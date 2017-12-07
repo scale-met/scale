@@ -35,6 +35,7 @@ module mod_cnvtopo
   logical, public :: CNVTOPO_UseGTOPO30   = .false.
   logical, public :: CNVTOPO_UseGMTED2010 = .false.
   logical, public :: CNVTOPO_UseDEM50M    = .false.
+  logical, public :: CNVTOPO_UseUSERFILE  = .false.
 
   !-----------------------------------------------------------------------------
   !
@@ -43,6 +44,7 @@ module mod_cnvtopo
   private :: CNVTOPO_GTOPO30
   private :: CNVTOPO_GMTED2010
   private :: CNVTOPO_DEM50M
+  private :: CNVTOPO_USERFILE
   private :: CNVTOPO_smooth
 
   !-----------------------------------------------------------------------------
@@ -97,6 +99,7 @@ contains
        CNVTOPO_UseGTOPO30,            &
        CNVTOPO_UseGMTED2010,          &
        CNVTOPO_UseDEM50M,             &
+       CNVTOPO_UseUSERFILE,           &
        CNVTOPO_unittile_ddeg,         &
        CNVTOPO_oversampling_factor,   &
        CNVTOPO_smooth_hypdiff_niter,  &
@@ -148,18 +151,25 @@ contains
        CNVTOPO_UseGTOPO30   = .true.
        CNVTOPO_UseGMTED2010 = .false.
        CNVTOPO_UseDEM50M    = .false.
+       CNVTOPO_UseUSERFILE  = .false.
     case('GMTED2010')
        CNVTOPO_UseGTOPO30   = .false.
        CNVTOPO_UseGMTED2010 = .true.
        CNVTOPO_UseDEM50M    = .false.
+       CNVTOPO_UseUSERFILE  = .false.
     case('DEM50M')
        CNVTOPO_UseGTOPO30   = .false.
        CNVTOPO_UseGMTED2010 = .false.
        CNVTOPO_UseDEM50M    = .true.
+       CNVTOPO_UseUSERFILE  = .false.
     case('COMBINE')
        CNVTOPO_UseGTOPO30   = .true.
        CNVTOPO_UseGMTED2010 = .true.
        CNVTOPO_UseDEM50M    = .true.
+       CNVTOPO_UseUSERFILE  = .false.
+    case('USERFILE')
+       ! You can use GTOPO30, GMTED2010, DEM50M and combine User-defined file as you like
+       CNVTOPO_UseUSERFILE  = .true.
     case default
        write(*,*) 'xxx Unsupported TYPE:', trim(CNVTOPO_name)
        call PRC_MPIstop
@@ -188,6 +198,9 @@ contains
     elseif ( CNVTOPO_UseDEM50M ) then
        CNVTOPO_DoNothing = .false.
        if( IO_L ) write(IO_FID_LOG,*) '*** Use DEM 50m data, Japan region only'
+    elseif ( CNVTOPO_UseUSERFILE ) then
+       CNVTOPO_DoNothing = .false.
+       if( IO_L ) write(IO_FID_LOG,*) '*** Use user-defined file'
     endif
 
     if ( CNVTOPO_DoNothing ) then
@@ -288,6 +301,10 @@ contains
           call CNVTOPO_DEM50M
        endif
 
+       if ( CNVTOPO_UseUSERFILE ) then
+          call CNVTOPO_USERFILE
+       endif
+
        call CNVTOPO_smooth( TOPO_Zsfc(:,:) ) ! (inout)
        call TOPO_fillhalo( FILL_BND=.true. )
 
@@ -319,8 +336,8 @@ contains
        REAL_LONX
     implicit none
 
+    character(len=H_LONG) :: GTOPO30_IN_DIR       = '.' !< directory contains GTOPO30 files (GrADS format)
     character(len=H_LONG) :: GTOPO30_IN_CATALOGUE = '' !< metadata files for GTOPO30
-    character(len=H_LONG) :: GTOPO30_IN_DIR       = '' !< directory contains GTOPO30 files (GrADS format)
 
     NAMELIST / PARAM_CNVTOPO_GTOPO30 / &
        GTOPO30_IN_CATALOGUE, &
@@ -704,8 +721,8 @@ contains
        REAL_LONX
     implicit none
 
+    character(len=H_LONG) :: DEM50M_IN_DIR       = '.' !< directory contains DEM50M files (GrADS format)
     character(len=H_LONG) :: DEM50M_IN_CATALOGUE = '' !< metadata files for DEM50M
-    character(len=H_LONG) :: DEM50M_IN_DIR       = '' !< directory contains DEM50M files (GrADS format)
 
     NAMELIST / PARAM_CNVTOPO_DEM50M / &
        DEM50M_IN_CATALOGUE, &
@@ -1065,6 +1082,558 @@ contains
 
     return
   end subroutine CNVTOPO_DEM50M
+
+  !-----------------------------------------------------------------------------
+  !> Convert from User-defined file
+  subroutine CNVTOPO_USERFILE
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_const, only: &
+       RADIUS => CONST_RADIUS, &
+       PI     => CONST_PI,     &
+       EPS    => CONST_EPS,    &
+       D2R    => CONST_D2R
+    use scale_topography, only: &
+       TOPO_Zsfc
+    use scale_grid_real, only: &
+       REAL_LATY, &
+       REAL_LONX
+    implicit none
+
+    integer               :: USERFILE_NLAT         = -1       ! number of latitude  tile
+    integer               :: USERFILE_NLON         = -1       ! number of longitude tile
+    real(RP)              :: USERFILE_DLAT         = -1.0_RP  ! width  of latitude  tile [deg.]
+    real(RP)              :: USERFILE_DLON         = -1.0_RP  ! width  of longitude tile [deg.]
+    character(len=H_LONG) :: USERFILE_IN_DIR       = '.'      ! directory contains data files (GrADS format)
+    character(len=H_LONG) :: USERFILE_IN_CATALOGUE = ''       ! catalogue file
+    character(len=H_LONG) :: USERFILE_IN_FILENAME  = ''       ! single data file (GrADS format)
+    character(len=H_LONG) :: USERFILE_IN_DATATYPE  = 'REAL4'  ! datatype (REAL4,REAL8,INT2)
+    logical               :: USERFILE_LATORDER_N2S = .false.  ! data of the latitude direction is stored in ordar of North->South?
+    real(RP)              :: USERFILE_LAT_START    = -90.0_RP ! (for single file) start latitude  of domain in input data
+    real(RP)              :: USERFILE_LAT_END      =  90.0_RP ! (for single file) end   latitude  of domain in input data
+    real(RP)              :: USERFILE_LON_START    =   0.0_RP ! (for single file) start longitude of domain in input data
+    real(RP)              :: USERFILE_LON_END      = 360.0_RP ! (for single file) end   longitude of domain in input data
+
+    NAMELIST / PARAM_CNVTOPO_USERFILE / &
+       USERFILE_NLAT,         &
+       USERFILE_NLON,         &
+       USERFILE_DLAT,         &
+       USERFILE_DLON,         &
+       USERFILE_IN_CATALOGUE, &
+       USERFILE_IN_DIR,       &
+       USERFILE_IN_FILENAME,  &
+       USERFILE_IN_DATATYPE,  &
+       USERFILE_LATORDER_N2S, &
+       USERFILE_LAT_START,    &
+       USERFILE_LAT_END,      &
+       USERFILE_LON_START,    &
+       USERFILE_LON_END
+
+    ! data catalogue list
+    integer, parameter      :: TILE_nlim = 1000
+    integer                 :: TILE_nmax
+    real(RP)                :: TILE_LATS (TILE_nlim)
+    real(RP)                :: TILE_LATE (TILE_nlim)
+    real(RP)                :: TILE_LONS (TILE_nlim)
+    real(RP)                :: TILE_LONE (TILE_nlim)
+    character(len=H_LONG)   :: TILE_fname(TILE_nlim)
+
+    ! User-defined data
+    real(RP),   allocatable :: TILE_HEIGHT_orig   (:,:)
+    real(DP),   allocatable :: TILE_HEIGHT_orig_DP(:,:)
+    real(SP),   allocatable :: TILE_HEIGHT_orig_SP(:,:)
+    integer(2), allocatable :: TILE_HEIGHT_orig_I2(:,:)
+    real(RP)                :: TILE_DLAT_orig, TILE_DLON_orig
+
+    ! User-defined data (oversampling)
+    integer                 :: jos, ios
+    integer                 :: jsize, isize
+    real(RP)                :: TILE_DLAT, TILE_DLON
+    real(RP), allocatable   :: TILE_HEIGHT(:,:)
+    real(RP), allocatable   :: TILE_LATH  (:)
+    real(RP), allocatable   :: TILE_LONH  (:)
+    real(RP)                :: area, area_fraction
+
+    integer  :: jloc, iloc
+    real(RP) :: jfrac_b ! fraction for jloc
+    real(RP) :: ifrac_l ! fraction for iloc
+
+    real(RP) :: REAL_LONX_mod(0:IA,JA)
+    real(RP) :: DOMAIN_LATS, DOMAIN_LATE
+    real(RP) :: DOMAIN_LONS, DOMAIN_LONE
+    integer  :: DOMAIN_LONSLOC(2), DOMAIN_LONELOC(2)
+    logical  :: check_IDL
+
+    real(RP) :: topo_sum(IA,JA)
+    real(RP) :: area_sum(IA,JA)
+    real(RP) :: topo, mask
+
+    character(len=H_LONG) :: fname
+
+    real(RP) :: zerosw
+    logical  :: hit_lat, hit_lon
+    integer  :: index
+    integer  :: fid, ierr
+    integer  :: i, j, ii, jj, iii, jjj, t
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[convert USERFILE] / Categ[preprocess] / Origin[SCALE-RM]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_CNVTOPO_USERFILE,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_CNVTOPO_USERFILE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVTOPO_USERFILE)
+
+    if ( USERFILE_NLAT <= 0 ) then
+       write(*,*) 'xxx USERFILE_NLAT (number of latitude tile)  should be positive. Check!', USERFILE_NLAT
+       call PRC_MPIstop
+    endif
+
+    if ( USERFILE_NLON <= 0 ) then
+       write(*,*) 'xxx USERFILE_NLON (number of longitude tile) should be positive. Check!', USERFILE_NLON
+       call PRC_MPIstop
+    endif
+
+    if ( USERFILE_DLAT <= 0.0_RP ) then
+       write(*,*) 'xxx USERFILE_DLAT (width (deg.) of latitude tile) should be positive. Check!', USERFILE_DLAT
+       call PRC_MPIstop
+    endif
+
+    if ( USERFILE_DLON <= 0.0_RP ) then
+       write(*,*) 'xxx USERFILE_DLON (width (deg.) of longitude tile) should be positive. Check!', USERFILE_DLON
+       call PRC_MPIstop
+    endif
+
+    if (       USERFILE_IN_CATALOGUE == '' &
+         .AND. USERFILE_IN_FILENAME  == '' ) then
+       write(*,*) 'xxx Neither catalogue file nor single file do not specified. Check!'
+       call PRC_MPIstop
+    endif
+
+    if    ( USERFILE_IN_DATATYPE == 'REAL8' ) then
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** type of input data : REAL8'
+       allocate( TILE_HEIGHT_orig   (USERFILE_NLON,USERFILE_NLAT) )
+       allocate( TILE_HEIGHT_orig_DP(USERFILE_NLON,USERFILE_NLAT) )
+
+    elseif( USERFILE_IN_DATATYPE == 'REAL4' ) then
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** type of input data : REAL4'
+       allocate( TILE_HEIGHT_orig   (USERFILE_NLON,USERFILE_NLAT) )
+       allocate( TILE_HEIGHT_orig_SP(USERFILE_NLON,USERFILE_NLAT) )
+
+    elseif( USERFILE_IN_DATATYPE == 'INT2'  ) then
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** type of input data : INT2'
+       allocate( TILE_HEIGHT_orig   (USERFILE_NLON,USERFILE_NLAT) )
+       allocate( TILE_HEIGHT_orig_I2(USERFILE_NLON,USERFILE_NLAT) )
+
+    else
+       write(*,*) 'xxx Not appropriate type for USERFILE_IN_DATATYPE. Check!'
+       write(*,*) 'xxx REAL8, REAL4, INT2 are available. requested:', trim(USERFILE_IN_DATATYPE)
+       call PRC_MPIstop
+    endif
+
+    if    ( USERFILE_LATORDER_N2S ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** data ordar of the latitude direction : North -> South'
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** data ordar of the latitude direction : South -> North'
+    endif
+
+    do j = 1, JA
+    do i = 1, IA
+       area_sum(i,j) = 0.0_RP
+       topo_sum(i,j) = 0.0_RP
+    enddo
+    enddo
+
+    REAL_LONX_mod(:,:) = mod( REAL_LONX(:,:)+3.0_DP*PI, 2.0_DP*PI ) - PI
+
+    DOMAIN_LATS    = minval(REAL_LATY    (:,:))
+    DOMAIN_LATE    = maxval(REAL_LATY    (:,:))
+    DOMAIN_LONS    = minval(REAL_LONX_mod(:,:))
+    DOMAIN_LONE    = maxval(REAL_LONX_mod(:,:))
+    DOMAIN_LONSLOC = minloc(REAL_LONX_mod(:,:))
+    DOMAIN_LONELOC = maxloc(REAL_LONX_mod(:,:))
+
+    check_IDL = .false.
+    if (      DOMAIN_LONS < REAL_LONX_mod( 0,DOMAIN_LONSLOC(2)) &
+         .OR. DOMAIN_LONE > REAL_LONX_mod(IA,DOMAIN_LONELOC(2)) ) then
+       check_IDL = .true.
+       DOMAIN_LONS = minval(REAL_LONX_mod(:,:),mask=(REAL_LONX_mod>0.0_RP))
+       DOMAIN_LONE = maxval(REAL_LONX_mod(:,:),mask=(REAL_LONX_mod<0.0_RP))
+    endif
+
+    jos   = nint( USERFILE_DLAT / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
+    ios   = nint( USERFILE_DLON / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
+    jsize = USERFILE_NLAT * jos
+    isize = USERFILE_NLON * ios
+
+    allocate( TILE_HEIGHT(isize,jsize) )
+    allocate( TILE_LATH  (0:jsize)     )
+    allocate( TILE_LONH  (0:isize)     )
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Oversampling (j) orig = ', USERFILE_NLAT, ', use = ', jsize
+    if( IO_L ) write(IO_FID_LOG,*) '*** Oversampling (i) orig = ', USERFILE_NLON, ', use = ', isize
+
+    TILE_DLAT_orig = USERFILE_DLAT * D2R
+    TILE_DLON_orig = USERFILE_DLON * D2R
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT       :', TILE_DLAT_orig/D2R
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON       :', TILE_DLON_orig/D2R
+
+    TILE_DLAT = TILE_DLAT_orig / jos
+    TILE_DLON = TILE_DLON_orig / ios
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT (OS)  :', TILE_DLAT/D2R
+    if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON (OS)  :', TILE_DLON/D2R
+
+    !---< READ from external files >---
+
+    if ( USERFILE_IN_CATALOGUE /= '' ) then
+
+       ! input from catalogue file
+       fname = trim(USERFILE_IN_DIR)//'/'//trim(USERFILE_IN_CATALOGUE)
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '+++ Input catalogue file:', trim(fname)
+
+       fid = IO_get_available_fid()
+       open( fid,                  &
+             file   = trim(fname), &
+             form   = 'formatted', &
+             status = 'old',       &
+             iostat = ierr         )
+
+          if ( ierr /= 0 ) then
+             write(*,*) 'xxx catalogue file not found!', trim(fname)
+             call PRC_MPIstop
+          endif
+
+          do t = 1, TILE_nlim
+             read(fid,*,iostat=ierr) index, TILE_LATS(t), TILE_LATE(t), & ! South->North
+                                            TILE_LONS(t), TILE_LONE(t), & ! WEST->EAST
+                                            TILE_fname(t)
+             if ( ierr /= 0 ) exit
+
+             if ( TILE_LONS(t) >= 180.0_RP ) then
+                TILE_LONS(t) = TILE_LONS(t) - 360.0_RP
+                TILE_LONE(t) = TILE_LONE(t) - 360.0_RP
+             endif
+             if ( TILE_LONS(t) < -180.0_RP ) TILE_LONS(t) = TILE_LONS(t) + 360.0_RP
+             if ( TILE_LONE(t) < -180.0_RP ) TILE_LONE(t) = TILE_LONE(t) + 360.0_RP
+
+          enddo
+
+          TILE_nmax = t - 1
+       close(fid)
+
+    elseif( USERFILE_IN_FILENAME /= '' ) then
+
+       ! input from single file
+       TILE_nmax     = 1
+       TILE_fname(1) = USERFILE_IN_FILENAME
+       TILE_LATS (1) = USERFILE_LAT_START
+       TILE_LATE (1) = USERFILE_LAT_END
+       TILE_LONS (1) = USERFILE_LON_START
+       TILE_LONE (1) = USERFILE_LON_END
+
+    endif
+
+    ! data file
+    do t = 1, TILE_nmax
+       hit_lat = .false.
+       hit_lon = .false.
+
+       if (      ( TILE_LATS(t)*D2R >= DOMAIN_LATS  .AND. TILE_LATS(t)*D2R < DOMAIN_LATE  ) &
+            .OR. ( TILE_LATE(t)*D2R >= DOMAIN_LATS  .AND. TILE_LATE(t)*D2R < DOMAIN_LATE  ) ) then
+          hit_lat = .true.
+       endif
+
+       if (      ( DOMAIN_LATS  >= TILE_LATS(t)*D2R .AND. DOMAIN_LATS  < TILE_LATE(t)*D2R ) &
+            .OR. ( DOMAIN_LATE  >= TILE_LATS(t)*D2R .AND. DOMAIN_LATE  < TILE_LATE(t)*D2R ) ) then
+          hit_lat = .true.
+       endif
+
+       if ( check_IDL ) then
+          if (      ( TILE_LONS(t)*D2R >= DOMAIN_LONS  .AND. TILE_LONS(t)*D2R < PI           ) &
+               .OR. ( TILE_LONS(t)*D2R >= -PI          .AND. TILE_LONS(t)*D2R < DOMAIN_LONE  ) &
+               .OR. ( TILE_LONE(t)*D2R >= DOMAIN_LONS  .AND. TILE_LONE(t)*D2R < PI           ) &
+               .OR. ( TILE_LONE(t)*D2R >= -PI          .AND. TILE_LONE(t)*D2R < DOMAIN_LONE  ) ) then
+             hit_lon = .true.
+          endif
+       else
+          if (      ( TILE_LONS(t)*D2R >= DOMAIN_LONS  .AND. TILE_LONS(t)*D2R < DOMAIN_LONE  ) &
+               .OR. ( TILE_LONE(t)*D2R >= DOMAIN_LONS  .AND. TILE_LONE(t)*D2R < DOMAIN_LONE  ) ) then
+             hit_lon = .true.
+          endif
+       endif
+
+       if (      ( DOMAIN_LONS  >= TILE_LONS(t)*D2R .AND. DOMAIN_LONS  < TILE_LONE(t)*D2R ) &
+            .OR. ( DOMAIN_LONE  >= TILE_LONS(t)*D2R .AND. DOMAIN_LONE  < TILE_LONE(t)*D2R ) ) then
+          hit_lon = .true.
+       endif
+
+       if ( hit_lat .AND. hit_lon ) then
+          fname = trim(USERFILE_IN_DIR)//'/'//trim(TILE_fname(t))
+
+          if( IO_L ) write(IO_FID_LOG,*)
+          if( IO_L ) write(IO_FID_LOG,*) '+++ Input data file :', trim(fname)
+          if( IO_L ) write(IO_FID_LOG,*) '*** Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '***        (LON)    :', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
+          if ( check_IDL ) then
+             if( IO_L ) write(IO_FID_LOG,*) '*** (Date line exists within the domain)'
+          endif
+          if( IO_L ) write(IO_FID_LOG,*) '*** Tile   (LAT)    :', TILE_LATS(t), TILE_LATE(t)
+          if( IO_L ) write(IO_FID_LOG,*) '***        (LON)    :', TILE_LONS(t), TILE_LONE(t)
+
+          if ( USERFILE_IN_DATATYPE == 'REAL8' ) then
+
+             fid = IO_get_available_fid()
+             open( fid,                                    &
+                   file   = trim(fname),                   &
+                   form   = 'unformatted',                 &
+                   access = 'direct',                      &
+                   status = 'old',                         &
+                   recl   = USERFILE_NLON*USERFILE_NLAT*8, &
+                   iostat = ierr                           )
+
+                if ( ierr /= 0 ) then
+                   write(*,*) 'xxx data file not found!'
+                   call PRC_MPIstop
+                endif
+
+                read(fid,rec=1) TILE_HEIGHT_orig_DP(:,:)
+             close(fid)
+
+             if ( USERFILE_LATORDER_N2S ) then
+                do j = 1, USERFILE_NLAT
+                do i = 1, USERFILE_NLON
+                   TILE_HEIGHT_orig(i,j) = real( TILE_HEIGHT_orig_DP(i,USERFILE_NLAT-j+1), kind=RP ) ! reverse order
+                enddo
+                enddo
+             else
+                do j = 1, USERFILE_NLAT
+                do i = 1, USERFILE_NLON
+                   TILE_HEIGHT_orig(i,j) = real( TILE_HEIGHT_orig_DP(i,j), kind=RP )
+                enddo
+                enddo
+             endif
+
+          elseif( USERFILE_IN_DATATYPE == 'REAL4' ) then
+
+             fid = IO_get_available_fid()
+             open( fid,                                    &
+                   file   = trim(fname),                   &
+                   form   = 'unformatted',                 &
+                   access = 'direct',                      &
+                   status = 'old',                         &
+                   recl   = USERFILE_NLON*USERFILE_NLAT*4, &
+                   iostat = ierr                           )
+
+                if ( ierr /= 0 ) then
+                   write(*,*) 'xxx data file not found!'
+                   call PRC_MPIstop
+                endif
+
+                read(fid,rec=1) TILE_HEIGHT_orig_SP(:,:)
+             close(fid)
+
+             if ( USERFILE_LATORDER_N2S ) then
+                do j = 1, USERFILE_NLAT
+                do i = 1, USERFILE_NLON
+                   TILE_HEIGHT_orig(i,j) = real( TILE_HEIGHT_orig_SP(i,USERFILE_NLAT-j+1), kind=RP ) ! reverse order
+                enddo
+                enddo
+             else
+                do j = 1, USERFILE_NLAT
+                do i = 1, USERFILE_NLON
+                   TILE_HEIGHT_orig(i,j) = real( TILE_HEIGHT_orig_SP(i,j), kind=RP )
+                enddo
+                enddo
+             endif
+
+          elseif( USERFILE_IN_DATATYPE == 'INT2' ) then
+
+             fid = IO_get_available_fid()
+             open( fid,                                    &
+                   file   = trim(fname),                   &
+                   form   = 'unformatted',                 &
+                   access = 'direct',                      &
+                   status = 'old',                         &
+                   recl   = USERFILE_NLON*USERFILE_NLAT*2, &
+                   iostat = ierr                           )
+
+                if ( ierr /= 0 ) then
+                   write(*,*) 'xxx data file not found!'
+                   call PRC_MPIstop
+                endif
+
+                read(fid,rec=1) TILE_HEIGHT_orig_I2(:,:)
+             close(fid)
+
+             if ( USERFILE_LATORDER_N2S ) then
+                do j = 1, USERFILE_NLAT
+                do i = 1, USERFILE_NLON
+                   TILE_HEIGHT_orig(i,j) = real( TILE_HEIGHT_orig_I2(i,USERFILE_NLAT-j+1), kind=RP ) ! reverse order
+                enddo
+                enddo
+             else
+                do j = 1, USERFILE_NLAT
+                do i = 1, USERFILE_NLON
+                   TILE_HEIGHT_orig(i,j) = real( TILE_HEIGHT_orig_I2(i,j), kind=RP )
+                enddo
+                enddo
+             endif
+
+          endif
+
+          ! oversampling
+          do jj = 1, USERFILE_NLAT
+          do ii = 1, USERFILE_NLON
+             do j = 1, jos
+             do i = 1, ios
+                jjj = (jj-1) * jos + j
+                iii = (ii-1) * ios + i
+
+                TILE_HEIGHT(iii,jjj) = TILE_HEIGHT_orig(ii,jj)
+             enddo
+             enddo
+          enddo
+          enddo
+
+          TILE_LATH(0) = TILE_LATS(t) * D2R
+          do jj = 1, jsize
+             TILE_LATH(jj) = TILE_LATH(jj-1) + TILE_DLAT
+             !if( IO_L ) write(IO_FID_LOG,*) jj, TILE_LATH(jj) / D2R
+          enddo
+
+          TILE_LONH(0) = TILE_LONS(t) * D2R
+          do ii = 1, isize
+             TILE_LONH(ii) = TILE_LONH(ii-1) + TILE_DLON
+             !if( IO_L ) write(IO_FID_LOG,*) ii, TILE_LONH(ii) / D2R
+          enddo
+
+          ! match and calc fraction
+          do jj = 1, jsize
+          do ii = 1, isize
+
+             iloc    = 1 ! Z_sfc(1,1) is used for dummy grid
+             ifrac_l = 1.0_RP
+
+             jloc    = 1 ! Z_sfc(1,1) is used for dummy grid
+             jfrac_b = 1.0_RP
+
+             if (      TILE_LATH(jj  ) < DOMAIN_LATS &
+                  .OR. TILE_LATH(jj-1) > DOMAIN_LATE ) then
+                cycle
+             endif
+
+             if ( check_IDL ) then
+                if (       TILE_LONH(ii  ) < DOMAIN_LONS &
+                     .AND. TILE_LONH(ii-1) > DOMAIN_LONE ) then
+                   cycle
+                endif
+             else
+                if (       TILE_LONH(ii  ) < DOMAIN_LONS &
+                     .OR.  TILE_LONH(ii-1) > DOMAIN_LONE ) then
+                   cycle
+                endif
+             endif
+
+      jloop: do j = JS-1, JE+1
+      iloop: do i = IS-1, IE+1
+                if (       TILE_LONH(ii-1) >= REAL_LONX_mod(i-1,j  ) &
+                     .AND. TILE_LONH(ii-1) <  REAL_LONX_mod(i  ,j  ) &
+                     .AND. TILE_LATH(jj-1) >= REAL_LATY    (i  ,j-1) &
+                     .AND. TILE_LATH(jj-1) <  REAL_LATY    (i  ,j  ) ) then
+
+                   iloc    = i
+                   ifrac_l = min( REAL_LONX_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
+
+                   jloc    = j
+                   jfrac_b = min( REAL_LATY(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                   exit jloop
+
+                endif
+
+                if (       REAL_LONX_mod(i-1,j) >= REAL_LONX_mod(i  ,j  ) &
+                     .AND. TILE_LATH    (jj-1)  >= REAL_LATY    (i  ,j-1) &
+                     .AND. TILE_LATH    (jj-1)  <  REAL_LATY    (i  ,j  ) ) then ! across the IDL
+
+                   if    (       TILE_LONH(ii-1) >= REAL_LONX_mod(i-1,j) &
+                           .AND. TILE_LONH(ii-1) <  PI                   ) then
+
+                      iloc    = i
+                      ifrac_l = min( REAL_LONX_mod(i,j)-TILE_LONH(ii-1)+2.0_RP*PI, TILE_DLON ) / TILE_DLON
+
+                      jloc    = j
+                      jfrac_b = min( REAL_LATY(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                      exit jloop
+
+                   elseif(       TILE_LONH(ii-1) >= -PI                  &
+                           .AND. TILE_LONH(ii-1) <  REAL_LONX_mod(i  ,j) ) then
+
+                      iloc    = i
+                      ifrac_l = min( REAL_LONX_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
+
+                      jloc    = j
+                      jfrac_b = min( REAL_LATY(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                      exit jloop
+
+                   endif
+
+                endif
+             enddo iloop
+             enddo jloop
+
+             if( iloc == 1 .AND. jloc == 1 ) cycle
+
+             topo = TILE_HEIGHT(ii,jj)
+             mask = 0.5_RP - sign( 0.5_RP,topo ) ! if Height is negative, mask = 1
+
+             area = RADIUS * RADIUS * TILE_DLON * ( sin(TILE_LATH(jj))-sin(TILE_LATH(jj-1)) ) * ( 1.0_RP - mask )
+
+!             if( IO_L ) write(IO_FID_LOG,*) ii, jj, area, iloc, jloc, ifrac_l, jfrac_b, TILE_HEIGHT(ii,jj)
+
+             area_fraction = (       ifrac_l) * (       jfrac_b) * area
+             area_sum(iloc  ,jloc  ) = area_sum(iloc  ,jloc  ) + area_fraction
+             topo_sum(iloc  ,jloc  ) = topo_sum(iloc  ,jloc  ) + area_fraction * topo
+
+             area_fraction = (1.0_RP-ifrac_l) * (       jfrac_b) * area
+             area_sum(iloc+1,jloc  ) = area_sum(iloc+1,jloc  ) + area_fraction
+             topo_sum(iloc+1,jloc  ) = topo_sum(iloc+1,jloc  ) + area_fraction * topo
+
+             area_fraction = (       ifrac_l) * (1.0_RP-jfrac_b) * area
+             area_sum(iloc  ,jloc+1) = area_sum(iloc  ,jloc+1) + area_fraction
+             topo_sum(iloc  ,jloc+1) = topo_sum(iloc  ,jloc+1) + area_fraction * topo
+
+             area_fraction = (1.0_RP-ifrac_l) * (1.0_RP-jfrac_b) * area
+             area_sum(iloc+1,jloc+1) = area_sum(iloc+1,jloc+1) + area_fraction
+             topo_sum(iloc+1,jloc+1) = topo_sum(iloc+1,jloc+1) + area_fraction * topo
+          enddo
+          enddo
+
+       endif
+    enddo ! tile loop
+
+    do j = JS, JE
+    do i = IS, IE
+       mask   = 0.5_RP + sign( 0.5_RP, area_sum(i,j)-EPS ) ! if any data is found, overwrite
+       zerosw = 0.5_RP - sign( 0.5_RP, area_sum(i,j)-EPS )
+       topo   = topo_sum(i,j) * ( 1.0_RP-zerosw ) / ( area_sum(i,j)-zerosw )
+       TOPO_Zsfc(i,j) = (        mask ) * topo &         ! overwrite
+                      + ( 1.0_RP-mask ) * TOPO_Zsfc(i,j) ! keep existing value
+    enddo
+    enddo
+
+    return
+  end subroutine CNVTOPO_USERFILE
 
   !-----------------------------------------------------------------------------
   !> check slope
