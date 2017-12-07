@@ -4069,7 +4069,7 @@ contains
       do i  = IS, IE
       do k  = KS, KE
          qhydro = 0.0_RP
-         do ihydro = 1, QA_MP
+         do ihydro = 1, nspc
           do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
             qhydro = qhydro + QTRC(k,i,j,iq)
           enddo
@@ -4138,6 +4138,7 @@ contains
        ! HC
        sum3 = 0.0_RP
        sum2 = 0.0_RP
+       ihydro = I_mp_QC
        do iq = QS_MP+1, QS_MP+nbnd
           sum3 = sum3 &
                + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
@@ -4159,6 +4160,7 @@ contains
        ! HR
        sum3 = 0.0_RP
        sum2 = 0.0_RP
+       ihydro = I_mp_QC
        do iq = QS_MP+nbnd+1, QS_MP+nbin
           sum3 = sum3 &
                + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
@@ -4214,7 +4216,7 @@ contains
           Re(k,i,j,I_HI) = ( re_tmp(I_mp_QP ) * sum0(I_mp_QP ) &
                            + re_tmp(I_mp_QCL) * sum0(I_mp_QCL) &
                            + re_tmp(I_mp_QD ) * sum0(I_mp_QD ) ) &
-                         / ( sum0(I_mp_QP) + sum0(I_mp_QCL) + sum0(I_mp_QD) )
+                         / ( sum0(I_mp_QP) + sum0(I_mp_QCL) + sum0(I_mp_QD) + EPS )
           Re(k,i,j,I_HS) = re_tmp(I_mp_QS)
           Re(k,i,j,I_HG) = re_tmp(I_mp_QG)
           Re(k,i,j,I_HH) = re_tmp(I_mp_QH)
