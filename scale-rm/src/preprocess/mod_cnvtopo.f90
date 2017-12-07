@@ -337,11 +337,11 @@ contains
     implicit none
 
     character(len=H_LONG) :: GTOPO30_IN_DIR       = '.' !< directory contains GTOPO30 files (GrADS format)
-    character(len=H_LONG) :: GTOPO30_IN_CATALOGUE = '' !< metadata files for GTOPO30
+    character(len=H_LONG) :: GTOPO30_IN_CATALOGUE = ''  !< metadata files for GTOPO30
 
     NAMELIST / PARAM_CNVTOPO_GTOPO30 / &
-       GTOPO30_IN_CATALOGUE, &
-       GTOPO30_IN_DIR
+       GTOPO30_IN_DIR,       &
+       GTOPO30_IN_CATALOGUE
 
     ! data catalogue list
     integer, parameter      :: TILE_nlim = 100
@@ -353,26 +353,25 @@ contains
     character(len=H_LONG)   :: TILE_fname(TILE_nlim)
 
     ! GTOPO30 data
-    integer, parameter      :: isize_orig = 4800
-    integer, parameter      :: jsize_orig = 6000
-    integer(2)              :: TILE_HEIGHT_orig(isize_orig,jsize_orig)
+    integer,  parameter     :: jsize_orig   = 6000
+    integer,  parameter     :: isize_orig   = 4800
+    real(RP), parameter     :: GTOPO30_DLAT = 30.0_RP / 60.0_RP / 60.0_RP ! 30 arc sec.
+    real(RP), parameter     :: GTOPO30_DLON = 30.0_RP / 60.0_RP / 60.0_RP ! 30 arc sec.
     real(RP)                :: TILE_DLAT_orig, TILE_DLON_orig
+    integer(2)              :: TILE_HEIGHT_orig(isize_orig,jsize_orig)
 
     ! GTOPO30 data (oversampling)
-    integer                 :: ios
-    integer                 :: jos
-    integer                 :: isize
-    integer                 :: jsize
+    integer                 :: jos, ios
+    integer                 :: jsize, isize
+    real(RP)                :: TILE_DLAT, TILE_DLON
     integer(2), allocatable :: TILE_HEIGHT(:,:)
     real(RP),   allocatable :: TILE_LATH  (:)
     real(RP),   allocatable :: TILE_LONH  (:)
-    real(RP)                :: TILE_DLAT, TILE_DLON
     real(RP)                :: area, area_fraction
 
-    integer  :: iloc
-    integer  :: jloc
-    real(RP) :: ifrac_l ! fraction for iloc
+    integer  :: jloc, iloc
     real(RP) :: jfrac_b ! fraction for jloc
+    real(RP) :: ifrac_l ! fraction for iloc
 
     real(RP) :: REAL_LONX_mod(0:IA,JA)
     real(RP) :: DOMAIN_LATS, DOMAIN_LATE
@@ -416,24 +415,23 @@ contains
 
     REAL_LONX_mod(:,:) = mod( REAL_LONX(:,:)+3.0_DP*PI, 2.0_DP*PI ) - PI
 
-    DOMAIN_LATS = minval(REAL_LATY    (:,:))
-    DOMAIN_LATE = maxval(REAL_LATY    (:,:))
-    DOMAIN_LONS = minval(REAL_LONX_mod(:,:))
-    DOMAIN_LONE = maxval(REAL_LONX_mod(:,:))
-
+    DOMAIN_LATS    = minval(REAL_LATY    (:,:))
+    DOMAIN_LATE    = maxval(REAL_LATY    (:,:))
+    DOMAIN_LONS    = minval(REAL_LONX_mod(:,:))
+    DOMAIN_LONE    = maxval(REAL_LONX_mod(:,:))
     DOMAIN_LONSLOC = minloc(REAL_LONX_mod(:,:))
     DOMAIN_LONELOC = maxloc(REAL_LONX_mod(:,:))
 
     check_IDL = .false.
-    if (      DOMAIN_LONS < REAL_LONX_mod(0 ,DOMAIN_LONSLOC(2)) &
+    if (      DOMAIN_LONS < REAL_LONX_mod( 0,DOMAIN_LONSLOC(2)) &
          .OR. DOMAIN_LONE > REAL_LONX_mod(IA,DOMAIN_LONELOC(2)) ) then
        check_IDL = .true.
        DOMAIN_LONS = minval(REAL_LONX_mod(:,:),mask=(REAL_LONX_mod>0.0_RP))
        DOMAIN_LONE = maxval(REAL_LONX_mod(:,:),mask=(REAL_LONX_mod<0.0_RP))
     endif
 
-    jos   = nint( 30.0_RP / 60.0_RP / 60.0_RP / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
-    ios   = nint( 30.0_RP / 60.0_RP / 60.0_RP / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
+    jos   = nint( GTOPO30_DLAT / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
+    ios   = nint( GTOPO30_DLON / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
     jsize = jsize_orig * jos
     isize = isize_orig * ios
 
@@ -444,8 +442,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Oversampling (j) orig = ', jsize_orig, ', use = ', jsize
     if( IO_L ) write(IO_FID_LOG,*) '*** Oversampling (i) orig = ', isize_orig, ', use = ', isize
 
-    TILE_DLAT_orig = 30.0_RP / 60.0_RP / 60.0_RP * D2R
-    TILE_DLON_orig = 30.0_RP / 60.0_RP / 60.0_RP * D2R
+    TILE_DLAT_orig = GTOPO30_DLAT * D2R
+    TILE_DLON_orig = GTOPO30_DLON * D2R
     if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT       :', TILE_DLAT_orig/D2R
     if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON       :', TILE_DLON_orig/D2R
 
@@ -573,13 +571,13 @@ contains
           TILE_LATH(0) = TILE_LATS(t) * D2R
           do jj = 1, jsize
              TILE_LATH(jj) = TILE_LATH(jj-1) + TILE_DLAT
-!             if( IO_L ) write(IO_FID_LOG,*) jj, TILE_LATH(jj)
+             !if( IO_L ) write(IO_FID_LOG,*) jj, TILE_LATH(jj) / D2R
           enddo
 
           TILE_LONH(0) = TILE_LONS(t) * D2R
           do ii = 1, isize
              TILE_LONH(ii) = TILE_LONH(ii-1) + TILE_DLON
-!             if( IO_L ) write(IO_FID_LOG,*) ii, TILE_LONH(ii)
+             !if( IO_L ) write(IO_FID_LOG,*) ii, TILE_LONH(ii) / D2R
           enddo
 
           ! match and calc fraction
@@ -722,11 +720,11 @@ contains
     implicit none
 
     character(len=H_LONG) :: DEM50M_IN_DIR       = '.' !< directory contains DEM50M files (GrADS format)
-    character(len=H_LONG) :: DEM50M_IN_CATALOGUE = '' !< metadata files for DEM50M
+    character(len=H_LONG) :: DEM50M_IN_CATALOGUE = ''  !< metadata files for DEM50M
 
     NAMELIST / PARAM_CNVTOPO_DEM50M / &
-       DEM50M_IN_CATALOGUE, &
-       DEM50M_IN_DIR
+       DEM50M_IN_DIR,      &
+       DEM50M_IN_CATALOGUE
 
     ! data catalogue list
     integer, parameter    :: TILE_nlim = 1000
@@ -738,26 +736,25 @@ contains
     character(len=H_LONG) :: TILE_fname(TILE_nlim)
 
     ! DEM50M data
-    integer, parameter    :: isize_orig = 1600
-    integer, parameter    :: jsize_orig = 1600
+    integer,  parameter   :: jsize_orig = 1600
+    integer,  parameter   :: isize_orig = 1600
+    real(RP), parameter   :: DEM50M_DLAT = 5.0_RP / 60.0_RP / 200.0_RP ! 30 arc sec.
+    real(RP), parameter   :: DEM50M_DLON = 7.5_RP / 60.0_RP / 200.0_RP ! 30 arc sec.
     real(SP)              :: TILE_HEIGHT_orig(isize_orig,jsize_orig)
     real(RP)              :: TILE_DLAT_orig, TILE_DLON_orig
 
     ! DEM50M data (oversampling)
-    integer               :: ios
-    integer               :: jos
-    integer               :: isize
-    integer               :: jsize
+    integer               :: jos, ios
+    integer               :: jsize, isize
+    real(RP)              :: TILE_DLAT, TILE_DLON
     real(SP), allocatable :: TILE_HEIGHT(:,:)
     real(RP), allocatable :: TILE_LATH  (:)
     real(RP), allocatable :: TILE_LONH  (:)
-    real(RP)              :: TILE_DLAT, TILE_DLON
     real(RP)              :: area, area_fraction
 
-    integer  :: iloc
-    integer  :: jloc
-    real(RP) :: ifrac_l ! fraction for iloc
+    integer  :: jloc, iloc
     real(RP) :: jfrac_b ! fraction for jloc
+    real(RP) :: ifrac_l ! fraction for iloc
 
     real(RP) :: REAL_LONX_mod(0:IA,JA)
     real(RP) :: DOMAIN_LATS, DOMAIN_LATE
@@ -801,24 +798,23 @@ contains
 
     REAL_LONX_mod(:,:) = mod( REAL_LONX(:,:)+3.0_DP*PI, 2.0_DP*PI ) - PI
 
-    DOMAIN_LATS = minval(REAL_LATY    (:,:))
-    DOMAIN_LATE = maxval(REAL_LATY    (:,:))
-    DOMAIN_LONS = minval(REAL_LONX_mod(:,:))
-    DOMAIN_LONE = maxval(REAL_LONX_mod(:,:))
-
+    DOMAIN_LATS    = minval(REAL_LATY    (:,:))
+    DOMAIN_LATE    = maxval(REAL_LATY    (:,:))
+    DOMAIN_LONS    = minval(REAL_LONX_mod(:,:))
+    DOMAIN_LONE    = maxval(REAL_LONX_mod(:,:))
     DOMAIN_LONSLOC = minloc(REAL_LONX_mod(:,:))
     DOMAIN_LONELOC = maxloc(REAL_LONX_mod(:,:))
 
     check_IDL = .false.
-    if (      DOMAIN_LONS < REAL_LONX_mod(0 ,DOMAIN_LONSLOC(2)) &
+    if (      DOMAIN_LONS < REAL_LONX_mod( 0,DOMAIN_LONSLOC(2)) &
          .OR. DOMAIN_LONE > REAL_LONX_mod(IA,DOMAIN_LONELOC(2)) ) then
        check_IDL = .true.
        DOMAIN_LONS = minval(REAL_LONX_mod(:,:),mask=(REAL_LONX_mod>0.0_RP))
        DOMAIN_LONE = maxval(REAL_LONX_mod(:,:),mask=(REAL_LONX_mod<0.0_RP))
     endif
 
-    jos   = nint( 5.0_RP / 60.0_RP / 200.0_RP / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
-    ios   = nint( 7.5_RP / 60.0_RP / 200.0_RP / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
+    jos   = nint( DEM50M_DLAT / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
+    ios   = nint( DEM50M_DLON / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
     jsize = jsize_orig * jos
     isize = isize_orig * ios
 
@@ -829,8 +825,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Oversampling (j) orig = ', jsize_orig, ', use = ', jsize
     if( IO_L ) write(IO_FID_LOG,*) '*** Oversampling (i) orig = ', isize_orig, ', use = ', isize
 
-    TILE_DLAT_orig = 5.0_RP / 60.0_RP / 200.0_RP * D2R
-    TILE_DLON_orig = 7.5_RP / 60.0_RP / 200.0_RP * D2R
+    TILE_DLAT_orig = DEM50M_DLAT * D2R
+    TILE_DLON_orig = DEM50M_DLON * D2R
     if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT       :', TILE_DLAT_orig/D2R
     if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON       :', TILE_DLON_orig/D2R
 
@@ -958,13 +954,13 @@ contains
           TILE_LATH(0) = TILE_LATS(t) * D2R
           do jj = 1, jsize
              TILE_LATH(jj) = TILE_LATH(jj-1) + TILE_DLAT
-!             if( IO_L ) write(IO_FID_LOG,*) jj, TILE_LATH(jj)
+             !if( IO_L ) write(IO_FID_LOG,*) jj, TILE_LATH(jj) / D2R
           enddo
 
           TILE_LONH(0) = TILE_LONS(t) * D2R
           do ii = 1, isize
              TILE_LONH(ii) = TILE_LONH(ii-1) + TILE_DLON
-!             if( IO_L ) write(IO_FID_LOG,*) ii, TILE_LONH(ii)
+             !if( IO_L ) write(IO_FID_LOG,*) ii, TILE_LONH(ii) / D2R
           enddo
 
           ! match and calc fraction
@@ -1683,10 +1679,10 @@ contains
 
        return
     else
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Apply smoothing. Slope limit       = ', CNVTOPO_smooth_maxslope_limit
-    if( IO_L ) write(IO_FID_LOG,*) '***                  Smoothing type    = ', CNVTOPO_smooth_type
-    if( IO_L ) write(IO_FID_LOG,*) '***                  Smoothing locally = ', CNVTOPO_smooth_local
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Apply smoothing. Slope limit       = ', CNVTOPO_smooth_maxslope_limit
+       if( IO_L ) write(IO_FID_LOG,*) '***                  Smoothing type    = ', CNVTOPO_smooth_type
+       if( IO_L ) write(IO_FID_LOG,*) '***                  Smoothing locally = ', CNVTOPO_smooth_local
     endif
 
     if ( CNVTOPO_smooth_local ) then
