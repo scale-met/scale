@@ -315,7 +315,7 @@ contains
     character(len=File_HSHORT) :: OUTNAME           !> name of variable (for output)
 
     character(len=File_HLONG)  :: BASENAME          !> base name of the file
-   logical                     :: POSTFIX_TIMELABEL !> Add timelabel to the basename?
+    logical                    :: POSTFIX_TIMELABEL !> Add timelabel to the basename?
     real(DP)                   :: TINTERVAL         !> time interval
     character(len=File_HSHORT) :: TUNIT             !> time unit
     logical                    :: TAVERAGE          !> apply time average?
@@ -652,7 +652,7 @@ contains
     character(len=*),  intent(in)  :: desc
     character(len=*),  intent(in)  :: units
     integer,           intent(in)  :: now_step
-    character(len=19), intent(in)  :: timelabel
+    character(len=*),  intent(in)  :: timelabel
 
     character(len=*),  intent(in), optional :: zcoord
     character(len=*),  intent(in), optional :: options  ! 'filetype1:key1=val1&filetype2:key2=val2&...'
