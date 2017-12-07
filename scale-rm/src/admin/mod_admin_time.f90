@@ -998,6 +998,8 @@ contains
        CALENDAR_daysec2date,   &
        CALENDAR_adjust_daysec, &
        CALENDAR_combine_daysec
+    use scale_comm, only: &
+       COMM_bcast
     use scale_time, only: &
        TIME_DTSEC,                &
        TIME_NOWDATE,              &
@@ -1012,7 +1014,7 @@ contains
     implicit none
 
     real(DP) :: WALLCLOCK_elapse
-    logical  :: exists
+    logical  :: WALLCLOCK_DOend
     !---------------------------------------------------------------------------
 
     TIME_DOend = .false.
@@ -1040,29 +1042,25 @@ contains
        TIME_DOend = .true.
     endif
 
-    if (       TIME_WALLCLOCK_LIMIT > 0.0_DP                     &
-         .AND. mod(TIME_NOWSTEP-1,TIME_DSTEP_WALLCLOCK_CHECK) == 0 ) then
-       WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
+    if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then ! use wallclock limiter
+       WALLCLOCK_DOend = .false.
 
-       if ( WALLCLOCK_elapse > TIME_WALLCLOCK_safelim ) then
+       if (       PRC_IsMaster                                        &      ! master node
+            .AND. mod(TIME_NOWSTEP-1,TIME_DSTEP_WALLCLOCK_CHECK) == 0 ) then ! step to check
+
+          WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
+
+          if( WALLCLOCK_elapse > TIME_WALLCLOCK_safelim ) WALLCLOCK_DOend = .true.
+
+       endif
+
+       call COMM_bcast( WALLCLOCK_DOend ) ! [INOUT]
+
+       if ( WALLCLOCK_DOend ) then
           if( IO_L ) write(IO_FID_LOG,*)
           if( IO_L ) write(IO_FID_LOG,*) '********************************************************************'
           if( IO_L ) write(IO_FID_LOG,*) '*** Elapse time limit is detected. Termination operation starts. ***'
           if( IO_L ) write(IO_FID_LOG,*) '********************************************************************'
-          if( IO_L ) write(IO_FID_LOG,*)
-          TIME_DOend = .true.
-       endif
-    endif
-
-    ! QUIT file control
-    if ( PRC_IsMaster ) then ! master node
-       inquire(file='QUIT', exist=exists)
-
-       if( exists ) then
-          if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*********************************************************'
-          if( IO_L ) write(IO_FID_LOG,*) '*** QUIT file is found. Termination operation starts. ***'
-          if( IO_L ) write(IO_FID_LOG,*) '*********************************************************'
           if( IO_L ) write(IO_FID_LOG,*)
           TIME_DOend = .true.
        endif
