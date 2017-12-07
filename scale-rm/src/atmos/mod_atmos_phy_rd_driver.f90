@@ -144,6 +144,8 @@ contains
        STAT_total
     use scale_history, only: &
        HIST_in
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     use mod_atmos_admin, only: &
        ATMOS_PHY_RD_TYPE
     use scale_atmos_solarins, only: &
@@ -191,9 +193,7 @@ contains
        solins       => ATMOS_PHY_RD_solins,       &
        cosSZA       => ATMOS_PHY_RD_cosSZA
     use mod_atmos_phy_mp_vars, only: &
-       CLDFRAC => ATMOS_PHY_MP_CLDFRAC, &
-       Re      => ATMOS_PHY_MP_Re     , &
-       Qe      => ATMOS_PHY_MP_Qe
+       ATMOS_PHY_MP_vars_get_diagnostic
     implicit none
 
     logical, intent(in) :: update_flag
@@ -219,6 +219,10 @@ contains
     real(RP) :: TOAFLX_LW_dn_c(IA,JA)
     real(RP) :: TOAFLX_SW_up_c(IA,JA)
     real(RP) :: TOAFLX_SW_dn_c(IA,JA)
+
+    real(RP) :: CLDFRAC(KA,IA,JA)
+    real(RP) :: Re     (KA,IA,JA,N_HYD)
+    real(RP) :: Qe     (KA,IA,JA,N_HYD)
 
     ! for WRF radiation scheme added by Adachi; array order is (i,k,j)
     real(RP) :: RTHRATENSW(IA,KA,JA)
@@ -251,6 +255,10 @@ contains
                                  TIME_NOWDATE(:), & ! [IN]
                                  TIME_OFFSET_YEAR ) ! [IN]
 
+
+       call ATMOS_PHY_MP_vars_get_diagnostic( &
+            DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
+            CLDFRAC=CLDFRAC, Re=Re, Qe=Qe            ) ! [IN]
 
        call ATMOS_PHY_RD( DENS, RHOT, QTRC,   & ! [IN]
                           REAL_CZ, REAL_FZ,   & ! [IN]

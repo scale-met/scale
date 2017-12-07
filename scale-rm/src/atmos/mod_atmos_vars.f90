@@ -142,7 +142,6 @@ module mod_atmos_vars
   real(RP), public, allocatable, target :: CVtot(:,:,:) !> specific heat          [J/kg/K]
   real(RP), public, allocatable, target :: CPtot(:,:,:) !> specific heat          [J/kg/K]
 
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -242,7 +241,6 @@ module mod_atmos_vars
   real(RP), allocatable, target :: PT_W_PRIM(:,:,:) !> resolved scale heat flux       [W/s]
   real(RP), allocatable, target :: W_PRIM3  (:,:,:) !> skewness of w                  [m3/s3]
   real(RP), allocatable, target :: TKE_RS   (:,:,:) !> resolved scale TKE             [m2/s2]
-
 
   ! id of diagnostic variables
   !! public
@@ -420,8 +418,9 @@ module mod_atmos_vars
 
 
   logical,  private                      :: moist
-  real(RP), private, target, allocatable :: QW(:,:,:,:)
+  real(RP), private, target, allocatable :: Qe(:,:,:,:)  !> mass ratio of hydrometors [kg/kg]
   real(RP), private, target, allocatable :: ZERO(:,:,:)
+
 
   ! for restart
   integer, private :: restart_fid = -1  ! file ID
@@ -437,6 +436,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_vars_setup
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_process, only: &
        PRC_abort
     use scale_history, only: &
@@ -558,38 +559,6 @@ contains
     MOMZ(KE:KA,:,:) = 0.0_RP
 
 
-    ! water content
-    if ( I_QV > 0 ) then
-       allocate( QW(KA,IA,JA,N_HYD) )
-!OCL XFILL
-       QW(:,:,:,:) = 0.0_RP
-
-       QV => QTRC_av(:,:,:,I_QV)
-       QC => QW(:,:,:,I_HC)
-       QR => QW(:,:,:,I_HR)
-       QI => QW(:,:,:,I_HI)
-       QS => QW(:,:,:,I_HS)
-       QG => QW(:,:,:,I_HG)
-       QH => QW(:,:,:,I_HH)
-
-       moist = .true.
-    else
-       allocate( ZERO(KA,IA,JA) )
-!OCL XFILL
-       ZERO(:,:,:) = 0.0_RP
-
-       QV => ZERO
-       QC => ZERO
-       QR => ZERO
-       QI => ZERO
-       QS => ZERO
-       QG => ZERO
-       QH => ZERO
-
-       moist = .false.
-    end if
-
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_VARS,iostat=ierr)
@@ -654,6 +623,38 @@ contains
     call ATMOS_PHY_TB_vars_setup
     call ATMOS_PHY_BL_vars_setup
     call ATMOS_PHY_CP_vars_setup
+
+
+    ! water content
+    if ( I_QV > 0 ) then
+       allocate( Qe(KA,IA,JA,N_HYD) )
+!OCL XFILL
+       Qe(:,:,:,:) = UNDEF
+
+       QV => QTRC_av(:,:,:,I_QV)
+       QC => Qe(:,:,:,I_HC)
+       QR => Qe(:,:,:,I_HR)
+       QI => Qe(:,:,:,I_HI)
+       QS => Qe(:,:,:,I_HS)
+       QG => Qe(:,:,:,I_HG)
+       QH => Qe(:,:,:,I_HH)
+
+       moist = .true.
+    else
+       allocate( ZERO(KA,IA,JA) )
+!OCL XFILL
+       ZERO(:,:,:) = 0.0_RP
+
+       QV => ZERO
+       QC => ZERO
+       QR => ZERO
+       QI => ZERO
+       QS => ZERO
+       QG => ZERO
+       QH => ZERO
+
+       moist = .false.
+    end if
 
 
     DV_calclated(DV_nmax) = .false.
@@ -1164,6 +1165,8 @@ contains
        REAL_FZ
     use scale_history, only: &
        HIST_put
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_vars_history
     implicit none
 
     integer :: iq, iv
@@ -1220,6 +1223,9 @@ contains
           end select
        end if
     end do
+
+    if ( moist ) &
+         call ATMOS_PHY_MP_vars_history( DENS_av(:,:,:), TEMP(:,:,:), QTRC_av(:,:,:,:) )
 
     return
   end subroutine ATMOS_vars_history
@@ -1303,6 +1309,9 @@ contains
        COMM_wait
     use scale_atmos_hydrometeor, only: &
        N_HYD
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_vars_get_diagnostic, &
+       ATMOS_PHY_MP_vars_reset_diagnostics
     implicit none
 
     integer :: iq
@@ -1330,15 +1339,18 @@ contains
          REAL_CZ(:,:,:), REAL_FZ(:,:,:), & ! (in)
          PHYD(:,:,:)                     ) ! (out)
 
-    if ( moist .and. associated(ATMOS_PHY_MP_mixingratio) ) then
-       call ATMOS_PHY_MP_mixingratio( &
-            QW(:,:,:,:),     & ! (out)
-            QTRC_av(:,:,:,:) ) ! (in)
+
+    call ATMOS_PHY_MP_vars_reset_diagnostics
+
+    if ( moist ) then
+       call ATMOS_PHY_MP_vars_get_diagnostic( &
+            DENS_av(:,:,:), TEMP(:,:,:), QTRC_av(:,:,:,:), & ! (in)
+            Qe=Qe(:,:,:,:)                                 ) ! (out)
        do iq = 1, N_HYD
-          call COMM_vars8(QW(:,:,:,iq), iq)
+          call COMM_vars8(Qe(:,:,:,iq), iq)
        end do
        do iq = 1, N_HYD
-          call COMM_wait (QW(:,:,:,iq), iq)
+          call COMM_wait (Qe(:,:,:,iq), iq)
        end do
     end if
 

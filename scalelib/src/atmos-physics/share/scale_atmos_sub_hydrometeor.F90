@@ -85,12 +85,11 @@ module scale_atmos_hydrometeor
   integer, public, parameter :: I_HG =  5 !< graupel
   integer, public, parameter :: I_HH =  6 !< hail
 
-  integer, public            :: I_QC = -1
-  integer, public            :: I_QR = -1
-  integer, public            :: I_QI = -1
-  integer, public            :: I_QS = -1
-  integer, public            :: I_QG = -1
-  integer, public            :: I_QH = -1
+  character(len=H_SHORT), public, parameter :: HYD_NAME(N_HYD) = &
+       (/ "QC", "QR", "QI", "QS", "QG", "QH" /)
+  character(len=H_SHORT), public, parameter :: HYD_DESC(N_HYD) = &
+       (/ "cloud", "rain", "ice water", "snow", "graupel", "heil" /)
+  real(RP), public           :: HYD_DENS(N_HYD)
 
   integer, public            :: I_NC = -1
   integer, public            :: I_NR = -1
@@ -99,7 +98,12 @@ module scale_atmos_hydrometeor
   integer, public            :: I_NG = -1
   integer, public            :: I_NH = -1
 
-  real(RP), public           :: DENS_HYD(N_HYD)
+  integer, public            :: I_QC = -1
+  integer, public            :: I_QR = -1
+  integer, public            :: I_QI = -1
+  integer, public            :: I_QS = -1
+  integer, public            :: I_QG = -1
+  integer, public            :: I_QH = -1
 
   ! hydrometeor (water + ice)
   integer, public            :: QHA =  0
@@ -203,7 +207,7 @@ contains
        call PRC_abort
     endif
 
-    DENS_HYD(:) = (/ DWATR, & ! HC
+    HYD_DENS(:) = (/ DWATR, & ! HC
                      DWATR, & ! HR
                      DICE,  & ! HI
                      DICE,  & ! HS

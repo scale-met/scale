@@ -931,8 +931,9 @@ contains
   !> ATMOS_PHY_MP_precipitation
   !! precipitation transport
   !<
+!OCL SINGLE
   subroutine ATMOS_PHY_MP_precipitation( &
-       KA, KS, KE, QA, QLA, QIA, &
+       KA, KS, KE, QHA, QLA, QIA, &
        TEMP, vterm, FDZ, RCDZ, dt,     &
        i, j,                           &
        DENS, RHOQ, CPtot, CVtot, RHOE, &
@@ -946,17 +947,17 @@ contains
        CV_ICE
     implicit none
     integer,  intent(in) :: KA, KS, KE
-    integer,  intent(in) :: QA, QLA, QIA
+    integer,  intent(in) :: QHA, QLA, QIA ! QHA = QLA + QIA
 
     real(RP), intent(in) :: TEMP (KA)
-    real(RP), intent(in) :: vterm(KA,QA) ! terminal velocity of cloud mass
+    real(RP), intent(in) :: vterm(KA,QHA) ! terminal velocity of cloud mass
     real(RP), intent(in) :: FDZ  (KA)
     real(RP), intent(in) :: RCDZ (KA)
-    real(RP), intent(in) :: dt
+    real(DP), intent(in) :: dt
     integer,  intent(in) :: i, j         ! for debug
 
     real(RP), intent(inout) :: DENS (KA)
-    real(RP), intent(inout) :: RHOQ (KA,QA)
+    real(RP), intent(inout) :: RHOQ (KA,QHA)
     real(RP), intent(inout) :: CPtot(KA)
     real(RP), intent(inout) :: CVtot(KA)
     real(RP), intent(inout) :: RHOE (KA)
@@ -966,6 +967,8 @@ contains
 
     real(RP) :: qflx(KA)
     real(RP) :: eflx(KA)
+    real(RP) :: RHOCP(KA)
+    real(RP) :: RHOCV(KA)
     real(RP) :: dDENS
     real(RP) :: CP, CV
 
@@ -980,10 +983,15 @@ contains
     qflx(KE) = 0.0_RP
     eflx(KE) = 0.0_RP
 
-    do iq = 1, QA
+    do k = KS, KE
+       RHOCP(k) = CPtot(k) * DENS(k)
+       RHOCV(k) = CVtot(k) * DENS(k)
+    end do
+
+    do iq = 1, QHA
 
        !--- mass flux for each tracer, upwind with vel < 0
-       do k  = KS-1, KE-1
+       do k = KS-1, KE-1
           qflx(k) = vterm(k+1,iq) * RHOQ(k+1,iq)
        enddo
 
@@ -993,9 +1001,9 @@ contains
        enddo ! falling (water mass & number) tracer
 
        ! QTRC(iq; iq>QLA+QLI) is not mass tracer, such as number density
-       if ( iq > QLA + QIA ) exit
+       if ( iq > QLA + QIA ) cycle
 
-       do k = KS-1, KE
+       do k = KS-1, KE-1
           mflx(k) = mflx(k) + qflx(k)
        end do
 
@@ -1012,9 +1020,9 @@ contains
        !--- update density
        do k = KS, KE
           dDENS = - ( qflx(k) - qflx(k-1) ) * RCDZ(k) * dt
+          RHOCP(k) = RHOCP(k) + CP * dDENS
+          RHOCV(k) = RHOCV(k) + CV * dDENS
           DENS(k) = DENS(k) + dDENS
-          CPtot(k) = CPtot(k) + dDENS * CP
-          CVtot(k) = CVtot(k) + dDENS * CV
        end do
 
        ! internal energy flux
@@ -1029,12 +1037,18 @@ contains
 
     end do
 
+    do k = KS, KE
+       CPtot(k) = RHOCP(k) / DENS(k)
+       CVtot(k) = RHOCV(k) / DENS(k)
+    end do
+
     return
   end subroutine ATMOS_PHY_MP_precipitation
   !-----------------------------------------------------------------------------
   !> ATMOS_PHY_MP_precipitation_transfer
   !! precipitation transport
   !<
+!OCL SINGLE
   subroutine ATMOS_PHY_MP_precipitation_momentum( &
        KA, KS, KE, &
        DENS, MOMZ, U, V, mflx, &

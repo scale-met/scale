@@ -624,7 +624,7 @@ contains
        TIME_DTSEC_ATMOS_PHY_MP
     implicit none
 
-    NAMELIST / PARAM_ATMOS_PHY_MP / &
+    NAMELIST / PARAM_ATMOS_PHY_MP_SN14 / &
        MP_doautoconversion, &
        MP_doprecipitation,  &
        MP_ssw_lim,          &
@@ -642,14 +642,14 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_SN14,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SN14. Check!'
        call PRC_MPIstop
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_SN14)
 
     ATMOS_PHY_MP_sn14_DENS(:) = CONST_UNDEF
     ATMOS_PHY_MP_sn14_DENS(I_HC) = CONST_DWATR

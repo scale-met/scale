@@ -29,7 +29,7 @@ module scale_atmos_phy_mp_tomita08
   public :: ATMOS_PHY_MP_tomita08_setup
   public :: ATMOS_PHY_MP_tomita08_adjustment
   public :: ATMOS_PHY_MP_tomita08_terminal_velocity
-  public :: ATMOS_PHY_MP_tomita08_mixing_ratio
+  public :: ATMOS_PHY_MP_tomita08_mass_ratio
   public :: ATMOS_PHY_MP_tomita08_effective_radius
   public :: ATMOS_PHY_MP_tomita08_cloud_fraction
 
@@ -38,30 +38,25 @@ module scale_atmos_phy_mp_tomita08
   !++ Public parameters & variables
   !
   integer, private, parameter :: QA_MP  = 6
-  integer, private, parameter :: I_QV = 1
-  integer, private, parameter :: I_QC = 2
-  integer, private, parameter :: I_QR = 3
-  integer, private, parameter :: I_QI = 4
-  integer, private, parameter :: I_QS = 5
-  integer, private, parameter :: I_QG = 6
 
-  integer,                parameter, public :: ATMOS_PHY_MP_tomita08_NLIQ = 2
-  integer,                parameter, public :: ATMOS_PHY_MP_tomita08_NICE = 3
-  character(len=H_SHORT), parameter, public :: ATMOS_PHY_MP_tomita08_NAME(QA_MP) = (/ &
+  integer,                parameter, public :: ATMOS_PHY_MP_tomita08_ntracers = QA_MP
+  integer,                parameter, public :: ATMOS_PHY_MP_tomita08_nwaters = 2
+  integer,                parameter, public :: ATMOS_PHY_MP_tomita08_nices = 3
+  character(len=H_SHORT), parameter, public :: ATMOS_PHY_MP_tomita08_tracer_names(QA_MP) = (/ &
        'QV', &
        'QC', &
        'QR', &
        'QI', &
        'QS', &
        'QG'  /)
-  character(len=H_MID)  , parameter, public :: ATMOS_PHY_MP_tomita08_DESC(QA_MP) = (/ &
+  character(len=H_MID)  , parameter, public :: ATMOS_PHY_MP_tomita08_tracer_descriptions(QA_MP) = (/ &
        'Ratio of Water Vapor mass to total mass (Specific humidity)', &
        'Ratio of Cloud Water mass to total mass',                     &
        'Ratio of Rain Water mass to total mass',                      &
-       'Ratio of Cloud Ice mixing ratio to total mass',               &
-       'Ratio of Snow mixing ratio to total mass',                    &
-       'Ratio of Graupel mixing ratio to total mass'                  /)
-  character(len=H_SHORT), parameter, public :: ATMOS_PHY_MP_tomita08_UNIT(QA_MP) = (/ &
+       'Ratio of Cloud Ice mass ratio to total mass',                 &
+       'Ratio of Snow miass ratio to total mass',                     &
+       'Ratio of Graupel mass ratio to total mass'                    /)
+  character(len=H_SHORT), parameter, public :: ATMOS_PHY_MP_tomita08_tracer_units(QA_MP) = (/ &
        'kg/kg',  &
        'kg/kg',  &
        'kg/kg',  &
@@ -80,11 +75,18 @@ module scale_atmos_phy_mp_tomita08
   !
   !++ Private parameters & variables
   !
-  integer,  private, parameter   :: I_mp_QC =  1
-  integer,  private, parameter   :: I_mp_QR =  2
-  integer,  private, parameter   :: I_mp_QI =  3
-  integer,  private, parameter   :: I_mp_QS =  4
-  integer,  private, parameter   :: I_mp_QG =  5
+  integer,  private, parameter   :: I_QV = 1
+  integer,  private, parameter   :: I_QC = 2
+  integer,  private, parameter   :: I_QR = 3
+  integer,  private, parameter   :: I_QI = 4
+  integer,  private, parameter   :: I_QS = 5
+  integer,  private, parameter   :: I_QG = 6
+
+  integer,  private, parameter   :: I_hyd_QC =  1
+  integer,  private, parameter   :: I_hyd_QR =  2
+  integer,  private, parameter   :: I_hyd_QI =  3
+  integer,  private, parameter   :: I_hyd_QS =  4
+  integer,  private, parameter   :: I_hyd_QG =  5
 
   logical,  private              :: couple_aerosol      ! apply CCN effect?
   logical,  private              :: do_explicit_icegen  ! apply explicit ice generation?
@@ -174,8 +176,8 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private              :: gamma_saut  = 60.E-3_RP   !< auto-conversion factor gamma for ice
   real(RP), private              :: beta_gaut   =  0.0_RP     !< auto-conversion factor beta  for snow
   real(RP), private              :: gamma_gaut  = 90.E-3_RP   !< auto-conversion factor gamma for snow
-  real(RP), private              :: qicrt_saut  =  0.0_RP     !< mixing ratio threshold for Psaut [kg/kg]
-  real(RP), private              :: qscrt_gaut  =  6.E-4_RP   !< mixing ratio threshold for Pgaut [kg/kg]
+  real(RP), private              :: qicrt_saut  =  0.0_RP     !< mass ratio threshold for Psaut [kg/kg]
+  real(RP), private              :: qscrt_gaut  =  6.E-4_RP   !< mass ratio threshold for Pgaut [kg/kg]
 
   ! Evaporation, Sublimation parameter
   real(RP), private, parameter   :: Da0         = 2.428E-2_RP !< thermal diffusion coefficient of air at 0C,1atm [J/m/s/K]
@@ -322,7 +324,6 @@ contains
   !<
   subroutine ATMOS_PHY_MP_tomita08_setup( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       MP_do_explicit_icegen, &
        MP_couple_aerosol      )
     use scale_process, only: &
        PRC_abort
@@ -340,7 +341,6 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    logical, intent(in) :: MP_do_explicit_icegen
     logical, intent(in) :: MP_couple_aerosol
 
     real(RP) :: autoconv_nc     = Nc_ocn  !< number concentration of cloud water [1/cc]
@@ -349,6 +349,7 @@ contains
     logical  :: enable_WDXZ2014 = .false. !< use scheme by Wainwright et al. (2014)
 
     NAMELIST / PARAM_ATMOS_PHY_MP_TOMITA08 / &
+       do_explicit_icegen, &
        autoconv_nc,     &
        enable_KK2000,   &
        enable_RS2014,   &
@@ -417,7 +418,6 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_TOMITA08)
 
-    do_explicit_icegen = MP_do_explicit_icegen
     couple_aerosol    = MP_couple_aerosol
 
 
@@ -678,7 +678,7 @@ contains
     real(RP), intent(in) :: DENS0(KA,IA,JA) ! density [km/m3]
     real(RP), intent(in) :: PRES0(KA,IA,JA) ! pressure    [Pa]
     real(RP), intent(in) :: CCN  (KA,IA,JA) ! [1/m3]
-    real(RP), intent(in) :: dt
+    real(DP), intent(in) :: dt
 
     real(RP), intent(inout) :: TEMP0 (KA,IA,JA) ! temperature [K]
     real(RP), intent(inout) :: QTRC0 (KA,IA,JA,QA_MP)
@@ -1524,10 +1524,10 @@ contains
        ! store to work
        dens = DENS0(k)
        temc = TEMP0(k) - TEM00
-       qr   = RHOQ0(k,I_mp_QR) / dens
-       qi   = RHOQ0(k,I_mp_QI) / dens
-       qs   = RHOQ0(k,I_mp_QS) / dens
-       qg   = RHOQ0(k,I_mp_QG) / dens
+       qr   = RHOQ0(k,I_hyd_QR) / dens
+       qi   = RHOQ0(k,I_hyd_QI) / dens
+       qs   = RHOQ0(k,I_hyd_QS) / dens
+       qg   = RHOQ0(k,I_hyd_QG) / dens
 
        rho_fact = sqrt( dens00 / dens )
 
@@ -1586,42 +1586,42 @@ contains
 
        !---< terminal velocity >
        zerosw = 0.5_RP - sign(0.5_RP, qi - 1.E-8_RP )
-       vterm(k,I_mp_QI) = -3.29_RP * exp( log( dens*qi+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
-       vterm(k,I_mp_QR) = -Cr * rho_fact * GAM_1brdr / GAM_1br * RLMDr_dr
-       vterm(k,I_mp_QS) = -Cs * rho_fact * RMOMs_Vt
-       vterm(k,I_mp_QG) = -Cg * rho_fact * GAM_1bgdg / GAM_1bg * RLMDg_dg
+       vterm(k,I_hyd_QI) = -3.29_RP * exp( log( dens*qi+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
+       vterm(k,I_hyd_QR) = -Cr * rho_fact * GAM_1brdr / GAM_1br * RLMDr_dr
+       vterm(k,I_hyd_QS) = -Cs * rho_fact * RMOMs_Vt
+       vterm(k,I_hyd_QG) = -Cg * rho_fact * GAM_1bgdg / GAM_1bg * RLMDg_dg
     enddo
 
 !OCL XFILL
     do k = KS, KE
-       vterm(k,I_mp_QC) = 0.0_RP
+       vterm(k,I_hyd_QC) = 0.0_RP
     end do
 
     if ( nofall_qr ) then
 !OCL XFILL
        do k = KS, KE
-          vterm(k,I_mp_QR) = 0.0_RP
+          vterm(k,I_hyd_QR) = 0.0_RP
        enddo
     endif
 
     if ( nofall_qi ) then
 !OCL XFILL
        do k = KS, KE
-          vterm(k,I_mp_QI) = 0.0_RP
+          vterm(k,I_hyd_QI) = 0.0_RP
        enddo
     endif
 
     if ( nofall_qs ) then
 !OCL XFILL
        do k = KS, KE
-          vterm(k,I_mp_QS) = 0.0_RP
+          vterm(k,I_hyd_QS) = 0.0_RP
        enddo
     endif
 
     if ( nofall_qg ) then
 !OCL XFILL
        do k = KS, KE
-          vterm(k,I_mp_QG) = 0.0_RP
+          vterm(k,I_hyd_QG) = 0.0_RP
        enddo
     endif
 
@@ -1655,8 +1655,8 @@ contains
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
-       qhydro = QTRC(k,i,j,I_mp_QC) + QTRC(k,i,j,I_mp_QR) &
-              + QTRC(k,i,j,I_mp_QI) + QTRC(k,i,j,I_mp_QS) + QTRC(k,i,j,I_mp_QG)
+       qhydro = QTRC(k,i,j,I_hyd_QC) + QTRC(k,i,j,I_hyd_QR) &
+              + QTRC(k,i,j,I_hyd_QI) + QTRC(k,i,j,I_hyd_QS) + QTRC(k,i,j,I_hyd_QG)
        cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
     enddo
     enddo
@@ -1743,7 +1743,7 @@ contains
        do i  = IS, IE
        do k  = KS, KE
           Re(k,i,j,I_HC) = 1.1_RP &
-               * ( DENS0(k,i,j) * QTRC0(k,i,j,I_mp_QC) / Nc(k,i,j) / ( 4.0_RP / 3.0_RP * PI * dens_w ) )**(1.0_RP/3.0_RP)
+               * ( DENS0(k,i,j) * QTRC0(k,i,j,I_hyd_QC) / Nc(k,i,j) / ( 4.0_RP / 3.0_RP * PI * dens_w ) )**(1.0_RP/3.0_RP)
           Re(k,i,j,I_HC) = min( 1.E-3_RP, max( 1.E-6_RP, Re(k,i,j,I_HC) ) ) * um2cm
        enddo
        enddo
@@ -1778,9 +1778,9 @@ contains
        do k  = KS, KE
           dens = DENS0(k,i,j)
           temc = TEMP0(k,i,j) - TEM00
-          qr   = QTRC0(k,i,j,I_mp_QR)
-          qs   = QTRC0(k,i,j,I_mp_QS)
-          qg   = QTRC0(k,i,j,I_mp_QG)
+          qr   = QTRC0(k,i,j,I_hyd_QR)
+          qs   = QTRC0(k,i,j,I_hyd_QS)
+          qg   = QTRC0(k,i,j,I_hyd_QG)
 
           ! intercept parameter N0
           N0r = ( 1.0_RP-sw_WDXZ2014 ) * N0r_def &                                                                             ! Marshall and Palmer (1948)
@@ -1837,8 +1837,8 @@ contains
   end subroutine ATMOS_PHY_MP_tomita08_effective_radius
 
   !-----------------------------------------------------------------------------
-  !> Calculate mixing ratio of each category
-  subroutine ATMOS_PHY_MP_tomita08_mixing_ratio( &
+  !> Calculate mass ratio of each category
+  subroutine ATMOS_PHY_MP_tomita08_mass_ratio( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        QTRC0, &
        Qe     )
@@ -1856,24 +1856,24 @@ contains
 
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA_MP-1)
 
-    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mass ratio of each cateory [kg/kg]
     !---------------------------------------------------------------------------
 
 !OCL XFILL
-    Qe(:,:,:,I_HC) = QTRC0(:,:,:,I_mp_QC)
+    Qe(:,:,:,I_HC) = QTRC0(:,:,:,I_hyd_QC)
 !OCL XFILL
-    Qe(:,:,:,I_HR) = QTRC0(:,:,:,I_mp_QR)
+    Qe(:,:,:,I_HR) = QTRC0(:,:,:,I_hyd_QR)
 !OCL XFILL
-    Qe(:,:,:,I_HI) = QTRC0(:,:,:,I_mp_QI)
+    Qe(:,:,:,I_HI) = QTRC0(:,:,:,I_hyd_QI)
 !OCL XFILL
-    Qe(:,:,:,I_HS) = QTRC0(:,:,:,I_mp_QS)
+    Qe(:,:,:,I_HS) = QTRC0(:,:,:,I_hyd_QS)
 !OCL XFILL
-    Qe(:,:,:,I_HG) = QTRC0(:,:,:,I_mp_QG)
+    Qe(:,:,:,I_HG) = QTRC0(:,:,:,I_hyd_QG)
 !OCL XFILL
     Qe(:,:,:,I_HG+1:) = 0.0_RP
 
     return
-  end subroutine ATMOS_PHY_MP_tomita08_mixing_ratio
+  end subroutine ATMOS_PHY_MP_tomita08_mass_ratio
 
   !-----------------------------------------------------------------------------
   subroutine MP_tomita08_BergeronParam( &

@@ -140,6 +140,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc dry air mass (0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_qd_0D( &
        qdry,  &
        q,     &
@@ -196,6 +197,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc total specific heat (CV,0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_cv_0D( &
        CVtot, &
        q,     &
@@ -257,6 +259,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc total specific heat (CP,0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_cp_0D( &
        CPtot, &
        q,     &
@@ -317,6 +320,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc total gas constant (R,0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_r_0D( &
        Rtot, &
        q,    &
@@ -378,6 +382,7 @@ contains
   !> ATMOS_THERMODYN_specific_heat_0D
   !! calc heat capacities: qdry, Rtot, CVtot, CPtot
   !<
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_specific_heat_0D( &
        Qdry, Rtot, CVtot, CPtot, &
        q, &
@@ -420,6 +425,7 @@ contains
   !> ATMOS_THERMODYN_specific_heat_1D
   !! calc specific heat: qdry, Rtot, CVtot, CPtot
   !<
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_specific_heat_1D( &
        KA, KS, KE, &       
        QA,         &
@@ -534,6 +540,7 @@ contains
   end subroutine ATMOS_THERMODYN_specific_heat_3D
 
   !-----------------------------------------------------------------------------
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_pott_0D( &
        pott, &
        temp, &
@@ -581,6 +588,7 @@ contains
   end subroutine ATMOS_THERMODYN_pott_0D
 
   !-----------------------------------------------------------------------------
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_pott_1D( &
        pott, &
        temp, &
@@ -684,6 +692,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc rho * pott -> rho * ein (0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_rhoe_0D( &
        rhoe, &
        rhot, &
@@ -790,6 +799,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc rho * ein -> rho * pott (0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_rhot_0D( &
        rhot, &
        rhoe, &
@@ -896,6 +906,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc rho, q, rho * pott -> temp & pres (0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_temp_pres_0D( &
        temp,  &
        pres,  &
@@ -975,6 +986,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc rho, q, rho * pott -> temp & pres (0D) (obsolute)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_temp_pres_0D_obsolute( &
        temp, &
        pres, &
@@ -1084,6 +1096,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc rho, q, rho * pott -> temp & pres (0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_temp_pres_E_0D( &
        temp, &
        pres, &

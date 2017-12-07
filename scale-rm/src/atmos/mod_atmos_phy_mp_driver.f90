@@ -47,7 +47,6 @@ module mod_atmos_phy_mp_driver
   logical,  private :: MP_do_precipitation   = .true.  !> apply sedimentation (precipitation)?
   logical,  private :: MP_do_negative_fixer  = .true.  !> apply negative fixer?
   real(RP), private :: MP_limit_negative    = 1.0_RP   !> Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
-  logical,  private :: MP_do_explicit_icegen = .false. !> apply explicit ice generation?
   integer,  private :: MP_ntmax_sedimentation = 1      !> number of time step for sedimentation
   real(RP), private :: MP_max_term_vel = 10.0_RP       !> terminal velocity for calculate dt of sedimentation
   real(RP), private :: MP_cldfrac_thleshold            !> thleshold for cloud fraction
@@ -65,13 +64,19 @@ contains
     use scale_process, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
-       ATMOS_HYDROMETEOR_regist
+       ATMOS_HYDROMETEOR_regist, &
+       I_QC, &
+       I_QR, &
+       I_QI, &
+       I_QS, &
+       I_QG
     use scale_atmos_phy_mp_tomita08, only: &
-       ATMOS_PHY_MP_TOMITA08_NLIQ, &
-       ATMOS_PHY_MP_TOMITA08_NICE, &
-       ATMOS_PHY_MP_TOMITA08_NAME, &
-       ATMOS_PHY_MP_TOMITA08_DESC, &
-       ATMOS_PHY_MP_TOMITA08_UNIT
+       ATMOS_PHY_MP_TOMITA08_ntracers,            &
+       ATMOS_PHY_MP_TOMITA08_nwaters,             &
+       ATMOS_PHY_MP_TOMITA08_nices,               &
+       ATMOS_PHY_MP_TOMITA08_tracer_names,        &
+       ATMOS_PHY_MP_TOMITA08_tracer_descriptions, &
+       ATMOS_PHY_MP_TOMITA08_tracer_units
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE, &
        ATMOS_sw_phy_mp
@@ -95,13 +100,18 @@ contains
        select case ( ATMOS_PHY_MP_TYPE )
        case ( 'TOMITA08' )
           call ATMOS_HYDROMETEOR_regist( &
-               QS_MP,                         & ! [OUT]
-               ATMOS_PHY_MP_TOMITA08_NLIQ,    & ! [IN]
-               ATMOS_PHY_MP_TOMITA08_NICE,    & ! [IN]
-               ATMOS_PHY_MP_TOMITA08_NAME(:), & ! [IN]
-               ATMOS_PHY_MP_TOMITA08_DESC(:), & ! [IN]
-               ATMOS_PHY_MP_TOMITA08_UNIT(:)  ) ! [IN]
-          QA_MP = 1 + ATMOS_PHY_MP_TOMITA08_NLIQ + ATMOS_PHY_MP_TOMITA08_NICE
+               QS_MP,                                        & ! [OUT]
+               ATMOS_PHY_MP_TOMITA08_nwaters,                & ! [IN]
+               ATMOS_PHY_MP_TOMITA08_nices,                  & ! [IN]
+               ATMOS_PHY_MP_TOMITA08_tracer_names(:),        & ! [IN]
+               ATMOS_PHY_MP_TOMITA08_tracer_descriptions(:), & ! [IN]
+               ATMOS_PHY_MP_TOMITA08_tracer_units(:)         ) ! [IN]
+          QA_MP = ATMOS_PHY_MP_TOMITA08_ntracers
+          I_QC = QS_MP+1
+          I_QR = QS_MP+2
+          I_QI = QS_MP+3
+          I_QS = QS_MP+4
+          I_QG = QS_MP+5
        case default
           call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
           QA_MP = QA_MP_obsolute
@@ -140,6 +150,7 @@ contains
        ATMOS_PHY_MP_TYPE, &
        ATMOS_sw_phy_mp
     use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_cldfrac_thleshold, &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow
     implicit none
@@ -148,7 +159,6 @@ contains
        MP_do_precipitation,     &
        MP_do_negative_fixer,    &
        MP_limit_negative,       &
-       MP_do_explicit_icegen,   &
        MP_ntmax_sedimentation,  &
        MP_max_term_vel,         &
        MP_cldfrac_thleshold,    &
@@ -184,11 +194,12 @@ contains
        MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(MP_ntmax_sedimentation,kind=RP)
        MP_DTSEC_SEDIMENTATION  = TIME_DTSEC_ATMOS_PHY_MP * MP_RNSTEP_SEDIMENTATION
 
+       ATMOS_PHY_MP_cldfrac_thleshold = MP_cldfrac_thleshold
+
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Enable negative fixer?                    : ', MP_do_negative_fixer
        if( IO_L ) write(IO_FID_LOG,*) '*** Value limit of negative fixer (abs)       : ', abs(MP_limit_negative)
        if( IO_L ) write(IO_FID_LOG,*) '*** Enable sedimentation (precipitation)?     : ', MP_do_precipitation
-       if( IO_L ) write(IO_FID_LOG,*) '*** Enable explicit ice generation?           : ', MP_do_explicit_icegen
        if( IO_L ) write(IO_FID_LOG,*) '*** Timestep of sedimentation is divided into : ', MP_ntmax_sedimentation, 'step'
        if( IO_L ) write(IO_FID_LOG,*) '*** DT of sedimentation                       : ', MP_DTSEC_SEDIMENTATION, '[s]'
 
@@ -196,7 +207,6 @@ contains
        case ( 'TOMITA08' )
           call ATMOS_PHY_MP_tomita08_setup( &
                KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-               MP_do_explicit_icegen, &
                MP_couple_aerosol      )
        case default
           ! setup library component
@@ -256,7 +266,7 @@ contains
 
     integer :: k, i, j, iq
 
-    if ( MP_do_negative_fixer ) then
+    if ( MP_do_negative_fixer .and. I_QV > 0) then
 
 !OCL XFILL
        DENS0(:,:,:) = DENS(:,:,:)
@@ -308,31 +318,19 @@ contains
        HIST_in
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
-       I_HC,  &
-       I_HR,  &
-       I_HI,  &
-       I_HS,  &
-       I_HG,  &
-       I_HH,  &
        QHA,   &
        QHS,   &
        QHE,   &
        QLA,   &
        QIA
     use scale_atmos_phy_mp, only: &
-       ATMOS_PHY_MP,                 &
-       ATMOS_PHY_MP_CloudFraction,   &
-       ATMOS_PHY_MP_EffectiveRadius, &
-       ATMOS_PHY_MP_MixingRatio
+       ATMOS_PHY_MP
     use scale_atmos_phy_mp_common, only: &
        ATMOS_PHY_MP_precipitation, &
        ATMOS_PHY_MP_precipitation_momentum
     use scale_atmos_phy_mp_tomita08, only: &
        ATMOS_PHY_MP_TOMITA08_adjustment, &
-       ATMOS_PHY_MP_TOMITA08_terminal_velocity, &
-       ATMOS_PHY_MP_TOMITA08_mixing_ratio, &
-       ATMOS_PHY_MP_TOMITA08_effective_radius, &
-       ATMOS_PHY_MP_TOMITA08_cloud_fraction
+       ATMOS_PHY_MP_TOMITA08_terminal_velocity
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE
     use mod_atmos_vars, only: &
@@ -374,10 +372,7 @@ contains
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow, &
        MOMX_t_MP => ATMOS_PHY_MP_MOMX_t,    &
-       MOMY_t_MP => ATMOS_PHY_MP_MOMY_t,    &
-       CLDFRAC   => ATMOS_PHY_MP_CLDFRAC,   &
-       Re        => ATMOS_PHY_MP_Re,        &
-       Qe        => ATMOS_PHY_MP_Qe
+       MOMY_t_MP => ATMOS_PHY_MP_MOMY_t
     use mod_atmos_phy_ae_vars, only: &
        CCN_t => ATMOS_PHY_AE_CCN_t
     implicit none
@@ -472,21 +467,6 @@ contains
           enddo
           enddo
 
-          call ATMOS_PHY_MP_tomita08_cloud_fraction( &
-               KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               QTRC(:,:,:,QHS:QHE), MP_cldfrac_thleshold, & ! [IN]
-               CLDFRAC(:,:,:)                             ) ! [OUT]
-
-          call ATMOS_PHY_MP_tomita08_effective_radius( &
-               KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QHS:QHE), & ! [IN]
-               Re(:,:,:,:)                                    ) ! [OUT]
-
-          call ATMOS_PHY_MP_tomita08_mixing_ratio( &
-               KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               QTRC(:,:,:,QHS:QHE), & ! [IN]
-               Qe(:,:,:,:)          ) ! [OUT]
-
        case default
 
 !OCL XFILL
@@ -543,18 +523,6 @@ contains
           enddo
           enddo
 
-          call ATMOS_PHY_MP_CloudFraction( CLDFRAC(:,:,:),      & ! [OUT]
-                                           QTRC(:,:,:,:),       & ! [IN]
-                                           MP_cldfrac_thleshold ) ! [IN]
-
-          call ATMOS_PHY_MP_EffectiveRadius( Re  (:,:,:,:), & ! [OUT]
-                                             QTRC(:,:,:,:), & ! [IN]
-                                             DENS(:,:,:),   & ! [IN]
-                                             TEMP(:,:,:)    ) ! [IN]
-
-          call ATMOS_PHY_MP_MixingRatio( Qe  (:,:,:,:), & ! [OUT]
-                                         QTRC(:,:,:,:)  ) ! [IN]
-
           MP_do_precipitation = .false.
 
        end select
@@ -591,7 +559,7 @@ contains
              CPtot2(:) = CPtot(:,i,j)
              CVtot2(:) = CVtot(:,i,j)
              do k = KS, KE
-                RHOE(k) = TEMP(k,i,j) * CVtot(k,i,j)
+                RHOE(k) = TEMP(k,i,j) * CVtot(k,i,j) * DENS2(k)
                 RHOE2(k) = RHOE(k)
              end do
              do iq = QS_MP+1, QE_MP
@@ -622,7 +590,7 @@ contains
                      mflux(:), sflux(:)      ) ! [OUT]
 
                 do k = KS, KE
-                   TEMP2(k) = RHOE2(k) / CVtot2(k)
+                   TEMP2(k) = RHOE2(k) / ( DENS2(k) * CVtot2(k) )
                 end do
 
                 do k = KS-1, KE-1
@@ -701,12 +669,6 @@ contains
                         'tendency rho*'//trim(TRACER_NAME(iq))//' in MP', 'kg/m3/s', nohalo=.true. )
        enddo
 
-       call HIST_in( Re(:,:,:,I_HC), 'Re_QC', 'effective radius cloud water', 'cm', nohalo=.true. )
-       call HIST_in( Re(:,:,:,I_HR), 'Re_QR', 'effective radius rain',        'cm', nohalo=.true. )
-       call HIST_in( Re(:,:,:,I_HI), 'Re_QI', 'effective radius ice water',   'cm', nohalo=.true. )
-       call HIST_in( Re(:,:,:,I_HS), 'Re_QS', 'effective radius snow',        'cm', nohalo=.true. )
-       call HIST_in( Re(:,:,:,I_HG), 'Re_QG', 'effective radius graupel',     'cm', nohalo=.true. )
-       call HIST_in( Re(:,:,:,I_HH), 'Re_QH', 'effective radius hail',        'cm', nohalo=.true. )
     endif
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &

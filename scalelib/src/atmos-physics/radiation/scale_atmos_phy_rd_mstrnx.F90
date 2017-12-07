@@ -399,11 +399,11 @@ contains
        QA_AE, &
        QS_AE
     use scale_atmos_hydrometeor, only: &
-       DENS_HYD, &
        N_HYD, &
        I_QV, &
        I_HC, &
-       I_HI
+       I_HI, &
+       HYD_DENS
     use scale_atmos_aerosol, only: &
        N_AE
     use scale_atmos_phy_rd_profile, only: &
@@ -681,7 +681,7 @@ contains
           do RD_k = RD_KADD+1 + KE - tropopause(i,j) + 1, RD_KMAX
              k = KS + RD_KMAX - RD_k ! reverse axis
              aerosol_conc_merge(RD_k,i,j,ihydro) = max( MP_Qe(k,i,j,ihydro), 0.0_RP ) &
-                                                 / DENS_HYD(ihydro) * RHO_std / PPM ! [PPM to standard air]
+                                                 / HYD_DENS(ihydro) * RHO_std / PPM ! [PPM to standard air]
           enddo
        enddo
        enddo
