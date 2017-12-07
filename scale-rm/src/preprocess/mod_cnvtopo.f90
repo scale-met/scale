@@ -49,7 +49,11 @@ module mod_cnvtopo
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private :: CNVTOPO_smooth_type           = 'LAPLACIAN'
+  character(len=H_SHORT), private :: CNVTOPO_smooth_type           = 'LAPLACIAN' ! smoothing type
+                                                                   ! 'OFF'         Do not apply smoothing
+                                                                   ! 'LAPLACIAN'   Laplacian filter
+                                                                   ! 'GAUSSIAN'    Gaussian filter
+
   integer,                private :: CNVTOPO_smooth_hypdiff_niter  = 20
   logical,                private :: CNVTOPO_smooth_local          = .true.
   integer,                private :: CNVTOPO_smooth_itelim         = 10000
@@ -1104,10 +1108,17 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    if ( CNVTOPO_smooth_type == 'OFF' ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Do not apply smoothing.'
+
+       return
+    else
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Apply smoothing. Slope limit       = ', CNVTOPO_smooth_maxslope_limit
     if( IO_L ) write(IO_FID_LOG,*) '***                  Smoothing type    = ', CNVTOPO_smooth_type
     if( IO_L ) write(IO_FID_LOG,*) '***                  Smoothing locally = ', CNVTOPO_smooth_local
+    endif
 
     if ( CNVTOPO_smooth_local ) then
        DXL(:) = DX
