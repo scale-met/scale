@@ -381,6 +381,11 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
       dinfo->time_units[i] = '\0';
       free(buf);
     }
+  } else {
+    if ( step > 1 ) { // if variable does not have time dimention, step > 1 should not exist
+      fprintf(stderr, "requested step is larger than tdim: step=%d tdim=%d\n", step, tdim);
+      return ERROR_CODE;
+    }
   }
   ERROR_SUPPRESS = 0;
 
