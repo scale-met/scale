@@ -13,6 +13,7 @@
 !! @par History
 !! @li      2013-12-04 (S.Nishizawa)  [mod] splited from scale_atmos_dyn.f90
 !<
+#include "inc_openmp.h"
 module mod_atmos_dyn_driver
   !-----------------------------------------------------------------------------
   !
@@ -305,6 +306,10 @@ contains
        end do
        
 
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j) &
+       !$omp shared (KA,KS,KE,ISB,IEB,JSB,JEB, &
+       !$omp         RHOT_tp,RHOH_p,CPtot,EXNER)
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
@@ -316,6 +321,10 @@ contains
        call COMM_vars8( RHOT_tp, 4 )
 
        call COMM_wait ( RHOU_tp, 1 )
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j) &
+       !$omp shared (KA,KS,KE,IS,IE,JS,JE, &
+       !$omp         MOMX_tp,RHOU_tp)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -327,6 +336,10 @@ contains
        call COMM_vars8( MOMX_tp, 1 )
 
        call COMM_wait ( RHOV_tp, 2 )
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j) &
+       !$omp shared (KA,KS,KE,IS,IE,JS,JE, &
+       !$omp         MOMY_tp,RHOV_tp)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE

@@ -44,14 +44,14 @@ module mod_atmos_phy_mp_driver
   !
   !++ Private parameters & variables
   !
-  logical,  private :: MP_doprecipitation   = .true.  !> apply sedimentation (precipitation)?
-  logical,  private :: MP_donegative_fixer  = .true.  !> apply negative fixer?
-  real(RP), private :: MP_limit_negative    = 1.0_RP  !> Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
-  logical,  private :: MP_doexplicit_icegen = .false. !> apply explicit ice generation?
-  integer,  private :: MP_ntmax_sedimentation = 1     !> number of time step for sedimentation
-  real(RP), private :: MP_max_term_vel = 10.0_RP      !> terminal velocity for calculate dt of sedimentation
-  real(RP), private :: MP_cldfrac_thleshold           !> thleshold for cloud fraction
-  logical,  private :: MP_couple_aerosol    = .false. !> apply CCN effect?
+  logical,  private :: MP_do_precipitation   = .true.  !> apply sedimentation (precipitation)?
+  logical,  private :: MP_do_negative_fixer  = .true.  !> apply negative fixer?
+  real(RP), private :: MP_limit_negative    = 1.0_RP   !> Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
+  logical,  private :: MP_do_explicit_icegen = .false. !> apply explicit ice generation?
+  integer,  private :: MP_ntmax_sedimentation = 1      !> number of time step for sedimentation
+  real(RP), private :: MP_max_term_vel = 10.0_RP       !> terminal velocity for calculate dt of sedimentation
+  real(RP), private :: MP_cldfrac_thleshold            !> thleshold for cloud fraction
+  logical,  private :: MP_couple_aerosol    = .false.  !> apply CCN effect?
 
   integer,  private :: MP_NSTEP_SEDIMENTATION
   real(RP), private :: MP_RNSTEP_SEDIMENTATION
@@ -145,13 +145,13 @@ contains
     implicit none
     
     NAMELIST / PARAM_ATMOS_PHY_MP / &
-       MP_doprecipitation,     &
-       MP_donegative_fixer,    &
-       MP_limit_negative,      &
-       MP_doexplicit_icegen,   &
-       MP_ntmax_sedimentation, &
-       MP_max_term_vel,        &
-       MP_cldfrac_thleshold,   &
+       MP_do_precipitation,     &
+       MP_do_negative_fixer,    &
+       MP_limit_negative,       &
+       MP_do_explicit_icegen,   &
+       MP_ntmax_sedimentation,  &
+       MP_max_term_vel,         &
+       MP_cldfrac_thleshold,    &
        MP_couple_aerosol
 
     integer :: nstep_max
@@ -185,10 +185,10 @@ contains
        MP_DTSEC_SEDIMENTATION  = TIME_DTSEC_ATMOS_PHY_MP * MP_RNSTEP_SEDIMENTATION
 
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Enable negative fixer?                    : ', MP_donegative_fixer
+       if( IO_L ) write(IO_FID_LOG,*) '*** Enable negative fixer?                    : ', MP_do_negative_fixer
        if( IO_L ) write(IO_FID_LOG,*) '*** Value limit of negative fixer (abs)       : ', abs(MP_limit_negative)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Enable sedimentation (precipitation)?     : ', MP_doprecipitation
-       if( IO_L ) write(IO_FID_LOG,*) '*** Enable explicit ice generation?           : ', MP_doexplicit_icegen
+       if( IO_L ) write(IO_FID_LOG,*) '*** Enable sedimentation (precipitation)?     : ', MP_do_precipitation
+       if( IO_L ) write(IO_FID_LOG,*) '*** Enable explicit ice generation?           : ', MP_do_explicit_icegen
        if( IO_L ) write(IO_FID_LOG,*) '*** Timestep of sedimentation is divided into : ', MP_ntmax_sedimentation, 'step'
        if( IO_L ) write(IO_FID_LOG,*) '*** DT of sedimentation                       : ', MP_DTSEC_SEDIMENTATION, '[s]'
 
@@ -196,8 +196,8 @@ contains
        case ( 'TOMITA08' )
           call ATMOS_PHY_MP_tomita08_setup( &
                KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-               MP_doexplicit_icegen, &
-               MP_couple_aerosol     )
+               MP_do_explicit_icegen, &
+               MP_couple_aerosol      )
        case default
           ! setup library component
           call ATMOS_PHY_MP_setup
@@ -256,7 +256,7 @@ contains
 
     integer :: k, i, j, iq
 
-    if ( MP_donegative_fixer ) then
+    if ( MP_do_negative_fixer ) then
 
 !OCL XFILL
        DENS0(:,:,:) = DENS(:,:,:)
@@ -533,9 +533,9 @@ contains
           !$omp parallel do default(none) &
           !$omp shared(JSB,JEB,ISB,IEB,KS,KE,RHOQ_t_MP,iq,QTRC1,QTRC,DENS1,DENS,dt_MP) &
           !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j  = JSB, JEB
-          do i  = ISB, IEB
-          do k  = KS, KE
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
              RHOQ_t_MP(k,i,j,iq) = ( QTRC1(k,i,j,iq) * DENS1(k,i,j) &
                                    - QTRC (k,i,j,iq) * DENS (k,i,j) ) / dt_MP
           enddo
@@ -555,12 +555,26 @@ contains
           call ATMOS_PHY_MP_MixingRatio( Qe  (:,:,:,:), & ! [OUT]
                                          QTRC(:,:,:,:)  ) ! [IN]
 
-          MP_doprecipitation = .false.
+          MP_do_precipitation = .false.
 
        end select
 
-       if ( MP_doprecipitation ) then
+       if ( MP_do_precipitation ) then
 
+          call PROF_rapstart('MP_Precipitation', 2)
+
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared (KA,KS,KE,ISB,IEB,JSB,JEB,QS_MP,QE_MP,QHA,QLA,QIA, &
+          !$omp         PRE00, &
+          !$omp         dt_MP,MP_NSTEP_SEDIMENTATION,MP_DTSEC_SEDIMENTATION,MP_RNSTEP_SEDIMENTATION, &
+          !$omp         REAL_CZ,REAL_FZ, &
+          !$omp         DENS,MOMZ,U,V,RHOT,TEMP,PRES,QTRC,CPtot,CVtot,EXNER, &
+          !$omp         DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOQ_t_MP,RHOH_MP, &
+          !$omp         SFLX_rain,SFLX_snow) &
+          !$omp private(i,j,k,iq,step, &
+          !$omp         FDZ,RFDZ,RCDZ, &
+          !$omp         DENS2,TEMP2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ2, &
+          !$omp         vterm,mflux,sflux,FLX_hydro,CP_t,CV_t)
           do j = JSB, JEB
           do i = ISB, IEB
 
@@ -656,6 +670,8 @@ contains
           enddo
           enddo
 
+          call PROF_rapend  ('MP_Precipitation', 2)
+
        end if
 
 
@@ -694,8 +710,9 @@ contains
     endif
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JS,JE,IS,IE,KS,KE,DENS_t,DENS_t_MP,MOMZ_t,MOMZ_t_MP,MOMX_t,MOMX_t_MP,MOMY_t) &
-    !$omp shared(MOMY_t_MP,RHOT_t,RHOT_t_MP)
+    !$omp shared(KS,KE,ISB,IEB,JSB,JEB, &
+    !$omp        DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOT_t_MP,RHOH_MP,MOMX_t_MP,MOMY_t_MP, &
+    !$omp        DENS_t,MOMZ_t,RHOU_t,RHOV_t,RHOT_t,RHOH,MOMX_t,MOMY_t)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE

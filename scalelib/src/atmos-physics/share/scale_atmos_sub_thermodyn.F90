@@ -449,9 +449,6 @@ contains
     integer :: iqw
     !---------------------------------------------------------------------------
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
-    !$omp private(k,iqw) &
-    !$omp private(qd,rt,cvt,cpt)
     do k = KS, KE
        qd  = 1.0_RP
        rt  = 0.0_RP

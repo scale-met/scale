@@ -101,8 +101,11 @@ contains
 
     call PROF_rapstart('MP_filter', 3)
 
-    !$omp parallel do default(none) private(i,j,k,iq,diffq) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JS,JE,IS,IE,KS,KE,QHA,QTRC,DENS,RHOT,diffq_check)
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k, &
+    !$omp         iq,diffq) &
+    !$omp shared(KS,KE,IS,IE,JS,JE,QHA, &
+    !$omp        QV,QTRC,DENS,diffq_check)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -320,9 +323,12 @@ contains
 
     if ( flag_liquid ) then ! warm rain
 
-       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JS,JE,IS,IE,KS,KE,QV0,QC0,TEMP0,CPtot0,CVtot0,LHV,LHF) &
-       !$omp private(QV,QC,Emoist,QSUM,CPtot,CVtot)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(KS,KE,IS,IE,JS,JE, &
+       !$omp        CP_VAPOR,CP_WATER,CV_VAPOR,CV_WATER,LHV,LHF, &
+       !$omp        DENS,QV0,QC0,TEMP0,CPtot0,CVtot0,RHOE_d) &
+       !$omp private(i,j,k, &
+       !$omp         TEMP,QV,QC,CPtot,CVtot,Emoist,QSUM)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -363,9 +369,12 @@ contains
 
     else ! cold rain
 
-       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JS,JE,IS,IE,KS,KE,QV0,QC0,QI0,TEMP0,CPtot0,CVtot0,LHV,LHF) &
-       !$omp private(QV,QC,QI,Emoist,QSUM,CPtot,CVtot)
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared (KS,KE,IS,IE,JS,JE, &
+       !$omp         CP_VAPOR,CP_WATER,CP_ICE,CV_VAPOR,CV_WATER,CV_ICE,LHV,LHF, &
+       !$omp         DENS,QV0,QC0,QI0,TEMP0,CPtot0,CVtot0,RHOE_d) &
+       !$omp private(i,j,k, &
+       !$omp         TEMP,QV,QC,QI,Emoist,QSUM,CPtot,CVtot)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -963,8 +972,6 @@ contains
     integer  :: k, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP_Precipitation', 2)
-
     ! tracer/energy transport by falldown
     ! 1st order upwind, forward euler, velocity is always negative
 
@@ -1022,8 +1029,6 @@ contains
 
     end do
 
-    call PROF_rapend  ('MP_Precipitation', 2)
-
     return
   end subroutine ATMOS_PHY_MP_precipitation
   !-----------------------------------------------------------------------------
@@ -1056,8 +1061,6 @@ contains
     integer  :: iq, iqa
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP_Precipitation', 2)
-
     flx(KE) = 0.0_RP
 
     !--- momentum z (half level)
@@ -1085,8 +1088,6 @@ contains
     do k = KS, KE
        RHOV_t(k) = - ( flx(k) - flx(k-1) ) * RCDZ(k)
     enddo
-
-    call PROF_rapend  ('MP_Precipitation', 2)
 
     return
   end subroutine ATMOS_PHY_MP_precipitation_momentum

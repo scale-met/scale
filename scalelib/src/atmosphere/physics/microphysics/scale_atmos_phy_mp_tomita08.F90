@@ -86,11 +86,11 @@ module scale_atmos_phy_mp_tomita08
   integer,  private, parameter   :: I_mp_QS =  4
   integer,  private, parameter   :: I_mp_QG =  5
 
-  logical,  private              :: couple_aerosol                 ! apply CCN effect?
-  logical,  private              :: doexplicit_icegen              ! apply explicit ice generation?
+  logical,  private              :: couple_aerosol      ! apply CCN effect?
+  logical,  private              :: do_explicit_icegen  ! apply explicit ice generation?
 
   logical,  private              :: fixed_re  = .false. ! use ice's effective radius for snow and graupel, and set rain transparent?
-  logical,  private              :: const_rec = .true. ! use constant  effective radius for cloud water?
+  logical,  private              :: const_rec = .true.  ! use constant  effective radius for cloud water?
   logical,  private              :: nofall_qr = .false. ! surpress sedimentation of rain?
   logical,  private              :: nofall_qi = .false. ! surpress sedimentation of ice?
   logical,  private              :: nofall_qs = .false. ! surpress sedimentation of snow?
@@ -322,8 +322,8 @@ contains
   !<
   subroutine ATMOS_PHY_MP_tomita08_setup( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       MP_doexplicit_icegen, &
-       MP_couple_aerosol     )
+       MP_do_explicit_icegen, &
+       MP_couple_aerosol      )
     use scale_process, only: &
        PRC_abort
     use scale_const, only: &
@@ -340,7 +340,7 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    logical, intent(in) :: MP_doexplicit_icegen
+    logical, intent(in) :: MP_do_explicit_icegen
     logical, intent(in) :: MP_couple_aerosol
 
     real(RP) :: autoconv_nc     = Nc_ocn  !< number concentration of cloud water [1/cc]
@@ -417,7 +417,7 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_TOMITA08)
 
-    doexplicit_icegen = MP_doexplicit_icegen
+    do_explicit_icegen = MP_do_explicit_icegen
     couple_aerosol    = MP_couple_aerosol
 
 
@@ -437,7 +437,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Surpress sedimentation of ice?     : ', nofall_qi
     if( IO_L ) write(IO_FID_LOG,*) '*** Surpress sedimentation of snow?    : ', nofall_qs
     if( IO_L ) write(IO_FID_LOG,*) '*** Surpress sedimentation of graupel? : ', nofall_qg
-    if( IO_L ) write(IO_FID_LOG,*) '*** Enable explicit ice generation?    : ', MP_doexplicit_icegen
+    if( IO_L ) write(IO_FID_LOG,*) '*** Enable explicit ice generation?    : ', do_explicit_icegen
     if( IO_L ) write(IO_FID_LOG,*)
 
     do j = JS, JE
@@ -462,7 +462,7 @@ contains
     Dg = 0.50_RP
 
     if ( enable_RS2014 ) then ! overwrite parameters
-       doexplicit_icegen = .true.
+       do_explicit_icegen = .true.
 
        sw_RS2014 = 1.0_RP
        N0g_def   = 4.E+8_RP
@@ -473,7 +473,7 @@ contains
        Egs       = 0.0_RP
     endif
 
-    if ( doexplicit_icegen ) then
+    if ( do_explicit_icegen ) then
        only_liquid = .true.
        sw_expice   = 1.0_RP
     else
@@ -760,14 +760,21 @@ contains
     call PROF_rapstart('MP_tomita08', 3)
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(DENS0,TEMP0,PRES0,CCN,CPtot0,CVtot0,dt, &
-    !$omp        QTRC0,RHOE_t, &
+    !$omp shared(KS,KE,IS,IE,JS,JE, &
+    !$omp        DENS0,TEMP0,PRES0,QTRC0,CCN,CPtot0,CVtot0,dt, &
+    !$omp        RHOE_t, &
+    !$omp        EPS,PI,PRE00,LHV,LHF,LHF0,CP_VAPOR,CP_WATER,CP_ICE,CV_VAPOR,CV_WATER,CV_ICE,ln10, &
+    !$omp        couple_aerosol,sw_expice,sw_WDXZ2014,sw_RS2014,sw_KK2000, &
+    !$omp        Nc_def,N0r_def,N0s_def,N0g_def, &
+    !$omp        Cr,Cs,Cg,Erw,Eri,Eiw,Esw,Esr,Esi,Egw,Egr,Egi,Egs,Ar,As,Ag, &
+    !$omp        gamma_sacr,gamma_gacs,gamma_saut,gamma_gaut,beta_saut,beta_gaut,qicrt_saut,qscrt_gaut,mi, &
+    !$omp        GAM,GAM_2,GAM_3,GAM_1br,GAM_1bs,GAM_1bsds,GAM_1bg,GAM_1bgdg,GAM_1brdr,GAM_2br,GAM_2bs,GAM_3br,GAM_3bs,GAM_3dr,GAM_3ds,GAM_3dg,GAM_5dr_h,GAM_5ds_h,GAM_5dg_h,GAM_6dr, &
     !$omp        w3d) &
-    !$omp private(dens,temp,cptot,cvtot,qv,qc,qr,qi,qs,qg,qv_t,qc_t,qr_t,qi_t,qs_t,qg_t,e_t,cp_t,cv_t &
+    !$omp private(dens,temp,cptot,cvtot,qv,qc,qr,qi,qs,qg,qv_t,qc_t,qr_t,qi_t,qs_t,qg_t,e_t,cp_t,cv_t, &
     !$omp         QSATL,QSATI,Sliq,Sice,Rdens,rho_fact,temc,N0r,N0s,N0g, &
     !$omp         RLMDr,RLMDr_2,RLMDr_3,RLMDs,RLMDs_2,RLMDs_3,RLMDg,RLMDg_2,RLMDg_3, &
     !$omp         RLMDr_1br,RLMDr_2br,RLMDr_3br,RLMDs_1bs,RLMDs_2bs,RLMDs_3bs, &
-    !$omp         RLMDr_dr,RLMDr_3dr,RLMDr_5dr,RLMDs_ds,RLMDs_3ds,RLMDs_5ds,
+    !$omp         RLMDr_dr,RLMDr_3dr,RLMDr_5dr,RLMDs_ds,RLMDs_3ds,RLMDs_5ds, &
     !$omp         RLMDg_dg,RLMDg_3dg,RLMDg_5dg,RLMDr_7,RLMDr_6dr, &
     !$omp         tems,Xs2,MOMs_0,MOMs_1,MOMs_2,MOMs_0bs,MOMs_1bs,MOMs_2bs,MOMs_2ds,MOMs_5ds_h,RMOMs_Vt, &
     !$omp         coef_at,coef_bt,loga_,b_,nm, &
