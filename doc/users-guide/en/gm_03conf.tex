@@ -13,15 +13,15 @@
  change to \texttt{scale-{\version}/scale-gm/test/case/DCMIP2016-12/}. After that, make a directory.
  The directory of gl05rl00z30pe40 already may exists, we assume create it newly.
  \begin{verbatim}
-    > mkdir gl05rl00z30pe40
-    > cd    gl05rl00z30pe40
+    $ mkdir gl05rl00z30pe40
+    $ cd    gl05rl00z30pe40
  \end{verbatim}
 
  \noindent Copy Makefile and configuration file from another directory
  of DCMIP2016 to the new direcotory, for example DCMIP2016-11.
  \begin{verbatim}
-    > cp ../../DCMIP2016-11/gl05rl00z30pe10/Makefile       ./
-    > cp ../../DCMIP2016-11/gl05rl00z30pe10/nhm_driver.cnf ./
+    $ cp ../../DCMIP2016-11/gl05rl00z30pe10/Makefile       ./
+    $ cp ../../DCMIP2016-11/gl05rl00z30pe10/nhm_driver.cnf ./
  \end{verbatim}
 
 \subsection{Edit configuration file: nhm\_driver.cnf}
@@ -31,35 +31,35 @@
  \noindent {\large{\sf edit for test case 161: moist baroclinic wave}}
 
  (symbols "\verb|<--|" means changed parameters)
- \begin{verbatim}
-    > vi nhm_driver.cnf
-     * snip *
-
-     &RUNCONFPARAM
-       RUNNAME        = 'DCMIP2016-11',      <--
-       NDIFF_LOCATION = 'IN_LARGE_STEP2',
-       THUBURN_LIM    = .true.,
-       RAIN_TYPE      = "WARM",
-       AF_TYPE        = 'DCMIP',
-     /
-
-     * snip *
-
-     &DYCORETESTPARAM
-       init_type   = 'Jablonowski-Moist',    <--
-       test_case   = '1',                    <--
-       chemtracer  = .true.,                 <--
-       prs_rebuild = .false.,
-     /
-
-     * snip *
-
-     &FORCING_DCMIP_PARAM
-       SET_DCMIP2016_11 = .true.,            <--
-     /
-
-     * snip *
- \end{verbatim}
+ \editboxtwo{
+    \verb|$ vi nhm_driver.cnf | & \\
+    \verb| * snip * | & \\
+    \\
+    \verb| &RUNCONFPARAM  | & \\ 
+    \verb|   RUNNAME        = 'DCMIP2016-11',  | &  {\verb| <--|} \\
+    \verb|   NDIFF_LOCATION = 'IN_LARGE_STEP2', | & \\
+    \verb|   THUBURN_LIM    = .true., | & \\
+    \verb|   RAIN_TYPE      = "WARM", | & \\
+    \verb|   AF_TYPE        = 'DCMIP', | & \\
+    \verb| / | & \\
+    \\
+    \verb| * snip * | & \\
+    \\
+    \verb| &DYCORETESTPARAM | & \\
+    \verb|   init_type   = 'Jablonowski-Moist', | & {\verb| <--|} \\
+    \verb|   test_case   = '1',                 | & {\verb| <--|}\\  
+    \verb|   chemtracer  = .true.,              | & {\verb| <--|}\\  
+    \verb|   prs_rebuild = .false.,              | & {\verb| <--|}\\
+    \verb| / | & \\
+    \\
+    \verb| * snip * | & \\
+    \\
+    \verb| &FORCING_DCMIP_PARAM | & \\
+    \verb|   SET_DCMIP2016_11 = .true., | & {\verb| <--|} \\
+    \verb| / | & \\
+    \\
+    \verb| * snip * | & \\
+ }
 
  \noindent \textcolor{blue}{{\sf Note}}
  \begin{itemize}
@@ -85,32 +85,32 @@
  \noindent {\large {\sf edit for test case 162: ideal tropical cyclone}}
 
  (symbols "\verb|<--|" means changed parameters)
- \begin{verbatim}
-    > vi nhm_driver.cnf
-     * snip *
-
-     &RUNCONFPARAM
-       RUNNAME        = 'DCMIP2016-12',      <--
-       NDIFF_LOCATION = 'IN_LARGE_STEP2',
-       THUBURN_LIM    = .true.,
-       RAIN_TYPE      = "WARM",
-       AF_TYPE        = 'DCMIP',
-     /
-
-     * snip *
-
-     &DYCORETESTPARAM
-       init_type   = 'Tropical-Cyclone',     <--
-     /
-
-     * snip *
-
-     &FORCING_DCMIP_PARAM
-       SET_DCMIP2016_12 = .true.,            <--
-     /
-
-     * snip *
- \end{verbatim}
+ \editboxtwo{
+   \verb| $ vi nhm_driver.cnf| & \\
+   \verb|  * snip *| & \\
+   \\
+   \verb|  &RUNCONFPARAM | & \\
+   \verb|    RUNNAME        = 'DCMIP2016-12',| & {\verb|<--|} \\
+   \verb|    NDIFF_LOCATION = 'IN_LARGE_STEP2',| & \\
+   \verb|    THUBURN_LIM    = .true.,| & \\
+   \verb|    RAIN_TYPE      = "WARM",| & \\
+   \verb|    AF_TYPE        = 'DCMIP',| & \\
+   \verb|  /| & \\
+   \\
+   \verb|  * snip *| \\
+   \\
+   \verb|  &DYCORETESTPARAM| \\
+   \verb|    init_type   = 'Tropical-Cyclone',|  &{\verb|<--|} \\
+   \verb|  /| & \\
+   \\
+   \verb|  * snip * | & \\
+   \\ 
+   \verb|  &FORCING_DCMIP_PARAM | & \\
+   \verb|    SET_DCMIP2016_12 = .true.,| & {\verb|<--|} \\
+   \verb|  / | & \\
+   \\
+   \verb|  * snip * | & \\
+ }
 
  \noindent \textcolor{blue}{{\sf Note}}
  \begin{itemize}
@@ -129,33 +129,33 @@
  \noindent {\large{\sf edit for test case 163: supercell}}
 
  (symbols "\verb|<--|" means changed parameters)
- \begin{verbatim}
-    > vi nhm_driver.cnf
-     * snip *
-
-     &RUNCONFPARAM
-       RUNNAME        = 'DCMIP2016-13',      <--
-       NDIFF_LOCATION = 'IN_LARGE_STEP2',
-       THUBURN_LIM    = .true.,
-       RAIN_TYPE      = "WARM",
-       AF_TYPE        = 'DCMIP',
-     /
-
-     * snip *
-
-     &DYCORETESTPARAM
-       init_type   = 'Supercell',            <--
-       test_case  = '1',                     <--
-     /
-
-     * snip *
-
-     &FORCING_DCMIP_PARAM
-       SET_DCMIP2016_13 = .true.,            <--
-     /
-
-     * snip *
- \end{verbatim}
+ \editboxtwo{
+   \verb|  $ vi nhm_driver.cnf | & \\
+   \verb|  * snip * | & \\
+   \\
+   \verb|  &RUNCONFPARAM| & \\
+   \verb|    RUNNAME        = 'DCMIP2016-13', | &  {\verb|<--|}\\
+   \verb|    NDIFF_LOCATION = 'IN_LARGE_STEP2',| & {\verb|<--|}\\
+   \verb|    THUBURN_LIM    = .true.,| & \\
+   \verb|    RAIN_TYPE      = "WARM",| & \\
+   \verb|    AF_TYPE        = 'DCMIP',| & \\
+   \verb|  /| & \\
+   \\
+   \verb|  * snip *| & \\
+   \\
+   \verb|  &DYCORETESTPARAM| & \\
+   \verb|    init_type   = 'Supercell', | & {\verb|<--|}\\
+   \verb|    test_case  = '1',          | & {\verb|<--|}\\
+   \verb|  /| & \\
+   \\
+   \verb|  * snip * | & \\
+   \\
+   \verb|  &FORCING_DCMIP_PARAM| & \\
+   \verb|    SET_DCMIP2016_13 = .true., | & {\verb|<--|}\\
+   \verb|  /| & \\
+   \\
+   \verb|  * snip *| & \\
+ }
 
  \noindent \textcolor{blue}{{\sf Note}}
  \begin{itemize}
@@ -176,8 +176,8 @@
  \noindent After above edit, you can run the experiment
  by the same manner in Section 1.4.
  \begin{verbatim}
-    > make run
-    > sh run.sh
+    $ make run
+    $ sh run.sh
  \end{verbatim}
 
 
@@ -199,17 +199,17 @@
 
  %--------------------
  (symbols "\verb|<--|" means changed parameters)
- \begin{verbatim}
-    > vi nhm_driver.cnf
-     * snip *
-
-     &FORCING_DCMIP_PARAM
-       SET_DCMIP2016_11 = .true.,
-       SET_DCMIP2016_LSC = .true.,      <--
-      /
-
-     * snip *
- \end{verbatim}
+ \editboxtwo{
+   \verb| $ vi nhm_driver.cnf | & \\
+   \verb|  * snip * | & \\
+   \\
+   \verb|  &FORCING_DCMIP_PARAM | & \\
+   \verb|    SET_DCMIP2016_11 = .true., | & \\
+   \verb|    SET_DCMIP2016_LSC = .true.,  | & {\verb|<--|}\\     
+   \verb|   / | & \\
+   \\
+   \verb|  * snip *  | & \\
+ }
 
 
  \noindent {\large{\sf no cloud physics}}
@@ -218,17 +218,17 @@
  An example for test case 161 is shown below.
 
  (symbols "\verb|<--|" means changed parameters)
- \begin{verbatim}
-    > vi nhm_driver.cnf
-     * snip *
-
-     &FORCING_DCMIP_PARAM
-       SET_DCMIP2016_11 = .true.,
-       SET_DCMIP2016_DRY = .true.,      <--
-      /
-
-     * snip *
- \end{verbatim}
+ \editboxtwo{
+   \verb| $ vi nhm_driver.cnf | & \\
+   \verb|  * snip * | & \\
+   \\
+   \verb|  &FORCING_DCMIP_PARAM | & \\
+   \verb|    SET_DCMIP2016_11 = .true.,   | & \\
+   \verb|    SET_DCMIP2016_DRY = .true.,  | & {\verb|<--|}\\     
+   \verb|   / | & \\
+   \\
+   \verb|  * snip * | & \\
+ }
 
  \noindent {\large{\sf use George Bryan PBL}}
 
@@ -238,17 +238,17 @@
  An example is shown below.
 
  (symbols "\verb|<--|" means changed parameters)
- \begin{verbatim}
-    > vi nhm_driver.cnf
-     * snip *
-
-     &FORCING_DCMIP_PARAM
-       SET_DCMIP2016_12 = .true.,
-       SM_PBL_Bryan     = .true.,      <--
-      /
-
-     * snip *
- \end{verbatim}
+ \editboxtwo{
+  \verb|  $ vi nhm_driver.cnf | & \\
+  \verb|   * snip * | & \\
+  \\
+  \verb|   &FORCING_DCMIP_PARAM | & \\
+  \verb|     SET_DCMIP2016_12 = .true., | & \\
+  \verb|     SM_PBL_Bryan     = .true., | & {\verb|<--|}\\      
+  \verb|    / | & \\
+  \\
+  \verb|   * snip * | & \\
+ }
 
 
  \noindent {\large{\sf no physics}}
@@ -258,20 +258,20 @@
  An example for test case 161 is shown below.
 
  (symbols "\verb|<--|" means changed parameters)
- \begin{verbatim}
-    > vi nhm_driver.cnf
-     * snip *
-
-     &RUNCONFPARAM
-       RUNNAME        = 'DCMIP2016-11',
-       NDIFF_LOCATION = 'IN_LARGE_STEP2',
-       THUBURN_LIM    = .true.,
-       RAIN_TYPE      = "WARM",
-       AF_TYPE        = 'NONE',       <--
-      /
-
-     * snip *
- \end{verbatim}
+ \editboxtwo{
+  \verb|  $ vi nhm_driver.cnf | & \\
+  \verb|   * snip *| & \\
+  \\
+  \verb|   &RUNCONFPARAM| & \\
+  \verb|     RUNNAME        = 'DCMIP2016-11',| & \\
+  \verb|     NDIFF_LOCATION = 'IN_LARGE_STEP2',| & \\
+  \verb|     THUBURN_LIM    = .true.,| & \\
+  \verb|     RAIN_TYPE      = "WARM",| & \\
+  \verb|     AF_TYPE        = 'NONE',| & {\verb|<--|} \\ 
+  \verb|    /| & \\
+  \\
+  \verb|   * snip *| & \\
+ }
 
 
 
@@ -288,65 +288,65 @@
 %------------------------------------------------------------------------------
  We assume in \texttt{scale-{\version}/scale-gm/test/case/DCMIP2016-11/}
  \begin{verbatim}
-    > mkdir gl05rl01z30pe40    <-- r-level is 1
-    > cd gl05rl01z30pe40/
+    $ mkdir gl05rl01z30pe40    <-- r-level is 1
+    $ cd gl05rl01z30pe40/
  \end{verbatim}
 
  \noindent Copy Makefile and configuration file to new direcotory.
  \begin{verbatim}
-    > cp ../gl05rl00z30pe10/Makefile ./
-    > cp ../gl05rl00z30pe10/nhm_driver.cnf ./
+    $ cp ../gl05rl00z30pe10/Makefile ./
+    $ cp ../gl05rl00z30pe10/nhm_driver.cnf ./
  \end{verbatim}
 
 \subsection{Edit Makefile}
 %------------------------------------------------------------------------------
  (symbols "\verb|<--|" means changed parameters) \\
  On the Lines from 17 to 21, edit parameters.
- \begin{verbatim}
-    > vi Makefile
-     glevel = 5
-     rlevel = 1      <--
-     nmpi   = 40     <--
-     zlayer = 30
-     vgrid  = vgrid30_stretch_30km_dcmip2016.dat
- \end{verbatim}
+ \editboxtwo{
+  \verb|  $ vi Makefile |& \\
+  \verb|   glevel = 5   |& \\
+  \verb|   rlevel = 1   |& {\verb|<--|}\\   
+  \verb|   nmpi   = 40  |& {\verb|<--|}\\   
+  \verb|   zlayer = 30  |& \\
+  \verb|   vgrid  = vgrid30_stretch_30km_dcmip2016.dat |& \\
+ }
 
 \subsection{Edit configuration file: nhm\_driver.cnf}
 %------------------------------------------------------------------------------
  (symbols "\verb|<--|" means changed parameters)
- \begin{verbatim}
-    > vi nhm_driver.cnf
-     * snip *
-     &ADMPARAM
-       glevel      = 5,
-       rlevel      = 1,                     <--
-       vlayer      = 30,
-       rgnmngfname = "rl01-prc40.info",     <--
-      /
-
-     &GRDPARAM
-       hgrid_io_mode = "ADVANCED",
-       hgrid_fname   = "boundary_GL05RL01",  <--
-       VGRID_fname   = "vgrid30_stretch_30km_dcmip2016.dat",
-       vgrid_scheme  = "LINEAR",
-       topo_fname    = "NONE",
-      /
-
-     * snip *
-
-     &RESTARTPARAM
-       input_io_mode     = 'IDEAL',
-       output_io_mode    = 'ADVANCED',
-       output_basename   = 'restart_all_GL05RL01z30', <--
-       restart_layername = 'ZSALL32_DCMIP16',
-      /
- \end{verbatim}
+ \editboxtwo{
+  \verb|  $ vi nhm_driver.cnf |&\\
+  \verb|   * snip * |&\\
+  \verb|   &ADMPARAM |&\\
+  \verb|     glevel      = 5, |&\\
+  \verb|     rlevel      = 1, |& {\verb|<--|} \\ 
+  \verb|     vlayer      = 30, |&\\
+  \verb|     rgnmngfname = "rl01-prc40.info", |& {\verb|<--|} \\
+  \verb|    / |&\\
+  \\
+  \verb|   &GRDPARAM |&\\
+  \verb|     hgrid_io_mode = "ADVANCED", |&\\
+  \verb|     hgrid_fname   = "boundary_GL05RL01", |& {\verb|<--|} \\
+  \verb|     VGRID_fname   = "vgrid30_stretch_30km_dcmip2016.dat", |&\\
+  \verb|     vgrid_scheme  = "LINEAR", |&\\
+  \verb|     topo_fname    = "NONE", |&\\
+  \verb|    / |&\\
+  \\
+  \verb|   * snip * |&\\
+  \\
+  \verb|   &RESTARTPARAM |&\\
+  \verb|     input_io_mode     = 'IDEAL', |&\\
+  \verb|     output_io_mode    = 'ADVANCED', |&\\
+  \verb|     output_basename   = 'restart_all_GL05RL01z30', |& {\verb|<--|} \\
+  \verb|     restart_layername = 'ZSALL32_DCMIP16', |&\\
+  \verb|    / |&\\
+ }
 
  \noindent After above edit, you can run the experiment
  by the same manner in Section 1.4.
  \begin{verbatim}
-    > make run
-    > sh run.sh
+    $ make run
+    $ sh run.sh
  \end{verbatim}
 
 
@@ -363,28 +363,28 @@
 %------------------------------------------------------------------------------
  We assume in \texttt{scale-{\version}/scale-gm/test/case/DCMIP2016-11/}
  \begin{verbatim}
-    > mkdir gl06rl01z30pe40  <-- g-level is 6, and r-level is 1
-    > cd gl06rl01z30pe40/
+    $ mkdir gl06rl01z30pe40  <-- g-level is 6, and r-level is 1
+    $ cd gl06rl01z30pe40/
  \end{verbatim}
 
  \noindent Copy Makefile and configuration file to new direcotory.
  \begin{verbatim}
-    > cp ../gl05rl00z30pe10/Makefile ./
-    > cp ../gl05rl00z30pe10/nhm_driver.cnf ./
+    $ cp ../gl05rl00z30pe10/Makefile ./
+    $ cp ../gl05rl00z30pe10/nhm_driver.cnf ./
  \end{verbatim}
 
 \subsection{Edit Makefile}
 %------------------------------------------------------------------------------
  (symbols "\verb|<--|" means changed parameters) \\
  On the Lines from 17 to 21, edit parameters.
- \begin{verbatim}
-    > vi Makefile
-     glevel = 6      <--
-     rlevel = 1      <--
-     nmpi   = 40     <--
-     zlayer = 30
-     vgrid  = vgrid30_stretch_30km_dcmip2016.dat
- \end{verbatim}
+ \editboxtwo{
+  \verb|  $ vi Makefile | & \\
+  \verb|   glevel = 6 | & {\verb|<--|}  \\  
+  \verb|   rlevel = 1 | & {\verb|<--|}  \\  
+  \verb|   nmpi   = 40 | & {\verb|<--|}  \\ 
+  \verb|   zlayer = 30 | & \\
+  \verb|   vgrid  = vgrid30_stretch_30km_dcmip2016.dat | & \\
+ }
 
 \subsection{Edit configuration file: nhm\_driver.cnf}
 %------------------------------------------------------------------------------
@@ -395,73 +395,73 @@
  {\sf take 1/8 of coefficient value by one up of g-level}. \\
 
  \noindent (symbols "\verb|<--|" means changed parameters)
- \begin{verbatim}
-    > vi nhm_driver.cnf
-     * snip *
-     &ADMPARAM
-       glevel      = 6,                     <--
-       rlevel      = 1,                     <--
-       vlayer      = 30,
-       rgnmngfname = "rl01-prc40.info",     <--
-      /
-
-     &GRDPARAM
-       hgrid_io_mode = "ADVANCED",
-       hgrid_fname   = "boundary_GL06RL01",  <--
-       VGRID_fname   = "vgrid30_stretch_30km_dcmip2016.dat",
-       vgrid_scheme  = "LINEAR",
-       topo_fname    = "NONE",
-      /
-
-     &TIMEPARAM
-       DTL         = 300.D0,     <--
-       INTEG_TYPE  = "RK3",
-       LSTEP_MAX   = 4320,       <--
-       start_date  = 0000,1,1,0,0,0
-      /
-
-     * snip *
-
-     &RESTARTPARAM
-       input_io_mode     = 'IDEAL',
-       output_io_mode    = 'ADVANCED',
-       output_basename   = 'restart_all_GL06RL01z30', <--
-       restart_layername = 'ZSALL32_DCMIP16',
-      /
-
-     * snip *
-
-     &NUMFILTERPARAM
-       lap_order_hdiff   = 2,
-       hdiff_type        = 'NONLINEAR1',
-       Kh_coef_maxlim    = 1.500D+16,    <--
-       Kh_coef_minlim    = 1.500D+15,    <--
-       ZD_hdiff_nl       = 20000.D0,
-       divdamp_type      = 'DIRECT',
-       lap_order_divdamp = 2,
-       alpha_d           = 1.50D15,      <--
-       gamma_h_lap1      = 0.0D0,
-       ZD                = 40000.D0,
-       alpha_r           = 0.0D0,
-      /
-
-     * snip *
-
-     &NMHISD
-       output_io_mode   = 'ADVANCED' ,
-       histall_fname    = 'history'  ,
-       hist3D_layername = 'ZSDEF30_DCMIP16',
-       NO_VINTRPL       = .false.    ,
-       output_type      = 'SNAPSHOT' ,
-       step             = 288        ,    <--
-       doout_step0      = .true.     ,
-      /
- \end{verbatim}
+ \editboxtwo{
+   \verb| $ vi nhm_driver.cnf | & \\
+   \verb|  * snip * | & \\
+   \verb|  &ADMPARAM | & \\
+   \verb|    glevel      = 6, | & {\verb|<--|}\\
+   \verb|    rlevel      = 1, | & \\
+   \verb|    vlayer      = 30, | & \\
+   \verb|    rgnmngfname = "rl01-prc40.info", | & {\verb|<--|}\\
+   \verb|   / | & \\
+   \\
+   \verb|  &GRDPARAM | & \\
+   \verb|    hgrid_io_mode = "ADVANCED", | & \\
+   \verb|    hgrid_fname   = "boundary_GL06RL01", | & {\verb|<--|}\\
+   \verb|    VGRID_fname   = "vgrid30_stretch_30km_dcmip2016.dat", | & \\
+   \verb|    vgrid_scheme  = "LINEAR", | & \\
+   \verb|    topo_fname    = "NONE", | & \\
+   \verb|   / | & \\
+   \\
+   \verb|  &TIMEPARAM | & \\
+   \verb|    DTL         = 300.D0, | & {\verb|<--|}\\
+   \verb|    INTEG_TYPE  = "RK3", | & \\
+   \verb|    LSTEP_MAX   = 4320, | & {\verb|<--|}\\
+   \verb|    start_date  = 0000,1,1,0,0,0 | & \\
+   \verb|   / | & \\
+   \\
+   \verb|  * snip * | & \\
+   \\
+   \verb|  &RESTARTPARAM | & \\
+   \verb|    input_io_mode     = 'IDEAL', | & \\
+   \verb|    output_io_mode    = 'ADVANCED', | & \\
+   \verb|    output_basename   = 'restart_all_GL06RL01z30',  | & {\verb|<--|}\\
+   \verb|    restart_layername = 'ZSALL32_DCMIP16', | & \\
+   \verb|   / | & \\
+   \\
+   \verb|  * snip * | & \\
+   \\
+   \verb|  &NUMFILTERPARAM | & \\
+   \verb|    lap_order_hdiff   = 2, | & \\
+   \verb|    hdiff_type        = 'NONLINEAR1', | & \\
+   \verb|    Kh_coef_maxlim    = 1.500D+16, | & {\verb|<--|}\\
+   \verb|    Kh_coef_minlim    = 1.500D+15, | & {\verb|<--|}\\
+   \verb|    ZD_hdiff_nl       = 20000.D0, | & \\
+   \verb|    divdamp_type      = 'DIRECT', | & \\
+   \verb|    lap_order_divdamp = 2, | & \\
+   \verb|    alpha_d           = 1.50D15,  | & {\verb|<--|}\\
+   \verb|    gamma_h_lap1      = 0.0D0, | & \\
+   \verb|    ZD                = 40000.D0, | & \\
+   \verb|    alpha_r           = 0.0D0, | & \\
+   \verb|   / | & \\
+   \\
+   \verb|   * snip * | & \\
+   \\
+   \verb|  &NMHISD | & \\
+   \verb|    output_io_mode   = 'ADVANCED' , | & \\
+   \verb|    histall_fname    = 'history'  , | & \\
+   \verb|    hist3D_layername = 'ZSDEF30_DCMIP16', | & \\
+   \verb|    NO_VINTRPL       = .false.    , | & \\
+   \verb|    output_type      = 'SNAPSHOT' , | & \\
+   \verb|    step             = 288        , | & {\verb|<--|}\\
+   \verb|    doout_step0      = .true.     , | & \\
+   \verb|   / | & \\
+ }
 
  \noindent After above edit, you can run the experiment
  by the same manner in Section 1.4.
  \begin{verbatim}
-    > make run
-    > sh run.sh
+    $ make run
+    $ sh run.sh
  \end{verbatim}
 
