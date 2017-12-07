@@ -1,44 +1,45 @@
-%\textcolor{red}{[英語版未対応-----ここから]}
+%\textcolor{red}{[英語版対応、要推敲-----ここから]}
 \section{Preparataion of databases}
 %-------------------------------------------------------------------------------
 
-To run the scale-gm, you need horizontal grid databases. We assume that 
-we use g-level=5, r-level=0, and 10 MPI processes in this tutorial.
-The databases for this setting is included in the tarball and 
-thus are not need to be prepared. 
-But if you use a different set of settings, you need to use databases 
+To run the scale-gm, you need to prepare horizontal grid databases. 
+The database for g-level=5, r-level=0, and 10 MPI processes 
+is included in the tarball, as an example.
+However, if you use a different set of settings, you need to prepare databases 
 in one of the following ways.
 \subsection{Use preprepared databases}
 The databases for some of the typical settings can be downloaded from 
-\noindent \url{http://scale.aics.r%iken.jp/ja/download/}
+\noindent \url{http://scale.aics.riken.jp/ja/download/}
 
-For example, when you download
-scale-gm\_database\_gl06rl01pe40.tar.gz\footnote{g-level=6,r-level=1,40
-  processes are assumed to be used}
-you have 40 boundary (horizontal grid databases) files and 41 llmap (LatLon
+For example, if you plan to use g-level=6, r-level=1, 40 MPI processes, 
+you can find the database for the settings 
+scale-gm\_database\_gl06rl01pe40.tar.gz
+
+Download and untar the file you have 40 boundary (horizontal grid database)
+files and 41 llmap (LatLon
 grid conversion table) files. 
 \begin{verbatim}
-  > tar -zxvf scale-gm_database_gl06rl01pe40.tar.gz
+  $ tar -zxvf scale-gm_database_gl06rl01pe40.tar.gz
 \end{verbatim}
 
 \noindent Then you need to move each database to appropriate directories.
 
 \noindent First the boundary files are moved to a new directory under 
 \texttt{scale-{\version}/scale-gm/test/data/grid/boundary}
-If we suppose we are in the untared directory, you may use the following commands
+If we suppose we are in the untared directory, you use the following commands
 \\
 
-\verb|  > mkdir scale-|{\version}\verb|/scale-gm/test/data/grid/boundary/gl06rl01pe40|
+\verb|  $ mkdir scale-|{\version}\verb|/scale-gm/test/data/grid/boundary/gl06rl01pe40|
 
-\verb|  > mv boundary_GL06RL01.* scale-|{\version}\verb|/scale-gm/test/data/grid/boundary/gl06rl01pe40/|
+\verb|  $ mv boundary_GL06RL01.* scale-|{\version}\verb|/scale-gm/test/data/grid/boundary/gl06rl01pe40/|
 \\
 
-\noindent The llmap files are move to a new directory under 
+\noindent The llmap files are moved to a new directory under 
 \texttt{scale-{\version}/scale-gm/test/data/grid/llmap}
 
-\verb|  > mkdir -p scale-|{\version}\verb|/scale-gm/test/data/grid/llmap/gl06/rl01|
+\verb|  $ mkdir -p scale-|{\version}\verb|/scale-gm/test/data/grid/llmap/gl06/rl01|
 
-\verb|  > mv llmap.* scale-|{\version}\verb|/scale-gm/test/data/grid/boundary/gl06/rl01/| \\
+\verb|  $ mv llmap.* scale-|{\version}\verb|/scale-gm/test/data/grid/boundary/gl06/rl01/| \\
 
 
 \subsection{Create new databases}
@@ -47,118 +48,197 @@ If we suppose we are in the untared directory, you may use the following command
 Databases can be made in the following steps.
 \subsubsection{1.Creation of horizontal grid databases}
 Creating horizontal grid databases consist of the following three steps.
-\textcolor{red}{the created databases should be moved to the appropriate directories?}
+\textcolor{red}{[The created databases should automatically be moved to the appropriate directories]}
 \footnote{For example\texttt{scale-{\version}/scale-gm/test/data/grid/boundary}}
 \renewcommand{\labelenumi}{(\roman{enumi})}
 \begin{enumerate}
 
-\item{Creation of process managing database} 
+\item{Creation of process managing database}  \\
+\verb|  $ mkdir scale-|{\version}\verb|/scale-gm/test/framework/mkrawgrid/gl05rl01pe20|
 
-\verb|  > cd scale-|{\version}\verb|/scale-gm/test/framework/mkmnginfo/rl01pe20|
+\verb|  $ cd scale-|{\version}\verb|/scale-gm/test/framework/mkrawgrid/rl01pe20|
+Copy a Makefile from an exisiting sample directory
+\begin{verbatim}
+  $ cp ../../rl01pe40/Makefile .
+\end{verbatim}
+
+Edit the Makefile
+\editboxtwo{
+\verb|# parameters for run| & \\
+\verb|    glevel      = none| &\\
+\verb|    rlevel      = 1|　　　　　　         &{\verb|<-- rlevel|} \\
+\verb|    nmpi        = 40|                    &{\verb|<-- number of processors|} \\
+\verb|    zlayer      = none| &\\
+\verb|    vgrid       = none| & \\
+}
+
 \vspace{-4mm}
 \begin{verbatim}
-  > make jobshell
-  > make run
+  $ make jobshell
+  $ make run
 \end{verbatim}
 You need to edit the following file appropriately
  \begin{verbatim}
-    > vi nhm_driver.cnf
-     &mkmnginfo_cnf
-      rlevel       = 1,                      <-- rlevel 
-      prc_num      = 20,                     <-- proess number
-      output_fname = "rl01-prc20.info",      <-- output filename
-     /
- \end{verbatim}
+    $ vi nhm_driver.cnf
+\end{verbatim}
+\editboxtwo{
+\verb|&mkmnginfo_cnf| & \\
+\verb|  rlevel       = 1,|                   &   {\verb|<-- rlevel |}\\
+\verb|  prc_num      = 20,|                  &   {\verb|<-- number of processors|}\\
+\verb|  output_fname = "rl01-prc20.info",|   &   {\verb|<-- output filename|}\\
+\verb|/|&\\
+}
 
-\item{Creation of raw grid database}
+\item{Creation of raw grid database} \\
+\verb|  $ mkdir scale-|{\version}\verb|/scale-gm/test/framework/mkrawgrid/gl05rl01pe20| \\
+\verb|  $ cd scale-|{\version}\verb|/scale-gm/test/framework/mkrawgrid/gl05rl01pe20|
 
-\verb|  > cd scale-|{\version}\verb|/scale-gm/test/framework/mkrawgrid/gl05rl01pe20|
+Copy a Makefile from an exisiting sample directory
+\begin{verbatim}
+  $ cp ../../rl01pe40/Makefile .
+\end{verbatim}
+
+Edit the Makefile
+\editboxtwo{
+\verb|# parameters for run |&\\
+\verb|glevel      = 6|             & {\verb|<-- glevel|} \\
+\verb|rlevel      = 1|             & {\verb|<-- rlevel|} \\
+\verb|nmpi        = 20|            & {\verb|<-- number of processors|} \\
+\verb|zlayer      = none |& \\
+\verb|vgrid       = none |& \\
+}
+
+
 \vspace{-4mm}
 \begin{verbatim}
-  > make jobshell
-  > make run
+  $ make jobshell
+  $ make run
 \end{verbatim}
 You need to edit the following file appropriately
  \begin{verbatim}
-    > vi mkrawgrid.cnf
-     &ADMPARAM
-       glevel      = 5,                      <-- glevel
-       rlevel      = 1,                      <-- rlevel
-       vlayer      = 1,                      <-- vertical layer?
-       rgnmngfname = "rl01-prc20.info",      <-- input filename 
-     /
-
-     &PARAM_MKGRD
-       MKGRD_DOSPRING     = .true.,           <-- use spring grid or not
-       MKGRD_OUT_BASENAME = "rawgrid_GL05RL01",<-- output filename
-       MKGRD_spring_beta  = 1.15D0,           <-- strength of the spring
-    /
+    $ vi mkrawgrid.cnf
  \end{verbatim}
+\editboxtwo{
+\verb|&ADMPARAM |&\\
+\verb|  glevel      = 5,|                &{\verb|<-- glevel|}\\
+\verb|  rlevel      = 1,|                &{\verb|<-- rlevel|}\\
+\verb|  vlayer      = 1,|                &{\verb|<-- vertical layer?|}\\
+\verb|  rgnmngfname = "rl01-prc20.info",|    &{\verb|<-- input filename|}\\
+\verb|/|&\\
+
+\verb|&PARAM_MKGRD|& \\
+\verb|  MKGRD_DOSPRING     = .true.,|       &{\verb|<-- use spring grid or not|}\\
+\verb|  MKGRD_OUT_BASENAME = "rawgrid_GL05RL01",| &{\verb|<-- output filename|}\\
+\verb|  MKGRD_spring_beta  = 1.15D0,|         &{\verb|<-- strength of the spring|}\\
+\verb|/|&\\
+}
 
 
 \item{水平格子データベースの作成}
 
-\verb|  > cd scale-|{\version}\verb|/scale-gm/test/framework/mkhgrid/gl05rl01pe20|
+\verb|  $ mkdir scale-|{\version}\verb|/scale-gm/test/framework/mkhgrid/gl05rl01pe20|
+
+\verb|  $ cd scale-|{\version}\verb|/scale-gm/test/framework/mkhgrid/gl05rl01pe20|
+Copy a Makefile from an exisiting sample directory
+\begin{verbatim}
+  $ cp ../../rl01pe40/Makefile .
+\end{verbatim}
+
+Edit the Makefile
+\editboxtwo{
+\verb|# parameters for run |&\\
+\verb|  glevel      = 6|    &{\verb|<-- glevel|}\\
+\verb|  rlevel      = 1|    &{\verb|<-- rlevel|}\\
+\verb|  nmpi        = 20|   &{\verb|<-- number of processors|}\\
+\verb|  zlayer      = none |& \\
+\verb|  vgrid       = none |& \\
+}
+
+
 \vspace{-4mm}
 \begin{verbatim}
-  > make jobshell
-  > make run
+  $ make jobshell
+  $ make run
 \end{verbatim}
 You need to edit the following file appropriately
  \begin{verbatim}
-    > vi mkhgrid.cnf
-     &ADMPARAM
-       glevel      = 5,                      <-- glevel
-       rlevel      = 1,                      <-- rlevel
-       vlayer      = 1,                      <-- vertical layer
-       rgnmngfname = "rl01-prc20.info",      <-- input management filename
-     /
-
-    &PARAM_MKGRD
-       MKGRD_DOPREROTATE      = .false.,     <-- rotate or not
-       MKGRD_DOSTRETCH        = .false.,     <-- stretch or not
-       MKGRD_DOSHRINK         = .false.,     <-- shrink or not
-       MKGRD_DOROTATE         = .false.,     <-- rotate first or not
-       MKGRD_IN_BASENAME      = "rawgrid_GL05RL01", <-- input rawgrid filename
-       MKGRD_OUT_BASENAME     = "boundary_GL05RL01",<-- outputput bondary filename
-   /
+    $ vi mkhgrid.cnf
 \end{verbatim}
+\editboxtwo{
+\verb|&ADMPARAM | &\\
+\verb|  glevel      = 5,|                &{\verb|<-- glevel|} \\
+\verb|  rlevel      = 1,|                &{\verb|<-- rlevel|} \\
+\verb|  vlayer      = 1,|                  &{\verb|<-- vertical layer|} \\
+\verb|  rgnmngfname = "rl01-prc20.info",|  &{\verb|<-- input management filename|} \\
+\verb|/ |\\
+\\
+\verb|&PARAM_MKGRD |&\\
+\verb|  MKGRD_DOPREROTATE      = .false.,|     &{\verb|<-- rotate or not|} \\
+\verb|  MKGRD_DOSTRETCH        = .false.,|     &{\verb|<-- stretch or not|} \\
+\verb|  MKGRD_DOSHRINK         = .false.,|     &{\verb|<-- shrink or not |}\\
+\verb|  MKGRD_DOROTATE         = .false.,|     &{\verb|<-- rotate first or not|} \\
+\verb|  MKGRD_IN_BASENAME      = "rawgrid_GL05RL01",| &{\verb|<-- input rawgrid filename|}\\
+\verb|  MKGRD_OUT_BASENAME     = "boundary_GL05RL01",| &{\verb|<-- outputput bondary filename|} \\
+\verb|   / |&\\
+}
 \end{enumerate}
 
 \subsubsection{2. Creation of LatLon grid conversion database}
 
-\verb|> cd scale-|{\version}\verb|/scale-gm/test/framework/mkllmap/gl05rl01pe20_t42|
+\verb|  $ mkdir scale-|{\version}\verb|/scale-gm/test/framework/llmap/gl06rl01pe20_t42|
+
+\verb|$ cd scale-|{\version}\verb|/scale-gm/test/framework/mkllmap/gl06rl01pe20_t42|
+
+Copy a Makefile from an exisiting sample directory
+\begin{verbatim}
+  $ cp ../../gl05rl00pe10_t42/Makefile .
+\end{verbatim}
+
+Edit the Makefile
+\editboxtwo{
+\verb|  # parameters for run |& \\
+\verb|  glevel      = 6|      &{\verb|<-- glevel|} \\
+\verb|  rlevel      = 1|      &{\verb|<-- rlevel|} \\
+\verb|  nmpi        = 20|     &{\verb|<-- number of processors|} \\
+\verb|  zlayer      = none | & \\
+\verb|  vgrid       = none | & \\
+}
+
+
 \vspace{-3mm}
 \begin{verbatim}
-  > make jobshell
-  > make run
+  $ make jobshell
+  $ make run
 \end{verbatim}
 You need to edit the following file appropriately
  \begin{verbatim}
-    > vi mkllmap.cnf
-     &ADMPARAM
-       glevel      = 5,
-       rlevel      = 1,
-       vlayer      = 1,
-       rgnmngfname = "rl01-prc20.info",
-     /
-
-     &GRDPARAM
-       hgrid_io_mode = "ADVANCED",
-       hgrid_fname   = "boundary_GL05RL01",
-       VGRID_fname   = "NONE",
-       topo_fname    = "NONE",
-     /
-
-     &LATLONPARAM
-       latlon_type = "GAUSSIAN",     <-- ``GAUSSIAN'' or ``EQUIDIST'' (equal distance)
-       imax        = 128,            <-- number of grid points in x
-       jmax        = 64,             <-- number of grid points in y
-     /
+    $ vi mkllmap.cnf
  \end{verbatim}
+\editboxtwo{
+\verb|&ADMPARAM  | &\\
+\verb|   glevel      = 5, |&\\
+\verb|   rlevel      = 1, |&\\
+\verb|   vlayer      = 1, |&\\
+\verb|   rgnmngfname = "rl01-prc20.info", |&\\
+\verb|/ |&\\
+
+\verb|&GRDPARAM |&\\
+\verb|  hgrid_io_mode = "ADVANCED", |&\\
+\verb|  hgrid_fname   = "boundary_GL05RL01", |&\\
+\verb|  VGRID_fname   = "NONE", |&\\
+\verb|  topo_fname    = "NONE", |&\\
+\verb|/ |\\
+
+\verb|&LATLONPARAM |&\\
+\verb|  latlon_type = "GAUSSIAN",| &{\verb|<-- ``GAUSSIAN'' or ``EQUIDIST'' (equal
+  distance)|} \\
+\verb|  imax        = 128,| &{\verb|<-- number of grid points in x|} \\
+\verb|  jmax        = 64,|  &{\verb|<-- number of grid points in y|} \\
+\verb|/ |&\\
+}
 
 
-%\textcolor{red}{[英語版未対応-----ここまで]}
+%\textcolor{red}{[英語版対応、要推敲-----ここまで]}
 
 \section{Run the model}
 %-------------------------------------------------------------------------------
@@ -180,12 +260,12 @@ according to the steps addressed in the previous section.
 %\textcolor{red}{[英語版未対応-----ここまで]}
  \begin{table}[h]
  \begin{center}
- \caption{Corresponding test cases}
+ \caption{A list of DCMIP-2016 test cases}
  \begin{tabularx}{150mm}{|l|X|} \hline
- \rowcolor[gray]{0.9} SCALE-GMにおけるテストケースの名称 & 実験内容 \\ \hline
-  DCMIP2016-11 & 湿潤傾圧波理想実験  \\ \hline
-  DCMIP2016-12 & 全球台風理想実験 \\ \hline
-  DCMIP2016-13 & 全球スーパーセル理想実験 \\ \hline
+ \rowcolor[gray]{0.9} Test cases \\ \hline
+  DCMIP2016-11 & Moist baroclinic wave  \\ \hline
+  DCMIP2016-12 & Idealized tropical cyclone \\ \hline
+  DCMIP2016-13 & Supercell \\ \hline
  \end{tabularx}
  \end{center}
  \end{table}
@@ -200,14 +280,14 @@ After moving to an arbitrary directory \footnote{for example
 execute the following comman to create model run script and post-process script.
 
  \begin{verbatim}
-   > make jobshell
+   $ make jobshell
  \end{verbatim}
 
 This commands create ``\verb|run.sh|'' and ``\verb|ico2ll_netcdf.sh|.''
 To run the model, execute the following command.
 
  \begin{verbatim}
-   > make run
+   $ make run
  \end{verbatim}
 
 This will run the model.
@@ -227,7 +307,7 @@ from the original icosahedral horizontal grid itno LatLon horizotnal grid.
 Before executing the post-process, you need to edit \verb|ico2ll_netcdf.sh|
 according to your experimental setups.
  \begin{verbatim}
-   > vi ico2ll_netcdf.sh
+   $ vi ico2ll_netcdf.sh
 
    [at Line 22]
    # User Settings
@@ -244,7 +324,7 @@ according to your experimental setups.
  \end{verbatim}
 
 % \begin{verbatim}
-%   > bsub < ico2ll_netcdf.sh
+%   $ bsub < ico2ll_netcdf.sh
 % \end{verbatim}
 
  \noindent The LatLon grid data created by ico2ll is in netcdf format. 
