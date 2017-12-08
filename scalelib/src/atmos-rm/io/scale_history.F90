@@ -312,7 +312,8 @@ contains
        HistoryAddVariable, &
        HistoryCheck
     use scale_time, only: &
-       NOWSTEP => TIME_NOWSTEP
+       NOWSTEP => TIME_NOWSTEP, &
+       TIME_gettimelabel
     use scale_process, only: &
        PRC_MPIstop,          &
        PRC_myrank,           &
@@ -336,6 +337,7 @@ contains
     logical :: flag_half_y
     logical :: flag_half_z
 
+    character(len=19)      :: timelabel
     character(len=H_SHORT) :: dims(3)
 
     integer                :: nvariant1, nvariant2, nvariant3
@@ -511,6 +513,7 @@ contains
        end if
     end if
 
+    call TIME_gettimelabel( timelabel )
 
     if ( IO_AGGREGATE ) then  ! user input parameter indicates to do PnetCDF I/O
        comm = PRC_LOCAL_COMM_WORLD
@@ -527,6 +530,7 @@ contains
                                 desc,         & ! [IN]
                                 unit,         & ! [IN]
                                 NOWSTEP,      & ! [IN]
+                                timelabel,    & ! [IN]
                                 'model',      & ! [IN]
                                 start=start,  & ! [IN]
                                 count=count,  & ! [IN]
@@ -540,6 +544,7 @@ contains
                                 desc,         & ! [IN]
                                 unit,         & ! [IN]
                                 NOWSTEP,      & ! [IN]
+                                timelabel,    & ! [IN]
                                 'z',          & ! [IN]
                                 start=start,  & ! [IN]
                                 count=count,  & ! [IN]
@@ -555,6 +560,7 @@ contains
                                    desc,         & ! [IN]
                                    unit,         & ! [IN]
                                    NOWSTEP,      & ! [IN]
+                                   timelabel,    & ! [IN]
                                    'pressure',   & ! [IN]
                                    start=start,  & ! [IN]
                                    count=count,  & ! [IN]
@@ -572,6 +578,7 @@ contains
                                 desc,         & ! [IN]
                                 unit,         & ! [IN]
                                 NOWSTEP,      & ! [IN]
+                                timelabel,    & ! [IN]
                                 start=start,  & ! [IN]
                                 count=count,  & ! [IN]
                                 comm=comm     ) ! [IN]

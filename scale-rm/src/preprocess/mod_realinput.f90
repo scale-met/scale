@@ -133,24 +133,25 @@ module mod_realinput
                                                             ! forest is considered as a typical landuse over Japan area.
 
   ! for namelist
-  integer,                private :: NUMBER_OF_FILES       = 1
-  integer,                private :: NUMBER_OF_TSTEPS      = 1       ! num of time steps in one file
-  integer,                private :: NUMBER_OF_SKIP_TSTEPS = 0       ! num of skipped first several data
+  integer,                private :: NUMBER_OF_FILES            = 1
+  integer,                private :: NUMBER_OF_TSTEPS           = 1       ! num of time steps in one file
+  integer,                private :: NUMBER_OF_SKIP_TSTEPS      = 0       ! num of skipped first several data
 
-  logical,                private :: SERIAL_PROC_READ      = .true.  ! read by one MPI process and broadcast
+  logical,                private :: SERIAL_PROC_READ           = .true.  ! read by one MPI process and broadcast
 
-  character(len=H_LONG),  private :: FILETYPE_ORG          = ''
-  character(len=H_LONG),  private :: BASENAME_ORG          = ''
-  logical,                private :: BASENAME_ADD_NUM      = .false.
+  character(len=H_LONG),  private :: FILETYPE_ORG               = ''
+  character(len=H_LONG),  private :: BASENAME_ORG               = ''
+  logical,                private :: BASENAME_ADD_NUM           = .false.
 
-  character(len=H_LONG),  private :: BASENAME_BOUNDARY     = ''
-  character(len=H_LONG),  private :: BOUNDARY_TITLE        = 'SCALE-RM BOUNDARY CONDITION for REAL CASE'
-  character(len=H_SHORT), private :: BOUNDARY_DTYPE        = 'DEFAULT'
-  real(DP),               private :: BOUNDARY_UPDATE_DT    = 0.0_DP  ! inteval time of boudary data update [s]
+  character(len=H_LONG),  private :: BASENAME_BOUNDARY          = ''
+  logical,                private :: BOUNDARY_POSTFIX_TIMELABEL = .false.
+  character(len=H_LONG),  private :: BOUNDARY_TITLE             = 'SCALE-RM BOUNDARY CONDITION for REAL CASE'
+  character(len=H_SHORT), private :: BOUNDARY_DTYPE             = 'DEFAULT'
+  real(DP),               private :: BOUNDARY_UPDATE_DT         = 0.0_DP  ! inteval time of boudary data update [s]
 
-  logical,                private :: USE_FILE_DENSITY      = .false. ! use density data from files
-  integer,                private :: PARENT_MP_TYPE        = 6       ! microphysics type of the parent model (number of classes)
-                                                                     ! 0: dry, 3:3-class, 5:5-class, 6:6-class, >6:double moment
+  logical,                private :: USE_FILE_DENSITY           = .false. ! use density data from files
+  integer,                private :: PARENT_MP_TYPE             = 6       ! microphysics type of the parent model (number of classes)
+                                                                          ! 0: dry, 3:3-class, 5:5-class, 6:6-class, >6:double moment
 
   logical, private :: first = .true.
   !-----------------------------------------------------------------------------
@@ -158,6 +159,10 @@ contains
   !-----------------------------------------------------------------------------
   subroutine REALINPUT_atmos( &
        flg_bin_intrp )
+    use scale_time, only: &
+       TIME_gettimelabel
+    use scale_atmos_phy_mp, only: &
+       QA_MP
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -167,30 +172,31 @@ contains
        QTRC
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE
-    use scale_atmos_phy_mp, only: &
-       QA_MP
     implicit none
 
     logical, intent(in)  :: flg_bin_intrp ! flag for interpolation of SBM(S10) from outer bulk-MP model
 
     NAMELIST / PARAM_MKINIT_REAL_ATMOS / &
-       NUMBER_OF_FILES,       &
-       NUMBER_OF_TSTEPS,      &
-       NUMBER_OF_SKIP_TSTEPS, &
-       SERIAL_PROC_READ,      &
-       FILETYPE_ORG,          &
-       BASENAME_ORG,          &
-       BASENAME_ADD_NUM,      &
-       BASENAME_BOUNDARY,     &
-       BOUNDARY_TITLE,        &
-       BOUNDARY_DTYPE,        &
-       BOUNDARY_UPDATE_DT,    &
-       USE_FILE_DENSITY,      &
+       NUMBER_OF_FILES,            &
+       NUMBER_OF_TSTEPS,           &
+       NUMBER_OF_SKIP_TSTEPS,      &
+       SERIAL_PROC_READ,           &
+       FILETYPE_ORG,               &
+       BASENAME_ORG,               &
+       BASENAME_ADD_NUM,           &
+       BASENAME_BOUNDARY,          &
+       BOUNDARY_POSTFIX_TIMELABEL, &
+       BOUNDARY_TITLE,             &
+       BOUNDARY_DTYPE,             &
+       BOUNDARY_UPDATE_DT,         &
+       USE_FILE_DENSITY,           &
        PARENT_MP_TYPE
 
     logical  :: flg_bin ! flag for SBM(S10) is used or not 0-> not used, 1-> used
 
     character(len=H_LONG) :: basename_mod
+    character(len=H_LONG) :: basename_out_mod
+    character(len=19)     :: timelabel
 
     integer  :: dims(6) ! dims 1-3: normal, 4-6: staggerd
     integer  :: timelen
@@ -210,7 +216,7 @@ contains
     real(RP) :: VELY_org(KA,IA,JA)
     real(RP) :: POTT_org(KA,IA,JA)
 
-    integer  :: ifile, istep, t
+    integer  :: ifile, istep, t, tall
     integer  :: k, i, j, iq
     integer  :: ierr
     !---------------------------------------------------------------------------
@@ -263,15 +269,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Number of temporal data in each file : ', NUMBER_OF_TSTEPS
 
-    if ( BASENAME_BOUNDARY /= '' ) then
-       call BoundaryAtmosSetup( BASENAME_BOUNDARY,  & ! [IN]
-                                BOUNDARY_TITLE,     & ! [IN]
-                                BOUNDARY_DTYPE,     & ! [IN]
-                                BOUNDARY_UPDATE_DT, & ! [IN]
-                                fid_atmos,          & ! [OUT]
-                                vid_atmos(:)        ) ! [OUT]
-    endif
-
     do ifile = 1, NUMBER_OF_FILES
 
        if ( FILETYPE_ORG == 'GrADS' ) then
@@ -296,19 +293,19 @@ contains
 
        do istep = 1, NUMBER_OF_TSTEPS
 
-          t = NUMBER_OF_TSTEPS * (ifile-1) + istep
+          tall = NUMBER_OF_TSTEPS * (ifile-1) + istep ! consecutive time step (input)
+          t    = tall - NUMBER_OF_SKIP_TSTEPS         ! time step (output)
 
-          if ( t <= NUMBER_OF_SKIP_TSTEPS ) then
+          if ( t <= 0 ) then
              if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,A,I5,A,I6,A)') &
-                        '*** [file,step,cons.] = [', ifile, ',', istep, ',', t, '] ...skip.'
+                        '*** [file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
              cycle
           endif
 
-          if (      t == 1 + NUMBER_OF_SKIP_TSTEPS &
-               .OR. BASENAME_BOUNDARY /= ''        ) then
+          if ( t == 1 .OR. BASENAME_BOUNDARY /= '' ) then
 
              if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,A,I5,A,I6,A)') &
-                        '*** [file,step,cons.] = [', ifile, ',', istep, ',', t, ']'
+                        '*** [file,step,cons.] = [', ifile, ',', istep, ',', tall, ']'
 
              ! read prepared data
              call ParentAtmosInput( FILETYPE_ORG,      & ! [IN]
@@ -331,11 +328,11 @@ contains
                                     POTT_org(:,:,:)    ) ! [OUT]
           else
              if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,A,I5,A,I6,A)') &
-                        '*** [file,step,cons.] = [', ifile, ',', istep, ',', t, '] ...skip.'
+                        '*** [file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
           endif
 
           !--- store prognostic variables as initial
-          if ( t == 1 + NUMBER_OF_SKIP_TSTEPS ) then ! skip first several data
+          if ( t == 1 ) then
              if( IO_L ) write(IO_FID_LOG,*) '*** store initial state.'
 
              do j = 1, JA
@@ -364,16 +361,33 @@ contains
 
           !--- output boundary data
           if ( BASENAME_BOUNDARY /= '' ) then
-             call BoundaryAtmosOutput( DENS_org(:,:,:),        & ! [IN]
-                                       VELZ_org(:,:,:),        & ! [IN]
-                                       VELX_org(:,:,:),        & ! [IN]
-                                       VELY_org(:,:,:),        & ! [IN]
-                                       POTT_org(:,:,:),        & ! [IN]
-                                       QTRC_org(:,:,:,:),      & ! [IN]
-                                       fid_atmos,              & ! [IN]
-                                       vid_atmos(:),           & ! [IN]
-                                       BOUNDARY_UPDATE_DT,     & ! [IN]
-                                       t-NUMBER_OF_SKIP_TSTEPS ) ! [IN]
+
+             if ( t == 1 ) then
+                if ( BOUNDARY_POSTFIX_TIMELABEL ) then
+                   call TIME_gettimelabel( timelabel )
+                   basename_out_mod = trim(BASENAME_BOUNDARY)//'_'//trim(timelabel)
+                else
+                   basename_out_mod = trim(BASENAME_BOUNDARY)
+                endif
+
+                call BoundaryAtmosSetup( basename_out_mod,   & ! [IN]
+                                         BOUNDARY_TITLE,     & ! [IN]
+                                         BOUNDARY_DTYPE,     & ! [IN]
+                                         BOUNDARY_UPDATE_DT, & ! [IN]
+                                         fid_atmos,          & ! [OUT]
+                                         vid_atmos(:)        ) ! [OUT]
+             endif
+
+             call BoundaryAtmosOutput( DENS_org(:,:,:),    & ! [IN]
+                                       VELZ_org(:,:,:),    & ! [IN]
+                                       VELX_org(:,:,:),    & ! [IN]
+                                       VELY_org(:,:,:),    & ! [IN]
+                                       POTT_org(:,:,:),    & ! [IN]
+                                       QTRC_org(:,:,:,:),  & ! [IN]
+                                       fid_atmos,          & ! [IN]
+                                       vid_atmos(:),       & ! [IN]
+                                       BOUNDARY_UPDATE_DT, & ! [IN]
+                                       t                   ) ! [IN]
           endif
 
        enddo ! istep loop
@@ -387,6 +401,8 @@ contains
     use scale_const, only: &
          I_SW => CONST_I_SW, &
          I_LW => CONST_I_LW
+    use scale_time, only: &
+       TIME_gettimelabel
     use mod_atmos_vars, only: &
          DENS, &
          MOMZ, &
@@ -467,22 +483,23 @@ contains
          SERIAL_PROC_READ
 
     NAMELIST / PARAM_MKINIT_REAL_OCEAN / &
-         NUMBER_OF_FILES,        &
-         NUMBER_OF_TSTEPS,       &
-         NUMBER_OF_SKIP_TSTEPS,  &
-         FILETYPE_ORG,           &
-         BASENAME_ORG,           &
-         BASENAME_ADD_NUM,       &
-         BASENAME_BOUNDARY,      &
-         BOUNDARY_TITLE,         &
-         BOUNDARY_UPDATE_DT,     &
-         INIT_OCEAN_ALB_LW,      &
-         INIT_OCEAN_ALB_SW,      &
-         INIT_OCEAN_Z0W,         &
-         INTRP_OCEAN_TEMP,       &
-         INTRP_OCEAN_SFC_TEMP,   &
-         INTRP_ITER_MAX,         &
-         SERIAL_PROC_READ
+       NUMBER_OF_FILES,            &
+       NUMBER_OF_TSTEPS,           &
+       NUMBER_OF_SKIP_TSTEPS,      &
+       FILETYPE_ORG,               &
+       BASENAME_ORG,               &
+       BASENAME_ADD_NUM,           &
+       BASENAME_BOUNDARY,          &
+       BOUNDARY_POSTFIX_TIMELABEL, &
+       BOUNDARY_TITLE,             &
+       BOUNDARY_UPDATE_DT,         &
+       INIT_OCEAN_ALB_LW,          &
+       INIT_OCEAN_ALB_SW,          &
+       INIT_OCEAN_Z0W,             &
+       INTRP_OCEAN_TEMP,           &
+       INTRP_OCEAN_SFC_TEMP,       &
+       INTRP_ITER_MAX,             &
+       SERIAL_PROC_READ
 
     character(len=H_LONG) :: FILETYPE_LAND
     character(len=H_LONG) :: FILETYPE_OCEAN
@@ -521,6 +538,9 @@ contains
     integer :: lit
     integer :: lfn
     integer :: ierr
+
+    character(len=H_LONG) :: basename_out_mod
+    character(len=19)     :: timelabel
 
     logical :: boundary_flag = .false.
 
@@ -783,13 +803,20 @@ contains
              call PRC_MPIstop
           endif
 
+          if ( BOUNDARY_POSTFIX_TIMELABEL ) then
+             call TIME_gettimelabel( timelabel )
+             basename_out_mod = trim(BASENAME_BOUNDARY)//'_'//trim(timelabel)
+          else
+             basename_out_mod = trim(BASENAME_BOUNDARY)
+          endif
+
           call ParentOceanBoundary( OCEAN_TEMP_ORG(:,:,ns:ne),         &
                                     OCEAN_SFC_TEMP_ORG(:,:,ns:ne),     &
                                     OCEAN_SFC_albedo_ORG(:,:,:,ns:ne), &
                                     OCEAN_SFC_Z0_ORG(:,:,ns:ne),       &
                                     totaltimesteps,     &
                                     BOUNDARY_UPDATE_DT, &
-                                    BASENAME_BOUNDARY,  &
+                                    basename_out_mod,   &
                                     BOUNDARY_TITLE      )
 
        endif
