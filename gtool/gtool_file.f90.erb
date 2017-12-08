@@ -282,6 +282,61 @@ contains
   end subroutine FileCreate
 
   !-----------------------------------------------------------------------------
+  subroutine FileGetVarnum( &
+       fid,         &
+       nvars_limit, &
+       nvars        )
+    implicit none
+
+    integer, intent(in)  :: fid
+    integer, intent(in)  :: nvars_limit
+    integer, intent(out) :: nvars
+
+    integer :: error
+    !---------------------------------------------------------------------------
+
+    call file_get_nvars( fid,         & ! (in)
+                         nvars, error ) ! (out)
+
+    if ( error /= SUCCESS_CODE ) then
+       write(message,*) 'xxx [FileGetVarnum] failed to get varnum. fid = ', fid
+       call Log('E', message)
+    end if
+
+    if ( nvars > nvars_limit ) then
+       write(message,*) 'xxx [FileGetCommoninfo] number of variables exceeds the requested size.', nvars, nvars_limit
+       call Log('E', message)
+    endif
+
+    return
+  end subroutine FileGetVarnum
+
+  !-----------------------------------------------------------------------------
+  subroutine FileGetVarname( &
+       fid,    &
+       vid,    &
+       varname )
+    implicit none
+
+    integer,          intent(in)  :: fid
+    integer,          intent(in)  :: vid
+    character(len=*), intent(out) :: varname
+
+    integer :: error
+    !---------------------------------------------------------------------------
+
+    call file_get_varname( fid, vid,      & ! (in)
+                           varname, error ) ! (out)
+
+    if ( error /= SUCCESS_CODE ) then
+       write(message,*) 'xxx [FileGetVarname] failed to get varname. vid = ', vid
+       call Log('E', message)
+    end if
+
+    return
+  end subroutine FileGetVarname
+
+  !-----------------------------------------------------------------------------
   subroutine FileGetGlobalAttributeText( &
        fid,      & ! (in)
        key,      & ! (in)
@@ -1139,6 +1194,7 @@ contains
   subroutine FileGetCommoninfoFName( &
        basename,     &
        myrank,       &
+       nvars_limit,  &
        title,        &
        source,       &
        institution,  &
@@ -1148,21 +1204,26 @@ contains
        start_global, &
        halo_global,  &
        halo_local,   &
-       periodic      )
+       periodic,     &
+       nvars,        &
+       varname       )
     implicit none
 
-    character(len=*),         intent(in)  :: basename
-    integer,                  intent(in)  :: myrank
-    character(len=File_HMID), intent(out) :: title             ! title of the file
-    character(len=File_HMID), intent(out) :: source            ! for file header
-    character(len=File_HMID), intent(out) :: institution       ! for file header
-    integer,                  intent(out) :: rankidx     (2)   ! my rank in 2D process topology (x:y)
-    integer,                  intent(out) :: procsize    (2)   ! total process size             (x:y)
-    integer,                  intent(out) :: size_global (2)   ! total grid size     in global  (x:y)
-    integer,                  intent(out) :: start_global(2)   ! start index of grid in global  (x:y)
-    integer,                  intent(out) :: halo_global (2,2) ! halo  grid size     in global  (x:y,start:end)
-    integer,                  intent(out) :: halo_local  (2,2) ! halo  grid size     in local   (x:y,start:end)
-    logical,                  intent(out) :: periodic    (2)   ! periodic condition?            (x:y)
+    character(len=*),           intent(in)  :: basename
+    integer,                    intent(in)  :: myrank
+    integer,                    intent(in)  :: nvars_limit
+    character(len=File_HMID),   intent(out) :: title                ! title of the file
+    character(len=File_HMID),   intent(out) :: source               ! for file header
+    character(len=File_HMID),   intent(out) :: institution          ! for file header
+    integer,                    intent(out) :: rankidx     (2)      ! my rank in 2D process topology (x:y)
+    integer,                    intent(out) :: procsize    (2)      ! total process size             (x:y)
+    integer,                    intent(out) :: size_global (2)      ! total grid size     in global  (x:y)
+    integer,                    intent(out) :: start_global(2)      ! start index of grid in global  (x:y)
+    integer,                    intent(out) :: halo_global (2,2)    ! halo  grid size     in global  (x:y,start:end)
+    integer,                    intent(out) :: halo_local  (2,2)    ! halo  grid size     in local   (x:y,start:end)
+    logical,                    intent(out) :: periodic    (2)      ! periodic condition?            (x:y)
+    integer,                    intent(out) :: nvars                ! number of variables
+    character(len=File_HSHORT), intent(out) :: varname(nvars_limit) ! name of variables
 
     integer :: myrank_check(1)
     integer :: fid
@@ -1175,6 +1236,7 @@ contains
                    File_FREAD ) ! [IN]
 
     call FileGetCommoninfoFId( fid,               & ! [IN]
+                               nvars_limit,       & ! [IN]
                                title,             & ! [OUT]
                                source,            & ! [OUT]
                                institution,       & ! [OUT]
@@ -1185,7 +1247,9 @@ contains
                                start_global(:),   & ! [OUT]
                                halo_global (:,:), & ! [OUT]
                                halo_local  (:,:), & ! [OUT]
-                               periodic    (:)    ) ! [OUT]
+                               periodic    (:),   & ! [OUT]
+                               nvars,             & ! [OUT]
+                               varname    (:)     ) ! [OUT]
 
     if ( myrank /= myrank_check(1) ) then
        call Log('E', 'xxx [FileGetCommoninfo] requested rank number is inconsistent with that in the file.')
@@ -1196,6 +1260,7 @@ contains
 
   subroutine FileGetCommoninfoFId( &
        fid,          &
+       nvars_limit,  &
        title,        &
        source,       &
        institution,  &
@@ -1206,23 +1271,30 @@ contains
        start_global, &
        halo_global,  &
        halo_local,   &
-       periodic      )
+       periodic,     &
+       nvars,        &
+       varname       )
     implicit none
 
-    integer,                  intent(in)  :: fid
-    character(len=File_HMID), intent(out) :: title             ! title of the file
-    character(len=File_HMID), intent(out) :: source            ! for file header
-    character(len=File_HMID), intent(out) :: institution       ! for file header
-    integer,                  intent(out) :: myrank      (1)   ! total process size             (x:y)
-    integer,                  intent(out) :: rankidx     (2)   ! my rank in 2D process topology (x:y)
-    integer,                  intent(out) :: procsize    (2)   ! total process size             (x:y)
-    integer,                  intent(out) :: size_global (2)   ! total grid size     in global  (x:y)
-    integer,                  intent(out) :: start_global(2)   ! start index of grid in global  (x:y)
-    integer,                  intent(out) :: halo_global (2,2) ! halo  grid size     in global  (x:y,start:end)
-    integer,                  intent(out) :: halo_local  (2,2) ! halo  grid size     in local   (x:y,start:end)
-    logical,                  intent(out) :: periodic    (2)   ! periodic condition?            (x:y)
+    integer,                    intent(in)  :: fid
+    integer,                    intent(in)  :: nvars_limit
+    character(len=File_HMID),   intent(out) :: title                ! title of the file
+    character(len=File_HMID),   intent(out) :: source               ! for file header
+    character(len=File_HMID),   intent(out) :: institution          ! for file header
+    integer,                    intent(out) :: myrank      (1)      ! total process size             (x:y)
+    integer,                    intent(out) :: rankidx     (2)      ! my rank in 2D process topology (x:y)
+    integer,                    intent(out) :: procsize    (2)      ! total process size             (x:y)
+    integer,                    intent(out) :: size_global (2)      ! total grid size     in global  (x:y)
+    integer,                    intent(out) :: start_global(2)      ! start index of grid in global  (x:y)
+    integer,                    intent(out) :: halo_global (2,2)    ! halo  grid size     in global  (x:y,start:end)
+    integer,                    intent(out) :: halo_local  (2,2)    ! halo  grid size     in local   (x:y,start:end)
+    logical,                    intent(out) :: periodic    (2)      ! periodic condition?            (x:y)
+    integer,                    intent(out) :: nvars                ! number of variables
+    character(len=File_HSHORT), intent(out) :: varname(nvars_limit) ! name of variables
 
     character(len=6) :: logical_str
+
+    integer :: v
     !---------------------------------------------------------------------------
 
     call FileGetGlobalAttribute( fid, 'title',       title       )
@@ -1245,6 +1317,12 @@ contains
     call FileGetAttribute( fid, 'y', 'halo_local',   halo_local  (2,:) )
     call FileGetAttribute( fid, 'y', 'periodic',     logical_str       )
     periodic(2) = logical_str == 'true'
+
+    call FileGetVarnum( fid, nvars_limit, nvars )
+
+    do v = 1, nvars
+       call FileGetVarname( fid, v, varname(v) )
+    enddo
 
     return
   end subroutine FileGetCommoninfoFId

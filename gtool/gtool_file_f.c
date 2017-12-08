@@ -78,6 +78,28 @@ void file_set_option_( int32_t *fid,      // (in)
   *error = file_set_option(*fid, _filetype, _key, _val);
 }
 
+void file_get_nvars_( int32_t *fid,    // (in)
+                      int32_t *nvars,  // (out)
+                      int32_t *error  )// (out)
+{
+  *error = file_get_nvars( *fid, nvars );
+}
+
+void file_get_varname_( int32_t *fid,         // (in)
+                        int32_t *vid,         // (in)
+                        char    *varname,     // (out)
+                        int32_t *error,       // (out)
+                        int32_t  varname_len )// (in)
+{
+  char _varname[File_HSHORT+1];
+  int32_t len;
+
+  *error = file_get_varname( *fid, *vid, _varname, varname_len );
+
+  len = varname_len > File_HSHORT ? File_HSHORT : varname_len;
+  cstr2fstr(varname, _varname, len);
+}
+
 void file_get_datainfo_( datainfo_t *dinfo,       // (out)
                          int32_t    *fid,         // (in)
                          char       *varname,     // (in)
@@ -284,13 +306,13 @@ void file_set_global_attribute_double_( int32_t *fid,      // (in)
 }
 
 void file_get_attribute_text_( int32_t *fid,        // (in)
-			       char    *vname,      // (in)
+                               char    *vname,      // (in)
                                char    *key,        // (in)
-			       char    *value,      // (out)
-			       int32_t *error,      // (out)
-			       int32_t  vname_len,  // (in)
-			       int32_t  key_len,    // (in)
-			       int32_t  value_len ) // (in)
+                               char    *value,      // (out)
+                               int32_t *error,      // (out)
+                               int32_t  vname_len,  // (in)
+                               int32_t  key_len,    // (in)
+                               int32_t  value_len ) // (in)
 {
   char _vname[File_HSHORT+1];
   char _key[File_HLONG+1];
@@ -310,13 +332,13 @@ void file_get_attribute_text_( int32_t *fid,        // (in)
 }
 
 void file_get_attribute_int_( int32_t *fid,       // (in)
-			      char    *vname,     // (in)
-			      char    *key,       // (in)
-			      int32_t *len,       // (in)
-			      int32_t *value,     // (out)
-			      int32_t *error,     // (out)
-			      int32_t  vname_len, // (in)
-			      int32_t  key_len )  // (in)
+                              char    *vname,     // (in)
+                              char    *key,       // (in)
+                              int32_t *len,       // (in)
+                              int32_t *value,     // (out)
+                              int32_t *error,     // (out)
+                              int32_t  vname_len, // (in)
+                              int32_t  key_len )  // (in)
 {
   char _vname[File_HSHORT+1];
   char _key[File_HLONG+1];
@@ -332,13 +354,13 @@ void file_get_attribute_int_( int32_t *fid,       // (in)
 }
 
 void file_get_attribute_float_( int32_t *fid,       // (in)
-				char    *vname,     // (in)
-				char    *key,       // (in)
-				int32_t *len,       // (in)
-				float   *value,     // (out)
-				int32_t *error,     // (out)
-				int32_t  vname_len, // (in)
-				int32_t  key_len )  // (in)
+                                char    *vname,     // (in)
+                                char    *key,       // (in)
+                                int32_t *len,       // (in)
+                                float   *value,     // (out)
+                                int32_t *error,     // (out)
+                                int32_t  vname_len, // (in)
+                                int32_t  key_len )  // (in)
 {
   char _vname[File_HSHORT+1];
   char _key[File_HLONG+1];
@@ -354,13 +376,13 @@ void file_get_attribute_float_( int32_t *fid,       // (in)
 }
 
 void file_get_attribute_double_( int32_t *fid,       // (in)
-				 char    *vname,     // (in)
-				 char    *key,       // (in)
-				 int32_t *len,       // (in)
-				 double  *value,     // (out)
-				 int32_t *error,     // (out)
-				 int32_t  vname_len, // (in)
-				 int32_t  key_len )  // (in)
+                                 char    *vname,     // (in)
+                                 char    *key,       // (in)
+                                 int32_t *len,       // (in)
+                                 double  *value,     // (out)
+                                 int32_t *error,     // (out)
+                                 int32_t  vname_len, // (in)
+                                 int32_t  key_len )  // (in)
 {
   char _vname[File_HSHORT+1];
   char _key[File_HLONG+1];
@@ -376,13 +398,13 @@ void file_get_attribute_double_( int32_t *fid,       // (in)
 }
 
 void file_set_attribute_text_( int32_t *fid,        // (in)
-			       char    *vname,      // (in)
-			       char    *key,        // (in)
-			       char    *value,      // (in)
-			       int32_t *error,      // (out)
-			       int32_t  vname_len,  // (in)
-			       int32_t  key_len,    // (in)
-			       int32_t  value_len ) // (in)
+                               char    *vname,      // (in)
+                               char    *key,        // (in)
+                               char    *value,      // (in)
+                               int32_t *error,      // (out)
+                               int32_t  vname_len,  // (in)
+                               int32_t  key_len,    // (in)
+                               int32_t  value_len ) // (in)
 {
   char _vname[File_HSHORT+1];
   char _key[File_HLONG+1];
@@ -402,13 +424,13 @@ void file_set_attribute_text_( int32_t *fid,        // (in)
 }
 
 void file_set_attribute_int_( int32_t *fid,       // (in)
-			      char    *vname,     // (in)
-			      char    *key,       // (in)
-			      int32_t *value,     // (in)
-			      int32_t *len,       // (in)
-			      int32_t *error,     // (out)
-			      int32_t  vname_len, // (in)
-			      int32_t  key_len )  // (in)
+                              char    *vname,     // (in)
+                              char    *key,       // (in)
+                              int32_t *value,     // (in)
+                              int32_t *len,       // (in)
+                              int32_t *error,     // (out)
+                              int32_t  vname_len, // (in)
+                              int32_t  key_len )  // (in)
 {
   char _vname[File_HSHORT+1];
   char _key[File_HLONG+1];
@@ -424,13 +446,13 @@ void file_set_attribute_int_( int32_t *fid,       // (in)
 }
 
 void file_set_attribute_float_( int32_t *fid,       // (in)
-				char    *vname,     // (in)
-				char    *key,       // (in)
-				float   *value,     // (in)
-				int32_t *len,       // (in)
-				int32_t *error,     // (out)
-				int32_t  vname_len, // (in)
-				int32_t  key_len )  // (in)
+                                char    *vname,     // (in)
+                                char    *key,       // (in)
+                                float   *value,     // (in)
+                                int32_t *len,       // (in)
+                                int32_t *error,     // (out)
+                                int32_t  vname_len, // (in)
+                                int32_t  key_len )  // (in)
 {
   char _vname[File_HSHORT+1];
   char _key[File_HLONG+1];
@@ -446,13 +468,13 @@ void file_set_attribute_float_( int32_t *fid,       // (in)
 }
 
 void file_set_attribute_double_( int32_t *fid,       // (in)
-				 char    *vname,     // (in)
-				 char    *key,       // (in)
-				 double  *value,     // (in)
-				 int32_t *len,       // (in)
-				 int32_t *error,     // (out)
-				 int32_t  vname_len, // (in)
-				 int32_t  key_len )  // (in)
+                                 char    *vname,     // (in)
+                                 char    *key,       // (in)
+                                 double  *value,     // (in)
+                                 int32_t *len,       // (in)
+                                 int32_t *error,     // (out)
+                                 int32_t  vname_len, // (in)
+                                 int32_t  key_len )  // (in)
 {
   char _vname[File_HSHORT+1];
   char _key[File_HLONG+1];
