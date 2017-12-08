@@ -115,7 +115,7 @@ module gtool_history
      integer                    :: size           !> Size of array
      real(DP)                   :: timesum        !> Buffer for time
      real(DP), pointer          :: varsum(:)      !> Buffer for value
-     integer                    :: ndims          !> variable's original no. dimensions
+     integer                    :: ndims          !> Number of dimensions
      integer                    :: start(4)       !> global subarray starting indices
      integer                    :: count(4)       !> global subarray request sizes
   end type vars
