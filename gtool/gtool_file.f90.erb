@@ -1331,27 +1331,28 @@ contains
   ! FileGetData
   !-----------------------------------------------------------------------------
   subroutine FileGetDatainfoFName( &
-      basename,    &
-      varname,     &
-      myrank,      &
-      istep,       &
-      single,      &
-      description, &
-      units,       &
-      datatype,    &
-      dim_rank,    &
-      dim_name,    &
-      dim_size,    &
-      time_start,  &
-      time_end,    &
-      time_units   )
+       basename,    &
+       varname,     &
+       myrank,      &
+       istep,       &
+       single,      &
+       description, &
+       units,       &
+       datatype,    &
+       dim_rank,    &
+       dim_name,    &
+       dim_size,    &
+       time_start,  &
+       time_end,    &
+       time_units   )
     implicit none
+
     character(len=*),           intent(in)  :: basename
     character(len=*),           intent(in)  :: varname
     integer,                    intent(in)  :: myrank
     integer,                    intent(in)  :: istep
-    logical,                    intent(in), optional :: single
 
+    logical,                    intent(in),  optional :: single
     character(len=File_HMID),   intent(out), optional :: description
     character(len=File_HSHORT), intent(out), optional :: units
     integer,                    intent(out), optional :: datatype
@@ -1364,14 +1365,15 @@ contains
 
     logical :: single_
     integer :: fid
+    !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     if ( present(single) ) then
        single_ = single
     else
        single_ = .false.
-    end if
-
-    mpi_myrank = myrank
+    endif
 
     !--- search/register file
     call FileOpen( fid,        & ! [OUT]
@@ -1379,36 +1381,37 @@ contains
                    File_FREAD, & ! [IN]
                    single_     ) ! [IN]
 
-    call FileGetDatainfoFId( &
-         fid,         &
-         varname,     &
-         istep,       &
-         description, &
-         units,       &
-         datatype,    &
-         dim_rank,    &
-         dim_name,    &
-         dim_size,    &
-         time_start,  &
-         time_end,    &
-         time_units   )
+    call FileGetDatainfoFId( fid,         & ! [IN]
+                             varname,     & ! [IN]
+                             istep,       & ! [IN]
+                             description, & ! [OUT], optional
+                             units,       & ! [OUT], optional
+                             datatype,    & ! [OUT], optional
+                             dim_rank,    & ! [OUT], optional
+                             dim_name,    & ! [OUT], optional
+                             dim_size,    & ! [OUT], optional
+                             time_start,  & ! [OUT], optional
+                             time_end,    & ! [OUT], optional
+                             time_units   ) ! [OUT], optional
 
     return
   end subroutine FileGetDatainfoFName
+
   subroutine FileGetDatainfoFId( &
-      fid,         &
-      varname,     &
-      istep,       &
-      description, &
-      units,       &
-      datatype,    &
-      dim_rank,    &
-      dim_name,    &
-      dim_size,    &
-      time_start,  &
-      time_end,    &
-      time_units   )
+       fid,         &
+       varname,     &
+       istep,       &
+       description, &
+       units,       &
+       datatype,    &
+       dim_rank,    &
+       dim_name,    &
+       dim_size,    &
+       time_start,  &
+       time_end,    &
+       time_units   )
     implicit none
+
     integer,                    intent(in)  :: fid
     character(len=*),           intent(in)  :: varname
     integer,                    intent(in)  :: istep
@@ -1425,10 +1428,9 @@ contains
 
     type(datainfo) :: dinfo
 
-    integer :: ndim, idim
-    real(DP):: time(1)
-
-    integer :: error
+    real(DP) :: time(1)
+    integer  :: ndim, idim
+    integer  :: error
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -1446,47 +1448,50 @@ contains
        call Log('E', 'xxx data info not found')
     endif
 
-    if ( present(description) ) description = dinfo%description
-    if ( present(units)       ) units       = dinfo%units
-    if ( present(datatype)    ) datatype    = dinfo%datatype
-    if ( present(dim_rank)    ) dim_rank    = dinfo%rank
+    if( present(description) ) description = dinfo%description
+    if( present(units)       ) units       = dinfo%units
+    if( present(datatype)    ) datatype    = dinfo%datatype
+    if( present(dim_rank)    ) dim_rank    = dinfo%rank
 
     if ( present(dim_name) ) then
        ndim = min( dinfo%rank, size(dim_name) ) ! limit dimension rank
        do idim = 1, ndim
           dim_name(idim) = dinfo%dim_name(idim)
        enddo
-    end if
+    endif
+
     if ( present(dim_size) ) then
        ndim = min( dinfo%rank, size(dim_size) ) ! limit dimension rank
        do idim = 1, ndim
           dim_size(idim) = dinfo%dim_size(idim)
        enddo
-    end if
+    endif
 
     if ( present(time_units)  ) then
        if ( dinfo%time_units == "" ) then
           call FileGetGlobalAttribute( fid, "time_units", time_units )
        else
-          time_units  = dinfo%time_units
-       end if
-    end if
+          time_units = dinfo%time_units
+       endif
+    endif
+
     if ( present(time_start)  ) then
        if ( dinfo%time_units == "" ) then
           call FileGetGlobalAttribute( fid, "time", time )
           time_start = time(1)
        else
-          time_start  = dinfo%time_start
-       end if
-    end if
+          time_start = dinfo%time_start
+       endif
+    endif
+
     if ( present(time_end)  ) then
        if ( dinfo%time_units == "" ) then
           call FileGetGlobalAttribute( fid, "time", time )
           time_end = time(1)
        else
-          time_end  = dinfo%time_end
+          time_end = dinfo%time_end
        end if
-    end if
+    endif
 
     return
   end subroutine FileGetDatainfoFId
@@ -1495,22 +1500,22 @@ contains
   ! FileGetData
   !-----------------------------------------------------------------------------
   subroutine FileGetAllDatainfoFName( &
-      step_limit,  &
-      dim_limit,   &
-      basename,    &
-      varname,     &
-      myrank,      &
-      step_nmax,   &
-      description, &
-      units,       &
-      datatype,    &
-      dim_rank,    &
-      dim_name,    &
-      dim_size,    &
-      time_start,  &
-      time_end,    &
-      time_units,  &
-      single       )
+       step_limit,  &
+       dim_limit,   &
+       basename,    &
+       varname,     &
+       myrank,      &
+       step_nmax,   &
+       description, &
+       units,       &
+       datatype,    &
+       dim_rank,    &
+       dim_name,    &
+       dim_size,    &
+       time_start,  &
+       time_end,    &
+       time_units,  &
+       single       )
     implicit none
 
     integer,                    intent(in)  :: step_limit
@@ -1531,9 +1536,9 @@ contains
 
     logical,                    intent(in), optional :: single
 
-
     integer :: fid
     logical :: single_
+    !---------------------------------------------------------------------------
 
     mpi_myrank = myrank
 
@@ -1541,7 +1546,7 @@ contains
        single_ = single
     else
        single_ = .false.
-    end if
+    endif
 
     !--- search/register file
     call FileOpen( fid,        & ! [OUT]
@@ -1549,39 +1554,39 @@ contains
                    File_FREAD, & ! [IN]
                    single_     ) ! [IN]
 
-    call FileGetAllDatainfoFId( &
-      step_limit,  &
-      dim_limit,   &
-      fid,         &
-      varname,     &
-      step_nmax,   &
-      description, &
-      units,       &
-      datatype,    &
-      dim_rank,    &
-      dim_name,    &
-      dim_size,    &
-      time_start,  &
-      time_end,    &
-      time_units   )
+    call FileGetAllDatainfoFId( step_limit,  & ! [IN]
+                                dim_limit,   & ! [IN]
+                                fid,         & ! [IN]
+                                varname,     & ! [IN]
+                                step_nmax,   & ! [OUT]
+                                description, & ! [OUT]
+                                units,       & ! [OUT]
+                                datatype,    & ! [OUT]
+                                dim_rank,    & ! [OUT]
+                                dim_name,    & ! [OUT]
+                                dim_size,    & ! [OUT]
+                                time_start,  & ! [OUT]
+                                time_end,    & ! [OUT]
+                                time_units   ) ! [OUT]
 
     return
   end subroutine FileGetAllDatainfoFName
+
   subroutine FileGetAllDatainfoFId( &
-      step_limit,  &
-      dim_limit,   &
-      fid,         &
-      varname,     &
-      step_nmax,   &
-      description, &
-      units,       &
-      datatype,    &
-      dim_rank,    &
-      dim_name,    &
-      dim_size,    &
-      time_start,  &
-      time_end,    &
-      time_units   )
+       step_limit,  &
+       dim_limit,   &
+       fid,         &
+       varname,     &
+       step_nmax,   &
+       description, &
+       units,       &
+       datatype,    &
+       dim_rank,    &
+       dim_name,    &
+       dim_size,    &
+       time_start,  &
+       time_end,    &
+       time_units   )
     implicit none
 
     integer,                    intent(in)  :: step_limit
@@ -1601,10 +1606,11 @@ contains
 
     type(datainfo) :: dinfo
 
-    integer :: ndim
-    integer :: istep, idim
+    real(DP) :: time(1)
+    integer  :: ndim, idim
+    integer  :: error
 
-    integer :: error
+    integer  :: istep
     !---------------------------------------------------------------------------
 
     ! initialize
@@ -1644,11 +1650,20 @@ contains
              dim_size(idim) = dinfo%dim_size(idim)
           enddo
 
-          time_units = dinfo%time_units
+          if ( dinfo%time_units == "" ) then
+             call FileGetGlobalAttribute( fid, "time_units", time_units )
+             call FileGetGlobalAttribute( fid, "time", time )
+             time_start(1) = time(1)
+             time_end  (1) = time(1)
+          else
+             time_units    = dinfo%time_units
+             time_start(1) = dinfo%time_start
+             time_end  (1) = dinfo%time_end
+          endif
+       else
+          time_start(istep) = dinfo%time_start
+          time_end  (istep) = dinfo%time_end
        endif
-
-       time_start(istep) = dinfo%time_start
-       time_end  (istep) = dinfo%time_end
     enddo
 
     return
