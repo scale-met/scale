@@ -1,15 +1,15 @@
 \section{What is \scalenetcdf file?}
-In this section, data file, which SCALE directly reads and writes (\scalenetcdf) files, is explained.
+In this section, data file, which SCALE directly reads and writes \scalenetcdf files, is explained.
 \scalelib employs \netcdf (network Common Data Format) as data file format.
-\netcdf is a software developed by Unidata (\url{http://www.unidata.ucar.edu/}).
+\Netcdf is a software developed by Unidata (\url{http://www.unidata.ucar.edu/}),
 and it enables us to generate files with self-describing and machine-independent data format;
 for example, the former has a merit to describe variables with their axis variables in a file and
 the latter has a merit to treat data without worry which endian is used.
 Based on the above virtue, \scalelib has particular conversion ( \scalenetcdf convention ).
 
 \subsection{Global Attributes}
-\scalenetcdf file contains data with information with regards to spatial 
-decomposition as ``Global Attributes'' (Table \ref{table:netcdf_global_attrs}).
+\scalenetcdf file contains information about data contained in the file,
+such as those with regards to spatial decomposition as ``Global Attributes'' (Table \ref{table:netcdf_global_attrs}).
 When the single file I/O is used (\nmitem{IO_AGGREGATE}=.true. in \namelist{PARAM_IO}),
 the attributes of myrank, rankidx, and procsize are not output.
 
@@ -70,7 +70,7 @@ Table \ref{table:netcdf_axes} shows list of the axis data.
 The coordinate variables has their own dimension; their variable names are same as their dimension names.
 The other axis variables uses some dimensions of coordinate variables.
 The lower-case variables are mainly used in the file, 
-while the upper-case variables are for special purpose such as restarting from the history files.
+while the upper-case variables describes axes in simulation.
 Figure \ref{fig:netcdfhorizontalcoordinate} and \ref{fig:netcdfverticalcoordinate} show 
 the horizontal and vertical locations of coordinate variables,
 respectively.
@@ -140,8 +140,8 @@ FBFYG & buffer factor at FYG for the whole region \\
 \hline
 \multicolumn{2}{l}{Other axis variables (2D)}\\ \hline
 name & description \\ \hline \hline
-lon & longitude at (y,x) \\
-lon\_uy & longitude at (y,xh) \\
+lon & longitude at (y, x) \\
+lon\_uy & longitude at (y, xh) \\
 lon\_xv & longitude at (yh, x) \\
 lon\_uv(yh, xh) & longitude at (yh, xh) \\
 lat(y, x) & latitude at (y, x) \\
@@ -186,5 +186,6 @@ the missing value ``missing\_value'' as well as ``long\_name'' and ``untis''.
 Data structure in the initial (restart) data and boundary data files 
 is identical to the array in the model, that is the z-x-y order.
 On the other hand, it in the history data file is the x-y-z order.
-This is true for 3D axis variables ( see also Table \ref{table:netcdf_axes} ).
+This is true for 3D axis variables.
+See also Table \ref{table:netcdf_axes}.
 
