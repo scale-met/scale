@@ -78,6 +78,7 @@ module mod_ideal_init
   private :: mountwave_init
   private :: gravwave_init
   private :: tomita_init
+  private :: warmbubble_init
 
   private :: tomita_2004
   private :: eta_vert_coord_NW
@@ -116,6 +117,8 @@ module mod_ideal_init
   real(RP), private :: p0 = 1.E+5_RP                ! [Pa]
   logical, private, parameter :: message = .false.
   integer, private, parameter :: itrmax = 100       ! # of iteration maximum
+
+  real(RP), private, allocatable :: bubble(:,:,:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -220,6 +223,11 @@ contains
     case('Tomita2004')
 
        call tomita_init( ADM_gall, ADM_kall, ADM_lall, DIAG_var(:,:,:,:) )
+
+    case('Warmbubble')
+
+       call BUBBLE_setup
+       call warmbubble_init( ADM_gall, ADM_kall, ADM_lall, DIAG_var(:,:,:,:) )
 
     case default
 
@@ -859,9 +867,10 @@ contains
     real(RP)            :: RdovRv
     real(RP)            :: Mvap2           ! Ratio of molar mass of dry air/water based on NICAM CONSTANTs
 
-    integer,  parameter :: zcoords = 1     ! 1 if z is specified, 0 if p is specified
-    integer             :: pert            ! type of perturbation (0 = no perturbation, 1 = perturbation)
-    logical,  parameter :: prs_dry = .false.
+    integer,  parameter :: zcoords  = 1      ! 1 if z is specified, 0 if p is specified
+    integer             :: pert              ! type of perturbation (0 = no perturbation, 1 = perturbation)
+    real(RP)            :: windmask = 1.0_RP
+    logical,  parameter :: prs_dry  = .false.
 
     integer :: n, k, l, k0
     !---------------------------------------------------------------------------
@@ -881,6 +890,9 @@ contains
     case('2')  ! without perturbation
        if( IO_L ) write(IO_FID_LOG,*) "Super-Cell Initialize - case 2: no perturbation"
        pert = 0
+    case('3')  ! without wind
+       if( IO_L ) write(IO_FID_LOG,*) "Super-Cell Initialize - case 3: no wind (warmbubble)"
+       windmask = 0.0_RP
     case default
        if( IO_L ) write(IO_FID_LOG,*) "xxx Invalid test_case: '"//trim(test_case)//"' specified."
        if( IO_L ) write(IO_FID_LOG,*) 'STOP.'
@@ -942,9 +954,9 @@ contains
        do k = 1, kdim
           DIAG_var(n,k,l,1     ) = prs     (k)
           DIAG_var(n,k,l,2     ) = tmp     (k)
-          DIAG_var(n,k,l,3     ) = vx_local(k)
-          DIAG_var(n,k,l,4     ) = vy_local(k)
-          DIAG_var(n,k,l,5     ) = vz_local(k)
+          DIAG_var(n,k,l,3     ) = vx_local(k) * windmask
+          DIAG_var(n,k,l,4     ) = vy_local(k) * windmask
+          DIAG_var(n,k,l,5     ) = vz_local(k) * windmask
           DIAG_var(n,k,l,6+I_QV) = q       (k)
        enddo
 
@@ -1875,6 +1887,215 @@ contains
   end subroutine tomita_init
 
   !-----------------------------------------------------------------------------
+  subroutine warmbubble_init( &
+       ijdim,   &
+       kdim,    &
+       lall,    &
+       DIAG_var )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_const, only: &
+       Pstd   => CONST_Pstd,   &
+       EPSvap => CONST_EPSvap
+    use mod_grd, only: &
+       GRD_LAT, &
+       GRD_LON, &
+       GRD_s,   &
+       GRD_Z,   &
+       GRD_vz
+    use mod_runconf, only: &
+       I_QV,    &
+       NQW_MAX
+    implicit none
+
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
+    integer,  intent(in)  :: lall
+    real(RP), intent(out) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+
+    ! Surface state
+    real(RP) :: SFC_THETA               ! surface potential temperature [K]
+    real(RP) :: SFC_PRES                ! surface pressure [Pa]
+    real(RP) :: SFC_RH       =  80.0_RP ! surface relative humidity [%]
+    ! Environment state
+    real(RP) :: ENV_U        =   0.0_RP ! velocity u of environment [m/s]
+    real(RP) :: ENV_V        =   0.0_RP ! velocity v of environment [m/s]
+    real(RP) :: ENV_RH       =  80.0_RP ! Relative Humidity of environment [%]
+    real(RP) :: ENV_L1_ZTOP  =  1.E3_RP ! top height of the layer1 (constant THETA)       [m]
+    real(RP) :: ENV_L2_ZTOP  = 14.E3_RP ! top height of the layer2 (small THETA gradient) [m]
+    real(RP) :: ENV_L2_TLAPS = 4.E-3_RP ! Lapse rate of THETA in the layer2 (small THETA gradient) [K/m]
+    real(RP) :: ENV_L3_TLAPS = 3.E-2_RP ! Lapse rate of THETA in the layer3 (large THETA gradient) [K/m]
+    ! Bubble
+    real(RP) :: BBL_THETA    =   1.0_RP ! extremum of temperature in bubble [K]
+
+    NAMELIST / PARAM_MKINIT_WARMBUBBLE / &
+       SFC_THETA,    &
+       SFC_PRES,     &
+       ENV_U,        &
+       ENV_V,        &
+       ENV_RH,       &
+       ENV_L1_ZTOP,  &
+       ENV_L2_ZTOP,  &
+       ENV_L2_TLAPS, &
+       ENV_L3_TLAPS, &
+       BBL_THETA
+
+    real(RP) :: lat, lon
+    real(RP) :: z(kdim)
+
+    real(RP) :: dens(kdim)
+    real(RP) :: pres(kdim)
+    real(RP) :: temp(kdim)
+    real(RP) :: pott(kdim)
+    real(RP) :: qv  (kdim)
+    real(RP) :: qc  (kdim)
+    real(RP) :: temp_sfc
+    real(RP) :: pres_sfc
+    real(RP) :: pott_sfc
+    real(RP) :: qv_sfc
+    real(RP) :: qc_sfc
+
+    real(RP) :: qsat(kdim)
+    real(RP) :: qsat_sfc
+    real(RP) :: psat
+    real(RP) :: dtheta
+
+    integer  :: ierr
+    integer  :: n, k, l, k0
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) "Warmbubble Initialize"
+
+    if ( NQW_MAX < 3 ) then
+       write(*         ,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
+       if( IO_L ) write(IO_FID_LOG,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
+       call PRC_MPIstop
+    endif
+
+    SFC_THETA = 300.0_RP
+    SFC_PRES  = Pstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_WARMBUBBLE,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_WARMBUBBLE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WARMBUBBLE)
+
+    k0 = ADM_KNONE
+
+    DIAG_var(:,:,:,:) = 0.0_RP
+
+    do l = 1, lall
+    do n = 1, ijdim
+       do k = ADM_kmin, ADM_kmax
+          z(k) = GRD_vz(n,k,l,GRD_Z)
+       enddo
+
+       lat = GRD_s(n,k0,l,GRD_LAT)
+       lon = GRD_s(n,k0,l,GRD_LON)
+
+       ! calc in dry condition
+       pres_sfc = SFC_PRES
+       pott_sfc = SFC_THETA
+       qv_sfc   = 0.0_RP
+       qc_sfc   = 0.0_RP
+
+       do k = ADM_kmin, ADM_kmax
+          if    ( z(k) <= ENV_L1_ZTOP ) then ! Layer 1
+             pott(k) = SFC_THETA
+          elseif( z(k) <  ENV_L2_ZTOP ) then ! Layer 2
+             pott(k) = pott(k-1) + ENV_L2_TLAPS * ( z(k)-z(k-1) )
+          else                               ! Layer 3
+             pott(k) = pott(k-1) + ENV_L3_TLAPS * ( z(k)-z(k-1) )
+          endif
+       enddo
+       qv(:)    = 0.0_RP
+       qc(:)    = 0.0_RP
+
+       ! make density & pressure profile in dry condition
+       call HYDROSTATIC_buildrho( kdim,     & ! [IN]
+                                  ADM_kmin, & ! [IN]
+                                  ADM_kmax, & ! [IN]
+                                  z   (:),  & ! [IN]
+                                  dens(:),  & ! [OUT]
+                                  temp(:),  & ! [OUT]
+                                  pres(:),  & ! [OUT]
+                                  pott(:),  & ! [IN]
+                                  qv  (:),  & ! [IN]
+                                  qc  (:),  & ! [IN]
+                                  temp_sfc, & ! [OUT]
+                                  pres_sfc, & ! [IN]
+                                  pott_sfc, & ! [IN]
+                                  qv_sfc,   & ! [IN]
+                                  qc_sfc    ) ! [IN]
+
+       ! calc QV from RH
+       call SATURATION_psat( temp_sfc, psat )
+       qsat_sfc = EPSvap * psat / ( pres_sfc - ( 1.0_RP-EPSvap ) * psat )
+
+       do k = 1, kdim
+          call SATURATION_psat( temp(k), psat )
+          qsat(k) = EPSvap * psat / ( pres(k) - ( 1.0_RP-EPSvap ) * psat )
+       enddo
+
+       qv_sfc = SFC_RH * 1.E-2_RP * qsat_sfc
+       do k = ADM_kmin, ADM_kmax
+          if    ( z(k) <= ENV_L1_ZTOP ) then ! Layer 1
+             qv(k) = ENV_RH * 1.E-2_RP * qsat(k)
+          elseif( z(k) <=  ENV_L2_ZTOP ) then ! Layer 2
+             qv(k) = ENV_RH * 1.E-2_RP * qsat(k)
+          else                                ! Layer 3
+             qv(k) = 0.0_RP
+          endif
+       enddo
+
+       ! make density & pressure profile in moist condition
+       call HYDROSTATIC_buildrho( kdim,     & ! [IN]
+                                  ADM_kmin, & ! [IN]
+                                  ADM_kmax, & ! [IN]
+                                  z   (:),  & ! [IN]
+                                  dens(:),  & ! [OUT]
+                                  temp(:),  & ! [OUT]
+                                  pres(:),  & ! [OUT]
+                                  pott(:),  & ! [IN]
+                                  qv  (:),  & ! [IN]
+                                  qc  (:),  & ! [IN]
+                                  temp_sfc, & ! [OUT]
+                                  pres_sfc, & ! [IN]
+                                  pott_sfc, & ! [IN]
+                                  qv_sfc,   & ! [IN]
+                                  qc_sfc    ) ! [IN]
+
+       ! make warm bubble
+       do k = 1, kdim
+          dtheta = BBL_THETA * bubble(n,k,l)
+
+          temp(k) = temp(k) + dtheta * ( pres(k) / PRE00 )**(Rd/Cp)
+       enddo
+
+
+       do k = 1, kdim
+          DIAG_var(n,k,l,1)      = pres(k)
+          DIAG_var(n,k,l,2)      = temp(k)
+          DIAG_var(n,k,l,3)      = 0.0_RP
+          DIAG_var(n,k,l,4)      = 0.0_RP
+          DIAG_var(n,k,l,5)      = 0.0_RP
+          DIAG_var(n,k,l,6)      = 0.0_RP
+          DIAG_var(n,k,l,6+I_QV) = qv  (k)
+       enddo
+    enddo
+    enddo
+
+    return
+  end subroutine warmbubble_init
+
+  !-----------------------------------------------------------------------------
   ! estimation ps distribution by using topography
   subroutine tomita_2004( &
       kdim,     &  !--- IN : # of z dimension
@@ -2507,5 +2728,430 @@ contains
 
     return
   end function Sp_Unit_North
+
+  !-----------------------------------------------------------------------------
+  !> Bubble
+  subroutine BUBBLE_setup
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_const, only: &
+       CONST_UNDEF8
+    use scale_vector, only: &
+       VECTR_distance
+    use mod_grd, only: &
+       GRD_LAT, &
+       GRD_LON, &
+       GRD_s,   &
+       GRD_Z,   &
+       GRD_vz
+    implicit none
+
+    ! Bubble
+    real(RP) :: BBL_CZ     =  2.E3_RP ! center location [m]: z
+    real(RP) :: BBL_CLON   =  2.E3_RP ! center location [deg.]: longitude
+    real(RP) :: BBL_CLAT   =  2.E3_RP ! center location [deg.]: latitude
+    real(RP) :: BBL_RZ     =  0.0_RP  ! bubble radius   [m]: z
+    real(RP) :: BBL_RHORIZ =  0.0_RP  ! bubble radius   [m]: horizontal
+
+    NAMELIST / PARAM_BUBBLE / &
+       BBL_CZ,    &
+       BBL_CLON,  &
+       BBL_CLAT,  &
+       BBL_RZ,    &
+       BBL_RHORIZ
+
+    real(RP) :: disth, distz
+
+    integer  :: ierr
+    integer  :: g, k, l, k0
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[idealinit bubble] / Categ[atmos] / Origin[SCALE-GM]'
+
+    k0 = ADM_KNONE
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_BUBBLE,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_BUBBLE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_BUBBLE)
+
+    allocate( bubble(ADM_gall,ADM_kall,ADM_lall) )
+
+    if ( abs(BBL_RZ*BBL_RHORIZ) <= 0.0_RP ) then
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** no bubble'
+       do l = 1, ADM_lall
+       do k = 1, ADM_kall
+       do g = 1, ADM_gall
+          bubble(g,k,l) = 0.0_RP
+       enddo
+       enddo
+       enddo
+
+    else
+
+       do l = 1, ADM_lall
+       do k = 1, ADM_kall
+       do g = 1, ADM_gall
+          bubble(g,k,l) = CONST_UNDEF8
+       enddo
+       enddo
+       enddo
+
+       ! make bubble coefficient
+       do l = 1, ADM_lall
+       do g = 1, ADM_gall
+
+          call VECTR_distance( a,                     &
+                               BBL_CLON,              &
+                               BBL_CLAT,              &
+                               GRD_s(g,k0,l,GRD_LON), &
+                               GRD_s(g,k0,l,GRD_LAT), &
+                               disth                  )
+
+          disth = ( disth / BBL_RHORIZ )**2
+
+          do k = ADM_kmin, ADM_kmax
+             distz = ( (GRD_vz(g,k,l,GRD_Z)-BBL_CZ) / BBL_RZ )**2
+
+             bubble(g,k,l) = cos( 0.5_RP*PI*sqrt( min(distz+disth,1.0_RP) ) )**2
+          enddo
+
+       enddo
+       enddo
+    endif
+
+    return
+  end subroutine BUBBLE_setup
+
+  !-----------------------------------------------------------------------------
+  !> calc saturation vapor pressure from Clausius-Clapeyron equation (0D)
+  subroutine SATURATION_psat( &
+       psat, &
+       temp  )
+    use scale_const, only: &
+       Rvap  => CONST_Rvap,   &
+       LHV0  => CONST_LHV0,  &
+       PSAT0 => CONST_PSAT0,  &
+       TEM00 => CONST_TEM00
+    implicit none
+
+    real(RP), intent(out) :: psat !< saturation vapor pressure [Pa]
+    real(RP), intent(in)  :: temp !< temperature               [K]
+
+    real(RP) :: RTEM00         !< inverse of TEM00
+    real(RP) :: LovR_liq
+    !---------------------------------------------------------------------------
+
+    RTEM00   = 1.0_RP / TEM00
+    LovR_liq = LHV0 / Rvap
+
+    psat = PSAT0 * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp ) )
+
+    return
+  end subroutine SATURATION_psat
+
+  !-----------------------------------------------------------------------------
+  !> Build up density from surface (1D)
+  subroutine HYDROSTATIC_buildrho( &
+       KA,       &
+       KS,       &
+       KE,       &
+       z,        &
+       dens,     &
+       temp,     &
+       pres,     &
+       pott,     &
+       qv,       &
+       qc,       &
+       temp_sfc, &
+       pres_sfc, &
+       pott_sfc, &
+       qv_sfc,   &
+       qc_sfc    )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_const, only: &
+       CONST_EPS,                &
+       CVdry   => CONST_CVdry,   &
+       CPvap   => CONST_CPvap,   &
+       CVvap   => CONST_CVvap,   &
+       LAPSdry => CONST_LAPSdry
+    implicit none
+
+    integer,  intent(in)  :: KA       !< # of vertical layer with halo
+    integer,  intent(in)  :: KS       !< start index of k
+    integer,  intent(in)  :: KE       !< end   index of k
+    real(RP), intent(in)  :: z   (KA) !< height                [m]
+    real(RP), intent(out) :: dens(KA) !< density               [kg/m3]
+    real(RP), intent(out) :: temp(KA) !< temperature           [K]
+    real(RP), intent(out) :: pres(KA) !< pressure              [Pa]
+    real(RP), intent(in)  :: pott(KA) !< potential temperature [K]
+    real(RP), intent(in)  :: qv  (KA) !< water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc  (KA) !< liquid water          [kg/kg]
+
+    real(RP), intent(out) :: temp_sfc !< surface temperature           [K]
+    real(RP), intent(in)  :: pres_sfc !< surface pressure              [Pa]
+    real(RP), intent(in)  :: pott_sfc !< surface potential temperature [K]
+    real(RP), intent(in)  :: qv_sfc   !< surface water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc_sfc   !< surface liquid water          [kg/kg]
+
+    integer, parameter :: itelim = 100 !< itelation number limit
+    real(RP)           :: criteria                            !< convergence judgement criteria
+    logical            :: HYDROSTATIC_uselapserate  = .false. !< use lapse rate?
+
+    real(RP) :: Rdry
+    real(RP) :: Rvap
+    real(RP) :: CV_qv
+    real(RP) :: CP_qv
+    real(RP) :: CV_qc
+    real(RP) :: CP_qc
+
+    real(RP) :: dens_sfc
+
+    real(RP) :: Rtot_sfc
+    real(RP) :: CVtot_sfc
+    real(RP) :: CPovCV_sfc
+    real(RP) :: Rtot
+    real(RP) :: CVtot
+    real(RP) :: CPtot
+    real(RP) :: CPovCV
+
+    real(RP) :: CVovCP_sfc, CPovR, CVovCP, RovCV
+    real(RP) :: dens_s, dhyd, dgrd
+    integer  :: ite
+    logical  :: converged
+    !---------------------------------------------------------------------------
+
+    Rdry  = Rd
+    Rvap  = Rv
+    CV_qv = CVvap
+    CP_qv = CPvap
+    CV_qc = CVvap
+    CP_qc = CVvap
+
+    criteria = sqrt( CONST_EPS )
+
+    !--- from surface to lowermost atmosphere
+
+    Rtot_sfc   = Rdry  * ( 1.0_RP - qv_sfc - qc_sfc ) &
+               + Rvap  * qv_sfc
+    CVtot_sfc  = CVdry * ( 1.0_RP - qv_sfc - qc_sfc ) &
+               + CV_qv * qv_sfc                       &
+               + CV_qc * qc_sfc
+    CPovCV_sfc = ( CVtot_sfc + Rtot_sfc ) / CVtot_sfc
+
+    Rtot   = Rdry  * ( 1.0_RP - qv(KS) - qc(KS) ) &
+           + Rvap  * qv(KS)
+    CVtot  = CVdry * ( 1.0_RP - qv(KS) - qc(KS) ) &
+           + CV_qv * qv(KS)                       &
+           + CV_qc * qc(KS)
+    CPtot  = Cp    * ( 1.0_RP - qv(KS) - qc(KS) ) &
+           + CP_qv * qv(KS)                       &
+           + CV_qc * qc(KS)
+    CPovCV = CPtot / CVtot
+
+    ! density at surface
+    CVovCP_sfc = 1.0_RP / CPovCV_sfc
+    dens_sfc   = PRE00 / Rtot_sfc / pott_sfc * ( pres_sfc/PRE00 )**CVovCP_sfc
+    temp_sfc   = pres_sfc / ( dens_sfc * Rtot_sfc )
+
+    ! make density at lowermost cell center
+    if ( HYDROSTATIC_uselapserate ) then
+
+       CPovR  = CPtot / Rtot
+       CVovCP = 1.0_RP / CPovCV
+
+       temp(KS) = pott_sfc - LAPSdry * z(KS) ! use dry lapse rate
+       pres(KS) = PRE00 * ( temp(KS)/pott(KS) )**CPovR
+       dens(KS) = PRE00 / Rtot / pott(KS) * ( pres(KS)/PRE00 )**CVovCP
+
+    else ! use itelation
+
+       RovCV = Rtot / CVtot
+
+       dens_s   = 0.0_RP
+       dens(KS) = dens_sfc ! first guess
+
+       converged = .false.
+       do ite = 1, itelim
+          if ( abs(dens(KS)-dens_s) <= criteria ) then
+             converged = .true.
+             exit
+          endif
+
+          dens_s = dens(KS)
+
+          dhyd = + ( PRE00 * ( dens_sfc * Rtot_sfc * pott_sfc / PRE00 )**CPovCV_sfc &
+                   - PRE00 * ( dens_s   * Rtot     * pott(KS) / PRE00 )**CPovCV     ) / z(KS) & ! dp/dz
+                 - g    * 0.5_RP * ( dens_sfc + dens_s )                                     ! rho*g
+
+          dgrd = - PRE00 * ( Rtot * pott(KS) / PRE00 )**CPovCV / z(KS) &
+                 * CPovCV * dens_s**RovCV                           &
+                 - 0.5_RP * g
+
+          dens(KS) = dens_s - dhyd/dgrd
+
+          if( dens(KS)*0.0_RP /= 0.0_RP) exit
+       enddo
+
+       if ( .NOT. converged ) then
+          write(*,*) 'xxx [buildrho 1D sfc] iteration not converged!', &
+                     dens(KS),ite,dens_s,dhyd,dgrd
+          call PRC_MPIstop
+       endif
+
+    endif
+
+    !--- from lowermost atmosphere to top of atmosphere
+    call ATMOS_HYDROSTATIC_buildrho_atmos_1D( KA,      & ! [IN]
+                                              KS,      & ! [IN]
+                                              KE,      & ! [IN]
+                                              z   (:), & ! [IN]
+                                              dens(:), & ! [INOUT]
+                                              temp(:), & ! [OUT]
+                                              pres(:), & ! [OUT]
+                                              pott(:), & ! [IN]
+                                              qv  (:), & ! [IN]
+                                              qc  (:)  ) ! [IN]
+
+    return
+  end subroutine HYDROSTATIC_buildrho
+
+  !-----------------------------------------------------------------------------
+  !> Build up density from lowermost atmosphere (1D)
+  subroutine ATMOS_HYDROSTATIC_buildrho_atmos_1D( &
+       KA,   &
+       KS,   &
+       KE,   &
+       z,    &
+       dens, &
+       temp, &
+       pres, &
+       pott, &
+       qv,   &
+       qc    )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_const, only: &
+       CONST_EPS,                &
+       CVdry   => CONST_CVdry,   &
+       CPvap   => CONST_CPvap,   &
+       CVvap   => CONST_CVvap,   &
+       LAPSdry => CONST_LAPSdry
+    implicit none
+
+    integer,  intent(in)    :: KA       !< # of vertical layer with halo
+    integer,  intent(in)    :: KS       !< start index of k
+    integer,  intent(in)    :: KE       !< end   index of k
+    real(RP), intent(in)    :: z   (KA) !< height                [m]
+    real(RP), intent(inout) :: dens(KA) !< density               [kg/m3]
+    real(RP), intent(out)   :: temp(KA) !< temperature           [K]
+    real(RP), intent(out)   :: pres(KA) !< pressure              [Pa]
+    real(RP), intent(in)    :: pott(KA) !< potential temperature [K]
+    real(RP), intent(in)    :: qv  (KA) !< water vapor           [kg/kg]
+    real(RP), intent(in)    :: qc  (KA) !< liquid water          [kg/kg]
+
+    integer, parameter :: itelim = 100 !< itelation number limit
+    real(RP)           :: criteria                            !< convergence judgement criteria
+    logical            :: HYDROSTATIC_uselapserate  = .false. !< use lapse rate?
+
+    real(RP) :: Rdry
+    real(RP) :: Rvap
+    real(RP) :: CV_qv
+    real(RP) :: CP_qv
+    real(RP) :: CV_qc
+    real(RP) :: CP_qc
+
+    real(RP) :: Rtot  (KA)
+    real(RP) :: CVtot (KA)
+    real(RP) :: CPtot (KA)
+    real(RP) :: CPovCV(KA)
+
+    real(RP) :: RovCV
+    real(RP) :: dens_s, dhyd, dgrd
+    integer  :: ite
+    logical  :: converged
+
+    integer  :: k
+    !---------------------------------------------------------------------------
+
+    Rdry  = Rd
+    Rvap  = Rv
+    CV_qv = CVvap
+    CP_qv = CPvap
+    CV_qc = CVvap
+    CP_qc = CVvap
+
+    criteria = sqrt( CONST_EPS )
+
+    do k = KS, KE
+       Rtot  (k) = Rdry  * ( 1.0_RP - qv(k) - qc(k) ) &
+                 + Rvap  * qv(k)
+       CVtot (k) = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
+                 + CV_qv * qv(k)                      &
+                 + CV_qc * qc(k)
+       CPtot (k) = Cp    * ( 1.0_RP - qv(k) - qc(k) ) &
+                 + CP_qv * qv(k)                      &
+                 + CV_qc * qc(k)
+       CPovCV(k) = CPtot(k) / CVtot(k)
+    enddo
+
+    do k = KS+1, KE
+       RovCV = Rtot(k) / CVtot(k)
+
+       dens_s  = 0.0_RP
+       dens(k) = dens(k-1) ! first guess
+
+       converged = .false.
+       do ite = 1, itelim
+          if ( abs(dens(k)-dens_s) <= criteria ) then
+             converged = .true.
+             exit
+          endif
+
+          dens_s = dens(k)
+
+          dhyd = + ( PRE00 * ( dens(k-1) * Rtot(k-1) * pott(k-1) / PRE00 )**CPovCV(k-1) &
+                   - PRE00 * ( dens_s    * Rtot(k  ) * pott(k  ) / PRE00 )**CPovCV(k  ) ) / (z(k)-z(k-1)) & ! dpdz
+                 - g    * 0.5_RP * ( dens(k-1) + dens_s )                                                   ! rho*g
+
+          dgrd = - PRE00 * ( Rtot(k) * pott(k) / PRE00 )**CPovCV(k) / (z(k)-z(k-1)) &
+                 * CPovCV(k) * dens_s**RovCV                                        &
+                 - 0.5_RP * g
+
+          dens(k) = dens_s - dhyd/dgrd
+
+          if( dens(k)*0.0_RP /= 0.0_RP) exit
+       enddo
+
+       if ( .NOT. converged ) then
+          write(*,*) 'xxx [buildrho 1D atmos] iteration not converged!', &
+                     k,dens(k),ite,dens_s,dhyd,dgrd
+          call PRC_MPIstop
+       endif
+    enddo
+
+    do k = KS, KE
+       pres(k) = PRE00 * ( dens(k) * Rtot(k) * pott(k) / PRE00 )**CPovCV(k)
+       temp(k) = pres(k) / ( dens(k) * Rtot(k) )
+    enddo
+
+    dens(   1:KS-1) = dens(KS)
+    dens(KE+1:KA  ) = dens(KE)
+    pres(   1:KS-1) = pres(KS)
+    pres(KE+1:KA  ) = pres(KE)
+    temp(   1:KS-1) = temp(KS)
+    temp(KE+1:KA  ) = temp(KE)
+
+    return
+  end subroutine ATMOS_HYDROSTATIC_buildrho_atmos_1D
 
 end module mod_ideal_init
