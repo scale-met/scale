@@ -1,8 +1,15 @@
 = Release History
 
+== 2017-12-11 (5.2.4)
+* Bug fixes:
+  * Fix bugs in calculation of the cloud fraction and effective radius in the Suzuki10 scheme
+  * Fix a bug in checking domain size
+  * Fix wrong axes in file: LCDZ, UCDZ
+  * Fix an error in generating reference manual
+
 == 2017-11-17 (5.2.3)
 * Bug fixes:
-  * Fix the nuding at the lateral boundary region with the SN14 and Suziki10 schemes
+  * Fix the nuding at the lateral boundary region with the SN14 and Suzuki10 schemes
   * Fix the CP scheme in the case with the SN14 scheme
   * Fix the online nesting in the case using the Tomita08 and SN14 scheme in the parent and daughter domains, respectively
 
