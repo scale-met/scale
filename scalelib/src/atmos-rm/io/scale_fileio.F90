@@ -156,9 +156,6 @@ contains
     NAMELIST / PARAM_FILEIO / &
        FILEIO_datacheck_criteria
 
-    integer :: rankidx(2)
-    integer :: IM, JM
-
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -187,19 +184,16 @@ contains
                                    '(file-internal)/internal = ', FILEIO_datacheck_criteria
 
     if ( IO_AGGREGATE ) then
-       rankidx(1) = PRC_2Drank(PRC_myrank,1)
-       rankidx(2) = PRC_2Drank(PRC_myrank,2)
-
        ! construct indices independent from PRC_PERIODIC_X/Y
        XSB = 1 + IHALO
-       if( rankidx(1) == 0 ) XSB = 1
+       if( PRC_2Drank(PRC_myrank,1) == 0           ) XSB = 1
        XEB = IMAX + IHALO
-       if( rankidx(1) == PRC_NUM_X-1 ) XEB = IA
+       if( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) XEB = IA
 
        YSB = 1 + JHALO
-       if( rankidx(2) == 0 ) YSB = 1
+       if( PRC_2Drank(PRC_myrank,2) == 0           ) YSB = 1
        YEB = JMAX + JHALO
-       if( rankidx(2) == PRC_NUM_Y-1 ) YEB = JA
+       if( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) YEB = JA
     else
        XSB = ISB
        XEB = IEB
@@ -207,19 +201,17 @@ contains
        YEB = JEB
     end if
 
-    IM = XEB - XSB + 1
-    JM = YEB - YSB + 1
-    allocate( AXIS_LON  (IM,JM) )
-    allocate( AXIS_LONX (IM,JM) )
-    allocate( AXIS_LONY (IM,JM) )
-    allocate( AXIS_LONXY(IM,JM) )
-    allocate( AXIS_LAT  (IM,JM) )
-    allocate( AXIS_LATX (IM,JM) )
-    allocate( AXIS_LATY (IM,JM) )
-    allocate( AXIS_LATXY(IM,JM) )
+    allocate( AXIS_LON  (  IA,  JA) )
+    allocate( AXIS_LONX (0:IA,  JA) )
+    allocate( AXIS_LONY (  IA,0:JA) )
+    allocate( AXIS_LONXY(0:IA,0:JA) )
+    allocate( AXIS_LAT  (  IA,  JA) )
+    allocate( AXIS_LATX (0:IA,  JA) )
+    allocate( AXIS_LATY (  IA,0:JA) )
+    allocate( AXIS_LATXY(0:IA,0:JA) )
 
-    allocate( AXIS_HZXY (KMAX,IM,JM) )
-    allocate( AXIS_HWXY (KMAX,IM,JM) )
+    allocate( AXIS_HZXY (  KA,IA,JA) )
+    allocate( AXIS_HWXY (0:KA,IA,JA) )
 
     if( IO_AGGREGATE ) call Construct_Derived_Datatype
 
@@ -269,29 +261,29 @@ contains
        D2R => CONST_D2R
     implicit none
 
-    real(RP), intent(in) :: LON  (IA,JA)
-    real(RP), intent(in) :: LONX (IA,JA)
-    real(RP), intent(in) :: LONY (IA,JA)
-    real(RP), intent(in) :: LONXY(IA,JA)
-    real(RP), intent(in) :: LAT  (IA,JA)
-    real(RP), intent(in) :: LATX (IA,JA)
-    real(RP), intent(in) :: LATY (IA,JA)
-    real(RP), intent(in) :: LATXY(IA,JA)
+    real(RP), intent(in) :: LON  (  IA,  JA)
+    real(RP), intent(in) :: LONX (0:IA,  JA)
+    real(RP), intent(in) :: LONY (  IA,0:JA)
+    real(RP), intent(in) :: LONXY(0:IA,0:JA)
+    real(RP), intent(in) :: LAT  (  IA,  JA)
+    real(RP), intent(in) :: LATX (0:IA,  JA)
+    real(RP), intent(in) :: LATY (  IA,0:JA)
+    real(RP), intent(in) :: LATXY(0:IA,0:JA)
     real(RP), intent(in) :: CZ   (  KA,IA,JA)
     real(RP), intent(in) :: FZ   (0:KA,IA,JA)
     !---------------------------------------------------------------------------
 
-    AXIS_LON  (:,:)   = LON  (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LONX (:,:)   = LONX (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LONY (:,:)   = LONY (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LONXY(:,:)   = LONXY(XSB:XEB,YSB:YEB) / D2R
-    AXIS_LAT  (:,:)   = LAT  (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LATX (:,:)   = LATX (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LATY (:,:)   = LATY (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LATXY(:,:)   = LATXY(XSB:XEB,YSB:YEB) / D2R
+    AXIS_LON  (:,:)   = LON  (:,:) / D2R
+    AXIS_LONX (:,:)   = LONX (:,:) / D2R
+    AXIS_LONY (:,:)   = LONY (:,:) / D2R
+    AXIS_LONXY(:,:)   = LONXY(:,:) / D2R
+    AXIS_LAT  (:,:)   = LAT  (:,:) / D2R
+    AXIS_LATX (:,:)   = LATX (:,:) / D2R
+    AXIS_LATY (:,:)   = LATY (:,:) / D2R
+    AXIS_LATXY(:,:)   = LATXY(:,:) / D2R
 
-    AXIS_HZXY (:,:,:) = CZ(KS:KE,XSB:XEB,YSB:YEB)
-    AXIS_HWXY (:,:,:) = FZ(KS:KE,XSB:XEB,YSB:YEB)
+    AXIS_HZXY (:,:,:) = CZ(:,:,:)
+    AXIS_HWXY (:,:,:) = FZ(:,:,:)
 
     set_coordinates = .true.
 
@@ -402,11 +394,11 @@ contains
     if ( set_coordinates ) then
        call FILEIO_read_var_2D( buffer_xy, fid, 'lon', 'XY', 1 )
        call FILEIO_flush( fid )
-       call check_2d( AXIS_LON, buffer_xy(XSB:XEB,YSB:YEB), 'lon' )
+       call check_2d( AXIS_LON(XSB:XEB,YSB:YEB), buffer_xy(XSB:XEB,YSB:YEB), 'lon' )
 
        call FILEIO_read_var_2D( buffer_xy, fid, 'lat', 'XY', 1 )
        call FILEIO_flush( fid )
-       call check_2d( AXIS_LAT, buffer_xy(XSB:XEB,YSB:YEB), 'lat' )
+       call check_2d( AXIS_LAT(XSB:XEB,YSB:YEB), buffer_xy(XSB:XEB,YSB:YEB), 'lat' )
     end if
 
     if ( atmos_ ) then
@@ -417,7 +409,7 @@ contains
        call FILEIO_flush( fid )
        call check_1d( GRID_CZ(KS:KE), buffer_z(KS:KE), 'z' )
        if ( .not. transpose_ ) then
-          call check_3d( AXIS_HZXY, buffer_zxy(KS:KE,XSB:XEB,YSB:YEB), 'height', transpose_ )
+          call check_3d( AXIS_HZXY(KS:KE,XSB:XEB,YSB:YEB), buffer_zxy(KS:KE,XSB:XEB,YSB:YEB), 'height', transpose_ )
        end if
     end if
 
@@ -1844,10 +1836,12 @@ contains
        GRID_FBFYG
     use scale_land_grid, only: &
        GRID_LCZ, &
-       GRID_LFZ
+       GRID_LFZ, &
+       GRID_LCDZ
     use scale_urban_grid, only: &
        GRID_UCZ, &
-       GRID_UFZ
+       GRID_UFZ, &
+       GRID_UCDZ
     implicit none
 
     integer, intent(in) :: fid
@@ -1923,11 +1917,11 @@ contains
 
        call FileWriteAxis( fid, 'LCZ',  GRID_LCZ,  start )
        call FileWriteAxis( fid, 'LFZ',  GRID_LFZ,  start )
-       call FileWriteAxis( fid, 'LCDZ', GRID_LCZ,  start )
+       call FileWriteAxis( fid, 'LCDZ', GRID_LCDZ, start )
 
        call FileWriteAxis( fid, 'UCZ',  GRID_UCZ,  start )
        call FileWriteAxis( fid, 'UFZ',  GRID_UFZ,  start )
-       call FileWriteAxis( fid, 'UCDZ', GRID_UCZ,  start )
+       call FileWriteAxis( fid, 'UCDZ', GRID_UCDZ, start )
 
        call FileWriteAxis( fid, 'CBFZ', GRID_CBFZ, start )
        call FileWriteAxis( fid, 'FBFZ', GRID_FBFZ, start )
@@ -1994,14 +1988,14 @@ contains
        start(1) = ISGA
        start(2) = JSGA
     end if
-    call FileWriteAssociatedCoordinates( fid, 'lon' ,   AXIS_LON  (:,:), start )
-    call FileWriteAssociatedCoordinates( fid, 'lon_uy', AXIS_LONX (:,:), start )
-    call FileWriteAssociatedCoordinates( fid, 'lon_xv', AXIS_LONY (:,:), start )
-    call FileWriteAssociatedCoordinates( fid, 'lon_uv', AXIS_LONXY(:,:), start )
-    call FileWriteAssociatedCoordinates( fid, 'lat' ,   AXIS_LAT  (:,:), start )
-    call FileWriteAssociatedCoordinates( fid, 'lat_uy', AXIS_LATX (:,:), start )
-    call FileWriteAssociatedCoordinates( fid, 'lat_xv', AXIS_LATY (:,:), start )
-    call FileWriteAssociatedCoordinates( fid, 'lat_uv', AXIS_LATXY(:,:), start )
+    call FileWriteAssociatedCoordinates( fid, 'lon' ,   AXIS_LON  (XSB:XEB,YSB:YEB), start )
+    call FileWriteAssociatedCoordinates( fid, 'lon_uy', AXIS_LONX (XSB:XEB,YSB:YEB), start )
+    call FileWriteAssociatedCoordinates( fid, 'lon_xv', AXIS_LONY (XSB:XEB,YSB:YEB), start )
+    call FileWriteAssociatedCoordinates( fid, 'lon_uv', AXIS_LONXY(XSB:XEB,YSB:YEB), start )
+    call FileWriteAssociatedCoordinates( fid, 'lat' ,   AXIS_LAT  (XSB:XEB,YSB:YEB), start )
+    call FileWriteAssociatedCoordinates( fid, 'lat_uy', AXIS_LATX (XSB:XEB,YSB:YEB), start )
+    call FileWriteAssociatedCoordinates( fid, 'lat_xv', AXIS_LATY (XSB:XEB,YSB:YEB), start )
+    call FileWriteAssociatedCoordinates( fid, 'lat_uv', AXIS_LATXY(XSB:XEB,YSB:YEB), start )
 
     if ( .NOT. xy_ ) then
        if ( IO_AGGREGATE ) then
@@ -2009,8 +2003,8 @@ contains
           start(2) = ISGA
           start(3) = JSGA
        end if
-       call FileWriteAssociatedCoordinates( fid, 'height',     AXIS_HZXY(:,:,:), start )
-       call FileWriteAssociatedCoordinates( fid, 'height_wxy', AXIS_HWXY(:,:,:), start )
+       call FileWriteAssociatedCoordinates( fid, 'height',     AXIS_HZXY(KS:KE,XSB:XEB,YSB:YEB), start )
+       call FileWriteAssociatedCoordinates( fid, 'height_wxy', AXIS_HWXY(KS:KE,XSB:XEB,YSB:YEB), start )
     end if
 
     return

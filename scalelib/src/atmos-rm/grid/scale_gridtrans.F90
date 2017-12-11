@@ -177,17 +177,17 @@ contains
        MPRJ_mapfactor
     use scale_grid_real, only: &
        REAL_calc_areavol, &
-       REAL_LAT,  &
-       REAL_LATX, &
-       REAL_LATY, &
+       REAL_LAT,          &
+       REAL_LATX,         &
+       REAL_LATY,         &
        REAL_LATXY
     implicit none
     !---------------------------------------------------------------------------
 
-    call MPRJ_mapfactor( REAL_LAT  , GTRANS_MAPF(:,:,1,I_XY), GTRANS_MAPF (:,:,2,I_XY))
-    call MPRJ_mapfactor( REAL_LATX , GTRANS_MAPF(:,:,1,I_UY), GTRANS_MAPF (:,:,2,I_UY))
-    call MPRJ_mapfactor( REAL_LATY , GTRANS_MAPF(:,:,1,I_XV), GTRANS_MAPF (:,:,2,I_XV))
-    call MPRJ_mapfactor( REAL_LATXY, GTRANS_MAPF(:,:,1,I_UV), GTRANS_MAPF (:,:,2,I_UV))
+    call MPRJ_mapfactor( REAL_LAT  (1:IA,1:JA), GTRANS_MAPF(:,:,1,I_XY), GTRANS_MAPF (:,:,2,I_XY))
+    call MPRJ_mapfactor( REAL_LATX (1:IA,1:JA), GTRANS_MAPF(:,:,1,I_UY), GTRANS_MAPF (:,:,2,I_UY))
+    call MPRJ_mapfactor( REAL_LATY (1:IA,1:JA), GTRANS_MAPF(:,:,1,I_XV), GTRANS_MAPF (:,:,2,I_XV))
+    call MPRJ_mapfactor( REAL_LATXY(1:IA,1:JA), GTRANS_MAPF(:,:,1,I_UV), GTRANS_MAPF (:,:,2,I_UV))
 
     call REAL_calc_areavol( GTRANS_MAPF(:,:,:,I_XY) )
 

@@ -9,7 +9,7 @@ TOPDIR=${6}
 BINNAME=${7}
 
 # System specific
-MPIEXEC="mpirun -np ${TPROC}"
+MPIEXEC="mpirun --oversubscribe -np ${TPROC}"
 
 GL=`printf %02d ${GLEV}`
 RL=`printf %02d ${RLEV}`
