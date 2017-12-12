@@ -249,7 +249,7 @@ contains
     if ( I_QV > 0 ) then
        call PROF_valcheck( 'dycore_input', 'DIAG_var(qv)  ', DIAG_var(:,:,:,7) )
     endif
-    if ( NQW_MAX > 3 ) then
+    if ( NQW_MAX >= 3 ) then
        call PROF_valcheck( 'dycore_input', 'DIAG_var(qc)  ', DIAG_var(:,:,:,8) )
        call PROF_valcheck( 'dycore_input', 'DIAG_var(qr)  ', DIAG_var(:,:,:,9) )
     endif
@@ -2054,11 +2054,11 @@ contains
                                   qc_sfc    ) ! [IN]
 
        ! calc QV from RH
-       call SATURATION_psat( temp_sfc, psat )
+       call SATURATION_psat( psat, temp_sfc )
        qsat_sfc = EPSvap * psat / ( pres_sfc - ( 1.0_RP-EPSvap ) * psat )
 
        do k = 1, kdim
-          call SATURATION_psat( temp(k), psat )
+          call SATURATION_psat( psat, temp(k) )
           qsat(k) = EPSvap * psat / ( pres(k) - ( 1.0_RP-EPSvap ) * psat )
        enddo
 
@@ -2753,7 +2753,8 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
-       CONST_UNDEF8
+       CONST_UNDEF8, &
+       CONST_D2R
     use scale_vector, only: &
        VECTR_distance
     use mod_grd, only: &
@@ -2778,6 +2779,7 @@ contains
        BBL_RZ,    &
        BBL_RHORIZ
 
+    real(RP) :: lon_rad, lat_rad
     real(RP) :: disth, distz
 
     integer  :: ierr
@@ -2799,6 +2801,9 @@ contains
        call PRC_MPIstop
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_BUBBLE)
+
+    lon_rad = BBL_CLON * CONST_D2R
+    lat_rad = BBL_CLAT * CONST_D2R
 
     allocate( bubble(ADM_gall,ADM_kall,ADM_lall) )
 
@@ -2827,12 +2832,12 @@ contains
        do l = 1, ADM_lall
        do g = 1, ADM_gall
 
-          call VECTR_distance( a,                     &
-                               BBL_CLON,              &
-                               BBL_CLAT,              &
-                               GRD_s(g,k0,l,GRD_LON), &
-                               GRD_s(g,k0,l,GRD_LAT), &
-                               disth                  )
+          call VECTR_distance( a,                     & ! [IN]
+                               lon_rad,               & ! [IN]
+                               lat_rad,               & ! [IN]
+                               GRD_s(g,k0,l,GRD_LON), & ! [IN]
+                               GRD_s(g,k0,l,GRD_LAT), & ! [IN]
+                               disth                  ) ! [OUT]
 
           disth = ( disth / BBL_RHORIZ )**2
 
@@ -2863,15 +2868,9 @@ contains
 
     real(RP), intent(out) :: psat !< saturation vapor pressure [Pa]
     real(RP), intent(in)  :: temp !< temperature               [K]
-
-    real(RP) :: RTEM00         !< inverse of TEM00
-    real(RP) :: LovR_liq
     !---------------------------------------------------------------------------
 
-    RTEM00   = 1.0_RP / TEM00
-    LovR_liq = LHV0 / Rvap
-
-    psat = PSAT0 * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp ) )
+    psat = PSAT0 * exp( LHV0 / Rvap * ( 1.0_RP / TEM00 - 1.0_RP/temp ) )
 
     return
   end subroutine SATURATION_psat
