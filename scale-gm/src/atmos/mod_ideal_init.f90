@@ -14,6 +14,7 @@ module mod_ideal_init
   !
   use scale_precision
   use scale_stdio
+  use scale_prof
 
   use scale_const, only: &
      pi    => CONST_PI,     &
@@ -127,6 +128,9 @@ contains
        DIAG_var )
     use scale_process, only: &
        PRC_MPIstop
+    use mod_runconf, only: &
+       I_QV,    &
+       NQW_MAX
     implicit none
 
     real(RP), intent(out) :: DIAG_var(ADM_gall,ADM_kall,ADM_lall,6+TRC_VMAX)
@@ -235,6 +239,20 @@ contains
        call PRC_MPIstop
 
     end select
+
+    call PROF_valcheck( 'dycore_input', 'DIAG_var(pres)', DIAG_var(:,:,:,1) )
+    call PROF_valcheck( 'dycore_input', 'DIAG_var(temp)', DIAG_var(:,:,:,2) )
+    call PROF_valcheck( 'dycore_input', 'DIAG_var(vx)  ', DIAG_var(:,:,:,3) )
+    call PROF_valcheck( 'dycore_input', 'DIAG_var(vy)  ', DIAG_var(:,:,:,4) )
+    call PROF_valcheck( 'dycore_input', 'DIAG_var(vz)  ', DIAG_var(:,:,:,5) )
+    call PROF_valcheck( 'dycore_input', 'DIAG_var(w)   ', DIAG_var(:,:,:,6) )
+    if ( I_QV > 0 ) then
+       call PROF_valcheck( 'dycore_input', 'DIAG_var(qv)  ', DIAG_var(:,:,:,7) )
+    endif
+    if ( NQW_MAX > 3 ) then
+       call PROF_valcheck( 'dycore_input', 'DIAG_var(qc)  ', DIAG_var(:,:,:,8) )
+       call PROF_valcheck( 'dycore_input', 'DIAG_var(qr)  ', DIAG_var(:,:,:,9) )
+    endif
 
     return
   end subroutine dycore_input
