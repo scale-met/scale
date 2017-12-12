@@ -118,16 +118,16 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_DOMAIN_CATALOGUE)
 
-    allocate( REAL_LON  (IA,JA) )
-    allocate( REAL_LAT  (IA,JA) )
-    allocate( REAL_LONX (IA,JA) )
-    allocate( REAL_LONY (IA,JA) )
-    allocate( REAL_LONXY(IA,JA) )
-    allocate( REAL_LATX (IA,JA) )
-    allocate( REAL_LATY (IA,JA) )
-    allocate( REAL_LATXY(IA,JA) )
-    allocate( REAL_DLON (IA,JA) )
-    allocate( REAL_DLAT (IA,JA) )
+    allocate( REAL_LON  (  IA,  JA) )
+    allocate( REAL_LAT  (  IA,  JA) )
+    allocate( REAL_LONX (0:IA,  JA) )
+    allocate( REAL_LONY (  IA,0:JA) )
+    allocate( REAL_LONXY(0:IA,0:JA) )
+    allocate( REAL_LATX (0:IA,  JA) )
+    allocate( REAL_LATY (  IA,0:JA) )
+    allocate( REAL_LATXY(0:IA,0:JA) )
+    allocate( REAL_DLON (  IA,  JA) )
+    allocate( REAL_DLAT (  IA,  JA) )
 
     allocate( REAL_CZ (  KA,IA,JA) )
     allocate( REAL_FZ (0:KA,IA,JA) )
@@ -233,8 +233,23 @@ contains
     do j = 1, JA
     do i = 1, IA
        call MPRJ_xy2lonlat( GRID_CX(i), GRID_CY(j), REAL_LON  (i,j), REAL_LAT  (i,j) )
+    enddo
+    enddo
+
+    do j = 1, JA
+    do i = 0, IA
        call MPRJ_xy2lonlat( GRID_FX(i), GRID_CY(j), REAL_LONX (i,j), REAL_LATX (i,j) )
+    enddo
+    enddo
+
+    do j = 0, JA
+    do i = 1, IA
        call MPRJ_xy2lonlat( GRID_CX(i), GRID_FY(j), REAL_LONY (i,j), REAL_LATY (i,j) )
+    enddo
+    enddo
+
+    do j = 0, JA
+    do i = 0, IA
        call MPRJ_xy2lonlat( GRID_FX(i), GRID_FY(j), REAL_LONXY(i,j), REAL_LATXY(i,j) )
     enddo
     enddo
