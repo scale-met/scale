@@ -3,7 +3,9 @@
 
 This section explains the number of grids, and the target domain and its relationship with the MPI process. The calculation domain is determined by the horizontal grid spacing, the number of grid points, and the number of MPI processes. Figure \ref{fig:domain} gives an example of this relationship. The parallelization is implemented by a 2D domain decomposition in the horizontal direction.
 
-The numbers of grids and of MPI processes are specified in \nmitem{IMAX, JMAX} in \namelist{PARAM_INDEX}, and in \nmitem{PRC_NUM_X, PRC_NUM_Y} in \namelist{PARAM_PRC}, respectively. As shown in Fig. \ref{fig:domain},  the entire domain is divided into \nmitem{PRC_NUM_X} along the X direction and \nmitem{PRC_NUM_Y} in the Y direction. Each sub-domain is managed by an MPI process, each of which takes charge of a grid block of IMAX $\times$ JMAX $\times$ KMAX. Care is taken to ensure that this number of grids is taken charge of by one process: its value is not identical to the total number of grids in the domain. In other words, the entire domain depends on the number of MPI processes, the horizontal grid spacing, and the number of grids.
+The numbers of grids and of MPI processes are specified in \nmitem{IMAX, JMAX} in \namelist{PARAM_INDEX}, and in \nmitem{PRC_NUM_X, PRC_NUM_Y} in \namelist{PARAM_PRC}, respectively. As shown in Fig. \ref{fig:domain},  the entire domain is divided into \nmitem{PRC_NUM_X} along the X direction and \nmitem{PRC_NUM_Y} in the Y direction.
+The process number starts zero and is numbered in order from the bottom left to the top right (Arrow in Fig. \ref{fig:domain}).
+Each sub-domain is managed by an MPI process, each of which takes charge of a grid block of IMAX $\times$ JMAX $\times$ KMAX. Care is taken to ensure that this number of grids is taken charge of by one process: its value is not identical to the total number of grids in the domain. In other words, the entire domain depends on the number of MPI processes, the horizontal grid spacing, and the number of grids.
 
 Thus, the number of grids along each horizontal direction and that in the entire domain are derived as follows:
 \begin{eqnarray}
@@ -12,16 +14,18 @@ Thus, the number of grids along each horizontal direction and that in the entire
 && \verb|Number of grids in the Y direction| = \verb|JMAX| \times \verb|PRC_NUM_Y|
    \label{eq:ygridnum}\\
 && \verb|Total number of grids in the domain| \nonumber\\
-&& = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
-   \times (\verb|JMAX| \times \verb|PRC_NUM_Y|)
-   \times (\verb|KMAX| ),
+&&\quad = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
+          \times (\verb|JMAX| \times \verb|PRC_NUM_Y|)
+          \times (\verb|KMAX| ),
 \end{eqnarray}
 where \nmitem{KMAX} is the number of grids along the vertical direction, which is specified in \namelist{PARAM_INDEX}.
 
 By using Eqs. (\ref{eq:xgridnum} and \ref{eq:ygridnum}),  the size of the entire domain is determined as follows:
 \begin{eqnarray}
-&& \verb|Domain length in the X direction| = \verb|number of grids in the X direction| \times \verb|DX|\\
-&& \verb|Domain length in the Y direction| = \verb|number of grids in the Y direction| \times \verb|DY|,
+&& \verb|Domain length in the X direction| \nonumber\\
+&&    \qquad = \verb|number of grids in the X direction| \times \verb|DX|\\
+&& \verb|Domain length in the Y direction| \nonumber\\
+&&    \qquad = \verb|number of grids in the Y direction| \times \verb|DY|,
 \end{eqnarray}
 where \nmitem{DX, DY} is grid spacings specified  in \namelist{PRAM_GRID} as described in subsection \ref{subsec:gridinterv}.
 If the horizontal resolution and domain size are set and the available number of MPI processes is given, the number of grids that are controlled by one MPI process can be determined as in the above relationship.
@@ -30,9 +34,12 @@ In the next subsections, the configuration of the MPI processes, the number of g
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[width=0.8\hsize]{./figure/domain_decomposition.eps}\\
-  \caption{Relation between horizontal grid interval (\texttt{DX}, \texttt{DY}), number of grids (\texttt{IMAX}, \texttt{JMAX})
-    per MPI process, and the number of MPI processes (\texttt{PRC\_NUM\_X}, \texttt{PRC\_NUM\_Y})     in the entire domain. The light-blue part corresponds to a region managed by an MPI process.}
+  \includegraphics[width=0.8\hsize]{./figure/domain_decomposition_v2.png}\\
+  \caption{Relation between horizontal grid interval (\texttt{DX}, \texttt{DY}),
+   number of grids (\texttt{IMAX}, \texttt{JMAX}) per MPI process,
+   and the number of MPI processes (\texttt{PRC\_NUM\_X}, \texttt{PRC\_NUM\_Y}) in the entire domain.
+   The light-blue part corresponds to a region managed by an MPI process.
+   The six digit number following ``pe'' shows the process number.}
   \label{fig:domain}
 \end{center}
 \end{figure}
