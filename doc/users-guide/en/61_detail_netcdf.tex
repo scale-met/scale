@@ -1,9 +1,9 @@
 \section{What is \scalenetcdf file?}
-In this section, data file, which SCALE directly reads and writes \scalenetcdf files, is explained.
+In this section, \scalenetcdf file, which \scalelib directly reads from and writes in, is explained.
 \scalelib employs \netcdf (network Common Data Format) as data file format.
 \Netcdf is a software developed by Unidata (\url{http://www.unidata.ucar.edu/}),
 and it enables us to generate files with self-describing and machine-independent data format;
-for example, the former has a merit to describe variables with their axis variables in a file and
+for example, the former has a merit to describe variables along with their axis variables in a file and
 the latter has a merit to treat data without worry which endian is used.
 Based on the above virtue, \scalelib has particular conversion ( \scalenetcdf convention ).
 
@@ -67,10 +67,10 @@ the number of the halo grids at the begin and end in the whole data ``halo\_glob
 and the number of the halo grids of data in the file ``halo\_local''.
 
 Table \ref{table:netcdf_axes} shows list of the axis data.
-The coordinate variables has their own dimension; their variable names are same as their dimension names.
-The other axis variables uses some dimensions of coordinate variables.
+The coordinate variables have their own dimension; their variable names are same as their dimension names.
+The other axis variables use some dimensions of coordinate variables.
 The lower-case variables are mainly used in the file, 
-while the upper-case variables describes axes in simulation.
+while the upper-case variables describe axes in simulation.
 Figure \ref{fig:netcdfhorizontalcoordinate} and \ref{fig:netcdfverticalcoordinate} show 
 the horizontal and vertical locations of coordinate variables,
 respectively.
@@ -93,46 +93,46 @@ y & full level position in y-direction of the data in the file \\
 xh & half level position in x-direction of the data in the file \\
 yh & half level position in y-direction of the data in the file \\
 time & time information \\ \hline
-CX & full level grid position in x-direction for the local region (inc. halo grids) \\
-FX & half level grid position in x-direction for the local region  (inc. halo grids) \\
-CDX & full level grid spacing in x-direction for the local region (inc. halo grids) \\
-FDX & half level grid spacing in x-direction for the local region (inc. halo grids) \\
-CY & full level grid position in y-direction for the local region (inc. halo grids) \\
-FY & half level grid position in y-direction for the local region (inc. halo grids) \\
-CDY & full level grid spacing in y-direction for the local region (inc. halo grids) \\
-FDY & half level grid spacing in y-direction for the local region (inc. halo grids) \\
+CX  & full level grid position in x-direction for the local region (inc. halo grids) \\
+FX  & half level grid position in x-direction for the local region (inc. halo grids) \\
+CDX & full level grid spacing  in x-direction (inc. halo grids) \\
+FDX & half level grid spacing  in x-direction (inc. halo grids) \\
+CY  & full level grid position in y-direction for the local region (inc. halo grids) \\
+FY  & half level grid position in y-direction for the local region (inc. halo grids) \\
+CDY & full level grid spacing  in y-direction (inc. halo grids) \\
+FDY & half level grid spacing  in y-direction (inc. halo grids) \\
 CXG & full level grid position in x-direction for the whole region (inc. halo grids) \\
 FXG & half level grid position in x-direction for the whole region (inc. halo grids) \\
 CYG & full level grid position in y-direction for the whole region (inc. halo grids) \\
 FYG & half level grid position in y-direction for the whole region (inc. halo grids) \\ \hline
 \multicolumn{2}{c}{Vertical axis : Atmosphere}\\ \hline
-z & full level position in z-direction in the file \\
-zh & half level position in z-direction in the file \\
-CZ & full level grid position in z-direction (inc. halo grids) \\
-FZ & half level grid position in z-direction (inc. halo grids) \\
-CDZ & full level grid spacing in z-direction (inc. halo grids) \\
-FDZ & half level grid spacing in z-direction (inc. halo grids) \\ \hline
+z   & full level position in z-direction in the file \\
+zh  & half level position in z-direction in the file \\
+CZ  & full level grid position in z-direction (inc. halo grids) \\
+FZ  & half level grid position in z-direction (inc. halo grids) \\
+CDZ & full level grid spacing  in z-direction (inc. halo grids) \\
+FDZ & half level grid spacing  in z-direction (inc. halo grids) \\ \hline
 \multicolumn{2}{c}{Vertical axis : Land}\\ \hline
-lz & full level position in z-direction of the land data in the file \\
-lzh & half level position in z-direction of the land data in the file \\
-LCZ & full level grid position in z-direction of the land model \\
-LFZ & half level grid position in z-direction of the land model \\
+lz   & full level position in z-direction of the land data in the file \\
+lzh  & half level position in z-direction of the land data in the file \\
+LCZ  & full level grid position in z-direction of the land model \\
+LFZ  & half level grid position in z-direction of the land model \\
 LCDZ & full level grid spacing in z-direction of the land model \\  \hline
 \multicolumn{2}{c}{Vertical axis : Urban canopy}\\ \hline
-uz & full level position in z-direction in the file \\
-uzh & half level position in z-direction in the file \\
-UCZ & full level grid position in z-direction \\
-UFZ & half level grid position in z-direction \\
+uz   & full level position in z-direction in the file \\
+uzh  & half level position in z-direction in the file \\
+UCZ  & full level grid position in z-direction \\
+UFZ  & half level grid position in z-direction \\
 UCDZ & full level grid spacing in z-direction \\ \hline
  \hline
   \multicolumn{2}{l}{Other axis variables (1D)}\\ \hline
-name & description \\ \hline \hline
-CBFZ & buffer factor at CZ \\
-FBFZ & buffer factor at FZ \\
-CBFX & buffer factor at CX for the local region \\
-FBFX & buffer factor at FX for the local region \\
-CBFY & buffer factor at CY for the local region \\
-FBFY & buffer factor at FY for the local region \\
+name  & description \\ \hline \hline
+CBFZ  & buffer factor at CZ \\
+FBFZ  & buffer factor at FZ \\
+CBFX  & buffer factor at CX for the local region \\
+FBFX  & buffer factor at FX for the local region \\
+CBFY  & buffer factor at CY for the local region \\
+FBFY  & buffer factor at FY for the local region \\
 CBFXG & buffer factor at CXG for the whole region \\
 FBFXG & buffer factor at FXG for the whole region \\
 CBFYG & buffer factor at CYG for the whole region \\
@@ -140,24 +140,24 @@ FBFYG & buffer factor at FYG for the whole region \\
 \hline
 \multicolumn{2}{l}{Other axis variables (2D)}\\ \hline
 name & description \\ \hline \hline
-lon & longitude at (y, x) \\
+lon     & longitude at (y, x) \\
 lon\_uy & longitude at (y, xh) \\
 lon\_xv & longitude at (yh, x) \\
-lon\_uv(yh, xh) & longitude at (yh, xh) \\
-lat(y, x) & latitude at (y, x) \\
-lat\_uy & latitude at (y, xh) \\
-lat\_xv & latitude at (yh, x) \\
-lat\_uv & latitude at (yh, xh) \\
+lon\_uv & longitude at (yh, xh) \\
+lat     & latitude  at (y, x) \\
+lat\_uy & latitude  at (y, xh) \\
+lat\_xv & latitude  at (yh, x) \\
+lat\_uv & latitude  at (yh, xh) \\
 \hline
 \multicolumn{2}{l}{Other axis variables (3D)}\\ \hline
 name & description \\ \hline \hline
-height & heigth at (z, y, x) in history file or at (y, x, z) in restart/initial file\\
-height\_xyw & height at (zh, y, x) in history file or at (y, x, zh) in restart/initial file\\
-height\_xvz & height at (z, yh, x) in history file or at (yh, x, z) in restart/initial file\\
-height\_uyz & height at (z, yh, xh) in history file or at (hy, x, z) in restart/initial file\\
-height\_xvw & height at (zh, yh, x) in history file or at (yh, x, zh) in restart/initial file\\
-height\_uyw & height at (zh, y, xh) in history file or at (y, xh, zh) in restart/initial file\\
-height\_uvz & height at (z, yh, xh) in history file or at (yh, xh, z) in restart/initial file\\
+height      & heigth at (z, y, x)    in history file or at (y, x, z)    in restart/initial file\\
+height\_xyw & height at (zh, y, x)   in history file or at (y, x, zh)   in restart/initial file\\
+height\_xvz & height at (z, yh, x)   in history file or at (yh, x, z)   in restart/initial file\\
+height\_uyz & height at (z, yh, xh)  in history file or at (hy, x, z)   in restart/initial file\\
+height\_xvw & height at (zh, yh, x)  in history file or at (yh, x, zh)  in restart/initial file\\
+height\_uyw & height at (zh, y, xh)  in history file or at (y, xh, zh)  in restart/initial file\\
+height\_uvz & height at (z, yh, xh)  in history file or at (yh, xh, z)  in restart/initial file\\
 height\_uvw & height at (zh, yh, xh) in history file or at (yh, xh, zh) in restart/initial file\\
 \end{longtable}
 
