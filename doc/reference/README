@@ -19,7 +19,7 @@ Outputs
 -------
 
  You will get the following files.
- * HTML files : ./html/*
+ * HTML files : ./html/* (top page: index.html)
  * PDF file : ./latex/refman.pdf
 
 ----------------------------------------------
