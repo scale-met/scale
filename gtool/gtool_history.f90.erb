@@ -113,7 +113,7 @@ module gtool_history
      logical                    :: taverage       !> Apply time average?
      integer                    :: vid            !> Variable id
 
-     real(DP)                   :: waitsec        !> Time length to suppress output [sec]
+     integer                    :: waitstep       !> Step length to suppress output [step]
      integer                    :: laststep_write !> Last step when the variable is written
      integer                    :: laststep_put   !> Last step when the variable is put
      integer                    :: size           !> Size of array
@@ -177,15 +177,15 @@ module gtool_history
   character(len=File_HMID),   private              :: History_TIME_SINCE                !> Offset time
 
   ! From NAMELIST or upstream side of the library
-  character(len=File_HMID),   private              :: History_TITLE                     !> Header information of the output file: title
-  character(len=File_HMID),   private              :: History_SOURCE                    !> Header information of the output file: model name
-  character(len=File_HMID),   private              :: History_INSTITUTION               !> Header information of the output file: institution
-  character(len=File_HMID),   private              :: History_TIME_UNITS                !> Unit for time axis
-
-  logical,                    private              :: History_OUTPUT_STEP0  = .false.   !> Output value at step=0?
-  real(DP),                   private              :: History_OUTPUT_WAIT   = 0.0_DP    !> Time length to suppress output [sec]
-
-  logical,                    private              :: History_ERROR_PUTMISS = .true.    !> Abort if the value is never stored after last output?
+  character(len=File_HMID),   private              :: History_TITLE                             !> Header information of the output file: title
+  character(len=File_HMID),   private              :: History_SOURCE                            !> Header information of the output file: model name
+  character(len=File_HMID),   private              :: History_INSTITUTION                       !> Header information of the output file: institution
+  character(len=File_HMID),   private              :: History_TIME_UNITS                        !> Unit for time axis
+  logical,                    private              :: History_OUTPUT_STEP0            = .false. !> Output value at step=0?
+  integer,                    private              :: History_OUTPUT_WAIT_STEP                  !> Step length to suppress output
+  integer,                    private              :: History_OUTPUT_SWITCH_STEP                !> Step interval to switch output file
+  integer,                    private              :: History_OUTPUT_SWITCH_LASTSTEP            !> Last step when the file is switched
+  logical,                    private              :: History_ERROR_PUTMISS           = .true.  !> Abort if the value is never stored after last output?
 
   ! working
   integer,                    private, parameter   :: History_req_limit     = 1000      !> number limit for history item request
@@ -290,6 +290,10 @@ contains
     character(len=File_HSHORT) :: History_DEFAULT_DATATYPE          !> Data type
                                                                     !> REAL4 : single precision
                                                                     !> REAL8 : double precision
+    real(DP)                   :: History_OUTPUT_WAIT               !> Time length to suppress output
+    character(len=File_HSHORT) :: History_OUTPUT_WAIT_TUNIT         !> Time unit
+    real(DP)                   :: History_OUTPUT_SWITCH_TINTERVAL   !> Time interval to switch output file
+    character(len=File_HSHORT) :: History_OUTPUT_SWITCH_TUNIT       !> Time unit
 
     NAMELIST / PARAM_HISTORY / &
        History_TITLE,                     &
@@ -305,6 +309,9 @@ contains
        History_DEFAULT_DATATYPE,          &
        History_OUTPUT_STEP0,              &
        History_OUTPUT_WAIT,               &
+       History_OUTPUT_WAIT_TUNIT,         &
+       History_OUTPUT_SWITCH_TINTERVAL,   &
+       History_OUTPUT_SWITCH_TUNIT,       &
        History_ERROR_PUTMISS,             &
        debug
 
@@ -371,6 +378,10 @@ contains
     History_DEFAULT_TUNIT             = 'SEC'     !> Time unit
     History_DEFAULT_TAVERAGE          = .false.   !> Apply time average?
     History_DEFAULT_DATATYPE          = 'REAL4'   !> Data type
+    History_OUTPUT_WAIT               =  0.0_DP   !> Time length to suppress output
+    History_OUTPUT_WAIT_TUNIT         = 'SEC'     !> Time unit
+    History_OUTPUT_SWITCH_TINTERVAL   = -1.0_DP   !> Time interval to switch output file
+    History_OUTPUT_SWITCH_TUNIT       = 'SEC'     !> Time unit
 
     !--- read namelist
     History_TITLE       = title
@@ -416,9 +427,19 @@ contains
     call Log_nml('I',message)
 #endif
 
-    if ( History_OUTPUT_WAIT < 0.0_DP ) then
+    if ( History_OUTPUT_WAIT >= 0.0_DP ) then
+       call CalendarYmdhms2sec( dtsec, History_OUTPUT_WAIT, History_OUTPUT_WAIT_TUNIT )
+       History_OUTPUT_WAIT_STEP = int( dtsec / History_DTSEC )
+    else
        write(message,*) 'xxx History_OUTPUT_WAIT must be positive. STOP'
        call Log('E',message)
+    endif
+
+    if ( History_OUTPUT_SWITCH_TINTERVAL >= 0.0_DP ) then
+       call CalendarYmdhms2sec( dtsec, History_OUTPUT_SWITCH_TINTERVAL, History_OUTPUT_SWITCH_TUNIT )
+       History_OUTPUT_SWITCH_STEP = int( dtsec / History_DTSEC )
+    else
+       History_OUTPUT_SWITCH_STEP = -1
     endif
 
     array_size = isize * jsize * ksize
@@ -499,6 +520,7 @@ contains
        History_req(reqid)%outname           = OUTNAME
        History_req(reqid)%basename          = BASENAME
        History_req(reqid)%postfix_timelabel = POSTFIX_TIMELABEL
+       if( History_OUTPUT_SWITCH_STEP >= 0 ) History_req(reqid)%postfix_timelabel = .true. ! force true
        History_req(reqid)%zcoord            = ZCOORD
        History_req(reqid)%taverage          = TAVERAGE
 
@@ -540,12 +562,16 @@ contains
     call Log('I',message)
     write(message,'(A,L4)') '*** Output value at the initial step?            : ', History_OUTPUT_STEP0
     call Log('I',message)
-    write(message,'(A,L4)') '*** Check if requested item is not registered?   : ', History_ERROR_PUTMISS
-    call Log('I',message)
-    if ( History_OUTPUT_WAIT > 0.0_DP ) then
-       write(message,'(A,F10.3)') '*** Time to suppress output [sec]                : ', History_OUTPUT_WAIT
+    if ( History_OUTPUT_WAIT_STEP > 0 ) then
+       write(message,'(A,I8)') '*** Time when the output is suppressed [step]    : ', History_OUTPUT_WAIT_STEP
        call Log('I',message)
     endif
+    if ( History_OUTPUT_SWITCH_STEP >= 0 ) then
+       write(message,'(A,I8)') '*** Interval for switching the file [step]       : ', History_OUTPUT_SWITCH_STEP
+       call Log('I',message)
+    endif
+    write(message,'(A,L4)') '*** Check if requested item is not registered?   : ', History_ERROR_PUTMISS
+    call Log('I',message)
 
     if ( .NOT. present(namelist_fid) ) then
        if( fid > 0 ) close(fid)
@@ -843,7 +869,7 @@ contains
 
              ! initialize
              History_vars(id)%size         = 0
-             History_vars(id)%waitsec      = History_OUTPUT_WAIT
+             History_vars(id)%waitstep     = History_OUTPUT_WAIT_STEP
              if ( History_OUTPUT_STEP0 .AND. now_step == 1 ) then
                 History_vars(id)%laststep_write = 1 - History_vars(id)%dstep
              else
@@ -1404,14 +1430,14 @@ contains
        call HistoryOutputList
     endif
 
-    sec_str = History_STARTDAYSEC + real(History_vars(id)%laststep_write-1,kind=DP) * History_DTSEC
-    sec_end = History_STARTDAYSEC + real(step_now                       -1,kind=DP) * History_DTSEC
-
-    if ( sec_end >= History_STARTDAYSEC + History_vars(id)%waitsec ) then
+    if ( step_now > History_vars(id)%waitstep ) then
        if ( laststep_write < step_now ) then ! log only once in this step
           write(message,'(A)') '*** Output History'
           call Log('I',message)
        endif
+
+       sec_str = History_STARTDAYSEC + real(History_vars(id)%laststep_write-1,kind=DP) * History_DTSEC
+       sec_end = History_STARTDAYSEC + real(step_now                       -1,kind=DP) * History_DTSEC
 
        ! convert time units [sec]->[sec,min,hour,day,month,year]
        call CalendarSec2ymdhms( time_str, sec_str, History_TIME_UNITS )
