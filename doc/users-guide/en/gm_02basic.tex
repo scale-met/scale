@@ -1,5 +1,5 @@
 %\textcolor{red}{[英語版対応、要推敲-----ここから]}
-\section{Preparataion of databases}
+\section{Preparataion of databases: Horizontal grid}
 %-------------------------------------------------------------------------------
 
 To run the scale-gm, you need to prepare horizontal grid databases. 
@@ -184,7 +184,10 @@ You need to edit the following file appropriately
 \end{enumerate}
 
 \subsubsection{2. Creation of LatLon grid conversion database}
-
+SCALE-gm outputs are defined at each grid point of the icosahedral grids.
+It is easy to transform the output into some familiar coordinates. 
+This database provides a way to convert the SCALE-gm outputs from its native 
+coordinates to some familiar coordinates. 
 \verb|  $ mkdir scale-|{\version}\verb|/scale-gm/test/framework/llmap/gl06rl01pe20_t42|
 
 \verb|$ cd scale-|{\version}\verb|/scale-gm/test/framework/mkllmap/gl06rl01pe20_t42|
@@ -238,6 +241,23 @@ You need to edit the following file appropriately
 }
 
 
+\section{Preparation of databases: Vertical grid}
+\verb|  $ cd scale-|{\version}\verb|/scale-gm/test/framework/mkvgrid/|
+
+Edit \verb|mkvgrid_cnf|
+\editboxtwo{
+\verb|&mkvlayer_cnf| & \\
+\verb|  num_of_layer = 30,|                  &   {\verb|<-- Num of layers |}\\
+\verb|  layer_type   = 'POWER',|            &   {\verb|<-- 'POWER' or 'GIVEN'|}\\
+\verb|  ztop         = "30000.",|           &   {\verb|<-- top of the model (m)|}\\
+\verb|  fact         = "1",|           &   {\verb|<-- factor |}\\
+\verb|  infname      = "",|           &   {\verb|<-- input file name, if layer_type='GIVEN' |}\\
+\verb|  outfname    = "vgrid30_stretch_30km_dcmip2016v2.dat",|           &   {\verb|<-- output file name |}\\
+\verb|/|&\\
+}
+
+
+
 %\textcolor{red}{[英語版対応、要推敲-----ここまで]}
 
 \section{Run the model}
@@ -271,7 +291,7 @@ according to the steps addressed in the previous section.
  \end{table}
 
 
-\subsection{計算実行: scale-gm}
+\subsection{Execution: scale-gm}
 
 Jobcommands depend on the system you use, but we have a system 
 that creates scripts depending on your computational environments.
@@ -297,6 +317,7 @@ DCMIP2016実験においては、scale-gmを実行したとき、
 \textcolor{red}{要検討：1〜3の実験をgl04 or gl05くらいで、PE5あたりで実行したときのおおよその所要時間があると
  RMにおけるUGの仕様と合わせることができる。また、正常に実行できた場合にどんなファイルが
  生成されるのか、どれがHistoryファイルで、どれがログファイルなのかくらいの説明があってもよいだろう。}
+
 
 
 \section{Post-process: ico2ll}
