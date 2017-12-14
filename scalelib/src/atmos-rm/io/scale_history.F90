@@ -331,24 +331,24 @@ contains
     character(len=*), intent(in)  :: desc   !< description  of the item
     character(len=*), intent(in)  :: unit   !< unit         of the item
     integer,          intent(in)  :: ndim   !< dimension    of the item
+
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
 
-    logical :: flag_half_x
-    logical :: flag_half_y
-    logical :: flag_half_z
-
     character(len=19)      :: timelabel
     character(len=H_SHORT) :: dims(3)
-
-    integer                :: nvariant1, nvariant2, nvariant3
-    integer                :: v, id
+    logical                :: flag_half_x
+    logical                :: flag_half_y
+    logical                :: flag_half_z
     logical                :: atom
     character(len=H_SHORT) :: mapping
 
     integer                :: start(4), count(4)
     integer                :: comm
+
+    integer :: nvariant1, nvariant2, nvariant3
+    integer :: v, id
     !---------------------------------------------------------------------------
 
     itemid = -1
@@ -375,8 +375,8 @@ contains
 
     atom = .true.
 
-    start = 0
-    count = 0
+    start(:) = 0
+    count(:) = 0
 
     if ( ndim == 1 ) then
 
@@ -1455,7 +1455,6 @@ contains
     integer :: start(3)
     integer :: startX, startY, startZ
     integer :: XAG, YAG
-
     !---------------------------------------------------------------------------
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
