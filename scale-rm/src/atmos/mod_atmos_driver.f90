@@ -14,6 +14,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module mod_atmos_driver
   !-----------------------------------------------------------------------------
   !
@@ -561,6 +562,7 @@ contains
 
     if ( CPL_sw ) then
        ! sum of rainfall from mp and cp
+       !$omp parallel do private(i,j) OMP_SCHEDULE_
        do j = 1, JA
        do i = 1, IA
           SFLX_rain(i,j) = SFLX_rain_CP(i,j) + SFLX_rain_MP(i,j)
