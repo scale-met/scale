@@ -1701,14 +1701,17 @@ contains
     character(len=*), intent(in) :: key
     character(len=*), intent(in) :: val
 
+    integer :: fid, prev_fid
     integer :: id
     !---------------------------------------------------------------------------
 
+    prev_fid = -1
     do id = 1, History_id_count
-       call FileSetAttribute( History_vars(id)%fid, & ! [IN]
-                              varname,              & ! [IN]
-                              key,                  & ! [IN]
-                              val                   ) ! [IN]
+       fid = History_vars(id)%fid
+       if ( fid > 0 .AND. fid /= prev_fid ) then
+          call FileSetAttribute( fid, varname, key, val ) ! [IN]
+          prev_fid = fid
+       endif
     enddo
 
     return
@@ -1727,14 +1730,17 @@ contains
     character(len=*), intent(in) :: key
     integer,          intent(in) :: val(:)
 
+    integer :: fid, prev_fid
     integer :: id
     !---------------------------------------------------------------------------
 
+    prev_fid = -1
     do id = 1, History_id_count
-       call FileSetAttribute( History_vars(id)%fid, & ! [IN]
-                              varname,              & ! [IN]
-                              key,                  & ! [IN]
-                              val(:)                ) ! [IN]
+       fid = History_vars(id)%fid
+       if ( fid > 0 .AND. fid /= prev_fid ) then
+          call FileSetAttribute( fid, varname, key, val(:) ) ! [IN]
+          prev_fid = fid
+       endif
     enddo
 
     return
@@ -1755,16 +1761,20 @@ contains
     character(len=*), intent(in) :: key
     real(SP),    intent(in) :: val(:)
 
+    integer :: fid, prev_fid
     integer :: id
     !---------------------------------------------------------------------------
 
+    prev_fid = -1
     do id = 1, History_id_count
-       call FileSetAttribute( History_vars(id)%fid, & ! [IN]
-                              varname,              & ! [IN]
-                              key,                  & ! [IN]
-                              val(:)                ) ! [IN]
+       fid = History_vars(id)%fid
+       if ( fid > 0 .AND. fid /= prev_fid ) then
+          call FileSetAttribute( fid, varname, key, val(:) ) ! [IN]
+          prev_fid = fid
+       endif
     enddo
 
+    return
   end subroutine HistorySetAttributeFloat
   !-----------------------------------------------------------------------------
   subroutine HistorySetAttributeDouble( &
@@ -1779,38 +1789,56 @@ contains
     character(len=*), intent(in) :: key
     real(DP),    intent(in) :: val(:)
 
+    integer :: fid, prev_fid
     integer :: id
     !---------------------------------------------------------------------------
 
+    prev_fid = -1
     do id = 1, History_id_count
-       call FileSetAttribute( History_vars(id)%fid, & ! [IN]
-                              varname,              & ! [IN]
-                              key,                  & ! [IN]
-                              val(:)                ) ! [IN]
+       fid = History_vars(id)%fid
+       if ( fid > 0 .AND. fid /= prev_fid ) then
+          call FileSetAttribute( fid, varname, key, val(:) ) ! [IN]
+          prev_fid = fid
+       endif
     enddo
 
+    return
   end subroutine HistorySetAttributeDouble
 
   !-----------------------------------------------------------------------------
-  subroutine HistorySetMapping( mapping )
+  subroutine HistorySetMapping( &
+       mapping )
     use gtool_file, only: &
        FileAddAssociatedVariable, &
        FileSetAttribute
+    implicit none
+
     character(len=*), intent(in) :: mapping
 
     logical :: existed
+    integer :: fid, prev_fid
     integer :: id
+    !---------------------------------------------------------------------------
 
+    prev_fid = -1
     do id = 1, History_id_count
-       call FileAddAssociatedVariable( History_vars(id)%fid, mapping, & ! [IN]
-                                       existed                        ) ! [OUT]
-       if ( .not. existed ) &
-          call FileSetAttribute( History_vars(id)%fid, mapping, & ! [IN]
-                                 "grid_mapping_name",  mapping  ) ! [IN]
-    end do
+       fid = History_vars(id)%fid
+       if ( fid > 0 .AND. fid /= prev_fid ) then
+          call FileAddAssociatedVariable( fid,     & ! [IN]
+                                          mapping, & ! [IN]
+                                          existed  ) ! [OUT]
+
+          if ( .NOT. existed ) then
+             call FileSetAttribute( fid, mapping, "grid_mapping_name", mapping ) ! [IN]
+          endif
+
+          prev_fid = fid
+       endif
+    enddo
 
     return
   end subroutine HistorySetMapping
+
   !-----------------------------------------------------------------------------
   subroutine HistoryQuery( &
        item,     &
@@ -2300,7 +2328,7 @@ contains
     prev_fid = -1
     do id = 1, History_id_count
        fid = History_vars(id)%fid
-       if ( fid .NE. prev_fid ) then
+       if ( fid > 0 .AND. fid /= prev_fid ) then
           call FileFlush( fid )
           prev_fid = fid
        endif
@@ -2788,7 +2816,7 @@ contains
     prev_fid = -1
     do id = 1, History_id_count
        fid = History_vars(id)%fid
-       if ( fid .NE. prev_fid ) then
+       if ( fid > 0 .AND. fid /= prev_fid ) then
           call FileDetachBuffer( fid ) ! Release the internal buffer previously allowed to be used by PnetCDF
           call FileClose( fid )
           prev_fid = fid
