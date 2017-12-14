@@ -1575,7 +1575,10 @@ contains
     use gtool_file, only: &
        FileDefAxis,  &
        FileSetAttribute, &
-       FileDefAssociatedCoordinates
+       FileDefAssociatedCoordinates, &
+       FileAddAssociatedVariable
+    use scale_const, &
+       UNDEF => CONST_UNDEF
     use scale_rm_process, only: &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y, &
@@ -1585,6 +1588,8 @@ contains
        PRC_HAS_E, &
        PRC_HAS_S, &
        PRC_HAS_N
+    use scale_mapproj, only: &
+       MPRJ_get_attributes
     implicit none
 
     integer, intent(in) :: fid
@@ -1600,6 +1605,16 @@ contains
     integer :: istart, jstart
     integer :: whalo_g, ehalo_g, shalo_g, nhalo_g
     integer :: whalo_l, ehalo_l, shalo_l, nhalo_l
+
+    character(len=H_SHORT) :: mapping
+    real(DP) :: false_easting
+    real(DP) :: false_northing
+    real(DP) :: longitude_of_central_meridian
+    real(DP) :: longitude_of_projection_origin
+    real(DP) :: latitude_of_projection_origin
+    real(DP) :: straight_vertical_longitude_from_pole
+    real(DP) :: standard_parallel(2)
+
     !---------------------------------------------------------------------------
 
     if ( present(xy) ) then
@@ -1839,6 +1854,47 @@ contains
        call FileSetAttribute( fid, 'UCZ', 'positive', 'down' )
        call FileSetAttribute( fid, 'UFZ', 'positive', 'down' )
     end if
+
+    call MPRJ_get_attributes( mapping,  &
+         false_easting, false_northing, &
+         longitude_of_central_meridian, &
+         longitude_of_projection_origin, &
+         latitude_of_projection_origin, &
+         straight_vertical_longitude_from_pole, &
+         standard_parallel(:) )
+    if ( mapping /= "" ) then
+       call FileSetAttribute( fid, "x",  "standard_name", "projection_x_coordinate");
+       call FileSetAttribute( fid, "xh", "standard_name", "projection_x_coordinate");
+       call FileSetAttribute( fid, "y",  "standard_name", "projection_y_coordinate");
+       call FileSetAttribute( fid, "yh", "standard_name", "projection_y_coordinate");
+       call FileAddAssociatedVariable( fid, mapping )
+       call FileSetAttribute( fid, mapping, "grid_mapping_name",  mapping )
+
+       if ( false_easting /= UNDEF ) &
+            call FileSetAttribute( fid, mapping, "false_easting",  (/ false_easting /) )
+       if ( false_northing /= UNDEF ) &
+            call FileSetAttribute( fid, mapping, "false_northing", (/ false_northing /) )
+       if ( longitude_of_central_meridian /= UNDEF ) &
+            call FileSetAttribute( fid, mapping, "longitude_of_central_meridian", &
+            (/ longitude_of_central_meridian /) )
+       if ( longitude_of_projection_origin /= UNDEF ) &
+            call FileSetAttribute( fid, mapping, "longitude_of_projection_origin", &
+            (/ longitude_of_projection_origin /) )
+       if ( latitude_of_projection_origin /= UNDEF ) &
+            call FileSetAttribute( fid, mapping, "latitude_of_projection_origin", &
+            (/ latitude_of_projection_origin /) )
+       if ( straight_vertical_longitude_from_pole /= UNDEF ) &
+            call FileSetAttribute( fid, mapping, "straight_vertical_longitude_from_pole", &
+            (/ straight_vertical_longitude_from_pole /) )
+       if ( standard_parallel(1) /= UNDEF ) then
+          if ( standard_parallel(2) /= UNDEF ) then
+             call FileSetAttribute( fid, mapping, "standard_parallel", standard_parallel(1:2) )
+          else
+             call FileSetAttribute( fid, mapping, "standard_parallel", standard_parallel(1:1) )
+          end if
+       end if
+    end if
+
 
     return
   end subroutine FILEIO_def_axes
@@ -2080,9 +2136,12 @@ contains
        File_REAL8, &
        File_REAL4
     use gtool_file, only: &
-       FileDefineVariable
+       FileDefineVariable, &
+       FileSetAttribute
     use scale_process, only: &
        PRC_MPIstop
+    use scale_mapproj, only: &
+       MPRJ_get_attributes
     implicit none
 
     integer,          intent(in)  :: fid      !< file ID
@@ -2099,6 +2158,7 @@ contains
     integer          :: dtype, ndims, elm_size
     character(len=2) :: dims(3)
     real(DP)         :: time_interval
+    character(len=H_SHORT) :: mapping
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -2126,63 +2186,77 @@ contains
        ndims   = 1
        dims(1) = 'z'
        write_buf_amount = write_buf_amount + KA * elm_size
+       mapping = ""
     elseif( axistype == 'X' ) then
        ndims   = 1
        dims(1) = 'x'
        write_buf_amount = write_buf_amount + IA * elm_size
+       mapping = ""
     elseif( axistype == 'Y' ) then
        ndims   = 1
        dims(1) = 'y'
        write_buf_amount = write_buf_amount + JA * elm_size
+       mapping = ""
     elseif( axistype == 'XY' ) then   ! 2D variable
        ndims   = 2
        dims(1) = 'x'
        dims(2) = 'y'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
+       call MPRJ_get_attributes( mapping )
     elseif( axistype == 'UY' ) then
        ndims   = 2
        dims(1) = 'xh'
        dims(2) = 'y'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
+       call MPRJ_get_attributes( mapping )
     elseif( axistype == 'XV' ) then
        ndims   = 2
        dims(1) = 'x'
        dims(2) = 'yh'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
+       call MPRJ_get_attributes( mapping )
     elseif( axistype == 'UV' ) then
        ndims   = 2
        dims(1) = 'xh'
        dims(2) = 'yh'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
+       call MPRJ_get_attributes( mapping )
     elseif( axistype == 'ZX' ) then
        ndims   = 2
        dims(1) = 'z'
        dims(2) = 'x'
        write_buf_amount = write_buf_amount + KA * IA * elm_size
+       mapping = ""
     elseif( axistype == 'ZXY' ) then  ! 3D variable
        ndims   = 3
        dims    = (/'z','x','y'/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
+       call MPRJ_get_attributes( mapping )
     elseif( axistype == 'ZHXY' ) then
        ndims   = 3
        dims    = (/'zh','x ','y '/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
+       call MPRJ_get_attributes( mapping )
     elseif( axistype == 'ZXHY' ) then
        ndims   = 3
        dims    = (/'z ','xh','y '/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
+       call MPRJ_get_attributes( mapping )
     elseif( axistype == 'ZXYH' ) then
        ndims   = 3
        dims    = (/'z ','x ','yh'/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
+       call MPRJ_get_attributes( mapping )
     elseif( axistype == 'Land' ) then
        ndims   = 3
        dims    = (/'lz','x ','y '/)
        write_buf_amount = write_buf_amount + LKMAX * IA * JA * elm_size
+       call MPRJ_get_attributes( mapping )
     elseif( axistype == 'Urban' ) then
        ndims   = 3
        dims    = (/'uz','x ','y '/)
        write_buf_amount = write_buf_amount + UKMAX * IA * JA * elm_size
+       call MPRJ_get_attributes( mapping )
     elseif( axistype == 'XYT' ) then  ! 3D variable with time dimension
        ndims   = 2
        dims(1) = 'x'
@@ -2192,6 +2266,7 @@ contains
        else
           write_buf_amount = write_buf_amount + IA * JA * elm_size
        end if
+       call MPRJ_get_attributes( mapping )
     elseif( axistype == 'ZXYT' ) then ! 4D variable
        ndims   = 3
        dims    = (/'z','x','y'/)
@@ -2200,6 +2275,7 @@ contains
        else
          write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
        end if
+       call MPRJ_get_attributes( mapping )
     else
        write(*,*) 'xxx [FILEIO_def_var] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
@@ -2212,6 +2288,8 @@ contains
     else
       call FileDefineVariable( fid, vid, varname, desc, unit, ndims, dims, dtype ) ! [IN]
     endif
+
+    if ( mapping /= "" ) call FileSetAttribute( fid, varname, "grid_mapping", mapping )
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 

@@ -45,6 +45,7 @@ module gtool_history
   public :: HistoryPutAxis
   public :: HistoryPutAssociatedCoordinates
   public :: HistorySetAttribute
+  public :: HistorySetMapping
   public :: HistoryQuery
   public :: HistoryPut
   public :: HistoryWriteAll
@@ -630,6 +631,7 @@ contains
        now_step,  &
        timelabel, &
        zcoord,    &
+       mapping,   &
        options,   &
        start,     &
        count,     &
@@ -655,6 +657,7 @@ contains
     character(len=*),  intent(in)  :: timelabel
 
     character(len=*),  intent(in), optional :: zcoord
+    character(len=*),  intent(in), optional :: mapping
     character(len=*),  intent(in), optional :: options  ! 'filetype1:key1=val1&filetype2:key2=val2&...'
     integer,           intent(in), optional :: start(:) ! global subarray starting indices of this process's write request
     integer,           intent(in), optional :: count(:) ! lengths of this process's write request along each dimension
@@ -843,6 +846,10 @@ contains
                    endif
                 enddo
              endif
+
+             if ( mapping /= "" ) then
+                call FileSetAttribute( fid, History_vars(id)%outname, 'grid_mapping', mapping )
+             end if
 
              ! initialize
              History_vars(id)%size         = 0
@@ -1755,6 +1762,26 @@ contains
 
   end subroutine HistorySetAttributeDouble
 
+  !-----------------------------------------------------------------------------
+  subroutine HistorySetMapping( mapping )
+    use gtool_file, only: &
+       FileAddAssociatedVariable, &
+       FileSetAttribute
+    character(len=*), intent(in) :: mapping
+
+    logical :: existed
+    integer :: id
+
+    do id = 1, History_id_count
+       call FileAddAssociatedVariable( History_vars(id)%fid, mapping, & ! [IN]
+                                       existed                        ) ! [OUT]
+       if ( .not. existed ) &
+          call FileSetAttribute( History_vars(id)%fid, mapping, & ! [IN]
+                                 "grid_mapping_name",  mapping  ) ! [IN]
+    end do
+
+    return
+  end subroutine HistorySetMapping
   !-----------------------------------------------------------------------------
   subroutine HistoryQuery( &
        item,     &

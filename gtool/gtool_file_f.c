@@ -467,6 +467,20 @@ void file_set_attribute_double_( int32_t *fid,       // (in)
   *error = file_set_attribute_double( *fid, _vname, _key, value, (size_t)*len );
 }
 
+void file_add_associated_variable_( int32_t *fid,        // (in)
+				    char    *vname,      // (in)
+				    int32_t *error,      // (out)
+				    int32_t  vname_len ) // (in)
+{
+  char _vname[File_HSHORT+1];
+  int32_t l;
+
+  l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
+  fstr2cstr(_vname, vname, l);
+
+  *error = file_add_associated_variable( *fid, _vname );
+}
+
 void file_set_tunits_( int32_t *fid,        // (in)
                        char    *time_units, // (in)
                        int32_t *error,      // (in)
