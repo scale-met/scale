@@ -2289,10 +2289,6 @@ contains
     integer :: id
     !---------------------------------------------------------------------------
 
-    ! Note this subroutine must be called after all HIST_reg calls are completed
-    ! Write registered history axes to history file
-    call HistoryWriteAxes
-
     ! Write registered history variables to history file
     do id = 1, History_id_count
        call HistoryWrite( id,      & ! [IN]
@@ -2314,7 +2310,8 @@ contains
   end subroutine HistoryWriteAll
 
   !-----------------------------------------------------------------------------
-  subroutine HistoryWriteAxes
+  subroutine HistoryWriteAxes( &
+       axis_written_first )
     use gtool_file, only: &
        FileEndDef,    &
        FileFlush,     &
@@ -2322,9 +2319,13 @@ contains
        FileWriteAssociatedCoordinates
     implicit none
 
+    logical, intent(out) :: axis_written_first
+
     integer :: start(1)
     integer :: m, id, fid
     !---------------------------------------------------------------------------
+
+    axis_written_first = .false.
 
     if( History_req_count  == 0 ) return
     if( History_axis_count == 0 ) return
@@ -2333,7 +2334,7 @@ contains
 
        fid = History_vars(id)%fid
 
-       if ( History_axis_written(fid) ) cycle
+       if( fid < 0 .OR. History_axis_written(fid) ) cycle
 
        call FileEndDef( fid )
 
@@ -2363,6 +2364,7 @@ contains
 
        ! mark the axes have been written
        History_axis_written(fid) = .true.
+       axis_written_first        = .true.
 
     enddo
 

@@ -70,7 +70,7 @@ module scale_history
   !++ Private procedures
   !
   private :: HIST_put_axes
-  private :: HIST_put_axis_attributes
+  private :: HIST_set_axes_attributes
 
   !-----------------------------------------------------------------------------
   !
@@ -309,8 +309,7 @@ contains
     use MPI, only: &
        MPI_COMM_NULL
     use gtool_history, only: &
-       HistoryAddVariable, &
-       HistoryCheck
+       HistoryAddVariable
     use scale_time, only: &
        NOWSTEP => TIME_NOWSTEP, &
        TIME_gettimelabel
@@ -620,8 +619,6 @@ contains
           HIST_zcoord (itemid,HIST_variant(itemid)) = I_PRES
        enddo
     endif
-
-    call HIST_put_axis_attributes
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -1360,13 +1357,22 @@ contains
   !> Flush history buffer to file
   subroutine HIST_write
     use gtool_history, only: &
-       HistoryWriteAll
+       HistoryWriteAll, &
+       HistoryWriteAxes
     use scale_time, only: &
        TIME_NOWSTEP
     implicit none
+
+    logical :: axis_written_first
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    ! Note this subroutine must be called after all HIST_reg calls are completed
+    ! Write registered history axes to history file
+    call HistoryWriteAxes( axis_written_first )
+
+    if( axis_written_first ) call HIST_set_axes_attributes
 
     call HistoryWriteAll( TIME_NOWSTEP ) ![IN]
 
@@ -1788,7 +1794,7 @@ contains
     return
   end subroutine HIST_put_axes
 
-  subroutine HIST_put_axis_attributes
+  subroutine HIST_set_axes_attributes
     use gtool_history, only: &
        HistorySetMapping, &
        HistorySetAttribute
@@ -1931,6 +1937,6 @@ contains
     end if
 
     return
-  end subroutine HIST_put_axis_attributes
+  end subroutine HIST_set_axes_attributes
 
 end module scale_history
