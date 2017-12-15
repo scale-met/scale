@@ -306,17 +306,13 @@ contains
        xdim,   &
        ydim,   &
        zdim    )
-    use MPI, only: &
-       MPI_COMM_NULL
     use gtool_history, only: &
        HistoryAddVariable
     use scale_time, only: &
-       NOWSTEP => TIME_NOWSTEP, &
-       TIME_gettimelabel
+       TIME_NOWSTEP
     use scale_process, only: &
-       PRC_MPIstop,          &
-       PRC_myrank,           &
-       PRC_LOCAL_COMM_WORLD
+       PRC_MPIstop, &
+       PRC_myrank
     use scale_rm_process, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
@@ -335,7 +331,6 @@ contains
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
 
-    character(len=19)      :: timelabel
     character(len=H_SHORT) :: dims(3)
     logical                :: flag_half_x
     logical                :: flag_half_y
@@ -344,7 +339,6 @@ contains
     character(len=H_SHORT) :: mapping
 
     integer                :: start(4), count(4)
-    integer                :: comm
 
     integer :: nvariant1, nvariant2, nvariant3
     integer :: v, id
@@ -521,61 +515,47 @@ contains
        end if
     end if
 
-    call TIME_gettimelabel( timelabel )
-
-    if ( IO_AGGREGATE ) then  ! user input parameter indicates to do PnetCDF I/O
-       comm = PRC_LOCAL_COMM_WORLD
-    else
-       comm = MPI_COMM_NULL
-    end if
-
     if ( atom ) then
 
        ! model coordinate (terrain following coordinate)
-       call HistoryAddVariable( nvariant1,    & ! [OUT]
-                                item,         & ! [IN]
-                                dims(1:ndim), & ! [IN]
-                                desc,         & ! [IN]
-                                unit,         & ! [IN]
-                                NOWSTEP,      & ! [IN]
-                                timelabel,    & ! [IN]
-                                'model',      & ! [IN]
-                                mapping,      & ! [IN]
-                                start=start,  & ! [IN]
-                                count=count,  & ! [IN]
-                                comm=comm     ) ! [IN]
+       call HistoryAddVariable( nvariant1,      & ! [OUT]
+                                item,           & ! [IN]
+                                dims(1:ndim),   & ! [IN]
+                                desc,           & ! [IN]
+                                unit,           & ! [IN]
+                                mapping,        & ! [IN]
+                                TIME_NOWSTEP,   & ! [IN]
+                                zcoord='model', & ! [IN]
+                                start=start,    & ! [IN]
+                                count=count     ) ! [IN]
 
        ! absolute height coordinate
        dims(3) = 'z'
-       call HistoryAddVariable( nvariant2,    & ! [OUT]
-                                item,         & ! [IN]
-                                dims(1:ndim), & ! [IN]
-                                desc,         & ! [IN]
-                                unit,         & ! [IN]
-                                NOWSTEP,      & ! [IN]
-                                timelabel,    & ! [IN]
-                                'z',          & ! [IN]
-                                mapping,      & ! [IN]
-                                start=start,  & ! [IN]
-                                count=count,  & ! [IN]
-                                comm=comm     ) ! [IN]
+       call HistoryAddVariable( nvariant2,      & ! [OUT]
+                                item,           & ! [IN]
+                                dims(1:ndim),   & ! [IN]
+                                desc,           & ! [IN]
+                                unit,           & ! [IN]
+                                mapping,        & ! [IN]
+                                TIME_NOWSTEP,   & ! [IN]
+                                zcoord='z',     & ! [IN]
+                                start=start,    & ! [IN]
+                                count=count     ) ! [IN]
 
        ! pressure coordinate
        if ( HIST_PRES_nlayer > 0 ) then
 
           dims(3) = 'pressure'
-          call HistoryAddVariable( nvariant3,    & ! [OUT]
-                                   item,         & ! [IN]
-                                   dims(1:ndim), & ! [IN]
-                                   desc,         & ! [IN]
-                                   unit,         & ! [IN]
-                                   NOWSTEP,      & ! [IN]
-                                   timelabel,    & ! [IN]
-                                   'pressure',   & ! [IN]
-                                   mapping,      & ! [IN]
-                                   start=start,  & ! [IN]
-                                   count=count,  & ! [IN]
-                                   comm=comm     ) ! [IN]
+          call HistoryAddVariable( nvariant3,         & ! [OUT]
+                                   item,              & ! [IN]
+                                   dims(1:ndim),      & ! [IN]
+                                   desc,              & ! [IN]
+                                   unit,              & ! [IN]
+                                   mapping,           & ! [IN]
+                                   TIME_NOWSTEP,      & ! [IN]
+                                   zcoord='pressure', & ! [IN]
+                                   start=start,       & ! [IN]
+                                   count=count        ) ! [IN]
 
        else
           nvariant3 = 0
@@ -583,17 +563,15 @@ contains
 
     else
 
-       call HistoryAddVariable( nvariant1,       & ! [OUT]
-                                item,            & ! [IN]
-                                dims(1:ndim),    & ! [IN]
-                                desc,            & ! [IN]
-                                unit,            & ! [IN]
-                                NOWSTEP,         & ! [IN]
-                                timelabel,       & ! [IN]
-                                mapping=mapping, & ! [IN]
-                                start=start,     & ! [IN]
-                                count=count,     & ! [IN]
-                                comm=comm        ) ! [IN]
+       call HistoryAddVariable( nvariant1,    & ! [OUT]
+                                item,         & ! [IN]
+                                dims(1:ndim), & ! [IN]
+                                desc,         & ! [IN]
+                                unit,         & ! [IN]
+                                mapping,      & ! [IN]
+                                TIME_NOWSTEP, & ! [IN]
+                                start=start,  & ! [IN]
+                                count=count   ) ! [IN]
 
        nvariant2 = 0
        nvariant3 = 0
@@ -638,6 +616,8 @@ contains
 
     integer,  intent(in)  :: itemid !< name of the item
     logical,  intent(out) :: answer !< is it time to store?
+
+    integer  :: n, v, id
     !---------------------------------------------------------------------------
 
     answer = .false.
@@ -652,10 +632,68 @@ contains
                        TIME_NOWSTEP,      & ! [IN]
                        answer             ) ! [OUT]
 
+    if ( answer ) then
+       id = 0
+       do n = 1, itemid-1
+          id = id + HIST_variant(n)
+       enddo
+
+       do v = 1, HIST_variant(itemid)
+          id = id + 1
+
+          call HIST_checkfile( id ) ! [IN]
+       enddo
+    endif
+
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_query
+
+  !-----------------------------------------------------------------------------
+  !> Check time to switching output file
+  subroutine HIST_checkfile( &
+       itemid )
+    use MPI, only: &
+       MPI_COMM_NULL
+    use gtool_history, only: &
+       HistoryFileCreate
+    use scale_process, only: &
+       PRC_LOCAL_COMM_WORLD
+    use scale_time, only: &
+       TIME_NOWSTEP,      &
+       TIME_gettimelabel
+    implicit none
+
+    integer,  intent(in)  :: itemid !< name of the item
+
+    character(len=19) :: timelabel
+    integer           :: comm
+    !---------------------------------------------------------------------------
+
+    if( .NOT. enabled ) return
+
+    if( itemid < 0 ) return
+
+    call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    call TIME_gettimelabel( timelabel )
+
+    if ( IO_AGGREGATE ) then  ! user input parameter indicates to do PnetCDF I/O
+       comm = PRC_LOCAL_COMM_WORLD
+    else
+       comm = MPI_COMM_NULL
+    endif
+
+    call HistoryFileCreate( itemid,       & ! [IN]
+                            TIME_NOWSTEP, & ! [IN]
+                            timelabel,    & ! [IN]
+                            comm=comm     ) ! [IN]
+
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
+
+    return
+  end subroutine HIST_checkfile
 
   !-----------------------------------------------------------------------------
   !> Put 1D data to history buffer
