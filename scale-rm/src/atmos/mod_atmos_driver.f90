@@ -565,7 +565,7 @@ contains
        !$omp parallel do private(i,j) OMP_SCHEDULE_
        do j = 1, JA
        do i = 1, IA
-          SFLX_rain(i,j) = SFLX_rain_CP(i,j) + SFLX_rain_MP(i,j)
+          SFLX_rain(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j)
           SFLX_snow(i,j) = SFLX_snow_MP(i,j)
        enddo
        enddo
