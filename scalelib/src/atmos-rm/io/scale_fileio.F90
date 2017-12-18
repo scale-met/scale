@@ -1182,6 +1182,7 @@ contains
        tsince,   &
        append,   &
        timetarg, &
+       timeofs,  &
        nohalo    )
     use scale_process, only: &
        PRC_masterrank, &
@@ -1201,6 +1202,7 @@ contains
 
     logical,          intent(in), optional :: append   !< append existing (closed) file?
     integer,          intent(in), optional :: timetarg !< target timestep (optional)
+    real(DP),         intent(in), optional :: timeofs  !< offset time     (optional)
     logical,          intent(in), optional :: nohalo   !< include halo data?
 
     integer  :: fid, vid
@@ -1223,7 +1225,8 @@ contains
 
     call FILEIO_enddef( fid )
 
-    call FILEIO_write_var_3D_t( fid, vid, var, varname, axistype, timeintv, timetarg, nohalo )
+    call FILEIO_write_var_3D_t( fid, vid, var, varname, axistype, timeintv, &
+                                timetarg, timeofs, nohalo                   )
 
     return
   end subroutine FILEIO_write_3D_t
@@ -2633,6 +2636,7 @@ contains
        axistype, &
        timeintv, &
        timetarg, &
+       timeofs,  &
        nohalo    )
     use gtool_file, only: &
        RMISS
@@ -2655,6 +2659,7 @@ contains
     real(DP),         intent(in) :: timeintv   !< time interval [sec]
 
     integer,          intent(in), optional :: timetarg !< target timestep (optional)
+    real(DP),         intent(in), optional :: timeofs  !< offset time     (optional)
     logical,          intent(in), optional :: nohalo   !< include halo data?
 
     real(RP) :: varhalo( size(var(:,1,1)), size(var(1,:,1)) )
@@ -2667,6 +2672,7 @@ contains
     integer  :: step
     integer  :: i, j, n
     logical  :: nohalo_
+    real(DP) :: timeofs_
     integer  :: rankidx(2)
     integer  :: start(2) ! used only when IO_AGGREGATE is .true.
     !---------------------------------------------------------------------------
@@ -2675,6 +2681,9 @@ contains
 
     nohalo_ = .false.
     if( present(nohalo) ) nohalo_ = nohalo
+
+    timeofs_ = 0.0_DP
+    if( present(timeofs) ) timeofs_ = timeofs
 
     time_interval = timeintv
     step = size(var(ISB,JSB,:))
@@ -2703,7 +2712,7 @@ contains
     ! start(3) time dimension will be set in file_write_data()
 
     if ( present(timetarg) ) then
-       nowtime = (timetarg-1) * time_interval
+       nowtime = timeofs_ + (timetarg-1) * time_interval
 
        if ( nohalo_ ) then
           varhalo(:,:) = var(:,:,timetarg)
@@ -2740,7 +2749,7 @@ contains
                           nowtime, nowtime, start                              ) ! [IN]
        end if
     else
-       nowtime = 0.0_DP
+       nowtime = timeofs_
        do n = 1, step
           if ( nohalo_ ) then
              varhalo(:,:) = var(:,:,n)

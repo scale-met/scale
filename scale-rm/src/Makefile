@@ -86,6 +86,7 @@ SUB_OBJS =	\
 	mod_copytopo.o            \
 	mod_cnvtopo.o             \
 	mod_cnvlanduse.o          \
+	mod_cnv2d.o               \
 	mod_convert.o             \
 	mod_mktopo.o              \
 	mod_realinput_scale.o     \
