@@ -323,8 +323,7 @@ contains
   !! Setup
   !<
   subroutine ATMOS_PHY_MP_tomita08_setup( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       MP_couple_aerosol      )
+       KA, KS, KE, IA, IS, IE, JA, JS, JE )
     use scale_process, only: &
        PRC_abort
     use scale_const, only: &
@@ -340,8 +339,6 @@ contains
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
-
-    logical, intent(in) :: MP_couple_aerosol
 
     real(RP) :: autoconv_nc     = Nc_ocn  !< number concentration of cloud water [1/cc]
     logical  :: enable_KK2000   = .false. !< use scheme by Khairoutdinov and Kogan (2000)
@@ -417,9 +414,6 @@ contains
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_TOMITA08)
-
-    couple_aerosol    = MP_couple_aerosol
-
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** density of the snow    [kg/m3] : ', dens_s

@@ -50,8 +50,6 @@ module mod_atmos_phy_mp_driver
   integer,  private :: MP_ntmax_sedimentation = 1      !> number of time step for sedimentation
   real(RP), private :: MP_max_term_vel = 10.0_RP       !> terminal velocity for calculate dt of sedimentation
   real(RP), private :: MP_cldfrac_thleshold            !> thleshold for cloud fraction
-  logical,  private :: MP_couple_aerosol    = .false.  !> apply CCN effect?
-
   integer,  private :: MP_NSTEP_SEDIMENTATION
   real(RP), private :: MP_RNSTEP_SEDIMENTATION
   real(DP), private :: MP_DTSEC_SEDIMENTATION
@@ -161,8 +159,7 @@ contains
        MP_limit_negative,       &
        MP_ntmax_sedimentation,  &
        MP_max_term_vel,         &
-       MP_cldfrac_thleshold,    &
-       MP_couple_aerosol
+       MP_cldfrac_thleshold
 
     integer :: nstep_max
 
@@ -206,8 +203,7 @@ contains
        select case ( ATMOS_PHY_MP_TYPE )
        case ( 'TOMITA08' )
           call ATMOS_PHY_MP_tomita08_setup( &
-               KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-               MP_couple_aerosol      )
+               KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB )
        case default
           ! setup library component
           call ATMOS_PHY_MP_setup
