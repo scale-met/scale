@@ -935,6 +935,37 @@ int32_t file_set_attribute_double( int32_t  fid,   // (in)
   return SUCCESS_CODE;
 }
 
+int32_t file_add_associated_variable( int32_t  fid,   // (in)
+				      char    *vname) // (in)
+{
+  int ncid, varid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  if ( nc_inq_varid(ncid, vname, &varid) == NC_NOERR ) // check if existed
+    return ALREADY_EXISTED_CODE;
+
+#ifdef NETCDF3
+  if (files[fid]->defmode == 0) {
+    CHECK_ERROR( nc_redef(ncid) )
+    files[fid]->defmode = 1;
+  }
+#endif
+
+  if ( files[fid]->shared_mode )
+    CHECK_PNC_ERROR( ncmpi_def_var(ncid, vname, NC_INT, 0, 0, &varid) )
+  else
+    CHECK_ERROR( nc_def_var(ncid, vname, NC_INT, 0, 0, &varid) )
+
+#ifdef NETCDF3
+  CHECK_ERROR( nc_enddef(ncid) )
+  files[fid]->defmode = 0;
+#endif
+
+  return SUCCESS_CODE;
+}
+
 int32_t file_set_tunits( int32_t fid,         // (in)
                          char    *time_units) // (in)
 {

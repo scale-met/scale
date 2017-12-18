@@ -322,6 +322,8 @@ contains
        PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
+    use scale_mapproj, only: &
+       MPRJ_get_attributes
     implicit none
 
     integer,          intent(out) :: itemid !< index number of the item
@@ -343,6 +345,7 @@ contains
     integer                :: nvariant1, nvariant2, nvariant3
     integer                :: v, id
     logical                :: atom
+    character(len=H_SHORT) :: mapping
 
     integer                :: start(4), count(4)
     integer                :: comm
@@ -390,6 +393,8 @@ contains
        count(1) = KMAX
        if ( PRC_myrank .GT. 0 ) count(1) = 0
 
+       mapping = ""
+
     elseif ( ndim == 2 ) then
 
        ! check half/full level for horizontal
@@ -416,6 +421,8 @@ contains
           dims(1) = 'lon'
           dims(2) = 'lat'
        endif
+
+       call MPRJ_get_attributes( mapping )
 
     elseif ( ndim == 3 ) then
 
@@ -495,6 +502,8 @@ contains
 
        endif
 
+       call MPRJ_get_attributes( mapping )
+
     endif
 
     if ( ndim >= 2 ) then
@@ -532,6 +541,7 @@ contains
                                 NOWSTEP,      & ! [IN]
                                 timelabel,    & ! [IN]
                                 'model',      & ! [IN]
+                                mapping,      & ! [IN]
                                 start=start,  & ! [IN]
                                 count=count,  & ! [IN]
                                 comm=comm     ) ! [IN]
@@ -546,6 +556,7 @@ contains
                                 NOWSTEP,      & ! [IN]
                                 timelabel,    & ! [IN]
                                 'z',          & ! [IN]
+                                mapping,      & ! [IN]
                                 start=start,  & ! [IN]
                                 count=count,  & ! [IN]
                                 comm=comm     ) ! [IN]
@@ -562,6 +573,7 @@ contains
                                    NOWSTEP,      & ! [IN]
                                    timelabel,    & ! [IN]
                                    'pressure',   & ! [IN]
+                                   mapping,      & ! [IN]
                                    start=start,  & ! [IN]
                                    count=count,  & ! [IN]
                                    comm=comm     ) ! [IN]
@@ -572,16 +584,17 @@ contains
 
     else
 
-       call HistoryAddVariable( nvariant1,    & ! [OUT]
-                                item,         & ! [IN]
-                                dims(1:ndim), & ! [IN]
-                                desc,         & ! [IN]
-                                unit,         & ! [IN]
-                                NOWSTEP,      & ! [IN]
-                                timelabel,    & ! [IN]
-                                start=start,  & ! [IN]
-                                count=count,  & ! [IN]
-                                comm=comm     ) ! [IN]
+       call HistoryAddVariable( nvariant1,       & ! [OUT]
+                                item,            & ! [IN]
+                                dims(1:ndim),    & ! [IN]
+                                desc,            & ! [IN]
+                                unit,            & ! [IN]
+                                NOWSTEP,         & ! [IN]
+                                timelabel,       & ! [IN]
+                                mapping=mapping, & ! [IN]
+                                start=start,     & ! [IN]
+                                count=count,     & ! [IN]
+                                comm=comm        ) ! [IN]
 
        nvariant2 = 0
        nvariant3 = 0
@@ -1442,6 +1455,7 @@ contains
     integer :: start(3)
     integer :: startX, startY, startZ
     integer :: XAG, YAG
+
     !---------------------------------------------------------------------------
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
@@ -1777,7 +1791,10 @@ contains
 
   subroutine HIST_put_axis_attributes
     use gtool_history, only: &
+       HistorySetMapping, &
        HistorySetAttribute
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_rm_process, only: &
        PRC_NUM_X, &
        PRC_NUM_Y, &
@@ -1787,6 +1804,8 @@ contains
        PRC_HAS_E, &
        PRC_HAS_S, &
        PRC_HAS_N
+    use scale_mapproj, only: &
+       MPRJ_get_attributes
 
     integer :: isize, jsize
     integer :: istart, jstart
@@ -1794,6 +1813,15 @@ contains
     integer :: whalo_l, ehalo_l, shalo_l, nhalo_l
 
     character(len=5) :: logical_str
+
+    character(len=H_SHORT) :: mapping
+    real(DP) :: false_easting
+    real(DP) :: false_northing
+    real(DP) :: longitude_of_central_meridian
+    real(DP) :: longitude_of_projection_origin
+    real(DP) :: latitude_of_projection_origin
+    real(DP) :: straight_vertical_longitude_from_pole
+    real(DP) :: standard_parallel(2)
 
     ! attributes
     if ( PRC_PERIODIC_X ) then; logical_str = "true"; else; logical_str = "false"; end if
@@ -1864,6 +1892,44 @@ contains
     call HistorySetAttribute( "yh", "halo_global",  (/ shalo_g, nhalo_g /) )
     call HistorySetAttribute( "yh", "halo_local",   (/ shalo_l, nhalo_l /) )
     call HistorySetAttribute( "yh", "periodic",     logical_str )
+
+    call MPRJ_get_attributes( mapping,  &
+         false_easting, false_northing, &
+         longitude_of_central_meridian, &
+         longitude_of_projection_origin, &
+         latitude_of_projection_origin, &
+         straight_vertical_longitude_from_pole, &
+         standard_parallel(:) )
+    if ( mapping /= "" ) then
+       call HistorySetAttribute( "x",  "standard_name", "projection_x_coordinate");
+       call HistorySetAttribute( "xh", "standard_name", "projection_x_coordinate");
+       call HistorySetAttribute( "y",  "standard_name", "projection_y_coordinate");
+       call HistorySetAttribute( "yh", "standard_name", "projection_y_coordinate");
+       call HistorySetMapping( mapping )
+       if ( false_easting /= UNDEF ) &
+            call HistorySetAttribute( mapping, "false_easting",  (/ false_easting /) )
+       if ( false_northing /= UNDEF ) &
+            call HistorySetAttribute( mapping, "false_northing", (/ false_northing /) )
+       if ( longitude_of_central_meridian /= UNDEF ) &
+            call HistorySetAttribute( mapping, "longitude_of_central_meridian", &
+            (/ longitude_of_central_meridian /) )
+       if ( longitude_of_projection_origin /= UNDEF ) &
+            call HistorySetAttribute( mapping, "longitude_of_projection_origin", &
+            (/ longitude_of_projection_origin /) )
+       if ( latitude_of_projection_origin /= UNDEF ) &
+            call HistorySetAttribute( mapping, "latitude_of_projection_origin", &
+            (/ latitude_of_projection_origin /) )
+       if ( straight_vertical_longitude_from_pole /= UNDEF ) &
+            call HistorySetAttribute( mapping, "straight_vertical_longitude_from_pole", &
+            (/ straight_vertical_longitude_from_pole /) )
+       if ( standard_parallel(1) /= UNDEF ) then
+          if ( standard_parallel(2) /= UNDEF ) then
+             call HistorySetAttribute( mapping, "standard_parallel", standard_parallel(1:2) )
+          else
+             call HistorySetAttribute( mapping, "standard_parallel", standard_parallel(1:1) )
+          end if
+       end if
+    end if
 
     return
   end subroutine HIST_put_axis_attributes

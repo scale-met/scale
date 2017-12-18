@@ -32,6 +32,7 @@ module scale_mapproj
   public :: MPRJ_lonlat2xy
   public :: MPRJ_mapfactor
   public :: MPRJ_rotcoef
+  public :: MPRJ_get_attributes
 
   interface MPRJ_rotcoef
      module procedure MPRJ_rotcoef_0D
@@ -126,6 +127,15 @@ module scale_mapproj
   real(DP), private :: D2R
   real(DP), private :: RADIUS
 
+  character(len=H_SHORT) :: MPRJ_mapping
+  real(DP), private :: MPRJ_false_easting
+  real(DP), private :: MPRJ_false_northing
+  real(DP), private :: MPRJ_longitude_of_central_meridian
+  real(DP), private :: MPRJ_longitude_of_projection_origin
+  real(DP), private :: MPRJ_latitude_of_projection_origin
+  real(DP), private :: MPRJ_straight_vertical_longitude_from_pole
+  real(DP), private :: MPRJ_standard_parallel(2)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -185,10 +195,21 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MAPPROJ)
 
-    if( MPRJ_PS_lat == UNDEF ) MPRJ_PS_lat = MPRJ_basepoint_lat
-
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Map projection type : ', trim(MPRJ_type)
+
+
+    MPRJ_mapping = ""
+    MPRJ_false_easting = UNDEF
+    MPRJ_false_northing = UNDEF
+    MPRJ_longitude_of_central_meridian = UNDEF
+    MPRJ_longitude_of_projection_origin = UNDEF
+    MPRJ_latitude_of_projection_origin = UNDEF
+    MPRJ_straight_vertical_longitude_from_pole = UNDEF
+    MPRJ_standard_parallel(:) = UNDEF
+
+    if( MPRJ_PS_lat == UNDEF ) MPRJ_PS_lat = MPRJ_basepoint_lat
+
     select case(trim(MPRJ_type))
     case('NONE')
        if( IO_L ) write(IO_FID_LOG,*) '*** => NO map projection'
@@ -392,6 +413,40 @@ contains
     return
   end subroutine MPRJ_rotcoef_2D
 
+
+  !-----------------------------------------------------------------------------
+  !> Get mapping attributes
+  subroutine MPRJ_get_attributes( &
+       mapping, &
+       false_easting, &
+       false_northing, &
+       longitude_of_central_meridian, &
+       longitude_of_projection_origin, &
+       latitude_of_projection_origin, &
+       straight_vertical_longitude_from_pole, &
+       standard_parallel )
+    character(len=*), intent(out) :: mapping
+    real(DP), intent(out), optional :: false_easting
+    real(DP), intent(out), optional :: false_northing
+    real(DP), intent(out), optional :: longitude_of_central_meridian
+    real(DP), intent(out), optional :: longitude_of_projection_origin
+    real(DP), intent(out), optional :: latitude_of_projection_origin
+    real(DP), intent(out), optional :: straight_vertical_longitude_from_pole
+    real(DP), intent(out), optional :: standard_parallel(2)
+
+    mapping = MPRJ_mapping
+    if ( present(false_easting) ) false_easting = MPRJ_false_easting
+    if ( present(false_northing) ) false_northing = MPRJ_false_northing
+    if ( present(longitude_of_central_meridian) ) longitude_of_central_meridian = MPRJ_longitude_of_central_meridian
+    if ( present(longitude_of_projection_origin) ) longitude_of_projection_origin = MPRJ_longitude_of_projection_origin
+    if ( present(latitude_of_projection_origin) ) latitude_of_projection_origin = MPRJ_latitude_of_projection_origin
+    if ( present(straight_vertical_longitude_from_pole) ) &
+         straight_vertical_longitude_from_pole = MPRJ_straight_vertical_longitude_from_pole
+    if ( present(standard_parallel) ) standard_parallel(:) = MPRJ_standard_parallel(:)
+
+    return
+  end subroutine MPRJ_get_attributes
+
   !-----------------------------------------------------------------------------
   !> No projection
   subroutine MPRJ_None_setup
@@ -400,6 +455,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_rotation   = ', MPRJ_rotation
+
+    MPRJ_mapping = ""
 
     return
   end subroutine MPRJ_None_setup
@@ -582,6 +639,13 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_LC_fact    = ', MPRJ_LC_fact
     if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_pole_x     = ', MPRJ_pole_x
     if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_pole_y     = ', MPRJ_pole_y
+
+    MPRJ_mapping = "lambert_conformal_conic"
+    MPRJ_standard_parallel(:) = (/ MPRJ_LC_lat1, MPRJ_LC_lat2 /)
+    MPRJ_longitude_of_central_meridian = MPRJ_basepoint_lon
+    MPRJ_latitude_of_projection_origin = MPRJ_basepoint_lat
+    MPRJ_false_easting  = MPRJ_basepoint_x
+    MPRJ_false_northing = MPRJ_basepoint_y
 
     return
   end subroutine MPRJ_LambertConformal_setup
@@ -769,6 +833,13 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_pole_x     = ', MPRJ_pole_x
     if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_pole_y     = ', MPRJ_pole_y
 
+    MPRJ_mapping = "polar_stereographic"
+    MPRJ_straight_vertical_longitude_from_pole = MPRJ_basepoint_lon
+    MPRJ_latitude_of_projection_origin = MPRJ_basepoint_lat
+    MPRJ_standard_parallel(1) = MPRJ_PS_lat
+    MPRJ_false_easting = MPRJ_basepoint_x
+    MPRJ_false_northing = MPRJ_basepoint_y
+
     return
   end subroutine MPRJ_PolarStereographic_setup
 
@@ -950,6 +1021,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_eq_x       = ', MPRJ_eq_x
     if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_eq_y       = ', MPRJ_eq_y
 
+    MPRJ_mapping = "mercator"
+    MPRJ_longitude_of_projection_origin = MPRJ_basepoint_lon
+    MPRJ_standard_parallel(1) = MPRJ_M_lat
+    MPRJ_false_easting = MPRJ_basepoint_x
+    MPRJ_false_northing = MPRJ_basepoint_y
+
     return
   end subroutine MPRJ_Mercator_setup
 
@@ -1089,6 +1166,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_EC_fact    = ', MPRJ_EC_fact
     if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_eq_x       = ', MPRJ_eq_x
     if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_eq_y       = ', MPRJ_eq_y
+
+    MPRJ_mapping = "equirectangular"
+    MPRJ_standard_parallel(1) = MPRJ_EC_lat
+    MPRJ_longitude_of_central_meridian = MPRJ_basepoint_lon
+    MPRJ_false_easting  = MPRJ_basepoint_x
+    MPRJ_false_northing = MPRJ_basepoint_y
 
     return
   end subroutine MPRJ_EquidistantCylindrical_setup

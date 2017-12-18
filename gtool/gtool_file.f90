@@ -53,6 +53,7 @@ module gtool_file
   public :: FileSetGlobalAttribute
   public :: FileGetAttribute
   public :: FileSetAttribute
+  public :: FileAddAssociatedVariable
   public :: FileEndDef
   public :: FileFlush
   public :: FileClose
@@ -476,6 +477,32 @@ contains
 
     return
   end subroutine FileSetGlobalAttributeDouble
+
+  !-----------------------------------------------------------------------------
+  subroutine FileAddAssociatedVariable( fid, vname, existed )
+    integer,           intent(in)  :: fid
+    character(len=*),  intent(in)  :: vname
+    logical, optional, intent(out) :: existed
+
+    integer error
+
+    call file_add_associated_variable( fid, vname , & ! (in)
+                                       error        ) ! (out)
+
+    if ( present(existed) ) then
+       if ( error == ALREADY_EXISTED_CODE ) then
+          existed = .true.
+          return
+       end if
+       existed = .false.
+    end if
+
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to add associated variable: '//trim(vname))
+    end if
+
+    return
+  end subroutine FileAddAssociatedVariable
 
   !-----------------------------------------------------------------------------
   subroutine FileSetOption( &

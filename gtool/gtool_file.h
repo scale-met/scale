@@ -169,6 +169,9 @@ extern int32_t file_set_attribute_double( int32_t  fid,   // (in)
 					  double  *value, // (in)
 					  size_t   len);  // (in)
 
+extern int32_t file_add_associated_variable( int32_t  fid,    // (in)
+					     char    *vname); // (in)
+
 extern int32_t file_set_tunits( int32_t fid,          // (in)
                                 char    *time_units); // (in)
 
