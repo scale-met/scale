@@ -75,6 +75,7 @@ module scale_atmos_thermodyn
 
   interface ATMOS_THERMODYN_specific_heat
      module procedure ATMOS_THERMODYN_specific_heat_0D
+     module procedure ATMOS_THERMODYN_specific_heat_1D
      module procedure ATMOS_THERMODYN_specific_heat_3D
   end interface ATMOS_THERMODYN_specific_heat
 
@@ -139,6 +140,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc dry air mass (0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_qd_0D( &
        qdry,  &
        q,     &
@@ -150,7 +152,7 @@ contains
     real(RP), intent(in)  :: q_mass(QA) !< mass factor 0 or 1
 
     integer :: iqw
-    !-----------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
 
     qdry = 1.0_RP
 #ifndef DRY
@@ -195,6 +197,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc total specific heat (CV,0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_cv_0D( &
        CVtot, &
        q,     &
@@ -256,6 +259,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc total specific heat (CP,0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_cp_0D( &
        CPtot, &
        q,     &
@@ -316,6 +320,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc total gas constant (R,0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_r_0D( &
        Rtot, &
        q,    &
@@ -377,6 +382,7 @@ contains
   !> ATMOS_THERMODYN_specific_heat_0D
   !! calc heat capacities: qdry, Rtot, CVtot, CPtot
   !<
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_specific_heat_0D( &
        Qdry, Rtot, CVtot, CPtot, &
        q, &
@@ -414,6 +420,60 @@ contains
 
     return
   end subroutine ATMOS_THERMODYN_specific_heat_0D
+
+  !-----------------------------------------------------------------------------
+  !> ATMOS_THERMODYN_specific_heat_1D
+  !! calc specific heat: qdry, Rtot, CVtot, CPtot
+  !<
+!OCL SINGLE
+  subroutine ATMOS_THERMODYN_specific_heat_1D( &
+       KA, KS, KE, &       
+       QA,         &
+       q,                       &
+       Mq, Rq, CVq, CPq,        &
+       Qdry, Rtot, CVtot, CPtot )
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: QA
+
+    real(RP), intent(in)  :: q(KA,QA)  !< mass concentration      [kg/kg]
+    real(RP), intent(in)  :: Mq (QA)   !< mass of tracer          0 or 1
+    real(RP), intent(in)  :: Rq (QA)   !< gas constant of tracer  [J/kg/K]
+    real(RP), intent(in)  :: CVq(QA)   !< specific heat of tracer [J/kg/K]
+    real(RP), intent(in)  :: CPq(QA)   !< specific heat of tracer [J/kg/K]
+
+    real(RP), intent(out) :: Qdry (KA) !> dry mass concentration [kg/kg]
+    real(RP), intent(out) :: Rtot (KA) !> total gas constant     [J/kg/K]
+    real(RP), intent(out) :: CVtot(KA) !> total specific heat    [J/kg/K]
+    real(RP), intent(out) :: CPtot(KA) !> total specific heat    [J/kg/K]
+
+    real(RP) :: qd
+    real(RP) :: rt
+    real(RP) :: cvt
+    real(RP) :: cpt
+
+    integer :: k
+    integer :: iqw
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+       qd  = 1.0_RP
+       rt  = 0.0_RP
+       cvt = 0.0_RP
+       cpt = 0.0_RP
+       do iqw = 1, QA
+          qd  = qd  - q(k,iqw) * Mq(iqw)
+          rt  = rt  + q(k,iqw) * Rq(iqw)
+          cvt = cvt + q(k,iqw) * CVq(iqw)
+          cpt = cpt + q(k,iqw) * CPq(iqw)
+       enddo
+       Qdry (k) = qd
+       Rtot (k) = rt  + qd * Rdry
+       CVtot(k) = cvt + qd * CVdry
+       CPtot(k) = cpt + qd * CPdry
+    end do
+
+    return
+  end subroutine ATMOS_THERMODYN_specific_heat_1D
 
   !-----------------------------------------------------------------------------
   !> ATMOS_THERMODYN_specific_heat_3D
@@ -480,6 +540,7 @@ contains
   end subroutine ATMOS_THERMODYN_specific_heat_3D
 
   !-----------------------------------------------------------------------------
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_pott_0D( &
        pott, &
        temp, &
@@ -527,6 +588,7 @@ contains
   end subroutine ATMOS_THERMODYN_pott_0D
 
   !-----------------------------------------------------------------------------
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_pott_1D( &
        pott, &
        temp, &
@@ -630,6 +692,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc rho * pott -> rho * ein (0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_rhoe_0D( &
        rhoe, &
        rhot, &
@@ -736,6 +799,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc rho * ein -> rho * pott (0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_rhot_0D( &
        rhot, &
        rhoe, &
@@ -842,6 +906,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc rho, q, rho * pott -> temp & pres (0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_temp_pres_0D( &
        temp,  &
        pres,  &
@@ -921,6 +986,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc rho, q, rho * pott -> temp & pres (0D) (obsolute)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_temp_pres_0D_obsolute( &
        temp, &
        pres, &
@@ -1030,6 +1096,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc rho, q, rho * pott -> temp & pres (0D)
+!OCL SINGLE
   subroutine ATMOS_THERMODYN_temp_pres_E_0D( &
        temp, &
        pres, &

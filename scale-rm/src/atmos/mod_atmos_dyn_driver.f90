@@ -13,6 +13,7 @@
 !! @par History
 !! @li      2013-12-04 (S.Nishizawa)  [mod] splited from scale_atmos_dyn.f90
 !<
+#include "inc_openmp.h"
 module mod_atmos_dyn_driver
   !-----------------------------------------------------------------------------
   !
@@ -257,7 +258,7 @@ contains
        RHOV_tp, &
        RHOT_tp, &
        RHOQ_tp, &
-       RHOH_tp, &
+       RHOH_p,  &
        MOMZ_tp, &
        MOMX_tp, &
        MOMY_tp, &
@@ -305,17 +306,25 @@ contains
        end do
        
 
-       do j = JS, JE
-       do i = IS, IE
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j) &
+       !$omp shared (KA,KS,KE,ISB,IEB,JSB,JEB, &
+       !$omp         RHOT_tp,RHOH_p,CPtot,EXNER)
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           RHOT_tp(k,i,j) = RHOT_tp(k,i,j) &
-                         + RHOH_tp(k,i,j) / ( CPtot(k,i,j) * EXNER(k,i,j) )
+                         + RHOH_p (k,i,j) / ( CPtot(k,i,j) * EXNER(k,i,j) )
        end do
        end do
        end do
        call COMM_vars8( RHOT_tp, 4 )
 
        call COMM_wait ( RHOU_tp, 1 )
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j) &
+       !$omp shared (KA,KS,KE,IS,IE,JS,JE, &
+       !$omp         MOMX_tp,RHOU_tp)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -327,6 +336,10 @@ contains
        call COMM_vars8( MOMX_tp, 1 )
 
        call COMM_wait ( RHOV_tp, 2 )
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j) &
+       !$omp shared (KA,KS,KE,IS,IE,JS,JE, &
+       !$omp         MOMY_tp,RHOV_tp)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -338,9 +351,9 @@ contains
        call COMM_vars8( MOMY_tp, 2 )
 
        call COMM_wait ( MOMZ_tp, 3 )
-       call COMM_wait ( RHOT_tp, 4 )
+       call COMM_wait ( RHOT_tp, 4, .false. )
        do iq = 1, QA
-          call COMM_wait ( RHOQ_tp(:,:,:,iq), 4+iq )
+          call COMM_wait ( RHOQ_tp(:,:,:,iq), 4+iq, .false. )
        end do
        call COMM_wait ( MOMX_tp, 1 )
        call COMM_wait ( MOMY_tp, 2 )

@@ -14,30 +14,31 @@ LIBNAME = libscale.a
 
 DEPENDLIB = $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
-VPATH = common:                     \
-        coupler:                    \
-        io:                         \
-        atmosphere/physics/pbl      \
-        atmos-physics:              \
-        atmos-physics/share:        \
-        atmos-physics/microphysics: \
-        atmos-physics/aerosol:      \
-        atmos-physics/chemistry:    \
-        atmos-physics/radiation:    \
-        atmos-physics/surfaceflux:  \
-        atmos-physics/turbulence:   \
-        atmos-physics/cumulus:      \
-        atmos-rm:                   \
-        atmos-rm/communication:     \
-        atmos-rm/grid:              \
-        atmos-rm/io:                \
-        atmos-rm/numeric:           \
-        atmos-rm/dynamics:          \
-        atmos-rm/forcing:           \
-        land:                       \
-        land/grid:                  \
-        ocean:                      \
-        urban:                      \
+VPATH = common:                          \
+        coupler:                         \
+        io:                              \
+        atmosphere/physics/pbl:          \
+        atmosphere/physics/microphysics: \
+        atmos-physics:                   \
+        atmos-physics/share:             \
+        atmos-physics/microphysics:      \
+        atmos-physics/aerosol:           \
+        atmos-physics/chemistry:         \
+        atmos-physics/radiation:         \
+        atmos-physics/surfaceflux:       \
+        atmos-physics/turbulence:        \
+        atmos-physics/cumulus:           \
+        atmos-rm:                        \
+        atmos-rm/communication:          \
+        atmos-rm/grid:                   \
+        atmos-rm/io:                     \
+        atmos-rm/numeric:                \
+        atmos-rm/dynamics:               \
+        atmos-rm/forcing:                \
+        land:                            \
+        land/grid:                       \
+        ocean:                           \
+        urban:                           \
         urban/grid:
 
 LIBVERSION = $(shell git rev-parse --short HEAD 2> /dev/null)

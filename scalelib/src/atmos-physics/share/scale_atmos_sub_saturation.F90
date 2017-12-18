@@ -1063,14 +1063,14 @@ contains
   !-----------------------------------------------------------------------------
   !> calc temp & dens -> saturation vapor mass (liquid/ice mixture,0D)
   subroutine ATMOS_SATURATION_dens2qsat_all_0D( &
-       qsat, &
        temp, &
-       dens  )
+       dens, &
+       qsat  )
     implicit none
-
-    real(RP), intent(out) :: qsat
     real(RP), intent(in)  :: temp
     real(RP), intent(in)  :: dens
+
+    real(RP), intent(out) :: qsat
 
     real(RP) :: psat
     !---------------------------------------------------------------------------
@@ -1086,15 +1086,15 @@ contains
   !> calc temp & dens -> saturation vapor mass (liquid/ice mixture,1D)
   subroutine ATMOS_SATURATION_dens2qsat_all_1D( &
        KA, KS, KE, &
-       qsat,       &
-       temp, dens  )
+       temp, dens, &
+       qsat        )
     implicit none
     integer,  intent(in)  :: KA, KS, KE
 
-    real(RP), intent(out) :: qsat(KA)
-
     real(RP), intent(in)  :: temp(KA)
     real(RP), intent(in)  :: dens(KA)
+
+    real(RP), intent(out) :: qsat(KA)
 
     real(RP) :: psat(KA)
 
@@ -1240,14 +1240,15 @@ contains
   !-----------------------------------------------------------------------------
   !> calc temp & dens -> saturation vapor mass (liquid,0D)
   subroutine ATMOS_SATURATION_dens2qsat_liq_0D( &
-       qsat, &
        temp, &
-       dens  )
+       dens, &
+       qsat  )
     implicit none
 
-    real(RP), intent(out) :: qsat
     real(RP), intent(in)  :: temp
     real(RP), intent(in)  :: dens
+
+    real(RP), intent(out) :: qsat
 
     real(RP) :: psat
     !---------------------------------------------------------------------------
@@ -1321,14 +1322,14 @@ contains
   !-----------------------------------------------------------------------------
   !> calc temp & dens -> saturation vapor mass (ice,0D)
   subroutine ATMOS_SATURATION_dens2qsat_ice_0D( &
-       qsat, &
        temp, &
-       dens  )
+       dens, &
+       qsat  )
     implicit none
-
-    real(RP), intent(out) :: qsat
     real(RP), intent(in)  :: temp
     real(RP), intent(in)  :: dens
+
+    real(RP), intent(out) :: qsat
 
     real(RP) :: psat
     !---------------------------------------------------------------------------

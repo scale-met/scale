@@ -34,6 +34,11 @@ module scale_atmos_hydrometeor
   public :: ATMOS_HYDROMETEOR_entr
   public :: ATMOS_HYDROMETEOR_diagnose_number_concentration
 
+  interface ATMOS_HYDROMETEOR_regist
+     module procedure ATMOS_HYDROMETEOR_regist
+     module procedure ATMOS_HYDROMETEOR_regist_obsolute
+  end interface ATMOS_HYDROMETEOR_regist
+
   interface ATMOS_HYDROMETEOR_LHV
      module procedure ATMOS_HYDROMETEOR_LHV_0D
      module procedure ATMOS_HYDROMETEOR_LHV_1D
@@ -80,12 +85,11 @@ module scale_atmos_hydrometeor
   integer, public, parameter :: I_HG =  5 !< graupel
   integer, public, parameter :: I_HH =  6 !< hail
 
-  integer, public            :: I_QC = -1
-  integer, public            :: I_QR = -1
-  integer, public            :: I_QI = -1
-  integer, public            :: I_QS = -1
-  integer, public            :: I_QG = -1
-  integer, public            :: I_QH = -1
+  character(len=H_SHORT), public, parameter :: HYD_NAME(N_HYD) = &
+       (/ "QC", "QR", "QI", "QS", "QG", "QH" /)
+  character(len=H_SHORT), public, parameter :: HYD_DESC(N_HYD) = &
+       (/ "cloud", "rain", "ice water", "snow", "graupel", "heil" /)
+  real(RP), public           :: HYD_DENS(N_HYD)
 
   integer, public            :: I_NC = -1
   integer, public            :: I_NR = -1
@@ -94,19 +98,36 @@ module scale_atmos_hydrometeor
   integer, public            :: I_NG = -1
   integer, public            :: I_NH = -1
 
+  integer, public            :: I_QC = -1
+  integer, public            :: I_QR = -1
+  integer, public            :: I_QI = -1
+  integer, public            :: I_QS = -1
+  integer, public            :: I_QG = -1
+  integer, public            :: I_QH = -1
+
   ! hydrometeor (water + ice)
+  integer, public            :: QHA =  0
   integer, public            :: QHS = -1
   integer, public            :: QHE = -2
   ! water
+  integer, public            :: QLA =  0
   integer, public            :: QLS = -1
   integer, public            :: QLE = -2
   ! ice
+  integer, public            :: QIA =  0
   integer, public            :: QIS = -1
   integer, public            :: QIE = -2
 
   real(RP), public           :: LHV       !< latent heat of vaporization for use [J/kg]
   real(RP), public           :: LHS       !< latent heat of sublimation  for use [J/kg]
   real(RP), public           :: LHF       !< latent heat of fusion       for use [J/kg]
+
+  real(RP), public           :: CV_VAPOR !< CV for vapor [J/kg/K]
+  real(RP), public           :: CP_VAPOR !< CP for vapor [J/kg/K]
+  real(RP), public           :: CV_WATER !< CV for water [J/kg/K]
+  real(RP), public           :: CP_WATER !< CP for water [J/kg/K]
+  real(RP), public           :: CV_ICE   !< CV for ice   [J/kg/K]
+  real(RP), public           :: CP_ICE   !< CP for ice   [J/kg/K]
 
   !-----------------------------------------------------------------------------
   !
@@ -116,14 +137,9 @@ module scale_atmos_hydrometeor
   !
   !++ Private parameters & variables
   !
-  real(RP), private :: CV_VAPOR !< CV for vapor [J/kg/K]
-  real(RP), private :: CP_VAPOR !< CP for vapor [J/kg/K]
-  real(RP), private :: CV_WATER !< CV for water [J/kg/K]
-  real(RP), private :: CP_WATER !< CP for water [J/kg/K]
-  real(RP), private :: CV_ICE   !< CV for ice   [J/kg/K]
-  real(RP), private :: CP_ICE   !< CP for ice   [J/kg/K]
-
   real(RP), private :: THERMODYN_EMASK = 1.0_RP
+
+  logical,  private :: initialized = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -131,21 +147,29 @@ contains
   !> Setup
   subroutine ATMOS_HYDROMETEOR_setup
     use scale_const, only: &
-       CPvap          => CONST_CPvap,          &
-       CVvap          => CONST_CVvap,          &
-       CL             => CONST_CL,             &
-       CI             => CONST_CI,             &
-       LHV00          => CONST_LHV00,          &
-       LHS00          => CONST_LHS00,          &
-       LHF00          => CONST_LHF00,          &
-       LHV0           => CONST_LHV0,           &
-       LHS0           => CONST_LHS0,           &
-       LHF0           => CONST_LHF0,           &
+       CONST_setup, &
+       CPvap          => CONST_CPvap, &
+       CVvap          => CONST_CVvap, &
+       CL             => CONST_CL,    &
+       CI             => CONST_CI,    &
+       LHV00          => CONST_LHV00, &
+       LHS00          => CONST_LHS00, &
+       LHF00          => CONST_LHF00, &
+       LHV0           => CONST_LHV0,  &
+       LHS0           => CONST_LHS0,  &
+       LHF0           => CONST_LHF0,  &
+       DWATR          => CONST_DWATR, &
+       DICE           => CONST_DICE,  &
        THERMODYN_TYPE => CONST_THERMODYN_TYPE
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
     !---------------------------------------------------------------------------
+
+    if ( initialized ) return
+    initialized = .true.
+
+    call CONST_setup
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[HYDEROMETER] / Categ[ATMOS SHARE] / Origin[SCALElib]'
@@ -180,17 +204,25 @@ contains
 
     else
        write(*,*) 'xxx Not appropriate ATMOS_THERMODYN_ENERGY_TYPE. Check!', trim(THERMODYN_TYPE)
-       call PRC_MPIstop
+       call PRC_abort
     endif
+
+    HYD_DENS(:) = (/ DWATR, & ! HC
+                     DWATR, & ! HR
+                     DICE,  & ! HI
+                     DICE,  & ! HS
+                     DICE,  & ! HG
+                     DICE  /) ! HH
 
     return
   end subroutine ATMOS_HYDROMETEOR_setup
 
   !-----------------------------------------------------------------------------
-  !> Regist tracer
+  !> ATMOS_HYDROMETEOR_regist
+  !! Regist tracer
+  !<
   subroutine ATMOS_HYDROMETEOR_regist( &
        Q0,   &
-       NV,   &
        NL,   &
        NI,   &
        NAME, &
@@ -198,7 +230,7 @@ contains
        UNIT, &
        ADVC  )
     use scale_process, only: &
-      PRC_MPIstop
+      PRC_abort
     use scale_tracer, only: &
       TRACER_regist
     use scale_const, only: &
@@ -206,20 +238,19 @@ contains
     implicit none
 
     integer,          intent(out) :: Q0
-    integer,          intent(in)  :: NV             !< number of vapor
     integer,          intent(in)  :: NL             !< number of liquid water tracers
     integer,          intent(in)  :: NI             !< number of ice water tracers
-    character(len=*), intent(in)  :: NAME(NV+NL+NI)
-    character(len=*), intent(in)  :: DESC(NV+NL+NI)
-    character(len=*), intent(in)  :: UNIT(NV+NL+NI)
+    character(len=*), intent(in)  :: NAME(1+NL+NI)
+    character(len=*), intent(in)  :: DESC(1+NL+NI)
+    character(len=*), intent(in)  :: UNIT(1+NL+NI)
 
-    logical,          intent(in), optional :: ADVC(NV+NL+NI)
+    logical,          intent(in), optional :: ADVC(1+NL+NI)
 
-    real(RP) :: CV   (NV+NL+NI)
-    real(RP) :: CP   (NV+NL+NI)
-    real(RP) :: R    (NV+NL+NI)
-    logical  :: MASS (NV+NL+NI)
-    logical  :: ADVC_(NV+NL+NI)
+    real(RP) :: CV   (1+NL+NI)
+    real(RP) :: CP   (1+NL+NI)
+    real(RP) :: R    (1+NL+NI)
+    logical  :: MASS (1+NL+NI)
+    logical  :: ADVC_(1+NL+NI)
 
     integer  :: NQ
     integer  :: n
@@ -227,23 +258,18 @@ contains
 
     if ( I_QV > 0 ) then
        write(*,*) 'xxx tracer for hydrometeor is already registerd'
-       call PRC_MPIstop
-    endif
-
-    if ( NV /= 1 ) then
-       write(*,*) 'xxx number of vapor must be 1 at this moment'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     NQ = 0
 
-    do n = 1, NV
-       NQ = NQ + 1
-       CV(NQ) = CV_VAPOR
-       CP(NQ) = CP_VAPOR
-       R (NQ) = Rvap
-    end do
+    ! vapor
+    NQ = NQ + 1
+    CV(NQ) = CV_VAPOR
+    CP(NQ) = CP_VAPOR
+    R (NQ) = Rvap
 
+    ! liquid
     do n = 1, NL
        NQ = NQ + 1
        CV(NQ) = CV_WATER
@@ -251,6 +277,7 @@ contains
        R (NQ) = 0.0_RP
     end do
 
+    ! ice
     do n = 1, NI
        NQ = NQ + 1
        CV(NQ) = CV_ICE
@@ -282,22 +309,60 @@ contains
 
     if ( NQ > 1 ) then
        QHS = I_QV + 1
-       QHE = QHS + NL + NI - 1
+       QHA = NL + NI
+       QHE = QHS + QHA - 1
     endif
 
     if ( NL > 0 ) then
        QLS = I_QV + 1
+       QLA = NL
        QLE = QLS + NL - 1
     endif
 
     if ( NI > 0 ) then
        QIS = QLE + 1
+       QIA = NI
        QIE = QIS + NI - 1
     endif
 
     return
   end subroutine ATMOS_HYDROMETEOR_regist
 
+  subroutine ATMOS_HYDROMETEOR_regist_obsolute( &
+       Q0,   &
+       NV,   &
+       NL,   &
+       NI,   &
+       NAME, &
+       DESC, &
+       UNIT, &
+       ADVC  )
+    use scale_process, only: &
+      PRC_MPIstop
+    use scale_tracer, only: &
+      TRACER_regist
+    use scale_const, only: &
+      Rvap => CONST_Rvap
+    implicit none
+
+    integer,          intent(out) :: Q0
+    integer,          intent(in)  :: NV             !< number of vapor
+    integer,          intent(in)  :: NL             !< number of liquid water tracers
+    integer,          intent(in)  :: NI             !< number of ice water tracers
+    character(len=*), intent(in)  :: NAME(NV+NL+NI)
+    character(len=*), intent(in)  :: DESC(NV+NL+NI)
+    character(len=*), intent(in)  :: UNIT(NV+NL+NI)
+
+    logical,          intent(in), optional :: ADVC(NV+NL+NI)
+
+    call ATMOS_HYDROMETEOR_regist( &
+         Q0,               & ! [IN]
+         NL, NI,           & ! [IN]
+         NAME, DESC, UNIT, & ! [IN]
+         ADVC              )
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_regist_obsolute
   !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_LHV_0D( &
        lhv, &

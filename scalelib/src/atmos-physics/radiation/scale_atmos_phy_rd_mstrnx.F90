@@ -371,6 +371,7 @@ contains
        fact_urban,            &
        temp_sfc, albedo_land, &
        solins, cosSZA,        &
+       CLDFRAC, MP_Re, MP_Qe, &
        flux_rad,              &
        flux_rad_top,          &
        flux_rad_sfc_dn,       &
@@ -392,11 +393,6 @@ contains
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
-    use scale_atmos_phy_mp, only: &
-       MP_EffectiveRadius => ATMOS_PHY_MP_EffectiveRadius, &
-       MP_CloudFraction   => ATMOS_PHY_MP_CloudFraction,   &
-       MP_Mixingratio     => ATMOS_PHY_MP_Mixingratio,     &
-       MP_DENS            => ATMOS_PHY_MP_DENS
     use scale_atmos_phy_ae, only: &
        AE_EffectiveRadius => ATMOS_PHY_AE_EffectiveRadius, &
        AE_DENS            => ATMOS_PHY_AE_DENS, &
@@ -406,7 +402,8 @@ contains
        N_HYD, &
        I_QV, &
        I_HC, &
-       I_HI
+       I_HI, &
+       HYD_DENS
     use scale_atmos_aerosol, only: &
        N_AE
     use scale_atmos_phy_rd_profile, only: &
@@ -426,6 +423,9 @@ contains
     real(RP), intent(in)  :: albedo_land    (IA,JA,2)
     real(RP), intent(in)  :: solins         (IA,JA)
     real(RP), intent(in)  :: cosSZA         (IA,JA)
+    real(RP), intent(in)  :: cldfrac        (KA,IA,JA)
+    real(RP), intent(in)  :: MP_Re          (KA,IA,JA,N_HYD)
+    real(RP), intent(in)  :: MP_Qe          (KA,IA,JA,N_HYD)
     real(RP), intent(out) :: flux_rad       (KA,IA,JA,2,2,2)
     real(RP), intent(out) :: flux_rad_top   (IA,JA,2,2,2)
     real(RP), intent(out) :: flux_rad_sfc_dn(IA,JA,2,2)
@@ -437,9 +437,6 @@ contains
     real(RP) :: pres   (KA,IA,JA)
     real(RP) :: qsat   (KA,IA,JA)
     real(RP) :: rh     (KA,IA,JA)
-    real(RP) :: cldfrac(KA,IA,JA)
-    real(RP) :: MP_Re  (KA,IA,JA,N_HYD)
-    real(RP) :: MP_Qe  (KA,IA,JA,N_HYD)
     real(RP) :: AE_Re  (KA,IA,JA,N_AE)
 
     integer  :: tropopause(IA,JA)
@@ -505,32 +502,11 @@ contains
        enddo
     endif
 
-    call MP_CloudFraction( cldfrac(:,:,:), & ! [OUT]
-                           QTRC(:,:,:,:),  & ! [IN]
-                           EPS             ) ! [IN]
-
-    call MP_EffectiveRadius( MP_Re(:,:,:,:), & ! [OUT]
-                             QTRC (:,:,:,:), & ! [IN]
-                             DENS (:,:,:)  , & ! [IN]
-                             TEMP (:,:,:)    ) ! [IN]
-
     call AE_EffectiveRadius( AE_Re(:,:,:,:), & ! [OUT]
                              QTRC (:,:,:,:), & ! [IN]
                              rh   (:,:,:)    ) ! [IN]
-
-    call MP_Mixingratio( MP_Qe(:,:,:,:), & ! [OUT]
-                         QTRC (:,:,:,:)  ) ! [IN]
-
 !    call AE_Mixingratio( AE_Qe(:,:,:,:), & ! [OUT]
 !                         QTRC (:,:,:,:)  ) ! [IN]
-
-    if ( ATMOS_PHY_RD_MSTRN_ONLY_QCI ) then
-       do ihydro = 1, N_HYD
-          if ( ihydro /= I_HC .and. ihydro /= I_HI ) then
-             MP_Qe(:,:,:,ihydro) = 0.0_RP
-          end if
-       end do
-    end if
 
     if ( ATMOS_PHY_RD_MSTRN_ONLY_TROPOCLOUD ) then
        do j  = JS, JE
@@ -548,16 +524,12 @@ contains
           enddo
        enddo
        enddo
-
-       do ihydro = 1, N_HYD
+    else
        do j  = JS, JE
        do i  = IS, IE
-          do k  = tropopause(i,j), KE
-             MP_Qe(k,i,j,ihydro) = 0.0_RP
-          enddo
-       enddo
-       enddo
-       enddo
+          tropopause(i,j) = KE+1
+       end do
+       end do
     endif
 
     ! marge basic profile and value in model domain
@@ -694,14 +666,34 @@ contains
 
 !OCL SERIAL
     do ihydro = 1, N_HYD
+       if ( ATMOS_PHY_RD_MSTRN_ONLY_QCI .and. &
+            ( ihydro /= I_HC .and. ihydro /= I_HI ) ) then
+!OCL XFILL
+          aerosol_conc_merge(:,:,:,ihydro) = 0.0_RP
+          cycle
+       end if
+!OCL PARALLEL
+       do j = JS, JE
+       do i = IS, IE
+          do RD_k = RD_KADD+1, RD_KADD+1 + KE - tropopause(i,j)
+             aerosol_conc_merge(RD_k,i,j,ihydro) = 0.0_RP
+          end do
+          do RD_k = RD_KADD+1 + KE - tropopause(i,j) + 1, RD_KMAX
+             k = KS + RD_KMAX - RD_k ! reverse axis
+             aerosol_conc_merge(RD_k,i,j,ihydro) = max( MP_Qe(k,i,j,ihydro), 0.0_RP ) &
+                                                 / HYD_DENS(ihydro) * RHO_std / PPM ! [PPM to standard air]
+          enddo
+       enddo
+       enddo
+    enddo
+
+!OCL SERIAL
+    do ihydro = 1, N_HYD
 !OCL PARALLEL
     do j = JS, JE
     do i = IS, IE
     do RD_k = RD_KADD+1, RD_KMAX
        k = KS + RD_KMAX - RD_k ! reverse axis
-
-       aerosol_conc_merge(RD_k,i,j,ihydro) = max( MP_Qe(k,i,j,ihydro), 0.0_RP ) &
-                                           / MP_DENS(ihydro) * RHO_std / PPM ! [PPM to standard air]
        aerosol_radi_merge(RD_k,i,j,ihydro) = MP_Re(k,i,j,ihydro)
     enddo
     enddo

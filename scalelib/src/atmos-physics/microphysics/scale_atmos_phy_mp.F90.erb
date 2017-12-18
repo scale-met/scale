@@ -1,6 +1,6 @@
 % # -*- f90 -*-
 % # vi: set sw=4 ts=8:
-% types = %w(dry kessler tomita08 sn14 suzuki10 sdm)
+% types = %w(dry kessler sn14 suzuki10 sdm)
 !-------------------------------------------------------------------------------
 !> module ATMOSPHERE / Physics Cloud Microphysics
 !!
@@ -114,14 +114,15 @@ module scale_atmos_phy_mp
   !
   !++ Public parameters & variables
   !
+  ! obsolute
   integer, public    :: QA_MP =  0 ! number of cloud microphysical tracers
   integer, public    :: QS_MP = -1 ! start index in QTRC
   integer, public    :: QE_MP = -1 ! end   index in QTRC
 
+  ! obsolute
   character(len=H_SHORT), pointer, public :: ATMOS_PHY_MP_NAME(:)
   character(len=H_MID),   pointer, public :: ATMOS_PHY_MP_DESC(:)
   character(len=H_SHORT), pointer, public :: ATMOS_PHY_MP_UNIT(:)
-  real(RP), pointer, public :: ATMOS_PHY_MP_DENS(:)
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -148,8 +149,7 @@ contains
        ATMOS_PHY_MP_<%=type%>_MixingRatio, &
        ATMOS_PHY_MP_<%=type%>_NAME, &
        ATMOS_PHY_MP_<%=type%>_DESC, &
-       ATMOS_PHY_MP_<%=type%>_UNIT, &
-       ATMOS_PHY_MP_<%=type%>_DENS
+       ATMOS_PHY_MP_<%=type%>_UNIT
 % end
     implicit none
 
@@ -172,7 +172,6 @@ contains
        ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_<%=type%>_NAME
        ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_<%=type%>_DESC
        ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_<%=type%>_UNIT
-       ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_<%=type%>_DENS
 % end
     end select
 

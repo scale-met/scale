@@ -137,8 +137,7 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_atmos_phy_mp, only: &
-       AQ_NAME => ATMOS_PHY_MP_NAME, &
+    use mod_atmos_phy_mp_vars, only: &
        QS_MP,                        &
        QE_MP,                        &
        QA_MP
@@ -206,8 +205,8 @@ contains
     VAR_t_UNIT(I_cp_rhot_t) = 'K*kg/m3/s'
 
     do iq = 1, QA_MP
-       VAR_t_NAME(2+iq) = trim(AQ_NAME(iq))//'_t_CP'
-       VAR_t_DESC(2+iq) = 'tendency rho*'//trim(AQ_NAME(iq))//' in CP'
+       VAR_t_NAME(2+iq) = trim(TRACER_NAME(QS_MP+iq-1))//'_t_CP'
+       VAR_t_DESC(2+iq) = 'tendency rho*'//trim(TRACER_NAME(QS_MP+iq-1))//' in CP'
        VAR_t_UNIT(2+iq) = 'kg/m3/s'
     enddo
 
@@ -263,7 +262,7 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_atmos_phy_mp, only: &
+    use mod_atmos_phy_mp_vars, only: &
        QA_MP
     implicit none
 
@@ -375,7 +374,7 @@ contains
     use scale_fileio, only: &
        FILEIO_read, &
        FILEIO_flush
-    use scale_atmos_phy_mp, only: &
+    use mod_atmos_phy_mp_vars, only: &
        QA_MP
     implicit none
 
@@ -541,7 +540,7 @@ contains
   subroutine ATMOS_PHY_CP_vars_restart_def_var
     use scale_fileio, only: &
        FILEIO_def_var
-    use scale_atmos_phy_mp, only: &
+    use mod_atmos_phy_mp_vars, only: &
        QA_MP
     implicit none
 
@@ -590,7 +589,7 @@ contains
        STAT_total
     use scale_fileio, only: &
        FILEIO_write => FILEIO_write_var
-    use scale_atmos_phy_mp, only: &
+    use mod_atmos_phy_mp_vars, only: &
        QA_MP
     implicit none
 

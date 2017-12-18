@@ -199,7 +199,7 @@ module scale_atmos_boundary
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_BOUNDARY_setup
+  subroutine ATMOS_BOUNDARY_setup( QA_MP )
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
@@ -211,9 +211,8 @@ contains
        OFFLINE,             &
        ONLINE_IAM_PARENT,   &
        ONLINE_IAM_DAUGHTER
-    use scale_atmos_phy_mp, only: &
-       QA_MP
     implicit none
+    integer, intent(in) :: QA_MP
 
     NAMELIST / PARAM_ATMOS_BOUNDARY / &
        ATMOS_BOUNDARY_TYPE,           &
@@ -1011,8 +1010,6 @@ contains
        FILEIO_check_coordinates, &
        FILEIO_read, &
        FILEIO_close
-    use scale_atmos_phy_mp, only: &
-       AQ_NAME => ATMOS_PHY_MP_NAME
     implicit none
 
     integer :: fid
@@ -1064,8 +1061,8 @@ contains
 
     if ( ATMOS_BOUNDARY_USE_QHYD ) then
        do iq = 2, BND_QA
-          call FILEIO_read( ATMOS_BOUNDARY_QTRC(:,:,:,iq), fid, AQ_NAME(iq), 'ZXY', 1 )
-          call FILEIO_read( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq), fid, 'ALPHA_'//trim(AQ_NAME(iq)), 'ZXY', 1 )
+          call FILEIO_read( ATMOS_BOUNDARY_QTRC(:,:,:,iq), fid, TRACER_NAME(iq), 'ZXY', 1 )
+          call FILEIO_read( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq), fid, 'ALPHA_'//trim(TRACER_NAME(iq)), 'ZXY', 1 )
        end do
     endif
 
@@ -1085,9 +1082,6 @@ contains
        FILEIO_write
     use scale_grid_nest, only: &
        ONLINE_USE_VELZ
-    use scale_atmos_phy_mp, only: &
-       AQ_NAME => ATMOS_PHY_MP_NAME, &
-       AQ_UNIT => ATMOS_PHY_MP_UNIT
     implicit none
 
     integer :: iq
@@ -1170,11 +1164,13 @@ contains
        do iq = 2, BND_QA
           call FILEIO_write( ATMOS_BOUNDARY_QTRC(:,:,:,iq),                                    &
                              ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE,            &
-                             AQ_NAME(iq), 'Reference '//trim(AQ_NAME(iq)), AQ_UNIT(iq), 'ZXY', &
+                             TRACER_NAME(iq), 'Reference '//trim(TRACER_NAME(iq)), &
+                             TRACER_UNIT(iq), 'ZXY', &
                              ATMOS_BOUNDARY_OUT_DTYPE                                          )
           call FILEIO_write( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq),                                      &
                              ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE,                    &
-                             'ALPHA_'//trim(AQ_NAME(iq)), 'Alpha for '//trim(AQ_NAME(iq)), '1', 'ZXY', &
+                             'ALPHA_'//trim(TRACER_NAME(iq)), 'Alpha for '//trim(TRACER_NAME(iq)), &
+                             '1', 'ZXY', &
                              ATMOS_BOUNDARY_OUT_DTYPE                                                  )
        end do
     endif
@@ -1974,8 +1970,6 @@ contains
     use scale_fileio, only: &
        FILEIO_read, &
        FILEIO_flush
-    use scale_atmos_phy_mp, only: &
-       AQ_NAME => ATMOS_PHY_MP_NAME
     implicit none
 
     integer, intent(in) :: ref
@@ -1992,7 +1986,7 @@ contains
     call FILEIO_read( ATMOS_BOUNDARY_ref_VELY(:,:,:,ref), fid, 'VELY', 'ZXY', boundary_timestep )
     call FILEIO_read( ATMOS_BOUNDARY_ref_POTT(:,:,:,ref), fid, 'POTT', 'ZXY', boundary_timestep )
     do iq = 1, BND_QA
-       call FILEIO_read( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,ref), fid, AQ_NAME(iq), 'ZXY', boundary_timestep )
+       call FILEIO_read( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,ref), fid, TRACER_NAME(iq), 'ZXY', boundary_timestep )
     end do
 
     call FILEIO_flush( fid )
@@ -2131,8 +2125,6 @@ contains
        NESTQA => NEST_BND_QA
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_diagnose_number_concentration
-    use scale_atmos_phy_mp, only: &
-       QA_MP
     implicit none
 
     ! parameters
@@ -2163,7 +2155,7 @@ contains
                              ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_idx),         & !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,ref_idx) ) !(KA,IA,JA,QA)
 
-    if ( ONLINE_BOUNDARY_DIAGQNUM .AND. QA_MP == 11 ) then
+    if ( ONLINE_BOUNDARY_DIAGQNUM ) then
        call ATMOS_HYDROMETEOR_diagnose_number_concentration( ATMOS_BOUNDARY_ref_QTRC(:,:,:,:,ref_idx) ) ! [INOUT]
     endif
 
@@ -2503,8 +2495,6 @@ contains
        ATMOS_BOUNDARY_VELY, &
        ATMOS_BOUNDARY_POTT, &
        ATMOS_BOUNDARY_QTRC )
-    use scale_atmos_phy_mp, only: &
-       AQ_NAME => ATMOS_PHY_MP_NAME
     use scale_history, only: &
        HIST_in
     implicit none
@@ -2523,7 +2513,8 @@ contains
     call HIST_in( ATMOS_BOUNDARY_VELY(:,:,:), 'VELY_BND', 'Boundary velocity y-direction',  'm/s',  ydim='half' )
     call HIST_in( ATMOS_BOUNDARY_POTT(:,:,:), 'POTT_BND', 'Boundary potential temperature', 'K'                 )
     do iq = 1, BND_QA
-       call HIST_in( ATMOS_BOUNDARY_QTRC(:,:,:,iq), trim(AQ_NAME(iq))//'_BND', 'Boundary '//trim(AQ_NAME(iq)), 'kg/kg' )
+       call HIST_in( ATMOS_BOUNDARY_QTRC(:,:,:,iq), trim(TRACER_NAME(iq))//'_BND', &
+                     'Boundary '//trim(TRACER_NAME(iq)), 'kg/kg' )
     enddo
 
     return

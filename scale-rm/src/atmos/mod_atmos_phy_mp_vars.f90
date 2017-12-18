@@ -40,6 +40,11 @@ module mod_atmos_phy_mp_vars
   public :: ATMOS_PHY_MP_vars_restart_enddef
   public :: ATMOS_PHY_MP_vars_restart_close
 
+  public :: ATMOS_PHY_MP_vars_history
+
+  public :: ATMOS_PHY_MP_vars_get_diagnostic
+  public :: ATMOS_PHY_MP_vars_reset_diagnostics
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -53,16 +58,27 @@ module mod_atmos_phy_mp_vars
   character(len=H_MID),   public :: ATMOS_PHY_MP_RESTART_OUT_TITLE             = 'ATMOS_PHY_MP restart' !< title    of the output file
   character(len=H_SHORT), public :: ATMOS_PHY_MP_RESTART_OUT_DTYPE             = 'DEFAULT'              !< REAL4 or REAL8
 
+  real(RP), public :: ATMOS_PHY_MP_cldfrac_thleshold
+
   real(RP), public, allocatable :: ATMOS_PHY_MP_DENS_t(:,:,:)    ! tendency DENS [kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_MOMZ_t(:,:,:)    ! tendency MOMZ [kg/m2/s2]
-  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMX_t(:,:,:)    ! tendency MOMX [kg/m2/s2]
-  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMY_t(:,:,:)    ! tendency MOMY [kg/m2/s2]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_RHOU_t(:,:,:)    ! tendency dens*U [kg/m2/s2]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_RHOV_t(:,:,:)    ! tendency dens*V [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOT_t(:,:,:)    ! tendency RHOT [K*kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOQ_t(:,:,:,:)  ! tendency rho*QTRC [kg/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_RHOH  (:,:,:)    ! adiabatic heating [J/kg/s]
+
+  ! obsolute
+  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMX_t(:,:,:)    ! tendency MOMX [kg/m2/s2]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMY_t(:,:,:)    ! tendency MOMY [kg/m2/s2]
 
   real(RP), public, allocatable :: ATMOS_PHY_MP_EVAPORATE(:,:,:) ! number concentration of evaporated cloud [/m3]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_rain(:,:)   ! precipitation flux (liquid) [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_snow(:,:)   ! precipitation flux (solid)  [kg/m2/s]
+
+  integer, public :: QA_MP
+  integer, public :: QS_MP
+  integer, public :: QE_MP
 
   !-----------------------------------------------------------------------------
   !
@@ -89,6 +105,22 @@ module mod_atmos_phy_mp_vars
   data VAR_UNIT / 'kg/m2/s', &
                   'kg/m2/s' /
 
+
+  ! for diagnostics
+  real(RP), private, allocatable :: ATMOS_PHY_MP_CLDFRAC(:,:,:)
+  real(RP), private, allocatable :: ATMOS_PHY_MP_Re     (:,:,:,:)
+  real(RP), private, allocatable :: ATMOS_PHY_MP_Qe     (:,:,:,:)
+  logical, private :: DIAG_CLDFRAC
+  logical, private :: DIAG_Re
+  logical, private :: DIAG_Qe
+
+
+  ! for history
+  integer, private             :: HIST_CLDFRAC_id
+  integer, private,allocatable :: HIST_Re_id(:)
+  logical, private             :: HIST_Re
+
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -98,9 +130,13 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_atmos_phy_mp, only: &
-       QS_MP, &
-       QE_MP
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       QHA,  &
+       HYD_NAME, &
+       HYD_DESC
+    use scale_history, only: &
+       HIST_reg
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_MP_VARS / &
@@ -113,27 +149,33 @@ contains
        ATMOS_PHY_MP_RESTART_OUT_DTYPE
 
     integer :: ierr
-    integer :: iv
+    integer :: iv, ih
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[ATMOS PHY_MP] / Origin[SCALE-RM]'
 
-    allocate( ATMOS_PHY_MP_DENS_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_MP_MOMZ_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_MP_MOMX_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_MP_MOMY_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_MP_RHOT_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_MP_RHOQ_t(KA,IA,JA,QS_MP:QE_MP) )
+    allocate( ATMOS_PHY_MP_DENS_t   (KA,IA,JA)    )
+    allocate( ATMOS_PHY_MP_MOMZ_t   (KA,IA,JA)    )
+    allocate( ATMOS_PHY_MP_RHOU_t   (KA,IA,JA)    )
+    allocate( ATMOS_PHY_MP_RHOV_t   (KA,IA,JA)    )
+    allocate( ATMOS_PHY_MP_RHOT_t   (KA,IA,JA)    )
+    allocate( ATMOS_PHY_MP_RHOQ_t   (KA,IA,JA,QS_MP:QE_MP) )
+    allocate( ATMOS_PHY_MP_RHOH     (KA,IA,JA)    )
     allocate( ATMOS_PHY_MP_EVAPORATE(KA,IA,JA)    )
+    allocate( ATMOS_PHY_MP_MOMX_t   (KA,IA,JA)    )
+    allocate( ATMOS_PHY_MP_MOMY_t   (KA,IA,JA)    )
     ! tentative approach
-    ATMOS_PHY_MP_DENS_t(:,:,:)   = 0.0_RP
-    ATMOS_PHY_MP_MOMZ_t(:,:,:)   = 0.0_RP
-    ATMOS_PHY_MP_MOMX_t(:,:,:)   = 0.0_RP
-    ATMOS_PHY_MP_MOMY_t(:,:,:)   = 0.0_RP
-    ATMOS_PHY_MP_RHOT_t(:,:,:)   = 0.0_RP
-    ATMOS_PHY_MP_RHOQ_t(:,:,:,:) = 0.0_RP
-    ATMOS_PHY_MP_EVAPORATE(:,:,:) = 0.0_RP
+    ATMOS_PHY_MP_DENS_t   (:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_MOMZ_t   (:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_RHOU_t   (:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_RHOV_t   (:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_RHOT_t   (:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_RHOQ_t   (:,:,:,:) = 0.0_RP
+    ATMOS_PHY_MP_RHOH     (:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_EVAPORATE(:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_MOMX_t   (:,:,:)   = 0.0_RP
+    ATMOS_PHY_MP_MOMY_t   (:,:,:)   = 0.0_RP
 
     allocate( ATMOS_PHY_MP_SFLX_rain(IA,JA) )
     allocate( ATMOS_PHY_MP_SFLX_snow(IA,JA) )
@@ -176,6 +218,31 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        ATMOS_PHY_MP_RESTART_OUTPUT = .false.
     endif
+
+
+    ! diagnostices
+    allocate( ATMOS_PHY_MP_CLDFRAC(KA,IA,JA) )
+    allocate( ATMOS_PHY_MP_Re     (KA,IA,JA,N_HYD) )
+    allocate( ATMOS_PHY_MP_Qe     (KA,IA,JA,N_HYD) )
+!OCL XFILL
+    ATMOS_PHY_MP_CLDFRAC(:,:,:) = UNDEF
+!OCL XFILL
+    ATMOS_PHY_MP_Re     (:,:,:,:) = UNDEF
+!OCL XFILL
+    ATMOS_PHY_MP_Qe     (:,:,:,:) = UNDEF
+    DIAG_CLDFRAC = .false.
+    DIAG_Re      = .false.
+    DIAG_Qe      = .false.
+
+    ! history
+    call HIST_reg( HIST_CLDFRAC_id, 'CLDFRAC', 'cloud fraction', '1', ndim=3 )
+
+    HIST_Re = .false.
+    allocate( HIST_Re_id(N_HYD) )
+    do ih = 1, N_HYD
+       call HIST_reg( HIST_Re_id(ih), 'Re_'//trim(HYD_NAME(ih)), 'effective radius of '//trim(HYD_DESC(ih)), 'cm', ndim=3 )
+       if ( HIST_Re_id(ih) > 0 ) HIST_Re = .true.
+    end do
 
     return
   end subroutine ATMOS_PHY_MP_vars_setup
@@ -392,5 +459,154 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_vars_restart_write
+
+  subroutine ATMOS_PHY_MP_vars_history( &
+       DENS, TEMP, QTRC )
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
+    use scale_history, only: &
+       HIST_put
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: TEMP(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+
+    real(RP) :: WORK  (KA,IA,JA,N_HYD)
+    integer  :: ih
+
+    if ( HIST_CLDFRAC_id > 0 ) then
+       call ATMOS_PHY_MP_vars_get_diagnostic( &
+            DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
+            CLDFRAC=WORK(:,:,:,1)                    ) ! [OUT]
+       call HIST_put( HIST_CLDFRAC_id, WORK(:,:,:,1), nohalo=.true. )
+    end if
+
+    if ( HIST_Re ) then
+       call ATMOS_PHY_MP_vars_get_diagnostic( &
+            DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
+            Re=WORK(:,:,:,:)                         ) ! [OUT]
+       do ih = 1, N_HYD
+          if ( HIST_Re_id(ih) > 0 ) &
+               call HIST_put( HIST_Re_id(ih), WORK(:,:,:,ih), nohalo=.true. )
+       end do
+    end if
+
+    return
+  end subroutine ATMOS_PHY_MP_vars_history
+
+  subroutine ATMOS_PHY_MP_vars_get_diagnostic( &
+       DENS, TEMP, QTRC, &
+       CLDFRAC, Re, Qe   )
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC,  &
+       I_HR,  &
+       I_HI,  &
+       I_HS,  &
+       I_HG,  &
+       I_HH,  &
+       QHS,   &
+       QHE
+    use scale_atmos_phy_mp_tomita08, only: &
+       ATMOS_PHY_MP_TOMITA08_mass_ratio, &
+       ATMOS_PHY_MP_TOMITA08_effective_radius, &
+       ATMOS_PHY_MP_TOMITA08_cloud_fraction
+    use scale_atmos_phy_mp, only: &
+       ATMOS_PHY_MP_CloudFraction,   &
+       ATMOS_PHY_MP_EffectiveRadius, &
+       ATMOS_PHY_MP_MixingRatio
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE
+
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: TEMP(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(out), optional :: CLDFRAC(KA,IA,JA)       !> cloud fraction [0-1]
+    real(RP), intent(out), optional :: Re     (KA,IA,JA,N_HYD) !> effective radius [cm]
+    real(RP), intent(out), optional :: Qe     (KA,IA,JA,N_HYD) !> mass ratio [kg/kg]
+
+    integer :: ih
+
+    if ( present(CLDFRAC) ) then
+       if ( .not. DIAG_CLDFRAC ) then
+          select case ( ATMOS_PHY_MP_TYPE )
+          case ( 'TOMITA08' )
+             call ATMOS_PHY_MP_tomita08_cloud_fraction( &
+                  KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                  QTRC(:,:,:,QHS:QHE), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
+                  ATMOS_PHY_MP_CLDFRAC(:,:,:)                          ) ! [OUT]
+          case default
+             if ( associated(ATMOS_PHY_MP_CloudFraction) ) then
+                call ATMOS_PHY_MP_CloudFraction( &
+                     ATMOS_PHY_MP_CLDFRAC(:,:,:),                   & ! [OUT]
+                     QTRC(:,:,:,:), ATMOS_PHY_MP_cldfrac_thleshold  ) ! [IN]
+             else
+!OCL XFILL
+                ATMOS_PHY_MP_CLDFRAC(:,:,:) = 0.0_RP
+             end if
+          end select
+          DIAG_CLDFRAC = .true.
+       end if
+!OCL XFILL
+       CLDFRAC(:,:,:) = ATMOS_PHY_MP_CLDFRAC(:,:,:)
+    end if
+
+    if ( present(Re) ) then
+       if ( .not. DIAG_Re ) then
+          select case ( ATMOS_PHY_MP_TYPE )
+          case ( 'TOMITA08' )
+             call ATMOS_PHY_MP_tomita08_effective_radius( &
+                  KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                  DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QHS:QHE), & ! [IN]
+                  ATMOS_PHY_MP_Re(:,:,:,:)                       ) ! [OUT]
+          case default
+             if ( associated(ATMOS_PHY_MP_EffectiveRadius) ) then
+                call ATMOS_PHY_MP_EffectiveRadius( &
+                     ATMOS_PHY_MP_Re(:,:,:,:),               & ! [OUT]
+                     QTRC(:,:,:,:), DENS(:,:,:), TEMP(:,:,:) ) ! [IN]
+             else
+!OCL XFILL
+                ATMOS_PHY_MP_Re(:,:,:,:) = 0.0_RP
+             end if
+          end select
+          DIAG_Re = .true.
+       end if
+!OCL XFILL
+       Re(:,:,:,:) = ATMOS_PHY_MP_Re(:,:,:,:)
+    end if
+
+    if ( present(Qe) ) then
+       if ( .not. DIAG_Qe ) then
+          select case ( ATMOS_PHY_MP_TYPE )
+          case ( 'TOMITA08' )
+             call ATMOS_PHY_MP_tomita08_mass_ratio( &
+                  KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                  QTRC(:,:,:,QHS:QHE),     & ! [IN]
+                  ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]
+          case default
+             if ( associated(ATMOS_PHY_MP_MixingRatio) ) then
+                call ATMOS_PHY_MP_MixingRatio( &
+                     ATMOS_PHY_MP_Qe(:,:,:,:),  & ! [OUT]
+                     QTRC(:,:,:,:)              ) ! [IN]
+             else
+!OCL XIFLL
+                ATMOS_PHY_MP_Qe(:,:,:,:) = 0.0_RP
+             end if
+          end select
+          DIAG_Qe = .true.
+       end if
+!OCL XIFLL
+       Qe(:,:,:,:) = ATMOS_PHY_MP_Qe(:,:,:,:)
+    end if
+
+    return
+  end subroutine ATMOS_PHY_MP_vars_get_diagnostic
+
+  subroutine ATMOS_PHY_MP_vars_reset_diagnostics
+    DIAG_CLDFRAC = .false.
+    DIAG_Re      = .false.
+    DIAG_Qe      = .false.
+
+    return
+  end subroutine ATMOS_PHY_MP_vars_reset_diagnostics
 
 end module mod_atmos_phy_mp_vars

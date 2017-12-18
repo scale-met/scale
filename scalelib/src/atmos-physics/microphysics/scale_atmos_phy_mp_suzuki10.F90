@@ -444,15 +444,13 @@ contains
     integer :: S10_RNDM_MSPC
     integer :: S10_RNDM_MBIN
 
-    NAMELIST / PARAM_ATMOS_PHY_MP / &
+    NAMELIST / PARAM_ATMOS_PHY_MP_SUZUKI10 / &
        MP_doprecipitation,     &
        MP_donegative_fixer,    &
        MP_limit_negative,      &
        MP_ntmax_sedimentation, &
        MP_doautoconversion,    &
-       MP_couple_aerosol
-
-    NAMELIST / PARAM_ATMOS_PHY_MP_SUZUKI10 / &
+       MP_couple_aerosol,      &
        RHO_AERO,  &
        R_MIN, &
        R_MAX, &
@@ -518,17 +516,6 @@ contains
     S10_RNDM_FLGP = rndm_flgp
     S10_RNDM_MSPC = mspc
     S10_RNDM_MBIN = mbin
-
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
-
-    if ( ierr < 0 ) then !--- missing
-     if( IO_L ) write(IO_FID_LOG,*)  '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-     write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP, Check!'
-     call PRC_MPIstop
-    endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP)
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_SUZUKI10,iostat=ierr)
