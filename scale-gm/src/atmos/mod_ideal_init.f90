@@ -934,7 +934,7 @@ contains
        ps = real( DP_ps, kind=RP )
 
        ! Re-Evaluation of temperature from virtual temperature
-       tmp(:) = tmp(:) * ( (1.0+RP + Mvap * q(:) ) / ( 1.0_RP + Mvap2 * q(:) ) )
+       tmp(:) = tmp(:) * ( (1.0_RP + Mvap * q(:) ) / ( 1.0_RP + Mvap2 * q(:) ) )
 
        call diag_pressure( kdim, z, rho, tmp, q, ps, prs, prs_rebuild, prs_dry )
        call conv_vxvyvz ( kdim, lat, lon, wix, wiy, vx_local, vy_local, vz_local )
@@ -1066,7 +1066,7 @@ contains
        ps = real( DP_ps, kind=RP )
 
        ! Re-Evaluation of temperature from virtual temperature
-       tmp(:) = tmp(:) * ( (1.0+RP + Mvap * q(:) ) / ( 1.0_RP + Mvap2 * q(:) ) )
+       tmp(:) = tmp(:) * ( (1.0_RP + Mvap * q(:) ) / ( 1.0_RP + Mvap2 * q(:) ) )
 
        call diag_pressure( kdim, z, rho, tmp, q, ps, prs, prs_rebuild, prs_dry )
        call conv_vxvyvz ( kdim, lat, lon, wix, wiy, vx_local, vy_local, vz_local )
