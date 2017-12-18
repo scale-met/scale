@@ -17,9 +17,8 @@ end
 
 output_dir = "./dox"
 
-docdir = ARGV.shift || usage
-topdir = File.join(docdir, "..")
-srcdir = File.join(topdir, "src")
+srcdir = ARGV.shift || usage
+title = ARGV.shift || File.basename(File.expand_path(File.join(`pwd`,"..")))
 
 
 def parse_line(line)
@@ -94,7 +93,7 @@ Index = {
 
 files = parse_dir(srcdir)
 
-files.flatten!.sort!
+files = files.flatten.sort!
 
 tree = Hash.new
 nm_params = Hash.new
@@ -125,11 +124,11 @@ files.each do |fname|
           line = file.gets if cont
         end
         case line_new
-        when /^\s*(public|private)\s* ::/
+        when /^\s*(public|private)\s* ::/i
           next
-        when /^\s*module\s*([^\s]+)\s*$/
+        when /^\s*module\s*([^\s]+)\s*$/i
           modname = $1.strip
-        when /^([^,]+).*(intent\([^\)]+\))?.*::([^=]+)(=.*)?$/
+        when /^([^,]+).*(intent\([^\)]+\))?.*::([^=]+)(=.*)?$/i
           next if $2
           type = $1
           name = $3
@@ -137,29 +136,28 @@ files.each do |fname|
           type.strip!
           name = name.strip.upcase
           val.sub!(/\A=/,"").strip! if val
-          if /,/ =~ name
-            nas = name.split(",")
-            nas.each do |na|
-              na.strip!
-              vars[na] = {:type => type, :val => nil, :comments => comments}
-            end
-            vars[nas[-1]][:val] = val if val
-          else
-            vars[name] = {:type => type, :val => val, :comments => comments}
+          while /\A([^,(]+)(?:\(([^)]+)\))?,?(.*)\Z/ =~ name
+            na = $1.strip
+            dim = $2 && $2.strip
+            name = $3 && $3.strip
+            ty = type
+            ty = ty + ", dimension(#{dim})" if dim
+            vars[na] = {:type => ty, :val => nil, :comments => comments}
           end
-        when /NAMELIST\s*\/([^\)]+)\/(.+)$/
+          vars[na][:val] = val if val
+        when /NAMELIST\s*\/([^\)]+)\/(.+)$/i
           group = $1
           lists = $2
           group.strip!
           lists = lists.split(",").map{|c| c.strip.upcase}
           namelists[group] = lists
-        when /call HIST_in\s*\((.+)$/
+        when /call HIST_in\s*\((.+)$/i
           next if modname == "scale_history"
           str = $1.strip.sub(/\)\Z/,"").strip
           str.gsub!(/\(:[^)]*\)/,'')
           info = str.split(",").map{|c| c.strip.sub(/\A'(.*)'\Z/,'\1')}
           hist[info[1]] = {:unit => info[3], :desc => info[2], :var => info[0]}
-        when /data\s+([^\s]+)\s+\/(.+)\/$/
+        when /data\s+([^\s]+)\s+\/(.+)\/$/i
           data[$1] = $2.split(',').map{|s| s.strip.sub(/^'/,"").sub(/'$/,"")}
         end
 
@@ -169,7 +167,10 @@ files.each do |fname|
 
   vars.update(Index){|k,v1,v2| v1}
 
-  next if namelists.empty? && hist.empty?
+  if namelists.empty? && hist.empty?
+    # warn "#{File.basename(fname)} namelist or history not found: namelist #{namelists.any?}, history #{hist.any?}"
+    next
+  end
 
   parent = File.dirname(mod_f)
   system("mkdir -p #{output_dir}/#{parent}")
@@ -261,35 +262,43 @@ end
 
 
 system("mkdir -p #{output_dir}")
-File.open("#{output_dir}/namelist.dox","w") do |file|
-  file.print <<EOL
+
+if nm_params.any?
+  File.open("#{output_dir}/namelist.dox","w") do |file|
+    file.print <<EOL
 !> @page namelist NAMELIST Parameters
+!> @section #{title} #{title.upcase}
 !> <table>
 !> <tr><th>Variable name</th><th>NAMELIST Group</th><th>module name</th></tr>
 EOL
-  nm_params.sort.each do |name,ary|
-    list = ary.map do |mod, group|
-      file.print "!>    <tr><td>#{name}</td><td>@ref namelist_#{mod}_#{group} \"#{group}\"</td><td>#{mod}</td></tr>\n"
+    nm_params.sort.each do |name,ary|
+      list = ary.map do |mod, group|
+        file.print "!>    <tr><td>#{name}</td><td>@ref namelist_#{mod}_#{group} \"#{group}\"</td><td>#{mod}</td></tr>\n"
+      end
     end
-  end
-  file.print <<EOL
+    file.print <<EOL
 !>    </table>
 EOL
+  end
 end
 
-File.open("#{output_dir}/history.dox","w") do |file|
-  file.print <<EOL
+
+if history.any?
+  File.open("#{output_dir}/history.dox","w") do |file|
+    file.print <<EOL
 !> @page history History Variables
+!> @section #{title} #{title.upcase}
 !> <table>
 !> <tr><th>Variable name</th><th>module name</th></tr>
 EOL
-  history.sort.each do |name,list|
-    list = list.map{|mod|
-      "@ref history_#{mod} \"#{mod}\""
-    }
-    file.print "!>    <tr><td>#{name}</td><td>#{list.join(", ")}</td></tr>\n"
-  end
-  file.print <<EOL
+    history.sort.each do |name,list|
+      list = list.map{|mod|
+        "@ref history_#{mod} \"#{mod}\""
+      }
+      file.print "!>    <tr><td>#{name}</td><td>#{list.join(", ")}</td></tr>\n"
+    end
+    file.print <<EOL
 !>    </table>
 EOL
+  end
 end
