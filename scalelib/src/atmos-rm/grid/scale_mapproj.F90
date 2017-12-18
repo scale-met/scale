@@ -1167,7 +1167,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_eq_x       = ', MPRJ_eq_x
     if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_eq_y       = ', MPRJ_eq_y
 
-    MPRJ_mapping = "geographic"
+    MPRJ_mapping = "equirectangular"
     MPRJ_standard_parallel(1) = MPRJ_EC_lat
     MPRJ_longitude_of_central_meridian = MPRJ_basepoint_lon
     MPRJ_false_easting  = MPRJ_basepoint_x
