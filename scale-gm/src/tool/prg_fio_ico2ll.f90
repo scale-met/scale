@@ -2,7 +2,7 @@
 !> Program FIO ico2ll
 !!
 !! @par Description
-!!          This program converts from data on dataicosahedral grid (new I/O format)
+!!          This program converts from data on icosahedral grid (new I/O format)
 !!          to that on latitude-longitude grid.
 !!          ( packaged NICAM data format : PaNDa )
 !!
@@ -166,7 +166,6 @@ program fio_ico2ll
   ! NetCDF handler
   type(netcdf_handler)                :: nc              ! [add] 13-04-18
   character(len=1024)                 :: nc_time_units   ! [add] 13-04-18
-  character(len=4)                    :: date_str_tmp(6) ! [add] 13-04-18
 
   ! ico data
   integer              :: GALL
@@ -831,22 +830,12 @@ program fio_ico2ll
                                       histsec,     & ! [IN]
                                       offset_year  ) ! [IN]
 
-           do j = 1, 6
-              write( date_str_tmp(j), '(I4)' ) date_str(j)
-              date_str_tmp(j) = adjustl( date_str_tmp(j) )
-              if ( j == 1 ) then
-                 write(date_str_tmp(j),'(4A)') ('0',i=1,4-len_trim(date_str_tmp(j))), trim(date_str_tmp(j))
-              else
-                 write(date_str_tmp(j),'(2A)') ('0',i=1,2-len_trim(date_str_tmp(j))), trim(date_str_tmp(j))
-              endif
-           enddo
-
-           write(nc_time_units,'(6(A,A))') 'minutes since ', trim(date_str_tmp(1)), &
-                                           '-',              trim(date_str_tmp(2)), &
-                                           '-',              trim(date_str_tmp(3)), &
-                                           ' ',              trim(date_str_tmp(4)), &
-                                           ':',              trim(date_str_tmp(5)), &
-                                           ':',              trim(date_str_tmp(6))
+           write( nc_time_units,'(A14,I4.4,5(A,I2.2))') "minutes since ", date_str(1), &
+                                                                     "-", date_str(2), &
+                                                                     "-", date_str(3), &
+                                                                     " ", date_str(4), &
+                                                                     ":", date_str(5), &
+                                                                     ":", date_str(6)
 
            write(IO_FID_LOG,*) '  nc_time_units = ', trim(nc_time_units)
 
