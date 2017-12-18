@@ -399,7 +399,6 @@ contains
     endif
 
     !########## Set hydrostatic pressure coordinate ##########
-    call ATMOS_vars_calc_diagnostics
     call PROF_rapstart('ATM_History', 1)
     call ATMOS_vars_history_setpres
     call PROF_rapend  ('ATM_History', 1)
