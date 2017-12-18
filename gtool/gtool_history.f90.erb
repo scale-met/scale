@@ -1017,7 +1017,7 @@ contains
        History_axis(id)%dim      = dim
        History_axis(id)%dtype    = dtype
        History_axis(id)%dim_size = dim_size
-       History_axis(id)%var(:)   = var(:)
+       History_axis(id)%var(:)   = real(var(:),kind=DP)
 
        if ( present(down) ) then
           History_axis(History_axis_count)%down = down
@@ -1101,7 +1101,7 @@ contains
        History_assoc(id)%dims(:)   = ''
        History_assoc(id)%dims(1:<%=n%>) = dims(1:<%=n%>)
        History_assoc(id)%dtype     = dtype
-       History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+       History_assoc(id)%var(:)    = real(reshape( var, (/ dim_size /) ),kind=DP)
 
        ! start and count are used for parallel I/O to a single shared file
        ! since var is reshaped into 1D array, we need to preserve its original shape in count
@@ -1343,7 +1343,7 @@ contains
 % else
           idx = <%=["i", "(j-1)*vsize(1)+i", "((k-1)*vsize(2)+(j-1))*vsize(1)+i"][n-1]%>
 % end
-          History_vars(id)%varsum(idx) = <%=var_elem%>
+          History_vars(id)%varsum(idx) = real(<%=var_elem%>,kind=DP)
 % n.times do |i|
        enddo
 % end

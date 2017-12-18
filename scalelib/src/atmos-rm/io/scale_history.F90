@@ -1936,43 +1936,52 @@ contains
     call HistorySetAttribute( "yh", "halo_local",   (/ shalo_l, nhalo_l /) )
     call HistorySetAttribute( "yh", "periodic",     logical_str )
 
-    call MPRJ_get_attributes( mapping,  &
-         false_easting, false_northing, &
-         longitude_of_central_meridian, &
-         longitude_of_projection_origin, &
-         latitude_of_projection_origin, &
-         straight_vertical_longitude_from_pole, &
-         standard_parallel(:) )
+    call MPRJ_get_attributes( mapping,                               & ! [OUT]
+                              false_easting, false_northing,         & ! [OUT]
+                              longitude_of_central_meridian,         & ! [OUT]
+                              longitude_of_projection_origin,        & ! [OUT]
+                              latitude_of_projection_origin,         & ! [OUT]
+                              straight_vertical_longitude_from_pole, & ! [OUT]
+                              standard_parallel(:)                   ) ! [OUT]
     if ( mapping /= "" ) then
        call HistorySetAttribute( "x",  "standard_name", "projection_x_coordinate");
        call HistorySetAttribute( "xh", "standard_name", "projection_x_coordinate");
        call HistorySetAttribute( "y",  "standard_name", "projection_y_coordinate");
        call HistorySetAttribute( "yh", "standard_name", "projection_y_coordinate");
        call HistorySetMapping( mapping )
-       if ( false_easting /= UNDEF ) &
-            call HistorySetAttribute( mapping, "false_easting",  (/ false_easting /) )
-       if ( false_northing /= UNDEF ) &
-            call HistorySetAttribute( mapping, "false_northing", (/ false_northing /) )
-       if ( longitude_of_central_meridian /= UNDEF ) &
-            call HistorySetAttribute( mapping, "longitude_of_central_meridian", &
-            (/ longitude_of_central_meridian /) )
-       if ( longitude_of_projection_origin /= UNDEF ) &
-            call HistorySetAttribute( mapping, "longitude_of_projection_origin", &
-            (/ longitude_of_projection_origin /) )
-       if ( latitude_of_projection_origin /= UNDEF ) &
-            call HistorySetAttribute( mapping, "latitude_of_projection_origin", &
-            (/ latitude_of_projection_origin /) )
-       if ( straight_vertical_longitude_from_pole /= UNDEF ) &
-            call HistorySetAttribute( mapping, "straight_vertical_longitude_from_pole", &
-            (/ straight_vertical_longitude_from_pole /) )
+
+       if ( false_easting /= UNDEF ) then
+          call HistorySetAttribute( mapping, "false_easting",  (/ false_easting /) )
+       endif
+
+       if ( false_northing /= UNDEF ) then
+          call HistorySetAttribute( mapping, "false_northing", (/ false_northing /) )
+       endif
+
+       if ( longitude_of_central_meridian /= UNDEF ) then
+          call HistorySetAttribute( mapping, "longitude_of_central_meridian", (/ longitude_of_central_meridian /) )
+       endif
+
+       if ( longitude_of_projection_origin /= UNDEF ) then
+          call HistorySetAttribute( mapping, "longitude_of_projection_origin", (/ longitude_of_projection_origin /) )
+       endif
+
+       if ( latitude_of_projection_origin /= UNDEF ) then
+          call HistorySetAttribute( mapping, "latitude_of_projection_origin", (/ latitude_of_projection_origin /) )
+       endif
+
+       if ( straight_vertical_longitude_from_pole /= UNDEF ) then
+          call HistorySetAttribute( mapping, "straight_vertical_longitude_from_pole", (/ straight_vertical_longitude_from_pole /) )
+       endif
+
        if ( standard_parallel(1) /= UNDEF ) then
           if ( standard_parallel(2) /= UNDEF ) then
              call HistorySetAttribute( mapping, "standard_parallel", standard_parallel(1:2) )
           else
              call HistorySetAttribute( mapping, "standard_parallel", standard_parallel(1:1) )
-          end if
-       end if
-    end if
+          endif
+       endif
+    endif
 
     return
   end subroutine HIST_set_axes_attributes

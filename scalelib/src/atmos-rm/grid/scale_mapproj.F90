@@ -417,15 +417,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Get mapping attributes
   subroutine MPRJ_get_attributes( &
-       mapping, &
-       false_easting, &
-       false_northing, &
-       longitude_of_central_meridian, &
-       longitude_of_projection_origin, &
-       latitude_of_projection_origin, &
+       mapping,                               &
+       false_easting,                         &
+       false_northing,                        &
+       longitude_of_central_meridian,         &
+       longitude_of_projection_origin,        &
+       latitude_of_projection_origin,         &
        straight_vertical_longitude_from_pole, &
-       standard_parallel )
+       standard_parallel                      )
+    implicit none
+
     character(len=*), intent(out) :: mapping
+
     real(DP), intent(out), optional :: false_easting
     real(DP), intent(out), optional :: false_northing
     real(DP), intent(out), optional :: longitude_of_central_meridian
@@ -433,16 +436,24 @@ contains
     real(DP), intent(out), optional :: latitude_of_projection_origin
     real(DP), intent(out), optional :: straight_vertical_longitude_from_pole
     real(DP), intent(out), optional :: standard_parallel(2)
+    !---------------------------------------------------------------------------
 
     mapping = MPRJ_mapping
-    if ( present(false_easting) ) false_easting = MPRJ_false_easting
-    if ( present(false_northing) ) false_northing = MPRJ_false_northing
-    if ( present(longitude_of_central_meridian) ) longitude_of_central_meridian = MPRJ_longitude_of_central_meridian
-    if ( present(longitude_of_projection_origin) ) longitude_of_projection_origin = MPRJ_longitude_of_projection_origin
-    if ( present(latitude_of_projection_origin) ) latitude_of_projection_origin = MPRJ_latitude_of_projection_origin
+
+    if ( present(false_easting)                         ) &
+                 false_easting                          = MPRJ_false_easting
+    if ( present(false_northing)                        ) &
+                 false_northing                         = MPRJ_false_northing
+    if ( present(longitude_of_central_meridian)         ) &
+                 longitude_of_central_meridian          = MPRJ_longitude_of_central_meridian
+    if ( present(longitude_of_projection_origin)        ) &
+                 longitude_of_projection_origin         = MPRJ_longitude_of_projection_origin
+    if ( present(latitude_of_projection_origin)         ) &
+                 latitude_of_projection_origin          = MPRJ_latitude_of_projection_origin
     if ( present(straight_vertical_longitude_from_pole) ) &
-         straight_vertical_longitude_from_pole = MPRJ_straight_vertical_longitude_from_pole
-    if ( present(standard_parallel) ) standard_parallel(:) = MPRJ_standard_parallel(:)
+                 straight_vertical_longitude_from_pole  = MPRJ_straight_vertical_longitude_from_pole
+    if ( present(standard_parallel)                     ) &
+                 standard_parallel(:)                   = MPRJ_standard_parallel(:)
 
     return
   end subroutine MPRJ_get_attributes

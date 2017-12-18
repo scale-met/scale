@@ -1021,7 +1021,7 @@ contains
        History_axis(id)%dim      = dim
        History_axis(id)%dtype    = dtype
        History_axis(id)%dim_size = dim_size
-       History_axis(id)%var(:)   = var(:)
+       History_axis(id)%var(:)   = real(var(:),kind=DP)
 
        if ( present(down) ) then
           History_axis(History_axis_count)%down = down
@@ -1104,7 +1104,7 @@ contains
        History_axis(id)%dim      = dim
        History_axis(id)%dtype    = dtype
        History_axis(id)%dim_size = dim_size
-       History_axis(id)%var(:)   = var(:)
+       History_axis(id)%var(:)   = real(var(:),kind=DP)
 
        if ( present(down) ) then
           History_axis(History_axis_count)%down = down
@@ -1185,7 +1185,7 @@ contains
        History_assoc(id)%dims(:)   = ''
        History_assoc(id)%dims(1:1) = dims(1:1)
        History_assoc(id)%dtype     = dtype
-       History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+       History_assoc(id)%var(:)    = real(reshape( var, (/ dim_size /) ),kind=DP)
 
        ! start and count are used for parallel I/O to a single shared file
        ! since var is reshaped into 1D array, we need to preserve its original shape in count
@@ -1260,7 +1260,7 @@ contains
        History_assoc(id)%dims(:)   = ''
        History_assoc(id)%dims(1:1) = dims(1:1)
        History_assoc(id)%dtype     = dtype
-       History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+       History_assoc(id)%var(:)    = real(reshape( var, (/ dim_size /) ),kind=DP)
 
        ! start and count are used for parallel I/O to a single shared file
        ! since var is reshaped into 1D array, we need to preserve its original shape in count
@@ -1335,7 +1335,7 @@ contains
        History_assoc(id)%dims(:)   = ''
        History_assoc(id)%dims(1:2) = dims(1:2)
        History_assoc(id)%dtype     = dtype
-       History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+       History_assoc(id)%var(:)    = real(reshape( var, (/ dim_size /) ),kind=DP)
 
        ! start and count are used for parallel I/O to a single shared file
        ! since var is reshaped into 1D array, we need to preserve its original shape in count
@@ -1410,7 +1410,7 @@ contains
        History_assoc(id)%dims(:)   = ''
        History_assoc(id)%dims(1:2) = dims(1:2)
        History_assoc(id)%dtype     = dtype
-       History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+       History_assoc(id)%var(:)    = real(reshape( var, (/ dim_size /) ),kind=DP)
 
        ! start and count are used for parallel I/O to a single shared file
        ! since var is reshaped into 1D array, we need to preserve its original shape in count
@@ -1485,7 +1485,7 @@ contains
        History_assoc(id)%dims(:)   = ''
        History_assoc(id)%dims(1:3) = dims(1:3)
        History_assoc(id)%dtype     = dtype
-       History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+       History_assoc(id)%var(:)    = real(reshape( var, (/ dim_size /) ),kind=DP)
 
        ! start and count are used for parallel I/O to a single shared file
        ! since var is reshaped into 1D array, we need to preserve its original shape in count
@@ -1560,7 +1560,7 @@ contains
        History_assoc(id)%dims(:)   = ''
        History_assoc(id)%dims(1:3) = dims(1:3)
        History_assoc(id)%dtype     = dtype
-       History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+       History_assoc(id)%var(:)    = real(reshape( var, (/ dim_size /) ),kind=DP)
 
        ! start and count are used for parallel I/O to a single shared file
        ! since var is reshaped into 1D array, we need to preserve its original shape in count
@@ -1635,7 +1635,7 @@ contains
        History_assoc(id)%dims(:)   = ''
        History_assoc(id)%dims(1:4) = dims(1:4)
        History_assoc(id)%dtype     = dtype
-       History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+       History_assoc(id)%var(:)    = real(reshape( var, (/ dim_size /) ),kind=DP)
 
        ! start and count are used for parallel I/O to a single shared file
        ! since var is reshaped into 1D array, we need to preserve its original shape in count
@@ -1710,7 +1710,7 @@ contains
        History_assoc(id)%dims(:)   = ''
        History_assoc(id)%dims(1:4) = dims(1:4)
        History_assoc(id)%dtype     = dtype
-       History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+       History_assoc(id)%var(:)    = real(reshape( var, (/ dim_size /) ),kind=DP)
 
        ! start and count are used for parallel I/O to a single shared file
        ! since var is reshaped into 1D array, we need to preserve its original shape in count
@@ -1948,7 +1948,7 @@ contains
        History_vars(id)%timesum = History_vars(id)%timesum + dt
     else
           idx = 1
-          History_vars(id)%varsum(idx) = var
+          History_vars(id)%varsum(idx) = real(var,kind=DP)
 
        History_vars(id)%timesum = 0.0_DP
     endif
@@ -1994,7 +1994,7 @@ contains
        History_vars(id)%timesum = History_vars(id)%timesum + dt
     else
           idx = 1
-          History_vars(id)%varsum(idx) = var
+          History_vars(id)%varsum(idx) = real(var,kind=DP)
 
        History_vars(id)%timesum = 0.0_DP
     endif
@@ -2046,7 +2046,7 @@ contains
     else
        do i = 1, vsize(1)
           idx = i
-          History_vars(id)%varsum(idx) = var(i)
+          History_vars(id)%varsum(idx) = real(var(i),kind=DP)
        enddo
 
        History_vars(id)%timesum = 0.0_DP
@@ -2099,7 +2099,7 @@ contains
     else
        do i = 1, vsize(1)
           idx = i
-          History_vars(id)%varsum(idx) = var(i)
+          History_vars(id)%varsum(idx) = real(var(i),kind=DP)
        enddo
 
        History_vars(id)%timesum = 0.0_DP
@@ -2155,7 +2155,7 @@ contains
        do j = 1, vsize(2)
        do i = 1, vsize(1)
           idx = (j-1)*vsize(1)+i
-          History_vars(id)%varsum(idx) = var(i,j)
+          History_vars(id)%varsum(idx) = real(var(i,j),kind=DP)
        enddo
        enddo
 
@@ -2212,7 +2212,7 @@ contains
        do j = 1, vsize(2)
        do i = 1, vsize(1)
           idx = (j-1)*vsize(1)+i
-          History_vars(id)%varsum(idx) = var(i,j)
+          History_vars(id)%varsum(idx) = real(var(i,j),kind=DP)
        enddo
        enddo
 
@@ -2272,7 +2272,7 @@ contains
        do j = 1, vsize(2)
        do i = 1, vsize(1)
           idx = ((k-1)*vsize(2)+(j-1))*vsize(1)+i
-          History_vars(id)%varsum(idx) = var(i,j,k)
+          History_vars(id)%varsum(idx) = real(var(i,j,k),kind=DP)
        enddo
        enddo
        enddo
@@ -2333,7 +2333,7 @@ contains
        do j = 1, vsize(2)
        do i = 1, vsize(1)
           idx = ((k-1)*vsize(2)+(j-1))*vsize(1)+i
-          History_vars(id)%varsum(idx) = var(i,j,k)
+          History_vars(id)%varsum(idx) = real(var(i,j,k),kind=DP)
        enddo
        enddo
        enddo
