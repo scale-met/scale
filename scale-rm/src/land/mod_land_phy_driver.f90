@@ -414,6 +414,23 @@ contains
          enddo
        enddo
        enddo
+
+
+       call FILE_HISTORY_in( SNOW_albedo         (:,:), 'SNOW_albedo',          'Snow surface albedo',                      '0-1',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_SH   (:,:), 'SNOW_ATMO_SFLX_SH',    'Snow surface sensible heat flux',          'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_LH   (:,:), 'SNOW_ATMO_SFLX_LH',    'Snow surface latent heat flux',            'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_GH   (:,:), 'SNOW_ATMO_SFLX_GH',    'Snowpack received heat flux',              'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_LAND_SFLX_GH   (:,:), 'SNOW_LAND_SFLX_GH',    'land surface ground heat flux under snow', 'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_LAND_SFLX_Water(:,:), 'SNOW_LAND_SFLX_Water', 'land surface water vapor flux under snow', 'kg/m2/s',dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_frac           (:,:), 'SNOW_frac',            'Snow fraction on land subgrid',            '0-1',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_MW   (:,:), 'SNOW_ATMO_SFLX_MW',    'Snow surface w-momentum flux',             'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_MU   (:,:), 'SNOW_ATMO_SFLX_MU',    'Snow surface u-momentum flux',             'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_MV   (:,:), 'SNOW_ATMO_SFLX_MV',    'Snow surface v-momentum flux',             'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_U10            (:,:), 'SNOW_U10',             'Wind velocity u at 10 m on snow surface',  'm/s',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_V10            (:,:), 'SNOW_V10',             'Wind velocity v at 10 m on snow surface',  'm/s',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_T2             (:,:), 'SNOW_T2',              'Air temperature at 2m on snow surface',    'K',      dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_Q2             (:,:), 'SNOW_Q2',              'Specific humidity at 2m on snow surface',  'kg/kg',  dim_type='XY' )
+
     endif
 
        call FILE_HISTORY_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'tendency of LAND_TEMP',  'K',     dim_type='LXY' )
