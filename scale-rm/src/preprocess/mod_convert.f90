@@ -39,9 +39,9 @@ module mod_convert
   !
   !++ Private parameters & variables
   !
-  logical :: CONVERT_NONE    = .false.
   logical :: CONVERT_TOPO    = .false.
   logical :: CONVERT_LANDUSE = .false.
+  logical :: CONVERT_2D      = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -54,12 +54,14 @@ contains
        CNVTOPO_setup
     use mod_cnvlanduse, only: &
        CNVLANDUSE_setup
+    use mod_cnv2d, only: &
+       CNV2D_setup
     implicit none
 
     NAMELIST / PARAM_CONVERT / &
-       CONVERT_NONE,    &
        CONVERT_TOPO,    &
-       CONVERT_LANDUSE
+       CONVERT_LANDUSE, &
+       CONVERT_2D
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -88,6 +90,11 @@ contains
        call CNVLANDUSE_setup
     end if
 
+    ! set up LANDUSE
+    if( CONVERT_2D ) then
+       call CNV2D_setup
+    end if
+
     return
   end subroutine CONVERT_setup
 
@@ -100,13 +107,12 @@ contains
        CNVTOPO
     use mod_cnvlanduse, only: &
        CNVLANDUSE
+    use mod_cnv2d, only: &
+       CNV2D
     implicit none
     !---------------------------------------------------------------------------
 
-    if ( CONVERT_NONE ) then
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '++++++ SKIP  CONVERT BOUNDARY DATA ++++++'
-    else
+    if ( CONVERT_TOPO .OR. CONVERT_LANDUSE .OR. CONVERT_2D ) then
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '++++++ START CONVERT BOUNDARY DATA ++++++'
 
@@ -118,7 +124,14 @@ contains
           call CNVLANDUSE
        end if
 
+       if( CONVERT_2D ) then
+          call CNV2D
+       end if
+
        if( IO_L ) write(IO_FID_LOG,*) '++++++ END   CONVERT BOUNDARY DATA ++++++'
+    else
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '++++++ SKIP  CONVERT BOUNDARY DATA ++++++'
     endif
 
     return

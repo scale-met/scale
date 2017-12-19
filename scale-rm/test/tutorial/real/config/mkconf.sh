@@ -222,11 +222,11 @@ do
   LANDUSE_OUT_BASENAME="landuse_d${FNUM}"
   LATLON_CATALOGUE_FNAME="latlon_domain_catalogue_d${PFNUM}.txt"
 
-  TOPO_IN_CATALOGUE="${TOPOTYPE[$D]}_catalogue.txt"
   TOPO_IN_DIR="${TOPODIR}/${TOPOTYPE[$D]}/Products"
+  TOPO_IN_CATALOGUE="${TOPOTYPE[$D]}_catalogue.txt"
 
-  LANDUSE_IN_CATALOGUE="${LANDUSETYPE[$D]}_catalogue.txt"
   LANDUSE_IN_DIR="${LANDUSEDIR}/${LANDUSETYPE[$D]}/Products"
+  LANDUSE_IN_CATALOGUE="${LANDUSETYPE[$D]}_catalogue.txt"
 
   INIT_TOPO_IN_BASENAME="${PPDIR}/topo_d${FNUM}"
   INIT_LANDUSE_IN_BASENAME="${PPDIR}/landuse_d${FNUM}"

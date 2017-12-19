@@ -224,13 +224,13 @@ contains
        REAL_LONX
     implicit none
 
+    character(len=H_LONG) :: GLCCv2_IN_DIR        = '.'    !< directory contains GLCCv2 files (GrADS format)
     character(len=H_LONG) :: GLCCv2_IN_CATALOGUE  = ''     !< metadata files for GLCCv2
-    character(len=H_LONG) :: GLCCv2_IN_DIR        = ''     !< directory contains GLCCv2 files (GrADS format)
     real(RP)              :: limit_urban_fraction = 1.0_RP !< fraction limiter for urban area
 
     NAMELIST / PARAM_CNVLANDUSE_GLCCv2 / &
-       GLCCv2_IN_CATALOGUE, &
        GLCCv2_IN_DIR,       &
+       GLCCv2_IN_CATALOGUE, &
        limit_urban_fraction
 
     ! data catalogue list
@@ -704,13 +704,13 @@ contains
        REAL_LONX
     implicit none
 
+    character(len=H_LONG) :: LU100M_IN_DIR       = '.'     !< directory contains LU100M files (GrADS format)
     character(len=H_LONG) :: LU100M_IN_CATALOGUE = ''      !< metadata files for LU100M
-    character(len=H_LONG) :: LU100M_IN_DIR       = ''      !< directory contains LU100M files (GrADS format)
     real(RP)              :: limit_urban_fraction = 1.0_RP !< fraction limiter for urban area
 
     NAMELIST / PARAM_CNVLANDUSE_LU100M / &
-       LU100M_IN_CATALOGUE, &
        LU100M_IN_DIR,       &
+       LU100M_IN_CATALOGUE, &
        limit_urban_fraction
 
     ! data catalogue list
