@@ -194,6 +194,7 @@ contains
     character(len=2) :: sk
 
     ! for snow
+    real(RP) :: SNOW_TEMP_t         (IA,JA)
     real(RP) :: SNOW_albedo         (IA,JA)
     real(RP) :: SNOW_ATMO_SFLX_SH   (IA,JA)
     real(RP) :: SNOW_ATMO_SFLX_LH   (IA,JA)
@@ -232,6 +233,7 @@ contains
                                  SNOW_Dzero          (:,:),   & ! [INOUT]
                                  SNOW_albedo         (:,:),   & ! [INOUT]
                                  SNOW_nosnowsec      (:,:),   & ! [INOUT]
+                                 SNOW_TEMP_t         (:,:),   & ! [OUT]
                                  SNOW_ATMO_SFLX_SH   (:,:),   & ! [OUT]
                                  SNOW_ATMO_SFLX_LH   (:,:),   & ! [OUT]
                                  SNOW_ATMO_SFLX_GH   (:,:),   & ! [OUT]
@@ -251,9 +253,9 @@ contains
                                  dt                           ) ! [IN]
 
        ! momentum fluxes and diagnostic variables above snowpack
-       call LAND_PHY_SNOW_DIAGS( SNOW_ATMO_SFLX_MW   (:,:),   & ! [OUT]
-                                 SNOW_ATMO_SFLX_MU   (:,:),   & ! [OUT]
-                                 SNOW_ATMO_SFLX_MV   (:,:),   & ! [OUT]
+       call LAND_PHY_SNOW_DIAGS( SNOW_ATMO_SFLX_MW   (:,:),  & ! [OUT]
+                                 SNOW_ATMO_SFLX_MU   (:,:),  & ! [OUT]
+                                 SNOW_ATMO_SFLX_MV   (:,:),  & ! [OUT]
                                  SNOW_U10       (:,:),       & ! [OUT]
                                  SNOW_V10       (:,:),       & ! [OUT]
                                  SNOW_T2        (:,:),       & ! [OUT]
@@ -385,11 +387,33 @@ contains
 
        ! marge land surface and snow surface !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
     if ( LAND_TYPE == 'SLAB'      .or.  &
          LAND_TYPE == 'THIN-SLAB' .or.  &
          LAND_TYPE == 'THICK-SLAB' )then
 
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+           LAND_SFC_TEMP_t(i,j) = SNOW_frac(i,j)*SNOW_TEMP_t(i,j)        + (1.0_RP-SNOW_frac(i,j))*LAND_SFC_TEMP_t(i,j)
+           !LAND_SFC_albedo_t(:,:,:) = 0.0_RP  ! currently not considered, but this is very important
+
+           LAND_SFLX_MW(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_MW(i,j)  + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_MW(i,j)
+           LAND_SFLX_MU(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_MU(i,j)  + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_MU(i,j)
+           LAND_SFLX_MV(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_MV(i,j)  + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_MV(i,j)
+           LAND_SFLX_SH(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_SH(i,j)  + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_SH(i,j)
+           LAND_SFLX_LH(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_LH(i,j)  + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_LH(i,j)
+           LAND_SFLX_GH(i,j)    = SNOW_frac(i,j)*SNOW_LAND_SFLX_GH(i,j)  + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_GH(i,j)
+           LAND_U10(i,j)        = SNOW_frac(i,j)*SNOW_U10(i,j)           + (1.0_RP-SNOW_frac(i,j))*LAND_U10(i,j)
+           LAND_V10(i,j)        = SNOW_frac(i,j)*SNOW_V10(i,j)           + (1.0_RP-SNOW_frac(i,j))*LAND_V10(i,j)
+           LAND_T2 (i,j)        = SNOW_frac(i,j)*SNOW_T2 (i,j)           + (1.0_RP-SNOW_frac(i,j))*LAND_T2(i,j)
+           LAND_Q2 (i,j)        = SNOW_frac(i,j)*SNOW_Q2 (i,j)           + (1.0_RP-SNOW_frac(i,j))*LAND_Q2(i,j)
+
+         do k = LKS+1, LKE-1
+           LAND_TEMP_t (k,i,j)  = SNOW_frac(i,j)*SNOW_LAND_TEMP_t (k,i,j) + (1.0_RP-SNOW_frac(i,j))*LAND_TEMP_t (k,i,j)
+           LAND_WATER_t(k,i,j)  = SNOW_frac(i,j)*SNOW_LAND_WATER_t(k,i,j) + (1.0_RP-SNOW_frac(i,j))*LAND_WATER_t(k,i,j)
+         enddo
+       enddo
+       enddo
     endif
 
        call FILE_HISTORY_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'tendency of LAND_TEMP',  'K',     dim_type='LXY' )

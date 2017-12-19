@@ -169,6 +169,7 @@ contains
              SDzero,                 & ! [INOUT]
              Salbedo,                & ! [INOUT]
              nosnowsec,              & ! [INOUT]
+             TSNOW_t,                & ! [OUT]
              SFLX_SH,                & ! [OUT]
              SFLX_LH,                & ! [OUT]
              SFLX_GH,                & ! [OUT]
@@ -203,6 +204,7 @@ contains
     real(RP), intent(inout)   :: nosnowsec      (IA,JA) ! elapsed time of no snow condition [s]
 
     ! updated variables
+    real(RP), intent(out)     :: TSNOW_t        (IA,JA) ! updated tendency of snow temperature [K]
     real(RP), intent(out)     :: SFLX_SH        (IA,JA) ! sensible heat flux between atmos and snow [W/m2]
     real(RP), intent(out)     :: SFLX_LH        (IA,JA) ! latente  heat flux between atmos and snow [W/m2]
     real(RP), intent(out)     :: SFLX_GH        (IA,JA) ! whole snowpack Ground flux [W/m2]
@@ -285,10 +287,11 @@ contains
        SNOW_LAND_Water(i,j) = SFLX_rain(i,j) +  SWEMELT(i,j) / dt    ! [kg/m2/s]
        SNOW_frac      (i,j) = 1.0_RP
 
-       TSNOW (i,j) = TSNOW1
-       SWE   (i,j) = SWE1
-       SDepth(i,j) = DEPTH1
-       SDzero(i,j) = ZNSNOW1
+       TSNOW_t (i,j) = ( TSNOW1 - TSNOW (i,j) ) / dt
+       TSNOW   (i,j) = TSNOW1
+       SWE     (i,j) = SWE1
+       SDepth  (i,j) = DEPTH1
+       SDzero  (i,j) = ZNSNOW1
 
     else
 
