@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Physics Radiation
+!> module atmosphere / physics / radiation / mstrnX
 !!
 !! @par Description
 !!          Atmospheric radiation transfer process
@@ -24,8 +24,6 @@ module scale_atmos_phy_rd_mstrnx
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
-  use scale_tracer
 
   use scale_atmos_phy_rd_common, only: &
      I_SW, &
@@ -45,7 +43,7 @@ module scale_atmos_phy_rd_mstrnx
   !++ Public procedure
   !
   public :: ATMOS_PHY_RD_mstrnx_setup
-  public :: ATMOS_PHY_RD_mstrnx
+  public :: ATMOS_PHY_RD_mstrnx_flux
 
   !-----------------------------------------------------------------------------
   !
@@ -226,9 +224,11 @@ module scale_atmos_phy_rd_mstrnx
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_RD_mstrnx_setup( RD_TYPE )
+  subroutine ATMOS_PHY_RD_mstrnx_setup( &
+       KA, KS, KE, &
+       CZ, FZ )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_time, only: &
        TIME_NOWDATE
     use scale_grid_real, only: &
@@ -242,8 +242,10 @@ contains
     use scale_atmos_aerosol, only: &
        N_AE
     implicit none
+    integer, intent(in) :: KA, KS, KE
 
-    character(len=*), intent(in) :: RD_TYPE
+    real(RP), intent(in) :: CZ(KA)
+    real(RP), intent(in) :: FZ(0:KA)
 
     real(RP)              :: ATMOS_PHY_RD_MSTRN_TOA
     integer               :: ATMOS_PHY_RD_MSTRN_KADD
@@ -266,18 +268,14 @@ contains
        ATMOS_PHY_RD_MSTRN_ONLY_QCI,              &
        ATMOS_PHY_RD_MSTRN_ONLY_TROPOCLOUD
 
+    integer :: KMAX
     integer :: ngas, ncfc
     integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[RADIATION] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Radiation mstrnX] / Categ[atmosphere physics] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Sekiguchi and Nakajima (2008) mstrnX radiation process'
-
-    if ( RD_TYPE /= 'MSTRNX' ) then
-       write(*,*) 'xxx RD_TYPE is not MSTRNX. Check!'
-       call PRC_MPIstop
-    endif
 
     !--- read namelist
     ATMOS_PHY_RD_MSTRN_TOA                   = RD_TOA
@@ -295,7 +293,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_RD_MSTRN. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_RD_MSTRN)
 
@@ -315,6 +313,7 @@ contains
     !--- setup climatological profile
     call RD_PROFILE_setup
 
+    KMAX = KE - KS + 1
     RD_KMAX = KMAX + RD_KADD
 
     !--- allocate arrays
@@ -335,8 +334,11 @@ contains
     allocate( RD_cldfrac     (RD_KMAX         ) )
 
     !--- setup vartical grid for radiation (larger TOA than Model domain)
-    call RD_PROFILE_setup_zgrid( RD_TOA, RD_KMAX, RD_KADD, & ! [IN]
-                                 RD_zh(:), RD_z(:)         ) ! [INOUT]
+    call RD_PROFILE_setup_zgrid( &
+         KA, KS, KE, &
+         RD_KMAX, RD_KADD,     & ! [IN]
+         RD_TOA, CZ(:), FZ(:), & ! [IN]
+         RD_zh(:), RD_z(:)     ) ! [OUT]
 
     !--- read climatological profile
     call RD_PROFILE_read( RD_KMAX,                & ! [IN]
@@ -363,8 +365,9 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Radiation main
-  subroutine ATMOS_PHY_RD_mstrnx( &
-       DENS, RHOT, QTRC,      &
+  subroutine ATMOS_PHY_RD_mstrnx_flux( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       DENS, TEMP, PRES, QV,  &
        CZ, FZ,                &
        fact_ocean,            &
        fact_land,             &
@@ -372,14 +375,13 @@ contains
        temp_sfc, albedo_land, &
        solins, cosSZA,        &
        CLDFRAC, MP_Re, MP_Qe, &
+!       AE_Re, AE_Qe,          &
+       AE_Re,                 &
        flux_rad,              &
        flux_rad_top,          &
        flux_rad_sfc_dn,       &
-       dtau_s,                &
-       dem_s                  )
-!       Jval                            )
-    use scale_grid_index
-    use scale_tracer
+       dtau_s, dem_s          )
+       !Jval                   )
     use scale_const, only: &
        EPS  => CONST_EPS, &
        Mdry => CONST_Mdry, &
@@ -393,11 +395,6 @@ contains
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
-    use scale_atmos_phy_ae, only: &
-       AE_EffectiveRadius => ATMOS_PHY_AE_EffectiveRadius, &
-       AE_DENS            => ATMOS_PHY_AE_DENS, &
-       QA_AE, &
-       QS_AE
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_QV, &
@@ -410,10 +407,14 @@ contains
        RD_PROFILE_read            => ATMOS_PHY_RD_PROFILE_read, &
        RD_PROFILE_use_climatology => ATMOS_PHY_RD_PROFILE_use_climatology
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
     real(RP), intent(in)  :: DENS           (KA,IA,JA)
-    real(RP), intent(in)  :: RHOT           (KA,IA,JA)
-    real(RP), intent(in)  :: QTRC           (KA,IA,JA,QA)
+    real(RP), intent(in)  :: TEMP           (KA,IA,JA)
+    real(RP), intent(in)  :: PRES           (KA,IA,JA)
+    real(RP), intent(in)  :: QV             (KA,IA,JA)
     real(RP), intent(in)  :: CZ             (  KA,IA,JA)    ! UNUSED
     real(RP), intent(in)  :: FZ             (0:KA,IA,JA)
     real(RP), intent(in)  :: fact_ocean     (IA,JA)
@@ -426,18 +427,15 @@ contains
     real(RP), intent(in)  :: cldfrac        (KA,IA,JA)
     real(RP), intent(in)  :: MP_Re          (KA,IA,JA,N_HYD)
     real(RP), intent(in)  :: MP_Qe          (KA,IA,JA,N_HYD)
+    real(RP), intent(in)  :: AE_Re          (KA,IA,JA,N_AE)
+!    real(RP), intent(in)  :: AE_Qe          (KA,IA,JA,N_AE)
     real(RP), intent(out) :: flux_rad       (KA,IA,JA,2,2,2)
     real(RP), intent(out) :: flux_rad_top   (IA,JA,2,2,2)
     real(RP), intent(out) :: flux_rad_sfc_dn(IA,JA,2,2)
-    real(RP), intent(out) :: dtau_s         (KA,IA,JA) ! 0.67 micron cloud optical depth
-    real(RP), intent(out) :: dem_s          (KA,IA,JA) ! 10.5 micron cloud emissivity
-!    real(RP), intent(out) :: Jval        (KA,IA,JA,CH_QA_photo)
 
-    real(RP) :: temp   (KA,IA,JA)
-    real(RP) :: pres   (KA,IA,JA)
-    real(RP) :: qsat   (KA,IA,JA)
-    real(RP) :: rh     (KA,IA,JA)
-    real(RP) :: AE_Re  (KA,IA,JA,N_AE)
+    real(RP), intent(out), optional :: dtau_s(KA,IA,JA) ! 0.67 micron cloud optical depth
+    real(RP), intent(out), optional :: dem_s (KA,IA,JA) ! 10.5 micron cloud emissivity
+!    real(RP), intent(out), optional :: Jval  (KA,IA,JA,CH_QA_photo)
 
     integer  :: tropopause(IA,JA)
     real(RP) :: gamma
@@ -466,49 +464,16 @@ contains
     integer :: RD_k, k, i, j, v, ic
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Radiation(mstrnX)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmosphere / physics / radiation / mstrnX'
 
     call PROF_rapstart('RD_Profile', 3)
 
-    call THERMODYN_temp_pres( temp(:,:,:),   & ! [OUT]
-                              pres(:,:,:),   & ! [OUT]
-                              DENS(:,:,:),   & ! [IN]
-                              RHOT(:,:,:),   & ! [IN]
-                              QTRC(:,:,:,:), & ! [IN]
-                              TRACER_CV(:),  & ! [IN]
-                              TRACER_R(:),   & ! [IN]
-                              TRACER_MASS(:) ) ! [IN]
-
-    call SATURATION_dens2qsat_liq( qsat(:,:,:), & ! [OUT]
-                                   TEMP(:,:,:), & ! [IN]
-                                   DENS(:,:,:)  ) ! [IN]
-
-!OCL XFILL
-    if ( I_QV > 0 ) then
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          rh(k,i,j) = QTRC(k,i,j,I_QV) / qsat(k,i,j)
-       enddo
-       enddo
-       enddo
-    else
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          rh(k,i,j) = 0.0_RP
-       enddo
-       enddo
-       enddo
-    endif
-
-    call AE_EffectiveRadius( AE_Re(:,:,:,:), & ! [OUT]
-                             QTRC (:,:,:,:), & ! [IN]
-                             rh   (:,:,:)    ) ! [IN]
-!    call AE_Mixingratio( AE_Qe(:,:,:,:), & ! [OUT]
-!                         QTRC (:,:,:,:)  ) ! [IN]
-
     if ( ATMOS_PHY_RD_MSTRN_ONLY_TROPOCLOUD ) then
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j, &
+       !$omp         gamma) &
+       !$omp shared (tropopause,pres,temp,CZ, &
+       !$omp         KS,KE,IS,IE,JS,JE)
        do j  = JS, JE
        do i  = IS, IE
           tropopause(i,j) = KE+1
@@ -519,12 +484,17 @@ contains
                 tropopause(i,j) = k
              else
                 gamma = ( temp(k+1,i,j) - temp(k,i,j) ) / ( CZ(k+1,i,j) - CZ(k,i,j) )
-                if( gamma > 1.E-4 ) tropopause(i,j) = k
+                if( gamma > 1.E-4_RP ) tropopause(i,j) = k
              endif
           enddo
        enddo
        enddo
     else
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j) &
+       !$omp shared (tropopause, &
+       !$omp         KE,IS,IE,JS,JE)
+!OCL XFILL
        do j  = JS, JE
        do i  = IS, IE
           tropopause(i,j) = KE+1
@@ -565,8 +535,8 @@ contains
           temph_merge(RD_k,i,j) = RD_temph(RD_k)
        enddo
 
-       temp(KE+1,i,j) = temp(KE,i,j)
-       do RD_k = RD_KADD+1, RD_KMAX
+       temph_merge(RD_KADD+1,i,j) = temp(KE,i,j)
+       do RD_k = RD_KADD+2, RD_KMAX
           k = KS + RD_KMAX - RD_k ! reverse axis
 
           temph_merge(RD_k,i,j) = ( temp(k  ,i,j) * (CZ(k+1,i,j)-FZ(k,i,j)) / (CZ(k+1,i,j)-CZ(k,i,j)) &
@@ -577,9 +547,11 @@ contains
     enddo
 
 !OCL XFILL
-    !$omp parallel do default(none) private(i,j,RD_k,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JS,JE,IS,IE,RD_KADD,rhodz_merge,RD_rhodz,pres_merge,RD_pres,temp_merge) &
-    !$omp shared(RD_temp,RD_KMAX,KS,dens,FZ,pres,temp)
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(k,i,j,RD_k) &
+    !$omp shared (RD_temp,dens,FZ,pres,temp, &
+    !$omp         rhodz_merge,RD_rhodz,pres_merge,RD_pres,temp_merge, &
+    !$omp         KS,JS,JE,IS,IE,RD_KMAX,RD_KADD)
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KADD
@@ -602,6 +574,10 @@ contains
 !OCL SERIAL
     do v = 1,  MSTRN_ngas
 !OCL PARALLEL
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,RD_k) &
+    !$omp shared (gas_merge,RD_gas, &
+    !$omp         IS,IE,JS,JE,RD_KMAX,v)
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KMAX
@@ -611,21 +587,28 @@ contains
     enddo
     enddo
 
-    if ( I_QV > 0 ) then
-       do j = JS, JE
-       do i = IS, IE
-          do RD_k = RD_KADD+1, RD_KMAX
-             k = KS + RD_KMAX - RD_k ! reverse axis
-             zerosw = sign(0.5_RP, QTRC(k,i,j,I_QV)-EPS) + 0.5_RP
-             gas_merge(RD_k,i,j,1) = QTRC(k,i,j,I_QV) / Mvap * Mdry / PPM * zerosw ! [PPM]
-          enddo
-       enddo
-       enddo
-    endif
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(k,i,j,RD_k, &
+    !$omp         zerosw ) &
+    !$omp shared (gas_merge,QV,EPS,Mvap,Mdry, &
+    !$omp         KS,IS,IE,JS,JE,RD_KADD,RD_KMAX)
+    do j = JS, JE
+    do i = IS, IE
+    do RD_k = RD_KADD+1, RD_KMAX
+       k = KS + RD_KMAX - RD_k ! reverse axis
+       zerosw = sign(0.5_RP, QV(k,i,j)-EPS) + 0.5_RP
+       gas_merge(RD_k,i,j,1) = QV(k,i,j) / Mvap * Mdry / PPM * zerosw ! [PPM]
+    enddo
+    enddo
+    enddo
 
 !OCL XFILL
 !OCL SERIAL
     do v = 1,  MSTRN_ncfc
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,RD_k) &
+    !$omp shared (cfc_merge,RD_cfc, &
+    !$omp         IS,IE,JS,JE,RD_KMAX,v)
 !OCL PARALLEL
     do j = JS, JE
     do i = IS, IE
@@ -636,6 +619,10 @@ contains
     enddo
     enddo
 
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(k,i,j,RD_k) &
+    !$omp shared (cldfrac_merge,RD_cldfrac,cldfrac, &
+    !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD)
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KADD
@@ -653,6 +640,10 @@ contains
 !OCL XFILL
 !OCL SERIAL
     do v = 1,  RD_naero
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,RD_k) &
+    !$omp shared (aerosol_conc_merge,RD_aerosol_conc,aerosol_radi_merge,RD_aerosol_radi, &
+    !$omp         IS,IE,JS,JE,RD_KADD,v)
 !OCL PARALLEL
     do j = JS, JE
     do i = IS, IE
@@ -672,6 +663,10 @@ contains
           aerosol_conc_merge(:,:,:,ihydro) = 0.0_RP
           cycle
        end if
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j,RD_k) &
+       !$omp shared (aerosol_conc_merge,tropopause,MP_Qe,HYD_DENS,RHO_std, &
+       !$omp         KS,KE,IS,IE,JS,JE,RD_KMAX,RD_KADD,ihydro)
 !OCL PARALLEL
        do j = JS, JE
        do i = IS, IE
@@ -689,6 +684,10 @@ contains
 
 !OCL SERIAL
     do ihydro = 1, N_HYD
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(k,i,j,RD_k) &
+    !$omp shared (aerosol_radi_merge,MP_Re, &
+    !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD,ihydro)
 !OCL PARALLEL
     do j = JS, JE
     do i = IS, IE
@@ -715,6 +714,10 @@ contains
 !!$       enddo
 !!$       enddo
 
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,RD_k) &
+       !$omp shared (aerosol_conc_merge,RD_aerosol_conc,aerosol_radi_merge,RD_aerosol_radi, &
+       !$omp         IS,IE,JS,JE,RD_KMAX,RD_KADD,iaero)
 !OCL PARALLEL
        do j = JS, JE
        do i = IS, IE
@@ -731,41 +734,32 @@ contains
     call PROF_rapstart('RD_MSTRN_DTRN3', 3)
 
     ! calc radiative transfer
-    call RD_MSTRN_DTRN3( RD_KMAX,                         & ! [IN]
-                         MSTRN_ngas,                      & ! [IN]
-                         MSTRN_ncfc,                      & ! [IN]
-                         RD_naero,                        & ! [IN]
-                         RD_hydro_str,                    & ! [IN]
-                         RD_hydro_end,                    & ! [IN]
-                         RD_aero_str,                     & ! [IN]
-                         RD_aero_end,                     & ! [IN]
-                         solins            (:,:),         & ! [IN]
-                         cosSZA            (:,:),         & ! [IN]
-                         rhodz_merge       (:,:,:),       & ! [IN]
-                         pres_merge        (:,:,:),       & ! [IN]
-                         temp_merge        (:,:,:),       & ! [IN]
-                         temph_merge       (:,:,:),       & ! [IN]
-                         temp_sfc          (:,:),         & ! [IN]
-                         gas_merge         (:,:,:,:),     & ! [IN]
-                         cfc_merge         (:,:,:,:),     & ! [IN]
-                         aerosol_conc_merge(:,:,:,:),     & ! [IN]
-                         aerosol_radi_merge(:,:,:,:),     & ! [IN]
-                         I_MPAE2RD         (:),           & ! [IN]
-                         cldfrac_merge     (:,:,:),       & ! [IN]
-                         albedo_land       (:,:,:),       & ! [IN]
-                         fact_ocean        (:,:),         & ! [IN]
-                         fact_land         (:,:),         & ! [IN]
-                         fact_urban        (:,:),         & ! [IN]
-                         flux_rad_merge    (:,:,:,:,:,:), & ! [OUT]
-                         flux_rad_sfc_dn   (:,:,:,:),     & ! [OUT]
-                         tauCLD_067u       (:,:,:),       & ! [OUT]
-                         emisCLD_105u      (:,:,:)        ) ! [OUT]
+    call RD_MSTRN_DTRN3( &
+         KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+         RD_KMAX,                                                  & ! [IN]
+         MSTRN_ngas, MSTRN_ncfc, RD_naero,                         & ! [IN]
+         RD_hydro_str, RD_hydro_end, RD_aero_str, RD_aero_end,     & ! [IN]
+         solins(:,:), cosSZA(:,:),                                 & ! [IN]
+         rhodz_merge(:,:,:), pres_merge(:,:,:),                    & ! [IN]
+         temp_merge(:,:,:), temph_merge(:,:,:), temp_sfc(:,:),     & ! [IN]
+         gas_merge(:,:,:,:), cfc_merge(:,:,:,:),                   & ! [IN]
+         aerosol_conc_merge(:,:,:,:), aerosol_radi_merge(:,:,:,:), & ! [IN]
+         I_MPAE2RD(:),                                             & ! [IN]
+         cldfrac_merge(:,:,:),                                     & ! [IN]
+         albedo_land(:,:,:),                                       & ! [IN]
+         fact_ocean(:,:), fact_land(:,:), fact_urban(:,:),         & ! [IN]
+         flux_rad_merge(:,:,:,:,:,:), flux_rad_sfc_dn(:,:,:,:),    & ! [OUT]
+         tauCLD_067u(:,:,:), emisCLD_105u(:,:,:)                   ) ! [OUT]
 
     call PROF_rapend  ('RD_MSTRN_DTRN3', 3)
 
     ! return to grid coordinate of model domain
 !OCL SERIAL
     do ic = 1, 2
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(k,i,j,RD_k) &
+    !$omp shared (flux_rad,flux_rad_merge, &
+    !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD,ic)
 !OCL PARALLEL
     do j  = JS, JE
     do i  = IS, IE
@@ -784,6 +778,10 @@ contains
 !OCL XFILL
 !OCL SERIAL
     do ic = 1, 2
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j) &
+    !$omp shared (flux_rad_top,flux_rad_merge, &
+    !$omp         IS,IE,JS,JE,ic)
 !OCL PARALLEL
     do j  = JS, JE
     do i  = IS, IE
@@ -795,19 +793,38 @@ contains
     enddo
     enddo
 
-    do j  = JS, JE
-    do i  = IS, IE
-    do RD_k = RD_KADD+1, RD_KMAX
-       k = KS + RD_KMAX - RD_k ! reverse axis
+    if ( present( dtau_s ) ) then
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j,RD_k) &
+       !$omp shared (dtau_s,tauCLD_067u, &
+       !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD)
+       do j = JS, JE
+       do i = IS, IE
+       do RD_k = RD_KADD+1, RD_KMAX
+          k = KS + RD_KMAX - RD_k ! reverse axis
+          dtau_s(k,i,j) = tauCLD_067u(RD_k,i,j)
+       enddo
+       enddo
+       enddo
+    end if
 
-       dtau_s(k,i,j) = tauCLD_067u (RD_k,i,j)
-       dem_s (k,i,j) = emisCLD_105u(RD_k,i,j)
-    enddo
-    enddo
-    enddo
+    if ( present( dem_s ) ) then
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j,RD_k) &
+       !$omp shared (dem_s,emisCLD_105u, &
+       !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD)
+       do j = JS, JE
+       do i = IS, IE
+       do RD_k = RD_KADD+1, RD_KMAX
+          k = KS + RD_KMAX - RD_k ! reverse axis
+          dem_s(k,i,j) = emisCLD_105u(RD_k,i,j)
+       enddo
+       enddo
+       enddo
+    end if
 
     return
-  end subroutine ATMOS_PHY_RD_mstrnx
+  end subroutine ATMOS_PHY_RD_mstrnx_flux
 
   !-----------------------------------------------------------------------------
   !> Setup MSTRN parameter table
@@ -1115,6 +1132,7 @@ contains
   !-----------------------------------------------------------------------------
   !> DTRN v3.2
   subroutine RD_MSTRN_DTRN3( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        rd_kmax,      &
        ngas,         &
        ncfc,         &
@@ -1151,6 +1169,9 @@ contains
        Pstd => CONST_Pstd, &
        PPM  => CONST_PPM
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
     integer,  intent(in)  :: rd_kmax
     integer,  intent(in)  :: ngas
@@ -1673,9 +1694,11 @@ contains
 !           enddo
 !           !$acc end kernels
 
-!          call RD_albedo_ocean( cosSZA      (:,:),          & ! [IN]
-!                                tau_column  (:,:,icloud),   & ! [IN]
-!                                albedo_ocean(:,:,:,icloud) )  ! [OUT]
+!          call RD_albedo_ocean( &
+!               IA, IS, IE, JA, JS, JE, &
+!               cosSZA      (:,:),          & ! [IN]
+!               tau_column  (:,:,icloud),   & ! [IN]
+!               albedo_ocean(:,:,:,icloud) )  ! [OUT]
 
 !          !$acc kernels pcopy(albedo_sfc) pcopyin(fact_ocean, fact_land, fact_urban, albedo_ocean, albedo_land) async(0)
           !$acc kernels pcopy(albedo_sfc) pcopyin(albedo_land) async(0)
@@ -1897,21 +1920,22 @@ contains
 
           ! two-stream transfer
           call PROF_rapstart('RD_MSTRN_twst', 3)
-          call RD_MSTRN_two_stream( rd_kmax,                & ! [IN]
-                                    iw, ich,                & ! [IN]
-                                    cosSZA     (:,:),       & ! [IN]
-                                    fsol_rgn   (:,:),       & ! [IN]
-                                    irgn,                   & ! [IN]
-                                    tau        (:,:,:,:),   & ! [IN]
-                                    omg        (:,:,:,:),   & ! [IN]
-                                    g          (:,:,:,:,:), & ! [IN]
-                                    b          (:,:,:,:,:), & ! [IN]
-                                    b_sfc      (:,:),       & ! [IN]
-                                    albedo_sfc (:,:,:),     & ! [IN]
-                                    cldfrac    (:,:,:),     & ! [IN]
-                                    flux       (:,:,:,:,:), & ! [OUT]
-                                    flux_direct(:,:,:,:),   & ! [OUT]
-                                    emisCLD    (:,:,:)      ) ! [OUT]
+          call RD_MSTRN_two_stream( &
+               RD_KMAX, IA, IS, IE, JA, JS, JE, &
+               iw, ich,                & ! [IN]
+               cosSZA     (:,:),       & ! [IN]
+               fsol_rgn   (:,:),       & ! [IN]
+               irgn,                   & ! [IN]
+               tau        (:,:,:,:),   & ! [IN]
+               omg        (:,:,:,:),   & ! [IN]
+               g          (:,:,:,:,:), & ! [IN]
+               b          (:,:,:,:,:), & ! [IN]
+               b_sfc      (:,:),       & ! [IN]
+               albedo_sfc (:,:,:),     & ! [IN]
+               cldfrac    (:,:,:),     & ! [IN]
+               flux       (:,:,:,:,:), & ! [OUT]
+               flux_direct(:,:,:,:),   & ! [OUT]
+               emisCLD    (:,:,:)      ) ! [OUT]
           call PROF_rapend  ('RD_MSTRN_twst', 3)
 
 !OCL SERIAL
@@ -1971,7 +1995,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Two stream calculation CORE
   subroutine RD_MSTRN_two_stream( &
-       rd_kmax,         &
+       RD_KMAX, IA, IS, IE, JA, JS, JE, &
        iw, ich,      &
        cosSZA0,      &
        fsol,         &
@@ -1991,8 +2015,10 @@ contains
        EPS  => CONST_EPS,  &
        EPS1 => CONST_EPS1
     implicit none
+    integer, intent(in) :: RD_KMAX
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
-    integer,  intent(in)  :: rd_kmax
     integer,  intent(in)  :: iw, ich
     real(RP), intent(in)  :: cosSZA0    (IA,JA)                          ! cos(SZA) = mu0
     real(RP), intent(in)  :: fsol       (IA,JA)                          ! solar radiation intensity
@@ -2449,10 +2475,13 @@ contains
   !-----------------------------------------------------------------------------
   ! Sea surface reflectance by Payne
   subroutine RD_albedo_ocean( &
+       IA, IS, IE, JA, JS, JE, &
        cosSZA,       &
        tau,          &
        albedo_ocean )
     implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
     real(RP), intent(in)  :: cosSZA      (IA,JA)
     real(RP), intent(in)  :: tau         (IA,JA)

@@ -51,6 +51,13 @@ contains
   subroutine ATMOS_PHY_RD_driver_setup
     use scale_atmos_phy_rd, only: &
        ATMOS_PHY_RD_setup
+    use scale_atmos_phy_rd_mstrnx, only: &
+       ATMOS_PHY_RD_mstrnx_setup
+    use scale_atmos_phy_rd_mm5sw, only: &
+       swinit
+    use scale_grid, only: &
+       CZ => GRID_CZ, &
+       FZ => GRID_FZ
     use mod_atmos_admin, only: &
        ATMOS_PHY_RD_TYPE, &
        ATMOS_sw_phy_rd
@@ -74,8 +81,18 @@ contains
 
     if ( ATMOS_sw_phy_rd ) then
 
-       ! setup library component
-       call ATMOS_PHY_RD_setup( ATMOS_PHY_RD_TYPE )
+       select case ( ATMOS_PHY_RD_TYPE )
+       case ( "MSTRNX" )
+          call ATMOS_PHY_RD_MSTRNX_setup( KA, KS, KE, CZ(:), FZ(:) )
+       case ( "WRF" )
+          call ATMOS_PHY_RD_MSTRNX_setup( KA, KS, KE, CZ(:), FZ(:) )
+          call swinit
+       case default
+          ! setup library component
+          call ATMOS_PHY_RD_setup( ATMOS_PHY_RD_TYPE )
+          !write(*,*) 'xxx invalid Radiation type(', trim(ATMOS_PHY_RD_TYPE), '). CHECK!'
+          !call PRC_abort
+       end select
 
     else
 
@@ -132,9 +149,9 @@ contains
        Rdry  => CONST_Rdry,  &
        CPdry => CONST_CPdry
     use scale_landuse, only: &
-       LANDUSE_fact_ocean, &
-       LANDUSE_fact_land,  &
-       LANDUSE_fact_urban
+       fact_ocean => LANDUSE_fact_ocean, &
+       fact_land  => LANDUSE_fact_land,  &
+       fact_urban => LANDUSE_fact_urban
     use scale_time, only: &
        dt_RD => TIME_DTSEC_ATMOS_PHY_RD, &
        TIME_NOWDATE,                     &
@@ -146,16 +163,20 @@ contains
        HIST_in
     use scale_atmos_hydrometeor, only: &
        N_HYD
+    use scale_atmos_aerosol, only: &
+       N_AE
     use mod_atmos_admin, only: &
        ATMOS_PHY_RD_TYPE
     use scale_atmos_solarins, only: &
        SOLARINS_insolation => ATMOS_SOLARINS_insolation
     use scale_atmos_phy_rd, only: &
        ATMOS_PHY_RD
+    use scale_atmos_phy_rd_mstrnx, only: &
+       ATMOS_PHY_RD_MSTRNX_flux
     use scale_atmos_phy_rd_mm5sw, only: &
        SWRAD
     use scale_atmos_phy_rd_common, only: &
-       RD_heating => ATMOS_PHY_RD_heating, &
+       ATMOS_PHY_RD_calc_heating, &
        I_SW,     &
        I_LW,     &
        I_dn,     &
@@ -172,15 +193,17 @@ contains
     use mod_atmos_vars, only: &
        TEMP,              &
        PRES,              &
+       QV,                &
+       CVtot,             &
        DENS   => DENS_av, &
        RHOT   => RHOT_av, &
        QTRC   => QTRC_av, &
-       RHOT_t => RHOT_tp
+       RHOH   => RHOH_p
     use mod_atmos_phy_sf_vars, only: &
        SFC_TEMP    => ATMOS_PHY_SF_SFC_TEMP,   &
        SFC_albedo  => ATMOS_PHY_SF_SFC_albedo
     use mod_atmos_phy_rd_vars, only: &
-       RHOT_t_RD    => ATMOS_PHY_RD_RHOT_t,       &
+       RHOH_RD      => ATMOS_PHY_RD_RHOH,         &
        SFCFLX_LW_up => ATMOS_PHY_RD_SFLX_LW_up,   &
        SFCFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn,   &
        SFCFLX_SW_up => ATMOS_PHY_RD_SFLX_SW_up,   &
@@ -192,8 +215,12 @@ contains
        SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_downall, &
        solins       => ATMOS_PHY_RD_solins,       &
        cosSZA       => ATMOS_PHY_RD_cosSZA
+    use mod_atmos_vars, only: &
+       ATMOS_vars_get_diagnostic
     use mod_atmos_phy_mp_vars, only: &
        ATMOS_PHY_MP_vars_get_diagnostic
+    use mod_atmos_phy_ae_vars, only: &
+       ATMOS_PHY_AE_vars_get_diagnostic
     implicit none
 
     logical, intent(in) :: update_flag
@@ -221,8 +248,10 @@ contains
     real(RP) :: TOAFLX_SW_dn_c(IA,JA)
 
     real(RP) :: CLDFRAC(KA,IA,JA)
-    real(RP) :: Re     (KA,IA,JA,N_HYD)
-    real(RP) :: Qe     (KA,IA,JA,N_HYD)
+    real(RP) :: MP_Re  (KA,IA,JA,N_HYD)
+    real(RP) :: MP_Qe  (KA,IA,JA,N_HYD)
+    real(RP) :: AE_Re  (KA,IA,JA,N_AE)
+    real(RP) :: AE_Qe  (KA,IA,JA,N_AE)
 
     ! for WRF radiation scheme added by Adachi; array order is (i,k,j)
     real(RP) :: RTHRATENSW(IA,KA,JA)
@@ -241,6 +270,8 @@ contains
     real(RP) :: QG3D      (IA,KA,JA)
     real(RP) :: flux_rad_org(KA,IA,JA,2,2,2)
 
+    real(RP), pointer :: RH(:,:,:)
+
     real(RP) :: total ! dummy
 
     integer  :: k, i, j
@@ -255,36 +286,47 @@ contains
                                  TIME_NOWDATE(:), & ! [IN]
                                  TIME_OFFSET_YEAR ) ! [IN]
 
-
        call ATMOS_PHY_MP_vars_get_diagnostic( &
             DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
-            CLDFRAC=CLDFRAC, Re=Re, Qe=Qe            ) ! [IN]
+            CLDFRAC=CLDFRAC, Re=MP_Re, Qe=MP_Qe      ) ! [IN]
 
-       call ATMOS_PHY_RD( DENS, RHOT, QTRC,   & ! [IN]
-                          REAL_CZ, REAL_FZ,   & ! [IN]
-                          LANDUSE_fact_ocean, & ! [IN]
-                          LANDUSE_fact_land,  & ! [IN]
-                          LANDUSE_fact_urban, & ! [IN]
-                          SFC_TEMP,           & ! [IN]
-                          SFC_albedo,         & ! [IN]
-                          solins, cosSZA,     & ! [IN]
-                          CLDFRAC, Re, Qe,    & ! [IN]
-                          flux_rad,           & ! [OUT]
-                          flux_rad_top,       & ! [OUT]
-                          SFLX_rad_dn,        & ! [OUT]
-                          dtau_s,             & ! [OUT]
-                          dem_s               ) ! [OUT]
+       call ATMOS_vars_get_diagnostic( "RH", RH )
+       call ATMOS_PHY_AE_vars_get_diagnostic( &
+            QTRC(:,:,:,:), RH(:,:,:), & ! [IN]
+            Re=AE_Re                  ) ! [IN]
+!            Re=AE_Re, Qe=AE_Qe      ) ! [IN]
 
 
-       ! apply radiative flux convergence -> heating rate
-       call RD_heating( flux_rad (:,:,:,:,:,2), & ! [IN]
-                        DENS     (:,:,:),       & ! [IN]
-                        RHOT     (:,:,:),       & ! [IN]
-                        QTRC     (:,:,:,:),     & ! [IN]
-                        REAL_FZ  (:,:,:),       & ! [IN]
-                        dt_RD,                  & ! [IN]
-                        TEMP_t   (:,:,:,:),     & ! [OUT]
-                        RHOT_t_RD(:,:,:)        ) ! [OUT]
+       select case ( ATMOS_PHY_RD_TYPE )
+       case ( "MSTRNX", "WRF" )
+          call ATMOS_PHY_RD_MSTRNX_flux( &
+               KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+               DENS(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
+               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                   & ! [IN]
+               fact_ocean(:,:), fact_land(:,:), fact_urban(:,:), & ! [IN]
+               SFC_TEMP(:,:), SFC_albedo(:,:,:),                 & ! [IN]
+               solins(:,:), cosSZA(:,:),                         & ! [IN]
+               CLDFRAC(:,:,:), MP_Re(:,:,:,:), MP_Qe(:,:,:,:),   & ! [IN]
+               AE_Re(:,:,:,:),                                   & ! [IN]
+!               AE_Re(:,:,:,:), AE_Qe(:,:,:,:),                   & ! [IN]
+               flux_rad(:,:,:,:,:,:),                            & ! [OUT]
+               flux_rad_top(:,:,:,:,:), SFLX_rad_dn(:,:,:,:),    & ! [OUT]
+               dtau_s = dtau_s(:,:,:), dem_s = dem_s(:,:,:)      ) ! [OUT]
+
+       case default
+          call ATMOS_PHY_RD( DENS, RHOT, QTRC,          & ! [IN]
+                             REAL_CZ, REAL_FZ,          & ! [IN]
+                             fact_ocean,                & ! [IN]
+                             fact_land,                 & ! [IN]
+                             fact_urban,                & ! [IN]
+                             SFC_TEMP, SFC_albedo,      & ! [IN]
+                             solins, cosSZA,            & ! [IN]
+                             CLDFRAC, MP_Re, MP_Qe,     & ! [IN]
+                             flux_rad,                  & ! [OUT]
+                             flux_rad_top, SFLX_rad_dn, & ! [OUT]
+                             dtau_s, dem_s              ) ! [OUT]
+
+       end select
 
 
 !OCL XFILL
@@ -466,6 +508,20 @@ contains
 
        endif
 
+
+
+       ! apply radiative flux convergence -> heating rate
+       call ATMOS_PHY_RD_calc_heating( &
+            KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+            flux_rad(:,:,:,:,:,2),     & ! [IN]
+            DENS(:,:,:), TEMP(:,:,:),  & ! [IN]
+            CVtot(:,:,:),              & ! [IN]
+            REAL_FZ(:,:,:),            & ! [IN]
+            RHOH_RD(:,:,:),            & ! [OUT]
+            temp_t = TEMP_t(:,:,:,:)   ) ! [OUT]
+
+
+
        call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', nohalo=.true. )
        call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '1',    nohalo=.true. )
 
@@ -512,10 +568,10 @@ contains
        call HIST_in( SFLX_rad_dn(:,:,I_SW,I_direct ), 'SFLX_SW_dn_dir', 'SFC downward shortwave flux (direct )', 'W/m2', nohalo=.true. )
        call HIST_in( SFLX_rad_dn(:,:,I_SW,I_diffuse), 'SFLX_SW_dn_dif', 'SFC downward shortwave flux (diffuse)', 'W/m2', nohalo=.true. )
 
-       call HIST_in( TEMP_t   (:,:,:,I_LW), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day',     nohalo=.true. )
-       call HIST_in( TEMP_t   (:,:,:,I_SW), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day',     nohalo=.true. )
-       call HIST_in( TEMP_t   (:,:,:,3   ), 'TEMP_t_rd',    'tendency of temp in rd',     'K/day',     nohalo=.true. )
-       call HIST_in( RHOT_t_RD(:,:,:),      'RHOT_t_RD',    'tendency of RHOT in rd',     'K.kg/m3/s', nohalo=.true. )
+       call HIST_in( TEMP_t   (:,:,:,I_LW), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)',  'K/day',     nohalo=.true. )
+       call HIST_in( TEMP_t   (:,:,:,I_SW), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)',  'K/day',     nohalo=.true. )
+       call HIST_in( TEMP_t   (:,:,:,3   ), 'TEMP_t_rd',    'tendency of temp in rd',      'K/day',     nohalo=.true. )
+       call HIST_in( RHOH_RD  (:,:,:),      'RHOH_RD',      'diabatic heating rate in rd', 'J/m3/s',    nohalo=.true. )
 
        ! output of raw data, for offline output
        call HIST_in( flux_rad(:,:,:,I_LW,I_up,2), 'RFLX_LW_up', 'upward   longwave  radiation flux (cell face)', 'W/m2', nohalo=.true. )
@@ -547,13 +603,13 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       RHOT_t(k,i,j) = RHOT_t(k,i,j) + RHOT_t_RD(k,i,j)
+       RHOH(k,i,j) = RHOH(k,i,j) + RHOH_RD(k,i,j)
     enddo
     enddo
     enddo
 
     if ( STATISTICS_checktotal ) then
-       call STAT_total( total, RHOT_t_RD(:,:,:), 'RHOT_t_RD' )
+       call STAT_total( total, RHOH_RD(:,:,:), 'RHOH_RD' )
     endif
 
     return

@@ -87,7 +87,7 @@ module scale_atmos_hydrometeor
 
   character(len=H_SHORT), public, parameter :: HYD_NAME(N_HYD) = &
        (/ "QC", "QR", "QI", "QS", "QG", "QH" /)
-  character(len=H_SHORT), public, parameter :: HYD_DESC(N_HYD) = &
+  character(len=H_MID), public, parameter :: HYD_DESC(N_HYD) = &
        (/ "cloud    ", "rain     ", "ice water", "snow     ", "graupel  ", "hail     " /)
   real(RP), public           :: HYD_DENS(N_HYD)
 

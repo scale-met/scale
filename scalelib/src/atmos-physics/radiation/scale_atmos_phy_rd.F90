@@ -95,14 +95,9 @@ contains
   subroutine ATMOS_PHY_RD_setup( RD_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_atmos_phy_rd_mstrnx, only: &
-       ATMOS_PHY_RD_mstrnx_setup, &
-       ATMOS_PHY_RD_mstrnx
     use scale_atmos_phy_rd_offline, only: &
        ATMOS_PHY_RD_offline_setup, &
        ATMOS_PHY_RD_offline
-    use scale_atmos_phy_rd_mm5sw, only: &
-       swinit
     implicit none
 
     character(len=*), intent(in) :: RD_TYPE
@@ -113,16 +108,9 @@ contains
     select case( RD_TYPE )
     case('OFF')
        ! do nothing
-    case( 'MSTRNX' )
-       call ATMOS_PHY_RD_mstrnx_setup( RD_TYPE )
-       ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
     case( 'OFFLINE' )
        call ATMOS_PHY_RD_offline_setup( RD_TYPE )
        ATMOS_PHY_RD => ATMOS_PHY_RD_offline
-    case( 'WRF' )
-       call ATMOS_PHY_RD_mstrnx_setup( 'MSTRNX' )
-       ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
-       call swinit
     case default
        write(*,*) 'xxx invalid Radiation type(', trim(RD_TYPE), '). CHECK!'
        call PRC_MPIstop
