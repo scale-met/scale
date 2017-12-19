@@ -51,11 +51,11 @@ module scale_atmos_phy_mp_tomita08
        'QG'  /)
   character(len=H_MID)  , parameter, public :: ATMOS_PHY_MP_tomita08_tracer_descriptions(QA_MP) = (/ &
        'Ratio of Water Vapor mass to total mass (Specific humidity)', &
-       'Ratio of Cloud Water mass to total mass',                     &
-       'Ratio of Rain Water mass to total mass',                      &
-       'Ratio of Cloud Ice mass ratio to total mass',                 &
-       'Ratio of Snow miass ratio to total mass',                     &
-       'Ratio of Graupel mass ratio to total mass'                    /)
+       'Ratio of Cloud Water mass to total mass                    ', &
+       'Ratio of Rain Water mass to total mass                     ', &
+       'Ratio of Cloud Ice mass ratio to total mass                ', &
+       'Ratio of Snow miass ratio to total mass                    ', &
+       'Ratio of Graupel mass ratio to total mass                  '/)
   character(len=H_SHORT), parameter, public :: ATMOS_PHY_MP_tomita08_tracer_units(QA_MP) = (/ &
        'kg/kg',  &
        'kg/kg',  &
