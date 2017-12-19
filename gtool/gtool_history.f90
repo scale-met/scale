@@ -136,6 +136,7 @@ module gtool_history
      integer                    :: size              !> Size of array
      real(DP)                   :: timesum           !> Buffer for time
      real(DP), pointer          :: varsum(:)         !> Buffer for value
+     real(DP), pointer          :: varout(:)         !> Buffer for value (output)
   end type vars
 
   type axis
@@ -598,6 +599,7 @@ contains
 
     do n = 1, History_req_count
        allocate( History_vars(n)%varsum(array_size) )
+       allocate( History_vars(n)%varout(array_size) )
     enddo
 
     ! count number of items and variants
@@ -744,10 +746,11 @@ contains
              else
                 History_vars(id)%laststep_write = 1
              endif
-             History_vars(id)%laststep_put      = History_vars(id)%laststep_write
-             History_vars(id)%size              = 0
-             History_vars(id)%timesum           = 0.0_DP
-             History_vars(id)%varsum(:)         = 0.0_DP
+             History_vars(id)%laststep_put = History_vars(id)%laststep_write
+             History_vars(id)%size         = 0
+             History_vars(id)%timesum      = 0.0_DP
+             History_vars(id)%varsum(:)    = 0.0_DP
+             History_vars(id)%varout(:)    = 0.0_DP
 
              if ( debug ) then
                 write(message,*) '*** [HIST] Item registration No.= ', id
@@ -1908,7 +1911,7 @@ contains
        if ( item == History_vars(id)%item ) then
           if    ( History_vars(id)%taverage ) then
              answer = .true.
-          elseif( step_now == History_vars(id)%laststep_write + History_vars(id)%dstep ) then
+          elseif( step_now >= History_vars(id)%laststep_write + History_vars(id)%dstep ) then
              answer = .true.
           endif
        endif
@@ -2477,6 +2480,7 @@ contains
     integer, intent(in) :: id
     integer, intent(in) :: step_now
 
+    logical  :: update_varout
     integer  :: isize
     real(DP) :: time_str, time_end
     real(DP) :: sec_str,  sec_end
@@ -2484,24 +2488,37 @@ contains
 
     if( History_req_count == 0 ) return
 
-    if ( step_now < History_vars(id)%laststep_write + History_vars(id)%dstep ) then
+    if (      step_now < History_vars(id)%laststep_write + History_vars(id)%dstep &
+         .OR. mod(step_now-1,History_vars(id)%dstep) /= 0                         ) then
        return
     endif
 
     if ( History_vars(id)%laststep_put == History_vars(id)%laststep_write ) then
-       write(message,*) 'xxx History variable was never put after the last output!: ', &
-                        trim(History_vars(id)%item)
        if ( History_ERROR_PUTMISS ) then
+          write(message,'(3A)') 'xxx The time interval of history output ', trim(History_vars(id)%item), &
+                                ' and the time interval of its related scheme are inconsistent.'
+          call Log('I',message)
+          write(message,'(A)')  'xxx Please check the namelist PARAM_TIME, PARAM_HISTORY, and HISTITEM.'
           call Log('E',message)
        else
+          write(message,'(2A)') '*** Output value is not updated in this step. NAME : ', &
+                                trim(History_vars(id)%item)
           call Log('I',message)
        endif
+
+       update_varout = .false.
+    else
+       update_varout = .true.
     endif
 
     isize = History_vars(id)%size
 
-    if ( History_vars(id)%taverage ) then
-       History_vars(id)%varsum(1:isize) = History_vars(id)%varsum(1:isize) / History_vars(id)%timesum
+    if ( update_varout ) then
+       if ( History_vars(id)%taverage ) then
+          History_vars(id)%varout(1:isize) = History_vars(id)%varsum(1:isize) / History_vars(id)%timesum
+       else
+          History_vars(id)%varout(1:isize) = History_vars(id)%varsum(1:isize)
+       endif
     endif
 
     if ( firsttime ) then
@@ -2530,7 +2547,7 @@ contains
           ! south-most processes in parallel, or a z axis to be written by rank 0 only
           call FileWrite( History_vars(id)%fid,             & ! [IN]
                           History_vars(id)%vid,             & ! [IN]
-                          History_vars(id)%varsum(1:isize), & ! [IN]
+                          History_vars(id)%varout(1:isize), & ! [IN]
                           time_str,                         & ! [IN]
                           time_end,                         & ! [IN]
                           History_vars(id)%start,           & ! global subarray start indices
@@ -2544,10 +2561,12 @@ contains
        endif
     endif
 
-    History_vars(id)%laststep_write = step_now
-    History_vars(id)%laststep_put   = step_now
-    History_vars(id)%timesum        = 0.0_DP
-    History_vars(id)%varsum(:)      = 0.0_DP
+    if ( update_varout ) then
+       History_vars(id)%laststep_write = step_now
+       History_vars(id)%laststep_put   = step_now
+       History_vars(id)%timesum        = 0.0_DP
+       History_vars(id)%varsum(:)      = 0.0_DP
+    endif
 
     laststep_write = step_now ! remember for multiple call in the same step
 
