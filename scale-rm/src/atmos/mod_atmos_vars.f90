@@ -150,8 +150,9 @@ module mod_atmos_vars
   !
   !++ Private parameters & variables
   !
-  logical,  private :: ATMOS_VARS_CHECKRANGE = .false.
-  real(RP), private :: ATMOS_VARS_CHECKCFL   = 0.0_RP
+  logical,  private :: ATMOS_VARS_CHECKRANGE    = .false.
+  real(RP), private :: ATMOS_VARS_CHECKCFL      = 1.0_RP
+  logical,  private :: ATMOS_VARS_CHECKCFL_WARN = .false.
 
   type Vinfo
      character(len=H_SHORT) :: NAME
@@ -488,7 +489,8 @@ contains
        ATMOS_RESTART_CHECK_BASENAME,        &
        ATMOS_RESTART_CHECK_CRITERION,       &
        ATMOS_VARS_CHECKRANGE,               &
-       ATMOS_VARS_CHECKCFL
+       ATMOS_VARS_CHECKCFL,                 &
+       ATMOS_VARS_CHECKCFL_WARN
 
     integer :: ierr
     integer :: iv, iq
@@ -610,6 +612,7 @@ contains
     if ( ATMOS_VARS_CHECKCFL > 0.0_RP ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Check CFL condition?            : YES'
        if( IO_L ) write(IO_FID_LOG,*) '*** Limit of Courant number         : ', ATMOS_VARS_CHECKCFL
+       if( IO_L ) write(IO_FID_LOG,*) '*** Continue job with warning?      : ', ATMOS_VARS_CHECKCFL_WARN
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Check CFL condition?            : NO'
     endif
@@ -2776,15 +2779,21 @@ contains
 
        CFLMAX = maxval( WORK(:,:,:,:) )
        if ( CFLMAX > ATMOS_VARS_CHECKCFL ) then
-          if( IO_L ) write(IO_FID_LOG,*) "*** [ATMOS_vars_monitor] Courant number exceeded the upper limit. : ", CFLMAX
-                     write(*,*)          "*** [ATMOS_vars_monitor] Courant number exceeded the upper limit. : ", CFLMAX, &
-                                         ", rank = ", PRC_myrank
+          if( IO_L ) write(IO_FID_LOG,*) &
+          "xxx [ATMOS_vars_monitor] Courant number =", CFLMAX, " exceeded the upper limit =", ATMOS_VARS_CHECKCFL
+          write(*,*) &
+          "xxx [ATMOS_vars_monitor] Courant number =", CFLMAX, " exceeded the upper limit =", ATMOS_VARS_CHECKCFL
+          write(*,*) "xxx                      Rank =", PRC_myrank
 
           WNAME(1) = "Courant num. Z"
           WNAME(2) = "Courant num. X"
           WNAME(3) = "Courant num. Y"
 
           call STAT_detail( WORK(:,:,:,:), WNAME(:), supress_globalcomm=.true. )
+
+          if ( .NOT. ATMOS_VARS_CHECKCFL_WARN ) then
+             call PRC_abort
+          endif
        endif
     endif
 
