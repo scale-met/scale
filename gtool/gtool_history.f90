@@ -108,6 +108,7 @@ module gtool_history
      integer                    :: dstep             !> Time unit
      logical                    :: taverage          !> Apply time average?
      integer                    :: dtype             !> Data type
+     logical                    :: registered        !> This item is registered?
   end type request
 
   type vars
@@ -567,6 +568,8 @@ contains
           write(message,*) 'xxx Not appropriate DATATYPE. Check!', DATATYPE
           call Log('E',message)
        endif
+
+       History_req(reqid)%registered = .false.
     enddo
 
     call Log('I','')
@@ -706,6 +709,8 @@ contains
              if ( present(zcoord) ) then
                 if ( History_req(reqid)%zcoord /= zcoord ) cycle
              endif
+
+             History_req(reqid)%registered = .true.
 
              existed = .true.
              nregist = nregist + 1
@@ -2852,6 +2857,23 @@ contains
     real(DP) :: dtsec
     integer  :: id
     !---------------------------------------------------------------------------
+
+    if ( History_id_count /= History_req_count ) then
+
+       write(message,'(A)') '*** [HIST] All of requested variable by the namelist HISTITEM did not find.'
+       call Log('I',message)
+       do id = 1, History_req_count
+          write(message,'(A,A24,A,L1)') '*** NAME : ', History_req(id)%item, &
+                                        ', registered? : ', History_req(id)%registered
+          call Log('I',message)
+       enddo
+
+       if ( History_ERROR_PUTMISS ) then
+          write(message,'(2A)') 'xxx Please set History_ERROR_PUTMISS in the namelist PARAM_HISTORY to .false.', &
+                                ' when you want to disable this check.'
+          call Log('E',message)
+       endif
+    endif
 
     call Log('I','')
     write(message,'(A)') '*** [HIST] Output item list '
