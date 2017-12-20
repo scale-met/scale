@@ -786,7 +786,8 @@ contains
        now_step,  &
        timelabel, &
        options,   &
-       comm       )
+       comm,      &
+       existed    )
     use mpi, only: &
        MPI_COMM_NULL
     use gtool_file, only: &
@@ -803,8 +804,9 @@ contains
     integer,           intent(in)  :: now_step
     character(len=*),  intent(in)  :: timelabel
 
-    character(len=*),  intent(in), optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
-    integer,           intent(in), optional :: comm    ! MPI communicator
+    character(len=*),  intent(in),  optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
+    integer,           intent(in),  optional :: comm    ! MPI communicator
+    logical,           intent(out), optional :: existed
 
     logical                   :: shared_file_io
     character(len=File_HMID)  :: tunits
@@ -817,6 +819,8 @@ contains
     integer :: ic, ie, is, lo
     integer :: m
     !---------------------------------------------------------------------------
+
+    if ( present(existed) ) existed = .true.
 
     if ( History_vars(id)%fid < 0 ) then ! time to create file
 
@@ -920,6 +924,8 @@ contains
           call FileAttachBuffer( History_vars(id)%fid, History_io_buffer_size )
 
           History_axis_written(History_vars(id)%fid) = .false.
+
+          if ( present(existed) ) existed = .false.
 
        endif ! new file?
 

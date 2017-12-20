@@ -669,6 +669,7 @@ contains
 
     character(len=19) :: timelabel
     integer           :: comm
+    logical           :: existed
     !---------------------------------------------------------------------------
 
     if( .NOT. enabled ) return
@@ -685,10 +686,13 @@ contains
        comm = MPI_COMM_NULL
     endif
 
-    call HistoryFileCreate( itemid,       & ! [IN]
-                            TIME_NOWSTEP, & ! [IN]
-                            timelabel,    & ! [IN]
-                            comm=comm     ) ! [IN]
+    call HistoryFileCreate( itemid,         & ! [IN]
+                            TIME_NOWSTEP,   & ! [IN]
+                            timelabel,      & ! [IN]
+                            comm=comm,      & ! [IN]
+                            existed=existed ) ! [OUT]
+
+    if ( .not. existed ) call HIST_set_axes_attributes
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -1409,8 +1413,6 @@ contains
     ! Note this subroutine must be called after all HIST_reg calls are completed
     ! Write registered history axes to history file
     call HistoryWriteAxes( axis_written_first )
-
-    if( axis_written_first ) call HIST_set_axes_attributes
 
     call HistoryWriteAll( TIME_NOWSTEP ) ![IN]
 
