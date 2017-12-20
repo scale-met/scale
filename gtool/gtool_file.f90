@@ -1340,6 +1340,7 @@ contains
     logical,          intent(in), optional :: tavg
 
     real(DP) :: tint8
+    integer  :: ndims
     integer  :: itavg
     integer  :: error
     integer  :: n
@@ -1349,34 +1350,26 @@ contains
 
     vid = -1
     do n = 1, File_vid_count
-       write(message,*) "seek", n, fid, File_vid_fid_list(n), trim(varname), " ", trim(File_vname_list  (n))
-       call Log("I",message)
        if (       File_vid_fid_list(n) == fid     &
             .AND. File_vname_list  (n) == varname ) then
           vid = File_vid_list(n)
           exit
        endif
     enddo
-    write(message,*) "OK", vid, File_vid_count
-    call Log("I",message)
 
     if ( vid < 0 ) then ! variable registration
 
        tint8 = real(tint,DP)
+       ndims = size(dims)
+       itavg = 0
 
        if ( present(tavg) ) then
-          if ( tavg ) then
-             itavg = 1
-          else
-             itavg = 0
-          endif
-       else
-          itavg = 0
+          if( tavg ) itavg = 1
        endif
 
-       call file_add_variable( vid,                                                              & ! [OUT]
-                               fid, varname, desc, units, dims, size(dims), dtype, tint8, itavg, & ! [IN]
-                               error                                                             ) ! [OUT]
+       call file_add_variable( vid,                                                         & ! [OUT]
+                               fid, varname, desc, units, dims, ndims, dtype, tint8, itavg, & ! [IN]
+                               error                                                        ) ! [OUT]
 
        if ( error /= SUCCESS_CODE ) then
           call Log('E', 'xxx failed to add variable: '//trim(varname))
@@ -1420,6 +1413,7 @@ contains
     logical,          intent(in), optional :: tavg
 
     real(DP) :: tint8
+    integer  :: ndims
     integer  :: itavg
     integer  :: error
     integer  :: n
@@ -1429,33 +1423,26 @@ contains
 
     vid = -1
     do n = 1, File_vid_count
-       write(message,*) "seek", n, fid, File_vid_fid_list(n), trim(varname), trim(File_vname_list  (n))
-       call Log("I",message)
        if (       File_vid_fid_list(n) == fid     &
             .AND. File_vname_list  (n) == varname ) then
           vid = File_vid_list(n)
+          exit
        endif
     enddo
-    write(message,*) "OK", vid, File_vid_count
-    call Log("I",message)
 
     if ( vid < 0 ) then ! variable registration
 
        tint8 = real(tint,DP)
+       ndims = size(dims)
+       itavg = 0
 
        if ( present(tavg) ) then
-          if ( tavg ) then
-             itavg = 1
-          else
-             itavg = 0
-          endif
-       else
-          itavg = 0
+          if( tavg ) itavg = 1
        endif
 
-       call file_add_variable( vid,                                                              & ! [OUT]
-                               fid, varname, desc, units, dims, size(dims), dtype, tint8, itavg, & ! [IN]
-                               error                                                             ) ! [OUT]
+       call file_add_variable( vid,                                                         & ! [OUT]
+                               fid, varname, desc, units, dims, ndims, dtype, tint8, itavg, & ! [IN]
+                               error                                                        ) ! [OUT]
 
        if ( error /= SUCCESS_CODE ) then
           call Log('E', 'xxx failed to add variable: '//trim(varname))
