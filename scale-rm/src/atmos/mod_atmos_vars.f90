@@ -2596,6 +2596,8 @@ contains
        MONIT_put
     use scale_time, only: &
        TIME_DTSEC_ATMOS_DYN
+    use mod_atmos_admin, only: &
+       ATMOS_DYN_TYPE
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
@@ -2768,7 +2770,8 @@ contains
        call STAT_detail( WORK(:,:,:,:), WNAME(:) )
     endif
 
-    if ( ATMOS_VARS_CHECKCFL > 0.0_RP .OR. ATMOS_VARS_CHECKCFL_ERR > 0.0_RP ) then
+    if (       ( ATMOS_DYN_TYPE /= 'OFF' .AND. ATMOS_DYN_TYPE /= 'NONE' )             &
+         .AND. ( ATMOS_VARS_CHECKCFL > 0.0_RP .OR. ATMOS_VARS_CHECKCFL_ERR > 0.0_RP ) ) then
 !OCL XFILL
        WORK(:,:,:,:) = 0.0_RP
 
