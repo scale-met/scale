@@ -1333,8 +1333,8 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   // get time variable
   if ( tint > 0.0 ) {
     for ( i=0; i<nt; i++ ) {
-      if ( tdims[i] != NULL && // still opened
-           tdims[i]->ncid == ncid && // same file
+      if ( tdims[i]       != NULL &&  // still opened
+           tdims[i]->ncid == ncid &&  // same file
            tdims[i]->tint == tint ) { // same time interval
         vars[nvar]->t = tdims[i];
         break;
@@ -1347,10 +1347,15 @@ int32_t file_add_variable( int32_t *vid,     // (out)
       tdims[nt]->tint = tint;
       tdims[nt]->tval = (double*) malloc(sizeof(double)*NTMAX);
       // generate name
-      if ( nt == 0 )
+      m=0;
+      for (i=0; i<nt; i++) {
+        if ( tdims[i] != NULL && tdims[i]->ncid == ncid ) m++;
+      }
+      if ( m == 0 ) {
         strcpy(tname, "time");
-      else
-        sprintf(tname, "time%d", nt);
+      } else {
+        sprintf(tname, "time%d", m);
+      }
       strcpy(tdims[nt]->name, tname);
       // define time dimension and variable
       if ( files[fid]->shared_mode ) {

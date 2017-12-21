@@ -44,6 +44,7 @@ module gtool_history
   public :: HistoryInit
   public :: HistoryCheck
   public :: HistoryAddVariable
+  public :: HistoryFileCreate
   public :: HistoryPutAxis
   public :: HistoryPutAssociatedCoordinates
   public :: HistorySetAttribute
@@ -95,33 +96,41 @@ module gtool_history
 
   type request
      character(len=File_HSHORT) :: item              !> Name of variable (in the code)
-     character(len=File_HMID)   :: zcoord            !> Z-coordinate
      character(len=File_HSHORT) :: outname           !> Name of variable (for output)
      character(len=File_HLONG)  :: basename          !> Base name of the file
      logical                    :: postfix_timelabel !> Add time label to basename?
+     character(len=File_HMID)   :: zcoord            !> Z-coordinate
      integer                    :: dstep             !> Time unit
      logical                    :: taverage          !> Apply time average?
      integer                    :: dtype             !> Data type
   end type request
 
   type vars
-     character(len=File_HSHORT) :: item           !> Name of variable (in the code)
-     character(len=File_HMID)   :: zcoord         !> Z-coordinate
-     character(len=File_HSHORT) :: outname        !> Name of variable (for output)
-     integer                    :: fid            !> File id of the file
-     integer                    :: dstep          !> Time unit
-     logical                    :: taverage       !> Apply time average?
-     integer                    :: vid            !> Variable id
+     character(len=File_HSHORT) :: item              !> Name of variable (in the code)
+     character(len=File_HSHORT) :: outname           !> Name of variable (for output)
+     character(len=File_HLONG)  :: basename          !> Base name of the file
+     logical                    :: postfix_timelabel !> Add time label to basename?
+     character(len=File_HMID)   :: zcoord            !> Z-coordinate
+     integer                    :: dstep             !> Time unit
+     logical                    :: taverage          !> Apply time average?
+     integer                    :: dtype             !> Data type
 
-     real(DP)                   :: waitsec        !> Time length to suppress output [sec]
-     integer                    :: laststep_write !> Last step when the variable is written
-     integer                    :: laststep_put   !> Last step when the variable is put
-     integer                    :: size           !> Size of array
-     real(DP)                   :: timesum        !> Buffer for time
-     real(DP), pointer          :: varsum(:)      !> Buffer for value
-     integer                    :: ndims          !> Number of dimensions
-     integer                    :: start(4)       !> global subarray starting indices
-     integer                    :: count(4)       !> global subarray request sizes
+     integer                    :: fid               !> File id of the file
+     integer                    :: vid               !> Variable id
+     character(len=File_HLONG)  :: desc              !> Variable description
+     character(len=File_HSHORT) :: units             !> Variable units
+     character(len=File_HSHORT) :: mapping           !> Map projection
+     integer                    :: ndims             !> number of dimensions
+     character(len=File_HSHORT) :: dims (4)          !> name of dimension
+     integer                    :: start(4)          !> global subarray starting indices
+     integer                    :: count(4)          !> global subarray request sizes
+
+     integer                    :: waitstep          !> Step length to suppress output [step]
+     integer                    :: laststep_write    !> Last step when the variable is written
+     integer                    :: laststep_put      !> Last step when the variable is put
+     integer                    :: size              !> Size of array
+     real(DP)                   :: timesum           !> Buffer for time
+     real(DP), pointer          :: varsum(:)         !> Buffer for value
   end type vars
 
   type axis
@@ -177,15 +186,15 @@ module gtool_history
   character(len=File_HMID),   private              :: History_TIME_SINCE                !> Offset time
 
   ! From NAMELIST or upstream side of the library
-  character(len=File_HMID),   private              :: History_TITLE                     !> Header information of the output file: title
-  character(len=File_HMID),   private              :: History_SOURCE                    !> Header information of the output file: model name
-  character(len=File_HMID),   private              :: History_INSTITUTION               !> Header information of the output file: institution
-  character(len=File_HMID),   private              :: History_TIME_UNITS                !> Unit for time axis
-
-  logical,                    private              :: History_OUTPUT_STEP0  = .false.   !> Output value at step=0?
-  real(DP),                   private              :: History_OUTPUT_WAIT   = 0.0_DP    !> Time length to suppress output [sec]
-
-  logical,                    private              :: History_ERROR_PUTMISS = .true.    !> Abort if the value is never stored after last output?
+  character(len=File_HMID),   private              :: History_TITLE                             !> Header information of the output file: title
+  character(len=File_HMID),   private              :: History_SOURCE                            !> Header information of the output file: model name
+  character(len=File_HMID),   private              :: History_INSTITUTION                       !> Header information of the output file: institution
+  character(len=File_HMID),   private              :: History_TIME_UNITS                        !> Unit for time axis
+  logical,                    private              :: History_OUTPUT_STEP0            = .false. !> Output value at step=0?
+  integer,                    private              :: History_OUTPUT_WAIT_STEP                  !> Step length to suppress output
+  integer,                    private              :: History_OUTPUT_SWITCH_STEP                !> Step interval to switch output file
+  integer,                    private              :: History_OUTPUT_SWITCH_LASTSTEP            !> Last step when the file is switched
+  logical,                    private              :: History_ERROR_PUTMISS           = .true.  !> Abort if the value is never stored after last output?
 
   ! working
   integer,                    private, parameter   :: History_req_limit     = 1000      !> number limit for history item request
@@ -211,7 +220,7 @@ module gtool_history
   character(len=LOG_LMSG),    private              :: message        = ''
   logical,                    private              :: debug          = .false.
 
-  integer,                    private              :: io_buffer_size                    !>  internal buffer for PnetCDF
+  integer,                    private              :: History_io_buffer_size            !>  internal buffer for PnetCDF
 
   !-----------------------------------------------------------------------------
 contains
@@ -254,20 +263,21 @@ contains
        File_preclist
     implicit none
 
-    integer,          intent(out)          :: item_count
-    integer,          intent(out)          :: variant_count
-    integer,          intent(in)           :: isize
-    integer,          intent(in)           :: jsize
-    integer,          intent(in)           :: ksize
-    integer,          intent(in)           :: master
-    integer,          intent(in)           :: myrank
-    integer,          intent(in)           :: rankidx(:)
-    integer,          intent(in)           :: procsize(:)
-    character(len=*), intent(in)           :: title
-    character(len=*), intent(in)           :: source
-    character(len=*), intent(in)           :: institution
-    real(DP),         intent(in)           :: time_start
-    real(DP),         intent(in)           :: time_interval
+    integer,          intent(out) :: item_count
+    integer,          intent(out) :: variant_count
+    integer,          intent(in)  :: isize
+    integer,          intent(in)  :: jsize
+    integer,          intent(in)  :: ksize
+    integer,          intent(in)  :: master
+    integer,          intent(in)  :: myrank
+    integer,          intent(in)  :: rankidx(:)
+    integer,          intent(in)  :: procsize(:)
+    character(len=*), intent(in)  :: title
+    character(len=*), intent(in)  :: source
+    character(len=*), intent(in)  :: institution
+    real(DP),         intent(in)  :: time_start
+    real(DP),         intent(in)  :: time_interval
+
     character(len=*), intent(in), optional :: time_units
     character(len=*), intent(in), optional :: time_since
     character(len=*), intent(in), optional :: default_basename
@@ -280,15 +290,19 @@ contains
     character(len=*), intent(in), optional :: namelist_filename
     integer         , intent(in), optional :: namelist_fid
 
-    character(len=File_HLONG)  :: History_DEFAULT_BASENAME          !> base name of the file
+    character(len=File_HLONG)  :: History_DEFAULT_BASENAME          !> Base name of the file
     logical                    :: History_DEFAULT_POSTFIX_TIMELABEL !> Add timelabel to the basename?
-    real(DP)                   :: History_DEFAULT_TINTERVAL         !> time interval
-    character(len=File_HSHORT) :: History_DEFAULT_TUNIT             !> time unit
-    logical                    :: History_DEFAULT_TAVERAGE          !> apply time average?
-    character(len=File_HSHORT) :: History_DEFAULT_ZCOORD            !> default z-coordinate
-    character(len=File_HSHORT) :: History_DEFAULT_DATATYPE          !> data type
+    character(len=File_HSHORT) :: History_DEFAULT_ZCOORD            !> Default z-coordinate
+    real(DP)                   :: History_DEFAULT_TINTERVAL         !> Time interval
+    character(len=File_HSHORT) :: History_DEFAULT_TUNIT             !> Time unit
+    logical                    :: History_DEFAULT_TAVERAGE          !> Apply time average?
+    character(len=File_HSHORT) :: History_DEFAULT_DATATYPE          !> Data type
                                                                     !> REAL4 : single precision
                                                                     !> REAL8 : double precision
+    real(DP)                   :: History_OUTPUT_WAIT               !> Time length to suppress output
+    character(len=File_HSHORT) :: History_OUTPUT_WAIT_TUNIT         !> Time unit
+    real(DP)                   :: History_OUTPUT_SWITCH_TINTERVAL   !> Time interval to switch output file
+    character(len=File_HSHORT) :: History_OUTPUT_SWITCH_TUNIT       !> Time unit
 
     NAMELIST / PARAM_HISTORY / &
        History_TITLE,                     &
@@ -297,25 +311,27 @@ contains
        History_TIME_UNITS,                &
        History_DEFAULT_BASENAME,          &
        History_DEFAULT_POSTFIX_TIMELABEL, &
+       History_DEFAULT_ZCOORD,            &
        History_DEFAULT_TINTERVAL,         &
        History_DEFAULT_TUNIT,             &
        History_DEFAULT_TAVERAGE,          &
-       History_DEFAULT_ZCOORD,            &
        History_DEFAULT_DATATYPE,          &
        History_OUTPUT_STEP0,              &
        History_OUTPUT_WAIT,               &
+       History_OUTPUT_WAIT_TUNIT,         &
+       History_OUTPUT_SWITCH_TINTERVAL,   &
+       History_OUTPUT_SWITCH_TUNIT,       &
        History_ERROR_PUTMISS,             &
        debug
 
     character(len=File_HSHORT) :: ITEM              !> name of variable (in the code)
     character(len=File_HSHORT) :: OUTNAME           !> name of variable (for output)
-
     character(len=File_HLONG)  :: BASENAME          !> base name of the file
     logical                    :: POSTFIX_TIMELABEL !> Add timelabel to the basename?
+    character(len=File_HSHORT) :: ZCOORD            !> z-coordinate
     real(DP)                   :: TINTERVAL         !> time interval
     character(len=File_HSHORT) :: TUNIT             !> time unit
     logical                    :: TAVERAGE          !> apply time average?
-    character(len=File_HSHORT) :: ZCOORD            !> z-coordinate
     character(len=File_HSHORT) :: DATATYPE          !> data type
 
     NAMELIST / HISTITEM / &
@@ -323,17 +339,17 @@ contains
        OUTNAME,           &
        BASENAME,          &
        POSTFIX_TIMELABEL, &
+       ZCOORD,            &
        TINTERVAL,         &
        TUNIT,             &
        TAVERAGE,          &
-       ZCOORD,            &
        DATATYPE
 
     integer  :: array_size
     integer  :: memsize
     integer  :: reqid
-    real(DP) :: item_dtsec
-    integer  :: item_dstep
+    real(DP) :: dtsec
+    integer  :: dstep
 
     integer                    :: id1, id2, count
     character(len=File_HSHORT) :: item1, item2
@@ -352,7 +368,7 @@ contains
     allocate( History_procsize(size(procsize)) )
     History_master      = master
     History_myrank      = myrank
-    History_rankidx(:)  = rankidx(:)
+    History_rankidx (:) = rankidx (:)
     History_procsize(:) = procsize(:)
 
     History_STARTDAYSEC = time_start
@@ -360,17 +376,21 @@ contains
     if ( present(time_since) ) then
        History_TIME_SINCE = time_since
     else
-       History_TIME_SINCE        = ''
+       History_TIME_SINCE = ''
     endif
 
     History_TIME_UNITS                = 'seconds' !> Unit for time axis
-    History_DEFAULT_BASENAME          = ''        !> base name of the file
+    History_DEFAULT_BASENAME          = ''        !> Base name of the file
     History_DEFAULT_POSTFIX_TIMELABEL = .false.   !> Add timelabel to the basename?
-    History_DEFAULT_TINTERVAL         = -1.0_DP   !> time interval
-    History_DEFAULT_TUNIT             = 'sec'     !> time unit
-    History_DEFAULT_TAVERAGE          = .false.   !> apply time average?
-    History_DEFAULT_ZCOORD            = ''        !> default z-coordinate
-    History_DEFAULT_DATATYPE          = 'REAL4'   !> data type
+    History_DEFAULT_ZCOORD            = ''        !> Default z-coordinate
+    History_DEFAULT_TINTERVAL         = -1.0_DP   !> Time interval
+    History_DEFAULT_TUNIT             = 'SEC'     !> Time unit
+    History_DEFAULT_TAVERAGE          = .false.   !> Apply time average?
+    History_DEFAULT_DATATYPE          = 'REAL4'   !> Data type
+    History_OUTPUT_WAIT               =  0.0_DP   !> Time length to suppress output
+    History_OUTPUT_WAIT_TUNIT         = 'SEC'     !> Time unit
+    History_OUTPUT_SWITCH_TINTERVAL   = -1.0_DP   !> Time interval to switch output file
+    History_OUTPUT_SWITCH_TUNIT       = 'SEC'     !> Time unit
 
     !--- read namelist
     History_TITLE       = title
@@ -379,10 +399,10 @@ contains
     if( present(time_units)                ) History_TIME_UNITS                = time_units
     if( present(default_basename)          ) History_DEFAULT_BASENAME          = default_basename
     if( present(default_postfix_timelabel) ) History_DEFAULT_POSTFIX_TIMELABEL = default_postfix_timelabel
+    if( present(default_zcoord)            ) History_DEFAULT_ZCOORD            = default_zcoord
     if( present(default_tinterval)         ) History_DEFAULT_TINTERVAL         = default_tinterval
     if( present(default_tunit)             ) History_DEFAULT_TUNIT             = default_tunit
     if( present(default_taverage)          ) History_DEFAULT_TAVERAGE          = default_taverage
-    if( present(default_zcoord)            ) History_DEFAULT_ZCOORD            = default_zcoord
     if( present(default_datatype)          ) History_DEFAULT_DATATYPE          = default_datatype
 
     fid = -1
@@ -416,10 +436,21 @@ contains
     call Log_nml('I',message)
 #endif
 
-    if ( History_OUTPUT_WAIT < 0.0_DP ) then
+    if ( History_OUTPUT_WAIT >= 0.0_DP ) then
+       call CalendarYmdhms2sec( dtsec, History_OUTPUT_WAIT, History_OUTPUT_WAIT_TUNIT )
+       History_OUTPUT_WAIT_STEP = int( dtsec / History_DTSEC )
+    else
        write(message,*) 'xxx History_OUTPUT_WAIT must be positive. STOP'
        call Log('E',message)
     endif
+
+    if ( History_OUTPUT_SWITCH_TINTERVAL >= 0.0_DP ) then
+       call CalendarYmdhms2sec( dtsec, History_OUTPUT_SWITCH_TINTERVAL, History_OUTPUT_SWITCH_TUNIT )
+       History_OUTPUT_SWITCH_STEP = int( dtsec / History_DTSEC )
+    else
+       History_OUTPUT_SWITCH_STEP = -1
+    endif
+    History_OUTPUT_SWITCH_LASTSTEP = 0
 
     array_size = isize * jsize * ksize
 
@@ -452,7 +483,7 @@ contains
     allocate( History_req(History_req_count) )
 
     ! allows PnetCDF to use an internal buffer to aggregate write requests
-    io_buffer_size = array_size * History_req_count * 8
+    History_io_buffer_size = array_size * History_req_count * 8
 
     ! read history request
     memsize = 0
@@ -464,10 +495,10 @@ contains
        OUTNAME           = 'undefined'
        BASENAME          = History_DEFAULT_BASENAME
        POSTFIX_TIMELABEL = History_DEFAULT_POSTFIX_TIMELABEL
+       ZCOORD            = History_DEFAULT_ZCOORD
        TINTERVAL         = History_DEFAULT_TINTERVAL
        TUNIT             = History_DEFAULT_TUNIT
        TAVERAGE          = History_DEFAULT_TAVERAGE
-       ZCOORD            = History_DEFAULT_ZCOORD
        DATATYPE          = History_DEFAULT_DATATYPE
 
        read(fid,nml=HISTITEM,iostat=ierr)
@@ -499,25 +530,26 @@ contains
        History_req(reqid)%outname           = OUTNAME
        History_req(reqid)%basename          = BASENAME
        History_req(reqid)%postfix_timelabel = POSTFIX_TIMELABEL
+       if( History_OUTPUT_SWITCH_STEP >= 0 ) History_req(reqid)%postfix_timelabel = .true. ! force true
+       History_req(reqid)%zcoord            = ZCOORD
        History_req(reqid)%taverage          = TAVERAGE
 
-       call CalendarYmdhms2sec( item_dtsec, TINTERVAL, TUNIT )
-       item_dstep = int( item_dtsec / History_DTSEC )
+       call CalendarYmdhms2sec( dtsec, TINTERVAL, TUNIT )
+       dstep = int( dtsec / History_DTSEC )
 
-       if ( item_dtsec <= 0.D0 ) then
+       if ( dtsec <= 0.D0 ) then
           write(message,*) &
           'xxx Not appropriate time interval. Check!', trim(ITEM), TINTERVAL, trim(TUNIT)
           call Log('E',message)
        endif
 
-       if ( abs(item_dtsec-real(item_dstep,kind=DP)*History_DTSEC ) > eps ) then
+       if ( abs(dtsec-real(dstep,kind=DP)*History_DTSEC ) > eps ) then
           write(message,*) &
-          'xxx time interval must be a multiple of delta t. (interval,dt)=', item_dtsec, History_DTSEC
+          'xxx time interval must be a multiple of delta t. (interval,dt)=', dtsec, History_DTSEC
           call Log('E',message)
        endif
 
-       History_req(reqid)%dstep  = item_dstep
-       History_req(reqid)%zcoord = ZCOORD
+       History_req(reqid)%dstep  = dstep
 
        if    ( DATATYPE == 'REAL4' ) then
           History_req(reqid)%dtype  = File_REAL4
@@ -540,12 +572,16 @@ contains
     call Log('I',message)
     write(message,'(A,L4)') '*** Output value at the initial step?            : ', History_OUTPUT_STEP0
     call Log('I',message)
-    write(message,'(A,L4)') '*** Check if requested item is not registered?   : ', History_ERROR_PUTMISS
-    call Log('I',message)
-    if ( History_OUTPUT_WAIT > 0.0_DP ) then
-       write(message,'(A,F10.3)') '*** Time to suppress output [sec]                : ', History_OUTPUT_WAIT
+    if ( History_OUTPUT_WAIT_STEP > 0 ) then
+       write(message,'(A,I8)') '*** Time when the output is suppressed [step]    : ', History_OUTPUT_WAIT_STEP
        call Log('I',message)
     endif
+    if ( History_OUTPUT_SWITCH_STEP >= 0 ) then
+       write(message,'(A,I8)') '*** Interval for switching the file [step]       : ', History_OUTPUT_SWITCH_STEP
+       call Log('I',message)
+    endif
+    write(message,'(A,L4)') '*** Check if requested item is not registered?   : ', History_ERROR_PUTMISS
+    call Log('I',message)
 
     if ( .NOT. present(namelist_fid) ) then
        if( fid > 0 ) close(fid)
@@ -586,17 +622,14 @@ contains
 
     integer :: max_count
     integer :: n
-
-    intrinsic size
     !---------------------------------------------------------------------------
 
     existed = .false.
 
     max_count = min( History_id_count, History_req_count )
 
+    !--- search existing item
     do n = 1, max_count
-
-       !--- search existing item
        if ( item == History_vars(n)%item ) then ! match (at least one) existing item
           !--- check z-coordinate
           if ( present(zcoord) ) then
@@ -608,9 +641,7 @@ contains
              existed = .true.
              return
           endif
-
-       end if
-
+       endif
     enddo
 
     return
@@ -623,24 +654,13 @@ contains
        dims,      &
        desc,      &
        units,     &
-       now_step,  &
-       timelabel, &
-       zcoord,    &
        mapping,   &
-       options,   &
+       now_step,  &
+       zcoord,    &
        start,     &
-       count,     &
-       comm       )
-    use mpi, only: &
-       MPI_COMM_NULL
-    use gtool_file, only: &
-       FileCreate,       &
-       FileSetOption,    &
-       FileAddVariable,  &
-       FileSetAttribute, &
-       FileDefAxis,      &
-       FileDefAssociatedCoordinates, &
-       FileAttachBuffer
+       count      )
+    use gtool_file_h, only: &
+       File_dtypelist
     implicit none
 
     integer,           intent(out) :: nregist
@@ -648,52 +668,28 @@ contains
     character(len=*),  intent(in)  :: dims(:)
     character(len=*),  intent(in)  :: desc
     character(len=*),  intent(in)  :: units
+    character(len=*),  intent(in)  :: mapping
     integer,           intent(in)  :: now_step
-    character(len=*),  intent(in)  :: timelabel
 
     character(len=*),  intent(in), optional :: zcoord
-    character(len=*),  intent(in), optional :: mapping
-    character(len=*),  intent(in), optional :: options  ! 'filetype1:key1=val1&filetype2:key2=val2&...'
     integer,           intent(in), optional :: start(:) ! global subarray starting indices of this process's write request
     integer,           intent(in), optional :: count(:) ! lengths of this process's write request along each dimension
-    integer,           intent(in), optional :: comm     ! MPI communicator
 
-    logical                   :: shared_file_io
-    logical                   :: existed
-    character(len=File_HMID)  :: tunits
-    integer                   :: ndim
-    character(len=File_HLONG) :: basename_mod
-    logical                   :: fileexisted
-    integer                   :: dim_size
-    real(DP)                  :: dtsec
-
-    integer :: ic, ie, is, lo
-    integer :: reqid, id, m
-    integer :: fid
+    integer :: reqid, id
+    integer :: ndims
+    logical :: existed
+    integer :: n
 
     intrinsic size
     !---------------------------------------------------------------------------
 
     nregist = 0
 
-    ! check whether shared-file I/O method is enabled
-    shared_file_io = .false.
-    if ( present(comm) .AND. comm .NE. MPI_COMM_NULL ) shared_file_io = .true.
-
     call HistoryCheck( existed, & ! [OUT]
                        item,    & ! [IN]
                        zcoord   ) ! [IN]
 
     if ( .NOT. existed ) then ! request-register matching check
-
-       ! new file registration
-       if ( History_TIME_SINCE == '' ) then
-          tunits = trim(History_TIME_UNITS)
-       else
-          tunits = trim(History_TIME_UNITS)//' since '//trim(History_TIME_SINCE)
-       endif
-
-       ndim = size(dims)
 
        do reqid = 1, History_req_count
 
@@ -710,177 +706,74 @@ contains
              History_id_count = History_id_count + 1
              id               = History_id_count
 
-             History_vars(id)%item    = History_req(reqid)%item
-             History_vars(id)%outname = History_req(reqid)%outname
+             History_vars(id)%item              = History_req(reqid)%item
+             History_vars(id)%outname           = History_req(reqid)%outname
+             History_vars(id)%basename          = History_req(reqid)%basename
+             History_vars(id)%postfix_timelabel = History_req(reqid)%postfix_timelabel
+             History_vars(id)%zcoord            = History_req(reqid)%zcoord
+             History_vars(id)%dstep             = History_req(reqid)%dstep
+             History_vars(id)%taverage          = History_req(reqid)%taverage
+             History_vars(id)%dtype             = History_req(reqid)%dtype
 
-             if ( History_req(reqid)%postfix_timelabel ) then
-                basename_mod = trim(History_req(reqid)%basename)//'_'//trim(timelabel)
-             else
-                basename_mod = trim(History_req(reqid)%basename)
-             endif
-
-             call FileCreate( fid,                 & ! [OUT]
-                              fileexisted,         & ! [OUT]
-                              basename_mod,        & ! [IN]
-                              History_TITLE,       & ! [IN]
-                              History_SOURCE,      & ! [IN]
-                              History_INSTITUTION, & ! [IN]
-                              History_master,      & ! [IN]
-                              History_myrank,      & ! [IN]
-                              History_rankidx(:),  & ! [IN]
-                              History_procsize(:), & ! [IN]
-                              time_units = tunits, & ! [IN]
-                              comm       = comm    ) ! [IN]
-
-             History_vars(id)%fid      = fid
-             History_vars(id)%dstep    = History_req(reqid)%dstep
-             History_vars(id)%taverage = History_req(reqid)%taverage
-             History_vars(id)%zcoord   = History_req(reqid)%zcoord
-
-             if ( .NOT. fileexisted ) then ! new file
-
-                ! write options
-                if ( present(options) ) then
-                   ic = -1 ! index of ':'
-                   ie = -1 ! index of '='
-                   is =  1 ! start index
-                   lo = len_trim(options)
-                   do m = 1, lo+1
-                      if ( m == lo+1 .OR. options(m:m) == '&' ) then
-                         if ( ic == -1 .OR. ie == -1 ) then
-                            call Log('E','xxx option is invalid: '//trim(options))
-                         endif
-
-                         call FileSetOption( fid,                & ! [IN]
-                                             options(is  :ic-1), & ! [IN]
-                                             options(ic+1:ie-1), & ! [IN]
-                                             options(ie+1:m -1)  ) ! [IN]
-
-                         ic = -1
-                         ie = -1
-                         is = m+1
-                      elseif( options(m:m) == ':' ) then
-                         ic = m
-                      elseif( options(m:m) == '=' ) then
-                         ie = m
-                      endif
-                   enddo
-                endif
-
-                ! define registered history axis variables in the newly created file
-                ! actual writing axis variables are deferred to HistoryWriteAxes
-                do m = 1, History_axis_count
-                   if ( shared_file_io ) then ! for shared-file I/O, define axis in its global size
-                      dim_size = History_axis(m)%gdim_size ! axis global size
-                   else
-                      dim_size = History_axis(m)%dim_size
-                   end if
-
-                   call FileDefAxis( fid,                     & ! [IN]
-                                     History_axis(m)%name,    & ! [IN]
-                                     History_axis(m)%desc,    & ! [IN]
-                                     History_axis(m)%units,   & ! [IN]
-                                     History_axis(m)%dim,     & ! [IN]
-                                     History_axis(m)%dtype,   & ! [IN]
-                                     dim_size                 ) ! [IN]
-                enddo
-
-                ! define registered history associated coordinate variables in the newly created file
-                ! actual writing coordinate variables are deferred to HistoryWriteAxes
-                do m = 1, History_assoc_count
-
-                   if ( shared_file_io ) then
-                      dim_size = History_axis(m)%gdim_size
-                   else
-                      dim_size = History_axis(m)%dim_size
-                   end if
-
-                   call FileDefAssociatedCoordinates( fid,                                             & ! [IN]
-                                                      History_assoc(m)%name,                           & ! [IN]
-                                                      History_assoc(m)%desc,                           & ! [IN]
-                                                      History_assoc(m)%units,                          & ! [IN]
-                                                      History_assoc(m)%dims(1:History_assoc(m)%ndims), & ! [IN]
-                                                      History_assoc(m)%dtype                           ) ! [IN]
-                enddo
-
-                ! allows PnetCDF to allocate an internal buffer of size io_buffer_size
-                ! to aggregate write requests for history variables
-                call FileAttachBuffer( fid, io_buffer_size )
-
-                History_axis_written(fid) = .false.
-
-             endif ! new file?
-
-             ! Add new variable
-             dtsec = real(History_vars(id)%dstep,kind=DP) * History_DTSEC
+             History_vars(id)%fid               = -1
+             History_vars(id)%vid               = -1
+             History_vars(id)%desc              = desc
+             History_vars(id)%units             = units
+             History_vars(id)%mapping           = mapping
 
              ! history variable has been reshaped to 1D, we preserve the
              ! original shape in count(:) and History_count(:,id)
              ! History_ndims(id) stores number of dimensions of original shape
-             History_vars(id)%ndims    = size(dims)
+             ndims = size(dims)
 
-             History_vars(id)%start(:) = 1
-             History_vars(id)%count(:) = 1
+             History_vars(id)%ndims             = ndims
+             History_vars(id)%dims (1:ndims)    = dims(1:ndims)
+             History_vars(id)%start(:)          = 1
+             History_vars(id)%count(:)          = 1
              if ( present(start) ) History_vars(id)%start(:) = start(:)
              if ( present(count) ) History_vars(id)%count(:) = count(:)
 
-             call FileAddVariable( History_vars(id)%vid,     & ! [OUT]
-                                   fid,                      & ! [IN]
-                                   History_vars(id)%outname, & ! [IN]
-                                   desc,                     & ! [IN]
-                                   units,                    & ! [IN]
-                                   dims(1:ndim),             & ! [IN]
-                                   History_req(reqid)%dtype, & ! [IN]
-                                   dtsec,                    & ! [IN]
-                                   History_vars(id)%taverage ) ! [IN]
-
-             if ( .not. fileexisted ) then
-                do m = 1, History_axis_count
-                   if ( History_axis(m)%down ) then
-                      call FileSetAttribute( fid, History_axis(m)%name, 'positive', 'down' )
-                   endif
-                enddo
-             endif
-
-             if ( mapping /= "" ) then
-                call FileSetAttribute( fid, History_vars(id)%outname, 'grid_mapping', mapping )
-             end if
-
-             ! initialize
-             History_vars(id)%size         = 0
-             History_vars(id)%waitsec      = History_OUTPUT_WAIT
+             History_vars(id)%waitstep          = History_OUTPUT_WAIT_STEP
              if ( History_OUTPUT_STEP0 .AND. now_step == 1 ) then
                 History_vars(id)%laststep_write = 1 - History_vars(id)%dstep
              else
                 History_vars(id)%laststep_write = 1
              endif
-             History_vars(id)%laststep_put = History_vars(id)%laststep_write
-             History_vars(id)%timesum      = 0.0_DP
-             History_vars(id)%varsum(:)    = 0.0_DP
+             History_vars(id)%laststep_put      = History_vars(id)%laststep_write
+             History_vars(id)%size              = 0
+             History_vars(id)%timesum           = 0.0_DP
+             History_vars(id)%varsum(:)         = 0.0_DP
 
              if ( debug ) then
                 write(message,*) '*** [HIST] Item registration No.= ', id
                 call Log('I',message)
-                write(message,*) '] Item name           : ', trim(History_vars(id)%item)
+                write(message,*) '] Item name                      : ', trim(History_vars(id)%item)
                 call Log('I',message)
-                write(message,*) '] Output name         : ', trim(History_vars(id)%outname)
+                write(message,*) '] Output name                    : ', trim(History_vars(id)%outname)
                 call Log('I',message)
-                write(message,*) '] Description         : ', trim(desc)
+                write(message,*) '] Description                    : ', trim(History_vars(id)%desc)
                 call Log('I',message)
-                write(message,*) '] Unit                : ', trim(units)
+                write(message,*) '] Unit                           : ', trim(History_vars(id)%units)
                 call Log('I',message)
-                write(message,*) '] Z-coordinate        : ', trim(History_vars(id)%zcoord)
+                write(message,*) '] Basename of output file        : ', trim(History_vars(id)%basename)
                 call Log('I',message)
-                write(message,*) '] Interval [sec,step] : ', dtsec, History_vars(id)%dstep
+                write(message,*) '] Add timelabel to the filename? : ', History_vars(id)%postfix_timelabel
                 call Log('I',message)
-                write(message,*) '] Time Average?       : ', History_vars(id)%taverage
+                write(message,*) '] Z-coordinate                   : ', trim(History_vars(id)%zcoord)
                 call Log('I',message)
-                write(message,*) '] axis name           : ', dims(1:ndim)
+                write(message,*) '] Interval [step]                : ', History_vars(id)%dstep
+                call Log('I',message)
+                write(message,*) '] Time Average?                  : ', History_vars(id)%taverage
+                call Log('I',message)
+                write(message,*) '] Datatype                       : ', trim(File_dtypelist(History_vars(id)%dtype))
+                call Log('I',message)
+                write(message,*) '] axis name                      : ', ( trim(History_vars(id)%dims(n))//" ", n=1, ndims )
                 call Log('I',message)
                 call Log('I','')
              endif
 
           endif ! match item?
+
        enddo
 
     endif ! new items?
@@ -889,8 +782,185 @@ contains
   end subroutine HistoryAddVariable
 
   !-----------------------------------------------------------------------------
-  ! interface HistoryPutAxis
+  subroutine HistoryFileCreate( &
+       id,        &
+       now_step,  &
+       timelabel, &
+       options,   &
+       comm,      &
+       existed    )
+    use mpi, only: &
+       MPI_COMM_NULL
+    use gtool_file, only: &
+       FileCreate,                   &
+       FileSetOption,                &
+       FileDefAxis,                  &
+       FileDefAssociatedCoordinates, &
+       FileAttachBuffer,             &
+       FileAddVariable,              &
+       FileSetAttribute
+    implicit none
+
+    integer,           intent(in)  :: id
+    integer,           intent(in)  :: now_step
+    character(len=*),  intent(in)  :: timelabel
+
+    character(len=*),  intent(in),  optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
+    integer,           intent(in),  optional :: comm    ! MPI communicator
+    logical,           intent(out), optional :: existed
+
+    logical                   :: shared_file_io
+    character(len=File_HMID)  :: tunits
+    character(len=File_HLONG) :: basename_mod
+    logical                   :: fileexisted
+    integer                   :: dim_size
+    integer                   :: ndims
+    real(DP)                  :: dtsec
+
+    integer :: ic, ie, is, lo
+    integer :: m
+    !---------------------------------------------------------------------------
+
+    if ( present(existed) ) existed = .true.
+
+    if ( History_vars(id)%fid < 0 ) then ! time to create file
+
+       ! check whether shared-file I/O method is enabled
+       shared_file_io = .false.
+       if ( present(comm) .AND. comm .NE. MPI_COMM_NULL ) shared_file_io = .true.
+
+       if ( History_TIME_SINCE == '' ) then
+          tunits = trim(History_TIME_UNITS)
+       else
+          tunits = trim(History_TIME_UNITS)//' since '//trim(History_TIME_SINCE)
+       endif
+
+       if ( History_vars(id)%postfix_timelabel ) then
+          basename_mod = trim(History_vars(id)%basename)//'_'//trim(timelabel)
+       else
+          basename_mod = trim(History_vars(id)%basename)
+       endif
+
+       call FileCreate( History_vars(id)%fid, & ! [OUT]
+                        fileexisted,          & ! [OUT]
+                        basename_mod,         & ! [IN]
+                        History_TITLE,        & ! [IN]
+                        History_SOURCE,       & ! [IN]
+                        History_INSTITUTION,  & ! [IN]
+                        History_master,       & ! [IN]
+                        History_myrank,       & ! [IN]
+                        History_rankidx (:),  & ! [IN]
+                        History_procsize(:),  & ! [IN]
+                        time_units = tunits,  & ! [IN]
+                        comm       = comm     ) ! [IN]
+
+       if ( .NOT. fileexisted ) then ! new file
+
+          ! write options
+          if ( present(options) ) then
+             ic = -1 ! index of ':'
+             ie = -1 ! index of '='
+             is =  1 ! start index
+             lo = len_trim(options)
+             do m = 1, lo+1
+                if ( m == lo+1 .OR. options(m:m) == '&' ) then
+                   if ( ic == -1 .OR. ie == -1 ) then
+                      call Log('E','xxx option is invalid: '//trim(options))
+                   endif
+
+                   call FileSetOption( History_vars(id)%fid, & ! [IN]
+                                       options(is  :ic-1),   & ! [IN]
+                                       options(ic+1:ie-1),   & ! [IN]
+                                       options(ie+1:m -1)    ) ! [IN]
+
+                   ic = -1
+                   ie = -1
+                   is = m+1
+                elseif( options(m:m) == ':' ) then
+                   ic = m
+                elseif( options(m:m) == '=' ) then
+                   ie = m
+                endif
+             enddo
+          endif
+
+          ! define registered history axis variables in the newly created file
+          ! actual writing axis variables are deferred to HistoryWriteAxes
+          do m = 1, History_axis_count
+             if ( shared_file_io ) then ! for shared-file I/O, define axis in its global size
+                dim_size = History_axis(m)%gdim_size ! axis global size
+             else
+                dim_size = History_axis(m)%dim_size
+             endif
+
+             call FileDefAxis( History_vars(id)%fid,  & ! [IN]
+                               History_axis(m)%name,  & ! [IN]
+                               History_axis(m)%desc,  & ! [IN]
+                               History_axis(m)%units, & ! [IN]
+                               History_axis(m)%dim,   & ! [IN]
+                               History_axis(m)%dtype, & ! [IN]
+                               dim_size               ) ! [IN]
+
+             if ( History_axis(m)%down ) then
+                call FileSetAttribute( History_vars(id)%fid, History_axis(m)%name, 'positive', 'down' )
+             endif
+          enddo
+
+          ! define registered history associated coordinate variables in the newly created file
+          ! actual writing coordinate variables are deferred to HistoryWriteAxes
+          do m = 1, History_assoc_count
+             ndims = History_assoc(m)%ndims
+
+             call FileDefAssociatedCoordinates( History_vars(id)%fid,           & ! [IN]
+                                                History_assoc(m)%name,          & ! [IN]
+                                                History_assoc(m)%desc,          & ! [IN]
+                                                History_assoc(m)%units,         & ! [IN]
+                                                History_assoc(m)%dims(1:ndims), & ! [IN]
+                                                History_assoc(m)%dtype          ) ! [IN]
+          enddo
+
+          ! allows PnetCDF to allocate an internal buffer of size io_buffer_size
+          ! to aggregate write requests for history variables
+          call FileAttachBuffer( History_vars(id)%fid, History_io_buffer_size )
+
+          History_axis_written(History_vars(id)%fid) = .false.
+
+          if ( present(existed) ) existed = .false.
+
+       endif ! new file?
+
+    endif
+
+    if ( History_vars(id)%vid < 0 ) then ! time to add
+       ! Add new variable
+       ndims = History_vars(id)%ndims
+
+       dtsec = real(History_vars(id)%dstep,kind=DP) * History_DTSEC
+
+       call FileAddVariable( History_vars(id)%vid,           & ! [OUT]
+                             History_vars(id)%fid,           & ! [IN]
+                             History_vars(id)%outname,       & ! [IN]
+                             History_vars(id)%desc,          & ! [IN]
+                             History_vars(id)%units,         & ! [IN]
+                             History_vars(id)%dims(1:ndims), & ! [IN]
+                             History_vars(id)%dtype,         & ! [IN]
+                             dtsec,                          & ! [IN]
+                             History_vars(id)%taverage       ) ! [IN]
+
+
+       if ( History_vars(id)%mapping /= "" ) then
+          call FileSetAttribute( History_vars(id)%fid,     &
+                                 History_vars(id)%outname, &
+                                 'grid_mapping',           &
+                                 History_vars(id)%mapping  )
+       endif
+    endif
+
+    return
+  end subroutine HistoryFileCreate
+
   !-----------------------------------------------------------------------------
+  ! interface HistoryPutAxis
 % ["SP", "DP"].each do |rp|
   !-----------------------------------------------------------------------------
   subroutine HistoryPutAxis<%=rp%>( &
@@ -913,6 +983,7 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim
     real(<%=rp%>),         intent(in) :: var(:)
+
     character(len=*), intent(in), optional :: datatype
     logical,          intent(in), optional :: down
     integer,          intent(in), optional :: gsize ! global dim size
@@ -952,7 +1023,7 @@ contains
        History_axis(id)%dim      = dim
        History_axis(id)%dtype    = dtype
        History_axis(id)%dim_size = dim_size
-       History_axis(id)%var(:)   = var(:)
+       History_axis(id)%var(:)   = real(var(:),kind=DP)
 
        if ( present(down) ) then
           History_axis(History_axis_count)%down = down
@@ -975,6 +1046,8 @@ contains
   end subroutine HistoryPutAxis<%=rp%>
 
 %end
+  !-----------------------------------------------------------------------------
+  ! interface HistoryPutAssociatedCoordinates
 % for n in 1..4
 %   ["SP", "DP"].each do |rp|
   !-----------------------------------------------------------------------------
@@ -1034,7 +1107,7 @@ contains
        History_assoc(id)%dims(:)   = ''
        History_assoc(id)%dims(1:<%=n%>) = dims(1:<%=n%>)
        History_assoc(id)%dtype     = dtype
-       History_assoc(id)%var(:)    = reshape( var, (/ dim_size /) )
+       History_assoc(id)%var(:)    = real(reshape( var, (/ dim_size /) ),kind=DP)
 
        ! start and count are used for parallel I/O to a single shared file
        ! since var is reshaped into 1D array, we need to preserve its original shape in count
@@ -1054,7 +1127,6 @@ contains
 
 %  end
 % end
-
   !-----------------------------------------------------------------------------
   ! interface HistorySetAttribute
   !-----------------------------------------------------------------------------
@@ -1070,16 +1142,20 @@ contains
     character(len=*), intent(in) :: key
     character(len=*), intent(in) :: val
 
+    integer :: fid, prev_fid
     integer :: id
     !---------------------------------------------------------------------------
 
+    prev_fid = -1
     do id = 1, History_id_count
-       call FileSetAttribute( History_vars(id)%fid, & ! [IN]
-                              varname,              & ! [IN]
-                              key,                  & ! [IN]
-                              val                   ) ! [IN]
+       fid = History_vars(id)%fid
+       if ( fid > 0 .AND. fid /= prev_fid ) then
+          call FileSetAttribute( fid, varname, key, val ) ! [IN]
+          prev_fid = fid
+       endif
     enddo
 
+    return
   end subroutine HistorySetAttributeText
 
   !-----------------------------------------------------------------------------
@@ -1095,18 +1171,24 @@ contains
     character(len=*), intent(in) :: key
     integer,          intent(in) :: val(:)
 
+    integer :: fid, prev_fid
     integer :: id
     !---------------------------------------------------------------------------
 
+    prev_fid = -1
     do id = 1, History_id_count
-       call FileSetAttribute( History_vars(id)%fid, & ! [IN]
-                              varname,              & ! [IN]
-                              key,                  & ! [IN]
-                              val(:)                ) ! [IN]
+       fid = History_vars(id)%fid
+       if ( fid > 0 .AND. fid /= prev_fid ) then
+          call FileSetAttribute( fid, varname, key, val(:) ) ! [IN]
+          prev_fid = fid
+       endif
     enddo
 
+    return
   end subroutine HistorySetAttributeInt
 
+  !-----------------------------------------------------------------------------
+  ! interface HistorySetAttribute
 % [["SP","Float"],["DP","Double"]].each do |rp,name|
   !-----------------------------------------------------------------------------
   subroutine HistorySetAttribute<%=name%>( &
@@ -1121,39 +1203,57 @@ contains
     character(len=*), intent(in) :: key
     real(<%=rp%>),    intent(in) :: val(:)
 
+    integer :: fid, prev_fid
     integer :: id
     !---------------------------------------------------------------------------
 
+    prev_fid = -1
     do id = 1, History_id_count
-       call FileSetAttribute( History_vars(id)%fid, & ! [IN]
-                              varname,              & ! [IN]
-                              key,                  & ! [IN]
-                              val(:)                ) ! [IN]
+       fid = History_vars(id)%fid
+       if ( fid > 0 .AND. fid /= prev_fid ) then
+          call FileSetAttribute( fid, varname, key, val(:) ) ! [IN]
+          prev_fid = fid
+       endif
     enddo
 
+    return
   end subroutine HistorySetAttribute<%=name%>
 %end
 
   !-----------------------------------------------------------------------------
-  subroutine HistorySetMapping( mapping )
+  subroutine HistorySetMapping( &
+       mapping )
     use gtool_file, only: &
        FileAddAssociatedVariable, &
        FileSetAttribute
+    implicit none
+
     character(len=*), intent(in) :: mapping
 
     logical :: existed
+    integer :: fid, prev_fid
     integer :: id
+    !---------------------------------------------------------------------------
 
+    prev_fid = -1
     do id = 1, History_id_count
-       call FileAddAssociatedVariable( History_vars(id)%fid, mapping, & ! [IN]
-                                       existed                        ) ! [OUT]
-       if ( .not. existed ) &
-          call FileSetAttribute( History_vars(id)%fid, mapping, & ! [IN]
-                                 "grid_mapping_name",  mapping  ) ! [IN]
-    end do
+       fid = History_vars(id)%fid
+       if ( fid > 0 .AND. fid /= prev_fid ) then
+          call FileAddAssociatedVariable( fid,     & ! [IN]
+                                          mapping, & ! [IN]
+                                          existed  ) ! [OUT]
+
+          if ( .NOT. existed ) then
+             call FileSetAttribute( fid, mapping, "grid_mapping_name", mapping ) ! [IN]
+          endif
+
+          prev_fid = fid
+       endif
+    enddo
 
     return
   end subroutine HistorySetMapping
+
   !-----------------------------------------------------------------------------
   subroutine HistoryQuery( &
        item,     &
@@ -1184,6 +1284,8 @@ contains
     return
   end subroutine HistoryQuery
 
+  !-----------------------------------------------------------------------------
+  ! interface HistoryPut
 % for n in 0..3
 % varDecl  = (n==0) ? "var" : "var(#{([":"]*n).join(",")})"
 % var_elem = (n==0) ? "var" : "var(#{["i","j","k"][0...n].join(",")})"
@@ -1209,18 +1311,19 @@ contains
     intrinsic shape
     !---------------------------------------------------------------------------
 
-    if ( id < 0 ) return
+    if( id < 0 ) return
 
-% if n > 0 then
-    vsize = shape(var)
-% end
-    dt  = ( step_now - History_vars(id)%laststep_put ) * History_DTSEC
+    dt = ( step_now - History_vars(id)%laststep_put ) * History_DTSEC
 
     if ( dt < eps .AND. ( .NOT. History_vars(id)%taverage ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
                         trim(History_vars(id)%item), step_now, History_vars(id)%laststep_put
        call Log('E',message)
     endif
+
+% if n > 0 then
+    vsize = shape(var)
+% end
 
     if ( History_vars(id)%taverage ) then
 % n.times do |i|
@@ -1246,7 +1349,7 @@ contains
 % else
           idx = <%=["i", "(j-1)*vsize(1)+i", "((k-1)*vsize(2)+(j-1))*vsize(1)+i"][n-1]%>
 % end
-          History_vars(id)%varsum(idx) = <%=var_elem%>
+          History_vars(id)%varsum(idx) = real(<%=var_elem%>,kind=DP)
 % n.times do |i|
        enddo
 % end
@@ -1270,13 +1373,9 @@ contains
     implicit none
     integer, intent(in) :: step_now
 
-    integer :: id
     integer :: fid, prev_fid
+    integer :: id
     !---------------------------------------------------------------------------
-
-    ! Note this subroutine must be called after all HIST_reg calls are completed
-    ! Write registered history axes to history file
-    call HistoryWriteAxes
 
     ! Write registered history variables to history file
     do id = 1, History_id_count
@@ -1284,22 +1383,40 @@ contains
                           step_now ) ! [IN]
     enddo
 
+    ! when using PnetCDF, the above HistoryWrite() only posts write requests
+    ! Now we need to commit the requests to the file
     prev_fid = -1
     do id = 1, History_id_count
        fid = History_vars(id)%fid
-       if ( fid .NE. prev_fid ) then
-          ! when using PnetCDF, the above HistoryWrite() only posts write requests
-          ! Now we need to commit the requests to the file
+       if ( fid > 0 .AND. fid /= prev_fid ) then
           call FileFlush( fid )
           prev_fid = fid
-       end if
-    end do
+       endif
+    enddo
+
+    ! check time to switching output file
+    if (       History_OUTPUT_SWITCH_STEP >= 0                                      &
+         .AND. step_now-History_OUTPUT_SWITCH_LASTSTEP > History_OUTPUT_SWITCH_STEP ) then
+
+       call HistoryFinalize
+
+       write(message,'(A)') '*** History file is switched.'
+       call Log('I',message)
+
+       do id = 1, History_id_count
+          History_vars(id)%fid = -1 ! reset
+          History_vars(id)%vid = -1 ! reset
+       enddo
+
+       History_OUTPUT_SWITCH_LASTSTEP = step_now-1
+    endif
 
     return
   end subroutine HistoryWriteAll
 
   !-----------------------------------------------------------------------------
-  subroutine HistoryWriteAxes
+  subroutine HistoryWriteAxes( &
+       axis_written_first )
     use gtool_file, only: &
        FileEndDef,    &
        FileFlush,     &
@@ -1307,9 +1424,13 @@ contains
        FileWriteAssociatedCoordinates
     implicit none
 
-    integer :: m, id, fid
+    logical, intent(out) :: axis_written_first
+
     integer :: start(1)
+    integer :: m, id, fid
     !---------------------------------------------------------------------------
+
+    axis_written_first = .false.
 
     if( History_req_count  == 0 ) return
     if( History_axis_count == 0 ) return
@@ -1318,7 +1439,7 @@ contains
 
        fid = History_vars(id)%fid
 
-       if ( History_axis_written(fid) ) cycle
+       if( fid < 0 .OR. History_axis_written(fid) ) cycle
 
        call FileEndDef( fid )
 
@@ -1326,15 +1447,16 @@ contains
        do m = 1, History_axis_count
           if ( History_axis(m)%start(1) > 0 ) then
              start(1) = History_axis(m)%start(1)
+
              call FileWriteAxis( fid,                  & ! [IN]
                                  History_axis(m)%name, & ! [IN]
                                  History_axis(m)%var,  & ! [IN]
                                  start                 ) ! [IN]
-          end if
+          endif
        enddo
 
        do m = 1, History_assoc_count
-          call FileWriteAssociatedCoordinates( fid,   & ! [IN]
+          call FileWriteAssociatedCoordinates( fid,                    & ! [IN]
                                                History_assoc(m)%name,  & ! [IN]
                                                History_assoc(m)%var,   & ! [IN]
                                                History_assoc(m)%start, & ! [IN]
@@ -1346,9 +1468,10 @@ contains
        call FileFlush( fid )
 
        ! mark the axes have been written
-       History_axis_written( fid ) = .true.
+       History_axis_written(fid) = .true.
+       axis_written_first        = .true.
 
-    end do
+    enddo
 
     return
   end subroutine HistoryWriteAxes
@@ -1398,20 +1521,20 @@ contains
        call HistoryOutputList
     endif
 
-    sec_str = History_STARTDAYSEC + real(History_vars(id)%laststep_write-1,kind=DP) * History_DTSEC
-    sec_end = History_STARTDAYSEC + real(step_now                       -1,kind=DP) * History_DTSEC
-
-    if ( sec_end >= History_STARTDAYSEC + History_vars(id)%waitsec ) then
+    if ( step_now > History_vars(id)%waitstep ) then
        if ( laststep_write < step_now ) then ! log only once in this step
           write(message,'(A)') '*** Output History'
           call Log('I',message)
        endif
 
+       sec_str = History_STARTDAYSEC + real(History_vars(id)%laststep_write-1,kind=DP) * History_DTSEC
+       sec_end = History_STARTDAYSEC + real(step_now                       -1,kind=DP) * History_DTSEC
+
        ! convert time units [sec]->[sec,min,hour,day,month,year]
        call CalendarSec2ymdhms( time_str, sec_str, History_TIME_UNITS )
        call CalendarSec2ymdhms( time_end, sec_end, History_TIME_UNITS )
 
-       if ( History_vars(id)%count(1) .GT. 0 ) then
+       if ( History_vars(id)%count(1) > 0 ) then
 
           ! for one-file-per-process I/O method, History_vars(:)%count(1) == 1 always
           ! for one file shared by all processes, History_vars(:)%count(1) >= 0,
@@ -1443,6 +1566,7 @@ contains
     return
   end subroutine HistoryWrite
 
+  !-----------------------------------------------------------------------------
   ! interface HistoryGet
 % for n in 1..3
 % ["DP", "SP"].each do |rp|
@@ -1541,19 +1665,18 @@ contains
        FileClose
     implicit none
 
-    integer :: id
     integer :: fid, prev_fid
+    integer :: id
     !---------------------------------------------------------------------------
 
     prev_fid = -1
     do id = 1, History_id_count
        fid = History_vars(id)%fid
-       if ( fid .NE. prev_fid ) then
-          ! Release the internal buffer previously allowed to be used by PnetCDF
-          call FileDetachBuffer( fid )
+       if ( fid > 0 .AND. fid /= prev_fid ) then
+          call FileDetachBuffer( fid ) ! Release the internal buffer previously allowed to be used by PnetCDF
           call FileClose( fid )
-          prev_fid =  fid
-       end if
+          prev_fid = fid
+       endif
     enddo
 
     return

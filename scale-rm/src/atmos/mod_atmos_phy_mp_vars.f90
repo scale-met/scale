@@ -460,24 +460,34 @@ contains
     return
   end subroutine ATMOS_PHY_MP_vars_restart_write
 
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_vars_history( &
        DENS, TEMP, QTRC )
     use scale_atmos_hydrometeor, only: &
        N_HYD
     use scale_history, only: &
+       HIST_query, &
        HIST_put
+    implicit none
+
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: TEMP(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
     real(RP) :: WORK  (KA,IA,JA,N_HYD)
+    logical  :: do_put
     integer  :: ih
+    !---------------------------------------------------------------------------
 
     if ( HIST_CLDFRAC_id > 0 ) then
-       call ATMOS_PHY_MP_vars_get_diagnostic( &
-            DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
-            CLDFRAC=WORK(:,:,:,1)                    ) ! [OUT]
-       call HIST_put( HIST_CLDFRAC_id, WORK(:,:,:,1), nohalo=.true. )
+       call HIST_query( HIST_CLDFRAC_id, do_put )
+
+       if ( do_put ) then
+          call ATMOS_PHY_MP_vars_get_diagnostic( &
+               DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
+               CLDFRAC=WORK(:,:,:,1)                    ) ! [OUT]
+          call HIST_put( HIST_CLDFRAC_id, WORK(:,:,:,1), nohalo=.true. )
+       end if
     end if
 
     if ( HIST_Re ) then
@@ -485,8 +495,10 @@ contains
             DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
             Re=WORK(:,:,:,:)                         ) ! [OUT]
        do ih = 1, N_HYD
-          if ( HIST_Re_id(ih) > 0 ) &
-               call HIST_put( HIST_Re_id(ih), WORK(:,:,:,ih), nohalo=.true. )
+          if ( HIST_Re_id(ih) > 0 ) then
+                           call HIST_query( HIST_Re_id(ih), do_put )
+             if ( do_put ) call HIST_put( HIST_Re_id(ih), WORK(:,:,:,ih), nohalo=.true. )
+          end if
        end do
     end if
 

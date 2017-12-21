@@ -1164,11 +1164,13 @@ contains
        REAL_CZ, &
        REAL_FZ
     use scale_history, only: &
+       HIST_query, &
        HIST_put
     use mod_atmos_phy_mp_vars, only: &
        ATMOS_PHY_MP_vars_history
     implicit none
 
+    logical :: do_put
     integer :: iq, iv
     !---------------------------------------------------------------------------
 
@@ -1182,47 +1184,69 @@ contains
     endif
 
     ! history output of prognostic variables
-    call HIST_put( PV_HIST_id(I_DENS), DENS(:,:,:) )
-    call HIST_put( PV_HIST_id(I_MOMZ), MOMZ(:,:,:) )
-    call HIST_put( PV_HIST_id(I_MOMX), MOMX(:,:,:) )
-    call HIST_put( PV_HIST_id(I_MOMY), MOMY(:,:,:) )
-    call HIST_put( PV_HIST_id(I_RHOT), RHOT(:,:,:) )
+                 call HIST_query( PV_HIST_id(I_DENS), do_put )
+    if( do_put ) call HIST_put  ( PV_HIST_id(I_DENS), DENS(:,:,:) )
+                 call HIST_query( PV_HIST_id(I_MOMZ), do_put )
+    if( do_put ) call HIST_put  ( PV_HIST_id(I_MOMZ), MOMZ(:,:,:) )
+                 call HIST_query( PV_HIST_id(I_MOMX), do_put )
+    if( do_put ) call HIST_put  ( PV_HIST_id(I_MOMX), MOMX(:,:,:) )
+                 call HIST_query( PV_HIST_id(I_MOMY), do_put )
+    if( do_put ) call HIST_put  ( PV_HIST_id(I_MOMY), MOMY(:,:,:) )
+                 call HIST_query( PV_HIST_id(I_RHOT), do_put )
+    if( do_put ) call HIST_put  ( PV_HIST_id(I_RHOT), RHOT(:,:,:) )
     do iq = 1, QA
-       call HIST_put( QP_HIST_id(iq), QTRC(:,:,:,iq) )
+                    call HIST_query( QP_HIST_id(iq), do_put )
+       if( do_put ) call HIST_put  ( QP_HIST_id(iq), QTRC(:,:,:,iq) )
     enddo
 
 
     ! history output of diagnostic variables
-    call HIST_put( DV_HIST_id(I_W    ), W(:,:,:)     )
-    call HIST_put( DV_HIST_id(I_U    ), U(:,:,:)     )
-    call HIST_put( DV_HIST_id(I_V    ), V(:,:,:)     )
-    call HIST_put( DV_HIST_id(I_POTT ), POTT(:,:,:)  )
-    call HIST_put( DV_HIST_id(I_TEMP ), TEMP(:,:,:)  )
-    call HIST_put( DV_HIST_id(I_PRES ), PRES(:,:,:)  )
+                 call HIST_query( DV_HIST_id(I_W    ), do_put )
+    if( do_put ) call HIST_put  ( DV_HIST_id(I_W    ), W(:,:,:)     )
+                 call HIST_query( DV_HIST_id(I_U    ), do_put )
+    if( do_put ) call HIST_put  ( DV_HIST_id(I_U    ), U(:,:,:)     )
+                 call HIST_query( DV_HIST_id(I_V    ), do_put )
+    if( do_put ) call HIST_put  ( DV_HIST_id(I_V    ), V(:,:,:)     )
+                 call HIST_query( DV_HIST_id(I_POTT ), do_put )
+    if( do_put ) call HIST_put  ( DV_HIST_id(I_POTT ), POTT(:,:,:)  )
+                 call HIST_query( DV_HIST_id(I_TEMP ), do_put )
+    if( do_put ) call HIST_put  ( DV_HIST_id(I_TEMP ), TEMP(:,:,:)  )
+                 call HIST_query( DV_HIST_id(I_PRES ), do_put )
+    if( do_put ) call HIST_put  ( DV_HIST_id(I_PRES ), PRES(:,:,:)  )
 
-    call HIST_put( DV_HIST_id(I_EXNER), EXNER(:,:,:) )
-    call HIST_put( DV_HIST_id(I_PHYD ), PHYD(:,:,:)  )
+                 call HIST_query( DV_HIST_id(I_EXNER), do_put )
+    if( do_put ) call HIST_put  ( DV_HIST_id(I_EXNER), EXNER(:,:,:) )
+                 call HIST_query( DV_HIST_id(I_PHYD ), do_put )
+    if( do_put ) call HIST_put  ( DV_HIST_id(I_PHYD ), PHYD(:,:,:)  )
 
-    call HIST_put( DV_HIST_id(I_QDRY ), QDRY(:,:,:)  )
-    call HIST_put( DV_HIST_id(I_RTOT ), RTOT(:,:,:)  )
-    call HIST_put( DV_HIST_id(I_CVTOT), CVTOT(:,:,:) )
-    call HIST_put( DV_HIST_id(I_CPTOT), CPTOT(:,:,:) )
+                 call HIST_query( DV_HIST_id(I_QDRY ), do_put )
+    if( do_put ) call HIST_put  ( DV_HIST_id(I_QDRY ), QDRY(:,:,:)  )
+                 call HIST_query( DV_HIST_id(I_RTOT ), do_put )
+    if( do_put ) call HIST_put  ( DV_HIST_id(I_RTOT ), RTOT(:,:,:)  )
+                 call HIST_query( DV_HIST_id(I_CVTOT), do_put )
+    if( do_put ) call HIST_put  ( DV_HIST_id(I_CVTOT), CVTOT(:,:,:) )
+                 call HIST_query( DV_HIST_id(I_CPTOT), do_put )
+    if( do_put ) call HIST_put  ( DV_HIST_id(I_CPTOT), CPTOT(:,:,:) )
 
     do iv = I_CPTOT+1, DV_nmax
        if ( DV_HIST_id(iv) > 0 ) then
-          select case ( DV_info(iv)%ndim )
-          case ( 3 )
-             call ATMOS_vars_get_diagnostic( DV_info(iv)%NAME, WORK3D )
-             call HIST_put( DV_HIST_id(iv), WORK3D(:,:,:) )
-          case ( 2 )
-             call ATMOS_vars_get_diagnostic( DV_info(iv)%NAME, WORK2D )
-             call HIST_put( DV_HIST_id(iv), WORK2D(:,:) )
-          case ( 1 )
-             call ATMOS_vars_get_diagnostic( DV_info(iv)%NAME, WORK1D )
-             call HIST_put( DV_HIST_id(iv), WORK1D(:) )
-          end select
-       end if
-    end do
+          call HIST_query( DV_HIST_id(iv), do_put )
+
+          if ( do_put ) then
+             select case( DV_info(iv)%ndim )
+             case( 3 )
+                call ATMOS_vars_get_diagnostic( DV_info(iv)%NAME, WORK3D )
+                call HIST_put( DV_HIST_id(iv), WORK3D(:,:,:) )
+             case( 2 )
+                call ATMOS_vars_get_diagnostic( DV_info(iv)%NAME, WORK2D )
+                call HIST_put( DV_HIST_id(iv), WORK2D(:,:) )
+             case( 1 )
+                call ATMOS_vars_get_diagnostic( DV_info(iv)%NAME, WORK1D )
+                call HIST_put( DV_HIST_id(iv), WORK1D(:) )
+             end select
+          endif
+       endif
+    enddo
 
     if ( moist ) &
          call ATMOS_PHY_MP_vars_history( DENS_av(:,:,:), TEMP(:,:,:), QTRC_av(:,:,:,:) )

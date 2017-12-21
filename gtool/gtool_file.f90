@@ -1310,33 +1310,37 @@ contains
     integer,          intent( in) :: dtype
     logical,          intent( in), optional :: tavg
 
-    call FileAddVariableRealDP(vid, fid, varname, desc, units, dims, dtype, &
-         -1.0_DP, tavg )
+    call FileAddVariableRealDP(vid, fid, varname, desc, units, dims, dtype, -1.0_DP, tavg )
 
     return
   end subroutine FileAddVariableNoT
+
+  !-----------------------------------------------------------------------------
   subroutine FileAddVariableRealSP( &
-       vid,     & ! (out)
-       fid,     & ! (in)
-       varname, & ! (in)
-       desc,    & ! (in)
-       units,   & ! (in)
-       dims,    & ! (in)
-       dtype,   & ! (in)
-       tint,    & ! (in)
-       tavg     & ! (in) optional
-       )
+       vid,     &
+       fid,     &
+       varname, &
+       desc,    &
+       units,   &
+       dims,    &
+       dtype,   &
+       tint,    &
+       tavg     )
+    implicit none
+
     integer,          intent(out) :: vid
-    integer,          intent( in) :: fid
-    character(len=*), intent( in) :: varname
-    character(len=*), intent( in) :: desc
-    character(len=*), intent( in) :: units
-    character(len=*), intent( in) :: dims(:)
-    integer,          intent( in) :: dtype
-    real(SP),    intent( in) :: tint
-    logical,          intent( in), optional :: tavg
+    integer,          intent(in)  :: fid
+    character(len=*), intent(in)  :: varname
+    character(len=*), intent(in)  :: desc
+    character(len=*), intent(in)  :: units
+    character(len=*), intent(in)  :: dims(:)
+    integer,          intent(in)  :: dtype
+    real(SP),    intent(in)  :: tint
+
+    logical,          intent(in), optional :: tavg
 
     real(DP) :: tint8
+    integer  :: ndims
     integer  :: itavg
     integer  :: error
     integer  :: n
@@ -1346,67 +1350,70 @@ contains
 
     vid = -1
     do n = 1, File_vid_count
-       if ( File_vid_fid_list(n) == fid .and. &
-            varname == File_vname_list(n) ) then
+       if (       File_vid_fid_list(n) == fid     &
+            .AND. File_vname_list  (n) == varname ) then
           vid = File_vid_list(n)
-       end if
+          exit
+       endif
     enddo
 
     if ( vid < 0 ) then ! variable registration
-       !--- register new variable
-       write(message,'(2A)') '###### Variable registration : name = ', trim(varname)
-       call Log("I",message)
 
        tint8 = real(tint,DP)
+       ndims = size(dims)
+       itavg = 0
 
        if ( present(tavg) ) then
-          if ( tavg ) then
-             itavg = 1
-          else
-             itavg = 0
-          end if
-       else
-          itavg = 0
-       end if
+          if( tavg ) itavg = 1
+       endif
 
-       call file_add_variable( vid,                             & ! (out)
-            fid, varname, desc, units, dims, size(dims), dtype, & ! (in)
-            tint8, itavg,                                       & ! (in)
-            error                                               ) ! (out)
+       call file_add_variable( vid,                                                         & ! [OUT]
+                               fid, varname, desc, units, dims, ndims, dtype, tint8, itavg, & ! [IN]
+                               error                                                        ) ! [OUT]
+
        if ( error /= SUCCESS_CODE ) then
           call Log('E', 'xxx failed to add variable: '//trim(varname))
-       end if
+       endif
 
        File_vname_list  (File_vid_count) = trim(varname)
        File_vid_list    (File_vid_count) = vid
        File_vid_fid_list(File_vid_count) = fid
        File_vid_count                    = File_vid_count + 1
+
+       write(message,'(A,I3.3,A,I4.4,2A)') &
+       '###### File variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
+       call Log("I",message)
     endif
 
     return
   end subroutine FileAddVariableRealSP
+
+  !-----------------------------------------------------------------------------
   subroutine FileAddVariableRealDP( &
-       vid,     & ! (out)
-       fid,     & ! (in)
-       varname, & ! (in)
-       desc,    & ! (in)
-       units,   & ! (in)
-       dims,    & ! (in)
-       dtype,   & ! (in)
-       tint,    & ! (in)
-       tavg     & ! (in) optional
-       )
+       vid,     &
+       fid,     &
+       varname, &
+       desc,    &
+       units,   &
+       dims,    &
+       dtype,   &
+       tint,    &
+       tavg     )
+    implicit none
+
     integer,          intent(out) :: vid
-    integer,          intent( in) :: fid
-    character(len=*), intent( in) :: varname
-    character(len=*), intent( in) :: desc
-    character(len=*), intent( in) :: units
-    character(len=*), intent( in) :: dims(:)
-    integer,          intent( in) :: dtype
-    real(DP),    intent( in) :: tint
-    logical,          intent( in), optional :: tavg
+    integer,          intent(in)  :: fid
+    character(len=*), intent(in)  :: varname
+    character(len=*), intent(in)  :: desc
+    character(len=*), intent(in)  :: units
+    character(len=*), intent(in)  :: dims(:)
+    integer,          intent(in)  :: dtype
+    real(DP),    intent(in)  :: tint
+
+    logical,          intent(in), optional :: tavg
 
     real(DP) :: tint8
+    integer  :: ndims
     integer  :: itavg
     integer  :: error
     integer  :: n
@@ -1416,41 +1423,39 @@ contains
 
     vid = -1
     do n = 1, File_vid_count
-       if ( File_vid_fid_list(n) == fid .and. &
-            varname == File_vname_list(n) ) then
+       if (       File_vid_fid_list(n) == fid     &
+            .AND. File_vname_list  (n) == varname ) then
           vid = File_vid_list(n)
-       end if
+          exit
+       endif
     enddo
 
     if ( vid < 0 ) then ! variable registration
-       !--- register new variable
-       write(message,'(2A)') '###### Variable registration : name = ', trim(varname)
-       call Log("I",message)
 
        tint8 = real(tint,DP)
+       ndims = size(dims)
+       itavg = 0
 
        if ( present(tavg) ) then
-          if ( tavg ) then
-             itavg = 1
-          else
-             itavg = 0
-          end if
-       else
-          itavg = 0
-       end if
+          if( tavg ) itavg = 1
+       endif
 
-       call file_add_variable( vid,                             & ! (out)
-            fid, varname, desc, units, dims, size(dims), dtype, & ! (in)
-            tint8, itavg,                                       & ! (in)
-            error                                               ) ! (out)
+       call file_add_variable( vid,                                                         & ! [OUT]
+                               fid, varname, desc, units, dims, ndims, dtype, tint8, itavg, & ! [IN]
+                               error                                                        ) ! [OUT]
+
        if ( error /= SUCCESS_CODE ) then
           call Log('E', 'xxx failed to add variable: '//trim(varname))
-       end if
+       endif
 
        File_vname_list  (File_vid_count) = trim(varname)
        File_vid_list    (File_vid_count) = vid
        File_vid_fid_list(File_vid_count) = fid
        File_vid_count                    = File_vid_count + 1
+
+       write(message,'(A,I3.3,A,I4.4,2A)') &
+       '###### File variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
+       call Log("I",message)
     endif
 
     return
@@ -1496,9 +1501,6 @@ contains
     enddo
 
     if ( vid < 0 ) then ! variable registration
-       !--- register new variable
-       write(message,'(2A)') '###### Variable registration : name = ', trim(varname)
-       call Log("I",message)
 
        if ( present(tint) ) then
           tint_ = tint
@@ -1528,6 +1530,10 @@ contains
        File_vid_list    (File_vid_count) = vid
        File_vid_fid_list(File_vid_count) = fid
        File_vid_count                    = File_vid_count + 1
+
+       write(message,'(A,I3.3,A,I4.4,2A)') &
+       '###### File variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
+       call Log("I",message)
     endif
 
     return
@@ -4005,10 +4011,9 @@ contains
     if ( error == SUCCESS_CODE ) then
 
        call Log("I",'')
-       write(message,'(A,I3.3,2A)') '###### File end define mode : No.', File_fid_list(n), &
-                                                  ', name = ', trim(File_fname_list(n))
+       write(message,'(A,I3.3,2A)') &
+       '###### File end define mode       : No.', File_fid_list(n), ', name = ', trim(File_fname_list(n))
        call Log("I",message)
-       call Log("I",'')
 
     else
 
@@ -4046,9 +4051,10 @@ contains
 
     if ( error == SUCCESS_CODE ) then
 
-       write(message,'(A,I3.3,3A,I10)') '###### File attach buffer : No.', File_fid_list(n),  &
-                                                       ', name = ', trim(File_fname_list(n)), &
-                                                       ', size = ', buf_amount
+       call Log("I",'')
+       write(message,'(A,I3.3,3A,I10)') &
+       '###### File attach buffer         : No.', File_fid_list(n), ', name = ', trim(File_fname_list(n)), &
+                                                                    ', size = ', buf_amount
        call Log("I",message)
 
     else
@@ -4087,8 +4093,9 @@ contains
 
     if ( error == SUCCESS_CODE ) then
 
-       write(message,'(A,I3.3,2A)') '###### File detach buffer : No.', File_fid_list(n), &
-                                                   ', name = ', trim(File_fname_list(n))
+       call Log("I",'')
+       write(message,'(A,I3.3,2A)') &
+       '###### File detach buffer         : No.', File_fid_list(n), ', name = ', trim(File_fname_list(n))
        call Log("I",message)
 
     else
@@ -4129,10 +4136,10 @@ contains
 
     if ( error == SUCCESS_CODE ) then
 
-       write(message,'(A,I3.3,2A)') '###### File flush : No.', File_fid_list(n), &
-                                                  ', name = ', trim(File_fname_list(n))
-       call Log("I",message)
        call Log("I",'')
+       write(message,'(A,I3.3,2A)') &
+       '###### File flush                 : No.', File_fid_list(n), ', name = ', trim(File_fname_list(n))
+       call Log("I",message)
 
     else
 
@@ -4172,10 +4179,10 @@ contains
 
     if ( error == SUCCESS_CODE ) then
 
-       write(message,'(A,I3.3,2A)') '###### File close : No.', File_fid_list(n), &
-                                                  ', name = ', trim(File_fname_list(n))
-       call Log("I",message)
        call Log("I",'')
+       write(message,'(A,I3.3,2A)') &
+       '###### File close                 : No.', File_fid_list(n), ', name = ', trim(File_fname_list(n))
+       call Log("I",message)
 
     elseif( error /= ALREADY_CLOSED_CODE ) then
 
@@ -4296,8 +4303,8 @@ contains
     end if
 
     call Log("I",'')
-    write(message,'(3A,I3.3,2A)') '###### File registration (', &
-                                  trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
+    write(message,'(A,A6,A,I3.3,2A)') &
+    '###### File registration (', trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
     call Log("I",message)
 
     File_fname_list(File_fid_count) = trim(fname)

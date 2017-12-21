@@ -70,7 +70,7 @@ module scale_history
   !++ Private procedures
   !
   private :: HIST_put_axes
-  private :: HIST_put_axis_attributes
+  private :: HIST_set_axes_attributes
 
   !-----------------------------------------------------------------------------
   !
@@ -306,18 +306,13 @@ contains
        xdim,   &
        ydim,   &
        zdim    )
-    use MPI, only: &
-       MPI_COMM_NULL
     use gtool_history, only: &
-       HistoryAddVariable, &
-       HistoryCheck
+       HistoryAddVariable
     use scale_time, only: &
-       NOWSTEP => TIME_NOWSTEP, &
-       TIME_gettimelabel
+       TIME_NOWSTEP
     use scale_process, only: &
-       PRC_MPIstop,          &
-       PRC_myrank,           &
-       PRC_LOCAL_COMM_WORLD
+       PRC_MPIstop, &
+       PRC_myrank
     use scale_rm_process, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
@@ -331,24 +326,22 @@ contains
     character(len=*), intent(in)  :: desc   !< description  of the item
     character(len=*), intent(in)  :: unit   !< unit         of the item
     integer,          intent(in)  :: ndim   !< dimension    of the item
+
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
 
-    logical :: flag_half_x
-    logical :: flag_half_y
-    logical :: flag_half_z
-
-    character(len=19)      :: timelabel
     character(len=H_SHORT) :: dims(3)
-
-    integer                :: nvariant1, nvariant2, nvariant3
-    integer                :: v, id
+    logical                :: flag_half_x
+    logical                :: flag_half_y
+    logical                :: flag_half_z
     logical                :: atom
     character(len=H_SHORT) :: mapping
 
     integer                :: start(4), count(4)
-    integer                :: comm
+
+    integer :: nvariant1, nvariant2, nvariant3
+    integer :: v, id
     !---------------------------------------------------------------------------
 
     itemid = -1
@@ -375,8 +368,8 @@ contains
 
     atom = .true.
 
-    start = 0
-    count = 0
+    start(:) = 0
+    count(:) = 0
 
     if ( ndim == 1 ) then
 
@@ -522,61 +515,47 @@ contains
        end if
     end if
 
-    call TIME_gettimelabel( timelabel )
-
-    if ( IO_AGGREGATE ) then  ! user input parameter indicates to do PnetCDF I/O
-       comm = PRC_LOCAL_COMM_WORLD
-    else
-       comm = MPI_COMM_NULL
-    end if
-
     if ( atom ) then
 
        ! model coordinate (terrain following coordinate)
-       call HistoryAddVariable( nvariant1,    & ! [OUT]
-                                item,         & ! [IN]
-                                dims(1:ndim), & ! [IN]
-                                desc,         & ! [IN]
-                                unit,         & ! [IN]
-                                NOWSTEP,      & ! [IN]
-                                timelabel,    & ! [IN]
-                                'model',      & ! [IN]
-                                mapping,      & ! [IN]
-                                start=start,  & ! [IN]
-                                count=count,  & ! [IN]
-                                comm=comm     ) ! [IN]
+       call HistoryAddVariable( nvariant1,      & ! [OUT]
+                                item,           & ! [IN]
+                                dims(1:ndim),   & ! [IN]
+                                desc,           & ! [IN]
+                                unit,           & ! [IN]
+                                mapping,        & ! [IN]
+                                TIME_NOWSTEP,   & ! [IN]
+                                zcoord='model', & ! [IN]
+                                start=start,    & ! [IN]
+                                count=count     ) ! [IN]
 
        ! absolute height coordinate
        dims(3) = 'z'
-       call HistoryAddVariable( nvariant2,    & ! [OUT]
-                                item,         & ! [IN]
-                                dims(1:ndim), & ! [IN]
-                                desc,         & ! [IN]
-                                unit,         & ! [IN]
-                                NOWSTEP,      & ! [IN]
-                                timelabel,    & ! [IN]
-                                'z',          & ! [IN]
-                                mapping,      & ! [IN]
-                                start=start,  & ! [IN]
-                                count=count,  & ! [IN]
-                                comm=comm     ) ! [IN]
+       call HistoryAddVariable( nvariant2,      & ! [OUT]
+                                item,           & ! [IN]
+                                dims(1:ndim),   & ! [IN]
+                                desc,           & ! [IN]
+                                unit,           & ! [IN]
+                                mapping,        & ! [IN]
+                                TIME_NOWSTEP,   & ! [IN]
+                                zcoord='z',     & ! [IN]
+                                start=start,    & ! [IN]
+                                count=count     ) ! [IN]
 
        ! pressure coordinate
        if ( HIST_PRES_nlayer > 0 ) then
 
           dims(3) = 'pressure'
-          call HistoryAddVariable( nvariant3,    & ! [OUT]
-                                   item,         & ! [IN]
-                                   dims(1:ndim), & ! [IN]
-                                   desc,         & ! [IN]
-                                   unit,         & ! [IN]
-                                   NOWSTEP,      & ! [IN]
-                                   timelabel,    & ! [IN]
-                                   'pressure',   & ! [IN]
-                                   mapping,      & ! [IN]
-                                   start=start,  & ! [IN]
-                                   count=count,  & ! [IN]
-                                   comm=comm     ) ! [IN]
+          call HistoryAddVariable( nvariant3,         & ! [OUT]
+                                   item,              & ! [IN]
+                                   dims(1:ndim),      & ! [IN]
+                                   desc,              & ! [IN]
+                                   unit,              & ! [IN]
+                                   mapping,           & ! [IN]
+                                   TIME_NOWSTEP,      & ! [IN]
+                                   zcoord='pressure', & ! [IN]
+                                   start=start,       & ! [IN]
+                                   count=count        ) ! [IN]
 
        else
           nvariant3 = 0
@@ -584,17 +563,15 @@ contains
 
     else
 
-       call HistoryAddVariable( nvariant1,       & ! [OUT]
-                                item,            & ! [IN]
-                                dims(1:ndim),    & ! [IN]
-                                desc,            & ! [IN]
-                                unit,            & ! [IN]
-                                NOWSTEP,         & ! [IN]
-                                timelabel,       & ! [IN]
-                                mapping=mapping, & ! [IN]
-                                start=start,     & ! [IN]
-                                count=count,     & ! [IN]
-                                comm=comm        ) ! [IN]
+       call HistoryAddVariable( nvariant1,    & ! [OUT]
+                                item,         & ! [IN]
+                                dims(1:ndim), & ! [IN]
+                                desc,         & ! [IN]
+                                unit,         & ! [IN]
+                                mapping,      & ! [IN]
+                                TIME_NOWSTEP, & ! [IN]
+                                start=start,  & ! [IN]
+                                count=count   ) ! [IN]
 
        nvariant2 = 0
        nvariant3 = 0
@@ -621,8 +598,6 @@ contains
        enddo
     endif
 
-    call HIST_put_axis_attributes
-
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
@@ -641,6 +616,8 @@ contains
 
     integer,  intent(in)  :: itemid !< name of the item
     logical,  intent(out) :: answer !< is it time to store?
+
+    integer  :: n, v, id
     !---------------------------------------------------------------------------
 
     answer = .false.
@@ -655,10 +632,72 @@ contains
                        TIME_NOWSTEP,      & ! [IN]
                        answer             ) ! [OUT]
 
+    if ( answer ) then
+       id = 0
+       do n = 1, itemid-1
+          id = id + HIST_variant(n)
+       enddo
+
+       do v = 1, HIST_variant(itemid)
+          id = id + 1
+
+          call HIST_checkfile( id ) ! [IN]
+       enddo
+    endif
+
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_query
+
+  !-----------------------------------------------------------------------------
+  !> Check time to switching output file
+  subroutine HIST_checkfile( &
+       itemid )
+    use MPI, only: &
+       MPI_COMM_NULL
+    use gtool_history, only: &
+       HistoryFileCreate
+    use scale_process, only: &
+       PRC_LOCAL_COMM_WORLD
+    use scale_time, only: &
+       TIME_NOWSTEP,      &
+       TIME_gettimelabel
+    implicit none
+
+    integer,  intent(in)  :: itemid !< name of the item
+
+    character(len=19) :: timelabel
+    integer           :: comm
+    logical           :: existed
+    !---------------------------------------------------------------------------
+
+    if( .NOT. enabled ) return
+
+    if( itemid < 0 ) return
+
+    call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    call TIME_gettimelabel( timelabel )
+
+    if ( IO_AGGREGATE ) then  ! user input parameter indicates to do PnetCDF I/O
+       comm = PRC_LOCAL_COMM_WORLD
+    else
+       comm = MPI_COMM_NULL
+    endif
+
+    call HistoryFileCreate( itemid,         & ! [IN]
+                            TIME_NOWSTEP,   & ! [IN]
+                            timelabel,      & ! [IN]
+                            comm=comm,      & ! [IN]
+                            existed=existed ) ! [OUT]
+
+    if ( .not. existed ) call HIST_set_axes_attributes
+
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
+
+    return
+  end subroutine HIST_checkfile
 
   !-----------------------------------------------------------------------------
   !> Put 1D data to history buffer
@@ -1360,13 +1399,20 @@ contains
   !> Flush history buffer to file
   subroutine HIST_write
     use gtool_history, only: &
-       HistoryWriteAll
+       HistoryWriteAll, &
+       HistoryWriteAxes
     use scale_time, only: &
        TIME_NOWSTEP
     implicit none
+
+    logical :: axis_written_first
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    ! Note this subroutine must be called after all HIST_reg calls are completed
+    ! Write registered history axes to history file
+    call HistoryWriteAxes( axis_written_first )
 
     call HistoryWriteAll( TIME_NOWSTEP ) ![IN]
 
@@ -1455,7 +1501,6 @@ contains
     integer :: start(3)
     integer :: startX, startY, startZ
     integer :: XAG, YAG
-
     !---------------------------------------------------------------------------
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
@@ -1789,7 +1834,7 @@ contains
     return
   end subroutine HIST_put_axes
 
-  subroutine HIST_put_axis_attributes
+  subroutine HIST_set_axes_attributes
     use gtool_history, only: &
        HistorySetMapping, &
        HistorySetAttribute
@@ -1893,45 +1938,54 @@ contains
     call HistorySetAttribute( "yh", "halo_local",   (/ shalo_l, nhalo_l /) )
     call HistorySetAttribute( "yh", "periodic",     logical_str )
 
-    call MPRJ_get_attributes( mapping,  &
-         false_easting, false_northing, &
-         longitude_of_central_meridian, &
-         longitude_of_projection_origin, &
-         latitude_of_projection_origin, &
-         straight_vertical_longitude_from_pole, &
-         standard_parallel(:) )
+    call MPRJ_get_attributes( mapping,                               & ! [OUT]
+                              false_easting, false_northing,         & ! [OUT]
+                              longitude_of_central_meridian,         & ! [OUT]
+                              longitude_of_projection_origin,        & ! [OUT]
+                              latitude_of_projection_origin,         & ! [OUT]
+                              straight_vertical_longitude_from_pole, & ! [OUT]
+                              standard_parallel(:)                   ) ! [OUT]
     if ( mapping /= "" ) then
        call HistorySetAttribute( "x",  "standard_name", "projection_x_coordinate");
        call HistorySetAttribute( "xh", "standard_name", "projection_x_coordinate");
        call HistorySetAttribute( "y",  "standard_name", "projection_y_coordinate");
        call HistorySetAttribute( "yh", "standard_name", "projection_y_coordinate");
        call HistorySetMapping( mapping )
-       if ( false_easting /= UNDEF ) &
-            call HistorySetAttribute( mapping, "false_easting",  (/ false_easting /) )
-       if ( false_northing /= UNDEF ) &
-            call HistorySetAttribute( mapping, "false_northing", (/ false_northing /) )
-       if ( longitude_of_central_meridian /= UNDEF ) &
-            call HistorySetAttribute( mapping, "longitude_of_central_meridian", &
-            (/ longitude_of_central_meridian /) )
-       if ( longitude_of_projection_origin /= UNDEF ) &
-            call HistorySetAttribute( mapping, "longitude_of_projection_origin", &
-            (/ longitude_of_projection_origin /) )
-       if ( latitude_of_projection_origin /= UNDEF ) &
-            call HistorySetAttribute( mapping, "latitude_of_projection_origin", &
-            (/ latitude_of_projection_origin /) )
-       if ( straight_vertical_longitude_from_pole /= UNDEF ) &
-            call HistorySetAttribute( mapping, "straight_vertical_longitude_from_pole", &
-            (/ straight_vertical_longitude_from_pole /) )
+
+       if ( false_easting /= UNDEF ) then
+          call HistorySetAttribute( mapping, "false_easting",  (/ false_easting /) )
+       endif
+
+       if ( false_northing /= UNDEF ) then
+          call HistorySetAttribute( mapping, "false_northing", (/ false_northing /) )
+       endif
+
+       if ( longitude_of_central_meridian /= UNDEF ) then
+          call HistorySetAttribute( mapping, "longitude_of_central_meridian", (/ longitude_of_central_meridian /) )
+       endif
+
+       if ( longitude_of_projection_origin /= UNDEF ) then
+          call HistorySetAttribute( mapping, "longitude_of_projection_origin", (/ longitude_of_projection_origin /) )
+       endif
+
+       if ( latitude_of_projection_origin /= UNDEF ) then
+          call HistorySetAttribute( mapping, "latitude_of_projection_origin", (/ latitude_of_projection_origin /) )
+       endif
+
+       if ( straight_vertical_longitude_from_pole /= UNDEF ) then
+          call HistorySetAttribute( mapping, "straight_vertical_longitude_from_pole", (/ straight_vertical_longitude_from_pole /) )
+       endif
+
        if ( standard_parallel(1) /= UNDEF ) then
           if ( standard_parallel(2) /= UNDEF ) then
              call HistorySetAttribute( mapping, "standard_parallel", standard_parallel(1:2) )
           else
              call HistorySetAttribute( mapping, "standard_parallel", standard_parallel(1:1) )
-          end if
-       end if
-    end if
+          endif
+       endif
+    endif
 
     return
-  end subroutine HIST_put_axis_attributes
+  end subroutine HIST_set_axes_attributes
 
 end module scale_history

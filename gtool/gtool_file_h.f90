@@ -77,5 +77,9 @@ module gtool_file_h
 
   integer, public, parameter :: File_preclist(0:3) = (/ 4, 8, 4, 8 /)
 
+  character(len=File_HSHORT), public :: File_dtypelist(0:4)
+
+  data File_dtypelist / "REAL4", "REAL8", "INTEGER2", "INTEGER4", "INTEGER8" /
+
 end module gtool_file_h
 !-------------------------------------------------------------------------------
