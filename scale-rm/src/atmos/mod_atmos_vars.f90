@@ -2307,7 +2307,7 @@ contains
           !$omp parallel do private(i,j) OMP_SCHEDULE_
           do j = 1, JA
           do i = 1, IA
-             RAIN(i,j) = SFLX_rain_CP(i,j) + SFLX_rain_MP(i,j)
+             RAIN(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j)
              SNOW(i,j) = SFLX_snow_MP(i,j)
              PREC(i,j) = RAIN(i,j) + SNOW(i,j)
           enddo
