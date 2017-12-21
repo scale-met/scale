@@ -455,6 +455,7 @@ contains
     else
        History_OUTPUT_SWITCH_STEP = -1
     endif
+    History_OUTPUT_SWITCH_LASTSTEP = 0
 
     array_size = isize * jsize * ksize
 
@@ -859,7 +860,6 @@ contains
                         comm       = comm     ) ! [IN]
 
        if ( .NOT. fileexisted ) then ! new file
-          History_OUTPUT_SWITCH_LASTSTEP = now_step
 
           ! write options
           if ( present(options) ) then
@@ -2383,8 +2383,8 @@ contains
     enddo
 
     ! check time to switching output file
-    if (       History_OUTPUT_SWITCH_STEP >= 0                                       &
-         .AND. step_now-History_OUTPUT_SWITCH_LASTSTEP >= History_OUTPUT_SWITCH_STEP ) then
+    if (       History_OUTPUT_SWITCH_STEP >= 0                                      &
+         .AND. step_now-History_OUTPUT_SWITCH_LASTSTEP > History_OUTPUT_SWITCH_STEP ) then
 
        call HistoryFinalize
 
@@ -2395,6 +2395,8 @@ contains
           History_vars(id)%fid = -1 ! reset
           History_vars(id)%vid = -1 ! reset
        enddo
+
+       History_OUTPUT_SWITCH_LASTSTEP = step_now-1
     endif
 
     return
