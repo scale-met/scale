@@ -58,7 +58,6 @@ module mod_user
   real(RP), private :: Ps   = 972E+2_RP
   real(RP), private :: Ug   =  3.0_RP
   real(RP), private :: Vg   = -9.0_RP
-  real(RP), private :: lat  = 37.6_RP
   real(RP), private :: Z0M  = 0.03_RP
   real(RP), private :: Z0H  = 0.003_RP
   real(RP), private :: LSD  = -0.005_RP ! Large-scale synoptic divergence
@@ -105,7 +104,6 @@ contains
          Ps, &
          Ug, &
          Vg, &
-         lat, &
          LSD, &
          dry, &
          restart
@@ -287,9 +285,6 @@ contains
   !-----------------------------------------------------------------------------
   !> User step
   subroutine USER_step
-    use scale_const, only: &
-       OHM => CONST_OHM, &
-       D2R => CONST_D2R
     use scale_time, only: &
        NOWSEC => TIME_NOWSEC, &
        dt     => TIME_DTSEC
@@ -297,6 +292,8 @@ contains
        FDZ  => GRID_FDZ, &
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ
+    use scale_atmos_dyn, only: &
+       CORIOLIS
     use mod_atmos_vars, only: &
        DENS,    &
        MOMZ,    &
@@ -311,32 +308,23 @@ contains
        RHOQ_tp
     use mod_atmos_phy_sf_vars, only: &
        ATMOS_PHY_SF_SFC_TEMP
-    use mod_land_vars, only: &
-       I_WaterCritical, &
-       LAND_PROPERTY,   &
-       LAND_SFC_TEMP,   &
-       LAND_WATER
     implicit none
 
     real(RP) :: val(KA)
 
-    real(RP) :: f, fdt, rden
     real(RP) :: Ts
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
-
-    f   = 2.0_RP * OHM * sin( lat * D2R )
-    fdt = f * dt
-
-    rden = 1.0_RP / ( 1.0_RP + fdt**2 )
 
     val(KS-1) = 0.0_RP
 
     do j = JS, JE
     do i = IS, IE
 
-       ! full level
+       ! large scale divergence
+
+       !! full level
        val(KS) = MOMZ(KS,i,j) / DENS(KS,i,j) * 0.5_RP
        do k = KS+1, KE
           val(k) = ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) / DENS(k,i,j) * 0.5_RP
@@ -347,7 +335,7 @@ contains
                + MOMZ(k,i,j) * divh(k) / ( DENS(k,i,j)*FDZ(k+1) + DENS(k+1,i,j)*FDZ(k) ) * ( FDZ(k+1) + FDZ(k) )
        end do
 
-       ! half level
+       !! half level
        do k = KS, KE-1
           val(k) = ( U(k,i,j)*FDZ(k+1) + U(k+1,i,j)*FDZ(k) ) &
                  / ( FDZ(k+1) + FDZ(k) )
@@ -359,7 +347,7 @@ contains
                + U(k,i,j) * divf(k)
        end do
 
-       ! half level
+       !! half level
        do k = KS, KE-1
           val(k) = ( V(k,i,j)*FDZ(k+1) + V(k+1,i,j)*FDZ(k) ) &
                  / ( FDZ(k+1) + FDZ(k) )
@@ -370,12 +358,8 @@ contains
                - ( fluxh(k)*val(k) - fluxh(k-1)*val(k-1) ) * RCDZ(k) &
                + V(k,i,j) * divf(k)
        end do
-       do k = KS, KE
-          RHOU_tp(k,i,j) = RHOU_tp(k,i,j) + f * ( V(k,i,j) - Vg ) * DENS(k,i,j)
-          RHOV_tp(k,i,j) = RHOV_tp(k,i,j) - f * ( U(k,i,j) - Ug ) * DENS(k,i,j)
-       end do
 
-       ! half level
+       !! half level
        do k = KS, KE-1
           val(k) = ( POTT(k,i,j)*FDZ(k+1) + POTT(k+1,i,j)*FDZ(k) ) &
                  / ( FDZ(k+1) + FDZ(k) )
@@ -388,7 +372,7 @@ contains
        end do
 
        do iq = 1, QA
-          ! half level
+          !! half level
           do k = KS, KE-1
              val(k) = ( QTRC(k,i,j,iq)*FDZ(k+1) + QTRC(k+1,i,j,iq)*FDZ(k) ) &
                     / ( FDZ(k+1) + FDZ(k) )
@@ -400,6 +384,14 @@ contains
                   + QTRC(k,i,j,iq) * divf(k)
           end do
        end do
+
+
+       ! geostrophic forcing
+       do k = KS, KE
+          RHOU_tp(k,i,j) = RHOU_tp(k,i,j) - CORIOLIS(i,j) * Vg * DENS(k,i,j)
+          RHOV_tp(k,i,j) = RHOV_tp(k,i,j) + CORIOLIS(i,j) * Ug * DENS(k,i,j)
+       end do
+
 
     end do
     end do
