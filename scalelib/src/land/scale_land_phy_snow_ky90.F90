@@ -102,6 +102,13 @@ contains
     !real(RP), intent(out)      :: DEPTH0  ! DEPTH0 = initial snow depth           [m]
     !real(RP)                   :: nosnowsec                   ! number of hours from latest snow event
 
+    real(RP)                  :: snow_conductivity     = 0.42_RP
+    real(RP)                  :: water_content         = 0.1_RP
+    real(RP)                  :: snow_heat_capacityRHO = 8.4e+05
+    real(RP)                  :: snow_rho              = 400.0
+    real(RP)                  :: snowDepth_initial     = 0.
+    real(RP)                  :: albedo_value          = 0.686_RP
+
     namelist / PARAM_LAND_PHY_SNOW_KY90 /  &
          ALBEDO_const,      &
          snow_conductivity, &
@@ -110,13 +117,6 @@ contains
          snow_rho,          &
          snowDepth_initial, &
          albedo_value
-
-    real(RP)                  :: snow_conductivity
-    real(RP)                  :: water_content
-    real(RP)                  :: snow_heat_capacityRHO
-    real(RP)                  :: snow_rho
-    real(RP)                  :: snowDepth_initial
-    real(RP)                  :: albedo_value
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -266,7 +266,7 @@ contains
                             DEPTH1,            & ! [INOUT]
                             ZNSNOW1,           & ! [INOUT]
                             nosnowsec   (i,j), & ! [INOUT]
-                            Salbedo     (i,j), & ! [OUT]
+                            Salbedo     (i,j), & ! [INOUT]
                             SFLX_SH     (i,j), & ! [OUT]
                             SFLX_LH     (i,j), & ! [OUT]
                             SFLX_GH     (i,j), & ! [OUT]
@@ -284,7 +284,8 @@ contains
                             dt                 )
 
 
-       SNOW_LAND_Water(i,j) = SFLX_rain(i,j) +  SWEMELT(i,j) / dt    ! [kg/m2/s]
+       SNOW_LAND_GH   (i,j) = SNOW_LAND_GH(i,j) / dt               ! [J/m2] -> [J/m2/s]
+       SNOW_LAND_Water(i,j) = SFLX_rain(i,j) +  SWEMELT(i,j) / dt  ! [kg/m2] -> [kg/m2/s]
        SNOW_frac      (i,j) = 1.0_RP
 
        TSNOW_t (i,j) = ( TSNOW1 - TSNOW (i,j) ) / dt
@@ -298,14 +299,19 @@ contains
        SNOW_LAND_Water(i,j) = SFLX_rain(i,j)
        SNOW_frac      (i,j) = 0.0_RP
 
-       TSNOW          (i,j) = 0.0_RP
-       SWE            (i,j) = 0.0_RP
-       SDepth         (i,j) = 0.0_RP
-       SDzero         (i,j) = 0.0_RP
-       Salbedo        (i,j) = 0.0_RP
+       TSNOW_t (i,j)        = 0.0_RP
+       !TSNOW          (i,j) = 0.0_RP
+       !SWE            (i,j) = 0.0_RP
+       !SDepth         (i,j) = 0.0_RP
+       !SDzero         (i,j) = 0.0_RP
+       !Salbedo        (i,j) = 0.0_RP
        SFLX_SH        (i,j) = 0.0_RP
        SFLX_LH        (i,j) = 0.0_RP
        SFLX_GH        (i,j) = 0.0_RP
+       QCC            (i,j) = 0.0_RP
+       QFUSION        (i,j) = 0.0_RP
+       MELT           (i,j) = 0.0_RP
+       SWEMELT        (i,j) = 0.0_RP
        SNOW_LAND_GH   (i,j) = 0.0_RP
 
     endif
@@ -362,8 +368,8 @@ contains
     real(RP), intent(out)      :: QCC           ! QCC = heat used for change snow condition to isothermal [J m^-2]
     real(RP), intent(out)      :: QFUSION       ! QFUSION = heat used for change snow condition to melt point [J m^-2]
     real(RP), intent(out)      :: MELT          ! MELT = heat used for snow run off production [J m^-2 s^-1]
-    real(RP), intent(out)      :: SWEMELT       ! snow water equivalent
-    real(RP), intent(out)      :: Gflux2land    ! Residual heat, goes to land model
+    real(RP), intent(out)      :: SWEMELT       ! snow water equivalent  ! [kg/m2]
+    real(RP), intent(out)      :: Gflux2land    ! Residual heat, goes to land model ! [J/m2]
 
 
     ! input data
@@ -449,8 +455,8 @@ contains
       ZNSNOW     = 0.0_RP
       DEPTH      = 0.0_RP
       SWE        = 0.0_RP
-      SWEMELT    = MELT *time /((1.0_RP-W0)*LF) ! [kg/m-2]
-      Gflux2land = GFLUX*time - (QCC + QFUSION + MELT)
+      SWEMELT    = MELT *time /((1.0_RP-W0)*LF)
+      Gflux2land = GFLUX*time - (QCC + QFUSION + MELT)   ! [J/m2]
 
    else
 
@@ -543,7 +549,6 @@ contains
       write(*,*) 'DELTADEPTH is:               ', DELTADEPTH
       write(*,*) 'DEPTH0 is:                   ', DEPTH
       write(*,*) 'ZNSNOW0 is:                  ', ZNSNOW
-
 
    endif
 

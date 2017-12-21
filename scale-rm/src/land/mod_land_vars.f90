@@ -460,9 +460,26 @@ contains
                                LAND_SFLX_GH(:,:)                          ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_evap), 'XY',  & ! [IN]
                                LAND_SFLX_evap(:,:)                        ) ! [OUT]
-            
 
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
+
+       !call FILE_CARTESC_read( restart_fid, 'SNOW_TEMP',          'XY',  & ! [OUT]
+       !                        SNOW_TEMP(:,:)                            ) ! [IN]
+       !call FILE_CARTESC_read( restart_fid, 'SNOW_SWE',           'XY',  & ! [OUT]
+       !                        SNOW_SWE(:,:)                             ) ! [IN]
+       !call FILE_CARTESC_read( restart_fid, 'SNOW_Depth',         'XY',  & ! [OUT]
+       !                        SNOW_Depth(:,:)                           ) ! [IN]
+       !call FILE_CARTESC_read( restart_fid, 'SNOW_Dzero',         'XY',  & ! [OUT]
+       !                        SNOW_Dzero(:,:)                           ) ! [IN]
+       !call FILE_CARTESC_read( restart_fid, 'SNOW_nosnowsec',     'XY'   & ! [OUT]
+       !                        SNOW_nosnowsec(:,:)                       ) ! [IN]
+
+       !!!!! Tentative !!!!!
+       SNOW_TEMP      = 273.15_RP
+       SNOW_SWE       = 0.0_RP
+       SNOW_Depth     = 0.0_RP
+       SNOW_Dzero     = 0.0_RP
+       SNOW_nosnowsec = 0.0_RP
 
        call LAND_vars_total
     else

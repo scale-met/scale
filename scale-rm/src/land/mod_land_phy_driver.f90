@@ -222,6 +222,8 @@ contains
     !------------------------------------------------------------------------
     !> snow area
 
+    SNOW_frac = 0.0_RP
+
     if ( LAND_TYPE == 'SLAB'      .or.  &
          LAND_TYPE == 'THIN-SLAB' .or.  &
          LAND_TYPE == 'THICK-SLAB' )then
@@ -299,7 +301,6 @@ contains
                       LAND_SFLX_evap   (:,:),                & ! [IN]
                       GRID_LCDZ        (:),                  & ! [IN]
                       dt                                     ) ! [IN]
-
     endif
 
     !------------------------------------------------------------------------
