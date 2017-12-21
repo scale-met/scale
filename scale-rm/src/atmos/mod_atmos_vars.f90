@@ -2071,10 +2071,10 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       PREC(i,j) = SFLX_rain_CP(i,j)                     &
-                 + SFLX_rain_MP(i,j) + SFLX_snow_MP(i,j)
-       RAIN(i,j) = SFLX_rain_CP(i,j)                     &
-                 + SFLX_rain_MP(i,j)
+       PREC(i,j) = SFLX_rain_MP(i,j) + SFLX_snow_MP(i,j) &
+                 + SFLX_rain_CP(i,j)
+       RAIN(i,j) = SFLX_rain_MP(i,j)                     &
+                 + SFLX_rain_CP(i,j)
        SNOW(i,j) = SFLX_snow_MP(i,j)
     enddo
     enddo

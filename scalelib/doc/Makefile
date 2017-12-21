@@ -11,7 +11,7 @@ include $(TOPDIR)/Mkinclude
 all: dox
 
 dox:
-	ruby $(TOPDIR)/doc/reference/mkdoc.rb .
+	ruby $(TOPDIR)/doc/reference/mkdoc.rb ../src
 
 clean:
 	rm -rf dox
