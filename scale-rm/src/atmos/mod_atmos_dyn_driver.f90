@@ -78,7 +78,12 @@ module mod_atmos_dyn_driver
   integer,  private :: ATMOS_DYN_wdamp_layer                 = -1        ! layer number to start apply Rayleigh damping [num]
 
   ! Coriolis force
-  logical,  private :: ATMOS_DYN_enable_coriolis             = .false.   ! enable coriolis force?
+  !> If ATMOS_DYN_coriolis_type=='PLANE', then f = ATMOS_DYN_coriolis_f0 + ATMOS_DYN_coriolis_beta * ( CY - ATMOS_DYN_coriolis_y0 )
+  !> If ATMOS_DYN_coriolis_type=='SPHERE', then f = 2 * CONST_OHM * sin( lat )
+  character(len=H_SHORT), private :: ATMOS_DYN_coriolis_type = 'PLANE'   ! type of coriolis force: 'PLANE', 'SPHERE'
+  real(RP), private :: ATMOS_DYN_coriolis_f0                 = 0.0_RP
+  real(RP), private :: ATMOS_DYN_coriolis_beta               = 0.0_RP
+  real(RP), private :: ATMOS_DYN_coriolis_y0                             ! default is domain center
 
   ! Divergence damping
   real(RP), private :: ATMOS_DYN_divdmp_coef                 = 0.0_RP    ! Divergence dumping coef
@@ -98,6 +103,8 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_grid, only: &
+       GRID_DOMAIN_CENTER_Y, &
+       GRID_CY,  &
        GRID_FZ,  &
        GRID_CDZ, &
        GRID_CDX, &
@@ -139,7 +146,10 @@ contains
        ATMOS_DYN_wdamp_tau,                   &
        ATMOS_DYN_wdamp_height,                &
        ATMOS_DYN_wdamp_layer,                 &
-       ATMOS_DYN_enable_coriolis,             &
+       ATMOS_DYN_coriolis_type,               &
+       ATMOS_DYN_coriolis_f0,                 &
+       ATMOS_DYN_coriolis_beta,               &
+       ATMOS_DYN_coriolis_y0,                 &
        ATMOS_DYN_divdmp_coef,                 &
        ATMOS_DYN_FLAG_TRACER_SPLIT_TEND,      &
        ATMOS_DYN_FLAG_FCT_momentum,           &
@@ -156,6 +166,7 @@ contains
 
     if ( ATMOS_sw_dyn ) then
 
+       ATMOS_DYN_coriolis_y0 = GRID_DOMAIN_CENTER_Y
        !--- read namelist
        rewind(IO_FID_CONF)
        read(IO_FID_CONF,nml=PARAM_ATMOS_DYN,iostat=ierr)
@@ -204,7 +215,11 @@ contains
                              ATMOS_DYN_wdamp_tau,                & ! [IN]
                              ATMOS_DYN_wdamp_height,             & ! [IN]
                              GRID_FZ,                            & ! [IN]
-                             ATMOS_DYN_enable_coriolis,          & ! [IN]
+                             ATMOS_DYN_coriolis_type,            & ! [IN]
+                             ATMOS_DYN_coriolis_f0,              & ! [IN]
+                             ATMOS_DYN_coriolis_beta,            & ! [IN]
+                             ATMOS_DYN_coriolis_y0,              & ! [IN]
+                             GRID_CY,                            & ! [IN]
                              REAL_LAT,                           & ! [IN]
                              none = ATMOS_DYN_TYPE=='NONE'       ) ! [IN]
     endif
