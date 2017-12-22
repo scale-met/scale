@@ -14,6 +14,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module mod_atmos_driver
   !-----------------------------------------------------------------------------
   !
@@ -532,8 +533,10 @@ contains
        U,    &
        V
     use mod_atmos_phy_mp_vars, only: &
-       SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
-       SFLX_snow => ATMOS_PHY_MP_SFLX_snow
+       SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
+       SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow
+    use mod_atmos_phy_cp_vars, only: &
+       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain
     use mod_atmos_phy_rd_vars, only: &
        SFLX_rad_dn => ATMOS_PHY_RD_SFLX_downall, &
        cosSZA      => ATMOS_PHY_RD_cosSZA
@@ -550,9 +553,23 @@ contains
     real(RP) :: SFC_DENS(IA,JA)
     real(RP) :: SFC_PRES(IA,JA)
     real(RP) :: ATM_PBL (IA,JA)
+
+    real(RP) :: SFLX_rain(IA,JA)
+    real(RP) :: SFLX_snow(IA,JA)
+
+    integer  :: i,j
     !---------------------------------------------------------------------------
 
     if ( CPL_sw ) then
+       ! sum of rainfall from mp and cp
+       !$omp parallel do private(i,j) OMP_SCHEDULE_
+       do j = 1, JA
+       do i = 1, IA
+          SFLX_rain(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j)
+          SFLX_snow(i,j) = SFLX_snow_MP(i,j)
+       enddo
+       enddo
+
        ! planetary boundary layer
        ATM_PBL(:,:) = 100.0_RP ! tentative
 

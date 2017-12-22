@@ -43,7 +43,7 @@ module mod_net2g_vars
   character(CLNG), public :: ODIR           = "."
   character(CLNG), public :: CONFFILE       = "./run.conf"
   character(CSHT), public :: VNAME(max_vcount) = ""
-  character(CSHT), public :: Z_LEV_TYPE     = "plev"
+  character(CSHT), public :: Z_LEV_TYPE     = "original"
   character(5),    public :: DELT           = "1mn"
   character(15),   public :: STIME          = "00:00Z01JAN2000"
   character(15),   public :: FTIME          = "200001010000"

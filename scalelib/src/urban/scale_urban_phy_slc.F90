@@ -224,6 +224,9 @@ contains
     return
   end subroutine URBAN_PHY_SLC_setup
 
+  !-----------------------------------------------------------------------------
+  !> Main routine for land submodel
+
   subroutine URBAN_PHY_SLC( &
         TR_URB_t,    &
         TB_URB_t,    &
