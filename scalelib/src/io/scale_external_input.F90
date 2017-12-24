@@ -40,6 +40,8 @@ module scale_external_input
   !
   !++ Public parameters & variables
   !
+  integer, public, parameter :: EXTIN_file_limit = 100 !< limit of file (for one item)
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedures
@@ -133,10 +135,14 @@ module scale_external_input
 
   type, private :: EXTIN_itemcontainer
      character(len=H_SHORT)             :: varname                   !< variable name
+     integer                            :: nfile                     !< number of files
+     integer                            :: file_current              !< current number of the file
+     character(len=H_LONG), allocatable :: basename(:)               !< file names
      integer                            :: fid                       !< file id
      integer                            :: ndim                      !< number of dimensions
      integer                            :: dim_size(EXTIN_dim_limit) !< size of dimension (z,x,y)
      integer, allocatable               :: dim_start(:)              !< start index
+     integer                            :: step_limit                !< size limit of time dimension
      integer                            :: step_num                  !< size of time dimension
      real(DP), allocatable              :: time(:)                   !< time of each step [sec]
      logical                            :: fixed_step                !< fix step position?
@@ -144,6 +150,7 @@ module scale_external_input
      real(RP)                           :: offset                    !< offset value (default is set to 0)
      integer                            :: data_step_prev            !< step position to read, previous from current
      integer                            :: data_step_next            !< step position to read, next     to   current
+     integer                            :: data_step_offset          !< offset of step position for each file
      real(RP), allocatable              :: value(:,:,:,:)            !< data value                    (1:previous,2:next)
      character(len=H_SHORT)             :: axistype                  !< axis type
      logical                            :: transpose                 !< true: xyz, false: zxy
@@ -169,7 +176,7 @@ contains
 
     character(len=*), intent(in) :: model
 
-    character(len=H_LONG)  :: basename
+    character(len=H_LONG)  :: basename(EXTIN_file_limit)
     character(len=H_SHORT) :: varname
     character(len=H_SHORT) :: axistype
     integer                :: step_limit            ! limit number for reading data
@@ -217,7 +224,7 @@ contains
     do count = 1, EXTIN_item_limit
        ! set default
        step_limit            = EXTIN_step_limit
-       basename              = ''
+       basename(:)           = ''
        varname               = ''
        axistype              = ''
        step_fixed            = -1
@@ -238,7 +245,7 @@ contains
        endif
        if( IO_NML .AND. IO_FID_NML /= IO_FID_LOG ) write(IO_FID_NML,nml=EXTITEM)
 
-       call EXTIN_regist( basename,              & ! [IN]
+       call EXTIN_regist( basename(:),           & ! [IN]
                           varname,               & ! [IN]
                           axistype,              & ! [IN]
                           enable_periodic_year,  & ! [IN]
@@ -295,7 +302,7 @@ contains
        FILEIO_check_coordinates
     implicit none
 
-    character(len=*), intent(in)  :: basename
+    character(len=*), intent(in)  :: basename(EXTIN_file_limit)
     character(len=*), intent(in)  :: varname
     character(len=*), intent(in)  :: axistype
     integer,          intent(in)  :: step_fixed            ! fixed step position to read
@@ -348,7 +355,7 @@ contains
 
     do nid = 1, EXTIN_item_count
        if ( EXTIN_item(nid)%varname  == varname ) then
-          write(*,*) 'xxx Data is already registered! basename,varname = ', trim(basename), ', ', trim(varname)
+          write(*,*) 'xxx Data is already registered! basename,varname = ', trim(basename(1)), ', ', trim(varname)
           call PRC_MPIstop
        endif
     enddo
@@ -360,7 +367,7 @@ contains
        call PRC_MPIstop
     endif
 
-    call FileOpen( fid, basename, File_FREAD, myrank=PRC_myrank )
+    call FileOpen( fid, basename(1), File_FREAD, myrank=PRC_myrank )
 
     ! read from file
     call FileGetAllDatainfo( step_limit_,               & ! [IN]
@@ -387,7 +394,7 @@ contains
           exist = .false.
           return
        else
-          write(*,*) 'xxx Data not found! basename,varname = ', trim(basename), ', ', trim(varname)
+          write(*,*) 'xxx Data not found! basename,varname = ', trim(basename(1)), ', ', trim(varname)
           call PRC_MPIstop
        endif
     endif
@@ -398,11 +405,22 @@ contains
 
     nid = EXTIN_item_count
 
+    do n = 1, EXTIN_file_limit
+       if( basename(n) == '' ) exit
+    enddo
+    EXTIN_item(nid)%nfile            = n - 1
+    EXTIN_item(nid)%file_current     = 1
+    EXTIN_item(nid)%data_step_offset = 0
+
+    allocate( EXTIN_item(nid)%basename(EXTIN_item(nid)%nfile) )
+    EXTIN_item(nid)%basename(1:EXTIN_item(nid)%nfile) = basename(1:EXTIN_item(nid)%nfile)
+
     ! setup item
     EXTIN_item(nid)%fid         = fid
     EXTIN_item(nid)%varname     = varname
     EXTIN_item(nid)%dim_size(:) = dim_size(:)
     EXTIN_item(nid)%step_num    = step_nmax
+    EXTIN_item(nid)%step_limit  = step_limit_
 
     if ( enable_periodic_day ) then
        EXTIN_item(nid)%flag_periodic = I_periodic_day
@@ -418,7 +436,7 @@ contains
     EXTIN_item(nid)%value(:,:,:,:) = defval
     EXTIN_item(nid)%offset         = offset
 
-    allocate( EXTIN_item(nid)%time(step_nmax) )
+    allocate( EXTIN_item(nid)%time(step_limit_) )
     EXTIN_item(nid)%time(:) = 0.0_DP
 
     do n = 1, EXTIN_item(nid)%step_num
@@ -671,6 +689,7 @@ contains
     integer  :: nid
     real(RP) :: weight
     logical  :: do_readfile
+    integer  :: step_next
 
     integer  :: n
     integer  :: n1
@@ -701,10 +720,11 @@ contains
                              do_readfile   ) ! [OUT]
 
     if ( do_readfile ) then
+       step_next = EXTIN_item(nid)%data_step_next - EXTIN_item(nid)%data_step_offset
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A,I4,A)') &
                   '*** Read 1D var           : ', trim(EXTIN_item(nid)%varname), &
-                  ' (step= ', EXTIN_item(nid)%data_step_next, ')'
+                  ' (step= ', EXTIN_item(nid)%data_step_next, ', file step=', step_next, ')'
 
        ! next -> prev
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)
@@ -713,7 +733,7 @@ contains
        call FileRead( EXTIN_item(nid)%value(:,1,1,I_next), & ! [OUT]
                       EXTIN_item(nid)%fid,                 & ! [IN]
                       EXTIN_item(nid)%varname,             & ! [IN]
-                      EXTIN_item(nid)%data_step_next       ) ! [IN]
+                      step_next                            ) ! [IN]
     endif
 
     ! store data with weight
@@ -748,6 +768,7 @@ contains
     integer  :: nid
     real(RP) :: weight
     logical  :: do_readfile
+    integer  :: step_next
 
     integer  :: n
     integer  :: n1, n2
@@ -774,9 +795,11 @@ contains
 
     if ( do_readfile ) then
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
+       step_next = EXTIN_item(nid)%data_step_next - EXTIN_item(nid)%data_step_offset
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A,I4,A)') &
                   '*** Read 2D var           : ', trim(EXTIN_item(nid)%varname), &
-                  ' (step= ', EXTIN_item(nid)%data_step_next, ')'
+                  ' (step= ', EXTIN_item(nid)%data_step_next, ', file step=', step_next, ')'
 
        ! next -> prev
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)
@@ -785,7 +808,7 @@ contains
        call FileRead( EXTIN_item(nid)%value(:,:,1,I_next), & ! [OUT]
                       EXTIN_item(nid)%fid,                 & ! [IN]
                       EXTIN_item(nid)%varname,             & ! [IN]
-                      EXTIN_item(nid)%data_step_next       ) ! [IN]
+                      step_next                            ) ! [IN]
     endif
 
     if ( EXTIN_item(nid)%transpose ) then
@@ -838,6 +861,7 @@ contains
     integer  :: nid
     real(RP) :: weight
     logical  :: do_readfile
+    integer  :: step_next
 
     integer  :: n
     integer  :: n1, n2, n3
@@ -864,9 +888,11 @@ contains
 
     if ( do_readfile ) then
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
+       step_next = EXTIN_item(nid)%data_step_next - EXTIN_item(nid)%data_step_offset
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A,I4,A)') &
                   '*** Read 3D var           : ', trim(EXTIN_item(nid)%varname), &
-                  ' (step= ', EXTIN_item(nid)%data_step_next, ')'
+                  ' (step= ', EXTIN_item(nid)%data_step_next, ', file step=', step_next, ')'
 
        ! next -> prev
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)
@@ -875,7 +901,7 @@ contains
        call FileRead( EXTIN_item(nid)%value(:,:,:,I_next), & ! [OUT]
                       EXTIN_item(nid)%fid,                 & ! [IN]
                       EXTIN_item(nid)%varname,             & ! [IN]
-                      EXTIN_item(nid)%data_step_next       ) ! [IN]
+                      step_next                            ) ! [IN]
     endif
 
     if ( EXTIN_item(nid)%transpose ) then
@@ -924,22 +950,43 @@ contains
        time_current, &
        weight,       &
        do_readfile   )
+    use gtool_file_h, only: &
+       File_FREAD
+    use gtool_file, only: &
+       FileOpen,           &
+       FileGetAllDataInfo
     use scale_process, only: &
+       PRC_myrank, &
        PRC_MPIstop
     use scale_calendar, only: &
        CALENDAR_adjust_daysec,  &
        CALENDAR_daysec2date,    &
        CALENDAR_date2daysec,    &
        CALENDAR_combine_daysec, &
+       CALENDAR_CFunits2sec,    &
        I_year,                  &
        I_month,                 &
        I_day
+    use scale_time, only: &
+       TIME_STARTDAYSEC, &
+       TIME_OFFSET_year
     implicit none
 
     integer,  intent(in)  :: nid          ! item id
     real(DP), intent(in)  :: time_current ! current time
     real(RP), intent(out) :: weight       ! weight
     logical,  intent(out) :: do_readfile  ! read new data at this time?
+
+    integer                :: step_nmax
+    character(len=H_LONG)  :: description
+    character(len=H_SHORT) :: unit
+    integer                :: datatype
+    integer                :: dim_rank
+    character(len=H_SHORT) :: dim_name  (3)
+    integer                :: dim_size  (3)
+    real(DP)               :: time_start(EXTIN_step_limit)
+    real(DP)               :: time_end  (EXTIN_step_limit)
+    character(len=H_MID)   :: time_units
 
     integer  :: datadate(6)   !< date
     real(DP) :: datasubsec    !< subsecond
@@ -950,6 +997,8 @@ contains
     real(DP) :: time_prev, time_next
     integer  :: step_prev, step_next
     integer  :: t
+    integer  :: fid
+    integer  :: n, nn
     !---------------------------------------------------------------------------
 
     do_readfile = .false.
@@ -1009,15 +1058,75 @@ contains
           else ! normal mode
 
              if ( EXTIN_item(nid)%data_step_next == EXTIN_item(nid)%step_num+1 ) then
-                write(*,*) 'xxx Current time is out of period of external data! '
-                call PRC_MPIstop
+
+                if ( EXTIN_item(nid)%file_current < EXTIN_item(nid)%nfile ) then
+
+                   EXTIN_item(nid)%file_current = EXTIN_item(nid)%file_current + 1
+
+                   call FileOpen( fid, EXTIN_item(nid)%basename(EXTIN_item(nid)%file_current), File_FREAD, myrank=PRC_myrank )
+
+                   ! read from file
+                   call FileGetAllDatainfo( EXTIN_item(nid)%step_limit,               & ! [IN]
+                                            EXTIN_dim_limit,                          & ! [IN]
+                                            fid,                                      & ! [IN]
+                                            EXTIN_item(nid)%varname,                  & ! [IN]
+                                            step_nmax,                                & ! [OUT]
+                                            description,                              & ! [OUT]
+                                            unit,                                     & ! [OUT]
+                                            datatype,                                 & ! [OUT]
+                                            dim_rank,                                 & ! [OUT]
+                                            dim_name  (:),                            & ! [OUT]
+                                            dim_size  (:),                            & ! [OUT]
+                                            time_start(1:EXTIN_item(nid)%step_limit), & ! [OUT]
+                                            time_end  (1:EXTIN_item(nid)%step_limit), & ! [OUT]
+                                            time_units                                ) ! [OUT]
+
+                   if ( step_nmax == 0 ) then
+                      write(*,*) 'xxx Data not found! basename = ', trim(EXTIN_item(nid)%basename(EXTIN_item(nid)%file_current)), &
+                                                    ', varname = ', trim(EXTIN_item(nid)%varname)
+                      call PRC_MPIstop
+                   endif
+
+                   do n = 1, dim_rank
+                      if ( EXTIN_item(nid)%dim_size(n) /= dim_size(n) ) then
+                         write(*,*) 'xxx The size of dimension', n, ' is inconsistent! '
+                         write(*,*) 'xxx size (previous,current) = ', EXTIN_item(nid)%dim_size(n), dim_size(n)
+                         write(*,*) 'xxx basename = ', trim(EXTIN_item(nid)%basename(EXTIN_item(nid)%file_current)), &
+                                       ', varname = ', trim(EXTIN_item(nid)%varname)
+                         call PRC_MPIstop
+                      endif
+                   enddo
+
+                   do n = 1, step_nmax
+                      nn = EXTIN_item(nid)%step_num + n
+                      EXTIN_item(nid)%time(nn) = CALENDAR_CFunits2sec( time_end(n), time_units, TIME_OFFSET_year, TIME_STARTDAYSEC )
+                   enddo
+
+                   if ( EXTIN_item(nid)%time(EXTIN_item(nid)%data_step_prev) > EXTIN_item(nid)%time(EXTIN_item(nid)%data_step_next) ) then
+                      write(*,*) 'xxx Time in new file is earlier than last time of previous file! stop'
+                      write(*,*) 'xxx Time (previous,current)  = ', EXTIN_item(nid)%time(EXTIN_item(nid)%data_step_prev), &
+                                                                    EXTIN_item(nid)%time(EXTIN_item(nid)%data_step_next)
+                      write(*,*) 'xxx Data not found! basename = ', trim(EXTIN_item(nid)%basename(EXTIN_item(nid)%file_current)), &
+                                                    ', varname = ', trim(EXTIN_item(nid)%varname)
+                      call PRC_MPIstop
+                   endif
+
+                   EXTIN_item(nid)%fid              = fid
+                   EXTIN_item(nid)%data_step_offset = EXTIN_item(nid)%step_num
+                   EXTIN_item(nid)%step_num         = EXTIN_item(nid)%step_num + step_nmax
+
+                else
+                   write(*,*) 'xxx Current time is out of period of external data! '
+                   call PRC_MPIstop
+                endif
+
              endif
 
-          endif
+          endif ! periodic or not
 
-       endif
+       endif ! time is passed?
 
-    endif
+    endif ! fixed step or not
 
     ! calc weight
     if ( EXTIN_item(nid)%fixed_step ) then

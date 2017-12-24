@@ -52,6 +52,7 @@ contains
     use scale_landuse, only: &
        LANDUSE_fact_ocean
     use scale_external_input, only: &
+       EXTIN_file_limit, &
        EXTIN_regist
     use scale_const, only: &
        UNDEF => CONST_UNDEF
@@ -59,15 +60,15 @@ contains
 
     character(len=*), intent(in) :: OCEAN_TYPE
 
-    character(len=H_LONG) :: OCEAN_PHY_FILE_basename              = ''
-    logical               :: OCEAN_PHY_FILE_enable_periodic_year  = .false.
-    logical               :: OCEAN_PHY_FILE_enable_periodic_month = .false.
-    logical               :: OCEAN_PHY_FILE_enable_periodic_day   = .false.
-    integer               :: OCEAN_PHY_FILE_step_fixed            = 0
-    real(RP)              :: OCEAN_PHY_FILE_offset                = 0.0_RP
-    real(RP)              :: OCEAN_PHY_FILE_defval              ! = UNDEF
-    logical               :: OCEAN_PHY_FILE_check_coordinates     = .true.
-    integer               :: OCEAN_PHY_FILE_step_limit            = 0
+    character(len=H_LONG) :: OCEAN_PHY_FILE_basename(EXTIN_file_limit) = ''
+    logical               :: OCEAN_PHY_FILE_enable_periodic_year       = .false.
+    logical               :: OCEAN_PHY_FILE_enable_periodic_month      = .false.
+    logical               :: OCEAN_PHY_FILE_enable_periodic_day        = .false.
+    integer               :: OCEAN_PHY_FILE_step_fixed                 = 0
+    real(RP)              :: OCEAN_PHY_FILE_offset                     = 0.0_RP
+    real(RP)              :: OCEAN_PHY_FILE_defval                   ! = UNDEF
+    logical               :: OCEAN_PHY_FILE_check_coordinates          = .true.
+    integer               :: OCEAN_PHY_FILE_step_limit                 = 0
 
     NAMELIST / PARAM_OCEAN_PHY_FILE / &
        OCEAN_PHY_FILE_basename,              &
@@ -105,12 +106,12 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN_PHY_FILE)
 
-    if ( OCEAN_PHY_FILE_basename == '' ) then
+    if ( OCEAN_PHY_FILE_basename(1) == '' ) then
        write(*,*) 'xxx OCEAN_PHY_FILE_basename is necessary'
        call PRC_MPIstop
     end if
 
-    call EXTIN_regist( OCEAN_PHY_FILE_basename,              & ! [IN]
+    call EXTIN_regist( OCEAN_PHY_FILE_basename(:),           & ! [IN]
                        'OCEAN_TEMP',                         & ! [IN]
                        'XY',                                 & ! [IN]
                        OCEAN_PHY_FILE_enable_periodic_year,  & ! [IN]
