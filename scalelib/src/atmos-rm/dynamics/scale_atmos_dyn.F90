@@ -278,6 +278,7 @@ contains
        DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    &
        DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
        divdmp_coef,                                          &
+       FLAG_TRACER_SPLIT_TEND,                               &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
        USE_AVERAGE,                                          &
@@ -364,6 +365,7 @@ contains
 
     real(RP), intent(in)    :: divdmp_coef
 
+    logical,  intent(in)    :: FLAG_TRACER_SPLIT_TEND
     logical,  intent(in)    :: FLAG_FCT_MOMENTUM
     logical,  intent(in)    :: FLAG_FCT_T
     logical,  intent(in)    :: FLAG_FCT_TRACER
@@ -501,6 +503,7 @@ contains
                                  DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    & ! [IN]
                                  wdamp_coef,                                           & ! [IN]
                                  divdmp_coef,                                          & ! [IN]
+                                 FLAG_TRACER_SPLIT_TEND,                               & ! [IN]
                                  FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       & ! [IN]
                                  FLAG_FCT_ALONG_STREAM,                                & ! [IN]
                                  USE_AVERAGE,                                          & ! [IN]

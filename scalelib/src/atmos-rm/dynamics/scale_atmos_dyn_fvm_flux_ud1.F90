@@ -130,11 +130,6 @@ contains
 #endif
 
 
-
-       valW(KS) = F2 * ( val(KS+1)+val(KS) )
-       valW(KE-1) = F2 * ( val(KE)+val(KE-1) )
-
-       
     return
   end subroutine ATMOS_DYN_FVM_flux_ValueW_Z_ud1
 
@@ -146,6 +141,8 @@ contains
        num_diff,          &
        CDZ,               &
        IIS, IIE, JJS, JJE )
+    use scale_const, only: &
+      EPS => CONST_EPS
     implicit none
 
     real(RP), intent(inout) :: flux    (KA,IA,JA)
@@ -185,7 +182,7 @@ contains
 
     !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
     !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff)
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff,EPS)
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -435,7 +432,10 @@ contains
 !       vel = ( 0.5_RP * ( mom(KS+1,i,j)+mom(KS+1,i-1,j) ) ) &
 !           / DENS(KS+1,i,j)
        flux(KS,i,j) = J13G(KS+1,i,j) / MAPF(i,j,+2) * vel &
-                   * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) ) ! k = KS+1
+                   * ( val(KS,i,j) &
+                     * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                + ( 2.0_RP * val(KS,i,j) + 5.0_RP * val(KS+1,i,j) - val(KS+2,i,j) ) / 6.0_RP &
+                     * ( 0.5_RP - sign(0.5_RP,vel) ) ) ! k = KS+1
 
 
        flux(KE-1,i,j) = 0.0_RP
@@ -499,7 +499,10 @@ contains
 !       vel = ( 0.5_RP * ( mom(KS+1,i,j)+mom(KS+1,i,j-1) ) ) &
 !           / DENS(KS+1,i,j)
        flux(KS,i,j) = J23G(KS+1,i,j) / MAPF(i,j,+1) * vel &
-                   * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) ) ! k = KS+1
+                   * ( val(KS,i,j) &
+                     * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                + ( 2.0_RP * val(KS,i,j) + 5.0_RP * val(KS+1,i,j) - val(KS+2,i,j) ) / 6.0_RP &
+                     * ( 0.5_RP - sign(0.5_RP,vel) ) ) ! k = KS+1
 
 
        flux(KE-1,i,j) = 0.0_RP
