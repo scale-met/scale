@@ -94,6 +94,8 @@ module test_atmos_dyn
 
   real(RP) :: divdmp_coef
 
+  logical  :: flag_tracer_split_tend = .false.
+
   logical  :: flag_fct_momentum = .true.
   logical  :: flag_fct_t        = .true.
   logical  :: flag_fct_tracer   = .true.
@@ -349,6 +351,7 @@ subroutine test_undef
           DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
           DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
           divdmp_coef,                                 & ! (in)
+          flag_tracer_split_tend,                      & ! (in)
           flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
           flag_fct_along_stream,                       & ! (in)
           .false.,                                     & ! (in)
@@ -403,6 +406,7 @@ subroutine test_const
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
        divdmp_coef,                                 & ! (in)
+       flag_tracer_split_tend,                      & ! (in)
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
@@ -503,6 +507,7 @@ subroutine test_conserve
          DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
          DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
          divdmp_coef,                                 & ! (in)
+         flag_tracer_split_tend,                      & ! (in)
          flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
          flag_fct_along_stream,                       & ! (in)
          .true.,                                      & ! (in)
@@ -631,6 +636,7 @@ subroutine test_cwc
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
        divdmp_coef,                                 & ! (in)
+       flag_tracer_split_tend,                      & ! (in)
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
@@ -720,6 +726,7 @@ subroutine test_fctminmax
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
        divdmp_coef,                                 & ! (in)
+       flag_tracer_split_tend,                      & ! (in)
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
