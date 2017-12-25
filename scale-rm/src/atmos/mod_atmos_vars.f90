@@ -150,8 +150,9 @@ module mod_atmos_vars
   !
   !++ Private parameters & variables
   !
-  logical,  private :: ATMOS_VARS_CHECKRANGE = .false.
-  real(RP), private :: ATMOS_VARS_CHECKCFL   = 0.0_RP
+  logical,  private :: ATMOS_VARS_CHECKRANGE    = .false.
+  real(RP), private :: ATMOS_VARS_CHECKCFL_SOFT = 1.0_RP  !> if Courant number exceeds this value, put the warning message
+  real(RP), private :: ATMOS_VARS_CHECKCFL_HARD = 2.0_RP  !> if Courant number exceeds this value, put the error message and stop
 
   type Vinfo
      character(len=H_SHORT) :: NAME
@@ -488,7 +489,8 @@ contains
        ATMOS_RESTART_CHECK_BASENAME,        &
        ATMOS_RESTART_CHECK_CRITERION,       &
        ATMOS_VARS_CHECKRANGE,               &
-       ATMOS_VARS_CHECKCFL
+       ATMOS_VARS_CHECKCFL_SOFT,            &
+       ATMOS_VARS_CHECKCFL_HARD
 
     integer :: ierr
     integer :: iv, iq
@@ -604,14 +606,22 @@ contains
        ATMOS_RESTART_CHECK = .false.
     endif
 
+    if ( ATMOS_VARS_CHECKCFL_HARD > 0.0_RP ) then
+       ATMOS_VARS_CHECKCFL_SOFT = min( ATMOS_VARS_CHECKCFL_SOFT, ATMOS_VARS_CHECKCFL_HARD )
+    endif
+
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Check restart consistency?      : ', ATMOS_RESTART_CHECK
-    if( IO_L ) write(IO_FID_LOG,*) '*** Check value range of variables? : ', ATMOS_VARS_CHECKRANGE
-    if ( ATMOS_VARS_CHECKCFL > 0.0_RP ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Check CFL condition?            : YES'
-       if( IO_L ) write(IO_FID_LOG,*) '*** Limit of Courant number         : ', ATMOS_VARS_CHECKCFL
+    if( IO_L ) write(IO_FID_LOG,*) '*** Check restart consistency?          : ', ATMOS_RESTART_CHECK
+    if( IO_L ) write(IO_FID_LOG,*) '*** Check value range of variables?     : ', ATMOS_VARS_CHECKRANGE
+    if ( ATMOS_VARS_CHECKCFL_SOFT > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Threshold of Courant number to warn : ', ATMOS_VARS_CHECKCFL_SOFT
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Check CFL condition?            : NO'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Threshold of Courant number to warn : disabled'
+    endif
+    if ( ATMOS_VARS_CHECKCFL_HARD > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Threshold of Courant number to stop : ', ATMOS_VARS_CHECKCFL_HARD
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Threshold of Courant number to stop : disabled'
     endif
 
     call ATMOS_DYN_vars_setup
@@ -2587,7 +2597,8 @@ contains
   !> monitor output
   subroutine ATMOS_vars_monitor
     use scale_process, only: &
-       PRC_myrank
+       PRC_myrank, &
+       PRC_abort
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        CVdry => CONST_CVdry
@@ -2609,6 +2620,8 @@ contains
        MONIT_put
     use scale_time, only: &
        TIME_DTSEC_ATMOS_DYN
+    use mod_atmos_admin, only: &
+       ATMOS_DYN_TYPE
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
@@ -2781,7 +2794,8 @@ contains
        call STAT_detail( WORK(:,:,:,:), WNAME(:) )
     endif
 
-    if ( ATMOS_VARS_CHECKCFL > 0.0_RP ) then
+    if (       ( ATMOS_DYN_TYPE /= 'OFF' .AND. ATMOS_DYN_TYPE /= 'NONE' )                   &
+         .AND. ( ATMOS_VARS_CHECKCFL_SOFT > 0.0_RP .OR. ATMOS_VARS_CHECKCFL_HARD > 0.0_RP ) ) then
 !OCL XFILL
        WORK(:,:,:,:) = 0.0_RP
 
@@ -2799,10 +2813,26 @@ contains
        enddo
 
        CFLMAX = maxval( WORK(:,:,:,:) )
-       if ( CFLMAX > ATMOS_VARS_CHECKCFL ) then
-          if( IO_L ) write(IO_FID_LOG,*) "*** [ATMOS_vars_monitor] Courant number exceeded the upper limit. : ", CFLMAX
-                     write(*,*)          "*** [ATMOS_vars_monitor] Courant number exceeded the upper limit. : ", CFLMAX, &
-                                         ", rank = ", PRC_myrank
+
+       if ( ATMOS_VARS_CHECKCFL_HARD > 0.0_RP .AND. CFLMAX > ATMOS_VARS_CHECKCFL_HARD ) then
+          if( IO_L ) write(IO_FID_LOG,*) "xxx Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
+          write(*,*)                     "xxx Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
+          write(*,*)                     "xxx Rank =", PRC_myrank
+          write(*,*)                     "xxx Please set ATMOS_VARS_CHECKCFL_HARD in the namelist PARAM_ATMOS_VARS when you want to change the limit."
+
+          WNAME(1) = "Courant num. Z"
+          WNAME(2) = "Courant num. X"
+          WNAME(3) = "Courant num. Y"
+
+          call STAT_detail( WORK(:,:,:,:), WNAME(:), supress_globalcomm=.true. )
+
+          call PRC_abort
+       endif
+
+       if ( ATMOS_VARS_CHECKCFL_SOFT > 0.0_RP .AND. CFLMAX > ATMOS_VARS_CHECKCFL_SOFT ) then
+          if( IO_L ) write(IO_FID_LOG,*) "xxx Courant number =", CFLMAX, " exceeded the soft limit =", ATMOS_VARS_CHECKCFL_SOFT
+          write(*,*)                     "xxx Courant number =", CFLMAX, " exceeded the soft limit =", ATMOS_VARS_CHECKCFL_SOFT
+          write(*,*)                     "xxx Rank =", PRC_myrank
 
           WNAME(1) = "Courant num. Z"
           WNAME(2) = "Courant num. X"
