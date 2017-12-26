@@ -102,12 +102,12 @@ contains
     !real(RP), intent(out)      :: DEPTH0  ! DEPTH0 = initial snow depth           [m]
     !real(RP)                   :: nosnowsec                   ! number of hours from latest snow event
 
-    real(RP)                  :: snow_conductivity     = 0.42_RP
-    real(RP)                  :: water_content         = 0.1_RP
+    real(RP)                  :: snow_conductivity     = 0.42
+    real(RP)                  :: water_content         = 0.1
     real(RP)                  :: snow_heat_capacityRHO = 8.4e+05
     real(RP)                  :: snow_rho              = 400.0
     real(RP)                  :: snowDepth_initial     = 0.
-    real(RP)                  :: albedo_value          = 0.686_RP
+    real(RP)                  :: albedo_value          = 0.686
 
     namelist / PARAM_LAND_PHY_SNOW_KY90 /  &
          ALBEDO_const,      &
@@ -251,7 +251,8 @@ contains
     if( ( LANDUSE_fact_land(i,j) > 0.0_RP    ) .and.    &
         ( SWE(i,j)>0. .or. SFLX_snow(i,j)>0. ) )then
 
-       Uabs = max( sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 ), Uabs_min )
+       !Uabs = max( sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 ), Uabs_min )
+       Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
 
        call qsatf( QAsat, TA(i,j), PRSA(i,j) )
        RH  = QA(i,j) / QAsat
@@ -300,11 +301,11 @@ contains
        SNOW_frac      (i,j) = 0.0_RP
 
        TSNOW_t (i,j)        = 0.0_RP
-       !TSNOW          (i,j) = 0.0_RP
-       !SWE            (i,j) = 0.0_RP
-       !SDepth         (i,j) = 0.0_RP
-       !SDzero         (i,j) = 0.0_RP
-       !Salbedo        (i,j) = 0.0_RP
+       TSNOW          (i,j) = T0     !!!
+       SWE            (i,j) = 0.0_RP !!!
+       SDepth         (i,j) = 0.0_RP !!!
+       SDzero         (i,j) = 0.0_RP !!!
+       Salbedo        (i,j) = 0.0_RP !!!
        SFLX_SH        (i,j) = 0.0_RP
        SFLX_LH        (i,j) = 0.0_RP
        SFLX_GH        (i,j) = 0.0_RP
@@ -421,7 +422,8 @@ contains
     DEPTH0  = DEPTH0  + (SNOW /RHOSNOW)
     ZNSNOW0 = ZNSNOW0 + (SNOW /RHOSNOW)    ! ZN does not change
 
-    write(*,*) "SWE and TAIN:   ", SWE0, TA
+    write(*,*) "UA, SNOW    :   ", UA, SNOW
+    write(*,*) "SWE , TSNOW, and TA :   ", SWE0, TSNOW0, TA
     write(*,*) "DEPTH is:       ", DEPTH0
     write(*,*) "ZN beginning:   ", ZNSNOW0
 
@@ -611,9 +613,12 @@ subroutine check_allSnowMelt (GFLUX, TS1, ZN1, D, sflag, time)
   energy_use_melt = (1.0_RP-W0)*RHOSNOW*LF*D
   energy_use      = energy_use_ripe + energy_use_melt
 
+     write(*,*) "Energy in  =",energy_in
+     write(*,*) "Energy use =",energy_use
+
   if(energy_in >= energy_use)then
      sflag=1
-     write(*,*) "Energy in  =",energy_in,energy_use
+     write(*,*) "Energy in  =",energy_in
      write(*,*) "Energy use =",energy_use
   else
      sflag=0

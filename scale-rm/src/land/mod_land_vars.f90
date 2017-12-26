@@ -511,6 +511,15 @@ contains
                      __FILE__, __LINE__ )
        call VALCHECK( LAND_SFC_albedo(IS:IE,JS:JE,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALB_SW),     &
                      __FILE__, __LINE__ )
+
+       !call VALCHECK( SNOW_TEMP     (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, 'SNOW_TEMP',            &
+       !              __FILE__, __LINE__ )
+       !call VALCHECK( SNOW_SWE      (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, 'SNOW_SWE',             &
+       !              __FILE__, __LINE__ )
+       !call VALCHECK( SNOW_Depth    (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, 'SNOW_Depth',           &
+       !              __FILE__, __LINE__ )
+       !call VALCHECK( SNOW_Dzero    (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, 'SNOW_Dzero',           &
+       !              __FILE__, __LINE__ )
     endif
 
     call FILE_HISTORY_in( LAND_TEMP (:,:,:), VAR_NAME(I_TEMP),  VAR_DESC(I_TEMP),  VAR_UNIT(I_TEMP),  dim_type='LXY' )
