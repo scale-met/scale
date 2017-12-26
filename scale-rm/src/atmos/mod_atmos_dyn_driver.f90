@@ -58,6 +58,15 @@ module mod_atmos_dyn_driver
                                                                    ! 'UD5'
                                                                    ! 'CD6'
 
+  ! Coriolis force
+  !> If ATMOS_DYN_coriolis_type=='PLANE', then f = ATMOS_DYN_coriolis_f0 + ATMOS_DYN_coriolis_beta * ( CY - ATMOS_DYN_coriolis_y0 )
+  !> If ATMOS_DYN_coriolis_type=='SPHERE', then f = 2 * CONST_OHM * sin( lat )
+  character(len=H_SHORT), public :: ATMOS_DYN_coriolis_type = 'PLANE'   ! type of coriolis force: 'PLANE', 'SPHERE'
+  real(RP), public :: ATMOS_DYN_coriolis_f0                 = 0.0_RP
+  real(RP), public :: ATMOS_DYN_coriolis_beta               = 0.0_RP
+  real(RP), public :: ATMOS_DYN_coriolis_y0                             ! default is domain center
+
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -76,14 +85,6 @@ module mod_atmos_dyn_driver
   real(RP), private :: ATMOS_DYN_wdamp_tau                   = -1.0_RP   ! maximum tau for Rayleigh damping of w [s]
   real(RP), private :: ATMOS_DYN_wdamp_height                = -1.0_RP   ! height       to start apply Rayleigh damping [m]
   integer,  private :: ATMOS_DYN_wdamp_layer                 = -1        ! layer number to start apply Rayleigh damping [num]
-
-  ! Coriolis force
-  !> If ATMOS_DYN_coriolis_type=='PLANE', then f = ATMOS_DYN_coriolis_f0 + ATMOS_DYN_coriolis_beta * ( CY - ATMOS_DYN_coriolis_y0 )
-  !> If ATMOS_DYN_coriolis_type=='SPHERE', then f = 2 * CONST_OHM * sin( lat )
-  character(len=H_SHORT), private :: ATMOS_DYN_coriolis_type = 'PLANE'   ! type of coriolis force: 'PLANE', 'SPHERE'
-  real(RP), private :: ATMOS_DYN_coriolis_f0                 = 0.0_RP
-  real(RP), private :: ATMOS_DYN_coriolis_beta               = 0.0_RP
-  real(RP), private :: ATMOS_DYN_coriolis_y0                             ! default is domain center
 
   ! Divergence damping
   real(RP), private :: ATMOS_DYN_divdmp_coef                 = 0.0_RP    ! Divergence dumping coef
