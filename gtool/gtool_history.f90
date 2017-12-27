@@ -137,7 +137,6 @@ module gtool_history
      integer                    :: size              !> Size of array
      real(DP)                   :: timesum           !> Buffer for time
      real(DP), pointer          :: varsum(:)         !> Buffer for value
-     real(DP), pointer          :: varout(:)         !> Buffer for value (output)
   end type vars
 
   type axis
@@ -602,7 +601,6 @@ contains
 
     do n = 1, History_req_count
        allocate( History_vars(n)%varsum(array_size) )
-       allocate( History_vars(n)%varout(array_size) )
     enddo
 
     ! count number of items and variants
@@ -751,11 +749,10 @@ contains
              else
                 History_vars(id)%laststep_write = 1
              endif
-             History_vars(id)%laststep_put = History_vars(id)%laststep_write
-             History_vars(id)%size         = 0
-             History_vars(id)%timesum      = 0.0_DP
-             History_vars(id)%varsum(:)    = 0.0_DP
-             History_vars(id)%varout(:)    = 0.0_DP
+             History_vars(id)%laststep_put      = History_vars(id)%laststep_write
+             History_vars(id)%size              = 0
+             History_vars(id)%timesum           = 0.0_DP
+             History_vars(id)%varsum(:)         = 0.0_DP
 
              if ( debug ) then
                 write(message,*) '*** [HIST] Item registration No.= ', id
@@ -1955,6 +1952,11 @@ contains
     endif
 
 
+    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
+       History_vars(id)%timesum   = 0.0_DP
+       History_vars(id)%varsum(:) = 0.0_DP
+    endif
+
     if ( History_vars(id)%taverage ) then
           idx = 1
           History_vars(id)%varsum(idx) = History_vars(id)%varsum(idx) + var * dt
@@ -2000,6 +2002,11 @@ contains
        call Log('E',message)
     endif
 
+
+    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
+       History_vars(id)%timesum   = 0.0_DP
+       History_vars(id)%varsum(:) = 0.0_DP
+    endif
 
     if ( History_vars(id)%taverage ) then
           idx = 1
@@ -2049,6 +2056,11 @@ contains
     endif
 
     vsize = shape(var)
+
+    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
+       History_vars(id)%timesum   = 0.0_DP
+       History_vars(id)%varsum(:) = 0.0_DP
+    endif
 
     if ( History_vars(id)%taverage ) then
        do i = 1, vsize(1)
@@ -2103,6 +2115,11 @@ contains
 
     vsize = shape(var)
 
+    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
+       History_vars(id)%timesum   = 0.0_DP
+       History_vars(id)%varsum(:) = 0.0_DP
+    endif
+
     if ( History_vars(id)%taverage ) then
        do i = 1, vsize(1)
           idx = i
@@ -2155,6 +2172,11 @@ contains
     endif
 
     vsize = shape(var)
+
+    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
+       History_vars(id)%timesum   = 0.0_DP
+       History_vars(id)%varsum(:) = 0.0_DP
+    endif
 
     if ( History_vars(id)%taverage ) then
        do j = 1, vsize(2)
@@ -2213,6 +2235,11 @@ contains
 
     vsize = shape(var)
 
+    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
+       History_vars(id)%timesum   = 0.0_DP
+       History_vars(id)%varsum(:) = 0.0_DP
+    endif
+
     if ( History_vars(id)%taverage ) then
        do j = 1, vsize(2)
        do i = 1, vsize(1)
@@ -2269,6 +2296,11 @@ contains
     endif
 
     vsize = shape(var)
+
+    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
+       History_vars(id)%timesum   = 0.0_DP
+       History_vars(id)%varsum(:) = 0.0_DP
+    endif
 
     if ( History_vars(id)%taverage ) then
        do k = 1, vsize(3)
@@ -2330,6 +2362,11 @@ contains
     endif
 
     vsize = shape(var)
+
+    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
+       History_vars(id)%timesum   = 0.0_DP
+       History_vars(id)%varsum(:) = 0.0_DP
+    endif
 
     if ( History_vars(id)%taverage ) then
        do k = 1, vsize(3)
@@ -2485,7 +2522,7 @@ contains
     integer, intent(in) :: id
     integer, intent(in) :: step_now
 
-    logical  :: update_varout
+    logical  :: update_varsum
     integer  :: isize
     real(DP) :: time_str, time_end
     real(DP) :: sec_str,  sec_end
@@ -2511,19 +2548,15 @@ contains
           call Log('I',message)
        endif
 
-       update_varout = .false.
+       update_varsum = .false.
     else
-       update_varout = .true.
+       update_varsum = .true.
     endif
 
     isize = History_vars(id)%size
 
-    if ( update_varout ) then
-       if ( History_vars(id)%taverage ) then
-          History_vars(id)%varout(1:isize) = History_vars(id)%varsum(1:isize) / History_vars(id)%timesum
-       else
-          History_vars(id)%varout(1:isize) = History_vars(id)%varsum(1:isize)
-       endif
+    if ( update_varsum .AND. History_vars(id)%taverage ) then
+       History_vars(id)%varsum(1:isize) = History_vars(id)%varsum(1:isize) / History_vars(id)%timesum
     endif
 
     if ( firsttime ) then
@@ -2552,7 +2585,7 @@ contains
           ! south-most processes in parallel, or a z axis to be written by rank 0 only
           call FileWrite( History_vars(id)%fid,             & ! [IN]
                           History_vars(id)%vid,             & ! [IN]
-                          History_vars(id)%varout(1:isize), & ! [IN]
+                          History_vars(id)%varsum(1:isize), & ! [IN]
                           time_str,                         & ! [IN]
                           time_end,                         & ! [IN]
                           History_vars(id)%start,           & ! global subarray start indices
@@ -2566,11 +2599,9 @@ contains
        endif
     endif
 
-    if ( update_varout ) then
+    if ( update_varsum ) then
        History_vars(id)%laststep_write = step_now
        History_vars(id)%laststep_put   = step_now
-       History_vars(id)%timesum        = 0.0_DP
-       History_vars(id)%varsum(:)      = 0.0_DP
     endif
 
     laststep_write = step_now ! remember for multiple call in the same step
