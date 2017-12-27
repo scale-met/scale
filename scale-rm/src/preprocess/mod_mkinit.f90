@@ -842,8 +842,8 @@ contains
 
     !--- Hydrometeor is zero at initial time for Bin method
     do iq = QHS,  QHE
-    do j  = JS, JE
-    do i  = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k  = KS, KE
         QTRC(k,i,j,iq) = 0.0_RP
     enddo
@@ -853,18 +853,18 @@ contains
 
     !-- Aerosol distribution
     if( nccn /= 0 ) then
-     do iq = 1, nccn
-     do j  = JS, JE
-     do i  = IS, IE
-     do k  = KS, KE
-       QTRC(k,i,j,QHE+iq) = gan(iq) !/ DENS(k,i,j)
-     enddo
-     enddo
-     enddo
-     enddo
+       do iq = 1, nccn
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k  = KS, KE
+          QTRC(k,i,j,QHE+iq) = gan(iq) !/ DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       enddo
 
-     deallocate( xactr )
-     deallocate( xabnd )
+       deallocate( xactr )
+       deallocate( xabnd )
     endif
 
 #endif
@@ -934,8 +934,8 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_FLUX)
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        SFLX_rain   (i,j) = FLX_rain
        SFLX_snow   (i,j) = FLX_snow
 
@@ -1061,8 +1061,8 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_OCEAN)
 
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        OCEAN_TEMP      (i,j)      = OCN_TEMP
        OCEAN_SFC_TEMP  (i,j)      = SFC_TEMP
        OCEAN_SFC_albedo(i,j,I_LW) = SFC_albedo_LW
@@ -1158,8 +1158,8 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_URBAN)
 
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        URBAN_TR   (i,j)   = URB_ROOF_TEMP
        URBAN_TB   (i,j)   = URB_BLDG_TEMP
        URBAN_TG   (i,j)   = URB_GRND_TEMP
@@ -1434,8 +1434,8 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_PLANESTATE)
 
     ! calc in dry condition
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        pott_sfc(1,i,j) = SFC_THETA
        pres_sfc(1,i,j) = SFC_PRES
        qv_sfc  (1,i,j) = 0.0_RP
@@ -1451,8 +1451,8 @@ contains
     if ( ENV_THETA < 0.0_RP ) then ! use isa profile
 
        call PROFILE_isa( KA, KS, KE,      & ! [IN]
-                         IA, IS, IE,      & ! [IN]
-                         JA, JS, JE,      & ! [IN]
+                         IA, ISB, IEB,    & ! [IN]
+                         JA, JSB, JEB,    & ! [IN]
                          pott_sfc(1,:,:), & ! [IN]
                          pres_sfc(1,:,:), & ! [IN]
                          REAL_CZ (:,:,:), & ! [IN]
@@ -1460,8 +1460,8 @@ contains
 
     else
 
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           pott(k,i,j) = ENV_THETA + ENV_TLAPS * REAL_CZ(k,i,j)
        enddo
@@ -1489,8 +1489,8 @@ contains
        call SATURATION_pres2qsat_all( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
 
        call RANDOM_get(rndm) ! make random
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
           qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,i,j)
 
           do k = KS, KE
@@ -1501,8 +1501,8 @@ contains
     end if
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        pott_sfc(1,i,j) = pott_sfc(1,i,j) + rndm(KS-1,i,j) * RANDOM_THETA
 
        do k = KS, KE
@@ -1528,8 +1528,8 @@ contains
     call COMM_wait ( DENS(:,:,:), 1 )
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMX(k,i,j) = ( ENV_U + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_U ) &
                    * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
@@ -1538,8 +1538,8 @@ contains
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMY(k,i,j) = ( ENV_V + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_V ) &
                    * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
@@ -1547,8 +1547,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMZ(k,i,j) = 0.0_RP
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
@@ -1557,8 +1557,8 @@ contains
     enddo
 
     if ( I_QV > 0 ) then
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           QTRC(k,i,j,I_QV) = qv(k,i,j)
        enddo
@@ -1653,8 +1653,8 @@ contains
                                qv_sfc  (1,1,1), & ! [IN]
                                qc_sfc  (1,1,1)  ) ! [IN]
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        DENS(k,i,j) = DENS(k,1,1)
        MOMZ(k,i,j) = 0.0_RP
@@ -1684,8 +1684,8 @@ contains
           call PRC_MPIstop
        end select
 
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           QTRC(k,i,j,I_NC) = BBL_NC * shapeFac(k,i,j)
        enddo
@@ -1861,8 +1861,8 @@ contains
 
     RovCP = Rdry / CPdry
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        DENS(k,i,j) = SFC_PRES/(Rdry*ENV_TEMP) * exp( - GRAV/(Rdry*ENV_TEMP) * GRID_CZ(k) )
        MOMZ(k,i,j) = 0.0_RP
@@ -1962,8 +1962,8 @@ contains
                                qv_sfc  (1,1,1), & ! [IN]
                                qc_sfc  (1,1,1)  ) ! [IN]
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        DENS(k,i,j) = DENS(k,1,1)
        MOMZ(k,i,j) = 0.0_RP
@@ -2073,8 +2073,8 @@ contains
                                qv_sfc  (1,1,1), & ! [IN]
                                qc_sfc  (1,1,1)  ) ! [IN]
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        DENS(k,i,j) = DENS(k,1,1)
        MOMZ(k,i,j) = 0.0_RP
@@ -2089,8 +2089,8 @@ contains
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        fact = ( GRID_CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
        fact = max( min( fact, 1.0_RP ), 0.0_RP )
@@ -2204,8 +2204,8 @@ contains
        call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
 
        call RANDOM_get(rndm) ! make random
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
           qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,1,1)
 
           do k = KS, KE
@@ -2216,8 +2216,8 @@ contains
     end if
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA + rndm(KS-1,i,j) * RANDOM_THETA
 
@@ -2244,8 +2244,8 @@ contains
     call COMM_wait ( DENS(:,:,:), 1 )
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMX(k,i,j) = ( ENV_U + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_U ) &
                    * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
@@ -2254,8 +2254,8 @@ contains
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMY(k,i,j) = ( ENV_V + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_V ) &
                    * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
@@ -2263,8 +2263,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMZ(k,i,j) = 0.0_RP
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
@@ -2273,8 +2273,8 @@ contains
     enddo
 
     if ( I_QV > 0.0_RP ) then
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           QTRC(k,i,j,I_QV) = qv(k,i,j)
        enddo
@@ -2285,8 +2285,8 @@ contains
 #ifndef DRY
     do iq = 1, QA
        if ( iq == I_QV ) cycle
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           QTRC(k,i,j,iq) = 0.0_RP
        enddo
@@ -2424,8 +2424,8 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_MOUNTAINWAVE)
 
     ! calc in dry condition
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = 0.0_RP
@@ -2433,8 +2433,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        Ustar2 = ENV_U * ENV_U + ENV_V * ENV_V
        N2     = Ustar2 * (SCORER*SCORER)
@@ -2459,8 +2459,8 @@ contains
                                qv_sfc  (:,:,:), & ! [IN]
                                qc_sfc  (:,:,:)  ) ! [IN]
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        DENS(k,i,j) = DENS(k,i,j)
        MOMZ(k,i,j) = 0.0_RP
@@ -2476,8 +2476,8 @@ contains
     ! optional : add tracer bubble
     if (  BBL_NC > 0.0_RP ) then
        if (  I_NC > 0 ) then
-          do j = JS, JE
-          do i = IS, IE
+          do j = JSB, JEB
+          do i = ISB, IEB
           do k = KS, KE
              QTRC(k,i,j,I_NC) = BBL_NC * bubble(k,i,j)
           enddo
@@ -2588,8 +2588,8 @@ contains
 
     eta(:,:,:) = 1.0E-8_RP   ! Set first guess of eta
 
-    do j = JS, JE
-    do i = IS, IS            ! Note that initial fields are zonaly symmetric
+    do j = JSB, JEB
+    do i = ISB, IEB            ! Note that initial fields are zonaly symmetric
 
        y = GRID_CY(j)
        yphase  = 2.0_RP*PI*y/Ly
@@ -2664,7 +2664,7 @@ contains
 
     !-----------------------------------------------------------------------------------
 
-    do j = JS, JE
+    do j = JSB, JEB
     do k = KS, KE
 
        eta(k,IS,j) = pres(k,IS,j)/REF_PRES
@@ -2685,8 +2685,8 @@ contains
     !---------------------------------------------------------------------------------------
 
     ! Add the inital perturbation for zonal velocity
-    do j = JS, JE
-    do i = IS-1, IE
+    do j = JSB, JEB
+    do i = max(ISB-1,1), IEB
        MOMX(KS:kE,i,j) = MOMX(KS:KE,i,j) &
            +  DENS(KS:KE,i,j)* Up*exp( - ((GRID_FX(i) - Xc)**2 + (GRID_CY(j) - Yc)**2)/Lp**2 )
     enddo
@@ -2815,8 +2815,8 @@ contains
                                qv_sfc  (1,1,1), & ! [IN]
                                qc_sfc  (1,1,1)  ) ! [IN]
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        DENS(k,i,j) = DENS(k,1,1)
        MOMZ(k,i,j) = 0.0_RP
@@ -2881,8 +2881,8 @@ contains
 
     call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        DENS(k,i,j) = RHO(k)
        MOMZ(k,i,j) = 0.0_RP
@@ -2951,8 +2951,8 @@ contains
     call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        DENS(k,i,j) = RHO(k)
        MOMZ(k,i,j) = 0.0_RP
@@ -3029,8 +3029,8 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WK1982)
 
     ! calc in dry condition
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        pres_sfc(1,i,j) = SFC_PRES
        pott_sfc(1,i,j) = SFC_THETA
        qv_sfc  (1,i,j) = 0.0_RP
@@ -3064,8 +3064,8 @@ contains
                                qc_sfc  (:,:,:)  ) ! [IN]
 
     ! calc QV from RH
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        rh_sfc(1,i,j) = 1.0_RP - 0.75_RP * ( REAL_FZ(KS-1,i,j) / TR_Z )**1.25_RP
 
        do k = KS, KE
@@ -3081,8 +3081,8 @@ contains
     call SATURATION_pres2qsat_all( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
     call SATURATION_pres2qsat_all( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        qv_sfc(1,i,j) = rh_sfc(1,i,j) * qsat_sfc(1,i,j)
        do k = KS, KE
           qv(k,i,j) = rh(k,i,j) * qsat(k,i,j)
@@ -3110,8 +3110,8 @@ contains
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMX(k,i,j) = SHEAR_U * tanh( REAL_CZ(k,i,j) / SHEAR_Z ) &
                    * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
@@ -3119,8 +3119,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMY(k,i,j) = 0.0_RP
        MOMZ(k,i,j) = 0.0_RP
@@ -3137,8 +3137,8 @@ contains
 #ifndef DRY
     if ( QA >= 2 ) then
        do iq = 2, QA
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           QTRC(k,i,j,iq) = 0.0_RP
        enddo
@@ -3223,8 +3223,8 @@ contains
     endif
 
     ! calc in dry condition
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
 
        pres_sfc(1,i,j) = 1017.8E2_RP ! [Pa]
        pott_sfc(1,i,j) = 289.0_RP    ! [K]
@@ -3267,8 +3267,8 @@ contains
                                qc_sfc  (:,:,:)  ) ! [IN]
 
     ! calc in moist condition
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        qv_sfc  (1,i,j) = 9.0E-3_RP   ! [kg/kg]
        qc_sfc  (1,i,j) = 0.0_RP
 
@@ -3306,8 +3306,8 @@ contains
 
     call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
     enddo
@@ -3327,8 +3327,8 @@ contains
                                       qv_sfc  (:,:,:), & ! [IN]
                                       qc_sfc  (:,:,:)  ) ! [IN]
 
-    do j  = JS, JE
-    do i  = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
     enddo
@@ -3338,8 +3338,8 @@ contains
     call COMM_wait ( DENS(:,:,:), 1 )
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
           MOMZ(k,i,j) = ( 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
@@ -3352,8 +3352,8 @@ contains
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
           MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
@@ -3366,8 +3366,8 @@ contains
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
           MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
@@ -3380,8 +3380,8 @@ contains
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
           RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
@@ -3394,8 +3394,8 @@ contains
     enddo
 
     if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j) !--- Super saturated air at initial
           do iq = QHE+1, QHE+nccn
@@ -3405,8 +3405,8 @@ contains
        enddo
        enddo
     else
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           QTRC(k,i,j,I_QV) = qv(k,i,j)
           QTRC(k,i,j,I_QC) = qc(k,i,j)
@@ -3415,8 +3415,8 @@ contains
        enddo
 
        if ( I_NC > 0 ) then
-          do j = JS, JE
-          do i = IS, IE
+          do j = JSB, JEB
+          do i = ISB, IEB
           do k = KS, KE
              if ( qc(k,i,j) > 0.0_RP ) then
                 QTRC(k,i,j,I_NC) = 120.E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
@@ -3494,8 +3494,8 @@ contains
 
     ! calc in dry condition
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
 
        pres_sfc(1,i,j) = 1017.8E2_RP   ! [Pa]
        pott_sfc(1,i,j) = 288.3_RP      ! [K]
@@ -3537,8 +3537,8 @@ contains
                                qc_sfc  (:,:,:)  ) ! [IN]
 
     ! calc in moist condition
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        qv_sfc  (1,i,j) = 9.45E-3_RP
        qc_sfc  (1,i,j) = 0.0_RP
 
@@ -3573,8 +3573,8 @@ contains
 
     call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
     enddo
@@ -3594,8 +3594,8 @@ contains
                                       qv_sfc  (:,:,:), & ! [IN]
                                       qc_sfc  (:,:,:)  ) ! [IN]
 
-    do j  = JS, JE
-    do i  = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
     enddo
@@ -3605,8 +3605,8 @@ contains
     call COMM_wait ( DENS(:,:,:), 1 )
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
        MOMZ(k,i,j) = ( 0.0_RP + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
@@ -3619,8 +3619,8 @@ contains
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
        MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
@@ -3633,8 +3633,8 @@ contains
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
        MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
@@ -3647,8 +3647,8 @@ contains
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then
        RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
@@ -3661,8 +3661,8 @@ contains
     enddo
 
     if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           !--- Super saturated air at initial
           QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j)
@@ -3673,8 +3673,8 @@ contains
        enddo
        enddo
     else
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           QTRC(k,i,j,I_QV) = qv(k,i,j)
           QTRC(k,i,j,I_QC) = qc(k,i,j)
@@ -3683,8 +3683,8 @@ contains
        enddo
 
        if ( I_NC > 0 ) then
-          do j = JS, JE
-          do i = IS, IE
+          do j = JSB, JEB
+          do i = ISB, IEB
           do k = KS, KE
              if ( qc(k,i,j) > 0.0_RP ) then
                 QTRC(k,i,j,I_NC) = 55.0E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
@@ -3768,8 +3768,8 @@ contains
 
     ! calc in dry condition
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
 
        pres_sfc(1,i,j) = PRES_ZB
 !      pott_sfc(1,i,j) = 288.3_RP      ! [K]
@@ -3834,8 +3834,8 @@ contains
     call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
 
     RovCP = Rdry / CPdry
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        pott(k,i,j) = potl(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
     enddo
@@ -3855,8 +3855,8 @@ contains
                                qv_sfc  (:,:,:), & ! [IN]
                                qc_sfc  (:,:,:)  ) ! [IN]
 
-    do j  = JS, JE
-    do i  = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
     enddo
@@ -3866,8 +3866,8 @@ contains
     call COMM_wait ( DENS(:,:,:), 1 )
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
        MOMZ(k,i,j) = ( 0.0_RP + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
@@ -3881,8 +3881,8 @@ contains
 
 !write(*,*)'chk8'
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
        MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
@@ -3896,8 +3896,8 @@ contains
 !write(*,*)'chk9'
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
        MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
@@ -3911,8 +3911,8 @@ contains
 !write(*,*)'chk10'
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then
        RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
@@ -3926,8 +3926,8 @@ contains
 
 !write(*,*)'chk11'
     do iq = 1, QA
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        QTRC(k,i,j,iq) = 0.0_RP
     enddo
@@ -3937,8 +3937,8 @@ contains
 
 !write(*,*)'chk12'
     if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           !--- Super saturated air at initial
           QTRC(k,i,j,I_QV) = qv(k,i,j) + qc(k,i,j)
@@ -3951,8 +3951,8 @@ contains
        enddo
        enddo
     else
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           QTRC(k,i,j,I_QV) = qv(k,i,j)
           QTRC(k,i,j,I_QC) = qc(k,i,j)
@@ -3961,8 +3961,8 @@ contains
        enddo
 
        if ( I_NC > 0 ) then
-          do j = JS, JE
-          do i = IS, IE
+          do j = JSB, JEB
+          do i = ISB, IEB
           do k = KS, KE
              if ( qc(k,i,j) > 0.0_RP ) then
                 QTRC(k,i,j,I_NC) = 55.0E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
@@ -4028,8 +4028,8 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RICO)
 
     ! calc in moist condition
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
 
        pres_sfc(1,i,j) = 1015.4E2_RP ! [Pa]
        pott_sfc(1,i,j) = 297.9_RP
@@ -4077,8 +4077,8 @@ contains
                                qc_sfc  (:,:,:)  ) ! [IN]
 
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        qv_sfc  (1,i,j) = 16.0E-3_RP   ! [kg/kg]
        qc_sfc  (1,i,j) = 0.0_RP
 
@@ -4106,8 +4106,8 @@ contains
 
     call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
     enddo
@@ -4128,8 +4128,8 @@ contains
                                       qc_sfc  (:,:,:)  ) ! [IN]
 
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA  ,i,j) = DENS(KE,i,j)
     enddo
@@ -4138,24 +4138,24 @@ contains
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMZ(k,i,j) = 0.0_RP
     enddo
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
     enddo
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
     enddo
@@ -4163,8 +4163,8 @@ contains
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        RHOT(k,i,j) = ( pott(k,i,j)+2.0_RP*( rndm(k,i,j)-0.5_RP )*PERTURB_AMP_PT ) * DENS(k,i,j)
     enddo
@@ -4174,8 +4174,8 @@ contains
     call RANDOM_get(rndm) ! make random
 
     if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           !--- Super saturated air at initial
           QTRC(k,i,j,I_QV) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV &
@@ -4187,8 +4187,8 @@ contains
        enddo
        enddo
     else
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           QTRC(k,i,j,I_QV) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV
           QTRC(k,i,j,I_QC) = qc(k,i,j)
@@ -4197,8 +4197,8 @@ contains
        enddo
 
        if ( I_NC > 0 ) then
-          do j = JS, JE
-          do i = IS, IE
+          do j = JSB, JEB
+          do i = ISB, IEB
           do k = KS, KE
              if ( qc(k,i,j) > 0.0_RP ) then
                 QTRC(k,i,j,I_NC) = 70.E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
@@ -4267,8 +4267,8 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BOMEX)
 
     ! calc in moist condition
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
 
        pres_sfc(1,i,j) = 1015.E2_RP ! [Pa]
        pott_sfc(1,i,j) = 299.1_RP
@@ -4322,8 +4322,8 @@ contains
                                qc_sfc  (:,:,:)  ) ! [IN]
 
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        qv_sfc  (1,i,j) = 22.45E-3_RP   ! [kg/kg]
        qc_sfc  (1,i,j) = 0.0_RP
 
@@ -4352,8 +4352,8 @@ contains
 
     call HYDROMETEOR_LHV( LHV(:,:,:), temp(:,:,:) )
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
     enddo
@@ -4374,8 +4374,8 @@ contains
                                       qc_sfc  (:,:,:)  ) ! [IN]
 
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA  ,i,j) = DENS(KE,i,j)
     enddo
@@ -4384,24 +4384,24 @@ contains
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMZ(k,i,j) = 0.0_RP
     enddo
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
     enddo
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
     enddo
@@ -4409,8 +4409,8 @@ contains
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        if( GRID_CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
          RHOT(k,i,j) = ( pott(k,i,j)+2.0_RP*( rndm(k,i,j)-0.5_RP )*PERTURB_AMP_PT ) * DENS(k,i,j)
@@ -4424,8 +4424,8 @@ contains
     call RANDOM_get(rndm) ! make random
 
     if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           !--- Super saturated air at initial
           if( GRID_CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
@@ -4441,8 +4441,8 @@ contains
        enddo
        enddo
     else
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           if( GRID_CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
             QTRC(k,i,j,I_QV) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV
@@ -4455,8 +4455,8 @@ contains
        enddo
 
        if ( I_NC > 0 ) then
-          do j = JS, JE
-          do i = IS, IE
+          do j = JSB, JEB
+          do i = ISB, IEB
           do k = KS, KE
              if ( qc(k,i,j) > 0.0_RP ) then
                 QTRC(k,i,j,I_NC) = 70.E6_RP / DENS(k,i,j) ! [number/m3] / [kg/m3]
@@ -4629,7 +4629,7 @@ contains
                                 GRID_FX (i), fx_org, dims(2), & ! (IN)
                                 .true.                        ) ! (IN)
     enddo
-    do j = JS, JE
+    do j = JSB, JEB
        call interporation_fact( fact_cy0(j), fact_cy1(j),     & ! (OUT)
                                 idx_cy0 (j), idx_cy1 (j),     & ! (OUT)
                                 GRID_CY (j), cy_org, dims(3), & ! (IN)
@@ -4696,8 +4696,8 @@ contains
     end do
     end do
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, IE
        DENS(k,i,j) = exp( &
                      fact_cz0(k)*fact_cx0(i)*fact_cy0(j)*dens_org(idx_cz0(k),idx_cx0(i),idx_cy0(j)) &
@@ -4780,16 +4780,16 @@ contains
     deallocate( fy_org )
 
     if ( I_QV > 0 ) then
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           qv(k,i,j) = QTRC(k,i,j,I_QV)
        end do
        end do
        end do
     else
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           qv(k,i,j) = 0.0_RP
        end do
@@ -4798,16 +4798,16 @@ contains
     end if
 
     if ( I_QC > 0 ) then
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           qc(k,i,j) = QTRC(k,i,j,I_QC)
        end do
        end do
        end do
     else
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           qc(k,i,j) = 0.0_RP
        end do
@@ -4815,8 +4815,8 @@ contains
        end do
     end if
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS+1, KE
        dz(k,i,j) = REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j) ! distance from cell center to cell center
     enddo
@@ -4832,32 +4832,32 @@ contains
                                      qc  (:,:,:), & ! [IN]
                                      dz  (:,:,:)  ) ! [IN]
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMZ(k,i,j) = 0.5_RP * W(k,i,j) * ( DENS(k,i,j) + DENS(k+1,i,j) )
     enddo
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMX(k,i,j) = 0.5_RP * U(k,i,j) * ( DENS(k,i+1,j) + DENS(k,i,j) )
     enddo
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMY(k,i,j) = 0.5_RP * V(k,i,j) * ( DENS(k,i,j+1) + DENS(k,i,j) )
     enddo
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
     enddo
@@ -5017,8 +5017,8 @@ contains
     call ocean_setup
 
     ! make landuse conditions
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        if ( abs( GRID_CX(i) - GRID_DOMAIN_CENTER_X ) < LAND_SIZE ) then
           LANDUSE_frac_land(i,j) = 1.0_RP
        else
@@ -5061,8 +5061,8 @@ contains
     dist = ( GRID_CXG(IMAX*PRC_NUM_X) - GRID_CXG(1) ) / 9.0_RP
 
     ! make landuse conditions
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        if (       GRID_CX(i) >= dist * 4.0_RP &
             .AND. GRID_CX(i) <  dist * 5.0_RP ) then
           LANDUSE_frac_land(i,j)  = 1.0_RP
@@ -5146,16 +5146,16 @@ contains
     enddo
     enddo
 
-    do j  = JS, JE
-    do i  = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
     enddo
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
           MOMZ(k,i,j) = ( 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
@@ -5168,8 +5168,8 @@ contains
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
           MOMX(k,i,j) = ( velx(k) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
@@ -5182,8 +5182,8 @@ contains
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
           MOMY(k,i,j) = ( vely(k) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
@@ -5196,8 +5196,8 @@ contains
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
           RHOT(k,i,j) = ( pott(k) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
@@ -5409,8 +5409,8 @@ contains
                                qv_sfc  (1,1,1), & ! [IN]
                                qc_sfc  (1,1,1)  ) ! [IN]
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        DENS(k,i,j) = DENS(k,1,1)
        MOMZ(k,i,j) = 0.0_RP

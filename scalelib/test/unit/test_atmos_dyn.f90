@@ -17,6 +17,7 @@ module test_atmos_dyn
      COMM_vars8, &
      COMM_wait
   use scale_grid, only: &
+       CY   => GRID_CY,   &
        CZ   => GRID_CZ,   &
        FZ   => GRID_FZ,   &
        CDZ  => GRID_CDZ,  &
@@ -146,7 +147,7 @@ contains
   !++ parameters & variables
   !
   !-----------------------------------------------------------------------------
-  real(RP) :: lat(1,IA,JA)
+  real(RP) :: lat(IA,JA)
   character(len=H_SHORT) :: CSDUMMY(1)
   character(len=H_MID)   :: CMDUMMY(1)
   integer :: j
@@ -216,7 +217,7 @@ contains
   nd_sfc_fact = 1.0_RP
   nd_use_rs = .true.
   do j = 1, JA
-     lat(1,:,j) = real(j, RP)
+     lat(:,j) = real(j, RP)
   end do
 
   DYN_TYPE = "FVM-HEVE"
@@ -245,7 +246,7 @@ contains
        PROG,                               & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
        wdamp_tau, wdamp_height, FZ,        & ! (in)
-       .false., lat                        ) ! (in)
+       'PLANE', 0.0_RP, 0.0_RP, CY, lat    ) ! (in)
 
   do k = KS+1, KE
      if ( GRID_CBFZ(k) > 0.0_RP ) then

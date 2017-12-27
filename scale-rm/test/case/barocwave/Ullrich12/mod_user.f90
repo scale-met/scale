@@ -76,7 +76,6 @@ module mod_user
   !++ Private parameters & variables
   !
   logical,  private, save :: USER_do = .false. !< do user step?
-  real(RP), private, save :: Phi0Deg = 45.0_RP !< Central latitude for f or beta plane
 
   real(RP), private, allocatable :: RHOT_bc(:,:,:)
   real(RP), private, allocatable :: DENS_bc(:,:,:)
@@ -95,29 +94,13 @@ contains
   subroutine USER_setup
     use scale_process, only: &
        PRC_MPIstop
-    
-    use scale_grid, only : &
-       CY => GRID_CY,      &
-       FY => GRID_FY,      &
-       RFDY => GRID_RFDY,  &
-       GRID_DOMAIN_CENTER_Y
-    
-    use scale_atmos_dyn, only: &
-       CORIOLI         
-    
     implicit none
 
     namelist / PARAM_USER / &
-       USER_do, &
-       Phi0Deg  
+       USER_do
     
     integer :: ierr
     integer :: i, j
-
-    real(RP) :: f0
-    real(RP) :: beta0
-    real(RP) :: y0
-    
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -135,19 +118,6 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
     
-    
-    ! Set coriolis parameter in f or beta plane approximation
-    
-    f0 = 2.0_RP*OHM*sin( Phi0Deg*PI/180.0_RP )
-    beta0 = 2.0_RP*OHM/RPlanet*cos( Phi0Deg*PI/180.0_RP )
-    y0 = GRID_DOMAIN_CENTER_Y
-    
-    do j = JS-1,JE+1
-    do i = IS-1,IE+1
-      CORIOLI(i,j) = f0 + beta0*(CY(j) - y0)
-    enddo      
-    enddo
-
     !
     allocate( RHOT_bc(KA,IA,2) )
     allocate( DENS_bc(KA,IA,2) )
@@ -203,12 +173,9 @@ contains
        PRC_HAS_S
     use scale_grid, only : &
        CX => GRID_CX, &
-       CY => GRID_CY, &
        CZ => GRID_CZ
     use scale_time, only: &
        DTSEC => TIME_DTSEC
-    use scale_atmos_dyn, only: &
-       CORIOLI
     use scale_gridtrans
     
     use scale_history, only: &
