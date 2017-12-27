@@ -19,6 +19,7 @@ VPATH = common:                          \
         io:                              \
         atmosphere/physics/pbl:          \
         atmosphere/physics/microphysics: \
+        atmosphere/physics/radiation:    \
         atmos-physics:                   \
         atmos-physics/share:             \
         atmos-physics/microphysics:      \

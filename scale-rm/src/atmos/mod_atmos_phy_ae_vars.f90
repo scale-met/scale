@@ -39,6 +39,11 @@ module mod_atmos_phy_ae_vars
   public :: ATMOS_PHY_AE_vars_restart_enddef
   public :: ATMOS_PHY_AE_vars_restart_close
 
+  public :: ATMOS_PHY_AE_vars_history
+
+  public :: ATMOS_PHY_AE_vars_get_diagnostic
+  public :: ATMOS_PHY_AE_vars_reset_diagnostics
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -79,6 +84,17 @@ module mod_atmos_phy_ae_vars
   data VAR_DESC / 'cloud condensation nuclei' /
   data VAR_UNIT / 'num/m3' /
 
+
+  ! for diagnostics
+  real(RP), private, allocatable :: ATMOS_PHY_AE_Re(:,:,:,:)
+  real(RP), private, allocatable :: ATMOS_PHY_AE_Qe(:,:,:,:)
+  logical, private :: DIAG_Re
+  logical, private :: DIAG_Qe
+
+  ! for history
+  integer, private,allocatable :: HIST_Re_id(:)
+  logical, private             :: HIST_Re
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -88,9 +104,15 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use scale_atmos_aerosol, only: &
+       N_AE, &
+       AE_NAME, &
+       AE_DESC
     use scale_atmos_phy_ae, only: &
        QS_AE, &
        QE_AE
+    use scale_history, only: &
+       HIST_reg
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_AE_VARS / &
@@ -157,6 +179,24 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        ATMOS_PHY_AE_RESTART_OUTPUT = .false.
     endif
+
+    ! diagnostices
+    allocate( ATMOS_PHY_AE_Re(KA,IA,JA,N_AE) )
+    allocate( ATMOS_PHY_AE_Qe(KA,IA,JA,N_AE) )
+!OCL XFILL
+    ATMOS_PHY_AE_Re(:,:,:,:) = UNDEF
+!OCL XFILL
+    ATMOS_PHY_AE_Qe(:,:,:,:) = UNDEF
+    DIAG_Re = .false.
+    DIAG_Qe = .false.
+
+    ! history
+    HIST_Re = .false.
+    allocate( HIST_Re_id(N_AE) )
+    do iv = 1, N_AE
+       call HIST_reg( HIST_Re_id(iv), 'Re_'//trim(AE_NAME(iv)), 'effective radius of '//trim(AE_DESC(iv)), 'cm', ndim=3 )
+       if ( HIST_Re_id(iv) > 0 ) HIST_Re = .true.
+    end do
 
     return
   end subroutine ATMOS_PHY_AE_vars_setup
@@ -379,5 +419,86 @@ contains
 
     return
   end subroutine ATMOS_PHY_AE_vars_restart_write
+
+  subroutine ATMOS_PHY_AE_vars_history( &
+       QTRC, RH )
+    use scale_atmos_aerosol, only: &
+       N_AE
+    use scale_history, only: &
+       HIST_put
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in) :: RH(KA,IA,JA)
+
+    real(RP) :: WORK(KA,IA,JA,N_AE)
+    integer  :: iv
+
+    if ( HIST_Re ) then
+       call ATMOS_PHY_AE_vars_get_diagnostic( &
+            QTRC(:,:,:,:), RH(:,:,:), & ! [IN]
+            Re=WORK(:,:,:,:)          ) ! [OUT]
+       do iv = 1, N_AE
+          if ( HIST_Re_id(iv) > 0 ) &
+               call HIST_put( HIST_Re_id(iv), WORK(:,:,:,iv), nohalo=.true. )
+       end do
+    end if
+
+    return
+  end subroutine ATMOS_PHY_AE_vars_history
+
+  subroutine ATMOS_PHY_AE_vars_get_diagnostic( &
+       QTRC, RH, &
+       Re, Qe   )
+    use scale_atmos_aerosol, only: &
+       N_AE
+    use scale_atmos_phy_ae, only: &
+       ATMOS_PHY_AE_EffectiveRadius
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_AE_TYPE
+
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in) :: RH(KA,IA,JA)
+    real(RP), intent(out), optional :: Re(KA,IA,JA,N_AE) !> effective radius [cm]
+    real(RP), intent(out), optional :: Qe(KA,IA,JA,N_AE) !> mass ratio [kg/kg]
+
+    if ( present(Re) ) then
+       if ( .not. DIAG_Re ) then
+          select case ( ATMOS_PHY_AE_TYPE )
+          case default
+             if ( associated(ATMOS_PHY_AE_EffectiveRadius) ) then
+                call ATMOS_PHY_AE_EffectiveRadius( &
+                     ATMOS_PHY_AE_Re(:,:,:,:),  & ! [OUT]
+                     QTRC(:,:,:,:), RH(:,:,:) ) ! [IN]
+             else
+!OCL XFILL
+                ATMOS_PHY_AE_Re(:,:,:,:) = 0.0_RP
+             end if
+          end select
+          DIAG_Re = .true.
+       end if
+!OCL XFILL
+       Re(:,:,:,:) = ATMOS_PHY_AE_Re(:,:,:,:)
+    end if
+
+    if ( present(Qe) ) then
+       if ( .not. DIAG_Qe ) then
+          select case ( ATMOS_PHY_AE_TYPE )
+          case default
+             ATMOS_PHY_AE_Qe(:,:,:,:) = 0.0_RP
+          end select
+          DIAG_Qe = .true.
+       end if
+!OCL XIFLL
+       Qe(:,:,:,:) = ATMOS_PHY_AE_Qe(:,:,:,:)
+    end if
+
+    return
+  end subroutine ATMOS_PHY_AE_vars_get_diagnostic
+
+  subroutine ATMOS_PHY_AE_vars_reset_diagnostics
+    DIAG_Re      = .false.
+    DIAG_Qe      = .false.
+
+    return
+  end subroutine ATMOS_PHY_AE_vars_reset_diagnostics
 
 end module mod_atmos_phy_ae_vars

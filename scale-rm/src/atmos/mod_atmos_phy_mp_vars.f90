@@ -66,7 +66,7 @@ module mod_atmos_phy_mp_vars
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOV_t(:,:,:)    ! tendency dens*V [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOT_t(:,:,:)    ! tendency RHOT [K*kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOQ_t(:,:,:,:)  ! tendency rho*QTRC [kg/kg/s]
-  real(RP), public, allocatable :: ATMOS_PHY_MP_RHOH  (:,:,:)    ! adiabatic heating [J/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_RHOH  (:,:,:)    ! diabatic heating rate [J/kg/s]
 
   ! obsolute
   real(RP), public, allocatable :: ATMOS_PHY_MP_MOMX_t(:,:,:)    ! tendency MOMX [kg/m2/s2]

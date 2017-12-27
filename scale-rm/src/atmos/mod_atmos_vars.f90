@@ -1178,6 +1178,8 @@ contains
        HIST_put
     use mod_atmos_phy_mp_vars, only: &
        ATMOS_PHY_MP_vars_history
+    use mod_atmos_phy_ae_vars, only: &
+       ATMOS_PHY_AE_vars_history
     implicit none
 
     logical :: do_put
@@ -1260,6 +1262,10 @@ contains
 
     if ( moist ) &
          call ATMOS_PHY_MP_vars_history( DENS_av(:,:,:), TEMP(:,:,:), QTRC_av(:,:,:,:) )
+!    if ( .false. ) then
+!       call ATMOS_vars_get_diagnostic( "RH", WORK3D )
+!       call ATMOS_PHY_AE_vars_history( QTRC_av(:,:,:,:), WORK3D(:,:,:) )
+!    end if
 
     return
   end subroutine ATMOS_vars_history
@@ -1346,6 +1352,8 @@ contains
     use mod_atmos_phy_mp_vars, only: &
        ATMOS_PHY_MP_vars_get_diagnostic, &
        ATMOS_PHY_MP_vars_reset_diagnostics
+    use mod_atmos_phy_ae_vars, only: &
+       ATMOS_PHY_AE_vars_reset_diagnostics
     implicit none
 
     integer :: iq
@@ -1375,6 +1383,7 @@ contains
 
 
     call ATMOS_PHY_MP_vars_reset_diagnostics
+    call ATMOS_PHY_AE_vars_reset_diagnostics
 
     if ( moist ) then
        call ATMOS_PHY_MP_vars_get_diagnostic( &

@@ -30,7 +30,7 @@ module scale_atmos_phy_rd_common
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_RD_heating
+  public :: ATMOS_PHY_RD_calc_heating
 
   !-----------------------------------------------------------------------------
   !
@@ -58,15 +58,14 @@ module scale_atmos_phy_rd_common
 contains
   !-----------------------------------------------------------------------------
   !> Calc heating rate
-  subroutine ATMOS_PHY_RD_heating( &
-       flux_rad, &
-       DENS,     &
-       RHOT,     &
-       QTRC,     &
-       FZ,       &
-       dt,       &
-       TEMP_t,   &
-       RHOT_t    )
+  subroutine ATMOS_PHY_RD_calc_heating( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       flux_rad,     &
+       DENS, TEMP,   &
+       CVtot,        &
+       FZ,           &
+       RHOH,         &
+       TEMP_t        )
     use scale_tracer, only: &
        TRACER_R, &
        TRACER_CV, &
@@ -77,83 +76,46 @@ contains
        THERMODYN_rhoe => ATMOS_THERMODYN_rhoe, &
        THERMODYN_rhot => ATMOS_THERMODYN_rhot
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
     real(RP), intent(in)  :: flux_rad(KA,IA,JA,2,2)
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
-    real(RP), intent(in)  :: RHOT    (KA,IA,JA)
-    real(RP), intent(in)  :: QTRC    (KA,IA,JA,QA)
+    real(RP), intent(in)  :: TEMP    (KA,IA,JA)
+    real(RP), intent(in)  :: CVtot   (KA,IA,JA)
     real(RP), intent(in)  :: FZ      (0:KA,IA,JA)
-    real(DP), intent(in)  :: dt
-    real(RP), intent(out) :: TEMP_t  (KA,IA,JA,3)
-    real(RP), intent(out) :: RHOT_t  (KA,IA,JA)
 
-    real(RP) :: RHOE  (KA,IA,JA)
-    real(RP) :: RHOE_t(KA,IA,JA,2)
-    real(RP) :: RHOT1 (KA,IA,JA)
-    real(RP) :: QDRY  (KA,IA,JA)
-    real(RP) :: CVtot (KA,IA,JA)
+    real(RP), intent(out) :: RHOH(KA,IA,JA)
+
+    real(RP), intent(out), optional :: TEMP_t(KA,IA,JA,3)
+
+    real(RP) :: RHOH_LW, RHOH_SW
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call THERMODYN_rhoe( RHOE(:,:,:),   & ! [OUT]
-                         RHOT(:,:,:),   & ! [IN]
-                         QTRC(:,:,:,:), & ! [IN]
-                         TRACER_CV(:),  & ! [IN]
-                         TRACER_R(:),   & ! [IN]
-                         TRACER_MASS(:) ) ! [IN]
-
-    !$omp parallel do default(none)                       &
-    !$omp shared(JS,JE,IS,IE,KS,KE,RHOE_t,flux_rad,FZ,dt,RHOE) &
-    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k, &
+    !$omp         RHOH_LW,RHOH_SW) &
+    !$omp shared(RHOH,TEMP_t,flux_rad,DENS,CVtot,FZ, &
+    !$omp        KS,KE,IS,IE,JS,JE)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
 
-       RHOE_t(k,i,j,I_LW) = ( ( flux_rad(k,i,j,I_LW,I_dn) - flux_rad(k-1,i,j,I_LW,I_dn) ) &
-                            - ( flux_rad(k,i,j,I_LW,I_up) - flux_rad(k-1,i,j,I_LW,I_up) ) &
-                            ) / ( FZ(k,i,j) - FZ(k-1,i,j) )
+       RHOH_LW = ( ( flux_rad(k,i,j,I_LW,I_dn) - flux_rad(k-1,i,j,I_LW,I_dn) ) &
+                 - ( flux_rad(k,i,j,I_LW,I_up) - flux_rad(k-1,i,j,I_LW,I_up) ) &
+                 ) / ( FZ(k,i,j) - FZ(k-1,i,j) )
 
-       RHOE_t(k,i,j,I_SW) = ( ( flux_rad(k,i,j,I_SW,I_dn) - flux_rad(k-1,i,j,I_SW,I_dn) ) &
-                            - ( flux_rad(k,i,j,I_SW,I_up) - flux_rad(k-1,i,j,I_SW,I_up) ) &
-                            ) / ( FZ(k,i,j) - FZ(k-1,i,j) )
+       RHOH_SW = ( ( flux_rad(k,i,j,I_SW,I_dn) - flux_rad(k-1,i,j,I_SW,I_dn) ) &
+                 - ( flux_rad(k,i,j,I_SW,I_up) - flux_rad(k-1,i,j,I_SW,I_up) ) &
+                 ) / ( FZ(k,i,j) - FZ(k-1,i,j) )
 
-       RHOE(k,i,j) = RHOE(k,i,j) + dt * ( RHOE_t(k,i,j,I_LW) + RHOE_t(k,i,j,I_SW) )
+       RHOH(k,i,j) = RHOH_LW + RHOH_SW
 
-    enddo
-    enddo
-    enddo
-
-    call THERMODYN_rhot( RHOT1(:,:,:),  & ! [OUT]
-                         RHOE(:,:,:),   & ! [IN]
-                         QTRC(:,:,:,:), & ! [IN]
-                         TRACER_CV(:),  & ! [IN]
-                         TRACER_R(:),   & ! [IN]
-                         TRACER_MASS(:) ) ! [IN]
-
-    ! update rhot
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       RHOT_t(k,i,j) = ( RHOT1(k,i,j) - RHOT(k,i,j) ) / dt
-    enddo
-    enddo
-    enddo
-
-    call THERMODYN_qd( QDRY(:,:,:),   & ! [OUT]
-                       QTRC(:,:,:,:), & ! [IN]
-                       TRACER_MASS(:) ) ! [IN]
-
-    call THERMODYN_cv( CVtot(:,:,:),   & ! [OUT]
-                       QTRC (:,:,:,:), & ! [IN]
-                       TRACER_CV(:),   & ! [IN]
-                       QDRY (:,:,:)    ) ! [IN]
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       TEMP_t(k,i,j,I_LW) = RHOE_t(k,i,j,I_LW) / DENS(k,i,j) / CVtot(k,i,j) * 86400.0_RP ! [K/day]
-       TEMP_t(k,i,j,I_SW) = RHOE_t(k,i,j,I_SW) / DENS(k,i,j) / CVtot(k,i,j) * 86400.0_RP ! [K/day]
+       TEMP_t(k,i,j,I_LW) = RHOH_LW / DENS(k,i,j) / CVtot(k,i,j) * 86400.0_RP ! [K/day]
+       TEMP_t(k,i,j,I_SW) = RHOH_SW / DENS(k,i,j) / CVtot(k,i,j) * 86400.0_RP ! [K/day]
 
        TEMP_t(k,i,j,3)    = TEMP_t(k,i,j,I_LW) + TEMP_t(k,i,j,I_SW)
     enddo
@@ -161,6 +123,6 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_PHY_RD_heating
+  end subroutine ATMOS_PHY_RD_calc_heating
 
 end module scale_atmos_phy_rd_common

@@ -1120,21 +1120,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup vertical grid for radiation
   subroutine ATMOS_PHY_RD_PROFILE_setup_zgrid( &
-       toa,  &
-       kmax, &
-       kadd, &
-       zh,   &
-       z     )
-    use scale_grid, only: &
-       CZ  => GRID_CZ,  &
-       FZ  => GRID_FZ
+       KA, KS, KE, &
+       KMAX, KADD, &
+       toa, CZ, FZ, &
+       zh, z        )
     implicit none
-
-    real(RP), intent(in)    :: toa        !< top of atmosphere [km]
-    integer,  intent(in)    :: kmax       !< number of vertical grid
-    integer,  intent(in)    :: kadd       !< number of additional vertical grid
-    real(RP), intent(inout) :: zh(kmax+1) !< altitude at the interface [km]
-    real(RP), intent(inout) :: z (kmax)   !< altitude at the center    [km]
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: KMAX, KADD
+    real(RP), intent(in)  :: toa        !> top of atmosphere [km]
+    real(RP), intent(in)  :: CZ(KA)     !> height of cell center
+    real(RP), intent(in)  :: FZ(KA)     !> height of cell face
+    real(RP), intent(out) :: zh(KMAX+1) !> altitude at the interface [km]
+    real(RP), intent(out) :: z (KMAX)   !> altitude at the center    [km]
 
     real(RP) :: dz
     integer  :: k, RD_k

@@ -651,14 +651,14 @@ contains
        call HIST_in( precip   (:,:),   'PREC_MP',   'surface precipitation rate by MP', 'kg/m2/s',  nohalo=.true. )
        call HIST_in( EVAPORATE(:,:,:), 'EVAPORATE', 'evaporated cloud number',          'num/m3/s', nohalo=.true. )
 
-       call HIST_in( DENS_t_MP(:,:,:), 'DENS_t_MP', 'tendency DENS in MP',  'kg/m3/s'  , nohalo=.true. )
-       call HIST_in( MOMZ_t_MP(:,:,:), 'MOMZ_t_MP', 'tendency MOMZ in MP',  'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( RHOU_t_MP(:,:,:), 'RHOU_t_MP', 'tendency RHOU in MP',  'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( RHOV_t_MP(:,:,:), 'RHOV_t_MP', 'tendency RHOV in MP',  'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( RHOT_t_MP(:,:,:), 'RHOT_t_MP', 'tendency RHOT in MP',  'K*kg/m3/s', nohalo=.true. )
-       call HIST_in( RHOH_MP  (:,:,:), 'RHOH_MP',   'adiabatic heat in MP', 'J*kg/m3/s', nohalo=.true. )
-       call HIST_in( MOMX_t_MP(:,:,:), 'MOMX_t_MP', 'tendency MOMX in MP',  'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( MOMY_t_MP(:,:,:), 'MOMY_t_MP', 'tendency MOMY in MP',  'kg/m2/s2' , nohalo=.true. )
+       call HIST_in( DENS_t_MP(:,:,:), 'DENS_t_MP', 'tendency DENS in MP',         'kg/m3/s'  , nohalo=.true. )
+       call HIST_in( MOMZ_t_MP(:,:,:), 'MOMZ_t_MP', 'tendency MOMZ in MP',         'kg/m2/s2' , nohalo=.true. )
+       call HIST_in( RHOU_t_MP(:,:,:), 'RHOU_t_MP', 'tendency RHOU in MP',         'kg/m2/s2' , nohalo=.true. )
+       call HIST_in( RHOV_t_MP(:,:,:), 'RHOV_t_MP', 'tendency RHOV in MP',         'kg/m2/s2' , nohalo=.true. )
+       call HIST_in( RHOT_t_MP(:,:,:), 'RHOT_t_MP', 'tendency RHOT in MP',         'K*kg/m3/s', nohalo=.true. )
+       call HIST_in( RHOH_MP  (:,:,:), 'RHOH_MP',   'diabatic heating rate in MP', 'J/m3/s',    nohalo=.true. )
+       call HIST_in( MOMX_t_MP(:,:,:), 'MOMX_t_MP', 'tendency MOMX in MP',         'kg/m2/s2' , nohalo=.true. )
+       call HIST_in( MOMY_t_MP(:,:,:), 'MOMY_t_MP', 'tendency MOMY in MP',         'kg/m2/s2' , nohalo=.true. )
 
        do iq = QS_MP, QE_MP
           call HIST_in( RHOQ_t_MP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_MP', &

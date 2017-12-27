@@ -53,7 +53,7 @@ module mod_atmos_phy_rd_vars
   character(len=H_MID),   public :: ATMOS_PHY_RD_RESTART_OUT_TITLE             = 'ATMOS_PHY_RD restart' !< title    of the output file
   character(len=H_SHORT), public :: ATMOS_PHY_RD_RESTART_OUT_DTYPE             = 'DEFAULT'              !< REAL4 or REAL8
 
-  real(RP), public, allocatable :: ATMOS_PHY_RD_RHOT_t(:,:,:)   ! tendency RHOT [K*kg/m3/s]
+  real(RP), public, allocatable :: ATMOS_PHY_RD_RHOH(:,:,:)   ! diavatic heating rate [J/m3/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_RD_SFLX_LW_up  (:,:) ! surface upward   longwave  flux [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_RD_SFLX_LW_dn  (:,:) ! surface downward longwave  flux [J/m2/s]
@@ -162,8 +162,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[ATMOS PHY_RD] / Origin[SCALE-RM]'
 
-    allocate( ATMOS_PHY_RD_RHOT_t(KA,IA,JA) )
-    ATMOS_PHY_RD_RHOT_t(:,:,:) = UNDEF
+    allocate( ATMOS_PHY_RD_RHOH(KA,IA,JA) )
+    ATMOS_PHY_RD_RHOH(:,:,:) = UNDEF
 
     allocate( ATMOS_PHY_RD_SFLX_LW_up  (IA,JA) )
     allocate( ATMOS_PHY_RD_SFLX_LW_dn  (IA,JA) )
