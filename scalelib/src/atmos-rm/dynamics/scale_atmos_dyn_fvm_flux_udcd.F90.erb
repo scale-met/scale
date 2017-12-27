@@ -878,7 +878,7 @@ contains
        vel = <%= interp("mom", "XYW", uv+"W", "KE"-(k+1)) %> &
            / <%= interp("DENS", "XYZ", uv+"W", "KE"-(k+1)) %>
        flux(KE<%=-k-1%>,i,j) = J33G * vel &
-                   * ( <%= flux("vel", [[order-(nh-k)*2,[order,2].min].max,[order-(nh-k-1)*2,[order,2].min].max], 0, "KE"-(k+1)) %> ) <%= num_diff("KE"-(k+1)) %>
+                   * ( <%= flux("vel", [[order-(nh-k-1)*2,[order,2].min].max,[order-(nh-k)*2,[order,2].min].max], 0, "KE"-(k+1)) %> ) <%= num_diff("KE"-(k+1)) %>
 <% end %>
        flux(KE,i,j) = 0.0_RP
     enddo
