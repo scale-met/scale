@@ -1,13 +1,14 @@
-\section{Setting for the coriolis force} \label{subsec:coriolis}
+\section{Setting for the Coriolis force} \label{subsec:coriolis}
 %----------------------------------------------------------
 
-In this section, the coriolis force in \scalerm is explained.
-The coriolis parameter is zero as the default, so that you have to set (some) parameter(s) to introduce the coriolis force in the simulation.
-There are two types of setting for the coriolis parameter: $f$-/$\beta$-plane and sphere.
+In this section, the Coriolis force in \scalerm is explained.
+The Coriolis parameter is zero as the default, so that you have to set (some) parameter(s) to introduce the Coriolis force in the simulation.
+There are two types of setting for the Coriolis parameter: $f$-/$\beta$-plane and sphere.
 
 \begin{description}
 \item[$f$-/$\beta$-plane]
-  The coriolis parameter $f$ is $f=f_0 + \beta (y-y_0)$.
+  The Coriolis parameter $f$ is $f=f_0 + \beta (y-y_0)$.
+  For $\beta=0$, the plane is called $f$-plane, otherwise it is called $\beta$-plane.
   The parameters of $f_0, \beta$ and $y_0$ is set with the parameters of \namelist{PARAM_ATMOS_DYN} as follows:
   \editbox{
     \verb|&PARAM_ATMOS_DYN| \\
@@ -21,7 +22,7 @@ There are two types of setting for the coriolis parameter: $f$-/$\beta$-plane an
 
   The default value of the \nmitem{ATMOS_DYN_coriolis_f0}, \nmitem{ATMOS_DYN_coriolis_beta}, and \nmitem{ATMOS_DYN_coriolis_y0} is 0.0, 0.0, and $y$ at the domain center, respectively.
 
-  If you want to add the geostrophic pressure gradient force that is in balance with the coriolis force accompanied by the geostrophic wind, you need to modify the user specific file \verb|mod_user.f90| (see Section ??).
+  If you want to add the geostrophic pressure gradient force that is in balance with the Coriolis force accompanied by the geostrophic wind, you need to modify the user specific file \verb|mod_user.f90| (see Section ??).
   The test case of \verb|scale-rm/test/case/inertial_oscillation/20km| is an example of a simulation on the $f$-plane with the geostropic pressure gradient force.
 
   The nudge lateral boundary conditions at the sourth and north boundaries might be used for $f$- and $\beta$-plane experiment.
@@ -29,9 +30,13 @@ There are two types of setting for the coriolis parameter: $f$-/$\beta$-plane an
   For the details of the nudging boundary, see Sections \ref{subsec:buffer} and ??.
 
 \item[sphere]
-  On the sphere, the coriolis parameter depends on the latitude as $f = 2\Omega \sin(\phi)$, where $\Omega$ and $\phi$ is angular velocity of the sphere and latitude, respectively.
+  On the sphere, the Coriolis parameter depends on the latitude as $f = 2\Omega \sin(\phi)$, where $\Omega$ and $\phi$ is angular velocity of the sphere and latitude, respectively.
   In this case, you have to set \nmitem{ATMOS_DYN_coriolis_type} = 'SPHERE'.
   The angular velocity of the sphere is set by \nmitem{CONST_OHM} parameter of \namelist{PARAM_CONST} (see Section ??).
   The latitude of the individual grids is determined dependeing on the map projection, which is explained in Section \ref{subsec:adv_mapproj}.
 
+
 \end{description}
+
+The lateral boundary in the x-direction for the all the setting (i.e., the $f$-plane, $\beta$-plane, and sphere) can be periodic condition, and that in the y-direction for the $f$-plane also can be periodic condition.
+On the other hand, the periodic boundary condition cannot be used in the y-direction for the $\beta$-plane or sphere, because the Coriolis parameter differs at the southern and northern boundaries.
