@@ -2541,6 +2541,14 @@ contains
                                 ' and the time interval of its related scheme are inconsistent.'
           call Log('I',message)
           write(message,'(A)')  'xxx Please check the namelist PARAM_TIME, PARAM_HISTORY, and HISTITEM.'
+          call Log('I',message)
+          write(message,'(2A)') 'xxx Please set History_ERROR_PUTMISS in the namelist PARAM_HISTORY to .false.', &
+                                ' when you want to disable this check.'
+          call Log('I',message)
+
+          write(message,'(4A)') 'xxx The time interval of history output ', trim(History_vars(id)%item), &
+                                ' and the time interval of its related scheme are inconsistent.',        &
+                                ' Please see detail in log file.'
           call Log('E',message)
        else
           write(message,'(2A)') '*** Output value is not updated in this step. NAME : ', &
@@ -2898,10 +2906,12 @@ contains
                                         ', registered? : ', History_req(id)%registered
           call Log('I',message)
        enddo
+       write(message,'(2A)') '*** Please set History_ERROR_PUTMISS in the namelist PARAM_HISTORY to .false.', &
+                             ' when you want to disable this check.'
+       call Log('I',message)
 
        if ( History_ERROR_PUTMISS ) then
-          write(message,'(2A)') 'xxx Please set History_ERROR_PUTMISS in the namelist PARAM_HISTORY to .false.', &
-                                ' when you want to disable this check.'
+          write(message,'(A)') 'xxx Requested variables by the namelist HISTITEM did not find. Please see detail in log file.'
           call Log('E',message)
        endif
     endif
