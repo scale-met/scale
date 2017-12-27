@@ -134,6 +134,7 @@ module gtool_history
      integer                    :: waitstep          !> Step length to suppress output [step]
      integer                    :: laststep_write    !> Last step when the variable is written
      integer                    :: laststep_put      !> Last step when the variable is put
+     logical                    :: flag_clear        !> Data buffer should be cleared at the timing of putting?
      integer                    :: size              !> Size of array
      real(DP)                   :: timesum           !> Buffer for time
      real(DP), pointer          :: varsum(:)         !> Buffer for value
@@ -750,6 +751,7 @@ contains
                 History_vars(id)%laststep_write = 1
              endif
              History_vars(id)%laststep_put      = History_vars(id)%laststep_write
+             History_vars(id)%flag_clear        = .true.
              History_vars(id)%size              = 0
              History_vars(id)%timesum           = 0.0_DP
              History_vars(id)%varsum(:)         = 0.0_DP
@@ -1952,9 +1954,9 @@ contains
     endif
 
 
-    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
-       History_vars(id)%timesum   = 0.0_DP
-       History_vars(id)%varsum(:) = 0.0_DP
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -1971,6 +1973,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut0DIdSP
@@ -2003,9 +2006,9 @@ contains
     endif
 
 
-    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
-       History_vars(id)%timesum   = 0.0_DP
-       History_vars(id)%varsum(:) = 0.0_DP
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -2022,6 +2025,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut0DIdDP
@@ -2057,9 +2061,9 @@ contains
 
     vsize = shape(var)
 
-    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
-       History_vars(id)%timesum   = 0.0_DP
-       History_vars(id)%varsum(:) = 0.0_DP
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -2080,6 +2084,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut1DIdSP
@@ -2115,9 +2120,9 @@ contains
 
     vsize = shape(var)
 
-    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
-       History_vars(id)%timesum   = 0.0_DP
-       History_vars(id)%varsum(:) = 0.0_DP
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -2138,6 +2143,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut1DIdDP
@@ -2173,9 +2179,9 @@ contains
 
     vsize = shape(var)
 
-    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
-       History_vars(id)%timesum   = 0.0_DP
-       History_vars(id)%varsum(:) = 0.0_DP
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -2200,6 +2206,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut2DIdSP
@@ -2235,9 +2242,9 @@ contains
 
     vsize = shape(var)
 
-    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
-       History_vars(id)%timesum   = 0.0_DP
-       History_vars(id)%varsum(:) = 0.0_DP
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -2262,6 +2269,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut2DIdDP
@@ -2297,9 +2305,9 @@ contains
 
     vsize = shape(var)
 
-    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
-       History_vars(id)%timesum   = 0.0_DP
-       History_vars(id)%varsum(:) = 0.0_DP
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -2328,6 +2336,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut3DIdSP
@@ -2363,9 +2372,9 @@ contains
 
     vsize = shape(var)
 
-    if ( History_vars(id)%laststep_write == History_vars(id)%laststep_put ) then ! first time after write out
-       History_vars(id)%timesum   = 0.0_DP
-       History_vars(id)%varsum(:) = 0.0_DP
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -2394,6 +2403,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut3DIdDP
@@ -2522,7 +2532,6 @@ contains
     integer, intent(in) :: id
     integer, intent(in) :: step_now
 
-    logical  :: update_varsum
     integer  :: isize
     real(DP) :: time_str, time_end
     real(DP) :: sec_str,  sec_end
@@ -2530,12 +2539,11 @@ contains
 
     if( History_req_count == 0 ) return
 
-    if (      step_now < History_vars(id)%laststep_write + History_vars(id)%dstep &
-         .OR. mod(step_now-1,History_vars(id)%dstep) /= 0                         ) then
+    if ( step_now < History_vars(id)%laststep_write + History_vars(id)%dstep ) then
        return
     endif
 
-    if ( History_vars(id)%laststep_put == History_vars(id)%laststep_write ) then
+    if ( History_vars(id)%flag_clear ) then
        if ( History_ERROR_PUTMISS ) then
           write(message,'(3A)') 'xxx The time interval of history output ', trim(History_vars(id)%item), &
                                 ' and the time interval of its related scheme are inconsistent.'
@@ -2555,15 +2563,11 @@ contains
                                 trim(History_vars(id)%item)
           call Log('I',message)
        endif
-
-       update_varsum = .false.
-    else
-       update_varsum = .true.
     endif
 
     isize = History_vars(id)%size
 
-    if ( update_varsum .AND. History_vars(id)%taverage ) then
+    if ( .NOT. History_vars(id)%flag_clear .AND. History_vars(id)%taverage ) then
        History_vars(id)%varsum(1:isize) = History_vars(id)%varsum(1:isize) / History_vars(id)%timesum
     endif
 
@@ -2607,10 +2611,8 @@ contains
        endif
     endif
 
-    if ( update_varsum ) then
-       History_vars(id)%laststep_write = step_now
-       History_vars(id)%laststep_put   = step_now
-    endif
+    History_vars(id)%laststep_write = step_now
+    History_vars(id)%flag_clear     = .true.
 
     laststep_write = step_now ! remember for multiple call in the same step
 
