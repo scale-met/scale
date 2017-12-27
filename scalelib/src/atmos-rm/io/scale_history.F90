@@ -1595,17 +1595,17 @@ contains
     call HistoryPutAxis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', GRID_UCDZ,             gsize=UKMAX,   start=startZ )
 
     call HistoryPutAxis('CBFZ',  'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ,  gsize=KA,  start=startZ )
-    call HistoryPutAxis('FBFZ',  'Boundary factor Face Z',   '1', 'CZ', GRID_FBFZ,  gsize=KA,  start=startZ )
+    call HistoryPutAxis('FBFZ',  'Boundary factor Face Z',   '1', 'FZ', GRID_FBFZ,  gsize=KA+1,  start=startZ )
     if ( IO_AGGREGATE ) then
        call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFXG, gsize=IAG, start=startZ )
        call HistoryPutAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFYG, gsize=JAG, start=startZ )
-       call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'CX', GRID_FBFXG, gsize=IAG, start=startZ )
-       call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'CY', GRID_FBFYG, gsize=JAG, start=startZ )
+       call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'FX', GRID_FBFXG, gsize=IAG+1, start=startZ )
+       call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'FY', GRID_FBFYG, gsize=JAG+1, start=startZ )
     else
        call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFX )
        call HistoryPutAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFY )
-       call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'CX', GRID_FBFX )
-       call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'CY', GRID_FBFY )
+       call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'FX', GRID_FBFX )
+       call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'FY', GRID_FBFY )
     end if
 
     ! TODO: skip 8 axes below when IO_AGGREGATE is true, as all axes are now global
@@ -1616,8 +1616,8 @@ contains
 
     call HistoryPutAxis('CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', GRID_CBFXG, gsize=IAG, start=startZ )
     call HistoryPutAxis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', GRID_CBFYG, gsize=JAG, start=startZ )
-    call HistoryPutAxis('FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', GRID_FBFXG, gsize=IAG, start=startZ )
-    call HistoryPutAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', GRID_FBFYG, gsize=JAG, start=startZ )
+    call HistoryPutAxis('FBFXG', 'Boundary factor Face X (global)',   '1', 'FXG', GRID_FBFXG, gsize=IAG+1, start=startZ )
+    call HistoryPutAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'FYG', GRID_FBFYG, gsize=JAG+1, start=startZ )
 
     ! associate coordinates
     if ( IO_AGGREGATE ) then
