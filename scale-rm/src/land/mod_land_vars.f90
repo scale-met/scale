@@ -66,6 +66,14 @@ module mod_land_vars
   real(RP), public, allocatable :: LAND_SFC_TEMP  (:,:)   !< land surface skin temperature  [K]
   real(RP), public, allocatable :: LAND_SFC_albedo(:,:,:) !< land surface albedo            (0-1)
 
+  ! for snow model
+  real(RP), public, allocatable :: SNOW_TEMP      (:,:)    !< snow surface temperature     [K]
+  real(RP), public, allocatable :: SNOW_SWE       (:,:)    !< snow water equivalent        [kg/m2]
+  real(RP), public, allocatable :: SNOW_Depth     (:,:)    !< snow depth                   [m]
+  real(RP), public, allocatable :: SNOW_Dzero     (:,:)    !< snow depth at melting point  [m]
+  real(RP), public, allocatable :: SNOW_nosnowsec (:,:)    !< sec while no snow            [s]
+  real(RP), public, allocatable :: LAND_type_albedo(:,:,:) !< land surface albedo (Initial) (0-1)
+
   ! tendency variables
   real(RP), public, allocatable :: LAND_TEMP_t      (:,:,:) !< tendency of LAND_TEMP
   real(RP), public, allocatable :: LAND_WATER_t     (:,:,:) !< tendency of LAND_WATER
@@ -239,10 +247,12 @@ contains
     allocate( LAND_WATER     (LKMAX,IA,JA) )
     allocate( LAND_SFC_TEMP  (IA,JA)       )
     allocate( LAND_SFC_albedo(IA,JA,2)     )
+    allocate( LAND_type_albedo(IA,JA,2)     )
     LAND_TEMP      (:,:,:) = UNDEF
     LAND_WATER     (:,:,:) = UNDEF
     LAND_SFC_TEMP  (:,:)   = UNDEF
     LAND_SFC_albedo(:,:,:) = UNDEF
+    LAND_type_albedo(:,:,:) = UNDEF
 
     allocate( LAND_TEMP_t      (LKMAX,IA,JA) )
     allocate( LAND_WATER_t     (LKMAX,IA,JA) )
@@ -474,12 +484,13 @@ contains
        !call FILE_CARTESC_read( restart_fid, 'SNOW_nosnowsec',     'XY'   & ! [OUT]
        !                        SNOW_nosnowsec(:,:)                       ) ! [IN]
 
-       !!!!! Tentative !!!!!
-       SNOW_TEMP      = 273.15_RP
-       SNOW_SWE       = 0.0_RP
-       SNOW_Depth     = 0.0_RP
-       SNOW_Dzero     = 0.0_RP
-       SNOW_nosnowsec = 0.0_RP
+       !!!!! Tentative for snow model !!!!!
+       LAND_type_albedo = LAND_SFC_albedo
+       SNOW_TEMP        = 273.15_RP
+       SNOW_SWE         = 0.0_RP
+       SNOW_Depth       = 0.0_RP
+       SNOW_Dzero       = 0.0_RP
+       SNOW_nosnowsec   = 0.0_RP
 
        call LAND_vars_total
     else

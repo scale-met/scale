@@ -140,6 +140,7 @@ contains
        LAND_WATER,        &
        LAND_SFC_TEMP,     &
        LAND_SFC_albedo,   &
+       LAND_type_albedo,  &
        LAND_TEMP_t,       &
        LAND_WATER_t,      &
        LAND_SFC_TEMP_t,   &
@@ -200,6 +201,7 @@ contains
     real(RP) :: SNOW_ATMO_SFLX_LH   (IA,JA)
     real(RP) :: SNOW_ATMO_SFLX_GH   (IA,JA)
     real(RP) :: SNOW_LAND_SFLX_GH   (IA,JA)
+    real(RP) :: SNOW_LAND_SFLX_evap (IA,JA)
     real(RP) :: SNOW_LAND_SFLX_Water(IA,JA)
     real(RP) :: SNOW_frac           (IA,JA)
 
@@ -219,8 +221,22 @@ contains
 
     if ( update_flag ) then
 
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          LAND_QVEF(i,j) = min( LAND_WATER(LKS,i,j) / LAND_PROPERTY(i,j,I_WaterCritical), BETA_MAX )
+
+          ! eq.(12) in Merlin et al.(2011) but simplified P=0.5 used
+          !sw = 0.5_RP + sign(0.5_RP,LAND_WATER(LKS,i,j)-LAND_PROPERTY(i,j,I_WaterCritical)) ! if W > Wc, sw = 1
+          !LAND_QVEF(i,j) = (        sw ) * 1.0_RP &
+          !               + ( 1.0_RP-sw ) * sqrt( 0.5_RP - 0.5_RP * cos( PI * LAND_WATER(LKS,i,j) / LAND_PROPERTY(i,j,I_WaterCritical) ) )
+
+          LAND_DZ1 (i,j) = GRID_LCDZ(LKS)
+       end do
+       end do
+
     !------------------------------------------------------------------------
-    !> snow area
+    !> snow area only for slab model
 
     SNOW_frac = 0.0_RP
 
@@ -281,44 +297,30 @@ contains
                                  LAND_PROPERTY  (:,:,I_Z0E)  ) ! [IN]
 
        ! update land temp and land water under snowpack
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
-          ATMOS_SFLX_prec(i,j) = SNOW_LAND_SFLX_Water(i,j)
-          LAND_SFLX_evap (i,j) = 0.0_RP
+          SNOW_LAND_SFLX_evap (i,j) = 0.0_RP
        enddo
        enddo
 
-       call LAND_PHY( SNOW_LAND_TEMP_t (:,:,:),              & ! [OUT]
-                      SNOW_LAND_WATER_t(:,:,:),              & ! [OUT]
-                      LAND_TEMP        (:,:,:),              & ! [IN]
-                      LAND_WATER       (:,:,:),              & ! [IN]
-                      LAND_PROPERTY    (:,:,I_WaterLimit),   & ! [IN]
-                      LAND_PROPERTY    (:,:,I_ThermalCond),  & ! [IN]
-                      LAND_PROPERTY    (:,:,I_HeatCapacity), & ! [IN]
-                      LAND_PROPERTY    (:,:,I_WaterDiff),    & ! [IN]
-                      SNOW_LAND_SFLX_GH(:,:),                & ! [IN]
-                      ATMOS_SFLX_prec  (:,:),                & ! [IN]
-                      LAND_SFLX_evap   (:,:),                & ! [IN]
-                      GRID_LCDZ        (:),                  & ! [IN]
-                      dt                                     ) ! [IN]
+       call LAND_PHY( SNOW_LAND_TEMP_t    (:,:,:),              & ! [OUT]
+                      SNOW_LAND_WATER_t   (:,:,:),              & ! [OUT]
+                      LAND_TEMP           (:,:,:),              & ! [IN]
+                      LAND_WATER          (:,:,:),              & ! [IN]
+                      LAND_PROPERTY       (:,:,I_WaterLimit),   & ! [IN]
+                      LAND_PROPERTY       (:,:,I_ThermalCond),  & ! [IN]
+                      LAND_PROPERTY       (:,:,I_HeatCapacity), & ! [IN]
+                      LAND_PROPERTY       (:,:,I_WaterDiff),    & ! [IN]
+                      SNOW_LAND_SFLX_GH   (:,:),                & ! [IN]
+                      SNOW_LAND_SFLX_Water(:,:),                & ! [IN]
+                      SNOW_LAND_SFLX_evap (:,:),                & ! [IN]
+                      GRID_LCDZ           (:),                  & ! [IN]
+                      dt                                        ) ! [IN]
     endif
 
     !------------------------------------------------------------------------
     !> no snow area
-
-!OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-          LAND_QVEF(i,j) = min( LAND_WATER(LKS,i,j) / LAND_PROPERTY(i,j,I_WaterCritical), BETA_MAX )
-
-          ! eq.(12) in Merlin et al.(2011) but simplified P=0.5 used
-          !sw = 0.5_RP + sign(0.5_RP,LAND_WATER(LKS,i,j)-LAND_PROPERTY(i,j,I_WaterCritical)) ! if W > Wc, sw = 1
-          !LAND_QVEF(i,j) = (        sw ) * 1.0_RP &
-          !               + ( 1.0_RP-sw ) * sqrt( 0.5_RP - 0.5_RP * cos( PI * LAND_WATER(LKS,i,j) / LAND_PROPERTY(i,j,I_WaterCritical) ) )
-
-          LAND_DZ1 (i,j) = GRID_LCDZ(LKS)
-       end do
-       end do
 
 
        call LAND_SFC( LAND_SFC_TEMP_t(:,:),                 & ! [OUT]
@@ -395,19 +397,20 @@ contains
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
-           LAND_SFC_TEMP_t(i,j) = SNOW_frac(i,j)*SNOW_TEMP_t(i,j)        + (1.0_RP-SNOW_frac(i,j))*LAND_SFC_TEMP_t(i,j)
+           LAND_SFC_TEMP_t(i,j) = SNOW_frac(i,j)*SNOW_TEMP_t(i,j)         + (1.0_RP-SNOW_frac(i,j))*LAND_SFC_TEMP_t(i,j)
            !LAND_SFC_albedo_t(:,:,:) = 0.0_RP  ! currently not considered, but this is very important
 
-           LAND_SFLX_MW(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_MW(i,j)  + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_MW(i,j)
-           LAND_SFLX_MU(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_MU(i,j)  + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_MU(i,j)
-           LAND_SFLX_MV(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_MV(i,j)  + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_MV(i,j)
-           LAND_SFLX_SH(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_SH(i,j)  + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_SH(i,j)
-           LAND_SFLX_LH(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_LH(i,j)  + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_LH(i,j)
-           LAND_SFLX_GH(i,j)    = SNOW_frac(i,j)*SNOW_LAND_SFLX_GH(i,j)  + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_GH(i,j)
-           LAND_U10(i,j)        = SNOW_frac(i,j)*SNOW_U10(i,j)           + (1.0_RP-SNOW_frac(i,j))*LAND_U10(i,j)
-           LAND_V10(i,j)        = SNOW_frac(i,j)*SNOW_V10(i,j)           + (1.0_RP-SNOW_frac(i,j))*LAND_V10(i,j)
-           LAND_T2 (i,j)        = SNOW_frac(i,j)*SNOW_T2 (i,j)           + (1.0_RP-SNOW_frac(i,j))*LAND_T2(i,j)
-           LAND_Q2 (i,j)        = SNOW_frac(i,j)*SNOW_Q2 (i,j)           + (1.0_RP-SNOW_frac(i,j))*LAND_Q2(i,j)
+           LAND_SFLX_MW(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_MW(i,j)   + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_MW(i,j)
+           LAND_SFLX_MU(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_MU(i,j)   + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_MU(i,j)
+           LAND_SFLX_MV(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_MV(i,j)   + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_MV(i,j)
+           LAND_SFLX_SH(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_SH(i,j)   + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_SH(i,j)
+           LAND_SFLX_LH(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_LH(i,j)   + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_LH(i,j)
+           LAND_SFLX_GH(i,j)    = SNOW_frac(i,j)*SNOW_LAND_SFLX_GH(i,j)   + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_GH(i,j)
+           LAND_SFLX_evap(i,j)  = SNOW_frac(i,j)*SNOW_LAND_SFLX_evap(i,j) + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_evap(i,j)
+           LAND_U10(i,j)        = SNOW_frac(i,j)*SNOW_U10(i,j)            + (1.0_RP-SNOW_frac(i,j))*LAND_U10(i,j)
+           LAND_V10(i,j)        = SNOW_frac(i,j)*SNOW_V10(i,j)            + (1.0_RP-SNOW_frac(i,j))*LAND_V10(i,j)
+           LAND_T2 (i,j)        = SNOW_frac(i,j)*SNOW_T2 (i,j)            + (1.0_RP-SNOW_frac(i,j))*LAND_T2(i,j)
+           LAND_Q2 (i,j)        = SNOW_frac(i,j)*SNOW_Q2 (i,j)            + (1.0_RP-SNOW_frac(i,j))*LAND_Q2(i,j)
 
          do k = LKS+1, LKE-1
            LAND_TEMP_t (k,i,j)  = SNOW_frac(i,j)*SNOW_LAND_TEMP_t (k,i,j) + (1.0_RP-SNOW_frac(i,j))*LAND_TEMP_t (k,i,j)

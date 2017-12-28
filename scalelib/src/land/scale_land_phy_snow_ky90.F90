@@ -46,12 +46,10 @@ module scale_land_phy_snow_KY90
   !
   real(RP)                  :: A0, A1, A2, C1, C2, C3
   real(RP)                  :: ESAT, QSAT, DELTAQSAT, CP
-  integer                   :: t
-  !real(RP)                  :: time  = 3600.0_RP
-  real(RP)                  :: SWEMELT, DELTASWE, DELTADEPTH, Gres, beta
+  !integer                   :: t
+  real(RP)                  :: Gres
 
   integer, parameter        :: data_length_max=10000
-  integer                   :: endtime ! number of time step
 
   ! model parameters
   real(RP)                  :: LAMBDAS               ! Snow thermal conductivity [W m^-1 K^-1]
@@ -77,7 +75,6 @@ module scale_land_phy_snow_KY90
 
   logical                   :: ALBEDO_const = .true.
 
-
   integer                   :: ZN_flag, TS_flag, sflag
 
   !----------------------------------------------------------------------------------------------!
@@ -102,12 +99,12 @@ contains
     !real(RP), intent(out)      :: DEPTH0  ! DEPTH0 = initial snow depth           [m]
     !real(RP)                   :: nosnowsec                   ! number of hours from latest snow event
 
-    real(RP)                  :: snow_conductivity     = 0.42
-    real(RP)                  :: water_content         = 0.1
-    real(RP)                  :: snow_heat_capacityRHO = 8.4e+05
-    real(RP)                  :: snow_rho              = 400.0
-    real(RP)                  :: snowDepth_initial     = 0.
-    real(RP)                  :: albedo_value          = 0.686
+    real(RP)                  :: snow_conductivity     = 0.42_RP
+    real(RP)                  :: water_content         = 0.1_RP
+    real(RP)                  :: snow_heat_capacityRHO = 8.4e+05_RP
+    real(RP)                  :: snow_rho              = 400.0_RP
+    real(RP)                  :: snowDepth_initial     = 0.0_RP
+    real(RP)                  :: albedo_value          = 0.686_RP
 
     namelist / PARAM_LAND_PHY_SNOW_KY90 /  &
          ALBEDO_const,      &
@@ -251,11 +248,12 @@ contains
     if( ( LANDUSE_fact_land(i,j) > 0.0_RP    ) .and.    &
         ( SWE(i,j)>0. .or. SFLX_snow(i,j)>0. ) )then
 
-       !Uabs = max( sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 ), Uabs_min )
-       Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
+       Uabs = max( sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 ), Uabs_min )
+       !Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
 
        call qsatf( QAsat, TA(i,j), PRSA(i,j) )
        RH  = QA(i,j) / QAsat
+       write(*,*) "RH,   ",RH
 
        TSNOW1  = TSNOW (i,j)
        SWE1    = SWE   (i,j)
@@ -286,14 +284,21 @@ contains
 
 
        SNOW_LAND_GH   (i,j) = SNOW_LAND_GH(i,j) / dt               ! [J/m2] -> [J/m2/s]
-       SNOW_LAND_Water(i,j) = SFLX_rain(i,j) +  SWEMELT(i,j) / dt  ! [kg/m2] -> [kg/m2/s]
-       SNOW_frac      (i,j) = 1.0_RP
+       SNOW_LAND_Water(i,j) = SFLX_rain(i,j) + SWEMELT(i,j) / dt  ! [kg/m2] -> [kg/m2/s]
+
+       if ( SWE1 <= 0. .and. SWE(i,j) <= 0. ) then  ! no accumulated snow during the time step
+          SNOW_frac      (i,j) = 0.0_RP
+       else
+          SNOW_frac      (i,j) = 1.0_RP
+       endif
 
        TSNOW_t (i,j) = ( TSNOW1 - TSNOW (i,j) ) / dt
        TSNOW   (i,j) = TSNOW1
        SWE     (i,j) = SWE1
        SDepth  (i,j) = DEPTH1
        SDzero  (i,j) = ZNSNOW1
+
+       write(*,*) "SNOW_frac, SWE, TSNOW", SNOW_frac(i,j), SWE(i,j), TSNOW(i,j)
 
     else
 
@@ -334,7 +339,7 @@ contains
        DEPTH,                 & ! [INOUT]
        ZNSNOW,                & ! [INOUT]
        nosnowsec,             & ! [INOUT]
-       ALBEDO_out,            & ! [OUT]
+       ALBEDO_out,            & ! [INOUT]
        HFLUX,                 & ! [OUT]
        LATENTFLUX,            & ! [OUT]
        GFLUX,                 & ! [OUT]
@@ -359,9 +364,9 @@ contains
     real(RP), intent(inout)    :: ZNSNOW        ! total snow depth            [m]
     ! update variables
     real(RP), intent(inout)    :: nosnowsec
+    real(RP), intent(inout)    :: ALBEDO_out
 
     ! output variables
-    real(RP), intent(out)      :: ALBEDO_out
     real(RP), intent(out)      :: HFLUX         ! HFLUX = whole snow Sensible heat flux [W/m2]
     real(RP), intent(out)      :: LATENTFLUX    ! LATENTFLUX = whole snow Latent heat flux [W/m2]
     real(RP), intent(out)      :: GFLUX         ! GFLUX = whole snow Ground flux [W/m2]
@@ -380,16 +385,7 @@ contains
     real(RP), intent(in)       :: RH
     real(RP), intent(in)       :: SW
     real(RP), intent(in)       :: LW
-
     real(RP), intent(in)       :: time
-
-
-    real(RP)                   :: RFLUX            ! RFLUX = whole snow net long wave radiation flux [W/m2]
-    real(RP)                   :: LINFLUX          ! LINFLUX = whole snow downward long wave radiation flux [W/m2]
-    real(RP)                   :: LOUTFLUX         ! LOUTFLUX = whole snow upward long wave radiation flux [W/m2]
-    real(RP)                   :: SFLUX            ! SFLUX = whole snow net short wave radiation flux [W/m2]
-
-    real(RP)                   :: SNOW             ! per dt
 
     ! initial value
     real(RP)                   :: TSNOW0           ! Initial time snow surface temperature [K]
@@ -397,11 +393,22 @@ contains
     real(RP)                   :: SWE0             ! SWE0 = snow depth initial value in snow water equivalen [kg/m2]
     real(RP)                   :: DEPTH0           ! DEPTH0 = initial snow depth           [m]
 
+    ! works
+    real(RP)                   :: SNOW             ! per dt
+    real(RP)                   :: RFLUX            ! RFLUX = whole snow net long wave radiation flux [W/m2]
+    real(RP)                   :: LINFLUX          ! LINFLUX = whole snow downward long wave radiation flux [W/m2]
+    real(RP)                   :: LOUTFLUX         ! LOUTFLUX = whole snow upward long wave radiation flux [W/m2]
+    real(RP)                   :: SFLUX            ! SFLUX = whole snow net short wave radiation flux [W/m2]
+    real(RP)                   :: DELTADEPTH
+
+    real(RP)                   :: beta
+
 
 !---------------------------------------------- !
 !        ALL START HERE                         !
 !---------------------------------------------- !
 
+    ! initialize
     ZN_flag = 0
     TS_flag = 0
 
@@ -409,25 +416,27 @@ contains
     QFUSION = 0.0_RP
     MELT    = 0.0_RP
 
+    ! snowfall during timestep
     SNOW    = SFLX_SNOW * time
 
-    ! for next step
+    ! save previous timestep
     TSNOW0  = TSNOW
     ZNSNOW0 = ZNSNOW
     SWE0    = SWE
     DEPTH0  = DEPTH
 
     ! update
-    SWE0    = SWE0    + (SNOW)             ! update according to snowfall
+    SWE0    = SWE0    +  SNOW              ! update according to snowfall
     DEPTH0  = DEPTH0  + (SNOW /RHOSNOW)
-    ZNSNOW0 = ZNSNOW0 + (SNOW /RHOSNOW)    ! ZN does not change
+    ZNSNOW0 = ZNSNOW0 + (SNOW /RHOSNOW)
 
-    write(*,*) "UA, SNOW    :   ", UA, SNOW
-    write(*,*) "SWE , TSNOW, and TA :   ", SWE0, TSNOW0, TA
-    write(*,*) "DEPTH is:       ", DEPTH0
-    write(*,*) "ZN beginning:   ", ZNSNOW0
+    write(*,*) "UA, SNOW,SFLX_SNOW,time : ", UA, SNOW, SFLX_SNOW, time
+    write(*,*) "SWE , TSNOW, and TA :     ", SWE0, TSNOW0, TA
+    write(*,*) "DEPTH is:                 ", DEPTH0
+    write(*,*) "ZN beginning:             ", ZNSNOW0
 
-!----------------------calculating albedo------------------------------------!
+!----- Calculating albedo -------------------------------------------!
+
     if (SNOW > 0.0_RP) then    ! snowfall
        nosnowsec = 0.0_RP
     else
@@ -438,39 +447,41 @@ contains
     endif
 
     ALBEDO_out = ALBEDO
-    write(*,*) "Albedo ",ALBEDO
-!----------------------------CORE  PROGRAM-------------------------------------------!
+    write(*,*) "Albedo                    ",ALBEDO
+
+!----- Energy balance at snow surface -------------------------------!
 
    call groundflux (TSNOW0, TA, UA, RH, ALBEDO, SW, LW, &  ! [IN]
                     GFLUX, RFLUX, SFLUX, LINFLUX, LOUTFLUX, HFLUX, LATENTFLUX) ! [OUT]
 
-   write(*,*) "snow surface temp: ", TSNOW0
 
-   ! When energy into snowpack is enough to melt all snow, snow model melt snow & go to next timestep
+!! Check whether GFLUX (energy into snowpack) is enough to melt all snow.
+!! If GFLUX is enough, the model melts all snow and then go to next timestep.
+
    call check_allSnowMelt   (GFLUX, TSNOW0, ZNSNOW0, DEPTH0, sflag, time)
    if(sflag .eq. 1)then
       if( IO_L ) write(IO_FID_LOG,*) '*** LAND/snow: All snow melt'
       QCC        = 0.5_RP*CSRHOS*ZNSNOW0*(T0-TSNOW0)
       QFUSION    = W0*RHOSNOW*LF*ZNSNOW0
-      MELT       = (1.0_RP-W0)*RHOSNOW*LF*DEPTH0/time  ! [W/m2]
+      MELT       = (1.0_RP-W0)*RHOSNOW*LF*DEPTH0  ! [J/m2]
       TSNOW      = T0
       ZNSNOW     = 0.0_RP
       DEPTH      = 0.0_RP
       SWE        = 0.0_RP
-      SWEMELT    = MELT *time /((1.0_RP-W0)*LF)
+      SWEMELT    = MELT /((1.0_RP-W0)*LF)
       Gflux2land = GFLUX*time - (QCC + QFUSION + MELT)   ! [J/m2]
 
    else
 
       call cal_param (ZNSNOW0, TSNOW0, GFLUX, TA, UA, RH, LW, time)
 
-      ! check the model has solution
+      ! check whether the model has solution
       call check_applicability (GFLUX, TSNOW0, ZNSNOW0, TA, UA, RH, LW, Gres, beta, time)
       if ((Gres >= 0.0_RP).and.(beta >= 0.0_RP)) then
          if( IO_L ) write(IO_FID_LOG,*) '*** LAND/snow model is not appropriate',Gres,beta
          QCC             = 0.5_RP*CSRHOS*ZNSNOW0*(T0-TSNOW0)
          QFUSION         = W0*RHOSNOW*LF*ZNSNOW0
-         MELT            = Gres / time
+         MELT            = Gres
          TSNOW           = T0
          ZNSNOW          = 0.0_RP
       else
@@ -493,16 +504,15 @@ contains
          END IF
 
          ! This equation is to calculate TSN
-         call  equation415(LAMBDAS, C2, ZNSNOW, RH, QSAT, TSNOW0, ZNSNOW0, GFLUX, TA,UA,LW, TSNOW, time)
+         call  equation415(LAMBDAS, C2, ZNSNOW, RH, QSAT, TSNOW0, ZNSNOW0, GFLUX, TA, UA, LW, TSNOW, time)
 
          write(*,*) 'TSNOW is:       ', TSNOW
-         write(*,*) 'Delta TSNOW is: ', TSNOW-TSNOW0
 
          if (TSNOW > T0) then
             TS_flag = 1
             TSNOW   = T0
             call recalculateZ(ZNSNOW0, TSNOW0, GFLUX, ZNSNOW, time)
-            call check_res(ZNSNOW0, ZNSNOW, TSNOW0, TSNOW, GFLUX,TA,UA,RH,LW, "1", time)
+            call check_res(ZNSNOW0, ZNSNOW, TSNOW0, TSNOW, GFLUX, TA, UA, RH, LW, "1", time)
             IF (ZNSNOW < ZMIN) THEN
                ZN_flag = 4
                write(*,*) "ZN is updated/replaced to: ", ZNSNOW ," to ", ZMIN
@@ -534,10 +544,10 @@ contains
       endif ! Gres & beta
 
       Gflux2land = GFLUX*time - (QCC + QFUSION + MELT)
-         if( IO_L ) write(IO_FID_LOG,*) "### ZN_flag = ", ZN_flag, "TS_flag = ", TS_flag
-         if( IO_L ) write(IO_FID_LOG,*) '### Heat flux from snowpack to land surface: ', Gflux2land
+      if( IO_L ) write(IO_FID_LOG,*) "### ZN_flag = ", ZN_flag, "TS_flag = ", TS_flag
+      if( IO_L ) write(IO_FID_LOG,*) '### Heat flux from snowpack to land surface: ', Gflux2land
 
-      DELTADEPTH             = MELT * time / ((1.0_RP-W0)*LF*RHOSNOW)
+      DELTADEPTH             = MELT / ((1.0_RP-W0)*LF*RHOSNOW)
       SWEMELT                = DELTADEPTH*RHOSNOW
       SWE                    = SWE0        - SWEMELT
       DEPTH                  = DEPTH0      - DELTADEPTH
@@ -564,7 +574,7 @@ subroutine groundflux (TS, TA, UA, RH, ALPHA, SW, LW, &
   implicit none
 
   real(RP), intent(in)     :: TS, TA, UA, RH, ALPHA, SW, LW
-  real(RP), intent(out)    :: GFLUX, SFLUX, RFLUX, LINFLUX, LOUTFLUX, HFLUX, LATENTFLUX
+  real(RP), intent(out)    :: GFLUX, RFLUX, SFLUX, LINFLUX, LOUTFLUX, HFLUX, LATENTFLUX
 
   ESAT               = 0.6112_RP * exp( (17.67_RP * (TA-273.15_RP)) / (TA-29.66_RP) )
   QSAT               = 0.622_RP * ESAT / 101.325_RP
@@ -589,11 +599,6 @@ subroutine groundflux (TS, TA, UA, RH, ALPHA, SW, LW, &
   write(*,*) " (LONG out:  ", LOUTFLUX,")"
   write(*,*) "HFLUX is:    ", HFLUX
   write(*,*) "LATENT FLUX: ", LATENTFLUX
-  write(*,*) "TS, TA     : ", TS, TA
-
-  !write(6,*) 'ESAT IS', ESAT
-  !write(6,*) 'QSAT IS', QSAT
-  !write(6,*) 'DELTAQSAT IS', DELTAQSAT
 
 return
 end subroutine groundflux
@@ -609,20 +614,18 @@ subroutine check_allSnowMelt (GFLUX, TS1, ZN1, D, sflag, time)
 
   energy_in  = GFLUX * time
 
-  energy_use_ripe = (csrhos*0.5_RP) * ZN1 * (T0-TS1) + W0*RHOSNOW*LF* ZN1
+  energy_use_ripe = 0.5_RP*CSRHOS*ZN1*(T0-TS1) + W0*RHOSNOW*LF*ZN1
   energy_use_melt = (1.0_RP-W0)*RHOSNOW*LF*D
   energy_use      = energy_use_ripe + energy_use_melt
 
-     write(*,*) "Energy in  =",energy_in
-     write(*,*) "Energy use =",energy_use
-
   if(energy_in >= energy_use)then
      sflag=1
-     write(*,*) "Energy in  =",energy_in
-     write(*,*) "Energy use =",energy_use
   else
      sflag=0
   endif
+
+  write(*,*) "Energy in  =",energy_in
+  write(*,*) "Energy use =",energy_use
 
   return
 end subroutine
@@ -660,13 +663,13 @@ subroutine check_applicability (GFLUX, TS1, ZN1, TA, UA, RH, LW, GFLUX_res, beta
   implicit none
   real(RP), intent(in)     :: GFLUX, TS1, ZN1, time
   real(RP), intent(in)     :: TA, UA, RH, LW
-  real(RP), intent(out)    :: GFLUX_res,beta
+  real(RP), intent(out)    :: GFLUX_res, beta
   real(RP)                 :: energy_in, energy_use_max
 
-  energy_in  = GFLUX * time
-  energy_use_max = (csrhos*0.5_RP) * ZN1 * (T0-TS1) + W0*RHOSNOW*LF* ZN1
+  energy_in      = GFLUX * time
+  energy_use_max = 0.5_RP*CSRHOS*ZN1*(T0-TS1) + W0*RHOSNOW*LF*ZN1
 
-  GFLUX_res = energy_in - energy_use_max ! residual energy after being used to melt all snow
+  GFLUX_res      = energy_in - energy_use_max  ! residual energy after being used to melt all snow
 
   !
   beta = (LAMBDAS/C2)* &
@@ -698,7 +701,7 @@ subroutine snowdepth (GFLUX, ZN1, ZN2, time)
 return
 end subroutine snowdepth
 !==============================================================
-subroutine equation415(LAMBDAS, C2, ZN2, RH, QSAT,TS1,ZN1, GFLUX, TA, UA, LW,TS2, time)
+subroutine equation415(LAMBDAS, C2, ZN2, RH, QSAT, TS1, ZN1, GFLUX, TA, UA, LW, TS2, time)
 
   implicit none
 
@@ -745,7 +748,7 @@ subroutine calculationMO(GFLUX, CSRHOS, ZN1, TS1, ZN2, TS2, &
 
   QCC             = 0.5_RP*CSRHOS*(ZN1*(T0-TS1)-ZN2*(T0-TS2))
   QFUSION         = W0*RHOSNOW*LF*(ZN1-ZN2)
-  MELT            = ( GFLUX*time - QCC - QFUSION ) / time
+  MELT            = ( GFLUX*time - QCC - QFUSION )
 
   write(*,*) "--------------------------MELT----------------"
   write(*,*) "GFLUX*time is: ", GFLUX*time
@@ -753,9 +756,9 @@ subroutine calculationMO(GFLUX, CSRHOS, ZN1, TS1, ZN2, TS2, &
   write(*,*) "QFUSION is   : ", QFUSION
   write(*,*) "QMELT is     : ", MELT
 
-  write(*,*) QCC+QFUSION+MELT*time
-  write(*,*) "diff= ", QCC + QFUSION + MELT*time - (GFLUX*time)
-  if ( ABS(QCC+QFUSION+MELT*time - (GFLUX*time)) > 10.) then
+  write(*,*) QCC+QFUSION+MELT
+  write(*,*) "diff= ", QCC + QFUSION + MELT - (GFLUX*time)
+  if ( ABS(QCC+QFUSION+MELT - (GFLUX*time)) > 10.) then
     print *, "Calculation is fault. Model would include bugs. Please check! Melt"
     stop
   endif
@@ -782,7 +785,7 @@ subroutine calculationNoMO(GFLUX, CSRHOS, ZN1, TS1, ZN2, TS2, &
   write(*,*) "QFUSION is   : ", QFUSION
   write(*,*) "QMELT is     : ", MELT
 
-  write(*,*) QCC+QFUSION+MELT*time
+  write(*,*) QCC+QFUSION+MELT
   write(*,*) "diff= ", QCC +QFUSION - (GFLUX*time)
   !if ( ABS(QCC+QFUSION - (GFLUX*time)) > 10.) then
   !  print *, "Calculation is fault. Model would include bugs. Please check! No Melt"
