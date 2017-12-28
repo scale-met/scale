@@ -200,9 +200,9 @@ contains
     real(RP) :: Kh(KA,IA,JA) !> eddy diffution
     real(RP) :: QW(KA,IA,JA) !> total water
 
-    real(RP), pointer :: N2  (:,:,:) !> static stability
-    real(RP), pointer :: POTL(:,:,:) !> liquid water potential temperature
-    real(RP), pointer :: POTV(:,:,:) !> virtual potential temperature
+    real(RP) :: N2  (KA,IA,JA) !> static stability
+    real(RP) :: POTL(KA,IA,JA) !> liquid water potential temperature
+    real(RP) :: POTV(KA,IA,JA) !> virtual potential temperature
 
     real(RP) :: total ! dummy
 
