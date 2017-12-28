@@ -164,8 +164,8 @@ contains
              SWE,                    & ! [INOUT]
              SDepth,                 & ! [INOUT]
              SDzero,                 & ! [INOUT]
-             Salbedo,                & ! [INOUT]
              nosnowsec,              & ! [INOUT]
+             Salbedo,                & ! [OUT]
              TSNOW_t,                & ! [OUT]
              SFLX_SH,                & ! [OUT]
              SFLX_LH,                & ! [OUT]
@@ -190,17 +190,20 @@ contains
        qsatf => ATMOS_SATURATION_pres2qsat_all  ! better to  change name from qsatf to qsat
     use scale_landuse, only: &
        LANDUSE_fact_land
+    use scale_const, only: &
+     I_SW  => CONST_I_SW, &
+     I_LW  => CONST_I_LW
 
     implicit none
     ! prognostic variables
-    real(RP), intent(inout)   :: TSNOW          (IA,JA) ! snow temperature        [K]
-    real(RP), intent(inout)   :: SWE            (IA,JA) ! equivalent water        [kg/m2]
-    real(RP), intent(inout)   :: SDepth         (IA,JA) ! depth of melting point  [m]
-    real(RP), intent(inout)   :: SDzero         (IA,JA) ! total snow depth        [m]
-    real(RP), intent(inout)   :: Salbedo        (IA,JA) ! snow albedo             [m]
-    real(RP), intent(inout)   :: nosnowsec      (IA,JA) ! elapsed time of no snow condition [s]
+    real(RP), intent(inout)   :: TSNOW          (IA,JA)   ! snow temperature        [K]
+    real(RP), intent(inout)   :: SWE            (IA,JA)   ! equivalent water        [kg/m2]
+    real(RP), intent(inout)   :: SDepth         (IA,JA)   ! depth of melting point  [m]
+    real(RP), intent(inout)   :: SDzero         (IA,JA)   ! total snow depth        [m]
+    real(RP), intent(inout)   :: nosnowsec      (IA,JA)   ! elapsed time of no snow condition [s]
 
     ! updated variables
+    real(RP), intent(out)     :: Salbedo        (IA,JA,2) ! snow albedo             [-]
     real(RP), intent(out)     :: TSNOW_t        (IA,JA) ! updated tendency of snow temperature [K]
     real(RP), intent(out)     :: SFLX_SH        (IA,JA) ! sensible heat flux between atmos and snow [W/m2]
     real(RP), intent(out)     :: SFLX_LH        (IA,JA) ! latente  heat flux between atmos and snow [W/m2]
@@ -260,27 +263,28 @@ contains
        DEPTH1  = SDepth(i,j)
        ZNSNOW1 = SDzero(i,j)
 
-       call SNOW_ky90_main( TSNOW1,            & ! [INOUT]
-                            SWE1,              & ! [INOUT]
-                            DEPTH1,            & ! [INOUT]
-                            ZNSNOW1,           & ! [INOUT]
-                            nosnowsec   (i,j), & ! [INOUT]
-                            Salbedo     (i,j), & ! [INOUT]
-                            SFLX_SH     (i,j), & ! [OUT]
-                            SFLX_LH     (i,j), & ! [OUT]
-                            SFLX_GH     (i,j), & ! [OUT]
-                            QCC         (i,j), & ! [OUT]
-                            QFUSION     (i,j), & ! [OUT]
-                            MELT        (i,j), & ! [OUT]
-                            SWEMELT     (i,j), & ! [OUT]
-                            SNOW_LAND_GH(i,j), & ! [OUT]
-                            SFLX_snow   (i,j), & ! [IN]     ! [kg/m2/s]
-                            TA          (i,j), & ! [IN]
-                            Uabs,              & ! [IN]
-                            RH,                & ! [IN]
-                            SFLX_SW_dn  (i,j), & ! [IN]
-                            SFLX_LW_dn  (i,j), & ! [IN]
-                            dt                 )
+       call SNOW_ky90_main( TSNOW1,                 & ! [INOUT]
+                            SWE1,                   & ! [INOUT]
+                            DEPTH1,                 & ! [INOUT]
+                            ZNSNOW1,                & ! [INOUT]
+                            nosnowsec   (i,j),      & ! [INOUT]
+                            Salbedo     (i,j,I_SW), & ! [OUT]
+                            Salbedo     (i,j,I_LW), & ! [OUT]
+                            SFLX_SH     (i,j),      & ! [OUT]
+                            SFLX_LH     (i,j),      & ! [OUT]
+                            SFLX_GH     (i,j),      & ! [OUT]
+                            QCC         (i,j),      & ! [OUT]
+                            QFUSION     (i,j),      & ! [OUT]
+                            MELT        (i,j),      & ! [OUT]
+                            SWEMELT     (i,j),      & ! [OUT]
+                            SNOW_LAND_GH(i,j),      & ! [OUT]
+                            SFLX_snow   (i,j),      & ! [IN]     ! [kg/m2/s]
+                            TA          (i,j),      & ! [IN]
+                            Uabs,                   & ! [IN]
+                            RH,                     & ! [IN]
+                            SFLX_SW_dn  (i,j),      & ! [IN]
+                            SFLX_LW_dn  (i,j),      & ! [IN]
+                            dt                      )
 
 
        SNOW_LAND_GH   (i,j) = SNOW_LAND_GH(i,j) / dt               ! [J/m2] -> [J/m2/s]
@@ -302,23 +306,23 @@ contains
 
     else
 
-       SNOW_LAND_Water(i,j) = SFLX_rain(i,j)
-       SNOW_frac      (i,j) = 0.0_RP
+       SNOW_LAND_Water(i,j)   = SFLX_rain(i,j)
+       SNOW_frac      (i,j)   = 0.0_RP
 
-       TSNOW_t (i,j)        = 0.0_RP
-       TSNOW          (i,j) = T0     !!!
-       SWE            (i,j) = 0.0_RP !!!
-       SDepth         (i,j) = 0.0_RP !!!
-       SDzero         (i,j) = 0.0_RP !!!
-       Salbedo        (i,j) = 0.0_RP !!!
-       SFLX_SH        (i,j) = 0.0_RP
-       SFLX_LH        (i,j) = 0.0_RP
-       SFLX_GH        (i,j) = 0.0_RP
-       QCC            (i,j) = 0.0_RP
-       QFUSION        (i,j) = 0.0_RP
-       MELT           (i,j) = 0.0_RP
-       SWEMELT        (i,j) = 0.0_RP
-       SNOW_LAND_GH   (i,j) = 0.0_RP
+       TSNOW_t (i,j)          = 0.0_RP
+       TSNOW          (i,j)   = T0     !!!
+       SWE            (i,j)   = 0.0_RP !!!
+       SDepth         (i,j)   = 0.0_RP !!!
+       SDzero         (i,j)   = 0.0_RP !!!
+       Salbedo        (i,j,:) = 0.0_RP !!!
+       SFLX_SH        (i,j)   = 0.0_RP
+       SFLX_LH        (i,j)   = 0.0_RP
+       SFLX_GH        (i,j)   = 0.0_RP
+       QCC            (i,j)   = 0.0_RP
+       QFUSION        (i,j)   = 0.0_RP
+       MELT           (i,j)   = 0.0_RP
+       SWEMELT        (i,j)   = 0.0_RP
+       SNOW_LAND_GH   (i,j)   = 0.0_RP
 
     endif
 
@@ -339,7 +343,8 @@ contains
        DEPTH,                 & ! [INOUT]
        ZNSNOW,                & ! [INOUT]
        nosnowsec,             & ! [INOUT]
-       ALBEDO_out,            & ! [INOUT]
+       ALBEDO_out,            & ! [OUT]
+       Emiss,                 & ! [OUT]
        HFLUX,                 & ! [OUT]
        LATENTFLUX,            & ! [OUT]
        GFLUX,                 & ! [OUT]
@@ -364,7 +369,8 @@ contains
     real(RP), intent(inout)    :: ZNSNOW        ! total snow depth            [m]
     ! update variables
     real(RP), intent(inout)    :: nosnowsec
-    real(RP), intent(inout)    :: ALBEDO_out
+    real(RP), intent(out)      :: ALBEDO_out
+    real(RP), intent(out)      :: Emiss
 
     ! output variables
     real(RP), intent(out)      :: HFLUX         ! HFLUX = whole snow Sensible heat flux [W/m2]
@@ -447,6 +453,7 @@ contains
     endif
 
     ALBEDO_out = ALBEDO
+    Emiss      = 1.0_RP - epsilon
     write(*,*) "Albedo                    ",ALBEDO
 
 !----- Energy balance at snow surface -------------------------------!

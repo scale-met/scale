@@ -196,7 +196,7 @@ contains
 
     ! for snow
     real(RP) :: SNOW_TEMP_t         (IA,JA)
-    real(RP) :: SNOW_albedo         (IA,JA)
+    real(RP) :: SNOW_albedo         (IA,JA,2)
     real(RP) :: SNOW_ATMO_SFLX_SH   (IA,JA)
     real(RP) :: SNOW_ATMO_SFLX_LH   (IA,JA)
     real(RP) :: SNOW_ATMO_SFLX_GH   (IA,JA)
@@ -249,8 +249,8 @@ contains
                                  SNOW_SWE            (:,:),   & ! [INOUT]
                                  SNOW_Depth          (:,:),   & ! [INOUT]
                                  SNOW_Dzero          (:,:),   & ! [INOUT]
-                                 SNOW_albedo         (:,:),   & ! [INOUT]
                                  SNOW_nosnowsec      (:,:),   & ! [INOUT]
+                                 SNOW_albedo         (:,:,:), & ! [OUT]
                                  SNOW_TEMP_t         (:,:),   & ! [OUT]
                                  SNOW_ATMO_SFLX_SH   (:,:),   & ! [OUT]
                                  SNOW_ATMO_SFLX_LH   (:,:),   & ! [OUT]
@@ -397,8 +397,14 @@ contains
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
-           LAND_SFC_TEMP_t(i,j) = SNOW_frac(i,j)*SNOW_TEMP_t(i,j)         + (1.0_RP-SNOW_frac(i,j))*LAND_SFC_TEMP_t(i,j)
-           !LAND_SFC_albedo_t(:,:,:) = 0.0_RP  ! currently not considered, but this is very important
+           LAND_SFC_TEMP_t(i,j)        =         SNOW_frac(i,j) *SNOW_TEMP_t(i,j)                                           &
+                                       + (1.0_RP-SNOW_frac(i,j))*LAND_SFC_TEMP_t(i,j)
+
+           ! tentative: it is not considered that LAND_SFC_albedo is updated in land physics model
+           LAND_SFC_albedo_t(i,j,I_SW) =         SNOW_frac(i,j) *(SNOW_albedo(i,j,I_SW)     -LAND_SFC_albedo(i,j,I_SW))/dt  &
+                                       + (1.0_RP-SNOW_frac(i,j))*(LAND_type_albedo(i,j,I_SW)-LAND_SFC_albedo(i,j,I_SW))/dt
+           LAND_SFC_albedo_t(i,j,I_LW) =         SNOW_frac(i,j) *(SNOW_albedo(i,j,I_LW)     -LAND_SFC_albedo(i,j,I_LW))/dt  &
+                                       + (1.0_RP-SNOW_frac(i,j))*(LAND_type_albedo(i,j,I_LW)-LAND_SFC_albedo(i,j,I_LW))/dt
 
            LAND_SFLX_MW(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_MW(i,j)   + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_MW(i,j)
            LAND_SFLX_MU(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_MU(i,j)   + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_MU(i,j)
@@ -419,21 +425,21 @@ contains
        enddo
        enddo
 
-
-       call FILE_HISTORY_in( SNOW_albedo         (:,:), 'SNOW_albedo',          'Snow surface albedo',                      '0-1',    dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_ATMO_SFLX_SH   (:,:), 'SNOW_ATMO_SFLX_SH',    'Snow surface sensible heat flux',          'J/m2/s', dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_ATMO_SFLX_LH   (:,:), 'SNOW_ATMO_SFLX_LH',    'Snow surface latent heat flux',            'J/m2/s', dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_ATMO_SFLX_GH   (:,:), 'SNOW_ATMO_SFLX_GH',    'Snowpack received heat flux',              'J/m2/s', dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_LAND_SFLX_GH   (:,:), 'SNOW_LAND_SFLX_GH',    'land surface ground heat flux under snow', 'J/m2/s', dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_LAND_SFLX_Water(:,:), 'SNOW_LAND_SFLX_Water', 'land surface water vapor flux under snow', 'kg/m2/s',dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_frac           (:,:), 'SNOW_frac',            'Snow fraction on land subgrid',            '0-1',    dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_ATMO_SFLX_MW   (:,:), 'SNOW_ATMO_SFLX_MW',    'Snow surface w-momentum flux',             'J/m2/s', dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_ATMO_SFLX_MU   (:,:), 'SNOW_ATMO_SFLX_MU',    'Snow surface u-momentum flux',             'J/m2/s', dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_ATMO_SFLX_MV   (:,:), 'SNOW_ATMO_SFLX_MV',    'Snow surface v-momentum flux',             'J/m2/s', dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_U10            (:,:), 'SNOW_U10',             'Wind velocity u at 10 m on snow surface',  'm/s',    dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_V10            (:,:), 'SNOW_V10',             'Wind velocity v at 10 m on snow surface',  'm/s',    dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_T2             (:,:), 'SNOW_T2',              'Air temperature at 2m on snow surface',    'K',      dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_Q2             (:,:), 'SNOW_Q2',              'Specific humidity at 2m on snow surface',  'kg/kg',  dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_albedo         (:,:,I_SW), 'SNOW_ALB_SW',          'Snow surface albedo (short wave)',         '0-1',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_albedo         (:,:,I_LW), 'SNOW_ALB_LW',          'Snow surface albedo (long wave)',          '0-1',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_SH   (:,:),      'SNOW_ATMO_SFLX_SH',    'Snow surface sensible heat flux',          'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_LH   (:,:),      'SNOW_ATMO_SFLX_LH',    'Snow surface latent heat flux',            'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_GH   (:,:),      'SNOW_ATMO_SFLX_GH',    'Snowpack received heat flux',              'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_LAND_SFLX_GH   (:,:),      'SNOW_LAND_SFLX_GH',    'land surface ground heat flux under snow', 'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_LAND_SFLX_Water(:,:),      'SNOW_LAND_SFLX_Water', 'land surface water vapor flux under snow', 'kg/m2/s',dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_frac           (:,:),      'SNOW_frac',            'Snow fraction on land subgrid',            '0-1',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_MW   (:,:),      'SNOW_ATMO_SFLX_MW',    'Snow surface w-momentum flux',             'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_MU   (:,:),      'SNOW_ATMO_SFLX_MU',    'Snow surface u-momentum flux',             'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_MV   (:,:),      'SNOW_ATMO_SFLX_MV',    'Snow surface v-momentum flux',             'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_U10            (:,:),      'SNOW_U10',             'Wind velocity u at 10 m on snow surface',  'm/s',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_V10            (:,:),      'SNOW_V10',             'Wind velocity v at 10 m on snow surface',  'm/s',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_T2             (:,:),      'SNOW_T2',              'Air temperature at 2m on snow surface',    'K',      dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_Q2             (:,:),      'SNOW_Q2',              'Specific humidity at 2m on snow surface',  'kg/kg',  dim_type='XY' )
 
     endif
 
