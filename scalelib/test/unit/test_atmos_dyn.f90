@@ -17,21 +17,22 @@ module test_atmos_dyn
      COMM_vars8, &
      COMM_wait
   use scale_grid, only: &
-       CY   => GRID_CY,   &
-       CZ   => GRID_CZ,   &
-       FZ   => GRID_FZ,   &
-       CDZ  => GRID_CDZ,  &
-       CDX  => GRID_CDX,  &
-       CDY  => GRID_CDY,  &
-       FDZ  => GRID_FDZ,  &
-       FDX  => GRID_FDX,  &
-       FDY  => GRID_FDY,  &
-       RCDZ => GRID_RCDZ, &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
-       RFDZ => GRID_RFDZ, &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY
+     DOMAIN_CENTER_Y => GRID_DOMAIN_CENTER_Y, &
+     CY              => GRID_CY,              &
+     CZ              => GRID_CZ,              &
+     FZ              => GRID_FZ,              &
+     CDZ             => GRID_CDZ,             &
+     CDX             => GRID_CDX,             &
+     CDY             => GRID_CDY,             &
+     FDZ             => GRID_FDZ,             &
+     FDX             => GRID_FDX,             &
+     FDY             => GRID_FDY,             &
+     RCDZ            => GRID_RCDZ,            &
+     RCDX            => GRID_RCDX,            &
+     RCDY            => GRID_RCDY,            &
+     RFDZ            => GRID_RFDZ,            &
+     RFDX            => GRID_RFDX,            &
+     RFDY            => GRID_RFDY
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -246,7 +247,8 @@ contains
        PROG,                               & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
        wdamp_tau, wdamp_height, FZ,        & ! (in)
-       'PLANE', 0.0_RP, 0.0_RP, CY, lat    ) ! (in)
+       'PLANE', 0.0_RP, 0.0_RP,            & ! (in)
+       DOMAIN_CENTER_Y, CY, lat            ) ! (in)
 
   do k = KS+1, KE
      if ( GRID_CBFZ(k) > 0.0_RP ) then
