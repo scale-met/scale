@@ -669,7 +669,7 @@ contains
             error                                                        ) ! (out)
     end if
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to write axis')
+       call Log('E', 'xxx failed to write axis: '//trim(name))
     end if
 
     return
@@ -695,7 +695,7 @@ contains
             error                                                        ) ! (out)
     end if
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to write axis')
+       call Log('E', 'xxx failed to write axis: '//trim(name))
     end if
 
     return
@@ -728,7 +728,7 @@ contains
          val, SP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -757,7 +757,7 @@ contains
          val, DP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -786,7 +786,7 @@ contains
          val, SP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -815,7 +815,7 @@ contains
          val, DP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -844,7 +844,7 @@ contains
          val, SP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -873,7 +873,7 @@ contains
          val, DP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -902,7 +902,7 @@ contains
          val, SP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -931,7 +931,7 @@ contains
          val, DP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
@@ -958,7 +958,7 @@ contains
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
          error                                                 ) ! (out)
     if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinates')
+       call Log('E', 'xxx failed to put associated coordinates: '//trim(name))
     end if
 
     return
