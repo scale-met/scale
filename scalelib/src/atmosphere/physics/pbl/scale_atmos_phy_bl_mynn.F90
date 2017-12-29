@@ -639,9 +639,9 @@ contains
     call HIST_in(dudz2(:,:,:), 'dUdZ2_MYNN', 'dudz2', 'm2/s2', nohalo=.true.)
     call HIST_in(l(:,:,:), 'L_mix_MYNN', 'minxing length', 'm', nohalo=.true.)
 
-    call HIST_in(flxU(:,:,:), 'MYNN_ZFLX_RHOU', 'Z FLUX of RHOU (MYNN)', 'kg/m/s2', nohalo=.true.)
-    call HIST_in(flxV(:,:,:), 'MYNN_ZFLX_RHOV', 'Z FLUX of RHOV (MYNN)', 'kg/m/s2', nohalo=.true.)
-    call HIST_in(flxT(:,:,:), 'MYNN_ZFLX_RHOT', 'Z FLUX of RHOT (MYNN)', 'K kg/m2/s', nohalo=.true.)
+    call HIST_in(flxU(:,:,:), 'ZFLX_RHOU_MYNN', 'Z FLUX of RHOU (MYNN)', 'kg/m/s2', nohalo=.true.)
+    call HIST_in(flxV(:,:,:), 'ZFLX_RHOV_MYNN', 'Z FLUX of RHOV (MYNN)', 'kg/m/s2', nohalo=.true.)
+    call HIST_in(flxT(:,:,:), 'ZFLX_RHOT_MYNN', 'Z FLUX of RHOT (MYNN)', 'K kg/m2/s', nohalo=.true.)
 
     return
   end subroutine ATMOS_PHY_BL_MYNN_tendency
@@ -653,32 +653,37 @@ contains
   subroutine ATMOS_PHY_BL_MYNN_tendency_tracer( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS, QTRC, SFLX_Q, Kh, &
-       CZ, FZ, DT,             &
+       CZ, FZ, DT, name,       &
        RHOQ_t                  )
     use scale_matrix, only: &
-         MATRIX_SOLVER_tridiagonal
-    integer,  intent(in) :: KA, KS, KE
-    integer,  intent(in) :: IA, IS, IE
-    integer,  intent(in) :: JA, JS, JE
+       MATRIX_SOLVER_tridiagonal
+    use scale_history, only: &
+       HIST_in  
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in) :: DENS  (KA,IA,JA) !> density
-    real(RP), intent(in) :: QTRC  (KA,IA,JA) !> tracers
-    real(RP), intent(in) :: SFLX_Q(   IA,JA) !> surface flux
-    real(RP), intent(in) :: Kh    (KA,IA,JA) !> eddy diffusion coefficient
-
-    real(RP), intent(in) :: CZ (  KA,IA,JA) !> z at the full level
-    real(RP), intent(in) :: FZ (0:KA,IA,JA) !> z at the half level
-    real(DP), intent(in) :: DT             !> time step
+    real(RP),         intent(in) :: DENS  (KA,IA,JA) !> density
+    real(RP),         intent(in) :: QTRC  (KA,IA,JA) !> tracers
+    real(RP),         intent(in) :: SFLX_Q(   IA,JA) !> surface flux
+    real(RP),         intent(in) :: Kh    (KA,IA,JA) !> eddy diffusion coefficient
+    real(RP),         intent(in) :: CZ (  KA,IA,JA) !> z at the full level
+    real(RP),         intent(in) :: FZ (0:KA,IA,JA) !> z at the half level
+    real(DP),         intent(in) :: DT              !> time step
+    character(len=*), intent(in) :: name            !> name of tracer (for history output)
 
     real(RP), intent(out) :: RHOQ_t(KA,IA,JA) !> tendency of tracers
 
     real(RP) :: QTRC_n(KA) !> value at the next time step
+    real(RP) :: RHOKh(KA)
     real(RP) :: a(KA)
     real(RP) :: b(KA)
     real(RP) :: c(KA)
     real(RP) :: d(KA)
     real(RP) :: ap
     real(RP) :: sf_t
+
+    real(RP) :: flx(KA,IA,JA)
 
     real(RP) :: f2h(KA,2) !> coefficient to convert from full to half level
 
@@ -687,8 +692,8 @@ contains
 !OCL INDEPENDENT
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE_PBL,KE,IS,IE,JS,JE) &
-    !$omp shared(RHOQ_t,DENS,QTRC,SFLX_Q,Kh,CZ,FZ,F2H,DT) &
-    !$omp private(QTRC_n,a,b,c,d,ap,sf_t) &
+    !$omp shared(RHOQ_t,DENS,QTRC,SFLX_Q,Kh,CZ,FZ,F2H,DT,flx) &
+    !$omp private(QTRC_n,RHOKh,a,b,c,d,ap,sf_t) &
     !$omp private(k,i,j)
     do j = JS, JE
     do i = IS, IE
@@ -698,6 +703,12 @@ contains
             FZ(:,i,j), & ! (in)
             f2h(:,:)   ) ! (out)
 
+       ! dens * coefficient at the half level
+       do k = KS, KE_PBL-1
+          RHOKh(k) = f2h(k,1) * DENS(k+1,i,j) * Kh(k+1,i,j) &
+                   + f2h(k,2) * DENS(k  ,i,j) * Kh(k  ,i,j)
+       end do
+
        sf_t = SFLX_Q(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
        d(KS) = QTRC(KS,i,j) + dt * sf_t / DENS(KS,i,j)
        do k = KS+1, KE_PBL
@@ -706,9 +717,7 @@ contains
 
        c(KS) = 0.0_RP
        do k = KS, KE_PBL-1
-          ap = - dt * ( f2h(k,1) * ( DENS(k+1,i,j) * Kh(k+1,i,j) ) &
-                      + f2h(k,2) * ( DENS(k  ,i,j) * Kh(k  ,i,j) ) ) &
-             / ( CZ(k+1,i,j) - CZ(k,i,j) )
+          ap = - dt * RHOKh(k) / ( CZ(k+1,i,j) - CZ(k,i,j) )
           a(k) = ap / ( DENS(k,i,j) * ( FZ(k,i,j) - FZ(k-1,i,j) ) )
           b(k) = - a(k) - c(k) + 1.0_RP
           c(k+1) = ap / ( DENS(k+1,i,j) * ( FZ(k+1,i,j) - FZ(k,i,j) ) )
@@ -729,8 +738,17 @@ contains
           RHOQ_t(k,i,j) = 0.0_RP
        end do
 
+       do k = KS, KE_PBL-1
+          flx(k,i,j) = - RHOKh(k) * ( QTRC_n(k+1) - QTRC_n(k) ) / ( CZ(k+1,i,j) - CZ(k,i,j) )
+       end do
+       do k = KE_PBL, KE
+          flx(k,i,j) = 0.0_RP
+       end do
+
     end do
     end do
+
+    call HIST_in(flx(:,:,:), 'ZFLX_'//trim(name)//'_MYNN', 'Z FLUX of DENS * '//trim(name)//' (MYNN)', 'kg/m2/s', nohalo=.true.)
 
     return
   end subroutine ATMOS_PHY_BL_MYNN_tendency_tracer

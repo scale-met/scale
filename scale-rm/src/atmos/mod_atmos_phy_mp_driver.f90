@@ -54,6 +54,7 @@ module mod_atmos_phy_mp_driver
   real(RP), private :: MP_RNSTEP_SEDIMENTATION
   real(DP), private :: MP_DTSEC_SEDIMENTATION
 
+  integer, private, allocatable :: hist_vterm_id(:)
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -144,6 +145,8 @@ contains
        ATMOS_PHY_MP_setup
     use scale_atmos_phy_mp_tomita08, only: &
        ATMOS_PHY_MP_TOMITA08_setup
+    use scale_history, only: &
+       HIST_reg
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE, &
        ATMOS_sw_phy_mp
@@ -151,6 +154,9 @@ contains
        ATMOS_PHY_MP_cldfrac_thleshold, &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow
+    use mod_atmos_phy_mp_vars, only: &
+       QS_MP, &
+       QE_MP
     implicit none
     
     NAMELIST / PARAM_ATMOS_PHY_MP / &
@@ -163,6 +169,7 @@ contains
 
     integer :: nstep_max
 
+    integer :: iq
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -217,6 +224,16 @@ contains
        SFLX_snow(:,:) = 0.0_RP
 
     endif
+
+
+    ! history putput
+    if ( MP_do_precipitation ) then
+       allocate( hist_vterm_id(QS_MP+1:QE_MP) )
+       do iq = QS_MP+1, QE_MP
+          call HIST_reg( hist_vterm_id(iq), 'Vterm_'//trim(TRACER_NAME(iq)), 'terminal velocity of '//trim(TRACER_NAME(iq)), 'm/s', ndim=3 )
+       end do
+    end if
+
 
     return
   end subroutine ATMOS_PHY_MP_driver_setup
@@ -327,6 +344,9 @@ contains
     use scale_atmos_phy_mp_tomita08, only: &
        ATMOS_PHY_MP_TOMITA08_adjustment, &
        ATMOS_PHY_MP_TOMITA08_terminal_velocity
+    use scale_history, only: &
+       HIST_query, &
+       HIST_put
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE
     use mod_atmos_vars, only: &
@@ -390,6 +410,7 @@ contains
     real(RP) :: MOMY1(KA,IA,JA)
     real(RP) :: RHOT1(KA,IA,JA)
     real(RP), target :: QTRC1(KA,IA,JA,QA)
+    logical :: integ_precip = .true.
 
     real(RP) :: FLX_hydro(KA)
     real(RP) :: DENS2    (KA)
@@ -411,6 +432,12 @@ contains
     real(RP) :: precip   (IA,JA)
 
     real(RP) :: total ! dummy
+
+    ! for history output
+    real(RP), allocatable :: vterm_hist(:,:,:,:)
+    integer :: hist_vterm_idx(QS_MP+1:QE_MP)
+    logical :: flag
+    integer :: ih
 
     integer :: k, i, j, iq
     integer :: step
@@ -519,7 +546,7 @@ contains
           enddo
           enddo
 
-          MP_do_precipitation = .false.
+          integ_precip = .false.
 
        end select
 
@@ -527,14 +554,32 @@ contains
 
           call PROF_rapstart('MP_Precipitation', 2)
 
+          ! prepare for history output
+          hist_vterm_idx(:) = -1
+          ih = 0
+          do iq = QS_MP+1, QE_MP
+             call HIST_query( hist_vterm_id(iq), flag )
+             if ( flag ) then
+                ih = ih + 1
+                hist_vterm_idx(iq) = ih
+             end if
+          end do
+          if ( ih > 0 ) then
+             allocate( vterm_hist(KA,IA,JA,ih) )
+             vterm_hist(:,:,:,:) = 0.0_RP
+          end if
+
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp shared (KA,KS,KE,ISB,IEB,JSB,JEB,QS_MP,QE_MP,QHA,QLA,QIA, &
           !$omp         PRE00, &
+          !$omp         ATMOS_PHY_MP_TYPE, &
           !$omp         dt_MP,MP_NSTEP_SEDIMENTATION,MP_DTSEC_SEDIMENTATION,MP_RNSTEP_SEDIMENTATION, &
           !$omp         REAL_CZ,REAL_FZ, &
           !$omp         DENS,MOMZ,U,V,RHOT,TEMP,PRES,QTRC,CPtot,CVtot,EXNER, &
           !$omp         DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOQ_t_MP,RHOH_MP, &
-          !$omp         SFLX_rain,SFLX_snow) &
+          !$omp         SFLX_rain,SFLX_snow, &
+          !$omp         integ_precip, &
+          !$omp         vterm_hist,hist_vterm_idx) &
           !$omp private(i,j,k,iq,step, &
           !$omp         FDZ,RFDZ,RCDZ, &
           !$omp         DENS2,TEMP2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ2, &
@@ -569,10 +614,24 @@ contains
              FLX_hydro(:) = 0.0_RP
              do step = 1, MP_NSTEP_SEDIMENTATION
 
-                call ATMOS_PHY_MP_tomita08_terminal_velocity( &
-                     KA, KS, KE, &
-                     DENS2(:), TEMP2(:), RHOQ2(:,:), & ! [IN]
-                     vterm(:,:)                      ) ! [OUT]
+                select case ( ATMOS_PHY_MP_TYPE )
+                case ( 'TOMITA08' )
+                   call ATMOS_PHY_MP_tomita08_terminal_velocity( &
+                        KA, KS, KE, &
+                        DENS2(:), TEMP2(:), RHOQ2(:,:), & ! [IN]
+                        vterm(:,:)                      ) ! [OUT]
+                case default
+                   vterm(:,:) = 0.0_RP ! tentative
+                end select
+
+                ! store to history output
+                do iq = QS_MP+1, QE_MP
+                   if ( hist_vterm_idx(iq) > 0 ) then
+                      vterm_hist(:,i,j,hist_vterm_idx(iq)) = &
+                          vterm_hist(:,i,j,hist_vterm_idx(iq)) &
+                        + vterm(:,iq) * MP_RNSTEP_SEDIMENTATION
+                   end if
+                end do
 
                 call ATMOS_PHY_MP_precipitation( &
                      KA, KS, KE, QHA, QLA, QIA, &
@@ -617,6 +676,8 @@ contains
 !                     * log( EXNER(k,i,j) ) * ( CP_t / CPtot(k,i,j) - CV_t / CVtot(k,i,j) )
              end do
 
+             if ( integ_precip ) then ! tentative
+
              do iq = QS_MP+1, QE_MP
              do k  = KS, KE
                 RHOQ_t_MP(k,i,j,iq) = RHOQ_t_MP(k,i,j,iq) &
@@ -631,8 +692,17 @@ contains
                      RCDZ(:), RFDZ(:),                                    & ! [IN]
                      MOMZ_t_MP(:,i,j), RHOU_t_MP(:,i,j), RHOV_t_MP(:,i,j) ) ! [OUT]
 
+            end if
+
           enddo
           enddo
+
+          ! history output
+          do iq = QS_MP+1, QE_MP
+             if ( hist_vterm_idx(iq) > 0 ) &
+                call HIST_put( hist_vterm_id(iq), vterm_hist(:,:,:,hist_vterm_idx(iq)) )
+          end do
+          if ( allocated( vterm_hist ) ) deallocate( vterm_hist )
 
           call PROF_rapend  ('MP_Precipitation', 2)
 

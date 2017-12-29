@@ -108,6 +108,7 @@ module gtool_history
      integer                    :: dstep             !> Time unit
      logical                    :: taverage          !> Apply time average?
      integer                    :: dtype             !> Data type
+     logical                    :: registered        !> This item is registered?
   end type request
 
   type vars
@@ -133,6 +134,7 @@ module gtool_history
      integer                    :: waitstep          !> Step length to suppress output [step]
      integer                    :: laststep_write    !> Last step when the variable is written
      integer                    :: laststep_put      !> Last step when the variable is put
+     logical                    :: flag_clear        !> Data buffer should be cleared at the timing of putting?
      integer                    :: size              !> Size of array
      real(DP)                   :: timesum           !> Buffer for time
      real(DP), pointer          :: varsum(:)         !> Buffer for value
@@ -566,6 +568,8 @@ contains
           write(message,*) 'xxx Not appropriate DATATYPE. Check!', DATATYPE
           call Log('E',message)
        endif
+
+       History_req(reqid)%registered = .false.
     enddo
 
     call Log('I','')
@@ -705,6 +709,8 @@ contains
                 if ( History_req(reqid)%zcoord /= zcoord ) cycle
              endif
 
+             History_req(reqid)%registered = .true.
+
              existed = .true.
              nregist = nregist + 1
 
@@ -745,6 +751,7 @@ contains
                 History_vars(id)%laststep_write = 1
              endif
              History_vars(id)%laststep_put      = History_vars(id)%laststep_write
+             History_vars(id)%flag_clear        = .true.
              History_vars(id)%size              = 0
              History_vars(id)%timesum           = 0.0_DP
              History_vars(id)%varsum(:)         = 0.0_DP
@@ -1908,7 +1915,7 @@ contains
        if ( item == History_vars(id)%item ) then
           if    ( History_vars(id)%taverage ) then
              answer = .true.
-          elseif( step_now == History_vars(id)%laststep_write + History_vars(id)%dstep ) then
+          elseif( step_now >= History_vars(id)%laststep_write + History_vars(id)%dstep ) then
              answer = .true.
           endif
        endif
@@ -1947,6 +1954,11 @@ contains
     endif
 
 
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
+    endif
+
     if ( History_vars(id)%taverage ) then
           idx = 1
           History_vars(id)%varsum(idx) = History_vars(id)%varsum(idx) + var * dt
@@ -1961,6 +1973,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut0DIdSP
@@ -1993,6 +2006,11 @@ contains
     endif
 
 
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
+    endif
+
     if ( History_vars(id)%taverage ) then
           idx = 1
           History_vars(id)%varsum(idx) = History_vars(id)%varsum(idx) + var * dt
@@ -2007,6 +2025,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut0DIdDP
@@ -2042,6 +2061,11 @@ contains
 
     vsize = shape(var)
 
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
+    endif
+
     if ( History_vars(id)%taverage ) then
        do i = 1, vsize(1)
           idx = i
@@ -2060,6 +2084,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut1DIdSP
@@ -2095,6 +2120,11 @@ contains
 
     vsize = shape(var)
 
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
+    endif
+
     if ( History_vars(id)%taverage ) then
        do i = 1, vsize(1)
           idx = i
@@ -2113,6 +2143,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut1DIdDP
@@ -2148,6 +2179,11 @@ contains
 
     vsize = shape(var)
 
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
+    endif
+
     if ( History_vars(id)%taverage ) then
        do j = 1, vsize(2)
        do i = 1, vsize(1)
@@ -2170,6 +2206,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut2DIdSP
@@ -2205,6 +2242,11 @@ contains
 
     vsize = shape(var)
 
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
+    endif
+
     if ( History_vars(id)%taverage ) then
        do j = 1, vsize(2)
        do i = 1, vsize(1)
@@ -2227,6 +2269,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut2DIdDP
@@ -2262,6 +2305,11 @@ contains
 
     vsize = shape(var)
 
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
+    endif
+
     if ( History_vars(id)%taverage ) then
        do k = 1, vsize(3)
        do j = 1, vsize(2)
@@ -2288,6 +2336,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut3DIdSP
@@ -2323,6 +2372,11 @@ contains
 
     vsize = shape(var)
 
+    if ( History_vars(id)%flag_clear ) then ! time to purge
+       History_vars(id)%timesum    = 0.0_DP
+       History_vars(id)%varsum(:)  = 0.0_DP
+    endif
+
     if ( History_vars(id)%taverage ) then
        do k = 1, vsize(3)
        do j = 1, vsize(2)
@@ -2349,6 +2403,7 @@ contains
 
     History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
+    History_vars(id)%flag_clear   = .false.
 
     return
   end subroutine HistoryPut3DIdDP
@@ -2488,19 +2543,31 @@ contains
        return
     endif
 
-    if ( History_vars(id)%laststep_put == History_vars(id)%laststep_write ) then
-       write(message,*) 'xxx History variable was never put after the last output!: ', &
-                        trim(History_vars(id)%item)
+    if ( History_vars(id)%flag_clear ) then
        if ( History_ERROR_PUTMISS ) then
+          write(message,'(3A)') 'xxx The time interval of history output ', trim(History_vars(id)%item), &
+                                ' and the time interval of its related scheme are inconsistent.'
+          call Log('I',message)
+          write(message,'(A)')  'xxx Please check the namelist PARAM_TIME, PARAM_HISTORY, and HISTITEM.'
+          call Log('I',message)
+          write(message,'(2A)') 'xxx Please set History_ERROR_PUTMISS in the namelist PARAM_HISTORY to .false.', &
+                                ' when you want to disable this check.'
+          call Log('I',message)
+
+          write(message,'(4A)') 'xxx The time interval of history output ', trim(History_vars(id)%item), &
+                                ' and the time interval of its related scheme are inconsistent.',        &
+                                ' Please see detail in log file.'
           call Log('E',message)
        else
+          write(message,'(2A)') '*** Output value is not updated in this step. NAME : ', &
+                                trim(History_vars(id)%item)
           call Log('I',message)
        endif
     endif
 
     isize = History_vars(id)%size
 
-    if ( History_vars(id)%taverage ) then
+    if ( .NOT. History_vars(id)%flag_clear .AND. History_vars(id)%taverage ) then
        History_vars(id)%varsum(1:isize) = History_vars(id)%varsum(1:isize) / History_vars(id)%timesum
     endif
 
@@ -2545,9 +2612,7 @@ contains
     endif
 
     History_vars(id)%laststep_write = step_now
-    History_vars(id)%laststep_put   = step_now
-    History_vars(id)%timesum        = 0.0_DP
-    History_vars(id)%varsum(:)      = 0.0_DP
+    History_vars(id)%flag_clear     = .true.
 
     laststep_write = step_now ! remember for multiple call in the same step
 
@@ -2833,6 +2898,25 @@ contains
     real(DP) :: dtsec
     integer  :: id
     !---------------------------------------------------------------------------
+
+    if ( History_id_count /= History_req_count ) then
+
+       write(message,'(A)') '*** [HIST] All of requested variable by the namelist HISTITEM did not find.'
+       call Log('I',message)
+       do id = 1, History_req_count
+          write(message,'(A,A24,A,L1)') '*** NAME : ', History_req(id)%item, &
+                                        ', registered? : ', History_req(id)%registered
+          call Log('I',message)
+       enddo
+       write(message,'(2A)') '*** Please set History_ERROR_PUTMISS in the namelist PARAM_HISTORY to .false.', &
+                             ' when you want to disable this check.'
+       call Log('I',message)
+
+       if ( History_ERROR_PUTMISS ) then
+          write(message,'(A)') 'xxx Requested variables by the namelist HISTITEM did not find. Please see detail in log file.'
+          call Log('E',message)
+       endif
+    endif
 
     call Log('I','')
     write(message,'(A)') '*** [HIST] Output item list '
