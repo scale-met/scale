@@ -232,9 +232,9 @@ contains
     allocate( GRID_CBFZ(KA) )
     allocate( GRID_CBFX(IA) )
     allocate( GRID_CBFY(JA) )
-    allocate( GRID_FBFZ(KA) )
-    allocate( GRID_FBFX(IA) )
-    allocate( GRID_FBFY(JA) )
+    allocate( GRID_FBFZ(0:KA) )
+    allocate( GRID_FBFX(0:IA) )
+    allocate( GRID_FBFY(0:JA) )
 
     ! global domain
     allocate( GRID_FXG  (0:IAG) )
@@ -247,8 +247,8 @@ contains
     allocate( GRID_CDYG (  JAG) )
     allocate( GRID_CBFXG(  IAG) )
     allocate( GRID_CBFYG(  JAG) )
-    allocate( GRID_FBFXG(  IAG) )
-    allocate( GRID_FBFYG(  JAG) )
+    allocate( GRID_FBFXG(0:IAG) )
+    allocate( GRID_FBFYG(0:JAG) )
 
     return
   end subroutine GRID_allocate
@@ -418,6 +418,8 @@ contains
     GRID_FBFXG(:) = 0.0_RP
     do i = 1, IHALO
        GRID_CBFXG(i) = 1.0_RP
+    enddo
+    do i = 0, IHALO
        GRID_FBFXG(i) = 1.0_RP
     enddo
 
@@ -525,6 +527,8 @@ contains
     GRID_FBFYG(:) = 0.0_RP
     do j = 1, JHALO
        GRID_CBFYG(j) = 1.0_RP
+    enddo
+    do j = 0, JHALO
        GRID_FBFYG(j) = 1.0_RP
     enddo
 
@@ -740,6 +744,8 @@ contains
        GRID_FX(i) = GRID_FXG(ii)
     enddo
 
+    ii = PRC_2Drank(PRC_myrank,1) * IMAX
+    GRID_FBFX(0) = GRID_FBFXG(ii)
     do i = 1, IA
        ii = i + PRC_2Drank(PRC_myrank,1) * IMAX
 
@@ -764,6 +770,8 @@ contains
        GRID_FY(j) = GRID_FYG(jj)
     enddo
 
+    jj = PRC_2Drank(PRC_myrank,2) * JMAX
+    GRID_FBFY(0) = GRID_FBFYG(jj)
     do j = 1, JA
        jj = j + PRC_2Drank(PRC_myrank,2) * JMAX
 
@@ -864,15 +872,15 @@ contains
     enddo
 
     k = 0
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,I5,A)') &
-    '|              ',GRID_FZ(k),'                  ',k,' |'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
+    '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' |'
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
     '|===============================================|'
 
     if ( debug ) then
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) ' ', 0, GRID_FX(0)
+       if( IO_L ) write(IO_FID_LOG,*) ' ', 0, GRID_FX(0), GRID_FBFX(0)
        do i = 1, IA-1
           if( IO_L ) write(IO_FID_LOG,*) i, GRID_CX(i), GRID_CBFX(i), GRID_CDX(i)
           if( IO_L ) write(IO_FID_LOG,*) ' ', i, GRID_FX(i), GRID_FBFX(i), GRID_FDX(i)
@@ -882,7 +890,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) ' ', i, GRID_FX(i), GRID_FBFX(i)
 
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) ' ', 0, GRID_FY(0)
+       if( IO_L ) write(IO_FID_LOG,*) ' ', 0, GRID_FY(0), GRID_FBFY(0)
        do j = 1, JA-1
           if( IO_L ) write(IO_FID_LOG,*) j, GRID_CY(j), GRID_CBFY(j), GRID_CDY(j)
           if( IO_L ) write(IO_FID_LOG,*) ' ', j, GRID_FY(j), GRID_FBFY(j), GRID_FDY(j)

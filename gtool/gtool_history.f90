@@ -353,7 +353,6 @@ contains
        DATATYPE
 
     integer  :: array_size
-    integer  :: memsize
     integer  :: reqid
     real(DP) :: dtsec
     integer  :: dstep
@@ -493,7 +492,6 @@ contains
     History_io_buffer_size = array_size * History_req_count * 8
 
     ! read history request
-    memsize = 0
     reqid   = 0
     if ( fid > 0 ) rewind(fid)
     do n = 1, History_req_limit
@@ -560,10 +558,8 @@ contains
 
        if    ( DATATYPE == 'REAL4' ) then
           History_req(reqid)%dtype  = File_REAL4
-          memsize = memsize + array_size * File_preclist(File_REAL4)
        elseif( DATATYPE == 'REAL8' ) then
           History_req(reqid)%dtype  = File_REAL8
-          memsize = memsize + array_size * File_preclist(File_REAL8)
        else
           write(message,*) 'xxx Not appropriate DATATYPE. Check!', DATATYPE
           call Log('E',message)
@@ -576,8 +572,6 @@ contains
     write(message,'(A,I4)') '*** Number of requested history item             : ', History_req_count
     call Log('I',message)
     write(message,'(A,A)')  '*** Output default data type                     : ', History_DEFAULT_DATATYPE
-    call Log('I',message)
-    write(message,'(A,I8)') '*** Memory usage for history data buffer [Mbyte] : ', memsize / 1024 / 1024
     call Log('I',message)
     write(message,'(A,L4)') '*** Output value at the initial step?            : ', History_OUTPUT_STEP0
     call Log('I',message)
@@ -599,10 +593,6 @@ contains
     History_id_count = 0
     allocate( History_vars        (  History_req_count) )
     allocate( History_axis_written(0:History_req_count) )
-
-    do n = 1, History_req_count
-       allocate( History_vars(n)%varsum(array_size) )
-    enddo
 
     ! count number of items and variants
     do id1 = 1, item_count
@@ -752,9 +742,9 @@ contains
              endif
              History_vars(id)%laststep_put      = History_vars(id)%laststep_write
              History_vars(id)%flag_clear        = .true.
-             History_vars(id)%size              = 0
+             History_vars(id)%size              = -1
+
              History_vars(id)%timesum           = 0.0_DP
-             History_vars(id)%varsum(:)         = 0.0_DP
 
              if ( debug ) then
                 write(message,*) '*** [HIST] Item registration No.= ', id
@@ -1954,9 +1944,14 @@ contains
     endif
 
 
+    if ( History_vars(id)%size == -1 ) then
+       History_vars(id)%size = 1
+       allocate( History_vars(id)%varsum( History_vars(id)%size ) )
+    end if
+
     if ( History_vars(id)%flag_clear ) then ! time to purge
        History_vars(id)%timesum    = 0.0_DP
-       History_vars(id)%varsum(:)  = 0.0_DP
+       if ( History_vars(id)%taverage ) History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -1971,7 +1966,6 @@ contains
        History_vars(id)%timesum = 0.0_DP
     endif
 
-    History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
     History_vars(id)%flag_clear   = .false.
 
@@ -2006,9 +2000,14 @@ contains
     endif
 
 
+    if ( History_vars(id)%size == -1 ) then
+       History_vars(id)%size = 1
+       allocate( History_vars(id)%varsum( History_vars(id)%size ) )
+    end if
+
     if ( History_vars(id)%flag_clear ) then ! time to purge
        History_vars(id)%timesum    = 0.0_DP
-       History_vars(id)%varsum(:)  = 0.0_DP
+       if ( History_vars(id)%taverage ) History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -2023,7 +2022,6 @@ contains
        History_vars(id)%timesum = 0.0_DP
     endif
 
-    History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
     History_vars(id)%flag_clear   = .false.
 
@@ -2061,9 +2059,14 @@ contains
 
     vsize = shape(var)
 
+    if ( History_vars(id)%size == -1 ) then
+       History_vars(id)%size = vsize(1)
+       allocate( History_vars(id)%varsum( History_vars(id)%size ) )
+    end if
+
     if ( History_vars(id)%flag_clear ) then ! time to purge
        History_vars(id)%timesum    = 0.0_DP
-       History_vars(id)%varsum(:)  = 0.0_DP
+       if ( History_vars(id)%taverage ) History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -2082,7 +2085,6 @@ contains
        History_vars(id)%timesum = 0.0_DP
     endif
 
-    History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
     History_vars(id)%flag_clear   = .false.
 
@@ -2120,9 +2122,14 @@ contains
 
     vsize = shape(var)
 
+    if ( History_vars(id)%size == -1 ) then
+       History_vars(id)%size = vsize(1)
+       allocate( History_vars(id)%varsum( History_vars(id)%size ) )
+    end if
+
     if ( History_vars(id)%flag_clear ) then ! time to purge
        History_vars(id)%timesum    = 0.0_DP
-       History_vars(id)%varsum(:)  = 0.0_DP
+       if ( History_vars(id)%taverage ) History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -2141,7 +2148,6 @@ contains
        History_vars(id)%timesum = 0.0_DP
     endif
 
-    History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
     History_vars(id)%flag_clear   = .false.
 
@@ -2179,9 +2185,14 @@ contains
 
     vsize = shape(var)
 
+    if ( History_vars(id)%size == -1 ) then
+       History_vars(id)%size = vsize(1) * vsize(2)
+       allocate( History_vars(id)%varsum( History_vars(id)%size ) )
+    end if
+
     if ( History_vars(id)%flag_clear ) then ! time to purge
        History_vars(id)%timesum    = 0.0_DP
-       History_vars(id)%varsum(:)  = 0.0_DP
+       if ( History_vars(id)%taverage ) History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -2204,7 +2215,6 @@ contains
        History_vars(id)%timesum = 0.0_DP
     endif
 
-    History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
     History_vars(id)%flag_clear   = .false.
 
@@ -2242,9 +2252,14 @@ contains
 
     vsize = shape(var)
 
+    if ( History_vars(id)%size == -1 ) then
+       History_vars(id)%size = vsize(1) * vsize(2)
+       allocate( History_vars(id)%varsum( History_vars(id)%size ) )
+    end if
+
     if ( History_vars(id)%flag_clear ) then ! time to purge
        History_vars(id)%timesum    = 0.0_DP
-       History_vars(id)%varsum(:)  = 0.0_DP
+       if ( History_vars(id)%taverage ) History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -2267,7 +2282,6 @@ contains
        History_vars(id)%timesum = 0.0_DP
     endif
 
-    History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
     History_vars(id)%flag_clear   = .false.
 
@@ -2305,9 +2319,14 @@ contains
 
     vsize = shape(var)
 
+    if ( History_vars(id)%size == -1 ) then
+       History_vars(id)%size = vsize(1) * vsize(2) * vsize(3)
+       allocate( History_vars(id)%varsum( History_vars(id)%size ) )
+    end if
+
     if ( History_vars(id)%flag_clear ) then ! time to purge
        History_vars(id)%timesum    = 0.0_DP
-       History_vars(id)%varsum(:)  = 0.0_DP
+       if ( History_vars(id)%taverage ) History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -2334,7 +2353,6 @@ contains
        History_vars(id)%timesum = 0.0_DP
     endif
 
-    History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
     History_vars(id)%flag_clear   = .false.
 
@@ -2372,9 +2390,14 @@ contains
 
     vsize = shape(var)
 
+    if ( History_vars(id)%size == -1 ) then
+       History_vars(id)%size = vsize(1) * vsize(2) * vsize(3)
+       allocate( History_vars(id)%varsum( History_vars(id)%size ) )
+    end if
+
     if ( History_vars(id)%flag_clear ) then ! time to purge
        History_vars(id)%timesum    = 0.0_DP
-       History_vars(id)%varsum(:)  = 0.0_DP
+       if ( History_vars(id)%taverage ) History_vars(id)%varsum(:)  = 0.0_DP
     endif
 
     if ( History_vars(id)%taverage ) then
@@ -2401,7 +2424,6 @@ contains
        History_vars(id)%timesum = 0.0_DP
     endif
 
-    History_vars(id)%size         = idx
     History_vars(id)%laststep_put = step_now
     History_vars(id)%flag_clear   = .false.
 

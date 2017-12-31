@@ -94,6 +94,8 @@ module scale_history
   integer,                private              :: im,  jm,  km
   integer,                private              :: ims, ime
   integer,                private              :: jms, jme
+  integer,                private              :: imh,  jmh
+  integer,                private              :: imsh, jmsh
 
   logical, private :: HIST_BND = .false.
   !-----------------------------------------------------------------------------
@@ -110,7 +112,11 @@ contains
     use scale_rm_process, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
-       PRC_NUM_Y
+       PRC_NUM_Y, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y, &
+       PRC_HAS_W, &
+       PRC_HAS_S
     use scale_time, only: &
        TIME_NOWDATE,     &
        TIME_NOWMS,       &
@@ -203,20 +209,36 @@ contains
        ime = IEB
        jms = JSB
        jme = JEB
+       imh = im
+       jmh = jm
+       imsh = ims
+       jmsh = jms
     else
-       im  = IMAX
-       jm  = JMAX
        ims = IS
        ime = IE
        jms = JS
        jme = JE
+       if ( PRC_HAS_W .or. PRC_PERIODIC_X ) then
+          imsh = ims
+       else
+          imsh = ims-1 ! including i = IS-1
+       end if
+       if ( PRC_HAS_S .or. PRC_PERIODIC_Y ) then
+          jmsh = jms
+       else
+          jmsh = jms-1 ! include j = JS-1
+       end if
+       im  = ime - ims + 1
+       jm  = jme - jms + 1
+       imh = ime - imsh + 1
+       jmh = jme - jmsh + 1
     end if
 
-    km = max( LKMAX, UKMAX, KMAX )
+    km = max( LKMAX+1, UKMAX+1, KMAX+1, HIST_PRES_nlayer )
 
     call HistoryInit( HIST_item_limit,                  & ! [OUT]
                       HIST_variant_limit,               & ! [OUT]
-                      im, jm, km,                       & ! [IN]
+                      imh, jmh, km,                     & ! [IN]
                       PRC_masterrank,                   & ! [IN]
                       PRC_myrank,                       & ! [IN]
                       rankidx(:),                       & ! [IN]
@@ -316,7 +338,9 @@ contains
     use scale_rm_process, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
-       PRC_NUM_Y
+       PRC_NUM_Y, &
+       PRC_HAS_W, &
+       PRC_HAS_S
     use scale_mapproj, only: &
        MPRJ_get_attributes
     implicit none
@@ -374,16 +398,22 @@ contains
     if ( ndim == 1 ) then
 
        ! check half/full level for vertical
-       dims(1) = "z"
+       flag_half_z = .false.
        if ( present(zdim) ) then
-          if ( zdim == 'half' ) then
-             dims(1) = "zh"
-          endif
+          if( zdim == 'half' ) flag_half_z = .true.
+       endif
+
+       start(1) = 1
+
+       if ( flag_half_z ) then
+          dims(1) = "zh"
+          count(1) = KMAX + 1
+       else
+          dims(1) = "z"
+          count(1) = KMAX
        endif
 
        ! for shared-file parallel I/O, only rank 0 writes variables with only Z dimension
-       start(1) = 1
-       count(1) = KMAX
        if ( PRC_myrank .GT. 0 ) count(1) = 0
 
        mapping = ""
@@ -481,7 +511,8 @@ contains
              atom = .false.
           elseif( zdim == 'landhalf'  ) then
              dims(3) = 'lzh'
-             count(3) = LKMAX
+             count(3) = LKMAX+1
+             flag_half_z = .true.
              atom = .false.
           elseif( zdim == 'urban'     ) then
              dims(3) = 'uz'
@@ -489,7 +520,8 @@ contains
              atom = .false.
           elseif( zdim == 'urbanhalf' ) then
              dims(3) = 'uzh'
-             count(3) = UKMAX
+             count(3) = UKMAX+1
+             flag_half_z = .true.
              atom = .false.
           endif
 
@@ -509,9 +541,23 @@ contains
        else
           ! for the case the shared-file contains no halos
           start(1) = 1 + PRC_2Drank(PRC_myrank,1) * IMAX    ! no IHALO
-          start(2) = 1 + PRC_2Drank(PRC_myrank,2) * JMAX    ! no JHALO
           count(1) = IMAX
+          if ( flag_half_x ) then
+             if ( PRC_HAS_W ) then
+                start(1) = start(1) + 1
+             else
+                count(1) = count(1) + 1
+             end if
+          end if
+          start(2) = 1 + PRC_2Drank(PRC_myrank,2) * JMAX    ! no JHALO
           count(2) = JMAX
+          if ( flag_half_y ) then
+             if ( PRC_HAS_S ) then
+                start(2) = start(2) + 1
+             else
+                count(2) = count(2) + 1
+             end if
+          end if
        end if
     end if
 
@@ -744,17 +790,23 @@ contains
   !> Put 1D data to history buffer
   subroutine HIST_put_1D( &
        itemid, &
-       var     )
+       var,    &
+       zdim    )
     use gtool_history, only: &
        HistoryPut
     use scale_time, only: &
        TIME_NOWSTEP
     implicit none
 
-    integer,  intent(in)  :: itemid !< name of the item
-    real(RP), intent(in)  :: var(:) !< value
+    integer,          intent(in) :: itemid !< name of the item
+    real(RP),         intent(in) :: var(:) !< value
+    character(len=*), intent(in), optional :: zdim
 
-    real(RP) :: var_trim(KMAX)
+    character(len=H_SHORT) :: zd
+    integer                :: ksize
+    integer                :: kstart
+
+    real(RP) :: var_trim(km)
 
     integer  :: n, v, id
     integer  :: k
@@ -766,16 +818,42 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    do k = 1, KMAX
-       var_trim(k) = var(KS+k-1)
-    enddo
+    zd = ''
+    if( present(zdim) ) zd = zdim
+
+    ! select dimension
+    select case( zd )
+      case('land')
+        ksize  = LKMAX
+        kstart = LKS
+      case('landhalf')
+        ksize  = LKMAX+1
+        kstart = LKS-1
+      case('urban')
+        ksize  = UKMAX
+        kstart = UKS
+      case('urbanhalf')
+        ksize  = UKMAX+1
+        kstart = UKS-1
+      case('half')
+        ksize  = KMAX+1
+        kstart = KS-1
+      case default
+        ksize  = KMAX
+        kstart = KS
+    end select
 
     id = 0
     do n = 1, itemid-1
        id = id + HIST_variant(n)
     enddo
 
+    do k = 1, ksize
+       var_trim(k) = var(kstart+k-1)
+    enddo
+
     do v = 1, HIST_variant(itemid)
+
        id = id + 1
 
        call HistoryPut( id,           & ! [IN]
@@ -793,6 +871,8 @@ contains
   subroutine HIST_put_2D( &
        itemid, &
        var,    &
+       xdim,   &
+       ydim,   &
        nohalo  )
     use gtool_file, only: &
        RMISS
@@ -802,12 +882,19 @@ contains
        TIME_NOWSTEP
     implicit none
 
-    integer,  intent(in)  :: itemid   !< name of the item
-    real(RP), intent(in)  :: var(:,:) !< value
-    logical,  intent(in), optional :: nohalo
+    integer,          intent(in)  :: itemid   !< name of the item
+    real(RP),         intent(in)  :: var(:,:) !< value
+    character(len=*), intent(in), optional :: xdim
+    character(len=*), intent(in), optional :: ydim
+    logical,          intent(in), optional :: nohalo
+
+    character(len=H_SHORT) :: xd, yd
+    integer                :: isize, jsize
+    integer                :: istart, jstart
 
     real(RP) :: var_trim(im*jm)
     logical  :: nohalo_
+    integer  :: s(2)
 
     integer  :: n, v, id
     integer  :: i, j
@@ -819,41 +906,34 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    do j = 1, jm
-    do i = 1, im
-       var_trim((j-1)*im+i) = var(ims+i-1,jms+j-1)
-    enddo
-    enddo
+    xd = ''
+    yd = ''
+    if( present(xdim) ) xd = xdim
+    if( present(ydim) ) yd = ydim
 
     nohalo_ = .false.
     if( present(nohalo) ) nohalo_ = nohalo
 
-    if ( nohalo_ ) then
-       ! W halo
-       do j = 1, jm
-       do i = 1, IS-ims
-          var_trim((j-1)*im+i) = RMISS
-       enddo
-       enddo
-       ! E halo
-       do j = 1, jm
-       do i = IE-ims+2, ime-ims+1
-          var_trim((j-1)*im+i) = RMISS
-       enddo
-       enddo
-       ! S halo
-       do j = 1, JS-jms
-       do i = 1, im
-          var_trim((j-1)*im+i) = RMISS
-       enddo
-       enddo
-       ! N halo
-       do j = JE-jms+2, jme-jms+1
-       do i = 1, im
-          var_trim((j-1)*im+i) = RMISS
-       enddo
-       enddo
-    endif
+    ! select dimension
+    select case( xd )
+      case('half')
+        isize  = imh
+        istart = imsh
+      case default
+        isize  = im
+        istart = ims
+    end select
+
+    select case( yd )
+      case('half')
+        jsize  = jmh
+        jstart = jmsh
+      case default
+        jsize  = jm
+        jstart = jms
+    end select
+
+    s(:) = shape(var)
 
     id = 0
     do n = 1, itemid-1
@@ -861,11 +941,45 @@ contains
     enddo
 
     do v = 1, HIST_variant(itemid)
+
+       do j = 1, jsize
+       do i = 1, isize
+          var_trim((j-1)*isize+i) = var(istart+i-1,jstart+j-1)
+       enddo
+       enddo
+
+       if ( nohalo_ ) then
+             ! W halo
+          do j = 1, jsize
+          do i = 1, IS-istart
+             var_trim((j-1)*isize+i) = RMISS
+          enddo
+          enddo
+          ! E halo
+          do j = 1, jsize
+          do i = IE-istart+2, ime-istart+1
+             var_trim((j-1)*isize+i) = RMISS
+          enddo
+          enddo
+          ! S halo
+          do j = 1, JS-jstart
+          do i = 1, isize
+             var_trim((j-1)*isize+i) = RMISS
+          enddo
+          enddo
+          ! N halo
+          do j = JE-jstart+2, jme-jstart+1
+          do i = 1, isize
+             var_trim((j-1)*isize+i) = RMISS
+          enddo
+          enddo
+       endif
+
        id = id + 1
 
-       call HistoryPut( id,           & ! [IN]
-                        TIME_NOWSTEP, & ! [IN]
-                        var_trim(:)   ) ! [IN]
+       call HistoryPut( id,                           & ! [IN]
+                        TIME_NOWSTEP,                 & ! [IN]
+                        var_trim(1:isize*jsize) ) ! [IN]
     enddo
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -891,6 +1005,8 @@ contains
     use scale_interpolation, only: &
        INTERP_vertical_xi2z, &
        INTERP_vertical_xi2p, &
+       INTERP_vertical_xih2zh, &
+       INTERP_vertical_xih2p, &
        INTERP_available
     implicit none
 
@@ -937,8 +1053,8 @@ contains
     ! select dimension
     select case( xd )
       case('half')
-        isize  = im
-        istart = ims
+        isize  = imh
+        istart = imsh
       case default
         isize  = im
         istart = ims
@@ -946,8 +1062,8 @@ contains
 
     select case( yd )
       case('half')
-        jsize  = jm
-        jstart = jms
+        jsize  = jmh
+        jstart = jmsh
       case default
         jsize  = jm
         jstart = jms
@@ -958,17 +1074,17 @@ contains
         ksize  = LKMAX
         kstart = LKS
       case('landhalf')
-        ksize  = LKMAX
-        kstart = LKS
+        ksize  = LKMAX+1
+        kstart = LKS-1
       case('urban')
         ksize  = UKMAX
         kstart = UKS
       case('urbanhalf')
-        ksize  = UKMAX
-        kstart = UKS
+        ksize  = UKMAX+1
+        kstart = UKS-1
       case('half')
-        ksize  = KMAX
-        kstart = KS
+        ksize  = KMAX+1
+        kstart = KS-1
       case default
         ksize  = KMAX
         kstart = KS
@@ -1001,6 +1117,24 @@ contains
           enddo
           enddo
 
+       elseif(       s(1)  == KA                  &
+               .AND. ksize == KMAX+1              &
+               .AND. HIST_zcoord(itemid,v) == I_Z &
+               .AND. INTERP_available             ) then ! z*->z interpolation
+
+          call PROF_rapstart('FILE_O_interp', 2)
+          call INTERP_vertical_xih2zh( var  (:,:,:), & ! [IN]
+                                       var_Z(:,:,:)  ) ! [OUT]
+          call PROF_rapend  ('FILE_O_interp', 2)
+
+          do k = 1, ksize
+          do j = 1, jsize
+          do i = 1, isize
+             var_trim((k-1)*jsize*isize+(j-1)*isize+i) = var_Z(kstart+k-1,istart+i-1,jstart+j-1)
+          enddo
+          enddo
+          enddo
+
        elseif(       s(1)  == KA                     &
                .AND. ksize == KMAX                   &
                .AND. HIST_zcoord(itemid,v) == I_PRES ) then ! z*->p interpolation
@@ -1011,6 +1145,26 @@ contains
           call INTERP_vertical_xi2p( HIST_PRES_nlayer, & ! [IN]
                                      var  (:,:,:),     & ! [IN]
                                      var_P(:,:,:)      ) ! [OUT]
+          call PROF_rapend  ('FILE_O_interp', 2)
+
+          do k = 1, ksize
+          do j = 1, jsize
+          do i = 1, isize
+             var_trim((k-1)*jsize*isize+(j-1)*isize+i) = var_P(k,istart+i-1,jstart+j-1)
+          enddo
+          enddo
+          enddo
+
+       elseif(       s(1)  == KA                     &
+               .AND. ksize == KMAX+1                 &
+               .AND. HIST_zcoord(itemid,v) == I_PRES ) then ! z*->p interpolation
+
+          ksize = HIST_PRES_nlayer
+
+          call PROF_rapstart('FILE_O_interp', 2)
+          call INTERP_vertical_xih2p( HIST_PRES_nlayer, & ! [IN]
+                                      var  (:,:,:),     & ! [IN]
+                                      var_P(:,:,:)      ) ! [OUT]
           call PROF_rapend  ('FILE_O_interp', 2)
 
           do k = 1, ksize
@@ -1490,17 +1644,23 @@ contains
     use scale_rm_process, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
-       PRC_NUM_Y
+       PRC_NUM_Y, &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y, &
+       PRC_HAS_W, &
+       PRC_HAS_S
     implicit none
 
-    real(RP)         :: AXIS     (im,jm,KMAX)
+    real(RP)         :: AXIS     (imh,jmh,0:KMAX)
     character(len=2) :: AXIS_name(3)
 
     integer :: k, i, j
     integer :: rankidx(2)
-    integer :: start(3)
+    integer :: start(3,4) !> 1: FF, 2: HF, 3: FH, 4: HH (x,y)
     integer :: startX, startY, startZ
+    integer :: startXH, startYH
     integer :: XAG, YAG
+    integer :: XAGH, YAGH
     !---------------------------------------------------------------------------
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
@@ -1519,26 +1679,54 @@ contains
 
     if ( IO_AGGREGATE ) then
        if ( HIST_BND ) then
-          startX = ISGB   ! global subarray starting index
-          startY = JSGB   ! global subarray starting index
-          XAG    = IAGB
-          YAG    = JAGB
+          startX  = ISGB   ! global subarray starting index
+          startY  = JSGB   ! global subarray starting index
+          XAG     = IAGB
+          YAG     = JAGB
+          startXH = startX
+          startYH = startY
+          XAGH    = XAG
+          YAGH    = YAG
        else
-          startX = 1 + PRC_2Drank(PRC_myrank,1) * IMAX    ! no IHALO
-          startY = 1 + PRC_2Drank(PRC_myrank,2) * JMAX    ! no JHALO
-          XAG    = IMAXG
-          YAG    = JMAXG
+          startX  = 1 + PRC_2Drank(PRC_myrank,1) * IMAX
+          startY  = 1 + PRC_2Drank(PRC_myrank,2) * JMAX
+          XAG     = IMAXG
+          YAG     = JMAXG
+          startXH = startX
+          startYH = startY
+          XAGH    = XAG
+          YAGH    = YAG
+          if ( .not. PRC_PERIODIC_X ) then
+             XAGH  = XAGH + 1
+             if ( PRC_HAS_W ) startXH = startXH + 1
+          end if
+          if ( .not. PRC_PERIODIC_Y ) then
+             YAGH  = YAGH + 1
+             if ( PRC_HAS_S ) startYH = startYH + 1
+          end if
        end if
        startZ = 1
-       if ( rankidx(2) .GT. 0 ) startX = -1   ! only south-most processes write
-       if ( rankidx(1) .GT. 0 ) startY = -1   ! only west-most processes write
-       if ( PRC_myrank .GT. 0 ) startZ = -1   ! only rank 0 writes Z axes
+       if ( rankidx(2) .GT. 0 ) then ! only south-most processes write
+          startX  = -1
+          startXH = -1
+       end if
+       if ( rankidx(1) .GT. 0 ) then ! only west-most processes write
+          startY  = -1
+          startYH = -1
+       end if
+       if ( PRC_myrank .GT. 0 ) then ! only rank 0 writes Z axes
+          startZ = -1
+       end if
     else
-       XAG = im
-       YAG = jm
-       startX = 1
-       startY = 1
-       startZ = 1
+       XAG     = im
+       YAG     = jm
+       startX  = 1
+       startY  = 1
+       startZ  = 1
+       XAGH    = imh
+       YAGH    = jmh
+       startXH = 1
+       startYH = 1
     end if
 
     ! for the shared-file I/O method, the axes are global (gsize)
@@ -1546,9 +1734,9 @@ contains
     call HistoryPutAxis( 'x',   'X',               'm', 'x',   GRID_CX(ims:ime), gsize=XAG,  start=startX )
     call HistoryPutAxis( 'y',   'Y',               'm', 'y',   GRID_CY(jms:jme), gsize=YAG,  start=startY )
     call HistoryPutAxis( 'z',   'Z',               'm', 'z',   GRID_CZ(KS:KE),   gsize=KMAX, start=startZ )
-    call HistoryPutAxis( 'xh',  'X (half level)',  'm', 'xh',  GRID_FX(ims:ime), gsize=XAG,  start=startX )
-    call HistoryPutAxis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY(jms:jme), gsize=YAG,  start=startY )
-    call HistoryPutAxis( 'zh',  'Z (half level)',  'm', 'zh',  GRID_FZ(KS:KE),   gsize=KMAX, start=startZ )
+    call HistoryPutAxis( 'xh',  'X (half level)',  'm', 'xh',  GRID_FX(imsh:ime), gsize=XAGH,  start=startXH )
+    call HistoryPutAxis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY(jmsh:jme), gsize=YAGH,  start=startYH )
+    call HistoryPutAxis( 'zh',  'Z (half level)',  'm', 'zh',  GRID_FZ(KS-1:KE),  gsize=KMAX+1, start=startZ )
 
     if ( HIST_PRES_nlayer > 0 ) then
        call HistoryPutAxis( 'pressure', 'Pressure', 'hPa', 'pressure',         &
@@ -1556,10 +1744,10 @@ contains
     endif
 
     call HistoryPutAxis( 'lz',  'LZ',              'm', 'lz',  GRID_LCZ(LKS:LKE), down=.true., gsize=LKMAX, start=startZ )
-    call HistoryPutAxis( 'lzh', 'LZ (half level)', 'm', 'lzh', GRID_LFZ(LKS:LKE), down=.true., gsize=LKMAX, start=startZ )
+    call HistoryPutAxis( 'lzh', 'LZ (half level)', 'm', 'lzh', GRID_LFZ(LKS-1:LKE), down=.true., gsize=LKMAX+1, start=startZ )
 
     call HistoryPutAxis( 'uz',  'UZ',              'm', 'uz',  GRID_UCZ(UKS:UKE), down=.true., gsize=UKMAX, start=startZ )
-    call HistoryPutAxis( 'uzh', 'UZ (half level)', 'm', 'uzh', GRID_UFZ(UKS:UKE), down=.true., gsize=UKMAX, start=startZ )
+    call HistoryPutAxis( 'uzh', 'UZ (half level)', 'm', 'uzh', GRID_UFZ(UKS-1:UKE), down=.true., gsize=UKMAX+1, start=startZ )
 
     ! axes below always include halos when written to file regardless of PRC_PERIODIC_X/PRC_PERIODIC_Y
     call HistoryPutAxis( 'CZ',  'Atmos Grid Center Position Z', 'm', 'CZ',  GRID_CZ,  gsize=KA,    start=startZ )
@@ -1595,17 +1783,17 @@ contains
     call HistoryPutAxis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', GRID_UCDZ,             gsize=UKMAX,   start=startZ )
 
     call HistoryPutAxis('CBFZ',  'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ,  gsize=KA,  start=startZ )
-    call HistoryPutAxis('FBFZ',  'Boundary factor Face Z',   '1', 'CZ', GRID_FBFZ,  gsize=KA,  start=startZ )
+    call HistoryPutAxis('FBFZ',  'Boundary factor Face Z',   '1', 'FZ', GRID_FBFZ,  gsize=KA+1,  start=startZ )
     if ( IO_AGGREGATE ) then
        call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFXG, gsize=IAG, start=startZ )
        call HistoryPutAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFYG, gsize=JAG, start=startZ )
-       call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'CX', GRID_FBFXG, gsize=IAG, start=startZ )
-       call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'CY', GRID_FBFYG, gsize=JAG, start=startZ )
+       call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'FX', GRID_FBFXG, gsize=IAG+1, start=startZ )
+       call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'FY', GRID_FBFYG, gsize=JAG+1, start=startZ )
     else
        call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFX )
        call HistoryPutAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFY )
-       call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'CX', GRID_FBFX )
-       call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'CY', GRID_FBFY )
+       call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'FX', GRID_FBFX )
+       call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'FY', GRID_FBFY )
     end if
 
     ! TODO: skip 8 axes below when IO_AGGREGATE is true, as all axes are now global
@@ -1616,21 +1804,29 @@ contains
 
     call HistoryPutAxis('CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', GRID_CBFXG, gsize=IAG, start=startZ )
     call HistoryPutAxis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', GRID_CBFYG, gsize=JAG, start=startZ )
-    call HistoryPutAxis('FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', GRID_FBFXG, gsize=IAG, start=startZ )
-    call HistoryPutAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', GRID_FBFYG, gsize=JAG, start=startZ )
+    call HistoryPutAxis('FBFXG', 'Boundary factor Face X (global)',   '1', 'FXG', GRID_FBFXG, gsize=IAG+1, start=startZ )
+    call HistoryPutAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'FYG', GRID_FBFYG, gsize=JAG+1, start=startZ )
 
     ! associate coordinates
     if ( IO_AGGREGATE ) then
        if ( HIST_BND ) then
-          start(1) = ISGB   ! global subarray starting index
-          start(2) = JSGB   ! global subarray starting index
+          start(1,:) = ISGB   ! global subarray starting index
+          start(2,:) = JSGB   ! global subarray starting index
        else
-          start(1) = 1 + PRC_2Drank(PRC_myrank,1) * IMAX    ! no IHALO
-          start(2) = 1 + PRC_2Drank(PRC_myrank,2) * JMAX    ! no JHALO
+          start(1,:) = 1 + PRC_2Drank(PRC_myrank,1) * IMAX    ! no IHALO
+          start(2,:) = 1 + PRC_2Drank(PRC_myrank,2) * JMAX    ! no JHALO
+          if ( (.not. PRC_PERIODIC_X) .and. PRC_HAS_W ) then
+             start(1,2) = start(1,2) + 1
+             start(1,4) = start(1,4) + 1
+          end if
+          if ( (.not. PRC_PERIODIC_Y) .and. PRC_HAS_S ) then
+             start(2,3) = start(2,3) + 1
+             start(2,4) = start(2,4) + 1
+          end if
        end if
-       start(3) = 1
+       start(3,:) = 1
     else
-       start(:) = 1
+       start(:,:) = 1
     end if
 
     do k = 1, KMAX
@@ -1638,198 +1834,198 @@ contains
     enddo
     AXIS_name(1:3) = (/'x ', 'y ', 'z '/)
     call HistoryPutAssociatedCoordinates( 'height', 'height above ground level', &
-                                          'm', AXIS_name(1:3), AXIS(:,:,:), start=start )
+                                          'm', AXIS_name(1:3), AXIS(1:im,1:jm,1:KMAX), start=start(:,1) )
 
-    do k = 1, KMAX
+    do k = 0, KMAX
        AXIS(1:im,1:jm,k) = REAL_FZ(k+KS-1,ims:ime,jms:jme)
     enddo
     AXIS_name(1:3) = (/'x ', 'y ', 'zh'/)
     call HistoryPutAssociatedCoordinates( 'height_xyw', 'height above ground level (half level xyw)', &
-                                          'm' , AXIS_name(1:3), AXIS(:,:,:), start=start )
+                                          'm' , AXIS_name(1:3), AXIS(1:im,1:jm,0:KMAX), start=start(:,1) )
 
     do k = 1, KMAX
     do j = 1, jm
-    do i = 1, min(im,IA-ims)
-       AXIS(i,j,k) = ( REAL_CZ(k+KS-1,ims+i-1,jms+j-1) + REAL_CZ(k+KS-1,ims+i,jms+j-1) ) * 0.5_RP
+    do i = 1, min(imh,IA-imsh)
+       AXIS(i,j,k) = ( REAL_CZ(k+KS-1,imsh+i-1,jms+j-1) + REAL_CZ(k+KS-1,imsh+i,jms+j-1) ) * 0.5_RP
     enddo
     enddo
     enddo
-    if ( im == IA-ims+1 ) then
+    if ( imh == IA-imsh+1 ) then
        do k = 1, KMAX
        do j = 1, jm
-          AXIS(im,j,k) = REAL_CZ(k+KS-1,ims+im-1,jms+j-1)
+          AXIS(imh,j,k) = REAL_CZ(k+KS-1,imsh+imh-1,jms+j-1)
        enddo
        enddo
     end if
     AXIS_name(1:3) = (/'xh', 'y ', 'z '/)
     call HistoryPutAssociatedCoordinates( 'height_uyz', 'height above ground level (half level uyz)', &
-                                          'm', AXIS_name(1:3), AXIS(:,:,:), start=start )
+                                          'm', AXIS_name(1:3), AXIS(1:imh,1:jm,1:KMAX), start=start(:,2) )
 
     do k = 1, KMAX
-    do j = 1, min(jm,JA-jms)
+    do j = 1, min(jmh,JA-jmsh)
     do i = 1, im
-       AXIS(i,j,k) = ( REAL_CZ(k+KS-1,ims+i-1,jms+j-1) + REAL_CZ(k+KS-1,ims+i-1,jms+j) ) * 0.5_RP
+       AXIS(i,j,k) = ( REAL_CZ(k+KS-1,ims+i-1,jmsh+j-1) + REAL_CZ(k+KS-1,ims+i-1,jmsh+j) ) * 0.5_RP
     enddo
     enddo
     enddo
-    if ( jm == JA-jms+1 ) then
+    if ( jmh == JA-jmsh+1 ) then
        do k = 1, KMAX
        do i = 1, im
-          AXIS(i,jm,k) = REAL_CZ(k+KS-1,ims+i-1,jms+jm-1)
+          AXIS(i,jmh,k) = REAL_CZ(k+KS-1,ims+i-1,jmsh+jmh-1)
        enddo
        enddo
     end if
     AXIS_name(1:3) = (/'x ', 'yh', 'z '/)
     call HistoryPutAssociatedCoordinates( 'height_xvz', 'height above ground level (half level xvz)', &
-                                          'm', AXIS_name(1:3), AXIS(:,:,:), start=start )
+                                          'm', AXIS_name(1:3), AXIS(1:im,1:jmh,1:KMAX), start=start(:,3) )
 
     do k = 1, KMAX
-    do j = 1, min(jm,JA-jms)
-    do i = 1, min(im,IA-ims)
-       AXIS(i,j,k) = ( REAL_CZ(k+KS-1,ims+i-1,jms+j-1) + REAL_CZ(k+KS-1,ims+i  ,jms+j-1) &
-                     + REAL_CZ(k+KS-1,ims+i-1,jms+j  ) + REAL_CZ(k+KS-1,ims+i  ,jms+j  ) ) * 0.25_RP
+    do j = 1, min(jmh,JA-jmsh)
+    do i = 1, min(imh,IA-imsh)
+       AXIS(i,j,k) = ( REAL_CZ(k+KS-1,imsh+i-1,jmsh+j-1) + REAL_CZ(k+KS-1,imsh+i  ,jmsh+j-1) &
+                     + REAL_CZ(k+KS-1,imsh+i-1,jmsh+j  ) + REAL_CZ(k+KS-1,imsh+i  ,jmsh+j  ) ) * 0.25_RP
     enddo
     enddo
     enddo
-    if ( jm == JA-jms+1 ) then
+    if ( jmh == JA-jmsh+1 ) then
        do k = 1, KMAX
-       do i = 1, min(im,IA-ims)
-          AXIS(i,jm,k) = ( REAL_CZ(k+KS-1,ims+i-1,jms+jm-1) + REAL_CZ(k+KS-1,ims+i,jms+jm-1) ) * 0.5_RP
+       do i = 1, min(imh,IA-imsh)
+          AXIS(i,jmh,k) = ( REAL_CZ(k+KS-1,imsh+i-1,jmsh+jmh-1) + REAL_CZ(k+KS-1,imsh+i,jmsh+jmh-1) ) * 0.5_RP
        enddo
        enddo
     end if
-    if ( im == IA-ims+1 ) then
+    if ( imh == IA-imsh+1 ) then
        do k = 1, KMAX
-       do j = 1, min(jm,JA-jms)
-          AXIS(im,j,k) = ( REAL_CZ(k+KS-1,ims+im-1,jms+j-1) + REAL_CZ(k+KS-1,ims+im-1,jms+j) ) * 0.5_RP
+       do j = 1, min(jmh,JA-jmsh)
+          AXIS(imh,j,k) = ( REAL_CZ(k+KS-1,imsh+imh-1,jmsh+j-1) + REAL_CZ(k+KS-1,imsh+imh-1,jmsh+j) ) * 0.5_RP
        enddo
        enddo
     end if
-    if ( im == IA-ims+1 .and. jm == JA-jms+1 ) then
+    if ( imh == IA-imsh+1 .and. jmh == JA-jmsh+1 ) then
        do k = 1, KMAX
-          AXIS(im,jm,k) = REAL_CZ(k+KS-1,ims+im-1,jms+jm-1)
+          AXIS(imh,jmh,k) = REAL_CZ(k+KS-1,imsh+imh-1,jmsh+jmh-1)
        enddo
     end if
     AXIS_name(1:3) = (/'xh', 'yh', 'z '/)
     call HistoryPutAssociatedCoordinates( 'height_uvz', 'height above ground level (half level uvz)', &
-                                          'm', AXIS_name(1:3), AXIS(:,:,:), start=start )
+                                          'm', AXIS_name(1:3), AXIS(1:imh,1:jmh,1:KMAX), start=start(:,4) )
 
-    do k = 1, KMAX
+    do k = 0, KMAX
     do j = 1, jm
-    do i = 1, min(im,IA-ims)
-       AXIS(i,j,k) = ( REAL_FZ(k+KS-1,ims+i-1,jms+j-1) + REAL_FZ(k+KS-1,ims+i,jms+j-1) ) * 0.5_RP
+    do i = 1, min(imh,IA-imsh)
+       AXIS(i,j,k) = ( REAL_FZ(k+KS-1,imsh+i-1,jms+j-1) + REAL_FZ(k+KS-1,imsh+i,jms+j-1) ) * 0.5_RP
     enddo
     enddo
     enddo
-    if ( im == IA-ims+1 ) then
-       do k = 1, KMAX
+    if ( imh == IA-imsh+1 ) then
+       do k = 0, KMAX
        do j = 1, jm
-          AXIS(im,j,k) = REAL_FZ(k+KS-1,ims+im-1,jms+j-1)
+          AXIS(imh,j,k) = REAL_FZ(k+KS-1,imsh+imh-1,jms+j-1)
        enddo
        enddo
     end if
     AXIS_name(1:3) = (/'xh', 'y ', 'zh'/)
     call HistoryPutAssociatedCoordinates( 'height_uyw', 'height above ground level (half level uyw)', &
-                                          'm', AXIS_name(1:3), AXIS(:,:,:), start=start )
+                                          'm', AXIS_name(1:3), AXIS(1:imh,1:jm,0:KMAX), start=start(:,2) )
 
-    do k = 1, KMAX
-    do j = 1, min(jm,JA-jms)
+    do k = 0, KMAX
+    do j = 1, min(jmh,JA-jmsh)
     do i = 1, im
-       AXIS(i,j,k) = ( REAL_FZ(k+KS-1,ims+i-1,jms+j-1) + REAL_FZ(k+KS-1,ims+i-1,jms+j) ) * 0.5_RP
+       AXIS(i,j,k) = ( REAL_FZ(k+KS-1,ims+i-1,jmsh+j-1) + REAL_FZ(k+KS-1,ims+i-1,jmsh+j) ) * 0.5_RP
     enddo
     enddo
     enddo
-    if ( jm == JA-jms+1 ) then
-       do k = 1, KMAX
+    if ( jmh == JA-jmsh+1 ) then
+       do k = 0, KMAX
        do i = 1, im
-          AXIS(i,jm,k) = REAL_FZ(k+KS-1,ims+i-1,jms+jm-1)
+          AXIS(i,jmh,k) = REAL_FZ(k+KS-1,ims+i-1,jmsh+jmh-1)
        enddo
        enddo
     end if
     AXIS_name(1:3) = (/'x ', 'yh', 'zh'/)
     call HistoryPutAssociatedCoordinates( 'height_xvw', 'height above ground level (half level xvw)', &
-                                          'm', AXIS_name(1:3), AXIS(:,:,:), start=start )
+                                          'm', AXIS_name(1:3), AXIS(1:im,1:jmh,0:KMAX), start=start(:,3) )
 
-    do k = 1, KMAX
-    do j = 1, min(jm,JA-jms)
-    do i = 1, min(im,IA-ims)
-       AXIS(i,j,k) = ( REAL_FZ(k+KS-1,ims+i-1,jms+j-1) + REAL_FZ(k+KS-1,ims+i  ,jms+j-1) &
-                     + REAL_FZ(k+KS-1,ims+i-1,jms+j  ) + REAL_FZ(k+KS-1,ims+i  ,jms+j  ) ) * 0.25_RP
+    do k = 0, KMAX
+    do j = 1, min(jmh,JA-jmsh)
+    do i = 1, min(imh,IA-imsh)
+       AXIS(i,j,k) = ( REAL_FZ(k+KS-1,imsh+i-1,jmsh+j-1) + REAL_FZ(k+KS-1,imsh+i  ,jmsh+j-1) &
+                     + REAL_FZ(k+KS-1,imsh+i-1,jmsh+j  ) + REAL_FZ(k+KS-1,imsh+i  ,jmsh+j  ) ) * 0.25_RP
     enddo
     enddo
     enddo
-    if ( jm == JA-jms+1 ) then
-       do k = 1, KMAX
-       do i = 1, min(im,IA-ims)
-          AXIS(i,jm,k) = ( REAL_FZ(k+KS-1,ims+i-1,jms+jm-1) + REAL_FZ(k+KS-1,ims+i,jms+jm-1) ) * 0.5_RP
+    if ( jmh == JA-jmsh+1 ) then
+       do k = 0, KMAX
+       do i = 1, min(imh,IA-imsh)
+          AXIS(i,jmh,k) = ( REAL_FZ(k+KS-1,imsh+i-1,jmsh+jmh-1) + REAL_FZ(k+KS-1,imsh+i,jmsh+jmh-1) ) * 0.5_RP
        enddo
        enddo
     end if
-    if ( im == IA-ims+1 ) then
-       do k = 1, KMAX
-       do j = 1, min(jm,JA-jms)
-          AXIS(im,j,k) = ( REAL_FZ(k+KS-1,ims+im-1,jms+j-1) + REAL_FZ(k+KS-1,ims+im-1,jms+j) ) * 0.5_RP
+    if ( imh == IA-imsh+1 ) then
+       do k = 0, KMAX
+       do j = 1, min(jmh,JA-jmsh)
+          AXIS(imh,j,k) = ( REAL_FZ(k+KS-1,imsh+imh-1,jmsh+j-1) + REAL_FZ(k+KS-1,imsh+imh-1,jmsh+j) ) * 0.5_RP
        enddo
        enddo
     end if
-    if ( im == IA-ims+1 .and. jm == JA-jms+1 ) then
-       do k = 1, KMAX
-          AXIS(im,jm,k) = REAL_FZ(k+KS-1,ims+im-1,jms+jm-1)
+    if ( imh == IA-imsh+1 .and. jm == JA-jmsh+1 ) then
+       do k = 0, KMAX
+          AXIS(imh,jmh,k) = REAL_FZ(k+KS-1,imsh+imh-1,jmsh+jmh-1)
        enddo
     end if
     AXIS_name(1:3) = (/'xh', 'yh', 'zh'/)
     call HistoryPutAssociatedCoordinates( 'height_uvw', 'height above ground level (half level uvw)', &
-                                          'm', AXIS_name(1:3), AXIS(:,:,:), start=start               )
+                                          'm', AXIS_name(1:3), AXIS(1:imh,1:jmh,0:KMAX), start=start(:,4) )
 
     AXIS(1:im,1:jm,1) = REAL_LON (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'y '/)
     call HistoryPutAssociatedCoordinates( 'lon', 'longitude',                                      &
-                                          'degrees_east', AXIS_name(1:2), AXIS(:,:,1), start=start )
+                                          'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
-    AXIS(1:im,1:jm,1) = REAL_LONX(ims:ime,jms:jme) / D2R
+    AXIS(1:imh,1:jm,1) = REAL_LONX(imsh:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'y '/)
     call HistoryPutAssociatedCoordinates( 'lon_uy', 'longitude (half level uy)',                   &
-                                          'degrees_east', AXIS_name(1:2), AXIS(:,:,1), start=start )
+                                          'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
 
-    AXIS(1:im,1:jm,1) = REAL_LONY(ims:ime,jms:jme) / D2R
+    AXIS(1:im,1:jmh,1) = REAL_LONY(ims:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'yh'/)
     call HistoryPutAssociatedCoordinates( 'lon_xv', 'longitude (half level xv)',                   &
-                                          'degrees_east', AXIS_name(1:2), AXIS(:,:,1), start=start )
+                                          'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
 
-    AXIS(1:im,1:jm,1) = REAL_LONXY(ims:ime,jms:jme) / D2R
+    AXIS(1:imh,1:jmh,1) = REAL_LONXY(imsh:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'yh'/)
     call HistoryPutAssociatedCoordinates( 'lon_uv', 'longitude (half level uv)',                   &
-                                          'degrees_east', AXIS_name(1:2), AXIS(:,:,1), start=start )
+                                          'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )
 
     AXIS(1:im,1:jm,1) = REAL_LAT (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'y '/)
     call HistoryPutAssociatedCoordinates( 'lat', 'latitude',                                        &
-                                          'degrees_north', AXIS_name(1:2), AXIS(:,:,1), start=start )
+                                          'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
-    AXIS(1:im,1:jm,1) = REAL_LATX(ims:ime,jms:jme) / D2R
+    AXIS(1:imh,1:jm,1) = REAL_LATX(imsh:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'y '/)
     call HistoryPutAssociatedCoordinates( 'lat_uy', 'latitude (half level uy)',                     &
-                                          'degrees_north', AXIS_name(1:2), AXIS(:,:,1), start=start )
+                                          'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
 
-    AXIS(1:im,1:jm,1) = REAL_LATY(ims:ime,jms:jme) / D2R
+    AXIS(1:im,1:jmh,1) = REAL_LATY(ims:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'yh'/)
     call HistoryPutAssociatedCoordinates( 'lat_xv', 'latitude (half level xv)',                     &
-                                          'degrees_north', AXIS_name(1:2), AXIS(:,:,1), start=start )
+                                          'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
 
-    AXIS(1:im,1:jm,1) = REAL_LATXY(ims:ime,jms:jme) / D2R
+    AXIS(1:imh,1:jmh,1) = REAL_LATXY(imsh:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'yh'/)
     call HistoryPutAssociatedCoordinates( 'lat_uv', 'latitude (half level uv)',                     &
-                                          'degrees_north', AXIS_name(1:2), AXIS(:,:,1), start=start )
+                                          'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )
 
     AXIS(1:im,1:jm,1) = TOPO_Zsfc(ims:ime,jms:jme)
     AXIS_name(1:2) = (/'x ', 'y '/)
     call HistoryPutAssociatedCoordinates( 'topo', 'topography',                         &
-                                          'm', AXIS_name(1:2), AXIS(:,:,1), start=start )
+                                          'm', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
     AXIS(1:im,1:jm,1) = LANDUSE_frac_land(ims:ime,jms:jme)
     AXIS_name(1:2) = (/'x ', 'y '/)
     call HistoryPutAssociatedCoordinates( 'lsmask', 'fraction for land-sea mask',       &
-                                          '1', AXIS_name(1:2), AXIS(:,:,1), start=start )
+                                          '1', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
     return
   end subroutine HIST_put_axes
@@ -1856,6 +2052,10 @@ contains
     integer :: istart, jstart
     integer :: whalo_g, ehalo_g, shalo_g, nhalo_g
     integer :: whalo_l, ehalo_l, shalo_l, nhalo_l
+    integer :: isizeh, jsizeh
+    integer :: istarth, jstarth
+    integer :: whaloh_g, shaloh_g
+    integer :: whaloh_l, shaloh_l
 
     character(len=5) :: logical_str
 
@@ -1877,7 +2077,20 @@ contains
        ehalo_g = 0
        whalo_l = 0
        ehalo_l = 0
-    else
+       isizeh = isize
+       istarth = istart
+       whaloh_g = whalo_g
+       whaloh_l = whalo_l
+       if ( .not. PRC_PERIODIC_X ) then
+          isizeh = isize + 1
+          whaloh_g = whalo_g + 1
+          if ( PRC_HAS_W ) then
+             istarth = istarth + 1
+          else
+             whaloh_l = whalo_l + 1
+          end if
+       end if
+    else ! HIST_BND == .true.
        isize = IAG
        istart = ISGA
        whalo_g = IHALO
@@ -1889,6 +2102,8 @@ contains
           if ( PRC_HAS_W ) then; whalo_l = 0; else; whalo_l = whalo_g; end if
           if ( PRC_HAS_E ) then; ehalo_l = 0; else; ehalo_l = ehalo_g; end if
        end if
+       isizeh = isize
+       istarth = istart
     end if
 
     call HistorySetAttribute( "x", "size_global",  (/ isize /) )
@@ -1897,10 +2112,10 @@ contains
     call HistorySetAttribute( "x", "halo_local",   (/ whalo_l, ehalo_l /) )
     call HistorySetAttribute( "x", "periodic",     logical_str )
 
-    call HistorySetAttribute( "xh", "size_global",  (/ isize /) )
-    call HistorySetAttribute( "xh", "start_global", (/ istart /) )
-    call HistorySetAttribute( "xh", "halo_global",  (/ whalo_g, ehalo_g /) )
-    call HistorySetAttribute( "xh", "halo_local",   (/ whalo_l, ehalo_l /) )
+    call HistorySetAttribute( "xh", "size_global",  (/ isizeh /) )
+    call HistorySetAttribute( "xh", "start_global", (/ istarth /) )
+    call HistorySetAttribute( "xh", "halo_global",  (/ whaloh_g, ehalo_g /) )
+    call HistorySetAttribute( "xh", "halo_local",   (/ whaloh_l, ehalo_l /) )
     call HistorySetAttribute( "xh", "periodic",     logical_str )
 
 
@@ -1912,7 +2127,20 @@ contains
        nhalo_g = 0
        shalo_l = 0
        nhalo_l = 0
-    else
+       jsizeh = jsize
+       jstarth = jstart
+       shaloh_g = shalo_g
+       shaloh_l = shalo_l
+       if ( .not. PRC_PERIODIC_Y ) then
+          jsizeh = jsize + 1
+          shaloh_g = shalo_g + 1
+          if ( PRC_HAS_S ) then
+             jstarth = jstarth + 1
+          else
+             shaloh_l = shalo_l + 1
+          end if
+       end if
+    else ! HIST_BND == .true.
        jsize = JAG
        jstart = JSGA
        shalo_g = JHALO
@@ -1924,6 +2152,8 @@ contains
           if ( PRC_HAS_S ) then; shalo_l = 0; else; shalo_l = shalo_g; end if
           if ( PRC_HAS_N ) then; nhalo_l = 0; else; nhalo_l = nhalo_g; end if
        end if
+       jsizeh = jsize
+       jstarth = jstart
     end if
 
     call HistorySetAttribute( "y", "size_global",  (/ jsize /) )
@@ -1932,10 +2162,10 @@ contains
     call HistorySetAttribute( "y", "halo_local",   (/ shalo_l, nhalo_l /) )
     call HistorySetAttribute( "y", "periodic",     logical_str )
 
-    call HistorySetAttribute( "yh", "size_global",  (/ jsize /) )
-    call HistorySetAttribute( "yh", "start_global", (/ jstart /) )
-    call HistorySetAttribute( "yh", "halo_global",  (/ shalo_g, nhalo_g /) )
-    call HistorySetAttribute( "yh", "halo_local",   (/ shalo_l, nhalo_l /) )
+    call HistorySetAttribute( "yh", "size_global",  (/ jsizeh /) )
+    call HistorySetAttribute( "yh", "start_global", (/ jstarth /) )
+    call HistorySetAttribute( "yh", "halo_global",  (/ shaloh_g, nhalo_g /) )
+    call HistorySetAttribute( "yh", "halo_local",   (/ shaloh_l, nhalo_l /) )
     call HistorySetAttribute( "yh", "periodic",     logical_str )
 
     call MPRJ_get_attributes( mapping,                               & ! [OUT]

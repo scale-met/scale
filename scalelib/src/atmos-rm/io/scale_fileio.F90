@@ -1724,14 +1724,14 @@ contains
     end if
 
     if ( .NOT. xy_ ) then
-       call FileDefAxis( fid, 'FBFZ', 'Boundary factor Face Z',   '1', 'CZ', dtype, KA )
+       call FileDefAxis( fid, 'FBFZ', 'Boundary factor Face Z',   '1', 'FZ', dtype, KA )
     end if
     if ( .NOT. IO_AGGREGATE ) then
-       call FileDefAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'CX', dtype, IA )
-       call FileDefAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'CY', dtype, JA )
+       call FileDefAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'FX', dtype, IA )
+       call FileDefAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'FY', dtype, JA )
     else
-       call FileDefAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'CX', dtype, IAG )
-       call FileDefAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'CY', dtype, JAG )
+       call FileDefAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'FX', dtype, IAG )
+       call FileDefAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'FY', dtype, JAG )
     end if
 
     ! TODO: skip 8 axes below when IO_AGGREGATE is true, as all axes are now global
@@ -1742,8 +1742,8 @@ contains
 
     call FileDefAxis( fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', dtype, IAG )
     call FileDefAxis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', dtype, JAG )
-    call FileDefAxis( fid, 'FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', dtype, IAG )
-    call FileDefAxis( fid, 'FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', dtype, JAG )
+    call FileDefAxis( fid, 'FBFXG', 'Boundary factor Face X (global)',   '1', 'FXG', dtype, IAG )
+    call FileDefAxis( fid, 'FBFYG', 'Boundary factor Face Y (global)',   '1', 'FYG', dtype, JAG )
 
     ! associate coordinates
     AXIS_name(1:2) = (/'x ','y '/)
