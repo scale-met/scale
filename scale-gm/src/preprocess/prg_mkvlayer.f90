@@ -25,9 +25,10 @@ program mkvlayer
   integer, parameter :: fid  = 11
 
   integer                :: num_of_layer = 10        ! number of layers
-  character(len=H_SHORT) :: layer_type   = 'POWER'   ! type of layer
-  real(RP)               :: ztop         = 1.E4_RP   ! height of model top if layer_type='POWER'
-  real(RP)               :: fact         = 1.0_RP    ! factor              if layer_type='POWER'
+  character(len=H_SHORT) :: layer_type   = 'ULLRICH14'   ! type of layer, 'ULLRICH14', 'EVEN', or 'GIVEN'
+  real(RP)               :: ztop         = 1.E4_RP   ! height of model top if layer_type!='GIVEN'
+  real(RP)               :: dz           = 1000_RP
+  real(RP)               :: fact         = 1.0_RP    ! factor              if layer_type!='GIVEN'
   character(len=H_LONG)  :: infname      = 'infile'  ! input  file name    if layer_type='GIVEN'
   character(len=H_LONG)  :: outfname     = 'outfile' ! output file name
 
@@ -66,14 +67,14 @@ program mkvlayer
   allocate( z_c(kall) )
 
   select case(layer_type)
+  case( 'ULLRICH14' )
+     call mk_layer_ullrich14( ztop )
+  case( 'EVEN' )
+     call mk_layer_even( ztop )
   case('POWER')
-
      call mk_layer_powerfunc( ztop, fact )
-
   case('GIVEN')
-
      call mk_layer_given( infname )
-
   end select
 
   z_h(kmin-1) = z_h(kmin) - ( z_h(kmin+1) - z_h(kmin) )
@@ -107,6 +108,30 @@ contains
 
     return
   end subroutine mk_layer_powerfunc
+
+  !-----------------------------------------------------------------------------
+  subroutine mk_layer_ullrich14( ztop )
+    implicit none
+
+    real(RP), intent(in) :: ztop
+    real(RP), parameter  :: MU=15.0
+
+    do k = kmin, kmax+1
+       z_h(k) =  ZTOP * (sqrt(mu * ((dble(k) / dble(num_of_layer))**2) + 1.d0) - 1.d0) & 
+                             / (sqrt(mu + 1.d0) - 1.d0 )
+    end do
+  end subroutine mk_layer_ullrich14
+
+  !-----------------------------------------------------------------------------
+  subroutine mk_layer_even( dz )
+    implicit none
+
+    real(RP), intent(in) :: dz
+
+    do k = kmin, kmax+1
+       z_h(k) =  dz * (k-kmin+1)
+    end do
+  end subroutine mk_layer_even
 
   !-----------------------------------------------------------------------------
   subroutine mk_layer_given( infname )
