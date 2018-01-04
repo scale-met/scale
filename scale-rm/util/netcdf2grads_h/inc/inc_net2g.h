@@ -38,6 +38,7 @@
   integer,  parameter :: vt_land   = 3  ! vtype index
   integer,  parameter :: vt_urban  = 4  ! vtype index
   integer,  parameter :: vt_tpmsk  = 5  ! vtype index
+  integer,  parameter :: vt_ocean  = 6  ! vtype index
 
   integer,  parameter :: a_slice   = 0  ! atype index
   integer,  parameter :: a_max     = 1  ! atype index

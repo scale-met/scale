@@ -60,11 +60,12 @@ program netcdf2grads_h
   integer :: nz   ! num of z-dimension in the combined file
   integer :: uz   ! num of z-dimension in the combined file for urban
   integer :: lz   ! num of z-dimension in the combined file for land
+  integer :: oz   ! num of z-dimension in the combined file for ocean
   integer :: nzg  ! num of z-dimension in the combined file for grid
   integer :: nxh  ! num of halo grids for x-dimension
   integer :: nyh  ! num of halo grids for y-dimension
   integer :: nzh  ! num of halo grids for z-dimension
-  integer :: nz_all(3)
+  integer :: nz_all(4)
   integer :: ks, ke
   integer :: nst, nen
 
@@ -253,8 +254,11 @@ program netcdf2grads_h
   ncfile = trim(IDIR)//"/"//trim(HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
   call netcdf_retrieve_dims( ncfile,                          &
                              nxp, nxgp, nxh, nyp, nygp, nyh,  &
-                             nz,  nzg,  nzh, uz, lz, ks, ke   )
-  nz_all(1) = nz; nz_all(2) = uz; nz_all(3) = lz
+                             nz,  nzg,  nzh, uz, lz, oz, ks, ke   )
+  nz_all(1) = nz
+  nz_all(2) = uz
+  nz_all(3) = lz
+  nz_all(4) = oz
 
   call set_array_size( nxp, nyp, nxgp, nygp, nx, ny, mnx, mny,  &
                        mnxp, mnyp, nxg_tproc, nyg_tproc         )
@@ -369,7 +373,7 @@ program netcdf2grads_h
         "+++ VARIABLE: ", trim(varname), " (vtype = ", vtype, ")"
 
         select case( vtype )
-        case ( vt_urban, vt_land, vt_height, vt_3d )
+        case ( vt_urban, vt_land, vt_ocean, vt_height, vt_3d )
         !-----------------------------------------------------------------------------------
 
            irec_timelev = irec_time
@@ -810,21 +814,31 @@ contains
     case ( vt_urban )
        if ( zz < 1 .or. zz > uz ) then
           write (*, *) "ERROR: requested level is in K-HALO [urban]"
+          write (*, *) "*** requested level =",zz,", min = 1, max = ",uz
           call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_land )
        if ( zz < 1 .or. zz > lz ) then
           write (*, *) "ERROR: requested level is in K-HALO [land]"
+          write (*, *) "*** requested level =",zz,", min = 1, max = ",lz
+          call err_abort( 1, __LINE__, loc_main )
+       endif
+    case ( vt_ocean )
+       if ( zz < 1 .or. zz > oz ) then
+          write (*, *) "ERROR: requested level is in K-HALO [ocean]"
+          write (*, *) "*** requested level =",zz,", min = 1, max = ",oz
           call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_height )
        if ( zz < ks .or. zz > ke ) then
            write (*, *) "ERROR: requested level is in K-HALO [height]"
+          write (*, *) "*** requested level =",zz,", min = ",ks," max = ",ke
           call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_3d )
        if ( zz < ks .or. zz > ke ) then
           write (*, *) "ERROR: requested level is in K-HALO [3D data]"
+          write (*, *) "*** requested level =",zz,", min = ",ks," max = ",ke
           call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_2d, vt_tpmsk )

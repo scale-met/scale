@@ -59,6 +59,7 @@ module mod_net2g_netcdf
   real(DP),allocatable, private :: p_3d(:,:,:,:)         ! partial grid data
   real(DP),allocatable, private :: p_3d_urban(:,:,:,:)   ! partial grid data
   real(DP),allocatable, private :: p_3d_land(:,:,:,:)    ! partial grid data
+  real(DP),allocatable, private :: p_3d_ocean(:,:,:,:)    ! partial grid data
   real(DP),allocatable, private :: p_2d(:,:,:)           ! partial grid data
   real(DP),allocatable, private :: p_2dt(:,:)            ! partial grid data
 
@@ -73,14 +74,15 @@ contains
       nxp, nxgp, nxh,  & ! [out]
       nyp, nygp, nyh,  & ! [out]
       nz,  nzg,  nzh,  & ! [out]
-      uz, lz, ks, ke   ) ! [out]
+      uz, lz, oz,      & ! [out]
+      ks, ke           ) ! [out]
     implicit none
 
     character(CLNG), intent(in) :: ncfile
     integer, intent(out) :: nxp, nxgp, nxh
     integer, intent(out) :: nyp, nygp, nyh
     integer, intent(out) :: nz,  nzg,  nzh
-    integer, intent(out) :: uz,  lz
+    integer, intent(out) :: uz,  lz,   oz
     integer, intent(out) :: ks,  ke
 
     integer :: ncid, dimid
@@ -116,6 +118,9 @@ contains
 
     istat = nf90_inq_dimid ( ncid,  'lz', dimid )
     istat = nf90_inquire_dimension( ncid, dimid, len=lz )
+
+    istat = nf90_inq_dimid ( ncid,  'oz', dimid )
+    istat = nf90_inquire_dimension( ncid, dimid, len=oz )
 
     istat = nf90_close(ncid)
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
@@ -164,7 +169,7 @@ contains
     implicit none
 
     integer, intent(in) :: mnxp, mnyp
-    integer, intent(in) :: nz(3)
+    integer, intent(in) :: nz(4)
     !---------------------------------------------------------------------------
 
     allocate( p_2dt       (mnxp, mnyp          ) )
@@ -172,6 +177,7 @@ contains
     allocate( p_3d        (mnxp, mnyp, nz(1), 1) )
     allocate( p_3d_urban  (mnxp, mnyp, nz(2), 1) )
     allocate( p_3d_land   (mnxp, mnyp, nz(3), 1) )
+    allocate( p_3d_ocean  (mnxp, mnyp, nz(4), 1) )
 
     return
   end subroutine netcdf_setup
@@ -265,7 +271,7 @@ contains
 
     integer, intent(in) :: imnge, nm, it
     integer, intent(in) :: nxp, nyp, mnxp, mnyp
-    integer, intent(in) :: zz, nz(3)
+    integer, intent(in) :: zz, nz(4)
     character(CMID),  intent(in)  :: varname
     integer,          intent(in)  :: atype, ctype, vtype
     character(len=*), intent(out) :: long_name
@@ -279,6 +285,7 @@ contains
     integer :: count_2d(3)
     integer :: count_urban(4)
     integer :: count_land(4)
+    integer :: count_ocean(4)
     integer :: count_height(3)
     integer :: count_tpmsk(2)
 
@@ -323,8 +330,9 @@ contains
                            mnxp, mnyp, it, nz, zz, varname,      &
                            isn, ien, jsn, jen, nzn,              &
                            start_3d, start_2d, start_2dt,        &
-                           count_3d, count_2d, count_urban,      &
-                           count_land, count_height, count_tpmsk )
+                           count_3d, count_2d,                   &
+                           count_urban, count_land, count_ocean, &
+                           count_height, count_tpmsk )
 
     istat = nf90_open( trim(ncfile), nf90_nowrite, ncid )
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
@@ -369,6 +377,12 @@ contains
        if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
        call anal_simple( atype, is,  ie,  js,  je,  &
                          isn, jsn, nzn, p_3d_land, p_var )
+
+    case ( vt_ocean )
+       istat = nf90_get_var( ncid, varid, p_3d_ocean(isn:ien,jsn:jen,1:nzn,1), start=start_3d, count=count_ocean )
+       if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
+       call anal_simple( atype, is,  ie,  js,  je,  &
+                         isn, jsn, nzn, p_3d_ocean, p_var )
 
 !    case ( vt_height )
 !       istat = nf90_get_var( ncid, varid, p_2d(isn:ien,jsn:jen,1), start=start_2d, count=count_height )
@@ -430,7 +444,7 @@ contains
     integer,  intent(in) :: imnge
     integer,  intent(in) :: nxp, nyp, mnxp, mnyp
     integer,  intent(in) :: it
-    integer,  intent(in) :: nz(3)
+    integer,  intent(in) :: nz(4)
     integer,  intent(in)  :: ctype
     real(SP), intent(out) :: p_var(:,:,:)
 

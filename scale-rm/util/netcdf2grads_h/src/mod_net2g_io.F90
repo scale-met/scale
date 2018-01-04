@@ -195,7 +195,7 @@ contains
         write( FID_CTL, '(a,3x,i7,1x,a,1x,a)') "ZDEF", 1, "linear", "1 1"
      case ( vt_2d )
         write( FID_CTL, '(a,3x,i7,1x,a,1x,ES15.7)') "ZDEF", 1, "LEVELS", zlev(zz)*1.d-3
-     case ( vt_urban, vt_land )
+     case ( vt_urban, vt_land, vt_ocean )
         if ( Z_MERGE_OUT ) then
            write( FID_CTL, '(a,3x,i7,1x,a,1x,a)') "ZDEF", ZCOUNT, "linear", "1 1"
         else
@@ -322,7 +322,7 @@ contains
         write( FID_CTLM, '(a,3x,i7,1x,a,1x,a)') "ZDEF", 1, "linear", "1 1"
      case ( vt_2d )
         write( FID_CTLM, '(a,3x,i7,1x,a,1x,ES15.7)') "ZDEF", 1, "LEVELS", zlev(zz)*1.d-3
-     case ( vt_urban, vt_land )
+     case ( vt_urban, vt_land, vt_ocean )
         if ( Z_MERGE_OUT ) then
            write( FID_CTLM, '(a,3x,i7,1x,a,1x,a)') "ZDEF", ZCOUNT, "linear", "1 1"
         else
