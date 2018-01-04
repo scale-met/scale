@@ -78,7 +78,6 @@ module scale_fileio
   end interface FILEIO_write_var
 
   !-----------------------------------------------------------------------------
-  !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
@@ -91,6 +90,7 @@ module scale_fileio
   private :: check_1d
   private :: check_2d
   private :: check_3d
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -112,7 +112,7 @@ module scale_fileio
                                                                           ! Keep consistency with "FILE_MAX" in gtool_netcdf.c
   logical,  private              :: File_axes_written(0:File_nfile_max-1) ! whether axes have been written
   !                                                                       ! fid starts from zero so index should start from zero
-  logical,  private              :: File_closed(0:File_nfile_max-1)       ! whether file has been closed
+  logical,  private              :: File_closed      (0:File_nfile_max-1) ! whether file has been closed
   logical,  private              :: File_nozcoord(0:File_nfile_max-1)     ! whether nozcoord is true or false
   integer,  private              :: write_buf_amount = 0                  ! sum of write buffer amounts
 
@@ -200,7 +200,7 @@ contains
        XEB = IEB
        YSB = JSB
        YEB = JEB
-    end if
+    endif
 
     IM = XEB - XSB + 1
     JM = YEB - YSB + 1
@@ -402,31 +402,31 @@ contains
        call FILEIO_read_var_2D( buffer_xy, fid, 'lat', 'XY', 1 )
        call FILEIO_flush( fid )
        call check_2d( AXIS_LAT, buffer_xy(XSB:XEB,YSB:YEB), 'lat' )
-    end if
+    endif
 
     if ( atmos_ ) then
        call FILEIO_read_var_1D( buffer_z,   fid, 'z',      'Z',   1 )
        if ( .not. transpose_ ) then
           call FILEIO_read_var_3D( buffer_zxy, fid, 'height', 'ZXY', 1 )
-       end if
+       endif
        call FILEIO_flush( fid )
        call check_1d( GRID_CZ(KS:KE), buffer_z(KS:KE), 'z' )
        if ( .not. transpose_ ) then
           call check_3d( AXIS_HZXY, buffer_zxy(KS:KE,XSB:XEB,YSB:YEB), 'height', transpose_ )
-       end if
-    end if
+       endif
+    endif
 
     if ( land_ ) then
        call FILEIO_read_var_1D( buffer_l, fid, 'lz',  'LZ', 1 )
        call FILEIO_flush( fid )
        call check_1d( GRID_LCZ(LKS:LKE), buffer_l(LKS:LKE), 'lz' )
-    end if
+    endif
 
     if ( urban_ ) then
        call FILEIO_read_var_1D( buffer_u, fid, 'uz',  'UZ', 1 )
        call FILEIO_flush( fid )
        call check_1d( GRID_UCZ(UKS:UKE), buffer_u(UKS:UKE), 'uz' )
-    end if
+    endif
 
     return
   end subroutine FILEIO_check_coordinates_id
@@ -775,7 +775,7 @@ contains
        endif
 
        call FileRead( var(dim1_S:dim1_E), fid, varname, step )
-    end if
+    endif
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
@@ -845,7 +845,7 @@ contains
        endif
 
        call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E), fid, varname, step )
-    end if
+    endif
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
@@ -951,7 +951,7 @@ contains
 
        call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
                       fid, varname, step                              )
-    end if
+    endif
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
@@ -1030,7 +1030,7 @@ contains
 
        call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E), &
                       fid, varname, step                                            )
-    end if
+    endif
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
@@ -1243,7 +1243,7 @@ contains
        nsteps = 1
     else
        nsteps = size(var,3)
-    end if
+    endif
     call FILEIO_def_var( fid, vid, varname, desc, unit, axistype, datatype, timeintv, nsteps )
 
     call FILEIO_enddef( fid )
@@ -1308,7 +1308,7 @@ contains
        nsteps = 1
     else
        nsteps = size(var,3)
-    end if
+    endif
     call FILEIO_def_var( fid, vid, varname, desc, unit, axistype, datatype, timeintv, nsteps )
 
     call FILEIO_enddef( fid )
@@ -1346,7 +1346,7 @@ contains
        comm = PRC_LOCAL_COMM_WORLD
     else
        comm = MPI_COMM_NULL
-    end if
+    endif
 
     call FileOpen( fid,                & ! [OUT]
                    basename,           & ! [IN]
@@ -1417,8 +1417,8 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    rankidx(1) = PRC_2Drank(PRC_myrank,1)
-    rankidx(2) = PRC_2Drank(PRC_myrank,2)
+    rankidx (1) = PRC_2Drank(PRC_myrank,1)
+    rankidx (2) = PRC_2Drank(PRC_myrank,2)
     procsize(1) = PRC_NUM_X
     procsize(2) = PRC_NUM_Y
 
@@ -1448,31 +1448,32 @@ contains
        call getCFtunits( tunits, date )
     else
        tunits = 'seconds'
-    end if
+    endif
 
     if ( IO_AGGREGATE ) then  ! user input parameter indicates to do PnetCDF I/O
        comm = PRC_LOCAL_COMM_WORLD
     else
        comm = MPI_COMM_NULL
-    end if
+    endif
 
-    call FileCreate( fid,                               & ! [OUT]
-                     fileexisted,                       & ! [OUT]
-                     basename,                          & ! [IN]
-                     title,                             & ! [IN]
-                     H_SOURCE,                          & ! [IN]
-                     H_INSTITUTE,                       & ! [IN]
-                     PRC_masterrank,                    & ! [IN]
-                     PRC_myrank,                        & ! [IN]
-                     rankidx,                           & ! [IN]
-                     procsize,                          & ! [IN]
-                     time_units = tunits,                      & ! [IN]
-                     append = append_sw,                       & ! [IN]
-                     comm = comm                               ) ! [IN]
+    call FileCreate( fid,                    & ! [OUT]
+                     fileexisted,            & ! [OUT]
+                     basename,               & ! [IN]
+                     title,                  & ! [IN]
+                     H_SOURCE,               & ! [IN]
+                     H_INSTITUTE,            & ! [IN]
+                     PRC_masterrank,         & ! [IN]
+                     PRC_myrank,             & ! [IN]
+                     rankidx,                & ! [IN]
+                     procsize,               & ! [IN]
+                     time_units = tunits,    & ! [IN]
+                     append     = append_sw, & ! [IN]
+                     comm       = comm       ) ! [IN]
+
+
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
        call FILEIO_def_axes( fid, dtype, xy = nozcoord ) ! [IN]
-       File_axes_written(fid) = .false.  ! indicating axes have not been written yet
        if ( present( nozcoord ) ) then
           File_nozcoord(fid) = nozcoord
        else
@@ -1488,10 +1489,11 @@ contains
           call getCFtunits(tunits, date)
        else
           call getCFtunits(tunits, NOWDATE)
-       end if
+       endif
        call FileSetGlobalAttribute( fid, "time_units", tunits )
 
-       File_closed(fid) = .false.
+       File_axes_written(fid) = .false.  ! indicating axes have not been written yet
+       File_closed      (fid) = .false.
     endif
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -1519,14 +1521,15 @@ contains
     ! If this enddef is called the first time, write axis variables
     if ( .NOT. File_axes_written(fid) ) then
        call FILEIO_write_axes( fid, File_nozcoord(fid) )
+
+       ! Tell PnetCDF library to use a buffer of size write_buf_amount to aggregate write requests to be post in FILEIO_write_var
        if ( IO_AGGREGATE ) then
           call FileFlush( fid )
-          ! Tell PnetCDF library to use a buffer of size write_buf_amount to
-          ! aggregate write requests to be post in FILEIO_write_var
           call FileAttachBuffer( fid, write_buf_amount )
-       end if
+       endif
+
        File_axes_written(fid) = .true.
-    end if
+    endif
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -1548,7 +1551,7 @@ contains
 
     if ( IO_AGGREGATE ) then
        call FileFlush( fid ) ! flush all pending read/write requests
-    end if
+    endif
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -1578,14 +1581,14 @@ contains
           if ( write_buf_amount > 0 ) then
              call FileDetachBuffer( fid ) ! detach PnetCDF aggregation buffer
              write_buf_amount = 0         ! reset write request amount
-          end if
-       end if
+          endif
+       endif
 
        call FileClose( fid ) ! [IN]
 
        File_closed(fid) = .true.
 
-    end if
+    endif
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -1599,8 +1602,8 @@ contains
        dtype, &
        xy     )
     use gtool_file, only: &
-       FileDefAxis,  &
-       FileSetAttribute, &
+       FileDefAxis,                  &
+       FileSetAttribute,             &
        FileDefAssociatedCoordinates, &
        FileAddAssociatedVariable
     use scale_const, &
@@ -1879,7 +1882,7 @@ contains
        call FileSetAttribute( fid, 'LFZ', 'positive', 'down' )
        call FileSetAttribute( fid, 'UCZ', 'positive', 'down' )
        call FileSetAttribute( fid, 'UFZ', 'positive', 'down' )
-    end if
+    endif
 
     call MPRJ_get_attributes( mapping,  &
          false_easting, false_northing, &
@@ -2292,7 +2295,7 @@ contains
           write_buf_amount = write_buf_amount + IA * JA * elm_size * nsteps
        else
           write_buf_amount = write_buf_amount + IA * JA * elm_size
-       end if
+       endif
        call MPRJ_get_attributes( mapping )
     elseif( axistype == 'ZXYT' ) then ! 4D variable
        ndims   = 3
@@ -2301,7 +2304,7 @@ contains
          write_buf_amount = write_buf_amount + KA * IA * JA * elm_size * nsteps
        else
          write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
-       end if
+       endif
        call MPRJ_get_attributes( mapping )
     else
        write(*,*) 'xxx [FILEIO_def_var] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
@@ -2454,7 +2457,7 @@ contains
           if( rankidx(1) == PRC_NUM_X - 1 ) dim1_E = IA
           if( rankidx(2) == 0             ) dim2_S = 1
           if( rankidx(2) == PRC_NUM_Y - 1 ) dim2_E = JA
-       end if
+       endif
     elseif( axistype == 'ZX' ) then
        dim1_S   = KS
        dim1_E   = KE
@@ -2466,7 +2469,7 @@ contains
           exec = .false.  ! only south most row processes write
           if( rankidx(1) == 0             ) dim2_S = 1
           if( rankidx(1) == PRC_NUM_X - 1 ) dim2_E = IA
-       end if
+       endif
     else
        write(*,*) 'xxx [FILEIO_write_var_2D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
@@ -2480,35 +2483,35 @@ contains
           do j = 1, JA
           do i = 1, IS-1
              varhalo(i,j) = RMISS
-          end do
-          end do
+          enddo
+          enddo
           ! E halo
           do j = 1, JA
           do i = IE+1, IA
              varhalo(i,j) = RMISS
-          end do
-          end do
+          enddo
+          enddo
           ! S halo
           do j = 1, JS-1
           do i = 1, IA
              varhalo(i,j) = RMISS
-          end do
-          end do
+          enddo
+          enddo
           ! N halo
           do j = JE+1, JA
           do i = 1, IA
              varhalo(i,j) = RMISS
-          end do
-          end do
+          enddo
+          enddo
 
           call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
                           NOWSEC, NOWSEC, start                           ) ! [IN]
        else
           call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E), &
                           NOWSEC, NOWSEC, start                       ) ! [IN]
-       end if
+       endif
 
-    end if
+    endif
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -2580,7 +2583,7 @@ contains
        if( rankidx(1) == PRC_NUM_X - 1 ) dim2_E = IA
        if( rankidx(2) == 0             ) dim3_S = 1
        if( rankidx(2) == PRC_NUM_Y - 1 ) dim3_E = JA
-    end if
+    endif
 
     if (      axistype == 'ZXY'  &
          .OR. axistype == 'ZXHY' &
@@ -2613,40 +2616,40 @@ contains
        do j = 1, JA
        do i = 1, IS-1
           varhalo(k,i,j) = RMISS
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
        ! E halo
        do k = 1, dim1_max
        do j = 1, JA
        do i = IE+1, IA
           varhalo(k,i,j) = RMISS
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
        ! S halo
        do k = 1, dim1_max
        do j = 1, JS-1
        do i = 1, IA
           varhalo(k,i,j) = RMISS
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
        ! N halo
        do k = 1, dim1_max
        do j = JE+1, JA
        do i = 1, IA
           varhalo(k,i,j) = RMISS
-       end do
-       end do
-       end do
+       enddo
+       enddo
+       enddo
 
        call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
                        NOWSEC, NOWSEC, start                                         ) ! [IN]
     else
        call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
                        NOWSEC, NOWSEC, start                                     ) ! [IN]
-    end if
+    endif
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -2728,7 +2731,7 @@ contains
           if( rankidx(1) == PRC_NUM_X - 1 ) dim1_E = IA
           if( rankidx(2) == 0             ) dim2_S = 1
           if( rankidx(2) == PRC_NUM_Y - 1 ) dim2_E = JA
-       end if
+       endif
     else
        write(*,*) 'xxx [FILEIO_write_var_3D_t] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
@@ -2748,33 +2751,33 @@ contains
           do j = 1, JA
           do i = 1, IS-1
              varhalo(i,j) = RMISS
-          end do
-          end do
+          enddo
+          enddo
           ! E halo
           do j = 1, JA
           do i = IE+1, IA
              varhalo(i,j) = RMISS
-          end do
-          end do
+          enddo
+          enddo
           ! S halo
           do j = 1, JS-1
           do i = 1, IA
              varhalo(i,j) = RMISS
-          end do
-          end do
+          enddo
+          enddo
           ! N halo
           do j = JE+1, JA
           do i = 1, IA
              varhalo(i,j) = RMISS
-          end do
-          end do
+          enddo
+          enddo
 
           call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
                           nowtime, nowtime, start                         ) ! [IN]
        else
           call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,timetarg), &
                           nowtime, nowtime, start                              ) ! [IN]
-       end if
+       endif
     else
        nowtime = timeofs_
        do n = 1, step
@@ -2785,33 +2788,33 @@ contains
              do j = 1, JA
              do i = 1, IS-1
                 varhalo(i,j) = RMISS
-             end do
-             end do
+             enddo
+             enddo
              ! E halo
              do j = 1, JA
              do i = IE+1, IA
                 varhalo(i,j) = RMISS
-             end do
-             end do
+             enddo
+             enddo
              ! S halo
              do j = 1, JS-1
              do i = 1, IA
                 varhalo(i,j) = RMISS
-             end do
-             end do
+             enddo
+             enddo
              ! N halo
              do j = JE+1, JA
              do i = 1, IA
                 varhalo(i,j) = RMISS
-             end do
-             end do
+             enddo
+             enddo
 
              call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
                              nowtime, nowtime, start                         ) ! [IN]
           else
              call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,n), &
                              nowtime, nowtime, start                       ) ! [IN]
-          end if
+          endif
           nowtime = nowtime + time_interval
        enddo
     endif
@@ -2906,7 +2909,7 @@ contains
           if( rankidx(1) == PRC_NUM_X - 1 ) dim2_E = IA
           if( rankidx(2) == 0             ) dim3_S = 1
           if( rankidx(2) == PRC_NUM_Y - 1 ) dim3_E = JA
-       end if
+       endif
     else
        write(*,*) 'xxx [FILEIO_write_var_4D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
@@ -2923,40 +2926,40 @@ contains
           do j = 1, JA
           do i = 1, IS-1
              varhalo(k,i,j) = RMISS
-          end do
-          end do
-          end do
+          enddo
+          enddo
+          enddo
           ! E halo
           do k = 1, dim1_max
           do j = 1, JA
           do i = IE+1, IA
              varhalo(k,i,j) = RMISS
-          end do
-          end do
-          end do
+          enddo
+          enddo
+          enddo
           ! S halo
           do k = 1, dim1_max
           do j = 1, JS-1
           do i = 1, IA
              varhalo(k,i,j) = RMISS
-          end do
-          end do
-          end do
+          enddo
+          enddo
+          enddo
           ! N halo
           do k = 1, dim1_max
           do j = JE+1, JA
           do i = 1, IA
              varhalo(k,i,j) = RMISS
-          end do
-          end do
-          end do
+          enddo
+          enddo
+          enddo
 
           call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
                           nowtime, nowtime, start                                       ) ! [IN]
        else
           call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,timetarg), &
                           nowtime, nowtime, start                                            ) ! [IN]
-       end if
+       endif
     else
        nowtime = timeofs_
        do n = 1, step
@@ -2968,40 +2971,40 @@ contains
              do j = 1, JA
              do i = 1, IS-1
                 varhalo(k,i,j) = RMISS
-             end do
-             end do
-             end do
+             enddo
+             enddo
+             enddo
              ! E halo
              do k = 1, dim1_max
              do j = 1, JA
              do i = IE+1, IA
                 varhalo(k,i,j) = RMISS
-             end do
-             end do
-             end do
+             enddo
+             enddo
+             enddo
              ! S halo
              do k = 1, dim1_max
              do j = 1, JS-1
              do i = 1, IA
                 varhalo(k,i,j) = RMISS
-             end do
-             end do
-             end do
+             enddo
+             enddo
+             enddo
              ! N halo
              do k = 1, dim1_max
              do j = JE+1, JA
              do i = 1, IA
                 varhalo(k,i,j) = RMISS
-             end do
-             end do
-             end do
+             enddo
+             enddo
+             enddo
 
              call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
                              nowtime, nowtime, start                                       ) ! [IN]
           else
              call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,n), &
                              nowtime, nowtime, start                                     ) ! [IN]
-          end if
+          endif
           call FileFlush( fid )
           nowtime = nowtime + time_interval
        enddo
@@ -3021,7 +3024,7 @@ contains
 
     do fid = 0, File_nfile_max-1
        call FILEIO_close( fid )
-    end do
+    enddo
 
     return
   end subroutine closeall
@@ -3063,21 +3066,21 @@ contains
     if ( size(buffer) /= nmax ) then
        write(*,*) 'xxx size of coordinate ('//trim(name)//') is different:', nmax, size(buffer)
        call PRC_MPIstop
-    end if
+    endif
 
     do n=1, nmax
        if ( abs(expected(n)) > EPS ) then
           check = abs(buffer(n)-expected(n)) / abs(buffer(n)+expected(n)) * 2.0_RP
        else
           check = abs(buffer(n)-expected(n))
-       end if
+       endif
 
        if ( check > FILEIO_datacheck_criteria ) then
           write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', n, ' is different:', &
                      expected(n), buffer(n), check
           call PRC_MPIstop
-       end if
-    end do
+       endif
+    enddo
 
     return
   end subroutine check_1d
@@ -3108,11 +3111,11 @@ contains
     if ( size(buffer,1) /= imax ) then
        write(*,*) 'xxx the first size of coordinate ('//trim(name)//') is different:', imax, size(buffer,1)
        call PRC_MPIstop
-    end if
+    endif
     if ( size(buffer,2) /= jmax ) then
        write(*,*) 'xxx the second size of coordinate ('//trim(name)//') is different:', jmax, size(buffer,2)
        call PRC_MPIstop
-    end if
+    endif
 
     do j=1, jmax
     do i=1, imax
@@ -3120,15 +3123,15 @@ contains
           check = abs(buffer(i,j)-expected(i,j)) / abs(buffer(i,j)+expected(i,j)) * 2.0_RP
        else
           check = abs(buffer(i,j)-expected(i,j))
-       end if
+       endif
 
        if ( check > FILEIO_datacheck_criteria ) then
           write(*,*) 'xxx value of coordinate ('//trim(name)//') at (', i, ',', j, ') is different:', &
                      expected(i,j), buffer(i,j), check
           call PRC_MPIstop
-       end if
-    end do
-    end do
+       endif
+    enddo
+    enddo
 
     return
   end subroutine check_2d
@@ -3164,19 +3167,19 @@ contains
        kmax = size(expected,1)
        imax = size(expected,2)
        jmax = size(expected,3)
-    end if
+    endif
     if ( size(buffer,1) /= kmax ) then
        write(*,*) 'xxx the first size of coordinate ('//trim(name)//') is different:', kmax, size(buffer,1)
        call PRC_MPIstop
-    end if
+    endif
     if ( size(buffer,2) /= imax ) then
        write(*,*) 'xxx the second size of coordinate ('//trim(name)//') is different:', imax, size(buffer,2)
        call PRC_MPIstop
-    end if
+    endif
     if ( size(buffer,3) /= jmax ) then
        write(*,*) 'xxx the third size of coordinate ('//trim(name)//') is different:', jmax, size(buffer,3)
        call PRC_MPIstop
-    end if
+    endif
 
     if ( transpose ) then
        ! buffer(i,j,k), expected(k,i,j)
@@ -3187,16 +3190,16 @@ contains
              check = abs(buffer(i,j,k)-expected(k,i,j)) / abs(buffer(i,j,k)+expected(k,i,j)) * 2.0_RP
           else
              check = abs(buffer(i,j,k)-expected(k,i,j))
-          end if
+          endif
 
           if ( check > FILEIO_datacheck_criteria ) then
              write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', i, ',', j, ',', k, ' is different:', &
                         expected(k,i,j), buffer(i,j,k), check
              call PRC_MPIstop
-          end if
-       end do
-       end do
-       end do
+          endif
+       enddo
+       enddo
+       enddo
     else
        do j=1, jmax
        do i=1, imax
@@ -3205,17 +3208,17 @@ contains
              check = abs(buffer(k,i,j)-expected(k,i,j)) / abs(buffer(k,i,j)+expected(k,i,j)) * 2.0_RP
           else
              check = abs(buffer(k,i,j)-expected(k,i,j))
-          end if
+          endif
 
           if ( check > FILEIO_datacheck_criteria ) then
              write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', k, ',', i, ',', j, ' is different:', &
                         expected(k,i,j), buffer(k,i,j), check
              call PRC_MPIstop
-          end if
-       end do
-       end do
-       end do
-    end if
+          endif
+       enddo
+       enddo
+       enddo
+    endif
 
     return
   end subroutine check_3d

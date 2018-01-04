@@ -46,52 +46,55 @@ module scale_grid
   real(RP), public              :: BUFFER_DX = 0.0_RP   !< thickness of buffer region [m]: x
   real(RP), public              :: BUFFER_DY = 0.0_RP   !< thickness of buffer region [m]: y
   real(RP), public              :: BUFFFACT  = 1.0_RP   !< default strech factor for dx/dy/dz of buffer region
+  real(RP), public              :: BUFFFACT_Z = -1.0_RP !< strech factor for dz of buffer region
   real(RP), public              :: BUFFFACT_X = -1.0_RP !< strech factor for dx of buffer region
   real(RP), public              :: BUFFFACT_Y = -1.0_RP !< strech factor for dy of buffer region
-  real(RP), public              :: BUFFFACT_Z = -1.0_RP !< strech factor for dz of buffer region
 
   real(RP), public              :: GRID_DOMAIN_CENTER_X !< center position of global domain [m]: x
   real(RP), public              :: GRID_DOMAIN_CENTER_Y !< center position of global domain [m]: y
 
-  real(RP), public, allocatable :: GRID_CZ  (:)  !< center coordinate [m]: z, local=global
-  real(RP), public, allocatable :: GRID_CX  (:)  !< center coordinate [m]: x, local
-  real(RP), public, allocatable :: GRID_CY  (:)  !< center coordinate [m]: y, local
-  real(RP), public, allocatable :: GRID_CDZ (:)  !< z-length of control volume [m]
-  real(RP), public, allocatable :: GRID_CDX (:)  !< x-length of control volume [m]
-  real(RP), public, allocatable :: GRID_CDY (:)  !< y-length of control volume [m]
-  real(RP), public, allocatable :: GRID_RCDZ(:)  !< reciprocal of center-dz
-  real(RP), public, allocatable :: GRID_RCDX(:)  !< reciprocal of center-dx
-  real(RP), public, allocatable :: GRID_RCDY(:)  !< reciprocal of center-dy
+  real(RP), public, allocatable :: GRID_CZ   (:) !< center coordinate [m]: z, local=global
+  real(RP), public, allocatable :: GRID_CX   (:) !< center coordinate [m]: x, local
+  real(RP), public, allocatable :: GRID_CY   (:) !< center coordinate [m]: y, local
+  real(RP), public, allocatable :: GRID_FZ   (:) !< face   coordinate [m]: z, local=global
+  real(RP), public, allocatable :: GRID_FX   (:) !< face   coordinate [m]: x, local
+  real(RP), public, allocatable :: GRID_FY   (:) !< face   coordinate [m]: y, local
 
-  real(RP), public, allocatable :: GRID_FZ  (:)  !< face   coordinate [m]: z, local=global
-  real(RP), public, allocatable :: GRID_FX  (:)  !< face   coordinate [m]: x, local
-  real(RP), public, allocatable :: GRID_FY  (:)  !< face   coordinate [m]: y, local
-  real(RP), public, allocatable :: GRID_FDZ (:)  !< z-length of grid(k+1) to grid(k) [m]
-  real(RP), public, allocatable :: GRID_FDX (:)  !< x-length of grid(i+1) to grid(i) [m]
-  real(RP), public, allocatable :: GRID_FDY (:)  !< y-length of grid(j+1) to grid(j) [m]
-  real(RP), public, allocatable :: GRID_RFDZ(:)  !< reciprocal of face-dz
-  real(RP), public, allocatable :: GRID_RFDX(:)  !< reciprocal of face-dx
-  real(RP), public, allocatable :: GRID_RFDY(:)  !< reciprocal of face-dy
+  real(RP), public, allocatable :: GRID_CDZ  (:) !< z-length of control volume [m]
+  real(RP), public, allocatable :: GRID_CDX  (:) !< x-length of control volume [m]
+  real(RP), public, allocatable :: GRID_CDY  (:) !< y-length of control volume [m]
+  real(RP), public, allocatable :: GRID_FDZ  (:) !< z-length of grid(k+1) to grid(k) [m]
+  real(RP), public, allocatable :: GRID_FDX  (:) !< x-length of grid(i+1) to grid(i) [m]
+  real(RP), public, allocatable :: GRID_FDY  (:) !< y-length of grid(j+1) to grid(j) [m]
 
-  real(RP), public, allocatable :: GRID_CBFZ(:)  !< center buffer factor (0-1): z
-  real(RP), public, allocatable :: GRID_CBFX(:)  !< center buffer factor (0-1): x
-  real(RP), public, allocatable :: GRID_CBFY(:)  !< center buffer factor (0-1): y
-  real(RP), public, allocatable :: GRID_FBFZ(:)  !< face   buffer factor (0-1): z
-  real(RP), public, allocatable :: GRID_FBFX(:)  !< face   buffer factor (0-1): x
-  real(RP), public, allocatable :: GRID_FBFY(:)  !< face   buffer factor (0-1): y
+  real(RP), public, allocatable :: GRID_RCDZ (:) !< reciprocal of center-dz
+  real(RP), public, allocatable :: GRID_RCDX (:) !< reciprocal of center-dx
+  real(RP), public, allocatable :: GRID_RCDY (:) !< reciprocal of center-dy
+  real(RP), public, allocatable :: GRID_RFDZ (:) !< reciprocal of face-dz
+  real(RP), public, allocatable :: GRID_RFDX (:) !< reciprocal of face-dx
+  real(RP), public, allocatable :: GRID_RFDY (:) !< reciprocal of face-dy
 
-  real(RP), public, allocatable :: GRID_FXG  (:) !< face   coordinate [m]: x, global
-  real(RP), public, allocatable :: GRID_FYG  (:) !< face   coordinate [m]: y, global
+  real(RP), public, allocatable :: GRID_CBFZ (:) !< center buffer factor (0-1): z
+  real(RP), public, allocatable :: GRID_CBFX (:) !< center buffer factor (0-1): x
+  real(RP), public, allocatable :: GRID_CBFY (:) !< center buffer factor (0-1): y
+  real(RP), public, allocatable :: GRID_FBFZ (:) !< face   buffer factor (0-1): z
+  real(RP), public, allocatable :: GRID_FBFX (:) !< face   buffer factor (0-1): x
+  real(RP), public, allocatable :: GRID_FBFY (:) !< face   buffer factor (0-1): y
+
   real(RP), public, allocatable :: GRID_CXG  (:) !< center coordinate [m]: x, global
   real(RP), public, allocatable :: GRID_CYG  (:) !< center coordinate [m]: y, global
-  real(RP), public, allocatable :: GRID_FDXG (:) !< center coordinate [m]: x, global
-  real(RP), public, allocatable :: GRID_FDYG (:) !< center coordinate [m]: y, global
+  real(RP), public, allocatable :: GRID_FXG  (:) !< face   coordinate [m]: x, global
+  real(RP), public, allocatable :: GRID_FYG  (:) !< face   coordinate [m]: y, global
+
   real(RP), public, allocatable :: GRID_CDXG (:) !< center coordinate [m]: x, global
   real(RP), public, allocatable :: GRID_CDYG (:) !< center coordinate [m]: y, global
-  real(RP), public, allocatable :: GRID_FBFXG(:) !< face   buffer factor (0-1): x, global
-  real(RP), public, allocatable :: GRID_FBFYG(:) !< face   buffer factor (0-1): y, global
+  real(RP), public, allocatable :: GRID_FDXG (:) !< center coordinate [m]: x, global
+  real(RP), public, allocatable :: GRID_FDYG (:) !< center coordinate [m]: y, global
+
   real(RP), public, allocatable :: GRID_CBFXG(:) !< center buffer factor (0-1): x, global
   real(RP), public, allocatable :: GRID_CBFYG(:) !< center buffer factor (0-1): y, global
+  real(RP), public, allocatable :: GRID_FBFXG(:) !< face   buffer factor (0-1): x, global
+  real(RP), public, allocatable :: GRID_FBFYG(:) !< face   buffer factor (0-1): y, global
 
   !-----------------------------------------------------------------------------
   !
@@ -131,9 +134,9 @@ contains
        GRID_OUT_BASENAME, &
        GRID_OFFSET_X,     &
        GRID_OFFSET_Y,     &
+       DZ,                &
        DX,                &
        DY,                &
-       DZ,                &
        BUFFER_DZ,         &
        BUFFER_DX,         &
        BUFFER_DY,         &
@@ -141,9 +144,9 @@ contains
        BUFFER_NX,         &
        BUFFER_NY,         &
        BUFFFACT,          &
+       BUFFFACT_Z,        &
        BUFFFACT_X,        &
        BUFFFACT_Y,        &
-       BUFFFACT_Z,        &
        FZ,                &
        debug
 
@@ -166,9 +169,9 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_GRID)
 
+    if ( BUFFFACT_Z < 0.0_RP ) BUFFFACT_Z = BUFFFACT
     if ( BUFFFACT_X < 0.0_RP ) BUFFFACT_X = BUFFFACT
     if ( BUFFFACT_Y < 0.0_RP ) BUFFFACT_Y = BUFFFACT
-    if ( BUFFFACT_Z < 0.0_RP ) BUFFFACT_Z = BUFFFACT
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*)                '*** Atmosphere grid information ***'
@@ -209,42 +212,45 @@ contains
     FZ(:) = -1.0_RP
 
     ! local domain
-    allocate( GRID_CZ  (KA) )
-    allocate( GRID_CX  (IA) )
-    allocate( GRID_CY  (JA) )
-    allocate( GRID_CDZ (KA) )
-    allocate( GRID_CDX (IA) )
-    allocate( GRID_CDY (JA) )
-    allocate( GRID_RCDZ(KA) )
-    allocate( GRID_RCDX(IA) )
-    allocate( GRID_RCDY(JA) )
-
+    allocate( GRID_CZ  (  KA) )
+    allocate( GRID_CX  (  IA) )
+    allocate( GRID_CY  (  JA) )
     allocate( GRID_FZ  (0:KA) )
     allocate( GRID_FX  (0:IA) )
     allocate( GRID_FY  (0:JA) )
+
+    allocate( GRID_CDZ (KA)   )
+    allocate( GRID_CDX (IA)   )
+    allocate( GRID_CDY (JA)   )
     allocate( GRID_FDZ (KA-1) )
     allocate( GRID_FDX (IA-1) )
     allocate( GRID_FDY (JA-1) )
+
+    allocate( GRID_RCDZ(KA)   )
+    allocate( GRID_RCDX(IA)   )
+    allocate( GRID_RCDY(JA)   )
     allocate( GRID_RFDZ(KA-1) )
     allocate( GRID_RFDX(IA-1) )
     allocate( GRID_RFDY(JA-1) )
 
-    allocate( GRID_CBFZ(KA) )
-    allocate( GRID_CBFX(IA) )
-    allocate( GRID_CBFY(JA) )
+    allocate( GRID_CBFZ(  KA) )
+    allocate( GRID_CBFX(  IA) )
+    allocate( GRID_CBFY(  JA) )
     allocate( GRID_FBFZ(0:KA) )
     allocate( GRID_FBFX(0:IA) )
     allocate( GRID_FBFY(0:JA) )
 
     ! global domain
-    allocate( GRID_FXG  (0:IAG) )
-    allocate( GRID_FYG  (0:JAG) )
     allocate( GRID_CXG  (  IAG) )
     allocate( GRID_CYG  (  JAG) )
+    allocate( GRID_FXG  (0:IAG) )
+    allocate( GRID_FYG  (0:JAG) )
+
+    allocate( GRID_CDXG (IAG)   )
+    allocate( GRID_CDYG (JAG)   )
     allocate( GRID_FDXG (IAG-1) )
     allocate( GRID_FDYG (JAG-1) )
-    allocate( GRID_CDXG (  IAG) )
-    allocate( GRID_CDYG (  JAG) )
+
     allocate( GRID_CBFXG(  IAG) )
     allocate( GRID_CBFYG(  JAG) )
     allocate( GRID_FBFXG(0:IAG) )
@@ -277,11 +283,6 @@ contains
     call FileRead( GRID_FX(:), bname, 'FX', 1, PRC_myrank )
     call FileRead( GRID_FY(:), bname, 'FY', 1, PRC_myrank )
 
-    call FileRead( GRID_CXG(:), bname, 'CXG', 1, PRC_myrank )
-    call FileRead( GRID_CYG(:), bname, 'CYG', 1, PRC_myrank )
-    call FileRead( GRID_FXG(:), bname, 'FXG', 1, PRC_myrank )
-    call FileRead( GRID_FYG(:), bname, 'FYG', 1, PRC_myrank )
-
     call FileRead( GRID_CDZ(:), bname, 'CDZ', 1, PRC_myrank )
     call FileRead( GRID_CDX(:), bname, 'CDX', 1, PRC_myrank )
     call FileRead( GRID_CDY(:), bname, 'CDY', 1, PRC_myrank )
@@ -302,6 +303,11 @@ contains
     call FileRead( GRID_FBFZ(:), bname, 'FBFZ', 1, PRC_myrank )
     call FileRead( GRID_FBFX(:), bname, 'FBFX', 1, PRC_myrank )
     call FileRead( GRID_FBFY(:), bname, 'FBFY', 1, PRC_myrank )
+
+    call FileRead( GRID_CXG(:), bname, 'CXG', 1, PRC_myrank )
+    call FileRead( GRID_CYG(:), bname, 'CYG', 1, PRC_myrank )
+    call FileRead( GRID_FXG(:), bname, 'FXG', 1, PRC_myrank )
+    call FileRead( GRID_FYG(:), bname, 'FYG', 1, PRC_myrank )
 
     return
   end subroutine GRID_read
