@@ -134,7 +134,7 @@ You need to edit the following file appropriately
 }
 
 
-\item{水平格子データベースの作成}
+\item{Creation of horizontal grid database}
 
 \verb|  $ mkdir scale-|{\version}\verb|/scale-gm/test/framework/mkhgrid/gl05rl01pe20|
 
@@ -303,7 +303,7 @@ execute the following comman to create model run script and post-process script.
    $ make jobshell
  \end{verbatim}
 
-This commands create ``\verb|run.sh|'' and ``\verb|ico2ll_netcdf.sh|.''
+This commands create ``\verb|run.sh|'' and ``\verb|ico2ll.sh|.''
 To run the model, execute the following command.
 
  \begin{verbatim}
@@ -325,10 +325,10 @@ DCMIP2016実験においては、scale-gmを実行したとき、
 To ease drawing and analysis of the outputs, you can convert 
 from the original icosahedral horizontal grid itno LatLon horizotnal grid.
 
-Before executing the post-process, you need to edit \verb|ico2ll_netcdf.sh|
+Before executing the post-process, you need to edit \verb|ico2ll.sh|
 according to your experimental setups.
  \begin{verbatim}
-   $ vi ico2ll_netcdf.sh
+   $ vi ico2ll.sh
 
    [at Line 22]
    # User Settings
@@ -341,12 +341,8 @@ according to your experimental setups.
 
  \noindent The following comman execute the post-process.
  \begin{verbatim}
-   sh ico2ll_netcdf.sh
+   sh ico2ll.sh
  \end{verbatim}
-
-% \begin{verbatim}
-%   $ bsub < ico2ll_netcdf.sh
-% \end{verbatim}
 
  \noindent The LatLon grid data created by ico2ll is in netcdf format. 
 In this case, the output file name is something like 
