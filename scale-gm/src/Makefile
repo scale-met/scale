@@ -143,8 +143,7 @@ OBJS =	\
 	mod_mkgrd.o          \
 	mod_mnginfo_light.o  \
 	mod_option.o         \
-	mod_netcdf.o 	     \
-	mod_write_tmp.o
+	mod_netcdf.o
 
 all:
 	$(MAKE) envlog
