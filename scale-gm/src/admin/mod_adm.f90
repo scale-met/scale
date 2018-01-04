@@ -14,6 +14,11 @@ module mod_adm
   !
   use scale_precision
   use scale_stdio
+  use scale_grid_index, only: &
+     kmax
+  use scale_atmos_phy_mp_common, only: &
+     SCALE_GM
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -63,6 +68,11 @@ module mod_adm
 
   ! dimension of the spacial vector
   integer,  public, parameter :: ADM_nxyz = 3
+
+  ! number of HALOs
+  integer, public, parameter :: KHALO  = 1  !< # of halo cells: z
+  integer, public            :: IHALO  = 1  !< # of halo cells: x
+  integer, public            :: JHALO  = 1  !< # of halo cells: y
 
 #ifdef FIXEDINDEX
   include "inc_index.h"
@@ -193,6 +203,22 @@ contains
        PRC_MPIstop, &
        PRC_myrank,  &
        PRC_nprocs
+    use scale_grid_index, only: & ! (K.Kikuchi) [add]
+       IA,   &
+       JA,   &
+       KA,   &
+       IS,   &
+       JS,   &
+       KS,   &
+       IE,   &
+       JE,   &
+       KE,   &
+       ISB,  &
+       IEB,  &
+       JSB,  &
+       JEB
+    use scale_gridtrans, only: &
+       J33G => GTRANS_J33G
     implicit none
 
     integer               :: glevel      = -1 !> grid division level
@@ -351,9 +377,23 @@ contains
        ADM_kmin = 1 + 1
        ADM_kmax = 1 + ADM_vlayer
     endif
+
+    IA           = nmax + IHALO * 2
+    JA           = nmax + JHALO * 2
+    KA           = vlayer + KHALO * 2
+    IS           = 1 + IHALO
+    IE           = nmax + IHALO
+    JS           = 1 + JHALO
+    JE           = nmax + JHALO
+    KS           = 1 + KHALO
+    KE           = vlayer + KHALO
+    ISB          = IS
+    IEB          = IE
+    JSB          = JS
+    JEB          = JE
+    J33G         = 1.0_RP
+    KMAX         = vlayer
 #endif
-
-
 
     call input_mnginfo( ADM_rgnmngfname )
 
@@ -381,6 +421,8 @@ contains
     ADM_l_me = 0
 
     call output_info
+
+    SCALE_GM = .true.
 
     return
   end subroutine ADM_setup

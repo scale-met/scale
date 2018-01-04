@@ -55,6 +55,7 @@ module mod_history_vars
   logical, private :: out_duvw     = .false.
   logical, private :: out_dtem     = .false.
   logical, private :: out_dq       = .false.
+  logical, private :: out_sst      = .false.
 
   real(RP), private, allocatable :: u_old  (:,:,:)
   real(RP), private, allocatable :: v_old  (:,:,:)
@@ -88,7 +89,8 @@ contains
     use mod_prgvar, only: &
        prgvar_get_withdiag
     use mod_bndcnd, only: &
-       BNDCND_all
+       BNDCND_all,  &
+       tem_sfc
     use mod_cnvvar, only: &
        cnvvar_vh2uv
     use mod_history, only: &
@@ -197,7 +199,7 @@ contains
            .OR. item_save(n) == 'ml_dw'       ) out_duvw     = .true.
        if(      item_save(n) == 'ml_dtem'     ) out_dtem     = .true.
        if(      item_save(n) == 'ml_dq'       ) out_dq       = .true.
-
+       if(      item_save(n) == 'sl_sst'      ) out_sst      = .true.
     enddo
 
     !--- get variables
@@ -282,6 +284,12 @@ contains
        qv_old(:,:,:) = q(:,:,:,I_QV)
     endif
 
+    if(out_sst) then
+       do l = 1, ADM_lall
+          call history_in( 'sl_sst', tmp2d(:,:) )
+       enddo
+    endif
+
     tmp2d(:,:) = 0.0_RP
     tmp3d(:,:) = 0.0_RP
 
@@ -293,18 +301,19 @@ contains
           call history_in( 'ml_af_fvz', tmp3d(:,:) )
           call history_in( 'ml_af_fe',  tmp3d(:,:) )
        enddo
-    case('DCMIP')
+    case default
        do l = 1, ADM_lall
           call history_in( 'ml_af_fvx', tmp3d(:,:) )
           call history_in( 'ml_af_fvy', tmp3d(:,:) )
           call history_in( 'ml_af_fvz', tmp3d(:,:) )
+          call history_in( 'ml_af_fw',  tmp3d(:,:) )
           call history_in( 'ml_af_fe',  tmp3d(:,:) )
+          call history_in( 'ml_af_frho',tmp3d(:,:) )
 
           do nq = 1, TRC_VMAX
              write(varname,'(A,I2.2)') 'ml_af_fq', nq
              call history_in( varname, tmp3d(:,:) )
           enddo
-
           call history_in( 'sl_af_prcp', tmp2d(:,:) )
        enddo
     end select

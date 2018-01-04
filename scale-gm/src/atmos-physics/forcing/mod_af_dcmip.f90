@@ -42,7 +42,7 @@ module mod_af_dcmip
   logical, private :: SM_LargeScaleCond   = .false. ! more option for SimpleMicrophysics
   logical, private :: SM_PBL_Bryan        = .false. ! more option for SimpleMicrophysics
   logical, private :: USE_ToyChemistry    = .false.
-  logical, private :: USE_HeldSuarez      = .false.
+  logical, public  :: USE_HeldSuarez      = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -55,6 +55,23 @@ contains
        NCHEM_MAX
     use mod_af_heldsuarez, only: &
        AF_heldsuarez_init
+    use mod_bndcnd, only: &
+       Tsfc => tem_sfc
+    use mod_adm, only: &
+       k0 => ADM_KNONE,      &
+       ADM_lall,             &
+       ADM_gall
+    use mod_grd, only: &
+       GRD_LAT,  &
+       GRD_s
+    use mod_gtl, only: &
+       GTL_clip_region_1layer
+    use scale_const, only:    &
+       omega => CONST_OHM,    &
+       pi    => CONST_PI,     &
+       rair  => CONST_Rdry,   &
+       a     => CONST_RADIUS, &
+       rh2o  => CONST_Rvap
     implicit none
 
     logical :: SET_RJ2012          = .false.
@@ -83,7 +100,18 @@ contains
        USE_ToyChemistry,    &
        USE_HeldSuarez
 
-    integer :: ierr
+    real(RP) :: dphi2
+    real(RP) :: q0 = 0.021_RP           ! Maximum specific humidity for baro test
+    real(RP) :: latw                    ! Halfwidth for  for baro test
+    real(RP) :: etav                    ! Auxiliary variable for baro test
+    real(RP) :: SST_TC   = 302.15_RP      ! Constant Value for SST
+    real(RP) :: u0       = 35.0_RP          ! Zonal wind constant for moist baro test
+    real(RP) :: eta0     = 0.252_RP         ! Center of jets (hybrid) for baro test
+    real(RP) :: T00      = 288.0_RP         ! Horizontal mean T at surface for moist baro test
+    real(RP) :: zvir  ! Constant for virtual temp. calc. =(rh2o/rair) - 1 is approx. 0.608  
+    real(RP) :: lat    (ADM_gall,ADM_lall)
+
+    integer :: ierr, ij, l
     !---------------------------------------------------------------------------
 
     !--- read parameters
@@ -225,6 +253,38 @@ contains
           call PRC_MPIstop
        endif
     endif
+!
+! Set Sea Surface Temperature (constant for tropical cyclone)
+! Tsurf needs to be dependent on latitude for moist baroclinic wave test
+! Tsurf needs to be constant for tropical cyclone test
+!
+    lat(:,:) = GRD_s(:,k0,:,GRD_LAT)
+    latw = 2.0_RP * pi / 9.0_RP 
+    etav = (1._RP-eta0) * 0.5_RP * pi
+    zvir   = (rh2o/rair) - 1._RP
+
+    do l=1, ADM_lall
+       if ( USE_HeldSuarez ) then ! Moist H-S Test
+          dphi2 = ( 26.D0 / 180.D0 * pi )**2
+          do ij = 1, ADM_gall
+             Tsfc(ij,l) = 29.D0 * exp( -0.5D0 * lat(ij,l) * lat(ij,l) / dphi2 ) + 271.D0
+          enddo
+       else
+          if ( SM_Latdepend_SST ) then ! Moist Baroclinic Wave Test
+             do ij=1, ADM_gall
+                Tsfc(ij,l) = (T00 + pi*u0/rair * 1.5_RP * sin(etav) * (cos(etav))**0.5_RP *  &
+        ((-2._RP*(sin(lat(ij,l)))**6 * ((cos(lat(ij,l)))**2 + 1._RP/3._RP) + 10._RP/63._RP) * &
+                     u0 * (cos(etav))**1.5_RP  +  &
+  (8._RP/5._RP*(cos(lat(ij,l)))**3 * ((sin(lat(ij,l)))**2 + 2._RP/3._RP) - pi/4._RP)*a*omega*0.5_RP ))/ &
+                    (1._RP+zvir*q0*exp(-(lat(ij,l)/latw)**4))
+             end do
+          else ! Tropical Cyclone Test
+             do ij=1, ADM_gall
+                Tsfc(ij,l) = SST_TC
+             end do
+          end if
+       endif
+    enddo
 
     return
   end subroutine af_dcmip_init
@@ -245,6 +305,7 @@ contains
        q,       &
        ein,     &
        pre_sfc, &
+       tem_sfc, &
        fvx,     &
        fvy,     &
        fvz,     &
@@ -300,6 +361,7 @@ contains
     real(RP), intent(in)  :: q      (ijdim,kdim,TRC_VMAX)
     real(RP), intent(in)  :: ein    (ijdim,kdim)
     real(RP), intent(in)  :: pre_sfc(ijdim)
+    real(RP), intent(in)  :: tem_sfc(ijdim)
     real(RP), intent(out) :: fvx    (ijdim,kdim)
     real(RP), intent(out) :: fvy    (ijdim,kdim)
     real(RP), intent(out) :: fvz    (ijdim,kdim)
@@ -336,7 +398,6 @@ contains
     real(RP) :: rpdel(ijdim,vlayer)   ! Reciprocal of layer thickness (1/Pa)
     real(RP) :: ps   (ijdim)          ! surface pressure output [dummy]
     real(RP) :: precip2 (ijdim)
-    integer  :: test
 
     ! for toy-chemistory
     real(DP) :: lat_deg, lon_deg
@@ -408,11 +469,6 @@ contains
     endif
 
     if ( USE_SimpleMicrophys ) then
-       if ( SM_Latdepend_SST ) then
-          test = 1
-       else
-          test = 0
-       endif
 
        do k = 1, vlayer
           kk = kmax - k + 1 ! reverse order
@@ -447,6 +503,7 @@ contains
                             vlayer,            & ! [IN]
                             dt,                & ! [IN]
                             lat   (:),         & ! [IN]
+                            tem_sfc(:),        & ! [IN]
                             t     (:,:),       & ! [INOUT]
                             qvv   (:,:),       & ! [INOUT]
                             u     (:,:),       & ! [INOUT]
@@ -457,7 +514,6 @@ contains
                             rpdel (:,:),       & ! [INOUT] but not changed
                             ps    (:),         & ! [INOUT] but not changed
                             precip2(:),        & ! [OUT]
-                            test,              & ! [IN]
                             SM_LargeScaleCond, & ! [IN]
                             SM_PBL_Bryan,      & ! [IN]
                             USE_HeldSuarez     ) ! [IN]

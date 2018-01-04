@@ -70,6 +70,8 @@ contains
     use scale_atmos_grid_cartesC_index, only: &
        I_XYZ, &
        I_XYW
+    use scale_atmos_phy_mp_common, only: &
+       SCALE_GM
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
@@ -85,8 +87,14 @@ contains
 
     real(RP) :: momws
 
-    integer :: k, i, j
+    integer :: k, i, j, ijadd
     !---------------------------------------------------------------------------
+
+    if( SCALE_GM ) then ! staggered or not
+       ijadd = 0
+    else
+       ijadd = 1
+    endif
 
     ! Note: W(KS,:,:) is filled because the values at i=1 or j=1 are not calculated below.
 !OCL XFILL
@@ -102,19 +110,21 @@ contains
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j = max(2,JS), JE
     do i = max(2,IS), IE
-!       W(KS,i,j) = 0.5_RP * ( MOMZ(KS,i,j) ) / DENS(KS,i,j)
-
-       ! at KS+1/2
-       momws = MOMZ(KS,i,j) &
-             + ( J13G(KS,i,j,I_XYW) * ( MOMX(KS,i,j) + MOMX(KS,i-1,j) + MOMX(KS+1,i,j) + MOMX(KS+1,i-1,j) ) &
+       if( .NOT. SCALE_GM ) then
+          ! at KS+1/2
+          momws = MOMZ(KS,i,j) &
+               + ( J13G(KS,i,j,I_XYW) * ( MOMX(KS,i,j) + MOMX(KS,i-1,j) + MOMX(KS+1,i,j) + MOMX(KS+1,i-1,j) ) &
                + J23G(KS,i,j,I_XYW) * ( MOMY(KS,i,j) + MOMY(KS,i,j-1) + MOMY(KS+1,i,j) + MOMY(KS+1,i,j-1) ) ) &
                * 0.25_RP / GSQRT(KS,i,j,I_XYW)
-       ! at KS
-       ! momws at the surface is assumed to be zero
-       W(KS,i,j) = momws * 0.5_RP &
-                 - ( J13G(KS,i,j,I_XYZ) * ( MOMX(KS,i,j) + MOMX(KS,i-1,j) ) &
-                   + J23G(KS,i,j,I_XYZ) * ( MOMY(KS,i,j) + MOMY(KS,i,j-1) ) ) &
-                   * 0.5_RP / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+          ! at KS
+          ! momws at the surface is assumed to be zero
+          W(KS,i,j) = momws * 0.5_RP &
+               - ( J13G(KS,i,j,I_XYZ) * ( MOMX(KS,i,j) + MOMX(KS,i-1,j) ) &
+               + J23G(KS,i,j,I_XYZ) * ( MOMY(KS,i,j) + MOMY(KS,i,j-1) ) ) &
+               * 0.5_RP / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+       else
+          W(KS,i,j) = 0.5_RP * ( MOMZ(KS,i,j) ) / DENS(KS,i,j)          
+       endif
     enddo
     enddo
 !OCL XFILL
@@ -130,7 +140,7 @@ contains
     do j = JS, JE
     do i = max(2,IS), IE
     do k = KS, KE
-       U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+       U(k,i,j) = 0.5_RP * ( MOMX(k,i-ijadd,j)+MOMX(k,i,j) ) / DENS(k,i,j)
     enddo
     enddo
     enddo
@@ -147,7 +157,7 @@ contains
     do j = max(2,JS), JE
     do i = IS, IE
     do k = KS, KE
-       V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
+       V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-ijadd)+MOMY(k,i,j) ) / DENS(k,i,j)
     enddo
     enddo
     enddo
@@ -171,12 +181,14 @@ contains
     enddo
     enddo
 
-    call COMM_vars8( W(:,:,:), 1 )
-    call COMM_vars8( U(:,:,:), 2 )
-    call COMM_vars8( V(:,:,:), 3 )
-    call COMM_wait ( W(:,:,:), 1, .false. )
-    call COMM_wait ( U(:,:,:), 2, .false. )
-    call COMM_wait ( V(:,:,:), 3, .false. )
+    if( .NOT. SCALE_GM ) then
+       call COMM_vars8( W(:,:,:), 1 )
+       call COMM_vars8( U(:,:,:), 2 )
+       call COMM_vars8( V(:,:,:), 3 )
+       call COMM_wait ( W(:,:,:), 1, .false. )
+       call COMM_wait ( U(:,:,:), 2, .false. )
+       call COMM_wait ( V(:,:,:), 3, .false. )
+    endif
 
     return
   end subroutine ATMOS_DIAGNOSTIC_CARTESC_get_vel

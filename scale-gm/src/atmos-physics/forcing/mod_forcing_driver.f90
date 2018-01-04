@@ -113,7 +113,9 @@ contains
        ADM_kall,    &
        ADM_lall,    &
        ADM_kmin,    &
-       ADM_kmax
+       ADM_kmax,    &
+       ADM_iall,    &
+       ADM_jall
     use mod_grd, only: &
        GRD_LAT,  &
        GRD_LON,  &
@@ -148,14 +150,35 @@ contains
     use mod_prgvar, only: &
        prgvar_get_in_withdiag, &
        prgvar_set_in
+    use mod_atmos_phy_sf_vars, only: &
+       SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP
     use mod_bndcnd, only: &
-       BNDCND_thermo
+       BNDCND_thermo, &
+       TEM_sfc
     use mod_history, only: &
        history_in
     use mod_af_heldsuarez, only: &
        AF_heldsuarez
     use mod_af_dcmip, only: &
        AF_dcmip
+    use mod_af_atmos_phy, only: &
+       AF_ATMOS_phy
+    use mod_grd_conversion, only: &
+       grd_gm2rm
+    use scale_grid_real, only: &
+       real_cz_rmgrid=> real_cz,    &
+       real_fz_rmgrid=> real_fz,    &
+       real_Z1,                     &
+       real_lon_rmgrid => real_lon, &
+       real_lat_rmgrid => real_lat
+    use mod_runconf, only: &
+       ATMOS_PHY_TYPE
+    use mod_grd_conversion, only: &
+       grd_gm2rm
+    use scale_grid_index, only: &
+       IA,      &
+       JA,      &
+       KS
     implicit none
 
     real(RP) :: rhog  (ADM_gall_in,ADM_kall,ADM_lall)
@@ -184,9 +207,9 @@ contains
     real(RP) :: fw (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP) :: fe (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP) :: fq (ADM_gall_in,ADM_kall,ADM_lall,TRC_VMAX)
+    real(RP) :: frho(ADM_gall_in,ADM_kall,ADM_lall)
 
     real(RP) :: tmp (ADM_gall_in,ADM_kall,ADM_lall)
-
     real(RP) :: precip(ADM_gall_in,ADM_KNONE,ADM_lall)
 
     ! geometry, coordinate
@@ -204,12 +227,18 @@ contains
     real(RP) :: jx     (ADM_gall_in,ADM_lall)
     real(RP) :: jy     (ADM_gall_in,ADM_lall)
     real(RP) :: jz     (ADM_gall_in,ADM_lall)
+    real(RP) :: real_lon  (ADM_gall_in)
+    real(RP) :: real_lat  (ADM_gall_in)
+    real(RP) :: Tsfc   (ADM_gall_in,ADM_knone,ADM_lall)
 
     real(RP) :: frhogq(ADM_gall_in,ADM_kall,ADM_lall)
+    real(RP) :: real_cz(ADM_gall_in,ADM_kall)
+    real(RP) :: real_fz(ADM_gall_in,0:ADM_kall)
+    real(RP) :: z_srf_rmgrid(IA,JA)
 
     character(len=H_SHORT) :: varname
 
-    integer :: l, nq, k0
+    integer :: i, j, k, l, nq, k0, ij, ij2
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('__Forcing',1)
@@ -233,22 +262,24 @@ contains
     call GTL_clip_region_1layer(GMTR_p(:,k0,:,GMTR_p_JY),jy)
     call GTL_clip_region_1layer(GMTR_p(:,k0,:,GMTR_p_JZ),jz)
 
+    call GTL_clip_region_1layer(tem_sfc(:,:) ,Tsfc  )
+
     !--- get the prognostic and diagnostic variables
-    call prgvar_get_in_withdiag( rhog,   & ! [IN]
-                                 rhogvx, & ! [IN]
-                                 rhogvy, & ! [IN]
-                                 rhogvz, & ! [IN]
-                                 rhogw,  & ! [IN]
-                                 rhoge,  & ! [IN]
-                                 rhogq,  & ! [IN]
-                                 rho,    & ! [IN]
-                                 pre,    & ! [IN]
-                                 tem,    & ! [IN]
-                                 vx,     & ! [IN]
-                                 vy,     & ! [IN]
-                                 vz,     & ! [IN]
-                                 w,      & ! [IN]
-                                 q       ) ! [IN]
+    call prgvar_get_in_withdiag( rhog,   & ! [OUT]
+                                 rhogvx, & ! [OUT]
+                                 rhogvy, & ! [OUT]
+                                 rhogvz, & ! [OUT]
+                                 rhogw,  & ! [OUT]
+                                 rhoge,  & ! [OUT]
+                                 rhogq,  & ! [OUT]
+                                 rho,    & ! [OUT]
+                                 pre,    & ! [OUT]
+                                 tem,    & ! [OUT]
+                                 vx,     & ! [OUT]
+                                 vy,     & ! [OUT]
+                                 vz,     & ! [OUT]
+                                 w,      & ! [OUT]
+                                 q       ) ! [OUT]
 
     ein(:,:,:) = rhoge(:,:,:) / rhog(:,:,:)
 
@@ -283,8 +314,7 @@ contains
     endif
 
     ! forcing
-    select case(AF_TYPE)
-    case('HELD-SUAREZ')
+    if ( AF_TYPE=='HELD-SUAREZ' ) then
 
        do l = 1, ADM_lall
           call AF_heldsuarez( ADM_gall_in,  & ! [IN]
@@ -306,8 +336,14 @@ contains
        enddo
        fw(:,:,:)   = 0.0_RP
        fq(:,:,:,:) = 0.0_RP
+       frho(:,:,:) = 0.0_RP
+    endif
 
-    case('DCMIP')
+    select case( ATMOS_PHY_TYPE )
+    case( 'SIMPLE' )
+
+       fw (:,:,:)   = 0.0_RP
+       frho(:,:,:)  = 0.0_RP
 
        do l = 1, ADM_lall
           call AF_dcmip( ADM_gall_in,      & ! [IN]
@@ -324,6 +360,7 @@ contains
                          q      (:,:,l,:), & ! [IN]
                          ein    (:,:,l),   & ! [IN]
                          pre_srf(:,l),     & ! [IN]
+                         Tsfc   (:,k0,l),  & ! [IN]
                          fvx    (:,:,l),   & ! [OUT]
                          fvy    (:,:,l),   & ! [OUT]
                          fvz    (:,:,l),   & ! [OUT]
@@ -338,10 +375,12 @@ contains
                          jz     (:,l),     & ! [IN]
                          TIME_DTL          ) ! [IN]
 
-          call history_in( 'ml_af_fvx', fvx(:,:,l) )
-          call history_in( 'ml_af_fvy', fvy(:,:,l) )
-          call history_in( 'ml_af_fvz', fvz(:,:,l) )
-          call history_in( 'ml_af_fe',  fe (:,:,l) )
+          call history_in( 'ml_af_fvx', fvx (:,:,l) )
+          call history_in( 'ml_af_fvy', fvy (:,:,l) )
+          call history_in( 'ml_af_fvz', fvz (:,:,l) )
+          call history_in( 'ml_af_fw',  fw  (:,:,l) )
+          call history_in( 'ml_af_fe',  fe  (:,:,l) )
+          call history_in( 'ml_af_frho',  frho(:,:,l) )
 
           do nq = 1, TRC_VMAX
              write(varname,'(A,I2.2)') 'ml_af_fq', nq
@@ -351,10 +390,10 @@ contains
 
           call history_in( 'sl_af_prcp', precip(:,:,l) )
        enddo
-       fw (:,:,:)   = 0.0_RP
 
-    case default
+    case ('NONE')
 
+       frho(:,:,:)  = 0.0_RP
        fvx(:,:,:)   = 0.0_RP
        fvy(:,:,:)   = 0.0_RP
        fvz(:,:,:)   = 0.0_RP
@@ -362,7 +401,74 @@ contains
        fe (:,:,:)   = 0.0_RP
        fq (:,:,:,:) = 0.0_RP
 
+    case default
+
+       do l = 1, ADM_lall
+          ij  = 1
+          ij2 = 1
+          real_fz(:,0)=0.0_RP
+          do j=1, ADM_jall
+          do i=1, ADM_iall
+             if( i/=1 .and. j/=1 ) then
+                real_cz(ij2,:) = GRD_vz(ij,:,l,GRD_Z)
+                REAL_LON(ij2)  = GRD_s (ij,1,l,GRD_LON)
+                REAL_LAT(ij2)  = GRD_s (ij,1,l,GRD_LAT)
+                do k=1, ADM_kall-1
+                   real_fz(ij2,k)=grd_vz(ij,k+1,l,GRD_ZH)
+                enddo
+                real_fz(ij2,ADM_kall)=real_fz(ij2,ADM_kall-1) &
+                     + ( real_fz(ij2,ADM_kall-1)-real_fz(ij2,ADM_kall-2) )
+                ij2 = ij2 + 1
+             end if
+             ij = ij + 1
+          enddo
+          enddo
+
+          call grd_gm2rm( real_cz, real_cz_rmgrid, ADM_kall )
+          call grd_gm2rm( real_fz, real_fz_rmgrid(0:ADM_kall,:,:), ADM_kall+1 )
+          call grd_gm2rm( z_srf(:,l), z_srf_rmgrid, 1 )
+          real_z1(:,:) = real_cz_rmgrid(ks,:,:) - z_srf_rmgrid(:,:)
+          call grd_gm2rm( real_lon, real_lon_rmgrid, 1 )
+          call grd_gm2rm( real_lat, real_lat_rmgrid, 1 )
+          call grd_gm2rm( Tsfc(:,k0,l), SFC_temp, 1 )
+
+          call AF_ATMOS_PHY( ADM_gall_in,      & ! [IN]
+                             lat    (:,l),     & ! [IN]
+                             lon    (:,l),     & ! [IN]
+                             z      (:,:,l),   & ! [IN]
+                             zh     (:,:,l),   & ! [IN]
+                             rho    (:,:,l),   & ! [IN]
+                             pre    (:,:,l),   & ! [IN]
+                             tem    (:,:,l),   & ! [IN]
+                             vx     (:,:,l),   & ! [IN]
+                             vy     (:,:,l),   & ! [IN]
+                             vz     (:,:,l),   & ! [IN]
+                             w      (:,:,l),   & ! [IN]
+                             q      (:,:,l,:), & ! [IN]
+                             ein    (:,:,l),   & ! [IN]
+                             pre_srf(:,l),     & ! [IN]
+                             fvx    (:,:,l),   & ! [OUT]
+                             fvy    (:,:,l),   & ! [OUT]
+                             fvz    (:,:,l),   & ! [OUT]
+                             fw     (:,:,l),   & ! [OUT]
+                             fe     (:,:,l),   & ! [OUT]
+                             fq     (:,:,l,:), & ! [OUT]
+                             frho   (:,:,l),   & ! [OUT]
+                             precip (:,k0,l),  & ! [OUT]
+                             ix     (:,l),     & ! [IN]
+                             iy     (:,l),     & ! [IN]
+                             iz     (:,l),     & ! [IN]
+                             jx     (:,l),     & ! [IN]
+                             jy     (:,l),     & ! [IN]
+                             jz     (:,l),     & ! [IN]
+                             TIME_DTL          ) ! [IN]
+       enddo
+          
     end select
+
+    do l=1, ADM_lall
+       call history_in( 'sl_sst', Tsfc(:,:,l) )
+    enddo
 
     rhogvx(:,:,:) = rhogvx(:,:,:) + TIME_DTL * fvx(:,:,:) * rho(:,:,:) * GSGAM2 (:,:,:)
     rhogvy(:,:,:) = rhogvy(:,:,:) + TIME_DTL * fvy(:,:,:) * rho(:,:,:) * GSGAM2 (:,:,:)
@@ -370,9 +476,12 @@ contains
     rhogw (:,:,:) = rhogw (:,:,:) + TIME_DTL * fw (:,:,:) * rho(:,:,:) * GSGAM2H(:,:,:)
     rhoge (:,:,:) = rhoge (:,:,:) + TIME_DTL * fe (:,:,:) * rho(:,:,:) * GSGAM2 (:,:,:)
 
-    do nq = 1, TRC_VMAX
-       frhogq(:,:,:) = fq(:,:,:,nq) * rho(:,:,:) * GSGAM2(:,:,:)
+    if ( UPDATE_TOT_DENS ) rhog (:,:,:) = rhog (:,:,:) + TIME_DTL * frho(:,:,:) * GSGAM2 (:,:,:)
 
+    do nq = 1, TRC_VMAX
+       frhogq(:,:,:) = fq(:,:,:,nq) * rho(:,:,:) * GSGAM2(:,:,:) &
+            + q(:,:,:,nq) * frho(:,:,:) * GSGAM2(:,:,:)
+          
        if ( NEGATIVE_FIXER ) then
           tmp   (:,:,:)    = max( rhogq(:,:,:,nq) + TIME_DTL * frhogq(:,:,:), 0.0_DP )
           frhogq(:,:,:)    = ( tmp(:,:,:) - rhogq(:,:,:,nq) ) / TIME_DTL
@@ -402,7 +511,7 @@ contains
 
     return
   end subroutine forcing_step
-
+  
   !-----------------------------------------------------------------------------
   ! [add; original by H.Miura] 20130613 R.Yoshida
   subroutine forcing_update( &

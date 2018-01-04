@@ -48,9 +48,14 @@ VPATH = $(BUILD_DIR):           \
         atmos-physics/forcing:  \
         atmos-physics/share:    \
         common:                 \
+	coupler: 		\
         io:                     \
+	land:			\
+        ocean:                  \
         preprocess:             \
-        tool:
+        tool:			\
+	urban:
+
 
 VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(VERSION),)
@@ -76,10 +81,16 @@ OBJS =	\
 	baroclinic_wave_test.o                   \
 	supercell_test.o                         \
 	tropical_cyclone_test.o                  \
-	simple_physics_v6.o                      \
+	simple_physics_v6_1.o                    \
 	kessler.o                                \
 	Terminator.o                             \
 	mod_chemvar.o        \
+	mod_ocean_admin.o   \
+	mod_land_admin.o   \
+	mod_urban_admin.o   \
+	mod_atmos_admin.o    \
+	mod_cpl_vars.o      \
+	mod_cpl_admin.o     \
 	mod_runconf.o        \
 	mod_gtl.o            \
 	mod_gm_statistics.o  \
@@ -90,31 +101,50 @@ OBJS =	\
 	mod_src.o            \
 	mod_ideal_init.o     \
 	mod_prgvar.o         \
-	mod_history.o        \
 	mod_bsstate.o        \
+	mod_history.o        \
 	mod_history_vars.o   \
 	mod_embudget.o       \
 	mod_extdata.o        \
 	mod_saturation.o     \
 	mod_af_heldsuarez.o  \
-	mod_af_dcmip.o       \
+	mod_grd_conversion.o \
+	mod_atmos_vars.o     \
+	mod_atmos_dyn_vars.o \
+	mod_atmos_phy_mp_vars.o     \
+	mod_atmos_phy_ae_vars.o     \
+	mod_atmos_phy_ch_vars.o     \
+	mod_atmos_phy_rd_vars.o     \
+	mod_atmos_phy_sf_vars.o     \
+	mod_atmos_phy_tb_vars.o     \
+	mod_atmos_phy_cp_vars.o     \
+	mod_atmos_phy_bl_vars.o     \
+	mod_atmos_phy_mp_driver.o   \
+	mod_mp_vars.o	     \
 	mod_af_trcadv.o      \
-	mod_forcing_driver.o \
 	mod_oprt3d.o         \
 	mod_numfilter.o      \
 	mod_vi.o             \
 	mod_src_tracer.o     \
 	mod_nudge.o          \
+	mod_gm_topography.o  \
+	mod_atmos_phy_bl_driver.o \
+	mod_atmos_phy_sf_driver.o \
+	mod_atmos_phy_rd_driver.o \
+	mod_atmos_phy_ae_driver.o \
+	mod_atmos_surface.o     \
 	mod_dynamics.o       \
+	mod_af_dcmip.o       \
+	mod_af_atmos_phy.o   \
+	mod_forcing_driver.o \
 	mod_gm_driver.o      \
 	orgico.o             \
 	mod_latlon.o         \
 	mod_mkgrd.o          \
 	mod_mnginfo_light.o  \
 	mod_option.o         \
-	mod_netcdf.o
-
-
+	mod_netcdf.o 	     \
+	mod_write_tmp.o
 
 all:
 	$(MAKE) envlog

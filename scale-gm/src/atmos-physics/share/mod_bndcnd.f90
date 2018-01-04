@@ -14,6 +14,10 @@ module mod_bndcnd
   !
   use scale_precision
   use scale_stdio
+  use mod_adm
+!  use mod_adm, only: &
+!     ADM_gall_in, &
+!     ADM_lall
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -31,6 +35,8 @@ module mod_bndcnd
   !
   !++ Public parameters & variables
   !
+  real(RP), allocatable, public :: tem_sfc    (:,:)
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedures
@@ -144,6 +150,8 @@ contains
        write(*,*) 'xxx Invalid BND_TYPE_M_BOTTOM. STOP.'
        call PRC_MPIstop
     endif
+
+    allocate( tem_sfc(ADM_gall,ADM_lall) )
 
     return
   end subroutine BNDCND_setup

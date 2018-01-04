@@ -29,6 +29,10 @@ module mod_grd
      ADM_gall,    &
      ADM_gall_pl, &
      ADM_kall
+  use scale_grid_index, only: &
+     KS
+  use scale_grid, only: &
+     GRID_CDZ
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -224,6 +228,19 @@ contains
        ADM_kmax
     use mod_comm, only:  &
        COMM_data_transfer
+    use scale_grid, only: &
+       GRID_CZ,  &
+       GRID_FZ
+    use scale_grid_real, only: &
+       real_CZ,  &
+       real_FZ,  &
+       real_LON, &
+       real_LAT, &
+       real_Z1
+    use scale_grid_index, only: &
+       IA,  &
+       JA,  &
+       KA
     implicit none
 
     namelist / GRDPARAM / &
@@ -241,11 +258,12 @@ contains
        triangle_size
 
     real(RP) :: htop
+    real(RP) :: dz
     integer  :: nstart, nend
     integer  :: kflat
 
     integer  :: ierr
-    integer  :: n, k, l, k0
+    integer  :: n, k, l, k0, i, j
     !---------------------------------------------------------------------------
 
     k0 = ADM_KNONE
@@ -311,8 +329,6 @@ contains
     ! calc position of cell arc
     call GRD_makearc
 
-
-
     !---< surface height >---
 #ifndef FIXEDINDEX
     allocate( GRD_zs   (ADM_gall,   k0,ADM_lall,   GRD_ZSFC) )
@@ -351,6 +367,7 @@ contains
           GRD_dgz(k) = GRD_gzh(k+1) - GRD_gzh(k)
        enddo
        GRD_dgz(ADM_kmax+1) = GRD_dgz(ADM_kmax)
+       GRID_CDZ = GRD_DGZ
 
        ! calculation of grid intervals ( cell wall )
        do k = ADM_kmin, ADM_kmax+1
@@ -362,7 +379,7 @@ contains
           GRD_rdgz (k) = 1.0_RP / grd_dgz (k)
           GRD_rdgzh(k) = 1.0_RP / grd_dgzh(k)
        enddo
-
+       
        ! hight top
        GRD_htop = GRD_gzh(ADM_kmax+1) - GRD_gzh(ADM_kmin)
 
@@ -489,6 +506,28 @@ contains
 
        ! fill HALO
        call COMM_data_transfer( GRD_vz, GRD_vz_pl )
+
+       ! setup RM-based vertical grid
+       allocate( GRID_FZ(0:ADM_kall) )
+       allocate( GRID_CZ(  ADM_kall) )
+       allocate( REAL_FZ(0:KA,IA,JA) )
+       allocate( REAL_CZ(  KA,IA,JA) )
+
+       GRID_FZ(0:ADM_kall-1) = GRD_vz(1,1:ADM_kall,1,GRD_ZH)
+       DZ = GRD_vz(1,ADM_kall,1,GRD_ZH) - GRD_vz(1,ADM_kall-1,1,GRD_ZH)
+       GRID_FZ(ADM_kall) = GRID_FZ(ADM_kall-1) + DZ
+       GRID_CZ(:) = GRD_vz(1,:,1,GRD_Z)
+
+       do j=1, JA
+       do i=1, IA
+          REAL_FZ(:,i,j) = GRID_FZ(:)
+          REAL_CZ(:,i,j) = GRID_CZ(:)
+       enddo
+       enddo
+
+       allocate( REAL_LON(     IA,JA) )
+       allocate( REAL_LAT(     IA,JA) )
+       allocate( REAL_Z1 (     IA,JA) )
     endif
 
     !--- output information about grid.

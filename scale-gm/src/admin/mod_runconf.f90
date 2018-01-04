@@ -14,6 +14,12 @@ module mod_runconf
   !
   use scale_precision
   use scale_stdio
+  use mod_atmos_admin, only: &
+     ATMOS_PHY_CP_TYPE, &
+     ATMOS_PHY_MP_TYPE, &
+     ATMOS_PHY_RD_TYPE, &
+     ATMOS_PHY_SF_TYPE, &
+     ATMOS_PHY_BL_TYPE
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -41,12 +47,8 @@ module mod_runconf
 
   !--- Physics
   character(len=H_SHORT), public :: RAIN_TYPE          = 'DRY'
+  character(len=H_SHORT), public :: ATMOS_PHY_TYPE               = 'NONE'
   logical,                public :: opt_2moment_water  = .false.
-
-  character(len=H_SHORT), public :: CP_TYPE            = 'NONE'
-  character(len=H_SHORT), public :: MP_TYPE            = 'NONE'
-  character(len=H_SHORT), public :: RD_TYPE            = 'NONE'
-  character(len=H_SHORT), public :: SF_TYPE            = 'DEFAULT'
   character(len=H_SHORT), public :: ROUGHNESS_SEA_TYPE = 'DEFAULT'
   character(len=H_SHORT), public :: OCEAN_TYPE         = 'NONE'
   character(len=H_SHORT), public :: RIV_TYPE           = 'NONE'
@@ -56,6 +58,7 @@ module mod_runconf
   character(len=H_SHORT), public :: CHEM_TYPE          = 'NONE'
   character(len=H_SHORT), public :: GWD_TYPE           = 'NONE'
   character(len=H_SHORT), public :: AF_TYPE            = 'NONE'
+  logical,                public :: SW_phy_bl          = .false.
 
   character(len=H_SHORT), public :: OUT_FILE_TYPE      = 'DEFAULT'
 
@@ -162,6 +165,25 @@ contains
   subroutine RUNCONF_setup
     use scale_process, only: &
        PRC_MPIstop
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE, &
+       ATMOS_PHY_AE_TYPE, &
+       ATMOS_PHY_CH_TYPE, &
+       ATMOS_PHY_RD_TYPE, &
+       ATMOS_PHY_SF_TYPE, &
+       ATMOS_PHY_TB_TYPE, &
+       ATMOS_PHY_BL_TYPE, &
+       ATMOS_PHY_CP_TYPE, &
+       ATMOS_sw_phy_mp,   &
+       ATMOS_sw_phy_ae,   &
+       ATMOS_sw_phy_ch,   &
+       ATMOS_sw_phy_rd,   &
+       ATMOS_sw_phy_sf,   &
+       ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_bl,   &
+       ATMOS_sw_phy_cp
+    use mod_cpl_admin, only: &
+       CPL_sw
     implicit none
 
     namelist /RUNCONFPARAM/ &
@@ -173,10 +195,12 @@ contains
        FLAG_NUDGING,       &
        THUBURN_LIM,        & ! R.Yoshida 13/06/13 [add]
        RAIN_TYPE,          &
-       CP_TYPE,            &
-       MP_TYPE,            &
-       RD_TYPE,            &
-       SF_TYPE,            &
+       ATMOS_PHY_TYPE,     & 
+       ATMOS_PHY_CP_TYPE,            &
+       ATMOS_PHY_MP_TYPE,            &
+       ATMOS_PHY_RD_TYPE,            &
+       ATMOS_PHY_SF_TYPE,            &
+       ATMOS_PHY_BL_TYPE,            &
        ROUGHNESS_SEA_TYPE, &
        LAND_TYPE,          &
        OCEAN_TYPE,         &
@@ -203,11 +227,79 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=RUNCONFPARAM)
 
+
+    ! Setting up swtiching parameters 
+    if ( ATMOS_PHY_MP_TYPE /= 'OFF' .AND. ATMOS_PHY_MP_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Cloud Microphysics   : ON, ', trim(ATMOS_PHY_MP_TYPE)
+       ATMOS_sw_phy_mp = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Cloud Microphysics   : OFF'
+       ATMOS_sw_phy_mp = .false.
+    endif
+
+    if ( ATMOS_PHY_AE_TYPE /= 'OFF' .AND. ATMOS_PHY_AE_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Aerosol Microphysics : ON, ', trim(ATMOS_PHY_AE_TYPE)
+       ATMOS_sw_phy_ae = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Aerosol Microphysics : OFF'
+       ATMOS_sw_phy_ae = .false.
+    endif
+
+    if ( ATMOS_PHY_CH_TYPE /= 'OFF' .AND. ATMOS_PHY_CH_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Chemistry            : ON, ', trim(ATMOS_PHY_CH_TYPE)
+       ATMOS_sw_phy_ch = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Chemistry            : OFF'
+       ATMOS_sw_phy_ch = .false.
+    endif
+
+    if ( ATMOS_PHY_RD_TYPE /= 'OFF' .AND. ATMOS_PHY_RD_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Radiative transfer   : ON, ', trim(ATMOS_PHY_RD_TYPE)
+       ATMOS_sw_phy_rd = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Radiative transfer   : OFF'
+       ATMOS_sw_phy_rd = .false.
+    endif
+
+    if ( ATMOS_PHY_SF_TYPE /= 'OFF' .AND. ATMOS_PHY_SF_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Surface Flux         : ON, ', trim(ATMOS_PHY_SF_TYPE)
+       ATMOS_sw_phy_sf = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Surface Flux         : OFF'
+       ATMOS_sw_phy_sf = .false.
+    endif
+
+    if ( ATMOS_PHY_TB_TYPE /= 'OFF' .AND. ATMOS_PHY_TB_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Sub-grid Turbulence  : ON, ', trim(ATMOS_PHY_TB_TYPE)
+       ATMOS_sw_phy_tb = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Sub-grid Turbulence  : OFF'
+       ATMOS_sw_phy_tb = .false.
+    endif
+
+    if ( ATMOS_PHY_BL_TYPE /= 'OFF' .AND. ATMOS_PHY_BL_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** + PBL Turbulence       : ON, ', trim(ATMOS_PHY_BL_TYPE)
+       ATMOS_sw_phy_bl = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** + PBL Turbulence       : OFF'
+       ATMOS_sw_phy_bl = .false.
+    endif
+
+    if ( ATMOS_PHY_CP_TYPE /= 'OFF' .AND. ATMOS_PHY_CP_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Convection Param.    : ON, ', trim(ATMOS_PHY_CP_TYPE)
+       ATMOS_sw_phy_cp = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Convection Param.    : OFF'
+       ATMOS_sw_phy_cp = .false.
+    endif
+
     call RUNCONF_component_setup
 
     call RUNCONF_tracer_setup
 
     call RUNCONF_thermodyn_setup
+
+    CPL_sw = .false.
 
     return
   end subroutine RUNCONF_setup
@@ -237,6 +329,8 @@ contains
        CHEM_TRC_vmax, &
        CHEM_TRC_name, &
        CHEM_TRC_desc
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE
     implicit none
 
     integer :: v, i
@@ -246,19 +340,19 @@ contains
     TRC_vmax = 0
 
     !--- Mass tracer for Water
-    if    ( RAIN_TYPE == 'DRY' ) then
+    if    ( ATMOS_PHY_MP_TYPE == 'DRY' ) then
        NQW_MAX = 1
        I_QV    = TRC_vmax + 1
-    elseif( RAIN_TYPE == 'CLOUD_PARAM' ) then
+    elseif( ATMOS_PHY_MP_TYPE == 'CLOUD_PARAM' ) then
        NQW_MAX = 2
        I_QV    = TRC_vmax + 1
        I_QC    = TRC_vmax + 2
-    elseif( RAIN_TYPE == 'WARM' ) then
+    elseif( ATMOS_PHY_MP_TYPE == 'KESSLER' ) then
        NQW_MAX = 3
        I_QV    = TRC_vmax + 1
        I_QC    = TRC_vmax + 2
        I_QR    = TRC_vmax + 3
-    elseif( RAIN_TYPE == 'COLD' ) then
+    elseif( ATMOS_PHY_MP_TYPE == 'TOMITA08' ) then
        NQW_MAX = 6
        I_QV    = TRC_vmax + 1
        I_QC    = TRC_vmax + 2
@@ -267,7 +361,7 @@ contains
        I_QS    = TRC_vmax + 5
        I_QG    = TRC_vmax + 6
     else
-       write(*,*) 'xxx RAIN_TYPE must be set to DRY,CLOUD_PARAM,WARM or COLD. STOP.'
+       write(*,*) 'xxx ATMOS_PHY_MP_TYPE must be set to DRY,CLOUD_PARAM,KESSLER or TOMITA08 STOP.'
        call PRC_MPIstop
     endif
     NQW_STR  = TRC_vmax + 1
@@ -276,16 +370,16 @@ contains
 
     !--- Number tracer for Water
     if ( opt_2moment_water ) then
-       if    ( RAIN_TYPE == 'DRY' ) then
+       if    ( ATMOS_PHY_MP_TYPE == 'DRY' ) then
           NNW_MAX = 0
-       elseif( RAIN_TYPE == 'CLOUD_PARAM' ) then
+       elseif( ATMOS_PHY_MP_TYPE == 'CLOUD_PARAM' ) then
           NNW_MAX = 1
           I_NC    = TRC_vmax + 1
-       elseif( RAIN_TYPE == 'WARM' ) then
+       elseif( ATMOS_PHY_MP_TYPE == 'KESSLER' ) then
           NNW_MAX = 2
           I_NC    = TRC_vmax + 1
           I_NR    = TRC_vmax + 2
-       elseif( RAIN_TYPE == 'COLD' ) then
+       elseif( ATMOS_PHY_MP_TYPE == 'TOMITA08' ) then
           NNW_MAX = 5
           I_NC    = TRC_vmax + 1
           I_NR    = TRC_vmax + 2

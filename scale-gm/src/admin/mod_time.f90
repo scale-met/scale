@@ -40,6 +40,7 @@ module mod_time
 
   integer,  public :: TIME_lstep_max = 10     ! Max steps of large step
   integer,  public :: TIME_sstep_max          ! Max steps of small step
+  integer,  public :: TIME_RES_ATMOS_PHY_RD
 
   real(DP), public :: TIME_dtl       = 5.0_RP ! Time interval for large step [sec]
   real(DP), public :: TIME_dts                ! Time interval for small step [sec]
@@ -51,6 +52,7 @@ module mod_time
   integer,  public :: TIME_CSTEP              ! Current time step
 
   logical,  public :: TIME_DOend                !< finish program in this step?
+  logical,  public :: TIME_DOATMOS_PHY_RD  !< execute physics  in this step? (radiation   )
 
   !-----------------------------------------------------------------------------
   !
@@ -105,11 +107,18 @@ contains
        TIME_DSTEP_WALLCLOCK_CHECK, &
        TIME_OFFSET_YEAR,           &
        TIME_STARTDAYSEC
+    use scale_time, only: &
+       dt_MP => TIME_DTSEC_ATMOS_PHY_MP, &
+       dt_BL => TIME_DTSEC_ATMOS_PHY_BL, &
+       dt_SF => TIME_DTSEC_ATMOS_PHY_SF, &
+       dt_RD => TIME_DTSEC_ATMOS_PHY_RD, &
+       TIME_DSTEP_ATMOS_PHY_RD
     implicit none
 
     character(len=H_SHORT) :: integ_type !--- integration method
     logical                :: split      !--- time spliting flag
     real(RP)               :: dtl        !--- delta t in large step
+    real(RP)               :: dtl_rd     !--- delta t in large step
     integer                :: lstep_max  !--- maximum number of large steps
     integer                :: sstep_max  !--- division number in large step
 
@@ -128,6 +137,7 @@ contains
        integ_type,                   &
        split,                        &
        dtl,                          &
+       dtl_rd,                       &
        lstep_max,                    &
        sstep_max,                    &
        start_date,                   &
@@ -152,6 +162,7 @@ contains
     integ_type = TIME_integ_type
     split      = TIME_split
     dtl        = TIME_dtl
+    dtl_rd     = TIME_dtl
     lstep_max  = TIME_lstep_max
     sstep_max  = -999
 
@@ -181,6 +192,14 @@ contains
     TIME_split      = split
     TIME_dtl        = dtl
     TIME_lstep_max  = lstep_max
+
+    dt_MP      = TIME_dtl
+    dt_BL      = TIME_dtl
+    dt_SF      = TIME_dtl
+    dt_RD      = max(dtl_rd, TIME_dtl)
+    
+    TIME_DSTEP_ATMOS_PHY_RD  = nint( dt_RD  / TIME_dtl )
+    dt_RD      = TIME_DSTEP_ATMOS_PHY_RD * TIME_dtl
 
     if ( sstep_max == -999 )  then
        select case(TIME_integ_type)
@@ -353,7 +372,8 @@ contains
        TIME_NOWSTEP,              &
        TIME_NSTEP,                &
        TIME_OFFSET_YEAR,          &
-       TIME_DSTEP_WALLCLOCK_CHECK
+       TIME_DSTEP_WALLCLOCK_CHECK, &
+       TIME_DSTEP_ATMOS_PHY_RD
     implicit none
 
     logical, intent(in), optional :: reverse
@@ -414,7 +434,14 @@ contains
        endif
     endif
 
-    return
+    TIME_DOATMOS_PHY_RD   = .false.
+    TIME_RES_ATMOS_PHY_RD = TIME_RES_ATMOS_PHY_RD + 1
+    if ( TIME_RES_ATMOS_PHY_RD == TIME_DSTEP_ATMOS_PHY_RD ) then
+       TIME_DOATMOS_PHY_RD   = .true.
+       TIME_RES_ATMOS_PHY_RD = 0
+    endif
+
+   return
   end subroutine TIME_advance
 
 end module mod_time
