@@ -209,7 +209,7 @@ contains
     allocate( ATMOS_PHY_SF_SFLX_SH   (IA,JA)    )
     allocate( ATMOS_PHY_SF_SFLX_LH   (IA,JA)    )
     allocate( ATMOS_PHY_SF_SFLX_GH   (IA,JA)    )
-    allocate( ATMOS_PHY_SF_SFLX_QTRC (IA,JA,QA) )
+    allocate( ATMOS_PHY_SF_SFLX_QTRC (IA,JA,max(QA,1)) )
     ATMOS_PHY_SF_SFLX_MW  (:,:)   = UNDEF
     ATMOS_PHY_SF_SFLX_MU  (:,:)   = UNDEF
     ATMOS_PHY_SF_SFLX_MV  (:,:)   = UNDEF
