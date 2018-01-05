@@ -1575,7 +1575,9 @@ contains
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
+    integer :: dim_size(<%=d%>)
     integer :: error
+    integer :: n
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
@@ -1606,6 +1608,13 @@ contains
        write(message,*) 'xxx rank is not <%=d%>', dinfo%rank
        call Log('E', message)
     end if
+    dim_size(:) = shape(var)
+    do n = 1, <%=d%>
+       if ( dinfo%dim_size(n) /= dim_size(n) ) then
+          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call Log('E', message)
+       end if
+    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(<%=idx%>),                    & ! (out)

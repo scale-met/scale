@@ -2846,7 +2846,9 @@ contains
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
+    integer :: dim_size(1)
     integer :: error
+    integer :: n
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
@@ -2877,6 +2879,13 @@ contains
        write(message,*) 'xxx rank is not 1', dinfo%rank
        call Log('E', message)
     end if
+    dim_size(:) = shape(var)
+    do n = 1, 1
+       if ( dinfo%dim_size(n) /= dim_size(n) ) then
+          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call Log('E', message)
+       end if
+    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:),                    & ! (out)
@@ -2920,7 +2929,9 @@ contains
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
+    integer :: dim_size(1)
     integer :: error
+    integer :: n
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
@@ -2951,6 +2962,13 @@ contains
        write(message,*) 'xxx rank is not 1', dinfo%rank
        call Log('E', message)
     end if
+    dim_size(:) = shape(var)
+    do n = 1, 1
+       if ( dinfo%dim_size(n) /= dim_size(n) ) then
+          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call Log('E', message)
+       end if
+    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:),                    & ! (out)
@@ -2994,7 +3012,9 @@ contains
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
+    integer :: dim_size(2)
     integer :: error
+    integer :: n
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
@@ -3025,6 +3045,13 @@ contains
        write(message,*) 'xxx rank is not 2', dinfo%rank
        call Log('E', message)
     end if
+    dim_size(:) = shape(var)
+    do n = 1, 2
+       if ( dinfo%dim_size(n) /= dim_size(n) ) then
+          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call Log('E', message)
+       end if
+    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:,:),                    & ! (out)
@@ -3068,7 +3095,9 @@ contains
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
+    integer :: dim_size(2)
     integer :: error
+    integer :: n
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
@@ -3099,6 +3128,13 @@ contains
        write(message,*) 'xxx rank is not 2', dinfo%rank
        call Log('E', message)
     end if
+    dim_size(:) = shape(var)
+    do n = 1, 2
+       if ( dinfo%dim_size(n) /= dim_size(n) ) then
+          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call Log('E', message)
+       end if
+    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:,:),                    & ! (out)
@@ -3142,7 +3178,9 @@ contains
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
+    integer :: dim_size(3)
     integer :: error
+    integer :: n
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
@@ -3173,6 +3211,13 @@ contains
        write(message,*) 'xxx rank is not 3', dinfo%rank
        call Log('E', message)
     end if
+    dim_size(:) = shape(var)
+    do n = 1, 3
+       if ( dinfo%dim_size(n) /= dim_size(n) ) then
+          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call Log('E', message)
+       end if
+    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:,:,:),                    & ! (out)
@@ -3216,7 +3261,9 @@ contains
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
+    integer :: dim_size(3)
     integer :: error
+    integer :: n
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
@@ -3247,6 +3294,13 @@ contains
        write(message,*) 'xxx rank is not 3', dinfo%rank
        call Log('E', message)
     end if
+    dim_size(:) = shape(var)
+    do n = 1, 3
+       if ( dinfo%dim_size(n) /= dim_size(n) ) then
+          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call Log('E', message)
+       end if
+    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:,:,:),                    & ! (out)
@@ -3290,7 +3344,9 @@ contains
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
+    integer :: dim_size(4)
     integer :: error
+    integer :: n
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
@@ -3321,6 +3377,13 @@ contains
        write(message,*) 'xxx rank is not 4', dinfo%rank
        call Log('E', message)
     end if
+    dim_size(:) = shape(var)
+    do n = 1, 4
+       if ( dinfo%dim_size(n) /= dim_size(n) ) then
+          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call Log('E', message)
+       end if
+    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:,:,:,:),                    & ! (out)
@@ -3364,7 +3427,9 @@ contains
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
 
     type(datainfo) :: dinfo
+    integer :: dim_size(4)
     integer :: error
+    integer :: n
 
     intrinsic size, shape
     !---------------------------------------------------------------------------
@@ -3395,6 +3460,13 @@ contains
        write(message,*) 'xxx rank is not 4', dinfo%rank
        call Log('E', message)
     end if
+    dim_size(:) = shape(var)
+    do n = 1, 4
+       if ( dinfo%dim_size(n) /= dim_size(n) ) then
+          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call Log('E', message)
+       end if
+    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:,:,:,:),                    & ! (out)
