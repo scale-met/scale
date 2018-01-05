@@ -39,6 +39,7 @@
     \verb|   RUNNAME        = 'DCMIP2016-11',  | &  {\verb| <--|} \\
     \verb|   NDIFF_LOCATION = 'IN_LARGE_STEP2', | & \\
     \verb|   THUBURN_LIM    = .true., | & \\
+    \verb|   ATMOS_PHY_TYPE = 'SIMPLE', | & \\ | &  {\verb| <--|} \\
     \verb|   RAIN_TYPE      = "WARM", | & \\
     \verb|   AF_TYPE        = 'DCMIP', | & \\
     \verb| / | & \\
@@ -65,6 +66,8 @@
  \begin{itemize}
    \item "RUNNAME" should be specified as "DCMIP2016-11".
    \item "init\_type" should be specified as "Jablonowski-Moist".
+   \item "ATMOS\_PHY\_TYPE" denotes what kind of physics parameterizations are
+     used ("SIMPLE", "NONE", or ""(sophisticated) can be used).
    \item "test\_case" can be choose from 1 ~ 6.\\
           case 1: perturbation: exponential / with moisture \\
           case 2: perturbation: stream function / with moisture \\
@@ -274,6 +277,53 @@
  }
 
 
+\section{Use Sophisticated Physics Schemes}
+%-------------------------------------------------------------------------------
+
+ \noindent You can also use more sophisticated physics schemes, like those
+ used in SCLAE-RM.  \\
+
+ \editboxtwo{
+   \verb|  &TIMEPARAM| & \\   
+   \verb|  &  DTL         = 600.D0,| & \\      
+   \verb|  &  DTL_rd      = 1800.D0,| & {\verb|<--|}\\
+   \verb|  &  LSTEP_MAX   = 50,| & \\      
+   \verb|  &  INTEG_TYPE  = "RK3",| & \\      
+   \verb|  &  start_date  = 0000,1,1,0,0,0| & \\      
+   \verb|  /| & \\      
+   \verb|   * snip *| & \\
+   \verb| $ vi nhm_driver.cnf | & \\
+   \verb|  * snip * | & \\
+   \\
+   \verb|  &RUNCONFPARAM| & \\
+   \verb|    RUNNAME        = 'DCMIP2016-13', | &  \\
+   \verb|    NDIFF_LOCATION = 'IN_LARGE_STEP2',| &  \\
+   \verb|    ATMOS_PHY_TYPE = '',| & {\verb|<--|}\\
+   \verb|    ATMOS_PHY_MP_TYPE = 'TOMITA08',| & {\verb|<--|}\\
+   \verb|    ATMOS_PHY_SF_TYPE = 'BULK',| & {\verb|<--|}\\
+   \verb|    ATMOS_PHY_BL_TYPE = 'MYNN',| & {\verb|<--|}\\
+   \verb|    ATMOS_PHY_RD_TYPE = 'MSTRNX',| & {\verb|<--|}\\
+   \verb|    THUBURN_LIM    = .true.,| & \\
+   \verb|    RAIN_TYPE      = "WARM",| & \\
+   \verb|    AF_TYPE        = 'DCMIP',| & \\
+   \verb|  /| & \\
+   \\
+   \verb|  * snip *| & \\
+ }
+ \begin{itemize}
+   \item "DTL\_rd" defines the interval of time integration. If not specified,
+     DTL\_rd=DTL is assumed.
+   \item If "ATMOS\_PHY\_TYPE" is neither set to ``SIMPLE'' nor ``NONE'',
+     sophisticated parameterizations are used. 
+   \item ``TOMITA08'' has been tested. However, another type of microphisics schemes listed in
+     Table V.5.1 could be used.
+   \item ``BULK'' scheme can be used as surface flux parameterization.
+   \item ``MYNN'' (Mellor-Yamada, Nakanishi-Niino) boundary layer scheme can
+     be used
+   \item ``mstrnX'' radiation scheme can be used
+ \end{itemize}
+
+
 
 \section{Increase MPI processes}
 %------------------------------------------------------------------------------
@@ -464,4 +514,6 @@
     $ make run
     $ sh run.sh
  \end{verbatim}
+
+
 
