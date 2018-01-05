@@ -25,6 +25,7 @@ fi
 
 dir2d=gl${GL}rl${RL}pe${NP}
 res2d=GL${GL}RL${RL}
+BNDDIR="${TOPDIR}/scale-gm/test/data/grid/boundary/"
 
 MNGINFO=rl${RL}-prc${NP}.info
 
@@ -67,6 +68,8 @@ cat << EOF2 >> run.sh
 
 # run
 ${MPIEXEC} ./${BINNAME} mkhgrid.cnf || exit
+mkdir -p ${BNDDIR}/${ODIR}
+mv -f boundary*.pe* ${BNDDIR}/${dir2d}
 
 ################################################################################
 EOF2
