@@ -213,8 +213,8 @@ contains
     allocate( AXIS_LATY (IM,JM) )
     allocate( AXIS_LATXY(IM,JM) )
 
-    allocate( AXIS_HZXY (KMAX,IM,JM) )
-    allocate( AXIS_HWXY (KMAX,IM,JM) )
+    allocate( AXIS_HZXY (KMAX  ,IM,JM) )
+    allocate( AXIS_HWXY (KMAX+1,IM,JM) )
 
     if( IO_AGGREGATE ) call Construct_Derived_Datatype
 
@@ -285,8 +285,8 @@ contains
     AXIS_LATY (:,:)   = LATY (XSB:XEB,YSB:YEB) / D2R
     AXIS_LATXY(:,:)   = LATXY(XSB:XEB,YSB:YEB) / D2R
 
-    AXIS_HZXY (:,:,:) = CZ(KS:KE,XSB:XEB,YSB:YEB)
-    AXIS_HWXY (:,:,:) = FZ(KS:KE,XSB:XEB,YSB:YEB)
+    AXIS_HZXY (:,:,:) = CZ(KS  :KE,XSB:XEB,YSB:YEB)
+    AXIS_HWXY (:,:,:) = FZ(KS-1:KE,XSB:XEB,YSB:YEB)
 
     set_coordinates = .true.
 
@@ -907,8 +907,17 @@ contains
           call PRC_MPIstop
        endif
     else
-       if    ( axistype == 'ZXY' ) then
+       if(      axistype == 'ZXY'  &
+           .or. axistype == 'ZXHY' &
+           .or. axistype == 'ZXYH' ) then
           dim1_S   = KS
+          dim1_E   = KE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
+       elseif( axistype == 'ZHXY' ) then
+          dim1_S   = KS-1
           dim1_E   = KE
           dim2_S   = ISB
           dim2_E   = IEB
@@ -994,8 +1003,19 @@ contains
           call PRC_MPIstop
        endif
     else
-       if ( axistype == 'ZXYT' ) then
+       if (      axistype == 'ZXYT'  &
+            .or. axistype == 'ZXHYT' &
+            .or. axistype == 'ZXYHT' ) then
           dim1_S   = KS
+          dim1_E   = KE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
+          dim4_S   = 1
+          dim4_E   = step
+       elseif ( axistype == 'ZHXYT' ) then
+          dim1_S   = KS-1
           dim1_E   = KE
           dim2_S   = ISB
           dim2_E   = IEB
@@ -1641,7 +1661,7 @@ contains
     end if
 
     if ( .NOT. xy_ ) then
-       call FileDefAxis( fid, 'zh',  'Z (half level)',  'm', 'zh',  dtype, KMAX )
+       call FileDefAxis( fid, 'zh',  'Z (half level)',  'm', 'zh',  dtype, KMAX+1 )
     end if
     if ( .NOT. IO_AGGREGATE ) then
        call FileDefAxis( fid, 'xh',  'X (half level)',  'm', 'xh',  dtype, IMAXB )
@@ -1652,10 +1672,10 @@ contains
     end if
 
     if ( .NOT. xy_ ) then
-       call FileDefAxis( fid, 'lz',  'LZ',              'm', 'lz',  dtype, LKMAX )
-       call FileDefAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, LKMAX )
-       call FileDefAxis( fid, 'uz',  'UZ',              'm', 'uz',  dtype, UKMAX )
-       call FileDefAxis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, UKMAX )
+       call FileDefAxis( fid, 'lz',  'LZ',              'm', 'lz',  dtype, LKMAX   )
+       call FileDefAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, LKMAX+1 )
+       call FileDefAxis( fid, 'uz',  'UZ',              'm', 'uz',  dtype, UKMAX   )
+       call FileDefAxis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, UKMAX+1 )
     end if
 
     if ( .NOT. xy_ ) then
@@ -2007,12 +2027,12 @@ contains
 
     if ( put_z ) then
        if( IO_AGGREGATE ) start(1) = 1
-       call FileWriteAxis( fid, 'z',   GRID_CZ(KS:KE),    start )
-       call FileWriteAxis( fid, 'zh',  GRID_FZ(KS:KE),    start )
-       call FileWriteAxis( fid, 'lz',  GRID_LCZ(LKS:LKE), start )
-       call FileWriteAxis( fid, 'lzh', GRID_LFZ(LKS:LKE), start )
-       call FileWriteAxis( fid, 'uz',  GRID_UCZ(UKS:UKE), start )
-       call FileWriteAxis( fid, 'uzh', GRID_UFZ(UKS:UKE), start )
+       call FileWriteAxis( fid, 'z',   GRID_CZ (KS   :KE),  start )
+       call FileWriteAxis( fid, 'zh',  GRID_FZ (KS-1 :KE),  start )
+       call FileWriteAxis( fid, 'lz',  GRID_LCZ(LKS  :LKE), start )
+       call FileWriteAxis( fid, 'lzh', GRID_LFZ(LKS-1:LKE), start )
+       call FileWriteAxis( fid, 'uz',  GRID_UCZ(UKS  :UKE), start )
+       call FileWriteAxis( fid, 'uzh', GRID_UFZ(UKS-1:UKE), start )
     end if
     if ( put_x ) then
        if( IO_AGGREGATE ) start(1) = ISGA
@@ -2242,7 +2262,7 @@ contains
     elseif( axistype == 'ZHXY' ) then
        ndims   = 3
        dims    = (/'zh','x ','y '/)
-       write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
+       write_buf_amount = write_buf_amount + (KA+1) * IA * JA * elm_size
        call MPRJ_get_attributes( mapping )
     elseif( axistype == 'ZXHY' ) then
        ndims   = 3
@@ -2563,11 +2583,14 @@ contains
     end if
 
     if (      axistype == 'ZXY'  &
-         .OR. axistype == 'ZHXY' &
          .OR. axistype == 'ZXHY' &
          .OR. axistype == 'ZXYH' ) then
        dim1_max = KMAX
        dim1_S   = KS
+       dim1_E   = KE
+    elseif ( axistype == 'ZHXY' ) then
+       dim1_max = KMAX+1
+       dim1_S   = KS-1
        dim1_E   = KE
     elseif( axistype == 'Land' ) then
        dim1_max = LKMAX

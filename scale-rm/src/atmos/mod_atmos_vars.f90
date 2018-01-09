@@ -940,15 +940,15 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS) ***'
 
        call FILEIO_read( DENS(:,:,:),                                     & ! [OUT]
-                         restart_fid, PV_info(I_DENS)%NAME, 'ZXY', step=1 ) ! [IN]
+                         restart_fid, PV_info(I_DENS)%NAME, 'ZXY',  step=1 ) ! [IN]
        call FILEIO_read( MOMZ(:,:,:),                                     & ! [OUT]
-                         restart_fid, PV_info(I_MOMZ)%NAME, 'ZXY', step=1 ) ! [IN]
+                         restart_fid, PV_info(I_MOMZ)%NAME, 'ZHXY', step=1 ) ! [IN]
        call FILEIO_read( MOMX(:,:,:),                                     & ! [OUT]
-                         restart_fid, PV_info(I_MOMX)%NAME, 'ZXY', step=1 ) ! [IN]
+                         restart_fid, PV_info(I_MOMX)%NAME, 'ZXHY', step=1 ) ! [IN]
        call FILEIO_read( MOMY(:,:,:),                                     & ! [OUT]
-                         restart_fid, PV_info(I_MOMY)%NAME, 'ZXY', step=1 ) ! [IN]
+                         restart_fid, PV_info(I_MOMY)%NAME, 'ZXYH', step=1 ) ! [IN]
        call FILEIO_read( RHOT(:,:,:),                                     & ! [OUT]
-                         restart_fid, PV_info(I_RHOT)%NAME, 'ZXY', step=1 ) ! [IN]
+                         restart_fid, PV_info(I_RHOT)%NAME, 'ZXY',  step=1 ) ! [IN]
 
        do iq = 1, QA
           call FILEIO_read( QTRC(:,:,:,iq),                             & ! [OUT]
@@ -962,7 +962,7 @@ contains
           do j  = 1, JA
           do i  = 1, IA
              DENS(   1:KS-1,i,j) = DENS(KS,i,j)
-             MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
+             MOMZ(   1:KS-2,i,j) = MOMZ(KS-1,i,j)
              MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
              MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
              RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
@@ -1072,11 +1072,11 @@ contains
 
     call FILEIO_open( fid, basename )
 
-    call FILEIO_read( DENS_check(:,:,:), fid, 'DENS', 'ZXY', step=1 )
-    call FILEIO_read( MOMZ_check(:,:,:), fid, 'MOMZ', 'ZXY', step=1 )
-    call FILEIO_read( MOMX_check(:,:,:), fid, 'MOMX', 'ZXY', step=1 )
-    call FILEIO_read( MOMY_check(:,:,:), fid, 'MOMY', 'ZXY', step=1 )
-    call FILEIO_read( RHOT_check(:,:,:), fid, 'RHOT', 'ZXY', step=1 )
+    call FILEIO_read( DENS_check(:,:,:), fid, 'DENS', 'ZXY' , step=1 )
+    call FILEIO_read( MOMZ_check(:,:,:), fid, 'MOMZ', 'ZHXY', step=1 )
+    call FILEIO_read( MOMX_check(:,:,:), fid, 'MOMX', 'ZXHY', step=1 )
+    call FILEIO_read( MOMY_check(:,:,:), fid, 'MOMY', 'ZXYH', step=1 )
+    call FILEIO_read( RHOT_check(:,:,:), fid, 'RHOT', 'ZXY' , step=1 )
     do iq = 1, QA
        call FILEIO_read( QTRC_check(:,:,:,iq), fid, TRACER_NAME(iq), 'ZXY', step=1 )
     end do
@@ -1096,7 +1096,7 @@ contains
     enddo
     enddo
 
-    do k = KS, KE
+    do k = KS-1, KE
     do j = JS, JE
     do i = IS, IE
        if ( abs( MOMZ(k,i,j)-MOMZ_check(k,i,j) ) > ATMOS_RESTART_CHECK_CRITERION ) then
