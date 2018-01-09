@@ -589,6 +589,8 @@ contains
     use mod_atmos_phy_rd_vars, only: &
        SFLX_rad_dn => ATMOS_PHY_RD_SFLX_downall, &
        cosSZA      => ATMOS_PHY_RD_cosSZA
+    use mod_atmos_phy_bl_vars, only: &
+       ATM_PBL => ATMOS_PHY_BL_Zi
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_cpl_vars, only: &
@@ -601,7 +603,6 @@ contains
     ! works
     real(RP) :: SFC_DENS(IA,JA)
     real(RP) :: SFC_PRES(IA,JA)
-    real(RP) :: ATM_PBL (IA,JA)
 
     real(RP) :: SFLX_rain(IA,JA)
     real(RP) :: SFLX_snow(IA,JA)
@@ -620,8 +621,6 @@ contains
        enddo
 
        ! planetary boundary layer
-       ATM_PBL(:,:) = 100.0_RP ! tentative
-
        call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
                              PRES     (:,:,:), & ! [IN]
                              REAL_CZ  (:,:,:), & ! [IN]

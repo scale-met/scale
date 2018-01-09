@@ -107,9 +107,6 @@ contains
     use scale_atmos_phy_sf_const, only: &
        ATMOS_PHY_SF_const_setup, &
        ATMOS_PHY_SF_const
-    use scale_atmos_phy_sf_bulk, only: &
-       ATMOS_PHY_SF_bulk_setup, &
-       ATMOS_PHY_SF_bulk
     implicit none
 
     character(len=*), intent(in) :: SF_TYPE
@@ -121,9 +118,6 @@ contains
     case('CONST')
        call ATMOS_PHY_SF_const_setup( SF_TYPE )
        ATMOS_PHY_SF => ATMOS_PHY_SF_const
-    case('BULK')
-       call ATMOS_PHY_SF_bulk_setup( SF_TYPE )
-       ATMOS_PHY_SF => ATMOS_PHY_SF_bulk
     case('OFF')
        ! do nothing
     case('COUPLE')

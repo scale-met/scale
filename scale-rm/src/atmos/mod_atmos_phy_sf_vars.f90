@@ -56,8 +56,9 @@ module mod_atmos_phy_sf_vars
 
   real(RP), public, allocatable :: ATMOS_PHY_SF_DENS_t(:,:)   ! tendency DENS [    kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_MOMZ_t(:,:)   ! tendency MOMZ [m/s*kg/m3/s]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_MOMX_t(:,:)   ! tendency MOMX [m/s*kg/m3/s]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_MOMY_t(:,:)   ! tendency MOMY [m/s*kg/m3/s]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_RHOU_t(:,:)   ! tendency rho*U [m/s*kg/m3/s]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_RHOV_t(:,:)   ! tendency rho*V [m/s*kg/m3/s]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_RHOH  (:,:)   ! diabatic heating [J/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_RHOT_t(:,:)   ! tendency RHOT [K  *kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_RHOQ_t(:,:,:) ! tendency rho*QTRC [    kg/kg/s]
 
@@ -169,15 +170,17 @@ contains
 
     allocate( ATMOS_PHY_SF_DENS_t(IA,JA)    )
     allocate( ATMOS_PHY_SF_MOMZ_t(IA,JA)    )
-    allocate( ATMOS_PHY_SF_MOMX_t(IA,JA)    )
-    allocate( ATMOS_PHY_SF_MOMY_t(IA,JA)    )
+    allocate( ATMOS_PHY_SF_RHOU_t(IA,JA)    )
+    allocate( ATMOS_PHY_SF_RHOV_t(IA,JA)    )
     allocate( ATMOS_PHY_SF_RHOT_t(IA,JA)    )
+    allocate( ATMOS_PHY_SF_RHOH  (IA,JA)    )
     allocate( ATMOS_PHY_SF_RHOQ_t(IA,JA,QA) )
     ATMOS_PHY_SF_DENS_t(:,:)   = UNDEF
     ATMOS_PHY_SF_MOMZ_t(:,:)   = UNDEF
-    ATMOS_PHY_SF_MOMX_t(:,:)   = UNDEF
-    ATMOS_PHY_SF_MOMY_t(:,:)   = UNDEF
+    ATMOS_PHY_SF_RHOU_t(:,:)   = UNDEF
+    ATMOS_PHY_SF_RHOV_t(:,:)   = UNDEF
     ATMOS_PHY_SF_RHOT_t(:,:)   = UNDEF
+    ATMOS_PHY_SF_RHOH  (:,:)   = UNDEF
     ATMOS_PHY_SF_RHOQ_t(:,:,:) = UNDEF
 
     allocate( ATMOS_PHY_SF_SFC_TEMP  (IA,JA)    )
