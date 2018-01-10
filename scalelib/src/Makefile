@@ -129,7 +129,6 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_phy_rd_common.o	\
 	$(OBJS_RD)	\
 	\
-	scale_atmos_phy_sf.o	\
 	$(OBJS_SF)	\
 	\
 	scale_atmos_phy_tb.o	\

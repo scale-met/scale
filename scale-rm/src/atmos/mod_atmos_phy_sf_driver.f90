@@ -57,8 +57,8 @@ contains
        PRC_abort
     use scale_atmos_phy_sf_bulk, only: &
        ATMOS_PHY_SF_bulk_setup
-    use scale_atmos_phy_sf, only: &
-       ATMOS_PHY_SF_setup
+    use scale_atmos_phy_sf_const, only: &
+       ATMOS_PHY_SF_const_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_SF_TYPE, &
        ATMOS_sw_phy_sf
@@ -90,7 +90,7 @@ contains
           case ( 'BULK' )
              call ATMOS_PHY_SF_bulk_setup
           case ( 'CONST' )
-             call ATMOS_PHY_SF_setup( ATMOS_PHY_SF_TYPE ) ! TODO
+             call ATMOS_PHY_SF_const_setup
           case default
              write(*,*) 'xxx invalid Surface flux type(', trim(ATMOS_PHY_SF_TYPE), '). CHECK!'
              call PRC_abort
@@ -162,8 +162,8 @@ contains
        I_QV
     use scale_atmos_phy_sf_bulk, only: &
        ATMOS_PHY_SF_bulk_flux
-    use scale_atmos_phy_sf, only: &
-       ATMOS_PHY_SF
+    use scale_atmos_phy_sf_const, only: &
+       ATMOS_PHY_SF_const_flux
     use scale_roughness, only: &
        ROUGHNESS
     use mod_atmos_vars, only: &
@@ -293,7 +293,15 @@ contains
 
           case ( 'CONST' )
 
-             !! TODO
+             call ATMOS_PHY_SF_const_flux( &
+                  IA, IS, IE, JA, JS, JE, &
+                  ATM_W(:,:), ATM_U(:,:), ATM_V(:,:), ATM_TEMP(:,:), & ! [IN]
+                  Z1(:,:), SFC_DENS(:,:),                            & ! [IN]
+                  SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),          & ! [OUT]
+                  SFLX_SH(:,:), SFLX_LH(:,:), SFLX_QV(:,:),          & ! [OUT]
+                  U10(:,:), V10(:,:)                                 ) ! [OUT]
+             T2(:,:) = ATM_TEMP(:,:)
+             Q2(:,:) = ATM_QV(:,:)
 
           end select
 
