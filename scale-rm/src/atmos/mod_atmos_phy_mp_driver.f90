@@ -692,7 +692,7 @@ contains
                      RCDZ(:), RFDZ(:),                                    & ! [IN]
                      MOMZ_t_MP(:,i,j), RHOU_t_MP(:,i,j), RHOV_t_MP(:,i,j) ) ! [OUT]
 
-            end if
+             end if
 
           enddo
           enddo

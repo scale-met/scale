@@ -371,8 +371,6 @@ contains
 
     call HIST_in( FLX_hydro(:,:,:,I_mp_QR), 'pflux_QR', 'precipitation flux of QR', 'kg/m2/s', nohalo=.true. )
 
-    call HIST_in( vterm(:,:,:,I_mp_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s' )
-
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
