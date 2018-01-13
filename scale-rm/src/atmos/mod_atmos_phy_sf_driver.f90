@@ -54,9 +54,11 @@ contains
   !> Setup
   subroutine ATMOS_PHY_SF_driver_setup
     use scale_process, only: &
-       PRC_MPIstop
-    use scale_atmos_phy_sf, only: &
-       ATMOS_PHY_SF_setup
+       PRC_abort
+    use scale_atmos_phy_sf_bulk, only: &
+       ATMOS_PHY_SF_bulk_setup
+    use scale_atmos_phy_sf_const, only: &
+       ATMOS_PHY_SF_const_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_SF_TYPE, &
        ATMOS_sw_phy_sf
@@ -80,11 +82,19 @@ contains
 
     if ( ATMOS_sw_phy_sf ) then
 
-       ! setup library component
-       call ATMOS_PHY_SF_setup( ATMOS_PHY_SF_TYPE )
-
-       if ( .NOT. CPL_sw ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Coupler is disabled.'
+       if ( CPL_sw ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Coupler is enabled.'
+       else
+          ! setup library component
+          select case( ATMOS_PHY_SF_TYPE )
+          case ( 'BULK' )
+             call ATMOS_PHY_SF_bulk_setup
+          case ( 'CONST' )
+             call ATMOS_PHY_SF_const_setup
+          case default
+             write(*,*) 'xxx invalid Surface flux type(', trim(ATMOS_PHY_SF_TYPE), '). CHECK!'
+             call PRC_abort
+          end select
        endif
 
     else
@@ -96,11 +106,11 @@ contains
        SFLX_MV  (:,:)   = 0.0_RP
        SFLX_SH  (:,:)   = 0.0_RP
        SFLX_LH  (:,:)   = 0.0_RP
-       SFLX_QTRC(:,:,:) = 0.0_RP
-
        if( IO_L ) write(IO_FID_LOG,*) '*** SFC_TEMP, SFC_albedo is set in ATMOS_PHY_SF_vars.'
 
     endif
+
+    SFLX_QTRC(:,:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_SF_driver_setup
@@ -127,25 +137,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_SF_driver( update_flag )
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
        KARMAN => CONST_KARMAN, &
        CPdry  => CONST_CPdry
-    use scale_grid, only: &
-       RCDZ => GRID_RCDZ, &
-       RFDZ => GRID_RFDZ
     use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_Z1
-    use scale_gridtrans, only: &
-       GSQRT => GTRANS_GSQRT, &
-       I_XYZ,                 &
-       I_UYZ,                 &
-       I_XVZ,                 &
-       I_XYW
+       CZ => REAL_CZ, &
+       FZ => REAL_FZ, &
+       Z1 => REAL_Z1
     use scale_topography, only: &
        TOPO_Zsfc
     use scale_time, only: &
@@ -159,38 +158,42 @@ contains
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
     use scale_atmos_hydrostatic, only: &
        barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd => ATMOS_THERMODYN_qd, &
-       THERMODYN_cp => ATMOS_THERMODYN_cp, &
-       THERMODYN_r  => ATMOS_THERMODYN_r
     use scale_atmos_hydrometeor, only: &
        I_QV
-    use scale_atmos_phy_sf, only: &
-       ATMOS_PHY_SF
+    use scale_atmos_phy_sf_bulk, only: &
+       ATMOS_PHY_SF_bulk_flux
+    use scale_atmos_phy_sf_const, only: &
+       ATMOS_PHY_SF_const_flux
+    use scale_roughness, only: &
+       ROUGHNESS
     use mod_atmos_vars, only: &
        DENS   => DENS_av, &
        RHOT   => RHOT_av, &
-       QTRC   => QTRC_av, &
        POTT,              &
        TEMP,              &
        PRES,              &
        W,                 &
        U,                 &
        V,                 &
+       QV,                &
        DENS_t => DENS_tp, &
        MOMZ_t => MOMZ_tp, &
-       MOMX_t => MOMX_tp, &
-       MOMY_t => MOMY_tp, &
+       RHOU_t => RHOU_tp, &
+       RHOV_t => RHOV_tp, &
+       RHOH   => RHOH_p,  &
        RHOT_t => RHOT_tp, &
        RHOQ_t => RHOQ_tp
     use mod_atmos_phy_rd_vars, only: &
        SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
        SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
+    use mod_atmos_phy_bl_vars, only: &
+       PBL_Zi => ATMOS_PHY_BL_Zi
     use mod_atmos_phy_sf_vars, only: &
        DENS_t_SF  => ATMOS_PHY_SF_DENS_t,     &
        MOMZ_t_SF  => ATMOS_PHY_SF_MOMZ_t,     &
-       MOMX_t_SF  => ATMOS_PHY_SF_MOMX_t,     &
-       MOMY_t_SF  => ATMOS_PHY_SF_MOMY_t,     &
+       RHOU_t_SF  => ATMOS_PHY_SF_RHOU_t,     &
+       RHOV_t_SF  => ATMOS_PHY_SF_RHOV_t,     &
+       RHOH_SF    => ATMOS_PHY_SF_RHOH,       &
        RHOT_t_SF  => ATMOS_PHY_SF_RHOT_t,     &
        RHOQ_t_SF  => ATMOS_PHY_SF_RHOQ_t,     &
        SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
@@ -214,9 +217,24 @@ contains
        l_mo       => ATMOS_PHY_SF_l_mo
     use mod_cpl_admin, only: &
        CPL_sw
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_SF_TYPE
     implicit none
 
     logical, intent(in) :: update_flag
+
+    real(RP) :: ATM_W   (IA,JA)
+    real(RP) :: ATM_U   (IA,JA)
+    real(RP) :: ATM_V   (IA,JA)
+    real(RP) :: ATM_DENS(IA,JA)
+    real(RP) :: ATM_TEMP(IA,JA)
+    real(RP) :: ATM_PRES(IA,JA)
+    real(RP) :: ATM_QV  (IA,JA)
+    real(RP) :: SFLX_QV (IA,JA)
+
+    real(RP) :: Z0M_t(IA,JA)
+    real(RP) :: Z0H_t(IA,JA)
+    real(RP) :: Z0E_t(IA,JA)
 
     real(RP) :: Uabs10(IA,JA) ! 10m absolute wind [m/s]
     real(RP) :: MSLP  (IA,JA) ! mean sea-level pressure [Pa]
@@ -239,53 +257,88 @@ contains
        ! update surface density, surface pressure
        call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
                              PRES     (:,:,:), & ! [IN]
-                             REAL_CZ  (:,:,:), & ! [IN]
+                             CZ       (:,:,:), & ! [IN]
                              TOPO_Zsfc(:,:),   & ! [IN]
-                             REAL_Z1  (:,:),   & ! [IN]
+                             Z1       (:,:),   & ! [IN]
                              SFC_DENS (:,:),   & ! [OUT]
                              SFC_PRES (:,:)    ) ! [OUT]
 
        if ( .NOT. CPL_sw ) then
-          call ATMOS_PHY_SF( TEMP      (KS,:,:),   & ! [IN]
-                             PRES      (KS,:,:),   & ! [IN]
-                             W         (KS,:,:),   & ! [IN]
-                             U         (KS,:,:),   & ! [IN]
-                             V         (KS,:,:),   & ! [IN]
-                             DENS      (KS,:,:),   & ! [IN]
-                             QTRC      (KS,:,:,:), & ! [IN]
-                             REAL_Z1   (:,:),      & ! [IN]
-                             dt_SF,                & ! [IN]
-                             SFC_DENS  (:,:),      & ! [IN]
-                             SFC_PRES  (:,:),      & ! [IN]
-                             SFLX_LW_dn(:,:),      & ! [IN]
-                             SFLX_SW_dn(:,:),      & ! [IN]
-                             SFC_TEMP  (:,:),      & ! [IN]
-                             SFC_albedo(:,:,:),    & ! [IN]
-                             SFC_Z0M   (:,:),      & ! [INOUT]
-                             SFC_Z0H   (:,:),      & ! [INOUT]
-                             SFC_Z0E   (:,:),      & ! [INOUT]
-                             SFLX_MW   (:,:),      & ! [OUT]
-                             SFLX_MU   (:,:),      & ! [OUT]
-                             SFLX_MV   (:,:),      & ! [OUT]
-                             SFLX_SH   (:,:),      & ! [OUT]
-                             SFLX_LH   (:,:),      & ! [OUT]
-                             SFLX_QTRC (:,:,:),    & ! [OUT]
-                             U10       (:,:),      & ! [OUT]
-                             V10       (:,:),      & ! [OUT]
-                             T2        (:,:),      & ! [OUT]
-                             Q2        (:,:)       ) ! [OUT]
+
+          !omp parallel do
+          do j = JSB, JEB
+          do i = ISB, IEB
+             ATM_W   (i,j) = W   (KS,i,j)
+             ATM_U   (i,j) = U   (KS,i,j)
+             ATM_V   (i,j) = V   (KS,i,j)
+             ATM_DENS(i,j) = DENS(KS,i,j)
+             ATM_TEMP(i,j) = TEMP(KS,i,j)
+             ATM_PRES(i,j) = PRES(KS,i,j)
+             ATM_QV  (i,j) = QV  (KS,i,j)
+          end do
+          end do
+
+          select case ( ATMOS_PHY_SF_TYPE )
+          case ( 'BULK' )
+             call ATMOS_PHY_SF_bulk_flux( &
+                  IA, ISB, IEB, JA, JSB, JEB, &
+                  ATM_W(:,:), ATM_U(:,:), ATM_V(:,:),          & ! [IN]
+                  ATM_TEMP(:,:), ATM_PRES(:,:), ATM_QV(:,:),   & ! [IN]
+                  SFC_DENS(:,:), SFC_TEMP(:,:), SFC_PRES(:,:), & ! [IN]
+                  SFC_Z0M(:,:), SFC_Z0H(:,:), SFC_Z0E(:,:),    & ! [IN]
+                  PBL_Zi(:,:), Z1(:,:),                        & ! [IN]
+                  SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),    & ! [OUT]
+                  SFLX_SH(:,:), SFLX_LH(:,:), SFLX_QV(:,:),    & ! [OUT]
+                  U10(:,:), V10(:,:), T2(:,:), Q2(:,:)         ) ! [OUT]
+
+          case ( 'CONST' )
+
+             call ATMOS_PHY_SF_const_flux( &
+                  IA, IS, IE, JA, JS, JE, &
+                  ATM_W(:,:), ATM_U(:,:), ATM_V(:,:), ATM_TEMP(:,:), & ! [IN]
+                  Z1(:,:), SFC_DENS(:,:),                            & ! [IN]
+                  SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),          & ! [OUT]
+                  SFLX_SH(:,:), SFLX_LH(:,:), SFLX_QV(:,:),          & ! [OUT]
+                  U10(:,:), V10(:,:)                                 ) ! [OUT]
+             T2(:,:) = ATM_TEMP(:,:)
+             Q2(:,:) = ATM_QV(:,:)
+
+          end select
+
+          if ( I_QV > 0 ) then
+             SFLX_QTRC(:,:,I_QV) = SFLX_QV(:,:)
+          end if
+
+
+          ! albedo
+          call ROUGHNESS( &
+               IA, ISB, IEB, JA, JSB, JEB, &
+               SFC_Z0M(:,:), SFC_Z0H(:,:), SFC_Z0E(:,:), & ! [IN]
+               ATM_U(:,:), ATM_V(:,:), Z1(:,:),          & ! [IN]
+               dt_SF,                                    & ! [IN]
+               Z0M_t(:,:), Z0H_t(:,:), Z0E_t(:,:)        ) ! [OUT]
+
+          !omp parallel do
+          do j = JSB, JEB
+          do i = ISB, IEB
+             SFC_Z0M(i,j) = SFC_Z0M(i,j) + Z0M_t(i,j) * dt_SF
+             SFC_Z0H(i,j) = SFC_Z0H(i,j) + Z0H_t(i,j) * dt_SF
+             SFC_Z0E(i,j) = SFC_Z0E(i,j) + Z0E_t(i,j) * dt_SF
+          end do
+          end do
+
        endif
 
 !OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
           Uabs10(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
        end do
        end do
 
        ! temtative
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
           us = max( 1.E-6_RP, &
                     sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) / DENS(KS,i,j) ) ) ! frictional velocity
           SFLX_PT = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) ) &
@@ -317,80 +370,48 @@ contains
        call HIST_in( Q2        (:,:),      'Q2 ',        '2m specific humidity',              'kg/kg'   , nohalo=.true. )
        call HIST_in( MSLP      (:,:),      'MSLP',       'mean sea-level pressure',           'Pa'      )
 
-       call COMM_vars8( SFLX_MU(:,:), 1 )
-       call COMM_vars8( SFLX_MV(:,:), 2 )
-       call COMM_wait ( SFLX_MU(:,:), 1 )
-       call COMM_wait ( SFLX_MV(:,:), 2 )
-
+       !omp parallel do
 !OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-          MOMZ_t_SF(i,j) = SFLX_MW(i,j) * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
-       enddo
-       enddo
-
-!OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-          MOMX_t_SF(i,j) = 0.5_RP * ( SFLX_MU(i,j) + SFLX_MU(i+1,j) ) * RCDZ(KS) / GSQRT(KS,i,j,I_UYZ)
-       enddo
-       enddo
-
-!OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-          MOMY_t_SF(i,j) = 0.5_RP * ( SFLX_MV(i,j) + SFLX_MV(i,j+1) ) * RCDZ(KS) / GSQRT(KS,i,j,I_XVZ)
-       enddo
-       enddo
-
-       do j = JS, JE
-       do i = IS, IE
-          do iq = 1, QA
-             q(iq) = QTRC(KS,i,j,iq)
-          enddo
-          call THERMODYN_qd( qdry,  q, TRACER_MASS )
-          call THERMODYN_r ( Rtot,  q, TRACER_R,  qdry )
-          call THERMODYN_cp( CPtot, q, TRACER_CP, qdry )
-          RHOT_t_SF(i,j) = SFLX_SH(i,j) * RCDZ(KS) / ( CPtot * GSQRT(KS,i,j,I_XYZ) ) &
-                         * RHOT(KS,i,j) * Rtot / PRES(KS,i,j) ! = POTT/TEMP
+       do j = JSB, JEB
+       do i = ISB, IEB
+          MOMZ_t_SF(i,j) = SFLX_MW(i,j) / ( CZ(KS+1,i,j) - CZ(KS,i,j) )
+          RHOU_t_SF(i,j) = SFLX_MU(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
+          RHOV_t_SF(i,j) = SFLX_MV(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
+          RHOH_SF  (i,j) = SFLX_SH(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
        enddo
        enddo
 
        if ( I_QV > 0 ) then
-          do j  = JS, JE
-          do i  = IS, IE
-             work = SFLX_QTRC(i,j,I_QV) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
+          !omp parallel do
+          do j = JSB, JEB
+          do i = ISB, IEB
+             work = SFLX_QTRC(i,j,I_QV) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
              DENS_t_SF(i,j)      = work
              RHOQ_t_SF(i,j,I_QV) = work
+             RHOT_t_SF(i,j) = work * RHOT(KS,i,j) / DENS(KS,i,j)
           enddo
           enddo
-
-          do j  = JS, JE
-          do i  = IS, IE
-             RHOT_t_SF(i,j) = RHOT_t_SF(i,j) + DENS_t_SF(i,j) * RHOT(KS,i,j) / DENS(KS,i,j)
-          enddo
-          enddo
-
-       else
-          DENS_t_SF(:,:) = 0.0_RP
        end if
 
     endif
 
-    do j = JS, JE
-    do i = IS, IE
-       DENS_t(KS,i,j) = DENS_t(KS,i,j) + DENS_t_SF(i,j)
+    !omp parallel do
+    do j = JSB, JEB
+    do i = ISB, IEB
        MOMZ_t(KS,i,j) = MOMZ_t(KS,i,j) + MOMZ_t_SF(i,j)
-       MOMX_t(KS,i,j) = MOMX_t(KS,i,j) + MOMX_t_SF(i,j)
-       MOMY_t(KS,i,j) = MOMY_t(KS,i,j) + MOMY_t_SF(i,j)
-       RHOT_t(KS,i,j) = RHOT_t(KS,i,j) + RHOT_t_SF(i,j)
+       RHOU_t(KS,i,j) = RHOU_t(KS,i,j) + RHOU_t_SF(i,j)
+       RHOV_t(KS,i,j) = RHOV_t(KS,i,j) + RHOV_t_SF(i,j)
+       RHOH  (KS,i,j) = RHOH  (KS,i,j) + RHOH_SF  (i,j)
     enddo
     enddo
 
     if ( I_QV > 0 ) then
+       !omp parallel do
        do j  = JS, JE
        do i  = IS, IE
+          DENS_t(KS,i,j) = DENS_t(KS,i,j) + DENS_t_SF(i,j)
           RHOQ_t(KS,i,j,I_QV) = RHOQ_t(KS,i,j,I_QV) + RHOQ_t_SF(i,j,I_QV)
+          RHOT_t(KS,i,j) = RHOT_t(KS,i,j) + RHOT_t_SF(i,j)
        enddo
        enddo
     end if
@@ -398,11 +419,12 @@ contains
     if ( STATISTICS_checktotal ) then
        call STAT_total( total, DENS_t_SF(:,:), 'DENS_t_SF' )
        call STAT_total( total, MOMZ_t_SF(:,:), 'MOMZ_t_SF' )
-       call STAT_total( total, MOMX_t_SF(:,:), 'MOMX_t_SF' )
-       call STAT_total( total, MOMY_t_SF(:,:), 'MOMY_t_SF' )
-       call STAT_total( total, RHOT_t_SF(:,:), 'RHOT_t_SF' )
+       call STAT_total( total, RHOU_t_SF(:,:), 'RHOU_t_SF' )
+       call STAT_total( total, RHOV_t_SF(:,:), 'RHOV_t_SF' )
+       call STAT_total( total, RHOH_SF  (:,:), 'RHOH_SF'   )
 
        if ( I_QV > 0 ) then
+          call STAT_total( total, RHOT_t_SF(:,:)     , 'RHOT_t_SF' )
           call STAT_total( total, RHOQ_t_SF(:,:,I_QV), trim(TRACER_NAME(I_QV))//'_t_SF' )
        end if
     endif

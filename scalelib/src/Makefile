@@ -20,6 +20,7 @@ VPATH = common:                          \
         atmosphere/physics/pbl:          \
         atmosphere/physics/microphysics: \
         atmosphere/physics/radiation:    \
+        atmosphere/physics/surface:      \
         atmos-physics:                   \
         atmos-physics/share:             \
         atmos-physics/microphysics:      \
@@ -128,7 +129,6 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_phy_rd_common.o	\
 	$(OBJS_RD)	\
 	\
-	scale_atmos_phy_sf.o	\
 	$(OBJS_SF)	\
 	\
 	scale_atmos_phy_tb.o	\

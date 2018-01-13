@@ -45,6 +45,7 @@ module scale_atmos_hydrometeor
      module procedure ATMOS_HYDROMETEOR_LHV_2D
      module procedure ATMOS_HYDROMETEOR_LHV_3D
      module procedure ATMOS_HYDROMETEOR_LHV_1D_obsolute
+     module procedure ATMOS_HYDROMETEOR_LHV_2D_obsolute
      module procedure ATMOS_HYDROMETEOR_LHV_3D_obsolute
   end interface ATMOS_HYDROMETEOR_LHV
 
@@ -429,7 +430,7 @@ contains
   end subroutine ATMOS_HYDROMETEOR_LHV_1D
   
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETEOR_LHV_2D( &
+  subroutine ATMOS_HYDROMETEOR_LHV_2D_obsolute( &
        lhv, &
        temp )
     use scale_const, only: &
@@ -445,6 +446,34 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
+       lhv(i,j) = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(i,j) - TEM00 ) * THERMODYN_EMASK
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_LHV_2D_obsolute
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_HYDROMETEOR_LHV_2D( &
+       IA, IS, IE, JA, JS, JE, &
+       temp, &
+       lhv   )
+    use scale_const, only: &
+       TEM00 => CONST_TEM00, &
+       LHV0  => CONST_LHV0
+    implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: temp(IA,JA) !< temperature                 [K]
+    real(RP), intent(out) :: lhv (IA,JA) !< latent heat of vaporization [J/kg]
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    !omp paralell do
+    do j = JS, JE
+    do i = IS, IE
        lhv(i,j) = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(i,j) - TEM00 ) * THERMODYN_EMASK
     enddo
     enddo

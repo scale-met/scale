@@ -38,6 +38,7 @@ module mod_atmos_phy_bl_vars
   real(RP), public, allocatable :: ATMOS_PHY_BL_RHOV_t(:,:,:)   ! tendency RHOV [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_BL_RHOT_t(:,:,:)   ! tendency RHOT [K*kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_BL_RHOQ_t(:,:,:,:) ! tendency rho*QTRC [kg/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_BL_Zi    (:,:)     ! depth of the PBL
 
   !-----------------------------------------------------------------------------
   !
@@ -71,6 +72,9 @@ contains
     ATMOS_PHY_BL_RHOV_t(:,:,:)   = UNDEF
     ATMOS_PHY_BL_RHOT_t(:,:,:)   = UNDEF
     ATMOS_PHY_BL_RHOQ_t(:,:,:,:) = UNDEF
+
+    allocate( ATMOS_PHY_BL_Zi(IA,JA) )
+    ATMOS_PHY_BL_Zi(:,:) = 100.0_RP ! tentative
 
     return
   end subroutine ATMOS_PHY_BL_vars_setup

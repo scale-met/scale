@@ -92,6 +92,7 @@ module scale_atmos_saturation
      module procedure ATMOS_SATURATION_pres2qsat_all_0D
      module procedure ATMOS_SATURATION_pres2qsat_all_1D
      module procedure ATMOS_SATURATION_pres2qsat_all_2D
+     module procedure ATMOS_SATURATION_pres2qsat_all_2D_obsolute
      module procedure ATMOS_SATURATION_pres2qsat_all_3D
      module procedure ATMOS_SATURATION_pres2qsat_all_3D_k
   end interface ATMOS_SATURATION_pres2qsat_all
@@ -797,6 +798,37 @@ contains
   !-----------------------------------------------------------------------------
   !> calc temp & pres -> saturation vapor mass (liquid/ice mixture,2D)
   subroutine ATMOS_SATURATION_pres2qsat_all_2D( &
+       IA, IS, IE, JA, JS, JE, &
+       temp, pres, &
+       qsat         )
+    implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: temp(IA,JA) !< temperature           [K]
+    real(RP), intent(in)  :: pres(IA,JA) !< pressure              [Pa]
+    real(RP), intent(out) :: qsat(IA,JA) !< saturation vapor mass [kg/kg]
+
+    real(RP) :: psat
+
+    integer  :: i, j
+    !---------------------------------------------------------------------------
+
+    !omp parallel do
+    do j = JS, JE
+    do i = IS, IE
+       call ATMOS_SATURATION_psat_all( psat, temp(i,j) )
+
+       qsat(i,j) = EPSvap * psat / ( pres(i,j) - ( 1.0_RP-EPSvap ) * psat )
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_pres2qsat_all_2D
+
+  !-----------------------------------------------------------------------------
+  !> calc temp & pres -> saturation vapor mass (liquid/ice mixture,2D)
+  subroutine ATMOS_SATURATION_pres2qsat_all_2D_obsolute( &
        qsat, &
        temp, &
        pres  )
@@ -820,7 +852,7 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_SATURATION_pres2qsat_all_2D
+  end subroutine ATMOS_SATURATION_pres2qsat_all_2D_obsolute
 
   !-----------------------------------------------------------------------------
   !> calc temp & pres -> saturation vapor mass (liquid/ice mixture,3D)

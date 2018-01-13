@@ -170,16 +170,17 @@ contains
 
     if ( update_flag ) then
 
-       call ROUGHNESS( OCEAN_SFC_Z0M_t(:,:), & ! [OUT]
-                       OCEAN_SFC_Z0H_t(:,:), & ! [OUT]
-                       OCEAN_SFC_Z0E_t(:,:), & ! [OUT]
-                       OCEAN_SFC_Z0M  (:,:), & ! [IN]
-                       OCEAN_SFC_Z0H  (:,:), & ! [IN]
-                       OCEAN_SFC_Z0E  (:,:), & ! [IN]
-                       ATMOS_U        (:,:), & ! [IN]
-                       ATMOS_V        (:,:), & ! [IN]
-                       REAL_Z1        (:,:), & ! [IN]
-                       dt                    ) ! [IN]
+       call ROUGHNESS( &
+            IA, ISB, IEB, JA, JSB, JEB, &
+            OCEAN_SFC_Z0M(:,:),         & ! [IN]
+            OCEAN_SFC_Z0H(:,:),         & ! [IN]
+            OCEAN_SFC_Z0E(:,:),         & ! [IN]
+            ATMOS_U(:,:), ATMOS_V(:,:), & ! [IN]
+            REAL_Z1(:,:),               & ! [IN]
+            dt,                         & ! [IN]
+            OCEAN_SFC_Z0M_t(:,:),       & ! [OUT]
+            OCEAN_SFC_Z0H_t(:,:),       & ! [OUT]
+            OCEAN_SFC_Z0E_t(:,:)        ) ! [OUT]
 
        call OCEAN_SFC_SimpleAlbedo( OCEAN_SFC_albedo_t(:,:,:), & ! [OUT]
                                     OCEAN_SFC_albedo  (:,:,:), & ! [IN]
