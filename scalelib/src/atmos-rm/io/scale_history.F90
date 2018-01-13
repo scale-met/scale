@@ -111,9 +111,6 @@ contains
        PRC_masterrank, &
        PRC_myrank
     use scale_rm_process, only: &
-       PRC_2Drank,     &
-       PRC_NUM_X,      &
-       PRC_NUM_Y,      &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y, &
        PRC_HAS_W,      &
@@ -140,8 +137,6 @@ contains
     integer  :: HIST_variant_limit
 
     real(DP) :: start_daysec
-    integer  :: rankidx(2)
-    integer  :: procsize(2)
     integer  :: ierr
     integer  :: k
     !---------------------------------------------------------------------------
@@ -184,11 +179,6 @@ contains
     endif
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
-
-    rankidx (1) = PRC_2Drank(PRC_myrank,1)
-    rankidx (2) = PRC_2Drank(PRC_myrank,2)
-    procsize(1) = PRC_NUM_X
-    procsize(2) = PRC_NUM_Y
 
     start_daysec = TIME_STARTDAYSEC
     if ( TIME_NOWDATE(1) > 0 ) then
@@ -246,8 +236,6 @@ contains
                       imh, jmh, km,                     & ! [IN]
                       PRC_masterrank,                   & ! [IN]
                       PRC_myrank,                       & ! [IN]
-                      rankidx (:),                      & ! [IN]
-                      procsize(:),                      & ! [IN]
                       HISTORY_H_TITLE,                  & ! [IN]
                       H_SOURCE,                         & ! [IN]
                       H_INSTITUTE,                      & ! [IN]
@@ -342,8 +330,6 @@ contains
        PRC_myrank
     use scale_rm_process, only: &
        PRC_2Drank, &
-       PRC_NUM_X, &
-       PRC_NUM_Y, &
        PRC_HAS_W, &
        PRC_HAS_S
     use scale_mapproj, only: &
@@ -2052,15 +2038,19 @@ contains
   !-----------------------------------------------------------------------------
   subroutine HIST_set_axes_attributes
     use gtool_history, only: &
-       HistorySetMapping, &
-       HistorySetAttribute
+       HistorySetGlobalAttribute, &
+       HistorySetAttribute,       &
+       HistorySetMapping
+    use scale_process, only: &
+       PRC_myrank
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_rm_process, only: &
-       PRC_PERIODIC_X, &
-       PRC_PERIODIC_Y, &
+       PRC_2Drank,     &
        PRC_NUM_X,      &
        PRC_NUM_Y,      &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y, &
        PRC_HAS_W,      &
        PRC_HAS_E,      &
        PRC_HAS_S,      &
@@ -2068,6 +2058,8 @@ contains
     use scale_mapproj, only: &
        MPRJ_get_attributes
     implicit none
+
+    character(len=5) :: periodic_z, periodic_x, periodic_y
 
     integer :: isize, jsize
     integer :: istart, jstart
@@ -2088,6 +2080,39 @@ contains
     real(DP) :: latitude_of_projection_origin
     real(DP) :: straight_vertical_longitude_from_pole
     real(DP) :: standard_parallel(2)
+    !---------------------------------------------------------------------------
+
+    periodic_z = "false"
+    if ( PRC_PERIODIC_X ) then
+       periodic_x = "true"
+    else
+       periodic_x = "false"
+    endif
+    if ( PRC_PERIODIC_Y ) then
+       periodic_y = "true"
+    else
+       periodic_y = "false"
+    endif
+
+    if ( .NOT. IO_AGGREGATE ) then
+       call HistorySetGlobalAttribute( "scale_rm_prc_rank_x", (/PRC_2Drank(PRC_myrank,1)/) ) ! [IN]
+       call HistorySetGlobalAttribute( "scale_rm_prc_rank_y", (/PRC_2Drank(PRC_myrank,2)/) ) ! [IN]
+
+       call HistorySetGlobalAttribute( "scale_rm_prc_num_x", (/PRC_NUM_X/) ) ! [IN]
+       call HistorySetGlobalAttribute( "scale_rm_prc_num_y", (/PRC_NUM_Y/) ) ! [IN]
+    endif
+
+    call HistorySetGlobalAttribute( "scale_rm_prc_periodic_z", periodic_z ) ! [IN]
+    call HistorySetGlobalAttribute( "scale_rm_prc_periodic_x", periodic_x ) ! [IN]
+    call HistorySetGlobalAttribute( "scale_rm_prc_periodic_y", periodic_y ) ! [IN]
+
+    call HistorySetGlobalAttribute( "scale_rm_grid_index_kmax",  (/KMAX/)  ) ! [IN]
+    call HistorySetGlobalAttribute( "scale_rm_grid_index_imaxg", (/IMAXG/) ) ! [IN]
+    call HistorySetGlobalAttribute( "scale_rm_grid_index_jmaxg", (/JMAXG/) ) ! [IN]
+
+    call HistorySetGlobalAttribute( "scale_rm_grid_index_khalo", (/KHALO/) ) ! [IN]
+    call HistorySetGlobalAttribute( "scale_rm_grid_index_ihalo", (/IHALO/) ) ! [IN]
+    call HistorySetGlobalAttribute( "scale_rm_grid_index_jhalo", (/JHALO/) ) ! [IN]
 
     ! attributes
     if ( PRC_PERIODIC_X ) then; logical_str = "true"; else; logical_str = "false"; end if
@@ -2196,6 +2221,7 @@ contains
                               latitude_of_projection_origin,         & ! [OUT]
                               straight_vertical_longitude_from_pole, & ! [OUT]
                               standard_parallel(:)                   ) ! [OUT]
+
     if ( mapping /= "" ) then
        call HistorySetAttribute( "x",  "standard_name", "projection_x_coordinate");
        call HistorySetAttribute( "xh", "standard_name", "projection_x_coordinate");

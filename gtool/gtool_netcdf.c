@@ -227,7 +227,7 @@ int32_t file_get_nvars( int32_t  fid,   // (in)
   if ( files[fid]->shared_mode )
     CHECK_PNC_ERROR( ncmpi_inq( ncid, &ndims, nvars, &ngatts, &unlimdim ) )
   else
-    ncinquire( ncid, &ndims, nvars, &ngatts, &unlimdim );
+    nc_inq( ncid, &ndims, nvars, &ngatts, &unlimdim );
 
   return SUCCESS_CODE;
 }
@@ -248,7 +248,7 @@ int32_t file_get_varname( int32_t  fid,  // (in)
   if ( files[fid]->shared_mode )
     CHECK_PNC_ERROR( ncmpi_inq_varname( ncid, varid, buf) )
   else
-    ncvarinq(ncid, varid, buf, NULL, NULL, NULL, NULL );
+    nc_inq_varname(ncid, varid, buf );
 
   for (i=0; i<MIN(len-1,MAX_NC_NAME-1); i++)
     name[i] = buf[i];

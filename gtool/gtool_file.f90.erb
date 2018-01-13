@@ -180,103 +180,92 @@ module gtool_file
 
   character(len=LOG_LMSG),   private            :: message
 
+  !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   subroutine FileCreate( &
-       fid,         & ! (out)
-       existed,     & ! (out)
-       basename,    & ! (in)
-       title,       & ! (in)
-       source,      & ! (in)
-       institution, & ! (in)
-       master,      & ! (in)
-       myrank,      & ! (in)
-       rankidx,     & ! (in)
-       procsize,    & ! (in)
-       single,      & ! (in) optional
-       time_units,  & ! (in) optional
-       append,      & ! (in) optional
-       comm         ) ! (in) optional
-    use MPI, only : MPI_COMM_NULL
+       fid,         &
+       existed,     &
+       basename,    &
+       title,       &
+       source,      &
+       institution, &
+       master,      &
+       myrank,      &
+       single,      &
+       time_units,  &
+       append,      &
+       comm         )
+    use mpi, only: &
+       MPI_COMM_NULL
     implicit none
 
-    integer,          intent(out)           :: fid
-    logical,          intent(out)           :: existed
-    character(len=*), intent( in)           :: basename
-    character(len=*), intent( in)           :: title
-    character(len=*), intent( in)           :: source
-    character(len=*), intent( in)           :: institution
-    integer,          intent( in)           :: master
-    integer,          intent( in)           :: myrank
-    integer,          intent( in)           :: rankidx(:)
-    integer,          intent( in)           :: procsize(:)
-    character(len=*), intent( in), optional :: time_units
-    logical,          intent( in), optional :: single
-    logical,          intent( in), optional :: append
-    integer,          intent( in), optional :: comm ! MPI communicator
+    integer,          intent(out) :: fid
+    logical,          intent(out) :: existed
+    character(len=*), intent(in)  :: basename
+    character(len=*), intent(in)  :: title
+    character(len=*), intent(in)  :: source
+    character(len=*), intent(in)  :: institution
+    integer,          intent(in)  :: master
+    integer,          intent(in)  :: myrank
+
+    logical,          intent(in), optional :: single
+    character(len=*), intent(in), optional :: time_units
+    logical,          intent(in), optional :: append
+    integer,          intent(in), optional :: comm       ! MPI communicator
 
     character(len=File_HMID) :: time_units_
     logical :: single_
     integer :: mode
-    integer :: error
 
-    intrinsic size
+    integer :: error
+    !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
+
+    single_ = .false.
+    if ( present(single) ) then
+       if( single .AND. myrank /= master ) return ! do nothing
+       single_ = single
+    endif
 
     if ( present(time_units) ) then
        time_units_ = time_units
     else
        time_units_ = 'seconds'
-    end if
-
-    mpi_myrank = myrank
-
-    if ( present(single) ) then
-       if ( single .and. (myrank .ne. master) ) return
-       single_ = single
-    else
-       single_ = .false.
     endif
 
     mode = File_FWRITE
     if ( present(append) ) then
-       if ( append ) mode = File_FAPPEND
-    end if
+       if( append ) mode = File_FAPPEND
+    endif
 
-    call FileGetfid( &
-         fid,        & ! (out)
-         existed,    & ! (out)
-         basename,   & ! (in)
-         mode,       & ! (in)
-         single_,    & ! (in)
-         comm        & ! (in)
-         )
+    call FileGetfid( fid,      & ! [OUT]
+                     existed,  & ! [OUT]
+                     basename, & ! [IN]
+                     mode,     & ! [IN]
+                     single_,  & ! [IN]
+                     comm      ) ! [IN]
 
-    if ( existed ) return
+    if( existed ) return
 
     !--- append package header to the file
-    call FileSetGlobalAttribute( fid, & ! (in)
-         "title", title               ) ! (in)
-    call FileSetGlobalAttribute( fid, & ! (in)
-         "source", source             ) ! (in)
-    call FileSetGlobalAttribute( fid, & ! (in)
-         "institution", institution   ) ! (in)
+    call FileSetGlobalAttribute( fid, "title"      , title       ) ! [IN]
+    call FileSetGlobalAttribute( fid, "source"     , source      ) ! [IN]
+    call FileSetGlobalAttribute( fid, "institution", institution ) ! [IN]
 
     if ( .NOT. present(comm) .OR. comm == MPI_COMM_NULL ) then
        ! for shared-file parallel I/O, skip attributes related to MPI processes
-       call FileSetGlobalAttribute( fid, & ! (in)
-            "myrank", (/myrank/)         ) ! (in)
-       call FileSetGlobalAttribute( fid, & ! (in)
-            "rankidx", rankidx(:)        ) ! (in)
-       call FileSetGlobalAttribute( fid, & ! (in)
-            "procsize", procsize(:)      ) ! (in)
-    end if
+       call FileSetGlobalAttribute( fid, "myrank"  , (/myrank/)  ) ! [IN]
+    endif
 
-    call file_set_tunits( fid, & ! (in)
-         time_units_,          & ! (in)
-         error                 ) ! (out)
+    call file_set_tunits( fid,         & ! [IN]
+                          time_units_, & ! [IN]
+                          error        ) ! [OUT]
+
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to set time units')
-    end if
+    endif
 
     return
   end subroutine FileCreate
@@ -1192,21 +1181,14 @@ contains
   ! FileGetCommoninfo
   !-----------------------------------------------------------------------------
   subroutine FileGetCommoninfoFName( &
-       basename,     &
-       myrank,       &
-       nvars_limit,  &
-       title,        &
-       source,       &
-       institution,  &
-       rankidx,      &
-       procsize,     &
-       size_global,  &
-       start_global, &
-       halo_global,  &
-       halo_local,   &
-       periodic,     &
-       nvars,        &
-       varname       )
+       basename,    &
+       myrank,      &
+       nvars_limit, &
+       title,       &
+       source,      &
+       institution, &
+       nvars,       &
+       varname      )
     implicit none
 
     character(len=*),           intent(in)  :: basename
@@ -1215,17 +1197,9 @@ contains
     character(len=File_HMID),   intent(out) :: title                ! title of the file
     character(len=File_HMID),   intent(out) :: source               ! for file header
     character(len=File_HMID),   intent(out) :: institution          ! for file header
-    integer,                    intent(out) :: rankidx     (2)      ! my rank in 2D process topology (x:y)
-    integer,                    intent(out) :: procsize    (2)      ! total process size             (x:y)
-    integer,                    intent(out) :: size_global (2)      ! total grid size     in global  (x:y)
-    integer,                    intent(out) :: start_global(2)      ! start index of grid in global  (x:y)
-    integer,                    intent(out) :: halo_global (2,2)    ! halo  grid size     in global  (x:y,start:end)
-    integer,                    intent(out) :: halo_local  (2,2)    ! halo  grid size     in local   (x:y,start:end)
-    logical,                    intent(out) :: periodic    (2)      ! periodic condition?            (x:y)
     integer,                    intent(out) :: nvars                ! number of variables
     character(len=File_HSHORT), intent(out) :: varname(nvars_limit) ! name of variables
 
-    integer :: myrank_check(1)
     integer :: fid
     !---------------------------------------------------------------------------
 
@@ -1235,88 +1209,50 @@ contains
                    basename,  & ! [IN]
                    File_FREAD ) ! [IN]
 
-    call FileGetCommoninfoFId( fid,               & ! [IN]
-                               nvars_limit,       & ! [IN]
-                               title,             & ! [OUT]
-                               source,            & ! [OUT]
-                               institution,       & ! [OUT]
-                               myrank_check(:),   & ! [OUT]
-                               rankidx     (:),   & ! [OUT]
-                               procsize    (:),   & ! [OUT]
-                               size_global (:),   & ! [OUT]
-                               start_global(:),   & ! [OUT]
-                               halo_global (:,:), & ! [OUT]
-                               halo_local  (:,:), & ! [OUT]
-                               periodic    (:),   & ! [OUT]
-                               nvars,             & ! [OUT]
-                               varname    (:)     ) ! [OUT]
-
-    if ( myrank /= myrank_check(1) ) then
-       call Log('E', 'xxx [FileGetCommoninfo] requested rank number is inconsistent with that in the file.')
-    endif
+    call FileGetCommoninfoFId( fid,         & ! [IN]
+                               myrank,      & ! [IN]
+                               nvars_limit, & ! [IN]
+                               title,       & ! [OUT]
+                               source,      & ! [OUT]
+                               institution, & ! [OUT]
+                               nvars,       & ! [OUT]
+                               varname(:)   ) ! [OUT]
 
     return
   end subroutine FileGetCommoninfoFName
 
   subroutine FileGetCommoninfoFId( &
-       fid,          &
-       nvars_limit,  &
-       title,        &
-       source,       &
-       institution,  &
-       myrank,       &
-       rankidx,      &
-       procsize,     &
-       size_global,  &
-       start_global, &
-       halo_global,  &
-       halo_local,   &
-       periodic,     &
-       nvars,        &
-       varname       )
+       fid,         &
+       myrank,      &
+       nvars_limit, &
+       title,       &
+       source,      &
+       institution, &
+       nvars,       &
+       varname      )
     implicit none
 
     integer,                    intent(in)  :: fid
+    integer,                    intent(in)  :: myrank
     integer,                    intent(in)  :: nvars_limit
     character(len=File_HMID),   intent(out) :: title                ! title of the file
     character(len=File_HMID),   intent(out) :: source               ! for file header
     character(len=File_HMID),   intent(out) :: institution          ! for file header
-    integer,                    intent(out) :: myrank      (1)      ! total process size             (x:y)
-    integer,                    intent(out) :: rankidx     (2)      ! my rank in 2D process topology (x:y)
-    integer,                    intent(out) :: procsize    (2)      ! total process size             (x:y)
-    integer,                    intent(out) :: size_global (2)      ! total grid size     in global  (x:y)
-    integer,                    intent(out) :: start_global(2)      ! start index of grid in global  (x:y)
-    integer,                    intent(out) :: halo_global (2,2)    ! halo  grid size     in global  (x:y,start:end)
-    integer,                    intent(out) :: halo_local  (2,2)    ! halo  grid size     in local   (x:y,start:end)
-    logical,                    intent(out) :: periodic    (2)      ! periodic condition?            (x:y)
     integer,                    intent(out) :: nvars                ! number of variables
     character(len=File_HSHORT), intent(out) :: varname(nvars_limit) ! name of variables
 
-    character(len=6) :: logical_str
-
+    integer :: myrank_check(1)
     integer :: v
     !---------------------------------------------------------------------------
 
     call FileGetGlobalAttribute( fid, 'title',       title       )
     call FileGetGlobalAttribute( fid, 'source',      source      )
     call FileGetGlobalAttribute( fid, 'institution', institution )
-    call FileGetGlobalAttribute( fid, 'myrank',      myrank  (:) )
-    call FileGetGlobalAttribute( fid, 'rankidx',     rankidx (:) )
-    call FileGetGlobalAttribute( fid, 'procsize',    procsize(:) )
+    call FileGetGlobalAttribute( fid, 'myrank',      myrank_check(:) )
 
-    call FileGetAttribute( fid, 'x', 'size_global',  size_global (1:1) )
-    call FileGetAttribute( fid, 'x', 'start_global', start_global(1:1) )
-    call FileGetAttribute( fid, 'x', 'halo_global',  halo_global (1,:) )
-    call FileGetAttribute( fid, 'x', 'halo_local',   halo_local  (1,:) )
-    call FileGetAttribute( fid, 'x', 'periodic',     logical_str       )
-    periodic(1) = logical_str == 'true'
-
-    call FileGetAttribute( fid, 'y', 'size_global',  size_global (2:2) )
-    call FileGetAttribute( fid, 'y', 'start_global', start_global(2:2) )
-    call FileGetAttribute( fid, 'y', 'halo_global',  halo_global (2,:) )
-    call FileGetAttribute( fid, 'y', 'halo_local',   halo_local  (2,:) )
-    call FileGetAttribute( fid, 'y', 'periodic',     logical_str       )
-    periodic(2) = logical_str == 'true'
+    if ( myrank /= myrank_check(1) ) then
+       call Log('E','xxx [FileGetCommoninfo] requested rank number is inconsistent with that in the file.')
+    endif
 
     call FileGetVarnum( fid, nvars_limit, nvars )
 
@@ -1655,6 +1591,8 @@ contains
              call FileGetGlobalAttribute( fid, "time", time )
              time_start(1) = time(1)
              time_end  (1) = time(1)
+             step_nmax = 1
+             exit
           else
              time_units    = dinfo%time_units
              time_start(1) = dinfo%time_start

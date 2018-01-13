@@ -1406,8 +1406,7 @@ contains
     logical,          intent(in), optional :: append   !< switch whether append existing file or not (default=false)
     logical,          intent(in), optional :: nozcoord !< switch whether include zcoordinate or not (default=false)
 
-    integer                :: rankidx(2)
-    integer                :: procsize(2)
+    character(len=5)       :: periodic_z, periodic_x, periodic_y
     integer                :: dtype
     logical                :: append_sw
     character(len=34)      :: tunits
@@ -1416,11 +1415,6 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
-
-    rankidx (1) = PRC_2Drank(PRC_myrank,1)
-    rankidx (2) = PRC_2Drank(PRC_myrank,2)
-    procsize(1) = PRC_NUM_X
-    procsize(2) = PRC_NUM_Y
 
     ! dtype is used to define the data type of axis variables in file
     if    ( datatype == 'REAL8' ) then
@@ -1464,8 +1458,6 @@ contains
                      H_INSTITUTE,            & ! [IN]
                      PRC_masterrank,         & ! [IN]
                      PRC_myrank,             & ! [IN]
-                     rankidx,                & ! [IN]
-                     procsize,               & ! [IN]
                      time_units = tunits,    & ! [IN]
                      append     = append_sw, & ! [IN]
                      comm       = comm       ) ! [IN]
@@ -1479,6 +1471,44 @@ contains
        else
           File_nozcoord(fid) = .false.
        endif
+
+       periodic_z = "false"
+       if ( PRC_PERIODIC_X ) then
+          periodic_x = "true"
+       else
+          periodic_x = "false"
+       endif
+       if ( PRC_PERIODIC_Y ) then
+          periodic_y = "true"
+       else
+          periodic_y = "false"
+       endif
+
+       if ( IO_AGGREGATE ) then
+          call FileSetGlobalAttribute( fid, "scale_rm_prc_rank_x", (/0/) ) ! [IN]
+          call FileSetGlobalAttribute( fid, "scale_rm_prc_rank_y", (/0/) ) ! [IN]
+
+          call FileSetGlobalAttribute( fid, "scale_rm_prc_num_x",  (/1/) ) ! [IN]
+          call FileSetGlobalAttribute( fid, "scale_rm_prc_num_y",  (/1/) ) ! [IN]
+       else
+          call FileSetGlobalAttribute( fid, "scale_rm_prc_rank_x", (/PRC_2Drank(PRC_myrank,1)/) ) ! [IN]
+          call FileSetGlobalAttribute( fid, "scale_rm_prc_rank_y", (/PRC_2Drank(PRC_myrank,2)/) ) ! [IN]
+
+          call FileSetGlobalAttribute( fid, "scale_rm_prc_num_x",  (/PRC_NUM_X/) ) ! [IN]
+          call FileSetGlobalAttribute( fid, "scale_rm_prc_num_y",  (/PRC_NUM_Y/) ) ! [IN]
+       endif
+
+       call FileSetGlobalAttribute( fid, "scale_rm_prc_periodic_z", periodic_z ) ! [IN]
+       call FileSetGlobalAttribute( fid, "scale_rm_prc_periodic_x", periodic_x ) ! [IN]
+       call FileSetGlobalAttribute( fid, "scale_rm_prc_periodic_y", periodic_y ) ! [IN]
+
+       call FileSetGlobalAttribute( fid, "scale_rm_grid_index_kmax",  (/KMAX/)  ) ! [IN]
+       call FileSetGlobalAttribute( fid, "scale_rm_grid_index_imaxg", (/IMAXG/) ) ! [IN]
+       call FileSetGlobalAttribute( fid, "scale_rm_grid_index_jmaxg", (/JMAXG/) ) ! [IN]
+
+       call FileSetGlobalAttribute( fid, "scale_rm_grid_index_khalo", (/KHALO/) ) ! [IN]
+       call FileSetGlobalAttribute( fid, "scale_rm_grid_index_ihalo", (/IHALO/) ) ! [IN]
+       call FileSetGlobalAttribute( fid, "scale_rm_grid_index_jhalo", (/JHALO/) ) ! [IN]
 
        if ( present( subsec ) ) then
           call FileSetGlobalAttribute( fid, "time", (/subsec/) )
