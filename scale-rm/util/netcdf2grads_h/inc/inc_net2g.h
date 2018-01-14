@@ -73,5 +73,5 @@
                   6000, 7000, 8000, 9000, 10000, 11000, 12000 /
 
   integer,  parameter :: num_std_vname = 6
-  character(CSHT) :: std_vname(num_std_vname)
+  character(CMID) :: std_vname(num_std_vname)
   data std_vname / "PT", "PRES", "U", "V", "W", "QHYD" /
