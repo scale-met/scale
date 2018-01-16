@@ -182,7 +182,7 @@ contains
 
        call FILEIO_write( TOPO_Zsfc(:,:), TOPO_OUT_BASENAME, TOPO_OUT_TITLE, & ! [IN]
                           'TOPO', 'Topography', 'm', 'XY',   TOPO_OUT_DTYPE, & ! [IN]
-                          nozcoord=.true. )
+                          haszcoord=.false.                                  ) ! [IN]
 
     endif
 

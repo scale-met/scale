@@ -325,7 +325,7 @@ contains
        call LANDUSE_fillhalo( FILL_BND=.false. )
 
        call FILEIO_create( fid, LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, &
-                           LANDUSE_OUT_DTYPE, nozcoord=.true.            )
+                           LANDUSE_OUT_DTYPE, haszcoord=.false.          )
 
        call FILEIO_def_var( fid, vid(1), 'FRAC_LAND'     , 'LAND fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE )
        call FILEIO_def_var( fid, vid(2), 'FRAC_LAKE'     , 'LAKE fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE )

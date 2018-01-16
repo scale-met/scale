@@ -81,6 +81,25 @@ module scale_fileio
   !
   !++ Public parameters & variables
   !
+  type, public :: axisattinfo
+    integer          :: size_global (1)
+    integer          :: start_global(1)
+    integer          :: halo_global (2)
+    integer          :: halo_local  (2)
+    character(len=5) :: periodic
+  end type axisattinfo
+
+  type, public :: mappinginfo
+    character(len=H_SHORT) :: mapping_name
+    real(DP)               :: false_easting                        (1)
+    real(DP)               :: false_northing                       (1)
+    real(DP)               :: longitude_of_central_meridian        (1)
+    real(DP)               :: longitude_of_projection_origin       (1)
+    real(DP)               :: latitude_of_projection_origin        (1)
+    real(DP)               :: straight_vertical_longitude_from_pole(1)
+    real(DP)               :: standard_parallel                    (2)
+  end type mappinginfo
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -98,22 +117,22 @@ module scale_fileio
   real(RP), private              :: FILEIO_datacheck_criteria
 
   real(RP), private, allocatable :: AXIS_LON  (:,:)   ! [deg]
-  real(RP), private, allocatable :: AXIS_LONX (:,:)   ! [deg]
-  real(RP), private, allocatable :: AXIS_LONY (:,:)   ! [deg]
-  real(RP), private, allocatable :: AXIS_LONXY(:,:)   ! [deg]
+  real(RP), private, allocatable :: AXIS_LONUY(:,:)   ! [deg]
+  real(RP), private, allocatable :: AXIS_LONXV(:,:)   ! [deg]
+  real(RP), private, allocatable :: AXIS_LONUV(:,:)   ! [deg]
   real(RP), private, allocatable :: AXIS_LAT  (:,:)   ! [deg]
-  real(RP), private, allocatable :: AXIS_LATX (:,:)   ! [deg]
-  real(RP), private, allocatable :: AXIS_LATY (:,:)   ! [deg]
-  real(RP), private, allocatable :: AXIS_LATXY(:,:)   ! [deg]
-  real(RP), private, allocatable :: AXIS_HZXY (:,:,:)
-  real(RP), private, allocatable :: AXIS_HWXY (:,:,:)
+  real(RP), private, allocatable :: AXIS_LATUY(:,:)   ! [deg]
+  real(RP), private, allocatable :: AXIS_LATXV(:,:)   ! [deg]
+  real(RP), private, allocatable :: AXIS_LATUV(:,:)   ! [deg]
+  real(RP), private, allocatable :: AXIS_HGT   (:,:,:)
+  real(RP), private, allocatable :: AXIS_HGTWXY(:,:,:)
 
   integer,  private, parameter   :: File_nfile_max = 512                  ! number limit of file
                                                                           ! Keep consistency with "FILE_MAX" in gtool_netcdf.c
   logical,  private              :: File_axes_written(0:File_nfile_max-1) ! whether axes have been written
   !                                                                       ! fid starts from zero so index should start from zero
   logical,  private              :: File_closed      (0:File_nfile_max-1) ! whether file has been closed
-  logical,  private              :: File_nozcoord(0:File_nfile_max-1)     ! whether nozcoord is true or false
+  logical,  private              :: File_haszcoord   (0:File_nfile_max-1) ! z-coordinates exist?
   integer,  private              :: write_buf_amount = 0                  ! sum of write buffer amounts
 
   ! global star and count
@@ -205,16 +224,16 @@ contains
     IM = XEB - XSB + 1
     JM = YEB - YSB + 1
     allocate( AXIS_LON  (IM,JM) )
-    allocate( AXIS_LONX (IM,JM) )
-    allocate( AXIS_LONY (IM,JM) )
-    allocate( AXIS_LONXY(IM,JM) )
+    allocate( AXIS_LONUY(IM,JM) )
+    allocate( AXIS_LONXV(IM,JM) )
+    allocate( AXIS_LONUV(IM,JM) )
     allocate( AXIS_LAT  (IM,JM) )
-    allocate( AXIS_LATX (IM,JM) )
-    allocate( AXIS_LATY (IM,JM) )
-    allocate( AXIS_LATXY(IM,JM) )
+    allocate( AXIS_LATUY(IM,JM) )
+    allocate( AXIS_LATXV(IM,JM) )
+    allocate( AXIS_LATUV(IM,JM) )
 
-    allocate( AXIS_HZXY (KMAX  ,IM,JM) )
-    allocate( AXIS_HWXY (KMAX+1,IM,JM) )
+    allocate( AXIS_HGT   (KMAX  ,IM,JM) )
+    allocate( AXIS_HGTWXY(KMAX+1,IM,JM) )
 
     if( IO_AGGREGATE ) call Construct_Derived_Datatype
 
@@ -230,15 +249,15 @@ contains
     !---------------------------------------------------------------------------
 
     deallocate( AXIS_LON   )
-    deallocate( AXIS_LONX  )
-    deallocate( AXIS_LONY  )
-    deallocate( AXIS_LONXY )
+    deallocate( AXIS_LONUY )
+    deallocate( AXIS_LONXV )
+    deallocate( AXIS_LONUV )
     deallocate( AXIS_LAT   )
-    deallocate( AXIS_LATX  )
-    deallocate( AXIS_LATY  )
-    deallocate( AXIS_LATXY )
-    deallocate( AXIS_HZXY  )
-    deallocate( AXIS_HWXY  )
+    deallocate( AXIS_LATUY )
+    deallocate( AXIS_LATXV )
+    deallocate( AXIS_LATUV )
+    deallocate( AXIS_HGT    )
+    deallocate( AXIS_HGTWXY )
 
     call Free_Derived_Datatype
 
@@ -277,16 +296,16 @@ contains
     !---------------------------------------------------------------------------
 
     AXIS_LON  (:,:)   = LON  (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LONX (:,:)   = LONX (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LONY (:,:)   = LONY (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LONXY(:,:)   = LONXY(XSB:XEB,YSB:YEB) / D2R
+    AXIS_LONUY(:,:)   = LONX (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LONXV(:,:)   = LONY (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LONUV(:,:)   = LONXY(XSB:XEB,YSB:YEB) / D2R
     AXIS_LAT  (:,:)   = LAT  (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LATX (:,:)   = LATX (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LATY (:,:)   = LATY (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LATXY(:,:)   = LATXY(XSB:XEB,YSB:YEB) / D2R
+    AXIS_LATUY(:,:)   = LATX (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LATXV(:,:)   = LATY (XSB:XEB,YSB:YEB) / D2R
+    AXIS_LATUV(:,:)   = LATXY(XSB:XEB,YSB:YEB) / D2R
 
-    AXIS_HZXY (:,:,:) = CZ(KS  :KE,XSB:XEB,YSB:YEB)
-    AXIS_HWXY (:,:,:) = FZ(KS-1:KE,XSB:XEB,YSB:YEB)
+    AXIS_HGT   (:,:,:) = CZ(KS  :KE,XSB:XEB,YSB:YEB)
+    AXIS_HGTWXY(:,:,:) = FZ(KS-1:KE,XSB:XEB,YSB:YEB)
 
     set_coordinates = .true.
 
@@ -412,7 +431,7 @@ contains
        call FILEIO_flush( fid )
        call check_1d( GRID_CZ(KS:KE), buffer_z(KS:KE), 'z' )
        if ( .not. transpose_ ) then
-          call check_3d( AXIS_HZXY, buffer_zxy(KS:KE,XSB:XEB,YSB:YEB), 'height', transpose_ )
+          call check_3d( AXIS_HGT, buffer_zxy(KS:KE,XSB:XEB,YSB:YEB), 'height', transpose_ )
        endif
     endif
 
@@ -1100,7 +1119,7 @@ contains
        subsec,   &
        append,   &
        nohalo,   &
-       nozcoord  )
+       haszcoord )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -1114,19 +1133,19 @@ contains
     character(len=*), intent(in) :: axistype !< axis type (Z/X/Y)
     character(len=*), intent(in) :: datatype !< data type (REAL8/REAL4/default)
 
-    integer,          intent(in), optional :: date(6)  !< ymdhms of the time
-    real(DP),         intent(in), optional :: subsec   !< subsec of the time
-    logical,          intent(in), optional :: append   !< switch whether append existing file or not (default=false)
-    logical,          intent(in), optional :: nohalo   !< switch whether include halo data or not (default=false)
-    logical,          intent(in), optional :: nozcoord !< switch whether include zcoordinate or not (default=false)
+    integer,          intent(in), optional :: date(6)   !< ymdhms of the time
+    real(DP),         intent(in), optional :: subsec    !< subsec of the time
+    logical,          intent(in), optional :: append    !< switch whether append existing file or not (default=false)
+    logical,          intent(in), optional :: nohalo    !< switch whether include halo data or not    (default=false)
+    logical,          intent(in), optional :: haszcoord !< switch whether include zcoordinate or not  (default=true)
 
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (2D), name : ', trim(varname)
 
-    call FILEIO_create( fid,                                                      & ! [OUT]
-                        basename, title, datatype, date, subsec, append, nozcoord )
+    call FILEIO_create( fid,                                                       & ! [OUT]
+                        basename, title, datatype, date, subsec, append, haszcoord )
 
     call FILEIO_def_var( fid, vid, varname, desc, unit, axistype, datatype )
 
@@ -1371,7 +1390,7 @@ contains
        date,     &
        subsec,   &
        append,   &
-       nozcoord  )
+       haszcoord )
     use mpi, only: &
        MPI_COMM_NULL
     use gtool_file_h, only: &
@@ -1401,17 +1420,17 @@ contains
     character(len=*), intent(in)  :: title    !< title    of the file
     character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
 
-    integer,          intent(in), optional :: date(6)  !< ymdhms of the time
-    real(DP),         intent(in), optional :: subsec   !< subsec of the time
-    logical,          intent(in), optional :: append   !< switch whether append existing file or not (default=false)
-    logical,          intent(in), optional :: nozcoord !< switch whether include zcoordinate or not (default=false)
+    integer,          intent(in), optional :: date(6)   !< ymdhms of the time
+    real(DP),         intent(in), optional :: subsec    !< subsec of the time
+    logical,          intent(in), optional :: append    !< switch whether append existing file or not (default=false)
+    logical,          intent(in), optional :: haszcoord !< switch whether include zcoordinate or not (default=true)
 
-    character(len=5)       :: periodic_z, periodic_x, periodic_y
-    integer                :: dtype
-    logical                :: append_sw
-    character(len=34)      :: tunits
-    integer                :: comm
-    logical                :: fileexisted
+    character(len=5)  :: periodic_z, periodic_x, periodic_y
+    integer           :: dtype
+    logical           :: append_sw
+    character(len=34) :: tunits
+    integer           :: comm
+    logical           :: fileexisted
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -1465,11 +1484,11 @@ contains
 
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
-       call FILEIO_def_axes( fid, dtype, xy = nozcoord ) ! [IN]
-       if ( present( nozcoord ) ) then
-          File_nozcoord(fid) = nozcoord
+
+       if ( present( haszcoord ) ) then
+          File_haszcoord(fid) = haszcoord
        else
-          File_nozcoord(fid) = .false.
+          File_haszcoord(fid) = .true.
        endif
 
        periodic_z = "false"
@@ -1510,17 +1529,22 @@ contains
        call FileSetGlobalAttribute( fid, "scale_rm_grid_index_ihalo", (/IHALO/) ) ! [IN]
        call FileSetGlobalAttribute( fid, "scale_rm_grid_index_jhalo", (/JHALO/) ) ! [IN]
 
-       if ( present( subsec ) ) then
-          call FileSetGlobalAttribute( fid, "time", (/subsec/) )
-       else
-          call FileSetGlobalAttribute( fid, "time", (/NOWMS/) )
-       end if
+       call FILEIO_def_axes( fid,                & ! [IN]
+                             dtype,              & ! [IN]
+                             File_haszcoord(fid) ) ! [IN]
+
        if ( present( date ) ) then
           call getCFtunits(tunits, date)
        else
           call getCFtunits(tunits, NOWDATE)
        endif
        call FileSetGlobalAttribute( fid, "time_units", tunits )
+
+       if ( present( subsec ) ) then
+          call FileSetGlobalAttribute( fid, "time", (/subsec/) )
+       else
+          call FileSetGlobalAttribute( fid, "time", (/NOWMS/) )
+       endif
 
        File_axes_written(fid) = .false.  ! indicating axes have not been written yet
        File_closed      (fid) = .false.
@@ -1539,9 +1563,18 @@ contains
        FileEndDef, &
        FileFlush,  &
        FileAttachBuffer
+    use scale_process, only: &
+       PRC_myrank
+    use scale_rm_process, only: &
+       PRC_2Drank, &
+       PRC_NUM_X, &
+       PRC_NUM_Y
     implicit none
 
     integer, intent(in) :: fid  !< file ID
+
+    logical :: put_z, put_x, put_y, writebymaster
+    integer :: start(3)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -1550,7 +1583,42 @@ contains
 
     ! If this enddef is called the first time, write axis variables
     if ( .NOT. File_axes_written(fid) ) then
-       call FILEIO_write_axes( fid, File_nozcoord(fid) )
+
+       if ( IO_AGGREGATE ) then
+          ! For parallel I/O, not all variables are written by all processes.
+          ! 1. Let PRC_myrank 0 writes all z axes
+          ! 2. Let processes (rankidx(2) == 0) write x axes  (south-most processes)
+          !        rankidx(1) == 0           writes west HALO
+          !        rankidx(1) == PRC_NUM_X-1 writes east HALO
+          !        others                    writes without HALO
+          ! 3. Let processes (rankidx(1) == 0) write y axes  (west-most processes)
+          !        rankidx(1) == 0           writes south HALO
+          !        rankidx(1) == PRC_NUM_Y-1 writes north HALO
+          !        others                    writes without HALO
+
+          put_z         = ( File_haszcoord(fid)           ) ! only master process output the vertical coordinates
+          put_x         = ( PRC_2Drank(PRC_myrank,1) == 0 ) ! only south-most row    processes write x coordinates
+          put_y         = ( PRC_2Drank(PRC_myrank,2) == 0 ) ! only west-most  column processes write y coordinates
+          writebymaster = .true.
+
+          start(1) = 1
+          start(2) = ISGA
+          start(3) = JSGA
+       else
+          put_z         = ( File_haszcoord(fid) )
+          put_x         = .true.
+          put_y         = .true.
+          writebymaster = .false.
+
+          start(1) = 1
+          start(2) = 1
+          start(3) = 1
+       endif
+
+       call FILEIO_write_axes( fid,                    & ! [IN]
+                               PRC_myrank,             & ! [IN]
+                               put_z, put_x, put_y,    & ! [IN]
+                               writebymaster, start(:) ) ! [IN]
 
        ! Tell PnetCDF library to use a buffer of size write_buf_amount to aggregate write requests to be post in FILEIO_write_var
        if ( IO_AGGREGATE ) then
@@ -1630,7 +1698,7 @@ contains
   subroutine FILEIO_def_axes( &
        fid,   &
        dtype, &
-       xy     )
+       hasZ   )
     use gtool_file, only: &
        FileDefAxis,                  &
        FileSetAttribute,             &
@@ -1641,11 +1709,11 @@ contains
     use scale_rm_process, only: &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y, &
-       PRC_NUM_X, &
-       PRC_NUM_Y, &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
+       PRC_NUM_X,      &
+       PRC_NUM_Y,      &
+       PRC_HAS_W,      &
+       PRC_HAS_E,      &
+       PRC_HAS_S,      &
        PRC_HAS_N
     use scale_mapproj, only: &
        MPRJ_get_attributes
@@ -1653,260 +1721,216 @@ contains
 
     integer, intent(in) :: fid
     integer, intent(in) :: dtype
-    logical, intent(in), optional :: xy
+    logical, intent(in) :: hasZ
 
-    character(len=2) :: AXIS_name(3)
-    logical          :: xy_
+    integer :: iall  ! grid size, x-axis, (whole domain or local tile), including halo
+    integer :: jall  ! grid size, y-axis, (whole domain or local tile), including halo
+    integer :: isize ! grid size, x-axis, (whole domain or local tile), without halo except domain edge
+    integer :: jsize ! grid size, y-axis, (whole domain or local tile), without halo except domain edge
 
-    character(len=5) :: logical_str
+    type(axisattinfo) :: ainfo(4)
+    type(mappinginfo) :: minfo
 
-    integer :: isize, jsize
-    integer :: istart, jstart
-    integer :: whalo_g, ehalo_g, shalo_g, nhalo_g
-    integer :: whalo_l, ehalo_l, shalo_l, nhalo_l
-
-    character(len=H_SHORT) :: mapping
-    real(DP) :: false_easting
-    real(DP) :: false_northing
-    real(DP) :: longitude_of_central_meridian
-    real(DP) :: longitude_of_projection_origin
-    real(DP) :: latitude_of_projection_origin
-    real(DP) :: straight_vertical_longitude_from_pole
-    real(DP) :: standard_parallel(2)
-
+    character(len=2) :: axisname(3)
     !---------------------------------------------------------------------------
 
-    if ( present(xy) ) then
-       xy_ = xy
+    if ( PRC_PERIODIC_X ) then
+       ainfo(1)%periodic = "true"
+       ainfo(2)%periodic = "true"
     else
-       xy_ = .false.
-    end if
+       ainfo(1)%periodic = "false"
+       ainfo(2)%periodic = "false"
+    endif
 
-    if ( .NOT. xy_ ) then
-       call FileDefAxis( fid, 'z',   'Z',               'm', 'z',   dtype, KMAX )
-    end if
-    if ( .NOT. IO_AGGREGATE ) then
-       call FileDefAxis( fid, 'x',   'X',               'm', 'x',   dtype, IMAXB )
-       call FileDefAxis( fid, 'y',   'Y',               'm', 'y',   dtype, JMAXB )
+    if ( PRC_PERIODIC_Y ) then
+       ainfo(3)%periodic = "true"
+       ainfo(4)%periodic = "true"
     else
-       call FileDefAxis( fid, 'x',   'X',               'm', 'x',   dtype, IAG )
-       call FileDefAxis( fid, 'y',   'Y',               'm', 'y',   dtype, JAG )
-    end if
+       ainfo(3)%periodic = "false"
+       ainfo(4)%periodic = "false"
+    endif
 
-    if ( .NOT. xy_ ) then
-       call FileDefAxis( fid, 'zh',  'Z (half level)',  'm', 'zh',  dtype, KMAX+1 )
-    end if
-    if ( .NOT. IO_AGGREGATE ) then
-       call FileDefAxis( fid, 'xh',  'X (half level)',  'm', 'xh',  dtype, IMAXB )
-       call FileDefAxis( fid, 'yh',  'Y (half level)',  'm', 'yh',  dtype, JMAXB )
+    call MPRJ_get_attributes( minfo%mapping_name,                             & ! [OUT]
+                              minfo%false_easting                        (1), & ! [OUT]
+                              minfo%false_northing                       (1), & ! [OUT]
+                              minfo%longitude_of_central_meridian        (1), & ! [OUT]
+                              minfo%longitude_of_projection_origin       (1), & ! [OUT]
+                              minfo%latitude_of_projection_origin        (1), & ! [OUT]
+                              minfo%straight_vertical_longitude_from_pole(1), & ! [OUT]
+                              minfo%standard_parallel                    (:)  ) ! [OUT]
+
+    if ( IO_AGGREGATE ) then
+       ! for x = CXG
+       ainfo(1)%size_global (1) = IAG
+       ainfo(1)%start_global(1) = 1
+       ainfo(1)%halo_global (1) = IHALO ! west side
+       ainfo(1)%halo_global (2) = IHALO ! east side
+       ainfo(1)%halo_local  (1) = IHALO ! west side
+       ainfo(1)%halo_local  (2) = IHALO ! east side
+       ! for xh = FXG
+       ainfo(2)%size_global (1) = IAG+1
+       ainfo(2)%start_global(1) = 1
+       ainfo(2)%halo_global (1) = IHALO ! west side
+       ainfo(2)%halo_global (2) = IHALO ! east side
+       ainfo(2)%halo_local  (1) = IHALO ! west side
+       ainfo(2)%halo_local  (2) = IHALO ! east side
+       ! for y = CYG
+       ainfo(3)%size_global (1) = JAG
+       ainfo(3)%start_global(1) = 1
+       ainfo(3)%halo_global (1) = JHALO ! south side
+       ainfo(3)%halo_global (2) = JHALO ! north side
+       ainfo(3)%halo_local  (1) = JHALO ! south side
+       ainfo(3)%halo_local  (2) = JHALO ! north side
+       ! for yh = FYG
+       ainfo(4)%size_global (1) = JAG+1
+       ainfo(4)%start_global(1) = 1
+       ainfo(4)%halo_global (1) = JHALO ! south side
+       ainfo(4)%halo_global (2) = JHALO ! north side
+       ainfo(4)%halo_local  (1) = JHALO ! south side
+       ainfo(4)%halo_local  (2) = JHALO ! north side
     else
-       call FileDefAxis( fid, 'xh',  'X (half level)',  'm', 'xh',  dtype, IAG )
-       call FileDefAxis( fid, 'yh',  'Y (half level)',  'm', 'yh',  dtype, JAG )
-    end if
+       ! for x
+       if ( PRC_PERIODIC_X ) then
+          ainfo(1)%size_global (1) = IMAX * PRC_NUM_X
+          ainfo(1)%start_global(1) = IS_inG - IHALO
+          ainfo(1)%halo_global (1) = 0     ! west side
+          ainfo(1)%halo_global (2) = 0     ! east side
+          ainfo(1)%halo_local  (1) = 0     ! west side
+          ainfo(1)%halo_local  (2) = 0     ! east side
+       else
+          ainfo(1)%size_global (1) = IAG
+          ainfo(1)%start_global(1) = ISGA
+          ainfo(1)%halo_global (1) = IHALO ! west side
+          ainfo(1)%halo_global (2) = IHALO ! east side
+          ainfo(1)%halo_local  (1) = IHALO ! west side
+          ainfo(1)%halo_local  (2) = IHALO ! east side
+          if( PRC_HAS_W ) ainfo(1)%halo_local(1) = 0
+          if( PRC_HAS_E ) ainfo(1)%halo_local(2) = 0
+       endif
+       ! for xh
+       ainfo(2) = ainfo(1)
+       ! for y
+       if ( PRC_PERIODIC_Y ) then
+          ainfo(3)%size_global (1) = JMAX * PRC_NUM_Y
+          ainfo(3)%start_global(1) = JS_inG - JHALO
+          ainfo(3)%halo_global (1) = 0     ! south side
+          ainfo(3)%halo_global (2) = 0     ! north side
+          ainfo(3)%halo_local  (1) = 0     ! south side
+          ainfo(3)%halo_local  (2) = 0     ! north side
+       else
+          ainfo(3)%size_global (1) = JAG
+          ainfo(3)%start_global(1) = JSGA
+          ainfo(3)%halo_global (1) = JHALO ! south side
+          ainfo(3)%halo_global (2) = JHALO ! north side
+          ainfo(3)%halo_local  (1) = JHALO ! south side
+          ainfo(3)%halo_local  (2) = JHALO ! north side
+          if( PRC_HAS_S ) ainfo(3)%halo_local(1) = 0
+          if( PRC_HAS_N ) ainfo(3)%halo_local(2) = 0
+       endif
+       ! for yh
+       ainfo(4) = ainfo(3)
+    endif
 
-    if ( .NOT. xy_ ) then
-       call FileDefAxis( fid, 'lz',  'LZ',              'm', 'lz',  dtype, LKMAX   )
-       call FileDefAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, LKMAX+1 )
-       call FileDefAxis( fid, 'uz',  'UZ',              'm', 'uz',  dtype, UKMAX   )
-       call FileDefAxis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, UKMAX+1 )
-    end if
-
-    if ( .NOT. xy_ ) then
-       call FileDefAxis( fid, 'CZ',  'Atmos Grid Center Position Z', 'm', 'CZ',  dtype, KA )
-    end if
-    if ( .NOT. IO_AGGREGATE ) then
-       call FileDefAxis( fid, 'CX',  'Atmos Grid Center Position X', 'm', 'CX',  dtype, IA )
-       call FileDefAxis( fid, 'CY',  'Atmos Grid Center Position Y', 'm', 'CY',  dtype, JA )
+    if ( IO_AGGREGATE ) then
+       iall  = IAG
+       jall  = JAG
+       isize = IAG
+       jsize = JAG
     else
-       call FileDefAxis( fid, 'CX',  'Atmos Grid Center Position X', 'm', 'CX',  dtype, IAG )
-       call FileDefAxis( fid, 'CY',  'Atmos Grid Center Position Y', 'm', 'CY',  dtype, JAG )
-    end if
+       iall  = IA
+       jall  = JA
+       isize = IMAXB
+       jsize = JMAXB
+    endif
 
-    if ( .NOT. xy_ ) then
-       call FileDefAxis( fid, 'FZ',  'Atmos Grid Face Position Z',   'm', 'FZ',  dtype, KA+1 )
-    end if
-    if ( .NOT. IO_AGGREGATE ) then
-       call FileDefAxis( fid, 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  dtype, IA+1 )
-       call FileDefAxis( fid, 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  dtype, JA+1 )
-    else
-       call FileDefAxis( fid, 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  dtype, IAG+1 )
-       call FileDefAxis( fid, 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  dtype, JAG+1 )
-    end if
+    if( hasZ ) call FileDefAxis( fid, 'z'  , 'Z'              , 'm', 'z'  , dtype, KMAX    )
+    if( hasZ ) call FileDefAxis( fid, 'zh' , 'Z (half level)' , 'm', 'zh' , dtype, KMAX+1  )
 
-    if ( .NOT. xy_ ) then
-       call FileDefAxis( fid, 'CDZ', 'Grid Cell length Z', 'm', 'CZ',  dtype, KA )
-    end if
-    if ( .NOT. IO_AGGREGATE ) then
-       call FileDefAxis( fid, 'CDX', 'Grid Cell length X', 'm', 'CX',  dtype, IA )
-       call FileDefAxis( fid, 'CDY', 'Grid Cell length Y', 'm', 'CY',  dtype, JA )
-    else
-       call FileDefAxis( fid, 'CDX', 'Grid Cell length X', 'm', 'CX',  dtype, IAG )
-       call FileDefAxis( fid, 'CDY', 'Grid Cell length Y', 'm', 'CY',  dtype, JAG )
-    end if
+    if( hasZ ) call FileDefAxis( fid, 'lz' , 'LZ'             , 'm', 'lz' , dtype, LKMAX   )
+    if( hasZ ) call FileDefAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, LKMAX+1 )
 
-    if ( .NOT. xy_ ) then
-       call FileDefAxis( fid, 'FDZ', 'Grid distance Z',    'm', 'FDZ', dtype, KA-1 )
-    end if
-    if ( .NOT. IO_AGGREGATE ) then
-       call FileDefAxis( fid, 'FDX', 'Grid distance X',    'm', 'FDX', dtype, IA-1 )
-       call FileDefAxis( fid, 'FDY', 'Grid distance Y',    'm', 'FDY', dtype, JA-1 )
-    else
-       call FileDefAxis( fid, 'FDX', 'Grid distance X',    'm', 'FDX', dtype, IAG-1 )
-       call FileDefAxis( fid, 'FDY', 'Grid distance Y',    'm', 'FDY', dtype, JAG-1 )
-    end if
+    if( hasZ ) call FileDefAxis( fid, 'uz' , 'UZ'             , 'm', 'uz' , dtype, UKMAX   )
+    if( hasZ ) call FileDefAxis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, UKMAX+1 )
 
-    if ( .NOT. xy_ ) then
-       call FileDefAxis( fid, 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', dtype, LKMAX )
-       call FileDefAxis( fid, 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', dtype, LKMAX+1 )
-       call FileDefAxis( fid, 'LCDZ', 'Land Grid Cell length Z',      'm', 'LCZ', dtype, LKMAX )
+               call FileDefAxis( fid, 'x'  , 'X'              , 'm', 'x'  , dtype, isize   )
+               call FileDefAxis( fid, 'xh' , 'X (half level)' , 'm', 'xh' , dtype, isize   )
+               call FileDefAxis( fid, 'y'  , 'Y'              , 'm', 'y'  , dtype, jsize   )
+               call FileDefAxis( fid, 'yh' , 'Y (half level)' , 'm', 'yh' , dtype, jsize   )
 
-       call FileDefAxis( fid, 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', dtype, UKMAX )
-       call FileDefAxis( fid, 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', dtype, UKMAX+1 )
-       call FileDefAxis( fid, 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', dtype, UKMAX )
-    end if
+    if( hasZ ) call FileDefAxis( fid, 'CZ'   , 'Atmos Grid Center Position Z',      'm', 'CZ',   dtype, KA      )
+    if( hasZ ) call FileDefAxis( fid, 'FZ'   , 'Atmos Grid Face   Position Z',      'm', 'FZ',   dtype, KA+1    )
+    if( hasZ ) call FileDefAxis( fid, 'CDZ'  , 'Grid Cell length Z',                'm', 'CZ',   dtype, KA      )
+    if( hasZ ) call FileDefAxis( fid, 'FDZ'  , 'Grid distance Z',                   'm', 'FDZ',  dtype, KA-1    )
+    if( hasZ ) call FileDefAxis( fid, 'CBFZ' , 'Boundary factor Center Z',          '1', 'CZ',   dtype, KA      )
+    if( hasZ ) call FileDefAxis( fid, 'FBFZ' , 'Boundary factor Face Z',            '1', 'FZ',   dtype, KA+1    )
 
-    if ( .NOT. xy_ ) then
-       call FileDefAxis( fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, KA )
-    end if
-    if ( .NOT. IO_AGGREGATE ) then
-       call FileDefAxis( fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, IA )
-       call FileDefAxis( fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, JA )
-    else
-       call FileDefAxis( fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, IAG )
-       call FileDefAxis( fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, JAG )
-    end if
+    if( hasZ ) call FileDefAxis( fid, 'LCZ'  , 'Land Grid Center Position Z',       'm', 'LCZ',  dtype, LKMAX   )
+    if( hasZ ) call FileDefAxis( fid, 'LFZ'  , 'Land Grid Face   Position Z',       'm', 'LFZ',  dtype, LKMAX+1 )
+    if( hasZ ) call FileDefAxis( fid, 'LCDZ' , 'Land Grid Cell length Z',           'm', 'LCZ',  dtype, LKMAX   )
 
-    if ( .NOT. xy_ ) then
-       call FileDefAxis( fid, 'FBFZ', 'Boundary factor Face Z',   '1', 'FZ', dtype, KA )
-    end if
-    if ( .NOT. IO_AGGREGATE ) then
-       call FileDefAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'FX', dtype, IA )
-       call FileDefAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'FY', dtype, JA )
-    else
-       call FileDefAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'FX', dtype, IAG )
-       call FileDefAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'FY', dtype, JAG )
-    end if
+    if( hasZ ) call FileDefAxis( fid, 'UCZ'  , 'Urban Grid Center Position Z',      'm', 'UCZ',  dtype, UKMAX   )
+    if( hasZ ) call FileDefAxis( fid, 'UFZ'  , 'Urban Grid Face   Position Z',      'm', 'UFZ',  dtype, UKMAX+1 )
+    if( hasZ ) call FileDefAxis( fid, 'UCDZ' , 'Urban Grid Cell length Z',          'm', 'UCZ',  dtype, UKMAX   )
 
-    ! TODO: skip 8 axes below when IO_AGGREGATE is true, as all axes are now global
-    call FileDefAxis( fid, 'CXG', 'Grid Center Position X (global)', 'm', 'CXG', dtype, IAG )
-    call FileDefAxis( fid, 'CYG', 'Grid Center Position Y (global)', 'm', 'CYG', dtype, JAG )
-    call FileDefAxis( fid, 'FXG', 'Grid Face Position X (global)',   'm', 'FXG', dtype, IAG+1 )
-    call FileDefAxis( fid, 'FYG', 'Grid Face Position Y (global)',   'm', 'FYG', dtype, JAG+1 )
+               call FileDefAxis( fid, 'CX'   , 'Atmos Grid Center Position X',      'm', 'CX',   dtype, iall   )
+               call FileDefAxis( fid, 'CY'   , 'Atmos Grid Center Position Y',      'm', 'CY',   dtype, jall   )
+               call FileDefAxis( fid, 'FX'   , 'Atmos Grid Face   Position X',      'm', 'FX',   dtype, iall+1 )
+               call FileDefAxis( fid, 'FY'   , 'Atmos Grid Face   Position Y',      'm', 'FY',   dtype, jall+1 )
+               call FileDefAxis( fid, 'CDX'  , 'Grid Cell length X',                'm', 'CX',   dtype, iall   )
+               call FileDefAxis( fid, 'CDY'  , 'Grid Cell length Y',                'm', 'CY',   dtype, jall   )
+               call FileDefAxis( fid, 'FDX'  , 'Grid distance X',                   'm', 'FDX',  dtype, iall-1 )
+               call FileDefAxis( fid, 'FDY'  , 'Grid distance Y',                   'm', 'FDY',  dtype, jall-1 )
+               call FileDefAxis( fid, 'CBFX' , 'Boundary factor Center X',          '1', 'CX',   dtype, iall   )
+               call FileDefAxis( fid, 'CBFY' , 'Boundary factor Center Y',          '1', 'CY',   dtype, jall   )
+               call FileDefAxis( fid, 'FBFX' , 'Boundary factor Face X',            '1', 'FX',   dtype, iall+1 )
+               call FileDefAxis( fid, 'FBFY' , 'Boundary factor Face Y',            '1', 'FY',   dtype, jall+1 )
 
-    call FileDefAxis( fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', dtype, IAG )
-    call FileDefAxis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', dtype, JAG )
-    call FileDefAxis( fid, 'FBFXG', 'Boundary factor Face X (global)',   '1', 'FXG', dtype, IAG )
-    call FileDefAxis( fid, 'FBFYG', 'Boundary factor Face Y (global)',   '1', 'FYG', dtype, JAG )
+               call FileDefAxis( fid, 'CXG'  , 'Grid Center Position X (global)',   'm', 'CXG',  dtype, IAG   )
+               call FileDefAxis( fid, 'CYG'  , 'Grid Center Position Y (global)',   'm', 'CYG',  dtype, JAG   )
+               call FileDefAxis( fid, 'FXG'  , 'Grid Face   Position X (global)',   'm', 'FXG',  dtype, IAG+1 )
+               call FileDefAxis( fid, 'FYG'  , 'Grid Face   Position Y (global)',   'm', 'FYG',  dtype, JAG+1 )
+               call FileDefAxis( fid, 'CDXG' , 'Grid Cell length X (global)',       'm', 'CXG',  dtype, IAG   )
+               call FileDefAxis( fid, 'CDYG' , 'Grid Cell length Y (global)',       'm', 'CYG',  dtype, JAG   )
+               call FileDefAxis( fid, 'FDXG' , 'Grid distance X (global)',          'm', 'FDXG', dtype, IAG-1 )
+               call FileDefAxis( fid, 'FDYG' , 'Grid distance Y (global)',          'm', 'FDYG', dtype, JAG-1 )
+               call FileDefAxis( fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG',  dtype, IAG   )
+               call FileDefAxis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG',  dtype, JAG   )
+               call FileDefAxis( fid, 'FBFXG', 'Boundary factor Face   X (global)', '1', 'FXG',  dtype, IAG+1 )
+               call FileDefAxis( fid, 'FBFYG', 'Boundary factor Face   Y (global)', '1', 'FYG',  dtype, JAG+1 )
 
     ! associate coordinates
-    AXIS_name(1:2) = (/'x ','y '/)
-    call FileDefAssociatedCoordinates( fid, 'lon' , 'longitude',                   &
-                                       'degrees_east' , AXIS_name(1:2), dtype      )
-    AXIS_name(1:2) = (/'xh','y '/)
-    call FileDefAssociatedCoordinates( fid, 'lon_uy', 'longitude (half level uy)', &
-                                       'degrees_east' , AXIS_name(1:2), dtype      )
-    AXIS_name(1:2) = (/'x ','yh'/)
-    call FileDefAssociatedCoordinates( fid, 'lon_xv', 'longitude (half level xv)', &
-                                       'degrees_east' , AXIS_name(1:2), dtype      )
-    AXIS_name(1:2) = (/'xh','yh'/)
-    call FileDefAssociatedCoordinates( fid, 'lon_uv', 'longitude (half level uv)', &
-                                       'degrees_east' , AXIS_name(1:2), dtype      )
-    AXIS_name(1:2) = (/'x ','y '/)
-    call FileDefAssociatedCoordinates( fid, 'lat' , 'latitude',                    &
-                                       'degrees_north', AXIS_name(1:2), dtype      )
-    AXIS_name(1:2) = (/'xh','y '/)
-    call FileDefAssociatedCoordinates( fid, 'lat_uy', 'latitude (half level uy)',  &
-                                       'degrees_north', AXIS_name(1:2), dtype      )
-    AXIS_name(1:2) = (/'x ','yh'/)
-    call FileDefAssociatedCoordinates( fid, 'lat_xv', 'latitude (half level xv)',  &
-                                       'degrees_north', AXIS_name(1:2), dtype      )
-    AXIS_name(1:2) = (/'xh','yh'/)
-    call FileDefAssociatedCoordinates( fid, 'lat_uv', 'latitude (half level uv)',  &
-                                       'degrees_north', AXIS_name(1:2), dtype      )
+    axisname(1:2) = (/'x ','y '/)
+    call FileDefAssociatedCoordinates( fid, 'lon'   , 'longitude',                 'degrees_east' , axisname(1:2), dtype )
+    axisname(1:2) = (/'xh','y '/)
+    call FileDefAssociatedCoordinates( fid, 'lon_uy', 'longitude (half level uy)', 'degrees_east' , axisname(1:2), dtype )
+    axisname(1:2) = (/'x ','yh'/)
+    call FileDefAssociatedCoordinates( fid, 'lon_xv', 'longitude (half level xv)', 'degrees_east' , axisname(1:2), dtype )
+    axisname(1:2) = (/'xh','yh'/)
+    call FileDefAssociatedCoordinates( fid, 'lon_uv', 'longitude (half level uv)', 'degrees_east' , axisname(1:2), dtype )
+    axisname(1:2) = (/'x ','y '/)
+    call FileDefAssociatedCoordinates( fid, 'lat'   , 'latitude',                  'degrees_north', axisname(1:2), dtype )
+    axisname(1:2) = (/'xh','y '/)
+    call FileDefAssociatedCoordinates( fid, 'lat_uy', 'latitude (half level uy)',  'degrees_north', axisname(1:2), dtype )
+    axisname(1:2) = (/'x ','yh'/)
+    call FileDefAssociatedCoordinates( fid, 'lat_xv', 'latitude (half level xv)',  'degrees_north', axisname(1:2), dtype )
+    axisname(1:2) = (/'xh','yh'/)
+    call FileDefAssociatedCoordinates( fid, 'lat_uv', 'latitude (half level uv)',  'degrees_north', axisname(1:2), dtype )
 
-    if ( .NOT. xy_ ) then
-       AXIS_name = (/'z', 'x', 'y'/)
+    if ( hasZ ) then
+       axisname = (/'z ', 'x ', 'y '/)
        call FileDefAssociatedCoordinates( fid, 'height',     'height above ground level', &
-                                          'm', AXIS_name(1:3), dtype                      )
-       AXIS_name = (/'zh', 'x ', 'y '/)
+                                          'm', axisname(1:3), dtype                       )
+       axisname = (/'zh', 'x ', 'y '/)
        call FileDefAssociatedCoordinates( fid, 'height_wxy', 'height above ground level (half level wxy)', &
-                                          'm', AXIS_name(1:3), dtype                                       )
-    end if
+                                          'm', axisname(1:3), dtype                                        )
+    endif
 
     ! attributes
-    if ( PRC_PERIODIC_X ) then; logical_str = "true"; else; logical_str = "false"; end if
-    if( PRC_PERIODIC_X .AND. .NOT. IO_AGGREGATE ) then
-       isize = IMAX * PRC_NUM_X
-       istart = IS_inG - IHALO
-       whalo_g = 0
-       ehalo_g = 0
-       whalo_l = 0
-       ehalo_l = 0
-    else
-       isize = IAG
-       istart = ISGA
-       whalo_g = IHALO
-       ehalo_g = IHALO
-       if ( IO_AGGREGATE ) then
-          whalo_l = whalo_g
-          ehalo_l = ehalo_g
-       else
-          if ( PRC_HAS_W ) then; whalo_l = 0; else; whalo_l = whalo_g; end if
-          if ( PRC_HAS_E ) then; ehalo_l = 0; else; ehalo_l = ehalo_g; end if
-       end if
-    end if
 
-    call FileSetAttribute( fid, "x", "size_global",  (/ isize /) )
-    call FileSetAttribute( fid, "x", "start_global", (/ istart /) )
-    call FileSetAttribute( fid, "x", "halo_global",  (/ whalo_g, ehalo_g /) )
-    call FileSetAttribute( fid, "x", "halo_local",   (/ whalo_l, ehalo_l /) )
-    call FileSetAttribute( fid, "x", "periodic",     logical_str )
-
-    call FileSetAttribute( fid, "xh", "size_global",  (/ isize /) )
-    call FileSetAttribute( fid, "xh", "start_global", (/ istart /) )
-    call FileSetAttribute( fid, "xh", "halo_global",  (/ whalo_g, ehalo_g /) )
-    call FileSetAttribute( fid, "xh", "halo_local",   (/ whalo_l, ehalo_l /) )
-    call FileSetAttribute( fid, "xh", "periodic",     logical_str )
-
-
-    if ( PRC_PERIODIC_Y ) then; logical_str = "true"; else; logical_str = "false"; end if
-    if( PRC_PERIODIC_Y .AND. .NOT. IO_AGGREGATE ) then
-       jsize = JMAX * PRC_NUM_Y
-       jstart = JS_inG - JHALO
-       shalo_g = 0
-       nhalo_g = 0
-       shalo_l = 0
-       nhalo_l = 0
-    else
-       jsize = JAG
-       jstart = JSGA
-       shalo_g = JHALO
-       nhalo_g = JHALO
-       if ( IO_AGGREGATE ) then
-          shalo_l = shalo_g
-          nhalo_l = nhalo_g
-       else
-          if ( PRC_HAS_S ) then; shalo_l = 0; else; shalo_l = shalo_g; end if
-          if ( PRC_HAS_N ) then; nhalo_l = 0; else; nhalo_l = nhalo_g; end if
-       end if
-    end if
-
-    call FileSetAttribute( fid, "y", "size_global",  (/ jsize /) )
-    call FileSetAttribute( fid, "y", "start_global", (/ jstart /) )
-    call FileSetAttribute( fid, "y", "halo_global",  (/ shalo_g, nhalo_g /) )
-    call FileSetAttribute( fid, "y", "halo_local",   (/ shalo_l, nhalo_l /) )
-    call FileSetAttribute( fid, "y", "periodic",     logical_str )
-
-    call FileSetAttribute( fid, "yh", "size_global",  (/ jsize /) )
-    call FileSetAttribute( fid, "yh", "start_global", (/ jstart /) )
-    call FileSetAttribute( fid, "yh", "halo_global",  (/ shalo_g, nhalo_g /) )
-    call FileSetAttribute( fid, "yh", "halo_local",   (/ shalo_l, nhalo_l /) )
-    call FileSetAttribute( fid, "yh", "periodic",     logical_str )
-
-    if ( .NOT. xy_ ) then
-       call FileSetAttribute( fid, 'lz',  'positive', 'down' )
+    if ( hasZ ) then
+       call FileSetAttribute( fid, 'lz' , 'positive', 'down' )
        call FileSetAttribute( fid, 'lzh', 'positive', 'down' )
-       call FileSetAttribute( fid, 'uz',  'positive', 'down' )
+       call FileSetAttribute( fid, 'uz' , 'positive', 'down' )
        call FileSetAttribute( fid, 'uzh', 'positive', 'down' )
        call FileSetAttribute( fid, 'LCZ', 'positive', 'down' )
        call FileSetAttribute( fid, 'LFZ', 'positive', 'down' )
@@ -1914,46 +1938,97 @@ contains
        call FileSetAttribute( fid, 'UFZ', 'positive', 'down' )
     endif
 
-    call MPRJ_get_attributes( mapping,  &
-         false_easting, false_northing, &
-         longitude_of_central_meridian, &
-         longitude_of_projection_origin, &
-         latitude_of_projection_origin, &
-         straight_vertical_longitude_from_pole, &
-         standard_parallel(:) )
-    if ( mapping /= "" ) then
-       call FileSetAttribute( fid, "x",  "standard_name", "projection_x_coordinate");
-       call FileSetAttribute( fid, "xh", "standard_name", "projection_x_coordinate");
-       call FileSetAttribute( fid, "y",  "standard_name", "projection_y_coordinate");
-       call FileSetAttribute( fid, "yh", "standard_name", "projection_y_coordinate");
-       call FileAddAssociatedVariable( fid, mapping )
-       call FileSetAttribute( fid, mapping, "grid_mapping_name",  mapping )
+    call FileSetAttribute( fid, "x" , "size_global" , ainfo(1)%size_global (:) )
+    call FileSetAttribute( fid, "x" , "start_global", ainfo(1)%start_global(:) )
+    call FileSetAttribute( fid, "x" , "halo_global" , ainfo(1)%halo_global (:) )
+    call FileSetAttribute( fid, "x" , "halo_local"  , ainfo(1)%halo_local  (:) )
+    call FileSetAttribute( fid, "x" , "periodic"    , ainfo(1)%periodic        )
 
-       if ( false_easting /= UNDEF ) &
-            call FileSetAttribute( fid, mapping, "false_easting",  (/ false_easting /) )
-       if ( false_northing /= UNDEF ) &
-            call FileSetAttribute( fid, mapping, "false_northing", (/ false_northing /) )
-       if ( longitude_of_central_meridian /= UNDEF ) &
-            call FileSetAttribute( fid, mapping, "longitude_of_central_meridian", &
-            (/ longitude_of_central_meridian /) )
-       if ( longitude_of_projection_origin /= UNDEF ) &
-            call FileSetAttribute( fid, mapping, "longitude_of_projection_origin", &
-            (/ longitude_of_projection_origin /) )
-       if ( latitude_of_projection_origin /= UNDEF ) &
-            call FileSetAttribute( fid, mapping, "latitude_of_projection_origin", &
-            (/ latitude_of_projection_origin /) )
-       if ( straight_vertical_longitude_from_pole /= UNDEF ) &
-            call FileSetAttribute( fid, mapping, "straight_vertical_longitude_from_pole", &
-            (/ straight_vertical_longitude_from_pole /) )
-       if ( standard_parallel(1) /= UNDEF ) then
-          if ( standard_parallel(2) /= UNDEF ) then
-             call FileSetAttribute( fid, mapping, "standard_parallel", standard_parallel(1:2) )
+    call FileSetAttribute( fid, "xh", "size_global" , ainfo(2)%size_global (:) )
+    call FileSetAttribute( fid, "xh", "start_global", ainfo(2)%start_global(:) )
+    call FileSetAttribute( fid, "xh", "halo_global" , ainfo(2)%halo_global (:) )
+    call FileSetAttribute( fid, "xh", "halo_local"  , ainfo(2)%halo_local  (:) )
+    call FileSetAttribute( fid, "xh", "periodic"    , ainfo(2)%periodic        )
+
+    call FileSetAttribute( fid, "y" , "size_global" , ainfo(3)%size_global (:) )
+    call FileSetAttribute( fid, "y" , "start_global", ainfo(3)%start_global(:) )
+    call FileSetAttribute( fid, "y" , "halo_global" , ainfo(3)%halo_global (:) )
+    call FileSetAttribute( fid, "y" , "halo_local"  , ainfo(3)%halo_local  (:) )
+    call FileSetAttribute( fid, "y" , "periodic"    , ainfo(3)%periodic        )
+
+    call FileSetAttribute( fid, "yh", "size_global" , ainfo(4)%size_global (:) )
+    call FileSetAttribute( fid, "yh", "start_global", ainfo(4)%start_global(:) )
+    call FileSetAttribute( fid, "yh", "halo_global" , ainfo(4)%halo_global (:) )
+    call FileSetAttribute( fid, "yh", "halo_local"  , ainfo(4)%halo_local  (:) )
+    call FileSetAttribute( fid, "yh", "periodic"    , ainfo(4)%periodic        )
+
+    ! map projection info
+
+    if ( minfo%mapping_name /= "" ) then
+       call FileSetAttribute( fid, "x" , "standard_name", "projection_x_coordinate" )
+       call FileSetAttribute( fid, "xh", "standard_name", "projection_x_coordinate" )
+       call FileSetAttribute( fid, "y" , "standard_name", "projection_y_coordinate" )
+       call FileSetAttribute( fid, "yh", "standard_name", "projection_y_coordinate" )
+
+       call FileAddAssociatedVariable( fid, minfo%mapping_name )
+       call FileSetAttribute( fid, minfo%mapping_name, "grid_mapping_name",  minfo%mapping_name )
+
+       if ( minfo%false_easting(1) /= UNDEF ) then
+          call FileSetAttribute( fid,                   & ! [IN]
+                                 minfo%mapping_name,    & ! [IN]
+                                 "false_easting",       & ! [IN]
+                                 minfo%false_easting(:) ) ! [IN]
+       endif
+
+       if ( minfo%false_northing(1) /= UNDEF ) then
+          call FileSetAttribute( fid,                    & ! [IN]
+                                 minfo%mapping_name,     & ! [IN]
+                                 "false_northing",       & ! [IN]
+                                 minfo%false_northing(:) ) ! [IN]
+       endif
+
+       if ( minfo%longitude_of_central_meridian(1) /= UNDEF ) then
+          call FileSetAttribute( fid,                                   & ! [IN]
+                                 minfo%mapping_name,                    & ! [IN]
+                                 "longitude_of_central_meridian",       & ! [IN]
+                                 minfo%longitude_of_central_meridian(:) ) ! [IN]
+       endif
+
+       if ( minfo%longitude_of_projection_origin(1) /= UNDEF ) then
+          call FileSetAttribute( fid,                                    & ! [IN]
+                                 minfo%mapping_name,                     & ! [IN]
+                                 "longitude_of_projection_origin",       & ! [IN]
+                                 minfo%longitude_of_projection_origin(:) ) ! [IN]
+       endif
+
+       if ( minfo%latitude_of_projection_origin(1) /= UNDEF ) then
+          call FileSetAttribute( fid,                                   & ! [IN]
+                                 minfo%mapping_name,                    & ! [IN]
+                                 "latitude_of_projection_origin",       & ! [IN]
+                                 minfo%latitude_of_projection_origin(:) ) ! [IN]
+       endif
+
+       if ( minfo%straight_vertical_longitude_from_pole(1) /= UNDEF ) then
+          call FileSetAttribute( fid,                                           & ! [IN]
+                                 minfo%mapping_name,                            & ! [IN]
+                                 "straight_vertical_longitude_from_pole",       & ! [IN]
+                                 minfo%straight_vertical_longitude_from_pole(:) ) ! [IN]
+       endif
+
+       if ( minfo%standard_parallel(1) /= UNDEF ) then
+          if ( minfo%standard_parallel(2) /= UNDEF ) then
+             call FileSetAttribute( fid,                         & ! [IN]
+                                    minfo%mapping_name,          & ! [IN]
+                                    "standard_parallel",         & ! [IN]
+                                    minfo%standard_parallel(1:2) ) ! [IN]
           else
-             call FileSetAttribute( fid, mapping, "standard_parallel", standard_parallel(1:1) )
-          end if
-       end if
-    end if
-
+             call FileSetAttribute( fid,                         & ! [IN]
+                                    minfo%mapping_name,          & ! [IN]
+                                    "standard_parallel",         & ! [IN]
+                                    minfo%standard_parallel(1:1) ) ! [IN]
+          endif
+       endif
+    endif
 
     return
   end subroutine FILEIO_def_axes
@@ -1961,17 +2036,18 @@ contains
   !-----------------------------------------------------------------------------
   !> write axis to the file
   subroutine FILEIO_write_axes( &
-       fid,   &
-       xy     )
+       fid,           &
+       myrank,        &
+       put_z,         &
+       put_x,         &
+       put_y,         &
+       writebymaster, &
+       start          )
     use gtool_file, only: &
-       FileWriteAxis,  &
+       FileWriteAxis,                 &
        FileWriteAssociatedCoordinates
     use scale_process, only: &
-       PRC_myrank
-    use scale_rm_process, only: &
-       PRC_2Drank, &
-       PRC_NUM_X, &
-       PRC_NUM_Y
+       PRC_masterrank
     use scale_grid, only: &
        GRID_CZ,    &
        GRID_CX,    &
@@ -2004,178 +2080,123 @@ contains
        GRID_FBFXG, &
        GRID_FBFYG
     use scale_land_grid, only: &
-       GRID_LCZ, &
-       GRID_LFZ, &
+       GRID_LCZ,  &
+       GRID_LFZ,  &
        GRID_LCDZ
     use scale_urban_grid, only: &
-       GRID_UCZ, &
-       GRID_UFZ, &
+       GRID_UCZ,  &
+       GRID_UFZ,  &
        GRID_UCDZ
     implicit none
 
-    integer, intent(in) :: fid
-    logical, intent(in), optional :: xy
-
-    logical :: xy_
-    logical :: put_x
-    logical :: put_y
-    logical :: put_z
-
-    integer :: rankidx(2)
-    integer :: start(3)
-
+    integer, intent(in)  :: fid
+    integer, intent(in)  :: myrank
+    logical, intent(in)  :: put_z
+    logical, intent(in)  :: put_x
+    logical, intent(in)  :: put_y
+    logical, intent(in)  :: writebymaster
+    integer, intent(in)  :: start(3)
     !---------------------------------------------------------------------------
 
-    if ( present(xy) ) then
-       xy_ = xy
+    if ( writebymaster ) then
+       if ( myrank == PRC_masterrank ) then
+          if( put_z ) call FileWriteAxis( fid, 'z'  , GRID_CZ (KS  :KE), start(1:1) )
+          if( put_z ) call FileWriteAxis( fid, 'zh' , GRID_FZ (KS-1:KE), start(1:1) )
+
+          if( put_z ) call FileWriteAxis( fid, 'lz' , GRID_LCZ(LKS  :LKE), start(1:1) )
+          if( put_z ) call FileWriteAxis( fid, 'lzh', GRID_LFZ(LKS-1:LKE), start(1:1) )
+
+          if( put_z ) call FileWriteAxis( fid, 'uz' , GRID_UCZ(UKS  :UKE), start(1:1) )
+          if( put_z ) call FileWriteAxis( fid, 'uzh', GRID_UFZ(UKS-1:UKE), start(1:1) )
+       endif
     else
-       xy_ = .false.
-    end if
+       if( put_z ) call FileWriteAxis( fid, 'z'  , GRID_CZ (KS  :KE)  , start(1:1) )
+       if( put_z ) call FileWriteAxis( fid, 'zh' , GRID_FZ (KS-1:KE)  , start(1:1) )
 
-    if ( IO_AGGREGATE ) then
-       rankidx(1) = PRC_2Drank(PRC_myrank,1)
-       rankidx(2) = PRC_2Drank(PRC_myrank,2)
+       if( put_z ) call FileWriteAxis( fid, 'lz' , GRID_LCZ(LKS  :LKE), start(1:1) )
+       if( put_z ) call FileWriteAxis( fid, 'lzh', GRID_LFZ(LKS-1:LKE), start(1:1) )
 
-       ! For parallel I/O, not all variables are written by all processes.
-       ! 1. Let PRC_myrank 0 writes all z axes
-       ! 2. Let processes (rankidx(2) == 0) write x axes  (south-most processes)
-       !        rankidx(1) == 0           writes west HALO
-       !        rankidx(1) == PRC_NUM_X-1 writes east HALO
-       !        others                    writes without HALO
-       ! 3. Let processes (rankidx(1) == 0) write y axes  (west-most processes)
-       !        rankidx(1) == 0           writes south HALO
-       !        rankidx(1) == PRC_NUM_Y-1 writes north HALO
-       !        others                    writes without HALO
+       if( put_z ) call FileWriteAxis( fid, 'uz' , GRID_UCZ(UKS  :UKE), start(1:1) )
+       if( put_z ) call FileWriteAxis( fid, 'uzh', GRID_UFZ(UKS-1:UKE), start(1:1) )
+    endif
 
-       put_z = ( .NOT. xy_ ) .AND. ( PRC_myrank == 0 ) ! only master process output the vertical coordinates
-       put_x = ( rankidx(2) == 0 ) ! only south most row processes write x coordinates
-       put_y = ( rankidx(1) == 0 ) ! only west most column processes write y coordinates
+    if( put_x ) call FileWriteAxis( fid, 'x' ,  GRID_CX(XSB:XEB),  start(2:2) )
+    if( put_x ) call FileWriteAxis( fid, 'xh',  GRID_FX(XSB:XEB),  start(2:2) )
+
+    if( put_y ) call FileWriteAxis( fid, 'y' ,  GRID_CY(YSB:YEB),  start(3:3) )
+    if( put_y ) call FileWriteAxis( fid, 'yh',  GRID_FY(YSB:YEB),  start(3:3) )
+
+    ! global coordinates (always including halo)
+    if( put_z ) call FileWriteAxis( fid, 'CZ'  , GRID_CZ  (:), start(1:1) )
+    if( put_z ) call FileWriteAxis( fid, 'FZ'  , GRID_FZ  (:), start(1:1) )
+    if( put_z ) call FileWriteAxis( fid, 'CDZ' , GRID_CDZ (:), start(1:1) )
+    if( put_z ) call FileWriteAxis( fid, 'FDZ' , GRID_FDZ (:), start(1:1) )
+    if( put_z ) call FileWriteAxis( fid, 'CBFZ', GRID_CBFZ(:), start(1:1) )
+    if( put_z ) call FileWriteAxis( fid, 'FBFZ', GRID_FBFZ(:), start(1:1) )
+
+    if( put_z ) call FileWriteAxis( fid, 'LCZ' , GRID_LCZ (:), start(1:1) )
+    if( put_z ) call FileWriteAxis( fid, 'LFZ' , GRID_LFZ (:), start(1:1) )
+    if( put_z ) call FileWriteAxis( fid, 'LCDZ', GRID_LCDZ(:), start(1:1) )
+
+    if( put_z ) call FileWriteAxis( fid, 'UCZ' , GRID_UCZ (:), start(1:1) )
+    if( put_z ) call FileWriteAxis( fid, 'UFZ' , GRID_UFZ (:), start(1:1) )
+    if( put_z ) call FileWriteAxis( fid, 'UCDZ', GRID_UCDZ(:), start(1:1) )
+
+    if ( writebymaster ) then
+       if ( myrank == PRC_masterrank ) then
+          call FileWriteAxis( fid, 'CX',   GRID_CXG  (:) )
+          call FileWriteAxis( fid, 'CY',   GRID_CYG  (:) )
+          call FileWriteAxis( fid, 'FX',   GRID_FXG  (:) )
+          call FileWriteAxis( fid, 'FY',   GRID_FYG  (:) )
+          call FileWriteAxis( fid, 'CDX',  GRID_CDXG (:) )
+          call FileWriteAxis( fid, 'CDY',  GRID_CDYG (:) )
+          call FileWriteAxis( fid, 'FDX',  GRID_FDXG (:) )
+          call FileWriteAxis( fid, 'FDY',  GRID_FDYG (:) )
+          call FileWriteAxis( fid, 'CBFX', GRID_CBFXG(:) )
+          call FileWriteAxis( fid, 'CBFY', GRID_CBFYG(:) )
+          call FileWriteAxis( fid, 'FBFX', GRID_FBFXG(:) )
+          call FileWriteAxis( fid, 'FBFY', GRID_FBFYG(:) )
+       endif
     else
-       put_z = ( .NOT. xy_ )
-       put_x = .true.
-       put_y = .true.
+       call FileWriteAxis( fid, 'CX',   GRID_CX  (:) )
+       call FileWriteAxis( fid, 'CY',   GRID_CY  (:) )
+       call FileWriteAxis( fid, 'FX',   GRID_FX  (:) )
+       call FileWriteAxis( fid, 'FY',   GRID_FY  (:) )
+       call FileWriteAxis( fid, 'CDX',  GRID_CDX (:) )
+       call FileWriteAxis( fid, 'CDY',  GRID_CDY (:) )
+       call FileWriteAxis( fid, 'FDX',  GRID_FDX (:) )
+       call FileWriteAxis( fid, 'FDY',  GRID_FDY (:) )
+       call FileWriteAxis( fid, 'CBFX', GRID_CBFX(:) )
+       call FileWriteAxis( fid, 'CBFY', GRID_CBFY(:) )
+       call FileWriteAxis( fid, 'FBFX', GRID_FBFX(:) )
+       call FileWriteAxis( fid, 'FBFY', GRID_FBFY(:) )
+    endif
 
-       start(:) = 1
-    end if
-
-    if ( put_z ) then
-       if( IO_AGGREGATE ) start(1) = 1
-       call FileWriteAxis( fid, 'z',   GRID_CZ (KS   :KE),  start )
-       call FileWriteAxis( fid, 'zh',  GRID_FZ (KS-1 :KE),  start )
-       call FileWriteAxis( fid, 'lz',  GRID_LCZ(LKS  :LKE), start )
-       call FileWriteAxis( fid, 'lzh', GRID_LFZ(LKS-1:LKE), start )
-       call FileWriteAxis( fid, 'uz',  GRID_UCZ(UKS  :UKE), start )
-       call FileWriteAxis( fid, 'uzh', GRID_UFZ(UKS-1:UKE), start )
-    end if
-    if ( put_x ) then
-       if( IO_AGGREGATE ) start(1) = ISGA
-       call FileWriteAxis( fid, 'x',   GRID_CX(XSB:XEB),  start )
-       call FileWriteAxis( fid, 'xh',  GRID_FX(XSB:XEB),  start )
-    end if
-    if ( put_y ) then
-       if( IO_AGGREGATE ) start(1) = JSGA
-       call FileWriteAxis( fid, 'y',   GRID_CY(YSB:YEB),  start )
-       call FileWriteAxis( fid, 'yh',  GRID_FY(YSB:YEB),  start )
-    end if
-
-    if ( put_z ) then
-       if( IO_AGGREGATE ) start(1) = 1
-       call FileWriteAxis( fid, 'CZ',   GRID_CZ,   start )
-       call FileWriteAxis( fid, 'FZ',   GRID_FZ,   start )
-       call FileWriteAxis( fid, 'CDZ',  GRID_CDZ,  start )
-       call FileWriteAxis( fid, 'FDZ',  GRID_FDZ,  start )
-
-       call FileWriteAxis( fid, 'LCZ',  GRID_LCZ,  start )
-       call FileWriteAxis( fid, 'LFZ',  GRID_LFZ,  start )
-       call FileWriteAxis( fid, 'LCDZ', GRID_LCDZ, start )
-
-       call FileWriteAxis( fid, 'UCZ',  GRID_UCZ,  start )
-       call FileWriteAxis( fid, 'UFZ',  GRID_UFZ,  start )
-       call FileWriteAxis( fid, 'UCDZ', GRID_UCDZ, start )
-
-       call FileWriteAxis( fid, 'CBFZ', GRID_CBFZ, start )
-       call FileWriteAxis( fid, 'FBFZ', GRID_FBFZ, start )
-    end if
-
-    if ( IO_AGGREGATE ) then
-       if ( PRC_myrank == 0 ) then
-          start(1) = 1
-          call FileWriteAxis( fid, 'CX',    GRID_CXG,   start )
-          call FileWriteAxis( fid, 'CY',    GRID_CYG,   start )
-          call FileWriteAxis( fid, 'FX',    GRID_FXG,   start )
-          call FileWriteAxis( fid, 'FY',    GRID_FYG,   start )
-
-          call FileWriteAxis( fid, 'CDX',   GRID_CDXG,  start )
-          call FileWriteAxis( fid, 'CDY',   GRID_CDYG,  start )
-          call FileWriteAxis( fid, 'FDX',   GRID_FDXG,  start )
-          call FileWriteAxis( fid, 'FDY',   GRID_FDYG,  start )
-
-          call FileWriteAxis( fid, 'CBFX',  GRID_CBFXG, start )
-          call FileWriteAxis( fid, 'CBFY',  GRID_CBFYG, start )
-          call FileWriteAxis( fid, 'FBFX',  GRID_FBFXG, start )
-          call FileWriteAxis( fid, 'FBFY',  GRID_FBFYG, start )
-
-          call FileWriteAxis( fid, 'CXG',   GRID_CXG,   start )
-          call FileWriteAxis( fid, 'CYG',   GRID_CYG,   start )
-          call FileWriteAxis( fid, 'FXG',   GRID_FXG,   start )
-          call FileWriteAxis( fid, 'FYG',   GRID_FYG,   start )
-
-          call FileWriteAxis( fid, 'CBFXG', GRID_CBFXG, start )
-          call FileWriteAxis( fid, 'CBFYG', GRID_CBFYG, start )
-          call FileWriteAxis( fid, 'FBFXG', GRID_FBFXG, start )
-          call FileWriteAxis( fid, 'FBFYG', GRID_FBFYG, start )
-       end if
-    else
-       call FileWriteAxis( fid, 'CX',    GRID_CX    )
-       call FileWriteAxis( fid, 'CY',    GRID_CY    )
-       call FileWriteAxis( fid, 'FX',    GRID_FX    )
-       call FileWriteAxis( fid, 'FY',    GRID_FY    )
-
-       call FileWriteAxis( fid, 'CDX',   GRID_CDX   )
-       call FileWriteAxis( fid, 'CDY',   GRID_CDY   )
-       call FileWriteAxis( fid, 'FDX',   GRID_FDX   )
-       call FileWriteAxis( fid, 'FDY',   GRID_FDY   )
-
-       call FileWriteAxis( fid, 'CBFX',  GRID_CBFX  )
-       call FileWriteAxis( fid, 'CBFY',  GRID_CBFY  )
-       call FileWriteAxis( fid, 'FBFX',  GRID_FBFX  )
-       call FileWriteAxis( fid, 'FBFY',  GRID_FBFY  )
-
-       call FileWriteAxis( fid, 'CXG',   GRID_CXG   )
-       call FileWriteAxis( fid, 'CYG',   GRID_CYG   )
-       call FileWriteAxis( fid, 'FXG',   GRID_FXG   )
-       call FileWriteAxis( fid, 'FYG',   GRID_FYG   )
-
-       call FileWriteAxis( fid, 'CBFXG', GRID_CBFXG )
-       call FileWriteAxis( fid, 'CBFYG', GRID_CBFYG )
-       call FileWriteAxis( fid, 'FBFXG', GRID_FBFXG )
-       call FileWriteAxis( fid, 'FBFYG', GRID_FBFYG )
-    end if
+    call FileWriteAxis( fid, 'CXG',   GRID_CXG  (:) )
+    call FileWriteAxis( fid, 'CYG',   GRID_CYG  (:) )
+    call FileWriteAxis( fid, 'FXG',   GRID_FXG  (:) )
+    call FileWriteAxis( fid, 'FYG',   GRID_FYG  (:) )
+    call FileWriteAxis( fid, 'CDXG',  GRID_CDXG (:) )
+    call FileWriteAxis( fid, 'CDYG',  GRID_CDYG (:) )
+    call FileWriteAxis( fid, 'FDXG',  GRID_FDXG (:) )
+    call FileWriteAxis( fid, 'FDYG',  GRID_FDYG (:) )
+    call FileWriteAxis( fid, 'CBFXG', GRID_CBFXG(:) )
+    call FileWriteAxis( fid, 'CBFYG', GRID_CBFYG(:) )
+    call FileWriteAxis( fid, 'FBFXG', GRID_FBFXG(:) )
+    call FileWriteAxis( fid, 'FBFYG', GRID_FBFYG(:) )
 
     ! associate coordinates
+    call FileWriteAssociatedCoordinates( fid, 'lon'   , AXIS_LON  (:,:), start(2:3) )
+    call FileWriteAssociatedCoordinates( fid, 'lon_uy', AXIS_LONUY(:,:), start(2:3) )
+    call FileWriteAssociatedCoordinates( fid, 'lon_xv', AXIS_LONXV(:,:), start(2:3) )
+    call FileWriteAssociatedCoordinates( fid, 'lon_uv', AXIS_LONUV(:,:), start(2:3) )
+    call FileWriteAssociatedCoordinates( fid, 'lat'   , AXIS_LAT  (:,:), start(2:3) )
+    call FileWriteAssociatedCoordinates( fid, 'lat_uy', AXIS_LATUY(:,:), start(2:3) )
+    call FileWriteAssociatedCoordinates( fid, 'lat_xv', AXIS_LATXV(:,:), start(2:3) )
+    call FileWriteAssociatedCoordinates( fid, 'lat_uv', AXIS_LATUV(:,:), start(2:3) )
 
-    if ( IO_AGGREGATE ) then
-       start(1) = ISGA
-       start(2) = JSGA
-    end if
-    call FileWriteAssociatedCoordinates( fid, 'lon' ,   AXIS_LON  (:,:), start )
-    call FileWriteAssociatedCoordinates( fid, 'lon_uy', AXIS_LONX (:,:), start )
-    call FileWriteAssociatedCoordinates( fid, 'lon_xv', AXIS_LONY (:,:), start )
-    call FileWriteAssociatedCoordinates( fid, 'lon_uv', AXIS_LONXY(:,:), start )
-    call FileWriteAssociatedCoordinates( fid, 'lat' ,   AXIS_LAT  (:,:), start )
-    call FileWriteAssociatedCoordinates( fid, 'lat_uy', AXIS_LATX (:,:), start )
-    call FileWriteAssociatedCoordinates( fid, 'lat_xv', AXIS_LATY (:,:), start )
-    call FileWriteAssociatedCoordinates( fid, 'lat_uv', AXIS_LATXY(:,:), start )
-
-    if ( .NOT. xy_ ) then
-       if ( IO_AGGREGATE ) then
-          start(1) = 1
-          start(2) = ISGA
-          start(3) = JSGA
-       end if
-       call FileWriteAssociatedCoordinates( fid, 'height',     AXIS_HZXY(:,:,:), start )
-       call FileWriteAssociatedCoordinates( fid, 'height_wxy', AXIS_HWXY(:,:,:), start )
-    end if
+    if( put_z ) call FileWriteAssociatedCoordinates( fid, 'height'    , AXIS_HGT   (:,:,:), start(1:3) )
+    if( put_z ) call FileWriteAssociatedCoordinates( fid, 'height_wxy', AXIS_HGTWXY(:,:,:), start(1:3) )
 
     return
   end subroutine FILEIO_write_axes
