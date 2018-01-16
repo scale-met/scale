@@ -16,14 +16,18 @@ either by donwloading prepared databases or by creating them yourself.
 %%%% IV.1.1.1 Use preprepared databases %%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Use preprepared databases}
-The databases for some of the typical settings can be downloaded from 
-\noindent \url{http://scale.aics.riken.jp/ja/download/}
+The databases for some of the typical settings\footnote{At the time of
+  writing, the following files are available:
+  \begin{itemize}
+    \item scale-gm\_database\_gl04rl00pe10.tar.gz
+    \item scale-gm\_database\_gl05rl01pe40.tar.gz
+    \item scale-gm\_database\_gl06rl01pe40.tar.gz
+    \item scale-gm\_database\_gl07rl02pe160.tar.gz
+\end{itemize}} can be downloaded from \noindent \url{http://scale.aics.riken.jp/ja/download/}
 
-For example, if you plan to use g-level=6, r-level=1, 40 MPI processes, 
-you can find the databases in
-scale-gm\_database\_gl06rl01pe40.tar.gz
-
-Download and untar the file, then you have 40 boundary (horizontal grid database)
+Suppose you use g-level=6, r-level=1, 40 MPI processes, 
+Download and untar scale-gm\_database\_gl06rl01pe40.tar.gz, 
+ then you have 40 boundary (horizontal grid database)
 files and 41 llmap (LatLon
 grid conversion table) files. 
 \begin{verbatim}
