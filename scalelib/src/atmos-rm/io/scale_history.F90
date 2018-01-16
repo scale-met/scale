@@ -846,9 +846,9 @@ contains
     do v = 1, HIST_variant(itemid)
        id = id + 1
 
-       call HistoryPut( id,           & ! [IN]
-                        TIME_NOWSTEP, & ! [IN]
-                        var_trim(:)   ) ! [IN]
+       call HistoryPut( id,               & ! [IN]
+                        TIME_NOWSTEP,     & ! [IN]
+                        var_trim(1:ksize) ) ! [IN]
     enddo
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -883,7 +883,7 @@ contains
     integer                :: isize, jsize
     integer                :: istart, jstart
 
-    real(RP) :: var_trim(im*jm)
+    real(RP) :: var_trim(imh*jmh)
     logical  :: nohalo_
     integer  :: s(2)
 
@@ -1016,7 +1016,7 @@ contains
     real(RP) :: var_Z(KA              ,IA,JA)
     real(RP) :: var_P(HIST_PRES_nlayer,IA,JA)
 
-    real(RP) :: var_trim(km*im*jm)
+    real(RP) :: var_trim(km*imh*jmh)
     logical  :: nohalo_
     integer  :: s(3)
 
