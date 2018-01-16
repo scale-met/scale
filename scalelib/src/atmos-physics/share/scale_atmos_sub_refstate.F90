@@ -397,7 +397,9 @@ contains
 
     ! calc QV from RH
     call SATURATION_psat_all( psat_sfc, temp_sfc )
-    call SATURATION_dens2qsat_all( qsat(:),  temp(:),  dens(:)  )
+    call SATURATION_dens2qsat_all( KA, KS, KE, &
+                                   temp(:),  dens(:), & ! [IN]
+                                   qsat(:)            ) ! [OUT]
 
     psat_sfc = ATMOS_REFSTATE_RH * 1.E-2_RP * psat_sfc ! rh * e
     qv_sfc = EPSvap * psat_sfc / ( pres_sfc - (1.0_RP-EPSvap) * psat_sfc )
@@ -487,7 +489,9 @@ contains
 
     ! calc QV from RH
     call SATURATION_psat_all( psat_sfc, temp_sfc )
-    call SATURATION_dens2qsat_all( qsat(:),  temp(:),  pres(:)  )
+    call SATURATION_dens2qsat_all( KA, KS, KE, &
+                                   temp(:), pres(:), & ! [IN]
+                                   qsat(:)           ) ! [OUT]
 
     psat_sfc = ATMOS_REFSTATE_RH * 1.E-2_RP * psat_sfc ! rh * e
     qv_sfc = EPSvap * psat_sfc / ( pres_sfc - (1.0_RP - EPSvap) * psat_sfc )

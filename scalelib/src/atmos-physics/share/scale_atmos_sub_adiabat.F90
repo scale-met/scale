@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_adiabat
   !-----------------------------------------------------------------------------
   !
@@ -46,46 +47,35 @@ contains
   !> Type of parcel method: Pseudo-adiabatic ascend from lowermost layer of the model
   !> Reference: Emanuel(1994)
   subroutine ATMOS_ADIABAT_cape( &
-       KA, KS, KE, &
-       IA, IS, IE, &
-       JA, JS, JE, &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        Kstr, &
-       DENS, &
-       TEMP, &
-       PRES, &
-       QTRC, &
-       CZ,   &
-       FZ,   &
-       CAPE, &
-       CIN,  &
-       LCL,  &
-       LFC,  &
-       LNB   )
-    use scale_process, only: &
-       PRC_MPIstop
+       DENS, TEMP, PRES,          &
+       QV, QC, Qdry, Rtot, CPtot, &
+       CZ, FZ,                    &
+       CAPE, CIN, LCL, LFC, LNB   )
     use scale_const, only: &
        GRAV => CONST_GRAV
-    use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_entr => ATMOS_HYDROMETEOR_entr, &
-       I_QV, &
-       I_QC
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
     use scale_history, only: &
        HIST_in
     implicit none
-
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
 
     integer,  intent(in)  :: Kstr
-    real(RP), intent(in)  :: DENS(KA,IA,JA)
-    real(RP), intent(in)  :: TEMP(KA,IA,JA)
-    real(RP), intent(in)  :: PRES(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
-    real(RP), intent(in)  :: CZ  (  KA,IA,JA)
-    real(RP), intent(in)  :: FZ  (0:KA,IA,JA)
+    real(RP), intent(in)  :: DENS (KA,IA,JA)
+    real(RP), intent(in)  :: TEMP (KA,IA,JA)
+    real(RP), intent(in)  :: PRES (KA,IA,JA)
+    real(RP), intent(in)  :: QV   (KA,IA,JA)
+    real(RP), intent(in)  :: QC   (KA,IA,JA)
+    real(RP), intent(in)  :: Qdry (KA,IA,JA)
+    real(RP), intent(in)  :: Rtot (KA,IA,JA)
+    real(RP), intent(in)  :: CPtot(KA,IA,JA)
+    real(RP), intent(in)  :: CZ   (  KA,IA,JA)
+    real(RP), intent(in)  :: FZ   (0:KA,IA,JA)
+
     real(RP), intent(out) :: CAPE(IA,JA)
     real(RP), intent(out) :: CIN (IA,JA)
     real(RP), intent(out) :: LCL (IA,JA)
@@ -94,49 +84,32 @@ contains
 
     real(RP) :: DENS_p (KA,IA,JA)
     real(RP) :: TEMP_p (KA,IA,JA)
-    real(RP) :: QTRC_p (KA,IA,JA,QA)
-    real(RP) :: ENTR_p (KA,IA,JA)
+    real(RP) :: QV_p   (KA,IA,JA)
+    real(RP) :: QL_p   (KA,IA,JA)
+    real(RP) :: QI_p   (KA,IA,JA)
+    real(RP) :: QC_p   (KA,IA,JA)
     real(RP) :: BUOY_p (KA,IA,JA)
     real(RP) :: BUOY_pf(KA,IA,JA)
     real(RP) :: QSAT_p (KA,IA,JA)
 
-    integer :: kLCL(IA,JA)
-    integer :: kLFC(IA,JA)
-    integer :: kLNB(IA,JA)
+    integer :: kLCL
+    integer :: kLFC
+    integer :: kLNB
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    if ( I_QV < 0 .OR. I_QC < 0 ) then
-       write(*,*) 'xxx Qv & Qc do not exist. CAPE calculation is invalid. STOP'
-       call PRC_MPIstop
-    endif
-
-    ! entropy at start point
-    call HYDROMETEOR_entr( ENTR_p(Kstr,:,:),   & ! [OUT]
-                           TEMP  (Kstr,:,:),   & ! [IN]
-                           PRES  (Kstr,:,:),   & ! [IN]
-                           QTRC  (Kstr,:,:,:), & ! [IN]
-                           TRACER_R(:)         ) ! [IN]
-
     ! lift parcel
-    call ATMOS_ADIABAT_liftparcel( Kstr,             & ! [IN]
-                                   TEMP  (:,:,:),    & ! [IN]
-                                   PRES  (:,:,:),    & ! [IN]
-                                   QTRC  (:,:,:,:),  & ! [IN]
-                                   ENTR_p(Kstr,:,:), & ! [IN]
-                                   DENS_p(:,:,:),    & ! [OUT]
-                                   TEMP_p(:,:,:),    & ! [OUT]
-                                   QTRC_p(:,:,:,:)   ) ! [OUT]
-
-    ! entropy profile (lifted parcel)
-    call HYDROMETEOR_entr( ENTR_p(:,:,:),   & ! [OUT]
-                           TEMP_p(:,:,:),   & ! [IN]
-                           PRES  (:,:,:),   & ! [IN]
-                           QTRC_p(:,:,:,:), & ! [IN]
-                           TRACER_R(:)      ) ! [IN]
+    call ATMOS_ADIABAT_liftparcel( &
+         KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+         Kstr,                                     & ! [IN]
+         dens(:,:,:), temp(:,:,:), pres(:,:,:),    & ! [IN]
+         qv(:,:,:), qc(:,:,:),                     & ! [IN]
+         qdry(:,:,:), Rtot(:,:,:), CPtot(:,:,:),   & ! [IN]
+         dens_p(:,:,:), temp_p(:,:,:), qv_p(:,:,:) ) ! [OUT]
 
     ! parcel buoyancy
+    !$omp parallel do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE
@@ -156,99 +129,76 @@ contains
     enddo
 
     ! saturation point profile (lifted parcel)
-    call SATURATION_dens2qsat_liq( QSAT_p(:,:,:), & ! [OUT]
-                                   TEMP_p(:,:,:), & ! [IN]
-                                   DENS_p(:,:,:)  ) ! [IN]
+    call SATURATION_dens2qsat_liq( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                   TEMP_p(:,:,:), DENS_p(:,:,:), & ! [IN]
+                                   QSAT_p(:,:,:)                 ) ! [OUT]
 
     call HIST_in( DENS_p(:,:,:), 'DENS_parcel', 'density profile in lifting parcel',     'kg/m3' )
     call HIST_in( TEMP_p(:,:,:), 'TEMP_parcel', 'temperature profile in lifting parcel', 'K'     )
-    call HIST_in( ENTR_p(:,:,:), 'ENTR_parcel', 'entropy profile in lifting parcel',     'J/K'   )
     call HIST_in( BUOY_p(:,:,:), 'BUOY_parcel', 'buoyancy profile in lifting parcel',    'm/s2'  )
     call HIST_in( QSAT_p(:,:,:), 'QSAT_parcel', 'saturation profile in lifting parcel',  'kg/kg' )
+    call HIST_in( QV_p  (:,:,:), 'QV_parcel',   'humidity profile in lifting parcel',    'kg/kg' )
 
-    ! detect layer number of LNB, LFC, LCL
-    kLCL(:,:) = -1
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(kLFC,kLCL,kLNB,k)
     do j = JS, JE
     do i = IS, IE
+
+       LCL (i,j) = 0.0_RP
+       LFC (i,j) = 0.0_RP
+       LNB (i,j) = 0.0_RP
+       CAPE(i,j) = 0.0_RP
+       CIN (i,j) = 0.0_RP
+
+       kLFC = -1
+       kLCL = -1
+       kLNB = -1
+
        do k = Kstr, KE
-          if ( QTRC_p(Kstr,i,j,I_QV) >= QSAT_p(k,i,j) ) then
-             kLCL(i,j) = k
+          if ( QV_p(Kstr,i,j) >= QSAT_p(k,i,j) ) then
+             kLCL = k
              exit
           endif
        enddo
-    enddo
-    enddo
 
-    kLFC(:,:) = -1
-    do j = JS, JE
-    do i = IS, IE
-       do k = kLCL(i,j), KE
+       do k = kLCL, KE
           if ( BUOY_p(k,i,j) >= 0.0_RP ) then
-             kLFC(i,j) = k
+             kLFC = k
              exit
           endif
        enddo
-    enddo
-    enddo
 
-    kLNB(:,:) = -1
-    do j = JS, JE
-    do i = IS, IE
        do k = KE, Kstr, -1
           if ( BUOY_p(k,i,j) >= 0.0_RP ) then
-             kLNB(i,j) = k
+             kLNB = k
              exit
           endif
        enddo
-    enddo
-    enddo
 
-    LCL(:,:) = 0.0_RP
-    do j = JS, JE
-    do i = IS, IE
-       if ( kLCL(i,j) >= Kstr ) then
-          LCL(i,j) = CZ(kLCL(i,j),i,j)
+       if ( kLCL >= Kstr ) then
+          LCL(i,j) = CZ(kLCL,i,j)
        endif
-    enddo
-    enddo
 
-    LFC(:,:) = 0.0_RP
-    do j = JS, JE
-    do i = IS, IE
-       if ( kLFC(i,j) >= Kstr ) then
-          LFC(i,j) = CZ(kLFC(i,j),i,j)
+       if ( kLFC >= Kstr ) then
+          LFC(i,j) = CZ(kLFC,i,j)
        endif
-    enddo
-    enddo
 
-    LNB(:,:) = 0.0_RP
-    do j = JS, JE
-    do i = IS, IE
-       if ( kLNB(i,j) >= Kstr ) then
-          LNB(i,j) = CZ(kLNB(i,j),i,j)
+       if ( kLNB >= Kstr ) then
+          LNB(i,j) = CZ(kLNB,i,j)
        endif
-    enddo
-    enddo
 
-    CAPE(:,:) = 0.0_RP
-    do j = JS, JE
-    do i = IS, IE
-       if ( kLFC(i,j) >= Kstr .AND. kLNB(i,j) > Kstr ) then
-          do k = kLFC(i,j), kLNB(i,j)
+       if ( kLFC >= Kstr .AND. kLNB > Kstr ) then
+          do k = kLFC, kLNB
              CAPE(i,j) = CAPE(i,j) + BUOY_pf(k-1,i,j) * ( FZ(k,i,j)-FZ(k-1,i,j) )
           enddo
        endif
-    enddo
-    enddo
 
-    CIN(:,:) = 0.0_RP
-    do j = JS, JE
-    do i = IS, IE
-       if ( kLFC(i,j) >= Kstr ) then
-          do k = Kstr+1, kLFC(i,j)
+       if ( kLFC >= Kstr ) then
+          do k = Kstr+1, kLFC
              CIN (i,j) = CIN (i,j) + BUOY_pf(k-1,i,j) * ( FZ(k,i,j)-FZ(k-1,i,j) )
           enddo
        endif
+
     enddo
     enddo
 
@@ -260,163 +210,108 @@ contains
   !> Method: Pseudo-adiabatic ascend from lowermost layer of the model
   !> Reference: Emanuel(1994)
   subroutine ATMOS_ADIABAT_liftparcel( &
-       Kstr,   &
-       TEMP,   &
-       PRES,   &
-       QTRC,   &
-       ENTR_p, &
-       DENS_p, &
-       TEMP_p, &
-       QTRC_p  )
-    use scale_const, only: &
-       EPS   => CONST_EPS,   &
-       Rdry  => CONST_Rdry,  &
-       CPdry => CONST_CPdry, &
-       Rvap  => CONST_Rvap,  &
-       CPvap => CONST_CPvap, &
-       LHV0  => CONST_LHV0,  &
-       PSAT0 => CONST_PSAT0, &
-       PRE00 => CONST_PRE00, &
-       TEM00 => CONST_TEM00
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       Kstr,                      &
+       DENS, TEMP, PRES, QV, QC,  &
+       QDRY, Rtot, CPtot,         &
+       DENS_p3D, TEMP_p3D, QV_p3D )
+    use scale_process, only: &
+       PRC_abort
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_entr => ATMOS_HYDROMETEOR_entr, &
-       I_QV, &
-       I_QC
+       CP_WATER
     use scale_atmos_saturation, only: &
-       SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
+       ATMOS_SATURATION_moist_conversion_pres_liq
+
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
-    integer,  intent(in)  :: Kstr
-    real(RP), intent(in)  :: TEMP  (KA,IA,JA)
-    real(RP), intent(in)  :: PRES  (KA,IA,JA)
-    real(RP), intent(in)  :: QTRC  (KA,IA,JA,QA)
-    real(RP), intent(in)  :: ENTR_p(IA,JA)
-    real(RP), intent(out) :: DENS_p(KA,IA,JA)
-    real(RP), intent(out) :: TEMP_p(KA,IA,JA)
-    real(RP), intent(out) :: QTRC_p(KA,IA,JA,QA)
+    integer,  intent(in) :: Kstr
+    real(RP), intent(in) :: DENS (KA,IA,JA)
+    real(RP), intent(in) :: TEMP (KA,IA,JA)
+    real(RP), intent(in) :: PRES (KA,IA,JA)
+    real(RP), intent(in) :: QV   (KA,IA,JA)
+    real(RP), intent(in) :: QC   (KA,IA,JA)
+    real(RP), intent(in) :: QDRY (KA,IA,JA)
+    real(RP), intent(in) :: Rtot (KA,IA,JA)
+    real(RP), intent(in) :: CPtot(KA,IA,JA)
 
-    real(RP) :: qsat_p(KA,IA,JA)
-    real(RP) :: qtot_p(IA,JA)
+    real(RP), intent(out) :: DENS_p3D(KA,IA,JA)
+    real(RP), intent(out) :: TEMP_p3D(KA,IA,JA)
+    real(RP), intent(out) :: QV_p3D  (KA,IA,JA)
 
-    real(RP) :: qdry_p, Rtot, CPtot
-    real(RP) :: pres_dry, pres_vap
-    real(RP) :: TEMP_unsat
-    real(RP) :: qsat_unsat
+    real(RP) :: ENTR_p
+    real(RP) :: QV_p, QC_p, Qdry_p
+    real(RP) :: Rtot_p, CPtot_p
+    real(RP) :: TEMP_p
 
-    real(RP) :: TEMP_ite
-    real(RP) :: qsat_ite
-    real(RP) :: QTRC_ite(QA)
-    real(RP) :: ENTR_ite
-    real(RP) :: TEMP_prev
-    real(RP) :: dENTR_dT
+    logical  :: converged, error
+    real(RP) :: fact
 
-    real(RP), parameter :: criteria = 1.E-8_RP
-    integer,  parameter :: itelim   = 100
-    integer             :: ite
-
-    real(RP), parameter :: TEMMIN = 0.1_RP
-
-    integer :: k, i, j, iqw
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    error = .false.
+
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(ENTR_p,QV_p,QC_p,Qdry_p,Rtot_p,CPtot_p,TEMP_p)
     do j = JS, JE
     do i = IS, IE
-    do k = 1, Kstr
-       TEMP_p(k,i,j) = TEMP(k,i,j)
-       do iqw = 1, QA
-          QTRC_p(k,i,j,iqw) = QTRC(k,i,j,iqw)
+
+       do k = 1, Kstr
+          DENS_p3D(k,i,j) = DENS(k,i,j)
+          TEMP_p3D(k,i,j) = TEMP(k,i,j)
+          QV_p3D  (k,i,j) = QV(k,i,j)
        enddo
+
+       ! vapor + liquid water at the start point
+       QV_p    = QV(Kstr,i,j)
+       QC_p    = QC(Kstr,i,j)
+       Qdry_p  = Qdry (Kstr,i,j)
+       Rtot_p  = Rtot (Kstr,i,j)
+       CPtot_p = CPtot(Kstr,i,j)
+
+       call HYDROMETEOR_entr( &
+            TEMP(Kstr,i,j), PRES(Kstr,i,j), & ! [IN]
+            QV_p, QC_p, Qdry_p,             & ! [IN]
+            Rtot_p, CPtot_p,                & ! [IN]
+            ENTR_p                          ) ! [OUT]
+
+       do k = Kstr, KE
+
+          call ATMOS_SATURATION_moist_conversion_pres_liq( &
+               PRES(k,i,j), Entr_p, Qdry_p, & ! [IN]
+               QV_p, QC_p, Rtot_p, CPtot_p, & ! [INOUT]
+               TEMP_p,                      & ! [OUT]
+               converged                    ) ! [OUT]
+
+          if ( .NOT. converged ) then
+             error = .true.
+             write(*,*) 'xxx [moist_conversion] not converged!', k,i,j
+             exit
+          endif
+
+          ! remove condensed water
+          fact = 1.0_RP / ( 1.0_RP - QC_p )
+          CPtot_p = ( CPtot_p - CP_WATER * QC_p ) * fact
+          Rtot_p = Rtot_p * fact
+          Qdry_p = Qdry_p * fact
+          QV_p = QV_p * fact
+          ! Entr_p = Entr_p - QC_p * CP_WATER * log( TEMP_p / TEM00 )
+          QC_p = 0.0_RP
+
+          DENS_p3D(k,i,j) = PRES(k,i,j) / ( Rtot_p * TEMP_p )
+          TEMP_p3D(k,i,j) = TEMP_p
+          QV_p3D  (k,i,j) = QV_p
+
+       enddo
+
     enddo
     enddo
-    enddo
 
-    ! vapor + cloud water at the start point
-    do j = JS, JE
-    do i = IS, IE
-       qtot_p(i,j) = QTRC(Kstr,i,j,I_QV) + QTRC(Kstr,i,j,I_QC)
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = Kstr, KE
-       TEMP_p(k,i,j) = TEMP(k,i,j) ! first guess
-
-       ! T1: unsaturated temperature, S = U1(PRES, TEMP_unsat, qtot_p)
-       qdry_p = 1.0_RP - qtot_p(i,j)
-       Rtot   = Rdry  * qdry_p + Rvap  * qtot_p(i,j)
-       CPtot  = CPdry * qdry_p + CPvap * qtot_p(i,j)
-
-       ! dry air + vapor
-       pres_dry = max( PRES(k,i,j) * qdry_p      * Rdry / Rtot, EPS )
-       pres_vap = max( PRES(k,i,j) * qtot_p(i,j) * Rvap / Rtot, EPS )
-
-       TEMP_unsat = TEM00 * exp( ( ENTR_p(i,j) + qdry_p      * Rdry * log( pres_dry / PRE00 ) &
-                                               + qtot_p(i,j) * Rvap * log( pres_vap / PSAT0 ) &
-                                               - qtot_p(i,j) * LHV0 / TEM00                   ) / CPtot )
-
-       call SATURATION_pres2qsat_liq( qsat_unsat, & ! [OUT]
-                                      TEMP_unsat, & ! [IN]
-                                      PRES(k,i,j) ) ! [IN]
-
-       ! T2: saturated temperature, S = U2(PRES, TEMP_ite, QTRC_ite)
-       if ( qtot_p(i,j) > qsat_unsat ) then
-
-          TEMP_ite = TEM00 * exp( ( ENTR_p(i,j) + Rdry * log( PRES(k,i,j) / PRE00 ) ) / CPdry )
-
-          do ite = 1, itelim
-
-             call SATURATION_pres2qsat_liq( qsat_ite,   & ! [OUT]
-                                            TEMP_ite,   & ! [IN]
-                                            PRES(k,i,j) ) ! [IN]
-
-             QTRC_ite(:)    = 0.0_RP ! Pseudo-adiabatic: no cloud water
-             QTRC_ite(I_QV) = min( qtot_p(i,j), qsat_ite )
-
-             call HYDROMETEOR_entr( ENTR_ite,    & ! [OUT]
-                                    TEMP_ite,    & ! [IN]
-                                    PRES(k,i,j), & ! [IN]
-                                    QTRC_ite(:), & ! [IN]
-                                    TRACER_R(:)  ) ! [IN]
-
-             qdry_p   = 1.0_RP - QTRC_ite(I_QV)
-             CPtot    = CPdry * qdry_p + CPvap * QTRC_ite(I_QV)
-
-             dENTR_dT  = CPtot                    / TEMP_ite    &
-                       - QTRC_ite(I_QV) * LHV0    / TEMP_ite**2 &
-                       + QTRC_ite(I_QV) * LHV0**2 / TEMP_ite**3 / Rvap
-             dENTR_dT  = max( dENTR_dT, EPS )
-
-             TEMP_prev = TEMP_ite
-             TEMP_ite  = TEMP_ite - ( ENTR_ite - ENTR_p(i,j) ) / dENTR_dT
-             TEMP_ite  = max( TEMP_ite, TEMMIN )
-
-             if( abs(TEMP_ite-TEMP_prev) < criteria ) exit
-
-          enddo
-
-          TEMP_p(k,i,j) = TEMP_ite
-
-       endif
-
-       ! parcel satulation point
-       call SATURATION_pres2qsat_liq( qsat_p(k,i,j), & ! [OUT]
-                                      TEMP_p(k,i,j), & ! [IN]
-                                      PRES  (k,i,j)  ) ! [IN]
-
-       ! update parcel vapor : remove condensed water
-       qtot_p(i,j) = min( qtot_p(i,j), qsat_p(k,i,j) )
-
-       QTRC_p(k,i,j,I_QV) = qtot_p(i,j)
-       QTRC_p(k,i,j,I_QC) = 0.0_RP
-
-       qdry_p = 1.0_RP - qtot_p(i,j)
-       Rtot   = Rdry * qdry_p + Rvap * qtot_p(i,j)
-
-       DENS_p(k,i,j) = PRES(k,i,j) / ( Rtot * TEMP_p(k,i,j) )
-    enddo
-    enddo
-    enddo
+    if ( error ) call PRC_abort
 
     return
   end subroutine ATMOS_ADIABAT_liftparcel

@@ -522,7 +522,7 @@ contains
        ROFF_URB_t (i,j) = ( ROFF  - ROFF_URB (i,j) ) / dt
 
        ! saturation at the surface
-       call qsat( QVsat, SFC_TEMP(i,j), PRSS(i,j) )
+       call qsat( SFC_TEMP(i,j), PRSS(i,j), QVsat )
 
        call BULKFLUX( Ustar,         & ! [OUT]
                       Tstar,         & ! [OUT]
@@ -985,7 +985,7 @@ contains
       RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA)
       call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO)
 
-      call qsat( QS0R, TR, PRSS )
+      call qsat( TR, PRSS, QS0R )
 
       RR    = EPSR * ( RX - STB * (TR**4)  )
       !HR    = RHOO * CPdry * CHR * UA * (TR-TA)
@@ -1071,7 +1071,7 @@ contains
      RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA)
      call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO)
 
-     call qsat( QS0R, TR, PRSS )
+     call qsat( TR, PRSS, QS0R )
 
      RR      = EPSR * ( RX - STB * (TR**4) )
      HR      = RHOO * CPdry * CHR * UA * (THS-THA) * EXN
@@ -1125,8 +1125,8 @@ contains
       call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO)
       ALPHAC = CHC * RHOO * CPdry * UA
 
-      call qsat( QS0B, TB, PRSS )
-      call qsat( QS0G, TG, PRSS )
+      call qsat( TB, PRSS, QS0B )
+      call qsat( TG, PRSS, QS0G )
 
       TC1   = RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
       !TC2   = RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
@@ -1214,8 +1214,8 @@ contains
       resi2p = resi2
 
       ! this is for TC, QC
-      call qsat( QS0B, TB, PRSS )
-      call qsat( QS0G, TG, PRSS )
+      call qsat( TB, PRSS, QS0B )
+      call qsat( TG, PRSS, QS0G )
 
       THS1   = TB / EXN
       THS2   = TG / EXN

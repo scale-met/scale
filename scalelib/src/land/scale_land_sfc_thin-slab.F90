@@ -241,13 +241,11 @@ contains
         ! modified Newton-Raphson method (Tomita 2009)
         do n = 1, LAND_SFC_THIN_SLAB_itr_max
 
-          call qsat( QVsat,     & ! [OUT]
-                     LST1(i,j), & ! [IN]
-                     PRSS(i,j)  ) ! [IN]
-          call qsat( dQVsat,         & ! [OUT]
-                     LST1(i,j)+dTS0, & ! [IN]
-                     PRSS(i,j)       ) ! [IN]
-
+          call qsat( LST1(i,j),      PRSS(i,j), & ! [IN]
+                     QVsat                      ) ! [OUT]
+          call qsat( LST1(i,j)+dTS0, PRSS(i,j), & ! [IN]
+                     dQVsat                     ) ! [OUT]
+                     
           QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
           dQVS = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * dQVsat
 
@@ -459,9 +457,10 @@ contains
         Rtot = ( 1.0_RP - QVA(i,j) ) * Rdry &
              + (          QVA(i,j) ) * Rvap
 
-        call qsat( QVsat,     & ! [OUT]
-                   LST1(i,j), & ! [IN]
-                   PRSS(i,j)  ) ! [IN]
+        call qsat( LST1(i,j), PRSS(i,j), & ! [IN]
+                   QVsat                 ) ! [OUT]
+                   
+                   
 
         QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
 

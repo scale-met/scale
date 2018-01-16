@@ -2326,7 +2326,8 @@ contains
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                KS,                                               & ! (in)
                DENS_av(:,:,:), TEMP(:,:,:), PRES(:,:,:),         & ! (in)
-               QTRC_av(:,:,:,:),                                 & ! (in)
+               QV(:,:,:), QC(:,:,:), Qdry(:,:,:),                & ! (in)
+               Rtot(:,:,:), CPtot(:,:,:),                        & ! (in)
                REAL_CZ(:,:,:), REAL_FZ(:,:,:),                   & ! (in)
                CAPE(:,:), CIN(:,:), LCL(:,:), LFC(:,:), LNB(:,:) ) ! (out)
           DV_calclated(I_CAPE) = .true.

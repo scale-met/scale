@@ -504,9 +504,11 @@ contains
                                 TRACER_R(:),    & ! [IN]
                                 TRACER_MASS(:)  ) ! [IN]
 
-    call SATURATION_dens2qsat_liq( QSAT (:,:,:), & ! [OUT]
-                                   TEMP0(:,:,:), & ! [IN]
-                                   DENS0(:,:,:)  ) ! [IN]
+    call SATURATION_dens2qsat_liq( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                   TEMP0(:,:,:), DENS0(:,:,:), & ! [IN]
+                                   QSAT (:,:,:)                ) ! [OUT]
+                                   
+                                   
 
     !$omp parallel do private(i,j,k,dens,rhoe,temp,pres,qv,qc,qr,qsatl,Sliq,dq_evap,dq_auto,dq_accr,vent_factor,dqc,dqr,dqv) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE

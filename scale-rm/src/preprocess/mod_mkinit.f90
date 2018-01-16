@@ -1485,8 +1485,12 @@ contains
 
     if ( I_QV > 0 ) then
        ! calc QV from RH
-       call SATURATION_pres2qsat_all( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
-       call SATURATION_pres2qsat_all( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
+       call SATURATION_pres2qsat_all( IA, ISB, IEB, JA, JSB, JEB, &
+                                      temp_sfc(1,:,:), pres_sfc(1,:,:), & ! [IN]
+                                      qsat_sfc(1,:,:)                   ) ! [OUT]
+       call SATURATION_pres2qsat_all( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                      temp    (:,:,:), pres    (:,:,:), & ! [IN]
+                                      qsat    (:,:,:)                   ) ! [OUT]
 
        call RANDOM_get(rndm) ! make random
        do j = JSB, JEB
@@ -2200,8 +2204,11 @@ contains
 
     if ( I_QV > 0 ) then
        ! calc QV from RH
-       call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-       call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+       call SATURATION_pres2qsat_all( temp_sfc(1,1,1), pres_sfc(1,1,1), & ! [IN]
+                                      qsat_sfc(1,1,1)                   ) ! [OUT]
+       call SATURATION_pres2qsat_all( KA, KS, KE, &
+                                      temp(:,1,1), pres(:,1,1), & ! [IN]
+                                      qsat(:,1,1)               ) ! [OUT]
 
        call RANDOM_get(rndm) ! make random
        do j = JSB, JEB
@@ -2788,9 +2795,11 @@ contains
                                qc_sfc  (1,1,1)  ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
-
+    call SATURATION_pres2qsat_all( temp_sfc(1,1,1), pres_sfc(1,1,1), & ! [IN]
+                                   qsat_sfc(1,1,1)                   ) ! [OUT]
+    call SATURATION_pres2qsat_all( KA, KS, KE, &
+                                   temp    (:,1,1), pres    (:,1,1), & ! [IN]
+                                   qsat    (:,1,1)                   ) ! [OUT]
     qv_sfc(1,1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
     do k = KS, KE
        if    ( GRID_CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
@@ -3078,8 +3087,12 @@ contains
     enddo
     enddo
 
-    call SATURATION_pres2qsat_all( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
-    call SATURATION_pres2qsat_all( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
+    call SATURATION_pres2qsat_all( IA, ISB, IEB, JA, JSB, JEB, &
+                                   temp_sfc(1,:,:), pres_sfc(1,:,:), & ! [IN]
+                                   qsat_sfc(1,:,:)                   ) ! [OUT]
+    call SATURATION_pres2qsat_all( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                   temp    (:,:,:), pres    (:,:,:), & ! [IN]
+                                   qsat    (:,:,:)                   ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB
@@ -5382,9 +5395,11 @@ contains
                                qc_sfc  (1,1,1)  ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
-
+    call SATURATION_pres2qsat_all( temp_sfc(1,1,1), pres_sfc(1,1,1), & ! [IN]
+                                   qsat_sfc(1,1,1)                   ) ! [OUT]
+    call SATURATION_pres2qsat_all( KA, KS, KE, &
+                                   temp    (:,1,1), pres    (:,1,1), & ! [IN]
+                                   qsat    (:,1,1)                   ) ! [OUT]
     qv_sfc(1,1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
     do k = KS, KE
        if    ( GRID_CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1

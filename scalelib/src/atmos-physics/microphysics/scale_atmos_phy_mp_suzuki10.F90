@@ -68,12 +68,8 @@ module scale_atmos_phy_mp_suzuki10
      TEMP0 => CONST_TEM00, &
      RHOW  => CONST_DWATR
   use scale_atmos_saturation, only: &
-     SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq, &
-     SATURATION_pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice, &
-     LovR_liq,     &
-     LovR_ice,     &
-     CPovR_liq,    &
-     CPovR_ice
+     ATMOS_SATURATION_pres2qsat_liq, &
+     ATMOS_SATURATION_pres2qsat_ice
   use scale_atmos_thermodyn, only: &
      THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
      THERMODYN_pott      => ATMOS_THERMODYN_pott
@@ -955,10 +951,9 @@ contains
                               TRACER_R(:),   & ! [IN]
                               TRACER_MASS(:) ) ! [IN]
 
-    call SATURATION_pres2qsat_liq( qsat(:,:,:), & ! [OUT]
-                                   TEMP(:,:,:), & ! [IN]
-                                   PRES(:,:,:)  ) ! [IN]
-
+    call ATMOS_SATURATION_pres2qsat_liq( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                         TEMP(:,:,:), PRES(:,:,:), & ! [IN]
+                                         qsat(:,:,:)               ) ! [OUT]
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -970,9 +965,9 @@ contains
     if ( nspc == 1 ) then
        ssice(:,:,:) = 0.0_RP
     else
-       call SATURATION_pres2qsat_ice( qsat(:,:,:), & ! [OUT]
-                                      TEMP(:,:,:), & ! [IN]
-                                      PRES(:,:,:)  ) ! [IN]
+       call ATMOS_SATURATION_pres2qsat_ice( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                            TEMP(:,:,:), PRES(:,:,:), & ! [IN]
+                                            qsat(:,:,:)               ) ! [OUT]
 
        do j = JS, JE
        do i = IS, IE
@@ -1675,7 +1670,7 @@ contains
   real(RP) :: n_c
   real(RP) :: sumnum(ijkmax)
   real(RP) :: gcn( nbin,ijkmax )        ! number of cloud particles in each bin (=gc/exp(xctr))
-  real(RP) :: psat
+  real(RP) :: qsat
   integer  :: ijk
 
     call PROF_rapstart('_SBM_Nucleat', 3)
@@ -1698,10 +1693,10 @@ contains
     !--- lhv
     qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
     !--- supersaturation
-    psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-          * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-    ssliq(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-    ssliq(ijk) = qvap(ijk)/ssliq(ijk)-1.0_RP
+    call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), & ! [IN]
+                                         qsat                  ) ! [OUT]
+                                         
+    ssliq(ijk) = qvap(ijk)/qsat-1.0_RP
 
    enddo
 
@@ -1771,7 +1766,7 @@ contains
 !  integer, save :: ncld( 1:nccn )
 !  logical, save :: ofirst(1:ijkmax) = .true.
   !
-  real(RP) :: psat
+  real(RP) :: qsat
   integer  :: ijk
 
     call PROF_rapstart('_SBM_NucleatA', 3)
@@ -1781,14 +1776,14 @@ contains
     !--- lhv
     qlevp = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
     !--- supersaturation
-    psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-          * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-    ssliq = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-    psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-          * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-    ssice = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-    ssliq = qvap(ijk)/ssliq-1.0_RP
-    ssice = qvap(ijk)/ssice-1.0_RP
+    call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), & ! [IN]
+                                         qsat                  ) ! [OUT]
+                                         
+    ssliq = qvap(ijk)/qsat-1.0_RP
+    call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), & ! [IN]
+                                         qsat                  ) ! [OUT]
+       
+    ssice = qvap(ijk)/qsat-1.0_RP
 
     if ( ssliq <= 0.0_RP ) cycle
     !--- use for aerosol coupled model
@@ -1816,14 +1811,14 @@ contains
     !--- nucleation
     do n = nccn, 1, -1
         !--- super saturation
-        psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-              * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-        ssliq = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-        psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-              * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-        ssice = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-        ssliq = qvap(ijk)/ssliq-1.0_RP
-        ssice = qvap(ijk)/ssice-1.0_RP
+        call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), & ! [IN]
+                                             qsat                  ) ! [OUT]
+                                             
+        ssliq = qvap(ijk)/qsat-1.0_RP
+        call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), & ! [IN]
+                                             qsat                  ) ! [OUT]
+             
+        ssice = qvap(ijk)/qsat-1.0_RP
 
       if ( ssliq <= 0.0_RP ) exit
       !--- use for aerosol coupled model
@@ -2016,7 +2011,7 @@ contains
 !  real(RP) :: old_sum_gcn, new_sum_gcn
   integer  :: iflg( nspc,ijkmax )                ! flag whether calculation is conduct or not
   real(RP) :: csum( nspc,ijkmax )
-  real(RP) :: f1, f2, emu, cefd, cefk, festl, psat
+  real(RP) :: f1, f2, emu, cefd, cefk, festl, qsat
   real(RP), parameter :: afmyu = 1.72E-05_RP, bfmyu = 3.93E+2_RP
   real(RP), parameter :: cfmyu = 1.2E+02_RP, fct = 1.4E+3_RP
   real(RP) :: zerosw, qvtmp
@@ -2068,14 +2063,14 @@ contains
      !--- lhv
      qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
      !--- super saturation
-     psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-           * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-     ssliq(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-     psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-           * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-     ssice(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-     ssliq(ijk) = qvap(ijk)/ssliq(ijk)-1.0_RP
-     ssice(ijk) = qvap(ijk)/ssice(ijk)-1.0_RP
+     call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), & ! [IN]
+                                          qsat                  ) ! [OUT]
+                                          
+     ssliq(ijk) = qvap(ijk)/qsat-1.0_RP
+     call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), & ! [IN]
+                                          qsat                  ) ! [OUT]
+                                          
+     ssice(ijk) = qvap(ijk)/qsat-1.0_RP
 
      emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
      cefd = emu/dens(ijk)
@@ -2112,14 +2107,14 @@ contains
        !--- lhv
        qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
        !----- matrix for supersaturation tendency
-       psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-             * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-       ssliq(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-       psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-             * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-       ssice(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-       ssliq(ijk) = qvap(ijk)/ssliq(ijk)-1.0_RP
-       ssice(ijk) = qvap(ijk)/ssice(ijk)-1.0_RP
+       call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), & ! [IN]
+                                            qsat                  ) ! [OUT]
+                                            
+       ssliq(ijk) = qvap(ijk)/qsat-1.0_RP
+       call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), & ! [IN]
+                                            qsat                  ) ! [OUT]
+            
+       ssice(ijk) = qvap(ijk)/qsat-1.0_RP
 
        emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
        cefd = emu/dens(ijk)
@@ -2380,7 +2375,7 @@ contains
   real(RP) :: dumm_regene(ijkmax)
   integer :: iflg( nspc,ijkmax )
   real(RP) :: csum( nspc,ijkmax )
-  real(RP) :: f1, f2, emu, cefd, cefk, festi, psat
+  real(RP) :: f1, f2, emu, cefd, cefk, festi, qsat
   real(RP), parameter :: afmyu = 1.72E-05_RP, bfmyu = 3.93E+2_RP
   real(RP), parameter :: cfmyu = 1.2E+02_RP, fct = 1.4E+3_RP
   integer :: ijk, mm, nn, loopflg(ijkmax)
@@ -2442,14 +2437,14 @@ contains
      !--- lhv
      qlsbl(ijk) = CONST_LHS0 + ( CONST_CPvap - CONST_CI ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
      !--- supersaturation
-     psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-           * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-     ssliq(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-     psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-           * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-     ssice(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-     ssliq(ijk) = qvap(ijk)/ssliq(ijk)-1.0_RP
-     ssice(ijk) = qvap(ijk)/ssice(ijk)-1.0_RP
+     call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), & ! [IN]
+                                          qsat                  ) ! [OUT]
+                                          
+     ssliq(ijk) = qvap(ijk)/qsat-1.0_RP
+     call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), & ! [IN]
+                                          qsat                  ) ! [OUT]
+                                          
+     ssice(ijk) = qvap(ijk)/qsat-1.0_RP
 
      emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
      cefd = emu/dens(ijk)
@@ -2488,14 +2483,13 @@ contains
        !--- lhv
        qlsbl(ijk) = CONST_LHS0 + ( CONST_CPvap - CONST_CI ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
        !----- matrix for supersaturation tendency
-       psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-             * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-       ssliq(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-       psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-             * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-       ssice(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-       ssliq(ijk) = qvap(ijk)/ssliq(ijk)-1.0_RP
-       ssice(ijk) = qvap(ijk)/ssice(ijk)-1.0_RP
+       call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), & ! [IN]
+                                            qsat                  ) ! [OUT]
+                                            
+       ssliq(ijk) = qvap(ijk)/qsat-1.0_RP
+       call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), & ! [IN]
+                                            qsat                  ) ! [OUT]
+            
 
        emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
        cefd = emu/dens(ijk)
@@ -2744,7 +2738,7 @@ contains
   real(RP) :: dumm_regene(ijkmax)
   real(RP) :: csum( nspc,ijkmax )
   integer :: iflg( nspc,ijkmax )
-  real(RP) :: f1, f2, emu, cefd, cefk, festl, festi, psat
+  real(RP) :: f1, f2, emu, cefd, cefk, festl, festi, qsat
   real(RP), parameter :: afmyu = 1.72E-05_RP, bfmyu = 3.93E+2_RP
   real(RP), parameter :: cfmyu = 1.2E+02_RP, fct = 1.4E+3_RP
   real(RP) :: qvtmp, zerosw
@@ -2810,14 +2804,13 @@ contains
       qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
       qlsbl(ijk) = CONST_LHS0 + ( CONST_CPvap - CONST_CI ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
       !-- supersaturation
-      psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-            * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-      ssliq(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-      psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-            * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-      ssice(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-      ssliq(ijk) = qvap(ijk)/ssliq(ijk)-1.0_RP
-      ssice(ijk) = qvap(ijk)/ssice(ijk)-1.0_RP
+      call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), & ! [IN]
+                                           qsat                  ) ! [OUT]
+                                           
+      ssliq(ijk) = qvap(ijk)/qsat-1.0_RP
+      call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), & ! [IN]
+                                           qsat                  ) ! [OUT]
+           
 
       emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
       cefd = emu/dens(ijk)
@@ -2867,12 +2860,14 @@ contains
          qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
          qlsbl(ijk) = CONST_LHS0 + ( CONST_CPvap - CONST_CI ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
          !-- matrix for supersaturation tendency
-         psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-               * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-         ssliq(ijk) = qvap(ijk) / ( CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat ) )-1.0_RP
-         psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-               * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-         ssice(ijk) = qvap(ijk) / ( CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat ) )-1.0_RP
+         call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), & ! [IN]
+                                              qsat                  ) ! [OUT]
+                                              
+         ssliq(ijk) = qvap(ijk)/qsat-1.0_RP
+         call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), & ! [IN]
+                                              qsat                 ) ! [OUT]
+                                              
+         ssice(ijk) = qvap(ijk)/qsat-1.0_RP
 
          emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
          cefd = emu/dens(ijk)
@@ -3161,24 +3156,23 @@ contains
   real(RP), parameter :: tdendu = 257.0_RP, tdendl = 255.0_RP! -14[degC], -18[degC]
   real(RP), parameter :: tplatu = 250.6_RP                   ! -22.4[degC]
   !
-  real(RP) :: psat
+  real(RP) :: qsat
   integer :: ijk, indirect
 
 
     call PROF_rapstart('_SBM_IceNucleat', 3)
 
-  do indirect = 1, num_cold
+    do indirect = 1, num_cold
      ijk = index_cold(indirect)
 
     !--- supersaturation
-    psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-          * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-    ssliq = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-    psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-          * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-    ssice = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-    ssliq = qvap(ijk)/ssliq-1.0_RP
-    ssice = qvap(ijk)/ssice-1.0_RP
+     call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), & ! [IN]
+                                          qsat                  ) ! [OUT]
+                                          
+     ssliq = qvap(ijk)/qsat-1.0_RP
+     call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), & ! [IN]
+                                          qsat                  ) ! [OUT]
+     ssice = qvap(ijk)/qsat-1.0_RP
 
     if( ssice <= 0.0_RP ) cycle
 

@@ -182,9 +182,8 @@ contains
              + (          QVA(i,j) ) * Rvap
 
         ! saturation at the surface
-        call qsat( QVsat,     & ! [OUT]
-                   SST1(i,j), & ! [IN]
-                   PRSS(i,j)  ) ! [IN]
+        call qsat( SST1(i,j), PRSS(i,j), & ! [IN]
+                   QVsat                 ) ! [OUT]
 
         call BULKFLUX( &
             Ustar,     & ! [OUT]

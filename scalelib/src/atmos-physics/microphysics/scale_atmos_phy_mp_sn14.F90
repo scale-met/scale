@@ -1754,8 +1754,10 @@ contains
     end do
     end do
 
-    call moist_psat_liq( esw, wtemp )
-    call moist_psat_ice( esi, wtemp )
+    call moist_psat_liq( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                         wtemp(:,:,:), esw(:,:,:) ) ! [IN], [OUT]
+    call moist_psat_ice( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                         wtemp(:,:,:), esi(:,:,:) ) ! [IN], [OUT]
 
     call freezing_water_kij( &
          dt,             & ! in
@@ -2220,7 +2222,7 @@ contains
        moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
        moist_pres2qsat_liq  => ATMOS_SATURATION_pres2qsat_liq, &
        moist_pres2qsat_ice  => ATMOS_SATURATION_pres2qsat_ice,   &
-       moist_dqsi_dtem_rho  => ATMOS_SATURATION_dqsi_dtem_rho
+       moist_dqsi_dtem_dens => ATMOS_SATURATION_dqs_dtem_dens_liq
     implicit none
 
     real(RP), intent(in)  :: z(KA)      !
@@ -2352,11 +2354,19 @@ contains
     rdt            = 1.0_RP/dt
     r_gravity      = 1.0_RP/GRAV
     !
-    call moist_psat_liq     ( esw, tem )
-    call moist_psat_ice     ( esi, tem )
-    call moist_pres2qsat_liq( qsw, tem, pre )
-    call moist_pres2qsat_ice( qsi, tem, pre )
-    call moist_dqsi_dtem_rho( dqsidtem_rho, tem, rho )
+    call moist_psat_liq      ( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              tem(:,:,:), esw(:,:,:) ) ! [IN], [OUT]
+    call moist_psat_ice      ( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              tem(:,:,:), esi(:,:,:) ) ! [IN], [OUT]
+    call moist_pres2qsat_liq ( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              tem(:,:,:), pre(:,:,:), & ! [IN]
+                              qsw(:,:,:)              ) ! [OUT]
+    call moist_pres2qsat_ice ( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              tem(:,:,:), pre(:,:,:), & ! [IN]
+                              qsi(:,:,:)              ) ! [OUT]
+    call moist_dqsi_dtem_dens( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                               tem(:,:,:), rho(:,:,:), & ! [IN]
+                               dqsidtem_rho(:,:,:)     ) ! [OUT]
     !
     ! Lohmann (2002),JAS, eq.(1) but changing unit [cm-3] => [m-3]
     a_max = 1.E+6_RP*0.1_RP*(1.E-6_RP)**1.27_RP
@@ -2893,7 +2903,8 @@ contains
     end do
     end do
 
-    call moist_psat_ice( esi, tem )
+    call moist_psat_ice( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                         tem(:,:,:), esi(:,:,:)  ) ! [IN], [OUT]
 
     if( opt_stick_KS96 )then
        do j = JS, JE
@@ -3853,10 +3864,10 @@ contains
     use scale_atmos_saturation, only: &
        moist_pres2qsat_liq  => ATMOS_SATURATION_pres2qsat_liq,  &
        moist_pres2qsat_ice  => ATMOS_SATURATION_pres2qsat_ice,  &
-       moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho,  &
-       moist_dqsi_dtem_rho  => ATMOS_SATURATION_dqsi_dtem_rho,  &
-       moist_dqsw_dtem_dpre => ATMOS_SATURATION_dqsw_dtem_dpre, &
-       moist_dqsi_dtem_dpre => ATMOS_SATURATION_dqsi_dtem_dpre
+       moist_dqs_dtem_dens_liq  => ATMOS_SATURATION_dqs_dtem_dens_liq,  &
+       moist_dqs_dtem_dens_ice  => ATMOS_SATURATION_dqs_dtem_dens_ice,  &
+       moist_dqs_dtem_dpre_liq => ATMOS_SATURATION_dqs_dtem_dpre_liq, &
+       moist_dqs_dtem_dpre_ice => ATMOS_SATURATION_dqs_dtem_dpre_ice
     implicit none
 
     integer, intent(in)    :: ntdiv               ! [Add] 10/08/03
@@ -4030,12 +4041,24 @@ contains
     end do
     end do
 
-    call moist_pres2qsat_liq ( qsw, wtem, pre )
-    call moist_pres2qsat_ice ( qsi, wtem, pre )
-    call moist_dqsw_dtem_rho ( dqswdtem_rho, wtem, rho )
-    call moist_dqsi_dtem_rho ( dqsidtem_rho, wtem, rho )
-    call moist_dqsw_dtem_dpre( dqswdtem_pre, dqswdpre_tem, wtem, pre )
-    call moist_dqsi_dtem_dpre( dqsidtem_pre, dqsidpre_tem, wtem, pre )
+    call moist_pres2qsat_liq( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              wtem(:,:,:), pre(:,:,:), & ! [IN]
+                              qsw(:,:,:)               ) ! [OUT]
+    call moist_pres2qsat_ice( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              wtem(:,:,:), pre(:,:,:), & ! [IN]
+                              qsi(:,:,:)               ) ! [OUT]
+    call moist_dqs_dtem_dens_liq( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                  wtem(:,:,:), rho(:,:,:), & ! [IN]
+                                  dqswdtem_rho(:,:,:)      ) ! [OUT]
+    call moist_dqs_dtem_dens_ice( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                  wtem(:,:,:), rho(:,:,:), & ! [IN]
+                                  dqsidtem_rho(:,:,:)      ) ! [OUT]
+    call moist_dqs_dtem_dpre_liq( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                  wtem(:,:,:), pre(:,:,:),                 & ! [IN]
+                                  dqswdtem_pre(:,:,:), dqswdpre_tem(:,:,:) ) ! [OUT]
+    call moist_dqs_dtem_dpre_ice( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                  wtem(:,:,:), pre(:,:,:),                 & ! [IN]
+                                  dqsidtem_pre(:,:,:), dqsidpre_tem(:,:,:) ) ! [OUT]
 
     PROFILE_START("sn14_update")
     do j = JS, JE

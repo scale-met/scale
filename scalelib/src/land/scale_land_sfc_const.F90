@@ -192,9 +192,8 @@ contains
         Rtot = ( 1.0_RP - QVA(i,j) ) * Rdry &
              + (          QVA(i,j) ) * Rvap
 
-        call qsat( QVsat,     & ! [OUT]
-                   LST(i,j),  & ! [IN]
-                   PRSS(i,j)  ) ! [IN]
+        call qsat( LST(i,j), PRSS(i,j), & ! [IN]
+                   QVsat                ) ! [OUT]
 
         QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
 
