@@ -212,7 +212,8 @@ module mod_atmos_vars
   real(RP), allocatable, target :: N2   (:,:,:) !> squared Brunt-Vaisala frequency [/s2]
   real(RP), allocatable, target :: PBLH (:,:)   !> PBL height [m]
 
-  real(RP), allocatable, target :: MSE  (:,:,:) !> MSE                             [m2/s2]
+  real(RP), allocatable, target :: MSE  (:,:,:) !> moist static energy [m2/s2]
+  real(RP), allocatable, target :: TDEW (:,:,:) !> dew point [K]
 
   real(RP), allocatable, target :: CAPE (:,:)   !> CAPE       [m2/s2]
   real(RP), allocatable, target :: CIN  (:,:)   !> CIN        [m2/s2]
@@ -288,35 +289,36 @@ module mod_atmos_vars
   integer,     private, parameter :: I_N2        = 37
   integer,     private, parameter :: I_PBLH      = 38
   integer,     private, parameter :: I_MSE       = 39
-  integer,     private, parameter :: I_CAPE      = 40
-  integer,     private, parameter :: I_CIN       = 41
-  integer,     private, parameter :: I_LCL       = 42
-  integer,     private, parameter :: I_LFC       = 43
-  integer,     private, parameter :: I_LNB       = 44
-  integer,     private, parameter :: I_ENGT      = 45
-  integer,     private, parameter :: I_ENGP      = 46
-  integer,     private, parameter :: I_ENGK      = 47
-  integer,     private, parameter :: I_ENGI      = 48
-  integer,     private, parameter :: I_DENS_MEAN = 49
-  integer,     private, parameter :: I_W_MEAN    = 50
-  integer,     private, parameter :: I_U_MEAN    = 51
-  integer,     private, parameter :: I_V_MEAN    = 52
-  integer,     private, parameter :: I_PT_MEAN   = 53
-  integer,     private, parameter :: I_T_MEAN    = 54
-  integer,     private, parameter :: I_QV_MEAN   = 55
-  integer,     private, parameter :: I_QHYD_MEAN = 56
-  integer,     private, parameter :: I_QLIQ_MEAN = 57
-  integer,     private, parameter :: I_QICE_MEAN = 58
-  integer,     private, parameter :: I_DENS_PRIM = 59
-  integer,     private, parameter :: I_W_PRIM    = 60
-  integer,     private, parameter :: I_U_PRIM    = 61
-  integer,     private, parameter :: I_V_PRIM    = 62
-  integer,     private, parameter :: I_PT_PRIM   = 63
-  integer,     private, parameter :: I_W_PRIM2   = 64
-  integer,     private, parameter :: I_PT_W_PRIM = 65
-  integer,     private, parameter :: I_W_PRIM3   = 66
-  integer,     private, parameter :: I_TKE_RS    = 67
-  integer,     private, parameter :: DV_nmax     = 67
+  integer,     private, parameter :: I_TDEW      = 40
+  integer,     private, parameter :: I_CAPE      = 41
+  integer,     private, parameter :: I_CIN       = 42
+  integer,     private, parameter :: I_LCL       = 43
+  integer,     private, parameter :: I_LFC       = 44
+  integer,     private, parameter :: I_LNB       = 45
+  integer,     private, parameter :: I_ENGT      = 46
+  integer,     private, parameter :: I_ENGP      = 47
+  integer,     private, parameter :: I_ENGK      = 48
+  integer,     private, parameter :: I_ENGI      = 49
+  integer,     private, parameter :: I_DENS_MEAN = 50
+  integer,     private, parameter :: I_W_MEAN    = 51
+  integer,     private, parameter :: I_U_MEAN    = 52
+  integer,     private, parameter :: I_V_MEAN    = 53
+  integer,     private, parameter :: I_PT_MEAN   = 54
+  integer,     private, parameter :: I_T_MEAN    = 55
+  integer,     private, parameter :: I_QV_MEAN   = 56
+  integer,     private, parameter :: I_QHYD_MEAN = 57
+  integer,     private, parameter :: I_QLIQ_MEAN = 58
+  integer,     private, parameter :: I_QICE_MEAN = 59
+  integer,     private, parameter :: I_DENS_PRIM = 60
+  integer,     private, parameter :: I_W_PRIM    = 61
+  integer,     private, parameter :: I_U_PRIM    = 62
+  integer,     private, parameter :: I_V_PRIM    = 63
+  integer,     private, parameter :: I_PT_PRIM   = 64
+  integer,     private, parameter :: I_W_PRIM2   = 65
+  integer,     private, parameter :: I_PT_W_PRIM = 66
+  integer,     private, parameter :: I_W_PRIM3   = 67
+  integer,     private, parameter :: I_TKE_RS    = 68
+  integer,     private, parameter :: DV_nmax     = 68
   type(Vinfo), private            :: DV_info(DV_nmax)
   logical,     private            :: DV_calclated(DV_nmax)
 
@@ -360,6 +362,7 @@ module mod_atmos_vars
        Vinfo( 'N2',        'squared Brunt-Vaisala frequency', '1/s2',    3, '', '', '' ), &
        Vinfo( 'PBLH',      'PBL height',                      'm',       2, '', '', '' ), &
        Vinfo( 'MSE',       'moist static energy',             'm2/s2',   3, '', '', '' ), &
+       Vinfo( 'TDEW',      'dew point',                       'K',       3, '', '', '' ), &
        Vinfo( 'CAPE',      'convection avail. pot. energy',   'm2/s2',   2, '', '', '' ), &
        Vinfo( 'CIN',       'convection inhibition',           'm2/s2',   2, '', '', '' ), &
        Vinfo( 'LCL',       'lifted condensation level',       'm',       2, '', '', '' ), &
@@ -1435,7 +1438,8 @@ contains
        ATMOS_SATURATION_dens2qsat_all, &
        ATMOS_SATURATION_psat_all, &
        ATMOS_SATURATION_psat_liq, &
-       ATMOS_SATURATION_psat_ice
+       ATMOS_SATURATION_psat_ice, &
+       ATMOS_SATURATION_tdew_liq
     use scale_atmos_diagnostic, only: &
        ATMOS_DIAGNOSTIC_get_potv, &
        ATMOS_DIAGNOSTIC_get_teml, &
@@ -1956,6 +1960,16 @@ contains
           DV_calclated(I_MSE) = .true.
        end if
        var => MSE
+
+    case ( 'TDEW' )
+       if ( .not. DV_calclated(I_TDEW) ) then
+          if ( .not. allocated(TDEW) ) allocate( TDEW(KA,IA,JA) )
+          call ATMOS_SATURATION_tdew_liq( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                                          DENS(:,:,:), TEMP(:,:,:), QV(:,:,:), & ! [IN]
+                                          TDEW(:,:,:)                          ) ! [OUT]
+          DV_calclated(I_TDEW) = .true.
+       end if
+       var => TDEW
 
     case ( 'ENGP' )
        if ( .not. DV_calclated(I_ENGP) ) then

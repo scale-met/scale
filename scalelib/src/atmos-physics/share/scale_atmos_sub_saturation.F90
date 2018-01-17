@@ -60,6 +60,8 @@ module scale_atmos_saturation
   public :: ATMOS_SATURATION_dqs_dtem_dpre_liq
   public :: ATMOS_SATURATION_dqs_dtem_dpre_ice
 
+  public :: ATMOS_SATURATION_tdew_liq
+
   public :: ATMOS_SATURATION_moist_conversion_dens_liq
   public :: ATMOS_SATURATION_moist_conversion_dens_all
   public :: ATMOS_SATURATION_moist_conversion_pres_liq
@@ -149,6 +151,11 @@ module scale_atmos_saturation
      module procedure ATMOS_SATURATION_dqs_dtem_dpre_ice_3D
   end interface ATMOS_SATURATION_dqs_dtem_dpre_ice
 
+  interface ATMOS_SATURATION_tdew_liq
+     module procedure ATMOS_SATURATION_tdew_liq_0D
+     module procedure ATMOS_SATURATION_tdew_liq_3D
+  end interface ATMOS_SATURATION_tdew_liq
+
   interface ATMOS_SATURATION_moist_conversion_dens_liq
      module procedure ATMOS_SATURATION_moist_conversion_dens_liq_0D
   end interface ATMOS_SATURATION_moist_conversion_dens_liq
@@ -171,13 +178,15 @@ module scale_atmos_saturation
   !
   !++ Private parameters & variables
   !
-  real(RP), private, parameter :: TEM_MIN   = 10.0_RP !< minimum temperature [K]
+  real(RP), private, parameter :: TEM_MIN   = 100.0_RP !< minimum temperature [K]
 
   real(RP), private,      save :: ATMOS_SATURATION_ULIMIT_TEMP = 273.15_RP !< upper limit temperature
   real(RP), private,      save :: ATMOS_SATURATION_LLIMIT_TEMP = 233.15_RP !< lower limit temperature
 
-  real(RP), private,      save :: RTEM00         !< inverse of TEM00
-  real(RP), private,      save :: dalphadT_const !< d(alfa)/dt
+  real(RP), private,      save :: RTEM00         !> inverse of TEM00
+  real(RP), private,      save :: dalphadT_const !> d(alfa)/dt
+  real(RP), private,      save :: psat_min_liq   !> psat_liq for TEM_MIN
+  real(RP), private,      save :: psat_min_ice   !> psat_ice for TEM_MIN
 
   real(RP), private,      save :: CPovR_liq
   real(RP), private,      save :: CPovR_ice
@@ -256,6 +265,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F7.2,A,F7.2)') '*** Temperature range for liquid/ice mixture : ', &
                                                       ATMOS_SATURATION_LLIMIT_TEMP, ' - ', &
                                                       ATMOS_SATURATION_ULIMIT_TEMP
+
+    call ATMOS_SATURATION_psat_liq( TEM_MIN, psat_min_liq ) ! [IN], [OUT]
+    call ATMOS_SATURATION_psat_ice( TEM_MIN, psat_min_ice ) ! [IN], [OUT]
 
     return
   end subroutine ATMOS_SATURATION_setup
@@ -1569,6 +1581,103 @@ contains
 
     return
   end subroutine ATMOS_SATURATION_dqs_dtem_dpre_all_0D
+
+  !-----------------------------------------------------------------------------
+  !> calculation of dew point
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_SATURATION_tdew_liq_0D( &
+       DENS, TEMP, QV, &
+       Tdew,           &
+       converged       )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_LHV
+    real(RP), intent(in) :: DENS
+    real(RP), intent(in) :: TEMP
+    real(RP), intent(in) :: QV
+
+    real(RP), intent(out) :: Tdew
+    logical,  intent(out) :: converged
+
+    integer,  parameter :: itelim = 100
+    real(RP), parameter :: criteria = 0.1_RP**(2+RP/2)
+
+    real(RP) :: lhv
+    real(RP) :: pvap, psat
+    real(RP) :: dpsat_dT
+    real(RP) :: dTdew
+
+    integer :: ite
+    !---------------------------------------------------------------------------
+
+    pvap = DENS * QV * Rvap * TEMP
+
+    if ( pvap < psat_min_liq ) then
+       converged = .true.
+       Tdew = UNDEF
+       return
+    end if
+
+    Tdew = TEMP
+    converged = .false.
+    do ite = 1, itelim
+
+       call ATMOS_SATURATION_psat_liq( Tdew, psat ) ! [IN], [OUT]
+       call ATMOS_HYDROMETEOR_LHV( lhv, Tdew )
+
+       dpsat_dT = psat * lhv / ( Rvap * Tdew**2 )
+       dTdew = ( psat - pvap ) / dpsat_dT
+       if ( dTdew < criteria ) then
+          converged = .true.
+          exit
+       end if
+
+       Tdew = Tdew - dTdew
+    end do
+
+    return
+  end subroutine ATMOS_SATURATION_tdew_liq_0D
+
+  subroutine ATMOS_SATURATION_tdew_liq_3D( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       DENS, TEMP, QV, &
+       Tdew            )
+    use scale_process, only: &
+       PRC_abort
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: TEMP(KA,IA,JA)
+    real(RP), intent(in) :: QV  (KA,IA,JA)
+
+    real(RP), intent(out) :: Tdew(KA,IA,JA)
+
+    logical :: converged, error
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    error = .false.
+    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       call ATMOS_SATURATION_tdew_liq_0D( DENS(k,i,j), TEMP(k,i,j), QV(k,i,j), & ! [IN]
+                                          Tdew(k,i,j), converged               ) ! [OUT]
+       if ( .not. converged ) then
+          write(*,*) 'xxx [tdew_liq] not converged! ', k,i,j
+          error = .true.
+          exit
+       end if
+    end do
+    end do
+    end do
+
+    if ( error ) call PRC_abort
+
+  end subroutine ATMOS_SATURATION_tdew_liq_3D
 
   !-----------------------------------------------------------------------------
   !> Iterative moist conversion for liquid water at constant density (volume)
