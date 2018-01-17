@@ -81,7 +81,7 @@ contains
     if(vname(1:3)=="lat")    vname="lat"
 
     select case( trim(vname) )
-    case ( "TRL_URB", "TBL_URB", "TGL_URB" )
+    case ( "URBAN_TRL", "URBAN_TBL", "URBAN_TGL" )
        vtype = vt_urban
     case ( "LAND_TEMP", "LAND_WATER", "LAND_DSAT" )
        vtype = vt_land
@@ -452,7 +452,7 @@ contains
     integer, intent(in)  :: nxp, nyp
     integer, intent(in)  :: mnxp, mnyp
     integer, intent(in)  :: it
-    integer, intent(in)  :: nz(3), zz        !nz: 1=atom, 2=urban, 3=land
+    integer, intent(in)  :: nz(4), zz        !nz: 1=atom, 2=urban, 3=land, 4=ocean
     character(CMID), intent(in) :: varname
     integer, intent(out) :: is, ie           ! start index, end index
     integer, intent(out) :: js, je           ! start index, end index

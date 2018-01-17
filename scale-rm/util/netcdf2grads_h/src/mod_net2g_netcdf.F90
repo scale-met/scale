@@ -40,6 +40,7 @@ module mod_net2g_netcdf
   public :: netcdf_var_dim
   public :: netcdf_retrieve_dims
   public :: netcdf_read_grid
+  public :: netcdf_read_grid_sfc
   public :: netcdf_read_var
   public :: netcdf_read_ref
 
@@ -115,12 +116,15 @@ contains
 
     istat = nf90_inq_dimid ( ncid,  'uz', dimid )
     istat = nf90_inquire_dimension( ncid, dimid, len=uz )
+    if (istat .ne. nf90_noerr) uz=-99
 
     istat = nf90_inq_dimid ( ncid,  'lz', dimid )
     istat = nf90_inquire_dimension( ncid, dimid, len=lz )
+    if (istat .ne. nf90_noerr) lz=-99
 
     istat = nf90_inq_dimid ( ncid,  'oz', dimid )
     istat = nf90_inquire_dimension( ncid, dimid, len=oz )
+    if (istat .ne. nf90_noerr) oz=-99
 
     istat = nf90_close(ncid)
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
@@ -249,6 +253,46 @@ contains
     istat = nf90_close(ncid)
     return
   end subroutine netcdf_read_grid
+
+  !> read from netcdf: grid data (land/urban/ocean)
+  !-----------------------------------------------------------------------------------------
+  subroutine netcdf_read_grid_sfc ( &
+      imnge,                        & ! [in]
+      sfc_lev_name,                 & ! [in]
+      sfc_lev                       ) ! [out]
+    implicit none
+
+    integer,         intent(in)  :: imnge
+    character(*),    intent(in)  :: sfc_lev_name
+    real(SP),        intent(out) :: sfc_lev(:)
+
+    integer :: ncid, varid
+    integer :: istat
+    character(CLNG) :: ncfile
+    character(6)    :: num
+    !---------------------------------------------------------------------------
+
+    write ( num,'(I6.6)' ) imnge
+    ncfile = trim(IDIR)//"/"//trim(HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
+    if ( LOUT ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (",trim(sfc_lev_name),"): ", trim(ncfile)
+
+    istat = nf90_open( trim(ncfile), nf90_nowrite, ncid )
+    if (istat .ne. nf90_noerr) then
+       write(*,*) "Error: Fail to open ",trim(ncfile)
+       call handle_err(istat, __LINE__)
+    endif
+
+    istat = nf90_inq_varid( ncid, trim(sfc_lev_name), varid )
+    istat = nf90_get_var( ncid, varid, sfc_lev )
+    if (istat .ne. nf90_noerr) then
+       write(*,*) "Error: Fail to get data ",trim(sfc_lev_name)
+       call handle_err(istat, __LINE__)
+    endif
+
+    if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
+    istat = nf90_close(ncid)
+    return
+  end subroutine netcdf_read_grid_sfc
 
   !> read from netcdf: variables data
   !-----------------------------------------------------------------------------------------

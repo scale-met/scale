@@ -33,6 +33,7 @@ program netcdf2grads_h
   real(SP),allocatable :: zlev(:), cz(:), cdz(:)
   real(SP),allocatable :: cx(:), cdx(:)
   real(SP),allocatable :: cy(:), cdy(:)
+  real(SP),allocatable :: lcz(:), ucz(:), ocz(:)
   real(SP),allocatable :: lon(:,:), lat(:,:)
   real(SP),allocatable :: var_2d(:,:)
   real(SP),allocatable :: p_var(:,:)
@@ -376,6 +377,30 @@ program netcdf2grads_h
         case ( vt_urban, vt_land, vt_ocean, vt_height, vt_3d )
         !-----------------------------------------------------------------------------------
 
+           ! read axis
+           if((it == nst).and.(irank == master))then
+              select case( vtype )
+              case ( vt_urban )
+                 if(uz < 0)then
+                    write (*,*) "ERROR: Not found urban layer axis: uz"
+                    call err_abort( 1, __LINE__, loc_main )
+                 endif
+                 call netcdf_read_grid_sfc( master, 'UCZ', ucz )
+              case ( vt_land )
+                 if(lz < 0)then
+                    write (*,*) "ERROR: Not found land layer axis: lz"
+                    call err_abort( 1, __LINE__, loc_main )
+                 endif
+                 call netcdf_read_grid_sfc( master, 'LCZ', lcz )
+              case ( vt_ocean )
+                 if(oz < 0)then
+                    write (*,*) "ERROR: Not found land layer axis: oz"
+                    call err_abort( 1, __LINE__, loc_main )
+                 endif
+                 call netcdf_read_grid_sfc( master, 'OCZ', ocz )
+              end select
+           endif
+
            irec_timelev = irec_time
            do iz = 1, ZCOUNT        !--- level loop
               if ( atype == a_slice ) then
@@ -459,18 +484,22 @@ program netcdf2grads_h
                        zz = TARGET_ZLEV(iz)
                     endif
                     call io_create_ctl( varname, atype, ctype, vtype, idom, &
-                         nx, ny, zz, nt, cx, cy, vgrid, zlev, long_name, unit )
+                         nx, ny, zz, nt, cx, cy, vgrid, zlev,               &
+                         lz, uz, oz, lcz, ucz, ocz, long_name, unit )
                     if ( MAPPROJ_ctl )then
                        call io_create_ctl_mproj( varname, atype, ctype, vtype, idom, &
-                            nx, ny, zz, nt, cx, cy, vgrid, zlev, minval(lon), minval(lat), long_name, unit )
+                            nx, ny, zz, nt, cx, cy, vgrid, zlev,                     &
+                            lz, uz, oz, lcz, ucz, ocz, minval(lon), minval(lat), long_name, unit )
                     endif
                  enddo
               else
                  call io_create_ctl( varname, atype, ctype, vtype, idom, &
-                      nx, ny, 1, nt, cx, cy, vgrid, zlev, long_name, unit )
+                      nx, ny, 1, nt, cx, cy, vgrid, zlev,                &
+                      lz, uz, oz, lcz, ucz, ocz, long_name, unit )
                  if ( MAPPROJ_ctl )then
                     call io_create_ctl_mproj( varname, atype, ctype, vtype, idom, &
-                         nx, ny, 1, nt, cx, cy, vgrid, zlev, minval(lon), minval(lat), long_name, unit )
+                         nx, ny, 1, nt, cx, cy, vgrid, zlev,                      &
+                         lz, uz, oz, lcz, ucz, ocz, minval(lon), minval(lat), long_name, unit )
                  endif
               endif
 
@@ -906,15 +935,21 @@ contains
     allocate( p_lon       (mnxp, mnyp*nmnge           ) )
     allocate( p_lat       (mnxp, mnyp*nmnge           ) )
 
+    if ( irank == master ) then
+       if (lz > 0) allocate( lcz       (lz     ) )
+       if (uz > 0) allocate( ucz       (uz     ) )
+       if (oz > 0) allocate( ocz       (oz     ) )
+       allocate( var_2d    (nx, ny ) )
+       allocate( cx        (nx     ) )
+       allocate( cy        (ny     ) )
+       allocate( cdx       (nx     ) )
+       allocate( cdy       (ny     ) )
+       allocate( lon       (nx, ny ) )
+       allocate( lat       (nx, ny ) )
+    endif
+
 #ifdef MPIUSE
     if ( irank == master ) then
-       allocate( var_2d    (nx,               ny               ) )
-       allocate( cx        (nx                                 ) )
-       allocate( cy        (ny                                 ) )
-       allocate( cdx       (nx                                 ) )
-       allocate( cdy       (ny                                 ) )
-       allocate( lon       (nx,               ny               ) )
-       allocate( lat       (nx,               ny               ) )
        allocate( recvbuf   (mnxp,             mnyp*nmnge*tproc ) )
        allocate( cx_gather (nxgp*nmnge*tproc                   ) )
        allocate( cy_gather (nygp*nmnge*tproc                   ) )
@@ -927,14 +962,6 @@ contains
        allocate( cdx_gather(1                                  ) )
        allocate( cdy_gather(1                                  ) )
     endif
-#else
-    allocate( var_2d    (nx, ny) )
-    allocate( cx        (nx    ) )
-    allocate( cy        (ny    ) )
-    allocate( cdx       (nx    ) )
-    allocate( cdy       (ny    ) )
-    allocate( lon       (nx, ny) )
-    allocate( lat       (nx, ny) )
 #endif
 
     return
