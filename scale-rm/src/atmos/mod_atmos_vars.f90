@@ -358,28 +358,28 @@ module mod_atmos_vars
        Vinfo( 'HDIV',      'horizontal divergence',           '1/s',     3, '', '', '' ), &
        Vinfo( 'Uabs',      'absolute velocity',               'm/s',     3, '', '', '' ), &
        Vinfo( 'N2',        'squared Brunt-Vaisala frequency', '1/s2',    3, '', '', '' ), &
-       Vinfo( 'PBLH',      'PBL height',                      'm',       3, '', '', '' ), &
+       Vinfo( 'PBLH',      'PBL height',                      'm',       2, '', '', '' ), &
        Vinfo( 'MSE',       'moist static energy',             'm2/s2',   3, '', '', '' ), &
-       Vinfo( 'CAPE',      'convection avail. pot. energy',   'm2/s2',   3, '', '', '' ), &
-       Vinfo( 'CIN',       'convection inhibition',           'm2/s2',   3, '', '', '' ), &
-       Vinfo( 'LCL',       'lifted condensation level',       'm',       3, '', '', '' ), &
-       Vinfo( 'LFC',       'level of free convection',        'm',       3, '', '', '' ), &
-       Vinfo( 'LNB',       'level of neutral buoyancy',       'm',       3, '', '', '' ), &
+       Vinfo( 'CAPE',      'convection avail. pot. energy',   'm2/s2',   2, '', '', '' ), &
+       Vinfo( 'CIN',       'convection inhibition',           'm2/s2',   2, '', '', '' ), &
+       Vinfo( 'LCL',       'lifted condensation level',       'm',       2, '', '', '' ), &
+       Vinfo( 'LFC',       'level of free convection',        'm',       2, '', '', '' ), &
+       Vinfo( 'LNB',       'level of neutral buoyancy',       'm',       2, '', '', '' ), &
        Vinfo( 'ENGT',      'total energy',                    'J/m3',    3, '', '', '' ), &
        Vinfo( 'ENGP',      'potential energy',                'J/m3',    3, '', '', '' ), &
        Vinfo( 'ENGK',      'kinetic energy',                  'J/m3',    3, '', '', '' ), &
        Vinfo( 'ENGI',      'internal energy',                 'J/m3',    3, '', '', '' ), &
-       Vinfo( 'DENS_MEAN', 'horiz. mean of density',          'kg/m3',   3, '', '', '' ), &
-       Vinfo( 'W_MEAN',    'horiz. mean of w',                'm/s',     3, '', '', '' ), &
-       Vinfo( 'U_MEAN',    'horiz. mean of u',                'm/s',     3, '', '', '' ), &
-       Vinfo( 'V_MEAN',    'horiz. mean of v',                'm/s',     3, '', '', '' ), &
-       Vinfo( 'PT_MEAN',   'horiz. mean of pot.',             'K',       3, '', '', '' ), &
-       Vinfo( 'T_MEAN',    'horiz. mean of t',                'K',       3, '', '', '' ), &
-       Vinfo( 'QV_MEAN',   'horiz. mean of QV',               '1',       3, '', '', '' ), &
-       Vinfo( 'QHYD_MEAN', 'horiz. mean of QHYD',             '1',       3, '', '', '' ), &
-       Vinfo( 'QLIQ_MEAN', 'horiz. mean of QLIQ',             '1',       3, '', '', '' ), &
-       Vinfo( 'QICE_MEAN', 'horiz. mean of QICE',             '1',       3, '', '', '' ), &
-       Vinfo( 'DENS_PRIM', 'horiz. deviation of density',     'kg/m3',   3, '', '', '' ), &
+       Vinfo( 'DENS_MEAN', 'horiz. mean of density',          'kg/m3',   1, '', '', '' ), &
+       Vinfo( 'W_MEAN',    'horiz. mean of w',                'm/s',     1, '', '', '' ), &
+       Vinfo( 'U_MEAN',    'horiz. mean of u',                'm/s',     1, '', '', '' ), &
+       Vinfo( 'V_MEAN',    'horiz. mean of v',                'm/s',     1, '', '', '' ), &
+       Vinfo( 'PT_MEAN',   'horiz. mean of pot.',             'K',       1, '', '', '' ), &
+       Vinfo( 'T_MEAN',    'horiz. mean of t',                'K',       1, '', '', '' ), &
+       Vinfo( 'QV_MEAN',   'horiz. mean of QV',               '1',       1, '', '', '' ), &
+       Vinfo( 'QHYD_MEAN', 'horiz. mean of QHYD',             '1',       1, '', '', '' ), &
+       Vinfo( 'QLIQ_MEAN', 'horiz. mean of QLIQ',             '1',       1, '', '', '' ), &
+       Vinfo( 'QICE_MEAN', 'horiz. mean of QICE',             '1',       1, '', '', '' ), &
+       Vinfo( 'DENS_PRIM', 'horiz. deviation of density',     'kg/m3',   1, '', '', '' ), &
        Vinfo( 'W_PRIM',    'horiz. deviation of w',           'm/s',     3, '', '', '' ), &
        Vinfo( 'U_PRIM',    'horiz. deviation of u',           'm/s',     3, '', '', '' ), &
        Vinfo( 'V_PRIM',    'horiz. deviation of v',           'm/s',     3, '', '', '' ), &
