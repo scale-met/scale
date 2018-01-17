@@ -139,6 +139,7 @@ module scale_fileio
   integer,  private              :: startXY   (3), countXY   (3)
   integer,  private              :: startZX   (2), countZX   (2)
   integer,  private              :: startZXY  (4), countZXY  (4)
+  integer,  private              :: startZHXY (4), countZHXY (4)
   integer,  private              :: startLAND (3), countLAND (3)
   integer,  private              :: startURBAN(3), countURBAN(3)
   ! local start and end
@@ -151,6 +152,7 @@ module scale_fileio
   integer,  private              :: centerTypeXY
   integer,  private              :: centerTypeZX
   integer,  private              :: centerTypeZXY
+  integer,  private              :: centerTypeZHXY
   integer,  private              :: centerTypeLAND
   integer,  private              :: centerTypeURBAN
 
@@ -470,6 +472,7 @@ contains
     centerTypeXY    = MPI_DATATYPE_NULL
     centerTypeZX    = MPI_DATATYPE_NULL
     centerTypeZXY   = MPI_DATATYPE_NULL
+    centerTypeZHXY  = MPI_DATATYPE_NULL
     centerTypeLAND  = MPI_DATATYPE_NULL
     centerTypeURBAN = MPI_DATATYPE_NULL
 
@@ -483,10 +486,10 @@ contains
     countXY(1)    = IA
     countXY(2)    = JA
     ! for axistype == 'ZXY'
-    startZXY(1)   = 1
-    startZXY(2:3) = startXY(1:2)
-    countZXY(1)   = KMAX
-    countZXY(2:3) = countXY(1:2)
+    startZXY(1)    = 1
+    startZXY(2:3)  = startXY(1:2)
+    countZXY(1)    = KMAX
+    countZXY(2:3)  = countXY(1:2)
     ! construct MPI subarray data type
     sizes(1)      = KA
     sizes(2)      = IA
@@ -497,9 +500,27 @@ contains
     sub_off(1)    = KS - 1 ! MPI start index starts with 0
     sub_off(2)    = 0
     sub_off(3)    = 0
-
     call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeZXY, err)
     call MPI_Type_commit(centerTypeZXY, err)
+
+    ! for axistype == 'ZHXY'
+    startZHXY(1)   = 1
+    startZHXY(2:3) = startXY(1:2)
+    countZHXY(1)   = KMAX+1
+    countZHXY(2:3) = countXY(1:2)
+    ! construct MPI subarray data type
+    sizes(1)      = KA
+    sizes(2)      = IA
+    sizes(3)      = JA
+    subsizes(1)   = KMAX+1
+    subsizes(2)   = IA
+    subsizes(3)   = JA
+    sub_off(1)    = KS - 2 ! MPI start index starts with 0
+    sub_off(2)    = 0
+    sub_off(3)    = 0
+    call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeZHXY, err)
+    call MPI_Type_commit(centerTypeZHXY, err)
+
 
     ! for axistype == 'Land'
     startLAND(1)   = 1
@@ -510,7 +531,6 @@ contains
     sizes(1)       = LKMAX
     subsizes(1)    = LKMAX
     sub_off(1)     = LKS - 1 ! MPI start index starts with 0
-
     call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeLAND, err)
     call MPI_Type_commit(centerTypeLAND, err)
 
@@ -523,7 +543,6 @@ contains
     sizes(1)        = UKMAX
     subsizes(1)     = UKMAX
     sub_off(1)      = UKS - 1 ! MPI start index starts with 0
-
     call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeURBAN, err)
     call MPI_Type_commit(centerTypeURBAN, err)
 
@@ -539,7 +558,6 @@ contains
     subsizes(2) = IMAXB
     sub_off(1)  = KHALO   ! MPI start index starts with 0
     sub_off(2)  = ISB - 1 ! MPI start index starts with 0
-
     call MPI_Type_create_subarray(2, sizes, subsizes, sub_off, order, etype, centerTypeZX, err)
     call MPI_Type_commit(centerTypeZX, err)
 
@@ -560,6 +578,7 @@ contains
     if( centerTypeXY    /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeXY,    err)
     if( centerTypeZX    /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeZX,    err)
     if( centerTypeZXY   /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeZXY,   err)
+    if( centerTypeZHXY  /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeZHXY,  err)
     if( centerTypeLAND  /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeLAND,  err)
     if( centerTypeURBAN /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeURBAN, err)
 
@@ -907,9 +926,14 @@ contains
        ! read data and halos into the local buffer
        ! Because KHALO is not saved in files, we use mpi derived datatypes to
        ! describe the layout of local read buffer
-       if    ( axistype == 'ZXY' ) then
+       if(      axistype == 'ZXY'  &
+           .or. axistype == 'ZXHY' &
+           .or. axistype == 'ZXYH' ) then
           call FileRead( var, fid, varname, step,                                      &
                          ntypes=1, dtype=centerTypeZXY, start=startZXY, count=countZXY )
+       elseif( axistype == 'ZHXY' ) then
+          call FileRead( var, fid, varname, step,                                      &
+                         ntypes=1, dtype=centerTypeZHXY, start=startZHXY, count=countZHXY )
        elseif( axistype == 'XYT' ) then
           startXY(3) = 1
           countXY(3) = step
@@ -1012,11 +1036,18 @@ contains
 
     if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
-       if ( axistype == 'ZXYT' ) then
+       if (      axistype == 'ZXYT'  &
+            .or. axistype == 'ZXHYT' &
+            .or. axistype == 'ZXYHT' ) then
           startZXY(4) = 1
           countZXY(4) = step
           call FileRead( var, fid, varname, step,                                         &
                          ntypes=step, dtype=centerTypeZXY, start=startZXY, count=countZXY )
+       elseif ( axistype == 'ZHXYT' ) then
+          startZXY(4) = 1
+          countZXY(4) = step
+          call FileRead( var, fid, varname, step,                                         &
+                         ntypes=step, dtype=centerTypeZHXY, start=startZHXY, count=countZHXY )
        else
           write(*,*) 'xxx [FILEIO_read_var_4D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
           call PRC_MPIstop
