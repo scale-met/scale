@@ -159,8 +159,9 @@ contains
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
     real(RP) :: Ra    ! Aerodynamic resistance (=1/Ce) [1/s]
 
-    real(RP) :: QVsat   ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: QVS     ! water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: QVsat ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: QVS   ! water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: qdry  ! dry air mass ratio
     real(RP) :: Rtot
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
@@ -189,11 +190,11 @@ contains
 
       if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
 
-        Rtot = ( 1.0_RP - QVA(i,j) ) * Rdry &
-             + (          QVA(i,j) ) * Rvap
+        qdry = 1.0_RP - QVA(i,j)
+        Rtot = qdry * Rdry + QVA(i,j) * Rvap
 
-        call qsat( LST(i,j), PRSS(i,j), & ! [IN]
-                   QVsat                ) ! [OUT]
+        call qsat( LST(i,j), PRSS(i,j), qdry, & ! [IN]
+                   QVsat                      ) ! [OUT]
 
         QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
 

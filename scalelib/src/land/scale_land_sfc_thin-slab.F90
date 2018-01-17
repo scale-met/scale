@@ -204,7 +204,8 @@ contains
 
     real(RP) :: QVsat, dQVsat ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: QVS, dQVS     ! water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: Rtot
+    real(RP) :: Rtot          ! total gas constant
+    real(RP) :: qdry          ! dry air mass ratio [kg/kg]
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
@@ -232,8 +233,8 @@ contains
 
       if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
 
-        Rtot = ( 1.0_RP - QVA(i,j) ) * Rdry &
-             + (          QVA(i,j) ) * Rvap
+        qdry = 1.0_RP - QVA(i,j)
+        Rtot = qdry * Rdry + QVA(i,j) * Rvap
 
         redf   = 1.0_RP
         oldres = huge(0.0_RP)
@@ -241,10 +242,10 @@ contains
         ! modified Newton-Raphson method (Tomita 2009)
         do n = 1, LAND_SFC_THIN_SLAB_itr_max
 
-          call qsat( LST1(i,j),      PRSS(i,j), & ! [IN]
-                     QVsat                      ) ! [OUT]
-          call qsat( LST1(i,j)+dTS0, PRSS(i,j), & ! [IN]
-                     dQVsat                     ) ! [OUT]
+          call qsat( LST1(i,j),      PRSS(i,j), qdry, & ! [IN]
+                     QVsat                            ) ! [OUT]
+          call qsat( LST1(i,j)+dTS0, PRSS(i,j), qdry, & ! [IN]
+                     dQVsat                           ) ! [OUT]
                      
           QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
           dQVS = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * dQVsat
@@ -454,11 +455,11 @@ contains
 
       if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
 
-        Rtot = ( 1.0_RP - QVA(i,j) ) * Rdry &
-             + (          QVA(i,j) ) * Rvap
+        qdry = 1.0_RP - QVA(i,j)
+        Rtot = qdry * Rdry + QVA(i,j) * Rvap
 
-        call qsat( LST1(i,j), PRSS(i,j), & ! [IN]
-                   QVsat                 ) ! [OUT]
+        call qsat( LST1(i,j), PRSS(i,j), qdry, & ! [IN]
+                   QVsat                       ) ! [OUT]
                    
                    
 

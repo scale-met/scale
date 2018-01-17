@@ -149,9 +149,10 @@ contains
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
     real(RP) :: Ra    ! Aerodynamic resistance (=1/Ce) [1/s]
 
-    real(RP) :: QVsat        ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: LHV(IA,JA)   ! latent heat of vaporization [J/kg]
-    real(RP) :: Rtot
+    real(RP) :: QVsat      ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: LHV(IA,JA) ! latent heat of vaporization [J/kg]
+    real(RP) :: Rtot       ! total gas constant
+    real(RP) :: qdry       ! dry air mass ratio [kg/kg]
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
@@ -178,12 +179,12 @@ contains
 
       if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) then
 
-        Rtot = ( 1.0_RP - QVA(i,j) ) * Rdry &
-             + (          QVA(i,j) ) * Rvap
+        qdry = 1.0_RP - QVA(i,j)
+        Rtot = qdry * Rdry + QVA(i,j) * Rvap
 
         ! saturation at the surface
-        call qsat( SST1(i,j), PRSS(i,j), & ! [IN]
-                   QVsat                 ) ! [OUT]
+        call qsat( SST1(i,j), PRSS(i,j), qdry, & ! [IN]
+                   QVsat                       ) ! [OUT]
 
         call BULKFLUX( &
             Ustar,     & ! [OUT]

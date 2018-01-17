@@ -75,6 +75,7 @@ module scale_atmos_saturation
   interface ATMOS_SATURATION_psat_all
      module procedure ATMOS_SATURATION_psat_all_0D
      module procedure ATMOS_SATURATION_psat_all_1D
+     module procedure ATMOS_SATURATION_psat_all_2D
      module procedure ATMOS_SATURATION_psat_all_3D
   end interface ATMOS_SATURATION_psat_all
   interface ATMOS_SATURATION_psat_liq
@@ -396,6 +397,37 @@ contains
   end subroutine ATMOS_SATURATION_psat_all_1D
 
   !-----------------------------------------------------------------------------
+  !> calc saturation vapor pressure (liquid/ice mixture) (2D)
+  subroutine ATMOS_SATURATION_psat_all_2D( &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       temp, &
+       psat  )
+    implicit none
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+
+    real(RP), intent(in)  :: temp(IA,JA) !< temperature               [K]
+
+    real(RP), intent(out) :: psat(IA,JA) !< saturation vapor pressure [Pa]
+
+    real(RP) :: alpha, psatl, psati
+
+    integer  :: i, j
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+       call ATMOS_SATURATION_psat_all_0D( temp(i,j), & ! [IN]
+                                          psat(i,j)  ) ! [OUT]
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_psat_all_2D
+
+  !-----------------------------------------------------------------------------
   !> calc saturation vapor pressure (liquid/ice mixture) (3D)
   subroutine ATMOS_SATURATION_psat_all_3D( &
        KA, KS, KE, &
@@ -586,29 +618,33 @@ contains
   !-----------------------------------------------------------------------------
   !> calc saturation pressure -> saturation vapor mass under constant pressure
   subroutine ATMOS_SATURATION_psat2qsat_pres_0D( &
-       psat, pres, &
-       qsat        )
+       psat, pres, qdry, &
+       qsat              )
     implicit none
 
     real(RP), intent(in)  :: psat !< saturation pressure [Pa]
     real(RP), intent(in)  :: pres !< pressure            [Pa]
+    real(RP), intent(in)  :: qdry !< dry air mass ratio  [kg/kg]
 
     real(RP), intent(out) :: qsat !< saturation vapor mass [kg/kg]
 
-    ! qdry is assumed to be 1 - qsat
-    qsat = EPSvap * psat / ( pres - ( 1.0_RP-EPSvap ) * psat )
+    ! ! qdry is assumed to be 1 - qsat
+    ! qsat = EPSvap * psat / ( pres - ( 1.0_RP-EPSvap ) * psat )
+
+    qsat = EPSvap * qdry * psat / ( pres - psat )
 
     return
   end subroutine ATMOS_SATURATION_psat2qsat_pres_0D
   !-----------------------------------------------------------------------------
   !> calc temp & pres -> saturation vapor mass (liquid/ice mixture,0D)
   subroutine ATMOS_SATURATION_pres2qsat_all_0D( &
-       temp, pres, &
-       qsat        )
+       temp, pres, qdry, &
+       qsat              )
     implicit none
 
     real(RP), intent(in)  :: temp !< temperature           [K]
     real(RP), intent(in)  :: pres !< pressure              [Pa]
+    real(RP), intent(in)  :: qdry !< dry air mass ratio    [kg/kg]
 
     real(RP), intent(out) :: qsat !< saturation vapor mass [kg/kg]
 
@@ -616,8 +652,8 @@ contains
     !---------------------------------------------------------------------------
 
     call ATMOS_SATURATION_psat_all_0D( temp, psat ) ! [IN], [OUT]
-    call ATMOS_SATURATION_psat2qsat_pres_0D( psat, pres, & ! [IN]
-                                             qsat        ) ! [OUT]
+    call ATMOS_SATURATION_psat2qsat_pres_0D( psat, pres, qdry, & ! [IN]
+                                             qsat              ) ! [OUT]
 
     return
   end subroutine ATMOS_SATURATION_pres2qsat_all_0D
@@ -627,13 +663,14 @@ contains
 !OCL SERIAL
   subroutine ATMOS_SATURATION_pres2qsat_all_1D( &
        KA, KS, KE, &
-       temp, pres, &
-       qsat        )
+       temp, pres, qdry, &
+       qsat              )
     implicit none
     integer, intent(in) :: KA, KS, KE
 
     real(RP), intent(in)  :: temp(KA) !< temperature           [K]
     real(RP), intent(in)  :: pres(KA) !< pressure              [Pa]
+    real(RP), intent(in)  :: qdry(KA) !< dry air mass ratio    [kg/kg]
 
     real(RP), intent(out) :: qsat(KA) !< saturation vapor mass [kg/kg]
 
@@ -641,8 +678,8 @@ contains
     !---------------------------------------------------------------------------
 
     do k = KS, KE
-       call ATMOS_SATURATION_pres2qsat_all_0D( temp(k), pres(k), & ! [IN]
-                                               qsat(k)           ) ! [OUT]
+       call ATMOS_SATURATION_pres2qsat_all_0D( temp(k), pres(k), qdry(k), & ! [IN]
+                                               qsat(k)                    ) ! [OUT]
     enddo
 
     return
@@ -652,14 +689,15 @@ contains
   !> calc temp & pres -> saturation vapor mass (liquid/ice mixture,2D)
   subroutine ATMOS_SATURATION_pres2qsat_all_2D( &
        IA, IS, IE, JA, JS, JE, &
-       temp, pres, &
-       qsat        )
+       temp, pres, qdry, &
+       qsat              )
     implicit none
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
     real(RP), intent(in)  :: temp(IA,JA) !< temperature           [K]
     real(RP), intent(in)  :: pres(IA,JA) !< pressure              [Pa]
+    real(RP), intent(in)  :: qdry(IA,JA) !< dry air mass ratio    [kg/kg]
 
     real(RP), intent(out) :: qsat(IA,JA) !< saturation vapor mass [kg/kg]
 
@@ -669,8 +707,8 @@ contains
     !omp parallel do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
-       call ATMOS_SATURATION_pres2qsat_all_0D( temp(i,j), pres(i,j), &
-                                               qsat(i,j)             )
+       call ATMOS_SATURATION_pres2qsat_all_0D( temp(i,j), pres(i,j), qdry(i,j), &
+                                               qsat(i,j)                        )
     enddo
     enddo
 
@@ -681,7 +719,7 @@ contains
   !> calc temp & pres -> saturation vapor mass (liquid/ice mixture,3D)
   subroutine ATMOS_SATURATION_pres2qsat_all_3D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       temp, pres, &
+       temp, pres, qdry, &
        qsat        )
     implicit none
     integer, intent(in) :: KA, KS, KE
@@ -690,6 +728,7 @@ contains
 
     real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature           [K]
     real(RP), intent(in)  :: pres(KA,IA,JA) !< pressure              [Pa]
+    real(RP), intent(in)  :: qdry(KA,IA,JA) !< dry air mass ratio    [kg/kg]
 
     real(RP), intent(out) :: qsat(KA,IA,JA) !< saturation vapor mass [kg/kg]
 
@@ -700,8 +739,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       call ATMOS_SATURATION_pres2qsat_all_0D( temp(k,i,j), pres(k,i,j), & ! [IN]
-                                               qsat(k,i,j)               ) ! [OUT]
+       call ATMOS_SATURATION_pres2qsat_all_0D( temp(k,i,j), pres(k,i,j), qdry(k,i,j), & ! [IN]
+                                               qsat(k,i,j)                            ) ! [OUT]
     enddo
     enddo
     enddo
@@ -712,12 +751,13 @@ contains
   !-----------------------------------------------------------------------------
   !> calc temp & pres -> saturation vapor mass (liquid,0D)
   subroutine ATMOS_SATURATION_pres2qsat_liq_0D( &
-       temp, pres, &
-       qsat        )
+       temp, pres, qdry, &
+       qsat              )
     implicit none
 
     real(RP), intent(in)  :: temp !< temperature           [K]
     real(RP), intent(in)  :: pres !< pressure              [Pa]
+    real(RP), intent(in)  :: qdry !< dry air mass ratio    [kg/kg]
 
     real(RP), intent(out) :: qsat !< saturation vapor mass [kg/kg]
 
@@ -725,8 +765,8 @@ contains
     !---------------------------------------------------------------------------
 
     call ATMOS_SATURATION_psat_liq( temp, psat ) ! [IN], [OUT]
-    call ATMOS_SATURATION_psat2qsat_pres( psat, pres, & ! [IN]
-                                          qsat        ) ! [OUT]
+    call ATMOS_SATURATION_psat2qsat_pres( psat, pres, qdry, & ! [IN]
+                                          qsat              ) ! [OUT]
 
     return
   end subroutine ATMOS_SATURATION_pres2qsat_liq_0D
@@ -736,13 +776,14 @@ contains
 !OCL SERIAL
   subroutine ATMOS_SATURATION_pres2qsat_liq_1D( &
        KA, KS, KE, &
-       temp, pres, &
-       qsat        )
+       temp, pres, qdry, &
+       qsat              )
     implicit none
     integer, intent(in) :: KA, KS, KE
 
     real(RP), intent(in)  :: temp(KA) !< temperature           [K]
     real(RP), intent(in)  :: pres(KA) !< pressure              [Pa]
+    real(RP), intent(in)  :: qdry(KA) !< dry air mass ratio    [kg/kg]
 
     real(RP), intent(out) :: qsat(KA) !< saturation vapor mass [kg/kg]
 
@@ -750,8 +791,8 @@ contains
     !---------------------------------------------------------------------------
 
     do k = KS, KE
-       call ATMOS_SATURATION_pres2qsat_liq_0D( temp(k), pres(k), & ! [IN]
-                                               qsat(k)           ) ! [OUT]
+       call ATMOS_SATURATION_pres2qsat_liq_0D( temp(k), pres(k), qdry(k), & ! [IN]
+                                               qsat(k)                    ) ! [OUT]
     enddo
 
     return
@@ -761,8 +802,8 @@ contains
   !> calc temp & pres -> saturation vapor mass (liquid,3D)
   subroutine ATMOS_SATURATION_pres2qsat_liq_3D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       temp, pres, &
-       qsat        )
+       temp, pres, qdry, &
+       qsat              )
     implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
@@ -770,6 +811,7 @@ contains
 
     real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature           [K]
     real(RP), intent(in)  :: pres(KA,IA,JA) !< pressure              [Pa]
+    real(RP), intent(in)  :: qdry(KA,IA,JA) !< dry air mass ratio    [kg/kg]
 
     real(RP), intent(out) :: qsat(KA,IA,JA) !< saturation vapor mass [kg/kg]
 
@@ -780,8 +822,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       call ATMOS_SATURATION_pres2qsat_liq_0D( temp(k,i,j), pres(k,i,j), & ! [IN]
-                                               qsat(k,i,j)               ) ! [OUT]
+       call ATMOS_SATURATION_pres2qsat_liq_0D( temp(k,i,j), pres(k,i,j), qdry(k,i,j), & ! [IN]
+                                               qsat(k,i,j)                            ) ! [OUT]
     enddo
     enddo
     enddo
@@ -792,12 +834,13 @@ contains
   !-----------------------------------------------------------------------------
   !> calc temp & pres -> saturation vapor mass (ice,0D)
   subroutine ATMOS_SATURATION_pres2qsat_ice_0D( &
-       temp, pres, &
-       qsat        )
+       temp, pres, qdry, &
+       qsat              )
     implicit none
 
     real(RP), intent(in)  :: temp !< temperature           [K]
     real(RP), intent(in)  :: pres !< pressure              [Pa]
+    real(RP), intent(in)  :: qdry !< dry air mass ratio    [kg/kg]
 
     real(RP), intent(out) :: qsat !< saturation vapor mass [kg/kg]
 
@@ -805,8 +848,8 @@ contains
     !---------------------------------------------------------------------------
 
     call ATMOS_SATURATION_psat_ice( temp, psat ) ! [IN], [OUT]
-    call ATMOS_SATURATION_psat2qsat_pres( psat, pres, & ! [IN]
-                                          qsat        ) ! [OUT]
+    call ATMOS_SATURATION_psat2qsat_pres( psat, pres, qdry, & ! [IN]
+                                          qsat              ) ! [OUT]
 
     return
   end subroutine ATMOS_SATURATION_pres2qsat_ice_0D
@@ -816,13 +859,14 @@ contains
 !OCL SERIAL
   subroutine ATMOS_SATURATION_pres2qsat_ice_1D( &
        KA, KS, KE, &
-       temp, pres, &
-       qsat        )
+       temp, pres, qdry, &
+       qsat              )
     implicit none
     integer, intent(in) :: KA, KS, KE
 
     real(RP), intent(in)  :: temp(KA)
     real(RP), intent(in)  :: pres(KA)
+    real(RP), intent(in)  :: qdry(KA)
 
     real(RP), intent(out) :: qsat(KA)
 
@@ -830,8 +874,8 @@ contains
     !---------------------------------------------------------------------------
 
     do k = KS, KE
-       call ATMOS_SATURATION_pres2qsat_ice_0D( temp(k), pres(k), & ! [IN]
-                                               qsat(k)           ) ! [OUT]
+       call ATMOS_SATURATION_pres2qsat_ice_0D( temp(k), pres(k), qdry(k), & ! [IN]
+                                               qsat(k)                    ) ! [OUT]
     enddo
 
     return
@@ -841,7 +885,7 @@ contains
   !> calc temp & pres -> saturation vapor mass (ice,3D)
   subroutine ATMOS_SATURATION_pres2qsat_ice_3D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       temp, pres, &
+       temp, pres, qdry, &
        qsat        )
     implicit none
     integer, intent(in) :: KA, KS, KE
@@ -850,6 +894,7 @@ contains
 
     real(RP), intent(in)  :: temp(KA,IA,JA)
     real(RP), intent(in)  :: pres(KA,IA,JA)
+    real(RP), intent(in)  :: qdry(KA,IA,JA)
 
     real(RP), intent(out) :: qsat(KA,IA,JA)
 
@@ -860,8 +905,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       call ATMOS_SATURATION_pres2qsat_ice_0D( temp(k,i,j), pres(k,i,j), & ! [IN]
-                                               qsat(k,i,j)               ) ! [OUT]
+       call ATMOS_SATURATION_pres2qsat_ice_0D( temp(k,i,j), pres(k,i,j), qdry(k,i,j), & ! [IN]
+                                               qsat(k,i,j)                            ) ! [OUT]
     enddo
     enddo
     enddo
@@ -1384,7 +1429,7 @@ contains
   !-----------------------------------------------------------------------------
   ! (d qs/d T)_{p} and (d qs/d p)_{T}
   subroutine ATMOS_SATURATION_dqs_dtem_dpre_liq_0D( &
-       temp, pres,         &
+       temp, pres, qdry,   &
        dqsat_dT, dqsat_dP, &
        qsat, psat          )
     use scale_atmos_hydrometeor, only: &
@@ -1393,6 +1438,7 @@ contains
 
     real(RP), intent(in)  :: temp
     real(RP), intent(in)  :: pres
+    real(RP), intent(in)  :: qdry
 
     real(RP), intent(out) :: dqsat_dT
     real(RP), intent(out) :: dqsat_dP
@@ -1416,8 +1462,8 @@ contains
     dqsat_dT =   EPSvap * psat_ / den2 * LHV * pres
 
     if ( present(qsat) ) &
-         call ATMOS_SATURATION_psat2qsat_pres( psat_, pres, & ! [IN]
-                                               qsat         ) ! [OUT]
+         call ATMOS_SATURATION_psat2qsat_pres( psat_, pres, qdry, & ! [IN]
+                                               qsat               ) ! [OUT]
     if ( present(psat) ) psat = psat_
 
     return
@@ -1427,7 +1473,7 @@ contains
   ! (d qs/d T)_{p} and (d qs/d p)_{T}
   subroutine ATMOS_SATURATION_dqs_dtem_dpre_liq_3D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       temp, pres,      &
+       temp, pres, qdry,  &
        dqsat_dT, dqsat_dP )
     implicit none
     integer, intent(in) :: KA, KS, KE
@@ -1436,6 +1482,7 @@ contains
 
     real(RP), intent(in)  :: temp   (KA,IA,JA)
     real(RP), intent(in)  :: pres   (KA,IA,JA)
+    real(RP), intent(in)  :: qdry   (KA,IA,JA)
 
     real(RP), intent(out) :: dqsat_dT(KA,IA,JA)
     real(RP), intent(out) :: dqsat_dP(KA,IA,JA)
@@ -1447,8 +1494,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       call ATMOS_SATURATION_dqs_dtem_dpre_liq_0D( temp(k,i,j), pres(k,i,j),        & ! [IN]
-                                                   dqsat_dT(k,i,j), dqsat_dP(k,i,j) ) ! [OUT]
+       call ATMOS_SATURATION_dqs_dtem_dpre_liq_0D( temp(k,i,j), pres(k,i,j), qdry(k,i,j), & ! [IN]
+                                                   dqsat_dT(k,i,j), dqsat_dP(k,i,j)       ) ! [OUT]
     enddo
     enddo
     enddo
@@ -1460,7 +1507,7 @@ contains
   ! (d qsi/d T)_{p} and (d qs/d p)_{T}
   !-----------------------------------------------------------------------------
   subroutine ATMOS_SATURATION_dqs_dtem_dpre_ice_0D( &
-       temp, pres,         &
+       temp, pres, qdry,   &
        dqsat_dT, dqsat_dP, &
        qsat                )
     use scale_atmos_hydrometeor, only: &
@@ -1469,6 +1516,7 @@ contains
 
     real(RP), intent(in)  :: temp
     real(RP), intent(in)  :: pres
+    real(RP), intent(in)  :: qdry
 
     real(RP), intent(out) :: dqsat_dT
     real(RP), intent(out) :: dqsat_dP
@@ -1491,8 +1539,8 @@ contains
     dqsat_dT =   EPSvap * psat / den2 * LHS * pres
 
     if ( present(qsat) ) &
-         call ATMOS_SATURATION_psat2qsat_pres( psat, pres, & ! [IN]
-                                               qsat        ) ! [OUT]
+         call ATMOS_SATURATION_psat2qsat_pres( psat, pres, qdry, & ! [IN]
+                                               qsat              ) ! [OUT]
     return
   end subroutine ATMOS_SATURATION_dqs_dtem_dpre_ice_0D
 
@@ -1501,7 +1549,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_SATURATION_dqs_dtem_dpre_ice_3D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       temp, pres,        &
+       temp, pres, qdry,  &
        dqsat_dT, dqsat_dP )
     implicit none
     integer, intent(in) :: KA, KS, KE
@@ -1510,6 +1558,7 @@ contains
 
     real(RP), intent(in)  :: temp   (KA,IA,JA)
     real(RP), intent(in)  :: pres   (KA,IA,JA)
+    real(RP), intent(in)  :: qdry   (KA,IA,JA)
 
     real(RP), intent(out) :: dqsat_dT(KA,IA,JA)
     real(RP), intent(out) :: dqsat_dP(KA,IA,JA)
@@ -1521,8 +1570,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       call ATMOS_SATURATION_dqs_dtem_dpre_ice( temp(k,i,j), pres(k,i,j),        & ! [IN]
-                                                dqsat_dT(k,i,j), dqsat_dP(k,i,j) ) ! [OUT]
+       call ATMOS_SATURATION_dqs_dtem_dpre_ice( temp(k,i,j), pres(k,i,j), qdry(k,i,j), & ! [IN]
+                                                dqsat_dT(k,i,j), dqsat_dP(k,i,j)       ) ! [OUT]
     enddo
     enddo
     enddo
@@ -1534,7 +1583,7 @@ contains
   ! (d qsi/d T)_{p} and (d qs/d p)_{T}
   !-----------------------------------------------------------------------------
   subroutine ATMOS_SATURATION_dqs_dtem_dpre_all_0D( &
-       temp, pres,               &
+       temp, pres, qdry,         &
        dqsat_dT, dqsat_dP,       &
        qsat, qsat_liq, qsat_ice, &
        alpha                     )
@@ -1544,6 +1593,7 @@ contains
 
     real(RP), intent(in)  :: temp
     real(RP), intent(in)  :: pres
+    real(RP), intent(in)  :: qdry
 
     real(RP), intent(out) :: dqsat_dT
     real(RP), intent(out) :: dqsat_dP
@@ -1560,10 +1610,10 @@ contains
 
     !---------------------------------------------------------------------------
 
-    call ATMOS_SATURATION_dqs_dtem_dpre_liq_0D( temp, pres,                 & ! [IN]
+    call ATMOS_SATURATION_dqs_dtem_dpre_liq_0D( temp, pres, qdry,           & ! [IN]
                                                 dqsat_dT_liq, dqsat_dP_liq, & ! [OUT]
                                                 qsat_liq_                   ) ! [OUT]
-    call ATMOS_SATURATION_dqs_dtem_dpre_ice_0D( temp, pres,                 & ! [IN]
+    call ATMOS_SATURATION_dqs_dtem_dpre_ice_0D( temp, pres, qdry,           & ! [IN]
                                                 dqsat_dT_ice, dqsat_dP_ice, & ! [OUT]
                                                 qsat_ice_                   ) ! [OUT]
     call ATMOS_SATURATION_alpha   ( temp, alpha_    ) ! [IN], [OUT]
@@ -1970,8 +2020,8 @@ contains
                                       Rtot, CPtot,                    & ! [IN]
                                       TEMP                            ) ! [OUT]
 
-    call ATMOS_SATURATION_pres2qsat_liq( TEMP, PRES, & ! [IN]
-                                         qsat        ) ! [OUT]
+    call ATMOS_SATURATION_pres2qsat_liq( TEMP, PRES, Qdry, & ! [IN]
+                                         qsat              ) ! [OUT]
     if ( Qsum <= qsat ) then
        ! unsaturated
 
@@ -1986,7 +2036,7 @@ contains
 
        do ite = 1, itelim
 
-          call ATMOS_SATURATION_dqs_dtem_dpre_liq_0d( TEMP_ite, PRES,       & ! [IN]
+          call ATMOS_SATURATION_dqs_dtem_dpre_liq_0d( TEMP_ite, PRES, Qdry, & ! [IN]
                                                       dqsat_dT, dqsat_dP,   & ! [OUT]
                                                       qsat=qsat, psat=psat  ) ! [OUT]
 
