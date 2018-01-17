@@ -3033,19 +3033,19 @@ contains
        write(message,*) 'xxx rank is not 1', dinfo%rank
        call Log('E', message)
     end if
-    dim_size(:) = shape(var)
-    do n = 1, 1
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
-       end if
-    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:),                    & ! (out)
             dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
             error                                                 ) ! (out)
     else
+       dim_size(:) = shape(var)
+       do n = 1, 1
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call Log('E', message)
+          end if
+       end do
        call file_read_data( var(:), & ! (out)
             dinfo, SP,                & ! (in)
             error                          ) ! (out)
@@ -3116,19 +3116,19 @@ contains
        write(message,*) 'xxx rank is not 1', dinfo%rank
        call Log('E', message)
     end if
-    dim_size(:) = shape(var)
-    do n = 1, 1
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
-       end if
-    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:),                    & ! (out)
             dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
             error                                                 ) ! (out)
     else
+       dim_size(:) = shape(var)
+       do n = 1, 1
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call Log('E', message)
+          end if
+       end do
        call file_read_data( var(:), & ! (out)
             dinfo, DP,                & ! (in)
             error                          ) ! (out)
@@ -3199,19 +3199,19 @@ contains
        write(message,*) 'xxx rank is not 2', dinfo%rank
        call Log('E', message)
     end if
-    dim_size(:) = shape(var)
-    do n = 1, 2
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
-       end if
-    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:,:),                    & ! (out)
             dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
             error                                                 ) ! (out)
     else
+       dim_size(:) = shape(var)
+       do n = 1, 2
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call Log('E', message)
+          end if
+       end do
        call file_read_data( var(:,:), & ! (out)
             dinfo, SP,                & ! (in)
             error                          ) ! (out)
@@ -3282,19 +3282,19 @@ contains
        write(message,*) 'xxx rank is not 2', dinfo%rank
        call Log('E', message)
     end if
-    dim_size(:) = shape(var)
-    do n = 1, 2
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
-       end if
-    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:,:),                    & ! (out)
             dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
             error                                                 ) ! (out)
     else
+       dim_size(:) = shape(var)
+       do n = 1, 2
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call Log('E', message)
+          end if
+       end do
        call file_read_data( var(:,:), & ! (out)
             dinfo, DP,                & ! (in)
             error                          ) ! (out)
@@ -3365,19 +3365,19 @@ contains
        write(message,*) 'xxx rank is not 3', dinfo%rank
        call Log('E', message)
     end if
-    dim_size(:) = shape(var)
-    do n = 1, 3
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
-       end if
-    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:,:,:),                    & ! (out)
             dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
             error                                                 ) ! (out)
     else
+       dim_size(:) = shape(var)
+       do n = 1, 3
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call Log('E', message)
+          end if
+       end do
        call file_read_data( var(:,:,:), & ! (out)
             dinfo, SP,                & ! (in)
             error                          ) ! (out)
@@ -3448,19 +3448,19 @@ contains
        write(message,*) 'xxx rank is not 3', dinfo%rank
        call Log('E', message)
     end if
-    dim_size(:) = shape(var)
-    do n = 1, 3
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
-       end if
-    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:,:,:),                    & ! (out)
             dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
             error                                                 ) ! (out)
     else
+       dim_size(:) = shape(var)
+       do n = 1, 3
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call Log('E', message)
+          end if
+       end do
        call file_read_data( var(:,:,:), & ! (out)
             dinfo, DP,                & ! (in)
             error                          ) ! (out)
@@ -3531,19 +3531,19 @@ contains
        write(message,*) 'xxx rank is not 4', dinfo%rank
        call Log('E', message)
     end if
-    dim_size(:) = shape(var)
-    do n = 1, 4
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
-       end if
-    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:,:,:,:),                    & ! (out)
             dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
             error                                                 ) ! (out)
     else
+       dim_size(:) = shape(var)
+       do n = 1, 4
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call Log('E', message)
+          end if
+       end do
        call file_read_data( var(:,:,:,:), & ! (out)
             dinfo, SP,                & ! (in)
             error                          ) ! (out)
@@ -3614,19 +3614,19 @@ contains
        write(message,*) 'xxx rank is not 4', dinfo%rank
        call Log('E', message)
     end if
-    dim_size(:) = shape(var)
-    do n = 1, 4
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
-       end if
-    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(:,:,:,:),                    & ! (out)
             dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
             error                                                 ) ! (out)
     else
+       dim_size(:) = shape(var)
+       do n = 1, 4
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call Log('E', message)
+          end if
+       end do
        call file_read_data( var(:,:,:,:), & ! (out)
             dinfo, DP,                & ! (in)
             error                          ) ! (out)
