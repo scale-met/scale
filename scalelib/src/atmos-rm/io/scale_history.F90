@@ -2067,7 +2067,7 @@ contains
 
     character(len=5) :: periodic_z, periodic_x, periodic_y
 
-    type(axisattinfo) :: ainfo(4)
+    type(axisattinfo) :: ainfo(4) ! x, xh, y, yh
     type(mappinginfo) :: minfo
     !---------------------------------------------------------------------------
 
@@ -2119,96 +2119,65 @@ contains
        ainfo(4)%periodic = "false"
     endif
 
-    if ( IO_AGGREGATE ) then
-       ! for x = CXG
+    ! for x
+    if ( PRC_PERIODIC_X .OR. .NOT. HIST_BND ) then
+       ainfo(1)%size_global (1) = IMAX * PRC_NUM_X
+       ainfo(1)%start_global(1) = IS_inG - IHALO
+       ainfo(1)%halo_global (1) = 0     ! west side
+       ainfo(1)%halo_global (2) = 0     ! east side
+       ainfo(1)%halo_local  (1) = 0     ! west side
+       ainfo(1)%halo_local  (2) = 0     ! east side
+    else
        ainfo(1)%size_global (1) = IAG
-       ainfo(1)%start_global(1) = 1
+       ainfo(1)%start_global(1) = ISGA
        ainfo(1)%halo_global (1) = IHALO ! west side
        ainfo(1)%halo_global (2) = IHALO ! east side
        ainfo(1)%halo_local  (1) = IHALO ! west side
        ainfo(1)%halo_local  (2) = IHALO ! east side
-       ! for xh = FXG
-       ainfo(2)%size_global (1) = IAG+1
-       ainfo(2)%start_global(1) = 1
-       ainfo(2)%halo_global (1) = IHALO ! west side
-       ainfo(2)%halo_global (2) = IHALO ! east side
-       ainfo(2)%halo_local  (1) = IHALO ! west side
-       ainfo(2)%halo_local  (2) = IHALO ! east side
-       ! for y = CYG
+       if( PRC_HAS_W ) ainfo(1)%halo_local(1) = 0
+       if( PRC_HAS_E ) ainfo(1)%halo_local(2) = 0
+    endif
+
+    ! for xh
+    ainfo(2) = ainfo(1)
+    if ( .NOT. PRC_PERIODIC_X .AND. .NOT. HIST_BND ) then
+       ainfo(2)%size_global (1) = ainfo(2)%size_global (1) + 1
+       ainfo(2)%halo_global (1) = ainfo(2)%halo_global (1) + 1
+       if ( PRC_HAS_W ) then
+          ainfo(2)%start_global(1) = ainfo(2)%start_global(1) + 1
+       else
+          ainfo(2)%halo_local  (1) = ainfo(2)%halo_local  (1) + 1
+       endif
+    endif
+
+    ! for y
+    if ( PRC_PERIODIC_Y .OR. .NOT. HIST_BND ) then
+       ainfo(3)%size_global (1) = JMAX * PRC_NUM_Y
+       ainfo(3)%start_global(1) = JS_inG - JHALO
+       ainfo(3)%halo_global (1) = 0     ! south side
+       ainfo(3)%halo_global (2) = 0     ! north side
+       ainfo(3)%halo_local  (1) = 0     ! south side
+       ainfo(3)%halo_local  (2) = 0     ! north side
+    else
        ainfo(3)%size_global (1) = JAG
-       ainfo(3)%start_global(1) = 1
+       ainfo(3)%start_global(1) = JSGA
        ainfo(3)%halo_global (1) = JHALO ! south side
        ainfo(3)%halo_global (2) = JHALO ! north side
        ainfo(3)%halo_local  (1) = JHALO ! south side
        ainfo(3)%halo_local  (2) = JHALO ! north side
-       ! for yh = FYG
-       ainfo(4)%size_global (1) = JAG+1
-       ainfo(4)%start_global(1) = 1
-       ainfo(4)%halo_global (1) = JHALO ! south side
-       ainfo(4)%halo_global (2) = JHALO ! north side
-       ainfo(4)%halo_local  (1) = JHALO ! south side
-       ainfo(4)%halo_local  (2) = JHALO ! north side
-    else
-       ! for x
-       if ( PRC_PERIODIC_X .OR. .NOT. HIST_BND ) then
-          ainfo(1)%size_global (1) = IMAX * PRC_NUM_X
-          ainfo(1)%start_global(1) = IS_inG - IHALO
-          ainfo(1)%halo_global (1) = 0     ! west side
-          ainfo(1)%halo_global (2) = 0     ! east side
-          ainfo(1)%halo_local  (1) = 0     ! west side
-          ainfo(1)%halo_local  (2) = 0     ! east side
+       if( PRC_HAS_S ) ainfo(3)%halo_local(1) = 0
+       if( PRC_HAS_N ) ainfo(3)%halo_local(2) = 0
+    endif
+
+    ! for yh
+    ainfo(4) = ainfo(3)
+    if ( .NOT. PRC_PERIODIC_Y .AND. .NOT. HIST_BND ) then
+       ainfo(4)%size_global (1) = ainfo(4)%size_global (1) + 1
+       ainfo(4)%halo_global (1) = ainfo(4)%halo_global (1) + 1
+       if ( PRC_HAS_S ) then
+          ainfo(4)%start_global(1) = ainfo(4)%start_global(1) + 1
        else
-          ainfo(1)%size_global (1) = IAG
-          ainfo(1)%start_global(1) = ISGA
-          ainfo(1)%halo_global (1) = IHALO ! west side
-          ainfo(1)%halo_global (2) = IHALO ! east side
-          ainfo(1)%halo_local  (1) = IHALO ! west side
-          ainfo(1)%halo_local  (2) = IHALO ! east side
-          if( PRC_HAS_W ) ainfo(1)%halo_local(1) = 0
-          if( PRC_HAS_E ) ainfo(1)%halo_local(2) = 0
-       endif
-
-       ! for xh
-       ainfo(2) = ainfo(1)
-       if ( .NOT. PRC_PERIODIC_X .AND. .NOT. HIST_BND ) then
-          ainfo(2)%size_global (1) = ainfo(2)%size_global (1) + 1
-          ainfo(2)%halo_global (1) = ainfo(2)%halo_global (1) + 1
-          if ( PRC_HAS_W ) then
-             ainfo(2)%start_global(1) = ainfo(2)%start_global(1) + 1
-          else
-             ainfo(2)%halo_local  (1) = ainfo(2)%halo_local  (1) + 1
-          endif
-       endif
-
-       ! for y
-       if ( PRC_PERIODIC_Y .OR. .NOT. HIST_BND ) then
-          ainfo(3)%size_global (1) = JMAX * PRC_NUM_Y
-          ainfo(3)%start_global(1) = JS_inG - JHALO
-          ainfo(3)%halo_global (1) = 0     ! south side
-          ainfo(3)%halo_global (2) = 0     ! north side
-          ainfo(3)%halo_local  (1) = 0     ! south side
-          ainfo(3)%halo_local  (2) = 0     ! north side
-       else
-          ainfo(3)%size_global (1) = JAG
-          ainfo(3)%start_global(1) = JSGA
-          ainfo(3)%halo_global (1) = JHALO ! south side
-          ainfo(3)%halo_global (2) = JHALO ! north side
-          ainfo(3)%halo_local  (1) = JHALO ! south side
-          ainfo(3)%halo_local  (2) = JHALO ! north side
-          if( PRC_HAS_S ) ainfo(3)%halo_local(1) = 0
-          if( PRC_HAS_N ) ainfo(3)%halo_local(2) = 0
-       endif
-
-       ! for yh
-       ainfo(4) = ainfo(3)
-       if ( .NOT. PRC_PERIODIC_Y .AND. .NOT. HIST_BND ) then
-          ainfo(4)%size_global (1) = ainfo(4)%size_global (1) + 1
-          ainfo(4)%halo_global (1) = ainfo(4)%halo_global (1) + 1
-          if ( PRC_HAS_S ) then
-             ainfo(4)%start_global(1) = ainfo(4)%start_global(1) + 1
-          else
-             ainfo(4)%halo_local  (1) = ainfo(4)%halo_local  (1) + 1
-          endif
+          ainfo(4)%halo_local  (1) = ainfo(4)%halo_local  (1) + 1
        endif
     endif
 

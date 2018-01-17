@@ -216,7 +216,7 @@ int32_t file_set_option( int32_t fid,    // (in)
 }
 
 int32_t file_get_nvars( int32_t  fid,   // (in)
-                        int     *nvars )// (out)
+                        int32_t *nvars )// (out)
 {
   int ncid;
   int ndims, ngatts, unlimdim;
@@ -225,9 +225,9 @@ int32_t file_get_nvars( int32_t  fid,   // (in)
   ncid = files[fid]->ncid;
 
   if ( files[fid]->shared_mode )
-    CHECK_PNC_ERROR( ncmpi_inq( ncid, &ndims, nvars, &ngatts, &unlimdim ) )
+    CHECK_PNC_ERROR( ncmpi_inq(ncid, &ndims, nvars, &ngatts, &unlimdim) )
   else
-    nc_inq( ncid, &ndims, nvars, &ngatts, &unlimdim );
+    CHECK_ERROR( nc_inq(ncid, &ndims, nvars, &ngatts, &unlimdim) )
 
   return SUCCESS_CODE;
 }
@@ -238,7 +238,7 @@ int32_t file_get_varname( int32_t  fid,  // (in)
                           int32_t  len ) // (in)
 {
   int ncid, varid;
-  char buf[MAX_NC_NAME];
+  char buf[MAX_NC_NAME+1];
   int i, error;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
@@ -246,11 +246,11 @@ int32_t file_get_varname( int32_t  fid,  // (in)
   varid = vid-1; // index starts from 1 in fortran space
 
   if ( files[fid]->shared_mode )
-    CHECK_PNC_ERROR( ncmpi_inq_varname( ncid, varid, buf) )
+    CHECK_PNC_ERROR( ncmpi_inq_varname(ncid, varid, buf) )
   else
-    nc_inq_varname(ncid, varid, buf );
+    CHECK_ERROR( nc_inq_varname(ncid, varid, buf) )
 
-  for (i=0; i<MIN(len-1,MAX_NC_NAME-1); i++)
+  for (i=0; i<MIN(len-1,strlen(buf)); i++)
     name[i] = buf[i];
   name[i] = '\0';
 

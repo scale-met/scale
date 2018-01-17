@@ -1565,15 +1565,10 @@ contains
        FileAttachBuffer
     use scale_process, only: &
        PRC_myrank
-    use scale_rm_process, only: &
-       PRC_2Drank, &
-       PRC_NUM_X, &
-       PRC_NUM_Y
     implicit none
 
     integer, intent(in) :: fid  !< file ID
 
-    logical :: put_z, put_x, put_y, writebymaster
     integer :: start(3)
     !---------------------------------------------------------------------------
 
@@ -1585,40 +1580,18 @@ contains
     if ( .NOT. File_axes_written(fid) ) then
 
        if ( IO_AGGREGATE ) then
-          ! For parallel I/O, not all variables are written by all processes.
-          ! 1. Let PRC_myrank 0 writes all z axes
-          ! 2. Let processes (rankidx(2) == 0) write x axes  (south-most processes)
-          !        rankidx(1) == 0           writes west HALO
-          !        rankidx(1) == PRC_NUM_X-1 writes east HALO
-          !        others                    writes without HALO
-          ! 3. Let processes (rankidx(1) == 0) write y axes  (west-most processes)
-          !        rankidx(1) == 0           writes south HALO
-          !        rankidx(1) == PRC_NUM_Y-1 writes north HALO
-          !        others                    writes without HALO
-
-          put_z         = ( File_haszcoord(fid)           ) ! only master process output the vertical coordinates
-          put_x         = ( PRC_2Drank(PRC_myrank,1) == 0 ) ! only south-most row    processes write x coordinates
-          put_y         = ( PRC_2Drank(PRC_myrank,2) == 0 ) ! only west-most  column processes write y coordinates
-          writebymaster = .true.
-
           start(1) = 1
           start(2) = ISGA
           start(3) = JSGA
        else
-          put_z         = ( File_haszcoord(fid) )
-          put_x         = .true.
-          put_y         = .true.
-          writebymaster = .false.
-
           start(1) = 1
           start(2) = 1
           start(3) = 1
        endif
 
-       call FILEIO_write_axes( fid,                    & ! [IN]
-                               PRC_myrank,             & ! [IN]
-                               put_z, put_x, put_y,    & ! [IN]
-                               writebymaster, start(:) ) ! [IN]
+       call FILEIO_write_axes( fid,                 & ! [IN]
+                               File_haszcoord(fid), & ! [IN]
+                               start(:)             ) ! [IN]
 
        ! Tell PnetCDF library to use a buffer of size write_buf_amount to aggregate write requests to be post in FILEIO_write_var
        if ( IO_AGGREGATE ) then
@@ -1728,7 +1701,7 @@ contains
     integer :: isize ! grid size, x-axis, (whole domain or local tile), without halo except domain edge
     integer :: jsize ! grid size, y-axis, (whole domain or local tile), without halo except domain edge
 
-    type(axisattinfo) :: ainfo(4)
+    type(axisattinfo) :: ainfo(4) ! x, xh, y, yh
     type(mappinginfo) :: minfo
 
     character(len=2) :: axisname(3)
@@ -2036,18 +2009,17 @@ contains
   !-----------------------------------------------------------------------------
   !> write axis to the file
   subroutine FILEIO_write_axes( &
-       fid,           &
-       myrank,        &
-       put_z,         &
-       put_x,         &
-       put_y,         &
-       writebymaster, &
-       start          )
+       fid,       &
+       haszcoord, &
+       start      )
     use gtool_file, only: &
        FileWriteAxis,                 &
        FileWriteAssociatedCoordinates
     use scale_process, only: &
-       PRC_masterrank
+       PRC_myrank, &
+       PRC_IsMaster
+    use scale_rm_process, only: &
+       PRC_2Drank
     use scale_grid, only: &
        GRID_CZ,    &
        GRID_CX,    &
@@ -2090,60 +2062,75 @@ contains
     implicit none
 
     integer, intent(in)  :: fid
-    integer, intent(in)  :: myrank
-    logical, intent(in)  :: put_z
-    logical, intent(in)  :: put_x
-    logical, intent(in)  :: put_y
-    logical, intent(in)  :: writebymaster
+    logical, intent(in)  :: haszcoord
     integer, intent(in)  :: start(3)
+
+    logical :: put_z, put_x, put_y
     !---------------------------------------------------------------------------
 
-    if ( writebymaster ) then
-       if ( myrank == PRC_masterrank ) then
-          if( put_z ) call FileWriteAxis( fid, 'z'  , GRID_CZ (KS  :KE), start(1:1) )
-          if( put_z ) call FileWriteAxis( fid, 'zh' , GRID_FZ (KS-1:KE), start(1:1) )
+    if ( IO_AGGREGATE ) then
+       ! For parallel I/O, not all variables are written by all processes.
+       ! 1. Let PRC_myrank 0 writes all z axes
+       ! 2. Let processes (rankidx(2) == 0) write x axes  (south-most processes)
+       !        rankidx(1) == 0           writes west HALO
+       !        rankidx(1) == PRC_NUM_X-1 writes east HALO
+       !        others                    writes without HALO
+       ! 3. Let processes (rankidx(1) == 0) write y axes  (west-most processes)
+       !        rankidx(1) == 0           writes south HALO
+       !        rankidx(1) == PRC_NUM_Y-1 writes north HALO
+       !        others                    writes without HALO
 
-          if( put_z ) call FileWriteAxis( fid, 'lz' , GRID_LCZ(LKS  :LKE), start(1:1) )
-          if( put_z ) call FileWriteAxis( fid, 'lzh', GRID_LFZ(LKS-1:LKE), start(1:1) )
-
-          if( put_z ) call FileWriteAxis( fid, 'uz' , GRID_UCZ(UKS  :UKE), start(1:1) )
-          if( put_z ) call FileWriteAxis( fid, 'uzh', GRID_UFZ(UKS-1:UKE), start(1:1) )
-       endif
+       put_z = ( PRC_IsMaster                  ) ! only master process output the vertical coordinates
+       put_x = ( PRC_2Drank(PRC_myrank,2) == 0 ) ! only south-most row    processes write x coordinates
+       put_y = ( PRC_2Drank(PRC_myrank,1) == 0 ) ! only west-most  column processes write y coordinates
     else
-       if( put_z ) call FileWriteAxis( fid, 'z'  , GRID_CZ (KS  :KE)  , start(1:1) )
-       if( put_z ) call FileWriteAxis( fid, 'zh' , GRID_FZ (KS-1:KE)  , start(1:1) )
+       put_z = .true.
+       put_x = .true.
+       put_y = .true.
+    end if
 
-       if( put_z ) call FileWriteAxis( fid, 'lz' , GRID_LCZ(LKS  :LKE), start(1:1) )
-       if( put_z ) call FileWriteAxis( fid, 'lzh', GRID_LFZ(LKS-1:LKE), start(1:1) )
 
-       if( put_z ) call FileWriteAxis( fid, 'uz' , GRID_UCZ(UKS  :UKE), start(1:1) )
-       if( put_z ) call FileWriteAxis( fid, 'uzh', GRID_UFZ(UKS-1:UKE), start(1:1) )
-    endif
+    if ( haszcoord .and. put_z ) then
+       call FileWriteAxis( fid, 'z'  , GRID_CZ (KS  :KE)  , start(1:1) )
+       call FileWriteAxis( fid, 'zh' , GRID_FZ (KS-1:KE)  , start(1:1) )
 
-    if( put_x ) call FileWriteAxis( fid, 'x' ,  GRID_CX(XSB:XEB),  start(2:2) )
-    if( put_x ) call FileWriteAxis( fid, 'xh',  GRID_FX(XSB:XEB),  start(2:2) )
+       call FileWriteAxis( fid, 'lz' , GRID_LCZ(LKS  :LKE), start(1:1) )
+       call FileWriteAxis( fid, 'lzh', GRID_LFZ(LKS-1:LKE), start(1:1) )
 
-    if( put_y ) call FileWriteAxis( fid, 'y' ,  GRID_CY(YSB:YEB),  start(3:3) )
-    if( put_y ) call FileWriteAxis( fid, 'yh',  GRID_FY(YSB:YEB),  start(3:3) )
+       call FileWriteAxis( fid, 'uz' , GRID_UCZ(UKS  :UKE), start(1:1) )
+       call FileWriteAxis( fid, 'uzh', GRID_UFZ(UKS-1:UKE), start(1:1) )
+    end if
+
+    if ( put_x ) then
+       call FileWriteAxis( fid, 'x' ,  GRID_CX(XSB:XEB),  start(2:2) )
+       call FileWriteAxis( fid, 'xh',  GRID_FX(XSB:XEB),  start(2:2) )
+    end if
+
+    if ( put_y ) then
+       call FileWriteAxis( fid, 'y' ,  GRID_CY(YSB:YEB),  start(3:3) )
+       call FileWriteAxis( fid, 'yh',  GRID_FY(YSB:YEB),  start(3:3) )
+    end if
 
     ! global coordinates (always including halo)
-    if( put_z ) call FileWriteAxis( fid, 'CZ'  , GRID_CZ  (:), start(1:1) )
-    if( put_z ) call FileWriteAxis( fid, 'FZ'  , GRID_FZ  (:), start(1:1) )
-    if( put_z ) call FileWriteAxis( fid, 'CDZ' , GRID_CDZ (:), start(1:1) )
-    if( put_z ) call FileWriteAxis( fid, 'FDZ' , GRID_FDZ (:), start(1:1) )
-    if( put_z ) call FileWriteAxis( fid, 'CBFZ', GRID_CBFZ(:), start(1:1) )
-    if( put_z ) call FileWriteAxis( fid, 'FBFZ', GRID_FBFZ(:), start(1:1) )
+    if ( haszcoord .and. put_z ) then
+       call FileWriteAxis( fid, 'CZ'  , GRID_CZ  (:), start(1:1) )
+       call FileWriteAxis( fid, 'FZ'  , GRID_FZ  (:), start(1:1) )
+       call FileWriteAxis( fid, 'CDZ' , GRID_CDZ (:), start(1:1) )
+       call FileWriteAxis( fid, 'FDZ' , GRID_FDZ (:), start(1:1) )
+       call FileWriteAxis( fid, 'CBFZ', GRID_CBFZ(:), start(1:1) )
+       call FileWriteAxis( fid, 'FBFZ', GRID_FBFZ(:), start(1:1) )
 
-    if( put_z ) call FileWriteAxis( fid, 'LCZ' , GRID_LCZ (:), start(1:1) )
-    if( put_z ) call FileWriteAxis( fid, 'LFZ' , GRID_LFZ (:), start(1:1) )
-    if( put_z ) call FileWriteAxis( fid, 'LCDZ', GRID_LCDZ(:), start(1:1) )
+       call FileWriteAxis( fid, 'LCZ' , GRID_LCZ (:), start(1:1) )
+       call FileWriteAxis( fid, 'LFZ' , GRID_LFZ (:), start(1:1) )
+       call FileWriteAxis( fid, 'LCDZ', GRID_LCDZ(:), start(1:1) )
 
-    if( put_z ) call FileWriteAxis( fid, 'UCZ' , GRID_UCZ (:), start(1:1) )
-    if( put_z ) call FileWriteAxis( fid, 'UFZ' , GRID_UFZ (:), start(1:1) )
-    if( put_z ) call FileWriteAxis( fid, 'UCDZ', GRID_UCDZ(:), start(1:1) )
+       call FileWriteAxis( fid, 'UCZ' , GRID_UCZ (:), start(1:1) )
+       call FileWriteAxis( fid, 'UFZ' , GRID_UFZ (:), start(1:1) )
+       call FileWriteAxis( fid, 'UCDZ', GRID_UCDZ(:), start(1:1) )
+    end if
 
-    if ( writebymaster ) then
-       if ( myrank == PRC_masterrank ) then
+    if ( IO_AGGREGATE ) then
+       if ( PRC_IsMaster ) then
           call FileWriteAxis( fid, 'CX',   GRID_CXG  (:) )
           call FileWriteAxis( fid, 'CY',   GRID_CYG  (:) )
           call FileWriteAxis( fid, 'FX',   GRID_FXG  (:) )
@@ -2172,18 +2159,20 @@ contains
        call FileWriteAxis( fid, 'FBFY', GRID_FBFY(:) )
     endif
 
-    call FileWriteAxis( fid, 'CXG',   GRID_CXG  (:) )
-    call FileWriteAxis( fid, 'CYG',   GRID_CYG  (:) )
-    call FileWriteAxis( fid, 'FXG',   GRID_FXG  (:) )
-    call FileWriteAxis( fid, 'FYG',   GRID_FYG  (:) )
-    call FileWriteAxis( fid, 'CDXG',  GRID_CDXG (:) )
-    call FileWriteAxis( fid, 'CDYG',  GRID_CDYG (:) )
-    call FileWriteAxis( fid, 'FDXG',  GRID_FDXG (:) )
-    call FileWriteAxis( fid, 'FDYG',  GRID_FDYG (:) )
-    call FileWriteAxis( fid, 'CBFXG', GRID_CBFXG(:) )
-    call FileWriteAxis( fid, 'CBFYG', GRID_CBFYG(:) )
-    call FileWriteAxis( fid, 'FBFXG', GRID_FBFXG(:) )
-    call FileWriteAxis( fid, 'FBFYG', GRID_FBFYG(:) )
+    if ( (.not. IO_AGGREGATE) .or. PRC_IsMaster ) then
+       call FileWriteAxis( fid, 'CXG',   GRID_CXG  (:) )
+       call FileWriteAxis( fid, 'CYG',   GRID_CYG  (:) )
+       call FileWriteAxis( fid, 'FXG',   GRID_FXG  (:) )
+       call FileWriteAxis( fid, 'FYG',   GRID_FYG  (:) )
+       call FileWriteAxis( fid, 'CDXG',  GRID_CDXG (:) )
+       call FileWriteAxis( fid, 'CDYG',  GRID_CDYG (:) )
+       call FileWriteAxis( fid, 'FDXG',  GRID_FDXG (:) )
+       call FileWriteAxis( fid, 'FDYG',  GRID_FDYG (:) )
+       call FileWriteAxis( fid, 'CBFXG', GRID_CBFXG(:) )
+       call FileWriteAxis( fid, 'CBFYG', GRID_CBFYG(:) )
+       call FileWriteAxis( fid, 'FBFXG', GRID_FBFXG(:) )
+       call FileWriteAxis( fid, 'FBFYG', GRID_FBFYG(:) )
+    end if
 
     ! associate coordinates
     call FileWriteAssociatedCoordinates( fid, 'lon'   , AXIS_LON  (:,:), start(2:3) )
@@ -2195,8 +2184,10 @@ contains
     call FileWriteAssociatedCoordinates( fid, 'lat_xv', AXIS_LATXV(:,:), start(2:3) )
     call FileWriteAssociatedCoordinates( fid, 'lat_uv', AXIS_LATUV(:,:), start(2:3) )
 
-    if( put_z ) call FileWriteAssociatedCoordinates( fid, 'height'    , AXIS_HGT   (:,:,:), start(1:3) )
-    if( put_z ) call FileWriteAssociatedCoordinates( fid, 'height_wxy', AXIS_HGTWXY(:,:,:), start(1:3) )
+    if ( haszcoord ) then
+       call FileWriteAssociatedCoordinates( fid, 'height'    , AXIS_HGT   (:,:,:), start(1:3) )
+       call FileWriteAssociatedCoordinates( fid, 'height_wxy', AXIS_HGTWXY(:,:,:), start(1:3) )
+    end if
 
     return
   end subroutine FILEIO_write_axes
