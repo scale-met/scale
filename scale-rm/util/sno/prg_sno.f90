@@ -53,8 +53,9 @@ program sno
      SNO_vars_read,    &
      SNO_vars_write
   use mod_sno_grads, only: &
-     SNO_grads_setup, &
-     SNO_grads_write
+     SNO_grads_setup,    &
+     SNO_grads_write,    &
+     SNO_grads_netcdfctl
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -364,6 +365,17 @@ program sno
            enddo ! item loop
 
 !            call plugin_timeaverage_finalize( debug ) ! [IN]
+
+           if ( output_gradsctl ) then
+              call SNO_grads_netcdfctl( dirpath_out,  & ! [IN] from namelist
+                                        basename_out, & ! [IN] from namelist
+                                        hinfo,        & ! [IN] from SNO_file_getinfo
+                                        naxis,        & ! [IN] from SNO_file_getinfo
+                                        ainfo(:),     & ! [IN] from SNO_axis_getinfo
+                                        nvars,        & ! [IN] from SNO_file_getinfo
+                                        dinfo(:),     & ! [IN] from SNO_vars_getinfo
+                                        debug         ) ! [IN]
+           endif
 
            call SNO_axis_dealloc( naxis,    & ! [IN]    from SNO_file_getinfo
                                   ainfo(:), & ! [INOUT] from SNO_axis_getinfo

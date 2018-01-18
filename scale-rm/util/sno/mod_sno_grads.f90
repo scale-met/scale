@@ -27,7 +27,7 @@ module mod_sno_grads
   public :: SNO_grads_setup
   public :: SNO_grads_write
   public :: SNO_grads_write_ctl
-!  public :: SNO_grads_write_netcdfctl
+  public :: SNO_grads_netcdfctl
 
   !-----------------------------------------------------------------------------
   !
@@ -384,6 +384,291 @@ contains
 
     return
   end subroutine SNO_grads_write_ctl
+
+  !-----------------------------------------------------------------------------
+  subroutine SNO_grads_netcdfctl( &
+       dirpath,  &
+       basename, &
+       hinfo,    &
+       naxis,    &
+       ainfo,    &
+       nvars,    &
+       dinfo,    &
+       debug     )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_const, only: &
+       CONST_UNDEF, &
+       CONST_D2R,   &
+       CONST_RADIUS
+    use mod_sno_h, only: &
+       commoninfo, &
+       axisinfo,   &
+       iteminfo
+    implicit none
+
+    character(len=*), intent(in)  :: dirpath                               ! directory path                     (output)
+    character(len=*), intent(in)  :: basename                              ! basename of file                   (output)
+    type(commoninfo), intent(in)  :: hinfo                                 ! common information                 (input)
+    integer,          intent(in)  :: naxis                                 ! number of axis variables           (input)
+    type(axisinfo),   intent(in)  :: ainfo(naxis)                          ! axis information                   (input)
+    integer,          intent(in)  :: nvars                                 ! number of variables                (input)
+    type(iteminfo),   intent(in)  :: dinfo(nvars)                          ! variable information               (input)
+    logical,          intent(in)  :: debug
+
+    character(len=H_LONG)  :: grdname
+    character(len=H_LONG)  :: ctlname
+
+    character(len=H_SHORT) :: idim, jdim, kdim
+    integer                :: imax, jmax, kmax
+
+    real(RP)               :: latstart, latend
+    real(RP)               :: lonstart, lonend
+    real(RP)               :: clat, clon
+    real(RP)               :: dx, dy
+    real(RP)               :: dlat, dlon
+
+    real(DP)               :: dt
+    character(len=20)      :: cdate, dhour
+
+    character(len=20)      :: dimorder
+    character(len=H_SHORT) :: kdim_
+    integer                :: kmax_
+    integer                :: count
+
+    logical  :: written
+    integer  :: fid
+    integer  :: k, n, v
+    !---------------------------------------------------------------------------
+
+    kmax = 1
+    kdim = 'none'
+    do v = 1, nvars
+       if ( dinfo(v)%dim_rank == 2 ) then
+          imax = size(dinfo(v)%VAR_2d(:,:),1)
+          jmax = size(dinfo(v)%VAR_2d(:,:),2)
+
+          idim = trim(dinfo(v)%dim_name(1))
+          jdim = trim(dinfo(v)%dim_name(2))
+       elseif( dinfo(v)%dim_rank == 3 ) then
+          imax = size(dinfo(v)%VAR_3d(:,:,:),2)
+          jmax = size(dinfo(v)%VAR_3d(:,:,:),3)
+          kmax_ = size(dinfo(v)%VAR_3d(:,:,:),1)
+
+          if ( dinfo(v)%transpose ) then
+             idim  = trim(dinfo(v)%dim_name(1))
+             jdim  = trim(dinfo(v)%dim_name(2))
+             kdim_ = trim(dinfo(v)%dim_name(3))
+          else
+             idim  = trim(dinfo(v)%dim_name(2))
+             jdim  = trim(dinfo(v)%dim_name(3))
+             kdim_ = trim(dinfo(v)%dim_name(1))
+          endif
+
+          if ( kmax_ > kmax ) then
+             kmax = kmax_
+             kdim = kdim_
+          endif
+       endif
+    enddo
+
+    grdname = trim(basename)//'.pe000000.nc'
+    if ( dirpath == '' ) then
+       ctlname = trim(basename)//'.ctl'
+    else
+       ctlname = trim(dirpath)//'/'//trim(basename)//'.ctl'
+    endif
+
+    do n = 1, naxis
+       if    ( ainfo(n)%varname == 'lat' ) then
+          latstart = minval( ainfo(n)%AXIS_2d(:,:) )
+          latend   = maxval( ainfo(n)%AXIS_2d(:,:) )
+       elseif( ainfo(n)%varname == 'lon' ) then
+          lonstart = minval( ainfo(n)%AXIS_2d(:,:) )
+          lonend   = maxval( ainfo(n)%AXIS_2d(:,:) )
+       endif
+    enddo
+    clat = 0.5_RP * ( latstart + latend ) * CONST_D2R
+    clon = 0.5_RP * ( lonstart + lonend ) * CONST_D2R
+
+
+    !##### write control file #####
+
+    fid = IO_get_available_fid()
+    open( unit   = fid,                    &
+          file   = trim(ctlname),          &
+          form   = 'formatted',            &
+          status = 'replace'               )
+
+       write(fid,'(A)')       'DSET ^'//trim(grdname)
+       write(fid,'(A)')       'TITLE SCALE-RM data output'
+       write(fid,'(A)')       'DTYPE netcdf'
+       write(fid,'(A,E12.5)') 'UNDEF ', CONST_UNDEF
+
+       !--- XDEF
+
+       written = .false.
+       do n = 1, naxis
+          if ( ainfo(n)%varname == idim ) then
+             dx   = ainfo(n)%AXIS_1d(imax/2+1) - ainfo(n)%AXIS_1d(imax/2)
+             dlon = dx / ( CONST_RADIUS * cos(clat) ) / CONST_D2R
+
+             write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'XDEF ', int(imax*1.1_RP), ' LINEAR', lonstart, dlon
+             written = .true.
+          endif
+       enddo
+
+       if ( .NOT. written ) then
+          write(*,*) 'xxx [SNO_grads_write_ctl] AXIS data for XDEF not found. ', trim(idim)
+          call PRC_MPIstop
+       endif
+
+       !--- YDEF
+
+       written = .false.
+       do n = 1, naxis
+          if ( ainfo(n)%varname == jdim ) then
+             dy    = ainfo(n)%AXIS_1d(jmax/2+1) - ainfo(n)%AXIS_1d(jmax/2)
+             dlat  = dy / ( CONST_RADIUS * cos(clat) ) / CONST_D2R
+
+             write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'YDEF ', jmax, ' LINEAR', latstart, dlat
+             written = .true.
+          endif
+       enddo
+
+       if ( .NOT. written ) then
+          write(*,*) 'xxx [SNO_grads_write_ctl] AXIS data for YDEF not found. ', trim(idim)
+          call PRC_MPIstop
+       endif
+
+       !--- ZDEF
+
+       written = .false.
+       do n = 1, naxis
+          if ( ainfo(n)%varname == kdim ) then
+             write(fid,'(A,I5,A)') 'ZDEF ', kmax, ' LEVELS'
+             write(fid,'(10(1x,F9.3))') (ainfo(n)%AXIS_1d(k),k=1,kmax)
+             written = .true.
+          endif
+       enddo
+
+       if ( .NOT. written ) then
+          write(fid,'(A,I5,A,2I5)') 'ZDEF ', 1, ' LINEAR', 1, 1
+       endif
+
+       !--- TDEF
+
+       if ( dinfo(1)%step_nmax > 1 ) then
+          dt = dinfo(1)%time_start(2) - dinfo(1)%time_start(1)
+       else
+          dt = 0.0_DP
+       endif
+
+       call SNO_grads_calc_timechar( dinfo(1)%time_units, dt, & ! [IN]
+                                     cdate, dhour             ) ! [OUT]
+
+       write(fid,'(A,I5,3(1x,A))') 'TDEF ', dinfo(1)%step_nmax, ' LINEAR ', trim(cdate), trim(dhour)
+
+       !--- PDEF
+
+       if ( hinfo%minfo_mapping_name == 'lambert_conformal_conic' ) then
+          write(fid,'(A,2(1x,I5),A,2(1x,F9.2),2(1x,I5),5(1x,F9.2))') 'PDEF',                                       &
+                                                                     imax,                                         &
+                                                                     jmax,                                         &
+                                                                     ' LCC',                                       &
+                                                                     hinfo%minfo_latitude_of_projection_origin(1), &
+                                                                     hinfo%minfo_longitude_of_central_meridian(1), &
+                                                                     imax/2,                                       &
+                                                                     jmax/2,                                       &
+                                                                     hinfo%minfo_standard_parallel            (1), &
+                                                                     hinfo%minfo_standard_parallel            (2), &
+                                                                     hinfo%minfo_longitude_of_central_meridian(1), &
+                                                                     dx,                                           &
+                                                                     dy
+       endif
+
+       !--- VARS
+
+       count = 0
+       do v = 1, nvars
+          if    ( dinfo(v)%dim_rank == 1 ) then
+             cycle ! skip
+          elseif( dinfo(v)%dim_rank == 2 ) then
+             if( size(dinfo(v)%VAR_2d(:,:),1) /= imax ) cycle ! skip
+             if( size(dinfo(v)%VAR_2d(:,:),2) /= jmax ) cycle ! skip
+             if ( dinfo(v)%step_nmax > 1 ) then
+                if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+             endif
+          elseif( dinfo(v)%dim_rank == 3 ) then
+             if( size(dinfo(v)%VAR_3d(:,:,:),2) /= imax ) cycle ! skip
+             if( size(dinfo(v)%VAR_3d(:,:,:),3) /= jmax ) cycle ! skip
+             if( size(dinfo(v)%VAR_3d(:,:,:),1) /= kmax ) cycle ! skip
+             if ( dinfo(v)%transpose ) then
+                if ( dinfo(v)%step_nmax > 1 ) then
+                   if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+                endif
+             else
+                if ( dinfo(v)%step_nmax > 1 ) then
+                   if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+                endif
+             endif
+          endif
+
+          count = count + 1
+       enddo
+
+       write(fid,'(A,I5)') 'VARS ', count
+       do v = 1, nvars
+          if    ( dinfo(v)%dim_rank == 1 ) then
+             cycle ! skip
+          elseif( dinfo(v)%dim_rank == 2 ) then
+             kmax_ = 0
+
+             if( size(dinfo(v)%VAR_2d(:,:),1) /= imax ) cycle ! skip
+             if( size(dinfo(v)%VAR_2d(:,:),2) /= jmax ) cycle ! skip
+
+             if ( dinfo(v)%step_nmax > 1 ) then
+                if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+
+                dimorder = 't,y,x'
+             else
+                dimorder = 'y,x'
+             endif
+          elseif( dinfo(v)%dim_rank == 3 ) then
+             kmax_ = kmax
+
+             if( size(dinfo(v)%VAR_3d(:,:,:),2) /= imax ) cycle ! skip
+             if( size(dinfo(v)%VAR_3d(:,:,:),3) /= jmax ) cycle ! skip
+             if( size(dinfo(v)%VAR_3d(:,:,:),1) /= kmax ) cycle ! skip
+
+             if ( dinfo(v)%transpose ) then
+                if ( dinfo(v)%step_nmax > 1 ) then
+                   if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+
+                   dimorder = 't,z,y,x'
+                else
+                   dimorder = 'z,y,x'
+                endif
+             else
+                if ( dinfo(v)%step_nmax > 1 ) then
+                   if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+
+                   dimorder = 't,y,x,z'
+                else
+                   dimorder = 'y,x,z'
+                endif
+             endif
+          endif
+
+          write(fid,'(A,I5,2(1X,A))') trim(dinfo(v)%varname)//'=>'//trim(dinfo(v)%varname), &
+                                      kmax_, trim(dimorder), trim(dinfo(v)%description)
+       enddo
+       write(fid,'(A)') 'ENDVARS '
+
+    close(fid)
+
+    return
+  end subroutine SNO_grads_netcdfctl
 
   !-----------------------------------------------------------------------------
   subroutine SNO_grads_calc_timechar( &
