@@ -319,6 +319,15 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) "*** nvars_file = ", nvars_file
     endif
 
+    hinfo%minfo_mapping_name                             = ''
+    hinfo%minfo_false_easting                        (:) = CONST_UNDEF
+    hinfo%minfo_false_northing                       (:) = CONST_UNDEF
+    hinfo%minfo_longitude_of_central_meridian        (:) = CONST_UNDEF
+    hinfo%minfo_longitude_of_projection_origin       (:) = CONST_UNDEF
+    hinfo%minfo_latitude_of_projection_origin        (:) = CONST_UNDEF
+    hinfo%minfo_straight_vertical_longitude_from_pole(:) = CONST_UNDEF
+    hinfo%minfo_standard_parallel                    (:) = CONST_UNDEF
+
     nvars = 0
     naxis = 0
     do n = 1, nvars_file
@@ -341,29 +350,37 @@ contains
        case('time','time_bnds')
           ! do nothing
        case('lambert_conformal_conic')
-
           if ( ismaster ) then
              call FileGetAttribute( fid, varname_file(n), "grid_mapping_name",                     hinfo%minfo_mapping_name                             )
              call FileGetAttribute( fid, varname_file(n), "false_easting",                         hinfo%minfo_false_easting                        (:) )
              call FileGetAttribute( fid, varname_file(n), "false_northing",                        hinfo%minfo_false_northing                       (:) )
              call FileGetAttribute( fid, varname_file(n), "longitude_of_central_meridian",         hinfo%minfo_longitude_of_central_meridian        (:) )
-!            call FileGetAttribute( fid, varname_file(n), "longitude_of_projection_origin",        hinfo%minfo_longitude_of_projection_origin       (:) )
-             hinfo%minfo_longitude_of_projection_origin       (:) = CONST_UNDEF
              call FileGetAttribute( fid, varname_file(n), "latitude_of_projection_origin",         hinfo%minfo_latitude_of_projection_origin        (:) )
-!            call FileGetAttribute( fid, varname_file(n), "straight_vertical_longitude_from_pole", hinfo%minfo_straight_vertical_longitude_from_pole(:) )
-             hinfo%minfo_straight_vertical_longitude_from_pole(:) = CONST_UNDEF
              call FileGetAttribute( fid, varname_file(n), "standard_parallel",                     hinfo%minfo_standard_parallel                    (:) )
           endif
-
-          call MPI_BCAST( hinfo%minfo_mapping_name                            , H_SHORT, MPI_CHARACTER,        PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-          call MPI_BCAST( hinfo%minfo_false_easting                        (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-          call MPI_BCAST( hinfo%minfo_false_northing                       (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-          call MPI_BCAST( hinfo%minfo_longitude_of_central_meridian        (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-          call MPI_BCAST( hinfo%minfo_longitude_of_projection_origin       (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-          call MPI_BCAST( hinfo%minfo_latitude_of_projection_origin        (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-          call MPI_BCAST( hinfo%minfo_straight_vertical_longitude_from_pole(1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-          call MPI_BCAST( hinfo%minfo_standard_parallel                    (1), 2      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
+       case('polar_stereographic')
+          if ( ismaster ) then
+             call FileGetAttribute( fid, varname_file(n), "grid_mapping_name",                     hinfo%minfo_mapping_name                             )
+             call FileGetAttribute( fid, varname_file(n), "false_easting",                         hinfo%minfo_false_easting                        (:) )
+             call FileGetAttribute( fid, varname_file(n), "false_northing",                        hinfo%minfo_false_northing                       (:) )
+             call FileGetAttribute( fid, varname_file(n), "latitude_of_projection_origin",         hinfo%minfo_latitude_of_projection_origin        (:) )
+             call FileGetAttribute( fid, varname_file(n), "straight_vertical_longitude_from_pole", hinfo%minfo_straight_vertical_longitude_from_pole(:) )
+             call FileGetAttribute( fid, varname_file(n), "standard_parallel",                     hinfo%minfo_standard_parallel                  (1:1) )
+          endif
+       case('mercator')
+          if ( ismaster ) then
+             call FileGetAttribute( fid, varname_file(n), "grid_mapping_name",                     hinfo%minfo_mapping_name                             )
+             call FileGetAttribute( fid, varname_file(n), "false_easting",                         hinfo%minfo_false_easting                        (:) )
+             call FileGetAttribute( fid, varname_file(n), "false_northing",                        hinfo%minfo_false_northing                       (:) )
+             call FileGetAttribute( fid, varname_file(n), "longitude_of_projection_origin",        hinfo%minfo_longitude_of_projection_origin       (:) )
+          endif
+       case('equirectangular')
+          if ( ismaster ) then
+             call FileGetAttribute( fid, varname_file(n), "grid_mapping_name",                     hinfo%minfo_mapping_name                             )
+             call FileGetAttribute( fid, varname_file(n), "false_easting",                         hinfo%minfo_false_easting                        (:) )
+             call FileGetAttribute( fid, varname_file(n), "false_northing",                        hinfo%minfo_false_northing                       (:) )
+             call FileGetAttribute( fid, varname_file(n), "longitude_of_central_meridian",         hinfo%minfo_longitude_of_central_meridian        (:) )
+          endif
        case default
           if ( nvars_req == 0 ) then
              nvars           = nvars + 1
@@ -397,6 +414,15 @@ contains
        call PRC_MPIstop
     endif
 
+    call MPI_BCAST( hinfo%minfo_mapping_name                            , H_SHORT, MPI_CHARACTER,        PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%minfo_false_easting                        (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%minfo_false_northing                       (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%minfo_longitude_of_central_meridian        (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%minfo_longitude_of_projection_origin       (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%minfo_latitude_of_projection_origin        (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%minfo_straight_vertical_longitude_from_pole(1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%minfo_standard_parallel                    (1), 2      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Axis to read'
     do n = 1, naxis
@@ -422,24 +448,28 @@ contains
        ngrids_y_total, &
        nhalos_x,       &
        nhalos_y,       &
+       hinfo,          &
        ngrids_x,       &
        ngrids_y,       &
        ngrids_xh,      &
        ngrids_yh       )
+    use mod_sno_h, only: &
+       commoninfo
     implicit none
 
-    integer, intent(in)  :: nprocs_x       ! x length of 2D processor topology
-    integer, intent(in)  :: nprocs_y       ! y length of 2D processor topology
-    integer, intent(in)  :: ngrids_x_total ! total grid size of x-axis         (sometimes including halo)
-    integer, intent(in)  :: ngrids_y_total ! total grid size of y-axis         (sometimes including halo)
-    integer, intent(in)  :: nhalos_x       ! halo  grid size of x-axis         (sometimes have a size)
-    integer, intent(in)  :: nhalos_y       ! halo  grid size of y-axis         (sometimes have a size)
-    integer, intent(in)  :: px             ! x index  in 2D processor topology
-    integer, intent(in)  :: py             ! y index  in 2D processor topology
-    integer, intent(out) :: ngrids_x       ! size of x-axis grids              (sometimes including halo)
-    integer, intent(out) :: ngrids_y       ! size of y-axis grids              (sometimes including halo)
-    integer, intent(out) :: ngrids_xh      ! size of x-axis grids              (sometimes including halo)
-    integer, intent(out) :: ngrids_yh      ! size of y-axis grids              (sometimes including halo)
+    integer,          intent(in)  :: nprocs_x       ! x length of 2D processor topology
+    integer,          intent(in)  :: nprocs_y       ! y length of 2D processor topology
+    integer,          intent(in)  :: ngrids_x_total ! total grid size of x-axis         (sometimes including halo)
+    integer,          intent(in)  :: ngrids_y_total ! total grid size of y-axis         (sometimes including halo)
+    integer,          intent(in)  :: nhalos_x       ! halo  grid size of x-axis         (sometimes have a size)
+    integer,          intent(in)  :: nhalos_y       ! halo  grid size of y-axis         (sometimes have a size)
+    integer,          intent(in)  :: px             ! x index  in 2D processor topology
+    integer,          intent(in)  :: py             ! y index  in 2D processor topology
+    type(commoninfo), intent(in)  :: hinfo          ! common information                (input)
+    integer,          intent(out) :: ngrids_x       ! size of x-axis grids              (sometimes including halo)
+    integer,          intent(out) :: ngrids_y       ! size of y-axis grids              (sometimes including halo)
+    integer,          intent(out) :: ngrids_xh      ! size of x-axis grids              (sometimes including halo)
+    integer,          intent(out) :: ngrids_yh      ! size of y-axis grids              (sometimes including halo)
     !---------------------------------------------------------------------------
 
     ngrids_y = ( ngrids_y_total - 2*nhalos_y ) / nprocs_y
@@ -447,7 +477,7 @@ contains
     if( py == nprocs_y ) ngrids_y = ngrids_y + nhalos_y
 
     ngrids_yh = ngrids_y
-    if ( nhalos_y == 0 .AND. py == 1 ) then
+    if ( nhalos_y == 0 .AND. py == 1 .AND. hinfo%periodic(3) == 'false' ) then
        ngrids_yh = ngrids_yh + 1
     endif
 
@@ -456,7 +486,7 @@ contains
     if( px == nprocs_x ) ngrids_x = ngrids_x + nhalos_x
 
     ngrids_xh = ngrids_x
-    if ( nhalos_x == 0 .AND. px == 1 ) then
+    if ( nhalos_x == 0 .AND. px == 1 .AND. hinfo%periodic(2) == 'false' ) then
        ngrids_xh = ngrids_xh + 1
     endif
 

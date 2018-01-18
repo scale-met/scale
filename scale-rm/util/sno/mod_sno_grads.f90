@@ -368,6 +368,20 @@ contains
                                                                      hinfo%minfo_longitude_of_central_meridian(1), &
                                                                      dx,                                           &
                                                                      dy
+       elseif( hinfo%minfo_mapping_name == 'polar_stereographic' ) then
+          write(fid,'(A,2(1x,I5),A,2(1x,F9.2),2(1x,I5),5(1x,F9.2))') 'PDEF',                                               &
+                                                                     imax,                                                 &
+                                                                     jmax,                                                 &
+                                                                     ' LCC',                                               &
+                                                                     hinfo%minfo_latitude_of_projection_origin        (1), &
+                                                                     hinfo%minfo_straight_vertical_longitude_from_pole(1), &
+                                                                     imax/2,                                               &
+                                                                     jmax/2,                                               &
+                                                                     hinfo%minfo_standard_parallel                    (1), &
+                                                                     hinfo%minfo_standard_parallel                    (1), &
+                                                                     hinfo%minfo_straight_vertical_longitude_from_pole(1), &
+                                                                     dx,                                                   &
+                                                                     dy
        endif
 
        !--- VARS
@@ -584,6 +598,20 @@ contains
                                                                      hinfo%minfo_standard_parallel            (2), &
                                                                      hinfo%minfo_longitude_of_central_meridian(1), &
                                                                      dx,                                           &
+                                                                     dy
+       elseif( hinfo%minfo_mapping_name == 'polar_stereographic' ) then
+          write(fid,'(A,2(1x,I5),A,2(1x,F9.2),2(1x,I5),5(1x,F9.2))') 'PDEF',                                               &
+                                                                     imax,                                                 &
+                                                                     jmax,                                                 &
+                                                                     ' LCC',                                               &
+                                                                     hinfo%minfo_latitude_of_projection_origin        (1), &
+                                                                     hinfo%minfo_straight_vertical_longitude_from_pole(1), &
+                                                                     imax/2,                                               &
+                                                                     jmax/2,                                               &
+                                                                     hinfo%minfo_standard_parallel                    (1), &
+                                                                     hinfo%minfo_standard_parallel                    (1), &
+                                                                     hinfo%minfo_straight_vertical_longitude_from_pole(1), &
+                                                                     dx,                                                   &
                                                                      dy
        endif
 

@@ -252,6 +252,7 @@ program sno
                                  px,            py,           & ! [IN]
                                  ngrids_x,      ngrids_y,     & ! [IN] from SNO_file_getinfo
                                  nhalos_x,      nhalos_y,     & ! [IN] from SNO_file_getinfo
+                                 hinfo,                       & ! [IN]    from SNO_file_getinfo
                                  ngrids_x_out,  ngrids_y_out, & ! [OUT]
                                  ngrids_xh_out, ngrids_yh_out ) ! [OUT]
 
@@ -291,6 +292,7 @@ program sno
                                nprocs_x_in,   nprocs_y_in,   & ! [IN]    from SNO_file_getinfo
                                ngrids_x,      ngrids_y,      & ! [IN]    from SNO_file_getinfo
                                nhalos_x,      nhalos_y,      & ! [IN]    from SNO_file_getinfo
+                               hinfo,                        & ! [IN]    from SNO_file_getinfo
                                ngrids_x_out,  ngrids_y_out,  & ! [IN]    from SNO_map_getsize_local
                                ngrids_xh_out, ngrids_yh_out, & ! [IN]    from SNO_map_getsize_local
                                naxis,                        & ! [IN]    from SNO_file_getinfo
@@ -327,6 +329,7 @@ program sno
                                      nprocs_x_in,   nprocs_y_in,   & ! [IN]    from SNO_file_getinfo
                                      ngrids_x,      ngrids_y,      & ! [IN]    from SNO_file_getinfo
                                      nhalos_x,      nhalos_y,      & ! [IN]    from SNO_file_getinfo
+                                     hinfo,                        & ! [IN]    from SNO_file_getinfo
                                      ngrids_x_out,  ngrids_y_out,  & ! [IN]    from SNO_map_getsize_local
                                      ngrids_xh_out, ngrids_yh_out, & ! [IN]    from SNO_map_getsize_local
                                      dinfo(v),                     & ! [INOUT] from SNO_vars_getinfo
