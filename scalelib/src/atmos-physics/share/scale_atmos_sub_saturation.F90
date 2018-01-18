@@ -62,6 +62,8 @@ module scale_atmos_saturation
 
   public :: ATMOS_SATURATION_tdew_liq
 
+  public :: ATMOS_SATURATION_pote
+
   public :: ATMOS_SATURATION_moist_conversion_dens_liq
   public :: ATMOS_SATURATION_moist_conversion_dens_all
   public :: ATMOS_SATURATION_moist_conversion_pres_liq
@@ -156,6 +158,11 @@ module scale_atmos_saturation
      module procedure ATMOS_SATURATION_tdew_liq_0D
      module procedure ATMOS_SATURATION_tdew_liq_3D
   end interface ATMOS_SATURATION_tdew_liq
+
+  interface ATMOS_SATURATION_pote
+     module procedure ATMOS_SATURATION_pote_0D
+     module procedure ATMOS_SATURATION_pote_3D
+  end interface ATMOS_SATURATION_pote
 
   interface ATMOS_SATURATION_moist_conversion_dens_liq
      module procedure ATMOS_SATURATION_moist_conversion_dens_liq_0D
@@ -1728,6 +1735,74 @@ contains
     if ( error ) call PRC_abort
 
   end subroutine ATMOS_SATURATION_tdew_liq_3D
+
+  !-----------------------------------------------------------------------------
+  !> calculate equivalent potential temperature
+  !>  Bolton, D., 1980: The computation of equivalent potential temperature. Monthly Weather Rev., 108, 1046-1053.
+  !> PT_E = PT exp( L QV / (CPdry T) f )
+  !> f ~ 1.0784 ( 1 + 0.810 QV )
+  !> Here T_L is temperature at the lifting condensation level and
+  !> T_L ~ 55 + 2840 / ( CPdry/Rdry log(T) - log(P_v) - 4.805 )
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_SATURATION_pote_0D( &
+       DENS, POTT, TEMP, QV, &
+       POTE                  )
+    use scale_const, only: &
+       Rdry  => CONST_Rdry, &
+       CPdry => CONST_CPdry
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_LHV
+    real(RP), intent(in) :: DENS
+    real(RP), intent(in) :: POTT
+    real(RP), intent(in) :: TEMP
+    real(RP), intent(in) :: QV
+
+    real(RP), intent(out) :: POTE
+
+    real(RP) :: TL !> temperature at the lifting condensation level
+    real(RP) :: Pv !> vapor pressure
+    real(RP) :: LHV
+
+    Pv = DENS * QV * Rvap * TEMP
+    TL = 55.0_RP + 2840.0_RP / ( CPdry / Rdry * log(TEMP) - log(Pv) - 4.805_RP )
+    call ATMOS_HYDROMETEOR_LHV( LHV, TEMP ) ! [OUT], [IN]
+
+    POTE = POTT * exp( LHV * QV / ( CPdry * TEMP ) &
+                     * 1.0784_RP * ( 1.0_RP + 0.810_RP * QV ) )
+
+    return
+  end subroutine ATMOS_SATURATION_pote_0D
+
+  subroutine ATMOS_SATURATION_pote_3D( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       DENS, POTT, TEMP, QV, &
+       POTE                  )
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: POTT(KA,IA,JA)
+    real(RP), intent(in) :: TEMP(KA,IA,JA)
+    real(RP), intent(in) :: QV  (KA,IA,JA)
+
+    real(RP), intent(out) :: POTE(KA,IA,JA)
+
+    integer :: k, i, j
+
+    !$omp parallel do
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       call ATMOS_SATURATION_pote_0D( &
+            DENS(k,i,j), POTT(k,i,j), TEMP(k,i,j), QV(k,i,j), & ! [IN]
+            POTE(k,i,j)                                       ) ! [OUT]
+    end do
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_SATURATION_pote_3D
 
   !-----------------------------------------------------------------------------
   !> Iterative moist conversion for liquid water at constant density (volume)

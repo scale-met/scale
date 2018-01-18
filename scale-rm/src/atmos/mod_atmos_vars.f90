@@ -185,6 +185,7 @@ module mod_atmos_vars
   real(RP), allocatable, target :: POTV (:,:,:) !> virtual pot. temp.      [K]
   real(RP), allocatable, target :: TEML (:,:,:) !> liquid water temp.      [K]
   real(RP), allocatable, target :: POTL (:,:,:) !> liquid water pot. temp. [K]
+  real(RP), allocatable, target :: POTE (:,:,:) !> equivalent pot. temp.   [K]
 
   real(RP), allocatable, target :: QTOT (:,:,:) !> total water content  [1]
   real(RP), allocatable, target :: QHYD (:,:,:) !> total hydrometeornt  [1]
@@ -268,57 +269,59 @@ module mod_atmos_vars
   integer,     private, parameter :: I_POTV      = 16
   integer,     private, parameter :: I_TEML      = 17
   integer,     private, parameter :: I_POTL      = 18
-  integer,     private, parameter :: I_QTOT      = 19
-  integer,     private, parameter :: I_QHYD      = 20
-  integer,     private, parameter :: I_QLIQ      = 21
-  integer,     private, parameter :: I_QICE      = 22
-  integer,     private, parameter :: I_LWP       = 23
-  integer,     private, parameter :: I_IWP       = 24
-  integer,     private, parameter :: I_PW        = 25
-  integer,     private, parameter :: I_PREC      = 26
-  integer,     private, parameter :: I_RAIN      = 27
-  integer,     private, parameter :: I_SNOW      = 28
-  integer,     private, parameter :: I_QSAT      = 29
-  integer,     private, parameter :: I_RHA       = 30
-  integer,     private, parameter :: I_RHL       = 31
-  integer,     private, parameter :: I_RHI       = 32
-  integer,     private, parameter :: I_VOR       = 33
-  integer,     private, parameter :: I_DIV       = 34
-  integer,     private, parameter :: I_HDIV      = 35
-  integer,     private, parameter :: I_Uabs      = 36
-  integer,     private, parameter :: I_N2        = 37
-  integer,     private, parameter :: I_PBLH      = 38
-  integer,     private, parameter :: I_MSE       = 39
-  integer,     private, parameter :: I_TDEW      = 40
-  integer,     private, parameter :: I_CAPE      = 41
-  integer,     private, parameter :: I_CIN       = 42
-  integer,     private, parameter :: I_LCL       = 43
-  integer,     private, parameter :: I_LFC       = 44
-  integer,     private, parameter :: I_LNB       = 45
-  integer,     private, parameter :: I_ENGT      = 46
-  integer,     private, parameter :: I_ENGP      = 47
-  integer,     private, parameter :: I_ENGK      = 48
-  integer,     private, parameter :: I_ENGI      = 49
-  integer,     private, parameter :: I_DENS_MEAN = 50
-  integer,     private, parameter :: I_W_MEAN    = 51
-  integer,     private, parameter :: I_U_MEAN    = 52
-  integer,     private, parameter :: I_V_MEAN    = 53
-  integer,     private, parameter :: I_PT_MEAN   = 54
-  integer,     private, parameter :: I_T_MEAN    = 55
-  integer,     private, parameter :: I_QV_MEAN   = 56
-  integer,     private, parameter :: I_QHYD_MEAN = 57
-  integer,     private, parameter :: I_QLIQ_MEAN = 58
-  integer,     private, parameter :: I_QICE_MEAN = 59
-  integer,     private, parameter :: I_DENS_PRIM = 60
-  integer,     private, parameter :: I_W_PRIM    = 61
-  integer,     private, parameter :: I_U_PRIM    = 62
-  integer,     private, parameter :: I_V_PRIM    = 63
-  integer,     private, parameter :: I_PT_PRIM   = 64
-  integer,     private, parameter :: I_W_PRIM2   = 65
-  integer,     private, parameter :: I_PT_W_PRIM = 66
-  integer,     private, parameter :: I_W_PRIM3   = 67
-  integer,     private, parameter :: I_TKE_RS    = 68
-  integer,     private, parameter :: DV_nmax     = 68
+  integer,     private, parameter :: I_POTE      = 19
+  integer,     private, parameter :: I_QTOT      = 20
+  integer,     private, parameter :: I_QHYD      = 21
+  integer,     private, parameter :: I_QLIQ      = 22
+  integer,     private, parameter :: I_QICE      = 23
+  integer,     private, parameter :: I_LWP       = 24
+  integer,     private, parameter :: I_IWP       = 25
+  integer,     private, parameter :: I_PW        = 26
+  integer,     private, parameter :: I_PREC      = 27
+  integer,     private, parameter :: I_RAIN      = 28
+  integer,     private, parameter :: I_SNOW      = 29
+  integer,     private, parameter :: I_QSAT      = 30
+  integer,     private, parameter :: I_RHA       = 31
+  integer,     private, parameter :: I_RHL       = 32
+  integer,     private, parameter :: I_RHI       = 33
+  integer,     private, parameter :: I_VOR       = 34
+  integer,     private, parameter :: I_DIV       = 35
+  integer,     private, parameter :: I_HDIV      = 36
+  integer,     private, parameter :: I_Uabs      = 37
+  integer,     private, parameter :: I_N2        = 38
+  integer,     private, parameter :: I_PBLH      = 39
+  integer,     private, parameter :: I_MSE       = 40
+  integer,     private, parameter :: I_TDEW      = 41
+  integer,     private, parameter :: I_CAPE      = 42
+  integer,     private, parameter :: I_CIN       = 43
+  integer,     private, parameter :: I_LCL       = 44
+  integer,     private, parameter :: I_LFC       = 45
+  integer,     private, parameter :: I_LNB       = 46
+  integer,     private, parameter :: I_ENGT      = 47
+  integer,     private, parameter :: I_ENGP      = 48
+  integer,     private, parameter :: I_ENGK      = 49
+  integer,     private, parameter :: I_ENGI      = 50
+  integer,     private, parameter :: I_DENS_MEAN = 51
+  integer,     private, parameter :: I_W_MEAN    = 52
+  integer,     private, parameter :: I_U_MEAN    = 53
+  integer,     private, parameter :: I_V_MEAN    = 54
+  integer,     private, parameter :: I_PT_MEAN   = 55
+  integer,     private, parameter :: I_T_MEAN    = 56
+  integer,     private, parameter :: I_QV_MEAN   = 57
+  integer,     private, parameter :: I_QHYD_MEAN = 58
+  integer,     private, parameter :: I_QLIQ_MEAN = 59
+  integer,     private, parameter :: I_QICE_MEAN = 60
+  integer,     private, parameter :: I_DENS_PRIM = 61
+  integer,     private, parameter :: I_W_PRIM    = 62
+  integer,     private, parameter :: I_U_PRIM    = 63
+  integer,     private, parameter :: I_V_PRIM    = 64
+  integer,     private, parameter :: I_PT_PRIM   = 65
+  integer,     private, parameter :: I_W_PRIM2   = 66
+  integer,     private, parameter :: I_PT_W_PRIM = 67
+  integer,     private, parameter :: I_W_PRIM3   = 68
+  integer,     private, parameter :: I_TKE_RS    = 69
+
+  integer,     private, parameter :: DV_nmax     = 69
   type(Vinfo), private            :: DV_info(DV_nmax)
   logical,     private            :: DV_calclated(DV_nmax)
 
@@ -339,8 +342,9 @@ module mod_atmos_vars
        Vinfo( 'LHS',       'latent heat for sublimation',     'J/kg',    3, '', '', '' ), &
        Vinfo( 'LHF',       'latent heat for fusion',          'J/kg',    3, '', '', '' ), &
        Vinfo( 'POTV',      'virtual potential temp.',         'K',       3, '', '', '' ), &
-       Vinfo( 'TEML',      'liq. water temperature',          'K',       3, '', '', '' ), &
-       Vinfo( 'POTL',      'liq. water potential temp.',      'K',       3, '', '', '' ), &
+       Vinfo( 'TEML',      'liquid water temperature',        'K',       3, '', '', '' ), &
+       Vinfo( 'POTL',      'liquid water potential temp.',    'K',       3, '', '', '' ), &
+       Vinfo( 'POTE',      'equivalent potential temp.',      'K',       3, '', '', '' ), &
        Vinfo( 'QTOT',      'total water',                     'kg/kg',   3, '', '', '' ), &
        Vinfo( 'QHYD',      'total hydrometeors',              'kg/kg',   3, '', '', '' ), &
        Vinfo( 'QLIQ',      'total liquid water',              'kg/kg',   3, '', '', '' ), &
@@ -1439,7 +1443,8 @@ contains
        ATMOS_SATURATION_psat_all, &
        ATMOS_SATURATION_psat_liq, &
        ATMOS_SATURATION_psat_ice, &
-       ATMOS_SATURATION_tdew_liq
+       ATMOS_SATURATION_tdew_liq, &
+       ATMOS_SATURATION_pote
     use scale_atmos_diagnostic, only: &
        ATMOS_DIAGNOSTIC_get_potv, &
        ATMOS_DIAGNOSTIC_get_teml, &
@@ -1569,6 +1574,15 @@ contains
        end if
        var => POTL
 
+    case ( 'POTE' )
+       if ( .not. DV_calclated(I_POTE) ) then
+          if ( .not. allocated(POTE) ) allocate( POTE(KA,IA,JA) )
+          call ATMOS_SATURATION_pote( &
+               KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+               DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), QV(:,:,:), & ! [IN]
+               POTE(:,:,:)                                       ) ! [OUT]
+       end if
+       var => POTE
     case ( 'QTOT' )
        if ( .not. DV_calclated(I_QTOT) ) then
           if ( .not. allocated(QTOT) ) allocate( QTOT(KA,IA,JA) )
