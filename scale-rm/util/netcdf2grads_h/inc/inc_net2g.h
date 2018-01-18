@@ -38,6 +38,7 @@
   integer,  parameter :: vt_land   = 3  ! vtype index
   integer,  parameter :: vt_urban  = 4  ! vtype index
   integer,  parameter :: vt_tpmsk  = 5  ! vtype index
+  integer,  parameter :: vt_ocean  = 6  ! vtype index
 
   integer,  parameter :: a_slice   = 0  ! atype index
   integer,  parameter :: a_max     = 1  ! atype index
@@ -72,5 +73,5 @@
                   6000, 7000, 8000, 9000, 10000, 11000, 12000 /
 
   integer,  parameter :: num_std_vname = 6
-  character(CSHT) :: std_vname(num_std_vname)
+  character(CMID) :: std_vname(num_std_vname)
   data std_vname / "PT", "PRES", "U", "V", "W", "QHYD" /

@@ -39,10 +39,10 @@ module mod_net2g_vars
   integer,         public :: TARGET_ZLEV(max_zcount) = -1
   real(DP),        public :: EXTRA_TINTERVAL = -9.999
   character(5),    public :: EXTRA_TUNIT    = ""
-  character(CLNG), public :: IDIR           = "./data"
+  character(CLNG), public :: IDIR           = "./"
   character(CLNG), public :: ODIR           = "."
   character(CLNG), public :: CONFFILE       = "./run.conf"
-  character(CSHT), public :: VNAME(max_vcount) = ""
+  character(CMID), public :: VNAME(max_vcount) = ""
   character(CSHT), public :: Z_LEV_TYPE     = "original"
   character(5),    public :: DELT           = "1mn"
   character(15),   public :: STIME          = "00:00Z01JAN2000"
