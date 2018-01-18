@@ -52,6 +52,9 @@ program sno
      SNO_vars_dealloc, &
      SNO_vars_read,    &
      SNO_vars_write
+  use mod_sno_grads, only: &
+     SNO_grads_setup, &
+     SNO_grads_write
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -66,16 +69,18 @@ program sno
 
   ! namelist parameters
   character(len=H_LONG)   :: basename_in      = ''       ! Basename of the input  file
+  character(len=H_LONG)   :: dirpath_out      = ''       ! directory path for the output file
   character(len=H_LONG)   :: basename_out     = ''       ! Basename of the output file
   integer                 :: nprocs_x_out     = 1        ! x length of 2D processor topology (output)
   integer                 :: nprocs_y_out     = 1        ! y length of 2D processor topology (output)
   character(len=H_SHORT)  :: vars(item_limit) = ''       ! name of variables
-  logical                 :: output_grads     = .false.
+  logical                 :: output_grads     = .false.  ! output grads fortmat file?
   logical                 :: output_gradsctl  = .false.  ! output grads control file for reading single NetCDF file?
   logical                 :: debug            = .false.
 
   namelist / PARAM_SNO / &
        basename_in,     &
+       dirpath_out,     &
        basename_out,    &
        nprocs_x_out,    &
        nprocs_y_out,    &
@@ -170,6 +175,10 @@ program sno
      call PRC_MPIstop
   endif
   if( IO_NML ) write(IO_FID_NML,nml=PARAM_SNO)
+
+  call SNO_grads_setup( nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
+                        output_grads,               & ! [IN] from namelist
+                        output_gradsctl             ) ! [IN] from namelist
 
   ! allocate output files to executing processes
   call SNO_proc_alloc( nprocs, myrank, ismaster,   & ! [IN] from MPI
@@ -327,18 +336,16 @@ program sno
 !                  call plugin_timeaverage_store( debug ) ! [IN]
 
                  if ( output_grads ) then
-!                     call SNO_grads_write( basename_out,               & ! [IN] from namelist
-!                                           p,                          & ! [IN]
-!                                           t,                          & ! [IN]
-!                                           nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
-!                                           nhalos_x,     nhalos_y,     & ! [IN] from SNO_file_getinfo
-!                                           hinfo,                      & ! [IN] from SNO_file_getinfo
-!                                           naxis,                      & ! [IN] from SNO_file_getinfo
-!                                           ainfo(:),                   & ! [IN] from SNO_axis_getinfo
-!                                           dinfo(v),                   & ! [IN] from SNO_vars_getinfo
-!                                           debug                       ) ! [IN]
+                    call SNO_grads_write( dirpath_out, & ! [IN] from namelist
+                                          t,           & ! [IN]
+                                          hinfo,       & ! [IN] from SNO_file_getinfo
+                                          naxis,       & ! [IN] from SNO_file_getinfo
+                                          ainfo(:),    & ! [IN] from SNO_axis_getinfo
+                                          dinfo(v),    & ! [IN] from SNO_vars_getinfo
+                                          debug        ) ! [IN]
                  else
-                    call SNO_vars_write( basename_out,               & ! [IN] from namelist
+                    call SNO_vars_write( dirpath_out,                & ! [IN] from namelist
+                                         basename_out,               & ! [IN] from namelist
                                          p,                          & ! [IN]
                                          t,                          & ! [IN]
                                          nprocs_x_out, nprocs_y_out, & ! [IN] from namelist

@@ -796,6 +796,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine SNO_vars_write( &
+       dirpath,       &
        basename,      &
        nowrank,       &
        nowstep,       &
@@ -831,6 +832,7 @@ contains
        SNO_axis_write
     implicit none
 
+    character(len=*), intent(in)    :: dirpath                               ! directory path                     (output)
     character(len=*), intent(in)    :: basename                              ! basename of file                   (output)
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
@@ -844,12 +846,11 @@ contains
     type(iteminfo),   intent(in)    :: dinfo                                 ! variable information               (input)
     logical,          intent(in)    :: debug
 
-    integer  :: fid
-    logical  :: fileexisted
-
-    integer  :: vid
-    real(DP) :: tint
-
+    character(len=H_LONG) :: basename_mod
+    integer               :: fid
+    logical               :: fileexisted
+    integer               :: vid
+    real(DP)              :: tint
     real(SP), allocatable :: VAR_1d_SP(:), VAR_2d_SP(:,:), VAR_3d_SP(:,:,:)
     real(DP), allocatable :: VAR_1d_DP(:), VAR_2d_DP(:,:), VAR_3d_DP(:,:,:)
 
@@ -857,9 +858,15 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
+    if ( dirpath == '' ) then
+       basename_mod = trim(basename)
+    else
+       basename_mod = trim(dirpath)//'/'//trim(basename)
+    endif
+
     call FileCreate( fid,                          & ! [OUT]
                      fileexisted,                  & ! [OUT]
-                     basename,                     & ! [IN]
+                     basename_mod,                 & ! [IN]
                      hinfo%title,                  & ! [IN]
                      hinfo%source,                 & ! [IN]
                      hinfo%institute,              & ! [IN]
