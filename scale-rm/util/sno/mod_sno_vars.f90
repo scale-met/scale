@@ -541,35 +541,64 @@ contains
                 enddo
                 enddo
 
-                if ( stgin1 > 0 .AND. stgout1 > 0 ) then
-                   do j = 1, ngrids_y_out
-                   do i = 1, stgout1
-                      localmap_2d(i,j+stgout2,I_map_p) = localmap(1,j,I_map_p)
-                      localmap_2d(i,j+stgout2,I_map_i) = i
-                      localmap_2d(i,j+stgout2,I_map_j) = localmap(1,j,I_map_j) + stgin2
-                   enddo
-                   enddo
+                if ( stgout1 > 0 ) then
+                   if ( stgin1 > 0 ) then
+                      do j = 1, ngrids_y_out
+                      do i = 1, stgout1
+                         localmap_2d(i,j+stgout2,I_map_p) = localmap(1,j,I_map_p)
+                         localmap_2d(i,j+stgout2,I_map_i) = i
+                         localmap_2d(i,j+stgout2,I_map_j) = localmap(1,j,I_map_j) + stgin2
+                      enddo
+                      enddo
+                   else
+                      do j = 1, ngrids_y_out
+                      do i = 1, stgout1
+                         localmap_2d(i,j+stgout2,I_map_p) = -1
+                         localmap_2d(i,j+stgout2,I_map_i) = -1
+                         localmap_2d(i,j+stgout2,I_map_j) = -1
+                      enddo
+                      enddo
+                   endif
                 endif
 
-                if ( stgin2 > 0 .AND. stgout2 > 0 ) then
-                   do j = 1, stgout2
-                   do i = 1, ngrids_x_out
-                      localmap_2d(i+stgout1,j,I_map_p) = localmap(i,1,I_map_p)
-                      localmap_2d(i+stgout1,j,I_map_i) = localmap(i,1,I_map_i) + stgin1
-                      localmap_2d(i+stgout1,j,I_map_j) = j
-                   enddo
-                   enddo
+                if ( stgout2 > 0 ) then
+                   if ( stgin2 > 0 ) then
+                      do j = 1, stgout2
+                      do i = 1, ngrids_x_out
+                         localmap_2d(i+stgout1,j,I_map_p) = localmap(i,1,I_map_p)
+                         localmap_2d(i+stgout1,j,I_map_i) = localmap(i,1,I_map_i) + stgin1
+                         localmap_2d(i+stgout1,j,I_map_j) = j
+                      enddo
+                      enddo
+                   else
+                      do j = 1, stgout2
+                      do i = 1, ngrids_x_out
+                         localmap_2d(i+stgout1,j,I_map_p) = -1
+                         localmap_2d(i+stgout1,j,I_map_i) = -1
+                         localmap_2d(i+stgout1,j,I_map_j) = -1
+                      enddo
+                      enddo
+                   endif
                 endif
 
-                if (       stgin1 > 0 .AND. stgout1 > 0 &
-                     .AND. stgin2 > 0 .AND. stgout2 > 0 ) then
-                   do j = 1, stgout2
-                   do i = 1, stgout1
-                      localmap_2d(i,j,I_map_p) = localmap(1,1,I_map_p)
-                      localmap_2d(i,j,I_map_i) = i
-                      localmap_2d(i,j,I_map_j) = j
-                   enddo
-                   enddo
+                if ( stgout1 > 0 .AND. stgout2 > 0 ) then
+                   if ( stgin1 > 0 .AND. stgin2 > 0 ) then
+                      do j = 1, stgout2
+                      do i = 1, stgout1
+                         localmap_2d(i,j,I_map_p) = localmap(1,1,I_map_p)
+                         localmap_2d(i,j,I_map_i) = i
+                         localmap_2d(i,j,I_map_j) = j
+                      enddo
+                      enddo
+                   else
+                      do j = 1, stgout2
+                      do i = 1, stgout1
+                         localmap_2d(i,j,I_map_p) = -1
+                         localmap_2d(i,j,I_map_i) = -1
+                         localmap_2d(i,j,I_map_j) = -1
+                      enddo
+                      enddo
+                   endif
                 endif
 
                 call SNO_read_map_2d( basename, p, nowstep, & ! [IN]
@@ -670,35 +699,64 @@ contains
                 enddo
                 enddo
 
-                if ( stgin2 > 0 .AND. stgout2 > 0 ) then
-                   do j = 1, ngrids_y_out
-                   do i = 1, stgout2
-                      localmap_2d(i,j+stgout3,I_map_p) = localmap(1,j,I_map_p)
-                      localmap_2d(i,j+stgout3,I_map_i) = i
-                      localmap_2d(i,j+stgout3,I_map_j) = localmap(1,j,I_map_j) + stgin3
-                   enddo
-                   enddo
+                if ( stgout2 > 0 ) then
+                   if ( stgin2 > 0 ) then
+                      do j = 1, ngrids_y_out
+                      do i = 1, stgout2
+                         localmap_2d(i,j+stgout3,I_map_p) = localmap(1,j,I_map_p)
+                         localmap_2d(i,j+stgout3,I_map_i) = i
+                         localmap_2d(i,j+stgout3,I_map_j) = localmap(1,j,I_map_j) + stgin3
+                      enddo
+                      enddo
+                   else
+                      do j = 1, ngrids_y_out
+                      do i = 1, stgout2
+                         localmap_2d(i,j+stgout3,I_map_p) = -1
+                         localmap_2d(i,j+stgout3,I_map_i) = -1
+                         localmap_2d(i,j+stgout3,I_map_j) = -1
+                      enddo
+                      enddo
+                   endif
                 endif
 
-                if ( stgin3 > 0 .AND. stgout3 > 0 ) then
-                   do j = 1, stgout3
-                   do i = 1, ngrids_x_out
-                      localmap_2d(i+stgout2,j,I_map_p) = localmap(i,1,I_map_p)
-                      localmap_2d(i+stgout2,j,I_map_i) = localmap(i,1,I_map_i) + stgin2
-                      localmap_2d(i+stgout2,j,I_map_j) = j
-                   enddo
-                   enddo
+                if ( stgout3 > 0 ) then
+                   if ( stgin3 > 0 ) then
+                      do j = 1, stgout3
+                      do i = 1, ngrids_x_out
+                         localmap_2d(i+stgout2,j,I_map_p) = localmap(i,1,I_map_p)
+                         localmap_2d(i+stgout2,j,I_map_i) = localmap(i,1,I_map_i) + stgin2
+                         localmap_2d(i+stgout2,j,I_map_j) = j
+                      enddo
+                      enddo
+                   else
+                      do j = 1, stgout3
+                      do i = 1, ngrids_x_out
+                         localmap_2d(i+stgout2,j,I_map_p) = -1
+                         localmap_2d(i+stgout2,j,I_map_i) = -1
+                         localmap_2d(i+stgout2,j,I_map_j) = -1
+                      enddo
+                      enddo
+                   endif
                 endif
 
-                if (       stgin2 > 0 .AND. stgout2 > 0 &
-                     .AND. stgin3 > 0 .AND. stgout3 > 0 ) then
-                   do j = 1, stgout3
-                   do i = 1, stgout2
-                      localmap_2d(i,j,I_map_p) = localmap(1,1,I_map_p)
-                      localmap_2d(i,j,I_map_i) = i
-                      localmap_2d(i,j,I_map_j) = j
-                   enddo
-                   enddo
+                if ( stgout2 > 0 .AND. stgout3 > 0 ) then
+                   if ( stgin2 > 0 .AND. stgin3 > 0 ) then
+                      do j = 1, stgout3
+                      do i = 1, stgout2
+                         localmap_2d(i,j,I_map_p) = localmap(1,1,I_map_p)
+                         localmap_2d(i,j,I_map_i) = i
+                         localmap_2d(i,j,I_map_j) = j
+                      enddo
+                      enddo
+                   else
+                      do j = 1, stgout3
+                      do i = 1, stgout2
+                         localmap_2d(i,j,I_map_p) = -1
+                         localmap_2d(i,j,I_map_i) = -1
+                         localmap_2d(i,j,I_map_j) = -1
+                      enddo
+                      enddo
+                   endif
                 endif
 
                 call SNO_read_map_3d( basename, p, nowstep, & ! [IN]

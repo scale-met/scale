@@ -32,8 +32,6 @@ program sno
      CONST_setup
   use scale_calendar, only: &
      CALENDAR_setup
-  use scale_random, only: &
-     RANDOM_setup
   use mod_sno_h
   use mod_sno, only: &
      SNO_proc_alloc,   &
@@ -158,9 +156,6 @@ program sno
 
   ! setup calendar
   call CALENDAR_setup
-
-  ! setup random number
-  call RANDOM_setup
 
   if( IO_L ) write(IO_FID_LOG,*)
   if( IO_L ) write(IO_FID_LOG,*) '++++++ Program[SNO] / Categ[Utility] / Origin[SCALE-RM]'
