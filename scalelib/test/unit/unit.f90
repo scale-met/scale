@@ -6,10 +6,8 @@ program unit
   use scale_tracer
 
   use scale_process, only: &
-     PRC_UNIVERSAL_setup,  &
-     PRC_global_setup,  &
-     PRC_LOCAL_setup,  &
-     PRC_MPIfinish, &
+     PRC_SINGLECOM_setup, &
+     PRC_MPIfinish,       &
      PRC_MPIstart
   use scale_rm_process, only: &
      PRC_setup
@@ -41,9 +39,7 @@ program unit
   call IO_setup( MODELNAME, .false. )
 
   ! setup MPI
-  call PRC_UNIVERSAL_setup( MPI_COMM_WORLD, nprocs, ismaster )
-  call PRC_GLOBAL_setup( .true., MPI_COMM_WORLD )
-  call PRC_LOCAL_setup( comm, myrank, ismaster )
+  call PRC_SINGLECOM_setup( comm, nprocs, myrank, ismaster )
 
   ! setup Log
   call IO_LOG_setup( myrank, ismaster )

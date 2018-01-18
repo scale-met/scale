@@ -47,6 +47,7 @@ module gtool_file
   public :: FileAddVariable
   public :: FileDefineVariable
   public :: FileGetShape
+  public :: FileGetCommoninfo
   public :: FileGetDatainfo
   public :: FileGetAllDatainfo
   public :: FileRead
@@ -64,10 +65,16 @@ module gtool_file
   public :: FileAttachBuffer
   public :: FileDetachBuffer
 
+  interface FileGetCommoninfo
+     module procedure FileGetCommoninfoFId
+     module procedure FileGetCommoninfoFName
+  end interface FileGetCommoninfo
+
   interface FileGetDatainfo
      module procedure FileGetDatainfoFId
      module procedure FileGetDatainfoFName
   end interface FileGetDatainfo
+
   interface FileGetAllDatainfo
      module procedure FileGetAllDatainfoFId
      module procedure FileGetAllDatainfoFName
@@ -173,106 +180,150 @@ module gtool_file
 
   character(len=LOG_LMSG),   private            :: message
 
+  !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   subroutine FileCreate( &
-       fid,         & ! (out)
-       existed,     & ! (out)
-       basename,    & ! (in)
-       title,       & ! (in)
-       source,      & ! (in)
-       institution, & ! (in)
-       master,      & ! (in)
-       myrank,      & ! (in)
-       rankidx,     & ! (in)
-       procsize,    & ! (in)
-       single,      & ! (in) optional
-       time_units,  & ! (in) optional
-       append,      & ! (in) optional
-       comm         ) ! (in) optional
-    use MPI, only : MPI_COMM_NULL
+       fid,         &
+       existed,     &
+       basename,    &
+       title,       &
+       source,      &
+       institution, &
+       master,      &
+       myrank,      &
+       single,      &
+       time_units,  &
+       append,      &
+       comm         )
+    use mpi, only: &
+       MPI_COMM_NULL
     implicit none
 
-    integer,          intent(out)           :: fid
-    logical,          intent(out)           :: existed
-    character(len=*), intent( in)           :: basename
-    character(len=*), intent( in)           :: title
-    character(len=*), intent( in)           :: source
-    character(len=*), intent( in)           :: institution
-    integer,          intent( in)           :: master
-    integer,          intent( in)           :: myrank
-    integer,          intent( in)           :: rankidx(:)
-    integer,          intent( in)           :: procsize(:)
-    character(len=*), intent( in), optional :: time_units
-    logical,          intent( in), optional :: single
-    logical,          intent( in), optional :: append
-    integer,          intent( in), optional :: comm ! MPI communicator
+    integer,          intent(out) :: fid
+    logical,          intent(out) :: existed
+    character(len=*), intent(in)  :: basename
+    character(len=*), intent(in)  :: title
+    character(len=*), intent(in)  :: source
+    character(len=*), intent(in)  :: institution
+    integer,          intent(in)  :: master
+    integer,          intent(in)  :: myrank
+
+    logical,          intent(in), optional :: single
+    character(len=*), intent(in), optional :: time_units
+    logical,          intent(in), optional :: append
+    integer,          intent(in), optional :: comm       ! MPI communicator
 
     character(len=File_HMID) :: time_units_
     logical :: single_
     integer :: mode
-    integer :: error
 
-    intrinsic size
+    integer :: error
+    !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
+
+    single_ = .false.
+    if ( present(single) ) then
+       if( single .AND. myrank /= master ) return ! do nothing
+       single_ = single
+    endif
 
     if ( present(time_units) ) then
        time_units_ = time_units
     else
        time_units_ = 'seconds'
-    end if
-
-    mpi_myrank = myrank
-
-    if ( present(single) ) then
-       if ( single .and. (myrank .ne. master) ) return
-       single_ = single
-    else
-       single_ = .false.
     endif
 
     mode = File_FWRITE
     if ( present(append) ) then
-       if ( append ) mode = File_FAPPEND
-    end if
+       if( append ) mode = File_FAPPEND
+    endif
 
-    call FileGetfid( &
-         fid,        & ! (out)
-         existed,    & ! (out)
-         basename,   & ! (in)
-         mode,       & ! (in)
-         single_,    & ! (in)
-         comm        & ! (in)
-         )
+    call FileGetfid( fid,      & ! [OUT]
+                     existed,  & ! [OUT]
+                     basename, & ! [IN]
+                     mode,     & ! [IN]
+                     single_,  & ! [IN]
+                     comm      ) ! [IN]
 
-    if ( existed ) return
+    if( existed ) return
 
     !--- append package header to the file
-    call FileSetGlobalAttribute( fid, & ! (in)
-         "title", title               ) ! (in)
-    call FileSetGlobalAttribute( fid, & ! (in)
-         "source", source             ) ! (in)
-    call FileSetGlobalAttribute( fid, & ! (in)
-         "institution", institution   ) ! (in)
+    call FileSetGlobalAttribute( fid, "title"      , title       ) ! [IN]
+    call FileSetGlobalAttribute( fid, "source"     , source      ) ! [IN]
+    call FileSetGlobalAttribute( fid, "institution", institution ) ! [IN]
 
     if ( .NOT. present(comm) .OR. comm == MPI_COMM_NULL ) then
        ! for shared-file parallel I/O, skip attributes related to MPI processes
-       call FileSetGlobalAttribute( fid, & ! (in)
-            "myrank", (/myrank/)         ) ! (in)
-       call FileSetGlobalAttribute( fid, & ! (in)
-            "rankidx", rankidx(:)        ) ! (in)
-       call FileSetGlobalAttribute( fid, & ! (in)
-            "procsize", procsize(:)      ) ! (in)
-    end if
+       call FileSetGlobalAttribute( fid, "myrank"  , (/myrank/)  ) ! [IN]
+    endif
 
-    call file_set_tunits( fid, & ! (in)
-         time_units_,          & ! (in)
-         error                 ) ! (out)
+    call file_set_tunits( fid,         & ! [IN]
+                          time_units_, & ! [IN]
+                          error        ) ! [OUT]
+
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to set time units')
-    end if
+    endif
 
     return
   end subroutine FileCreate
+
+  !-----------------------------------------------------------------------------
+  subroutine FileGetVarnum( &
+       fid,         &
+       nvars_limit, &
+       nvars        )
+    implicit none
+
+    integer, intent(in)  :: fid
+    integer, intent(in)  :: nvars_limit
+    integer, intent(out) :: nvars
+
+    integer :: error
+    !---------------------------------------------------------------------------
+
+    call file_get_nvars( fid,         & ! (in)
+                         nvars, error ) ! (out)
+
+    if ( error /= SUCCESS_CODE ) then
+       write(message,*) 'xxx [FileGetVarnum] failed to get varnum. fid = ', fid
+       call Log('E', message)
+    end if
+
+    if ( nvars > nvars_limit ) then
+       write(message,*) 'xxx [FileGetCommoninfo] number of variables exceeds the requested size.', nvars, nvars_limit
+       call Log('E', message)
+    endif
+
+    return
+  end subroutine FileGetVarnum
+
+  !-----------------------------------------------------------------------------
+  subroutine FileGetVarname( &
+       fid,    &
+       vid,    &
+       varname )
+    implicit none
+
+    integer,          intent(in)  :: fid
+    integer,          intent(in)  :: vid
+    character(len=*), intent(out) :: varname
+
+    integer :: error
+    !---------------------------------------------------------------------------
+
+    call file_get_varname( fid, vid,      & ! (in)
+                           varname, error ) ! (out)
+
+    if ( error /= SUCCESS_CODE ) then
+       write(message,*) 'xxx [FileGetVarname] failed to get varname. vid = ', vid
+       call Log('E', message)
+    end if
+
+    return
+  end subroutine FileGetVarname
 
   !-----------------------------------------------------------------------------
   subroutine FileGetGlobalAttributeText( &
@@ -1127,30 +1178,117 @@ contains
   end subroutine FileGetShape
 
   !-----------------------------------------------------------------------------
+  ! FileGetCommoninfo
+  !-----------------------------------------------------------------------------
+  subroutine FileGetCommoninfoFName( &
+       basename,    &
+       myrank,      &
+       nvars_limit, &
+       title,       &
+       source,      &
+       institution, &
+       nvars,       &
+       varname      )
+    implicit none
+
+    character(len=*),           intent(in)  :: basename
+    integer,                    intent(in)  :: myrank
+    integer,                    intent(in)  :: nvars_limit
+    character(len=File_HMID),   intent(out) :: title                ! title of the file
+    character(len=File_HMID),   intent(out) :: source               ! for file header
+    character(len=File_HMID),   intent(out) :: institution          ! for file header
+    integer,                    intent(out) :: nvars                ! number of variables
+    character(len=File_HSHORT), intent(out) :: varname(nvars_limit) ! name of variables
+
+    integer :: fid
+    !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
+
+    call FileOpen( fid,       & ! [OUT]
+                   basename,  & ! [IN]
+                   File_FREAD ) ! [IN]
+
+    call FileGetCommoninfoFId( fid,         & ! [IN]
+                               myrank,      & ! [IN]
+                               nvars_limit, & ! [IN]
+                               title,       & ! [OUT]
+                               source,      & ! [OUT]
+                               institution, & ! [OUT]
+                               nvars,       & ! [OUT]
+                               varname(:)   ) ! [OUT]
+
+    return
+  end subroutine FileGetCommoninfoFName
+
+  subroutine FileGetCommoninfoFId( &
+       fid,         &
+       myrank,      &
+       nvars_limit, &
+       title,       &
+       source,      &
+       institution, &
+       nvars,       &
+       varname      )
+    implicit none
+
+    integer,                    intent(in)  :: fid
+    integer,                    intent(in)  :: myrank
+    integer,                    intent(in)  :: nvars_limit
+    character(len=File_HMID),   intent(out) :: title                ! title of the file
+    character(len=File_HMID),   intent(out) :: source               ! for file header
+    character(len=File_HMID),   intent(out) :: institution          ! for file header
+    integer,                    intent(out) :: nvars                ! number of variables
+    character(len=File_HSHORT), intent(out) :: varname(nvars_limit) ! name of variables
+
+    integer :: myrank_check(1)
+    integer :: v
+    !---------------------------------------------------------------------------
+
+    call FileGetGlobalAttribute( fid, 'title',       title       )
+    call FileGetGlobalAttribute( fid, 'source',      source      )
+    call FileGetGlobalAttribute( fid, 'institution', institution )
+    call FileGetGlobalAttribute( fid, 'myrank',      myrank_check(:) )
+
+    if ( myrank /= myrank_check(1) ) then
+       call Log('E','xxx [FileGetCommoninfo] requested rank number is inconsistent with that in the file.')
+    endif
+
+    call FileGetVarnum( fid, nvars_limit, nvars )
+
+    do v = 1, nvars
+       call FileGetVarname( fid, v, varname(v) )
+    enddo
+
+    return
+  end subroutine FileGetCommoninfoFId
+
+  !-----------------------------------------------------------------------------
   ! FileGetData
   !-----------------------------------------------------------------------------
   subroutine FileGetDatainfoFName( &
-      basename,    &
-      varname,     &
-      myrank,      &
-      istep,       &
-      single,      &
-      description, &
-      units,       &
-      datatype,    &
-      dim_rank,    &
-      dim_name,    &
-      dim_size,    &
-      time_start,  &
-      time_end,    &
-      time_units   )
+       basename,    &
+       varname,     &
+       myrank,      &
+       istep,       &
+       single,      &
+       description, &
+       units,       &
+       datatype,    &
+       dim_rank,    &
+       dim_name,    &
+       dim_size,    &
+       time_start,  &
+       time_end,    &
+       time_units   )
     implicit none
+
     character(len=*),           intent(in)  :: basename
     character(len=*),           intent(in)  :: varname
     integer,                    intent(in)  :: myrank
     integer,                    intent(in)  :: istep
-    logical,                    intent(in), optional :: single
 
+    logical,                    intent(in),  optional :: single
     character(len=File_HMID),   intent(out), optional :: description
     character(len=File_HSHORT), intent(out), optional :: units
     integer,                    intent(out), optional :: datatype
@@ -1163,14 +1301,15 @@ contains
 
     logical :: single_
     integer :: fid
+    !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
 
     if ( present(single) ) then
        single_ = single
     else
        single_ = .false.
-    end if
-
-    mpi_myrank = myrank
+    endif
 
     !--- search/register file
     call FileOpen( fid,        & ! [OUT]
@@ -1178,36 +1317,37 @@ contains
                    File_FREAD, & ! [IN]
                    single_     ) ! [IN]
 
-    call FileGetDatainfoFId( &
-         fid,         &
-         varname,     &
-         istep,       &
-         description, &
-         units,       &
-         datatype,    &
-         dim_rank,    &
-         dim_name,    &
-         dim_size,    &
-         time_start,  &
-         time_end,    &
-         time_units   )
+    call FileGetDatainfoFId( fid,         & ! [IN]
+                             varname,     & ! [IN]
+                             istep,       & ! [IN]
+                             description, & ! [OUT], optional
+                             units,       & ! [OUT], optional
+                             datatype,    & ! [OUT], optional
+                             dim_rank,    & ! [OUT], optional
+                             dim_name,    & ! [OUT], optional
+                             dim_size,    & ! [OUT], optional
+                             time_start,  & ! [OUT], optional
+                             time_end,    & ! [OUT], optional
+                             time_units   ) ! [OUT], optional
 
     return
   end subroutine FileGetDatainfoFName
+
   subroutine FileGetDatainfoFId( &
-      fid,         &
-      varname,     &
-      istep,       &
-      description, &
-      units,       &
-      datatype,    &
-      dim_rank,    &
-      dim_name,    &
-      dim_size,    &
-      time_start,  &
-      time_end,    &
-      time_units   )
+       fid,         &
+       varname,     &
+       istep,       &
+       description, &
+       units,       &
+       datatype,    &
+       dim_rank,    &
+       dim_name,    &
+       dim_size,    &
+       time_start,  &
+       time_end,    &
+       time_units   )
     implicit none
+
     integer,                    intent(in)  :: fid
     character(len=*),           intent(in)  :: varname
     integer,                    intent(in)  :: istep
@@ -1224,10 +1364,9 @@ contains
 
     type(datainfo) :: dinfo
 
-    integer :: ndim, idim
-    real(DP):: time(1)
-
-    integer :: error
+    real(DP) :: time(1)
+    integer  :: ndim, idim
+    integer  :: error
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -1245,47 +1384,50 @@ contains
        call Log('E', 'xxx data info not found')
     endif
 
-    if ( present(description) ) description = dinfo%description
-    if ( present(units)       ) units       = dinfo%units
-    if ( present(datatype)    ) datatype    = dinfo%datatype
-    if ( present(dim_rank)    ) dim_rank    = dinfo%rank
+    if( present(description) ) description = dinfo%description
+    if( present(units)       ) units       = dinfo%units
+    if( present(datatype)    ) datatype    = dinfo%datatype
+    if( present(dim_rank)    ) dim_rank    = dinfo%rank
 
     if ( present(dim_name) ) then
        ndim = min( dinfo%rank, size(dim_name) ) ! limit dimension rank
        do idim = 1, ndim
           dim_name(idim) = dinfo%dim_name(idim)
        enddo
-    end if
+    endif
+
     if ( present(dim_size) ) then
        ndim = min( dinfo%rank, size(dim_size) ) ! limit dimension rank
        do idim = 1, ndim
           dim_size(idim) = dinfo%dim_size(idim)
        enddo
-    end if
+    endif
 
     if ( present(time_units)  ) then
        if ( dinfo%time_units == "" ) then
           call FileGetGlobalAttribute( fid, "time_units", time_units )
        else
-          time_units  = dinfo%time_units
-       end if
-    end if
+          time_units = dinfo%time_units
+       endif
+    endif
+
     if ( present(time_start)  ) then
        if ( dinfo%time_units == "" ) then
           call FileGetGlobalAttribute( fid, "time", time )
           time_start = time(1)
        else
-          time_start  = dinfo%time_start
-       end if
-    end if
+          time_start = dinfo%time_start
+       endif
+    endif
+
     if ( present(time_end)  ) then
        if ( dinfo%time_units == "" ) then
           call FileGetGlobalAttribute( fid, "time", time )
           time_end = time(1)
        else
-          time_end  = dinfo%time_end
+          time_end = dinfo%time_end
        end if
-    end if
+    endif
 
     return
   end subroutine FileGetDatainfoFId
@@ -1294,22 +1436,22 @@ contains
   ! FileGetData
   !-----------------------------------------------------------------------------
   subroutine FileGetAllDatainfoFName( &
-      step_limit,  &
-      dim_limit,   &
-      basename,    &
-      varname,     &
-      myrank,      &
-      step_nmax,   &
-      description, &
-      units,       &
-      datatype,    &
-      dim_rank,    &
-      dim_name,    &
-      dim_size,    &
-      time_start,  &
-      time_end,    &
-      time_units,  &
-      single       )
+       step_limit,  &
+       dim_limit,   &
+       basename,    &
+       varname,     &
+       myrank,      &
+       step_nmax,   &
+       description, &
+       units,       &
+       datatype,    &
+       dim_rank,    &
+       dim_name,    &
+       dim_size,    &
+       time_start,  &
+       time_end,    &
+       time_units,  &
+       single       )
     implicit none
 
     integer,                    intent(in)  :: step_limit
@@ -1330,9 +1472,9 @@ contains
 
     logical,                    intent(in), optional :: single
 
-
     integer :: fid
     logical :: single_
+    !---------------------------------------------------------------------------
 
     mpi_myrank = myrank
 
@@ -1340,7 +1482,7 @@ contains
        single_ = single
     else
        single_ = .false.
-    end if
+    endif
 
     !--- search/register file
     call FileOpen( fid,        & ! [OUT]
@@ -1348,39 +1490,39 @@ contains
                    File_FREAD, & ! [IN]
                    single_     ) ! [IN]
 
-    call FileGetAllDatainfoFId( &
-      step_limit,  &
-      dim_limit,   &
-      fid,         &
-      varname,     &
-      step_nmax,   &
-      description, &
-      units,       &
-      datatype,    &
-      dim_rank,    &
-      dim_name,    &
-      dim_size,    &
-      time_start,  &
-      time_end,    &
-      time_units   )
+    call FileGetAllDatainfoFId( step_limit,  & ! [IN]
+                                dim_limit,   & ! [IN]
+                                fid,         & ! [IN]
+                                varname,     & ! [IN]
+                                step_nmax,   & ! [OUT]
+                                description, & ! [OUT]
+                                units,       & ! [OUT]
+                                datatype,    & ! [OUT]
+                                dim_rank,    & ! [OUT]
+                                dim_name,    & ! [OUT]
+                                dim_size,    & ! [OUT]
+                                time_start,  & ! [OUT]
+                                time_end,    & ! [OUT]
+                                time_units   ) ! [OUT]
 
     return
   end subroutine FileGetAllDatainfoFName
+
   subroutine FileGetAllDatainfoFId( &
-      step_limit,  &
-      dim_limit,   &
-      fid,         &
-      varname,     &
-      step_nmax,   &
-      description, &
-      units,       &
-      datatype,    &
-      dim_rank,    &
-      dim_name,    &
-      dim_size,    &
-      time_start,  &
-      time_end,    &
-      time_units   )
+       step_limit,  &
+       dim_limit,   &
+       fid,         &
+       varname,     &
+       step_nmax,   &
+       description, &
+       units,       &
+       datatype,    &
+       dim_rank,    &
+       dim_name,    &
+       dim_size,    &
+       time_start,  &
+       time_end,    &
+       time_units   )
     implicit none
 
     integer,                    intent(in)  :: step_limit
@@ -1400,10 +1542,11 @@ contains
 
     type(datainfo) :: dinfo
 
-    integer :: ndim
-    integer :: istep, idim
+    real(DP) :: time(1)
+    integer  :: ndim, idim
+    integer  :: error
 
-    integer :: error
+    integer  :: istep
     !---------------------------------------------------------------------------
 
     ! initialize
@@ -1443,11 +1586,22 @@ contains
              dim_size(idim) = dinfo%dim_size(idim)
           enddo
 
-          time_units = dinfo%time_units
+          if ( dinfo%time_units == "" ) then
+             call FileGetGlobalAttribute( fid, "time_units", time_units )
+             call FileGetGlobalAttribute( fid, "time", time )
+             time_start(1) = time(1)
+             time_end  (1) = time(1)
+             step_nmax = 1
+             exit
+          else
+             time_units    = dinfo%time_units
+             time_start(1) = dinfo%time_start
+             time_end  (1) = dinfo%time_end
+          endif
+       else
+          time_start(istep) = dinfo%time_start
+          time_end  (istep) = dinfo%time_end
        endif
-
-       time_start(istep) = dinfo%time_start
-       time_end  (istep) = dinfo%time_end
     enddo
 
     return
@@ -1608,19 +1762,19 @@ contains
        write(message,*) 'xxx rank is not <%=d%>', dinfo%rank
        call Log('E', message)
     end if
-    dim_size(:) = shape(var)
-    do n = 1, <%=d%>
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
-       end if
-    end do
 
     if (present(ntypes) ) then
        call file_read_data_par( var(<%=idx%>),                    & ! (out)
             dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
             error                                                 ) ! (out)
     else
+       dim_size(:) = shape(var)
+       do n = 1, <%=d%>
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call Log('E', message)
+          end if
+       end do
        call file_read_data( var(<%=idx%>), & ! (out)
             dinfo, <%=rp%>,                & ! (in)
             error                          ) ! (out)

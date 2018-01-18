@@ -45,6 +45,7 @@ module gtool_history
   public :: HistoryFileCreate
   public :: HistoryPutAxis
   public :: HistoryPutAssociatedCoordinates
+  public :: HistorySetGlobalAttribute
   public :: HistorySetAttribute
   public :: HistorySetMapping
   public :: HistoryQuery
@@ -72,6 +73,20 @@ module gtool_history
      module procedure HistoryPut4DAssociatedCoordinatesDP
   end interface HistoryPutAssociatedCoordinates
 
+  interface HistorySetGlobalAttribute
+     module procedure HistorySetGlobalAttributeText
+     module procedure HistorySetGlobalAttributeInt
+     module procedure HistorySetGlobalAttributeFloat
+     module procedure HistorySetGlobalAttributeDouble
+  end interface HistorySetGlobalAttribute
+
+  interface HistorySetAttribute
+     module procedure HistorySetAttributeText
+     module procedure HistorySetAttributeInt
+     module procedure HistorySetAttributeFloat
+     module procedure HistorySetAttributeDouble
+  end interface HistorySetAttribute
+
   interface HistoryPut
      module procedure HistoryPut0DIdSP
      module procedure HistoryPut0DIdDP
@@ -91,13 +106,6 @@ module gtool_history
      module procedure HistoryGet3DSP
      module procedure HistoryGet3DDP
   end interface HistoryGet
-
-  interface HistorySetAttribute
-     module procedure HistorySetAttributeText
-     module procedure HistorySetAttributeInt
-     module procedure HistorySetAttributeFloat
-     module procedure HistorySetAttributeDouble
-  end interface HistorySetAttribute
 
   type request
      character(len=File_HSHORT) :: item              !> Name of variable (in the code)
@@ -185,8 +193,6 @@ module gtool_history
   ! From upstream side of the library
   integer,                    private              :: History_master                    !> Number of master rank
   integer,                    private              :: History_myrank                    !> Number of my rank
-  integer,                    private, allocatable :: History_rankidx(:)                !> Index number in the 2D rank mesh
-  integer,                    private, allocatable :: History_procsize(:)               !> Process size of the 2D rank mesh
 
   real(DP),                   private              :: History_STARTDAYSEC               !> Start date [second]
   real(DP),                   private              :: History_DTSEC                     !> Delta t    [second]
@@ -240,8 +246,6 @@ contains
        ksize,                     &
        master,                    &
        myrank,                    &
-       rankidx,                   &
-       procsize,                  &
        title,                     &
        source,                    &
        institution,               &
@@ -277,8 +281,6 @@ contains
     integer,          intent(in)  :: ksize
     integer,          intent(in)  :: master
     integer,          intent(in)  :: myrank
-    integer,          intent(in)  :: rankidx(:)
-    integer,          intent(in)  :: procsize(:)
     character(len=*), intent(in)  :: title
     character(len=*), intent(in)  :: source
     character(len=*), intent(in)  :: institution
@@ -370,12 +372,8 @@ contains
     call Log('I','###### Module[HISTORY] / Origin[gtoollib]')
 
     ! setup
-    allocate( History_rankidx (size(rankidx) ) )
-    allocate( History_procsize(size(procsize)) )
     History_master      = master
     History_myrank      = myrank
-    History_rankidx (:) = rankidx (:)
-    History_procsize(:) = procsize(:)
 
     History_STARTDAYSEC = time_start
     History_DTSEC       = time_interval
@@ -851,8 +849,6 @@ contains
                         History_INSTITUTION,  & ! [IN]
                         History_master,       & ! [IN]
                         History_myrank,       & ! [IN]
-                        History_rankidx (:),  & ! [IN]
-                        History_procsize(:),  & ! [IN]
                         time_units = tunits,  & ! [IN]
                         comm       = comm     ) ! [IN]
 
@@ -1732,6 +1728,116 @@ contains
   end subroutine HistoryPut4DAssociatedCoordinatesDP
 
   !-----------------------------------------------------------------------------
+  ! interface HistorySetGlobalAttribute
+  !-----------------------------------------------------------------------------
+  subroutine HistorySetGlobalAttributeText( &
+       key, &
+       val  )
+    use gtool_file, only: &
+       FileSetGlobalAttribute
+    implicit none
+
+    character(len=*), intent(in) :: key
+    character(len=*), intent(in) :: val
+
+    integer :: fid, prev_fid
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    prev_fid = -1
+    do id = 1, History_id_count
+       fid = History_vars(id)%fid
+       if ( fid > 0 .AND. fid /= prev_fid ) then
+          call FileSetGlobalAttribute( fid, key, val ) ! [IN]
+          prev_fid = fid
+       endif
+    enddo
+
+    return
+  end subroutine HistorySetGlobalAttributeText
+
+  !-----------------------------------------------------------------------------
+  subroutine HistorySetGlobalAttributeInt( &
+       key, &
+       val  )
+    use gtool_file, only: &
+       FileSetGlobalAttribute
+    implicit none
+
+    character(len=*), intent(in) :: key
+    integer,          intent(in) :: val(:)
+
+    integer :: fid, prev_fid
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    prev_fid = -1
+    do id = 1, History_id_count
+       fid = History_vars(id)%fid
+       if ( fid > 0 .AND. fid /= prev_fid ) then
+          call FileSetGlobalAttribute( fid, key, val(:) ) ! [IN]
+          prev_fid = fid
+       endif
+    enddo
+
+    return
+  end subroutine HistorySetGlobalAttributeInt
+
+  !-----------------------------------------------------------------------------
+  subroutine HistorySetGlobalAttributeFloat( &
+       key, &
+       val  )
+    use gtool_file, only: &
+       FileSetGlobalAttribute
+    implicit none
+
+    character(len=*), intent(in) :: key
+    real(SP),         intent(in) :: val(:)
+
+    integer :: fid, prev_fid
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    prev_fid = -1
+    do id = 1, History_id_count
+       fid = History_vars(id)%fid
+       if ( fid > 0 .AND. fid /= prev_fid ) then
+          call FileSetGlobalAttribute( fid, key, val(:) ) ! [IN]
+          prev_fid = fid
+       endif
+    enddo
+
+    return
+  end subroutine HistorySetGlobalAttributeFloat
+
+  !-----------------------------------------------------------------------------
+  subroutine HistorySetGlobalAttributeDouble( &
+       key, &
+       val  )
+    use gtool_file, only: &
+       FileSetGlobalAttribute
+    implicit none
+
+    character(len=*), intent(in) :: key
+    real(DP),         intent(in) :: val(:)
+
+    integer :: fid, prev_fid
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    prev_fid = -1
+    do id = 1, History_id_count
+       fid = History_vars(id)%fid
+       if ( fid > 0 .AND. fid /= prev_fid ) then
+          call FileSetGlobalAttribute( fid, key, val(:) ) ! [IN]
+          prev_fid = fid
+       endif
+    enddo
+
+    return
+  end subroutine HistorySetGlobalAttributeDouble
+
+  !-----------------------------------------------------------------------------
   ! interface HistorySetAttribute
   !-----------------------------------------------------------------------------
   subroutine HistorySetAttributeText( &
@@ -1792,8 +1898,6 @@ contains
   end subroutine HistorySetAttributeInt
 
   !-----------------------------------------------------------------------------
-  ! interface HistorySetAttribute
-  !-----------------------------------------------------------------------------
   subroutine HistorySetAttributeFloat( &
        varname, &
        key,     &
@@ -1804,7 +1908,7 @@ contains
 
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: key
-    real(SP),    intent(in) :: val(:)
+    real(SP),         intent(in) :: val(:)
 
     integer :: fid, prev_fid
     integer :: id
@@ -1821,6 +1925,7 @@ contains
 
     return
   end subroutine HistorySetAttributeFloat
+
   !-----------------------------------------------------------------------------
   subroutine HistorySetAttributeDouble( &
        varname, &
@@ -1832,7 +1937,7 @@ contains
 
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: key
-    real(DP),    intent(in) :: val(:)
+    real(DP),         intent(in) :: val(:)
 
     integer :: fid, prev_fid
     integer :: id

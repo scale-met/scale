@@ -91,13 +91,14 @@ module scale_history
   real(RP),               private, allocatable :: HIST_PRES_val(:)       !< pressure level to output [hPa]
 
   logical,                private              :: enabled
-  integer,                private              :: im,  jm,  km
-  integer,                private              :: ims, ime
-  integer,                private              :: jms, jme
+  integer,                private              :: im,   jm,  km
+  integer,                private              :: ims,  ime
+  integer,                private              :: jms,  jme
   integer,                private              :: imh,  jmh
   integer,                private              :: imsh, jmsh
 
   logical, private :: HIST_BND = .false.
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -110,12 +111,9 @@ contains
        PRC_masterrank, &
        PRC_myrank
     use scale_rm_process, only: &
-       PRC_2Drank, &
-       PRC_NUM_X, &
-       PRC_NUM_Y, &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y, &
-       PRC_HAS_W, &
+       PRC_HAS_W,      &
        PRC_HAS_S
     use scale_time, only: &
        TIME_NOWDATE,     &
@@ -139,8 +137,6 @@ contains
     integer  :: HIST_variant_limit
 
     real(DP) :: start_daysec
-    integer  :: rankidx(2)
-    integer  :: procsize(2)
     integer  :: ierr
     integer  :: k
     !---------------------------------------------------------------------------
@@ -164,7 +160,7 @@ contains
        if ( HIST_PRES_nlayer > 100 ) then
           write(*,*) 'xxx number of layers of pressure is larger the KMAX'
           call PRC_MPIstop
-       end if
+       endif
 
        do k = 1, HIST_PRES_nlayer
           if ( HIST_PRES(k) <= 0.0_RP ) then
@@ -184,11 +180,6 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    rankidx(1) = PRC_2Drank(PRC_myrank,1)
-    rankidx(2) = PRC_2Drank(PRC_myrank,2)
-    procsize(1) = PRC_NUM_X
-    procsize(2) = PRC_NUM_Y
-
     start_daysec = TIME_STARTDAYSEC
     if ( TIME_NOWDATE(1) > 0 ) then
        write(HISTORY_T_SINCE,'(I4.4,5(A1,I2.2))')      TIME_NOWDATE(1), &
@@ -203,36 +194,40 @@ contains
     endif
 
     if ( HIST_BND ) then
-       im  = IMAXB
-       jm  = JMAXB
-       ims = ISB
-       ime = IEB
-       jms = JSB
-       jme = JEB
-       imh = im
-       jmh = jm
+       ims  = ISB
+       ime  = IEB
+       jms  = JSB
+       jme  = JEB
+
        imsh = ims
        jmsh = jms
+
+       im   = IMAXB
+       jm   = JMAXB
+       imh  = im
+       jmh  = jm
     else
-       ims = IS
-       ime = IE
-       jms = JS
-       jme = JE
-       if ( PRC_HAS_W .or. PRC_PERIODIC_X ) then
+       ims  = IS
+       ime  = IE
+       jms  = JS
+       jme  = JE
+
+       if ( PRC_HAS_W .OR. PRC_PERIODIC_X ) then
           imsh = ims
        else
-          imsh = ims-1 ! including i = IS-1
-       end if
-       if ( PRC_HAS_S .or. PRC_PERIODIC_Y ) then
+          imsh = ims - 1 ! including i = IS-1
+       endif
+       if ( PRC_HAS_S .OR. PRC_PERIODIC_Y ) then
           jmsh = jms
        else
-          jmsh = jms-1 ! include j = JS-1
-       end if
-       im  = ime - ims + 1
-       jm  = jme - jms + 1
-       imh = ime - imsh + 1
-       jmh = jme - jmsh + 1
-    end if
+          jmsh = jms - 1 ! include j = JS-1
+       endif
+
+       im   = ime - ims  + 1
+       jm   = jme - jms  + 1
+       imh  = ime - imsh + 1
+       jmh  = jme - jmsh + 1
+    endif
 
     km = max( LKMAX+1, UKMAX+1, KMAX+1, HIST_PRES_nlayer )
 
@@ -241,8 +236,6 @@ contains
                       imh, jmh, km,                     & ! [IN]
                       PRC_masterrank,                   & ! [IN]
                       PRC_myrank,                       & ! [IN]
-                      rankidx(:),                       & ! [IN]
-                      procsize(:),                      & ! [IN]
                       HISTORY_H_TITLE,                  & ! [IN]
                       H_SOURCE,                         & ! [IN]
                       H_INSTITUTE,                      & ! [IN]
@@ -337,8 +330,6 @@ contains
        PRC_myrank
     use scale_rm_process, only: &
        PRC_2Drank, &
-       PRC_NUM_X, &
-       PRC_NUM_Y, &
        PRC_HAS_W, &
        PRC_HAS_S
     use scale_mapproj, only: &
@@ -360,7 +351,7 @@ contains
     logical                :: flag_half_y
     logical                :: flag_half_z
     logical                :: atom
-    character(len=H_SHORT) :: mapping
+    character(len=H_SHORT) :: mapping_name
 
     integer                :: start(4), count(4)
 
@@ -406,17 +397,17 @@ contains
        start(1) = 1
 
        if ( flag_half_z ) then
-          dims(1) = "zh"
+          dims (1) = "zh"
           count(1) = KMAX + 1
        else
-          dims(1) = "z"
+          dims (1) = "z"
           count(1) = KMAX
        endif
 
        ! for shared-file parallel I/O, only rank 0 writes variables with only Z dimension
-       if ( PRC_myrank .GT. 0 ) count(1) = 0
+       if ( PRC_myrank > 0 ) count(1) = 0
 
-       mapping = ""
+       mapping_name = ""
 
     elseif ( ndim == 2 ) then
 
@@ -445,13 +436,17 @@ contains
           dims(2) = 'lat'
        endif
 
-       call MPRJ_get_attributes( mapping )
+       call MPRJ_get_attributes( mapping_name )
 
     elseif ( ndim == 3 ) then
 
        ! check half/full level for vertical/horizontal
-       flag_half_x = .false.
+       flag_half_z = .false.
+       if ( present(zdim) ) then
+          if( zdim == 'half' ) flag_half_z = .true.
+       endif
 
+       flag_half_x = .false.
        if ( present(xdim) ) then
           if( xdim == 'half' ) flag_half_x = .true.
        endif
@@ -459,11 +454,6 @@ contains
        flag_half_y = .false.
        if ( present(ydim) ) then
           if( ydim == 'half' ) flag_half_y = .true.
-       endif
-
-       flag_half_z = .false.
-       if ( present(zdim) ) then
-          if( zdim == 'half' ) flag_half_z = .true.
        endif
 
        if    ( flag_half_x .AND. flag_half_y ) then
@@ -506,28 +496,27 @@ contains
 
        if ( present(zdim) ) then
           if    ( zdim == 'land'      ) then
-             dims(3) = 'lz'
+             dims (3) = 'lz'
              count(3) = LKMAX
-             atom = .false.
+             atom     = .false.
           elseif( zdim == 'landhalf'  ) then
-             dims(3) = 'lzh'
+             dims (3) = 'lzh'
              count(3) = LKMAX+1
+             atom     = .false.
              flag_half_z = .true.
-             atom = .false.
           elseif( zdim == 'urban'     ) then
-             dims(3) = 'uz'
+             dims (3) = 'uz'
              count(3) = UKMAX
-             atom = .false.
+             atom     = .false.
           elseif( zdim == 'urbanhalf' ) then
-             dims(3) = 'uzh'
+             dims (3) = 'uzh'
              count(3) = UKMAX+1
+             atom     = .false.
              flag_half_z = .true.
-             atom = .false.
           endif
-
        endif
 
-       call MPRJ_get_attributes( mapping )
+       call MPRJ_get_attributes( mapping_name )
 
     endif
 
@@ -540,40 +529,41 @@ contains
           count(2) = JMAXB
        else
           ! for the case the shared-file contains no halos
-          start(1) = 1 + PRC_2Drank(PRC_myrank,1) * IMAX    ! no IHALO
+          start(1) = PRC_2Drank(PRC_myrank,1) * IMAX + 1 ! no IHALO
           count(1) = IMAX
           if ( flag_half_x ) then
              if ( PRC_HAS_W ) then
                 start(1) = start(1) + 1
              else
                 count(1) = count(1) + 1
-             end if
-          end if
-          start(2) = 1 + PRC_2Drank(PRC_myrank,2) * JMAX    ! no JHALO
+             endif
+          endif
+
+          start(2) = PRC_2Drank(PRC_myrank,2) * JMAX + 1 ! no JHALO
           count(2) = JMAX
           if ( flag_half_y ) then
              if ( PRC_HAS_S ) then
                 start(2) = start(2) + 1
              else
                 count(2) = count(2) + 1
-             end if
-          end if
-       end if
-    end if
+             endif
+          endif
+       endif
+    endif
 
     if ( atom ) then
 
        ! model coordinate (terrain following coordinate)
-       call HistoryAddVariable( nvariant1,      & ! [OUT]
-                                item,           & ! [IN]
-                                dims(1:ndim),   & ! [IN]
-                                desc,           & ! [IN]
-                                unit,           & ! [IN]
-                                mapping,        & ! [IN]
-                                TIME_NOWSTEP,   & ! [IN]
-                                zcoord='model', & ! [IN]
-                                start=start,    & ! [IN]
-                                count=count     ) ! [IN]
+       call HistoryAddVariable( nvariant1,        & ! [OUT]
+                                item,             & ! [IN]
+                                dims(1:ndim),     & ! [IN]
+                                desc,             & ! [IN]
+                                unit,             & ! [IN]
+                                mapping_name,     & ! [IN]
+                                TIME_NOWSTEP,     & ! [IN]
+                                zcoord = 'model', & ! [IN]
+                                start  = start,   & ! [IN]
+                                count  = count    ) ! [IN]
 
        ! absolute height coordinate
        dims(3) = 'z'
@@ -582,26 +572,26 @@ contains
                                 dims(1:ndim),   & ! [IN]
                                 desc,           & ! [IN]
                                 unit,           & ! [IN]
-                                mapping,        & ! [IN]
+                                mapping_name,   & ! [IN]
                                 TIME_NOWSTEP,   & ! [IN]
-                                zcoord='z',     & ! [IN]
-                                start=start,    & ! [IN]
-                                count=count     ) ! [IN]
+                                zcoord = 'z',   & ! [IN]
+                                start  = start, & ! [IN]
+                                count  = count  ) ! [IN]
 
        ! pressure coordinate
        if ( HIST_PRES_nlayer > 0 ) then
 
           dims(3) = 'pressure'
-          call HistoryAddVariable( nvariant3,         & ! [OUT]
-                                   item,              & ! [IN]
-                                   dims(1:ndim),      & ! [IN]
-                                   desc,              & ! [IN]
-                                   unit,              & ! [IN]
-                                   mapping,           & ! [IN]
-                                   TIME_NOWSTEP,      & ! [IN]
-                                   zcoord='pressure', & ! [IN]
-                                   start=start,       & ! [IN]
-                                   count=count        ) ! [IN]
+          call HistoryAddVariable( nvariant3,           & ! [OUT]
+                                   item,                & ! [IN]
+                                   dims(1:ndim),        & ! [IN]
+                                   desc,                & ! [IN]
+                                   unit,                & ! [IN]
+                                   mapping_name,        & ! [IN]
+                                   TIME_NOWSTEP,        & ! [IN]
+                                   zcoord = 'pressure', & ! [IN]
+                                   start  = start,      & ! [IN]
+                                   count  = count       ) ! [IN]
 
        else
           nvariant3 = 0
@@ -609,15 +599,15 @@ contains
 
     else
 
-       call HistoryAddVariable( nvariant1,    & ! [OUT]
-                                item,         & ! [IN]
-                                dims(1:ndim), & ! [IN]
-                                desc,         & ! [IN]
-                                unit,         & ! [IN]
-                                mapping,      & ! [IN]
-                                TIME_NOWSTEP, & ! [IN]
-                                start=start,  & ! [IN]
-                                count=count   ) ! [IN]
+       call HistoryAddVariable( nvariant1,     & ! [OUT]
+                                item,          & ! [IN]
+                                dims(1:ndim),  & ! [IN]
+                                desc,          & ! [IN]
+                                unit,          & ! [IN]
+                                mapping_name,  & ! [IN]
+                                TIME_NOWSTEP,  & ! [IN]
+                                start = start, & ! [IN]
+                                count = count  ) ! [IN]
 
        nvariant2 = 0
        nvariant3 = 0
@@ -738,7 +728,7 @@ contains
                             comm=comm,      & ! [IN]
                             existed=existed ) ! [OUT]
 
-    if ( .not. existed ) call HIST_set_axes_attributes
+    if ( .NOT. existed ) call HIST_set_axes_attributes
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -800,6 +790,7 @@ contains
 
     integer,          intent(in) :: itemid !< name of the item
     real(RP),         intent(in) :: var(:) !< value
+
     character(len=*), intent(in), optional :: zdim
 
     character(len=H_SHORT) :: zd
@@ -843,22 +834,21 @@ contains
         kstart = KS
     end select
 
+    do k = 1, ksize
+       var_trim(k) = var(kstart+k-1)
+    enddo
+
     id = 0
     do n = 1, itemid-1
        id = id + HIST_variant(n)
     enddo
 
-    do k = 1, ksize
-       var_trim(k) = var(kstart+k-1)
-    enddo
-
     do v = 1, HIST_variant(itemid)
-
        id = id + 1
 
-       call HistoryPut( id,           & ! [IN]
-                        TIME_NOWSTEP, & ! [IN]
-                        var_trim(:)   ) ! [IN]
+       call HistoryPut( id,               & ! [IN]
+                        TIME_NOWSTEP,     & ! [IN]
+                        var_trim(1:ksize) ) ! [IN]
     enddo
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -884,6 +874,7 @@ contains
 
     integer,          intent(in)  :: itemid   !< name of the item
     real(RP),         intent(in)  :: var(:,:) !< value
+
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     logical,          intent(in), optional :: nohalo
@@ -892,7 +883,7 @@ contains
     integer                :: isize, jsize
     integer                :: istart, jstart
 
-    real(RP) :: var_trim(im*jm)
+    real(RP) :: var_trim(imh*jmh)
     logical  :: nohalo_
     integer  :: s(2)
 
@@ -949,7 +940,7 @@ contains
        enddo
 
        if ( nohalo_ ) then
-             ! W halo
+          ! W halo
           do j = 1, jsize
           do i = 1, IS-istart
              var_trim((j-1)*isize+i) = RMISS
@@ -977,8 +968,8 @@ contains
 
        id = id + 1
 
-       call HistoryPut( id,                           & ! [IN]
-                        TIME_NOWSTEP,                 & ! [IN]
+       call HistoryPut( id,                     & ! [IN]
+                        TIME_NOWSTEP,           & ! [IN]
                         var_trim(1:isize*jsize) ) ! [IN]
     enddo
 
@@ -1003,15 +994,16 @@ contains
     use scale_time, only: &
        TIME_NOWSTEP
     use scale_interpolation, only: &
-       INTERP_vertical_xi2z, &
-       INTERP_vertical_xi2p, &
+       INTERP_vertical_xi2z,   &
+       INTERP_vertical_xi2p,   &
        INTERP_vertical_xih2zh, &
-       INTERP_vertical_xih2p, &
+       INTERP_vertical_xih2p,  &
        INTERP_available
     implicit none
 
     integer,          intent(in)  :: itemid     !< name of the item
     real(RP),         intent(in)  :: var(:,:,:) !< value
+
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
@@ -1024,7 +1016,7 @@ contains
     real(RP) :: var_Z(KA              ,IA,JA)
     real(RP) :: var_P(HIST_PRES_nlayer,IA,JA)
 
-    real(RP) :: var_trim(km*im*jm)
+    real(RP) :: var_trim(km*imh*jmh)
     logical  :: nohalo_
     integer  :: s(3)
 
@@ -1188,7 +1180,7 @@ contains
        endif
 
        if ( nohalo_ ) then
-             ! W halo
+          ! W halo
           do k = 1, ksize
           do j = 1, jsize
           do i = 1, IS-istart
@@ -1243,11 +1235,12 @@ contains
        unit )
     implicit none
 
-    real(RP),         intent(in) :: var
-    character(len=*), intent(in) :: item
-    character(len=*), intent(in) :: desc
-    character(len=*), intent(in) :: unit
+    real(RP),         intent(in) :: var  !< value
+    character(len=*), intent(in) :: item !< name        of the item
+    character(len=*), intent(in) :: desc !< description of the item
+    character(len=*), intent(in) :: unit !< unit        of the item
 
+    integer, parameter :: ndim = 0
     integer :: itemid
     logical :: do_put
     !---------------------------------------------------------------------------
@@ -1259,7 +1252,7 @@ contains
                      item,    & ! [IN]
                      desc,    & ! [IN]
                      unit,    & ! [IN]
-                     0        ) ! [IN]
+                     ndim     ) ! [IN]
 
     ! Check whether it is time to input the item
     call HIST_query( itemid,  & ! [IN]
@@ -1283,14 +1276,16 @@ contains
        zdim  )
     implicit none
 
-    real(RP),         intent(in)  :: var(:)
-    character(len=*), intent(in)  :: item
-    character(len=*), intent(in)  :: desc
-    character(len=*), intent(in)  :: unit
+    real(RP),         intent(in)  :: var(:) !< value
+    character(len=*), intent(in)  :: item   !< name        of the item
+    character(len=*), intent(in)  :: desc   !< description of the item
+    character(len=*), intent(in)  :: unit   !< unit        of the item
+
     character(len=*), intent(in), optional :: zdim
 
     character(len=H_SHORT) :: zd
 
+    integer, parameter :: ndim = 1
     integer :: itemid
     logical :: do_put
     !---------------------------------------------------------------------------
@@ -1305,7 +1300,7 @@ contains
                      item,    & ! [IN]
                      desc,    & ! [IN]
                      unit,    & ! [IN]
-                     1,       & ! [IN]
+                     ndim,    & ! [IN]
                      zdim=zd  ) ! [IN]
 
     ! Check whether it is time to input the item
@@ -1336,12 +1331,14 @@ contains
     character(len=*), intent(in)  :: item     !< name        of the item
     character(len=*), intent(in)  :: desc     !< description of the item
     character(len=*), intent(in)  :: unit     !< unit        of the item
+
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     logical,          intent(in), optional :: nohalo
 
     character(len=H_SHORT) :: xd, yd
 
+    integer, parameter :: ndim = 2
     integer :: itemid
     logical :: do_put
     !---------------------------------------------------------------------------
@@ -1358,7 +1355,7 @@ contains
                      item,    & ! [IN]
                      desc,    & ! [IN]
                      unit,    & ! [IN]
-                     2,       & ! [IN]
+                     ndim,    & ! [IN]
                      xdim=xd, & ! [IN]
                      ydim=yd  ) ! [IN]
 
@@ -1392,6 +1389,7 @@ contains
     character(len=*), intent(in)  :: item       !< name        of the item
     character(len=*), intent(in)  :: desc       !< description of the item
     character(len=*), intent(in)  :: unit       !< unit        of the item
+
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
@@ -1399,6 +1397,7 @@ contains
 
     character(len=H_SHORT) :: xd, yd, zd
 
+    integer, parameter :: ndim = 3
     integer :: itemid
     logical :: do_put
     !---------------------------------------------------------------------------
@@ -1417,7 +1416,7 @@ contains
                      item,    & ! [IN]
                      desc,    & ! [IN]
                      unit,    & ! [IN]
-                     3,       & ! [IN]
+                     ndim,    & ! [IN]
                      xdim=xd, & ! [IN]
                      ydim=yd, & ! [IN]
                      zdim=zd  ) ! [IN]
@@ -1454,6 +1453,7 @@ contains
     character(len=*), intent(in)  :: basename   !< basename of the file
     character(len=*), intent(in)  :: varname    !< name of the variable
     integer,          intent(in)  :: step       !< step number
+
     logical,          intent(in), optional :: allow_missing !< allow data is missing?
 
     logical :: am
@@ -1491,6 +1491,7 @@ contains
     character(len=*), intent(in)  :: basename   !< basename of the file
     character(len=*), intent(in)  :: varname    !< name of the variable
     integer,          intent(in)  :: step       !< step number
+
     logical,          intent(in), optional :: allow_missing !< allow data is missing?
 
     logical :: am
@@ -1528,6 +1529,7 @@ contains
     character(len=*), intent(in)  :: basename   !< basename of the file
     character(len=*), intent(in)  :: varname    !< name of the variable
     integer,          intent(in)  :: step       !< step number
+
     logical,          intent(in), optional :: allow_missing !< allow data is missing?
 
     logical :: am
@@ -1585,6 +1587,16 @@ contains
        HistoryPutAssociatedCoordinates
     use scale_const, only: &
        D2R => CONST_D2R
+    use scale_process, only: &
+       PRC_myrank
+    use scale_rm_process, only: &
+       PRC_2Drank,     &
+       PRC_NUM_X,      &
+       PRC_NUM_Y,      &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y, &
+       PRC_HAS_W,      &
+       PRC_HAS_S
     use scale_grid, only: &
        GRID_CZ,    &
        GRID_CX,    &
@@ -1639,16 +1651,6 @@ contains
        TOPO_Zsfc
     use scale_landuse, only: &
        LANDUSE_frac_land
-    use scale_process, only: &
-       PRC_myrank
-    use scale_rm_process, only: &
-       PRC_2Drank, &
-       PRC_NUM_X, &
-       PRC_NUM_Y, &
-       PRC_PERIODIC_X, &
-       PRC_PERIODIC_Y, &
-       PRC_HAS_W, &
-       PRC_HAS_S
     implicit none
 
     real(RP)         :: AXIS     (imh,jmh,0:KMAX)
@@ -1678,134 +1680,140 @@ contains
     !         others                    writes without HALO
 
     if ( IO_AGGREGATE ) then
+
+       startZ = 1
+
        if ( HIST_BND ) then
-          startX  = ISGB   ! global subarray starting index
-          startY  = JSGB   ! global subarray starting index
-          XAG     = IAGB
-          YAG     = JAGB
+          startX  = ISGB ! global subarray starting index
+          startY  = JSGB ! global subarray starting index
           startXH = startX
           startYH = startY
+          XAG     = IAGB
+          YAG     = JAGB
           XAGH    = XAG
           YAGH    = YAG
        else
-          startX  = 1 + PRC_2Drank(PRC_myrank,1) * IMAX
-          startY  = 1 + PRC_2Drank(PRC_myrank,2) * JMAX
-          XAG     = IMAXG
-          YAG     = JMAXG
+          startX  = PRC_2Drank(PRC_myrank,1) * IMAX + 1
+          startY  = PRC_2Drank(PRC_myrank,2) * JMAX + 1
           startXH = startX
           startYH = startY
+          XAG     = IMAXG
+          YAG     = JMAXG
           XAGH    = XAG
           YAGH    = YAG
-          if ( .not. PRC_PERIODIC_X ) then
-             XAGH  = XAGH + 1
-             if ( PRC_HAS_W ) startXH = startXH + 1
-          end if
-          if ( .not. PRC_PERIODIC_Y ) then
-             YAGH  = YAGH + 1
-             if ( PRC_HAS_S ) startYH = startYH + 1
-          end if
-       end if
-       startZ = 1
-       if ( rankidx(2) .GT. 0 ) then ! only south-most processes write
+
+          if ( .NOT. PRC_PERIODIC_X ) then
+             XAGH = XAGH + 1
+             if( PRC_HAS_W ) startXH = startXH + 1
+          endif
+
+          if ( .NOT. PRC_PERIODIC_Y ) then
+             YAGH = YAGH + 1
+             if( PRC_HAS_S ) startYH = startYH + 1
+          endif
+       endif
+
+       if ( PRC_myrank > 0 ) then ! only rank 0 writes Z axes
+          startZ = -1
+       endif
+       if ( rankidx(2) > 0 ) then ! only south-most processes write
           startX  = -1
           startXH = -1
-       end if
-       if ( rankidx(1) .GT. 0 ) then ! only west-most processes write
+       endif
+       if ( rankidx(1) > 0 ) then ! only west-most processes write
           startY  = -1
           startYH = -1
-       end if
-       if ( PRC_myrank .GT. 0 ) then ! only rank 0 writes Z axes
-          startZ = -1
-       end if
+       endif
     else
-       XAG     = im
-       YAG     = jm
+       startZ  = 1
        startX  = 1
        startY  = 1
-       startZ  = 1
+       startXH = startX
+       startYH = startY
+       XAG     = im
+       YAG     = jm
        XAGH    = imh
        YAGH    = jmh
-       startXH = 1
-       startYH = 1
-    end if
+    endif
 
     ! for the shared-file I/O method, the axes are global (gsize)
     ! for one-file-per-process I/O method, the axes size is equal to the local buffer size
-    call HistoryPutAxis( 'x',   'X',               'm', 'x',   GRID_CX(ims:ime), gsize=XAG,  start=startX )
-    call HistoryPutAxis( 'y',   'Y',               'm', 'y',   GRID_CY(jms:jme), gsize=YAG,  start=startY )
-    call HistoryPutAxis( 'z',   'Z',               'm', 'z',   GRID_CZ(KS:KE),   gsize=KMAX, start=startZ )
-    call HistoryPutAxis( 'xh',  'X (half level)',  'm', 'xh',  GRID_FX(imsh:ime), gsize=XAGH,  start=startXH )
-    call HistoryPutAxis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY(jmsh:jme), gsize=YAGH,  start=startYH )
-    call HistoryPutAxis( 'zh',  'Z (half level)',  'm', 'zh',  GRID_FZ(KS-1:KE),  gsize=KMAX+1, start=startZ )
+    call HistoryPutAxis( 'z',   'Z',               'm', 'z',   GRID_CZ (KS  :KE),   gsize=KMAX   , start=startZ )
+    call HistoryPutAxis( 'zh',  'Z (half level)',  'm', 'zh',  GRID_FZ (KS-1:KE),   gsize=KMAX+1 , start=startZ )
 
     if ( HIST_PRES_nlayer > 0 ) then
-       call HistoryPutAxis( 'pressure', 'Pressure', 'hPa', 'pressure',         &
-                            HIST_PRES_val(:)/100.0_RP, down=.true., gsize=HIST_PRES_nlayer, start=startZ )
+       call HistoryPutAxis( 'pressure', 'Pressure', 'hPa', 'pressure', HIST_PRES_val(:)/100.0_RP, &
+                            gsize=HIST_PRES_nlayer, start=startZ, down=.true.                     )
     endif
 
-    call HistoryPutAxis( 'lz',  'LZ',              'm', 'lz',  GRID_LCZ(LKS:LKE), down=.true., gsize=LKMAX, start=startZ )
-    call HistoryPutAxis( 'lzh', 'LZ (half level)', 'm', 'lzh', GRID_LFZ(LKS-1:LKE), down=.true., gsize=LKMAX+1, start=startZ )
+    call HistoryPutAxis( 'lz',  'LZ',              'm', 'lz',  GRID_LCZ(LKS  :LKE), gsize=LKMAX  , start=startZ, down=.true. )
+    call HistoryPutAxis( 'lzh', 'LZ (half level)', 'm', 'lzh', GRID_LFZ(LKS-1:LKE), gsize=LKMAX+1, start=startZ, down=.true. )
 
-    call HistoryPutAxis( 'uz',  'UZ',              'm', 'uz',  GRID_UCZ(UKS:UKE), down=.true., gsize=UKMAX, start=startZ )
-    call HistoryPutAxis( 'uzh', 'UZ (half level)', 'm', 'uzh', GRID_UFZ(UKS-1:UKE), down=.true., gsize=UKMAX+1, start=startZ )
+    call HistoryPutAxis( 'uz',  'UZ',              'm', 'uz',  GRID_UCZ(UKS  :UKE), gsize=UKMAX  , start=startZ, down=.true. )
+    call HistoryPutAxis( 'uzh', 'UZ (half level)', 'm', 'uzh', GRID_UFZ(UKS-1:UKE), gsize=UKMAX+1, start=startZ, down=.true. )
+
+    call HistoryPutAxis( 'x',   'X',               'm', 'x',   GRID_CX (ims :ime),  gsize=XAG , start=startX  )
+    call HistoryPutAxis( 'xh',  'X (half level)',  'm', 'xh',  GRID_FX (imsh:ime),  gsize=XAGH, start=startXH )
+
+    call HistoryPutAxis( 'y',   'Y',               'm', 'y',   GRID_CY (jms :jme),  gsize=YAG , start=startY  )
+    call HistoryPutAxis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY (jmsh:jme),  gsize=YAGH, start=startYH )
 
     ! axes below always include halos when written to file regardless of PRC_PERIODIC_X/PRC_PERIODIC_Y
-    call HistoryPutAxis( 'CZ',  'Atmos Grid Center Position Z', 'm', 'CZ',  GRID_CZ,  gsize=KA,    start=startZ )
-    call HistoryPutAxis( 'FZ',  'Atmos Grid Face Position Z',   'm', 'FZ',  GRID_FZ,  gsize=KA+1,  start=startZ )
-    call HistoryPutAxis( 'CDZ',  'Grid Cell length Z', 'm', 'CZ',  GRID_CDZ,  gsize=KA,    start=startZ )
-    call HistoryPutAxis( 'FDZ',  'Grid distance Z',    'm', 'FDZ', GRID_FDZ,  gsize=KA-1,  start=startZ )
+    call HistoryPutAxis( 'CZ',   'Atmos Grid Center Position Z', 'm', 'CZ',  GRID_CZ,   gsize=KA,      start=startZ )
+    call HistoryPutAxis( 'FZ',   'Atmos Grid Face Position Z',   'm', 'FZ',  GRID_FZ,   gsize=KA+1,    start=startZ )
+    call HistoryPutAxis( 'CDZ',  'Grid Cell length Z',           'm', 'CZ',  GRID_CDZ,  gsize=KA,      start=startZ )
+    call HistoryPutAxis( 'FDZ',  'Grid distance Z',              'm', 'FDZ', GRID_FDZ,  gsize=KA-1,    start=startZ )
+    call HistoryPutAxis( 'CBFZ', 'Boundary factor Center Z',     '1', 'CZ',  GRID_CBFZ, gsize=KA,      start=startZ )
+    call HistoryPutAxis( 'FBFZ', 'Boundary factor Face Z',       '1', 'FZ',  GRID_FBFZ, gsize=KA+1,    start=startZ )
+
+    call HistoryPutAxis( 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', GRID_LCZ,  gsize=LKMAX,   start=startZ, down=.true. )
+    call HistoryPutAxis( 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', GRID_LFZ,  gsize=LKMAX+1, start=startZ, down=.true. )
+    call HistoryPutAxis( 'LCDZ', 'Land Grid Cell length Z',      'm', 'LCZ', GRID_LCDZ, gsize=LKMAX,   start=startZ              )
+
+    call HistoryPutAxis( 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', GRID_UCZ,  gsize=UKMAX,   start=startZ, down=.true. )
+    call HistoryPutAxis( 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', GRID_UFZ,  gsize=UKMAX+1, start=startZ, down=.true. )
+    call HistoryPutAxis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', GRID_UCDZ, gsize=UKMAX,   start=startZ              )
+
     if ( IO_AGGREGATE ) then
-       call HistoryPutAxis( 'CX',  'Atmos Grid Center Position X', 'm', 'CX',  GRID_CXG, gsize=IAG,   start=startZ )
-       call HistoryPutAxis( 'CY',  'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CYG, gsize=JAG,   start=startZ )
-       call HistoryPutAxis( 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  GRID_FXG, gsize=IAG+1, start=startZ )
-       call HistoryPutAxis( 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  GRID_FYG, gsize=JAG+1, start=startZ )
-       call HistoryPutAxis( 'CDX',  'Grid Cell length X', 'm', 'CX',  GRID_CDXG, gsize=IAG,   start=startZ )
-       call HistoryPutAxis( 'CDY',  'Grid Cell length Y', 'm', 'CY',  GRID_CDYG, gsize=JAG,   start=startZ )
-       call HistoryPutAxis( 'FDX',  'Grid distance X',    'm', 'FDX', GRID_FDXG, gsize=IAG-1, start=startZ )
-       call HistoryPutAxis( 'FDY',  'Grid distance Y',    'm', 'FDY', GRID_FDYG, gsize=JAG-1, start=startZ )
+       call HistoryPutAxis( 'CX',   'Atmos Grid Center Position X', 'm', 'CX',  GRID_CXG,   gsize=IAG,   start=startZ )
+       call HistoryPutAxis( 'CY',   'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CYG,   gsize=JAG,   start=startZ )
+       call HistoryPutAxis( 'FX',   'Atmos Grid Face Position X',   'm', 'FX',  GRID_FXG,   gsize=IAG+1, start=startZ )
+       call HistoryPutAxis( 'FY',   'Atmos Grid Face Position Y',   'm', 'FY',  GRID_FYG,   gsize=JAG+1, start=startZ )
+       call HistoryPutAxis( 'CDX',  'Grid Cell length X',           'm', 'CX',  GRID_CDXG,  gsize=IAG,   start=startZ )
+       call HistoryPutAxis( 'CDY',  'Grid Cell length Y',           'm', 'CY',  GRID_CDYG,  gsize=JAG,   start=startZ )
+       call HistoryPutAxis( 'FDX',  'Grid distance X',              'm', 'FDX', GRID_FDXG,  gsize=IAG-1, start=startZ )
+       call HistoryPutAxis( 'FDY',  'Grid distance Y',              'm', 'FDY', GRID_FDYG,  gsize=JAG-1, start=startZ )
+       call HistoryPutAxis( 'CBFX', 'Boundary factor Center X',     '1', 'CX',  GRID_CBFXG, gsize=IAG,   start=startZ )
+       call HistoryPutAxis( 'CBFY', 'Boundary factor Center Y',     '1', 'CY',  GRID_CBFYG, gsize=JAG,   start=startZ )
+       call HistoryPutAxis( 'FBFX', 'Boundary factor Face X',       '1', 'FX',  GRID_FBFXG, gsize=IAG+1, start=startZ )
+       call HistoryPutAxis( 'FBFY', 'Boundary factor Face Y',       '1', 'FY',  GRID_FBFYG, gsize=JAG+1, start=startZ )
     else
-       call HistoryPutAxis( 'CX',  'Atmos Grid Center Position X', 'm', 'CX',  GRID_CX )
-       call HistoryPutAxis( 'CY',  'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CY )
-       call HistoryPutAxis( 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  GRID_FX )
-       call HistoryPutAxis( 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  GRID_FY )
-       call HistoryPutAxis( 'CDX',  'Grid Cell length X', 'm', 'CX',  GRID_CDX )
-       call HistoryPutAxis( 'CDY',  'Grid Cell length Y', 'm', 'CY',  GRID_CDY )
-       call HistoryPutAxis( 'FDX',  'Grid distance X',    'm', 'FDX', GRID_FDX )
-       call HistoryPutAxis( 'FDY',  'Grid distance Y',    'm', 'FDY', GRID_FDY )
-    end if
+       call HistoryPutAxis( 'CX',   'Atmos Grid Center Position X', 'm', 'CX',  GRID_CX   )
+       call HistoryPutAxis( 'CY',   'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CY   )
+       call HistoryPutAxis( 'FX',   'Atmos Grid Face Position X',   'm', 'FX',  GRID_FX   )
+       call HistoryPutAxis( 'FY',   'Atmos Grid Face Position Y',   'm', 'FY',  GRID_FY   )
+       call HistoryPutAxis( 'CDX',  'Grid Cell length X',           'm', 'CX',  GRID_CDX  )
+       call HistoryPutAxis( 'CDY',  'Grid Cell length Y',           'm', 'CY',  GRID_CDY  )
+       call HistoryPutAxis( 'FDX',  'Grid distance X',              'm', 'FDX', GRID_FDX  )
+       call HistoryPutAxis( 'FDY',  'Grid distance Y',              'm', 'FDY', GRID_FDY  )
+       call HistoryPutAxis( 'CBFX', 'Boundary factor Center X',     '1', 'CX',  GRID_CBFX )
+       call HistoryPutAxis( 'CBFY', 'Boundary factor Center Y',     '1', 'CY',  GRID_CBFY )
+       call HistoryPutAxis( 'FBFX', 'Boundary factor Face X',       '1', 'FX',  GRID_FBFX )
+       call HistoryPutAxis( 'FBFY', 'Boundary factor Face Y',       '1', 'FY',  GRID_FBFY )
+    endif
 
-    call HistoryPutAxis( 'LCZ',  'Land Grid Center Position Z', 'm', 'LCZ', GRID_LCZ, down=.true., gsize=LKMAX,   start=startZ )
-    call HistoryPutAxis( 'LFZ',  'Land Grid Face Position Z',   'm', 'LFZ', GRID_LFZ, down=.true., gsize=LKMAX+1, start=startZ )
-    call HistoryPutAxis( 'LCDZ', 'Land Grid Cell length Z',     'm', 'LCZ', GRID_LCDZ,             gsize=LKMAX,   start=startZ )
-
-    call HistoryPutAxis( 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', GRID_UCZ, down=.true., gsize=UKMAX,   start=startZ )
-    call HistoryPutAxis( 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', GRID_UFZ, down=.true., gsize=UKMAX+1, start=startZ )
-    call HistoryPutAxis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', GRID_UCDZ,             gsize=UKMAX,   start=startZ )
-
-    call HistoryPutAxis('CBFZ',  'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ,  gsize=KA,  start=startZ )
-    call HistoryPutAxis('FBFZ',  'Boundary factor Face Z',   '1', 'FZ', GRID_FBFZ,  gsize=KA+1,  start=startZ )
-    if ( IO_AGGREGATE ) then
-       call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFXG, gsize=IAG, start=startZ )
-       call HistoryPutAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFYG, gsize=JAG, start=startZ )
-       call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'FX', GRID_FBFXG, gsize=IAG+1, start=startZ )
-       call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'FY', GRID_FBFYG, gsize=JAG+1, start=startZ )
-    else
-       call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFX )
-       call HistoryPutAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFY )
-       call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'FX', GRID_FBFX )
-       call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'FY', GRID_FBFY )
-    end if
-
-    ! TODO: skip 8 axes below when IO_AGGREGATE is true, as all axes are now global
-    call HistoryPutAxis('CXG',   'Grid Center Position X (global)', 'm', 'CXG', GRID_CXG, gsize=IAG,   start=startZ )
-    call HistoryPutAxis('CYG',   'Grid Center Position Y (global)', 'm', 'CYG', GRID_CYG, gsize=JAG,   start=startZ )
-    call HistoryPutAxis('FXG',   'Grid Face Position X (global)',   'm', 'FXG', GRID_FXG, gsize=IAG+1, start=startZ )
-    call HistoryPutAxis('FYG',   'Grid Face Position Y (global)',   'm', 'FYG', GRID_FYG, gsize=JAG+1, start=startZ )
-
-    call HistoryPutAxis('CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', GRID_CBFXG, gsize=IAG, start=startZ )
-    call HistoryPutAxis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', GRID_CBFYG, gsize=JAG, start=startZ )
-    call HistoryPutAxis('FBFXG', 'Boundary factor Face X (global)',   '1', 'FXG', GRID_FBFXG, gsize=IAG+1, start=startZ )
-    call HistoryPutAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'FYG', GRID_FBFYG, gsize=JAG+1, start=startZ )
+    call HistoryPutAxis('CXG',   'Grid Center Position X (global)',   'm', 'CXG',  GRID_CXG,   gsize=IAG,   start=startZ )
+    call HistoryPutAxis('CYG',   'Grid Center Position Y (global)',   'm', 'CYG',  GRID_CYG,   gsize=JAG,   start=startZ )
+    call HistoryPutAxis('FXG',   'Grid Face Position X (global)',     'm', 'FXG',  GRID_FXG,   gsize=IAG+1, start=startZ )
+    call HistoryPutAxis('FYG',   'Grid Face Position Y (global)',     'm', 'FYG',  GRID_FYG,   gsize=JAG+1, start=startZ )
+    call HistoryPutAxis('CDXG',  'Grid Cell length X (global)',       'm', 'CXG',  GRID_CDXG,  gsize=IAG,   start=startZ )
+    call HistoryPutAxis('CDYG',  'Grid Cell length Y (global)',       'm', 'CYG',  GRID_CDYG,  gsize=JAG,   start=startZ )
+    call HistoryPutAxis('FDXG',  'Grid distance X (global)',          'm', 'FDXG', GRID_FDXG,  gsize=IAG-1, start=startZ )
+    call HistoryPutAxis('FDYG',  'Grid distance Y (global)',          'm', 'FDYG', GRID_FDYG,  gsize=JAG-1, start=startZ )
+    call HistoryPutAxis('CBFXG', 'Boundary factor Center X (global)', '1', 'CXG',  GRID_CBFXG, gsize=IAG,   start=startZ )
+    call HistoryPutAxis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG',  GRID_CBFYG, gsize=JAG,   start=startZ )
+    call HistoryPutAxis('FBFXG', 'Boundary factor Face X (global)',   '1', 'FXG',  GRID_FBFXG, gsize=IAG+1, start=startZ )
+    call HistoryPutAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'FYG',  GRID_FBFYG, gsize=JAG+1, start=startZ )
 
     ! associate coordinates
     if ( IO_AGGREGATE ) then
@@ -1813,34 +1821,34 @@ contains
           start(1,:) = ISGB   ! global subarray starting index
           start(2,:) = JSGB   ! global subarray starting index
        else
-          start(1,:) = 1 + PRC_2Drank(PRC_myrank,1) * IMAX    ! no IHALO
-          start(2,:) = 1 + PRC_2Drank(PRC_myrank,2) * JMAX    ! no JHALO
-          if ( (.not. PRC_PERIODIC_X) .and. PRC_HAS_W ) then
+          start(1,:) = PRC_2Drank(PRC_myrank,1) * IMAX + 1 ! no IHALO
+          start(2,:) = PRC_2Drank(PRC_myrank,2) * JMAX + 1 ! no JHALO
+          if ( (.NOT. PRC_PERIODIC_X) .AND. PRC_HAS_W ) then
              start(1,2) = start(1,2) + 1
              start(1,4) = start(1,4) + 1
-          end if
-          if ( (.not. PRC_PERIODIC_Y) .and. PRC_HAS_S ) then
+          endif
+          if ( (.NOT. PRC_PERIODIC_Y) .AND. PRC_HAS_S ) then
              start(2,3) = start(2,3) + 1
              start(2,4) = start(2,4) + 1
-          end if
-       end if
+          endif
+       endif
        start(3,:) = 1
     else
        start(:,:) = 1
-    end if
+    endif
 
     do k = 1, KMAX
        AXIS(1:im,1:jm,k) = REAL_CZ(k+KS-1,ims:ime,jms:jme)
     enddo
     AXIS_name(1:3) = (/'x ', 'y ', 'z '/)
-    call HistoryPutAssociatedCoordinates( 'height', 'height above ground level', &
+    call HistoryPutAssociatedCoordinates( 'height', 'height above ground level',                        &
                                           'm', AXIS_name(1:3), AXIS(1:im,1:jm,1:KMAX), start=start(:,1) )
 
     do k = 0, KMAX
        AXIS(1:im,1:jm,k) = REAL_FZ(k+KS-1,ims:ime,jms:jme)
     enddo
     AXIS_name(1:3) = (/'x ', 'y ', 'zh'/)
-    call HistoryPutAssociatedCoordinates( 'height_xyw', 'height above ground level (half level xyw)', &
+    call HistoryPutAssociatedCoordinates( 'height_xyw', 'height above ground level (half level xyw)',    &
                                           'm' , AXIS_name(1:3), AXIS(1:im,1:jm,0:KMAX), start=start(:,1) )
 
     do k = 1, KMAX
@@ -1856,9 +1864,9 @@ contains
           AXIS(imh,j,k) = REAL_CZ(k+KS-1,imsh+imh-1,jms+j-1)
        enddo
        enddo
-    end if
+    endif
     AXIS_name(1:3) = (/'xh', 'y ', 'z '/)
-    call HistoryPutAssociatedCoordinates( 'height_uyz', 'height above ground level (half level uyz)', &
+    call HistoryPutAssociatedCoordinates( 'height_uyz', 'height above ground level (half level uyz)',    &
                                           'm', AXIS_name(1:3), AXIS(1:imh,1:jm,1:KMAX), start=start(:,2) )
 
     do k = 1, KMAX
@@ -1874,9 +1882,9 @@ contains
           AXIS(i,jmh,k) = REAL_CZ(k+KS-1,ims+i-1,jmsh+jmh-1)
        enddo
        enddo
-    end if
+    endif
     AXIS_name(1:3) = (/'x ', 'yh', 'z '/)
-    call HistoryPutAssociatedCoordinates( 'height_xvz', 'height above ground level (half level xvz)', &
+    call HistoryPutAssociatedCoordinates( 'height_xvz', 'height above ground level (half level xvz)',    &
                                           'm', AXIS_name(1:3), AXIS(1:im,1:jmh,1:KMAX), start=start(:,3) )
 
     do k = 1, KMAX
@@ -1893,21 +1901,21 @@ contains
           AXIS(i,jmh,k) = ( REAL_CZ(k+KS-1,imsh+i-1,jmsh+jmh-1) + REAL_CZ(k+KS-1,imsh+i,jmsh+jmh-1) ) * 0.5_RP
        enddo
        enddo
-    end if
+    endif
     if ( imh == IA-imsh+1 ) then
        do k = 1, KMAX
        do j = 1, min(jmh,JA-jmsh)
           AXIS(imh,j,k) = ( REAL_CZ(k+KS-1,imsh+imh-1,jmsh+j-1) + REAL_CZ(k+KS-1,imsh+imh-1,jmsh+j) ) * 0.5_RP
        enddo
        enddo
-    end if
-    if ( imh == IA-imsh+1 .and. jmh == JA-jmsh+1 ) then
+    endif
+    if ( imh == IA-imsh+1 .AND. jmh == JA-jmsh+1 ) then
        do k = 1, KMAX
           AXIS(imh,jmh,k) = REAL_CZ(k+KS-1,imsh+imh-1,jmsh+jmh-1)
        enddo
-    end if
+    endif
     AXIS_name(1:3) = (/'xh', 'yh', 'z '/)
-    call HistoryPutAssociatedCoordinates( 'height_uvz', 'height above ground level (half level uvz)', &
+    call HistoryPutAssociatedCoordinates( 'height_uvz', 'height above ground level (half level uvz)',     &
                                           'm', AXIS_name(1:3), AXIS(1:imh,1:jmh,1:KMAX), start=start(:,4) )
 
     do k = 0, KMAX
@@ -1923,9 +1931,9 @@ contains
           AXIS(imh,j,k) = REAL_FZ(k+KS-1,imsh+imh-1,jms+j-1)
        enddo
        enddo
-    end if
+    endif
     AXIS_name(1:3) = (/'xh', 'y ', 'zh'/)
-    call HistoryPutAssociatedCoordinates( 'height_uyw', 'height above ground level (half level uyw)', &
+    call HistoryPutAssociatedCoordinates( 'height_uyw', 'height above ground level (half level uyw)',    &
                                           'm', AXIS_name(1:3), AXIS(1:imh,1:jm,0:KMAX), start=start(:,2) )
 
     do k = 0, KMAX
@@ -1941,9 +1949,9 @@ contains
           AXIS(i,jmh,k) = REAL_FZ(k+KS-1,ims+i-1,jmsh+jmh-1)
        enddo
        enddo
-    end if
+    endif
     AXIS_name(1:3) = (/'x ', 'yh', 'zh'/)
-    call HistoryPutAssociatedCoordinates( 'height_xvw', 'height above ground level (half level xvw)', &
+    call HistoryPutAssociatedCoordinates( 'height_xvw', 'height above ground level (half level xvw)',    &
                                           'm', AXIS_name(1:3), AXIS(1:im,1:jmh,0:KMAX), start=start(:,3) )
 
     do k = 0, KMAX
@@ -1960,257 +1968,306 @@ contains
           AXIS(i,jmh,k) = ( REAL_FZ(k+KS-1,imsh+i-1,jmsh+jmh-1) + REAL_FZ(k+KS-1,imsh+i,jmsh+jmh-1) ) * 0.5_RP
        enddo
        enddo
-    end if
+    endif
     if ( imh == IA-imsh+1 ) then
        do k = 0, KMAX
        do j = 1, min(jmh,JA-jmsh)
           AXIS(imh,j,k) = ( REAL_FZ(k+KS-1,imsh+imh-1,jmsh+j-1) + REAL_FZ(k+KS-1,imsh+imh-1,jmsh+j) ) * 0.5_RP
        enddo
        enddo
-    end if
-    if ( imh == IA-imsh+1 .and. jm == JA-jmsh+1 ) then
+    endif
+    if ( imh == IA-imsh+1 .AND. jm == JA-jmsh+1 ) then
        do k = 0, KMAX
           AXIS(imh,jmh,k) = REAL_FZ(k+KS-1,imsh+imh-1,jmsh+jmh-1)
        enddo
-    end if
+    endif
     AXIS_name(1:3) = (/'xh', 'yh', 'zh'/)
-    call HistoryPutAssociatedCoordinates( 'height_uvw', 'height above ground level (half level uvw)', &
+    call HistoryPutAssociatedCoordinates( 'height_uvw', 'height above ground level (half level uvw)',     &
                                           'm', AXIS_name(1:3), AXIS(1:imh,1:jmh,0:KMAX), start=start(:,4) )
 
     AXIS(1:im,1:jm,1) = REAL_LON (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'y '/)
-    call HistoryPutAssociatedCoordinates( 'lon', 'longitude',                                      &
+    call HistoryPutAssociatedCoordinates( 'lon', 'longitude',                                                 &
                                           'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
     AXIS(1:imh,1:jm,1) = REAL_LONX(imsh:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'y '/)
-    call HistoryPutAssociatedCoordinates( 'lon_uy', 'longitude (half level uy)',                   &
+    call HistoryPutAssociatedCoordinates( 'lon_uy', 'longitude (half level uy)',                               &
                                           'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
 
     AXIS(1:im,1:jmh,1) = REAL_LONY(ims:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'yh'/)
-    call HistoryPutAssociatedCoordinates( 'lon_xv', 'longitude (half level xv)',                   &
+    call HistoryPutAssociatedCoordinates( 'lon_xv', 'longitude (half level xv)',                               &
                                           'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
 
     AXIS(1:imh,1:jmh,1) = REAL_LONXY(imsh:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'yh'/)
-    call HistoryPutAssociatedCoordinates( 'lon_uv', 'longitude (half level uv)',                   &
+    call HistoryPutAssociatedCoordinates( 'lon_uv', 'longitude (half level uv)',                                &
                                           'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )
 
     AXIS(1:im,1:jm,1) = REAL_LAT (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'y '/)
-    call HistoryPutAssociatedCoordinates( 'lat', 'latitude',                                        &
+    call HistoryPutAssociatedCoordinates( 'lat', 'latitude',                                                   &
                                           'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
     AXIS(1:imh,1:jm,1) = REAL_LATX(imsh:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'y '/)
-    call HistoryPutAssociatedCoordinates( 'lat_uy', 'latitude (half level uy)',                     &
+    call HistoryPutAssociatedCoordinates( 'lat_uy', 'latitude (half level uy)',                                 &
                                           'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
 
     AXIS(1:im,1:jmh,1) = REAL_LATY(ims:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'yh'/)
-    call HistoryPutAssociatedCoordinates( 'lat_xv', 'latitude (half level xv)',                     &
+    call HistoryPutAssociatedCoordinates( 'lat_xv', 'latitude (half level xv)',                                 &
                                           'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
 
     AXIS(1:imh,1:jmh,1) = REAL_LATXY(imsh:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'yh'/)
-    call HistoryPutAssociatedCoordinates( 'lat_uv', 'latitude (half level uv)',                     &
+    call HistoryPutAssociatedCoordinates( 'lat_uv', 'latitude (half level uv)',                                  &
                                           'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )
 
     AXIS(1:im,1:jm,1) = TOPO_Zsfc(ims:ime,jms:jme)
     AXIS_name(1:2) = (/'x ', 'y '/)
-    call HistoryPutAssociatedCoordinates( 'topo', 'topography',                         &
+    call HistoryPutAssociatedCoordinates( 'topo', 'topography',                                    &
                                           'm', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
     AXIS(1:im,1:jm,1) = LANDUSE_frac_land(ims:ime,jms:jme)
     AXIS_name(1:2) = (/'x ', 'y '/)
-    call HistoryPutAssociatedCoordinates( 'lsmask', 'fraction for land-sea mask',       &
+    call HistoryPutAssociatedCoordinates( 'lsmask', 'fraction for land-sea mask',                  &
                                           '1', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
     return
   end subroutine HIST_put_axes
 
+  !-----------------------------------------------------------------------------
   subroutine HIST_set_axes_attributes
     use gtool_history, only: &
-       HistorySetMapping, &
-       HistorySetAttribute
+       HistorySetGlobalAttribute, &
+       HistorySetAttribute,       &
+       HistorySetMapping
+    use scale_process, only: &
+       PRC_myrank
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_rm_process, only: &
-       PRC_NUM_X, &
-       PRC_NUM_Y, &
+       PRC_2Drank,     &
+       PRC_NUM_X,      &
+       PRC_NUM_Y,      &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y, &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
+       PRC_HAS_W,      &
+       PRC_HAS_E,      &
+       PRC_HAS_S,      &
        PRC_HAS_N
+    use scale_fileio, only: &
+       axisattinfo,   &
+       mappinginfo
     use scale_mapproj, only: &
        MPRJ_get_attributes
+    implicit none
 
-    integer :: isize, jsize
-    integer :: istart, jstart
-    integer :: whalo_g, ehalo_g, shalo_g, nhalo_g
-    integer :: whalo_l, ehalo_l, shalo_l, nhalo_l
-    integer :: isizeh, jsizeh
-    integer :: istarth, jstarth
-    integer :: whaloh_g, shaloh_g
-    integer :: whaloh_l, shaloh_l
+    character(len=5) :: periodic_z, periodic_x, periodic_y
 
-    character(len=5) :: logical_str
+    type(axisattinfo) :: ainfo(4) ! x, xh, y, yh
+    type(mappinginfo) :: minfo
+    !---------------------------------------------------------------------------
 
-    character(len=H_SHORT) :: mapping
-    real(DP) :: false_easting
-    real(DP) :: false_northing
-    real(DP) :: longitude_of_central_meridian
-    real(DP) :: longitude_of_projection_origin
-    real(DP) :: latitude_of_projection_origin
-    real(DP) :: straight_vertical_longitude_from_pole
-    real(DP) :: standard_parallel(2)
+    periodic_z = "false"
+    if ( PRC_PERIODIC_X ) then
+       periodic_x = "true"
+    else
+       periodic_x = "false"
+    endif
+    if ( PRC_PERIODIC_Y ) then
+       periodic_y = "true"
+    else
+       periodic_y = "false"
+    endif
 
-    ! attributes
-    if ( PRC_PERIODIC_X ) then; logical_str = "true"; else; logical_str = "false"; end if
-    if( PRC_PERIODIC_X .or. .not. HIST_BND ) then
-       isize = IMAX * PRC_NUM_X
-       istart = IS_inG - IHALO
-       whalo_g = 0
-       ehalo_g = 0
-       whalo_l = 0
-       ehalo_l = 0
-       isizeh = isize
-       istarth = istart
-       whaloh_g = whalo_g
-       whaloh_l = whalo_l
-       if ( .not. PRC_PERIODIC_X ) then
-          isizeh = isize + 1
-          whaloh_g = whalo_g + 1
-          if ( PRC_HAS_W ) then
-             istarth = istarth + 1
-          else
-             whaloh_l = whalo_l + 1
-          end if
-       end if
-    else ! HIST_BND == .true.
-       isize = IAG
-       istart = ISGA
-       whalo_g = IHALO
-       ehalo_g = IHALO
-       if ( IO_AGGREGATE ) then
-          whalo_l = whalo_g
-          ehalo_l = ehalo_g
+    if ( .NOT. IO_AGGREGATE ) then
+       call HistorySetGlobalAttribute( "scale_rm_prc_rank_x", (/PRC_2Drank(PRC_myrank,1)/) ) ! [IN]
+       call HistorySetGlobalAttribute( "scale_rm_prc_rank_y", (/PRC_2Drank(PRC_myrank,2)/) ) ! [IN]
+
+       call HistorySetGlobalAttribute( "scale_rm_prc_num_x", (/PRC_NUM_X/) ) ! [IN]
+       call HistorySetGlobalAttribute( "scale_rm_prc_num_y", (/PRC_NUM_Y/) ) ! [IN]
+    endif
+
+    call HistorySetGlobalAttribute( "scale_rm_prc_periodic_z", periodic_z ) ! [IN]
+    call HistorySetGlobalAttribute( "scale_rm_prc_periodic_x", periodic_x ) ! [IN]
+    call HistorySetGlobalAttribute( "scale_rm_prc_periodic_y", periodic_y ) ! [IN]
+
+    call HistorySetGlobalAttribute( "scale_rm_grid_index_kmax",  (/KMAX/)  ) ! [IN]
+    call HistorySetGlobalAttribute( "scale_rm_grid_index_imaxg", (/IMAXG/) ) ! [IN]
+    call HistorySetGlobalAttribute( "scale_rm_grid_index_jmaxg", (/JMAXG/) ) ! [IN]
+
+    call HistorySetGlobalAttribute( "scale_rm_grid_index_khalo", (/KHALO/) ) ! [IN]
+    call HistorySetGlobalAttribute( "scale_rm_grid_index_ihalo", (/IHALO/) ) ! [IN]
+    call HistorySetGlobalAttribute( "scale_rm_grid_index_jhalo", (/JHALO/) ) ! [IN]
+
+    if ( PRC_PERIODIC_X ) then
+       ainfo(1)%periodic = "true"
+       ainfo(2)%periodic = "true"
+    else
+       ainfo(1)%periodic = "false"
+       ainfo(2)%periodic = "false"
+    endif
+
+    if ( PRC_PERIODIC_Y ) then
+       ainfo(3)%periodic = "true"
+       ainfo(4)%periodic = "true"
+    else
+       ainfo(3)%periodic = "false"
+       ainfo(4)%periodic = "false"
+    endif
+
+    ! for x
+    if ( PRC_PERIODIC_X .OR. .NOT. HIST_BND ) then
+       ainfo(1)%size_global (1) = IMAX * PRC_NUM_X
+       ainfo(1)%start_global(1) = IS_inG - IHALO
+       ainfo(1)%halo_global (1) = 0     ! west side
+       ainfo(1)%halo_global (2) = 0     ! east side
+       ainfo(1)%halo_local  (1) = 0     ! west side
+       ainfo(1)%halo_local  (2) = 0     ! east side
+    else
+       ainfo(1)%size_global (1) = IAG
+       ainfo(1)%start_global(1) = ISGA
+       ainfo(1)%halo_global (1) = IHALO ! west side
+       ainfo(1)%halo_global (2) = IHALO ! east side
+       ainfo(1)%halo_local  (1) = IHALO ! west side
+       ainfo(1)%halo_local  (2) = IHALO ! east side
+       if( PRC_HAS_W ) ainfo(1)%halo_local(1) = 0
+       if( PRC_HAS_E ) ainfo(1)%halo_local(2) = 0
+    endif
+
+    ! for xh
+    ainfo(2) = ainfo(1)
+    if ( .NOT. PRC_PERIODIC_X .AND. .NOT. HIST_BND ) then
+       ainfo(2)%size_global (1) = ainfo(2)%size_global (1) + 1
+       ainfo(2)%halo_global (1) = ainfo(2)%halo_global (1) + 1
+       if ( PRC_HAS_W ) then
+          ainfo(2)%start_global(1) = ainfo(2)%start_global(1) + 1
        else
-          if ( PRC_HAS_W ) then; whalo_l = 0; else; whalo_l = whalo_g; end if
-          if ( PRC_HAS_E ) then; ehalo_l = 0; else; ehalo_l = ehalo_g; end if
-       end if
-       isizeh = isize
-       istarth = istart
-    end if
+          ainfo(2)%halo_local  (1) = ainfo(2)%halo_local  (1) + 1
+       endif
+    endif
 
-    call HistorySetAttribute( "x", "size_global",  (/ isize /) )
-    call HistorySetAttribute( "x", "start_global", (/ istart /) )
-    call HistorySetAttribute( "x", "halo_global",  (/ whalo_g, ehalo_g /) )
-    call HistorySetAttribute( "x", "halo_local",   (/ whalo_l, ehalo_l /) )
-    call HistorySetAttribute( "x", "periodic",     logical_str )
+    ! for y
+    if ( PRC_PERIODIC_Y .OR. .NOT. HIST_BND ) then
+       ainfo(3)%size_global (1) = JMAX * PRC_NUM_Y
+       ainfo(3)%start_global(1) = JS_inG - JHALO
+       ainfo(3)%halo_global (1) = 0     ! south side
+       ainfo(3)%halo_global (2) = 0     ! north side
+       ainfo(3)%halo_local  (1) = 0     ! south side
+       ainfo(3)%halo_local  (2) = 0     ! north side
+    else
+       ainfo(3)%size_global (1) = JAG
+       ainfo(3)%start_global(1) = JSGA
+       ainfo(3)%halo_global (1) = JHALO ! south side
+       ainfo(3)%halo_global (2) = JHALO ! north side
+       ainfo(3)%halo_local  (1) = JHALO ! south side
+       ainfo(3)%halo_local  (2) = JHALO ! north side
+       if( PRC_HAS_S ) ainfo(3)%halo_local(1) = 0
+       if( PRC_HAS_N ) ainfo(3)%halo_local(2) = 0
+    endif
 
-    call HistorySetAttribute( "xh", "size_global",  (/ isizeh /) )
-    call HistorySetAttribute( "xh", "start_global", (/ istarth /) )
-    call HistorySetAttribute( "xh", "halo_global",  (/ whaloh_g, ehalo_g /) )
-    call HistorySetAttribute( "xh", "halo_local",   (/ whaloh_l, ehalo_l /) )
-    call HistorySetAttribute( "xh", "periodic",     logical_str )
-
-
-    if ( PRC_PERIODIC_Y ) then; logical_str = "true"; else; logical_str = "false"; end if
-    if( PRC_PERIODIC_Y .or. .not. HIST_BND ) then
-       jsize = JMAX * PRC_NUM_Y
-       jstart = JS_inG - JHALO
-       shalo_g = 0
-       nhalo_g = 0
-       shalo_l = 0
-       nhalo_l = 0
-       jsizeh = jsize
-       jstarth = jstart
-       shaloh_g = shalo_g
-       shaloh_l = shalo_l
-       if ( .not. PRC_PERIODIC_Y ) then
-          jsizeh = jsize + 1
-          shaloh_g = shalo_g + 1
-          if ( PRC_HAS_S ) then
-             jstarth = jstarth + 1
-          else
-             shaloh_l = shalo_l + 1
-          end if
-       end if
-    else ! HIST_BND == .true.
-       jsize = JAG
-       jstart = JSGA
-       shalo_g = JHALO
-       nhalo_g = JHALO
-       if ( IO_AGGREGATE ) then
-          shalo_l = shalo_g
-          nhalo_l = nhalo_g
+    ! for yh
+    ainfo(4) = ainfo(3)
+    if ( .NOT. PRC_PERIODIC_Y .AND. .NOT. HIST_BND ) then
+       ainfo(4)%size_global (1) = ainfo(4)%size_global (1) + 1
+       ainfo(4)%halo_global (1) = ainfo(4)%halo_global (1) + 1
+       if ( PRC_HAS_S ) then
+          ainfo(4)%start_global(1) = ainfo(4)%start_global(1) + 1
        else
-          if ( PRC_HAS_S ) then; shalo_l = 0; else; shalo_l = shalo_g; end if
-          if ( PRC_HAS_N ) then; nhalo_l = 0; else; nhalo_l = nhalo_g; end if
-       end if
-       jsizeh = jsize
-       jstarth = jstart
-    end if
+          ainfo(4)%halo_local  (1) = ainfo(4)%halo_local  (1) + 1
+       endif
+    endif
 
-    call HistorySetAttribute( "y", "size_global",  (/ jsize /) )
-    call HistorySetAttribute( "y", "start_global", (/ jstart /) )
-    call HistorySetAttribute( "y", "halo_global",  (/ shalo_g, nhalo_g /) )
-    call HistorySetAttribute( "y", "halo_local",   (/ shalo_l, nhalo_l /) )
-    call HistorySetAttribute( "y", "periodic",     logical_str )
+    call HistorySetAttribute( "x" , "size_global" , ainfo(1)%size_global (:) )
+    call HistorySetAttribute( "x" , "start_global", ainfo(1)%start_global(:) )
+    call HistorySetAttribute( "x" , "halo_global" , ainfo(1)%halo_global (:) )
+    call HistorySetAttribute( "x" , "halo_local"  , ainfo(1)%halo_local  (:) )
+    call HistorySetAttribute( "x" , "periodic"    , ainfo(1)%periodic        )
 
-    call HistorySetAttribute( "yh", "size_global",  (/ jsizeh /) )
-    call HistorySetAttribute( "yh", "start_global", (/ jstarth /) )
-    call HistorySetAttribute( "yh", "halo_global",  (/ shaloh_g, nhalo_g /) )
-    call HistorySetAttribute( "yh", "halo_local",   (/ shaloh_l, nhalo_l /) )
-    call HistorySetAttribute( "yh", "periodic",     logical_str )
+    call HistorySetAttribute( "xh", "size_global" , ainfo(2)%size_global (:) )
+    call HistorySetAttribute( "xh", "start_global", ainfo(2)%start_global(:) )
+    call HistorySetAttribute( "xh", "halo_global" , ainfo(2)%halo_global (:) )
+    call HistorySetAttribute( "xh", "halo_local"  , ainfo(2)%halo_local  (:) )
+    call HistorySetAttribute( "xh", "periodic"    , ainfo(2)%periodic        )
 
-    call MPRJ_get_attributes( mapping,                               & ! [OUT]
-                              false_easting, false_northing,         & ! [OUT]
-                              longitude_of_central_meridian,         & ! [OUT]
-                              longitude_of_projection_origin,        & ! [OUT]
-                              latitude_of_projection_origin,         & ! [OUT]
-                              straight_vertical_longitude_from_pole, & ! [OUT]
-                              standard_parallel(:)                   ) ! [OUT]
-    if ( mapping /= "" ) then
-       call HistorySetAttribute( "x",  "standard_name", "projection_x_coordinate");
-       call HistorySetAttribute( "xh", "standard_name", "projection_x_coordinate");
-       call HistorySetAttribute( "y",  "standard_name", "projection_y_coordinate");
-       call HistorySetAttribute( "yh", "standard_name", "projection_y_coordinate");
-       call HistorySetMapping( mapping )
+    call HistorySetAttribute( "y" , "size_global" , ainfo(3)%size_global (:) )
+    call HistorySetAttribute( "y" , "start_global", ainfo(3)%start_global(:) )
+    call HistorySetAttribute( "y" , "halo_global" , ainfo(3)%halo_global (:) )
+    call HistorySetAttribute( "y" , "halo_local"  , ainfo(3)%halo_local  (:) )
+    call HistorySetAttribute( "y" , "periodic"    , ainfo(3)%periodic        )
 
-       if ( false_easting /= UNDEF ) then
-          call HistorySetAttribute( mapping, "false_easting",  (/ false_easting /) )
+    call HistorySetAttribute( "yh", "size_global" , ainfo(4)%size_global (:) )
+    call HistorySetAttribute( "yh", "start_global", ainfo(4)%start_global(:) )
+    call HistorySetAttribute( "yh", "halo_global" , ainfo(4)%halo_global (:) )
+    call HistorySetAttribute( "yh", "halo_local"  , ainfo(4)%halo_local  (:) )
+    call HistorySetAttribute( "yh", "periodic"    , ainfo(4)%periodic        )
+
+    ! map projection info
+    call MPRJ_get_attributes( minfo%mapping_name,                             & ! [OUT]
+                              minfo%false_easting                        (1), & ! [OUT]
+                              minfo%false_northing                       (1), & ! [OUT]
+                              minfo%longitude_of_central_meridian        (1), & ! [OUT]
+                              minfo%longitude_of_projection_origin       (1), & ! [OUT]
+                              minfo%latitude_of_projection_origin        (1), & ! [OUT]
+                              minfo%straight_vertical_longitude_from_pole(1), & ! [OUT]
+                              minfo%standard_parallel                    (:)  ) ! [OUT]
+
+    if ( minfo%mapping_name /= "" ) then
+       call HistorySetAttribute( "x" , "standard_name", "projection_x_coordinate" )
+       call HistorySetAttribute( "xh", "standard_name", "projection_x_coordinate" )
+       call HistorySetAttribute( "y" , "standard_name", "projection_y_coordinate" )
+       call HistorySetAttribute( "yh", "standard_name", "projection_y_coordinate" )
+
+       call HistorySetMapping( minfo%mapping_name )
+
+       if ( minfo%false_easting(1) /= UNDEF ) then
+          call HistorySetAttribute( minfo%mapping_name,    & ! [IN]
+                                    "false_easting",       & ! [IN]
+                                    minfo%false_easting(:) ) ! [IN]
        endif
 
-       if ( false_northing /= UNDEF ) then
-          call HistorySetAttribute( mapping, "false_northing", (/ false_northing /) )
+       if ( minfo%false_northing(1) /= UNDEF ) then
+          call HistorySetAttribute( minfo%mapping_name,     & ! [IN]
+                                    "false_northing",       & ! [IN]
+                                    minfo%false_northing(:) ) ! [IN]
        endif
 
-       if ( longitude_of_central_meridian /= UNDEF ) then
-          call HistorySetAttribute( mapping, "longitude_of_central_meridian", (/ longitude_of_central_meridian /) )
+       if ( minfo%longitude_of_central_meridian(1) /= UNDEF ) then
+          call HistorySetAttribute( minfo%mapping_name,                    & ! [IN]
+                                    "longitude_of_central_meridian",       & ! [IN]
+                                    minfo%longitude_of_central_meridian(:) ) ! [IN]
        endif
 
-       if ( longitude_of_projection_origin /= UNDEF ) then
-          call HistorySetAttribute( mapping, "longitude_of_projection_origin", (/ longitude_of_projection_origin /) )
+       if ( minfo%longitude_of_projection_origin(1) /= UNDEF ) then
+          call HistorySetAttribute( minfo%mapping_name,                     & ! [IN]
+                                    "longitude_of_projection_origin",       & ! [IN]
+                                    minfo%longitude_of_projection_origin(:) ) ! [IN]
        endif
 
-       if ( latitude_of_projection_origin /= UNDEF ) then
-          call HistorySetAttribute( mapping, "latitude_of_projection_origin", (/ latitude_of_projection_origin /) )
+       if ( minfo%latitude_of_projection_origin(1) /= UNDEF ) then
+          call HistorySetAttribute( minfo%mapping_name,                    & ! [IN]
+                                    "latitude_of_projection_origin",       & ! [IN]
+                                    minfo%latitude_of_projection_origin(:) ) ! [IN]
        endif
 
-       if ( straight_vertical_longitude_from_pole /= UNDEF ) then
-          call HistorySetAttribute( mapping, "straight_vertical_longitude_from_pole", (/ straight_vertical_longitude_from_pole /) )
+       if ( minfo%straight_vertical_longitude_from_pole(1) /= UNDEF ) then
+          call HistorySetAttribute( minfo%mapping_name,                            & ! [IN]
+                                    "straight_vertical_longitude_from_pole",       & ! [IN]
+                                    minfo%straight_vertical_longitude_from_pole(:) ) ! [IN]
        endif
 
-       if ( standard_parallel(1) /= UNDEF ) then
-          if ( standard_parallel(2) /= UNDEF ) then
-             call HistorySetAttribute( mapping, "standard_parallel", standard_parallel(1:2) )
+       if ( minfo%standard_parallel(1) /= UNDEF ) then
+          if ( minfo%standard_parallel(2) /= UNDEF ) then
+             call HistorySetAttribute( minfo%mapping_name,          & ! [IN]
+                                       "standard_parallel",         & ! [IN]
+                                       minfo%standard_parallel(1:2) ) ! [IN]
           else
-             call HistorySetAttribute( mapping, "standard_parallel", standard_parallel(1:1) )
+             call HistorySetAttribute( minfo%mapping_name,          & ! [IN]
+                                       "standard_parallel",         & ! [IN]
+                                       minfo%standard_parallel(1:1) ) ! [IN]
           endif
        endif
     endif

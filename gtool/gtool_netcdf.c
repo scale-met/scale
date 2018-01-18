@@ -17,7 +17,7 @@ static int32_t ERROR_SUPPRESS = 0;
     int status_ = (func);                                       \
     if (status_ != NC_NOERR) {                                  \
       if ( ! ERROR_SUPPRESS ) {                                 \
-        fprintf(stderr, "Error: at l%d in %s\n", __LINE__, __FILE__);   \
+        fprintf(stderr, "Error: at line %d in %s\n", __LINE__, __FILE__);   \
         fprintf(stderr, "       %s\n", nc_strerror(status_));   \
       }                                                         \
       return ERROR_CODE;                                        \
@@ -31,7 +31,7 @@ static int32_t ERROR_SUPPRESS = 0;
     int status_ = (func);                                       \
     if (status_ != NC_NOERR) {                                  \
       if ( ! ERROR_SUPPRESS ) {                                 \
-        fprintf(stderr, "Error: at l%d in %s\n", __LINE__, __FILE__);   \
+        fprintf(stderr, "Error: at line %d in %s\n", __LINE__, __FILE__);   \
         fprintf(stderr, "       %s\n", ncmpi_strerror(status_));        \
       }                                                         \
       return ERROR_CODE;                                        \
@@ -215,6 +215,48 @@ int32_t file_set_option( int32_t fid,    // (in)
   }
 }
 
+int32_t file_get_nvars( int32_t  fid,   // (in)
+                        int32_t *nvars )// (out)
+{
+  int ncid;
+  int ndims, ngatts, unlimdim;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  if ( files[fid]->shared_mode )
+    CHECK_PNC_ERROR( ncmpi_inq(ncid, &ndims, nvars, &ngatts, &unlimdim) )
+  else
+    CHECK_ERROR( nc_inq(ncid, &ndims, nvars, &ngatts, &unlimdim) )
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_get_varname( int32_t  fid,  // (in)
+                          int32_t  vid,  // (in)
+                          char    *name, // (out)
+                          int32_t  len ) // (in)
+{
+  int ncid, varid;
+  char buf[MAX_NC_NAME+1];
+  int i, error;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid  = files[fid]->ncid;
+  varid = vid-1; // index starts from 1 in fortran space
+
+  if ( files[fid]->shared_mode )
+    CHECK_PNC_ERROR( ncmpi_inq_varname(ncid, varid, buf) )
+  else
+    CHECK_ERROR( nc_inq_varname(ncid, varid, buf) )
+
+  for (i=0; i<MIN(len-1,strlen(buf)); i++)
+    name[i] = buf[i];
+  name[i] = '\0';
+
+  return SUCCESS_CODE;
+}
+
 int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
                            int32_t     fid,     // (in)
                            char*       varname, // (in)
@@ -380,6 +422,11 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
         dinfo->time_units[i] = buf[i];
       dinfo->time_units[i] = '\0';
       free(buf);
+    }
+  } else {
+    if ( step > 1 ) { // if variable does not have time dimention, step > 1 should not exist
+      fprintf(stderr, "requested step is larger than tdim: step=%d tdim=%d\n", step, tdim);
+      return ERROR_CODE;
     }
   }
   ERROR_SUPPRESS = 0;
@@ -645,10 +692,10 @@ int32_t file_set_global_attribute_double( int32_t  fid,   // (in)
 }
 
 int32_t file_get_attribute_text( int32_t  fid,   // (in)
-				 char    *vname, // (in)
-				 char    *key,   // (in)
-				 char    *value, // (out)
-				 int32_t len)    // (in)
+                                 char    *vname, // (in)
+                                 char    *key,   // (in)
+                                 char    *value, // (out)
+                                 int32_t len)    // (in)
 {
   int ncid;
   int varid;
@@ -681,10 +728,10 @@ int32_t file_get_attribute_text( int32_t  fid,   // (in)
 }
 
 int32_t file_get_attribute_int( int32_t  fid,   // (in)
-				char    *vname, // (in)
-				char    *key,   // (in)
-				int     *value, // (out)
-				size_t   len)   // (in)
+                                char    *vname, // (in)
+                                char    *key,   // (in)
+                                int     *value, // (out)
+                                size_t   len)   // (in)
 {
   int ncid;
   int varid;
@@ -713,10 +760,10 @@ int32_t file_get_attribute_int( int32_t  fid,   // (in)
 }
 
 int32_t file_get_attribute_float( int32_t  fid,   // (in)
-				  char    *vname, // (in)
-				  char    *key,   // (in)
-				  float   *value, // (out)
-				  size_t   len)   // (in)
+                                  char    *vname, // (in)
+                                  char    *key,   // (in)
+                                  float   *value, // (out)
+                                  size_t   len)   // (in)
 {
   int ncid;
   int varid;
@@ -745,10 +792,10 @@ int32_t file_get_attribute_float( int32_t  fid,   // (in)
 }
 
 int32_t file_get_attribute_double( int32_t  fid,   // (in)
-				   char    *vname, // (in)
-				   char    *key,   // (in)
-				   double  *value, // (out)
-				   size_t   len)   // (in)
+                                   char    *vname, // (in)
+                                   char    *key,   // (in)
+                                   double  *value, // (out)
+                                   size_t   len)   // (in)
 {
   int ncid;
   int varid;
@@ -777,9 +824,9 @@ int32_t file_get_attribute_double( int32_t  fid,   // (in)
 }
 
 int32_t file_set_attribute_text( int32_t  fid,   // (in)
-			    char    *vname, // (in)
-			    char    *key,   // (in)
-			    char    *val)   // (in)
+                            char    *vname, // (in)
+                            char    *key,   // (in)
+                            char    *val)   // (in)
 {
   int ncid;
   int varid;
@@ -816,10 +863,10 @@ int32_t file_set_attribute_text( int32_t  fid,   // (in)
 }
 
 int32_t file_set_attribute_int( int32_t  fid,   // (in)
-				char    *vname, // (in)
-				char    *key,   // (in)
-				int32_t *value, // (in)
-				size_t   len )  // (in)
+                                char    *vname, // (in)
+                                char    *key,   // (in)
+                                int32_t *value, // (in)
+                                size_t   len )  // (in)
 {
   int ncid;
   int varid;
@@ -856,10 +903,10 @@ int32_t file_set_attribute_int( int32_t  fid,   // (in)
 }
 
 int32_t file_set_attribute_float( int32_t  fid,   // (in)
-				  char    *vname, // (in)
-				  char    *key,   // (in)
-				  float   *value, // (in)
-				  size_t   len )  // (in)
+                                  char    *vname, // (in)
+                                  char    *key,   // (in)
+                                  float   *value, // (in)
+                                  size_t   len )  // (in)
 {
   int ncid;
   int varid;
@@ -896,10 +943,10 @@ int32_t file_set_attribute_float( int32_t  fid,   // (in)
 }
 
 int32_t file_set_attribute_double( int32_t  fid,   // (in)
-				   char    *vname, // (in)
-				   char    *key,   // (in)
-				   double  *value, // (in)
-				   size_t   len )  // (in)
+                                   char    *vname, // (in)
+                                   char    *key,   // (in)
+                                   double  *value, // (in)
+                                   size_t   len )  // (in)
 {
   int ncid;
   int varid;
