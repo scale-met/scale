@@ -156,11 +156,13 @@ module scale_atmos_saturation
 
   interface ATMOS_SATURATION_tdew_liq
      module procedure ATMOS_SATURATION_tdew_liq_0D
+     module procedure ATMOS_SATURATION_tdew_liq_1D
      module procedure ATMOS_SATURATION_tdew_liq_3D
   end interface ATMOS_SATURATION_tdew_liq
 
   interface ATMOS_SATURATION_pote
      module procedure ATMOS_SATURATION_pote_0D
+     module procedure ATMOS_SATURATION_pote_1D
      module procedure ATMOS_SATURATION_pote_3D
   end interface ATMOS_SATURATION_pote
 
@@ -186,7 +188,7 @@ module scale_atmos_saturation
   !
   !++ Private parameters & variables
   !
-  real(RP), private, parameter :: TEM_MIN   = 100.0_RP !< minimum temperature [K]
+  real(RP), private, parameter :: TEM_MIN   = 10.0_RP !< minimum temperature [K]
 
   real(RP), private,      save :: ATMOS_SATURATION_ULIMIT_TEMP = 273.15_RP !< upper limit temperature
   real(RP), private,      save :: ATMOS_SATURATION_LLIMIT_TEMP = 233.15_RP !< lower limit temperature
@@ -209,7 +211,7 @@ contains
   !> Setup
   subroutine ATMOS_SATURATION_setup
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        CPvap => CONST_CPvap, &
        CVvap => CONST_CVvap, &
@@ -220,6 +222,8 @@ contains
        LHV0  => CONST_LHV0,  &
        LHS0  => CONST_LHS0,  &
        CONST_THERMODYN_TYPE
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_setup
     implicit none
 
     NAMELIST / PARAM_ATMOS_SATURATION / &
@@ -239,7 +243,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_SATURATION. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_SATURATION)
 
@@ -273,6 +277,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F7.2,A,F7.2)') '*** Temperature range for liquid/ice mixture : ', &
                                                       ATMOS_SATURATION_LLIMIT_TEMP, ' - ', &
                                                       ATMOS_SATURATION_ULIMIT_TEMP
+
+    call ATMOS_HYDROMETEOR_setup
 
     call ATMOS_SATURATION_psat_liq( TEM_MIN, psat_min_liq ) ! [IN], [OUT]
     call ATMOS_SATURATION_psat_ice( TEM_MIN, psat_min_ice ) ! [IN], [OUT]
@@ -1696,6 +1702,32 @@ contains
     return
   end subroutine ATMOS_SATURATION_tdew_liq_0D
 
+!OCL SERIAL
+  subroutine ATMOS_SATURATION_tdew_liq_1D( &
+       KA, KS, KE, &
+       DENS, TEMP, QV, &
+       Tdew,           &
+       converged       )
+    integer, intent(in) :: KA, KS, KE
+
+    real(RP), intent(in) :: DENS(KA)
+    real(RP), intent(in) :: TEMP(KA)
+    real(RP), intent(in) :: QV  (KA)
+
+    real(RP), intent(out) :: Tdew(KA)
+    logical,  intent(out) :: converged
+
+    integer :: k
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+       call ATMOS_SATURATION_tdew_liq_0D( DENS(k), TEMP(k), QV(k), & ! [IN]
+                                          Tdew(k), converged       ) ! [OUT]
+       if ( .not. converged ) exit
+    end do
+
+  end subroutine ATMOS_SATURATION_tdew_liq_1D
+
   subroutine ATMOS_SATURATION_tdew_liq_3D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS, TEMP, QV, &
@@ -1772,6 +1804,30 @@ contains
 
     return
   end subroutine ATMOS_SATURATION_pote_0D
+
+!OCL SERIAL
+  subroutine ATMOS_SATURATION_pote_1D( &
+       KA, KS, KE, &
+       DENS, POTT, TEMP, QV, &
+       POTE                  )
+    integer, intent(in) :: KA, KS, KE
+
+    real(RP), intent(in) :: DENS(KA)
+    real(RP), intent(in) :: POTT(KA)
+    real(RP), intent(in) :: TEMP(KA)
+    real(RP), intent(in) :: QV  (KA)
+
+    real(RP), intent(out) :: POTE(KA)
+
+    integer :: k
+
+    do k = KS, KE
+       call ATMOS_SATURATION_pote_0D( DENS(k), POTT(k), TEMP(k), QV(k), & ! [IN]
+                                      POTE(k)                           ) ! [OUT]
+    end do
+
+    return
+  end subroutine ATMOS_SATURATION_pote_1D
 
   subroutine ATMOS_SATURATION_pote_3D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
