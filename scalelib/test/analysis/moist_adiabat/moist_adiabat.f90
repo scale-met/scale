@@ -4,9 +4,11 @@ program moist_adiabat
      PRE00 => CONST_PRE00, &
      Rdry  => CONST_Rdry,  &
      Rvap  => CONST_Rvap,  &
-     CPdry => CONST_CPdry, &
-     CPvap => CONST_CPvap, &
-     CL    => CONST_CL
+     CPdry => CONST_CPdry
+  use scale_atmos_hydrometeor, only: &
+     CPvap => CP_VAPOR, &
+     CL    => CP_WATER, &
+     CI    => CP_ICE
   use scale_stdio, only: &
      IO_get_available_fid
   use scale_atmos_saturation, only: &
@@ -23,7 +25,8 @@ program moist_adiabat
   real(RP), allocatable :: xaxis(:), yaxis(:)
   real(RP), allocatable :: z(:), zh(:)
 
-  real(RP), allocatable :: TEMP(:), PRES(:), QV(:), QC(:)
+  real(RP), allocatable :: TEMP(:), PRES(:)
+  real(RP), allocatable :: QV(:), QC(:), QR(:), QI(:), QS(:), QG(:)
   real(RP), allocatable :: POTT(:), DENS(:), QDRY(:)
   real(RP), allocatable :: Rtot(:), CPtot(:)
   real(RP), allocatable :: Tdew(:), POTE(:)
@@ -80,7 +83,7 @@ program moist_adiabat
   if( IO_NML ) write(IO_FID_NML,nml=PARAM_MOIST_ADIABAT)
   
   status = nf90_open( filename_in, nf90_nowrite, ncid )
-  if ( status /= nf90_noerr) then
+  if ( status /= nf90_noerr ) then
      write(*,*) 'xxx failed to open file: ', trim(filename_in)
      call PRC_abort
   end if
@@ -121,7 +124,7 @@ program moist_adiabat
   status = nf90_get_var( ncid, vid, zh(:), start=(/i,j,1/), count=(/1,1,nz+1/) )
 
   ! get variables
-  allocate( TEMP(nz), PRES(nz), QV(nz), QC(nz) )
+  allocate( TEMP(nz), PRES(nz), QV(nz), QC(nz), QR(nz), QI(nz), QS(nz), QG(nz) )
   start(:) = (/i,j,1,nstep/)
   count(:) = (/1,1,nz,1/)
 
@@ -135,19 +138,49 @@ program moist_adiabat
   status = nf90_get_var( ncid, vid, QV(:), start=start, count=count)
 
   status = nf90_inq_varid( ncid, "QC", vid )
-  status = nf90_get_var( ncid, vid, QC(:), start=start, count=count)
+  if ( status == nf90_noerr ) then
+     status = nf90_get_var( ncid, vid, QC(:), start=start, count=count)
+  else
+     QC(:) = 0.0_RP
+  end if
 
+  status = nf90_inq_varid( ncid, "QR", vid )
+  if ( status == nf90_noerr ) then
+     status = nf90_get_var( ncid, vid, QR(:), start=start, count=count)
+  else
+     QR(:) = 0.0_RP
+  end if
+
+  status = nf90_inq_varid( ncid, "QI", vid )
+  if ( status == nf90_noerr ) then
+     status = nf90_get_var( ncid, vid, QI(:), start=start, count=count)
+  else
+     QI(:) = 0.0_RP
+  end if
+
+  status = nf90_inq_varid( ncid, "QS", vid )
+  if ( status == nf90_noerr ) then
+     status = nf90_get_var( ncid, vid, QS(:), start=start, count=count)
+  else
+     QS(:) = 0.0_RP
+  end if
+
+  status = nf90_inq_varid( ncid, "QG", vid )
+  if ( status == nf90_noerr ) then
+     status = nf90_get_var( ncid, vid, QG(:), start=start, count=count)
+  else
+     QG(:) = 0.0_RP
+  end if
 
   status = nf90_close( ncid )
 
 
-
-  ! approximate estimation (ignore other tracers than qv and qc)
+  ! approximate estimation (ignore other tracers)
   allocate( POTT(nz), DENS(nz), QDRY(nz), Rtot(nz), CPtot(nz) )
   do k = 1, nz
-     QDRY(k) = 1.0_RP - QV(k) - QC(k)
+     QDRY(k) = 1.0_RP - QV(k) - QC(k) - QR(k) - QI(k) - QS(k) - QG(k)
      Rtot(k)  =  Rdry * QDRY(k) +  Rvap * QV(k)
-     CPtot(k) = CPdry * QDRY(k) + CPvap * QV(k) + CL * QC(k)
+     CPtot(k) = CPdry * QDRY(k) + CPvap * QV(k) + CL * ( QC(k) + QR(k) ) + CI * ( QI(k) + QS(k) + QG(k) )
      POTT(k) = TEMP(k) * ( PRE00 / PRES(k) )**( Rtot(k) / CPtot(k) )
      DENS(k) = PRES(k) / ( Rtot(k) * TEMP(k) )
   end do
