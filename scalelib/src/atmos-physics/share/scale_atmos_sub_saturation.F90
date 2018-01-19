@@ -188,7 +188,7 @@ module scale_atmos_saturation
   !
   !++ Private parameters & variables
   !
-  real(RP), private, parameter :: TEM_MIN   = 10.0_RP !< minimum temperature [K]
+  real(RP), private, parameter :: TEM_MIN = 10.0_RP !> calculation of dew point is ommited under this temperature
 
   real(RP), private,      save :: ATMOS_SATURATION_ULIMIT_TEMP = 273.15_RP !< upper limit temperature
   real(RP), private,      save :: ATMOS_SATURATION_LLIMIT_TEMP = 233.15_RP !< lower limit temperature
@@ -1663,6 +1663,9 @@ contains
     real(RP), intent(out) :: Tdew
     logical,  intent(out) :: converged
 
+    real(RP), parameter :: A = 17.625_RP
+    real(RP), parameter :: B = 243.04_RP
+    real(RP), parameter :: C = 610.94_RP
     integer,  parameter :: itelim = 100
     real(RP), parameter :: criteria = 0.1_RP**(2+RP/2)
 
@@ -1682,7 +1685,9 @@ contains
        return
     end if
 
-    Tdew = TEMP
+    ! first guess is calculated by Alduchov and Eskridge (1996)
+    ! See Lawrence (2005) BAMS
+    Tdew = B * log( pvap / C ) / ( A - log( pvap / C ) ) + TEM00
     converged = .false.
     do ite = 1, itelim
 
@@ -1698,6 +1703,9 @@ contains
 
        Tdew = Tdew - dTdew
     end do
+    if( .not. converged ) then
+       write(*,*)DENS, TEMP, QV, pvap, Tdew, dTdew, dpsat_dT
+    endif
 
     return
   end subroutine ATMOS_SATURATION_tdew_liq_0D
@@ -1749,7 +1757,8 @@ contains
     !---------------------------------------------------------------------------
 
     error = .false.
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(converged)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE

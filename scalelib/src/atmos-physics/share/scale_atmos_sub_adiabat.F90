@@ -266,7 +266,8 @@ contains
     end if
     
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(converged)
     do j = JS, JE
     do i = IS, IE
 
