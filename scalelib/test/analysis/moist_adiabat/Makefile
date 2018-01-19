@@ -16,7 +16,7 @@ BINNAME = moist_adiabat
 
 LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
-OBJS = 
+OBJS =
 
 all:
 	$(MAKE) envlog
@@ -32,6 +32,9 @@ makebin: $(BINNAME)
 
 run:
 	./$(BINNAME) run.conf
+
+vis:
+	bash ./visualize/visualize.sh
 
 $(BINNAME): $(BUILD_DIR)/$(BINNAME).o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(LIBS) $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
