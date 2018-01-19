@@ -108,16 +108,19 @@ program sno
   integer                 :: nhalos_x                    ! size of x-axis halo grids         (global,sometimes have a size)
   integer                 :: nhalos_y                    ! size of y-axis halo grids         (global,sometimes have a size)
 
+  type(commoninfo)        :: hinfo
   integer                 :: nvars                       ! number of variables               (input)
   character(len=H_SHORT)  :: varname(item_limit)         ! name   of variables               (input)
   integer                 :: naxis                       ! number of axis variables          (input)
   character(len=H_SHORT)  :: axisname(item_limit)        ! name   of axis variables          (input)
 
-  type(commoninfo)            :: hinfo
+  ! axis information from input file [SNO_axis_getinfo]
   type(axisinfo), allocatable :: ainfo(:)
+
+  ! variable information from input file [SNO_vars_getinfo]
   type(iteminfo), allocatable :: dinfo(:)
 
-  ! mapping table [SNO_map_getsize_local,SNO_map_settable_global,SNO_map_settable_local]
+  ! mapping table [SNO_calc_localsize,SNO_map_settable_global,SNO_map_settable_local]
   integer                 :: ngrids_x_out                ! size of x-axis grids              (output,sometimes including halo)
   integer                 :: ngrids_y_out                ! size of y-axis grids              (output,sometimes including halo)
   integer                 :: ngrids_xh_out               ! size of x-axis grids, staggard    (output,sometimes including halo)
@@ -301,8 +304,6 @@ program sno
                                readflag(:,:),                & ! [IN]    from SNO_map_settable_local
                                debug                         ) ! [IN]
 
-!            call plugin_timeaverage_setup( debug ) ! [IN]
-
            !####################################################################
            ! process each variable
            !####################################################################
@@ -310,6 +311,8 @@ program sno
            do v = 1, nvars
               if( IO_L ) write(IO_FID_LOG,*)
               if( IO_L ) write(IO_FID_LOG,*) '*** + now processing varname = ', trim(dinfo(v)%varname)
+
+              ! output array allocation
 
               call SNO_vars_alloc( ngrids_x_out,  ngrids_y_out,  & ! [IN]    from SNO_map_getsize_local
                                    ngrids_xh_out, ngrids_yh_out, & ! [IN]    from SNO_map_getsize_local
@@ -362,12 +365,12 @@ program sno
                  endif
               enddo ! t loop
 
+              ! output array deallocation
+
               call SNO_vars_dealloc( dinfo(v), & ! [INOUT] from SNO_vars_getinfo
                                      debug     ) ! [IN]
 
            enddo ! item loop
-
-!            call plugin_timeaverage_finalize( debug ) ! [IN]
 
            if ( output_gradsctl ) then
               call SNO_grads_netcdfctl( dirpath_out,  & ! [IN] from namelist

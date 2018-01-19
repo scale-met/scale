@@ -296,7 +296,7 @@ contains
              dx   = ainfo(n)%AXIS_1d(imax/2+1) - ainfo(n)%AXIS_1d(imax/2)
              dlon = dx / ( CONST_RADIUS * cos(clat) ) / CONST_D2R
 
-             write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'XDEF ', int(imax*1.1_RP), ' LINEAR', lonstart, dlon
+             write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'XDEF ', imax, ' LINEAR', lonstart, dlon
              written = .true.
           endif
        enddo
@@ -465,8 +465,8 @@ contains
           idim = trim(dinfo(v)%dim_name(1))
           jdim = trim(dinfo(v)%dim_name(2))
        elseif( dinfo(v)%dim_rank == 3 ) then
-          imax = size(dinfo(v)%VAR_3d(:,:,:),2)
-          jmax = size(dinfo(v)%VAR_3d(:,:,:),3)
+          imax  = size(dinfo(v)%VAR_3d(:,:,:),2)
+          jmax  = size(dinfo(v)%VAR_3d(:,:,:),3)
           kmax_ = size(dinfo(v)%VAR_3d(:,:,:),1)
 
           if ( dinfo(v)%transpose ) then
