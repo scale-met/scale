@@ -793,7 +793,7 @@ contains
                       qtrc_org(k+2,i,j,I_QV) = UNDEF
                    else
                       rhprs_org(k+2,i,j) = qtrc_org(k+2,i,j,I_QV) / 100.0_RP   ! relative humidity
-                      call psat( p_sat, temp_org(k+2,i,j) )                    ! satulation pressure
+                      call psat( temp_org(k+2,i,j), p_sat )                    ! satulation pressure
                       qm = EPSvap * rhprs_org(k+2,i,j) * p_sat &
                          / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat )  ! mixing ratio
                       qtrc_org(k+2,i,j,I_QV) = qm / ( 1.0_RP + qm )            ! specific humidity
@@ -809,7 +809,7 @@ contains
                    do i = 1, dims(2)
                    do k = knum+1, dims(1)
                       rhprs_org(k+2,i,j) = rhprs_org(knum+2,i,j)              ! relative humidity
-                      call psat( p_sat, temp_org(k+2,i,j) )                   ! satulated specific humidity
+                      call psat( temp_org(k+2,i,j), p_sat )                   ! satulated specific humidity
                       qm = EPSvap * rhprs_org(k+2,i,j) * p_sat &
                          / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat ) ! mixing ratio
                       qtrc_org(k+2,i,j,I_QV) = qm / ( 1.0_RP + qm )           ! specific humidity
@@ -915,7 +915,7 @@ contains
                    qtrc_org(2,i,j,I_QV) = UNDEF
                 else
                    rhsfc = qtrc_org(2,i,j,I_QV) / 100.0_RP
-                   call psat( p_sat, temp_org(2,i,j) )         ! satulation pressure
+                   call psat( temp_org(2,i,j), p_sat )         ! satulation pressure
                    qm = EPSvap * rhsfc * p_sat &
                       / ( pres_org(2,i,j) - rhsfc * p_sat )    ! mixing ratio
                    qtrc_org(2,i,j,I_QV) = qm / ( 1.0_RP + qm ) ! specific humidity
