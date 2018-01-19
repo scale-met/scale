@@ -218,7 +218,7 @@ contains
        call FileGetGlobalAttribute( fid, "scale_rm_grid_index_jhalo", hinfo%halosize(3:3) )
 
        call FileGetGlobalAttribute( fid, "time_units", hinfo%time_units    )
-       call FileGetGlobalAttribute( fid, "time_start", hinfo%time_start(1) )
+       call FileGetGlobalAttribute( fid, "time_start", hinfo%time_start(:) )
 
        call FileGetAttribute( fid, 'x', 'size_global', hinfo%xatt_size_global(:) )
        call FileGetAttribute( fid, 'x', 'halo_global', hinfo%xatt_halo_global(:) )

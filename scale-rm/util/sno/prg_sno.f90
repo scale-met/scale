@@ -55,6 +55,11 @@ program sno
   use mod_sno_grads, only: &
      SNO_grads_setup,    &
      SNO_grads_netcdfctl
+  use mod_snoplugin_timeave, only: &
+     SNOPLGIN_timeave_setup,   &
+     SNOPLGIN_timeave_alloc,   &
+     SNOPLGIN_timeave_dealloc, &
+     SNOPLGIN_timeave_store
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -130,7 +135,9 @@ program sno
   integer                 :: ipos                        ! offset of i-index
   integer                 :: jpos                        ! offset of j-index
 
+  ! Plugins
   logical                 :: do_output
+  logical                 :: plugin_timeave
 
   integer :: px, py, p
   integer :: t, v
@@ -186,6 +193,9 @@ program sno
   call SNO_grads_setup( nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
                         output_grads,               & ! [IN] from namelist
                         output_gradsctl             ) ! [IN] from namelist
+
+  call SNOPLGIN_timeave_setup( plugin_timeave, & ! [OUT]
+                               do_output       ) ! [INOUT]
 
   ! allocate output files to executing processes
   call SNO_proc_alloc( nprocs, myrank, ismaster,   & ! [IN] from MPI
@@ -322,6 +332,9 @@ program sno
                                    dinfo(v),                     & ! [INOUT] from SNO_vars_getinfo
                                    debug                         ) ! [IN]
 
+              if( plugin_timeave ) call SNOPLGIN_timeave_alloc( dinfo(v), & ! [INOUT] from SNO_vars_getinfo
+                                                                debug     ) ! [IN]
+
               !#################################################################
               ! process each timestep
               !#################################################################
@@ -343,6 +356,18 @@ program sno
                                      readflag(:,:),                & ! [IN]    from SNO_map_settable_local
                                      debug                         ) ! [IN]
 
+                 if( plugin_timeave ) call SNOPLGIN_timeave_store( dirpath_out,                & ! [IN] from namelist
+                                                                   basename_out,               & ! [IN] from namelist
+                                                                   output_grads,               & ! [IN] from namelist
+                                                                   p,                          & ! [IN]
+                                                                   t,                          & ! [IN]
+                                                                   nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
+                                                                   nhalos_x,     nhalos_y,     & ! [IN] from SNO_file_getinfo
+                                                                   hinfo,                      & ! [IN] from SNO_file_getinfo
+                                                                   naxis,                      & ! [IN] from SNO_file_getinfo
+                                                                   ainfo(:),                   & ! [IN] from SNO_axis_getinfo
+                                                                   dinfo(v),                   & ! [IN] from SNO_vars_getinfo
+                                                                   debug                       ) ! [IN]
                  if ( do_output ) then
                     call SNO_vars_write( dirpath_out,                & ! [IN] from namelist
                                          basename_out,               & ! [IN] from namelist
@@ -363,6 +388,8 @@ program sno
 
               call SNO_vars_dealloc( dinfo(v), & ! [INOUT] from SNO_vars_getinfo
                                      debug     ) ! [IN]
+
+              if( plugin_timeave ) call SNOPLGIN_timeave_dealloc( debug ) ! [IN]
 
            enddo ! item loop
 
