@@ -90,6 +90,7 @@ module mod_sno_h
     integer                :: step_nmax
     real(DP)               :: time_start(step_limit)
     real(DP)               :: time_end  (step_limit)
+    real(DP)               :: dt
     character(len=H_MID)   :: time_units
     real(RP), allocatable  :: VAR_1d(:)
     real(RP), allocatable  :: VAR_2d(:,:)

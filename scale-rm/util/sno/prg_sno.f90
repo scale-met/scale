@@ -54,7 +54,6 @@ program sno
      SNO_vars_write
   use mod_sno_grads, only: &
      SNO_grads_setup,    &
-     SNO_grads_write,    &
      SNO_grads_netcdfctl
   !-----------------------------------------------------------------------------
   implicit none
@@ -131,6 +130,8 @@ program sno
   integer                 :: ipos                        ! offset of i-index
   integer                 :: jpos                        ! offset of j-index
 
+  logical                 :: do_output
+
   integer :: px, py, p
   integer :: t, v
   integer :: ierr
@@ -179,6 +180,8 @@ program sno
      call PRC_MPIstop
   endif
   if( IO_NML ) write(IO_FID_NML,nml=PARAM_SNO)
+
+  do_output = .true.
 
   call SNO_grads_setup( nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
                         output_grads,               & ! [IN] from namelist
@@ -340,19 +343,10 @@ program sno
                                      readflag(:,:),                & ! [IN]    from SNO_map_settable_local
                                      debug                         ) ! [IN]
 
-!                  call plugin_timeaverage_store( debug ) ! [IN]
-
-                 if ( output_grads ) then
-                    call SNO_grads_write( dirpath_out, & ! [IN] from namelist
-                                          t,           & ! [IN]
-                                          hinfo,       & ! [IN] from SNO_file_getinfo
-                                          naxis,       & ! [IN] from SNO_file_getinfo
-                                          ainfo(:),    & ! [IN] from SNO_axis_getinfo
-                                          dinfo(v),    & ! [IN] from SNO_vars_getinfo
-                                          debug        ) ! [IN]
-                 else
+                 if ( do_output ) then
                     call SNO_vars_write( dirpath_out,                & ! [IN] from namelist
                                          basename_out,               & ! [IN] from namelist
+                                         output_grads,               & ! [IN] from namelist
                                          p,                          & ! [IN]
                                          t,                          & ! [IN]
                                          nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
@@ -372,15 +366,17 @@ program sno
 
            enddo ! item loop
 
-           if ( output_gradsctl ) then
-              call SNO_grads_netcdfctl( dirpath_out,  & ! [IN] from namelist
-                                        basename_out, & ! [IN] from namelist
-                                        hinfo,        & ! [IN] from SNO_file_getinfo
-                                        naxis,        & ! [IN] from SNO_file_getinfo
-                                        ainfo(:),     & ! [IN] from SNO_axis_getinfo
-                                        nvars,        & ! [IN] from SNO_file_getinfo
-                                        dinfo(:),     & ! [IN] from SNO_vars_getinfo
-                                        debug         ) ! [IN]
+           if ( do_output ) then
+              if ( output_gradsctl ) then
+                 call SNO_grads_netcdfctl( dirpath_out,  & ! [IN] from namelist
+                                           basename_out, & ! [IN] from namelist
+                                           hinfo,        & ! [IN] from SNO_file_getinfo
+                                           naxis,        & ! [IN] from SNO_file_getinfo
+                                           ainfo(:),     & ! [IN] from SNO_axis_getinfo
+                                           nvars,        & ! [IN] from SNO_file_getinfo
+                                           dinfo(:),     & ! [IN] from SNO_vars_getinfo
+                                           debug         ) ! [IN]
+              endif
            endif
 
            call SNO_axis_dealloc( naxis,    & ! [IN]    from SNO_file_getinfo

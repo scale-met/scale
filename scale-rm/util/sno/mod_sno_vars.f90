@@ -29,6 +29,7 @@ module mod_sno_vars
   public :: SNO_vars_dealloc
   public :: SNO_vars_read
   public :: SNO_vars_write
+  public :: SNO_vars_write_netcdf
 
   !-----------------------------------------------------------------------------
   !
@@ -129,6 +130,12 @@ contains
              endif
           endif
 
+          if ( dinfo(v)%step_nmax > 1 ) then
+             dinfo(v)%dt = dinfo(v)%time_start(2) - dinfo(v)%time_start(1)
+          else
+             dinfo(v)%dt = 0.0_DP
+          endif
+
        enddo
     endif
 
@@ -144,6 +151,7 @@ contains
        call MPI_BCAST( dinfo(v)%step_nmax    , 1                , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%time_start(:), step_limit       , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%time_end  (:), step_limit       , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+       call MPI_BCAST( dinfo(v)%dt           , 1                , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%time_units   , H_MID            , MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
        if ( debug ) then
@@ -797,8 +805,74 @@ contains
     return
   end subroutine SNO_vars_read
 
+
   !-----------------------------------------------------------------------------
   subroutine SNO_vars_write( &
+       dirpath,       &
+       basename,      &
+       output_grads,  &
+       nowrank,       &
+       nowstep,       &
+       nprocs_x_out,  &
+       nprocs_y_out,  &
+       nhalos_x,      &
+       nhalos_y,      &
+       hinfo,         &
+       naxis,         &
+       ainfo,         &
+       dinfo,         &
+       debug          )
+    use mod_sno_h, only: &
+       commoninfo, &
+       axisinfo,   &
+       iteminfo
+    use mod_sno_grads, only: &
+       SNO_grads_write
+    implicit none
+
+    character(len=*), intent(in)    :: dirpath                               ! directory path                     (output)
+    character(len=*), intent(in)    :: basename                              ! basename of file                   (output)
+    logical,          intent(in)    :: output_grads
+    integer,          intent(in)    :: nowrank                               ! current rank                       (output)
+    integer,          intent(in)    :: nowstep                               ! current step                       (output)
+    integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (output)
+    integer,          intent(in)    :: nprocs_y_out                          ! y length of 2D processor topology  (output)
+    integer,          intent(in)    :: nhalos_x                              ! number of x-axis halo grids        (global domain)
+    integer,          intent(in)    :: nhalos_y                              ! number of y-axis halo grids        (global domain)
+    type(commoninfo), intent(in)    :: hinfo                                 ! common information                 (input)
+    integer,          intent(in)    :: naxis                                 ! number of axis variables           (input)
+    type(axisinfo),   intent(in)    :: ainfo(naxis)                          ! axis information                   (input)
+    type(iteminfo),   intent(in)    :: dinfo                                 ! variable information               (input)
+    logical,          intent(in)    :: debug
+    !---------------------------------------------------------------------------
+
+    if ( output_grads ) then
+       call SNO_grads_write( dirpath,  & ! [IN]
+                             nowstep,  & ! [IN]
+                             hinfo,    & ! [IN]
+                             naxis,    & ! [IN]
+                             ainfo(:), & ! [IN]
+                             dinfo,    & ! [IN]
+                             debug     ) ! [IN]
+    else
+       call SNO_vars_write_netcdf( dirpath,                    & ! [IN]
+                                   basename,                   & ! [IN]
+                                   nowrank,                    & ! [IN]
+                                   nowstep,                    & ! [IN]
+                                   nprocs_x_out, nprocs_y_out, & ! [IN]
+                                   nhalos_x,     nhalos_y,     & ! [IN]
+                                   hinfo,                      & ! [IN]
+                                   naxis,                      & ! [IN]
+                                   ainfo(:),                   & ! [IN]
+                                   dinfo,                      & ! [IN]
+                                   debug                       ) ! [IN]
+    endif
+
+    return
+  end subroutine SNO_vars_write
+
+  !-----------------------------------------------------------------------------
+  subroutine SNO_vars_write_netcdf( &
        dirpath,       &
        basename,      &
        nowrank,       &
@@ -853,7 +927,6 @@ contains
     integer               :: fid
     logical               :: fileexisted
     integer               :: vid
-    real(DP)              :: tint
     real(SP), allocatable :: VAR_1d_SP(:), VAR_2d_SP(:,:), VAR_3d_SP(:,:,:)
     real(DP), allocatable :: VAR_1d_DP(:), VAR_2d_DP(:,:), VAR_3d_DP(:,:,:)
 
@@ -898,9 +971,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** + + + define variable'
 
-    if ( dinfo%step_nmax > 1 ) then
-       tint = dinfo%time_start(2) - dinfo%time_start(1)
-
+    if ( dinfo%dt > 0.0_DP ) then
        call FileDefineVariable( fid,               & ! [OUT]
                                 vid,               & ! [OUT]
                                 dinfo%varname,     & ! [IN]
@@ -909,7 +980,7 @@ contains
                                 dinfo%dim_rank,    & ! [IN]
                                 dinfo%dim_name,    & ! [IN]
                                 dinfo%datatype,    & ! [IN]
-                                tint = tint        ) ! [IN]
+                                tint = dinfo%dt    ) ! [IN]
     else
        call FileDefineVariable( fid,               & ! [OUT]
                                 vid,               & ! [OUT]
@@ -1082,6 +1153,6 @@ contains
     endif
 
     return
-  end subroutine SNO_vars_write
+  end subroutine SNO_vars_write_netcdf
 
 end module mod_sno_vars

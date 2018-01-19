@@ -223,7 +223,6 @@ contains
     real(RP)               :: dx, dy
     real(RP)               :: dlat, dlon
 
-    real(DP)               :: dt
     character(len=20)      :: cdate, dhour
 
     logical  :: written
@@ -341,14 +340,8 @@ contains
 
        !--- TDEF
 
-       if ( dinfo%step_nmax > 1 ) then
-          dt = dinfo%time_start(2) - dinfo%time_start(1)
-       else
-          dt = 0.0_DP
-       endif
-
-       call SNO_grads_calc_timechar( dinfo%time_units, dt, & ! [IN]
-                                     cdate, dhour          ) ! [OUT]
+       call SNO_grads_calc_timechar( dinfo%time_units, dinfo%dt, & ! [IN]
+                                     cdate, dhour                ) ! [OUT]
 
        write(fid,'(A,I5,3(1x,A))') 'TDEF ', dinfo%step_nmax, ' LINEAR ', trim(cdate), trim(dhour)
 
@@ -572,14 +565,8 @@ contains
 
        !--- TDEF
 
-       if ( dinfo(1)%step_nmax > 1 ) then
-          dt = dinfo(1)%time_start(2) - dinfo(1)%time_start(1)
-       else
-          dt = 0.0_DP
-       endif
-
-       call SNO_grads_calc_timechar( dinfo(1)%time_units, dt, & ! [IN]
-                                     cdate, dhour             ) ! [OUT]
+       call SNO_grads_calc_timechar( dinfo(1)%time_units, dinfo(1)%dt, & ! [IN]
+                                     cdate, dhour                      ) ! [OUT]
 
        write(fid,'(A,I5,3(1x,A))') 'TDEF ', dinfo(1)%step_nmax, ' LINEAR ', trim(cdate), trim(dhour)
 
@@ -625,7 +612,7 @@ contains
              if( size(dinfo(v)%VAR_2d(:,:),1) /= imax ) cycle ! skip
              if( size(dinfo(v)%VAR_2d(:,:),2) /= jmax ) cycle ! skip
              if ( dinfo(v)%step_nmax > 1 ) then
-                if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+                if( abs(dinfo(v)%dt-dinfo(1)%dt) > 1.E-5_DP ) cycle ! skip
              endif
           elseif( dinfo(v)%dim_rank == 3 ) then
              if( size(dinfo(v)%VAR_3d(:,:,:),2) /= imax ) cycle ! skip
@@ -633,11 +620,11 @@ contains
              if( size(dinfo(v)%VAR_3d(:,:,:),1) /= kmax ) cycle ! skip
              if ( dinfo(v)%transpose ) then
                 if ( dinfo(v)%step_nmax > 1 ) then
-                   if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+                   if( abs(dinfo(v)%dt-dinfo(1)%dt) > 1.E-5_DP ) cycle ! skip
                 endif
              else
                 if ( dinfo(v)%step_nmax > 1 ) then
-                   if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+                   if( abs(dinfo(v)%dt-dinfo(1)%dt) > 1.E-5_DP ) cycle ! skip
                 endif
              endif
           endif
@@ -656,7 +643,7 @@ contains
              if( size(dinfo(v)%VAR_2d(:,:),2) /= jmax ) cycle ! skip
 
              if ( dinfo(v)%step_nmax > 1 ) then
-                if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+                if( abs(dinfo(v)%dt-dinfo(1)%dt) > 1.E-5_DP ) cycle ! skip
 
                 dimorder = 't,y,x'
              else
@@ -671,7 +658,7 @@ contains
 
              if ( dinfo(v)%transpose ) then
                 if ( dinfo(v)%step_nmax > 1 ) then
-                   if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+                   if( abs(dinfo(v)%dt-dinfo(1)%dt) > 1.E-5_DP ) cycle ! skip
 
                    dimorder = 't,z,y,x'
                 else
@@ -679,7 +666,7 @@ contains
                 endif
              else
                 if ( dinfo(v)%step_nmax > 1 ) then
-                   if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+                   if( abs(dinfo(v)%dt-dinfo(1)%dt) > 1.E-5_DP ) cycle ! skip
 
                    dimorder = 't,y,x,z'
                 else
