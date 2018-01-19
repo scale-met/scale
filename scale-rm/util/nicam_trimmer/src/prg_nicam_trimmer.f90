@@ -87,7 +87,7 @@ program nicam_trimmer
   !########## Initial setup ##########
 
   ! setup standard I/O
-  call IO_setup( MODELNAME, .false. )
+  call IO_setup( MODELNAME )
 
   ! setup Log
   call LogInit( IO_FID_CONF,       &

@@ -95,7 +95,7 @@ contains
                               ismaster ) ! [OUT]
 
     ! setup scale_io
-    call IO_setup( name )
+    call IO_setup( name, allow_noconf = .true. )
 
     ! setup log
     call IO_LOG_setup( myrank, ismaster )

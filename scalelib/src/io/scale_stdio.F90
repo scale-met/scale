@@ -45,11 +45,12 @@ module scale_stdio
   integer,               public, parameter :: H_MID       = File_HMID       !< Character length (short=64)
   integer,               public, parameter :: H_LONG      = File_HLONG      !< Character length (short=256)
 
-  character(len=H_MID),  public            :: H_MODELNAME                   !< name and version of the model
+  character(len=H_MID),  public            :: H_APPNAME                     !< name of the application
   character(len=H_MID),  public            :: H_LIBNAME                     !< name and version of the library
   character(len=H_MID),  public            :: H_SOURCE                      !< for file header
   character(len=H_MID),  public            :: H_INSTITUTE = 'AICS/RIKEN'    !< for file header
 
+  character(len=9),      public, parameter :: IO_NULLFILE   = "/dev/null"
   character(len=6),      public, parameter :: IO_STDOUT     = "STDOUT"
   integer,               public, parameter :: IO_FID_STDOUT = 6
   integer,               public            :: IO_FID_CONF   = -1            !< Config file ID
@@ -82,8 +83,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine IO_setup( &
-       MODELNAME, &
-       fname_in   )
+       APPNAME,     &
+       conf_name,   &
+       allow_noconf )
 
     implicit none
 
@@ -98,18 +100,19 @@ contains
        IO_STEP_TO_STDOUT,   &
        IO_AGGREGATE
 
-    character(len=*), intent(in) :: MODELNAME          !< name of the model
-    character(len=*), intent(in), optional :: fname_in !< name of config file for each process
+    character(len=*), intent(in) :: APPNAME                !< name of the application
+    character(len=*), intent(in), optional :: conf_name    !< name of config file for each process
+    logical,          intent(in), optional :: allow_noconf !< if true, allow program to run without configure file
 
     character(len=H_LONG) :: fname
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if ( present(fname_in) ) then
-       fname = fname_in
+    if ( present(conf_name) ) then
+       fname = conf_name
     else
-       fname = IO_ARG_getfname( is_master=.true., allow_noarg=.true. )
+       fname = IO_ARG_getfname( is_master=.true., allow_noconf=allow_noconf )
        IO_LOG_BASENAME = IO_STDOUT
     endif
 
@@ -117,9 +120,9 @@ contains
     IO_FID_CONF = IO_CNF_open( fname,           & ! [IN]
                                is_master=.true. ) ! [IN]
 
-    H_MODELNAME = trim(MODELNAME)
-    H_LIBNAME   = 'SCALE Library ver. '//trim(LIBVERSION)
-    H_SOURCE    = trim(MODELNAME)
+    H_APPNAME = trim(APPNAME)
+    H_LIBNAME = 'SCALE Library ver. '//trim(LIBVERSION)
+    H_SOURCE  = trim(APPNAME)
 
     !--- read PARAM
     if ( IO_FID_CONF > 0 ) then
@@ -248,7 +251,7 @@ contains
           write(IO_FID_LOG,*) '    SCALE : Scalable Computing by Advanced Library and Environment      '
           write(IO_FID_LOG,*) ''
           write(IO_FID_LOG,*) trim(H_LIBNAME)
-          write(IO_FID_LOG,*) trim(H_MODELNAME)
+          write(IO_FID_LOG,*) trim(H_APPNAME)
           write(IO_FID_LOG,*) ''
           write(IO_FID_LOG,*) '++++++ Module[STDIO] / Categ[IO] / Origin[SCALElib]'
           write(IO_FID_LOG,*) ''
@@ -283,7 +286,7 @@ contains
           write(IO_FID_NML,'(A)')  '################################################################################'
           write(IO_FID_NML,'(A)')  '#! configulation'
           write(IO_FID_NML,'(2A)') '#! ', trim(H_LIBNAME)
-          write(IO_FID_NML,'(2A)') '#! ', trim(H_MODELNAME)
+          write(IO_FID_NML,'(2A)') '#! ', trim(H_APPNAME)
           write(IO_FID_NML,'(A)')  '################################################################################'
           write(IO_FID_NML,nml=PARAM_IO)
        else
@@ -355,23 +358,23 @@ contains
   !-----------------------------------------------------------------------------
   !> get config filename from argument
   !> @return fname
-  function IO_ARG_getfname( is_master, allow_noarg ) result(fname)
+  function IO_ARG_getfname( is_master, allow_noconf ) result(fname)
     implicit none
-    logical, intent(in) :: is_master !< master process?
-    logical, intent(in), optional :: allow_noarg
+    logical, intent(in)           :: is_master    !> master process?
+    logical, intent(in), optional :: allow_noconf !> allow no configuration file
 
-    character(len=H_LONG) :: fname     !< filename
-    logical :: an
+    character(len=H_LONG) :: fname   !< filename
+    logical :: allow_noconf_
     !---------------------------------------------------------------------------
 
     if ( COMMAND_ARGUMENT_COUNT() < 1 ) then
-       an = .false.
-       if ( present(allow_noarg) ) an = allow_noarg
-       if ( .not. an ) then
+       allow_noconf_ = .false.
+       if ( present(allow_noconf) ) allow_noconf_ = allow_noconf
+       if ( .not. allow_noconf_ ) then
           if(is_master) write(*,*) 'xxx Program needs config file from argument! STOP.'
           stop
        else
-          fname = "/dev/null"
+          fname = IO_NULLFILE
        end if
     else
        call get_command_argument(1,fname)
