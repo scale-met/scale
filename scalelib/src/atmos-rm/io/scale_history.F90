@@ -97,7 +97,10 @@ module scale_history
   integer,                private              :: imh,  jmh
   integer,                private              :: imsh, jmsh
 
-  logical, private :: HIST_BND = .false.
+  integer,                private              :: HISTORY_STARTDATE(6) !< start time [YYYY MM DD HH MM SS]
+  real(DP),               private              :: HISTORY_STARTMS      !< subsecond part of start time [millisec]
+
+  logical,                private              :: HIST_BND = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -179,6 +182,9 @@ contains
     endif
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    HISTORY_STARTDATE(:) = TIME_NOWDATE
+    HISTORY_STARTMS      = TIME_NOWMS
 
     start_daysec = TIME_STARTDAYSEC
     if ( TIME_NOWDATE(1) > 0 ) then
@@ -2059,13 +2065,15 @@ contains
        PRC_HAS_S,      &
        PRC_HAS_N
     use scale_fileio, only: &
-       axisattinfo,   &
+       FILEIO_getCFtunits, &
+       axisattinfo,        &
        mappinginfo
     use scale_mapproj, only: &
        MPRJ_get_attributes
     implicit none
 
-    character(len=5) :: periodic_z, periodic_x, periodic_y
+    character(len=5)  :: periodic_z, periodic_x, periodic_y
+    character(len=34) :: tunits
 
     type(axisattinfo) :: ainfo(4) ! x, xh, y, yh
     type(mappinginfo) :: minfo
@@ -2102,6 +2110,10 @@ contains
     call HistorySetGlobalAttribute( "scale_rm_grid_index_khalo", (/KHALO/) ) ! [IN]
     call HistorySetGlobalAttribute( "scale_rm_grid_index_ihalo", (/IHALO/) ) ! [IN]
     call HistorySetGlobalAttribute( "scale_rm_grid_index_jhalo", (/JHALO/) ) ! [IN]
+
+    call FILEIO_getCFtunits(tunits,HISTORY_STARTDATE)
+    call HistorySetGlobalAttribute( "time_units", tunits )
+    call HistorySetGlobalAttribute( "time_start", (/HISTORY_STARTMS/) )
 
     if ( PRC_PERIODIC_X ) then
        ainfo(1)%periodic = "true"

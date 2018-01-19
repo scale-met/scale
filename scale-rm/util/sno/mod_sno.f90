@@ -199,23 +199,26 @@ contains
                                nvars_file,      & ! [OUT]
                                varname_file(:)  ) ! [OUT]
 
-       call FileGetGlobalAttribute( fid, "scale_rm_prc_num_x", procsize(1:1) ) ! [IN]
-       call FileGetGlobalAttribute( fid, "scale_rm_prc_num_y", procsize(2:2) ) ! [IN]
+       call FileGetGlobalAttribute( fid, "scale_rm_prc_num_x", procsize(1:1) )
+       call FileGetGlobalAttribute( fid, "scale_rm_prc_num_y", procsize(2:2) )
 
-       call FileGetGlobalAttribute( fid, "scale_rm_prc_periodic_z",   periodic(1) ) ! [IN]
-       call FileGetGlobalAttribute( fid, "scale_rm_prc_periodic_x",   periodic(2) ) ! [IN]
-       call FileGetGlobalAttribute( fid, "scale_rm_prc_periodic_y",   periodic(3) ) ! [IN]
+       call FileGetGlobalAttribute( fid, "scale_rm_prc_periodic_z",   periodic(1) )
+       call FileGetGlobalAttribute( fid, "scale_rm_prc_periodic_x",   periodic(2) )
+       call FileGetGlobalAttribute( fid, "scale_rm_prc_periodic_y",   periodic(3) )
        hinfo%periodic(1) = trim(periodic(1))
        hinfo%periodic(2) = trim(periodic(2))
        hinfo%periodic(3) = trim(periodic(3))
 
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_kmax",  hinfo%gridsize(1:1) ) ! [IN]
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_imaxg", hinfo%gridsize(2:2) ) ! [IN]
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_jmaxg", hinfo%gridsize(3:3) ) ! [IN]
+       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_kmax",  hinfo%gridsize(1:1) )
+       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_imaxg", hinfo%gridsize(2:2) )
+       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_jmaxg", hinfo%gridsize(3:3) )
 
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_khalo", hinfo%halosize(1:1) ) ! [IN]
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_ihalo", hinfo%halosize(2:2) ) ! [IN]
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_jhalo", hinfo%halosize(3:3) ) ! [IN]
+       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_khalo", hinfo%halosize(1:1) )
+       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_ihalo", hinfo%halosize(2:2) )
+       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_jhalo", hinfo%halosize(3:3) )
+
+       call FileGetGlobalAttribute( fid, "time_units", hinfo%time_units    )
+       call FileGetGlobalAttribute( fid, "time_start", hinfo%time_start(1) )
 
        call FileGetAttribute( fid, 'x', 'size_global', hinfo%xatt_size_global(:) )
        call FileGetAttribute( fid, 'x', 'halo_global', hinfo%xatt_halo_global(:) )
@@ -224,17 +227,19 @@ contains
        call FileGetAttribute( fid, 'y', 'halo_global', hinfo%yatt_halo_global(:) )
     endif
 
-    call MPI_BCAST( hinfo%title              , H_MID, MPI_CHARACTER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%source             , H_MID, MPI_CHARACTER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%institute          , H_MID, MPI_CHARACTER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%periodic        (1), 5*3  , MPI_CHARACTER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%gridsize        (1), 3    , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%halosize        (1), 3    , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%xatt_size_global(1), 1    , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%xatt_halo_global(1), 2    , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%yatt_size_global(1), 1    , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%yatt_halo_global(1), 2    , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( procsize              (1), 2    , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%title              , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%source             , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%institute          , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%periodic        (1), 5*3  , MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%gridsize        (1), 3    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%halosize        (1), 3    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%time_units         , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%time_start      (1), 1    , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%xatt_size_global(1), 1    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%xatt_halo_global(1), 2    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%yatt_size_global(1), 1    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%yatt_halo_global(1), 2    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( procsize              (1), 2    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
     call MPI_BCAST( nvars_file     , 1                 , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( varname_file(1), H_SHORT*item_limit, MPI_CHARACTER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -928,8 +933,8 @@ contains
     call FileSetGlobalAttribute( fid, "scale_rm_grid_index_ihalo", hinfo%halosize(2:2) ) ! [IN]
     call FileSetGlobalAttribute( fid, "scale_rm_grid_index_jhalo", hinfo%halosize(3:3) ) ! [IN]
 
-    call FileSetGlobalAttribute( fid, "time_units", dinfo%time_units      )
-    call FileSetGlobalAttribute( fid, "time",       dinfo%time_start(1:1) )
+    call FileSetGlobalAttribute( fid, "time_units", hinfo%time_units    ) ! [IN]
+    call FileSetGlobalAttribute( fid, "time_start", hinfo%time_start(:) ) ! [IN]
 
     IMAX = hinfo%gridsize(2) / nprocs_x_out
     JMAX = hinfo%gridsize(3) / nprocs_y_out

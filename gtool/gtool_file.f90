@@ -2111,7 +2111,7 @@ contains
 
     if ( present(time_start)  ) then
        if ( dinfo%time_units == "" ) then
-          call FileGetGlobalAttribute( fid, "time", time )
+          call FileGetGlobalAttribute( fid, "time_start", time )
           time_start = time(1)
        else
           time_start = dinfo%time_start
@@ -2120,7 +2120,7 @@ contains
 
     if ( present(time_end)  ) then
        if ( dinfo%time_units == "" ) then
-          call FileGetGlobalAttribute( fid, "time", time )
+          call FileGetGlobalAttribute( fid, "time_start", time )
           time_end = time(1)
        else
           time_end = dinfo%time_end
@@ -2286,7 +2286,7 @@ contains
 
           if ( dinfo%time_units == "" ) then
              call FileGetGlobalAttribute( fid, "time_units", time_units )
-             call FileGetGlobalAttribute( fid, "time", time )
+             call FileGetGlobalAttribute( fid, "time_start", time )
              time_start(1) = time(1)
              time_end  (1) = time(1)
              step_nmax = 1
