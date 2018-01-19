@@ -88,14 +88,15 @@ contains
        SFLX_SH, SFLX_LH, SFLX_QV,    &
        U10, V10, T2, Q2              )
     use scale_const, only: &
-       PRE00 => CONST_PRE00, &
-       CPdry => CONST_CPdry, &
-       Rdry  => CONST_Rdry
+       PRE00  => CONST_PRE00, &
+       CPdry  => CONST_CPdry, &
+       Rdry   => CONST_Rdry,  &
+       EPSvap => CONST_EPSvap
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
        I_QV
     use scale_atmos_saturation, only: &
-       SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
+       SATURATION_psat_all => ATMOS_SATURATION_psat_all
     use scale_bulkflux, only: &
        BULKFLUX
     implicit none
@@ -128,15 +129,16 @@ contains
     real(RP), intent(out) :: T2     (IA,JA) ! temperature t     at  2m height
     real(RP), intent(out) :: Q2     (IA,JA) ! water vapor q     at  2m height
 
-    real(RP) :: SFC_QSAT (IA,JA) ! saturatad water vapor mixing ratio [kg/kg]
+    real(RP) :: SFC_PSAT (IA,JA) ! saturatad water vapor pressure [Pa]
     real(RP) :: LHV      (IA,JA)
 
-    real(RP) :: Ustar   ! friction velocity [m]
-    real(RP) :: Tstar   ! friction temperature [K]
-    real(RP) :: Qstar   ! friction mixing rate [kg/kg]
-    real(RP) :: Uabs    ! modified absolute velocity [m/s]
-    real(RP) :: Ra      ! Aerodynamic resistance (=1/Ce) [1/s]
-    real(RP) :: SFC_QV  ! water vapor mixing ratio [kg/kg]
+    real(RP) :: Ustar    ! friction velocity [m]
+    real(RP) :: Tstar    ! friction temperature [K]
+    real(RP) :: Qstar    ! friction mixing rate [kg/kg]
+    real(RP) :: Uabs     ! modified absolute velocity [m/s]
+    real(RP) :: Ra       ! Aerodynamic resistance (=1/Ce) [1/s]
+    real(RP) :: SFC_QSAT ! saturatad water vapor mixing ratio [kg/kg]
+    real(RP) :: SFC_QV   ! water vapor mixing ratio [kg/kg]
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
@@ -148,26 +150,26 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Surface flux(bulk)'
 
     ! ToDo consider ATM_TEMP is appropriate
-    call HYDROMETEOR_LHV( &
-         IA, IS, IE, JA, JS, JE, &
-         ATM_TEMP(:,:), & ! [IN]
-         LHV(:,:)       ) ! [OUT]
+    call HYDROMETEOR_LHV( IA, IS, IE, JA, JS, JE, &
+                          ATM_TEMP(:,:), & ! [IN]
+                          LHV(:,:)       ) ! [OUT]
 
-    call SATURATION_pres2qsat_all( &
-         IA, IS, IE, JA, JS, JE, &
-         SFC_TEMP(:,:), & ! [IN]
-         SFC_PRES(:,:), & ! [IN]
-         SFC_QSAT(:,:)  ) ! [OUT]
+    call SATURATION_psat_all( IA, IS, IE, JA, JS, JE, &
+                              SFC_TEMP(:,:), & ! [IN]
+                              SFC_PSAT(:,:)  ) ! [OUT]
 
     !omp parallel do default(none) &
-    !omp private(SFC_QV,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2) &
-    !omp shared (IS,IE,JS,JE, ATMOS_PHY_SF_beta, &
+    !omp private(SFC_QSAT,SFC_QV,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2) &
+    !omp shared (IS,IE,JS,JE,EPSvap,ATMOS_PHY_SF_beta, &
     !omp         ATM_TEMP,ATM_PRES,ATM_QV,ATM_U,ATM_V,ATM_Z1, &
-    !omp         SFC_TEMP,SFC_PRES,SFC_Z0M,SFC_Z0H,SFC_Z0E,PBL, &
+    !omp         SFC_TEMP,SFC_PRES,SFC_PSAT,SFC_Z0M,SFC_Z0H,SFC_Z0E,PBL, &
     !omp         SFLX_MW,SFLX_MU,SFLX_MW,SFLX_QV,U10,V10,T2,Q2)
     do j = JS, JE
     do i = IS, IE
-       SFC_QV = ( 1.0_RP - ATMOS_PHY_SF_beta ) * ATM_QV(i,j) + ATMOS_PHY_SF_beta * SFC_QSAT(i,j)
+       ! qdry = 1 - psat
+       SFC_QSAT = EPSvap * SFC_PSAT(i,j) / ( SFC_PRES(i,j) - ( 1.0_RP-EPSvap ) * SFC_PSAT(i,j) )
+
+       SFC_QV = ( 1.0_RP - ATMOS_PHY_SF_beta ) * ATM_QV(i,j) + ATMOS_PHY_SF_beta * SFC_QSAT
 
        call BULKFLUX( Ustar,         & ! [OUT]
                       Tstar,         & ! [OUT]

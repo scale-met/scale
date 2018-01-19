@@ -108,7 +108,8 @@ OBJS_CP = scale_atmos_phy_cp_kf.o
 
 
 
-OBJS_NAME = $(scale_rdma)	\
+OBJS_NAME = \
+	scale.o \
 	scale_atmos_dyn.o	\
 	scale_atmos_dyn_common.o	\
 	$(OBJS_DYN)	\

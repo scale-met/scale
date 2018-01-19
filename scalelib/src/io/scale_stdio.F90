@@ -45,16 +45,17 @@ module scale_stdio
   integer,               public, parameter :: H_MID       = File_HMID       !< Character length (short=64)
   integer,               public, parameter :: H_LONG      = File_HLONG      !< Character length (short=256)
 
-  character(len=H_MID),  public            :: H_MODELNAME                   !< name and version of the model
+  character(len=H_MID),  public            :: H_APPNAME                     !< name of the application
   character(len=H_MID),  public            :: H_LIBNAME                     !< name and version of the library
   character(len=H_MID),  public            :: H_SOURCE                      !< for file header
   character(len=H_MID),  public            :: H_INSTITUTE = 'AICS/RIKEN'    !< for file header
 
+  character(len=9),      public, parameter :: IO_NULLFILE   = "/dev/null"
   character(len=6),      public, parameter :: IO_STDOUT     = "STDOUT"
   integer,               public, parameter :: IO_FID_STDOUT = 6
-  integer,               public            :: IO_FID_CONF   = 7             !< Config file ID
-  integer,               public            :: IO_FID_LOG    = 8             !< Log file ID
-  integer,               public            :: IO_FID_NML    = 9             !< Log file ID (only for output namelist)
+  integer,               public            :: IO_FID_CONF   = -1            !< Config file ID
+  integer,               public            :: IO_FID_LOG    = -1            !< Log file ID
+  integer,               public            :: IO_FID_NML    = -1            !< Log file ID (only for output namelist)
 
   character(len=H_LONG), public            :: IO_LOG_BASENAME     = 'LOG'   !< basename of logfile
   character(len=H_LONG), public            :: IO_NML_FILENAME     = ''      !< filename of logfile (only for output namelist)
@@ -82,9 +83,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine IO_setup( &
-       MODELNAME,          &
-       call_from_launcher, &
-       fname_in            )
+       APPNAME,     &
+       conf_name,   &
+       allow_noconf )
+
     implicit none
 
     namelist / PARAM_IO / &
@@ -98,41 +100,39 @@ contains
        IO_STEP_TO_STDOUT,   &
        IO_AGGREGATE
 
-    character(len=*), intent(in) :: MODELNAME          !< name of the model
-    logical,          intent(in) :: call_from_launcher !< flag to get command argument
-    character(len=*), intent(in), optional :: fname_in !< name of config file for each process
+    character(len=*), intent(in) :: APPNAME                !< name of the application
+    character(len=*), intent(in), optional :: conf_name    !< name of config file for each process
+    logical,          intent(in), optional :: allow_noconf !< if true, allow program to run without configure file
 
     character(len=H_LONG) :: fname
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if ( call_from_launcher ) then
-       if ( present(fname_in) ) then
-          fname = fname_in
-       else
-          write(*,*) 'xxx Not imported name of config file! STOP.'
-          stop 1
-       endif
+    if ( present(conf_name) ) then
+       fname = conf_name
     else
-       fname = IO_ARG_getfname( is_master=.true. )
+       fname = IO_ARG_getfname( is_master=.true., allow_noconf=allow_noconf )
+       IO_LOG_BASENAME = IO_STDOUT
     endif
 
     !--- Open config file till end
     IO_FID_CONF = IO_CNF_open( fname,           & ! [IN]
                                is_master=.true. ) ! [IN]
 
-    H_MODELNAME = trim(MODELNAME)
-    H_LIBNAME   = 'SCALE Library ver. '//trim(LIBVERSION)
-    H_SOURCE    = trim(MODELNAME)
+    H_APPNAME = trim(APPNAME)
+    H_LIBNAME = 'SCALE Library ver. '//trim(LIBVERSION)
+    H_SOURCE  = trim(APPNAME)
 
     !--- read PARAM
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_IO,iostat=ierr)
-    if ( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_IO . Check!'
-       stop 1
-    endif
+    if ( IO_FID_CONF > 0 ) then
+       rewind(IO_FID_CONF)
+       read(IO_FID_CONF,nml=PARAM_IO,iostat=ierr)
+       if ( ierr > 0 ) then !--- fatal error
+          write(*,*) 'xxx Not appropriate names in namelist PARAM_IO . Check!'
+          stop
+       endif
+    end if
 
     return
   end subroutine IO_setup
@@ -192,72 +192,74 @@ contains
                 iostat = ierr         )
           if ( ierr /= 0 ) then
              write(*,*) 'xxx File open error! :', trim(fname)
-             stop 1
+             stop
           endif
        endif
 
-       write(IO_FID_LOG,*) ''
-       write(IO_FID_LOG,*) '                                               -+++++++++;              '
-       write(IO_FID_LOG,*) '                                             ++++++++++++++=            '
-       write(IO_FID_LOG,*) '                                           ++++++++++++++++++-          '
-       write(IO_FID_LOG,*) '                                          +++++++++++++++++++++         '
-       write(IO_FID_LOG,*) '                                        .+++++++++++++++++++++++        '
-       write(IO_FID_LOG,*) '                                        +++++++++++++++++++++++++       '
-       write(IO_FID_LOG,*) '                                       +++++++++++++++++++++++++++      '
-       write(IO_FID_LOG,*) '                                      =++++++=x######+++++++++++++;     '
-       write(IO_FID_LOG,*) '                                     .++++++X####XX####++++++++++++     '
-       write(IO_FID_LOG,*) '         =+xxx=,               ++++  +++++=##+       .###++++++++++-    '
-       write(IO_FID_LOG,*) '      ,xxxxxxxxxx-            +++++.+++++=##           .##++++++++++    '
-       write(IO_FID_LOG,*) '     xxxxxxxxxxxxx           -+++x#;+++++#+              ##+++++++++.   '
-       write(IO_FID_LOG,*) '    xxxxxxxx##xxxx,          ++++# +++++XX                #+++++++++-   '
-       write(IO_FID_LOG,*) '   xxxxxxx####+xx+x         ++++#.++++++#                  #+++++++++   '
-       write(IO_FID_LOG,*) '  +xxxxxX#X   #Xx#=        =+++#x=++++=#.                  x=++++++++   '
-       write(IO_FID_LOG,*) '  xxxxxx#,    x###        .++++#,+++++#=                    x++++++++   '
-       write(IO_FID_LOG,*) ' xxxxxx#.                 ++++# +++++x#                     #++++++++   '
-       write(IO_FID_LOG,*) ' xxxxxx+                 ++++#-+++++=#                      #++++++++   '
-       write(IO_FID_LOG,*) ',xxxxxX                 -+++XX-+++++#,                      +++++++++   '
-       write(IO_FID_LOG,*) '=xxxxxX                .++++#.+++++#x                       -++++++++   '
-       write(IO_FID_LOG,*) '+xxxxx=                ++++#.++++++#                        ++++++++#   '
-       write(IO_FID_LOG,*) 'xxxxxx;               ++++#+=++++=#                         ++++++++#   '
-       write(IO_FID_LOG,*) 'xxxxxxx              ,+++x#,+++++#-                        ;++++++++-   '
-       write(IO_FID_LOG,*) '#xxxxxx              +++=# +++++xX                         ++++++++#    '
-       write(IO_FID_LOG,*) 'xxxxxxxx            ++++#-+++++=#                         +++++++++X    '
-       write(IO_FID_LOG,*) '-+xxxxxx+          ++++X#-++++=#.            -++;        =++++++++#     '
-       write(IO_FID_LOG,*) ' #xxxxxxxx.      .+++++# +++++#x            =++++-      +++++++++XX     '
-       write(IO_FID_LOG,*) ' #xxxxxxxxxx=--=++++++#.++++++#             ++++++    -+++++++++x#      '
-       write(IO_FID_LOG,*) '  #+xxxxxxxxxx+++++++#x=++++=#              ++++++;=+++++++++++x#       '
-       write(IO_FID_LOG,*) '  =#+xxxxxxxx+++++++##,+++++#=             =++++++++++++++++++##.       '
-       write(IO_FID_LOG,*) '   X#xxxxxxxx++++++## +++++x#              ;x++++++++++++++++##.        '
-       write(IO_FID_LOG,*) '    x##+xxxx+++++x## +++++=#                ##++++++++++++x##X          '
-       write(IO_FID_LOG,*) '     ,###Xx+++x###x -++++=#,                .####x+++++X####.           '
-       write(IO_FID_LOG,*) '       -########+   -#####x                   .X#########+.             '
-       write(IO_FID_LOG,*) '           .,.      ......                         .,.                  '
-       write(IO_FID_LOG,*) '                                                                        '
-       write(IO_FID_LOG,*) '    .X#######     +###-        =###+           ###x         x########   '
-       write(IO_FID_LOG,*) '   .#########    ######X      #######         ####        .#########x   '
-       write(IO_FID_LOG,*) '   ####+++++=   X#######.    -#######x       .###;        ####x+++++.   '
-       write(IO_FID_LOG,*) '   ###          ###= ####    #### x###       ####        -###.          '
-       write(IO_FID_LOG,*) '  .###         ####   ###+  X###   ###X     =###.        ####           '
-       write(IO_FID_LOG,*) '   ###-       ;###,        .###+   -###     ####        x##########+    '
-       write(IO_FID_LOG,*) '   +####x     ####         ####     ####   ####         ###########.    '
-       write(IO_FID_LOG,*) '    x######. =###          ###,     .###-  ###+        x###--------     '
-       write(IO_FID_LOG,*) '      =##### X###         -###       #### ,###         ####             '
-       write(IO_FID_LOG,*) '        .###=x###;        .###+       ###X ###X        ####.            '
-       write(IO_FID_LOG,*) ' ###########; ###########+ ###########     ########### ,##########.     '
-       write(IO_FID_LOG,*) '-###########  ,##########,  #########X      ##########  +#########      '
-       write(IO_FID_LOG,*) ',,,,,,,,,,.     ,,,,,,,,,    .,,,,,,,.       .,,,,,,,,    ,,,,,,,,      '
-       write(IO_FID_LOG,*) '                                                                        '
-       write(IO_FID_LOG,*) '    SCALE : Scalable Computing by Advanced Library and Environment      '
-       write(IO_FID_LOG,*) ''
-       write(IO_FID_LOG,*) trim(H_LIBNAME)
-       write(IO_FID_LOG,*) trim(H_MODELNAME)
-       write(IO_FID_LOG,*) ''
-       write(IO_FID_LOG,*) '++++++ Module[STDIO] / Categ[IO] / Origin[SCALElib]'
-       write(IO_FID_LOG,*) ''
-       write(IO_FID_LOG,'(1x,A,I3)') '*** Open config file, FID = ', IO_FID_CONF
-       write(IO_FID_LOG,'(1x,A,I3)') '*** Open log    file, FID = ', IO_FID_LOG
-       write(IO_FID_LOG,'(1x,2A)')   '*** basename of log file  = ', trim(IO_LOG_BASENAME)
-       write(IO_FID_LOG,*) ''
+       if ( IO_FID_LOG .ne. IO_FID_STDOUT ) then
+          write(IO_FID_LOG,*) ''
+          write(IO_FID_LOG,*) '                                               -+++++++++;              '
+          write(IO_FID_LOG,*) '                                             ++++++++++++++=            '
+          write(IO_FID_LOG,*) '                                           ++++++++++++++++++-          '
+          write(IO_FID_LOG,*) '                                          +++++++++++++++++++++         '
+          write(IO_FID_LOG,*) '                                        .+++++++++++++++++++++++        '
+          write(IO_FID_LOG,*) '                                        +++++++++++++++++++++++++       '
+          write(IO_FID_LOG,*) '                                       +++++++++++++++++++++++++++      '
+          write(IO_FID_LOG,*) '                                      =++++++=x######+++++++++++++;     '
+          write(IO_FID_LOG,*) '                                     .++++++X####XX####++++++++++++     '
+          write(IO_FID_LOG,*) '         =+xxx=,               ++++  +++++=##+       .###++++++++++-    '
+          write(IO_FID_LOG,*) '      ,xxxxxxxxxx-            +++++.+++++=##           .##++++++++++    '
+          write(IO_FID_LOG,*) '     xxxxxxxxxxxxx           -+++x#;+++++#+              ##+++++++++.   '
+          write(IO_FID_LOG,*) '    xxxxxxxx##xxxx,          ++++# +++++XX                #+++++++++-   '
+          write(IO_FID_LOG,*) '   xxxxxxx####+xx+x         ++++#.++++++#                  #+++++++++   '
+          write(IO_FID_LOG,*) '  +xxxxxX#X   #Xx#=        =+++#x=++++=#.                  x=++++++++   '
+          write(IO_FID_LOG,*) '  xxxxxx#,    x###        .++++#,+++++#=                    x++++++++   '
+          write(IO_FID_LOG,*) ' xxxxxx#.                 ++++# +++++x#                     #++++++++   '
+          write(IO_FID_LOG,*) ' xxxxxx+                 ++++#-+++++=#                      #++++++++   '
+          write(IO_FID_LOG,*) ',xxxxxX                 -+++XX-+++++#,                      +++++++++   '
+          write(IO_FID_LOG,*) '=xxxxxX                .++++#.+++++#x                       -++++++++   '
+          write(IO_FID_LOG,*) '+xxxxx=                ++++#.++++++#                        ++++++++#   '
+          write(IO_FID_LOG,*) 'xxxxxx;               ++++#+=++++=#                         ++++++++#   '
+          write(IO_FID_LOG,*) 'xxxxxxx              ,+++x#,+++++#-                        ;++++++++-   '
+          write(IO_FID_LOG,*) '#xxxxxx              +++=# +++++xX                         ++++++++#    '
+          write(IO_FID_LOG,*) 'xxxxxxxx            ++++#-+++++=#                         +++++++++X    '
+          write(IO_FID_LOG,*) '-+xxxxxx+          ++++X#-++++=#.            -++;        =++++++++#     '
+          write(IO_FID_LOG,*) ' #xxxxxxxx.      .+++++# +++++#x            =++++-      +++++++++XX     '
+          write(IO_FID_LOG,*) ' #xxxxxxxxxx=--=++++++#.++++++#             ++++++    -+++++++++x#      '
+          write(IO_FID_LOG,*) '  #+xxxxxxxxxx+++++++#x=++++=#              ++++++;=+++++++++++x#       '
+          write(IO_FID_LOG,*) '  =#+xxxxxxxx+++++++##,+++++#=             =++++++++++++++++++##.       '
+          write(IO_FID_LOG,*) '   X#xxxxxxxx++++++## +++++x#              ;x++++++++++++++++##.        '
+          write(IO_FID_LOG,*) '    x##+xxxx+++++x## +++++=#                ##++++++++++++x##X          '
+          write(IO_FID_LOG,*) '     ,###Xx+++x###x -++++=#,                .####x+++++X####.           '
+          write(IO_FID_LOG,*) '       -########+   -#####x                   .X#########+.             '
+          write(IO_FID_LOG,*) '           .,.      ......                         .,.                  '
+          write(IO_FID_LOG,*) '                                                                        '
+          write(IO_FID_LOG,*) '    .X#######     +###-        =###+           ###x         x########   '
+          write(IO_FID_LOG,*) '   .#########    ######X      #######         ####        .#########x   '
+          write(IO_FID_LOG,*) '   ####+++++=   X#######.    -#######x       .###;        ####x+++++.   '
+          write(IO_FID_LOG,*) '   ###          ###= ####    #### x###       ####        -###.          '
+          write(IO_FID_LOG,*) '  .###         ####   ###+  X###   ###X     =###.        ####           '
+          write(IO_FID_LOG,*) '   ###-       ;###,        .###+   -###     ####        x##########+    '
+          write(IO_FID_LOG,*) '   +####x     ####         ####     ####   ####         ###########.    '
+          write(IO_FID_LOG,*) '    x######. =###          ###,     .###-  ###+        x###--------     '
+          write(IO_FID_LOG,*) '      =##### X###         -###       #### ,###         ####             '
+          write(IO_FID_LOG,*) '        .###=x###;        .###+       ###X ###X        ####.            '
+          write(IO_FID_LOG,*) ' ###########; ###########+ ###########     ########### ,##########.     '
+          write(IO_FID_LOG,*) '-###########  ,##########,  #########X      ##########  +#########      '
+          write(IO_FID_LOG,*) ',,,,,,,,,,.     ,,,,,,,,,    .,,,,,,,.       .,,,,,,,,    ,,,,,,,,      '
+          write(IO_FID_LOG,*) '                                                                        '
+          write(IO_FID_LOG,*) '    SCALE : Scalable Computing by Advanced Library and Environment      '
+          write(IO_FID_LOG,*) ''
+          write(IO_FID_LOG,*) trim(H_LIBNAME)
+          write(IO_FID_LOG,*) trim(H_APPNAME)
+          write(IO_FID_LOG,*) ''
+          write(IO_FID_LOG,*) '++++++ Module[STDIO] / Categ[IO] / Origin[SCALElib]'
+          write(IO_FID_LOG,*) ''
+          write(IO_FID_LOG,'(1x,A,I3)') '*** Open config file, FID = ', IO_FID_CONF
+          write(IO_FID_LOG,'(1x,A,I3)') '*** Open log    file, FID = ', IO_FID_LOG
+          write(IO_FID_LOG,'(1x,2A)')   '*** basename of log file  = ', trim(IO_LOG_BASENAME)
+          write(IO_FID_LOG,*) ''
+       end if
 
     else
        if( is_master ) write(*,*) '*** Log report is suppressed.'
@@ -284,7 +286,7 @@ contains
           write(IO_FID_NML,'(A)')  '################################################################################'
           write(IO_FID_NML,'(A)')  '#! configulation'
           write(IO_FID_NML,'(2A)') '#! ', trim(H_LIBNAME)
-          write(IO_FID_NML,'(2A)') '#! ', trim(H_MODELNAME)
+          write(IO_FID_NML,'(2A)') '#! ', trim(H_APPNAME)
           write(IO_FID_NML,'(A)')  '################################################################################'
           write(IO_FID_NML,nml=PARAM_IO)
        else
@@ -356,17 +358,24 @@ contains
   !-----------------------------------------------------------------------------
   !> get config filename from argument
   !> @return fname
-  function IO_ARG_getfname( is_master ) result(fname)
+  function IO_ARG_getfname( is_master, allow_noconf ) result(fname)
     implicit none
+    logical, intent(in)           :: is_master    !> master process?
+    logical, intent(in), optional :: allow_noconf !> allow no configuration file
 
-    logical, intent(in)   :: is_master !< master process?
-
-    character(len=H_LONG) :: fname     !< filename
+    character(len=H_LONG) :: fname   !< filename
+    logical :: allow_noconf_
     !---------------------------------------------------------------------------
 
     if ( COMMAND_ARGUMENT_COUNT() < 1 ) then
-       if(is_master) write(*,*) 'xxx Program needs config file from argument! STOP.'
-       stop 1
+       allow_noconf_ = .false.
+       if ( present(allow_noconf) ) allow_noconf_ = allow_noconf
+       if ( .not. allow_noconf_ ) then
+          if(is_master) write(*,*) 'xxx Program needs config file from argument! STOP.'
+          stop
+       else
+          fname = IO_NULLFILE
+       end if
     else
        call get_command_argument(1,fname)
     endif

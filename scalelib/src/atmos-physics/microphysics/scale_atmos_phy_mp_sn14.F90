@@ -1641,16 +1641,16 @@ contains
 
     call PROF_rapstart('MP_Nucleation', 3)
 
-    call nucleation_kij(    &
-         z, velz,           & ! in
-         DENS, wtemp, pres, & ! in
-         rhoq2,             & ! (in)
-         PQ,                & ! out
-         cpa,               & ! in
-         dTdt_equiv_d,      & ! in
-         qke_d,             & ! in
-         CCN,               & ! in
-         dt                 ) ! in
+    call nucleation_kij(          &
+         z, velz,                 & ! in
+         DENS, wtemp, pres, qdry, & ! in
+         rhoq2,                   & ! (in)
+         PQ,                      & ! out
+         cpa,                     & ! in
+         dTdt_equiv_d,            & ! in
+         qke_d,                   & ! in
+         CCN,                     & ! in
+         dt                       ) ! in
 
     do j = JS, JE
     do i = IS, IE
@@ -1680,7 +1680,6 @@ contains
        QTRC(k,i,j,I_NC) = rhoq(I_NC,k,i,j) * rrho(k,i,j)
        QTRC(k,i,j,I_NI) = rhoq(I_NI,k,i,j) * rrho(k,i,j)
 
-       CALC_QDRY( qdry(k,i,j), QTRC, TRACER_MASS, k, i, j, iq )
        CALC_CV( cva(k,i,j), qdry(k,i,j), QTRC, k, i, j, iq, CVdry, TRACER_CV )
        CALC_R( Rmoist, qdry(k,i,j), QTRC, k, i, j, iq, Rdry, TRACER_R )
        temp(k,i,j) = rhoe(k,i,j) / ( DENS(k,i,j) * cva(k,i,j) )
@@ -1754,8 +1753,10 @@ contains
     end do
     end do
 
-    call moist_psat_liq( esw, wtemp )
-    call moist_psat_ice( esi, wtemp )
+    call moist_psat_liq( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                         wtemp(:,:,:), esw(:,:,:) ) ! [IN], [OUT]
+    call moist_psat_ice( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                         wtemp(:,:,:), esi(:,:,:) ) ! [IN], [OUT]
 
     call freezing_water_kij( &
          dt,             & ! in
@@ -1783,6 +1784,7 @@ contains
          velz,                       & ! in
          dTdt_equiv_d,               & ! in
          DENS,                       & ! in
+         qdry,                       & ! in
          rhoe,                       & ! inout
          rhoq, QTRC,                 & ! inout
          temp, pres,                 & ! inout
@@ -2058,7 +2060,6 @@ contains
           QTRC(k,i,j,iq) = rhoq(iq,k,i,j) * rrho(k,i,j)
        enddo
 
-       CALC_QDRY( qdry(k,i,j), QTRC, TRACER_MASS, k, i, j, iq )
        CALC_CV( cva(k,i,j), qdry(k,i,j), QTRC, k, i, j, iq, CVdry, TRACER_CV )
        CALC_R( Rmoist, qdry(k,i,j), QTRC, k, i, j, iq, Rdry, TRACER_R )
        cpa(k,i,j) = cva(k,i,j) + Rmoist
@@ -2202,15 +2203,15 @@ contains
   end subroutine debug_tem_kij
 
   subroutine nucleation_kij( &
-       z, velz,          &
-       rho, tem, pre,    &
-       rhoq,             &
-       PQ,               &
-       cpa,              & ! in
-       dTdt_rad,         & ! in
-       qke,              & ! in
-       CCN,               & ! in
-       dt                ) ! in
+       z, velz,             &
+       rho, tem, pre, qdry, &
+       rhoq,                &
+       PQ,                  &
+       cpa,                 & ! in
+       dTdt_rad,            & ! in
+       qke,                 & ! in
+       CCN,                 & ! in
+       dt                   ) ! in
     use scale_process, only: &
        PRC_MPIstop
     use scale_tracer, only: &
@@ -2220,7 +2221,7 @@ contains
        moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
        moist_pres2qsat_liq  => ATMOS_SATURATION_pres2qsat_liq, &
        moist_pres2qsat_ice  => ATMOS_SATURATION_pres2qsat_ice,   &
-       moist_dqsi_dtem_rho  => ATMOS_SATURATION_dqsi_dtem_rho
+       moist_dqsi_dtem_dens => ATMOS_SATURATION_dqs_dtem_dens_liq
     implicit none
 
     real(RP), intent(in)  :: z(KA)      !
@@ -2228,6 +2229,7 @@ contains
     real(RP), intent(in)  :: rho(KA,IA,JA)    ! [Add] 09/08/18 T.Mitsui
     real(RP), intent(in)  :: tem(KA,IA,JA)    ! [Add] 09/08/18 T.Mitsui
     real(RP), intent(in)  :: pre(KA,IA,JA)    ! [Add] 09/08/18 T.Mitsui
+    real(RP), intent(in)  :: qdry(KA,IA,JA)
     !
     real(RP), intent(in)  :: rhoq(I_QV:I_NG,KA,IA,JA)     !
     real(RP), intent(out) :: PQ(PQ_MAX,KA,IA,JA)
@@ -2352,11 +2354,19 @@ contains
     rdt            = 1.0_RP/dt
     r_gravity      = 1.0_RP/GRAV
     !
-    call moist_psat_liq     ( esw, tem )
-    call moist_psat_ice     ( esi, tem )
-    call moist_pres2qsat_liq( qsw, tem, pre )
-    call moist_pres2qsat_ice( qsi, tem, pre )
-    call moist_dqsi_dtem_rho( dqsidtem_rho, tem, rho )
+    call moist_psat_liq      ( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              tem(:,:,:), esw(:,:,:) ) ! [IN], [OUT]
+    call moist_psat_ice      ( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              tem(:,:,:), esi(:,:,:) ) ! [IN], [OUT]
+    call moist_pres2qsat_liq ( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              tem(:,:,:), pre(:,:,:), qdry(:,:,:), & ! [IN]
+                              qsw(:,:,:)                           ) ! [OUT]
+    call moist_pres2qsat_ice ( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              tem(:,:,:), pre(:,:,:), qdry(:,:,:), & ! [IN]
+                              qsi(:,:,:)                           ) ! [OUT]
+    call moist_dqsi_dtem_dens( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                               tem(:,:,:), rho(:,:,:), & ! [IN]
+                               dqsidtem_rho(:,:,:)     ) ! [OUT]
     !
     ! Lohmann (2002),JAS, eq.(1) but changing unit [cm-3] => [m-3]
     a_max = 1.E+6_RP*0.1_RP*(1.E-6_RP)**1.27_RP
@@ -2893,7 +2903,8 @@ contains
     end do
     end do
 
-    call moist_psat_ice( esi, tem )
+    call moist_psat_ice( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                         tem(:,:,:), esi(:,:,:)  ) ! [IN], [OUT]
 
     if( opt_stick_KS96 )then
        do j = JS, JE
@@ -3835,6 +3846,7 @@ contains
        velz,                & ! in
        dTdt_rad,            & ! in
        rho,                 & ! in
+       qdry,                & ! in
        rhoe,                & ! inout
        rhoq, q,             & ! inout
        tem, pre,            & ! inout
@@ -3853,10 +3865,10 @@ contains
     use scale_atmos_saturation, only: &
        moist_pres2qsat_liq  => ATMOS_SATURATION_pres2qsat_liq,  &
        moist_pres2qsat_ice  => ATMOS_SATURATION_pres2qsat_ice,  &
-       moist_dqsw_dtem_rho  => ATMOS_SATURATION_dqsw_dtem_rho,  &
-       moist_dqsi_dtem_rho  => ATMOS_SATURATION_dqsi_dtem_rho,  &
-       moist_dqsw_dtem_dpre => ATMOS_SATURATION_dqsw_dtem_dpre, &
-       moist_dqsi_dtem_dpre => ATMOS_SATURATION_dqsi_dtem_dpre
+       moist_dqs_dtem_dens_liq  => ATMOS_SATURATION_dqs_dtem_dens_liq,  &
+       moist_dqs_dtem_dens_ice  => ATMOS_SATURATION_dqs_dtem_dens_ice,  &
+       moist_dqs_dtem_dpre_liq => ATMOS_SATURATION_dqs_dtem_dpre_liq, &
+       moist_dqs_dtem_dpre_ice => ATMOS_SATURATION_dqs_dtem_dpre_ice
     implicit none
 
     integer, intent(in)    :: ntdiv               ! [Add] 10/08/03
@@ -3869,6 +3881,7 @@ contains
     real(RP), intent(in)    :: velz(KA,IA,JA)     ! vertical velocity @ half point[m/s]
     real(RP), intent(in)    :: dTdt_rad(KA,IA,JA) ! temperture tendency by radiation[K/s]
     real(RP), intent(in)    :: rho(KA,IA,JA)      ! density[kg/m3]
+    real(RP), intent(in)    :: qdry(KA,IA,JA)     ! dry air mass ratio [kg/kg]
     real(RP), intent(inout) :: rhoe(KA,IA,JA)     ! internal energy[J/m3]
     real(RP), intent(inout) :: rhoq(I_QV:I_NG,KA,IA,JA)  ! tracers[kg/m3]
     real(RP), intent(inout) :: q(KA,IA,JA,QA)     ! tracers mixing ratio[kg/kg]
@@ -3890,7 +3903,6 @@ contains
     real(RP) :: xi                     ! mean mass of ice particles
     real(RP) :: rrho                   ! 1/rho
     real(RP) :: wtem(KA,IA,JA)         ! temperature[K]
-    real(RP) :: qdry                   ! mixing ratio of dry air
     !
     real(RP) :: r_cva                  ! specific heat at constant volume
     real(RP) :: cpa                    ! specific heat at constant pressure
@@ -4030,12 +4042,24 @@ contains
     end do
     end do
 
-    call moist_pres2qsat_liq ( qsw, wtem, pre )
-    call moist_pres2qsat_ice ( qsi, wtem, pre )
-    call moist_dqsw_dtem_rho ( dqswdtem_rho, wtem, rho )
-    call moist_dqsi_dtem_rho ( dqsidtem_rho, wtem, rho )
-    call moist_dqsw_dtem_dpre( dqswdtem_pre, dqswdpre_tem, wtem, pre )
-    call moist_dqsi_dtem_dpre( dqsidtem_pre, dqsidpre_tem, wtem, pre )
+    call moist_pres2qsat_liq( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              wtem(:,:,:), pre(:,:,:), qdry(:,:,:), & ! [IN]
+                              qsw(:,:,:)                            ) ! [OUT]
+    call moist_pres2qsat_ice( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              wtem(:,:,:), pre(:,:,:), qdry(:,:,:), & ! [IN]
+                              qsi(:,:,:)                            ) ! [OUT]
+    call moist_dqs_dtem_dens_liq( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                  wtem(:,:,:), rho(:,:,:), & ! [IN]
+                                  dqswdtem_rho(:,:,:)      ) ! [OUT]
+    call moist_dqs_dtem_dens_ice( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                  wtem(:,:,:), rho(:,:,:), & ! [IN]
+                                  dqsidtem_rho(:,:,:)      ) ! [OUT]
+    call moist_dqs_dtem_dpre_liq( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                  wtem(:,:,:), pre(:,:,:), qdry(:,:,:),    & ! [IN]
+                                  dqswdtem_pre(:,:,:), dqswdpre_tem(:,:,:) ) ! [OUT]
+    call moist_dqs_dtem_dpre_ice( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                  wtem(:,:,:), pre(:,:,:), qdry(:,:,:),    & ! [IN]
+                                  dqsidtem_pre(:,:,:), dqsidpre_tem(:,:,:) ) ! [OUT]
 
     PROFILE_START("sn14_update")
     do j = JS, JE
@@ -4080,10 +4104,9 @@ contains
 !       taudep_s(k,i,j)   = 1.0_RP/(r_taudep_s+r_tau100day)
 !       taudep_g(k,i,j)   = 1.0_RP/(r_taudep_g+r_tau100day)
 
-       CALC_QDRY( qdry, q, TRACER_MASS, k, i, j, iqw )
-       CALC_CV( cva(k,i,j), qdry, q, k, i, j, iqw, CVdry, TRACER_CV )
-       CALC_CP( cpa, qdry, q, k, i, j, iqw, CPdry, TRACER_CP )
-       CALC_R( Rmoist, qdry, q, k, i, j, iqw, Rdry, TRACER_R )
+       CALC_CV( cva(k,i,j), qdry(k,i,j), q, k, i, j, iqw, CVdry, TRACER_CV )
+       CALC_CP( cpa, qdry(k,i,j), q, k, i, j, iqw, CPdry, TRACER_CP )
+       CALC_R( Rmoist, qdry(k,i,j), q, k, i, j, iqw, Rdry, TRACER_R )
        r_cva = 1.0_RP / cva(k,i,j)
        r_cpa = 1.0_RP / cpa
 
@@ -4359,9 +4382,8 @@ contains
        q(k,i,j,I_NS) = rhoq(I_NS,k,i,j) * rrho
        q(k,i,j,I_NG) = rhoq(I_NG,k,i,j) * rrho
 
-       CALC_QDRY( qdry, q, TRACER_MASS, k, i, j, iqw )
-       CALC_CV( cva(k,i,j), qdry, q, k, i, j, iqw, CVdry, TRACER_CV )
-       CALC_R( Rmoist, qdry, q, k, i, j, iqw, Rdry, TRACER_R )
+       CALC_CV( cva(k,i,j), qdry(k,i,j), q, k, i, j, iqw, CVdry, TRACER_CV )
+       CALC_R( Rmoist, qdry(k,i,j), q, k, i, j, iqw, Rdry, TRACER_R )
        tem(k,i,j) = rhoe(k,i,j) / ( rho(k,i,j) * cva(k,i,j) )
        pre(k,i,j) = rho(k,i,j) * Rmoist * tem(k,i,j)
 

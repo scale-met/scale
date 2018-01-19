@@ -167,7 +167,7 @@ contains
     !########## Initial setup ##########
 
     ! setup standard I/O
-    call IO_setup( MODELNAME, .true., cnf_fname )
+    call IO_setup( MODELNAME, cnf_fname )
 
     ! setup MPI
     call PRC_LOCAL_setup( comm_world, & ! [IN]

@@ -65,7 +65,7 @@ program mkllmap
   !########## Initial setup ##########
 
   ! setup standard I/O
-  call IO_setup( MODELNAME, .false. )
+  call IO_setup( MODELNAME )
   call IO_LOG_setup( myrank, ismaster )
   call LogInit( IO_FID_CONF,       &
                 IO_FID_LOG, IO_L,  &

@@ -13,38 +13,39 @@ pros = Hash.new
 
 SUFFIX = ".F90"
 
-def parse(deps, pros, srcdir, dir="")
+def parse(deps, pros, srcdir, dir=".")
   dirs = Dir[ File.join(srcdir, dir, "*") ]
   dirs.each do |fdir|
-    dir = fdir.sub(/#{srcdir}\//,"")
-    next if /\A\./ =~ dir
-    parse(deps, pros, srcdir, dir)
-    files = Dir[ File.join(fdir, "*#{SUFFIX}") ]
-    files.each do |file|
-      basename = File.basename(file, SUFFIX)
-      dep = {
-        :dir => dir,
-        :depends => Array.new
-      }
-      pro = {
-        :dir => dir,
-        :file => basename
-      }
-      deps[basename] = dep
-      File.foreach(file) do |line|
-        case line
-        when /^\s*module (\w+)/
-          mod = $1
-          next if /procedure/ =~ mod
-          pros[mod] = pro
-        when /^\s*use (\w+)/
-          mod = $1
-#          next if /(dc_types|gtool|mpi|netcdf|NAME)/ =~ mod
-#          next if /(dc_types|gtool|mpi|netcdf|gadg|rng|m_|mt|NAME)/ =~ mod
-          next if (/(dc_types|gtool|mpi|MPI|netcdf|gadg|rng|mt|NAME)/ =~ mod)
+    next unless File.directory?(fdir)
+    fdir = fdir.sub(/#{srcdir}\//,"")
+    next if /\.\Z/ =~ fdir
+    parse(deps, pros, srcdir, fdir)
+  end
+  files = Dir[ File.join(srcdir, dir, "*#{SUFFIX}") ]
+  files.each do |file|
+    basename = File.basename(file, SUFFIX)
+    dep = {
+      :dir => dir,
+      :depends => Array.new
+    }
+    pro = {
+      :dir => dir,
+      :file => basename
+    }
+    deps[basename] = dep
+    File.foreach(file) do |line|
+      case line
+      when /^\s*module (\w+)/
+        mod = $1
+        next if /procedure/ =~ mod
+        pros[mod] = pro
+      when /^\s*use (\w+)/
+        mod = $1
+#        next if /(dc_types|gtool|mpi|netcdf|NAME)/ =~ mod
+#        next if /(dc_types|gtool|mpi|netcdf|gadg|rng|m_|mt|NAME)/ =~ mod
+        next if (/(dc_log|dc_types|gtool|mpi|MPI|netcdf|gadg|rng|mt|NAME)/ =~ mod)
 
-          dep[:depends].push(mod) unless dep[:depends].include?(mod)
-        end
+        dep[:depends].push(mod) unless dep[:depends].include?(mod)
       end
     end
   end

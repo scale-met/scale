@@ -767,7 +767,8 @@ contains
           if ( I_QV > 0 ) then
              qv_ae(k,i,j) = QTRC(k,i,j,I_QV)
              !--- calculate super saturation of water
-             call pres2qsat_liq( qsat_tmp,temp_ae(k,i,j),pres_ae(k,i,j) )
+             call pres2qsat_liq( temp_ae(k,i,j), pres_ae(k,i,j), qdry(k,i,j), & ! [IN]
+                                 qsat_tmp                                     ) ! [OUT]
              ssliq_ae(k,i,j) = qv_ae(k,i,j)/qsat_tmp - 1.0_RP
           else
              ssliq_ae(k,i,j) = - 1.0_RP
@@ -2473,7 +2474,8 @@ contains
           pres = CONST_PRE00 * ( RHOT(k,i,j) * Rmoist / CONST_PRE00 )**(cpa/cva)
           temp = pres / ( DENS(k,i,j) * Rmoist )
 
-          call SATURATION_pres2qsat_liq( qsat_tmp, temp, pres )
+          call SATURATION_pres2qsat_liq( temp, pres, qdry, & ! [IN]
+                                         qsat_tmp          ) ! [OUT]
 
           ssliq = QTRC(k,i,j,I_QV) / qsat_tmp - 1.0_RP
        else

@@ -143,7 +143,7 @@ program sno
                             ismaster ) ! [OUT]
 
   ! setup standard I/O
-  call IO_setup( TOOLNAME, call_from_launcher=.false. )
+  call IO_setup( TOOLNAME )
 
   ! setup Log
   call IO_LOG_setup( myrank, ismaster )

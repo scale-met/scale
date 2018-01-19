@@ -42,14 +42,15 @@ module mod_mkinit
   use scale_process, only: &
      PRC_MPIstop
   use scale_const, only: &
-     PI    => CONST_PI,    &
-     GRAV  => CONST_GRAV,  &
-     Pstd  => CONST_Pstd,  &
-     Rdry  => CONST_Rdry,  &
-     CPdry => CONST_CPdry, &
-     P00   => CONST_PRE00, &
-     I_SW  => CONST_I_SW,  &
-     I_LW  => CONST_I_LW
+     PI     => CONST_PI,     &
+     GRAV   => CONST_GRAV,   &
+     Pstd   => CONST_Pstd,   &
+     Rdry   => CONST_Rdry,   &
+     CPdry  => CONST_CPdry,  &
+     P00    => CONST_PRE00,  &
+     EPSvap => CONST_EPSvap, &
+     I_SW   => CONST_I_SW,   &
+     I_LW   => CONST_I_LW
   use scale_random, only: &
      RANDOM_get
   use scale_comm, only: &
@@ -77,6 +78,7 @@ module mod_mkinit
      HYDROSTATIC_buildrho_atmos  => ATMOS_HYDROSTATIC_buildrho_atmos, &
      HYDROSTATIC_buildrho_bytemp => ATMOS_HYDROSTATIC_buildrho_bytemp
   use scale_atmos_saturation, only: &
+     SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
      SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all, &
      SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
   use mod_atmos_vars, only: &
@@ -200,6 +202,7 @@ module mod_mkinit
   real(RP), private, allocatable         :: pres    (:,:,:) ! pressure [Pa]
   real(RP), private, allocatable         :: temp    (:,:,:) ! temperature [K]
   real(RP), private, allocatable         :: pott    (:,:,:) ! potential temperature [K]
+  real(RP), private, allocatable         :: qdry    (:,:,:) ! dry air mass ratio [kg/kg]
   real(RP), private, allocatable         :: qsat    (:,:,:) ! satulated water vapor [kg/kg]
   real(RP), private, allocatable         :: qv      (:,:,:) ! water vapor [kg/kg]
   real(RP), private, allocatable         :: qc      (:,:,:) ! cloud water [kg/kg]
@@ -209,6 +212,7 @@ module mod_mkinit
   real(RP), private, allocatable         :: pres_sfc(:,:,:) ! surface pressure [Pa]
   real(RP), private, allocatable         :: temp_sfc(:,:,:) ! surface temperature [K]
   real(RP), private, allocatable         :: pott_sfc(:,:,:) ! surface potential temperature [K]
+  real(RP), private, allocatable         :: psat_sfc(:,:,:) ! surface satulated water pressure [Pa]
   real(RP), private, allocatable         :: qsat_sfc(:,:,:) ! surface satulated water vapor [kg/kg]
   real(RP), private, allocatable         :: qv_sfc  (:,:,:) ! surface water vapor [kg/kg]
   real(RP), private, allocatable         :: qc_sfc  (:,:,:) ! surface cloud water [kg/kg]
@@ -253,6 +257,7 @@ contains
     allocate( pres(KA,IA,JA) )
     allocate( temp(KA,IA,JA) )
     allocate( pott(KA,IA,JA) )
+    allocate( qdry(KA,IA,JA) )
     allocate( qsat(KA,IA,JA) )
     allocate( qv  (KA,IA,JA) )
     allocate( qc  (KA,IA,JA) )
@@ -262,6 +267,7 @@ contains
     allocate( pres_sfc(1,IA,JA) )
     allocate( temp_sfc(1,IA,JA) )
     allocate( pott_sfc(1,IA,JA) )
+    allocate( psat_sfc(1,IA,JA) )
     allocate( qsat_sfc(1,IA,JA) )
     allocate( qv_sfc  (1,IA,JA) )
     allocate( qc_sfc  (1,IA,JA) )
@@ -409,6 +415,7 @@ contains
       pres_sfc(:,:,:) = CONST_UNDEF8
       temp_sfc(:,:,:) = CONST_UNDEF8
       pott_sfc(:,:,:) = CONST_UNDEF8
+      psat_sfc(:,:,:) = CONST_UNDEF8
       qsat_sfc(:,:,:) = CONST_UNDEF8
       qv_sfc  (:,:,:) = CONST_UNDEF8
       qc_sfc  (:,:,:) = CONST_UNDEF8
@@ -1485,12 +1492,18 @@ contains
 
     if ( I_QV > 0 ) then
        ! calc QV from RH
-       call SATURATION_pres2qsat_all( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
-       call SATURATION_pres2qsat_all( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
+       call SATURATION_psat_all( IA, ISB, IEB, JA, JSB, JEB, &
+                                 temp_sfc(1,:,:), & ! [IN]
+                                 psat_sfc(1,:,:)  ) ! [OUT]
+       qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
+       call SATURATION_pres2qsat_all( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                      temp(:,:,:), pres(:,:,:), qdry(:,:,:), & ! [IN]
+                                      qsat(:,:,:)                            ) ! [OUT]
 
        call RANDOM_get(rndm) ! make random
        do j = JSB, JEB
        do i = ISB, IEB
+          qsat_sfc(1,i,j) = EPSvap * psat_sfc(1,i,j) / ( pres_sfc(1,i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(1,i,j) )
           qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,i,j)
 
           do k = KS, KE
@@ -2200,12 +2213,17 @@ contains
 
     if ( I_QV > 0 ) then
        ! calc QV from RH
-       call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-       call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+       call SATURATION_psat_all( temp_sfc(1,1,1), & ! [IN]
+                                 psat_sfc(1,1,1)  ) ! [OUT]
+       qdry(:,1,1) = 1.0_RP - qv(:,1,1) - qc(:,1,1)
+       call SATURATION_pres2qsat_all( KA, KS, KE, &
+                                      temp(:,1,1), pres(:,1,1), qdry(:,1,1), & ! [IN]
+                                      qsat(:,1,1)                            ) ! [OUT]
 
        call RANDOM_get(rndm) ! make random
        do j = JSB, JEB
        do i = ISB, IEB
+          qsat_sfc(1,1,1) = EPSvap * psat_sfc(1,i,j) / ( pres_sfc(1,i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(1,i,j) )
           qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,1,1)
 
           do k = KS, KE
@@ -2788,10 +2806,14 @@ contains
                                qc_sfc  (1,1,1)  ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
-
+    call SATURATION_psat_all( temp_sfc(1,1,1), & ! [IN]
+                              psat_sfc(1,1,1)  ) ! [OUT]
+    qsat_sfc(1,1,1) = EPSvap * psat_sfc(1,1,1) / ( pres_sfc(1,1,1) - ( 1.0_RP-EPSvap ) * psat_sfc(1,1,1) )
     qv_sfc(1,1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
+    qdry(:,1,1) = 1.0_RP - qv(:,1,1) - qc(:,1,1)
+    call SATURATION_pres2qsat_all( KA, KS, KE, &
+                                   temp(:,1,1), pres(:,1,1), qdry(:,1,1), & ! [IN]
+                                   qsat(:,1,1)                            ) ! [OUT]
     do k = KS, KE
        if    ( GRID_CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
           qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
@@ -3078,11 +3100,17 @@ contains
     enddo
     enddo
 
-    call SATURATION_pres2qsat_all( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
-    call SATURATION_pres2qsat_all( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
+    call SATURATION_psat_all( IA, ISB, IEB, JA, JSB, JEB, &
+                              temp_sfc(1,:,:), & ! [IN]
+                              psat_sfc(1,:,:)  ) ! [OUT]
+    qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
+    call SATURATION_pres2qsat_all( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                   temp(:,:,:), pres(:,:,:), qdry(:,:,:), & ! [IN]
+                                   qsat(:,:,:)                            ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB
+       qsat_sfc(1,i,j) = EPSvap * psat_sfc(1,i,j) / ( pres_sfc(1,i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(1,i,j) )
        qv_sfc(1,i,j) = rh_sfc(1,i,j) * qsat_sfc(1,i,j)
        do k = KS, KE
           qv(k,i,j) = rh(k,i,j) * qsat(k,i,j)
@@ -5232,7 +5260,7 @@ contains
        init_pres, &
        init_ssliq
 
-    real(RP) :: qsat
+    real(RP) :: psat, qsat
     integer  :: i, j, k, ierr
     !---------------------------------------------------------------------------
 
@@ -5262,7 +5290,8 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BOXAERO)
 
     QTRC(:,:,:,:) = 0.0_RP
-    call SATURATION_pres2qsat_all( qsat, init_temp, init_pres )
+    call SATURATION_psat_all( init_temp, psat )
+    qsat = EPSvap * psat / ( init_pres - ( 1.0_RP-EPSvap ) * psat )
 
     do j = 1, JA
     do i = 1, IA
@@ -5382,9 +5411,13 @@ contains
                                qc_sfc  (1,1,1)  ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
-    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+    call SATURATION_psat_all( temp_sfc(1,1,1), psat_sfc(1,1,1) ) ! [IN], [OUT]
+    qsat_sfc(1,1,1) = EPSvap * psat_sfc(1,1,1) / ( pres_sfc(1,1,1) - ( 1.0_RP-EPSvap ) * psat_sfc(1,1,1) )
 
+    qdry(:,1,1) = 1.0_RP - qv(:,1,1) - qc(:,1,1)
+    call SATURATION_pres2qsat_all( KA, KS, KE, &
+                                   temp(:,1,1), pres(:,1,1), qdry(:,1,1), & ! [IN]
+                                   qsat(:,1,1)                            ) ! [OUT]
     qv_sfc(1,1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
     do k = KS, KE
        if    ( GRID_CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1

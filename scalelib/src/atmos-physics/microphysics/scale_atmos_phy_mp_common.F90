@@ -58,9 +58,6 @@ module scale_atmos_phy_mp_common
   !
   !++ Private procedure
   !
-  private :: moist_conversion_liq
-  private :: moist_conversion_all
-
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -271,12 +268,14 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_saturation_adjustment_3D( &
          KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-         DENS,           &
-         flag_liquid,    &
-         TEMP0,          &
-         QV0, QC0, QI0,  &
-         CPtot0, CVtot0, &
-         RHOE_d          )
+         DENS,         &
+         flag_liquid,  &
+         TEMP,         &
+         QV, QC, QI,   &
+         CPtot, CVtot, &
+         RHOE_d        )
+    use scale_process, only: &
+       PRC_abort
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &
        CP_WATER, &
@@ -286,6 +285,9 @@ contains
        CV_ICE,   &
        LHV,   &
        LHF
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_moist_conversion_dens_all, &
+       ATMOS_SATURATION_moist_conversion_dens_liq
     implicit none
 
     integer, intent(in) :: KA, KS, KE
@@ -295,133 +297,113 @@ contains
     real(RP), intent(in) :: DENS(KA,IA,JA)
     logical , intent(in) :: flag_liquid !> use scheme only for the liquid water?
 
-    real(RP), intent(inout) :: TEMP0 (KA,IA,JA)
-    real(RP), intent(inout) :: QV0   (KA,IA,JA)
-    real(RP), intent(inout) :: QC0   (KA,IA,JA)
-    real(RP), intent(inout) :: QI0   (KA,IA,JA)
-    real(RP), intent(inout) :: CPtot0(KA,IA,JA)
-    real(RP), intent(inout) :: CVtot0(KA,IA,JA)
+    real(RP), intent(inout) :: TEMP (KA,IA,JA)
+    real(RP), intent(inout) :: QV   (KA,IA,JA)
+    real(RP), intent(inout) :: QC   (KA,IA,JA)
+    real(RP), intent(inout) :: QI   (KA,IA,JA)
+    real(RP), intent(inout) :: CPtot(KA,IA,JA)
+    real(RP), intent(inout) :: CVtot(KA,IA,JA)
 
     real(RP), intent(out) :: RHOE_d(KA,IA,JA)
 
     ! working
-    real(RP) :: TEMP
-    real(RP) :: QV
-    real(RP) :: QC
-    real(RP) :: QI
-    real(RP) :: CPtot
-    real(RP) :: CVtot
+    real(RP) :: QV1
+    real(RP) :: QC1
+    real(RP) :: QI1
 
     real(RP) :: Emoist ! moist internal energy
-    real(RP) :: QSUM   ! QV+QC+QI
+
+    logical :: converged, error
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_Saturation_adjustment', 2)
 
+    error = .false.
 
     if ( flag_liquid ) then ! warm rain
 
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp shared(KS,KE,IS,IE,JS,JE, &
        !$omp        CP_VAPOR,CP_WATER,CV_VAPOR,CV_WATER,LHV,LHF, &
-       !$omp        DENS,QV0,QC0,TEMP0,CPtot0,CVtot0,RHOE_d) &
+       !$omp        DENS,QV,QC,TEMP,CPtot,CVtot,RHOE_d,error) &
        !$omp private(i,j,k, &
-       !$omp         TEMP,QV,QC,CPtot,CVtot,Emoist,QSUM)
+       !$omp         QV1,QC1,Emoist,converged)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
 
-          QV = QV0(k,i,j)
-          QC = QC0(k,i,j)
+          QV1 = QV(k,i,j)
+          QC1 = QC(k,i,j)
 
-          Emoist = TEMP0(k,i,j) * CVtot0(k,i,j) &
-                 + QV * LHV
+          Emoist = TEMP(k,i,j) * CVtot(k,i,j) &
+                 + QV1 * LHV
 
-          QSUM = QV + QC
+          call ATMOS_SATURATION_moist_conversion_dens_liq( DENS(k,i,j), Emoist,        & ! [IN]
+                                                           TEMP(k,i,j), QV1, QC1,      & ! [INOUT]
+                                                           CPtot(k,i,j), CVtot(k,i,j), & ! [INOUT]
+                                                           converged                   ) ! [OUT]
 
-          ! Turn QC into QV with consistency of moist internal energy
-          CVtot = CVtot0(k,i,j) + ( CV_VAPOR - CV_WATER ) * QC
-          CPtot = CPtot0(k,i,j) + ( CP_VAPOR - CP_WATER ) * QC
-          QV = QSUM
-          QC = 0.0_RP
+          if ( .NOT. converged ) then
+             write(*,*) 'xxx [moist_conversion] not converged! ', k,i,j
+             error = .true.
+             exit
+          endif
 
-          ! new temperature (after QC evaporation)
-          TEMP = ( Emoist - QV * LHV ) / CVtot
+          RHOE_d(k,i,j) = - LHV * ( QV1 - QV(k,i,j) ) * DENS(k,i,j)
 
-          call moist_conversion_liq( &
-               DENS(k,i,j), QSUM, Emoist,  & ! [IN]
-               k, i, j,                    & ! [IN]
-               TEMP, QV, QC, CPtot, CVtot  ) ! [INOUT]
-
-          RHOE_d(k,i,j) = - LHV * ( QV - QV0(k,i,j) ) * DENS(k,i,j)
-
-          TEMP0 (k,i,j) = TEMP
-          QV0   (k,i,j) = QV
-          QC0   (k,i,j) = QC
-          CPtot0(k,i,j) = CPtot
-          CVtot0(k,i,j) = CVtot
+          QV(k,i,j) = QV1
+          QC(k,i,j) = QC1
 
        end do
        end do
        end do
+
+       if ( error ) call PRC_abort
 
     else ! cold rain
 
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp shared (KS,KE,IS,IE,JS,JE, &
        !$omp         CP_VAPOR,CP_WATER,CP_ICE,CV_VAPOR,CV_WATER,CV_ICE,LHV,LHF, &
-       !$omp         DENS,QV0,QC0,QI0,TEMP0,CPtot0,CVtot0,RHOE_d) &
+       !$omp         DENS,QV,QC,QI,TEMP,CPtot,CVtot,RHOE_d,error) &
        !$omp private(i,j,k, &
-       !$omp         TEMP,QV,QC,QI,Emoist,QSUM,CPtot,CVtot)
+       !$omp         QV1,QC1,QI1,Emoist,converged)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QV = QV0(k,i,j)
-          QC = QC0(k,i,j)
-          QI = QI0(k,i,j)
+          QV1 = QV(k,i,j)
+          QC1 = QC(k,i,j)
+          QI1 = QI(k,i,j)
 
-          Emoist = TEMP0(k,i,j) * CVtot0(k,i,j) &
-                 + QV * LHV &
-                 - QI * LHF
+          Emoist = TEMP(k,i,j) * CVtot(k,i,j) &
+                 + QV1 * LHV &
+                 - QI1 * LHF
 
-          QSUM = QV + QC + QI
+          call ATMOS_SATURATION_moist_conversion_dens_all( DENS(k,i,j), Emoist,        & ! [IN]
+                                                           TEMP(k,i,j), QV1, QC1, QI1, & ! [INOUT]
+                                                           CPtot(k,i,j), CVtot(k,i,j), & ! [INOUT]
+                                                           converged                   ) ! [OUT]
 
-          ! Turn QC & QI into QV with consistency of moist internal energy
-          CPtot = CPtot0(k,i,j) &
-                + ( CP_VAPOR - CP_WATER ) * QC &
-                + ( CP_VAPOR - CP_ICE   ) * QI
-          CVtot = CVtot0(k,i,j) &
-                + ( CV_VAPOR - CV_WATER ) * QC &
-                + ( CV_VAPOR - CV_ICE   ) * QI
+          if ( .NOT. converged ) then
+             write(*,*) 'xxx [moist_conversion] not converged! ', k,i,j
+             error = .true.
+             exit
+          endif
 
-          QV = QSUM
-          QC = 0.0_RP
-          QI = 0.0_RP
+          RHOE_d(k,i,j) = ( - LHV * ( QV1 - QV(k,i,j) ) &
+                            + LHF * ( QI1 - QI(k,i,j) ) ) * DENS(k,i,j)
 
-          ! new temperature (after QC & QI evaporation)
-          TEMP = ( Emoist - QV * LHV ) / CVtot
-
-          call moist_conversion_all( &
-               DENS(k,i,j), QSUM, Emoist,      & ! [IN]
-               k, i, j,                        & ! [IN]
-               TEMP, QV, QC, QI, CPtot, CVtot  ) ! [INOUT]
-
-          RHOE_d(k,i,j) = ( - LHV * ( QV - QV0(k,i,j) ) &
-                            + LHF * ( QI - QI0(k,i,j) ) ) * DENS(k,i,j)
-
-          TEMP0 (k,i,j) = TEMP
-          QV0   (k,i,j) = QV
-          QC0   (k,i,j) = QC
-          QI0   (k,i,j) = QI
-          CPtot0(k,i,j) = CPtot
-          CVtot0(k,i,j) = CVtot
+          QV(k,i,j) = QV1
+          QC(k,i,j) = QC1
+          QI(k,i,j) = QI1
 
        end do
        end do
        end do
 
+       if ( error ) call PRC_abort
     endif
 
     call PROF_rapend  ('MP_Saturation_adjustment', 2)
@@ -443,6 +425,8 @@ contains
     use scale_const, only: &
        UNDEF => CONST_UNDEF
 #endif
+    use scale_process, only: &
+       PRC_abort
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_atmos_thermodyn, only: &
@@ -452,6 +436,9 @@ contains
     use scale_atmos_hydrometeor, only: &
        LHV, &
        LHF
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_moist_conversion_dens_all, &
+       ATMOS_SATURATION_moist_conversion_dens_liq
     implicit none
 
     real(RP), intent(inout) :: RHOE_t(KA,IA,JA)    ! tendency rhoe             [J/m3/s]
@@ -478,6 +465,8 @@ contains
     real(RP) :: RHOE1 (KA,IA,JA)
     real(RP) :: QTRC1 (KA,IA,JA,QA)
     real(RP) :: rdt
+
+    logical :: converged
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -549,12 +538,18 @@ contains
        do k = KS, KE
           TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV ) / CVtot(k,i,j)
 
-          call moist_conversion_liq( &
-               DENS(k,i,j), QSUM1(k,i,j), Emoist(k,i,j), & ! [IN]
-               k, i, j,                                  & ! [IN]
-               TEMP1(k,i,j),                             & ! [INOUT]
-               QTRC1(k,i,j,I_QV), QTRC1(k,i,j,I_QC),     & ! [INOUT]
-               CPtot(k,i,j), CVtot(k,i,j)                ) ! [INOUT]
+          call ATMOS_SATURATION_moist_conversion_dens_liq( &
+               DENS(k,i,j), Emoist(k,i,j),           & ! [IN]
+               TEMP1(k,i,j),                         & ! [INOUT]
+               QTRC1(k,i,j,I_QV), QTRC1(k,i,j,I_QC), & ! [INOUT]
+               CPtot(k,i,j), CVtot(k,i,j),           & ! [INOUT]
+               converged                             ) ! [OUT]
+
+          if ( .NOT. converged ) then
+             write(*,*) 'xxx [moist_conversion] not converged! ', k,i,j
+             call PRC_abort
+          endif
+
        enddo
        enddo
        enddo
@@ -593,12 +588,18 @@ contains
        do i = ISB, IEB
        do k = KS, KE
           TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV ) / CVtot(k,i,j)
-          call moist_conversion_all( &
-               DENS(k,i,j), QSUM1(k,i,j), Emoist(k,i,j),                & ! [IN]
-               k, i, j,                                                 & ! [IN]
+          call ATMOS_SATURATION_moist_conversion_dens_all( &
+               DENS(k,i,j), Emoist(k,i,j),                              & ! [IN]
                TEMP1(k,i,j),                                            & ! [INOUT]
                QTRC1(k,i,j,I_QV), QTRC1(k,i,j,I_QC), QTRC1(k,i,j,I_QI), & ! [INOUT]
-               CPtot(k,i,j), CVtot(k,i,j)                               ) ! [INOUT]
+               CPtot(k,i,j), CVtot(k,i,j),                              & ! [INOUT]
+               converged                                                ) ! [OUT]
+
+          if ( .NOT. converged ) then
+             write(*,*) 'xxx [moist_conversion] not converged! ', k,i,j
+             call PRC_abort
+          endif
+
        enddo
        enddo
        enddo
@@ -674,258 +675,6 @@ contains
 #endif
     return
   end subroutine ATMOS_PHY_MP_saturation_adjustment_obsolute
-
-  !-----------------------------------------------------------------------------
-  !> Iterative moist conversion for warm rain
-  !-----------------------------------------------------------------------------
-  subroutine moist_conversion_liq( &
-       DENS, QSUM, Emoist0,       &
-       k, i, j,                   &
-       TEMP, QV, QC, CPtot, CVtot )
-    use scale_process, only: &
-       PRC_abort
-    use scale_atmos_hydrometeor, only: &
-       CP_VAPOR, &
-       CP_WATER, &
-       CV_VAPOR, &
-       CV_WATER, &
-       LHV
-    use scale_atmos_saturation, only: &
-       SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
-       CVovR_liq, &
-       LovR_liq
-    implicit none
-
-    real(RP), intent(in)    :: DENS
-    real(RP), intent(in)    :: QSUM
-    real(RP), intent(in)    :: Emoist0
-
-    integer , intent(in)    :: k, i, j  ! for debug
-
-    real(RP), intent(inout) :: TEMP
-    real(RP), intent(inout) :: QV
-    real(RP), intent(inout) :: QC
-    real(RP), intent(inout) :: CPtot
-    real(RP), intent(inout) :: CVtot
-
-    ! working
-    real(RP) :: CVtot0
-    real(RP) :: qsat
-    real(RP) :: Emoist ! moist internal energy
-
-    ! d(X)/dT
-    real(RP) :: dqsatl_dT
-    real(RP) :: dqc_dT
-    real(RP) :: dCVtot_dT
-    real(RP) :: dEmoist_dT
-    real(RP) :: dtemp
-
-    integer,  parameter :: itelim = 100
-    real(RP), parameter :: dtemp_criteria = 0.1_RP**(2+RP/2)
-    logical  :: converged
-    integer  :: ite
-    !---------------------------------------------------------------------------
-
-
-    call SATURATION_dens2qsat_liq( temp, DENS, & ! [IN]
-                                   qsat        ) ! [OUT]
-
-    if ( QSUM <= qsat ) then
-       ! do nothing
-       return
-    end if
-
-    CVtot0 = CVtot
-
-    converged = .false.
-    do ite = 1, itelim
-
-       call SATURATION_dens2qsat_liq( temp, DENS, & ! [IN]
-                                      qsat        ) ! [OUT]
-
-       ! Separation
-       qc = QSUM - qsat
-
-       CVtot = CVtot0 + ( CV_VAPOR - CV_WATER ) * ( qsat - QV )
-
-       Emoist = temp * CVtot + qsat * LHV
-
-       ! dX/dT
-       dqsatl_dT = ( LovR_liq / ( temp*temp ) + CVovR_liq / temp ) * qsat
-
-       dqc_dT = - dqsatl_dT
-
-       dCVtot_dT = dqsatl_dT * CV_VAPOR &
-                 + dqc_dT    * CV_WATER
-
-       dEmoist_dT = temp * dCVtot_dT + CVtot + dqsatl_dT * LHV
-
-       dtemp = ( Emoist - Emoist0 ) / dEmoist_dT
-       temp  = temp - dtemp
-
-       if ( abs(dtemp) < dtemp_criteria ) then
-          converged = .true.
-          exit
-       endif
-
-       if( temp*0.0_RP /= 0.0_RP) exit
-    enddo
-
-    if ( .NOT. converged ) then
-       write(*,*) 'xxx [moist_conversion] not converged! dtemp=', dtemp,k,i,j
-       call PRC_abort
-    endif
-
-    CPtot = CPtot + ( CP_VAPOR - CP_WATER ) * ( qsat - QV )
-
-    QV = qsat
-
-    return
-  end subroutine moist_conversion_liq
-
-  !-----------------------------------------------------------------------------
-  !> Iterative moist conversion (liquid/ice mixture)
-  !-----------------------------------------------------------------------------
-  subroutine moist_conversion_all( &
-       DENS, QSUM, Emoist0,           &
-       k, i, j,                       &
-       TEMP, QV, QC, QI, CPtot, CVtot )
-    use scale_process, only: &
-       PRC_abort
-    use scale_atmos_hydrometeor, only: &
-       CP_VAPOR, &
-       CP_WATER, &
-       CP_ICE, &
-       CV_VAPOR, &
-       CV_WATER, &
-       CV_ICE, &
-       LHV, &
-       LHF
-    use scale_atmos_saturation, only: &
-       SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all, &
-       SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
-       SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice, &
-       SATURATION_alpha         => ATMOS_SATURATION_alpha,         &
-       SATURATION_dalphadT      => ATMOS_SATURATION_dalphadT,      &
-       CVovR_liq, &
-       CVovR_ice, &
-       LovR_liq,  &
-       LovR_ice
-    implicit none
-
-    real(RP), intent(in)    :: DENS
-    real(RP), intent(in)    :: QSUM
-    real(RP), intent(in)    :: Emoist0
-
-    integer,  intent(in)    :: k, i, j ! for debug
-
-    real(RP), intent(inout) :: TEMP
-    real(RP), intent(inout) :: QV
-    real(RP), intent(inout) :: QC
-    real(RP), intent(inout) :: QI
-    real(RP), intent(inout) :: CPtot
-    real(RP), intent(inout) :: CVtot
-
-    ! working
-    real(RP) :: TEMP0
-    real(RP) :: QV0, QC0, QI0
-    real(RP) :: CVtot0
-    real(RP) :: alpha
-    real(RP) :: qsat, qsatl, qsati
-    real(RP) :: Emoist ! moist internal energy
-
-    ! d(X)/dT
-    real(RP) :: dalpha_dT
-    real(RP) :: dqsat_dT, dqsatl_dT, dqsati_dT
-    real(RP) :: dqc_dT, dqi_dT
-    real(RP) :: dCVtot_dT
-    real(RP) :: dEmoist_dT
-    real(RP) :: dtemp
-
-    integer,  parameter :: itelim = 100
-    real(RP), parameter :: dtemp_criteria = 0.1_RP**(2+RP/2)
-    logical  :: converged
-    integer  :: ite
-    !---------------------------------------------------------------------------
-
-    TEMP0  = TEMP
-    CVtot0 = CVtot
-    QV0    = QV
-    QC0    = QC
-    QI0    = QI
-
-    call SATURATION_dens2qsat_all( &
-         TEMP, DENS, & ! [IN]
-         qsat        )! [OUT]
-
-    if ( QSUM <= qsat ) then
-       return
-    end if
-
-    converged = .false.
-    do ite = 1, itelim
-
-       ! liquid/ice separation factor
-       call SATURATION_alpha( alpha, temp )
-       ! Saturation
-       call SATURATION_dens2qsat_all( temp, DENS, qsat )
-       call SATURATION_dens2qsat_liq( temp, DENS, qsatl )
-       call SATURATION_dens2qsat_ice( temp, DENS, qsati )
-
-       ! Separation
-       qv = qsat
-       qc = ( QSUM - qsat ) * (          alpha )
-       qi = ( QSUM - qsat ) * ( 1.0_RP - alpha )
-
-       CVtot = CVtot0 &
-             + CV_VAPOR * ( qv - QV0 ) &
-             + CV_WATER * ( qc - QC0 ) &
-             + CV_ICE   * ( qi - QI0 )
-
-       Emoist = temp * CVtot + qv * LHV - qi * LHF
-
-       ! dX/dT
-       call SATURATION_dalphadT( dalpha_dT, temp )
-
-       dqsatl_dT = ( LovR_liq / ( temp*temp ) + CVovR_liq / temp ) * qv
-       dqsati_dT = ( LovR_ice / ( temp*temp ) + CVovR_ice / temp ) * qv
-
-       dqsat_dT  = qsatl * dalpha_dT + dqsatl_dT * (        alpha ) &
-                 - qsati * dalpha_dT + dqsati_dT * ( 1.0_RP-alpha )
-
-       dqc_dT =  ( QSUM - qv ) * dalpha_dT - dqsat_dT * (        alpha )
-       dqi_dT = -( QSUM - qv ) * dalpha_dT - dqsat_dT * ( 1.0_RP-alpha )
-
-       dCVtot_dT = dqsat_dT * CV_VAPOR &
-                 + dqc_dT   * CV_WATER &
-                 + dqi_dT   * CV_ICE
-
-       dEmoist_dT = temp * dCVtot_dT + CVtot + dqsat_dT * LHV - dqi_dT * LHF
-
-       dtemp = ( Emoist - Emoist0 ) / dEmoist_dT
-       temp  = temp - dtemp
-
-       if ( abs(dtemp) < dtemp_criteria ) then
-          converged = .true.
-          exit
-       endif
-
-       if( temp*0.0_RP /= 0.0_RP) exit
-    enddo
-
-    if ( .NOT. converged ) then
-       write(*,*) dens, temp0, qv0, qc0, qi0
-       write(*,*) 'xxx [moist_conversion] not converged! dtemp=', dtemp, k,i,j
-       call PRC_abort
-    endif
-
-    CPtot = CPtot &
-          + CP_VAPOR * ( qv - QV0 ) &
-          + CP_WATER * ( qc - QC0 ) &
-          + CP_ICE   * ( qi - QI0 )
-
-    return
-  end subroutine moist_conversion_all
 
   !-----------------------------------------------------------------------------
   !> ATMOS_PHY_MP_precipitation
