@@ -2,8 +2,8 @@
 !> module User
 !!
 !! @par Description
-!!      Put atmospheric data for urban test
-!!      Test is based on Aoyagi et al. (2011,JAMC)
+!!      Put atmospheric data for offline (between snow/land and atmos) test
+!!      Input data is provided from observation at JMA Sapporo
 !!
 !! @author Team SCALE
 !<
@@ -43,8 +43,16 @@ module mod_user
   !
   !++ Private parameters & variables
   !
-  logical, private :: USER_do   = .false. !< do user step?
+  logical,  private            :: USER_do   = .false. !< do user step?
+  real(DP), private            :: INPUT_UPDATE_DT = 0.0_DP
+  integer,  private            :: INPUT_UPDATE_NSTEP
+  integer,  private            :: nowstep
+  integer,  private            :: totalstep
+  integer,  private            :: stepnum, stepnum1,stepnum2
 
+  integer,  private            :: LAND_NSTEP
+
+  integer,            private :: data_length
   integer, parameter, private :: data_length_max = 10000    ! maximum data length
   real(RP)          , private :: SNOWIN (data_length_max)
   real(RP)          , private :: TAIN   (data_length_max)
@@ -52,7 +60,7 @@ module mod_user
   real(RP)          , private :: WINDIN (data_length_max)
   real(RP)          , private :: SHORTIN(data_length_max)
   real(RP)          , private :: LONGIN (data_length_max)
-  integer           , private :: stepnum
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -79,10 +87,15 @@ contains
        ATMOS_sw_phy_sf, &
        ATMOS_sw_phy_tb, &
        ATMOS_sw_phy_cp
+    use scale_time, only:   &
+       dt_LND => TIME_DTSEC_LAND,  & !< time interval of land step  [sec]
+       TIME_NSTEP,                 & !< total steps
+       TIME_DSTEP_LAND               !< step interval of land step
     implicit none
 
     namelist / PARAM_USER / &
-       USER_do
+       USER_do,             &
+       INPUT_UPDATE_DT
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -114,9 +127,22 @@ contains
     ATMOS_sw_phy_tb = .false.
     ATMOS_sw_phy_cp = .false.
 
+    call read_input_atm_data(data_length)
+    nowstep   = -1
+    totalstep = 0
+    stepnum   = 1
 
-    call read_input_atm_data
-    stepnum = 0
+    LAND_NSTEP = TIME_NSTEP / TIME_DSTEP_LAND + 1 ! +1 is initial
+
+    if ( INPUT_UPDATE_DT <= 0.0_DP ) then
+       write(*,*) 'xxx You need specify value larger than 0.0 to INPUT_UPDATE_DT'
+       call PRC_MPIstop
+    endif
+    INPUT_UPDATE_NSTEP = nint( INPUT_UPDATE_DT / dt_LND )
+    if ( abs(INPUT_UPDATE_NSTEP * dt_LND - INPUT_UPDATE_DT) > 1E-10_DP ) then
+       write(*,*) 'xxx INPUT_UPDATE_DT is not multiple of LAND DT'
+       call PRC_MPIstop
+    end if
 
     return
   end subroutine USER_setup
@@ -144,6 +170,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Step
   subroutine USER_step
+    use scale_process, only: &
+       PRC_MPIstop
     use scale_const, only: &
        I_LW  => CONST_I_LW,  &
        I_SW  => CONST_I_SW,  &
@@ -156,8 +184,8 @@ contains
     use scale_grid_real, only: &
        REAL_lon
     use scale_time, only:   &
-       NOWSEC => TIME_NOWSEC,      & !< subday part  of current time [sec]
-       dt_URB => TIME_DTSEC_URBAN    !< time interval of urban step  [sec]
+       NOWSEC => TIME_NOWSEC,      & ! subday part  of current time [sec]
+       dt_LND => TIME_DTSEC_LAND     ! time interval of land step  [sec]
     use scale_history, only: &
        HIST_in
     use mod_cpl_vars, only: &
@@ -176,83 +204,81 @@ contains
        SNOW  => LND_ATM_SFLX_snow
     implicit none
 
-    !real(RP) :: PTA (IA,JA)
     real(RP) :: LWD (IA,JA)
     real(RP) :: SWD (IA,JA)
     real(RP) :: WORK(IA,JA)
-    !real(RP) :: RovCP
     real(RP) :: RH
     real(RP) :: QAsat
 
-    !real(RP) :: SWtot
-    real(RP) :: LON
-    real(RP) :: dsec
-    integer  :: tloc
+    !real(RP) :: LON
+    !real(RP) :: dsec
+    real(RP) :: fact
 
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    !RovCP = Rdry / CPdry
-
     if ( USER_do ) then
 
-       stepnum = stepnum + 1     ! step number of
+       ! counter of total step of land model
+       totalstep = totalstep + 1
 
-       TMPA(:,:)         = TAIN(stepnum)
+       ! counter for reading input data
+       nowstep = nowstep + 1
+       if( nowstep >= INPUT_UPDATE_NSTEP )then
+          nowstep = 0
+          stepnum = stepnum + 1
+       endif
+       fact = real(nowstep, kind=RP) / real(INPUT_UPDATE_NSTEP, kind=RP)
+
+       if( totalstep == LAND_NSTEP )then ! last
+          stepnum1 = stepnum
+          stepnum2 = stepnum
+       else
+          stepnum1 = stepnum
+          stepnum2 = stepnum + 1
+       endif
+       if( max(stepnum1,stepnum2) > data_length )then
+          write(*,*) "xxx Number of input data is not enough: ",data_length,"<",max(stepnum1,stepnum2)
+          call PRC_MPIstop
+       endif
+
+       TMPA(:,:)         = ( (1.0_RP-fact) * TAIN(stepnum1)  &
+                           +         fact  * TAIN(stepnum2) )
        PRSA(:,:)         = 100000.0_RP
        PRSS(:,:)         = 100120.0_RP
-       UA  (:,:)         = WINDIN(stepnum)
+       UA  (:,:)         = ( (1.0_RP-fact) * WINDIN(stepnum1) &
+                           +         fact  * WINDIN(stepnum2) )
        VA  (:,:)         = 0.0_RP
        WA  (:,:)         = 0.0_RP
        RHOA(:,:)         = 1.13_RP
-       RH                = RHIN(stepnum)*0.01
+       RH                = ( (1.0_RP-fact) * RHIN(stepnum1) &
+                           +         fact  * RHIN(stepnum2) )
        PBL (:,:)         = 100.0_RP
-       RWD (:,:,I_SW,1)  = SHORTIN(stepnum) ! direct
-       RWD (:,:,I_SW,2)  = 0.0_RP ! duffusion
-       RWD (:,:,I_LW,1)  = 0.0_RP ! direct
-       RWD (:,:,I_LW,2)  = LONGIN(stepnum)
+       RWD (:,:,I_SW,1)  = ( (1.0_RP-fact) * SHORTIN(stepnum1) &
+                           +         fact  * SHORTIN(stepnum2) ) ! direct
+       RWD (:,:,I_SW,2)  = 0.0_RP                                 ! duffusion
+       RWD (:,:,I_LW,1)  = 0.0_RP
+       RWD (:,:,I_LW,2)  = ( (1.0_RP-fact) * LONGIN(stepnum1) &
+                           +         fact  * LONGIN(stepnum2) )
+       SNOW(:,:)         = ( (1.0_RP-fact) * SNOWIN(stepnum1) &
+                           +         fact  * SNOWIN(stepnum2) )
        RAIN(:,:)         = 0.0_RP
-       SNOW(:,:)         = SNOWIN(stepnum)
 
 
        do j = 1, JA
        do i = 1, IA
 
-          LON = REAL_lon(i,j) / D2R
-
-          tloc = mod(int(NOWSEC/3600.0_RP)+int(LON/15.0_RP),24)
-
-          dsec = mod(NOWSEC,3600.0_RP) / 3600.0_RP
-
-          !SWtot = ( ( 1.0_RP-dsec ) * SW(tloc  ) &
-          !        + (        dsec ) * SW(tloc+1) )
-
-          !RWD (i,j,I_SW,1) = (        SRATIO ) * SWtot ! direct
-          !RWD (i,j,I_SW,2) = ( 1.0_RP-SRATIO ) * SWtot ! diffuse
-
-          !PTA (i,j) = ( ( 1.0_RP-dsec ) * PT(tloc  ) &
-          !            + (        dsec ) * PT(tloc+1) )
-          !TMPA(i,j) = PTA(i,j) * ( PRSA(i,j) / PRE00 )**RovCP   ! air temp, but now PRSA = 100000Pa
+          !LON = REAL_lon(i,j) / D2R
+          !tloc = mod(int(NOWSEC/3600.0_RP)+int(LON/15.0_RP),24)
+          !dsec = mod(NOWSEC,3600.0_RP) / 3600.0_RP
 
           RHOS(i,j) = PRSS(i,j) / ( Rdry * TMPA(i,j) )
-
-          !UA  (i,j) = ( ( 1.0_RP-dsec ) * Wind(tloc  ) &
-          !            + (        dsec ) * Wind(tloc+1) )
-
           LWD (i,j) = RWD(i,j,I_LW,1) + RWD(i,j,I_LW,2)
           SWD (i,j) = RWD(i,j,I_SW,1) + RWD(i,j,I_SW,2)
 
-          !QVA (i,j) = ( ( 1.0_RP-dsec ) * Qvapor(tloc  ) &
-          !            + (        dsec ) * Qvapor(tloc+1) )
-          !QVA (i,j) = QVA(i,j) / (1.0_RP + QVA(i,j))         ! [mixing ratio->specific humidity]
-
           call qsatf( QAsat, TMPA(i,j), PRSA(i,j) )
-          QVA  (i,j) =  QAsat* RH
-
-          !RAIN(i,j) = ( ( 1.0_RP-dsec ) * Prcp(tloc  ) &
-          !            + (        dsec ) * Prcp(tloc+1) ) / 3600.0_RP ! [mm/h->kg/m2/s]
-
-          SNOW(i,j) = SNOW(i,j) / 3600.0_RP ! [mm/h->kg/m2/s]
+          QVA (i,j) = QAsat * (RH * 0.01)
+          SNOW(i,j) = SNOW(i,j) / real(INPUT_UPDATE_DT, kind=RP) ! [mm/h->kg/m2/s]
 
        enddo
        enddo
@@ -273,11 +299,11 @@ contains
   end subroutine USER_step
 
 !----------------------------------------------------------
-  subroutine read_input_atm_data
+  subroutine read_input_atm_data(timestep)
     implicit none
 
-    integer :: timestep
-    integer :: PREProws, TArows, RHrows, WINDrows, SHORTrows, LONGrows
+    integer, intent(out) :: timestep
+    integer              :: PREProws, TArows, RHrows, WINDrows, SHORTrows, LONGrows
 
     call inputtext('./input/SNOW_input.txt',    SNOWIN,  PREProws )
     call inputtext('./input/TEMPAIR_input.txt', TAIN,    TArows   )
