@@ -216,6 +216,7 @@ contains
 
     character(len=H_SHORT) :: idim, jdim, kdim
     integer                :: imax, jmax, kmax
+    integer                :: imax_, jmax_
 
     real(RP)               :: latstart, latend
     real(RP)               :: lonstart, lonend
@@ -295,7 +296,14 @@ contains
              dx   = ainfo(n)%AXIS_1d(imax/2+1) - ainfo(n)%AXIS_1d(imax/2)
              dlon = dx / ( CONST_RADIUS * cos(clat) ) / CONST_D2R
 
-             write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'XDEF ', imax, ' LINEAR', lonstart, dlon
+             if    ( hinfo%minfo_mapping_name == 'lambert_conformal_conic' ) then
+                imax_ = int(imax*0.9_RP)
+                write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'XDEF ', imax_, ' LINEAR', lonstart, dlon
+             elseif( hinfo%minfo_mapping_name == 'polar_stereographic' ) then
+                write(fid,'(A)') 'XDEF   720 LINEAR -179.5 0.5'
+             else
+                write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'XDEF ', imax, ' LINEAR', lonstart, dlon
+             endif
              written = .true.
           endif
        enddo
@@ -313,7 +321,16 @@ contains
              dy    = ainfo(n)%AXIS_1d(jmax/2+1) - ainfo(n)%AXIS_1d(jmax/2)
              dlat  = dy / ( CONST_RADIUS * cos(clat) ) / CONST_D2R
 
-             write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'YDEF ', jmax, ' LINEAR', latstart, dlat
+             if    ( hinfo%minfo_mapping_name == 'lambert_conformal_conic' ) then
+                jmax_ = int(jmax*0.9_RP)
+                write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'YDEF ', jmax_, ' LINEAR', latstart, dlat
+             elseif( hinfo%minfo_mapping_name == 'polar_stereographic' ) then
+                latstart = real(int(latstart),kind=RP)
+                jmax_ = int( ( 90.0_RP - abs(latstart) ) / 0.5_RP )
+                write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'YDEF ', jmax_, ' LINEAR', latstart, 0.5_RP
+             else
+                write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'YDEF ', jmax, ' LINEAR', latstart, dlat
+             endif
              written = .true.
           endif
        enddo
@@ -362,19 +379,17 @@ contains
                                                                      dx,                                           &
                                                                      dy
        elseif( hinfo%minfo_mapping_name == 'polar_stereographic' ) then
-          write(fid,'(A,2(1x,I5),A,2(1x,F9.2),2(1x,I5),5(1x,F9.2))') 'PDEF',                                               &
+          write(fid,'(A,2(1x,I5),A,2(1x,F9.2),2(1x,I5),3(1x,F9.2))') 'PDEF',                                               &
                                                                      imax,                                                 &
                                                                      jmax,                                                 &
-                                                                     ' LCC',                                               &
+                                                                     ' PSE',                                               &
                                                                      hinfo%minfo_latitude_of_projection_origin        (1), &
                                                                      hinfo%minfo_straight_vertical_longitude_from_pole(1), &
                                                                      imax/2,                                               &
                                                                      jmax/2,                                               &
-                                                                     hinfo%minfo_standard_parallel                    (1), &
-                                                                     hinfo%minfo_standard_parallel                    (1), &
-                                                                     hinfo%minfo_straight_vertical_longitude_from_pole(1), &
-                                                                     dx,                                                   &
-                                                                     dy
+                                                                     dx/1000.0_RP,                                         &
+                                                                     dy/1000.0_RP,                                         &
+                                                                     sign(1.0_RP,hinfo%minfo_standard_parallel(1))
        endif
 
        !--- VARS
