@@ -156,7 +156,7 @@ contains
        LAND_V10,          &
        LAND_T2,           &
        LAND_Q2,           &
-       SNOW_TEMP,         &
+       SNOW_SFC_TEMP,     &
        SNOW_SWE,          &
        SNOW_Depth,        &
        SNOW_Dzero,        &
@@ -195,7 +195,7 @@ contains
     character(len=2) :: sk
 
     ! for snow
-    real(RP) :: SNOW_TEMP_t         (IA,JA)
+    real(RP) :: SNOW_SFC_TEMP_t     (IA,JA)
     real(RP) :: SNOW_albedo         (IA,JA,2)
     real(RP) :: SNOW_ATMO_SFLX_SH   (IA,JA)
     real(RP) :: SNOW_ATMO_SFLX_LH   (IA,JA)
@@ -244,14 +244,26 @@ contains
          LAND_TYPE == 'THIN-SLAB' .or.  &
          LAND_TYPE == 'THICK-SLAB' )then
 
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          ! This is for debug---adachi start
+          if(( int(SNOW_frac(i,j)) == 1 ).and.( abs(SNOW_SFC_TEMP(i,j)-LAND_SFC_TEMP(i,j))/=0 ))then
+             write(*,*) "xxx Error please check SNOW_SFC_TEMP routine"
+          endif
+          ! This is for debug---adachi end
+          SNOW_SFC_TEMP(i,j) = LAND_SFC_TEMP(i,j)
+       end do
+       end do
+
        ! accumulation and melt of snow if there is snow
-       call LAND_PHY_SNOW_KY90(  SNOW_TEMP           (:,:),   & ! [INOUT]
+       call LAND_PHY_SNOW_KY90(  SNOW_SFC_TEMP       (:,:),   & ! [INOUT]
                                  SNOW_SWE            (:,:),   & ! [INOUT]
                                  SNOW_Depth          (:,:),   & ! [INOUT]
                                  SNOW_Dzero          (:,:),   & ! [INOUT]
                                  SNOW_nosnowsec      (:,:),   & ! [INOUT]
                                  SNOW_albedo         (:,:,:), & ! [OUT]
-                                 SNOW_TEMP_t         (:,:),   & ! [OUT]
+                                 SNOW_SFC_TEMP_t     (:,:),   & ! [OUT]
                                  SNOW_ATMO_SFLX_SH   (:,:),   & ! [OUT]
                                  SNOW_ATMO_SFLX_LH   (:,:),   & ! [OUT]
                                  SNOW_ATMO_SFLX_GH   (:,:),   & ! [OUT]
@@ -290,7 +302,7 @@ contains
                                  ATMOS_PBL      (:,:),       & ! [IN]
                                  ATMOS_SFC_DENS (:,:),       & ! [IN]
                                  ATMOS_SFC_PRES (:,:),       & ! [IN]
-                                 SNOW_TEMP      (:,:),       & ! [IN]
+                                 SNOW_SFC_TEMP  (:,:),       & ! [IN]
                                  LAND_QVEF      (:,:),       & ! [IN]  ! ? beta?
                                  LAND_PROPERTY  (:,:,I_Z0M), & ! [IN]
                                  LAND_PROPERTY  (:,:,I_Z0H), & ! [IN]
@@ -397,7 +409,7 @@ contains
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
-           LAND_SFC_TEMP_t(i,j)        =         SNOW_frac(i,j) *SNOW_TEMP_t(i,j)                                           &
+           LAND_SFC_TEMP_t(i,j)        =         SNOW_frac(i,j) *SNOW_SFC_TEMP_t(i,j)                                       &
                                        + (1.0_RP-SNOW_frac(i,j))*LAND_SFC_TEMP_t(i,j)
 
            ! tentative: it is not considered that LAND_SFC_albedo is updated in land physics model

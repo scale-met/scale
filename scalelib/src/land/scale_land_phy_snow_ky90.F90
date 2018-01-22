@@ -41,12 +41,9 @@ module scale_land_phy_snow_KY90
   !
   !++ Private parameters & variables
   !
-  !integer, private, parameter        :: RP=8
-
   !
   real(RP)                  :: A0, A1, A2, C1, C2, C3
   real(RP)                  :: ESAT, QSAT, DELTAQSAT, CP
-  !integer                   :: t
   real(RP)                  :: Gres
 
   integer, parameter        :: data_length_max=10000
@@ -186,6 +183,8 @@ contains
              dt                      ) ! [IN]
     use scale_process, only: &
        PRC_MPIstop
+    use scale_history, only: &
+       HIST_in
     use scale_atmos_saturation, only:  &
        qsatf => ATMOS_SATURATION_pres2qsat_all  ! better to  change name from qsatf to qsat
     use scale_landuse, only: &
@@ -288,7 +287,7 @@ contains
 
 
        SNOW_LAND_GH   (i,j) = SNOW_LAND_GH(i,j) / dt               ! [J/m2] -> [J/m2/s]
-       SNOW_LAND_Water(i,j) = SFLX_rain(i,j) + SWEMELT(i,j) / dt  ! [kg/m2] -> [kg/m2/s]
+       SNOW_LAND_Water(i,j) = SFLX_rain(i,j) + SWEMELT(i,j) / dt   ! [kg/m2] -> [kg/m2/s]
 
        if ( SWE1 <= 0. .and. SWE(i,j) <= 0. ) then  ! no accumulated snow during the time step
           SNOW_frac      (i,j) = 0.0_RP
@@ -326,7 +325,11 @@ contains
 
     endif
 
-    ! HIST_in
+    call HIST_in( TSNOW_t (:,:), 'SNOW_SFC_TEMP_t', 'tendency of snow surface temperature',        'K'    )
+    call HIST_in( QCC     (:,:), 'SNOW_QCC',        'Heat used for changing temperature profile',  'J/m2' )
+    call HIST_in( QFUSION (:,:), 'SNOW_QFUSION',    'Heat used for phase change of snow',          'J/m2' )
+    call HIST_in( MELT    (:,:), 'SNOW_MELT',       'Heat used for snow melt',                     'J/m2' )
+    call HIST_in( SWEMELT (:,:), 'SNOW_SWEMELT',    'Equivalent water of melt snow',               'kg/m2')
 
     end do
     end do
