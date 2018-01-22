@@ -45,8 +45,8 @@ kmax = pres.gt(100.0).where[-1]
 
 
 DCL.swiset("ifl", 1) # PNG output
-DCL.gropn(1)
-#DCL.gropn(2)
+#DCL.gropn(1)
+DCL.gropn(2)
 DCL.uzfact(0.7)
 DCL.sglset("lclip", true)
 
