@@ -63,7 +63,7 @@ module scale_land_phy_snow_KY90
   ! constant variables
   real(RP), parameter       :: epsilon   = 0.97_RP
   real(RP), parameter       :: sigma     = 5.67e-08_RP
-  real(RP), parameter       :: rhoair    = 1.289_RP      ! [kg/m3]
+  !real(RP), parameter       :: rhoair    = 1.289_RP      ! [kg/m3]
   real(RP), parameter       :: CH        = 0.002_RP
   real(RP), parameter       :: CE        = 0.0021_RP
   real(RP), parameter       :: LV        = 2.5e6_RP
@@ -178,6 +178,7 @@ contains
              UA,                     & ! [IN]
              VA,                     & ! [IN]
              QA,                     & ! [IN]
+             DENS,                   & ! [IN]
              SFLX_SW_dn,             & ! [IN]
              SFLX_LW_dn,             & ! [IN]
              dt                      ) ! [IN]
@@ -220,6 +221,7 @@ contains
     real(RP), intent(in)      :: UA        (IA,JA)
     real(RP), intent(in)      :: VA        (IA,JA)
     real(RP), intent(in)      :: QA        (IA,JA)      ! specific humidity [kg/kg]
+    real(RP), intent(in)      :: DENS      (IA,JA)
     real(RP), intent(in)      :: SFLX_SW_dn(IA,JA)
     real(RP), intent(in)      :: SFLX_LW_dn(IA,JA)
     real(RP), intent(in)      :: dt                     ! dt of land
@@ -255,7 +257,7 @@ contains
 
        call qsatf( QAsat, TA(i,j), PRSA(i,j) )
        RH  = QA(i,j) / QAsat
-       write(*,*) "RH,   ",RH
+       write(*,*) "RH,  ",RH," DENS (1.289 org) ",DENS(i,j)
 
        TSNOW1  = TSNOW (i,j)
        SWE1    = SWE   (i,j)
@@ -281,6 +283,7 @@ contains
                             TA          (i,j),      & ! [IN]
                             Uabs,                   & ! [IN]
                             RH,                     & ! [IN]
+                            DENS        (i,j),      & ! [IN]
                             SFLX_SW_dn  (i,j),      & ! [IN]
                             SFLX_LW_dn  (i,j),      & ! [IN]
                             dt                      )
@@ -360,6 +363,7 @@ contains
        TA,                    & ! [IN]
        UA,                    & ! [IN]
        RH,                    & ! [IN]
+       DENS,                  & ! [IN]
        SW,                    & ! [IN]
        LW,                    & ! [IN]
        time                   ) ! [IN]
@@ -392,6 +396,7 @@ contains
     real(RP), intent(in)       :: TA
     real(RP), intent(in)       :: UA
     real(RP), intent(in)       :: RH
+    real(RP), intent(in)       :: DENS
     real(RP), intent(in)       :: SW
     real(RP), intent(in)       :: LW
     real(RP), intent(in)       :: time
@@ -461,7 +466,7 @@ contains
 
 !----- Energy balance at snow surface -------------------------------!
 
-   call groundflux (TSNOW0, TA, UA, RH, ALBEDO, SW, LW, &  ! [IN]
+   call groundflux (TSNOW0, TA, UA, RH, DENS, ALBEDO, SW, LW, &  ! [IN]
                     GFLUX, RFLUX, SFLUX, LINFLUX, LOUTFLUX, HFLUX, LATENTFLUX) ! [OUT]
 
 
@@ -483,10 +488,10 @@ contains
 
    else
 
-      call cal_param (ZNSNOW0, TSNOW0, GFLUX, TA, UA, RH, LW, time)
+      call cal_param (ZNSNOW0, TSNOW0, GFLUX, TA, UA, RH, DENS, LW, time)
 
       ! check whether the model has solution
-      call check_applicability (GFLUX, TSNOW0, ZNSNOW0, TA, UA, RH, LW, Gres, beta, time)
+      call check_applicability (GFLUX, TSNOW0, ZNSNOW0, TA, UA, RH, DENS, LW, Gres, beta, time)
       if ((Gres >= 0.0_RP).and.(beta >= 0.0_RP)) then
          if( IO_L ) write(IO_FID_LOG,*) '*** LAND/snow model is not appropriate',Gres,beta
          QCC             = 0.5_RP*CSRHOS*ZNSNOW0*(T0-TSNOW0)
@@ -497,7 +502,7 @@ contains
       else
 
          !if (t==1)then
-         !   call cal_R1R2 (ZNSNOW0, TSNOW0,GFLUX,TA,UA,LW, time)
+         !   call cal_R1R2 (ZNSNOW0, TSNOW0, GFLUX, TA, UA, RH, rhoair, LW, time)
          !endif
 
          call snowdepth ( GFLUX, ZNSNOW0, ZNSNOW, time)
@@ -514,7 +519,7 @@ contains
          END IF
 
          ! This equation is to calculate TSN
-         call  equation415(LAMBDAS, C2, ZNSNOW, RH, QSAT, TSNOW0, ZNSNOW0, GFLUX, TA, UA, LW, TSNOW, time)
+         call  equation415(LAMBDAS, C2, ZNSNOW, RH, QSAT, TSNOW0, ZNSNOW0, GFLUX, TA, UA, DENS, LW, TSNOW, time)
 
          write(*,*) 'TSNOW is:       ', TSNOW
 
@@ -522,7 +527,7 @@ contains
             TS_flag = 1
             TSNOW   = T0
             call recalculateZ(ZNSNOW0, TSNOW0, GFLUX, ZNSNOW, time)
-            call check_res(ZNSNOW0, ZNSNOW, TSNOW0, TSNOW, GFLUX, TA, UA, RH, LW, "1", time)
+            call check_res(ZNSNOW0, ZNSNOW, TSNOW0, TSNOW, GFLUX, TA, UA, RH, DENS, LW, "1", time)
             IF (ZNSNOW < ZMIN) THEN
                ZN_flag = 4
                write(*,*) "ZN is updated/replaced to: ", ZNSNOW ," to ", ZMIN
@@ -538,7 +543,7 @@ contains
             write(*,*) 'TSNOW  is updated:  ', TSNOW
             write(*,*) 'ZNSNOW is updated:  ', ZNSNOW
          else
-            call check_res( ZNSNOW0, ZNSNOW, TSNOW0, TSNOW, GFLUX, TA,UA,RH,LW, "0", time)
+            call check_res( ZNSNOW0, ZNSNOW, TSNOW0, TSNOW, GFLUX, TA, UA, RH, DENS, LW, "0", time)
          endif
 
          IF ( (ZNSNOW-ZMIN)/ZMIN < 0.00001 ) THEN
@@ -579,11 +584,11 @@ contains
 
 !==============================================================
 
-subroutine groundflux (TS, TA, UA, RH, ALPHA, SW, LW, &
+subroutine groundflux (TS, TA, UA, RH, rhoair, ALPHA, SW, LW, &
                        GFLUX, RFLUX, SFLUX, LINFLUX, LOUTFLUX, HFLUX, LATENTFLUX)
   implicit none
 
-  real(RP), intent(in)     :: TS, TA, UA, RH, ALPHA, SW, LW
+  real(RP), intent(in)     :: TS, TA, UA, RH, rhoair, ALPHA, SW, LW
   real(RP), intent(out)    :: GFLUX, RFLUX, SFLUX, LINFLUX, LOUTFLUX, HFLUX, LATENTFLUX
 
   ESAT               = 0.6112_RP * exp( (17.67_RP * (TA-273.15_RP)) / (TA-29.66_RP) )
@@ -641,10 +646,10 @@ subroutine check_allSnowMelt (GFLUX, TS1, ZN1, D, sflag, time)
 end subroutine
 
 !==============================================================
-subroutine cal_param (ZN1, TS1, GFLUX, TA, UA, RH, LW, time)
+subroutine cal_param (ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
 
   implicit none
-  real(RP), intent(in) ::  ZN1, TS1, TA, UA, RH, LW
+  real(RP), intent(in) ::  ZN1, TS1, TA, UA, RH, rhoair, LW
   real(RP), intent(in) ::  GFLUX, time
 
   C1      = csrhos*0.5_RP
@@ -668,11 +673,11 @@ subroutine cal_param (ZN1, TS1, GFLUX, TA, UA, RH, LW, time)
 end subroutine
 
 !==============================================================
-subroutine check_applicability (GFLUX, TS1, ZN1, TA, UA, RH, LW, GFLUX_res, beta, time)
+subroutine check_applicability (GFLUX, TS1, ZN1, TA, UA, RH, rhoair, LW, GFLUX_res, beta, time)
 
   implicit none
   real(RP), intent(in)     :: GFLUX, TS1, ZN1, time
-  real(RP), intent(in)     :: TA, UA, RH, LW
+  real(RP), intent(in)     :: TA, UA, RH, rhoair, LW
   real(RP), intent(out)    :: GFLUX_res, beta
   real(RP)                 :: energy_in, energy_use_max
 
@@ -711,11 +716,11 @@ subroutine snowdepth (GFLUX, ZN1, ZN2, time)
 return
 end subroutine snowdepth
 !==============================================================
-subroutine equation415(LAMBDAS, C2, ZN2, RH, QSAT, TS1, ZN1, GFLUX, TA, UA, LW, TS2, time)
+subroutine equation415(LAMBDAS, C2, ZN2, RH, QSAT, TS1, ZN1, GFLUX, TA, UA, rhoair, LW, TS2, time)
 
   implicit none
 
-  real(RP), intent(in)     :: TA, UA, LW, ZN2, GFLUX, TS1,ZN1
+  real(RP), intent(in)     :: TA, UA, rhoair, LW, ZN2, GFLUX, TS1,ZN1
   real(RP), intent(in)     :: C2, LAMBDAS, RH, QSAT, time
   real(RP), intent(out)    :: TS2
   real(RP)                 :: TS_check
@@ -806,11 +811,11 @@ subroutine calculationNoMO(GFLUX, CSRHOS, ZN1, TS1, ZN2, TS2, &
 end subroutine calculationNoMO
 
 !==============================================================
-subroutine check_res(ZN1, ZN2, TS1, TS2, GFLUX, TA, UA, RH, LW, flag, time)
+subroutine check_res(ZN1, ZN2, TS1, TS2, GFLUX, TA, UA, RH, rhoair, LW, flag, time)
 
   implicit none
   real(RP) , intent(in)  :: ZN1, ZN2, TS1, TS2, GFLUX, time
-  real(RP) , intent(in)  :: TA, UA, RH, LW
+  real(RP) , intent(in)  :: TA, UA, RH, rhoair, LW
   character(len=*)       :: flag
   real(RP)               :: R1 ! Eq. (2)
   real(RP)               :: R2 ! Eq. (8)
@@ -836,11 +841,11 @@ subroutine check_res(ZN1, ZN2, TS1, TS2, GFLUX, TA, UA, RH, LW, flag, time)
 end subroutine check_res
 
 !==============================================================
-subroutine cal_R1R2(ZN1, TS1,GFLUX,TA,UA,RH,LW, time)
+subroutine cal_R1R2(ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
 
   implicit none
   real(RP), intent(in)   :: ZN1, TS1
-  real(RP), intent(in)   :: GFLUX,TA,UA,RH,LW, time
+  real(RP), intent(in)   :: GFLUX, TA, UA, RH, rhoair, LW, time
   real(RP)               :: ZN2, TS2
   real(RP)               :: R1 ! Eq. (2)
   real(RP)               :: R2 ! Eq. (8)

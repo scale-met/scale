@@ -248,9 +248,9 @@ contains
        do j = JS, JE
        do i = IS, IE
           ! This is for debug---adachi start
-          if(( int(SNOW_frac(i,j)) == 1 ).and.( abs(SNOW_SFC_TEMP(i,j)-LAND_SFC_TEMP(i,j))/=0 ))then
-             write(*,*) "xxx Error please check SNOW_SFC_TEMP routine"
-          endif
+          !if(( int(SNOW_frac(i,j)) == 1 ).and.( abs(SNOW_SFC_TEMP(i,j)-LAND_SFC_TEMP(i,j))/=0 ))then
+          !   write(*,*) "xxx Error please check SNOW_SFC_TEMP routine"
+          !endif
           ! This is for debug---adachi end
           SNOW_SFC_TEMP(i,j) = LAND_SFC_TEMP(i,j)
        end do
@@ -278,6 +278,7 @@ contains
                                  ATMOS_U             (:,:),   & ! [IN]
                                  ATMOS_V             (:,:),   & ! [IN]
                                  ATMOS_QV            (:,:),   & ! [IN]
+                                 ATMOS_SFC_DENS      (:,:),   & ! [IN]
                                  ATMOS_SFLX_SW       (:,:),   & ! [IN]
                                  ATMOS_SFLX_LW       (:,:),   & ! [IN]
                                  dt                           ) ! [IN]
