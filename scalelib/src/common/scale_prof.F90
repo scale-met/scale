@@ -165,7 +165,13 @@ contains
 
     integer :: id
     integer :: level_
+    integer :: tn
+    !$ integer :: omp_get_thread_num
     !---------------------------------------------------------------------------
+
+    tn = 0
+    !$ tn = omp_get_thread_num()
+    if ( tn > 0 ) return
 
     if ( present(level) ) then
        level_ = level
@@ -213,7 +219,13 @@ contains
 
     integer :: id
     integer :: level_
+    integer :: tn
+    !$ integer :: omp_get_thread_num
     !---------------------------------------------------------------------------
+
+    tn = 0
+    !$ tn = omp_get_thread_num()
+    if ( tn > 0 ) return
 
     if ( present(level) ) then
        if( level > PROF_rap_level ) return
