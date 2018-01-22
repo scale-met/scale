@@ -478,7 +478,6 @@ contains
     real(RP) :: RovCP
     real(RP) :: RovCV
     real(RP) :: CPovCV
-    real(RP) :: qdry
 
     integer  :: k, i, j, iq, k2
     !---------------------------------------------------------------------------
@@ -891,7 +890,8 @@ contains
              CPovCV = CPtot / ( CPtot - Rtot )
              pres   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
 
-             call moist_pres2qsat_liq( qv_evap, FIXED_SST, pres_sfc )
+             call moist_pres2qsat_liq( FIXED_SST, pres_sfc, qdry, &
+                                       qv_evap )
 
              ! flux
              SFLX_MOMZ(i,j) = 0.0_RP
