@@ -54,8 +54,12 @@ program sno
      SNO_vars_write
   use mod_sno_grads, only: &
      SNO_grads_setup,    &
-     SNO_grads_write,    &
      SNO_grads_netcdfctl
+  use mod_snoplugin_timeave, only: &
+     SNOPLGIN_timeave_setup,   &
+     SNOPLGIN_timeave_alloc,   &
+     SNOPLGIN_timeave_dealloc, &
+     SNOPLGIN_timeave_store
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -108,16 +112,19 @@ program sno
   integer                 :: nhalos_x                    ! size of x-axis halo grids         (global,sometimes have a size)
   integer                 :: nhalos_y                    ! size of y-axis halo grids         (global,sometimes have a size)
 
+  type(commoninfo)        :: hinfo
   integer                 :: nvars                       ! number of variables               (input)
   character(len=H_SHORT)  :: varname(item_limit)         ! name   of variables               (input)
   integer                 :: naxis                       ! number of axis variables          (input)
   character(len=H_SHORT)  :: axisname(item_limit)        ! name   of axis variables          (input)
 
-  type(commoninfo)            :: hinfo
+  ! axis information from input file [SNO_axis_getinfo]
   type(axisinfo), allocatable :: ainfo(:)
+
+  ! variable information from input file [SNO_vars_getinfo]
   type(iteminfo), allocatable :: dinfo(:)
 
-  ! mapping table [SNO_map_getsize_local,SNO_map_settable_global,SNO_map_settable_local]
+  ! mapping table [SNO_calc_localsize,SNO_map_settable_global,SNO_map_settable_local]
   integer                 :: ngrids_x_out                ! size of x-axis grids              (output,sometimes including halo)
   integer                 :: ngrids_y_out                ! size of y-axis grids              (output,sometimes including halo)
   integer                 :: ngrids_xh_out               ! size of x-axis grids, staggard    (output,sometimes including halo)
@@ -127,6 +134,10 @@ program sno
   logical,    allocatable :: readflag (:,:)              ! flag to read each input file
   integer                 :: ipos                        ! offset of i-index
   integer                 :: jpos                        ! offset of j-index
+
+  ! Plugins
+  logical                 :: do_output
+  logical                 :: plugin_timeave
 
   integer :: px, py, p
   integer :: t, v
@@ -177,9 +188,14 @@ program sno
   endif
   if( IO_NML ) write(IO_FID_NML,nml=PARAM_SNO)
 
+  do_output = .true.
+
   call SNO_grads_setup( nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
                         output_grads,               & ! [IN] from namelist
                         output_gradsctl             ) ! [IN] from namelist
+
+  call SNOPLGIN_timeave_setup( plugin_timeave, & ! [OUT]
+                               do_output       ) ! [INOUT]
 
   ! allocate output files to executing processes
   call SNO_proc_alloc( nprocs, myrank, ismaster,   & ! [IN] from MPI
@@ -252,6 +268,7 @@ program sno
                                  px,            py,           & ! [IN]
                                  ngrids_x,      ngrids_y,     & ! [IN] from SNO_file_getinfo
                                  nhalos_x,      nhalos_y,     & ! [IN] from SNO_file_getinfo
+                                 hinfo,                       & ! [IN]    from SNO_file_getinfo
                                  ngrids_x_out,  ngrids_y_out, & ! [OUT]
                                  ngrids_xh_out, ngrids_yh_out ) ! [OUT]
 
@@ -291,6 +308,7 @@ program sno
                                nprocs_x_in,   nprocs_y_in,   & ! [IN]    from SNO_file_getinfo
                                ngrids_x,      ngrids_y,      & ! [IN]    from SNO_file_getinfo
                                nhalos_x,      nhalos_y,      & ! [IN]    from SNO_file_getinfo
+                               hinfo,                        & ! [IN]    from SNO_file_getinfo
                                ngrids_x_out,  ngrids_y_out,  & ! [IN]    from SNO_map_getsize_local
                                ngrids_xh_out, ngrids_yh_out, & ! [IN]    from SNO_map_getsize_local
                                naxis,                        & ! [IN]    from SNO_file_getinfo
@@ -298,8 +316,6 @@ program sno
                                localmap(:,:,:),              & ! [IN]    from SNO_map_settable_local
                                readflag(:,:),                & ! [IN]    from SNO_map_settable_local
                                debug                         ) ! [IN]
-
-!            call plugin_timeaverage_setup( debug ) ! [IN]
 
            !####################################################################
            ! process each variable
@@ -309,10 +325,15 @@ program sno
               if( IO_L ) write(IO_FID_LOG,*)
               if( IO_L ) write(IO_FID_LOG,*) '*** + now processing varname = ', trim(dinfo(v)%varname)
 
+              ! output array allocation
+
               call SNO_vars_alloc( ngrids_x_out,  ngrids_y_out,  & ! [IN]    from SNO_map_getsize_local
                                    ngrids_xh_out, ngrids_yh_out, & ! [IN]    from SNO_map_getsize_local
                                    dinfo(v),                     & ! [INOUT] from SNO_vars_getinfo
                                    debug                         ) ! [IN]
+
+              if( plugin_timeave ) call SNOPLGIN_timeave_alloc( dinfo(v), & ! [INOUT] from SNO_vars_getinfo
+                                                                debug     ) ! [IN]
 
               !#################################################################
               ! process each timestep
@@ -327,6 +348,7 @@ program sno
                                      nprocs_x_in,   nprocs_y_in,   & ! [IN]    from SNO_file_getinfo
                                      ngrids_x,      ngrids_y,      & ! [IN]    from SNO_file_getinfo
                                      nhalos_x,      nhalos_y,      & ! [IN]    from SNO_file_getinfo
+                                     hinfo,                        & ! [IN]    from SNO_file_getinfo
                                      ngrids_x_out,  ngrids_y_out,  & ! [IN]    from SNO_map_getsize_local
                                      ngrids_xh_out, ngrids_yh_out, & ! [IN]    from SNO_map_getsize_local
                                      dinfo(v),                     & ! [INOUT] from SNO_vars_getinfo
@@ -334,19 +356,22 @@ program sno
                                      readflag(:,:),                & ! [IN]    from SNO_map_settable_local
                                      debug                         ) ! [IN]
 
-!                  call plugin_timeaverage_store( debug ) ! [IN]
-
-                 if ( output_grads ) then
-                    call SNO_grads_write( dirpath_out, & ! [IN] from namelist
-                                          t,           & ! [IN]
-                                          hinfo,       & ! [IN] from SNO_file_getinfo
-                                          naxis,       & ! [IN] from SNO_file_getinfo
-                                          ainfo(:),    & ! [IN] from SNO_axis_getinfo
-                                          dinfo(v),    & ! [IN] from SNO_vars_getinfo
-                                          debug        ) ! [IN]
-                 else
+                 if( plugin_timeave ) call SNOPLGIN_timeave_store( dirpath_out,                & ! [IN] from namelist
+                                                                   basename_out,               & ! [IN] from namelist
+                                                                   output_grads,               & ! [IN] from namelist
+                                                                   p,                          & ! [IN]
+                                                                   t,                          & ! [IN]
+                                                                   nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
+                                                                   nhalos_x,     nhalos_y,     & ! [IN] from SNO_file_getinfo
+                                                                   hinfo,                      & ! [IN] from SNO_file_getinfo
+                                                                   naxis,                      & ! [IN] from SNO_file_getinfo
+                                                                   ainfo(:),                   & ! [IN] from SNO_axis_getinfo
+                                                                   dinfo(v),                   & ! [IN] from SNO_vars_getinfo
+                                                                   debug                       ) ! [IN]
+                 if ( do_output ) then
                     call SNO_vars_write( dirpath_out,                & ! [IN] from namelist
                                          basename_out,               & ! [IN] from namelist
+                                         output_grads,               & ! [IN] from namelist
                                          p,                          & ! [IN]
                                          t,                          & ! [IN]
                                          nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
@@ -359,22 +384,26 @@ program sno
                  endif
               enddo ! t loop
 
+              ! output array deallocation
+
               call SNO_vars_dealloc( dinfo(v), & ! [INOUT] from SNO_vars_getinfo
                                      debug     ) ! [IN]
 
+              if( plugin_timeave ) call SNOPLGIN_timeave_dealloc( debug ) ! [IN]
+
            enddo ! item loop
 
-!            call plugin_timeaverage_finalize( debug ) ! [IN]
-
-           if ( output_gradsctl ) then
-              call SNO_grads_netcdfctl( dirpath_out,  & ! [IN] from namelist
-                                        basename_out, & ! [IN] from namelist
-                                        hinfo,        & ! [IN] from SNO_file_getinfo
-                                        naxis,        & ! [IN] from SNO_file_getinfo
-                                        ainfo(:),     & ! [IN] from SNO_axis_getinfo
-                                        nvars,        & ! [IN] from SNO_file_getinfo
-                                        dinfo(:),     & ! [IN] from SNO_vars_getinfo
-                                        debug         ) ! [IN]
+           if ( do_output ) then
+              if ( output_gradsctl ) then
+                 call SNO_grads_netcdfctl( dirpath_out,  & ! [IN] from namelist
+                                           basename_out, & ! [IN] from namelist
+                                           hinfo,        & ! [IN] from SNO_file_getinfo
+                                           naxis,        & ! [IN] from SNO_file_getinfo
+                                           ainfo(:),     & ! [IN] from SNO_axis_getinfo
+                                           nvars,        & ! [IN] from SNO_file_getinfo
+                                           dinfo(:),     & ! [IN] from SNO_vars_getinfo
+                                           debug         ) ! [IN]
+              endif
            endif
 
            call SNO_axis_dealloc( naxis,    & ! [IN]    from SNO_file_getinfo

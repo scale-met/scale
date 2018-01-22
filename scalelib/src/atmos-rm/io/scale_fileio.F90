@@ -77,6 +77,8 @@ module scale_fileio
      module procedure FILEIO_write_var_4D
   end interface FILEIO_write_var
 
+  public :: FILEIO_getCFtunits
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -105,7 +107,6 @@ module scale_fileio
   !++ Private procedure
   !
   private :: closeall
-  private :: getCFtunits
   private :: check_1d
   private :: check_2d
   private :: check_3d
@@ -1489,7 +1490,7 @@ contains
 
     ! create a netCDF file if not already existed. Otherwise, open it.
     if ( present(date) ) then
-       call getCFtunits( tunits, date )
+       call FILEIO_getCFtunits( tunits, date )
     else
        tunits = 'seconds'
     endif
@@ -1565,16 +1566,16 @@ contains
                              File_haszcoord(fid) ) ! [IN]
 
        if ( present( date ) ) then
-          call getCFtunits(tunits, date)
+          call FILEIO_getCFtunits(tunits, date)
        else
-          call getCFtunits(tunits, NOWDATE)
+          call FILEIO_getCFtunits(tunits, NOWDATE)
        endif
        call FileSetGlobalAttribute( fid, "time_units", tunits )
 
        if ( present( subsec ) ) then
-          call FileSetGlobalAttribute( fid, "time", (/subsec/) )
+          call FileSetGlobalAttribute( fid, "time_start", (/subsec/) )
        else
-          call FileSetGlobalAttribute( fid, "time", (/NOWMS/) )
+          call FileSetGlobalAttribute( fid, "time_start", (/NOWMS/)  )
        endif
 
        File_axes_written(fid) = .false.  ! indicating axes have not been written yet
@@ -3103,7 +3104,7 @@ contains
   end subroutine closeall
 
   !-----------------------------------------------------------------------------
-  subroutine getCFtunits(tunits, date)
+  subroutine FILEIO_getCFtunits(tunits, date)
     implicit none
 
     character(len=34), intent(out) :: tunits
@@ -3113,7 +3114,7 @@ contains
     write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', date
 
     return
-  end subroutine getCFtunits
+  end subroutine FILEIO_getCFtunits
 
   !-----------------------------------------------------------------------------
   subroutine check_1d( &

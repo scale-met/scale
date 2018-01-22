@@ -199,23 +199,26 @@ contains
                                nvars_file,      & ! [OUT]
                                varname_file(:)  ) ! [OUT]
 
-       call FileGetGlobalAttribute( fid, "scale_rm_prc_num_x", procsize(1:1) ) ! [IN]
-       call FileGetGlobalAttribute( fid, "scale_rm_prc_num_y", procsize(2:2) ) ! [IN]
+       call FileGetGlobalAttribute( fid, "scale_rm_prc_num_x", procsize(1:1) )
+       call FileGetGlobalAttribute( fid, "scale_rm_prc_num_y", procsize(2:2) )
 
-       call FileGetGlobalAttribute( fid, "scale_rm_prc_periodic_z",   periodic(1) ) ! [IN]
-       call FileGetGlobalAttribute( fid, "scale_rm_prc_periodic_x",   periodic(2) ) ! [IN]
-       call FileGetGlobalAttribute( fid, "scale_rm_prc_periodic_y",   periodic(3) ) ! [IN]
+       call FileGetGlobalAttribute( fid, "scale_rm_prc_periodic_z",   periodic(1) )
+       call FileGetGlobalAttribute( fid, "scale_rm_prc_periodic_x",   periodic(2) )
+       call FileGetGlobalAttribute( fid, "scale_rm_prc_periodic_y",   periodic(3) )
        hinfo%periodic(1) = trim(periodic(1))
        hinfo%periodic(2) = trim(periodic(2))
        hinfo%periodic(3) = trim(periodic(3))
 
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_kmax",  hinfo%gridsize(1:1) ) ! [IN]
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_imaxg", hinfo%gridsize(2:2) ) ! [IN]
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_jmaxg", hinfo%gridsize(3:3) ) ! [IN]
+       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_kmax",  hinfo%gridsize(1:1) )
+       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_imaxg", hinfo%gridsize(2:2) )
+       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_jmaxg", hinfo%gridsize(3:3) )
 
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_khalo", hinfo%halosize(1:1) ) ! [IN]
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_ihalo", hinfo%halosize(2:2) ) ! [IN]
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_jhalo", hinfo%halosize(3:3) ) ! [IN]
+       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_khalo", hinfo%halosize(1:1) )
+       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_ihalo", hinfo%halosize(2:2) )
+       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_jhalo", hinfo%halosize(3:3) )
+
+       call FileGetGlobalAttribute( fid, "time_units", hinfo%time_units    )
+       call FileGetGlobalAttribute( fid, "time_start", hinfo%time_start(:) )
 
        call FileGetAttribute( fid, 'x', 'size_global', hinfo%xatt_size_global(:) )
        call FileGetAttribute( fid, 'x', 'halo_global', hinfo%xatt_halo_global(:) )
@@ -224,17 +227,19 @@ contains
        call FileGetAttribute( fid, 'y', 'halo_global', hinfo%yatt_halo_global(:) )
     endif
 
-    call MPI_BCAST( hinfo%title              , H_MID, MPI_CHARACTER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%source             , H_MID, MPI_CHARACTER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%institute          , H_MID, MPI_CHARACTER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%periodic        (1), 5*3  , MPI_CHARACTER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%gridsize        (1), 3    , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%halosize        (1), 3    , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%xatt_size_global(1), 1    , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%xatt_halo_global(1), 2    , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%yatt_size_global(1), 1    , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%yatt_halo_global(1), 2    , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( procsize              (1), 2    , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%title              , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%source             , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%institute          , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%periodic        (1), 5*3  , MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%gridsize        (1), 3    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%halosize        (1), 3    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%time_units         , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%time_start      (1), 1    , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%xatt_size_global(1), 1    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%xatt_halo_global(1), 2    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%yatt_size_global(1), 1    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%yatt_halo_global(1), 2    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( procsize              (1), 2    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
     call MPI_BCAST( nvars_file     , 1                 , MPI_INTEGER,   PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( varname_file(1), H_SHORT*item_limit, MPI_CHARACTER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -319,6 +324,15 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) "*** nvars_file = ", nvars_file
     endif
 
+    hinfo%minfo_mapping_name                             = ''
+    hinfo%minfo_false_easting                        (:) = CONST_UNDEF
+    hinfo%minfo_false_northing                       (:) = CONST_UNDEF
+    hinfo%minfo_longitude_of_central_meridian        (:) = CONST_UNDEF
+    hinfo%minfo_longitude_of_projection_origin       (:) = CONST_UNDEF
+    hinfo%minfo_latitude_of_projection_origin        (:) = CONST_UNDEF
+    hinfo%minfo_straight_vertical_longitude_from_pole(:) = CONST_UNDEF
+    hinfo%minfo_standard_parallel                    (:) = CONST_UNDEF
+
     nvars = 0
     naxis = 0
     do n = 1, nvars_file
@@ -341,29 +355,37 @@ contains
        case('time','time_bnds')
           ! do nothing
        case('lambert_conformal_conic')
-
           if ( ismaster ) then
              call FileGetAttribute( fid, varname_file(n), "grid_mapping_name",                     hinfo%minfo_mapping_name                             )
              call FileGetAttribute( fid, varname_file(n), "false_easting",                         hinfo%minfo_false_easting                        (:) )
              call FileGetAttribute( fid, varname_file(n), "false_northing",                        hinfo%minfo_false_northing                       (:) )
              call FileGetAttribute( fid, varname_file(n), "longitude_of_central_meridian",         hinfo%minfo_longitude_of_central_meridian        (:) )
-!            call FileGetAttribute( fid, varname_file(n), "longitude_of_projection_origin",        hinfo%minfo_longitude_of_projection_origin       (:) )
-             hinfo%minfo_longitude_of_projection_origin       (:) = CONST_UNDEF
              call FileGetAttribute( fid, varname_file(n), "latitude_of_projection_origin",         hinfo%minfo_latitude_of_projection_origin        (:) )
-!            call FileGetAttribute( fid, varname_file(n), "straight_vertical_longitude_from_pole", hinfo%minfo_straight_vertical_longitude_from_pole(:) )
-             hinfo%minfo_straight_vertical_longitude_from_pole(:) = CONST_UNDEF
              call FileGetAttribute( fid, varname_file(n), "standard_parallel",                     hinfo%minfo_standard_parallel                    (:) )
           endif
-
-          call MPI_BCAST( hinfo%minfo_mapping_name                            , H_SHORT, MPI_CHARACTER,        PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-          call MPI_BCAST( hinfo%minfo_false_easting                        (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-          call MPI_BCAST( hinfo%minfo_false_northing                       (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-          call MPI_BCAST( hinfo%minfo_longitude_of_central_meridian        (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-          call MPI_BCAST( hinfo%minfo_longitude_of_projection_origin       (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-          call MPI_BCAST( hinfo%minfo_latitude_of_projection_origin        (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-          call MPI_BCAST( hinfo%minfo_straight_vertical_longitude_from_pole(1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-          call MPI_BCAST( hinfo%minfo_standard_parallel                    (1), 2      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
+       case('polar_stereographic')
+          if ( ismaster ) then
+             call FileGetAttribute( fid, varname_file(n), "grid_mapping_name",                     hinfo%minfo_mapping_name                             )
+             call FileGetAttribute( fid, varname_file(n), "false_easting",                         hinfo%minfo_false_easting                        (:) )
+             call FileGetAttribute( fid, varname_file(n), "false_northing",                        hinfo%minfo_false_northing                       (:) )
+             call FileGetAttribute( fid, varname_file(n), "latitude_of_projection_origin",         hinfo%minfo_latitude_of_projection_origin        (:) )
+             call FileGetAttribute( fid, varname_file(n), "straight_vertical_longitude_from_pole", hinfo%minfo_straight_vertical_longitude_from_pole(:) )
+             call FileGetAttribute( fid, varname_file(n), "standard_parallel",                     hinfo%minfo_standard_parallel                  (1:1) )
+          endif
+       case('mercator')
+          if ( ismaster ) then
+             call FileGetAttribute( fid, varname_file(n), "grid_mapping_name",                     hinfo%minfo_mapping_name                             )
+             call FileGetAttribute( fid, varname_file(n), "false_easting",                         hinfo%minfo_false_easting                        (:) )
+             call FileGetAttribute( fid, varname_file(n), "false_northing",                        hinfo%minfo_false_northing                       (:) )
+             call FileGetAttribute( fid, varname_file(n), "longitude_of_projection_origin",        hinfo%minfo_longitude_of_projection_origin       (:) )
+          endif
+       case('equirectangular')
+          if ( ismaster ) then
+             call FileGetAttribute( fid, varname_file(n), "grid_mapping_name",                     hinfo%minfo_mapping_name                             )
+             call FileGetAttribute( fid, varname_file(n), "false_easting",                         hinfo%minfo_false_easting                        (:) )
+             call FileGetAttribute( fid, varname_file(n), "false_northing",                        hinfo%minfo_false_northing                       (:) )
+             call FileGetAttribute( fid, varname_file(n), "longitude_of_central_meridian",         hinfo%minfo_longitude_of_central_meridian        (:) )
+          endif
        case default
           if ( nvars_req == 0 ) then
              nvars           = nvars + 1
@@ -397,6 +419,15 @@ contains
        call PRC_MPIstop
     endif
 
+    call MPI_BCAST( hinfo%minfo_mapping_name                            , H_SHORT, MPI_CHARACTER,        PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%minfo_false_easting                        (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%minfo_false_northing                       (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%minfo_longitude_of_central_meridian        (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%minfo_longitude_of_projection_origin       (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%minfo_latitude_of_projection_origin        (1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%minfo_straight_vertical_longitude_from_pole(1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%minfo_standard_parallel                    (1), 2      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Axis to read'
     do n = 1, naxis
@@ -422,24 +453,28 @@ contains
        ngrids_y_total, &
        nhalos_x,       &
        nhalos_y,       &
+       hinfo,          &
        ngrids_x,       &
        ngrids_y,       &
        ngrids_xh,      &
        ngrids_yh       )
+    use mod_sno_h, only: &
+       commoninfo
     implicit none
 
-    integer, intent(in)  :: nprocs_x       ! x length of 2D processor topology
-    integer, intent(in)  :: nprocs_y       ! y length of 2D processor topology
-    integer, intent(in)  :: ngrids_x_total ! total grid size of x-axis         (sometimes including halo)
-    integer, intent(in)  :: ngrids_y_total ! total grid size of y-axis         (sometimes including halo)
-    integer, intent(in)  :: nhalos_x       ! halo  grid size of x-axis         (sometimes have a size)
-    integer, intent(in)  :: nhalos_y       ! halo  grid size of y-axis         (sometimes have a size)
-    integer, intent(in)  :: px             ! x index  in 2D processor topology
-    integer, intent(in)  :: py             ! y index  in 2D processor topology
-    integer, intent(out) :: ngrids_x       ! size of x-axis grids              (sometimes including halo)
-    integer, intent(out) :: ngrids_y       ! size of y-axis grids              (sometimes including halo)
-    integer, intent(out) :: ngrids_xh      ! size of x-axis grids              (sometimes including halo)
-    integer, intent(out) :: ngrids_yh      ! size of y-axis grids              (sometimes including halo)
+    integer,          intent(in)  :: nprocs_x       ! x length of 2D processor topology
+    integer,          intent(in)  :: nprocs_y       ! y length of 2D processor topology
+    integer,          intent(in)  :: ngrids_x_total ! total grid size of x-axis         (sometimes including halo)
+    integer,          intent(in)  :: ngrids_y_total ! total grid size of y-axis         (sometimes including halo)
+    integer,          intent(in)  :: nhalos_x       ! halo  grid size of x-axis         (sometimes have a size)
+    integer,          intent(in)  :: nhalos_y       ! halo  grid size of y-axis         (sometimes have a size)
+    integer,          intent(in)  :: px             ! x index  in 2D processor topology
+    integer,          intent(in)  :: py             ! y index  in 2D processor topology
+    type(commoninfo), intent(in)  :: hinfo          ! common information                (input)
+    integer,          intent(out) :: ngrids_x       ! size of x-axis grids              (sometimes including halo)
+    integer,          intent(out) :: ngrids_y       ! size of y-axis grids              (sometimes including halo)
+    integer,          intent(out) :: ngrids_xh      ! size of x-axis grids              (sometimes including halo)
+    integer,          intent(out) :: ngrids_yh      ! size of y-axis grids              (sometimes including halo)
     !---------------------------------------------------------------------------
 
     ngrids_y = ( ngrids_y_total - 2*nhalos_y ) / nprocs_y
@@ -447,7 +482,7 @@ contains
     if( py == nprocs_y ) ngrids_y = ngrids_y + nhalos_y
 
     ngrids_yh = ngrids_y
-    if ( nhalos_y == 0 .AND. py == 1 ) then
+    if ( nhalos_y == 0 .AND. py == 1 .AND. hinfo%periodic(3) == 'false' ) then
        ngrids_yh = ngrids_yh + 1
     endif
 
@@ -456,7 +491,7 @@ contains
     if( px == nprocs_x ) ngrids_x = ngrids_x + nhalos_x
 
     ngrids_xh = ngrids_x
-    if ( nhalos_x == 0 .AND. px == 1 ) then
+    if ( nhalos_x == 0 .AND. px == 1 .AND. hinfo%periodic(2) == 'false' ) then
        ngrids_xh = ngrids_xh + 1
     endif
 
@@ -898,8 +933,8 @@ contains
     call FileSetGlobalAttribute( fid, "scale_rm_grid_index_ihalo", hinfo%halosize(2:2) ) ! [IN]
     call FileSetGlobalAttribute( fid, "scale_rm_grid_index_jhalo", hinfo%halosize(3:3) ) ! [IN]
 
-    call FileSetGlobalAttribute( fid, "time_units", dinfo%time_units      )
-    call FileSetGlobalAttribute( fid, "time",       dinfo%time_start(1:1) )
+    call FileSetGlobalAttribute( fid, "time_units", hinfo%time_units    ) ! [IN]
+    call FileSetGlobalAttribute( fid, "time_start", hinfo%time_start(:) ) ! [IN]
 
     IMAX = hinfo%gridsize(2) / nprocs_x_out
     JMAX = hinfo%gridsize(3) / nprocs_y_out

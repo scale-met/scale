@@ -216,6 +216,7 @@ contains
 
     character(len=H_SHORT) :: idim, jdim, kdim
     integer                :: imax, jmax, kmax
+    integer                :: imax_, jmax_
 
     real(RP)               :: latstart, latend
     real(RP)               :: lonstart, lonend
@@ -223,7 +224,6 @@ contains
     real(RP)               :: dx, dy
     real(RP)               :: dlat, dlon
 
-    real(DP)               :: dt
     character(len=20)      :: cdate, dhour
 
     logical  :: written
@@ -296,7 +296,14 @@ contains
              dx   = ainfo(n)%AXIS_1d(imax/2+1) - ainfo(n)%AXIS_1d(imax/2)
              dlon = dx / ( CONST_RADIUS * cos(clat) ) / CONST_D2R
 
-             write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'XDEF ', int(imax*1.1_RP), ' LINEAR', lonstart, dlon
+             if    ( hinfo%minfo_mapping_name == 'lambert_conformal_conic' ) then
+                imax_ = int(imax*0.9_RP)
+                write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'XDEF ', imax_, ' LINEAR', lonstart, dlon
+             elseif( hinfo%minfo_mapping_name == 'polar_stereographic' ) then
+                write(fid,'(A)') 'XDEF   720 LINEAR -179.5 0.5'
+             else
+                write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'XDEF ', imax, ' LINEAR', lonstart, dlon
+             endif
              written = .true.
           endif
        enddo
@@ -314,7 +321,16 @@ contains
              dy    = ainfo(n)%AXIS_1d(jmax/2+1) - ainfo(n)%AXIS_1d(jmax/2)
              dlat  = dy / ( CONST_RADIUS * cos(clat) ) / CONST_D2R
 
-             write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'YDEF ', jmax, ' LINEAR', latstart, dlat
+             if    ( hinfo%minfo_mapping_name == 'lambert_conformal_conic' ) then
+                jmax_ = int(jmax*0.9_RP)
+                write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'YDEF ', jmax_, ' LINEAR', latstart, dlat
+             elseif( hinfo%minfo_mapping_name == 'polar_stereographic' ) then
+                latstart = real(int(latstart),kind=RP)
+                jmax_ = int( ( 90.0_RP - abs(latstart) ) / 0.5_RP )
+                write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'YDEF ', jmax_, ' LINEAR', latstart, 0.5_RP
+             else
+                write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'YDEF ', jmax, ' LINEAR', latstart, dlat
+             endif
              written = .true.
           endif
        enddo
@@ -341,14 +357,8 @@ contains
 
        !--- TDEF
 
-       if ( dinfo%step_nmax > 1 ) then
-          dt = dinfo%time_start(2) - dinfo%time_start(1)
-       else
-          dt = 0.0_DP
-       endif
-
-       call SNO_grads_calc_timechar( dinfo%time_units, dt, & ! [IN]
-                                     cdate, dhour          ) ! [OUT]
+       call SNO_grads_calc_timechar( dinfo%time_units, dinfo%dt, & ! [IN]
+                                     cdate, dhour                ) ! [OUT]
 
        write(fid,'(A,I5,3(1x,A))') 'TDEF ', dinfo%step_nmax, ' LINEAR ', trim(cdate), trim(dhour)
 
@@ -368,6 +378,18 @@ contains
                                                                      hinfo%minfo_longitude_of_central_meridian(1), &
                                                                      dx,                                           &
                                                                      dy
+       elseif( hinfo%minfo_mapping_name == 'polar_stereographic' ) then
+          write(fid,'(A,2(1x,I5),A,2(1x,F9.2),2(1x,I5),3(1x,F9.2))') 'PDEF',                                               &
+                                                                     imax,                                                 &
+                                                                     jmax,                                                 &
+                                                                     ' PSE',                                               &
+                                                                     hinfo%minfo_latitude_of_projection_origin        (1), &
+                                                                     hinfo%minfo_straight_vertical_longitude_from_pole(1), &
+                                                                     imax/2,                                               &
+                                                                     jmax/2,                                               &
+                                                                     dx/1000.0_RP,                                         &
+                                                                     dy/1000.0_RP,                                         &
+                                                                     sign(1.0_RP,hinfo%minfo_standard_parallel(1))
        endif
 
        !--- VARS
@@ -451,8 +473,8 @@ contains
           idim = trim(dinfo(v)%dim_name(1))
           jdim = trim(dinfo(v)%dim_name(2))
        elseif( dinfo(v)%dim_rank == 3 ) then
-          imax = size(dinfo(v)%VAR_3d(:,:,:),2)
-          jmax = size(dinfo(v)%VAR_3d(:,:,:),3)
+          imax  = size(dinfo(v)%VAR_3d(:,:,:),2)
+          jmax  = size(dinfo(v)%VAR_3d(:,:,:),3)
           kmax_ = size(dinfo(v)%VAR_3d(:,:,:),1)
 
           if ( dinfo(v)%transpose ) then
@@ -558,14 +580,8 @@ contains
 
        !--- TDEF
 
-       if ( dinfo(1)%step_nmax > 1 ) then
-          dt = dinfo(1)%time_start(2) - dinfo(1)%time_start(1)
-       else
-          dt = 0.0_DP
-       endif
-
-       call SNO_grads_calc_timechar( dinfo(1)%time_units, dt, & ! [IN]
-                                     cdate, dhour             ) ! [OUT]
+       call SNO_grads_calc_timechar( dinfo(1)%time_units, dinfo(1)%dt, & ! [IN]
+                                     cdate, dhour                      ) ! [OUT]
 
        write(fid,'(A,I5,3(1x,A))') 'TDEF ', dinfo(1)%step_nmax, ' LINEAR ', trim(cdate), trim(dhour)
 
@@ -585,6 +601,20 @@ contains
                                                                      hinfo%minfo_longitude_of_central_meridian(1), &
                                                                      dx,                                           &
                                                                      dy
+       elseif( hinfo%minfo_mapping_name == 'polar_stereographic' ) then
+          write(fid,'(A,2(1x,I5),A,2(1x,F9.2),2(1x,I5),5(1x,F9.2))') 'PDEF',                                               &
+                                                                     imax,                                                 &
+                                                                     jmax,                                                 &
+                                                                     ' LCC',                                               &
+                                                                     hinfo%minfo_latitude_of_projection_origin        (1), &
+                                                                     hinfo%minfo_straight_vertical_longitude_from_pole(1), &
+                                                                     imax/2,                                               &
+                                                                     jmax/2,                                               &
+                                                                     hinfo%minfo_standard_parallel                    (1), &
+                                                                     hinfo%minfo_standard_parallel                    (1), &
+                                                                     hinfo%minfo_straight_vertical_longitude_from_pole(1), &
+                                                                     dx,                                                   &
+                                                                     dy
        endif
 
        !--- VARS
@@ -597,7 +627,7 @@ contains
              if( size(dinfo(v)%VAR_2d(:,:),1) /= imax ) cycle ! skip
              if( size(dinfo(v)%VAR_2d(:,:),2) /= jmax ) cycle ! skip
              if ( dinfo(v)%step_nmax > 1 ) then
-                if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+                if( abs(dinfo(v)%dt-dinfo(1)%dt) > 1.E-5_DP ) cycle ! skip
              endif
           elseif( dinfo(v)%dim_rank == 3 ) then
              if( size(dinfo(v)%VAR_3d(:,:,:),2) /= imax ) cycle ! skip
@@ -605,11 +635,11 @@ contains
              if( size(dinfo(v)%VAR_3d(:,:,:),1) /= kmax ) cycle ! skip
              if ( dinfo(v)%transpose ) then
                 if ( dinfo(v)%step_nmax > 1 ) then
-                   if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+                   if( abs(dinfo(v)%dt-dinfo(1)%dt) > 1.E-5_DP ) cycle ! skip
                 endif
              else
                 if ( dinfo(v)%step_nmax > 1 ) then
-                   if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+                   if( abs(dinfo(v)%dt-dinfo(1)%dt) > 1.E-5_DP ) cycle ! skip
                 endif
              endif
           endif
@@ -628,7 +658,7 @@ contains
              if( size(dinfo(v)%VAR_2d(:,:),2) /= jmax ) cycle ! skip
 
              if ( dinfo(v)%step_nmax > 1 ) then
-                if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+                if( abs(dinfo(v)%dt-dinfo(1)%dt) > 1.E-5_DP ) cycle ! skip
 
                 dimorder = 't,y,x'
              else
@@ -643,7 +673,7 @@ contains
 
              if ( dinfo(v)%transpose ) then
                 if ( dinfo(v)%step_nmax > 1 ) then
-                   if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+                   if( abs(dinfo(v)%dt-dinfo(1)%dt) > 1.E-5_DP ) cycle ! skip
 
                    dimorder = 't,z,y,x'
                 else
@@ -651,7 +681,7 @@ contains
                 endif
              else
                 if ( dinfo(v)%step_nmax > 1 ) then
-                   if( abs(dinfo(v)%time_start(2)-dinfo(v)%time_start(1)-dt) > 1.E-5_DP ) cycle ! skip
+                   if( abs(dinfo(v)%dt-dinfo(1)%dt) > 1.E-5_DP ) cycle ! skip
 
                    dimorder = 't,y,x,z'
                 else
