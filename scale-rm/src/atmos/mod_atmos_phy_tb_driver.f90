@@ -192,7 +192,7 @@ contains
     real(RP) :: Ri(KA,IA,JA) ! Richardson number
     real(RP) :: Pr(KA,IA,JA) ! Prandtl number
 
-    real(RP), pointer :: N2(:,:,:)
+    real(RP) :: N2(KA,IA,JA)
 
     real(RP) :: tend(KA,IA,JA)
     real(RP) :: total ! dummy

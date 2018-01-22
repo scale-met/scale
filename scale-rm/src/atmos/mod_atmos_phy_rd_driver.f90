@@ -270,7 +270,7 @@ contains
     real(RP) :: QG3D      (IA,KA,JA)
     real(RP) :: flux_rad_org(KA,IA,JA,2,2,2)
 
-    real(RP), pointer :: RH(:,:,:)
+    real(RP) :: RH(KA,IA,JA)
 
     real(RP) :: total ! dummy
 
