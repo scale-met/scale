@@ -363,8 +363,8 @@ contains
                       LAND_TEMP      (LKS,:,:),             & ! [IN]
                       LAND_SFC_TEMP  (:,:),                 & ! [IN]
                       LAND_QVEF      (:,:),                 & ! [IN]
-                      LAND_SFC_albedo(:,:,I_LW),            & ! [IN]
-                      LAND_SFC_albedo(:,:,I_SW),            & ! [IN]
+                      LAND_type_albedo(:,:,I_LW),           & ! [IN]
+                      LAND_type_albedo(:,:,I_SW),           & ! [IN]
                       LAND_DZ1       (:,:),                 & ! [IN]
                       LAND_PROPERTY  (:,:,I_StomataResist), & ! [IN]
                       LAND_PROPERTY  (:,:,I_ThermalCond),   & ! [IN]
@@ -395,10 +395,6 @@ contains
                       LAND_SFLX_evap (:,:),                & ! [IN]
                       GRID_LCDZ      (:),                  & ! [IN]
                       dt                                   ) ! [IN]
-
-       ! no albedo update (tentative)
-!OCL XFILL
-       LAND_SFC_albedo_t(:,:,:) = 0.0_RP
 
 
        ! marge land surface and snow surface !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -453,6 +449,12 @@ contains
        call FILE_HISTORY_in( SNOW_V10            (:,:),      'SNOW_V10',             'Wind velocity v at 10 m on snow surface',  'm/s',    dim_type='XY' )
        call FILE_HISTORY_in( SNOW_T2             (:,:),      'SNOW_T2',              'Air temperature at 2m on snow surface',    'K',      dim_type='XY' )
        call FILE_HISTORY_in( SNOW_Q2             (:,:),      'SNOW_Q2',              'Specific humidity at 2m on snow surface',  'kg/kg',  dim_type='XY' )
+
+    else
+
+       ! no albedo update (tentative)
+!OCL XFILL
+       LAND_SFC_albedo_t(:,:,:) = 0.0_RP
 
     endif
 
