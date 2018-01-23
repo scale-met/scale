@@ -35,6 +35,7 @@ module scale_calendar
   public :: CALENDAR_adjust_daysec
   public :: CALENDAR_combine_daysec
   public :: CALENDAR_unit2sec
+  public :: CALENDAR_sec2unit
   public :: CALENDAR_CFunits2sec
   public :: CALENDAR_date2char
 
@@ -448,6 +449,39 @@ contains
 
     return
   end subroutine CALENDAR_unit2sec
+
+  !-----------------------------------------------------------------------------
+  !> Convert several second to specified unit
+  subroutine CALENDAR_sec2unit( &
+     value,  &
+     second, &
+     unit    )
+    use scale_process, only: &
+       PRC_MPIstop
+    implicit none
+
+    real(DP),         intent(out) :: value
+    real(DP),         intent( in) :: second
+    character(len=*), intent( in) :: unit
+    !---------------------------------------------------------------------------
+
+    select case(trim(unit))
+    case('MSEC', 'msec')
+       value = second / 1.0E-3_DP
+    case('SEC', 'seconds', 'sec', 's')
+       value = second
+    case('MIN', 'mins', 'min')
+       value = second / CALENDAR_SEC
+    case('HOUR', 'hours', 'hour', 'h')
+       value = second / (CALENDAR_SEC * CALENDAR_MIN)
+    case('DAY', 'days', 'day')
+       value = second / (CALENDAR_SEC * CALENDAR_MIN * CALENDAR_HOUR)
+    case default
+       write(*,*) 'xxx Unsupported UNIT: ', trim(unit), ', ', value
+       call PRC_MPIstop
+    endselect
+
+  end subroutine CALENDAR_sec2unit
 
   !-----------------------------------------------------------------------------
   !> Convert time in units of the CF convention to second

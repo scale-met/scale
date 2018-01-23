@@ -17,8 +17,6 @@ module scale_process
   !++ used modules
   !
   use mpi
-  use gtool_file, only: &
-     FileCloseAll
   use scale_precision
   use scale_stdio
   !-----------------------------------------------------------------------------
@@ -882,6 +880,8 @@ contains
   subroutine PRC_MPI_errorhandler( &
       comm,     &
       errcode   )
+  use scale_file, only: &
+     FILE_Close_All
     implicit none
 
     ! attributes are needed to be the same with COMM_ERRHANDLER function
@@ -930,7 +930,7 @@ contains
        write(*,*)                     ''
     endif
 
-    call FileCloseAll
+    call FILE_Close_All
 
     ! Close logfile, configfile
     if ( IO_L ) then

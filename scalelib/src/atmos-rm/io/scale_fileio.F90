@@ -23,6 +23,8 @@ module scale_fileio
   use scale_land_grid_index
   use scale_ocean_grid_index
   use scale_urban_grid_index
+  use scale_file_h, only: &
+     FILE_FILE_MAX
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -129,12 +131,10 @@ module scale_fileio
   real(RP), private, allocatable :: AXIS_HGT   (:,:,:)
   real(RP), private, allocatable :: AXIS_HGTWXY(:,:,:)
 
-  integer,  private, parameter   :: File_nfile_max = 512                  ! number limit of file
-                                                                          ! Keep consistency with "FILE_MAX" in gtool_netcdf.c
-  logical,  private              :: File_axes_written(0:File_nfile_max-1) ! whether axes have been written
+  logical,  private              :: File_axes_written(0:FILE_FILE_MAX-1) ! whether axes have been written
   !                                                                       ! fid starts from zero so index should start from zero
-  logical,  private              :: File_closed      (0:File_nfile_max-1) ! whether file has been closed
-  logical,  private              :: File_haszcoord   (0:File_nfile_max-1) ! z-coordinates exist?
+  logical,  private              :: File_closed      (0:FILE_FILE_MAX-1) ! whether file has been closed
+  logical,  private              :: File_haszcoord   (0:FILE_FILE_MAX-1) ! z-coordinates exist?
   integer,  private              :: write_buf_amount = 0                  ! sum of write buffer amounts
 
   ! global star and count
@@ -629,10 +629,6 @@ contains
        varname,  &
        axistype, &
        step      )
-    use gtool_file, only: &
-       FileRead
-    use scale_process, only: &
-       PRC_MPIstop
     implicit none
 
     real(RP),         intent(out) :: var(:)   !< value of the variable
@@ -663,10 +659,6 @@ contains
        varname,  &
        axistype, &
        step      )
-    use gtool_file, only: &
-       FileRead
-    use scale_process, only: &
-       PRC_MPIstop
     implicit none
 
     real(RP),         intent(out) :: var(:,:) !< value of the variable
@@ -697,10 +689,6 @@ contains
        varname,  &
        axistype, &
        step      )
-    use gtool_file, only: &
-       FileRead
-    use scale_process, only: &
-       PRC_MPIstop
     implicit none
 
     real(RP),         intent(out) :: var(:,:,:) !< value of the variable
@@ -731,10 +719,6 @@ contains
        varname,  &
        axistype, &
        step      )
-    use gtool_file, only: &
-       FileRead
-    use scale_process, only: &
-       PRC_MPIstop
     implicit none
 
     real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
@@ -765,8 +749,8 @@ contains
        varname,  &
        axistype, &
        step      )
-    use gtool_file, only: &
-       FileRead
+    use scale_file, only: &
+       FILE_Read
     use scale_process, only: &
        PRC_MPIstop
     use scale_rm_process, only: &
@@ -795,7 +779,7 @@ contains
        if    ( axistype == 'Z' ) then
           start(1) = 1
           count(1) = KMAX
-          call FileRead( var(KS:KE), fid, varname, step,                    &
+          call FILE_Read( var(KS:KE), fid, varname, step,                    &
                          ntypes=KMAX, dtype=etype, start=start, count=count )
        elseif( axistype == 'OZ' ) then
           start(1) = 1
@@ -805,22 +789,22 @@ contains
        elseif( axistype == 'LZ' ) then
           start(1) = 1
           count(1) = LKMAX
-          call FileRead( var, fid, varname, step,                            &
+          call FILE_Read( var, fid, varname, step,                            &
                          ntypes=LKMAX, dtype=etype, start=start, count=count )
        elseif( axistype == 'UZ' ) then
           start(1) = 1
           count(1) = UKMAX
-          call FileRead( var, fid, varname, step,                            &
+          call FILE_Read( var, fid, varname, step,                            &
                          ntypes=UKMAX, dtype=etype, start=start, count=count )
        elseif( axistype == 'X' .OR. axistype == 'CX' ) then
           start(1) = IS_inG - IHALO
           count(1) = IA
-          call FileRead( var, fid, varname, step,                         &
+          call FILE_Read( var, fid, varname, step,                         &
                          ntypes=IA, dtype=etype, start=start, count=count )
        elseif( axistype == 'Y' .OR. axistype == 'CY' ) then
           start(1) = JS_inG - JHALO
           count(1) = JA
-          call FileRead( var, fid, varname, step,                         &
+          call FILE_Read( var, fid, varname, step,                         &
                          ntypes=JA, dtype=etype, start=start, count=count )
        else
           write(*,*) 'xxx [FILEIO_read_var_1D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
@@ -856,7 +840,7 @@ contains
           call PRC_MPIstop
        endif
 
-       call FileRead( var(dim1_S:dim1_E), fid, varname, step )
+       call FILE_Read( var(dim1_S:dim1_E), fid, varname, step )
     endif
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
@@ -872,8 +856,8 @@ contains
        varname,  &
        axistype, &
        step      )
-    use gtool_file, only: &
-       FileRead
+    use scale_file, only: &
+       FILE_Read
     use scale_process, only: &
        PRC_MPIstop
     use scale_rm_process, only: &
@@ -899,12 +883,12 @@ contains
     if ( IO_AGGREGATE ) then
        ! read data and halos into the local buffer
        if    ( axistype == 'XY' ) then
-          call FileRead( var, fid, varname, step,                                &
+          call FILE_Read( var, fid, varname, step,                                &
                          ntypes=IA*JA, dtype=etype, start=startXY, count=countXY )
        elseif( axistype == 'ZX' ) then
           ! Because KHALO is not saved in files, we use centerTypeZX, an MPI
           ! derived datatype to describe the layout of local read buffer
-          call FileRead( var, fid, varname, step,                                   &
+          call FILE_Read( var, fid, varname, step,                                   &
                          ntypes=1, dtype=centerTypeZX, start=startZX, count=countZX )
        else
           write(*,*) 'xxx [FILEIO_read_var_2D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
@@ -926,7 +910,7 @@ contains
           call PRC_MPIstop
        endif
 
-       call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E), fid, varname, step )
+       call FILE_Read( var(dim1_S:dim1_E,dim2_S:dim2_E), fid, varname, step )
     endif
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
@@ -942,8 +926,8 @@ contains
        varname,  &
        axistype, &
        step      )
-    use gtool_file, only: &
-       FileRead
+    use scale_file, only: &
+       FILE_Read
     use scale_process, only: &
        PRC_MPIstop
     use scale_rm_process, only: &
@@ -973,24 +957,24 @@ contains
        if(      axistype == 'ZXY'  &
            .or. axistype == 'ZXHY' &
            .or. axistype == 'ZXYH' ) then
-          call FileRead( var, fid, varname, step,                                      &
+          call FILE_Read( var, fid, varname, step,                                      &
                          ntypes=1, dtype=centerTypeZXY, start=startZXY, count=countZXY )
        elseif( axistype == 'ZHXY' ) then
-          call FileRead( var, fid, varname, step,                                      &
+          call FILE_Read( var, fid, varname, step,                                      &
                          ntypes=1, dtype=centerTypeZHXY, start=startZHXY, count=countZHXY )
        elseif( axistype == 'XYT' ) then
           startXY(3) = 1
           countXY(3) = step
-          call FileRead( var, fid, varname, step,                                     &
+          call FILE_Read( var, fid, varname, step,                                     &
                          ntypes=step*IA*JA, dtype=etype, start=startXY, count=countXY )
        elseif( axistype == 'Ocean' ) then
           call FileRead( var, fid, varname, step,                                            &
                          ntypes=1, dtype=centerTypeOCEAN, start=startOCEAN, count=countOCEAN )
        elseif( axistype == 'Land' ) then
-          call FileRead( var, fid, varname, step,                                         &
+          call FILE_Read( var, fid, varname, step,                                         &
                          ntypes=1, dtype=centerTypeLAND, start=startLAND, count=countLAND )
        elseif( axistype == 'Urban' ) then
-          call FileRead( var, fid, varname, step,                                            &
+          call FILE_Read( var, fid, varname, step,                                            &
                          ntypes=1, dtype=centerTypeURBAN, start=startURBAN, count=countURBAN )
        else
           write(*,*) 'xxx [FILEIO_read_var_3D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
@@ -1046,7 +1030,7 @@ contains
           call PRC_MPIstop
        endif
 
-       call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
+       call FILE_Read( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
                       fid, varname, step                              )
     endif
 
@@ -1063,8 +1047,8 @@ contains
        varname,  &
        axistype, &
        step      )
-    use gtool_file, only: &
-       FileRead
+    use scale_file, only: &
+       FILE_Read
     use scale_process, only: &
        PRC_MPIstop
     use scale_rm_process, only: &
@@ -1095,12 +1079,12 @@ contains
             .or. axistype == 'ZXYHT' ) then
           startZXY(4) = 1
           countZXY(4) = step
-          call FileRead( var, fid, varname, step,                                         &
+          call FILE_Read( var, fid, varname, step,                                         &
                          ntypes=step, dtype=centerTypeZXY, start=startZXY, count=countZXY )
        elseif ( axistype == 'ZHXYT' ) then
           startZXY(4) = 1
           countZXY(4) = step
-          call FileRead( var, fid, varname, step,                                         &
+          call FILE_Read( var, fid, varname, step,                                         &
                          ntypes=step, dtype=centerTypeZHXY, start=startZHXY, count=countZHXY )
        else
           write(*,*) 'xxx [FILEIO_read_var_4D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
@@ -1141,7 +1125,7 @@ contains
           call PRC_MPIstop
        endif
 
-       call FileRead( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E), &
+       call FILE_Read( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E), &
                       fid, varname, step                                            )
     endif
 
@@ -1265,8 +1249,6 @@ contains
        subsec,   &
        append,   &
        nohalo    )
-    use gtool_file, only: &
-       RMISS
     use scale_process, only: &
        PRC_masterrank, &
        PRC_MPIstop
@@ -1384,8 +1366,6 @@ contains
        timetarg, &
        timeofs,  &
        nohalo    )
-    use gtool_file, only: &
-       RMISS
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -1437,10 +1417,10 @@ contains
   subroutine FILEIO_open( &
        fid,      &
        basename  )
-    use gtool_file_h, only: &
-       File_FREAD
-    use gtool_file, only: &
-       FileOpen
+    use scale_file_h, only: &
+       FILE_FREAD
+    use scale_file, only: &
+       FILE_Open
     use scale_process, only: &
        PRC_myrank, &
        PRC_LOCAL_COMM_WORLD
@@ -1461,11 +1441,11 @@ contains
        comm = MPI_COMM_NULL
     endif
 
-    call FileOpen( fid,                & ! [OUT]
-                   basename,           & ! [IN]
-                   File_FREAD,         & ! [IN]
-                   comm = comm,        & ! [IN]
-                   myrank = PRC_myrank ) ! [IN]
+    call FILE_Open( fid,                & ! [OUT]
+                    basename,           & ! [IN]
+                    FILE_FREAD,         & ! [IN]
+                    comm = comm,        & ! [IN]
+                    myrank = PRC_myrank ) ! [IN]
 
     File_closed(fid) = .false.
 
@@ -1487,12 +1467,12 @@ contains
        haszcoord )
     use mpi, only: &
        MPI_COMM_NULL
-    use gtool_file_h, only: &
-       File_REAL8, &
-       File_REAL4
-    use gtool_file, only: &
-       FileCreate,      &
-       FileSetGlobalAttribute
+    use scale_file_h, only: &
+       FILE_REAL8, &
+       FILE_REAL4
+    use scale_file, only: &
+       FILE_Create, &
+       FILE_Set_GlobalAttribute
     use scale_process, only: &
        PRC_masterrank, &
        PRC_myrank,     &
@@ -1531,14 +1511,14 @@ contains
 
     ! dtype is used to define the data type of axis variables in file
     if    ( datatype == 'REAL8' ) then
-       dtype = File_REAL8
+       dtype = FILE_REAL8
     elseif( datatype == 'REAL4' ) then
-       dtype = File_REAL4
+       dtype = FILE_REAL4
     else
        if    ( RP == 8 ) then
-          dtype = File_REAL8
+          dtype = FILE_REAL8
        elseif( RP == 4 ) then
-          dtype = File_REAL4
+          dtype = FILE_REAL4
        else
           write(*,*) 'xxx unsupported data type. Check!', trim(datatype)
           call PRC_MPIstop
@@ -1563,17 +1543,17 @@ contains
        comm = MPI_COMM_NULL
     endif
 
-    call FileCreate( fid,                    & ! [OUT]
-                     fileexisted,            & ! [OUT]
-                     basename,               & ! [IN]
-                     title,                  & ! [IN]
-                     H_SOURCE,               & ! [IN]
-                     H_INSTITUTE,            & ! [IN]
-                     PRC_masterrank,         & ! [IN]
-                     PRC_myrank,             & ! [IN]
-                     time_units = tunits,    & ! [IN]
-                     append     = append_sw, & ! [IN]
-                     comm       = comm       ) ! [IN]
+    call FILE_Create( fid,                    & ! [OUT]
+                      fileexisted,            & ! [OUT]
+                      basename,               & ! [IN]
+                      title,                  & ! [IN]
+                      H_SOURCE,               & ! [IN]
+                      H_INSTITUTE,            & ! [IN]
+                      PRC_masterrank,         & ! [IN]
+                      PRC_myrank,             & ! [IN]
+                      time_units = tunits,    & ! [IN]
+                      append     = append_sw, & ! [IN]
+                      comm       = comm       ) ! [IN]
 
 
 
@@ -1598,30 +1578,30 @@ contains
        endif
 
        if ( IO_AGGREGATE ) then
-          call FileSetGlobalAttribute( fid, "scale_rm_prc_rank_x", (/0/) ) ! [IN]
-          call FileSetGlobalAttribute( fid, "scale_rm_prc_rank_y", (/0/) ) ! [IN]
+          call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_rank_x", (/0/) ) ! [IN]
+          call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_rank_y", (/0/) ) ! [IN]
 
-          call FileSetGlobalAttribute( fid, "scale_rm_prc_num_x",  (/1/) ) ! [IN]
-          call FileSetGlobalAttribute( fid, "scale_rm_prc_num_y",  (/1/) ) ! [IN]
+          call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_num_x",  (/1/) ) ! [IN]
+          call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_num_y",  (/1/) ) ! [IN]
        else
-          call FileSetGlobalAttribute( fid, "scale_rm_prc_rank_x", (/PRC_2Drank(PRC_myrank,1)/) ) ! [IN]
-          call FileSetGlobalAttribute( fid, "scale_rm_prc_rank_y", (/PRC_2Drank(PRC_myrank,2)/) ) ! [IN]
+          call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_rank_x", (/PRC_2Drank(PRC_myrank,1)/) ) ! [IN]
+          call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_rank_y", (/PRC_2Drank(PRC_myrank,2)/) ) ! [IN]
 
-          call FileSetGlobalAttribute( fid, "scale_rm_prc_num_x",  (/PRC_NUM_X/) ) ! [IN]
-          call FileSetGlobalAttribute( fid, "scale_rm_prc_num_y",  (/PRC_NUM_Y/) ) ! [IN]
+          call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_num_x",  (/PRC_NUM_X/) ) ! [IN]
+          call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_num_y",  (/PRC_NUM_Y/) ) ! [IN]
        endif
 
-       call FileSetGlobalAttribute( fid, "scale_rm_prc_periodic_z", periodic_z ) ! [IN]
-       call FileSetGlobalAttribute( fid, "scale_rm_prc_periodic_x", periodic_x ) ! [IN]
-       call FileSetGlobalAttribute( fid, "scale_rm_prc_periodic_y", periodic_y ) ! [IN]
+       call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_periodic_z", periodic_z ) ! [IN]
+       call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_periodic_x", periodic_x ) ! [IN]
+       call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_periodic_y", periodic_y ) ! [IN]
 
-       call FileSetGlobalAttribute( fid, "scale_rm_grid_index_kmax",  (/KMAX/)  ) ! [IN]
-       call FileSetGlobalAttribute( fid, "scale_rm_grid_index_imaxg", (/IMAXG/) ) ! [IN]
-       call FileSetGlobalAttribute( fid, "scale_rm_grid_index_jmaxg", (/JMAXG/) ) ! [IN]
+       call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_kmax",  (/KMAX/)  ) ! [IN]
+       call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_imaxg", (/IMAXG/) ) ! [IN]
+       call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_jmaxg", (/JMAXG/) ) ! [IN]
 
-       call FileSetGlobalAttribute( fid, "scale_rm_grid_index_khalo", (/KHALO/) ) ! [IN]
-       call FileSetGlobalAttribute( fid, "scale_rm_grid_index_ihalo", (/IHALO/) ) ! [IN]
-       call FileSetGlobalAttribute( fid, "scale_rm_grid_index_jhalo", (/JHALO/) ) ! [IN]
+       call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_khalo", (/KHALO/) ) ! [IN]
+       call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_ihalo", (/IHALO/) ) ! [IN]
+       call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_jhalo", (/JHALO/) ) ! [IN]
 
        call FILEIO_def_axes( fid,                & ! [IN]
                              dtype,              & ! [IN]
@@ -1632,12 +1612,12 @@ contains
        else
           call FILEIO_getCFtunits(tunits, NOWDATE)
        endif
-       call FileSetGlobalAttribute( fid, "time_units", tunits )
+       call FILE_Set_GlobalAttribute( fid, "time_units", tunits )
 
        if ( present( subsec ) ) then
-          call FileSetGlobalAttribute( fid, "time_start", (/subsec/) )
+          call FILE_Set_GlobalAttribute( fid, "time_start", (/subsec/) )
        else
-          call FileSetGlobalAttribute( fid, "time_start", (/NOWMS/)  )
+          call FILE_Set_GlobalAttribute( fid, "time_start", (/NOWMS/)  )
        endif
 
        File_axes_written(fid) = .false.  ! indicating axes have not been written yet
@@ -1653,10 +1633,10 @@ contains
   !> Exit netCDF file define mode
   subroutine FILEIO_enddef( &
        fid )
-    use gtool_file, only: &
-       FileEndDef, &
-       FileFlush,  &
-       FileAttachBuffer
+    use scale_file, only: &
+       FILE_EndDef, &
+       FILE_Flush,  &
+       FILE_Attach_Buffer
     use scale_process, only: &
        PRC_myrank
     implicit none
@@ -1668,7 +1648,7 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    call FileEndDef( fid ) ! [IN]
+    call FILE_EndDef( fid ) ! [IN]
 
     ! If this enddef is called the first time, write axis variables
     if ( .NOT. File_axes_written(fid) ) then
@@ -1689,8 +1669,8 @@ contains
 
        ! Tell PnetCDF library to use a buffer of size write_buf_amount to aggregate write requests to be post in FILEIO_write_var
        if ( IO_AGGREGATE ) then
-          call FileFlush( fid )
-          call FileAttachBuffer( fid, write_buf_amount )
+          call FILE_Flush( fid )
+          call FILE_Attach_Buffer( fid, write_buf_amount )
        endif
 
        File_axes_written(fid) = .true.
@@ -1705,8 +1685,8 @@ contains
   !> Flush all pending requests to a netCDF file (PnetCDF only)
   subroutine FILEIO_flush( &
        fid )
-    use gtool_file, only: &
-       FileFlush
+    use scale_file, only: &
+       FILE_Flush
     implicit none
 
     integer, intent(in) :: fid  !< file ID
@@ -1715,7 +1695,7 @@ contains
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
     if ( IO_AGGREGATE ) then
-       call FileFlush( fid ) ! flush all pending read/write requests
+       call FILE_Flush( fid ) ! flush all pending read/write requests
     endif
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -1727,10 +1707,10 @@ contains
   !> Close a netCDF file
   subroutine FILEIO_close( &
        fid )
-    use gtool_file, only: &
-       FileClose, &
-       FileFlush, &
-       FileDetachBuffer
+    use scale_file, only: &
+       FILE_Close, &
+       FILE_Flush, &
+       FILE_Detach_Buffer
     implicit none
 
     integer, intent(in) :: fid  !< file ID
@@ -1742,14 +1722,14 @@ contains
     if ( .NOT. File_closed(fid) ) then
 
        if ( IO_AGGREGATE ) then
-          call FileFlush( fid )        ! flush all pending read/write requests
+          call FILE_Flush( fid )        ! flush all pending read/write requests
           if ( write_buf_amount > 0 ) then
-             call FileDetachBuffer( fid ) ! detach PnetCDF aggregation buffer
+             call FILE_Detach_Buffer( fid ) ! detach PnetCDF aggregation buffer
              write_buf_amount = 0         ! reset write request amount
           endif
        endif
 
-       call FileClose( fid ) ! [IN]
+       call FILE_Close( fid ) ! [IN]
 
        File_closed(fid) = .true.
 
@@ -1766,11 +1746,11 @@ contains
        fid,   &
        dtype, &
        hasZ   )
-    use gtool_file, only: &
-       FileDefAxis,                  &
-       FileSetAttribute,             &
-       FileDefAssociatedCoordinates, &
-       FileAddAssociatedVariable
+    use scale_file, only: &
+       FILE_Def_Axis,                 &
+       FILE_Set_Attribute,            &
+       FILE_Def_AssociatedCoordinate, &
+       FILE_Add_AssociatedVariable
     use scale_const, &
        UNDEF => CONST_UNDEF
     use scale_rm_process, only: &
@@ -1910,184 +1890,183 @@ contains
        jsize = JMAXB
     endif
 
-    if( hasZ ) call FileDefAxis( fid, 'z'  , 'Z'              , 'm', 'z'  , dtype, KMAX    )
-    if( hasZ ) call FileDefAxis( fid, 'zh' , 'Z (half level)' , 'm', 'zh' , dtype, KMAX+1  )
+    if( hasZ ) call FILE_Def_Axis( fid, 'zh' , 'Z (half level)' , 'm', 'zh' , dtype, KMAX+1  )
 
-    if( hasZ ) call FileDefAxis( fid, 'oz' , 'OZ'             , 'm', 'oz' , dtype, OKMAX   )
-    if( hasZ ) call FileDefAxis( fid, 'ozh', 'OZ (half level)', 'm', 'ozh', dtype, OKMAX+1 )
+    if( hasZ ) call FILE_Def_Axis( fid, 'oz' , 'OZ'             , 'm', 'oz' , dtype, OKMAX   )
+    if( hasZ ) call FILE_Def_Axis( fid, 'ozh', 'OZ (half level)', 'm', 'ozh', dtype, OKMAX+1 )
 
-    if( hasZ ) call FileDefAxis( fid, 'lz' , 'LZ'             , 'm', 'lz' , dtype, LKMAX   )
-    if( hasZ ) call FileDefAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, LKMAX+1 )
+    if( hasZ ) call FILE_Def_Axis( fid, 'lz' , 'LZ'             , 'm', 'lz' , dtype, LKMAX   )
+    if( hasZ ) call FILE_Def_Axis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, LKMAX+1 )
 
-    if( hasZ ) call FileDefAxis( fid, 'uz' , 'UZ'             , 'm', 'uz' , dtype, UKMAX   )
-    if( hasZ ) call FileDefAxis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, UKMAX+1 )
+    if( hasZ ) call FILE_Def_Axis( fid, 'uz' , 'UZ'             , 'm', 'uz' , dtype, UKMAX   )
+    if( hasZ ) call FILE_Def_Axis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, UKMAX+1 )
 
-               call FileDefAxis( fid, 'x'  , 'X'              , 'm', 'x'  , dtype, isize   )
-               call FileDefAxis( fid, 'xh' , 'X (half level)' , 'm', 'xh' , dtype, isize   )
-               call FileDefAxis( fid, 'y'  , 'Y'              , 'm', 'y'  , dtype, jsize   )
-               call FileDefAxis( fid, 'yh' , 'Y (half level)' , 'm', 'yh' , dtype, jsize   )
+               call FILE_Def_Axis( fid, 'x'  , 'X'              , 'm', 'x'  , dtype, isize   )
+               call FILE_Def_Axis( fid, 'xh' , 'X (half level)' , 'm', 'xh' , dtype, isize   )
+               call FILE_Def_Axis( fid, 'y'  , 'Y'              , 'm', 'y'  , dtype, jsize   )
+               call FILE_Def_Axis( fid, 'yh' , 'Y (half level)' , 'm', 'yh' , dtype, jsize   )
 
-    if( hasZ ) call FileDefAxis( fid, 'CZ'   , 'Atmos Grid Center Position Z',      'm', 'CZ',   dtype, KA      )
-    if( hasZ ) call FileDefAxis( fid, 'FZ'   , 'Atmos Grid Face   Position Z',      'm', 'FZ',   dtype, KA+1    )
-    if( hasZ ) call FileDefAxis( fid, 'CDZ'  , 'Grid Cell length Z',                'm', 'CZ',   dtype, KA      )
-    if( hasZ ) call FileDefAxis( fid, 'FDZ'  , 'Grid distance Z',                   'm', 'FDZ',  dtype, KA-1    )
-    if( hasZ ) call FileDefAxis( fid, 'CBFZ' , 'Boundary factor Center Z',          '1', 'CZ',   dtype, KA      )
-    if( hasZ ) call FileDefAxis( fid, 'FBFZ' , 'Boundary factor Face Z',            '1', 'FZ',   dtype, KA+1    )
+    if( hasZ ) call FILE_Def_Axis( fid, 'CZ'   , 'Atmos Grid Center Position Z',      'm', 'CZ',   dtype, KA      )
+    if( hasZ ) call FILE_Def_Axis( fid, 'FZ'   , 'Atmos Grid Face   Position Z',      'm', 'FZ',   dtype, KA+1    )
+    if( hasZ ) call FILE_Def_Axis( fid, 'CDZ'  , 'Grid Cell length Z',                'm', 'CZ',   dtype, KA      )
+    if( hasZ ) call FILE_Def_Axis( fid, 'FDZ'  , 'Grid distance Z',                   'm', 'FDZ',  dtype, KA-1    )
+    if( hasZ ) call FILE_Def_Axis( fid, 'CBFZ' , 'Boundary factor Center Z',          '1', 'CZ',   dtype, KA      )
+    if( hasZ ) call FILE_Def_Axis( fid, 'FBFZ' , 'Boundary factor Face Z',            '1', 'FZ',   dtype, KA+1    )
 
-    if( hasZ ) call FileDefAxis( fid, 'OCZ'  , 'Ocean Grid Center Position Z',      'm', 'OCZ',  dtype, OKMAX   )
-    if( hasZ ) call FileDefAxis( fid, 'OFZ'  , 'Ocean Grid Face   Position Z',      'm', 'OFZ',  dtype, OKMAX+1 )
-    if( hasZ ) call FileDefAxis( fid, 'OCDZ' , 'Ocean Grid Cell length Z',          'm', 'OCZ',  dtype, OKMAX   )
+    if( hasZ ) call FILE_Def_Axis( fid, 'OCZ'  , 'Ocean Grid Center Position Z',      'm', 'OCZ',  dtype, OKMAX   )
+    if( hasZ ) call FILE_Def_Axis( fid, 'OFZ'  , 'Ocean Grid Face   Position Z',      'm', 'OFZ',  dtype, OKMAX+1 )
+    if( hasZ ) call FILE_Def_Axis( fid, 'OCDZ' , 'Ocean Grid Cell length Z',          'm', 'OCZ',  dtype, OKMAX   )
 
-    if( hasZ ) call FileDefAxis( fid, 'LCZ'  , 'Land Grid Center Position Z',       'm', 'LCZ',  dtype, LKMAX   )
-    if( hasZ ) call FileDefAxis( fid, 'LFZ'  , 'Land Grid Face   Position Z',       'm', 'LFZ',  dtype, LKMAX+1 )
-    if( hasZ ) call FileDefAxis( fid, 'LCDZ' , 'Land Grid Cell length Z',           'm', 'LCZ',  dtype, LKMAX   )
+    if( hasZ ) call FILE_Def_Axis( fid, 'LCZ'  , 'Land Grid Center Position Z',       'm', 'LCZ',  dtype, LKMAX   )
+    if( hasZ ) call FILE_Def_Axis( fid, 'LFZ'  , 'Land Grid Face   Position Z',       'm', 'LFZ',  dtype, LKMAX+1 )
+    if( hasZ ) call FILE_Def_Axis( fid, 'LCDZ' , 'Land Grid Cell length Z',           'm', 'LCZ',  dtype, LKMAX   )
 
-    if( hasZ ) call FileDefAxis( fid, 'UCZ'  , 'Urban Grid Center Position Z',      'm', 'UCZ',  dtype, UKMAX   )
-    if( hasZ ) call FileDefAxis( fid, 'UFZ'  , 'Urban Grid Face   Position Z',      'm', 'UFZ',  dtype, UKMAX+1 )
-    if( hasZ ) call FileDefAxis( fid, 'UCDZ' , 'Urban Grid Cell length Z',          'm', 'UCZ',  dtype, UKMAX   )
+    if( hasZ ) call FILE_Def_Axis( fid, 'UCZ'  , 'Urban Grid Center Position Z',      'm', 'UCZ',  dtype, UKMAX   )
+    if( hasZ ) call FILE_Def_Axis( fid, 'UFZ'  , 'Urban Grid Face   Position Z',      'm', 'UFZ',  dtype, UKMAX+1 )
+    if( hasZ ) call FILE_Def_Axis( fid, 'UCDZ' , 'Urban Grid Cell length Z',          'm', 'UCZ',  dtype, UKMAX   )
 
-               call FileDefAxis( fid, 'CX'   , 'Atmos Grid Center Position X',      'm', 'CX',   dtype, iall   )
-               call FileDefAxis( fid, 'CY'   , 'Atmos Grid Center Position Y',      'm', 'CY',   dtype, jall   )
-               call FileDefAxis( fid, 'FX'   , 'Atmos Grid Face   Position X',      'm', 'FX',   dtype, iall+1 )
-               call FileDefAxis( fid, 'FY'   , 'Atmos Grid Face   Position Y',      'm', 'FY',   dtype, jall+1 )
-               call FileDefAxis( fid, 'CDX'  , 'Grid Cell length X',                'm', 'CX',   dtype, iall   )
-               call FileDefAxis( fid, 'CDY'  , 'Grid Cell length Y',                'm', 'CY',   dtype, jall   )
-               call FileDefAxis( fid, 'FDX'  , 'Grid distance X',                   'm', 'FDX',  dtype, iall-1 )
-               call FileDefAxis( fid, 'FDY'  , 'Grid distance Y',                   'm', 'FDY',  dtype, jall-1 )
-               call FileDefAxis( fid, 'CBFX' , 'Boundary factor Center X',          '1', 'CX',   dtype, iall   )
-               call FileDefAxis( fid, 'CBFY' , 'Boundary factor Center Y',          '1', 'CY',   dtype, jall   )
-               call FileDefAxis( fid, 'FBFX' , 'Boundary factor Face X',            '1', 'FX',   dtype, iall+1 )
-               call FileDefAxis( fid, 'FBFY' , 'Boundary factor Face Y',            '1', 'FY',   dtype, jall+1 )
+               call FILE_Def_Axis( fid, 'CX'   , 'Atmos Grid Center Position X',      'm', 'CX',   dtype, iall   )
+               call FILE_Def_Axis( fid, 'CY'   , 'Atmos Grid Center Position Y',      'm', 'CY',   dtype, jall   )
+               call FILE_Def_Axis( fid, 'FX'   , 'Atmos Grid Face   Position X',      'm', 'FX',   dtype, iall+1 )
+               call FILE_Def_Axis( fid, 'FY'   , 'Atmos Grid Face   Position Y',      'm', 'FY',   dtype, jall+1 )
+               call FILE_Def_Axis( fid, 'CDX'  , 'Grid Cell length X',                'm', 'CX',   dtype, iall   )
+               call FILE_Def_Axis( fid, 'CDY'  , 'Grid Cell length Y',                'm', 'CY',   dtype, jall   )
+               call FILE_Def_Axis( fid, 'FDX'  , 'Grid distance X',                   'm', 'FDX',  dtype, iall-1 )
+               call FILE_Def_Axis( fid, 'FDY'  , 'Grid distance Y',                   'm', 'FDY',  dtype, jall-1 )
+               call FILE_Def_Axis( fid, 'CBFX' , 'Boundary factor Center X',          '1', 'CX',   dtype, iall   )
+               call FILE_Def_Axis( fid, 'CBFY' , 'Boundary factor Center Y',          '1', 'CY',   dtype, jall   )
+               call FILE_Def_Axis( fid, 'FBFX' , 'Boundary factor Face X',            '1', 'FX',   dtype, iall+1 )
+               call FILE_Def_Axis( fid, 'FBFY' , 'Boundary factor Face Y',            '1', 'FY',   dtype, jall+1 )
 
-               call FileDefAxis( fid, 'CXG'  , 'Grid Center Position X (global)',   'm', 'CXG',  dtype, IAG   )
-               call FileDefAxis( fid, 'CYG'  , 'Grid Center Position Y (global)',   'm', 'CYG',  dtype, JAG   )
-               call FileDefAxis( fid, 'FXG'  , 'Grid Face   Position X (global)',   'm', 'FXG',  dtype, IAG+1 )
-               call FileDefAxis( fid, 'FYG'  , 'Grid Face   Position Y (global)',   'm', 'FYG',  dtype, JAG+1 )
-               call FileDefAxis( fid, 'CDXG' , 'Grid Cell length X (global)',       'm', 'CXG',  dtype, IAG   )
-               call FileDefAxis( fid, 'CDYG' , 'Grid Cell length Y (global)',       'm', 'CYG',  dtype, JAG   )
-               call FileDefAxis( fid, 'FDXG' , 'Grid distance X (global)',          'm', 'FDXG', dtype, IAG-1 )
-               call FileDefAxis( fid, 'FDYG' , 'Grid distance Y (global)',          'm', 'FDYG', dtype, JAG-1 )
-               call FileDefAxis( fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG',  dtype, IAG   )
-               call FileDefAxis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG',  dtype, JAG   )
-               call FileDefAxis( fid, 'FBFXG', 'Boundary factor Face   X (global)', '1', 'FXG',  dtype, IAG+1 )
-               call FileDefAxis( fid, 'FBFYG', 'Boundary factor Face   Y (global)', '1', 'FYG',  dtype, JAG+1 )
+               call FILE_Def_Axis( fid, 'CXG'  , 'Grid Center Position X (global)',   'm', 'CXG',  dtype, IAG   )
+               call FILE_Def_Axis( fid, 'CYG'  , 'Grid Center Position Y (global)',   'm', 'CYG',  dtype, JAG   )
+               call FILE_Def_Axis( fid, 'FXG'  , 'Grid Face   Position X (global)',   'm', 'FXG',  dtype, IAG+1 )
+               call FILE_Def_Axis( fid, 'FYG'  , 'Grid Face   Position Y (global)',   'm', 'FYG',  dtype, JAG+1 )
+               call FILE_Def_Axis( fid, 'CDXG' , 'Grid Cell length X (global)',       'm', 'CXG',  dtype, IAG   )
+               call FILE_Def_Axis( fid, 'CDYG' , 'Grid Cell length Y (global)',       'm', 'CYG',  dtype, JAG   )
+               call FILE_Def_Axis( fid, 'FDXG' , 'Grid distance X (global)',          'm', 'FDXG', dtype, IAG-1 )
+               call FILE_Def_Axis( fid, 'FDYG' , 'Grid distance Y (global)',          'm', 'FDYG', dtype, JAG-1 )
+               call FILE_Def_Axis( fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG',  dtype, IAG   )
+               call FILE_Def_Axis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG',  dtype, JAG   )
+               call FILE_Def_Axis( fid, 'FBFXG', 'Boundary factor Face   X (global)', '1', 'FXG',  dtype, IAG+1 )
+               call FILE_Def_Axis( fid, 'FBFYG', 'Boundary factor Face   Y (global)', '1', 'FYG',  dtype, JAG+1 )
 
     ! associate coordinates
     axisname(1:2) = (/'x ','y '/)
-    call FileDefAssociatedCoordinates( fid, 'lon'   , 'longitude',                 'degrees_east' , axisname(1:2), dtype )
+    call FILE_Def_AssociatedCoordinate( fid, 'lon'   , 'longitude',                 'degrees_east' , axisname(1:2), dtype )
     axisname(1:2) = (/'xh','y '/)
-    call FileDefAssociatedCoordinates( fid, 'lon_uy', 'longitude (half level uy)', 'degrees_east' , axisname(1:2), dtype )
+    call FILE_Def_AssociatedCoordinate( fid, 'lon_uy', 'longitude (half level uy)', 'degrees_east' , axisname(1:2), dtype )
     axisname(1:2) = (/'x ','yh'/)
-    call FileDefAssociatedCoordinates( fid, 'lon_xv', 'longitude (half level xv)', 'degrees_east' , axisname(1:2), dtype )
+    call FILE_Def_AssociatedCoordinate( fid, 'lon_xv', 'longitude (half level xv)', 'degrees_east' , axisname(1:2), dtype )
     axisname(1:2) = (/'xh','yh'/)
-    call FileDefAssociatedCoordinates( fid, 'lon_uv', 'longitude (half level uv)', 'degrees_east' , axisname(1:2), dtype )
+    call FILE_Def_AssociatedCoordinate( fid, 'lon_uv', 'longitude (half level uv)', 'degrees_east' , axisname(1:2), dtype )
     axisname(1:2) = (/'x ','y '/)
-    call FileDefAssociatedCoordinates( fid, 'lat'   , 'latitude',                  'degrees_north', axisname(1:2), dtype )
+    call FILE_Def_AssociatedCoordinate( fid, 'lat'   , 'latitude',                  'degrees_north', axisname(1:2), dtype )
     axisname(1:2) = (/'xh','y '/)
-    call FileDefAssociatedCoordinates( fid, 'lat_uy', 'latitude (half level uy)',  'degrees_north', axisname(1:2), dtype )
+    call FILE_Def_AssociatedCoordinate( fid, 'lat_uy', 'latitude (half level uy)',  'degrees_north', axisname(1:2), dtype )
     axisname(1:2) = (/'x ','yh'/)
-    call FileDefAssociatedCoordinates( fid, 'lat_xv', 'latitude (half level xv)',  'degrees_north', axisname(1:2), dtype )
+    call FILE_Def_AssociatedCoordinate( fid, 'lat_xv', 'latitude (half level xv)',  'degrees_north', axisname(1:2), dtype )
     axisname(1:2) = (/'xh','yh'/)
-    call FileDefAssociatedCoordinates( fid, 'lat_uv', 'latitude (half level uv)',  'degrees_north', axisname(1:2), dtype )
+    call FILE_Def_AssociatedCoordinate( fid, 'lat_uv', 'latitude (half level uv)',  'degrees_north', axisname(1:2), dtype )
 
     if ( hasZ ) then
        axisname = (/'z ', 'x ', 'y '/)
-       call FileDefAssociatedCoordinates( fid, 'height',     'height above ground level', &
+       call FILE_Def_AssociatedCoordinate( fid, 'height',     'height above ground level', &
                                           'm', axisname(1:3), dtype                       )
        axisname = (/'zh', 'x ', 'y '/)
-       call FileDefAssociatedCoordinates( fid, 'height_wxy', 'height above ground level (half level wxy)', &
+       call FILE_Def_AssociatedCoordinate( fid, 'height_wxy', 'height above ground level (half level wxy)', &
                                           'm', axisname(1:3), dtype                                        )
     endif
 
     ! attributes
 
     if ( hasZ ) then
-       call FileSetAttribute( fid, 'oz',  'positive', 'down' )
-       call FileSetAttribute( fid, 'ozh', 'positive', 'down' )
-       call FileSetAttribute( fid, 'lz' , 'positive', 'down' )
-       call FileSetAttribute( fid, 'lzh', 'positive', 'down' )
-       call FileSetAttribute( fid, 'uz' , 'positive', 'down' )
-       call FileSetAttribute( fid, 'uzh', 'positive', 'down' )
-       call FileSetAttribute( fid, 'LCZ', 'positive', 'down' )
-       call FileSetAttribute( fid, 'LFZ', 'positive', 'down' )
-       call FileSetAttribute( fid, 'OCZ', 'positive', 'down' )
-       call FileSetAttribute( fid, 'OFZ', 'positive', 'down' )
-       call FileSetAttribute( fid, 'UCZ', 'positive', 'down' )
-       call FileSetAttribute( fid, 'UFZ', 'positive', 'down' )
+       call FILE_Set_Attribute( fid, 'oz' , 'positive', 'down' )
+       call FILE_Set_Attribute( fid, 'ozh', 'positive', 'down' )
+       call FILE_Set_Attribute( fid, 'lz' , 'positive', 'down' )
+       call FILE_Set_Attribute( fid, 'lzh', 'positive', 'down' )
+       call FILE_Set_Attribute( fid, 'uz' , 'positive', 'down' )
+       call FILE_Set_Attribute( fid, 'uzh', 'positive', 'down' )
+       call FILE_Set_Attribute( fid, 'OCZ', 'positive', 'down' )
+       call FILE_Set_Attribute( fid, 'OFZ', 'positive', 'down' )
+       call FILE_Set_Attribute( fid, 'LCZ', 'positive', 'down' )
+       call FILE_Set_Attribute( fid, 'LFZ', 'positive', 'down' )
+       call FILE_Set_Attribute( fid, 'UCZ', 'positive', 'down' )
+       call FILE_Set_Attribute( fid, 'UFZ', 'positive', 'down' )
     endif
 
-    call FileSetAttribute( fid, "x" , "size_global" , ainfo(1)%size_global (:) )
-    call FileSetAttribute( fid, "x" , "start_global", ainfo(1)%start_global(:) )
-    call FileSetAttribute( fid, "x" , "halo_global" , ainfo(1)%halo_global (:) )
-    call FileSetAttribute( fid, "x" , "halo_local"  , ainfo(1)%halo_local  (:) )
-    call FileSetAttribute( fid, "x" , "periodic"    , ainfo(1)%periodic        )
+    call FILE_Set_Attribute( fid, "x" , "size_global" , ainfo(1)%size_global (:) )
+    call FILE_Set_Attribute( fid, "x" , "start_global", ainfo(1)%start_global(:) )
+    call FILE_Set_Attribute( fid, "x" , "halo_global" , ainfo(1)%halo_global (:) )
+    call FILE_Set_Attribute( fid, "x" , "halo_local"  , ainfo(1)%halo_local  (:) )
+    call FILE_Set_Attribute( fid, "x" , "periodic"    , ainfo(1)%periodic        )
 
-    call FileSetAttribute( fid, "xh", "size_global" , ainfo(2)%size_global (:) )
-    call FileSetAttribute( fid, "xh", "start_global", ainfo(2)%start_global(:) )
-    call FileSetAttribute( fid, "xh", "halo_global" , ainfo(2)%halo_global (:) )
-    call FileSetAttribute( fid, "xh", "halo_local"  , ainfo(2)%halo_local  (:) )
-    call FileSetAttribute( fid, "xh", "periodic"    , ainfo(2)%periodic        )
+    call FILE_Set_Attribute( fid, "xh", "size_global" , ainfo(2)%size_global (:) )
+    call FILE_Set_Attribute( fid, "xh", "start_global", ainfo(2)%start_global(:) )
+    call FILE_Set_Attribute( fid, "xh", "halo_global" , ainfo(2)%halo_global (:) )
+    call FILE_Set_Attribute( fid, "xh", "halo_local"  , ainfo(2)%halo_local  (:) )
+    call FILE_Set_Attribute( fid, "xh", "periodic"    , ainfo(2)%periodic        )
 
-    call FileSetAttribute( fid, "y" , "size_global" , ainfo(3)%size_global (:) )
-    call FileSetAttribute( fid, "y" , "start_global", ainfo(3)%start_global(:) )
-    call FileSetAttribute( fid, "y" , "halo_global" , ainfo(3)%halo_global (:) )
-    call FileSetAttribute( fid, "y" , "halo_local"  , ainfo(3)%halo_local  (:) )
-    call FileSetAttribute( fid, "y" , "periodic"    , ainfo(3)%periodic        )
+    call FILE_Set_Attribute( fid, "y" , "size_global" , ainfo(3)%size_global (:) )
+    call FILE_Set_Attribute( fid, "y" , "start_global", ainfo(3)%start_global(:) )
+    call FILE_Set_Attribute( fid, "y" , "halo_global" , ainfo(3)%halo_global (:) )
+    call FILE_Set_Attribute( fid, "y" , "halo_local"  , ainfo(3)%halo_local  (:) )
+    call FILE_Set_Attribute( fid, "y" , "periodic"    , ainfo(3)%periodic        )
 
-    call FileSetAttribute( fid, "yh", "size_global" , ainfo(4)%size_global (:) )
-    call FileSetAttribute( fid, "yh", "start_global", ainfo(4)%start_global(:) )
-    call FileSetAttribute( fid, "yh", "halo_global" , ainfo(4)%halo_global (:) )
-    call FileSetAttribute( fid, "yh", "halo_local"  , ainfo(4)%halo_local  (:) )
-    call FileSetAttribute( fid, "yh", "periodic"    , ainfo(4)%periodic        )
+    call FILE_Set_Attribute( fid, "yh", "size_global" , ainfo(4)%size_global (:) )
+    call FILE_Set_Attribute( fid, "yh", "start_global", ainfo(4)%start_global(:) )
+    call FILE_Set_Attribute( fid, "yh", "halo_global" , ainfo(4)%halo_global (:) )
+    call FILE_Set_Attribute( fid, "yh", "halo_local"  , ainfo(4)%halo_local  (:) )
+    call FILE_Set_Attribute( fid, "yh", "periodic"    , ainfo(4)%periodic        )
 
     ! map projection info
 
     if ( minfo%mapping_name /= "" ) then
-       call FileSetAttribute( fid, "x" , "standard_name", "projection_x_coordinate" )
-       call FileSetAttribute( fid, "xh", "standard_name", "projection_x_coordinate" )
-       call FileSetAttribute( fid, "y" , "standard_name", "projection_y_coordinate" )
-       call FileSetAttribute( fid, "yh", "standard_name", "projection_y_coordinate" )
+       call FILE_Set_Attribute( fid, "x" , "standard_name", "projection_x_coordinate" )
+       call FILE_Set_Attribute( fid, "xh", "standard_name", "projection_x_coordinate" )
+       call FILE_Set_Attribute( fid, "y" , "standard_name", "projection_y_coordinate" )
+       call FILE_Set_Attribute( fid, "yh", "standard_name", "projection_y_coordinate" )
 
-       call FileAddAssociatedVariable( fid, minfo%mapping_name )
-       call FileSetAttribute( fid, minfo%mapping_name, "grid_mapping_name",  minfo%mapping_name )
+       call FILE_Add_AssociatedVariable( fid, minfo%mapping_name )
+       call FILE_Set_Attribute( fid, minfo%mapping_name, "grid_mapping_name",  minfo%mapping_name )
 
        if ( minfo%false_easting(1) /= UNDEF ) then
-          call FileSetAttribute( fid,                   & ! [IN]
+          call FILE_Set_Attribute( fid,                   & ! [IN]
                                  minfo%mapping_name,    & ! [IN]
                                  "false_easting",       & ! [IN]
                                  minfo%false_easting(:) ) ! [IN]
        endif
 
        if ( minfo%false_northing(1) /= UNDEF ) then
-          call FileSetAttribute( fid,                    & ! [IN]
+          call FILE_Set_Attribute( fid,                    & ! [IN]
                                  minfo%mapping_name,     & ! [IN]
                                  "false_northing",       & ! [IN]
                                  minfo%false_northing(:) ) ! [IN]
        endif
 
        if ( minfo%longitude_of_central_meridian(1) /= UNDEF ) then
-          call FileSetAttribute( fid,                                   & ! [IN]
+          call FILE_Set_Attribute( fid,                                   & ! [IN]
                                  minfo%mapping_name,                    & ! [IN]
                                  "longitude_of_central_meridian",       & ! [IN]
                                  minfo%longitude_of_central_meridian(:) ) ! [IN]
        endif
 
        if ( minfo%longitude_of_projection_origin(1) /= UNDEF ) then
-          call FileSetAttribute( fid,                                    & ! [IN]
+          call FILE_Set_Attribute( fid,                                    & ! [IN]
                                  minfo%mapping_name,                     & ! [IN]
                                  "longitude_of_projection_origin",       & ! [IN]
                                  minfo%longitude_of_projection_origin(:) ) ! [IN]
        endif
 
        if ( minfo%latitude_of_projection_origin(1) /= UNDEF ) then
-          call FileSetAttribute( fid,                                   & ! [IN]
+          call FILE_Set_Attribute( fid,                                   & ! [IN]
                                  minfo%mapping_name,                    & ! [IN]
                                  "latitude_of_projection_origin",       & ! [IN]
                                  minfo%latitude_of_projection_origin(:) ) ! [IN]
        endif
 
        if ( minfo%straight_vertical_longitude_from_pole(1) /= UNDEF ) then
-          call FileSetAttribute( fid,                                           & ! [IN]
+          call FILE_Set_Attribute( fid,                                           & ! [IN]
                                  minfo%mapping_name,                            & ! [IN]
                                  "straight_vertical_longitude_from_pole",       & ! [IN]
                                  minfo%straight_vertical_longitude_from_pole(:) ) ! [IN]
@@ -2095,12 +2074,12 @@ contains
 
        if ( minfo%standard_parallel(1) /= UNDEF ) then
           if ( minfo%standard_parallel(2) /= UNDEF ) then
-             call FileSetAttribute( fid,                         & ! [IN]
+             call FILE_Set_Attribute( fid,                         & ! [IN]
                                     minfo%mapping_name,          & ! [IN]
                                     "standard_parallel",         & ! [IN]
                                     minfo%standard_parallel(1:2) ) ! [IN]
           else
-             call FileSetAttribute( fid,                         & ! [IN]
+             call FILE_Set_Attribute( fid,                         & ! [IN]
                                     minfo%mapping_name,          & ! [IN]
                                     "standard_parallel",         & ! [IN]
                                     minfo%standard_parallel(1:1) ) ! [IN]
@@ -2117,9 +2096,9 @@ contains
        fid,       &
        haszcoord, &
        start      )
-    use gtool_file, only: &
-       FileWriteAxis,                 &
-       FileWriteAssociatedCoordinates
+    use scale_file, only: &
+       FILE_Write_Axis,                 &
+       FILE_Write_AssociatedCoordinate
     use scale_process, only: &
        PRC_myrank, &
        PRC_IsMaster
@@ -2199,109 +2178,109 @@ contains
     end if
 
     if ( haszcoord .and. put_z ) then
-       call FileWriteAxis( fid, 'z'  , GRID_CZ (KS  :KE)  , start(1:1) )
-       call FileWriteAxis( fid, 'zh' , GRID_FZ (KS-1:KE)  , start(1:1) )
+       call FILE_Write_Axis( fid, 'z'  , GRID_CZ (KS  :KE)  , start(1:1) )
+       call FILE_Write_Axis( fid, 'zh' , GRID_FZ (KS-1:KE)  , start(1:1) )
 
-       call FileWriteAxis( fid, 'oz',  GRID_OCZ(OKS  :OKE), start(1:1) )
-       call FileWriteAxis( fid, 'ozh', GRID_OFZ(OKS-1:OKE), start(1:1) )
+       call FILE_Write_Axis( fid, 'oz' , GRID_OCZ(OKS  :OKE), start(1:1) )
+       call FILE_Write_Axis( fid, 'ozh', GRID_OFZ(OKS-1:OKE), start(1:1) )
 
-       call FileWriteAxis( fid, 'lz' , GRID_LCZ(LKS  :LKE), start(1:1) )
-       call FileWriteAxis( fid, 'lzh', GRID_LFZ(LKS-1:LKE), start(1:1) )
+       call FILE_Write_Axis( fid, 'lz' , GRID_LCZ(LKS  :LKE), start(1:1) )
+       call FILE_Write_Axis( fid, 'lzh', GRID_LFZ(LKS-1:LKE), start(1:1) )
 
-       call FileWriteAxis( fid, 'uz' , GRID_UCZ(UKS  :UKE), start(1:1) )
-       call FileWriteAxis( fid, 'uzh', GRID_UFZ(UKS-1:UKE), start(1:1) )
+       call FILE_Write_Axis( fid, 'uz' , GRID_UCZ(UKS  :UKE), start(1:1) )
+       call FILE_Write_Axis( fid, 'uzh', GRID_UFZ(UKS-1:UKE), start(1:1) )
     end if
 
     if ( put_x ) then
-       call FileWriteAxis( fid, 'x' ,  GRID_CX(XSB:XEB),  start(2:2) )
-       call FileWriteAxis( fid, 'xh',  GRID_FX(XSB:XEB),  start(2:2) )
+       call FILE_Write_Axis( fid, 'x' ,  GRID_CX(XSB:XEB),  start(2:2) )
+       call FILE_Write_Axis( fid, 'xh',  GRID_FX(XSB:XEB),  start(2:2) )
     end if
 
     if ( put_y ) then
-       call FileWriteAxis( fid, 'y' ,  GRID_CY(YSB:YEB),  start(3:3) )
-       call FileWriteAxis( fid, 'yh',  GRID_FY(YSB:YEB),  start(3:3) )
+       call FILE_Write_Axis( fid, 'y' ,  GRID_CY(YSB:YEB),  start(3:3) )
+       call FILE_Write_Axis( fid, 'yh',  GRID_FY(YSB:YEB),  start(3:3) )
     end if
 
     ! global coordinates (always including halo)
     if ( haszcoord .and. put_z ) then
-       call FileWriteAxis( fid, 'CZ'  , GRID_CZ  (:), start(1:1) )
-       call FileWriteAxis( fid, 'FZ'  , GRID_FZ  (:), start(1:1) )
-       call FileWriteAxis( fid, 'CDZ' , GRID_CDZ (:), start(1:1) )
-       call FileWriteAxis( fid, 'FDZ' , GRID_FDZ (:), start(1:1) )
-       call FileWriteAxis( fid, 'CBFZ', GRID_CBFZ(:), start(1:1) )
-       call FileWriteAxis( fid, 'FBFZ', GRID_FBFZ(:), start(1:1) )
+       call FILE_Write_Axis( fid, 'CZ'  , GRID_CZ  (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'FZ'  , GRID_FZ  (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'CDZ' , GRID_CDZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'FDZ' , GRID_FDZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'CBFZ', GRID_CBFZ(:), start(1:1) )
+       call FILE_Write_Axis( fid, 'FBFZ', GRID_FBFZ(:), start(1:1) )
 
-       call FileWriteAxis( fid, 'OCZ' , GRID_OCZ (:), start(1:1) )
-       call FileWriteAxis( fid, 'OFZ' , GRID_OFZ (:), start(1:1) )
-       call FileWriteAxis( fid, 'OCDZ', GRID_OCDZ(:), start(1:1) )
+       call FILE_Write_Axis( fid, 'OCZ' , GRID_OCZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'OFZ' , GRID_OFZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'OCDZ', GRID_OCDZ(:), start(1:1) )
 
-       call FileWriteAxis( fid, 'LCZ' , GRID_LCZ (:), start(1:1) )
-       call FileWriteAxis( fid, 'LFZ' , GRID_LFZ (:), start(1:1) )
-       call FileWriteAxis( fid, 'LCDZ', GRID_LCDZ(:), start(1:1) )
+       call FILE_Write_Axis( fid, 'LCZ' , GRID_LCZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'LFZ' , GRID_LFZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'LCDZ', GRID_LCDZ(:), start(1:1) )
 
-       call FileWriteAxis( fid, 'UCZ' , GRID_UCZ (:), start(1:1) )
-       call FileWriteAxis( fid, 'UFZ' , GRID_UFZ (:), start(1:1) )
-       call FileWriteAxis( fid, 'UCDZ', GRID_UCDZ(:), start(1:1) )
+       call FILE_Write_Axis( fid, 'UCZ' , GRID_UCZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'UFZ' , GRID_UFZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'UCDZ', GRID_UCDZ(:), start(1:1) )
     end if
 
     if ( IO_AGGREGATE ) then
        if ( PRC_IsMaster ) then
-          call FileWriteAxis( fid, 'CX',   GRID_CXG  (:) )
-          call FileWriteAxis( fid, 'CY',   GRID_CYG  (:) )
-          call FileWriteAxis( fid, 'FX',   GRID_FXG  (:) )
-          call FileWriteAxis( fid, 'FY',   GRID_FYG  (:) )
-          call FileWriteAxis( fid, 'CDX',  GRID_CDXG (:) )
-          call FileWriteAxis( fid, 'CDY',  GRID_CDYG (:) )
-          call FileWriteAxis( fid, 'FDX',  GRID_FDXG (:) )
-          call FileWriteAxis( fid, 'FDY',  GRID_FDYG (:) )
-          call FileWriteAxis( fid, 'CBFX', GRID_CBFXG(:) )
-          call FileWriteAxis( fid, 'CBFY', GRID_CBFYG(:) )
-          call FileWriteAxis( fid, 'FBFX', GRID_FBFXG(:) )
-          call FileWriteAxis( fid, 'FBFY', GRID_FBFYG(:) )
+          call FILE_Write_Axis( fid, 'CX',   GRID_CXG  (:) )
+          call FILE_Write_Axis( fid, 'CY',   GRID_CYG  (:) )
+          call FILE_Write_Axis( fid, 'FX',   GRID_FXG  (:) )
+          call FILE_Write_Axis( fid, 'FY',   GRID_FYG  (:) )
+          call FILE_Write_Axis( fid, 'CDX',  GRID_CDXG (:) )
+          call FILE_Write_Axis( fid, 'CDY',  GRID_CDYG (:) )
+          call FILE_Write_Axis( fid, 'FDX',  GRID_FDXG (:) )
+          call FILE_Write_Axis( fid, 'FDY',  GRID_FDYG (:) )
+          call FILE_Write_Axis( fid, 'CBFX', GRID_CBFXG(:) )
+          call FILE_Write_Axis( fid, 'CBFY', GRID_CBFYG(:) )
+          call FILE_Write_Axis( fid, 'FBFX', GRID_FBFXG(:) )
+          call FILE_Write_Axis( fid, 'FBFY', GRID_FBFYG(:) )
        endif
     else
-       call FileWriteAxis( fid, 'CX',   GRID_CX  (:) )
-       call FileWriteAxis( fid, 'CY',   GRID_CY  (:) )
-       call FileWriteAxis( fid, 'FX',   GRID_FX  (:) )
-       call FileWriteAxis( fid, 'FY',   GRID_FY  (:) )
-       call FileWriteAxis( fid, 'CDX',  GRID_CDX (:) )
-       call FileWriteAxis( fid, 'CDY',  GRID_CDY (:) )
-       call FileWriteAxis( fid, 'FDX',  GRID_FDX (:) )
-       call FileWriteAxis( fid, 'FDY',  GRID_FDY (:) )
-       call FileWriteAxis( fid, 'CBFX', GRID_CBFX(:) )
-       call FileWriteAxis( fid, 'CBFY', GRID_CBFY(:) )
-       call FileWriteAxis( fid, 'FBFX', GRID_FBFX(:) )
-       call FileWriteAxis( fid, 'FBFY', GRID_FBFY(:) )
+       call FILE_Write_Axis( fid, 'CX',   GRID_CX  (:) )
+       call FILE_Write_Axis( fid, 'CY',   GRID_CY  (:) )
+       call FILE_Write_Axis( fid, 'FX',   GRID_FX  (:) )
+       call FILE_Write_Axis( fid, 'FY',   GRID_FY  (:) )
+       call FILE_Write_Axis( fid, 'CDX',  GRID_CDX (:) )
+       call FILE_Write_Axis( fid, 'CDY',  GRID_CDY (:) )
+       call FILE_Write_Axis( fid, 'FDX',  GRID_FDX (:) )
+       call FILE_Write_Axis( fid, 'FDY',  GRID_FDY (:) )
+       call FILE_Write_Axis( fid, 'CBFX', GRID_CBFX(:) )
+       call FILE_Write_Axis( fid, 'CBFY', GRID_CBFY(:) )
+       call FILE_Write_Axis( fid, 'FBFX', GRID_FBFX(:) )
+       call FILE_Write_Axis( fid, 'FBFY', GRID_FBFY(:) )
     endif
 
     if ( (.not. IO_AGGREGATE) .or. PRC_IsMaster ) then
-       call FileWriteAxis( fid, 'CXG',   GRID_CXG  (:) )
-       call FileWriteAxis( fid, 'CYG',   GRID_CYG  (:) )
-       call FileWriteAxis( fid, 'FXG',   GRID_FXG  (:) )
-       call FileWriteAxis( fid, 'FYG',   GRID_FYG  (:) )
-       call FileWriteAxis( fid, 'CDXG',  GRID_CDXG (:) )
-       call FileWriteAxis( fid, 'CDYG',  GRID_CDYG (:) )
-       call FileWriteAxis( fid, 'FDXG',  GRID_FDXG (:) )
-       call FileWriteAxis( fid, 'FDYG',  GRID_FDYG (:) )
-       call FileWriteAxis( fid, 'CBFXG', GRID_CBFXG(:) )
-       call FileWriteAxis( fid, 'CBFYG', GRID_CBFYG(:) )
-       call FileWriteAxis( fid, 'FBFXG', GRID_FBFXG(:) )
-       call FileWriteAxis( fid, 'FBFYG', GRID_FBFYG(:) )
+       call FILE_Write_Axis( fid, 'CXG',   GRID_CXG  (:) )
+       call FILE_Write_Axis( fid, 'CYG',   GRID_CYG  (:) )
+       call FILE_Write_Axis( fid, 'FXG',   GRID_FXG  (:) )
+       call FILE_Write_Axis( fid, 'FYG',   GRID_FYG  (:) )
+       call FILE_Write_Axis( fid, 'CDXG',  GRID_CDXG (:) )
+       call FILE_Write_Axis( fid, 'CDYG',  GRID_CDYG (:) )
+       call FILE_Write_Axis( fid, 'FDXG',  GRID_FDXG (:) )
+       call FILE_Write_Axis( fid, 'FDYG',  GRID_FDYG (:) )
+       call FILE_Write_Axis( fid, 'CBFXG', GRID_CBFXG(:) )
+       call FILE_Write_Axis( fid, 'CBFYG', GRID_CBFYG(:) )
+       call FILE_Write_Axis( fid, 'FBFXG', GRID_FBFXG(:) )
+       call FILE_Write_Axis( fid, 'FBFYG', GRID_FBFYG(:) )
     end if
 
     ! associate coordinates
-    call FileWriteAssociatedCoordinates( fid, 'lon'   , AXIS_LON  (:,:), start(2:3) )
-    call FileWriteAssociatedCoordinates( fid, 'lon_uy', AXIS_LONUY(:,:), start(2:3) )
-    call FileWriteAssociatedCoordinates( fid, 'lon_xv', AXIS_LONXV(:,:), start(2:3) )
-    call FileWriteAssociatedCoordinates( fid, 'lon_uv', AXIS_LONUV(:,:), start(2:3) )
-    call FileWriteAssociatedCoordinates( fid, 'lat'   , AXIS_LAT  (:,:), start(2:3) )
-    call FileWriteAssociatedCoordinates( fid, 'lat_uy', AXIS_LATUY(:,:), start(2:3) )
-    call FileWriteAssociatedCoordinates( fid, 'lat_xv', AXIS_LATXV(:,:), start(2:3) )
-    call FileWriteAssociatedCoordinates( fid, 'lat_uv', AXIS_LATUV(:,:), start(2:3) )
+    call FILE_Write_AssociatedCoordinate( fid, 'lon'   , AXIS_LON  (:,:), start(2:3) )
+    call FILE_Write_AssociatedCoordinate( fid, 'lon_uy', AXIS_LONUY(:,:), start(2:3) )
+    call FILE_Write_AssociatedCoordinate( fid, 'lon_xv', AXIS_LONXV(:,:), start(2:3) )
+    call FILE_Write_AssociatedCoordinate( fid, 'lon_uv', AXIS_LONUV(:,:), start(2:3) )
+    call FILE_Write_AssociatedCoordinate( fid, 'lat'   , AXIS_LAT  (:,:), start(2:3) )
+    call FILE_Write_AssociatedCoordinate( fid, 'lat_uy', AXIS_LATUY(:,:), start(2:3) )
+    call FILE_Write_AssociatedCoordinate( fid, 'lat_xv', AXIS_LATXV(:,:), start(2:3) )
+    call FILE_Write_AssociatedCoordinate( fid, 'lat_uv', AXIS_LATUV(:,:), start(2:3) )
 
     if ( haszcoord ) then
-       call FileWriteAssociatedCoordinates( fid, 'height'    , AXIS_HGT   (:,:,:), start(1:3) )
-       call FileWriteAssociatedCoordinates( fid, 'height_wxy', AXIS_HGTWXY(:,:,:), start(1:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'height'    , AXIS_HGT   (:,:,:), start(1:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'height_wxy', AXIS_HGTWXY(:,:,:), start(1:3) )
     end if
 
     return
@@ -2319,12 +2298,12 @@ contains
        datatype, &
        timeintv, &
        nsteps    )
-    use gtool_file_h, only: &
-       File_REAL8, &
-       File_REAL4
-    use gtool_file, only: &
-       FileDefineVariable, &
-       FileSetAttribute
+    use scale_file_h, only: &
+       FILE_REAL8, &
+       FILE_REAL4
+    use scale_file, only: &
+       FILE_Def_Variable, &
+       FILE_Set_Attribute
     use scale_process, only: &
        PRC_MPIstop
     use scale_mapproj, only: &
@@ -2351,17 +2330,17 @@ contains
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
     if    ( datatype == 'REAL8' ) then
-       dtype = File_REAL8
+       dtype = FILE_REAL8
        elm_size = 4
     elseif( datatype == 'REAL4' ) then
-       dtype = File_REAL4
+       dtype = FILE_REAL4
        elm_size = 8
     else
        if    ( RP == 8 ) then
-          dtype = File_REAL8
+          dtype = FILE_REAL8
           elm_size = 8
        elseif( RP == 4 ) then
-          dtype = File_REAL4
+          dtype = FILE_REAL4
           elm_size = 4
        else
           write(*,*) 'xxx unsupported data type. Check!', trim(datatype), ' item:',trim(varname)
@@ -2484,13 +2463,13 @@ contains
 
     if ( present(timeintv) ) then  ! 3D/4D variable with time dimension
       time_interval = timeintv
-      call FileDefineVariable( fid, vid, varname, desc, unit, ndims, dims, dtype, & ! [IN]
-                               tint=time_interval                                 ) ! [IN]
+      call FILE_Def_Variable( fid, vid, varname, desc, unit, ndims, dims, dtype, & ! [IN]
+                              tint=time_interval                                 ) ! [IN]
     else
-      call FileDefineVariable( fid, vid, varname, desc, unit, ndims, dims, dtype ) ! [IN]
+      call FILE_Def_Variable( fid, vid, varname, desc, unit, ndims, dims, dtype ) ! [IN]
     endif
 
-    if ( mapping /= "" ) call FileSetAttribute( fid, varname, "grid_mapping", mapping )
+    if ( mapping /= "" ) call FILE_Set_Attribute( fid, varname, "grid_mapping", mapping )
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -2505,8 +2484,8 @@ contains
        var,      &
        varname,  &
        axistype  )
-    use gtool_file, only: &
-       FileWrite
+    use scale_file, only: &
+       FILE_Write
     use scale_process, only: &
        PRC_myrank,  &
        PRC_MPIstop
@@ -2553,7 +2532,7 @@ contains
        call PRC_MPIstop
     endif
 
-    if( exec ) call FileWrite( fid, vid, var(dim1_S:dim1_E), &
+    if( exec ) call FILE_Write( fid, vid, var(dim1_S:dim1_E), &
                                NOWSEC, NOWSEC, start         ) ! [IN]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -2570,10 +2549,10 @@ contains
        varname,  &
        axistype, &
        nohalo    )
-    use gtool_file, only: &
-       RMISS
-    use gtool_file, only: &
-       FileWrite
+    use scale_file_h, only: &
+       RMISS => FILE_RMISS
+    use scale_file, only: &
+       FILE_Write
     use scale_process, only: &
        PRC_myrank,     &
        PRC_MPIstop
@@ -2675,10 +2654,10 @@ contains
           enddo
           enddo
 
-          call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
+          call FILE_Write( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
                           NOWSEC, NOWSEC, start                           ) ! [IN]
        else
-          call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E), &
+          call FILE_Write( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E), &
                           NOWSEC, NOWSEC, start                       ) ! [IN]
        endif
 
@@ -2698,10 +2677,10 @@ contains
        varname,  &
        axistype, &
        nohalo    )
-    use gtool_file, only: &
-       RMISS
-    use gtool_file, only: &
-       FileWrite
+    use scale_file_h, only: &
+       RMISS => FILE_RMISS
+    use scale_file, only: &
+       FILE_Write
     use scale_process, only: &
        PRC_myrank,  &
        PRC_MPIstop
@@ -2819,10 +2798,10 @@ contains
        enddo
        enddo
 
-       call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
+       call FILE_Write( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
                        NOWSEC, NOWSEC, start                                         ) ! [IN]
     else
-       call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
+       call FILE_Write( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
                        NOWSEC, NOWSEC, start                                     ) ! [IN]
     endif
 
@@ -2843,10 +2822,10 @@ contains
        timetarg, &
        timeofs,  &
        nohalo    )
-    use gtool_file, only: &
-       RMISS
-    use gtool_file, only: &
-       FileWrite
+    use scale_file_h, only: &
+       RMISS => FILE_RMISS
+    use scale_file, only: &
+       FILE_Write
     use scale_process, only: &
        PRC_myrank,     &
        PRC_MPIstop
@@ -2947,10 +2926,10 @@ contains
           enddo
           enddo
 
-          call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
+          call FILE_Write( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
                           nowtime, nowtime, start                         ) ! [IN]
        else
-          call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,timetarg), &
+          call FILE_Write( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,timetarg), &
                           nowtime, nowtime, start                              ) ! [IN]
        endif
     else
@@ -2984,10 +2963,10 @@ contains
              enddo
              enddo
 
-             call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
+             call FILE_Write( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
                              nowtime, nowtime, start                         ) ! [IN]
           else
-             call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,n), &
+             call FILE_Write( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,n), &
                              nowtime, nowtime, start                       ) ! [IN]
           endif
           nowtime = nowtime + time_interval
@@ -3011,11 +2990,11 @@ contains
        timetarg, &
        timeofs,  &
        nohalo    )
-    use gtool_file, only: &
-       RMISS
-    use gtool_file, only: &
-       FileWrite, &
-       FileFlush
+    use scale_file_h, only: &
+       RMISS => FILE_RMISS
+    use scale_file, only: &
+       FILE_Write, &
+       FILE_Flush
     use scale_process, only: &
        PRC_myrank,     &
        PRC_MPIstop
@@ -3148,10 +3127,10 @@ contains
           enddo
           enddo
 
-          call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
+          call FILE_Write( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
                           nowtime, nowtime, start                                       ) ! [IN]
        else
-          call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,timetarg), &
+          call FILE_Write( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,timetarg), &
                           nowtime, nowtime, start                                            ) ! [IN]
        endif
     else
@@ -3193,13 +3172,13 @@ contains
              enddo
              enddo
 
-             call FileWrite( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
+             call FILE_Write( fid, vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
                              nowtime, nowtime, start                                       ) ! [IN]
           else
-             call FileWrite( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,n), &
+             call FILE_Write( fid, vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,n), &
                              nowtime, nowtime, start                                     ) ! [IN]
           endif
-          call FileFlush( fid )
+          call FILE_Flush( fid )
           nowtime = nowtime + time_interval
        enddo
     endif
@@ -3216,7 +3195,7 @@ contains
     integer :: fid
     !---------------------------------------------------------------------------
 
-    do fid = 0, File_nfile_max-1
+    do fid = 0, FILE_FILE_MAX-1
        call FILEIO_close( fid )
     enddo
 

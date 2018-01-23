@@ -6,11 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2011-12-05 (H.Yashiro)   [new]
-!! @li      2012-03-23 (H.Yashiro)   [mod] Explicit index parameter inclusion
-!! @li      2012-06-11 (S.Nishizawa) [mod] use gtool_history
-!!
 !<
 !-------------------------------------------------------------------------------
 module scale_history
@@ -108,8 +103,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine HIST_setup
-    use gtool_history, only: &
-       HistoryInit
+    use scale_file_history, only: &
+       FILE_HISTORY_Init
     use scale_process, only: &
        PRC_MPIstop,    &
        PRC_masterrank, &
@@ -238,19 +233,19 @@ contains
 
     km = max( LKMAX+1, UKMAX+1, KMAX+1, HIST_PRES_nlayer )
 
-    call HistoryInit( HIST_item_limit,                  & ! [OUT]
-                      HIST_variant_limit,               & ! [OUT]
-                      imh, jmh, km,                     & ! [IN]
-                      PRC_masterrank,                   & ! [IN]
-                      PRC_myrank,                       & ! [IN]
-                      HISTORY_H_TITLE,                  & ! [IN]
-                      H_SOURCE,                         & ! [IN]
-                      H_INSTITUTE,                      & ! [IN]
-                      time_start     = start_daysec,    & ! [IN]
-                      time_interval  = TIME_DTSEC,      & ! [IN]
-                      time_since     = HISTORY_T_SINCE, & ! [IN]
-                      default_zcoord = 'model',         & ! [IN]
-                      namelist_fid   = IO_FID_CONF      ) ! [IN]
+    call FILE_HISTORY_Init( HIST_item_limit,                  & ! [OUT]
+                            HIST_variant_limit,               & ! [OUT]
+                            imh, jmh, km,                     & ! [IN]
+                            PRC_masterrank,                   & ! [IN]
+                            PRC_myrank,                       & ! [IN]
+                            HISTORY_H_TITLE,                  & ! [IN]
+                            H_SOURCE,                         & ! [IN]
+                            H_INSTITUTE,                      & ! [IN]
+                            time_start     = start_daysec,    & ! [IN]
+                            time_interval  = TIME_DTSEC,      & ! [IN]
+                            time_since     = HISTORY_T_SINCE, & ! [IN]
+                            default_zcoord = 'model',         & ! [IN]
+                            namelist_fid   = IO_FID_CONF      ) ! [IN]
 
     HIST_item_count = 0
     if ( HIST_item_limit > 0 ) then
@@ -328,8 +323,8 @@ contains
        xdim,   &
        ydim,   &
        zdim    )
-    use gtool_history, only: &
-       HistoryAddVariable
+    use scale_file_history, only: &
+       FILE_HISTORY_Add_Variable
     use scale_time, only: &
        TIME_NOWSTEP
     use scale_process, only: &
@@ -570,44 +565,44 @@ contains
     if ( atom ) then
 
        ! model coordinate (terrain following coordinate)
-       call HistoryAddVariable( nvariant1,        & ! [OUT]
-                                item,             & ! [IN]
-                                dims(1:ndim),     & ! [IN]
-                                desc,             & ! [IN]
-                                unit,             & ! [IN]
-                                mapping_name,     & ! [IN]
-                                TIME_NOWSTEP,     & ! [IN]
-                                zcoord = 'model', & ! [IN]
-                                start  = start,   & ! [IN]
-                                count  = count    ) ! [IN]
+       call FILE_HISTORY_Add_Variable( nvariant1,        & ! [OUT]
+                                       item,             & ! [IN]
+                                       dims(1:ndim),     & ! [IN]
+                                       desc,             & ! [IN]
+                                       unit,             & ! [IN]
+                                       mapping_name,     & ! [IN]
+                                       TIME_NOWSTEP,     & ! [IN]
+                                       zcoord = 'model', & ! [IN]
+                                       start  = start,   & ! [IN]
+                                       count  = count    ) ! [IN]
 
        ! absolute height coordinate
        dims(3) = 'z'
-       call HistoryAddVariable( nvariant2,      & ! [OUT]
-                                item,           & ! [IN]
-                                dims(1:ndim),   & ! [IN]
-                                desc,           & ! [IN]
-                                unit,           & ! [IN]
-                                mapping_name,   & ! [IN]
-                                TIME_NOWSTEP,   & ! [IN]
-                                zcoord = 'z',   & ! [IN]
-                                start  = start, & ! [IN]
-                                count  = count  ) ! [IN]
+       call FILE_HISTORY_Add_Variable( nvariant2,      & ! [OUT]
+                                       item,           & ! [IN]
+                                       dims(1:ndim),   & ! [IN]
+                                       desc,           & ! [IN]
+                                       unit,           & ! [IN]
+                                       mapping_name,   & ! [IN]
+                                       TIME_NOWSTEP,   & ! [IN]
+                                       zcoord = 'z',   & ! [IN]
+                                       start  = start, & ! [IN]
+                                       count  = count  ) ! [IN]
 
        ! pressure coordinate
        if ( HIST_PRES_nlayer > 0 ) then
 
           dims(3) = 'pressure'
-          call HistoryAddVariable( nvariant3,           & ! [OUT]
-                                   item,                & ! [IN]
-                                   dims(1:ndim),        & ! [IN]
-                                   desc,                & ! [IN]
-                                   unit,                & ! [IN]
-                                   mapping_name,        & ! [IN]
-                                   TIME_NOWSTEP,        & ! [IN]
-                                   zcoord = 'pressure', & ! [IN]
-                                   start  = start,      & ! [IN]
-                                   count  = count       ) ! [IN]
+          call FILE_HISTORY_Add_Variable( nvariant3,           & ! [OUT]
+                                          item,                & ! [IN]
+                                          dims(1:ndim),        & ! [IN]
+                                          desc,                & ! [IN]
+                                          unit,                & ! [IN]
+                                          mapping_name,        & ! [IN]
+                                          TIME_NOWSTEP,        & ! [IN]
+                                          zcoord = 'pressure', & ! [IN]
+                                          start  = start,      & ! [IN]
+                                          count  = count       ) ! [IN]
 
        else
           nvariant3 = 0
@@ -615,15 +610,15 @@ contains
 
     else
 
-       call HistoryAddVariable( nvariant1,     & ! [OUT]
-                                item,          & ! [IN]
-                                dims(1:ndim),  & ! [IN]
-                                desc,          & ! [IN]
-                                unit,          & ! [IN]
-                                mapping_name,  & ! [IN]
-                                TIME_NOWSTEP,  & ! [IN]
-                                start = start, & ! [IN]
-                                count = count  ) ! [IN]
+       call FILE_HISTORY_Add_Variable( nvariant1,     & ! [OUT]
+                                       item,          & ! [IN]
+                                       dims(1:ndim),  & ! [IN]
+                                       desc,          & ! [IN]
+                                       unit,          & ! [IN]
+                                       mapping_name,  & ! [IN]
+                                       TIME_NOWSTEP,  & ! [IN]
+                                       start = start, & ! [IN]
+                                       count = count  ) ! [IN]
 
        nvariant2 = 0
        nvariant3 = 0
@@ -660,8 +655,8 @@ contains
   subroutine HIST_query( &
        itemid, &
        answer  )
-    use gtool_history, only: &
-       HistoryQuery
+    use scale_file_history, only: &
+       FILE_HISTORY_Query
     use scale_time, only: &
        TIME_NOWSTEP
     implicit none
@@ -680,7 +675,7 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    call HistoryQuery( HIST_item(itemid), & ! [IN]
+    call FILE_HISTORY_Query( HIST_item(itemid), & ! [IN]
                        TIME_NOWSTEP,      & ! [IN]
                        answer             ) ! [OUT]
 
@@ -708,8 +703,8 @@ contains
        itemid )
     use MPI, only: &
        MPI_COMM_NULL
-    use gtool_history, only: &
-       HistoryFileCreate
+    use scale_file_history, only: &
+       FILE_HISTORY_Create
     use scale_process, only: &
        PRC_LOCAL_COMM_WORLD
     use scale_time, only: &
@@ -738,11 +733,11 @@ contains
        comm = MPI_COMM_NULL
     endif
 
-    call HistoryFileCreate( itemid,         & ! [IN]
-                            TIME_NOWSTEP,   & ! [IN]
-                            timelabel,      & ! [IN]
-                            comm=comm,      & ! [IN]
-                            existed=existed ) ! [OUT]
+    call FILE_HISTORY_Create( itemid,         & ! [IN]
+                              TIME_NOWSTEP,   & ! [IN]
+                              timelabel,      & ! [IN]
+                              comm=comm,      & ! [IN]
+                              existed=existed ) ! [OUT]
 
     if ( .NOT. existed ) call HIST_set_axes_attributes
 
@@ -756,8 +751,8 @@ contains
   subroutine HIST_put_0D( &
        itemid, &
        var     )
-    use gtool_history, only: &
-       HistoryPut
+    use scale_file_history, only: &
+       FILE_HISTORY_Put
     use scale_time, only: &
        TIME_NOWSTEP
     implicit none
@@ -782,9 +777,9 @@ contains
     do v = 1, HIST_variant(itemid)
        id = id + 1
 
-       call HistoryPut( id,           & ! [IN]
-                        TIME_NOWSTEP, & ! [IN]
-                        var           ) ! [IN]
+       call FILE_HISTORY_Put( id,           & ! [IN]
+                              TIME_NOWSTEP, & ! [IN]
+                              var           ) ! [IN]
     enddo
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -798,8 +793,8 @@ contains
        itemid, &
        var,    &
        zdim    )
-    use gtool_history, only: &
-       HistoryPut
+    use scale_file_history, only: &
+       FILE_HISTORY_Put
     use scale_time, only: &
        TIME_NOWSTEP
     implicit none
@@ -862,9 +857,9 @@ contains
     do v = 1, HIST_variant(itemid)
        id = id + 1
 
-       call HistoryPut( id,               & ! [IN]
-                        TIME_NOWSTEP,     & ! [IN]
-                        var_trim(1:ksize) ) ! [IN]
+       call FILE_HISTORY_Put( id,               & ! [IN]
+                              TIME_NOWSTEP,     & ! [IN]
+                              var_trim(1:ksize) ) ! [IN]
     enddo
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -880,10 +875,10 @@ contains
        xdim,   &
        ydim,   &
        nohalo  )
-    use gtool_file, only: &
-       RMISS
-    use gtool_history, only: &
-       HistoryPut
+    use scale_file_h, only: &
+       RMISS => FILE_RMISS
+    use scale_file_history, only: &
+       FILE_HISTORY_Put
     use scale_time, only: &
        TIME_NOWSTEP
     implicit none
@@ -984,9 +979,9 @@ contains
 
        id = id + 1
 
-       call HistoryPut( id,                     & ! [IN]
-                        TIME_NOWSTEP,           & ! [IN]
-                        var_trim(1:isize*jsize) ) ! [IN]
+       call FILE_HISTORY_Put( id,                     & ! [IN]
+                              TIME_NOWSTEP,           & ! [IN]
+                              var_trim(1:isize*jsize) ) ! [IN]
     enddo
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -1003,10 +998,10 @@ contains
        ydim,   &
        zdim,   &
        nohalo  )
-    use gtool_file, only: &
-       RMISS
-    use gtool_history, only: &
-       HistoryPut
+    use scale_file_h, only: &
+       RMISS => FILE_RMISS
+    use scale_file_history, only: &
+       FILE_HISTORY_Put
     use scale_time, only: &
        TIME_NOWSTEP
     use scale_interpolation, only: &
@@ -1238,9 +1233,9 @@ contains
 
        id = id + 1
 
-       call HistoryPut( id,                           & ! [IN]
-                        TIME_NOWSTEP,                 & ! [IN]
-                        var_trim(1:isize*jsize*ksize) ) ! [IN]
+       call FILE_HISTORY_Put( id,                           & ! [IN]
+                              TIME_NOWSTEP,                 & ! [IN]
+                              var_trim(1:isize*jsize*ksize) ) ! [IN]
     enddo
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -1467,8 +1462,8 @@ contains
        varname,      &
        step,         &
        allow_missing )
-    use gtool_history, only: &
-       HistoryGet
+    use scale_file_history, only: &
+       FILE_HISTORY_Get
     implicit none
 
     real(RP),         intent(out) :: var(:)     !< value
@@ -1486,11 +1481,11 @@ contains
     am = .false.
     if( present(allow_missing) ) am = allow_missing
 
-    call HistoryGet( var(:),          & ! [OUT]
-                     basename,        & ! [IN]
-                     varname,         & ! [IN]
-                     step,            & ! [IN]
-                     allow_missing=am ) ! [IN]
+    call FILE_HISTORY_Get( var(:),          & ! [OUT]
+                           basename,        & ! [IN]
+                           varname,         & ! [IN]
+                           step,            & ! [IN]
+                           allow_missing=am ) ! [IN]
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
@@ -1505,8 +1500,8 @@ contains
        varname,      &
        step,         &
        allow_missing )
-    use gtool_history, only: &
-       HistoryGet
+    use scale_file_history, only: &
+       FILE_HISTORY_Get
     implicit none
 
     real(RP),         intent(out) :: var(:,:)   !< value
@@ -1524,11 +1519,11 @@ contains
     am = .false.
     if( present(allow_missing) ) am = allow_missing
 
-    call HistoryGet( var(:,:),        & ! [OUT]
-                     basename,        & ! [IN]
-                     varname,         & ! [IN]
-                     step,            & ! [IN]
-                     allow_missing=am ) ! [IN]
+    call FILE_HISTORY_Get( var(:,:),        & ! [OUT]
+                           basename,        & ! [IN]
+                           varname,         & ! [IN]
+                           step,            & ! [IN]
+                           allow_missing=am ) ! [IN]
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
@@ -1543,8 +1538,8 @@ contains
        varname,      &
        step,         &
        allow_missing )
-    use gtool_history, only: &
-       HistoryGet
+    use scale_file_history, only: &
+       FILE_HISTORY_Get
     implicit none
 
     real(RP),         intent(out) :: var(:,:,:) !< value
@@ -1562,11 +1557,11 @@ contains
     am = .false.
     if( present(allow_missing) ) am = allow_missing
 
-    call HistoryGet( var(:,:,:),      & ! [OUT]
-                     basename,        & ! [IN]
-                     varname,         & ! [IN]
-                     step,            & ! [IN]
-                     allow_missing=am ) ! [IN]
+    call FILE_HISTORY_Get( var(:,:,:),      & ! [OUT]
+                           basename,        & ! [IN]
+                           varname,         & ! [IN]
+                           step,            & ! [IN]
+                           allow_missing=am ) ! [IN]
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
@@ -1576,9 +1571,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Flush history buffer to file
   subroutine HIST_write
-    use gtool_history, only: &
-       HistoryWriteAll, &
-       HistoryWriteAxes
+    use scale_file_history, only: &
+       FILE_HISTORY_Write_All, &
+       FILE_HISTORY_Write_Axes
     use scale_time, only: &
        TIME_NOWSTEP
     implicit none
@@ -1590,9 +1585,9 @@ contains
 
     ! Note this subroutine must be called after all HIST_reg calls are completed
     ! Write registered history axes to history file
-    call HistoryWriteAxes( axis_written_first )
+    call FILE_HISTORY_Write_Axes( axis_written_first )
 
-    call HistoryWriteAll( TIME_NOWSTEP ) ![IN]
+    call FILE_HISTORY_Write_All( TIME_NOWSTEP ) ![IN]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -1604,9 +1599,9 @@ contains
   !  only register the axis and coordinate variables into internal buffers
   !  The actual write happens later when calling HIST_write
   subroutine HIST_put_axes
-    use gtool_history, only: &
-       HistoryPutAxis,  &
-       HistoryPutAssociatedCoordinates
+    use scale_file_history, only: &
+       FILE_HISTORY_Put_Axis,  &
+       FILE_HISTORY_Put_AssociatedCoordinate
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_process, only: &
@@ -1764,89 +1759,87 @@ contains
 
     ! for the shared-file I/O method, the axes are global (gsize)
     ! for one-file-per-process I/O method, the axes size is equal to the local buffer size
-    call HistoryPutAxis( 'z',   'Z',               'm', 'z',   GRID_CZ (KS  :KE),   gsize=KMAX   , start=startZ )
-    call HistoryPutAxis( 'zh',  'Z (half level)',  'm', 'zh',  GRID_FZ (KS-1:KE),   gsize=KMAX+1 , start=startZ )
+    call FILE_HISTORY_Put_Axis( 'z',   'Z',               'm', 'z',   GRID_CZ (KS  :KE),   gsize=KMAX   , start=startZ )
+    call FILE_HISTORY_Put_Axis( 'zh',  'Z (half level)',  'm', 'zh',  GRID_FZ (KS-1:KE),   gsize=KMAX+1 , start=startZ )
 
     if ( HIST_PRES_nlayer > 0 ) then
-       call HistoryPutAxis( 'pressure', 'Pressure', 'hPa', 'pressure', HIST_PRES_val(:)/100.0_RP, &
+       call FILE_HISTORY_Put_Axis( 'pressure', 'Pressure', 'hPa', 'pressure', HIST_PRES_val(:)/100.0_RP, &
                             gsize=HIST_PRES_nlayer, start=startZ, down=.true.                     )
     endif
 
-    call HistoryPutAxis( 'oz',  'OZ',              'm', 'oz',  GRID_OCZ(OKS  :OKE), gsize=OKMAX  , start=startZ, down=.true. )
-    call HistoryPutAxis( 'ozh', 'OZ (half level)', 'm', 'ozh', GRID_OFZ(OKS-1:OKE), gsize=OKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Put_Axis( 'oz',  'OZ',              'm', 'oz',  GRID_OCZ(OKS  :OKE), gsize=OKMAX  , start=startZ, down=.true. )
+    call FILE_HISTORY_Put_Axis( 'ozh', 'OZ (half level)', 'm', 'ozh', GRID_OFZ(OKS-1:OKE), gsize=OKMAX+1, start=startZ, down=.true. )
 
-    call HistoryPutAxis( 'lz',  'LZ',              'm', 'lz',  GRID_LCZ(LKS  :LKE), gsize=LKMAX  , start=startZ, down=.true. )
-    call HistoryPutAxis( 'lzh', 'LZ (half level)', 'm', 'lzh', GRID_LFZ(LKS-1:LKE), gsize=LKMAX+1, start=startZ, down=.true. )
 
-    call HistoryPutAxis( 'uz',  'UZ',              'm', 'uz',  GRID_UCZ(UKS  :UKE), gsize=UKMAX  , start=startZ, down=.true. )
-    call HistoryPutAxis( 'uzh', 'UZ (half level)', 'm', 'uzh', GRID_UFZ(UKS-1:UKE), gsize=UKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Put_Axis( 'uz',  'UZ',              'm', 'uz',  GRID_UCZ(UKS  :UKE), gsize=UKMAX  , start=startZ, down=.true. )
+    call FILE_HISTORY_Put_Axis( 'uzh', 'UZ (half level)', 'm', 'uzh', GRID_UFZ(UKS-1:UKE), gsize=UKMAX+1, start=startZ, down=.true. )
 
-    call HistoryPutAxis( 'x',   'X',               'm', 'x',   GRID_CX (ims :ime),  gsize=XAG , start=startX  )
-    call HistoryPutAxis( 'xh',  'X (half level)',  'm', 'xh',  GRID_FX (imsh:ime),  gsize=XAGH, start=startXH )
+    call FILE_HISTORY_Put_Axis( 'x',   'X',               'm', 'x',   GRID_CX (ims :ime),  gsize=XAG , start=startX  )
+    call FILE_HISTORY_Put_Axis( 'xh',  'X (half level)',  'm', 'xh',  GRID_FX (imsh:ime),  gsize=XAGH, start=startXH )
 
-    call HistoryPutAxis( 'y',   'Y',               'm', 'y',   GRID_CY (jms :jme),  gsize=YAG , start=startY  )
-    call HistoryPutAxis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY (jmsh:jme),  gsize=YAGH, start=startYH )
+    call FILE_HISTORY_Put_Axis( 'y',   'Y',               'm', 'y',   GRID_CY (jms :jme),  gsize=YAG , start=startY  )
+    call FILE_HISTORY_Put_Axis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY (jmsh:jme),  gsize=YAGH, start=startYH )
 
     ! axes below always include halos when written to file regardless of PRC_PERIODIC_X/PRC_PERIODIC_Y
-    call HistoryPutAxis( 'CZ',   'Atmos Grid Center Position Z', 'm', 'CZ',  GRID_CZ,   gsize=KA,      start=startZ )
-    call HistoryPutAxis( 'FZ',   'Atmos Grid Face Position Z',   'm', 'FZ',  GRID_FZ,   gsize=KA+1,    start=startZ )
-    call HistoryPutAxis( 'CDZ',  'Grid Cell length Z',           'm', 'CZ',  GRID_CDZ,  gsize=KA,      start=startZ )
-    call HistoryPutAxis( 'FDZ',  'Grid distance Z',              'm', 'FDZ', GRID_FDZ,  gsize=KA-1,    start=startZ )
-    call HistoryPutAxis( 'CBFZ', 'Boundary factor Center Z',     '1', 'CZ',  GRID_CBFZ, gsize=KA,      start=startZ )
-    call HistoryPutAxis( 'FBFZ', 'Boundary factor Face Z',       '1', 'FZ',  GRID_FBFZ, gsize=KA+1,    start=startZ )
+    call FILE_HISTORY_Put_Axis( 'CZ',   'Atmos Grid Center Position Z', 'm', 'CZ',  GRID_CZ,   gsize=KA,      start=startZ )
+    call FILE_HISTORY_Put_Axis( 'FZ',   'Atmos Grid Face Position Z',   'm', 'FZ',  GRID_FZ,   gsize=KA+1,    start=startZ )
+    call FILE_HISTORY_Put_Axis( 'CDZ',  'Grid Cell length Z',           'm', 'CZ',  GRID_CDZ,  gsize=KA,      start=startZ )
+    call FILE_HISTORY_Put_Axis( 'FDZ',  'Grid distance Z',              'm', 'FDZ', GRID_FDZ,  gsize=KA-1,    start=startZ )
+    call FILE_HISTORY_Put_Axis( 'CBFZ', 'Boundary factor Center Z',     '1', 'CZ',  GRID_CBFZ, gsize=KA,      start=startZ )
+    call FILE_HISTORY_Put_Axis( 'FBFZ', 'Boundary factor Face Z',       '1', 'FZ',  GRID_FBFZ, gsize=KA+1,    start=startZ )
 
-    call HistoryPutAxis( 'OCZ',  'Ocean Grid Center Position Z', 'm', 'OCZ', GRID_OCZ,  gsize=OKMAX,   start=startZ, down=.true. )
-    call HistoryPutAxis( 'OFZ',  'Ocean Grid Face Position Z',   'm', 'OFZ', GRID_OFZ,  gsize=OKMAX+1, start=startZ, down=.true. )
-    call HistoryPutAxis( 'OCDZ', 'Ocean Grid Cell length Z',     'm', 'OCZ', GRID_OCDZ, gsize=OKMAX,   start=startZ              )
+    call FILE_HISTORY_Put_Axis( 'OCZ',  'Ocean Grid Center Position Z', 'm', 'OCZ', GRID_OCZ,  gsize=OKMAX,   start=startZ, down=.true. )
+    call FILE_HISTORY_Put_Axis( 'OFZ',  'Ocean Grid Face Position Z',   'm', 'OFZ', GRID_OFZ,  gsize=OKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Put_Axis( 'OCDZ', 'Ocean Grid Cell length Z',     'm', 'OCZ', GRID_OCDZ, gsize=OKMAX,   start=startZ              )
 
-    call HistoryPutAxis( 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', GRID_LCZ,  gsize=LKMAX,   start=startZ, down=.true. )
-    call HistoryPutAxis( 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', GRID_LFZ,  gsize=LKMAX+1, start=startZ, down=.true. )
-    call HistoryPutAxis( 'LCDZ', 'Land Grid Cell length Z',      'm', 'LCZ', GRID_LCDZ, gsize=LKMAX,   start=startZ              )
+    call FILE_HISTORY_Put_Axis( 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', GRID_LCZ,  gsize=LKMAX,   start=startZ, down=.true. )
+    call FILE_HISTORY_Put_Axis( 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', GRID_LFZ,  gsize=LKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Put_Axis( 'LCDZ', 'Land Grid Cell length Z',      'm', 'LCZ', GRID_LCDZ, gsize=LKMAX,   start=startZ              )
 
-    call HistoryPutAxis( 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', GRID_UCZ,  gsize=UKMAX,   start=startZ, down=.true. )
-    call HistoryPutAxis( 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', GRID_UFZ,  gsize=UKMAX+1, start=startZ, down=.true. )
-    call HistoryPutAxis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', GRID_UCDZ, gsize=UKMAX,   start=startZ              )
+    call FILE_HISTORY_Put_Axis( 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', GRID_UCZ,  gsize=UKMAX,   start=startZ, down=.true. )
+    call FILE_HISTORY_Put_Axis( 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', GRID_UFZ,  gsize=UKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Put_Axis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', GRID_UCDZ, gsize=UKMAX,   start=startZ              )
 
     if ( IO_AGGREGATE ) then
-       call HistoryPutAxis( 'CX',   'Atmos Grid Center Position X', 'm', 'CX',  GRID_CXG,   gsize=IAG,   start=startZ )
-       call HistoryPutAxis( 'CY',   'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CYG,   gsize=JAG,   start=startZ )
-       call HistoryPutAxis( 'FX',   'Atmos Grid Face Position X',   'm', 'FX',  GRID_FXG,   gsize=IAG+1, start=startZ )
-       call HistoryPutAxis( 'FY',   'Atmos Grid Face Position Y',   'm', 'FY',  GRID_FYG,   gsize=JAG+1, start=startZ )
-       call HistoryPutAxis( 'CDX',  'Grid Cell length X',           'm', 'CX',  GRID_CDXG,  gsize=IAG,   start=startZ )
-       call HistoryPutAxis( 'CDY',  'Grid Cell length Y',           'm', 'CY',  GRID_CDYG,  gsize=JAG,   start=startZ )
-       call HistoryPutAxis( 'FDX',  'Grid distance X',              'm', 'FDX', GRID_FDXG,  gsize=IAG-1, start=startZ )
-       call HistoryPutAxis( 'FDY',  'Grid distance Y',              'm', 'FDY', GRID_FDYG,  gsize=JAG-1, start=startZ )
-       call HistoryPutAxis( 'CBFX', 'Boundary factor Center X',     '1', 'CX',  GRID_CBFXG, gsize=IAG,   start=startZ )
-       call HistoryPutAxis( 'CBFY', 'Boundary factor Center Y',     '1', 'CY',  GRID_CBFYG, gsize=JAG,   start=startZ )
-       call HistoryPutAxis( 'FBFX', 'Boundary factor Face X',       '1', 'FX',  GRID_FBFXG, gsize=IAG+1, start=startZ )
-       call HistoryPutAxis( 'FBFY', 'Boundary factor Face Y',       '1', 'FY',  GRID_FBFYG, gsize=JAG+1, start=startZ )
+       call FILE_HISTORY_Put_Axis( 'CX',   'Atmos Grid Center Position X', 'm', 'CX',  GRID_CXG,   gsize=IAG,   start=startZ )
+       call FILE_HISTORY_Put_Axis( 'CY',   'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CYG,   gsize=JAG,   start=startZ )
+       call FILE_HISTORY_Put_Axis( 'FX',   'Atmos Grid Face Position X',   'm', 'FX',  GRID_FXG,   gsize=IAG+1, start=startZ )
+       call FILE_HISTORY_Put_Axis( 'FY',   'Atmos Grid Face Position Y',   'm', 'FY',  GRID_FYG,   gsize=JAG+1, start=startZ )
+       call FILE_HISTORY_Put_Axis( 'CDX',  'Grid Cell length X',           'm', 'CX',  GRID_CDXG,  gsize=IAG,   start=startZ )
+       call FILE_HISTORY_Put_Axis( 'CDY',  'Grid Cell length Y',           'm', 'CY',  GRID_CDYG,  gsize=JAG,   start=startZ )
+       call FILE_HISTORY_Put_Axis( 'FDX',  'Grid distance X',              'm', 'FDX', GRID_FDXG,  gsize=IAG-1, start=startZ )
+       call FILE_HISTORY_Put_Axis( 'FDY',  'Grid distance Y',              'm', 'FDY', GRID_FDYG,  gsize=JAG-1, start=startZ )
+       call FILE_HISTORY_Put_Axis( 'CBFX', 'Boundary factor Center X',     '1', 'CX',  GRID_CBFXG, gsize=IAG,   start=startZ )
+       call FILE_HISTORY_Put_Axis( 'CBFY', 'Boundary factor Center Y',     '1', 'CY',  GRID_CBFYG, gsize=JAG,   start=startZ )
+       call FILE_HISTORY_Put_Axis( 'FBFX', 'Boundary factor Face X',       '1', 'FX',  GRID_FBFXG, gsize=IAG+1, start=startZ )
+       call FILE_HISTORY_Put_Axis( 'FBFY', 'Boundary factor Face Y',       '1', 'FY',  GRID_FBFYG, gsize=JAG+1, start=startZ )
     else
-       call HistoryPutAxis( 'CX',   'Atmos Grid Center Position X', 'm', 'CX',  GRID_CX   )
-       call HistoryPutAxis( 'CY',   'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CY   )
-       call HistoryPutAxis( 'FX',   'Atmos Grid Face Position X',   'm', 'FX',  GRID_FX   )
-       call HistoryPutAxis( 'FY',   'Atmos Grid Face Position Y',   'm', 'FY',  GRID_FY   )
-       call HistoryPutAxis( 'CDX',  'Grid Cell length X',           'm', 'CX',  GRID_CDX  )
-       call HistoryPutAxis( 'CDY',  'Grid Cell length Y',           'm', 'CY',  GRID_CDY  )
-       call HistoryPutAxis( 'FDX',  'Grid distance X',              'm', 'FDX', GRID_FDX  )
-       call HistoryPutAxis( 'FDY',  'Grid distance Y',              'm', 'FDY', GRID_FDY  )
-       call HistoryPutAxis( 'CBFX', 'Boundary factor Center X',     '1', 'CX',  GRID_CBFX )
-       call HistoryPutAxis( 'CBFY', 'Boundary factor Center Y',     '1', 'CY',  GRID_CBFY )
-       call HistoryPutAxis( 'FBFX', 'Boundary factor Face X',       '1', 'FX',  GRID_FBFX )
-       call HistoryPutAxis( 'FBFY', 'Boundary factor Face Y',       '1', 'FY',  GRID_FBFY )
+       call FILE_HISTORY_Put_Axis( 'CX',   'Atmos Grid Center Position X', 'm', 'CX',  GRID_CX   )
+       call FILE_HISTORY_Put_Axis( 'CY',   'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CY   )
+       call FILE_HISTORY_Put_Axis( 'FX',   'Atmos Grid Face Position X',   'm', 'FX',  GRID_FX   )
+       call FILE_HISTORY_Put_Axis( 'FY',   'Atmos Grid Face Position Y',   'm', 'FY',  GRID_FY   )
+       call FILE_HISTORY_Put_Axis( 'CDX',  'Grid Cell length X',           'm', 'CX',  GRID_CDX  )
+       call FILE_HISTORY_Put_Axis( 'CDY',  'Grid Cell length Y',           'm', 'CY',  GRID_CDY  )
+       call FILE_HISTORY_Put_Axis( 'FDX',  'Grid distance X',              'm', 'FDX', GRID_FDX  )
+       call FILE_HISTORY_Put_Axis( 'FDY',  'Grid distance Y',              'm', 'FDY', GRID_FDY  )
+       call FILE_HISTORY_Put_Axis( 'CBFX', 'Boundary factor Center X',     '1', 'CX',  GRID_CBFX )
+       call FILE_HISTORY_Put_Axis( 'CBFY', 'Boundary factor Center Y',     '1', 'CY',  GRID_CBFY )
+       call FILE_HISTORY_Put_Axis( 'FBFX', 'Boundary factor Face X',       '1', 'FX',  GRID_FBFX )
+       call FILE_HISTORY_Put_Axis( 'FBFY', 'Boundary factor Face Y',       '1', 'FY',  GRID_FBFY )
     endif
 
-    call HistoryPutAxis('CXG',   'Grid Center Position X (global)',   'm', 'CXG',  GRID_CXG,   gsize=IAG,   start=startZ )
-    call HistoryPutAxis('CYG',   'Grid Center Position Y (global)',   'm', 'CYG',  GRID_CYG,   gsize=JAG,   start=startZ )
-    call HistoryPutAxis('FXG',   'Grid Face Position X (global)',     'm', 'FXG',  GRID_FXG,   gsize=IAG+1, start=startZ )
-    call HistoryPutAxis('FYG',   'Grid Face Position Y (global)',     'm', 'FYG',  GRID_FYG,   gsize=JAG+1, start=startZ )
-    call HistoryPutAxis('CDXG',  'Grid Cell length X (global)',       'm', 'CXG',  GRID_CDXG,  gsize=IAG,   start=startZ )
-    call HistoryPutAxis('CDYG',  'Grid Cell length Y (global)',       'm', 'CYG',  GRID_CDYG,  gsize=JAG,   start=startZ )
-    call HistoryPutAxis('FDXG',  'Grid distance X (global)',          'm', 'FDXG', GRID_FDXG,  gsize=IAG-1, start=startZ )
-    call HistoryPutAxis('FDYG',  'Grid distance Y (global)',          'm', 'FDYG', GRID_FDYG,  gsize=JAG-1, start=startZ )
-    call HistoryPutAxis('CBFXG', 'Boundary factor Center X (global)', '1', 'CXG',  GRID_CBFXG, gsize=IAG,   start=startZ )
-    call HistoryPutAxis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG',  GRID_CBFYG, gsize=JAG,   start=startZ )
-    call HistoryPutAxis('FBFXG', 'Boundary factor Face X (global)',   '1', 'FXG',  GRID_FBFXG, gsize=IAG+1, start=startZ )
-    call HistoryPutAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'FYG',  GRID_FBFYG, gsize=JAG+1, start=startZ )
+    call FILE_HISTORY_Put_Axis('CXG',   'Grid Center Position X (global)',   'm', 'CXG',  GRID_CXG,   gsize=IAG,   start=startZ )
+    call FILE_HISTORY_Put_Axis('CYG',   'Grid Center Position Y (global)',   'm', 'CYG',  GRID_CYG,   gsize=JAG,   start=startZ )
+    call FILE_HISTORY_Put_Axis('FXG',   'Grid Face Position X (global)',     'm', 'FXG',  GRID_FXG,   gsize=IAG+1, start=startZ )
+    call FILE_HISTORY_Put_Axis('FYG',   'Grid Face Position Y (global)',     'm', 'FYG',  GRID_FYG,   gsize=JAG+1, start=startZ )
+    call FILE_HISTORY_Put_Axis('CDXG',  'Grid Cell length X (global)',       'm', 'CXG',  GRID_CDXG,  gsize=IAG,   start=startZ )
+    call FILE_HISTORY_Put_Axis('CDYG',  'Grid Cell length Y (global)',       'm', 'CYG',  GRID_CDYG,  gsize=JAG,   start=startZ )
+    call FILE_HISTORY_Put_Axis('FDXG',  'Grid distance X (global)',          'm', 'FDXG', GRID_FDXG,  gsize=IAG-1, start=startZ )
+    call FILE_HISTORY_Put_Axis('FDYG',  'Grid distance Y (global)',          'm', 'FDYG', GRID_FDYG,  gsize=JAG-1, start=startZ )
+    call FILE_HISTORY_Put_Axis('CBFXG', 'Boundary factor Center X (global)', '1', 'CXG',  GRID_CBFXG, gsize=IAG,   start=startZ )
+    call FILE_HISTORY_Put_Axis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG',  GRID_CBFYG, gsize=JAG,   start=startZ )
+    call FILE_HISTORY_Put_Axis('FBFXG', 'Boundary factor Face X (global)',   '1', 'FXG',  GRID_FBFXG, gsize=IAG+1, start=startZ )
+    call FILE_HISTORY_Put_Axis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'FYG',  GRID_FBFYG, gsize=JAG+1, start=startZ )
 
     ! associate coordinates
     if ( IO_AGGREGATE ) then
@@ -1874,14 +1867,14 @@ contains
        AXIS(1:im,1:jm,k) = REAL_CZ(k+KS-1,ims:ime,jms:jme)
     enddo
     AXIS_name(1:3) = (/'x ', 'y ', 'z '/)
-    call HistoryPutAssociatedCoordinates( 'height', 'height above ground level',                        &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'height', 'height above ground level',                        &
                                           'm', AXIS_name(1:3), AXIS(1:im,1:jm,1:KMAX), start=start(:,1) )
 
     do k = 0, KMAX
        AXIS(1:im,1:jm,k) = REAL_FZ(k+KS-1,ims:ime,jms:jme)
     enddo
     AXIS_name(1:3) = (/'x ', 'y ', 'zh'/)
-    call HistoryPutAssociatedCoordinates( 'height_xyw', 'height above ground level (half level xyw)',    &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'height_xyw', 'height above ground level (half level xyw)',    &
                                           'm' , AXIS_name(1:3), AXIS(1:im,1:jm,0:KMAX), start=start(:,1) )
 
     do k = 1, KMAX
@@ -1899,7 +1892,7 @@ contains
        enddo
     endif
     AXIS_name(1:3) = (/'xh', 'y ', 'z '/)
-    call HistoryPutAssociatedCoordinates( 'height_uyz', 'height above ground level (half level uyz)',    &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'height_uyz', 'height above ground level (half level uyz)',    &
                                           'm', AXIS_name(1:3), AXIS(1:imh,1:jm,1:KMAX), start=start(:,2) )
 
     do k = 1, KMAX
@@ -1917,7 +1910,7 @@ contains
        enddo
     endif
     AXIS_name(1:3) = (/'x ', 'yh', 'z '/)
-    call HistoryPutAssociatedCoordinates( 'height_xvz', 'height above ground level (half level xvz)',    &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'height_xvz', 'height above ground level (half level xvz)',    &
                                           'm', AXIS_name(1:3), AXIS(1:im,1:jmh,1:KMAX), start=start(:,3) )
 
     do k = 1, KMAX
@@ -1948,7 +1941,7 @@ contains
        enddo
     endif
     AXIS_name(1:3) = (/'xh', 'yh', 'z '/)
-    call HistoryPutAssociatedCoordinates( 'height_uvz', 'height above ground level (half level uvz)',     &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'height_uvz', 'height above ground level (half level uvz)',     &
                                           'm', AXIS_name(1:3), AXIS(1:imh,1:jmh,1:KMAX), start=start(:,4) )
 
     do k = 0, KMAX
@@ -1966,7 +1959,7 @@ contains
        enddo
     endif
     AXIS_name(1:3) = (/'xh', 'y ', 'zh'/)
-    call HistoryPutAssociatedCoordinates( 'height_uyw', 'height above ground level (half level uyw)',    &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'height_uyw', 'height above ground level (half level uyw)',    &
                                           'm', AXIS_name(1:3), AXIS(1:imh,1:jm,0:KMAX), start=start(:,2) )
 
     do k = 0, KMAX
@@ -1984,7 +1977,7 @@ contains
        enddo
     endif
     AXIS_name(1:3) = (/'x ', 'yh', 'zh'/)
-    call HistoryPutAssociatedCoordinates( 'height_xvw', 'height above ground level (half level xvw)',    &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'height_xvw', 'height above ground level (half level xvw)',    &
                                           'm', AXIS_name(1:3), AXIS(1:im,1:jmh,0:KMAX), start=start(:,3) )
 
     do k = 0, KMAX
@@ -2015,57 +2008,57 @@ contains
        enddo
     endif
     AXIS_name(1:3) = (/'xh', 'yh', 'zh'/)
-    call HistoryPutAssociatedCoordinates( 'height_uvw', 'height above ground level (half level uvw)',     &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'height_uvw', 'height above ground level (half level uvw)',     &
                                           'm', AXIS_name(1:3), AXIS(1:imh,1:jmh,0:KMAX), start=start(:,4) )
 
     AXIS(1:im,1:jm,1) = REAL_LON (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'y '/)
-    call HistoryPutAssociatedCoordinates( 'lon', 'longitude',                                                 &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'lon', 'longitude',                                                 &
                                           'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
     AXIS(1:imh,1:jm,1) = REAL_LONX(imsh:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'y '/)
-    call HistoryPutAssociatedCoordinates( 'lon_uy', 'longitude (half level uy)',                               &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'lon_uy', 'longitude (half level uy)',                               &
                                           'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
 
     AXIS(1:im,1:jmh,1) = REAL_LONY(ims:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'yh'/)
-    call HistoryPutAssociatedCoordinates( 'lon_xv', 'longitude (half level xv)',                               &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'lon_xv', 'longitude (half level xv)',                               &
                                           'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
 
     AXIS(1:imh,1:jmh,1) = REAL_LONXY(imsh:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'yh'/)
-    call HistoryPutAssociatedCoordinates( 'lon_uv', 'longitude (half level uv)',                                &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'lon_uv', 'longitude (half level uv)',                                &
                                           'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )
 
     AXIS(1:im,1:jm,1) = REAL_LAT (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'y '/)
-    call HistoryPutAssociatedCoordinates( 'lat', 'latitude',                                                   &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'lat', 'latitude',                                                   &
                                           'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
     AXIS(1:imh,1:jm,1) = REAL_LATX(imsh:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'y '/)
-    call HistoryPutAssociatedCoordinates( 'lat_uy', 'latitude (half level uy)',                                 &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'lat_uy', 'latitude (half level uy)',                                 &
                                           'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
 
     AXIS(1:im,1:jmh,1) = REAL_LATY(ims:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'yh'/)
-    call HistoryPutAssociatedCoordinates( 'lat_xv', 'latitude (half level xv)',                                 &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'lat_xv', 'latitude (half level xv)',                                 &
                                           'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
 
     AXIS(1:imh,1:jmh,1) = REAL_LATXY(imsh:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'yh'/)
-    call HistoryPutAssociatedCoordinates( 'lat_uv', 'latitude (half level uv)',                                  &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'lat_uv', 'latitude (half level uv)',                                  &
                                           'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )
 
     AXIS(1:im,1:jm,1) = TOPO_Zsfc(ims:ime,jms:jme)
     AXIS_name(1:2) = (/'x ', 'y '/)
-    call HistoryPutAssociatedCoordinates( 'topo', 'topography',                                    &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'topo', 'topography',                                    &
                                           'm', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
     AXIS(1:im,1:jm,1) = LANDUSE_frac_land(ims:ime,jms:jme)
     AXIS_name(1:2) = (/'x ', 'y '/)
-    call HistoryPutAssociatedCoordinates( 'lsmask', 'fraction for land-sea mask',                  &
+    call FILE_HISTORY_Put_AssociatedCoordinate( 'lsmask', 'fraction for land-sea mask',                  &
                                           '1', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
     return
@@ -2073,10 +2066,10 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HIST_set_axes_attributes
-    use gtool_history, only: &
-       HistorySetGlobalAttribute, &
-       HistorySetAttribute,       &
-       HistorySetMapping
+    use scale_file_history, only: &
+       FILE_HISTORY_Set_GlobalAttribute, &
+       FILE_HISTORY_Set_Attribute,       &
+       FILE_HISTORY_Set_Mapping
     use scale_process, only: &
        PRC_myrank
     use scale_const, only: &
@@ -2119,28 +2112,28 @@ contains
     endif
 
     if ( .NOT. IO_AGGREGATE ) then
-       call HistorySetGlobalAttribute( "scale_rm_prc_rank_x", (/PRC_2Drank(PRC_myrank,1)/) ) ! [IN]
-       call HistorySetGlobalAttribute( "scale_rm_prc_rank_y", (/PRC_2Drank(PRC_myrank,2)/) ) ! [IN]
+       call FILE_HISTORY_Set_GlobalAttribute( "scale_rm_prc_rank_x", (/PRC_2Drank(PRC_myrank,1)/) ) ! [IN]
+       call FILE_HISTORY_Set_GlobalAttribute( "scale_rm_prc_rank_y", (/PRC_2Drank(PRC_myrank,2)/) ) ! [IN]
 
-       call HistorySetGlobalAttribute( "scale_rm_prc_num_x", (/PRC_NUM_X/) ) ! [IN]
-       call HistorySetGlobalAttribute( "scale_rm_prc_num_y", (/PRC_NUM_Y/) ) ! [IN]
+       call FILE_HISTORY_Set_GlobalAttribute( "scale_rm_prc_num_x", (/PRC_NUM_X/) ) ! [IN]
+       call FILE_HISTORY_Set_GlobalAttribute( "scale_rm_prc_num_y", (/PRC_NUM_Y/) ) ! [IN]
     endif
 
-    call HistorySetGlobalAttribute( "scale_rm_prc_periodic_z", periodic_z ) ! [IN]
-    call HistorySetGlobalAttribute( "scale_rm_prc_periodic_x", periodic_x ) ! [IN]
-    call HistorySetGlobalAttribute( "scale_rm_prc_periodic_y", periodic_y ) ! [IN]
+    call FILE_HISTORY_Set_GlobalAttribute( "scale_rm_prc_periodic_z", periodic_z ) ! [IN]
+    call FILE_HISTORY_Set_GlobalAttribute( "scale_rm_prc_periodic_x", periodic_x ) ! [IN]
+    call FILE_HISTORY_Set_GlobalAttribute( "scale_rm_prc_periodic_y", periodic_y ) ! [IN]
 
-    call HistorySetGlobalAttribute( "scale_rm_grid_index_kmax",  (/KMAX/)  ) ! [IN]
-    call HistorySetGlobalAttribute( "scale_rm_grid_index_imaxg", (/IMAXG/) ) ! [IN]
-    call HistorySetGlobalAttribute( "scale_rm_grid_index_jmaxg", (/JMAXG/) ) ! [IN]
+    call FILE_HISTORY_Set_GlobalAttribute( "scale_rm_grid_index_kmax",  (/KMAX/)  ) ! [IN]
+    call FILE_HISTORY_Set_GlobalAttribute( "scale_rm_grid_index_imaxg", (/IMAXG/) ) ! [IN]
+    call FILE_HISTORY_Set_GlobalAttribute( "scale_rm_grid_index_jmaxg", (/JMAXG/) ) ! [IN]
 
-    call HistorySetGlobalAttribute( "scale_rm_grid_index_khalo", (/KHALO/) ) ! [IN]
-    call HistorySetGlobalAttribute( "scale_rm_grid_index_ihalo", (/IHALO/) ) ! [IN]
-    call HistorySetGlobalAttribute( "scale_rm_grid_index_jhalo", (/JHALO/) ) ! [IN]
+    call FILE_HISTORY_Set_GlobalAttribute( "scale_rm_grid_index_khalo", (/KHALO/) ) ! [IN]
+    call FILE_HISTORY_Set_GlobalAttribute( "scale_rm_grid_index_ihalo", (/IHALO/) ) ! [IN]
+    call FILE_HISTORY_Set_GlobalAttribute( "scale_rm_grid_index_jhalo", (/JHALO/) ) ! [IN]
 
     call FILEIO_getCFtunits(tunits,HISTORY_STARTDATE)
-    call HistorySetGlobalAttribute( "time_units", tunits )
-    call HistorySetGlobalAttribute( "time_start", (/HISTORY_STARTMS/) )
+    call FILE_HISTORY_Set_GlobalAttribute( "time_units", tunits )
+    call FILE_HISTORY_Set_GlobalAttribute( "time_start", (/HISTORY_STARTMS/) )
 
     if ( PRC_PERIODIC_X ) then
        ainfo(1)%periodic = "true"
@@ -2220,29 +2213,29 @@ contains
        endif
     endif
 
-    call HistorySetAttribute( "x" , "size_global" , ainfo(1)%size_global (:) )
-    call HistorySetAttribute( "x" , "start_global", ainfo(1)%start_global(:) )
-    call HistorySetAttribute( "x" , "halo_global" , ainfo(1)%halo_global (:) )
-    call HistorySetAttribute( "x" , "halo_local"  , ainfo(1)%halo_local  (:) )
-    call HistorySetAttribute( "x" , "periodic"    , ainfo(1)%periodic        )
+    call FILE_HISTORY_Set_Attribute( "x" , "size_global" , ainfo(1)%size_global (:) )
+    call FILE_HISTORY_Set_Attribute( "x" , "start_global", ainfo(1)%start_global(:) )
+    call FILE_HISTORY_Set_Attribute( "x" , "halo_global" , ainfo(1)%halo_global (:) )
+    call FILE_HISTORY_Set_Attribute( "x" , "halo_local"  , ainfo(1)%halo_local  (:) )
+    call FILE_HISTORY_Set_Attribute( "x" , "periodic"    , ainfo(1)%periodic        )
 
-    call HistorySetAttribute( "xh", "size_global" , ainfo(2)%size_global (:) )
-    call HistorySetAttribute( "xh", "start_global", ainfo(2)%start_global(:) )
-    call HistorySetAttribute( "xh", "halo_global" , ainfo(2)%halo_global (:) )
-    call HistorySetAttribute( "xh", "halo_local"  , ainfo(2)%halo_local  (:) )
-    call HistorySetAttribute( "xh", "periodic"    , ainfo(2)%periodic        )
+    call FILE_HISTORY_Set_Attribute( "xh", "size_global" , ainfo(2)%size_global (:) )
+    call FILE_HISTORY_Set_Attribute( "xh", "start_global", ainfo(2)%start_global(:) )
+    call FILE_HISTORY_Set_Attribute( "xh", "halo_global" , ainfo(2)%halo_global (:) )
+    call FILE_HISTORY_Set_Attribute( "xh", "halo_local"  , ainfo(2)%halo_local  (:) )
+    call FILE_HISTORY_Set_Attribute( "xh", "periodic"    , ainfo(2)%periodic        )
 
-    call HistorySetAttribute( "y" , "size_global" , ainfo(3)%size_global (:) )
-    call HistorySetAttribute( "y" , "start_global", ainfo(3)%start_global(:) )
-    call HistorySetAttribute( "y" , "halo_global" , ainfo(3)%halo_global (:) )
-    call HistorySetAttribute( "y" , "halo_local"  , ainfo(3)%halo_local  (:) )
-    call HistorySetAttribute( "y" , "periodic"    , ainfo(3)%periodic        )
+    call FILE_HISTORY_Set_Attribute( "y" , "size_global" , ainfo(3)%size_global (:) )
+    call FILE_HISTORY_Set_Attribute( "y" , "start_global", ainfo(3)%start_global(:) )
+    call FILE_HISTORY_Set_Attribute( "y" , "halo_global" , ainfo(3)%halo_global (:) )
+    call FILE_HISTORY_Set_Attribute( "y" , "halo_local"  , ainfo(3)%halo_local  (:) )
+    call FILE_HISTORY_Set_Attribute( "y" , "periodic"    , ainfo(3)%periodic        )
 
-    call HistorySetAttribute( "yh", "size_global" , ainfo(4)%size_global (:) )
-    call HistorySetAttribute( "yh", "start_global", ainfo(4)%start_global(:) )
-    call HistorySetAttribute( "yh", "halo_global" , ainfo(4)%halo_global (:) )
-    call HistorySetAttribute( "yh", "halo_local"  , ainfo(4)%halo_local  (:) )
-    call HistorySetAttribute( "yh", "periodic"    , ainfo(4)%periodic        )
+    call FILE_HISTORY_Set_Attribute( "yh", "size_global" , ainfo(4)%size_global (:) )
+    call FILE_HISTORY_Set_Attribute( "yh", "start_global", ainfo(4)%start_global(:) )
+    call FILE_HISTORY_Set_Attribute( "yh", "halo_global" , ainfo(4)%halo_global (:) )
+    call FILE_HISTORY_Set_Attribute( "yh", "halo_local"  , ainfo(4)%halo_local  (:) )
+    call FILE_HISTORY_Set_Attribute( "yh", "periodic"    , ainfo(4)%periodic        )
 
     ! map projection info
     call MPRJ_get_attributes( minfo%mapping_name,                             & ! [OUT]
@@ -2255,56 +2248,56 @@ contains
                               minfo%standard_parallel                    (:)  ) ! [OUT]
 
     if ( minfo%mapping_name /= "" ) then
-       call HistorySetAttribute( "x" , "standard_name", "projection_x_coordinate" )
-       call HistorySetAttribute( "xh", "standard_name", "projection_x_coordinate" )
-       call HistorySetAttribute( "y" , "standard_name", "projection_y_coordinate" )
-       call HistorySetAttribute( "yh", "standard_name", "projection_y_coordinate" )
+       call FILE_HISTORY_Set_Attribute( "x" , "standard_name", "projection_x_coordinate" )
+       call FILE_HISTORY_Set_Attribute( "xh", "standard_name", "projection_x_coordinate" )
+       call FILE_HISTORY_Set_Attribute( "y" , "standard_name", "projection_y_coordinate" )
+       call FILE_HISTORY_Set_Attribute( "yh", "standard_name", "projection_y_coordinate" )
 
-       call HistorySetMapping( minfo%mapping_name )
+       call FILE_HISTORY_Set_Mapping( minfo%mapping_name )
 
        if ( minfo%false_easting(1) /= UNDEF ) then
-          call HistorySetAttribute( minfo%mapping_name,    & ! [IN]
+          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,    & ! [IN]
                                     "false_easting",       & ! [IN]
                                     minfo%false_easting(:) ) ! [IN]
        endif
 
        if ( minfo%false_northing(1) /= UNDEF ) then
-          call HistorySetAttribute( minfo%mapping_name,     & ! [IN]
+          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,     & ! [IN]
                                     "false_northing",       & ! [IN]
                                     minfo%false_northing(:) ) ! [IN]
        endif
 
        if ( minfo%longitude_of_central_meridian(1) /= UNDEF ) then
-          call HistorySetAttribute( minfo%mapping_name,                    & ! [IN]
+          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                    & ! [IN]
                                     "longitude_of_central_meridian",       & ! [IN]
                                     minfo%longitude_of_central_meridian(:) ) ! [IN]
        endif
 
        if ( minfo%longitude_of_projection_origin(1) /= UNDEF ) then
-          call HistorySetAttribute( minfo%mapping_name,                     & ! [IN]
+          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                     & ! [IN]
                                     "longitude_of_projection_origin",       & ! [IN]
                                     minfo%longitude_of_projection_origin(:) ) ! [IN]
        endif
 
        if ( minfo%latitude_of_projection_origin(1) /= UNDEF ) then
-          call HistorySetAttribute( minfo%mapping_name,                    & ! [IN]
+          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                    & ! [IN]
                                     "latitude_of_projection_origin",       & ! [IN]
                                     minfo%latitude_of_projection_origin(:) ) ! [IN]
        endif
 
        if ( minfo%straight_vertical_longitude_from_pole(1) /= UNDEF ) then
-          call HistorySetAttribute( minfo%mapping_name,                            & ! [IN]
+          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                            & ! [IN]
                                     "straight_vertical_longitude_from_pole",       & ! [IN]
                                     minfo%straight_vertical_longitude_from_pole(:) ) ! [IN]
        endif
 
        if ( minfo%standard_parallel(1) /= UNDEF ) then
           if ( minfo%standard_parallel(2) /= UNDEF ) then
-             call HistorySetAttribute( minfo%mapping_name,          & ! [IN]
+             call FILE_HISTORY_Set_Attribute( minfo%mapping_name,          & ! [IN]
                                        "standard_parallel",         & ! [IN]
                                        minfo%standard_parallel(1:2) ) ! [IN]
           else
-             call HistorySetAttribute( minfo%mapping_name,          & ! [IN]
+             call FILE_HISTORY_Set_Attribute( minfo%mapping_name,          & ! [IN]
                                        "standard_parallel",         & ! [IN]
                                        minfo%standard_parallel(1:1) ) ! [IN]
           endif

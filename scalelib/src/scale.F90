@@ -115,8 +115,8 @@ contains
   end subroutine SCALE_init
 
   subroutine SCALE_finalize
-    use gtool_file, only: &
-       FileCloseAll
+    use scale_file, only: &
+       FILE_Close_All
     use scale_process, only: &
        PRC_MPIfinish
     use scale_prof, only: &
@@ -125,7 +125,7 @@ contains
 
     call PROF_rapend( 'Main', 0 )
 
-    call FileCloseAll
+    call FILE_Close_All
     call PROF_rapreport
 
     ! stop mpi

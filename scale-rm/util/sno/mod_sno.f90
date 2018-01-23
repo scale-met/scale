@@ -115,13 +115,13 @@ contains
        varname,      &
        debug         )
     use mpi
-    use gtool_file_h, only: &
-       File_FREAD
-    use gtool_file, only: &
-       FileOpen,               &
-       FileGetCommoninfo,      &
-       FileGetGlobalAttribute, &
-       FileGetAttribute
+    use scale_file_h, only: &
+       FILE_FREAD
+    use scale_file, only: &
+       FILE_Open,                &
+       FILE_Get_Commoninfo,      &
+       FILE_Get_GlobalAttribute, &
+       FILE_Get_Attribute
     use scale_process, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD, &
@@ -185,46 +185,46 @@ contains
     if ( ismaster ) then
        nowrank = 0 ! first file
 
-       call FileOpen( fid,             & ! [OUT]
-                      basename,        & ! [IN]
-                      File_FREAD,      & ! [IN]
-                      myrank = nowrank ) ! [IN]
+       call FILE_Open( fid,             & ! [OUT]
+                       basename,        & ! [IN]
+                       FILE_FREAD,      & ! [IN]
+                       myrank = nowrank ) ! [IN]
 
-       call FileGetCommoninfo( fid,             & ! [IN]
-                               nowrank,         & ! [IN]
-                               item_limit,      & ! [IN]
-                               hinfo%title,     & ! [OUT]
-                               hinfo%source,    & ! [OUT]
-                               hinfo%institute, & ! [OUT]
-                               nvars_file,      & ! [OUT]
-                               varname_file(:)  ) ! [OUT]
+       call FILE_Get_Commoninfo( fid,             & ! [IN]
+                                 nowrank,         & ! [IN]
+                                 item_limit,      & ! [IN]
+                                 hinfo%title,     & ! [OUT]
+                                 hinfo%source,    & ! [OUT]
+                                 hinfo%institute, & ! [OUT]
+                                 nvars_file,      & ! [OUT]
+                                 varname_file(:)  ) ! [OUT]
 
-       call FileGetGlobalAttribute( fid, "scale_rm_prc_num_x", procsize(1:1) )
-       call FileGetGlobalAttribute( fid, "scale_rm_prc_num_y", procsize(2:2) )
+       call FILE_Get_GlobalAttribute( fid, "scale_rm_prc_num_x", procsize(1:1) )
+       call FILE_Get_GlobalAttribute( fid, "scale_rm_prc_num_y", procsize(2:2) )
 
-       call FileGetGlobalAttribute( fid, "scale_rm_prc_periodic_z",   periodic(1) )
-       call FileGetGlobalAttribute( fid, "scale_rm_prc_periodic_x",   periodic(2) )
-       call FileGetGlobalAttribute( fid, "scale_rm_prc_periodic_y",   periodic(3) )
+       call FILE_Get_GlobalAttribute( fid, "scale_rm_prc_periodic_z",   periodic(1) )
+       call FILE_Get_GlobalAttribute( fid, "scale_rm_prc_periodic_x",   periodic(2) )
+       call FILE_Get_GlobalAttribute( fid, "scale_rm_prc_periodic_y",   periodic(3) )
        hinfo%periodic(1) = trim(periodic(1))
        hinfo%periodic(2) = trim(periodic(2))
        hinfo%periodic(3) = trim(periodic(3))
 
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_kmax",  hinfo%gridsize(1:1) )
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_imaxg", hinfo%gridsize(2:2) )
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_jmaxg", hinfo%gridsize(3:3) )
+       call FILE_Get_GlobalAttribute( fid, "scale_rm_grid_index_kmax",  hinfo%gridsize(1:1) )
+       call FILE_Get_GlobalAttribute( fid, "scale_rm_grid_index_imaxg", hinfo%gridsize(2:2) )
+       call FILE_Get_GlobalAttribute( fid, "scale_rm_grid_index_jmaxg", hinfo%gridsize(3:3) )
 
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_khalo", hinfo%halosize(1:1) )
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_ihalo", hinfo%halosize(2:2) )
-       call FileGetGlobalAttribute( fid, "scale_rm_grid_index_jhalo", hinfo%halosize(3:3) )
+       call FILE_Get_GlobalAttribute( fid, "scale_rm_grid_index_khalo", hinfo%halosize(1:1) )
+       call FILE_Get_GlobalAttribute( fid, "scale_rm_grid_index_ihalo", hinfo%halosize(2:2) )
+       call FILE_Get_GlobalAttribute( fid, "scale_rm_grid_index_jhalo", hinfo%halosize(3:3) )
 
-       call FileGetGlobalAttribute( fid, "time_units", hinfo%time_units    )
-       call FileGetGlobalAttribute( fid, "time_start", hinfo%time_start(:) )
+       call FILE_Get_GlobalAttribute( fid, "time_units", hinfo%time_units    )
+       call FILE_Get_GlobalAttribute( fid, "time_start", hinfo%time_start(:) )
 
-       call FileGetAttribute( fid, 'x', 'size_global', hinfo%xatt_size_global(:) )
-       call FileGetAttribute( fid, 'x', 'halo_global', hinfo%xatt_halo_global(:) )
+       call FILE_Get_Attribute( fid, 'x', 'size_global', hinfo%xatt_size_global(:) )
+       call FILE_Get_Attribute( fid, 'x', 'halo_global', hinfo%xatt_halo_global(:) )
 
-       call FileGetAttribute( fid, 'y', 'size_global', hinfo%yatt_size_global(:) )
-       call FileGetAttribute( fid, 'y', 'halo_global', hinfo%yatt_halo_global(:) )
+       call FILE_Get_Attribute( fid, 'y', 'size_global', hinfo%yatt_size_global(:) )
+       call FILE_Get_Attribute( fid, 'y', 'halo_global', hinfo%yatt_halo_global(:) )
     endif
 
     call MPI_BCAST( hinfo%title              , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -356,35 +356,55 @@ contains
           ! do nothing
        case('lambert_conformal_conic')
           if ( ismaster ) then
-             call FileGetAttribute( fid, varname_file(n), "grid_mapping_name",                     hinfo%minfo_mapping_name                             )
-             call FileGetAttribute( fid, varname_file(n), "false_easting",                         hinfo%minfo_false_easting                        (:) )
-             call FileGetAttribute( fid, varname_file(n), "false_northing",                        hinfo%minfo_false_northing                       (:) )
-             call FileGetAttribute( fid, varname_file(n), "longitude_of_central_meridian",         hinfo%minfo_longitude_of_central_meridian        (:) )
-             call FileGetAttribute( fid, varname_file(n), "latitude_of_projection_origin",         hinfo%minfo_latitude_of_projection_origin        (:) )
-             call FileGetAttribute( fid, varname_file(n), "standard_parallel",                     hinfo%minfo_standard_parallel                    (:) )
+             call FILE_Get_Attribute( fid, varname_file(n), "grid_mapping_name",             &
+                                      hinfo%minfo_mapping_name                               )
+             call FILE_Get_Attribute( fid, varname_file(n), "false_easting",                 &
+                                      hinfo%minfo_false_easting                        (:)   )
+             call FILE_Get_Attribute( fid, varname_file(n), "false_northing",                &
+                                      hinfo%minfo_false_northing                       (:)   )
+             call FILE_Get_Attribute( fid, varname_file(n), "longitude_of_central_meridian", &
+                                      hinfo%minfo_longitude_of_central_meridian        (:)   )
+             call FILE_Get_Attribute( fid, varname_file(n), "latitude_of_projection_origin", &
+                                      hinfo%minfo_latitude_of_projection_origin        (:)   )
+             call FILE_Get_Attribute( fid, varname_file(n), "standard_parallel",             &
+                                      hinfo%minfo_standard_parallel                    (:)   )
           endif
        case('polar_stereographic')
           if ( ismaster ) then
-             call FileGetAttribute( fid, varname_file(n), "grid_mapping_name",                     hinfo%minfo_mapping_name                             )
-             call FileGetAttribute( fid, varname_file(n), "false_easting",                         hinfo%minfo_false_easting                        (:) )
-             call FileGetAttribute( fid, varname_file(n), "false_northing",                        hinfo%minfo_false_northing                       (:) )
-             call FileGetAttribute( fid, varname_file(n), "latitude_of_projection_origin",         hinfo%minfo_latitude_of_projection_origin        (:) )
-             call FileGetAttribute( fid, varname_file(n), "straight_vertical_longitude_from_pole", hinfo%minfo_straight_vertical_longitude_from_pole(:) )
-             call FileGetAttribute( fid, varname_file(n), "standard_parallel",                     hinfo%minfo_standard_parallel                  (1:1) )
+             call FILE_Get_Attribute( fid, varname_file(n), "grid_mapping_name",                     &
+                                      hinfo%minfo_mapping_name                             )
+             call FILE_Get_Attribute( fid, varname_file(n), "false_easting",                         &
+                                      hinfo%minfo_false_easting                        (:) )
+             call FILE_Get_Attribute( fid, varname_file(n), "false_northing",                        &
+                                       hinfo%minfo_false_northing                       (:) )
+             call FILE_Get_Attribute( fid, varname_file(n), "latitude_of_projection_origin",         &
+                                      hinfo%minfo_latitude_of_projection_origin        (:) )
+             call FILE_Get_Attribute( fid, varname_file(n), "straight_vertical_longitude_from_pole", &
+                                      hinfo%minfo_straight_vertical_longitude_from_pole(:) )
+             call FILE_Get_Attribute( fid, varname_file(n), "standard_parallel",                     &
+                                      hinfo%minfo_standard_parallel                  (1:1) )
           endif
        case('mercator')
           if ( ismaster ) then
-             call FileGetAttribute( fid, varname_file(n), "grid_mapping_name",                     hinfo%minfo_mapping_name                             )
-             call FileGetAttribute( fid, varname_file(n), "false_easting",                         hinfo%minfo_false_easting                        (:) )
-             call FileGetAttribute( fid, varname_file(n), "false_northing",                        hinfo%minfo_false_northing                       (:) )
-             call FileGetAttribute( fid, varname_file(n), "longitude_of_projection_origin",        hinfo%minfo_longitude_of_projection_origin       (:) )
+             call FILE_Get_Attribute( fid, varname_file(n), "grid_mapping_name",              &
+                                      hinfo%minfo_mapping_name                             )
+             call FILE_Get_Attribute( fid, varname_file(n), "false_easting",                  &
+                                      hinfo%minfo_false_easting                        (:) )
+             call FILE_Get_Attribute( fid, varname_file(n), "false_northing",                 &
+                                      hinfo%minfo_false_northing                       (:) )
+             call FILE_Get_Attribute( fid, varname_file(n), "longitude_of_projection_origin", &
+                                      hinfo%minfo_longitude_of_projection_origin       (:) )
           endif
        case('equirectangular')
           if ( ismaster ) then
-             call FileGetAttribute( fid, varname_file(n), "grid_mapping_name",                     hinfo%minfo_mapping_name                             )
-             call FileGetAttribute( fid, varname_file(n), "false_easting",                         hinfo%minfo_false_easting                        (:) )
-             call FileGetAttribute( fid, varname_file(n), "false_northing",                        hinfo%minfo_false_northing                       (:) )
-             call FileGetAttribute( fid, varname_file(n), "longitude_of_central_meridian",         hinfo%minfo_longitude_of_central_meridian        (:) )
+             call FILE_Get_Attribute( fid, varname_file(n), "grid_mapping_name",             &
+                                      hinfo%minfo_mapping_name                             )
+             call FILE_Get_Attribute( fid, varname_file(n), "false_easting",                 &
+                                      hinfo%minfo_false_easting                        (:) )
+             call FILE_Get_Attribute( fid, varname_file(n), "false_northing",                &
+                                      hinfo%minfo_false_northing                       (:) )
+             call FILE_Get_Attribute( fid, varname_file(n), "longitude_of_central_meridian", &
+                                      hinfo%minfo_longitude_of_central_meridian        (:) )
           endif
        case default
           if ( nvars_req == 0 ) then
@@ -507,12 +527,12 @@ contains
        varsize,   &
        var        )
     use mpi
-    use gtool_file_h, only: &
-       File_REAL4, &
-       File_REAL8, &
-       File_dtypelist
-    use gtool_file, only: &
-       FileRead
+    use scale_file_h, only: &
+       FILE_REAL4, &
+       FILE_REAL8, &
+       FILE_dtypelist
+    use scale_file, only: &
+       FILE_Read
     use scale_process, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD, &
@@ -542,24 +562,24 @@ contains
        datatype_mpi = MPI_DOUBLE_PRECISION
     endif
 
-    if ( datatype == File_REAL4 ) then
+    if ( datatype == FILE_REAL4 ) then
 
        if ( ismaster ) then
           allocate( tmp_SP(varsize) )
 
-          call FileRead( tmp_SP(:), basename, varname, 1, nowrank )
+          call FILE_Read( tmp_SP(:), basename, varname, 1, nowrank )
 
           var(:) = real(tmp_SP(:),kind=RP)
 
           deallocate( tmp_SP )
        endif
 
-    elseif( datatype == File_REAL8 ) then
+    elseif( datatype == FILE_REAL8 ) then
 
        if ( ismaster ) then
           allocate( tmp_DP(varsize) )
 
-          call FileRead( tmp_DP(:), basename, varname, 1, nowrank )
+          call FILE_Read( tmp_DP(:), basename, varname, 1, nowrank )
 
           var(:) = real(tmp_DP(:),kind=RP)
 
@@ -567,7 +587,7 @@ contains
        endif
 
     else
-       write(*,*) 'xxx [read_bcast_1d] Unsupported datatype : ', trim(File_dtypelist(datatype))
+       write(*,*) 'xxx [read_bcast_1d] Unsupported datatype : ', trim(FILE_dtypelist(datatype))
        call PRC_MPIstop
     endif
 
@@ -587,12 +607,12 @@ contains
        gout1,    &
        localmap, &
        var       )
-    use gtool_file_h, only: &
-       File_REAL4, &
-       File_REAL8, &
-       File_dtypelist
-    use gtool_file, only: &
-       FileRead
+    use scale_file_h, only: &
+       FILE_REAL4, &
+       FILE_REAL8, &
+       FILE_dtypelist
+    use scale_file, only: &
+       FILE_Read
     use scale_process, only: &
        PRC_MPIstop
     use mod_sno_h, only: &
@@ -616,9 +636,9 @@ contains
     integer  :: i, ii
     !---------------------------------------------------------------------------
 
-    if ( datatype == File_REAL4 ) then
+    if ( datatype == FILE_REAL4 ) then
 
-       call FileRead( tmp_SP(:), basename, varname, nowstep, nowrank )
+       call FILE_Read( tmp_SP(:), basename, varname, nowstep, nowrank )
 
        do i = 1, gout1
           if ( localmap(i,I_map_p) == nowrank ) then
@@ -628,9 +648,9 @@ contains
           endif
        enddo
 
-    elseif( datatype == File_REAL8 ) then
+    elseif( datatype == FILE_REAL8 ) then
 
-       call FileRead( tmp_DP(:), basename, varname, nowstep, nowrank )
+       call FILE_Read( tmp_DP(:), basename, varname, nowstep, nowrank )
 
        do i = 1, gout1
           if ( localmap(i,I_map_p) == nowrank ) then
@@ -641,7 +661,7 @@ contains
        enddo
 
     else
-       write(*,*) 'xxx [read_map_1d] Unsupported datatype : ', trim(File_dtypelist(datatype))
+       write(*,*) 'xxx [read_map_1d] Unsupported datatype : ', trim(FILE_dtypelist(datatype))
        call PRC_MPIstop
     endif
 
@@ -661,12 +681,12 @@ contains
        gout2,    &
        localmap, &
        var       )
-    use gtool_file_h, only: &
-       File_REAL4, &
-       File_REAL8, &
-       File_dtypelist
-    use gtool_file, only: &
-       FileRead
+    use scale_file_h, only: &
+       FILE_REAL4, &
+       FILE_REAL8, &
+       FILE_dtypelist
+    use scale_file, only: &
+       FILE_Read
     use scale_process, only: &
        PRC_MPIstop
     use mod_sno_h, only: &
@@ -693,9 +713,9 @@ contains
     integer  :: i, j, ii, jj
     !---------------------------------------------------------------------------
 
-    if ( datatype == File_REAL4 ) then
+    if ( datatype == FILE_REAL4 ) then
 
-       call FileRead( tmp_SP(:,:), basename, varname, nowstep, nowrank )
+       call FILE_Read( tmp_SP(:,:), basename, varname, nowstep, nowrank )
 
        do j = 1, gout2
        do i = 1, gout1
@@ -708,9 +728,9 @@ contains
        enddo
        enddo
 
-    elseif( datatype == File_REAL8 ) then
+    elseif( datatype == FILE_REAL8 ) then
 
-       call FileRead( tmp_DP(:,:), basename, varname, nowstep, nowrank )
+       call FILE_Read( tmp_DP(:,:), basename, varname, nowstep, nowrank )
 
        do j = 1, gout2
        do i = 1, gout1
@@ -724,7 +744,7 @@ contains
        enddo
 
     else
-       write(*,*) 'xxx [read_map_2d] Unsupported datatype : ', trim(File_dtypelist(datatype))
+       write(*,*) 'xxx [read_map_2d] Unsupported datatype : ', trim(FILE_dtypelist(datatype))
        call PRC_MPIstop
     endif
 
@@ -747,12 +767,12 @@ contains
        gout3,     &
        localmap,  &
        var        )
-    use gtool_file_h, only: &
-       File_REAL4, &
-       File_REAL8, &
-       File_dtypelist
-    use gtool_file, only: &
-       FileRead
+    use scale_file_h, only: &
+       FILE_REAL4, &
+       FILE_REAL8, &
+       FILE_dtypelist
+    use scale_file, only: &
+       FILE_Read
     use scale_process, only: &
        PRC_MPIstop
     use mod_sno_h, only: &
@@ -782,7 +802,7 @@ contains
     integer  :: k, i, j, ii, jj
     !---------------------------------------------------------------------------
 
-    if ( datatype == File_REAL4 ) then
+    if ( datatype == FILE_REAL4 ) then
 
        if ( transpose ) then
           allocate( tmp_SP(gin2,gin3,gin1) ) ! x,y,z
@@ -790,7 +810,7 @@ contains
           allocate( tmp_SP(gin1,gin2,gin3) ) ! z,x,y
        endif
 
-       call FileRead( tmp_SP(:,:,:), basename, varname, nowstep, nowrank )
+       call FILE_Read( tmp_SP(:,:,:), basename, varname, nowstep, nowrank )
 
        if ( transpose ) then
           do j = 1, gout3
@@ -822,7 +842,7 @@ contains
 
        deallocate( tmp_SP )
 
-    elseif( datatype == File_REAL8 ) then
+    elseif( datatype == FILE_REAL8 ) then
 
        if ( transpose ) then
           allocate( tmp_DP(gin2,gin3,gin1) ) ! x,y,z
@@ -830,7 +850,7 @@ contains
           allocate( tmp_DP(gin1,gin2,gin3) ) ! z,x,y
        endif
 
-       call FileRead( tmp_DP(:,:,:), basename, varname, nowstep, nowrank )
+       call FILE_Read( tmp_DP(:,:,:), basename, varname, nowstep, nowrank )
 
        if ( transpose ) then
           do j = 1, gout3
@@ -863,7 +883,7 @@ contains
        deallocate( tmp_DP )
 
     else
-       write(*,*) 'xxx [read_map_3d] Unsupported datatype : ', trim(File_dtypelist(datatype))
+       write(*,*) 'xxx [read_map_3d] Unsupported datatype : ', trim(FILE_dtypelist(datatype))
        call PRC_MPIstop
     endif
 
@@ -881,10 +901,10 @@ contains
        hinfo,        &
        dinfo,        &
        debug         )
-    use gtool_file, only: &
-       FileSetGlobalAttribute,   &
-       FileSetAttribute,         &
-       FileAddAssociatedVariable
+    use scale_file, only: &
+       FILE_Set_GlobalAttribute,   &
+       FILE_Set_Attribute,         &
+       FILE_Add_AssociatedVariable
     use scale_const, &
        UNDEF => CONST_UNDEF
     use scale_fileio, only: &
@@ -915,26 +935,26 @@ contains
     rankidx(1) = mod(nowrank,nprocs_x_out)
     rankidx(2) =     nowrank/nprocs_x_out
 
-    call FileSetGlobalAttribute( fid, "scale_rm_prc_rank_x", rankidx(1:1) ) ! [IN]
-    call FileSetGlobalAttribute( fid, "scale_rm_prc_rank_y", rankidx(2:2) ) ! [IN]
+    call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_rank_x", rankidx(1:1) ) ! [IN]
+    call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_rank_y", rankidx(2:2) ) ! [IN]
 
-    call FileSetGlobalAttribute( fid, "scale_rm_prc_num_x",  (/nprocs_x_out/) ) ! [IN]
-    call FileSetGlobalAttribute( fid, "scale_rm_prc_num_y",  (/nprocs_y_out/) ) ! [IN]
+    call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_num_x",  (/nprocs_x_out/) ) ! [IN]
+    call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_num_y",  (/nprocs_y_out/) ) ! [IN]
 
-    call FileSetGlobalAttribute( fid, "scale_rm_prc_periodic_z",   hinfo%periodic(1) ) ! [IN]
-    call FileSetGlobalAttribute( fid, "scale_rm_prc_periodic_x",   hinfo%periodic(2) ) ! [IN]
-    call FileSetGlobalAttribute( fid, "scale_rm_prc_periodic_y",   hinfo%periodic(3) ) ! [IN]
+    call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_periodic_z",   hinfo%periodic(1) ) ! [IN]
+    call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_periodic_x",   hinfo%periodic(2) ) ! [IN]
+    call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_periodic_y",   hinfo%periodic(3) ) ! [IN]
 
-    call FileSetGlobalAttribute( fid, "scale_rm_grid_index_kmax",  hinfo%gridsize(1:1) ) ! [IN]
-    call FileSetGlobalAttribute( fid, "scale_rm_grid_index_imaxg", hinfo%gridsize(2:2) ) ! [IN]
-    call FileSetGlobalAttribute( fid, "scale_rm_grid_index_jmaxg", hinfo%gridsize(3:3) ) ! [IN]
+    call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_kmax",  hinfo%gridsize(1:1) ) ! [IN]
+    call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_imaxg", hinfo%gridsize(2:2) ) ! [IN]
+    call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_jmaxg", hinfo%gridsize(3:3) ) ! [IN]
 
-    call FileSetGlobalAttribute( fid, "scale_rm_grid_index_khalo", hinfo%halosize(1:1) ) ! [IN]
-    call FileSetGlobalAttribute( fid, "scale_rm_grid_index_ihalo", hinfo%halosize(2:2) ) ! [IN]
-    call FileSetGlobalAttribute( fid, "scale_rm_grid_index_jhalo", hinfo%halosize(3:3) ) ! [IN]
+    call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_khalo", hinfo%halosize(1:1) ) ! [IN]
+    call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_ihalo", hinfo%halosize(2:2) ) ! [IN]
+    call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_jhalo", hinfo%halosize(3:3) ) ! [IN]
 
-    call FileSetGlobalAttribute( fid, "time_units", hinfo%time_units    ) ! [IN]
-    call FileSetGlobalAttribute( fid, "time_start", hinfo%time_start(:) ) ! [IN]
+    call FILE_Set_GlobalAttribute( fid, "time_units", hinfo%time_units    ) ! [IN]
+    call FILE_Set_GlobalAttribute( fid, "time_start", hinfo%time_start(:) ) ! [IN]
 
     IMAX = hinfo%gridsize(2) / nprocs_x_out
     JMAX = hinfo%gridsize(3) / nprocs_y_out
@@ -996,92 +1016,92 @@ contains
     minfo%straight_vertical_longitude_from_pole(:) = hinfo%minfo_straight_vertical_longitude_from_pole(:)
     minfo%standard_parallel                    (:) = hinfo%minfo_standard_parallel                    (:)
 
-    call FileSetAttribute( fid, "x" , "size_global" , ainfo(1)%size_global (:) )
-    call FileSetAttribute( fid, "x" , "start_global", ainfo(1)%start_global(:) )
-    call FileSetAttribute( fid, "x" , "halo_global" , ainfo(1)%halo_global (:) )
-    call FileSetAttribute( fid, "x" , "halo_local"  , ainfo(1)%halo_local  (:) )
-    call FileSetAttribute( fid, "x" , "periodic"    , ainfo(1)%periodic        )
+    call FILE_Set_Attribute( fid, "x" , "size_global" , ainfo(1)%size_global (:) )
+    call FILE_Set_Attribute( fid, "x" , "start_global", ainfo(1)%start_global(:) )
+    call FILE_Set_Attribute( fid, "x" , "halo_global" , ainfo(1)%halo_global (:) )
+    call FILE_Set_Attribute( fid, "x" , "halo_local"  , ainfo(1)%halo_local  (:) )
+    call FILE_Set_Attribute( fid, "x" , "periodic"    , ainfo(1)%periodic        )
 
-    call FileSetAttribute( fid, "xh", "size_global" , ainfo(2)%size_global (:) )
-    call FileSetAttribute( fid, "xh", "start_global", ainfo(2)%start_global(:) )
-    call FileSetAttribute( fid, "xh", "halo_global" , ainfo(2)%halo_global (:) )
-    call FileSetAttribute( fid, "xh", "halo_local"  , ainfo(2)%halo_local  (:) )
-    call FileSetAttribute( fid, "xh", "periodic"    , ainfo(2)%periodic        )
+    call FILE_Set_Attribute( fid, "xh", "size_global" , ainfo(2)%size_global (:) )
+    call FILE_Set_Attribute( fid, "xh", "start_global", ainfo(2)%start_global(:) )
+    call FILE_Set_Attribute( fid, "xh", "halo_global" , ainfo(2)%halo_global (:) )
+    call FILE_Set_Attribute( fid, "xh", "halo_local"  , ainfo(2)%halo_local  (:) )
+    call FILE_Set_Attribute( fid, "xh", "periodic"    , ainfo(2)%periodic        )
 
-    call FileSetAttribute( fid, "y" , "size_global" , ainfo(3)%size_global (:) )
-    call FileSetAttribute( fid, "y" , "start_global", ainfo(3)%start_global(:) )
-    call FileSetAttribute( fid, "y" , "halo_global" , ainfo(3)%halo_global (:) )
-    call FileSetAttribute( fid, "y" , "halo_local"  , ainfo(3)%halo_local  (:) )
-    call FileSetAttribute( fid, "y" , "periodic"    , ainfo(3)%periodic        )
+    call FILE_Set_Attribute( fid, "y" , "size_global" , ainfo(3)%size_global (:) )
+    call FILE_Set_Attribute( fid, "y" , "start_global", ainfo(3)%start_global(:) )
+    call FILE_Set_Attribute( fid, "y" , "halo_global" , ainfo(3)%halo_global (:) )
+    call FILE_Set_Attribute( fid, "y" , "halo_local"  , ainfo(3)%halo_local  (:) )
+    call FILE_Set_Attribute( fid, "y" , "periodic"    , ainfo(3)%periodic        )
 
-    call FileSetAttribute( fid, "yh", "size_global" , ainfo(4)%size_global (:) )
-    call FileSetAttribute( fid, "yh", "start_global", ainfo(4)%start_global(:) )
-    call FileSetAttribute( fid, "yh", "halo_global" , ainfo(4)%halo_global (:) )
-    call FileSetAttribute( fid, "yh", "halo_local"  , ainfo(4)%halo_local  (:) )
-    call FileSetAttribute( fid, "yh", "periodic"    , ainfo(4)%periodic        )
+    call FILE_Set_Attribute( fid, "yh", "size_global" , ainfo(4)%size_global (:) )
+    call FILE_Set_Attribute( fid, "yh", "start_global", ainfo(4)%start_global(:) )
+    call FILE_Set_Attribute( fid, "yh", "halo_global" , ainfo(4)%halo_global (:) )
+    call FILE_Set_Attribute( fid, "yh", "halo_local"  , ainfo(4)%halo_local  (:) )
+    call FILE_Set_Attribute( fid, "yh", "periodic"    , ainfo(4)%periodic        )
 
     if ( minfo%mapping_name /= "" ) then
-       call FileSetAttribute( fid, "x" , "standard_name", "projection_x_coordinate" )
-       call FileSetAttribute( fid, "xh", "standard_name", "projection_x_coordinate" )
-       call FileSetAttribute( fid, "y" , "standard_name", "projection_y_coordinate" )
-       call FileSetAttribute( fid, "yh", "standard_name", "projection_y_coordinate" )
+       call FILE_Set_Attribute( fid, "x" , "standard_name", "projection_x_coordinate" )
+       call FILE_Set_Attribute( fid, "xh", "standard_name", "projection_x_coordinate" )
+       call FILE_Set_Attribute( fid, "y" , "standard_name", "projection_y_coordinate" )
+       call FILE_Set_Attribute( fid, "yh", "standard_name", "projection_y_coordinate" )
 
-       call FileAddAssociatedVariable( fid, minfo%mapping_name )
-       call FileSetAttribute( fid, minfo%mapping_name, "grid_mapping_name",  minfo%mapping_name )
+       call FILE_Add_AssociatedVariable( fid, minfo%mapping_name )
+       call FILE_Set_Attribute( fid, minfo%mapping_name, "grid_mapping_name",  minfo%mapping_name )
 
        if ( minfo%false_easting(1) /= UNDEF ) then
-          call FileSetAttribute( fid,                   & ! [IN]
-                                 minfo%mapping_name,    & ! [IN]
-                                 "false_easting",       & ! [IN]
-                                 minfo%false_easting(:) ) ! [IN]
+          call FILE_Set_Attribute( fid,                   & ! [IN]
+                                   minfo%mapping_name,    & ! [IN]
+                                   "false_easting",       & ! [IN]
+                                   minfo%false_easting(:) ) ! [IN]
        endif
 
        if ( minfo%false_northing(1) /= UNDEF ) then
-          call FileSetAttribute( fid,                    & ! [IN]
-                                 minfo%mapping_name,     & ! [IN]
-                                 "false_northing",       & ! [IN]
-                                 minfo%false_northing(:) ) ! [IN]
+          call FILE_Set_Attribute( fid,                    & ! [IN]
+                                   minfo%mapping_name,     & ! [IN]
+                                   "false_northing",       & ! [IN]
+                                   minfo%false_northing(:) ) ! [IN]
        endif
 
        if ( minfo%longitude_of_central_meridian(1) /= UNDEF ) then
-          call FileSetAttribute( fid,                                   & ! [IN]
-                                 minfo%mapping_name,                    & ! [IN]
-                                 "longitude_of_central_meridian",       & ! [IN]
-                                 minfo%longitude_of_central_meridian(:) ) ! [IN]
+          call FILE_Set_Attribute( fid,                                   & ! [IN]
+                                   minfo%mapping_name,                    & ! [IN]
+                                   "longitude_of_central_meridian",       & ! [IN]
+                                   minfo%longitude_of_central_meridian(:) ) ! [IN]
        endif
 
        if ( minfo%longitude_of_projection_origin(1) /= UNDEF ) then
-          call FileSetAttribute( fid,                                    & ! [IN]
-                                 minfo%mapping_name,                     & ! [IN]
-                                 "longitude_of_projection_origin",       & ! [IN]
-                                 minfo%longitude_of_projection_origin(:) ) ! [IN]
+          call FILE_Set_Attribute( fid,                                    & ! [IN]
+                                   minfo%mapping_name,                     & ! [IN]
+                                   "longitude_of_projection_origin",       & ! [IN]
+                                   minfo%longitude_of_projection_origin(:) ) ! [IN]
        endif
 
        if ( minfo%latitude_of_projection_origin(1) /= UNDEF ) then
-          call FileSetAttribute( fid,                                   & ! [IN]
-                                 minfo%mapping_name,                    & ! [IN]
-                                 "latitude_of_projection_origin",       & ! [IN]
-                                 minfo%latitude_of_projection_origin(:) ) ! [IN]
+          call FILE_Set_Attribute( fid,                                   & ! [IN]
+                                   minfo%mapping_name,                    & ! [IN]
+                                   "latitude_of_projection_origin",       & ! [IN]
+                                   minfo%latitude_of_projection_origin(:) ) ! [IN]
        endif
 
        if ( minfo%straight_vertical_longitude_from_pole(1) /= UNDEF ) then
-          call FileSetAttribute( fid,                                           & ! [IN]
-                                 minfo%mapping_name,                            & ! [IN]
-                                 "straight_vertical_longitude_from_pole",       & ! [IN]
-                                 minfo%straight_vertical_longitude_from_pole(:) ) ! [IN]
+          call FILE_Set_Attribute( fid,                                           & ! [IN]
+                                   minfo%mapping_name,                            & ! [IN]
+                                   "straight_vertical_longitude_from_pole",       & ! [IN]
+                                   minfo%straight_vertical_longitude_from_pole(:) ) ! [IN]
        endif
 
        if ( minfo%standard_parallel(1) /= UNDEF ) then
           if ( minfo%standard_parallel(2) /= UNDEF ) then
-             call FileSetAttribute( fid,                         & ! [IN]
-                                    minfo%mapping_name,          & ! [IN]
-                                    "standard_parallel",         & ! [IN]
-                                    minfo%standard_parallel(1:2) ) ! [IN]
+             call FILE_Set_Attribute( fid,                         & ! [IN]
+                                      minfo%mapping_name,          & ! [IN]
+                                      "standard_parallel",         & ! [IN]
+                                      minfo%standard_parallel(1:2) ) ! [IN]
           else
-             call FileSetAttribute( fid,                         & ! [IN]
-                                    minfo%mapping_name,          & ! [IN]
-                                    "standard_parallel",         & ! [IN]
-                                    minfo%standard_parallel(1:1) ) ! [IN]
+             call FILE_Set_Attribute( fid,                         & ! [IN]
+                                      minfo%mapping_name,          & ! [IN]
+                                      "standard_parallel",         & ! [IN]
+                                      minfo%standard_parallel(1:1) ) ! [IN]
           endif
        endif
     endif

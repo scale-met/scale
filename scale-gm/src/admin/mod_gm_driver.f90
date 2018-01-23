@@ -16,8 +16,8 @@ module mod_gm_driver
   !
   use dc_log, only: &
      LogInit
-  use gtool_file, only: &
-     FileCloseAll
+  use scale_file, only: &
+     FILE_Close_All
   use scale_precision
   use scale_stdio
   use scale_prof
@@ -384,7 +384,7 @@ contains
     !########## Finalize ##########
 
     call PROF_rapstart('File', 2)
-    call FileCloseAll
+    call FILE_Close_All
     call PROF_rapend  ('File', 2)
 
     call PROF_rapend  ('All', 1)

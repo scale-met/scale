@@ -29,9 +29,6 @@ module scale_atmos_boundary
   use scale_index
   use scale_tracer
 
-  use gtool_file_h, only: &
-     File_REAL4,  &
-     File_REAL8
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -1261,8 +1258,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Resume boundary value for real case experiment
   subroutine ATMOS_BOUNDARY_resume_file
-    use gtool_file, only: &
-       FileRead
     use scale_process, only: &
        PRC_MPIstop
     use scale_time, only: &

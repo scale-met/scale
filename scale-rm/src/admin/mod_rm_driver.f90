@@ -19,8 +19,6 @@ module mod_rm_driver
   !
   use dc_log, only: &
      LogInit
-  use gtool_file, only: &
-     FileCloseAll
   use scale_precision
   use scale_stdio
   use scale_prof
@@ -61,6 +59,8 @@ contains
        intercomm_parent, &
        intercomm_child,  &
        cnf_fname         )
+    use scale_file, only: &
+     FILE_Close_All
     use scale_process, only: &
        PRC_LOCAL_setup
     use scale_rm_process, only: &
@@ -409,7 +409,7 @@ contains
 
     call COMM_cleanup
 
-    call FileCloseAll
+    call FILE_Close_All
     call PROF_rapend  ('File', 2)
 
     call PROF_rapend  ('All', 1)

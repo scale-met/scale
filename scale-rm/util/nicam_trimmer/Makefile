@@ -2,16 +2,15 @@
 
 TOPDIR      = $(abspath ../../..)
 BUILD_DIR   = ./.libs
-SYSDEP_DIR  = ../../../sysdep
-SCALELIB    = ../../../scalelib/src
-GTOOLLIB    = ../../../gtool
-DCUTILS     = ../../../dc_utils
+SYSDEP_DIR  = $(TOPDIR)/sysdep
+DCUTILS     = $(TOPDIR)/dc_utils
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
 
 #FC=ifort
-LIBS=$(SCALE_NETCDF_LIBS) -L$(SCALELIB) -lscale  -L$(DCUTILS) -ldcutils -L$(GTOOLLIB) -lgtool
-INCLUDES=-I$(SCALELIB) -I$(DCUTILS) -I$(GTOOLLIB) $(SCALE_NETCDF_INCLUDE)
+LIBS=$(SCALE_NETCDF_LIBS) -L$(TOPDIR)/lib -lscale  -L$(DCUTILS) -ldcutils
+INCLUDES=-I$(TOPDIR)/include -I$(DCUTILS) $(SCALE_NETCDF_INCLUDE)
 
 OBJECT1=nicam_trimmer
 OBJECT2=nicam_trimmer_jw06

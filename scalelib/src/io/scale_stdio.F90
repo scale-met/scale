@@ -14,10 +14,10 @@ module scale_stdio
   !
   !++ used modules
   !
-  use gtool_file_h, only: &
-     File_HSHORT, &
-     File_HMID,   &
-     File_HLONG
+  use scale_file_h, only: &
+     FILE_HSHORT, &
+     FILE_HMID,   &
+     FILE_HLONG
   !-----------------------------------------------------------------------------
   implicit none
   private

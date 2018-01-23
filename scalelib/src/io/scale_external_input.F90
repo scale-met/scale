@@ -276,12 +276,12 @@ contains
        check_coordinates,     &
        step_limit,            &
        exist                  )
-    use gtool_file_h, only: &
-       File_FREAD
-    use gtool_file, only: &
-       FileOpen,           &
-       FileGetAllDataInfo, &
-       FileRead
+    use scale_file_h, only: &
+       FILE_FREAD
+    use scale_file, only: &
+       FILE_Open,             &
+       FILE_Get_All_DataInfo, &
+       FILE_Read
     use scale_process, only: &
        PRC_myrank, &
        PRC_MPIstop
@@ -367,23 +367,23 @@ contains
        call PRC_MPIstop
     endif
 
-    call FileOpen( fid, basename(1), File_FREAD, myrank=PRC_myrank )
+    call FILE_Open( fid, basename(1), FILE_FREAD, myrank=PRC_myrank )
 
     ! read from file
-    call FileGetAllDatainfo( step_limit_,               & ! [IN]
-                             EXTIN_dim_limit,           & ! [IN]
-                             fid,                       & ! [IN]
-                             varname,                   & ! [IN]
-                             step_nmax,                 & ! [OUT]
-                             description,               & ! [OUT]
-                             unit,                      & ! [OUT]
-                             datatype,                  & ! [OUT]
-                             dim_rank,                  & ! [OUT]
-                             dim_name  (:),             & ! [OUT]
-                             dim_size  (:),             & ! [OUT]
-                             time_start(1:step_limit_), & ! [OUT]
-                             time_end  (1:step_limit_), & ! [OUT]
-                             time_units                 ) ! [OUT]
+    call FILE_Get_All_Datainfo( step_limit_,               & ! [IN]
+                                EXTIN_dim_limit,           & ! [IN]
+                                fid,                       & ! [IN]
+                                varname,                   & ! [IN]
+                                step_nmax,                 & ! [OUT]
+                                description,               & ! [OUT]
+                                unit,                      & ! [OUT]
+                                datatype,                  & ! [OUT]
+                                dim_rank,                  & ! [OUT]
+                                dim_name  (:),             & ! [OUT]
+                                dim_size  (:),             & ! [OUT]
+                                time_start(1:step_limit_), & ! [OUT]
+                                time_end  (1:step_limit_), & ! [OUT]
+                                time_units                 ) ! [OUT]
 
     if ( step_nmax > 0 ) then
        if ( present(exist) ) then
@@ -551,19 +551,19 @@ contains
                   '*** Read 1D var           : ', trim(EXTIN_item(nid)%varname), &
                   ' (step= ', EXTIN_item(nid)%data_step_prev, ')'
 
-       call FileRead( EXTIN_item(nid)%value(:,1,1,I_prev), & ! [OUT]
-                      EXTIN_item(nid)%fid,                 & ! [IN]
-                      EXTIN_item(nid)%varname,             & ! [IN]
-                      EXTIN_item(nid)%data_step_prev       ) ! [IN]
+       call FILE_Read( EXTIN_item(nid)%value(:,1,1,I_prev), & ! [OUT]
+                       EXTIN_item(nid)%fid,                 & ! [IN]
+                       EXTIN_item(nid)%varname,             & ! [IN]
+                       EXTIN_item(nid)%data_step_prev       ) ! [IN]
        ! read next
        if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
                   '*** Read 1D var           : ', trim(EXTIN_item(nid)%varname), &
                   ' (step= ', EXTIN_item(nid)%data_step_next, ')'
 
-       call FileRead( EXTIN_item(nid)%value(:,1,1,I_next), & ! [OUT]
-                      EXTIN_item(nid)%fid,                 & ! [IN]
-                      EXTIN_item(nid)%varname,             & ! [IN]
-                      EXTIN_item(nid)%data_step_next       ) ! [IN]
+       call FILE_Read( EXTIN_item(nid)%value(:,1,1,I_next), & ! [OUT]
+                       EXTIN_item(nid)%fid,                 & ! [IN]
+                       EXTIN_item(nid)%varname,             & ! [IN]
+                       EXTIN_item(nid)%data_step_next       ) ! [IN]
 
     elseif(       dim_size(1) >= 1 &
             .AND. dim_size(2) >  1 &
@@ -592,19 +592,19 @@ contains
                   '*** Read 2D var           : ', trim(EXTIN_item(nid)%varname), &
                   ' (step= ', EXTIN_item(nid)%data_step_prev, ')'
 
-       call FileRead( EXTIN_item(nid)%value(:,:,1,I_prev), & ! [OUT]
-                      EXTIN_item(nid)%fid,                 & ! [IN]
-                      EXTIN_item(nid)%varname,             & ! [IN]
-                      EXTIN_item(nid)%data_step_prev       ) ! [IN]
+       call FILE_Read( EXTIN_item(nid)%value(:,:,1,I_prev), & ! [OUT]
+                       EXTIN_item(nid)%fid,                 & ! [IN]
+                       EXTIN_item(nid)%varname,             & ! [IN]
+                       EXTIN_item(nid)%data_step_prev       ) ! [IN]
        ! read next
        if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
                   '*** Read 2D var           : ', trim(EXTIN_item(nid)%varname), &
                   ' (step= ', EXTIN_item(nid)%data_step_next, ')'
 
-       call FileRead( EXTIN_item(nid)%value(:,:,1,I_next), & ! [OUT]
-                      EXTIN_item(nid)%fid,                 & ! [IN]
-                      EXTIN_item(nid)%varname,             & ! [IN]
-                      EXTIN_item(nid)%data_step_next       ) ! [IN]
+       call FILE_Read( EXTIN_item(nid)%value(:,:,1,I_next), & ! [OUT]
+                       EXTIN_item(nid)%fid,                 & ! [IN]
+                       EXTIN_item(nid)%varname,             & ! [IN]
+                       EXTIN_item(nid)%data_step_next       ) ! [IN]
 
     elseif(       dim_size(1) >= 1 &
             .AND. dim_size(2) >  1 &
@@ -637,20 +637,20 @@ contains
                   '*** Read 3D var           : ', trim(EXTIN_item(nid)%varname), &
                   ' (step= ', EXTIN_item(nid)%data_step_prev, ')'
 
-       call FileRead( EXTIN_item(nid)%value(:,:,:,I_prev), & ! [OUT]
-                      EXTIN_item(nid)%fid,                 & ! [IN]
-                      EXTIN_item(nid)%varname,             & ! [IN]
-                      EXTIN_item(nid)%data_step_prev       ) ! [IN]
+       call FILE_Read( EXTIN_item(nid)%value(:,:,:,I_prev), & ! [OUT]
+                       EXTIN_item(nid)%fid,                 & ! [IN]
+                       EXTIN_item(nid)%varname,             & ! [IN]
+                       EXTIN_item(nid)%data_step_prev       ) ! [IN]
 
        ! read next
        if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
                   '*** Read 3D var           : ', trim(EXTIN_item(nid)%varname), &
                   ' (step= ', EXTIN_item(nid)%data_step_next, ')'
 
-       call FileRead( EXTIN_item(nid)%value(:,:,:,I_next), & ! [OUT]
-                      EXTIN_item(nid)%fid,                 & ! [IN]
-                      EXTIN_item(nid)%varname,             & ! [IN]
-                      EXTIN_item(nid)%data_step_next       ) ! [IN]
+       call FILE_Read( EXTIN_item(nid)%value(:,:,:,I_next), & ! [OUT]
+                       EXTIN_item(nid)%fid,                 & ! [IN]
+                       EXTIN_item(nid)%varname,             & ! [IN]
+                       EXTIN_item(nid)%data_step_next       ) ! [IN]
 
     else
        write(*,*) 'xxx Unexpected dimsize: ', dim_size(:)
@@ -675,8 +675,8 @@ contains
        varname,      &
        time_current, &
        error         )
-    use gtool_file, only: &
-       FileRead
+    use scale_file, only: &
+       FILE_Read
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -730,10 +730,10 @@ contains
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)
 
        ! read next
-       call FileRead( EXTIN_item(nid)%value(:,1,1,I_next), & ! [OUT]
-                      EXTIN_item(nid)%fid,                 & ! [IN]
-                      EXTIN_item(nid)%varname,             & ! [IN]
-                      step_next                            ) ! [IN]
+       call FILE_Read( EXTIN_item(nid)%value(:,1,1,I_next), & ! [OUT]
+                       EXTIN_item(nid)%fid,                 & ! [IN]
+                       EXTIN_item(nid)%varname,             & ! [IN]
+                       step_next                            ) ! [IN]
     endif
 
     ! store data with weight
@@ -756,8 +756,8 @@ contains
        varname,      &
        time_current, &
        error         )
-    use gtool_file, only: &
-       FileRead
+    use scale_file, only: &
+       FILE_Read
     implicit none
 
     real(RP),         intent(out) :: var(:,:)     ! variable
@@ -805,10 +805,10 @@ contains
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)
 
        ! read next
-       call FileRead( EXTIN_item(nid)%value(:,:,1,I_next), & ! [OUT]
-                      EXTIN_item(nid)%fid,                 & ! [IN]
-                      EXTIN_item(nid)%varname,             & ! [IN]
-                      step_next                            ) ! [IN]
+       call FILE_Read( EXTIN_item(nid)%value(:,:,1,I_next), & ! [OUT]
+                       EXTIN_item(nid)%fid,                 & ! [IN]
+                       EXTIN_item(nid)%varname,             & ! [IN]
+                       step_next                            ) ! [IN]
     endif
 
     if ( EXTIN_item(nid)%transpose ) then
@@ -849,8 +849,8 @@ contains
        varname,      &
        time_current, &
        error         )
-    use gtool_file, only: &
-       FileRead
+    use scale_file, only: &
+       FILE_Read
     implicit none
 
     real(RP),         intent(out) :: var(:,:,:)   ! variable
@@ -898,10 +898,10 @@ contains
        EXTIN_item(nid)%value(:,:,:,I_prev) = EXTIN_item(nid)%value(:,:,:,I_next)
 
        ! read next
-       call FileRead( EXTIN_item(nid)%value(:,:,:,I_next), & ! [OUT]
-                      EXTIN_item(nid)%fid,                 & ! [IN]
-                      EXTIN_item(nid)%varname,             & ! [IN]
-                      step_next                            ) ! [IN]
+       call FILE_Read( EXTIN_item(nid)%value(:,:,:,I_next), & ! [OUT]
+                       EXTIN_item(nid)%fid,                 & ! [IN]
+                       EXTIN_item(nid)%varname,             & ! [IN]
+                       step_next                            ) ! [IN]
     endif
 
     if ( EXTIN_item(nid)%transpose ) then
@@ -950,11 +950,11 @@ contains
        time_current, &
        weight,       &
        do_readfile   )
-    use gtool_file_h, only: &
-       File_FREAD
-    use gtool_file, only: &
-       FileOpen,           &
-       FileGetAllDataInfo
+    use scale_file_h, only: &
+       FILE_FREAD
+    use scale_file, only: &
+       FILE_Open,           &
+       FILE_Get_All_DataInfo
     use scale_process, only: &
        PRC_myrank, &
        PRC_MPIstop
@@ -1063,23 +1063,23 @@ contains
 
                    EXTIN_item(nid)%file_current = EXTIN_item(nid)%file_current + 1
 
-                   call FileOpen( fid, EXTIN_item(nid)%basename(EXTIN_item(nid)%file_current), File_FREAD, myrank=PRC_myrank )
+                   call FILE_Open( fid, EXTIN_item(nid)%basename(EXTIN_item(nid)%file_current), FILE_FREAD, myrank=PRC_myrank )
 
                    ! read from file
-                   call FileGetAllDatainfo( EXTIN_item(nid)%step_limit,               & ! [IN]
-                                            EXTIN_dim_limit,                          & ! [IN]
-                                            fid,                                      & ! [IN]
-                                            EXTIN_item(nid)%varname,                  & ! [IN]
-                                            step_nmax,                                & ! [OUT]
-                                            description,                              & ! [OUT]
-                                            unit,                                     & ! [OUT]
-                                            datatype,                                 & ! [OUT]
-                                            dim_rank,                                 & ! [OUT]
-                                            dim_name  (:),                            & ! [OUT]
-                                            dim_size  (:),                            & ! [OUT]
-                                            time_start(1:EXTIN_item(nid)%step_limit), & ! [OUT]
-                                            time_end  (1:EXTIN_item(nid)%step_limit), & ! [OUT]
-                                            time_units                                ) ! [OUT]
+                   call FILE_Get_All_Datainfo( EXTIN_item(nid)%step_limit,               & ! [IN]
+                                               EXTIN_dim_limit,                          & ! [IN]
+                                               fid,                                      & ! [IN]
+                                               EXTIN_item(nid)%varname,                  & ! [IN]
+                                               step_nmax,                                & ! [OUT]
+                                               description,                              & ! [OUT]
+                                               unit,                                     & ! [OUT]
+                                               datatype,                                 & ! [OUT]
+                                               dim_rank,                                 & ! [OUT]
+                                               dim_name  (:),                            & ! [OUT]
+                                               dim_size  (:),                            & ! [OUT]
+                                               time_start(1:EXTIN_item(nid)%step_limit), & ! [OUT]
+                                               time_end  (1:EXTIN_item(nid)%step_limit), & ! [OUT]
+                                               time_units                                ) ! [OUT]
 
                    if ( step_nmax == 0 ) then
                       write(*,*) 'xxx Data not found! basename = ', trim(EXTIN_item(nid)%basename(EXTIN_item(nid)%file_current)), &

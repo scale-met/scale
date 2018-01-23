@@ -90,8 +90,8 @@ contains
        PARENT_JMAX
     use scale_specfunc, only: &
        SF_gamma
-    use gtool_file, only: &
-       FileRead
+    use scale_file, only: &
+       FILE_Read
     use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP_NAME, &
        QA_MP, &
@@ -222,7 +222,7 @@ contains
 
     endif
 
-    call FileRead( read3Di(:,:,:), BASENAME_ORG, "QV", it, rank )
+    call FILE_Read( read3Di(:,:,:), BASENAME_ORG, "QV", it, rank )
     do k = 1, dims(1)
        qtrc_org(k+2,xs:xe,ys:ye,I_QV) = read3Di(:,:,k)
     end do
@@ -233,12 +233,12 @@ contains
       if( IO_L ) write(IO_FID_LOG,*) '+++ SDF of Bin model is created from'
       if( IO_L ) write(IO_FID_LOG,*) '+++ Kessler type Bulk microphysical model'
 
-       call FileRead( read3Di(:,:,:), BASENAME_ORG, "QC", it, rank )
+       call FILE_Read( read3Di(:,:,:), BASENAME_ORG, "QC", it, rank )
        do k = 1, dims(1)
           qc_tmp(k+2,xs:xe,ys:ye) = read3Di(:,:,k)
        end do
 
-       call FileRead( read3Di(:,:,:), BASENAME_ORG, "QR", it, rank )
+       call FILE_Read( read3Di(:,:,:), BASENAME_ORG, "QR", it, rank )
        do k = 1, dims(1)
           qr_tmp(k+2,xs:xe,ys:ye) = read3Di(:,:,k)
        end do
@@ -276,7 +276,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '+++ SDF of Bin model is created from'
        if( IO_L ) write(IO_FID_LOG,*) '+++ TOMITA08 Bulk microphysical model'
 
-       call FileRead( read3Di(:,:,:), BASENAME_ORG, "QC", it, rank )
+       call FILE_Read( read3Di(:,:,:), BASENAME_ORG, "QC", it, rank )
        do k = 1, dims(1)
           qc_tmp(k+2,xs:xe,ys:ye) = read3Di(:,:,k)
        end do
@@ -288,22 +288,22 @@ contains
 !       enddo
 !       enddo
 
-       call FileRead( read3Di(:,:,:), BASENAME_ORG, "QR", it, rank )
+       call FILE_Read( read3Di(:,:,:), BASENAME_ORG, "QR", it, rank )
        do k = 1, dims(1)
           qr_tmp(k+2,xs:xe,ys:ye) = read3Di(:,:,k)
        end do
 
-       call FileRead( read3Di(:,:,:), BASENAME_ORG, "QI", it, rank )
+       call FILE_Read( read3Di(:,:,:), BASENAME_ORG, "QI", it, rank )
        do k = 1, dims(1)
           qi_tmp(k+2,xs:xe,ys:ye) = read3Di(:,:,k)
        end do
 
-       call FileRead( read3Di(:,:,:), BASENAME_ORG, "QS", it, rank )
+       call FILE_Read( read3Di(:,:,:), BASENAME_ORG, "QS", it, rank )
        do k = 1, dims(1)
           qs_tmp(k+2,xs:xe,ys:ye) = read3Di(:,:,k)
        end do
 
-       call FileRead( read3Di(:,:,:), BASENAME_ORG, "QG", it, rank )
+       call FILE_Read( read3Di(:,:,:), BASENAME_ORG, "QG", it, rank )
        do k = 1, dims(1)
           qg_tmp(k+2,xs:xe,ys:ye) = read3Di(:,:,k)
        end do
@@ -448,7 +448,7 @@ contains
       if( IO_L ) write(IO_FID_LOG,*) '+++ from Bin microphysical model'
       do iq = 1, QA_MP
          iqa = QS_MP + iq - 1
-         call FileRead( read3Di(:,:,:), BASENAME_ORG, ATMOS_PHY_MP_NAME(iq), it, rank )
+         call FILE_Read( read3Di(:,:,:), BASENAME_ORG, ATMOS_PHY_MP_NAME(iq), it, rank )
          do k = 1, dims(1)
             qtrc_org(k+2,xs:xe,ys:ye,iqa) = read3Di(:,:,k)
          end do

@@ -6,26 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2011-11-11 (H.Yashiro)  [new] Imported from SCALE-RM ver.2
-!! @li      2012-01-31 (Y.Miyamoto) [add] Lamb wave test
-!! @li      2012-01-31 (Y.Miyamoto) [add] KH wave test
-!! @li      2012-01-31 (Y.Miyamoto) [add] turbulence test
-!! @li      2011-02-01 (H.Yashiro)  [add] supercell test, follow the supercell test of WRF
-!! @li      2012-02-06 (Y.Miyamoto) [add] advection test
-!! @li      2012-02-16 (Y.Miyamoto) [mod] added hydrostatic balance calculation
-!! @li      2012-03-27 (H.Yashiro)  [mod] change subroutines into one module
-!! @li      2012-04-04 (Y.Miyamoto) [new] SQUALLINE test, for GCSS model comparison (Redelsperger et al. 2000)
-!! @li      2012-04-06 (H.Yashiro)  [new] uniform state test
-!! @li      2012-04-08 (H.Yashiro)  [mod] merge all init programs
-!! @li      2012-06-13 (Y.Sato)     [mod] add hbinw option (***HBINW)
-!! @li      2013-02-25 (H.Yashiro)  [mod] ISA profile
-!! @li      2014-03-27 (A.Noda)     [mod] add DYCOMS2_RF02_DNS
-!! @li      2014-04-28 (R.Yoshida)  [add] real case experiment
-!! @li      2014-08-26 (A.Noda)     [mod] add GRAYZONE
-!! @li      2015-03-27 (Y.Sato)     [mod] add Box aero
-!! @li      2015-04-30 (Y.Sato)     [mod] add WARMBUBBLE-AERO
-!!
 !<
 !-------------------------------------------------------------------------------
 module mod_mkinit
@@ -4504,9 +4484,9 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine MKINIT_interporation
-    use gtool_file, only: &
-       FileGetShape, &
-       FileRead
+    use scale_file, only: &
+       FILE_Get_Shape, &
+       FILE_Read
     use scale_atmos_hydrometeor, only: &
        I_QV, &
        I_QC
@@ -4589,8 +4569,8 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_INTERPORATION)
 
-    call FileGetShape( dims(:),                               &
-                       BASENAME_ORG, "DENS", 1, single=.true. )
+    call FILE_Get_Shape( dims(:),                               &
+                         BASENAME_ORG, "DENS", 1, single=.true. )
 
     allocate( dens_org(dims(1),dims(2),dims(3)) )
     allocate( momz_org(dims(1),dims(2),dims(3)) )
@@ -4611,30 +4591,30 @@ contains
     allocate( cy_org(dims(3)) )
     allocate( fy_org(dims(3)) )
 
-    call FileRead( dens_org(:,:,:),                          &
+    call FILE_Read( dens_org(:,:,:),                          &
                    BASENAME_ORG, "DENS", 1, 1, single=.true. )
-    call FileRead( momz_org(:,:,:),                          &
+    call FILE_Read( momz_org(:,:,:),                          &
                    BASENAME_ORG, "MOMZ", 1, 1, single=.true. )
-    call FileRead( momx_org(:,:,:),                          &
+    call FILE_Read( momx_org(:,:,:),                          &
                    BASENAME_ORG, "MOMX", 1, 1, single=.true. )
-    call FileRead( momy_org(:,:,:),                          &
+    call FILE_Read( momy_org(:,:,:),                          &
                    BASENAME_ORG, "MOMY", 1, 1, single=.true. )
-    call FileRead( rhot_org(:,:,:),                          &
+    call FILE_Read( rhot_org(:,:,:),                          &
                    BASENAME_ORG, "RHOT", 1, 1, single=.true. )
     do iq = 1, QA
-       call FileRead( qtrc_org(:,:,:,iq),                            &
+       call FILE_Read( qtrc_org(:,:,:,iq),                            &
                       BASENAME_ORG, TRACER_NAME(iq), 1, 1, single=.true. )
     end do
 
-    call FileRead( cz_org(:),                              &
+    call FILE_Read( cz_org(:),                              &
                    BASENAME_ORG, "z" , 1, 1, single=.true. )
-    call FileRead( cx_org(:),                              &
+    call FILE_Read( cx_org(:),                              &
                    BASENAME_ORG, "x" , 1, 1, single=.true. )
-    call FileRead( cy_org(:),                              &
+    call FILE_Read( cy_org(:),                              &
                    BASENAME_ORG, "y" , 1, 1, single=.true. )
-    call FileRead( fx_org(:),                              &
+    call FILE_Read( fx_org(:),                              &
                    BASENAME_ORG, "xh", 1, 1, single=.true. )
-    call FileRead( fy_org(:),                              &
+    call FILE_Read( fy_org(:),                              &
                    BASENAME_ORG, "yh", 1, 1, single=.true. )
 
     do k = KS, KE

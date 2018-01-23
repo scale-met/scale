@@ -55,10 +55,10 @@ contains
        ainfo,     &
        debug      )
     use mpi
-    use gtool_file_h, only: &
-       File_dtypelist
-    use gtool_file, only: &
-       FileGetDatainfo
+    use scale_file_h, only: &
+       FILE_dtypelist
+    use scale_file, only: &
+       FILE_Get_Datainfo
     use scale_process, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD, &
@@ -94,16 +94,16 @@ contains
              if( IO_L ) write(IO_FID_LOG,*) '*** read info : ', trim(axisname(n))
           endif
 
-          call FileGetDatainfo( basename,                           & ! [IN]
-                                axisname(n),                        & ! [IN]
-                                nowrank,                            & ! [IN]
-                                nowstep,                            & ! [IN]
-                                description = ainfo(n)%description, & ! [OUT]
-                                units       = ainfo(n)%units,       & ! [OUT]
-                                datatype    = ainfo(n)%datatype,    & ! [OUT]
-                                dim_rank    = ainfo(n)%dim_rank,    & ! [OUT]
-                                dim_name    = ainfo(n)%dim_name(:), & ! [OUT]
-                                dim_size    = ainfo(n)%dim_size(:)  ) ! [OUT]
+          call FILE_Get_Datainfo( basename,                           & ! [IN]
+                                  axisname(n),                        & ! [IN]
+                                  nowrank,                            & ! [IN]
+                                  nowstep,                            & ! [IN]
+                                  description = ainfo(n)%description, & ! [OUT]
+                                  units       = ainfo(n)%units,       & ! [OUT]
+                                  datatype    = ainfo(n)%datatype,    & ! [OUT]
+                                  dim_rank    = ainfo(n)%dim_rank,    & ! [OUT]
+                                  dim_name    = ainfo(n)%dim_name(:), & ! [OUT]
+                                  dim_size    = ainfo(n)%dim_size(:)  ) ! [OUT]
 
           ainfo(n)%varname = axisname(n)
 
@@ -149,7 +149,7 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '*** varname     : ', trim(ainfo(n)%varname)
           if( IO_L ) write(IO_FID_LOG,*) '*** description : ', trim(ainfo(n)%description)
           if( IO_L ) write(IO_FID_LOG,*) '*** units       : ', trim(ainfo(n)%units)
-          if( IO_L ) write(IO_FID_LOG,*) '*** datatype    : ', trim(File_dtypelist(ainfo(n)%datatype))
+          if( IO_L ) write(IO_FID_LOG,*) '*** datatype    : ', trim(FILE_dtypelist(ainfo(n)%datatype))
           if( IO_L ) write(IO_FID_LOG,*) '*** dim_rank    : ', ainfo(n)%dim_rank
           do d = 1, ainfo(n)%dim_rank
              if( IO_L ) write(IO_FID_LOG,*) '*** dim No.', d
@@ -1297,9 +1297,9 @@ contains
        naxis, &
        ainfo, &
        debug  )
-    use gtool_file, only: &
-       FileDefAxis,                  &
-       FileDefAssociatedCoordinates
+    use scale_file, only: &
+       FILE_Def_Axis,                &
+       FILE_Def_AssociatedCoordinate
     use mod_sno_h, only: &
        axisinfo
     implicit none
@@ -1321,22 +1321,22 @@ contains
        if ( ainfo(n)%dim_rank == 1 ) then
           dsize = size(ainfo(n)%AXIS_1d(:))
 
-          call FileDefAxis( fid,                  & ! [IN]
-                            ainfo(n)%varname,     & ! [IN]
-                            ainfo(n)%description, & ! [IN]
-                            ainfo(n)%units,       & ! [IN]
-                            ainfo(n)%dim_name(1), & ! [IN]
-                            ainfo(n)%datatype,    & ! [IN]
-                            dsize                 ) ! [IN]
+          call FILE_Def_Axis( fid,                  & ! [IN]
+                              ainfo(n)%varname,     & ! [IN]
+                              ainfo(n)%description, & ! [IN]
+                              ainfo(n)%units,       & ! [IN]
+                              ainfo(n)%dim_name(1), & ! [IN]
+                              ainfo(n)%datatype,    & ! [IN]
+                              dsize                 ) ! [IN]
        else
           drank = ainfo(n)%dim_rank
 
-          call FileDefAssociatedCoordinates( fid,                        & ! [IN]
-                                             ainfo(n)%varname,           & ! [IN]
-                                             ainfo(n)%description,       & ! [IN]
-                                             ainfo(n)%units,             & ! [IN]
-                                             ainfo(n)%dim_name(1:drank), & ! [IN]
-                                             ainfo(n)%datatype           ) ! [IN]
+          call FILE_Def_AssociatedCoordinate( fid,                        & ! [IN]
+                                              ainfo(n)%varname,           & ! [IN]
+                                              ainfo(n)%description,       & ! [IN]
+                                              ainfo(n)%units,             & ! [IN]
+                                              ainfo(n)%dim_name(1:drank), & ! [IN]
+                                              ainfo(n)%datatype           ) ! [IN]
        endif
     enddo
 
@@ -1349,9 +1349,9 @@ contains
        naxis, &
        ainfo, &
        debug  )
-    use gtool_file, only: &
-       FileWriteAxis,                 &
-       FileWriteAssociatedCoordinates
+    use scale_file, only: &
+       FILE_Write_Axis,                &
+       FILE_Write_AssociatedCoordinate
     use mod_sno_h, only: &
        axisinfo
     implicit none
@@ -1370,23 +1370,23 @@ contains
     do n = 1, naxis
        if    ( ainfo(n)%dim_rank == 1 ) then
 
-          call FileWriteAxis( fid,                & ! [IN]
-                              ainfo(n)%varname,   & ! [IN]
-                              ainfo(n)%AXIS_1d(:) ) ! [IN]
+          call FILE_Write_Axis( fid,                & ! [IN]
+                                ainfo(n)%varname,   & ! [IN]
+                                ainfo(n)%AXIS_1d(:) ) ! [IN]
 
        elseif( ainfo(n)%dim_rank == 2 ) then
 
-          call FileWriteAssociatedCoordinates( fid,                   & ! [IN]
-                                               ainfo(n)%varname,      & ! [IN]
-                                               ainfo(n)%AXIS_2d(:,:), & ! [IN]
-                                               start(2:3)             ) ! [IN]
+          call FILE_Write_AssociatedCoordinate( fid,                   & ! [IN]
+                                                ainfo(n)%varname,      & ! [IN]
+                                                ainfo(n)%AXIS_2d(:,:), & ! [IN]
+                                                start(2:3)             ) ! [IN]
 
        elseif( ainfo(n)%dim_rank == 3 ) then
 
-          call FileWriteAssociatedCoordinates( fid,                     & ! [IN]
-                                               ainfo(n)%varname,        & ! [IN]
-                                               ainfo(n)%AXIS_3d(:,:,:), & ! [IN]
-                                               start(1:3)               ) ! [IN]
+          call FILE_Write_AssociatedCoordinate( fid,                     & ! [IN]
+                                                ainfo(n)%varname,        & ! [IN]
+                                                ainfo(n)%AXIS_3d(:,:,:), & ! [IN]
+                                                start(1:3)               ) ! [IN]
 
        endif
     enddo

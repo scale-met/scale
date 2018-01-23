@@ -12,11 +12,12 @@ include $(TOPDIR)/Mkinclude
 
 LIBNAME = libscale.a
 
-DEPENDLIB = $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+DEPENDLIB = $(LIBDIR)/libdcutils.a
 
 VPATH = common:                          \
         coupler:                         \
         io:                              \
+	file:                            \
         atmosphere/physics/pbl:          \
         atmosphere/physics/microphysics: \
         atmosphere/physics/radiation:    \
@@ -111,6 +112,11 @@ OBJS_CP = scale_atmos_phy_cp_kf.o
 
 OBJS_NAME = \
 	scale.o \
+	scale_netcdf.o	\
+	scale_file_f.o	\
+	scale_file_h.o	\
+	scale_file.o	\
+	scale_file_history.o	\
 	scale_atmos_dyn.o	\
 	scale_atmos_dyn_common.o	\
 	$(OBJS_DYN)	\
@@ -245,7 +251,6 @@ all:
 	$(MAKE) makedir
 	@echo;echo "Entering scalelib..."; echo "Current version is " $(LIBVERSION)
 	$(MAKE) -C $(DCUTILSDIR)
-	$(MAKE) -C $(GTOOLDIR)
 ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) checksdm
 	$(MAKE) overridesdm
@@ -261,9 +266,6 @@ makedir:
 
 $(LIBDIR)/libdcutils.a:
 	$(MAKE) -C $(DCUTILSDIR)
-
-$(LIBDIR)/libgtool.a: $(LIBDIR)/libdcutils.a
-	$(MAKE) -C $(GTOOLDIR)
 
 $(LIBNAME): $(LIBDIR)/$(LIBNAME)
 	install $< $@
@@ -318,7 +320,6 @@ cleansdm:
 
 allclean: distclean
 	$(MAKE) -C $(DCUTILSDIR) allclean
-	$(MAKE) -C $(GTOOLDIR)   allclean
 ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) checksdm
 	$(MAKE) restoresdm
@@ -355,9 +356,9 @@ $(MODDIR)/%.mod : %.mod
 	install $< $@
 
 $(OBJ_DIR)/%.o : %.F90
-	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJS_FOR_DYN) :
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 
 scale_atmos_dyn_fvm_flux_%.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
 	fname=$@ erb $< > $@

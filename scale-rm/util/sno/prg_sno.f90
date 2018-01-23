@@ -17,8 +17,8 @@ program sno
   use mpi
   use dc_log, only: &
      LogInit
-  use gtool_file, only: &
-     FileCloseAll
+  use scale_file, only: &
+     FILE_Close_All
   use scale_precision
   use scale_stdio
   use scale_prof
@@ -423,7 +423,7 @@ program sno
   !########## Finalize ##########
   call PROF_rapend  ('Main', 0)
 
-  call FileCloseAll
+  call FILE_Close_All
 
   call PROF_rapreport
 
