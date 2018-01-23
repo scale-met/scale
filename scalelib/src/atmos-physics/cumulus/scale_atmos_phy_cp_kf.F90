@@ -57,10 +57,11 @@ module scale_atmos_phy_cp_kf
   !
   public :: ATMOS_PHY_CP_kf_setup
   public :: ATMOS_PHY_CP_kf
+!  public :: ATMOS_PHY_CP_kf_wmean
 
   !-----------------------------------------------------------------------------
   !++ Public pparameters & variabeles
-  real(DP), public,  save       :: KF_DTSEC = 300._RP    ! kf time scale [sec]
+!  real(DP), public,  save       :: KF_DTSEC = 300._RP    ! kf time scale [sec]
 
   !-----------------------------------------------------------------------------
   !
@@ -130,14 +131,14 @@ module scale_atmos_phy_cp_kf
   real(RP)                       :: deltax         ! delta x [m]
 
 
-  ! kf time controll
-  integer,  private :: TIME_RES_KF   ! time step for kf
-  integer,  private :: TIME_DSTEP_KF ! time interval
-  logical,  private :: TIME_DOKF     ! exclude kf trigger
-
-  ! tuning parameter
-  logical,  private :: PARAM_ATMOS_PHY_CP_kf_wadapt = .true.
-  integer,  private :: PARAM_ATMOS_PHY_CP_kf_w_time = 16
+!  ! kf time controll
+!  integer,  private :: TIME_RES_KF   ! time step for kf
+!  integer,  private :: TIME_DSTEP_KF ! time interval
+!  logical,  private :: TIME_DOKF     ! exclude kf trigger
+!
+!  ! tuning parameter
+!  logical,  private :: PARAM_ATMOS_PHY_CP_kf_wadapt = .true.
+!  integer,  private :: PARAM_ATMOS_PHY_CP_kf_w_time = 16
 
   !------------------------------------------------------------------------------
 contains
@@ -148,7 +149,7 @@ contains
        PRC_MPIstop
     use scale_time , only :&
        TIME_DTSEC,             &
-       TIME_DTSEC_ATMOS_PHY_CP
+       KF_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
     use scale_grid_real, only: &
        CZ => REAL_CZ
     use scale_grid,only: &
@@ -167,7 +168,7 @@ contains
     ! tunning parameters, original parameter set is from KF2004 and NO2007
     real(RP) :: PARAM_ATMOS_PHY_CP_kf_rate      =   0.03_RP ! ratio of cloud water and precipitation (Ogura and Cho 1973)
     integer  :: PARAM_ATMOS_PHY_CP_kf_trigger   = 1         ! trigger function type 1:KF2004 3:NO2007
-    real(DP) :: PARAM_ATMOS_PHY_CP_kf_dt        =    5.0_DP ! KF convection check time interval [min]
+!    real(DP) :: PARAM_ATMOS_PHY_CP_kf_dt        =    5.0_DP ! KF convection check time interval [min]
     real(RP) :: PARAM_ATMOS_PHY_CP_kf_dlcape    =    0.1_RP ! cape decleace rate
     real(RP) :: PARAM_ATMOS_PHY_CP_kf_dlifetime = 1800.0_RP ! minimum lifetime scale of deep convection [sec]
     real(RP) :: PARAM_ATMOS_PHY_CP_kf_slifetime = 2400.0_RP ! lifetime of shallow convection [sec]
@@ -179,16 +180,16 @@ contains
     NAMELIST / PARAM_ATMOS_PHY_CP_KF / &
        PARAM_ATMOS_PHY_CP_kf_rate,      &
        PARAM_ATMOS_PHY_CP_kf_trigger,   &
-       PARAM_ATMOS_PHY_CP_kf_dt,        &
+!       PARAM_ATMOS_PHY_CP_kf_dt,        &
        PARAM_ATMOS_PHY_CP_kf_dlcape,    &
        PARAM_ATMOS_PHY_CP_kf_dlifetime, &
        PARAM_ATMOS_PHY_CP_kf_slifetime, &
        PARAM_ATMOS_PHY_CP_kf_DEPTH_USL, &
        PARAM_ATMOS_PHY_CP_kf_prec,      &
        PARAM_ATMOS_PHY_CP_kf_thres,     &
-       PARAM_ATMOS_PHY_CP_kf_LOG,       &
-       PARAM_ATMOS_PHY_CP_kf_wadapt, &
-       PARAM_ATMOS_PHY_CP_kf_w_time
+       PARAM_ATMOS_PHY_CP_kf_LOG
+!       PARAM_ATMOS_PHY_CP_kf_wadapt, &
+!       PARAM_ATMOS_PHY_CP_kf_w_time
 
     integer :: k, i, j
     integer :: QS
@@ -227,10 +228,10 @@ contains
        end if
     endif
 
-    if ( abs(TIME_DTSEC_ATMOS_PHY_CP-TIME_DTSEC) > 0.0_DP ) then
-       write(*,*) 'xxx TIME_DTSEC_ATMOS_PHY_CP should be same as TIME_DTSEC for KF scheme. STOP.'
-       call PRC_MPIstop
-    endif
+!    if ( abs(TIME_DTSEC_ATMOS_PHY_CP-TIME_DTSEC) > 0.0_DP ) then
+!       write(*,*) 'xxx TIME_DTSEC_ATMOS_PHY_CP should be same as TIME_DTSEC for KF scheme. STOP.'
+!       call PRC_MPIstop
+!    endif
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -246,26 +247,26 @@ contains
     call kf_lutab ! set kf look up table
 
     ! set kf convection check step
-    TIME_DSTEP_KF = nint( PARAM_ATMOS_PHY_CP_kf_dt * 60.0_DP / TIME_DTSEC_ATMOS_PHY_CP )
-    TIME_DSTEP_KF = max(TIME_DSTEP_KF,1) ! kf time interval step
-    TIME_RES_KF   = -1                   ! initialize to keep consistent for below step
-    TIME_DOKF     = .true.               ! initialize
+!    TIME_DSTEP_KF = nint( PARAM_ATMOS_PHY_CP_kf_dt * 60.0_DP / TIME_DTSEC_ATMOS_PHY_CP )
+!    TIME_DSTEP_KF = max(TIME_DSTEP_KF,1) ! kf time interval step
+!    TIME_RES_KF   = -1                   ! initialize to keep consistent for below step
+!    TIME_DOKF     = .true.               ! initialize
 
     call CP_kf_param( PARAM_ATMOS_PHY_CP_kf_rate,      &
                       PARAM_ATMOS_PHY_CP_kf_trigger,   &
-                      PARAM_ATMOS_PHY_CP_kf_dt,        &
+!                      PARAM_ATMOS_PHY_CP_kf_dt,        &
                       PARAM_ATMOS_PHY_CP_kf_dlcape,    &
                       PARAM_ATMOS_PHY_CP_kf_dlifetime, &
                       PARAM_ATMOS_PHY_CP_kf_slifetime, &
                       PARAM_ATMOS_PHY_CP_kf_DEPTH_USL, &
                       PARAM_ATMOS_PHY_CP_kf_prec,      &
                       PARAM_ATMOS_PHY_CP_kf_thres,     &
-                      PARAM_ATMOS_PHY_CP_kf_LOG ,      &
-                      TIME_DSTEP_KF                    )
+                      PARAM_ATMOS_PHY_CP_kf_LOG        )!,      &
+!                      TIME_DSTEP_KF                    )
 
     ! output parameter lists
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) "*** Interval for check [step]                       : ", TIME_DSTEP_KF
+!    if( IO_L ) write(IO_FID_LOG,*) "*** Interval for check [step]                       : ", TIME_DSTEP_KF
     if( IO_L ) write(IO_FID_LOG,*) "*** Ogura-Cho condense material convert rate        : ", PARAM_ATMOS_PHY_CP_kf_rate
     if( IO_L ) write(IO_FID_LOG,*) "*** Trigger function type, 1:KF2004 3:NO2007        : ", PARAM_ATMOS_PHY_CP_kf_trigger
     if( IO_L ) write(IO_FID_LOG,*) "*** CAPE decrease rate                              : ", PARAM_ATMOS_PHY_CP_kf_dlcape
@@ -275,8 +276,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) "*** Precipitation type 1:Ogura-Cho(1973) 2:Kessler  : ", PARAM_ATMOS_PHY_CP_kf_prec
     if( IO_L ) write(IO_FID_LOG,*) "*** Kessler type precipitation's threshold          : ", PARAM_ATMOS_PHY_CP_kf_thres
     if( IO_L ) write(IO_FID_LOG,*) "*** Warm rain?                                      : ", WARMRAIN
-    if( IO_L ) write(IO_FID_LOG,*) "*** Use running mean of w in adaptive timestep?     : ", PARAM_ATMOS_PHY_CP_kf_wadapt
-    if( IO_L ) write(IO_FID_LOG,*) "*** Fixed time scale for running mean of w          : ", PARAM_ATMOS_PHY_CP_kf_w_time
+!    if( IO_L ) write(IO_FID_LOG,*) "*** Use running mean of w in adaptive timestep?     : ", PARAM_ATMOS_PHY_CP_kf_wadapt
+!    if( IO_L ) write(IO_FID_LOG,*) "*** Fixed time scale for running mean of w          : ", PARAM_ATMOS_PHY_CP_kf_w_time
     if( IO_L ) write(IO_FID_LOG,*) "*** Output log?                                     : ", PARAM_ATMOS_PHY_CP_kf_LOG
 
     ! output variables
@@ -313,6 +314,7 @@ contains
        MOMY,           &
        RHOT,           &
        QTRC,           &
+       w0avg,          &
        DENS_t_CP,      &
        MOMZ_t_CP,      &
        MOMX_t_CP,      &
@@ -325,8 +327,7 @@ contains
        cloudbase,      &
        cldfrac_dp,     &
        cldfrac_sh,     &
-       nca,            &
-       w0avg           )
+       nca             )
     use scale_grid_index
     use scale_history, only: &
        HIST_in
@@ -340,6 +341,7 @@ contains
     real(RP), intent(in)    :: MOMZ          (KA,IA,JA)
     real(RP), intent(in)    :: RHOT          (KA,IA,JA)
     real(RP), intent(in)    :: QTRC          (KA,IA,JA,QA)
+    real(RP), intent(in)    :: w0avg         (KA,IA,JA)    ! running mean of vertical velocity [m/s]
     real(RP), intent(inout) :: DENS_t_CP     (KA,IA,JA)
     real(RP), intent(inout) :: MOMZ_t_CP     (KA,IA,JA)    ! not used
     real(RP), intent(inout) :: MOMX_t_CP     (KA,IA,JA)    ! not used
@@ -353,26 +355,26 @@ contains
     real(RP), intent(inout) :: cldfrac_dp    (KA,IA,JA)    ! cloud fraction (deep convection)
     real(RP), intent(inout) :: cldfrac_sh    (KA,IA,JA)    ! cloud fraction (shallow convection)
     real(RP), intent(inout) :: nca           (IA,JA)       ! convection active time [sec]
-    real(RP), intent(inout) :: w0avg         (KA,IA,JA)    ! running mean of vertical velocity [m/s]
 
     real(RP) :: cldfrac(KA,2)           ! 1 shallow , 2 deep
 
     !---------------------------------------------------------------------------
 
+!if( IO_L ) write(IO_FID_LOG,*) '>>>> PHY_CP_KF'
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cumulus Parameterization(KF)'
 
-    call KF_wmean( w0avg(:,:,:), & ! [OUT]
-                   DENS (:,:,:), & ! [IN]
-                   MOMZ (:,:,:)  ) ! [IN]
+!    call KF_wmean( w0avg(:,:,:), & ! [OUT]
+!                   DENS (:,:,:), & ! [IN]
+!                   MOMZ (:,:,:)  ) ! [IN]
 
-    TIME_DOKF   = .false.
-    TIME_RES_KF = TIME_RES_KF + 1
-    if ( TIME_RES_KF == TIME_DSTEP_KF ) then
-       TIME_DOKF   = .true.
-       TIME_RES_KF = 0
-    endif
+!    TIME_DOKF   = .false.
+!    TIME_RES_KF = TIME_RES_KF + 1
+!    if ( TIME_RES_KF == TIME_DSTEP_KF ) then
+!       TIME_DOKF   = .true.
+!       TIME_RES_KF = 0
+!    endif
 
-    if ( TIME_DOKF ) then
+!    if ( TIME_DOKF ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** KF Convection Check '
 
        call PROF_rapstart('CP_kf', 3)
@@ -398,7 +400,7 @@ contains
                         I_convflag   (:,:)      ) ! [INOUT]
 
        call PROF_rapend('CP_kf', 3)
-    endif
+!    endif
 
     call HIST_in( lifetime(:,:),            'KF_LIFETIME', 'lifetime of KF scheme', 's' )
     call HIST_in( real(I_convflag(:,:),RP), 'KF_CONVFLAG', 'CONVECTION FLAG',       ''  )
@@ -406,74 +408,78 @@ contains
     return
   end subroutine ATMOS_PHY_CP_kf
 
-  !-----------------------------------------------------------------------------
-  !> running mean vertical wind speed
-  ! WRF comment out for W0
-  !...TST IS THE NUMBER OF TIME STEPS IN 10 MINUTES...W0AVG IS CLOSE TO A
-  !...RUNNING MEAN VERTICAL VELOCITY...NOTE THAT IF YOU CHANGE TST, IT WIL
-  !...CHANGE THE FREQUENCY OF THE CONVECTIVE INTITIATION CHECK (SEE BELOW)
-  !...NOTE THAT THE ORDERING OF VERTICAL LAYERS MUST BE REVERSED FOR W0AVG
-  !...BECAUSE THE ORDERING IS REVERSED IN KFPARA...
-  subroutine KF_wmean( &
-       W0_avg, &
-       DENS,   &
-       MOMZ    )
-    use scale_time , only :&
-       TIME_DTSEC
-    implicit none
+!  !-----------------------------------------------------------------------------
+!  !> running mean vertical wind speed
+!  ! WRF comment out for W0
+!  !...TST IS THE NUMBER OF TIME STEPS IN 10 MINUTES...W0AVG IS CLOSE TO A
+!  !...RUNNING MEAN VERTICAL VELOCITY...NOTE THAT IF YOU CHANGE TST, IT WIL
+!  !...CHANGE THE FREQUENCY OF THE CONVECTIVE INTITIATION CHECK (SEE BELOW)
+!  !...NOTE THAT THE ORDERING OF VERTICAL LAYERS MUST BE REVERSED FOR W0AVG
+!  !...BECAUSE THE ORDERING IS REVERSED IN KFPARA...
+!  subroutine ATMOS_PHY_CP_kf_wmean( &
+!       W0_avg, &
+!       DENS,   &
+!       MOMZ    )
+!    use scale_time , only :&
+!       TIME_DTSEC,             &
+!       KF_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
+!    implicit none
 
-    real(RP), intent(inout) :: W0_avg(KA,IA,JA)
-    real(RP), intent(in)    :: DENS  (KA,IA,JA)
-    real(RP), intent(in)    :: MOMZ  (KA,IA,JA)
+!    real(RP), intent(inout) :: W0_avg(KA,IA,JA)
+!    real(RP), intent(in)    :: DENS  (KA,IA,JA)
+!    real(RP), intent(in)    :: MOMZ  (KA,IA,JA)
 
-    real(RP) :: W0
-    real(RP) :: fact_W0_avg, fact_W0
+!    real(RP) :: W0
+!    real(RP) :: fact_W0_avg, fact_W0
 
-    integer :: k, i, j
-    !---------------------------------------------------------------------------
+!    integer :: k, i, j
+!    !---------------------------------------------------------------------------
 
-    if ( PARAM_ATMOS_PHY_CP_kf_wadapt ) then
-       fact_W0_avg = 2.0_RP * max(KF_DTSEC,TIME_DTSEC) - TIME_DTSEC
-       fact_W0     = TIME_DTSEC
-    else ! w_time is tuning parameter
-       fact_W0_avg = real(PARAM_ATMOS_PHY_CP_kf_w_time,RP)
-       fact_W0     = 1.0_RP
-    endif
+!    if ( PARAM_ATMOS_PHY_CP_kf_wadapt ) then
+!       fact_W0_avg = 2.0_RP * max(KF_DTSEC,TIME_DTSEC) - TIME_DTSEC
+!       fact_W0     = TIME_DTSEC
+!    else ! w_time is tuning parameter
+!       fact_W0_avg = real(PARAM_ATMOS_PHY_CP_kf_w_time,RP)
+!       fact_W0     = 1.0_RP
+!    endif
+!!if( IO_L ) write(IO_FID_LOG,*) ">>>> W0:", fact_W0_avg, fact_W0
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       W0 = 0.5_RP * ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) / DENS(k,i,j)
+!    do j = JS, JE
+!    do i = IS, IE
+!    do k = KS, KE
+!       W0 = 0.5_RP * ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) / DENS(k,i,j)
 
-       W0_avg(k,i,j) = ( W0_avg(k,i,j) * fact_W0_avg &
-                       + W0            * fact_W0     ) / ( fact_W0_avg + fact_W0 )
-    enddo
-    enddo
-    enddo
+!       W0_avg(k,i,j) = ( W0_avg(k,i,j) * fact_W0_avg &
+!                       + W0            * fact_W0     ) / ( fact_W0_avg + fact_W0 )
+!    enddo
+!    enddo
+!    enddo
 
-    return
-  end subroutine KF_wmean
+!    return
+!  end subroutine ATMOS_PHY_CP_kf_wmean
 
   !-----------------------------------------------------------------------------
   subroutine CP_kf_param( & ! set kf tuning parametres
        ![IN]
        RATE_in,            &
        TRIGGER_in,         & ! INOUT
-       KF_DT_in,           &
+!       KF_DT_in,           &
        DELCAPE_in ,        &
        DEEPLIFETIME_in,    &
        SHALLOWLIFETIME_in, &
        DEPTH_USL_in,       &
        KF_prec_in,         &
        KF_threshold_in,    &
-       KF_LOG_in,          &
-       stepkf_in     )
+       KF_LOG_in           ) !,          &
+!       stepkf_in     )
     use scale_process, only: &
          PRC_MPIstop
+!    use scale_time , only :&
+!       TIME_DTSEC_ATMOS_PHY_CP
     implicit none
     real(RP),intent(in) :: RATE_in
     integer, intent(inout) :: TRIGGER_in
-    real(DP),intent(in) :: KF_DT_in
+!    real(DP),intent(in) :: KF_DT_in
     real(RP),intent(in) :: DELCAPE_in
     real(RP),intent(in) :: DEEPLIFETIME_in
     real(RP),intent(in) :: SHALLOWLIFETIME_in
@@ -481,7 +487,7 @@ contains
     integer, intent(in) :: KF_prec_in
     real(RP),intent(in) :: KF_threshold_in
     logical, intent(in) :: KF_LOG_in
-    integer, intent(in) :: stepkf_in
+!    integer, intent(in) :: stepkf_in
     !
     RATE            = RATE_in
     ! TRIGGER must be 1 or 3
@@ -491,7 +497,8 @@ contains
        TRIGGER_in = 3
     end if
     TRIGGER         = TRIGGER_in
-    KF_DTSEC        = KF_DT_in * 60.0_DP ! convert from min to sec
+!    KF_DTSEC        = KF_DT_in * 60.0_DP ! convert from min to sec
+!    KF_DTSEC        = TIME_DTSEC_ATMOS_PHY_CP
     DELCAPE         = DELCAPE_in
     DEEPLIFETIME    = DEEPLIFETIME_in
     SHALLOWLIFETIME = SHALLOWLIFETIME_in
@@ -499,7 +506,7 @@ contains
     KF_prec         = KF_prec_in
     KF_threshold    = KF_threshold_in
     KF_LOG          = KF_LOG_in
-    stepkf          = stepkf_in
+!    stepkf          = stepkf_in
     if (KF_prec == 1) then
        p_precipitation => precipitation_OC1973 ! Ogura and Cho (1973)
     elseif( KF_prec == 2) then
@@ -549,8 +556,10 @@ contains
        I_QR, &
        I_QI, &
        I_QS
+!    use scale_time , only :&
+!       dt => TIME_DTSEC_ATMOS_PHY_CP
     use scale_time , only :&
-       dt => TIME_DTSEC_ATMOS_PHY_CP
+       KF_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
     use scale_grid_real, only: &
        FZ => REAL_FZ
     use scale_atmos_thermodyn, only: &
@@ -667,15 +676,17 @@ contains
     ! do loop variable
     integer  :: k, i, j, iq, iqa, ii
 
+!if( IO_L ) write(IO_FID_LOG,*) '>>>> kf_main'
     I_convflag (:,:) = 2
 
     do j = JS, JE
     do i = IS, IE
 
-       nca(i,j) = nca(i,j) - real(TIME_DSTEP_KF,RP) * dt
+!       nca(i,j) = nca(i,j) - real(TIME_DSTEP_KF,RP) * dt
+       nca(i,j) = nca(i,j) - KF_DTSEC
 
        ! check convection
-       if ( nca(i,j) .ge. 0.5_DP * dt ) cycle
+       if ( nca(i,j) .ge. 0.5_DP * KF_DTSEC ) cycle
 
        do k = KS, KE
           ! preparing a NON Hydriometeor condition to fit assumption in KF scheme
@@ -925,6 +936,7 @@ contains
        !------------------------------------------------------------------------
 
        if(I_convflag(i,j) == 2) then ! no convection
+!if( IO_L ) write(IO_FID_LOG,*) '>>>> kf_main: no conv'
           rainrate_cp(i,j)    = 0.0_RP
           cldfrac_KF(KS:KE,:) = 0.0_RP
           timecp(i,j)         = 0.0_RP
@@ -939,6 +951,7 @@ contains
           end do
 
        else ! convection allowed I_convflag=0 or 1
+!if( IO_L ) write(IO_FID_LOG,*) '>>>> kf_main: yes conv'
           ! chek
           !
           !...FEEDBACK TO RESOLVABLE SCALE TENDENCIES.
@@ -947,8 +960,8 @@ contains
           !...TIMECP, ALLOW FEEDBACK TO OCCUR ONLY DURING TADVEC...
           !
           if (I_convflag(i,j) == 0) then ! deep
-             if (time_advec < timecp(i,j)) nic=nint(time_advec/dt)
-             nca(i,j) = real(nic,RP)*dt ! convection feed back act this time span
+             if (time_advec < timecp(i,j)) nic=nint(time_advec/KF_DTSEC)
+             nca(i,j) = real(nic,RP)*KF_DTSEC ! convection feed back act this time span
           elseif (I_convflag(i,j) == 1) then ! shallow
              timecp(i,j) = SHALLOWLIFETIME
              nca   (i,j) = KF_DTSEC ! convection feed back act this time span
@@ -1191,6 +1204,7 @@ contains
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     !! start cood
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+!if( IO_L ) write(IO_FID_LOG,*) '>>>> kf_trigger'
     pres300 = pres(KS) - DEPTH_USL*100._RP ! pressure @ surface - 300 mb. maybe 700mb or so default depth_usl is 300hPa
     do kk = KS, KE
        tempv(kk)   = temp(kk)*(1._RP + 0.608_RP*qv(kk)) ! vertual temperature
@@ -1758,6 +1772,7 @@ contains
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     !! start cood
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+!if( IO_L ) write(IO_FID_LOG,*) '>>>> kf_updraft'
     ! initialize
     ! only qv exist other water variables is none
     umf(:)     = 0._RP
@@ -2132,6 +2147,7 @@ contains
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     !! start cood
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+!if( IO_L ) write(IO_FID_LOG,*) '>>>> kf_downdraft'
 
     ! initialize
     wspd(:)    = 0._RP
@@ -2491,7 +2507,8 @@ contains
     use scale_atmos_saturation ,only :&
          ATMOS_SATURATION_psat_liq
     use scale_time , only :&
-         dt => TIME_DTSEC_ATMOS_PHY_CP
+!         dt => TIME_DTSEC_ATMOS_PHY_CP
+         KF_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
     use scale_process, only: &
          PRC_MPIstop
     implicit none
@@ -2657,6 +2674,7 @@ contains
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     !! start cood
     !!@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+!if( IO_L ) write(IO_FID_LOG,*) '>>>> kf_conpensational'
 
     !! initialize
     if(I_convflag == 2) return     ! noconvection
@@ -2673,10 +2691,10 @@ contains
     timecp = max(DEEPLIFETIME, timecp)
     timecp = min(3600._RP, timecp)
     if(I_convflag == 1) timecp = SHALLOWLIFETIME ! shallow convection timescale is 40 minutes
-    nic = nint(timecp/dt)
+    nic = nint(timecp/KF_DTSEC)
     ! timecp is KF timescale
     ! must be bigger than "cumplus parameterization timestep " given by namelist
-    timecp = real( nic,RP )*dt! determin timecp not change below
+    timecp = real( nic,RP )*KF_DTSEC! determin timecp not change below
     !
     ! maximam of ainc calculate
     aincmx = 1000._RP
