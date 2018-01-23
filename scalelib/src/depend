@@ -88,12 +88,14 @@ $(OBJ_DIR)/scale_interpolation.o: ./atmos-rm/grid/scale_interpolation.F90 $(inc_
 $(OBJ_DIR)/scale_interpolation_nest.o: ./atmos-rm/grid/scale_interpolation_nest.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_debug.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_index.o $(OBJ_DIR)/scale_land_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_tracer.o
 $(OBJ_DIR)/scale_land_grid.o: ./land/grid/scale_land_grid.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_grid_cartesian.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_land_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_land_grid_index.o: ./land/grid/scale_land_grid_index.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
-$(OBJ_DIR)/scale_land_phy.o: ./land/scale_land_phy.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_land_grid_index.o $(OBJ_DIR)/scale_land_phy_const.o $(OBJ_DIR)/scale_land_phy_matsiro.o $(OBJ_DIR)/scale_land_phy_slab.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
+$(OBJ_DIR)/scale_land_phy.o: ./land/scale_land_phy.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_land_grid_index.o $(OBJ_DIR)/scale_land_phy_const.o $(OBJ_DIR)/scale_land_phy_file.o $(OBJ_DIR)/scale_land_phy_matsiro.o $(OBJ_DIR)/scale_land_phy_slab.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_land_phy_const.o: ./land/scale_land_phy_const.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_debug.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_land_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
+$(OBJ_DIR)/scale_land_phy_file.o: ./land/scale_land_phy_file.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_debug.o $(OBJ_DIR)/scale_external_input.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_land_grid_index.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_time.o
 $(OBJ_DIR)/scale_land_phy_matsiro.o: ./land/scale_land_phy_matsiro.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_debug.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_land_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_land_phy_slab.o: ./land/scale_land_phy_slab.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_debug.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_land_grid_index.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_matrix.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
-$(OBJ_DIR)/scale_land_sfc.o: ./land/scale_land_sfc.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_land_sfc_const.o $(OBJ_DIR)/scale_land_sfc_thick-slab.o $(OBJ_DIR)/scale_land_sfc_thin-slab.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
+$(OBJ_DIR)/scale_land_sfc.o: ./land/scale_land_sfc.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_land_sfc_const.o $(OBJ_DIR)/scale_land_sfc_file.o $(OBJ_DIR)/scale_land_sfc_thick-slab.o $(OBJ_DIR)/scale_land_sfc_thin-slab.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_land_sfc_const.o: ./land/scale_land_sfc_const.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_sub_hydrometeor.o $(OBJ_DIR)/scale_atmos_sub_saturation.o $(OBJ_DIR)/scale_bulkflux.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
+$(OBJ_DIR)/scale_land_sfc_file.o: ./land/scale_land_sfc_file.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_sub_hydrometeor.o $(OBJ_DIR)/scale_atmos_sub_saturation.o $(OBJ_DIR)/scale_bulkflux.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_external_input.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_time.o
 $(OBJ_DIR)/scale_land_sfc_thick-slab.o: ./land/scale_land_sfc_thick-slab.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_sub_hydrometeor.o $(OBJ_DIR)/scale_atmos_sub_saturation.o $(OBJ_DIR)/scale_bulkflux.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_land_sfc_thin-slab.o: ./land/scale_land_sfc_thin-slab.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_sub_hydrometeor.o $(OBJ_DIR)/scale_atmos_sub_saturation.o $(OBJ_DIR)/scale_bulkflux.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_landuse.o: ./coupler/scale_landuse.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_comm.o $(OBJ_DIR)/scale_fileio.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
@@ -208,10 +210,12 @@ MODS =	\
 	$(OBJ_DIR)/scale_land_grid_index.mod	\
 	$(OBJ_DIR)/scale_land_phy.mod	\
 	$(OBJ_DIR)/scale_land_phy_const.mod	\
+	$(OBJ_DIR)/scale_land_phy_file.mod	\
 	$(OBJ_DIR)/scale_land_phy_matsiro.mod	\
 	$(OBJ_DIR)/scale_land_phy_slab.mod	\
 	$(OBJ_DIR)/scale_land_sfc.mod	\
 	$(OBJ_DIR)/scale_land_sfc_const.mod	\
+	$(OBJ_DIR)/scale_land_sfc_file.mod	\
 	$(OBJ_DIR)/scale_land_sfc_thick_slab.mod	\
 	$(OBJ_DIR)/scale_land_sfc_thin_slab.mod	\
 	$(OBJ_DIR)/scale_landuse.mod	\
