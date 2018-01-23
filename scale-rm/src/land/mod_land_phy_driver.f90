@@ -314,6 +314,7 @@ contains
        do j = JS, JE
        do i = IS, IE
           SNOW_LAND_SFLX_evap (i,j) = 0.0_RP
+          SNOW_LAND_SFLX_GH   (i,j) = -1.0_RP * SNOW_LAND_SFLX_GH(i,j)
        enddo
        enddo
 
