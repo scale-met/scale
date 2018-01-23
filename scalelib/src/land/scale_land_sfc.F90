@@ -131,6 +131,9 @@ contains
     use scale_land_sfc_const, only: &
        LAND_SFC_CONST_setup, &
        LAND_SFC_CONST
+    use scale_land_sfc_file, only: &
+       LAND_SFC_FILE_setup, &
+       LAND_SFC_FILE
     use scale_land_sfc_thin_slab, only: &
        LAND_SFC_THIN_SLAB_setup, &
        LAND_SFC_THIN_SLAB
@@ -146,6 +149,9 @@ contains
     case( 'CONST' )
        call LAND_SFC_CONST_setup( LAND_TYPE )
        LAND_SFC => LAND_SFC_CONST
+    case( 'FILE' )
+       call LAND_SFC_FILE_setup( LAND_TYPE )
+       LAND_SFC => LAND_SFC_FILE
     case( 'SLAB', 'THIN-SLAB' )
        call LAND_SFC_THIN_SLAB_setup( LAND_TYPE )
        LAND_SFC => LAND_SFC_THIN_SLAB
