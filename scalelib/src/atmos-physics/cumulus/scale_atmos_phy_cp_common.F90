@@ -127,7 +127,6 @@ contains
        fact_W0_avg = real(PARAM_ATMOS_PHY_CP_w_time,RP)
        fact_W0     = 1.0_RP
     endif
-!if( IO_L ) write(IO_FID_LOG,*) ">>>> W0:", fact_W0_avg, fact_W0
 
     do j = JS, JE
     do i = IS, IE

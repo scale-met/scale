@@ -24,7 +24,6 @@ module mod_atmos_phy_cp_driver
   !-----------------------------------------------------------------------------
   implicit none
   private
-integer, save :: tstep
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure
@@ -73,7 +72,6 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
     endif
 
-tstep = 1
     return
   end subroutine ATMOS_PHY_CP_driver_setup
 
@@ -160,7 +158,6 @@ tstep = 1
     call HIST_in( w0avg(:,:,:), 'w0avg', 'running mean vertical wind velocity', 'kg/m2/s', nohalo=.true. )
 
     if ( update_flag ) then ! update
-!if( IO_L ) write(IO_FID_LOG,*) '>>>> update_flag'
 
        call ATMOS_PHY_CP( DENS,           & ! [IN]
                           MOMZ,           & ! [IN]
@@ -205,31 +202,28 @@ tstep = 1
        ! diagnose tendency of number concentration
        call ATMOS_HYDROMETEOR_diagnose_number_concentration( RHOQ_t_CP(:,:,:,:) ) ! [INOUT]
 
-!       call HIST_in( MFLX_cloudbase(:,:),   'CBMFX',     'cloud base mass flux',             'kg/m2/s', nohalo=.true. )
-!       call HIST_in( SFLX_rain     (:,:),   'RAIN_CP',   'surface rain rate by CP',          'kg/m2/s', nohalo=.true. )
-!       call HIST_in( SFLX_rain     (:,:),   'PREC_CP',   'surface precipitation rate by CP', 'kg/m2/s', nohalo=.true. )
-!       call HIST_in( cloudtop      (:,:),   'CUMHGT',    'CP cloud top height',              'm',       nohalo=.true. )
-!       call HIST_in( cloudbase     (:,:),   'CUBASE',    'CP cloud base height',             'm',       nohalo=.true. )
-!       call HIST_in( cldfrac_dp    (:,:,:), 'CUMFRC_DP', 'CP cloud fraction (deep)',         '1',       nohalo=.true. )
-!       call HIST_in( cldfrac_sh    (:,:,:), 'CUMFRC_SH', 'CP cloud fraction (shallow)',      '1',       nohalo=.true. )
+       call HIST_in( MFLX_cloudbase(:,:),   'CBMFX',     'cloud base mass flux',             'kg/m2/s', nohalo=.true. )
+       call HIST_in( SFLX_rain     (:,:),   'RAIN_CP',   'surface rain rate by CP',          'kg/m2/s', nohalo=.true. )
+       call HIST_in( SFLX_rain     (:,:),   'PREC_CP',   'surface precipitation rate by CP', 'kg/m2/s', nohalo=.true. )
+       call HIST_in( cloudtop      (:,:),   'CUMHGT',    'CP cloud top height',              'm',       nohalo=.true. )
+       call HIST_in( cloudbase     (:,:),   'CUBASE',    'CP cloud base height',             'm',       nohalo=.true. )
+       call HIST_in( cldfrac_dp    (:,:,:), 'CUMFRC_DP', 'CP cloud fraction (deep)',         '1',       nohalo=.true. )
+       call HIST_in( cldfrac_sh    (:,:,:), 'CUMFRC_SH', 'CP cloud fraction (shallow)',      '1',       nohalo=.true. )
+       call HIST_in( kf_nca        (:,:),   'kf_nca',    'advection or cumulus convection timescale for KF', 's',       nohalo=.true. )
 
-!       call HIST_in( kf_nca        (:,:),   'kf_nca',    'advection or cumulus convection timescale for KF', 's',       nohalo=.true. )
-!       call HIST_in( kf_w0avg      (:,:,:), 'kf_w0avg',  'rannning mean vertical wind velocity for KF',      'kg/m2/s', nohalo=.true. )
+       call HIST_in( DENS_t_CP(:,:,:), 'DENS_t_CP', 'tendency DENS in CP', 'kg/m3/s'  , nohalo=.true. )
+       call HIST_in( MOMZ_t_CP(:,:,:), 'MOMZ_t_CP', 'tendency MOMZ in CP', 'kg/m2/s2' , nohalo=.true. )
+       call HIST_in( MOMX_t_CP(:,:,:), 'MOMX_t_CP', 'tendency MOMX in CP', 'kg/m2/s2' , nohalo=.true. )
+       call HIST_in( MOMY_t_CP(:,:,:), 'MOMY_t_CP', 'tendency MOMY in CP', 'kg/m2/s2' , nohalo=.true. )
+       call HIST_in( RHOT_t_CP(:,:,:), 'RHOT_t_CP', 'tendency RHOT in CP', 'K*kg/m3/s', nohalo=.true. )
 
-!       call HIST_in( DENS_t_CP(:,:,:), 'DENS_t_CP', 'tendency DENS in CP', 'kg/m3/s'  , nohalo=.true. )
-!       call HIST_in( MOMZ_t_CP(:,:,:), 'MOMZ_t_CP', 'tendency MOMZ in CP', 'kg/m2/s2' , nohalo=.true. )
-!       call HIST_in( MOMX_t_CP(:,:,:), 'MOMX_t_CP', 'tendency MOMX in CP', 'kg/m2/s2' , nohalo=.true. )
-!       call HIST_in( MOMY_t_CP(:,:,:), 'MOMY_t_CP', 'tendency MOMY in CP', 'kg/m2/s2' , nohalo=.true. )
-!       call HIST_in( RHOT_t_CP(:,:,:), 'RHOT_t_CP', 'tendency RHOT in CP', 'K*kg/m3/s', nohalo=.true. )
-
-!       do iq = QS_MP, QE_MP
-!          call HIST_in( RHOQ_t_CP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CP', &
-!                        'tendency rho*'//trim(TRACER_NAME(iq))//' in CP', 'kg/m3/s', nohalo=.true. )
-!       enddo
+       do iq = QS_MP, QE_MP
+          call HIST_in( RHOQ_t_CP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CP', &
+                        'tendency rho*'//trim(TRACER_NAME(iq))//' in CP', 'kg/m3/s', nohalo=.true. )
+       enddo
 
     endif ! update
 
-!if( IO_L ) write(IO_FID_LOG,*) '>>>> add tendency'
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
@@ -242,29 +236,7 @@ tstep = 1
     enddo
     enddo
     enddo
-!################################# TEST
-if( IO_L ) write(IO_FID_LOG,*) '++++++ KF STEP: ', tstep
-tstep = tstep + 1
-       call HIST_in( MFLX_cloudbase(:,:),   'CBMFX',     'cloud base mass flux',             'kg/m2/s', nohalo=.true. )
-       call HIST_in( SFLX_rain     (:,:),   'RAIN_CP',   'surface rain rate by CP',          'kg/m2/s', nohalo=.true. )
-       call HIST_in( SFLX_rain     (:,:),   'PREC_CP',   'surface precipitation rate by CP', 'kg/m2/s', nohalo=.true. )
-       call HIST_in( cloudtop      (:,:),   'CUMHGT',    'CP cloud top height',              'm',       nohalo=.true. )
-       call HIST_in( cloudbase     (:,:),   'CUBASE',    'CP cloud base height',             'm',       nohalo=.true. )
-       call HIST_in( cldfrac_dp    (:,:,:), 'CUMFRC_DP', 'CP cloud fraction (deep)',         '1',       nohalo=.true. )
-       call HIST_in( cldfrac_sh    (:,:,:), 'CUMFRC_SH', 'CP cloud fraction (shallow)',      '1',       nohalo=.true. )
-       call HIST_in( kf_nca        (:,:),   'kf_nca',    'advection or cumulus convection timescale for KF', 's',       nohalo=.true. )
-!       call HIST_in( kf_w0avg      (:,:,:), 'kf_w0avg',  'rannning mean vertical wind velocity for KF',      'kg/m2/s', nohalo=.true. )
-       call HIST_in( DENS_t_CP(:,:,:), 'DENS_t_CP', 'tendency DENS in CP', 'kg/m3/s'  , nohalo=.true. )
-       call HIST_in( MOMZ_t_CP(:,:,:), 'MOMZ_t_CP', 'tendency MOMZ in CP', 'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( MOMX_t_CP(:,:,:), 'MOMX_t_CP', 'tendency MOMX in CP', 'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( MOMY_t_CP(:,:,:), 'MOMY_t_CP', 'tendency MOMY in CP', 'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( RHOT_t_CP(:,:,:), 'RHOT_t_CP', 'tendency RHOT in CP', 'K*kg/m3/s', nohalo=.true. )
 
-       do iq = QS_MP, QE_MP
-          call HIST_in( RHOQ_t_CP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CP', &
-                        'tendency rho*'//trim(TRACER_NAME(iq))//' in CP', 'kg/m3/s', nohalo=.true. )
-       enddo
-!################################# TEST
     do iq = QS_MP,  QE_MP
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j  = JS, JE
@@ -276,7 +248,7 @@ tstep = tstep + 1
     enddo
     enddo
 
-!    if ( STATISTICS_checktotal ) then
+    if ( STATISTICS_checktotal ) then
        call STAT_total( total, DENS_t_CP(:,:,:), 'DENS_t_CP' )
        call STAT_total( total, MOMZ_t_CP(:,:,:), 'MOMZ_t_CP' )
        call STAT_total( total, MOMX_t_CP(:,:,:), 'MOMX_t_CP' )
@@ -286,7 +258,7 @@ tstep = tstep + 1
        do iq = QS_MP, QE_MP
           call STAT_total( total, RHOQ_t_CP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CP' )
        enddo
-!    endif
+    endif
 
     return
   end subroutine ATMOS_PHY_CP_driver
