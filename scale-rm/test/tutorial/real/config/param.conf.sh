@@ -219,14 +219,14 @@ cat << EOF > param.history.conf
 #
 #################################################
 
-&PARAM_HISTORY
- HISTORY_DEFAULT_BASENAME  = "${HISTORY_DEFAULT_BASENAME}",
- HISTORY_DEFAULT_TINTERVAL = ${TIME_DT_HISTORY_2D},
- HISTORY_DEFAULT_TUNIT     = "${TIME_DT_UNIT}",
- HISTORY_DEFAULT_TAVERAGE  = .false.,
- HISTORY_DEFAULT_DATATYPE  = "REAL4",
- HISTORY_DEFAULT_ZCOORD    = "model",
- HISTORY_OUTPUT_STEP0      = .true.,
+&PARAM_FILE_HISTORY
+ FILE_HISTORY_DEFAULT_BASENAME  = "${HISTORY_DEFAULT_BASENAME}",
+ FILE_HISTORY_DEFAULT_TINTERVAL = ${TIME_DT_HISTORY_2D},
+ FILE_HISTORY_DEFAULT_TUNIT     = "${TIME_DT_UNIT}",
+ FILE_HISTORY_DEFAULT_TAVERAGE  = .false.,
+ FILE_HISTORY_DEFAULT_DATATYPE  = "REAL4",
+ FILE_HISTORY_DEFAULT_ZCOORD    = "model",
+ FILE_HISTORY_OUTPUT_STEP0      = .true.,
 /
 
 &PARAM_HIST
@@ -238,24 +238,24 @@ EOF
 if [ ${#HIST_ITEMS_SNAPSHOT_2D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_SNAPSHOT_2D[*]}
   do
-    echo "&HISTITEM item=\"${VAR}\" /" >> param.history.conf
+    echo "&HISTORY_ITEM item=\"${VAR}\" /" >> param.history.conf
   done
 fi
 if [ ${#HIST_ITEMS_SNAPSHOT_3D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_SNAPSHOT_3D[*]}
   do
-    echo "&HISTITEM item=\"${VAR}\", tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
+    echo "&HISTORY_ITEM item=\"${VAR}\", tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
   done
 fi
 if [ ${#HIST_ITEMS_AVERAGE_2D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_AVERAGE_2D[*]}
   do
-    echo "&HISTITEM item=\"${VAR}\", taverage=.true. /" >> param.history.conf
+    echo "&HISTORY_ITEM item=\"${VAR}\", taverage=.true. /" >> param.history.conf
   done
 fi
 if [ ${#HIST_ITEMS_AVERAGE_3D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_AVERAGE_3D[*]}
   do
-    echo "&HISTITEM item=\"${VAR}\", taverage=.true., tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
+    echo "&HISTORY_ITEM item=\"${VAR}\", taverage=.true., tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
   done
 fi

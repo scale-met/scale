@@ -123,18 +123,18 @@ program netcdf2grads_h
   real    :: MPRJ_PS_fact            ! pre-calc factor
   real    :: MPRJ_M_lat              ! standard latitude1 for Mer. projection [deg]
   real    :: MPRJ_EC_lat             ! standard latitude1 for E.C. projection [deg]
-  character(len=CMID) :: HISTORY_TITLE
-  character(len=CMID) :: HISTORY_SOURCE
-  character(len=CMID) :: HISTORY_INSTITUTION
-  character(len=CMID) :: HISTORY_TIME_UNITS
-  character(len=CMID) :: HISTORY_TIME_SINCE
-  real                :: HISTORY_DTSEC
-  real                :: HISTORY_STARTDAYSEC
-  logical             :: HISTORY_OUTPUT_STEP0  = .false. !> output value of step=0?
-  real                :: HISTORY_OUTPUT_START  = 0.0_DP  !> start time for output in second
-  logical             :: HISTORY_ERROR_PUTMISS = .false.
-  logical             :: HISTORY_DEFAULT_TAVERAGE  = .false.
-  character(len=CSHT) :: HISTORY_DEFAULT_DATATYPE  = 'REAL4'
+  character(len=CMID) :: FILE_HISTORY_TITLE
+  character(len=CMID) :: FILE_HISTORY_SOURCE
+  character(len=CMID) :: FILE_HISTORY_INSTITUTION
+  character(len=CMID) :: FILE_HISTORY_TIME_UNITS
+  character(len=CMID) :: FILE_HISTORY_TIME_SINCE
+  real                :: FILE_HISTORY_DTSEC
+  real                :: FILE_HISTORY_STARTDAYSEC
+  logical             :: FILE_HISTORY_OUTPUT_STEP0  = .false. !> output value of step=0?
+  real                :: FILE_HISTORY_OUTPUT_START  = 0.0_DP  !> start time for output in second
+  logical             :: FILE_HISTORY_ERROR_PUTMISS = .false.
+  logical             :: FILE_HISTORY_DEFAULT_TAVERAGE  = .false.
+  character(len=CSHT) :: FILE_HISTORY_DEFAULT_DATATYPE  = 'REAL4'
   !-----------------------------------------------------------------------------------------
 
   namelist /LOGOUT/            &
@@ -189,20 +189,20 @@ program netcdf2grads_h
     MPRJ_M_lat,                & ! currently not required
     MPRJ_EC_lat                  ! currently not required
 
-  namelist  /PARAM_HISTORY/    &
-    HISTORY_DEFAULT_BASENAME,  &
-    HISTORY_DEFAULT_TINTERVAL, &
-    HISTORY_DEFAULT_TUNIT,     &
-    HISTORY_DEFAULT_ZDIM,      &
-    HISTORY_TITLE,             & ! not required
-    HISTORY_SOURCE,            & ! not required
-    HISTORY_INSTITUTION,       & ! not required
-    HISTORY_TIME_UNITS,        & ! not required
-    HISTORY_DEFAULT_TAVERAGE,  & ! not required
-    HISTORY_DEFAULT_DATATYPE,  & ! not required
-    HISTORY_OUTPUT_STEP0,      & ! not required
-    HISTORY_OUTPUT_START,      & ! not required
-    HISTORY_ERROR_PUTMISS        ! not required
+  namelist  /PARAM_FILE_HISTORY/    &
+    FILE_HISTORY_DEFAULT_BASENAME,  &
+    FILE_HISTORY_DEFAULT_TINTERVAL, &
+    FILE_HISTORY_DEFAULT_TUNIT,     &
+    FILE_HISTORY_DEFAULT_ZDIM,      &
+    FILE_HISTORY_TITLE,             & ! not required
+    FILE_HISTORY_SOURCE,            & ! not required
+    FILE_HISTORY_INSTITUTION,       & ! not required
+    FILE_HISTORY_TIME_UNITS,        & ! not required
+    FILE_HISTORY_DEFAULT_TAVERAGE,  & ! not required
+    FILE_HISTORY_DEFAULT_DATATYPE,  & ! not required
+    FILE_HISTORY_OUTPUT_STEP0,      & ! not required
+    FILE_HISTORY_OUTPUT_START,      & ! not required
+    FILE_HISTORY_ERROR_PUTMISS        ! not required
 
   namelist  /PARAM_HIST/       &
     HIST_BND
@@ -252,7 +252,7 @@ program netcdf2grads_h
   !### read and combine
   !-----------------------------------------------------------------------------------------
   write ( num,'(I6.6)' ) rk_mnge(1)
-  ncfile = trim(IDIR)//"/"//trim(HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
+  ncfile = trim(IDIR)//"/"//trim(FILE_HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
   call netcdf_retrieve_dims( ncfile,                          &
                              nxp, nxgp, nxh, nyp, nygp, nyh,  &
                              nz,  nzg,  nzh, uz, lz, oz, ks, ke   )
@@ -802,8 +802,8 @@ contains
     if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_HIST )
 
     rewind( FID_RCNF )
-    read  ( FID_RCNF, nml=PARAM_HISTORY, iostat=ierr )
-    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_HISTORY )
+    read  ( FID_RCNF, nml=PARAM_FILE_HISTORY, iostat=ierr )
+    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_FILE_HISTORY )
 
     if ( MAPPROJ_ctl )then
        rewind( FID_RCNF )
@@ -814,10 +814,10 @@ contains
     close(FID_RCNF)
 
     if ( EXTRA_TINTERVAL > 0 ) then
-       HISTORY_DEFAULT_TINTERVAL = EXTRA_TINTERVAL
-       HISTORY_DEFAULT_TUNIT     = EXTRA_TUNIT
+       FILE_HISTORY_DEFAULT_TINTERVAL = EXTRA_TINTERVAL
+       FILE_HISTORY_DEFAULT_TUNIT     = EXTRA_TUNIT
        if ( LOUT ) write( FID_LOG, '(1X,A,F5.1,A)' ) "+++ USE EXTRA TIME: ", &
-                        HISTORY_DEFAULT_TINTERVAL, trim(HISTORY_DEFAULT_TUNIT)
+                        FILE_HISTORY_DEFAULT_TINTERVAL, trim(FILE_HISTORY_DEFAULT_TUNIT)
     endif
 
     !--- tentative

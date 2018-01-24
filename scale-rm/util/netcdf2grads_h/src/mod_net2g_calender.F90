@@ -101,14 +101,14 @@ contains
        enddo
     endif
 
-    inc = HISTORY_DEFAULT_TINTERVAL * dble(INC_TSTEP)
-    select case ( HISTORY_DEFAULT_TUNIT )
+    inc = FILE_HISTORY_DEFAULT_TINTERVAL * dble(INC_TSTEP)
+    select case ( FILE_HISTORY_DEFAULT_TUNIT )
     case ( "SEC", "sec" )
        if ( inc < 60.0D0 ) then
           if ( LOUT ) write( FID_LOG, '(1X,A)') &
-                      "*** WARNING: HISTORY_DEFAULT_TINTERVAL is not compatible!"
+                      "*** WARNING: FILE_HISTORY_DEFAULT_TINTERVAL is not compatible!"
           if ( LOUT ) write( FID_LOG, '(1X,A,I7,A)') &
-                      "*** ", int(HISTORY_DEFAULT_TINTERVAL), " is too short for Grads"
+                      "*** ", int(FILE_HISTORY_DEFAULT_TINTERVAL), " is too short for Grads"
           tint  = 1     !tentative
           tunit = "mn"  !tentative
        else
@@ -165,9 +165,9 @@ contains
     real(DP) :: inc
     !---------------------------------------------------------------------------
 
-    inc = HISTORY_DEFAULT_TINTERVAL * dble(INC_TSTEP)
+    inc = FILE_HISTORY_DEFAULT_TINTERVAL * dble(INC_TSTEP)
 
-    select case ( HISTORY_DEFAULT_TUNIT )
+    select case ( FILE_HISTORY_DEFAULT_TUNIT )
     case ( "SEC", "sec" )
        if ( inc < 60.0D0 ) then
           call cal_inc_sec( int(inc), yy, mm, dd, hh, mn, sc )
