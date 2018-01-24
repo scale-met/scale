@@ -644,8 +644,8 @@ contains
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
     use scale_time, only: &
        TIME_DTSEC_ATMOS_PHY_AE
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     implicit none
     integer,  intent(in)    :: QQA
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -957,14 +957,14 @@ contains
     enddo
 
     do ic = 1, n_ctg
-      call HIST_in( total_aerosol_mass  (:,:,:,ic), trim(ctg_name(ic))//' mass', 'Total mass mixing ratio of aerosol', 'kg/kg' )
-      call HIST_in( total_aerosol_number(:,:,:,ic), trim(ctg_name(ic))//' number', 'Total number mixing ratio of aerosol', 'num/kg' )
-      call HIST_in( total_emit_aerosol_mass  (:,:,:,ic), trim(ctg_name(ic))//' mass_emit', 'Total mass mixing ratio of emitted aerosol', 'kg/kg' )
-      call HIST_in( total_emit_aerosol_number(:,:,:,ic), trim(ctg_name(ic))//' number_emit', 'Total number mixing ratio of emitted aerosol', 'num/kg' )
+      call FILE_HISTORY_in( total_aerosol_mass  (:,:,:,ic), trim(ctg_name(ic))//' mass', 'Total mass mixing ratio of aerosol', 'kg/kg' )
+      call FILE_HISTORY_in( total_aerosol_number(:,:,:,ic), trim(ctg_name(ic))//' number', 'Total number mixing ratio of aerosol', 'num/kg' )
+      call FILE_HISTORY_in( total_emit_aerosol_mass  (:,:,:,ic), trim(ctg_name(ic))//' mass_emit', 'Total mass mixing ratio of emitted aerosol', 'kg/kg' )
+      call FILE_HISTORY_in( total_emit_aerosol_number(:,:,:,ic), trim(ctg_name(ic))//' number_emit', 'Total number mixing ratio of emitted aerosol', 'num/kg' )
     enddo
 
-    call HIST_in( EMIT(:,:,:,QA_AE-GAS_CTG+IG_H2SO4), 'H2SO4_emit', 'Emission ratio of H2SO4 gas', 'ug/m3/s' )
-    call HIST_in( EMIT(:,:,:,QA_AE-GAS_CTG+IG_CGAS),  'CGAS_emit',  'Emission ratio of Condensabule gas', 'ug/m3/s' )
+    call FILE_HISTORY_in( EMIT(:,:,:,QA_AE-GAS_CTG+IG_H2SO4), 'H2SO4_emit', 'Emission ratio of H2SO4 gas', 'ug/m3/s' )
+    call FILE_HISTORY_in( EMIT(:,:,:,QA_AE-GAS_CTG+IG_CGAS),  'CGAS_emit',  'Emission ratio of Condensabule gas', 'ug/m3/s' )
 
     deallocate( aerosol_procs )
     deallocate( aerosol_activ )

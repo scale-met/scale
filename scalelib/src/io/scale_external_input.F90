@@ -298,8 +298,8 @@ contains
        TIME_STARTDAYSEC, &
        TIME_NOWDAYSEC,   &
        TIME_OFFSET_year
-    use scale_fileio, only: &
-       FILEIO_check_coordinates
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_check_coordinates
     implicit none
 
     character(len=*), intent(in)  :: basename(EXTIN_file_limit)
@@ -367,7 +367,7 @@ contains
        call PRC_MPIstop
     endif
 
-    call FILE_Open( fid, basename(1), FILE_FREAD, myrank=PRC_myrank )
+    call FILE_Open( fid, basename(1), FILE_FREAD, rankid=PRC_myrank )
 
     ! read from file
     call FILE_Get_All_Datainfo( step_limit_,               & ! [IN]
@@ -659,7 +659,7 @@ contains
 
     if ( present(check_coordinates) ) then
        if ( check_coordinates ) then
-          call FILEIO_check_coordinates( fid,                                  &
+          call FILE_CARTESC_check_coordinates( fid,                                  &
                                          atmos     = EXTIN_item(nid)%ndim==3,  &
                                          transpose = EXTIN_item(nid)%transpose )
        endif
@@ -1063,7 +1063,7 @@ contains
 
                    EXTIN_item(nid)%file_current = EXTIN_item(nid)%file_current + 1
 
-                   call FILE_Open( fid, EXTIN_item(nid)%basename(EXTIN_item(nid)%file_current), FILE_FREAD, myrank=PRC_myrank )
+                   call FILE_Open( fid, EXTIN_item(nid)%basename(EXTIN_item(nid)%file_current), FILE_FREAD, rankid=PRC_myrank )
 
                    ! read from file
                    call FILE_Get_All_Datainfo( EXTIN_item(nid)%step_limit,               & ! [IN]

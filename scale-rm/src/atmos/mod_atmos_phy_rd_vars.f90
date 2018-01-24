@@ -283,8 +283,8 @@ contains
   subroutine ATMOS_PHY_RD_vars_restart_open
     use scale_time, only: &
        TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_open
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_open
     implicit none
 
     character(len=19)     :: timelabel
@@ -305,7 +305,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_open( restart_fid, basename )
+       call FILE_CARTESC_open( restart_fid, basename )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_RD is not specified.'
     endif
@@ -320,9 +320,11 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_fileio, only: &
-       FILEIO_read, &
-       FILEIO_flush
+    use scale_file, only: &
+       FILE_get_aggregate
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_read, &
+       FILE_CARTESC_flush
     implicit none
 
     real(RP) :: total
@@ -332,33 +334,33 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS_PHY_RD) ***'
 
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_LW_up(:,:),           & ! [OUT]
+       call FILE_CARTESC_read( ATMOS_PHY_RD_SFLX_LW_up(:,:),           & ! [OUT]
                          restart_fid, VAR_NAME(1) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_LW_dn(:,:),           & ! [OUT]
+       call FILE_CARTESC_read( ATMOS_PHY_RD_SFLX_LW_dn(:,:),           & ! [OUT]
                          restart_fid, VAR_NAME(2) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_SW_up(:,:),           & ! [OUT]
+       call FILE_CARTESC_read( ATMOS_PHY_RD_SFLX_SW_up(:,:),           & ! [OUT]
                          restart_fid, VAR_NAME(3) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_SW_dn(:,:),           & ! [OUT]
+       call FILE_CARTESC_read( ATMOS_PHY_RD_SFLX_SW_dn(:,:),           & ! [OUT]
                          restart_fid, VAR_NAME(4) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_LW_up(:,:),         & ! [OUT]
+       call FILE_CARTESC_read( ATMOS_PHY_RD_TOAFLX_LW_up(:,:),         & ! [OUT]
                          restart_fid, VAR_NAME(5) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),         & ! [OUT]
+       call FILE_CARTESC_read( ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),         & ! [OUT]
                          restart_fid, VAR_NAME(6) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_SW_up(:,:),         & ! [OUT]
+       call FILE_CARTESC_read( ATMOS_PHY_RD_TOAFLX_SW_up(:,:),         & ! [OUT]
                          restart_fid, VAR_NAME(7) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),         & ! [OUT]
+       call FILE_CARTESC_read( ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),         & ! [OUT]
                          restart_fid, VAR_NAME(8) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_downall(:,:,1,1),     & ! [OUT]
+       call FILE_CARTESC_read( ATMOS_PHY_RD_SFLX_downall(:,:,1,1),     & ! [OUT]
                          restart_fid, VAR_NAME(9) , 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_downall(:,:,1,2),     & ! [OUT]
+       call FILE_CARTESC_read( ATMOS_PHY_RD_SFLX_downall(:,:,1,2),     & ! [OUT]
                          restart_fid, VAR_NAME(10), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_downall(:,:,2,1),     & ! [OUT]
+       call FILE_CARTESC_read( ATMOS_PHY_RD_SFLX_downall(:,:,2,1),     & ! [OUT]
                          restart_fid, VAR_NAME(11), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_RD_SFLX_downall(:,:,2,2),     & ! [OUT]
+       call FILE_CARTESC_read( ATMOS_PHY_RD_SFLX_downall(:,:,2,2),     & ! [OUT]
                          restart_fid, VAR_NAME(12), 'XY', step=1 ) ! [IN]
 
-       if ( IO_AGGREGATE ) then
-          call FILEIO_flush( restart_fid ) ! X/Y halos have been read from file
+       if ( FILE_get_AGGREGATE(restart_fid) ) then
+          call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
        else
           call ATMOS_PHY_RD_vars_fillhalo
        end if
@@ -414,8 +416,8 @@ contains
   subroutine ATMOS_PHY_RD_vars_restart_create
     use scale_time, only: &
        TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_create
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_create
     implicit none
 
     character(len=19)     :: timelabel
@@ -436,7 +438,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_create( restart_fid,                                                             & ! [OUT]
+       call FILE_CARTESC_create( restart_fid,                                                             & ! [OUT]
                            basename, ATMOS_PHY_RD_RESTART_OUT_TITLE, ATMOS_PHY_RD_RESTART_OUT_DTYPE ) ! [IN]
 
     endif
@@ -447,12 +449,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Exit netCDF define mode
   subroutine ATMOS_PHY_RD_vars_restart_enddef
-    use scale_fileio, only: &
-       FILEIO_enddef
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_enddef
     implicit none
 
     if ( restart_fid /= -1 ) then
-       call FILEIO_enddef( restart_fid ) ! [IN]
+       call FILE_CARTESC_enddef( restart_fid ) ! [IN]
     endif
 
     return
@@ -461,8 +463,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Close restart file
   subroutine ATMOS_PHY_RD_vars_restart_close
-    use scale_fileio, only: &
-       FILEIO_close
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_close
     implicit none
     !---------------------------------------------------------------------------
 
@@ -470,7 +472,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Close restart file (ATMOS_PHY_RD) ***'
 
-       call FILEIO_close( restart_fid ) ! [IN]
+       call FILE_CARTESC_close( restart_fid ) ! [IN]
 
        restart_fid = -1
     endif
@@ -481,36 +483,36 @@ contains
   !-----------------------------------------------------------------------------
   !> Define variables in restart file
   subroutine ATMOS_PHY_RD_vars_restart_def_var
-    use scale_fileio, only: &
-       FILEIO_def_var
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_def_var
     implicit none
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
 
-       call FILEIO_def_var( restart_fid, VAR_ID(1), VAR_NAME(1) , VAR_DESC(1) , VAR_UNIT(1) , &
+       call FILE_CARTESC_def_var( restart_fid, VAR_ID(1), VAR_NAME(1) , VAR_DESC(1) , VAR_UNIT(1) , &
                             'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(2), VAR_NAME(2) , VAR_DESC(2) , VAR_UNIT(2) , &
+       call FILE_CARTESC_def_var( restart_fid, VAR_ID(2), VAR_NAME(2) , VAR_DESC(2) , VAR_UNIT(2) , &
                             'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(3), VAR_NAME(3) , VAR_DESC(3) , VAR_UNIT(3) , &
+       call FILE_CARTESC_def_var( restart_fid, VAR_ID(3), VAR_NAME(3) , VAR_DESC(3) , VAR_UNIT(3) , &
                             'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(4), VAR_NAME(4) , VAR_DESC(4) , VAR_UNIT(4) , &
+       call FILE_CARTESC_def_var( restart_fid, VAR_ID(4), VAR_NAME(4) , VAR_DESC(4) , VAR_UNIT(4) , &
                             'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(5), VAR_NAME(5) , VAR_DESC(5) , VAR_UNIT(5) , &
+       call FILE_CARTESC_def_var( restart_fid, VAR_ID(5), VAR_NAME(5) , VAR_DESC(5) , VAR_UNIT(5) , &
                             'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(6), VAR_NAME(6) , VAR_DESC(6) , VAR_UNIT(6) , &
+       call FILE_CARTESC_def_var( restart_fid, VAR_ID(6), VAR_NAME(6) , VAR_DESC(6) , VAR_UNIT(6) , &
                             'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(7), VAR_NAME(7) , VAR_DESC(7) , VAR_UNIT(7) , &
+       call FILE_CARTESC_def_var( restart_fid, VAR_ID(7), VAR_NAME(7) , VAR_DESC(7) , VAR_UNIT(7) , &
                             'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(8), VAR_NAME(8) , VAR_DESC(8) , VAR_UNIT(8) , &
+       call FILE_CARTESC_def_var( restart_fid, VAR_ID(8), VAR_NAME(8) , VAR_DESC(8) , VAR_UNIT(8) , &
                             'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(9), VAR_NAME(9) , VAR_DESC(9) , VAR_UNIT(9) , &
+       call FILE_CARTESC_def_var( restart_fid, VAR_ID(9), VAR_NAME(9) , VAR_DESC(9) , VAR_UNIT(9) , &
                             'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(10), VAR_NAME(10), VAR_DESC(10), VAR_UNIT(10), &
+       call FILE_CARTESC_def_var( restart_fid, VAR_ID(10), VAR_NAME(10), VAR_DESC(10), VAR_UNIT(10), &
                             'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(11), VAR_NAME(11), VAR_DESC(11), VAR_UNIT(11), &
+       call FILE_CARTESC_def_var( restart_fid, VAR_ID(11), VAR_NAME(11), VAR_DESC(11), VAR_UNIT(11), &
                             'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(12), VAR_NAME(12), VAR_DESC(12), VAR_UNIT(12), &
+       call FILE_CARTESC_def_var( restart_fid, VAR_ID(12), VAR_NAME(12), VAR_DESC(12), VAR_UNIT(12), &
                             'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
@@ -524,8 +526,8 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_fileio, only: &
-       FILEIO_write_var
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_write_var
     implicit none
 
     real(RP) :: total
@@ -550,29 +552,29 @@ contains
           call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,2), VAR_NAME(12) )
        endif
 
-       call FILEIO_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_RD_SFLX_LW_up(:,:), &
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_RD_SFLX_LW_up(:,:), &
                               VAR_NAME(1) , 'XY'  ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(2), ATMOS_PHY_RD_SFLX_LW_dn(:,:), &
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(2), ATMOS_PHY_RD_SFLX_LW_dn(:,:), &
                               VAR_NAME(2) , 'XY'  ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(3), ATMOS_PHY_RD_SFLX_SW_up(:,:), &
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(3), ATMOS_PHY_RD_SFLX_SW_up(:,:), &
                               VAR_NAME(3) , 'XY'  ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(4), ATMOS_PHY_RD_SFLX_SW_dn(:,:), &
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(4), ATMOS_PHY_RD_SFLX_SW_dn(:,:), &
                               VAR_NAME(4) , 'XY'  ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(5), ATMOS_PHY_RD_TOAFLX_LW_up(:,:), &
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(5), ATMOS_PHY_RD_TOAFLX_LW_up(:,:), &
                               VAR_NAME(5) , 'XY'  ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(6), ATMOS_PHY_RD_TOAFLX_LW_dn(:,:), &
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(6), ATMOS_PHY_RD_TOAFLX_LW_dn(:,:), &
                               VAR_NAME(6) , 'XY'  ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(7), ATMOS_PHY_RD_TOAFLX_SW_up(:,:), &
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(7), ATMOS_PHY_RD_TOAFLX_SW_up(:,:), &
                               VAR_NAME(7) , 'XY'  ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(8), ATMOS_PHY_RD_TOAFLX_SW_dn(:,:), &
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(8), ATMOS_PHY_RD_TOAFLX_SW_dn(:,:), &
                               VAR_NAME(8) , 'XY'  ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(9), ATMOS_PHY_RD_SFLX_downall(:,:,1,1), &
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(9), ATMOS_PHY_RD_SFLX_downall(:,:,1,1), &
                               VAR_NAME(9) , 'XY'  ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(10), ATMOS_PHY_RD_SFLX_downall(:,:,1,2), &
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(10), ATMOS_PHY_RD_SFLX_downall(:,:,1,2), &
                               VAR_NAME(10), 'XY'  ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(11), ATMOS_PHY_RD_SFLX_downall(:,:,2,1), &
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(11), ATMOS_PHY_RD_SFLX_downall(:,:,2,1), &
                               VAR_NAME(11), 'XY'  ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(12), ATMOS_PHY_RD_SFLX_downall(:,:,2,2), &
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(12), ATMOS_PHY_RD_SFLX_downall(:,:,2,2), &
                               VAR_NAME(12), 'XY'  ) ! [IN]
 
     endif

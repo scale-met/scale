@@ -30,8 +30,8 @@ module mod_user
      ATMOS_BOUNDARY_alpha, &
      ATMOS_BOUNDARY_var
   use mod_atmos_vars
-  use scale_history, only: &
-     HIST_in
+  use scale_file_history, only: &
+     FILE_HISTORY_in
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -206,8 +206,8 @@ contains
        call PRC_MPIstop
     endif
 
-    call HIST_in( ATMOS_BOUNDARY_var(:,:,:,I_BND_DENS), 'BND_DENS', 'boundary_dens', 'kg/m3' )
-    call HIST_in( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX), 'BND_VELX', 'boundary_velx', 'm/s'   )
+    call FILE_HISTORY_in( ATMOS_BOUNDARY_var(:,:,:,I_BND_DENS), 'BND_DENS', 'boundary_dens', 'kg/m3' )
+    call FILE_HISTORY_in( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX), 'BND_VELX', 'boundary_velx', 'm/s'   )
 
     front_posi = front_posi + UEND * TIME_DTSEC
     if( IO_L ) write(IO_FID_LOG,*) '*** front position', front_posi

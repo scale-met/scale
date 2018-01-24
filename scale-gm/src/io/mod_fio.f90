@@ -232,7 +232,7 @@ contains
     integer :: did, fid
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILEIO_in',2)
+    call PROF_rapstart('FILE_CARTESC_in',2)
 
     !--- search/register file
     call FIO_getfid( fid, basename, IO_FREAD, '', '' )
@@ -251,7 +251,7 @@ contains
 
              var(:,k_start:k_end,:) = 0.0_SP
 
-             call PROF_rapend('FILEIO_in',2)
+             call PROF_rapend('FILE_CARTESC_in',2)
              return
           endif
        else
@@ -284,7 +284,7 @@ contains
 
     endif
 
-    call PROF_rapend('FILEIO_in',2)
+    call PROF_rapend('FILE_CARTESC_in',2)
 
     return
   end subroutine FIO_input_SP
@@ -323,7 +323,7 @@ contains
     integer :: did, fid
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILEIO_in',2)
+    call PROF_rapstart('FILE_CARTESC_in',2)
 
     !--- search/register file
     call FIO_getfid( fid, basename, IO_FREAD, '', '' )
@@ -342,7 +342,7 @@ contains
 
              var(:,k_start:k_end,:) = 0.0_DP
 
-             call PROF_rapend('FILEIO_in',2)
+             call PROF_rapend('FILE_CARTESC_in',2)
              return
           endif
        else
@@ -375,7 +375,7 @@ contains
 
     endif
 
-    call PROF_rapend('FILEIO_in',2)
+    call PROF_rapend('FILE_CARTESC_in',2)
 
     return
   end subroutine FIO_input_DP
@@ -425,7 +425,7 @@ contains
     integer  :: i
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILEIO_in',2)
+    call PROF_rapstart('FILE_CARTESC_in',2)
 
     !--- search/register file
     call FIO_getfid( fid, basename, IO_FREAD, '', '' )
@@ -487,7 +487,7 @@ contains
        endif
     enddo
 
-    call PROF_rapend('FILEIO_in',2)
+    call PROF_rapend('FILE_CARTESC_in',2)
 
     return
   end subroutine FIO_seek
@@ -542,7 +542,7 @@ contains
     integer :: did, fid
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILEIO_out',2)
+    call PROF_rapstart('FILE_CARTESC_out',2)
 
     !--- search/register file
     call FIO_getfid( fid, basename, IO_FWRITE, pkg_desc, pkg_note )
@@ -580,7 +580,7 @@ contains
        call PRC_MPIstop
     endif
 
-    call PROF_rapend('FILEIO_out',2)
+    call PROF_rapend('FILE_CARTESC_out',2)
 
     return
   end subroutine FIO_output_SP
@@ -635,7 +635,7 @@ contains
     integer :: did, fid
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILEIO_out',2)
+    call PROF_rapstart('FILE_CARTESC_out',2)
 
     !--- search/register file
     call FIO_getfid( fid, basename, IO_FWRITE, pkg_desc, pkg_note )
@@ -673,7 +673,7 @@ contains
        call PRC_MPIstop
     endif
 
-    call PROF_rapend('FILEIO_out',2)
+    call PROF_rapend('FILE_CARTESC_out',2)
 
     return
   end subroutine FIO_output_DP

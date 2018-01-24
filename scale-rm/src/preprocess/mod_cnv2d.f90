@@ -1224,8 +1224,8 @@ contains
        istep      )
     use scale_time, only: &
        TIME_NOWDATE
-    use scale_fileio, only: &
-       FILEIO_write
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_write
     implicit none
 
     real(RP), intent(in) :: VAR2D(IA,JA)
@@ -1246,7 +1246,7 @@ contains
 
        timeofs = real(istep-1,kind=DP) * timeintv
 
-       call FILEIO_write( work(:,:,:),        & ! [IN]
+       call FILE_CARTESC_write( work(:,:,:),        & ! [IN]
                           CNV2D_OUT_BASENAME, & ! [IN]
                           CNV2D_OUT_TITLE,    & ! [IN]
                           CNV2D_OUT_VARNAME,  & ! [IN]

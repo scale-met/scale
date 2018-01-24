@@ -113,6 +113,8 @@ typedef struct {
   tdim_t *t;
   size_t *start;
   size_t *count;
+  size_t ndims;
+  size_t ndims_t;
 } varinfo_t;
 
 static fileinfo_t *files[FILE_MAX];
@@ -188,6 +190,7 @@ int32_t file_open_c(       int32_t  *fid,     // (out)
   files[nfile]->shared_mode = shared_mode;  /* shared-file I/O mode */
   strcpy(files[nfile]->fname, fname);
   *fid = nfile;
+
   nfile++;
 
   return SUCCESS_CODE;
@@ -428,273 +431,85 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
   return SUCCESS_CODE;
 }
 
-int32_t file_read_data_c(       void       *var,        // (out)
-			  const datainfo_t *dinfo,      // (in)
-			  const int32_t     precision)  // (in)
+int32_t file_read_data_c(       void       *var,       // (out)
+			  const datainfo_t *dinfo,     // (in)
+			  const int32_t     precision, // (in)
+			  const MPI_Offset  ntypes,    // (in)
+			  const MPI_Datatype dtype,    // (in)
+			  const int32_t     *start,    // (in)
+			  const int32_t     *count )   // (in)
 {
   int ncid, varid;
   int rank;
-  size_t *start, *count;
   int i;
   int status;
+  int fid;
+  size_t *str, *cnt;
+  MPI_Offset *strp, *cntp;
 
-  if ( files[dinfo->fid] == NULL ) return ALREADY_CLOSED_CODE;
-  ncid = files[dinfo->fid]->ncid;
-  CHECK_ERROR( nc_inq_varid(ncid, dinfo->varname, &varid) )
-
-  CHECK_ERROR( nc_inq_varndims(ncid, varid, &rank) )
-  start = (size_t*) malloc(sizeof(size_t)*rank);
-  count = (size_t*) malloc(sizeof(size_t)*rank);
-  for (i=0; i<dinfo->rank; i++) {
-    // note: C and Fortran orders are opposite
-    start[rank -i-1] = 0;
-    count[rank -i-1] = dinfo->dim_size[i];
+  fid = dinfo->fid;
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+  if ( files[fid]->shared_mode ) {
+    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, dinfo->varname, &varid) )
+    CHECK_PNC_ERROR( ncmpi_inq_varndims(ncid, varid, &rank) )
+    strp = (MPI_Offset*) malloc(sizeof(MPI_Offset)*rank);
+    cntp = (MPI_Offset*) malloc(sizeof(MPI_Offset)*rank);
+  } else {
+    CHECK_ERROR( nc_inq_varid(ncid, dinfo->varname, &varid) )
+    CHECK_ERROR( nc_inq_varndims(ncid, varid, &rank) )
   }
-  if (rank > dinfo->rank) { // have time dimension
-    start[0] = dinfo->step - 1;
-    count[0] = 1;
-  }
-  switch ( precision ) {
-  case 8:
-    status = nc_get_vara_double(ncid, varid, start, count, (double*)var);
-    free(start);
-    free(count);
-    CHECK_ERROR(status);
-    break;
-  case 4:
-    status = nc_get_vara_float(ncid, varid, start, count, (float*)var);
-    free(start);
-    free(count);
-    CHECK_ERROR(status);
-    break;
-  default:
-    free(start);
-    free(count);
-    fprintf(stderr, "unsupported data precision: %d\n", precision );
-    return ERROR_CODE;
-  }
+  str = (size_t*) malloc(sizeof(size_t)*rank);
+  cnt = (size_t*) malloc(sizeof(size_t)*rank);
 
-  return SUCCESS_CODE;
-}
-
-int32_t file_read_data_par_c(       void         *var,        // (out)
-			      const datainfo_t   *dinfo,      // (in)
-			      const MPI_Offset    ntypes,     // (in)
-			      const MPI_Datatype  dtype,      // (in)
-			      const MPI_Offset   *start,      // (in)
-			      const MPI_Offset   *count)      // (in)
-{
-  int ncid, varid, rank;
-  MPI_Offset *str, *cnt;
-  int i;
-
-  if ( files[dinfo->fid] == NULL ) return ALREADY_CLOSED_CODE;
-  ncid = files[dinfo->fid]->ncid;
-  CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, dinfo->varname, &varid) )
-
-  CHECK_PNC_ERROR( ncmpi_inq_varndims(ncid, varid, &rank) )
-
-  str = (MPI_Offset*) malloc(sizeof(MPI_Offset)*rank);
-  cnt = (MPI_Offset*) malloc(sizeof(MPI_Offset)*rank);
-  if (rank > dinfo->rank) { // have time dimension
-    str[0] = dinfo->step - 1;
-    cnt[0] = 1;
-    for (i=1; i<=dinfo->rank; i++) {
-      str[i] = start[i];
-      cnt[i] = count[i];
+  if ( start == NULL || count == NULL ) {
+    for (i=0; i<dinfo->rank; i++) {
+      // note: C and Fortran orders are opposite
+      str[rank -i-1] = 0;
+      cnt[rank -i-1] = dinfo->dim_size[i];
     }
   } else {
     for (i=0; i<dinfo->rank; i++) {
-      str[i] = start[i+1];
-      cnt[i] = count[i+1];
+      // note: C and Fortran orders are opposite
+      str[rank -i-1] = start[i] - 1;
+      cnt[rank -i-1] = count[i];
     }
   }
-
-  CHECK_PNC_ERROR( ncmpi_iget_vara(ncid, varid, str, cnt, var, ntypes, dtype, NULL) )
-
-  free(str);
-  free(cnt);
-
-  return SUCCESS_CODE;
-}
-
-int32_t file_get_globalattribute_text_c( const int32_t  fid,   // (in)
-					 const char    *key,   // (in)
-					       char    *value, // (out)
-					 const int32_t  len )  // (in)
-{
-  int ncid;
-  size_t l;
-
-  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
-  ncid = files[fid]->ncid;
-
-  CHECK_ERROR( nc_inq_attlen(ncid, NC_GLOBAL, key, &l) )
-  if ( len < l+1 ) return ERROR_CODE;
-
-  CHECK_ERROR( nc_get_att_text(ncid, NC_GLOBAL, key, value) )
-  value[l] = '\0';
-
-  return SUCCESS_CODE;
-}
-
-int32_t file_get_globalattribute_int_c( const int32_t  fid,   // (in)
-					const char    *key,   // (in)
-					      int     *value, // (out)
-					const size_t   len )  // (in)
-{
-  int ncid;
-  size_t l;
-
-  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
-  ncid = files[fid]->ncid;
-
-  CHECK_ERROR( nc_inq_attlen(ncid, NC_GLOBAL, key, &l) )
-  if ( len < l ) return ERROR_CODE;
-  CHECK_ERROR( nc_get_att_int(ncid, NC_GLOBAL, key, value) )
-
-  return SUCCESS_CODE;
-}
-
-int32_t file_get_globalattribute_float_c( const int32_t  fid,   // (in)
-					  const char    *key,   // (in)
-					        float   *value, // (out)
-					  const size_t   len )  // (in)
-{
-  int ncid;
-  size_t l;
-
-  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
-  ncid = files[fid]->ncid;
-
-  CHECK_ERROR( nc_inq_attlen(ncid, NC_GLOBAL, key, &l) )
-  if ( len < l ) return ERROR_CODE;
-  CHECK_ERROR( nc_get_att_float(ncid, NC_GLOBAL, key, value) )
-
-  return SUCCESS_CODE;
-}
-
-int32_t file_get_globalattribute_double_c( const int32_t  fid,   // (in)
-					   const char    *key,   // (in)
-					         double  *value, // (out)
-					   const size_t   len )  // (in)
-{
-  int ncid;
-  size_t l;
-
-  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
-  ncid = files[fid]->ncid;
-
-  CHECK_ERROR( nc_inq_attlen(ncid, NC_GLOBAL, key, &l) )
-  if ( len < l ) return ERROR_CODE;
-  CHECK_ERROR( nc_get_att_double(ncid, NC_GLOBAL, key, value) )
-
-  return SUCCESS_CODE;
-}
-
-int32_t file_set_globalattribute_text_c( const int32_t  fid,    // (in)
-					 const char    *key,    // (in)
-					 const char    *value ) // (in)
-{
-  int ncid;
-
-  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
-  ncid = files[fid]->ncid;
-
-#ifdef NETCDF3
-  if (files[fid]->defmode == 0) {
-    CHECK_ERROR( nc_redef(ncid) )
-    files[fid]->defmode = 1;
+  if (rank > dinfo->rank) { // have time dimension
+    str[0] = dinfo->step - 1;
+    cnt[0] = 1;
   }
-#endif
 
   if ( files[fid]->shared_mode ) {
-    CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, NC_GLOBAL, key, strlen(value), value) )
-  }
-  else {
-    CHECK_ERROR( nc_put_att_text(ncid, NC_GLOBAL, key, strlen(value), value) )
-  }
-
-  return SUCCESS_CODE;
-}
-
-int32_t file_set_globalattribute_int_c( const int32_t  fid,   // (in)
-					const char    *key,   // (in)
-					const int     *value, // (in)
-					const size_t   len )  // (in)
-{
-  int ncid;
-
-  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
-  ncid = files[fid]->ncid;
-
-#ifdef NETCDF3
-  if (files[fid]->defmode == 0) {
-    CHECK_ERROR( nc_redef(ncid) )
-    files[fid]->defmode = 1;
-  }
-#endif
-
-  if ( files[fid]->shared_mode ) {
-    CHECK_PNC_ERROR( ncmpi_put_att_int(ncid, NC_GLOBAL, key, NC_INT, len, value) )
-  }
-  else {
-    CHECK_ERROR( nc_put_att_int(ncid, NC_GLOBAL, key, NC_INT, len, value) )
+    for (i=0; i<rank; i++) {
+      strp[i] = (MPI_Offset) str[i];
+      cntp[i] = (MPI_Offset) cnt[i];
+    }
+    free(str);
+    free(cnt);
+    status = ncmpi_iget_vara(ncid, varid, strp, cntp, var, ntypes, dtype, NULL);
+    free(strp);
+    free(cntp);
+    CHECK_PNC_ERROR(status)
+  } else {
+    switch ( precision ) {
+    case 8:
+      status = nc_get_vara_double(ncid, varid, str, cnt, (double*)var);
+      break;
+    case 4:
+      status = nc_get_vara_float(ncid, varid, str, cnt, (float*)var);
+      break;
+    default:
+      free(str);
+      free(cnt);
+      fprintf(stderr, "unsupported data precision: %d\n", precision );
+      return ERROR_CODE;
+    }
+    free(str);
+    free(cnt);
+    CHECK_ERROR(status)
   }
 
-  return SUCCESS_CODE;
-}
-
-int32_t file_set_globalattribute_float_c( const int32_t  fid,   // (in)
-					  const char    *key,   // (in)
-					  const float   *value, // (in)
-					  const size_t   len )  // (in)
-{
-  int ncid;
-
-  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
-  ncid = files[fid]->ncid;
-
-#ifdef NETCDF3
-  if (files[fid]->defmode == 0) {
-    CHECK_ERROR( nc_redef(ncid) )
-    files[fid]->defmode = 1;
-  }
-#endif
-
-  if ( files[fid]->shared_mode ) {
-    CHECK_PNC_ERROR( ncmpi_put_att_float(ncid, NC_GLOBAL, key, NC_FLOAT, len, value) )
-  }
-  else {
-    CHECK_ERROR( nc_put_att_float(ncid, NC_GLOBAL, key, NC_FLOAT, len, value) )
-  }
-
-  return SUCCESS_CODE;
-}
-
-int32_t file_set_globalattribute_double_c( const int32_t  fid,   // (in)
-					   const char    *key,   // (in)
-					   const double  *value, // (in)
-					   const size_t   len )  // (in)
-{
-  int ncid;
-
-  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
-  ncid = files[fid]->ncid;
-
-#ifdef NETCDF3
-  if (files[fid]->defmode == 0) {
-    CHECK_ERROR( nc_redef(ncid) )
-    files[fid]->defmode = 1;
-  }
-#endif
-
-  if ( files[fid]->shared_mode ) {
-    CHECK_PNC_ERROR( ncmpi_put_att_double(ncid, NC_GLOBAL, key, NC_DOUBLE, len, value) )
-  }
-  else {
-    CHECK_ERROR( nc_put_att_double(ncid, NC_GLOBAL, key, NC_DOUBLE, len, value) )
-  }
 
   return SUCCESS_CODE;
 }
@@ -713,7 +528,10 @@ int32_t file_get_attribute_text_c( const int32_t  fid,   // (in)
 
   if ( files[fid]->shared_mode ) {
     MPI_Offset l;
-    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
     if ( len < l+1 ) return ERROR_CODE;
@@ -723,7 +541,10 @@ int32_t file_get_attribute_text_c( const int32_t  fid,   // (in)
   }
   else {
     size_t l;
-    CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
     if ( len < l+1 ) return ERROR_CODE;
@@ -749,7 +570,10 @@ int32_t file_get_attribute_int_c( const int32_t  fid,   // (in)
 
   if ( files[fid]->shared_mode ) {
     MPI_Offset l;
-    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
     if ( len < l ) return ERROR_CODE;
@@ -757,7 +581,10 @@ int32_t file_get_attribute_int_c( const int32_t  fid,   // (in)
   }
   else {
     size_t l;
-    CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
     if ( len < l ) return ERROR_CODE;
@@ -781,7 +608,10 @@ int32_t file_get_attribute_float_c( const int32_t  fid,   // (in)
 
   if ( files[fid]->shared_mode ) {
     MPI_Offset l;
-    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
     if ( len < l ) return ERROR_CODE;
@@ -789,7 +619,10 @@ int32_t file_get_attribute_float_c( const int32_t  fid,   // (in)
   }
   else {
     size_t l;
-    CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
     if ( len < l ) return ERROR_CODE;
@@ -813,7 +646,10 @@ int32_t file_get_attribute_double_c( const int32_t  fid,   // (in)
 
   if ( files[fid]->shared_mode ) {
     MPI_Offset l;
-    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
     if ( len < l ) return ERROR_CODE;
@@ -821,7 +657,10 @@ int32_t file_get_attribute_double_c( const int32_t  fid,   // (in)
   }
   else {
     size_t l;
-    CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
     if ( len < l ) return ERROR_CODE;
@@ -844,7 +683,10 @@ int32_t file_set_attribute_text_c( const int32_t  fid,   // (in)
   ncid = files[fid]->ncid;
 
   if ( files[fid]->shared_mode ) {
-    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     if ( ncmpi_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
       return ALREADY_EXISTED_CODE;
@@ -852,7 +694,10 @@ int32_t file_set_attribute_text_c( const int32_t  fid,   // (in)
     CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, varid, key, strlen(val), val) )
   }
   else {
-    CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     if ( nc_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
       return ALREADY_EXISTED_CODE;
@@ -884,7 +729,10 @@ int32_t file_set_attribute_int_c( const int32_t  fid,   // (in)
   ncid = files[fid]->ncid;
 
   if ( files[fid]->shared_mode ) {
-    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     if ( ncmpi_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
       return ALREADY_EXISTED_CODE;
@@ -892,7 +740,10 @@ int32_t file_set_attribute_int_c( const int32_t  fid,   // (in)
     CHECK_PNC_ERROR( ncmpi_put_att_int(ncid, varid, key, NC_INT, len, value) )
   }
   else {
-    CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     if ( nc_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
       return ALREADY_EXISTED_CODE;
@@ -924,7 +775,10 @@ int32_t file_set_attribute_float_c( const int32_t  fid,   // (in)
   ncid = files[fid]->ncid;
 
   if ( files[fid]->shared_mode ) {
-    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     if ( ncmpi_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
       return ALREADY_EXISTED_CODE;
@@ -932,7 +786,10 @@ int32_t file_set_attribute_float_c( const int32_t  fid,   // (in)
     CHECK_PNC_ERROR( ncmpi_put_att_float(ncid, varid, key, NC_FLOAT, len, value) )
   }
   else {
-    CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     if ( nc_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
       return ALREADY_EXISTED_CODE;
@@ -964,7 +821,10 @@ int32_t file_set_attribute_double_c( const int32_t  fid,   // (in)
   ncid = files[fid]->ncid;
 
   if ( files[fid]->shared_mode ) {
-    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     if ( ncmpi_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
       return ALREADY_EXISTED_CODE;
@@ -972,7 +832,10 @@ int32_t file_set_attribute_double_c( const int32_t  fid,   // (in)
     CHECK_PNC_ERROR( ncmpi_put_att_double(ncid, varid, key, NC_DOUBLE, len, value) )
   }
   else {
-    CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
+    if ( strcmp(vname, "global") == 0 ) {
+      varid = NC_GLOBAL;
+    } else
+      CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     if ( nc_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
       return ALREADY_EXISTED_CODE;
@@ -1374,6 +1237,7 @@ int32_t file_add_variable_c(       int32_t *vid,     // (out)
   vars[nvar]->t = NULL;
   vars[nvar]->start = NULL;
   vars[nvar]->count = NULL;
+  vars[nvar]->ndims = ndims;
 
 #if defined(NETCDF3) || defined(PNETCDF)
   if (files[fid]->defmode == 0) {
@@ -1570,6 +1434,7 @@ int32_t file_add_variable_c(       int32_t *vid,     // (out)
   }
 
   // set start and count
+  vars[nvar]->ndims_t = ndims_t;
   vars[nvar]->start = (size_t*) malloc(sizeof(size_t)*ndims_t);
   vars[nvar]->count = (size_t*) malloc(sizeof(size_t)*ndims_t);
   for ( i=0; i<ndims_t; i++ ) {
@@ -1663,20 +1528,27 @@ int32_t file_flush_c( const int32_t fid ) // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_write_data_c( const int32_t     fid,        // (in)
-			   const int32_t     vid,        // (in)
-			   const void       *var,        // (in)
-			   const real64_t    t_start,    // (in)
-			   const real64_t    t_end,      // (in)
-			   const int32_t     precision,  // (in)
-			   const MPI_Offset *start,      // (in)
-			   const MPI_Offset *count)      // (in)
+int32_t file_write_data_c( const int32_t   fid,       // (in)
+			   const int32_t   vid,       // (in)
+			   const void     *var,       // (in)
+			   const real64_t  t_start,   // (in)
+			   const real64_t  t_end,     // (in)
+			   const int32_t   precision, // (in)
+			   const int32_t   ndims,     // (in)
+			   const int32_t  *start,     // (in)
+			   const int32_t  *count)     // (in)
 {
   int ncid, varid;
   MPI_Offset *str, *cnt;
 
   if ( vars[vid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = vars[vid]->ncid;
+
+  if ( ndims != vars[vid]->ndims ) {
+    fprintf(stderr, "Error: at line %d in %s\n", __LINE__, __FILE__);
+    fprintf(stderr, "       dimension size %d is not consistent that was added by file_add_variable %d\n", ndims, vars[vid]->ndims );
+    return ERROR_CODE;
+  }
 
 #ifdef NETCDF3
   if ( files[fid]->defmode == 1 && ! files[fid]->shared_mode ) {
@@ -1734,18 +1606,26 @@ int32_t file_write_data_c( const int32_t     fid,        // (in)
         return ERROR_CODE;
       }
     }
-    if ( files[fid]->shared_mode ) {
+  }
+
+  if ( files[fid]->shared_mode ) {
+    int i;
+    int ndims_t = vars[vid]->ndims_t;
+    str = (MPI_Offset*) malloc(sizeof(MPI_Offset)*(ndims_t));
+    cnt = (MPI_Offset*) malloc(sizeof(MPI_Offset)*(ndims_t));
+    if ( vars[vid]->t != NULL ) { // have time dimension
       // add time dimension to start[0] and count[0]
-      int i, ndims;
-      CHECK_PNC_ERROR( ncmpi_inq_varndims(ncid, varid, &ndims) )
-      str = (MPI_Offset*) malloc(sizeof(MPI_Offset)*ndims);
-      cnt = (MPI_Offset*) malloc(sizeof(MPI_Offset)*ndims);
-      for (i=ndims-1; i>0; i--) {
-        str[i] = start[i-1];
-        cnt[i] = count[i-1];
-      }
       str[0] = vars[vid]->start[0];  // start along the time dimension
       cnt[0] = vars[vid]->count[0];
+      for (i=0; i<ndims; i++) {
+        str[ndims_t-i-1] = start[i];
+        cnt[ndims_t-i-1] = count[i];
+      }
+    } else {
+      for (i=0; i<ndims; i++) {
+        str[ndims-i-1] = start[i];
+        cnt[ndims-i-1] = count[i];
+      }
     }
   }
 

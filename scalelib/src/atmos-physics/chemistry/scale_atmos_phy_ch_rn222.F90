@@ -175,8 +175,8 @@ contains
        GRID_RCDZ
     use scale_landuse, only: &
        LANDUSE_fact_land
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_tracer, only: &
        QA
     implicit none
@@ -225,7 +225,7 @@ contains
     enddo
     enddo
 
-    call HIST_in( emission(:,:), 'EMIT_RN222', 'Emission Rn222', 'Bq/m2/s' )
+    call FILE_HISTORY_in( emission(:,:), 'EMIT_RN222', 'Emission Rn222', 'Bq/m2/s' )
 
     return
   end subroutine ATMOS_PHY_CH_rn222

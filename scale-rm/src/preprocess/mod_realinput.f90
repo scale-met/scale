@@ -1480,10 +1480,10 @@ contains
        timeintv,  &
        fid,       &
        vid        )
-    use scale_fileio, only: &
-       FILEIO_create, &
-       FILEIO_def_var, &
-       FILEIO_enddef
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_create, &
+       FILE_CARTESC_def_var, &
+       FILE_CARTESC_enddef
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE
     use scale_atmos_phy_mp, only: &
@@ -1501,20 +1501,20 @@ contains
     integer :: iq
     !---------------------------------------------------------------------------
 
-    call FILEIO_create( fid, basename, title, datatype, NOWDATE )
+    call FILE_CARTESC_create( fid, basename, title, datatype, NOWDATE )
 
-    call FILEIO_def_var( fid, vid(1), 'DENS', 'Reference Density', 'kg/m3', 'ZXYT', datatype, timeintv )
-    call FILEIO_def_var( fid, vid(2), 'VELZ', 'Reference VELZ',    'm/s',   'ZXYT', datatype, timeintv ) ! Todo ZHXY
-    call FILEIO_def_var( fid, vid(3), 'VELX', 'Reference VELX',    'm/s',   'ZXYT', datatype, timeintv ) ! Todo ZXHY
-    call FILEIO_def_var( fid, vid(4), 'VELY', 'Reference VELY',    'm/s',   'ZXYT', datatype, timeintv ) ! Todo ZXYH
-    call FILEIO_def_var( fid, vid(5), 'POTT', 'Reference PT',      'K',     'ZXYT', datatype, timeintv )
+    call FILE_CARTESC_def_var( fid, vid(1), 'DENS', 'Reference Density', 'kg/m3', 'ZXYT', datatype, timeintv )
+    call FILE_CARTESC_def_var( fid, vid(2), 'VELZ', 'Reference VELZ',    'm/s',   'ZXYT', datatype, timeintv ) ! Todo ZHXY
+    call FILE_CARTESC_def_var( fid, vid(3), 'VELX', 'Reference VELX',    'm/s',   'ZXYT', datatype, timeintv ) ! Todo ZXHY
+    call FILE_CARTESC_def_var( fid, vid(4), 'VELY', 'Reference VELY',    'm/s',   'ZXYT', datatype, timeintv ) ! Todo ZXYH
+    call FILE_CARTESC_def_var( fid, vid(5), 'POTT', 'Reference PT',      'K',     'ZXYT', datatype, timeintv )
 
     do iq = QS_MP, QE_MP
-       call FILEIO_def_var( fid, vid(5+iq), TRACER_NAME(iq), 'Reference '//TRACER_NAME(iq), &
+       call FILE_CARTESC_def_var( fid, vid(5+iq), TRACER_NAME(iq), 'Reference '//TRACER_NAME(iq), &
                             'kg/kg', 'ZXYT', datatype, timeintv                             )
     enddo
 
-    call FILEIO_enddef( fid )
+    call FILE_CARTESC_enddef( fid )
 
     return
   end subroutine BoundaryAtmosSetup
@@ -1532,8 +1532,8 @@ contains
        vid,      &
        timeintv, &
        istep     )
-    use scale_fileio, only: &
-       FILEIO_write_var
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_write_var
     use scale_atmos_phy_mp, only: &
        QA_MP, &
        QS_MP, &
@@ -1563,22 +1563,22 @@ contains
 
 !OCL XFILL
     work(:,:,:,1) = DENS(:,:,:)
-    call FILEIO_write_var( fid, vid(1), work(:,:,:,:), 'DENS', 'ZXYT', timeintv, timeofs=timeofs )
+    call FILE_CARTESC_write_var( fid, vid(1), work(:,:,:,:), 'DENS', 'ZXYT', timeintv, timeofs=timeofs )
 !OCL XFILL
     work(:,:,:,1) = VELZ(:,:,:)
-    call FILEIO_write_var( fid, vid(2), work(:,:,:,:), 'VELZ', 'ZXYT', timeintv, timeofs=timeofs ) ! Todo ZHXY
+    call FILE_CARTESC_write_var( fid, vid(2), work(:,:,:,:), 'VELZ', 'ZXYT', timeintv, timeofs=timeofs ) ! Todo ZHXY
 !OCL XFILL
     work(:,:,:,1) = VELX(:,:,:)
-    call FILEIO_write_var( fid, vid(3), work(:,:,:,:), 'VELX', 'ZXYT', timeintv, timeofs=timeofs ) ! Todo ZXHY
+    call FILE_CARTESC_write_var( fid, vid(3), work(:,:,:,:), 'VELX', 'ZXYT', timeintv, timeofs=timeofs ) ! Todo ZXHY
 !OCL XFILL
     work(:,:,:,1) = VELY(:,:,:)
-    call FILEIO_write_var( fid, vid(4), work(:,:,:,:), 'VELY', 'ZXYT', timeintv, timeofs=timeofs ) ! Todo ZXYH
+    call FILE_CARTESC_write_var( fid, vid(4), work(:,:,:,:), 'VELY', 'ZXYT', timeintv, timeofs=timeofs ) ! Todo ZXYH
 !OCL XFILL
     work(:,:,:,1) = POTT(:,:,:)
-    call FILEIO_write_var( fid, vid(5), work(:,:,:,:), 'POTT', 'ZXYT', timeintv, timeofs=timeofs )
+    call FILE_CARTESC_write_var( fid, vid(5), work(:,:,:,:), 'POTT', 'ZXYT', timeintv, timeofs=timeofs )
 
     do iq = QS_MP, QE_MP
-       call FILEIO_write_var( fid, vid(5+iq),QTRC(:,:,:,iq:iq), TRACER_NAME(iq), &
+       call FILE_CARTESC_write_var( fid, vid(5+iq),QTRC(:,:,:,iq:iq), TRACER_NAME(iq), &
                               'ZXYT', timeintv, timeofs=timeofs                  )
     enddo
 
@@ -2361,11 +2361,11 @@ contains
     use scale_const, only: &
          I_SW => CONST_I_SW, &
          I_LW => CONST_I_LW
-    use scale_fileio, only: &
-         FILEIO_create, &
-         FILEIO_def_var, &
-         FILEIO_enddef, &
-         FILEIO_write_var
+    use scale_file_cartesC, only: &
+         FILE_CARTESC_create, &
+         FILE_CARTESC_def_var, &
+         FILE_CARTESC_enddef, &
+         FILE_CARTESC_write_var
     use scale_time, only: &
          TIME_NOWDATE
     implicit none
@@ -2400,51 +2400,51 @@ contains
     nowdate = TIME_NOWDATE
     nowdate(1) = nowdate(1)
 
-    call FILEIO_create( fid, basename, title, boundary_out_dtype, nowdate )
+    call FILE_CARTESC_create( fid, basename, title, boundary_out_dtype, nowdate )
 
-    call FILEIO_def_var( fid, vid(1), &
+    call FILE_CARTESC_def_var( fid, vid(1), &
          'LAND_TEMP', 'Reference Land Temperature', 'K', 'Land', &
          boundary_out_dtype, update_dt, numsteps )
-    call FILEIO_def_var( fid, vid(2), &
+    call FILE_CARTESC_def_var( fid, vid(2), &
          'LAND_WATER', 'Reference Land Moisture', 'm3/m3', 'Land', &
          boundary_out_dtype, update_dt, numsteps )
-    call FILEIO_def_var( fid, vid(3), &
+    call FILE_CARTESC_def_var( fid, vid(3), &
          'LAND_SFC_TEMP', 'Reference Land Surface Temperature', 'K', 'XYT', &
          boundary_out_dtype, update_dt, numsteps )
-    call FILEIO_def_var( fid, vid(4), &
+    call FILE_CARTESC_def_var( fid, vid(4), &
          'LAND_ALB_LW', 'Reference Land Surface Albedo Long-wave', '1', 'XYT', &
          boundary_out_dtype, update_dt, numsteps )
-    call FILEIO_def_var( fid, vid(5), &
+    call FILE_CARTESC_def_var( fid, vid(5), &
          'LAND_ALB_SW', 'Reference Land Surface Albedo Short-wave', '1', 'XYT', &
          boundary_out_dtype, update_dt, numsteps )
-    call FILEIO_def_var( fid, vid(6), &
+    call FILE_CARTESC_def_var( fid, vid(6), &
          'OCEAN_TEMP', 'Reference Ocean Temperature', 'K', 'XYT', &
          boundary_out_dtype, update_dt, numsteps )
-    call FILEIO_def_var( fid, vid(7), &
+    call FILE_CARTESC_def_var( fid, vid(7), &
          'OCEAN_SFC_TEMP', 'Reference Ocean Surface Temperature', 'K', 'XYT', &
          boundary_out_dtype, update_dt, numsteps )
-    call FILEIO_def_var( fid, vid(8), &
+    call FILE_CARTESC_def_var( fid, vid(8), &
          'OCEAN_ALB_LW', 'Reference Ocean Surface Albedo Long-wave', '1', 'XYT', &
          boundary_out_dtype, update_dt, numsteps )
-    call FILEIO_def_var( fid, vid(9), &
+    call FILE_CARTESC_def_var( fid, vid(9), &
          'OCEAN_ALB_SW', 'Reference Ocean Surface Albedo Short-wave', '1', 'XYT', &
          boundary_out_dtype, update_dt, numsteps )
-    call FILEIO_def_var( fid, vid(10), &
+    call FILE_CARTESC_def_var( fid, vid(10), &
          'OCEAN_SFC_Z0', 'Reference Ocean Surface Z0', 'm', 'XYT', &
          boundary_out_dtype, update_dt, numsteps )
 
-    call FILEIO_enddef( fid )
+    call FILE_CARTESC_enddef( fid )
 
-    call FILEIO_write_var( fid, vid(1),  tg  (:,:,:,     ts:te), 'LAND_TEMP',      'Land', update_dt )
-    call FILEIO_write_var( fid, vid(2),  strg(:,:,:,     ts:te), 'LAND_WATER',     'Land', update_dt )
-    call FILEIO_write_var( fid, vid(3),  lst (  :,:,     ts:te), 'LAND_SFC_TEMP',  'XYT',  update_dt )
-    call FILEIO_write_var( fid, vid(4),  albg(  :,:,I_LW,ts:te), 'LAND_ALB_LW',    'XYT',  update_dt )
-    call FILEIO_write_var( fid, vid(5),  albg(  :,:,I_SW,ts:te), 'LAND_ALB_SW',    'XYT',  update_dt )
-    call FILEIO_write_var( fid, vid(6),  tw  (  :,:,     ts:te), 'OCEAN_TEMP',     'XYT',  update_dt )
-    call FILEIO_write_var( fid, vid(7),  sst (  :,:,     ts:te), 'OCEAN_SFC_TEMP', 'XYT',  update_dt )
-    call FILEIO_write_var( fid, vid(8),  albw(  :,:,I_LW,ts:te), 'OCEAN_ALB_LW',   'XYT',  update_dt )
-    call FILEIO_write_var( fid, vid(9),  albw(  :,:,I_SW,ts:te), 'OCEAN_ALB_SW',   'XYT',  update_dt )
-    call FILEIO_write_var( fid, vid(10), z0  (  :,:,     ts:te), 'OCEAN_SFC_Z0',   'XYT',  update_dt )
+    call FILE_CARTESC_write_var( fid, vid(1),  tg  (:,:,:,     ts:te), 'LAND_TEMP',      'LXYT', update_dt )
+    call FILE_CARTESC_write_var( fid, vid(2),  strg(:,:,:,     ts:te), 'LAND_WATER',     'LXYT', update_dt )
+    call FILE_CARTESC_write_var( fid, vid(3),  lst (  :,:,     ts:te), 'LAND_SFC_TEMP',  'XYT',  update_dt )
+    call FILE_CARTESC_write_var( fid, vid(4),  albg(  :,:,I_LW,ts:te), 'LAND_ALB_LW',    'XYT',  update_dt )
+    call FILE_CARTESC_write_var( fid, vid(5),  albg(  :,:,I_SW,ts:te), 'LAND_ALB_SW',    'XYT',  update_dt )
+    call FILE_CARTESC_write_var( fid, vid(6),  tw  (  :,:,     ts:te), 'OCEAN_TEMP',     'XYT',  update_dt )
+    call FILE_CARTESC_write_var( fid, vid(7),  sst (  :,:,     ts:te), 'OCEAN_SFC_TEMP', 'XYT',  update_dt )
+    call FILE_CARTESC_write_var( fid, vid(8),  albw(  :,:,I_LW,ts:te), 'OCEAN_ALB_LW',   'XYT',  update_dt )
+    call FILE_CARTESC_write_var( fid, vid(9),  albw(  :,:,I_SW,ts:te), 'OCEAN_ALB_SW',   'XYT',  update_dt )
+    call FILE_CARTESC_write_var( fid, vid(10), z0  (  :,:,     ts:te), 'OCEAN_SFC_Z0',   'XYT',  update_dt )
 
     call PROF_rapend  ('___SurfaceOutput',3)
 

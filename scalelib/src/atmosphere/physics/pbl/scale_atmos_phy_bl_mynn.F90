@@ -216,8 +216,8 @@ contains
        MATRIX_SOLVER_tridiagonal
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_dens2qsat => ATMOS_SATURATION_dens2qsat_all
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     implicit none
 
     integer, intent(in) :: KA, KS, KE
@@ -632,16 +632,16 @@ contains
     end do
 
     l(KE_PBL+1:KE,:,:) = 0.0_RP
-    call HIST_in(Ri(:,:,:), 'Ri_MYNN', 'Richardson number', '1',     nohalo=.true. )
-    call HIST_in(Pr(:,:,:), 'Pr_MYNN', 'Prandtl number',    '1',     nohalo=.true. )
-    call HIST_in(prod(:,:,:), 'TKE_prod_MYNN', 'TKE production',  'm2/s3', nohalo=.true.)
-    call HIST_in(diss(:,:,:), 'TKE_diss_MYNN', 'TKE dissipation', 'm2/s3', nohalo=.true.)
-    call HIST_in(dudz2(:,:,:), 'dUdZ2_MYNN', 'dudz2', 'm2/s2', nohalo=.true.)
-    call HIST_in(l(:,:,:), 'L_mix_MYNN', 'minxing length', 'm', nohalo=.true.)
+    call FILE_HISTORY_in(Ri(:,:,:), 'Ri_MYNN', 'Richardson number', '1',     fill_halo=.true. )
+    call FILE_HISTORY_in(Pr(:,:,:), 'Pr_MYNN', 'Prandtl number',    '1',     fill_halo=.true. )
+    call FILE_HISTORY_in(prod(:,:,:), 'TKE_prod_MYNN', 'TKE production',  'm2/s3', fill_halo=.true.)
+    call FILE_HISTORY_in(diss(:,:,:), 'TKE_diss_MYNN', 'TKE dissipation', 'm2/s3', fill_halo=.true.)
+    call FILE_HISTORY_in(dudz2(:,:,:), 'dUdZ2_MYNN', 'dudz2', 'm2/s2', fill_halo=.true.)
+    call FILE_HISTORY_in(l(:,:,:), 'L_mix_MYNN', 'minxing length', 'm', fill_halo=.true.)
 
-    call HIST_in(flxU(:,:,:), 'ZFLX_RHOU_MYNN', 'Z FLUX of RHOU (MYNN)', 'kg/m/s2', nohalo=.true.)
-    call HIST_in(flxV(:,:,:), 'ZFLX_RHOV_MYNN', 'Z FLUX of RHOV (MYNN)', 'kg/m/s2', nohalo=.true.)
-    call HIST_in(flxT(:,:,:), 'ZFLX_RHOT_MYNN', 'Z FLUX of RHOT (MYNN)', 'K kg/m2/s', nohalo=.true.)
+    call FILE_HISTORY_in(flxU(:,:,:), 'ZFLX_RHOU_MYNN', 'Z FLUX of RHOU (MYNN)', 'kg/m/s2', fill_halo=.true.)
+    call FILE_HISTORY_in(flxV(:,:,:), 'ZFLX_RHOV_MYNN', 'Z FLUX of RHOV (MYNN)', 'kg/m/s2', fill_halo=.true.)
+    call FILE_HISTORY_in(flxT(:,:,:), 'ZFLX_RHOT_MYNN', 'Z FLUX of RHOT (MYNN)', 'K kg/m2/s', fill_halo=.true.)
 
     return
   end subroutine ATMOS_PHY_BL_MYNN_tendency
@@ -657,8 +657,8 @@ contains
        RHOQ_t                  )
     use scale_matrix, only: &
        MATRIX_SOLVER_tridiagonal
-    use scale_history, only: &
-       HIST_in  
+    use scale_file_history, only: &
+       FILE_HISTORY_in  
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
@@ -748,7 +748,7 @@ contains
     end do
     end do
 
-    call HIST_in(flx(:,:,:), 'ZFLX_'//trim(name)//'_MYNN', 'Z FLUX of DENS * '//trim(name)//' (MYNN)', 'kg/m2/s', nohalo=.true.)
+    call FILE_HISTORY_in(flx(:,:,:), 'ZFLX_'//trim(name)//'_MYNN', 'Z FLUX of DENS * '//trim(name)//' (MYNN)', 'kg/m2/s', fill_halo=.true.)
 
     return
   end subroutine ATMOS_PHY_BL_MYNN_tendency_tracer

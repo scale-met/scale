@@ -199,8 +199,8 @@ contains
   subroutine ATMOS_DYN_vars_restart_open
     use scale_time, only: &
        TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_open
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_open
     implicit none
 
     character(len=19)     :: timelabel
@@ -221,7 +221,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_open( restart_fid, basename )
+       call FILE_CARTESC_open( restart_fid, basename )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_DYN is not specified.'
     endif
@@ -235,9 +235,11 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_fileio, only: &
-       FILEIO_read, &
-       FILEIO_flush
+    use scale_file, only: &
+       FILE_get_AGGREGATE
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_read, &
+       FILE_CARTESC_flush
     implicit none
 
     real(RP) :: total
@@ -249,12 +251,12 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS_DYN) ***'
 
        do iv = 1, VA
-          call FILEIO_read( PROG(:,:,:,iv),                          & ! [OUT]
+          call FILE_CARTESC_read( PROG(:,:,:,iv),                          & ! [OUT]
                             restart_fid, VAR_NAME(iv), 'ZXY', step=1 ) ! [IN]
        enddo
 
-       if ( IO_AGGREGATE ) then
-          call FILEIO_flush( restart_fid )
+       if ( FILE_get_AGGREGATE(restart_fid) ) then
+          call FILE_CARTESC_flush( restart_fid )
           ! X/Y halos have been read from file
 
           ! fill K halos
@@ -286,8 +288,8 @@ contains
   subroutine ATMOS_DYN_vars_restart_create
     use scale_time, only: &
        TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_create
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_create
     implicit none
 
     character(len=19)     :: timelabel
@@ -308,7 +310,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_create( restart_fid,                                                       & ! [OUT]
+       call FILE_CARTESC_create( restart_fid,                                                       & ! [OUT]
                            basename, ATMOS_DYN_RESTART_OUT_TITLE, ATMOS_DYN_RESTART_OUT_DTYPE ) ! [IN]
 
     endif
@@ -319,12 +321,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Exit netCDF define mode
   subroutine ATMOS_DYN_vars_restart_enddef
-    use scale_fileio, only: &
-       FILEIO_enddef
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_enddef
     implicit none
 
     if ( restart_fid /= -1 ) then
-       call FILEIO_enddef( restart_fid ) ! [IN]
+       call FILE_CARTESC_enddef( restart_fid ) ! [IN]
     endif
 
     return
@@ -333,8 +335,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Close restart file
   subroutine ATMOS_DYN_vars_restart_close
-    use scale_fileio, only: &
-       FILEIO_close
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_close
     implicit none
     !---------------------------------------------------------------------------
 
@@ -342,7 +344,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Close restart file (ATMOS_DYN) ***'
 
-       call FILEIO_close( restart_fid ) ! [IN]
+       call FILE_CARTESC_close( restart_fid ) ! [IN]
 
        restart_fid = -1
     endif
@@ -353,8 +355,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Define variables in restart file
   subroutine ATMOS_DYN_vars_restart_def_var
-    use scale_fileio, only: &
-       FILEIO_def_var
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_def_var
     implicit none
 
     integer iv
@@ -363,7 +365,7 @@ contains
     if ( restart_fid /= -1 ) then
 
        do iv = 1, VA
-          call FILEIO_def_var( restart_fid, VAR_ID(iv), VAR_NAME(iv), VAR_DESC(iv), &
+          call FILE_CARTESC_def_var( restart_fid, VAR_ID(iv), VAR_NAME(iv), VAR_DESC(iv), &
                                VAR_UNIT(iv), 'ZXY', ATMOS_DYN_RESTART_OUT_DTYPE     ) ! [IN]
        enddo
 
@@ -378,8 +380,8 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_fileio, only: &
-       FILEIO_write_var
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_write_var
     implicit none
 
     real(RP) :: total
@@ -397,7 +399,7 @@ contains
        endif
 
        do iv = 1, VA
-          call FILEIO_write_var( restart_fid, VAR_ID(iv), PROG(:,:,:,iv), VAR_NAME(iv), 'ZXY' ) ! [IN]
+          call FILE_CARTESC_write_var( restart_fid, VAR_ID(iv), PROG(:,:,:,iv), VAR_NAME(iv), 'ZXY' ) ! [IN]
        enddo
 
     endif

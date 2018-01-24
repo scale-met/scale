@@ -152,8 +152,8 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_atmos_bottom, only: &
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
     use scale_atmos_hydrostatic, only: &
@@ -349,26 +349,26 @@ contains
 
        call barometric_law_mslp( MSLP(:,:), SFC_PRES(:,:), T2(:,:), TOPO_Zsfc(:,:) )
 
-       call HIST_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3'   )
-       call HIST_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa'      )
-       call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K'       )
-       call HIST_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave,merged)',  '1'       , nohalo=.true. )
-       call HIST_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '1'       , nohalo=.true. )
-       call HIST_in( SFC_Z0M   (:,:),      'SFC_Z0M',    'roughness length (momentum)',       'm'       , nohalo=.true. )
-       call HIST_in( SFC_Z0H   (:,:),      'SFC_Z0H',    'roughness length (heat)',           'm'       , nohalo=.true. )
-       call HIST_in( SFC_Z0E   (:,:),      'SFC_Z0E',    'roughness length (vapor)',          'm'       , nohalo=.true. )
-       call HIST_in( SFLX_MW   (:,:),      'MWFLX',      'w-momentum flux (merged)',          'kg/m/s2' )
-       call HIST_in( SFLX_MU   (:,:),      'MUFLX',      'u-momentum flux (merged)',          'kg/m/s2' )
-       call HIST_in( SFLX_MV   (:,:),      'MVFLX',      'v-momentum flux (merged)',          'kg/m/s2' )
-       call HIST_in( SFLX_SH   (:,:),      'SHFLX',      'sensible heat flux (merged)',       'W/m2'    , nohalo=.true. )
-       call HIST_in( SFLX_LH   (:,:),      'LHFLX',      'latent heat flux (merged)',         'W/m2'    , nohalo=.true. )
-       call HIST_in( SFLX_GH   (:,:),      'GHFLX',      'ground heat flux (merged)',         'W/m2'    , nohalo=.true. )
-       call HIST_in( Uabs10    (:,:),      'Uabs10',     '10m absolute wind',                 'm/s'     , nohalo=.true. )
-       call HIST_in( U10       (:,:),      'U10',        '10m x-wind',                        'm/s'     , nohalo=.true. )
-       call HIST_in( V10       (:,:),      'V10',        '10m y-wind',                        'm/s'     , nohalo=.true. )
-       call HIST_in( T2        (:,:),      'T2 ',        '2m air temperature',                'K'       , nohalo=.true. )
-       call HIST_in( Q2        (:,:),      'Q2 ',        '2m specific humidity',              'kg/kg'   , nohalo=.true. )
-       call HIST_in( MSLP      (:,:),      'MSLP',       'mean sea-level pressure',           'Pa'      )
+       call FILE_HISTORY_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3'   )
+       call FILE_HISTORY_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa'      )
+       call FILE_HISTORY_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K'       )
+       call FILE_HISTORY_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave,merged)',  '1'       , fill_halo=.true. )
+       call FILE_HISTORY_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '1'       , fill_halo=.true. )
+       call FILE_HISTORY_in( SFC_Z0M   (:,:),      'SFC_Z0M',    'roughness length (momentum)',       'm'       , fill_halo=.true. )
+       call FILE_HISTORY_in( SFC_Z0H   (:,:),      'SFC_Z0H',    'roughness length (heat)',           'm'       , fill_halo=.true. )
+       call FILE_HISTORY_in( SFC_Z0E   (:,:),      'SFC_Z0E',    'roughness length (vapor)',          'm'       , fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_MW   (:,:),      'MWFLX',      'w-momentum flux (merged)',          'kg/m/s2' )
+       call FILE_HISTORY_in( SFLX_MU   (:,:),      'MUFLX',      'u-momentum flux (merged)',          'kg/m/s2' )
+       call FILE_HISTORY_in( SFLX_MV   (:,:),      'MVFLX',      'v-momentum flux (merged)',          'kg/m/s2' )
+       call FILE_HISTORY_in( SFLX_SH   (:,:),      'SHFLX',      'sensible heat flux (merged)',       'W/m2'    , fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_LH   (:,:),      'LHFLX',      'latent heat flux (merged)',         'W/m2'    , fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_GH   (:,:),      'GHFLX',      'ground heat flux (merged)',         'W/m2'    , fill_halo=.true. )
+       call FILE_HISTORY_in( Uabs10    (:,:),      'Uabs10',     '10m absolute wind',                 'm/s'     , fill_halo=.true. )
+       call FILE_HISTORY_in( U10       (:,:),      'U10',        '10m x-wind',                        'm/s'     , fill_halo=.true. )
+       call FILE_HISTORY_in( V10       (:,:),      'V10',        '10m y-wind',                        'm/s'     , fill_halo=.true. )
+       call FILE_HISTORY_in( T2        (:,:),      'T2 ',        '2m air temperature',                'K'       , fill_halo=.true. )
+       call FILE_HISTORY_in( Q2        (:,:),      'Q2 ',        '2m specific humidity',              'kg/kg'   , fill_halo=.true. )
+       call FILE_HISTORY_in( MSLP      (:,:),      'MSLP',       'mean sea-level pressure',           'Pa'      )
 
        !omp parallel do
 !OCL XFILL

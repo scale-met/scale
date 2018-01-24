@@ -111,8 +111,8 @@ contains
     use scale_atmos_phy_ae, only: &
        QS_AE, &
        QE_AE
-    use scale_history, only: &
-       HIST_reg
+    use scale_file_history, only: &
+       FILE_HISTORY_reg
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_AE_VARS / &
@@ -194,7 +194,7 @@ contains
     HIST_Re = .false.
     allocate( HIST_Re_id(N_AE) )
     do iv = 1, N_AE
-       call HIST_reg( HIST_Re_id(iv), 'Re_'//trim(AE_NAME(iv)), 'effective radius of '//trim(AE_DESC(iv)), 'cm', ndim=3 )
+       call FILE_HISTORY_reg( HIST_Re_id(iv), 'Re_'//trim(AE_NAME(iv)), 'effective radius of '//trim(AE_DESC(iv)), 'cm', fill_halo=.true., dim_type='ZXY' )
        if ( HIST_Re_id(iv) > 0 ) HIST_Re = .true.
     end do
 
@@ -230,8 +230,8 @@ contains
   subroutine ATMOS_PHY_AE_vars_restart_open
     use scale_time, only: &
        TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_open
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_open
     implicit none
 
     character(len=19)     :: timelabel
@@ -252,7 +252,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_open( restart_fid, basename )
+       call FILE_CARTESC_open( restart_fid, basename )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_AE is not specified.'
     endif
@@ -266,9 +266,11 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_fileio, only: &
-       FILEIO_read, &
-       FILEIO_flush
+    use scale_file, only: &
+       FILE_get_aggregate
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_read, &
+       FILE_CARTESC_flush
     implicit none
 
     real(RP) :: total
@@ -279,11 +281,11 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS_PHY_AE) ***'
 
-       call FILEIO_read( ATMOS_PHY_AE_CCN(:,:,:),                & ! [OUT]
+       call FILE_CARTESC_read( ATMOS_PHY_AE_CCN(:,:,:),                & ! [OUT]
                          restart_fid, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
 
-       if ( IO_AGGREGATE ) then
-          call FILEIO_flush( restart_fid ) ! X/Y halos have been read from file
+       if ( FILE_get_AGGREGATE(restart_fid) ) then
+          call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
 
           ! fill K halos
           do j  = 1, JA
@@ -311,8 +313,8 @@ contains
   subroutine ATMOS_PHY_AE_vars_restart_create
     use scale_time, only: &
        TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_create
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_create
     implicit none
 
     character(len=19)     :: timelabel
@@ -333,7 +335,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_create( restart_fid,                                                             & ! [OUT]
+       call FILE_CARTESC_create( restart_fid,                                                             & ! [OUT]
                            basename, ATMOS_PHY_AE_RESTART_OUT_TITLE, ATMOS_PHY_AE_RESTART_OUT_DTYPE ) ! [IN]
 
     endif
@@ -344,12 +346,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Exit netCDF define mode
   subroutine ATMOS_PHY_AE_vars_restart_enddef
-    use scale_fileio, only: &
-       FILEIO_enddef
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_enddef
     implicit none
 
     if ( restart_fid /= -1 ) then
-       call FILEIO_enddef( restart_fid ) ! [IN]
+       call FILE_CARTESC_enddef( restart_fid ) ! [IN]
     endif
 
     return
@@ -358,8 +360,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Close restart file
   subroutine ATMOS_PHY_AE_vars_restart_close
-    use scale_fileio, only: &
-       FILEIO_close
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_close
     implicit none
     !---------------------------------------------------------------------------
 
@@ -367,7 +369,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Close restart file (ATMOS_PHY_AE) ***'
 
-       call FILEIO_close( restart_fid ) ! [IN]
+       call FILE_CARTESC_close( restart_fid ) ! [IN]
 
        restart_fid = -1
     endif
@@ -378,13 +380,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Write restart
   subroutine ATMOS_PHY_AE_vars_restart_def_var
-    use scale_fileio, only: &
-       FILEIO_def_var
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_def_var
     implicit none
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
-       call FILEIO_def_var( restart_fid, VAR_ID(1), VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), &
+       call FILE_CARTESC_def_var( restart_fid, VAR_ID(1), VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), &
                             'ZXY', ATMOS_PHY_AE_RESTART_OUT_DTYPE  ) ! [IN]
     endif
 
@@ -397,8 +399,8 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_fileio, only: &
-       FILEIO_write_var
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_write_var
     implicit none
 
     real(RP) :: total
@@ -412,7 +414,7 @@ contains
           call STAT_total( total, ATMOS_PHY_AE_CCN(:,:,:), VAR_NAME(1) )
        end if
 
-       call FILEIO_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_AE_CCN(:,:,:), &
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_AE_CCN(:,:,:), &
                               VAR_NAME(1), 'ZXY' ) ! [IN]
 
     endif
@@ -424,8 +426,8 @@ contains
        QTRC, RH )
     use scale_atmos_aerosol, only: &
        N_AE
-    use scale_history, only: &
-       HIST_put
+    use scale_file_history, only: &
+       FILE_HISTORY_put
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(in) :: RH(KA,IA,JA)
 
@@ -438,7 +440,7 @@ contains
             Re=WORK(:,:,:,:)          ) ! [OUT]
        do iv = 1, N_AE
           if ( HIST_Re_id(iv) > 0 ) &
-               call HIST_put( HIST_Re_id(iv), WORK(:,:,:,iv), nohalo=.true. )
+               call FILE_HISTORY_put( HIST_Re_id(iv), WORK(:,:,:,iv) )
        end do
     end if
 

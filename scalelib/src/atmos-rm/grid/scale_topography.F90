@@ -123,12 +123,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Read topography
   subroutine TOPO_read
-    use scale_fileio, only: &
-       FILEIO_open, &
-       FILEIO_read, &
-       FILEIO_flush, &
-       FILEIO_check_coordinates, &
-       FILEIO_close
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_open, &
+       FILE_CARTESC_read, &
+       FILE_CARTESC_flush, &
+       FILE_CARTESC_check_coordinates, &
+       FILE_CARTESC_close
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -141,16 +141,16 @@ contains
 
     if ( TOPO_IN_BASENAME /= '' ) then
 
-       call FILEIO_open( fid, TOPO_IN_BASENAME )
-       call FILEIO_read( TOPO_Zsfc(:,:),           & ! [OUT]
+       call FILE_CARTESC_open( fid, TOPO_IN_BASENAME )
+       call FILE_CARTESC_read( TOPO_Zsfc(:,:),           & ! [OUT]
                          fid, 'TOPO', 'XY', step=1 ) ! [IN]
-       call FILEIO_flush( fid )
+       call FILE_CARTESC_flush( fid )
 
        if ( TOPO_IN_CHECK_COORDINATES ) then
-          call FILEIO_check_coordinates( fid )
+          call FILE_CARTESC_check_coordinates( fid )
        end if
 
-       call FILEIO_close( fid )
+       call FILE_CARTESC_close( fid )
 
        call TOPO_fillhalo( FILL_BND=.false. )
 
@@ -168,8 +168,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Write topography
   subroutine TOPO_write
-    use scale_fileio, only: &
-       FILEIO_write
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_write
     implicit none
     !---------------------------------------------------------------------------
 
@@ -180,7 +180,7 @@ contains
 
        call TOPO_fillhalo( FILL_BND=.false. )
 
-       call FILEIO_write( TOPO_Zsfc(:,:), TOPO_OUT_BASENAME, TOPO_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( TOPO_Zsfc(:,:), TOPO_OUT_BASENAME, TOPO_OUT_TITLE, & ! [IN]
                           'TOPO', 'Topography', 'm', 'XY',   TOPO_OUT_DTYPE, & ! [IN]
                           haszcoord=.false.                                  ) ! [IN]
 

@@ -124,12 +124,19 @@ void file_get_datainfo_c_(       datainfo_t *dinfo,       // (out)
   for ( i=0; i<RANK_MAX; i++ )
     cstr2fstr(dinfo->dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT);
 }
+
 void file_read_data_c_(       void       *var,       // (out)
 			const datainfo_t *dinfo,     // (in)
 			const int32_t    *precision, // (in)
+			const int32_t    *ntypes,    // (in)
+			const int32_t    *dtype,     // (in)
+			const int32_t    *start,     // (in)
+			const int32_t    *count,     // (in)
 			      int32_t    *error)     // (out)
 {
   datainfo_t cdinfo;
+  MPI_Offset ntypes_;
+  MPI_Datatype dtype_;
   int i;
 
   cdinfo.datatype = dinfo->datatype;
@@ -146,179 +153,14 @@ void file_read_data_c_(       void       *var,       // (out)
   for ( i=0; i<RANK_MAX; i++ )
     fstr2cstr(cdinfo.dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT-1);
 
-  *error = file_read_data_c( var, &cdinfo, *precision );
-}
+  ntypes_ = (MPI_Offset) (*ntypes);
 
-void file_read_data_par_c_(       void       *var,    // (out)
-                            const datainfo_t *dinfo,  // (in)
-			    const int32_t    *ndims,  // (in)
-                            const int32_t    *ntypes, // (in)
-                            const int32_t    *dtype,  // (in)
-                            const int32_t    *start,  // (in)
-                            const int32_t    *count,  // (in)
-				  int32_t    *error ) // (out)
-{
-  int i;
-  MPI_Offset ntypes_, start_[4], count_[4];
-  datainfo_t cdinfo;
+  dtype_ =  dtype==0 ? MPI_DATATYPE_NULL : MPI_Type_f2c(*dtype);
 
-  cdinfo.datatype = dinfo->datatype;
-  cdinfo.rank = dinfo->rank;
-  for ( i=0; i<dinfo->rank; i++ ) cdinfo.dim_size[i] = dinfo->dim_size[i];
-  cdinfo.step = dinfo->step;
-  cdinfo.time_start = dinfo->time_start;
-  cdinfo.time_end = dinfo->time_end;
-  cdinfo.fid = dinfo->fid;
-  fstr2cstr(cdinfo.varname, dinfo->varname, File_HSHORT-1);
-  fstr2cstr(cdinfo.description, dinfo->description, File_HMID-1);
-  fstr2cstr(cdinfo.units, dinfo->units, File_HSHORT-1);
-  fstr2cstr(cdinfo.time_units, dinfo->time_units, File_HMID-1);
-  for ( i=0; i<RANK_MAX; i++ )
-    fstr2cstr(cdinfo.dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT-1);
-
-  for (i=0; i<*ndims; i++) {
-      start_[i+1] = start[*ndims - i - 1] -  1;
-      count_[i+1] = count[*ndims - i - 1];
-  }
-  ntypes_ = (MPI_Offset)(*ntypes);
-
-  *error = file_read_data_par_c( var, &cdinfo, ntypes_, MPI_Type_f2c(*dtype), start_, count_ );
-}
-
-void file_get_globalattribute_text_c_( const int32_t *fid,        // (in)
-				       const char    *key,        // (in)
-					     char    *value,      // (out)
-				             int32_t *error,      // (out)
-				       const int32_t  key_len,    // (in)
-				       const int32_t  value_len ) // (in)
-{
-  char _key[File_HLONG+1];
-  char _value[File_HLONG+1];
-  int32_t len;
-
-  len = key_len > File_HLONG ? File_HLONG : key_len;
-  fstr2cstr(_key, key, len);
-
-  *error = file_get_globalattribute_text_c( *fid, _key, _value, value_len );
-
-  len = value_len > File_HLONG ? File_HLONG : value_len;
-  cstr2fstr(value, _value, len);
-}
-
-void file_get_globalattribute_int_c_( const int32_t *fid,      // (in)
-				      const char    *key,      // (in)
-				      const int32_t *len,      // (in)
-				            int32_t *value,    // (out)
-				            int32_t *error,    // (out)
-				      const int32_t  key_len ) // (in)
-{
-  char _key[File_HLONG+1];
-  int32_t l;
-
-  l = key_len > File_HLONG ? File_HLONG : key_len;
-  fstr2cstr(_key, key, l);
-
-  *error = file_get_globalattribute_int_c( *fid, _key, value, (size_t)*len );
-}
-
-void file_get_globalattribute_float_c_( const int32_t *fid,      // (in)
-					const char    *key,      // (in)
-					const int32_t *len,      // (in)
-					      float   *value,    // (out)
-					      int32_t *error,    // (out)
-					const int32_t  key_len ) // (in)
-{
-  char _key[File_HLONG+1];
-  int32_t l;
-
-  l = key_len > File_HLONG ? File_HLONG : key_len;
-  fstr2cstr(_key, key, l);
-
-  *error = file_get_globalattribute_float_c( *fid, _key, value, (size_t)*len );
-}
-
-void file_get_globalattribute_double_c_( const int32_t *fid,      // (in)
-					 const char    *key,      // (in)
-					 const int32_t *len,      // (in)
-					       double  *value,    // (out)
-					       int32_t *error,    // (out)
-					 const int32_t  key_len ) // (in)
-{
-  char _key[File_HLONG+1];
-  int32_t l;
-
-  l = key_len > File_HLONG ? File_HLONG : key_len;
-  fstr2cstr(_key, key, l);
-
-  *error = file_get_globalattribute_double_c( *fid, _key, value, (size_t)*len );
-}
-
-void file_set_globalattribute_text_c_( const int32_t *fid,        // (in)
-				       const char    *key,        // (in)
-				       const char    *value,      // (in)
-				             int32_t *error,      // (out)
-				       const int32_t  key_len,    // (in)
-				       const int32_t  value_len ) // (in)
-{
-  char _key[File_HLONG+1];
-  char _value[File_HLONG+1];
-  int32_t l;
-
-  l = key_len > File_HLONG ? File_HLONG : key_len;
-  fstr2cstr(_key, key, l);
-
-  l = value_len > File_HLONG ? File_HLONG : value_len;
-  fstr2cstr(_value, value, l);
-
-  *error = file_set_globalattribute_text_c( *fid, _key, _value );
-}
-
-void file_set_globalattribute_int_c_( const int32_t *fid,      // (in)
-				      const char    *key,      // (in)
-				      const int32_t *value,    // (in)
-				      const int32_t *len,      // (in)
-				            int32_t *error,    // (out)
-				      const int32_t  key_len ) // (in)
-{
-  char _key[File_HLONG+1];
-  int32_t l;
-
-  l = key_len > File_HLONG ? File_HLONG : key_len;
-  fstr2cstr(_key, key, l);
-
-  *error = file_set_globalattribute_int_c( *fid, _key, value, (size_t)*len );
-}
-
-void file_set_globalattribute_float_c_( const int32_t *fid,      // (in)
-					const char    *key,      // (in)
-					const float   *value,    // (in)
-					const int32_t *len,      // (in)
-					      int32_t *error,    // (out)
-					const int32_t  key_len ) // (in)
-{
-  char _key[File_HLONG+1];
-  int32_t l;
-
-  l = key_len > File_HLONG ? File_HLONG : key_len;
-  fstr2cstr(_key, key, l);
-
-  *error = file_set_globalattribute_float_c( *fid, _key, value, (size_t)*len );
-}
-
-void file_set_globalattribute_double_c_( const int32_t *fid,      // (in)
-					 const char    *key,      // (in)
-					 const double  *value,    // (in)
-					 const int32_t *len,      // (in)
-					       int32_t *error,    // (out)
-					 const int32_t  key_len ) // (in)
-{
-  char _key[File_HLONG+1];
-  int32_t l;
-
-  l = key_len > File_HLONG ? File_HLONG : key_len;
-  fstr2cstr(_key, key, l);
-
-  *error = file_set_globalattribute_double_c( *fid, _key, value, (size_t)*len );
+  if ( *start == -1 )
+    *error = file_read_data_c( var, &cdinfo, *precision, ntypes_, dtype_, NULL, NULL );
+  else
+    *error = file_read_data_c( var, &cdinfo, *precision, ntypes_, dtype_, start, count );
 }
 
 void file_get_attribute_text_c_( const int32_t *fid,        // (in)
@@ -787,13 +629,8 @@ void file_write_data_c_( const int32_t  *fid,       // (in)
 			       int32_t  *error)     // (out)
 {
   int i;
-  MPI_Offset start_[4], count_[4]; /* assume max ndims is 4 */
 
-  for (i=0; i<*ndims; i++) {
-      start_[i] = start[*ndims - i - 1] -  1;
-      count_[i] = count[*ndims - i - 1];
-  }
-  *error = file_write_data_c( *fid, *vid, var, *t_start, *t_end, *precision, start_, count_ );
+  *error = file_write_data_c( *fid, *vid, var, *t_start, *t_end, *precision, *ndims, start, count );
 }
 
 void file_close_c_( const int32_t *fid ,   // (in)

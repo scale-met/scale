@@ -1002,21 +1002,21 @@ contains
   subroutine ATMOS_BOUNDARY_read
     use scale_process, only: &
        PRC_MPIstop
-    use scale_fileio, only: &
-       FILEIO_open, &
-       FILEIO_check_coordinates, &
-       FILEIO_read, &
-       FILEIO_close
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_open, &
+       FILE_CARTESC_check_coordinates, &
+       FILE_CARTESC_read, &
+       FILE_CARTESC_close
     implicit none
 
     integer :: fid
     integer :: iq
     !---------------------------------------------------------------------------
 
-    call FILEIO_open( fid, ATMOS_BOUNDARY_IN_BASENAME )
+    call FILE_CARTESC_open( fid, ATMOS_BOUNDARY_IN_BASENAME )
 
     if ( ATMOS_BOUNDARY_IN_CHECK_COORDINATES ) then
-       call FILEIO_check_coordinates( fid, atmos=.true. )
+       call FILE_CARTESC_check_coordinates( fid, atmos=.true. )
     end if
 
     if (      ATMOS_BOUNDARY_USE_DENS &
@@ -1025,45 +1025,45 @@ contains
          .OR. ATMOS_BOUNDARY_USE_VELY &
          .OR. ATMOS_BOUNDARY_USE_POTT &
          ) then
-       call FILEIO_read( ATMOS_BOUNDARY_DENS(:,:,:), fid, 'DENS', 'ZXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_DENS(:,:,:), fid, 'DENS', 'ZXY', 1 )
     end if
     if ( ATMOS_BOUNDARY_USE_DENS ) then
-       call FILEIO_read( ATMOS_BOUNDARY_alpha_DENS(:,:,:), fid, 'ALPHA_DENS', 'ZXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_DENS(:,:,:), fid, 'ALPHA_DENS', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
-       call FILEIO_read( ATMOS_BOUNDARY_VELZ(:,:,:), fid, 'VELZ', 'ZXY', 1 )
-       call FILEIO_read( ATMOS_BOUNDARY_alpha_VELZ(:,:,:), fid, 'ALPHA_VELZ', 'ZXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_VELZ(:,:,:), fid, 'VELZ', 'ZXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_VELZ(:,:,:), fid, 'ALPHA_VELZ', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX ) then
-       call FILEIO_read( ATMOS_BOUNDARY_VELX(:,:,:), fid, 'VELX', 'ZXY', 1 )
-       call FILEIO_read( ATMOS_BOUNDARY_alpha_VELX(:,:,:), fid, 'ALPHA_VELX', 'ZXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_VELX(:,:,:), fid, 'VELX', 'ZXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_VELX(:,:,:), fid, 'ALPHA_VELX', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY ) then
-       call FILEIO_read( ATMOS_BOUNDARY_VELY(:,:,:), fid, 'VELY', 'ZXY', 1 )
-       call FILEIO_read( ATMOS_BOUNDARY_alpha_VELY(:,:,:), fid, 'ALPHA_VELY', 'ZXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_VELY(:,:,:), fid, 'VELY', 'ZXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_VELY(:,:,:), fid, 'ALPHA_VELY', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_POTT ) then
-       call FILEIO_read( ATMOS_BOUNDARY_POTT(:,:,:), fid, 'POTT', 'ZXY', 1 )
-       call FILEIO_read( ATMOS_BOUNDARY_alpha_POTT(:,:,:), fid, 'ALPHA_POTT', 'ZXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_POTT(:,:,:), fid, 'POTT', 'ZXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_POTT(:,:,:), fid, 'ALPHA_POTT', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_QV   ) then
-       call FILEIO_read( ATMOS_BOUNDARY_QTRC(:,:,:,1), fid, 'QV', 'ZXY', 1 )
-       call FILEIO_read( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,1), fid, 'ALPHA_QV', 'ZXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_QTRC(:,:,:,1), fid, 'QV', 'ZXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,1), fid, 'ALPHA_QV', 'ZXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_QHYD ) then
        do iq = 2, BND_QA
-          call FILEIO_read( ATMOS_BOUNDARY_QTRC(:,:,:,iq), fid, TRACER_NAME(iq), 'ZXY', 1 )
-          call FILEIO_read( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq), fid, 'ALPHA_'//trim(TRACER_NAME(iq)), 'ZXY', 1 )
+          call FILE_CARTESC_read( ATMOS_BOUNDARY_QTRC(:,:,:,iq), fid, TRACER_NAME(iq), 'ZXY', 1 )
+          call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq), fid, 'ALPHA_'//trim(TRACER_NAME(iq)), 'ZXY', 1 )
        end do
     endif
 
-    call FILEIO_close( fid )
+    call FILE_CARTESC_close( fid )
 
 
     call ATMOS_BOUNDARY_var_fillhalo
@@ -1075,8 +1075,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Write boundary data
   subroutine ATMOS_BOUNDARY_write
-    use scale_fileio, only: &
-       FILEIO_write
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_write
     use scale_grid_nest, only: &
        ONLINE_USE_VELZ
     implicit none
@@ -1090,68 +1090,68 @@ contains
          .OR. ATMOS_BOUNDARY_USE_VELY &
          .OR. ATMOS_BOUNDARY_USE_POTT &
          ) then
-       call FILEIO_write( ATMOS_BOUNDARY_DENS(:,:,:),                            &
+       call FILE_CARTESC_write( ATMOS_BOUNDARY_DENS(:,:,:),                            &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'DENS', 'Reference Density', 'kg/m3', 'ZXY',           &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     end if
     if ( ATMOS_BOUNDARY_USE_DENS .OR. l_bnd ) then
-       call FILEIO_write( ATMOS_BOUNDARY_alpha_DENS(:,:,:),                      &
+       call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_DENS(:,:,:),                      &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'ALPHA_DENS', 'Alpha for DENS', '1', 'ZXY',            &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELZ .OR. (l_bnd .AND. ONLINE_USE_VELZ) ) then
-       call FILEIO_write( ATMOS_BOUNDARY_VELZ(:,:,:),                            &
+       call FILE_CARTESC_write( ATMOS_BOUNDARY_VELZ(:,:,:),                            &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'VELZ', 'Reference Velocity w', 'm/s', 'ZXY',          &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILEIO_write( ATMOS_BOUNDARY_alpha_VELZ(:,:,:),                      &
+       call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_VELZ(:,:,:),                      &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'ALPHA_VELZ', 'Alpha for VELZ', '1', 'ZXY',            &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX .OR. l_bnd ) then
-       call FILEIO_write( ATMOS_BOUNDARY_VELX(:,:,:),                            &
+       call FILE_CARTESC_write( ATMOS_BOUNDARY_VELX(:,:,:),                            &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'VELX', 'Reference Velocity u', 'm/s', 'ZXY',          &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILEIO_write( ATMOS_BOUNDARY_alpha_VELX(:,:,:),                      &
+       call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_VELX(:,:,:),                      &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'ALPHA_VELX', 'Alpha for VELX', '1', 'ZXY',            &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY .OR. l_bnd ) then
-       call FILEIO_write( ATMOS_BOUNDARY_VELY(:,:,:),                            &
+       call FILE_CARTESC_write( ATMOS_BOUNDARY_VELY(:,:,:),                            &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'VELY', 'Reference Velocity y', 'm/s', 'ZXY',          &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILEIO_write( ATMOS_BOUNDARY_alpha_VELY(:,:,:),                      &
+       call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_VELY(:,:,:),                      &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'ALPHA_VELY', 'Alpha for VELY', '1', 'ZXY',            &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
     if ( ATMOS_BOUNDARY_USE_POTT .OR. l_bnd ) then
-       call FILEIO_write( ATMOS_BOUNDARY_POTT(:,:,:),                            &
+       call FILE_CARTESC_write( ATMOS_BOUNDARY_POTT(:,:,:),                            &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'POTT', 'Reference POTT', 'K', 'ZXY',                  &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILEIO_write( ATMOS_BOUNDARY_alpha_POTT(:,:,:),                      &
+       call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_POTT(:,:,:),                      &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'ALPHA_POTT', 'Alpha for POTT', '1', 'ZXY',            &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
     if ( ATMOS_BOUNDARY_USE_QV   .OR. l_bnd ) then
-       call FILEIO_write( ATMOS_BOUNDARY_QTRC(:,:,:,1),                          &
+       call FILE_CARTESC_write( ATMOS_BOUNDARY_QTRC(:,:,:,1),                          &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'QV', 'Reference QV', 'kg/kg', 'ZXY',                  &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILEIO_write( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,1),                    &
+       call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,1),                    &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'ALPHA_QV', 'Alpha for QV', '1', 'ZXY',                &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
@@ -1159,12 +1159,12 @@ contains
 
     if ( ATMOS_BOUNDARY_USE_QHYD ) then
        do iq = 2, BND_QA
-          call FILEIO_write( ATMOS_BOUNDARY_QTRC(:,:,:,iq),                                    &
+          call FILE_CARTESC_write( ATMOS_BOUNDARY_QTRC(:,:,:,iq),                                    &
                              ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE,            &
                              TRACER_NAME(iq), 'Reference '//trim(TRACER_NAME(iq)), &
                              TRACER_UNIT(iq), 'ZXY', &
                              ATMOS_BOUNDARY_OUT_DTYPE                                          )
-          call FILEIO_write( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq),                                      &
+          call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq),                                      &
                              ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE,                    &
                              'ALPHA_'//trim(TRACER_NAME(iq)), 'Alpha for '//trim(TRACER_NAME(iq)), &
                              '1', 'ZXY', &
@@ -1214,9 +1214,9 @@ contains
        CALENDAR_date2char
     use scale_time, only: &
        TIME_NOWDATE
-    use scale_fileio, only: &
-       FILEIO_open, &
-       FILEIO_check_coordinates
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_open, &
+       FILE_CARTESC_check_coordinates
     implicit none
 
     integer           :: boundary_time_startday
@@ -1246,10 +1246,10 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '*** BOUNDARY START Date     : ', boundary_chardate
 
-    call FILEIO_open( ATMOS_BOUNDARY_fid, ATMOS_BOUNDARY_IN_BASENAME )
+    call FILE_CARTESC_open( ATMOS_BOUNDARY_fid, ATMOS_BOUNDARY_IN_BASENAME )
 
     if ( ATMOS_BOUNDARY_IN_CHECK_COORDINATES ) then
-       call FILEIO_check_coordinates( ATMOS_BOUNDARY_fid, atmos=.true. )
+       call FILE_CARTESC_check_coordinates( ATMOS_BOUNDARY_fid, atmos=.true. )
     end if
 
     return
@@ -1551,8 +1551,8 @@ contains
        NEST_COMM_recvwait_issue, &
        NEST_COMM_recv_cancel,    &
        NESTQA => NEST_BND_QA
-    use scale_fileio, only: &
-       FILEIO_close
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_close
     implicit none
 
     ! works
@@ -1570,7 +1570,7 @@ contains
     endif
 
     if ( ATMOS_BOUNDARY_fid > 0 ) then
-       call FILEIO_close( ATMOS_BOUNDARY_fid )
+       call FILE_CARTESC_close( ATMOS_BOUNDARY_fid )
        ATMOS_BOUNDARY_fid = -1
     end if
 
@@ -1962,9 +1962,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Update reference boundary from file
   subroutine ATMOS_BOUNDARY_update_file( ref )
-    use scale_fileio, only: &
-       FILEIO_read, &
-       FILEIO_flush
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_read, &
+       FILE_CARTESC_flush
     implicit none
 
     integer, intent(in) :: ref
@@ -1976,15 +1976,15 @@ contains
 
     fid = ATMOS_BOUNDARY_fid
 
-    call FILEIO_read( ATMOS_BOUNDARY_ref_DENS(:,:,:,ref), fid, 'DENS', 'ZXY', boundary_timestep )
-    call FILEIO_read( ATMOS_BOUNDARY_ref_VELX(:,:,:,ref), fid, 'VELX', 'ZXY', boundary_timestep )
-    call FILEIO_read( ATMOS_BOUNDARY_ref_VELY(:,:,:,ref), fid, 'VELY', 'ZXY', boundary_timestep )
-    call FILEIO_read( ATMOS_BOUNDARY_ref_POTT(:,:,:,ref), fid, 'POTT', 'ZXY', boundary_timestep )
+    call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_DENS(:,:,:,ref), fid, 'DENS', 'ZXY', boundary_timestep )
+    call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_VELX(:,:,:,ref), fid, 'VELX', 'ZXY', boundary_timestep )
+    call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_VELY(:,:,:,ref), fid, 'VELY', 'ZXY', boundary_timestep )
+    call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_POTT(:,:,:,ref), fid, 'POTT', 'ZXY', boundary_timestep )
     do iq = 1, BND_QA
-       call FILEIO_read( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,ref), fid, TRACER_NAME(iq), 'ZXY', boundary_timestep )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,ref), fid, TRACER_NAME(iq), 'ZXY', boundary_timestep )
     end do
 
-    call FILEIO_flush( fid )
+    call FILE_CARTESC_flush( fid )
 
     ! fill HALO in reference
     call ATMOS_BOUNDARY_ref_fillhalo( ref )
@@ -2490,8 +2490,8 @@ contains
        ATMOS_BOUNDARY_VELY, &
        ATMOS_BOUNDARY_POTT, &
        ATMOS_BOUNDARY_QTRC )
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     implicit none
     real(RP), intent(in) :: ATMOS_BOUNDARY_DENS(KA,IA,JA)
     real(RP), intent(in) :: ATMOS_BOUNDARY_VELZ(KA,IA,JA)
@@ -2502,13 +2502,13 @@ contains
 
     integer :: iq
 
-    call HIST_in( ATMOS_BOUNDARY_DENS(:,:,:), 'DENS_BND', 'Boundary Density',               'kg/m3'             )
-    call HIST_in( ATMOS_BOUNDARY_VELZ(:,:,:), 'VELZ_BND', 'Boundary velocity z-direction',  'm/s',  zdim='half' )
-    call HIST_in( ATMOS_BOUNDARY_VELX(:,:,:), 'VELX_BND', 'Boundary velocity x-direction',  'm/s',  xdim='half' )
-    call HIST_in( ATMOS_BOUNDARY_VELY(:,:,:), 'VELY_BND', 'Boundary velocity y-direction',  'm/s',  ydim='half' )
-    call HIST_in( ATMOS_BOUNDARY_POTT(:,:,:), 'POTT_BND', 'Boundary potential temperature', 'K'                 )
+    call FILE_HISTORY_in( ATMOS_BOUNDARY_DENS(:,:,:), 'DENS_BND', 'Boundary Density',               'kg/m3'             )
+    call FILE_HISTORY_in( ATMOS_BOUNDARY_VELZ(:,:,:), 'VELZ_BND', 'Boundary velocity z-direction',  'm/s',  dim_type='ZHXY' )
+    call FILE_HISTORY_in( ATMOS_BOUNDARY_VELX(:,:,:), 'VELX_BND', 'Boundary velocity x-direction',  'm/s',  dim_type='ZXHY' )
+    call FILE_HISTORY_in( ATMOS_BOUNDARY_VELY(:,:,:), 'VELY_BND', 'Boundary velocity y-direction',  'm/s',  dim_type='ZXYH' )
+    call FILE_HISTORY_in( ATMOS_BOUNDARY_POTT(:,:,:), 'POTT_BND', 'Boundary potential temperature', 'K'                 )
     do iq = 1, BND_QA
-       call HIST_in( ATMOS_BOUNDARY_QTRC(:,:,:,iq), trim(TRACER_NAME(iq))//'_BND', &
+       call FILE_HISTORY_in( ATMOS_BOUNDARY_QTRC(:,:,:,iq), trim(TRACER_NAME(iq))//'_BND', &
                      'Boundary '//trim(TRACER_NAME(iq)), 'kg/kg' )
     enddo
 

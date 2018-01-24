@@ -222,12 +222,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Read landuse data
   subroutine LANDUSE_read
-    use scale_fileio, only: &
-       FILEIO_open, &
-       FILEIO_read, &
-       FILEIO_flush, &
-       FILEIO_check_coordinates, &
-       FILEIO_close
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_open, &
+       FILE_CARTESC_read, &
+       FILE_CARTESC_flush, &
+       FILE_CARTESC_check_coordinates, &
+       FILE_CARTESC_close
     implicit none
 
     real(RP) :: temp(IA,JA)
@@ -243,36 +243,36 @@ contains
 
     if ( LANDUSE_IN_BASENAME /= '' ) then
 
-       call FILEIO_open( fid, LANDUSE_IN_BASENAME )
+       call FILE_CARTESC_open( fid, LANDUSE_IN_BASENAME )
 
-       call FILEIO_read( LANDUSE_frac_land(:,:),         & ! [OUT]
+       call FILE_CARTESC_read( LANDUSE_frac_land(:,:),         & ! [OUT]
                          fid, 'FRAC_LAND',  'XY', step=1 ) ! [IN]
-       call FILEIO_read( LANDUSE_frac_lake(:,:),         & ! [OUT]
+       call FILE_CARTESC_read( LANDUSE_frac_lake(:,:),         & ! [OUT]
                          fid, 'FRAC_LAKE',  'XY', step=1 ) ! [IN]
-       call FILEIO_read( LANDUSE_frac_urban(:,:),        & ! [OUT]
+       call FILE_CARTESC_read( LANDUSE_frac_urban(:,:),        & ! [OUT]
                          fid, 'FRAC_URBAN', 'XY', step=1 ) ! [IN]
 
-       call FILEIO_read( LANDUSE_fact_ocean(:,:),            & ! [OUT]
+       call FILE_CARTESC_read( LANDUSE_fact_ocean(:,:),            & ! [OUT]
                          fid, 'FRAC_OCEAN_abs', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( LANDUSE_fact_land(:,:),             & ! [OUT]
+       call FILE_CARTESC_read( LANDUSE_fact_land(:,:),             & ! [OUT]
                          fid, 'FRAC_LAND_abs',  'XY', step=1 ) ! [IN]
-       call FILEIO_read( LANDUSE_fact_urban(:,:),            & ! [OUT]
+       call FILE_CARTESC_read( LANDUSE_fact_urban(:,:),            & ! [OUT]
                          fid, 'FRAC_URBAN_abs', 'XY', step=1 ) ! [IN]
 
-       call FILEIO_flush( fid )
+       call FILE_CARTESC_flush( fid )
 
        do p = 1, LANDUSE_PFT_mosaic
           write(varname,'(A8,I1.1)') 'FRAC_PFT', p
 
-          call FILEIO_read( LANDUSE_frac_PFT(:,:,p),   & ! [OUT]
+          call FILE_CARTESC_read( LANDUSE_frac_PFT(:,:,p),   & ! [OUT]
                             fid, varname, 'XY', step=1 ) ! [IN]
-          call FILEIO_flush( fid )
+          call FILE_CARTESC_flush( fid )
 
           write(varname,'(A9,I1.1)') 'INDEX_PFT', p
 
-          call FILEIO_read( temp(:,:),                 & ! [OUT]
+          call FILE_CARTESC_read( temp(:,:),                 & ! [OUT]
                             fid, varname, 'XY', step=1 ) ! [IN]
-          call FILEIO_flush( fid )
+          call FILE_CARTESC_flush( fid )
 
           do j = JS, JE
           do i = IS, IE
@@ -282,10 +282,10 @@ contains
        enddo
 
        if ( LANDUSE_IN_CHECK_COORDINATES ) then
-          call FILEIO_check_coordinates( fid )
+          call FILE_CARTESC_check_coordinates( fid )
        end if
 
-       call FILEIO_close( fid )
+       call FILE_CARTESC_close( fid )
 
        call LANDUSE_fillhalo( FILL_BND=.false. )
 
@@ -300,12 +300,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Write landuse data
   subroutine LANDUSE_write
-    use scale_fileio, only: &
-       FILEIO_create, &
-       FILEIO_def_var, &
-       FILEIO_enddef, &
-       FILEIO_write_var, &
-       FILEIO_close
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_create, &
+       FILE_CARTESC_def_var, &
+       FILE_CARTESC_enddef, &
+       FILE_CARTESC_write_var, &
+       FILE_CARTESC_close
     implicit none
 
     real(RP) :: temp(IA,JA)
@@ -324,41 +324,41 @@ contains
 
        call LANDUSE_fillhalo( FILL_BND=.false. )
 
-       call FILEIO_create( fid, LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, &
+       call FILE_CARTESC_create( fid, LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, &
                            LANDUSE_OUT_DTYPE, haszcoord=.false.          )
 
-       call FILEIO_def_var( fid, vid(1), 'FRAC_LAND'     , 'LAND fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE )
-       call FILEIO_def_var( fid, vid(2), 'FRAC_LAKE'     , 'LAKE fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE )
-       call FILEIO_def_var( fid, vid(3), 'FRAC_URBAN'    , 'URBAN fraction'         , '1', 'XY', LANDUSE_OUT_DTYPE )
-       call FILEIO_def_var( fid, vid(4), 'FRAC_OCEAN_abs', 'absolute OCEAN fraction', '1', 'XY', LANDUSE_OUT_DTYPE )
-       call FILEIO_def_var( fid, vid(5), 'FRAC_LAND_abs' , 'absolute LAND fraction' , '1', 'XY', LANDUSE_OUT_DTYPE )
-       call FILEIO_def_var( fid, vid(6), 'FRAC_URBAN_abs', 'absolute URBAN fraction', '1', 'XY', LANDUSE_OUT_DTYPE )
+       call FILE_CARTESC_def_var( fid, vid(1), 'FRAC_LAND'     , 'LAND fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE )
+       call FILE_CARTESC_def_var( fid, vid(2), 'FRAC_LAKE'     , 'LAKE fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE )
+       call FILE_CARTESC_def_var( fid, vid(3), 'FRAC_URBAN'    , 'URBAN fraction'         , '1', 'XY', LANDUSE_OUT_DTYPE )
+       call FILE_CARTESC_def_var( fid, vid(4), 'FRAC_OCEAN_abs', 'absolute OCEAN fraction', '1', 'XY', LANDUSE_OUT_DTYPE )
+       call FILE_CARTESC_def_var( fid, vid(5), 'FRAC_LAND_abs' , 'absolute LAND fraction' , '1', 'XY', LANDUSE_OUT_DTYPE )
+       call FILE_CARTESC_def_var( fid, vid(6), 'FRAC_URBAN_abs', 'absolute URBAN fraction', '1', 'XY', LANDUSE_OUT_DTYPE )
 
        do p = 1, LANDUSE_PFT_mosaic
           write(varname,'(A8,I1.1)') 'FRAC_PFT', p
-          call FILEIO_def_var( fid, vid(7+2*(p-1)), varname, 'PFT fraction', '1', 'XY', LANDUSE_OUT_DTYPE )
+          call FILE_CARTESC_def_var( fid, vid(7+2*(p-1)), varname, 'PFT fraction', '1', 'XY', LANDUSE_OUT_DTYPE )
           write(varname,'(A9,I1.1)') 'INDEX_PFT', p
-          call FILEIO_def_var( fid, vid(8+2*(p-1)), varname, 'PFT index',    '1', 'XY', LANDUSE_OUT_DTYPE )
+          call FILE_CARTESC_def_var( fid, vid(8+2*(p-1)), varname, 'PFT index',    '1', 'XY', LANDUSE_OUT_DTYPE )
        end do
 
-       call FILEIO_enddef( fid )
+       call FILE_CARTESC_enddef( fid )
 
-       call FILEIO_write_var( fid, vid(1), LANDUSE_frac_land (:,:), 'FRAC_LAND'     , 'XY' )
-       call FILEIO_write_var( fid, vid(2), LANDUSE_frac_lake (:,:), 'FRAC_LAKE'     , 'XY' )
-       call FILEIO_write_var( fid, vid(3), LANDUSE_frac_urban(:,:), 'FRAC_URBAN'    , 'XY' )
-       call FILEIO_write_var( fid, vid(4), LANDUSE_fact_ocean(:,:), 'FRAC_OCEAN_abs', 'XY' )
-       call FILEIO_write_var( fid, vid(5), LANDUSE_fact_land (:,:), 'FRAC_LAND_abs' , 'XY' )
-       call FILEIO_write_var( fid, vid(6), LANDUSE_fact_urban(:,:), 'FRAC_URBAN_abs', 'XY' )
+       call FILE_CARTESC_write_var( fid, vid(1), LANDUSE_frac_land (:,:), 'FRAC_LAND'     , 'XY' )
+       call FILE_CARTESC_write_var( fid, vid(2), LANDUSE_frac_lake (:,:), 'FRAC_LAKE'     , 'XY' )
+       call FILE_CARTESC_write_var( fid, vid(3), LANDUSE_frac_urban(:,:), 'FRAC_URBAN'    , 'XY' )
+       call FILE_CARTESC_write_var( fid, vid(4), LANDUSE_fact_ocean(:,:), 'FRAC_OCEAN_abs', 'XY' )
+       call FILE_CARTESC_write_var( fid, vid(5), LANDUSE_fact_land (:,:), 'FRAC_LAND_abs' , 'XY' )
+       call FILE_CARTESC_write_var( fid, vid(6), LANDUSE_fact_urban(:,:), 'FRAC_URBAN_abs', 'XY' )
 
        do p = 1, LANDUSE_PFT_mosaic
           write(varname,'(A8,I1.1)') 'FRAC_PFT', p
-          call FILEIO_write_var( fid, vid(7+2*(p-1)), LANDUSE_frac_PFT(:,:,p), varname, 'XY' )
+          call FILE_CARTESC_write_var( fid, vid(7+2*(p-1)), LANDUSE_frac_PFT(:,:,p), varname, 'XY' )
           write(varname,'(A9,I1.1)') 'INDEX_PFT', p
           temp(:,:) = real(LANDUSE_index_PFT(:,:,p),kind=RP)
-          call FILEIO_write_var( fid, vid(8+2*(p-1)), temp(:,:),               varname, 'XY' )
+          call FILE_CARTESC_write_var( fid, vid(8+2*(p-1)), temp(:,:),               varname, 'XY' )
        end do
 
-       call FILEIO_close( fid )
+       call FILE_CARTESC_close( fid )
 
     end if
 

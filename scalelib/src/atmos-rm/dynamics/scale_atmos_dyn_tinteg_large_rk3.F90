@@ -140,8 +140,8 @@ contains
        BND_QA, &
        BND_SMOOTHER_FACT => ATMOS_BOUNDARY_SMOOTHER_FACT
 #ifdef HIST_TEND
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
 #endif
     implicit none
 

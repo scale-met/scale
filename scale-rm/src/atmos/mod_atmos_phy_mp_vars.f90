@@ -135,8 +135,8 @@ contains
        QHA,  &
        HYD_NAME, &
        HYD_DESC
-    use scale_history, only: &
-       HIST_reg
+    use scale_file_history, only: &
+       FILE_HISTORY_reg
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_MP_VARS / &
@@ -235,12 +235,12 @@ contains
     DIAG_Qe      = .false.
 
     ! history
-    call HIST_reg( HIST_CLDFRAC_id, 'CLDFRAC', 'cloud fraction', '1', ndim=3 )
+    call FILE_HISTORY_reg( HIST_CLDFRAC_id, 'CLDFRAC', 'cloud fraction', '1', fill_halo=.true., dim_type='ZXY' )
 
     HIST_Re = .false.
     allocate( HIST_Re_id(N_HYD) )
     do ih = 1, N_HYD
-       call HIST_reg( HIST_Re_id(ih), 'Re_'//trim(HYD_NAME(ih)), 'effective radius of '//trim(HYD_DESC(ih)), 'cm', ndim=3 )
+       call FILE_HISTORY_reg( HIST_Re_id(ih), 'Re_'//trim(HYD_NAME(ih)), 'effective radius of '//trim(HYD_DESC(ih)), 'cm', fill_halo=.true., dim_type='ZXY' )
        if ( HIST_Re_id(ih) > 0 ) HIST_Re = .true.
     end do
 
@@ -269,8 +269,8 @@ contains
   subroutine ATMOS_PHY_MP_vars_restart_open
     use scale_time, only: &
        TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_open
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_open
     implicit none
 
     character(len=19)     :: timelabel
@@ -291,7 +291,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_open( restart_fid, basename )
+       call FILE_CARTESC_open( restart_fid, basename )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_MP is not specified.'
     endif
@@ -305,9 +305,11 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_fileio, only: &
-       FILEIO_read, &
-       FILEIO_flush
+    use scale_file, only: &
+       FILE_get_aggregate
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_read, &
+       FILE_CARTESC_flush
     implicit none
 
     real(RP) :: total
@@ -317,13 +319,13 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS_PHY_MP) ***'
 
-       call FILEIO_read( ATMOS_PHY_MP_SFLX_rain(:,:),             & ! [OUT]
+       call FILE_CARTESC_read( ATMOS_PHY_MP_SFLX_rain(:,:),             & ! [OUT]
                          restart_fid, VAR_NAME(1), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_MP_SFLX_snow(:,:),             & ! [OUT]
+       call FILE_CARTESC_read( ATMOS_PHY_MP_SFLX_snow(:,:),             & ! [OUT]
                          restart_fid, VAR_NAME(2), 'XY', step=1 ) ! [IN]
 
-       if ( IO_AGGREGATE ) then
-          call FILEIO_flush( restart_fid ) ! X/Y halos have been read from file
+       if ( FILE_get_AGGREGATE(restart_fid) ) then
+          call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
        else
           call ATMOS_PHY_MP_vars_fillhalo
        end if
@@ -344,8 +346,8 @@ contains
   subroutine ATMOS_PHY_MP_vars_restart_create
     use scale_time, only: &
        TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_create
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_create
     implicit none
 
     character(len=19)     :: timelabel
@@ -366,7 +368,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_create( restart_fid,                                                             & ! [OUT]
+       call FILE_CARTESC_create( restart_fid,                                                             & ! [OUT]
                            basename, ATMOS_PHY_MP_RESTART_OUT_TITLE, ATMOS_PHY_MP_RESTART_OUT_DTYPE ) ! [IN]
 
     endif
@@ -377,12 +379,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Exit netCDF define mode
   subroutine ATMOS_PHY_MP_vars_restart_enddef
-    use scale_fileio, only: &
-       FILEIO_enddef
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_enddef
     implicit none
 
     if ( restart_fid /= -1 ) then
-       call FILEIO_enddef( restart_fid ) ! [IN]
+       call FILE_CARTESC_enddef( restart_fid ) ! [IN]
     endif
 
     return
@@ -391,8 +393,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Close restart file
   subroutine ATMOS_PHY_MP_vars_restart_close
-    use scale_fileio, only: &
-       FILEIO_close
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_close
     implicit none
     !---------------------------------------------------------------------------
 
@@ -400,7 +402,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Close restart file (ATMOS_PHY_MP) ***'
 
-       call FILEIO_close( restart_fid ) ! [IN]
+       call FILE_CARTESC_close( restart_fid ) ! [IN]
 
        restart_fid = -1
     endif
@@ -411,16 +413,16 @@ contains
   !-----------------------------------------------------------------------------
   !> Define variables in restart file
   subroutine ATMOS_PHY_MP_vars_restart_def_var
-    use scale_fileio, only: &
-       FILEIO_def_var
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_def_var
     implicit none
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
 
-       call FILEIO_def_var( restart_fid, VAR_ID(1), VAR_NAME(1), VAR_DESC(1), &
+       call FILE_CARTESC_def_var( restart_fid, VAR_ID(1), VAR_NAME(1), VAR_DESC(1), &
                             VAR_UNIT(1), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_def_var( restart_fid, VAR_ID(2), VAR_NAME(2), VAR_DESC(2), &
+       call FILE_CARTESC_def_var( restart_fid, VAR_ID(2), VAR_NAME(2), VAR_DESC(2), &
                             VAR_UNIT(2), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
@@ -434,8 +436,8 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_fileio, only: &
-       FILEIO_write_var
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_write_var
     implicit none
 
     real(RP) :: total
@@ -450,9 +452,9 @@ contains
           call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2) )
        endif
 
-       call FILEIO_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_MP_SFLX_rain(:,:), &
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_MP_SFLX_rain(:,:), &
                               VAR_NAME(1), 'XY' ) ! [IN]
-       call FILEIO_write_var( restart_fid, VAR_ID(2), ATMOS_PHY_MP_SFLX_snow(:,:), &
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(2), ATMOS_PHY_MP_SFLX_snow(:,:), &
                               VAR_NAME(2), 'XY' ) ! [IN]
 
     endif
@@ -465,9 +467,9 @@ contains
        DENS, TEMP, QTRC )
     use scale_atmos_hydrometeor, only: &
        N_HYD
-    use scale_history, only: &
-       HIST_query, &
-       HIST_put
+    use scale_file_history, only: &
+       FILE_HISTORY_query, &
+       FILE_HISTORY_put
     implicit none
 
     real(RP), intent(in) :: DENS(KA,IA,JA)
@@ -480,26 +482,36 @@ contains
     !---------------------------------------------------------------------------
 
     if ( HIST_CLDFRAC_id > 0 ) then
-       call HIST_query( HIST_CLDFRAC_id, do_put )
+       call FILE_HISTORY_query( HIST_CLDFRAC_id, do_put )
 
        if ( do_put ) then
           call ATMOS_PHY_MP_vars_get_diagnostic( &
                DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
                CLDFRAC=WORK(:,:,:,1)                    ) ! [OUT]
-          call HIST_put( HIST_CLDFRAC_id, WORK(:,:,:,1), nohalo=.true. )
+          call FILE_HISTORY_put( HIST_CLDFRAC_id, WORK(:,:,:,1) )
        end if
     end if
 
     if ( HIST_Re ) then
-       call ATMOS_PHY_MP_vars_get_diagnostic( &
-            DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
-            Re=WORK(:,:,:,:)                         ) ! [OUT]
        do ih = 1, N_HYD
           if ( HIST_Re_id(ih) > 0 ) then
-                           call HIST_query( HIST_Re_id(ih), do_put )
-             if ( do_put ) call HIST_put( HIST_Re_id(ih), WORK(:,:,:,ih), nohalo=.true. )
+             call FILE_HISTORY_query( HIST_Re_id(ih), do_put )
+             if ( do_put ) then
+                call ATMOS_PHY_MP_vars_get_diagnostic( &
+                     DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
+                     Re=WORK(:,:,:,:)                         ) ! [OUT]
+                exit
+             end if
           end if
        end do
+       if ( do_put ) then
+          do ih = 1, N_HYD
+             if ( HIST_Re_id(ih) > 0 ) then
+                call FILE_HISTORY_query( HIST_Re_id(ih), do_put )
+                if ( do_put ) call FILE_HISTORY_put( HIST_Re_id(ih), WORK(:,:,:,ih) )
+             end if
+          end do
+       end if
     end if
 
     return

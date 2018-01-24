@@ -244,8 +244,8 @@ contains
        COMM_horizontal_mean
     use scale_time, only: &
        dt_MP => TIME_DTSEC_ATMOS_PHY_MP
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_tracer, only: &
        QA,         &
        TRACER_R,   &
@@ -369,7 +369,7 @@ contains
 
     endif
 
-    call HIST_in( FLX_hydro(:,:,:,I_mp_QR), 'pflux_QR', 'precipitation flux of QR', 'kg/m2/s', nohalo=.true. )
+    call FILE_HISTORY_in( FLX_hydro(:,:,:,I_mp_QR), 'pflux_QR', 'precipitation flux of QR', 'kg/m2/s', fill_halo=.true. )
 
     do j = JS, JE
     do i = IS, IE
@@ -397,7 +397,7 @@ contains
     enddo
     enddo
 
-    call HIST_in( QC_t_sat(:,:,:), 'Pcsat', 'QC production term by satadjust', 'kg/kg/s' )
+    call FILE_HISTORY_in( QC_t_sat(:,:,:), 'Pcsat', 'QC production term by satadjust', 'kg/kg/s' )
 
     do j = JS, JE
     do i = IS, IE

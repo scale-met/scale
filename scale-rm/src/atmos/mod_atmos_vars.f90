@@ -158,10 +158,8 @@ module mod_atmos_vars
      character(len=H_SHORT) :: NAME
      character(len=H_MID)   :: DESC
      character(len=H_SHORT) :: UNIT
-     integer                :: ndim
-     character(len=H_SHORT) :: xdim
-     character(len=H_SHORT) :: ydim
-     character(len=H_SHORT) :: zdim
+     integer                :: ndims
+     character(len=H_SHORT) :: dim_type
   end type Vinfo
 
   ! prognostic variables
@@ -170,11 +168,11 @@ module mod_atmos_vars
   integer,     private, allocatable :: PV_ID(:)
 
   data PV_info / &
-       Vinfo( 'DENS', 'density',     'kg/m3',   3, '',     '',     '' ), &
-       Vinfo( 'MOMZ', 'momentum z',  'kg/m2/s', 3, '',     '',     'half' ), &
-       Vinfo( 'MOMX', 'momentum x',  'kg/m2/s', 3, 'half', '',     '' ), &
-       Vinfo( 'MOMY', 'momentum y',  'kg/m2/s', 3, '',     'half', '' ), &
-       Vinfo( 'RHOT', 'rho * theta', 'kg/m3*K', 3, '',     '',     '' )  /
+       Vinfo( 'DENS', 'density',     'kg/m3',   3, 'ZXY' ), &
+       Vinfo( 'MOMZ', 'momentum z',  'kg/m2/s', 3, 'ZHXY'), &
+       Vinfo( 'MOMX', 'momentum x',  'kg/m2/s', 3, 'ZXHY'), &
+       Vinfo( 'MOMY', 'momentum y',  'kg/m2/s', 3, 'ZXYH'), &
+       Vinfo( 'RHOT', 'rho * theta', 'kg/m3*K', 3, 'ZXY' ) /
 
 
   ! private diagnostic variables
@@ -326,75 +324,75 @@ module mod_atmos_vars
   logical,     private            :: DV_calclated(DV_nmax)
 
   data DV_info / &
-       Vinfo( 'W',         'velocity w',                      'm/s',     3, '', '', '' ), &
-       Vinfo( 'U',         'velocity u',                      'm/s',     3, '', '', '' ), &
-       Vinfo( 'V',         'velocity v',                      'm/s',     3, '', '', '' ), &
-       Vinfo( 'PT',        'potential temp.',                 'K',       3, '', '', '' ), &
-       Vinfo( 'T',         'temperature',                     'K',       3, '', '', '' ), &
-       Vinfo( 'PRES',      'pressure',                        'Pa',      3, '', '', '' ), &
-       Vinfo( 'EXNER',     'Exner function',                  '1',       3, '', '', '' ), &
-       Vinfo( 'PHYD',      'hydrostatic pressure',            'Pa',      3, '', '', '' ), &
-       Vinfo( 'QDRY',      'dry air',                         'kg/kg',   3, '', '', '' ), &
-       Vinfo( 'RTOT',      'Total gas constant',              'J/kg/K',  3, '', '', '' ), &
-       Vinfo( 'CVTOT',     'Total heat capacity',             'J/kg/K',  3, '', '', '' ), &
-       Vinfo( 'CPTOT',     'Total heat capacity',             'J/kg/K',  3, '', '', '' ), &
-       Vinfo( 'LHV',       'latent heat for vaporization',    'J/kg',    3, '', '', '' ), &
-       Vinfo( 'LHS',       'latent heat for sublimation',     'J/kg',    3, '', '', '' ), &
-       Vinfo( 'LHF',       'latent heat for fusion',          'J/kg',    3, '', '', '' ), &
-       Vinfo( 'POTV',      'virtual potential temp.',         'K',       3, '', '', '' ), &
-       Vinfo( 'TEML',      'liquid water temperature',        'K',       3, '', '', '' ), &
-       Vinfo( 'POTL',      'liquid water potential temp.',    'K',       3, '', '', '' ), &
-       Vinfo( 'POTE',      'equivalent potential temp.',      'K',       3, '', '', '' ), &
-       Vinfo( 'QTOT',      'total water',                     'kg/kg',   3, '', '', '' ), &
-       Vinfo( 'QHYD',      'total hydrometeors',              'kg/kg',   3, '', '', '' ), &
-       Vinfo( 'QLIQ',      'total liquid water',              'kg/kg',   3, '', '', '' ), &
-       Vinfo( 'QICE',      'total ice water',                 'kg/kg',   3, '', '', '' ), &
-       Vinfo( 'LWP',       'liquid water path',               'g/m2',    2, '', '', ''  ), &
-       Vinfo( 'IWP',       'ice water path',                  'g/m2',    2, '', '', ''  ), &
-       Vinfo( 'PW',        'precipitable water',              'g/m2',    2, '', '', ''  ), &
-       Vinfo( 'PREC',      'surface precipitation rate',      'kg/m2/s', 2, '', '', ''  ), &
-       Vinfo( 'RAIN',      'surface rain rate',               'kg/m2/s', 2, '', '', ''  ), &
-       Vinfo( 'SNOW',      'surface snow rate',               'kg/m2/s', 2, '', '', ''  ), &
-       Vinfo( 'QSAT',      'saturation specific humidity',    'kg/kg',   3, '', '', '' ), &
-       Vinfo( 'RHA',       'relative humidity(liq+ice)',      '%',       3, '', '', '' ), &
-       Vinfo( 'RH',        'relative humidity(liq)',          '%',       3, '', '', '' ), &
-       Vinfo( 'RHI',       'relative humidity(ice)',          '%',       3, '', '', '' ), &
-       Vinfo( 'VOR',       'vertical vorticity',              '1/s',     3, '', '', '' ), &
-       Vinfo( 'DIV',       'divergence',                      '1/s',     3, '', '', '' ), &
-       Vinfo( 'HDIV',      'horizontal divergence',           '1/s',     3, '', '', '' ), &
-       Vinfo( 'Uabs',      'absolute velocity',               'm/s',     3, '', '', '' ), &
-       Vinfo( 'N2',        'squared Brunt-Vaisala frequency', '1/s2',    3, '', '', '' ), &
-       Vinfo( 'PBLH',      'PBL height',                      'm',       2, '', '', '' ), &
-       Vinfo( 'MSE',       'moist static energy',             'm2/s2',   3, '', '', '' ), &
-       Vinfo( 'TDEW',      'dew point',                       'K',       3, '', '', '' ), &
-       Vinfo( 'CAPE',      'convection avail. pot. energy',   'm2/s2',   2, '', '', '' ), &
-       Vinfo( 'CIN',       'convection inhibition',           'm2/s2',   2, '', '', '' ), &
-       Vinfo( 'LCL',       'lifted condensation level',       'm',       2, '', '', '' ), &
-       Vinfo( 'LFC',       'level of free convection',        'm',       2, '', '', '' ), &
-       Vinfo( 'LNB',       'level of neutral buoyancy',       'm',       2, '', '', '' ), &
-       Vinfo( 'ENGT',      'total energy',                    'J/m3',    3, '', '', '' ), &
-       Vinfo( 'ENGP',      'potential energy',                'J/m3',    3, '', '', '' ), &
-       Vinfo( 'ENGK',      'kinetic energy',                  'J/m3',    3, '', '', '' ), &
-       Vinfo( 'ENGI',      'internal energy',                 'J/m3',    3, '', '', '' ), &
-       Vinfo( 'DENS_MEAN', 'horiz. mean of density',          'kg/m3',   1, '', '', '' ), &
-       Vinfo( 'W_MEAN',    'horiz. mean of w',                'm/s',     1, '', '', '' ), &
-       Vinfo( 'U_MEAN',    'horiz. mean of u',                'm/s',     1, '', '', '' ), &
-       Vinfo( 'V_MEAN',    'horiz. mean of v',                'm/s',     1, '', '', '' ), &
-       Vinfo( 'PT_MEAN',   'horiz. mean of pot.',             'K',       1, '', '', '' ), &
-       Vinfo( 'T_MEAN',    'horiz. mean of t',                'K',       1, '', '', '' ), &
-       Vinfo( 'QV_MEAN',   'horiz. mean of QV',               '1',       1, '', '', '' ), &
-       Vinfo( 'QHYD_MEAN', 'horiz. mean of QHYD',             '1',       1, '', '', '' ), &
-       Vinfo( 'QLIQ_MEAN', 'horiz. mean of QLIQ',             '1',       1, '', '', '' ), &
-       Vinfo( 'QICE_MEAN', 'horiz. mean of QICE',             '1',       1, '', '', '' ), &
-       Vinfo( 'DENS_PRIM', 'horiz. deviation of density',     'kg/m3',   1, '', '', '' ), &
-       Vinfo( 'W_PRIM',    'horiz. deviation of w',           'm/s',     3, '', '', '' ), &
-       Vinfo( 'U_PRIM',    'horiz. deviation of u',           'm/s',     3, '', '', '' ), &
-       Vinfo( 'V_PRIM',    'horiz. deviation of v',           'm/s',     3, '', '', '' ), &
-       Vinfo( 'PT_PRIM',   'horiz. deviation of pot. temp.',  'K',       3, '', '', '' ), &
-       Vinfo( 'W_PRIM2',   'variance of w',                   'm2/s2',   3, '', '', '' ), &
-       Vinfo( 'PT_W_PRIM', 'resolved scale heat flux',        'W/s',     3, '', '', '' ), &
-       Vinfo( 'W_PRIM3',   'skewness of w',                   'm3/s3',   3, '', '', '' ), &
-       Vinfo( 'TKE_RS',    'resolved scale TKE',              'm2/s2',   3, '', '', '' )  /
+       Vinfo( 'W',         'velocity w',                      'm/s',     3, 'ZXY' ), &
+       Vinfo( 'U',         'velocity u',                      'm/s',     3, 'ZXY' ), &
+       Vinfo( 'V',         'velocity v',                      'm/s',     3, 'ZXY' ), &
+       Vinfo( 'PT',        'potential temp.',                 'K',       3, 'ZXY' ), &
+       Vinfo( 'T',         'temperature',                     'K',       3, 'ZXY' ), &
+       Vinfo( 'PRES',      'pressure',                        'Pa',      3, 'ZXY' ), &
+       Vinfo( 'EXNER',     'Exner function',                  '1',       3, 'ZXY' ), &
+       Vinfo( 'PHYD',      'hydrostatic pressure',            'Pa',      3, 'ZXY' ), &
+       Vinfo( 'QDRY',      'dry air',                         'kg/kg',   3, 'ZXY' ), &
+       Vinfo( 'RTOT',      'Total gas constant',              'J/kg/K',  3, 'ZXY' ), &
+       Vinfo( 'CVTOT',     'Total heat capacity',             'J/kg/K',  3, 'ZXY' ), &
+       Vinfo( 'CPTOT',     'Total heat capacity',             'J/kg/K',  3, 'ZXY' ), &
+       Vinfo( 'LHV',       'latent heat for vaporization',    'J/kg',    3, 'ZXY' ), &
+       Vinfo( 'LHS',       'latent heat for sublimation',     'J/kg',    3, 'ZXY' ), &
+       Vinfo( 'LHF',       'latent heat for fusion',          'J/kg',    3, 'ZXY' ), &
+       Vinfo( 'POTV',      'virtual potential temp.',         'K',       3, 'ZXY' ), &
+       Vinfo( 'TEML',      'liquid water temperature',        'K',       3, 'ZXY' ), &
+       Vinfo( 'POTL',      'liquid water potential temp.',    'K',       3, 'ZXY' ), &
+       Vinfo( 'POTE',      'equivalent potential temp.',      'K',       3, 'ZXY' ), &
+       Vinfo( 'QTOT',      'total water',                     'kg/kg',   3, 'ZXY' ), &
+       Vinfo( 'QHYD',      'total hydrometeors',              'kg/kg',   3, 'ZXY' ), &
+       Vinfo( 'QLIQ',      'total liquid water',              'kg/kg',   3, 'ZXY' ), &
+       Vinfo( 'QICE',      'total ice water',                 'kg/kg',   3, 'ZXY' ), &
+       Vinfo( 'LWP',       'liquid water path',               'g/m2',    2, 'XY'  ), &
+       Vinfo( 'IWP',       'ice water path',                  'g/m2',    2, 'XY'  ), &
+       Vinfo( 'PW',        'precipitable water',              'g/m2',    2, 'XY'  ), &
+       Vinfo( 'PREC',      'surface precipitation rate',      'kg/m2/s', 2, 'XY'  ), &
+       Vinfo( 'RAIN',      'surface rain rate',               'kg/m2/s', 2, 'XY'  ), &
+       Vinfo( 'SNOW',      'surface snow rate',               'kg/m2/s', 2, 'XY'  ), &
+       Vinfo( 'QSAT',      'saturation specific humidity',    'kg/kg',   3, 'ZXY' ), &
+       Vinfo( 'RHA',       'relative humidity(liq+ice)',      '%',       3, 'ZXY' ), &
+       Vinfo( 'RH',        'relative humidity(liq)',          '%',       3, 'ZXY' ), &
+       Vinfo( 'RHI',       'relative humidity(ice)',          '%',       3, 'ZXY' ), &
+       Vinfo( 'VOR',       'vertical vorticity',              '1/s',     3, 'ZXY' ), &
+       Vinfo( 'DIV',       'divergence',                      '1/s',     3, 'ZXY' ), &
+       Vinfo( 'HDIV',      'horizontal divergence',           '1/s',     3, 'ZXY' ), &
+       Vinfo( 'Uabs',      'absolute velocity',               'm/s',     3, 'ZXY' ), &
+       Vinfo( 'N2',        'squared Brunt-Vaisala frequency', '1/s2',    3, 'ZXY' ), &
+       Vinfo( 'PBLH',      'PBL height',                      'm',       2, 'XY'  ), &
+       Vinfo( 'MSE',       'moist static energy',             'm2/s2',   3, 'ZXY' ), &
+       Vinfo( 'TDEW',      'dew point',                       'K',       3, 'ZXY' ), &
+       Vinfo( 'CAPE',      'convection avail. pot. energy',   'm2/s2',   2, 'XY'  ), &
+       Vinfo( 'CIN',       'convection inhibition',           'm2/s2',   2, 'XY'  ), &
+       Vinfo( 'LCL',       'lifted condensation level',       'm',       2, 'XY'  ), &
+       Vinfo( 'LFC',       'level of free convection',        'm',       2, 'XY'  ), &
+       Vinfo( 'LNB',       'level of neutral buoyancy',       'm',       2, 'XY'  ), &
+       Vinfo( 'ENGT',      'total energy',                    'J/m3',    3, 'ZXY' ), &
+       Vinfo( 'ENGP',      'potential energy',                'J/m3',    3, 'ZXY' ), &
+       Vinfo( 'ENGK',      'kinetic energy',                  'J/m3',    3, 'ZXY' ), &
+       Vinfo( 'ENGI',      'internal energy',                 'J/m3',    3, 'ZXY' ), &
+       Vinfo( 'DENS_MEAN', 'horiz. mean of density',          'kg/m3',   1, 'Z'   ), &
+       Vinfo( 'W_MEAN',    'horiz. mean of w',                'm/s',     1, 'Z'   ), &
+       Vinfo( 'U_MEAN',    'horiz. mean of u',                'm/s',     1, 'Z'   ), &
+       Vinfo( 'V_MEAN',    'horiz. mean of v',                'm/s',     1, 'Z'   ), &
+       Vinfo( 'PT_MEAN',   'horiz. mean of pot.',             'K',       1, 'Z'   ), &
+       Vinfo( 'T_MEAN',    'horiz. mean of t',                'K',       1, 'Z'   ), &
+       Vinfo( 'QV_MEAN',   'horiz. mean of QV',               '1',       1, 'Z'   ), &
+       Vinfo( 'QHYD_MEAN', 'horiz. mean of QHYD',             '1',       1, 'Z'   ), &
+       Vinfo( 'QLIQ_MEAN', 'horiz. mean of QLIQ',             '1',       1, 'Z'   ), &
+       Vinfo( 'QICE_MEAN', 'horiz. mean of QICE',             '1',       1, 'Z'   ), &
+       Vinfo( 'DENS_PRIM', 'horiz. deviation of density',     'kg/m3',   1, 'Z'   ), &
+       Vinfo( 'W_PRIM',    'horiz. deviation of w',           'm/s',     3, 'ZXY' ), &
+       Vinfo( 'U_PRIM',    'horiz. deviation of u',           'm/s',     3, 'ZXY' ), &
+       Vinfo( 'V_PRIM',    'horiz. deviation of v',           'm/s',     3, 'ZXY' ), &
+       Vinfo( 'PT_PRIM',   'horiz. deviation of pot. temp.',  'K',       3, 'ZXY' ), &
+       Vinfo( 'W_PRIM2',   'variance of w',                   'm2/s2',   3, 'ZXY' ), &
+       Vinfo( 'PT_W_PRIM', 'resolved scale heat flux',        'W/s',     3, 'ZXY' ), &
+       Vinfo( 'W_PRIM3',   'skewness of w',                   'm3/s3',   3, 'ZXY' ), &
+       Vinfo( 'TKE_RS',    'resolved scale TKE',              'm2/s2',   3, 'ZXY' ) /
 
   ! for history output and monitor
   integer, private              :: PV_HIST_id (PV_nmax) !> prognostic variables
@@ -451,8 +449,8 @@ contains
        UNDEF => CONST_UNDEF
     use scale_process, only: &
        PRC_abort
-    use scale_history, only: &
-       HIST_reg
+    use scale_file_history, only: &
+       FILE_HISTORY_reg
     use scale_monitor, only: &
        MONIT_reg
     use scale_atmos_hydrometeor, only: &
@@ -695,21 +693,21 @@ contains
 
 
     do iv = 1, PV_nmax
-       call HIST_reg( PV_HIST_id(iv), PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, &
-            ndim=PV_info(iv)%ndim, xdim=PV_info(iv)%xdim, ydim=PV_info(iv)%ydim, zdim=PV_info(iv)%zdim )
+       call FILE_HISTORY_reg( PV_HIST_id(iv), PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, dim_type=PV_info(iv)%dim_type )
+            
     end do
     do iq = 1, QA
-       call HIST_reg( QP_HIST_id(iq), TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), ndim=3 )
+       call FILE_HISTORY_reg( QP_HIST_id(iq), TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), dim_type='ZXY' )
     enddo
 
     do iv = 1, DV_nmax
-       call HIST_reg( DV_HIST_id(iv), DV_info(iv)%NAME, DV_info(iv)%DESC, DV_info(iv)%UNIT, ndim=DV_info(iv)%ndim )
+       call FILE_HISTORY_reg( DV_HIST_id(iv), DV_info(iv)%NAME, DV_info(iv)%DESC, DV_info(iv)%UNIT, dim_type=DV_info(iv)%dim_type )
     end do
 
 
     !-----< monitor output setup >-----
     do iv = 1, PV_nmax
-       call MONIT_reg( PV_MONIT_id(iv), PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, ndim=PV_info(iv)%ndim, isflux=.false. )
+       call MONIT_reg( PV_MONIT_id(iv), PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, ndim=PV_info(iv)%ndims, isflux=.false. )
     end do
     do iq = 1, QA
        call MONIT_reg( QP_MONIT_id(iq), TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), ndim=3, isflux=.false. )
@@ -820,9 +818,9 @@ contains
        GRAV  => CONST_GRAV
     use scale_time, only: &
        TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_open, &
-       FILEIO_check_coordinates
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_open, &
+       FILE_CARTESC_check_coordinates
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
@@ -872,10 +870,10 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_open( restart_fid, basename )
+       call FILE_CARTESC_open( restart_fid, basename )
 
        if ( ATMOS_RESTART_IN_CHECK_COORDINATES ) then
-          call FILEIO_check_coordinates( restart_fid, atmos=.true. )
+          call FILE_CARTESC_check_coordinates( restart_fid, atmos=.true. )
        end if
 
     else
@@ -909,9 +907,11 @@ contains
   subroutine ATMOS_vars_restart_read
     use scale_process, only: &
        PRC_abort
-    use scale_fileio, only: &
-       FILEIO_read, &
-       FILEIO_flush
+    use scale_file, only: &
+       FILE_get_AGGREGATE
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_read, &
+       FILE_CARTESC_flush
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
@@ -950,24 +950,24 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS) ***'
 
-       call FILEIO_read( DENS(:,:,:),                                     & ! [OUT]
+       call FILE_CARTESC_read( DENS(:,:,:),                                     & ! [OUT]
                          restart_fid, PV_info(I_DENS)%NAME, 'ZXY',  step=1 ) ! [IN]
-       call FILEIO_read( MOMZ(:,:,:),                                     & ! [OUT]
+       call FILE_CARTESC_read( MOMZ(:,:,:),                                     & ! [OUT]
                          restart_fid, PV_info(I_MOMZ)%NAME, 'ZHXY', step=1 ) ! [IN]
-       call FILEIO_read( MOMX(:,:,:),                                     & ! [OUT]
+       call FILE_CARTESC_read( MOMX(:,:,:),                                     & ! [OUT]
                          restart_fid, PV_info(I_MOMX)%NAME, 'ZXHY', step=1 ) ! [IN]
-       call FILEIO_read( MOMY(:,:,:),                                     & ! [OUT]
+       call FILE_CARTESC_read( MOMY(:,:,:),                                     & ! [OUT]
                          restart_fid, PV_info(I_MOMY)%NAME, 'ZXYH', step=1 ) ! [IN]
-       call FILEIO_read( RHOT(:,:,:),                                     & ! [OUT]
+       call FILE_CARTESC_read( RHOT(:,:,:),                                     & ! [OUT]
                          restart_fid, PV_info(I_RHOT)%NAME, 'ZXY',  step=1 ) ! [IN]
 
        do iq = 1, QA
-          call FILEIO_read( QTRC(:,:,:,iq),                             & ! [OUT]
+          call FILE_CARTESC_read( QTRC(:,:,:,iq),                             & ! [OUT]
                             restart_fid, TRACER_NAME(iq), 'ZXY', step=1 ) ! [IN]
        enddo
 
-       if ( IO_AGGREGATE ) then
-          call FILEIO_flush( restart_fid ) ! X/Y halos have been read from file
+       if ( FILE_get_AGGREGATE(restart_fid) ) then
+          call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
 
           ! fill k halos
           do j  = 1, JA
@@ -1025,8 +1025,8 @@ contains
        TOPO_Zsfc
     use scale_atmos_bottom, only: &
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
-    use scale_history, only: &
-       HIST_setpres
+    use scale_file_history_cartesC, only: &
+       FILE_HISTORY_CARTESC_set_pres
     implicit none
 
     real(RP) :: SFC_DENS(IA,JA)
@@ -1041,8 +1041,11 @@ contains
                           SFC_DENS (:,:),   & ! [OUT]
                           SFC_PRES (:,:)    ) ! [OUT]
 
-    call HIST_setpres( PHYD    (:,:,:),  & ! [IN]
-                       SFC_PRES(:,:)     ) ! [IN]
+    ! TODO: PHYDH (half level) must be used
+    call FILE_HISTORY_CARTESC_set_pres( PHYD(:,:,:),  & ! [IN]
+!                                        PHYDH(:,:,:), & ! [IN]
+                                        PHYD(:,:,:),  & ! [IN]
+                                        SFC_PRES(:,:) ) ! [IN]
 
     return
   end subroutine ATMOS_vars_history_setpres
@@ -1052,11 +1055,13 @@ contains
   subroutine ATMOS_vars_restart_check
     use scale_process, only: &
        PRC_myrank
-    use scale_fileio, only: &
-       FILEIO_open, &
-       FILEIO_read, &
-       FILEIO_flush, &
-       FILEIO_close
+    use scale_file, only: &
+       FILE_get_AGGREGATE
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_open, &
+       FILE_CARTESC_read, &
+       FILE_CARTESC_flush, &
+       FILE_CARTESC_close
     implicit none
 
     real(RP) :: DENS_check(KA,IA,JA)    ! Density    [kg/m3]
@@ -1081,19 +1086,19 @@ contains
 
     basename = ATMOS_RESTART_CHECK_BASENAME
 
-    call FILEIO_open( fid, basename )
+    call FILE_CARTESC_open( fid, basename )
 
-    call FILEIO_read( DENS_check(:,:,:), fid, 'DENS', 'ZXY' , step=1 )
-    call FILEIO_read( MOMZ_check(:,:,:), fid, 'MOMZ', 'ZHXY', step=1 )
-    call FILEIO_read( MOMX_check(:,:,:), fid, 'MOMX', 'ZXHY', step=1 )
-    call FILEIO_read( MOMY_check(:,:,:), fid, 'MOMY', 'ZXYH', step=1 )
-    call FILEIO_read( RHOT_check(:,:,:), fid, 'RHOT', 'ZXY' , step=1 )
+    call FILE_CARTESC_read( DENS_check(:,:,:), fid, 'DENS', 'ZXY' , step=1 )
+    call FILE_CARTESC_read( MOMZ_check(:,:,:), fid, 'MOMZ', 'ZHXY', step=1 )
+    call FILE_CARTESC_read( MOMX_check(:,:,:), fid, 'MOMX', 'ZXHY', step=1 )
+    call FILE_CARTESC_read( MOMY_check(:,:,:), fid, 'MOMY', 'ZXYH', step=1 )
+    call FILE_CARTESC_read( RHOT_check(:,:,:), fid, 'RHOT', 'ZXY' , step=1 )
     do iq = 1, QA
-       call FILEIO_read( QTRC_check(:,:,:,iq), fid, TRACER_NAME(iq), 'ZXY', step=1 )
+       call FILE_CARTESC_read( QTRC_check(:,:,:,iq), fid, TRACER_NAME(iq), 'ZXY', step=1 )
     end do
-    if ( IO_AGGREGATE ) call FILEIO_flush( fid )
+    if ( FILE_get_AGGREGATE(fid) ) call FILE_CARTESC_flush( fid )
 
-    call FILEIO_close( fid ) ! [IN]
+    call FILE_CARTESC_close( fid ) ! [IN]
 
     do k = KS, KE
     do j = JS, JE
@@ -1188,9 +1193,9 @@ contains
     use scale_grid_real, only: &
        REAL_CZ, &
        REAL_FZ
-    use scale_history, only: &
-       HIST_query, &
-       HIST_put
+    use scale_file_history, only: &
+       FILE_HISTORY_query, &
+       FILE_HISTORY_put
     use mod_atmos_phy_mp_vars, only: &
        ATMOS_PHY_MP_vars_history
     use mod_atmos_phy_ae_vars, only: &
@@ -1211,65 +1216,47 @@ contains
     endif
 
     ! history output of prognostic variables
-                 call HIST_query( PV_HIST_id(I_DENS), do_put )
-    if( do_put ) call HIST_put  ( PV_HIST_id(I_DENS), DENS(:,:,:) )
-                 call HIST_query( PV_HIST_id(I_MOMZ), do_put )
-    if( do_put ) call HIST_put  ( PV_HIST_id(I_MOMZ), MOMZ(:,:,:), zdim='half' )
-                 call HIST_query( PV_HIST_id(I_MOMX), do_put )
-    if( do_put ) call HIST_put  ( PV_HIST_id(I_MOMX), MOMX(:,:,:), xdim='half' )
-                 call HIST_query( PV_HIST_id(I_MOMY), do_put )
-    if( do_put ) call HIST_put  ( PV_HIST_id(I_MOMY), MOMY(:,:,:), ydim='half' )
-                 call HIST_query( PV_HIST_id(I_RHOT), do_put )
-    if( do_put ) call HIST_put  ( PV_HIST_id(I_RHOT), RHOT(:,:,:) )
+    call FILE_HISTORY_put  ( PV_HIST_id(I_DENS), DENS(:,:,:) )
+    call FILE_HISTORY_put  ( PV_HIST_id(I_MOMZ), MOMZ(:,:,:) )
+    call FILE_HISTORY_put  ( PV_HIST_id(I_MOMX), MOMX(:,:,:) )
+    call FILE_HISTORY_put  ( PV_HIST_id(I_MOMY), MOMY(:,:,:) )
+    call FILE_HISTORY_put  ( PV_HIST_id(I_RHOT), RHOT(:,:,:) )
     do iq = 1, QA
-                    call HIST_query( QP_HIST_id(iq), do_put )
-       if( do_put ) call HIST_put  ( QP_HIST_id(iq), QTRC(:,:,:,iq) )
+       call FILE_HISTORY_put  ( QP_HIST_id(iq), QTRC(:,:,:,iq) )
     enddo
 
 
     ! history output of diagnostic variables
-                 call HIST_query( DV_HIST_id(I_W    ), do_put )
-    if( do_put ) call HIST_put  ( DV_HIST_id(I_W    ), W(:,:,:)     )
-                 call HIST_query( DV_HIST_id(I_U    ), do_put )
-    if( do_put ) call HIST_put  ( DV_HIST_id(I_U    ), U(:,:,:)     )
-                 call HIST_query( DV_HIST_id(I_V    ), do_put )
-    if( do_put ) call HIST_put  ( DV_HIST_id(I_V    ), V(:,:,:)     )
-                 call HIST_query( DV_HIST_id(I_POTT ), do_put )
-    if( do_put ) call HIST_put  ( DV_HIST_id(I_POTT ), POTT(:,:,:)  )
-                 call HIST_query( DV_HIST_id(I_TEMP ), do_put )
-    if( do_put ) call HIST_put  ( DV_HIST_id(I_TEMP ), TEMP(:,:,:)  )
-                 call HIST_query( DV_HIST_id(I_PRES ), do_put )
-    if( do_put ) call HIST_put  ( DV_HIST_id(I_PRES ), PRES(:,:,:)  )
+    call FILE_HISTORY_put  ( DV_HIST_id(I_W    ), W(:,:,:)     )
+    call FILE_HISTORY_put  ( DV_HIST_id(I_U    ), U(:,:,:)     )
+    call FILE_HISTORY_put  ( DV_HIST_id(I_V    ), V(:,:,:)     )
+    call FILE_HISTORY_put  ( DV_HIST_id(I_POTT ), POTT(:,:,:)  )
+    call FILE_HISTORY_put  ( DV_HIST_id(I_TEMP ), TEMP(:,:,:)  )
+    call FILE_HISTORY_put  ( DV_HIST_id(I_PRES ), PRES(:,:,:)  )
 
-                 call HIST_query( DV_HIST_id(I_EXNER), do_put )
-    if( do_put ) call HIST_put  ( DV_HIST_id(I_EXNER), EXNER(:,:,:) )
-                 call HIST_query( DV_HIST_id(I_PHYD ), do_put )
-    if( do_put ) call HIST_put  ( DV_HIST_id(I_PHYD ), PHYD(:,:,:)  )
+    call FILE_HISTORY_put  ( DV_HIST_id(I_EXNER), EXNER(:,:,:) )
+    call FILE_HISTORY_put  ( DV_HIST_id(I_PHYD ), PHYD(:,:,:)  )
 
-                 call HIST_query( DV_HIST_id(I_QDRY ), do_put )
-    if( do_put ) call HIST_put  ( DV_HIST_id(I_QDRY ), QDRY(:,:,:)  )
-                 call HIST_query( DV_HIST_id(I_RTOT ), do_put )
-    if( do_put ) call HIST_put  ( DV_HIST_id(I_RTOT ), RTOT(:,:,:)  )
-                 call HIST_query( DV_HIST_id(I_CVTOT), do_put )
-    if( do_put ) call HIST_put  ( DV_HIST_id(I_CVTOT), CVTOT(:,:,:) )
-                 call HIST_query( DV_HIST_id(I_CPTOT), do_put )
-    if( do_put ) call HIST_put  ( DV_HIST_id(I_CPTOT), CPTOT(:,:,:) )
+    call FILE_HISTORY_put  ( DV_HIST_id(I_QDRY ), QDRY(:,:,:)  )
+    call FILE_HISTORY_put  ( DV_HIST_id(I_RTOT ), RTOT(:,:,:)  )
+    call FILE_HISTORY_put  ( DV_HIST_id(I_CVTOT), CVTOT(:,:,:) )
+    call FILE_HISTORY_put  ( DV_HIST_id(I_CPTOT), CPTOT(:,:,:) )
 
     do iv = I_CPTOT+1, DV_nmax
        if ( DV_HIST_id(iv) > 0 ) then
-          call HIST_query( DV_HIST_id(iv), do_put )
+          call FILE_HISTORY_query( DV_HIST_id(iv), do_put )
 
           if ( do_put ) then
-             select case( DV_info(iv)%ndim )
+             select case( DV_info(iv)%ndims )
              case( 3 )
                 call ATMOS_vars_get_diagnostic( DV_info(iv)%NAME, WORK3D(:,:,:) )
-                call HIST_put( DV_HIST_id(iv), WORK3D(:,:,:) )
+                call FILE_HISTORY_put( DV_HIST_id(iv), WORK3D(:,:,:) )
              case( 2 )
                 call ATMOS_vars_get_diagnostic( DV_info(iv)%NAME, WORK2D(:,:) )
-                call HIST_put( DV_HIST_id(iv), WORK2D(:,:) )
+                call FILE_HISTORY_put( DV_HIST_id(iv), WORK2D(:,:) )
              case( 1 )
                 call ATMOS_vars_get_diagnostic( DV_info(iv)%NAME, WORK1D(:) )
-                call HIST_put( DV_HIST_id(iv), WORK1D(:) )
+                call FILE_HISTORY_put( DV_HIST_id(iv), WORK1D(:) )
              end select
           endif
        endif
@@ -2896,8 +2883,8 @@ contains
   subroutine ATMOS_vars_restart_create
     use scale_time, only: &
        TIME_gettimelabel
-    use scale_fileio, only: &
-       FILEIO_create
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_create
     use mod_atmos_admin, only: &
        ATMOS_sw_dyn,      &
        ATMOS_sw_phy_mp,   &
@@ -2957,7 +2944,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILEIO_create( restart_fid,                                               & ! [OUT]
+       call FILE_CARTESC_create( restart_fid,                                               & ! [OUT]
                            basename, ATMOS_RESTART_OUT_TITLE, ATMOS_RESTART_OUT_DTYPE ) ! [IN]
 
        allocate( PV_ID(PV_nmax+QA) )
@@ -2978,8 +2965,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Exit netCDF define mode
   subroutine ATMOS_vars_restart_enddef
-    use scale_fileio, only: &
-       FILEIO_enddef
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_enddef
     use mod_atmos_admin, only: &
        ATMOS_sw_dyn,      &
        ATMOS_sw_phy_mp,   &
@@ -3021,7 +3008,7 @@ contains
 #endif
 
     if ( restart_fid /= -1 ) then
-       call FILEIO_enddef( restart_fid ) ! [IN]
+       call FILE_CARTESC_enddef( restart_fid ) ! [IN]
     endif
 
     if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_enddef
@@ -3039,8 +3026,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Close restart file
   subroutine ATMOS_vars_restart_close
-    use scale_fileio, only: &
-       FILEIO_close
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_close
     use mod_atmos_admin, only: &
        ATMOS_sw_dyn,      &
        ATMOS_sw_phy_mp,   &
@@ -3084,7 +3071,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Close restart file (ATMOS) ***'
 
-       call FILEIO_close( restart_fid ) ! [IN]
+       call FILE_CARTESC_close( restart_fid ) ! [IN]
 
        restart_fid = -1
 
@@ -3106,8 +3093,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Define atmospheric variables in restart file
   subroutine ATMOS_vars_restart_def_var
-    use scale_fileio, only: &
-       FILEIO_def_var
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_def_var
     use mod_atmos_admin, only: &
        ATMOS_sw_dyn,      &
        ATMOS_sw_phy_mp,   &
@@ -3151,19 +3138,19 @@ contains
 
     if ( restart_fid /= -1 ) then
 
-       call FILEIO_def_var( restart_fid, PV_ID(I_DENS), PV_info(I_DENS)%NAME, PV_info(I_DENS)%DESC, & ! [IN]
+       call FILE_CARTESC_def_var( restart_fid, PV_ID(I_DENS), PV_info(I_DENS)%NAME, PV_info(I_DENS)%DESC, & ! [IN]
                             PV_info(I_DENS)%UNIT, 'ZXY',  ATMOS_RESTART_OUT_DTYPE                   ) ! [IN]
-       call FILEIO_def_var( restart_fid, PV_ID(I_MOMZ), PV_info(I_MOMZ)%NAME, PV_info(I_MOMZ)%DESC, & ! [IN]
+       call FILE_CARTESC_def_var( restart_fid, PV_ID(I_MOMZ), PV_info(I_MOMZ)%NAME, PV_info(I_MOMZ)%DESC, & ! [IN]
                             PV_info(I_MOMZ)%UNIT, 'ZHXY', ATMOS_RESTART_OUT_DTYPE                   ) ! [IN]
-       call FILEIO_def_var( restart_fid, PV_ID(I_MOMX), PV_info(I_MOMX)%NAME, PV_info(I_MOMX)%DESC, & ! [IN]
+       call FILE_CARTESC_def_var( restart_fid, PV_ID(I_MOMX), PV_info(I_MOMX)%NAME, PV_info(I_MOMX)%DESC, & ! [IN]
                             PV_info(I_MOMX)%UNIT, 'ZXHY', ATMOS_RESTART_OUT_DTYPE                   ) ! [IN]
-       call FILEIO_def_var( restart_fid, PV_ID(I_MOMY), PV_info(I_MOMY)%NAME, PV_info(I_MOMY)%DESC, & ! [IN]
+       call FILE_CARTESC_def_var( restart_fid, PV_ID(I_MOMY), PV_info(I_MOMY)%NAME, PV_info(I_MOMY)%DESC, & ! [IN]
                             PV_info(I_MOMY)%UNIT, 'ZXYH', ATMOS_RESTART_OUT_DTYPE                   ) ! [IN]
-       call FILEIO_def_var( restart_fid, PV_ID(I_RHOT), PV_info(I_RHOT)%NAME, PV_info(I_RHOT)%DESC, & ! [IN]
+       call FILE_CARTESC_def_var( restart_fid, PV_ID(I_RHOT), PV_info(I_RHOT)%NAME, PV_info(I_RHOT)%DESC, & ! [IN]
                             PV_info(I_RHOT)%UNIT, 'ZXY',  ATMOS_RESTART_OUT_DTYPE                   ) ! [IN]
 
        do iq = 1, QA
-          call FILEIO_def_var( restart_fid, PV_ID(PV_nmax+iq), TRACER_NAME(iq), TRACER_DESC(iq), & ! [IN]
+          call FILE_CARTESC_def_var( restart_fid, PV_ID(PV_nmax+iq), TRACER_NAME(iq), TRACER_DESC(iq), & ! [IN]
                                TRACER_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE       ) ! [IN]
        enddo
 
@@ -3184,8 +3171,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Write restart of atmospheric variables
   subroutine ATMOS_vars_restart_write
-    use scale_fileio, only: &
-       FILEIO_write_var
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_write_var
     use mod_atmos_admin, only: &
        ATMOS_sw_dyn,      &
        ATMOS_sw_phy_mp,   &
@@ -3233,14 +3220,14 @@ contains
 
        call ATMOS_vars_total
 
-       call FILEIO_write_var( restart_fid, PV_ID(I_DENS), DENS(:,:,:), PV_info(I_DENS)%NAME, 'ZXY'  ) ! [IN]
-       call FILEIO_write_var( restart_fid, PV_ID(I_MOMZ), MOMZ(:,:,:), PV_info(I_MOMZ)%NAME, 'ZHXY' ) ! [IN]
-       call FILEIO_write_var( restart_fid, PV_ID(I_MOMX), MOMX(:,:,:), PV_info(I_MOMX)%NAME, 'ZXHY' ) ! [IN]
-       call FILEIO_write_var( restart_fid, PV_ID(I_MOMY), MOMY(:,:,:), PV_info(I_MOMY)%NAME, 'ZXYH' ) ! [IN]
-       call FILEIO_write_var( restart_fid, PV_ID(I_RHOT), RHOT(:,:,:), PV_info(I_RHOT)%NAME, 'ZXY'  ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, PV_ID(I_DENS), DENS(:,:,:), PV_info(I_DENS)%NAME, 'ZXY'  ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, PV_ID(I_MOMZ), MOMZ(:,:,:), PV_info(I_MOMZ)%NAME, 'ZHXY' ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, PV_ID(I_MOMX), MOMX(:,:,:), PV_info(I_MOMX)%NAME, 'ZXHY' ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, PV_ID(I_MOMY), MOMY(:,:,:), PV_info(I_MOMY)%NAME, 'ZXYH' ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, PV_ID(I_RHOT), RHOT(:,:,:), PV_info(I_RHOT)%NAME, 'ZXY'  ) ! [IN]
 
        do iq = 1, QA
-          call FILEIO_write_var( restart_fid, PV_ID(PV_nmax+iq), QTRC(:,:,:,iq), TRACER_NAME(iq), 'ZXY' ) ! [IN]
+          call FILE_CARTESC_write_var( restart_fid, PV_ID(PV_nmax+iq), QTRC(:,:,:,iq), TRACER_NAME(iq), 'ZXY' ) ! [IN]
        enddo
 
     endif

@@ -42,6 +42,8 @@ module scale_process
   public :: PRC_MPItime
   public :: PRC_MPItimestat
 
+  public :: PRC_set_file_closer
+
   interface PRC_MPIstop
      procedure PRC_abort
   end interface PRC_MPIstop
@@ -88,6 +90,13 @@ module scale_process
   integer, public :: PRC_UNIVERSAL_handler              !< error handler  in universal communicator
   integer, public :: PRC_ABORT_COMM_WORLD               !< communicator for aborting
   integer, public :: PRC_ABORT_handler                  !< error handler communicator for aborting
+
+  abstract interface
+     subroutine closer
+     end subroutine closer
+  end interface
+
+  procedure(closer), pointer :: PRC_FILE_Closer => NULL()
 
   !-----------------------------------------------------------------------------
   !
@@ -880,8 +889,6 @@ contains
   subroutine PRC_MPI_errorhandler( &
       comm,     &
       errcode   )
-  use scale_file, only: &
-     FILE_Close_All
     implicit none
 
     ! attributes are needed to be the same with COMM_ERRHANDLER function
@@ -930,7 +937,7 @@ contains
        write(*,*)                     ''
     endif
 
-    call FILE_Close_All
+    if ( associated( PRC_FILE_CLOSER ) ) call PRC_FILE_Closer
 
     ! Close logfile, configfile
     if ( IO_L ) then
@@ -946,5 +953,13 @@ contains
 
     stop
   end subroutine PRC_MPI_errorhandler
+
+  subroutine PRC_set_file_closer( routine )
+    procedure(closer), pointer, intent(in) :: routine
+
+    PRC_FILE_Closer => routine
+
+    return
+  end subroutine PRC_set_file_closer
 
 end module scale_process

@@ -114,7 +114,7 @@ contains
   subroutine ADMIN_TIME_setup( &
        setup_TimeIntegration )
     use scale_file, only: &
-       FILE_Get_GlobalAttribute
+       FILE_Get_Attribute
     use scale_process, only: &
        PRC_myrank,  &
        PRC_MPIstop, &
@@ -504,17 +504,19 @@ contains
     !--- calculate time
     if ( TIME_STARTDATE(1) == -999 ) then
        if ( RESTART_IN_BASENAME /= '' ) then ! read start time from the restart data
-          call FILE_Get_GlobalAttribute( RESTART_IN_BASENAME, & ! [IN]
-                                         'time_start',        & ! [IN]
-                                         PRC_myrank,          & ! [IN]
-                                         cftime(:),           & ! [OUT]
-                                         single = .false.     ) ! [IN]
+          call FILE_Get_Attribute( RESTART_IN_BASENAME, & ! [IN]
+                                   "global",            & ! [IN]
+                                   'time_start',        & ! [IN]
+                                   cftime(:),           & ! [OUT]
+                                   rankid = PRC_myrank, & ! [IN]
+                                   single = .false.     ) ! [IN]
 
-          call FILE_Get_GlobalAttribute( RESTART_IN_BASENAME, & ! [IN]
-                                         'time_units',        & ! [IN]
-                                         PRC_myrank,          & ! [IN]
-                                         cfunits,             & ! [OUT]
-                                         single = .false.     ) ! [IN]
+          call FILE_Get_Attribute( RESTART_IN_BASENAME, & ! [IN]
+                                   "global",            & ! [IN]
+                                   'time_units',        & ! [IN]
+                                   cfunits,             & ! [OUT]
+                                   rankid = PRC_myrank, & ! [IN]
+                                   single = .false.     ) ! [IN]
 
           dateday = 0
           datesec = CALENDAR_CFunits2sec( cftime(1), cfunits, 0 )

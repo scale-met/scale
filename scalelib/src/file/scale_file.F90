@@ -16,13 +16,11 @@ module scale_file
   !
   !++ Used modules
   !
-  use dc_log, only: &
-       Log, &
-       LOG_LMSG
-  use scale_precision, only: &
-       DP, &
-       SP
+  use scale_stdio
+  use scale_precision
   use scale_file_h
+  use scale_process, only: &
+     PRC_abort
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -30,6 +28,7 @@ module scale_file
   !
   !++ Public procedures
   !
+  public :: FILE_setup
   public :: FILE_open
   public :: FILE_create
   public :: FILE_set_option
@@ -47,8 +46,6 @@ module scale_file
   public :: FILE_get_all_dataInfo
   public :: FILE_read
   public :: FILE_write
-  public :: FILE_get_globalAttribute
-  public :: FILE_set_globalAttribute
   public :: FILE_get_attribute
   public :: FILE_set_attribute
   public :: FILE_add_associatedVariable
@@ -59,6 +56,8 @@ module scale_file
   public :: FILE_make_fname
   public :: FILE_attach_buffer
   public :: FILE_detach_buffer
+  public :: FILE_get_CFtunits
+  public :: FILE_get_aggregate
 
   interface FILE_get_commonInfo
      module procedure FILE_get_commonInfo_fid
@@ -136,27 +135,15 @@ module scale_file
     module procedure FILE_write_realSP_4D
     module procedure FILE_write_realDP_4D
   end interface FILE_write
-  interface FILE_get_globalAttribute
-     module procedure FILE_get_globalAttribute_text_fid
-     module procedure FILE_get_globalAttribute_int_fid
-     module procedure FILE_get_globalAttribute_float_fid
-     module procedure FILE_get_globalAttribute_double_fid
-     module procedure FILE_get_globalAttribute_text_fname
-     module procedure FILE_get_globalAttribute_int_fname
-     module procedure FILE_get_globalAttribute_float_fname
-     module procedure FILE_get_globalAttribute_double_fname
-  end interface FILE_get_globalAttribute
-  interface FILE_set_globalAttribute
-     module procedure FILE_set_globalAttribute_text
-     module procedure FILE_set_globalAttribute_int
-     module procedure FILE_set_globalAttribute_float
-     module procedure FILE_set_globalAttribute_double
-  end interface FILE_set_globalAttribute
   interface FILE_get_attribute
-     module procedure FILE_get_attribute_text
-     module procedure FILE_get_attribute_int
-     module procedure FILE_get_attribute_float
-     module procedure FILE_get_attribute_double
+     module procedure FILE_get_attribute_text_fname
+     module procedure FILE_get_attribute_int_fname
+     module procedure FILE_get_attribute_float_fname
+     module procedure FILE_get_attribute_double_fname
+     module procedure FILE_get_attribute_text_fid
+     module procedure FILE_get_attribute_int_fid
+     module procedure FILE_get_attribute_float_fid
+     module procedure FILE_get_attribute_double_fid
   end interface FILE_get_attribute
   interface FILE_set_attribute
      module procedure FILE_set_attribute_text
@@ -169,6 +156,8 @@ module scale_file
   !
   !++ Public parameters & variables
   !
+  logical, public :: FILE_AGGREGATE = .false. !> do parallel I/O through PnetCDF (default setting)
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedures
@@ -177,24 +166,60 @@ module scale_file
   !
   !++ Private parameters & variables
   !
-  integer,                   private, parameter :: FILE_nfile_max = 512   ! number limit of file
-                                                 ! Keep consistency with "FILE_MAX" in scale_netcdf.c
-  integer,                   private, parameter :: FILE_nvar_max  = 40960 ! number limit of variables
-                                                 ! Keep consistency with "VAR_MAX" in scale_netcdf.c
+  type file
+     character(len=FILE_HLONG) :: name
+     integer                   :: fid
+     logical                   :: aggregate
+  end type file
+  type(file) :: FILE_files(FILE_FILE_MAX)
+  integer    :: FILE_nfiles = 0
 
-  character(len=FILE_HLONG), private,      save :: FILE_fname_list(FILE_nfile_max)
-  integer,                   private,      save :: FILE_fid_list  (FILE_nfile_max)
-  integer,                   private,      save :: FILE_fid_count = 1
-  character(len=FILE_HLONG), private,      save :: FILE_vname_list  (FILE_nvar_max)
-  integer,                   private,      save :: FILE_vid_fid_list(FILE_nvar_max)
-  integer,                   private,      save :: FILE_vid_list    (FILE_nvar_max)
-  integer,                   private,      save :: FILE_vid_count = 1
-  integer,                   private,      save :: mpi_myrank
+  type var
+  character(len=FILE_HLONG) :: name
+  integer                   :: fid
+  integer                   :: vid
+  end type var
+  type(var) :: FILE_vars(FILE_VAR_MAX)
+  integer   :: FILE_nvars = 0
 
-  character(len=LOG_LMSG),   private            :: message
+  integer                   :: mpi_myrank
 
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> setup
+  !-----------------------------------------------------------------------------
+  subroutine FILE_setup( &
+       myrank )
+    use scale_process, only: &
+       PRC_set_file_closer
+    implicit none
+
+    integer, intent(in) :: myrank
+
+    NAMELIST / PARAM_FILE / &
+         FILE_AGGREGATE
+    
+    integer :: ierr
+
+       !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_FILE,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_FILE. Check!'
+       call PRC_abort
+    endif
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_FILE)
+
+    mpi_myrank = myrank
+
+    call PRC_set_file_closer( FILE_CLOSE_ALL )
+
+    return
+  end subroutine FILE_setup
+
   !-----------------------------------------------------------------------------
   subroutine FILE_create( &
        fid,         &
@@ -203,12 +228,13 @@ contains
        title,       &
        source,      &
        institution, &
-       master,      &
-       myrank,      &
+       grid_name,   &
+       rankid,      &
+       ismaster,    &
        single,      &
        time_units,  &
        append,      &
-       comm         )
+       mpi_comm     )
     use mpi, only: &
        MPI_COMM_NULL
     implicit none
@@ -219,26 +245,40 @@ contains
     character(len=*), intent(in)  :: title
     character(len=*), intent(in)  :: source
     character(len=*), intent(in)  :: institution
-    integer,          intent(in)  :: master
-    integer,          intent(in)  :: myrank
+    character(len=*), intent(in)  :: grid_name
 
+    integer,          intent(in), optional :: rankid
+    logical,          intent(in), optional :: ismaster
     logical,          intent(in), optional :: single
     character(len=*), intent(in), optional :: time_units
     logical,          intent(in), optional :: append
-    integer,          intent(in), optional :: comm       ! MPI communicator
+    integer,          intent(in), optional :: mpi_comm !> MPI communicator
 
     character(len=FILE_HMID) :: time_units_
+    integer :: rankid_
     logical :: single_
     integer :: mode
 
     integer :: error
     !---------------------------------------------------------------------------
 
-    mpi_myrank = myrank
+
+    if ( present(rankid) ) then
+       rankid_ = rankid
+    else
+       rankid_ = mpi_myrank
+    end if
 
     single_ = .false.
     if ( present(single) ) then
-       if( single .AND. myrank /= master ) return ! do nothing
+       if ( single ) then
+          if ( present( ismaster ) ) then
+             if ( .not. ismaster ) return
+          else
+             write(*,*) 'xxx [FILE_create] ismaster is required if single == .true.'
+             call PRC_abort
+          end if
+       end if
        single_ = single
     endif
 
@@ -257,27 +297,30 @@ contains
                        existed,  & ! [OUT]
                        basename, & ! [IN]
                        mode,     & ! [IN]
+                       rankid_,  & ! [IN]
                        single_,  & ! [IN]
-                       comm      ) ! [IN]
+                       mpi_comm  ) ! [IN]
 
     if( existed ) return
 
     !--- append package header to the file
-    call FILE_set_globalAttribute( fid, "title"      , title       ) ! [IN]
-    call FILE_set_globalAttribute( fid, "source"     , source      ) ! [IN]
-    call FILE_set_globalAttribute( fid, "institution", institution ) ! [IN]
+    call FILE_set_attribute( fid, "global", "title"      , title       ) ! [IN]
+    call FILE_set_attribute( fid, "global", "source"     , source      ) ! [IN]
+    call FILE_set_attribute( fid, "global", "institution", institution ) ! [IN]
+    call FILE_set_attribute( fid, "global", "grid_name",   grid_name   ) ! [IN]
 
-    if ( .NOT. present(comm) .OR. comm == MPI_COMM_NULL ) then
+    if ( ( .not. present(mpi_comm) ) .or. mpi_comm == MPI_COMM_NULL ) then
        ! for shared-file parallel I/O, skip attributes related to MPI processes
-       call FILE_set_globalAttribute( fid, "myrank"  , (/myrank/)  ) ! [IN]
+       call FILE_set_attribute( fid, "global", "rankid"  , (/rankid/)  ) ! [IN]
     endif
 
-    call file_set_tunits_c( fid,         & ! [IN]
-                            time_units_, & ! [IN]
-                            error        ) ! [OUT]
+    call file_set_tunits_c( FILE_files(fid)%fid, & ! [IN]
+                            time_units_,         & ! [IN]
+                            error                ) ! [OUT]
 
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx [FILE_create] failed to set time units')
+       write(*,*) 'xxx [FILE_create] failed to set time units'
+       call PRC_abort
     endif
 
     return
@@ -297,17 +340,17 @@ contains
     integer :: error
     !---------------------------------------------------------------------------
 
-    call file_get_nvars_c( fid,         & ! (in)
-                           nvars, error ) ! (out)
+    call file_get_nvars_c( FILE_files(fid)%fid, & ! (in)
+                           nvars, error         ) ! (out)
 
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(message,*) 'xxx [FILE_get_var_num] failed to get varnum. fid = ', fid
-       call Log('E', message)
+       write(*,*) 'xxx [FILE_get_var_num] failed to get varnum. fid = ', fid
+       call PRC_abort
     end if
 
     if ( nvars > nvars_limit ) then
-       write(message,*) 'xxx [FILE_get_var_num] number of variables exceeds the requested size.', nvars, nvars_limit
-       call Log('E', message)
+       write(*,*) 'xxx [FILE_get_var_num] number of variables exceeds the requested size.', nvars, nvars_limit
+       call PRC_abort
     endif
 
     return
@@ -316,311 +359,27 @@ contains
   !-----------------------------------------------------------------------------
   subroutine FILE_get_var_name( &
        fid,    &
-       vid,    &
+       cvid,   &
        varname )
     implicit none
 
     integer,          intent(in)  :: fid
-    integer,          intent(in)  :: vid
+    integer,          intent(in)  :: cvid
     character(len=*), intent(out) :: varname
 
     integer :: error
     !---------------------------------------------------------------------------
 
-    call file_get_varname_c( fid, vid,      & ! (in)
-                             varname, error ) ! (out)
+    call file_get_varname_c( FILE_files(fid)%fid, cvid, & ! (in)
+                             varname, error             ) ! (out)
 
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(message,*) 'xxx [FILE_get_var_name] failed to get varname. vid = ', vid
-       call Log('E', message)
+       write(*,*) 'xxx [FILE_get_var_name] failed to get varname. cvid = ', cvid
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_get_var_name
-
-  !-----------------------------------------------------------------------------
-  ! interface FILE_get_globalAttribute
-  !-----------------------------------------------------------------------------
-  subroutine FILE_get_globalAttribute_text_fid( &
-       fid,      & ! (in)
-       key,      & ! (in)
-       val       & ! (out)
-       )
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: key
-    character(len=*), intent(out) :: val
-
-    integer :: error
-
-    call file_get_globalattribute_text_c( & ! (in)
-         fid, key,                        & ! (in)
-         val, error                       ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get text global attribute: '//trim(key))
-    end if
-
-    return
-  end subroutine FILE_get_globalAttribute_text_fid
-
-  !-----------------------------------------------------------------------------
-  subroutine FILE_get_globalAttribute_int_fid( &
-       fid,      & ! (in)
-       key,      & ! (in)
-       val       & ! (out)
-       )
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: key
-    integer,          intent(out) :: val(:)
-
-    integer :: error
-
-    call file_get_globalattribute_int_c( & ! (in)
-         fid, key, size(val),            & ! (in)
-         val, error                      ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get integer global attribute: '//trim(key))
-    end if
-
-    return
-  end subroutine FILE_get_globalAttribute_int_fid
-
-  !-----------------------------------------------------------------------------
-  subroutine FILE_get_globalAttribute_float_fid( &
-       fid, & ! (in)
-       key, & ! (in)
-       val  ) ! (out)
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: key
-    real(SP),    intent(out) :: val(:)
-
-    integer :: error
-
-    call file_get_globalAttribute_float_c( & ! (in)
-         fid, key, size(val), & ! (in)
-         val, error           ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get float global attribute: '//trim(key))
-    end if
-
-    return
-  end subroutine FILE_get_globalAttribute_float_fid
-
-  !-----------------------------------------------------------------------------
-  subroutine FILE_get_globalAttribute_double_fid( &
-       fid, & ! (in)
-       key, & ! (in)
-       val  ) ! (out)
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: key
-    real(DP),    intent(out) :: val(:)
-
-    integer :: error
-
-    call file_get_globalAttribute_double_c( & ! (in)
-         fid, key, size(val), & ! (in)
-         val, error           ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get double global attribute: '//trim(key))
-    end if
-
-    return
-  end subroutine FILE_get_globalAttribute_double_fid
-
-  subroutine FILE_get_globalAttribute_text_fname( &
-       basename, &
-       key,      &
-       myrank,   &
-       val,      &
-       single    )
-    character(len=*), intent(in) :: basename
-    character(len=*), intent(in) :: key
-    integer,          intent(in) :: myrank
-
-    character(len=*), intent(out) :: val
-
-    logical,          intent(in), optional :: single
-
-    integer :: fid
-
-    call FILE_open( fid,              & ! (out)
-         basename, FILE_FREAD,        & ! (in)
-         myrank=myrank, single=single ) ! (in)
-
-    call FILE_get_globalAttribute( fid, key, & ! (in)
-                                   val       ) ! (out)
-
-    return
-  end subroutine FILE_get_globalAttribute_text_fname
-
-  !-----------------------------------------------------------------------------
-  subroutine FILE_get_globalAttribute_int_fname( &
-       basename, &
-       key,      &
-       myrank,   &
-       val,      &
-       single    )
-    character(len=*), intent(in) :: basename
-    character(len=*), intent(in) :: key
-    integer,          intent(in) :: myrank
-
-    integer, intent(out) :: val(:)
-
-    logical, intent(in), optional :: single
-
-    integer :: fid
-
-    call FILE_open( fid,              & ! (out)
-         basename, FILE_FREAD,        & ! (in)
-         myrank=myrank, single=single ) ! (in)
-
-    call FILE_get_globalAttribute( fid, key, & ! (in)
-                                   val(:)    ) ! (out)
-
-    return
-  end subroutine FILE_get_globalAttribute_int_fname
-
-  !-----------------------------------------------------------------------------
-  subroutine FILE_get_globalAttribute_float_fname( &
-       basename, &
-       key,      &
-       myrank,   &
-       val,      &
-       single    )
-    character(len=*), intent(in) :: basename
-    character(len=*), intent(in) :: key
-    integer,          intent(in) :: myrank
-
-    real(SP), intent(out) :: val(:)
-
-    logical, intent(in), optional :: single
-
-    integer :: fid
-
-    call FILE_open( fid,              & ! (out)
-         basename, FILE_FREAD,        & ! (in)
-         myrank=myrank, single=single ) ! (in)
-
-    call FILE_get_globalAttribute( fid, key, & ! (in)
-                                   val(:)    ) ! (out)
-
-    return
-  end subroutine FILE_get_globalAttribute_float_fname
-
-  !-----------------------------------------------------------------------------
-  subroutine FILE_get_globalAttribute_double_fname( &
-       basename, &
-       key,      &
-       myrank,   &
-       val,      &
-       single    )
-    character(len=*), intent(in) :: basename
-    character(len=*), intent(in) :: key
-    integer,          intent(in) :: myrank
-
-    real(DP), intent(out) :: val(:)
-
-    logical, intent(in), optional :: single
-
-    integer :: fid
-
-    call FILE_open( fid,              & ! (out)
-         basename, FILE_FREAD,        & ! (in)
-         myrank=myrank, single=single ) ! (in)
-
-    call FILE_get_globalAttribute( fid, key, & ! (in)
-                                   val(:)    ) ! (out)
-
-    return
-  end subroutine FILE_get_globalAttribute_double_fname
-
-
-  !-----------------------------------------------------------------------------
-  subroutine FILE_set_globalattribute_text( &
-       fid,      & ! (in)
-       key,      & ! (in)
-       val       & ! (in)
-       )
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: key
-    character(len=*), intent(in) :: val
-
-    integer :: error
-
-    call file_set_globalattribute_text_c( fid, & ! (in)
-         key, val,                              & ! (in)
-         error                                  ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to set text global attribute: '//trim(key))
-    end if
-
-    return
-  end subroutine FILE_set_globalattribute_text
-
-  !-----------------------------------------------------------------------------
-  subroutine FILE_set_globalattribute_int( &
-       fid,      & ! (in)
-       key,      & ! (in)
-       val       & ! (in)
-       )
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: key
-    integer,          intent(in) :: val(:)
-
-    integer :: error
-
-    call file_set_globalattribute_int_c( fid, & ! (in)
-         key, val, size(val),                 & ! (in)
-         error                                ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to set integer global attribute: '//trim(key))
-    end if
-
-    return
-  end subroutine FILE_set_globalattribute_int
-
-  !-----------------------------------------------------------------------------
-  subroutine FILE_set_globalattribute_float( &
-       fid,      & ! (in)
-       key,      & ! (in)
-       val       & ! (in)
-       )
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: key
-    real(SP),    intent(in) :: val(:)
-
-    integer :: error
-
-    call file_set_globalattribute_float_c( fid, & ! (in)
-         key, val, size(val), & ! (in)
-         error                ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to set float global attribute: '//trim(key))
-    end if
-
-    return
-  end subroutine FILE_set_globalattribute_float
-
-  !-----------------------------------------------------------------------------
-  subroutine FILE_set_globalattribute_double( &
-       fid,      & ! (in)
-       key,      & ! (in)
-       val       & ! (in)
-       )
-    integer,          intent(in) :: fid
-    character(len=*), intent(in) :: key
-    real(DP),    intent(in) :: val(:)
-
-    integer :: error
-
-    call file_set_globalattribute_double_c( fid, & ! (in)
-         key, val, size(val), & ! (in)
-         error                ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to set double global attribute: '//trim(key))
-    end if
-
-    return
-  end subroutine FILE_set_globalattribute_double
 
   !-----------------------------------------------------------------------------
   subroutine FILE_add_associatedvariable( fid, vname, existed )
@@ -630,8 +389,8 @@ contains
 
     integer :: error
 
-    call file_add_associatedvariable_c( fid, vname , & ! (in)
-                                        error        ) ! (out)
+    call file_add_associatedvariable_c( FILE_files(fid)%fid, vname , & ! (in)
+                                        error                        ) ! (out)
 
     if ( present(existed) ) then
        if ( error == FILE_ALREADY_EXISTED_CODE ) then
@@ -642,7 +401,8 @@ contains
     end if
 
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to add associated variable: '//trim(vname))
+       write(*,*) 'xxx failed to add associated variable: '//trim(vname)
+       call PRC_abort
     end if
 
     return
@@ -662,10 +422,11 @@ contains
 
     integer :: error
 
-    call file_set_option_c( fid, filetype, key, val, & ! (in)
-                            error                    ) ! (out)
+    call file_set_option_c( FILE_files(fid)%fid, filetype, key, val, & ! (in)
+                            error                                    ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to set option')
+       write(*,*) 'xxx failed to set option'
+       call PRC_abort
     end if
 
     return
@@ -677,28 +438,32 @@ contains
       basename,  & ! (in)
       mode,      & ! (in)
       single,    & ! (in) optional
-      comm,      & ! (in) optional
-      myrank     & ! (in) optional
-      )
+      mpi_comm,  & ! (in) optional
+      rankid     ) ! (in) optional
     implicit none
 
     integer,          intent(out) :: fid
     character(len=*), intent( in) :: basename
     integer,          intent( in) :: mode
     logical,          intent( in), optional :: single
-    integer,          intent( in), optional :: comm
-    integer,          intent( in), optional :: myrank
+    integer,          intent( in), optional :: mpi_comm
+    integer,          intent( in), optional :: rankid
 
+    integer :: rankid_
     logical :: existed
     logical :: single_
 
     single_ = .false.
 
     if ( present(single) ) single_ = single
-    if ( present(myrank) ) mpi_myrank = myrank
+    if ( present(rankid) ) then
+       rankid_ = rankid
+    else
+       rankid_ = mpi_myrank
+    end if
 
-    call FILE_get_fid( fid, existed,   & ! (out)
-         basename, mode, single_, comm ) ! (in)
+    call FILE_get_fid( fid, existed,                              & ! (out)
+                       basename, mode, rankid_, single_, mpi_comm ) ! (in)
 
     return
   end subroutine FILE_open
@@ -725,10 +490,12 @@ contains
     integer :: error
     intrinsic size
 
-    call file_put_axis_c( fid, name, desc, units, dim_name, dtype, val, size(val), SP, & ! (in)
-         error                                                                            ) ! (out)
+    call file_put_axis_c( FILE_files(fid)%fid,                        & ! (in)
+         name, desc, units, dim_name, dtype, val, size(val), SP, & ! (in)
+         error                                                        ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put axis')
+       write(*,*) 'xxx failed to put axis'
+       call PRC_abort
     end if
 
     return
@@ -752,10 +519,12 @@ contains
     integer :: error
     intrinsic size
 
-    call file_put_axis_c( fid, name, desc, units, dim_name, dtype, val, size(val), DP, & ! (in)
-         error                                                                            ) ! (out)
+    call file_put_axis_c( FILE_files(fid)%fid,                        & ! (in)
+         name, desc, units, dim_name, dtype, val, size(val), DP, & ! (in)
+         error                                                        ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put axis')
+       write(*,*) 'xxx failed to put axis'
+       call PRC_abort
     end if
 
     return
@@ -779,10 +548,12 @@ contains
 
     integer :: error
 
-    call file_def_axis_c( fid, name, desc, units, dim_name, dtype, dim_size, & ! (in)
-         error                                                             ) ! (out)
+    call file_def_axis_c( FILE_files(fid)%fid, &
+         name, desc, units, dim_name, dtype, dim_size, & ! (in)
+         error                                         ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to define axis')
+       write(*,*) 'xxx failed to define axis'
+       call PRC_abort
     end if
 
     return
@@ -805,14 +576,17 @@ contains
     intrinsic shape
 
     if ( present(start) ) then
-       call file_write_axis_c( fid, name, val, SP, start, shape(val), & ! (in)
-            error                                                          ) ! (out)
+       call file_write_axis_c( FILE_files(fid)%fid, & ! (in)
+            name, val, SP, start, shape(val),  & ! (in)
+            error                                   ) ! (out)
     else
-       call file_write_axis_c( fid, name, val, SP, (/1/), shape(val), & ! (in)
-            error                                                          ) ! (out)
+       call file_write_axis_c( FILE_files(fid)%fid, & ! (in)
+            name, val, SP, (/1/), shape(val),  & ! (in)
+            error                                   ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to write axis: '//trim(name))
+       write(*,*) 'xxx failed to write axis: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -831,14 +605,17 @@ contains
     intrinsic shape
 
     if ( present(start) ) then
-       call file_write_axis_c( fid, name, val, DP, start, shape(val), & ! (in)
-            error                                                          ) ! (out)
+       call file_write_axis_c( FILE_files(fid)%fid, & ! (in)
+            name, val, DP, start, shape(val),  & ! (in)
+            error                                   ) ! (out)
     else
-       call file_write_axis_c( fid, name, val, DP, (/1/), shape(val), & ! (in)
-            error                                                          ) ! (out)
+       call file_write_axis_c( FILE_files(fid)%fid, & ! (in)
+            name, val, DP, (/1/), shape(val),  & ! (in)
+            error                                   ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to write axis: '//trim(name))
+       write(*,*) 'xxx failed to write axis: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -866,12 +643,13 @@ contains
     integer :: error
     intrinsic size
 
-    call file_put_associatedcoordinate_c( fid,                 & ! (in)
+    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
          val, SP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -895,12 +673,13 @@ contains
     integer :: error
     intrinsic size
 
-    call file_put_associatedcoordinate_c( fid,                 & ! (in)
+    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
          val, DP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -924,12 +703,13 @@ contains
     integer :: error
     intrinsic size
 
-    call file_put_associatedcoordinate_c( fid,                 & ! (in)
+    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
          val, SP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -953,12 +733,13 @@ contains
     integer :: error
     intrinsic size
 
-    call file_put_associatedcoordinate_c( fid,                 & ! (in)
+    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
          val, DP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -982,12 +763,13 @@ contains
     integer :: error
     intrinsic size
 
-    call file_put_associatedcoordinate_c( fid,                 & ! (in)
+    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
          val, SP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -1011,12 +793,13 @@ contains
     integer :: error
     intrinsic size
 
-    call file_put_associatedcoordinate_c( fid,                 & ! (in)
+    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
          val, DP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -1040,12 +823,13 @@ contains
     integer :: error
     intrinsic size
 
-    call file_put_associatedcoordinate_c( fid,                 & ! (in)
+    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
          val, SP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -1069,12 +853,13 @@ contains
     integer :: error
     intrinsic size
 
-    call file_put_associatedcoordinate_c( fid,                 & ! (in)
+    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
          val, DP,                                         & ! (in)
          error                                                 ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -1097,11 +882,12 @@ contains
     integer :: error
     intrinsic size
 
-    call file_def_associatedcoordinate_c( fid,                 & ! (in)
+    call file_def_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
          error                                                 ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -1130,22 +916,26 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( fid, name, val, SP, & ! (in)
-            ndims, start, count,                                        & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, SP,                                     & ! (in)
+            ndims, start, count,                                    & ! (in)
+            error                                                   ) ! (out)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( fid, name, val, SP, & ! (in)
-            1, start, shape(val),                                  & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, SP,                                     & ! (in)
+            1, start, shape(val),                              & ! (in)
+            error                                                   ) ! (out)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( fid, name, val, SP, & ! (in)
-            1, (/1/), shape(val),             & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, SP,                                     & ! (in)
+            1, (/1/), shape(val),         & ! (in)
+            error                                                   ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -1170,22 +960,26 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( fid, name, val, DP, & ! (in)
-            ndims, start, count,                                        & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, DP,                                     & ! (in)
+            ndims, start, count,                                    & ! (in)
+            error                                                   ) ! (out)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( fid, name, val, DP, & ! (in)
-            1, start, shape(val),                                  & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, DP,                                     & ! (in)
+            1, start, shape(val),                              & ! (in)
+            error                                                   ) ! (out)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( fid, name, val, DP, & ! (in)
-            1, (/1/), shape(val),             & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, DP,                                     & ! (in)
+            1, (/1/), shape(val),         & ! (in)
+            error                                                   ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -1210,22 +1004,26 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( fid, name, val, SP, & ! (in)
-            ndims, start, count,                                        & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, SP,                                     & ! (in)
+            ndims, start, count,                                    & ! (in)
+            error                                                   ) ! (out)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( fid, name, val, SP, & ! (in)
-            2, start, shape(val),                                  & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, SP,                                     & ! (in)
+            2, start, shape(val),                              & ! (in)
+            error                                                   ) ! (out)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( fid, name, val, SP, & ! (in)
-            2, (/1,1/), shape(val),             & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, SP,                                     & ! (in)
+            2, (/1,1/), shape(val),         & ! (in)
+            error                                                   ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -1250,22 +1048,26 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( fid, name, val, DP, & ! (in)
-            ndims, start, count,                                        & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, DP,                                     & ! (in)
+            ndims, start, count,                                    & ! (in)
+            error                                                   ) ! (out)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( fid, name, val, DP, & ! (in)
-            2, start, shape(val),                                  & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, DP,                                     & ! (in)
+            2, start, shape(val),                              & ! (in)
+            error                                                   ) ! (out)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( fid, name, val, DP, & ! (in)
-            2, (/1,1/), shape(val),             & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, DP,                                     & ! (in)
+            2, (/1,1/), shape(val),         & ! (in)
+            error                                                   ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -1290,22 +1092,26 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( fid, name, val, SP, & ! (in)
-            ndims, start, count,                                        & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, SP,                                     & ! (in)
+            ndims, start, count,                                    & ! (in)
+            error                                                   ) ! (out)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( fid, name, val, SP, & ! (in)
-            3, start, shape(val),                                  & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, SP,                                     & ! (in)
+            3, start, shape(val),                              & ! (in)
+            error                                                   ) ! (out)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( fid, name, val, SP, & ! (in)
-            3, (/1,1,1/), shape(val),             & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, SP,                                     & ! (in)
+            3, (/1,1,1/), shape(val),         & ! (in)
+            error                                                   ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -1330,22 +1136,26 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( fid, name, val, DP, & ! (in)
-            ndims, start, count,                                        & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, DP,                                     & ! (in)
+            ndims, start, count,                                    & ! (in)
+            error                                                   ) ! (out)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( fid, name, val, DP, & ! (in)
-            3, start, shape(val),                                  & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, DP,                                     & ! (in)
+            3, start, shape(val),                              & ! (in)
+            error                                                   ) ! (out)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( fid, name, val, DP, & ! (in)
-            3, (/1,1,1/), shape(val),             & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, DP,                                     & ! (in)
+            3, (/1,1,1/), shape(val),         & ! (in)
+            error                                                   ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -1370,22 +1180,26 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( fid, name, val, SP, & ! (in)
-            ndims, start, count,                                        & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, SP,                                     & ! (in)
+            ndims, start, count,                                    & ! (in)
+            error                                                   ) ! (out)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( fid, name, val, SP, & ! (in)
-            4, start, shape(val),                                  & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, SP,                                     & ! (in)
+            4, start, shape(val),                              & ! (in)
+            error                                                   ) ! (out)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( fid, name, val, SP, & ! (in)
-            4, (/1,1,1,1/), shape(val),             & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, SP,                                     & ! (in)
+            4, (/1,1,1,1/), shape(val),         & ! (in)
+            error                                                   ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -1410,22 +1224,26 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( fid, name, val, DP, & ! (in)
-            ndims, start, count,                                        & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, DP,                                     & ! (in)
+            ndims, start, count,                                    & ! (in)
+            error                                                   ) ! (out)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( fid, name, val, DP, & ! (in)
-            4, start, shape(val),                                  & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, DP,                                     & ! (in)
+            4, start, shape(val),                              & ! (in)
+            error                                                   ) ! (out)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( fid, name, val, DP, & ! (in)
-            4, (/1,1,1,1/), shape(val),             & ! (in)
-            error                                                       ) ! (out)
+       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
+            name, val, DP,                                     & ! (in)
+            4, (/1,1,1,1/), shape(val),         & ! (in)
+            error                                                   ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to put associated coordinate: '//trim(name))
+       write(*,*) 'xxx failed to put associated coordinate: '//trim(name)
+       call PRC_abort
     end if
 
     return
@@ -1483,6 +1301,7 @@ contains
     logical,          intent(in), optional :: tavg
 
     real(DP) :: tint8
+    integer  :: cvid
     integer  :: ndims
     integer  :: itavg
     integer  :: error
@@ -1492,10 +1311,9 @@ contains
     !---------------------------------------------------------------------------
 
     vid = -1
-    do n = 1, FILE_vid_count
-       if (       FILE_vid_fid_list(n) == fid     &
-            .AND. FILE_vname_list  (n) == varname ) then
-          vid = FILE_vid_list(n)
+    do n = 1, FILE_nvars
+       if ( FILE_vars(n)%fid == fid .and. FILE_vars(n)%name == varname ) then
+          vid = FILE_vars(n)%vid
           exit
        endif
     enddo
@@ -1510,22 +1328,25 @@ contains
           if( tavg ) itavg = 1
        endif
 
-       call file_add_variable_c( vid,                                                         & ! [OUT]
-                                 fid, varname, desc, units, dims, ndims, dtype, tint8, itavg, & ! [IN]
-                                 error                                                        ) ! [OUT]
+       call file_add_variable_c( cvid,                              & ! [OUT]
+                                 FILE_files(fid)%fid,              & ! [IN]
+                                 varname, desc, units,             & ! [IN]
+                                 dims, ndims, dtype, tint8, itavg, & ! [IN]
+                                 error                             ) ! [OUT]
 
        if ( error /= FILE_SUCCESS_CODE ) then
-          call Log('E', 'xxx failed to add variable: '//trim(varname))
+          write(*,*) 'xxx failed to add variable: '//trim(varname)
+          call PRC_abort
        endif
 
-       FILE_vname_list  (FILE_vid_count) = trim(varname)
-       FILE_vid_list    (FILE_vid_count) = vid
-       FILE_vid_fid_list(FILE_vid_count) = fid
-       FILE_vid_count                    = FILE_vid_count + 1
+       FILE_nvars = FILE_nvars + 1
+       vid = FILE_nvars
+       FILE_vars(vid)%name = varname
+       FILE_vars(vid)%vid  = cvid
+       FILE_vars(vid)%fid  = fid
 
-       write(message,'(A,I3.3,A,I4.4,2A)') &
-       '###### FILE_ variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
-       call Log("I",message)
+       if (IO_L) write(IO_FID_LOG,'(A,I3.3,A,I4.4,2A)') &
+       '###### FILE variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
     endif
 
     return
@@ -1556,6 +1377,7 @@ contains
     logical,          intent(in), optional :: tavg
 
     real(DP) :: tint8
+    integer  :: cvid
     integer  :: ndims
     integer  :: itavg
     integer  :: error
@@ -1565,10 +1387,9 @@ contains
     !---------------------------------------------------------------------------
 
     vid = -1
-    do n = 1, FILE_vid_count
-       if (       FILE_vid_fid_list(n) == fid     &
-            .AND. FILE_vname_list  (n) == varname ) then
-          vid = FILE_vid_list(n)
+    do n = 1, FILE_nvars
+       if ( FILE_vars(n)%fid == fid .and. FILE_vars(n)%name == varname ) then
+          vid = FILE_vars(n)%vid
           exit
        endif
     enddo
@@ -1583,22 +1404,25 @@ contains
           if( tavg ) itavg = 1
        endif
 
-       call file_add_variable_c( vid,                                                         & ! [OUT]
-                                 fid, varname, desc, units, dims, ndims, dtype, tint8, itavg, & ! [IN]
-                                 error                                                        ) ! [OUT]
+       call file_add_variable_c( cvid,                              & ! [OUT]
+                                 FILE_files(fid)%fid,              & ! [IN]
+                                 varname, desc, units,             & ! [IN]
+                                 dims, ndims, dtype, tint8, itavg, & ! [IN]
+                                 error                             ) ! [OUT]
 
        if ( error /= FILE_SUCCESS_CODE ) then
-          call Log('E', 'xxx failed to add variable: '//trim(varname))
+          write(*,*) 'xxx failed to add variable: '//trim(varname)
+          call PRC_abort
        endif
 
-       FILE_vname_list  (FILE_vid_count) = trim(varname)
-       FILE_vid_list    (FILE_vid_count) = vid
-       FILE_vid_fid_list(FILE_vid_count) = fid
-       FILE_vid_count                    = FILE_vid_count + 1
+       FILE_nvars = FILE_nvars + 1
+       vid = FILE_nvars
+       FILE_vars(vid)%name = varname
+       FILE_vars(vid)%vid  = cvid
+       FILE_vars(vid)%fid  = fid
 
-       write(message,'(A,I3.3,A,I4.4,2A)') &
-       '###### FILE_ variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
-       call Log("I",message)
+       if (IO_L) write(IO_FID_LOG,'(A,I3.3,A,I4.4,2A)') &
+       '###### FILE variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
     endif
 
     return
@@ -1629,16 +1453,16 @@ contains
 
     real(DP) :: tint_
     integer  :: itavg
+    integer  :: cvid
     integer  :: error
     integer  :: n
 
     !---------------------------------------------------------------------------
 
     vid = -1
-    do n = 1, FILE_vid_count
-       if ( FILE_vid_fid_list(n) == fid .and. &
-            varname == FILE_vname_list(n) ) then
-          vid = FILE_vid_list(n)
+    do n = 1, FILE_nvars
+       if ( FILE_vars(n)%fid == fid .and. FILE_vars(n)%name == varname ) then
+          vid = n
        end if
     enddo
 
@@ -1660,31 +1484,33 @@ contains
           itavg = 0
        end if
 
-       call file_add_variable_c( vid,                      & ! (out)
-            fid, varname, desc, units, dims, ndims, dtype, & ! (in)
-            tint_, itavg,                                  & ! (in)
-            error                                          ) ! (out)
+       call file_add_variable_c( cvid,                & ! (out)
+            FILE_files(fid)%fid,                      & ! (in)
+            varname, desc, units, dims, ndims, dtype, & ! (in)
+            tint_, itavg,                             & ! (in)
+            error                                     ) ! (out)
        if ( error /= FILE_SUCCESS_CODE ) then
-          call Log('E', 'xxx failed to add variable: '//trim(varname))
+          write(*,*) 'xxx failed to add variable: '//trim(varname)
+          call PRC_abort
        end if
 
-       FILE_vname_list  (FILE_vid_count) = trim(varname)
-       FILE_vid_list    (FILE_vid_count) = vid
-       FILE_vid_fid_list(FILE_vid_count) = fid
-       FILE_vid_count                    = FILE_vid_count + 1
+       FILE_nvars = FILE_nvars + 1
+       vid = FILE_nvars
+       FILE_vars(vid)%name = varname
+       FILE_vars(vid)%vid  = cvid
+       FILE_vars(vid)%fid  = fid
 
-       write(message,'(A,I3.3,A,I4.4,2A)') &
+       if (IO_L) write(IO_FID_LOG,'(A,I3.3,A,I4.4,2A)') &
        '###### FILE_ variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
-       call Log("I",message)
     endif
 
     return
   end subroutine FILE_def_variable
 
   !-----------------------------------------------------------------------------
-  ! FILE_GetAttribute
+  ! FILE_Get_Attribute
   !-----------------------------------------------------------------------------
-  subroutine FILE_get_attribute_text( &
+  subroutine FILE_get_attribute_text_fid( &
        fid,   & ! (in)
        vname, & ! (in)
        key,   & ! (in)
@@ -1697,18 +1523,51 @@ contains
     integer :: error
 
     call file_get_attribute_text_c( &
-         fid, vname, & ! (in)
-         key,        & ! (in)
-         val, error  ) ! (out)
+         FILE_files(fid)%fid, vname, & ! (in)
+         key,                        & ! (in)
+         val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get text attribute for '//trim(vname)//': '//trim(key))
+       write(*,*) 'xxx failed to get text attribute for '//trim(vname)//': '//trim(key)
+       call PRC_abort
     end if
 
     return
-  end subroutine FILE_get_attribute_text
+  end subroutine FILE_get_attribute_text_fid
+  subroutine FILE_get_attribute_text_fname( &
+      basename,  & ! (in)
+      vname,     & ! (in)
+      key,       & ! (in)
+      val,       & ! (out)
+      single,    & ! (in) optional
+      mpi_comm,  & ! (in) optional
+      rankid     ) ! (in) optional
+    implicit none
+
+    character(len=*), intent(in) :: basename
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+
+    character(len=*), intent(out) :: val
+
+    logical, intent(in), optional :: single
+    integer, intent(in), optional :: mpi_comm
+    integer, intent(in), optional :: rankid
+
+    integer :: fid
+
+    call FILE_open( fid,          & ! (out)
+         basename, FILE_FREAD,    & ! (in)
+         single, mpi_comm, rankid ) ! (in) optional
+
+    call FILE_get_attribute_text_fid( &
+         fid, vname, key, & ! (in)
+         val              ) ! (out)
+
+    return
+  end subroutine FILE_get_attribute_text_fname
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_get_attribute_int( &
+  subroutine FILE_get_attribute_int_fid( &
        fid,   & ! (in)
        vname, & ! (in)
        key,   & ! (in)
@@ -1723,18 +1582,51 @@ contains
     intrinsic size
 
     call file_get_attribute_int_c( &
-         fid, vname,     & ! (in)
-         key, size(val), & ! (in)
-         val, error      ) ! (out)
+         FILE_files(fid)%fid, vname, & ! (in)
+         key, size(val),             & ! (in)
+         val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get integer attribute for '//trim(vname)//': '//trim(key))
+       write(*,*) 'xxx failed to get integer attribute for '//trim(vname)//': '//trim(key)
+       call PRC_abort
     end if
 
     return
-  end subroutine FILE_get_attribute_int
+  end subroutine FILE_get_attribute_int_fid
+  subroutine FILE_get_attribute_int_fname( &
+      basename,  & ! (in)
+      vname,     & ! (in)
+      key,       & ! (in)
+      val,       & ! (out)
+      single,    & ! (in) optional
+      mpi_comm,  & ! (in) optional
+      rankid     ) ! (in) optional
+    implicit none
+
+    character(len=*), intent(in) :: basename
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+
+    integer, intent(out) :: val(:)
+
+    logical, intent(in), optional :: single
+    integer, intent(in), optional :: mpi_comm
+    integer, intent(in), optional :: rankid
+
+    integer :: fid
+
+    call FILE_open( fid,          & ! (out)
+         basename, FILE_FREAD,    & ! (in)
+         single, mpi_comm, rankid ) ! (in) optional
+
+    call FILE_get_attribute_int_fid( &
+         fid, vname, key, & ! (in)
+         val              ) ! (out)
+
+    return
+  end subroutine FILE_get_attribute_int_fname
   !-----------------------------------------------------------------------------
 
-  subroutine FILE_get_attribute_float( &
+  subroutine FILE_get_attribute_float_fid( &
        fid,   & ! (in)
        vname, & ! (in)
        key,   & ! (in)
@@ -1749,16 +1641,49 @@ contains
     intrinsic size
 
     call file_get_attribute_float_c( &
-         fid, vname,     & ! (in)
-         key, size(val), & ! (in)
-         val, error      ) ! (out)
+         FILE_files(fid)%fid, vname, & ! (in)
+         key, size(val),             & ! (in)
+         val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get float attribute for '//trim(vname)//': '//trim(key))
+       write(*,*) 'xxx failed to get float attribute for '//trim(vname)//': '//trim(key)
+       call PRC_abort
     end if
 
     return
-  end subroutine FILE_get_attribute_float
-  subroutine FILE_get_attribute_double( &
+  end subroutine FILE_get_attribute_float_fid
+  subroutine FILE_get_attribute_float_fname( &
+      basename,  & ! (in)
+      vname,     & ! (in)
+      key,       & ! (in)
+      val,       & ! (out)
+      single,    & ! (in) optional
+      mpi_comm,  & ! (in) optional
+      rankid     ) ! (in) optional
+    implicit none
+
+    character(len=*), intent(in) :: basename
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+
+    real(SP), intent(out) :: val(:)
+
+    logical, intent(in), optional :: single
+    integer, intent(in), optional :: mpi_comm
+    integer, intent(in), optional :: rankid
+
+    integer :: fid
+
+    call FILE_open( fid,          & ! (out)
+         basename, FILE_FREAD ,   & ! (in)
+         single, mpi_comm, rankid ) ! (in) optional
+
+    call FILE_get_attribute_float_fid( &
+         fid, vname, key, & ! (in)
+         val              ) ! (out)
+
+    return
+  end subroutine FILE_get_attribute_float_fname
+  subroutine FILE_get_attribute_double_fid( &
        fid,   & ! (in)
        vname, & ! (in)
        key,   & ! (in)
@@ -1773,15 +1698,48 @@ contains
     intrinsic size
 
     call file_get_attribute_double_c( &
-         fid, vname,     & ! (in)
-         key, size(val), & ! (in)
-         val, error      ) ! (out)
+         FILE_files(fid)%fid, vname, & ! (in)
+         key, size(val),             & ! (in)
+         val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get double attribute for '//trim(vname)//': '//trim(key))
+       write(*,*) 'xxx failed to get double attribute for '//trim(vname)//': '//trim(key)
+       call PRC_abort
     end if
 
     return
-  end subroutine FILE_get_attribute_double
+  end subroutine FILE_get_attribute_double_fid
+  subroutine FILE_get_attribute_double_fname( &
+      basename,  & ! (in)
+      vname,     & ! (in)
+      key,       & ! (in)
+      val,       & ! (out)
+      single,    & ! (in) optional
+      mpi_comm,  & ! (in) optional
+      rankid     ) ! (in) optional
+    implicit none
+
+    character(len=*), intent(in) :: basename
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+
+    real(DP), intent(out) :: val(:)
+
+    logical, intent(in), optional :: single
+    integer, intent(in), optional :: mpi_comm
+    integer, intent(in), optional :: rankid
+
+    integer :: fid
+
+    call FILE_open( fid,          & ! (out)
+         basename, FILE_FREAD ,   & ! (in)
+         single, mpi_comm, rankid ) ! (in) optional
+
+    call FILE_get_attribute_double_fid( &
+         fid, vname, key, & ! (in)
+         val              ) ! (out)
+
+    return
+  end subroutine FILE_get_attribute_double_fname
 
   !-----------------------------------------------------------------------------
   ! FILE_set_attribute
@@ -1800,11 +1758,12 @@ contains
     integer :: error
 
     call file_set_attribute_text_c( &
-         fid, vname, & ! (in)
-         key, val,   & ! (in)
-         error       ) ! (out)
+         FILE_files(fid)%fid, vname, & ! (in)
+         key, val,                   & ! (in)
+         error                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to set text attribute for '//trim(vname)//': '//trim(key))
+       write(*,*) 'xxx failed to set text attribute for '//trim(vname)//': '//trim(key)
+       call PRC_abort
     end if
 
     return
@@ -1827,11 +1786,12 @@ contains
     intrinsic size
 
     call file_set_attribute_int_c( &
-         fid, vname,                & ! (in)
-         key, val(:), size(val(:)), & ! (in)
-         error                      ) ! (out)
+         FILE_files(fid)%fid, vname, & ! (in)
+         key, val(:), size(val(:)),  & ! (in)
+         error                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to set integer attribute for '//trim(vname)//': '//trim(key))
+       write(*,*) 'xxx failed to set integer attribute for '//trim(vname)//': '//trim(key)
+       call PRC_abort
     end if
 
     return
@@ -1854,11 +1814,12 @@ contains
     intrinsic size
 
     call file_set_attribute_float_c( &
-         fid, vname,                & ! (in)
-         key, val(:), size(val(:)), & ! (in)
-         error                      ) ! (out)
+         FILE_files(fid)%fid, vname, & ! (in)
+         key, val(:), size(val(:)),  & ! (in)
+         error                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to set float attribute for '//trim(vname)//': '//trim(key))
+       write(*,*) 'xxx failed to set float attribute for '//trim(vname)//': '//trim(key)
+       call PRC_abort
     end if
 
     return
@@ -1880,11 +1841,12 @@ contains
     intrinsic size
 
     call file_set_attribute_double_c( &
-         fid, vname,                & ! (in)
-         key, val(:), size(val(:)), & ! (in)
-         error                      ) ! (out)
+         FILE_files(fid)%fid, vname, & ! (in)
+         key, val(:), size(val(:)),  & ! (in)
+         error                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       call Log('E', 'xxx failed to set double attribute for '//trim(vname)//': '//trim(key))
+       write(*,*) 'xxx failed to set double attribute for '//trim(vname)//': '//trim(key)
+       call PRC_abort
     end if
 
     return
@@ -1896,7 +1858,7 @@ contains
       dims,          & ! (out)
       basename,      & ! (in)
       varname,       & ! (in)
-      myrank,        & ! (in)
+      rankid,        & ! (in)
       single,        & ! (in) optional
       error          ) ! (out) optional
     implicit none
@@ -1904,7 +1866,7 @@ contains
     integer,          intent(out)           :: dims(:)
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: myrank
+    integer,          intent( in)           :: rankid
     logical,          intent( in), optional :: single
     logical,          intent(out), optional :: error
 
@@ -1919,8 +1881,6 @@ contains
     intrinsic size
     !---------------------------------------------------------------------------
 
-    mpi_myrank = myrank
-
     if ( present(single) ) then
        single_ = single
     else
@@ -1934,13 +1894,15 @@ contains
     end if
 
     !--- search/register file
-    call FILE_open( fid,                & ! (out)
-         basename, FILE_FREAD, single_ ) ! (in)
+    call FILE_open( fid,                          & ! (out)
+                    basename, FILE_FREAD,         & ! (in)
+                    rankid=rankid, single=single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo_c( dinfo, & ! (out)
-         fid, varname, 1, suppress,  & ! (in)
-         ierror                      ) ! (out)
+    call file_get_datainfo_c( dinfo,   & ! (out)
+         FILE_files(fid)%fid, varname, & ! (in)
+         1, suppress,                  & ! (in)
+         ierror                        ) ! (out)
 
     !--- verify
     if ( ierror /= FILE_SUCCESS_CODE ) then
@@ -1948,13 +1910,14 @@ contains
           error = .true.
           return
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= size(dims) ) then
-       write(message,*) 'xxx rank is different, ', size(dims), dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is different, ', size(dims), dinfo%rank
+       call PRC_abort
     end if
     do n = 1, size(dims)
        dims(n) = dinfo%dim_size(n)
@@ -1970,39 +1933,39 @@ contains
   !-----------------------------------------------------------------------------
   subroutine FILE_get_commonInfo_fname( &
        basename,    &
-       myrank,      &
+       rankid,      &
        nvars_limit, &
        title,       &
        source,      &
        institution, &
+       grid_name,   &
        nvars,       &
        varname      )
     implicit none
 
     character(len=*),           intent(in)  :: basename
-    integer,                    intent(in)  :: myrank
+    integer,                    intent(in)  :: rankid
     integer,                    intent(in)  :: nvars_limit
     character(len=FILE_HMID),   intent(out) :: title                ! title of the file
     character(len=FILE_HMID),   intent(out) :: source               ! for file header
     character(len=FILE_HMID),   intent(out) :: institution          ! for file header
+    character(len=FILE_HSHORT), intent(out) :: grid_name            ! for file header
     integer,                    intent(out) :: nvars                ! number of variables
     character(len=FILE_HSHORT), intent(out) :: varname(nvars_limit) ! name of variables
 
     integer :: fid
     !---------------------------------------------------------------------------
 
-    mpi_myrank = myrank
-
-    call FILE_open( fid,       & ! [OUT]
-                    basename,  & ! [IN]
-                    FILE_FREAD ) ! [IN]
+    call FILE_open( fid,                  & ! [OUT]
+                    basename, FILE_FREAD, & ! [IN]
+                    rankid=rankid         ) ! [IN]
 
     call FILE_get_commonInfo_fid( fid,         & ! [IN]
-                                  myrank,      & ! [IN]
                                   nvars_limit, & ! [IN]
                                   title,       & ! [OUT]
                                   source,      & ! [OUT]
                                   institution, & ! [OUT]
+                                  grid_name,   & ! [OUT]
                                   nvars,       & ! [OUT]
                                   varname(:)   ) ! [OUT]
 
@@ -2011,36 +1974,31 @@ contains
 
   subroutine FILE_get_commonInfo_fid( &
        fid,         &
-       myrank,      &
        nvars_limit, &
        title,       &
        source,      &
        institution, &
+       grid_name,   &
        nvars,       &
        varname      )
     implicit none
 
     integer,                    intent(in)  :: fid
-    integer,                    intent(in)  :: myrank
     integer,                    intent(in)  :: nvars_limit
     character(len=FILE_HMID),   intent(out) :: title                ! title of the file
     character(len=FILE_HMID),   intent(out) :: source               ! for file header
     character(len=FILE_HMID),   intent(out) :: institution          ! for file header
+    character(len=FILE_HSHORT), intent(out) :: grid_name            ! for file header
     integer,                    intent(out) :: nvars                ! number of variables
     character(len=FILE_HSHORT), intent(out) :: varname(nvars_limit) ! name of variables
 
-    integer :: myrank_check(1)
     integer :: v
     !---------------------------------------------------------------------------
 
-    call FILE_get_globalAttribute( fid, 'title',       title       )
-    call FILE_get_globalAttribute( fid, 'source',      source      )
-    call FILE_get_globalAttribute( fid, 'institution', institution )
-    call FILE_get_globalAttribute( fid, 'myrank',      myrank_check(:) )
-
-    if ( myrank /= myrank_check(1) ) then
-       call Log('E','xxx [FILE_GetCommoninfo] requested rank number is inconsistent with that in the file.')
-    endif
+    call FILE_get_attribute( fid, 'global', 'title',       title       )
+    call FILE_get_attribute( fid, 'global', 'source',      source      )
+    call FILE_get_attribute( fid, 'global', 'institution', institution )
+    call FILE_get_attribute( fid, 'global', 'grid_name',   grid_name   )
 
     call FILE_get_var_num( fid, nvars_limit, nvars )
 
@@ -2057,7 +2015,7 @@ contains
   subroutine FILE_get_dataInfo_fname( &
        basename,    &
        varname,     &
-       myrank,      &
+       rankid,      &
        istep,       &
        single,      &
        description, &
@@ -2073,7 +2031,7 @@ contains
 
     character(len=*),           intent(in)  :: basename
     character(len=*),           intent(in)  :: varname
-    integer,                    intent(in)  :: myrank
+    integer,                    intent(in)  :: rankid
     integer,                    intent(in)  :: istep
 
     logical,                    intent(in),  optional :: single
@@ -2091,8 +2049,6 @@ contains
     integer :: fid
     !---------------------------------------------------------------------------
 
-    mpi_myrank = myrank
-
     if ( present(single) ) then
        single_ = single
     else
@@ -2100,10 +2056,9 @@ contains
     endif
 
     !--- search/register file
-    call FILE_open( fid,        & ! [OUT]
-                    basename,   & ! [IN]
-                    FILE_FREAD, & ! [IN]
-                    single_     ) ! [IN]
+    call FILE_open( fid,                          & ! [OUT]
+                    basename, FILE_FREAD,         & ! [IN]
+                    rankid=rankid, single=single_ ) ! [IN]
 
     call FILE_get_dataInfo_fid( fid,         & ! [IN]
                                 varname,     & ! [IN]
@@ -2160,16 +2115,17 @@ contains
     !---------------------------------------------------------------------------
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,   & ! [OUT]
-                              fid,     & ! [IN]
-                              varname, & ! [IN]
-                              istep,   & ! [IN]
-                              .false., & ! [IN]
-                              error    ) ! [OUT]
+    call file_get_datainfo_c( dinfo,               & ! [OUT]
+                              FILE_files(fid)%fid, & ! [IN]
+                              varname,             & ! [IN]
+                              istep,               & ! [IN]
+                              .false.,             & ! [IN]
+                              error                ) ! [OUT]
 
     !--- verify and exit
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx data info not found')
+       write(*,*) 'xxx data info not found'
+       call PRC_abort
     endif
 
     if( present(description) ) description = dinfo%description
@@ -2193,7 +2149,7 @@ contains
 
     if ( present(time_units)  ) then
        if ( dinfo%time_units == "" ) then
-          call FILE_get_globalAttribute( fid, "time_units", time_units )
+          call FILE_get_attribute( fid, "global", "time_units", time_units )
        else
           time_units = dinfo%time_units
        endif
@@ -2201,7 +2157,7 @@ contains
 
     if ( present(time_start)  ) then
        if ( dinfo%time_units == "" ) then
-          call FILE_get_globalAttribute( fid, "time_start", time )
+          call FILE_get_Attribute( fid, "global", "time_start", time )
           time_start = time(1)
        else
           time_start = dinfo%time_start
@@ -2210,7 +2166,7 @@ contains
 
     if ( present(time_end)  ) then
        if ( dinfo%time_units == "" ) then
-          call FILE_get_globalAttribute( fid, "time_start", time )
+          call FILE_get_Attribute( fid, "global", "time_start", time )
           time_end = time(1)
        else
           time_end = dinfo%time_end
@@ -2228,7 +2184,7 @@ contains
        dim_limit,   &
        basename,    &
        varname,     &
-       myrank,      &
+       rankid,      &
        step_nmax,   &
        description, &
        units,       &
@@ -2246,7 +2202,7 @@ contains
     integer,                    intent(in)  :: dim_limit
     character(len=*),           intent(in)  :: basename
     character(len=*),           intent(in)  :: varname
-    integer,                    intent(in)  :: myrank
+    integer,                    intent(in)  :: rankid
     integer,                    intent(out) :: step_nmax
     character(len=FILE_HMID),   intent(out) :: description
     character(len=FILE_HSHORT), intent(out) :: units
@@ -2264,8 +2220,6 @@ contains
     logical :: single_
     !---------------------------------------------------------------------------
 
-    mpi_myrank = myrank
-
     if ( present(single) ) then
        single_ = single
     else
@@ -2273,10 +2227,9 @@ contains
     endif
 
     !--- search/register file
-    call FILE_open( fid,        & ! [OUT]
-                    basename,   & ! [IN]
-                    FILE_FREAD, & ! [IN]
-                    single_     ) ! [IN]
+    call FILE_open( fid,                          & ! [OUT]
+                    basename, FILE_FREAD,         & ! [IN]
+                    rankid=rankid, single=single_ ) ! [IN]
 
     call FILE_get_all_datainfo_fid( step_limit,  & ! [IN]
                                     dim_limit,   & ! [IN]
@@ -2349,12 +2302,12 @@ contains
 
     do istep = 1, step_limit
        !--- get data information
-       call file_get_datainfo_c( dinfo,   & ! [OUT]
-                                 fid,     & ! [IN]
-                                 varname, & ! [IN]
-                                 istep,   & ! [IN]
-                                 .true.,  & ! [IN]
-                                 error    ) ! [OUT]
+       call file_get_datainfo_c( dinfo,               & ! [OUT]
+                                 FILE_files(fid)%fid, & ! [IN]
+                                 varname,             & ! [IN]
+                                 istep,               & ! [IN]
+                                 .true.,              & ! [IN]
+                                 error                ) ! [OUT]
 
        !--- verify and exit
        if ( error /= FILE_SUCCESS_CODE ) then
@@ -2375,8 +2328,8 @@ contains
           enddo
 
           if ( dinfo%time_units == "" ) then
-             call FILE_get_globalAttribute( fid, "time_units", time_units )
-             call FILE_get_globalAttribute( fid, "time_start", time )
+             call FILE_get_attribute( fid, "global", "time_units", time_units )
+             call FILE_get_attribute( fid, "global", "time_start", time )
              time_start(1) = time(1)
              time_end  (1) = time(1)
              step_nmax = 1
@@ -2403,7 +2356,7 @@ contains
       basename,      & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
+      rankid,        & ! (in)
       allow_missing, & ! (in) optional
       single         & ! (in) optional
       )
@@ -2413,7 +2366,7 @@ contains
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
+    integer,          intent( in)           :: rankid
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
 
@@ -2430,45 +2383,45 @@ contains
 
     single_ = .false.
 
-    mpi_myrank = myrank
-
     if ( present(single) ) single_ = single
 
     !--- search/register file
-    call FILE_open( fid,                & ! (out)
-         basename, FILE_FREAD, single_ ) ! (in)
+    call FILE_open( fid,                          & ! (out)
+                    basename, FILE_FREAD,         & ! (in)
+                    rankid=rankid, single=single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:) = 0.0_SP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 1 ) then
-       write(message,*) 'xxx rank is not 1', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 1', dinfo%rank
+       call PRC_abort
     end if
     dim_size(:) = shape(var)
     do n = 1, 1
        if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
+          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call PRC_abort
        end if
     end do
 
@@ -2476,7 +2429,8 @@ contains
          dinfo, SP,                  & ! (in)
          error                            ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
@@ -2486,7 +2440,7 @@ contains
       basename,      & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
+      rankid,        & ! (in)
       allow_missing, & ! (in) optional
       single         & ! (in) optional
       )
@@ -2496,7 +2450,7 @@ contains
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
+    integer,          intent( in)           :: rankid
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
 
@@ -2513,45 +2467,45 @@ contains
 
     single_ = .false.
 
-    mpi_myrank = myrank
-
     if ( present(single) ) single_ = single
 
     !--- search/register file
-    call FILE_open( fid,                & ! (out)
-         basename, FILE_FREAD, single_ ) ! (in)
+    call FILE_open( fid,                          & ! (out)
+                    basename, FILE_FREAD,         & ! (in)
+                    rankid=rankid, single=single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:) = 0.0_DP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 1 ) then
-       write(message,*) 'xxx rank is not 1', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 1', dinfo%rank
+       call PRC_abort
     end if
     dim_size(:) = shape(var)
     do n = 1, 1
        if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
+          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call PRC_abort
        end if
     end do
 
@@ -2559,7 +2513,8 @@ contains
          dinfo, DP,                  & ! (in)
          error                            ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
@@ -2569,7 +2524,7 @@ contains
       basename,      & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
+      rankid,        & ! (in)
       allow_missing, & ! (in) optional
       single         & ! (in) optional
       )
@@ -2579,7 +2534,7 @@ contains
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
+    integer,          intent( in)           :: rankid
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
 
@@ -2596,45 +2551,45 @@ contains
 
     single_ = .false.
 
-    mpi_myrank = myrank
-
     if ( present(single) ) single_ = single
 
     !--- search/register file
-    call FILE_open( fid,                & ! (out)
-         basename, FILE_FREAD, single_ ) ! (in)
+    call FILE_open( fid,                          & ! (out)
+                    basename, FILE_FREAD,         & ! (in)
+                    rankid=rankid, single=single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:,:) = 0.0_SP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 2 ) then
-       write(message,*) 'xxx rank is not 2', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 2', dinfo%rank
+       call PRC_abort
     end if
     dim_size(:) = shape(var)
     do n = 1, 2
        if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
+          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call PRC_abort
        end if
     end do
 
@@ -2642,7 +2597,8 @@ contains
          dinfo, SP,                  & ! (in)
          error                            ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
@@ -2652,7 +2608,7 @@ contains
       basename,      & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
+      rankid,        & ! (in)
       allow_missing, & ! (in) optional
       single         & ! (in) optional
       )
@@ -2662,7 +2618,7 @@ contains
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
+    integer,          intent( in)           :: rankid
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
 
@@ -2679,45 +2635,45 @@ contains
 
     single_ = .false.
 
-    mpi_myrank = myrank
-
     if ( present(single) ) single_ = single
 
     !--- search/register file
-    call FILE_open( fid,                & ! (out)
-         basename, FILE_FREAD, single_ ) ! (in)
+    call FILE_open( fid,                          & ! (out)
+                    basename, FILE_FREAD,         & ! (in)
+                    rankid=rankid, single=single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:,:) = 0.0_DP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 2 ) then
-       write(message,*) 'xxx rank is not 2', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 2', dinfo%rank
+       call PRC_abort
     end if
     dim_size(:) = shape(var)
     do n = 1, 2
        if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
+          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call PRC_abort
        end if
     end do
 
@@ -2725,7 +2681,8 @@ contains
          dinfo, DP,                  & ! (in)
          error                            ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
@@ -2735,7 +2692,7 @@ contains
       basename,      & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
+      rankid,        & ! (in)
       allow_missing, & ! (in) optional
       single         & ! (in) optional
       )
@@ -2745,7 +2702,7 @@ contains
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
+    integer,          intent( in)           :: rankid
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
 
@@ -2762,45 +2719,45 @@ contains
 
     single_ = .false.
 
-    mpi_myrank = myrank
-
     if ( present(single) ) single_ = single
 
     !--- search/register file
-    call FILE_open( fid,                & ! (out)
-         basename, FILE_FREAD, single_ ) ! (in)
+    call FILE_open( fid,                          & ! (out)
+                    basename, FILE_FREAD,         & ! (in)
+                    rankid=rankid, single=single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:,:,:) = 0.0_SP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 3 ) then
-       write(message,*) 'xxx rank is not 3', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 3', dinfo%rank
+       call PRC_abort
     end if
     dim_size(:) = shape(var)
     do n = 1, 3
        if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
+          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call PRC_abort
        end if
     end do
 
@@ -2808,7 +2765,8 @@ contains
          dinfo, SP,                  & ! (in)
          error                            ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
@@ -2818,7 +2776,7 @@ contains
       basename,      & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
+      rankid,        & ! (in)
       allow_missing, & ! (in) optional
       single         & ! (in) optional
       )
@@ -2828,7 +2786,7 @@ contains
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
+    integer,          intent( in)           :: rankid
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
 
@@ -2845,45 +2803,45 @@ contains
 
     single_ = .false.
 
-    mpi_myrank = myrank
-
     if ( present(single) ) single_ = single
 
     !--- search/register file
-    call FILE_open( fid,                & ! (out)
-         basename, FILE_FREAD, single_ ) ! (in)
+    call FILE_open( fid,                          & ! (out)
+                    basename, FILE_FREAD,         & ! (in)
+                    rankid=rankid, single=single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:,:,:) = 0.0_DP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 3 ) then
-       write(message,*) 'xxx rank is not 3', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 3', dinfo%rank
+       call PRC_abort
     end if
     dim_size(:) = shape(var)
     do n = 1, 3
        if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
+          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call PRC_abort
        end if
     end do
 
@@ -2891,7 +2849,8 @@ contains
          dinfo, DP,                  & ! (in)
          error                            ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
@@ -2901,7 +2860,7 @@ contains
       basename,      & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
+      rankid,        & ! (in)
       allow_missing, & ! (in) optional
       single         & ! (in) optional
       )
@@ -2911,7 +2870,7 @@ contains
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
+    integer,          intent( in)           :: rankid
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
 
@@ -2928,45 +2887,45 @@ contains
 
     single_ = .false.
 
-    mpi_myrank = myrank
-
     if ( present(single) ) single_ = single
 
     !--- search/register file
-    call FILE_open( fid,                & ! (out)
-         basename, FILE_FREAD, single_ ) ! (in)
+    call FILE_open( fid,                          & ! (out)
+                    basename, FILE_FREAD,         & ! (in)
+                    rankid=rankid, single=single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:,:,:,:) = 0.0_SP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 4 ) then
-       write(message,*) 'xxx rank is not 4', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 4', dinfo%rank
+       call PRC_abort
     end if
     dim_size(:) = shape(var)
     do n = 1, 4
        if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
+          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call PRC_abort
        end if
     end do
 
@@ -2974,7 +2933,8 @@ contains
          dinfo, SP,                  & ! (in)
          error                            ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
@@ -2984,7 +2944,7 @@ contains
       basename,      & ! (in)
       varname,       & ! (in)
       step,          & ! (in)
-      myrank,        & ! (in)
+      rankid,        & ! (in)
       allow_missing, & ! (in) optional
       single         & ! (in) optional
       )
@@ -2994,7 +2954,7 @@ contains
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: step
-    integer,          intent( in)           :: myrank
+    integer,          intent( in)           :: rankid
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
 
@@ -3011,45 +2971,45 @@ contains
 
     single_ = .false.
 
-    mpi_myrank = myrank
-
     if ( present(single) ) single_ = single
 
     !--- search/register file
-    call FILE_open( fid,                & ! (out)
-         basename, FILE_FREAD, single_ ) ! (in)
+    call FILE_open( fid,                          & ! (out)
+                    basename, FILE_FREAD,         & ! (in)
+                    rankid=rankid, single=single_ ) ! (in)
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:,:,:,:) = 0.0_DP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 4 ) then
-       write(message,*) 'xxx rank is not 4', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 4', dinfo%rank
+       call PRC_abort
     end if
     dim_size(:) = shape(var)
     do n = 1, 4
        if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call Log('E', message)
+          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+          call PRC_abort
        end if
     end do
 
@@ -3057,24 +3017,24 @@ contains
          dinfo, DP,                  & ! (in)
          error                            ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_read_realDP_4D
 
   subroutine FILE_read_var_realSP_1D( &
-      var,           & ! (out)
-      fid,           & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      allow_missing, & ! (in) optional
-      single,        & ! (in) optional
-      ntypes,        & ! (in)
-      dtype,         & ! (in)
-      start,         & ! (in)
-      count          & ! (in)
-      )
+      var,           &
+      fid,           &
+      varname,       &
+      step,          &
+      allow_missing, &
+      single,        &
+      ntypes,        &
+      dtype,         &
+      start,         &
+      count          )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
@@ -3098,66 +3058,73 @@ contains
     !---------------------------------------------------------------------------
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:) = 0.0_SP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 1 ) then
-       write(message,*) 'xxx rank is not 1', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 1', dinfo%rank
+       call PRC_abort
     end if
 
     if (present(ntypes) ) then
-       call file_read_data_par_c( var(:),                  & ! (out)
-            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-            error                                                 ) ! (out)
+       call file_read_data_c( var(:),             & ! (out)
+            dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
+            error                                        ) ! (out)
     else
        dim_size(:) = shape(var)
        do n = 1, 1
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call Log('E', message)
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:), & ! (out)
-            dinfo, SP,                  & ! (in)
-            error                            ) ! (out)
+       if ( present(start) ) then
+          call file_read_data_c( var(:),          & ! (out)
+               dinfo, SP, 0, 0, start(:), count(:), & ! (in)
+               error                                     ) ! (out)
+       else
+          call file_read_data_c( var(:), & ! (out)
+               dinfo, SP, 0, 0, -1, -1,    & ! (in)
+               error                            ) ! (out)
+       end if
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_read_var_realSP_1D
   subroutine FILE_read_var_realDP_1D( &
-      var,           & ! (out)
-      fid,           & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      allow_missing, & ! (in) optional
-      single,        & ! (in) optional
-      ntypes,        & ! (in)
-      dtype,         & ! (in)
-      start,         & ! (in)
-      count          & ! (in)
-      )
+      var,           &
+      fid,           &
+      varname,       &
+      step,          &
+      allow_missing, &
+      single,        &
+      ntypes,        &
+      dtype,         &
+      start,         &
+      count          )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
@@ -3181,66 +3148,73 @@ contains
     !---------------------------------------------------------------------------
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:) = 0.0_DP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 1 ) then
-       write(message,*) 'xxx rank is not 1', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 1', dinfo%rank
+       call PRC_abort
     end if
 
     if (present(ntypes) ) then
-       call file_read_data_par_c( var(:),                  & ! (out)
-            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-            error                                                 ) ! (out)
+       call file_read_data_c( var(:),             & ! (out)
+            dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
+            error                                        ) ! (out)
     else
        dim_size(:) = shape(var)
        do n = 1, 1
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call Log('E', message)
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:), & ! (out)
-            dinfo, DP,                  & ! (in)
-            error                            ) ! (out)
+       if ( present(start) ) then
+          call file_read_data_c( var(:),          & ! (out)
+               dinfo, DP, 0, 0, start(:), count(:), & ! (in)
+               error                                     ) ! (out)
+       else
+          call file_read_data_c( var(:), & ! (out)
+               dinfo, DP, 0, 0, -1, -1,    & ! (in)
+               error                            ) ! (out)
+       end if
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_read_var_realDP_1D
   subroutine FILE_read_var_realSP_2D( &
-      var,           & ! (out)
-      fid,           & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      allow_missing, & ! (in) optional
-      single,        & ! (in) optional
-      ntypes,        & ! (in)
-      dtype,         & ! (in)
-      start,         & ! (in)
-      count          & ! (in)
-      )
+      var,           &
+      fid,           &
+      varname,       &
+      step,          &
+      allow_missing, &
+      single,        &
+      ntypes,        &
+      dtype,         &
+      start,         &
+      count          )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
@@ -3264,66 +3238,73 @@ contains
     !---------------------------------------------------------------------------
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:,:) = 0.0_SP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 2 ) then
-       write(message,*) 'xxx rank is not 2', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 2', dinfo%rank
+       call PRC_abort
     end if
 
     if (present(ntypes) ) then
-       call file_read_data_par_c( var(:,:),                  & ! (out)
-            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-            error                                                 ) ! (out)
+       call file_read_data_c( var(:,:),             & ! (out)
+            dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
+            error                                        ) ! (out)
     else
        dim_size(:) = shape(var)
        do n = 1, 2
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call Log('E', message)
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:), & ! (out)
-            dinfo, SP,                  & ! (in)
-            error                            ) ! (out)
+       if ( present(start) ) then
+          call file_read_data_c( var(:,:),          & ! (out)
+               dinfo, SP, 0, 0, start(:), count(:), & ! (in)
+               error                                     ) ! (out)
+       else
+          call file_read_data_c( var(:,:), & ! (out)
+               dinfo, SP, 0, 0, -1, -1,    & ! (in)
+               error                            ) ! (out)
+       end if
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_read_var_realSP_2D
   subroutine FILE_read_var_realDP_2D( &
-      var,           & ! (out)
-      fid,           & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      allow_missing, & ! (in) optional
-      single,        & ! (in) optional
-      ntypes,        & ! (in)
-      dtype,         & ! (in)
-      start,         & ! (in)
-      count          & ! (in)
-      )
+      var,           &
+      fid,           &
+      varname,       &
+      step,          &
+      allow_missing, &
+      single,        &
+      ntypes,        &
+      dtype,         &
+      start,         &
+      count          )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
@@ -3347,66 +3328,73 @@ contains
     !---------------------------------------------------------------------------
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:,:) = 0.0_DP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 2 ) then
-       write(message,*) 'xxx rank is not 2', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 2', dinfo%rank
+       call PRC_abort
     end if
 
     if (present(ntypes) ) then
-       call file_read_data_par_c( var(:,:),                  & ! (out)
-            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-            error                                                 ) ! (out)
+       call file_read_data_c( var(:,:),             & ! (out)
+            dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
+            error                                        ) ! (out)
     else
        dim_size(:) = shape(var)
        do n = 1, 2
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call Log('E', message)
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:), & ! (out)
-            dinfo, DP,                  & ! (in)
-            error                            ) ! (out)
+       if ( present(start) ) then
+          call file_read_data_c( var(:,:),          & ! (out)
+               dinfo, DP, 0, 0, start(:), count(:), & ! (in)
+               error                                     ) ! (out)
+       else
+          call file_read_data_c( var(:,:), & ! (out)
+               dinfo, DP, 0, 0, -1, -1,    & ! (in)
+               error                            ) ! (out)
+       end if
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_read_var_realDP_2D
   subroutine FILE_read_var_realSP_3D( &
-      var,           & ! (out)
-      fid,           & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      allow_missing, & ! (in) optional
-      single,        & ! (in) optional
-      ntypes,        & ! (in)
-      dtype,         & ! (in)
-      start,         & ! (in)
-      count          & ! (in)
-      )
+      var,           &
+      fid,           &
+      varname,       &
+      step,          &
+      allow_missing, &
+      single,        &
+      ntypes,        &
+      dtype,         &
+      start,         &
+      count          )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
@@ -3430,66 +3418,73 @@ contains
     !---------------------------------------------------------------------------
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:,:,:) = 0.0_SP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 3 ) then
-       write(message,*) 'xxx rank is not 3', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 3', dinfo%rank
+       call PRC_abort
     end if
 
     if (present(ntypes) ) then
-       call file_read_data_par_c( var(:,:,:),                  & ! (out)
-            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-            error                                                 ) ! (out)
+       call file_read_data_c( var(:,:,:),             & ! (out)
+            dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
+            error                                        ) ! (out)
     else
        dim_size(:) = shape(var)
        do n = 1, 3
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call Log('E', message)
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:,:), & ! (out)
-            dinfo, SP,                  & ! (in)
-            error                            ) ! (out)
+       if ( present(start) ) then
+          call file_read_data_c( var(:,:,:),          & ! (out)
+               dinfo, SP, 0, 0, start(:), count(:), & ! (in)
+               error                                     ) ! (out)
+       else
+          call file_read_data_c( var(:,:,:), & ! (out)
+               dinfo, SP, 0, 0, -1, -1,    & ! (in)
+               error                            ) ! (out)
+       end if
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_read_var_realSP_3D
   subroutine FILE_read_var_realDP_3D( &
-      var,           & ! (out)
-      fid,           & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      allow_missing, & ! (in) optional
-      single,        & ! (in) optional
-      ntypes,        & ! (in)
-      dtype,         & ! (in)
-      start,         & ! (in)
-      count          & ! (in)
-      )
+      var,           &
+      fid,           &
+      varname,       &
+      step,          &
+      allow_missing, &
+      single,        &
+      ntypes,        &
+      dtype,         &
+      start,         &
+      count          )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
@@ -3513,66 +3508,73 @@ contains
     !---------------------------------------------------------------------------
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:,:,:) = 0.0_DP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 3 ) then
-       write(message,*) 'xxx rank is not 3', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 3', dinfo%rank
+       call PRC_abort
     end if
 
     if (present(ntypes) ) then
-       call file_read_data_par_c( var(:,:,:),                  & ! (out)
-            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-            error                                                 ) ! (out)
+       call file_read_data_c( var(:,:,:),             & ! (out)
+            dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
+            error                                        ) ! (out)
     else
        dim_size(:) = shape(var)
        do n = 1, 3
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call Log('E', message)
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:,:), & ! (out)
-            dinfo, DP,                  & ! (in)
-            error                            ) ! (out)
+       if ( present(start) ) then
+          call file_read_data_c( var(:,:,:),          & ! (out)
+               dinfo, DP, 0, 0, start(:), count(:), & ! (in)
+               error                                     ) ! (out)
+       else
+          call file_read_data_c( var(:,:,:), & ! (out)
+               dinfo, DP, 0, 0, -1, -1,    & ! (in)
+               error                            ) ! (out)
+       end if
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_read_var_realDP_3D
   subroutine FILE_read_var_realSP_4D( &
-      var,           & ! (out)
-      fid,           & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      allow_missing, & ! (in) optional
-      single,        & ! (in) optional
-      ntypes,        & ! (in)
-      dtype,         & ! (in)
-      start,         & ! (in)
-      count          & ! (in)
-      )
+      var,           &
+      fid,           &
+      varname,       &
+      step,          &
+      allow_missing, &
+      single,        &
+      ntypes,        &
+      dtype,         &
+      start,         &
+      count          )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
@@ -3596,66 +3598,73 @@ contains
     !---------------------------------------------------------------------------
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:,:,:,:) = 0.0_SP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 4 ) then
-       write(message,*) 'xxx rank is not 4', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 4', dinfo%rank
+       call PRC_abort
     end if
 
     if (present(ntypes) ) then
-       call file_read_data_par_c( var(:,:,:,:),                  & ! (out)
-            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-            error                                                 ) ! (out)
+       call file_read_data_c( var(:,:,:,:),             & ! (out)
+            dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
+            error                                        ) ! (out)
     else
        dim_size(:) = shape(var)
        do n = 1, 4
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call Log('E', message)
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:,:,:), & ! (out)
-            dinfo, SP,                  & ! (in)
-            error                            ) ! (out)
+       if ( present(start) ) then
+          call file_read_data_c( var(:,:,:,:),          & ! (out)
+               dinfo, SP, 0, 0, start(:), count(:), & ! (in)
+               error                                     ) ! (out)
+       else
+          call file_read_data_c( var(:,:,:,:), & ! (out)
+               dinfo, SP, 0, 0, -1, -1,    & ! (in)
+               error                            ) ! (out)
+       end if
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_read_var_realSP_4D
   subroutine FILE_read_var_realDP_4D( &
-      var,           & ! (out)
-      fid,           & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      allow_missing, & ! (in) optional
-      single,        & ! (in) optional
-      ntypes,        & ! (in)
-      dtype,         & ! (in)
-      start,         & ! (in)
-      count          & ! (in)
-      )
+      var,           &
+      fid,           &
+      varname,       &
+      step,          &
+      allow_missing, &
+      single,        &
+      ntypes,        &
+      dtype,         &
+      start,         &
+      count          )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
@@ -3679,50 +3688,58 @@ contains
     !---------------------------------------------------------------------------
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,  & ! (out)
-         fid, varname, step, .false., & ! (in)
-         error                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                  & ! (out)
+         FILE_files(fid)%fid, varname, step, .false., & ! (in)
+         error                                        ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             write(message,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
                   'varname= ',trim(varname),', step=',step
-             call Log('I', message)
-             call Log('I', 'xxx [INPUT]/[FILE_] Value is set to 0.')
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
              var(:,:,:,:) = 0.0_DP
           else
-             call Log('E', 'xxx failed to get data information :'//trim(varname))
+             write(*,*) 'xxx failed to get data information :'//trim(varname)
+             call PRC_abort
           end if
        else
-          call Log('E', 'xxx failed to get data information :'//trim(varname))
+          write(*,*) 'xxx failed to get data information :'//trim(varname)
+          call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= 4 ) then
-       write(message,*) 'xxx rank is not 4', dinfo%rank
-       call Log('E', message)
+       write(*,*) 'xxx rank is not 4', dinfo%rank
+       call PRC_abort
     end if
 
     if (present(ntypes) ) then
-       call file_read_data_par_c( var(:,:,:,:),                  & ! (out)
-            dinfo, size(shape(var)), ntypes, dtype, start, count, & ! (in)
-            error                                                 ) ! (out)
+       call file_read_data_c( var(:,:,:,:),             & ! (out)
+            dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
+            error                                        ) ! (out)
     else
        dim_size(:) = shape(var)
        do n = 1, 4
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(message,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call Log('E', message)
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:,:,:), & ! (out)
-            dinfo, DP,                  & ! (in)
-            error                            ) ! (out)
+       if ( present(start) ) then
+          call file_read_data_c( var(:,:,:,:),          & ! (out)
+               dinfo, DP, 0, 0, start(:), count(:), & ! (in)
+               error                                     ) ! (out)
+       else
+          call file_read_data_c( var(:,:,:,:), & ! (out)
+               dinfo, DP, 0, 0, -1, -1,    & ! (in)
+               error                            ) ! (out)
+       end if
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to get data value')
+       write(*,*) 'xxx failed to get data value'
+       call PRC_abort
     end if
 
     return
@@ -3732,32 +3749,28 @@ contains
   ! interface FILE_write
   !-----------------------------------------------------------------------------
   subroutine FILE_write_realSP_1D( &
-      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
+      ndims,   & ! (in)
       count,   & ! (in)
-      ndims    & ! (in)
-      )
+      start    ) ! (in)
     implicit none
 
-    real(SP), intent(in) :: var(:)
-    integer,  intent(in)           :: fid
     integer,  intent(in)           :: vid
+    real(SP), intent(in) :: var(:)
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
-    integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
     integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
-
+    integer,  intent(in), optional :: count(:)
+    integer,  intent(in), optional :: start(:)
     real(DP) :: ts, te
 
     integer :: start_(1)
 
+    integer :: fid
     integer :: error, n
-    character(len=100) :: str
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -3765,20 +3778,24 @@ contains
     ts = t_start
     te = t_end
 
+    fid = FILE_vars(vid)%fid
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
        ! In this case, start and count must be present
 
        if ( .not. present(start) ) then
-          call Log('E', 'start argument is neccessary when ndims is specified')
+          write(*,*) 'start argument is neccessary when ndims is specified'
+          call PRC_abort
        end if
        if ( .not. present(count) ) then
-          call Log('E', 'count argument is neccessary when ndims is specified')
+          write(*,*) 'count argument is neccessary when ndims is specified'
+          call PRC_abort
        end if
 
-       call file_write_data_c( fid, vid, var(:), ts, te, SP, & ! (in)
-            ndims, start, count,                                         & ! (in)
-            error                                                        ) ! (out)
+       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+            var(:), ts, te, SP,                             & ! (in)
+            ndims, start, count,                                        & ! (in)
+            error                                                       ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
@@ -3786,49 +3803,46 @@ contains
        else
           start_(:) = 1
        end if
-       call file_write_data_c( fid, vid, var(:), ts, te, SP, & ! (in)
-            1, start_, shape(var),                                  & ! (in)
-            error                                                        ) ! (out)
+       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+            var(:), ts, te, SP,                             & ! (in)
+            1, start_, shape(var),                                 & ! (in)
+            error                                                       ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_vid_count
-          if ( FILE_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(FILE_vname_list(n)), mpi_myrank
+       do n = 1, FILE_nvars
+          if ( FILE_vars(n)%vid == vid ) then
+             write(*,*) 'xxx failed to write data: ', trim(FILE_vars(n)%name)
              exit
           end if
        enddo
-       call Log('E', trim(str))
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_write_realSP_1D
   subroutine FILE_write_realDP_1D( &
-      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
+      ndims,   & ! (in)
       count,   & ! (in)
-      ndims    & ! (in)
-      )
+      start    ) ! (in)
     implicit none
 
-    real(DP), intent(in) :: var(:)
-    integer,  intent(in)           :: fid
     integer,  intent(in)           :: vid
+    real(DP), intent(in) :: var(:)
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
-    integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
     integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
-
+    integer,  intent(in), optional :: count(:)
+    integer,  intent(in), optional :: start(:)
     real(DP) :: ts, te
 
     integer :: start_(1)
 
+    integer :: fid
     integer :: error, n
-    character(len=100) :: str
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -3836,20 +3850,24 @@ contains
     ts = t_start
     te = t_end
 
+    fid = FILE_vars(vid)%fid
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
        ! In this case, start and count must be present
 
        if ( .not. present(start) ) then
-          call Log('E', 'start argument is neccessary when ndims is specified')
+          write(*,*) 'start argument is neccessary when ndims is specified'
+          call PRC_abort
        end if
        if ( .not. present(count) ) then
-          call Log('E', 'count argument is neccessary when ndims is specified')
+          write(*,*) 'count argument is neccessary when ndims is specified'
+          call PRC_abort
        end if
 
-       call file_write_data_c( fid, vid, var(:), ts, te, DP, & ! (in)
-            ndims, start, count,                                         & ! (in)
-            error                                                        ) ! (out)
+       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+            var(:), ts, te, DP,                             & ! (in)
+            ndims, start, count,                                        & ! (in)
+            error                                                       ) ! (out)
     else
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
@@ -3857,49 +3875,42 @@ contains
        else
           start_(:) = 1
        end if
-       call file_write_data_c( fid, vid, var(:), ts, te, DP, & ! (in)
-            1, start_, shape(var),                                  & ! (in)
-            error                                                        ) ! (out)
+       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+            var(:), ts, te, DP,                             & ! (in)
+            1, start_, shape(var),                                 & ! (in)
+            error                                                       ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_vid_count
-          if ( FILE_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(FILE_vname_list(n)), mpi_myrank
+       do n = 1, FILE_nvars
+          if ( FILE_vars(n)%vid == vid ) then
+             write(*,*) 'xxx failed to write data: ', trim(FILE_vars(n)%name)
              exit
           end if
        enddo
-       call Log('E', trim(str))
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_write_realDP_1D
   subroutine FILE_write_realSP_2D( &
-      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
-      count,   & ! (in)
-      ndims    & ! (in)
-      )
+      start    ) ! (in)
     implicit none
 
-    real(SP), intent(in) :: var(:,:)
-    integer,  intent(in)           :: fid
     integer,  intent(in)           :: vid
+    real(SP), intent(in) :: var(:,:)
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
-    integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
-
     real(DP) :: ts, te
 
     integer :: start_(2)
 
+    integer :: fid
     integer :: error, n
-    character(len=100) :: str
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -3907,70 +3918,48 @@ contains
     ts = t_start
     te = t_end
 
-    if ( present(ndims) ) then
-       ! history variable has been reshaped to 1D
-       ! In this case, start and count must be present
-
-       if ( .not. present(start) ) then
-          call Log('E', 'start argument is neccessary when ndims is specified')
-       end if
-       if ( .not. present(count) ) then
-          call Log('E', 'count argument is neccessary when ndims is specified')
-       end if
-
-       call file_write_data_c( fid, vid, var(:,:), ts, te, SP, & ! (in)
-            ndims, start, count,                                         & ! (in)
-            error                                                        ) ! (out)
-    else
+    fid = FILE_vars(vid)%fid
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
        else
           start_(:) = 1
        end if
-       call file_write_data_c( fid, vid, var(:,:), ts, te, SP, & ! (in)
-            2, start_, shape(var),                                  & ! (in)
-            error                                                        ) ! (out)
-    end if
+       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+            var(:,:), ts, te, SP,                             & ! (in)
+            2, start_, shape(var),                                 & ! (in)
+            error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_vid_count
-          if ( FILE_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(FILE_vname_list(n)), mpi_myrank
+       do n = 1, FILE_nvars
+          if ( FILE_vars(n)%vid == vid ) then
+             write(*,*) 'xxx failed to write data: ', trim(FILE_vars(n)%name)
              exit
           end if
        enddo
-       call Log('E', trim(str))
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_write_realSP_2D
   subroutine FILE_write_realDP_2D( &
-      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
-      count,   & ! (in)
-      ndims    & ! (in)
-      )
+      start    ) ! (in)
     implicit none
 
-    real(DP), intent(in) :: var(:,:)
-    integer,  intent(in)           :: fid
     integer,  intent(in)           :: vid
+    real(DP), intent(in) :: var(:,:)
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
-    integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
-
     real(DP) :: ts, te
 
     integer :: start_(2)
 
+    integer :: fid
     integer :: error, n
-    character(len=100) :: str
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -3978,70 +3967,48 @@ contains
     ts = t_start
     te = t_end
 
-    if ( present(ndims) ) then
-       ! history variable has been reshaped to 1D
-       ! In this case, start and count must be present
-
-       if ( .not. present(start) ) then
-          call Log('E', 'start argument is neccessary when ndims is specified')
-       end if
-       if ( .not. present(count) ) then
-          call Log('E', 'count argument is neccessary when ndims is specified')
-       end if
-
-       call file_write_data_c( fid, vid, var(:,:), ts, te, DP, & ! (in)
-            ndims, start, count,                                         & ! (in)
-            error                                                        ) ! (out)
-    else
+    fid = FILE_vars(vid)%fid
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
        else
           start_(:) = 1
        end if
-       call file_write_data_c( fid, vid, var(:,:), ts, te, DP, & ! (in)
-            2, start_, shape(var),                                  & ! (in)
-            error                                                        ) ! (out)
-    end if
+       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+            var(:,:), ts, te, DP,                             & ! (in)
+            2, start_, shape(var),                                 & ! (in)
+            error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_vid_count
-          if ( FILE_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(FILE_vname_list(n)), mpi_myrank
+       do n = 1, FILE_nvars
+          if ( FILE_vars(n)%vid == vid ) then
+             write(*,*) 'xxx failed to write data: ', trim(FILE_vars(n)%name)
              exit
           end if
        enddo
-       call Log('E', trim(str))
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_write_realDP_2D
   subroutine FILE_write_realSP_3D( &
-      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
-      count,   & ! (in)
-      ndims    & ! (in)
-      )
+      start    ) ! (in)
     implicit none
 
-    real(SP), intent(in) :: var(:,:,:)
-    integer,  intent(in)           :: fid
     integer,  intent(in)           :: vid
+    real(SP), intent(in) :: var(:,:,:)
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
-    integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
-
     real(DP) :: ts, te
 
     integer :: start_(3)
 
+    integer :: fid
     integer :: error, n
-    character(len=100) :: str
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4049,70 +4016,48 @@ contains
     ts = t_start
     te = t_end
 
-    if ( present(ndims) ) then
-       ! history variable has been reshaped to 1D
-       ! In this case, start and count must be present
-
-       if ( .not. present(start) ) then
-          call Log('E', 'start argument is neccessary when ndims is specified')
-       end if
-       if ( .not. present(count) ) then
-          call Log('E', 'count argument is neccessary when ndims is specified')
-       end if
-
-       call file_write_data_c( fid, vid, var(:,:,:), ts, te, SP, & ! (in)
-            ndims, start, count,                                         & ! (in)
-            error                                                        ) ! (out)
-    else
+    fid = FILE_vars(vid)%fid
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
        else
           start_(:) = 1
        end if
-       call file_write_data_c( fid, vid, var(:,:,:), ts, te, SP, & ! (in)
-            3, start_, shape(var),                                  & ! (in)
-            error                                                        ) ! (out)
-    end if
+       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+            var(:,:,:), ts, te, SP,                             & ! (in)
+            3, start_, shape(var),                                 & ! (in)
+            error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_vid_count
-          if ( FILE_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(FILE_vname_list(n)), mpi_myrank
+       do n = 1, FILE_nvars
+          if ( FILE_vars(n)%vid == vid ) then
+             write(*,*) 'xxx failed to write data: ', trim(FILE_vars(n)%name)
              exit
           end if
        enddo
-       call Log('E', trim(str))
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_write_realSP_3D
   subroutine FILE_write_realDP_3D( &
-      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
-      count,   & ! (in)
-      ndims    & ! (in)
-      )
+      start    ) ! (in)
     implicit none
 
-    real(DP), intent(in) :: var(:,:,:)
-    integer,  intent(in)           :: fid
     integer,  intent(in)           :: vid
+    real(DP), intent(in) :: var(:,:,:)
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
-    integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
-
     real(DP) :: ts, te
 
     integer :: start_(3)
 
+    integer :: fid
     integer :: error, n
-    character(len=100) :: str
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4120,70 +4065,48 @@ contains
     ts = t_start
     te = t_end
 
-    if ( present(ndims) ) then
-       ! history variable has been reshaped to 1D
-       ! In this case, start and count must be present
-
-       if ( .not. present(start) ) then
-          call Log('E', 'start argument is neccessary when ndims is specified')
-       end if
-       if ( .not. present(count) ) then
-          call Log('E', 'count argument is neccessary when ndims is specified')
-       end if
-
-       call file_write_data_c( fid, vid, var(:,:,:), ts, te, DP, & ! (in)
-            ndims, start, count,                                         & ! (in)
-            error                                                        ) ! (out)
-    else
+    fid = FILE_vars(vid)%fid
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
        else
           start_(:) = 1
        end if
-       call file_write_data_c( fid, vid, var(:,:,:), ts, te, DP, & ! (in)
-            3, start_, shape(var),                                  & ! (in)
-            error                                                        ) ! (out)
-    end if
+       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+            var(:,:,:), ts, te, DP,                             & ! (in)
+            3, start_, shape(var),                                 & ! (in)
+            error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_vid_count
-          if ( FILE_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(FILE_vname_list(n)), mpi_myrank
+       do n = 1, FILE_nvars
+          if ( FILE_vars(n)%vid == vid ) then
+             write(*,*) 'xxx failed to write data: ', trim(FILE_vars(n)%name)
              exit
           end if
        enddo
-       call Log('E', trim(str))
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_write_realDP_3D
   subroutine FILE_write_realSP_4D( &
-      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
-      count,   & ! (in)
-      ndims    & ! (in)
-      )
+      start    ) ! (in)
     implicit none
 
-    real(SP), intent(in) :: var(:,:,:,:)
-    integer,  intent(in)           :: fid
     integer,  intent(in)           :: vid
+    real(SP), intent(in) :: var(:,:,:,:)
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
-    integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
-
     real(DP) :: ts, te
 
     integer :: start_(4)
 
+    integer :: fid
     integer :: error, n
-    character(len=100) :: str
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4191,70 +4114,48 @@ contains
     ts = t_start
     te = t_end
 
-    if ( present(ndims) ) then
-       ! history variable has been reshaped to 1D
-       ! In this case, start and count must be present
-
-       if ( .not. present(start) ) then
-          call Log('E', 'start argument is neccessary when ndims is specified')
-       end if
-       if ( .not. present(count) ) then
-          call Log('E', 'count argument is neccessary when ndims is specified')
-       end if
-
-       call file_write_data_c( fid, vid, var(:,:,:,:), ts, te, SP, & ! (in)
-            ndims, start, count,                                         & ! (in)
-            error                                                        ) ! (out)
-    else
+    fid = FILE_vars(vid)%fid
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
        else
           start_(:) = 1
        end if
-       call file_write_data_c( fid, vid, var(:,:,:,:), ts, te, SP, & ! (in)
-            4, start_, shape(var),                                  & ! (in)
-            error                                                        ) ! (out)
-    end if
+       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+            var(:,:,:,:), ts, te, SP,                             & ! (in)
+            4, start_, shape(var),                                 & ! (in)
+            error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_vid_count
-          if ( FILE_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(FILE_vname_list(n)), mpi_myrank
+       do n = 1, FILE_nvars
+          if ( FILE_vars(n)%vid == vid ) then
+             write(*,*) 'xxx failed to write data: ', trim(FILE_vars(n)%name)
              exit
           end if
        enddo
-       call Log('E', trim(str))
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_write_realSP_4D
   subroutine FILE_write_realDP_4D( &
-      fid,     & ! (in)
       vid,     & ! (in)
       var,     & ! (in)
       t_start, & ! (in)
       t_end,   & ! (in)
-      start,   & ! (in)
-      count,   & ! (in)
-      ndims    & ! (in)
-      )
+      start    ) ! (in)
     implicit none
 
-    real(DP), intent(in) :: var(:,:,:,:)
-    integer,  intent(in)           :: fid
     integer,  intent(in)           :: vid
+    real(DP), intent(in) :: var(:,:,:,:)
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
-    integer,  intent(in), optional :: count(:) ! when var has been reshaped to 1D
-    integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
-
     real(DP) :: ts, te
 
     integer :: start_(4)
 
+    integer :: fid
     integer :: error, n
-    character(len=100) :: str
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4262,39 +4163,25 @@ contains
     ts = t_start
     te = t_end
 
-    if ( present(ndims) ) then
-       ! history variable has been reshaped to 1D
-       ! In this case, start and count must be present
-
-       if ( .not. present(start) ) then
-          call Log('E', 'start argument is neccessary when ndims is specified')
-       end if
-       if ( .not. present(count) ) then
-          call Log('E', 'count argument is neccessary when ndims is specified')
-       end if
-
-       call file_write_data_c( fid, vid, var(:,:,:,:), ts, te, DP, & ! (in)
-            ndims, start, count,                                         & ! (in)
-            error                                                        ) ! (out)
-    else
+    fid = FILE_vars(vid)%fid
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
        else
           start_(:) = 1
        end if
-       call file_write_data_c( fid, vid, var(:,:,:,:), ts, te, DP, & ! (in)
-            4, start_, shape(var),                                  & ! (in)
-            error                                                        ) ! (out)
-    end if
+       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+            var(:,:,:,:), ts, te, DP,                             & ! (in)
+            4, start_, shape(var),                                 & ! (in)
+            error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_vid_count
-          if ( FILE_vid_list(n) == vid ) then
-             write(str,*) 'xxx failed to write data: ', trim(FILE_vname_list(n)), mpi_myrank
+       do n = 1, FILE_nvars
+          if ( FILE_vars(n)%vid == vid ) then
+             write(*,*) 'xxx failed to write data: ', trim(FILE_vars(n)%name)
              exit
           end if
        enddo
-       call Log('E', trim(str))
+       call PRC_abort
     end if
 
     return
@@ -4302,9 +4189,7 @@ contains
 
   !-----------------------------------------------------------------------------
   ! exit netCDF define mode and enter data mode
-  subroutine FILE_enddef( &
-       fid & ! (in)
-       )
+  subroutine FILE_enddef( fid )
     implicit none
 
     integer, intent(in) :: fid
@@ -4314,27 +4199,17 @@ contains
 
     if ( fid < 0 ) return
 
-    do n = 1, FILE_fid_count-1
-       if ( FILE_fid_list(n) == fid ) exit
-    end do
-    if ( fid .NE. FILE_fid_list(n) ) then
-       write(message,*) 'xxx in FILE_EndDef invalid fid' , fid
-       call Log('E', message)
-    end if
-
-    call file_enddef_c( fid, error )
+    call file_enddef_c( FILE_files(fid)%fid, error )
 
     if ( error == FILE_SUCCESS_CODE ) then
 
-       call Log("I",'')
-       write(message,'(A,I3.3,2A)') &
-       '###### FILE_ end define mode       : No.', FILE_fid_list(n), ', name = ', trim(FILE_fname_list(n))
-       call Log("I",message)
+       if (IO_L) write(IO_FID_LOG,*)
+       if (IO_L) write(IO_FID_LOG,'(A,I3.3,2A)') &
+            '###### FILE_ end define mode       : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     else
-
-       call Log('E', 'xxx failed to exit define mode')
-
+       write(*,*) 'xxx failed to exit define mode'
+       call PRC_abort
     end if
 
     return
@@ -4355,28 +4230,17 @@ contains
 
     if ( fid < 0 ) return
 
-    do n = 1, FILE_fid_count-1
-       if ( FILE_fid_list(n) == fid ) exit
-    end do
-    if ( fid .NE. FILE_fid_list(n) ) then
-       write(message,*) 'xxx in FILE_AttachBuffer invalid fid' , fid
-       call Log('E', message)
-    end if
-
-    call file_attach_buffer_c( fid, buf_amount, error )
+    call file_attach_buffer_c( FILE_files(fid)%fid, buf_amount, error )
 
     if ( error == FILE_SUCCESS_CODE ) then
 
-       call Log("I",'')
-       write(message,'(A,I3.3,3A,I10)') &
-       '###### FILE_ attach buffer         : No.', FILE_fid_list(n), ', name = ', trim(FILE_fname_list(n)), &
-                                                                    ', size = ', buf_amount
-       call Log("I",message)
-
+       if (IO_L) write(IO_FID_LOG,*)
+       if (IO_L) write(IO_FID_LOG,'(A,I3.3,3A,I10)') &
+            '###### FILE_ attach buffer         : No.', fid, ', name = ', trim(FILE_files(fid)%name), &
+            ', size = ', buf_amount
     else
-
-       call Log('E', 'xxx failed to attach buffer in PnetCDF')
-
+       write(*,*) 'xxx failed to attach buffer in PnetCDF'
+       call PRC_abort
     end if
 
     return
@@ -4395,29 +4259,19 @@ contains
 
     if ( fid < 0 ) return
 
-    do n = 1, FILE_fid_count-1
-       if ( FILE_fid_list(n) == fid ) exit
-    end do
-    if ( n == FILE_fid_count ) return  ! already closed
+    if ( FILE_files(fid)%fid < 0 ) return  ! already closed
 
-    if ( fid .NE. FILE_fid_list(n) ) then
-       write(message,*) 'xxx in FILE_DetachBuffer invalid fid' , fid
-       call Log('E', message)
-    end if
-
-    call file_detach_buffer_c( fid, error )
+    call file_detach_buffer_c( FILE_files(fid)%fid, error )
 
     if ( error == FILE_SUCCESS_CODE ) then
 
-       call Log("I",'')
-       write(message,'(A,I3.3,2A)') &
-       '###### FILE_ detach buffer         : No.', FILE_fid_list(n), ', name = ', trim(FILE_fname_list(n))
-       call Log("I",message)
+       if (IO_L) write(IO_FID_LOG,*)
+       if (IO_L) write(IO_FID_LOG,'(A,I3.3,2A)') &
+            '###### FILE_ detach buffer         : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     else
-
-       call Log('E', 'xxx failed to detach buffer in PnetCDF')
-
+       write(*,*) 'xxx failed to detach buffer in PnetCDF'
+       call PRC_abort
     end if
 
     return
@@ -4425,9 +4279,7 @@ contains
 
   !-----------------------------------------------------------------------------
   ! This subroutine is used when PnetCDF I/O method is enabled
-  subroutine FILE_flush( &
-       fid & ! (in)
-       )
+  subroutine FILE_flush( fid )
     implicit none
 
     integer, intent(in) :: fid
@@ -4436,40 +4288,27 @@ contains
     !---------------------------------------------------------------------------
 
     if ( fid < 0 ) return
-    if ( FILE_fid_count == 1 ) return
 
-    do n = 1, FILE_fid_count-1
-       if ( FILE_fid_list(n) == fid ) exit
-    end do
-    if ( n == FILE_fid_count ) return  ! already closed
+    if ( FILE_files(fid)%fid < 0 ) return  ! already closed
 
-    if ( fid .NE. FILE_fid_list(n) ) then
-       write(message,*) 'xxx in FILE_Flush invalid fid' , fid
-       call Log('E', message)
-    end if
-
-    call file_flush_c( fid, error )
+    call file_flush_c( FILE_files(fid)%fid, error )
 
     if ( error == FILE_SUCCESS_CODE ) then
 
-       call Log("I",'')
-       write(message,'(A,I3.3,2A)') &
-       '###### FILE_ flush                 : No.', FILE_fid_list(n), ', name = ', trim(FILE_fname_list(n))
-       call Log("I",message)
+       if (IO_L) write(IO_FID_LOG,*)
+       if (IO_L) write(IO_FID_LOG,'(A,I3.3,2A)') &
+            '###### FILE_ flush                 : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     else
-
-       call Log('E', 'xxx failed to flush PnetCDF pending requests')
-
+       write(*,*) 'xxx failed to flush PnetCDF pending requests'
+       call PRC_abort
     end if
 
     return
   end subroutine FILE_flush
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_close( &
-       fid & ! (in)
-       )
+  subroutine FILE_close( fid )
     implicit none
 
     integer, intent(in) :: fid
@@ -4481,35 +4320,30 @@ contains
 
     if ( fid < 0 ) return
 
-    do n = 1, FILE_fid_count-1
-       if ( FILE_fid_list(n) == fid ) exit
-    end do
-    if ( n == FILE_fid_count ) return  ! already closed
+    if ( FILE_files(fid)%fid < 0 ) return  ! already closed
 
-    if ( fid /= FILE_fid_list(n) ) then
-       write(message,*) 'xxx in FILE_Close invalid fid ', fid
-       call Log('E', message)
-    end if
-
-    call file_close_c( fid, error )
+    call file_close_c( FILE_files(fid)%fid, error )
 
     if ( error == FILE_SUCCESS_CODE ) then
 
-       call Log("I",'')
-       write(message,'(A,I3.3,2A)') &
-       '###### FILE_ close                 : No.', FILE_fid_list(n), ', name = ', trim(FILE_fname_list(n))
-       call Log("I",message)
+       if (IO_L) write(IO_FID_LOG,*)
+       if (IO_L) write(IO_FID_LOG,'(A,I3.3,2A)') &
+            '###### FILE_ close                 : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     elseif( error /= FILE_ALREADY_CLOSED_CODE ) then
-
-       call Log('E', 'xxx failed to close file')
+       write(*,*) 'xxx failed to close file'
+       call PRC_abort
 
     end if
 
-    do n = 1, FILE_fid_count-1
-       if ( FILE_fid_list(n) == fid ) then
-          FILE_fid_list(n) = -1
-          FILE_fname_list(n) = ''
+    FILE_files(fid)%fid = -1
+    FILE_files(fid)%name = ''
+    FILE_files(fid)%aggregate = .false.
+
+    do n = 1, FILE_nvars
+       if ( FILE_vars(n)%fid == fid ) then
+          FILE_vars(n)%vid = -1
+          FILE_vars(n)%name = ''
        end if
     end do
 
@@ -4522,8 +4356,8 @@ contains
     integer n
     !---------------------------------------------------------------------------
 
-    do n = 1, FILE_fid_count-1
-       call FILE_close( FILE_fid_list(n) )
+    do n = 1, FILE_nfiles
+       call FILE_close( n )
     enddo
 
     return
@@ -4536,12 +4370,12 @@ contains
        fname,    & ! (out)
        basename, & ! (in)
        prefix,   & ! (in)
-       myrank,   & ! (in)
+       rankid,   & ! (in)
        len       ) ! (in)
     character(len=*), intent(out) :: fname
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: prefix
-    integer,          intent( in) :: myrank
+    integer,          intent( in) :: rankid
     integer,          intent( in) :: len
 
     !                           12345678901234567
@@ -4549,12 +4383,13 @@ contains
     !---------------------------------------------------------------------------
 
     if ( len < 1 .or. len > 9 ) then
-       call Log('E', 'xxx len is invalid')
+       write(*,*) 'xxx [FILE_make_fname] len is invalid'
+       call PRC_abort
     end if
 
     write(fmt(14:14),'(I1)') len
     write(fmt(16:16),'(I1)') len
-    write(fname, fmt) trim(basename), trim(prefix), myrank
+    write(fname, fmt) trim(basename), trim(prefix), rankid
 
     return
   end subroutine FILE_make_fname
@@ -4564,17 +4399,20 @@ contains
       existed,    &
       basename,   &
       mode,       &
+      rankid,     &
       single,     &
-      comm        )
-    use MPI, only : MPI_COMM_NULL, MPI_COMM_SELF
+      mpi_comm    )
+    use MPI, only: &
+      MPI_COMM_NULL
     implicit none
 
     integer,          intent(out) :: fid
     logical,          intent(out) :: existed
     character(len=*), intent( in) :: basename
     integer,          intent( in) :: mode
+    integer,          intent( in) :: rankid
     logical,          intent( in) :: single
-    integer,          intent( in), optional :: comm
+    integer,          intent( in), optional :: mpi_comm
 
     character(len=FILE_HSHORT) :: rwname(0:2)
     data rwname / 'READ','WRITE','APPEND' /
@@ -4582,27 +4420,33 @@ contains
     character(len=FILE_HLONG) :: fname
     integer                   :: n
 
+    logical :: aggregate
+    integer :: cfid
     integer :: error
-    integer :: comm_
+    integer :: mpi_comm_
     !---------------------------------------------------------------------------
 
-    !--- register new file and open
-    comm_ = MPI_COMM_NULL
-    if ( present(comm) ) comm_ = comm
-    if ( comm_ .NE. MPI_COMM_NULL ) then
-       ! parallel I/O on a single shared netCDF file
+    !--- check aggregate (parallel I/O on a single shared netCDF file)
+    mpi_comm_ = MPI_COMM_NULL
+    if ( present(mpi_comm) ) mpi_comm_ = mpi_comm
+
+    aggregate = ( mpi_comm_ .ne. MPI_COMM_NULL )
+
+    if ( aggregate ) then
        fname = basename
-       comm_ = comm
     elseif ( single ) then
        fname = trim(basename)//'.peall'
     else
-       call FILE_make_fname(fname,trim(basename),'pe',mpi_myrank,6)
+       call FILE_make_fname(fname,trim(basename),'pe',rankid,6)
     endif
 
     !--- search existing file
     fid = -1
-    do n = 1, FILE_fid_count-1
-       if ( fname==FILE_fname_list(n) ) fid = FILE_fid_list(n)
+    do n = 1, FILE_nfiles
+       if ( fname == FILE_files(n)%name ) then
+          fid = n
+          exit
+       end if
     enddo
 
     if ( fid >= 0 ) then
@@ -4610,27 +4454,57 @@ contains
        return
     end if
 
-    call file_open_c( fid,   & ! (out)
-         fname, mode, comm_, & ! (in)
-         error               ) ! (out)
+    call file_open_c( cfid,                   & ! (out)
+                      fname, mode, mpi_comm_, & ! (in)
+                      error                   ) ! (out)
 
     if ( error /= FILE_SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to open file :'//trim(fname)//'.nc')
+       write(*,*) 'xxx failed to open file :'//trim(fname)//'.nc'
+       call PRC_abort
     end if
 
-    call Log("I",'')
-    write(message,'(A,A6,A,I3.3,2A)') &
-    '###### FILE_ registration (', trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
-    call Log("I",message)
+    if (IO_L) write(IO_FID_LOG,*)
+    if (IO_L) write(IO_FID_LOG,'(A,A6,A,I3.3,2A)') &
+         '###### FILE_ registration (', trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
 
-    FILE_fname_list(FILE_fid_count) = trim(fname)
-    FILE_fid_list  (FILE_fid_count) = fid
-    FILE_fid_count                  = FILE_fid_count + 1
+    FILE_nfiles = FILE_nfiles + 1
+    fid = FILE_nfiles
+    FILE_files(fid)%name      = fname
+    FILE_files(fid)%fid       = cfid
+    FILE_files(fid)%aggregate = aggregate
 
     existed = .false.
 
     return
   end subroutine FILE_get_fid
+
+  !-----------------------------------------------------------------------------
+  !> get unit of time
+  !-----------------------------------------------------------------------------
+  subroutine FILE_get_CFtunits(tunits, date)
+    implicit none
+
+    character(len=*), intent(out) :: tunits
+    integer,          intent(in)  :: date(6)
+    !---------------------------------------------------------------------------
+
+    write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', date
+
+    return
+  end subroutine FILE_get_CFtunits
+
+  function FILE_get_aggregate( fid )
+    integer, intent(in) :: fid
+    logical :: FILE_get_aggregate
+
+    if ( fid < 0 ) then
+       FILE_get_aggregate = .false.
+    else
+       FILE_get_aggregate = FILE_files(fid)%aggregate
+    end if
+
+    return
+  end function FILE_get_aggregate
 
 end module scale_file
 !-------------------------------------------------------------------------------

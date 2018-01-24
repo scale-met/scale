@@ -238,24 +238,24 @@ EOF
 if [ ${#HIST_ITEMS_SNAPSHOT_2D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_SNAPSHOT_2D[*]}
   do
-    echo "&HISTORY_ITEM item=\"${VAR}\" /" >> param.history.conf
+    echo "&HISTORY_ITEM name=\"${VAR}\" /" >> param.history.conf
   done
 fi
 if [ ${#HIST_ITEMS_SNAPSHOT_3D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_SNAPSHOT_3D[*]}
   do
-    echo "&HISTORY_ITEM item=\"${VAR}\", tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
+    echo "&HISTORY_ITEM name=\"${VAR}\", tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
   done
 fi
 if [ ${#HIST_ITEMS_AVERAGE_2D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_AVERAGE_2D[*]}
   do
-    echo "&HISTORY_ITEM item=\"${VAR}\", taverage=.true. /" >> param.history.conf
+    echo "&HISTORY_ITEM name=\"${VAR}\", taverage=.true. /" >> param.history.conf
   done
 fi
 if [ ${#HIST_ITEMS_AVERAGE_3D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_AVERAGE_3D[*]}
   do
-    echo "&HISTORY_ITEM item=\"${VAR}\", taverage=.true., tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
+    echo "&HISTORY_ITEM name=\"${VAR}\", taverage=.true., tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
   done
 fi

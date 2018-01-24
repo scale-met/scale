@@ -205,8 +205,8 @@ contains
        DENS_p, TEMP_p, BUOY_p, QV_p )
     use scale_process, only: &
        PRC_abort
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     implicit none
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
@@ -293,10 +293,10 @@ contains
 
     if ( error ) call PRC_abort
 
-    call HIST_in( P_DENS(:,:,:), 'DENS_parcel', 'density profile in lifting parcel',     'kg/m3' )
-    call HIST_in( P_TEMP(:,:,:), 'TEMP_parcel', 'temperature profile in lifting parcel', 'K'     )
-    call HIST_in( P_BUOY(:,:,:), 'BUOY_parcel', 'buoyancy profile in lifting parcel',    'm/s2'  )
-    call HIST_in( P_QV  (:,:,:), 'QV_parcel',   'humidity profile in lifting parcel',    'kg/kg' )
+    call FILE_HISTORY_in( P_DENS(:,:,:), 'DENS_parcel', 'density profile in lifting parcel',     'kg/m3' )
+    call FILE_HISTORY_in( P_TEMP(:,:,:), 'TEMP_parcel', 'temperature profile in lifting parcel', 'K'     )
+    call FILE_HISTORY_in( P_BUOY(:,:,:), 'BUOY_parcel', 'buoyancy profile in lifting parcel',    'm/s2'  )
+    call FILE_HISTORY_in( P_QV  (:,:,:), 'QV_parcel',   'humidity profile in lifting parcel',    'kg/kg' )
 
     if ( .not. present(DENS_p) ) deallocate( P_DENS )
     if ( .not. present(TEMP_p) ) deallocate( P_TEMP )

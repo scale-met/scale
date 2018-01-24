@@ -40,6 +40,7 @@ makedir:
 	mkdir -p $(BUILD_DIR)
 
 makelib:
+	$(MAKE) -C $(DCUTILSDIR)
 	$(MAKE) -C $(SCALELIBDIR)/src BUILD_DIR=$(BUILD_DIR)
 
 makebin: $(BINDIR)/$(BINNAME)
