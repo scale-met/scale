@@ -342,7 +342,7 @@ contains
        endif
 
        select case(varname_file(n))
-       case('z','zh','oz','ozh','lz','lzh','uz','uzh',                                                    &
+       case('z','zh','oz','ozh','lz','lzh','uz','uzh','pressure',                                         &
             'CZ','FZ','CDZ','FDZ','CBFZ','FBFZ','OCZ','OFZ','OCDZ','LCZ','LFZ','LCDZ','UCZ','UFZ','UCDZ', &
             'x','xh','y','yh',                                                                            &
             'CX','CY','FX','FY','CDX','CDY','FDX','FDY','CBFX','CBFY','FBFX','FBFY',                      &
@@ -906,7 +906,7 @@ contains
        FILE_Add_AssociatedVariable
     use scale_const, &
        UNDEF => CONST_UNDEF
-    use scale_fileio, only: &
+    use scale_file_cartesC, only: &
        axisattinfo, &
        mappinginfo
     use mod_sno_h, only: &

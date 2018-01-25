@@ -342,7 +342,7 @@ contains
     integer  :: next_date(6) !< date            (time=t+1)
     real(DP) :: next_ms      !< subsecond       (time=t+1)
 
-    logical  :: do_output
+    logical  :: do_output, finalize, add_rm_attr
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -446,6 +446,7 @@ contains
        timeave_counter = timeave_counter + 1
 
        if ( timeave_counter == 1 ) then
+          now_ms      = 0.0_RP
           now_date(:) = timeave_refdate(:)
           now_date(3) = now_date(3) - 1
 
@@ -462,6 +463,7 @@ contains
        endif
 
        if ( do_output ) then
+          now_ms      = 0.0_RP
           now_date(:) = timeave_refdate(:)
 
           call CALENDAR_date2daysec( now_day,  now_sec,               & ! [OUT]
@@ -477,6 +479,7 @@ contains
        timeave_counter = timeave_counter + 1
 
        if ( timeave_counter == 1 ) then
+          now_ms      = 0.0_RP
           now_date(:) = timeave_refdate(:)
           now_date(2) = now_date(2) - 1
           now_date(3) = 1
@@ -493,6 +496,7 @@ contains
        endif
 
        if ( do_output ) then
+          now_ms      = 0.0_RP
           now_date(:) = timeave_refdate(:)
           now_date(3) = 1
 
@@ -509,6 +513,7 @@ contains
        timeave_counter = timeave_counter + 1
 
        if ( timeave_counter == 1 ) then
+          now_ms      = 0.0_RP
           now_date(:) = timeave_refdate(:)
           now_date(1) = now_date(1) - 1
           now_date(2) = 1
@@ -525,6 +530,7 @@ contains
        endif
 
        if ( do_output ) then
+          now_ms      = 0.0_RP
           now_date(:) = timeave_refdate(:)
           now_date(2) = 1
           now_date(3) = 1
@@ -592,11 +598,16 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)') '++ output tave = ', avgdinfo%step_nmax
 
+       finalize    = ( nowstep == dinfo%step_nmax )
+       add_rm_attr = .true.
+
        call SNO_vars_write( dirpath,                    & ! [IN] from namelist
                             basename,                   & ! [IN] from namelist
                             output_grads,               & ! [IN] from namelist
                             nowrank,                    & ! [IN]
                             avgdinfo%step_nmax,         & ! [IN]
+                            finalize,                   & ! [IN]
+                            add_rm_attr,                & ! [IN]
                             nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
                             nhalos_x,     nhalos_y,     & ! [IN] from SNO_file_getinfo
                             hinfo,                      & ! [IN] from SNO_file_getinfo

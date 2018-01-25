@@ -829,6 +829,8 @@ contains
        output_grads,  &
        nowrank,       &
        nowstep,       &
+       finalize,      &
+       add_rm_attr,   &
        nprocs_x_out,  &
        nprocs_y_out,  &
        nhalos_x,      &
@@ -851,6 +853,8 @@ contains
     logical,          intent(in)    :: output_grads
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
+    logical,          intent(in)    :: finalize                              ! finalize in this step?
+    logical,          intent(in)    :: add_rm_attr                           ! add SCALE-RM specific attributes?
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (output)
     integer,          intent(in)    :: nprocs_y_out                          ! y length of 2D processor topology  (output)
     integer,          intent(in)    :: nhalos_x                              ! number of x-axis halo grids        (global domain)
@@ -865,6 +869,7 @@ contains
     if ( output_grads ) then
        call SNO_grads_write( dirpath,  & ! [IN]
                              nowstep,  & ! [IN]
+                             finalize, & ! [IN]
                              hinfo,    & ! [IN]
                              naxis,    & ! [IN]
                              ainfo(:), & ! [IN]
@@ -875,6 +880,7 @@ contains
                                    basename,                   & ! [IN]
                                    nowrank,                    & ! [IN]
                                    nowstep,                    & ! [IN]
+                                   add_rm_attr,                & ! [IN]
                                    nprocs_x_out, nprocs_y_out, & ! [IN]
                                    nhalos_x,     nhalos_y,     & ! [IN]
                                    hinfo,                      & ! [IN]
@@ -893,6 +899,7 @@ contains
        basename,      &
        nowrank,       &
        nowstep,       &
+       add_rm_attr,   &
        nprocs_x_out,  &
        nprocs_y_out,  &
        nhalos_x,      &
@@ -928,6 +935,7 @@ contains
     character(len=*), intent(in)    :: basename                              ! basename of file                   (output)
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
+    logical,          intent(in)    :: add_rm_attr                           ! add SCALE-RM specific attributes?
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (output)
     integer,          intent(in)    :: nprocs_y_out                          ! y length of 2D processor topology  (output)
     integer,          intent(in)    :: nhalos_x                              ! number of x-axis halo grids        (global domain)
@@ -940,7 +948,7 @@ contains
 
     character(len=H_LONG) :: basename_mod
     integer               :: fid
-    logical               :: fileexisted
+    logical               :: fileexisted, varexisted
     integer               :: vid
     real(SP), allocatable :: VAR_1d_SP(:), VAR_2d_SP(:,:), VAR_3d_SP(:,:,:)
     real(DP), allocatable :: VAR_1d_DP(:), VAR_2d_DP(:,:), VAR_3d_DP(:,:,:)
@@ -972,16 +980,17 @@ contains
                              ainfo(:), & ! [IN]
                              debug     ) ! [IN]
 
-       call SNO_attributes_write( fid,          & ! [IN]
-                                  nowrank,      & ! [IN]
-                                  nprocs_x_out, & ! [IN]
-                                  nprocs_y_out, & ! [IN]
-                                  nhalos_x,     & ! [IN]
-                                  nhalos_y,     & ! [IN]
-                                  hinfo,        & ! [IN]
-                                  dinfo,        & ! [IN]
-                                  debug         ) ! [IN]
-
+       if ( add_rm_attr ) then
+          call SNO_attributes_write( fid,          & ! [IN]
+                                     nowrank,      & ! [IN]
+                                     nprocs_x_out, & ! [IN]
+                                     nprocs_y_out, & ! [IN]
+                                     nhalos_x,     & ! [IN]
+                                     nhalos_y,     & ! [IN]
+                                     hinfo,        & ! [IN]
+                                     dinfo,        & ! [IN]
+                                     debug         ) ! [IN]
+       endif
     endif
 
     if ( dinfo%dt > 0.0_DP ) then
@@ -993,6 +1002,7 @@ contains
                                dinfo%dim_name,     & ! [IN]
                                dinfo%datatype,     & ! [IN]
                                vid,                & ! [OUT]
+                               varexisted,         & ! [OUT]
                                time_int = dinfo%dt ) ! [IN]
     else
        call FILE_Def_Variable( fid,               & ! [IN]
@@ -1002,14 +1012,17 @@ contains
                                dinfo%dim_rank,    & ! [IN]
                                dinfo%dim_name,    & ! [IN]
                                dinfo%datatype,    & ! [IN]
-                               vid                ) ! [OUT]
+                               vid,               & ! [OUT]
+                               varexisted         ) ! [OUT]
     endif
 
     if ( hinfo%minfo_mapping_name /= "" ) then
        call FILE_Set_Attribute( fid, dinfo%varname, "grid_mapping", hinfo%minfo_mapping_name )
     endif
 
-    call FILE_EndDef( fid )
+    if ( .NOT. varexisted ) then ! do below only once when file is created
+       call FILE_enddef( fid )
+    endif
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
 

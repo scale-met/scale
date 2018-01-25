@@ -135,9 +135,9 @@ program sno
   integer                 :: jpos                        ! offset of j-index
 
   ! Plugins
-  logical                 :: do_output
   logical                 :: plugin_timeave
 
+  logical :: do_output, finalize, add_rm_attr
   integer :: px, py, p
   integer :: t, v
   integer :: ierr
@@ -364,11 +364,16 @@ program sno
                                                                    dinfo(v),                   & ! [IN] from SNO_vars_getinfo
                                                                    debug                       ) ! [IN]
                  if ( do_output ) then
+                    finalize    = ( t == dinfo(v)%step_nmax )
+                    add_rm_attr = .true.
+
                     call SNO_vars_write( dirpath_out,                & ! [IN] from namelist
                                          basename_out,               & ! [IN] from namelist
                                          output_grads,               & ! [IN] from namelist
                                          p,                          & ! [IN]
                                          t,                          & ! [IN]
+                                         finalize,                   & ! [IN]
+                                         add_rm_attr,                & ! [IN]
                                          nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
                                          nhalos_x,     nhalos_y,     & ! [IN] from SNO_file_getinfo
                                          hinfo,                      & ! [IN] from SNO_file_getinfo

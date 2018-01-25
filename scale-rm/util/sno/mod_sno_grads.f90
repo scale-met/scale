@@ -80,13 +80,14 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine SNO_grads_write( &
-       dirpath, &
-       nowstep, &
-       hinfo,   &
-       naxis,   &
-       ainfo,   &
-       dinfo,   &
-       debug    )
+       dirpath,  &
+       nowstep,  &
+       finalize, &
+       hinfo,    &
+       naxis,    &
+       ainfo,    &
+       dinfo,    &
+       debug     )
     use scale_process, only: &
        PRC_MPIstop
     use mod_sno_h, only: &
@@ -97,6 +98,7 @@ contains
 
     character(len=*), intent(in)  :: dirpath                               ! directory path                     (output)
     integer,          intent(in)  :: nowstep                               ! current step                       (output)
+    logical,          intent(in)  :: finalize                              ! finalize in this step?
     type(commoninfo), intent(in)  :: hinfo                                 ! common information                 (input)
     integer,          intent(in)  :: naxis                                 ! number of axis variables           (input)
     type(axisinfo),   intent(in)  :: ainfo(naxis)                          ! axis information                   (input)
@@ -166,7 +168,7 @@ contains
 
 
     ! Close data file
-    if ( nowstep == dinfo%step_nmax ) then
+    if ( finalize ) then
        deallocate( TMPDATA )
 
        close(GRADS_grd_fid)
@@ -297,7 +299,7 @@ contains
              dlon = dx / ( CONST_RADIUS * cos(clat) ) / CONST_D2R
 
              if    ( hinfo%minfo_mapping_name == 'lambert_conformal_conic' ) then
-                imax_ = int(imax*0.9_RP)
+                imax_ = int(imax*1.1_RP)
                 write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'XDEF ', imax_, ' LINEAR', lonstart, dlon
              elseif( hinfo%minfo_mapping_name == 'polar_stereographic' ) then
                 write(fid,'(A)') 'XDEF   720 LINEAR -179.5 0.5'
