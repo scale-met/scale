@@ -179,7 +179,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_file_getinfo] Get process & horizontal grid info from input file'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Basename of input file : ', trim(basename)
 
     if ( ismaster ) then
        nowrank = 0 ! first file
@@ -265,6 +264,7 @@ contains
     nprocs_in   = nprocs_x_in * nprocs_y_in
 
     if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Process info ***'
     if( IO_L ) write(IO_FID_LOG,*) '*** # of PEs (input  file)        : ', nprocs_in, '(', nprocs_x_in, 'x', nprocs_y_in, ')'
 
     !--- horizontal grid management
@@ -288,7 +288,7 @@ contains
     ngrids_out      = ngrids_x_out    * ngrids_y_out
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Grid management : horizontal'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Grid info (horizontal) ***'
     if( IO_L ) write(IO_FID_LOG,*) '*** # of total grids           without halo : ', &
                                    ngrids    , '(', ngrids_x_nohalo, 'x', ngrids_y_nohalo, ')'
     if( IO_L ) write(IO_FID_LOG,*) '*** # of grids per input  file without halo : ', &
@@ -449,15 +449,15 @@ contains
     call MPI_BCAST( hinfo%minfo_standard_parallel                    (1), 2      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Axis to read'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Axis list'
     do n = 1, naxis
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A32)') '*** No.', n, ', name: ', trim(axisname(n))
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A20)') '*** No.', n, ', name: ', trim(axisname(n))
     enddo
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Variable to read'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Variable list'
     do n = 1, nvars
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A32)') '*** No.', n, ', name: ', trim(varname(n))
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A20)') '*** No.', n, ', name: ', trim(varname(n))
     enddo
 
     return

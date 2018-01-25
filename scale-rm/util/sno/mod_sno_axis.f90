@@ -82,8 +82,7 @@ contains
     integer :: n, d
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Read information of axis'
+    if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_axis_getinfo] Read information of axis'
 
     if ( ismaster ) then
        nowrank = 0 ! first file
@@ -213,8 +212,9 @@ contains
     integer  :: n
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Allocate axis array'
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_axis_alloc] Allocate axis array'
+    endif
 
     IA_out = ( hinfo%gridsize(2) ) / nprocs_x_out + 2 * hinfo%halosize(2)
     JA_out = ( hinfo%gridsize(3) ) / nprocs_y_out + 2 * hinfo%halosize(3)
@@ -335,8 +335,9 @@ contains
     integer  :: n
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Deallocate axis array'
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_axis_dealloc] Deallocate axis array'
+    endif
 
     do n = 1, naxis
        if ( ainfo(n)%regrid ) then
@@ -384,8 +385,9 @@ contains
     integer  :: n, nn
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** + Copy axis array (local)'
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_axis_copy] Copy axis array (local)'
+    endif
 
     IMAX_out = ( hinfo%gridsize(2) ) / nprocs_x_out
     JMAX_out = ( hinfo%gridsize(3) ) / nprocs_y_out
@@ -681,8 +683,9 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** + Read axis array (local)'
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_axis_read] Read axis array (local)'
+    endif
 
     do py = 1, nprocs_y_in
        do px = 1, nprocs_x_in
@@ -1315,7 +1318,9 @@ contains
     intrinsic size
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** + + + define axis'
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_axis_define] define axis'
+    endif
 
     do n = 1, naxis
        if ( ainfo(n)%dim_rank == 1 ) then
@@ -1365,7 +1370,9 @@ contains
     integer  :: n
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** + + + write axis'
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_axis_write] write axis'
+    endif
 
     do n = 1, naxis
        if    ( ainfo(n)%dim_rank == 1 ) then

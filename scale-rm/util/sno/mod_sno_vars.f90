@@ -93,8 +93,7 @@ contains
     integer :: v, d, t
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Read information of variables'
+    if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_vars_getinfo] Read information of variables'
 
     if ( ismaster ) then
        nowrank = 0 ! first file
@@ -220,12 +219,15 @@ contains
     integer  :: gout1, gout2, gout3
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Allocate variable array'
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_vars_alloc] Allocate variable array'
+    endif
 
     if ( dinfo%dim_rank == 1 ) then
 
        gout1 = dinfo%dim_size(1)
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,3A,I6)') '+ [',trim(dinfo%dim_name(1)),'] = ', gout1
 
        allocate( dinfo%VAR_1d(gout1) )
        dinfo%VAR_1d(:) = 0.0_RP
@@ -247,6 +249,9 @@ contains
        else
           gout2 = dinfo%dim_size(2)
        endif
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,5A,2I6)') '+ [',trim(dinfo%dim_name(1)),',',&
+                                                        trim(dinfo%dim_name(2)),'] = ', gout1, gout2
 
        allocate( dinfo%VAR_2d(gout1,gout2) )
        dinfo%VAR_2d(:,:) = 0.0_RP
@@ -271,6 +276,10 @@ contains
           else
              gout3 = dinfo%dim_size(2)
           endif
+
+          if( IO_L ) write(IO_FID_LOG,'(1x,7A,3I6)') '+ [',trim(dinfo%dim_name(3)),',',&
+                                                           trim(dinfo%dim_name(1)),',',&
+                                                           trim(dinfo%dim_name(2)),'] = ', gout1, gout2, gout3
        else
           gout1 = dinfo%dim_size(1)
 
@@ -289,6 +298,10 @@ contains
           else
              gout3 = dinfo%dim_size(3)
           endif
+
+          if( IO_L ) write(IO_FID_LOG,'(1x,7A,3I6)') '+ [',trim(dinfo%dim_name(1)),',',&
+                                                           trim(dinfo%dim_name(2)),',',&
+                                                           trim(dinfo%dim_name(3)),'] = ', gout1, gout2, gout3
        endif
 
        allocate( dinfo%VAR_3d(gout1,gout2,gout3) )
@@ -311,8 +324,9 @@ contains
     logical,        intent(in)    :: debug
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Deallocate variable array'
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_vars_dealloc] Deallocate variable array'
+    endif
 
     if( allocated(dinfo%VAR_1d) ) deallocate( dinfo%VAR_1d )
     if( allocated(dinfo%VAR_2d) ) deallocate( dinfo%VAR_2d )
@@ -970,8 +984,6 @@ contains
 
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** + + + define variable'
-
     if ( dinfo%dt > 0.0_DP ) then
        call FILE_Def_Variable( fid,                & ! [IN]
                                dinfo%varname,      & ! [IN]
@@ -1007,8 +1019,6 @@ contains
                             debug     ) ! [IN]
 
     endif
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** + + + write variable'
 
     if ( dinfo%dim_rank == 1 ) then
 

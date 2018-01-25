@@ -130,7 +130,7 @@ contains
 
        recsize = int(imax,kind=8) * int(jmax,kind=8) * int(kmax,kind=8) * 4_8
 
-       if( IO_L ) write(IO_FID_LOG,*) 'Output: ', trim(grdname), recsize, imax, jmax, kmax
+       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_grads_write] filename : ', trim(grdname)
 
        GRADS_grd_fid = IO_get_available_fid()
        open( unit   = GRADS_grd_fid, &
@@ -144,8 +144,6 @@ contains
     endif
 
 
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** + + + write variable'
 
     if ( dinfo%dim_rank == 2 ) then
        do j = 1, jmax
@@ -276,6 +274,8 @@ contains
 
 
     !##### write control file #####
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_grads_write_ctl] filename : ', trim(ctlname)
 
     fid = IO_get_available_fid()
     open( unit   = fid,                    &
@@ -450,7 +450,6 @@ contains
     real(RP)               :: dx, dy
     real(RP)               :: dlat, dlon
 
-    real(DP)               :: dt
     character(len=20)      :: cdate, dhour
 
     character(len=20)      :: dimorder

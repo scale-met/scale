@@ -50,7 +50,7 @@ $(BUILD_DIR)/mod_sno_axis.o  : mod_sno_axis.f90  $(BUILD_DIR)/mod_sno_h.o $(BUIL
 $(BUILD_DIR)/mod_sno_grads.o : mod_sno_grads.f90 $(BUILD_DIR)/mod_sno_h.o
 $(BUILD_DIR)/mod_sno_vars.o  : mod_sno_vars.f90  $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno.o $(BUILD_DIR)/mod_sno_axis.o $(BUILD_DIR)/mod_sno_grads.o
 
-$(BUILD_DIR)/mod_snoplugin_timeave.o : mod_snoplugin_timeave.f90 $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno_vars.o
+$(BUILD_DIR)/mod_snoplugin_timeave.o  : mod_snoplugin_timeave.f90  $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno_vars.o
 
 
 

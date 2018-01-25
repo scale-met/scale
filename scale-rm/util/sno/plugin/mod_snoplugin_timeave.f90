@@ -161,8 +161,8 @@ contains
        iteminfo
     implicit none
 
-    type(iteminfo), intent(inout) :: dinfo ! variable information               (input)
-    logical,        intent(in)    :: debug
+    type(iteminfo), intent(in)  :: dinfo ! variable information               (input)
+    logical,        intent(in)  :: debug
 
     integer  :: gout1, gout2, gout3
 
@@ -174,8 +174,9 @@ contains
     integer  :: d
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Plugin[timeave] allocate temporal array'
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [SNOPLGIN_timeave_alloc] allocate temporal array'
+    endif
 
     if ( dinfo%dim_rank == 1 ) then
 
@@ -264,11 +265,12 @@ contains
        iteminfo
     implicit none
 
-    logical,        intent(in)    :: debug
+    logical,        intent(in)  :: debug
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Plugin[timeave] deallocate temporal array'
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [SNOPLGIN_timeave_dealloc] deallocate temporal array'
+    endif
 
     if( allocated(avgdinfo%VAR_1d) ) deallocate( avgdinfo%VAR_1d )
     if( allocated(avgdinfo%VAR_2d) ) deallocate( avgdinfo%VAR_2d )
@@ -540,7 +542,6 @@ contains
     ! output
 
     if ( do_output ) then
-
        ! store time information
        avgdinfo%step_nmax = avgdinfo%step_nmax + 1
 
@@ -588,6 +589,8 @@ contains
           enddo
 
        endif
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)') '++ output tave = ', avgdinfo%step_nmax
 
        call SNO_vars_write( dirpath,                    & ! [IN] from namelist
                             basename,                   & ! [IN] from namelist

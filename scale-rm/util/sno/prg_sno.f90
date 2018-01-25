@@ -53,6 +53,7 @@ program sno
   use mod_sno_grads, only: &
      SNO_grads_setup,    &
      SNO_grads_netcdfctl
+
   use mod_snoplugin_timeave, only: &
      SNOPLGIN_timeave_setup,   &
      SNOPLGIN_timeave_alloc,   &
@@ -189,8 +190,8 @@ program sno
                         output_grads,               & ! [IN] from namelist
                         output_gradsctl             ) ! [IN] from namelist
 
-  call SNOPLGIN_timeave_setup( plugin_timeave, & ! [OUT]
-                               do_output       ) ! [INOUT]
+  call SNOPLGIN_timeave_setup ( plugin_timeave,  & ! [OUT]
+                                do_output        ) ! [INOUT]
 
   ! allocate output files to executing processes
   call SNO_proc_alloc( nprocs, myrank, ismaster,   & ! [IN] from MPI
@@ -269,7 +270,7 @@ program sno
 
         if ( p >= pstr .AND. p <= pend ) then
            if( IO_L ) write(IO_FID_LOG,*)
-           if( IO_L ) write(IO_FID_LOG,*) '*** now processing p = ', p
+           if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)') '*** now processing rank = ', p
 
            ! in->out mapping table (for one file)
            allocate( localmap(ngrids_x_out,ngrids_y_out,3) )
@@ -318,7 +319,7 @@ program sno
 
            do v = 1, nvars
               if( IO_L ) write(IO_FID_LOG,*)
-              if( IO_L ) write(IO_FID_LOG,*) '*** + now processing varname = ', trim(dinfo(v)%varname)
+              if( IO_L ) write(IO_FID_LOG,*) '+ variable : ', trim(dinfo(v)%varname)
 
               ! output array allocation
 
@@ -327,16 +328,15 @@ program sno
                                    dinfo(v),                     & ! [INOUT] from SNO_vars_getinfo
                                    debug                         ) ! [IN]
 
-              if( plugin_timeave ) call SNOPLGIN_timeave_alloc( dinfo(v), & ! [INOUT] from SNO_vars_getinfo
-                                                                debug     ) ! [IN]
+              if( plugin_timeave  ) call SNOPLGIN_timeave_alloc ( dinfo(v), & ! [IN] from SNO_vars_getinfo
+                                                                  debug     ) ! [IN]
 
               !#################################################################
               ! process each timestep
               !#################################################################
 
               do t = 1, dinfo(v)%step_nmax
-                 if( IO_L ) write(IO_FID_LOG,*)
-                 if( IO_L ) write(IO_FID_LOG,*) '*** + + now processing t = ', t
+                 if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)') '++ t = ', t
 
                  call SNO_vars_read( basename_in,                  & ! [IN]    from namelist
                                      t,                            & ! [IN]
@@ -384,7 +384,7 @@ program sno
               call SNO_vars_dealloc( dinfo(v), & ! [INOUT] from SNO_vars_getinfo
                                      debug     ) ! [IN]
 
-              if( plugin_timeave ) call SNOPLGIN_timeave_dealloc( debug ) ! [IN]
+              if( plugin_timeave  ) call SNOPLGIN_timeave_dealloc ( debug ) ! [IN]
 
            enddo ! item loop
 

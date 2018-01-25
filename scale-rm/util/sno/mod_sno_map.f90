@@ -76,7 +76,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Calc relation map for grids and procs (global)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_map_settable_global] Calc relation map for grids and procs (global)'
 
     jpos = 0
     do py = 1, nprocs_y_in
@@ -191,7 +191,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** + Calc relation map for grids and procs (local)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_map_settable_local] Calc relation map for grids and procs (local)'
 
     do j = 1, ngrids_y_out
     do i = 1, ngrids_x_out
