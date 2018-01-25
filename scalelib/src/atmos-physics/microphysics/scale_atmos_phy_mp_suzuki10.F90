@@ -2528,6 +2528,7 @@ contains
        call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
                                             qsat                             ) ! [OUT]
             
+       ssice(ijk) = qvap(ijk)/qsat-1.0_RP
 
        emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
        cefd = emu/dens(ijk)
@@ -2851,6 +2852,7 @@ contains
       call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
                                            qsat                             ) ! [OUT]
            
+      ssice(ijk) = qvap(ijk)/qsat-1.0_RP
 
       emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
       cefd = emu/dens(ijk)
