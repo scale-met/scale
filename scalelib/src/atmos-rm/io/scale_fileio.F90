@@ -2970,20 +2970,35 @@ contains
     time_interval = timeintv
     step = size(var,4)
 
-    if ( axistype == 'ZXYT' ) then
+    dim2_S = ISB
+    dim2_E = IEB
+    dim3_S = JSB
+    dim3_E = JEB
+    if ( IO_AGGREGATE ) then
+       if( rankidx(1) == 0             ) dim2_S = 1
+       if( rankidx(1) == PRC_NUM_X - 1 ) dim2_E = IA
+       if( rankidx(2) == 0             ) dim3_S = 1
+       if( rankidx(2) == PRC_NUM_Y - 1 ) dim3_E = JA
+    end if
+
+    if (      axistype == 'ZXYT'  &
+         .OR. axistype == 'ZXHYT' &
+         .OR. axistype == 'ZXYHT' ) then
        dim1_max = KMAX
        dim1_S   = KS
        dim1_E   = KE
-       dim2_S   = ISB
-       dim2_E   = IEB
-       dim3_S   = JSB
-       dim3_E   = JEB
-       if ( IO_AGGREGATE ) then
-          if( rankidx(1) == 0             ) dim2_S = 1
-          if( rankidx(1) == PRC_NUM_X - 1 ) dim2_E = IA
-          if( rankidx(2) == 0             ) dim3_S = 1
-          if( rankidx(2) == PRC_NUM_Y - 1 ) dim3_E = JA
-       endif
+    elseif ( axistype == 'ZHXYT' ) then
+       dim1_max = KMAX+1
+       dim1_S   = KS-1
+       dim1_E   = KE
+    elseif( axistype == 'Land' ) then
+       dim1_max = LKMAX
+       dim1_S   = LKS
+       dim1_E   = LKE
+    elseif( axistype == 'Urban' ) then
+       dim1_max = UKMAX
+       dim1_S   = UKS
+       dim1_E   = UKE
     else
        write(*,*) 'xxx [FILEIO_write_var_4D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop

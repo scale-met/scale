@@ -67,7 +67,7 @@ module mod_realinput
 
   private :: ParentSurfaceSetup
   private :: ParentSurfaceInput
-  private :: ParentOceanBoundary
+  private :: ParentSurfaceBoundary
   private :: interp_OceanLand_data
 
   !-----------------------------------------------------------------------------
@@ -403,13 +403,6 @@ contains
          I_LW => CONST_I_LW
     use scale_time, only: &
        TIME_gettimelabel
-    use mod_atmos_vars, only: &
-         DENS, &
-         MOMZ, &
-         MOMX, &
-         MOMY, &
-         RHOT, &
-         QTRC
     use mod_land_vars, only: &
          LAND_TEMP, &
          LAND_WATER, &
@@ -466,21 +459,25 @@ contains
     logical                  :: elevation_collection = .true.
 
     NAMELIST / PARAM_MKINIT_REAL_LAND / &
-         NUMBER_OF_FILES,        &
-         NUMBER_OF_TSTEPS,       &
-         NUMBER_OF_SKIP_TSTEPS,  &
-         FILETYPE_ORG,           &
-         BASENAME_ORG,           &
-         BASENAME_ADD_NUM,       &
-         USE_FILE_LANDWATER,     &
-         INIT_LANDWATER_RATIO,   &
-         INTRP_LAND_TEMP,        &
-         INTRP_LAND_WATER,       &
-         INTRP_LAND_SFC_TEMP,    &
-         INTRP_ITER_MAX,         &
-         SOILWATER_DS2VC,        &
-         ELEVATION_COLLECTION,   &
-         SERIAL_PROC_READ
+       NUMBER_OF_FILES,            &
+       NUMBER_OF_TSTEPS,           &
+       NUMBER_OF_SKIP_TSTEPS,      &
+       FILETYPE_ORG,               &
+       BASENAME_ORG,               &
+       BASENAME_ADD_NUM,           &
+       BASENAME_BOUNDARY,          &
+       BOUNDARY_POSTFIX_TIMELABEL, &
+       BOUNDARY_TITLE,             &
+       BOUNDARY_UPDATE_DT,         &
+       USE_FILE_LANDWATER,         &
+       INIT_LANDWATER_RATIO,       &
+       INTRP_LAND_TEMP,            &
+       INTRP_LAND_WATER,           &
+       INTRP_LAND_SFC_TEMP,        &
+       INTRP_ITER_MAX,             &
+       SOILWATER_DS2VC,            &
+       ELEVATION_COLLECTION,       &
+       SERIAL_PROC_READ
 
     NAMELIST / PARAM_MKINIT_REAL_OCEAN / &
        NUMBER_OF_FILES,            &
@@ -511,10 +508,10 @@ contains
     logical               :: SERIAL_PROC_READ_ocean
 
     ! land
-    real(RP) :: LAND_TEMP_ORG(LKMAX,IA,JA)
-    real(RP) :: LAND_WATER_ORG(LKMAX,IA,JA)
-    real(RP) :: LAND_SFC_TEMP_ORG(IA,JA)
-    real(RP) :: LAND_SFC_albedo_ORG(IA,JA,2)
+    real(RP), allocatable :: LAND_TEMP_org      (:,:,:,:)
+    real(RP), allocatable :: LAND_WATER_org     (:,:,:,:)
+    real(RP), allocatable :: LAND_SFC_TEMP_org  (:,:,:)
+    real(RP), allocatable :: LAND_SFC_albedo_org(:,:,:,:)
 
     ! urban
     real(RP) :: URBAN_TC_ORG(IA,JA)
@@ -524,10 +521,26 @@ contains
     real(RP) :: URBAN_SFC_albedo_ORG(IA,JA,2)
 
     ! ocean
-    real(RP), allocatable :: OCEAN_TEMP_ORG(:,:,:)
-    real(RP), allocatable :: OCEAN_SFC_TEMP_ORG(:,:,:)
-    real(RP), allocatable :: OCEAN_SFC_albedo_ORG(:,:,:,:)
-    real(RP), allocatable :: OCEAN_SFC_Z0_ORG(:,:,:)
+    real(RP), allocatable :: OCEAN_TEMP_org      (:,:,:)
+    real(RP), allocatable :: OCEAN_SFC_TEMP_org  (:,:,:)
+    real(RP), allocatable :: OCEAN_SFC_albedo_org(:,:,:,:)
+    real(RP), allocatable :: OCEAN_SFC_Z0_org    (:,:,:)
+
+    integer :: NUMBER_OF_FILES_LAND        = 1
+    integer :: NUMBER_OF_FILES_OCEAN       = 1
+    integer :: NUMBER_OF_TSTEPS_LAND       = 1       ! num of time steps in one file
+    integer :: NUMBER_OF_TSTEPS_OCEAN      = 1       ! num of time steps in one file
+    integer :: NUMBER_OF_SKIP_TSTEPS_LAND  = 0       ! num of skipped first several data
+    integer :: NUMBER_OF_SKIP_TSTEPS_OCEAN = 0       ! num of skipped first several data
+
+    character(len=H_LONG) :: BASENAME_BOUNDARY_LAND           = ''
+    character(len=H_LONG) :: BASENAME_BOUNDARY_OCEAN          = ''
+    logical               :: BOUNDARY_POSTFIX_TIMELABEL_LAND  = .false.
+    logical               :: BOUNDARY_POSTFIX_TIMELABEL_OCEAN = .false.
+    character(len=H_LONG) :: BOUNDARY_TITLE_LAND              = 'SCALE-RM BOUNDARY CONDITION for REAL CASE'
+    character(len=H_LONG) :: BOUNDARY_TITLE_OCEAN             = 'SCALE-RM BOUNDARY CONDITION for REAL CASE'
+    real(DP)              :: BOUNDARY_UPDATE_DT_LAND          = 0.0_DP  ! inteval time of boudary data update [s]
+    real(DP)              :: BOUNDARY_UPDATE_DT_OCEAN         = 0.0_DP  ! inteval time of boudary data update [s]
 
     integer :: mdlid_land, mdlid_ocean
     integer :: ldims(3), odims(2)
@@ -535,7 +548,6 @@ contains
     integer :: totaltimesteps = 1
     integer :: timelen
     integer :: skip_steps
-    integer :: lit
     integer :: lfn
     integer :: ierr
 
@@ -564,47 +576,19 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_LAND)
 
-    FILETYPE_LAND = FILETYPE_ORG
+    NUMBER_OF_FILES_LAND            = NUMBER_OF_FILES
+    NUMBER_OF_TSTEPS_LAND           = NUMBER_OF_TSTEPS
+    NUMBER_OF_SKIP_TSTEPS_LAND      = NUMBER_OF_SKIP_TSTEPS
+    FILETYPE_LAND                   = FILETYPE_ORG
+    BASENAME_BOUNDARY_LAND          = BASENAME_BOUNDARY
+    BOUNDARY_POSTFIX_TIMELABEL_LAND = BOUNDARY_POSTFIX_TIMELABEL
+    BOUNDARY_TITLE_LAND             = BOUNDARY_TITLE
+    BOUNDARY_UPDATE_DT_LAND         = BOUNDARY_UPDATE_DT
 
-    lfn = NUMBER_OF_SKIP_TSTEPS / NUMBER_OF_TSTEPS
     if ( FILETYPE_LAND .ne. "GrADS" .and. ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM ) ) then
-       write(NUM,'(I5.5)') lfn
-       BASENAME_LAND = trim(BASENAME_ORG)//"_"//NUM
+       BASENAME_LAND = trim(BASENAME_ORG)//"_00000"
     else
        BASENAME_LAND = trim(BASENAME_ORG)
-    endif
-
-    serial_land = SERIAL_PROC_READ
-
-    lit = mod(NUMBER_OF_SKIP_TSTEPS,NUMBER_OF_TSTEPS)+1
-
-    !--- read external file
-    if( IO_L ) write(IO_FID_LOG,*) ' '
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Target File Name (Land): ',trim(BASENAME_LAND)
-    if( IO_L ) write(IO_FID_LOG,*) '    Time Steps in One File: ', NUMBER_OF_TSTEPS
-    if( IO_L ) write(IO_FID_LOG,*) '    Time Step to read: ', lit
-
-
-
-    ! OCEAN
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_OCEAN,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_OCEAN. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_OCEAN)
-
-    FILETYPE_OCEAN = FILETYPE_ORG
-
-    if ( FILETYPE_OCEAN .ne. "GrADS" .and. ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM ) ) then
-       BASENAME_OCEAN = trim(BASENAME_ORG)//"_00000"
-    else
-       BASENAME_OCEAN = trim(BASENAME_ORG)
     endif
 
     select case( SOILWATER_DS2VC )
@@ -617,8 +601,49 @@ contains
       call PRC_MPIstop
     end select
 
+    serial_land = SERIAL_PROC_READ
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_OCEAN,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_OCEAN. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_OCEAN)
+
+    NUMBER_OF_FILES_OCEAN            = NUMBER_OF_FILES
+    NUMBER_OF_TSTEPS_OCEAN           = NUMBER_OF_TSTEPS
+    NUMBER_OF_SKIP_TSTEPS_OCEAN      = NUMBER_OF_SKIP_TSTEPS
+    FILETYPE_OCEAN                   = FILETYPE_ORG
+    BASENAME_BOUNDARY_OCEAN          = BASENAME_BOUNDARY
+    BOUNDARY_POSTFIX_TIMELABEL_OCEAN = BOUNDARY_POSTFIX_TIMELABEL
+    BOUNDARY_TITLE_OCEAN             = BOUNDARY_TITLE
+    BOUNDARY_UPDATE_DT_OCEAN         = BOUNDARY_UPDATE_DT
+
+    if ( FILETYPE_OCEAN .ne. "GrADS" .and. ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM ) ) then
+       BASENAME_OCEAN = trim(BASENAME_ORG)//"_00000"
+    else
+       BASENAME_OCEAN = trim(BASENAME_ORG)
+    endif
+
     serial_ocean = SERIAL_PROC_READ
 
+    ! check land/ocean parameters
+    if( NUMBER_OF_FILES_LAND            .NE.   NUMBER_OF_FILES_OCEAN            .OR. &
+        NUMBER_OF_TSTEPS_LAND           .NE.   NUMBER_OF_TSTEPS_OCEAN           .OR. &
+        NUMBER_OF_SKIP_TSTEPS_LAND      .NE.   NUMBER_OF_SKIP_TSTEPS_OCEAN      .OR. &
+        BASENAME_BOUNDARY_LAND          .NE.   BASENAME_BOUNDARY_OCEAN          .OR. &
+        BOUNDARY_POSTFIX_TIMELABEL_LAND .NEQV. BOUNDARY_POSTFIX_TIMELABEL_OCEAN .OR. &
+        BOUNDARY_TITLE_LAND             .NE.   BOUNDARY_TITLE_OCEAN             .OR. &
+        BOUNDARY_UPDATE_DT_LAND         .NE.   BOUNDARY_UPDATE_DT_OCEAN              ) then
+       write(*,*) 'xxx Error: The following LAND/OCEAN parameters must be consistent due to technical problem:'
+       write(*,*) '           NUMBER_OF_FILES, NUMBER_OF_TSTEPS, NUMBER_OF_SKIP_TSTEPS,'
+       write(*,*) '           BASENAME_BOUNDARY, BOUNDARY_POSTFIX_TIMELABEL, BOUNDARY_TITLE, BOUNDARY_UPDATE_DT.'
+       call PRC_MPIstop
+    end if
 
     call ParentSurfaceSetup( ldims, odims,           & ![OUT]
                              mdlid_land,             & ![OUT]
@@ -641,19 +666,15 @@ contains
 
     totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
 
-    allocate( OCEAN_TEMP_ORG      (IA,JA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
-    allocate( OCEAN_SFC_TEMP_ORG  (IA,JA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
-    allocate( OCEAN_SFC_albedo_ORG(IA,JA,2,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
-    allocate( OCEAN_SFC_Z0_ORG    (IA,JA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
+    allocate( LAND_TEMP_ORG      (LKMAX,IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( LAND_WATER_ORG     (LKMAX,IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( LAND_SFC_TEMP_ORG  (      IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( LAND_SFC_albedo_ORG(      IA,JA,2,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
 
-    if ( mdlid_land == iGrADS ) then
-       if ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM ) then
-          write(NUM,'(I5.5)') lfn
-          BASENAME_LAND = "_"//NUM
-       else
-          BASENAME_LAND = ""
-       endif
-    endif
+    allocate( OCEAN_TEMP_ORG      (IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( OCEAN_SFC_TEMP_ORG  (IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( OCEAN_SFC_albedo_ORG(IA,JA,2,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( OCEAN_SFC_Z0_ORG    (IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
 
     if ( mdlid_ocean == iGrADS ) then
        BASENAME_ORG = ""
@@ -668,14 +689,17 @@ contains
 
        if ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM ) then
           write(NUM,'(I5.5)') n-1
+          BASENAME_LAND  = trim(BASENAME_ORG)//"_"//NUM
           BASENAME_OCEAN = trim(BASENAME_ORG)//"_"//NUM
        else
+          BASENAME_LAND  = trim(BASENAME_ORG)
           BASENAME_OCEAN = trim(BASENAME_ORG)
        endif
 
        if( IO_L ) write(IO_FID_LOG,*) ' '
+       if( IO_L ) write(IO_FID_LOG,*) '+++ Target File Name (Land) : ', trim(BASENAME_LAND)
        if( IO_L ) write(IO_FID_LOG,*) '+++ Target File Name (Ocean): ', trim(BASENAME_OCEAN)
-       if( IO_L ) write(IO_FID_LOG,*) '    Time Steps in One File: ', NUMBER_OF_TSTEPS
+       if( IO_L ) write(IO_FID_LOG,*) '    Time Steps in One File  : ', NUMBER_OF_TSTEPS
 
        ns = NUMBER_OF_TSTEPS * (n - 1) + 1
        ne = ns + (NUMBER_OF_TSTEPS - 1)
@@ -689,25 +713,19 @@ contains
        ns = max(ns, NUMBER_OF_SKIP_TSTEPS+1)
 
        ! read all prepared data
-       call ParentSurfaceInput( LAND_TEMP_org,        &
-                                LAND_WATER_org,       &
-                                LAND_SFC_TEMP_org,    &
-                                LAND_SFC_albedo_org,  &
+       call ParentSurfaceInput( LAND_TEMP_org       (:,:,:,ns:ne), &
+                                LAND_WATER_org      (:,:,:,ns:ne), &
+                                LAND_SFC_TEMP_org   (:,:,  ns:ne), &
+                                LAND_SFC_albedo_org (:,:,:,ns:ne), &
                                 URBAN_TC_org,         &
                                 URBAN_QC_org,         &
                                 URBAN_UC_org,         &
                                 URBAN_SFC_TEMP_org,   &
                                 URBAN_SFC_albedo_org, &
-                                OCEAN_TEMP_org(:,:,ns:ne),         &
-                                OCEAN_SFC_TEMP_org(:,:,ns:ne),     &
+                                OCEAN_TEMP_org      (:,:,  ns:ne), &
+                                OCEAN_SFC_TEMP_org  (:,:,  ns:ne), &
                                 OCEAN_SFC_albedo_org(:,:,:,ns:ne), &
-                                OCEAN_SFC_Z0_org(:,:,ns:ne),       &
-                                DENS, &
-                                MOMZ, &
-                                MOMX, &
-                                MOMY, &
-                                RHOT, &
-                                QTRC, &
+                                OCEAN_SFC_Z0_org    (:,:,  ns:ne), &
                                 BASENAME_LAND,           &
                                 BASENAME_OCEAN,          &
                                 mdlid_land, mdlid_ocean, &
@@ -722,7 +740,7 @@ contains
                                 elevation_collection,    &
                                 boundary_flag,           &
                                 NUMBER_OF_TSTEPS,        &
-                                skip_steps, lit          )
+                                skip_steps               )
 
        ! required one-step data only
        if( BASENAME_BOUNDARY == '' ) exit
@@ -731,17 +749,19 @@ contains
 
 
     !--- input initial data
+    ns = NUMBER_OF_SKIP_TSTEPS + 1  ! skip first several data
+
     do j = 1, JA
     do i = 1, IA
-       LAND_SFC_TEMP(i,j) = LAND_SFC_TEMP_org(i,j)
-       LAND_SFC_albedo(i,j,I_LW) = LAND_SFC_albedo_org(i,j,I_LW)
-       LAND_SFC_albedo(i,j,I_SW) = LAND_SFC_albedo_org(i,j,I_SW)
+       LAND_SFC_TEMP  (i,j)      = LAND_SFC_TEMP_org  (i,j,     ns)
+       LAND_SFC_albedo(i,j,I_LW) = LAND_SFC_albedo_org(i,j,I_LW,ns)
+       LAND_SFC_albedo(i,j,I_SW) = LAND_SFC_albedo_org(i,j,I_SW,ns)
        do k = 1, LKMAX
-          LAND_TEMP(k,i,j) = LAND_TEMP_org(k,i,j)
-          LAND_WATER(k,i,j) = LAND_WATER_org(k,i,j)
+          LAND_TEMP (k,i,j) = LAND_TEMP_org (k,i,j,ns)
+          LAND_WATER(k,i,j) = LAND_WATER_org(k,i,j,ns)
        enddo
 
-       URBAN_SFC_TEMP(i,j) = URBAN_SFC_TEMP_org(i,j)
+       URBAN_SFC_TEMP  (i,j)      = URBAN_SFC_TEMP_org  (i,j)
        URBAN_SFC_albedo(i,j,I_LW) = URBAN_SFC_albedo_org(i,j,I_LW)
        URBAN_SFC_albedo(i,j,I_SW) = URBAN_SFC_albedo_org(i,j,I_SW)
        do k = UKS, UKE
@@ -749,43 +769,37 @@ contains
           URBAN_TBL(k,i,j) = URBAN_SFC_TEMP_org(i,j)
           URBAN_TGL(k,i,j) = URBAN_SFC_TEMP_org(i,j)
        enddo
-       URBAN_TC(i,j) = URBAN_TC_org(i,j)
-       URBAN_QC(i,j) = URBAN_QC_org(i,j)
-       URBAN_UC(i,j) = URBAN_UC_org(i,j)
-       URBAN_TR(i,j) = URBAN_SFC_TEMP_org(i,j)
-       URBAN_TB(i,j) = URBAN_SFC_TEMP_org(i,j)
-       URBAN_TG(i,j) = URBAN_SFC_TEMP_org(i,j)
+       URBAN_TC   (i,j) = URBAN_TC_org      (i,j)
+       URBAN_QC   (i,j) = URBAN_QC_org      (i,j)
+       URBAN_UC   (i,j) = URBAN_UC_org      (i,j)
+       URBAN_TR   (i,j) = URBAN_SFC_TEMP_org(i,j)
+       URBAN_TB   (i,j) = URBAN_SFC_TEMP_org(i,j)
+       URBAN_TG   (i,j) = URBAN_SFC_TEMP_org(i,j)
        URBAN_RAINR(i,j) = 0.0_RP
        URBAN_RAINB(i,j) = 0.0_RP
        URBAN_RAING(i,j) = 0.0_RP
        URBAN_ROFF (i,j) = 0.0_RP
-    enddo
-    enddo
 
-
-    ns = NUMBER_OF_SKIP_TSTEPS + 1  ! skip first several data
-    do j = 1, JA
-    do i = 1, IA
-       OCEAN_TEMP(i,j)     = OCEAN_TEMP_ORG(i,j,ns)
-       OCEAN_SFC_TEMP(i,j) = OCEAN_SFC_TEMP_ORG(i,j,ns)
+       OCEAN_TEMP      (i,j)      = OCEAN_TEMP_ORG      (i,j,     ns)
+       OCEAN_SFC_TEMP  (i,j)      = OCEAN_SFC_TEMP_ORG  (i,j,     ns)
        OCEAN_SFC_albedo(i,j,I_LW) = OCEAN_SFC_albedo_ORG(i,j,I_LW,ns)
        OCEAN_SFC_albedo(i,j,I_SW) = OCEAN_SFC_albedo_ORG(i,j,I_SW,ns)
-       OCEAN_SFC_Z0M(i,j) = OCEAN_SFC_Z0_ORG(i,j,ns)
-       OCEAN_SFC_Z0H(i,j) = OCEAN_SFC_Z0_ORG(i,j,ns)
-       OCEAN_SFC_Z0E(i,j) = OCEAN_SFC_Z0_ORG(i,j,ns)
+       OCEAN_SFC_Z0M   (i,j)      = OCEAN_SFC_Z0_ORG    (i,j,     ns)
+       OCEAN_SFC_Z0H   (i,j)      = OCEAN_SFC_Z0_ORG    (i,j,     ns)
+       OCEAN_SFC_Z0E   (i,j)      = OCEAN_SFC_Z0_ORG    (i,j,     ns)
     enddo
     enddo
 
     do j = 1, JA
     do i = 1, IA
-       ATMOS_PHY_SF_SFC_TEMP  (i,j)      = fact_ocean(i,j) * OCEAN_SFC_TEMP(i,j) &
-                                         + fact_land (i,j) * LAND_SFC_TEMP (i,j) &
-                                         + fact_urban(i,j) * URBAN_SFC_TEMP(i,j)
+       ATMOS_PHY_SF_SFC_TEMP  (i,j)      = fact_ocean(i,j) * OCEAN_SFC_TEMP  (i,j) &
+                                         + fact_land (i,j) * LAND_SFC_TEMP   (i,j) &
+                                         + fact_urban(i,j) * URBAN_SFC_TEMP  (i,j)
        ATMOS_PHY_SF_SFC_albedo(i,j,I_LW) = fact_ocean(i,j) * OCEAN_SFC_albedo(i,j,I_LW) &
-                                         + fact_land (i,j) * LAND_SFC_albedo(i,j,I_LW) &
+                                         + fact_land (i,j) * LAND_SFC_albedo (i,j,I_LW) &
                                          + fact_urban(i,j) * URBAN_SFC_albedo(i,j,I_LW)
        ATMOS_PHY_SF_SFC_albedo(i,j,I_SW) = fact_ocean(i,j) * OCEAN_SFC_albedo(i,j,I_SW) &
-                                         + fact_land (i,j) * LAND_SFC_albedo(i,j,I_SW) &
+                                         + fact_land (i,j) * LAND_SFC_albedo (i,j,I_SW) &
                                          + fact_urban(i,j) * URBAN_SFC_albedo(i,j,I_SW)
        ATMOS_PHY_SF_SFC_Z0M   (i,j)      = OCEAN_SFC_Z0M(i,j)
        ATMOS_PHY_SF_SFC_Z0H   (i,j)      = OCEAN_SFC_Z0H(i,j)
@@ -810,22 +824,30 @@ contains
              basename_out_mod = trim(BASENAME_BOUNDARY)
           endif
 
-          call ParentOceanBoundary( OCEAN_TEMP_ORG(:,:,ns:ne),         &
-                                    OCEAN_SFC_TEMP_ORG(:,:,ns:ne),     &
-                                    OCEAN_SFC_albedo_ORG(:,:,:,ns:ne), &
-                                    OCEAN_SFC_Z0_ORG(:,:,ns:ne),       &
-                                    totaltimesteps,     &
-                                    BOUNDARY_UPDATE_DT, &
-                                    basename_out_mod,   &
-                                    BOUNDARY_TITLE      )
+          call ParentSurfaceBoundary( LAND_TEMP_org       (:,:,:,ns:ne), &
+                                      LAND_WATER_org      (:,:,:,ns:ne), &
+                                      LAND_SFC_TEMP_org   (:,:,  ns:ne), &
+                                      LAND_SFC_albedo_org (:,:,:,ns:ne), &
+                                      OCEAN_TEMP_org      (:,:,  ns:ne), &
+                                      OCEAN_SFC_TEMP_org  (:,:,  ns:ne), &
+                                      OCEAN_SFC_albedo_org(:,:,:,ns:ne), &
+                                      OCEAN_SFC_Z0_org    (:,:,  ns:ne), &
+                                      totaltimesteps,                    &
+                                      BOUNDARY_UPDATE_DT,                &
+                                      basename_out_mod,                  &
+                                      BOUNDARY_TITLE                     )
 
        endif
     endif
 
-    deallocate( ocean_TEMP_org )
-    deallocate( ocean_sfc_TEMP_org )
-    deallocate( ocean_sfc_albedo_org )
-    deallocate( ocean_sfc_z0_org )
+    deallocate( LAND_TEMP_org        )
+    deallocate( LAND_WATER_org       )
+    deallocate( LAND_SFC_TEMP_org    )
+    deallocate( LAND_SFC_albedo_org  )
+    deallocate( OCEAN_TEMP_org       )
+    deallocate( OCEAN_SFC_TEMP_org   )
+    deallocate( OCEAN_SFC_albedo_org )
+    deallocate( OCEAN_SFC_Z0_org     )
 
     return
   end subroutine REALINPUT_surface
@@ -1835,12 +1857,6 @@ contains
        sst, &
        albw, &
        z0w, &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC, &
        basename_land,     &
        basename_ocean,    &
        mdlid_land, &
@@ -1857,8 +1873,7 @@ contains
        elevation_collection, &
        boundary_flag,        &
        timelen,          &
-       skiplen, &
-       lit )
+       skiplen )
     use scale_comm, only: &
          COMM_bcast, &
          COMM_vars8, &
@@ -1895,27 +1910,28 @@ contains
          ParentOceanOpenGrADS, &
          ParentOceanInputGrADS, &
          ParentLandInputGrADS
+    use mod_atmos_vars, only: &
+         DENS, &
+         MOMZ, &
+         MOMX, &
+         MOMY, &
+         RHOT, &
+         QTRC
     implicit none
 
-    real(RP),         intent(inout) :: tg(LKMAX,IA,JA)
-    real(RP),         intent(inout) :: strg(LKMAX,IA,JA)
-    real(RP),         intent(inout) :: lst(IA,JA)
-    real(RP),         intent(inout) :: albg(IA,JA,2)
+    real(RP),         intent(out) :: tg  (:,:,:,:)
+    real(RP),         intent(out) :: strg(:,:,:,:)
+    real(RP),         intent(out) :: lst (:,:,:)
+    real(RP),         intent(out) :: albg(:,:,:,:)
     real(RP),         intent(inout) :: tc_urb(IA,JA)
     real(RP),         intent(inout) :: qc_urb(IA,JA)
     real(RP),         intent(inout) :: uc_urb(IA,JA)
-    real(RP),         intent(inout) :: ust(IA,JA)
-    real(RP),         intent(inout) :: albu(IA,JA,2)
-    real(RP),         intent(out) :: tw(:,:,:)
-    real(RP),         intent(out) :: sst(:,:,:)
+    real(RP),         intent(inout) :: ust   (IA,JA)
+    real(RP),         intent(inout) :: albu  (IA,JA,2)
+    real(RP),         intent(out) :: tw  (:,:,:)
+    real(RP),         intent(out) :: sst (:,:,:)
     real(RP),         intent(out) :: albw(:,:,:,:)
-    real(RP),         intent(out) :: z0w(:,:,:)
-    real(RP),         intent(in)  :: DENS(KA,IA,JA)
-    real(RP),         intent(in)  :: MOMZ(KA,IA,JA)
-    real(RP),         intent(in)  :: MOMX(KA,IA,JA)
-    real(RP),         intent(in)  :: MOMY(KA,IA,JA)
-    real(RP),         intent(in)  :: RHOT(KA,IA,JA)
-    real(RP),         intent(in)  :: QTRC(KA,IA,JA,QA)
+    real(RP),         intent(out) :: z0w (:,:,:)
     character(len=*), intent(in)  :: basename_land
     character(len=*), intent(in)  :: basename_ocean
     integer,          intent(in)  :: mdlid_land
@@ -1934,7 +1950,6 @@ contains
     logical,          intent(in)  :: boundary_flag    ! switch for making boundary file
     integer,          intent(in)  :: timelen          ! time steps in one file
     integer,          intent(in)  :: skiplen          ! skip steps
-    integer,          intent(in)  :: lit
 
    ! land
     real(RP) :: tg_org   (ldims(1),ldims(2),ldims(3))
@@ -1977,81 +1992,7 @@ contains
 
     first = .true.
 
-    if ( first ) then ! read land data only once
-
-       if ( do_read_land ) then
-
-          call PROF_rapstart('___SurfaceInput',3)
-
-          select case( mdlid_land )
-          case( iSCALE ) ! TYPE: SCALE-RM
-
-             call ParentLandInputSCALE( &
-                  tg_org, strg_org,           & ! (out)
-                  lst_org, ust_org, albg_org, & ! (out)
-                  topo_org, lmask_org,        & ! (out)
-                  llon_org, llat_org, lz_org, & ! (out)
-                  basename_land, ldims,       & ! (in)
-                  use_file_landwater, lit     ) ! (in)
-
-          case( iWRFARW ) ! TYPE: WRF-ARW
-
-             call ParentLandInputWRFARW( &
-                  tg_org, strg_org,           & ! (out)
-                  lst_org, ust_org, albg_org, & ! (out)
-                  topo_org, lmask_org,        & ! (out)
-                  llon_org, llat_org, lz_org, & ! (out)
-                  basename_land, ldims,       & ! (in)
-                  use_file_landwater, lit     ) ! (in)
-
-          case( iNICAM ) ! TYPE: NICAM-NETCDF
-
-             call ParentLandInputNICAM( &
-                  tg_org, strg_org,           & ! (out)
-                  lst_org,                    & ! (out)
-                  llon_org, llat_org, lz_org, & ! (out)
-                  topo_org, lmask_org,        & ! (out)
-                  basename_land, ldims,       & ! (in)
-                  use_file_landwater, lit     ) ! (in)
-             ust_org = UNDEF
-             albg_org = UNDEF
-
-          case( iGrADS ) ! TYPE: GrADS format
-
-             call ParentLandInputGrADS( &
-                  tg_org, strg_org, smds_org, & ! (out)
-                  lst_org,                    & ! (out)
-                  llon_org, llat_org, lz_org, & ! (out)
-                  topo_org, lmask_org,        & ! (out)
-                  basename_land, ldims,       & ! (in)
-                  use_file_landwater, lit     ) ! (in)
-             ust_org = UNDEF
-             albg_org = UNDEF
-
-          end select
-
-          call PROF_rapend  ('___SurfaceInput',3)
-
-       end if
-
-       if ( serial_land ) then
-          call COMM_bcast( tg_org, ldims(1), ldims(2), ldims(3) )
-          if ( use_waterratio ) then
-             call COMM_bcast( smds_org, ldims(1), ldims(2), ldims(3) )
-          else
-             call COMM_bcast( strg_org, ldims(1), ldims(2), ldims(3) )
-          end if
-          call COMM_bcast( lst_org, ldims(2), ldims(3) )
-          call COMM_bcast( ust_org, ldims(2), ldims(3) )
-          call COMM_bcast( albg_org(:,:,I_LW), ldims(2), ldims(3) )
-          call COMM_bcast( albg_org(:,:,I_SW), ldims(2), ldims(3) )
-          call COMM_bcast( topo_org, ldims(2), ldims(3) )
-          call COMM_bcast( lmask_org, ldims(2), ldims(3) )
-          call COMM_bcast( llon_org, ldims(2), ldims(3) )
-          call COMM_bcast( llat_org, ldims(2), ldims(3) )
-          call COMM_bcast( lz_org, ldims(1) )
-       end if
-
+    if ( first ) then ! read data only once
 
        ! urban data
 
@@ -2133,6 +2074,79 @@ contains
 
     do n = skiplen+1, timelen
        nn = n - skiplen
+
+       if ( do_read_land ) then
+
+          call PROF_rapstart('___SurfaceInput',3)
+
+          select case( mdlid_land )
+          case( iSCALE ) ! TYPE: SCALE-RM
+
+             call ParentLandInputSCALE( &
+                  tg_org, strg_org,           & ! (out)
+                  lst_org, ust_org, albg_org, & ! (out)
+                  topo_org, lmask_org,        & ! (out)
+                  llon_org, llat_org, lz_org, & ! (out)
+                  basename_land, ldims,       & ! (in)
+                  use_file_landwater, n       ) ! (in)
+
+          case( iWRFARW ) ! TYPE: WRF-ARW
+
+             call ParentLandInputWRFARW( &
+                  tg_org, strg_org,           & ! (out)
+                  lst_org, ust_org, albg_org, & ! (out)
+                  topo_org, lmask_org,        & ! (out)
+                  llon_org, llat_org, lz_org, & ! (out)
+                  basename_land, ldims,       & ! (in)
+                  use_file_landwater, n       ) ! (in)
+
+          case( iNICAM ) ! TYPE: NICAM-NETCDF
+
+             call ParentLandInputNICAM( &
+                  tg_org, strg_org,           & ! (out)
+                  lst_org,                    & ! (out)
+                  llon_org, llat_org, lz_org, & ! (out)
+                  topo_org, lmask_org,        & ! (out)
+                  basename_land, ldims,       & ! (in)
+                  use_file_landwater, n       ) ! (in)
+             ust_org = UNDEF
+             albg_org = UNDEF
+
+          case( iGrADS ) ! TYPE: GrADS format
+
+             call ParentLandInputGrADS( &
+                  tg_org, strg_org, smds_org, & ! (out)
+                  lst_org,                    & ! (out)
+                  llon_org, llat_org, lz_org, & ! (out)
+                  topo_org, lmask_org,        & ! (out)
+                  basename_land, ldims,       & ! (in)
+                  use_file_landwater, n       ) ! (in)
+             ust_org = UNDEF
+             albg_org = UNDEF
+
+          end select
+
+          call PROF_rapend  ('___SurfaceInput',3)
+
+       end if
+
+       if ( serial_land ) then
+          call COMM_bcast( tg_org, ldims(1), ldims(2), ldims(3) )
+          if ( use_waterratio ) then
+             call COMM_bcast( smds_org, ldims(1), ldims(2), ldims(3) )
+          else
+             call COMM_bcast( strg_org, ldims(1), ldims(2), ldims(3) )
+          end if
+          call COMM_bcast( lst_org, ldims(2), ldims(3) )
+          call COMM_bcast( ust_org, ldims(2), ldims(3) )
+          call COMM_bcast( albg_org(:,:,I_LW), ldims(2), ldims(3) )
+          call COMM_bcast( albg_org(:,:,I_SW), ldims(2), ldims(3) )
+          call COMM_bcast( topo_org, ldims(2), ldims(3) )
+          call COMM_bcast( lmask_org, ldims(2), ldims(3) )
+          call COMM_bcast( llon_org, ldims(2), ldims(3) )
+          call COMM_bcast( llat_org, ldims(2), ldims(3) )
+          call COMM_bcast( lz_org, ldims(1) )
+       end if
 
        if ( do_read_ocean ) then
 
@@ -2238,27 +2252,27 @@ contains
 
        if ( first ) then ! interporate land data only once
 
-          call land_interporation(         &
-               tg, strg,                   & ! (out)
-               lst, albg,                  & ! (out)
-               ust, albu,                  & ! (out)
-               tg_org, strg_org, smds_org, & ! (inout)
-               lst_org, albg_org,          & ! (inout)
-               ust_org,                    & ! (inout)
-               sst_org,                    & ! (in)
-               lmask_org,                  & ! (in)
-               lsmask_nest,                & ! (in)
-               topo_org,                   & ! (in)
-               lz_org, llon_org, llat_org, & ! (in)
-               LCZ, LON, LAT,              & ! (in)
-               ldims, odims,               & ! (in)
-               maskval_tg, maskval_strg,   & ! (in)
-               init_landwater_ratio,       & ! (in)
-               use_file_landwater,         & ! (in)
-               use_waterratio,             & ! (in)
-               soilwater_ds2vc_flag,       & ! (in)
-               elevation_collection,       & ! (in)
-               intrp_iter_max              ) ! (in)
+          call land_interporation( &
+               tg(:,:,:,nn), strg(:,:,:,nn), & ! (out)
+               lst(:,:,nn), albg(:,:,:,nn),  & ! (out)
+               ust, albu,                    & ! (out)
+               tg_org, strg_org, smds_org,   & ! (inout)
+               lst_org, albg_org,            & ! (inout)
+               ust_org,                      & ! (inout)
+               sst_org,                      & ! (in)
+               lmask_org,                    & ! (in)
+               lsmask_nest,                  & ! (in)
+               topo_org,                     & ! (in)
+               lz_org, llon_org, llat_org,   & ! (in)
+               LCZ, LON, LAT,                & ! (in)
+               ldims, odims,                 & ! (in)
+               maskval_tg, maskval_strg,     & ! (in)
+               init_landwater_ratio,         & ! (in)
+               use_file_landwater,           & ! (in)
+               use_waterratio,               & ! (in)
+               soilwater_ds2vc_flag,         & ! (in)
+               elevation_collection,         & ! (in)
+               intrp_iter_max                ) ! (in)
 
        end if ! first
 
@@ -2307,8 +2321,8 @@ contains
           do j = 1, JA
           do i = 1, IA
              if( abs(lsmask_nest(i,j)-0.0_RP) < EPS ) then ! ocean grid
-                lst(i,j)   = sst(i,j,nn)
-                ust(i,j)   = sst(i,j,nn)
+                lst(i,j,nn) = sst(i,j,nn)
+                ust(i,j)    = sst(i,j,nn)
              endif
           enddo
           enddo
@@ -2328,7 +2342,11 @@ contains
   end subroutine ParentSurfaceInput
 
   !> Boundary Data Write
-  subroutine ParentOceanBoundary( &
+  subroutine ParentSurfaceBoundary( &
+       tg, &
+       strg, &
+       lst, &
+       albg, &
        tw, &
        sst, &
        albw, &
@@ -2349,6 +2367,10 @@ contains
          TIME_NOWDATE
     implicit none
 
+    real(RP),         intent(in)   :: tg(:,:,:,:)
+    real(RP),         intent(in)   :: strg(:,:,:,:)
+    real(RP),         intent(in)   :: lst(:,:,:)
+    real(RP),         intent(in)   :: albg(:,:,:,:)
     real(RP),         intent(in)   :: tw(:,:,:)
     real(RP),         intent(in)   :: sst(:,:,:)
     real(RP),         intent(in)   :: albw(:,:,:,:)
@@ -2358,7 +2380,7 @@ contains
     character(len=*), intent(in)   :: title
     integer,          intent(in)   :: numsteps ! total time steps
 
-    character(len=H_SHORT) :: ocean_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
+    character(len=H_SHORT) :: boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
     integer :: nowdate(6)
     integer :: fid, vid(5)
     integer :: ts, te
@@ -2375,36 +2397,56 @@ contains
     nowdate = TIME_NOWDATE
     nowdate(1) = nowdate(1)
 
-    call FILEIO_create( fid, basename, title, ocean_boundary_out_dtype, nowdate )
+    call FILEIO_create( fid, basename, title, boundary_out_dtype, nowdate )
 
     call FILEIO_def_var( fid, vid(1), &
-         'OCEAN_TEMP',     'Reference Ocean Temperature',            'K', 'XYT', &
-         ocean_boundary_out_dtype, update_dt, numsteps )
+         'LAND_TEMP', 'Reference Land Temperature', 'K', 'Land', &
+         boundary_out_dtype, update_dt, numsteps )
     call FILEIO_def_var( fid, vid(2), &
-         'OCEAN_SFC_TEMP', 'Reference Ocean Surface Temperature',    'K', 'XYT', &
-         ocean_boundary_out_dtype, update_dt, numsteps )
+         'LAND_WATER', 'Reference Land Moisture', 'm3/m3', 'Land', &
+         boundary_out_dtype, update_dt, numsteps )
     call FILEIO_def_var( fid, vid(3), &
-         'OCEAN_ALB_LW', 'Reference Ocean Surface Albedo Long-wave', '1', 'XYT', &
-         ocean_boundary_out_dtype, update_dt, numsteps )
+         'LAND_SFC_TEMP', 'Reference Land Surface Temperature', 'K', 'XYT', &
+         boundary_out_dtype, update_dt, numsteps )
     call FILEIO_def_var( fid, vid(4), &
-         'OCEAN_ALB_SW', 'Reference Ocean Surface Albedo Short-wave', '1', 'XYT', &
-         ocean_boundary_out_dtype, update_dt, numsteps )
+         'LAND_ALB_LW', 'Reference Land Surface Albedo Long-wave', '1', 'XYT', &
+         boundary_out_dtype, update_dt, numsteps )
     call FILEIO_def_var( fid, vid(5), &
+         'LAND_ALB_SW', 'Reference Land Surface Albedo Short-wave', '1', 'XYT', &
+         boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(6), &
+         'OCEAN_TEMP', 'Reference Ocean Temperature', 'K', 'XYT', &
+         boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(7), &
+         'OCEAN_SFC_TEMP', 'Reference Ocean Surface Temperature', 'K', 'XYT', &
+         boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(8), &
+         'OCEAN_ALB_LW', 'Reference Ocean Surface Albedo Long-wave', '1', 'XYT', &
+         boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(9), &
+         'OCEAN_ALB_SW', 'Reference Ocean Surface Albedo Short-wave', '1', 'XYT', &
+         boundary_out_dtype, update_dt, numsteps )
+    call FILEIO_def_var( fid, vid(10), &
          'OCEAN_SFC_Z0', 'Reference Ocean Surface Z0', 'm', 'XYT', &
-         ocean_boundary_out_dtype, update_dt, numsteps )
+         boundary_out_dtype, update_dt, numsteps )
 
     call FILEIO_enddef( fid )
 
-       call FILEIO_write_var( fid, vid(1), tw(:,:,ts:te),         'OCEAN_TEMP',    'XYT', update_dt )
-       call FILEIO_write_var( fid, vid(2), sst(:,:,ts:te),       'OCEAN_SFC_TEMP', 'XYT', update_dt )
-       call FILEIO_write_var( fid, vid(3), albw(:,:,I_LW,ts:te), 'OCEAN_ALB_LW',   'XYT', update_dt )
-       call FILEIO_write_var( fid, vid(4), albw(:,:,I_SW,ts:te), 'OCEAN_ALB_SW',   'XYT', update_dt )
-       call FILEIO_write_var( fid, vid(5), z0(:,:,ts:te),        'OCEAN_SFC_Z0',   'XYT', update_dt )
+    call FILEIO_write_var( fid, vid(1),  tg  (:,:,:,     ts:te), 'LAND_TEMP',      'Land', update_dt )
+    call FILEIO_write_var( fid, vid(2),  strg(:,:,:,     ts:te), 'LAND_WATER',     'Land', update_dt )
+    call FILEIO_write_var( fid, vid(3),  lst (  :,:,     ts:te), 'LAND_SFC_TEMP',  'XYT',  update_dt )
+    call FILEIO_write_var( fid, vid(4),  albg(  :,:,I_LW,ts:te), 'LAND_ALB_LW',    'XYT',  update_dt )
+    call FILEIO_write_var( fid, vid(5),  albg(  :,:,I_SW,ts:te), 'LAND_ALB_SW',    'XYT',  update_dt )
+    call FILEIO_write_var( fid, vid(6),  tw  (  :,:,     ts:te), 'OCEAN_TEMP',     'XYT',  update_dt )
+    call FILEIO_write_var( fid, vid(7),  sst (  :,:,     ts:te), 'OCEAN_SFC_TEMP', 'XYT',  update_dt )
+    call FILEIO_write_var( fid, vid(8),  albw(  :,:,I_LW,ts:te), 'OCEAN_ALB_LW',   'XYT',  update_dt )
+    call FILEIO_write_var( fid, vid(9),  albw(  :,:,I_SW,ts:te), 'OCEAN_ALB_SW',   'XYT',  update_dt )
+    call FILEIO_write_var( fid, vid(10), z0  (  :,:,     ts:te), 'OCEAN_SFC_Z0',   'XYT',  update_dt )
 
     call PROF_rapend  ('___SurfaceOutput',3)
 
     return
-  end subroutine ParentOceanBoundary
+  end subroutine ParentSurfaceBoundary
 
 
   !-------------------------------
