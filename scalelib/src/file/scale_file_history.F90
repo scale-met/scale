@@ -117,6 +117,31 @@ module scale_file_history
   end interface FILE_HISTORY_Set_Attribute
 
 
+  !-----------------------------------------------------------------------------
+  !
+  !++ included parameters
+  !
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public parameters & variables
+  !
+  logical, public :: FILE_HISTORY_AGGREGATE !> Switch to use aggregate file I/O
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private procedures
+  !
+  private :: FILE_HISTORY_Create
+  private :: FILE_HISTORY_Add_Variable
+  private :: FILE_HISTORY_Write_Axes
+  private :: FILE_HISTORY_Write_OneVar
+  private :: FILE_HISTORY_Output_List
+  private :: FILE_HISTORY_Check
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private parameters & variables
+  !
+
   type request
      character(len=File_HSHORT) :: name              !> Name of variable (in the code)
      character(len=File_HSHORT) :: outname           !> Name of variable (for output)
@@ -200,30 +225,6 @@ module scale_file_history
      real(SP), pointer          :: float(:)
      real(DP), pointer          :: double(:)
   end type attr
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ included parameters
-  !
-  !-----------------------------------------------------------------------------
-  !
-  !++ Public parameters & variables
-  !
-  !-----------------------------------------------------------------------------
-  !
-  !++ Private procedures
-  !
-  private :: FILE_HISTORY_Create
-  private :: FILE_HISTORY_Add_Variable
-  private :: FILE_HISTORY_Write_Axes
-  private :: FILE_HISTORY_Write_OneVar
-  private :: FILE_HISTORY_Output_List
-  private :: FILE_HISTORY_Check
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ Private parameters & variables
-  !
 
   ! From upstream side of the library
   integer                    :: FILE_HISTORY_myrank      !> Number of my rank
@@ -310,6 +311,8 @@ contains
        FILE_REAL4, &
        FILE_REAL8, &
        FILE_preclist
+    use scale_file, only: &
+       FILE_AGGREGATE
     use scale_calendar, only: &
        CALENDAR_unit2sec
     use scale_const, only: &
@@ -368,6 +371,7 @@ contains
        FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL,   &
        FILE_HISTORY_OUTPUT_SWITCH_TUNIT,       &
        FILE_HISTORY_ERROR_PUTMISS,             &
+       FILE_HISTORY_AGGREGATE,                 &
        FILE_HISTORY_OPTIONS,                   &
        debug
 
@@ -432,6 +436,8 @@ contains
     FILE_HISTORY_OUTPUT_WAIT_TUNIT         = 'SEC'     !> Time unit
     FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL   = -1.0_DP   !> Time interval to switch output file
     FILE_HISTORY_OUTPUT_SWITCH_TUNIT       = 'SEC'     !> Time unit
+
+    FILE_HISTORY_AGGREGATE                 = FILE_AGGREGATE
 
     !--- read namelist
     FILE_HISTORY_TITLE       = title
@@ -1251,8 +1257,11 @@ contains
     else
        FILE_HISTORY_axes(FILE_HISTORY_naxes)%down = .false.
     endif
-    if ( present(gsize) ) &  ! global dimension size
+    if ( present(gsize) ) then ! global dimension size
          FILE_HISTORY_axes(FILE_HISTORY_naxes)%gdim_size = gsize
+    else
+         FILE_HISTORY_axes(FILE_HISTORY_naxes)%gdim_size = -1
+    end if
     if ( present(start) ) then  ! global subarray starting indices
        FILE_HISTORY_axes(FILE_HISTORY_naxes)%start(1) = start
     else
@@ -1265,17 +1274,14 @@ contains
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Write
     use scale_file, only: &
-       FILE_AGGREGATE, &
+       FILE_EndDef, &
        FILE_Flush
-    use mpi, only: &
-       MPI_COMM_NULL
     use scale_time, only: &
        TIME_time2label
     implicit none
 
     integer :: fid, prev_fid
     integer :: id
-    integer :: comm
     character(len=FILE_HMID) :: timelabel
     !---------------------------------------------------------------------------
 
@@ -1285,21 +1291,19 @@ contains
 
     ! Note this subroutine must be called after all FILE_HISTORY_reg calls are completed
     ! Write registered history axes to history file
-    if ( FILE_AGGREGATE ) then  ! user input parameter indicates to do PnetCDF I/O
-       comm = FILE_HISTORY_MPI_COMM
-    else
-       comm = MPI_COMM_NULL
-    endif
-
     call TIME_time2label( FILE_HISTORY_NOWDATE, FILE_HISTORY_NOWMS, & ! [IN]
                           timelabel ) ! [OUT]
-    ! Write registered history variables to history file
+
     do id = 1, FILE_HISTORY_nitems
        call FILE_HISTORY_Create( id,                              & ! [IN]
                                  FILE_HISTORY_NOWSTEP, timelabel, & ! [IN]
-                                 options=FILE_HISTORY_options,    &
-                                 mpi_comm=comm                    ) ! [IN]
+                                 options=FILE_HISTORY_options     )
+    end do
 
+    call FILE_HISTORY_Write_Axes
+
+    ! Write registered history variables to history file
+    do id = 1, FILE_HISTORY_nitems
        call FILE_HISTORY_Write_OneVar( id, FILE_HISTORY_NOWSTEP ) ! [IN]
     enddo
 
@@ -1533,10 +1537,11 @@ contains
        now_step,  &
        timelabel, &
        options,   &
-       mpi_comm,  &
        existed    )
     use mpi, only: &
        MPI_COMM_NULL
+    use scale_process, only: &
+       PRC_LOCAL_COMM_WORLD
     use scale_file_h, only: &
        FILE_REAL8, &
        FILE_REAL4
@@ -1556,11 +1561,9 @@ contains
     character(len=*),  intent(in)  :: timelabel
 
     character(len=*),  intent(in),  optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
-    integer,           intent(in),  optional :: mpi_comm ! MPI communicator
     logical,           intent(out), optional :: existed
 
     integer                   :: fid
-    logical                   :: shared_file_io
     character(len=FILE_HMID)  :: tunits
     character(len=FILE_HLONG) :: basename_mod
     logical                   :: fileexisted
@@ -1570,6 +1573,7 @@ contains
     integer                   :: dimid
     integer                   :: ndims
     real(DP)                  :: dtsec
+    integer                   :: mpi_comm
 
     integer :: ic, ie, is, lo
     integer :: m
@@ -1580,14 +1584,6 @@ contains
     if ( fid >= 0 ) then ! file already exists
        fileexisted = .true.
     else
-
-       ! check whether shared-file I/O method is enabled
-       shared_file_io = .false.
-       if ( present(mpi_comm) ) then
-          shared_file_io = (mpi_comm .NE. MPI_COMM_NULL)
-       else
-          shared_file_io = .false.
-       end if
 
 
        if ( FILE_HISTORY_TIME_SINCE == '' ) then
@@ -1602,8 +1598,13 @@ contains
           basename_mod = trim(FILE_HISTORY_vars(id)%basename)
        endif
 
-       call FILE_Create( fid,                      & ! [OUT]
-                         fileexisted,              & ! [OUT]
+       if ( FILE_HISTORY_AGGREGATE ) then
+          mpi_comm = PRC_LOCAL_COMM_WORLD
+       else
+          mpi_comm = MPI_COMM_NULL
+       end if
+
+       call FILE_Create( fid, fileexisted,         & ! [OUT]
                          basename_mod,             & ! [IN]
                          FILE_HISTORY_TITLE,       & ! [IN]
                          FILE_HISTORY_SOURCE,      & ! [IN]
@@ -1654,8 +1655,13 @@ contains
           ! define registered history axis variables in the newly created file
           ! actual writing axis variables are deferred to FILE_HISTORY_WriteAxes
           do m = 1, FILE_HISTORY_naxes
-             if ( shared_file_io ) then ! for shared-file I/O, define axis in its global size
+             if ( FILE_HISTORY_AGGREGATE ) then ! for shared-file I/O, define axis in its global size
                 dim_size = FILE_HISTORY_axes(m)%gdim_size ! axis global size
+                if ( dim_size < 1 ) then
+                   write(*,*) 'xxx gsize is not set by FILE_HISTORY_Set_Axis'
+                   write(*,*) 'It is necessary for aggregate file'
+                   call PRC_abort
+                end if
              else
                 dim_size = FILE_HISTORY_axes(m)%dim_size
              endif
@@ -1772,8 +1778,6 @@ contains
        endif
 
     endif
-
-    if ( .not. fileexisted ) call FILE_HISTORY_Write_Axes
 
     if ( present(existed) ) existed = fileexisted
 

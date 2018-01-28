@@ -140,7 +140,7 @@ module scale_file_cartesC
   integer,  private              :: startLAND (3), countLAND (3)
   integer,  private              :: startURBAN(3), countURBAN(3)
   ! local start and end
-  integer,  private              :: XSB, XEB, YSB, YEB
+  integer,  private              :: ISB2, IEB2, JSB2, JEB2 !> for FILE_AGGREGATE
 
   ! MPI element datatype for restart variables
   integer,  private              :: etype
@@ -163,7 +163,7 @@ contains
   subroutine FILE_CARTESC_setup
     use scale_process, only: &
        PRC_myrank, &
-       PRC_MPIstop
+       PRC_abort
     use scale_rm_process, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
@@ -171,7 +171,7 @@ contains
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_file, only: &
-       FILE_AGGREGATE
+       FILE_setup
     implicit none
 
     NAMELIST / PARAM_FILE_CARTESC / &
@@ -180,6 +180,9 @@ contains
     integer :: IM, JM
     integer :: ierr
     !---------------------------------------------------------------------------
+
+    call FILE_setup( PRC_myrank )
+
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[FIELIO] / Categ[ATMOS-RM IO] / Origin[SCALElib]'
@@ -193,7 +196,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_FILE_CARTESC. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_FILE_CARTESC)
 
@@ -205,26 +208,19 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Data consistency criteria : ', &
                                    '(file-internal)/internal = ', FILE_CARTESC_datacheck_criteria
 
-    if ( FILE_AGGREGATE ) then
-       ! construct indices independent from PRC_PERIODIC_X/Y
-       XSB = 1 + IHALO
-       if( PRC_2Drank(PRC_myrank,1) == 0           ) XSB = 1
-       XEB = IMAX + IHALO
-       if( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) XEB = IA
+    ! construct indices independent from PRC_PERIODIC_X/Y
+    ISB2 = IS
+    if( PRC_2Drank(PRC_myrank,1) == 0           ) ISB2 = 1
+    IEB2 = IE
+    if( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) IEB2 = IA
 
-       YSB = 1 + JHALO
-       if( PRC_2Drank(PRC_myrank,2) == 0           ) YSB = 1
-       YEB = JMAX + JHALO
-       if( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) YEB = JA
-    else
-       XSB = ISB
-       XEB = IEB
-       YSB = JSB
-       YEB = JEB
-    endif
+    JSB2 = JS
+    if( PRC_2Drank(PRC_myrank,2) == 0           ) JSB2 = 1
+    JEB2 = JE
+    if( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) JEB2 = JA
 
-    IM = XEB - XSB + 1
-    JM = YEB - YSB + 1
+    IM = JEB2 - JSB2 + 1
+    JM = JEB2 - JSB2 + 1
     allocate( AXIS_LON  (IM,JM) )
     allocate( AXIS_LONUY(IM,JM) )
     allocate( AXIS_LONXV(IM,JM) )
@@ -237,7 +233,7 @@ contains
     allocate( AXIS_HGT   (KMAX  ,IM,JM) )
     allocate( AXIS_HGTWXY(KMAX+1,IM,JM) )
 
-    if( FILE_AGGREGATE ) call Construct_Derived_Datatype
+    call Construct_Derived_Datatype
 
     File_closed(:) = .true.
 
@@ -297,17 +293,17 @@ contains
     real(RP), intent(in) :: FZ   (0:KA,IA,JA)
     !---------------------------------------------------------------------------
 
-    AXIS_LON  (:,:)   = LON  (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LONUY(:,:)   = LONX (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LONXV(:,:)   = LONY (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LONUV(:,:)   = LONXY(XSB:XEB,YSB:YEB) / D2R
-    AXIS_LAT  (:,:)   = LAT  (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LATUY(:,:)   = LATX (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LATXV(:,:)   = LATY (XSB:XEB,YSB:YEB) / D2R
-    AXIS_LATUV(:,:)   = LATXY(XSB:XEB,YSB:YEB) / D2R
+    AXIS_LON  (:,:)   = LON  (ISB2:IEB2,JSB2:JEB2) / D2R
+    AXIS_LONUY(:,:)   = LONX (ISB2:IEB2,JSB2:JEB2) / D2R
+    AXIS_LONXV(:,:)   = LONY (ISB2:IEB2,JSB2:JEB2) / D2R
+    AXIS_LONUV(:,:)   = LONXY(ISB2:IEB2,JSB2:JEB2) / D2R
+    AXIS_LAT  (:,:)   = LAT  (ISB2:IEB2,JSB2:JEB2) / D2R
+    AXIS_LATUY(:,:)   = LATX (ISB2:IEB2,JSB2:JEB2) / D2R
+    AXIS_LATXV(:,:)   = LATY (ISB2:IEB2,JSB2:JEB2) / D2R
+    AXIS_LATUV(:,:)   = LATXY(ISB2:IEB2,JSB2:JEB2) / D2R
 
-    AXIS_HGT   (:,:,:) = CZ(KS  :KE,XSB:XEB,YSB:YEB)
-    AXIS_HGTWXY(:,:,:) = FZ(KS-1:KE,XSB:XEB,YSB:YEB)
+    AXIS_HGT   (:,:,:) = CZ(KS  :KE,ISB2:IEB2,JSB2:JEB2)
+    AXIS_HGTWXY(:,:,:) = FZ(KS-1:KE,ISB2:IEB2,JSB2:JEB2)
 
     set_coordinates = .true.
 
@@ -405,6 +401,8 @@ contains
     real(RP) :: buffer_o  (OKMAX)
     real(RP) :: buffer_l  (LKMAX)
     real(RP) :: buffer_u  (UKMAX)
+
+    integer :: XSB, XEB, YSB, YEB
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -422,6 +420,12 @@ contains
     if( present(urban) ) urban_ = urban
     if( present(transpose) ) transpose_ = transpose
 
+
+    XSB = ISB - ISB2 + 1
+    XEB = IEB - ISB + XSB
+    YSB = JSB - JSB2 + 1
+    YEB = JEB - JSB + YSB
+
     call FILE_CARTESC_read_var_1D( buffer_x, fid, 'x',  'X', 1 )
     call FILE_CARTESC_read_var_1D( buffer_y, fid, 'y',  'Y', 1 )
     call FILE_CARTESC_flush( fid )
@@ -431,11 +435,11 @@ contains
     if ( set_coordinates ) then
        call FILE_CARTESC_read_var_2D( buffer_xy, fid, 'lon', 'XY', 1 )
        call FILE_CARTESC_flush( fid )
-       call check_2d( AXIS_LON, buffer_xy(XSB:XEB,YSB:YEB), 'lon' )
+       call check_2d( AXIS_LON(XSB:XEB,YSB:YEB), buffer_xy(ISB:IEB,JSB:JEB), 'lon' )
 
        call FILE_CARTESC_read_var_2D( buffer_xy, fid, 'lat', 'XY', 1 )
        call FILE_CARTESC_flush( fid )
-       call check_2d( AXIS_LAT, buffer_xy(XSB:XEB,YSB:YEB), 'lat' )
+       call check_2d( AXIS_LAT(XSB:XEB,YSB:YEB), buffer_xy(ISB:IEB,JSB:JEB), 'lat' )
     endif
 
     if ( atmos_ ) then
@@ -446,7 +450,7 @@ contains
        call FILE_CARTESC_flush( fid )
        call check_1d( GRID_CZ(KS:KE), buffer_z(KS:KE), 'z' )
        if ( .not. transpose_ ) then
-          call check_3d( AXIS_HGT, buffer_zxy(KS:KE,XSB:XEB,YSB:YEB), 'height', transpose_ )
+          call check_3d( AXIS_HGT(:,XSB:XEB,YSB:YEB), buffer_zxy(KS:KE,ISB:IEB,JSB:JEB), 'height', transpose_ )
        endif
     endif
 
@@ -476,7 +480,7 @@ contains
   subroutine Construct_Derived_Datatype
     use mpi
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_rm_process, only: &
        PRC_NUM_X,  &
        PRC_NUM_Y
@@ -599,14 +603,10 @@ contains
   !> free MPI derived datatypes
   subroutine Free_Derived_Datatype
     use mpi
-    use scale_file, only: &
-       FILE_AGGREGATE
     implicit none
 
     integer :: err
     !---------------------------------------------------------------------------
-
-    if( .NOT. FILE_AGGREGATE ) return
 
     if( centerTypeXY    /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeXY,    err)
     if( centerTypeZX    /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeZX,    err)
@@ -630,7 +630,8 @@ contains
        basename, &
        varname,  &
        dim_type, &
-       step      )
+       step,     &
+       aggregate )
     implicit none
 
     real(RP),         intent(out) :: var(:)   !< value of the variable
@@ -638,12 +639,14 @@ contains
     character(len=*), intent(in)  :: varname  !< name of the variable
     character(len=*), intent(in)  :: dim_type !< axis type (Z/X/Y)
     integer,          intent(in)  :: step     !< step number
+    logical,          intent(in), optional :: aggregate
 
     integer :: fid
     !---------------------------------------------------------------------------
 
     call FILE_CARTESC_open( fid,      & ! [OUT]
-                            basename  ) ! [IN]
+                            basename, & ! [IN]
+                            aggregate ) ! [IN]
 
     call FILE_CARTESC_read_var_1D( var(:),                      & ! [OUT]
                                    fid, varname, dim_type, step ) ! [IN]
@@ -660,7 +663,8 @@ contains
        basename, &
        varname,  &
        dim_type, &
-       step      )
+       step,     &
+       aggregate )
     implicit none
 
     real(RP),         intent(out) :: var(:,:) !< value of the variable
@@ -668,12 +672,14 @@ contains
     character(len=*), intent(in)  :: varname  !< name of the variable
     character(len=*), intent(in)  :: dim_type !< axis type (Z/X/Y)
     integer,          intent(in)  :: step     !< step number
+    logical,          intent(in), optional :: aggregate
 
     integer :: fid
     !---------------------------------------------------------------------------
 
     call FILE_CARTESC_open( fid,      & ! [OUT]
-                      basename  ) ! [IN]
+                            basename, & ! [IN]
+                            aggregate ) ! [IN]
 
     call FILE_CARTESC_read_var_2D( var(:,:),                    & ! [OUT]
                                    fid, varname, dim_type, step ) ! [IN]
@@ -690,7 +696,8 @@ contains
        basename, &
        varname,  &
        dim_type, &
-       step      )
+       step,     &
+       aggregate )
     implicit none
 
     real(RP),         intent(out) :: var(:,:,:) !< value of the variable
@@ -698,12 +705,14 @@ contains
     character(len=*), intent(in)  :: varname    !< name of the variable
     character(len=*), intent(in)  :: dim_type   !< axis type (Z/X/Y/T)
     integer,          intent(in)  :: step       !< step number
+    logical,          intent(in), optional :: aggregate
 
     integer :: fid
     !---------------------------------------------------------------------------
 
     call FILE_CARTESC_open( fid,      & ! [OUT]
-                      basename  ) ! [IN]
+                            basename, & ! [IN]
+                            aggregate )
 
     call FILE_CARTESC_read_var_3D( var(:,:,:),                  & ! [OUT]
                                    fid, varname, dim_type, step ) ! [IN]
@@ -720,7 +729,8 @@ contains
        basename, &
        varname,  &
        dim_type, &
-       step      )
+       step,     &
+       aggregate )
     implicit none
 
     real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
@@ -728,12 +738,14 @@ contains
     character(len=*), intent(in)  :: varname      !< name of the variable
     character(len=*), intent(in)  :: dim_type     !< axis type (Z/X/Y/Time)
     integer,          intent(in)  :: step         !< step number
+    logical,          intent(in), optional :: aggregate
 
     integer :: fid
     !---------------------------------------------------------------------------
 
     call FILE_CARTESC_open( fid,      & ! [OUT]
-                      basename  ) ! [IN]
+                            basename, & ! [IN]
+                            aggregate )
 
     call FILE_CARTESC_read_var_4D( var(:,:,:,:),                & ! [OUT]
                                    fid, varname, dim_type, step ) ! [IN]
@@ -755,7 +767,7 @@ contains
        FILE_get_AGGREGATE, &
        FILE_Read
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_rm_process, only: &
        PRC_NUM_X, &
        PRC_NUM_Y
@@ -811,7 +823,7 @@ contains
                           ntypes=JA, dtype=etype, start=start, count=count )
        else
           write(*,*) 'xxx [FILE_CARTESC_read_var_1D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_MPIstop
+          call PRC_abort
        endif
     else
        if    ( dim_type == 'Z' ) then
@@ -840,7 +852,7 @@ contains
           dim1_E   = JA
        else
           write(*,*) 'xxx [FILE_CARTESC_read_var_1D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        call FILE_Read( var(dim1_S:dim1_E), fid, varname, step )
@@ -863,7 +875,7 @@ contains
        FILE_get_AGGREGATE, &
        FILE_Read
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_rm_process, only: &
        PRC_NUM_X, &
        PRC_NUM_Y
@@ -896,7 +908,7 @@ contains
                           ntypes=1, dtype=centerTypeZX, start=startZX, count=countZX )
        else
           write(*,*) 'xxx [FILE_CARTESC_read_var_2D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_MPIstop
+          call PRC_abort
        endif
     else
        if    ( dim_type == 'XY' ) then
@@ -911,7 +923,7 @@ contains
           dim2_E   = IEB
        else
           write(*,*) 'xxx [FILE_CARTESC_read_var_2D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        call FILE_Read( var(dim1_S:dim1_E,dim2_S:dim2_E), fid, varname, step )
@@ -934,7 +946,7 @@ contains
        FILE_get_AGGREGATE, &
        FILE_Read
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_rm_process, only: &
        PRC_NUM_X, &
        PRC_NUM_Y
@@ -983,7 +995,7 @@ contains
                           ntypes=1, dtype=centerTypeURBAN, start=startURBAN, count=countURBAN )
        else
           write(*,*) 'xxx [FILE_CARTESC_read_var_3D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_MPIstop
+          call PRC_abort
        endif
     else
        if(      dim_type == 'ZXY'  &
@@ -1032,7 +1044,7 @@ contains
           dim3_E   = JEB
        else
           write(*,*) 'xxx [FILE_CARTESC_read_var_3D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        call FILE_Read( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
@@ -1056,7 +1068,7 @@ contains
        FILE_get_AGGREGATE, &
        FILE_Read
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_rm_process, only: &
        PRC_NUM_X, &
        PRC_NUM_Y
@@ -1094,7 +1106,7 @@ contains
                           ntypes=step, dtype=centerTypeZHXY, start=startZHXY, count=countZHXY )
        else
           write(*,*) 'xxx [FILE_CARTESC_read_var_4D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_MPIstop
+          call PRC_abort
        endif
     else
        if (      dim_type == 'ZXYT'  &
@@ -1128,7 +1140,7 @@ contains
           dim4_E   = step
        else
           write(*,*) 'xxx [FILE_CARTESC_read_var_4D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        call FILE_Read( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E), &
@@ -1157,9 +1169,10 @@ contains
        datatype, &
        date,     &
        subsec,   &
-       append    )
+       append,   &
+       aggregate )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
 
     real(RP),         intent(in) :: var(:)   !< value of the variable
@@ -1174,14 +1187,16 @@ contains
     integer,          intent(in), optional :: date(6) !< ymdhms of the time
     real(DP),         intent(in), optional :: subsec  !< subsec of the time
     logical,          intent(in), optional :: append  !< switch whether append existing file or not (default=false)
+    logical,          intent(in), optional :: aggregate
 
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (1D), name : ', trim(varname)
 
-    call FILE_CARTESC_create( fid,                                            & ! [OUT]
-                              basename, title, datatype, date, subsec, append )
+    call FILE_CARTESC_create( fid,                            & ! [OUT]
+                              basename, title, datatype,      & ! [IN]
+                              date, subsec, append, aggregate ) ! [IN]
 
     call FILE_CARTESC_def_var( fid, vid, varname, desc, unit, dim_type, datatype )
 
@@ -1207,9 +1222,10 @@ contains
        subsec,    &
        append,    &
        fill_halo, &
-       haszcoord  )
+       haszcoord, &
+       aggregate  )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
 
     real(RP),         intent(in) :: var(:,:) !< value of the variable
@@ -1226,14 +1242,16 @@ contains
     logical,          intent(in), optional :: append    !< switch whether append existing file or not (default=false)
     logical,          intent(in), optional :: fill_halo !< switch whether include halo data or not    (default=false)
     logical,          intent(in), optional :: haszcoord !< switch whether include zcoordinate or not  (default=true)
+    logical,          intent(in), optional :: aggregate
 
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (2D), name : ', trim(varname)
 
-    call FILE_CARTESC_create( fid,                                                       & ! [OUT]
-                              basename, title, datatype, date, subsec, append, haszcoord )
+    call FILE_CARTESC_create( fid,                                       & ! [OUT]
+                              basename, title, datatype,                 & ! [IN]
+                              date, subsec, append, haszcoord, aggregate ) ! [IN]
 
     call FILE_CARTESC_def_var( fid, vid, varname, desc, unit, dim_type, datatype )
 
@@ -1247,21 +1265,22 @@ contains
   !-----------------------------------------------------------------------------
   !> Write 3D data to file
   subroutine FILE_CARTESC_write_3D( &
-       var,      &
-       basename, &
-       title,    &
-       varname,  &
-       desc,     &
-       unit,     &
-       dim_type, &
-       datatype, &
-       date,     &
-       subsec,   &
-       append,   &
-       fill_halo )
+       var,       &
+       basename,  &
+       title,     &
+       varname,   &
+       desc,      &
+       unit,      &
+       dim_type,  &
+       datatype,  &
+       date,      &
+       subsec,    &
+       append,    &
+       fill_halo, &
+       aggregate  )
     use scale_process, only: &
        PRC_masterrank, &
-       PRC_MPIstop
+       PRC_abort
     implicit none
 
     real(RP),         intent(in) :: var(:,:,:) !< value of the variable
@@ -1277,14 +1296,16 @@ contains
     real(DP),         intent(in), optional :: subsec    !< subsec of the time
     logical,          intent(in), optional :: append    !< append existing (closed) file?
     logical,          intent(in), optional :: fill_halo !< include halo data?
+    logical,          intent(in), optional :: aggregate
 
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (3D), name : ', trim(varname)
 
-    call FILE_CARTESC_create( fid,                                            & ! [OUT]
-                              basename, title, datatype, date, subsec, append )
+    call FILE_CARTESC_create( fid,                            & ! [OUT]
+                              basename, title, datatype,      & ! [IN]
+                              date, subsec, append, aggregate ) ! [IN]
 
     call FILE_CARTESC_def_var( fid, vid, varname, desc, unit, dim_type, datatype )
 
@@ -1298,23 +1319,24 @@ contains
   !-----------------------------------------------------------------------------
   !> Write 3D data with time dimension to file
   subroutine FILE_CARTESC_write_3D_t( &
-       var,      &
-       basename, &
-       title,    &
-       varname,  &
-       desc,     &
-       unit,     &
-       dim_type, &
-       datatype, &
-       timeintv, &
-       tsince,   &
-       append,   &
-       timetarg, &
-       timeofs,  &
-       fill_halo )
+       var,       &
+       basename,  &
+       title,     &
+       varname,   &
+       desc,      &
+       unit,      &
+       dim_type,  &
+       datatype,  &
+       timeintv,  &
+       tsince,    &
+       append,    &
+       timetarg,  &
+       timeofs,   &
+       fill_halo, &
+       aggregate  )
     use scale_process, only: &
        PRC_masterrank, &
-       PRC_MPIstop
+       PRC_abort
     implicit none
 
     real(RP),         intent(in) :: var(:,:,:) !< value of the variable
@@ -1332,6 +1354,7 @@ contains
     integer,          intent(in), optional :: timetarg  !< target timestep (optional)
     real(DP),         intent(in), optional :: timeofs   !< offset time     (optional)
     logical,          intent(in), optional :: fill_halo !< include halo data?
+    logical,          intent(in), optional :: aggregate
 
     integer  :: fid, vid
     integer  :: nsteps
@@ -1341,8 +1364,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,'(1x,3A)') '*** Write to file (3D), name : ', trim(varname), 'with time dimension'
 
-    call FILE_CARTESC_create( fid,                                             & ! [OUT]
-                              basename, title, datatype, tsince, append=append )
+    call FILE_CARTESC_create( fid,                               & ! [OUT]
+                              basename, title, datatype, tsince, & ! [IN]
+                              append=append, aggregate=aggregate ) ! [IN]
 
     if ( present(timetarg) ) then
        nsteps = 1
@@ -1362,22 +1386,23 @@ contains
   !-----------------------------------------------------------------------------
   !> Write 4D data to file
   subroutine FILE_CARTESC_write_4D( &
-       var,      &
-       basename, &
-       title,    &
-       varname,  &
-       desc,     &
-       unit,     &
-       dim_type, &
-       datatype, &
-       timeintv, &
-       tsince,   &
-       append,   &
-       timetarg, &
-       timeofs,  &
-       fill_halo )
+       var,       &
+       basename,  &
+       title,     &
+       varname,   &
+       desc,      &
+       unit,      &
+       dim_type,  &
+       datatype,  &
+       timeintv,  &
+       tsince,    &
+       append,    &
+       timetarg,  &
+       timeofs,   &
+       fill_halo, &
+       aggregate  )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
 
     real(RP),         intent(in) :: var(:,:,:,:) !< value of the variable
@@ -1395,6 +1420,7 @@ contains
     integer,          intent(in), optional :: timetarg  !< target timestep (optional)
     real(DP),         intent(in), optional :: timeofs   !< offset time     (optional)
     logical,          intent(in), optional :: fill_halo !< include halo data?
+    logical,          intent(in), optional :: aggregate
 
     integer  :: fid, vid
     integer  :: nsteps
@@ -1404,8 +1430,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (4D), name : ', trim(varname)
 
-    call FILE_CARTESC_create( fid,                                             & ! [OUT]
-                              basename, title, datatype, tsince, append=append )
+    call FILE_CARTESC_create( fid,                               & ! [OUT]
+                              basename, title, datatype, tsince, & ! [IN]
+                              append=append, aggregate=aggregate ) ! [IN]
 
     if ( present(timetarg) ) then
        nsteps = 1
@@ -1426,7 +1453,8 @@ contains
   !> open a netCDF file for read
   subroutine FILE_CARTESC_open( &
        fid,      &
-       basename  )
+       basename, &
+       aggregate )
     use scale_file_h, only: &
        FILE_FREAD
     use scale_file, only: &
@@ -1440,17 +1468,20 @@ contains
 
     integer,          intent(out) :: fid      !< file ID
     character(len=*), intent(in)  :: basename !< basename of the file
+    logical,          intent(in), optional :: aggregate
 
     integer :: comm
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( FILE_AGGREGATE ) then  ! user input parameter indicates to do PnetCDF I/O
+    comm = MPI_COMM_NULL
+    ! check to do PnetCDF I/O
+    if ( present(aggregate) ) then
+       if (aggregate) comm = PRC_LOCAL_COMM_WORLD
+    else if ( FILE_AGGREGATE ) then
        comm = PRC_LOCAL_COMM_WORLD
-    else
-       comm = MPI_COMM_NULL
-    endif
+    end if
 
     call FILE_Open( fid,                & ! [OUT]
                     basename,           & ! [IN]
@@ -1468,14 +1499,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Create/open a netCDF file
   subroutine FILE_CARTESC_create( &
-       fid,      &
-       basename, &
-       title,    &
-       datatype, &
-       date,     &
-       subsec,   &
-       append,   &
-       haszcoord )
+       fid,       &
+       basename,  &
+       title,     &
+       datatype,  &
+       date,      &
+       subsec,    &
+       append,    &
+       haszcoord, &
+       aggregate  )
     use mpi, only: &
        MPI_COMM_NULL
     use scale_file_h, only: &
@@ -1489,7 +1521,7 @@ contains
     use scale_process, only: &
        PRC_Ismaster, &
        PRC_myrank,   &
-       PRC_MPIstop,  &
+       PRC_abort,  &
        PRC_LOCAL_COMM_WORLD
     use scale_rm_process, only: &
        PRC_2Drank,     &
@@ -1511,6 +1543,7 @@ contains
     real(DP),         intent(in), optional :: subsec    !< subsec of the time
     logical,          intent(in), optional :: append    !< switch whether append existing file or not (default=false)
     logical,          intent(in), optional :: haszcoord !< switch whether include zcoordinate or not (default=true)
+    logical,          intent(in), optional :: aggregate
 
     character(len=5)  :: periodic_z, periodic_x, periodic_y
     integer           :: dtype
@@ -1518,6 +1551,7 @@ contains
     character(len=34) :: tunits
     integer           :: comm
     logical           :: fileexisted
+    logical           :: aggregate_
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -1534,7 +1568,7 @@ contains
           dtype = FILE_REAL4
        else
           write(*,*) 'xxx unsupported data type. Check!', trim(datatype)
-          call PRC_MPIstop
+          call PRC_abort
        endif
     endif
 
@@ -1550,11 +1584,19 @@ contains
        tunits = 'seconds'
     endif
 
-    if ( FILE_AGGREGATE ) then  ! user input parameter indicates to do PnetCDF I/O
+
+    ! check to use PnetCDF I/O
+    if ( present(aggregate) ) then
+       aggregate_ = aggregate
+    else
+       aggregate_ = FILE_AGGREGATE
+    endif
+
+    if ( aggregate_ ) then
        comm = PRC_LOCAL_COMM_WORLD
     else
        comm = MPI_COMM_NULL
-    endif
+    end if
 
     call FILE_Create( fid,                     & ! [OUT]
                       fileexisted,             & ! [OUT]
@@ -1562,7 +1604,7 @@ contains
                       title,                   & ! [IN]
                       H_SOURCE,                & ! [IN]
                       H_INSTITUTE,             & ! [IN]
-                      "Cartesian-C",           & ! [IN]
+                      "cartesC",               & ! [IN]
 !                      GRID_CARTESC_NAME,       & ! [IN]
                       rankid = PRC_myrank,     & ! [IN]
                       ismaster = PRC_Ismaster, & ! [IN]
@@ -1592,31 +1634,31 @@ contains
           periodic_y = "false"
        endif
 
-       if ( FILE_AGGREGATE ) then
-          call FILE_Set_Attribute( fid, "global", "scale_rm_prc_rank_x", (/0/) ) ! [IN]
-          call FILE_Set_Attribute( fid, "global", "scale_rm_prc_rank_y", (/0/) ) ! [IN]
+       if ( aggregate_ ) then
+          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_rank_x", (/0/) ) ! [IN]
+          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_rank_y", (/0/) ) ! [IN]
 
-          call FILE_Set_Attribute( fid, "global", "scale_rm_prc_num_x",  (/1/) ) ! [IN]
-          call FILE_Set_Attribute( fid, "global", "scale_rm_prc_num_y",  (/1/) ) ! [IN]
+          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_x",  (/1/) ) ! [IN]
+          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_y",  (/1/) ) ! [IN]
        else
-          call FILE_Set_Attribute( fid, "global", "scale_rm_prc_rank_x", (/PRC_2Drank(PRC_myrank,1)/) ) ! [IN]
-          call FILE_Set_Attribute( fid, "global", "scale_rm_prc_rank_y", (/PRC_2Drank(PRC_myrank,2)/) ) ! [IN]
+          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_rank_x", (/PRC_2Drank(PRC_myrank,1)/) ) ! [IN]
+          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_rank_y", (/PRC_2Drank(PRC_myrank,2)/) ) ! [IN]
 
-          call FILE_Set_Attribute( fid, "global", "scale_rm_prc_num_x",  (/PRC_NUM_X/) ) ! [IN]
-          call FILE_Set_Attribute( fid, "global", "scale_rm_prc_num_y",  (/PRC_NUM_Y/) ) ! [IN]
+          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_x",  (/PRC_NUM_X/) ) ! [IN]
+          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_y",  (/PRC_NUM_Y/) ) ! [IN]
        endif
 
-       call FILE_Set_Attribute( fid, "global", "scale_rm_prc_periodic_z", periodic_z ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_rm_prc_periodic_x", periodic_x ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_rm_prc_periodic_y", periodic_y ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_periodic_z", periodic_z ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_periodic_x", periodic_x ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_periodic_y", periodic_y ) ! [IN]
 
-       call FILE_Set_Attribute( fid, "global", "scale_rm_grid_index_kmax",  (/KMAX/)  ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_rm_grid_index_imaxg", (/IMAXG/) ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_rm_grid_index_jmaxg", (/JMAXG/) ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_kmax",  (/KMAX/)  ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_imaxg", (/IMAXG/) ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_jmaxg", (/JMAXG/) ) ! [IN]
 
-       call FILE_Set_Attribute( fid, "global", "scale_rm_grid_index_khalo", (/KHALO/) ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_rm_grid_index_ihalo", (/IHALO/) ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_rm_grid_index_jhalo", (/JHALO/) ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_khalo", (/KHALO/) ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_ihalo", (/IHALO/) ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_jhalo", (/JHALO/) ) ! [IN]
 
        call FILE_CARTESC_def_axes( fid,                & ! [IN]
                              dtype,              & ! [IN]
@@ -2174,6 +2216,7 @@ contains
     integer, intent(in)  :: start(3)
 
     logical :: put_z, put_x, put_y
+    integer :: XSB, XEB, YSB, YEB
     !---------------------------------------------------------------------------
 
     if ( FILE_get_AGGREGATE(fid) ) then
@@ -2212,13 +2255,23 @@ contains
     end if
 
     if ( put_x ) then
-       call FILE_Write_Axis( fid, 'x' ,  GRID_CX(XSB:XEB),  start(2:2) )
-       call FILE_Write_Axis( fid, 'xh',  GRID_FX(XSB:XEB),  start(2:2) )
+       if ( FILE_get_aggregate(fid) ) then
+          call FILE_Write_Axis( fid, 'x' ,  GRID_CX(ISB2:IEB2),  start(2:2) )
+          call FILE_Write_Axis( fid, 'xh',  GRID_FX(ISB2:IEB2),  start(2:2) )
+       else
+          call FILE_Write_Axis( fid, 'x' ,  GRID_CX(ISB:IEB),  start(2:2) )
+          call FILE_Write_Axis( fid, 'xh',  GRID_FX(ISB:IEB),  start(2:2) )
+       end if
     end if
 
     if ( put_y ) then
-       call FILE_Write_Axis( fid, 'y' ,  GRID_CY(YSB:YEB),  start(3:3) )
-       call FILE_Write_Axis( fid, 'yh',  GRID_FY(YSB:YEB),  start(3:3) )
+       if ( FILE_get_aggregate(fid) ) then
+          call FILE_Write_Axis( fid, 'y' ,  GRID_CY(JSB2:JEB2),  start(3:3) )
+          call FILE_Write_Axis( fid, 'yh',  GRID_FY(JSB2:JEB2),  start(3:3) )
+       else
+          call FILE_Write_Axis( fid, 'y' ,  GRID_CY(JSB:JEB),  start(3:3) )
+          call FILE_Write_Axis( fid, 'yh',  GRID_FY(JSB:JEB),  start(3:3) )
+       end if
     end if
 
     ! global coordinates (always including halo)
@@ -2289,18 +2342,37 @@ contains
     end if
 
     ! associate coordinates
-    call FILE_Write_AssociatedCoordinate( fid, 'lon'   , AXIS_LON  (:,:), start(2:3) )
-    call FILE_Write_AssociatedCoordinate( fid, 'lon_uy', AXIS_LONUY(:,:), start(2:3) )
-    call FILE_Write_AssociatedCoordinate( fid, 'lon_xv', AXIS_LONXV(:,:), start(2:3) )
-    call FILE_Write_AssociatedCoordinate( fid, 'lon_uv', AXIS_LONUV(:,:), start(2:3) )
-    call FILE_Write_AssociatedCoordinate( fid, 'lat'   , AXIS_LAT  (:,:), start(2:3) )
-    call FILE_Write_AssociatedCoordinate( fid, 'lat_uy', AXIS_LATUY(:,:), start(2:3) )
-    call FILE_Write_AssociatedCoordinate( fid, 'lat_xv', AXIS_LATXV(:,:), start(2:3) )
-    call FILE_Write_AssociatedCoordinate( fid, 'lat_uv', AXIS_LATUV(:,:), start(2:3) )
+    if ( FILE_get_AGGREGATE(fid) ) then
+       call FILE_Write_AssociatedCoordinate( fid, 'lon'   , AXIS_LON  (:,:), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lon_uy', AXIS_LONUY(:,:), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lon_xv', AXIS_LONXV(:,:), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lon_uv', AXIS_LONUV(:,:), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lat'   , AXIS_LAT  (:,:), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lat_uy', AXIS_LATUY(:,:), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lat_xv', AXIS_LATXV(:,:), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lat_uv', AXIS_LATUV(:,:), start(2:3) )
+       if ( haszcoord ) then
+          call FILE_Write_AssociatedCoordinate( fid, 'height'    , AXIS_HGT   (:,:,:), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'height_wxy', AXIS_HGTWXY(:,:,:), start(1:3) )
+       end if
+    else
+       XSB = ISB - ISB2 + 1
+       XEB = IEB - ISB + XSB
+       YSB = JSB - JSB2 + 1
+       YEB = JEB - JSB + YSB
 
-    if ( haszcoord ) then
-       call FILE_Write_AssociatedCoordinate( fid, 'height'    , AXIS_HGT   (:,:,:), start(1:3) )
-       call FILE_Write_AssociatedCoordinate( fid, 'height_wxy', AXIS_HGTWXY(:,:,:), start(1:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lon'   , AXIS_LON  (XSB:XEB,YSB:YEB), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lon_uy', AXIS_LONUY(XSB:XEB,YSB:YEB), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lon_xv', AXIS_LONXV(XSB:XEB,YSB:YEB), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lon_uv', AXIS_LONUV(XSB:XEB,YSB:YEB), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lat'   , AXIS_LAT  (XSB:XEB,YSB:YEB), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lat_uy', AXIS_LATUY(XSB:XEB,YSB:YEB), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lat_xv', AXIS_LATXV(XSB:XEB,YSB:YEB), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lat_uv', AXIS_LATUV(XSB:XEB,YSB:YEB), start(2:3) )
+       if ( haszcoord ) then
+          call FILE_Write_AssociatedCoordinate( fid, 'height'    , AXIS_HGT   (:,XSB:XEB,YSB:YEB), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'height_wxy', AXIS_HGTWXY(:,XSB:XEB,YSB:YEB), start(1:3) )
+       end if
     end if
 
     return
@@ -2325,7 +2397,7 @@ contains
        FILE_Def_Variable, &
        FILE_Set_Attribute
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_mapproj, only: &
        MPRJ_get_attributes
     implicit none
@@ -2364,7 +2436,7 @@ contains
           elm_size = 4
        else
           write(*,*) 'xxx unsupported data type. Check!', trim(datatype), ' item:',trim(varname)
-          call PRC_MPIstop
+          call PRC_abort
        endif
     endif
 
@@ -2478,7 +2550,7 @@ contains
        call MPRJ_get_attributes( mapping )
     else
        write(*,*) 'xxx [FILE_CARTESC_def_var] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( present(timeintv) ) then  ! 3D/4D variable with time dimension
@@ -2509,7 +2581,7 @@ contains
        FILE_Write
     use scale_process, only: &
        PRC_myrank,  &
-       PRC_MPIstop
+       PRC_abort
     use scale_rm_process, only: &
        PRC_2Drank
     use scale_time, only: &
@@ -2525,7 +2597,7 @@ contains
     integer :: dim1_S, dim1_E
     integer :: rankidx(2)
     integer :: start(1)         ! used only when AGGREGATE is .true.
-    logical :: exec = .true.
+    logical :: exec
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -2537,20 +2609,36 @@ contains
        dim1_S   = KS
        dim1_E   = KE
        start(1) = 1
-       if( FILE_get_AGGREGATE(fid) .AND. PRC_myrank > 0 ) exec = .false.  ! only rank 0 writes
+       if( FILE_get_AGGREGATE(fid) .AND. PRC_myrank > 0 ) then
+          exec = .false.  ! only rank 0 writes
+       else
+          exec = .true.
+       end if
     elseif( dim_type == 'X' ) then
-       dim1_S   = ISB
-       dim1_E   = IEB
+       if ( FILE_get_AGGREGATE(fid) ) then
+          exec = ( rankidx(2) == 0 ) ! only south most row processes write
+          dim1_S   = ISB2
+          dim1_E   = IEB2
+       else
+          exec = .true.
+          dim1_S   = ISB
+          dim1_E   = IEB
+       end if
        start(1) = ISGA
-       if( FILE_get_AGGREGATE(fid) .AND. rankidx(2) > 0 ) exec = .false.  ! only south most row processes write
     elseif( dim_type == 'Y' ) then
-       dim1_S   = JSB
-       dim1_E   = JEB
+       if ( FILE_get_AGGREGATE(fid) ) then
+          exec = ( rankidx(1) == 0 ) ! only west most column processes write
+          dim1_S   = JSB2
+          dim1_E   = JEB2
+       else
+          exec = .true.
+          dim1_S   = JSB
+          dim1_E   = JEB
+       end if
        start(1) = JSGA
-       if( FILE_get_AGGREGATE(fid) .AND. rankidx(1) > 0 ) exec = .false.  ! only west most column processes write
     else
        write(*,*) 'xxx [FILE_CARTESC_write_var_1D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if( exec ) call FILE_Write( vid, var(dim1_S:dim1_E),    & ! [IN]
@@ -2577,7 +2665,7 @@ contains
        FILE_Write
     use scale_process, only: &
        PRC_myrank,     &
-       PRC_MPIstop
+       PRC_abort
     use scale_rm_process, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
@@ -2602,7 +2690,7 @@ contains
     logical :: fill_halo_
     integer :: rankidx(2)
     integer :: start(2)         ! used only when AGGREGATE is .true.
-    logical :: exec = .true.
+    logical :: exec
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -2620,31 +2708,35 @@ contains
          .OR. dim_type == 'UY' &
          .OR. dim_type == 'XV' &
          .OR. dim_type == 'UV' ) then
-       dim1_S   = ISB
-       dim1_E   = IEB
-       dim2_S   = JSB
-       dim2_E   = JEB
        if ( FILE_get_AGGREGATE(fid) ) then
-          if( rankidx(1) == 0             ) dim1_S = 1
-          if( rankidx(1) == PRC_NUM_X - 1 ) dim1_E = IA
-          if( rankidx(2) == 0             ) dim2_S = 1
-          if( rankidx(2) == PRC_NUM_Y - 1 ) dim2_E = JA
+          dim1_S   = ISB2
+          dim1_E   = IEB2
+          dim2_S   = JSB2
+          dim2_E   = JEB2
+       else
+          dim1_S   = ISB
+          dim1_E   = IEB
+          dim2_S   = JSB
+          dim2_E   = JEB
        endif
+       exec = .true.
     elseif( dim_type == 'ZX' ) then
        dim1_S   = KS
        dim1_E   = KE
-       dim2_S   = ISB
-       dim2_E   = IEB
        start(2) = start(1)
        start(1) = 1
-       if ( FILE_get_AGGREGATE(fid) .AND. rankidx(2) > 0 ) then
-          exec = .false.  ! only south most row processes write
-          if( rankidx(1) == 0             ) dim2_S = 1
-          if( rankidx(1) == PRC_NUM_X - 1 ) dim2_E = IA
+       if ( FILE_get_AGGREGATE(fid) ) then
+          exec = ( rankidx(2) == 0 )  ! only south most row processes write
+          dim2_S = ISB2
+          dim2_E = IEB2
+       else
+          exec = .true.
+          dim2_S = ISB
+          dim2_E = IEB
        endif
     else
        write(*,*) 'xxx [FILE_CARTESC_write_var_2D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( exec ) then
@@ -2706,7 +2798,7 @@ contains
        FILE_Write
     use scale_process, only: &
        PRC_myrank,  &
-       PRC_MPIstop
+       PRC_abort
     use scale_rm_process, only: &
        PRC_2Drank, &
        PRC_NUM_X,  &
@@ -2747,17 +2839,6 @@ contains
     start(2) = ISGA
     start(3) = JSGA
 
-    dim2_S   = ISB
-    dim2_E   = IEB
-    dim3_S   = JSB
-    dim3_E   = JEB
-    if ( FILE_get_AGGREGATE(fid) ) then
-       if( rankidx(1) == 0             ) dim2_S = 1
-       if( rankidx(1) == PRC_NUM_X - 1 ) dim2_E = IA
-       if( rankidx(2) == 0             ) dim3_S = 1
-       if( rankidx(2) == PRC_NUM_Y - 1 ) dim3_E = JA
-    endif
-
     if (      dim_type == 'ZXY'  &
          .OR. dim_type == 'ZXHY' &
          .OR. dim_type == 'ZXYH' ) then
@@ -2782,7 +2863,19 @@ contains
        dim1_E   = UKE
     else
        write(*,*) 'xxx [FILE_CARTESC_write_var_3D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-       call PRC_MPIstop
+       call PRC_abort
+    endif
+
+    if ( FILE_get_AGGREGATE(fid) ) then
+       dim2_S   = ISB2
+       dim2_E   = IEB2
+       dim3_S   = JSB2
+       dim3_E   = JEB2
+    else
+       dim2_S   = ISB
+       dim2_E   = IEB
+       dim3_S   = JSB
+       dim3_E   = JEB
     endif
 
     if ( fill_halo_ ) then
@@ -2852,7 +2945,7 @@ contains
        FILE_Write
     use scale_process, only: &
        PRC_myrank,     &
-       PRC_MPIstop
+       PRC_abort
     use scale_rm_process, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
@@ -2900,19 +2993,20 @@ contains
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
     if ( dim_type == 'XYT' ) then
-       dim1_S   = ISB
-       dim1_E   = IEB
-       dim2_S   = JSB
-       dim2_E   = JEB
        if ( FILE_get_AGGREGATE(fid) ) then
-          if( rankidx(1) == 0             ) dim1_S = 1
-          if( rankidx(1) == PRC_NUM_X - 1 ) dim1_E = IA
-          if( rankidx(2) == 0             ) dim2_S = 1
-          if( rankidx(2) == PRC_NUM_Y - 1 ) dim2_E = JA
-       endif
+          dim1_S   = ISB2
+          dim1_E   = IEB2
+          dim2_S   = JSB2
+          dim2_E   = JEB2
+       else
+          dim1_S   = ISB
+          dim1_E   = IEB
+          dim2_S   = JSB
+          dim2_E   = JEB
+       end if
     else
        write(*,*) 'xxx [FILE_CARTESC_write_var_3D_t] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     start(1) = ISGA
@@ -3022,7 +3116,7 @@ contains
        FILE_Flush
     use scale_process, only: &
        PRC_myrank,     &
-       PRC_MPIstop
+       PRC_abort
     use scale_rm_process, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
@@ -3075,15 +3169,16 @@ contains
     time_interval = timeintv
     step = size(var,4)
 
-    dim2_S = ISB
-    dim2_E = IEB
-    dim3_S = JSB
-    dim3_E = JEB
     if ( FILE_get_AGGREGATE(fid) ) then
-       if( rankidx(1) == 0             ) dim2_S = 1
-       if( rankidx(1) == PRC_NUM_X - 1 ) dim2_E = IA
-       if( rankidx(2) == 0             ) dim3_S = 1
-       if( rankidx(2) == PRC_NUM_Y - 1 ) dim3_E = JA
+       dim2_S   = ISB2
+       dim2_E   = IEB2
+       dim3_S   = JSB2
+       dim3_E   = JEB2
+    else
+       dim2_S   = ISB
+       dim2_E   = IEB
+       dim3_S   = JSB
+       dim3_E   = JEB
     endif
 
     if (      dim_type == 'ZXYT'  &
@@ -3096,21 +3191,33 @@ contains
        dim1_max = KMAX+1
        dim1_S   = KS-1
        dim1_E   = KE
+    elseif( dim_type == 'OXYT' ) then
+       dim1_max = OKMAX
+       dim1_S   = OKS
+       dim1_E   = OKE
+    elseif( dim_type == 'OHXYT' ) then
+       dim1_max = OKMAX+1
+       dim1_S   = OKS-1
+       dim1_E   = OKE
     elseif( dim_type == 'LXYT' ) then
        dim1_max = LKMAX
        dim1_S   = LKS
+       dim1_E   = LKE
+    elseif( dim_type == 'LHXYT' ) then
+       dim1_max = LKMAX+1
+       dim1_S   = LKS-1
        dim1_E   = LKE
     elseif( dim_type == 'UXYT' ) then
        dim1_max = UKMAX
        dim1_S   = UKS
        dim1_E   = UKE
-    elseif ( axistype == 'OXYT' ) then
-       dim1_max = OKMAX
-       dim1_S   = OKS
-       dim1_E   = OKE
+    elseif( dim_type == 'UHXYT' ) then
+       dim1_max = UKMAX+1
+       dim1_S   = UKS-1
+       dim1_E   = UKE
     else
        write(*,*) 'xxx [FILE_CARTESC_write_var_4D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( present(timetarg) ) then
@@ -3232,7 +3339,7 @@ contains
        expected, buffer, &
        name              )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
@@ -3250,7 +3357,7 @@ contains
     nmax = size(expected)
     if ( size(buffer) /= nmax ) then
        write(*,*) 'xxx size of coordinate ('//trim(name)//') is different:', nmax, size(buffer)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     do n=1, nmax
@@ -3263,7 +3370,7 @@ contains
        if ( check > FILE_CARTESC_datacheck_criteria ) then
           write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', n, ' is different:', &
                      expected(n), buffer(n), check
-          call PRC_MPIstop
+          call PRC_abort
        endif
     enddo
 
@@ -3275,7 +3382,7 @@ contains
        expected, buffer, &
        name              )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
@@ -3295,11 +3402,11 @@ contains
     jmax = size(expected,2)
     if ( size(buffer,1) /= imax ) then
        write(*,*) 'xxx the first size of coordinate ('//trim(name)//') is different:', imax, size(buffer,1)
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if ( size(buffer,2) /= jmax ) then
        write(*,*) 'xxx the second size of coordinate ('//trim(name)//') is different:', jmax, size(buffer,2)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     do j=1, jmax
@@ -3313,7 +3420,7 @@ contains
        if ( check > FILE_CARTESC_datacheck_criteria ) then
           write(*,*) 'xxx value of coordinate ('//trim(name)//') at (', i, ',', j, ') is different:', &
                      expected(i,j), buffer(i,j), check
-          call PRC_MPIstop
+          call PRC_abort
        endif
     enddo
     enddo
@@ -3327,7 +3434,7 @@ contains
        name,             &
        transpose         )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
@@ -3355,15 +3462,15 @@ contains
     endif
     if ( size(buffer,1) /= kmax ) then
        write(*,*) 'xxx the first size of coordinate ('//trim(name)//') is different:', kmax, size(buffer,1)
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if ( size(buffer,2) /= imax ) then
        write(*,*) 'xxx the second size of coordinate ('//trim(name)//') is different:', imax, size(buffer,2)
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if ( size(buffer,3) /= jmax ) then
        write(*,*) 'xxx the third size of coordinate ('//trim(name)//') is different:', jmax, size(buffer,3)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( transpose ) then
@@ -3380,7 +3487,7 @@ contains
           if ( check > FILE_CARTESC_datacheck_criteria ) then
              write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', i, ',', j, ',', k, ' is different:', &
                         expected(k,i,j), buffer(i,j,k), check
-             call PRC_MPIstop
+             call PRC_abort
           endif
        enddo
        enddo
@@ -3398,7 +3505,7 @@ contains
           if ( check > FILE_CARTESC_datacheck_criteria ) then
              write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', k, ',', i, ',', j, ' is different:', &
                         expected(k,i,j), buffer(k,i,j), check
-             call PRC_MPIstop
+             call PRC_abort
           endif
        enddo
        enddo

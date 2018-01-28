@@ -47,11 +47,13 @@ module mod_urban_vars
   !
   !++ Public parameters & variables
   !
-  logical,               public :: URBAN_RESTART_OUTPUT                = .false.         !< Output restart file?
+  logical,               public :: URBAN_RESTART_OUTPUT                 = .false.         !< Output restart file?
 
   character(len=H_LONG),  public :: URBAN_RESTART_IN_BASENAME           = ''              !< Basename of the input  file
+  logical,                public :: URBAN_RESTART_IN_AGGREGATE                            !< Switch to use aggregate file
   logical,                public :: URBAN_RESTART_IN_POSTFIX_TIMELABEL  = .false.         !< Add timelabel to the basename of input  file?
   character(len=H_LONG),  public :: URBAN_RESTART_OUT_BASENAME          = ''              !< Basename of the output file
+  logical,                public :: URBAN_RESTART_OUT_AGGREGATE                           !< Switch to use aggregate file
   logical,                public :: URBAN_RESTART_OUT_POSTFIX_TIMELABEL = .true.          !< Add timelabel to the basename of output file?
   character(len=H_MID),   public :: URBAN_RESTART_OUT_TITLE             = 'URBAN restart' !< Title    of the output file
   character(len=H_SHORT), public :: URBAN_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
@@ -250,10 +252,12 @@ contains
 
     NAMELIST / PARAM_URBAN_VARS /  &
        URBAN_RESTART_IN_BASENAME,           &
+       URBAN_RESTART_IN_AGGREGATE,          &
        URBAN_RESTART_IN_POSTFIX_TIMELABEL,  &
        URBAN_RESTART_IN_CHECK_COORDINATES,  &
        URBAN_RESTART_OUTPUT,                &
        URBAN_RESTART_OUT_BASENAME,          &
+       URBAN_RESTART_OUT_AGGREGATE,         &
        URBAN_RESTART_OUT_POSTFIX_TIMELABEL, &
        URBAN_RESTART_OUT_TITLE,             &
        URBAN_RESTART_OUT_DTYPE,             &
@@ -453,8 +457,9 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_open( restart_fid, & ! [OUT]
-                         basename     ) ! [IN]
+       call FILE_CARTESC_open( restart_fid,                         & ! [OUT]
+                               basename,                            & ! [IN]
+                               aggregate=URBAN_RESTART_IN_AGGREGATE ) ! [IN]
 
        if ( URBAN_RESTART_IN_CHECK_COORDINATES ) then
           call FILE_CARTESC_check_coordinates( restart_fid, urban=.true. )
@@ -754,8 +759,9 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_create( restart_fid,                                               & ! [OUT]
-                           basename, URBAN_RESTART_OUT_TITLE, URBAN_RESTART_OUT_DTYPE ) ! [IN]
+       call FILE_CARTESC_create( restart_fid,                                                & ! [OUT]
+                                 basename, URBAN_RESTART_OUT_TITLE, URBAN_RESTART_OUT_DTYPE, & ! [IN]
+                                 aggregate=URBAN_RESTART_OUT_AGGREGATE                       ) ! [IN]
 
     endif
 

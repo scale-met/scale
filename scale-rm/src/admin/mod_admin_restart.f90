@@ -42,8 +42,10 @@ module mod_admin_restart
   logical,                public :: RESTART_OUTPUT                = .false.   !< Output restart file?
 
   character(len=H_LONG),  public :: RESTART_IN_BASENAME           = ''        !< Basename of the input  file
+  logical,                public :: RESTART_IN_AGGREGATE                      !< Switch to use aggregate file
   logical,                public :: RESTART_IN_POSTFIX_TIMELABEL  = .false.   !< Add timelabel to the basename of input  file?
   character(len=H_LONG),  public :: RESTART_OUT_BASENAME          = ''        !< Basename of the output file
+  logical,                public :: RESTART_OUT_AGGREGATE                     !< Switch to use aggregate file
   logical,                public :: RESTART_OUT_POSTFIX_TIMELABEL = .true.    !< Add timelabel to the basename of output file?
   character(len=H_MID),   public :: RESTART_OUT_TITLE             = ''        !< Title    of the output file
   character(len=H_SHORT), public :: RESTART_OUT_DTYPE             = 'DEFAULT' !< REAL4 or REAL8
@@ -55,99 +57,125 @@ contains
   subroutine ADMIN_restart_setup
     use scale_process, only: &
        PRC_MPIstop
+    use scale_file, only: &
+       FILE_AGGREGATE
     use mod_atmos_vars, only: &
        ATMOS_RESTART_OUTPUT,                &
        ATMOS_RESTART_IN_BASENAME,           &
+       ATMOS_RESTART_IN_AGGREGATE,          &
        ATMOS_RESTART_IN_POSTFIX_TIMELABEL,  &
        ATMOS_RESTART_OUT_BASENAME,          &
+       ATMOS_RESTART_OUT_AGGREGATE,         &
        ATMOS_RESTART_OUT_POSTFIX_TIMELABEL, &
        ATMOS_RESTART_OUT_TITLE,             &
        ATMOS_RESTART_OUT_DTYPE
     use mod_atmos_dyn_vars, only: &
        ATMOS_DYN_RESTART_OUTPUT,                &
        ATMOS_DYN_RESTART_IN_BASENAME,           &
+       ATMOS_DYN_RESTART_IN_AGGREGATE,          &
        ATMOS_DYN_RESTART_IN_POSTFIX_TIMELABEL,  &
        ATMOS_DYN_RESTART_OUT_BASENAME,          &
+       ATMOS_DYN_RESTART_OUT_AGGREGATE,         &
        ATMOS_DYN_RESTART_OUT_POSTFIX_TIMELABEL, &
        ATMOS_DYN_RESTART_OUT_TITLE,             &
        ATMOS_DYN_RESTART_OUT_DTYPE
     use mod_atmos_phy_mp_vars, only: &
        ATMOS_PHY_MP_RESTART_OUTPUT,                &
        ATMOS_PHY_MP_RESTART_IN_BASENAME,           &
+       ATMOS_PHY_MP_RESTART_IN_AGGREGATE,          &
        ATMOS_PHY_MP_RESTART_IN_POSTFIX_TIMELABEL,  &
        ATMOS_PHY_MP_RESTART_OUT_BASENAME,          &
+       ATMOS_PHY_MP_RESTART_OUT_AGGREGATE,         &
        ATMOS_PHY_MP_RESTART_OUT_POSTFIX_TIMELABEL, &
        ATMOS_PHY_MP_RESTART_OUT_TITLE,             &
        ATMOS_PHY_MP_RESTART_OUT_DTYPE
     use mod_atmos_phy_ae_vars, only: &
        ATMOS_PHY_AE_RESTART_OUTPUT,                &
        ATMOS_PHY_AE_RESTART_IN_BASENAME,           &
+       ATMOS_PHY_AE_RESTART_IN_AGGREGATE,          &
        ATMOS_PHY_AE_RESTART_IN_POSTFIX_TIMELABEL,  &
        ATMOS_PHY_AE_RESTART_OUT_BASENAME,          &
+       ATMOS_PHY_AE_RESTART_OUT_AGGREGATE,         &
        ATMOS_PHY_AE_RESTART_OUT_POSTFIX_TIMELABEL, &
        ATMOS_PHY_AE_RESTART_OUT_TITLE,             &
        ATMOS_PHY_AE_RESTART_OUT_DTYPE
     use mod_atmos_phy_ch_vars, only: &
        ATMOS_PHY_CH_RESTART_OUTPUT,                &
        ATMOS_PHY_CH_RESTART_IN_BASENAME,           &
+       ATMOS_PHY_CH_RESTART_IN_AGGREGATE,          &
        ATMOS_PHY_CH_RESTART_IN_POSTFIX_TIMELABEL,  &
        ATMOS_PHY_CH_RESTART_OUT_BASENAME,          &
+       ATMOS_PHY_CH_RESTART_OUT_AGGREGATE,         &
        ATMOS_PHY_CH_RESTART_OUT_POSTFIX_TIMELABEL, &
        ATMOS_PHY_CH_RESTART_OUT_TITLE,             &
        ATMOS_PHY_CH_RESTART_OUT_DTYPE
     use mod_atmos_phy_rd_vars, only: &
        ATMOS_PHY_RD_RESTART_OUTPUT,                &
        ATMOS_PHY_RD_RESTART_IN_BASENAME,           &
+       ATMOS_PHY_RD_RESTART_IN_AGGREGATE,          &
        ATMOS_PHY_RD_RESTART_IN_POSTFIX_TIMELABEL,  &
        ATMOS_PHY_RD_RESTART_OUT_BASENAME,          &
+       ATMOS_PHY_RD_RESTART_OUT_AGGREGATE,         &
        ATMOS_PHY_RD_RESTART_OUT_POSTFIX_TIMELABEL, &
        ATMOS_PHY_RD_RESTART_OUT_TITLE,             &
        ATMOS_PHY_RD_RESTART_OUT_DTYPE
     use mod_atmos_phy_sf_vars, only: &
        ATMOS_PHY_SF_RESTART_OUTPUT,                &
        ATMOS_PHY_SF_RESTART_IN_BASENAME,           &
+       ATMOS_PHY_SF_RESTART_IN_AGGREGATE,          &
        ATMOS_PHY_SF_RESTART_IN_POSTFIX_TIMELABEL,  &
        ATMOS_PHY_SF_RESTART_OUT_BASENAME,          &
+       ATMOS_PHY_SF_RESTART_OUT_AGGREGATE,         &
        ATMOS_PHY_SF_RESTART_OUT_POSTFIX_TIMELABEL, &
        ATMOS_PHY_SF_RESTART_OUT_TITLE,             &
        ATMOS_PHY_SF_RESTART_OUT_DTYPE
     use mod_atmos_phy_tb_vars, only: &
        ATMOS_PHY_TB_RESTART_OUTPUT,                &
        ATMOS_PHY_TB_RESTART_IN_BASENAME,           &
+       ATMOS_PHY_TB_RESTART_IN_AGGREGATE,          &
        ATMOS_PHY_TB_RESTART_IN_POSTFIX_TIMELABEL,  &
        ATMOS_PHY_TB_RESTART_OUT_BASENAME,          &
+       ATMOS_PHY_TB_RESTART_OUT_AGGREGATE,         &
        ATMOS_PHY_TB_RESTART_OUT_POSTFIX_TIMELABEL, &
        ATMOS_PHY_TB_RESTART_OUT_TITLE,             &
        ATMOS_PHY_TB_RESTART_OUT_DTYPE
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_RESTART_OUTPUT,                &
        ATMOS_PHY_CP_RESTART_IN_BASENAME,           &
+       ATMOS_PHY_CP_RESTART_IN_AGGREGATE,          &
        ATMOS_PHY_CP_RESTART_IN_POSTFIX_TIMELABEL,  &
        ATMOS_PHY_CP_RESTART_OUT_BASENAME,          &
+       ATMOS_PHY_CP_RESTART_OUT_AGGREGATE,         &
        ATMOS_PHY_CP_RESTART_OUT_POSTFIX_TIMELABEL, &
        ATMOS_PHY_CP_RESTART_OUT_TITLE,             &
        ATMOS_PHY_CP_RESTART_OUT_DTYPE
     use mod_ocean_vars, only: &
        OCEAN_RESTART_OUTPUT,                &
        OCEAN_RESTART_IN_BASENAME,           &
+       OCEAN_RESTART_IN_AGGREGATE,          &
        OCEAN_RESTART_IN_POSTFIX_TIMELABEL,  &
        OCEAN_RESTART_OUT_BASENAME,          &
+       OCEAN_RESTART_OUT_AGGREGATE,         &
        OCEAN_RESTART_OUT_POSTFIX_TIMELABEL, &
        OCEAN_RESTART_OUT_TITLE,             &
        OCEAN_RESTART_OUT_DTYPE
     use mod_land_vars, only: &
        LAND_RESTART_OUTPUT,                &
        LAND_RESTART_IN_BASENAME,           &
+       LAND_RESTART_IN_AGGREGATE,          &
        LAND_RESTART_IN_POSTFIX_TIMELABEL,  &
        LAND_RESTART_OUT_BASENAME,          &
+       LAND_RESTART_OUT_AGGREGATE,         &
        LAND_RESTART_OUT_POSTFIX_TIMELABEL, &
        LAND_RESTART_OUT_TITLE,             &
        LAND_RESTART_OUT_DTYPE
     use mod_urban_vars, only: &
        URBAN_RESTART_OUTPUT,                &
        URBAN_RESTART_IN_BASENAME,           &
+       URBAN_RESTART_IN_AGGREGATE,          &
        URBAN_RESTART_IN_POSTFIX_TIMELABEL,  &
        URBAN_RESTART_OUT_BASENAME,          &
+       URBAN_RESTART_OUT_AGGREGATE,         &
        URBAN_RESTART_OUT_POSTFIX_TIMELABEL, &
        URBAN_RESTART_OUT_TITLE,             &
        URBAN_RESTART_OUT_DTYPE
@@ -157,8 +185,10 @@ contains
        RESTART_RUN,                   &
        RESTART_OUTPUT,                &
        RESTART_IN_BASENAME,           &
+       RESTART_IN_AGGREGATE,          &
        RESTART_IN_POSTFIX_TIMELABEL,  &
        RESTART_OUT_BASENAME,          &
+       RESTART_OUT_AGGREGATE,         &
        RESTART_OUT_POSTFIX_TIMELABEL, &
        RESTART_OUT_TITLE,             &
        RESTART_OUT_DTYPE
@@ -168,6 +198,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[RESTART] / Categ[ADMIN] / Origin[SCALE-RM]'
+
+    RESTART_IN_AGGREGATE  = FILE_AGGREGATE
+    RESTART_OUT_AGGREGATE = FILE_AGGREGATE
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -210,6 +243,19 @@ contains
        URBAN_RESTART_IN_BASENAME        = RESTART_IN_BASENAME
     endif
 
+    ATMOS_RESTART_IN_AGGREGATE         = RESTART_IN_AGGREGATE
+    ATMOS_DYN_RESTART_IN_AGGREGATE     = RESTART_IN_AGGREGATE
+    ATMOS_PHY_MP_RESTART_IN_AGGREGATE  = RESTART_IN_AGGREGATE
+    ATMOS_PHY_AE_RESTART_IN_AGGREGATE  = RESTART_IN_AGGREGATE
+    ATMOS_PHY_CH_RESTART_IN_AGGREGATE  = RESTART_IN_AGGREGATE
+    ATMOS_PHY_RD_RESTART_IN_AGGREGATE  = RESTART_IN_AGGREGATE
+    ATMOS_PHY_SF_RESTART_IN_AGGREGATE  = RESTART_IN_AGGREGATE
+    ATMOS_PHY_TB_RESTART_IN_AGGREGATE  = RESTART_IN_AGGREGATE
+    ATMOS_PHY_CP_RESTART_IN_AGGREGATE  = RESTART_IN_AGGREGATE
+    OCEAN_RESTART_IN_AGGREGATE         = RESTART_IN_AGGREGATE
+    LAND_RESTART_IN_AGGREGATE          = RESTART_IN_AGGREGATE
+    URBAN_RESTART_IN_AGGREGATE         = RESTART_IN_AGGREGATE
+
     ATMOS_RESTART_IN_POSTFIX_TIMELABEL         = RESTART_IN_POSTFIX_TIMELABEL
     ATMOS_DYN_RESTART_IN_POSTFIX_TIMELABEL     = RESTART_IN_POSTFIX_TIMELABEL
     ATMOS_PHY_MP_RESTART_IN_POSTFIX_TIMELABEL  = RESTART_IN_POSTFIX_TIMELABEL
@@ -238,6 +284,19 @@ contains
        LAND_RESTART_OUT_BASENAME         = RESTART_OUT_BASENAME
        URBAN_RESTART_OUT_BASENAME        = RESTART_OUT_BASENAME
     endif
+
+    ATMOS_RESTART_OUT_AGGREGATE         = RESTART_OUT_AGGREGATE
+    ATMOS_DYN_RESTART_OUT_AGGREGATE     = RESTART_OUT_AGGREGATE
+    ATMOS_PHY_MP_RESTART_OUT_AGGREGATE  = RESTART_OUT_AGGREGATE
+    ATMOS_PHY_AE_RESTART_OUT_AGGREGATE  = RESTART_OUT_AGGREGATE
+    ATMOS_PHY_CH_RESTART_OUT_AGGREGATE  = RESTART_OUT_AGGREGATE
+    ATMOS_PHY_RD_RESTART_OUT_AGGREGATE  = RESTART_OUT_AGGREGATE
+    ATMOS_PHY_SF_RESTART_OUT_AGGREGATE  = RESTART_OUT_AGGREGATE
+    ATMOS_PHY_TB_RESTART_OUT_AGGREGATE  = RESTART_OUT_AGGREGATE
+    ATMOS_PHY_CP_RESTART_OUT_AGGREGATE  = RESTART_OUT_AGGREGATE
+    OCEAN_RESTART_OUT_AGGREGATE         = RESTART_OUT_AGGREGATE
+    LAND_RESTART_OUT_AGGREGATE          = RESTART_OUT_AGGREGATE
+    URBAN_RESTART_OUT_AGGREGATE         = RESTART_OUT_AGGREGATE
 
     ATMOS_RESTART_OUT_POSTFIX_TIMELABEL         = RESTART_OUT_POSTFIX_TIMELABEL
     ATMOS_DYN_RESTART_OUT_POSTFIX_TIMELABEL     = RESTART_OUT_POSTFIX_TIMELABEL

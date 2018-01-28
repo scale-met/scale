@@ -103,7 +103,7 @@ contains
        MPRJ_get_attributes
     implicit none
 
-    character(len=*), parameter :: GRID_CARTESC_NAME = "Cartesian-C"
+    character(len=*), parameter :: GRID_CARTESC_NAME = "cartesC"
 
     integer, parameter :: nlayer_max = 300
     real(RP)           :: FILE_HISTORY_CARTESC_PRES(nlayer_max) !> pressure level to output [hPa]
@@ -773,9 +773,8 @@ contains
   !  only register the axis and coordinate variables into internal buffers
   !  The actual write happens later when calling FILE_HISTORY_CARTESC_write
   subroutine FILE_HISTORY_CARTESC_set_axes
-    use scale_file, only: &
-       FILE_AGGREGATE
     use scale_file_history, only: &
+       FILE_HISTORY_AGGREGATE, &
        FILE_HISTORY_Set_Axis, &
        FILE_HISTORY_Set_AssociatedCoordinate
     use scale_const, only: &
@@ -872,7 +871,7 @@ contains
     !         rankidx(1) == PRC_NUM_Y-1 writes north HALO
     !         others                    writes without HALO
 
-    if ( FILE_AGGREGATE ) then
+    if ( FILE_HISTORY_AGGREGATE ) then
 
        startZ = 1
 
@@ -968,7 +967,7 @@ contains
     call FILE_HISTORY_Set_Axis( 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', GRID_UFZ,  gsize=UKMAX+1, start=startZ, down=.true. )
     call FILE_HISTORY_Set_Axis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', GRID_UCDZ, gsize=UKMAX,   start=startZ              )
 
-    if ( FILE_AGGREGATE ) then
+    if ( FILE_HISTORY_AGGREGATE ) then
        call FILE_HISTORY_Set_Axis( 'CX',   'Atmos Grid Center Position X', 'm', 'CX',  GRID_CXG,   gsize=IAG,   start=startZ )
        call FILE_HISTORY_Set_Axis( 'CY',   'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CYG,   gsize=JAG,   start=startZ )
        call FILE_HISTORY_Set_Axis( 'FX',   'Atmos Grid Face Position X',   'm', 'FX',  GRID_FXG,   gsize=IAG+1, start=startZ )
@@ -1012,7 +1011,7 @@ contains
 
 
     ! associate coordinates
-    if ( FILE_AGGREGATE ) then
+    if ( FILE_HISTORY_AGGREGATE ) then
        if ( FILE_HISTORY_CARTESC_BOUNDARY ) then
           start(1,:) = ISGB   ! global subarray starting index
           start(2,:) = JSGB   ! global subarray starting index
@@ -1236,9 +1235,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_CARTESC_set_axes_attributes
-    use scale_file, only: &
-       FILE_AGGREGATE
     use scale_file_history, only: &
+       FILE_HISTORY_AGGREGATE, &
        FILE_HISTORY_Set_Attribute
     use scale_process, only: &
        PRC_myrank
@@ -1282,25 +1280,25 @@ contains
        periodic_y = "false"
     endif
 
-    if ( .NOT. FILE_AGGREGATE ) then
-       call FILE_HISTORY_Set_Attribute( "global", "scale_rm_prc_rank_x", (/PRC_2Drank(PRC_myrank,1)/) ) ! [IN]
-       call FILE_HISTORY_Set_Attribute( "global", "scale_rm_prc_rank_y", (/PRC_2Drank(PRC_myrank,2)/) ) ! [IN]
+    if ( .NOT. FILE_HISTORY_AGGREGATE ) then
+       call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_rank_x", (/PRC_2Drank(PRC_myrank,1)/) ) ! [IN]
+       call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_rank_y", (/PRC_2Drank(PRC_myrank,2)/) ) ! [IN]
 
-       call FILE_HISTORY_Set_Attribute( "global", "scale_rm_prc_num_x", (/PRC_NUM_X/) ) ! [IN]
-       call FILE_HISTORY_Set_Attribute( "global", "scale_rm_prc_num_y", (/PRC_NUM_Y/) ) ! [IN]
+       call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_num_x", (/PRC_NUM_X/) ) ! [IN]
+       call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_num_y", (/PRC_NUM_Y/) ) ! [IN]
     endif
 
-    call FILE_HISTORY_Set_Attribute( "global", "scale_rm_prc_periodic_z", periodic_z ) ! [IN]
-    call FILE_HISTORY_Set_Attribute( "global", "scale_rm_prc_periodic_x", periodic_x ) ! [IN]
-    call FILE_HISTORY_Set_Attribute( "global", "scale_rm_prc_periodic_y", periodic_y ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_periodic_z", periodic_z ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_periodic_x", periodic_x ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_periodic_y", periodic_y ) ! [IN]
 
-    call FILE_HISTORY_Set_Attribute( "global", "scale_rm_grid_index_kmax",  (/KMAX/)  ) ! [IN]
-    call FILE_HISTORY_Set_Attribute( "global", "scale_rm_grid_index_imaxg", (/IMAXG/) ) ! [IN]
-    call FILE_HISTORY_Set_Attribute( "global", "scale_rm_grid_index_jmaxg", (/JMAXG/) ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_kmax",  (/KMAX/)  ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_imaxg", (/IMAXG/) ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_jmaxg", (/JMAXG/) ) ! [IN]
 
-    call FILE_HISTORY_Set_Attribute( "global", "scale_rm_grid_index_khalo", (/KHALO/) ) ! [IN]
-    call FILE_HISTORY_Set_Attribute( "global", "scale_rm_grid_index_ihalo", (/IHALO/) ) ! [IN]
-    call FILE_HISTORY_Set_Attribute( "global", "scale_rm_grid_index_jhalo", (/JHALO/) ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_khalo", (/KHALO/) ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_ihalo", (/IHALO/) ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_jhalo", (/JHALO/) ) ! [IN]
 
     call FILE_get_CFtunits(tunits, FILE_HISTORY_CARTESCORY_STARTDATE)
     call FILE_HISTORY_Set_Attribute( "global", "time_units", tunits )
@@ -1337,8 +1335,10 @@ contains
        ainfo(1)%halo_global (2) = IHALO ! east side
        ainfo(1)%halo_local  (1) = IHALO ! west side
        ainfo(1)%halo_local  (2) = IHALO ! east side
-       if( PRC_HAS_W ) ainfo(1)%halo_local(1) = 0
-       if( PRC_HAS_E ) ainfo(1)%halo_local(2) = 0
+       if ( .not. FILE_HISTORY_AGGREGATE ) then
+          if( PRC_HAS_W ) ainfo(1)%halo_local(1) = 0
+          if( PRC_HAS_E ) ainfo(1)%halo_local(2) = 0
+       end if
     endif
 
     ! for xh
@@ -1346,7 +1346,7 @@ contains
     if ( .NOT. PRC_PERIODIC_X .AND. .NOT. FILE_HISTORY_CARTESC_BOUNDARY ) then
        ainfo(2)%size_global (1) = ainfo(2)%size_global (1) + 1
        ainfo(2)%halo_global (1) = ainfo(2)%halo_global (1) + 1
-       if ( PRC_HAS_W ) then
+       if ( PRC_HAS_W .and. ( .not. FILE_HISTORY_AGGREGATE ) ) then
           ainfo(2)%start_global(1) = ainfo(2)%start_global(1) + 1
        else
           ainfo(2)%halo_local  (1) = ainfo(2)%halo_local  (1) + 1
@@ -1368,8 +1368,10 @@ contains
        ainfo(3)%halo_global (2) = JHALO ! north side
        ainfo(3)%halo_local  (1) = JHALO ! south side
        ainfo(3)%halo_local  (2) = JHALO ! north side
-       if( PRC_HAS_S ) ainfo(3)%halo_local(1) = 0
-       if( PRC_HAS_N ) ainfo(3)%halo_local(2) = 0
+       if ( .not. FILE_HISTORY_AGGREGATE ) then
+          if( PRC_HAS_S ) ainfo(3)%halo_local(1) = 0
+          if( PRC_HAS_N ) ainfo(3)%halo_local(2) = 0
+       end if
     endif
 
     ! for yh
@@ -1377,12 +1379,19 @@ contains
     if ( .NOT. PRC_PERIODIC_Y .AND. .NOT. FILE_HISTORY_CARTESC_BOUNDARY ) then
        ainfo(4)%size_global (1) = ainfo(4)%size_global (1) + 1
        ainfo(4)%halo_global (1) = ainfo(4)%halo_global (1) + 1
-       if ( PRC_HAS_S ) then
+       if ( PRC_HAS_S .and. ( .not. FILE_HISTORY_AGGREGATE ) ) then
           ainfo(4)%start_global(1) = ainfo(4)%start_global(1) + 1
        else
           ainfo(4)%halo_local  (1) = ainfo(4)%halo_local  (1) + 1
        endif
     endif
+
+    if ( FILE_HISTORY_AGGREGATE ) then
+       ainfo(1)%start_global(1) = 1
+       ainfo(2)%start_global(1) = 1
+       ainfo(3)%start_global(1) = 1
+       ainfo(4)%start_global(1) = 1
+    end if
 
     call FILE_HISTORY_Set_Attribute( "x" , "size_global" , ainfo(1)%size_global (:) )
     call FILE_HISTORY_Set_Attribute( "x" , "start_global", ainfo(1)%start_global(:) )

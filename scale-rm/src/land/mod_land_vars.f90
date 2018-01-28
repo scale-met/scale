@@ -49,11 +49,13 @@ module mod_land_vars
   !
   !++ Public parameters & variables
   !
-  logical,               public :: LAND_RESTART_OUTPUT                = .false.         !< Output restart file?
+  logical,               public :: LAND_RESTART_OUTPUT                 = .false.         !< Output restart file?
 
   character(len=H_LONG),  public :: LAND_RESTART_IN_BASENAME           = ''              !< Basename of the input  file
+  logical,                public :: LAND_RESTART_IN_AGGREGATE                            !< Switch to use aggregate file
   logical,                public :: LAND_RESTART_IN_POSTFIX_TIMELABEL  = .false.         !< Add timelabel to the basename of input  file?
   character(len=H_LONG),  public :: LAND_RESTART_OUT_BASENAME          = ''              !< Basename of the output file
+  logical,                public :: LAND_RESTART_OUT_AGGREGATE                           !< Switch to use aggregate file
   logical,                public :: LAND_RESTART_OUT_POSTFIX_TIMELABEL = .true.          !< Add timelabel to the basename of output file?
   character(len=H_MID),   public :: LAND_RESTART_OUT_TITLE             = 'LAND restart' !< Title    of the output file
   character(len=H_SHORT), public :: LAND_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
@@ -215,10 +217,12 @@ contains
 
     NAMELIST / PARAM_LAND_VARS /  &
        LAND_RESTART_IN_BASENAME,           &
+       LAND_RESTART_IN_AGGREGATE,          &
        LAND_RESTART_IN_POSTFIX_TIMELABEL,  &
        LAND_RESTART_IN_CHECK_COORDINATES,  &
        LAND_RESTART_OUTPUT,                &
        LAND_RESTART_OUT_BASENAME,          &
+       LAND_RESTART_OUT_AGGREGATE,         &
        LAND_RESTART_OUT_POSTFIX_TIMELABEL, &
        LAND_RESTART_OUT_TITLE,             &
        LAND_RESTART_OUT_DTYPE,             &
@@ -404,8 +408,9 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_open( restart_fid, & ! [OUT]
-                         basename     ) ! [IN]
+       call FILE_CARTESC_open( restart_fid,                        & ! [OUT]
+                               basename,                           & ! [IN]
+                               aggregate=LAND_RESTART_IN_AGGREGATE ) ! [IN]
 
        if ( LAND_RESTART_IN_CHECK_COORDINATES ) then
           call FILE_CARTESC_check_coordinates( restart_fid, land=.true. )
@@ -790,8 +795,9 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_create( restart_fid,                                             & ! [OUT]
-                           basename, LAND_RESTART_OUT_TITLE, LAND_RESTART_OUT_DTYPE ) ! [IN]
+       call FILE_CARTESC_create( restart_fid,                                              & ! [OUT]
+                                 basename, LAND_RESTART_OUT_TITLE, LAND_RESTART_OUT_DTYPE, & ! [IN]
+                                 aggregate=LAND_RESTART_OUT_AGGREGATE                      ) ! [IN]
 
     endif
 

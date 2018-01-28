@@ -58,8 +58,10 @@ module scale_landuse
   !++ Private parameters & variables
   !
   character(len=H_LONG),  private :: LANDUSE_IN_BASENAME  = ''                  !< basename of the input  file
+  logical,                private :: LANDUSE_IN_AGGREGATE                       !< switch to use aggregated file
   logical,                private :: LANDUSE_IN_CHECK_COORDINATES = .true.      !< switch for check of coordinates
   character(len=H_LONG),  private :: LANDUSE_OUT_BASENAME = ''                  !< basename of the output file
+  logical,                private :: LANDUSE_OUT_AGGREGATE                      !< switch to use aggregated file
   character(len=H_MID),   private :: LANDUSE_OUT_TITLE    = 'SCALE-RM LANDUSE'  !< title    of the output file
   character(len=H_SHORT), private :: LANDUSE_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
   logical,                private :: LANDUSE_AllOcean     = .false.
@@ -72,14 +74,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LANDUSE_setup
+    use scale_file, only: &
+       FILE_AGGREGATE
     use scale_process, only: &
        PRC_MPIstop
     implicit none
 
     namelist / PARAM_LANDUSE / &
        LANDUSE_IN_BASENAME,          &
+       LANDUSE_IN_AGGREGATE,         &
        LANDUSE_IN_CHECK_COORDINATES, &
        LANDUSE_OUT_BASENAME,         &
+       LANDUSE_OUT_AGGREGATE,        &
        LANDUSE_OUT_DTYPE,            &
        LANDUSE_PFT_mosaic,           &
        LANDUSE_PFT_nmax,             &
@@ -93,6 +99,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[LANDUSE] / Categ[COUPLER] / Origin[SCALElib]'
+
+    LANDUSE_IN_AGGREGATE  = FILE_AGGREGATE
+    LANDUSE_OUT_AGGREGATE = FILE_AGGREGATE
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -243,7 +252,7 @@ contains
 
     if ( LANDUSE_IN_BASENAME /= '' ) then
 
-       call FILE_CARTESC_open( fid, LANDUSE_IN_BASENAME )
+       call FILE_CARTESC_open( fid, LANDUSE_IN_BASENAME, aggregate=LANDUSE_IN_AGGREGATE )
 
        call FILE_CARTESC_read( LANDUSE_frac_land(:,:),         & ! [OUT]
                          fid, 'FRAC_LAND',  'XY', step=1 ) ! [IN]
@@ -324,8 +333,8 @@ contains
 
        call LANDUSE_fillhalo( FILL_BND=.false. )
 
-       call FILE_CARTESC_create( fid, LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, &
-                           LANDUSE_OUT_DTYPE, haszcoord=.false.          )
+       call FILE_CARTESC_create( fid, LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, LANDUSE_OUT_DTYPE, &
+                                 haszcoord=.false., aggregate=LANDUSE_OUT_AGGREGATE               )
 
        call FILE_CARTESC_def_var( fid, vid(1), 'FRAC_LAND'     , 'LAND fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE )
        call FILE_CARTESC_def_var( fid, vid(2), 'FRAC_LAKE'     , 'LAKE fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE )

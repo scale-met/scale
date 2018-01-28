@@ -252,7 +252,7 @@ contains
     logical,          intent(in), optional :: single
     character(len=*), intent(in), optional :: time_units
     logical,          intent(in), optional :: append
-    integer,          intent(in), optional :: mpi_comm !> MPI communicator
+    integer,          intent(in), optional :: mpi_comm !> MPI communicator. If this is set, files are aggregated used by PnetCDF
 
     character(len=FILE_HMID) :: time_units_
     integer :: rankid_
@@ -434,12 +434,12 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_open( &
-      fid,       & ! (out)
-      basename,  & ! (in)
-      mode,      & ! (in)
-      single,    & ! (in) optional
-      mpi_comm,  & ! (in) optional
-      rankid     ) ! (in) optional
+      fid,       &
+      basename,  &
+      mode,      &
+      single,    &
+      mpi_comm,  &
+      rankid     )
     implicit none
 
     integer,          intent(out) :: fid
@@ -1748,8 +1748,7 @@ contains
      fid,   & ! (in)
      vname, & ! (in)
      key,   & ! (in)
-     val    & ! (in)
-     )
+     val    ) ! (in)
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: vname
     character(len=*), intent(in) :: key
@@ -1774,8 +1773,7 @@ contains
      fid,   & ! (in)
      vname, & ! (in)
      key,   & ! (in)
-     val    & ! (in)
-     )
+     val    ) ! (in)
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: vname
     character(len=*), intent(in) :: key
@@ -1802,8 +1800,7 @@ contains
      fid,   & ! (in)
      vname, & ! (in)
      key,   & ! (in)
-     val    & ! (in)
-     )
+     val    ) ! (in)
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: vname
     character(len=*), intent(in) :: key
@@ -1829,8 +1826,7 @@ contains
      fid,   & ! (in)
      vname, & ! (in)
      key,   & ! (in)
-     val    & ! (in)
-     )
+     val    ) ! (in)
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: vname
     character(len=*), intent(in) :: key

@@ -49,11 +49,13 @@ module mod_atmos_phy_mp_vars
   !
   !++ Public parameters & variables
   !
-  logical,               public :: ATMOS_PHY_MP_RESTART_OUTPUT                = .false.                !< output restart file?
+  logical,               public :: ATMOS_PHY_MP_RESTART_OUTPUT                 = .false.                !< output restart file?
 
   character(len=H_LONG),  public :: ATMOS_PHY_MP_RESTART_IN_BASENAME           = ''                     !< Basename of the input  file
+  logical,                public :: ATMOS_PHY_MP_RESTART_IN_AGGREGATE                                   !< Switch to use aggregate file
   logical,                public :: ATMOS_PHY_MP_RESTART_IN_POSTFIX_TIMELABEL  = .false.                !< Add timelabel to the basename of input  file?
   character(len=H_LONG),  public :: ATMOS_PHY_MP_RESTART_OUT_BASENAME          = ''                     !< Basename of the output file
+  logical,                public :: ATMOS_PHY_MP_RESTART_OUT_AGGREGATE                                  !< Switch to use aggregate file
   logical,                public :: ATMOS_PHY_MP_RESTART_OUT_POSTFIX_TIMELABEL = .true.                 !< Add timelabel to the basename of output file?
   character(len=H_MID),   public :: ATMOS_PHY_MP_RESTART_OUT_TITLE             = 'ATMOS_PHY_MP restart' !< title    of the output file
   character(len=H_SHORT), public :: ATMOS_PHY_MP_RESTART_OUT_DTYPE             = 'DEFAULT'              !< REAL4 or REAL8
@@ -141,9 +143,11 @@ contains
 
     NAMELIST / PARAM_ATMOS_PHY_MP_VARS / &
        ATMOS_PHY_MP_RESTART_IN_BASENAME,           &
+       ATMOS_PHY_MP_RESTART_IN_AGGREGATE,          &
        ATMOS_PHY_MP_RESTART_IN_POSTFIX_TIMELABEL,  &
        ATMOS_PHY_MP_RESTART_OUTPUT,                &
        ATMOS_PHY_MP_RESTART_OUT_BASENAME,          &
+       ATMOS_PHY_MP_RESTART_OUT_AGGREGATE,         &
        ATMOS_PHY_MP_RESTART_OUT_POSTFIX_TIMELABEL, &
        ATMOS_PHY_MP_RESTART_OUT_TITLE,             &
        ATMOS_PHY_MP_RESTART_OUT_DTYPE
@@ -291,7 +295,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_open( restart_fid, basename )
+       call FILE_CARTESC_open( restart_fid, basename, aggregate=ATMOS_PHY_MP_RESTART_IN_AGGREGATE )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_MP is not specified.'
     endif
@@ -368,8 +372,9 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_create( restart_fid,                                                             & ! [OUT]
-                           basename, ATMOS_PHY_MP_RESTART_OUT_TITLE, ATMOS_PHY_MP_RESTART_OUT_DTYPE ) ! [IN]
+       call FILE_CARTESC_create( restart_fid,                                                              & ! [OUT]
+                                 basename, ATMOS_PHY_MP_RESTART_OUT_TITLE, ATMOS_PHY_MP_RESTART_OUT_DTYPE, & ! [IN]
+                                 aggregate=ATMOS_PHY_MP_RESTART_OUT_AGGREGATE ) ! [IN]
 
     endif
 

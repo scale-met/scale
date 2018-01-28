@@ -46,8 +46,10 @@ module scale_topography
   !++ Private parameters & variables
   !
   character(len=H_LONG),  private :: TOPO_IN_BASENAME  = ''                     !< basename of the input  file
+  logical,                private :: TOPO_IN_AGGREGATE                          !> switch to use aggregated file
   logical,                private :: TOPO_IN_CHECK_COORDINATES = .false.        !> switch for check of coordinates
   character(len=H_LONG),  private :: TOPO_OUT_BASENAME = ''                     !< basename of the output file
+  logical,                private :: TOPO_OUT_AGGREGATE                         !> switch to use aggregated file
   character(len=H_MID),   private :: TOPO_OUT_TITLE    = 'SCALE-RM TOPOGRAPHY'  !< title    of the output file
   character(len=H_SHORT), private :: TOPO_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
@@ -56,14 +58,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine TOPO_setup
+    use scale_file, only: &
+       FILE_AGGREGATE
     use scale_process, only: &
        PRC_MPIstop
     implicit none
 
     namelist / PARAM_TOPO / &
        TOPO_IN_BASENAME,          &
+       TOPO_IN_AGGREGATE,         &
        TOPO_IN_CHECK_COORDINATES, &
        TOPO_OUT_BASENAME,         &
+       TOPO_OUT_AGGREGATE,        &
        TOPO_OUT_DTYPE
 
     integer :: ierr
@@ -71,6 +77,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TOPOGRAPHY] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
+
+    TOPO_IN_AGGREGATE  = FILE_AGGREGATE
+    TOPO_OUT_AGGREGATE = FILE_AGGREGATE
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -141,9 +150,9 @@ contains
 
     if ( TOPO_IN_BASENAME /= '' ) then
 
-       call FILE_CARTESC_open( fid, TOPO_IN_BASENAME )
+       call FILE_CARTESC_open( fid, TOPO_IN_BASENAME, aggregate=TOPO_IN_AGGREGATE )
        call FILE_CARTESC_read( TOPO_Zsfc(:,:),           & ! [OUT]
-                         fid, 'TOPO', 'XY', step=1 ) ! [IN]
+                               fid, 'TOPO', 'XY', step=1 ) ! [IN]
        call FILE_CARTESC_flush( fid )
 
        if ( TOPO_IN_CHECK_COORDINATES ) then
@@ -181,8 +190,8 @@ contains
        call TOPO_fillhalo( FILL_BND=.false. )
 
        call FILE_CARTESC_write( TOPO_Zsfc(:,:), TOPO_OUT_BASENAME, TOPO_OUT_TITLE, & ! [IN]
-                          'TOPO', 'Topography', 'm', 'XY',   TOPO_OUT_DTYPE, & ! [IN]
-                          haszcoord=.false.                                  ) ! [IN]
+                                'TOPO', 'Topography', 'm', 'XY',   TOPO_OUT_DTYPE, & ! [IN]
+                                haszcoord=.false., aggregate=TOPO_OUT_AGGREGATE    ) ! [IN]
 
     endif
 

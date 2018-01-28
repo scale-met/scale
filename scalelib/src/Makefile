@@ -364,7 +364,7 @@ scale_atmos_dyn_fvm_flux_%.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
 #	erb fname=$@ $< > $@
 
 $(OBJ_DIR)/%.o : %.c
-	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include -o $@ -c $<
+	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include $(SCALE_NETCDF_INCLUDE) -o $@ -c $<
 
 .PHONY : clean distclean allclean depend modules dependency
 

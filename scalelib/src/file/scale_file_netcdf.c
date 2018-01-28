@@ -187,6 +187,7 @@ int32_t file_open_c(       int32_t  *fid,     // (out)
   else
     files[nfile]->defmode = 0;
 #endif
+
   files[nfile]->shared_mode = shared_mode;  /* shared-file I/O mode */
   strcpy(files[nfile]->fname, fname);
   *fid = nfile;
@@ -1618,12 +1619,12 @@ int32_t file_write_data_c( const int32_t   fid,       // (in)
       str[0] = vars[vid]->start[0];  // start along the time dimension
       cnt[0] = vars[vid]->count[0];
       for (i=0; i<ndims; i++) {
-        str[ndims_t-i-1] = start[i];
+        str[ndims_t-i-1] = start[i] - 1;
         cnt[ndims_t-i-1] = count[i];
       }
     } else {
       for (i=0; i<ndims; i++) {
-        str[ndims-i-1] = start[i];
+        str[ndims-i-1] = start[i] - 1;
         cnt[ndims-i-1] = count[i];
       }
     }

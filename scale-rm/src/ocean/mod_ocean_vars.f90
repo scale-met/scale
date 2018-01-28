@@ -47,11 +47,13 @@ module mod_ocean_vars
   !
   !++ Public parameters & variables
   !
-  logical,               public :: OCEAN_RESTART_OUTPUT                = .false.         !< Output restart file?
+  logical,               public :: OCEAN_RESTART_OUTPUT                 = .false.         !< Output restart file?
 
   character(len=H_LONG),  public :: OCEAN_RESTART_IN_BASENAME           = ''              !< Basename of the input  file
+  logical,                public :: OCEAN_RESTART_IN_AGGREGATE                            !< Switch to use aggregate file
   logical,                public :: OCEAN_RESTART_IN_POSTFIX_TIMELABEL  = .false.         !< Add timelabel to the basename of input  file?
   character(len=H_LONG),  public :: OCEAN_RESTART_OUT_BASENAME          = ''              !< Basename of the output file
+  logical,                public :: OCEAN_RESTART_OUT_AGGREGATE                           !< Switch to use aggregate file
   logical,                public :: OCEAN_RESTART_OUT_POSTFIX_TIMELABEL = .true.          !< Add timelabel to the basename of output file?
   character(len=H_MID),   public :: OCEAN_RESTART_OUT_TITLE             = 'OCEAN restart' !< Title    of the output file
   character(len=H_SHORT), public :: OCEAN_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
@@ -213,10 +215,12 @@ contains
 
     NAMELIST / PARAM_OCEAN_VARS /  &
        OCEAN_RESTART_IN_BASENAME,           &
+       OCEAN_RESTART_IN_AGGREGATE,          &
        OCEAN_RESTART_IN_POSTFIX_TIMELABEL,  &
        OCEAN_RESTART_IN_CHECK_COORDINATES,  &
        OCEAN_RESTART_OUTPUT,                &
        OCEAN_RESTART_OUT_BASENAME,          &
+       OCEAN_RESTART_OUT_AGGREGATE,         &
        OCEAN_RESTART_OUT_POSTFIX_TIMELABEL, &
        OCEAN_RESTART_OUT_TITLE,             &
        OCEAN_RESTART_OUT_DTYPE,             &
@@ -393,8 +397,9 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_open( restart_fid, & ! [OUT]
-                         basename     ) ! [IN]
+       call FILE_CARTESC_open( restart_fid,                         & ! [OUT]
+                               basename,                            & ! [IN]
+                               aggregate=OCEAN_RESTART_IN_AGGREGATE ) ! [IN]
 
        if ( OCEAN_RESTART_IN_CHECK_COORDINATES ) then
           call FILE_CARTESC_check_coordinates( restart_fid )
@@ -633,8 +638,9 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_create( restart_fid,                                               & ! [OUT]
-                           basename, OCEAN_RESTART_OUT_TITLE, OCEAN_RESTART_OUT_DTYPE ) ! [IN]
+       call FILE_CARTESC_create( restart_fid,                                                & ! [OUT]
+                                 basename, OCEAN_RESTART_OUT_TITLE, OCEAN_RESTART_OUT_DTYPE, & ! [IN]
+                                 aggregate=OCEAN_RESTART_OUT_AGGREGATE                       ) ! [IN]
 
     endif
 
