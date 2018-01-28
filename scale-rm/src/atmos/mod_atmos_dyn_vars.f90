@@ -370,8 +370,8 @@ contains
     if ( restart_fid /= -1 ) then
 
        do iv = 1, VA
-          call FILE_CARTESC_def_var( restart_fid, VAR_ID(iv), VAR_NAME(iv), VAR_DESC(iv), &
-                               VAR_UNIT(iv), 'ZXY', ATMOS_DYN_RESTART_OUT_DTYPE     ) ! [IN]
+          call FILE_CARTESC_def_var( restart_fid, VAR_NAME(iv), VAR_DESC(iv), VAR_UNIT(iv), 'ZXY', ATMOS_DYN_RESTART_OUT_DTYPE, &
+                                     VAR_ID(iv) )
        enddo
 
     endif

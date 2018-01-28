@@ -1429,18 +1429,16 @@ contains
   end subroutine FILE_add_variable_realDP
 
   subroutine FILE_def_variable( &
-       fid,     & ! (in)
-       vid,     & ! (out)
-       varname, & ! (in)
-       desc,    & ! (in)
-       units,   & ! (in)
-       ndims,   & ! (in)
-       dims,    & ! (in)
-       dtype,   & ! (in)
-       tint,    & ! (in) optional
-       tavg     & ! (in) optional
-       )
-    integer,          intent(out) :: vid
+       fid,      & ! (in)
+       varname,  & ! (in)
+       desc,     & ! (in)
+       units,    & ! (in)
+       ndims,    & ! (in)
+       dims,     & ! (in)
+       dtype,    & ! (in)
+       vid,      & ! (out)
+       timeintv, & ! (in) optional
+       timeavg   ) ! (in) optional
     integer,          intent( in) :: fid
     character(len=*), intent( in) :: varname
     character(len=*), intent( in) :: desc
@@ -1448,8 +1446,9 @@ contains
     integer,          intent( in) :: ndims
     character(len=*), intent( in) :: dims(:)
     integer,          intent( in) :: dtype
-    real(DP),         intent( in), optional :: tint
-    logical,          intent( in), optional :: tavg
+    integer,          intent(out) :: vid
+    real(DP),         intent( in), optional :: timeintv
+    logical,          intent( in), optional :: timeavg
 
     real(DP) :: tint_
     integer  :: itavg
@@ -1468,14 +1467,14 @@ contains
 
     if ( vid < 0 ) then ! variable registration
 
-       if ( present(tint) ) then
-          tint_ = tint
+       if ( present(timeintv) ) then
+          tint_ = timeintv
        else
           tint_ = -1.0_DP
        endif
 
-       if ( present(tavg) ) then
-          if ( tavg ) then
+       if ( present(timeavg) ) then
+          if ( timeavg ) then
              itavg = 1
           else
              itavg = 0
@@ -2386,48 +2385,10 @@ contains
                     basename, FILE_FREAD,         & ! (in)
                     rankid=rankid, single=single_ ) ! (in)
 
-    !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
-
-    !--- verify
-    if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
-             var(:) = 0.0_SP
-          else
-             write(*,*) 'xxx failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
-       else
-          write(*,*) 'xxx failed to get data information :'//trim(varname)
-          call PRC_abort
-       end if
-    end if
-
-    if ( dinfo%rank /= 1 ) then
-       write(*,*) 'xxx rank is not 1', dinfo%rank
-       call PRC_abort
-    end if
-    dim_size(:) = shape(var)
-    do n = 1, 1
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call PRC_abort
-       end if
-    end do
-
-    call file_read_data_c( var(:), & ! (out)
-         dinfo, SP,                  & ! (in)
-         error                            ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
-       call PRC_abort
-    end if
+    call FILE_read_var_realSP_1D(          &
+         var,                                        & ! (out)
+         fid, varname, step,                         & ! (in)
+         allow_missing=allow_missing, single=single_ ) ! (in)
 
     return
   end subroutine FILE_read_realSP_1D
@@ -2470,48 +2431,10 @@ contains
                     basename, FILE_FREAD,         & ! (in)
                     rankid=rankid, single=single_ ) ! (in)
 
-    !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
-
-    !--- verify
-    if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
-             var(:) = 0.0_DP
-          else
-             write(*,*) 'xxx failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
-       else
-          write(*,*) 'xxx failed to get data information :'//trim(varname)
-          call PRC_abort
-       end if
-    end if
-
-    if ( dinfo%rank /= 1 ) then
-       write(*,*) 'xxx rank is not 1', dinfo%rank
-       call PRC_abort
-    end if
-    dim_size(:) = shape(var)
-    do n = 1, 1
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call PRC_abort
-       end if
-    end do
-
-    call file_read_data_c( var(:), & ! (out)
-         dinfo, DP,                  & ! (in)
-         error                            ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
-       call PRC_abort
-    end if
+    call FILE_read_var_realDP_1D(          &
+         var,                                        & ! (out)
+         fid, varname, step,                         & ! (in)
+         allow_missing=allow_missing, single=single_ ) ! (in)
 
     return
   end subroutine FILE_read_realDP_1D
@@ -2554,48 +2477,10 @@ contains
                     basename, FILE_FREAD,         & ! (in)
                     rankid=rankid, single=single_ ) ! (in)
 
-    !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
-
-    !--- verify
-    if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
-             var(:,:) = 0.0_SP
-          else
-             write(*,*) 'xxx failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
-       else
-          write(*,*) 'xxx failed to get data information :'//trim(varname)
-          call PRC_abort
-       end if
-    end if
-
-    if ( dinfo%rank /= 2 ) then
-       write(*,*) 'xxx rank is not 2', dinfo%rank
-       call PRC_abort
-    end if
-    dim_size(:) = shape(var)
-    do n = 1, 2
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call PRC_abort
-       end if
-    end do
-
-    call file_read_data_c( var(:,:), & ! (out)
-         dinfo, SP,                  & ! (in)
-         error                            ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
-       call PRC_abort
-    end if
+    call FILE_read_var_realSP_2D(          &
+         var,                                        & ! (out)
+         fid, varname, step,                         & ! (in)
+         allow_missing=allow_missing, single=single_ ) ! (in)
 
     return
   end subroutine FILE_read_realSP_2D
@@ -2638,48 +2523,10 @@ contains
                     basename, FILE_FREAD,         & ! (in)
                     rankid=rankid, single=single_ ) ! (in)
 
-    !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
-
-    !--- verify
-    if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
-             var(:,:) = 0.0_DP
-          else
-             write(*,*) 'xxx failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
-       else
-          write(*,*) 'xxx failed to get data information :'//trim(varname)
-          call PRC_abort
-       end if
-    end if
-
-    if ( dinfo%rank /= 2 ) then
-       write(*,*) 'xxx rank is not 2', dinfo%rank
-       call PRC_abort
-    end if
-    dim_size(:) = shape(var)
-    do n = 1, 2
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call PRC_abort
-       end if
-    end do
-
-    call file_read_data_c( var(:,:), & ! (out)
-         dinfo, DP,                  & ! (in)
-         error                            ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
-       call PRC_abort
-    end if
+    call FILE_read_var_realDP_2D(          &
+         var,                                        & ! (out)
+         fid, varname, step,                         & ! (in)
+         allow_missing=allow_missing, single=single_ ) ! (in)
 
     return
   end subroutine FILE_read_realDP_2D
@@ -2722,48 +2569,10 @@ contains
                     basename, FILE_FREAD,         & ! (in)
                     rankid=rankid, single=single_ ) ! (in)
 
-    !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
-
-    !--- verify
-    if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
-             var(:,:,:) = 0.0_SP
-          else
-             write(*,*) 'xxx failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
-       else
-          write(*,*) 'xxx failed to get data information :'//trim(varname)
-          call PRC_abort
-       end if
-    end if
-
-    if ( dinfo%rank /= 3 ) then
-       write(*,*) 'xxx rank is not 3', dinfo%rank
-       call PRC_abort
-    end if
-    dim_size(:) = shape(var)
-    do n = 1, 3
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call PRC_abort
-       end if
-    end do
-
-    call file_read_data_c( var(:,:,:), & ! (out)
-         dinfo, SP,                  & ! (in)
-         error                            ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
-       call PRC_abort
-    end if
+    call FILE_read_var_realSP_3D(          &
+         var,                                        & ! (out)
+         fid, varname, step,                         & ! (in)
+         allow_missing=allow_missing, single=single_ ) ! (in)
 
     return
   end subroutine FILE_read_realSP_3D
@@ -2806,48 +2615,10 @@ contains
                     basename, FILE_FREAD,         & ! (in)
                     rankid=rankid, single=single_ ) ! (in)
 
-    !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
-
-    !--- verify
-    if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
-             var(:,:,:) = 0.0_DP
-          else
-             write(*,*) 'xxx failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
-       else
-          write(*,*) 'xxx failed to get data information :'//trim(varname)
-          call PRC_abort
-       end if
-    end if
-
-    if ( dinfo%rank /= 3 ) then
-       write(*,*) 'xxx rank is not 3', dinfo%rank
-       call PRC_abort
-    end if
-    dim_size(:) = shape(var)
-    do n = 1, 3
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call PRC_abort
-       end if
-    end do
-
-    call file_read_data_c( var(:,:,:), & ! (out)
-         dinfo, DP,                  & ! (in)
-         error                            ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
-       call PRC_abort
-    end if
+    call FILE_read_var_realDP_3D(          &
+         var,                                        & ! (out)
+         fid, varname, step,                         & ! (in)
+         allow_missing=allow_missing, single=single_ ) ! (in)
 
     return
   end subroutine FILE_read_realDP_3D
@@ -2890,48 +2661,10 @@ contains
                     basename, FILE_FREAD,         & ! (in)
                     rankid=rankid, single=single_ ) ! (in)
 
-    !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
-
-    !--- verify
-    if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
-             var(:,:,:,:) = 0.0_SP
-          else
-             write(*,*) 'xxx failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
-       else
-          write(*,*) 'xxx failed to get data information :'//trim(varname)
-          call PRC_abort
-       end if
-    end if
-
-    if ( dinfo%rank /= 4 ) then
-       write(*,*) 'xxx rank is not 4', dinfo%rank
-       call PRC_abort
-    end if
-    dim_size(:) = shape(var)
-    do n = 1, 4
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call PRC_abort
-       end if
-    end do
-
-    call file_read_data_c( var(:,:,:,:), & ! (out)
-         dinfo, SP,                  & ! (in)
-         error                            ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
-       call PRC_abort
-    end if
+    call FILE_read_var_realSP_4D(          &
+         var,                                        & ! (out)
+         fid, varname, step,                         & ! (in)
+         allow_missing=allow_missing, single=single_ ) ! (in)
 
     return
   end subroutine FILE_read_realSP_4D
@@ -2974,48 +2707,10 @@ contains
                     basename, FILE_FREAD,         & ! (in)
                     rankid=rankid, single=single_ ) ! (in)
 
-    !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
-
-    !--- verify
-    if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
-             var(:,:,:,:) = 0.0_DP
-          else
-             write(*,*) 'xxx failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
-       else
-          write(*,*) 'xxx failed to get data information :'//trim(varname)
-          call PRC_abort
-       end if
-    end if
-
-    if ( dinfo%rank /= 4 ) then
-       write(*,*) 'xxx rank is not 4', dinfo%rank
-       call PRC_abort
-    end if
-    dim_size(:) = shape(var)
-    do n = 1, 4
-       if ( dinfo%dim_size(n) /= dim_size(n) ) then
-          write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-          call PRC_abort
-       end if
-    end do
-
-    call file_read_data_c( var(:,:,:,:), & ! (out)
-         dinfo, DP,                  & ! (in)
-         error                            ) ! (out)
-    if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
-       call PRC_abort
-    end if
+    call FILE_read_var_realDP_4D(          &
+         var,                                        & ! (out)
+         fid, varname, step,                         & ! (in)
+         allow_missing=allow_missing, single=single_ ) ! (in)
 
     return
   end subroutine FILE_read_realDP_4D

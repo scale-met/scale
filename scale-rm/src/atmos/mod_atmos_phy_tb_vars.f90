@@ -339,8 +339,10 @@ contains
 
 !    if ( restart_fid /= -1 ) then
 
-!       call FILE_CARTESC_def_var( restart_fid, VAR_ID(1), VAR_NAME(1), VAR_DESC(1), &
-!                            VAR_UNIT(1), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE  ) ! [IN]
+!       call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
+!            VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), & ! [IN]
+!            'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE, & ! [IN]
+!            VAR_ID(1)                              ) ! [OUT]
 
 !    endif
 

@@ -93,6 +93,7 @@ module mod_atmos_phy_cp_vars
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
+  character(len=H_SHORT), private            :: VAR_DIM (VMAX) !< dimension type
   integer,                private            :: VAR_ID  (VMAX) !< ID    of the variables
   integer,                private            :: restart_fid = -1  ! file ID
 
@@ -120,6 +121,14 @@ module mod_atmos_phy_cp_vars
                   '1',       &
                   'm/s',     &
                   'step'     /
+  data VAR_DIM  / 'XY',  &
+                  'XY',  &
+                  'XY',  &
+                  'XY',  &
+                  'ZXY', &
+                  'ZXY', &
+                  'ZXY', &
+                  'XY'   /
 
   ! tendency names
   integer,                private              :: VMAX_t       !< number of the tendency variables dens+rhot+QA_MP
@@ -553,36 +562,30 @@ contains
        QA_MP
     implicit none
 
-    integer :: iq
+    integer :: i, iq
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
 
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(1), VAR_NAME(1), VAR_DESC(1),   &
-                            VAR_UNIT(1), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(2), VAR_NAME(2), VAR_DESC(2),   &
-                            VAR_UNIT(2), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(3), VAR_NAME(3), VAR_DESC(3),   &
-                            VAR_UNIT(3), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(4), VAR_NAME(4), VAR_DESC(4),   &
-                            VAR_UNIT(4), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(5), VAR_NAME(5), VAR_DESC(5),   &
-                            VAR_UNIT(5), 'ZXY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(6), VAR_NAME(6), VAR_DESC(6),   &
-                            VAR_UNIT(6), 'ZXY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(7), VAR_NAME(7), VAR_DESC(7),   &
-                            VAR_UNIT(7), 'ZXY', ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(8), VAR_NAME(8), VAR_DESC(8),   &
-                            VAR_UNIT(8), 'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE  ) ! [IN]
+       do i = 1, 8
+          call FILE_CARTESC_def_var( restart_fid,          & ! [IN]
+               VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i),      & ! [IN]
+               VAR_DIM(i), ATMOS_PHY_CP_RESTART_OUT_DTYPE, & ! [IN]
+               VAR_ID(i)                                   ) ! [OUT]
+       end do
 
-       call FILE_CARTESC_def_var( restart_fid, VAR_t_ID(1), VAR_t_NAME(1), VAR_t_DESC(1), &
-                            VAR_t_UNIT(1), 'ZXY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE   ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_t_ID(2), VAR_t_NAME(2), VAR_t_DESC(2), &
-                            VAR_t_UNIT(2), 'ZXY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE   ) ! [IN]
+       do i = 1, 2
+          call FILE_CARTESC_def_var( restart_fid,           & ! [IN]
+               VAR_t_NAME(i), VAR_t_DESC(i), VAR_t_UNIT(i), & ! [IN]
+               'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE,       & ! [IN]
+               VAR_t_ID(i)                                  ) ! [OUT]
+       end do
 
        do iq = 1, QA_MP
-          call FILE_CARTESC_def_var( restart_fid, VAR_t_ID(2+iq), VAR_t_NAME(2+iq), VAR_t_DESC(2+iq), &
-                               VAR_t_UNIT(2+iq), 'ZXY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE         ) ! [IN]
+          call FILE_CARTESC_def_var( restart_fid,                    & ! [IN]
+               VAR_t_NAME(2+iq), VAR_t_DESC(2+iq), VAR_t_UNIT(2+iq), & ! [IN]
+               'ZXY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE,               & ! [IN]
+               VAR_t_ID(2+iq)                                        ) ! [OUT]
        enddo
 
     endif
@@ -639,9 +642,9 @@ contains
                           VAR_NAME(5), 'ZXY' ) ! [IN]
        call FILE_CARTESC_write( restart_fid, VAR_ID(6), ATMOS_PHY_CP_cldfrac_sh(:,:,:), & ! [IN]
                           VAR_NAME(6), 'ZXY' ) ! [IN]
-       call FILE_CARTESC_write( restart_fid, VAR_ID(7), ATMOS_PHY_CP_kf_nca(:,:), & ! [IN]
+       call FILE_CARTESC_write( restart_fid, VAR_ID(7), ATMOS_PHY_CP_w0avg(:,:,:), & ! [IN]
                           VAR_NAME(7), 'ZXY' ) ! [IN]
-       call FILE_CARTESC_write( restart_fid, VAR_ID(8), ATMOS_PHY_CP_kf_w0avg(:,:,:), & ! [IN]
+       call FILE_CARTESC_write( restart_fid, VAR_ID(8), ATMOS_PHY_CP_kf_nca(:,:), & ! [IN]
                           VAR_NAME(8), 'XY' ) ! [IN]
 
        ! tendency

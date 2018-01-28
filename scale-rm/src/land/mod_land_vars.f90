@@ -844,34 +844,24 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_def_var
     implicit none
+    integer :: i
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
 
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_TEMP),      VAR_NAME(I_TEMP),      VAR_DESC(I_TEMP),      &
-                            VAR_UNIT(I_TEMP),      'LXY', LAND_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_WATER),     VAR_NAME(I_WATER),     VAR_DESC(I_WATER),     &
-                            VAR_UNIT(I_WATER),     'LXY', LAND_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFC_TEMP),  VAR_NAME(I_SFC_TEMP),  VAR_DESC(I_SFC_TEMP),  &
-                            VAR_UNIT(I_SFC_TEMP),  'XY',   LAND_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_ALB_LW),    VAR_NAME(I_ALB_LW),    VAR_DESC(I_ALB_LW),    &
-                            VAR_UNIT(I_ALB_LW),    'XY',   LAND_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_ALB_SW),    VAR_NAME(I_ALB_SW),    VAR_DESC(I_ALB_SW),    &
-                            VAR_UNIT(I_ALB_SW),    'XY',   LAND_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_MW),   VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   &
-                            VAR_UNIT(I_SFLX_MW),   'XY',   LAND_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_MU),   VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   &
-                            VAR_UNIT(I_SFLX_MU),   'XY',   LAND_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_MV),   VAR_NAME(I_SFLX_MV),   VAR_DESC(I_SFLX_MV),   &
-                            VAR_UNIT(I_SFLX_MV),   'XY',   LAND_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_SH),   VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   &
-                            VAR_UNIT(I_SFLX_SH),   'XY',   LAND_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_LH),   VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   &
-                            VAR_UNIT(I_SFLX_LH),   'XY',   LAND_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_GH),   VAR_NAME(I_SFLX_GH),   VAR_DESC(I_SFLX_GH),   &
-                            VAR_UNIT(I_SFLX_GH),   'XY',   LAND_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_evap), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), &
-                            VAR_UNIT(I_SFLX_evap), 'XY',   LAND_RESTART_OUT_DTYPE)
+       do i = I_TEMP, I_WATER
+          if ( i == I_WATERDS ) cycle
+          call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
+               VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
+               'LXY', LAND_RESTART_OUT_DTYPE,         & ! [IN]
+               VAR_ID(i)                              ) ! [OUT]
+       end do
+       do i = I_SFC_TEMP, VMAX
+          call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
+               VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
+               'XY', LAND_RESTART_OUT_DTYPE,          & ! [IN]
+               VAR_ID(i)                              ) ! [OUT]
+       end do
 
     endif
 

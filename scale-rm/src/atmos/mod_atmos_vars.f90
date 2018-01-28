@@ -3143,20 +3143,19 @@ contains
 
     if ( restart_fid /= -1 ) then
 
-       call FILE_CARTESC_def_var( restart_fid, PV_ID(I_DENS), PV_info(I_DENS)%NAME, PV_info(I_DENS)%DESC, & ! [IN]
-                            PV_info(I_DENS)%UNIT, 'ZXY',  ATMOS_RESTART_OUT_DTYPE                   ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, PV_ID(I_MOMZ), PV_info(I_MOMZ)%NAME, PV_info(I_MOMZ)%DESC, & ! [IN]
-                            PV_info(I_MOMZ)%UNIT, 'ZHXY', ATMOS_RESTART_OUT_DTYPE                   ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, PV_ID(I_MOMX), PV_info(I_MOMX)%NAME, PV_info(I_MOMX)%DESC, & ! [IN]
-                            PV_info(I_MOMX)%UNIT, 'ZXHY', ATMOS_RESTART_OUT_DTYPE                   ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, PV_ID(I_MOMY), PV_info(I_MOMY)%NAME, PV_info(I_MOMY)%DESC, & ! [IN]
-                            PV_info(I_MOMY)%UNIT, 'ZXYH', ATMOS_RESTART_OUT_DTYPE                   ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, PV_ID(I_RHOT), PV_info(I_RHOT)%NAME, PV_info(I_RHOT)%DESC, & ! [IN]
-                            PV_info(I_RHOT)%UNIT, 'ZXY',  ATMOS_RESTART_OUT_DTYPE                   ) ! [IN]
-
+       call FILE_CARTESC_def_var( restart_fid, PV_info(I_DENS)%NAME, PV_info(I_DENS)%DESC, PV_info(I_DENS)%UNIT, 'ZXY',  ATMOS_RESTART_OUT_DTYPE, &
+                                  PV_ID(I_DENS) )
+       call FILE_CARTESC_def_var( restart_fid, PV_info(I_MOMZ)%NAME, PV_info(I_MOMZ)%DESC, PV_info(I_MOMZ)%UNIT, 'ZHXY', ATMOS_RESTART_OUT_DTYPE, &
+                                  PV_ID(I_MOMZ) )
+       call FILE_CARTESC_def_var( restart_fid, PV_info(I_MOMX)%NAME, PV_info(I_MOMX)%DESC, PV_info(I_MOMX)%UNIT, 'ZXHY', ATMOS_RESTART_OUT_DTYPE, &
+                                  PV_ID(I_MOMX) )
+       call FILE_CARTESC_def_var( restart_fid, PV_info(I_MOMY)%NAME, PV_info(I_MOMY)%DESC, PV_info(I_MOMY)%UNIT, 'ZXYH', ATMOS_RESTART_OUT_DTYPE, &
+                                  PV_ID(I_MOMY) )
+       call FILE_CARTESC_def_var( restart_fid, PV_info(I_RHOT)%NAME, PV_info(I_RHOT)%DESC, PV_info(I_RHOT)%UNIT, 'ZXY',  ATMOS_RESTART_OUT_DTYPE, &
+                                  PV_ID(I_RHOT) )
        do iq = 1, QA
-          call FILE_CARTESC_def_var( restart_fid, PV_ID(PV_nmax+iq), TRACER_NAME(iq), TRACER_DESC(iq), & ! [IN]
-                               TRACER_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE       ) ! [IN]
+          call FILE_CARTESC_def_var( restart_fid, TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE, &
+                                     PV_ID(PV_nmax+iq) )
        enddo
 
     endif

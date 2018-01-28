@@ -336,18 +336,18 @@ contains
        call FILE_CARTESC_create( fid, LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, LANDUSE_OUT_DTYPE, &
                                  haszcoord=.false., aggregate=LANDUSE_OUT_AGGREGATE               )
 
-       call FILE_CARTESC_def_var( fid, vid(1), 'FRAC_LAND'     , 'LAND fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE )
-       call FILE_CARTESC_def_var( fid, vid(2), 'FRAC_LAKE'     , 'LAKE fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE )
-       call FILE_CARTESC_def_var( fid, vid(3), 'FRAC_URBAN'    , 'URBAN fraction'         , '1', 'XY', LANDUSE_OUT_DTYPE )
-       call FILE_CARTESC_def_var( fid, vid(4), 'FRAC_OCEAN_abs', 'absolute OCEAN fraction', '1', 'XY', LANDUSE_OUT_DTYPE )
-       call FILE_CARTESC_def_var( fid, vid(5), 'FRAC_LAND_abs' , 'absolute LAND fraction' , '1', 'XY', LANDUSE_OUT_DTYPE )
-       call FILE_CARTESC_def_var( fid, vid(6), 'FRAC_URBAN_abs', 'absolute URBAN fraction', '1', 'XY', LANDUSE_OUT_DTYPE )
+       call FILE_CARTESC_def_var( fid, 'FRAC_LAND'     , 'LAND fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE, vid(1) )
+       call FILE_CARTESC_def_var( fid, 'FRAC_LAKE'     , 'LAKE fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE, vid(2) )
+       call FILE_CARTESC_def_var( fid, 'FRAC_URBAN'    , 'URBAN fraction'         , '1', 'XY', LANDUSE_OUT_DTYPE, vid(3) )
+       call FILE_CARTESC_def_var( fid, 'FRAC_OCEAN_abs', 'absolute OCEAN fraction', '1', 'XY', LANDUSE_OUT_DTYPE, vid(4) )
+       call FILE_CARTESC_def_var( fid, 'FRAC_LAND_abs' , 'absolute LAND fraction' , '1', 'XY', LANDUSE_OUT_DTYPE, vid(5) )
+       call FILE_CARTESC_def_var( fid, 'FRAC_URBAN_abs', 'absolute URBAN fraction', '1', 'XY', LANDUSE_OUT_DTYPE, vid(6) )
 
        do p = 1, LANDUSE_PFT_mosaic
           write(varname,'(A8,I1.1)') 'FRAC_PFT', p
-          call FILE_CARTESC_def_var( fid, vid(7+2*(p-1)), varname, 'PFT fraction', '1', 'XY', LANDUSE_OUT_DTYPE )
+          call FILE_CARTESC_def_var( fid, varname, 'PFT fraction', '1', 'XY', LANDUSE_OUT_DTYPE, vid(7+2*(p-1)) )
           write(varname,'(A9,I1.1)') 'INDEX_PFT', p
-          call FILE_CARTESC_def_var( fid, vid(8+2*(p-1)), varname, 'PFT index',    '1', 'XY', LANDUSE_OUT_DTYPE )
+          call FILE_CARTESC_def_var( fid, varname, 'PFT index',    '1', 'XY', LANDUSE_OUT_DTYPE, vid(8+2*(p-1)) )
        end do
 
        call FILE_CARTESC_enddef( fid )

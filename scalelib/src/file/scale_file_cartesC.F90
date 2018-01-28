@@ -545,7 +545,7 @@ contains
     call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeZHXY, err)
     call MPI_Type_commit(centerTypeZHXY, err)
 
-    ! for axistype == 'Ocean'
+    ! for dim_type == 'OXY'
     startOCEAN(1)   = 1
     startOCEAN(2:3) = startXY(1:2)
     countOCEAN(1)   = OKMAX
@@ -1198,7 +1198,8 @@ contains
                               basename, title, datatype,      & ! [IN]
                               date, subsec, append, aggregate ) ! [IN]
 
-    call FILE_CARTESC_def_var( fid, vid, varname, desc, unit, dim_type, datatype )
+    call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
+                               vid                                           ) ! [OUT]
 
     call FILE_CARTESC_enddef( fid )
 
@@ -1253,7 +1254,8 @@ contains
                               basename, title, datatype,                 & ! [IN]
                               date, subsec, append, haszcoord, aggregate ) ! [IN]
 
-    call FILE_CARTESC_def_var( fid, vid, varname, desc, unit, dim_type, datatype )
+    call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
+                               vid                                           ) ! [OUT]
 
     call FILE_CARTESC_enddef( fid )
 
@@ -1307,7 +1309,8 @@ contains
                               basename, title, datatype,      & ! [IN]
                               date, subsec, append, aggregate ) ! [IN]
 
-    call FILE_CARTESC_def_var( fid, vid, varname, desc, unit, dim_type, datatype )
+    call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
+                               vid                                           ) ! [OUT]
 
     call FILE_CARTESC_enddef( fid )
 
@@ -1373,7 +1376,9 @@ contains
     else
        nsteps = size(var,3)
     endif
-    call FILE_CARTESC_def_var( fid, vid, varname, desc, unit, dim_type, datatype, timeintv, nsteps )
+    call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
+                               vid,                                          & ! [OUT]
+                               timeintv, nsteps                              ) ! [IN]
 
     call FILE_CARTESC_enddef( fid )
 
@@ -1439,7 +1444,9 @@ contains
     else
        nsteps = size(var,3)
     endif
-    call FILE_CARTESC_def_var( fid, vid, varname, desc, unit, dim_type, datatype, timeintv, nsteps )
+    call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
+                               vid,                                          & ! [OUT]
+                               timeintv, nsteps                              ) ! [IN]
 
     call FILE_CARTESC_enddef( fid )
 
@@ -2382,12 +2389,12 @@ contains
   !> Define a variable to file
   subroutine FILE_CARTESC_def_var( &
        fid,      &
-       vid,      &
        varname,  &
        desc,     &
        unit,     &
        dim_type, &
        datatype, &
+       vid,      &
        timeintv, &
        nsteps    )
     use scale_file_h, only: &
@@ -2403,12 +2410,13 @@ contains
     implicit none
 
     integer,          intent(in)  :: fid      !< file ID
-    integer,          intent(out) :: vid      !< variable ID
     character(len=*), intent(in)  :: varname  !< name        of the variable
     character(len=*), intent(in)  :: desc     !< description of the variable
     character(len=*), intent(in)  :: unit     !< unit        of the variable
     character(len=*), intent(in)  :: dim_type !< axis type (Z/X/Y)
     character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
+
+    integer,          intent(out) :: vid      !< variable ID
 
     real(DP),         intent(in), optional :: timeintv !< time interval [sec]
     integer,          intent(in), optional :: nsteps   !< number of time steps
@@ -2539,14 +2547,69 @@ contains
          write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
        endif
        call MPRJ_get_attributes( mapping )
-    elseif( axistype == 'OXYT' ) then ! 4D variable
+    elseif( dim_type == 'ZHXYT' ) then ! 4D variable
        ndims   = 3
-       dims    = (/'oz','x ','y '/)
+       dims    = (/'zh','x ','y '/)
+       if ( present(nsteps) ) then
+         write_buf_amount = write_buf_amount + (KA+1) * IA * JA * elm_size * nsteps
+       else
+         write_buf_amount = write_buf_amount + (KA+1) * IA * JA * elm_size
+       endif
+       call MPRJ_get_attributes( mapping )
+    elseif( dim_type == 'ZXHYT' ) then ! 4D variable
+       ndims   = 3
+       dims    = (/'z ','xh','y '/)
+       if ( present(nsteps) ) then
+         write_buf_amount = write_buf_amount + KA * (IA+1) * JA * elm_size * nsteps
+       else
+         write_buf_amount = write_buf_amount + KA * (IA+1) * JA * elm_size
+       endif
+       call MPRJ_get_attributes( mapping )
+    elseif( dim_type == 'ZXYHT' ) then ! 4D variable
+       ndims   = 3
+       dims    = (/'z ','x ','yh'/)
+       if ( present(nsteps) ) then
+         write_buf_amount = write_buf_amount + KA * IA * (JA+1) * elm_size * nsteps
+       else
+         write_buf_amount = write_buf_amount + KA * IA * (JA+1) * elm_size
+       endif
+       call MPRJ_get_attributes( mapping )
+    elseif( dim_type == 'OXYT' ) then ! 4D variable
+       ndims   = 3
+       dims    = (/'oz','x','y'/)
        if ( present(nsteps) ) then
          write_buf_amount = write_buf_amount + OKMAX * IA * JA * elm_size * nsteps
        else
          write_buf_amount = write_buf_amount + OKMAX * IA * JA * elm_size
-       end if
+       endif
+       call MPRJ_get_attributes( mapping )
+    elseif( dim_type == 'OHXYT' ) then ! 4D variable
+       ndims   = 3
+       dims    = (/'ozh','x','y'/)
+       if ( present(nsteps) ) then
+         write_buf_amount = write_buf_amount + (OKMAX+1) * IA * JA * elm_size * nsteps
+       else
+         write_buf_amount = write_buf_amount + (OKMAX+1) * IA * JA * elm_size
+       endif
+       call MPRJ_get_attributes( mapping )
+    elseif( dim_type == 'LXYT' ) then ! 4D variable
+       ndims   = 3
+       dims    = (/'lz','x','y'/)
+       if ( present(nsteps) ) then
+         write_buf_amount = write_buf_amount + LKMAX * IA * JA * elm_size * nsteps
+       else
+         write_buf_amount = write_buf_amount + LKMAX * IA * JA * elm_size
+       endif
+       call MPRJ_get_attributes( mapping )
+    elseif( dim_type == 'LHXYT' ) then ! 4D variable
+       ndims   = 3
+       dims    = (/'lzh','x','y'/)
+       if ( present(nsteps) ) then
+         write_buf_amount = write_buf_amount + (LKMAX+1) * IA * JA * elm_size * nsteps
+       else
+         write_buf_amount = write_buf_amount + (LKMAX+1) * IA * JA * elm_size
+       endif
+>>>>>>> change argument order of some subroutines in the scale_file
        call MPRJ_get_attributes( mapping )
     else
        write(*,*) 'xxx [FILE_CARTESC_def_var] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
@@ -2555,10 +2618,12 @@ contains
 
     if ( present(timeintv) ) then  ! 3D/4D variable with time dimension
       time_interval = timeintv
-      call FILE_Def_Variable( fid, vid, varname, desc, unit, ndims, dims, dtype, & ! [IN]
-                              tint=time_interval                                 ) ! [IN]
+      call FILE_Def_Variable( fid, varname, desc, unit, ndims, dims, dtype, & ! [IN]
+                              vid,                                          & ! [OUT]
+                              timeintv=time_interval                        ) ! [IN]
     else
-      call FILE_Def_Variable( fid, vid, varname, desc, unit, ndims, dims, dtype ) ! [IN]
+      call FILE_Def_Variable( fid, varname, desc, unit, ndims, dims, dtype, & ! [IN]
+                              vid                                           ) ! [OUT]
     endif
 
     if ( mapping /= "" ) call FILE_Set_Attribute( fid, varname, "grid_mapping", mapping )

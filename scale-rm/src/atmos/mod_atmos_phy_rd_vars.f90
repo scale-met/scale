@@ -491,35 +491,18 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_def_var
     implicit none
+
+    integer :: i
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
 
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(1), VAR_NAME(1) , VAR_DESC(1) , VAR_UNIT(1) , &
-                            'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(2), VAR_NAME(2) , VAR_DESC(2) , VAR_UNIT(2) , &
-                            'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(3), VAR_NAME(3) , VAR_DESC(3) , VAR_UNIT(3) , &
-                            'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(4), VAR_NAME(4) , VAR_DESC(4) , VAR_UNIT(4) , &
-                            'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(5), VAR_NAME(5) , VAR_DESC(5) , VAR_UNIT(5) , &
-                            'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(6), VAR_NAME(6) , VAR_DESC(6) , VAR_UNIT(6) , &
-                            'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(7), VAR_NAME(7) , VAR_DESC(7) , VAR_UNIT(7) , &
-                            'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(8), VAR_NAME(8) , VAR_DESC(8) , VAR_UNIT(8) , &
-                            'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(9), VAR_NAME(9) , VAR_DESC(9) , VAR_UNIT(9) , &
-                            'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(10), VAR_NAME(10), VAR_DESC(10), VAR_UNIT(10), &
-                            'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(11), VAR_NAME(11), VAR_DESC(11), VAR_UNIT(11), &
-                            'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(12), VAR_NAME(12), VAR_DESC(12), VAR_UNIT(12), &
-                            'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE  ) ! [IN]
-
+       do i = 1, 12
+          call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
+               VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
+               'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE,  & ! [IN]
+               VAR_ID(i)                              ) ! [OUT]
+       end do
     endif
 
     return

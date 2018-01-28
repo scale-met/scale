@@ -691,40 +691,40 @@ contains
 
     if ( restart_fid /= -1 ) then
 
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_TEMP),      VAR_NAME(I_TEMP),      VAR_DESC(I_TEMP),      &
-                            VAR_UNIT(I_TEMP),      'OXY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SALT),      VAR_NAME(I_SALT),      VAR_DESC(I_SALT),      &
-                            VAR_UNIT(I_SALT),      'OXY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_UVEL),      VAR_NAME(I_UVEL),      VAR_DESC(I_UVEL),      &
-                            VAR_UNIT(I_UVEL),      'OXY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_VVEL),      VAR_NAME(I_VVEL),      VAR_DESC(I_VVEL),      &
-                            VAR_UNIT(I_VVEL),      'OXY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFC_TEMP),  VAR_NAME(I_SFC_TEMP),  VAR_DESC(I_SFC_TEMP),  &
-                            VAR_UNIT(I_SFC_TEMP),  'XY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_ALB_LW),    VAR_NAME(I_ALB_LW),    VAR_DESC(I_ALB_LW),    &
-                            VAR_UNIT(I_ALB_LW),    'XY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_ALB_SW),    VAR_NAME(I_ALB_SW),    VAR_DESC(I_ALB_SW),    &
-                            VAR_UNIT(I_ALB_SW),    'XY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFC_Z0M),   VAR_NAME(I_SFC_Z0M),   VAR_DESC(I_SFC_Z0M),   &
-                            VAR_UNIT(I_SFC_Z0M),   'XY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFC_Z0H),   VAR_NAME(I_SFC_Z0H),   VAR_DESC(I_SFC_Z0H),   &
-                            VAR_UNIT(I_SFC_Z0H),   'XY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFC_Z0E),   VAR_NAME(I_SFC_Z0E),   VAR_DESC(I_SFC_Z0E),   &
-                            VAR_UNIT(I_SFC_Z0E),   'XY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_MW),   VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   &
-                            VAR_UNIT(I_SFLX_MW),   'XY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_MU),   VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   &
-                             VAR_UNIT(I_SFLX_MU),  'XY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_MV),   VAR_NAME(I_SFLX_MV),   VAR_DESC(I_SFLX_MV),   &
-                            VAR_UNIT(I_SFLX_MV),   'XY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_SH),   VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   &
-                            VAR_UNIT(I_SFLX_SH),   'XY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_LH),   VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   &
-                            VAR_UNIT(I_SFLX_LH),   'XY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_WH),   VAR_NAME(I_SFLX_WH),   VAR_DESC(I_SFLX_WH),   &
-                            VAR_UNIT(I_SFLX_WH),   'XY', OCEAN_RESTART_OUT_DTYPE)
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_evap), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), &
-                            VAR_UNIT(I_SFLX_evap), 'XY', OCEAN_RESTART_OUT_DTYPE)
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_TEMP),      VAR_DESC(I_TEMP),      VAR_UNIT(I_TEMP),      'XY', OCEAN_RESTART_OUT_DTYPE, &
+                                  VAR_ID(I_TEMP) )
+!       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SALT),      VAR_DESC(I_SALT),      VAR_UNIT(I_SALT),      'XY', OCEAN_RESTART_OUT_DTYPE, &
+!                                  VAR_ID(I_SALT) )
+!       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_UVEL),      VAR_DESC(I_UVEL),      VAR_UNIT(I_UVEL),      'XY', OCEAN_RESTART_OUT_DTYPE, &
+!                                  VAR_ID(I_UVEL) )
+!       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_VVEL),      VAR_DESC(I_VVEL),      VAR_UNIT(I_VVEL),      'XY', OCEAN_RESTART_OUT_DTYPE, &
+!                                  VAR_ID(I_VVEL) )
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFC_TEMP),  VAR_DESC(I_SFC_TEMP),  VAR_UNIT(I_SFC_TEMP),  'XY', OCEAN_RESTART_OUT_DTYPE, &
+                                  VAR_ID(I_SFC_TEMP) )
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_ALB_LW),    VAR_DESC(I_ALB_LW),    VAR_UNIT(I_ALB_LW),    'XY', OCEAN_RESTART_OUT_DTYPE, &
+                                  VAR_ID(I_ALB_LW) )
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_ALB_SW),    VAR_DESC(I_ALB_SW),    VAR_UNIT(I_ALB_SW),    'XY', OCEAN_RESTART_OUT_DTYPE, &
+                                  VAR_ID(I_ALB_SW) )
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFC_Z0M),   VAR_DESC(I_SFC_Z0M),   VAR_UNIT(I_SFC_Z0M),   'XY', OCEAN_RESTART_OUT_DTYPE, &
+                                  VAR_ID(I_SFC_Z0M) )
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFC_Z0H),   VAR_DESC(I_SFC_Z0H),   VAR_UNIT(I_SFC_Z0H),   'XY', OCEAN_RESTART_OUT_DTYPE, &
+                                  VAR_ID(I_SFC_Z0H) )
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFC_Z0E),   VAR_DESC(I_SFC_Z0E),   VAR_UNIT(I_SFC_Z0E),   'XY', OCEAN_RESTART_OUT_DTYPE, &
+                                  VAR_ID(I_SFC_Z0E) )
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   VAR_UNIT(I_SFLX_MW),   'XY', OCEAN_RESTART_OUT_DTYPE, &
+                                  VAR_ID(I_SFLX_MW) )
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   VAR_UNIT(I_SFLX_MU),  'XY', OCEAN_RESTART_OUT_DTYPE, &
+                                  VAR_ID(I_SFLX_MU) )
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_MV),   VAR_DESC(I_SFLX_MV),   VAR_UNIT(I_SFLX_MV),   'XY', OCEAN_RESTART_OUT_DTYPE, &
+                                  VAR_ID(I_SFLX_MV) )
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   VAR_UNIT(I_SFLX_SH),   'XY', OCEAN_RESTART_OUT_DTYPE, &
+                                  VAR_ID(I_SFLX_SH) )
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH),   'XY', OCEAN_RESTART_OUT_DTYPE, &
+                                  VAR_ID(I_SFLX_LH) )
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_WH),   VAR_DESC(I_SFLX_WH),   VAR_UNIT(I_SFLX_WH),   'XY', OCEAN_RESTART_OUT_DTYPE, &
+                                  VAR_ID(I_SFLX_WH) )
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap), 'XY', OCEAN_RESTART_OUT_DTYPE, &
+                                  VAR_ID(I_SFLX_evap) )
 
     endif
 

@@ -1032,18 +1032,18 @@ contains
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_VELZ(:,:,:), fid, 'VELZ', 'ZXY', 1 )
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_VELZ(:,:,:), fid, 'ALPHA_VELZ', 'ZXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_VELZ(:,:,:), fid, 'VELZ', 'ZHXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_VELZ(:,:,:), fid, 'ALPHA_VELZ', 'ZHXY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX ) then
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_VELX(:,:,:), fid, 'VELX', 'ZXY', 1 )
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_VELX(:,:,:), fid, 'ALPHA_VELX', 'ZXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_VELX(:,:,:), fid, 'VELX', 'ZXHY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_VELX(:,:,:), fid, 'ALPHA_VELX', 'ZXHY', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY ) then
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_VELY(:,:,:), fid, 'VELY', 'ZXY', 1 )
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_VELY(:,:,:), fid, 'ALPHA_VELY', 'ZXY', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_VELY(:,:,:), fid, 'VELY', 'ZXYH', 1 )
+       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_VELY(:,:,:), fid, 'ALPHA_VELY', 'ZXYH', 1 )
     endif
 
     if ( ATMOS_BOUNDARY_USE_POTT ) then
@@ -1105,33 +1105,33 @@ contains
     if ( ATMOS_BOUNDARY_USE_VELZ .OR. (l_bnd .AND. ONLINE_USE_VELZ) ) then
        call FILE_CARTESC_write( ATMOS_BOUNDARY_VELZ(:,:,:),                            &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'VELZ', 'Reference Velocity w', 'm/s', 'ZXY',          &
+                          'VELZ', 'Reference Velocity w', 'm/s', 'ZHXY',          &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
        call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_VELZ(:,:,:),                      &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_VELZ', 'Alpha for VELZ', '1', 'ZXY',            &
+                          'ALPHA_VELZ', 'Alpha for VELZ', '1', 'ZHXY',            &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX .OR. l_bnd ) then
        call FILE_CARTESC_write( ATMOS_BOUNDARY_VELX(:,:,:),                            &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'VELX', 'Reference Velocity u', 'm/s', 'ZXY',          &
+                          'VELX', 'Reference Velocity u', 'm/s', 'ZXHY',         &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
        call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_VELX(:,:,:),                      &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_VELX', 'Alpha for VELX', '1', 'ZXY',            &
+                          'ALPHA_VELX', 'Alpha for VELX', '1', 'ZXHY',           &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY .OR. l_bnd ) then
        call FILE_CARTESC_write( ATMOS_BOUNDARY_VELY(:,:,:),                            &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'VELY', 'Reference Velocity y', 'm/s', 'ZXY',          &
+                          'VELY', 'Reference Velocity y', 'm/s', 'ZXYH',         &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
        call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_VELY(:,:,:),                      &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_VELY', 'Alpha for VELY', '1', 'ZXY',            &
+                          'ALPHA_VELY', 'Alpha for VELY', '1', 'ZXYH',           &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
@@ -1977,8 +1977,8 @@ contains
     fid = ATMOS_BOUNDARY_fid
 
     call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_DENS(:,:,:,ref), fid, 'DENS', 'ZXY', boundary_timestep )
-    call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_VELX(:,:,:,ref), fid, 'VELX', 'ZXY', boundary_timestep )
-    call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_VELY(:,:,:,ref), fid, 'VELY', 'ZXY', boundary_timestep )
+    call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_VELX(:,:,:,ref), fid, 'VELX', 'ZXHY', boundary_timestep )
+    call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_VELY(:,:,:,ref), fid, 'VELY', 'ZXYH', boundary_timestep )
     call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_POTT(:,:,:,ref), fid, 'POTT', 'ZXY', boundary_timestep )
     do iq = 1, BND_QA
        call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,ref), fid, TRACER_NAME(iq), 'ZXY', boundary_timestep )

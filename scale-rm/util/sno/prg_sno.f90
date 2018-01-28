@@ -15,8 +15,6 @@ program sno
   !++ used modules
   !
   use mpi
-  use dc_log, only: &
-     LogInit
   use scale_file, only: &
      FILE_Close_All
   use scale_precision
@@ -158,9 +156,6 @@ program sno
 
   ! setup Log
   call IO_LOG_setup( myrank, ismaster )
-  call LogInit( IO_FID_CONF,       &
-                IO_FID_LOG, IO_L,  &
-                IO_FID_NML, IO_NML )
 
   ! setup profiler
   call PROF_setup

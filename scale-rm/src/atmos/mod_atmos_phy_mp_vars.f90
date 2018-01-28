@@ -425,11 +425,10 @@ contains
 
     if ( restart_fid /= -1 ) then
 
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(1), VAR_NAME(1), VAR_DESC(1), &
-                            VAR_UNIT(1), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(2), VAR_NAME(2), VAR_DESC(2), &
-                            VAR_UNIT(2), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE  ) ! [IN]
-
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE, &
+                                  VAR_ID(1) )
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE, &
+                                  VAR_ID(2) )
     endif
 
     return

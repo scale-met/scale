@@ -104,7 +104,7 @@ contains
                                       dim_limit   = dim_limit,              & ! [IN]
                                       basename    = basename,               & ! [IN]
                                       varname     = varname(v),             & ! [IN]
-                                      myrank      = nowrank,                & ! [IN]
+                                      rankid      = nowrank,                & ! [IN]
                                       step_nmax   = dinfo(v)%step_nmax,     & ! [OUT]
                                       description = dinfo(v)%description,   & ! [OUT]
                                       units       = dinfo(v)%units,         & ! [OUT]
@@ -898,7 +898,7 @@ contains
        FILE_EndDef,         &
        FILE_Write
     use scale_process, only: &
-       PRC_masterrank, &
+       PRC_ismaster, &
        PRC_MPIstop
     use mod_sno_h, only: &
        commoninfo, &
@@ -948,8 +948,9 @@ contains
                       hinfo%title,                  & ! [IN]
                       hinfo%source,                 & ! [IN]
                       hinfo%institute,              & ! [IN]
-                      PRC_masterrank,               & ! [IN]
-                      nowrank,                      & ! [IN]
+                      hinfo%grid_name,              & ! [IN]
+                      rankid     = nowrank,         & ! [IN]
+                      ismaster   = PRC_ismaster,    & ! [IN]
                       time_units = dinfo%time_units ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
@@ -974,24 +975,24 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** + + + define variable'
 
     if ( dinfo%dt > 0.0_DP ) then
-       call FILE_Def_Variable( fid,               & ! [OUT]
-                               vid,               & ! [OUT]
+       call FILE_Def_Variable( fid,                & ! [IN]
+                               dinfo%varname,      & ! [IN]
+                               dinfo%description,  & ! [IN]
+                               dinfo%units,        & ! [IN]
+                               dinfo%dim_rank,     & ! [IN]
+                               dinfo%dim_name,     & ! [IN]
+                               dinfo%datatype,     & ! [IN]
+                               vid,                & ! [OUT]
+                               timeintv = dinfo%dt ) ! [IN]
+    else
+       call FILE_Def_Variable( fid,               & ! [IN]
                                dinfo%varname,     & ! [IN]
                                dinfo%description, & ! [IN]
                                dinfo%units,       & ! [IN]
                                dinfo%dim_rank,    & ! [IN]
                                dinfo%dim_name,    & ! [IN]
                                dinfo%datatype,    & ! [IN]
-                               tint = dinfo%dt    ) ! [IN]
-    else
-       call FILE_Def_Variable( fid,               & ! [OUT]
-                               vid,               & ! [OUT]
-                               dinfo%varname,     & ! [IN]
-                               dinfo%description, & ! [IN]
-                               dinfo%units,       & ! [IN]
-                               dinfo%dim_rank,    & ! [IN]
-                               dinfo%dim_name,    & ! [IN]
-                               dinfo%datatype     ) ! [IN]
+                               vid                ) ! [OUT]
     endif
 
     if ( hinfo%minfo_mapping_name /= "" ) then
@@ -1020,8 +1021,7 @@ contains
           allocate( VAR_1d_SP(gout1) )
           VAR_1d_SP(:) = real(dinfo%VAR_1d(:),kind=SP)
 
-          call FILE_Write( fid,                       & ! [IN]
-                           vid,                       & ! [IN]
+          call FILE_Write( vid,                       & ! [IN]
                            VAR_1d_SP(:),              & ! [IN]
                            dinfo%time_start(nowstep), & ! [IN]
                            dinfo%time_end  (nowstep)  ) ! [IN]
@@ -1033,8 +1033,7 @@ contains
           allocate( VAR_1d_DP(gout1) )
           VAR_1d_DP(:) = real(dinfo%VAR_1d(:),kind=DP)
 
-          call FILE_Write( fid,                       & ! [IN]
-                           vid,                       & ! [IN]
+          call FILE_Write( vid,                       & ! [IN]
                            VAR_1d_DP(:),              & ! [IN]
                            dinfo%time_start(nowstep), & ! [IN]
                            dinfo%time_end  (nowstep)  ) ! [IN]
@@ -1053,8 +1052,7 @@ contains
           allocate( VAR_2d_SP(gout1,gout2) )
           VAR_2d_SP(:,:) = real(dinfo%VAR_2d(:,:),kind=SP)
 
-          call FILE_Write( fid,                       & ! [IN]
-                           vid,                       & ! [IN]
+          call FILE_Write( vid,                       & ! [IN]
                            VAR_2d_SP(:,:),            & ! [IN]
                            dinfo%time_start(nowstep), & ! [IN]
                            dinfo%time_end  (nowstep)  ) ! [IN]
@@ -1066,8 +1064,7 @@ contains
           allocate( VAR_2d_DP(gout1,gout2) )
           VAR_2d_DP(:,:) = real(dinfo%VAR_2d(:,:),kind=DP)
 
-          call FILE_Write( fid,                       & ! [IN]
-                           vid,                       & ! [IN]
+          call FILE_Write( vid,                       & ! [IN]
                            VAR_2d_DP(:,:),            & ! [IN]
                            dinfo%time_start(nowstep), & ! [IN]
                            dinfo%time_end  (nowstep)  ) ! [IN]
@@ -1094,8 +1091,7 @@ contains
              enddo
              enddo
 
-             call FILE_Write( fid,                       & ! [IN]
-                              vid,                       & ! [IN]
+             call FILE_Write( vid,                       & ! [IN]
                               VAR_3d_SP(:,:,:),          & ! [IN]
                               dinfo%time_start(nowstep), & ! [IN]
                               dinfo%time_end  (nowstep)  ) ! [IN]
@@ -1113,8 +1109,7 @@ contains
              enddo
              enddo
 
-             call FILE_Write( fid,                       & ! [IN]
-                              vid,                       & ! [IN]
+             call FILE_Write( vid,                       & ! [IN]
                               VAR_3d_DP(:,:,:),          & ! [IN]
                               dinfo%time_start(nowstep), & ! [IN]
                               dinfo%time_end  (nowstep)  ) ! [IN]
@@ -1128,8 +1123,7 @@ contains
              allocate( VAR_3d_SP(gout1,gout2,gout3) )
              VAR_3d_SP(:,:,:) = real(dinfo%VAR_3d(:,:,:),kind=SP)
 
-             call FILE_Write( fid,                       & ! [IN]
-                              vid,                       & ! [IN]
+             call FILE_Write( vid,                       & ! [IN]
                               VAR_3d_SP(:,:,:),          & ! [IN]
                               dinfo%time_start(nowstep), & ! [IN]
                               dinfo%time_end  (nowstep)  ) ! [IN]
@@ -1141,8 +1135,7 @@ contains
              allocate( VAR_3d_DP(gout1,gout2,gout3) )
              VAR_3d_DP(:,:,:) = real(dinfo%VAR_3d(:,:,:),kind=DP)
 
-             call FILE_Write( fid,                       & ! [IN]
-                              vid,                       & ! [IN]
+             call FILE_Write( vid,                       & ! [IN]
                               VAR_3d_DP(:,:,:),          & ! [IN]
                               dinfo%time_start(nowstep), & ! [IN]
                               dinfo%time_end  (nowstep)  ) ! [IN]

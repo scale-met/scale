@@ -808,60 +808,24 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_def_var
     implicit none
+    integer :: i
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
 
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_TR), VAR_NAME(I_TR), VAR_DESC(I_TR), &
-                            VAR_UNIT(I_TR), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_TB), VAR_NAME(I_TB), VAR_DESC(I_TB), &
-                            VAR_UNIT(I_TB), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_TG), VAR_NAME(I_TG), VAR_DESC(I_TG), &
-                            VAR_UNIT(I_TG), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_TC), VAR_NAME(I_TC), VAR_DESC(I_TC), &
-                            VAR_UNIT(I_TC), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_QC), VAR_NAME(I_QC), VAR_DESC(I_QC), &
-                            VAR_UNIT(I_QC), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_UC), VAR_NAME(I_UC), VAR_DESC(I_UC), &
-                            VAR_UNIT(I_UC), 'XY', URBAN_RESTART_OUT_DTYPE )
-
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_TRL), VAR_NAME(I_TRL), VAR_DESC(I_TRL), &
-                            VAR_UNIT(I_TRL), 'UXY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_TBL), VAR_NAME(I_TBL), VAR_DESC(I_TBL), &
-                            VAR_UNIT(I_TBL), 'UXY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_TGL), VAR_NAME(I_TGL), VAR_DESC(I_TGL), &
-                            VAR_UNIT(I_TGL), 'UXY', URBAN_RESTART_OUT_DTYPE )
-
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_RAINR), VAR_NAME(I_RAINR), VAR_DESC(I_RAINR), &
-                            VAR_UNIT(I_RAINR), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_RAINB), VAR_NAME(I_RAINB), VAR_DESC(I_RAINB), &
-                            VAR_UNIT(I_RAINB), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_RAING), VAR_NAME(I_RAING), VAR_DESC(I_RAING), &
-                            VAR_UNIT(I_RAING), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_ROFF), VAR_NAME(I_ROFF),  VAR_DESC(I_ROFF),  &
-                            VAR_UNIT(I_ROFF), 'XY', URBAN_RESTART_OUT_DTYPE )
-
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFC_TEMP), VAR_NAME(I_SFC_TEMP), VAR_DESC(I_SFC_TEMP), &
-                            VAR_UNIT(I_SFC_TEMP), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_ALB_LW), VAR_NAME(I_ALB_LW), VAR_DESC(I_ALB_LW), &
-                            VAR_UNIT(I_ALB_LW), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_ALB_SW), VAR_NAME(I_ALB_SW), VAR_DESC(I_ALB_SW), &
-                            VAR_UNIT(I_ALB_SW), 'XY', URBAN_RESTART_OUT_DTYPE )
-
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_MW), VAR_NAME(I_SFLX_MW), VAR_DESC(I_SFLX_MW), &
-                            VAR_UNIT(I_SFLX_MW), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_MU), VAR_NAME(I_SFLX_MU), VAR_DESC(I_SFLX_MU), &
-                            VAR_UNIT(I_SFLX_MU), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_MV), VAR_NAME(I_SFLX_MV), VAR_DESC(I_SFLX_MV), &
-                            VAR_UNIT(I_SFLX_MV), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_SH), VAR_NAME(I_SFLX_SH), VAR_DESC(I_SFLX_SH), &
-                            VAR_UNIT(I_SFLX_SH), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_LH), VAR_NAME(I_SFLX_LH), VAR_DESC(I_SFLX_LH), &
-                            VAR_UNIT(I_SFLX_LH), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_GH), VAR_NAME(I_SFLX_GH), VAR_DESC(I_SFLX_GH), &
-                            VAR_UNIT(I_SFLX_GH), 'XY', URBAN_RESTART_OUT_DTYPE )
-       call FILE_CARTESC_def_var( restart_fid, VAR_ID(I_SFLX_evap), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), &
-                            VAR_UNIT(I_SFLX_evap), 'XY', URBAN_RESTART_OUT_DTYPE )
+       do i = 1, VMAX
+          if ( i==I_TRL .or. i==I_TBL .or. i==I_TGL ) then ! 3D
+             call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
+                  VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
+                  'UXY', URBAN_RESTART_OUT_DTYPE,        & ! [IN]
+                  VAR_ID(i)                              ) ! [OUT]
+          else
+             call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
+                  VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
+                  'XY', URBAN_RESTART_OUT_DTYPE,         & ! [IN]
+                  VAR_ID(i)                              ) ! [OUT]
+          end if
+       end do
 
     endif
 

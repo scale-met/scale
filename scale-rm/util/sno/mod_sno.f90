@@ -120,7 +120,6 @@ contains
     use scale_file, only: &
        FILE_Open,                &
        FILE_Get_Commoninfo,      &
-       FILE_Get_GlobalAttribute, &
        FILE_Get_Attribute
     use scale_process, only: &
        PRC_masterrank,       &
@@ -188,37 +187,37 @@ contains
        call FILE_Open( fid,             & ! [OUT]
                        basename,        & ! [IN]
                        FILE_FREAD,      & ! [IN]
-                       myrank = nowrank ) ! [IN]
+                       rankid = nowrank ) ! [IN]
 
        call FILE_Get_Commoninfo( fid,             & ! [IN]
-                                 nowrank,         & ! [IN]
                                  item_limit,      & ! [IN]
                                  hinfo%title,     & ! [OUT]
                                  hinfo%source,    & ! [OUT]
                                  hinfo%institute, & ! [OUT]
+                                 hinfo%grid_name, & ! [OUT]
                                  nvars_file,      & ! [OUT]
                                  varname_file(:)  ) ! [OUT]
 
-       call FILE_Get_GlobalAttribute( fid, "scale_rm_prc_num_x", procsize(1:1) )
-       call FILE_Get_GlobalAttribute( fid, "scale_rm_prc_num_y", procsize(2:2) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_num_x", procsize(1:1) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_num_y", procsize(2:2) )
 
-       call FILE_Get_GlobalAttribute( fid, "scale_rm_prc_periodic_z",   periodic(1) )
-       call FILE_Get_GlobalAttribute( fid, "scale_rm_prc_periodic_x",   periodic(2) )
-       call FILE_Get_GlobalAttribute( fid, "scale_rm_prc_periodic_y",   periodic(3) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_z",   periodic(1) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_x",   periodic(2) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_y",   periodic(3) )
        hinfo%periodic(1) = trim(periodic(1))
        hinfo%periodic(2) = trim(periodic(2))
        hinfo%periodic(3) = trim(periodic(3))
 
-       call FILE_Get_GlobalAttribute( fid, "scale_rm_grid_index_kmax",  hinfo%gridsize(1:1) )
-       call FILE_Get_GlobalAttribute( fid, "scale_rm_grid_index_imaxg", hinfo%gridsize(2:2) )
-       call FILE_Get_GlobalAttribute( fid, "scale_rm_grid_index_jmaxg", hinfo%gridsize(3:3) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_kmax",  hinfo%gridsize(1:1) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_imaxg", hinfo%gridsize(2:2) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_jmaxg", hinfo%gridsize(3:3) )
 
-       call FILE_Get_GlobalAttribute( fid, "scale_rm_grid_index_khalo", hinfo%halosize(1:1) )
-       call FILE_Get_GlobalAttribute( fid, "scale_rm_grid_index_ihalo", hinfo%halosize(2:2) )
-       call FILE_Get_GlobalAttribute( fid, "scale_rm_grid_index_jhalo", hinfo%halosize(3:3) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_khalo", hinfo%halosize(1:1) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_ihalo", hinfo%halosize(2:2) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_jhalo", hinfo%halosize(3:3) )
 
-       call FILE_Get_GlobalAttribute( fid, "time_units", hinfo%time_units    )
-       call FILE_Get_GlobalAttribute( fid, "time_start", hinfo%time_start(:) )
+       call FILE_Get_Attribute( fid, "global", "time_units", hinfo%time_units    )
+       call FILE_Get_Attribute( fid, "global", "time_start", hinfo%time_start(:) )
 
        call FILE_Get_Attribute( fid, 'x', 'size_global', hinfo%xatt_size_global(:) )
        call FILE_Get_Attribute( fid, 'x', 'halo_global', hinfo%xatt_halo_global(:) )
@@ -230,6 +229,7 @@ contains
     call MPI_BCAST( hinfo%title              , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%source             , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%institute          , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%grid_name          , H_SHORT, MPI_CHARACTER     , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%periodic        (1), 5*3  , MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%gridsize        (1), 3    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%halosize        (1), 3    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -248,6 +248,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) "hinfo%title           ", trim(hinfo%title)
        if( IO_L ) write(IO_FID_LOG,*) "hinfo%source          ", trim(hinfo%source)
        if( IO_L ) write(IO_FID_LOG,*) "hinfo%institute       ", trim(hinfo%institute)
+       if( IO_L ) write(IO_FID_LOG,*) "hinfo%grid_name       ", trim(hinfo%grid_name)
        if( IO_L ) write(IO_FID_LOG,*) "hinfo%periodic        ", hinfo%periodic        (:)
        if( IO_L ) write(IO_FID_LOG,*) "hinfo%gridsize        ", hinfo%gridsize        (:)
        if( IO_L ) write(IO_FID_LOG,*) "hinfo%halosize        ", hinfo%halosize        (:)
@@ -902,7 +903,6 @@ contains
        dinfo,        &
        debug         )
     use scale_file, only: &
-       FILE_Set_GlobalAttribute,   &
        FILE_Set_Attribute,         &
        FILE_Add_AssociatedVariable
     use scale_const, &
@@ -935,26 +935,26 @@ contains
     rankidx(1) = mod(nowrank,nprocs_x_out)
     rankidx(2) =     nowrank/nprocs_x_out
 
-    call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_rank_x", rankidx(1:1) ) ! [IN]
-    call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_rank_y", rankidx(2:2) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_rank_x", rankidx(1:1) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_rank_y", rankidx(2:2) ) ! [IN]
 
-    call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_num_x",  (/nprocs_x_out/) ) ! [IN]
-    call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_num_y",  (/nprocs_y_out/) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_x",  (/nprocs_x_out/) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_y",  (/nprocs_y_out/) ) ! [IN]
 
-    call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_periodic_z",   hinfo%periodic(1) ) ! [IN]
-    call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_periodic_x",   hinfo%periodic(2) ) ! [IN]
-    call FILE_Set_GlobalAttribute( fid, "scale_rm_prc_periodic_y",   hinfo%periodic(3) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_periodic_z",   hinfo%periodic(1) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_periodic_x",   hinfo%periodic(2) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_periodic_y",   hinfo%periodic(3) ) ! [IN]
 
-    call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_kmax",  hinfo%gridsize(1:1) ) ! [IN]
-    call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_imaxg", hinfo%gridsize(2:2) ) ! [IN]
-    call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_jmaxg", hinfo%gridsize(3:3) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_kmax",  hinfo%gridsize(1:1) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_imaxg", hinfo%gridsize(2:2) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_jmaxg", hinfo%gridsize(3:3) ) ! [IN]
 
-    call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_khalo", hinfo%halosize(1:1) ) ! [IN]
-    call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_ihalo", hinfo%halosize(2:2) ) ! [IN]
-    call FILE_Set_GlobalAttribute( fid, "scale_rm_grid_index_jhalo", hinfo%halosize(3:3) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_khalo", hinfo%halosize(1:1) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_ihalo", hinfo%halosize(2:2) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_jhalo", hinfo%halosize(3:3) ) ! [IN]
 
-    call FILE_Set_GlobalAttribute( fid, "time_units", hinfo%time_units    ) ! [IN]
-    call FILE_Set_GlobalAttribute( fid, "time_start", hinfo%time_start(:) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "time_units", hinfo%time_units    ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "time_start", hinfo%time_start(:) ) ! [IN]
 
     IMAX = hinfo%gridsize(2) / nprocs_x_out
     JMAX = hinfo%gridsize(3) / nprocs_y_out
