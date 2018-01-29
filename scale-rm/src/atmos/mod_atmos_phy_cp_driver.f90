@@ -51,6 +51,8 @@ contains
   subroutine ATMOS_PHY_CP_driver_setup
     use scale_atmos_phy_cp, only: &
          ATMOS_PHY_CP_setup
+    use scale_atmos_phy_cp_common, only: &
+         ATMOS_PHY_CP_common_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_CP_TYPE, &
        ATMOS_sw_phy_cp
@@ -64,6 +66,7 @@ contains
 
        ! setup library component
        call ATMOS_PHY_CP_setup( ATMOS_PHY_CP_TYPE )
+       call ATMOS_PHY_CP_common_setup
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -103,6 +106,8 @@ contains
        ATMOS_HYDROMETEOR_diagnose_number_concentration
     use scale_atmos_phy_cp, only: &
        ATMOS_PHY_CP
+    use scale_atmos_phy_cp_common, only: &
+       ATMOS_PHY_CP_wmean
     use scale_atmos_phy_mp, only: &
        QS_MP, &
        QE_MP
@@ -134,8 +139,9 @@ contains
        cloudbase      => ATMOS_PHY_CP_cloudbase,      &  ! cloud base height [m]
        cldfrac_dp     => ATMOS_PHY_CP_cldfrac_dp,     &  ! cloud fraction (deep convection) (0-1)
        cldfrac_sh     => ATMOS_PHY_CP_cldfrac_sh,     &  ! cloud fraction (shallow convection) (0-1)
-       kf_nca         => ATMOS_PHY_CP_kf_nca,         &  ! advection/cumulus convection timescale/dt for KF [step]
-       kf_w0avg       => ATMOS_PHY_CP_kf_w0avg           ! rannning mean vertical wind velocity      for KF [m/s]
+       w0avg          => ATMOS_PHY_CP_w0avg,          &  ! running mean vertical wind velocity [m/s]
+       kf_nca         => ATMOS_PHY_CP_kf_nca             ! advection/cumulus convection timescale/dt for KF [step]
+
     implicit none
 
     logical, intent(in) :: update_flag
@@ -145,7 +151,13 @@ contains
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    if ( update_flag ) then
+    ! temporal running mean of vertical velocity
+    call ATMOS_PHY_CP_wmean( w0avg(:,:,:), & ! [OUT]
+                             DENS (:,:,:), & ! [IN]
+                             MOMZ (:,:,:)  ) ! [IN]
+    call HIST_in( w0avg(:,:,:), 'w0avg', 'running mean vertical wind velocity', 'kg/m2/s', nohalo=.true. )
+
+    if ( update_flag ) then ! update
 
        call ATMOS_PHY_CP( DENS,           & ! [IN]
                           MOMZ,           & ! [IN]
@@ -153,6 +165,7 @@ contains
                           MOMY,           & ! [IN]
                           RHOT,           & ! [IN]
                           QTRC,           & ! [IN]
+                          w0avg,          & ! [IN]
                           DENS_t_CP,      & ! [INOUT]
                           MOMZ_t_CP,      & ! [INOUT]
                           MOMX_t_CP,      & ! [INOUT]
@@ -165,8 +178,7 @@ contains
                           cloudbase,      & ! [OUT]
                           cldfrac_dp,     & ! [OUT]
                           cldfrac_sh,     & ! [OUT]
-                          kf_nca,         & ! [OUT]
-                          kf_w0avg        ) ! [OUT]
+                          kf_nca          ) ! [OUT]
 
        ! tentative reset
 !OCL XFILL
@@ -197,9 +209,7 @@ contains
        call HIST_in( cloudbase     (:,:),   'CUBASE',    'CP cloud base height',             'm',       nohalo=.true. )
        call HIST_in( cldfrac_dp    (:,:,:), 'CUMFRC_DP', 'CP cloud fraction (deep)',         '1',       nohalo=.true. )
        call HIST_in( cldfrac_sh    (:,:,:), 'CUMFRC_SH', 'CP cloud fraction (shallow)',      '1',       nohalo=.true. )
-
        call HIST_in( kf_nca        (:,:),   'kf_nca',    'advection or cumulus convection timescale for KF', 's',       nohalo=.true. )
-       call HIST_in( kf_w0avg      (:,:,:), 'kf_w0avg',  'rannning mean vertical wind velocity for KF',      'kg/m2/s', nohalo=.true. )
 
        call HIST_in( DENS_t_CP(:,:,:), 'DENS_t_CP', 'tendency DENS in CP', 'kg/m3/s'  , nohalo=.true. )
        call HIST_in( MOMZ_t_CP(:,:,:), 'MOMZ_t_CP', 'tendency MOMZ in CP', 'kg/m2/s2' , nohalo=.true. )
@@ -212,7 +222,7 @@ contains
                         'tendency rho*'//trim(TRACER_NAME(iq))//' in CP', 'kg/m3/s', nohalo=.true. )
        enddo
 
-    endif
+    endif ! update
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE

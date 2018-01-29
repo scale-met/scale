@@ -31,6 +31,7 @@ module scale_atmos_phy_cp
           MOMY,           &
           RHOT,           &
           QTRC,           &
+          w0avg,          &
           DENS_t_CP,      &
           MOMZ_t_CP,      &
           MOMX_t_CP,      &
@@ -43,8 +44,7 @@ module scale_atmos_phy_cp
           cloudbase,      &
           cldfrac_dp,     &
           cldfrac_sh,     &
-          kf_nca,         &
-          kf_w0avg        )
+          kf_nca          )
        use scale_precision
        use scale_stdio
        use scale_prof
@@ -57,6 +57,7 @@ module scale_atmos_phy_cp
        real(RP), intent(in)    :: MOMZ(KA,IA,JA)
        real(RP), intent(in)    :: RHOT(KA,IA,JA)
        real(RP), intent(in)    :: QTRC(KA,IA,JA,QA)
+       real(RP), intent(in)    :: w0avg(KA,IA,JA)
        real(RP), intent(inout) :: DENS_t_CP(KA,IA,JA)
        real(RP), intent(inout) :: MOMZ_t_CP(KA,IA,JA)
        real(RP), intent(inout) :: MOMX_t_CP(KA,IA,JA)
@@ -70,7 +71,6 @@ module scale_atmos_phy_cp
        real(RP), intent(inout) :: cldfrac_dp(KA,IA,JA)
        real(RP), intent(inout) :: cldfrac_sh(KA,IA,JA)
        real(RP), intent(inout) :: kf_nca(IA,JA)
-       real(RP), intent(inout) :: kf_W0avg(KA,IA,JA)
      end subroutine cp
   end interface
   procedure(cp), pointer :: ATMOS_PHY_CP => NULL()

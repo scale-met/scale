@@ -139,6 +139,7 @@ OBJS_NAME = \
 	$(OBJS_BL)	\
 	\
 	scale_atmos_phy_cp.o	\
+	scale_atmos_phy_cp_common.o	\
 	$(OBJS_CP)	\
 	\
 	scale_atmos_sub_bottom.o	\
