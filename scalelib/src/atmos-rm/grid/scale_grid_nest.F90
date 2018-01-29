@@ -67,6 +67,7 @@ module scale_grid_nest
   integer,  public              :: PARENT_KA(2)         !< parent max number in z-direction (with halo)
   integer,  public              :: PARENT_IA(2)         !< parent max number in x-direction (with halo)
   integer,  public              :: PARENT_JA(2)         !< parent max number in y-direction (with halo)
+  integer,  public              :: PARENT_OKMAX(2)      !< parent max number in oz-direction
   integer,  public              :: PARENT_LKMAX(2)      !< parent max number in lz-direction
   real(DP), public              :: PARENT_DTSEC(2)      !< parent DT [sec]
   integer,  public              :: PARENT_NSTEP(2)      !< parent step [number]
@@ -77,6 +78,7 @@ module scale_grid_nest
   integer,  public              :: DAUGHTER_KA(2)       !< daughter max number in z-direction (with halo)
   integer,  public              :: DAUGHTER_IA(2)       !< daughter max number in x-direction (with halo)
   integer,  public              :: DAUGHTER_JA(2)       !< daughter max number in y-direction (with halo)
+  integer,  public              :: DAUGHTER_OKMAX(2)    !< daughter max number in oz-direction
   integer,  public              :: DAUGHTER_LKMAX(2)    !< daughter max number in lz-direction
   real(DP), public              :: DAUGHTER_DTSEC(2)    !< daughter DT [sec]
   integer,  public              :: DAUGHTER_NSTEP(2)    !< daughter steps [number]
@@ -169,6 +171,7 @@ module scale_grid_nest
   integer, private               :: OFFLINE_PARENT_IMAX      !< parent max number in x-direction [for namelist]
   integer, private               :: OFFLINE_PARENT_JMAX      !< parent max number in y-direction [for namelist]
   integer, private               :: OFFLINE_PARENT_LKMAX     !< parent max number in lz-direction [for namelist]
+  integer, private               :: OFFLINE_PARENT_OKMAX     !< parent max number in oz-direction [for namelist]
   integer(8), private            :: ONLINE_WAIT_LIMIT        !< limit times of waiting loop in "NEST_COMM_waitall"
   logical, private               :: ONLINE_DAUGHTER_USE_VELZ
   logical, private               :: ONLINE_DAUGHTER_NO_ROTATE
@@ -400,6 +403,12 @@ contains
           else
              OFFLINE_PARENT_KMAX = dims(1)
           end if
+          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "oz", 0, error=error )
+          if ( error ) then
+             OFFLINE_PARENT_OKMAX = 0
+          else
+             OFFLINE_PARENT_OKMAX = dims(1)
+          end if
           call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "lz", 0, error=error )
           if ( error ) then
              OFFLINE_PARENT_LKMAX = 0
@@ -410,6 +419,7 @@ contains
        call COMM_Bcast( OFFLINE_PARENT_IMAX )
        call COMM_Bcast( OFFLINE_PARENT_JMAX )
        call COMM_Bcast( OFFLINE_PARENT_KMAX )
+       call COMM_Bcast( OFFLINE_PARENT_OKMAX )
        call COMM_Bcast( OFFLINE_PARENT_LKMAX )
     end if
 
@@ -463,6 +473,7 @@ contains
          PARENT_KMAX(HANDLING_NUM)      = OFFLINE_PARENT_KMAX
          PARENT_IMAX(HANDLING_NUM)      = OFFLINE_PARENT_IMAX
          PARENT_JMAX(HANDLING_NUM)      = OFFLINE_PARENT_JMAX
+         PARENT_OKMAX(HANDLING_NUM)     = OFFLINE_PARENT_OKMAX
          PARENT_LKMAX(HANDLING_NUM)     = OFFLINE_PARENT_LKMAX
 
          PARENT_PRC_nprocs(HANDLING_NUM) = PARENT_PRC_NUM_X(HANDLING_NUM) * PARENT_PRC_NUM_Y(HANDLING_NUM)

@@ -18,6 +18,7 @@ module scale_ocean_phy_file
   use scale_prof
   use scale_debug
   use scale_grid_index
+  use scale_ocean_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -157,8 +158,8 @@ contains
          EXTIN_update
     implicit none
 
-    real(RP), intent(out) :: OCEAN_TEMP_t   (IA,JA)
-    real(RP), intent(in)  :: OCEAN_TEMP     (IA,JA)
+    real(RP), intent(out) :: OCEAN_TEMP_t   (OKMAX,IA,JA)
+    real(RP), intent(in)  :: OCEAN_TEMP     (OKMAX,IA,JA)
     real(RP), intent(in)  :: OCEAN_SFLX_WH  (IA,JA)
     real(RP), intent(in)  :: OCEAN_SFLX_prec(IA,JA)
     real(RP), intent(in)  :: OCEAN_SFLX_evap(IA,JA)
@@ -168,7 +169,7 @@ contains
 
     logical :: error
 
-    integer :: i, j
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean physics step: File'
@@ -185,10 +186,12 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       if( is_OCN(i,j) ) then
-          OCEAN_TEMP_t(i,j) = ( OCEAN_TEMP_new(i,j) - OCEAN_TEMP(i,j) ) / dt
-       else
-          OCEAN_TEMP_t(i,j) = 0.0_RP
+       do k = OKS, OKE
+          OCEAN_TEMP_t(k,i,j) = 0.0_RP
+       enddo
+
+       if ( is_OCN(i,j) ) then
+          OCEAN_TEMP_t(OKS,i,j) = ( OCEAN_TEMP_new(i,j) - OCEAN_TEMP(OKS,i,j) ) / dt
        endif
     enddo
     enddo

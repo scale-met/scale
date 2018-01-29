@@ -21,6 +21,7 @@ module scale_fileio
   use scale_prof
   use scale_grid_index
   use scale_land_grid_index
+  use scale_ocean_grid_index
   use scale_urban_grid_index
   !-----------------------------------------------------------------------------
   implicit none
@@ -141,6 +142,7 @@ module scale_fileio
   integer,  private              :: startZX   (2), countZX   (2)
   integer,  private              :: startZXY  (4), countZXY  (4)
   integer,  private              :: startZHXY (4), countZHXY (4)
+  integer,  private              :: startOCEAN(3), countOCEAN(3)
   integer,  private              :: startLAND (3), countLAND (3)
   integer,  private              :: startURBAN(3), countURBAN(3)
   ! local start and end
@@ -154,6 +156,7 @@ module scale_fileio
   integer,  private              :: centerTypeZX
   integer,  private              :: centerTypeZXY
   integer,  private              :: centerTypeZHXY
+  integer,  private              :: centerTypeOCEAN
   integer,  private              :: centerTypeLAND
   integer,  private              :: centerTypeURBAN
 
@@ -320,6 +323,7 @@ contains
   subroutine FILEIO_check_coordinates_name( &
        basename, &
        atmos,    &
+       ocean,    &
        land,     &
        urban,    &
        transpose )
@@ -327,11 +331,13 @@ contains
 
     character(len=*), intent(in) :: basename        !< basename of the file
     logical,          intent(in), optional :: atmos !< check atmospheric coordinates
+    logical,          intent(in), optional :: ocean !< check ocean coordinates
     logical,          intent(in), optional :: land  !< check land coordinates
     logical,          intent(in), optional :: urban !< check urban coordinates
     logical,          intent(in), optional :: transpose
 
     logical :: atmos_
+    logical :: ocean_
     logical :: land_
     logical :: urban_
     logical :: transpose_
@@ -340,11 +346,13 @@ contains
     !---------------------------------------------------------------------------
 
     atmos_ = .false.
+    ocean_ = .false.
     land_  = .false.
     urban_ = .false.
     transpose_ = .false.
 
     if( present(atmos) ) atmos_ = atmos
+    if( present(ocean) ) ocean_ = ocean
     if( present(land ) ) land_  = land
     if( present(urban) ) urban_ = urban
     if( present(transpose) ) transpose_ = transpose
@@ -352,9 +360,9 @@ contains
     call FILEIO_open( fid,     & ! [OUT]
                       basename ) ! [IN]
 
-    call FILEIO_check_coordinates_id( fid,                   & ! [IN]
-                                      atmos_, land_, urban_, & ! [IN]
-                                      transpose_             )
+    call FILEIO_check_coordinates_id( fid,                           & ! [IN]
+                                      atmos_, ocean_, land_, urban_, & ! [IN]
+                                      transpose_                     ) ! [IN]
 
     return
   end subroutine FILEIO_check_coordinates_name
@@ -364,6 +372,7 @@ contains
   subroutine FILEIO_check_coordinates_id( &
        fid,   &
        atmos, &
+       ocean, &
        land,  &
        urban, &
        transpose )
@@ -371,6 +380,8 @@ contains
        GRID_CZ, &
        GRID_CX, &
        GRID_CY
+    use scale_ocean_grid, only: &
+       GRID_OCZ
     use scale_land_grid, only: &
        GRID_LCZ
     use scale_urban_grid, only: &
@@ -379,11 +390,13 @@ contains
 
     integer, intent(in) :: fid
     logical, intent(in), optional :: atmos !< check atmospheric coordinates
+    logical, intent(in), optional :: ocean !< check ocean coordinates
     logical, intent(in), optional :: land  !< check land coordinates
     logical, intent(in), optional :: urban !< check urban coordinates
     logical, intent(in), optional :: transpose
 
     logical :: atmos_
+    logical :: ocean_
     logical :: land_
     logical :: urban_
     logical :: transpose_
@@ -393,6 +406,7 @@ contains
     real(RP) :: buffer_y  (JA)
     real(RP) :: buffer_xy (IA,JA)
     real(RP) :: buffer_zxy(KA,IA,JA)
+    real(RP) :: buffer_o  (OKMAX)
     real(RP) :: buffer_l  (LKMAX)
     real(RP) :: buffer_u  (UKMAX)
     !---------------------------------------------------------------------------
@@ -401,11 +415,13 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Check consistency of axis ***'
 
     atmos_ = .false.
+    ocean_ = .false.
     land_  = .false.
     urban_ = .false.
     transpose_ = .false.
 
     if( present(atmos) ) atmos_ = atmos
+    if( present(ocean) ) ocean_ = ocean
     if( present(land ) ) land_  = land
     if( present(urban) ) urban_ = urban
     if( present(transpose) ) transpose_ = transpose
@@ -438,14 +454,20 @@ contains
        endif
     endif
 
+    if ( ocean_ ) then
+       call FILEIO_read_var_1D( buffer_o, fid, 'oz', 'OZ', 1 )
+       call FILEIO_flush( fid )
+       call check_1d( GRID_OCZ(OKS:OKE), buffer_o(OKS:OKE), 'oz' )
+    endif
+
     if ( land_ ) then
-       call FILEIO_read_var_1D( buffer_l, fid, 'lz',  'LZ', 1 )
+       call FILEIO_read_var_1D( buffer_l, fid, 'lz', 'LZ', 1 )
        call FILEIO_flush( fid )
        call check_1d( GRID_LCZ(LKS:LKE), buffer_l(LKS:LKE), 'lz' )
     endif
 
     if ( urban_ ) then
-       call FILEIO_read_var_1D( buffer_u, fid, 'uz',  'UZ', 1 )
+       call FILEIO_read_var_1D( buffer_u, fid, 'uz', 'UZ', 1 )
        call FILEIO_flush( fid )
        call check_1d( GRID_UCZ(UKS:UKE), buffer_u(UKS:UKE), 'uz' )
     endif
@@ -474,6 +496,7 @@ contains
     centerTypeZX    = MPI_DATATYPE_NULL
     centerTypeZXY   = MPI_DATATYPE_NULL
     centerTypeZHXY  = MPI_DATATYPE_NULL
+    centerTypeOCEAN = MPI_DATATYPE_NULL
     centerTypeLAND  = MPI_DATATYPE_NULL
     centerTypeURBAN = MPI_DATATYPE_NULL
 
@@ -522,6 +545,17 @@ contains
     call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeZHXY, err)
     call MPI_Type_commit(centerTypeZHXY, err)
 
+    ! for axistype == 'Ocean'
+    startOCEAN(1)   = 1
+    startOCEAN(2:3) = startXY(1:2)
+    countOCEAN(1)   = OKMAX
+    countOCEAN(2:3) = countXY(1:2)
+    ! construct MPI subarray data type
+    sizes(1)       = OKMAX
+    subsizes(1)    = OKMAX
+    sub_off(1)     = OKS - 1 ! MPI start index starts with 0
+    call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeOCEAN, err)
+    call MPI_Type_commit(centerTypeOCEAN, err)
 
     ! for axistype == 'Land'
     startLAND(1)   = 1
@@ -580,6 +614,7 @@ contains
     if( centerTypeZX    /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeZX,    err)
     if( centerTypeZXY   /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeZXY,   err)
     if( centerTypeZHXY  /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeZHXY,  err)
+    if( centerTypeOCEAN /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeOCEAN, err)
     if( centerTypeLAND  /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeLAND,  err)
     if( centerTypeURBAN /= MPI_DATATYPE_NULL ) call MPI_Type_free(centerTypeURBAN, err)
 
@@ -762,6 +797,11 @@ contains
           count(1) = KMAX
           call FileRead( var(KS:KE), fid, varname, step,                    &
                          ntypes=KMAX, dtype=etype, start=start, count=count )
+       elseif( axistype == 'OZ' ) then
+          start(1) = 1
+          count(1) = OKMAX
+          call FileRead( var, fid, varname, step,                            &
+                         ntypes=OKMAX, dtype=etype, start=start, count=count )
        elseif( axistype == 'LZ' ) then
           start(1) = 1
           count(1) = LKMAX
@@ -790,6 +830,9 @@ contains
        if    ( axistype == 'Z' ) then
           dim1_S   = KS
           dim1_E   = KE
+       elseif( axistype == 'OZ' ) then
+          dim1_S   = 1
+          dim1_E   = OKMAX
        elseif( axistype == 'LZ' ) then
           dim1_S   = 1
           dim1_E   = LKMAX
@@ -940,6 +983,9 @@ contains
           countXY(3) = step
           call FileRead( var, fid, varname, step,                                     &
                          ntypes=step*IA*JA, dtype=etype, start=startXY, count=countXY )
+       elseif( axistype == 'Ocean' ) then
+          call FileRead( var, fid, varname, step,                                            &
+                         ntypes=1, dtype=centerTypeOCEAN, start=startOCEAN, count=countOCEAN )
        elseif( axistype == 'Land' ) then
           call FileRead( var, fid, varname, step,                                         &
                          ntypes=1, dtype=centerTypeLAND, start=startLAND, count=countLAND )
@@ -974,6 +1020,13 @@ contains
           dim2_E   = JEB
           dim3_S   = 1
           dim3_E   = step
+       elseif( axistype == 'Ocean' ) then
+          dim1_S   = OKS
+          dim1_E   = OKE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
        elseif( axistype == 'Land' ) then
           dim1_S   = LKS
           dim1_E   = LKE
@@ -1068,6 +1121,15 @@ contains
        elseif ( axistype == 'ZHXYT' ) then
           dim1_S   = KS-1
           dim1_E   = KE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
+          dim4_S   = 1
+          dim4_E   = step
+       elseif ( axistype == 'OXYT' ) then
+          dim1_S   = OKS
+          dim1_E   = OKE
           dim2_S   = ISB
           dim2_E   = IEB
           dim3_S   = JSB
@@ -1851,6 +1913,9 @@ contains
     if( hasZ ) call FileDefAxis( fid, 'z'  , 'Z'              , 'm', 'z'  , dtype, KMAX    )
     if( hasZ ) call FileDefAxis( fid, 'zh' , 'Z (half level)' , 'm', 'zh' , dtype, KMAX+1  )
 
+    if( hasZ ) call FileDefAxis( fid, 'oz' , 'OZ'             , 'm', 'oz' , dtype, OKMAX   )
+    if( hasZ ) call FileDefAxis( fid, 'ozh', 'OZ (half level)', 'm', 'ozh', dtype, OKMAX+1 )
+
     if( hasZ ) call FileDefAxis( fid, 'lz' , 'LZ'             , 'm', 'lz' , dtype, LKMAX   )
     if( hasZ ) call FileDefAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, LKMAX+1 )
 
@@ -1868,6 +1933,10 @@ contains
     if( hasZ ) call FileDefAxis( fid, 'FDZ'  , 'Grid distance Z',                   'm', 'FDZ',  dtype, KA-1    )
     if( hasZ ) call FileDefAxis( fid, 'CBFZ' , 'Boundary factor Center Z',          '1', 'CZ',   dtype, KA      )
     if( hasZ ) call FileDefAxis( fid, 'FBFZ' , 'Boundary factor Face Z',            '1', 'FZ',   dtype, KA+1    )
+
+    if( hasZ ) call FileDefAxis( fid, 'OCZ'  , 'Ocean Grid Center Position Z',      'm', 'OCZ',  dtype, OKMAX   )
+    if( hasZ ) call FileDefAxis( fid, 'OFZ'  , 'Ocean Grid Face   Position Z',      'm', 'OFZ',  dtype, OKMAX+1 )
+    if( hasZ ) call FileDefAxis( fid, 'OCDZ' , 'Ocean Grid Cell length Z',          'm', 'OCZ',  dtype, OKMAX   )
 
     if( hasZ ) call FileDefAxis( fid, 'LCZ'  , 'Land Grid Center Position Z',       'm', 'LCZ',  dtype, LKMAX   )
     if( hasZ ) call FileDefAxis( fid, 'LFZ'  , 'Land Grid Face   Position Z',       'm', 'LFZ',  dtype, LKMAX+1 )
@@ -1933,12 +2002,16 @@ contains
     ! attributes
 
     if ( hasZ ) then
+       call FileSetAttribute( fid, 'oz',  'positive', 'down' )
+       call FileSetAttribute( fid, 'ozh', 'positive', 'down' )
        call FileSetAttribute( fid, 'lz' , 'positive', 'down' )
        call FileSetAttribute( fid, 'lzh', 'positive', 'down' )
        call FileSetAttribute( fid, 'uz' , 'positive', 'down' )
        call FileSetAttribute( fid, 'uzh', 'positive', 'down' )
        call FileSetAttribute( fid, 'LCZ', 'positive', 'down' )
        call FileSetAttribute( fid, 'LFZ', 'positive', 'down' )
+       call FileSetAttribute( fid, 'OCZ', 'positive', 'down' )
+       call FileSetAttribute( fid, 'OFZ', 'positive', 'down' )
        call FileSetAttribute( fid, 'UCZ', 'positive', 'down' )
        call FileSetAttribute( fid, 'UFZ', 'positive', 'down' )
     endif
@@ -2083,6 +2156,10 @@ contains
        GRID_CBFYG, &
        GRID_FBFXG, &
        GRID_FBFYG
+    use scale_ocean_grid, only: &
+       GRID_OCZ,  &
+       GRID_OFZ,  &
+       GRID_OCDZ
     use scale_land_grid, only: &
        GRID_LCZ,  &
        GRID_LFZ,  &
@@ -2121,10 +2198,12 @@ contains
        put_y = .true.
     end if
 
-
     if ( haszcoord .and. put_z ) then
        call FileWriteAxis( fid, 'z'  , GRID_CZ (KS  :KE)  , start(1:1) )
        call FileWriteAxis( fid, 'zh' , GRID_FZ (KS-1:KE)  , start(1:1) )
+
+       call FileWriteAxis( fid, 'oz',  GRID_OCZ(OKS  :OKE), start(1:1) )
+       call FileWriteAxis( fid, 'ozh', GRID_OFZ(OKS-1:OKE), start(1:1) )
 
        call FileWriteAxis( fid, 'lz' , GRID_LCZ(LKS  :LKE), start(1:1) )
        call FileWriteAxis( fid, 'lzh', GRID_LFZ(LKS-1:LKE), start(1:1) )
@@ -2151,6 +2230,10 @@ contains
        call FileWriteAxis( fid, 'FDZ' , GRID_FDZ (:), start(1:1) )
        call FileWriteAxis( fid, 'CBFZ', GRID_CBFZ(:), start(1:1) )
        call FileWriteAxis( fid, 'FBFZ', GRID_FBFZ(:), start(1:1) )
+
+       call FileWriteAxis( fid, 'OCZ' , GRID_OCZ (:), start(1:1) )
+       call FileWriteAxis( fid, 'OFZ' , GRID_OFZ (:), start(1:1) )
+       call FileWriteAxis( fid, 'OCDZ', GRID_OCDZ(:), start(1:1) )
 
        call FileWriteAxis( fid, 'LCZ' , GRID_LCZ (:), start(1:1) )
        call FileWriteAxis( fid, 'LFZ' , GRID_LFZ (:), start(1:1) )
@@ -2351,6 +2434,11 @@ contains
        dims    = (/'z ','x ','yh'/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
        call MPRJ_get_attributes( mapping )
+    elseif( axistype == 'Ocean' ) then
+       ndims   = 3
+       dims    = (/'oz','x ','y '/)
+       write_buf_amount = write_buf_amount + OKMAX * IA * JA * elm_size
+       call MPRJ_get_attributes( mapping )
     elseif( axistype == 'Land' ) then
        ndims   = 3
        dims    = (/'lz','x ','y '/)
@@ -2379,6 +2467,15 @@ contains
        else
          write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
        endif
+       call MPRJ_get_attributes( mapping )
+    elseif( axistype == 'OXYT' ) then ! 4D variable
+       ndims   = 3
+       dims    = (/'oz','x ','y '/)
+       if ( present(nsteps) ) then
+         write_buf_amount = write_buf_amount + OKMAX * IA * JA * elm_size * nsteps
+       else
+         write_buf_amount = write_buf_amount + OKMAX * IA * JA * elm_size
+       end if
        call MPRJ_get_attributes( mapping )
     else
        write(*,*) 'xxx [FILEIO_def_var] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
@@ -2669,6 +2766,10 @@ contains
        dim1_max = KMAX+1
        dim1_S   = KS-1
        dim1_E   = KE
+    elseif( axistype == 'Ocean' ) then
+       dim1_max = OKMAX
+       dim1_S   = OKS
+       dim1_E   = OKE
     elseif( axistype == 'Land' ) then
        dim1_max = LKMAX
        dim1_S   = LKS
@@ -2999,6 +3100,10 @@ contains
        dim1_max = UKMAX
        dim1_S   = UKS
        dim1_E   = UKE
+    elseif ( axistype == 'OXYT' ) then
+       dim1_max = OKMAX
+       dim1_S   = OKS
+       dim1_E   = OKE
     else
        write(*,*) 'xxx [FILEIO_write_var_4D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop

@@ -23,6 +23,7 @@ module scale_history
   use scale_prof
   use scale_grid_index
   use scale_land_grid_index
+  use scale_ocean_grid_index
   use scale_urban_grid_index
   !-----------------------------------------------------------------------------
   implicit none
@@ -501,23 +502,32 @@ contains
        count(3) = KMAX
 
        if ( present(zdim) ) then
-          if    ( zdim == 'land'      ) then
-             dims (3) = 'lz'
-             count(3) = LKMAX
-             atom     = .false.
-          elseif( zdim == 'landhalf'  ) then
-             dims (3) = 'lzh'
-             count(3) = LKMAX+1
-             atom     = .false.
+          if    ( zdim == 'ocean' ) then
+             dims(3)     = 'oz'
+             count(3)    = OKMAX
+             atom        = .false.
+          elseif( zdim == 'oceanhalf' ) then
+             dims(3)     = 'ozh'
+             count(3)    = OKMAX+1
+             atom        = .false.
              flag_half_z = .true.
-          elseif( zdim == 'urban'     ) then
-             dims (3) = 'uz'
-             count(3) = UKMAX
-             atom     = .false.
+          elseif( zdim == 'land' ) then
+             dims (3)    = 'lz'
+             count(3)    = LKMAX
+             atom        = .false.
+          elseif( zdim == 'landhalf' ) then
+             dims (3)    = 'lzh'
+             count(3)    = LKMAX+1
+             atom        = .false.
+             flag_half_z = .true.
+          elseif( zdim == 'urban' ) then
+             dims (3)    = 'uz'
+             count(3)    = UKMAX
+             atom        = .false.
           elseif( zdim == 'urbanhalf' ) then
-             dims (3) = 'uzh'
-             count(3) = UKMAX+1
-             atom     = .false.
+             dims (3)    = 'uzh'
+             count(3)    = UKMAX+1
+             atom        = .false.
              flag_half_z = .true.
           endif
        endif
@@ -1068,6 +1078,12 @@ contains
     end select
 
     select case( zd )
+      case('ocean')
+        ksize  = OKMAX
+        kstart = OKS
+      case('oceanhalf')
+        ksize  = OKMAX+1
+        kstart = OKS-1
       case('land')
         ksize  = LKMAX
         kstart = LKS
@@ -1634,6 +1650,10 @@ contains
        GRID_CBFYG, &
        GRID_FBFXG, &
        GRID_FBFYG
+    use scale_ocean_grid, only: &
+       GRID_OCZ, &
+       GRID_OFZ, &
+       GRID_OCDZ
     use scale_land_grid, only: &
        GRID_LCZ, &
        GRID_LFZ, &
@@ -1752,6 +1772,9 @@ contains
                             gsize=HIST_PRES_nlayer, start=startZ, down=.true.                     )
     endif
 
+    call HistoryPutAxis( 'oz',  'OZ',              'm', 'oz',  GRID_OCZ(OKS  :OKE), gsize=OKMAX  , start=startZ, down=.true. )
+    call HistoryPutAxis( 'ozh', 'OZ (half level)', 'm', 'ozh', GRID_OFZ(OKS-1:OKE), gsize=OKMAX+1, start=startZ, down=.true. )
+
     call HistoryPutAxis( 'lz',  'LZ',              'm', 'lz',  GRID_LCZ(LKS  :LKE), gsize=LKMAX  , start=startZ, down=.true. )
     call HistoryPutAxis( 'lzh', 'LZ (half level)', 'm', 'lzh', GRID_LFZ(LKS-1:LKE), gsize=LKMAX+1, start=startZ, down=.true. )
 
@@ -1771,6 +1794,10 @@ contains
     call HistoryPutAxis( 'FDZ',  'Grid distance Z',              'm', 'FDZ', GRID_FDZ,  gsize=KA-1,    start=startZ )
     call HistoryPutAxis( 'CBFZ', 'Boundary factor Center Z',     '1', 'CZ',  GRID_CBFZ, gsize=KA,      start=startZ )
     call HistoryPutAxis( 'FBFZ', 'Boundary factor Face Z',       '1', 'FZ',  GRID_FBFZ, gsize=KA+1,    start=startZ )
+
+    call HistoryPutAxis( 'OCZ',  'Ocean Grid Center Position Z', 'm', 'OCZ', GRID_OCZ,  gsize=OKMAX,   start=startZ, down=.true. )
+    call HistoryPutAxis( 'OFZ',  'Ocean Grid Face Position Z',   'm', 'OFZ', GRID_OFZ,  gsize=OKMAX+1, start=startZ, down=.true. )
+    call HistoryPutAxis( 'OCDZ', 'Ocean Grid Cell length Z',     'm', 'OCZ', GRID_OCDZ, gsize=OKMAX,   start=startZ              )
 
     call HistoryPutAxis( 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', GRID_LCZ,  gsize=LKMAX,   start=startZ, down=.true. )
     call HistoryPutAxis( 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', GRID_LFZ,  gsize=LKMAX+1, start=startZ, down=.true. )

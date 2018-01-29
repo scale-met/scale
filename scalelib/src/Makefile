@@ -40,6 +40,7 @@ VPATH = common:                          \
         land:                            \
         land/grid:                       \
         ocean:                           \
+        ocean/grid:                      \
         urban:                           \
         urban/grid:
 
@@ -190,6 +191,8 @@ OBJS_NAME = \
 	scale_mapproj.o	\
 	scale_matrix.o	\
 	scale_monitor.o	\
+	scale_ocean_grid.o	\
+	scale_ocean_grid_index.o	\
 	scale_ocean_phy.o	\
 	scale_ocean_phy_const.o	\
 	scale_ocean_phy_slab.o	\
