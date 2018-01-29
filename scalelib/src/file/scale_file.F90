@@ -444,16 +444,23 @@ contains
 
     integer,          intent(out) :: fid
     character(len=*), intent( in) :: basename
-    integer,          intent( in) :: mode
+    integer,          intent( in), optional :: mode
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: mpi_comm
     integer,          intent( in), optional :: rankid
 
+    integer :: mode_
     integer :: rankid_
     logical :: existed
     logical :: single_
 
     single_ = .false.
+
+    if ( present(mode) ) then
+       mode_ = mode
+    else
+       mode_ = FILE_FREAD
+    end if
 
     if ( present(single) ) single_ = single
     if ( present(rankid) ) then
@@ -462,8 +469,8 @@ contains
        rankid_ = mpi_myrank
     end if
 
-    call FILE_get_fid( fid, existed,                              & ! (out)
-                       basename, mode, rankid_, single_, mpi_comm ) ! (in)
+    call FILE_get_fid( fid, existed,                               & ! (out)
+                       basename, mode_, rankid_, single_, mpi_comm ) ! (in)
 
     return
   end subroutine FILE_open
@@ -2027,8 +2034,8 @@ contains
     character(len=*),           intent(in)  :: basename
     character(len=*),           intent(in)  :: varname
     integer,                    intent(in)  :: rankid
-    integer,                    intent(in)  :: istep
 
+    integer,                    intent(in),  optional :: istep
     logical,                    intent(in),  optional :: single
     character(len=FILE_HMID),   intent(out), optional :: description
     character(len=FILE_HSHORT), intent(out), optional :: units
@@ -2057,7 +2064,7 @@ contains
 
     call FILE_get_dataInfo_fid( fid,         & ! [IN]
                                 varname,     & ! [IN]
-                                istep,       & ! [IN]
+                                istep,       & ! [IN] , optional
                                 description, & ! [OUT], optional
                                 units,       & ! [OUT], optional
                                 datatype,    & ! [OUT], optional
@@ -2086,10 +2093,10 @@ contains
        time_units   )
     implicit none
 
-    integer,                    intent(in)  :: fid
-    character(len=*),           intent(in)  :: varname
-    integer,                    intent(in)  :: istep
+    integer,          intent(in)  :: fid
+    character(len=*), intent(in)  :: varname
 
+    integer,                    intent(in),  optional :: istep
     character(len=FILE_HMID),   intent(out), optional :: description
     character(len=FILE_HSHORT), intent(out), optional :: units
     integer,                    intent(out), optional :: datatype
@@ -2102,6 +2109,7 @@ contains
 
     type(datainfo) :: dinfo
 
+    integer  :: istep_
     real(DP) :: time(1)
     integer  :: ndim, idim
     integer  :: error
@@ -2109,11 +2117,18 @@ contains
     intrinsic size
     !---------------------------------------------------------------------------
 
+    if ( present(istep) ) then
+       istep_ = istep
+    else
+       istep_ = 1
+    end if
+       
+
     !--- get data information
     call file_get_datainfo_c( dinfo,               & ! [OUT]
                               FILE_files(fid)%fid, & ! [IN]
                               varname,             & ! [IN]
-                              istep,               & ! [IN]
+                              istep_,              & ! [IN]
                               .false.,             & ! [IN]
                               error                ) ! [OUT]
 
@@ -2732,13 +2747,15 @@ contains
     real(SP),    intent(out)           :: var(:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
+    integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+
+    integer :: step_
 
     type(datainfo) :: dinfo
     integer :: dim_size(1)
@@ -2748,19 +2765,26 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( present(step) ) then
+       step_ = step
+    else
+       step_ = 1
+    end if
+
     !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                   & ! (out)
+         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
+         error                                         ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step_
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
              var(:) = 0.0_SP
+             return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
              call PRC_abort
@@ -2772,8 +2796,10 @@ contains
     end if
 
     if ( dinfo%rank /= 1 ) then
-       write(*,*) 'xxx rank is not 1', dinfo%rank
-       call PRC_abort
+       if ( (.not. present(start)) .and. (.not. present(count)) ) then
+          write(*,*) 'xxx [FILE_read_var_realSP_1D] rank of '//trim(varname)//' is not 1', dinfo%rank
+          call PRC_abort
+       end if
     end if
 
     if (present(ntypes) ) then
@@ -2781,18 +2807,18 @@ contains
             dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
     else
-       dim_size(:) = shape(var)
-       do n = 1, 1
-          if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call PRC_abort
-          end if
-       end do
-       if ( present(start) ) then
+       if ( present(start) .and. present(count) ) then
           call file_read_data_c( var(:),          & ! (out)
                dinfo, SP, 0, 0, start(:), count(:), & ! (in)
                error                                     ) ! (out)
        else
+          dim_size(:) = shape(var)
+          do n = 1, 1
+             if ( dinfo%dim_size(n) /= dim_size(n) ) then
+                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+                call PRC_abort
+             end if
+          end do
           call file_read_data_c( var(:), & ! (out)
                dinfo, SP, 0, 0, -1, -1,    & ! (in)
                error                            ) ! (out)
@@ -2822,13 +2848,15 @@ contains
     real(DP),    intent(out)           :: var(:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
+    integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+
+    integer :: step_
 
     type(datainfo) :: dinfo
     integer :: dim_size(1)
@@ -2838,19 +2866,26 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( present(step) ) then
+       step_ = step
+    else
+       step_ = 1
+    end if
+
     !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                   & ! (out)
+         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
+         error                                         ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step_
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
              var(:) = 0.0_DP
+             return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
              call PRC_abort
@@ -2862,8 +2897,10 @@ contains
     end if
 
     if ( dinfo%rank /= 1 ) then
-       write(*,*) 'xxx rank is not 1', dinfo%rank
-       call PRC_abort
+       if ( (.not. present(start)) .and. (.not. present(count)) ) then
+          write(*,*) 'xxx [FILE_read_var_realDP_1D] rank of '//trim(varname)//' is not 1', dinfo%rank
+          call PRC_abort
+       end if
     end if
 
     if (present(ntypes) ) then
@@ -2871,18 +2908,18 @@ contains
             dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
     else
-       dim_size(:) = shape(var)
-       do n = 1, 1
-          if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call PRC_abort
-          end if
-       end do
-       if ( present(start) ) then
+       if ( present(start) .and. present(count) ) then
           call file_read_data_c( var(:),          & ! (out)
                dinfo, DP, 0, 0, start(:), count(:), & ! (in)
                error                                     ) ! (out)
        else
+          dim_size(:) = shape(var)
+          do n = 1, 1
+             if ( dinfo%dim_size(n) /= dim_size(n) ) then
+                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+                call PRC_abort
+             end if
+          end do
           call file_read_data_c( var(:), & ! (out)
                dinfo, DP, 0, 0, -1, -1,    & ! (in)
                error                            ) ! (out)
@@ -2912,13 +2949,15 @@ contains
     real(SP),    intent(out)           :: var(:,:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
+    integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+
+    integer :: step_
 
     type(datainfo) :: dinfo
     integer :: dim_size(2)
@@ -2928,19 +2967,26 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( present(step) ) then
+       step_ = step
+    else
+       step_ = 1
+    end if
+
     !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                   & ! (out)
+         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
+         error                                         ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step_
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
              var(:,:) = 0.0_SP
+             return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
              call PRC_abort
@@ -2952,8 +2998,10 @@ contains
     end if
 
     if ( dinfo%rank /= 2 ) then
-       write(*,*) 'xxx rank is not 2', dinfo%rank
-       call PRC_abort
+       if ( (.not. present(start)) .and. (.not. present(count)) ) then
+          write(*,*) 'xxx [FILE_read_var_realSP_2D] rank of '//trim(varname)//' is not 2', dinfo%rank
+          call PRC_abort
+       end if
     end if
 
     if (present(ntypes) ) then
@@ -2961,18 +3009,18 @@ contains
             dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
     else
-       dim_size(:) = shape(var)
-       do n = 1, 2
-          if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call PRC_abort
-          end if
-       end do
-       if ( present(start) ) then
+       if ( present(start) .and. present(count) ) then
           call file_read_data_c( var(:,:),          & ! (out)
                dinfo, SP, 0, 0, start(:), count(:), & ! (in)
                error                                     ) ! (out)
        else
+          dim_size(:) = shape(var)
+          do n = 1, 2
+             if ( dinfo%dim_size(n) /= dim_size(n) ) then
+                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+                call PRC_abort
+             end if
+          end do
           call file_read_data_c( var(:,:), & ! (out)
                dinfo, SP, 0, 0, -1, -1,    & ! (in)
                error                            ) ! (out)
@@ -3002,13 +3050,15 @@ contains
     real(DP),    intent(out)           :: var(:,:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
+    integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+
+    integer :: step_
 
     type(datainfo) :: dinfo
     integer :: dim_size(2)
@@ -3018,19 +3068,26 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( present(step) ) then
+       step_ = step
+    else
+       step_ = 1
+    end if
+
     !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                   & ! (out)
+         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
+         error                                         ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step_
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
              var(:,:) = 0.0_DP
+             return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
              call PRC_abort
@@ -3042,8 +3099,10 @@ contains
     end if
 
     if ( dinfo%rank /= 2 ) then
-       write(*,*) 'xxx rank is not 2', dinfo%rank
-       call PRC_abort
+       if ( (.not. present(start)) .and. (.not. present(count)) ) then
+          write(*,*) 'xxx [FILE_read_var_realDP_2D] rank of '//trim(varname)//' is not 2', dinfo%rank
+          call PRC_abort
+       end if
     end if
 
     if (present(ntypes) ) then
@@ -3051,18 +3110,18 @@ contains
             dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
     else
-       dim_size(:) = shape(var)
-       do n = 1, 2
-          if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call PRC_abort
-          end if
-       end do
-       if ( present(start) ) then
+       if ( present(start) .and. present(count) ) then
           call file_read_data_c( var(:,:),          & ! (out)
                dinfo, DP, 0, 0, start(:), count(:), & ! (in)
                error                                     ) ! (out)
        else
+          dim_size(:) = shape(var)
+          do n = 1, 2
+             if ( dinfo%dim_size(n) /= dim_size(n) ) then
+                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+                call PRC_abort
+             end if
+          end do
           call file_read_data_c( var(:,:), & ! (out)
                dinfo, DP, 0, 0, -1, -1,    & ! (in)
                error                            ) ! (out)
@@ -3092,13 +3151,15 @@ contains
     real(SP),    intent(out)           :: var(:,:,:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
+    integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+
+    integer :: step_
 
     type(datainfo) :: dinfo
     integer :: dim_size(3)
@@ -3108,19 +3169,26 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( present(step) ) then
+       step_ = step
+    else
+       step_ = 1
+    end if
+
     !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                   & ! (out)
+         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
+         error                                         ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step_
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
              var(:,:,:) = 0.0_SP
+             return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
              call PRC_abort
@@ -3132,8 +3200,10 @@ contains
     end if
 
     if ( dinfo%rank /= 3 ) then
-       write(*,*) 'xxx rank is not 3', dinfo%rank
-       call PRC_abort
+       if ( (.not. present(start)) .and. (.not. present(count)) ) then
+          write(*,*) 'xxx [FILE_read_var_realSP_3D] rank of '//trim(varname)//' is not 3', dinfo%rank
+          call PRC_abort
+       end if
     end if
 
     if (present(ntypes) ) then
@@ -3141,18 +3211,18 @@ contains
             dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
     else
-       dim_size(:) = shape(var)
-       do n = 1, 3
-          if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call PRC_abort
-          end if
-       end do
-       if ( present(start) ) then
+       if ( present(start) .and. present(count) ) then
           call file_read_data_c( var(:,:,:),          & ! (out)
                dinfo, SP, 0, 0, start(:), count(:), & ! (in)
                error                                     ) ! (out)
        else
+          dim_size(:) = shape(var)
+          do n = 1, 3
+             if ( dinfo%dim_size(n) /= dim_size(n) ) then
+                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+                call PRC_abort
+             end if
+          end do
           call file_read_data_c( var(:,:,:), & ! (out)
                dinfo, SP, 0, 0, -1, -1,    & ! (in)
                error                            ) ! (out)
@@ -3182,13 +3252,15 @@ contains
     real(DP),    intent(out)           :: var(:,:,:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
+    integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+
+    integer :: step_
 
     type(datainfo) :: dinfo
     integer :: dim_size(3)
@@ -3198,19 +3270,26 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( present(step) ) then
+       step_ = step
+    else
+       step_ = 1
+    end if
+
     !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                   & ! (out)
+         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
+         error                                         ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step_
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
              var(:,:,:) = 0.0_DP
+             return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
              call PRC_abort
@@ -3222,8 +3301,10 @@ contains
     end if
 
     if ( dinfo%rank /= 3 ) then
-       write(*,*) 'xxx rank is not 3', dinfo%rank
-       call PRC_abort
+       if ( (.not. present(start)) .and. (.not. present(count)) ) then
+          write(*,*) 'xxx [FILE_read_var_realDP_3D] rank of '//trim(varname)//' is not 3', dinfo%rank
+          call PRC_abort
+       end if
     end if
 
     if (present(ntypes) ) then
@@ -3231,18 +3312,18 @@ contains
             dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
     else
-       dim_size(:) = shape(var)
-       do n = 1, 3
-          if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call PRC_abort
-          end if
-       end do
-       if ( present(start) ) then
+       if ( present(start) .and. present(count) ) then
           call file_read_data_c( var(:,:,:),          & ! (out)
                dinfo, DP, 0, 0, start(:), count(:), & ! (in)
                error                                     ) ! (out)
        else
+          dim_size(:) = shape(var)
+          do n = 1, 3
+             if ( dinfo%dim_size(n) /= dim_size(n) ) then
+                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+                call PRC_abort
+             end if
+          end do
           call file_read_data_c( var(:,:,:), & ! (out)
                dinfo, DP, 0, 0, -1, -1,    & ! (in)
                error                            ) ! (out)
@@ -3272,13 +3353,15 @@ contains
     real(SP),    intent(out)           :: var(:,:,:,:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
+    integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+
+    integer :: step_
 
     type(datainfo) :: dinfo
     integer :: dim_size(4)
@@ -3288,19 +3371,26 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( present(step) ) then
+       step_ = step
+    else
+       step_ = 1
+    end if
+
     !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                   & ! (out)
+         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
+         error                                         ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step_
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
              var(:,:,:,:) = 0.0_SP
+             return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
              call PRC_abort
@@ -3312,8 +3402,10 @@ contains
     end if
 
     if ( dinfo%rank /= 4 ) then
-       write(*,*) 'xxx rank is not 4', dinfo%rank
-       call PRC_abort
+       if ( (.not. present(start)) .and. (.not. present(count)) ) then
+          write(*,*) 'xxx [FILE_read_var_realSP_4D] rank of '//trim(varname)//' is not 4', dinfo%rank
+          call PRC_abort
+       end if
     end if
 
     if (present(ntypes) ) then
@@ -3321,18 +3413,18 @@ contains
             dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
     else
-       dim_size(:) = shape(var)
-       do n = 1, 4
-          if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call PRC_abort
-          end if
-       end do
-       if ( present(start) ) then
+       if ( present(start) .and. present(count) ) then
           call file_read_data_c( var(:,:,:,:),          & ! (out)
                dinfo, SP, 0, 0, start(:), count(:), & ! (in)
                error                                     ) ! (out)
        else
+          dim_size(:) = shape(var)
+          do n = 1, 4
+             if ( dinfo%dim_size(n) /= dim_size(n) ) then
+                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+                call PRC_abort
+             end if
+          end do
           call file_read_data_c( var(:,:,:,:), & ! (out)
                dinfo, SP, 0, 0, -1, -1,    & ! (in)
                error                            ) ! (out)
@@ -3362,13 +3454,15 @@ contains
     real(DP),    intent(out)           :: var(:,:,:,:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
+    integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
     integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+
+    integer :: step_
 
     type(datainfo) :: dinfo
     integer :: dim_size(4)
@@ -3378,19 +3472,26 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( present(step) ) then
+       step_ = step
+    else
+       step_ = 1
+    end if
+
     !--- get data information
-    call file_get_datainfo_c( dinfo,                  & ! (out)
-         FILE_files(fid)%fid, varname, step, .false., & ! (in)
-         error                                        ) ! (out)
+    call file_get_datainfo_c( dinfo,                   & ! (out)
+         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
+         error                                         ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(allow_missing) ) then
           if ( allow_missing ) then
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE_] Value is set to 0.'
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
+                  'varname= ',trim(varname),', step=',step_
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
              var(:,:,:,:) = 0.0_DP
+             return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
              call PRC_abort
@@ -3402,8 +3503,10 @@ contains
     end if
 
     if ( dinfo%rank /= 4 ) then
-       write(*,*) 'xxx rank is not 4', dinfo%rank
-       call PRC_abort
+       if ( (.not. present(start)) .and. (.not. present(count)) ) then
+          write(*,*) 'xxx [FILE_read_var_realDP_4D] rank of '//trim(varname)//' is not 4', dinfo%rank
+          call PRC_abort
+       end if
     end if
 
     if (present(ntypes) ) then
@@ -3411,18 +3514,18 @@ contains
             dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
     else
-       dim_size(:) = shape(var)
-       do n = 1, 4
-          if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-             call PRC_abort
-          end if
-       end do
-       if ( present(start) ) then
+       if ( present(start) .and. present(count) ) then
           call file_read_data_c( var(:,:,:,:),          & ! (out)
                dinfo, DP, 0, 0, start(:), count(:), & ! (in)
                error                                     ) ! (out)
        else
+          dim_size(:) = shape(var)
+          do n = 1, 4
+             if ( dinfo%dim_size(n) /= dim_size(n) ) then
+                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+                call PRC_abort
+             end if
+          end do
           call file_read_data_c( var(:,:,:,:), & ! (out)
                dinfo, DP, 0, 0, -1, -1,    & ! (in)
                error                            ) ! (out)

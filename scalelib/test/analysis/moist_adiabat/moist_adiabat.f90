@@ -35,26 +35,22 @@ program moist_adiabat
 
   logical :: converged
 
-  ! netcdf
-  integer :: ncid, vid
-  integer :: dimid(1)
-  integer :: status
-  integer :: start(4), count(4)
-
   ! conf data
-  character(len=H_MID) :: filename_in
+  character(len=H_MID) :: basename_in
+  integer :: rankid
   character(len=H_MID) :: filename_out
   real(RP) :: x, y
   integer  :: nstep
 
   NAMELIST / PARAM_MOIST_ADIABAT / &
-       filename_in, &
+       basename_in, &
+       rankid, &
        filename_out, &
        x, y, &
        nstep
 
   integer :: fid
-  integer :: i, j, k
+  integer :: k
   integer :: ierr
 
 
@@ -63,7 +59,8 @@ program moist_adiabat
   call ATMOS_SATURATION_setup
   call ATMOS_ADIABAT_setup
 
-  filename_in  = "history.pe000000.nc"
+  ! default value
+  basename_in  = "history"
   filename_out = "output.dat"
   x = 0.0_RP
   y = 0.0_RP
@@ -82,97 +79,8 @@ program moist_adiabat
   end if
   if( IO_NML ) write(IO_FID_NML,nml=PARAM_MOIST_ADIABAT)
   
-  status = nf90_open( filename_in, nf90_nowrite, ncid )
-  if ( status /= nf90_noerr ) then
-     write(*,*) 'xxx failed to open file: ', trim(filename_in)
-     call PRC_abort
-  end if
 
-  ! get x axis
-  status = nf90_inq_varid( ncid, "x", vid )
-  status = nf90_inquire_variable( ncid, vid, dimids=dimid(:) )
-  status = nf90_inquire_dimension( ncid, dimid(1), len=nx )
-  allocate( xaxis(nx) )
-  status = nf90_get_var( ncid, vid, xaxis(:) )
-
-  ! get y axis
-  status = nf90_inq_varid( ncid, "y", vid )
-  status = nf90_inquire_variable( ncid, vid, dimids=dimid(:) )
-  status = nf90_inquire_dimension( ncid, dimid(1), len=ny )
-  allocate( yaxis(ny) )
-  status = nf90_get_var( ncid, vid, yaxis(:) )
-
-  ! get z axis length
-  status = nf90_inq_varid( ncid, "z", vid )
-  status = nf90_inquire_variable( ncid, vid, dimids=dimid(:) )
-  status = nf90_inquire_dimension( ncid, dimid(1), len=nz )
-
-
-  ! search index
-  do i = 1, nx
-     if ( x <= xaxis(i) ) exit
-  end do
-  do j = 1, ny
-     if ( y <= yaxis(j) ) exit
-  end do
-
-  ! get z axis
-  allocate( z(nz), zh(0:nz) )
-  status = nf90_inq_varid( ncid, "height", vid )
-  status = nf90_get_var( ncid, vid, z(:), start=(/i,j,1/), count=(/1,1,nz/) )
-  status = nf90_inq_varid( ncid, "height_xyw", vid )
-  status = nf90_get_var( ncid, vid, zh(:), start=(/i,j,1/), count=(/1,1,nz+1/) )
-
-  ! get variables
-  allocate( TEMP(nz), PRES(nz), QV(nz), QC(nz), QR(nz), QI(nz), QS(nz), QG(nz) )
-  start(:) = (/i,j,1,nstep/)
-  count(:) = (/1,1,nz,1/)
-
-  status = nf90_inq_varid( ncid, "T", vid )
-  status = nf90_get_var( ncid, vid, TEMP(:), start=start, count=count)
-
-  status = nf90_inq_varid( ncid, "PRES", vid )
-  status = nf90_get_var( ncid, vid, PRES(:), start=start, count=count)
-
-  status = nf90_inq_varid( ncid, "QV", vid )
-  status = nf90_get_var( ncid, vid, QV(:), start=start, count=count)
-
-  status = nf90_inq_varid( ncid, "QC", vid )
-  if ( status == nf90_noerr ) then
-     status = nf90_get_var( ncid, vid, QC(:), start=start, count=count)
-  else
-     QC(:) = 0.0_RP
-  end if
-
-  status = nf90_inq_varid( ncid, "QR", vid )
-  if ( status == nf90_noerr ) then
-     status = nf90_get_var( ncid, vid, QR(:), start=start, count=count)
-  else
-     QR(:) = 0.0_RP
-  end if
-
-  status = nf90_inq_varid( ncid, "QI", vid )
-  if ( status == nf90_noerr ) then
-     status = nf90_get_var( ncid, vid, QI(:), start=start, count=count)
-  else
-     QI(:) = 0.0_RP
-  end if
-
-  status = nf90_inq_varid( ncid, "QS", vid )
-  if ( status == nf90_noerr ) then
-     status = nf90_get_var( ncid, vid, QS(:), start=start, count=count)
-  else
-     QS(:) = 0.0_RP
-  end if
-
-  status = nf90_inq_varid( ncid, "QG", vid )
-  if ( status == nf90_noerr ) then
-     status = nf90_get_var( ncid, vid, QG(:), start=start, count=count)
-  else
-     QG(:) = 0.0_RP
-  end if
-
-  status = nf90_close( ncid )
+  call read_data
 
 
   ! approximate estimation (ignore other tracers)
@@ -220,9 +128,9 @@ program moist_adiabat
   fid = IO_get_available_fid()
   open( unit=fid, file=filename_out )
   write(fid,*)nz
-  write(fid,'(2a8,5a9)') "z", "pres", "temp", "tdew", "pott", "pote", "temp_p"
+  write(fid,'(2a8,5a10)') "z", "pres", "temp", "tdew", "pott", "pote", "temp_p"
   do k = 1, nz
-     write(fid,'(2f8.1,5f9.2)') z(k), pres(k)/100.0_RP, temp(k), tdew(k), pott(k), pote(k), temp_p(k)
+     write(fid,'(2f8.1,5f10.2)') z(k), pres(k)/100.0_RP, temp(k), tdew(k), pott(k), pote(k), temp_p(k)
   end do
   close(fid)
 
@@ -232,4 +140,68 @@ program moist_adiabat
   call SCALE_finalize
 
   stop
+
+contains
+
+  subroutine read_data
+    use scale_file, only: &
+         FILE_open, &
+         FILE_get_datainfo, &
+         FILE_read, &
+         FILE_close
+    integer :: fid
+    integer :: dims(3)
+    integer :: start(3), count(3)
+
+    integer :: i, j
+
+    ! file open
+    call FILE_open( fid, & ! (out)
+                    basename_in, rankid=rankid ) ! (in)
+
+    ! get dimension size
+    call FILE_get_datainfo( fid, "height", dim_size=dims(:) )
+    nx = dims(1)
+    ny = dims(2)
+    nz = dims(3)
+
+    ! get x and y axis
+    allocate( xaxis(nx), yaxis(ny) )
+    call FILE_read( xaxis(:), fid, "x" )
+    call FILE_read( yaxis(:), fid, "y" )
+
+    ! search index
+    do i = 1, nx
+       if ( x <= xaxis(i) ) exit
+    end do
+    do j = 1, ny
+       if ( y <= yaxis(j) ) exit
+    end do
+    start(:) = (/i,j,1/)
+
+    ! get z axis
+    allocate( z(nz), zh(0:nz) )
+    call FILE_read( z(:),  fid, "height",     start=start(:), count=(/1,1,nz/) )
+    call FILE_read( zh(:), fid, "height_xyw", start=start(:), count=(/1,1,nz+1/) )
+
+    ! get variables
+    allocate( TEMP(nz), PRES(nz), QV(nz), QC(nz), QR(nz), QI(nz), QS(nz), QG(nz) )
+    count(:) = (/1,1,nz/)
+
+    call FILE_read( TEMP(:), fid, "T",    start=start(:), count=count(:), step=nstep )
+    call FILE_read( PRES(:), fid, "PRES", start=start(:), count=count(:), step=nstep )
+    call FILE_read( QV  (:), fid, "QV",   start=start(:), count=count(:), step=nstep )
+    call FILE_read( QC  (:), fid, "QC",   start=start(:), count=count(:), step=nstep, allow_missing=.true. )
+    call FILE_read( QR  (:), fid, "QR",   start=start(:), count=count(:), step=nstep, allow_missing=.true. )
+    call FILE_read( QI  (:), fid, "QI",   start=start(:), count=count(:), step=nstep, allow_missing=.true. )
+    call FILE_read( QS  (:), fid, "QS",   start=start(:), count=count(:), step=nstep, allow_missing=.true. )
+    call FILE_read( QG  (:), fid, "QG",   start=start(:), count=count(:), step=nstep, allow_missing=.true. )
+
+
+    ! close
+    call FILE_close( fid )
+
+    return
+  end subroutine read_data
+
 end program moist_adiabat
