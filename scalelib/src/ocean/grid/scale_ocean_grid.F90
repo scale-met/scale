@@ -137,8 +137,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Read ocean grid
   subroutine OCEAN_GRID_read
-    use gtool_file, only: &
-       FileRead
+    use scale_file, only: &
+       FILE_Read
     use scale_process, only: &
        PRC_myrank, &
        PRC_MPIstop
@@ -161,13 +161,13 @@ contains
 
     write(bname,'(A,A,F15.3)') trim(OCEAN_GRID_IN_BASENAME)
 
-    call FileRead( GRID_OCZ (:), bname, 'OCZ',  1, PRC_myrank )
-    call FileRead( GRID_OCDZ(:), bname, 'OCDZ', 1, PRC_myrank )
-    call FileRead( GRID_OFZ (:), bname, 'OFZ',  1, PRC_myrank )
+    call FILE_Read( GRID_OCZ (:), bname, 'OCZ',  1, PRC_myrank )
+    call FILE_Read( GRID_OCDZ(:), bname, 'OCDZ', 1, PRC_myrank )
+    call FILE_Read( GRID_OFZ (:), bname, 'OFZ',  1, PRC_myrank )
 
-    call FileRead( tmp_CBFZ (:), bname, 'CBFZ', 1, PRC_myrank )
-    call FileRead( tmp_CBFY (:), bname, 'CBFX', 1, PRC_myrank )
-    call FileRead( tmp_CBFY (:), bname, 'CBFY', 1, PRC_myrank )
+    call FILE_Read( tmp_CBFZ (:), bname, 'CBFZ', 1, PRC_myrank )
+    call FILE_Read( tmp_CBFY (:), bname, 'CBFX', 1, PRC_myrank )
+    call FILE_Read( tmp_CBFY (:), bname, 'CBFY', 1, PRC_myrank )
 
     do i = 1, IA
        if ( tmp_CBFX(i) /= GRID_CBFX(i) ) then

@@ -637,7 +637,7 @@ contains
     real(RP),         intent(out) :: var(:)   !< value of the variable
     character(len=*), intent(in)  :: basename !< basename of the file
     character(len=*), intent(in)  :: varname  !< name of the variable
-    character(len=*), intent(in)  :: dim_type !< axis type (Z/X/Y)
+    character(len=*), intent(in)  :: dim_type !< dimension type (Z/X/Y)
     integer,          intent(in)  :: step     !< step number
     logical,          intent(in), optional :: aggregate
 
@@ -670,7 +670,7 @@ contains
     real(RP),         intent(out) :: var(:,:) !< value of the variable
     character(len=*), intent(in)  :: basename !< basename of the file
     character(len=*), intent(in)  :: varname  !< name of the variable
-    character(len=*), intent(in)  :: dim_type !< axis type (Z/X/Y)
+    character(len=*), intent(in)  :: dim_type !< dimension type (Z/X/Y)
     integer,          intent(in)  :: step     !< step number
     logical,          intent(in), optional :: aggregate
 
@@ -703,7 +703,7 @@ contains
     real(RP),         intent(out) :: var(:,:,:) !< value of the variable
     character(len=*), intent(in)  :: basename   !< basename of the file
     character(len=*), intent(in)  :: varname    !< name of the variable
-    character(len=*), intent(in)  :: dim_type   !< axis type (Z/X/Y/T)
+    character(len=*), intent(in)  :: dim_type   !< dimension type (Z/X/Y/T)
     integer,          intent(in)  :: step       !< step number
     logical,          intent(in), optional :: aggregate
 
@@ -736,7 +736,7 @@ contains
     real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
     character(len=*), intent(in)  :: basename     !< basename of the file
     character(len=*), intent(in)  :: varname      !< name of the variable
-    character(len=*), intent(in)  :: dim_type     !< axis type (Z/X/Y/Time)
+    character(len=*), intent(in)  :: dim_type     !< dimension type (Z/X/Y/Time)
     integer,          intent(in)  :: step         !< step number
     logical,          intent(in), optional :: aggregate
 
@@ -777,7 +777,7 @@ contains
     real(RP),         intent(out) :: var(:)   !< value of the variable
     integer,          intent(in)  :: fid      !< file ID
     character(len=*), intent(in)  :: varname  !< name of the variable
-    character(len=*), intent(in)  :: dim_type !< axis type (Z/X/Y)
+    character(len=*), intent(in)  :: dim_type !< dimension type (Z/X/Y)
     integer,          intent(in)  :: step     !< step number
 
     integer :: dim1_S, dim1_E
@@ -822,7 +822,7 @@ contains
           call FILE_Read( var, fid, varname, step,                         &
                           ntypes=JA, dtype=etype, start=start, count=count )
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_1D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          write(*,*) 'xxx [FILE_CARTESC_read_var_1D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
     else
@@ -851,7 +851,7 @@ contains
           dim1_S   = 1
           dim1_E   = JA
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_1D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          write(*,*) 'xxx [FILE_CARTESC_read_var_1D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
@@ -885,7 +885,7 @@ contains
     real(RP),         intent(out) :: var(:,:) !< value of the variable
     integer,          intent(in)  :: fid      !< file ID
     character(len=*), intent(in)  :: varname  !< name of the variable
-    character(len=*), intent(in)  :: dim_type !< axis type (Z/X/Y)
+    character(len=*), intent(in)  :: dim_type !< dimension type (Z/X/Y)
     integer,          intent(in)  :: step     !< step number
 
     integer :: dim1_S, dim1_E
@@ -907,7 +907,7 @@ contains
           call FILE_Read( var, fid, varname, step,                                   &
                           ntypes=1, dtype=centerTypeZX, start=startZX, count=countZX )
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_2D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          write(*,*) 'xxx [FILE_CARTESC_read_var_2D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
     else
@@ -922,7 +922,7 @@ contains
           dim2_S   = ISB
           dim2_E   = IEB
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_2D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          write(*,*) 'xxx [FILE_CARTESC_read_var_2D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
@@ -955,7 +955,7 @@ contains
     real(RP),         intent(out) :: var(:,:,:) !< value of the variable
     integer,          intent(in)  :: fid        !< file ID
     character(len=*), intent(in)  :: varname    !< name of the variable
-    character(len=*), intent(in)  :: dim_type   !< axis type (Z/X/Y/T)
+    character(len=*), intent(in)  :: dim_type   !< dimension type (Z/X/Y/T)
     integer,          intent(in)  :: step       !< step number
 
     integer :: dim1_S, dim1_E
@@ -994,7 +994,7 @@ contains
           call FILE_Read( var, fid, varname, step,                                            &
                           ntypes=1, dtype=centerTypeURBAN, start=startURBAN, count=countURBAN )
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_3D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          write(*,*) 'xxx [FILE_CARTESC_read_var_3D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
     else
@@ -1043,7 +1043,7 @@ contains
           dim3_S   = JSB
           dim3_E   = JEB
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_3D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          write(*,*) 'xxx [FILE_CARTESC_read_var_3D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
@@ -1077,7 +1077,7 @@ contains
     real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
     integer,          intent(in)  :: fid          !< file ID
     character(len=*), intent(in)  :: varname      !< name of the variable
-    character(len=*), intent(in)  :: dim_type     !< axis type (Z/X/Y/Time)
+    character(len=*), intent(in)  :: dim_type     !< dimension type (Z/X/Y/Time)
     integer,          intent(in)  :: step         !< step number
 
     integer :: dim1_S, dim1_E
@@ -1105,7 +1105,7 @@ contains
           call FILE_Read( var, fid, varname, step,                                         &
                           ntypes=step, dtype=centerTypeZHXY, start=startZHXY, count=countZHXY )
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_4D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          write(*,*) 'xxx [FILE_CARTESC_read_var_4D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
     else
@@ -1129,7 +1129,7 @@ contains
           dim3_E   = JEB
           dim4_S   = 1
           dim4_E   = step
-       elseif ( axistype == 'OXYT' ) then
+       elseif ( dim_type == 'OXYT' ) then
           dim1_S   = OKS
           dim1_E   = OKE
           dim2_S   = ISB
@@ -1139,7 +1139,7 @@ contains
           dim4_S   = 1
           dim4_E   = step
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_4D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          write(*,*) 'xxx [FILE_CARTESC_read_var_4D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
@@ -1181,7 +1181,7 @@ contains
     character(len=*), intent(in) :: varname  !< name        of the variable
     character(len=*), intent(in) :: desc     !< description of the variable
     character(len=*), intent(in) :: unit     !< unit        of the variable
-    character(len=*), intent(in) :: dim_type !< axis type (Z/X/Y)
+    character(len=*), intent(in) :: dim_type !< dimension type (Z/X/Y)
     character(len=*), intent(in) :: datatype !< data type (REAL8/REAL4/default)
 
     integer,          intent(in), optional :: date(6) !< ymdhms of the time
@@ -1235,7 +1235,7 @@ contains
     character(len=*), intent(in) :: varname  !< name        of the variable
     character(len=*), intent(in) :: desc     !< description of the variable
     character(len=*), intent(in) :: unit     !< unit        of the variable
-    character(len=*), intent(in) :: dim_type !< axis type (Z/X/Y)
+    character(len=*), intent(in) :: dim_type !< dimension type (Z/X/Y)
     character(len=*), intent(in) :: datatype !< data type (REAL8/REAL4/default)
 
     integer,          intent(in), optional :: date(6)   !< ymdhms of the time
@@ -1291,7 +1291,7 @@ contains
     character(len=*), intent(in) :: varname    !< name        of the variable
     character(len=*), intent(in) :: desc       !< description of the variable
     character(len=*), intent(in) :: unit       !< unit        of the variable
-    character(len=*), intent(in) :: dim_type   !< axis type (Z/X/Y)
+    character(len=*), intent(in) :: dim_type   !< dimension type (Z/X/Y)
     character(len=*), intent(in) :: datatype   !< data type (REAL8/REAL4/default)
 
     integer,          intent(in), optional :: date(6)   !< ymdhms of the time
@@ -1348,7 +1348,7 @@ contains
     character(len=*), intent(in) :: varname    !< name        of the variable
     character(len=*), intent(in) :: desc       !< description of the variable
     character(len=*), intent(in) :: unit       !< unit        of the variable
-    character(len=*), intent(in) :: dim_type   !< axis type (X/Y/Time)
+    character(len=*), intent(in) :: dim_type   !< dimension type (X/Y/Time)
     character(len=*), intent(in) :: datatype   !< data type (REAL8/REAL4/default)
     real(DP),         intent(in) :: timeintv   !< time interval [sec]
     integer ,         intent(in) :: tsince(6)  !< start time
@@ -1416,7 +1416,7 @@ contains
     character(len=*), intent(in) :: varname      !< name        of the variable
     character(len=*), intent(in) :: desc         !< description of the variable
     character(len=*), intent(in) :: unit         !< unit        of the variable
-    character(len=*), intent(in) :: dim_type     !< axis type (Z/X/Y/Time)
+    character(len=*), intent(in) :: dim_type     !< dimension type (Z/X/Y/Time)
     character(len=*), intent(in) :: datatype     !< data type (REAL8/REAL4/default)
     real(DP),         intent(in) :: timeintv     !< time interval [sec]
     integer,          intent(in) :: tsince(6)    !< start time
@@ -1958,6 +1958,7 @@ contains
        jsize = JMAXB
     endif
 
+    if( hasZ ) call FILE_Def_Axis( fid, 'z'  , 'Z'              , 'm', 'z'  , dtype, KMAX    )
     if( hasZ ) call FILE_Def_Axis( fid, 'zh' , 'Z (half level)' , 'm', 'zh' , dtype, KMAX+1  )
 
     if( hasZ ) call FILE_Def_Axis( fid, 'oz' , 'OZ'             , 'm', 'oz' , dtype, OKMAX   )
@@ -2609,10 +2610,9 @@ contains
        else
          write_buf_amount = write_buf_amount + (LKMAX+1) * IA * JA * elm_size
        endif
->>>>>>> change argument order of some subroutines in the scale_file
        call MPRJ_get_attributes( mapping )
     else
-       write(*,*) 'xxx [FILE_CARTESC_def_var] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+       write(*,*) 'xxx [FILE_CARTESC_def_var] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
        call PRC_abort
     endif
 
@@ -2702,7 +2702,7 @@ contains
        end if
        start(1) = JSGA
     else
-       write(*,*) 'xxx [FILE_CARTESC_write_var_1D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+       write(*,*) 'xxx [FILE_CARTESC_write_var_1D] unsupported dimenstion type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
        call PRC_abort
     endif
 
@@ -2800,7 +2800,7 @@ contains
           dim2_E = IEB
        endif
     else
-       write(*,*) 'xxx [FILE_CARTESC_write_var_2D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+       write(*,*) 'xxx [FILE_CARTESC_write_var_2D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
        call PRC_abort
     endif
 
@@ -2876,7 +2876,7 @@ contains
     integer,          intent(in) :: vid        !< netCDF variable ID
     real(RP),         intent(in) :: var(:,:,:) !< value of the variable
     character(len=*), intent(in) :: varname    !< name        of the variable
-    character(len=*), intent(in) :: dim_type   !< axis type (Z/X/Y)
+    character(len=*), intent(in) :: dim_type   !< dimension type (Z/X/Y)
 
     logical,          intent(in), optional :: fill_halo !< include halo data?
 
@@ -2927,7 +2927,7 @@ contains
        dim1_S   = UKS
        dim1_E   = UKE
     else
-       write(*,*) 'xxx [FILE_CARTESC_write_var_3D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+       write(*,*) 'xxx [FILE_CARTESC_write_var_3D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
        call PRC_abort
     endif
 
@@ -3021,7 +3021,7 @@ contains
     integer,          intent(in) :: vid        !< netCDF variable ID
     real(RP),         intent(in) :: var(:,:,:) !< value of the variable
     character(len=*), intent(in) :: varname    !< name of the variable
-    character(len=*), intent(in) :: dim_type   !< axis type (X/Y/Time)
+    character(len=*), intent(in) :: dim_type   !< dimension type (X/Y/Time)
     real(DP),         intent(in) :: timeintv   !< time interval [sec]
 
     integer,          intent(in), optional :: timetarg  !< target timestep (optional)
@@ -3070,7 +3070,7 @@ contains
           dim2_E   = JEB
        end if
     else
-       write(*,*) 'xxx [FILE_CARTESC_write_var_3D_t] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+       write(*,*) 'xxx [FILE_CARTESC_write_var_3D_t] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
        call PRC_abort
     endif
 
@@ -3192,7 +3192,7 @@ contains
     integer,          intent(in) :: vid          !< netCDF variable ID
     real(RP),         intent(in) :: var(:,:,:,:) !< value of the variable
     character(len=*), intent(in) :: varname      !< name        of the variable
-    character(len=*), intent(in) :: dim_type     !< axis type (Z/X/Y/Time)
+    character(len=*), intent(in) :: dim_type     !< dimension type (Z/X/Y/Time)
     real(DP),         intent(in) :: timeintv     !< time interval [sec]
 
     integer,          intent(in), optional :: timetarg  !< target timestep (optional)
@@ -3281,7 +3281,7 @@ contains
        dim1_S   = UKS-1
        dim1_E   = UKE
     else
-       write(*,*) 'xxx [FILE_CARTESC_write_var_4D] unsupported axis type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+       write(*,*) 'xxx [FILE_CARTESC_write_var_4D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
        call PRC_abort
     endif
 

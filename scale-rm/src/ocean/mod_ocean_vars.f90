@@ -691,13 +691,13 @@ contains
 
     if ( restart_fid /= -1 ) then
 
-       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_TEMP),      VAR_DESC(I_TEMP),      VAR_UNIT(I_TEMP),      'XY', OCEAN_RESTART_OUT_DTYPE, &
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_TEMP),      VAR_DESC(I_TEMP),      VAR_UNIT(I_TEMP),      'OXY', OCEAN_RESTART_OUT_DTYPE, &
                                   VAR_ID(I_TEMP) )
-!       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SALT),      VAR_DESC(I_SALT),      VAR_UNIT(I_SALT),      'XY', OCEAN_RESTART_OUT_DTYPE, &
+!       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SALT),      VAR_DESC(I_SALT),      VAR_UNIT(I_SALT),      'OXY', OCEAN_RESTART_OUT_DTYPE, &
 !                                  VAR_ID(I_SALT) )
-!       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_UVEL),      VAR_DESC(I_UVEL),      VAR_UNIT(I_UVEL),      'XY', OCEAN_RESTART_OUT_DTYPE, &
+!       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_UVEL),      VAR_DESC(I_UVEL),      VAR_UNIT(I_UVEL),      'OXY', OCEAN_RESTART_OUT_DTYPE, &
 !                                  VAR_ID(I_UVEL) )
-!       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_VVEL),      VAR_DESC(I_VVEL),      VAR_UNIT(I_VVEL),      'XY', OCEAN_RESTART_OUT_DTYPE, &
+!       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_VVEL),      VAR_DESC(I_VVEL),      VAR_UNIT(I_VVEL),      'OXY', OCEAN_RESTART_OUT_DTYPE, &
 !                                  VAR_ID(I_VVEL) )
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFC_TEMP),  VAR_DESC(I_SFC_TEMP),  VAR_UNIT(I_SFC_TEMP),  'XY', OCEAN_RESTART_OUT_DTYPE, &
                                   VAR_ID(I_SFC_TEMP) )
@@ -743,14 +743,14 @@ contains
 
        call OCEAN_vars_total
 
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_TEMP), OCEAN_TEMP(:,:),              & ! [IN]
-                              VAR_NAME(I_TEMP),      'XY', fill_halo=.true.                 ) ! [IN]
-!       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SALT), OCEAN_SALT(:,:),              & ! [IN]
-!                              VAR_NAME(I_SALT),      'XY', fill_halo=.true.                 ) ! [IN]
-!       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_UVEL), OCEAN_UVEL(:,:),              & ! [IN]
-!                              VAR_NAME(I_UVEL),      'XY', fill_halo=.true.                 ) ! [IN]
-!       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_VVEL), OCEAN_VVEL(:,:),              & ! [IN]
-!                              VAR_NAME(I_VVEL),      'XY', fill_halo=.true.                 ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_TEMP), OCEAN_TEMP(:,:,:),              & ! [IN]
+                              VAR_NAME(I_TEMP),      'OXY', fill_halo=.true.                 ) ! [IN]
+!       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SALT), OCEAN_SALT(:,:,:),              & ! [IN]
+!                              VAR_NAME(I_SALT),      'OXY', fill_halo=.true.                 ) ! [IN]
+!       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_UVEL), OCEAN_UVEL(:,:,:),              & ! [IN]
+!                              VAR_NAME(I_UVEL),      'OXY', fill_halo=.true.                 ) ! [IN]
+!       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_VVEL), OCEAN_VVEL(:,:,:),              & ! [IN]
+!                              VAR_NAME(I_VVEL),      'OXY', fill_halo=.true.                 ) ! [IN]
 
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_TEMP), OCEAN_SFC_TEMP(:,:),      & ! [IN]
                               VAR_NAME(I_SFC_TEMP),  'XY', fill_halo=.true.                 ) ! [IN]

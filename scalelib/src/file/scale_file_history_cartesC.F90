@@ -17,6 +17,7 @@ module scale_file_history_cartesC
   use scale_stdio
   use scale_prof
   use scale_grid_index
+  use scale_ocean_grid_index
   use scale_land_grid_index
   use scale_urban_grid_index
   use scale_process, only: &
@@ -360,18 +361,18 @@ contains
     dims (3) = "height_xyw"
     count(3) = KMAX + 1
     call FILE_HISTORY_Set_Dim( "ZHXY", 3, dims(:), nzs, zs(:), start(:), count(:) ) ! [IN]
+    dims (3) = "oz"
+    count(3) = OKMAX
+    call FILE_HISTORY_Set_Dim( "OXY", 3, dims(:), nzs, zs(:), start(:), count(:) ) ! [IN]
+    dims (3) = "ozh"
+    count(3) = OKMAX + 1
+    call FILE_HISTORY_Set_Dim( "OHXY", 3, dims(:), nzs, zs(:), start(:), count(:) ) ! [IN]
     dims (3) = "lz"
     count(3) = LKMAX
     call FILE_HISTORY_Set_Dim( "LXY", 3, dims(:), nzs, zs(:), start(:), count(:) ) ! [IN]
     dims (3) = "lzh"
     count(3) = LKMAX + 1
     call FILE_HISTORY_Set_Dim( "LHXY", 3, dims(:), nzs, zs(:), start(:), count(:) ) ! [IN]
-!!$    dims (3) = "oz"
-!!$    count(3) = OKMAX
-!!$    call FILE_HISTORY_Set_Dim( "OXY", 3, dims(:), nzs, zs(:), start(:), count(:) ) ! [IN]
-!!$    dims (3) = "ozh"
-!!$    count(3) = OKMAX + 1
-!!$    call FILE_HISTORY_Set_Dim( "OHXY", 3, dims(:), nzs, zs(:), start(:), count(:) ) ! [IN]
     dims (3) = "uz"
     count(3) = UKMAX
     call FILE_HISTORY_Set_Dim( "UXY", 3, dims(:), nzs, zs(:), start(:), count(:) ) ! [IN]
