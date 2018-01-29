@@ -18,6 +18,7 @@ module scale_ocean_phy_slab
   use scale_prof
   use scale_debug
   use scale_grid_index
+  use scale_ocean_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -99,25 +100,27 @@ contains
        LANDUSE_fact_ocean
     implicit none
 
-    real(RP), intent(out) :: OCEAN_TEMP_t   (IA,JA)
-    real(RP), intent(in)  :: OCEAN_TEMP     (IA,JA)
+    real(RP), intent(out) :: OCEAN_TEMP_t   (OKMAX,IA,JA)
+    real(RP), intent(in)  :: OCEAN_TEMP     (OKMAX,IA,JA)
     real(RP), intent(in)  :: OCEAN_SFLX_WH  (IA,JA)
     real(RP), intent(in)  :: OCEAN_SFLX_prec(IA,JA)
     real(RP), intent(in)  :: OCEAN_SFLX_evap(IA,JA)
     real(DP), intent(in)  :: dt
 
-    integer :: i, j
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean physics step: Slab'
 
     do j = JS, JE
     do i = IS, IE
-      if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) then
-        OCEAN_TEMP_t(i,j) = - OCEAN_SFLX_WH(i,j) / OCEAN_PHY_SLAB_HeatCapacity
-      else
-        OCEAN_TEMP_t(i,j) = 0.0_RP
-      endif
+       do k = OKS, OKE
+          OCEAN_TEMP_t(k,i,j) = 0.0_RP
+       enddo
+
+       if ( LANDUSE_fact_ocean(i,j) > 0.0_RP ) then
+          OCEAN_TEMP_t(OKS,i,j) = - OCEAN_SFLX_WH(i,j) / OCEAN_PHY_SLAB_HeatCapacity
+       endif
     enddo
     enddo
 

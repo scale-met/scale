@@ -342,14 +342,14 @@ contains
        endif
 
        select case(varname_file(n))
-       case('z','zh','lz','lzh','uz','uzh',                                                      &
-            'CZ','FZ','CDZ','FDZ','CBFZ','FBFZ','LCZ','LFZ','LCDZ','UCZ','UFZ','UCDZ',           &
-            'x','xh','y','yh',                                                                   &
-            'CX','CY','FX','FY','CDX','CDY','FDX','FDY','CBFX','CBFY','FBFX','FBFY',             &
-            'CXG','CYG','FXG','FYG','CDXG','CDYG','FDXG','FDYG','CBFXG','CBFYG','FBFXG','FBFYG', &
-            'lon','lon_uy','lon_xv','lon_uv','lat','lat_uy','lat_xv','lat_uv','topo','lsmask',   &
-            'height','height_wxy','height_xyw','height_uyz','height_xvz',                        &
-            'height_uvz','height_uyw','height_xvw','height_uvw'                                  )
+       case('z','zh','oz','ozh','lz','lzh','uz','uzh',                                                    &
+            'CZ','FZ','CDZ','FDZ','CBFZ','FBFZ','OCZ','OFZ','OCDZ','LCZ','LFZ','LCDZ','UCZ','UFZ','UCDZ', &
+            'x','xh','y','yh',                                                                            &
+            'CX','CY','FX','FY','CDX','CDY','FDX','FDY','CBFX','CBFY','FBFX','FBFY',                      &
+            'CXG','CYG','FXG','FYG','CDXG','CDYG','FDXG','FDYG','CBFXG','CBFYG','FBFXG','FBFYG',          &
+            'lon','lon_uy','lon_xv','lon_uv','lat','lat_uy','lat_xv','lat_uv','topo','lsmask',            &
+            'height','height_wxy','height_xyw','height_uyz','height_xvz',                                 &
+            'height_uvz','height_uyw','height_xvw','height_uvw'                                           )
           naxis           = naxis + 1
           axisname(naxis) = varname_file(n)
        case('time','time_bnds')

@@ -122,6 +122,8 @@ contains
           if ( dinfo(v)%dim_rank > 2 ) then
              if (       dinfo(v)%dim_name(1) /= 'z'   &
                   .AND. dinfo(v)%dim_name(1) /= 'zh'  &
+                  .AND. dinfo(v)%dim_name(1) /= 'oz'  &
+                  .AND. dinfo(v)%dim_name(1) /= 'ozh' &
                   .AND. dinfo(v)%dim_name(1) /= 'lz'  &
                   .AND. dinfo(v)%dim_name(1) /= 'lzh' &
                   .AND. dinfo(v)%dim_name(1) /= 'uz'  &

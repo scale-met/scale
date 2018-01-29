@@ -79,6 +79,10 @@ contains
        DY
     use scale_grid_nest, only: &
        NEST_setup
+    use scale_ocean_grid_index, only: &
+       OCEAN_GRID_INDEX_setup
+    use scale_ocean_grid, only: &
+       OCEAN_GRID_setup
     use scale_land_grid_index, only: &
        LAND_GRID_INDEX_setup
     use scale_land_grid, only: &
@@ -236,6 +240,9 @@ contains
     ! setup horizontal/vertical grid coordinates (cartesian,idealized)
     call GRID_INDEX_setup
     call GRID_setup
+
+    call OCEAN_GRID_INDEX_setup
+    call OCEAN_GRID_setup
 
     call LAND_GRID_INDEX_setup
     call LAND_GRID_setup

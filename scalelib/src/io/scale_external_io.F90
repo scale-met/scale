@@ -137,7 +137,10 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status /= nf90_noerr) call handle_err(status, __LINE__)
+    if (status /= nf90_noerr) then
+       write(*,*) 'xxx File ', trim(fname), ' is not found'
+       call handle_err(status, __LINE__)
+    endif
 
     status = nf90_inquire( ncid, unlimitedDimID=unlimid )
     if (status /= nf90_noerr) call handle_err(status, __LINE__)
@@ -929,7 +932,11 @@ contains
     allocate( var_org(nx,ny,nz,tcount) )
 
     status = nf90_inq_varid( ncid, trim(varname), varid )
-    if (status /= nf90_noerr) call handle_err(status, __LINE__)
+
+    if (status /= nf90_noerr) then
+       write(*,*) 'xxx Variable ', trim(varname), ' is not found in ', trim(fname)
+       call handle_err(status, __LINE__)
+    endif
 
     status = nf90_inquire_variable( ncid, varid, xtype=precis )
     if(status /= nf90_NoErr) call handle_err(status, __LINE__)

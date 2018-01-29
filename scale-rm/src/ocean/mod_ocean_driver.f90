@@ -17,6 +17,7 @@ module mod_ocean_driver
   use scale_prof
   use scale_debug
   use scale_grid_index
+  use scale_ocean_grid_index
 
   use scale_const, only: &
      I_SW  => CONST_I_SW, &
@@ -76,7 +77,16 @@ contains
 !    use mod_ocean_frc_nudge, only: &
 !       OCEAN_FRC_driver_resume
     use mod_ocean_vars, only: &
-       OCEAN_vars_history
+       OCEAN_vars_history, &
+       OCEAN_TEMP_t,       &
+       OCEAN_SALT_t,       &
+       OCEAN_UVEL_t,       &
+       OCEAN_VVEL_t,       &
+       OCEAN_SFC_TEMP_t,   &
+       OCEAN_SFC_albedo_t, &
+       OCEAN_SFC_Z0M_t,    &
+       OCEAN_SFC_Z0H_t,    &
+       OCEAN_SFC_Z0E_t
     use mod_ocean_admin, only: &
        OCEAN_sw
     implicit none
@@ -88,8 +98,28 @@ contains
     !########## Get Surface Boundary from coupler ##########
     call OCEAN_SURFACE_GET
 
-    call OCEAN_PHY_driver_resume
+    !########## initialize tendencies ##########
+!OCL XFILL
+    OCEAN_SFC_TEMP_t  (:,:)   = 0.0_RP
+!OCL XFILL
+    OCEAN_SFC_albedo_t(:,:,:) = 0.0_RP
+!OCL XFILL
+    OCEAN_SFC_Z0M_t   (:,:)   = 0.0_RP
+!OCL XFILL
+    OCEAN_SFC_Z0H_t   (:,:)   = 0.0_RP
+!OCL XFILL
+    OCEAN_SFC_Z0E_t   (:,:)   = 0.0_RP
+!OCL XFILL
+    OCEAN_TEMP_t      (:,:,:) = 0.0_RP
+!OCL XFILL
+    OCEAN_SALT_t      (:,:,:) = 0.0_RP
+!OCL XFILL
+    OCEAN_UVEL_t      (:,:,:) = 0.0_RP
+!OCL XFILL
+    OCEAN_VVEL_t      (:,:,:) = 0.0_RP
 
+    ! setup each components
+    call OCEAN_PHY_driver_resume
 !    if( OCEAN_FRC_sw ) call OCEAN_FRC_driver_resume
 
     !########## Set Surface Boundary to coupler ##########
@@ -114,12 +144,18 @@ contains
        OCEAN_sw
     use mod_ocean_vars, only: &
        OCEAN_TEMP,         &
+       OCEAN_SALT,         &
+       OCEAN_UVEL,         &
+       OCEAN_VVEL,         &
        OCEAN_SFC_TEMP,     &
        OCEAN_SFC_albedo,   &
        OCEAN_SFC_Z0M,      &
        OCEAN_SFC_Z0H,      &
        OCEAN_SFC_Z0E,      &
        OCEAN_TEMP_t,       &
+       OCEAN_SALT_t,       &
+       OCEAN_UVEL_t,       &
+       OCEAN_VVEL_t,       &
        OCEAN_SFC_TEMP_t,   &
        OCEAN_SFC_albedo_t, &
        OCEAN_SFC_Z0M_t,    &
@@ -133,7 +169,7 @@ contains
 !       OCEAN_forcing
     implicit none
 
-    integer :: i, j
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     !########## Get Surface Boundary from coupler ##########
@@ -158,13 +194,23 @@ contains
     !########## Update ##########
     do j = JS, JE
     do i = IS, IE
-       OCEAN_TEMP      (i,j)      = OCEAN_TEMP      (i,j)      + OCEAN_TEMP_t      (i,j)      * dt
        OCEAN_SFC_TEMP  (i,j)      = OCEAN_SFC_TEMP  (i,j)      + OCEAN_SFC_TEMP_t  (i,j)      * dt
        OCEAN_SFC_albedo(i,j,I_LW) = OCEAN_SFC_albedo(i,j,I_LW) + OCEAN_SFC_albedo_t(i,j,I_LW) * dt
        OCEAN_SFC_albedo(i,j,I_SW) = OCEAN_SFC_albedo(i,j,I_SW) + OCEAN_SFC_albedo_t(i,j,I_SW) * dt
        OCEAN_SFC_Z0M   (i,j)      = OCEAN_SFC_Z0M   (i,j)      + OCEAN_SFC_Z0M_t   (i,j)      * dt
        OCEAN_SFC_Z0H   (i,j)      = OCEAN_SFC_Z0H   (i,j)      + OCEAN_SFC_Z0H_t   (i,j)      * dt
        OCEAN_SFC_Z0E   (i,j)      = OCEAN_SFC_Z0E   (i,j)      + OCEAN_SFC_Z0E_t   (i,j)      * dt
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = OKS, OKE
+       OCEAN_TEMP(k,i,j) = OCEAN_TEMP(k,i,j) + OCEAN_TEMP_t(k,i,j) * dt
+       OCEAN_SALT(k,i,j) = OCEAN_SALT(k,i,j) + OCEAN_SALT_t(k,i,j) * dt
+       OCEAN_UVEL(k,i,j) = OCEAN_UVEL(k,i,j) + OCEAN_UVEL_t(k,i,j) * dt
+       OCEAN_VVEL(k,i,j) = OCEAN_VVEL(k,i,j) + OCEAN_VVEL_t(k,i,j) * dt
+    enddo
     enddo
     enddo
 
@@ -179,13 +225,23 @@ contains
 !OCL XFILL
     do j = JS, JE
     do i = IS, IE
-       OCEAN_TEMP_t      (i,j)      = 0.0_RP
        OCEAN_SFC_TEMP_t  (i,j)      = 0.0_RP
        OCEAN_SFC_albedo_t(i,j,I_LW) = 0.0_RP
        OCEAN_SFC_albedo_t(i,j,I_SW) = 0.0_RP
        OCEAN_SFC_Z0M_t   (i,j)      = 0.0_RP
        OCEAN_SFC_Z0H_t   (i,j)      = 0.0_RP
        OCEAN_SFC_Z0E_t   (i,j)      = 0.0_RP
+    enddo
+    enddo
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = OKS, OKE
+       OCEAN_TEMP_t(k,i,j) = 0.0_RP
+       OCEAN_SALT_t(k,i,j) = 0.0_RP
+       OCEAN_UVEL_t(k,i,j) = 0.0_RP
+       OCEAN_VVEL_t(k,i,j) = 0.0_RP
+    enddo
     enddo
     enddo
 

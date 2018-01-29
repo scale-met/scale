@@ -17,6 +17,7 @@ module scale_external_input_rm
   use scale_stdio
   use scale_prof
   use scale_grid_index
+  use scale_ocean_grid_index
   use scale_land_grid_index
   use scale_urban_grid_index
   !-----------------------------------------------------------------------------
@@ -74,6 +75,10 @@ contains
        dim1_max = JMAXB
        dim1_S   = JSB
        dim1_E   = JEB
+    case ( 'OZ' )
+       dim1_max = OKMAX
+       dim1_S   = OKS
+       dim1_E   = OKE
     case default
        write(*,*) 'xxx [EXTIN_RM_get_dims_1D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_MPIstop
@@ -189,6 +194,28 @@ contains
        dim2_E   = JEB
        dim3_S   = KS
        dim3_E   = KE
+       transpose = .true.
+    case ( 'OXY' ) ! OCEAN
+       dim1_max = OKMAX
+       dim2_max = IMAXB
+       dim3_max = JMAXB
+       dim1_S   = OKS
+       dim1_E   = OKE
+       dim2_S   = ISB
+       dim2_E   = IEB
+       dim3_S   = JSB
+       dim3_E   = JEB
+       transpose = .false.
+    case ( 'XYO' ) ! OCEAN
+       dim1_max = IMAXB
+       dim2_max = JMAXB
+       dim3_max = OKMAX
+       dim1_S   = ISB
+       dim1_E   = IEB
+       dim2_S   = JSB
+       dim2_E   = JEB
+       dim3_S   = OKS
+       dim3_E   = OKE
        transpose = .true.
     case ( 'LXY' ) ! LAND
        dim1_max = LKMAX

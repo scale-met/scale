@@ -1070,7 +1070,7 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-       OCEAN_TEMP      (i,j)      = OCN_TEMP
+       OCEAN_TEMP      (:,i,j)    = OCN_TEMP
        OCEAN_SFC_TEMP  (i,j)      = SFC_TEMP
        OCEAN_SFC_albedo(i,j,I_LW) = SFC_albedo_LW
        OCEAN_SFC_albedo(i,j,I_SW) = SFC_albedo_SW

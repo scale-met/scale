@@ -18,6 +18,7 @@ module scale_ocean_phy_const
   use scale_prof
   use scale_debug
   use scale_grid_index
+  use scale_ocean_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -67,8 +68,8 @@ contains
        dt               )
     implicit none
 
-    real(RP), intent(out) :: OCEAN_TEMP_t   (IA,JA)
-    real(RP), intent(in)  :: OCEAN_TEMP     (IA,JA)
+    real(RP), intent(out) :: OCEAN_TEMP_t   (OKMAX,IA,JA)
+    real(RP), intent(in)  :: OCEAN_TEMP     (OKMAX,IA,JA)
     real(RP), intent(in)  :: OCEAN_SFLX_WH  (IA,JA)
     real(RP), intent(in)  :: OCEAN_SFLX_prec(IA,JA)
     real(RP), intent(in)  :: OCEAN_SFLX_evap(IA,JA)
@@ -77,7 +78,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean physics step: Const'
 
-    OCEAN_TEMP_t(:,:) = 0.0_RP
+    OCEAN_TEMP_t(:,:,:) = 0.0_RP
 
     return
   end subroutine OCEAN_PHY_CONST

@@ -111,6 +111,8 @@ contains
           if ( ainfo(n)%dim_rank > 2 ) then
              if (       ainfo(n)%dim_name(1) /= 'z'   &
                   .AND. ainfo(n)%dim_name(1) /= 'zh'  &
+                  .AND. ainfo(n)%dim_name(1) /= 'oz'  &
+                  .AND. ainfo(n)%dim_name(1) /= 'ozh' &
                   .AND. ainfo(n)%dim_name(1) /= 'lz'  &
                   .AND. ainfo(n)%dim_name(1) /= 'lzh' &
                   .AND. ainfo(n)%dim_name(1) /= 'uz'  &

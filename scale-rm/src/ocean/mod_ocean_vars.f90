@@ -18,6 +18,7 @@ module mod_ocean_vars
   use scale_prof
   use scale_debug
   use scale_grid_index
+  use scale_ocean_grid_index
 
   use scale_const, only: &
      I_SW  => CONST_I_SW, &
@@ -56,7 +57,11 @@ module mod_ocean_vars
   character(len=H_SHORT), public :: OCEAN_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
 
   ! prognostic variables
-  real(RP), public, allocatable :: OCEAN_TEMP      (:,:)   !< temperature at uppermost ocean layer [K]
+  real(RP), public, allocatable :: OCEAN_TEMP      (:,:,:) !< ocean temperature [K]
+  real(RP), public, allocatable :: OCEAN_SALT      (:,:,:) !< ocean salinity [PSU]
+  real(RP), public, allocatable :: OCEAN_UVEL      (:,:,:) !< ocean zonal velocity [m/s]
+  real(RP), public, allocatable :: OCEAN_VVEL      (:,:,:) !< ocean meridional velocity [m/s]
+
   real(RP), public, allocatable :: OCEAN_SFC_TEMP  (:,:)   !< ocean surface skin temperature [K]
   real(RP), public, allocatable :: OCEAN_SFC_albedo(:,:,:) !< ocean surface albedo (0-1)
   real(RP), public, allocatable :: OCEAN_SFC_Z0M   (:,:)   !< ocean surface roughness length for momentum [m]
@@ -64,7 +69,11 @@ module mod_ocean_vars
   real(RP), public, allocatable :: OCEAN_SFC_Z0E   (:,:)   !< ocean surface roughness length for vapor [m]
 
   ! tendency variables
-  real(RP), public, allocatable :: OCEAN_TEMP_t      (:,:)   !< tendency of OCEAN_TEMP
+  real(RP), public, allocatable :: OCEAN_TEMP_t      (:,:,:) !< tendency of ocean temperature [K/s]
+  real(RP), public, allocatable :: OCEAN_SALT_t      (:,:,:) !< tendency of ocean salinity [PSU/s]
+  real(RP), public, allocatable :: OCEAN_UVEL_t      (:,:,:) !< tendency of ocean zonal velocity [m/s2]
+  real(RP), public, allocatable :: OCEAN_VVEL_t      (:,:,:) !< tendency of ocean meridional velocity [m/s2]
+
   real(RP), public, allocatable :: OCEAN_SFC_TEMP_t  (:,:)   !< tendency of OCEAN_SFC_TEMP
   real(RP), public, allocatable :: OCEAN_SFC_albedo_t(:,:,:) !< tendency of OCEAN_SFC_alebdo
   real(RP), public, allocatable :: OCEAN_SFC_Z0M_t   (:,:)   !< tendency of OCEAN_SFC_Z0M
@@ -112,21 +121,24 @@ module mod_ocean_vars
   !
   logical,                private :: OCEAN_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX        = 14 !< number of the variables
+  integer,                private, parameter :: VMAX        = 17 !< number of the variables 14-?27
   integer,                private, parameter :: I_TEMP      =  1
-  integer,                private, parameter :: I_SFC_TEMP  =  2
-  integer,                private, parameter :: I_ALB_LW    =  3
-  integer,                private, parameter :: I_ALB_SW    =  4
-  integer,                private, parameter :: I_SFC_Z0M   =  5
-  integer,                private, parameter :: I_SFC_Z0H   =  6
-  integer,                private, parameter :: I_SFC_Z0E   =  7
-  integer,                private, parameter :: I_SFLX_MW   =  8
-  integer,                private, parameter :: I_SFLX_MU   =  9
-  integer,                private, parameter :: I_SFLX_MV   = 10
-  integer,                private, parameter :: I_SFLX_SH   = 11
-  integer,                private, parameter :: I_SFLX_LH   = 12
-  integer,                private, parameter :: I_SFLX_WH   = 13
-  integer,                private, parameter :: I_SFLX_evap = 14
+  integer,                private, parameter :: I_SALT      =  2
+  integer,                private, parameter :: I_UVEL      =  3
+  integer,                private, parameter :: I_VVEL      =  4
+  integer,                private, parameter :: I_SFC_TEMP  =  5
+  integer,                private, parameter :: I_ALB_LW    =  6
+  integer,                private, parameter :: I_ALB_SW    =  7
+  integer,                private, parameter :: I_SFC_Z0M   =  8
+  integer,                private, parameter :: I_SFC_Z0H   =  9
+  integer,                private, parameter :: I_SFC_Z0E   = 10
+  integer,                private, parameter :: I_SFLX_MW   = 11
+  integer,                private, parameter :: I_SFLX_MU   = 12
+  integer,                private, parameter :: I_SFLX_MV   = 13
+  integer,                private, parameter :: I_SFLX_SH   = 14
+  integer,                private, parameter :: I_SFLX_LH   = 15
+  integer,                private, parameter :: I_SFLX_WH   = 16
+  integer,                private, parameter :: I_SFLX_evap = 17
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
@@ -137,6 +149,9 @@ module mod_ocean_vars
   logical,                private            :: OCEAN_RESTART_IN_CHECK_COORDINATES = .true.
 
   data VAR_NAME / 'OCEAN_TEMP',      &
+                  'OCEAN_SALT',      &
+                  'OCEAN_UVEL',      &
+                  'OCEAN_VVEL',      &
                   'OCEAN_SFC_TEMP',  &
                   'OCEAN_ALB_LW',    &
                   'OCEAN_ALB_SW',    &
@@ -150,7 +165,10 @@ module mod_ocean_vars
                   'OCEAN_SFLX_LH',   &
                   'OCEAN_SFLX_WH',   &
                   'OCEAN_SFLX_evap'  /
-  data VAR_DESC / 'temperature at uppermost ocean layer', &
+  data VAR_DESC / 'ocean temperature',                          &
+                  'ocean salinity',                             &
+                  'ocean u-velocity',                           &
+                  'ocean v-velocity',                           &
                   'ocean surface skin temperature',             &
                   'ocean surface albedo (longwave)',            &
                   'ocean surface albedo (shortwave)',           &
@@ -165,6 +183,9 @@ module mod_ocean_vars
                   'ocean surface water heat flux',              &
                   'ocean surface water vapor flux'              /
   data VAR_UNIT / 'K',       &
+                  'PSU',     &
+                  'm/s',     &
+                  'm/s',     &
                   'K',       &
                   '1',       &
                   '1',       &
@@ -208,26 +229,40 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[OCEAN] / Origin[SCALE-RM]'
 
-    allocate( OCEAN_TEMP      (IA,JA)   )
+    allocate( OCEAN_TEMP(OKMAX,IA,JA) )
+    allocate( OCEAN_SALT(OKMAX,IA,JA) )
+    allocate( OCEAN_UVEL(OKMAX,IA,JA) )
+    allocate( OCEAN_VVEL(OKMAX,IA,JA) )
+    OCEAN_TEMP      (:,:,:) = UNDEF
+    OCEAN_SALT      (:,:,:) = UNDEF
+    OCEAN_UVEL      (:,:,:) = UNDEF
+    OCEAN_VVEL      (:,:,:) = UNDEF
+
     allocate( OCEAN_SFC_TEMP  (IA,JA)   )
     allocate( OCEAN_SFC_albedo(IA,JA,2) )
     allocate( OCEAN_SFC_Z0M   (IA,JA)   )
     allocate( OCEAN_SFC_Z0H   (IA,JA)   )
     allocate( OCEAN_SFC_Z0E   (IA,JA)   )
-    OCEAN_TEMP      (:,:)   = UNDEF
     OCEAN_SFC_TEMP  (:,:)   = UNDEF
     OCEAN_SFC_albedo(:,:,:) = UNDEF
     OCEAN_SFC_Z0M   (:,:)   = UNDEF
     OCEAN_SFC_Z0H   (:,:)   = UNDEF
     OCEAN_SFC_Z0E   (:,:)   = UNDEF
 
-    allocate( OCEAN_TEMP_t      (IA,JA)   )
+    allocate( OCEAN_TEMP_t(OKMAX,IA,JA) )
+    allocate( OCEAN_SALT_t(OKMAX,IA,JA) )
+    allocate( OCEAN_UVEL_t(OKMAX,IA,JA) )
+    allocate( OCEAN_VVEL_t(OKMAX,IA,JA) )
+    OCEAN_TEMP_t(:,:,:) = UNDEF
+    OCEAN_SALT_t(:,:,:) = UNDEF
+    OCEAN_UVEL_t(:,:,:) = UNDEF
+    OCEAN_VVEL_t(:,:,:) = UNDEF
+
     allocate( OCEAN_SFC_TEMP_t  (IA,JA)   )
     allocate( OCEAN_SFC_albedo_t(IA,JA,2) )
     allocate( OCEAN_SFC_Z0M_t   (IA,JA)   )
     allocate( OCEAN_SFC_Z0H_t   (IA,JA)   )
     allocate( OCEAN_SFC_Z0E_t   (IA,JA)   )
-    OCEAN_TEMP_t      (:,:)   = UNDEF
     OCEAN_SFC_TEMP_t  (:,:)   = UNDEF
     OCEAN_SFC_albedo_t(:,:,:) = UNDEF
     OCEAN_SFC_Z0M_t   (:,:)   = UNDEF
@@ -385,8 +420,15 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (OCEAN) ***'
 
-       call FILEIO_read( OCEAN_TEMP(:,:),                                 & ! [OUT]
-                         restart_fid, VAR_NAME(I_TEMP),      'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_TEMP(:,:,:),                               & ! [OUT]
+                         restart_fid, VAR_NAME(I_TEMP),   'Ocean', step=1 ) ! [IN]
+!        call FILEIO_read( OCEAN_SALT(:,:,:),                               & ! [OUT]
+!                          restart_fid, VAR_NAME(I_SALT),   'Ocean', step=1 ) ! [IN]
+!        call FILEIO_read( OCEAN_UVEL(:,:,:),                               & ! [OUT]
+!                          restart_fid, VAR_NAME(I_UVEL),   'Ocean', step=1 ) ! [IN]
+!        call FILEIO_read( OCEAN_VVEL(:,:,:),                               & ! [OUT]
+!                          restart_fid, VAR_NAME(I_VVEL),   'Ocean', step=1 ) ! [IN]
+
        call FILEIO_read( OCEAN_SFC_TEMP(:,:),                             & ! [OUT]
                          restart_fid, VAR_NAME(I_SFC_TEMP),  'XY', step=1 ) ! [IN]
        call FILEIO_read( OCEAN_SFC_albedo(:,:,I_LW),                      & ! [OUT]
@@ -434,8 +476,15 @@ contains
     !---------------------------------------------------------------------------
 
     if ( OCEAN_VARS_CHECKRANGE ) then
-       call VALCHECK( OCEAN_TEMP      (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),     &
+       call VALCHECK( OCEAN_TEMP      (OKS:OKE,IS:IE,JS:JE), 0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP), &
                      __FILE__, __LINE__ )
+!        call VALCHECK( OCEAN_SALT      (OKS:OKE,IS:IE,JS:JE), 0.0_RP, 1000.0_RP, VAR_NAME(I_SALT), &
+!                      __FILE__, __LINE__ )
+!        call VALCHECK( OCEAN_UVEL      (OKS:OKE,IS:IE,JS:JE), 0.0_RP, 1000.0_RP, VAR_NAME(I_UVEL), &
+!                      __FILE__, __LINE__ )
+!        call VALCHECK( OCEAN_VVEL      (OKS:OKE,IS:IE,JS:JE), 0.0_RP, 1000.0_RP, VAR_NAME(I_VVEL), &
+!                      __FILE__, __LINE__ )
+
        call VALCHECK( OCEAN_SFC_TEMP  (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP), &
                      __FILE__, __LINE__ )
        call VALCHECK( OCEAN_SFC_albedo(IS:IE,JS:JE,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALB_LW),   &
@@ -450,7 +499,11 @@ contains
                      __FILE__, __LINE__ )
     endif
 
-    call HIST_in( OCEAN_TEMP      (:,:),      VAR_NAME(I_TEMP),     VAR_DESC(I_TEMP),     VAR_UNIT(I_TEMP)     )
+    call HIST_in( OCEAN_TEMP(:,:,:), VAR_NAME(I_TEMP), VAR_DESC(I_TEMP), VAR_UNIT(I_TEMP), zdim='ocean' )
+    call HIST_in( OCEAN_SALT(:,:,:), VAR_NAME(I_SALT), VAR_DESC(I_SALT), VAR_UNIT(I_SALT), zdim='ocean' )
+    call HIST_in( OCEAN_UVEL(:,:,:), VAR_NAME(I_UVEL), VAR_DESC(I_UVEL), VAR_UNIT(I_UVEL), zdim='ocean' )
+    call HIST_in( OCEAN_VVEL(:,:,:), VAR_NAME(I_VVEL), VAR_DESC(I_VVEL), VAR_UNIT(I_VVEL), zdim='ocean' )
+
     call HIST_in( OCEAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP), VAR_DESC(I_SFC_TEMP), VAR_UNIT(I_SFC_TEMP) )
     call HIST_in( OCEAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW),   VAR_DESC(I_ALB_LW),   VAR_UNIT(I_ALB_LW)   )
     call HIST_in( OCEAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW),   VAR_DESC(I_ALB_SW),   VAR_UNIT(I_ALB_SW)   )
@@ -482,7 +535,11 @@ contains
 
     if ( STATISTICS_checktotal ) then
 
-       call STAT_total( total, OCEAN_TEMP      (:,:),      VAR_NAME(I_TEMP)     )
+       call STAT_total( total, OCEAN_TEMP      (:,:,:),    VAR_NAME(I_TEMP)     )
+       call STAT_total( total, OCEAN_SALT      (:,:,:),    VAR_NAME(I_SALT)     )
+       call STAT_total( total, OCEAN_UVEL      (:,:,:),    VAR_NAME(I_UVEL)     )
+       call STAT_total( total, OCEAN_VVEL      (:,:,:),    VAR_NAME(I_VVEL)     )
+
        call STAT_total( total, OCEAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP) )
        call STAT_total( total, OCEAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW)   )
        call STAT_total( total, OCEAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW)   )
@@ -514,7 +571,7 @@ contains
        OCEAN_SFC_Z0E_in     )
     implicit none
 
-    real(RP), intent(in) :: OCEAN_TEMP_in      (IA,JA)
+    real(RP), intent(in) :: OCEAN_TEMP_in      (OKMAX,IA,JA)
     real(RP), intent(in) :: OCEAN_SFC_TEMP_in  (IA,JA)
     real(RP), intent(in) :: OCEAN_SFC_albedo_in(IA,JA,2)
     real(RP), intent(in) :: OCEAN_SFC_Z0M_in   (IA,JA)
@@ -525,7 +582,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** External Input file (ocean) ***'
 
-    OCEAN_TEMP      (:,:)   = OCEAN_TEMP_in      (:,:)
+    OCEAN_TEMP      (:,:,:) = OCEAN_TEMP_in      (:,:,:)
+
     OCEAN_SFC_TEMP  (:,:)   = OCEAN_SFC_TEMP_in  (:,:)
     OCEAN_SFC_albedo(:,:,:) = OCEAN_SFC_albedo_in(:,:,:)
     OCEAN_SFC_Z0M   (:,:)   = OCEAN_SFC_Z0M_in   (:,:)
@@ -626,8 +684,15 @@ contains
 
     if ( restart_fid /= -1 ) then
 
-       call FILEIO_def_var( restart_fid, VAR_ID(I_TEMP),      VAR_NAME(I_TEMP),      VAR_DESC(I_TEMP),      &
-                            VAR_UNIT(I_TEMP),      'XY', OCEAN_RESTART_OUT_DTYPE)
+       call FILEIO_def_var( restart_fid, VAR_ID(I_TEMP),      VAR_NAME(I_TEMP),      VAR_DESC(I_TEMP),   &
+                            VAR_UNIT(I_TEMP),      'Ocean', OCEAN_RESTART_OUT_DTYPE)
+!        call FILEIO_def_var( restart_fid, VAR_ID(I_SALT),      VAR_NAME(I_SALT),      VAR_DESC(I_SALT),   &
+!                             VAR_UNIT(I_SALT),      'Ocean', OCEAN_RESTART_OUT_DTYPE)
+!        call FILEIO_def_var( restart_fid, VAR_ID(I_UVEL),      VAR_NAME(I_UVEL),      VAR_DESC(I_UVEL),   &
+!                             VAR_UNIT(I_UVEL),      'Ocean', OCEAN_RESTART_OUT_DTYPE)
+!        call FILEIO_def_var( restart_fid, VAR_ID(I_VVEL),      VAR_NAME(I_VVEL),      VAR_DESC(I_VVEL),   &
+!                             VAR_UNIT(I_VVEL),      'Ocean', OCEAN_RESTART_OUT_DTYPE)
+
        call FILEIO_def_var( restart_fid, VAR_ID(I_SFC_TEMP),  VAR_NAME(I_SFC_TEMP),  VAR_DESC(I_SFC_TEMP),  &
                             VAR_UNIT(I_SFC_TEMP),  'XY', OCEAN_RESTART_OUT_DTYPE)
        call FILEIO_def_var( restart_fid, VAR_ID(I_ALB_LW),    VAR_NAME(I_ALB_LW),    VAR_DESC(I_ALB_LW),    &
@@ -672,8 +737,15 @@ contains
 
        call OCEAN_vars_total
 
-       call FILEIO_write_var( restart_fid, VAR_ID(I_TEMP), OCEAN_TEMP(:,:),              & ! [IN]
-                              VAR_NAME(I_TEMP),      'XY', nohalo=.true.                 ) ! [IN]
+       call FILEIO_write_var( restart_fid, VAR_ID(I_TEMP),     OCEAN_TEMP(:,:,:),        & ! [IN]
+                              VAR_NAME(I_TEMP),      'Ocean', nohalo=.true.              ) ! [IN]
+!        call FILEIO_write_var( restart_fid, VAR_ID(I_SALT),     OCEAN_SALT(:,:,:),        & ! [IN]
+!                               VAR_NAME(I_SALT),      'Ocean', nohalo=.true.              ) ! [IN]
+!        call FILEIO_write_var( restart_fid, VAR_ID(I_UVEL),     OCEAN_UVEL(:,:,:),        & ! [IN]
+!                               VAR_NAME(I_UVEL),      'Ocean', nohalo=.true.              ) ! [IN]
+!        call FILEIO_write_var( restart_fid, VAR_ID(I_VVEL),     OCEAN_VVEL(:,:,:),        & ! [IN]
+!                               VAR_NAME(I_VVEL),      'Ocean', nohalo=.true.              ) ! [IN]
+
        call FILEIO_write_var( restart_fid, VAR_ID(I_SFC_TEMP), OCEAN_SFC_TEMP(:,:),      & ! [IN]
                               VAR_NAME(I_SFC_TEMP),  'XY', nohalo=.true.                 ) ! [IN]
        call FILEIO_write_var( restart_fid, VAR_ID(I_ALB_LW), OCEAN_SFC_albedo(:,:,I_LW), & ! [IN]

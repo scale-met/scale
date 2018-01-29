@@ -19,6 +19,7 @@ module mod_realinput
   use scale_stdio
   use scale_prof
   use scale_grid_index
+  use scale_ocean_grid_index
   use scale_land_grid_index
   use scale_urban_grid_index
   use scale_index
@@ -521,7 +522,7 @@ contains
     real(RP) :: URBAN_SFC_albedo_ORG(IA,JA,2)
 
     ! ocean
-    real(RP), allocatable :: OCEAN_TEMP_org      (:,:,:)
+    real(RP), allocatable :: OCEAN_TEMP_org      (:,:,:,:)
     real(RP), allocatable :: OCEAN_SFC_TEMP_org  (:,:,:)
     real(RP), allocatable :: OCEAN_SFC_albedo_org(:,:,:,:)
     real(RP), allocatable :: OCEAN_SFC_Z0_org    (:,:,:)
@@ -671,10 +672,10 @@ contains
     allocate( LAND_SFC_TEMP_ORG  (      IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
     allocate( LAND_SFC_albedo_ORG(      IA,JA,2,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
 
-    allocate( OCEAN_TEMP_ORG      (IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-    allocate( OCEAN_SFC_TEMP_ORG  (IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-    allocate( OCEAN_SFC_albedo_ORG(IA,JA,2,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-    allocate( OCEAN_SFC_Z0_ORG    (IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( OCEAN_TEMP_ORG      (OKMAX,IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( OCEAN_SFC_TEMP_ORG  (      IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( OCEAN_SFC_albedo_ORG(      IA,JA,2,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( OCEAN_SFC_Z0_ORG    (      IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
 
     if ( mdlid_ocean == iGrADS ) then
        BASENAME_ORG = ""
@@ -722,10 +723,10 @@ contains
                                 URBAN_UC_org,         &
                                 URBAN_SFC_TEMP_org,   &
                                 URBAN_SFC_albedo_org, &
-                                OCEAN_TEMP_org      (:,:,  ns:ne), &
-                                OCEAN_SFC_TEMP_org  (:,:,  ns:ne), &
-                                OCEAN_SFC_albedo_org(:,:,:,ns:ne), &
-                                OCEAN_SFC_Z0_org    (:,:,  ns:ne), &
+                                OCEAN_TEMP_org      (OKS,:,:,  ns:ne), &
+                                OCEAN_SFC_TEMP_org  (    :,:,  ns:ne), &
+                                OCEAN_SFC_albedo_org(    :,:,:,ns:ne), &
+                                OCEAN_SFC_Z0_org    (    :,:,  ns:ne), &
                                 BASENAME_LAND,           &
                                 BASENAME_OCEAN,          &
                                 mdlid_land, mdlid_ocean, &
@@ -780,7 +781,9 @@ contains
        URBAN_RAING(i,j) = 0.0_RP
        URBAN_ROFF (i,j) = 0.0_RP
 
-       OCEAN_TEMP      (i,j)      = OCEAN_TEMP_ORG      (i,j,     ns)
+       do k = 1, OKMAX
+          OCEAN_TEMP(k,i,j) = OCEAN_TEMP_ORG(OKS,i,j,ns)
+       enddo
        OCEAN_SFC_TEMP  (i,j)      = OCEAN_SFC_TEMP_ORG  (i,j,     ns)
        OCEAN_SFC_albedo(i,j,I_LW) = OCEAN_SFC_albedo_ORG(i,j,I_LW,ns)
        OCEAN_SFC_albedo(i,j,I_SW) = OCEAN_SFC_albedo_ORG(i,j,I_SW,ns)
@@ -828,10 +831,10 @@ contains
                                       LAND_WATER_org      (:,:,:,ns:ne), &
                                       LAND_SFC_TEMP_org   (:,:,  ns:ne), &
                                       LAND_SFC_albedo_org (:,:,:,ns:ne), &
-                                      OCEAN_TEMP_org      (:,:,  ns:ne), &
-                                      OCEAN_SFC_TEMP_org  (:,:,  ns:ne), &
-                                      OCEAN_SFC_albedo_org(:,:,:,ns:ne), &
-                                      OCEAN_SFC_Z0_org    (:,:,  ns:ne), &
+                                      OCEAN_TEMP_org      (OKS,:,:,  ns:ne), &
+                                      OCEAN_SFC_TEMP_org  (    :,:,  ns:ne), &
+                                      OCEAN_SFC_albedo_org(    :,:,:,ns:ne), &
+                                      OCEAN_SFC_Z0_org    (    :,:,  ns:ne), &
                                       totaltimesteps,                    &
                                       BOUNDARY_UPDATE_DT,                &
                                       basename_out_mod,                  &
