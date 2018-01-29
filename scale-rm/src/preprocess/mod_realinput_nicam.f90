@@ -89,7 +89,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atmos Input File Type: NICAM-NETCDF'
     basename = "ms_pres"//trim(basename_org)
-    call FILE_Get_Shape( dims_ncm(:), trim(basename), "ms_pres", 1, single=.true. )
+    call FILE_Get_Shape( basename, "ms_pres", & ! (in)
+                         dims_ncm(:),         & ! (out)
+                         single=.true.        ) ! (in)
     timelen = dims_ncm(4)
 
     ! full level
@@ -139,17 +141,17 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosOpenNICAM]'
 
     basename = "ms_pres"//trim(basename_num)
-    call FILE_Read( read1DX(:), trim(basename), "lon", 1, 1, single=.true. )
+    call FILE_Read( basename, "lon", read1DX(:), single=.true. )
     do j = 1, dims(3)
        lon_org (:,j)  = read1DX(:) * D2R
     enddo
 
-    call FILE_Read( read1DY(:), trim(basename), "lat", 1, 1, single=.true. )
+    call FILE_Read( basename, "lat", read1DY(:), single=.true. )
     do i = 1, dims(2)
        lat_org (i,:)  = read1DY(:) * D2R
     enddo
 
-    call FILE_Read( read1DZ(:), trim(basename), "lev", 1, 1, single=.true. )
+    call FILE_Read( basename, "lev", read1DZ(:), single=.true. )
     do j = 1, dims(3)
     do i = 1, dims(2)
        cz_org(3:,i,j) = read1DZ(:)
@@ -354,7 +356,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Land Input File Type: NICAM-NETCDF'
     basename = "la_tg"//trim(basename_org)
-    call FILE_Get_Shape( dims_ncm(:), trim(basename), "la_tg", 1, single=.true. )
+    call FILE_Get_Shape( basename, "la_tg", & ! (in)
+                         dims_ncm(:),       & ! (out)
+                         single=.true.      ) ! (in)
     ! land
     ldims(1) = dims_ncm(3) ! vertical grid of land model
     ldims(2) = dims_ncm(1)
@@ -420,15 +424,15 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[LandInputNICAM]'
 
     basename = "la_tg"//trim(basename_num)
-    call FILE_Read( read1DLZ(:), trim(basename), "lev", 1, 1, single=.true. )
+    call FILE_Read( basename, "lev", read1DLZ(:), single=.true. )
     lz_org(:) = read1DLZ(:)
 
-    call FILE_Read( read1DX(:), trim(basename), "lon", 1, 1, single=.true. )
+    call FILE_Read( basename, "lon", read1DX(:), single=.true. )
     do j = 1, ldims(3)
        llon_org (:,j)  = read1DX(:) * D2R
     enddo
 
-    call FILE_Read( read1DY(:), trim(basename), "lat", 1, 1, single=.true. )
+    call FILE_Read( basename, "lat", read1DY(:), single=.true. )
     do i = 1, ldims(2)
        llat_org (i,:)  = read1DY(:) * D2R
     enddo
@@ -514,7 +518,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Ocean Input File Type: NICAM-NETCDF'
 
     basename = "oa_sst"//trim(basename_org)
-    call FILE_Get_Shape( dims_ncm(:), trim(basename), "oa_sst", 1, single=.true. )
+    call FILE_Get_Shape( basename, "oa_sst", &
+                         dims_ncm(:),        &
+                         single=.true.       )
     odims(1) = dims_ncm(1)
     odims(2) = dims_ncm(2)
 
@@ -557,12 +563,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[OceanOpenNICAM]'
 
     basename = "oa_sst"//trim(basename_num)
-    call FILE_Read( read1DX(:), trim(basename), "lon", 1, 1, single=.true. )
+    call FILE_Read( basename, "lon", read1DX(:), single=.true. )
     do j = 1, odims(2)
        olon_org (:,j)  = read1DX(:) * D2R
     enddo
 
-    call FILE_Read( read1DY(:), trim(basename), "lat", 1, 1, single=.true. )
+    call FILE_Read( basename, "lat", read1DY(:), single=.true. )
     do i = 1, odims(1)
        olat_org (i,:)  = read1DY(:) * D2R
     enddo

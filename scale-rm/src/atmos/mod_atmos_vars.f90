@@ -697,15 +697,15 @@ contains
 
 
     do iv = 1, PV_nmax
-       call FILE_HISTORY_reg( PV_HIST_id(iv), PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, dim_type=PV_info(iv)%dim_type )
+       call FILE_HISTORY_reg( PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, PV_HIST_id(iv), dim_type=PV_info(iv)%dim_type )
             
     end do
     do iq = 1, QA
-       call FILE_HISTORY_reg( QP_HIST_id(iq), TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), dim_type='ZXY' )
+       call FILE_HISTORY_reg( TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), QP_HIST_id(iq), dim_type='ZXY' )
     enddo
 
     do iv = 1, DV_nmax
-       call FILE_HISTORY_reg( DV_HIST_id(iv), DV_info(iv)%NAME, DV_info(iv)%DESC, DV_info(iv)%UNIT, dim_type=DV_info(iv)%dim_type )
+       call FILE_HISTORY_reg( DV_info(iv)%NAME, DV_info(iv)%DESC, DV_info(iv)%UNIT, DV_HIST_id(iv), dim_type=DV_info(iv)%dim_type )
     end do
 
 
@@ -874,7 +874,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_open( restart_fid, basename, aggregate=ATMOS_RESTART_IN_AGGREGATE )
+       call FILE_CARTESC_open( basename, restart_fid, aggregate=ATMOS_RESTART_IN_AGGREGATE )
 
        if ( ATMOS_RESTART_IN_CHECK_COORDINATES ) then
           call FILE_CARTESC_check_coordinates( restart_fid, atmos=.true. )
@@ -954,20 +954,20 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS) ***'
 
-       call FILE_CARTESC_read( DENS(:,:,:),                                     & ! [OUT]
-                         restart_fid, PV_info(I_DENS)%NAME, 'ZXY',  step=1 ) ! [IN]
-       call FILE_CARTESC_read( MOMZ(:,:,:),                                     & ! [OUT]
-                         restart_fid, PV_info(I_MOMZ)%NAME, 'ZHXY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( MOMX(:,:,:),                                     & ! [OUT]
-                         restart_fid, PV_info(I_MOMX)%NAME, 'ZXHY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( MOMY(:,:,:),                                     & ! [OUT]
-                         restart_fid, PV_info(I_MOMY)%NAME, 'ZXYH', step=1 ) ! [IN]
-       call FILE_CARTESC_read( RHOT(:,:,:),                                     & ! [OUT]
-                         restart_fid, PV_info(I_RHOT)%NAME, 'ZXY',  step=1 ) ! [IN]
+       call FILE_CARTESC_read( restart_fid, PV_info(I_DENS)%NAME, 'ZXY', & ! [IN]
+                               DENS(:,:,:)                               ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, PV_info(I_MOMZ)%NAME, 'ZHXY', & ! [IN]
+                               MOMZ(:,:,:)                                ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, PV_info(I_MOMX)%NAME, 'ZXHY', & ! [IN]
+                               MOMX(:,:,:)                                ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, PV_info(I_MOMX)%NAME, 'ZXYH', & ! [IN]
+                               MOMX(:,:,:)                                ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, PV_info(I_RHOT)%NAME, 'ZXY', & ! [IN]
+                               RHOT(:,:,:)                               ) ! [OUT]
 
        do iq = 1, QA
-          call FILE_CARTESC_read( QTRC(:,:,:,iq),                             & ! [OUT]
-                            restart_fid, TRACER_NAME(iq), 'ZXY', step=1 ) ! [IN]
+          call FILE_CARTESC_read( restart_fid, TRACER_NAME(iq), 'ZXY', & ! [IN]
+                                  QTRC(:,:,:,iq)                       ) ! [OUT]
        enddo
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
@@ -1090,15 +1090,15 @@ contains
 
     basename = ATMOS_RESTART_CHECK_BASENAME
 
-    call FILE_CARTESC_open( fid, basename )
+    call FILE_CARTESC_open( basename, fid )
 
-    call FILE_CARTESC_read( DENS_check(:,:,:), fid, 'DENS', 'ZXY' , step=1 )
-    call FILE_CARTESC_read( MOMZ_check(:,:,:), fid, 'MOMZ', 'ZHXY', step=1 )
-    call FILE_CARTESC_read( MOMX_check(:,:,:), fid, 'MOMX', 'ZXHY', step=1 )
-    call FILE_CARTESC_read( MOMY_check(:,:,:), fid, 'MOMY', 'ZXYH', step=1 )
-    call FILE_CARTESC_read( RHOT_check(:,:,:), fid, 'RHOT', 'ZXY' , step=1 )
+    call FILE_CARTESC_read( fid, 'DENS', 'ZXY' , DENS_check(:,:,:) )
+    call FILE_CARTESC_read( fid, 'MOMZ', 'ZHXY', MOMZ_check(:,:,:) )
+    call FILE_CARTESC_read( fid, 'MOMX', 'ZXHY', MOMX_check(:,:,:) )
+    call FILE_CARTESC_read( fid, 'MOMY', 'ZXYH', MOMY_check(:,:,:) )
+    call FILE_CARTESC_read( fid, 'RHOT', 'ZXY' , RHOT_check(:,:,:) )
     do iq = 1, QA
-       call FILE_CARTESC_read( QTRC_check(:,:,:,iq), fid, TRACER_NAME(iq), 'ZXY', step=1 )
+       call FILE_CARTESC_read( fid, TRACER_NAME(iq), 'ZXY', QTRC_check(:,:,:,iq) )
     end do
     if ( FILE_get_AGGREGATE(fid) ) call FILE_CARTESC_flush( fid )
 
@@ -2948,9 +2948,10 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_create( restart_fid,                                                & ! [OUT]
-                                 basename, ATMOS_RESTART_OUT_TITLE, ATMOS_RESTART_OUT_DTYPE, & ! [IN]
-                                 aggregate=ATMOS_RESTART_OUT_AGGREGATE                       ) ! [IN]
+       call FILE_CARTESC_create( &
+            basename, ATMOS_RESTART_OUT_TITLE, ATMOS_RESTART_OUT_DTYPE, & ! [IN]
+            restart_fid,                                                & ! [OUT]
+            aggregate=ATMOS_RESTART_OUT_AGGREGATE                       ) ! [IN]
 
        allocate( PV_ID(PV_nmax+QA) )
     endif

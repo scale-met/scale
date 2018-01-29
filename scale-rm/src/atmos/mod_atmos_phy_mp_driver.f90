@@ -230,7 +230,7 @@ contains
     if ( MP_do_precipitation ) then
        allocate( hist_vterm_id(QS_MP+1:QE_MP) )
        do iq = QS_MP+1, QE_MP
-          call FILE_HISTORY_reg( hist_vterm_id(iq), 'Vterm_'//trim(TRACER_NAME(iq)), 'terminal velocity of '//trim(TRACER_NAME(iq)), 'm/s' )
+          call FILE_HISTORY_reg( 'Vterm_'//trim(TRACER_NAME(iq)), 'terminal velocity of '//trim(TRACER_NAME(iq)), 'm/s', hist_vterm_id(iq) )
        end do
     end if
 

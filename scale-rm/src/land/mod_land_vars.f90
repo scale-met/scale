@@ -408,9 +408,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_open( restart_fid,                        & ! [OUT]
-                               basename,                           & ! [IN]
-                               aggregate=LAND_RESTART_IN_AGGREGATE ) ! [IN]
+       call FILE_CARTESC_open( basename, restart_fid, aggregate=LAND_RESTART_IN_AGGREGATE )
 
        if ( LAND_RESTART_IN_CHECK_COORDINATES ) then
           call FILE_CARTESC_check_coordinates( restart_fid, land=.true. )
@@ -438,30 +436,31 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (LAND) ***'
 
-       call FILE_CARTESC_read( LAND_TEMP (:,:,:),                                 & ! [OUT]
-                         restart_fid, VAR_NAME(I_TEMP),      'LXY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( LAND_WATER(:,:,:),                                 & ! [OUT]
-                         restart_fid, VAR_NAME(I_WATER),     'LXY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( LAND_SFC_TEMP(:,:),                                & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFC_TEMP),  'XY',   step=1 ) ! [IN]
-       call FILE_CARTESC_read( LAND_SFC_albedo(:,:,I_LW),                         & ! [OUT]
-                         restart_fid, VAR_NAME(I_ALB_LW),    'XY',   step=1 ) ! [IN]
-       call FILE_CARTESC_read( LAND_SFC_albedo(:,:,I_SW),                         & ! [OUT]
-                         restart_fid, VAR_NAME(I_ALB_SW),    'XY',   step=1 ) ! [IN]
-       call FILE_CARTESC_read( LAND_SFLX_MW(:,:),                                 & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_MW),   'XY',   step=1 ) ! [IN]
-       call FILE_CARTESC_read( LAND_SFLX_MU(:,:),                                 & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_MU),   'XY',   step=1 ) ! [IN]
-       call FILE_CARTESC_read( LAND_SFLX_MV(:,:),                                 & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_MV),   'XY',   step=1 ) ! [IN]
-       call FILE_CARTESC_read( LAND_SFLX_SH(:,:),                                 & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_SH),   'XY',   step=1 ) ! [IN]
-       call FILE_CARTESC_read( LAND_SFLX_LH(:,:),                                 & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_LH),   'XY',   step=1 ) ! [IN]
-       call FILE_CARTESC_read( LAND_SFLX_GH(:,:),                                 & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_GH),   'XY',   step=1 ) ! [IN]
-       call FILE_CARTESC_read( LAND_SFLX_evap(:,:),                               & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_evap), 'XY',   step=1 ) ! [IN]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_TEMP),      'LXY', & ! [IN]
+                               LAND_TEMP (:,:,:)                          ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_WATER),     'LXY', & ! [IN]
+                               LAND_WATER(:,:,:)                          ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_TEMP),  'XY',  & ! [IN]
+                               LAND_SFC_TEMP(:,:)                         ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ALB_LW),    'XY',  & ! [IN]
+                               LAND_SFC_albedo(:,:,I_LW)                  ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ALB_SW),    'XY',  & ! [IN]
+                               LAND_SFC_albedo(:,:,I_SW)                  ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MW),   'XY',  & ! [IN]
+                               LAND_SFLX_MW(:,:)                          ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MU),   'XY',  & ! [IN]
+                               LAND_SFLX_MU(:,:)                          ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MV),   'XY',  & ! [IN]
+                               LAND_SFLX_MV(:,:)                          ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_SH),   'XY',  & ! [IN]
+                               LAND_SFLX_SH(:,:)                          ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_LH),   'XY',  & ! [IN]
+                               LAND_SFLX_LH(:,:)                          ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_GH),   'XY',  & ! [IN]
+                               LAND_SFLX_GH(:,:)                          ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_evap), 'XY',  & ! [IN]
+                               LAND_SFLX_evap(:,:)                        ) ! [OUT]
+            
 
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
 
@@ -795,9 +794,10 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_create( restart_fid,                                              & ! [OUT]
-                                 basename, LAND_RESTART_OUT_TITLE, LAND_RESTART_OUT_DTYPE, & ! [IN]
-                                 aggregate=LAND_RESTART_OUT_AGGREGATE                      ) ! [IN]
+       call FILE_CARTESC_create( &
+            basename, LAND_RESTART_OUT_TITLE, LAND_RESTART_OUT_DTYPE, & ! [IN]
+            restart_fid,                                              & ! [OUT]
+            aggregate=LAND_RESTART_OUT_AGGREGATE                      ) ! [IN]
 
     endif
 

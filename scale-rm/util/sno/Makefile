@@ -43,7 +43,7 @@ $(BINDIR)/$(BINNAME) : $(BUILD_DIR)/prg_$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/
 
 $(BUILD_DIR)/prg_$(BINNAME).o : prg_$(BINNAME).f90 $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 
-$(BUILD_DIR)/mod_sno_h.o     : mod_sno_h.f90     $(BUILD_DIR)/mod_sno_h.o
+$(BUILD_DIR)/mod_sno_h.o     : mod_sno_h.f90
 $(BUILD_DIR)/mod_sno.o       : mod_sno.f90       $(BUILD_DIR)/mod_sno_h.o
 $(BUILD_DIR)/mod_sno_map.o   : mod_sno_map.f90   $(BUILD_DIR)/mod_sno_h.o
 $(BUILD_DIR)/mod_sno_axis.o  : mod_sno_axis.f90  $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno.o

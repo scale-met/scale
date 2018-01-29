@@ -1013,7 +1013,7 @@ contains
     integer :: iq
     !---------------------------------------------------------------------------
 
-    call FILE_CARTESC_open( fid, ATMOS_BOUNDARY_IN_BASENAME )
+    call FILE_CARTESC_open( ATMOS_BOUNDARY_IN_BASENAME, fid )
 
     if ( ATMOS_BOUNDARY_IN_CHECK_COORDINATES ) then
        call FILE_CARTESC_check_coordinates( fid, atmos=.true. )
@@ -1025,41 +1025,41 @@ contains
          .OR. ATMOS_BOUNDARY_USE_VELY &
          .OR. ATMOS_BOUNDARY_USE_POTT &
          ) then
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_DENS(:,:,:), fid, 'DENS', 'ZXY', 1 )
+       call FILE_CARTESC_read( fid, 'DENS', 'ZXY', ATMOS_BOUNDARY_DENS(:,:,:) )
     end if
     if ( ATMOS_BOUNDARY_USE_DENS ) then
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_DENS(:,:,:), fid, 'ALPHA_DENS', 'ZXY', 1 )
+       call FILE_CARTESC_read( fid, 'ALPHA_DENS', 'ZXY', ATMOS_BOUNDARY_alpha_DENS(:,:,:) )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_VELZ(:,:,:), fid, 'VELZ', 'ZHXY', 1 )
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_VELZ(:,:,:), fid, 'ALPHA_VELZ', 'ZHXY', 1 )
+       call FILE_CARTESC_read( fid, 'VELZ', 'ZHXY', ATMOS_BOUNDARY_VELZ(:,:,:) )
+       call FILE_CARTESC_read( fid, 'ALPHA_VELZ', 'ZHXY', ATMOS_BOUNDARY_alpha_VELZ(:,:,:) )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX ) then
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_VELX(:,:,:), fid, 'VELX', 'ZXHY', 1 )
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_VELX(:,:,:), fid, 'ALPHA_VELX', 'ZXHY', 1 )
+       call FILE_CARTESC_read( fid, 'VELX', 'ZXHY', ATMOS_BOUNDARY_VELX(:,:,:) )
+       call FILE_CARTESC_read( fid, 'ALPHA_VELX', 'ZXHY', ATMOS_BOUNDARY_alpha_VELX(:,:,:) )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY ) then
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_VELY(:,:,:), fid, 'VELY', 'ZXYH', 1 )
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_VELY(:,:,:), fid, 'ALPHA_VELY', 'ZXYH', 1 )
+       call FILE_CARTESC_read( fid, 'VELY', 'ZXYH', ATMOS_BOUNDARY_VELY(:,:,:) )
+       call FILE_CARTESC_read( fid, 'ALPHA_VELY', 'ZXYH', ATMOS_BOUNDARY_alpha_VELY(:,:,:) )
     endif
 
     if ( ATMOS_BOUNDARY_USE_POTT ) then
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_POTT(:,:,:), fid, 'POTT', 'ZXY', 1 )
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_POTT(:,:,:), fid, 'ALPHA_POTT', 'ZXY', 1 )
+       call FILE_CARTESC_read( fid, 'POTT', 'ZXY', ATMOS_BOUNDARY_POTT(:,:,:) )
+       call FILE_CARTESC_read( fid, 'ALPHA_POTT', 'ZXY', ATMOS_BOUNDARY_alpha_POTT(:,:,:) )
     endif
 
     if ( ATMOS_BOUNDARY_USE_QV   ) then
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_QTRC(:,:,:,1), fid, 'QV', 'ZXY', 1 )
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,1), fid, 'ALPHA_QV', 'ZXY', 1 )
+       call FILE_CARTESC_read( fid, 'QV', 'ZXY', ATMOS_BOUNDARY_QTRC(:,:,:,1) )
+       call FILE_CARTESC_read( fid, 'ALPHA_QV', 'ZXY', ATMOS_BOUNDARY_alpha_QTRC(:,:,:,1) )
     endif
 
     if ( ATMOS_BOUNDARY_USE_QHYD ) then
        do iq = 2, BND_QA
-          call FILE_CARTESC_read( ATMOS_BOUNDARY_QTRC(:,:,:,iq), fid, TRACER_NAME(iq), 'ZXY', 1 )
-          call FILE_CARTESC_read( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq), fid, 'ALPHA_'//trim(TRACER_NAME(iq)), 'ZXY', 1 )
+          call FILE_CARTESC_read( fid, TRACER_NAME(iq), 'ZXY', ATMOS_BOUNDARY_QTRC(:,:,:,iq) )
+          call FILE_CARTESC_read( fid, 'ALPHA_'//trim(TRACER_NAME(iq)), 'ZXY', ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq) )
        end do
     endif
 
@@ -1246,7 +1246,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '*** BOUNDARY START Date     : ', boundary_chardate
 
-    call FILE_CARTESC_open( ATMOS_BOUNDARY_fid, ATMOS_BOUNDARY_IN_BASENAME )
+    call FILE_CARTESC_open( ATMOS_BOUNDARY_IN_BASENAME, ATMOS_BOUNDARY_fid )
 
     if ( ATMOS_BOUNDARY_IN_CHECK_COORDINATES ) then
        call FILE_CARTESC_check_coordinates( ATMOS_BOUNDARY_fid, atmos=.true. )
@@ -1976,12 +1976,12 @@ contains
 
     fid = ATMOS_BOUNDARY_fid
 
-    call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_DENS(:,:,:,ref), fid, 'DENS', 'ZXY', boundary_timestep )
-    call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_VELX(:,:,:,ref), fid, 'VELX', 'ZXHY', boundary_timestep )
-    call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_VELY(:,:,:,ref), fid, 'VELY', 'ZXYH', boundary_timestep )
-    call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_POTT(:,:,:,ref), fid, 'POTT', 'ZXY', boundary_timestep )
+    call FILE_CARTESC_read( fid, 'DENS', 'ZXY', ATMOS_BOUNDARY_ref_DENS(:,:,:,ref), step=boundary_timestep )
+    call FILE_CARTESC_read( fid, 'VELX', 'ZXHY', ATMOS_BOUNDARY_ref_VELX(:,:,:,ref), step=boundary_timestep )
+    call FILE_CARTESC_read( fid, 'VELY', 'ZXYH', ATMOS_BOUNDARY_ref_VELY(:,:,:,ref), step=boundary_timestep )
+    call FILE_CARTESC_read( fid, 'POTT', 'ZXY', ATMOS_BOUNDARY_ref_POTT(:,:,:,ref), step=boundary_timestep )
     do iq = 1, BND_QA
-       call FILE_CARTESC_read( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,ref), fid, TRACER_NAME(iq), 'ZXY', boundary_timestep )
+       call FILE_CARTESC_read( fid, TRACER_NAME(iq), 'ZXY', ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,ref), step=boundary_timestep )
     end do
 
     call FILE_CARTESC_flush( fid )

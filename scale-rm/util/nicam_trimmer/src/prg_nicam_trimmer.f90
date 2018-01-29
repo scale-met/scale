@@ -373,10 +373,10 @@ contains
     character(len=*), intent(in)  :: filename
     !---------------------------------------------------------------------------
 
-    call FILE_Read( lon(:),  trim(filename), "lon",  1, 1, single=.true. )
-    call FILE_Read( lat(:),  trim(filename), "lat",  1, 1, single=.true. )
-    call FILE_Read( lev(:),  trim(filename), "lev",  1, 1, single=.true. )
-    call FILE_Read( time(:), trim(filename), "time", 1, 1, single=.true. )
+    call FILE_Read( filename, "lon",  lon(:),  single=.true. )
+    call FILE_Read( filename, "lat",  lat(:),  single=.true. )
+    call FILE_Read( filename, "lev",  lev(:),  single=.true. )
+    call FILE_Read( filename, "lime", time(:), single=.true. )
 
     return
   end subroutine nicamread_grid

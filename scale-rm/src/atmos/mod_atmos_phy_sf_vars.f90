@@ -332,7 +332,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_open( restart_fid, basename, aggregate=ATMOS_PHY_SF_RESTART_IN_AGGREGATE )
+       call FILE_CARTESC_open( basename, restart_fid, aggregate=ATMOS_PHY_SF_RESTART_IN_AGGREGATE )
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_SF is not specified.'
@@ -369,18 +369,18 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS_PHY_SF) ***'
 
-       call FILE_CARTESC_read( ATMOS_PHY_SF_SFC_TEMP  (:,:),          & ! [OUT]
-                         restart_fid, VAR_NAME(1), 'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( ATMOS_PHY_SF_SFC_albedo(:,:,I_LW),     & ! [OUT]
-                         restart_fid, VAR_NAME(2), 'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( ATMOS_PHY_SF_SFC_albedo(:,:,I_SW),     & ! [OUT]
-                         restart_fid, VAR_NAME(3), 'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( ATMOS_PHY_SF_SFC_Z0M   (:,:),          & ! [OUT]
-                         restart_fid, VAR_NAME(4), 'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( ATMOS_PHY_SF_SFC_Z0H   (:,:),          & ! [OUT]
-                         restart_fid, VAR_NAME(5), 'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( ATMOS_PHY_SF_SFC_Z0E   (:,:),          & ! [OUT]
-                         restart_fid, VAR_NAME(6), 'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(1), 'XY', & ! [IN]
+                               ATMOS_PHY_SF_SFC_TEMP  (:,:)    ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(2), 'XY',   & ! [IN]
+                               ATMOS_PHY_SF_SFC_albedo(:,:,I_LW) ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(3), 'XY',   & ! [IN]
+                               ATMOS_PHY_SF_SFC_albedo(:,:,I_SW) ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(4), 'XY', & ! [IN]
+                               ATMOS_PHY_SF_SFC_Z0M   (:,:)    ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(5), 'XY', & ! [IN]
+                               ATMOS_PHY_SF_SFC_Z0H   (:,:)    ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(6), 'XY', & ! [IN]
+                               ATMOS_PHY_SF_SFC_Z0E   (:,:)    ) ! [OUT]
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
@@ -467,9 +467,10 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_create( restart_fid,                                                              & ! [OUT]
-                                 basename, ATMOS_PHY_SF_RESTART_OUT_TITLE, ATMOS_PHY_SF_RESTART_OUT_DTYPE, & ! [IN]
-                                 aggregate=ATMOS_PHY_SF_RESTART_OUT_AGGREGATE                              ) ! [IN]
+       call FILE_CARTESC_create( &
+            basename, ATMOS_PHY_SF_RESTART_OUT_TITLE, ATMOS_PHY_SF_RESTART_OUT_DTYPE, & ! [IN]
+            restart_fid,                                                              & ! [OUT]
+            aggregate=ATMOS_PHY_SF_RESTART_OUT_AGGREGATE                              ) ! [IN]
     endif
 
     return

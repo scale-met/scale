@@ -898,7 +898,6 @@ contains
        FILE_EndDef,         &
        FILE_Write
     use scale_process, only: &
-       PRC_ismaster, &
        PRC_MPIstop
     use mod_sno_h, only: &
        commoninfo, &
@@ -942,15 +941,14 @@ contains
        basename_mod = trim(dirpath)//'/'//trim(basename)
     endif
 
-    call FILE_Create( fid,                          & ! [OUT]
-                      fileexisted,                  & ! [OUT]
-                      basename_mod,                 & ! [IN]
+    call FILE_Create( basename_mod,                 & ! [IN]
                       hinfo%title,                  & ! [IN]
                       hinfo%source,                 & ! [IN]
                       hinfo%institute,              & ! [IN]
                       hinfo%grid_name,              & ! [IN]
+                      fid,                          & ! [OUT]
+                      fileexisted,                  & ! [OUT]
                       rankid     = nowrank,         & ! [IN]
-                      ismaster   = PRC_ismaster,    & ! [IN]
                       time_units = dinfo%time_units ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
@@ -983,7 +981,7 @@ contains
                                dinfo%dim_name,     & ! [IN]
                                dinfo%datatype,     & ! [IN]
                                vid,                & ! [OUT]
-                               timeintv = dinfo%dt ) ! [IN]
+                               time_int = dinfo%dt ) ! [IN]
     else
        call FILE_Def_Variable( fid,               & ! [IN]
                                dinfo%varname,     & ! [IN]

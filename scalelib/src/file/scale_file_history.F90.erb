@@ -586,21 +586,21 @@ contains
   !> Register/Append variable to history file
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_reg( &
-       itemid,           &
        name, desc, unit, &
-       dim_type,         &
-       fill_halo,        &
-       ndims             )
+       itemid,           &
+       ndims, dim_type,  &
+       fill_halo         )
     implicit none
 
-    integer,          intent(out) :: itemid !< index number of the item
     character(len=*), intent(in)  :: name   !< name         of the item
     character(len=*), intent(in)  :: desc   !< description  of the item
     character(len=*), intent(in)  :: unit   !< unit         of the item
 
+    integer,          intent(out) :: itemid !< index number of the item
+
+    integer,          intent(in), optional :: ndims    !< if ndims is set and dim_type is not set, the dim_type that set firstry by FILE_HISTORY_set_dim of ndims is used
     character(len=*), intent(in), optional :: dim_type
     logical,          intent(in), optional :: fill_halo
-    integer,          intent(in), optional :: ndims
 
     integer :: dimid
     integer :: n
@@ -654,20 +654,21 @@ contains
 
        do n = 1, FILE_HISTORY_dims(dimid)%nzcoords
 
-          call FILE_HISTORY_Add_Variable( itemid,                              & ! (out)
-                                          name, desc, unit,                    & ! (in)
+          call FILE_HISTORY_Add_Variable( name, desc, unit,                    & ! (in)
+                                          
                                           dimid,                               & ! (in)
                                           FILE_HISTORY_dims(dimid)%zcoords(n), & ! (in)
+                                          itemid,                              & ! (out)
                                           fill_halo                            ) ! (in)
 
        end do
 
     else
 
-       call FILE_HISTORY_Add_Variable( itemid,           & ! (out)
-                                       name, desc, unit, & ! (in)
+       call FILE_HISTORY_Add_Variable( name, desc, unit, & ! (in)
                                        dimid,            & ! (in)
                                        "model",          & ! (in)
+                                       itemid,           & ! (out)
                                        fill_halo         ) ! (in)
 
     end if
@@ -798,11 +799,11 @@ contains
     if ( FILE_HISTORY_disabled ) return
 
     ! Check whether the item has been already registered
-    call FILE_HISTORY_reg( itemid,           & ! [OUT]
-                           name, desc, unit, & ! [IN]
-                           dim_type,         & ! [IN]
-                           fill_halo,        & ! [IN]
-                           ndim              ) ! [IN]
+    call FILE_HISTORY_reg( name, desc, unit,   & ! [IN]
+                           itemid,             & ! [OUT]
+                           ndims=ndim,         & ! [IN]
+                           dim_type=dim_type,  & ! [IN]
+                           fill_halo=fill_halo ) ! [IN]
 
     if ( itemid < 0 ) return
 
@@ -1061,8 +1062,6 @@ contains
   end subroutine FILE_HISTORY_Finalize
 
 
-
-
   !! private procedures
 
   !-----------------------------------------------------------------------------
@@ -1096,10 +1095,10 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Add_Variable( &
-       id,                 &
        name, desc, units,  &
        dimid,              &
        zcoord,             &
+       id,                 &
        fill_halo           )
     use scale_file_h, only: &
        FILE_dtypelist
@@ -1270,15 +1269,15 @@ contains
           mpi_comm = MPI_COMM_NULL
        end if
 
-       call FILE_Create( fid, fileexisted,         & ! [OUT]
-                         basename_mod,             & ! [IN]
-                         FILE_HISTORY_TITLE,       & ! [IN]
-                         FILE_HISTORY_SOURCE,      & ! [IN]
-                         FILE_HISTORY_INSTITUTION, & ! [IN]
-                         FILE_HISTORY_GRIDNAME,    & ! [IN]
-                         FILE_HISTORY_myrank,      & ! [IN]
-                         time_units = tunits,      & ! [IN]
-                         mpi_comm = mpi_comm       ) ! [IN]
+       call FILE_Create( basename_mod,                 & ! [IN]
+                         FILE_HISTORY_TITLE,           & ! [IN]
+                         FILE_HISTORY_SOURCE,          & ! [IN]
+                         FILE_HISTORY_INSTITUTION,     & ! [IN]
+                         FILE_HISTORY_GRIDNAME,        & ! [IN]
+                         fid, fileexisted,             & ! [OUT]
+                         rankid = FILE_HISTORY_myrank, & ! [IN]
+                         time_units = tunits,          & ! [IN]
+                         mpi_comm = mpi_comm           ) ! [IN]
        FILE_HISTORY_vars(id)%fid = fid
 
        if ( .NOT. fileexisted ) then ! new file
@@ -1424,15 +1423,15 @@ contains
        dimid = FILE_HISTORY_vars(id)%dimid
        ndims = FILE_HISTORY_dims(dimid)%ndims
 
-       call FILE_Add_Variable( FILE_HISTORY_vars(id)%vid,              & ! [OUT]
-                               FILE_HISTORY_vars(id)%fid,              & ! [IN]
+       call FILE_Add_Variable( FILE_HISTORY_vars(id)%fid,              & ! [IN]
                                FILE_HISTORY_vars(id)%outname,          & ! [IN]
                                FILE_HISTORY_vars(id)%desc,             & ! [IN]
                                FILE_HISTORY_vars(id)%units,            & ! [IN]
                                FILE_HISTORY_dims(dimid)%dims(1:ndims), & ! [IN]
                                FILE_HISTORY_vars(id)%dtype,            & ! [IN]
                                dtsec,                                  & ! [IN]
-                               FILE_HISTORY_vars(id)%taverage          ) ! [IN]
+                               FILE_HISTORY_vars(id)%vid,              & ! [OUT]
+                               time_avg=FILE_HISTORY_vars(id)%taverage ) ! [IN]
 
 
        if (       FILE_HISTORY_dims(dimid)%mapping &

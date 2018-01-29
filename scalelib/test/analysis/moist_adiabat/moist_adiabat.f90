@@ -146,7 +146,7 @@ contains
   subroutine read_data
     use scale_file, only: &
          FILE_open, &
-         FILE_get_datainfo, &
+         FILE_get_shape, &
          FILE_read, &
          FILE_close
     integer :: fid
@@ -156,19 +156,21 @@ contains
     integer :: i, j
 
     ! file open
-    call FILE_open( fid, & ! (out)
-                    basename_in, rankid=rankid ) ! (in)
+    call FILE_open( basename_in,  & ! (in)
+                    fid,          & ! (out)
+                    rankid=rankid ) ! (in)
 
     ! get dimension size
-    call FILE_get_datainfo( fid, "height", dim_size=dims(:) )
+    call FILE_get_shape( fid, "height", & ! (in)
+                         dims(:)        ) ! (out)
     nx = dims(1)
     ny = dims(2)
     nz = dims(3)
 
     ! get x and y axis
     allocate( xaxis(nx), yaxis(ny) )
-    call FILE_read( xaxis(:), fid, "x" )
-    call FILE_read( yaxis(:), fid, "y" )
+    call FILE_read( fid, "x", xaxis(:) )
+    call FILE_read( fid, "y", yaxis(:) )
 
     ! search index
     do i = 1, nx
@@ -181,21 +183,21 @@ contains
 
     ! get z axis
     allocate( z(nz), zh(0:nz) )
-    call FILE_read( z(:),  fid, "height",     start=start(:), count=(/1,1,nz/) )
-    call FILE_read( zh(:), fid, "height_xyw", start=start(:), count=(/1,1,nz+1/) )
+    call FILE_read( fid, "height",     z(:),  start=start(:), count=(/1,1,nz/) )
+    call FILE_read( fid, "height_xyw", zh(:), start=start(:), count=(/1,1,nz+1/) )
 
     ! get variables
     allocate( TEMP(nz), PRES(nz), QV(nz), QC(nz), QR(nz), QI(nz), QS(nz), QG(nz) )
     count(:) = (/1,1,nz/)
 
-    call FILE_read( TEMP(:), fid, "T",    start=start(:), count=count(:), step=nstep )
-    call FILE_read( PRES(:), fid, "PRES", start=start(:), count=count(:), step=nstep )
-    call FILE_read( QV  (:), fid, "QV",   start=start(:), count=count(:), step=nstep )
-    call FILE_read( QC  (:), fid, "QC",   start=start(:), count=count(:), step=nstep, allow_missing=.true. )
-    call FILE_read( QR  (:), fid, "QR",   start=start(:), count=count(:), step=nstep, allow_missing=.true. )
-    call FILE_read( QI  (:), fid, "QI",   start=start(:), count=count(:), step=nstep, allow_missing=.true. )
-    call FILE_read( QS  (:), fid, "QS",   start=start(:), count=count(:), step=nstep, allow_missing=.true. )
-    call FILE_read( QG  (:), fid, "QG",   start=start(:), count=count(:), step=nstep, allow_missing=.true. )
+    call FILE_read( fid, "T",    TEMP(:), start=start(:), count=count(:), step=nstep )
+    call FILE_read( fid, "PRES", PRES(:), start=start(:), count=count(:), step=nstep )
+    call FILE_read( fid, "QV",   QV  (:), start=start(:), count=count(:), step=nstep )
+    call FILE_read( fid, "QC",   QC  (:), start=start(:), count=count(:), step=nstep, allow_missing=.true. )
+    call FILE_read( fid, "QR",   QR  (:), start=start(:), count=count(:), step=nstep, allow_missing=.true. )
+    call FILE_read( fid, "QI",   QI  (:), start=start(:), count=count(:), step=nstep, allow_missing=.true. )
+    call FILE_read( fid, "QS",   QS  (:), start=start(:), count=count(:), step=nstep, allow_missing=.true. )
+    call FILE_read( fid, "QG",   QG  (:), start=start(:), count=count(:), step=nstep, allow_missing=.true. )
 
 
     ! close

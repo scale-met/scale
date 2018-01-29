@@ -457,9 +457,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_open( restart_fid,                         & ! [OUT]
-                               basename,                            & ! [IN]
-                               aggregate=URBAN_RESTART_IN_AGGREGATE ) ! [IN]
+       call FILE_CARTESC_open( basename, restart_fid, aggregate=URBAN_RESTART_IN_AGGREGATE )
 
        if ( URBAN_RESTART_IN_CHECK_COORDINATES ) then
           call FILE_CARTESC_check_coordinates( restart_fid, urban=.true. )
@@ -487,56 +485,56 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (URBAN) ***'
 
-       call FILE_CARTESC_read( URBAN_TR(:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(I_TR), 'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_TB(:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(I_TB), 'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_TG(:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(I_TG), 'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_TC(:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(I_TC), 'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_QC(:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(I_QC), 'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_UC(:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(I_UC), 'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_TR), 'XY', & ! [IN]
+                               URBAN_TR(:,:)                      ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_TB), 'XY', & ! [IN]
+                               URBAN_TB(:,:)                      ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_TG), 'XY', & ! [IN]
+                               URBAN_TG(:,:)                      ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_TC), 'XY', & ! [IN]
+                               URBAN_TC(:,:)                      ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_QC), 'XY', & ! [IN]
+                               URBAN_QC(:,:)                      ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_UC), 'XY', & ! [IN]
+                               URBAN_UC(:,:)                      ) ! [OUT]
 
-       call FILE_CARTESC_read( URBAN_TRL(:,:,:),                             & ! [OUT]
-                         restart_fid, VAR_NAME(I_TRL), 'UXY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_TBL(:,:,:),                             & ! [OUT]
-                         restart_fid, VAR_NAME(I_TBL), 'UXY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_TGL(:,:,:),                             & ! [OUT]
-                         restart_fid, VAR_NAME(I_TGL), 'UXY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_TRL), 'UXY', & ! [IN]
+                               URBAN_TRL(:,:,:)                     ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_TBL), 'UXY', & ! [IN]
+                               URBAN_TBL(:,:,:)                     ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_TGL), 'UXY', & ! [IN]
+                               URBAN_TGL(:,:,:)                     ) ! [OUT]
 
-       call FILE_CARTESC_read( URBAN_RAINR(:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(I_RAINR), 'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_RAINB(:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(I_RAINB), 'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_RAING(:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(I_RAING), 'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_ROFF(:,:),                             & ! [OUT]
-                         restart_fid, VAR_NAME(I_ROFF),  'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_RAINR), 'XY', & ! [IN]
+                               URBAN_RAINR(:,:)                      ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_RAINB), 'XY', & ! [IN]
+                               URBAN_RAINB(:,:)                      ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_RAING), 'XY', & ! [IN]
+                               URBAN_RAING(:,:)                      ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ROFF),  'XY', & ! [IN]
+                               URBAN_ROFF(:,:)                       ) ! [OUT]
 
-       call FILE_CARTESC_read( URBAN_SFC_TEMP(:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFC_TEMP), 'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_SFC_albedo(:,:,I_LW),                     & ! [OUT]
-                         restart_fid, VAR_NAME(I_ALB_LW),   'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_SFC_albedo(:,:,I_SW),                     & ! [OUT]
-                         restart_fid, VAR_NAME(I_ALB_SW),   'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_TEMP), 'XY', & ! [IN]
+                               URBAN_SFC_TEMP(:,:)                      ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ALB_LW),   'XY', & ! [IN]
+                               URBAN_SFC_albedo(:,:,I_LW)               ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ALB_SW),   'XY', & ! [IN]
+                               URBAN_SFC_albedo(:,:,I_SW)               ) ! [OUT]
 
-       call FILE_CARTESC_read( URBAN_SFLX_MW(:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_MW),   'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_SFLX_MU(:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_MU),   'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_SFLX_MV(:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_MV),   'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_SFLX_SH(:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_SH),   'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_SFLX_LH(:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_LH),   'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_SFLX_GH(:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_GH),   'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( URBAN_SFLX_evap(:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_evap), 'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MW),   'XY', & ! [IN]
+                               URBAN_SFLX_MW(:,:)                        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MU),   'XY', & ! [IN]
+                               URBAN_SFLX_MU(:,:)                        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MV),   'XY', & ! [IN]
+                               URBAN_SFLX_MV(:,:)                        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_SH),   'XY', & ! [IN]
+                               URBAN_SFLX_SH(:,:)                        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_LH),   'XY', & ! [IN]
+                               URBAN_SFLX_LH(:,:)                        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_GH),   'XY', & ! [IN]
+                               URBAN_SFLX_GH(:,:)                        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_evap), 'XY', & ! [IN]
+                               URBAN_SFLX_evap(:,:)                      ) ! [OUT]
 
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
 
@@ -759,9 +757,10 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_create( restart_fid,                                                & ! [OUT]
-                                 basename, URBAN_RESTART_OUT_TITLE, URBAN_RESTART_OUT_DTYPE, & ! [IN]
-                                 aggregate=URBAN_RESTART_OUT_AGGREGATE                       ) ! [IN]
+       call FILE_CARTESC_create( &
+            basename, URBAN_RESTART_OUT_TITLE, URBAN_RESTART_OUT_DTYPE, & ! [IN]
+            restart_fid,                                                & ! [OUT]
+            aggregate=URBAN_RESTART_OUT_AGGREGATE                       ) ! [IN]
 
     endif
 

@@ -473,11 +473,11 @@ contains
                                 i               ) ! [in ]
        allocate( read2D  ( tilei,tilej ) )
 
-       call FILE_Read( read2D(:,:), COPYTOPO_IN_BASENAME, "lon",  1, rank )
+       call FILE_Read( COPYTOPO_IN_BASENAME, "lon",  read2D(:,:), rankid=rank )
        lon_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
-       call FILE_Read( read2D(:,:), COPYTOPO_IN_BASENAME, "lat",  1, rank )
+       call FILE_Read( COPYTOPO_IN_BASENAME, "lat",  read2D(:,:), rankid=rank )
        lat_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
-       call FILE_Read( read2D(:,:), COPYTOPO_IN_BASENAME, "TOPO", 1, rank )
+       call FILE_Read( COPYTOPO_IN_BASENAME, "TOPO", read2D(:,:), rankid=rank )
        topo_org(cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye)
 
        deallocate( read2D )

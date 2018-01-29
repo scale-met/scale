@@ -53,7 +53,6 @@ module scale_file_cartesC
      module procedure FILE_CARTESC_read_2D
      module procedure FILE_CARTESC_read_3D
      module procedure FILE_CARTESC_read_4D
-
      module procedure FILE_CARTESC_read_var_1D
      module procedure FILE_CARTESC_read_var_2D
      module procedure FILE_CARTESC_read_var_3D
@@ -267,16 +266,9 @@ contains
   !-----------------------------------------------------------------------------
   !> set latlon and z
   subroutine FILE_CARTESC_set_coordinates( &
-       LON,   &
-       LONX,  &
-       LONY,  &
-       LONXY, &
-       LAT,   &
-       LATX,  &
-       LATY,  &
-       LATXY, &
-       CZ,    &
-       FZ     )
+       LON, LONX, LONY, LONXY, &
+       LAT, LATX, LATY, LATXY, &
+       CZ, FZ                  )
     use scale_const, only: &
        D2R => CONST_D2R
     implicit none
@@ -313,12 +305,9 @@ contains
   !-----------------------------------------------------------------------------
   !> check coordinates in the file
   subroutine FILE_CARTESC_check_coordinates_name( &
-       basename, &
-       atmos,    &
-       ocean,    &
-       land,     &
-       urban,    &
-       transpose )
+       basename,                  &
+       atmos, ocean, land, urban, &
+       transpose                  )
     implicit none
 
     character(len=*), intent(in) :: basename        !< basename of the file
@@ -349,8 +338,8 @@ contains
     if( present(urban) ) urban_ = urban
     if( present(transpose) ) transpose_ = transpose
 
-    call FILE_CARTESC_open( fid,     & ! [OUT]
-                            basename ) ! [IN]
+    call FILE_CARTESC_open( basename, fid )
+                            
 
     call FILE_CARTESC_check_coordinates_id( fid,                           & ! [IN]
                                             atmos_, ocean_, land_, urban_, & ! [IN]
@@ -362,12 +351,9 @@ contains
   !-----------------------------------------------------------------------------
   !> check coordinates in the file
   subroutine FILE_CARTESC_check_coordinates_id( &
-       fid,   &
-       atmos, &
-       ocean, &
-       land,  &
-       urban, &
-       transpose )
+       fid,                       &
+       atmos, ocean, land, urban, &
+       transpose                  )
     use scale_grid, only: &
        GRID_CZ, &
        GRID_CX, &
@@ -426,28 +412,28 @@ contains
     YSB = JSB - JSB2 + 1
     YEB = JEB - JSB + YSB
 
-    call FILE_CARTESC_read_var_1D( buffer_x, fid, 'x',  'X', 1 )
-    call FILE_CARTESC_read_var_1D( buffer_y, fid, 'y',  'Y', 1 )
-    call FILE_CARTESC_flush( fid )
+    call FILE_CARTESC_read_var_1D( fid, 'x',  'X', buffer_x(:) )
+    call FILE_CARTESC_read_var_1D( fid, 'y',  'Y', buffer_y(:) )
+    call FILE_CARTESC_flush( fid ) ! for non-blocking I/O
     call check_1d( GRID_CX(ISB:IEB), buffer_x(ISB:IEB), 'x' )
     call check_1d( GRID_CY(JSB:JEB), buffer_y(JSB:JEB), 'y' )
 
     if ( set_coordinates ) then
-       call FILE_CARTESC_read_var_2D( buffer_xy, fid, 'lon', 'XY', 1 )
-       call FILE_CARTESC_flush( fid )
+       call FILE_CARTESC_read_var_2D( fid, 'lon', 'XY', buffer_xy(:,:) )
+       call FILE_CARTESC_flush( fid ) ! for non-blocking I/O
        call check_2d( AXIS_LON(XSB:XEB,YSB:YEB), buffer_xy(ISB:IEB,JSB:JEB), 'lon' )
 
-       call FILE_CARTESC_read_var_2D( buffer_xy, fid, 'lat', 'XY', 1 )
-       call FILE_CARTESC_flush( fid )
+       call FILE_CARTESC_read_var_2D( fid, 'lat', 'XY', buffer_xy(:,:) )
+       call FILE_CARTESC_flush( fid ) ! for non-blocking I/O
        call check_2d( AXIS_LAT(XSB:XEB,YSB:YEB), buffer_xy(ISB:IEB,JSB:JEB), 'lat' )
     endif
 
     if ( atmos_ ) then
-       call FILE_CARTESC_read_var_1D( buffer_z,   fid, 'z',      'Z',   1 )
+       call FILE_CARTESC_read_var_1D( fid, 'z', 'Z', buffer_z(:) )
        if ( .not. transpose_ ) then
-          call FILE_CARTESC_read_var_3D( buffer_zxy, fid, 'height', 'ZXY', 1 )
+          call FILE_CARTESC_read_var_3D( fid, 'height', 'ZXY', buffer_zxy(:,:,:) )
        endif
-       call FILE_CARTESC_flush( fid )
+       call FILE_CARTESC_flush( fid ) ! for non-blocking I/O
        call check_1d( GRID_CZ(KS:KE), buffer_z(KS:KE), 'z' )
        if ( .not. transpose_ ) then
           call check_3d( AXIS_HGT(:,XSB:XEB,YSB:YEB), buffer_zxy(KS:KE,ISB:IEB,JSB:JEB), 'height', transpose_ )
@@ -455,20 +441,20 @@ contains
     endif
 
     if ( ocean_ ) then
-       call FILE_CARTESC_read_var_1D( buffer_o, fid, 'oz', 'OZ', 1 )
-       call FILE_CARTESC_flush( fid )
+       call FILE_CARTESC_read_var_1D( fid, 'oz', 'OZ', buffer_o(:) )
+       call FILE_CARTESC_flush( fid ) ! for non-blocking I/O
        call check_1d( GRID_OCZ(OKS:OKE), buffer_o(OKS:OKE), 'oz' )
     endif
 
     if ( land_ ) then
-       call FILE_CARTESC_read_var_1D( buffer_l, fid, 'lz',  'LZ', 1 )
-       call FILE_CARTESC_flush( fid )
+       call FILE_CARTESC_read_var_1D( fid, 'lz',  'LZ', buffer_l(:) )
+       call FILE_CARTESC_flush( fid ) ! for non-blocking I/O
        call check_1d( GRID_LCZ(LKS:LKE), buffer_l(LKS:LKE), 'lz' )
     endif
 
     if ( urban_ ) then
-       call FILE_CARTESC_read_var_1D( buffer_u, fid, 'uz',  'UZ', 1 )
-       call FILE_CARTESC_flush( fid )
+       call FILE_CARTESC_read_var_1D( fid, 'uz',  'UZ', buffer_u(:) )
+       call FILE_CARTESC_flush( fid ) ! for non-blocking I/O
        call check_1d( GRID_UCZ(UKS:UKE), buffer_u(UKS:UKE), 'uz' )
     endif
 
@@ -620,847 +606,10 @@ contains
   end subroutine Free_Derived_Datatype
 
   !-----------------------------------------------------------------------------
-  !> interface FILE_CARTESC_read
-  !!    Read data from file
-  !!    This routine is a wrapper of the lower primitive routines
-  !<
-  !-----------------------------------------------------------------------------
-  subroutine FILE_CARTESC_read_1D( &
-       var,      &
-       basename, &
-       varname,  &
-       dim_type, &
-       step,     &
-       aggregate )
-    implicit none
-
-    real(RP),         intent(out) :: var(:)   !< value of the variable
-    character(len=*), intent(in)  :: basename !< basename of the file
-    character(len=*), intent(in)  :: varname  !< name of the variable
-    character(len=*), intent(in)  :: dim_type !< dimension type (Z/X/Y)
-    integer,          intent(in)  :: step     !< step number
-    logical,          intent(in), optional :: aggregate
-
-    integer :: fid
-    !---------------------------------------------------------------------------
-
-    call FILE_CARTESC_open( fid,      & ! [OUT]
-                            basename, & ! [IN]
-                            aggregate ) ! [IN]
-
-    call FILE_CARTESC_read_var_1D( var(:),                      & ! [OUT]
-                                   fid, varname, dim_type, step ) ! [IN]
-
-    call FILE_CARTESC_close( fid )
-
-    return
-  end subroutine FILE_CARTESC_read_1D
-
-  !-----------------------------------------------------------------------------
-  !> Read 2D data from file
-  subroutine FILE_CARTESC_read_2D( &
-       var,      &
-       basename, &
-       varname,  &
-       dim_type, &
-       step,     &
-       aggregate )
-    implicit none
-
-    real(RP),         intent(out) :: var(:,:) !< value of the variable
-    character(len=*), intent(in)  :: basename !< basename of the file
-    character(len=*), intent(in)  :: varname  !< name of the variable
-    character(len=*), intent(in)  :: dim_type !< dimension type (Z/X/Y)
-    integer,          intent(in)  :: step     !< step number
-    logical,          intent(in), optional :: aggregate
-
-    integer :: fid
-    !---------------------------------------------------------------------------
-
-    call FILE_CARTESC_open( fid,      & ! [OUT]
-                            basename, & ! [IN]
-                            aggregate ) ! [IN]
-
-    call FILE_CARTESC_read_var_2D( var(:,:),                    & ! [OUT]
-                                   fid, varname, dim_type, step ) ! [IN]
-
-    call FILE_CARTESC_close( fid )
-
-    return
-  end subroutine FILE_CARTESC_read_2D
-
-  !-----------------------------------------------------------------------------
-  !> Read 3D data from file
-  subroutine FILE_CARTESC_read_3D( &
-       var,      &
-       basename, &
-       varname,  &
-       dim_type, &
-       step,     &
-       aggregate )
-    implicit none
-
-    real(RP),         intent(out) :: var(:,:,:) !< value of the variable
-    character(len=*), intent(in)  :: basename   !< basename of the file
-    character(len=*), intent(in)  :: varname    !< name of the variable
-    character(len=*), intent(in)  :: dim_type   !< dimension type (Z/X/Y/T)
-    integer,          intent(in)  :: step       !< step number
-    logical,          intent(in), optional :: aggregate
-
-    integer :: fid
-    !---------------------------------------------------------------------------
-
-    call FILE_CARTESC_open( fid,      & ! [OUT]
-                            basename, & ! [IN]
-                            aggregate )
-
-    call FILE_CARTESC_read_var_3D( var(:,:,:),                  & ! [OUT]
-                                   fid, varname, dim_type, step ) ! [IN]
-
-    call FILE_CARTESC_close( fid )
-
-    return
-  end subroutine FILE_CARTESC_read_3D
-
-  !-----------------------------------------------------------------------------
-  !> Read 4D data from file
-  subroutine FILE_CARTESC_read_4D( &
-       var,      &
-       basename, &
-       varname,  &
-       dim_type, &
-       step,     &
-       aggregate )
-    implicit none
-
-    real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
-    character(len=*), intent(in)  :: basename     !< basename of the file
-    character(len=*), intent(in)  :: varname      !< name of the variable
-    character(len=*), intent(in)  :: dim_type     !< dimension type (Z/X/Y/Time)
-    integer,          intent(in)  :: step         !< step number
-    logical,          intent(in), optional :: aggregate
-
-    integer :: fid
-    !---------------------------------------------------------------------------
-
-    call FILE_CARTESC_open( fid,      & ! [OUT]
-                            basename, & ! [IN]
-                            aggregate )
-
-    call FILE_CARTESC_read_var_4D( var(:,:,:,:),                & ! [OUT]
-                                   fid, varname, dim_type, step ) ! [IN]
-
-    call FILE_CARTESC_close( fid )
-
-    return
-  end subroutine FILE_CARTESC_read_4D
-
-  !-----------------------------------------------------------------------------
-  !> Read 1D data from file
-  subroutine FILE_CARTESC_read_var_1D( &
-       var,      &
-       fid,      &
-       varname,  &
-       dim_type, &
-       step      )
-    use scale_file, only: &
-       FILE_get_AGGREGATE, &
-       FILE_Read
-    use scale_process, only: &
-       PRC_abort
-    use scale_rm_process, only: &
-       PRC_NUM_X, &
-       PRC_NUM_Y
-    use mpi
-    implicit none
-
-    real(RP),         intent(out) :: var(:)   !< value of the variable
-    integer,          intent(in)  :: fid      !< file ID
-    character(len=*), intent(in)  :: varname  !< name of the variable
-    character(len=*), intent(in)  :: dim_type !< dimension type (Z/X/Y)
-    integer,          intent(in)  :: step     !< step number
-
-    integer :: dim1_S, dim1_E
-    integer :: start(1)   ! start offset of globale variable
-    integer :: count(1)   ! request length to the global variable
-    !---------------------------------------------------------------------------
-
-    call PROF_rapstart('FILE_I_NetCDF', 2)
-
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (1D), name : ', trim(varname)
-
-    if ( FILE_get_aggregate(fid) ) then
-       ! read data and halos into the local buffer
-       if    ( dim_type == 'Z' ) then
-          start(1) = 1
-          count(1) = KMAX
-          call FILE_Read( var(KS:KE), fid, varname, step,                    &
-                          ntypes=KMAX, dtype=etype, start=start, count=count )
-       elseif( dim_type == 'OZ' ) then
-          start(1) = 1
-          count(1) = OKMAX
-          call FILE_Read( var, fid, varname, step,                            &
-                          ntypes=OKMAX, dtype=etype, start=start, count=count )
-       elseif( dim_type == 'LZ' ) then
-          start(1) = 1
-          count(1) = LKMAX
-          call FILE_Read( var, fid, varname, step,                            &
-                          ntypes=LKMAX, dtype=etype, start=start, count=count )
-       elseif( dim_type == 'UZ' ) then
-          start(1) = 1
-          count(1) = UKMAX
-          call FILE_Read( var, fid, varname, step,                            &
-                          ntypes=UKMAX, dtype=etype, start=start, count=count )
-       elseif( dim_type == 'X' .OR. dim_type == 'CX' ) then
-          start(1) = IS_inG - IHALO
-          count(1) = IA
-          call FILE_Read( var, fid, varname, step,                         &
-                          ntypes=IA, dtype=etype, start=start, count=count )
-       elseif( dim_type == 'Y' .OR. dim_type == 'CY' ) then
-          start(1) = JS_inG - JHALO
-          count(1) = JA
-          call FILE_Read( var, fid, varname, step,                         &
-                          ntypes=JA, dtype=etype, start=start, count=count )
-       else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_1D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-    else
-       if    ( dim_type == 'Z' ) then
-          dim1_S   = KS
-          dim1_E   = KE
-       elseif( dim_type == 'OZ' ) then
-          dim1_S   = 1
-          dim1_E   = OKMAX
-       elseif( dim_type == 'LZ' ) then
-          dim1_S   = 1
-          dim1_E   = LKMAX
-       elseif( dim_type == 'UZ' ) then
-          dim1_S   = 1
-          dim1_E   = UKMAX
-       elseif( dim_type == 'X' ) then
-          dim1_S   = ISB
-          dim1_E   = IEB
-       elseif( dim_type == 'CX' ) then
-          dim1_S   = 1
-          dim1_E   = IA
-       elseif( dim_type == 'Y' ) then
-          dim1_S   = JSB
-          dim1_E   = JEB
-       elseif( dim_type == 'CY' ) then
-          dim1_S   = 1
-          dim1_E   = JA
-       else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_1D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-
-       call FILE_Read( var(dim1_S:dim1_E), fid, varname, step )
-    endif
-
-    call PROF_rapend  ('FILE_I_NetCDF', 2)
-
-    return
-  end subroutine FILE_CARTESC_read_var_1D
-
-  !-----------------------------------------------------------------------------
-  !> Read 2D data from file
-  subroutine FILE_CARTESC_read_var_2D( &
-       var,      &
-       fid,      &
-       varname,  &
-       dim_type, &
-       step      )
-    use scale_file, only: &
-       FILE_get_AGGREGATE, &
-       FILE_Read
-    use scale_process, only: &
-       PRC_abort
-    use scale_rm_process, only: &
-       PRC_NUM_X, &
-       PRC_NUM_Y
-    use mpi
-    implicit none
-
-    real(RP),         intent(out) :: var(:,:) !< value of the variable
-    integer,          intent(in)  :: fid      !< file ID
-    character(len=*), intent(in)  :: varname  !< name of the variable
-    character(len=*), intent(in)  :: dim_type !< dimension type (Z/X/Y)
-    integer,          intent(in)  :: step     !< step number
-
-    integer :: dim1_S, dim1_E
-    integer :: dim2_S, dim2_E
-    !---------------------------------------------------------------------------
-
-    call PROF_rapstart('FILE_I_NetCDF', 2)
-
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (2D), name : ', trim(varname)
-
-    if ( FILE_get_AGGREGATE(fid) ) then
-       ! read data and halos into the local buffer
-       if    ( dim_type == 'XY' ) then
-          call FILE_Read( var, fid, varname, step,                                &
-                          ntypes=IA*JA, dtype=etype, start=startXY, count=countXY )
-       elseif( dim_type == 'ZX' ) then
-          ! Because KHALO is not saved in files, we use centerTypeZX, an MPI
-          ! derived datatype to describe the layout of local read buffer
-          call FILE_Read( var, fid, varname, step,                                   &
-                          ntypes=1, dtype=centerTypeZX, start=startZX, count=countZX )
-       else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_2D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-    else
-       if    ( dim_type == 'XY' ) then
-          dim1_S   = ISB
-          dim1_E   = IEB
-          dim2_S   = JSB
-          dim2_E   = JEB
-       elseif( dim_type == 'ZX' ) then
-          dim1_S   = KS
-          dim1_E   = KE
-          dim2_S   = ISB
-          dim2_E   = IEB
-       else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_2D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-
-       call FILE_Read( var(dim1_S:dim1_E,dim2_S:dim2_E), fid, varname, step )
-    endif
-
-    call PROF_rapend  ('FILE_I_NetCDF', 2)
-
-    return
-  end subroutine FILE_CARTESC_read_var_2D
-
-  !-----------------------------------------------------------------------------
-  !> Read 3D data from file
-  subroutine FILE_CARTESC_read_var_3D( &
-       var,      &
-       fid,      &
-       varname,  &
-       dim_type, &
-       step      )
-    use scale_file, only: &
-       FILE_get_AGGREGATE, &
-       FILE_Read
-    use scale_process, only: &
-       PRC_abort
-    use scale_rm_process, only: &
-       PRC_NUM_X, &
-       PRC_NUM_Y
-    implicit none
-
-    real(RP),         intent(out) :: var(:,:,:) !< value of the variable
-    integer,          intent(in)  :: fid        !< file ID
-    character(len=*), intent(in)  :: varname    !< name of the variable
-    character(len=*), intent(in)  :: dim_type   !< dimension type (Z/X/Y/T)
-    integer,          intent(in)  :: step       !< step number
-
-    integer :: dim1_S, dim1_E
-    integer :: dim2_S, dim2_E
-    integer :: dim3_S, dim3_E
-    !---------------------------------------------------------------------------
-
-    call PROF_rapstart('FILE_I_NetCDF', 2)
-
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (3D), name : ', trim(varname)
-
-    if ( FILE_get_AGGREGATE(fid) ) then
-       ! read data and halos into the local buffer
-       ! Because KHALO is not saved in files, we use mpi derived datatypes to
-       ! describe the layout of local read buffer
-       if(      dim_type == 'ZXY'  &
-           .or. dim_type == 'ZXHY' &
-           .or. dim_type == 'ZXYH' ) then
-          call FILE_Read( var, fid, varname, step,                                      &
-                          ntypes=1, dtype=centerTypeZXY, start=startZXY, count=countZXY )
-       elseif( dim_type == 'ZHXY' ) then
-          call FILE_Read( var, fid, varname, step,                                      &
-                          ntypes=1, dtype=centerTypeZHXY, start=startZHXY, count=countZHXY )
-       elseif( dim_type == 'XYT' ) then
-          startXY(3) = 1
-          countXY(3) = step
-          call FILE_Read( var, fid, varname, step,                                     &
-                          ntypes=step*IA*JA, dtype=etype, start=startXY, count=countXY )
-       elseif( dim_type == 'OXY' ) then
-          call FILE_Read( var, fid, varname, step,                                         &
-                          ntypes=1, dtype=centerTypeOCEAN, start=startOCEAN, count=countOCEAN )
-       elseif( dim_type == 'LXY' ) then
-          call FILE_Read( var, fid, varname, step,                                         &
-                          ntypes=1, dtype=centerTypeLAND, start=startLAND, count=countLAND )
-       elseif( dim_type == 'UXY' ) then
-          call FILE_Read( var, fid, varname, step,                                            &
-                          ntypes=1, dtype=centerTypeURBAN, start=startURBAN, count=countURBAN )
-       else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_3D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-    else
-       if(      dim_type == 'ZXY'  &
-           .or. dim_type == 'ZXHY' &
-           .or. dim_type == 'ZXYH' ) then
-          dim1_S   = KS
-          dim1_E   = KE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-       elseif( dim_type == 'ZHXY' ) then
-          dim1_S   = KS-1
-          dim1_E   = KE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-       elseif( dim_type == 'XYT' ) then
-          dim1_S   = ISB
-          dim1_E   = IEB
-          dim2_S   = JSB
-          dim2_E   = JEB
-          dim3_S   = 1
-          dim3_E   = step
-       elseif( dim_type == 'OXY' ) then
-          dim1_S   = OKS
-          dim1_E   = OKE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-       elseif( dim_type == 'LXY' ) then
-          dim1_S   = LKS
-          dim1_E   = LKE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-       elseif( dim_type == 'UXY' ) then
-          dim1_S   = UKS
-          dim1_E   = UKE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-       else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_3D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-
-       call FILE_Read( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                       fid, varname, step                              )
-    endif
-
-    call PROF_rapend  ('FILE_I_NetCDF', 2)
-
-    return
-  end subroutine FILE_CARTESC_read_var_3D
-
-  !-----------------------------------------------------------------------------
-  !> Read 4D data from file
-  subroutine FILE_CARTESC_read_var_4D( &
-       var,      &
-       fid,      &
-       varname,  &
-       dim_type, &
-       step      )
-    use scale_file, only: &
-       FILE_get_AGGREGATE, &
-       FILE_Read
-    use scale_process, only: &
-       PRC_abort
-    use scale_rm_process, only: &
-       PRC_NUM_X, &
-       PRC_NUM_Y
-    implicit none
-
-    real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
-    integer,          intent(in)  :: fid          !< file ID
-    character(len=*), intent(in)  :: varname      !< name of the variable
-    character(len=*), intent(in)  :: dim_type     !< dimension type (Z/X/Y/Time)
-    integer,          intent(in)  :: step         !< step number
-
-    integer :: dim1_S, dim1_E
-    integer :: dim2_S, dim2_E
-    integer :: dim3_S, dim3_E
-    integer :: dim4_S, dim4_E
-    !---------------------------------------------------------------------------
-
-    call PROF_rapstart('FILE_I_NetCDF', 2)
-
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (4D), name : ', trim(varname)
-
-    if ( FILE_get_AGGREGATE(fid) ) then
-       ! read data and halos into the local buffer
-       if (      dim_type == 'ZXYT'  &
-            .or. dim_type == 'ZXHYT' &
-            .or. dim_type == 'ZXYHT' ) then
-          startZXY(4) = 1
-          countZXY(4) = step
-          call FILE_Read( var, fid, varname, step,                                         &
-                          ntypes=step, dtype=centerTypeZXY, start=startZXY, count=countZXY )
-       elseif ( dim_type == 'ZHXYT' ) then
-          startZXY(4) = 1
-          countZXY(4) = step
-          call FILE_Read( var, fid, varname, step,                                         &
-                          ntypes=step, dtype=centerTypeZHXY, start=startZHXY, count=countZHXY )
-       else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_4D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-    else
-       if (      dim_type == 'ZXYT'  &
-            .or. dim_type == 'ZXHYT' &
-            .or. dim_type == 'ZXYHT' ) then
-          dim1_S   = KS
-          dim1_E   = KE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-          dim4_S   = 1
-          dim4_E   = step
-       elseif ( dim_type == 'ZHXYT' ) then
-          dim1_S   = KS-1
-          dim1_E   = KE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-          dim4_S   = 1
-          dim4_E   = step
-       elseif ( dim_type == 'OXYT' ) then
-          dim1_S   = OKS
-          dim1_E   = OKE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-          dim4_S   = 1
-          dim4_E   = step
-       else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_4D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-
-       call FILE_Read( var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E), &
-                       fid, varname, step                                            )
-    endif
-
-    call PROF_rapend  ('FILE_I_NetCDF', 2)
-
-    return
-  end subroutine FILE_CARTESC_read_var_4D
-
-  !-----------------------------------------------------------------------------
-  !> interface FILE_CARTESC_write
-  !!   Write data to file
-  !!   This routine is a wrapper of the lowere primitive routines
-  !<
-  !-----------------------------------------------------------------------------
-  subroutine FILE_CARTESC_write_1D( &
-       var,      &
-       basename, &
-       title,    &
-       varname,  &
-       desc,     &
-       unit,     &
-       dim_type, &
-       datatype, &
-       date,     &
-       subsec,   &
-       append,   &
-       aggregate )
-    use scale_process, only: &
-       PRC_abort
-    implicit none
-
-    real(RP),         intent(in) :: var(:)   !< value of the variable
-    character(len=*), intent(in) :: basename !< basename of the file
-    character(len=*), intent(in) :: title    !< title    of the file
-    character(len=*), intent(in) :: varname  !< name        of the variable
-    character(len=*), intent(in) :: desc     !< description of the variable
-    character(len=*), intent(in) :: unit     !< unit        of the variable
-    character(len=*), intent(in) :: dim_type !< dimension type (Z/X/Y)
-    character(len=*), intent(in) :: datatype !< data type (REAL8/REAL4/default)
-
-    integer,          intent(in), optional :: date(6) !< ymdhms of the time
-    real(DP),         intent(in), optional :: subsec  !< subsec of the time
-    logical,          intent(in), optional :: append  !< switch whether append existing file or not (default=false)
-    logical,          intent(in), optional :: aggregate
-
-    integer :: fid, vid
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (1D), name : ', trim(varname)
-
-    call FILE_CARTESC_create( fid,                            & ! [OUT]
-                              basename, title, datatype,      & ! [IN]
-                              date, subsec, append, aggregate ) ! [IN]
-
-    call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
-                               vid                                           ) ! [OUT]
-
-    call FILE_CARTESC_enddef( fid )
-
-    call FILE_CARTESC_write_var_1D( fid, vid, var, varname, dim_type )
-
-    return
-  end subroutine FILE_CARTESC_write_1D
-
-  !-----------------------------------------------------------------------------
-  !> Write 2D data to file
-  subroutine FILE_CARTESC_write_2D( &
-       var,       &
-       basename,  &
-       title,     &
-       varname,   &
-       desc,      &
-       unit,      &
-       dim_type,  &
-       datatype,  &
-       date,      &
-       subsec,    &
-       append,    &
-       fill_halo, &
-       haszcoord, &
-       aggregate  )
-    use scale_process, only: &
-       PRC_abort
-    implicit none
-
-    real(RP),         intent(in) :: var(:,:) !< value of the variable
-    character(len=*), intent(in) :: basename !< basename of the file
-    character(len=*), intent(in) :: title    !< title    of the file
-    character(len=*), intent(in) :: varname  !< name        of the variable
-    character(len=*), intent(in) :: desc     !< description of the variable
-    character(len=*), intent(in) :: unit     !< unit        of the variable
-    character(len=*), intent(in) :: dim_type !< dimension type (Z/X/Y)
-    character(len=*), intent(in) :: datatype !< data type (REAL8/REAL4/default)
-
-    integer,          intent(in), optional :: date(6)   !< ymdhms of the time
-    real(DP),         intent(in), optional :: subsec    !< subsec of the time
-    logical,          intent(in), optional :: append    !< switch whether append existing file or not (default=false)
-    logical,          intent(in), optional :: fill_halo !< switch whether include halo data or not    (default=false)
-    logical,          intent(in), optional :: haszcoord !< switch whether include zcoordinate or not  (default=true)
-    logical,          intent(in), optional :: aggregate
-
-    integer :: fid, vid
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (2D), name : ', trim(varname)
-
-    call FILE_CARTESC_create( fid,                                       & ! [OUT]
-                              basename, title, datatype,                 & ! [IN]
-                              date, subsec, append, haszcoord, aggregate ) ! [IN]
-
-    call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
-                               vid                                           ) ! [OUT]
-
-    call FILE_CARTESC_enddef( fid )
-
-    call FILE_CARTESC_write_var_2D( fid, vid, var, varname, dim_type, fill_halo )
-
-    return
-  end subroutine FILE_CARTESC_write_2D
-
-  !-----------------------------------------------------------------------------
-  !> Write 3D data to file
-  subroutine FILE_CARTESC_write_3D( &
-       var,       &
-       basename,  &
-       title,     &
-       varname,   &
-       desc,      &
-       unit,      &
-       dim_type,  &
-       datatype,  &
-       date,      &
-       subsec,    &
-       append,    &
-       fill_halo, &
-       aggregate  )
-    use scale_process, only: &
-       PRC_masterrank, &
-       PRC_abort
-    implicit none
-
-    real(RP),         intent(in) :: var(:,:,:) !< value of the variable
-    character(len=*), intent(in) :: basename   !< basename of the file
-    character(len=*), intent(in) :: title      !< title    of the file
-    character(len=*), intent(in) :: varname    !< name        of the variable
-    character(len=*), intent(in) :: desc       !< description of the variable
-    character(len=*), intent(in) :: unit       !< unit        of the variable
-    character(len=*), intent(in) :: dim_type   !< dimension type (Z/X/Y)
-    character(len=*), intent(in) :: datatype   !< data type (REAL8/REAL4/default)
-
-    integer,          intent(in), optional :: date(6)   !< ymdhms of the time
-    real(DP),         intent(in), optional :: subsec    !< subsec of the time
-    logical,          intent(in), optional :: append    !< append existing (closed) file?
-    logical,          intent(in), optional :: fill_halo !< include halo data?
-    logical,          intent(in), optional :: aggregate
-
-    integer :: fid, vid
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (3D), name : ', trim(varname)
-
-    call FILE_CARTESC_create( fid,                            & ! [OUT]
-                              basename, title, datatype,      & ! [IN]
-                              date, subsec, append, aggregate ) ! [IN]
-
-    call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
-                               vid                                           ) ! [OUT]
-
-    call FILE_CARTESC_enddef( fid )
-
-    call FILE_CARTESC_write_var_3D( fid, vid, var, varname, dim_type, fill_halo )
-
-    return
-  end subroutine FILE_CARTESC_write_3D
-
-  !-----------------------------------------------------------------------------
-  !> Write 3D data with time dimension to file
-  subroutine FILE_CARTESC_write_3D_t( &
-       var,       &
-       basename,  &
-       title,     &
-       varname,   &
-       desc,      &
-       unit,      &
-       dim_type,  &
-       datatype,  &
-       timeintv,  &
-       tsince,    &
-       append,    &
-       timetarg,  &
-       timeofs,   &
-       fill_halo, &
-       aggregate  )
-    use scale_process, only: &
-       PRC_masterrank, &
-       PRC_abort
-    implicit none
-
-    real(RP),         intent(in) :: var(:,:,:) !< value of the variable
-    character(len=*), intent(in) :: basename   !< basename of the file
-    character(len=*), intent(in) :: title      !< title    of the file
-    character(len=*), intent(in) :: varname    !< name        of the variable
-    character(len=*), intent(in) :: desc       !< description of the variable
-    character(len=*), intent(in) :: unit       !< unit        of the variable
-    character(len=*), intent(in) :: dim_type   !< dimension type (X/Y/Time)
-    character(len=*), intent(in) :: datatype   !< data type (REAL8/REAL4/default)
-    real(DP),         intent(in) :: timeintv   !< time interval [sec]
-    integer ,         intent(in) :: tsince(6)  !< start time
-
-    logical,          intent(in), optional :: append    !< append existing (closed) file?
-    integer,          intent(in), optional :: timetarg  !< target timestep (optional)
-    real(DP),         intent(in), optional :: timeofs   !< offset time     (optional)
-    logical,          intent(in), optional :: fill_halo !< include halo data?
-    logical,          intent(in), optional :: aggregate
-
-    integer  :: fid, vid
-    integer  :: nsteps
-
-    intrinsic :: size
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,'(1x,3A)') '*** Write to file (3D), name : ', trim(varname), 'with time dimension'
-
-    call FILE_CARTESC_create( fid,                               & ! [OUT]
-                              basename, title, datatype, tsince, & ! [IN]
-                              append=append, aggregate=aggregate ) ! [IN]
-
-    if ( present(timetarg) ) then
-       nsteps = 1
-    else
-       nsteps = size(var,3)
-    endif
-    call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
-                               vid,                                          & ! [OUT]
-                               timeintv, nsteps                              ) ! [IN]
-
-    call FILE_CARTESC_enddef( fid )
-
-    call FILE_CARTESC_write_var_3D_t( fid, vid, var, varname, dim_type, timeintv, &
-                                      timetarg, timeofs, fill_halo                )
-
-    return
-  end subroutine FILE_CARTESC_write_3D_t
-
-  !-----------------------------------------------------------------------------
-  !> Write 4D data to file
-  subroutine FILE_CARTESC_write_4D( &
-       var,       &
-       basename,  &
-       title,     &
-       varname,   &
-       desc,      &
-       unit,      &
-       dim_type,  &
-       datatype,  &
-       timeintv,  &
-       tsince,    &
-       append,    &
-       timetarg,  &
-       timeofs,   &
-       fill_halo, &
-       aggregate  )
-    use scale_process, only: &
-       PRC_abort
-    implicit none
-
-    real(RP),         intent(in) :: var(:,:,:,:) !< value of the variable
-    character(len=*), intent(in) :: basename     !< basename of the file
-    character(len=*), intent(in) :: title        !< title    of the file
-    character(len=*), intent(in) :: varname      !< name        of the variable
-    character(len=*), intent(in) :: desc         !< description of the variable
-    character(len=*), intent(in) :: unit         !< unit        of the variable
-    character(len=*), intent(in) :: dim_type     !< dimension type (Z/X/Y/Time)
-    character(len=*), intent(in) :: datatype     !< data type (REAL8/REAL4/default)
-    real(DP),         intent(in) :: timeintv     !< time interval [sec]
-    integer,          intent(in) :: tsince(6)    !< start time
-
-    logical,          intent(in), optional :: append    !< append existing (closed) file?
-    integer,          intent(in), optional :: timetarg  !< target timestep (optional)
-    real(DP),         intent(in), optional :: timeofs   !< offset time     (optional)
-    logical,          intent(in), optional :: fill_halo !< include halo data?
-    logical,          intent(in), optional :: aggregate
-
-    integer  :: fid, vid
-    integer  :: nsteps
-
-    intrinsic :: size
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (4D), name : ', trim(varname)
-
-    call FILE_CARTESC_create( fid,                               & ! [OUT]
-                              basename, title, datatype, tsince, & ! [IN]
-                              append=append, aggregate=aggregate ) ! [IN]
-
-    if ( present(timetarg) ) then
-       nsteps = 1
-    else
-       nsteps = size(var,3)
-    endif
-    call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
-                               vid,                                          & ! [OUT]
-                               timeintv, nsteps                              ) ! [IN]
-
-    call FILE_CARTESC_enddef( fid )
-
-    call FILE_CARTESC_write_var_4D( fid, vid, var, varname, dim_type, timeintv, &
-                                    timetarg, timeofs, fill_halo                )
-
-    return
-  end subroutine FILE_CARTESC_write_4D
-
-  !-----------------------------------------------------------------------------
   !> open a netCDF file for read
   subroutine FILE_CARTESC_open( &
-       fid,      &
        basename, &
+       fid,      &
        aggregate )
     use scale_file_h, only: &
        FILE_FREAD
@@ -1472,9 +621,10 @@ contains
        PRC_LOCAL_COMM_WORLD
     use mpi, only : MPI_COMM_NULL
     implicit none
+    character(len=*), intent(in)  :: basename !< basename of the file
 
     integer,          intent(out) :: fid      !< file ID
-    character(len=*), intent(in)  :: basename !< basename of the file
+
     logical,          intent(in), optional :: aggregate
 
     integer :: comm
@@ -1490,9 +640,8 @@ contains
        comm = PRC_LOCAL_COMM_WORLD
     end if
 
-    call FILE_Open( fid,                & ! [OUT]
-                    basename,           & ! [IN]
-                    FILE_FREAD,         & ! [IN]
+    call FILE_Open( basename,           & ! [IN]
+                    fid,                & ! [OUT]
                     mpi_comm = comm,    & ! [IN]
                     rankid = PRC_myrank ) ! [IN]
 
@@ -1506,15 +655,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Create/open a netCDF file
   subroutine FILE_CARTESC_create( &
-       fid,       &
-       basename,  &
-       title,     &
-       datatype,  &
-       date,      &
-       subsec,    &
-       append,    &
-       haszcoord, &
-       aggregate  )
+       basename, title, datatype, &
+       fid,                       &
+       date, subsec,              &
+       haszcoord,                 &
+       append, aggregate          )
     use mpi, only: &
        MPI_COMM_NULL
     use scale_file_h, only: &
@@ -1540,11 +685,11 @@ contains
        NOWDATE => TIME_NOWDATE, &
        NOWMS   => TIME_NOWMS
     implicit none
-
-    integer,          intent(out) :: fid      !< file ID
     character(len=*), intent(in)  :: basename !< basename of the file
     character(len=*), intent(in)  :: title    !< title    of the file
     character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
+
+    integer,          intent(out) :: fid      !< file ID
 
     integer,          intent(in), optional :: date(6)   !< ymdhms of the time
     real(DP),         intent(in), optional :: subsec    !< subsec of the time
@@ -1586,7 +731,7 @@ contains
 
     ! create a netCDF file if not already existed. Otherwise, open it.
     if ( present(date) ) then
-       call FILE_get_CFtunits( tunits, date )
+       call FILE_get_CFtunits( date(:), tunits )
     else
        tunits = 'seconds'
     endif
@@ -1605,16 +750,15 @@ contains
        comm = MPI_COMM_NULL
     end if
 
-    call FILE_Create( fid,                     & ! [OUT]
-                      fileexisted,             & ! [OUT]
-                      basename,                & ! [IN]
+    call FILE_Create( basename,                & ! [IN]
                       title,                   & ! [IN]
                       H_SOURCE,                & ! [IN]
                       H_INSTITUTE,             & ! [IN]
                       "cartesC",               & ! [IN]
 !                      GRID_CARTESC_NAME,       & ! [IN]
-                      rankid = PRC_myrank,     & ! [IN]
-                      ismaster = PRC_Ismaster, & ! [IN]
+                      fid,                     & ! [OUT]
+                      fileexisted,             & ! [OUT]
+                      rankid     = PRC_myrank, & ! [IN]
                       time_units = tunits,     & ! [IN]
                       append     = append_sw,  & ! [IN]
                       mpi_comm   = comm        ) ! [IN]
@@ -1672,9 +816,9 @@ contains
                              File_haszcoord(fid) ) ! [IN]
 
        if ( present( date ) ) then
-          call FILE_get_CFtunits(tunits, date)
+          call FILE_get_CFtunits( date(:), tunits )
        else
-          call FILE_get_CFtunits(tunits, NOWDATE)
+          call FILE_get_CFtunits( NOWDATE(:), tunits )
        endif
        call FILE_Set_Attribute( fid, "global", "time_units", tunits )
 
@@ -1695,8 +839,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Exit netCDF file define mode
-  subroutine FILE_CARTESC_enddef( &
-       fid )
+  subroutine FILE_CARTESC_enddef( fid )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_EndDef,    &
@@ -1748,8 +891,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Flush all pending requests to a netCDF file (PnetCDF only)
-  subroutine FILE_CARTESC_flush( &
-       fid )
+  subroutine FILE_CARTESC_flush( fid )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_Flush
@@ -1771,8 +913,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Close a netCDF file
-  subroutine FILE_CARTESC_close( &
-       fid )
+  subroutine FILE_CARTESC_close( fid )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_Close,     &
@@ -1806,6 +947,833 @@ contains
 
     return
   end subroutine FILE_CARTESC_close
+
+  !-----------------------------------------------------------------------------
+  !> interface FILE_CARTESC_read
+  !!    Read data from file
+  !!    This routine is a wrapper of the lower primitive routines
+  !<
+  !-----------------------------------------------------------------------------
+  subroutine FILE_CARTESC_read_1D( &
+       basename, varname, &
+       dim_type,          &
+       var,               &
+       step, aggregate          )
+    implicit none
+    character(len=*), intent(in)  :: basename !< basename of the file
+    character(len=*), intent(in)  :: varname  !< name of the variable
+    character(len=*), intent(in)  :: dim_type !< dimension type (Z/X/Y)
+
+    real(RP),         intent(out) :: var(:)   !< value of the variable
+
+    integer,          intent(in), optional  :: step     !< step number
+    logical,          intent(in), optional :: aggregate
+
+    integer :: fid
+    !---------------------------------------------------------------------------
+
+    call FILE_CARTESC_open( basename, & ! [IN]
+                            fid,      & ! [OUT]
+                            aggregate ) ! [IN]
+
+    call FILE_CARTESC_read_var_1D( fid, varname, dim_type, & ! [IN]
+                                   var(:),                 & ! [OUT]
+                                   step=step               ) ! [IN]                                   
+
+    call FILE_CARTESC_close( fid )
+
+    return
+  end subroutine FILE_CARTESC_read_1D
+
+  !-----------------------------------------------------------------------------
+  !> Read 2D data from file
+  subroutine FILE_CARTESC_read_2D( &
+       basename, varname, &
+       dim_type,          &
+       var,               &
+       step, aggregate    )
+    implicit none
+    character(len=*), intent(in)  :: basename !< basename of the file
+    character(len=*), intent(in)  :: varname  !< name of the variable
+    character(len=*), intent(in)  :: dim_type !< dimension type (Z/X/Y)
+
+    real(RP),         intent(out) :: var(:,:) !< value of the variable
+
+    integer,          intent(in), optional :: step     !< step number
+    logical,          intent(in), optional :: aggregate
+
+    integer :: fid
+    !---------------------------------------------------------------------------
+
+    call FILE_CARTESC_open( basename, & ! [IN]
+                            fid,      & ! [OUT]
+                            aggregate ) ! [IN]
+
+    call FILE_CARTESC_read_var_2D( fid, varname, dim_type, & ! [IN]
+                                   var(:,:),               & ! [OUT]
+                                   step=step               ) ! [IN]                                   
+
+    call FILE_CARTESC_close( fid )
+
+    return
+  end subroutine FILE_CARTESC_read_2D
+
+  !-----------------------------------------------------------------------------
+  !> Read 3D data from file
+  subroutine FILE_CARTESC_read_3D( &
+       basename, varname, &
+       dim_type,          &
+       var,               &
+       step, aggregate    )
+    implicit none
+    character(len=*), intent(in)  :: basename   !< basename of the file
+    character(len=*), intent(in)  :: varname    !< name of the variable
+    character(len=*), intent(in)  :: dim_type   !< dimension type (Z/X/Y/T)
+
+    real(RP),         intent(out) :: var(:,:,:) !< value of the variable
+
+    integer,          intent(in), optional :: step       !< step number
+    logical,          intent(in), optional :: aggregate
+
+    integer :: fid
+    !---------------------------------------------------------------------------
+
+    call FILE_CARTESC_open( basename, & ! [IN]
+                            fid,      & ! [OUT]
+                            aggregate )
+
+    call FILE_CARTESC_read_var_3D( fid, varname, dim_type, & ! [IN]
+                                   var(:,:,:),             & ! [OUT]
+                                   step=step               ) ! [IN]
+
+    call FILE_CARTESC_close( fid )
+
+    return
+  end subroutine FILE_CARTESC_read_3D
+
+  !-----------------------------------------------------------------------------
+  !> Read 4D data from file
+  subroutine FILE_CARTESC_read_4D( &
+       basename, varname, &
+       dim_type,          &
+       var,               &
+       step, aggregate    )
+    implicit none
+    character(len=*), intent(in)  :: basename     !< basename of the file
+    character(len=*), intent(in)  :: varname      !< name of the variable
+    character(len=*), intent(in)  :: dim_type     !< dimension type (Z/X/Y/Time)
+
+    real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
+
+    integer,          intent(in), optional :: step         !< step number
+    logical,          intent(in), optional :: aggregate
+
+    integer :: fid
+    !---------------------------------------------------------------------------
+
+    call FILE_CARTESC_open( basename, & ! [IN]
+                            fid,      & ! [OUT]
+                            aggregate )
+
+    call FILE_CARTESC_read_var_4D( fid, varname, dim_type, & ! [IN]
+                                   var(:,:,:,:),           & ! [OUT]
+                                   step=step               ) ! [IN]
+
+    call FILE_CARTESC_close( fid )
+
+    return
+  end subroutine FILE_CARTESC_read_4D
+
+  !-----------------------------------------------------------------------------
+  !> Read 1D data from file
+  subroutine FILE_CARTESC_read_var_1D( &
+       fid, varname, &
+       dim_type,     &
+       var,          &
+       step          )
+    use scale_file, only: &
+       FILE_get_AGGREGATE, &
+       FILE_Read
+    use scale_process, only: &
+       PRC_abort
+    use scale_rm_process, only: &
+       PRC_NUM_X, &
+       PRC_NUM_Y
+    use mpi
+    implicit none
+    integer,          intent(in)  :: fid      !< file ID
+    character(len=*), intent(in)  :: varname  !< name of the variable
+    character(len=*), intent(in)  :: dim_type !< dimension type (Z/X/Y)
+
+    real(RP),         intent(out) :: var(:)   !< value of the variable
+
+    integer,          intent(in), optional :: step     !< step number
+
+    integer :: dim1_S, dim1_E
+    integer :: start(1)   ! start offset of globale variable
+    integer :: count(1)   ! request length to the global variable
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_I_NetCDF', 2)
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (1D), name : ', trim(varname)
+
+    if ( FILE_get_aggregate(fid) ) then
+       ! read data and halos into the local buffer
+       if    ( dim_type == 'Z' ) then
+          start(1) = 1
+          count(1) = KMAX
+          call FILE_Read( fid, varname,                                      & ! (in)
+               var(KS:KE),                                                   & ! (out)
+               step=step, ntypes=KMAX, dtype=etype, start=start, count=count ) ! (in)
+       elseif( dim_type == 'OZ' ) then
+          start(1) = 1
+          count(1) = OKMAX
+          call FILE_Read( fid, varname,                                       & ! (in)
+               var(OKS:OKE),                                                  & ! (out)
+               step=step, ntypes=OKMAX, dtype=etype, start=start, count=count ) ! (in)
+       elseif( dim_type == 'LZ' ) then
+          start(1) = 1
+          count(1) = LKMAX
+          call FILE_Read( fid, varname,                                       & ! (in)
+               var(LKS:LKE),                                                  & ! (out)
+               step=step, ntypes=LKMAX, dtype=etype, start=start, count=count ) ! (in)
+       elseif( dim_type == 'UZ' ) then
+          start(1) = 1
+          count(1) = UKMAX
+          call FILE_Read( fid, varname,                                       & ! (in)
+               var(UKS:UKE),                                                  & ! (out)
+               step=step, ntypes=UKMAX, dtype=etype, start=start, count=count ) ! (in)
+       elseif( dim_type == 'X' .OR. dim_type == 'CX' ) then
+          start(1) = IS_inG - IHALO
+          count(1) = IA
+          call FILE_Read( fid, varname,                                    & ! (in)
+               var(:),                                                     & ! (out)
+               step=step, ntypes=IA, dtype=etype, start=start, count=count ) ! (in)
+       elseif( dim_type == 'Y' .OR. dim_type == 'CY' ) then
+          start(1) = JS_inG - JHALO
+          count(1) = JA
+          call FILE_Read( fid, varname,                                    & ! (in)
+               var(:),                                                     & ! (out)
+               step=step, ntypes=JA, dtype=etype, start=start, count=count ) ! (in)
+       else
+          write(*,*) 'xxx [FILE_CARTESC_read_var_1D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+    else
+       if    ( dim_type == 'Z' ) then
+          dim1_S   = KS
+          dim1_E   = KE
+       elseif( dim_type == 'OZ' ) then
+          dim1_S   = 1
+          dim1_E   = OKMAX
+       elseif( dim_type == 'LZ' ) then
+          dim1_S   = 1
+          dim1_E   = LKMAX
+       elseif( dim_type == 'UZ' ) then
+          dim1_S   = 1
+          dim1_E   = UKMAX
+       elseif( dim_type == 'X' ) then
+          dim1_S   = ISB
+          dim1_E   = IEB
+       elseif( dim_type == 'CX' ) then
+          dim1_S   = 1
+          dim1_E   = IA
+       elseif( dim_type == 'Y' ) then
+          dim1_S   = JSB
+          dim1_E   = JEB
+       elseif( dim_type == 'CY' ) then
+          dim1_S   = 1
+          dim1_E   = JA
+       else
+          write(*,*) 'xxx [FILE_CARTESC_read_var_1D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+
+       call FILE_Read( fid, varname, var(dim1_S:dim1_E), step=step )
+    endif
+
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
+
+    return
+  end subroutine FILE_CARTESC_read_var_1D
+
+  !-----------------------------------------------------------------------------
+  !> Read 2D data from file
+  subroutine FILE_CARTESC_read_var_2D( &
+       fid, varname, &
+       dim_type,     &
+       var,          &
+       step          )
+    use scale_file, only: &
+       FILE_get_AGGREGATE, &
+       FILE_Read
+    use scale_process, only: &
+       PRC_abort
+    use scale_rm_process, only: &
+       PRC_NUM_X, &
+       PRC_NUM_Y
+    use mpi
+    implicit none
+    integer,          intent(in)  :: fid      !< file ID
+    character(len=*), intent(in)  :: varname  !< name of the variable
+    character(len=*), intent(in)  :: dim_type !< dimension type (Z/X/Y)
+
+    real(RP),         intent(out) :: var(:,:) !< value of the variable
+
+    integer,          intent(in), optional :: step     !< step number
+
+    integer :: dim1_S, dim1_E
+    integer :: dim2_S, dim2_E
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_I_NetCDF', 2)
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (2D), name : ', trim(varname)
+
+    if ( FILE_get_AGGREGATE(fid) ) then
+       ! read data and halos into the local buffer
+       if    ( dim_type == 'XY' ) then
+          call FILE_Read( fid, varname,                                           & ! (in)
+               var(:,:),                                                          & ! (out)
+               step=step, ntypes=IA*JA, dtype=etype, start=startXY, count=countXY ) ! (in)
+       elseif( dim_type == 'ZX' ) then
+          ! Because KHALO is not saved in files, we use centerTypeZX, an MPI
+          ! derived datatype to describe the layout of local read buffer
+          call FILE_Read( fid, varname,                                              & ! (in)
+               var(:,:),                                                             & ! (out)
+               step=step, ntypes=1, dtype=centerTypeZX, start=startZX, count=countZX ) ! (in)
+       else
+          write(*,*) 'xxx [FILE_CARTESC_read_var_2D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+    else
+       if    ( dim_type == 'XY' ) then
+          dim1_S   = ISB
+          dim1_E   = IEB
+          dim2_S   = JSB
+          dim2_E   = JEB
+       elseif( dim_type == 'ZX' ) then
+          dim1_S   = KS
+          dim1_E   = KE
+          dim2_S   = ISB
+          dim2_E   = IEB
+       else
+          write(*,*) 'xxx [FILE_CARTESC_read_var_2D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+
+       call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E), step=step )
+    endif
+
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
+
+    return
+  end subroutine FILE_CARTESC_read_var_2D
+
+  !-----------------------------------------------------------------------------
+  !> Read 3D data from file
+  subroutine FILE_CARTESC_read_var_3D( &
+       fid, varname, &
+       dim_type,     &
+       var,          &
+       step          )
+    use scale_file, only: &
+       FILE_get_AGGREGATE, &
+       FILE_Read
+    use scale_process, only: &
+       PRC_abort
+    use scale_rm_process, only: &
+       PRC_NUM_X, &
+       PRC_NUM_Y
+    implicit none
+    integer,          intent(in)  :: fid        !< file ID
+    character(len=*), intent(in)  :: varname    !< name of the variable
+    character(len=*), intent(in)  :: dim_type   !< dimension type (Z/X/Y/T)
+
+    real(RP),         intent(out) :: var(:,:,:) !< value of the variable
+
+    integer,          intent(in), optional :: step       !< step number
+
+    integer :: dim1_S, dim1_E
+    integer :: dim2_S, dim2_E
+    integer :: dim3_S, dim3_E
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_I_NetCDF', 2)
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (3D), name : ', trim(varname)
+
+    if ( FILE_get_AGGREGATE(fid) ) then
+       ! read data and halos into the local buffer
+       ! Because KHALO is not saved in files, we use mpi derived datatypes to
+       ! describe the layout of local read buffer
+       if(      dim_type == 'ZXY'  &
+           .or. dim_type == 'ZXHY' &
+           .or. dim_type == 'ZXYH' ) then
+          call FILE_Read( fid, varname,                                                 & ! (in)
+               var(:,:,:),                                                              & ! (out)
+               step=step, ntypes=1, dtype=centerTypeZXY, start=startZXY, count=countZXY ) ! (in)
+       elseif( dim_type == 'ZHXY' ) then
+          call FILE_Read( fid, varname,                                                    & ! (in)
+               var(:,:,:),                                                                 & ! (out)
+               step=step, ntypes=1, dtype=centerTypeZHXY, start=startZHXY, count=countZHXY ) ! (in)
+       elseif( dim_type == 'XYT' ) then
+          startXY(3) = 1
+          countXY(3) = step
+          call FILE_Read( fid, varname,                                                & ! (in)
+               var(:,:,:),                                                             & ! (out)
+               step=step, ntypes=step*IA*JA, dtype=etype, start=startXY, count=countXY ) ! (in)
+       elseif( dim_type == 'OXY' ) then
+          call FILE_Read( fid, varname,                                                       & ! (in)
+               var(:,:,:),                                                                    & ! (out)
+               step=step, ntypes=1, dtype=centerTypeOCEAN, start=startOCEAN, count=countOCEAN ) ! (in)
+       elseif( dim_type == 'LXY' ) then
+          call FILE_Read( fid, varname,                                                      & ! (in)
+               var(:,:,:),                                                                   & ! (out)
+               step=step, ntypes=1, dtype=centerTypeLAND, start=startLAND, count=countLAND ) ! (in)
+       elseif( dim_type == 'UXY' ) then
+          call FILE_Read( fid, varname,                                                       & ! (in)
+               var(:,:,:),                                                                    & ! (out)
+               step=step, ntypes=1, dtype=centerTypeURBAN, start=startURBAN, count=countURBAN ) ! (in)
+       else
+          write(*,*) 'xxx [FILE_CARTESC_read_var_3D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+    else
+       if(      dim_type == 'ZXY'  &
+           .or. dim_type == 'ZXHY' &
+           .or. dim_type == 'ZXYH' ) then
+          dim1_S   = KS
+          dim1_E   = KE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
+       elseif( dim_type == 'ZHXY' ) then
+          dim1_S   = KS-1
+          dim1_E   = KE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
+       elseif( dim_type == 'XYT' ) then
+          dim1_S   = ISB
+          dim1_E   = IEB
+          dim2_S   = JSB
+          dim2_E   = JEB
+          dim3_S   = 1
+          dim3_E   = step
+       elseif( dim_type == 'OXY' ) then
+          dim1_S   = OKS
+          dim1_E   = OKE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
+       elseif( dim_type == 'LXY' ) then
+          dim1_S   = LKS
+          dim1_E   = LKE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
+       elseif( dim_type == 'UXY' ) then
+          dim1_S   = UKS
+          dim1_E   = UKE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
+       else
+          write(*,*) 'xxx [FILE_CARTESC_read_var_3D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+
+       call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), step=step )
+                       
+    endif
+
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
+
+    return
+  end subroutine FILE_CARTESC_read_var_3D
+
+  !-----------------------------------------------------------------------------
+  !> Read 4D data from file
+  subroutine FILE_CARTESC_read_var_4D( &
+       fid, varname, &
+       dim_type,     &
+       var,          &
+       step          )
+    use scale_file, only: &
+       FILE_get_AGGREGATE, &
+       FILE_Read
+    use scale_process, only: &
+       PRC_abort
+    use scale_rm_process, only: &
+       PRC_NUM_X, &
+       PRC_NUM_Y
+    implicit none
+    integer,          intent(in)  :: fid          !< file ID
+    character(len=*), intent(in)  :: varname      !< name of the variable
+    character(len=*), intent(in)  :: dim_type     !< dimension type (Z/X/Y/Time)
+
+    real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
+
+    integer,          intent(in), optional :: step         !< step number
+
+    integer :: dim1_S, dim1_E
+    integer :: dim2_S, dim2_E
+    integer :: dim3_S, dim3_E
+    integer :: dim4_S, dim4_E
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_I_NetCDF', 2)
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (4D), name : ', trim(varname)
+
+    if ( FILE_get_AGGREGATE(fid) ) then
+       ! read data and halos into the local buffer
+       if (      dim_type == 'ZXYT'  &
+            .or. dim_type == 'ZXHYT' &
+            .or. dim_type == 'ZXYHT' ) then
+          startZXY(4) = 1
+          countZXY(4) = step
+          call FILE_Read( fid, varname,                                                    & ! (in)
+               var(:,:,:,:),                                                               & ! (out)
+               step=step, ntypes=step, dtype=centerTypeZXY, start=startZXY, count=countZXY ) ! (in)
+       elseif ( dim_type == 'ZHXYT' ) then
+          startZXY(4) = 1
+          countZXY(4) = step
+          call FILE_Read( fid, varname,                                                       & ! (in)
+               var(:,:,:,:),                                                                  & ! (out)
+               step=step, ntypes=step, dtype=centerTypeZHXY, start=startZHXY, count=countZHXY ) ! (in)
+       else
+          write(*,*) 'xxx [FILE_CARTESC_read_var_4D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+    else
+       if (      dim_type == 'ZXYT'  &
+            .or. dim_type == 'ZXHYT' &
+            .or. dim_type == 'ZXYHT' ) then
+          dim1_S   = KS
+          dim1_E   = KE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
+          dim4_S   = 1
+          dim4_E   = step
+       elseif ( dim_type == 'ZHXYT' ) then
+          dim1_S   = KS-1
+          dim1_E   = KE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
+          dim4_S   = 1
+          dim4_E   = step
+       elseif ( dim_type == 'OXYT' ) then
+          dim1_S   = OKS
+          dim1_E   = OKE
+          dim2_S   = ISB
+          dim2_E   = IEB
+          dim3_S   = JSB
+          dim3_E   = JEB
+          dim4_S   = 1
+          dim4_E   = step
+       else
+          write(*,*) 'xxx [FILE_CARTESC_read_var_4D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+
+       call FILE_Read( fid, varname,                                      & ! (in)
+            var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E), & ! (out)
+            step=step                                                     ) ! (in)
+    endif
+
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
+
+    return
+  end subroutine FILE_CARTESC_read_var_4D
+
+  !-----------------------------------------------------------------------------
+  !> interface FILE_CARTESC_write
+  !!   Write data to file
+  !!   This routine is a wrapper of the lowere primitive routines
+  !<
+  !-----------------------------------------------------------------------------
+  subroutine FILE_CARTESC_write_1D( &
+       var,                 &
+       basename, title,     &
+       varname, desc, unit, &
+       dim_type, datatype,  &
+       date, subsec,        &
+       append, aggregate    )
+    use scale_process, only: &
+       PRC_abort
+    implicit none
+
+    real(RP),         intent(in) :: var(:)   !< value of the variable
+    character(len=*), intent(in) :: basename !< basename of the file
+    character(len=*), intent(in) :: title    !< title    of the file
+    character(len=*), intent(in) :: varname  !< name        of the variable
+    character(len=*), intent(in) :: desc     !< description of the variable
+    character(len=*), intent(in) :: unit     !< unit        of the variable
+    character(len=*), intent(in) :: dim_type !< dimension type (Z/X/Y)
+    character(len=*), intent(in) :: datatype !< data type (REAL8/REAL4/default)
+
+    integer,          intent(in), optional :: date(6) !< ymdhms of the time
+    real(DP),         intent(in), optional :: subsec  !< subsec of the time
+    logical,          intent(in), optional :: append  !< switch whether append existing file or not (default=false)
+    logical,          intent(in), optional :: aggregate
+
+    integer :: fid, vid
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (1D), name : ', trim(varname)
+
+    call FILE_CARTESC_create( basename, title, datatype,         & ! [IN]
+                              fid,                               & ! [OUT]
+                              date=date, subsec=subsec,          & ! [IN]
+                              append=append, aggregate=aggregate ) ! [IN]
+
+    call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
+                               vid                                           ) ! [OUT]
+
+    call FILE_CARTESC_enddef( fid )
+
+    call FILE_CARTESC_write_var_1D( fid, vid, var, varname, dim_type )
+
+    return
+  end subroutine FILE_CARTESC_write_1D
+
+  !-----------------------------------------------------------------------------
+  !> Write 2D data to file
+  subroutine FILE_CARTESC_write_2D( &
+       var,                  &
+       basename, title,      &
+       varname, desc, unit,  &
+       dim_type, datatype,   &
+       date, subsec,         &
+       fill_halo, haszcoord, &
+       append, aggregate     )
+    use scale_process, only: &
+       PRC_abort
+    implicit none
+
+    real(RP),         intent(in) :: var(:,:) !< value of the variable
+    character(len=*), intent(in) :: basename !< basename of the file
+    character(len=*), intent(in) :: title    !< title    of the file
+    character(len=*), intent(in) :: varname  !< name        of the variable
+    character(len=*), intent(in) :: desc     !< description of the variable
+    character(len=*), intent(in) :: unit     !< unit        of the variable
+    character(len=*), intent(in) :: dim_type !< dimension type (Z/X/Y)
+    character(len=*), intent(in) :: datatype !< data type (REAL8/REAL4/default)
+
+    integer,          intent(in), optional :: date(6)   !< ymdhms of the time
+    real(DP),         intent(in), optional :: subsec    !< subsec of the time
+    logical,          intent(in), optional :: fill_halo !< switch whether include halo data or not    (default=false)
+    logical,          intent(in), optional :: haszcoord !< switch whether include zcoordinate or not  (default=true)
+    logical,          intent(in), optional :: append    !< switch whether append existing file or not (default=false)
+    logical,          intent(in), optional :: aggregate
+
+    integer :: fid, vid
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (2D), name : ', trim(varname)
+
+    call FILE_CARTESC_create( basename, title, datatype,         & ! [IN]
+                              fid,                               & ! [OUT]
+                              date=date, subsec=subsec,          & ! [IN]
+                              haszcoord=haszcoord,               & ! [IN]
+                              append=append, aggregate=aggregate ) ! [IN]
+
+    call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
+                               vid                                           ) ! [OUT]
+
+    call FILE_CARTESC_enddef( fid )
+
+    call FILE_CARTESC_write_var_2D( fid, vid, var, varname, dim_type, fill_halo )
+
+    return
+  end subroutine FILE_CARTESC_write_2D
+
+  !-----------------------------------------------------------------------------
+  !> Write 3D data to file
+  subroutine FILE_CARTESC_write_3D( &
+       var,                 &
+       basename, title,     &
+       varname, desc, unit, &
+       dim_type, datatype,  &
+       date, subsec,        &
+       fill_halo,           &
+       append, aggregate    )
+    use scale_process, only: &
+       PRC_masterrank, &
+       PRC_abort
+    implicit none
+
+    real(RP),         intent(in) :: var(:,:,:) !< value of the variable
+    character(len=*), intent(in) :: basename   !< basename of the file
+    character(len=*), intent(in) :: title      !< title    of the file
+    character(len=*), intent(in) :: varname    !< name        of the variable
+    character(len=*), intent(in) :: desc       !< description of the variable
+    character(len=*), intent(in) :: unit       !< unit        of the variable
+    character(len=*), intent(in) :: dim_type   !< dimension type (Z/X/Y)
+    character(len=*), intent(in) :: datatype   !< data type (REAL8/REAL4/default)
+
+    integer,          intent(in), optional :: date(6)   !< ymdhms of the time
+    real(DP),         intent(in), optional :: subsec    !< subsec of the time
+    logical,          intent(in), optional :: fill_halo !< include halo data?
+    logical,          intent(in), optional :: append    !< append existing (closed) file?
+    logical,          intent(in), optional :: aggregate
+
+    integer :: fid, vid
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (3D), name : ', trim(varname)
+
+    call FILE_CARTESC_create( basename, title, datatype,         & ! [IN]
+                              fid,                               & ! [OUT]
+                              date=date, subsec=subsec,          & ! [IN]
+                              append=append, aggregate=aggregate ) ! [IN]
+
+    call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
+                               vid                                           ) ! [OUT]
+
+    call FILE_CARTESC_enddef( fid )
+
+    call FILE_CARTESC_write_var_3D( fid, vid, var, varname, dim_type, fill_halo )
+
+    return
+  end subroutine FILE_CARTESC_write_3D
+
+  !-----------------------------------------------------------------------------
+  !> Write 3D data with time dimension to file
+  subroutine FILE_CARTESC_write_3D_t( &
+       var,                 &
+       basename, title,     &
+       varname, desc, unit, &
+       dim_type, datatype,  &
+       timeintv, tsince,    &
+       timetarg, timeofs,   &
+       fill_halo,           &
+       append, aggregate    )
+    use scale_process, only: &
+       PRC_masterrank, &
+       PRC_abort
+    implicit none
+
+    real(RP),         intent(in) :: var(:,:,:) !< value of the variable
+    character(len=*), intent(in) :: basename   !< basename of the file
+    character(len=*), intent(in) :: title      !< title    of the file
+    character(len=*), intent(in) :: varname    !< name        of the variable
+    character(len=*), intent(in) :: desc       !< description of the variable
+    character(len=*), intent(in) :: unit       !< unit        of the variable
+    character(len=*), intent(in) :: dim_type   !< dimension type (X/Y/Time)
+    character(len=*), intent(in) :: datatype   !< data type (REAL8/REAL4/default)
+    real(DP),         intent(in) :: timeintv   !< time interval [sec]
+    integer ,         intent(in) :: tsince(6)  !< start time
+
+    integer,          intent(in), optional :: timetarg  !< target timestep (optional)
+    real(DP),         intent(in), optional :: timeofs   !< offset time     (optional)
+    logical,          intent(in), optional :: fill_halo !< include halo data?
+    logical,          intent(in), optional :: append    !< append existing (closed) file?
+    logical,          intent(in), optional :: aggregate
+
+    integer  :: fid, vid
+    integer  :: nsteps
+
+    intrinsic :: size
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,3A)') '*** Write to file (3D), name : ', trim(varname), 'with time dimension'
+ 
+    call FILE_CARTESC_create( basename, title, datatype,         & ! [IN]
+                              fid,                               & ! [OUT]
+                              date=tsince,                       & ! [IN]
+                              append=append, aggregate=aggregate ) ! [IN]
+
+    if ( present(timetarg) ) then
+       nsteps = 1
+    else
+       nsteps = size(var,3)
+    endif
+    call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
+                               vid,                                          & ! [OUT]
+                               timeintv, nsteps                              ) ! [IN]
+
+    call FILE_CARTESC_enddef( fid )
+
+    call FILE_CARTESC_write_var_3D_t( fid, vid, var, varname, dim_type, timeintv, &
+                                      timetarg, timeofs, fill_halo                )
+
+    return
+  end subroutine FILE_CARTESC_write_3D_t
+
+  !-----------------------------------------------------------------------------
+  !> Write 4D data to file
+  subroutine FILE_CARTESC_write_4D( &
+       var,                 &
+       basename, title,     &
+       varname, desc, unit, &
+       dim_type, datatype,  &
+       timeintv, tsince,    &
+       timetarg, timeofs,   &
+       fill_halo,           &
+       append, aggregate    )
+    use scale_process, only: &
+       PRC_abort
+    implicit none
+
+    real(RP),         intent(in) :: var(:,:,:,:) !< value of the variable
+    character(len=*), intent(in) :: basename     !< basename of the file
+    character(len=*), intent(in) :: title        !< title    of the file
+    character(len=*), intent(in) :: varname      !< name        of the variable
+    character(len=*), intent(in) :: desc         !< description of the variable
+    character(len=*), intent(in) :: unit         !< unit        of the variable
+    character(len=*), intent(in) :: dim_type     !< dimension type (Z/X/Y/Time)
+    character(len=*), intent(in) :: datatype     !< data type (REAL8/REAL4/default)
+    real(DP),         intent(in) :: timeintv     !< time interval [sec]
+    integer,          intent(in) :: tsince(6)    !< start time
+
+    integer,          intent(in), optional :: timetarg  !< target timestep (optional)
+    real(DP),         intent(in), optional :: timeofs   !< offset time     (optional)
+    logical,          intent(in), optional :: fill_halo !< include halo data?
+    logical,          intent(in), optional :: append    !< append existing (closed) file?
+    logical,          intent(in), optional :: aggregate
+
+    integer  :: fid, vid
+    integer  :: nsteps
+
+    intrinsic :: size
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (4D), name : ', trim(varname)
+
+    call FILE_CARTESC_create( basename, title, datatype,         & ! [IN]
+                              fid,                               & ! [OUT]
+                              date=tsince,                       & ! [IN]
+                              append=append, aggregate=aggregate ) ! [IN]
+
+    if ( present(timetarg) ) then
+       nsteps = 1
+    else
+       nsteps = size(var,3)
+    endif
+    call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
+                               vid,                                          & ! [OUT]
+                               timeintv, nsteps                              ) ! [IN]
+
+    call FILE_CARTESC_enddef( fid )
+
+    call FILE_CARTESC_write_var_4D( fid, vid, var, varname, dim_type, timeintv, &
+                                    timetarg, timeofs, fill_halo                )
+
+    return
+  end subroutine FILE_CARTESC_write_4D
 
   !-----------------------------------------------------------------------------
   !> define axis variables in the file
@@ -2620,7 +2588,7 @@ contains
       time_interval = timeintv
       call FILE_Def_Variable( fid, varname, desc, unit, ndims, dims, dtype, & ! [IN]
                               vid,                                          & ! [OUT]
-                              timeintv=time_interval                        ) ! [IN]
+                              time_int=time_interval                        ) ! [IN]
     else
       call FILE_Def_Variable( fid, varname, desc, unit, ndims, dims, dtype, & ! [IN]
                               vid                                           ) ! [OUT]

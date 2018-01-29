@@ -372,7 +372,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_open( restart_fid, basename, aggregate=ATMOS_PHY_CP_RESTART_IN_AGGREGATE )
+       call FILE_CARTESC_open( basename, restart_fid, aggregate=ATMOS_PHY_CP_RESTART_IN_AGGREGATE )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_CP is not specified.'
     endif
@@ -403,30 +403,30 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS_PHY_CP) ***'
 
-       call FILE_CARTESC_read( ATMOS_PHY_CP_MFLX_cloudbase(:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(1), 'XY',  step=1 ) ! [IN]
-       call FILE_CARTESC_read( ATMOS_PHY_CP_SFLX_rain(:,:),                                 & ! [OUT]
-                         restart_fid, VAR_NAME(2), 'XY',  step=1 ) ! [IN]
-       call FILE_CARTESC_read( ATMOS_PHY_CP_cloudtop(:,:),                                  & ! [OUT]
-                         restart_fid, VAR_NAME(3), 'XY',  step=1 ) ! [IN]
-       call FILE_CARTESC_read( ATMOS_PHY_CP_cloudbase(:,:),                                 & ! [OUT]
-                         restart_fid, VAR_NAME(4), 'XY',  step=1 ) ! [IN]
-       call FILE_CARTESC_read( ATMOS_PHY_CP_cldfrac_dp(:,:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(5), 'ZXY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( ATMOS_PHY_CP_cldfrac_sh(:,:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(6), 'ZXY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( ATMOS_PHY_CP_w0avg(:,:,:),                                   & ! [OUT]
-                         restart_fid, VAR_NAME(7), 'ZXY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( ATMOS_PHY_CP_kf_nca(:,:),                                    & ! [OUT]
-                         restart_fid, VAR_NAME(8), 'XY',  step=1 ) ! [IN]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(1), 'XY',  & ! [IN]
+                               ATMOS_PHY_CP_MFLX_cloudbase(:,:) ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(2), 'XY',  & ! [IN]
+                               ATMOS_PHY_CP_SFLX_rain(:,:)      ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(3), 'XY',  & ! [IN]
+                               ATMOS_PHY_CP_cloudtop(:,:)       ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(4), 'XY',  & ! [IN]
+                               ATMOS_PHY_CP_cloudbase(:,:)      ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(5), 'XY',  & ! [IN]
+                               ATMOS_PHY_CP_cldfrac_dp(:,:,:)   ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(6), 'XY',  & ! [IN]
+                               ATMOS_PHY_CP_cldfrac_sh(:,:,:)   ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(7), 'XY',  & ! [IN]
+                               ATMOS_PHY_CP_w0avg(:,:,:)        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(8), 'XY',  & ! [IN]
+                               ATMOS_PHY_CP_kf_nca(:,:)         ) ! [OUT]
        ! tendency
-       call FILE_CARTESC_read( ATMOS_PHY_CP_DENS_t(:,:,:),                                    & ! [OUT]
-                         restart_fid, VAR_t_NAME(1), 'ZXY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( ATMOS_PHY_CP_RHOT_t(:,:,:),                                    & ! [OUT]
-                         restart_fid, VAR_t_NAME(2), 'ZXY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( restart_fid, VAR_t_NAME(1), 'ZXY', & ! [IN]
+                               ATMOS_PHY_CP_DENS_t(:,:,:)         ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_t_NAME(2), 'ZXY', & ! [IN]
+                               ATMOS_PHY_CP_RHOT_t(:,:,:)         ) ! [OUT]
        do iq = 1, QA_MP
-          call FILE_CARTESC_read( ATMOS_PHY_CP_RHOQ_t(:,:,:,iq),                                    & ! [OUT]
-                            restart_fid, VAR_t_NAME(2+iq), 'ZXY', step=1 ) ! [IN]
+          call FILE_CARTESC_read( restart_fid, VAR_t_NAME(2+iq), 'ZXY', & ! [IN]
+                                  ATMOS_PHY_CP_RHOQ_t(:,:,:,iq)         ) ! [OUT]
        enddo
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
@@ -510,9 +510,10 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_create( restart_fid,                                                              & ! [OUT]
-                                 basename, ATMOS_PHY_CP_RESTART_OUT_TITLE, ATMOS_PHY_CP_RESTART_OUT_DTYPE, &
-                                 aggregate=ATMOS_PHY_CP_RESTART_OUT_AGGREGATE                              ) ! [IN]
+       call FILE_CARTESC_create( &
+            basename, ATMOS_PHY_CP_RESTART_OUT_TITLE, ATMOS_PHY_CP_RESTART_OUT_DTYPE, & ! [IN]
+            restart_fid,                                                              & ! [OUT]
+            aggregate=ATMOS_PHY_CP_RESTART_OUT_AGGREGATE                              ) ! [IN]
 
     endif
 

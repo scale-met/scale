@@ -204,7 +204,7 @@ contains
 
 !       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-!       call FILE_CARTESC_open( restart_fid, basename, aggregate=ATMOS_PHY_TB_RESTART_IN_AGGREGATE )
+!       call FILE_CARTESC_open( basename, restart_fid, aggregate=ATMOS_PHY_TB_RESTART_IN_AGGREGATE )
 !    else
 !       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_TB is not specified.'
 !    endif
@@ -233,8 +233,9 @@ contains
 !       if( IO_L ) write(IO_FID_LOG,*)
 !       if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS_PHY_TB) ***'
 !
-!       call FILE_CARTESC_read( ATMOS_PHY_TB_??(:,:,:),                & ! [OUT]
-!                         restart_fid, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
+!       call FILE_CARTESC_read( restart_fid, VAR_NAME(1), 'ZXY', & ! [IN]
+!                               ATMOS_PHY_TB_??(:,:,:)           ) ! [OUT]
+!                         
 !
 !       if ( FILE_get_AGGREGATE(restart_fid) ) then
 !          call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
@@ -287,9 +288,10 @@ contains
 !
 !       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 !
-!       call FILE_CARTESC_create( restart_fid,                                                              & ! [OUT]
-!                                 basename, ATMOS_PHY_TB_RESTART_OUT_TITLE, ATMOS_PHY_TB_RESTART_OUT_DTYPE, & ! [IN]
-!                                 aggregate=ATMOS_PHY_TB_RESTART_OUT_AGGREGATE                              ) ! [IN]
+!    call FILE_CARTESC_create( &
+!         basename, ATMOS_PHY_TB_RESTART_OUT_TITLE, ATMOS_PHY_TB_RESTART_OUT_DTYPE, & ! [IN]
+!         restart_fid,                                                              & ! [OUT]
+!         aggregate=ATMOS_PHY_TB_RESTART_OUT_AGGREGATE                              ) ! [IN]
 !    endif
 
     return

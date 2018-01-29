@@ -1301,7 +1301,7 @@ contains
     call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_ihalo", (/IHALO/) ) ! [IN]
     call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_jhalo", (/JHALO/) ) ! [IN]
 
-    call FILE_get_CFtunits(tunits, FILE_HISTORY_CARTESCORY_STARTDATE)
+    call FILE_get_CFtunits( FILE_HISTORY_CARTESCORY_STARTDATE(:), tunits )
     call FILE_HISTORY_Set_Attribute( "global", "time_units", tunits )
     call FILE_HISTORY_Set_Attribute( "global", "time_start", (/FILE_HISTORY_CARTESCORY_STARTMS/) )
 

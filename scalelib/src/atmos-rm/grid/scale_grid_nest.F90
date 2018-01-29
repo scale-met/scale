@@ -393,25 +393,25 @@ contains
        USE_NESTING = .true.
 
        if ( PRC_IsMaster ) then
-          call FILE_Get_Shape( dims, OFFLINE_PARENT_BASENAME, "CX", 0 )
+          call FILE_Get_Shape( OFFLINE_PARENT_BASENAME, "CX", dims(:) )
           OFFLINE_PARENT_IMAX = dims(1)-4
-          call FILE_Get_Shape( dims, OFFLINE_PARENT_BASENAME, "CY", 0 )
+          call FILE_Get_Shape( OFFLINE_PARENT_BASENAME, "CY", dims(:) )
           OFFLINE_PARENT_JMAX = dims(1)-4
-          call FILE_Get_Shape( dims, OFFLINE_PARENT_BASENAME, "z", 0, error=error )
+          call FILE_Get_Shape( OFFLINE_PARENT_BASENAME, "z", dims(:), error=error )
           if ( error ) then
              OFFLINE_PARENT_KMAX = 0
           else
              OFFLINE_PARENT_KMAX = dims(1)
           end if
 
-          call FILE_Get_Shape( dims, OFFLINE_PARENT_BASENAME, "oz", 0, error=error )
+          call FILE_Get_Shape( OFFLINE_PARENT_BASENAME, "oz", dims(:), error=error )
           if ( error ) then
              OFFLINE_PARENT_OKMAX = 0
           else
              OFFLINE_PARENT_OKMAX = dims(1)
           end if
 
-          call FILE_Get_Shape( dims, OFFLINE_PARENT_BASENAME, "lz", 0, error=error )
+          call FILE_Get_Shape( OFFLINE_PARENT_BASENAME, "lz", dims(:), error=error )
           if ( error ) then
              OFFLINE_PARENT_LKMAX = 0
           else

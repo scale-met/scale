@@ -64,6 +64,11 @@ module scale_file
      module procedure FILE_get_commonInfo_fname
   end interface FILE_get_commonInfo
 
+  interface FILE_get_shape
+     module procedure FILE_get_shape_fid
+     module procedure FILE_get_shape_fname
+  end interface FILE_get_shape
+
   interface FILE_get_datainfo
      module procedure FILE_get_datainfo_fid
      module procedure FILE_get_datainfo_fname
@@ -162,6 +167,8 @@ module scale_file
   !
   !++ Private procedures
   !
+  private :: FILE_get_fid
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -222,15 +229,14 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_create( &
-       fid,         &
-       existed,     &
        basename,    &
        title,       &
        source,      &
        institution, &
        grid_name,   &
+       fid,         &
+       existed,     &
        rankid,      &
-       ismaster,    &
        single,      &
        time_units,  &
        append,      &
@@ -239,16 +245,16 @@ contains
        MPI_COMM_NULL
     implicit none
 
-    integer,          intent(out) :: fid
-    logical,          intent(out) :: existed
     character(len=*), intent(in)  :: basename
     character(len=*), intent(in)  :: title
     character(len=*), intent(in)  :: source
     character(len=*), intent(in)  :: institution
     character(len=*), intent(in)  :: grid_name
 
+    integer,          intent(out) :: fid
+    logical,          intent(out) :: existed
+
     integer,          intent(in), optional :: rankid
-    logical,          intent(in), optional :: ismaster
     logical,          intent(in), optional :: single
     character(len=*), intent(in), optional :: time_units
     logical,          intent(in), optional :: append
@@ -271,14 +277,6 @@ contains
 
     single_ = .false.
     if ( present(single) ) then
-       if ( single ) then
-          if ( present( ismaster ) ) then
-             if ( .not. ismaster ) return
-          else
-             write(*,*) 'xxx [FILE_create] ismaster is required if single == .true.'
-             call PRC_abort
-          end if
-       end if
        single_ = single
     endif
 
@@ -293,13 +291,12 @@ contains
        if( append ) mode = FILE_FAPPEND
     endif
 
-    call FILE_get_fid( fid,      & ! [OUT]
-                       existed,  & ! [OUT]
-                       basename, & ! [IN]
-                       mode,     & ! [IN]
-                       rankid_,  & ! [IN]
-                       single_,  & ! [IN]
-                       mpi_comm  ) ! [IN]
+    if ( single_ .and. rankid_ /= 0 ) return
+
+    call FILE_get_fid( basename, mode,   & ! [IN]
+                       rankid_, single_, & ! [IN]
+                       fid, existed,     & ! [OUT]
+                       mpi_comm=mpi_comm ) ! [IN]
 
     if( existed ) return
 
@@ -328,9 +325,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_get_var_num( &
-       fid,         &
-       nvars_limit, &
-       nvars        )
+       fid, nvars_limit, &
+       nvars             )
     implicit none
 
     integer, intent(in)  :: fid
@@ -358,9 +354,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_get_var_name( &
-       fid,    &
-       cvid,   &
-       varname )
+       fid, cvid, &
+       varname    )
     implicit none
 
     integer,          intent(in)  :: fid
@@ -410,11 +405,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_set_option( &
-       fid,      & ! (in)
-       filetype, & ! (in)
-       key,      & ! (in)
-       val       & ! (in)
-       )
+       fid,               &
+       filetype, key, val )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: filetype
     character(len=*), intent(in) :: key
@@ -434,16 +426,16 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_open( &
-      fid,       &
       basename,  &
+      fid,       &
       mode,      &
       single,    &
       mpi_comm,  &
       rankid     )
     implicit none
 
-    integer,          intent(out) :: fid
     character(len=*), intent( in) :: basename
+    integer,          intent(out) :: fid
     integer,          intent( in), optional :: mode
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: mpi_comm
@@ -469,8 +461,9 @@ contains
        rankid_ = mpi_myrank
     end if
 
-    call FILE_get_fid( fid, existed,                               & ! (out)
-                       basename, mode_, rankid_, single_, mpi_comm ) ! (in)
+    call FILE_get_fid( basename, mode_, rankid_, single_, & ! (in)
+                       fid, existed,                      & ! (out)
+                       mpi_comm = mpi_comm                ) ! (in)
 
     return
   end subroutine FILE_open
@@ -479,13 +472,10 @@ contains
   ! interface FILE_PutAxis
   !-----------------------------------------------------------------------------
   subroutine FILE_put_axis_realSP( &
-       fid,      & ! (in)
-       name,     & ! (in)
-       desc,     & ! (in)
-       units,    & ! (in)
-       dim_name, & ! (in)
-       dtype,    & ! (in)
-       val       ) ! (in)
+       fid,               &
+       name, desc, units, &
+       dim_name, dtype,   &
+       val                )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -508,13 +498,10 @@ contains
     return
   end subroutine FILE_put_axis_realSP
   subroutine FILE_put_axis_realDP( &
-       fid,      & ! (in)
-       name,     & ! (in)
-       desc,     & ! (in)
-       units,    & ! (in)
-       dim_name, & ! (in)
-       dtype,    & ! (in)
-       val       ) ! (in)
+       fid,               &
+       name, desc, units, &
+       dim_name, dtype,   &
+       val                )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -538,13 +525,9 @@ contains
   end subroutine FILE_put_axis_realDP
 
   subroutine FILE_def_axis( &
-       fid,      & ! (in)
-       name,     & ! (in)
-       desc,     & ! (in)
-       units,    & ! (in)
-       dim_name, & ! (in)
-       dtype,    & ! (in)
-       dim_size  ) ! (in)
+       fid,                       &
+       name, desc, units,         &
+       dim_name, dtype, dim_size  )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -570,10 +553,10 @@ contains
   ! interface FILE_WriteAxis
   !-----------------------------------------------------------------------------
   subroutine FILE_write_axis_realSP( &
-       fid,      & ! (in)
-       name,     & ! (in)
-       val,      & ! (in)
-       start     ) ! (in)
+       fid,  &
+       name, &
+       val,  &
+       start )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(SP),    intent(in)           :: val(:)
@@ -599,10 +582,10 @@ contains
     return
   end subroutine FILE_write_axis_realSP
   subroutine FILE_write_axis_realDP( &
-       fid,      & ! (in)
-       name,     & ! (in)
-       val,      & ! (in)
-       start     ) ! (in)
+       fid,  &
+       name, &
+       val,  &
+       start )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(DP),    intent(in)           :: val(:)
@@ -632,13 +615,10 @@ contains
   ! interface FILE_put_associatedCoordinate
   !-----------------------------------------------------------------------------
   subroutine FILE_put_associatedCoordinate_realSP_1D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       desc,      & ! (in)
-       units,     & ! (in)
-       dim_names, & ! (in)
-       dtype,     & ! (in)
-       val        ) ! (in)
+       fid,                &
+       name, desc,  units, &
+       dim_names, dtype,   &
+       val                 )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -662,13 +642,10 @@ contains
     return
   end subroutine FILE_put_associatedCoordinate_realSP_1D
   subroutine FILE_put_associatedCoordinate_realDP_1D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       desc,      & ! (in)
-       units,     & ! (in)
-       dim_names, & ! (in)
-       dtype,     & ! (in)
-       val        ) ! (in)
+       fid,                &
+       name, desc,  units, &
+       dim_names, dtype,   &
+       val                 )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -692,13 +669,10 @@ contains
     return
   end subroutine FILE_put_associatedCoordinate_realDP_1D
   subroutine FILE_put_associatedCoordinate_realSP_2D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       desc,      & ! (in)
-       units,     & ! (in)
-       dim_names, & ! (in)
-       dtype,     & ! (in)
-       val        ) ! (in)
+       fid,                &
+       name, desc,  units, &
+       dim_names, dtype,   &
+       val                 )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -722,13 +696,10 @@ contains
     return
   end subroutine FILE_put_associatedCoordinate_realSP_2D
   subroutine FILE_put_associatedCoordinate_realDP_2D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       desc,      & ! (in)
-       units,     & ! (in)
-       dim_names, & ! (in)
-       dtype,     & ! (in)
-       val        ) ! (in)
+       fid,                &
+       name, desc,  units, &
+       dim_names, dtype,   &
+       val                 )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -752,13 +723,10 @@ contains
     return
   end subroutine FILE_put_associatedCoordinate_realDP_2D
   subroutine FILE_put_associatedCoordinate_realSP_3D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       desc,      & ! (in)
-       units,     & ! (in)
-       dim_names, & ! (in)
-       dtype,     & ! (in)
-       val        ) ! (in)
+       fid,                &
+       name, desc,  units, &
+       dim_names, dtype,   &
+       val                 )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -782,13 +750,10 @@ contains
     return
   end subroutine FILE_put_associatedCoordinate_realSP_3D
   subroutine FILE_put_associatedCoordinate_realDP_3D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       desc,      & ! (in)
-       units,     & ! (in)
-       dim_names, & ! (in)
-       dtype,     & ! (in)
-       val        ) ! (in)
+       fid,                &
+       name, desc,  units, &
+       dim_names, dtype,   &
+       val                 )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -812,13 +777,10 @@ contains
     return
   end subroutine FILE_put_associatedCoordinate_realDP_3D
   subroutine FILE_put_associatedCoordinate_realSP_4D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       desc,      & ! (in)
-       units,     & ! (in)
-       dim_names, & ! (in)
-       dtype,     & ! (in)
-       val        ) ! (in)
+       fid,                &
+       name, desc,  units, &
+       dim_names, dtype,   &
+       val                 )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -842,13 +804,10 @@ contains
     return
   end subroutine FILE_put_associatedCoordinate_realSP_4D
   subroutine FILE_put_associatedCoordinate_realDP_4D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       desc,      & ! (in)
-       units,     & ! (in)
-       dim_names, & ! (in)
-       dtype,     & ! (in)
-       val        ) ! (in)
+       fid,                &
+       name, desc,  units, &
+       dim_names, dtype,   &
+       val                 )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -873,12 +832,9 @@ contains
   end subroutine FILE_put_associatedCoordinate_realDP_4D
 
   subroutine FILE_def_associatedCoordinate( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       desc,      & ! (in)
-       units,     & ! (in)
-       dim_names, & ! (in)
-       dtype      ) ! (in)
+       fid,               &
+       name, desc, units, &
+       dim_names, dtype   )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -904,12 +860,11 @@ contains
   ! interface FILE_write_associatedCoordinate
   !-----------------------------------------------------------------------------
   subroutine FILE_write_associatedCoordinate_realSP_1D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       val,       & ! (in)
-       start,     & ! (in)
-       count,     & ! (in)
-       ndims      ) ! (in)
+       fid,          &
+       name,         &
+       val,          &
+       start, count, &
+       ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(SP),    intent(in)           :: val(:)
@@ -948,12 +903,11 @@ contains
     return
   end subroutine FILE_write_associatedCoordinate_realSP_1D
   subroutine FILE_write_associatedCoordinate_realDP_1D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       val,       & ! (in)
-       start,     & ! (in)
-       count,     & ! (in)
-       ndims      ) ! (in)
+       fid,          &
+       name,         &
+       val,          &
+       start, count, &
+       ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(DP),    intent(in)           :: val(:)
@@ -992,12 +946,11 @@ contains
     return
   end subroutine FILE_write_associatedCoordinate_realDP_1D
   subroutine FILE_write_associatedCoordinate_realSP_2D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       val,       & ! (in)
-       start,     & ! (in)
-       count,     & ! (in)
-       ndims      ) ! (in)
+       fid,          &
+       name,         &
+       val,          &
+       start, count, &
+       ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(SP),    intent(in)           :: val(:,:)
@@ -1036,12 +989,11 @@ contains
     return
   end subroutine FILE_write_associatedCoordinate_realSP_2D
   subroutine FILE_write_associatedCoordinate_realDP_2D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       val,       & ! (in)
-       start,     & ! (in)
-       count,     & ! (in)
-       ndims      ) ! (in)
+       fid,          &
+       name,         &
+       val,          &
+       start, count, &
+       ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(DP),    intent(in)           :: val(:,:)
@@ -1080,12 +1032,11 @@ contains
     return
   end subroutine FILE_write_associatedCoordinate_realDP_2D
   subroutine FILE_write_associatedCoordinate_realSP_3D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       val,       & ! (in)
-       start,     & ! (in)
-       count,     & ! (in)
-       ndims      ) ! (in)
+       fid,          &
+       name,         &
+       val,          &
+       start, count, &
+       ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(SP),    intent(in)           :: val(:,:,:)
@@ -1124,12 +1075,11 @@ contains
     return
   end subroutine FILE_write_associatedCoordinate_realSP_3D
   subroutine FILE_write_associatedCoordinate_realDP_3D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       val,       & ! (in)
-       start,     & ! (in)
-       count,     & ! (in)
-       ndims      ) ! (in)
+       fid,          &
+       name,         &
+       val,          &
+       start, count, &
+       ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(DP),    intent(in)           :: val(:,:,:)
@@ -1168,12 +1118,11 @@ contains
     return
   end subroutine FILE_write_associatedCoordinate_realDP_3D
   subroutine FILE_write_associatedCoordinate_realSP_4D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       val,       & ! (in)
-       start,     & ! (in)
-       count,     & ! (in)
-       ndims      ) ! (in)
+       fid,          &
+       name,         &
+       val,          &
+       start, count, &
+       ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(SP),    intent(in)           :: val(:,:,:,:)
@@ -1212,12 +1161,11 @@ contains
     return
   end subroutine FILE_write_associatedCoordinate_realSP_4D
   subroutine FILE_write_associatedCoordinate_realDP_4D( &
-       fid,       & ! (in)
-       name,      & ! (in)
-       val,       & ! (in)
-       start,     & ! (in)
-       count,     & ! (in)
-       ndims      ) ! (in)
+       fid,          &
+       name,         &
+       val,          &
+       start, count, &
+       ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
     real(DP),    intent(in)           :: val(:,:,:,:)
@@ -1260,52 +1208,48 @@ contains
   ! interface FILE_add_variable
   !-----------------------------------------------------------------------------
   subroutine FILE_add_variable_no_time( &
-       vid,     & ! (out)
-       fid,     & ! (in)
-       varname, & ! (in)
-       desc,    & ! (in)
-       units,   & ! (in)
-       dims,    & ! (in)
-       dtype,   & ! (in)
-       tavg     & ! (in) optional
-       )
-    integer,          intent(out) :: vid
+       fid,                  &
+       varname, desc, units, &
+       dims, dtype,          &
+       vid,                  &
+       time_avg              )
     integer,          intent( in) :: fid
     character(len=*), intent( in) :: varname
     character(len=*), intent( in) :: desc
     character(len=*), intent( in) :: units
     character(len=*), intent( in) :: dims(:)
     integer,          intent( in) :: dtype
-    logical,          intent( in), optional :: tavg
+    integer,          intent(out) :: vid
+    logical,          intent( in), optional :: time_avg
 
-    call FILE_add_variable_realDP(vid, fid, varname, desc, units, dims, dtype, -1.0_DP, tavg )
+    call FILE_add_variable_realDP( fid,              & ! (in)
+         varname, desc, units, dims, dtype, -1.0_DP, & ! (in)
+         vid,                                        & ! (out)
+         time_avg = time_avg                         ) ! (in)
 
     return
   end subroutine FILE_add_variable_no_time
 
   !-----------------------------------------------------------------------------
   subroutine FILE_add_variable_realSP( &
-       vid,     &
-       fid,     &
-       varname, &
-       desc,    &
-       units,   &
-       dims,    &
-       dtype,   &
-       tint,    &
-       tavg     )
+       fid,                  &
+       varname, desc, units, &
+       dims, dtype,          &
+       time_int,             &
+       vid,                  &
+       time_avg              )
     implicit none
-
-    integer,          intent(out) :: vid
     integer,          intent(in)  :: fid
     character(len=*), intent(in)  :: varname
     character(len=*), intent(in)  :: desc
     character(len=*), intent(in)  :: units
     character(len=*), intent(in)  :: dims(:)
     integer,          intent(in)  :: dtype
-    real(SP),    intent(in)  :: tint
+    real(SP),    intent(in)  :: time_int
 
-    logical,          intent(in), optional :: tavg
+    integer,          intent(out) :: vid
+
+    logical,          intent(in), optional :: time_avg
 
     real(DP) :: tint8
     integer  :: cvid
@@ -1327,12 +1271,12 @@ contains
 
     if ( vid < 0 ) then ! variable registration
 
-       tint8 = real(tint,DP)
+       tint8 = real(time_int,DP)
        ndims = size(dims)
        itavg = 0
 
-       if ( present(tavg) ) then
-          if( tavg ) itavg = 1
+       if ( present(time_avg) ) then
+          if( time_avg ) itavg = 1
        endif
 
        call file_add_variable_c( cvid,                              & ! [OUT]
@@ -1361,27 +1305,24 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_add_variable_realDP( &
-       vid,     &
-       fid,     &
-       varname, &
-       desc,    &
-       units,   &
-       dims,    &
-       dtype,   &
-       tint,    &
-       tavg     )
+       fid,                  &
+       varname, desc, units, &
+       dims, dtype,          &
+       time_int,             &
+       vid,                  &
+       time_avg              )
     implicit none
-
-    integer,          intent(out) :: vid
     integer,          intent(in)  :: fid
     character(len=*), intent(in)  :: varname
     character(len=*), intent(in)  :: desc
     character(len=*), intent(in)  :: units
     character(len=*), intent(in)  :: dims(:)
     integer,          intent(in)  :: dtype
-    real(DP),    intent(in)  :: tint
+    real(DP),    intent(in)  :: time_int
 
-    logical,          intent(in), optional :: tavg
+    integer,          intent(out) :: vid
+
+    logical,          intent(in), optional :: time_avg
 
     real(DP) :: tint8
     integer  :: cvid
@@ -1403,12 +1344,12 @@ contains
 
     if ( vid < 0 ) then ! variable registration
 
-       tint8 = real(tint,DP)
+       tint8 = real(time_int,DP)
        ndims = size(dims)
        itavg = 0
 
-       if ( present(tavg) ) then
-          if( tavg ) itavg = 1
+       if ( present(time_avg) ) then
+          if( time_avg ) itavg = 1
        endif
 
        call file_add_variable_c( cvid,                              & ! [OUT]
@@ -1436,16 +1377,12 @@ contains
   end subroutine FILE_add_variable_realDP
 
   subroutine FILE_def_variable( &
-       fid,      & ! (in)
-       varname,  & ! (in)
-       desc,     & ! (in)
-       units,    & ! (in)
-       ndims,    & ! (in)
-       dims,     & ! (in)
-       dtype,    & ! (in)
-       vid,      & ! (out)
-       timeintv, & ! (in) optional
-       timeavg   ) ! (in) optional
+       fid,                  &
+       varname, desc, units, &
+       ndims, dims,          &
+       dtype,                &
+       vid,                  &
+       time_int, time_avg    )
     integer,          intent( in) :: fid
     character(len=*), intent( in) :: varname
     character(len=*), intent( in) :: desc
@@ -1454,8 +1391,8 @@ contains
     character(len=*), intent( in) :: dims(:)
     integer,          intent( in) :: dtype
     integer,          intent(out) :: vid
-    real(DP),         intent( in), optional :: timeintv
-    logical,          intent( in), optional :: timeavg
+    real(DP),         intent( in), optional :: time_int
+    logical,          intent( in), optional :: time_avg
 
     real(DP) :: tint_
     integer  :: itavg
@@ -1474,14 +1411,14 @@ contains
 
     if ( vid < 0 ) then ! variable registration
 
-       if ( present(timeintv) ) then
-          tint_ = timeintv
+       if ( present(time_int) ) then
+          tint_ = time_int
        else
           tint_ = -1.0_DP
        endif
 
-       if ( present(timeavg) ) then
-          if ( timeavg ) then
+       if ( present(time_avg) ) then
+          if ( time_avg ) then
              itavg = 1
           else
              itavg = 0
@@ -1517,10 +1454,9 @@ contains
   ! FILE_Get_Attribute
   !-----------------------------------------------------------------------------
   subroutine FILE_get_attribute_text_fid( &
-       fid,   & ! (in)
-       vname, & ! (in)
-       key,   & ! (in)
-       val    ) ! (out)
+       fid,        &
+       vname, key, &
+       val         )
     integer,          intent(in ) :: fid
     character(len=*), intent(in ) :: vname
     character(len=*), intent(in ) :: key
@@ -1540,13 +1476,9 @@ contains
     return
   end subroutine FILE_get_attribute_text_fid
   subroutine FILE_get_attribute_text_fname( &
-      basename,  & ! (in)
-      vname,     & ! (in)
-      key,       & ! (in)
-      val,       & ! (out)
-      single,    & ! (in) optional
-      mpi_comm,  & ! (in) optional
-      rankid     ) ! (in) optional
+      basename, vname, key,    &
+      val,                     &
+      single, mpi_comm, rankid )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1561,9 +1493,11 @@ contains
 
     integer :: fid
 
-    call FILE_open( fid,          & ! (out)
-         basename, FILE_FREAD,    & ! (in)
-         single, mpi_comm, rankid ) ! (in) optional
+    call FILE_open( basename, & ! (in)
+         fid,                 & ! (out)
+         single = single,     & ! (in)
+         mpi_comm = mpi_comm, & ! (in)
+         rankid = rankid      ) ! (in)
 
     call FILE_get_attribute_text_fid( &
          fid, vname, key, & ! (in)
@@ -1574,10 +1508,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_get_attribute_int_fid( &
-       fid,   & ! (in)
-       vname, & ! (in)
-       key,   & ! (in)
-       val    ) ! (out)
+       fid, vname, key, &
+       val              )
     integer,          intent(in ) :: fid
     character(len=*), intent(in ) :: vname
     character(len=*), intent(in ) :: key
@@ -1599,13 +1531,9 @@ contains
     return
   end subroutine FILE_get_attribute_int_fid
   subroutine FILE_get_attribute_int_fname( &
-      basename,  & ! (in)
-      vname,     & ! (in)
-      key,       & ! (in)
-      val,       & ! (out)
-      single,    & ! (in) optional
-      mpi_comm,  & ! (in) optional
-      rankid     ) ! (in) optional
+      basename, vname, key,    &
+      val,                     &
+      single, mpi_comm, rankid )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1620,9 +1548,11 @@ contains
 
     integer :: fid
 
-    call FILE_open( fid,          & ! (out)
-         basename, FILE_FREAD,    & ! (in)
-         single, mpi_comm, rankid ) ! (in) optional
+    call FILE_open( basename, & ! (in)
+         fid,                 & ! (out)
+         single = single,     & ! (in)
+         mpi_comm = mpi_comm, & ! (in)
+         rankid = rankid      ) ! (in)
 
     call FILE_get_attribute_int_fid( &
          fid, vname, key, & ! (in)
@@ -1633,10 +1563,8 @@ contains
   !-----------------------------------------------------------------------------
 
   subroutine FILE_get_attribute_float_fid( &
-       fid,   & ! (in)
-       vname, & ! (in)
-       key,   & ! (in)
-       val    ) ! (out)
+       fid, vname, key, &
+       val              )
     integer,          intent(in ) :: fid
     character(len=*), intent(in ) :: vname
     character(len=*), intent(in ) :: key
@@ -1658,13 +1586,9 @@ contains
     return
   end subroutine FILE_get_attribute_float_fid
   subroutine FILE_get_attribute_float_fname( &
-      basename,  & ! (in)
-      vname,     & ! (in)
-      key,       & ! (in)
-      val,       & ! (out)
-      single,    & ! (in) optional
-      mpi_comm,  & ! (in) optional
-      rankid     ) ! (in) optional
+      basename, vname, key,    &
+      val,                     &
+      single, mpi_comm, rankid )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1679,9 +1603,11 @@ contains
 
     integer :: fid
 
-    call FILE_open( fid,          & ! (out)
-         basename, FILE_FREAD ,   & ! (in)
-         single, mpi_comm, rankid ) ! (in) optional
+    call FILE_open( basename, & ! (in)
+         fid,                 & ! (out)
+         single = single,     & ! (in)
+         mpi_comm = mpi_comm, & ! (in)
+         rankid = rankid      ) ! (in)
 
     call FILE_get_attribute_float_fid( &
          fid, vname, key, & ! (in)
@@ -1690,10 +1616,8 @@ contains
     return
   end subroutine FILE_get_attribute_float_fname
   subroutine FILE_get_attribute_double_fid( &
-       fid,   & ! (in)
-       vname, & ! (in)
-       key,   & ! (in)
-       val    ) ! (out)
+       fid, vname, key, &
+       val              )
     integer,          intent(in ) :: fid
     character(len=*), intent(in ) :: vname
     character(len=*), intent(in ) :: key
@@ -1715,13 +1639,9 @@ contains
     return
   end subroutine FILE_get_attribute_double_fid
   subroutine FILE_get_attribute_double_fname( &
-      basename,  & ! (in)
-      vname,     & ! (in)
-      key,       & ! (in)
-      val,       & ! (out)
-      single,    & ! (in) optional
-      mpi_comm,  & ! (in) optional
-      rankid     ) ! (in) optional
+      basename, vname, key,    &
+      val,                     &
+      single, mpi_comm, rankid )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1736,9 +1656,11 @@ contains
 
     integer :: fid
 
-    call FILE_open( fid,          & ! (out)
-         basename, FILE_FREAD ,   & ! (in)
-         single, mpi_comm, rankid ) ! (in) optional
+    call FILE_open( basename, & ! (in)
+         fid,                 & ! (out)
+         single = single,     & ! (in)
+         mpi_comm = mpi_comm, & ! (in)
+         rankid = rankid      ) ! (in)
 
     call FILE_get_attribute_double_fid( &
          fid, vname, key, & ! (in)
@@ -1751,10 +1673,8 @@ contains
   ! FILE_set_attribute
   !-----------------------------------------------------------------------------
   subroutine FILE_set_attribute_text( &
-     fid,   & ! (in)
-     vname, & ! (in)
-     key,   & ! (in)
-     val    ) ! (in)
+     fid, vname, &
+     key, val    )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: vname
     character(len=*), intent(in) :: key
@@ -1776,10 +1696,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_set_attribute_int( &
-     fid,   & ! (in)
-     vname, & ! (in)
-     key,   & ! (in)
-     val    ) ! (in)
+     fid, vname, &
+     key, val    )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: vname
     character(len=*), intent(in) :: key
@@ -1803,10 +1721,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_set_attribute_float( &
-     fid,   & ! (in)
-     vname, & ! (in)
-     key,   & ! (in)
-     val    ) ! (in)
+     fid, vname, &
+     key, val    )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: vname
     character(len=*), intent(in) :: key
@@ -1829,10 +1745,8 @@ contains
   end subroutine FILE_set_attribute_float
   !-----------------------------------------------------------------------------
   subroutine FILE_set_attribute_double( &
-     fid,   & ! (in)
-     vname, & ! (in)
-     key,   & ! (in)
-     val    ) ! (in)
+     fid, vname, &
+     key, val    )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: vname
     character(len=*), intent(in) :: key
@@ -1856,49 +1770,60 @@ contains
   !-----------------------------------------------------------------------------
   ! FILE_get_shape
   !-----------------------------------------------------------------------------
-  subroutine FILE_get_shape( &
-      dims,          & ! (out)
-      basename,      & ! (in)
-      varname,       & ! (in)
-      rankid,        & ! (in)
-      single,        & ! (in) optional
-      error          ) ! (out) optional
+  subroutine FILE_get_shape_fname( &
+      basename, varname, &
+      dims,              &
+      rankid, single,    &
+      error              )
     implicit none
 
-    integer,          intent(out)           :: dims(:)
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: rankid
+    integer,          intent(out)           :: dims(:)
+    integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
     logical,          intent(out), optional :: error
 
     integer :: fid
+    !---------------------------------------------------------------------------
+
+    !--- search/register file
+    call FILE_open( basename,                    & ! (in)
+                    fid,                         & ! (out)
+                    rankid=rankid, single=single ) ! (in)
+
+    call FILE_get_shape_fid( fid, varname, & ! (in)
+                             dims(:),      & ! (out)
+                             error = error ) ! (out)
+
+    return
+  end subroutine FILE_get_shape_fname
+
+  subroutine FILE_get_shape_fid( &
+       fid, varname, &
+       dims,         &
+       error         )
+    implicit none
+
+    integer,          intent(out)           :: dims(:)
+    integer,          intent( in)           :: fid
+    character(len=*), intent( in)           :: varname
+    logical,          intent(out), optional :: error
+
     type(datainfo) :: dinfo
     integer :: ierror
     integer :: n
 
-    logical :: single_
     logical :: suppress
 
     intrinsic size
     !---------------------------------------------------------------------------
-
-    if ( present(single) ) then
-       single_ = single
-    else
-       single_ = .false.
-    end if
 
     if ( present(error) ) then
        suppress = .true.
     else
        suppress = .false.
     end if
-
-    !--- search/register file
-    call FILE_open( fid,                          & ! (out)
-                    basename, FILE_FREAD,         & ! (in)
-                    rankid=rankid, single=single_ ) ! (in)
 
     !--- get data information
     call file_get_datainfo_c( dinfo,   & ! (out)
@@ -1928,7 +1853,7 @@ contains
     if ( present(error) ) error = .false.
 
     return
-  end subroutine FILE_get_shape
+  end subroutine FILE_get_shape_fid
 
   !-----------------------------------------------------------------------------
   ! FILE_get_commonInfo
@@ -1958,8 +1883,8 @@ contains
     integer :: fid
     !---------------------------------------------------------------------------
 
-    call FILE_open( fid,                  & ! [OUT]
-                    basename, FILE_FREAD, & ! [IN]
+    call FILE_open( basename,             & ! [IN]
+                    fid,                  & ! [OUT]
                     rankid=rankid         ) ! [IN]
 
     call FILE_get_commonInfo_fid( fid,         & ! [IN]
@@ -2015,26 +1940,18 @@ contains
   ! FILE_get_dataInfo
   !-----------------------------------------------------------------------------
   subroutine FILE_get_dataInfo_fname( &
-       basename,    &
-       varname,     &
-       rankid,      &
-       istep,       &
-       single,      &
-       description, &
-       units,       &
-       datatype,    &
-       dim_rank,    &
-       dim_name,    &
-       dim_size,    &
-       time_start,  &
-       time_end,    &
-       time_units   )
+       basename, varname,               &
+       rankid, istep, single,           &
+       description, units,              &
+       datatype,                        &
+       dim_rank, dim_name, dim_size,    &
+       time_start, time_end, time_units )
     implicit none
 
     character(len=*),           intent(in)  :: basename
     character(len=*),           intent(in)  :: varname
-    integer,                    intent(in)  :: rankid
 
+    integer,                    intent(in),  optional :: rankid
     integer,                    intent(in),  optional :: istep
     logical,                    intent(in),  optional :: single
     character(len=FILE_HMID),   intent(out), optional :: description
@@ -2058,8 +1975,8 @@ contains
     endif
 
     !--- search/register file
-    call FILE_open( fid,                          & ! [OUT]
-                    basename, FILE_FREAD,         & ! [IN]
+    call FILE_open( basename,                     & ! [IN]
+                    fid,                          & ! [OUT]
                     rankid=rankid, single=single_ ) ! [IN]
 
     call FILE_get_dataInfo_fid( fid,         & ! [IN]
@@ -2079,18 +1996,12 @@ contains
   end subroutine FILE_get_dataInfo_fname
 
   subroutine FILE_get_dataInfo_fid( &
-       fid,         &
-       varname,     &
-       istep,       &
-       description, &
-       units,       &
-       datatype,    &
-       dim_rank,    &
-       dim_name,    &
-       dim_size,    &
-       time_start,  &
-       time_end,    &
-       time_units   )
+       fid, varname,                    &
+       istep,                           &
+       description, units,              &
+       datatype,                        &
+       dim_rank, dim_name, dim_size,    &
+       time_start, time_end, time_units )
     implicit none
 
     integer,          intent(in)  :: fid
@@ -2190,29 +2101,19 @@ contains
   ! FILE_get_data_all_dataInfo
   !-----------------------------------------------------------------------------
   subroutine FILE_get_all_dataInfo_fname( &
-       step_limit,  &
-       dim_limit,   &
-       basename,    &
-       varname,     &
-       rankid,      &
-       step_nmax,   &
-       description, &
-       units,       &
-       datatype,    &
-       dim_rank,    &
-       dim_name,    &
-       dim_size,    &
-       time_start,  &
-       time_end,    &
-       time_units,  &
-       single       )
+       step_limit, dim_limit,            &
+       basename, varname,                &
+       step_nmax,                        &
+       description, units, datatype,     &
+       dim_rank, dim_name, dim_size,     &
+       time_start, time_end, time_units, &
+       rankid, single                    )
     implicit none
 
     integer,                    intent(in)  :: step_limit
     integer,                    intent(in)  :: dim_limit
     character(len=*),           intent(in)  :: basename
     character(len=*),           intent(in)  :: varname
-    integer,                    intent(in)  :: rankid
     integer,                    intent(out) :: step_nmax
     character(len=FILE_HMID),   intent(out) :: description
     character(len=FILE_HSHORT), intent(out) :: units
@@ -2224,6 +2125,7 @@ contains
     real(DP),                   intent(out) :: time_end  (step_limit)
     character(len=FILE_HMID),   intent(out) :: time_units
 
+    integer,                    intent(in), optional :: rankid
     logical,                    intent(in), optional :: single
 
     integer :: fid
@@ -2237,43 +2139,27 @@ contains
     endif
 
     !--- search/register file
-    call FILE_open( fid,                          & ! [OUT]
-                    basename, FILE_FREAD,         & ! [IN]
+    call FILE_open( basename,                     & ! [IN]
+                    fid,                          & ! [OUT]
                     rankid=rankid, single=single_ ) ! [IN]
 
-    call FILE_get_all_datainfo_fid( step_limit,  & ! [IN]
-                                    dim_limit,   & ! [IN]
-                                    fid,         & ! [IN]
-                                    varname,     & ! [IN]
-                                    step_nmax,   & ! [OUT]
-                                    description, & ! [OUT]
-                                    units,       & ! [OUT]
-                                    datatype,    & ! [OUT]
-                                    dim_rank,    & ! [OUT]
-                                    dim_name,    & ! [OUT]
-                                    dim_size,    & ! [OUT]
-                                    time_start,  & ! [OUT]
-                                    time_end,    & ! [OUT]
-                                    time_units   ) ! [OUT]
+    call FILE_get_all_datainfo_fid( step_limit, dim_limit,           & ! [IN]
+                                    fid, varname,                    & ! [IN]
+                                    step_nmax,                       & ! [OUT]
+                                    description, units, datatype,    & ! [OUT]
+                                    dim_rank, dim_name, dim_size,    & ! [OUT]
+                                    time_start, time_end, time_units ) ! [OUT]
 
     return
   end subroutine FILE_get_all_dataInfo_fname
 
   subroutine FILE_get_all_dataInfo_fid( &
-       step_limit,  &
-       dim_limit,   &
-       fid,         &
-       varname,     &
-       step_nmax,   &
-       description, &
-       units,       &
-       datatype,    &
-       dim_rank,    &
-       dim_name,    &
-       dim_size,    &
-       time_start,  &
-       time_end,    &
-       time_units   )
+       step_limit, dim_limit,           &
+       fid, varname,                    &
+       step_nmax,                       &
+       description, units, datatype,    &
+       dim_rank, dim_name, dim_size,    &
+       time_start, time_end, time_units )
     implicit none
 
     integer,                    intent(in)  :: step_limit
@@ -2362,23 +2248,19 @@ contains
   ! interface FILE_read
   !-----------------------------------------------------------------------------
   subroutine FILE_read_realSP_1D( &
-      var,           & ! (out)
-      basename,      & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      rankid,        & ! (in)
-      allow_missing, & ! (in) optional
-      single         & ! (in) optional
-      )
+      basename, varname,    &
+      var,                  &
+      step, rankid, single, &
+      allow_missing         )
     implicit none
 
-    real(SP),    intent(out)           :: var(:)
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
-    integer,          intent( in)           :: rankid
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    real(SP),    intent(out)           :: var(:)
+    integer,          intent( in), optional :: step
+    integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2386,45 +2268,35 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_
-
     intrinsic shape
     !---------------------------------------------------------------------------
 
-    single_ = .false.
-
-    if ( present(single) ) single_ = single
-
     !--- search/register file
-    call FILE_open( fid,                          & ! (out)
-                    basename, FILE_FREAD,         & ! (in)
-                    rankid=rankid, single=single_ ) ! (in)
+    call FILE_open( basename,                    & ! (in)
+                    fid,                         & ! (out)
+                    rankid=rankid, single=single ) ! (in)
 
-    call FILE_read_var_realSP_1D(          &
-         var,                                        & ! (out)
-         fid, varname, step,                         & ! (in)
-         allow_missing=allow_missing, single=single_ ) ! (in)
+    call FILE_read_var_realSP_1D( &
+         fid, varname,                          & ! (in)
+         var(:),                         & ! (out)
+         step=step, allow_missing=allow_missing ) ! (in)
 
     return
   end subroutine FILE_read_realSP_1D
   subroutine FILE_read_realDP_1D( &
-      var,           & ! (out)
-      basename,      & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      rankid,        & ! (in)
-      allow_missing, & ! (in) optional
-      single         & ! (in) optional
-      )
+      basename, varname,    &
+      var,                  &
+      step, rankid, single, &
+      allow_missing         )
     implicit none
 
-    real(DP),    intent(out)           :: var(:)
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
-    integer,          intent( in)           :: rankid
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    real(DP),    intent(out)           :: var(:)
+    integer,          intent( in), optional :: step
+    integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2432,45 +2304,35 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_
-
     intrinsic shape
     !---------------------------------------------------------------------------
 
-    single_ = .false.
-
-    if ( present(single) ) single_ = single
-
     !--- search/register file
-    call FILE_open( fid,                          & ! (out)
-                    basename, FILE_FREAD,         & ! (in)
-                    rankid=rankid, single=single_ ) ! (in)
+    call FILE_open( basename,                    & ! (in)
+                    fid,                         & ! (out)
+                    rankid=rankid, single=single ) ! (in)
 
-    call FILE_read_var_realDP_1D(          &
-         var,                                        & ! (out)
-         fid, varname, step,                         & ! (in)
-         allow_missing=allow_missing, single=single_ ) ! (in)
+    call FILE_read_var_realDP_1D( &
+         fid, varname,                          & ! (in)
+         var(:),                         & ! (out)
+         step=step, allow_missing=allow_missing ) ! (in)
 
     return
   end subroutine FILE_read_realDP_1D
   subroutine FILE_read_realSP_2D( &
-      var,           & ! (out)
-      basename,      & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      rankid,        & ! (in)
-      allow_missing, & ! (in) optional
-      single         & ! (in) optional
-      )
+      basename, varname,    &
+      var,                  &
+      step, rankid, single, &
+      allow_missing         )
     implicit none
 
-    real(SP),    intent(out)           :: var(:,:)
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
-    integer,          intent( in)           :: rankid
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    real(SP),    intent(out)           :: var(:,:)
+    integer,          intent( in), optional :: step
+    integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2478,45 +2340,35 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_
-
     intrinsic shape
     !---------------------------------------------------------------------------
 
-    single_ = .false.
-
-    if ( present(single) ) single_ = single
-
     !--- search/register file
-    call FILE_open( fid,                          & ! (out)
-                    basename, FILE_FREAD,         & ! (in)
-                    rankid=rankid, single=single_ ) ! (in)
+    call FILE_open( basename,                    & ! (in)
+                    fid,                         & ! (out)
+                    rankid=rankid, single=single ) ! (in)
 
-    call FILE_read_var_realSP_2D(          &
-         var,                                        & ! (out)
-         fid, varname, step,                         & ! (in)
-         allow_missing=allow_missing, single=single_ ) ! (in)
+    call FILE_read_var_realSP_2D( &
+         fid, varname,                          & ! (in)
+         var(:,:),                         & ! (out)
+         step=step, allow_missing=allow_missing ) ! (in)
 
     return
   end subroutine FILE_read_realSP_2D
   subroutine FILE_read_realDP_2D( &
-      var,           & ! (out)
-      basename,      & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      rankid,        & ! (in)
-      allow_missing, & ! (in) optional
-      single         & ! (in) optional
-      )
+      basename, varname,    &
+      var,                  &
+      step, rankid, single, &
+      allow_missing         )
     implicit none
 
-    real(DP),    intent(out)           :: var(:,:)
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
-    integer,          intent( in)           :: rankid
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    real(DP),    intent(out)           :: var(:,:)
+    integer,          intent( in), optional :: step
+    integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2524,45 +2376,35 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_
-
     intrinsic shape
     !---------------------------------------------------------------------------
 
-    single_ = .false.
-
-    if ( present(single) ) single_ = single
-
     !--- search/register file
-    call FILE_open( fid,                          & ! (out)
-                    basename, FILE_FREAD,         & ! (in)
-                    rankid=rankid, single=single_ ) ! (in)
+    call FILE_open( basename,                    & ! (in)
+                    fid,                         & ! (out)
+                    rankid=rankid, single=single ) ! (in)
 
-    call FILE_read_var_realDP_2D(          &
-         var,                                        & ! (out)
-         fid, varname, step,                         & ! (in)
-         allow_missing=allow_missing, single=single_ ) ! (in)
+    call FILE_read_var_realDP_2D( &
+         fid, varname,                          & ! (in)
+         var(:,:),                         & ! (out)
+         step=step, allow_missing=allow_missing ) ! (in)
 
     return
   end subroutine FILE_read_realDP_2D
   subroutine FILE_read_realSP_3D( &
-      var,           & ! (out)
-      basename,      & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      rankid,        & ! (in)
-      allow_missing, & ! (in) optional
-      single         & ! (in) optional
-      )
+      basename, varname,    &
+      var,                  &
+      step, rankid, single, &
+      allow_missing         )
     implicit none
 
-    real(SP),    intent(out)           :: var(:,:,:)
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
-    integer,          intent( in)           :: rankid
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    real(SP),    intent(out)           :: var(:,:,:)
+    integer,          intent( in), optional :: step
+    integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2570,45 +2412,35 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_
-
     intrinsic shape
     !---------------------------------------------------------------------------
 
-    single_ = .false.
-
-    if ( present(single) ) single_ = single
-
     !--- search/register file
-    call FILE_open( fid,                          & ! (out)
-                    basename, FILE_FREAD,         & ! (in)
-                    rankid=rankid, single=single_ ) ! (in)
+    call FILE_open( basename,                    & ! (in)
+                    fid,                         & ! (out)
+                    rankid=rankid, single=single ) ! (in)
 
-    call FILE_read_var_realSP_3D(          &
-         var,                                        & ! (out)
-         fid, varname, step,                         & ! (in)
-         allow_missing=allow_missing, single=single_ ) ! (in)
+    call FILE_read_var_realSP_3D( &
+         fid, varname,                          & ! (in)
+         var(:,:,:),                         & ! (out)
+         step=step, allow_missing=allow_missing ) ! (in)
 
     return
   end subroutine FILE_read_realSP_3D
   subroutine FILE_read_realDP_3D( &
-      var,           & ! (out)
-      basename,      & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      rankid,        & ! (in)
-      allow_missing, & ! (in) optional
-      single         & ! (in) optional
-      )
+      basename, varname,    &
+      var,                  &
+      step, rankid, single, &
+      allow_missing         )
     implicit none
 
-    real(DP),    intent(out)           :: var(:,:,:)
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
-    integer,          intent( in)           :: rankid
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    real(DP),    intent(out)           :: var(:,:,:)
+    integer,          intent( in), optional :: step
+    integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2616,45 +2448,35 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_
-
     intrinsic shape
     !---------------------------------------------------------------------------
 
-    single_ = .false.
-
-    if ( present(single) ) single_ = single
-
     !--- search/register file
-    call FILE_open( fid,                          & ! (out)
-                    basename, FILE_FREAD,         & ! (in)
-                    rankid=rankid, single=single_ ) ! (in)
+    call FILE_open( basename,                    & ! (in)
+                    fid,                         & ! (out)
+                    rankid=rankid, single=single ) ! (in)
 
-    call FILE_read_var_realDP_3D(          &
-         var,                                        & ! (out)
-         fid, varname, step,                         & ! (in)
-         allow_missing=allow_missing, single=single_ ) ! (in)
+    call FILE_read_var_realDP_3D( &
+         fid, varname,                          & ! (in)
+         var(:,:,:),                         & ! (out)
+         step=step, allow_missing=allow_missing ) ! (in)
 
     return
   end subroutine FILE_read_realDP_3D
   subroutine FILE_read_realSP_4D( &
-      var,           & ! (out)
-      basename,      & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      rankid,        & ! (in)
-      allow_missing, & ! (in) optional
-      single         & ! (in) optional
-      )
+      basename, varname,    &
+      var,                  &
+      step, rankid, single, &
+      allow_missing         )
     implicit none
 
-    real(SP),    intent(out)           :: var(:,:,:,:)
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
-    integer,          intent( in)           :: rankid
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    real(SP),    intent(out)           :: var(:,:,:,:)
+    integer,          intent( in), optional :: step
+    integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2662,45 +2484,35 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_
-
     intrinsic shape
     !---------------------------------------------------------------------------
 
-    single_ = .false.
-
-    if ( present(single) ) single_ = single
-
     !--- search/register file
-    call FILE_open( fid,                          & ! (out)
-                    basename, FILE_FREAD,         & ! (in)
-                    rankid=rankid, single=single_ ) ! (in)
+    call FILE_open( basename,                    & ! (in)
+                    fid,                         & ! (out)
+                    rankid=rankid, single=single ) ! (in)
 
-    call FILE_read_var_realSP_4D(          &
-         var,                                        & ! (out)
-         fid, varname, step,                         & ! (in)
-         allow_missing=allow_missing, single=single_ ) ! (in)
+    call FILE_read_var_realSP_4D( &
+         fid, varname,                          & ! (in)
+         var(:,:,:,:),                         & ! (out)
+         step=step, allow_missing=allow_missing ) ! (in)
 
     return
   end subroutine FILE_read_realSP_4D
   subroutine FILE_read_realDP_4D( &
-      var,           & ! (out)
-      basename,      & ! (in)
-      varname,       & ! (in)
-      step,          & ! (in)
-      rankid,        & ! (in)
-      allow_missing, & ! (in) optional
-      single         & ! (in) optional
-      )
+      basename, varname,    &
+      var,                  &
+      step, rankid, single, &
+      allow_missing         )
     implicit none
 
-    real(DP),    intent(out)           :: var(:,:,:,:)
     character(len=*), intent( in)           :: basename
     character(len=*), intent( in)           :: varname
-    integer,          intent( in)           :: step
-    integer,          intent( in)           :: rankid
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    real(DP),    intent(out)           :: var(:,:,:,:)
+    integer,          intent( in), optional :: step
+    integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
+    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2708,48 +2520,37 @@ contains
     integer :: error
     integer :: n
 
-    logical :: single_
-
     intrinsic shape
     !---------------------------------------------------------------------------
 
-    single_ = .false.
-
-    if ( present(single) ) single_ = single
-
     !--- search/register file
-    call FILE_open( fid,                          & ! (out)
-                    basename, FILE_FREAD,         & ! (in)
-                    rankid=rankid, single=single_ ) ! (in)
+    call FILE_open( basename,                    & ! (in)
+                    fid,                         & ! (out)
+                    rankid=rankid, single=single ) ! (in)
 
-    call FILE_read_var_realDP_4D(          &
-         var,                                        & ! (out)
-         fid, varname, step,                         & ! (in)
-         allow_missing=allow_missing, single=single_ ) ! (in)
+    call FILE_read_var_realDP_4D( &
+         fid, varname,                          & ! (in)
+         var(:,:,:,:),                         & ! (out)
+         step=step, allow_missing=allow_missing ) ! (in)
 
     return
   end subroutine FILE_read_realDP_4D
 
   subroutine FILE_read_var_realSP_1D( &
+      fid, varname,  &
       var,           &
-      fid,           &
-      varname,       &
       step,          &
       allow_missing, &
-      single,        &
-      ntypes,        &
-      dtype,         &
-      start,         &
-      count          )
+      ntypes, dtype, &
+      start, count   )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
-    real(SP),    intent(out)           :: var(:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+    real(SP),    intent(out)           :: var(:)
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
@@ -2832,25 +2633,20 @@ contains
     return
   end subroutine FILE_read_var_realSP_1D
   subroutine FILE_read_var_realDP_1D( &
+      fid, varname,  &
       var,           &
-      fid,           &
-      varname,       &
       step,          &
       allow_missing, &
-      single,        &
-      ntypes,        &
-      dtype,         &
-      start,         &
-      count          )
+      ntypes, dtype, &
+      start, count   )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
-    real(DP),    intent(out)           :: var(:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+    real(DP),    intent(out)           :: var(:)
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
@@ -2933,25 +2729,20 @@ contains
     return
   end subroutine FILE_read_var_realDP_1D
   subroutine FILE_read_var_realSP_2D( &
+      fid, varname,  &
       var,           &
-      fid,           &
-      varname,       &
       step,          &
       allow_missing, &
-      single,        &
-      ntypes,        &
-      dtype,         &
-      start,         &
-      count          )
+      ntypes, dtype, &
+      start, count   )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
-    real(SP),    intent(out)           :: var(:,:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+    real(SP),    intent(out)           :: var(:,:)
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
@@ -3034,25 +2825,20 @@ contains
     return
   end subroutine FILE_read_var_realSP_2D
   subroutine FILE_read_var_realDP_2D( &
+      fid, varname,  &
       var,           &
-      fid,           &
-      varname,       &
       step,          &
       allow_missing, &
-      single,        &
-      ntypes,        &
-      dtype,         &
-      start,         &
-      count          )
+      ntypes, dtype, &
+      start, count   )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
-    real(DP),    intent(out)           :: var(:,:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+    real(DP),    intent(out)           :: var(:,:)
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
@@ -3135,25 +2921,20 @@ contains
     return
   end subroutine FILE_read_var_realDP_2D
   subroutine FILE_read_var_realSP_3D( &
+      fid, varname,  &
       var,           &
-      fid,           &
-      varname,       &
       step,          &
       allow_missing, &
-      single,        &
-      ntypes,        &
-      dtype,         &
-      start,         &
-      count          )
+      ntypes, dtype, &
+      start, count   )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
-    real(SP),    intent(out)           :: var(:,:,:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+    real(SP),    intent(out)           :: var(:,:,:)
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
@@ -3236,25 +3017,20 @@ contains
     return
   end subroutine FILE_read_var_realSP_3D
   subroutine FILE_read_var_realDP_3D( &
+      fid, varname,  &
       var,           &
-      fid,           &
-      varname,       &
       step,          &
       allow_missing, &
-      single,        &
-      ntypes,        &
-      dtype,         &
-      start,         &
-      count          )
+      ntypes, dtype, &
+      start, count   )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
-    real(DP),    intent(out)           :: var(:,:,:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+    real(DP),    intent(out)           :: var(:,:,:)
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
@@ -3337,25 +3113,20 @@ contains
     return
   end subroutine FILE_read_var_realDP_3D
   subroutine FILE_read_var_realSP_4D( &
+      fid, varname,  &
       var,           &
-      fid,           &
-      varname,       &
       step,          &
       allow_missing, &
-      single,        &
-      ntypes,        &
-      dtype,         &
-      start,         &
-      count          )
+      ntypes, dtype, &
+      start, count   )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
-    real(SP),    intent(out)           :: var(:,:,:,:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+    real(SP),    intent(out)           :: var(:,:,:,:)
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
@@ -3438,25 +3209,20 @@ contains
     return
   end subroutine FILE_read_var_realSP_4D
   subroutine FILE_read_var_realDP_4D( &
+      fid, varname,  &
       var,           &
-      fid,           &
-      varname,       &
       step,          &
       allow_missing, &
-      single,        &
-      ntypes,        &
-      dtype,         &
-      start,         &
-      count          )
+      ntypes, dtype, &
+      start, count   )
     use MPI, only : MPI_COMM_NULL
     implicit none
 
-    real(DP),    intent(out)           :: var(:,:,:,:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+    real(DP),    intent(out)           :: var(:,:,:,:)
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    logical,          intent( in), optional :: single
     integer,          intent( in), optional :: ntypes      ! number of dtypes
     integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
     integer,          intent( in), optional :: start(:)    ! request starts to global variable
@@ -3543,13 +3309,11 @@ contains
   ! interface FILE_write
   !-----------------------------------------------------------------------------
   subroutine FILE_write_realSP_1D( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      ndims,   & ! (in)
-      count,   & ! (in)
-      start    ) ! (in)
+      vid, var,       &
+      t_start, t_end, &
+      ndims,          &
+      count,          &
+      start           )
     implicit none
 
     integer,  intent(in)           :: vid
@@ -3615,13 +3379,11 @@ contains
     return
   end subroutine FILE_write_realSP_1D
   subroutine FILE_write_realDP_1D( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      ndims,   & ! (in)
-      count,   & ! (in)
-      start    ) ! (in)
+      vid, var,       &
+      t_start, t_end, &
+      ndims,          &
+      count,          &
+      start           )
     implicit none
 
     integer,  intent(in)           :: vid
@@ -3687,11 +3449,9 @@ contains
     return
   end subroutine FILE_write_realDP_1D
   subroutine FILE_write_realSP_2D( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      start    ) ! (in)
+      vid, var,       &
+      t_start, t_end, &
+      start           )
     implicit none
 
     integer,  intent(in)           :: vid
@@ -3736,11 +3496,9 @@ contains
     return
   end subroutine FILE_write_realSP_2D
   subroutine FILE_write_realDP_2D( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      start    ) ! (in)
+      vid, var,       &
+      t_start, t_end, &
+      start           )
     implicit none
 
     integer,  intent(in)           :: vid
@@ -3785,11 +3543,9 @@ contains
     return
   end subroutine FILE_write_realDP_2D
   subroutine FILE_write_realSP_3D( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      start    ) ! (in)
+      vid, var,       &
+      t_start, t_end, &
+      start           )
     implicit none
 
     integer,  intent(in)           :: vid
@@ -3834,11 +3590,9 @@ contains
     return
   end subroutine FILE_write_realSP_3D
   subroutine FILE_write_realDP_3D( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      start    ) ! (in)
+      vid, var,       &
+      t_start, t_end, &
+      start           )
     implicit none
 
     integer,  intent(in)           :: vid
@@ -3883,11 +3637,9 @@ contains
     return
   end subroutine FILE_write_realDP_3D
   subroutine FILE_write_realSP_4D( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      start    ) ! (in)
+      vid, var,       &
+      t_start, t_end, &
+      start           )
     implicit none
 
     integer,  intent(in)           :: vid
@@ -3932,11 +3684,9 @@ contains
     return
   end subroutine FILE_write_realSP_4D
   subroutine FILE_write_realDP_4D( &
-      vid,     & ! (in)
-      var,     & ! (in)
-      t_start, & ! (in)
-      t_end,   & ! (in)
-      start    ) ! (in)
+      vid, var,       &
+      t_start, t_end, &
+      start           )
     implicit none
 
     integer,  intent(in)           :: vid
@@ -4012,8 +3762,8 @@ contains
   !-----------------------------------------------------------------------------
   ! This subroutine is used when PnetCDF I/O method is enabled
   subroutine FILE_attach_buffer( &
-       fid,       & ! (in)
-       buf_amount ) ! (in)
+       fid,       &
+       buf_amount )
     implicit none
 
     integer, intent(in) :: fid
@@ -4042,8 +3792,7 @@ contains
 
   !-----------------------------------------------------------------------------
   ! This subroutine is used when PnetCDF I/O method is enabled
-  subroutine FILE_detach_buffer( &
-       fid        ) ! (in)
+  subroutine FILE_detach_buffer( fid )
     implicit none
 
     integer, intent(in) :: fid
@@ -4157,20 +3906,17 @@ contains
     return
   end subroutine FILE_close_all
 
-  !-----------------------------------------------------------------------------
-  ! private
-  !-----------------------------------------------------------------------------
   subroutine FILE_make_fname( &
-       fname,    & ! (out)
-       basename, & ! (in)
-       prefix,   & ! (in)
-       rankid,   & ! (in)
-       len       ) ! (in)
-    character(len=*), intent(out) :: fname
+       basename, &
+       prefix,   &
+       rankid,   &
+       len,      &
+       fname     )
     character(len=*), intent( in) :: basename
     character(len=*), intent( in) :: prefix
     integer,          intent( in) :: rankid
     integer,          intent( in) :: len
+    character(len=*), intent(out) :: fname
 
     !                           12345678901234567
     character(len=17) :: fmt = "(A, '.', A, I*.*)"
@@ -4187,25 +3933,60 @@ contains
 
     return
   end subroutine FILE_make_fname
+
+  !-----------------------------------------------------------------------------
+  !> get unit of time
+  !-----------------------------------------------------------------------------
+  subroutine FILE_get_CFtunits(date, tunits)
+    implicit none
+
+    integer,          intent(in)  :: date(6)
+    character(len=*), intent(out) :: tunits
+    !---------------------------------------------------------------------------
+
+    write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', date
+
+    return
+  end subroutine FILE_get_CFtunits
+
+  function FILE_get_aggregate( fid )
+    integer, intent(in) :: fid
+    logical :: FILE_get_aggregate
+
+    if ( fid < 0 ) then
+       FILE_get_aggregate = .false.
+    else
+       FILE_get_aggregate = FILE_files(fid)%aggregate
+    end if
+
+    return
+  end function FILE_get_aggregate
+
+  !-----------------------------------------------------------------------------
+  ! private
+  !-----------------------------------------------------------------------------
+
   !-----------------------------------------------------------------------------
   subroutine FILE_get_fid( &
-      fid,        &
-      existed,    &
       basename,   &
       mode,       &
       rankid,     &
       single,     &
+      fid,        &
+      existed,    &
       mpi_comm    )
     use MPI, only: &
       MPI_COMM_NULL
     implicit none
 
-    integer,          intent(out) :: fid
-    logical,          intent(out) :: existed
     character(len=*), intent( in) :: basename
     integer,          intent( in) :: mode
     integer,          intent( in) :: rankid
     logical,          intent( in) :: single
+
+    integer,          intent(out) :: fid
+    logical,          intent(out) :: existed
+
     integer,          intent( in), optional :: mpi_comm
 
     character(len=FILE_HSHORT) :: rwname(0:2)
@@ -4231,7 +4012,7 @@ contains
     elseif ( single ) then
        fname = trim(basename)//'.peall'
     else
-       call FILE_make_fname(fname,trim(basename),'pe',rankid,6)
+       call FILE_make_fname( basename, 'pe', rankid, 6, fname )
     endif
 
     !--- search existing file
@@ -4272,33 +4053,6 @@ contains
     return
   end subroutine FILE_get_fid
 
-  !-----------------------------------------------------------------------------
-  !> get unit of time
-  !-----------------------------------------------------------------------------
-  subroutine FILE_get_CFtunits(tunits, date)
-    implicit none
-
-    character(len=*), intent(out) :: tunits
-    integer,          intent(in)  :: date(6)
-    !---------------------------------------------------------------------------
-
-    write(tunits,'(a,i4.4,"-",i2.2,"-",i2.2," ",i2.2,":",i2.2,":",i2.2)') 'seconds since ', date
-
-    return
-  end subroutine FILE_get_CFtunits
-
-  function FILE_get_aggregate( fid )
-    integer, intent(in) :: fid
-    logical :: FILE_get_aggregate
-
-    if ( fid < 0 ) then
-       FILE_get_aggregate = .false.
-    else
-       FILE_get_aggregate = FILE_files(fid)%aggregate
-    end if
-
-    return
-  end function FILE_get_aggregate
 
 end module scale_file
 !-------------------------------------------------------------------------------

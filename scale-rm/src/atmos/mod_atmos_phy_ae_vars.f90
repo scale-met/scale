@@ -198,7 +198,7 @@ contains
     HIST_Re = .false.
     allocate( HIST_Re_id(N_AE) )
     do iv = 1, N_AE
-       call FILE_HISTORY_reg( HIST_Re_id(iv), 'Re_'//trim(AE_NAME(iv)), 'effective radius of '//trim(AE_DESC(iv)), 'cm', fill_halo=.true., dim_type='ZXY' )
+       call FILE_HISTORY_reg( 'Re_'//trim(AE_NAME(iv)), 'effective radius of '//trim(AE_DESC(iv)), 'cm', HIST_Re_id(iv), fill_halo=.true., dim_type='ZXY' )
        if ( HIST_Re_id(iv) > 0 ) HIST_Re = .true.
     end do
 
@@ -256,7 +256,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_open( restart_fid, basename, aggregate=ATMOS_PHY_AE_RESTART_IN_AGGREGATE )
+       call FILE_CARTESC_open( basename, restart_fid, aggregate=ATMOS_PHY_AE_RESTART_IN_AGGREGATE )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_AE is not specified.'
     endif
@@ -285,8 +285,9 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS_PHY_AE) ***'
 
-       call FILE_CARTESC_read( ATMOS_PHY_AE_CCN(:,:,:),                & ! [OUT]
-                         restart_fid, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(1), 'ZXY', & ! [IN]
+                               ATMOS_PHY_AE_CCN(:,:,:)          ) ! [OUT]
+                         
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
@@ -339,9 +340,10 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_create( restart_fid,                                                              & ! [OUT]
-                                 basename, ATMOS_PHY_AE_RESTART_OUT_TITLE, ATMOS_PHY_AE_RESTART_OUT_DTYPE, & ! [IN]
-                                 aggregate=ATMOS_PHY_AE_RESTART_OUT_AGGREGATE                              ) ! [IN]
+       call FILE_CARTESC_create( &
+            basename, ATMOS_PHY_AE_RESTART_OUT_TITLE, ATMOS_PHY_AE_RESTART_OUT_DTYPE, & ! [IN]
+            restart_fid,                                                              & ! [OUT]
+            aggregate=ATMOS_PHY_AE_RESTART_OUT_AGGREGATE                              ) ! [IN]
 
     endif
 

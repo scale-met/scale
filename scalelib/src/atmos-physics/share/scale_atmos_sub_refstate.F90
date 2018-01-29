@@ -253,25 +253,25 @@ contains
 
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
 
-       call FILE_CARTESC_open( fid, ATMOS_REFSTATE_IN_BASENAME )
+       call FILE_CARTESC_open( ATMOS_REFSTATE_IN_BASENAME, fid )
 
        if ( ATMOS_REFSTATE_IN_CHECK_COORDINATES ) then
           call FILE_CARTESC_check_coordinates( fid, atmos=.true. )
        end if
 
        ! 1D
-       call FILE_CARTESC_read( ATMOS_REFSTATE1D_pres(:), fid, 'PRES_ref', 'Z', step=1 )
-       call FILE_CARTESC_read( ATMOS_REFSTATE1D_temp(:), fid, 'TEMP_ref', 'Z', step=1 )
-       call FILE_CARTESC_read( ATMOS_REFSTATE1D_dens(:), fid, 'DENS_ref', 'Z', step=1 )
-       call FILE_CARTESC_read( ATMOS_REFSTATE1D_pott(:), fid, 'POTT_ref', 'Z', step=1 )
-       call FILE_CARTESC_read( ATMOS_REFSTATE1D_qv(:),   fid, 'QV_ref',   'Z', step=1 )
+       call FILE_CARTESC_read( fid, 'PRES_ref', 'Z', ATMOS_REFSTATE1D_pres(:) )
+       call FILE_CARTESC_read( fid, 'TEMP_ref', 'Z', ATMOS_REFSTATE1D_temp(:) )
+       call FILE_CARTESC_read( fid, 'DENS_ref', 'Z', ATMOS_REFSTATE1D_dens(:) )
+       call FILE_CARTESC_read( fid, 'POTT_ref', 'Z', ATMOS_REFSTATE1D_pott(:) )
+       call FILE_CARTESC_read( fid, 'QV_ref',   'Z', ATMOS_REFSTATE1D_qv  (:) )
 
        ! 3D
-       call FILE_CARTESC_read( ATMOS_REFSTATE_pres(:,:,:), fid, 'PRES_ref3D', 'ZXY', step=1 )
-       call FILE_CARTESC_read( ATMOS_REFSTATE_temp(:,:,:), fid, 'TEMP_ref3D', 'ZXY', step=1 )
-       call FILE_CARTESC_read( ATMOS_REFSTATE_dens(:,:,:), fid, 'DENS_ref3D', 'ZXY', step=1 )
-       call FILE_CARTESC_read( ATMOS_REFSTATE_pott(:,:,:), fid, 'POTT_ref3D', 'ZXY', step=1 )
-       call FILE_CARTESC_read( ATMOS_REFSTATE_qv(:,:,:),   fid, 'QV_ref3D',   'ZXY', step=1 )
+       call FILE_CARTESC_read( fid, 'PRES_ref3D', 'ZXY', ATMOS_REFSTATE_pres(:,:,:) )
+       call FILE_CARTESC_read( fid, 'TEMP_ref3D', 'ZXY', ATMOS_REFSTATE_temp(:,:,:) )
+       call FILE_CARTESC_read( fid, 'DENS_ref3D', 'ZXY', ATMOS_REFSTATE_dens(:,:,:) )
+       call FILE_CARTESC_read( fid, 'POTT_ref3D', 'ZXY', ATMOS_REFSTATE_pott(:,:,:) )
+       call FILE_CARTESC_read( fid, 'QV_ref3D',   'ZXY', ATMOS_REFSTATE_qv  (:,:,:) )
 
     else
        write(*,*) 'xxx [ATMOS_REFSTATE_read] refstate file is not specified.'

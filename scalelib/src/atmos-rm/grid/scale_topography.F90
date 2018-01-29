@@ -150,9 +150,9 @@ contains
 
     if ( TOPO_IN_BASENAME /= '' ) then
 
-       call FILE_CARTESC_open( fid, TOPO_IN_BASENAME, aggregate=TOPO_IN_AGGREGATE )
-       call FILE_CARTESC_read( TOPO_Zsfc(:,:),           & ! [OUT]
-                               fid, 'TOPO', 'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_open( TOPO_IN_BASENAME, fid, aggregate=TOPO_IN_AGGREGATE )
+       call FILE_CARTESC_read( fid, 'TOPO', 'XY', TOPO_Zsfc(:,:) )
+                               
        call FILE_CARTESC_flush( fid )
 
        if ( TOPO_IN_CHECK_COORDINATES ) then

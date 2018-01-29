@@ -184,9 +184,8 @@ contains
     if ( ismaster ) then
        nowrank = 0 ! first file
 
-       call FILE_Open( fid,             & ! [OUT]
-                       basename,        & ! [IN]
-                       FILE_FREAD,      & ! [IN]
+       call FILE_Open( basename,        & ! [IN]
+                       fid,             & ! [OUT]
                        rankid = nowrank ) ! [IN]
 
        call FILE_Get_Commoninfo( fid,             & ! [IN]
@@ -568,7 +567,7 @@ contains
        if ( ismaster ) then
           allocate( tmp_SP(varsize) )
 
-          call FILE_Read( tmp_SP(:), basename, varname, 1, nowrank )
+          call FILE_Read( basename, varname, tmp_SP(:), rankid=nowrank )
 
           var(:) = real(tmp_SP(:),kind=RP)
 
@@ -580,7 +579,7 @@ contains
        if ( ismaster ) then
           allocate( tmp_DP(varsize) )
 
-          call FILE_Read( tmp_DP(:), basename, varname, 1, nowrank )
+          call FILE_Read( basename, varname, tmp_DP(:), rankid=nowrank )
 
           var(:) = real(tmp_DP(:),kind=RP)
 
@@ -639,7 +638,7 @@ contains
 
     if ( datatype == FILE_REAL4 ) then
 
-       call FILE_Read( tmp_SP(:), basename, varname, nowstep, nowrank )
+       call FILE_Read( basename, varname, tmp_SP(:), step=nowstep, rankid=nowrank )
 
        do i = 1, gout1
           if ( localmap(i,I_map_p) == nowrank ) then
@@ -651,7 +650,7 @@ contains
 
     elseif( datatype == FILE_REAL8 ) then
 
-       call FILE_Read( tmp_DP(:), basename, varname, nowstep, nowrank )
+       call FILE_Read( basename, varname, tmp_DP(:), step=nowstep, rankid=nowrank )
 
        do i = 1, gout1
           if ( localmap(i,I_map_p) == nowrank ) then
@@ -716,7 +715,7 @@ contains
 
     if ( datatype == FILE_REAL4 ) then
 
-       call FILE_Read( tmp_SP(:,:), basename, varname, nowstep, nowrank )
+       call FILE_Read( basename, varname, tmp_SP(:,:), step=nowstep, rankid=nowrank )
 
        do j = 1, gout2
        do i = 1, gout1
@@ -731,7 +730,7 @@ contains
 
     elseif( datatype == FILE_REAL8 ) then
 
-       call FILE_Read( tmp_DP(:,:), basename, varname, nowstep, nowrank )
+       call FILE_Read( basename, varname, tmp_DP(:,:), step=nowstep, rankid=nowrank )
 
        do j = 1, gout2
        do i = 1, gout1
@@ -811,7 +810,7 @@ contains
           allocate( tmp_SP(gin1,gin2,gin3) ) ! z,x,y
        endif
 
-       call FILE_Read( tmp_SP(:,:,:), basename, varname, nowstep, nowrank )
+       call FILE_Read( basename, varname, tmp_SP(:,:,:), step=nowstep, rankid=nowrank )
 
        if ( transpose ) then
           do j = 1, gout3
@@ -851,7 +850,7 @@ contains
           allocate( tmp_DP(gin1,gin2,gin3) ) ! z,x,y
        endif
 
-       call FILE_Read( tmp_DP(:,:,:), basename, varname, nowstep, nowrank )
+       call FILE_Read( basename, varname, tmp_DP(:,:,:), step=nowstep, rankid=nowrank )
 
        if ( transpose ) then
           do j = 1, gout3

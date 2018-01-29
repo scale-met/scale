@@ -252,36 +252,27 @@ contains
 
     if ( LANDUSE_IN_BASENAME /= '' ) then
 
-       call FILE_CARTESC_open( fid, LANDUSE_IN_BASENAME, aggregate=LANDUSE_IN_AGGREGATE )
+       call FILE_CARTESC_open( LANDUSE_IN_BASENAME, fid, aggregate=LANDUSE_IN_AGGREGATE )
 
-       call FILE_CARTESC_read( LANDUSE_frac_land(:,:),         & ! [OUT]
-                         fid, 'FRAC_LAND',  'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( LANDUSE_frac_lake(:,:),         & ! [OUT]
-                         fid, 'FRAC_LAKE',  'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( LANDUSE_frac_urban(:,:),        & ! [OUT]
-                         fid, 'FRAC_URBAN', 'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( fid, 'FRAC_LAND',  'XY', LANDUSE_frac_land(:,:) )
+       call FILE_CARTESC_read( fid, 'FRAC_LAKE',  'XY', LANDUSE_frac_lake(:,:) )
+       call FILE_CARTESC_read( fid, 'FRAC_URBAN', 'XY', LANDUSE_frac_urban(:,:) )
 
-       call FILE_CARTESC_read( LANDUSE_fact_ocean(:,:),            & ! [OUT]
-                         fid, 'FRAC_OCEAN_abs', 'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( LANDUSE_fact_land(:,:),             & ! [OUT]
-                         fid, 'FRAC_LAND_abs',  'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( LANDUSE_fact_urban(:,:),            & ! [OUT]
-                         fid, 'FRAC_URBAN_abs', 'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( fid, 'FRAC_OCEAN_abs', 'XY', LANDUSE_fact_ocean(:,:) )
+       call FILE_CARTESC_read( fid, 'FRAC_LAND_abs',  'XY', LANDUSE_fact_land(:,:) )
+       call FILE_CARTESC_read( fid, 'FRAC_URBAN_abs', 'XY', LANDUSE_fact_urban(:,:) )
 
        call FILE_CARTESC_flush( fid )
 
        do p = 1, LANDUSE_PFT_mosaic
           write(varname,'(A8,I1.1)') 'FRAC_PFT', p
 
-          call FILE_CARTESC_read( LANDUSE_frac_PFT(:,:,p),   & ! [OUT]
-                            fid, varname, 'XY', step=1 ) ! [IN]
-          call FILE_CARTESC_flush( fid )
+          call FILE_CARTESC_read( fid, varname, 'XY', LANDUSE_frac_PFT(:,:,p) )
 
           write(varname,'(A9,I1.1)') 'INDEX_PFT', p
 
-          call FILE_CARTESC_read( temp(:,:),                 & ! [OUT]
-                            fid, varname, 'XY', step=1 ) ! [IN]
-          call FILE_CARTESC_flush( fid )
+          call FILE_CARTESC_read( fid, varname, 'XY', temp(:,:) )
+          call FILE_CARTESC_flush( fid ) ! for non-blocking I/O
 
           do j = JS, JE
           do i = IS, IE
@@ -333,8 +324,10 @@ contains
 
        call LANDUSE_fillhalo( FILL_BND=.false. )
 
-       call FILE_CARTESC_create( fid, LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, LANDUSE_OUT_DTYPE, &
-                                 haszcoord=.false., aggregate=LANDUSE_OUT_AGGREGATE               )
+       call FILE_CARTESC_create( &
+            LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, LANDUSE_OUT_DTYPE, & ! [IN]
+            fid,                                                        & ! [OUT]
+            haszcoord=.false., aggregate=LANDUSE_OUT_AGGREGATE          ) ! [IN]
 
        call FILE_CARTESC_def_var( fid, 'FRAC_LAND'     , 'LAND fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE, vid(1) )
        call FILE_CARTESC_def_var( fid, 'FRAC_LAKE'     , 'LAKE fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE, vid(2) )

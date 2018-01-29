@@ -225,7 +225,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_open( restart_fid, basename, aggregate=ATMOS_DYN_RESTART_IN_AGGREGATE )
+       call FILE_CARTESC_open( basename, restart_fid, aggregate=ATMOS_DYN_RESTART_IN_AGGREGATE )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_DYN is not specified.'
     endif
@@ -255,8 +255,9 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (ATMOS_DYN) ***'
 
        do iv = 1, VA
-          call FILE_CARTESC_read( PROG(:,:,:,iv),                          & ! [OUT]
-                            restart_fid, VAR_NAME(iv), 'ZXY', step=1 ) ! [IN]
+          call FILE_CARTESC_read( restart_fid, VAR_NAME(iv), 'ZXY', & ! [IN]
+                                  PROG(:,:,:,iv)                    ) ! [OUT]
+                            
        enddo
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
@@ -314,9 +315,10 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_create( restart_fid,                                                        & ! [OUT]
-                                 basename, ATMOS_DYN_RESTART_OUT_TITLE, ATMOS_DYN_RESTART_OUT_DTYPE, & ! [IN]
-                                 aggregate=ATMOS_DYN_RESTART_OUT_AGGREGATE                           ) ! [IN]
+       call FILE_CARTESC_create( &
+            basename, ATMOS_DYN_RESTART_OUT_TITLE, ATMOS_DYN_RESTART_OUT_DTYPE, & ! [IN]
+            restart_fid,                                                        & ! [OUT]
+            aggregate=ATMOS_DYN_RESTART_OUT_AGGREGATE                           ) ! [IN]
 
     endif
 

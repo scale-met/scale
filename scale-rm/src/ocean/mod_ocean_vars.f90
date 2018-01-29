@@ -397,9 +397,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_open( restart_fid,                         & ! [OUT]
-                               basename,                            & ! [IN]
-                               aggregate=OCEAN_RESTART_IN_AGGREGATE ) ! [IN]
+       call FILE_CARTESC_open( basename, restart_fid, aggregate=OCEAN_RESTART_IN_AGGREGATE )
 
        if ( OCEAN_RESTART_IN_CHECK_COORDINATES ) then
           call FILE_CARTESC_check_coordinates( restart_fid )
@@ -427,42 +425,44 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Read from restart file (OCEAN) ***'
 
-       call FILE_CARTESC_read( OCEAN_TEMP(:,:,:),                                 & ! [OUT]
-                         restart_fid, VAR_NAME(I_TEMP),      'OXY', step=1 ) ! [IN]
-!       call FILE_CARTESC_read( OCEAN_SALT(:,:,:),                                 & ! [OUT]
-!                         restart_fid, VAR_NAME(I_SALT),      'OXY', step=1 ) ! [IN]
-!       call FILE_CARTESC_read( OCEAN_UVEL(:,:,:),                                 & ! [OUT]
-!                         restart_fid, VAR_NAME(I_UVEL),      'OXY', step=1 ) ! [IN]
-!       call FILE_CARTESC_read( OCEAN_VVEL(:,:,:),                                 & ! [OUT]
-!                         restart_fid, VAR_NAME(I_VVEL),      'OXY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( OCEAN_SFC_TEMP(:,:),                             & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFC_TEMP),  'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( OCEAN_SFC_albedo(:,:,I_LW),                      & ! [OUT]
-                         restart_fid, VAR_NAME(I_ALB_LW),    'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( OCEAN_SFC_albedo(:,:,I_SW),                      & ! [OUT]
-                         restart_fid, VAR_NAME(I_ALB_SW),    'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( OCEAN_SFC_Z0M(:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFC_Z0M),   'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( OCEAN_SFC_Z0H(:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFC_Z0H),   'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( OCEAN_SFC_Z0E(:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFC_Z0E),   'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_TEMP),      'OXY', & ! [IN]
+                               OCEAN_TEMP(:,:,:)                          ) ! [OUT]
+!       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SALT),      'OXY', & ! [IN]
+!                               OCEAN_SALT(:,:,:)                          ) ! [OUT]
+!       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_UVEL),      'OXY', & ! [IN]
+!                               OCEAN_UVEL(:,:,:)                          ) ! [OUT]
+!       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_VVEL),      'OXY', & ! [IN]
+!                               OCEAN_VVEL(:,:,:)                          ) ! [OUT]
+!                         
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_TEMP),  'XY', & ! [IN]
+                               OCEAN_SFC_TEMP(:,:)                       ) ! [OUT]
+            
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ALB_LW),    'XY', & ! [IN]
+                               OCEAN_SFC_albedo(:,:,I_LW)                ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ALB_SW),    'XY', & ! [IN]
+                               OCEAN_SFC_albedo(:,:,I_SW)                ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_Z0M),   'XY', & ! [IN]
+                               OCEAN_SFC_Z0M(:,:)                        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_Z0H),   'XY', & ! [IN]
+                               OCEAN_SFC_Z0H(:,:)                        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_Z0E),   'XY', & ! [IN]
+                               OCEAN_SFC_Z0E(:,:)                        ) ! [OUT]
 
-       call FILE_CARTESC_read( OCEAN_SFLX_MW(:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_MW),   'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( OCEAN_SFLX_MU(:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_MU),   'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( OCEAN_SFLX_MV(:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_MV),   'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( OCEAN_SFLX_SH(:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_SH),   'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( OCEAN_SFLX_LH(:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_LH),   'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( OCEAN_SFLX_WH(:,:),                              & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_WH),   'XY', step=1 ) ! [IN]
-       call FILE_CARTESC_read( OCEAN_SFLX_evap(:,:),                            & ! [OUT]
-                         restart_fid, VAR_NAME(I_SFLX_evap), 'XY', step=1 ) ! [IN]
-
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MW),   'XY', & ! [IN]
+                               OCEAN_SFLX_MW(:,:)                        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MU),   'XY', & ! [IN]
+                               OCEAN_SFLX_MU(:,:)                        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MV),   'XY', & ! [IN]
+                               OCEAN_SFLX_MV(:,:)                        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_SH),   'XY', & ! [IN]
+                               OCEAN_SFLX_SH(:,:)                        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_LH),   'XY', & ! [IN]
+                               OCEAN_SFLX_LH(:,:)                        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_WH),   'XY', & ! [IN]
+                               OCEAN_SFLX_WH(:,:)                        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_evap), 'XY', & ! [IN]
+                               OCEAN_SFLX_evap(:,:)                      ) ! [OUT]
+            
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
 
        call OCEAN_vars_total
@@ -638,9 +638,10 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call FILE_CARTESC_create( restart_fid,                                                & ! [OUT]
-                                 basename, OCEAN_RESTART_OUT_TITLE, OCEAN_RESTART_OUT_DTYPE, & ! [IN]
-                                 aggregate=OCEAN_RESTART_OUT_AGGREGATE                       ) ! [IN]
+       call FILE_CARTESC_create( &
+            basename, OCEAN_RESTART_OUT_TITLE, OCEAN_RESTART_OUT_DTYPE, & ! [IN]
+            restart_fid,                                                & ! [OUT]
+            aggregate=OCEAN_RESTART_OUT_AGGREGATE                       ) ! [IN]
 
     endif
 

@@ -161,13 +161,13 @@ contains
 
     write(bname,'(A,A,F15.3)') trim(OCEAN_GRID_IN_BASENAME)
 
-    call FILE_Read( GRID_OCZ (:), bname, 'OCZ',  1, PRC_myrank )
-    call FILE_Read( GRID_OCDZ(:), bname, 'OCDZ', 1, PRC_myrank )
-    call FILE_Read( GRID_OFZ (:), bname, 'OFZ',  1, PRC_myrank )
-
-    call FILE_Read( tmp_CBFZ (:), bname, 'CBFZ', 1, PRC_myrank )
-    call FILE_Read( tmp_CBFY (:), bname, 'CBFX', 1, PRC_myrank )
-    call FILE_Read( tmp_CBFY (:), bname, 'CBFY', 1, PRC_myrank )
+    call FILE_Read( bname, 'OCZ',  GRID_OCZ (:) )
+    call FILE_Read( bname, 'OCDZ', GRID_OCDZ(:) )
+    call FILE_Read( bname, 'OFZ',  GRID_OFZ (:) )
+                                                 
+    call FILE_Read( bname, 'CBFZ', tmp_CBFZ (:) )
+    call FILE_Read( bname, 'CBFX', tmp_CBFY (:) )
+    call FILE_Read( bname, 'CBFY', tmp_CBFY (:) )
 
     do i = 1, IA
        if ( tmp_CBFX(i) /= GRID_CBFX(i) ) then

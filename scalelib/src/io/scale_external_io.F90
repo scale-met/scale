@@ -1560,20 +1560,14 @@ contains
        if ( single ) then
           fname = trim(basename)
        else
-          call FILE_Make_Fname(fname,trim(basename),'_',myrank,4)
+          call FILE_Make_Fname( basename , '_', myrank, 4, fname )
        endif
     elseif( mdlid == iNICAM )then      !TYPE: NICAM-NETCDF
        if ( single ) then
           fname = trim(basename)//'.peall.nc'
        else
-          call FILE_Make_Fname(fname,trim(basename),'anl.pe',myrank,6)
+          call FILE_Make_Fname( basename , 'anl.pe', myrank, 6, fname )
        endif
-    !elseif( mdlid == iGrADS )then      !TYPE: GrADS
-    !   if ( single ) then
-    !      fname = trim(basename)//'.anl'
-    !   else
-    !      call FILE_Make_Fname(fname,trim(basename),'anl.pe',myrank,6)
-    !   endif
     else
        write(*,*) 'xxx failed, wrong filetype: [scale_external_io]/[ExternalFileMakeFName]'
        call PRC_MPIstop

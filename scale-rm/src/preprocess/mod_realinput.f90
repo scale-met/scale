@@ -1501,7 +1501,7 @@ contains
     integer :: iq
     !---------------------------------------------------------------------------
 
-    call FILE_CARTESC_create( fid, basename, title, datatype, NOWDATE )
+    call FILE_CARTESC_create( basename, title, datatype, fid, date=NOWDATE )
 
     call FILE_CARTESC_def_var( fid, &
          'DENS', 'Reference Density', 'kg/m3', 'ZXYT',  datatype, & ! [IN]
@@ -2418,7 +2418,7 @@ contains
     nowdate = TIME_NOWDATE
     nowdate(1) = nowdate(1)
 
-    call FILE_CARTESC_create( fid, basename, title, boundary_out_dtype, nowdate )
+    call FILE_CARTESC_create( basename, title, boundary_out_dtype, fid, date=nowdate )
 
     call FILE_CARTESC_def_var( fid,                      & ! [IN]
          'LAND_TEMP', 'Reference Land Temperature', 'K', & ! [IN]
