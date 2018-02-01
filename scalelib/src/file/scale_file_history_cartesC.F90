@@ -332,12 +332,12 @@ contains
     if ( PRC_IsMaster ) count(1) = LKMAX + 1
     call FILE_HISTORY_Set_Dim( "LZH", 1, dims(:), 1, zs(:), start(:), count(:) ) ! [IN]
 
-!!$    dims (1) = "oz"
-!!$    if ( PRC_IsMaster ) count(1) = OKMAX
-!!$    call FILE_HISTORY_Set_Dim( "OZ", 1, dims(:), 1, zs(:), start(:), count(:) ) ! [IN]
-!!$    dims (1) = "ozh"
-!!$    if ( PRC_IsMaster ) count(1) = OKMAX + 1
-!!$    call FILE_HISTORY_Set_Dim( "OZH", 1, dims(:), 1, zs(:), start(:), count(:) ) ! [IN]
+    dims (1) = "oz"
+    if ( PRC_IsMaster ) count(1) = OKMAX
+    call FILE_HISTORY_Set_Dim( "OZ", 1, dims(:), 1, zs(:), start(:), count(:) ) ! [IN]
+    dims (1) = "ozh"
+    if ( PRC_IsMaster ) count(1) = OKMAX + 1
+    call FILE_HISTORY_Set_Dim( "OZH", 1, dims(:), 1, zs(:), start(:), count(:) ) ! [IN]
 
     dims (1) = "uz"
     if ( PRC_IsMaster ) count(1) = UKMAX
@@ -469,12 +469,12 @@ contains
     case ('LZH')
        ksize  = LKMAX+1
        kstart = LKS-1
-!!$    case ('OZ')
-!!$       ksize  = OKMAX
-!!$       kstart = OKS
-!!$    case ('OZH')
-!!$       ksize  = OKMAX+1
-!!$       kstart = OKS-1
+    case ('OZ')
+       ksize  = OKMAX
+       kstart = OKS
+    case ('OZH')
+       ksize  = OKMAX+1
+       kstart = OKS-1
     case ('UZ')
        ksize  = UKMAX
        kstart = UKS
@@ -634,9 +634,9 @@ contains
     case('L')
        ksize  = LKMAX
        kstart = LKS
-!!$    case('O')
-!!$       ksize  = OKMAX
-!!$       kstart = OKS
+    case('O')
+       ksize  = OKMAX
+       kstart = OKS
     case('U')
        ksize  = UKMAX
        kstart = UKS
