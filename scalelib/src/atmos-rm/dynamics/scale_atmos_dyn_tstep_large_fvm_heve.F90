@@ -705,8 +705,8 @@ contains
        enddo
        call COMM_vars8( MOMZ_t(:,:,:), I_COMM_MOMZ_t )
 #ifdef HIST_TEND
-       call FILE_HISTORY_in(MOMZ_tp, 'MOMZ_t_phys', 'tendency of momentum z due to physics',  'kg/m2/s2', zdim='half' )
-       call FILE_HISTORY_in(damp_t,  'MOMZ_t_damp', 'tendency of momentum z due to damping', 'kg/m2/s2', zdim='half' )
+       call FILE_HISTORY_in(MOMZ_tp, 'MOMZ_t_phys', 'tendency of momentum z due to physics', 'kg/m2/s2', dim_type='ZHXY' )
+       call FILE_HISTORY_in(damp_t,  'MOMZ_t_damp', 'tendency of momentum z due to damping', 'kg/m2/s2', dim_type='ZHXY' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -750,8 +750,8 @@ contains
        enddo
        call COMM_vars8( MOMX_t(:,:,:), I_COMM_MOMX_t )
 #ifdef HIST_TEND
-       call FILE_HISTORY_in(MOMX_tp, 'MOMX_t_phys', 'tendency of momentum x due to physics', 'kg/m2/s2', xdim='half' )
-       call FILE_HISTORY_in(damp_t,  'MOMX_t_damp', 'tendency of momentum x due to damping', 'kg/m2/s2', xdim='half' )
+       call FILE_HISTORY_in(MOMX_tp, 'MOMX_t_phys', 'tendency of momentum x due to physics', 'kg/m2/s2', dim_type='ZXHY' )
+       call FILE_HISTORY_in(damp_t,  'MOMX_t_damp', 'tendency of momentum x due to damping', 'kg/m2/s2', dim_type='ZXHY' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -795,8 +795,8 @@ contains
        enddo
        call COMM_vars8( MOMY_t(:,:,:), I_COMM_MOMY_t )
 #ifdef HIST_TEND
-       call FILE_HISTORY_in(MOMY_tp, 'MOMY_t_phys', 'tendency of momentum y due to physics', 'kg/m2/s2', ydim='half' )
-       call FILE_HISTORY_in(damp_t,  'MOMY_t_damp', 'tendency of momentum y due to damping', 'kg/m2/s2', ydim='half' )
+       call FILE_HISTORY_in(MOMY_tp, 'MOMY_t_phys', 'tendency of momentum y due to physics', 'kg/m2/s2', dim_type='ZXYH' )
+       call FILE_HISTORY_in(damp_t,  'MOMY_t_damp', 'tendency of momentum y due to damping', 'kg/m2/s2', dim_type='ZXYH' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -1134,13 +1134,13 @@ contains
     integer :: ierr
 
 
-    call FILE_HISTORY_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', zdim='half' )
-    call FILE_HISTORY_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction', 'kg/m2/s', xdim='half' )
-    call FILE_HISTORY_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction', 'kg/m2/s', ydim='half' )
+    call FILE_HISTORY_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', dim_type='ZHXY' )
+    call FILE_HISTORY_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction', 'kg/m2/s', dim_type='ZXHY' )
+    call FILE_HISTORY_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction', 'kg/m2/s', dim_type='ZXYH' )
 
-    call FILE_HISTORY_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction', 'K*kg/m2/s', zdim='half' )
-    call FILE_HISTORY_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction', 'K*kg/m2/s', xdim='half' )
-    call FILE_HISTORY_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction', 'K*kg/m2/s', ydim='half' )
+    call FILE_HISTORY_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction', 'K*kg/m2/s', dim_type='ZHXY' )
+    call FILE_HISTORY_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction', 'K*kg/m2/s', dim_type='ZXHY' )
+    call FILE_HISTORY_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction', 'K*kg/m2/s', dim_type='ZXYH' )
 
     mflx_lb_total            = 0.0_RP
     mflx_lb_horizontal(:)    = 0.0_RP

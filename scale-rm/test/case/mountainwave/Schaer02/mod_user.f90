@@ -170,7 +170,7 @@ contains
        enddo
 
        call FILE_HISTORY_in( PT_diff(:,:,:), 'PT_diff', 'PT perturbation', 'K' )
-       call FILE_HISTORY_in( U_diff(:,:,:), 'U_diff', 'U perturbation', 'm/s', xdim='half' )
+       call FILE_HISTORY_in( U_diff(:,:,:), 'U_diff', 'U perturbation', 'm/s', dim_type='ZXHY' )
     endif
 
     return
