@@ -2403,7 +2403,7 @@ contains
 
     character(len=H_SHORT) :: boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
     integer :: nowdate(6)
-    integer :: fid, vid(5)
+    integer :: fid, vid(10)
     integer :: ts, te
     !---------------------------------------------------------------------------
 
