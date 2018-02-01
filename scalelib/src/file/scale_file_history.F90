@@ -691,7 +691,6 @@ contains
        itemid = -1
        do n = 1, FILE_HISTORY_dims(dimid)%nzcoords
           call FILE_HISTORY_Add_Variable( name, desc, unit,                    & ! (in)
-                                          
                                           dimid,                               & ! (in)
                                           FILE_HISTORY_dims(dimid)%zcoords(n), & ! (in)
                                           iid,                                 & ! (out)
@@ -1280,7 +1279,7 @@ contains
 
     FILE_HISTORY_naxes = FILE_HISTORY_naxes + 1
     id                 = FILE_HISTORY_naxes
-    
+
     allocate( FILE_HISTORY_axes(id)%var(dim_size) )
 
     FILE_HISTORY_axes(id)%name     = name
@@ -1628,7 +1627,7 @@ contains
     integer :: m
     !---------------------------------------------------------------------------
 
-    fid = FILE_HISTORY_vars(id)%fid 
+    fid = FILE_HISTORY_vars(id)%fid
 
     if ( fid >= 0 ) then ! file already exists
        fileexisted = .true.
@@ -2361,8 +2360,9 @@ contains
                      ' Please see detail in log file.'
           call PRC_abort
        else
-          if( IO_L ) write(IO_FID_LOG,*) '*** Output value is not updated in this step. NAME : ', &
-                                trim(FILE_HISTORY_vars(id)%name)
+          if( IO_L ) write(IO_FID_LOG,*) '*** [WARN] Output value is not updated in this step.', &
+                                         ' NAME = ',     trim(FILE_HISTORY_vars(id)%name), &
+                                         ', OUTNAME = ', trim(FILE_HISTORY_vars(id)%outname)
        endif
     endif
 
@@ -2442,29 +2442,29 @@ contains
        endif
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*       ) '*** [HISTORY] Output item list '
-    if( IO_L ) write(IO_FID_LOG,'(A,I4)') '*** Number of history item :', FILE_HISTORY_nreqs
-    if( IO_L ) write(IO_FID_LOG,*       ) 'ITEM                    :OUTNAME                 ', &
-                                          ':    size:interval[sec]:    step:timeavg?:zcoord'
-    if( IO_L ) write(IO_FID_LOG,*       ) '=================================================', &
-                                          '================================================'
+    if( IO_L ) write(IO_FID_LOG,*)           '*** [HISTORY] Output item list '
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4)') '*** Number of history item :', FILE_HISTORY_nreqs
+    if( IO_L ) write(IO_FID_LOG,*)           'ITEM                    :OUTNAME                 ', &
+                                             ':    size:interval[sec]:    step:timeavg?:zcoord'
+    if( IO_L ) write(IO_FID_LOG,*)           '=================================================', &
+                                             '================================================='
 
 
     do id = 1, FILE_HISTORY_nitems
        dtsec = real(FILE_HISTORY_vars(id)%dstep,kind=DP) * FILE_HISTORY_DTSEC
 
-       if( IO_L ) write(IO_FID_LOG,'(A24,1x,A24,1x,I8,1x,F13.3,1x,I8,1x,L8,1x,A6)') &
-            FILE_HISTORY_vars(id)%name,     &
-            FILE_HISTORY_vars(id)%outname,  &
-            FILE_HISTORY_vars(id)%size,     &
-            dtsec,                          &
-            FILE_HISTORY_vars(id)%dstep,    &
-            FILE_HISTORY_vars(id)%taverage, &
-            FILE_HISTORY_vars(id)%zcoord
+       if( IO_L ) write(IO_FID_LOG,'(1x,A24,1x,A24,1x,I8,1x,F13.3,1x,I8,1x,L8,1x,A8)') &
+                  FILE_HISTORY_vars(id)%name,     &
+                  FILE_HISTORY_vars(id)%outname,  &
+                  FILE_HISTORY_vars(id)%size,     &
+                  dtsec,                          &
+                  FILE_HISTORY_vars(id)%dstep,    &
+                  FILE_HISTORY_vars(id)%taverage, &
+                  FILE_HISTORY_vars(id)%zcoord
     enddo
 
-    if( IO_L ) write(IO_FID_LOG,*) '=================================================', &
-                                   '================================================'
+    if( IO_L ) write(IO_FID_LOG,*)           '=================================================', &
+                                             '================================================='
 
     return
   end subroutine FILE_HISTORY_Output_List
