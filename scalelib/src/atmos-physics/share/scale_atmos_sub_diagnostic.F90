@@ -262,7 +262,7 @@ contains
     real(RP), intent(in)  :: PRES(KA,IA,JA)
 
     real(RP), intent(in)  :: CZ(KA,IA,JA)
-    real(RP), intent(in)  :: FZ(KA,IA,JA)
+    real(RP), intent(in)  :: FZ(0:KA,IA,JA)
 
     real(RP), intent(out) :: PHYD(KA,IA,JA)
 

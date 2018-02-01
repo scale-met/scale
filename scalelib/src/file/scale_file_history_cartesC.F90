@@ -292,7 +292,7 @@ contains
 
     character(len=H_SHORT) :: dims(3,3)
 
-    integer :: start(3), count(3)
+    integer :: start(3,3), count(3,3)
     integer :: xs, xc, ys, yc
     !---------------------------------------------------------------------------
 
@@ -312,73 +312,73 @@ contains
 
 
     !  Virtical 1D
-    start(1) = 1
+    start(1,1) = 1
     dims(1,1) = "z"
     if ( PRC_IsMaster ) then
-       count(1) = KMAX
+       count(1,1) = KMAX
     else
        ! for shared-file parallel I/O, only master rank writes variables with only Z dimension
-       count(1) = 0
+       count(1,1) = 0
     end if
-    call FILE_HISTORY_Set_Dim( "Z", 1, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "Z", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(1,1) = "zh"
-    if ( PRC_IsMaster ) count(1) = KMAX + 1
-    call FILE_HISTORY_Set_Dim( "ZH", 1, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    if ( PRC_IsMaster ) count(1,1) = KMAX + 1
+    call FILE_HISTORY_Set_Dim( "ZH", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
     dims(1,1) = "lz"
-    if ( PRC_IsMaster ) count(1) = LKMAX
-    call FILE_HISTORY_Set_Dim( "LZ", 1, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    if ( PRC_IsMaster ) count(1,1) = LKMAX
+    call FILE_HISTORY_Set_Dim( "LZ", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(1,1) = "lzh"
-    if ( PRC_IsMaster ) count(1) = LKMAX + 1
-    call FILE_HISTORY_Set_Dim( "LZH", 1, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    if ( PRC_IsMaster ) count(1,1) = LKMAX + 1
+    call FILE_HISTORY_Set_Dim( "LZH", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
     dims(1,1) = "oz"
-    if ( PRC_IsMaster ) count(1) = OKMAX
-    call FILE_HISTORY_Set_Dim( "OZ", 1, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    if ( PRC_IsMaster ) count(1,1) = OKMAX
+    call FILE_HISTORY_Set_Dim( "OZ", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(1,1) = "ozh"
-    if ( PRC_IsMaster ) count(1) = OKMAX + 1
-    call FILE_HISTORY_Set_Dim( "OZH", 1, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    if ( PRC_IsMaster ) count(1,1) = OKMAX + 1
+    call FILE_HISTORY_Set_Dim( "OZH", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
     dims(1,1) = "uz"
-    if ( PRC_IsMaster ) count(1) = UKMAX
-    call FILE_HISTORY_Set_Dim( "UZ", 1, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    if ( PRC_IsMaster ) count(1,1) = UKMAX
+    call FILE_HISTORY_Set_Dim( "UZ", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
     dims(1,1) = "uzh"
-    if ( PRC_IsMaster ) count(1) = UKMAX + 1
-    call FILE_HISTORY_Set_Dim( "UZH", 1, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    if ( PRC_IsMaster ) count(1,1) = UKMAX + 1
+    call FILE_HISTORY_Set_Dim( "UZH", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
 
     ! X, Y
     dims(1,:) = 'lon'
     dims(2,:) = 'lat'
-    start(1) = xs; count(1) = xc
-    start(2) = ys; count(2) = yc
-    call FILE_HISTORY_Set_Dim( "XY", 2, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    start(1,:) = xs; count(1,:) = xc
+    start(2,:) = ys; count(2,:) = yc
+    call FILE_HISTORY_Set_Dim( "XY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(3,:) = (/ "height  ", "z       ", "pressure" /)
-    start(3) = 1
-    count(3) = KMAX
-    call FILE_HISTORY_Set_Dim( "ZXY", 3, nzs, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    start(3,:) = 1
+    count(3,:) = (/ KMAX, KMAX, FILE_HISTORY_CARTESC_PRES_nlayer /)
+    call FILE_HISTORY_Set_Dim( "ZXY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(3,:) = (/ "height_xyw", "zh        ", "pressure  " /)
-    count(3) = KMAX + 1
-    call FILE_HISTORY_Set_Dim( "ZHXY", 3, nzs, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
+    call FILE_HISTORY_Set_Dim( "ZHXY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(3,1) = "oz"
-    count(3) = OKMAX
-    call FILE_HISTORY_Set_Dim( "OXY", 3, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    count(3,1) = OKMAX
+    call FILE_HISTORY_Set_Dim( "OXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(3,1) = "ozh"
-    count(3) = OKMAX + 1
-    call FILE_HISTORY_Set_Dim( "OHXY", 3, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    count(3,1) = OKMAX + 1
+    call FILE_HISTORY_Set_Dim( "OHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(3,1) = "lz"
-    count(3) = LKMAX
-    call FILE_HISTORY_Set_Dim( "LXY", 3, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    count(3,1) = LKMAX
+    call FILE_HISTORY_Set_Dim( "LXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(3,1) = "lzh"
-    count(3) = LKMAX + 1
-    call FILE_HISTORY_Set_Dim( "LHXY", 3, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    count(3,1) = LKMAX + 1
+    call FILE_HISTORY_Set_Dim( "LHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(3,1) = "uz"
-    count(3) = UKMAX
-    call FILE_HISTORY_Set_Dim( "UXY", 3, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    count(3,1) = UKMAX
+    call FILE_HISTORY_Set_Dim( "UXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(3,1) = "uzh"
-    count(3) = UKMAX + 1
-    call FILE_HISTORY_Set_Dim( "UHXY", 3, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    count(3,1) = UKMAX + 1
+    call FILE_HISTORY_Set_Dim( "UHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
 
 
@@ -386,50 +386,50 @@ contains
     dims(1,:) = 'lon_uy'
     dims(2,:) = 'lat_uy'
     if ( PRC_HAS_W ) then
-       start(1) = xs+1; count(1) = xc
+       start(1,:) = xs+1; count(1,:) = xc
     else
-       start(1) = xs  ; count(1) = xc+1
+       start(1,:) = xs  ; count(1,:) = xc+1
     endif
-    call FILE_HISTORY_Set_Dim( "XHY", 2, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "XHY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(3,:) = (/ "height_uyz", "z         ", "pressure  " /)
-    count(3) = KMAX
-    call FILE_HISTORY_Set_Dim( "ZXHY", 3, nzs, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    count(3,:) = (/ KMAX, KMAX, FILE_HISTORY_CARTESC_PRES_nlayer /)
+    call FILE_HISTORY_Set_Dim( "ZXHY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(3,:) = (/ "height_uyw", "zh        ", "pressure  " /)
-    count(3) = KMAX + 1
-    call FILE_HISTORY_Set_Dim( "ZHXHY", 3, nzs, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
+    call FILE_HISTORY_Set_Dim( "ZHXHY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
 
     ! X, YH
     dims(1,:) = 'lon_xv'
     dims(2,:) = 'lat_xv'
-    start(1) = xs; count(1) = xc
+    start(1,:) = xs; count(1,:) = xc
     if ( PRC_HAS_S ) then
-       start(2) = ys+1; count(2) = yc
+       start(2,:) = ys+1; count(2,:) = yc
     else
-       start(2) = ys  ; count(2) = yc+1
+       start(2,:) = ys  ; count(2,:) = yc+1
     endif
-    call FILE_HISTORY_Set_Dim( "XYH", 2, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "XYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(3,:) = (/ "height_xvz", "z         ", "pressure  " /)
-    count(3) = KMAX
-    call FILE_HISTORY_Set_Dim( "ZXYH", 3, nzs, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    count(3,:) = (/ KMAX, KMAX, FILE_HISTORY_CARTESC_PRES_nlayer /)
+    call FILE_HISTORY_Set_Dim( "ZXYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(3,:) = (/ "height_xvw", "zh        ", "pressure  " /)
-    count(3) = KMAX + 1
-    call FILE_HISTORY_Set_Dim( "ZHXYH", 3, nzs, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
+    call FILE_HISTORY_Set_Dim( "ZHXYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
     dims(1,:) = 'lon_uv'
     dims(2,:) = 'lat_uv'
     if ( PRC_HAS_W ) then
-       start(1) = xs+1; count(1) = xc
+       start(1,:) = xs+1; count(1,:) = xc
     else
-       start(1) = xs  ; count(1) = xc+1
+       start(1,:) = xs  ; count(1,:) = xc+1
     endif
-    call FILE_HISTORY_Set_Dim( "XHYH", 2, 1, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "XHYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(3,:) = (/ "height_uvz", "z         ", "pressure  " /)
-    count(3) = KMAX
-    call FILE_HISTORY_Set_Dim( "ZXHYH", 3, nzs, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    count(3,:) = (/ KMAX, KMAX, FILE_HISTORY_CARTESC_PRES_nlayer /)
+    call FILE_HISTORY_Set_Dim( "ZXHYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(3,:) = (/ "height_uvw", "zh        ", "pressure  " /)
-    count(3) = KMAX + 1
-    call FILE_HISTORY_Set_Dim( "ZHXHYH", 3, nzs, dims(:,:), zs(:), start(:), count(:) ) ! [IN]
+    count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
+    call FILE_HISTORY_Set_Dim( "ZHXHYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
     return
   end subroutine FILE_HISTORY_CARTESC_set_dims

@@ -170,12 +170,12 @@ module scale_file_history
   type dim
      character(len=FILE_HSHORT)          :: name
      integer                             :: ndims
-     character(len=FILE_HSHORT), pointer :: dims(:,:)
      integer                             :: nzcoords
+     character(len=FILE_HSHORT), pointer :: dims(:,:)
+     integer                   , pointer :: start(:,:)
+     integer                   , pointer :: count(:,:)
+     integer                   , pointer :: size(:)
      character(len=FILE_HSHORT), pointer :: zcoords(:)
-     integer                             :: start(3)
-     integer                             :: count(3)
-     integer                             :: size
      logical                             :: mapping
   end type dim
 
@@ -850,13 +850,13 @@ contains
     integer,          intent(in) :: nzcoords
     character(len=*), intent(in) :: dims(ndims,nzcoords)
     character(len=*), intent(in) :: zcoords(nzcoords)
-    integer,          intent(in) :: start(ndims)
-    integer,          intent(in) :: count(ndims)
+    integer,          intent(in) :: start(ndims,nzcoords)
+    integer,          intent(in) :: count(ndims,nzcoords)
 
     logical, intent(in), optional :: mapping
 
     integer :: id
-    integer :: size, n
+    integer :: size, n, m
 
     if ( FILE_HISTORY_ndims >= FILE_HISTORY_dim_max ) then
        write(*,*) 'xxx number of dimension exceed max limit: ', FILE_HISTORY_dim_max
@@ -866,21 +866,27 @@ contains
     id = FILE_HISTORY_ndims
 
     allocate( FILE_HISTORY_dims(id)%dims(ndims,nzcoords) )
+    allocate( FILE_HISTORY_dims(id)%start(ndims,nzcoords) )
+    allocate( FILE_HISTORY_dims(id)%count(ndims,nzcoords) )
     allocate( FILE_HISTORY_dims(id)%zcoords(nzcoords) )
+    allocate( FILE_HISTORY_dims(id)%size(nzcoords) )
 
-    size = 1
-    do n = 1, ndims
-       size = size * count(n)
+    FILE_HISTORY_dims(id)%name       = name
+    FILE_HISTORY_dims(id)%ndims      = ndims
+    FILE_HISTORY_dims(id)%dims(:,:)  = dims(:,:)
+    FILE_HISTORY_dims(id)%nzcoords   = nzcoords
+    FILE_HISTORY_dims(id)%zcoords(:) = zcoords(:)
+    FILE_HISTORY_dims(id)%start(:,:) = start(:,:)
+    FILE_HISTORY_dims(id)%count(:,:) = count(:,:)
+
+    do m = 1, nzcoords
+       size = 1
+       do n = 1, ndims
+          size = size * count(n,m)
+       end do
+       FILE_HISTORY_dims(id)%size(m) = size
     end do
 
-    FILE_HISTORY_dims(id)%name           = name
-    FILE_HISTORY_dims(id)%ndims          = ndims
-    FILE_HISTORY_dims(id)%dims(:,:)      = dims(:,:)
-    FILE_HISTORY_dims(id)%nzcoords       = nzcoords
-    FILE_HISTORY_dims(id)%zcoords(:)     = zcoords(:)
-    FILE_HISTORY_dims(id)%start(1:ndims) = start(:)
-    FILE_HISTORY_dims(id)%count(1:ndims) = count(:)
-    FILE_HISTORY_dims(id)%size           = size
     if ( present(mapping) ) then
        FILE_HISTORY_dims(id)%mapping = mapping
     else
@@ -1177,7 +1183,7 @@ contains
           endif
           FILE_HISTORY_vars(id)%laststep_put      = FILE_HISTORY_vars(id)%laststep_write
           FILE_HISTORY_vars(id)%flag_clear        = .true.
-          FILE_HISTORY_vars(id)%size = FILE_HISTORY_dims(dimid)%size
+          FILE_HISTORY_vars(id)%size = FILE_HISTORY_dims(dimid)%size(zid)
           allocate( FILE_HISTORY_vars(id)%varsum( FILE_HISTORY_vars(id)%size ) )
 
           FILE_HISTORY_vars(id)%timesum           = 0.0_DP
@@ -1431,8 +1437,7 @@ contains
           if ( FILE_HISTORY_io_buffer_size == 0 ) then
              array_size = 0
              do m = 1, FILE_HISTORY_nitems
-                dimid = FILE_HISTORY_vars(m)%dimid
-                array_size = array_size + FILE_HISTORY_dims(dimid)%size
+                array_size = array_size + FILE_HISTORY_vars(m)%size
              end do
              FILE_HISTORY_io_buffer_size = array_size * FILE_HISTORY_nitems * DP
           end if
@@ -1803,8 +1808,7 @@ contains
     integer, intent(in) :: id
     integer, intent(in) :: step_now
 
-    integer  :: dimid
-    integer  :: isize
+    integer  :: dimid, zid
     real(DP) :: time_str, time_end
     real(DP) :: sec_str,  sec_end
     !---------------------------------------------------------------------------
@@ -1833,10 +1837,8 @@ contains
        endif
     endif
 
-    isize = FILE_HISTORY_vars(id)%size
-
     if ( .NOT. FILE_HISTORY_vars(id)%flag_clear .AND. FILE_HISTORY_vars(id)%taverage ) then
-       FILE_HISTORY_vars(id)%varsum(1:isize) = FILE_HISTORY_vars(id)%varsum(1:isize) / FILE_HISTORY_vars(id)%timesum
+       FILE_HISTORY_vars(id)%varsum(:) = FILE_HISTORY_vars(id)%varsum(:) / FILE_HISTORY_vars(id)%timesum
     endif
 
     if ( firsttime ) then
@@ -1857,19 +1859,21 @@ contains
        call CALENDAR_sec2unit( time_end, sec_end, FILE_HISTORY_TIME_UNITS )
 
        dimid = FILE_HISTORY_vars(id)%dimid
-       if ( FILE_HISTORY_dims(dimid)%count(1) > 0 ) then
+       zid = FILE_HISTORY_vars(id)%zid
+       if ( FILE_HISTORY_dims(dimid)%count(1,zid) > 0 ) then
 
-          ! for one-file-per-process I/O method, FILE_HISTORY_vars(:)%count(1) == 1 always
-          ! for one file shared by all processes, FILE_HISTORY_vars(:)%count(1) >= 0,
+          ! for one-file-per-process I/O method, count(1) == 1 always
+          ! for one file shared by all processes, count(1) >= 0,
           ! being 0 indicates a 1D history variable, which will only be written by the
           ! south-most processes in parallel, or a z axis to be written by rank 0 only
-          call FILE_Write( FILE_HISTORY_vars(id)%vid,             & ! [IN]
-                           FILE_HISTORY_vars(id)%varsum(1:isize), & ! [IN]
-                           time_str,                              & ! [IN]
-                           time_end,                              & ! [IN]
-                           ndims=FILE_HISTORY_dims(dimid)%ndims,  & ! ndims before reshape
-                           count=FILE_HISTORY_dims(dimid)%count,  & ! global subarray lengths
-                           start=FILE_HISTORY_dims(dimid)%start   ) ! global subarray start indices
+
+          call FILE_Write( FILE_HISTORY_vars(id)%vid,                   & ! [IN]
+                           FILE_HISTORY_vars(id)%varsum(:),             & ! [IN]
+                           time_str,                                    & ! [IN]
+                           time_end,                                    & ! [IN]
+                           ndims=FILE_HISTORY_dims(dimid)%ndims,        & ! ndims before reshape
+                           count=FILE_HISTORY_dims(dimid)%count(:,zid), & ! global subarray lengths
+                           start=FILE_HISTORY_dims(dimid)%start(:,zid)  ) ! global subarray start indices
        end if
     else
        if ( laststep_write < step_now ) then
