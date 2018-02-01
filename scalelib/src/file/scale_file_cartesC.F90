@@ -218,7 +218,7 @@ contains
     JEB2 = JE
     if( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) JEB2 = JA
 
-    IM = JEB2 - JSB2 + 1
+    IM = IEB2 - ISB2 + 1
     JM = JEB2 - JSB2 + 1
     allocate( AXIS_LON  (IM,JM) )
     allocate( AXIS_LONUY(IM,JM) )
