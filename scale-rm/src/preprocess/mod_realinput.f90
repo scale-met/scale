@@ -1993,13 +1993,7 @@ contains
     real(RP) :: llat_org (         ldims(2),ldims(3))
 
     ! ocean
-    real(RP) :: tw_org   (        odims(1),odims(2))
-    real(RP) :: sst_org  (        odims(1),odims(2))
-    real(RP) :: albw_org (        odims(1),odims(2),2)
     real(RP) :: z0w_org  (        odims(1),odims(2))
-    real(RP) :: olon_org (        odims(1),odims(2))
-    real(RP) :: olat_org (        odims(1),odims(2))
-    real(RP) :: omask_org(        odims(1),odims(2))
     real(RP) :: omask    (        odims(1),odims(2))
     real(RP) :: lst_ocean(        odims(1),odims(2))
 
