@@ -40,7 +40,11 @@ do
 
    date_now=`date -u -d "@${usec}" +%Y-%m-%d_%H:%M:%S`
 
-   ln -svf ${indir}/${fname}_${date_now} ./${fname}_${FN}
+   if [ "${SCALE_SYS}" == "Kmicro" ]; then
+      cp -vf  ${indir}/${fname}_${date_now} ./${fname}_${FN}
+   else
+      ln -svf ${indir}/${fname}_${date_now} ./${fname}_${FN}
+   fi
 
    let fnum="${fnum}+1"
    let usec="${usec}+${dt}"

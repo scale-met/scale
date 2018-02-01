@@ -18,7 +18,11 @@ do
    src=${indir}/history.pe${PE}.nc
 
    if [ -f ${src} ]; then
-      ln -svf ${src} ./${dst}
+      if [ "${SCALE_SYS}" == "Kmicro" ]; then
+         cp -vf  ${src} ./${dst}
+      else
+         ln -svf ${src} ./${dst}
+      fi
    else
       echo "datafile does not found! : ${src}"
       exit 1
@@ -28,7 +32,11 @@ done
 src=${indir}/latlon_domain_catalogue.txt
 
 if [ -f ${src} ]; then
-   ln -svf ${src} .
+   if [ "${SCALE_SYS}" == "Kmicro" ]; then
+      cp -vf  ${src} .
+   else
+      ln -svf ${src} .
+   fi
 else
    echo "datafile does not found! : ${src}"
    exit 1
