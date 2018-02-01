@@ -955,7 +955,7 @@ contains
   end subroutine PRC_MPI_errorhandler
 
   subroutine PRC_set_file_closer( routine )
-    procedure(closer), pointer, intent(in) :: routine
+    procedure(closer) :: routine
 
     PRC_FILE_Closer => routine
 
