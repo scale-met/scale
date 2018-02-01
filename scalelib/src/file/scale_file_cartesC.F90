@@ -2545,7 +2545,7 @@ contains
        call MPRJ_get_attributes( mapping )
     elseif( dim_type == 'OXYT' ) then ! 4D variable
        ndims   = 3
-       dims    = (/'oz','x','y'/)
+       dims    = (/'oz','x ','y '/)
        if ( present(nsteps) ) then
          write_buf_amount = write_buf_amount + OKMAX * IA * JA * elm_size * nsteps
        else
@@ -2554,7 +2554,7 @@ contains
        call MPRJ_get_attributes( mapping )
     elseif( dim_type == 'OHXYT' ) then ! 4D variable
        ndims   = 3
-       dims    = (/'ozh','x','y'/)
+       dims    = (/'ozh','x  ','y  '/)
        if ( present(nsteps) ) then
          write_buf_amount = write_buf_amount + (OKMAX+1) * IA * JA * elm_size * nsteps
        else
@@ -2563,7 +2563,7 @@ contains
        call MPRJ_get_attributes( mapping )
     elseif( dim_type == 'LXYT' ) then ! 4D variable
        ndims   = 3
-       dims    = (/'lz','x','y'/)
+       dims    = (/'lz','x ','y '/)
        if ( present(nsteps) ) then
          write_buf_amount = write_buf_amount + LKMAX * IA * JA * elm_size * nsteps
        else
@@ -2572,7 +2572,7 @@ contains
        call MPRJ_get_attributes( mapping )
     elseif( dim_type == 'LHXYT' ) then ! 4D variable
        ndims   = 3
-       dims    = (/'lzh','x','y'/)
+       dims    = (/'lzh','x  ','y  '/)
        if ( present(nsteps) ) then
          write_buf_amount = write_buf_amount + (LKMAX+1) * IA * JA * elm_size * nsteps
        else
