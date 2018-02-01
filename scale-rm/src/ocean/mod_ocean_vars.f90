@@ -537,14 +537,21 @@ contains
     implicit none
 
     real(RP) :: total
+
+    character(len=2) :: sk
+    integer          :: k
     !---------------------------------------------------------------------------
 
     if ( STATISTICS_checktotal ) then
 
-       call STAT_total( total, OCEAN_TEMP      (:,:,:),    VAR_NAME(I_TEMP)     )
-       call STAT_total( total, OCEAN_SALT      (:,:,:),    VAR_NAME(I_SALT)     )
-       call STAT_total( total, OCEAN_UVEL      (:,:,:),    VAR_NAME(I_UVEL)     )
-       call STAT_total( total, OCEAN_VVEL      (:,:,:),    VAR_NAME(I_VVEL)     )
+       do k = OKS, OKE
+          write(sk,'(I2.2)') k
+
+          call STAT_total( total, OCEAN_TEMP(k,:,:), trim(VAR_NAME(I_TEMP))//sk )
+          call STAT_total( total, OCEAN_SALT(k,:,:), trim(VAR_NAME(I_SALT))//sk )
+          call STAT_total( total, OCEAN_UVEL(k,:,:), trim(VAR_NAME(I_UVEL))//sk )
+          call STAT_total( total, OCEAN_VVEL(k,:,:), trim(VAR_NAME(I_VVEL))//sk )
+       enddo
 
        call STAT_total( total, OCEAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP) )
        call STAT_total( total, OCEAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW)   )

@@ -48,7 +48,7 @@ module scale_ocean_grid
   !
   !++ Private parameters & variables
   !
-  real(RP), private :: OFZ(100) ! face coordinate without surface (=0 m)
+  real(RP), private :: FZ(100) ! face coordinate without surface (=0 m)
 
   character(len=H_LONG), private :: OCEAN_GRID_IN_BASENAME  = ''
   character(len=H_LONG), private :: OCEAN_GRID_OUT_BASENAME = ''
@@ -65,7 +65,7 @@ contains
     namelist / PARAM_OCEAN_GRID / &
        OCEAN_GRID_IN_BASENAME,  &
        OCEAN_GRID_OUT_BASENAME, &
-       OFZ
+       FZ
 
     integer :: ierr
     integer :: k
@@ -74,7 +74,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID] / Categ[OCEAN GRID] / Origin[SCALElib]'
 
-    OFZ(:) = 0.0_RP
+    FZ(:) = 0.0_RP
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -204,12 +204,12 @@ contains
 
     GRID_OFZ(OKS-1) = 0.0_RP
     do k = OKS, OKE
-       GRID_OFZ(k) = OFZ(k)
+       GRID_OFZ(k) = FZ(k)
     enddo
 
     do k = OKS, OKE
-       GRID_OCZ (k) = GRID_OCDZ(k) / 2.0_RP + GRID_OFZ(k-1)
        GRID_OCDZ(k) = GRID_OFZ(k) - GRID_OFZ(k-1)
+       GRID_OCZ (k) = GRID_OCDZ(k) / 2.0_RP + GRID_OFZ(k-1)
     enddo
 
     return
