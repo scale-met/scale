@@ -683,7 +683,17 @@ contains
           call PRC_abort
        end if
     else
-       dimid = 1
+       ! ndims = 3 is assumed as default
+       do n = 1, FILE_HISTORY_ndims
+          if ( FILE_HISTORY_dims(n)%ndims == 3 ) then
+             dimid = n
+             exit
+          end if
+       end do
+       if ( dimid == -1 ) then
+          write(*,'(a,i1,a)') 'xxx [FILE_HISTORY_reg] dim_type or ndims must be specified'
+          call PRC_abort
+       end if
     end if
 
     if ( FILE_HISTORY_dims(dimid)%nzcoords > 0 ) then
@@ -1638,7 +1648,6 @@ contains
     if ( fid >= 0 ) then ! file already exists
        fileexisted = .true.
     else
-
 
        if ( FILE_HISTORY_TIME_SINCE == '' ) then
           tunits = trim(FILE_HISTORY_TIME_UNITS)

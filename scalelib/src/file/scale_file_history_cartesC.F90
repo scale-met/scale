@@ -280,7 +280,6 @@ contains
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_CARTESC_set_dims
     use scale_process, only: &
-       PRC_IsMaster, &
        PRC_myrank
     use scale_rm_process, only: &
        PRC_2Drank, &
@@ -314,37 +313,32 @@ contains
     !  Virtical 1D
     start(1,1) = 1
     dims(1,1) = "z"
-    if ( PRC_IsMaster ) then
-       count(1,1) = KMAX
-    else
-       ! for shared-file parallel I/O, only master rank writes variables with only Z dimension
-       count(1,1) = 0
-    end if
+    count(1,1) = KMAX
     call FILE_HISTORY_Set_Dim( "Z", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(1,1) = "zh"
-    if ( PRC_IsMaster ) count(1,1) = KMAX + 1
+    count(1,1) = KMAX + 1
     call FILE_HISTORY_Set_Dim( "ZH", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
     dims(1,1) = "lz"
-    if ( PRC_IsMaster ) count(1,1) = LKMAX
+    count(1,1) = LKMAX
     call FILE_HISTORY_Set_Dim( "LZ", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(1,1) = "lzh"
-    if ( PRC_IsMaster ) count(1,1) = LKMAX + 1
+    count(1,1) = LKMAX + 1
     call FILE_HISTORY_Set_Dim( "LZH", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
     dims(1,1) = "oz"
-    if ( PRC_IsMaster ) count(1,1) = OKMAX
+    count(1,1) = OKMAX
     call FILE_HISTORY_Set_Dim( "OZ", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims(1,1) = "ozh"
-    if ( PRC_IsMaster ) count(1,1) = OKMAX + 1
+    count(1,1) = OKMAX + 1
     call FILE_HISTORY_Set_Dim( "OZH", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
     dims(1,1) = "uz"
-    if ( PRC_IsMaster ) count(1,1) = UKMAX
+    count(1,1) = UKMAX
     call FILE_HISTORY_Set_Dim( "UZ", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
     dims(1,1) = "uzh"
-    if ( PRC_IsMaster ) count(1,1) = UKMAX + 1
+    count(1,1) = UKMAX + 1
     call FILE_HISTORY_Set_Dim( "UZH", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
 
@@ -918,6 +912,7 @@ contains
           endif
        endif
 
+       ! for shared-file parallel I/O, only a part of rank writes variables
        if ( PRC_myrank > 0 ) then ! only rank 0 writes Z axes
           startZ = -1
        endif
