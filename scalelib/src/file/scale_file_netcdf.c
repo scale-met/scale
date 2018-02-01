@@ -443,7 +443,6 @@ int32_t file_read_data_c(       void       *var,       // (out)
   int ncid, varid;
   int rank;
   int i;
-  int status;
   int fid;
   size_t *str, *cnt;
   MPI_Offset *strp, *cntp;
@@ -488,17 +487,16 @@ int32_t file_read_data_c(       void       *var,       // (out)
     }
     free(str);
     free(cnt);
-    status = ncmpi_iget_vara(ncid, varid, strp, cntp, var, ntypes, dtype, NULL);
+    CHECK_PNC_ERROR( ncmpi_iget_vara(ncid, varid, strp, cntp, var, ntypes, dtype, NULL) )
     free(strp);
     free(cntp);
-    CHECK_PNC_ERROR(status)
   } else {
     switch ( precision ) {
     case 8:
-      status = nc_get_vara_double(ncid, varid, str, cnt, (double*)var);
+      CHECK_ERROR( nc_get_vara_double(ncid, varid, str, cnt, (double*)var) )
       break;
     case 4:
-      status = nc_get_vara_float(ncid, varid, str, cnt, (float*)var);
+      CHECK_ERROR( nc_get_vara_float(ncid, varid, str, cnt, (float*)var) )
       break;
     default:
       free(str);
@@ -508,7 +506,6 @@ int32_t file_read_data_c(       void       *var,       // (out)
     }
     free(str);
     free(cnt);
-    CHECK_ERROR(status)
   }
 
 
