@@ -505,10 +505,10 @@ contains
                      __FILE__, __LINE__ )
     endif
 
-    call FILE_HISTORY_in( OCEAN_TEMP      (:,:,:),    VAR_NAME(I_TEMP),     VAR_DESC(I_TEMP),     VAR_UNIT(I_TEMP)     )
-    call FILE_HISTORY_in( OCEAN_SALT      (:,:,:),    VAR_NAME(I_SALT),     VAR_DESC(I_SALT),     VAR_UNIT(I_SALT)     )
-    call FILE_HISTORY_in( OCEAN_UVEL      (:,:,:),    VAR_NAME(I_UVEL),     VAR_DESC(I_UVEL),     VAR_UNIT(I_UVEL)     )
-    call FILE_HISTORY_in( OCEAN_VVEL      (:,:,:),    VAR_NAME(I_VVEL),     VAR_DESC(I_VVEL),     VAR_UNIT(I_VVEL)     )
+    call FILE_HISTORY_in( OCEAN_TEMP      (:,:,:),    VAR_NAME(I_TEMP),     VAR_DESC(I_TEMP),     VAR_UNIT(I_TEMP)    , dim_type="OXY" )
+    call FILE_HISTORY_in( OCEAN_SALT      (:,:,:),    VAR_NAME(I_SALT),     VAR_DESC(I_SALT),     VAR_UNIT(I_SALT)    , dim_type="OXY" )
+    call FILE_HISTORY_in( OCEAN_UVEL      (:,:,:),    VAR_NAME(I_UVEL),     VAR_DESC(I_UVEL),     VAR_UNIT(I_UVEL)    , dim_type="OXY" )
+    call FILE_HISTORY_in( OCEAN_VVEL      (:,:,:),    VAR_NAME(I_VVEL),     VAR_DESC(I_VVEL),     VAR_UNIT(I_VVEL)    , dim_type="OXY" )
 
     call FILE_HISTORY_in( OCEAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP), VAR_DESC(I_SFC_TEMP), VAR_UNIT(I_SFC_TEMP) )
     call FILE_HISTORY_in( OCEAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW),   VAR_DESC(I_ALB_LW),   VAR_UNIT(I_ALB_LW)   )
