@@ -1444,7 +1444,7 @@ contains
        FILE_vars(vid)%fid  = fid
 
        if (IO_L) write(IO_FID_LOG,'(A,I3.3,A,I4.4,2A)') &
-       '###### FILE_ variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
+       '###### FILE variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
     endif
 
     return
@@ -3749,7 +3749,7 @@ contains
 
        if (IO_L) write(IO_FID_LOG,*)
        if (IO_L) write(IO_FID_LOG,'(A,I3.3,2A)') &
-            '###### FILE_ end define mode       : No.', fid, ', name = ', trim(FILE_files(fid)%name)
+            '###### FILE end define mode       : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     else
        write(*,*) 'xxx failed to exit define mode'
@@ -3780,7 +3780,7 @@ contains
 
        if (IO_L) write(IO_FID_LOG,*)
        if (IO_L) write(IO_FID_LOG,'(A,I3.3,3A,I10)') &
-            '###### FILE_ attach buffer         : No.', fid, ', name = ', trim(FILE_files(fid)%name), &
+            '###### FILE attach buffer         : No.', fid, ', name = ', trim(FILE_files(fid)%name), &
             ', size = ', buf_amount
     else
        write(*,*) 'xxx failed to attach buffer in PnetCDF'
@@ -3810,7 +3810,7 @@ contains
 
        if (IO_L) write(IO_FID_LOG,*)
        if (IO_L) write(IO_FID_LOG,'(A,I3.3,2A)') &
-            '###### FILE_ detach buffer         : No.', fid, ', name = ', trim(FILE_files(fid)%name)
+            '###### FILE detach buffer         : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     else
        write(*,*) 'xxx failed to detach buffer in PnetCDF'
@@ -3840,7 +3840,7 @@ contains
 
        if (IO_L) write(IO_FID_LOG,*)
        if (IO_L) write(IO_FID_LOG,'(A,I3.3,2A)') &
-            '###### FILE_ flush                 : No.', fid, ', name = ', trim(FILE_files(fid)%name)
+            '###### FILE flush                 : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     else
        write(*,*) 'xxx failed to flush PnetCDF pending requests'
@@ -3871,7 +3871,7 @@ contains
 
        if (IO_L) write(IO_FID_LOG,*)
        if (IO_L) write(IO_FID_LOG,'(A,I3.3,2A)') &
-            '###### FILE_ close                 : No.', fid, ', name = ', trim(FILE_files(fid)%name)
+            '###### FILE close                 : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     elseif( error /= FILE_ALREADY_CLOSED_CODE ) then
        write(*,*) 'xxx failed to close file'
@@ -4040,7 +4040,7 @@ contains
 
     if (IO_L) write(IO_FID_LOG,*)
     if (IO_L) write(IO_FID_LOG,'(A,A6,A,I3.3,2A)') &
-         '###### FILE_ registration (', trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
+         '###### FILE registration (', trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
 
     FILE_nfiles = FILE_nfiles + 1
     fid = FILE_nfiles

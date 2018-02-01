@@ -131,6 +131,7 @@ module scale_file_history
   !++ Private procedures
   !
   private :: FILE_HISTORY_Create
+  private :: FILE_HISTORY_Close
   private :: FILE_HISTORY_Add_Variable
   private :: FILE_HISTORY_Write_Axes
   private :: FILE_HISTORY_Write_OneVar
@@ -154,12 +155,13 @@ module scale_file_history
      logical                    :: registered        !> This item is registered?
   end type request
 
-  type var
+  type var_out
      character(len=FILE_HSHORT) :: name              !> Name of variable (in the code)
      character(len=FILE_HSHORT) :: outname           !> Name of variable (for output)
      character(len=FILE_HLONG)  :: basename          !> Base name of the file
      logical                    :: postfix_timelabel !> Add time label to basename?
      character(len=FILE_HSHORT) :: zcoord            !> Z-coordinate
+     integer                    :: zid               !> Z-coordinate index
      integer                    :: dstep             !> Time unit
      logical                    :: taverage          !> Apply time average?
      integer                    :: dtype             !> Data type
@@ -177,12 +179,19 @@ module scale_file_history
      real(DP)                   :: timesum           !> Buffer for time
      real(DP), pointer          :: varsum(:)         !> Buffer for value
      logical                    :: fill_halo         !> switch to fill halo with RMISS value
-  end type var
+  end type var_out
+
+  integer, parameter :: FILE_HISTORY_variant_max = 10
+  type var_in
+     character(len=FILE_HSHORT) :: name
+     integer                    :: nvariants
+     integer                    :: variants(FILE_HISTORY_variant_max)
+  end type var_in
 
   type dim
      character(len=FILE_HSHORT)          :: name
      integer                             :: ndims
-     character(len=FILE_HSHORT)          :: dims(3)
+     character(len=FILE_HSHORT), pointer :: dims(:,:)
      integer                             :: nzcoords
      character(len=FILE_HSHORT), pointer :: zcoords(:)
      integer                             :: start(3)
@@ -254,8 +263,11 @@ module scale_file_history
   type(request), allocatable :: FILE_HISTORY_req(:)
 
   integer                    :: FILE_HISTORY_nitems = 0     !> number of registered item
-  type(var),     allocatable :: FILE_HISTORY_vars(:)
+  type(var_out), allocatable :: FILE_HISTORY_vars(:)
   logical,       allocatable :: FILE_HISTORY_axis_written(:) !> Axis for this file is already written?
+
+  integer                    :: FILE_HISTORY_nvar_inputs
+  type(var_in),  allocatable :: FILE_HISTORY_var_inputs(:)
 
   integer,       parameter   :: FILE_HISTORY_dim_max = 30
   integer                    :: FILE_HISTORY_ndims = 0
@@ -594,6 +606,9 @@ contains
     allocate( FILE_HISTORY_vars        (FILE_HISTORY_nreqs) )
     allocate( FILE_HISTORY_axis_written(0:FILE_HISTORY_nreqs-1) ) ! fid begins from 0
 
+    FILE_HISTORY_nvar_inputs = 0
+    allocate( FILE_HISTORY_var_inputs(FILE_HISTORY_nreqs) )
+
     FILE_HISTORY_truncate_1D => FILE_HISTORY_truncate_1D_default
     FILE_HISTORY_truncate_2D => FILE_HISTORY_truncate_2D_default
     FILE_HISTORY_truncate_3D => FILE_HISTORY_truncate_3D_default
@@ -623,7 +638,7 @@ contains
     character(len=*), intent(in), optional :: dim_type
     logical,          intent(in), optional :: fill_halo
 
-    integer :: dimid
+    integer :: dimid, iid
     integer :: n
     !---------------------------------------------------------------------------
 
@@ -673,14 +688,15 @@ contains
 
     if ( FILE_HISTORY_dims(dimid)%nzcoords > 0 ) then
 
+       itemid = -1
        do n = 1, FILE_HISTORY_dims(dimid)%nzcoords
-
           call FILE_HISTORY_Add_Variable( name, desc, unit,                    & ! (in)
+                                          
                                           dimid,                               & ! (in)
                                           FILE_HISTORY_dims(dimid)%zcoords(n), & ! (in)
-                                          itemid,                              & ! (out)
+                                          iid,                                 & ! (out)
                                           fill_halo                            ) ! (in)
-
+          if ( iid > 0 ) itemid = iid
        end do
 
     else
@@ -693,9 +709,6 @@ contains
 
     end if
 
-
-
-
     call PROF_rapend('FILE_HISTORY_OUT', 2)
 
     return
@@ -704,13 +717,13 @@ contains
   ! interface FILE_HISTORY_Put
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Put_0D( &
-       id,       &
+       itemid,   &
        var       )
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
 
-    integer,  intent(in) :: id
+    integer,  intent(in) :: itemid
     real(RP), intent(in) :: var
 
     integer :: dimid
@@ -719,42 +732,48 @@ contains
     integer  :: idx
     logical  :: do_put
 
+    integer :: i, id
+
     intrinsic shape
     !---------------------------------------------------------------------------
 
     if ( FILE_HISTORY_disabled ) return
-    if ( id < 0 ) return
+    if ( itemid < 0 ) return
 
-    call FILE_HISTORY_query( id, do_put )
+    call FILE_HISTORY_query( itemid, do_put )
     if ( .not. do_put ) return
 
     call PROF_rapstart('FILE_HISTORY_OUT', 2)
 
-    dt = ( FILE_HISTORY_NOWSTEP - FILE_HISTORY_vars(id)%laststep_put ) * FILE_HISTORY_DTSEC
+    do i = 1, FILE_HISTORY_var_inputs(itemid)%nvariants
+       id = FILE_HISTORY_var_inputs(itemid)%variants(i)
 
-    if ( dt < eps .AND. ( .NOT. FILE_HISTORY_vars(id)%taverage ) ) then
-       write(*,*) 'xxx [FILE_HISTORY] variable was put two times before output!: ', &
-                  trim(FILE_HISTORY_vars(id)%name), FILE_HISTORY_NOWSTEP, FILE_HISTORY_vars(id)%laststep_put
-       call PRC_abort
-    endif
+       dt = ( FILE_HISTORY_NOWSTEP - FILE_HISTORY_vars(id)%laststep_put ) * FILE_HISTORY_DTSEC
 
-    if ( FILE_HISTORY_vars(id)%flag_clear ) then ! time to purge
-       FILE_HISTORY_vars(id)%timesum    = 0.0_DP
-       if ( FILE_HISTORY_vars(id)%taverage ) FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
-    endif
+       if ( dt < eps .AND. ( .NOT. FILE_HISTORY_vars(id)%taverage ) ) then
+          write(*,*) 'xxx [FILE_HISTORY] variable was put two times before output!: ', &
+                     trim(FILE_HISTORY_vars(id)%name), FILE_HISTORY_NOWSTEP, FILE_HISTORY_vars(id)%laststep_put
+          call PRC_abort
+       endif
 
+       if ( FILE_HISTORY_vars(id)%flag_clear ) then ! time to purge
+          FILE_HISTORY_vars(id)%timesum    = 0.0_DP
+          if ( FILE_HISTORY_vars(id)%taverage ) FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+       endif
 
-    dimid = FILE_HISTORY_vars(id)%dimid
-    if ( FILE_HISTORY_vars(id)%taverage ) then
-       FILE_HISTORY_vars(id)%varsum(1) = FILE_HISTORY_vars(id)%varsum(1) + var * dt
-       FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
-    else
-       FILE_HISTORY_vars(id)%varsum(1) = var
-       FILE_HISTORY_vars(id)%timesum = 0.0_DP
-    endif
+       dimid = FILE_HISTORY_vars(id)%dimid
+       if ( FILE_HISTORY_vars(id)%taverage ) then
+         FILE_HISTORY_vars(id)%varsum(1) = FILE_HISTORY_vars(id)%varsum(1) + var * dt
+         FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
+      else
+         FILE_HISTORY_vars(id)%varsum(1) = var
+         FILE_HISTORY_vars(id)%timesum = 0.0_DP
+      endif
 
-    FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_NOWSTEP
-    FILE_HISTORY_vars(id)%flag_clear   = .false.
+      FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_NOWSTEP
+      FILE_HISTORY_vars(id)%flag_clear   = .false.
+
+   end do ! variants
 
     call PROF_rapend('FILE_HISTORY_OUT', 2)
 
@@ -797,7 +816,7 @@ contains
     if ( itemid < 0 ) return
 
     ! Check whether it is time to input the item
-    call FILE_HISTORY_query( name, do_put ) ! [IN], [OUT]
+    call FILE_HISTORY_query( itemid, do_put ) ! [IN], [OUT]
 
     if ( do_put ) call FILE_HISTORY_put( itemid, var )
 
@@ -806,13 +825,13 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Put_1D( &
-       id,       &
+       itemid,   &
        var       )
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
 
-    integer,  intent(in) :: id
+    integer,  intent(in) :: itemid
     real(RP), intent(in) :: var(:)
 
     integer :: dimid
@@ -821,55 +840,61 @@ contains
     integer  :: idx
     logical  :: do_put
 
+    integer :: i, id
+
     intrinsic shape
     !---------------------------------------------------------------------------
 
     if ( FILE_HISTORY_disabled ) return
-    if ( id < 0 ) return
+    if ( itemid < 0 ) return
 
-    call FILE_HISTORY_query( id, do_put )
+    call FILE_HISTORY_query( itemid, do_put )
     if ( .not. do_put ) return
 
     call PROF_rapstart('FILE_HISTORY_OUT', 2)
 
-    dt = ( FILE_HISTORY_NOWSTEP - FILE_HISTORY_vars(id)%laststep_put ) * FILE_HISTORY_DTSEC
+    do i = 1, FILE_HISTORY_var_inputs(itemid)%nvariants
+       id = FILE_HISTORY_var_inputs(itemid)%variants(i)
 
-    if ( dt < eps .AND. ( .NOT. FILE_HISTORY_vars(id)%taverage ) ) then
-       write(*,*) 'xxx [FILE_HISTORY] variable was put two times before output!: ', &
-                  trim(FILE_HISTORY_vars(id)%name), FILE_HISTORY_NOWSTEP, FILE_HISTORY_vars(id)%laststep_put
-       call PRC_abort
-    endif
+       dt = ( FILE_HISTORY_NOWSTEP - FILE_HISTORY_vars(id)%laststep_put ) * FILE_HISTORY_DTSEC
 
-    if ( FILE_HISTORY_vars(id)%flag_clear ) then ! time to purge
-       FILE_HISTORY_vars(id)%timesum    = 0.0_DP
-       if ( FILE_HISTORY_vars(id)%taverage ) FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
-    endif
+       if ( dt < eps .AND. ( .NOT. FILE_HISTORY_vars(id)%taverage ) ) then
+          write(*,*) 'xxx [FILE_HISTORY] variable was put two times before output!: ', &
+                     trim(FILE_HISTORY_vars(id)%name), FILE_HISTORY_NOWSTEP, FILE_HISTORY_vars(id)%laststep_put
+          call PRC_abort
+       endif
 
+       if ( FILE_HISTORY_vars(id)%flag_clear ) then ! time to purge
+          FILE_HISTORY_vars(id)%timesum    = 0.0_DP
+          if ( FILE_HISTORY_vars(id)%taverage ) FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+       endif
 
-    dimid = FILE_HISTORY_vars(id)%dimid
-    if ( FILE_HISTORY_vars(id)%taverage ) then
-       allocate( buffer( FILE_HISTORY_vars(id)%size ) )
-       call FILE_HISTORY_truncate_1D( var(:),               & ! (in)
-                                      FILE_HISTORY_dims(dimid)%name,   & ! (in)
-                                      FILE_HISTORY_vars(id)%zcoord,    & ! (in)
-                                      FILE_HISTORY_vars(id)%fill_halo, & ! (in)
-                                      buffer(:)                        ) ! (out)
-       do idx = 1, FILE_HISTORY_vars(id)%size
-          FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
-       enddo
-       deallocate( buffer )
-       FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
-    else
-       call FILE_HISTORY_truncate_1D( var(:),               & ! (in)
-                                      FILE_HISTORY_dims(dimid)%name,   & ! (in)
-                                      FILE_HISTORY_vars(id)%zcoord,    & ! (in)
-                                      FILE_HISTORY_vars(id)%fill_halo, & ! (in)
-                                      FILE_HISTORY_vars(id)%varsum(:)  ) ! (out)
-       FILE_HISTORY_vars(id)%timesum = 0.0_DP
-    endif
+       dimid = FILE_HISTORY_vars(id)%dimid
+       if ( FILE_HISTORY_vars(id)%taverage ) then
+         allocate( buffer( FILE_HISTORY_vars(id)%size ) )
+         call FILE_HISTORY_truncate_1D( var(:),               & ! (in)
+                                        FILE_HISTORY_dims(dimid)%name,   & ! (in)
+                                        FILE_HISTORY_vars(id)%zcoord,    & ! (in)
+                                        FILE_HISTORY_vars(id)%fill_halo, & ! (in)
+                                        buffer(:)                        ) ! (out)
+         do idx = 1, FILE_HISTORY_vars(id)%size
+            FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+         enddo
+         deallocate( buffer )
+         FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
+      else
+         call FILE_HISTORY_truncate_1D( var(:),               & ! (in)
+                                        FILE_HISTORY_dims(dimid)%name,   & ! (in)
+                                        FILE_HISTORY_vars(id)%zcoord,    & ! (in)
+                                        FILE_HISTORY_vars(id)%fill_halo, & ! (in)
+                                        FILE_HISTORY_vars(id)%varsum(:)  ) ! (out)
+         FILE_HISTORY_vars(id)%timesum = 0.0_DP
+      endif
 
-    FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_NOWSTEP
-    FILE_HISTORY_vars(id)%flag_clear   = .false.
+      FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_NOWSTEP
+      FILE_HISTORY_vars(id)%flag_clear   = .false.
+
+   end do ! variants
 
     call PROF_rapend('FILE_HISTORY_OUT', 2)
 
@@ -912,7 +937,7 @@ contains
     if ( itemid < 0 ) return
 
     ! Check whether it is time to input the item
-    call FILE_HISTORY_query( name, do_put ) ! [IN], [OUT]
+    call FILE_HISTORY_query( itemid, do_put ) ! [IN], [OUT]
 
     if ( do_put ) call FILE_HISTORY_put( itemid, var(:) )
 
@@ -921,13 +946,13 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Put_2D( &
-       id,       &
+       itemid,   &
        var       )
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
 
-    integer,  intent(in) :: id
+    integer,  intent(in) :: itemid
     real(RP), intent(in) :: var(:,:)
 
     integer :: dimid
@@ -936,55 +961,61 @@ contains
     integer  :: idx
     logical  :: do_put
 
+    integer :: i, id
+
     intrinsic shape
     !---------------------------------------------------------------------------
 
     if ( FILE_HISTORY_disabled ) return
-    if ( id < 0 ) return
+    if ( itemid < 0 ) return
 
-    call FILE_HISTORY_query( id, do_put )
+    call FILE_HISTORY_query( itemid, do_put )
     if ( .not. do_put ) return
 
     call PROF_rapstart('FILE_HISTORY_OUT', 2)
 
-    dt = ( FILE_HISTORY_NOWSTEP - FILE_HISTORY_vars(id)%laststep_put ) * FILE_HISTORY_DTSEC
+    do i = 1, FILE_HISTORY_var_inputs(itemid)%nvariants
+       id = FILE_HISTORY_var_inputs(itemid)%variants(i)
 
-    if ( dt < eps .AND. ( .NOT. FILE_HISTORY_vars(id)%taverage ) ) then
-       write(*,*) 'xxx [FILE_HISTORY] variable was put two times before output!: ', &
-                  trim(FILE_HISTORY_vars(id)%name), FILE_HISTORY_NOWSTEP, FILE_HISTORY_vars(id)%laststep_put
-       call PRC_abort
-    endif
+       dt = ( FILE_HISTORY_NOWSTEP - FILE_HISTORY_vars(id)%laststep_put ) * FILE_HISTORY_DTSEC
 
-    if ( FILE_HISTORY_vars(id)%flag_clear ) then ! time to purge
-       FILE_HISTORY_vars(id)%timesum    = 0.0_DP
-       if ( FILE_HISTORY_vars(id)%taverage ) FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
-    endif
+       if ( dt < eps .AND. ( .NOT. FILE_HISTORY_vars(id)%taverage ) ) then
+          write(*,*) 'xxx [FILE_HISTORY] variable was put two times before output!: ', &
+                     trim(FILE_HISTORY_vars(id)%name), FILE_HISTORY_NOWSTEP, FILE_HISTORY_vars(id)%laststep_put
+          call PRC_abort
+       endif
 
+       if ( FILE_HISTORY_vars(id)%flag_clear ) then ! time to purge
+          FILE_HISTORY_vars(id)%timesum    = 0.0_DP
+          if ( FILE_HISTORY_vars(id)%taverage ) FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+       endif
 
-    dimid = FILE_HISTORY_vars(id)%dimid
-    if ( FILE_HISTORY_vars(id)%taverage ) then
-       allocate( buffer( FILE_HISTORY_vars(id)%size ) )
-       call FILE_HISTORY_truncate_2D( var(:,:),               & ! (in)
-                                      FILE_HISTORY_dims(dimid)%name,   & ! (in)
-                                      FILE_HISTORY_vars(id)%zcoord,    & ! (in)
-                                      FILE_HISTORY_vars(id)%fill_halo, & ! (in)
-                                      buffer(:)                        ) ! (out)
-       do idx = 1, FILE_HISTORY_vars(id)%size
-          FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
-       enddo
-       deallocate( buffer )
-       FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
-    else
-       call FILE_HISTORY_truncate_2D( var(:,:),               & ! (in)
-                                      FILE_HISTORY_dims(dimid)%name,   & ! (in)
-                                      FILE_HISTORY_vars(id)%zcoord,    & ! (in)
-                                      FILE_HISTORY_vars(id)%fill_halo, & ! (in)
-                                      FILE_HISTORY_vars(id)%varsum(:)  ) ! (out)
-       FILE_HISTORY_vars(id)%timesum = 0.0_DP
-    endif
+       dimid = FILE_HISTORY_vars(id)%dimid
+       if ( FILE_HISTORY_vars(id)%taverage ) then
+         allocate( buffer( FILE_HISTORY_vars(id)%size ) )
+         call FILE_HISTORY_truncate_2D( var(:,:),               & ! (in)
+                                        FILE_HISTORY_dims(dimid)%name,   & ! (in)
+                                        FILE_HISTORY_vars(id)%zcoord,    & ! (in)
+                                        FILE_HISTORY_vars(id)%fill_halo, & ! (in)
+                                        buffer(:)                        ) ! (out)
+         do idx = 1, FILE_HISTORY_vars(id)%size
+            FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+         enddo
+         deallocate( buffer )
+         FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
+      else
+         call FILE_HISTORY_truncate_2D( var(:,:),               & ! (in)
+                                        FILE_HISTORY_dims(dimid)%name,   & ! (in)
+                                        FILE_HISTORY_vars(id)%zcoord,    & ! (in)
+                                        FILE_HISTORY_vars(id)%fill_halo, & ! (in)
+                                        FILE_HISTORY_vars(id)%varsum(:)  ) ! (out)
+         FILE_HISTORY_vars(id)%timesum = 0.0_DP
+      endif
 
-    FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_NOWSTEP
-    FILE_HISTORY_vars(id)%flag_clear   = .false.
+      FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_NOWSTEP
+      FILE_HISTORY_vars(id)%flag_clear   = .false.
+
+   end do ! variants
 
     call PROF_rapend('FILE_HISTORY_OUT', 2)
 
@@ -1027,7 +1058,7 @@ contains
     if ( itemid < 0 ) return
 
     ! Check whether it is time to input the item
-    call FILE_HISTORY_query( name, do_put ) ! [IN], [OUT]
+    call FILE_HISTORY_query( itemid, do_put ) ! [IN], [OUT]
 
     if ( do_put ) call FILE_HISTORY_put( itemid, var(:,:) )
 
@@ -1036,13 +1067,13 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Put_3D( &
-       id,       &
+       itemid,   &
        var       )
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
 
-    integer,  intent(in) :: id
+    integer,  intent(in) :: itemid
     real(RP), intent(in) :: var(:,:,:)
 
     integer :: dimid
@@ -1051,55 +1082,61 @@ contains
     integer  :: idx
     logical  :: do_put
 
+    integer :: i, id
+
     intrinsic shape
     !---------------------------------------------------------------------------
 
     if ( FILE_HISTORY_disabled ) return
-    if ( id < 0 ) return
+    if ( itemid < 0 ) return
 
-    call FILE_HISTORY_query( id, do_put )
+    call FILE_HISTORY_query( itemid, do_put )
     if ( .not. do_put ) return
 
     call PROF_rapstart('FILE_HISTORY_OUT', 2)
 
-    dt = ( FILE_HISTORY_NOWSTEP - FILE_HISTORY_vars(id)%laststep_put ) * FILE_HISTORY_DTSEC
+    do i = 1, FILE_HISTORY_var_inputs(itemid)%nvariants
+       id = FILE_HISTORY_var_inputs(itemid)%variants(i)
 
-    if ( dt < eps .AND. ( .NOT. FILE_HISTORY_vars(id)%taverage ) ) then
-       write(*,*) 'xxx [FILE_HISTORY] variable was put two times before output!: ', &
-                  trim(FILE_HISTORY_vars(id)%name), FILE_HISTORY_NOWSTEP, FILE_HISTORY_vars(id)%laststep_put
-       call PRC_abort
-    endif
+       dt = ( FILE_HISTORY_NOWSTEP - FILE_HISTORY_vars(id)%laststep_put ) * FILE_HISTORY_DTSEC
 
-    if ( FILE_HISTORY_vars(id)%flag_clear ) then ! time to purge
-       FILE_HISTORY_vars(id)%timesum    = 0.0_DP
-       if ( FILE_HISTORY_vars(id)%taverage ) FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
-    endif
+       if ( dt < eps .AND. ( .NOT. FILE_HISTORY_vars(id)%taverage ) ) then
+          write(*,*) 'xxx [FILE_HISTORY] variable was put two times before output!: ', &
+                     trim(FILE_HISTORY_vars(id)%name), FILE_HISTORY_NOWSTEP, FILE_HISTORY_vars(id)%laststep_put
+          call PRC_abort
+       endif
 
+       if ( FILE_HISTORY_vars(id)%flag_clear ) then ! time to purge
+          FILE_HISTORY_vars(id)%timesum    = 0.0_DP
+          if ( FILE_HISTORY_vars(id)%taverage ) FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+       endif
 
-    dimid = FILE_HISTORY_vars(id)%dimid
-    if ( FILE_HISTORY_vars(id)%taverage ) then
-       allocate( buffer( FILE_HISTORY_vars(id)%size ) )
-       call FILE_HISTORY_truncate_3D( var(:,:,:),               & ! (in)
-                                      FILE_HISTORY_dims(dimid)%name,   & ! (in)
-                                      FILE_HISTORY_vars(id)%zcoord,    & ! (in)
-                                      FILE_HISTORY_vars(id)%fill_halo, & ! (in)
-                                      buffer(:)                        ) ! (out)
-       do idx = 1, FILE_HISTORY_vars(id)%size
-          FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
-       enddo
-       deallocate( buffer )
-       FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
-    else
-       call FILE_HISTORY_truncate_3D( var(:,:,:),               & ! (in)
-                                      FILE_HISTORY_dims(dimid)%name,   & ! (in)
-                                      FILE_HISTORY_vars(id)%zcoord,    & ! (in)
-                                      FILE_HISTORY_vars(id)%fill_halo, & ! (in)
-                                      FILE_HISTORY_vars(id)%varsum(:)  ) ! (out)
-       FILE_HISTORY_vars(id)%timesum = 0.0_DP
-    endif
+       dimid = FILE_HISTORY_vars(id)%dimid
+       if ( FILE_HISTORY_vars(id)%taverage ) then
+         allocate( buffer( FILE_HISTORY_vars(id)%size ) )
+         call FILE_HISTORY_truncate_3D( var(:,:,:),               & ! (in)
+                                        FILE_HISTORY_dims(dimid)%name,   & ! (in)
+                                        FILE_HISTORY_vars(id)%zcoord,    & ! (in)
+                                        FILE_HISTORY_vars(id)%fill_halo, & ! (in)
+                                        buffer(:)                        ) ! (out)
+         do idx = 1, FILE_HISTORY_vars(id)%size
+            FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+         enddo
+         deallocate( buffer )
+         FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
+      else
+         call FILE_HISTORY_truncate_3D( var(:,:,:),               & ! (in)
+                                        FILE_HISTORY_dims(dimid)%name,   & ! (in)
+                                        FILE_HISTORY_vars(id)%zcoord,    & ! (in)
+                                        FILE_HISTORY_vars(id)%fill_halo, & ! (in)
+                                        FILE_HISTORY_vars(id)%varsum(:)  ) ! (out)
+         FILE_HISTORY_vars(id)%timesum = 0.0_DP
+      endif
 
-    FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_NOWSTEP
-    FILE_HISTORY_vars(id)%flag_clear   = .false.
+      FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_NOWSTEP
+      FILE_HISTORY_vars(id)%flag_clear   = .false.
+
+   end do ! variants
 
     call PROF_rapend('FILE_HISTORY_OUT', 2)
 
@@ -1142,7 +1179,7 @@ contains
     if ( itemid < 0 ) return
 
     ! Check whether it is time to input the item
-    call FILE_HISTORY_query( name, do_put ) ! [IN], [OUT]
+    call FILE_HISTORY_query( itemid, do_put ) ! [IN], [OUT]
 
     if ( do_put ) call FILE_HISTORY_put( itemid, var(:,:,:) )
 
@@ -1154,20 +1191,20 @@ contains
   !> set dimension information
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Set_Dim( &
-       name,              &
-       ndims, dims,       &
-       nzcoords, zcoords, &
-       start, count,      &
-       mapping            )
+       name,            &
+       ndims, nzcoords, &
+       dims, zcoords,   &
+       start, count,    &
+       mapping          )
     implicit none
 
     character(len=*), intent(in) :: name
     integer,          intent(in) :: ndims
-    character(len=*), intent(in) :: dims(1:ndims)
     integer,          intent(in) :: nzcoords
-    character(len=*), intent(in) :: zcoords(1:nzcoords)
-    integer,          intent(in) :: start(1:ndims)
-    integer,          intent(in) :: count(1:ndims)
+    character(len=*), intent(in) :: dims(ndims,nzcoords)
+    character(len=*), intent(in) :: zcoords(nzcoords)
+    integer,          intent(in) :: start(ndims)
+    integer,          intent(in) :: count(ndims)
 
     logical, intent(in), optional :: mapping
 
@@ -1181,6 +1218,7 @@ contains
     FILE_HISTORY_ndims = FILE_HISTORY_ndims + 1
     id = FILE_HISTORY_ndims
 
+    allocate( FILE_HISTORY_dims(id)%dims(ndims,nzcoords) )
     allocate( FILE_HISTORY_dims(id)%zcoords(nzcoords) )
 
     size = 1
@@ -1190,7 +1228,7 @@ contains
 
     FILE_HISTORY_dims(id)%name           = name
     FILE_HISTORY_dims(id)%ndims          = ndims
-    FILE_HISTORY_dims(id)%dims(1:ndims)  = dims(:)
+    FILE_HISTORY_dims(id)%dims(:,:)      = dims(:,:)
     FILE_HISTORY_dims(id)%nzcoords       = nzcoords
     FILE_HISTORY_dims(id)%zcoords(:)     = zcoords(:)
     FILE_HISTORY_dims(id)%start(1:ndims) = start(:)
@@ -1322,7 +1360,7 @@ contains
     if (       FILE_HISTORY_OUTPUT_SWITCH_STEP >= 0                                      &
          .AND. FILE_HISTORY_NOWSTEP-FILE_HISTORY_OUTPUT_SWITCH_LASTSTEP > FILE_HISTORY_OUTPUT_SWITCH_STEP ) then
 
-       call FILE_HISTORY_Finalize
+       call FILE_HISTORY_Close
 
        if( IO_L ) write(IO_FID_LOG,*) '*** FILE_HISTORY_ file is switched.'
 
@@ -1372,24 +1410,8 @@ contains
   !> finalization
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Finalize
-    use scale_file, only: &
-       FILE_Detach_Buffer, &
-       FILE_Close
-    implicit none
 
-    integer :: fid, prev_fid
-    integer :: id
-    !---------------------------------------------------------------------------
-
-    prev_fid = -1
-    do id = 1, FILE_HISTORY_nitems
-       fid = FILE_HISTORY_vars(id)%fid
-       if ( fid > 0 .AND. fid /= prev_fid ) then
-          call FILE_Detach_Buffer( fid ) ! Release the internal buffer previously allowed to be used by PnetCDF
-          call FILE_Close( fid )
-          prev_fid = fid
-       endif
-    enddo
+    call FILE_HISTORY_Close
 
     return
   end subroutine FILE_HISTORY_Finalize
@@ -1400,28 +1422,27 @@ contains
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Check( &
        name, zcoord, &
-       existed        )
+       itemid        )
     implicit none
 
     character(len=*), intent(in)  :: name
     character(len=*), intent(in)  :: zcoord
-    logical,          intent(out) :: existed
+    integer,          intent(out) :: itemid
 
-    integer :: id
+    integer :: id, i
     !---------------------------------------------------------------------------
 
-    existed = .false.
-
     !--- search existing item
-    do id = 1, FILE_HISTORY_nitems
-       if ( name == FILE_HISTORY_vars(id)%name ) then ! match (at least one) existing item
-          !--- check zcoord
-          if ( FILE_HISTORY_vars(id)%zcoord == zcoord ) then
-             existed = .true.
-             return
-          end if
+    do itemid = 1, FILE_HISTORY_nvar_inputs
+       if ( name == FILE_HISTORY_var_inputs(itemid)%name ) then ! match name
+          do i = 1, FILE_HISTORY_var_inputs(itemid)%nvariants
+             id = FILE_HISTORY_var_inputs(itemid)%variants(i)
+             !--- check zcoord
+             if ( FILE_HISTORY_vars(id)%zcoord == zcoord ) return
+          end do
        end if
     end do
+    itemid = -1
 
     return
   end subroutine FILE_HISTORY_Check
@@ -1431,100 +1452,129 @@ contains
        name, desc, units,  &
        dimid,              &
        zcoord,             &
-       id,                 &
+       itemid,             &
        fill_halo           )
     use scale_file_h, only: &
        FILE_dtypelist
     implicit none
-    integer,          intent(out) :: id
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
     character(len=*), intent(in) :: units
     integer,          intent(in) :: dimid
     character(len=*), intent(in) :: zcoord
+    integer,          intent(out) :: itemid
     logical,          intent(in), optional :: fill_halo
 
-    integer :: reqid
+    integer :: reqid, zid, id
     logical :: existed
-    integer :: n
+    integer :: n, m
 
     intrinsic size
     !---------------------------------------------------------------------------
 
     call FILE_HISTORY_Check( name, zcoord, & ! (in)
-                             existed       ) ! (out)
+                             itemid        )
 
-    if ( .NOT. existed ) then ! request-register matching check
+    if ( itemid > 0 ) return
 
-       do reqid = 1, FILE_HISTORY_nreqs
+    do reqid = 1, FILE_HISTORY_nreqs
 
-          if ( FILE_HISTORY_req(reqid)%registered ) cycle
+       if ( FILE_HISTORY_req(reqid)%registered ) cycle
 
-          ! note: plural requests are allowed for each name
-          if ( name == FILE_HISTORY_req(reqid)%name ) then
+       ! note: plural requests are allowed for each name
+       if ( name   == FILE_HISTORY_req(reqid)%name .and. &
+            zcoord == FILE_HISTORY_req(reqid)%zcoord ) then
 
-             if ( FILE_HISTORY_req(reqid)%zcoord /= zcoord ) cycle
+          FILE_HISTORY_req(reqid)%registered = .true.
 
-             FILE_HISTORY_req(reqid)%registered = .true.
+          FILE_HISTORY_nitems = FILE_HISTORY_nitems + 1
+          id                  = FILE_HISTORY_nitems
 
-             existed = .true.
+          FILE_HISTORY_vars(id)%name              = FILE_HISTORY_req(reqid)%name
+          FILE_HISTORY_vars(id)%outname           = FILE_HISTORY_req(reqid)%outname
+          FILE_HISTORY_vars(id)%basename          = FILE_HISTORY_req(reqid)%basename
+          FILE_HISTORY_vars(id)%postfix_timelabel = FILE_HISTORY_req(reqid)%postfix_timelabel
+          FILE_HISTORY_vars(id)%zcoord            = FILE_HISTORY_req(reqid)%zcoord
+          FILE_HISTORY_vars(id)%dstep             = FILE_HISTORY_req(reqid)%dstep
+          FILE_HISTORY_vars(id)%taverage          = FILE_HISTORY_req(reqid)%taverage
+          FILE_HISTORY_vars(id)%dtype             = FILE_HISTORY_req(reqid)%dtype
 
-             FILE_HISTORY_nitems = FILE_HISTORY_nitems + 1
-             id                  = FILE_HISTORY_nitems
-
-             FILE_HISTORY_vars(id)%name              = FILE_HISTORY_req(reqid)%name
-             FILE_HISTORY_vars(id)%outname           = FILE_HISTORY_req(reqid)%outname
-             FILE_HISTORY_vars(id)%basename          = FILE_HISTORY_req(reqid)%basename
-             FILE_HISTORY_vars(id)%postfix_timelabel = FILE_HISTORY_req(reqid)%postfix_timelabel
-             FILE_HISTORY_vars(id)%zcoord            = FILE_HISTORY_req(reqid)%zcoord
-             FILE_HISTORY_vars(id)%dstep             = FILE_HISTORY_req(reqid)%dstep
-             FILE_HISTORY_vars(id)%taverage          = FILE_HISTORY_req(reqid)%taverage
-             FILE_HISTORY_vars(id)%dtype             = FILE_HISTORY_req(reqid)%dtype
-
-             FILE_HISTORY_vars(id)%fid               = -1
-             FILE_HISTORY_vars(id)%vid               = -1
-             FILE_HISTORY_vars(id)%desc              = desc
-             FILE_HISTORY_vars(id)%units             = units
-             FILE_HISTORY_vars(id)%dimid             = dimid
-             if ( present(fill_halo) ) then
-                FILE_HISTORY_vars(id)%fill_halo         = fill_halo
-             else
-                FILE_HISTORY_vars(id)%fill_halo         = .false.
+          FILE_HISTORY_vars(id)%zid               = -1
+          do zid = 1, FILE_HISTORY_dims(dimid)%nzcoords
+             if ( FILE_HISTORY_dims(dimid)%zcoords(zid) == FILE_HISTORY_vars(id)%zcoord ) then
+                FILE_HISTORY_vars(id)%zid = zid
+                exit
              end if
+          end do
+          if ( zid < 0 ) then
+             write(*,*) 'xxx z-coordinate ', trim(FILE_HISTORY_vars(id)%zcoord), ' is not found for dimension ', trim(FILE_HISTORY_dims(dimid)%name)
+             call PRC_abort
+          end if
 
-             FILE_HISTORY_vars(id)%waitstep          = FILE_HISTORY_OUTPUT_WAIT_STEP
-             if ( FILE_HISTORY_OUTPUT_STEP0 .AND. FILE_HISTORY_NOWSTEP == 1 ) then
-                FILE_HISTORY_vars(id)%laststep_write = 1 - FILE_HISTORY_vars(id)%dstep
-             else
-                FILE_HISTORY_vars(id)%laststep_write = 1
-             endif
-             FILE_HISTORY_vars(id)%laststep_put      = FILE_HISTORY_vars(id)%laststep_write
-             FILE_HISTORY_vars(id)%flag_clear        = .true.
-             FILE_HISTORY_vars(id)%size = FILE_HISTORY_dims(dimid)%size
-             allocate( FILE_HISTORY_vars(id)%varsum( FILE_HISTORY_vars(id)%size ) )
+          FILE_HISTORY_vars(id)%fid               = -1
+          FILE_HISTORY_vars(id)%vid               = -1
+          FILE_HISTORY_vars(id)%desc              = desc
+          FILE_HISTORY_vars(id)%units             = units
+          FILE_HISTORY_vars(id)%dimid             = dimid
+          if ( present(fill_halo) ) then
+             FILE_HISTORY_vars(id)%fill_halo         = fill_halo
+          else
+             FILE_HISTORY_vars(id)%fill_halo         = .false.
+          end if
 
-             FILE_HISTORY_vars(id)%timesum           = 0.0_DP
+          FILE_HISTORY_vars(id)%waitstep          = FILE_HISTORY_OUTPUT_WAIT_STEP
+          if ( FILE_HISTORY_OUTPUT_STEP0 .AND. FILE_HISTORY_NOWSTEP == 1 ) then
+             FILE_HISTORY_vars(id)%laststep_write = 1 - FILE_HISTORY_vars(id)%dstep
+          else
+             FILE_HISTORY_vars(id)%laststep_write = 1
+          endif
+          FILE_HISTORY_vars(id)%laststep_put      = FILE_HISTORY_vars(id)%laststep_write
+          FILE_HISTORY_vars(id)%flag_clear        = .true.
+          FILE_HISTORY_vars(id)%size = FILE_HISTORY_dims(dimid)%size
+          allocate( FILE_HISTORY_vars(id)%varsum( FILE_HISTORY_vars(id)%size ) )
 
-             if ( debug ) then
-                if( IO_L ) write(IO_FID_LOG,*) '*** [HISTORY] Item registration No.= ', id
-                if( IO_L ) write(IO_FID_LOG,*) '] Item name                      : ', trim(FILE_HISTORY_vars(id)%name)
-                if( IO_L ) write(IO_FID_LOG,*) '] Output name                    : ', trim(FILE_HISTORY_vars(id)%outname)
-                if( IO_L ) write(IO_FID_LOG,*) '] Description                    : ', trim(FILE_HISTORY_vars(id)%desc)
-                if( IO_L ) write(IO_FID_LOG,*) '] Unit                           : ', trim(FILE_HISTORY_vars(id)%units)
-                if( IO_L ) write(IO_FID_LOG,*) '] Basename of output file        : ', trim(FILE_HISTORY_vars(id)%basename)
-                if( IO_L ) write(IO_FID_LOG,*) '] Add timelabel to the filename? : ', FILE_HISTORY_vars(id)%postfix_timelabel
-                if( IO_L ) write(IO_FID_LOG,*) '] Zcoord                         : ', trim(FILE_HISTORY_vars(id)%zcoord)
-                if( IO_L ) write(IO_FID_LOG,*) '] Interval [step]                : ', FILE_HISTORY_vars(id)%dstep
-                if( IO_L ) write(IO_FID_LOG,*) '] Time Average?                  : ', FILE_HISTORY_vars(id)%taverage
-                if( IO_L ) write(IO_FID_LOG,*) '] Datatype                       : ', trim(FILE_dtypelist(FILE_HISTORY_vars(id)%dtype))
-                if( IO_L ) write(IO_FID_LOG,*) '] axis name                      : ', ( trim(FILE_HISTORY_dims(dimid)%dims(n))//" ", n=1, FILE_HISTORY_dims(dimid)%ndims )
-             endif
+          FILE_HISTORY_vars(id)%timesum           = 0.0_DP
 
-          endif ! match item?
+          if ( debug ) then
+             if( IO_L ) write(IO_FID_LOG,*) '*** [HISTORY] Item registration No.= ', id
+             if( IO_L ) write(IO_FID_LOG,*) '] Item name                      : ', trim(FILE_HISTORY_vars(id)%name)
+             if( IO_L ) write(IO_FID_LOG,*) '] Output name                    : ', trim(FILE_HISTORY_vars(id)%outname)
+             if( IO_L ) write(IO_FID_LOG,*) '] Description                    : ', trim(FILE_HISTORY_vars(id)%desc)
+             if( IO_L ) write(IO_FID_LOG,*) '] Unit                           : ', trim(FILE_HISTORY_vars(id)%units)
+             if( IO_L ) write(IO_FID_LOG,*) '] Basename of output file        : ', trim(FILE_HISTORY_vars(id)%basename)
+             if( IO_L ) write(IO_FID_LOG,*) '] Add timelabel to the filename? : ', FILE_HISTORY_vars(id)%postfix_timelabel
+             if( IO_L ) write(IO_FID_LOG,*) '] Zcoord                         : ', trim(FILE_HISTORY_vars(id)%zcoord)
+             if( IO_L ) write(IO_FID_LOG,*) '] Interval [step]                : ', FILE_HISTORY_vars(id)%dstep
+             if( IO_L ) write(IO_FID_LOG,*) '] Time Average?                  : ', FILE_HISTORY_vars(id)%taverage
+             if( IO_L ) write(IO_FID_LOG,*) '] Datatype                       : ', trim(FILE_dtypelist(FILE_HISTORY_vars(id)%dtype))
+             if( IO_L ) write(IO_FID_LOG,*) '] axis name                      : ', ( trim(FILE_HISTORY_dims(dimid)%dims(n,zid))//" ", n=1, FILE_HISTORY_dims(dimid)%ndims )
+          endif
 
-       enddo
+          existed = .false.
+          do m = 1, FILE_HISTORY_nvar_inputs
+             if ( FILE_HISTORY_var_inputs(m)%name == name ) then
+                FILE_HISTORY_var_inputs(m)%nvariants = FILE_HISTORY_var_inputs(m)%nvariants + 1
+                if ( FILE_HISTORY_var_inputs(m)%nvariants > FILE_HISTORY_variant_max ) then
+                   write(*,*) 'xxx Number of variant for ', trim(name), ' excees limit!'
+                   call PRC_abort
+                end if
+                FILE_HISTORY_var_inputs(m)%variants(FILE_HISTORY_var_inputs(m)%nvariants) = id
+                itemid = m
+                existed = .true.
+                exit
+             end if
+          end do
+          if ( .not. existed ) then
+             FILE_HISTORY_nvar_inputs = FILE_HISTORY_nvar_inputs + 1
+             itemid = FILE_HISTORY_nvar_inputs
+             FILE_HISTORY_var_inputs(itemid)%name = name
+             FILE_HISTORY_var_inputs(itemid)%nvariants = 1
+             FILE_HISTORY_var_inputs(itemid)%variants(1) = id
+          end if
 
-    endif ! new items?
+       endif ! match item?
+
+    enddo
 
     return
   end subroutine FILE_HISTORY_Add_Variable
@@ -1561,17 +1611,18 @@ contains
     character(len=*),  intent(in),  optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
     logical,           intent(out), optional :: existed
 
-    integer                   :: fid
-    character(len=FILE_HMID)  :: tunits
-    character(len=FILE_HLONG) :: basename_mod
-    logical                   :: fileexisted
-    integer                   :: array_size
-    integer                   :: dim_size
-    integer                   :: dtype
-    integer                   :: dimid
-    integer                   :: ndims
-    real(DP)                  :: dtsec
-    integer                   :: mpi_comm
+    integer                    :: fid
+    character(len=FILE_HMID)   :: tunits
+    character(len=FILE_HLONG)  :: basename_mod
+    logical                    :: fileexisted
+    integer                    :: array_size
+    integer                    :: dim_size
+    integer                    :: dtype
+    integer                    :: dimid, zid
+    integer                    :: ndims
+    character(len=FILE_HSHORT) :: dims(3)
+    real(DP)                   :: dtsec
+    integer                    :: mpi_comm
 
     integer :: ic, ie, is, lo
     integer :: m
@@ -1754,13 +1805,15 @@ contains
        dtsec = real(FILE_HISTORY_vars(id)%dstep,kind=DP) * FILE_HISTORY_DTSEC
 
        dimid = FILE_HISTORY_vars(id)%dimid
+       zid   = FILE_HISTORY_vars(id)%zid
        ndims = FILE_HISTORY_dims(dimid)%ndims
+       dims(1:ndims) = FILE_HISTORY_dims(dimid)%dims(1:ndims,zid)
 
        call FILE_Add_Variable( FILE_HISTORY_vars(id)%fid,              & ! [IN]
                                FILE_HISTORY_vars(id)%outname,          & ! [IN]
                                FILE_HISTORY_vars(id)%desc,             & ! [IN]
                                FILE_HISTORY_vars(id)%units,            & ! [IN]
-                               FILE_HISTORY_dims(dimid)%dims(1:ndims), & ! [IN]
+                               dims(1:ndims),                          & ! [IN]
                                FILE_HISTORY_vars(id)%dtype,            & ! [IN]
                                dtsec,                                  & ! [IN]
                                FILE_HISTORY_vars(id)%vid,              & ! [OUT]
@@ -1781,6 +1834,29 @@ contains
 
     return
   end subroutine FILE_HISTORY_Create
+
+  subroutine FILE_HISTORY_Close
+    use scale_file, only: &
+       FILE_Detach_Buffer, &
+       FILE_Close
+    implicit none
+
+    integer :: fid, prev_fid
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    prev_fid = -1
+    do id = 1, FILE_HISTORY_nitems
+       fid = FILE_HISTORY_vars(id)%fid
+       if ( fid > 0 .AND. fid /= prev_fid ) then
+          call FILE_Detach_Buffer( fid ) ! Release the internal buffer previously allowed to be used by PnetCDF
+          call FILE_Close( fid )
+          prev_fid = fid
+       endif
+    enddo
+
+    return
+  end subroutine FILE_HISTORY_Close
 
   !-----------------------------------------------------------------------------
   ! interface FILE_HISTORY_SetAssociatedCoordinate
@@ -2142,19 +2218,27 @@ contains
   ! interface FILE_HOSTORY_Query
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Query_ID( &
-       id,    &
+       itemid,    &
        answer )
-    integer, intent(in)  :: id
+    integer, intent(in)  :: itemid
     logical, intent(out) :: answer
 
-    if ( id < 0 ) then
-       answer = .false.
-       return
-    end if
+    integer :: id, i
 
-    ! TODO: should be improved
-    call FILE_HISTORY_Query_Name( FILE_HISTORY_vars(id)%name, &
-                                  answer                      )
+    answer = .false.
+    if ( FILE_HISTORY_disabled ) return
+    if ( itemid < 0 ) return
+
+    do i = 1, FILE_HISTORY_var_inputs(itemid)%nvariants
+       id = FILE_HISTORY_var_inputs(itemid)%variants(i)
+       if ( FILE_HISTORY_vars(id)%taverage ) then
+          answer = .true.
+          return
+       else if ( FILE_HISTORY_NOWSTEP >= FILE_HISTORY_vars(id)%laststep_write + FILE_HISTORY_vars(id)%dstep ) then
+          answer = .true.
+          return
+       endif
+    end do
 
     return
   end subroutine FILE_HISTORY_Query_ID
@@ -2168,21 +2252,16 @@ contains
 
     logical, intent(out) :: answer
 
-    integer :: id
+    integer :: itemid
     !---------------------------------------------------------------------------
 
     answer  = .false.
     if ( FILE_HISTORY_disabled ) return
 
-    do id = 1, FILE_HISTORY_nitems
-       if ( FILE_HISTORY_vars(id)%name == name ) then
-          if ( FILE_HISTORY_vars(id)%taverage ) then
-             answer = .true.
-             return
-          else if ( FILE_HISTORY_NOWSTEP >= FILE_HISTORY_vars(id)%laststep_write + FILE_HISTORY_vars(id)%dstep ) then
-             answer = .true.
-             return
-          endif
+    do itemid = 1, FILE_HISTORY_nvar_inputs
+       if ( FILE_HISTORY_var_inputs(itemid)%name == name ) then
+          call FILE_HISTORY_Query_ID( itemid, answer ) ! [IN], [OUT]
+          return
        end if
     end do
 
@@ -2282,9 +2361,8 @@ contains
                      ' Please see detail in log file.'
           call PRC_abort
        else
-          if( IO_L ) write(IO_FID_LOG,*) '*** [WARN] Output value is not updated in this step.', &
-                                         ' NAME = ',     trim(FILE_HISTORY_vars(id)%name), &
-                                         ', OUTNAME = ', trim(FILE_HISTORY_vars(id)%outname)
+          if( IO_L ) write(IO_FID_LOG,*) '*** Output value is not updated in this step. NAME : ', &
+                                trim(FILE_HISTORY_vars(id)%name)
        endif
     endif
 
@@ -2364,29 +2442,29 @@ contains
        endif
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*)           '*** [HISTORY] Output item list '
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4)') '*** Number of history item :', FILE_HISTORY_nreqs
-    if( IO_L ) write(IO_FID_LOG,*)           'ITEM                    :OUTNAME                 ', &
-                                             ':    size:interval[sec]:    step:timeavg?:zcoord'
-    if( IO_L ) write(IO_FID_LOG,*)           '=================================================', &
-                                             '================================================='
+    if( IO_L ) write(IO_FID_LOG,*       ) '*** [HISTORY] Output item list '
+    if( IO_L ) write(IO_FID_LOG,'(A,I4)') '*** Number of history item :', FILE_HISTORY_nreqs
+    if( IO_L ) write(IO_FID_LOG,*       ) 'ITEM                    :OUTNAME                 ', &
+                                          ':    size:interval[sec]:    step:timeavg?:zcoord'
+    if( IO_L ) write(IO_FID_LOG,*       ) '=================================================', &
+                                          '================================================'
 
 
     do id = 1, FILE_HISTORY_nitems
        dtsec = real(FILE_HISTORY_vars(id)%dstep,kind=DP) * FILE_HISTORY_DTSEC
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A24,1x,A24,1x,I8,1x,F13.3,1x,I8,1x,L8,1x,A8)') &
-                  FILE_HISTORY_vars(id)%name,     &
-                  FILE_HISTORY_vars(id)%outname,  &
-                  FILE_HISTORY_vars(id)%size,     &
-                  dtsec,                          &
-                  FILE_HISTORY_vars(id)%dstep,    &
-                  FILE_HISTORY_vars(id)%taverage, &
-                  FILE_HISTORY_vars(id)%zcoord
+       if( IO_L ) write(IO_FID_LOG,'(A24,1x,A24,1x,I8,1x,F13.3,1x,I8,1x,L8,1x,A6)') &
+            FILE_HISTORY_vars(id)%name,     &
+            FILE_HISTORY_vars(id)%outname,  &
+            FILE_HISTORY_vars(id)%size,     &
+            dtsec,                          &
+            FILE_HISTORY_vars(id)%dstep,    &
+            FILE_HISTORY_vars(id)%taverage, &
+            FILE_HISTORY_vars(id)%zcoord
     enddo
 
-    if( IO_L ) write(IO_FID_LOG,*)           '=================================================', &
-                                             '================================================='
+    if( IO_L ) write(IO_FID_LOG,*) '=================================================', &
+                                   '================================================'
 
     return
   end subroutine FILE_HISTORY_Output_List
@@ -2395,11 +2473,11 @@ contains
     character(len=*), intent(in) :: name
     integer :: FILE_HISTORY_find_id
 
-    integer :: id
+    integer :: itemid
 
-    do id = 1, FILE_HISTORY_nitems
-       if ( FILE_HISTORY_vars(id)%name == name ) then
-          FILE_HISTORY_find_id = id
+    do itemid = 1, FILE_HISTORY_nvar_inputs
+       if ( FILE_HISTORY_var_inputs(itemid)%name == name ) then
+          FILE_HISTORY_find_id = itemid
           return
        end if
     end do
