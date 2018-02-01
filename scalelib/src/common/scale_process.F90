@@ -624,6 +624,14 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    ORDER2DOM     (:) = -1
+    DOM2ORDER     (:) = -1
+    RO_PRC_DOMAINS(:) = -1
+    RO_DOM2COL    (:) = -1
+    RO_CONF_FILES (:) = ""
+    RO_PARENT_COL (:) = -1
+    RO_CHILD_COL  (:) = -1
+
     call MPI_COMM_SIZE(ORG_COMM,ORG_nmax, ierr)
 
     if ( color_reorder ) then
@@ -701,12 +709,6 @@ contains
        enddo
 
     else !--- without reordering of colors
-       ORDER2DOM(:)      = -1
-       RO_DOM2COL(:)     = -1
-       RO_PRC_DOMAINS(:) = -1
-       RO_PRC_DOMAINS(:) = -1
-       RO_PARENT_COL(:)  = -1
-       RO_CHILD_COL(:)   = -1
 
        do i = 1, NUM_DOMAIN
           ORDER2DOM(i)      = i
