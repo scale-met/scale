@@ -825,6 +825,10 @@ contains
        GRID_LCZ, &
        GRID_LFZ, &
        GRID_LCDZ
+    use scale_ocean_grid, only: &
+       GRID_OCZ, &
+       GRID_OFZ, &
+       GRID_OCDZ
     use scale_urban_grid, only: &
        GRID_UCZ, &
        GRID_UFZ, &
@@ -942,6 +946,9 @@ contains
 
     call FILE_HISTORY_Set_Axis( 'lz',  'LZ',              'm', 'lz',  GRID_LCZ(LKS  :LKE), gsize=LKMAX  , start=startZ, down=.true. )
     call FILE_HISTORY_Set_Axis( 'lzh', 'LZ (half level)', 'm', 'lzh', GRID_LFZ(LKS-1:LKE), gsize=LKMAX+1, start=startZ, down=.true. )
+
+    call FILE_HISTORY_Set_Axis( 'oz',  'OZ',              'm', 'oz',  GRID_OCZ(OKS  :OKE), gsize=OKMAX  , start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'ozh', 'OZ (half level)', 'm', 'ozh', GRID_OFZ(OKS-1:OKE), gsize=OKMAX+1, start=startZ, down=.true. )
 
     call FILE_HISTORY_Set_Axis( 'uz',  'UZ',              'm', 'uz',  GRID_UCZ(UKS  :UKE), gsize=UKMAX  , start=startZ, down=.true. )
     call FILE_HISTORY_Set_Axis( 'uzh', 'UZ (half level)', 'm', 'uzh', GRID_UFZ(UKS-1:UKE), gsize=UKMAX+1, start=startZ, down=.true. )
