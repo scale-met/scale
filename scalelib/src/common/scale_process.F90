@@ -44,6 +44,11 @@ module scale_process
 
   public :: PRC_set_file_closer
 
+  abstract interface
+     subroutine closer
+     end subroutine closer
+  end interface
+
   interface PRC_MPIstop
      procedure PRC_abort
   end interface PRC_MPIstop
@@ -91,13 +96,6 @@ module scale_process
   integer, public :: PRC_ABORT_COMM_WORLD               !< communicator for aborting
   integer, public :: PRC_ABORT_handler                  !< error handler communicator for aborting
 
-  abstract interface
-     subroutine closer
-     end subroutine closer
-  end interface
-
-  procedure(closer), pointer :: PRC_FILE_Closer => NULL()
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -112,6 +110,8 @@ module scale_process
   integer, private, parameter :: PRC_ABORT_code = -1     !< MPI abort code in error handler
 !  integer, private, parameter :: PRC_ABORT_code_p = 2 !< mpi abort code in error handler from parent
 !  integer, private, parameter :: PRC_ABORT_code_d = 3 !< mpi abort code in error handler from daughter
+
+  procedure(closer), pointer :: PRC_FILE_Closer => NULL()
 
   !-----------------------------------------------------------------------------
 contains
