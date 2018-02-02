@@ -59,6 +59,12 @@ program sno
      SNOPLGIN_timeave_alloc,   &
      SNOPLGIN_timeave_dealloc, &
      SNOPLGIN_timeave_store
+  use mod_snoplugin_hgridope, only: &
+     SNOPLGIN_hgridope_setup,   &
+     SNOPLGIN_hgridope_setcoef, &
+     SNOPLGIN_hgridope_alloc,   &
+     SNOPLGIN_hgridope_dealloc, &
+     SNOPLGIN_hgridope_llinterp
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -136,6 +142,7 @@ program sno
 
   ! Plugins
   logical                 :: plugin_timeave
+  logical                 :: plugin_hgridope
 
   logical :: do_output, finalize, add_rm_attr
   integer :: px, py, p
@@ -192,6 +199,12 @@ program sno
 
   call SNOPLGIN_timeave_setup ( plugin_timeave,  & ! [OUT]
                                 do_output        ) ! [INOUT]
+
+  call SNOPLGIN_hgridope_setup( nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
+                                output_grads,               & ! [IN] from namelist
+                                output_gradsctl,            & ! [IN] from namelist
+                                plugin_hgridope,            & ! [OUT]
+                                do_output                   ) ! [INOUT]
 
   ! allocate output files to executing processes
   call SNO_proc_alloc( nprocs, myrank, ismaster,   & ! [IN] from MPI
@@ -313,6 +326,11 @@ program sno
                                readflag(:,:),                & ! [IN]    from SNO_map_settable_local
                                debug                         ) ! [IN]
 
+           if( plugin_hgridope ) call SNOPLGIN_hgridope_setcoef( ngrids_x_out, ngrids_y_out, & ! [IN] from SNO_map_getsize_local
+                                                                 naxis,                      & ! [IN] from SNO_file_getinfo
+                                                                 ainfo(:),                   & ! [IN] from SNO_axis_getinfo
+                                                                 debug                       ) ! [IN]
+
            !####################################################################
            ! process each variable
            !####################################################################
@@ -329,6 +347,9 @@ program sno
                                    debug                         ) ! [IN]
 
               if( plugin_timeave  ) call SNOPLGIN_timeave_alloc ( dinfo(v), & ! [IN] from SNO_vars_getinfo
+                                                                  debug     ) ! [IN]
+
+              if( plugin_hgridope ) call SNOPLGIN_hgridope_alloc( dinfo(v), & ! [IN] from SNO_vars_getinfo
                                                                   debug     ) ! [IN]
 
               !#################################################################
@@ -363,6 +384,18 @@ program sno
                                                                    ainfo(:),                   & ! [IN] from SNO_axis_getinfo
                                                                    dinfo(v),                   & ! [IN] from SNO_vars_getinfo
                                                                    debug                       ) ! [IN]
+
+                 if( plugin_hgridope ) call SNOPLGIN_hgridope_llinterp( dirpath_out,                & ! [IN] from namelist
+                                                                        basename_out,               & ! [IN] from namelist
+                                                                        output_grads,               & ! [IN] from namelist
+                                                                        p,                          & ! [IN]
+                                                                        t,                          & ! [IN]
+                                                                        nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
+                                                                        nhalos_x,     nhalos_y,     & ! [IN] from SNO_file_getinfo
+                                                                        hinfo,                      & ! [IN] from SNO_file_getinfo
+                                                                   dinfo(v),                   & ! [IN] from SNO_vars_getinfo
+                                                                   debug                       ) ! [IN]
+
                  if ( do_output ) then
                     finalize    = ( t == dinfo(v)%step_nmax )
                     add_rm_attr = .true.
@@ -390,6 +423,8 @@ program sno
                                      debug     ) ! [IN]
 
               if( plugin_timeave  ) call SNOPLGIN_timeave_dealloc ( debug ) ! [IN]
+
+              if( plugin_hgridope ) call SNOPLGIN_hgridope_dealloc( debug ) ! [IN]
 
            enddo ! item loop
 
