@@ -642,6 +642,7 @@ contains
     integer :: n
     !---------------------------------------------------------------------------
 
+    itemid = -1
     if ( FILE_HISTORY_nreqs == 0 ) return
 
     itemid = FILE_HISTORY_find_id( name )
