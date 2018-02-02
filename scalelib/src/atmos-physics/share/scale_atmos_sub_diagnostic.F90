@@ -95,6 +95,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    ! Note: W(KS,:,:) is filled because the values at i=1 or j=1 are not calculated below.
 !OCL XFILL
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
