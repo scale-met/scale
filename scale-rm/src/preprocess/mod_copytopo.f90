@@ -30,13 +30,6 @@ module mod_copytopo
   !
   !++ Public parameters & variables
   !
-  integer, public            :: CNVTOPO_TYPE = -1
-
-  integer, public, parameter :: I_IGNORE     =  0
-  integer, public, parameter :: I_GTOPO30    =  1
-  integer, public, parameter :: I_DEM50M     =  2
-  integer, public, parameter :: I_GMTED2010  =  3
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -81,8 +74,6 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_grid, only: &
-       DX,         &
-       DY,         &
        BUFFER_DX,  &
        BUFFER_DY,  &
        BUFFFACT
@@ -124,13 +115,17 @@ contains
 
     if ( COPYTOPO_TRANSITION_DX < 0.0_RP ) then
        COPYTOPO_TRANSITION_DX = BUFFER_DX
-    end if
+    endif
+
     if ( COPYTOPO_TRANSITION_DY < 0.0_RP ) then
        COPYTOPO_TRANSITION_DY = BUFFER_DY
-    end if
+    endif
+
     if ( COPYTOPO_TRANSFACT < 0.0_RP ) then
        COPYTOPO_TRANSFACT = BUFFFACT
-    end if
+    endif
+
+
 
     allocate( CTRX(IA) )
     allocate( CTRY(JA) )
@@ -154,21 +149,14 @@ contains
   end subroutine COPYTOPO
 
   !-----------------------------------------------------------------------------
-  !> Individual Procedures
-  !-----------------------------------------------------------------------------
-
-  !-----------------------------------------------------------------------------
   !> Generate transition grid
   subroutine COPYTOPO_transgrid
     use scale_process, only: &
        PRC_MPIstop, &
        PRC_myrank
     use scale_rm_process, only: &
-       PRC_2Drank,  &
-       PRC_NUM_X,   &
-       PRC_NUM_Y
+       PRC_2Drank
     use scale_const, only: &
-       RADIUS => CONST_RADIUS, &
        EPS    => CONST_EPS
     use scale_grid, only: &
        DX,                  &
@@ -194,7 +182,7 @@ contains
     integer :: jmain, jbuff, jtrans
     integer :: copy_is, copy_ie, copy_js, copy_je
 
-    integer :: i, j, ii, jj
+    integer  :: i, j, ii, jj
     !---------------------------------------------------------------------------
 
     allocate( buffx (0:IAG) )
@@ -212,11 +200,11 @@ contains
     transtotx = 0.0_RP
 
     do i = IHALO+1, IAG
-       if( abs(CBFXG(i) - 0.0_RP) < EPS ) exit
+       if( abs(CBFXG(i)) < EPS ) exit
        buffx(i) = buffx(i-1) * BUFFFACT
        bufftotx = bufftotx + buffx(i)
     enddo
-    ibuff = i - (IHALO+1)
+    ibuff = i - 1 - IHALO
 
     do i = 1, IAG
        if( transtotx >= COPYTOPO_TRANSITION_DX ) exit
@@ -224,18 +212,22 @@ contains
        transtotx = transtotx + transx(i)
     enddo
     itrans = i - 1
+
     imain  = IAG - 2*ibuff - 2*itrans - 2*IHALO
 
     if ( imain < 1 ) then
        write(*,*) 'xxx Not appropriate transition width for global domain(X).', COPYTOPO_TRANSITION_DX
-       write(*,*) '    # of buffer region (one side)', ibuff
-       write(*,*) '    # of transion region (one side)', itrans
+       write(*,*) 'xxx # of buffer   region (one side) = ', ibuff
+       write(*,*) 'xxx # of transion region (one side) = ', itrans
        call PRC_MPIstop
     endif
 
     ! calc transition factor (global domaim)
     CTRXG(:) = 0.0_RP
-    do i = 1, IHALO+ibuff
+
+    copy_is = 1
+    copy_ie = IHALO+ibuff
+    do i = copy_is, copy_ie
        CTRXG(i) = 1.0_RP
     enddo
 
@@ -257,6 +249,7 @@ contains
     do i = copy_is, copy_ie
        CTRXG(i) = 1.0_RP
     enddo
+
     CTRXG(:) = max( min( CTRXG(:), 1.0_RP ), 0.0_RP )
 
     ! Y-direction
@@ -267,11 +260,11 @@ contains
     transtoty = 0.0_RP
 
     do j = JHALO+1, JAG
-       if( abs(CBFYG(j) - 0.0_RP) < EPS ) exit
+       if( abs(CBFYG(j)) < EPS ) exit
        buffy(j) = buffy(j-1) * BUFFFACT
        bufftoty = bufftoty + buffy(j)
     enddo
-    jbuff = j - (JHALO+1)
+    jbuff = j - 1 - JHALO
 
     do j = 1, JAG
        if( transtoty >= COPYTOPO_TRANSITION_DY ) exit
@@ -279,18 +272,22 @@ contains
        transtoty = transtoty + transy(j)
     enddo
     jtrans = j - 1
+
     jmain  = JAG - 2*jbuff - 2*jtrans - 2*JHALO
 
     if ( jmain < 1 ) then
        write(*,*) 'xxx Not appropriate transition width for global domain(Y).', COPYTOPO_TRANSITION_DY
-       write(*,*) '    # of buffer region (one side)', jbuff
-       write(*,*) '    # of transion region (one side)', jtrans
+       write(*,*) 'xxx # of buffer   region (one side)', jbuff
+       write(*,*) 'xxx # of transion region (one side)', jtrans
        call PRC_MPIstop
     endif
 
     ! calc transition factor (global domaim)
     CTRYG(:) = 0.0_RP
-    do j = 1, JHALO+jbuff
+
+    copy_js = 1
+    copy_je = JHALO+jbuff
+    do j = copy_js, copy_je
        CTRYG(j) = 1.0_RP
     enddo
 
@@ -312,13 +309,17 @@ contains
     do j = copy_js, copy_je
        CTRYG(j) = 1.0_RP
     enddo
+
     CTRYG(:) = max( min( CTRYG(:), 1.0_RP ), 0.0_RP )
+
+
 
     ! horizontal coordinate (local domaim)
     do i = 1, IA
        ii = i + PRC_2Drank(PRC_myrank,1) * IMAX
        CTRX(i) = CTRXG(ii)
     enddo
+
     do j = 1, JA
        jj = j + PRC_2Drank(PRC_myrank,2) * JMAX
        CTRY(j) = CTRYG(jj)
@@ -339,12 +340,14 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
+    implicit none
+
 
     real(RP) :: coef_x, alpha_x1
     real(RP) :: coef_y, alpha_y1
     real(RP) :: ee1
 
-    integer :: i, j
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     ! check invalid fraction
@@ -366,6 +369,7 @@ contains
     do j = 1, JA
     do i = 1, IA
        ee1 = CTRX(i)
+
        if ( ee1 <= 1.0_RP - COPYTOPO_FRACX ) then
           ee1 = 0.0_RP
        else
@@ -376,9 +380,10 @@ contains
           alpha_x1 = coef_x * ee1
        else
           alpha_x1 = coef_x * ee1 * exp( -(1.0_RP-ee1) * COPYTOPO_EXP_H )
-       end if
+       endif
 
        ee1 = CTRY(j)
+
        if ( ee1 <= 1.0_RP - COPYTOPO_FRACY ) then
           ee1 = 0.0_RP
        else
@@ -389,7 +394,7 @@ contains
           alpha_y1 = coef_y * ee1
        else
           alpha_y1 = coef_y * ee1 * exp( -(1.0_RP-ee1) * COPYTOPO_EXP_H )
-       end if
+       endif
 
        COPYTOPO_alpha(i,j) = max( alpha_x1, alpha_y1 )
     enddo
@@ -413,13 +418,6 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_grid_nest, only: &
-       PARENT_IMAX,     &
-       PARENT_JMAX,     &
-       NEST_TILE_NUM_X, &
-       NEST_TILE_NUM_Y, &
-       NEST_TILE_ID,    &
-       NEST_domain_shape
     use scale_interpolation_nest, only: &
        INTRPNEST_domain_compatibility,  &
        INTRPNEST_interp_fact_latlon,    &
@@ -427,6 +425,14 @@ contains
     use scale_grid_real, only: &
        LAT => REAL_LAT, &
        LON => REAL_LON
+    use scale_grid_nest, only: &
+       NEST_INTERP_LEVEL, &
+       PARENT_IMAX,       &
+       PARENT_JMAX,       &
+       NEST_TILE_NUM_X,   &
+       NEST_TILE_NUM_Y,   &
+       NEST_TILE_ID,      &
+       NEST_domain_shape
     implicit none
 
     real(RP), intent(out) :: topo_pd(:,:)

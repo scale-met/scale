@@ -61,10 +61,10 @@ module scale_grid_real
   real(RP), public, allocatable :: REAL_AREA(:,:)      !< horizontal area [m2]
   real(RP), public, allocatable :: REAL_VOL (:,:,:)    !< control volume  [m3]
 
-  real(RP), public, allocatable :: REAL_DOMAIN_CATALOGUE(:,:,:) !< domain latlon catalogue [rad]
+  real(RP), public              :: REAL_TOTAREA        !< total area   (local) [m2]
+  real(RP), public              :: REAL_TOTVOL         !< total volume (local) [m3]
 
-  real(RP), public :: REAL_TOTAREA                     !< total area   (local) [m2]
-  real(RP), public :: REAL_TOTVOL                      !< total volume (local) [m3]
+  real(RP), public, allocatable :: REAL_DOMAIN_CATALOGUE(:,:,:) !< domain latlon catalogue [rad]
 
   !-----------------------------------------------------------------------------
   !
@@ -152,9 +152,9 @@ contains
     ! call REAL_calc_areavol ! must be called after GTRANS_setup
 
     ! set latlon and z to fileio module
-    call FILE_CARTESC_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, &
-                                 REAL_LAT, REAL_LATX, REAL_LATY, REAL_LATXY, &
-                                 REAL_CZ,  REAL_FZ    )
+    call FILE_CARTESC_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, & ! [IN]
+                                       REAL_LAT, REAL_LATX, REAL_LATY, REAL_LATXY, & ! [IN]
+                                       REAL_CZ,  REAL_FZ                           ) ! [IN]
 
     return
   end subroutine REAL_setup
@@ -173,9 +173,9 @@ contains
     call REAL_calc_Z
 
     ! set latlon and z to fileio module
-    call FILE_CARTESC_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, &
-                                 REAL_LAT, REAL_LATX, REAL_LATY, REAL_LATXY, &
-                                 REAL_CZ,  REAL_FZ    )
+    call FILE_CARTESC_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, & ! [IN]
+                                       REAL_LAT, REAL_LATX, REAL_LATY, REAL_LATXY, & ! [IN]
+                                       REAL_CZ,  REAL_FZ                           ) ! [IN]
 
     return
   end subroutine REAL_update_Z
@@ -404,34 +404,33 @@ contains
   !> Calc control area/volume
   subroutine REAL_calc_areavol( &
        MAPF )
-    use scale_const, only: &
-       RADIUS => CONST_RADIUS
     use scale_grid, only: &
        DZ, &
        DX, &
        DY
     implicit none
+
     real(RP), intent(in) :: MAPF(IA,JA,2)
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    REAL_TOTAREA   = 0.0_RP
     REAL_AREA(:,:) = 0.0_RP
+    REAL_TOTAREA   = 0.0_RP
     do j = JS, JE
     do i = IS, IE
        REAL_AREA(i,j) = DX * DY / ( MAPF(i,j,1) * MAPF(i,j,2) )
-       REAL_TOTAREA = REAL_TOTAREA + REAL_AREA(i,j)
+       REAL_TOTAREA   = REAL_TOTAREA + REAL_AREA(i,j)
     enddo
     enddo
 
-    REAL_TOTVOL     = 0.0_RP
     REAL_VOL(:,:,:) = 0.0_RP
+    REAL_TOTVOL     = 0.0_RP
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
        REAL_VOL(k,i,j) = ( REAL_FZ(k,i,j) - REAL_FZ(k-1,i,j) ) * REAL_AREA(i,j)
-       REAL_TOTVOL = REAL_TOTVOL + REAL_VOL(k,i,j)
+       REAL_TOTVOL     = REAL_TOTVOL + REAL_VOL(k,i,j)
     enddo
     enddo
     enddo

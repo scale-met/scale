@@ -206,7 +206,7 @@ contains
 
     NAMELIST / PARAM_FILE / &
          FILE_AGGREGATE
-    
+
     integer :: ierr
 
        !--- read namelist
@@ -2033,7 +2033,7 @@ contains
     else
        istep_ = 1
     end if
-       
+
 
     !--- get data information
     call file_get_datainfo_c( dinfo,               & ! [OUT]

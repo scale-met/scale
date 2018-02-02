@@ -189,10 +189,6 @@ contains
        rotc => GTRANS_ROTC
     use scale_topography, only: &
        topo => TOPO_Zsfc
-    use scale_interpolation_nest, only: &
-       INTRPNEST_interp_fact_llz,  &
-       INTRPNEST_interp_2d,        &
-       INTRPNEST_interp_3d
     use scale_atmos_phy_mp_convert, only: &
        ATMOS_PHY_MP_bulk2bin
     implicit none

@@ -165,7 +165,7 @@ contains
        V(k,i,1) = MOMY(k,i,1) / DENS(k,i,1)
     enddo
     enddo
- 
+
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j  = JS, JE
     do i  = IS, IE
@@ -223,7 +223,7 @@ contains
                               DENS(:,:,:), RHOT(:,:,:),                & ! (in)
                               Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:), & ! (in)
                               TEMP(:,:,:), PRES(:,:,:)                 ) ! (out)
-                              
+
 
 !OCL XFILL
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
@@ -244,10 +244,10 @@ contains
 
   !-----------------------------------------------------------------------------
   !> ATMOS_DIAGNOSTIC_get_phyd
-  !! hydrostatic pressure 
+  !! hydrostatic pressure
   !<
   subroutine ATMOS_DIAGNOSTIC_get_phyd( &
-       KA, KS, KE, &       
+       KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
        DENS, PRES, &
@@ -255,16 +255,15 @@ contains
        PHYD        )
     use scale_const, only: &
        GRAV => CONST_GRAV
+    implicit none
+
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
-
     real(RP), intent(in)  :: DENS(KA,IA,JA)
     real(RP), intent(in)  :: PRES(KA,IA,JA)
-
     real(RP), intent(in)  :: CZ(KA,IA,JA)
     real(RP), intent(in)  :: FZ(0:KA,IA,JA)
-
     real(RP), intent(out) :: PHYD(KA,IA,JA)
 
     real(RP) :: ph(KA)  !> hydrostatic pressure at the half level
@@ -294,7 +293,7 @@ contains
   !! N^2
   !<
   subroutine ATMOS_DIAGNOSTIC_get_n2( &
-       KA, KS, KE, &       
+       KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
        POTT, &
@@ -346,7 +345,7 @@ contains
   !! virtual potential temperature
   !<
   subroutine ATMOS_DIAGNOSTIC_get_potv( &
-       KA, KS, KE, &       
+       KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
        POTT, &
@@ -387,7 +386,7 @@ contains
   !! liqued water temperature
   !<
   subroutine ATMOS_DIAGNOSTIC_get_teml( &
-       KA, KS, KE, &       
+       KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
        TEMP,     &

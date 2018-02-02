@@ -581,6 +581,7 @@ contains
     use scale_atmos_hydrometeor, only: &
        I_QV
     implicit none
+
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)

@@ -604,17 +604,18 @@ contains
     integer,               intent(out) :: CHILD_COL(:)              ! child  color number
     character(len=H_LONG), intent(out) :: COL_FILE(0:PRC_DOMAIN_nlim) ! conf file in each color
 
-    integer :: touch(PRC_DOMAIN_nlim)
-    integer :: PRC_ORDER(PRC_DOMAIN_nlim)                   ! reordered number of process
-    integer :: ORDER2DOM(PRC_DOMAIN_nlim)                   ! get domain number by order number
-    integer :: DOM2ORDER(PRC_DOMAIN_nlim)                   ! get order number by domain number
-    integer :: DOM2COL(PRC_DOMAIN_nlim)                     ! get color number by domain number
-    integer :: COL2DOM(0:PRC_DOMAIN_nlim)                   ! get domain number by color number
-    integer :: RO_PRC_DOMAINS(PRC_DOMAIN_nlim)              ! reordered values
-    integer :: RO_DOM2COL(PRC_DOMAIN_nlim)                  ! reordered values
-    integer :: RO_PARENT_COL(PRC_DOMAIN_nlim)               ! reordered values
-    integer :: RO_CHILD_COL(PRC_DOMAIN_nlim)                ! reordered values
-    character(len=H_LONG) :: RO_CONF_FILES(PRC_DOMAIN_nlim) ! reordered values
+    integer               :: touch         (  PRC_DOMAIN_nlim)
+    integer               :: PRC_ORDER     (  PRC_DOMAIN_nlim) ! reordered number of process
+    integer               :: ORDER2DOM     (  PRC_DOMAIN_nlim) ! get domain number by order number
+    integer               :: DOM2ORDER     (  PRC_DOMAIN_nlim) ! get order number by domain number
+    integer               :: DOM2COL       (  PRC_DOMAIN_nlim) ! get color number by domain number
+    integer               :: COL2DOM       (0:PRC_DOMAIN_nlim) ! get domain number by color number
+
+    integer               :: RO_PRC_DOMAINS(  PRC_DOMAIN_nlim) ! reordered values
+    integer               :: RO_DOM2COL    (  PRC_DOMAIN_nlim) ! reordered values
+    integer               :: RO_PARENT_COL (  PRC_DOMAIN_nlim) ! reordered values
+    integer               :: RO_CHILD_COL  (  PRC_DOMAIN_nlim) ! reordered values
+    character(len=H_LONG) :: RO_CONF_FILES (  PRC_DOMAIN_nlim) ! reordered values
 
     integer :: ORG_nmax   ! parent domain number
     integer :: id_parent  ! parent domain number
@@ -638,23 +639,24 @@ contains
        !--- make color order
        !    domain num is counted from 1
        !    color num  is counted from 0
-       touch(:) = -1
+       touch    (:) = -1
        PRC_ORDER(:) = PRC_DOMAINS(:)
+
        call PRC_sort_ascd( PRC_ORDER(1:NUM_DOMAIN), 1, NUM_DOMAIN )
 
        do i = 1, NUM_DOMAIN
        do j = 1, NUM_DOMAIN
           if ( PRC_DOMAINS(i) == PRC_ORDER(j) .AND. touch(j) < 0 ) then
-             DOM2COL(i         ) = j - 1  ! domain_num --> color_num
-             COL2DOM(DOM2COL(i)) = i      ! color_num  --> domain_num
-             touch(j) = 1
+             DOM2COL(i  ) = j-1 ! domain_num --> color_num
+             COL2DOM(j-1) = i   ! color_num  --> domain_num
+             touch  (j  ) = 1
              exit
           endif
        enddo
        enddo
 
        PARENT_COL(:) = -1
-       CHILD_COL(:)  = -1
+       CHILD_COL (:) = -1
        do i = 1, NUM_DOMAIN
           id_parent = i - 1
           id_child  = i + 1
@@ -663,34 +665,34 @@ contains
              PARENT_COL(i) = DOM2COL(id_parent)
           endif
           if ( 1 <= id_child  .AND. id_child  <= NUM_DOMAIN ) then
-             CHILD_COL(i) = DOM2COL(id_child)
+             CHILD_COL (i) = DOM2COL(id_child)
           endif
 
           if ( PRC_UNIVERSAL_IsMaster .AND. LOG_SPLIT ) then
-             write( *, '(1X,A,I2,1X,A,I2,2(2X,A,I2))' )  &
-                  "DOMAIN: ", i, "MY_COL: ", DOM2COL(i), &
-                  "PARENT: COL= ", PARENT_COL(i), "CHILD: COL= ", CHILD_COL(i)
+             write(*,'(1x,A,I2,1x,A,I2,2(2x,A,I2))') &
+             "DOMAIN: ", i, "MY_COL: ", DOM2COL(i), "PARENT: COL= ", PARENT_COL(i), "CHILD: COL= ", CHILD_COL(i)
           endif
        enddo
 
        !--- reorder following color order
        do i = 1, NUM_DOMAIN
           dnum = COL2DOM(i-1)
-          ORDER2DOM(i)      = dnum
-          DOM2ORDER(dnum)   = i
-          RO_PRC_DOMAINS(i) = PRC_DOMAINS(dnum)
-          RO_DOM2COL(dnum)  = DOM2COL(dnum)
-          RO_CONF_FILES(i)  = CONF_FILES(dnum)
-          RO_PARENT_COL(i)  = PARENT_COL(dnum)
-          RO_CHILD_COL(i)   = CHILD_COL (dnum)
+
+          ORDER2DOM     (i)    = dnum
+          DOM2ORDER     (dnum) = i
+          RO_PRC_DOMAINS(i)    = PRC_DOMAINS(dnum)
+          RO_DOM2COL    (dnum) = DOM2COL    (dnum)
+          RO_CONF_FILES (i)    = CONF_FILES (dnum)
+          RO_PARENT_COL (i)    = PARENT_COL (dnum)
+          RO_CHILD_COL  (i)    = CHILD_COL  (dnum)
        enddo
 
        !--- set relationship by ordering of relationship number
        PARENT_COL(:) = -1
        CHILD_COL (:) = -1
        do i = 1, NUM_DOMAIN-1
-          PARENT_COL(i) = RO_PARENT_COL( DOM2ORDER(i+1) ) ! from child to parent
-          CHILD_COL (i) = RO_CHILD_COL ( DOM2ORDER(i)   ) ! from parent to child
+          PARENT_COL(i) = RO_PARENT_COL(DOM2ORDER(i+1)) ! from child to parent
+          CHILD_COL (i) = RO_CHILD_COL (DOM2ORDER(i)  ) ! from parent to child
        enddo
 
        do i = 1, NUM_DOMAIN
@@ -711,10 +713,10 @@ contains
     else !--- without reordering of colors
 
        do i = 1, NUM_DOMAIN
-          ORDER2DOM(i)      = i
-          RO_DOM2COL(i)     = i-1
+          ORDER2DOM     (i) = i
           RO_PRC_DOMAINS(i) = PRC_DOMAINS(i)
-          RO_CONF_FILES(i)  = CONF_FILES(i)
+          RO_DOM2COL    (i) = i-1
+          RO_CONF_FILES (i) = CONF_FILES(i)
        enddo
 
        do i = 1, NUM_DOMAIN
@@ -725,14 +727,14 @@ contains
              RO_PARENT_COL(i) = RO_DOM2COL(id_parent)
           endif
           if ( 1 <= id_child  .AND. id_child  <= NUM_DOMAIN ) then
-             RO_CHILD_COL(i) = RO_DOM2COL(id_child)
+             RO_CHILD_COL (i) = RO_DOM2COL(id_child)
           endif
        enddo
 
        ! make relationship
        do i = 1, NUM_DOMAIN-1
           PARENT_COL(i) = RO_PARENT_COL(i+1) ! from child to parent
-          CHILD_COL(i)  = RO_CHILD_COL (i  ) ! from parent to child
+          CHILD_COL (i) = RO_CHILD_COL (i  ) ! from parent to child
        enddo
 
     endif
@@ -745,15 +747,18 @@ contains
 
     do i = 0, ORG_nmax-1
        COLOR_LIST(i+1) = RO_DOM2COL(ORDER2DOM(order))
-       KEY_LIST(i+1)   = key
+       KEY_LIST  (i+1) = key
+
        if ( key == 0 ) then
           PRC_ROOT(COLOR_LIST(i+1)) = i
           COL_FILE(COLOR_LIST(i+1)) = RO_CONF_FILES(order)
        endif
+
        if ( LOG_SPLIT .AND. PRC_UNIVERSAL_IsMaster ) then
-          write ( *, '(1X,4(A,I5))' ) "PE:", i, "   COLOR:", COLOR_LIST(i+1), &
-                "   KEY:", KEY_LIST(i+1), "   PRC_ROOT:", PRC_ROOT(COLOR_LIST(i+1))
+          write(*,'(1x,4(A,I5))') &
+          "PE:", i, " COLOR:", COLOR_LIST(i+1), " KEY:", KEY_LIST(i+1), " PRC_ROOT:", PRC_ROOT(COLOR_LIST(i+1))
        endif
+
        key = key + 1
        if ( key >= nprc ) then
           order = order + 1
