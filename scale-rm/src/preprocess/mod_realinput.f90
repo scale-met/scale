@@ -427,6 +427,9 @@ contains
          URBAN_ROFF
     use mod_ocean_vars, only: &
          OCEAN_TEMP, &
+         OCEAN_SALT, &
+         OCEAN_UVEL, &
+         OCEAN_VVEL, &
          OCEAN_SFC_TEMP, &
          OCEAN_SFC_albedo, &
          OCEAN_SFC_Z0M, &
@@ -783,6 +786,9 @@ contains
 
        do k = 1, OKMAX
           OCEAN_TEMP(k,i,j) = OCEAN_TEMP_ORG(OKS,i,j,ns)
+          OCEAN_SALT(k,i,j) = 0.0_RP
+          OCEAN_UVEL(k,i,j) = 0.0_RP
+          OCEAN_VVEL(k,i,j) = 0.0_RP
        enddo
        OCEAN_SFC_TEMP  (i,j)      = OCEAN_SFC_TEMP_ORG  (i,j,     ns)
        OCEAN_SFC_albedo(i,j,I_LW) = OCEAN_SFC_albedo_ORG(i,j,I_LW,ns)
@@ -1987,13 +1993,7 @@ contains
     real(RP) :: llat_org (         ldims(2),ldims(3))
 
     ! ocean
-    real(RP) :: tw_org   (        odims(1),odims(2))
-    real(RP) :: sst_org  (        odims(1),odims(2))
-    real(RP) :: albw_org (        odims(1),odims(2),2)
     real(RP) :: z0w_org  (        odims(1),odims(2))
-    real(RP) :: olon_org (        odims(1),odims(2))
-    real(RP) :: olat_org (        odims(1),odims(2))
-    real(RP) :: omask_org(        odims(1),odims(2))
     real(RP) :: omask    (        odims(1),odims(2))
     real(RP) :: lst_ocean(        odims(1),odims(2))
 

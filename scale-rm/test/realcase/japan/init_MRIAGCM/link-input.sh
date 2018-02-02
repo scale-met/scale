@@ -38,10 +38,17 @@ do
    year_dir=`date -u -d "@${usec}" +%Y`
    date_now=`date -u -d "@${usec}" +%Y%m%d%H`
 
-   ln -svf ${indir}/invariant_TL959.dr                      ./MRI_${FN}.grd
-   ln -svf ${indir}/${year_dir}/atm_eta_pres_${date_now}.dr ./MRIpres_${FN}.grd
-   ln -svf ${indir}/${year_dir}/atm_eta_${date_now}.dr      ./MRIatm_${FN}.grd
-   ln -svf ${indir}/${year_dir}/sfc_${date_now}.dr          ./MRIsfc_${FN}.grd
+   if [ "${SCALE_SYS}" == "Kmicro" ]; then
+      cp -vf  ${indir}/invariant_TL959.dr                      ./MRI_${FN}.grd
+      cp -vf  ${indir}/${year_dir}/atm_eta_pres_${date_now}.dr ./MRIpres_${FN}.grd
+      cp -vf  ${indir}/${year_dir}/atm_eta_${date_now}.dr      ./MRIatm_${FN}.grd
+      cp -vf  ${indir}/${year_dir}/sfc_${date_now}.dr          ./MRIsfc_${FN}.grd
+   else
+      ln -svf ${indir}/invariant_TL959.dr                      ./MRI_${FN}.grd
+      ln -svf ${indir}/${year_dir}/atm_eta_pres_${date_now}.dr ./MRIpres_${FN}.grd
+      ln -svf ${indir}/${year_dir}/atm_eta_${date_now}.dr      ./MRIatm_${FN}.grd
+      ln -svf ${indir}/${year_dir}/sfc_${date_now}.dr          ./MRIsfc_${FN}.grd
+   fi
 
    let fnum="${fnum}+1"
    let usec="${usec}+${dt}"

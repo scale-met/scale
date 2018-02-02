@@ -38,9 +38,15 @@ do
    year_dir=`date -u -d "@${usec}" +%Y`
    date_now=`date -u -d "@${usec}" +%Y%m%d%H`
 
-   ln -svf ${indir}/${year_dir}/FNL_ATM_${date_now}.grd ./ATM_${FN}.grd
-   ln -svf ${indir}/${year_dir}/FNL_SFC_${date_now}.grd ./SFC_${FN}.grd
-   ln -svf ${indir}/${year_dir}/FNL_LND_${date_now}.grd ./LND_${FN}.grd
+   if [ "${SCALE_SYS}" == "Kmicro" ]; then
+      cp -vf  ${indir}/${year_dir}/FNL_ATM_${date_now}.grd ./ATM_${FN}.grd
+      cp -vf  ${indir}/${year_dir}/FNL_SFC_${date_now}.grd ./SFC_${FN}.grd
+      cp -vf  ${indir}/${year_dir}/FNL_LND_${date_now}.grd ./LND_${FN}.grd
+   else
+      ln -svf ${indir}/${year_dir}/FNL_ATM_${date_now}.grd ./ATM_${FN}.grd
+      ln -svf ${indir}/${year_dir}/FNL_SFC_${date_now}.grd ./SFC_${FN}.grd
+      ln -svf ${indir}/${year_dir}/FNL_LND_${date_now}.grd ./LND_${FN}.grd
+   fi
 
    let fnum="${fnum}+1"
    let usec="${usec}+${dt}"
