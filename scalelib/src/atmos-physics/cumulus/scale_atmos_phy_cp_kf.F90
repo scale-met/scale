@@ -298,8 +298,8 @@ contains
        cldfrac_sh,     &
        nca             )
     use scale_grid_index
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_atmos_phy_mp, only: &
        QA_MP
     implicit none
@@ -356,8 +356,8 @@ contains
 
     call PROF_rapend('CP_kf', 3)
 
-    call HIST_in( lifetime(:,:),            'KF_LIFETIME', 'lifetime of KF scheme', 's' )
-    call HIST_in( real(I_convflag(:,:),RP), 'KF_CONVFLAG', 'CONVECTION FLAG',       ''  )
+    call FILE_HISTORY_in( lifetime(:,:),            'KF_LIFETIME', 'lifetime of KF scheme', 's' )
+    call FILE_HISTORY_in( real(I_convflag(:,:),RP), 'KF_CONVFLAG', 'CONVECTION FLAG',       ''  )
 
     return
   end subroutine ATMOS_PHY_CP_kf

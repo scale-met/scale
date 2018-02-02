@@ -262,8 +262,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Read horizontal&vertical grid
   subroutine GRID_read
-    use gtool_file, only: &
-       FileRead
+    use scale_file, only: &
+       FILE_Read
     use scale_process, only: &
        PRC_myrank
     implicit none
@@ -276,19 +276,19 @@ contains
 
     write(bname,'(A,A,F15.3)') trim(GRID_IN_BASENAME)
 
-    call FileRead( GRID_CZ(:), bname, 'CZ', 1, PRC_myrank )
-    call FileRead( GRID_CX(:), bname, 'CX', 1, PRC_myrank )
-    call FileRead( GRID_CY(:), bname, 'CY', 1, PRC_myrank )
-    call FileRead( GRID_FZ(:), bname, 'FZ', 1, PRC_myrank )
-    call FileRead( GRID_FX(:), bname, 'FX', 1, PRC_myrank )
-    call FileRead( GRID_FY(:), bname, 'FY', 1, PRC_myrank )
+    call FILE_Read( bname, 'CZ', GRID_CZ(:) )
+    call FILE_Read( bname, 'CX', GRID_CX(:) )
+    call FILE_Read( bname, 'CY', GRID_CY(:) )
+    call FILE_Read( bname, 'FZ', GRID_FZ(:) )
+    call FILE_Read( bname, 'FX', GRID_FX(:) )
+    call FILE_Read( bname, 'FY', GRID_FY(:) )
 
-    call FileRead( GRID_CDZ(:), bname, 'CDZ', 1, PRC_myrank )
-    call FileRead( GRID_CDX(:), bname, 'CDX', 1, PRC_myrank )
-    call FileRead( GRID_CDY(:), bname, 'CDY', 1, PRC_myrank )
-    call FileRead( GRID_FDZ(:), bname, 'FDZ', 1, PRC_myrank )
-    call FileRead( GRID_FDX(:), bname, 'FDX', 1, PRC_myrank )
-    call FileRead( GRID_FDY(:), bname, 'FDY', 1, PRC_myrank )
+    call FILE_Read( bname, 'CDZ', GRID_CDZ(:) )
+    call FILE_Read( bname, 'CDX', GRID_CDX(:) )
+    call FILE_Read( bname, 'CDY', GRID_CDY(:) )
+    call FILE_Read( bname, 'FDZ', GRID_FDZ(:) )
+    call FILE_Read( bname, 'FDX', GRID_FDX(:) )
+    call FILE_Read( bname, 'FDY', GRID_FDY(:) )
 
     GRID_RCDZ(:) = 1.0_RP / GRID_CDZ(:)
     GRID_RCDX(:) = 1.0_RP / GRID_CDX(:)
@@ -297,17 +297,17 @@ contains
     GRID_RFDX(:) = 1.0_RP / GRID_FDX(:)
     GRID_RFDY(:) = 1.0_RP / GRID_FDY(:)
 
-    call FileRead( GRID_CBFZ(:), bname, 'CBFZ', 1, PRC_myrank )
-    call FileRead( GRID_CBFX(:), bname, 'CBFX', 1, PRC_myrank )
-    call FileRead( GRID_CBFY(:), bname, 'CBFY', 1, PRC_myrank )
-    call FileRead( GRID_FBFZ(:), bname, 'FBFZ', 1, PRC_myrank )
-    call FileRead( GRID_FBFX(:), bname, 'FBFX', 1, PRC_myrank )
-    call FileRead( GRID_FBFY(:), bname, 'FBFY', 1, PRC_myrank )
+    call FILE_Read( bname, 'CBFZ', GRID_CBFZ(:) )
+    call FILE_Read( bname, 'CBFX', GRID_CBFX(:) )
+    call FILE_Read( bname, 'CBFY', GRID_CBFY(:) )
+    call FILE_Read( bname, 'FBFZ', GRID_FBFZ(:) )
+    call FILE_Read( bname, 'FBFX', GRID_FBFX(:) )
+    call FILE_Read( bname, 'FBFY', GRID_FBFY(:) )
 
-    call FileRead( GRID_CXG(:), bname, 'CXG', 1, PRC_myrank )
-    call FileRead( GRID_CYG(:), bname, 'CYG', 1, PRC_myrank )
-    call FileRead( GRID_FXG(:), bname, 'FXG', 1, PRC_myrank )
-    call FileRead( GRID_FYG(:), bname, 'FYG', 1, PRC_myrank )
+    call FILE_Read( bname, 'CXG', GRID_CXG(:) )
+    call FILE_Read( bname, 'CYG', GRID_CYG(:) )
+    call FILE_Read( bname, 'FXG', GRID_FXG(:) )
+    call FILE_Read( bname, 'FYG', GRID_FYG(:) )
 
     return
   end subroutine GRID_read

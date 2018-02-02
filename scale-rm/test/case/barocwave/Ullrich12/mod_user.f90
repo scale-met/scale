@@ -178,8 +178,8 @@ contains
        DTSEC => TIME_DTSEC
     use scale_gridtrans
     
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     implicit none
 
 

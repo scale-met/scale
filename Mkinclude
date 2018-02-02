@@ -27,7 +27,6 @@ ifeq ($(origin MODDIR),undefined)
    MODDIR = $(INST_DIR)/include
 endif
 
-GTOOLDIR    = $(TOPDIR)/gtool
 DCUTILSDIR  = $(TOPDIR)/dc_utils
 SCALELIBDIR = $(TOPDIR)/scalelib
 SCALERMDIR  = $(TOPDIR)/scale-rm

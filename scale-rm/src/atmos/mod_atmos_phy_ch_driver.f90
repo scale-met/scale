@@ -123,8 +123,8 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_atmos_phy_ch, only: &
        ATMOS_PHY_CH, &
        QA_CH,        &
@@ -158,8 +158,8 @@ contains
 
 
        do iq = QS_CH, QE_CH
-          call HIST_in( RHOQ_t_CH(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CH', &
-                        'tendency rho*'//trim(TRACER_NAME(iq))//' in CH', 'kg/m3/s', nohalo=.true. )
+          call FILE_HISTORY_in( RHOQ_t_CH(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CH', &
+                        'tendency rho*'//trim(TRACER_NAME(iq))//' in CH', 'kg/m3/s', fill_halo=.true. )
        enddo
     endif
 

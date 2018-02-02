@@ -794,7 +794,7 @@ contains
   end subroutine INTERP_vertical_zh2xih
 
   !-----------------------------------------------------------------------------
-  !> Reset random seed
+  !> Setup
   subroutine INTERP_setup_pres( &
        Kpres )
     implicit none

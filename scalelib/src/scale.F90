@@ -57,8 +57,6 @@ contains
   !> Initialization
   subroutine SCALE_init( &
        app_name )
-    use dc_log, only: &
-       LogInit
     use scale_process, only: &
        PRC_MPIstart, &
        PRC_SINGLECOM_setup
@@ -99,9 +97,6 @@ contains
 
     ! setup log
     call IO_LOG_setup( myrank, ismaster )
-    call LogInit( IO_FID_CONF,       &
-                  IO_FID_LOG, IO_L,  &
-                  IO_FID_NML, IO_NML )
 
     ! setup profiler
     call PROF_setup
@@ -115,8 +110,8 @@ contains
   end subroutine SCALE_init
 
   subroutine SCALE_finalize
-    use gtool_file, only: &
-       FileCloseAll
+    use scale_file, only: &
+       FILE_Close_All
     use scale_process, only: &
        PRC_MPIfinish
     use scale_prof, only: &
@@ -125,7 +120,7 @@ contains
 
     call PROF_rapend( 'Main', 0 )
 
-    call FileCloseAll
+    call FILE_Close_All
     call PROF_rapreport
 
     ! stop mpi

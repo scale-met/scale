@@ -74,8 +74,8 @@ contains
       dims,    &
       timelen, &
       basename_org )
-    use gtool_file, only: &
-         FileGetShape
+    use scale_file, only: &
+         FILE_Get_Shape
     implicit none
 
     integer,          intent(out) :: dims(6)
@@ -89,7 +89,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atmos Input File Type: NICAM-NETCDF'
     basename = "ms_pres"//trim(basename_org)
-    call FileGetShape( dims_ncm(:), trim(basename), "ms_pres", 1, single=.true. )
+    call FILE_Get_Shape( basename, "ms_pres", & ! (in)
+                         dims_ncm(:),         & ! (out)
+                         single=.true.        ) ! (in)
     timelen = dims_ncm(4)
 
     ! full level
@@ -120,10 +122,10 @@ contains
        dims          )
     use scale_const, only: &
          D2R => CONST_D2R
-    use gtool_file, only: &
-         FileRead
+    use scale_file, only: &
+         FILE_Read
     use scale_external_io, only: &
-         ExternalFileRead
+         ExternalFILERead
     implicit none
 
     real(RP),         intent(out) :: lon_org(:,:)
@@ -139,17 +141,17 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosOpenNICAM]'
 
     basename = "ms_pres"//trim(basename_num)
-    call FileRead( read1DX(:), trim(basename), "lon", 1, 1, single=.true. )
+    call FILE_Read( basename, "lon", read1DX(:), single=.true. )
     do j = 1, dims(3)
        lon_org (:,j)  = read1DX(:) * D2R
     enddo
 
-    call FileRead( read1DY(:), trim(basename), "lat", 1, 1, single=.true. )
+    call FILE_Read( basename, "lat", read1DY(:), single=.true. )
     do i = 1, dims(2)
        lat_org (i,:)  = read1DY(:) * D2R
     enddo
 
-    call FileRead( read1DZ(:), trim(basename), "lev", 1, 1, single=.true. )
+    call FILE_Read( basename, "lev", read1DZ(:), single=.true. )
     do j = 1, dims(3)
     do i = 1, dims(2)
        cz_org(3:,i,j) = read1DZ(:)
@@ -340,8 +342,8 @@ contains
   subroutine ParentLandSetupNICAM( &
        ldims,    &
        basename_org )
-    use gtool_file, only: &
-         FileGetShape
+    use scale_file, only: &
+         FILE_Get_Shape
     implicit none
 
     integer,          intent(out) :: ldims(3)
@@ -354,7 +356,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Land Input File Type: NICAM-NETCDF'
     basename = "la_tg"//trim(basename_org)
-    call FileGetShape( dims_ncm(:), trim(basename), "la_tg", 1, single=.true. )
+    call FILE_Get_Shape( basename, "la_tg", & ! (in)
+                         dims_ncm(:),       & ! (out)
+                         single=.true.      ) ! (in)
     ! land
     ldims(1) = dims_ncm(3) ! vertical grid of land model
     ldims(2) = dims_ncm(1)
@@ -391,8 +395,8 @@ contains
          D2R   => CONST_D2R,   &
          TEM00 => CONST_TEM00, &
          EPS   => CONST_EPS
-    use gtool_file, only: &
-         FileRead
+    use scale_file, only: &
+         FILE_Read
     use scale_external_io, only: &
          ExternalFileRead, &
          ExternalFileReadOffset
@@ -420,15 +424,15 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[LandInputNICAM]'
 
     basename = "la_tg"//trim(basename_num)
-    call FileRead( read1DLZ(:), trim(basename), "lev", 1, 1, single=.true. )
+    call FILE_Read( basename, "lev", read1DLZ(:), single=.true. )
     lz_org(:) = read1DLZ(:)
 
-    call FileRead( read1DX(:), trim(basename), "lon", 1, 1, single=.true. )
+    call FILE_Read( basename, "lon", read1DX(:), single=.true. )
     do j = 1, ldims(3)
        llon_org (:,j)  = read1DX(:) * D2R
     enddo
 
-    call FileRead( read1DY(:), trim(basename), "lat", 1, 1, single=.true. )
+    call FILE_Read( basename, "lat", read1DY(:), single=.true. )
     do i = 1, ldims(2)
        llat_org (i,:)  = read1DY(:) * D2R
     enddo
@@ -498,8 +502,8 @@ contains
        odims,    &
        timelen, &
        basename_org )
-    use gtool_file, only: &
-         FileGetShape
+    use scale_file, only: &
+         FILE_Get_Shape
     implicit none
 
     integer,          intent(out) :: odims(2)
@@ -514,7 +518,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Ocean Input File Type: NICAM-NETCDF'
 
     basename = "oa_sst"//trim(basename_org)
-    call FileGetShape( dims_ncm(:), trim(basename), "oa_sst", 1, single=.true. )
+    call FILE_Get_Shape( basename, "oa_sst", &
+                         dims_ncm(:),        &
+                         single=.true.       )
     odims(1) = dims_ncm(1)
     odims(2) = dims_ncm(2)
 
@@ -538,8 +544,8 @@ contains
        odims         )
     use scale_const, only: &
          D2R => CONST_D2R
-    use gtool_file, only: &
-         FileRead
+    use scale_file, only: &
+         FILE_Read
     use scale_external_io, only: &
          ExternalFileRead
     implicit none
@@ -557,12 +563,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[OceanOpenNICAM]'
 
     basename = "oa_sst"//trim(basename_num)
-    call FileRead( read1DX(:), trim(basename), "lon", 1, 1, single=.true. )
+    call FILE_Read( basename, "lon", read1DX(:), single=.true. )
     do j = 1, odims(2)
        olon_org (:,j)  = read1DX(:) * D2R
     enddo
 
-    call FileRead( read1DY(:), trim(basename), "lat", 1, 1, single=.true. )
+    call FILE_Read( basename, "lat", read1DY(:), single=.true. )
     do i = 1, odims(1)
        olat_org (i,:)  = read1DY(:) * D2R
     enddo
@@ -594,8 +600,6 @@ contains
          D2R   => CONST_D2R,   &
          TEM00 => CONST_TEM00, &
          EPS   => CONST_EPS
-    use gtool_file, only: &
-         FileRead
     use scale_external_io, only: &
          ExternalFileRead, &
          ExternalFileReadOffset

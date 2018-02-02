@@ -62,10 +62,10 @@ module mod_net2g_vars
   integer,         public :: PRC_NUM_X
   integer,         public :: PRC_NUM_Y
   integer,         public :: TIME_STARTDATE(6)
-  real(DP),        public :: HISTORY_DEFAULT_TINTERVAL
-  character(CMID), public :: HISTORY_DEFAULT_BASENAME
-  character(5),    public :: HISTORY_DEFAULT_TUNIT
-  character(CSHT), public :: HISTORY_DEFAULT_ZDIM = 'native'
+  real(DP),        public :: FILE_HISTORY_DEFAULT_TINTERVAL
+  character(CMID), public :: FILE_HISTORY_DEFAULT_BASENAME
+  character(5),    public :: FILE_HISTORY_DEFAULT_TUNIT
+  character(CSHT), public :: FILE_HISTORY_DEFAULT_ZDIM = 'native'
   logical,         public :: HIST_BND = .true.
 
   real(DP),        public :: MPRJ_basepoint_lon

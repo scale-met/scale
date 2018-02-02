@@ -12,7 +12,6 @@ all: doxygen tex
 
 dox:
 	$(MAKE) -C $(TOPDIR)/dc_utils/doc dox
-	$(MAKE) -C $(TOPDIR)/gtool/doc dox
 	$(MAKE) -C $(TOPDIR)/scalelib/doc dox
 	$(MAKE) -C $(TOPDIR)/scale-rm/doc dox
 
@@ -29,7 +28,6 @@ clean:
 
 allclean: clean
 	$(MAKE) -C $(TOPDIR)/dc_utils/doc clean
-	$(MAKE) -C $(TOPDIR)/gtool/doc clean
 	$(MAKE) -C $(TOPDIR)/scalelib/doc clean
 	$(MAKE) -C $(TOPDIR)/scale-rm/doc clean
 

@@ -16,8 +16,6 @@ module scale_external_io
   !
   !++ used modules
   !
-  use gtool_file, only: &
-     FileMakeFname
   use scale_precision
   use scale_stdio
   use scale_grid_index
@@ -65,7 +63,7 @@ module scale_external_io
   !
   !++ Public parameters & variables
   !
-  integer, public, parameter :: iSCALE  = 1  ! use gtool, coz it's not external
+  integer, public, parameter :: iSCALE  = 1  ! use scale_file, coz it's not external
   integer, public, parameter :: iWRFARW = 2
   integer, public, parameter :: iNICAM  = 3
   integer, public, parameter :: iGrADS  = 4
@@ -1544,6 +1542,8 @@ contains
       myrank,        & ! (in)
       single         & ! (in) optional
       )
+  use scale_file, only: &
+     FILE_Make_Fname
     implicit none
 
     character(len=*), intent(out) :: fname
@@ -1560,20 +1560,14 @@ contains
        if ( single ) then
           fname = trim(basename)
        else
-          call FileMakeFname(fname,trim(basename),'_',myrank,4)
+          call FILE_Make_Fname( basename , '_', myrank, 4, fname )
        endif
     elseif( mdlid == iNICAM )then      !TYPE: NICAM-NETCDF
        if ( single ) then
           fname = trim(basename)//'.peall.nc'
        else
-          call FileMakeFname(fname,trim(basename),'anl.pe',myrank,6)
+          call FILE_Make_Fname( basename , 'anl.pe', myrank, 6, fname )
        endif
-    !elseif( mdlid == iGrADS )then      !TYPE: GrADS
-    !   if ( single ) then
-    !      fname = trim(basename)//'.anl'
-    !   else
-    !      call FileMakeFname(fname,trim(basename),'anl.pe',myrank,6)
-    !   endif
     else
        write(*,*) 'xxx failed, wrong filetype: [scale_external_io]/[ExternalFileMakeFName]'
        call PRC_MPIstop
@@ -1583,7 +1577,7 @@ contains
   end subroutine ExternalFileMakeFName
 
   !-----------------------------------------------------------------------------
-  ! ExternalMakeFName
+  ! ExternalTakeDimension
   !-----------------------------------------------------------------------------
   subroutine ExternalTakeDimension( &
       dims,          & ! (out)

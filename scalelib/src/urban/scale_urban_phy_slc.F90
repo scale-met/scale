@@ -293,8 +293,8 @@ contains
     use scale_const, only: &
        Rdry => CONST_Rdry, &
        Rvap => CONST_Rvap
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_atmos_saturation, only: &
        qsat => ATMOS_SATURATION_pres2qsat_all
     use scale_bulkflux, only: &
@@ -606,19 +606,19 @@ contains
     end do
     end do
 
-    call HIST_in( SHR  (:,:), 'URBAN_SHR',   'urban sensible heat flux on roof',    'W/m2' )
-    call HIST_in( SHB  (:,:), 'URBAN_SHB',   'urban sensible heat flux on wall',    'W/m2' )
-    call HIST_in( SHG  (:,:), 'URBAN_SHG',   'urban sensible heat flux on road',    'W/m2' )
-    call HIST_in( LHR  (:,:), 'URBAN_LHR',   'urban latent heat flux on roof',      'W/m2' )
-    call HIST_in( LHB  (:,:), 'URBAN_LHB',   'urban latent heat flux on wall',      'W/m2' )
-    call HIST_in( LHG  (:,:), 'URBAN_LHG',   'urban latent heat flux on road',      'W/m2' )
-    call HIST_in( GHR  (:,:), 'URBAN_GHR',   'urban ground heat flux on roof',      'W/m2' )
-    call HIST_in( GHB  (:,:), 'URBAN_GHB',   'urban ground heat flux on wall',      'W/m2' )
-    call HIST_in( GHG  (:,:), 'URBAN_GHG',   'urban ground heat flux on road',      'W/m2' )
-    call HIST_in( RNR  (:,:), 'URBAN_RNR',   'urban net radiation on roof',         'W/m2' )
-    call HIST_in( RNB  (:,:), 'URBAN_RNB',   'urban net radiation on wall',         'W/m2' )
-    call HIST_in( RNG  (:,:), 'URBAN_RNG',   'urban net radiation on road',         'W/m2' )
-    call HIST_in( RNgrd(:,:), 'URBAN_RNgrd', 'urban grid average of net radiation', 'W/m2' )
+    call FILE_HISTORY_in( SHR  (:,:), 'URBAN_SHR',   'urban sensible heat flux on roof',    'W/m2' )
+    call FILE_HISTORY_in( SHB  (:,:), 'URBAN_SHB',   'urban sensible heat flux on wall',    'W/m2' )
+    call FILE_HISTORY_in( SHG  (:,:), 'URBAN_SHG',   'urban sensible heat flux on road',    'W/m2' )
+    call FILE_HISTORY_in( LHR  (:,:), 'URBAN_LHR',   'urban latent heat flux on roof',      'W/m2' )
+    call FILE_HISTORY_in( LHB  (:,:), 'URBAN_LHB',   'urban latent heat flux on wall',      'W/m2' )
+    call FILE_HISTORY_in( LHG  (:,:), 'URBAN_LHG',   'urban latent heat flux on road',      'W/m2' )
+    call FILE_HISTORY_in( GHR  (:,:), 'URBAN_GHR',   'urban ground heat flux on roof',      'W/m2' )
+    call FILE_HISTORY_in( GHB  (:,:), 'URBAN_GHB',   'urban ground heat flux on wall',      'W/m2' )
+    call FILE_HISTORY_in( GHG  (:,:), 'URBAN_GHG',   'urban ground heat flux on road',      'W/m2' )
+    call FILE_HISTORY_in( RNR  (:,:), 'URBAN_RNR',   'urban net radiation on roof',         'W/m2' )
+    call FILE_HISTORY_in( RNB  (:,:), 'URBAN_RNB',   'urban net radiation on wall',         'W/m2' )
+    call FILE_HISTORY_in( RNG  (:,:), 'URBAN_RNG',   'urban net radiation on road',         'W/m2' )
+    call FILE_HISTORY_in( RNgrd(:,:), 'URBAN_RNgrd', 'urban grid average of net radiation', 'W/m2' )
 
     return
   end subroutine URBAN_PHY_SLC

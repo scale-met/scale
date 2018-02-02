@@ -850,8 +850,8 @@ contains
     use scale_atmos_phy_mp_common, only: &
        MP_negative_fixer => ATMOS_PHY_MP_negative_fixer, &
        MP_precipitation  => ATMOS_PHY_MP_precipitation
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     implicit none
 
     real(RP), intent(inout) :: DENS     (KA,IA,JA)
@@ -1360,8 +1360,8 @@ contains
        enddo
     enddo
 
-    call HIST_in( QHYD_out(:,:,:,1), 'QC', 'Mixing ratio of QC', 'kg/kg' )
-    call HIST_in( QHYD_out(:,:,:,2), 'QR', 'Mixing ratio of QR', 'kg/kg' )
+    call FILE_HISTORY_in( QHYD_out(:,:,:,1), 'QC', 'Mixing ratio of QC', 'kg/kg' )
+    call FILE_HISTORY_in( QHYD_out(:,:,:,2), 'QR', 'Mixing ratio of QR', 'kg/kg' )
 
     if ( nspc > 1 ) then
        do m = ic, id ! columnar,plate,dendrite = ice
@@ -1414,10 +1414,10 @@ contains
           enddo
        enddo
 
-       call HIST_in( QHYD_out(:,:,:,3), 'QI', 'Mixing ratio of QI', 'kg/kg' )
-       call HIST_in( QHYD_out(:,:,:,4), 'QS', 'Mixing ratio of QS', 'kg/kg' )
-       call HIST_in( QHYD_out(:,:,:,5), 'QG', 'Mixing ratio of QG', 'kg/kg' )
-       call HIST_in( QHYD_out(:,:,:,6), 'QH', 'Mixing ratio of QH', 'kg/kg' )
+       call FILE_HISTORY_in( QHYD_out(:,:,:,3), 'QI', 'Mixing ratio of QI', 'kg/kg' )
+       call FILE_HISTORY_in( QHYD_out(:,:,:,4), 'QS', 'Mixing ratio of QS', 'kg/kg' )
+       call FILE_HISTORY_in( QHYD_out(:,:,:,5), 'QG', 'Mixing ratio of QG', 'kg/kg' )
+       call FILE_HISTORY_in( QHYD_out(:,:,:,6), 'QH', 'Mixing ratio of QH', 'kg/kg' )
     endif
 
     return

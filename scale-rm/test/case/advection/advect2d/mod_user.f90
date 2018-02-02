@@ -208,8 +208,8 @@ contains
        DENS, &
        RHOT, QTRC
 
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
 
     implicit none
 
@@ -271,9 +271,9 @@ contains
        if ( mod(NOWTSEC, 10.0_RP) == 0 ) then
           write(*,*) "t=", NOWTSEC, "l2=", l2_error, "linf=", linf_error
        end if
-       call HIST_in( l2_error, 'l2error', 'l2error', '1' )
-       call HIST_in( linf_error, 'linferror', 'linferror', '1' )
-!       call HIST_in( (QTRC(:,:,:,I_NC) - ExactSol)**2, 'NC_diff', 'NC_diff', '1' )
+       call FILE_HISTORY_in( l2_error, 'l2error', 'l2error', '1' )
+       call FILE_HISTORY_in( linf_error, 'linferror', 'linferror', '1' )
+!       call FILE_HISTORY_in( (QTRC(:,:,:,I_NC) - ExactSol)**2, 'NC_diff', 'NC_diff', '1' )
 
        return
     end if

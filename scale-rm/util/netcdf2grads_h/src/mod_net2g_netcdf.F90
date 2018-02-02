@@ -214,7 +214,7 @@ contains
     !---------------------------------------------------------------------------
 
     write ( num,'(I6.6)' ) imnge
-    ncfile = trim(IDIR)//"/"//trim(HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
+    ncfile = trim(IDIR)//"/"//trim(FILE_HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
     if ( LOUT ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (grd): ", trim(ncfile)
 
     call set_index_readbuf_grid( nm, nxgp, nygp, is, ie, js, je )
@@ -273,7 +273,7 @@ contains
     !---------------------------------------------------------------------------
 
     write ( num,'(I6.6)' ) imnge
-    ncfile = trim(IDIR)//"/"//trim(HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
+    ncfile = trim(IDIR)//"/"//trim(FILE_HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
     if ( LOUT ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (",trim(sfc_lev_name),"): ", trim(ncfile)
 
     istat = nf90_open( trim(ncfile), nf90_nowrite, ncid )
@@ -348,7 +348,7 @@ contains
     !---------------------------------------------------------------------------
 
     write ( num,'(I6.6)' ) imnge
-    ncfile = trim(IDIR)//"/"//trim(HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
+    ncfile = trim(IDIR)//"/"//trim(FILE_HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
     if ( LOUT .and. LOG_DBUG ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (var): ", trim(ncfile)
 
     if ( atype == a_conv ) then
@@ -512,7 +512,7 @@ contains
     yproc = PRC_NUM_Y
 
     write ( num,'(I6.6)' ) imnge
-    ncfile = trim(IDIR)//"/"//trim(HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
+    ncfile = trim(IDIR)//"/"//trim(FILE_HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
     if ( LOUT .and. LOG_DBUG ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (ref): ", trim(ncfile)
 
     call irank2ixjy( imnge, ix, jy )

@@ -424,8 +424,8 @@ contains
        THERMODYN_r  => ATMOS_THERMODYN_r
     use scale_atmos_saturation, only : &
        moist_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use mod_admin_time, only: &
        do_phy_rd => TIME_DOATMOS_PHY_RD, &
        do_phy_sf => TIME_DOATMOS_PHY_SF
@@ -738,8 +738,8 @@ contains
           end do
           end do
 
-          call HIST_in( flux_rad(:,:,:), 'RADFLUX_DYCOMS', 'net radiation flux', 'W/m2', nohalo=.true. )
-          call HIST_in( Zi      (:,:),   'Zi',             'cloud top height'  , 'm'   , nohalo=.true. )
+          call FILE_HISTORY_in( flux_rad(:,:,:), 'RADFLUX_DYCOMS', 'net radiation flux', 'W/m2', nohalo=.true. )
+          call FILE_HISTORY_in( Zi      (:,:),   'Zi',             'cloud top height'  , 'm'   , nohalo=.true. )
 
        elseif( USER_LS_TYPE == 'RICO' ) then
 
@@ -850,8 +850,8 @@ contains
           enddo
           enddo
 
-          call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2' )
-          call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2' )
+          call FILE_HISTORY_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2' )
+          call FILE_HISTORY_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2' )
 
           !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
@@ -919,8 +919,8 @@ contains
           enddo
           enddo
 
-          call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2' )
-          call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2' )
+          call FILE_HISTORY_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2' )
+          call FILE_HISTORY_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2' )
 
           !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE

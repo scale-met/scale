@@ -109,8 +109,8 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_grid_real, only: &
        REAL_Z1
     use scale_roughness, only: &
@@ -243,14 +243,13 @@ contains
                        OCEAN_SFLX_evap(:,:),   & ! [IN]
                        dt                      ) ! [IN]
 
-       call HIST_in( OCEAN_TEMP_t      (:,:,:),    'OCEAN_TEMP_t',     'tendency of OCEAN_TEMP',     'K' )
-
-       call HIST_in( OCEAN_SFC_TEMP_t  (:,:),      'OCEAN_SFC_TEMP_t', 'tendency of OCEAN_SFC_TEMP', 'K' )
-       call HIST_in( OCEAN_SFC_albedo_t(:,:,I_LW), 'OCEAN_ALB_LW_t',   'tendency of OCEAN_ALB_LW',   '1' )
-       call HIST_in( OCEAN_SFC_albedo_t(:,:,I_SW), 'OCEAN_ALB_SW_t',   'tendency of OCEAN_ALB_SW',   '1' )
-       call HIST_in( OCEAN_SFC_Z0M_t   (:,:),      'OCEAN_SFC_Z0M_t',  'tendency of OCEAN_SFC_Z0M',  'm' )
-       call HIST_in( OCEAN_SFC_Z0H_t   (:,:),      'OCEAN_SFC_Z0H_t',  'tendency of OCEAN_SFC_Z0H',  'm' )
-       call HIST_in( OCEAN_SFC_Z0E_t   (:,:),      'OCEAN_SFC_Z0E_t',  'tendency of OCEAN_SFC_Z0E',  'm' )
+       call FILE_HISTORY_in( OCEAN_TEMP_t      (:,:,:),    'OCEAN_TEMP_t',     'tendency of OCEAN_TEMP',     'K', dim_type='OXY' )
+       call FILE_HISTORY_in( OCEAN_SFC_TEMP_t  (:,:),      'OCEAN_SFC_TEMP_t', 'tendency of OCEAN_SFC_TEMP', 'K', dim_type='XY' )
+       call FILE_HISTORY_in( OCEAN_SFC_albedo_t(:,:,I_LW), 'OCEAN_ALB_LW_t',   'tendency of OCEAN_ALB_LW',   '1', dim_type='XY' )
+       call FILE_HISTORY_in( OCEAN_SFC_albedo_t(:,:,I_SW), 'OCEAN_ALB_SW_t',   'tendency of OCEAN_ALB_SW',   '1', dim_type='XY' )
+       call FILE_HISTORY_in( OCEAN_SFC_Z0M_t   (:,:),      'OCEAN_SFC_Z0M_t',  'tendency of OCEAN_SFC_Z0M',  'm', dim_type='XY' )
+       call FILE_HISTORY_in( OCEAN_SFC_Z0H_t   (:,:),      'OCEAN_SFC_Z0H_t',  'tendency of OCEAN_SFC_Z0H',  'm', dim_type='XY' )
+       call FILE_HISTORY_in( OCEAN_SFC_Z0E_t   (:,:),      'OCEAN_SFC_Z0E_t',  'tendency of OCEAN_SFC_Z0E',  'm', dim_type='XY' )
 
     end if
 

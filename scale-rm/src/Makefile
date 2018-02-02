@@ -18,7 +18,7 @@ PPNAME   = scale-rm_pp
 BINS = $(BINDIR)/$(BINNAME)  \
        $(BINDIR)/$(INITNAME) \
        $(BINDIR)/$(PPNAME)
-LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+LIBS = $(LIBDIR)/libscale.a
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
   DEPENDLIB = $(LIBS)
@@ -108,8 +108,6 @@ OBJS = 	\
 all:
 	$(MAKE) envlog
 	$(MAKE) makedir
-	$(MAKE) -C $(DCUTILSDIR)
-	$(MAKE) -C $(GTOOLDIR)
 	$(MAKE) -C $(SCALELIBDIR)/src BUILD_DIR=$(BUILD_DIR)
 	@echo;echo "Entering scale-rm...";echo "Current version is " $(VERSION)
 	$(MAKE) makebin
@@ -120,13 +118,7 @@ makedir:
 	mkdir -p $(LIBDIR)
 	mkdir -p $(BUILD_DIR)
 
-$(LIBDIR)/libdcutils.a :
-	$(MAKE) -C $(DCUTILSDIR)
-
-$(LIBDIR)/libgtool.a : $(LIBDIR)/libdcutils.a
-	$(MAKE) -C $(GTOOLDIR)
-
-$(LIBDIR)/libscale.a : $(LIBDIR)/libdcutils.a $(LIBDIR)/libgtool.a
+$(LIBDIR)/libscale.a:
 	$(MAKE) -C $(SCALELIBDIR)/src
 
 makebin: $(BINS)
@@ -147,8 +139,6 @@ $(BUILD_DIR)/mod_user.o : mod_user.f90 $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(SUB
 
 
 allclean: distclean
-	$(MAKE) -C $(DCUTILSDIR)      allclean
-	$(MAKE) -C $(GTOOLDIR)        allclean
 	$(MAKE) -C $(SCALELIBDIR)/src allclean
 	rm -f $(BINDIR)/$(BINNAME)
 	rm -f $(BINDIR)/$(INITNAME)
@@ -174,12 +164,12 @@ dependency:
 	make $(patsubst %.f90,%.o,$<)
 
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALERMDIR)/include $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(BUILD_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALERMDIR)/include $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(BUILD_DIR) -o $@ -c $<
 
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-.PHONY : clean distclean allclean dcutils gtool scalelib depend dependency
+.PHONY : clean distclean allclean scalelib depend dependency
 
 include $(TOPDIR)/utils/Make_environments
 

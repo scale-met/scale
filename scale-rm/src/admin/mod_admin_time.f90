@@ -113,8 +113,8 @@ contains
   !> Setup
   subroutine ADMIN_TIME_setup( &
        setup_TimeIntegration )
-    use gtool_file, only: &
-       FileGetDatainfo
+    use scale_file, only: &
+       FILE_Get_Attribute
     use scale_process, only: &
        PRC_myrank,  &
        PRC_MPIstop, &
@@ -271,7 +271,7 @@ contains
 
     integer              :: dateday
     real(DP)             :: datesec
-    real(DP)             :: cftime
+    real(DP)             :: cftime(1)
     character(len=H_MID) :: cfunits
 
     real(DP)          :: TIME_DURATIONSEC
@@ -504,15 +504,22 @@ contains
     !--- calculate time
     if ( TIME_STARTDATE(1) == -999 ) then
        if ( RESTART_IN_BASENAME /= '' ) then ! read start time from the restart data
-          call FileGetDatainfo( RESTART_IN_BASENAME, & ! [IN]
-                                'DENS',              & ! [IN]
-                                PRC_myrank,          & ! [IN]
-                                0,                   & ! [IN] step
-                                time_start = cftime, & ! [OUT]
-                                time_units = cfunits ) ! [OUT]
+          call FILE_Get_Attribute( RESTART_IN_BASENAME, & ! [IN]
+                                   "global",            & ! [IN]
+                                   'time_start',        & ! [IN]
+                                   cftime(:),           & ! [OUT]
+                                   rankid = PRC_myrank, & ! [IN]
+                                   single = .false.     ) ! [IN]
+
+          call FILE_Get_Attribute( RESTART_IN_BASENAME, & ! [IN]
+                                   "global",            & ! [IN]
+                                   'time_units',        & ! [IN]
+                                   cfunits,             & ! [OUT]
+                                   rankid = PRC_myrank, & ! [IN]
+                                   single = .false.     ) ! [IN]
 
           dateday = 0
-          datesec = CALENDAR_CFunits2sec( cftime, cfunits, 0 )
+          datesec = CALENDAR_CFunits2sec( cftime(1), cfunits, 0 )
 
           call CALENDAR_adjust_daysec( dateday, datesec )
 

@@ -137,8 +137,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Read land grid
   subroutine LAND_GRID_read
-    use gtool_file, only: &
-       FileRead
+    use scale_file, only: &
+       FILE_Read
     use scale_process, only: &
        PRC_myrank, &
        PRC_MPIstop
@@ -161,13 +161,13 @@ contains
 
     write(bname,'(A,A,F15.3)') trim(LAND_GRID_IN_BASENAME)
 
-    call FileRead( GRID_LCZ (:), bname, 'LCZ',  1, PRC_myrank )
-    call FileRead( GRID_LCDZ(:), bname, 'LCDZ', 1, PRC_myrank )
-    call FileRead( GRID_LFZ (:), bname, 'LFZ',  1, PRC_myrank )
-
-    call FileRead( tmp_CBFZ (:), bname, 'CBFZ', 1, PRC_myrank )
-    call FileRead( tmp_CBFX (:), bname, 'CBFX', 1, PRC_myrank )
-    call FileRead( tmp_CBFY (:), bname, 'CBFY', 1, PRC_myrank )
+    call FILE_Read( bname, 'LCZ',  GRID_LCZ (:) )
+    call FILE_Read( bname, 'LCDZ', GRID_LCDZ(:) )
+    call FILE_Read( bname, 'LFZ',  GRID_LFZ (:) )
+                                                 
+    call FILE_Read( bname, 'CBFZ', tmp_CBFZ (:) )
+    call FILE_Read( bname, 'CBFX', tmp_CBFX (:) )
+    call FILE_Read( bname, 'CBFY', tmp_CBFY (:) )
 
     do i = 1, IA
        if ( tmp_CBFX(i) /= GRID_CBFX(i) ) then

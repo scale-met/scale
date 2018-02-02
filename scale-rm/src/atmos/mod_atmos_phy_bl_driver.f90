@@ -148,8 +148,8 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_time, only: &
        dt_BL => TIME_DTSEC_ATMOS_PHY_BL
     use scale_atmos_phy_bl_mynn, only: &
@@ -249,17 +249,17 @@ contains
           end do
        end select
 
-       call HIST_in( Nu(:,:,:),        'Nu_BL',     'eddy viscosity',     'm2/s',      nohalo=.true. )
-       call HIST_in( Kh(:,:,:),        'Ku_BL',     'eddy diffusion',     'm2/s',      nohalo=.true. )
+       call FILE_HISTORY_in( Nu(:,:,:),        'Nu_BL',     'eddy viscosity',     'm2/s',      fill_halo=.true. )
+       call FILE_HISTORY_in( Kh(:,:,:),        'Ku_BL',     'eddy diffusion',     'm2/s',      fill_halo=.true. )
 
-       call HIST_in( RHOU_t_BL(:,:,:), 'RHOU_t_BL', 'MOMX tendency (BL)', 'kg/m2/s2',  nohalo=.true. )
-       call HIST_in( RHOV_t_BL(:,:,:), 'RHOV_t_BL', 'MOMY tendency (BL)', 'kg/m2/s2',  nohalo=.true. )
-       call HIST_in( RHOT_t_BL(:,:,:), 'RHOT_t_BL', 'RHOT tendency (BL)', 'K.kg/m3/s', nohalo=.true. )
+       call FILE_HISTORY_in( RHOU_t_BL(:,:,:), 'RHOU_t_BL', 'MOMX tendency (BL)', 'kg/m2/s2',  fill_halo=.true. )
+       call FILE_HISTORY_in( RHOV_t_BL(:,:,:), 'RHOV_t_BL', 'MOMY tendency (BL)', 'kg/m2/s2',  fill_halo=.true. )
+       call FILE_HISTORY_in( RHOT_t_BL(:,:,:), 'RHOT_t_BL', 'RHOT tendency (BL)', 'K.kg/m3/s', fill_halo=.true. )
 
        do iq = 1, QA
           if ( .not. TRACER_ADVC(iq) ) cycle
-          call HIST_in( RHOQ_t_BL(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_BL',                      &
-                        'RHO*'//trim(TRACER_NAME(iq))//' tendency (BL)', 'kg/m3/s', nohalo=.true. )
+          call FILE_HISTORY_in( RHOQ_t_BL(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_BL',                      &
+                        'RHO*'//trim(TRACER_NAME(iq))//' tendency (BL)', 'kg/m3/s', fill_halo=.true. )
        enddo
 
        if ( STATISTICS_checktotal ) then

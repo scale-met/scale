@@ -136,8 +136,8 @@ contains
     use scale_time, only: &
        NOWSEC  => TIME_NOWSEC, &
        DTSEC => TIME_DTSEC
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     implicit none
 
     real(RP) :: PT_diff(KA,IA,JA)
@@ -169,8 +169,8 @@ contains
        enddo
        enddo
 
-       call HIST_in( PT_diff(:,:,:), 'PT_diff', 'PT perturbation', 'K' )
-       call HIST_in( U_diff(:,:,:), 'U_diff', 'U perturbation', 'm/s', xdim='half' )
+       call FILE_HISTORY_in( PT_diff(:,:,:), 'PT_diff', 'PT perturbation', 'K' )
+       call FILE_HISTORY_in( U_diff(:,:,:), 'U_diff', 'U perturbation', 'm/s', dim_type='ZXHY' )
     endif
 
     return

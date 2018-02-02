@@ -153,8 +153,8 @@ contains
        DTSEC => TIME_DTSEC, &
        NOWTSEC => TIME_NOWSEC
     use scale_gridtrans
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_comm
     implicit none
 

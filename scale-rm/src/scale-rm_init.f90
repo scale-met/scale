@@ -14,8 +14,6 @@ program scalerm_launcher
   !
   !++ used modules
   !
-  use gtool_file, only: &
-     FileCloseAll
   use scale_precision
   use scale_stdio
   use scale_prof

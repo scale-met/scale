@@ -1404,8 +1404,8 @@ contains
        moist_psat_ice      => ATMOS_SATURATION_psat_ice
     use scale_atmos_phy_mp_common, only: &
        MP_precipitation => ATMOS_PHY_MP_precipitation
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     implicit none
 
     real(RP), intent(inout) :: DENS     (KA,IA,JA)
@@ -2139,16 +2139,16 @@ contains
 
     endif
 
-    call HIST_in( FLX_hydro(:,:,:,I_mp_QC), 'pflux_QC', 'precipitation flux of QC', 'kg/m2/s', nohalo=.true. )
-    call HIST_in( FLX_hydro(:,:,:,I_mp_QR), 'pflux_QR', 'precipitation flux of QR', 'kg/m2/s', nohalo=.true. )
-    call HIST_in( FLX_hydro(:,:,:,I_mp_QI), 'pflux_QI', 'precipitation flux of QI', 'kg/m2/s', nohalo=.true. )
-    call HIST_in( FLX_hydro(:,:,:,I_mp_QS), 'pflux_QS', 'precipitation flux of QS', 'kg/m2/s', nohalo=.true. )
-    call HIST_in( FLX_hydro(:,:,:,I_mp_QG), 'pflux_QG', 'precipitation flux of QG', 'kg/m2/s', nohalo=.true. )
-    call HIST_in( FLX_hydro(:,:,:,I_mp_NC), 'pflux_QC', 'precipitation flux of NC', 'kg/m2/s', nohalo=.true. )
-    call HIST_in( FLX_hydro(:,:,:,I_mp_NR), 'pflux_QR', 'precipitation flux of NR', 'kg/m2/s', nohalo=.true. )
-    call HIST_in( FLX_hydro(:,:,:,I_mp_NI), 'pflux_QI', 'precipitation flux of NI', 'kg/m2/s', nohalo=.true. )
-    call HIST_in( FLX_hydro(:,:,:,I_mp_NS), 'pflux_QS', 'precipitation flux of NS', 'kg/m2/s', nohalo=.true. )
-    call HIST_in( FLX_hydro(:,:,:,I_mp_NG), 'pflux_QG', 'precipitation flux of NG', 'kg/m2/s', nohalo=.true. )
+    call FILE_HISTORY_in( FLX_hydro(:,:,:,I_mp_QC), 'pflux_QC', 'precipitation flux of QC', 'kg/m2/s', fill_halo=.true. )
+    call FILE_HISTORY_in( FLX_hydro(:,:,:,I_mp_QR), 'pflux_QR', 'precipitation flux of QR', 'kg/m2/s', fill_halo=.true. )
+    call FILE_HISTORY_in( FLX_hydro(:,:,:,I_mp_QI), 'pflux_QI', 'precipitation flux of QI', 'kg/m2/s', fill_halo=.true. )
+    call FILE_HISTORY_in( FLX_hydro(:,:,:,I_mp_QS), 'pflux_QS', 'precipitation flux of QS', 'kg/m2/s', fill_halo=.true. )
+    call FILE_HISTORY_in( FLX_hydro(:,:,:,I_mp_QG), 'pflux_QG', 'precipitation flux of QG', 'kg/m2/s', fill_halo=.true. )
+    call FILE_HISTORY_in( FLX_hydro(:,:,:,I_mp_NC), 'pflux_QC', 'precipitation flux of NC', 'kg/m2/s', fill_halo=.true. )
+    call FILE_HISTORY_in( FLX_hydro(:,:,:,I_mp_NR), 'pflux_QR', 'precipitation flux of NR', 'kg/m2/s', fill_halo=.true. )
+    call FILE_HISTORY_in( FLX_hydro(:,:,:,I_mp_NI), 'pflux_QI', 'precipitation flux of NI', 'kg/m2/s', fill_halo=.true. )
+    call FILE_HISTORY_in( FLX_hydro(:,:,:,I_mp_NS), 'pflux_QS', 'precipitation flux of NS', 'kg/m2/s', fill_halo=.true. )
+    call FILE_HISTORY_in( FLX_hydro(:,:,:,I_mp_NG), 'pflux_QG', 'precipitation flux of NG', 'kg/m2/s', fill_halo=.true. )
 
     do j = JS, JE
     do i = IS, IE

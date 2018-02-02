@@ -145,8 +145,8 @@ contains
        ATMOS_PHY_MP_setup
     use scale_atmos_phy_mp_tomita08, only: &
        ATMOS_PHY_MP_TOMITA08_setup
-    use scale_history, only: &
-       HIST_reg
+    use scale_file_history, only: &
+       FILE_HISTORY_reg
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE, &
        ATMOS_sw_phy_mp
@@ -230,7 +230,7 @@ contains
     if ( MP_do_precipitation ) then
        allocate( hist_vterm_id(QS_MP+1:QE_MP) )
        do iq = QS_MP+1, QE_MP
-          call HIST_reg( hist_vterm_id(iq), 'Vterm_'//trim(TRACER_NAME(iq)), 'terminal velocity of '//trim(TRACER_NAME(iq)), 'm/s', ndim=3 )
+          call FILE_HISTORY_reg( 'Vterm_'//trim(TRACER_NAME(iq)), 'terminal velocity of '//trim(TRACER_NAME(iq)), 'm/s', hist_vterm_id(iq) )
        end do
     end if
 
@@ -327,8 +327,8 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
        QHA,   &
@@ -344,9 +344,9 @@ contains
     use scale_atmos_phy_mp_tomita08, only: &
        ATMOS_PHY_MP_TOMITA08_adjustment, &
        ATMOS_PHY_MP_TOMITA08_terminal_velocity
-    use scale_history, only: &
-       HIST_query, &
-       HIST_put
+    use scale_file_history, only: &
+       FILE_HISTORY_query, &
+       FILE_HISTORY_put
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE
     use mod_atmos_vars, only: &
@@ -558,7 +558,7 @@ contains
           hist_vterm_idx(:) = -1
           ih = 0
           do iq = QS_MP+1, QE_MP
-             call HIST_query( hist_vterm_id(iq), flag )
+             call FILE_HISTORY_query( hist_vterm_id(iq), flag )
              if ( flag ) then
                 ih = ih + 1
                 hist_vterm_idx(iq) = ih
@@ -700,7 +700,7 @@ contains
           ! history output
           do iq = QS_MP+1, QE_MP
              if ( hist_vterm_idx(iq) > 0 ) &
-                call HIST_put( hist_vterm_id(iq), vterm_hist(:,:,:,hist_vterm_idx(iq)) )
+                call FILE_HISTORY_put( hist_vterm_id(iq), vterm_hist(:,:,:,hist_vterm_idx(iq)) )
           end do
           if ( allocated( vterm_hist ) ) deallocate( vterm_hist )
 
@@ -716,23 +716,23 @@ contains
        end do
        end do
 
-       call HIST_in( SFLX_rain(:,:),   'RAIN_MP',   'surface rain rate by MP',          'kg/m2/s',  nohalo=.true. )
-       call HIST_in( SFLX_snow(:,:),   'SNOW_MP',   'surface snow rate by MP',          'kg/m2/s',  nohalo=.true. )
-       call HIST_in( precip   (:,:),   'PREC_MP',   'surface precipitation rate by MP', 'kg/m2/s',  nohalo=.true. )
-       call HIST_in( EVAPORATE(:,:,:), 'EVAPORATE', 'evaporated cloud number',          'num/m3/s', nohalo=.true. )
+       call FILE_HISTORY_in( SFLX_rain(:,:),   'RAIN_MP',   'surface rain rate by MP',          'kg/m2/s',  fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_snow(:,:),   'SNOW_MP',   'surface snow rate by MP',          'kg/m2/s',  fill_halo=.true. )
+       call FILE_HISTORY_in( precip   (:,:),   'PREC_MP',   'surface precipitation rate by MP', 'kg/m2/s',  fill_halo=.true. )
+       call FILE_HISTORY_in( EVAPORATE(:,:,:), 'EVAPORATE', 'evaporated cloud number',          'num/m3/s', fill_halo=.true. )
 
-       call HIST_in( DENS_t_MP(:,:,:), 'DENS_t_MP', 'tendency DENS in MP',         'kg/m3/s'  , nohalo=.true. )
-       call HIST_in( MOMZ_t_MP(:,:,:), 'MOMZ_t_MP', 'tendency MOMZ in MP',         'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( RHOU_t_MP(:,:,:), 'RHOU_t_MP', 'tendency RHOU in MP',         'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( RHOV_t_MP(:,:,:), 'RHOV_t_MP', 'tendency RHOV in MP',         'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( RHOT_t_MP(:,:,:), 'RHOT_t_MP', 'tendency RHOT in MP',         'K*kg/m3/s', nohalo=.true. )
-       call HIST_in( RHOH_MP  (:,:,:), 'RHOH_MP',   'diabatic heating rate in MP', 'J/m3/s',    nohalo=.true. )
-       call HIST_in( MOMX_t_MP(:,:,:), 'MOMX_t_MP', 'tendency MOMX in MP',         'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( MOMY_t_MP(:,:,:), 'MOMY_t_MP', 'tendency MOMY in MP',         'kg/m2/s2' , nohalo=.true. )
+       call FILE_HISTORY_in( DENS_t_MP(:,:,:), 'DENS_t_MP', 'tendency DENS in MP',         'kg/m3/s'  , fill_halo=.true. )
+       call FILE_HISTORY_in( MOMZ_t_MP(:,:,:), 'MOMZ_t_MP', 'tendency MOMZ in MP',         'kg/m2/s2' , fill_halo=.true. )
+       call FILE_HISTORY_in( RHOU_t_MP(:,:,:), 'RHOU_t_MP', 'tendency RHOU in MP',         'kg/m2/s2' , fill_halo=.true. )
+       call FILE_HISTORY_in( RHOV_t_MP(:,:,:), 'RHOV_t_MP', 'tendency RHOV in MP',         'kg/m2/s2' , fill_halo=.true. )
+       call FILE_HISTORY_in( RHOT_t_MP(:,:,:), 'RHOT_t_MP', 'tendency RHOT in MP',         'K*kg/m3/s', fill_halo=.true. )
+       call FILE_HISTORY_in( RHOH_MP  (:,:,:), 'RHOH_MP',   'diabatic heating rate in MP', 'J/m3/s',    fill_halo=.true. )
+       call FILE_HISTORY_in( MOMX_t_MP(:,:,:), 'MOMX_t_MP', 'tendency MOMX in MP',         'kg/m2/s2' , fill_halo=.true. )
+       call FILE_HISTORY_in( MOMY_t_MP(:,:,:), 'MOMY_t_MP', 'tendency MOMY in MP',         'kg/m2/s2' , fill_halo=.true. )
 
        do iq = QS_MP, QE_MP
-          call HIST_in( RHOQ_t_MP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_MP', &
-                        'tendency rho*'//trim(TRACER_NAME(iq))//' in MP', 'kg/m3/s', nohalo=.true. )
+          call FILE_HISTORY_in( RHOQ_t_MP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_MP', &
+                        'tendency rho*'//trim(TRACER_NAME(iq))//' in MP', 'kg/m3/s', fill_halo=.true. )
        enddo
 
     endif

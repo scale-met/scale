@@ -90,8 +90,8 @@ contains
        GRID_DOMAIN_CENTER_Y
     use scale_mapproj, only: &
        MPRJ_setup
-    use scale_fileio, only: &
-       FILEIO_set_coordinates
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_set_coordinates
     implicit none
 
     character(len=H_LONG) :: DOMAIN_CATALOGUE_FNAME  = 'latlon_domain_catalogue.txt' !< metadata files for lat-lon domain for all processes
@@ -152,7 +152,7 @@ contains
     ! call REAL_calc_areavol ! must be called after GTRANS_setup
 
     ! set latlon and z to fileio module
-    call FILEIO_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, &
+    call FILE_CARTESC_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, &
                                  REAL_LAT, REAL_LATX, REAL_LATY, REAL_LATXY, &
                                  REAL_CZ,  REAL_FZ    )
 
@@ -164,8 +164,8 @@ contains
   subroutine REAL_update_Z
     use scale_process, only: &
        PRC_MPIstop
-    use scale_fileio, only: &
-       FILEIO_set_coordinates
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_set_coordinates
     implicit none
     !---------------------------------------------------------------------------
 
@@ -173,7 +173,7 @@ contains
     call REAL_calc_Z
 
     ! set latlon and z to fileio module
-    call FILEIO_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, &
+    call FILE_CARTESC_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, &
                                  REAL_LAT, REAL_LATX, REAL_LATY, REAL_LATXY, &
                                  REAL_CZ,  REAL_FZ    )
 

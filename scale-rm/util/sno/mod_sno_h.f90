@@ -43,6 +43,7 @@ module mod_sno_h
     character(len=H_MID)   :: title               ! title of the file
     character(len=H_MID)   :: source              ! for file header
     character(len=H_MID)   :: institute           ! for file header
+    character(len=H_SHORT) :: grid_name           ! for file header
     character(len=5)       :: periodic(3)         ! periodic condition?            (z:y)
     integer                :: gridsize(3)         ! total grid size     in global  (z:y), always including halo
     integer                :: halosize(3)         ! halo  grid size     in global  (z:y), always existing

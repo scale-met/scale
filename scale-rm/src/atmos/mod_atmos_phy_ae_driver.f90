@@ -126,8 +126,8 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_atmos_phy_ae, only: &
        ATMOS_PHY_AE, &
        QA_AE, &
@@ -190,8 +190,8 @@ contains
 
        CCN_t(:,:,:) = CCN(:,:,:) / dt_AE
 
-       call HIST_in( CN (:,:,:)*1.E-6_RP, 'CN',  'condensation nucrei',       'num/cc' )
-       call HIST_in( CCN(:,:,:)*1.E-6_RP, 'CCN', 'cloud condensation nucrei', 'num/cc' )
+       call FILE_HISTORY_in( CN (:,:,:)*1.E-6_RP, 'CN',  'condensation nucrei',       'num/cc' )
+       call FILE_HISTORY_in( CCN(:,:,:)*1.E-6_RP, 'CCN', 'cloud condensation nucrei', 'num/cc' )
 
     endif
 

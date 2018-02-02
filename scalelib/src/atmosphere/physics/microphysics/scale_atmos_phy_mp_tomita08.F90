@@ -530,8 +530,8 @@ contains
     use scale_const, only: &
        DWATR => CONST_DWATR, &
        PI    => CONST_PI
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_atmos_phy_mp_common, only: &
        MP_saturation_adjustment => ATMOS_PHY_MP_saturation_adjustment
     implicit none
@@ -613,8 +613,8 @@ contains
     enddo
     enddo
 
-    call HIST_in( QC_t_sat(:,:,:), 'Pcsat', 'QC production term by satadjust', 'kg/kg/s' )
-    call HIST_in( QI_t_sat(:,:,:), 'Pisat', 'QI production term by satadjust', 'kg/kg/s' )
+    call FILE_HISTORY_in( QC_t_sat(:,:,:), 'Pcsat', 'QC production term by satadjust', 'kg/kg/s' )
+    call FILE_HISTORY_in( QI_t_sat(:,:,:), 'Pisat', 'QI production term by satadjust', 'kg/kg/s' )
 
     do j = JS, JE
     do i = IS, IE
@@ -650,8 +650,8 @@ contains
        TEM00 => CONST_TEM00, &
        PRE00 => CONST_PRE00, &
        DWATR => CONST_DWATR
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_atmos_hydrometeor, only: &
        LHV, &
        LHF, &
@@ -1469,7 +1469,7 @@ contains
     enddo
 
     do ip = 1, w_nmax
-       call HIST_in( w3d(:,:,:,ip), w_name(ip), 'individual tendency term in tomita08', 'kg/kg/s' )
+       call FILE_HISTORY_in( w3d(:,:,:,ip), w_name(ip), 'individual tendency term in tomita08', 'kg/kg/s' )
     enddo
 
     call PROF_rapend  ('MP_tomita08', 3)

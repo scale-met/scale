@@ -15,10 +15,8 @@ program sno
   !++ used modules
   !
   use mpi
-  use dc_log, only: &
-     LogInit
-  use gtool_file, only: &
-     FileCloseAll
+  use scale_file, only: &
+     FILE_Close_All
   use scale_precision
   use scale_stdio
   use scale_prof
@@ -158,9 +156,6 @@ program sno
 
   ! setup Log
   call IO_LOG_setup( myrank, ismaster )
-  call LogInit( IO_FID_CONF,       &
-                IO_FID_LOG, IO_L,  &
-                IO_FID_NML, IO_NML )
 
   ! setup profiler
   call PROF_setup
@@ -423,7 +418,7 @@ program sno
   !########## Finalize ##########
   call PROF_rapend  ('Main', 0)
 
-  call FileCloseAll
+  call FILE_Close_All
 
   call PROF_rapreport
 

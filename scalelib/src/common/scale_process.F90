@@ -17,8 +17,6 @@ module scale_process
   !++ used modules
   !
   use mpi
-  use gtool_file, only: &
-     FileCloseAll
   use scale_precision
   use scale_stdio
   !-----------------------------------------------------------------------------
@@ -43,6 +41,8 @@ module scale_process
   public :: PRC_MPIbarrier
   public :: PRC_MPItime
   public :: PRC_MPItimestat
+
+  public :: PRC_set_file_closer
 
   interface PRC_MPIstop
      procedure PRC_abort
@@ -90,6 +90,13 @@ module scale_process
   integer, public :: PRC_UNIVERSAL_handler              !< error handler  in universal communicator
   integer, public :: PRC_ABORT_COMM_WORLD               !< communicator for aborting
   integer, public :: PRC_ABORT_handler                  !< error handler communicator for aborting
+
+  abstract interface
+     subroutine closer
+     end subroutine closer
+  end interface
+
+  procedure(closer), pointer :: PRC_FILE_Closer => NULL()
 
   !-----------------------------------------------------------------------------
   !
@@ -930,7 +937,7 @@ contains
        write(*,*)                     ''
     endif
 
-    call FileCloseAll
+    if ( associated( PRC_FILE_CLOSER ) ) call PRC_FILE_Closer
 
     ! Close logfile, configfile
     if ( IO_L ) then
@@ -946,5 +953,13 @@ contains
 
     stop
   end subroutine PRC_MPI_errorhandler
+
+  subroutine PRC_set_file_closer( routine )
+    procedure(closer) :: routine
+
+    PRC_FILE_Closer => routine
+
+    return
+  end subroutine PRC_set_file_closer
 
 end module scale_process

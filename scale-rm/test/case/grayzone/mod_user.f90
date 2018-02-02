@@ -395,8 +395,8 @@ contains
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        CPw => AQ_CP, &
        ATMOS_THERMODYN_templhv
-    use scale_history, only: &
-         HIST_in
+    use scale_file_history, only: &
+         FILE_HISTORY_in
     use mod_atmos_phy_tb_vars, only: &
        TKE       => ATMOS_PHY_TB_TKE,    &
        NU        => ATMOS_PHY_TB_NU
@@ -1051,11 +1051,11 @@ contains
         endif
       endif
 
-      call HIST_in( SST       (:,:),     'SST2',      'sst',   'K'    )
-      call HIST_in( SFLX_POTT (:,:)*CPd, 'SHF',       'shf',   'W/m2' )
-      call HIST_in( SFLX_QV   (:,:)*lhv_t(:,:), 'LHF',       'lhf',   'W/m2' )
-      call HIST_in( SFC_albedo(:,:,1),   'ALBEDO_LW', 'alblw', '-'    )
-      call HIST_in( SFC_albedo(:,:,2),   'ALBEDO_SW', 'albsw', '-'    )
+      call FILE_HISTORY_in( SST       (:,:),     'SST2',      'sst',   'K'    )
+      call FILE_HISTORY_in( SFLX_POTT (:,:)*CPd, 'SHF',       'shf',   'W/m2' )
+      call FILE_HISTORY_in( SFLX_QV   (:,:)*lhv_t(:,:), 'LHF',       'lhf',   'W/m2' )
+      call FILE_HISTORY_in( SFC_albedo(:,:,1),   'ALBEDO_LW', 'alblw', '-'    )
+      call FILE_HISTORY_in( SFC_albedo(:,:,2),   'ALBEDO_SW', 'albsw', '-'    )
 
       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
       do j = JS, JE
@@ -1082,8 +1082,8 @@ contains
       enddo
 !return ! tmp12
 
-      call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2' )
-      call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2' )
+      call FILE_HISTORY_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2' )
+      call FILE_HISTORY_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2' )
 
     endif
 !momz_tp(:,:,:)=0.0

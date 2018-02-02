@@ -54,10 +54,10 @@ contains
        dinfo,    &
        debug     )
     use mpi
-    use gtool_file_h, only: &
-       File_dtypelist
-    use gtool_file, only: &
-       FileGetAllDatainfo
+    use scale_file_h, only: &
+       FILE_dtypelist
+    use scale_file, only: &
+       FILE_Get_All_Datainfo
     use scale_process, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD, &
@@ -100,21 +100,21 @@ contains
        nowrank = 0 ! first file
 
        do v = 1, nvars
-          call FileGetAllDatainfo( step_limit  = step_limit,             & ! [IN]
-                                   dim_limit   = dim_limit,              & ! [IN]
-                                   basename    = basename,               & ! [IN]
-                                   varname     = varname(v),             & ! [IN]
-                                   myrank      = nowrank,                & ! [IN]
-                                   step_nmax   = dinfo(v)%step_nmax,     & ! [OUT]
-                                   description = dinfo(v)%description,   & ! [OUT]
-                                   units       = dinfo(v)%units,         & ! [OUT]
-                                   datatype    = dinfo(v)%datatype,      & ! [OUT]
-                                   dim_rank    = dinfo(v)%dim_rank,      & ! [OUT]
-                                   dim_name    = dinfo(v)%dim_name  (:), & ! [OUT]
-                                   dim_size    = dinfo(v)%dim_size  (:), & ! [OUT]
-                                   time_start  = dinfo(v)%time_start(:), & ! [OUT]
-                                   time_end    = dinfo(v)%time_end  (:), & ! [OUT]
-                                   time_units  = dinfo(v)%time_units     ) ! [OUT]
+          call FILE_Get_All_Datainfo( step_limit  = step_limit,             & ! [IN]
+                                      dim_limit   = dim_limit,              & ! [IN]
+                                      basename    = basename,               & ! [IN]
+                                      varname     = varname(v),             & ! [IN]
+                                      rankid      = nowrank,                & ! [IN]
+                                      step_nmax   = dinfo(v)%step_nmax,     & ! [OUT]
+                                      description = dinfo(v)%description,   & ! [OUT]
+                                      units       = dinfo(v)%units,         & ! [OUT]
+                                      datatype    = dinfo(v)%datatype,      & ! [OUT]
+                                      dim_rank    = dinfo(v)%dim_rank,      & ! [OUT]
+                                      dim_name    = dinfo(v)%dim_name  (:), & ! [OUT]
+                                      dim_size    = dinfo(v)%dim_size  (:), & ! [OUT]
+                                      time_start  = dinfo(v)%time_start(:), & ! [OUT]
+                                      time_end    = dinfo(v)%time_end  (:), & ! [OUT]
+                                      time_units  = dinfo(v)%time_units     ) ! [OUT]
 
           dinfo(v)%varname = varname(v)
 
@@ -162,7 +162,7 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '*** varname     : ', trim(dinfo(v)%varname)
           if( IO_L ) write(IO_FID_LOG,*) '*** description : ', trim(dinfo(v)%description)
           if( IO_L ) write(IO_FID_LOG,*) '*** units       : ', trim(dinfo(v)%units)
-          if( IO_L ) write(IO_FID_LOG,*) '*** datatype    : ', trim(File_dtypelist(dinfo(v)%datatype))
+          if( IO_L ) write(IO_FID_LOG,*) '*** datatype    : ', trim(FILE_dtypelist(dinfo(v)%datatype))
           if( IO_L ) write(IO_FID_LOG,*) '*** dim_rank    : ', dinfo(v)%dim_rank
           do d = 1, dinfo(v)%dim_rank
              if( IO_L ) write(IO_FID_LOG,*) '*** dim No.', d
@@ -888,17 +888,16 @@ contains
        ainfo,         &
        dinfo,         &
        debug          )
-    use gtool_file_h, only: &
-       File_REAL4, &
-       File_REAL8
-    use gtool_file, only: &
-       FileCreate,         &
-       FileDefineVariable, &
-       FileSetAttribute,   &
-       FileEndDef,         &
-       FileWrite
+    use scale_file_h, only: &
+       FILE_REAL4, &
+       FILE_REAL8
+    use scale_file, only: &
+       FILE_Create,         &
+       FILE_Def_Variable, &
+       FILE_Set_Attribute,   &
+       FILE_EndDef,         &
+       FILE_Write
     use scale_process, only: &
-       PRC_masterrank, &
        PRC_MPIstop
     use mod_sno_h, only: &
        commoninfo, &
@@ -942,15 +941,15 @@ contains
        basename_mod = trim(dirpath)//'/'//trim(basename)
     endif
 
-    call FileCreate( fid,                          & ! [OUT]
-                     fileexisted,                  & ! [OUT]
-                     basename_mod,                 & ! [IN]
-                     hinfo%title,                  & ! [IN]
-                     hinfo%source,                 & ! [IN]
-                     hinfo%institute,              & ! [IN]
-                     PRC_masterrank,               & ! [IN]
-                     nowrank,                      & ! [IN]
-                     time_units = dinfo%time_units ) ! [IN]
+    call FILE_Create( basename_mod,                 & ! [IN]
+                      hinfo%title,                  & ! [IN]
+                      hinfo%source,                 & ! [IN]
+                      hinfo%institute,              & ! [IN]
+                      hinfo%grid_name,              & ! [IN]
+                      fid,                          & ! [OUT]
+                      fileexisted,                  & ! [OUT]
+                      rankid     = nowrank,         & ! [IN]
+                      time_units = dinfo%time_units ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
 
@@ -974,31 +973,31 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** + + + define variable'
 
     if ( dinfo%dt > 0.0_DP ) then
-       call FileDefineVariable( fid,               & ! [OUT]
-                                vid,               & ! [OUT]
-                                dinfo%varname,     & ! [IN]
-                                dinfo%description, & ! [IN]
-                                dinfo%units,       & ! [IN]
-                                dinfo%dim_rank,    & ! [IN]
-                                dinfo%dim_name,    & ! [IN]
-                                dinfo%datatype,    & ! [IN]
-                                tint = dinfo%dt    ) ! [IN]
+       call FILE_Def_Variable( fid,                & ! [IN]
+                               dinfo%varname,      & ! [IN]
+                               dinfo%description,  & ! [IN]
+                               dinfo%units,        & ! [IN]
+                               dinfo%dim_rank,     & ! [IN]
+                               dinfo%dim_name,     & ! [IN]
+                               dinfo%datatype,     & ! [IN]
+                               vid,                & ! [OUT]
+                               time_int = dinfo%dt ) ! [IN]
     else
-       call FileDefineVariable( fid,               & ! [OUT]
-                                vid,               & ! [OUT]
-                                dinfo%varname,     & ! [IN]
-                                dinfo%description, & ! [IN]
-                                dinfo%units,       & ! [IN]
-                                dinfo%dim_rank,    & ! [IN]
-                                dinfo%dim_name,    & ! [IN]
-                                dinfo%datatype     ) ! [IN]
+       call FILE_Def_Variable( fid,               & ! [IN]
+                               dinfo%varname,     & ! [IN]
+                               dinfo%description, & ! [IN]
+                               dinfo%units,       & ! [IN]
+                               dinfo%dim_rank,    & ! [IN]
+                               dinfo%dim_name,    & ! [IN]
+                               dinfo%datatype,    & ! [IN]
+                               vid                ) ! [OUT]
     endif
 
     if ( hinfo%minfo_mapping_name /= "" ) then
-       call FileSetAttribute( fid, dinfo%varname, "grid_mapping", hinfo%minfo_mapping_name )
+       call FILE_Set_Attribute( fid, dinfo%varname, "grid_mapping", hinfo%minfo_mapping_name )
     endif
 
-    call FileEndDef( fid )
+    call FILE_EndDef( fid )
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
 
@@ -1015,29 +1014,27 @@ contains
 
        gout1 = size(dinfo%VAR_1d(:),1)
 
-       if ( dinfo%datatype == File_REAL4 ) then
+       if ( dinfo%datatype == FILE_REAL4 ) then
 
           allocate( VAR_1d_SP(gout1) )
           VAR_1d_SP(:) = real(dinfo%VAR_1d(:),kind=SP)
 
-          call FileWrite( fid,                       & ! [IN]
-                          vid,                       & ! [IN]
-                          VAR_1d_SP(:),              & ! [IN]
-                          dinfo%time_start(nowstep), & ! [IN]
-                          dinfo%time_end  (nowstep)  ) ! [IN]
+          call FILE_Write( vid,                       & ! [IN]
+                           VAR_1d_SP(:),              & ! [IN]
+                           dinfo%time_start(nowstep), & ! [IN]
+                           dinfo%time_end  (nowstep)  ) ! [IN]
 
           deallocate( VAR_1d_SP )
 
-       elseif( dinfo%datatype == File_REAL8 ) then
+       elseif( dinfo%datatype == FILE_REAL8 ) then
 
           allocate( VAR_1d_DP(gout1) )
           VAR_1d_DP(:) = real(dinfo%VAR_1d(:),kind=DP)
 
-          call FileWrite( fid,                       & ! [IN]
-                          vid,                       & ! [IN]
-                          VAR_1d_DP(:),              & ! [IN]
-                          dinfo%time_start(nowstep), & ! [IN]
-                          dinfo%time_end  (nowstep)  ) ! [IN]
+          call FILE_Write( vid,                       & ! [IN]
+                           VAR_1d_DP(:),              & ! [IN]
+                           dinfo%time_start(nowstep), & ! [IN]
+                           dinfo%time_end  (nowstep)  ) ! [IN]
 
           deallocate( VAR_1d_DP )
 
@@ -1048,29 +1045,27 @@ contains
        gout1 = size(dinfo%VAR_2d(:,:),1)
        gout2 = size(dinfo%VAR_2d(:,:),2)
 
-       if ( dinfo%datatype == File_REAL4 ) then
+       if ( dinfo%datatype == FILE_REAL4 ) then
 
           allocate( VAR_2d_SP(gout1,gout2) )
           VAR_2d_SP(:,:) = real(dinfo%VAR_2d(:,:),kind=SP)
 
-          call FileWrite( fid,                       & ! [IN]
-                          vid,                       & ! [IN]
-                          VAR_2d_SP(:,:),            & ! [IN]
-                          dinfo%time_start(nowstep), & ! [IN]
-                          dinfo%time_end  (nowstep)  ) ! [IN]
+          call FILE_Write( vid,                       & ! [IN]
+                           VAR_2d_SP(:,:),            & ! [IN]
+                           dinfo%time_start(nowstep), & ! [IN]
+                           dinfo%time_end  (nowstep)  ) ! [IN]
 
           deallocate( VAR_2d_SP )
 
-       elseif( dinfo%datatype == File_REAL8 ) then
+       elseif( dinfo%datatype == FILE_REAL8 ) then
 
           allocate( VAR_2d_DP(gout1,gout2) )
           VAR_2d_DP(:,:) = real(dinfo%VAR_2d(:,:),kind=DP)
 
-          call FileWrite( fid,                       & ! [IN]
-                          vid,                       & ! [IN]
-                          VAR_2d_DP(:,:),            & ! [IN]
-                          dinfo%time_start(nowstep), & ! [IN]
-                          dinfo%time_end  (nowstep)  ) ! [IN]
+          call FILE_Write( vid,                       & ! [IN]
+                           VAR_2d_DP(:,:),            & ! [IN]
+                           dinfo%time_start(nowstep), & ! [IN]
+                           dinfo%time_end  (nowstep)  ) ! [IN]
 
           deallocate( VAR_2d_DP )
 
@@ -1083,7 +1078,7 @@ contains
        gout3 = size(dinfo%VAR_3d(:,:,:),3)
 
        if ( dinfo%transpose ) then
-          if ( dinfo%datatype == File_REAL4 ) then
+          if ( dinfo%datatype == FILE_REAL4 ) then
 
              allocate( VAR_3d_SP(gout2,gout3,gout1) )
              do k = 1, gout1
@@ -1094,15 +1089,14 @@ contains
              enddo
              enddo
 
-             call FileWrite( fid,                       & ! [IN]
-                             vid,                       & ! [IN]
-                             VAR_3d_SP(:,:,:),          & ! [IN]
-                             dinfo%time_start(nowstep), & ! [IN]
-                             dinfo%time_end  (nowstep)  ) ! [IN]
+             call FILE_Write( vid,                       & ! [IN]
+                              VAR_3d_SP(:,:,:),          & ! [IN]
+                              dinfo%time_start(nowstep), & ! [IN]
+                              dinfo%time_end  (nowstep)  ) ! [IN]
 
              deallocate( VAR_3d_SP )
 
-          elseif( dinfo%datatype == File_REAL8 ) then
+          elseif( dinfo%datatype == FILE_REAL8 ) then
 
              allocate( VAR_3d_DP(gout2,gout3,gout1) )
              do k = 1, gout1
@@ -1113,39 +1107,36 @@ contains
              enddo
              enddo
 
-             call FileWrite( fid,                       & ! [IN]
-                             vid,                       & ! [IN]
-                             VAR_3d_DP(:,:,:),          & ! [IN]
-                             dinfo%time_start(nowstep), & ! [IN]
-                             dinfo%time_end  (nowstep)  ) ! [IN]
+             call FILE_Write( vid,                       & ! [IN]
+                              VAR_3d_DP(:,:,:),          & ! [IN]
+                              dinfo%time_start(nowstep), & ! [IN]
+                              dinfo%time_end  (nowstep)  ) ! [IN]
 
              deallocate( VAR_3d_DP )
 
           endif
        else
-          if ( dinfo%datatype == File_REAL4 ) then
+          if ( dinfo%datatype == FILE_REAL4 ) then
 
              allocate( VAR_3d_SP(gout1,gout2,gout3) )
              VAR_3d_SP(:,:,:) = real(dinfo%VAR_3d(:,:,:),kind=SP)
 
-             call FileWrite( fid,                       & ! [IN]
-                             vid,                       & ! [IN]
-                             VAR_3d_SP(:,:,:),          & ! [IN]
-                             dinfo%time_start(nowstep), & ! [IN]
-                             dinfo%time_end  (nowstep)  ) ! [IN]
+             call FILE_Write( vid,                       & ! [IN]
+                              VAR_3d_SP(:,:,:),          & ! [IN]
+                              dinfo%time_start(nowstep), & ! [IN]
+                              dinfo%time_end  (nowstep)  ) ! [IN]
 
              deallocate( VAR_3d_SP )
 
-          elseif( dinfo%datatype == File_REAL8 ) then
+          elseif( dinfo%datatype == FILE_REAL8 ) then
 
              allocate( VAR_3d_DP(gout1,gout2,gout3) )
              VAR_3d_DP(:,:,:) = real(dinfo%VAR_3d(:,:,:),kind=DP)
 
-             call FileWrite( fid,                       & ! [IN]
-                             vid,                       & ! [IN]
-                             VAR_3d_DP(:,:,:),          & ! [IN]
-                             dinfo%time_start(nowstep), & ! [IN]
-                             dinfo%time_end  (nowstep)  ) ! [IN]
+             call FILE_Write( vid,                       & ! [IN]
+                              VAR_3d_DP(:,:,:),          & ! [IN]
+                              dinfo%time_start(nowstep), & ! [IN]
+                              dinfo%time_end  (nowstep)  ) ! [IN]
 
              deallocate( VAR_3d_DP )
 

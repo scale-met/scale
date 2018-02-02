@@ -137,8 +137,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Read urban grid
   subroutine URBAN_GRID_read
-    use gtool_file, only: &
-       FileRead
+    use scale_file, only: &
+       FILE_Read
     use scale_process, only: &
        PRC_myrank
     implicit none
@@ -151,9 +151,9 @@ contains
 
     write(bname,'(A,A,F15.3)') trim(URBAN_GRID_IN_BASENAME)
 
-    call FileRead( GRID_UCZ(:),  bname, 'UCZ',  1, PRC_myrank )
-    call FileRead( GRID_UCDZ(:), bname, 'UCDZ', 1, PRC_myrank )
-    call FileRead( GRID_UFZ(:),  bname, 'UFZ',  1, PRC_myrank )
+    call FILE_Read( bname, 'UCZ',  GRID_UCZ(:)  )
+    call FILE_Read( bname, 'UCDZ', GRID_UCDZ(:) )
+    call FILE_Read( bname, 'UFZ',  GRID_UFZ(:)  )
 
     return
   end subroutine URBAN_GRID_read

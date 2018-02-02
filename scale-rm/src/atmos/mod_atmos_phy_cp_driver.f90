@@ -100,8 +100,8 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_diagnose_number_concentration
     use scale_atmos_phy_cp, only: &
@@ -155,7 +155,7 @@ contains
     call ATMOS_PHY_CP_wmean( w0avg(:,:,:), & ! [OUT]
                              DENS (:,:,:), & ! [IN]
                              MOMZ (:,:,:)  ) ! [IN]
-    call HIST_in( w0avg(:,:,:), 'w0avg', 'running mean vertical wind velocity', 'kg/m2/s', nohalo=.true. )
+    call FILE_HISTORY_in( w0avg(:,:,:), 'w0avg', 'running mean vertical wind velocity', 'kg/m2/s', fill_halo=.true. )
 
     if ( update_flag ) then ! update
 
@@ -202,24 +202,24 @@ contains
        ! diagnose tendency of number concentration
        call ATMOS_HYDROMETEOR_diagnose_number_concentration( RHOQ_t_CP(:,:,:,:) ) ! [INOUT]
 
-       call HIST_in( MFLX_cloudbase(:,:),   'CBMFX',     'cloud base mass flux',             'kg/m2/s', nohalo=.true. )
-       call HIST_in( SFLX_rain     (:,:),   'RAIN_CP',   'surface rain rate by CP',          'kg/m2/s', nohalo=.true. )
-       call HIST_in( SFLX_rain     (:,:),   'PREC_CP',   'surface precipitation rate by CP', 'kg/m2/s', nohalo=.true. )
-       call HIST_in( cloudtop      (:,:),   'CUMHGT',    'CP cloud top height',              'm',       nohalo=.true. )
-       call HIST_in( cloudbase     (:,:),   'CUBASE',    'CP cloud base height',             'm',       nohalo=.true. )
-       call HIST_in( cldfrac_dp    (:,:,:), 'CUMFRC_DP', 'CP cloud fraction (deep)',         '1',       nohalo=.true. )
-       call HIST_in( cldfrac_sh    (:,:,:), 'CUMFRC_SH', 'CP cloud fraction (shallow)',      '1',       nohalo=.true. )
-       call HIST_in( kf_nca        (:,:),   'kf_nca',    'advection or cumulus convection timescale for KF', 's',       nohalo=.true. )
+       call FILE_HISTORY_in( MFLX_cloudbase(:,:),   'CBMFX',     'cloud base mass flux',             'kg/m2/s', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_rain     (:,:),   'RAIN_CP',   'surface rain rate by CP',          'kg/m2/s', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_rain     (:,:),   'PREC_CP',   'surface precipitation rate by CP', 'kg/m2/s', fill_halo=.true. )
+       call FILE_HISTORY_in( cloudtop      (:,:),   'CUMHGT',    'CP cloud top height',              'm',       fill_halo=.true. )
+       call FILE_HISTORY_in( cloudbase     (:,:),   'CUBASE',    'CP cloud base height',             'm',       fill_halo=.true. )
+       call FILE_HISTORY_in( cldfrac_dp    (:,:,:), 'CUMFRC_DP', 'CP cloud fraction (deep)',         '1',       fill_halo=.true. )
+       call FILE_HISTORY_in( cldfrac_sh    (:,:,:), 'CUMFRC_SH', 'CP cloud fraction (shallow)',      '1',       fill_halo=.true. )
+       call FILE_HISTORY_in( kf_nca        (:,:),   'kf_nca',    'advection or cumulus convection timescale for KF', 's',       fill_halo=.true. )
 
-       call HIST_in( DENS_t_CP(:,:,:), 'DENS_t_CP', 'tendency DENS in CP', 'kg/m3/s'  , nohalo=.true. )
-       call HIST_in( MOMZ_t_CP(:,:,:), 'MOMZ_t_CP', 'tendency MOMZ in CP', 'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( MOMX_t_CP(:,:,:), 'MOMX_t_CP', 'tendency MOMX in CP', 'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( MOMY_t_CP(:,:,:), 'MOMY_t_CP', 'tendency MOMY in CP', 'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( RHOT_t_CP(:,:,:), 'RHOT_t_CP', 'tendency RHOT in CP', 'K*kg/m3/s', nohalo=.true. )
+       call FILE_HISTORY_in( DENS_t_CP(:,:,:), 'DENS_t_CP', 'tendency DENS in CP', 'kg/m3/s'  , fill_halo=.true. )
+       call FILE_HISTORY_in( MOMZ_t_CP(:,:,:), 'MOMZ_t_CP', 'tendency MOMZ in CP', 'kg/m2/s2' , fill_halo=.true. )
+       call FILE_HISTORY_in( MOMX_t_CP(:,:,:), 'MOMX_t_CP', 'tendency MOMX in CP', 'kg/m2/s2' , fill_halo=.true. )
+       call FILE_HISTORY_in( MOMY_t_CP(:,:,:), 'MOMY_t_CP', 'tendency MOMY in CP', 'kg/m2/s2' , fill_halo=.true. )
+       call FILE_HISTORY_in( RHOT_t_CP(:,:,:), 'RHOT_t_CP', 'tendency RHOT in CP', 'K*kg/m3/s', fill_halo=.true. )
 
        do iq = QS_MP, QE_MP
-          call HIST_in( RHOQ_t_CP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CP', &
-                        'tendency rho*'//trim(TRACER_NAME(iq))//' in CP', 'kg/m3/s', nohalo=.true. )
+          call FILE_HISTORY_in( RHOQ_t_CP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CP', &
+                        'tendency rho*'//trim(TRACER_NAME(iq))//' in CP', 'kg/m3/s', fill_halo=.true. )
        enddo
 
     endif ! update

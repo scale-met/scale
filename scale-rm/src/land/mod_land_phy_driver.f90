@@ -109,8 +109,8 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_grid_real, only: &
        REAL_Z1
     use scale_land_grid, only: &
@@ -263,21 +263,21 @@ contains
 !OCL XFILL
        LAND_SFC_albedo_t(:,:,:) = 0.0_RP
 
-       call HIST_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'tendency of LAND_TEMP',  'K',     zdim='land' )
-       call HIST_in( LAND_WATER_t(:,:,:), 'LAND_WATER_t', 'tendency of LAND_WATER', 'm3/m3', zdim='land' )
+       call FILE_HISTORY_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'tendency of LAND_TEMP',  'K',     dim_type='LXY' )
+       call FILE_HISTORY_in( LAND_WATER_t(:,:,:), 'LAND_WATER_t', 'tendency of LAND_WATER', 'm3/m3', dim_type='LXY' )
 
-       call HIST_in( LAND_SFC_TEMP_t  (:,:),      'LAND_SFC_TEMP_t', 'tendency of LAND_SFC_TEMP', 'K' )
-       call HIST_in( LAND_SFC_albedo_t(:,:,I_LW), 'LAND_ALB_LW_t',   'tendency of LAND_ALB_LW',   '1' )
-       call HIST_in( LAND_SFC_albedo_t(:,:,I_SW), 'LAND_ALB_SW_t',   'tendency of LAND_ALB_SW',   '1' )
+       call FILE_HISTORY_in( LAND_SFC_TEMP_t  (:,:),      'LAND_SFC_TEMP_t', 'tendency of LAND_SFC_TEMP', 'K', dim_type='XY' )
+       call FILE_HISTORY_in( LAND_SFC_albedo_t(:,:,I_LW), 'LAND_ALB_LW_t',   'tendency of LAND_ALB_LW',   '1', dim_type='XY' )
+       call FILE_HISTORY_in( LAND_SFC_albedo_t(:,:,I_SW), 'LAND_ALB_SW_t',   'tendency of LAND_ALB_SW',   '1', dim_type='XY' )
 
-       call HIST_in( LAND_PROPERTY(:,:,I_WaterLimit),    'LP_WaterLimit',    'LAND PROPERTY, WaterLimit',    'm3/m3'  )
-       call HIST_in( LAND_PROPERTY(:,:,I_WaterCritical), 'LP_WaterCritical', 'LAND PROPERTY, WaterCritical', 'm3/m3'  )
-       call HIST_in( LAND_PROPERTY(:,:,I_ThermalCond),   'LP_ThermalCond',   'LAND PROPERTY, ThermalCond',   'W/K/m'  )
-       call HIST_in( LAND_PROPERTY(:,:,I_HeatCapacity),  'LP_HeatCapacity',  'LAND PROPERTY, HeatCapacity',  'J/K/m3' )
-       call HIST_in( LAND_PROPERTY(:,:,I_WaterDiff),     'LP_WaterDiff',     'LAND PROPERTY, WaterDiff',     'm2/s'   )
-       call HIST_in( LAND_PROPERTY(:,:,I_Z0M),           'LP_Z0M',           'LAND PROPERTY, Z0M',           'm'      )
-       call HIST_in( LAND_PROPERTY(:,:,I_Z0H),           'LP_Z0H',           'LAND PROPERTY, Z0H',           'm'      )
-       call HIST_in( LAND_PROPERTY(:,:,I_Z0E),           'LP_Z0E',           'LAND PROPERTY, Z0E',           'm'      )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_WaterLimit),    'LP_WaterLimit',    'LAND PROPERTY, WaterLimit',    'm3/m3',  dim_type='XY' )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_WaterCritical), 'LP_WaterCritical', 'LAND PROPERTY, WaterCritical', 'm3/m3',  dim_type='XY' )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_ThermalCond),   'LP_ThermalCond',   'LAND PROPERTY, ThermalCond',   'W/K/m',  dim_type='XY' )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_HeatCapacity),  'LP_HeatCapacity',  'LAND PROPERTY, HeatCapacity',  'J/K/m3', dim_type='XY' )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_WaterDiff),     'LP_WaterDiff',     'LAND PROPERTY, WaterDiff',     'm2/s',   dim_type='XY' )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_Z0M),           'LP_Z0M',           'LAND PROPERTY, Z0M',           'm',      dim_type='XY' )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_Z0H),           'LP_Z0H',           'LAND PROPERTY, Z0H',           'm',      dim_type='XY' )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_Z0E),           'LP_Z0E',           'LAND PROPERTY, Z0E',           'm',      dim_type='XY' )
 
     endif
 

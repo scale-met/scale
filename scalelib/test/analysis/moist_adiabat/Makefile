@@ -14,7 +14,7 @@ include $(TOPDIR)/Mkinclude
 
 BINNAME = moist_adiabat
 
-LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+LIBS = $(LIBDIR)/libscale.a
 
 OBJS =
 
@@ -43,6 +43,8 @@ $(BUILD_DIR)/$(BINNAME).o: $(BINNAME).f90 $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 
 distclean: clean
 	rm -f $(BINNAME)
+	rm -f output.dat
+	rm -f skewTlogP.png
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -54,7 +56,7 @@ clean:
 	$(MAKE) $(patsubst %.f90,%.o,$<)
 
 $(BUILD_DIR)/%.o: %.f90
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALERMDIR)/include $(SCALE_NETCDF_INCLUDE) $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(BUILD_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALERMDIR)/include $(SCALE_NETCDF_INCLUDE) $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(BUILD_DIR) -o $@ -c $<
 
 .PHONY : clean distclean allclean
 

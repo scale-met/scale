@@ -14,10 +14,10 @@ module scale_stdio
   !
   !++ used modules
   !
-  use gtool_file_h, only: &
-     File_HSHORT, &
-     File_HMID,   &
-     File_HLONG
+  use scale_file_h, only: &
+     FILE_HSHORT, &
+     FILE_HMID,   &
+     FILE_HLONG
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -64,7 +64,6 @@ module scale_stdio
   logical,               public            :: IO_LOG_SUPPRESS     = .false. !< suppress all of log output?
   logical,               public            :: IO_LOG_NML_SUPPRESS = .false. !< suppress all of log output? (for namelist)
   logical,               public            :: IO_LOG_ALLNODE      = .false. !< output log for each node?
-  logical,               public            :: IO_AGGREGATE        = .false. !< do parallel I/O through PnetCDF
   integer,               public            :: IO_STEP_TO_STDOUT   = -1      !< interval for output current step to STDOUT (negative is off)
 
   !-----------------------------------------------------------------------------
@@ -97,8 +96,7 @@ contains
        IO_LOG_SUPPRESS,     &
        IO_LOG_NML_SUPPRESS, &
        IO_LOG_ALLNODE,      &
-       IO_STEP_TO_STDOUT,   &
-       IO_AGGREGATE
+       IO_STEP_TO_STDOUT
 
     character(len=*), intent(in) :: APPNAME                !< name of the application
     character(len=*), intent(in), optional :: conf_name    !< name of config file for each process
@@ -154,8 +152,7 @@ contains
        IO_NML_FILENAME,     &
        IO_LOG_SUPPRESS,     &
        IO_LOG_NML_SUPPRESS, &
-       IO_LOG_ALLNODE,      &
-       IO_AGGREGATE
+       IO_LOG_ALLNODE
 
     character(len=H_LONG) :: fname
 

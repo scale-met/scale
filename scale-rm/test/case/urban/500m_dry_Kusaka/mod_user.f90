@@ -146,8 +146,8 @@ contains
     use scale_time, only:   &
        NOWSEC => TIME_NOWSEC,      & !< subday part  of current time [sec]
        dt_URB => TIME_DTSEC_URBAN    !< time interval of urban step  [sec]
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use mod_cpl_vars, only: &
        TMPA  => URB_ATM_TEMP,        &
        PRSA  => URB_ATM_PRES,        &
@@ -308,13 +308,13 @@ contains
        enddo
        enddo
 
-       call HIST_in( PTA (:,:), 'PT_urb',   'Potential air temperature',    'K'     )
-       call HIST_in( QVA (:,:), 'QA_urb',   'Specific humidity',            'kg/kg' )
-       call HIST_in( UA  (:,:), 'UA_urb',   'Wind speed',                   'm/s'   )
-       call HIST_in( SWD (:,:), 'SWD_urb',  'Downward shortwave radiation', 'W/m2'  )
-       call HIST_in( LWD (:,:), 'LWD_urb',  'Downward longwave  radiation', 'W/m2'  )
+       call FILE_HISTORY_in( PTA (:,:), 'PT_urb',   'Potential air temperature',    'K'     )
+       call FILE_HISTORY_in( QVA (:,:), 'QA_urb',   'Specific humidity',            'kg/kg' )
+       call FILE_HISTORY_in( UA  (:,:), 'UA_urb',   'Wind speed',                   'm/s'   )
+       call FILE_HISTORY_in( SWD (:,:), 'SWD_urb',  'Downward shortwave radiation', 'W/m2'  )
+       call FILE_HISTORY_in( LWD (:,:), 'LWD_urb',  'Downward longwave  radiation', 'W/m2'  )
        WORK(:,:) = ( RAIN(:,:) + SNOW(:,:) ) * dt_URB
-       call HIST_in( WORK(:,:), 'RAIN_urb', 'Precipitation',                'kg/m2' )
+       call FILE_HISTORY_in( WORK(:,:), 'RAIN_urb', 'Precipitation',                'kg/m2' )
 
     endif
 
