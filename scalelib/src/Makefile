@@ -177,7 +177,7 @@ OBJS_NAME = \
 	scale_grid_real.o	\
 	scale_index.o		\
 	scale_gridtrans.o	\
-	scale_interpolation_nest.o	\
+	scale_interp.o	\
 	scale_interp_vert.o	\
 	scale_land_grid.o	\
 	scale_land_grid_index.o	\

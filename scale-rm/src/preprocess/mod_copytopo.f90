@@ -44,44 +44,39 @@ module mod_copytopo
   !++ Private parameters & variables
   !
   integer, private, parameter :: handle = 1
-  integer, private            :: itp_nh = 4
 
-  character(len=H_LONG), private :: COPYTOPO_IN_BASENAME  = ''
-
-  real(RP), private :: COPYTOPO_TRANSITION_DX = -1.0_RP  !< thickness of transition region [m]: x
-  real(RP), private :: COPYTOPO_TRANSITION_DY = -1.0_RP  !< thickness of transition region [m]: y
-  real(RP), private :: COPYTOPO_TRANSFACT     = -1.0_RP  !< stretch factor of transition region
-  real(RP), private :: COPYTOPO_FRACX         =  1.0_RP  !< fraction of transition region (x) (0-1)
-  real(RP), private :: COPYTOPO_FRACY         =  1.0_RP  !< fraction of transition region (y) (0-1)
-  real(RP), private :: COPYTOPO_taux          =  1.0_RP  !< maximum value for mixing tau (x) [s]
-  real(RP), private :: COPYTOPO_tauy          =  1.0_RP  !< maximum value for mixing tau (y) [s]
-
-  logical,  private :: COPYTOPO_ENTIRE_REGION = .false.  !< copy parent topo over an entire region
-  logical,  private :: COPYTOPO_LINEAR_H      = .true.   !< linear or non-linear profile of relax region
-  real(RP), private :: COPYTOPO_EXP_H         = 2.0_RP   !< factor of non-linear profile of relax region
-
-  real(RP), private, allocatable :: CTRX(:)              !< center buffer factor (0-1): x
-  real(RP), private, allocatable :: CTRY(:)              !< center buffer factor (0-1): y
-  real(RP), private, allocatable :: COPYTOPO_alpha(:,:)  !> damping coefficient  (0-1)
-  real(RP), private, allocatable :: topo_pd(:,:)         !> topography of parent domain
+  character(len=H_LONG), private :: COPYTOPO_IN_BASENAME   = ''
+  real(RP),              private :: COPYTOPO_TRANSITION_DX = -1.0_RP  !< thickness of transition region [m]: x
+  real(RP),              private :: COPYTOPO_TRANSITION_DY = -1.0_RP  !< thickness of transition region [m]: y
+  real(RP),              private :: COPYTOPO_TRANSFACT     = -1.0_RP  !< stretch factor of transition region
+  real(RP),              private :: COPYTOPO_FRACX         =  1.0_RP  !< fraction of transition region (x) (0-1)
+  real(RP),              private :: COPYTOPO_FRACY         =  1.0_RP  !< fraction of transition region (y) (0-1)
+  real(RP),              private :: COPYTOPO_taux          =  1.0_RP  !< maximum value for mixing tau (x) [s]
+  real(RP),              private :: COPYTOPO_tauy          =  1.0_RP  !< maximum value for mixing tau (y) [s]
+  logical,               private :: COPYTOPO_ENTIRE_REGION = .false.  !< copy parent topo over an entire region
+  logical,               private :: COPYTOPO_LINEAR_H      = .true.   !< linear or non-linear profile of relax region
+  real(RP),              private :: COPYTOPO_EXP_H         =  2.0_RP  !< factor of non-linear profile of relax region
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup and Main
   subroutine COPYTOPO( &
-      topo_cd          ) ! [inout]
+       TOPO_child )
     use scale_process, only: &
        PRC_MPIstop
     use scale_grid, only: &
        BUFFER_DX,  &
        BUFFER_DY,  &
        BUFFFACT
-    use scale_grid_nest, only: &
-       NEST_INTERP_LEVEL
     implicit none
 
-    real(RP), intent(inout) :: topo_cd(:,:)
+    real(RP), intent(inout) :: TOPO_child(:,:) !< topography of child domain
+
+    real(RP) :: CTRX       (IA)    !< transition factor   (0-1): x
+    real(RP) :: CTRY       (JA)    !< transition factor   (0-1): y
+    real(RP) :: alpha      (IA,JA) !< dumping coefficient (0-1)
+    real(RP) :: TOPO_parent(IA,JA) !< topography of parent domain
 
     NAMELIST / PARAM_COPYTOPO / &
        COPYTOPO_IN_BASENAME,    &
@@ -125,39 +120,34 @@ contains
        COPYTOPO_TRANSFACT = BUFFFACT
     endif
 
-
-
-    allocate( CTRX(IA) )
-    allocate( CTRY(JA) )
-    allocate( COPYTOPO_alpha(IA,JA) )
-    allocate( topo_pd       (IA,JA) )
-    COPYTOPO_alpha(:,:) = 0.0_RP
-
-    itp_nh = int( NEST_INTERP_LEVEL )
-
     ! copy topography from parent domain to transition region
-    call COPYTOPO_transgrid
 
-    call COPYTOPO_setalpha
+    call COPYTOPO_transgrid( CTRX(:), CTRY(:) ) ! [OUT]
 
-    call COPYTOPO_input_data( topo_pd ) ! (out)
+    call COPYTOPO_setalpha ( CTRX(:), CTRY(:), & ! [IN]
+                             alpha(:,:)        ) ! [OUT]
 
-    call COPYTOPO_mix_data( topo_cd, &  ! (inout)
-                            topo_pd  )  ! (in)
+    call COPYTOPO_input_data( TOPO_parent(:,:) ) ! [OUT]
+
+    call COPYTOPO_mix_data( TOPO_parent(:,:), & ! [IN]
+                            alpha      (:,:), & ! [IN]
+                            TOPO_child (:,:)  ) ! [INOUT]
 
     return
   end subroutine COPYTOPO
 
   !-----------------------------------------------------------------------------
   !> Generate transition grid
-  subroutine COPYTOPO_transgrid
+  subroutine COPYTOPO_transgrid( &
+       CTRX, &
+       CTRY  )
     use scale_process, only: &
        PRC_MPIstop, &
        PRC_myrank
     use scale_rm_process, only: &
        PRC_2Drank
     use scale_const, only: &
-       EPS    => CONST_EPS
+       EPS => CONST_EPS
     use scale_grid, only: &
        DX,                  &
        DY,                  &
@@ -170,27 +160,25 @@ contains
        BUFFFACT
     implicit none
 
-    real(RP), allocatable :: CTRXG(:) !< center buffer factor (0-1): x, global
-    real(RP), allocatable :: CTRYG(:) !< center buffer factor (0-1): y, global
+    real(RP), intent(out) :: CTRX(IA) !< transition factor (0-1): x, local
+    real(RP), intent(out) :: CTRY(JA) !< transition factor (0-1): y, local
 
-    real(RP), allocatable :: buffx(:),  buffy(:)
-    real(RP)              :: bufftotx,  bufftoty
-    real(RP), allocatable :: transx(:), transy(:)
-    real(RP)              :: transtotx, transtoty
+    real(RP) :: CTRXG (  IAG) !< transition factor (0-1): x, global
+    real(RP) :: CTRYG (  JAG) !< transition factor (0-1): y, global
+    real(RP) :: buffx (0:IAG)
+    real(RP) :: buffy (0:JAG)
+    real(RP) :: transx(0:IAG)
+    real(RP) :: transy(0:JAG)
 
-    integer :: imain, ibuff, itrans
-    integer :: jmain, jbuff, jtrans
-    integer :: copy_is, copy_ie, copy_js, copy_je
+    real(RP) :: bufftotx,  bufftoty
+    real(RP) :: transtotx, transtoty
+    integer  :: imain, ibuff, itrans
+    integer  :: jmain, jbuff, jtrans
+    integer  :: copy_is, copy_ie
+    integer  :: copy_js, copy_je
 
     integer  :: i, j, ii, jj
     !---------------------------------------------------------------------------
-
-    allocate( buffx (0:IAG) )
-    allocate( buffy (0:JAG) )
-    allocate( transx(0:IAG) )
-    allocate( transy(0:JAG) )
-    allocate( CTRXG (  IAG) )
-    allocate( CTRYG (  JAG) )
 
     ! X-direction
     ! calculate buffer grid size
@@ -325,16 +313,16 @@ contains
        CTRY(j) = CTRYG(jj)
     enddo
 
-    deallocate( transx )
-    deallocate( transy )
-
     return
   end subroutine COPYTOPO_transgrid
 
 
   !-----------------------------------------------------------------------------
   !> Calc dumping coefficient alpha
-  subroutine COPYTOPO_setalpha
+  subroutine COPYTOPO_setalpha( &
+       CTRX, &
+       CTRY, &
+       alpha )
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_comm, only: &
@@ -342,6 +330,9 @@ contains
        COMM_wait
     implicit none
 
+    real(RP), intent(in)  :: CTRX (IA)    !< transition factor   (0-1): x
+    real(RP), intent(in)  :: CTRY (JA)    !< transition factor   (0-1): y
+    real(RP), intent(out) :: alpha(IA,JA) !< dumping coefficient (0-1)
 
     real(RP) :: coef_x, alpha_x1
     real(RP) :: coef_y, alpha_y1
@@ -396,12 +387,12 @@ contains
           alpha_y1 = coef_y * ee1 * exp( -(1.0_RP-ee1) * COPYTOPO_EXP_H )
        endif
 
-       COPYTOPO_alpha(i,j) = max( alpha_x1, alpha_y1 )
+       alpha(i,j) = max( alpha_x1, alpha_y1 )
     enddo
     enddo
 
-    call COMM_vars8( COPYTOPO_alpha(:,:), 1 )
-    call COMM_wait ( COPYTOPO_alpha(:,:), 1 )
+    call COMM_vars8( alpha(:,:), 1 )
+    call COMM_wait ( alpha(:,:), 1 )
 
     return
   end subroutine COPYTOPO_setalpha
@@ -410,18 +401,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Calc dumping coefficient alpha
   subroutine COPYTOPO_input_data( &
-      topo_pd      ) ! (out)
+       TOPO_parent )
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_file, only: &
        FILE_Read
+    use scale_interp, only: &
+       INTRP_domain_compatibility, &
+       INTRP_factor2d,             &
+       INTRP_interp2d
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_interpolation_nest, only: &
-       INTRPNEST_domain_compatibility,  &
-       INTRPNEST_interp_fact_latlon,    &
-       INTRPNEST_interp_2d
     use scale_grid_real, only: &
        LAT => REAL_LAT, &
        LON => REAL_LON
@@ -435,86 +426,84 @@ contains
        NEST_domain_shape
     implicit none
 
-    real(RP), intent(out) :: topo_pd(:,:)
+    real(RP), intent(out) :: TOPO_parent(:,:)
 
-    real(RP)              :: dummy (1,1,1)
-    real(RP), allocatable :: read2D(:,:)
-    real(RP), allocatable :: lon_org (:,:)
-    real(RP), allocatable :: lat_org (:,:)
-    real(RP), allocatable :: topo_org(:,:)
-    real(RP), allocatable :: hfact(:,:,:)
-    integer,  allocatable :: igrd (:,:,:)
-    integer,  allocatable :: jgrd (:,:,:)
+    real(RP), allocatable :: LON_org (:,:)
+    real(RP), allocatable :: LAT_org (:,:)
+    real(RP), allocatable :: TOPO_org(:,:)
+    real(RP), allocatable :: read2D  (:,:)
 
-    integer :: IALL, JALL  ! number of grids for whole domain
-    integer :: PTI, PTJ    ! number of grids for a tile
+    real(RP) :: dummy(1,1,1)
+    integer  :: idx_i(IA,JA,NEST_INTERP_LEVEL)
+    integer  :: idx_j(IA,JA,NEST_INTERP_LEVEL)
+    real(RP) :: hfact(IA,JA,NEST_INTERP_LEVEL)
+
+    integer :: IA_org, JA_org     ! number of grids for whole domain
     integer :: tilei, tilej
+    integer :: cxs, cxe, cys, cye ! for child domain
+    integer :: pxs, pxe, pys, pye ! for parent domain
     integer :: rank
-    integer :: i
-    integer :: cxs, cxe, cys, cye  ! for child domain
-    integer :: pxs, pxe, pys, pye  ! for parent domain
+
+    integer :: n
     !---------------------------------------------------------------------------
 
-    PTI  = PARENT_IMAX(handle)
-    PTJ  = PARENT_JMAX(handle)
-    IALL = PTI * NEST_TILE_NUM_X
-    JALL = PTJ * NEST_TILE_NUM_Y
+    IA_org = PARENT_IMAX(handle) * NEST_TILE_NUM_X
+    JA_org = PARENT_JMAX(handle) * NEST_TILE_NUM_Y
 
-    allocate( hfact   ( IA,   JA,  itp_nh ) )
-    allocate( igrd    ( IA,   JA,  itp_nh ) )
-    allocate( jgrd    ( IA,   JA,  itp_nh ) )
-    allocate( lon_org ( IALL, JALL        ) )
-    allocate( lat_org ( IALL, JALL        ) )
-    allocate( topo_org( IALL, JALL        ) )
+    allocate( LON_org (IA_org,JA_org) )
+    allocate( LAT_org (IA_org,JA_org) )
+    allocate( TOPO_org(IA_org,JA_org) )
 
-    do i = 1, size( NEST_TILE_ID(:) )
+    do n = 1, size( NEST_TILE_ID(:) )
        ! read data from split files
-       rank = NEST_TILE_ID(i)
+       rank = NEST_TILE_ID(n)
 
-       call NEST_domain_shape ( tilei, tilej,   & ! [out]
-                                cxs,   cxe,     & ! [out]
-                                cys,   cye,     & ! [out]
-                                pxs,   pxe,     & ! [out]
-                                pys,   pye,     & ! [out]
-                                i               ) ! [in ]
-       allocate( read2D  ( tilei,tilej ) )
+       call NEST_domain_shape( tilei, tilej, & ! [OUT]
+                               cxs,   cxe,   & ! [OUT]
+                               cys,   cye,   & ! [OUT]
+                               pxs,   pxe,   & ! [OUT]
+                               pys,   pye,   & ! [OUT]
+                               n             ) ! [IN]
+
+       allocate( read2D(tilei,tilej) )
 
        call FILE_Read( COPYTOPO_IN_BASENAME, "lon",  read2D(:,:), rankid=rank )
-       lon_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
+       LON_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
        call FILE_Read( COPYTOPO_IN_BASENAME, "lat",  read2D(:,:), rankid=rank )
-       lat_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
+       LAT_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
        call FILE_Read( COPYTOPO_IN_BASENAME, "TOPO", read2D(:,:), rankid=rank )
-       topo_org(cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye)
+       TOPO_org(cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye)
 
        deallocate( read2D )
-    end do
 
-    call INTRPNEST_domain_compatibility( lon_org(:,:), lat_org(:,:), dummy(:,:,:), &
-                                         LON(:,:),     LAT(:,:),     dummy(:,:,:), &
-                                         skip_z=.true.                             )
-    !call check_domain_compatibility( lon_org(:,:), lat_org(:,:), dummy(:,:,:), &
-    !                                 LON(:,:),     LAT(:,:),     dummy(:,:,:), &
-    !                                 skip_z=.true.                             )
+    enddo
 
-    call INTRPNEST_interp_fact_latlon( hfact  (:,:,:),   & ! (out)
-                                       igrd   (:,:,:),   & ! (out)
-                                       jgrd   (:,:,:),   & ! (out)
-                                       LAT    (:,:),     & ! (in)
-                                       LON    (:,:),     & ! (in)
-                                       IA,   JA,         & ! (in)
-                                       lat_org(:,:),     & ! (in)
-                                       lon_org(:,:),     & ! (in)
-                                       IALL, JALL        ) ! (in)
+    call INTRP_domain_compatibility( LON_org(:,:), LAT_org(:,:), dummy(:,:,:), &
+                                     LON(:,:),     LAT(:,:),     dummy(:,:,:), &
+                                     skip_z=.true.                             )
 
-    call INTRPNEST_interp_2d( topo_pd (:,:),    &
-                              topo_org(:,:),    &
-                              hfact   (:,:,:),  &
-                              igrd    (:,:,:),  &
-                              jgrd    (:,:,:),  &
-                              IA, JA            )
+    call INTRP_factor2d( NEST_INTERP_LEVEL, & ! [IN]
+                         IA_org, JA_org,    & ! [IN]
+                         LON_org(:,:),      & ! [IN]
+                         LAT_org(:,:),      & ! [IN]
+                         IA, JA,            & ! [IN]
+                         LON    (:,:),      & ! [IN]
+                         LAT    (:,:),      & ! [IN]
+                         idx_i  (:,:,:),    & ! [OUT]
+                         idx_j  (:,:,:),    & ! [OUT]
+                         hfact  (:,:,:)     ) ! [OUT]
 
-    call COMM_vars8( topo_pd(:,:), 1 )
-    call COMM_wait ( topo_pd(:,:), 1 )
+    call INTRP_interp2d( NEST_INTERP_LEVEL,  & ! [IN]
+                         IA_org, JA_org,     & ! [IN]
+                         IA, JA,             & ! [IN]
+                         idx_i      (:,:,:), & ! [IN]
+                         idx_j      (:,:,:), & ! [IN]
+                         hfact      (:,:,:), & ! [IN]
+                         TOPO_org   (:,:),   & ! [IN]
+                         TOPO_parent(:,:)    ) ! [OUT]
+
+    call COMM_vars8( TOPO_parent(:,:), 1 )
+    call COMM_wait ( TOPO_parent(:,:), 1 )
 
     return
   end subroutine COPYTOPO_input_data
@@ -522,26 +511,31 @@ contains
   !-----------------------------------------------------------------------------
   !> Mixing TOPO data using parent and child domains
   subroutine COPYTOPO_mix_data( &
-      topo_cd,  &  ! (inout)
-      topo_pd    ) ! (in)
+       TOPO_parent, &
+       alpha,       &
+       TOPO_child   )
     implicit none
-    real(RP), intent(inout) :: topo_cd(:,:)  ! topography of child domain (mine)
-    real(RP), intent(in)    :: topo_pd(:,:)  ! topography of parent domain
 
-    real(RP) :: frac
+    real(RP), intent(in)    :: TOPO_parent(:,:) ! topography of parent domain
+    real(RP), intent(in)    :: alpha      (:,:) ! dumping coefficient (0-1)
+    real(RP), intent(inout) :: TOPO_child (:,:) ! topography of child  domain
+
     integer  :: i, j
     !---------------------------------------------------------------------------
 
     if ( COPYTOPO_ENTIRE_REGION ) then
-       topo_cd(:,:) = topo_pd(:,:)
+       do j = 1, JA
+       do i = 1, IA
+          TOPO_child(i,j) = TOPO_parent(i,j)
+       enddo
+       enddo
     else
        do j = 1, JA
        do i = 1, IA
-          frac = COPYTOPO_alpha(i,j)
-          topo_cd(i,j) = topo_cd(i,j) * ( 1.0_RP - frac ) &
-                       + topo_pd(i,j) * frac
-       end do
-       end do
+          TOPO_child(i,j) = ( 1.0_RP-alpha(i,j) ) * TOPO_child (i,j) &
+                          + (        alpha(i,j) ) * TOPO_parent(i,j)
+       enddo
+       enddo
     endif
 
     return
