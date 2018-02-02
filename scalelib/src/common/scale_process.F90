@@ -489,10 +489,12 @@ contains
        do_create_p(:) = .false.
        do_create_c(:) = .false.
        if ( .NOT. bulk_split ) then
+          if ( PRC_UNIVERSAL_IsMaster ) write(*,*)
+          if ( PRC_UNIVERSAL_IsMaster ) write(*,*) "*** Inter-domain relationship information ***"
           do i = 1, NUM_DOMAIN-1
-             if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I4)' ) "relationship: ", i
-             if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I4,A,I4)' ) &
-                               "--- parent color = ", PARENT_COL(i), "  child color = ", CHILD_COL(i)
+             if ( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,I2.2)')  "*** Relationship No. ", i
+             if ( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,2(A,I2))') "*** Parent color = ", PARENT_COL(i), &
+                                                                   " <=> child color = ", CHILD_COL (i)
              if ( COLOR_LIST(ORG_myrank) == PARENT_COL(i) ) then
                 do_create_p(i) = .true.
              elseif ( COLOR_LIST(ORG_myrank) == CHILD_COL(i) ) then
@@ -695,16 +697,25 @@ contains
           CHILD_COL (i) = RO_CHILD_COL (DOM2ORDER(i)  ) ! from parent to child
        enddo
 
+       if( PRC_UNIVERSAL_IsMaster ) write(*,*)
+       if( PRC_UNIVERSAL_IsMaster ) write(*,*) '*** Domain information (with reordering) ***'
        do i = 1, NUM_DOMAIN
-          if( PRC_UNIVERSAL_IsMaster ) write(*,*)                ""
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1X,A,I2,A,I5)') "ORDER (",i,") -> DOMAIN: ", ORDER2DOM(i)
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1X,A,I1,A,I5)') "NUM PRC_DOMAINS(",i,")  = ", RO_PRC_DOMAINS(i)
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1X,A,I1,A,I3)') "MY COLOR(",i,") = ", RO_DOM2COL(ORDER2DOM(i))
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1X,A,I1,A,I3)') "PARENT COLOR(",i,") = ", RO_PARENT_COL(i)
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1X,A,I1,A,I3)') "CHILD COLOR(",i,") = ", RO_CHILD_COL(i)
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1X,A,I1,A,A)' ) "CONF_FILES(",i,")    = ", trim(RO_CONF_FILES(i))
+          if( PRC_UNIVERSAL_IsMaster ) write(*,*)
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,2(A,I2.2))') "*** Order No. ",i," -> Domain No. ", ORDER2DOM(i)
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,I5)')      "*** ] Number of process      = ", RO_PRC_DOMAINS(i)
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,I5)')      "*** ] Color of this   domain = ", RO_DOM2COL(ORDER2DOM(i))
+          if ( RO_PARENT_COL(i) >= 0 ) then
+             if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,I5)')   "*** ] Color of parent domain = ", RO_PARENT_COL(i)
+          else
+             if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A)'   )   "*** ] Color of parent domain = no parent"
+          endif
+          if ( RO_CHILD_COL(i) >= 0 ) then
+             if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,I5)')   "*** ] Color of child  domain = ", RO_CHILD_COL(i)
+          else
+             if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A)'   )   "*** ] Color of child  domain = no child"
+          endif
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,A)')       "*** ] Name of config file    = ", trim(RO_CONF_FILES(i))
        enddo
-       if( PRC_UNIVERSAL_IsMaster ) write(*,*) ""
 
        do i = 1, NUM_DOMAIN
           COL_FILE(i-1) = RO_CONF_FILES(i) ! final copy
