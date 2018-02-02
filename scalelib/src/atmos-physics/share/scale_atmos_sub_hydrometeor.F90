@@ -11,6 +11,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_hydrometeor
   !-----------------------------------------------------------------------------
   !
@@ -32,13 +33,22 @@ module scale_atmos_hydrometeor
   public :: ATMOS_HYDROMETEOR_LHS
   public :: ATMOS_HYDROMETEOR_LHF
   public :: ATMOS_HYDROMETEOR_entr
+  public :: ATMOS_HYDROMETEOR_entr2temp
   public :: ATMOS_HYDROMETEOR_diagnose_number_concentration
+
+  interface ATMOS_HYDROMETEOR_regist
+     module procedure ATMOS_HYDROMETEOR_regist
+     module procedure ATMOS_HYDROMETEOR_regist_obsolute
+  end interface ATMOS_HYDROMETEOR_regist
 
   interface ATMOS_HYDROMETEOR_LHV
      module procedure ATMOS_HYDROMETEOR_LHV_0D
      module procedure ATMOS_HYDROMETEOR_LHV_1D
      module procedure ATMOS_HYDROMETEOR_LHV_2D
      module procedure ATMOS_HYDROMETEOR_LHV_3D
+     module procedure ATMOS_HYDROMETEOR_LHV_1D_obsolute
+     module procedure ATMOS_HYDROMETEOR_LHV_2D_obsolute
+     module procedure ATMOS_HYDROMETEOR_LHV_3D_obsolute
   end interface ATMOS_HYDROMETEOR_LHV
 
   interface ATMOS_HYDROMETEOR_LHS
@@ -46,6 +56,7 @@ module scale_atmos_hydrometeor
      module procedure ATMOS_HYDROMETEOR_LHS_1D
      module procedure ATMOS_HYDROMETEOR_LHS_2D
      module procedure ATMOS_HYDROMETEOR_LHS_3D
+     module procedure ATMOS_HYDROMETEOR_LHS_3D_obsolute
   end interface ATMOS_HYDROMETEOR_LHS
 
   interface ATMOS_HYDROMETEOR_LHF
@@ -53,6 +64,7 @@ module scale_atmos_hydrometeor
      module procedure ATMOS_HYDROMETEOR_LHF_1D
      module procedure ATMOS_HYDROMETEOR_LHF_2D
      module procedure ATMOS_HYDROMETEOR_LHF_3D
+     module procedure ATMOS_HYDROMETEOR_LHF_3D_obsolute
   end interface ATMOS_HYDROMETEOR_LHF
 
   interface ATMOS_HYDROMETEOR_entr
@@ -60,6 +72,10 @@ module scale_atmos_hydrometeor
      module procedure ATMOS_HYDROMETEOR_entr_2D
      module procedure ATMOS_HYDROMETEOR_entr_3D
   end interface ATMOS_HYDROMETEOR_entr
+
+  interface ATMOS_HYDROMETEOR_entr2temp
+     module procedure ATMOS_HYDROMETEOR_entr2temp_0D
+  end interface ATMOS_HYDROMETEOR_entr2temp
 
   !-----------------------------------------------------------------------------
   !
@@ -76,12 +92,11 @@ module scale_atmos_hydrometeor
   integer, public, parameter :: I_HG =  5 !< graupel
   integer, public, parameter :: I_HH =  6 !< hail
 
-  integer, public            :: I_QC = -1
-  integer, public            :: I_QR = -1
-  integer, public            :: I_QI = -1
-  integer, public            :: I_QS = -1
-  integer, public            :: I_QG = -1
-  integer, public            :: I_QH = -1
+  character(len=H_SHORT), public, parameter :: HYD_NAME(N_HYD) = &
+       (/ "QC", "QR", "QI", "QS", "QG", "QH" /)
+  character(len=H_MID), public, parameter :: HYD_DESC(N_HYD) = &
+       (/ "cloud    ", "rain     ", "ice water", "snow     ", "graupel  ", "hail     " /)
+  real(RP), public           :: HYD_DENS(N_HYD)
 
   integer, public            :: I_NC = -1
   integer, public            :: I_NR = -1
@@ -90,19 +105,36 @@ module scale_atmos_hydrometeor
   integer, public            :: I_NG = -1
   integer, public            :: I_NH = -1
 
+  integer, public            :: I_QC = -1
+  integer, public            :: I_QR = -1
+  integer, public            :: I_QI = -1
+  integer, public            :: I_QS = -1
+  integer, public            :: I_QG = -1
+  integer, public            :: I_QH = -1
+
   ! hydrometeor (water + ice)
+  integer, public            :: QHA =  0
   integer, public            :: QHS = -1
   integer, public            :: QHE = -2
   ! water
+  integer, public            :: QLA =  0
   integer, public            :: QLS = -1
   integer, public            :: QLE = -2
   ! ice
+  integer, public            :: QIA =  0
   integer, public            :: QIS = -1
   integer, public            :: QIE = -2
 
   real(RP), public           :: LHV       !< latent heat of vaporization for use [J/kg]
   real(RP), public           :: LHS       !< latent heat of sublimation  for use [J/kg]
   real(RP), public           :: LHF       !< latent heat of fusion       for use [J/kg]
+
+  real(RP), public           :: CV_VAPOR !< CV for vapor [J/kg/K]
+  real(RP), public           :: CP_VAPOR !< CP for vapor [J/kg/K]
+  real(RP), public           :: CV_WATER !< CV for water [J/kg/K]
+  real(RP), public           :: CP_WATER !< CP for water [J/kg/K]
+  real(RP), public           :: CV_ICE   !< CV for ice   [J/kg/K]
+  real(RP), public           :: CP_ICE   !< CP for ice   [J/kg/K]
 
   !-----------------------------------------------------------------------------
   !
@@ -112,14 +144,9 @@ module scale_atmos_hydrometeor
   !
   !++ Private parameters & variables
   !
-  real(RP), private :: CV_VAPOR !< CV for vapor [J/kg/K]
-  real(RP), private :: CP_VAPOR !< CP for vapor [J/kg/K]
-  real(RP), private :: CV_WATER !< CV for water [J/kg/K]
-  real(RP), private :: CP_WATER !< CP for water [J/kg/K]
-  real(RP), private :: CV_ICE   !< CV for ice   [J/kg/K]
-  real(RP), private :: CP_ICE   !< CP for ice   [J/kg/K]
-
   real(RP), private :: THERMODYN_EMASK = 1.0_RP
+
+  logical,  private :: initialized = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -127,21 +154,29 @@ contains
   !> Setup
   subroutine ATMOS_HYDROMETEOR_setup
     use scale_const, only: &
-       CPvap          => CONST_CPvap,          &
-       CVvap          => CONST_CVvap,          &
-       CL             => CONST_CL,             &
-       CI             => CONST_CI,             &
-       LHV00          => CONST_LHV00,          &
-       LHS00          => CONST_LHS00,          &
-       LHF00          => CONST_LHF00,          &
-       LHV0           => CONST_LHV0,           &
-       LHS0           => CONST_LHS0,           &
-       LHF0           => CONST_LHF0,           &
+       CONST_setup, &
+       CPvap          => CONST_CPvap, &
+       CVvap          => CONST_CVvap, &
+       CL             => CONST_CL,    &
+       CI             => CONST_CI,    &
+       LHV00          => CONST_LHV00, &
+       LHS00          => CONST_LHS00, &
+       LHF00          => CONST_LHF00, &
+       LHV0           => CONST_LHV0,  &
+       LHS0           => CONST_LHS0,  &
+       LHF0           => CONST_LHF0,  &
+       DWATR          => CONST_DWATR, &
+       DICE           => CONST_DICE,  &
        THERMODYN_TYPE => CONST_THERMODYN_TYPE
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
     !---------------------------------------------------------------------------
+
+    if ( initialized ) return
+    initialized = .true.
+
+    call CONST_setup
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[HYDEROMETER] / Categ[ATMOS SHARE] / Origin[SCALElib]'
@@ -176,17 +211,25 @@ contains
 
     else
        write(*,*) 'xxx Not appropriate ATMOS_THERMODYN_ENERGY_TYPE. Check!', trim(THERMODYN_TYPE)
-       call PRC_MPIstop
+       call PRC_abort
     endif
+
+    HYD_DENS(:) = (/ DWATR, & ! HC
+                     DWATR, & ! HR
+                     DICE,  & ! HI
+                     DICE,  & ! HS
+                     DICE,  & ! HG
+                     DICE  /) ! HH
 
     return
   end subroutine ATMOS_HYDROMETEOR_setup
 
   !-----------------------------------------------------------------------------
-  !> Regist tracer
+  !> ATMOS_HYDROMETEOR_regist
+  !! Regist tracer
+  !<
   subroutine ATMOS_HYDROMETEOR_regist( &
        Q0,   &
-       NV,   &
        NL,   &
        NI,   &
        NAME, &
@@ -194,7 +237,7 @@ contains
        UNIT, &
        ADVC  )
     use scale_process, only: &
-      PRC_MPIstop
+      PRC_abort
     use scale_tracer, only: &
       TRACER_regist
     use scale_const, only: &
@@ -202,20 +245,19 @@ contains
     implicit none
 
     integer,          intent(out) :: Q0
-    integer,          intent(in)  :: NV             !< number of vapor
     integer,          intent(in)  :: NL             !< number of liquid water tracers
     integer,          intent(in)  :: NI             !< number of ice water tracers
-    character(len=*), intent(in)  :: NAME(NV+NL+NI)
-    character(len=*), intent(in)  :: DESC(NV+NL+NI)
-    character(len=*), intent(in)  :: UNIT(NV+NL+NI)
+    character(len=*), intent(in)  :: NAME(1+NL+NI)
+    character(len=*), intent(in)  :: DESC(1+NL+NI)
+    character(len=*), intent(in)  :: UNIT(1+NL+NI)
 
-    logical,          intent(in), optional :: ADVC(NV+NL+NI)
+    logical,          intent(in), optional :: ADVC(1+NL+NI)
 
-    real(RP) :: CV   (NV+NL+NI)
-    real(RP) :: CP   (NV+NL+NI)
-    real(RP) :: R    (NV+NL+NI)
-    logical  :: MASS (NV+NL+NI)
-    logical  :: ADVC_(NV+NL+NI)
+    real(RP) :: CV   (1+NL+NI)
+    real(RP) :: CP   (1+NL+NI)
+    real(RP) :: R    (1+NL+NI)
+    logical  :: MASS (1+NL+NI)
+    logical  :: ADVC_(1+NL+NI)
 
     integer  :: NQ
     integer  :: n
@@ -223,23 +265,18 @@ contains
 
     if ( I_QV > 0 ) then
        write(*,*) 'xxx tracer for hydrometeor is already registerd'
-       call PRC_MPIstop
-    endif
-
-    if ( NV /= 1 ) then
-       write(*,*) 'xxx number of vapor must be 1 at this moment'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     NQ = 0
 
-    do n = 1, NV
-       NQ = NQ + 1
-       CV(NQ) = CV_VAPOR
-       CP(NQ) = CP_VAPOR
-       R (NQ) = Rvap
-    end do
+    ! vapor
+    NQ = NQ + 1
+    CV(NQ) = CV_VAPOR
+    CP(NQ) = CP_VAPOR
+    R (NQ) = Rvap
 
+    ! liquid
     do n = 1, NL
        NQ = NQ + 1
        CV(NQ) = CV_WATER
@@ -247,6 +284,7 @@ contains
        R (NQ) = 0.0_RP
     end do
 
+    ! ice
     do n = 1, NI
        NQ = NQ + 1
        CV(NQ) = CV_ICE
@@ -278,22 +316,60 @@ contains
 
     if ( NQ > 1 ) then
        QHS = I_QV + 1
-       QHE = QHS + NL + NI - 1
+       QHA = NL + NI
+       QHE = QHS + QHA - 1
     endif
 
     if ( NL > 0 ) then
        QLS = I_QV + 1
+       QLA = NL
        QLE = QLS + NL - 1
     endif
 
     if ( NI > 0 ) then
        QIS = QLE + 1
+       QIA = NI
        QIE = QIS + NI - 1
     endif
 
     return
   end subroutine ATMOS_HYDROMETEOR_regist
 
+  subroutine ATMOS_HYDROMETEOR_regist_obsolute( &
+       Q0,   &
+       NV,   &
+       NL,   &
+       NI,   &
+       NAME, &
+       DESC, &
+       UNIT, &
+       ADVC  )
+    use scale_process, only: &
+      PRC_MPIstop
+    use scale_tracer, only: &
+      TRACER_regist
+    use scale_const, only: &
+      Rvap => CONST_Rvap
+    implicit none
+
+    integer,          intent(out) :: Q0
+    integer,          intent(in)  :: NV             !< number of vapor
+    integer,          intent(in)  :: NL             !< number of liquid water tracers
+    integer,          intent(in)  :: NI             !< number of ice water tracers
+    character(len=*), intent(in)  :: NAME(NV+NL+NI)
+    character(len=*), intent(in)  :: DESC(NV+NL+NI)
+    character(len=*), intent(in)  :: UNIT(NV+NL+NI)
+
+    logical,          intent(in), optional :: ADVC(NV+NL+NI)
+
+    call ATMOS_HYDROMETEOR_regist( &
+         Q0,               & ! [IN]
+         NL, NI,           & ! [IN]
+         NAME, DESC, UNIT, & ! [IN]
+         ADVC              )
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_regist_obsolute
   !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_LHV_0D( &
        lhv, &
@@ -313,7 +389,7 @@ contains
   end subroutine ATMOS_HYDROMETEOR_LHV_0D
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETEOR_LHV_1D( &
+  subroutine ATMOS_HYDROMETEOR_LHV_1D_obsolute( &
        lhv, &
        temp )
     use scale_const, only: &
@@ -332,10 +408,35 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_HYDROMETEOR_LHV_1D
+  end subroutine ATMOS_HYDROMETEOR_LHV_1D_obsolute
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETEOR_LHV_2D( &
+  subroutine ATMOS_HYDROMETEOR_LHV_1D( &
+       KA, KS, KE, &
+       temp, &
+       lhv   )
+    use scale_const, only: &
+       TEM00 => CONST_TEM00, &
+       LHV0  => CONST_LHV0
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+
+    real(RP), intent(in)  :: temp(KA) !< temperature                 [K]
+
+    real(RP), intent(out) :: lhv (KA) !< latent heat of vaporization [J/kg]
+
+    integer :: k
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+       lhv(k) = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(k) - TEM00 ) * THERMODYN_EMASK
+    enddo
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_LHV_1D
+  
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_HYDROMETEOR_LHV_2D_obsolute( &
        lhv, &
        temp )
     use scale_const, only: &
@@ -356,10 +457,38 @@ contains
     enddo
 
     return
+  end subroutine ATMOS_HYDROMETEOR_LHV_2D_obsolute
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_HYDROMETEOR_LHV_2D( &
+       IA, IS, IE, JA, JS, JE, &
+       temp, &
+       lhv   )
+    use scale_const, only: &
+       TEM00 => CONST_TEM00, &
+       LHV0  => CONST_LHV0
+    implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: temp(IA,JA) !< temperature                 [K]
+    real(RP), intent(out) :: lhv (IA,JA) !< latent heat of vaporization [J/kg]
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    !omp paralell do
+    do j = JS, JE
+    do i = IS, IE
+       lhv(i,j) = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(i,j) - TEM00 ) * THERMODYN_EMASK
+    enddo
+    enddo
+
+    return
   end subroutine ATMOS_HYDROMETEOR_LHV_2D
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_HYDROMETEOR_LHV_3D( &
+  subroutine ATMOS_HYDROMETEOR_LHV_3D_obsolute( &
        lhv, &
        temp )
     use scale_const, only: &
@@ -375,6 +504,40 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
+    do k = KS, KE
+       lhv(k,i,j) = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(k,i,j) - TEM00 ) * THERMODYN_EMASK
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_LHV_3D_obsolute
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_HYDROMETEOR_LHV_3D( &
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       temp, &
+       lhv   )
+    use scale_const, only: &
+       TEM00 => CONST_TEM00, &
+       LHV0  => CONST_LHV0
+    implicit none
+
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+
+    real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature                 [K]
+
+    real(RP), intent(out) :: lhv (KA,IA,JA) !< latent heat of vaporization [J/kg]
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE
        lhv(k,i,j) = LHV0 + ( CP_VAPOR - CP_WATER ) * ( temp(k,i,j) - TEM00 ) * THERMODYN_EMASK
     enddo
@@ -450,6 +613,38 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_LHS_3D( &
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       temp, &
+       lhs   )
+    use scale_const, only: &
+       TEM00 => CONST_TEM00, &
+       LHS0  => CONST_LHS0
+    implicit none
+
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+
+    real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature                [K]
+    real(RP), intent(out) :: lhs (KA,IA,JA) !< latent heat of sublimation [J/kg]
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       lhs(k,i,j) = LHS0 + ( CP_VAPOR - CP_ICE ) * ( temp(k,i,j) - TEM00 ) * THERMODYN_EMASK
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_LHS_3D
+
+  subroutine ATMOS_HYDROMETEOR_LHS_3D_obsolute( &
        lhs, &
        temp )
     use scale_const, only: &
@@ -472,7 +667,7 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_HYDROMETEOR_LHS_3D
+  end subroutine ATMOS_HYDROMETEOR_LHS_3D_obsolute
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_LHF_0D( &
@@ -540,6 +735,38 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_LHF_3D( &
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       temp, &
+       lhf   )
+    use scale_const, only: &
+       TEM00 => CONST_TEM00, &
+       LHF0  => CONST_LHF0
+    implicit none
+
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+
+    real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature           [K]
+    real(RP), intent(out) :: lhf (KA,IA,JA) !< latent heat of fusion [J/kg]
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       lhf(k,i,j) = LHF0 + ( CP_WATER - CP_ICE ) * ( temp(k,i,j) - TEM00 ) * THERMODYN_EMASK
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_LHF_3D
+
+  subroutine ATMOS_HYDROMETEOR_LHF_3D_obsolute( &
        lhf, &
        temp )
     use scale_const, only: &
@@ -562,78 +789,46 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_HYDROMETEOR_LHF_3D
+  end subroutine ATMOS_HYDROMETEOR_LHF_3D_obsolute
 
   !-----------------------------------------------------------------------------
   !> calc temp, pres, q -> entropy (0D)
+!OCL SERIAL
   subroutine ATMOS_HYDROMETEOR_entr_0D( &
-       entr, &
-       temp, &
-       pres, &
-       q,    &
-       Rq    )
+       TEMP, PRES,   &
+       QV, QI, Qdry, &
+       Rtot, CPtot,  &
+       entr          )
     use scale_const, only: &
-       EPS   => CONST_EPS,   &
        PRE00 => CONST_PRE00, &
        TEM00 => CONST_TEM00, &
        Rdry  => CONST_Rdry,  &
-       CPdry => CONST_CPdry, &
        Rvap  => CONST_Rvap,  &
        LHV0  => CONST_LHV0,  &
        LHF0  => CONST_LHF0,  &
        PSAT0 => CONST_PSAT0
-    use scale_tracer, only: &
-       QA
     implicit none
 
-    real(RP), intent(out) :: entr     !< entropy            [J/K]
-    real(RP), intent(in)  :: temp     !< temperature        [K]
-    real(RP), intent(in)  :: pres     !< pressure           [Pa]
-    real(RP), intent(in)  :: q(QA)    !< mass concentration [kg/kg]
-    real(RP), intent(in)  :: Rq(QA)   !< gas constantt      [J/kg/K]
+    real(RP), intent(in) :: TEMP  !< temperature [K]
+    real(RP), intent(in) :: PRES  !< pressure    [Pa]
+    real(RP), intent(in) :: QV    !< water vapor  mass concentration [kg/kg]
+    real(RP), intent(in) :: QI    !< ice water    mass concentration [kg/kg]
+    real(RP), intent(in) :: Qdry  !< dry air      mass concentration [kg/kg]
+    real(RP), intent(in) :: Rtot  !< gas constant
+    real(RP), intent(in) :: CPtot !< specific heat
 
-    real(RP) :: qdry, Rtot
-    real(RP) :: logT_T0, pres_dry, pres_vap
+    real(RP), intent(out) :: entr !< entropy            [J/K]
 
-    integer  :: iqw
+    real(RP) :: pres_dry, pres_vap
     !---------------------------------------------------------------------------
 
-    logT_T0 = log( temp / TEM00 )
+    pres_dry = PRES * Qdry * Rdry / Rtot
+    pres_vap = PRES * QV   * Rvap / Rtot
 
-    qdry = 1.0_RP
-    Rtot = 0.0_RP
-    do iqw = 1, QA
-       qdry = qdry - q(iqw)
-       Rtot = Rtot + q(iqw) * Rq(iqw)
-    enddo
-    Rtot = Rtot + Rdry * qdry
-
-    ! dry air + vapor
-    pres_dry = max( pres * qdry * Rdry / Rtot, EPS )
-    entr = qdry * CPdry * logT_T0 &
-         - qdry * Rdry  * log( pres_dry / PRE00 )
-
-    if ( I_QV > 0 ) then
-       pres_vap = max( pres * q(I_QV) * Rvap / Rtot, EPS )
-       entr = entr + q(I_QV) * CP_VAPOR * logT_T0 &
-                   - q(I_QV) * Rvap  * log( pres_vap / PSAT0 ) &
-                   + q(I_QV) * LHV0 / TEM00
-    endif
-
-    ! liquid water
-    if ( QLS > 0 ) then
-       do iqw = QLS, QLE
-          entr = entr + q(iqw) * CP_WATER * logT_T0
-       enddo
-    endif
-
-    ! ice
-    if ( QIS > 0 ) then
-       do iqw = QIS, QIE
-          entr = entr + q(iqw) * CP_ICE * logT_T0 &
-                      - q(iqw) * LHF0 / TEM00
-       enddo
-    endif
+    entr = CPtot * log( TEMP / TEM00 ) &
+         - Qdry * Rdry * log( pres_dry / PRE00 ) &
+         - QV   * Rvap * log( pres_vap / PSAT0 ) &
+         + ( QV * LHV0 - QI * LHF0 ) / TEM00
 
     return
   end subroutine ATMOS_HYDROMETEOR_entr_0D
@@ -641,166 +836,124 @@ contains
   !-----------------------------------------------------------------------------
   !> calc temp, pres, q -> entropy (2D)
   subroutine ATMOS_HYDROMETEOR_entr_2D( &
-       entr, &
-       temp, &
-       pres, &
-       q,    &
-       Rq    )
-    use scale_const, only: &
-       EPS   => CONST_EPS,   &
-       PRE00 => CONST_PRE00, &
-       TEM00 => CONST_TEM00, &
-       CPdry => CONST_CPdry, &
-       Rdry  => CONST_Rdry,  &
-       Rvap  => CONST_Rvap,  &
-       LHV0  => CONST_LHV0,  &
-       LHF0  => CONST_LHF0,  &
-       PSAT0 => CONST_PSAT0
-    use scale_tracer, only: &
-       QA
+       IA, IS, IE, JA, JS, JE, &
+       TEMP, PRES,   &
+       QV, QI, Qdry, &
+       Rtot, CPtot,  &
+       entr          )
     implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: TEMP (IA,JA) !< temperature [K]
+    real(RP), intent(in) :: PRES (IA,JA) !< pressure    [Pa]
+    real(RP), intent(in) :: QV   (IA,JA) !< water vapor  mass concentration [kg/kg]
+    real(RP), intent(in) :: QI   (IA,JA) !< ice water    mass concentration [kg/kg]
+    real(RP), intent(in) :: Qdry (IA,JA) !< dry air      mass concentration [kg/kg]
+    real(RP), intent(in) :: Rtot (IA,JA) !< gas constant
+    real(RP), intent(in) :: CPtot(IA,JA) !< specific heat
 
     real(RP), intent(out) :: entr(IA,JA)    !< entropy            [J/K]
-    real(RP), intent(in)  :: temp(IA,JA)    !< temperature        [K]
-    real(RP), intent(in)  :: pres(IA,JA)    !< pressure           [Pa]
-    real(RP), intent(in)  :: q   (IA,JA,QA) !< mass concentration [kg/kg]
-    real(RP), intent(in)  :: Rq  (QA)       !< gas constant       [J/kg/K]
 
-    real(RP) :: qdry, Rtot
-    real(RP) :: logT_T0, pres_dry, pres_vap
-
-    integer  :: i, j, iqw
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
-    ! dry air + vapor
-    do j = JSB, JEB
-    do i = ISB, IEB
-
-       logT_T0 = log( temp(i,j) / TEM00 )
-
-       qdry = 1.0_RP
-       Rtot = 0.0_RP
-       do iqw = 1, QA
-          qdry = qdry - q(i,j,iqw)
-          Rtot = Rtot + q(i,j,iqw) * Rq(iqw)
-       enddo
-       Rtot = Rtot + Rdry * qdry
-
-       ! dry air + vapor
-       pres_dry = max( pres(i,j) * qdry    * Rdry / Rtot, EPS )
-       entr(i,j) = qdry    * CPdry * logT_T0 &
-                 - qdry    * Rdry  * log( pres_dry / PRE00 )
-
-       if ( I_QV > 0 ) then
-          pres_vap = max( pres(i,j) * q(i,j,I_QV) * Rvap / Rtot, EPS )
-          entr(i,j) = entr(i,j) + q(i,j,I_QV) * CP_VAPOR * logT_T0 &
-                                - q(i,j,I_QV) * Rvap  * log( pres_vap / PSAT0 ) &
-                                + q(i,j,I_QV) * LHV0 / TEM00
-       endif
-
-       ! liquid water
-       if ( QLS > 0 ) then
-          do iqw = QLS, QLE
-             entr(i,j) = entr(i,j) + q(i,j,iqw) * CP_WATER * logT_T0
-          enddo
-       endif
-
-       ! ice
-       if ( QIS > 0 ) then
-          do iqw = QIS, QIE
-             entr(i,j) = entr(i,j) + q(i,j,iqw) * CP_ICE * logT_T0 &
-                                   - q(i,j,iqw) * LHF0 / TEM00
-          enddo
-       endif
-
+    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+       call ATMOS_HYDROMETEOR_entr_0D( &
+            TEMP(i,j), PRES(i,j),        & ! [IN]
+            QV(i,j), QI(i,j), Qdry(i,j), & ! [IN]
+            Rtot(i,j), CPtot(i,j),       & ! [IN]
+            entr(i,j)                    ) ! [OUT]
     enddo
     enddo
 
     return
   end subroutine ATMOS_HYDROMETEOR_entr_2D
-
   !-----------------------------------------------------------------------------
   !> calc temp, pres, q -> entropy (3D)
   subroutine ATMOS_HYDROMETEOR_entr_3D( &
-       entr, &
-       temp, &
-       pres, &
-       q,    &
-       Rq    )
-    use scale_const, only: &
-       EPS   => CONST_EPS,   &
-       PRE00 => CONST_PRE00, &
-       TEM00 => CONST_TEM00, &
-       CPdry => CONST_CPdry, &
-       Rdry  => CONST_Rdry,  &
-       Rvap  => CONST_Rvap,  &
-       LHV0  => CONST_LHV0,  &
-       LHF0  => CONST_LHF0,  &
-       PSAT0 => CONST_PSAT0
-    use scale_tracer, only: &
-       QA
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       TEMP, PRES,   &
+       QV, QI, Qdry, &
+       Rtot, CPtot,  &
+       entr          )
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(out) :: entr(KA,IA,JA)    !< entropy            [J/K]
-    real(RP), intent(in)  :: temp(KA,IA,JA)    !< temperature        [K]
-    real(RP), intent(in)  :: pres(KA,IA,JA)    !< pressure           [Pa]
-    real(RP), intent(in)  :: q   (KA,IA,JA,QA) !< mass concentration [kg/kg]
-    real(RP), intent(in)  :: Rq  (QA)          !< gas constant       [J/kg/K]
+    real(RP), intent(in) :: TEMP (KA,IA,JA) !< temperature [K]
+    real(RP), intent(in) :: PRES (KA,IA,JA) !< pressure    [Pa]
+    real(RP), intent(in) :: QV   (KA,IA,JA) !< water vapor  mass concentration [kg/kg]
+    real(RP), intent(in) :: QI   (KA,IA,JA) !< ice water    mass concentration [kg/kg]
+    real(RP), intent(in) :: Qdry (KA,IA,JA) !< dry air      mass concentration [kg/kg]
+    real(RP), intent(in) :: Rtot (KA,IA,JA) !< gas constant
+    real(RP), intent(in) :: CPtot(KA,IA,JA) !< specific heat
 
-    real(RP) :: qdry, Rtot
-    real(RP) :: logT_T0, pres_dry, pres_vap
+    real(RP), intent(out) :: entr(KA,IA,JA) !< entropy            [J/K]
 
-    integer  :: k, i, j, iqw
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    ! dry air + vapor
-    do j = JSB, JEB
-    do i = ISB, IEB
+    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE
-
-       logT_T0 = log( temp(k,i,j) / TEM00 )
-
-       qdry = 1.0_RP
-       Rtot = 0.0_RP
-       do iqw = 1, QA
-          qdry = qdry - q(k,i,j,iqw)
-          Rtot = Rtot + q(k,i,j,iqw) * Rq(iqw)
-       enddo
-       Rtot = Rtot + Rdry * qdry
-
-       ! dry air + vapor
-       pres_dry = max( pres(k,i,j) * qdry    * Rdry / Rtot, EPS )
-       entr(k,i,j) = qdry    * CPdry * logT_T0 &
-                   - qdry    * Rdry  * log( pres_dry / PRE00 )
-
-       if ( I_QV > 0 ) then
-          pres_vap = max( pres(k,i,j) * q(k,i,j,I_QV) * Rvap / Rtot, EPS )
-          entr(k,i,j) = entr(k,i,j) + q(k,i,j,I_QV) * CP_VAPOR * logT_T0 &
-                                    - q(k,i,j,I_QV) * Rvap  * log( pres_vap / PSAT0 ) &
-                                    + q(k,i,j,I_QV) * LHV0 / TEM00
-       endif
-
-       ! liquid water
-       if ( QLS > 0 ) then
-          do iqw = QLS, QLE
-             entr(k,i,j) = entr(k,i,j) + q(k,i,j,iqw) * CP_WATER * logT_T0
-          enddo
-       endif
-
-       ! ice
-       if ( QIS > 0 ) then
-          do iqw = QIS, QIE
-             entr(k,i,j) = entr(k,i,j) + q(k,i,j,iqw) * CP_ICE * logT_T0 &
-                                       - q(k,i,j,iqw) * LHF0 / TEM00
-          enddo
-       endif
-
+       call ATMOS_HYDROMETEOR_entr_0D( &
+            TEMP(k,i,j), PRES(k,i,j),          & ! [IN]
+            QV(k,i,j), QI(k,i,j), Qdry(k,i,j), & ! [IN]
+            Rtot(k,i,j), CPtot(k,i,j),         & ! [IN]
+            entr(k,i,j)                        ) ! [OUT]
     enddo
     enddo
     enddo
 
     return
   end subroutine ATMOS_HYDROMETEOR_entr_3D
+
+  !-----------------------------------------------------------------------------
+  !> calc entropy, pres, q -> temp (0D)
+!OCL SERIAL
+  subroutine ATMOS_HYDROMETEOR_entr2temp_0D( &
+       entr, pres, &
+       qv, qi, qdry, &
+       Rtot, CPtot,    &
+       temp            )
+    use scale_const, only: &
+       PRE00 => CONST_PRE00, &
+       TEM00 => CONST_TEM00, &
+       Rdry  => CONST_Rdry,  &
+       Rvap  => CONST_Rvap,  &
+       LHV0  => CONST_LHV0,  &
+       LHF0  => CONST_LHF0,  &
+       PSAT0 => CONST_PSAT0
+    implicit none
+
+    real(RP), intent(in) :: entr  !< entropy  [J/K]
+    real(RP), intent(in) :: pres  !< pressure [Pa]
+    real(RP), intent(in) :: qv    !< water vapor mass concentration [kg/kg]
+    real(RP), intent(in) :: qi    !< ice water   mass concentration [kg/kg]
+    real(RP), intent(in) :: qdry  !< dry air     mass concentration [kg/kg]
+    real(RP), intent(in) :: Rtot  !< total gas constant
+    real(RP), intent(in) :: CPtot !< total specific heat
+
+    real(RP), intent(out) :: temp !< temperature [K]
+
+    real(RP) :: pres_dry, pres_vap
+    !---------------------------------------------------------------------------
+
+    pres_dry = PRES * Qdry * Rdry / Rtot
+    pres_vap = PRES * QV   * Rvap / Rtot
+
+    TEMP = TEM00 &
+         * exp( ( entr &
+                + Qdry * Rdry * log( pres_dry / PRE00 ) &
+                + QV   * Rvap * log( pres_vap / PSAT0 ) &
+              - ( QV * LHV0 - QI * LHF0 ) / TEM00 ) / CPtot )
+    return
+  end subroutine ATMOS_HYDROMETEOR_entr2temp_0D
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_diagnose_number_concentration( &

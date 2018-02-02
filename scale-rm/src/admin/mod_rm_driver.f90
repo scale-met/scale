@@ -17,10 +17,6 @@ module mod_rm_driver
   !
   !++ used modules
   !
-  use dc_log, only: &
-     LogInit
-  use gtool_file, only: &
-     FileCloseAll
   use scale_precision
   use scale_stdio
   use scale_prof
@@ -61,6 +57,8 @@ contains
        intercomm_parent, &
        intercomm_child,  &
        cnf_fname         )
+    use scale_file, only: &
+       FILE_Close_All
     use scale_process, only: &
        PRC_LOCAL_setup
     use scale_rm_process, only: &
@@ -79,6 +77,10 @@ contains
        DY
     use scale_grid_nest, only: &
        NEST_setup
+    use scale_ocean_grid_index, only: &
+       OCEAN_GRID_INDEX_setup
+    use scale_ocean_grid, only: &
+       OCEAN_GRID_setup
     use scale_land_grid_index, only: &
        LAND_GRID_INDEX_setup
     use scale_land_grid, only: &
@@ -87,9 +89,9 @@ contains
        URBAN_GRID_INDEX_setup
     use scale_urban_grid, only: &
        URBAN_GRID_setup
-    use scale_fileio, only: &
-       FILEIO_setup, &
-       FILEIO_cleanup
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_setup, &
+       FILE_CARTESC_cleanup
     use scale_comm, only: &
        COMM_setup , &
        COMM_cleanup
@@ -105,9 +107,16 @@ contains
        INTERP_setup
     use scale_rm_statistics, only: &
        STAT_setup
-    use scale_history, only: &
-       HIST_setup, &
-       HIST_write
+    use scale_time, only: &
+       TIME_NOWDATE, &
+       TIME_NOWMS,   &
+       TIME_NOWSTEP
+    use scale_file_history, only: &
+       FILE_HISTORY_write, &
+       FILE_HISTORY_set_nowdate, &
+       FILE_HISTORY_finalize
+    use scale_file_history_cartesC, only: &
+       FILE_HISTORY_CARTESC_setup
     use scale_monitor, only: &
        MONIT_setup, &
        MONIT_write, &
@@ -126,7 +135,6 @@ contains
        BULKFLUX_setup
     use scale_roughness, only: &
        ROUGHNESS_setup
-
     use mod_atmos_driver, only: &
        ATMOS_driver_config
     use mod_admin_restart, only: &
@@ -199,7 +207,7 @@ contains
     !########## Initial setup ##########
 
     ! setup standard I/O
-    call IO_setup( MODELNAME, .true., cnf_fname )
+    call IO_setup( MODELNAME, cnf_fname )
 
     ! setup MPI
     call PRC_LOCAL_setup( comm_world, & ! [IN]
@@ -208,9 +216,6 @@ contains
 
     ! setup Log
     call IO_LOG_setup( myrank, ismaster )
-    call LogInit( IO_FID_CONF,       &
-                  IO_FID_LOG, IO_L,  &
-                  IO_FID_NML, IO_NML )
 
     ! setup process
     call PRC_setup
@@ -237,6 +242,9 @@ contains
     call GRID_INDEX_setup
     call GRID_setup
 
+    call OCEAN_GRID_INDEX_setup
+    call OCEAN_GRID_setup
+
     call LAND_GRID_INDEX_setup
     call LAND_GRID_setup
 
@@ -256,7 +264,7 @@ contains
     call USER_config
 
     ! setup file I/O
-    call FILEIO_setup
+    call FILE_CARTESC_setup
 
     ! setup mpi communication
     call COMM_setup
@@ -280,7 +288,7 @@ contains
     ! setup statistics
     call STAT_setup
     ! setup history I/O
-    call HIST_setup
+    call FILE_HISTORY_CARTESC_setup
     ! setup monitor I/O
     call MONIT_setup
     ! setup external in
@@ -339,12 +347,13 @@ contains
 
          ! history&monitor file output
          call MONIT_write('MAIN')
-         call HIST_write ! if needed
+         call FILE_HISTORY_write ! if needed
       end if
 
 
       ! time advance
       call ADMIN_TIME_advance
+      call FILE_HISTORY_set_nowdate( TIME_NOWDATE, TIME_NOWMS, TIME_NOWSTEP )
 
       ! user-defined procedure
       call USER_step
@@ -357,7 +366,7 @@ contains
 
       ! history&monitor file output
       call MONIT_write('MAIN')
-      call HIST_write
+      call FILE_HISTORY_write
 
       ! restart output
       call ADMIN_restart_write
@@ -397,12 +406,13 @@ contains
     call PROF_rapend  ('Monit', 2)
 
     call PROF_rapstart('File', 2)
+    call FILE_HISTORY_finalize
     ! clean up resource allocated for I/O
-    call FILEIO_cleanup
+    call FILE_CARTESC_cleanup
 
     call COMM_cleanup
 
-    call FileCloseAll
+    call FILE_Close_All
     call PROF_rapend  ('File', 2)
 
     call PROF_rapend  ('All', 1)
@@ -431,7 +441,7 @@ contains
        URBAN_driver_resume, &
        URBAN_SURFACE_SET
     use mod_atmos_vars, only: &
-       ATMOS_vars_diagnostics,     &
+       ATMOS_vars_calc_diagnostics, &
        ATMOS_vars_history_setpres, &
        ATMOS_vars_restart_read
     use mod_ocean_vars, only: &
@@ -464,7 +474,7 @@ contains
 
     if ( ATMOS_do ) then
        ! calc diagnostics
-       call ATMOS_vars_diagnostics
+       call ATMOS_vars_calc_diagnostics
        call ATMOS_vars_history_setpres
     endif
 

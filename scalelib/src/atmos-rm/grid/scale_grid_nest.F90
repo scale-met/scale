@@ -67,6 +67,7 @@ module scale_grid_nest
   integer,  public              :: PARENT_KA(2)         !< parent max number in z-direction (with halo)
   integer,  public              :: PARENT_IA(2)         !< parent max number in x-direction (with halo)
   integer,  public              :: PARENT_JA(2)         !< parent max number in y-direction (with halo)
+  integer,  public              :: PARENT_OKMAX(2)      !< parent max number in oz-direction
   integer,  public              :: PARENT_LKMAX(2)      !< parent max number in lz-direction
   real(DP), public              :: PARENT_DTSEC(2)      !< parent DT [sec]
   integer,  public              :: PARENT_NSTEP(2)      !< parent step [number]
@@ -77,6 +78,7 @@ module scale_grid_nest
   integer,  public              :: DAUGHTER_KA(2)       !< daughter max number in z-direction (with halo)
   integer,  public              :: DAUGHTER_IA(2)       !< daughter max number in x-direction (with halo)
   integer,  public              :: DAUGHTER_JA(2)       !< daughter max number in y-direction (with halo)
+  integer,  public              :: DAUGHTER_OKMAX(2)    !< daughter max number in oz-direction
   integer,  public              :: DAUGHTER_LKMAX(2)    !< daughter max number in lz-direction
   real(DP), public              :: DAUGHTER_DTSEC(2)    !< daughter DT [sec]
   integer,  public              :: DAUGHTER_NSTEP(2)    !< daughter steps [number]
@@ -111,6 +113,7 @@ module scale_grid_nest
   logical,  public              :: ONLINE_USE_VELZ      = .false.
   logical,  public              :: ONLINE_NO_ROTATE     = .false.
   logical,  public              :: ONLINE_BOUNDARY_USE_QHYD = .false.
+  logical,  public              :: ONLINE_BOUNDARY_DIAGQNUM = .false.
 
   !-----------------------------------------------------------------------------
   !
@@ -168,6 +171,7 @@ module scale_grid_nest
   integer, private               :: OFFLINE_PARENT_IMAX      !< parent max number in x-direction [for namelist]
   integer, private               :: OFFLINE_PARENT_JMAX      !< parent max number in y-direction [for namelist]
   integer, private               :: OFFLINE_PARENT_LKMAX     !< parent max number in lz-direction [for namelist]
+  integer, private               :: OFFLINE_PARENT_OKMAX     !< parent max number in oz-direction [for namelist]
   integer(8), private            :: ONLINE_WAIT_LIMIT        !< limit times of waiting loop in "NEST_COMM_waitall"
   logical, private               :: ONLINE_DAUGHTER_USE_VELZ
   logical, private               :: ONLINE_DAUGHTER_NO_ROTATE
@@ -276,8 +280,8 @@ contains
       inter_child    )
 !      flag_parent,   &
 !      flag_child     )
-    use gtool_file, only: &
-       FileGetShape
+    use scale_file, only: &
+       FILE_Get_Shape
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_process, only: &
@@ -323,9 +327,6 @@ contains
     integer :: parent_id
     integer, allocatable :: errcodes(:)
 
-    integer :: ims, ime
-    integer :: jms, jme
-
     character(len=2) :: dom_num
 
     logical :: flag_parent = .false.
@@ -345,6 +346,7 @@ contains
        ONLINE_USE_VELZ,          &
        ONLINE_NO_ROTATE,         &
        ONLINE_BOUNDARY_USE_QHYD, &
+       ONLINE_BOUNDARY_DIAGQNUM, &
        ONLINE_AGGRESSIVE_COMM,   &
        ONLINE_WAIT_LIMIT,        &
        ONLINE_SPECIFIED_MAXRQ,   &
@@ -391,17 +393,25 @@ contains
        USE_NESTING = .true.
 
        if ( PRC_IsMaster ) then
-          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "CX", 0 )
+          call FILE_Get_Shape( OFFLINE_PARENT_BASENAME, "CX", dims(:) )
           OFFLINE_PARENT_IMAX = dims(1)-4
-          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "CY", 0 )
+          call FILE_Get_Shape( OFFLINE_PARENT_BASENAME, "CY", dims(:) )
           OFFLINE_PARENT_JMAX = dims(1)-4
-          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "z", 0, error=error )
+          call FILE_Get_Shape( OFFLINE_PARENT_BASENAME, "z", dims(:), error=error )
           if ( error ) then
              OFFLINE_PARENT_KMAX = 0
           else
              OFFLINE_PARENT_KMAX = dims(1)
           end if
-          call FileGetShape( dims, OFFLINE_PARENT_BASENAME, "lz", 0, error=error )
+
+          call FILE_Get_Shape( OFFLINE_PARENT_BASENAME, "oz", dims(:), error=error )
+          if ( error ) then
+             OFFLINE_PARENT_OKMAX = 0
+          else
+             OFFLINE_PARENT_OKMAX = dims(1)
+          end if
+
+          call FILE_Get_Shape( OFFLINE_PARENT_BASENAME, "lz", dims(:), error=error )
           if ( error ) then
              OFFLINE_PARENT_LKMAX = 0
           else
@@ -411,6 +421,7 @@ contains
        call COMM_Bcast( OFFLINE_PARENT_IMAX )
        call COMM_Bcast( OFFLINE_PARENT_JMAX )
        call COMM_Bcast( OFFLINE_PARENT_KMAX )
+       call COMM_Bcast( OFFLINE_PARENT_OKMAX )
        call COMM_Bcast( OFFLINE_PARENT_LKMAX )
     end if
 
@@ -445,22 +456,14 @@ contains
     if( USE_NESTING ) then
 
        if ( OFFLINE .OR. ONLINE_IAM_DAUGHTER ) then
-          ims = IS-1
-          ime = IE
-          jms = JS-1
-          jme = JE
-          if ( .NOT. PRC_HAS_W ) ims = 1
-          if ( .NOT. PRC_HAS_E ) ime = IA
-          if ( .NOT. PRC_HAS_S ) jms = 1
-          if ( .NOT. PRC_HAS_N ) jme = JA
-          corner_loc(I_NW,I_LON) = REAL_LONXY(ims,jme) / D2R
-          corner_loc(I_NE,I_LON) = REAL_LONXY(ime,jme) / D2R
-          corner_loc(I_SW,I_LON) = REAL_LONXY(ims,jms) / D2R
-          corner_loc(I_SE,I_LON) = REAL_LONXY(ime,jms) / D2R
-          corner_loc(I_NW,I_LAT) = REAL_LATXY(ims,jme) / D2R
-          corner_loc(I_NE,I_LAT) = REAL_LATXY(ime,jme) / D2R
-          corner_loc(I_SW,I_LAT) = REAL_LATXY(ims,jms) / D2R
-          corner_loc(I_SE,I_LAT) = REAL_LATXY(ime,jms) / D2R
+          corner_loc(I_NW,I_LON) = REAL_LONXY( 0,JA) / D2R
+          corner_loc(I_NE,I_LON) = REAL_LONXY(IA,JA) / D2R
+          corner_loc(I_SW,I_LON) = REAL_LONXY( 0, 0) / D2R
+          corner_loc(I_SE,I_LON) = REAL_LONXY(IA, 0) / D2R
+          corner_loc(I_NW,I_LAT) = REAL_LATXY( 0,JA) / D2R
+          corner_loc(I_NE,I_LAT) = REAL_LATXY(IA,JA) / D2R
+          corner_loc(I_SW,I_LAT) = REAL_LATXY( 0, 0) / D2R
+          corner_loc(I_SE,I_LAT) = REAL_LATXY(IA, 0) / D2R
 
           allocate( ncopy(IA,JA,itp_nh,itp_ng) )
        end if
@@ -472,6 +475,7 @@ contains
          PARENT_KMAX(HANDLING_NUM)      = OFFLINE_PARENT_KMAX
          PARENT_IMAX(HANDLING_NUM)      = OFFLINE_PARENT_IMAX
          PARENT_JMAX(HANDLING_NUM)      = OFFLINE_PARENT_JMAX
+         PARENT_OKMAX(HANDLING_NUM)     = OFFLINE_PARENT_OKMAX
          PARENT_LKMAX(HANDLING_NUM)     = OFFLINE_PARENT_LKMAX
 
          PARENT_PRC_nprocs(HANDLING_NUM) = PARENT_PRC_NUM_X(HANDLING_NUM) * PARENT_PRC_NUM_Y(HANDLING_NUM)
@@ -744,8 +748,8 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
                                             jgrd           (:,:,:,I_XSTG),     & ! [OUT]
                                             ncopy          (:,:,:,I_XSTG),     & ! [OUT]
                                             MY_CZ          (:,:,:),            & ! [IN]
-                                            MY_LATX        (:,:),              & ! [IN]
-                                            MY_LONX        (:,:),              & ! [IN]
+                                            MY_LATX        (1:IA,:),           & ! [IN]
+                                            MY_LONX        (1:IA,:),           & ! [IN]
                                             DATR_KS(HANDLING_NUM),             & ! [IN]
                                             DATR_KE(HANDLING_NUM),             & ! [IN]
                                             DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
@@ -765,8 +769,8 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
                                             jgrd           (:,:,:,I_YSTG),     & ! [OUT]
                                             ncopy          (:,:,:,I_YSTG),     & ! [OUT]
                                             MY_CZ          (:,:,:),            & ! [IN]
-                                            MY_LATY        (:,:),              & ! [IN]
-                                            MY_LONY        (:,:),              & ! [IN]
+                                            MY_LATY        (:,1:JA),           & ! [IN]
+                                            MY_LONY        (:,1:JA),           & ! [IN]
                                             DATR_KS(HANDLING_NUM),             & ! [IN]
                                             DATR_KE(HANDLING_NUM),             & ! [IN]
                                             DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
@@ -1163,10 +1167,17 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        call PRC_MPIstop
     endif
 
-    if( QA_OTHERSIDE /= NEST_BND_QA ) then
-       write(*,*) 'xxx [grd_nest/NEST_COMM_parentsize] NUMBER of QA are not matched!'
-       write(*,*) 'xxx check a flag of ONLINE_BOUNDARY_USE_QHYD.', QA_OTHERSIDE, NEST_BND_QA
-       call PRC_MPIstop
+    if ( ONLINE_BOUNDARY_DIAGQNUM ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Number concentration of hydrometeor will be diagnosed'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Number of QA (remote,local) = ', QA_OTHERSIDE, NEST_BND_QA
+       NEST_BND_QA = min(QA_OTHERSIDE, NEST_BND_QA)
+    else
+       if ( QA_OTHERSIDE /= NEST_BND_QA ) then
+          write(*,*) 'xxx [grd_nest/NEST_COMM_parentsize] NUMBER of QA are not matched!'
+          write(*,*) 'xxx check a flag of ONLINE_BOUNDARY_USE_QHYD.'
+          write(*,*) 'xxx Number of QA (remote,local) = ', QA_OTHERSIDE, NEST_BND_QA
+          call PRC_MPIstop
+       endif
     endif
 
     return
@@ -1547,25 +1558,25 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_lonx
-          call MPI_ISEND(REAL_LONX, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(REAL_LONX(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
           call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_latx
-          call MPI_ISEND(REAL_LATX, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(REAL_LATX(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
           call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_lony
-          call MPI_ISEND(REAL_LONY, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(REAL_LONY(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
           call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_laty
-          call MPI_ISEND(REAL_LATY, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(REAL_LATY(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
           call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
           rq = rq + 1

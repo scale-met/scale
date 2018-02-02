@@ -68,12 +68,8 @@ module scale_atmos_phy_mp_suzuki10
      TEMP0 => CONST_TEM00, &
      RHOW  => CONST_DWATR
   use scale_atmos_saturation, only: &
-     SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq, &
-     SATURATION_pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice, &
-     LovR_liq,     &
-     LovR_ice,     &
-     CPovR_liq,    &
-     CPovR_ice
+     ATMOS_SATURATION_pres2qsat_liq, &
+     ATMOS_SATURATION_pres2qsat_ice
   use scale_atmos_thermodyn, only: &
      THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
      THERMODYN_pott      => ATMOS_THERMODYN_pott
@@ -444,15 +440,13 @@ contains
     integer :: S10_RNDM_MSPC
     integer :: S10_RNDM_MBIN
 
-    NAMELIST / PARAM_ATMOS_PHY_MP / &
+    NAMELIST / PARAM_ATMOS_PHY_MP_SUZUKI10 / &
        MP_doprecipitation,     &
        MP_donegative_fixer,    &
        MP_limit_negative,      &
        MP_ntmax_sedimentation, &
        MP_doautoconversion,    &
-       MP_couple_aerosol
-
-    NAMELIST / PARAM_ATMOS_PHY_MP_SUZUKI10 / &
+       MP_couple_aerosol,      &
        RHO_AERO,  &
        R_MIN, &
        R_MAX, &
@@ -518,17 +512,6 @@ contains
     S10_RNDM_FLGP = rndm_flgp
     S10_RNDM_MSPC = mspc
     S10_RNDM_MBIN = mbin
-
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
-
-    if ( ierr < 0 ) then !--- missing
-     if( IO_L ) write(IO_FID_LOG,*)  '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-     write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP, Check!'
-     call PRC_MPIstop
-    endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP)
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_SUZUKI10,iostat=ierr)
@@ -860,14 +843,15 @@ contains
        TRACER_CV, &
        TRACER_MASS
     use scale_atmos_thermodyn, only: &
+       THERMODYN_qd          => ATMOS_THERMODYN_qd,         &
        THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,       &
        THERMODYN_rhot        => ATMOS_THERMODYN_rhot,       &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
     use scale_atmos_phy_mp_common, only: &
        MP_negative_fixer => ATMOS_PHY_MP_negative_fixer, &
        MP_precipitation  => ATMOS_PHY_MP_precipitation
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     implicit none
 
     real(RP), intent(inout) :: DENS     (KA,IA,JA)
@@ -885,6 +869,7 @@ contains
     real(RP) :: POTT (KA,IA,JA)
     real(RP) :: TEMP (KA,IA,JA)
     real(RP) :: PRES (KA,IA,JA)
+    real(RP) :: Qdry (KA,IA,JA)
     real(RP) :: qsat (KA,IA,JA)
     real(RP) :: ssliq(KA,IA,JA)
     real(RP) :: ssice(KA,IA,JA)
@@ -899,6 +884,7 @@ contains
     real(RP) :: DENS_ijk(KIJMAX)
     real(RP) :: PRES_ijk(KIJMAX)
     real(RP) :: TEMP_ijk(KIJMAX)
+    real(RP) :: Qdry_ijk(KIJMAX)
     real(RP) :: Qvap_ijk(KIJMAX)
     real(RP) :: CCN_ijk(KIJMAX)
     real(RP) :: Evaporate_ijk(KIJMAX)
@@ -959,6 +945,9 @@ contains
     enddo
     enddo
 
+    call THERMODYN_qd( QDRY(:,:,:),                  & ! [OUT]
+                       QTRC(:,:,:,:), TRACER_MASS(:) ) ! [IN]
+
     call THERMODYN_temp_pres( TEMP(:,:,:),   & ! [OUT]
                               PRES(:,:,:),   & ! [OUT]
                               DENS(:,:,:),   & ! [IN]
@@ -968,10 +957,9 @@ contains
                               TRACER_R(:),   & ! [IN]
                               TRACER_MASS(:) ) ! [IN]
 
-    call SATURATION_pres2qsat_liq( qsat(:,:,:), & ! [OUT]
-                                   TEMP(:,:,:), & ! [IN]
-                                   PRES(:,:,:)  ) ! [IN]
-
+    call ATMOS_SATURATION_pres2qsat_liq( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                         TEMP(:,:,:), PRES(:,:,:), QDRY(:,:,:), & ! [IN]
+                                         qsat(:,:,:)                            ) ! [OUT]
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -983,9 +971,9 @@ contains
     if ( nspc == 1 ) then
        ssice(:,:,:) = 0.0_RP
     else
-       call SATURATION_pres2qsat_ice( qsat(:,:,:), & ! [OUT]
-                                      TEMP(:,:,:), & ! [IN]
-                                      PRES(:,:,:)  ) ! [IN]
+       call ATMOS_SATURATION_pres2qsat_ice( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                            TEMP(:,:,:), PRES(:,:,:), QDRY(:,:,:), & ! [IN]
+                                            qsat(:,:,:)                            ) ! [OUT]
 
        do j = JS, JE
        do i = IS, IE
@@ -1048,6 +1036,7 @@ contains
           DENS_ijk(ijkcount) = DENS(k,i,j)
           PRES_ijk(ijkcount) = PRES(k,i,j)
           TEMP_ijk(ijkcount) = TEMP(k,i,j)
+          Qdry_ijk(ijkcount) = QDRY(k,i,j)
           CCN_ijk(ijkcount)  = CCN(k,i,j)
           Qvap_ijk(ijkcount) = QTRC(k,i,j,I_QV)
 
@@ -1122,6 +1111,7 @@ contains
                       index_warm(    1:ijkcount), & ! [IN]
                       DENS_ijk  (    1:ijkcount), & ! [IN]
                       PRES_ijk  (    1:ijkcount), & ! [IN]
+                      Qdry_ijk  (    1:ijkcount), & ! [IN]
                       CCN_ijk   (    1:ijkcount), & ! [IN]
                       TEMP_ijk  (    1:ijkcount), & ! [INOUT]
                       Qvap_ijk  (    1:ijkcount), & ! [INOUT]
@@ -1286,7 +1276,7 @@ contains
                                  TRACER_CV(:),          & ! [IN]
                                  MP_DTSEC_SEDIMENTATION ) ! [IN]
 
-          do iq = 1, QA_MP
+          do iq = 1, QA_MP-1
           do j  = JS, JE
           do i  = IS, IE
           do k  = KS-1, KE-1
@@ -1370,8 +1360,8 @@ contains
        enddo
     enddo
 
-    call HIST_in( QHYD_out(:,:,:,1), 'QC', 'Mixing ratio of QC', 'kg/kg' )
-    call HIST_in( QHYD_out(:,:,:,2), 'QR', 'Mixing ratio of QR', 'kg/kg' )
+    call FILE_HISTORY_in( QHYD_out(:,:,:,1), 'QC', 'Mixing ratio of QC', 'kg/kg' )
+    call FILE_HISTORY_in( QHYD_out(:,:,:,2), 'QR', 'Mixing ratio of QR', 'kg/kg' )
 
     if ( nspc > 1 ) then
        do m = ic, id ! columnar,plate,dendrite = ice
@@ -1424,10 +1414,10 @@ contains
           enddo
        enddo
 
-       call HIST_in( QHYD_out(:,:,:,3), 'QI', 'Mixing ratio of QI', 'kg/kg' )
-       call HIST_in( QHYD_out(:,:,:,4), 'QS', 'Mixing ratio of QS', 'kg/kg' )
-       call HIST_in( QHYD_out(:,:,:,5), 'QG', 'Mixing ratio of QG', 'kg/kg' )
-       call HIST_in( QHYD_out(:,:,:,6), 'QH', 'Mixing ratio of QH', 'kg/kg' )
+       call FILE_HISTORY_in( QHYD_out(:,:,:,3), 'QI', 'Mixing ratio of QI', 'kg/kg' )
+       call FILE_HISTORY_in( QHYD_out(:,:,:,4), 'QS', 'Mixing ratio of QS', 'kg/kg' )
+       call FILE_HISTORY_in( QHYD_out(:,:,:,5), 'QG', 'Mixing ratio of QG', 'kg/kg' )
+       call FILE_HISTORY_in( QHYD_out(:,:,:,6), 'QH', 'Mixing ratio of QH', 'kg/kg' )
     endif
 
     return
@@ -1442,6 +1432,7 @@ contains
        index_warm,  &
        dens,        &
        pres,        &
+       qdry,        &
        ccn,         &
        temp,        &
        qvap,        &
@@ -1458,6 +1449,7 @@ contains
     integer , intent(in)    :: index_warm(ijkmax)
     real(RP), intent(in)    :: dens      (ijkmax)           ! Density           [kg/m3]
     real(RP), intent(in)    :: pres      (ijkmax)           ! Pressure          [Pa]
+    real(RP), intent(in)    :: qdry      (ijkmax)           ! dry air mass ratio [kg/kg]
     real(RP), intent(in)    :: ccn       (ijkmax)           ! Number concentration of CCN [#/m3]
     real(RP), intent(inout) :: temp      (ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap      (ijkmax)           ! Specific humidity [kg/kg]
@@ -1475,6 +1467,7 @@ contains
           call nucleata( ijkmax,      & ! [IN]
                          dens(:),     & ! [IN]
                          pres(:),     & ! [IN]
+                         qdry(:),     & ! [IN]
                          temp(:),     & ! [INOUT]
                          qvap(:),     & ! [INOUT]
                          ghyd(:,:,:), & ! [INOUT]
@@ -1485,6 +1478,7 @@ contains
           call cndevpsbla( ijkmax,      & ! [IN]
                            dens(:),     & ! [IN]
                            pres(:),     & ! [IN]
+                           qdry(:),     & ! [IN]
                            temp(:),     & ! [INOUT]
                            qvap(:),     & ! [INOUT]
                            ghyd(:,:,:), & ! [INOUT]
@@ -1507,6 +1501,7 @@ contains
           call nucleata( ijkmax,      & ! [IN]
                          dens(:),     & ! [IN]
                          pres(:),     & ! [IN]
+                         qdry(:),     & ! [IN]
                          temp(:),     & ! [INOUT]
                          qvap(:),     & ! [INOUT]
                          ghyd(:,:,:), & ! [INOUT]
@@ -1527,6 +1522,7 @@ contains
 !                            index_cold(:), & ! [IN]
 !                            dens(:),       & ! [IN]
 !                            pres(:),       & ! [IN]
+!                            qdry(:),       & ! [IN]
 !                            temp(:),       & ! [INOUT]
 !                            qvap(:),       & ! [INOUT]
 !                            ghyd(:,:,:),   & ! [INOUT]
@@ -1544,6 +1540,7 @@ contains
           call cndevpsbla( ijkmax,      & ! [IN]
                            dens(:),     & ! [IN]
                            pres(:),     & ! [IN]
+                           qdry(:),     & ! [IN]
                            temp(:),     & ! [INOUT]
                            qvap(:),     & ! [INOUT]
                            ghyd(:,:,:), & ! [INOUT]
@@ -1570,6 +1567,7 @@ contains
           call nucleat( ijkmax,      & ! [IN]
                         dens(:),     & ! [IN]
                         pres(:),     & ! [IN]
+                        qdry(:),     & ! [IN]
                         ccn(:),      & ! [IN]
                         temp(:),     & ! [INOUT]
                         qvap(:),     & ! [INOUT]
@@ -1580,6 +1578,7 @@ contains
           call cndevpsbl( ijkmax,      & ! [IN]
                           dens(:),     & ! [IN]
                           pres(:),     & ! [IN]
+                          qdry(:),     & ! [IN]
                           temp(:),     & ! [INOUT]
                           qvap(:),     & ! [INOUT]
                           ghyd(:,:,:), & ! [INOUT]
@@ -1601,6 +1600,7 @@ contains
           call nucleat( ijkmax,      & ! [IN]
                         dens(:),     & ! [IN]
                         pres(:),     & ! [IN]
+                        qdry(:),     & ! [IN]
                         ccn(:),      & ! [IN]
                         temp(:),     & ! [INOUT]
                         qvap(:),     & ! [INOUT]
@@ -1621,6 +1621,7 @@ contains
                             index_cold(:), & ! [IN]
                             dens(:),       & ! [IN]
                             pres(:),       & ! [IN]
+                            qdry(:),       & ! [IN]
                             temp(:),       & ! [INOUT]
                             qvap(:),       & ! [INOUT]
                             ghyd(:,:,:),   & ! [INOUT]
@@ -1638,6 +1639,7 @@ contains
           call cndevpsbl( ijkmax,      & ! [IN]
                           dens(:),     & ! [IN]
                           pres(:),     & ! [IN]
+                          qdry(:),     & ! [IN]
                           temp(:),     & ! [INOUT]
                           qvap(:),     & ! [INOUT]
                           ghyd(:,:,:), & ! [INOUT]
@@ -1664,6 +1666,7 @@ contains
        ijkmax, &
        dens,   &
        pres,   &
+       qdry,   &
        ccn,    &
        temp,   &
        qvap,   &
@@ -1674,6 +1677,7 @@ contains
     integer,  intent(in)    :: ijkmax
     real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
     real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
+    real(RP), intent(in)    :: qdry(ijkmax)           ! dry air mass ratio [kg/kg]
     real(RP), intent(in)    :: ccn(ijkmax)            ! CCN number concentration [#/m3]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
@@ -1688,7 +1692,7 @@ contains
   real(RP) :: n_c
   real(RP) :: sumnum(ijkmax)
   real(RP) :: gcn( nbin,ijkmax )        ! number of cloud particles in each bin (=gc/exp(xctr))
-  real(RP) :: psat
+  real(RP) :: qsat
   integer  :: ijk
 
     call PROF_rapstart('_SBM_Nucleat', 3)
@@ -1711,10 +1715,10 @@ contains
     !--- lhv
     qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
     !--- supersaturation
-    psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-          * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-    ssliq(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-    ssliq(ijk) = qvap(ijk)/ssliq(ijk)-1.0_RP
+    call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                         qsat                  ) ! [OUT]
+                                         
+    ssliq(ijk) = qvap(ijk)/qsat-1.0_RP
 
    enddo
 
@@ -1757,6 +1761,7 @@ contains
        ijkmax, &
        dens,   &
        pres,   &
+       qdry,   &
        temp,   &
        qvap,   &
        gc,     &
@@ -1767,6 +1772,7 @@ contains
     integer,  intent(in)    :: ijkmax
     real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
     real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
+    real(RP), intent(in)    :: qdry(ijkmax)           ! dry air mass ratio [kg/kg]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
@@ -1784,7 +1790,7 @@ contains
 !  integer, save :: ncld( 1:nccn )
 !  logical, save :: ofirst(1:ijkmax) = .true.
   !
-  real(RP) :: psat
+  real(RP) :: qsat
   integer  :: ijk
 
     call PROF_rapstart('_SBM_NucleatA', 3)
@@ -1794,14 +1800,14 @@ contains
     !--- lhv
     qlevp = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
     !--- supersaturation
-    psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-          * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-    ssliq = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-    psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-          * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-    ssice = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-    ssliq = qvap(ijk)/ssliq-1.0_RP
-    ssice = qvap(ijk)/ssice-1.0_RP
+    call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                         qsat                             ) ! [OUT]
+                                         
+    ssliq = qvap(ijk)/qsat-1.0_RP
+    call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                         qsat                             ) ! [OUT]
+       
+    ssice = qvap(ijk)/qsat-1.0_RP
 
     if ( ssliq <= 0.0_RP ) cycle
     !--- use for aerosol coupled model
@@ -1829,14 +1835,14 @@ contains
     !--- nucleation
     do n = nccn, 1, -1
         !--- super saturation
-        psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-              * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-        ssliq = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-        psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-              * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-        ssice = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-        ssliq = qvap(ijk)/ssliq-1.0_RP
-        ssice = qvap(ijk)/ssice-1.0_RP
+        call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                             qsat                             ) ! [OUT]
+                                             
+        ssliq = qvap(ijk)/qsat-1.0_RP
+        call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                             qsat                             ) ! [OUT]
+             
+        ssice = qvap(ijk)/qsat-1.0_RP
 
       if ( ssliq <= 0.0_RP ) exit
       !--- use for aerosol coupled model
@@ -1882,6 +1888,7 @@ contains
        ijkmax,    &
        dens,      &
        pres,      &
+       qdry,      &
        temp,      &
        qvap,      &
        gc,        &
@@ -1890,10 +1897,11 @@ contains
     implicit none
 
     integer,  intent(in)    :: ijkmax
-    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
-    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
-    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
-    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density            [kg/m3]
+    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure           [Pa]
+    real(RP), intent(in)    :: qdry(ijkmax)           ! dry air mass ratio [kg/kg]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature        [K]
+    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity  [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(out)   :: evaporate(ijkmax)      ! Number concentration of evaporated cloud [/m3]
     real(DP), intent(in)    :: dtime                  ! Time step interval
@@ -1902,6 +1910,7 @@ contains
     call liqphase( ijkmax,        & ! [IN]
                    dens(:),       & ! [IN]
                    pres(:),       & ! [IN]
+                   qdry(:),       & ! [IN]
                    temp(:),       & ! [INOUT]
                    qvap(:),       & ! [INOUT]
                    gc  (:,:,:),   & ! [INOUT]
@@ -1912,6 +1921,7 @@ contains
       call icephase( ijkmax,        & ! [IN]
                      dens(:),       & ! [IN]
                      pres(:),       & ! [IN]
+                     qdry(:),       & ! [IN]
                      temp(:),       & ! [INOUT]
                      qvap(:),       & ! [INOUT]
                      gc  (:,:,:),   & ! [INOUT]
@@ -1920,6 +1930,7 @@ contains
       call mixphase( ijkmax,        & ! [IN]
                      dens(:),       & ! [IN]
                      pres(:),       & ! [IN]
+                     qdry(:),       & ! [IN]
                      temp(:),       & ! [INOUT]
                      qvap(:),       & ! [INOUT]
                      gc  (:,:,:),   & ! [INOUT]
@@ -1934,6 +1945,7 @@ contains
        ijkmax,    &
        dens,      &
        pres,      &
+       qdry,      &
        temp,      &
        qvap,      &
        gc,        &
@@ -1943,10 +1955,11 @@ contains
     implicit none
 
     integer,  intent(in)    :: ijkmax
-    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
-    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
-    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
-    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density            [kg/m3]
+    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure           [Pa]
+    real(RP), intent(in)    :: qdry(ijkmax)           ! dry air mass ratio [kg/kg]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature        [K]
+    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity  [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(inout) :: ga  (nccn     ,ijkmax) ! Mass size distribution function of aerosol
     real(RP), intent(out)   :: evaporate(ijkmax)      ! Number concentration of evaporated cloud [/m3]
@@ -1956,6 +1969,7 @@ contains
     call liqphase( ijkmax,        & ! [IN]
                    dens(:),       & ! [IN]
                    pres(:),       & ! [IN]
+                   qdry(:),       & ! [IN]
                    temp(:),       & ! [INOUT]
                    qvap(:),       & ! [INOUT]
                    gc  (:,:,:),   & ! [INOUT]
@@ -1974,6 +1988,7 @@ contains
       call icephase( ijkmax,        & ! [IN]
                      dens(:),       & ! [IN]
                      pres(:),       & ! [IN]
+                     qdry(:),       & ! [IN]
                      temp(:),       & ! [INOUT]
                      qvap(:),       & ! [INOUT]
                      gc  (:,:,:),   & ! [INOUT]
@@ -1982,6 +1997,7 @@ contains
       call mixphase( ijkmax,        & ! [IN]
                      dens(:),       & ! [IN]
                      pres(:),       & ! [IN]
+                     qdry(:),       & ! [IN]
                      temp(:),       & ! [INOUT]
                      qvap(:),       & ! [INOUT]
                      gc  (:,:,:),   & ! [INOUT]
@@ -1996,6 +2012,7 @@ contains
        ijkmax,     &
        dens,       &
        pres,       &
+       qdry,       &
        temp,       &
        qvap,       &
        gc,         &
@@ -2004,10 +2021,11 @@ contains
     implicit none
 
     integer,  intent(in)    :: ijkmax
-    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
-    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
-    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
-    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density            [kg/m3]
+    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure           [Pa]
+    real(RP), intent(in)    :: qdry(ijkmax)           ! dry air mass ratio [kg/kg]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature        [K]
+    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity  [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(out)   :: regene_gcn(ijkmax)     ! mass of regenerated aerosol
     real(DP), intent(in)    :: dtime                  ! Time step interval
@@ -2029,7 +2047,7 @@ contains
 !  real(RP) :: old_sum_gcn, new_sum_gcn
   integer  :: iflg( nspc,ijkmax )                ! flag whether calculation is conduct or not
   real(RP) :: csum( nspc,ijkmax )
-  real(RP) :: f1, f2, emu, cefd, cefk, festl, psat
+  real(RP) :: f1, f2, emu, cefd, cefk, festl, qsat
   real(RP), parameter :: afmyu = 1.72E-05_RP, bfmyu = 3.93E+2_RP
   real(RP), parameter :: cfmyu = 1.2E+02_RP, fct = 1.4E+3_RP
   real(RP) :: zerosw, qvtmp
@@ -2081,14 +2099,14 @@ contains
      !--- lhv
      qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
      !--- super saturation
-     psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-           * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-     ssliq(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-     psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-           * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-     ssice(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-     ssliq(ijk) = qvap(ijk)/ssliq(ijk)-1.0_RP
-     ssice(ijk) = qvap(ijk)/ssice(ijk)-1.0_RP
+     call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                          qsat                             ) ! [OUT]
+                                          
+     ssliq(ijk) = qvap(ijk)/qsat-1.0_RP
+     call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                          qsat                             ) ! [OUT]
+                                          
+     ssice(ijk) = qvap(ijk)/qsat-1.0_RP
 
      emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
      cefd = emu/dens(ijk)
@@ -2125,14 +2143,14 @@ contains
        !--- lhv
        qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
        !----- matrix for supersaturation tendency
-       psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-             * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-       ssliq(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-       psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-             * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-       ssice(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-       ssliq(ijk) = qvap(ijk)/ssliq(ijk)-1.0_RP
-       ssice(ijk) = qvap(ijk)/ssice(ijk)-1.0_RP
+       call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                            qsat                             ) ! [OUT]
+                                            
+       ssliq(ijk) = qvap(ijk)/qsat-1.0_RP
+       call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                            qsat                             ) ! [OUT]
+            
+       ssice(ijk) = qvap(ijk)/qsat-1.0_RP
 
        emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
        cefd = emu/dens(ijk)
@@ -2364,6 +2382,7 @@ contains
        ijkmax, &
        dens,   &
        pres,   &
+       qdry,   &
        temp,   &
        qvap,   &
        gc,     &
@@ -2371,10 +2390,11 @@ contains
     implicit none
 
     integer,  intent(in)    :: ijkmax
-    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
-    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
-    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
-    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density            [kg/m3]
+    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure           [Pa]
+    real(RP), intent(in)    :: qdry(ijkmax)           ! dry air mass ratio [kg/kg]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature        [K]
+    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity  [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(DP), intent(in)    :: dtime                  ! Time step interval
 
@@ -2393,7 +2413,7 @@ contains
   real(RP) :: dumm_regene(ijkmax)
   integer :: iflg( nspc,ijkmax )
   real(RP) :: csum( nspc,ijkmax )
-  real(RP) :: f1, f2, emu, cefd, cefk, festi, psat
+  real(RP) :: f1, f2, emu, cefd, cefk, festi, qsat
   real(RP), parameter :: afmyu = 1.72E-05_RP, bfmyu = 3.93E+2_RP
   real(RP), parameter :: cfmyu = 1.2E+02_RP, fct = 1.4E+3_RP
   integer :: ijk, mm, nn, loopflg(ijkmax)
@@ -2455,14 +2475,14 @@ contains
      !--- lhv
      qlsbl(ijk) = CONST_LHS0 + ( CONST_CPvap - CONST_CI ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
      !--- supersaturation
-     psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-           * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-     ssliq(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-     psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-           * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-     ssice(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-     ssliq(ijk) = qvap(ijk)/ssliq(ijk)-1.0_RP
-     ssice(ijk) = qvap(ijk)/ssice(ijk)-1.0_RP
+     call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                          qsat                             ) ! [OUT]
+                                          
+     ssliq(ijk) = qvap(ijk)/qsat-1.0_RP
+     call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                          qsat                             ) ! [OUT]
+                                          
+     ssice(ijk) = qvap(ijk)/qsat-1.0_RP
 
      emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
      cefd = emu/dens(ijk)
@@ -2501,14 +2521,14 @@ contains
        !--- lhv
        qlsbl(ijk) = CONST_LHS0 + ( CONST_CPvap - CONST_CI ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
        !----- matrix for supersaturation tendency
-       psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-             * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-       ssliq(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-       psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-             * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-       ssice(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-       ssliq(ijk) = qvap(ijk)/ssliq(ijk)-1.0_RP
-       ssice(ijk) = qvap(ijk)/ssice(ijk)-1.0_RP
+       call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                            qsat                             ) ! [OUT]
+                                            
+       ssliq(ijk) = qvap(ijk)/qsat-1.0_RP
+       call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                            qsat                             ) ! [OUT]
+            
+       ssice(ijk) = qvap(ijk)/qsat-1.0_RP
 
        emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
        cefd = emu/dens(ijk)
@@ -2725,6 +2745,7 @@ contains
        ijkmax, &
        dens,   &
        pres,   &
+       qdry,   &
        temp,   &
        qvap,   &
        gc,     &
@@ -2732,10 +2753,11 @@ contains
     implicit none
 
     integer,  intent(in)    :: ijkmax
-    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
-    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
-    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
-    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density            [kg/m3]
+    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure           [Pa]
+    real(RP), intent(in)    :: qdry(ijkmax)           ! dry air mass ratio [kg/kg]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature        [K]
+    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity  [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(DP), intent(in)    :: dtime                  ! Time step interval
 
@@ -2757,7 +2779,7 @@ contains
   real(RP) :: dumm_regene(ijkmax)
   real(RP) :: csum( nspc,ijkmax )
   integer :: iflg( nspc,ijkmax )
-  real(RP) :: f1, f2, emu, cefd, cefk, festl, festi, psat
+  real(RP) :: f1, f2, emu, cefd, cefk, festl, festi, qsat
   real(RP), parameter :: afmyu = 1.72E-05_RP, bfmyu = 3.93E+2_RP
   real(RP), parameter :: cfmyu = 1.2E+02_RP, fct = 1.4E+3_RP
   real(RP) :: qvtmp, zerosw
@@ -2823,14 +2845,14 @@ contains
       qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
       qlsbl(ijk) = CONST_LHS0 + ( CONST_CPvap - CONST_CI ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
       !-- supersaturation
-      psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-            * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-      ssliq(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-      psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-            * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-      ssice(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-      ssliq(ijk) = qvap(ijk)/ssliq(ijk)-1.0_RP
-      ssice(ijk) = qvap(ijk)/ssice(ijk)-1.0_RP
+      call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                           qsat                             ) ! [OUT]
+                                           
+      ssliq(ijk) = qvap(ijk)/qsat-1.0_RP
+      call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                           qsat                             ) ! [OUT]
+           
+      ssice(ijk) = qvap(ijk)/qsat-1.0_RP
 
       emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
       cefd = emu/dens(ijk)
@@ -2880,12 +2902,14 @@ contains
          qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
          qlsbl(ijk) = CONST_LHS0 + ( CONST_CPvap - CONST_CI ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
          !-- matrix for supersaturation tendency
-         psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-               * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-         ssliq(ijk) = qvap(ijk) / ( CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat ) )-1.0_RP
-         psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-               * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-         ssice(ijk) = qvap(ijk) / ( CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat ) )-1.0_RP
+         call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                              qsat                             ) ! [OUT]
+                                              
+         ssliq(ijk) = qvap(ijk)/qsat-1.0_RP
+         call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                              qsat                             ) ! [OUT]
+                                              
+         ssice(ijk) = qvap(ijk)/qsat-1.0_RP
 
          emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
          cefd = emu/dens(ijk)
@@ -3149,6 +3173,7 @@ contains
        index_cold, &
        dens,       &
        pres,       &
+       qdry,       &
        temp,       &
        qvap,       &
        gc,         &
@@ -3158,10 +3183,11 @@ contains
     integer,  intent(in)    :: ijkmax
     integer,  intent(in)    :: num_cold
     integer,  intent(in)    :: index_cold(ijkmax)
-    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
-    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
-    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
-    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density            [kg/m3]
+    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure           [Pa]
+    real(RP), intent(in)    :: qdry(ijkmax)           ! dry air mass ratio [kg/kg]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature        [K]
+    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity  [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(DP), intent(in)    :: dtime                  ! Time step interval
 
@@ -3174,24 +3200,23 @@ contains
   real(RP), parameter :: tdendu = 257.0_RP, tdendl = 255.0_RP! -14[degC], -18[degC]
   real(RP), parameter :: tplatu = 250.6_RP                   ! -22.4[degC]
   !
-  real(RP) :: psat
+  real(RP) :: qsat
   integer :: ijk, indirect
 
 
     call PROF_rapstart('_SBM_IceNucleat', 3)
 
-  do indirect = 1, num_cold
+    do indirect = 1, num_cold
      ijk = index_cold(indirect)
 
     !--- supersaturation
-    psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
-          * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-    ssliq = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-    psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-          * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-    ssice = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-    ssliq = qvap(ijk)/ssliq-1.0_RP
-    ssice = qvap(ijk)/ssice-1.0_RP
+     call ATMOS_SATURATION_pres2qsat_liq( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                          qsat                             ) ! [OUT]
+                                          
+     ssliq = qvap(ijk)/qsat-1.0_RP
+     call ATMOS_SATURATION_pres2qsat_ice( temp(ijk), pres(ijk), qdry(ijk), & ! [IN]
+                                          qsat                             ) ! [OUT]
+     ssice = qvap(ijk)/qsat-1.0_RP
 
     if( ssice <= 0.0_RP ) cycle
 
@@ -4069,7 +4094,7 @@ contains
       do i  = IS, IE
       do k  = KS, KE
          qhydro = 0.0_RP
-         do ihydro = 1, QA_MP
+         do ihydro = 1, nspc
           do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
             qhydro = qhydro + QTRC(k,i,j,iq)
           enddo
@@ -4138,6 +4163,7 @@ contains
        ! HC
        sum3 = 0.0_RP
        sum2 = 0.0_RP
+       ihydro = I_mp_QC
        do iq = QS_MP+1, QS_MP+nbnd
           sum3 = sum3 &
                + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
@@ -4159,6 +4185,7 @@ contains
        ! HR
        sum3 = 0.0_RP
        sum2 = 0.0_RP
+       ihydro = I_mp_QC
        do iq = QS_MP+nbnd+1, QS_MP+nbin
           sum3 = sum3 &
                + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
@@ -4214,7 +4241,7 @@ contains
           Re(k,i,j,I_HI) = ( re_tmp(I_mp_QP ) * sum0(I_mp_QP ) &
                            + re_tmp(I_mp_QCL) * sum0(I_mp_QCL) &
                            + re_tmp(I_mp_QD ) * sum0(I_mp_QD ) ) &
-                         / ( sum0(I_mp_QP) + sum0(I_mp_QCL) + sum0(I_mp_QD) )
+                         / ( sum0(I_mp_QP) + sum0(I_mp_QCL) + sum0(I_mp_QD) + EPS )
           Re(k,i,j,I_HS) = re_tmp(I_mp_QS)
           Re(k,i,j,I_HG) = re_tmp(I_mp_QG)
           Re(k,i,j,I_HH) = re_tmp(I_mp_QH)

@@ -244,8 +244,8 @@ contains
        COMM_horizontal_mean
     use scale_time, only: &
        dt_MP => TIME_DTSEC_ATMOS_PHY_MP
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_tracer, only: &
        QA,         &
        TRACER_R,   &
@@ -369,9 +369,7 @@ contains
 
     endif
 
-    call HIST_in( FLX_hydro(:,:,:,I_mp_QR), 'pflux_QR', 'precipitation flux of QR', 'kg/m2/s', nohalo=.true. )
-
-    call HIST_in( vterm(:,:,:,I_mp_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s' )
+    call FILE_HISTORY_in( FLX_hydro(:,:,:,I_mp_QR), 'pflux_QR', 'precipitation flux of QR', 'kg/m2/s', fill_halo=.true. )
 
     do j = JS, JE
     do i = IS, IE
@@ -399,7 +397,7 @@ contains
     enddo
     enddo
 
-    call HIST_in( QC_t_sat(:,:,:), 'Pcsat', 'QC production term by satadjust', 'kg/kg/s' )
+    call FILE_HISTORY_in( QC_t_sat(:,:,:), 'Pcsat', 'QC production term by satadjust', 'kg/kg/s' )
 
     do j = JS, JE
     do i = IS, IE
@@ -506,9 +504,11 @@ contains
                                 TRACER_R(:),    & ! [IN]
                                 TRACER_MASS(:)  ) ! [IN]
 
-    call SATURATION_dens2qsat_liq( QSAT (:,:,:), & ! [OUT]
-                                   TEMP0(:,:,:), & ! [IN]
-                                   DENS0(:,:,:)  ) ! [IN]
+    call SATURATION_dens2qsat_liq( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                   TEMP0(:,:,:), DENS0(:,:,:), & ! [IN]
+                                   QSAT (:,:,:)                ) ! [OUT]
+                                   
+                                   
 
     !$omp parallel do private(i,j,k,dens,rhoe,temp,pres,qv,qc,qr,qsatl,Sliq,dq_evap,dq_auto,dq_accr,vent_factor,dqc,dqr,dqv) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE

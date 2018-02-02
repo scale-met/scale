@@ -110,6 +110,7 @@ module mod_cpl_vars
   real(RP), public, allocatable :: OCN_ATM_DENS       (:,:)     ! density at the lowermost atmosphere layer [kg/m3]
   real(RP), public, allocatable :: OCN_ATM_QV         (:,:)     ! water vapor at the lowermost atmosphere layer [kg/kg]
   real(RP), public, allocatable :: OCN_ATM_PBL        (:,:)     ! the top of atmospheric mixing layer [m]
+  real(RP), public, allocatable :: OCN_ATM_SFC_DENS   (:,:)     ! surface density  [kg/m3]
   real(RP), public, allocatable :: OCN_ATM_SFC_PRES   (:,:)     ! surface pressure [Pa]
   real(RP), public, allocatable :: OCN_ATM_SFLX_rad_dn(:,:,:,:) ! downward radiation flux (SW/LW,direct/diffuse) [J/m2/s]
   real(RP), public, allocatable :: OCN_ATM_cosSZA     (:,:)     ! cos(solar zenith angle) (0-1)
@@ -125,6 +126,7 @@ module mod_cpl_vars
   real(RP), public, allocatable :: LND_ATM_DENS       (:,:)     ! density at the lowermost atmosphere layer [kg/m3]
   real(RP), public, allocatable :: LND_ATM_QV         (:,:)     ! water vapor at the lowermost atmosphere layer [kg/kg]
   real(RP), public, allocatable :: LND_ATM_PBL        (:,:)     ! the top of atmospheric mixing layer [m]
+  real(RP), public, allocatable :: LND_ATM_SFC_DENS   (:,:)     ! surface density  [kg/m3]
   real(RP), public, allocatable :: LND_ATM_SFC_PRES   (:,:)     ! surface pressure [Pa]
   real(RP), public, allocatable :: LND_ATM_SFLX_rad_dn(:,:,:,:) ! downward radiation flux (SW/LW,direct/diffuse) [J/m2/s]
   real(RP), public, allocatable :: LND_ATM_cosSZA     (:,:)     ! cos(solar zenith angle) (0-1)
@@ -140,6 +142,7 @@ module mod_cpl_vars
   real(RP), public, allocatable :: URB_ATM_DENS       (:,:)     ! density at the lowermost atmosphere layer [kg/m3]
   real(RP), public, allocatable :: URB_ATM_QV         (:,:)     ! water vapor at the lowermost atmosphere layer [kg/kg]
   real(RP), public, allocatable :: URB_ATM_PBL        (:,:)     ! the top of atmospheric mixing layer [m]
+  real(RP), public, allocatable :: URB_ATM_SFC_DENS   (:,:)     ! surface density  [kg/m3]
   real(RP), public, allocatable :: URB_ATM_SFC_PRES   (:,:)     ! surface pressure [Pa]
   real(RP), public, allocatable :: URB_ATM_SFLX_rad_dn(:,:,:,:) ! downward radiation flux (SW/LW,direct/diffuse) [J/m2/s]
   real(RP), public, allocatable :: URB_ATM_cosSZA     (:,:)     ! cos(solar zenith angle) (0-1)
@@ -324,6 +327,7 @@ contains
     allocate( OCN_ATM_DENS       (IA,JA)     )
     allocate( OCN_ATM_QV         (IA,JA)     )
     allocate( OCN_ATM_PBL        (IA,JA)     )
+    allocate( OCN_ATM_SFC_DENS   (IA,JA)     )
     allocate( OCN_ATM_SFC_PRES   (IA,JA)     )
     allocate( OCN_ATM_SFLX_rad_dn(IA,JA,2,2) )
     allocate( OCN_ATM_cosSZA     (IA,JA)     )
@@ -337,6 +341,7 @@ contains
     OCN_ATM_DENS       (:,:)     = UNDEF
     OCN_ATM_QV         (:,:)     = UNDEF
     OCN_ATM_PBL        (:,:)     = UNDEF
+    OCN_ATM_SFC_DENS   (:,:)     = UNDEF
     OCN_ATM_SFC_PRES   (:,:)     = UNDEF
     OCN_ATM_SFLX_rad_dn(:,:,:,:) = UNDEF
     OCN_ATM_cosSZA     (:,:)     = UNDEF
@@ -351,6 +356,7 @@ contains
     allocate( LND_ATM_DENS       (IA,JA)     )
     allocate( LND_ATM_QV         (IA,JA)     )
     allocate( LND_ATM_PBL        (IA,JA)     )
+    allocate( LND_ATM_SFC_DENS   (IA,JA)     )
     allocate( LND_ATM_SFC_PRES   (IA,JA)     )
     allocate( LND_ATM_SFLX_rad_dn(IA,JA,2,2) )
     allocate( LND_ATM_cosSZA     (IA,JA)     )
@@ -364,6 +370,7 @@ contains
     LND_ATM_DENS       (:,:)     = UNDEF
     LND_ATM_QV         (:,:)     = UNDEF
     LND_ATM_PBL        (:,:)     = UNDEF
+    LND_ATM_SFC_DENS   (:,:)     = UNDEF
     LND_ATM_SFC_PRES   (:,:)     = UNDEF
     LND_ATM_SFLX_rad_dn(:,:,:,:) = UNDEF
     LND_ATM_cosSZA     (:,:)     = UNDEF
@@ -378,6 +385,7 @@ contains
     allocate( URB_ATM_DENS       (IA,JA)     )
     allocate( URB_ATM_QV         (IA,JA)     )
     allocate( URB_ATM_PBL        (IA,JA)     )
+    allocate( URB_ATM_SFC_DENS   (IA,JA)     )
     allocate( URB_ATM_SFC_PRES   (IA,JA)     )
     allocate( URB_ATM_SFLX_rad_dn(IA,JA,2,2) )
     allocate( URB_ATM_cosSZA     (IA,JA)     )
@@ -391,6 +399,7 @@ contains
     URB_ATM_DENS       (:,:)     = UNDEF
     URB_ATM_QV         (:,:)     = UNDEF
     URB_ATM_PBL        (:,:)     = UNDEF
+    URB_ATM_SFC_DENS   (:,:)     = UNDEF
     URB_ATM_SFC_PRES   (:,:)     = UNDEF
     URB_ATM_SFLX_rad_dn(:,:,:,:) = UNDEF
     URB_ATM_cosSZA     (:,:)     = UNDEF
@@ -424,6 +433,7 @@ contains
        DENS,        &
        QTRC,        &
        PBL,         &
+       SFC_DENS,    &
        SFC_PRES,    &
        SFLX_rad_dn, &
        cosSZA,      &
@@ -443,6 +453,7 @@ contains
     real(RP), intent(in) :: DENS       (IA,JA)
     real(RP), intent(in) :: QTRC       (IA,JA,QA)
     real(RP), intent(in) :: PBL        (IA,JA)
+    real(RP), intent(in) :: SFC_DENS   (IA,JA)
     real(RP), intent(in) :: SFC_PRES   (IA,JA)
     real(RP), intent(in) :: SFLX_rad_dn(IA,JA,2,2)
     real(RP), intent(in) :: cosSZA     (IA,JA)
@@ -456,19 +467,19 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) private(i,j) shared(I_LW,I_SW) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JS,JE,IS,IE,OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U) &
+    !$omp shared(JSB,JEB,ISB,IEB,OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U) &
     !$omp shared(OCN_ATM_V,OCN_ATM_DENS,CNT_putATM_OCN,TEMP,PRES,W,U,V,DENS) &
-    !$omp shared(I_QV,OCN_ATM_QV,OCN_ATM_PBL,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn) &
-    !$omp shared(OCN_ATM_cosSZA,OCN_ATM_SFLX_rain,OCN_ATM_SFLX_snow,QTRC,PBL,SFC_PRES) &
+    !$omp shared(I_QV,OCN_ATM_QV,OCN_ATM_PBL,OCN_ATM_SFC_DENS,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn) &
+    !$omp shared(OCN_ATM_cosSZA,OCN_ATM_SFLX_rain,OCN_ATM_SFLX_snow,QTRC,PBL,SFC_DENS,SFC_PRES) &
     !$omp shared(SFLX_rad_dn,cosSZA,SFLX_rain,SFLX_snow) &
     !$omp shared(LND_ATM_TEMP,LND_ATM_PRES,LND_ATM_W,LND_ATM_U,LND_ATM_V,LND_ATM_DENS) &
-    !$omp shared(LND_ATM_QV,LND_ATM_PBL,LND_ATM_SFC_PRES,LND_ATM_SFLX_rad_dn,LND_ATM_cosSZA) &
+    !$omp shared(LND_ATM_QV,LND_ATM_PBL,LND_ATM_SFC_DENS,LND_ATM_SFC_PRES,LND_ATM_SFLX_rad_dn,LND_ATM_cosSZA) &
     !$omp shared(LND_ATM_SFLX_rain,LND_ATM_SFLX_snow) &
     !$omp shared(URB_ATM_TEMP,URB_ATM_PRES,URB_ATM_W,URB_ATM_U,URB_ATM_V,URB_ATM_DENS) &
-    !$omp shared(URB_ATM_QV,URB_ATM_PBL,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA) &
+    !$omp shared(URB_ATM_QV,URB_ATM_PBL,URB_ATM_SFC_DENS,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA) &
     !$omp shared(URB_ATM_SFLX_rain,URB_ATM_SFLX_snow,CNT_putATM_URB,CNT_putATM_LND)
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        ! for ocean
        OCN_ATM_TEMP       (i,j)     = OCN_ATM_TEMP       (i,j)     * CNT_putATM_OCN + TEMP       (i,j)
        OCN_ATM_PRES       (i,j)     = OCN_ATM_PRES       (i,j)     * CNT_putATM_OCN + PRES       (i,j)
@@ -479,6 +490,7 @@ contains
        if ( I_QV > 0 ) &
        OCN_ATM_QV         (i,j)     = OCN_ATM_QV         (i,j)     * CNT_putATM_OCN + QTRC       (i,j,I_QV)
        OCN_ATM_PBL        (i,j)     = OCN_ATM_PBL        (i,j)     * CNT_putATM_OCN + PBL        (i,j)
+       OCN_ATM_SFC_DENS   (i,j)     = OCN_ATM_SFC_DENS   (i,j)     * CNT_putATM_OCN + SFC_DENS   (i,j)
        OCN_ATM_SFC_PRES   (i,j)     = OCN_ATM_SFC_PRES   (i,j)     * CNT_putATM_OCN + SFC_PRES   (i,j)
        OCN_ATM_SFLX_rad_dn(i,j,I_LW,1) = OCN_ATM_SFLX_rad_dn(i,j,I_LW,1) * CNT_putATM_OCN + SFLX_rad_dn(i,j,I_LW,1)
        OCN_ATM_SFLX_rad_dn(i,j,I_SW,1) = OCN_ATM_SFLX_rad_dn(i,j,I_SW,1) * CNT_putATM_OCN + SFLX_rad_dn(i,j,I_SW,1)
@@ -497,6 +509,7 @@ contains
        if ( I_QV > 0 ) &
        LND_ATM_QV         (i,j)     = LND_ATM_QV         (i,j)     * CNT_putATM_LND + QTRC       (i,j,I_QV)
        LND_ATM_PBL        (i,j)     = LND_ATM_PBL        (i,j)     * CNT_putATM_LND + PBL        (i,j)
+       LND_ATM_SFC_DENS   (i,j)     = LND_ATM_SFC_DENS   (i,j)     * CNT_putATM_LND + SFC_DENS   (i,j)
        LND_ATM_SFC_PRES   (i,j)     = LND_ATM_SFC_PRES   (i,j)     * CNT_putATM_LND + SFC_PRES   (i,j)
        LND_ATM_SFLX_rad_dn(i,j,I_LW,1) = LND_ATM_SFLX_rad_dn(i,j,I_LW,1) * CNT_putATM_LND + SFLX_rad_dn(i,j,I_LW,1)
        LND_ATM_SFLX_rad_dn(i,j,I_SW,1) = LND_ATM_SFLX_rad_dn(i,j,I_SW,1) * CNT_putATM_LND + SFLX_rad_dn(i,j,I_SW,1)
@@ -515,6 +528,7 @@ contains
        if ( I_QV > 0 ) &
        URB_ATM_QV         (i,j)     = URB_ATM_QV         (i,j)     * CNT_putATM_URB + QTRC       (i,j,I_QV)
        URB_ATM_PBL        (i,j)     = URB_ATM_PBL        (i,j)     * CNT_putATM_URB + PBL        (i,j)
+       URB_ATM_SFC_DENS   (i,j)     = URB_ATM_SFC_DENS   (i,j)     * CNT_putATM_URB + SFC_DENS   (i,j)
        URB_ATM_SFC_PRES   (i,j)     = URB_ATM_SFC_PRES   (i,j)     * CNT_putATM_URB + SFC_PRES   (i,j)
        URB_ATM_SFLX_rad_dn(i,j,I_LW,1) = URB_ATM_SFLX_rad_dn(i,j,I_LW,1) * CNT_putATM_URB + SFLX_rad_dn(i,j,I_LW,1)
        URB_ATM_SFLX_rad_dn(i,j,I_SW,1) = URB_ATM_SFLX_rad_dn(i,j,I_SW,1) * CNT_putATM_URB + SFLX_rad_dn(i,j,I_SW,1)
@@ -527,19 +541,19 @@ contains
     enddo
 
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE) &
+    !$omp shared(JSB,JEB,ISB,IEB) &
     !$omp shared(OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U,OCN_ATM_V,OCN_ATM_DENS,OCN_ATM_QV) &
-    !$omp shared(OCN_ATM_PBL,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn,OCN_ATM_cosSZA,OCN_ATM_SFLX_rain) &
+    !$omp shared(OCN_ATM_PBL,OCN_ATM_SFC_DENS,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn,OCN_ATM_cosSZA,OCN_ATM_SFLX_rain) &
     !$omp shared(OCN_ATM_SFLX_snow,CNT_putATM_OCN) &
     !$omp shared(LND_ATM_TEMP,LND_ATM_PRES,LND_ATM_W,LND_ATM_U,LND_ATM_V,LND_ATM_DENS,LND_ATM_QV) &
-    !$omp shared(LND_ATM_PBL,LND_ATM_SFC_PRES,LND_ATM_SFLX_rad_dn,LND_ATM_cosSZA,LND_ATM_SFLX_rain) &
+    !$omp shared(LND_ATM_PBL,LND_ATM_SFC_DENS,LND_ATM_SFC_PRES,LND_ATM_SFLX_rad_dn,LND_ATM_cosSZA,LND_ATM_SFLX_rain) &
     !$omp shared(LND_ATM_SFLX_snow,CNT_putATM_LND) &
     !$omp shared(URB_ATM_TEMP,URB_ATM_PRES,URB_ATM_W,URB_ATM_U,URB_ATM_V,URB_ATM_DENS,URB_ATM_QV) &
-    !$omp shared(URB_ATM_PBL,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA,URB_ATM_SFLX_rain) &
+    !$omp shared(URB_ATM_PBL,URB_ATM_SFC_DENS,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA,URB_ATM_SFLX_rain) &
     !$omp shared(URB_ATM_SFLX_snow,CNT_putATM_URB) &
     !$omp private(i,j) shared(I_LW,I_SW) OMP_SCHEDULE_ collapse(1)
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        ! for ocean
        OCN_ATM_TEMP       (i,j)     = OCN_ATM_TEMP       (i,j)     / ( CNT_putATM_OCN + 1.0_RP )
        OCN_ATM_PRES       (i,j)     = OCN_ATM_PRES       (i,j)     / ( CNT_putATM_OCN + 1.0_RP )
@@ -549,6 +563,7 @@ contains
        OCN_ATM_DENS       (i,j)     = OCN_ATM_DENS       (i,j)     / ( CNT_putATM_OCN + 1.0_RP )
        OCN_ATM_QV         (i,j)     = OCN_ATM_QV         (i,j)     / ( CNT_putATM_OCN + 1.0_RP )
        OCN_ATM_PBL        (i,j)     = OCN_ATM_PBL        (i,j)     / ( CNT_putATM_OCN + 1.0_RP )
+       OCN_ATM_SFC_DENS   (i,j)     = OCN_ATM_SFC_DENS   (i,j)     / ( CNT_putATM_OCN + 1.0_RP )
        OCN_ATM_SFC_PRES   (i,j)     = OCN_ATM_SFC_PRES   (i,j)     / ( CNT_putATM_OCN + 1.0_RP )
        OCN_ATM_SFLX_rad_dn(i,j,I_LW,1) = OCN_ATM_SFLX_rad_dn(i,j,I_LW,1) / ( CNT_putATM_OCN + 1.0_RP )
        OCN_ATM_SFLX_rad_dn(i,j,I_SW,1) = OCN_ATM_SFLX_rad_dn(i,j,I_SW,1) / ( CNT_putATM_OCN + 1.0_RP )
@@ -566,6 +581,7 @@ contains
        LND_ATM_DENS       (i,j)     = LND_ATM_DENS       (i,j)     / ( CNT_putATM_LND + 1.0_RP )
        LND_ATM_QV         (i,j)     = LND_ATM_QV         (i,j)     / ( CNT_putATM_LND + 1.0_RP )
        LND_ATM_PBL        (i,j)     = LND_ATM_PBL        (i,j)     / ( CNT_putATM_LND + 1.0_RP )
+       LND_ATM_SFC_DENS   (i,j)     = LND_ATM_SFC_DENS   (i,j)     / ( CNT_putATM_LND + 1.0_RP )
        LND_ATM_SFC_PRES   (i,j)     = LND_ATM_SFC_PRES   (i,j)     / ( CNT_putATM_LND + 1.0_RP )
        LND_ATM_SFLX_rad_dn(i,j,I_LW,1) = LND_ATM_SFLX_rad_dn(i,j,I_LW,1) / ( CNT_putATM_LND + 1.0_RP )
        LND_ATM_SFLX_rad_dn(i,j,I_SW,1) = LND_ATM_SFLX_rad_dn(i,j,I_SW,1) / ( CNT_putATM_LND + 1.0_RP )
@@ -583,6 +599,7 @@ contains
        URB_ATM_DENS       (i,j)     = URB_ATM_DENS       (i,j)     / ( CNT_putATM_URB + 1.0_RP )
        URB_ATM_QV         (i,j)     = URB_ATM_QV         (i,j)     / ( CNT_putATM_URB + 1.0_RP )
        URB_ATM_PBL        (i,j)     = URB_ATM_PBL        (i,j)     / ( CNT_putATM_URB + 1.0_RP )
+       URB_ATM_SFC_DENS   (i,j)     = URB_ATM_SFC_DENS   (i,j)     / ( CNT_putATM_URB + 1.0_RP )
        URB_ATM_SFC_PRES   (i,j)     = URB_ATM_SFC_PRES   (i,j)     / ( CNT_putATM_URB + 1.0_RP )
        URB_ATM_SFLX_rad_dn(i,j,I_LW,1) = URB_ATM_SFLX_rad_dn(i,j,I_LW,1) / ( CNT_putATM_URB + 1.0_RP )
        URB_ATM_SFLX_rad_dn(i,j,I_SW,1) = URB_ATM_SFLX_rad_dn(i,j,I_SW,1) / ( CNT_putATM_URB + 1.0_RP )
@@ -648,8 +665,8 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        OCN_SFC_TEMP  (i,j)      = OCN_SFC_TEMP  (i,j)      * CNT_putOCN + SFC_TEMP  (i,j)
        OCN_SFC_albedo(i,j,I_LW) = OCN_SFC_albedo(i,j,I_LW) * CNT_putOCN + SFC_albedo(i,j,I_LW)
        OCN_SFC_albedo(i,j,I_SW) = OCN_SFC_albedo(i,j,I_SW) * CNT_putOCN + SFC_albedo(i,j,I_SW)
@@ -671,12 +688,12 @@ contains
     enddo
 
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,OCN_SFC_TEMP,OCN_SFC_albedo,OCN_SFC_Z0M,OCN_SFC_Z0H,OCN_SFC_Z0E) &
+    !$omp shared(JSB,JEB,ISB,IEB,OCN_SFC_TEMP,OCN_SFC_albedo,OCN_SFC_Z0M,OCN_SFC_Z0H,OCN_SFC_Z0E) &
     !$omp shared(OCN_SFLX_MW,OCN_SFLX_MU,OCN_SFLX_MV,OCN_SFLX_SH,OCN_SFLX_LH,OCN_SFLX_WH,OCN_SFLX_evap,OCN_U10,OCN_V10) &
     !$omp shared(OCN_T2,OCN_Q2,CNT_putOCN,I_LW,I_SW) &
-    !$omp private(i,j) OMP_SCHEDULE_ 
-    do j = JS, JE
-    do i = IS, IE
+    !$omp private(i,j) OMP_SCHEDULE_
+    do j = JSB, JEB
+    do i = ISB, IEB
        OCN_SFC_TEMP  (i,j)      = OCN_SFC_TEMP  (i,j)      / ( CNT_putOCN + 1.0_RP )
        OCN_SFC_albedo(i,j,I_LW) = OCN_SFC_albedo(i,j,I_LW) / ( CNT_putOCN + 1.0_RP )
        OCN_SFC_albedo(i,j,I_SW) = OCN_SFC_albedo(i,j,I_SW) / ( CNT_putOCN + 1.0_RP )
@@ -750,13 +767,13 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,LND_SFC_TEMP,LND_SFC_albedo,LND_SFC_Z0M,LND_SFC_Z0H,LND_SFC_Z0E) &
+    !$omp shared(JSB,JEB,ISB,IEB,LND_SFC_TEMP,LND_SFC_albedo,LND_SFC_Z0M,LND_SFC_Z0H,LND_SFC_Z0E) &
     !$omp shared(LND_SFLX_MW,LND_SFLX_MU,LND_SFLX_MV,LND_SFLX_SH,LND_SFLX_LH,LND_SFLX_GH,LND_SFLX_evap) &
     !$omp shared(LND_U10,LND_V10,LND_T2,LND_Q2,CNT_putLND,I_LW,I_SW,SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H) &
     !$omp shared(SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_GH,SFLX_evap,U10,V10,T2,Q2) &
-    !$omp private(i,j) OMP_SCHEDULE_ 
-    do j = JS, JE
-    do i = IS, IE
+    !$omp private(i,j) OMP_SCHEDULE_
+    do j = JSB, JEB
+    do i = ISB, IEB
        LND_SFC_TEMP  (i,j)      = LND_SFC_TEMP  (i,j)      * CNT_putLND + SFC_TEMP  (i,j)
        LND_SFC_albedo(i,j,I_LW) = LND_SFC_albedo(i,j,I_LW) * CNT_putLND + SFC_albedo(i,j,I_LW)
        LND_SFC_albedo(i,j,I_SW) = LND_SFC_albedo(i,j,I_SW) * CNT_putLND + SFC_albedo(i,j,I_SW)
@@ -777,8 +794,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        LND_SFC_TEMP  (i,j)      = LND_SFC_TEMP  (i,j)      / ( CNT_putLND + 1.0_RP )
        LND_SFC_albedo(i,j,I_LW) = LND_SFC_albedo(i,j,I_LW) / ( CNT_putLND + 1.0_RP )
        LND_SFC_albedo(i,j,I_SW) = LND_SFC_albedo(i,j,I_SW) / ( CNT_putLND + 1.0_RP )
@@ -851,8 +868,8 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        URB_SFC_TEMP  (i,j)      = URB_SFC_TEMP  (i,j)      * CNT_putURB + SFC_TEMP  (i,j)
        URB_SFC_albedo(i,j,I_LW) = URB_SFC_albedo(i,j,I_LW) * CNT_putURB + SFC_albedo(i,j,I_LW)
        URB_SFC_albedo(i,j,I_SW) = URB_SFC_albedo(i,j,I_SW) * CNT_putURB + SFC_albedo(i,j,I_SW)
@@ -874,12 +891,12 @@ contains
     enddo
 
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,URB_SFC_TEMP,URB_SFC_albedo,URB_SFC_Z0M,URB_SFC_Z0H,URB_SFC_Z0E) &
+    !$omp shared(JSB,JEB,ISB,IEB,URB_SFC_TEMP,URB_SFC_albedo,URB_SFC_Z0M,URB_SFC_Z0H,URB_SFC_Z0E) &
     !$omp shared(URB_SFLX_MW,URB_SFLX_MU,URB_SFLX_MV,URB_SFLX_SH,URB_SFLX_LH,URB_SFLX_GH,URB_SFLX_evap,URB_U10,URB_V10) &
     !$omp shared(URB_T2,URB_Q2,CNT_putURB,I_LW,I_SW) &
-    !$omp private(i,j) OMP_SCHEDULE_ 
-    do j = JS, JE
-    do i = IS, IE
+    !$omp private(i,j) OMP_SCHEDULE_
+    do j = JSB, JEB
+    do i = ISB, IEB
        URB_SFC_TEMP  (i,j)      = URB_SFC_TEMP  (i,j)      / ( CNT_putURB + 1.0_RP )
        URB_SFC_albedo(i,j,I_LW) = URB_SFC_albedo(i,j,I_LW) / ( CNT_putURB + 1.0_RP )
        URB_SFC_albedo(i,j,I_SW) = URB_SFC_albedo(i,j,I_SW) / ( CNT_putURB + 1.0_RP )
@@ -954,7 +971,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,QA,SFLX_QTRC,SFC_TEMP,SFC_albedo,I_LW,I_SW,SFC_Z0M,SFC_Z0H,SFC_Z0E) &
+    !$omp shared(JSB,JEB,ISB,IEB,QA,SFLX_QTRC,SFC_TEMP,SFC_albedo,I_LW,I_SW,SFC_Z0M,SFC_Z0H,SFC_Z0E) &
     !$omp shared(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_GH,I_QV,U10,V10,T2,Q2) &
     !$omp shared(fact_ocean,fact_land,fact_urban,OCN_SFC_TEMP,LND_SFC_TEMP,URB_SFC_TEMP,OCN_SFC_albedo) &
     !$omp shared(LND_SFC_albedo,URB_SFC_albedo,OCN_SFC_Z0M,LND_SFC_Z0M,URB_SFC_Z0M) &
@@ -963,9 +980,9 @@ contains
     !$omp shared(URB_SFLX_MV,OCN_SFLX_SH,LND_SFLX_SH,URB_SFLX_SH,OCN_SFLX_LH,LND_SFLX_LH,URB_SFLX_LH) &
     !$omp shared(OCN_SFLX_WH,LND_SFLX_GH,URB_SFLX_GH,OCN_SFLX_evap,LND_SFLX_evap,URB_SFLX_evap,OCN_U10) &
     !$omp shared(LND_U10,URB_U10,OCN_V10,LND_V10,URB_V10,OCN_T2,LND_T2,URB_T2,OCN_Q2,LND_Q2,URB_Q2) &
-    !$omp private(i,j,iq) OMP_SCHEDULE_ 
-    do j = JS, JE
-    do i = IS, IE
+    !$omp private(i,j,iq) OMP_SCHEDULE_
+    do j = JSB, JEB
+    do i = ISB, IEB
        do iq = 1, QA
           SFLX_QTRC(i,j,iq) = 0.0_RP ! tentative
        enddo
@@ -1059,6 +1076,7 @@ contains
        DENS,        &
        QV,          &
        PBL,         &
+       SFC_DENS,    &
        SFC_PRES,    &
        SFLX_rad_dn, &
        cosSZA,      &
@@ -1074,6 +1092,7 @@ contains
     real(RP), intent(out) :: DENS       (IA,JA)
     real(RP), intent(out) :: QV         (IA,JA)
     real(RP), intent(out) :: PBL        (IA,JA)
+    real(RP), intent(out) :: SFC_DENS   (IA,JA)
     real(RP), intent(out) :: SFC_PRES   (IA,JA)
     real(RP), intent(out) :: SFLX_rad_dn(IA,JA,2,2)
     real(RP), intent(out) :: cosSZA     (IA,JA)
@@ -1085,30 +1104,31 @@ contains
 
 !OCL XFILL
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
+    !$omp shared(JSB,JEB,ISB,IEB,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_DENS,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
     !$omp shared(SFLX_snow) &
     !$omp shared(OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U,OCN_ATM_V,OCN_ATM_DENS,OCN_ATM_QV) &
-    !$omp shared(OCN_ATM_PBL,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn,OCN_ATM_cosSZA,OCN_ATM_SFLX_rain) &
+    !$omp shared(OCN_ATM_PBL,OCN_ATM_SFC_DENS,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn,OCN_ATM_cosSZA,OCN_ATM_SFLX_rain) &
     !$omp shared(OCN_ATM_SFLX_snow) &
-    !$omp private(i,j) shared(I_LW,I_SW) OMP_SCHEDULE_ 
-    do j = JS, JE
-    do i = IS, IE
-       TEMP       (i,j)     = OCN_ATM_TEMP       (i,j)
-       PRES       (i,j)     = OCN_ATM_PRES       (i,j)
-       W          (i,j)     = OCN_ATM_W          (i,j)
-       U          (i,j)     = OCN_ATM_U          (i,j)
-       V          (i,j)     = OCN_ATM_V          (i,j)
-       DENS       (i,j)     = OCN_ATM_DENS       (i,j)
-       QV         (i,j)     = OCN_ATM_QV         (i,j)
-       PBL        (i,j)     = OCN_ATM_PBL        (i,j)
-       SFC_PRES   (i,j)     = OCN_ATM_SFC_PRES   (i,j)
+    !$omp private(i,j) shared(I_LW,I_SW) OMP_SCHEDULE_
+    do j = JSB, JEB
+    do i = ISB, IEB
+       TEMP       (i,j)        = OCN_ATM_TEMP       (i,j)
+       PRES       (i,j)        = OCN_ATM_PRES       (i,j)
+       W          (i,j)        = OCN_ATM_W          (i,j)
+       U          (i,j)        = OCN_ATM_U          (i,j)
+       V          (i,j)        = OCN_ATM_V          (i,j)
+       DENS       (i,j)        = OCN_ATM_DENS       (i,j)
+       QV         (i,j)        = OCN_ATM_QV         (i,j)
+       PBL        (i,j)        = OCN_ATM_PBL        (i,j)
+       SFC_DENS   (i,j)        = OCN_ATM_SFC_DENS   (i,j)
+       SFC_PRES   (i,j)        = OCN_ATM_SFC_PRES   (i,j)
        SFLX_rad_dn(i,j,I_LW,1) = OCN_ATM_SFLX_rad_dn(i,j,I_LW,1)
        SFLX_rad_dn(i,j,I_SW,1) = OCN_ATM_SFLX_rad_dn(i,j,I_SW,1)
        SFLX_rad_dn(i,j,I_LW,2) = OCN_ATM_SFLX_rad_dn(i,j,I_LW,2)
        SFLX_rad_dn(i,j,I_SW,2) = OCN_ATM_SFLX_rad_dn(i,j,I_SW,2)
-       cosSZA     (i,j)     = OCN_ATM_cosSZA     (i,j)
-       SFLX_rain  (i,j)     = OCN_ATM_SFLX_rain  (i,j)
-       SFLX_snow  (i,j)     = OCN_ATM_SFLX_snow  (i,j)
+       cosSZA     (i,j)        = OCN_ATM_cosSZA     (i,j)
+       SFLX_rain  (i,j)        = OCN_ATM_SFLX_rain  (i,j)
+       SFLX_snow  (i,j)        = OCN_ATM_SFLX_snow  (i,j)
     enddo
     enddo
 
@@ -1127,6 +1147,7 @@ contains
        DENS,        &
        QV,          &
        PBL,         &
+       SFC_DENS,    &
        SFC_PRES,    &
        SFLX_rad_dn, &
        cosSZA,      &
@@ -1142,6 +1163,7 @@ contains
     real(RP), intent(out) :: DENS       (IA,JA)
     real(RP), intent(out) :: QV         (IA,JA)
     real(RP), intent(out) :: PBL        (IA,JA)
+    real(RP), intent(out) :: SFC_DENS   (IA,JA)
     real(RP), intent(out) :: SFC_PRES   (IA,JA)
     real(RP), intent(out) :: SFLX_rad_dn(IA,JA,2,2)
     real(RP), intent(out) :: cosSZA     (IA,JA)
@@ -1153,30 +1175,31 @@ contains
 
 !OCL XFILL
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
+    !$omp shared(JSB,JEB,ISB,IEB,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_DENS,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
     !$omp shared(SFLX_snow) &
     !$omp shared(LND_ATM_TEMP,LND_ATM_PRES,LND_ATM_W,LND_ATM_U,LND_ATM_V,LND_ATM_DENS,LND_ATM_QV) &
-    !$omp shared(LND_ATM_PBL,LND_ATM_SFC_PRES,LND_ATM_SFLX_rad_dn,LND_ATM_cosSZA,LND_ATM_SFLX_rain) &
+    !$omp shared(LND_ATM_PBL,LND_ATM_SFC_DENS,LND_ATM_SFC_PRES,LND_ATM_SFLX_rad_dn,LND_ATM_cosSZA,LND_ATM_SFLX_rain) &
     !$omp shared(LND_ATM_SFLX_snow) &
-    !$omp private(i,j) shared(I_LW,I_SW) OMP_SCHEDULE_ 
-    do j = JS, JE
-    do i = IS, IE
-       TEMP       (i,j)     = LND_ATM_TEMP       (i,j)
-       PRES       (i,j)     = LND_ATM_PRES       (i,j)
-       W          (i,j)     = LND_ATM_W          (i,j)
-       U          (i,j)     = LND_ATM_U          (i,j)
-       V          (i,j)     = LND_ATM_V          (i,j)
-       DENS       (i,j)     = LND_ATM_DENS       (i,j)
-       QV         (i,j)     = LND_ATM_QV         (i,j)
-       PBL        (i,j)     = LND_ATM_PBL        (i,j)
-       SFC_PRES   (i,j)     = LND_ATM_SFC_PRES   (i,j)
+    !$omp private(i,j) shared(I_LW,I_SW) OMP_SCHEDULE_
+    do j = JSB, JEB
+    do i = ISB, IEB
+       TEMP       (i,j)        = LND_ATM_TEMP       (i,j)
+       PRES       (i,j)        = LND_ATM_PRES       (i,j)
+       W          (i,j)        = LND_ATM_W          (i,j)
+       U          (i,j)        = LND_ATM_U          (i,j)
+       V          (i,j)        = LND_ATM_V          (i,j)
+       DENS       (i,j)        = LND_ATM_DENS       (i,j)
+       QV         (i,j)        = LND_ATM_QV         (i,j)
+       PBL        (i,j)        = LND_ATM_PBL        (i,j)
+       SFC_DENS   (i,j)        = LND_ATM_SFC_DENS   (i,j)
+       SFC_PRES   (i,j)        = LND_ATM_SFC_PRES   (i,j)
        SFLX_rad_dn(i,j,I_LW,1) = LND_ATM_SFLX_rad_dn(i,j,I_LW,1)
        SFLX_rad_dn(i,j,I_SW,1) = LND_ATM_SFLX_rad_dn(i,j,I_SW,1)
        SFLX_rad_dn(i,j,I_LW,2) = LND_ATM_SFLX_rad_dn(i,j,I_LW,2)
        SFLX_rad_dn(i,j,I_SW,2) = LND_ATM_SFLX_rad_dn(i,j,I_SW,2)
-       cosSZA     (i,j)     = LND_ATM_cosSZA     (i,j)
-       SFLX_rain  (i,j)     = LND_ATM_SFLX_rain  (i,j)
-       SFLX_snow  (i,j)     = LND_ATM_SFLX_snow  (i,j)
+       cosSZA     (i,j)        = LND_ATM_cosSZA     (i,j)
+       SFLX_rain  (i,j)        = LND_ATM_SFLX_rain  (i,j)
+       SFLX_snow  (i,j)        = LND_ATM_SFLX_snow  (i,j)
     enddo
     enddo
 
@@ -1195,6 +1218,7 @@ contains
        DENS,        &
        QV,          &
        PBL,         &
+       SFC_DENS,    &
        SFC_PRES,    &
        SFLX_rad_dn, &
        cosSZA,      &
@@ -1210,6 +1234,7 @@ contains
     real(RP), intent(out) :: DENS       (IA,JA)
     real(RP), intent(out) :: QV         (IA,JA)
     real(RP), intent(out) :: PBL        (IA,JA)
+    real(RP), intent(out) :: SFC_DENS   (IA,JA)
     real(RP), intent(out) :: SFC_PRES   (IA,JA)
     real(RP), intent(out) :: SFLX_rad_dn(IA,JA,2,2)
     real(RP), intent(out) :: cosSZA     (IA,JA)
@@ -1221,14 +1246,14 @@ contains
 
 !OCL XFILL
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
+    !$omp shared(JSB,JEB,ISB,IEB,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_DENS,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
     !$omp shared(SFLX_snow) &
     !$omp shared(URB_ATM_TEMP,URB_ATM_PRES,URB_ATM_W,URB_ATM_U,URB_ATM_V,URB_ATM_DENS,URB_ATM_QV) &
-    !$omp shared(URB_ATM_PBL,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA,URB_ATM_SFLX_rain) &
+    !$omp shared(URB_ATM_PBL,URB_ATM_SFC_DENS,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA,URB_ATM_SFLX_rain) &
     !$omp shared(URB_ATM_SFLX_snow) &
-    !$omp private(i,j) shared(I_LW,I_SW) OMP_SCHEDULE_ 
-    do j = JS, JE
-    do i = IS, IE
+    !$omp private(i,j) shared(I_LW,I_SW) OMP_SCHEDULE_
+    do j = JSB, JEB
+    do i = ISB, IEB
        TEMP       (i,j)     = URB_ATM_TEMP       (i,j)
        PRES       (i,j)     = URB_ATM_PRES       (i,j)
        W          (i,j)     = URB_ATM_W          (i,j)
@@ -1237,6 +1262,7 @@ contains
        DENS       (i,j)     = URB_ATM_DENS       (i,j)
        QV         (i,j)     = URB_ATM_QV         (i,j)
        PBL        (i,j)     = URB_ATM_PBL        (i,j)
+       SFC_DENS   (i,j)     = URB_ATM_SFC_DENS   (i,j)
        SFC_PRES   (i,j)     = URB_ATM_SFC_PRES   (i,j)
        SFLX_rad_dn(i,j,I_LW,1) = URB_ATM_SFLX_rad_dn(i,j,I_LW,1)
        SFLX_rad_dn(i,j,I_SW,1) = URB_ATM_SFLX_rad_dn(i,j,I_SW,1)

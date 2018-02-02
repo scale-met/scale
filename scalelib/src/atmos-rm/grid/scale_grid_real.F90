@@ -90,8 +90,8 @@ contains
        GRID_DOMAIN_CENTER_Y
     use scale_mapproj, only: &
        MPRJ_setup
-    use scale_fileio, only: &
-       FILEIO_set_coordinates
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_set_coordinates
     implicit none
 
     character(len=H_LONG) :: DOMAIN_CATALOGUE_FNAME  = 'latlon_domain_catalogue.txt' !< metadata files for lat-lon domain for all processes
@@ -118,16 +118,16 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_DOMAIN_CATALOGUE)
 
-    allocate( REAL_LON  (IA,JA) )
-    allocate( REAL_LAT  (IA,JA) )
-    allocate( REAL_LONX (IA,JA) )
-    allocate( REAL_LONY (IA,JA) )
-    allocate( REAL_LONXY(IA,JA) )
-    allocate( REAL_LATX (IA,JA) )
-    allocate( REAL_LATY (IA,JA) )
-    allocate( REAL_LATXY(IA,JA) )
-    allocate( REAL_DLON (IA,JA) )
-    allocate( REAL_DLAT (IA,JA) )
+    allocate( REAL_LON  (  IA,  JA) )
+    allocate( REAL_LAT  (  IA,  JA) )
+    allocate( REAL_LONX (0:IA,  JA) )
+    allocate( REAL_LONY (  IA,0:JA) )
+    allocate( REAL_LONXY(0:IA,0:JA) )
+    allocate( REAL_LATX (0:IA,  JA) )
+    allocate( REAL_LATY (  IA,0:JA) )
+    allocate( REAL_LATXY(0:IA,0:JA) )
+    allocate( REAL_DLON (  IA,  JA) )
+    allocate( REAL_DLAT (  IA,  JA) )
 
     allocate( REAL_CZ (  KA,IA,JA) )
     allocate( REAL_FZ (0:KA,IA,JA) )
@@ -152,7 +152,7 @@ contains
     ! call REAL_calc_areavol ! must be called after GTRANS_setup
 
     ! set latlon and z to fileio module
-    call FILEIO_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, &
+    call FILE_CARTESC_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, &
                                  REAL_LAT, REAL_LATX, REAL_LATY, REAL_LATXY, &
                                  REAL_CZ,  REAL_FZ    )
 
@@ -164,8 +164,8 @@ contains
   subroutine REAL_update_Z
     use scale_process, only: &
        PRC_MPIstop
-    use scale_fileio, only: &
-       FILEIO_set_coordinates
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_set_coordinates
     implicit none
     !---------------------------------------------------------------------------
 
@@ -173,7 +173,7 @@ contains
     call REAL_calc_Z
 
     ! set latlon and z to fileio module
-    call FILEIO_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, &
+    call FILE_CARTESC_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, &
                                  REAL_LAT, REAL_LATX, REAL_LATY, REAL_LATXY, &
                                  REAL_CZ,  REAL_FZ    )
 
@@ -233,8 +233,23 @@ contains
     do j = 1, JA
     do i = 1, IA
        call MPRJ_xy2lonlat( GRID_CX(i), GRID_CY(j), REAL_LON  (i,j), REAL_LAT  (i,j) )
+    enddo
+    enddo
+
+    do j = 1, JA
+    do i = 0, IA
        call MPRJ_xy2lonlat( GRID_FX(i), GRID_CY(j), REAL_LONX (i,j), REAL_LATX (i,j) )
+    enddo
+    enddo
+
+    do j = 0, JA
+    do i = 1, IA
        call MPRJ_xy2lonlat( GRID_CX(i), GRID_FY(j), REAL_LONY (i,j), REAL_LATY (i,j) )
+    enddo
+    enddo
+
+    do j = 0, JA
+    do i = 0, IA
        call MPRJ_xy2lonlat( GRID_FX(i), GRID_FY(j), REAL_LONXY(i,j), REAL_LATXY(i,j) )
     enddo
     enddo

@@ -85,6 +85,9 @@ contains
     use scale_land_phy_const, only: &
        LAND_PHY_CONST_setup, &
        LAND_PHY_CONST
+    use scale_land_phy_file, only: &
+       LAND_PHY_FILE_setup, &
+       LAND_PHY_FILE
     use scale_land_phy_slab, only: &
        LAND_PHY_SLAB_setup, &
        LAND_PHY_SLAB
@@ -100,6 +103,9 @@ contains
     case( 'CONST' )
        call LAND_PHY_CONST_setup( LAND_TYPE )
        LAND_PHY => LAND_PHY_CONST
+    case( 'FILE' )
+       call LAND_PHY_FILE_setup( LAND_TYPE )
+       LAND_PHY => LAND_PHY_FILE
     case( 'SLAB', 'THIN-SLAB', 'THICK-SLAB' )
        call LAND_PHY_SLAB_setup( LAND_TYPE )
        LAND_PHY => LAND_PHY_SLAB

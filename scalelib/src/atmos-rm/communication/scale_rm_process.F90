@@ -13,8 +13,6 @@ module scale_rm_process
   !++ used modules
   !
   use mpi
-  use gtool_file, only: &
-     FileCloseAll
   use scale_precision
   use scale_stdio
   !-----------------------------------------------------------------------------

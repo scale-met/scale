@@ -33,6 +33,7 @@ program netcdf2grads_h
   real(SP),allocatable :: zlev(:), cz(:), cdz(:)
   real(SP),allocatable :: cx(:), cdx(:)
   real(SP),allocatable :: cy(:), cdy(:)
+  real(SP),allocatable :: lcz(:), ucz(:), ocz(:)
   real(SP),allocatable :: lon(:,:), lat(:,:)
   real(SP),allocatable :: var_2d(:,:)
   real(SP),allocatable :: p_var(:,:)
@@ -60,11 +61,12 @@ program netcdf2grads_h
   integer :: nz   ! num of z-dimension in the combined file
   integer :: uz   ! num of z-dimension in the combined file for urban
   integer :: lz   ! num of z-dimension in the combined file for land
+  integer :: oz   ! num of z-dimension in the combined file for ocean
   integer :: nzg  ! num of z-dimension in the combined file for grid
   integer :: nxh  ! num of halo grids for x-dimension
   integer :: nyh  ! num of halo grids for y-dimension
   integer :: nzh  ! num of halo grids for z-dimension
-  integer :: nz_all(3)
+  integer :: nz_all(4)
   integer :: ks, ke
   integer :: nst, nen
 
@@ -121,18 +123,18 @@ program netcdf2grads_h
   real    :: MPRJ_PS_fact            ! pre-calc factor
   real    :: MPRJ_M_lat              ! standard latitude1 for Mer. projection [deg]
   real    :: MPRJ_EC_lat             ! standard latitude1 for E.C. projection [deg]
-  character(len=CMID) :: HISTORY_TITLE
-  character(len=CMID) :: HISTORY_SOURCE
-  character(len=CMID) :: HISTORY_INSTITUTION
-  character(len=CMID) :: HISTORY_TIME_UNITS
-  character(len=CMID) :: HISTORY_TIME_SINCE
-  real                :: HISTORY_DTSEC
-  real                :: HISTORY_STARTDAYSEC
-  logical             :: HISTORY_OUTPUT_STEP0  = .false. !> output value of step=0?
-  real                :: HISTORY_OUTPUT_START  = 0.0_DP  !> start time for output in second
-  logical             :: HISTORY_ERROR_PUTMISS = .false.
-  logical             :: HISTORY_DEFAULT_TAVERAGE  = .false.
-  character(len=CSHT) :: HISTORY_DEFAULT_DATATYPE  = 'REAL4'
+  character(len=CMID) :: FILE_HISTORY_TITLE
+  character(len=CMID) :: FILE_HISTORY_SOURCE
+  character(len=CMID) :: FILE_HISTORY_INSTITUTION
+  character(len=CMID) :: FILE_HISTORY_TIME_UNITS
+  character(len=CMID) :: FILE_HISTORY_TIME_SINCE
+  real                :: FILE_HISTORY_DTSEC
+  real                :: FILE_HISTORY_STARTDAYSEC
+  logical             :: FILE_HISTORY_OUTPUT_STEP0  = .false. !> output value of step=0?
+  real                :: FILE_HISTORY_OUTPUT_START  = 0.0_DP  !> start time for output in second
+  logical             :: FILE_HISTORY_ERROR_PUTMISS = .false.
+  logical             :: FILE_HISTORY_DEFAULT_TAVERAGE  = .false.
+  character(len=CSHT) :: FILE_HISTORY_DEFAULT_DATATYPE  = 'REAL4'
   !-----------------------------------------------------------------------------------------
 
   namelist /LOGOUT/            &
@@ -187,20 +189,20 @@ program netcdf2grads_h
     MPRJ_M_lat,                & ! currently not required
     MPRJ_EC_lat                  ! currently not required
 
-  namelist  /PARAM_HISTORY/    &
-    HISTORY_DEFAULT_BASENAME,  &
-    HISTORY_DEFAULT_TINTERVAL, &
-    HISTORY_DEFAULT_TUNIT,     &
-    HISTORY_DEFAULT_ZDIM,      &
-    HISTORY_TITLE,             & ! not required
-    HISTORY_SOURCE,            & ! not required
-    HISTORY_INSTITUTION,       & ! not required
-    HISTORY_TIME_UNITS,        & ! not required
-    HISTORY_DEFAULT_TAVERAGE,  & ! not required
-    HISTORY_DEFAULT_DATATYPE,  & ! not required
-    HISTORY_OUTPUT_STEP0,      & ! not required
-    HISTORY_OUTPUT_START,      & ! not required
-    HISTORY_ERROR_PUTMISS        ! not required
+  namelist  /PARAM_FILE_HISTORY/    &
+    FILE_HISTORY_DEFAULT_BASENAME,  &
+    FILE_HISTORY_DEFAULT_TINTERVAL, &
+    FILE_HISTORY_DEFAULT_TUNIT,     &
+    FILE_HISTORY_DEFAULT_ZDIM,      &
+    FILE_HISTORY_TITLE,             & ! not required
+    FILE_HISTORY_SOURCE,            & ! not required
+    FILE_HISTORY_INSTITUTION,       & ! not required
+    FILE_HISTORY_TIME_UNITS,        & ! not required
+    FILE_HISTORY_DEFAULT_TAVERAGE,  & ! not required
+    FILE_HISTORY_DEFAULT_DATATYPE,  & ! not required
+    FILE_HISTORY_OUTPUT_STEP0,      & ! not required
+    FILE_HISTORY_OUTPUT_START,      & ! not required
+    FILE_HISTORY_ERROR_PUTMISS        ! not required
 
   namelist  /PARAM_HIST/       &
     HIST_BND
@@ -250,11 +252,14 @@ program netcdf2grads_h
   !### read and combine
   !-----------------------------------------------------------------------------------------
   write ( num,'(I6.6)' ) rk_mnge(1)
-  ncfile = trim(IDIR)//"/"//trim(HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
+  ncfile = trim(IDIR)//"/"//trim(FILE_HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
   call netcdf_retrieve_dims( ncfile,                          &
                              nxp, nxgp, nxh, nyp, nygp, nyh,  &
-                             nz,  nzg,  nzh, uz, lz, ks, ke   )
-  nz_all(1) = nz; nz_all(2) = uz; nz_all(3) = lz
+                             nz,  nzg,  nzh, uz, lz, oz, ks, ke   )
+  nz_all(1) = nz
+  nz_all(2) = uz
+  nz_all(3) = lz
+  nz_all(4) = oz
 
   call set_array_size( nxp, nyp, nxgp, nygp, nx, ny, mnx, mny,  &
                        mnxp, mnyp, nxg_tproc, nyg_tproc         )
@@ -369,8 +374,32 @@ program netcdf2grads_h
         "+++ VARIABLE: ", trim(varname), " (vtype = ", vtype, ")"
 
         select case( vtype )
-        case ( vt_urban, vt_land, vt_height, vt_3d )
+        case ( vt_urban, vt_land, vt_ocean, vt_height, vt_3d )
         !-----------------------------------------------------------------------------------
+
+           ! read axis
+           if((it == nst).and.(irank == master))then
+              select case( vtype )
+              case ( vt_urban )
+                 if(uz < 0)then
+                    write (*,*) "ERROR: Not found urban layer axis: uz"
+                    call err_abort( 1, __LINE__, loc_main )
+                 endif
+                 call netcdf_read_grid_sfc( master, 'UCZ', ucz )
+              case ( vt_land )
+                 if(lz < 0)then
+                    write (*,*) "ERROR: Not found land layer axis: lz"
+                    call err_abort( 1, __LINE__, loc_main )
+                 endif
+                 call netcdf_read_grid_sfc( master, 'LCZ', lcz )
+              case ( vt_ocean )
+                 if(oz < 0)then
+                    write (*,*) "ERROR: Not found land layer axis: oz"
+                    call err_abort( 1, __LINE__, loc_main )
+                 endif
+                 call netcdf_read_grid_sfc( master, 'OCZ', ocz )
+              end select
+           endif
 
            irec_timelev = irec_time
            do iz = 1, ZCOUNT        !--- level loop
@@ -455,18 +484,22 @@ program netcdf2grads_h
                        zz = TARGET_ZLEV(iz)
                     endif
                     call io_create_ctl( varname, atype, ctype, vtype, idom, &
-                         nx, ny, zz, nt, cx, cy, vgrid, zlev, long_name, unit )
+                         nx, ny, zz, nt, cx, cy, vgrid, zlev,               &
+                         lz, uz, oz, lcz, ucz, ocz, long_name, unit )
                     if ( MAPPROJ_ctl )then
                        call io_create_ctl_mproj( varname, atype, ctype, vtype, idom, &
-                            nx, ny, zz, nt, cx, cy, vgrid, zlev, minval(lon), minval(lat), long_name, unit )
+                            nx, ny, zz, nt, cx, cy, vgrid, zlev,                     &
+                            lz, uz, oz, lcz, ucz, ocz, minval(lon), minval(lat), long_name, unit )
                     endif
                  enddo
               else
                  call io_create_ctl( varname, atype, ctype, vtype, idom, &
-                      nx, ny, 1, nt, cx, cy, vgrid, zlev, long_name, unit )
+                      nx, ny, 1, nt, cx, cy, vgrid, zlev,                &
+                      lz, uz, oz, lcz, ucz, ocz, long_name, unit )
                  if ( MAPPROJ_ctl )then
                     call io_create_ctl_mproj( varname, atype, ctype, vtype, idom, &
-                         nx, ny, 1, nt, cx, cy, vgrid, zlev, minval(lon), minval(lat), long_name, unit )
+                         nx, ny, 1, nt, cx, cy, vgrid, zlev,                      &
+                         lz, uz, oz, lcz, ucz, ocz, minval(lon), minval(lat), long_name, unit )
                  endif
               endif
 
@@ -769,8 +802,8 @@ contains
     if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_HIST )
 
     rewind( FID_RCNF )
-    read  ( FID_RCNF, nml=PARAM_HISTORY, iostat=ierr )
-    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_HISTORY )
+    read  ( FID_RCNF, nml=PARAM_FILE_HISTORY, iostat=ierr )
+    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_FILE_HISTORY )
 
     if ( MAPPROJ_ctl )then
        rewind( FID_RCNF )
@@ -781,10 +814,10 @@ contains
     close(FID_RCNF)
 
     if ( EXTRA_TINTERVAL > 0 ) then
-       HISTORY_DEFAULT_TINTERVAL = EXTRA_TINTERVAL
-       HISTORY_DEFAULT_TUNIT     = EXTRA_TUNIT
+       FILE_HISTORY_DEFAULT_TINTERVAL = EXTRA_TINTERVAL
+       FILE_HISTORY_DEFAULT_TUNIT     = EXTRA_TUNIT
        if ( LOUT ) write( FID_LOG, '(1X,A,F5.1,A)' ) "+++ USE EXTRA TIME: ", &
-                        HISTORY_DEFAULT_TINTERVAL, trim(HISTORY_DEFAULT_TUNIT)
+                        FILE_HISTORY_DEFAULT_TINTERVAL, trim(FILE_HISTORY_DEFAULT_TUNIT)
     endif
 
     !--- tentative
@@ -810,21 +843,31 @@ contains
     case ( vt_urban )
        if ( zz < 1 .or. zz > uz ) then
           write (*, *) "ERROR: requested level is in K-HALO [urban]"
+          write (*, *) "*** requested level =",zz,", min = 1, max = ",uz
           call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_land )
        if ( zz < 1 .or. zz > lz ) then
           write (*, *) "ERROR: requested level is in K-HALO [land]"
+          write (*, *) "*** requested level =",zz,", min = 1, max = ",lz
+          call err_abort( 1, __LINE__, loc_main )
+       endif
+    case ( vt_ocean )
+       if ( zz < 1 .or. zz > oz ) then
+          write (*, *) "ERROR: requested level is in K-HALO [ocean]"
+          write (*, *) "*** requested level =",zz,", min = 1, max = ",oz
           call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_height )
        if ( zz < ks .or. zz > ke ) then
            write (*, *) "ERROR: requested level is in K-HALO [height]"
+          write (*, *) "*** requested level =",zz,", min = ",ks," max = ",ke
           call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_3d )
        if ( zz < ks .or. zz > ke ) then
           write (*, *) "ERROR: requested level is in K-HALO [3D data]"
+          write (*, *) "*** requested level =",zz,", min = ",ks," max = ",ke
           call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_2d, vt_tpmsk )
@@ -892,15 +935,21 @@ contains
     allocate( p_lon       (mnxp, mnyp*nmnge           ) )
     allocate( p_lat       (mnxp, mnyp*nmnge           ) )
 
+    if ( irank == master ) then
+       if (lz > 0) allocate( lcz       (lz     ) )
+       if (uz > 0) allocate( ucz       (uz     ) )
+       if (oz > 0) allocate( ocz       (oz     ) )
+       allocate( var_2d    (nx, ny ) )
+       allocate( cx        (nx     ) )
+       allocate( cy        (ny     ) )
+       allocate( cdx       (nx     ) )
+       allocate( cdy       (ny     ) )
+       allocate( lon       (nx, ny ) )
+       allocate( lat       (nx, ny ) )
+    endif
+
 #ifdef MPIUSE
     if ( irank == master ) then
-       allocate( var_2d    (nx,               ny               ) )
-       allocate( cx        (nx                                 ) )
-       allocate( cy        (ny                                 ) )
-       allocate( cdx       (nx                                 ) )
-       allocate( cdy       (ny                                 ) )
-       allocate( lon       (nx,               ny               ) )
-       allocate( lat       (nx,               ny               ) )
        allocate( recvbuf   (mnxp,             mnyp*nmnge*tproc ) )
        allocate( cx_gather (nxgp*nmnge*tproc                   ) )
        allocate( cy_gather (nygp*nmnge*tproc                   ) )
@@ -913,14 +962,6 @@ contains
        allocate( cdx_gather(1                                  ) )
        allocate( cdy_gather(1                                  ) )
     endif
-#else
-    allocate( var_2d    (nx, ny) )
-    allocate( cx        (nx    ) )
-    allocate( cy        (ny    ) )
-    allocate( cdx       (nx    ) )
-    allocate( cdy       (ny    ) )
-    allocate( lon       (nx, ny) )
-    allocate( lat       (nx, ny) )
 #endif
 
     return

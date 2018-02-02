@@ -109,8 +109,8 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_grid_real, only: &
        REAL_Z1
     use scale_roughness, only: &
@@ -122,12 +122,18 @@ contains
        OCEAN_SFC_SimpleAlbedo
     use mod_ocean_vars, only: &
        OCEAN_TEMP,         &
+       OCEAN_SALT,         &
+       OCEAN_UVEL,         &
+       OCEAN_VVEL,         &
        OCEAN_SFC_TEMP,     &
        OCEAN_SFC_albedo,   &
        OCEAN_SFC_Z0M,      &
        OCEAN_SFC_Z0H,      &
        OCEAN_SFC_Z0E,      &
        OCEAN_TEMP_t,       &
+       OCEAN_SALT_t,       &
+       OCEAN_UVEL_t,       &
+       OCEAN_VVEL_t,       &
        OCEAN_SFC_TEMP_t,   &
        OCEAN_SFC_albedo_t, &
        OCEAN_SFC_Z0M_t,    &
@@ -152,6 +158,7 @@ contains
        ATMOS_DENS,         &
        ATMOS_QV,           &
        ATMOS_PBL,          &
+       ATMOS_SFC_DENS,     &
        ATMOS_SFC_PRES,     &
        ATMOS_SFLX_LW,      &
        ATMOS_SFLX_SW,      &
@@ -169,16 +176,17 @@ contains
 
     if ( update_flag ) then
 
-       call ROUGHNESS( OCEAN_SFC_Z0M_t(:,:), & ! [OUT]
-                       OCEAN_SFC_Z0H_t(:,:), & ! [OUT]
-                       OCEAN_SFC_Z0E_t(:,:), & ! [OUT]
-                       OCEAN_SFC_Z0M  (:,:), & ! [IN]
-                       OCEAN_SFC_Z0H  (:,:), & ! [IN]
-                       OCEAN_SFC_Z0E  (:,:), & ! [IN]
-                       ATMOS_U        (:,:), & ! [IN]
-                       ATMOS_V        (:,:), & ! [IN]
-                       REAL_Z1        (:,:), & ! [IN]
-                       dt                    ) ! [IN]
+       call ROUGHNESS( &
+            IA, ISB, IEB, JA, JSB, JEB, &
+            OCEAN_SFC_Z0M(:,:),         & ! [IN]
+            OCEAN_SFC_Z0H(:,:),         & ! [IN]
+            OCEAN_SFC_Z0E(:,:),         & ! [IN]
+            ATMOS_U(:,:), ATMOS_V(:,:), & ! [IN]
+            REAL_Z1(:,:),               & ! [IN]
+            dt,                         & ! [IN]
+            OCEAN_SFC_Z0M_t(:,:),       & ! [OUT]
+            OCEAN_SFC_Z0H_t(:,:),       & ! [OUT]
+            OCEAN_SFC_Z0E_t(:,:)        ) ! [OUT]
 
        call OCEAN_SFC_SimpleAlbedo( OCEAN_SFC_albedo_t(:,:,:), & ! [OUT]
                                     OCEAN_SFC_albedo  (:,:,:), & ! [IN]
@@ -205,10 +213,11 @@ contains
                        ATMOS_QV        (:,:),      & ! [IN]
                        REAL_Z1         (:,:),      & ! [IN]
                        ATMOS_PBL       (:,:),      & ! [IN]
+                       ATMOS_SFC_DENS  (:,:),      & ! [IN]
                        ATMOS_SFC_PRES  (:,:),      & ! [IN]
                        ATMOS_SFLX_LW   (:,:),      & ! [IN]
                        ATMOS_SFLX_SW   (:,:),      & ! [IN]
-                       OCEAN_TEMP      (:,:),      & ! [IN]
+                       OCEAN_TEMP      (1,:,:),    & ! [IN]
                        OCEAN_SFC_TEMP  (:,:),      & ! [IN]
                        OCEAN_SFC_albedo(:,:,I_LW), & ! [IN]
                        OCEAN_SFC_albedo(:,:,I_SW), & ! [IN]
@@ -227,25 +236,26 @@ contains
        end do
        end do
 
-       call OCEAN_PHY( OCEAN_TEMP_t   (:,:), & ! [OUT]
-                       OCEAN_TEMP     (:,:), & ! [IN]
-                       OCEAN_SFLX_WH  (:,:), & ! [IN]
-                       ATMOS_SFLX_prec(:,:), & ! [IN]
-                       OCEAN_SFLX_evap(:,:), & ! [IN]
-                       dt                    ) ! [IN]
+       call OCEAN_PHY( OCEAN_TEMP_t   (:,:,:), & ! [OUT]
+                       OCEAN_TEMP     (:,:,:), & ! [IN]
+                       OCEAN_SFLX_WH  (:,:),   & ! [IN]
+                       ATMOS_SFLX_prec(:,:),   & ! [IN]
+                       OCEAN_SFLX_evap(:,:),   & ! [IN]
+                       dt                      ) ! [IN]
 
-       call HIST_in( OCEAN_TEMP_t      (:,:),      'OCEAN_TEMP_t',     'tendency of OCEAN_TEMP',     'K' )
-       call HIST_in( OCEAN_SFC_TEMP_t  (:,:),      'OCEAN_SFC_TEMP_t', 'tendency of OCEAN_SFC_TEMP', 'K' )
-       call HIST_in( OCEAN_SFC_albedo_t(:,:,I_LW), 'OCEAN_ALB_LW_t',   'tendency of OCEAN_ALB_LW',   '1' )
-       call HIST_in( OCEAN_SFC_albedo_t(:,:,I_SW), 'OCEAN_ALB_SW_t',   'tendency of OCEAN_ALB_SW',   '1' )
-       call HIST_in( OCEAN_SFC_Z0M_t   (:,:),      'OCEAN_SFC_Z0M_t',  'tendency of OCEAN_SFC_Z0M',  'm' )
-       call HIST_in( OCEAN_SFC_Z0H_t   (:,:),      'OCEAN_SFC_Z0H_t',  'tendency of OCEAN_SFC_Z0H',  'm' )
-       call HIST_in( OCEAN_SFC_Z0E_t   (:,:),      'OCEAN_SFC_Z0E_t',  'tendency of OCEAN_SFC_Z0E',  'm' )
+       call FILE_HISTORY_in( OCEAN_TEMP_t      (:,:,:),    'OCEAN_TEMP_t',     'tendency of OCEAN_TEMP',     'K', dim_type='OXY' )
+       call FILE_HISTORY_in( OCEAN_SFC_TEMP_t  (:,:),      'OCEAN_SFC_TEMP_t', 'tendency of OCEAN_SFC_TEMP', 'K', dim_type='XY' )
+       call FILE_HISTORY_in( OCEAN_SFC_albedo_t(:,:,I_LW), 'OCEAN_ALB_LW_t',   'tendency of OCEAN_ALB_LW',   '1', dim_type='XY' )
+       call FILE_HISTORY_in( OCEAN_SFC_albedo_t(:,:,I_SW), 'OCEAN_ALB_SW_t',   'tendency of OCEAN_ALB_SW',   '1', dim_type='XY' )
+       call FILE_HISTORY_in( OCEAN_SFC_Z0M_t   (:,:),      'OCEAN_SFC_Z0M_t',  'tendency of OCEAN_SFC_Z0M',  'm', dim_type='XY' )
+       call FILE_HISTORY_in( OCEAN_SFC_Z0H_t   (:,:),      'OCEAN_SFC_Z0H_t',  'tendency of OCEAN_SFC_Z0H',  'm', dim_type='XY' )
+       call FILE_HISTORY_in( OCEAN_SFC_Z0E_t   (:,:),      'OCEAN_SFC_Z0E_t',  'tendency of OCEAN_SFC_Z0E',  'm', dim_type='XY' )
 
     end if
 
     if ( STATISTICS_checktotal ) then
-       call STAT_total( total, OCEAN_TEMP_t      (:,:),      'OCEAN_TEMP_t'     )
+       call STAT_total( total, OCEAN_TEMP_t      (:,:,:),    'OCEAN_TEMP_t'     )
+
        call STAT_total( total, OCEAN_SFC_TEMP_t  (:,:),      'OCEAN_SFC_TEMP_t' )
        call STAT_total( total, OCEAN_SFC_albedo_t(:,:,I_LW), 'OCEAN_ALB_LW_t'   )
        call STAT_total( total, OCEAN_SFC_albedo_t(:,:,I_SW), 'OCEAN_ALB_SW_t'   )

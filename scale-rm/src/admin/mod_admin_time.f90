@@ -49,6 +49,7 @@ module mod_admin_time
   logical,  public :: TIME_DOATMOS_PHY_RD       !< execute physics  in this step? (radiation   )
   logical,  public :: TIME_DOATMOS_PHY_SF       !< execute physics  in this step? (surface flux)
   logical,  public :: TIME_DOATMOS_PHY_TB       !< execute physics  in this step? (turbulence  )
+  logical,  public :: TIME_DOATMOS_PHY_BL       !< execute physics  in this step? (boudary layer  )
   logical,  public :: TIME_DOATMOS_PHY_CH       !< execute physics  in this step? (chemistry   )
   logical,  public :: TIME_DOATMOS_PHY_AE       !< execute physics  in this step? (aerosol     )
   logical,  public :: TIME_DOATMOS_restart      !< execute atmosphere restart output in this step?
@@ -87,6 +88,7 @@ module mod_admin_time
   integer,  private :: TIME_RES_ATMOS_PHY_RD  = 0
   integer,  private :: TIME_RES_ATMOS_PHY_SF  = 0
   integer,  private :: TIME_RES_ATMOS_PHY_TB  = 0
+  integer,  private :: TIME_RES_ATMOS_PHY_BL  = 0
   integer,  private :: TIME_RES_ATMOS_PHY_CH  = 0
   integer,  private :: TIME_RES_ATMOS_PHY_AE  = 0
   integer,  private :: TIME_RES_ATMOS_RESTART = 0
@@ -103,6 +105,8 @@ module mod_admin_time
   real(DP), private :: TIME_WALLCLOCK_SAFE    =  0.9_DP ! Safety coefficient for elapse time limit
   real(DP), private :: TIME_WALLCLOCK_safelim           ! TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE
 
+  logical,  private :: debug = .false.
+
   real(DP), private, parameter :: eps = 1.E-6_DP !> epsilon for timesec
 
   !-----------------------------------------------------------------------------
@@ -111,8 +115,8 @@ contains
   !> Setup
   subroutine ADMIN_TIME_setup( &
        setup_TimeIntegration )
-    use gtool_file, only: &
-       FileGetDatainfo
+    use scale_file, only: &
+       FILE_Get_Attribute
     use scale_process, only: &
        PRC_myrank,  &
        PRC_MPIstop, &
@@ -143,6 +147,7 @@ contains
        TIME_DTSEC_ATMOS_PHY_RD,    &
        TIME_DTSEC_ATMOS_PHY_SF,    &
        TIME_DTSEC_ATMOS_PHY_TB,    &
+       TIME_DTSEC_ATMOS_PHY_BL,    &
        TIME_DTSEC_ATMOS_PHY_CH,    &
        TIME_DTSEC_ATMOS_PHY_AE,    &
        TIME_DTSEC_OCEAN,           &
@@ -155,6 +160,7 @@ contains
        TIME_DSTEP_ATMOS_PHY_RD,    &
        TIME_DSTEP_ATMOS_PHY_SF,    &
        TIME_DSTEP_ATMOS_PHY_TB,    &
+       TIME_DSTEP_ATMOS_PHY_BL,    &
        TIME_DSTEP_ATMOS_PHY_CH,    &
        TIME_DSTEP_ATMOS_PHY_AE,    &
        TIME_DSTEP_OCEAN,           &
@@ -187,6 +193,8 @@ contains
     character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_SF_UNIT    = ""
     real(DP)               :: TIME_DT_ATMOS_PHY_TB         = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_TB_UNIT    = ""
+    real(DP)               :: TIME_DT_ATMOS_PHY_BL         = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_BL_UNIT    = ""
     real(DP)               :: TIME_DT_ATMOS_PHY_CH         = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_CH_UNIT    = ""
     real(DP)               :: TIME_DT_ATMOS_PHY_AE         = UNDEF8
@@ -235,6 +243,8 @@ contains
        TIME_DT_ATMOS_PHY_SF_UNIT,    &
        TIME_DT_ATMOS_PHY_TB,         &
        TIME_DT_ATMOS_PHY_TB_UNIT,    &
+       TIME_DT_ATMOS_PHY_BL,         &
+       TIME_DT_ATMOS_PHY_BL_UNIT,    &
        TIME_DT_ATMOS_PHY_CH,         &
        TIME_DT_ATMOS_PHY_CH_UNIT,    &
        TIME_DT_ATMOS_PHY_AE,         &
@@ -259,11 +269,12 @@ contains
        TIME_DT_RESUME_UNIT,          &
        TIME_WALLCLOCK_LIMIT,         &
        TIME_WALLCLOCK_SAFE,          &
-       TIME_END_RESTART_OUT
+       TIME_END_RESTART_OUT,         &
+       debug
 
     integer              :: dateday
     real(DP)             :: datesec
-    real(DP)             :: cftime
+    real(DP)             :: cftime(1)
     character(len=H_MID) :: cfunits
 
     real(DP)          :: TIME_DURATIONSEC
@@ -371,6 +382,17 @@ contains
           if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_TB_UNIT.    ', &
                                                  'TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_TB_UNIT = TIME_DT_UNIT
+       endif
+       ! PHY_BL
+       if ( TIME_DT_ATMOS_PHY_BL == UNDEF8 ) then
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_BL.         ', &
+                                                 'TIME_DT is used.'
+          TIME_DT_ATMOS_PHY_BL = TIME_DT
+       endif
+       if ( TIME_DT_ATMOS_PHY_BL_UNIT == '' ) then
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Not found TIME_DT_ATMOS_PHY_BL_UNIT.    ', &
+                                                 'TIME_DT_UNIT is used.'
+          TIME_DT_ATMOS_PHY_BL_UNIT = TIME_DT_UNIT
        endif
        ! PHY_CH
        if ( TIME_DT_ATMOS_PHY_CH == UNDEF8 ) then
@@ -485,15 +507,22 @@ contains
     !--- calculate time
     if ( TIME_STARTDATE(1) == -999 ) then
        if ( RESTART_IN_BASENAME /= '' ) then ! read start time from the restart data
-          call FileGetDatainfo( RESTART_IN_BASENAME, & ! [IN]
-                                'DENS',              & ! [IN]
-                                PRC_myrank,          & ! [IN]
-                                0,                   & ! [IN] step
-                                time_start = cftime, & ! [OUT]
-                                time_units = cfunits ) ! [OUT]
+          call FILE_Get_Attribute( RESTART_IN_BASENAME, & ! [IN]
+                                   "global",            & ! [IN]
+                                   'time_start',        & ! [IN]
+                                   cftime(:),           & ! [OUT]
+                                   rankid = PRC_myrank, & ! [IN]
+                                   single = .false.     ) ! [IN]
+
+          call FILE_Get_Attribute( RESTART_IN_BASENAME, & ! [IN]
+                                   "global",            & ! [IN]
+                                   'time_units',        & ! [IN]
+                                   cfunits,             & ! [OUT]
+                                   rankid = PRC_myrank, & ! [IN]
+                                   single = .false.     ) ! [IN]
 
           dateday = 0
-          datesec = CALENDAR_CFunits2sec( cftime, cfunits, 0 )
+          datesec = CALENDAR_CFunits2sec( cftime(1), cfunits, 0 )
 
           call CALENDAR_adjust_daysec( dateday, datesec )
 
@@ -563,8 +592,8 @@ contains
        TIME_NSTEP   = int( TIME_DURATIONSEC / TIME_DTSEC )
        TIME_NOWSTEP = 1
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** delta t (sec.) :', TIME_DTSEC
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I10)'  ) '*** No. of steps   :', TIME_NSTEP
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.3)') '*** delta t (sec.) :', TIME_DTSEC
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I12)'  ) '*** No. of steps   :', TIME_NSTEP
 
        !--- calculate intervals for atmosphere
        if ( TIME_DT_ATMOS_DYN /= UNDEF8 ) then
@@ -577,6 +606,7 @@ contains
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD,  TIME_DT_ATMOS_PHY_RD_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_SF,  TIME_DT_ATMOS_PHY_SF,  TIME_DT_ATMOS_PHY_SF_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_TB,  TIME_DT_ATMOS_PHY_TB,  TIME_DT_ATMOS_PHY_TB_UNIT  )
+       call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_BL,  TIME_DT_ATMOS_PHY_BL,  TIME_DT_ATMOS_PHY_BL_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_CH,  TIME_DT_ATMOS_PHY_CH,  TIME_DT_ATMOS_PHY_CH_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_AE,  TIME_DT_ATMOS_PHY_AE,  TIME_DT_ATMOS_PHY_AE_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_RESTART, TIME_DT_ATMOS_RESTART, TIME_DT_ATMOS_RESTART_UNIT )
@@ -597,6 +627,7 @@ contains
        TIME_DTSEC_ATMOS_PHY_RD  = max( TIME_DTSEC_ATMOS_PHY_RD,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_ATMOS_PHY_SF  = max( TIME_DTSEC_ATMOS_PHY_SF,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_ATMOS_PHY_TB  = max( TIME_DTSEC_ATMOS_PHY_TB,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_ATMOS_PHY_BL  = max( TIME_DTSEC_ATMOS_PHY_BL,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_ATMOS_PHY_CH  = max( TIME_DTSEC_ATMOS_PHY_CH,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_ATMOS_PHY_AE  = max( TIME_DTSEC_ATMOS_PHY_AE,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_ATMOS_RESTART = max( TIME_DTSEC_ATMOS_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
@@ -614,6 +645,7 @@ contains
        TIME_DSTEP_ATMOS_PHY_RD  = nint( TIME_DTSEC_ATMOS_PHY_RD  / TIME_DTSEC )
        TIME_DSTEP_ATMOS_PHY_SF  = nint( TIME_DTSEC_ATMOS_PHY_SF  / TIME_DTSEC )
        TIME_DSTEP_ATMOS_PHY_TB  = nint( TIME_DTSEC_ATMOS_PHY_TB  / TIME_DTSEC )
+       TIME_DSTEP_ATMOS_PHY_BL  = nint( TIME_DTSEC_ATMOS_PHY_BL  / TIME_DTSEC )
        TIME_DSTEP_ATMOS_PHY_CH  = nint( TIME_DTSEC_ATMOS_PHY_CH  / TIME_DTSEC )
        TIME_DSTEP_ATMOS_PHY_AE  = nint( TIME_DTSEC_ATMOS_PHY_AE  / TIME_DTSEC )
        TIME_DSTEP_OCEAN         = nint( TIME_DTSEC_OCEAN         / TIME_DTSEC )
@@ -656,6 +688,11 @@ contains
        if ( abs(TIME_DTSEC_ATMOS_PHY_TB-real(TIME_DSTEP_ATMOS_PHY_TB,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_TB) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_TB, real(TIME_DSTEP_ATMOS_PHY_TB,kind=DP)*TIME_DTSEC
+          call PRC_MPIstop
+       endif
+       if ( abs(TIME_DTSEC_ATMOS_PHY_BL-real(TIME_DSTEP_ATMOS_PHY_BL,kind=DP)*TIME_DTSEC) > eps ) then
+          write(*,*) 'xxx delta t(ATMOS_PHY_BL) must be a multiple of delta t ', &
+                     TIME_DTSEC_ATMOS_PHY_BL, real(TIME_DSTEP_ATMOS_PHY_BL,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
        if ( abs(TIME_DTSEC_ATMOS_PHY_CH-real(TIME_DSTEP_ATMOS_PHY_CH,kind=DP)*TIME_DTSEC) > eps ) then
@@ -730,6 +767,8 @@ contains
                                                           ' (step interval=', TIME_DSTEP_ATMOS_PHY_SF, ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Physics, Turbulence         : ', TIME_DTSEC_ATMOS_PHY_TB, &
                                                           ' (step interval=', TIME_DSTEP_ATMOS_PHY_TB, ')'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Physics, Boundary layer     : ', TIME_DTSEC_ATMOS_PHY_BL, &
+                                                          ' (step interval=', TIME_DSTEP_ATMOS_PHY_BL, ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Physics, Chemistry          : ', TIME_DTSEC_ATMOS_PHY_CH, &
                                                           ' (step interval=', TIME_DSTEP_ATMOS_PHY_CH, ')'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Physics, Aerosol            : ', TIME_DTSEC_ATMOS_PHY_AE, &
@@ -772,6 +811,7 @@ contains
                                             TIME_DTSEC_ATMOS_PHY_RD,                   &
                                             TIME_DTSEC_ATMOS_PHY_SF,                   &
                                             TIME_DTSEC_ATMOS_PHY_TB,                   &
+                                            TIME_DTSEC_ATMOS_PHY_BL,                   &
                                             TIME_DTSEC_ATMOS_PHY_CH,                   &
                                             TIME_DTSEC_ATMOS_PHY_AE,                   &
                                             TIME_DTSEC_OCEAN,                          &
@@ -797,6 +837,10 @@ contains
                                                           ' (step interval=', TIME_DSTEP_WALLCLOCK_CHECK, ')'
     endif
 
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [ADMIN_TIME_advance] ', TIME_NOWDAY, TIME_NOWSEC, TIME_NOWDATE(:), TIME_NOWMS
+     endif
+
     return
   end subroutine ADMIN_TIME_setup
 
@@ -819,6 +863,7 @@ contains
        TIME_DSTEP_ATMOS_PHY_RD, &
        TIME_DSTEP_ATMOS_PHY_SF, &
        TIME_DSTEP_ATMOS_PHY_TB, &
+       TIME_DSTEP_ATMOS_PHY_BL, &
        TIME_DSTEP_ATMOS_PHY_CH, &
        TIME_DSTEP_ATMOS_PHY_AE, &
        TIME_DSTEP_OCEAN,        &
@@ -838,6 +883,7 @@ contains
     TIME_DOATMOS_PHY_RD   = .false.
     TIME_DOATMOS_PHY_SF   = .false.
     TIME_DOATMOS_PHY_TB   = .false.
+    TIME_DOATMOS_PHY_BL   = .false.
     TIME_DOATMOS_PHY_CH   = .false.
     TIME_DOATMOS_PHY_AE   = .false.
     TIME_DOOCEAN_step     = .false.
@@ -851,6 +897,7 @@ contains
     TIME_RES_ATMOS_PHY_RD = TIME_RES_ATMOS_PHY_RD + 1
     TIME_RES_ATMOS_PHY_SF = TIME_RES_ATMOS_PHY_SF + 1
     TIME_RES_ATMOS_PHY_TB = TIME_RES_ATMOS_PHY_TB + 1
+    TIME_RES_ATMOS_PHY_BL = TIME_RES_ATMOS_PHY_BL + 1
     TIME_RES_ATMOS_PHY_CH = TIME_RES_ATMOS_PHY_CH + 1
     TIME_RES_ATMOS_PHY_AE = TIME_RES_ATMOS_PHY_AE + 1
     TIME_RES_OCEAN        = TIME_RES_OCEAN        + 1
@@ -887,6 +934,11 @@ contains
        TIME_DOATMOS_step     = .true.
        TIME_DOATMOS_PHY_TB   = .true.
        TIME_RES_ATMOS_PHY_TB = 0
+    endif
+    if ( TIME_RES_ATMOS_PHY_BL == TIME_DSTEP_ATMOS_PHY_BL ) then
+       TIME_DOATMOS_step     = .true.
+       TIME_DOATMOS_PHY_BL   = .true.
+       TIME_RES_ATMOS_PHY_BL = 0
     endif
     if ( TIME_RES_ATMOS_PHY_CH == TIME_DSTEP_ATMOS_PHY_CH ) then
        TIME_DOATMOS_step     = .true.
@@ -956,6 +1008,8 @@ contains
        CALENDAR_daysec2date,   &
        CALENDAR_adjust_daysec, &
        CALENDAR_combine_daysec
+    use scale_comm, only: &
+       COMM_bcast
     use scale_time, only: &
        TIME_DTSEC,                &
        TIME_NOWDATE,              &
@@ -970,7 +1024,7 @@ contains
     implicit none
 
     real(DP) :: WALLCLOCK_elapse
-    logical  :: exists
+    logical  :: WALLCLOCK_DOend
     !---------------------------------------------------------------------------
 
     TIME_DOend = .false.
@@ -990,33 +1044,33 @@ contains
 
     TIME_NOWDAYSEC = CALENDAR_combine_daysec( TIME_NOWDAY, TIME_NOWSEC )
 
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [ADMIN_TIME_advance] ', TIME_NOWDAY, TIME_NOWSEC, TIME_NOWDATE(:), TIME_NOWMS
+    endif
+
     if ( TIME_NOWSTEP > TIME_NSTEP ) then
        TIME_DOend = .true.
     endif
 
-    if (       TIME_WALLCLOCK_LIMIT > 0.0_DP                     &
-         .AND. mod(TIME_NOWSTEP-1,TIME_DSTEP_WALLCLOCK_CHECK) == 0 ) then
-       WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
+    if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then ! use wallclock limiter
+       WALLCLOCK_DOend = .false.
 
-       if ( WALLCLOCK_elapse > TIME_WALLCLOCK_safelim ) then
+       if (       PRC_IsMaster                                        &      ! master node
+            .AND. mod(TIME_NOWSTEP-1,TIME_DSTEP_WALLCLOCK_CHECK) == 0 ) then ! step to check
+
+          WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
+
+          if( WALLCLOCK_elapse > TIME_WALLCLOCK_safelim ) WALLCLOCK_DOend = .true.
+
+       endif
+
+       call COMM_bcast( WALLCLOCK_DOend ) ! [INOUT]
+
+       if ( WALLCLOCK_DOend ) then
           if( IO_L ) write(IO_FID_LOG,*)
           if( IO_L ) write(IO_FID_LOG,*) '********************************************************************'
           if( IO_L ) write(IO_FID_LOG,*) '*** Elapse time limit is detected. Termination operation starts. ***'
           if( IO_L ) write(IO_FID_LOG,*) '********************************************************************'
-          if( IO_L ) write(IO_FID_LOG,*)
-          TIME_DOend = .true.
-       endif
-    endif
-
-    ! QUIT file control
-    if ( PRC_IsMaster ) then ! master node
-       inquire(file='QUIT', exist=exists)
-
-       if( exists ) then
-          if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*********************************************************'
-          if( IO_L ) write(IO_FID_LOG,*) '*** QUIT file is found. Termination operation starts. ***'
-          if( IO_L ) write(IO_FID_LOG,*) '*********************************************************'
           if( IO_L ) write(IO_FID_LOG,*)
           TIME_DOend = .true.
        endif

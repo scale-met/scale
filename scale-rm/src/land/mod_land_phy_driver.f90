@@ -100,6 +100,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine LAND_PHY_driver( update_flag )
+    use scale_const, only: &
+       PI => CONST_PI
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_time, only: &
@@ -107,8 +109,8 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_grid_real, only: &
        REAL_Z1
     use scale_land_grid, only: &
@@ -121,6 +123,7 @@ contains
        LAND_PROPERTY,     &
        I_WaterLimit,      &
        I_WaterCritical,   &
+       I_StomataResist,   &
        I_ThermalCond,     &
        I_HeatCapacity,    &
        I_WaterDiff,       &
@@ -154,6 +157,7 @@ contains
        ATMOS_DENS,        &
        ATMOS_QV,          &
        ATMOS_PBL,         &
+       ATMOS_SFC_DENS,    &
        ATMOS_SFC_PRES,    &
        ATMOS_SFLX_LW,     &
        ATMOS_SFLX_SW,     &
@@ -162,6 +166,7 @@ contains
 
     ! parameters
     real(RP), parameter :: BETA_MAX = 1.0_RP
+    !real(RP) :: sw
 
     ! arguments
     logical, intent(in) :: update_flag
@@ -184,44 +189,52 @@ contains
        do j = JS, JE
        do i = IS, IE
           LAND_QVEF(i,j) = min( LAND_WATER(LKS,i,j) / LAND_PROPERTY(i,j,I_WaterCritical), BETA_MAX )
+
+          ! eq.(12) in Merlin et al.(2011) but simplified P=0.5 used
+          !sw = 0.5_RP + sign(0.5_RP,LAND_WATER(LKS,i,j)-LAND_PROPERTY(i,j,I_WaterCritical)) ! if W > Wc, sw = 1
+          !LAND_QVEF(i,j) = (        sw ) * 1.0_RP &
+          !               + ( 1.0_RP-sw ) * sqrt( 0.5_RP - 0.5_RP * cos( PI * LAND_WATER(LKS,i,j) / LAND_PROPERTY(i,j,I_WaterCritical) ) )
+
           LAND_DZ1 (i,j) = GRID_LCDZ(LKS)
        end do
        end do
 
-       call LAND_SFC( LAND_SFC_TEMP_t(:,:),               & ! [OUT]
-                      LAND_SFLX_MW   (:,:),               & ! [OUT]
-                      LAND_SFLX_MU   (:,:),               & ! [OUT]
-                      LAND_SFLX_MV   (:,:),               & ! [OUT]
-                      LAND_SFLX_SH   (:,:),               & ! [OUT]
-                      LAND_SFLX_LH   (:,:),               & ! [OUT]
-                      LAND_SFLX_GH   (:,:),               & ! [OUT]
-                      LAND_U10       (:,:),               & ! [OUT]
-                      LAND_V10       (:,:),               & ! [OUT]
-                      LAND_T2        (:,:),               & ! [OUT]
-                      LAND_Q2        (:,:),               & ! [OUT]
-                      ATMOS_TEMP     (:,:),               & ! [IN]
-                      ATMOS_PRES     (:,:),               & ! [IN]
-                      ATMOS_W        (:,:),               & ! [IN]
-                      ATMOS_U        (:,:),               & ! [IN]
-                      ATMOS_V        (:,:),               & ! [IN]
-                      ATMOS_DENS     (:,:),               & ! [IN]
-                      ATMOS_QV       (:,:),               & ! [IN]
-                      REAL_Z1        (:,:),               & ! [IN]
-                      ATMOS_PBL      (:,:),               & ! [IN]
-                      ATMOS_SFC_PRES (:,:),               & ! [IN]
-                      ATMOS_SFLX_LW  (:,:),               & ! [IN]
-                      ATMOS_SFLX_SW  (:,:),               & ! [IN]
-                      LAND_TEMP      (LKS,:,:),           & ! [IN]
-                      LAND_SFC_TEMP  (:,:),               & ! [IN]
-                      LAND_QVEF      (:,:),               & ! [IN]
-                      LAND_SFC_albedo(:,:,I_LW),          & ! [IN]
-                      LAND_SFC_albedo(:,:,I_SW),          & ! [IN]
-                      LAND_DZ1       (:,:),               & ! [IN]
-                      LAND_PROPERTY  (:,:,I_ThermalCond), & ! [IN]
-                      LAND_PROPERTY  (:,:,I_Z0M),         & ! [IN]
-                      LAND_PROPERTY  (:,:,I_Z0H),         & ! [IN]
-                      LAND_PROPERTY  (:,:,I_Z0E),         & ! [IN]
-                      dt                                  ) ! [IN]
+       call LAND_SFC( LAND_SFC_TEMP_t(:,:),                 & ! [OUT]
+                      LAND_SFLX_MW   (:,:),                 & ! [OUT]
+                      LAND_SFLX_MU   (:,:),                 & ! [OUT]
+                      LAND_SFLX_MV   (:,:),                 & ! [OUT]
+                      LAND_SFLX_SH   (:,:),                 & ! [OUT]
+                      LAND_SFLX_LH   (:,:),                 & ! [OUT]
+                      LAND_SFLX_GH   (:,:),                 & ! [OUT]
+                      LAND_U10       (:,:),                 & ! [OUT]
+                      LAND_V10       (:,:),                 & ! [OUT]
+                      LAND_T2        (:,:),                 & ! [OUT]
+                      LAND_Q2        (:,:),                 & ! [OUT]
+                      ATMOS_TEMP     (:,:),                 & ! [IN]
+                      ATMOS_PRES     (:,:),                 & ! [IN]
+                      ATMOS_W        (:,:),                 & ! [IN]
+                      ATMOS_U        (:,:),                 & ! [IN]
+                      ATMOS_V        (:,:),                 & ! [IN]
+                      ATMOS_DENS     (:,:),                 & ! [IN]
+                      ATMOS_QV       (:,:),                 & ! [IN]
+                      REAL_Z1        (:,:),                 & ! [IN]
+                      ATMOS_PBL      (:,:),                 & ! [IN]
+                      ATMOS_SFC_DENS (:,:),                 & ! [IN]
+                      ATMOS_SFC_PRES (:,:),                 & ! [IN]
+                      ATMOS_SFLX_LW  (:,:),                 & ! [IN]
+                      ATMOS_SFLX_SW  (:,:),                 & ! [IN]
+                      LAND_TEMP      (LKS,:,:),             & ! [IN]
+                      LAND_SFC_TEMP  (:,:),                 & ! [IN]
+                      LAND_QVEF      (:,:),                 & ! [IN]
+                      LAND_SFC_albedo(:,:,I_LW),            & ! [IN]
+                      LAND_SFC_albedo(:,:,I_SW),            & ! [IN]
+                      LAND_DZ1       (:,:),                 & ! [IN]
+                      LAND_PROPERTY  (:,:,I_StomataResist), & ! [IN]
+                      LAND_PROPERTY  (:,:,I_ThermalCond),   & ! [IN]
+                      LAND_PROPERTY  (:,:,I_Z0M),           & ! [IN]
+                      LAND_PROPERTY  (:,:,I_Z0H),           & ! [IN]
+                      LAND_PROPERTY  (:,:,I_Z0E),           & ! [IN]
+                      dt                                    ) ! [IN]
 
        call HYDROMETEOR_LHV( LHV(:,:), ATMOS_TEMP(:,:) )
 
@@ -250,21 +263,21 @@ contains
 !OCL XFILL
        LAND_SFC_albedo_t(:,:,:) = 0.0_RP
 
-       call HIST_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'tendency of LAND_TEMP',  'K',     zdim='land' )
-       call HIST_in( LAND_WATER_t(:,:,:), 'LAND_WATER_t', 'tendency of LAND_WATER', 'm3/m3', zdim='land' )
+       call FILE_HISTORY_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'tendency of LAND_TEMP',  'K',     dim_type='LXY' )
+       call FILE_HISTORY_in( LAND_WATER_t(:,:,:), 'LAND_WATER_t', 'tendency of LAND_WATER', 'm3/m3', dim_type='LXY' )
 
-       call HIST_in( LAND_SFC_TEMP_t  (:,:),      'LAND_SFC_TEMP_t', 'tendency of LAND_SFC_TEMP', 'K' )
-       call HIST_in( LAND_SFC_albedo_t(:,:,I_LW), 'LAND_ALB_LW_t',   'tendency of LAND_ALB_LW',   '1' )
-       call HIST_in( LAND_SFC_albedo_t(:,:,I_SW), 'LAND_ALB_SW_t',   'tendency of LAND_ALB_SW',   '1' )
+       call FILE_HISTORY_in( LAND_SFC_TEMP_t  (:,:),      'LAND_SFC_TEMP_t', 'tendency of LAND_SFC_TEMP', 'K', dim_type='XY' )
+       call FILE_HISTORY_in( LAND_SFC_albedo_t(:,:,I_LW), 'LAND_ALB_LW_t',   'tendency of LAND_ALB_LW',   '1', dim_type='XY' )
+       call FILE_HISTORY_in( LAND_SFC_albedo_t(:,:,I_SW), 'LAND_ALB_SW_t',   'tendency of LAND_ALB_SW',   '1', dim_type='XY' )
 
-       call HIST_in( LAND_PROPERTY(:,:,I_WaterLimit),    'LP_WaterLimit',    'LAND PROPERTY, WaterLimit',    'm3/m3'  )
-       call HIST_in( LAND_PROPERTY(:,:,I_WaterCritical), 'LP_WaterCritical', 'LAND PROPERTY, WaterCritical', 'm3/m3'  )
-       call HIST_in( LAND_PROPERTY(:,:,I_ThermalCond),   'LP_ThermalCond',   'LAND PROPERTY, ThermalCond',   'W/K/m'  )
-       call HIST_in( LAND_PROPERTY(:,:,I_HeatCapacity),  'LP_HeatCapacity',  'LAND PROPERTY, HeatCapacity',  'J/K/m3' )
-       call HIST_in( LAND_PROPERTY(:,:,I_WaterDiff),     'LP_WaterDiff',     'LAND PROPERTY, WaterDiff',     'm2/s'   )
-       call HIST_in( LAND_PROPERTY(:,:,I_Z0M),           'LP_Z0M',           'LAND PROPERTY, Z0M',           'm'      )
-       call HIST_in( LAND_PROPERTY(:,:,I_Z0H),           'LP_Z0H',           'LAND PROPERTY, Z0H',           'm'      )
-       call HIST_in( LAND_PROPERTY(:,:,I_Z0E),           'LP_Z0E',           'LAND PROPERTY, Z0E',           'm'      )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_WaterLimit),    'LP_WaterLimit',    'LAND PROPERTY, WaterLimit',    'm3/m3',  dim_type='XY' )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_WaterCritical), 'LP_WaterCritical', 'LAND PROPERTY, WaterCritical', 'm3/m3',  dim_type='XY' )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_ThermalCond),   'LP_ThermalCond',   'LAND PROPERTY, ThermalCond',   'W/K/m',  dim_type='XY' )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_HeatCapacity),  'LP_HeatCapacity',  'LAND PROPERTY, HeatCapacity',  'J/K/m3', dim_type='XY' )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_WaterDiff),     'LP_WaterDiff',     'LAND PROPERTY, WaterDiff',     'm2/s',   dim_type='XY' )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_Z0M),           'LP_Z0M',           'LAND PROPERTY, Z0M',           'm',      dim_type='XY' )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_Z0H),           'LP_Z0H',           'LAND PROPERTY, Z0H',           'm',      dim_type='XY' )
+       call FILE_HISTORY_in( LAND_PROPERTY(:,:,I_Z0E),           'LP_Z0E',           'LAND PROPERTY, Z0E',           'm',      dim_type='XY' )
 
     endif
 

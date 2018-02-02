@@ -207,90 +207,103 @@ contains
   !-----------------------------------------------------------------------------
   !> User step
   subroutine USER_step
-    use mod_atmos_vars, only: &
-         DENS,    &
-         QTRC,    &
-         RHOQ_tp
-    use mod_atmos_phy_ae_vars, only: &
-         RHOQ_t_AE => ATMOS_PHY_AE_RHOQ_t, &
-         CCN       => ATMOS_PHY_AE_CCN, &
-         AE_EMIT   => ATMOS_PHY_AE_EMIT
-    use mod_admin_time, only: &
-         do_phy_ae => TIME_DOATMOS_PHY_AE
-    use scale_time, only: &
-         TIME_NOWSEC,  &
-         dtae =>  TIME_DTSEC_ATMOS_PHY_AE
     use scale_const, only: &
-         pi => CONST_PI
+       CONST_PI
+    use scale_time, only: &
+       TIME_NOWSEC
+    use scale_atmos_phy_ae, only: &
+       QS_AE, &
+       QE_AE
+    use mod_atmos_phy_ae_vars, only: &
+       AE_EMIT => ATMOS_PHY_AE_EMIT
+    use mod_atmos_vars, only: &
+       DENS
     implicit none
 
     real(RP) :: m0t, dgt, sgt, m2t, m3t, mst
     real(RP) :: pi6
-    integer  :: ic, ik, is0, ia0, it
+
+    integer  :: ic, ik, is0, ia0
+    integer  :: kpnt, ipnt, jpnt
+    integer  :: k, iq
     !---------------------------------------------------------------------------
 
-    pi6   = pi / 6._RP
+    pi6 = CONST_PI / 6._RP
+
+    kpnt = emit_indx(3)
+    ipnt = emit_indx(1)
+    jpnt = emit_indx(2)
+
     !--- Add tendency of box model
+
     ! update conc_h2so4
-    if( emit_indx(1) /= 0 .and. emit_indx(2) /= 0 .and. emit_indx(3) /= 0 ) then
-      if( TIME_NOWSEC <= user_emitdt ) then
+    if ( i /= 0 .AND. j /= 0 .AND. k /= 0 .AND.  TIME_NOWSEC <= user_emitdt ) then
 
-        !--- Emission from Gas
-        AE_EMIT(1:emit_indx(3),emit_indx(1),emit_indx(2),QA_AE-GAS_CTG+IG_H2SO4) = user_h2so4dt
-        AE_EMIT(1:emit_indx(3),emit_indx(1),emit_indx(2),QA_AE-GAS_CTG+IG_CGAS) = user_ocgasdt
+       !--- Emission from Aerosol
+       m0t = user_m0_sulf                               ! total M0 [#/m3]
+       dgt = user_dg_sulf                               ! [m]
+       sgt = user_sg_sulf                               ! [-]
+       m2t = m0t * dgt**2 * exp( 2.0_RP * log(sgt)**2 ) ! total M2 [m2/m3]
+       m3t = m0t * dgt**3 * exp( 4.5_RP * log(sgt)**3 ) ! total M3 [m3/m3]
+       mst = m3t * pi6 * conv_vl_ms                     ! total Ms [ug/m3]
 
-        !--- Emission from Aerosol
-        m0t = user_m0_sulf !total M0 [#/m3]
-        dgt = user_dg_sulf ![m]
-        sgt = user_sg_sulf ![-]
-        m2t = m0t*dgt**(2.d0) *dexp(2.0d0 *(dlog(sgt)**2.d0)) !total M2 [m2/m3]
-        m3t = m0t*dgt**(3.d0) *dexp(4.5d0 *(dlog(sgt)**2.d0)) !total M3 [m3/m3]
-        mst = m3t*pi6*conv_vl_ms                              !total Ms [ug/m3]
+       do ic  = 1, AE_CTG       ! category
+          do ik  = 1, n_kap(ic) ! kappa bin
+          do is0 = 1, NSIZ(ic)  ! size bin
 
-        do ic = 1, AE_CTG
-        !aerosol_procs initial condition
-        do ik = 1, n_kap(ic)   !kappa bin
-        do is0 = 1, NSIZ(ic)
-           if (dgt >= d_lw(is0,ic) .and. dgt < d_up(is0,ic)) then
-             user_aerosol_procs(ia_m0,is0,ik,ic) = user_aerosol_procs(ia_m0,is0,ik,ic) + m0t ![#/m3]
-             user_aerosol_procs(ia_m2,is0,ik,ic) = user_aerosol_procs(ia_m2,is0,ik,ic) + m2t ![m2/m3]
-             user_aerosol_procs(ia_m3,is0,ik,ic) = user_aerosol_procs(ia_m3,is0,ik,ic) + m3t ![m3/m3]
-             user_aerosol_procs(ia_ms,is0,ik,ic) = user_aerosol_procs(ia_ms,is0,ik,ic) + mst*1.E-9_RP ![kg/m3]
-           elseif (dgt < d_lw(1,ic)) then
-             user_aerosol_procs(ia_m0,1 ,ik,ic) = user_aerosol_procs(ia_m0,1 ,ik,ic) + m0t ![#/m3]
-             user_aerosol_procs(ia_m2,1 ,ik,ic) = user_aerosol_procs(ia_m2,1 ,ik,ic) + m2t ![m2/m3]
-             user_aerosol_procs(ia_m3,1 ,ik,ic) = user_aerosol_procs(ia_m3,1 ,ik,ic) + m3t ![m3/m3]
-             user_aerosol_procs(ia_ms,1 ,ik,ic) = user_aerosol_procs(ia_ms,1 ,ik,ic) + mst*1.E-9_RP ![kg/m3]
-           elseif (dgt >= d_up(NSIZ(ic),ic)) then
-             user_aerosol_procs(ia_m0,NSIZ(ic),ik,ic) = user_aerosol_procs(ia_m0,NSIZ(ic),ik,ic) + m0t          ![#/m3]
-             user_aerosol_procs(ia_m2,NSIZ(ic),ik,ic) = user_aerosol_procs(ia_m2,NSIZ(ic),ik,ic) + m2t          ![m2/m3]
-             user_aerosol_procs(ia_m3,NSIZ(ic),ik,ic) = user_aerosol_procs(ia_m3,NSIZ(ic),ik,ic) + m3t          ![m3/m3]
-             user_aerosol_procs(ia_ms,NSIZ(ic),ik,ic) = user_aerosol_procs(ia_ms,NSIZ(ic),ik,ic) + mst*1.E-9_RP ![kg/m3]
-           endif
-        enddo
-        enddo
-        enddo
+             if (    dgt >= d_lw(is0,ic) .AND. dgt < d_up(is0,ic) ) then
 
-        it = 0
-        do ic = 1, AE_CTG       !category
-        do ik = 1, NKAP(ic)     !kappa bin
-        do is0 = 1, NSIZ(ic)    !size bin
-        do ia0 = 1, N_ATR       !attributes
-           it = it + 1
-           AE_EMIT(1:emit_indx(3),emit_indx(1),emit_indx(2),it) = &
-             user_aerosol_procs(ia0,is0,ik,ic)/DENS(1:emit_indx(3),emit_indx(1),emit_indx(2)) !#,m2,m3,kg/m3 -> #,m2,m3,kg/kg
-        enddo !ia0 (1:N_ATR )
-        enddo !is (1:n_siz(ic)  )
-        enddo !ik (1:n_kap(ic)  )
-        enddo !ic (1:n_ctg      )
+                user_aerosol_procs(ia_m0,is0     ,ik,ic) = user_aerosol_procs(ia_m0,is0     ,ik,ic) + m0t          ! [#/m3]
+                user_aerosol_procs(ia_m2,is0     ,ik,ic) = user_aerosol_procs(ia_m2,is0     ,ik,ic) + m2t          ! [m2/m3]
+                user_aerosol_procs(ia_m3,is0     ,ik,ic) = user_aerosol_procs(ia_m3,is0     ,ik,ic) + m3t          ! [m3/m3]
+                user_aerosol_procs(ia_ms,is0     ,ik,ic) = user_aerosol_procs(ia_ms,is0     ,ik,ic) + mst*1.E-9_RP ! [kg/m3]
 
-      else
+             elseif( dgt < d_lw(1,ic) ) then
 
-        AE_EMIT(:,:,:,:) = 0.0_RP
+                user_aerosol_procs(ia_m0,1       ,ik,ic) = user_aerosol_procs(ia_m0,1       ,ik,ic) + m0t          ! [#/m3]
+                user_aerosol_procs(ia_m2,1       ,ik,ic) = user_aerosol_procs(ia_m2,1       ,ik,ic) + m2t          ! [m2/m3]
+                user_aerosol_procs(ia_m3,1       ,ik,ic) = user_aerosol_procs(ia_m3,1       ,ik,ic) + m3t          ! [m3/m3]
+                user_aerosol_procs(ia_ms,1       ,ik,ic) = user_aerosol_procs(ia_ms,1       ,ik,ic) + mst*1.E-9_RP ! [kg/m3]
 
-      endif
+             elseif( dgt >= d_up(NSIZ(ic),ic) ) then
+
+                user_aerosol_procs(ia_m0,NSIZ(ic),ik,ic) = user_aerosol_procs(ia_m0,NSIZ(ic),ik,ic) + m0t          ! [#/m3]
+                user_aerosol_procs(ia_m2,NSIZ(ic),ik,ic) = user_aerosol_procs(ia_m2,NSIZ(ic),ik,ic) + m2t          ! [m2/m3]
+                user_aerosol_procs(ia_m3,NSIZ(ic),ik,ic) = user_aerosol_procs(ia_m3,NSIZ(ic),ik,ic) + m3t          ! [m3/m3]
+                user_aerosol_procs(ia_ms,NSIZ(ic),ik,ic) = user_aerosol_procs(ia_ms,NSIZ(ic),ik,ic) + mst*1.E-9_RP ! [kg/m3]
+
+             endif
+
+          enddo
+          enddo
+       enddo
+
+       iq = QS_AE
+       do ic  = 1, AE_CTG      ! category
+          do ik  = 1, NKAP(ic) ! kappa bin
+          do is0 = 1, NSIZ(ic) ! size bin
+          do ia0 = 1, N_ATR    ! attributes
+
+             do k = 1, kpnt
+                AE_EMIT(k,ipnt,jpnt,iq) = user_aerosol_procs(ia0,is0,ik,ic) / DENS(k,ipnt,jpnt) !#,m2,m3,kg/m3 -> #,m2,m3,kg/kg
+             enddo
+
+             iq = iq + 1
+          enddo
+          enddo
+          enddo
+       enddo
+
+       !--- Emission from Gas
+       do k = 1, kpnt
+          AE_EMIT(k,ipnt,jpnt,QE_AE-GAS_CTG+IG_H2SO4) = user_h2so4dt
+          AE_EMIT(k,ipnt,jpnt,QE_AE-GAS_CTG+IG_CGAS ) = user_ocgasdt
+       enddo
+
     else
-      AE_EMIT(:,:,:,:) = 0.0_RP
+
+       AE_EMIT(:,:,:,:) = 0.0_RP
+
     endif
 
     return

@@ -40,6 +40,7 @@ module mod_net2g_netcdf
   public :: netcdf_var_dim
   public :: netcdf_retrieve_dims
   public :: netcdf_read_grid
+  public :: netcdf_read_grid_sfc
   public :: netcdf_read_var
   public :: netcdf_read_ref
 
@@ -59,6 +60,7 @@ module mod_net2g_netcdf
   real(DP),allocatable, private :: p_3d(:,:,:,:)         ! partial grid data
   real(DP),allocatable, private :: p_3d_urban(:,:,:,:)   ! partial grid data
   real(DP),allocatable, private :: p_3d_land(:,:,:,:)    ! partial grid data
+  real(DP),allocatable, private :: p_3d_ocean(:,:,:,:)    ! partial grid data
   real(DP),allocatable, private :: p_2d(:,:,:)           ! partial grid data
   real(DP),allocatable, private :: p_2dt(:,:)            ! partial grid data
 
@@ -73,14 +75,15 @@ contains
       nxp, nxgp, nxh,  & ! [out]
       nyp, nygp, nyh,  & ! [out]
       nz,  nzg,  nzh,  & ! [out]
-      uz, lz, ks, ke   ) ! [out]
+      uz, lz, oz,      & ! [out]
+      ks, ke           ) ! [out]
     implicit none
 
     character(CLNG), intent(in) :: ncfile
     integer, intent(out) :: nxp, nxgp, nxh
     integer, intent(out) :: nyp, nygp, nyh
     integer, intent(out) :: nz,  nzg,  nzh
-    integer, intent(out) :: uz,  lz
+    integer, intent(out) :: uz,  lz,   oz
     integer, intent(out) :: ks,  ke
 
     integer :: ncid, dimid
@@ -113,9 +116,15 @@ contains
 
     istat = nf90_inq_dimid ( ncid,  'uz', dimid )
     istat = nf90_inquire_dimension( ncid, dimid, len=uz )
+    if (istat .ne. nf90_noerr) uz=-99
 
     istat = nf90_inq_dimid ( ncid,  'lz', dimid )
     istat = nf90_inquire_dimension( ncid, dimid, len=lz )
+    if (istat .ne. nf90_noerr) lz=-99
+
+    istat = nf90_inq_dimid ( ncid,  'oz', dimid )
+    istat = nf90_inquire_dimension( ncid, dimid, len=oz )
+    if (istat .ne. nf90_noerr) oz=-99
 
     istat = nf90_close(ncid)
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
@@ -164,7 +173,7 @@ contains
     implicit none
 
     integer, intent(in) :: mnxp, mnyp
-    integer, intent(in) :: nz(3)
+    integer, intent(in) :: nz(4)
     !---------------------------------------------------------------------------
 
     allocate( p_2dt       (mnxp, mnyp          ) )
@@ -172,6 +181,7 @@ contains
     allocate( p_3d        (mnxp, mnyp, nz(1), 1) )
     allocate( p_3d_urban  (mnxp, mnyp, nz(2), 1) )
     allocate( p_3d_land   (mnxp, mnyp, nz(3), 1) )
+    allocate( p_3d_ocean  (mnxp, mnyp, nz(4), 1) )
 
     return
   end subroutine netcdf_setup
@@ -204,7 +214,7 @@ contains
     !---------------------------------------------------------------------------
 
     write ( num,'(I6.6)' ) imnge
-    ncfile = trim(IDIR)//"/"//trim(HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
+    ncfile = trim(IDIR)//"/"//trim(FILE_HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
     if ( LOUT ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (grd): ", trim(ncfile)
 
     call set_index_readbuf_grid( nm, nxgp, nygp, is, ie, js, je )
@@ -244,6 +254,46 @@ contains
     return
   end subroutine netcdf_read_grid
 
+  !> read from netcdf: grid data (land/urban/ocean)
+  !-----------------------------------------------------------------------------------------
+  subroutine netcdf_read_grid_sfc ( &
+      imnge,                        & ! [in]
+      sfc_lev_name,                 & ! [in]
+      sfc_lev                       ) ! [out]
+    implicit none
+
+    integer,         intent(in)  :: imnge
+    character(*),    intent(in)  :: sfc_lev_name
+    real(SP),        intent(out) :: sfc_lev(:)
+
+    integer :: ncid, varid
+    integer :: istat
+    character(CLNG) :: ncfile
+    character(6)    :: num
+    !---------------------------------------------------------------------------
+
+    write ( num,'(I6.6)' ) imnge
+    ncfile = trim(IDIR)//"/"//trim(FILE_HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
+    if ( LOUT ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (",trim(sfc_lev_name),"): ", trim(ncfile)
+
+    istat = nf90_open( trim(ncfile), nf90_nowrite, ncid )
+    if (istat .ne. nf90_noerr) then
+       write(*,*) "Error: Fail to open ",trim(ncfile)
+       call handle_err(istat, __LINE__)
+    endif
+
+    istat = nf90_inq_varid( ncid, trim(sfc_lev_name), varid )
+    istat = nf90_get_var( ncid, varid, sfc_lev )
+    if (istat .ne. nf90_noerr) then
+       write(*,*) "Error: Fail to get data ",trim(sfc_lev_name)
+       call handle_err(istat, __LINE__)
+    endif
+
+    if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
+    istat = nf90_close(ncid)
+    return
+  end subroutine netcdf_read_grid_sfc
+
   !> read from netcdf: variables data
   !-----------------------------------------------------------------------------------------
   subroutine netcdf_read_var( &
@@ -265,7 +315,7 @@ contains
 
     integer, intent(in) :: imnge, nm, it
     integer, intent(in) :: nxp, nyp, mnxp, mnyp
-    integer, intent(in) :: zz, nz(3)
+    integer, intent(in) :: zz, nz(4)
     character(CMID),  intent(in)  :: varname
     integer,          intent(in)  :: atype, ctype, vtype
     character(len=*), intent(out) :: long_name
@@ -279,6 +329,7 @@ contains
     integer :: count_2d(3)
     integer :: count_urban(4)
     integer :: count_land(4)
+    integer :: count_ocean(4)
     integer :: count_height(3)
     integer :: count_tpmsk(2)
 
@@ -297,7 +348,7 @@ contains
     !---------------------------------------------------------------------------
 
     write ( num,'(I6.6)' ) imnge
-    ncfile = trim(IDIR)//"/"//trim(HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
+    ncfile = trim(IDIR)//"/"//trim(FILE_HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
     if ( LOUT .and. LOG_DBUG ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (var): ", trim(ncfile)
 
     if ( atype == a_conv ) then
@@ -323,8 +374,9 @@ contains
                            mnxp, mnyp, it, nz, zz, varname,      &
                            isn, ien, jsn, jen, nzn,              &
                            start_3d, start_2d, start_2dt,        &
-                           count_3d, count_2d, count_urban,      &
-                           count_land, count_height, count_tpmsk )
+                           count_3d, count_2d,                   &
+                           count_urban, count_land, count_ocean, &
+                           count_height, count_tpmsk )
 
     istat = nf90_open( trim(ncfile), nf90_nowrite, ncid )
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
@@ -369,6 +421,12 @@ contains
        if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
        call anal_simple( atype, is,  ie,  js,  je,  &
                          isn, jsn, nzn, p_3d_land, p_var )
+
+    case ( vt_ocean )
+       istat = nf90_get_var( ncid, varid, p_3d_ocean(isn:ien,jsn:jen,1:nzn,1), start=start_3d, count=count_ocean )
+       if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
+       call anal_simple( atype, is,  ie,  js,  je,  &
+                         isn, jsn, nzn, p_3d_ocean, p_var )
 
 !    case ( vt_height )
 !       istat = nf90_get_var( ncid, varid, p_2d(isn:ien,jsn:jen,1), start=start_2d, count=count_height )
@@ -430,7 +488,7 @@ contains
     integer,  intent(in) :: imnge
     integer,  intent(in) :: nxp, nyp, mnxp, mnyp
     integer,  intent(in) :: it
-    integer,  intent(in) :: nz(3)
+    integer,  intent(in) :: nz(4)
     integer,  intent(in)  :: ctype
     real(SP), intent(out) :: p_var(:,:,:)
 
@@ -454,7 +512,7 @@ contains
     yproc = PRC_NUM_Y
 
     write ( num,'(I6.6)' ) imnge
-    ncfile = trim(IDIR)//"/"//trim(HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
+    ncfile = trim(IDIR)//"/"//trim(FILE_HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
     if ( LOUT .and. LOG_DBUG ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (ref): ", trim(ncfile)
 
     call irank2ixjy( imnge, ix, jy )

@@ -12,32 +12,37 @@ include $(TOPDIR)/Mkinclude
 
 LIBNAME = libscale.a
 
-DEPENDLIB = $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+DEPENDLIB =
 
-VPATH = common:                     \
-        common/tracer:              \
-        coupler:                    \
-        io:                         \
-        atmos-physics:              \
-        atmos-physics/share:        \
-        atmos-physics/cumulus:      \
-        atmos-physics/microphysics: \
-        atmos-physics/radiation:    \
-        atmos-physics/surfaceflux:  \
-        atmos-physics/turbulence:   \
-        atmos-physics/aerosol:      \
-        atmos-physics/chemistry:    \
-        atmos-rm:                   \
-        atmos-rm/communication:     \
-        atmos-rm/grid:              \
-        atmos-rm/io:                \
-        atmos-rm/numeric:           \
-        atmos-rm/dynamics:          \
-        atmos-rm/forcing:           \
-        land:                       \
-        land/grid:                  \
-        ocean:                      \
-        urban:                      \
+VPATH = common:                          \
+        coupler:                         \
+        io:                              \
+	file:                            \
+        atmosphere/physics/pbl:          \
+        atmosphere/physics/microphysics: \
+        atmosphere/physics/radiation:    \
+        atmosphere/physics/surface:      \
+        atmos-physics:                   \
+        atmos-physics/share:             \
+        atmos-physics/microphysics:      \
+        atmos-physics/aerosol:           \
+        atmos-physics/chemistry:         \
+        atmos-physics/radiation:         \
+        atmos-physics/surfaceflux:       \
+        atmos-physics/turbulence:        \
+        atmos-physics/cumulus:           \
+        atmos-rm:                        \
+        atmos-rm/communication:          \
+        atmos-rm/grid:                   \
+        atmos-rm/io:                     \
+        atmos-rm/numeric:                \
+        atmos-rm/dynamics:               \
+        atmos-rm/forcing:                \
+        land:                            \
+        land/grid:                       \
+        ocean:                           \
+        ocean/grid:                      \
+        urban:                           \
         urban/grid:
 
 LIBVERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
@@ -48,29 +53,6 @@ else
 endif
 
 SDM_EXIST := $(shell find $(TOPDIR)/contrib -name SDM 2> /dev/null )
-
-OBJS_MP = scale_atmos_phy_mp_dry.o	\
-          scale_atmos_phy_mp_kessler.o	\
-          scale_atmos_phy_mp_sn14.o	\
-          scale_atmos_phy_mp_sdm.o	\
-          scale_atmos_phy_mp_suzuki10.o	\
-          scale_atmos_phy_mp_tomita08.o
-
-OBJS_CP = scale_atmos_phy_cp_kf.o
-
-OBJS_AE = scale_atmos_phy_ae_dummy.o	\
-          scale_atmos_phy_ae_kajino13.o
-
-OBJS_RD = scale_atmos_phy_rd_mstrnx.o	\
-          scale_atmos_phy_rd_mm5sw.o	\
-          scale_atmos_phy_rd_offline.o	\
-          scale_atmos_phy_rd_profile.o
-
-OBJS_TB = scale_atmos_phy_tb_smg.o	\
-          scale_atmos_phy_tb_d1980.o	\
-          scale_atmos_phy_tb_dns.o	\
-          scale_atmos_phy_tb_mynn.o	\
-          scale_atmos_phy_tb_hybrid.o
 
 OBJS_DYN = scale_atmos_dyn_fvm_flux_cd2.o	\
            scale_atmos_dyn_fvm_flux_cd4.o	\
@@ -98,29 +80,77 @@ OBJS_DYN = scale_atmos_dyn_fvm_flux_cd2.o	\
            scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
            scale_atmos_dyn_tstep_tracer.o
 
-OBJS_NAME = $(scale_rdma)	\
+OBJS_MP = scale_atmos_phy_mp_dry.o	\
+          scale_atmos_phy_mp_kessler.o	\
+          scale_atmos_phy_mp_sn14.o	\
+          scale_atmos_phy_mp_sdm.o	\
+          scale_atmos_phy_mp_suzuki10.o	\
+          scale_atmos_phy_mp_tomita08.o
+
+OBJS_AE = scale_atmos_phy_ae_dummy.o	\
+          scale_atmos_phy_ae_kajino13.o
+
+OBJS_CH = scale_atmos_phy_ch_rn222.o
+
+OBJS_RD = scale_atmos_phy_rd_mstrnx.o	\
+          scale_atmos_phy_rd_mm5sw.o	\
+          scale_atmos_phy_rd_offline.o	\
+          scale_atmos_phy_rd_profile.o
+
+OBJS_SF = scale_atmos_phy_sf_bulk.o	\
+          scale_atmos_phy_sf_const.o
+
+OBJS_TB = scale_atmos_phy_tb_smg.o	\
+          scale_atmos_phy_tb_d1980.o	\
+          scale_atmos_phy_tb_dns.o
+
+OBJS_BL = scale_atmos_phy_bl_mynn.o
+
+OBJS_CP = scale_atmos_phy_cp_kf.o
+
+
+
+OBJS_NAME = \
+	scale.o \
+	scale_file_netcdf.o	\
+	scale_file_f.o	\
+	scale_file_h.o	\
+	scale_file.o	\
+	scale_file_cartesC.o	\
+	scale_file_history.o	\
+	scale_file_history_cartesC.o	\
 	scale_atmos_dyn.o	\
 	scale_atmos_dyn_common.o	\
 	$(OBJS_DYN)	\
-	scale_atmos_phy_ae.o	\
-	scale_atmos_phy_ae_dummy.o	\
 	$(OBJS_NUMERIC_FDM)	\
-	$(OBJS_AE)	\
-	scale_atmos_phy_cp.o	\
-	$(OBJS_CP)	\
+	\
 	scale_atmos_phy_mp.o	\
 	scale_atmos_phy_mp_common.o	\
-	$(OBJS_MP)	\
 	scale_atmos_phy_mp_convert.o	\
+	$(OBJS_MP)	\
+	\
+	scale_atmos_phy_ae.o	\
+	$(OBJS_AE)	\
+	\
+	scale_atmos_phy_ch.o	\
+	$(OBJS_CH)	\
+	\
 	scale_atmos_phy_rd.o	\
 	scale_atmos_phy_rd_common.o	\
 	$(OBJS_RD)	\
-	scale_atmos_phy_sf.o	\
-	scale_atmos_phy_sf_bulk.o	\
-	scale_atmos_phy_sf_const.o	\
+	\
+	$(OBJS_SF)	\
+	\
 	scale_atmos_phy_tb.o	\
 	scale_atmos_phy_tb_common.o	\
 	$(OBJS_TB)	\
+        \
+	$(OBJS_BL)	\
+	\
+	scale_atmos_phy_cp.o	\
+	scale_atmos_phy_cp_common.o	\
+	$(OBJS_CP)	\
+	\
 	scale_atmos_sub_bottom.o	\
 	scale_atmos_sub_boundary.o	\
 	scale_atmos_sub_hydrostatic.o	\
@@ -141,24 +171,24 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_external_io.o	\
 	scale_external_input.o	\
 	scale_external_input_rm.o	\
-	scale_fileio.o	\
 	scale_grid_cartesian.o	\
 	scale_grid_index.o	\
 	scale_grid_nest.o	\
 	scale_grid_real.o	\
 	scale_index.o		\
 	scale_gridtrans.o	\
-	scale_history.o	\
 	scale_interpolation.o	\
 	scale_interpolation_nest.o	\
 	scale_land_grid.o	\
 	scale_land_grid_index.o	\
 	scale_land_phy.o	\
 	scale_land_phy_const.o	\
+	scale_land_phy_file.o	\
 	scale_land_phy_slab.o	\
 	scale_land_phy_matsiro.o	\
 	scale_land_sfc.o	\
 	scale_land_sfc_const.o	\
+	scale_land_sfc_file.o	\
 	scale_land_sfc_thin-slab.o	\
 	scale_land_sfc_thick-slab.o	\
 	scale_landuse.o	\
@@ -167,6 +197,8 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_mapproj.o	\
 	scale_matrix.o	\
 	scale_monitor.o	\
+	scale_ocean_grid.o	\
+	scale_ocean_grid_index.o	\
 	scale_ocean_phy.o	\
 	scale_ocean_phy_const.o	\
 	scale_ocean_phy_slab.o	\
@@ -218,8 +250,6 @@ OBJS_FOR_SDM = $(OBJ_DIR)/scale_precision.o	\
 all:
 	$(MAKE) makedir
 	@echo;echo "Entering scalelib..."; echo "Current version is " $(LIBVERSION)
-	$(MAKE) -C $(DCUTILSDIR)
-	$(MAKE) -C $(GTOOLDIR)
 ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) checksdm
 	$(MAKE) overridesdm
@@ -232,12 +262,6 @@ endif
 makedir:
 	mkdir -p $(MODDIR)
 	mkdir -p $(LIBDIR)
-
-$(LIBDIR)/libdcutils.a:
-	$(MAKE) -C $(DCUTILSDIR)
-
-$(LIBDIR)/libgtool.a: $(LIBDIR)/libdcutils.a
-	$(MAKE) -C $(GTOOLDIR)
 
 $(LIBNAME): $(LIBDIR)/$(LIBNAME)
 	install $< $@
@@ -291,8 +315,6 @@ cleansdm:
 
 
 allclean: distclean
-	$(MAKE) -C $(DCUTILSDIR) allclean
-	$(MAKE) -C $(GTOOLDIR)   allclean
 ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) checksdm
 	$(MAKE) restoresdm
@@ -317,7 +339,7 @@ dependency:
 
 
 .SUFFIXES:
-.SUFFIXES: .o .f90 .F90 .c .erb .mod
+.SUFFIXES: .o .F90 .c .erb .mod
 
 %.F90 : %.F90.erb
 	erb $< > $@
@@ -329,16 +351,20 @@ $(MODDIR)/%.mod : %.mod
 	install $< $@
 
 $(OBJ_DIR)/%.o : %.F90
-	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJS_FOR_DYN) :
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+
+file/scale_file.F90 : scale_file.F90.erb
+
+file/scale_file_history.F90 : scale_file_history.F90.erb
 
 scale_atmos_dyn_fvm_flux_%.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
 	fname=$@ erb $< > $@
 #	erb fname=$@ $< > $@
 
 $(OBJ_DIR)/%.o : %.c
-	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include -o $@ -c $<
+	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include $(SCALE_NETCDF_INCLUDE) -o $@ -c $<
 
 .PHONY : clean distclean allclean depend modules dependency
 

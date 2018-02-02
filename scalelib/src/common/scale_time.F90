@@ -28,6 +28,7 @@ module scale_time
   !++ Public procedure
   !
   public :: TIME_gettimelabel
+  public :: TIME_time2label
 
   !-----------------------------------------------------------------------------
   !
@@ -42,6 +43,7 @@ module scale_time
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_RD    !< time interval of physics(radiation   ) [sec]
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_SF    !< time interval of physics(surface flux) [sec]
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_TB    !< time interval of physics(turbulence  ) [sec]
+  real(DP), public :: TIME_DTSEC_ATMOS_PHY_BL    !< time interval of physics(pbl         ) [sec]
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_CH    !< time interval of physics(chemistry   ) [sec]
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_AE    !< time interval of physics(aerosol     ) [sec]
   real(DP), public :: TIME_DTSEC_OCEAN           !< time interval of ocean step            [sec]
@@ -55,6 +57,7 @@ module scale_time
   integer,  public :: TIME_DSTEP_ATMOS_PHY_RD    !< step interval of physics(radiation   )
   integer,  public :: TIME_DSTEP_ATMOS_PHY_SF    !< step interval of physics(surface flux)
   integer,  public :: TIME_DSTEP_ATMOS_PHY_TB    !< step interval of physics(turbulence  )
+  integer,  public :: TIME_DSTEP_ATMOS_PHY_BL    !< step interval of physics(pbl         )
   integer,  public :: TIME_DSTEP_ATMOS_PHY_CH    !< step interval of physics(chemistry   )
   integer,  public :: TIME_DSTEP_ATMOS_PHY_AE    !< step interval of physics(aerosol     )
   integer,  public :: TIME_DSTEP_OCEAN           !< step interval of ocean step
@@ -93,10 +96,29 @@ contains
     !---------------------------------------------------------------------------
 
     ! YYYYMMDD-hhmmss.sss
-    write(timelabel,'(I4.4,I2.2,I2.2,A1,I2.2,I2.2,I2.2,A1,I3.3)') &
-         TIME_NOWDATE(1:3), '-', TIME_NOWDATE(4:6), '.', int(TIME_NOWMS*1000.0_DP)
+    call TIME_time2label( TIME_NOWDATE(:), TIME_NOWMS, & ! [IN]
+                          timelabel                    ) ! [OUT]
 
     return
   end subroutine TIME_gettimelabel
+
+  !> generate time label
+  subroutine TIME_time2label( &
+       date, ms, &
+       timelabel )
+    implicit none
+
+    integer,  intent(in) :: date(6)
+    real(DP), intent(in) :: ms
+
+    character(len=*), intent(out) :: timelabel
+    !---------------------------------------------------------------------------
+
+    ! YYYYMMDD-hhmmss.sss
+    write(timelabel,'(I4.4,I2.2,I2.2,A1,I2.2,I2.2,I2.2,A1,I3.3)') &
+         date(1:3), '-', date(4:6), '.', int(ms*1000.0_DP)
+
+    return
+  end subroutine TIME_time2label
 
 end module scale_time

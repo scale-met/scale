@@ -12,9 +12,6 @@ module mod_copytopo
   !
   !++ used modules
   !
-  use gtool_file_h
-  use gtool_file, only: &
-     FileRead
   use scale_precision
   use scale_stdio
   use scale_prof
@@ -411,6 +408,8 @@ contains
       topo_pd      ) ! (out)
     use scale_const, only: &
        D2R => CONST_D2R
+    use scale_file, only: &
+       FILE_Read
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -474,11 +473,11 @@ contains
                                 i               ) ! [in ]
        allocate( read2D  ( tilei,tilej ) )
 
-       call FileRead( read2D(:,:), COPYTOPO_IN_BASENAME, "lon",  1, rank )
+       call FILE_Read( COPYTOPO_IN_BASENAME, "lon",  read2D(:,:), rankid=rank )
        lon_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
-       call FileRead( read2D(:,:), COPYTOPO_IN_BASENAME, "lat",  1, rank )
+       call FILE_Read( COPYTOPO_IN_BASENAME, "lat",  read2D(:,:), rankid=rank )
        lat_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
-       call FileRead( read2D(:,:), COPYTOPO_IN_BASENAME, "TOPO", 1, rank )
+       call FILE_Read( COPYTOPO_IN_BASENAME, "TOPO", read2D(:,:), rankid=rank )
        topo_org(cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye)
 
        deallocate( read2D )

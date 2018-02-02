@@ -17,20 +17,22 @@ module test_atmos_dyn
      COMM_vars8, &
      COMM_wait
   use scale_grid, only: &
-       CZ   => GRID_CZ,   &
-       FZ   => GRID_FZ,   &
-       CDZ  => GRID_CDZ,  &
-       CDX  => GRID_CDX,  &
-       CDY  => GRID_CDY,  &
-       FDZ  => GRID_FDZ,  &
-       FDX  => GRID_FDX,  &
-       FDY  => GRID_FDY,  &
-       RCDZ => GRID_RCDZ, &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
-       RFDZ => GRID_RFDZ, &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY
+     DOMAIN_CENTER_Y => GRID_DOMAIN_CENTER_Y, &
+     CY              => GRID_CY,              &
+     CZ              => GRID_CZ,              &
+     FZ              => GRID_FZ,              &
+     CDZ             => GRID_CDZ,             &
+     CDX             => GRID_CDX,             &
+     CDY             => GRID_CDY,             &
+     FDZ             => GRID_FDZ,             &
+     FDX             => GRID_FDX,             &
+     FDY             => GRID_FDY,             &
+     RCDZ            => GRID_RCDZ,            &
+     RCDX            => GRID_RCDX,            &
+     RCDY            => GRID_RCDY,            &
+     RFDZ            => GRID_RFDZ,            &
+     RFDX            => GRID_RFDX,            &
+     RFDY            => GRID_RFDY
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -94,6 +96,8 @@ module test_atmos_dyn
 
   real(RP) :: divdmp_coef
 
+  logical  :: flag_tracer_split_tend = .false.
+
   logical  :: flag_fct_momentum = .true.
   logical  :: flag_fct_t        = .true.
   logical  :: flag_fct_tracer   = .true.
@@ -144,7 +148,7 @@ contains
   !++ parameters & variables
   !
   !-----------------------------------------------------------------------------
-  real(RP) :: lat(1,IA,JA)
+  real(RP) :: lat(IA,JA)
   character(len=H_SHORT) :: CSDUMMY(1)
   character(len=H_MID)   :: CMDUMMY(1)
   integer :: j
@@ -214,7 +218,7 @@ contains
   nd_sfc_fact = 1.0_RP
   nd_use_rs = .true.
   do j = 1, JA
-     lat(1,:,j) = real(j, RP)
+     lat(:,j) = real(j, RP)
   end do
 
   DYN_TYPE = "FVM-HEVE"
@@ -243,7 +247,8 @@ contains
        PROG,                               & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
        wdamp_tau, wdamp_height, FZ,        & ! (in)
-       .false., lat                        ) ! (in)
+       'PLANE', 0.0_RP, 0.0_RP,            & ! (in)
+       DOMAIN_CENTER_Y, CY, lat            ) ! (in)
 
   do k = KS+1, KE
      if ( GRID_CBFZ(k) > 0.0_RP ) then
@@ -349,6 +354,7 @@ subroutine test_undef
           DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
           DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
           divdmp_coef,                                 & ! (in)
+          flag_tracer_split_tend,                      & ! (in)
           flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
           flag_fct_along_stream,                       & ! (in)
           .false.,                                     & ! (in)
@@ -403,6 +409,7 @@ subroutine test_const
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
        divdmp_coef,                                 & ! (in)
+       flag_tracer_split_tend,                      & ! (in)
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
@@ -503,6 +510,7 @@ subroutine test_conserve
          DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
          DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
          divdmp_coef,                                 & ! (in)
+         flag_tracer_split_tend,                      & ! (in)
          flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
          flag_fct_along_stream,                       & ! (in)
          .true.,                                      & ! (in)
@@ -631,6 +639,7 @@ subroutine test_cwc
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
        divdmp_coef,                                 & ! (in)
+       flag_tracer_split_tend,                      & ! (in)
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
@@ -720,6 +729,7 @@ subroutine test_fctminmax
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
        divdmp_coef,                                 & ! (in)
+       flag_tracer_split_tend,                      & ! (in)
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)

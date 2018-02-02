@@ -66,7 +66,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler components ***'
 
-    ! Atoms-Ocean/Land/Urban Switch
+    ! Atmos-Ocean/Land/Urban Switch
     if ( OCEAN_sw .OR. LAND_sw .OR. URBAN_sw ) then
        CPL_sw = .true.
     else

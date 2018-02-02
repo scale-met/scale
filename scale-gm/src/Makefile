@@ -32,7 +32,7 @@ BINS = $(BINDIR)/$(BINNAME) \
        $(BINDIR)/$(PPNAME7) \
        $(BINDIR)/$(PPNAME8) \
        $(BINDIR)/$(PPNAME9)
-LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libdcutils.a
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
   DEPENDLIB = $(LIBS)
@@ -120,7 +120,6 @@ all:
 	$(MAKE) envlog
 	$(MAKE) makedir
 	$(MAKE) -C $(DCUTILSDIR)
-	$(MAKE) -C $(GTOOLDIR)
 	$(MAKE) -C $(SCALELIBDIR)/src
 	@echo;echo "Entering scale-gm...";echo "Current version is " $(VERSION)
 	$(MAKE) makebin
@@ -134,10 +133,7 @@ makedir:
 $(LIBDIR)/libdcutils.a :
 	$(MAKE) -C $(DCUTILSDIR)
 
-$(LIBDIR)/libgtool.a : $(LIBDIR)/libdcutils.a
-	$(MAKE) -C $(GTOOLDIR)
-
-$(LIBDIR)/libscale.a : $(LIBDIR)/libdcutils.a $(LIBDIR)/libgtool.a
+$(LIBDIR)/libscale.a : $(LIBDIR)/libdcutils.a
 	$(MAKE) -C $(SCALELIBDIR)/src
 
 makebin: $(BINS)
@@ -178,7 +174,6 @@ $(BUILD_DIR)/prg_fio_ico2ll.o : prg_fio_ico2ll.f90 $(patsubst %,$(BUILD_DIR)/%,$
 
 allclean: distclean
 	$(MAKE) -C $(DCUTILSDIR)      allclean
-	$(MAKE) -C $(GTOOLDIR)        allclean
 	$(MAKE) -C $(SCALELIBDIR)/src allclean
 	rm -f $(BINDIR)/$(BINNAME)
 	rm -f $(BINDIR)/$(PPNAME1)
@@ -218,14 +213,14 @@ dependency:
 	make $(patsubst %.f90,%.o,$<)
 
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/mod_oprt.o :
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) $(FFLAGS_TENTATIVE) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) $(FFLAGS_TENTATIVE) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALEGMDIR)/include -o $@ -c $<
 
-.PHONY : clean distclean allclean dcutils gtool scalelib depend dependency
+.PHONY : clean distclean allclean dcutils scalelib depend dependency
 
 include $(TOPDIR)/utils/Make_environments
 

@@ -146,8 +146,8 @@ contains
 
     use scale_gridtrans
 
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
 
     use scale_time, only: &
          DTSEC => TIME_DTSEC, &
@@ -163,7 +163,7 @@ contains
 
     if ( .not. USER_do ) return
 
-    call HIST_in( (RHOT/DENS - 300.0_RP), 'PT_diff', 'PT_diff', 'K' )
+    call FILE_HISTORY_in( (RHOT/DENS - 300.0_RP), 'PT_diff', 'PT_diff', 'K' )
 
     ! Consider eddy turbulent mixing with constant eddy viscosity and diffusivity
 

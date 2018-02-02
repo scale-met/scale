@@ -38,6 +38,7 @@ module mod_atmos_admin
   character(len=H_SHORT), public :: ATMOS_PHY_RD_TYPE = 'NONE'
   character(len=H_SHORT), public :: ATMOS_PHY_SF_TYPE = 'NONE'
   character(len=H_SHORT), public :: ATMOS_PHY_TB_TYPE = 'NONE'
+  character(len=H_SHORT), public :: ATMOS_PHY_BL_TYPE = 'NONE'
   character(len=H_SHORT), public :: ATMOS_PHY_CP_TYPE = 'NONE'
 
   logical,                public :: ATMOS_USE_AVERAGE = .false.
@@ -49,6 +50,7 @@ module mod_atmos_admin
   logical,                public :: ATMOS_sw_phy_rd
   logical,                public :: ATMOS_sw_phy_sf
   logical,                public :: ATMOS_sw_phy_tb
+  logical,                public :: ATMOS_sw_phy_bl
   logical,                public :: ATMOS_sw_phy_cp
 
   !-----------------------------------------------------------------------------
@@ -77,6 +79,7 @@ contains
        ATMOS_PHY_RD_TYPE, &
        ATMOS_PHY_SF_TYPE, &
        ATMOS_PHY_TB_TYPE, &
+       ATMOS_PHY_BL_TYPE, &
        ATMOS_PHY_CP_TYPE, &
        ATMOS_USE_AVERAGE
 
@@ -176,6 +179,14 @@ contains
        ATMOS_sw_phy_tb = .false.
     endif
 
+    if ( ATMOS_PHY_BL_TYPE /= 'OFF' .AND. ATMOS_PHY_BL_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** + PBL Turbulence       : ON, ', trim(ATMOS_PHY_BL_TYPE)
+       ATMOS_sw_phy_bl = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** + PBL Turbulence       : OFF'
+       ATMOS_sw_phy_bl = .false.
+    endif
+
     if ( ATMOS_PHY_CP_TYPE /= 'OFF' .AND. ATMOS_PHY_CP_TYPE /= 'NONE' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** + Convection Param.    : ON, ', trim(ATMOS_PHY_CP_TYPE)
        ATMOS_sw_phy_cp = .true.
@@ -221,6 +232,8 @@ contains
        scheme_name = ATMOS_PHY_SF_TYPE
     case("PHY_TB")
        scheme_name = ATMOS_PHY_TB_TYPE
+    case("PHY_BL")
+       scheme_name = ATMOS_PHY_BL_TYPE
     case("PHY_CP")
        scheme_name = ATMOS_PHY_CP_TYPE
     case default

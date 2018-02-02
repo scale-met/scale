@@ -224,6 +224,9 @@ contains
     return
   end subroutine URBAN_PHY_SLC_setup
 
+  !-----------------------------------------------------------------------------
+  !> Main routine for land submodel
+
   subroutine URBAN_PHY_SLC( &
         TR_URB_t,    &
         TB_URB_t,    &
@@ -263,6 +266,7 @@ contains
         QA,          &
         Z1,          &
         PBL,         &
+        RHOS,        &
         PRSS,        &
         LWD,         &
         SWD,         &
@@ -286,8 +290,11 @@ contains
         dt           )
     use scale_grid_index
     use scale_urban_grid_index
-    use scale_history, only: &
-       HIST_in
+    use scale_const, only: &
+       Rdry => CONST_Rdry, &
+       Rvap => CONST_Rvap
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_atmos_saturation, only: &
        qsat => ATMOS_SATURATION_pres2qsat_all
     use scale_bulkflux, only: &
@@ -340,6 +347,7 @@ contains
     real(RP), intent(in) :: QA    (IA,JA)
     real(RP), intent(in) :: Z1    (IA,JA)
     real(RP), intent(in) :: PBL   (IA,JA)
+    real(RP), intent(in) :: RHOS  (IA,JA) ! density  at the surface [kg/m3]
     real(RP), intent(in) :: PRSS  (IA,JA)
     real(RP), intent(in) :: LWD   (IA,JA,2)
     real(RP), intent(in) :: SWD   (IA,JA,2)
@@ -397,8 +405,11 @@ contains
     real(RP) :: Tstar ! friction temperature [K]
     real(RP) :: Qstar ! friction mixing rate [kg/kg]
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
+    real(RP) :: Ra    ! Aerodynamic resistance (=1/Ce) [1/s]
 
     real(RP) :: QVsat ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: Rtot  ! total gas constant
+    real(RP) :: qdry  ! dry air mass ratio [kg/kg]
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
@@ -413,6 +424,9 @@ contains
     do i = IS, IE
 
     if( is_URB(i,j) ) then
+
+       qdry = 1.0_RP - QA(i,j)
+       Rtot = qdry * Rdry + QA(i,j) * Rvap 
 
        Uabs = max( sqrt( U1(i,j)**2 + V1(i,j)**2 + W1(i,j)**2 ), Uabs_min )
 
@@ -509,12 +523,14 @@ contains
        ROFF_URB_t (i,j) = ( ROFF  - ROFF_URB (i,j) ) / dt
 
        ! saturation at the surface
-       call qsat( QVsat, SFC_TEMP(i,j), PRSS(i,j) )
+       call qsat( SFC_TEMP(i,j), PRSS(i,j), qdry, & ! [IN]
+                  QVsat                           ) ! [OUT]
 
        call BULKFLUX( Ustar,         & ! [OUT]
                       Tstar,         & ! [OUT]
                       Qstar,         & ! [OUT]
                       Uabs,          & ! [OUT]
+                      Ra,            & ! [OUT]
                       FracU10,       & ! [OUT]
                       FracT2,        & ! [OUT]
                       FracQ2,        & ! [OUT]
@@ -532,9 +548,9 @@ contains
                       Z0HC,          & ! [IN]
                       Z0HC           ) ! [IN]
 
-       MWFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * W1(i,j)
-       MUFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * U1(i,j)
-       MVFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * V1(i,j)
+       MWFLX(i,j) = -RHOS(i,j) * Ustar**2 / Uabs * W1(i,j)
+       MUFLX(i,j) = -RHOS(i,j) * Ustar**2 / Uabs * U1(i,j)
+       MVFLX(i,j) = -RHOS(i,j) * Ustar**2 / Uabs * V1(i,j)
 
        Z0M(i,j) = Z0C
        Z0H(i,j) = Z0HC
@@ -590,19 +606,19 @@ contains
     end do
     end do
 
-    call HIST_in( SHR  (:,:), 'URBAN_SHR',   'urban sensible heat flux on roof',    'W/m2' )
-    call HIST_in( SHB  (:,:), 'URBAN_SHB',   'urban sensible heat flux on wall',    'W/m2' )
-    call HIST_in( SHG  (:,:), 'URBAN_SHG',   'urban sensible heat flux on road',    'W/m2' )
-    call HIST_in( LHR  (:,:), 'URBAN_LHR',   'urban latent heat flux on roof',      'W/m2' )
-    call HIST_in( LHB  (:,:), 'URBAN_LHB',   'urban latent heat flux on wall',      'W/m2' )
-    call HIST_in( LHG  (:,:), 'URBAN_LHG',   'urban latent heat flux on road',      'W/m2' )
-    call HIST_in( GHR  (:,:), 'URBAN_GHR',   'urban ground heat flux on roof',      'W/m2' )
-    call HIST_in( GHB  (:,:), 'URBAN_GHB',   'urban ground heat flux on wall',      'W/m2' )
-    call HIST_in( GHG  (:,:), 'URBAN_GHG',   'urban ground heat flux on road',      'W/m2' )
-    call HIST_in( RNR  (:,:), 'URBAN_RNR',   'urban net radiation on roof',         'W/m2' )
-    call HIST_in( RNB  (:,:), 'URBAN_RNB',   'urban net radiation on wall',         'W/m2' )
-    call HIST_in( RNG  (:,:), 'URBAN_RNG',   'urban net radiation on road',         'W/m2' )
-    call HIST_in( RNgrd(:,:), 'URBAN_RNgrd', 'urban grid average of net radiation', 'W/m2' )
+    call FILE_HISTORY_in( SHR  (:,:), 'URBAN_SHR',   'urban sensible heat flux on roof',    'W/m2' )
+    call FILE_HISTORY_in( SHB  (:,:), 'URBAN_SHB',   'urban sensible heat flux on wall',    'W/m2' )
+    call FILE_HISTORY_in( SHG  (:,:), 'URBAN_SHG',   'urban sensible heat flux on road',    'W/m2' )
+    call FILE_HISTORY_in( LHR  (:,:), 'URBAN_LHR',   'urban latent heat flux on roof',      'W/m2' )
+    call FILE_HISTORY_in( LHB  (:,:), 'URBAN_LHB',   'urban latent heat flux on wall',      'W/m2' )
+    call FILE_HISTORY_in( LHG  (:,:), 'URBAN_LHG',   'urban latent heat flux on road',      'W/m2' )
+    call FILE_HISTORY_in( GHR  (:,:), 'URBAN_GHR',   'urban ground heat flux on roof',      'W/m2' )
+    call FILE_HISTORY_in( GHB  (:,:), 'URBAN_GHB',   'urban ground heat flux on wall',      'W/m2' )
+    call FILE_HISTORY_in( GHG  (:,:), 'URBAN_GHG',   'urban ground heat flux on road',      'W/m2' )
+    call FILE_HISTORY_in( RNR  (:,:), 'URBAN_RNR',   'urban net radiation on roof',         'W/m2' )
+    call FILE_HISTORY_in( RNB  (:,:), 'URBAN_RNB',   'urban net radiation on wall',         'W/m2' )
+    call FILE_HISTORY_in( RNG  (:,:), 'URBAN_RNG',   'urban net radiation on road',         'W/m2' )
+    call FILE_HISTORY_in( RNgrd(:,:), 'URBAN_RNgrd', 'urban grid average of net radiation', 'W/m2' )
 
     return
   end subroutine URBAN_PHY_SLC
@@ -828,6 +844,7 @@ contains
     real(RP) :: THA,THC,THS,THS1,THS2
     real(RP) :: RovCP
     real(RP) :: EXN  ! exner function at the surface
+    real(RP) :: qdry
 
     integer  :: iteration
 
@@ -949,6 +966,8 @@ contains
 
     EXN = ( PRSS / PRE00 )**RovCP ! exner function
 
+    qdry = 1.0_RP - QA
+
     !-----------------------------------------------------------
     ! Energy balance on roof/wall/road surface
     !-----------------------------------------------------------
@@ -971,7 +990,8 @@ contains
       RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA)
       call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO)
 
-      call qsat( QS0R, TR, PRSS )
+      call qsat( TR, PRSS, qdry, & ! [IN]
+                 QS0R            ) ! [OUT]
 
       RR    = EPSR * ( RX - STB * (TR**4)  )
       !HR    = RHOO * CPdry * CHR * UA * (TR-TA)
@@ -1057,7 +1077,8 @@ contains
      RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA)
      call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO)
 
-     call qsat( QS0R, TR, PRSS )
+     call qsat( TR, PRSS, qdry, & ! [IN]
+                QS0R            ) ! [OUT]
 
      RR      = EPSR * ( RX - STB * (TR**4) )
      HR      = RHOO * CPdry * CHR * UA * (THS-THA) * EXN
@@ -1111,8 +1132,8 @@ contains
       call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO)
       ALPHAC = CHC * RHOO * CPdry * UA
 
-      call qsat( QS0B, TB, PRSS )
-      call qsat( QS0G, TG, PRSS )
+      call qsat( TB, PRSS, qdry, QS0B )
+      call qsat( TG, PRSS, qdry, QS0G )
 
       TC1   = RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
       !TC2   = RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
@@ -1200,8 +1221,8 @@ contains
       resi2p = resi2
 
       ! this is for TC, QC
-      call qsat( QS0B, TB, PRSS )
-      call qsat( QS0G, TG, PRSS )
+      call qsat( TB, PRSS, qdry, QS0B )
+      call qsat( TG, PRSS, qdry, QS0G )
 
       THS1   = TB / EXN
       THS2   = TG / EXN

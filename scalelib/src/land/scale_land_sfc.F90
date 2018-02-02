@@ -47,6 +47,7 @@ module scale_land_sfc
            QVA,    &
            Z1,     &
            PBL,    &
+           RHOS,   &
            PRSS,   &
            LWD,    &
            SWD,    &
@@ -56,6 +57,7 @@ module scale_land_sfc
            ALB_LW, &
            ALB_SW, &
            DZG,    &
+           Rb,     &
            TCS,    &
            Z0M,    &
            Z0H,    &
@@ -86,6 +88,7 @@ module scale_land_sfc
        real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
        real(RP), intent(in) :: Z1  (IA,JA) ! cell center height at the lowest atmospheric layer [m]
        real(RP), intent(in) :: PBL (IA,JA) ! the top of atmospheric mixing layer [m]
+       real(RP), intent(in) :: RHOS(IA,JA) ! density  at the surface [kg/m3]
        real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
        real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [J/m2/s]
        real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [J/m2/s]
@@ -96,6 +99,7 @@ module scale_land_sfc
        real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW (0-1)
        real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW (0-1)
        real(RP), intent(in) :: DZG   (IA,JA) ! soil depth [m]
+       real(RP), intent(in) :: Rb    (IA,JA) ! stomata resistance [1/s]
        real(RP), intent(in) :: TCS   (IA,JA) ! thermal conductivity for soil [J/m/K/s]
        real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
        real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
@@ -127,6 +131,9 @@ contains
     use scale_land_sfc_const, only: &
        LAND_SFC_CONST_setup, &
        LAND_SFC_CONST
+    use scale_land_sfc_file, only: &
+       LAND_SFC_FILE_setup, &
+       LAND_SFC_FILE
     use scale_land_sfc_thin_slab, only: &
        LAND_SFC_THIN_SLAB_setup, &
        LAND_SFC_THIN_SLAB
@@ -142,6 +149,9 @@ contains
     case( 'CONST' )
        call LAND_SFC_CONST_setup( LAND_TYPE )
        LAND_SFC => LAND_SFC_CONST
+    case( 'FILE' )
+       call LAND_SFC_FILE_setup( LAND_TYPE )
+       LAND_SFC => LAND_SFC_FILE
     case( 'SLAB', 'THIN-SLAB' )
        call LAND_SFC_THIN_SLAB_setup( LAND_TYPE )
        LAND_SFC => LAND_SFC_THIN_SLAB

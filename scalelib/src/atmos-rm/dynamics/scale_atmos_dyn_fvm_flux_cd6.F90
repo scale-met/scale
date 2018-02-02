@@ -156,8 +156,6 @@ contains
 
 #endif
 
-
-
        valW(KS) = F2 * ( val(KS+1)+val(KS) )
        valW(KE-1) = F2 * ( val(KE)+val(KE-1) )
 
@@ -166,7 +164,7 @@ contains
        valW(KE-2) = F41 * ( val(KE-1)+val(KE-2) ) &
                      + F42 * ( val(KE)+val(KE-3) )
 
-       
+
     return
   end subroutine ATMOS_DYN_FVM_flux_ValueW_Z_cd6
 
@@ -178,6 +176,8 @@ contains
        num_diff,          &
        CDZ,               &
        IIS, IIE, JJS, JJE )
+    use scale_const, only: &
+      EPS => CONST_EPS
     implicit none
 
     real(RP), intent(inout) :: flux    (KA,IA,JA)
@@ -226,7 +226,7 @@ contains
 
     !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
     !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff)
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff,EPS)
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG

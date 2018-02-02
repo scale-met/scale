@@ -59,9 +59,12 @@ module scale_atmos_dyn_tstep_large_fvm_heve
   real(RP), private, allocatable :: MOMX_t(:,:,:)
   real(RP), private, allocatable :: MOMY_t(:,:,:)
   real(RP), private, allocatable :: RHOT_t(:,:,:)
-  real(RP), private, allocatable :: RHOQ_t(:,:,:,:)
+  real(RP), private, allocatable, target :: RHOQ_t(:,:,:,:)
+  real(RP), private, allocatable, target :: ZERO(:,:,:)
+  real(RP), private, pointer     :: RHOQ_tn(:,:,:)
 
   real(RP), private, allocatable :: mflx_hi(:,:,:,:)        ! rho * vel(x,y,z) @ (u,v,w)-face high order
+
 
   ! for communication
   integer :: I_COMM_DENS = 1
@@ -158,6 +161,9 @@ contains
     call COMM_vars8_init( 'mflx_X', mflx_hi(:,:,:,XDIR), I_COMM_mflx_x )
     call COMM_vars8_init( 'mflx_Y', mflx_hi(:,:,:,YDIR), I_COMM_mflx_y )
 
+    allocate( ZERO(KA,IA,JA) )
+    ZERO(:,:,:) = 0.0_RP
+
     mflx_hi(:,:,:,:) = UNDEF
 
     return
@@ -187,6 +193,7 @@ contains
        DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
        wdamp_coef,                                           &
        divdmp_coef,                                          &
+       FLAG_TRACER_SPLIT_TEND,                               &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
        USE_AVERAGE,                                          &
@@ -224,11 +231,11 @@ contains
     use scale_atmos_boundary, only: &
        BND_QA, &
        BND_SMOOTHER_FACT => ATMOS_BOUNDARY_SMOOTHER_FACT
-    use scale_history, only: &
+    use scale_file_history, only: &
 #ifdef HIST_TEND
-       HIST_in, &
+       FILE_HISTORY_in, &
 #endif
-       HIST_switch
+       FILE_HISTORY_set_disable
     use scale_atmos_dyn_tinteg_short, only: &
        ATMOS_DYN_tinteg_short
     use scale_atmos_dyn_tinteg_tracer, only: &
@@ -325,6 +332,7 @@ contains
     real(RP), intent(in)    :: wdamp_coef(KA)
     real(RP), intent(in)    :: divdmp_coef
 
+    logical,  intent(in)    :: FLAG_TRACER_SPLIT_TEND
     logical,  intent(in)    :: FLAG_FCT_MOMENTUM
     logical,  intent(in)    :: FLAG_FCT_T
     logical,  intent(in)    :: FLAG_FCT_TRACER
@@ -512,7 +520,7 @@ contains
        !$omp shared(damp_t) &
 #endif
        !$omp shared(JS,JE,IS,IE,KS,KE,iq) &
-       !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,BND_SMOOTHER_FACT,DENS00)
+       !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,BND_SMOOTHER_FACT,DENS00,TRACER_MASS)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -526,14 +534,14 @@ contains
 #endif
           damp = damp * DENS00(k,i,j)
           RHOQ_t(k,i,j,iq) = RHOQ_tp(k,i,j,iq) + damp
-          DENS_tq(k,i,j) = DENS_tq(k,i,j) + damp
+          DENS_tq(k,i,j) = DENS_tq(k,i,j) + damp * TRACER_MASS(iq) ! only for mass tracer
        enddo
        enddo
        enddo
 #ifdef HIST_TEND
-       call HIST_in(RHOQ_tp(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_phys', &
+       call FILE_HISTORY_in(RHOQ_tp(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_phys', &
                     'tendency of '//trim(TRACER_NAME(iq))//' due to physics', 'kg/kg/s' )
-       call HIST_in(damp_t,            trim(TRACER_NAME(iq))//'_t_damp', &
+       call FILE_HISTORY_in(damp_t,            trim(TRACER_NAME(iq))//'_t_damp', &
                     'tendency of '//trim(TRACER_NAME(iq))//' due to damping', 'kg/kg/s' )
 #endif
 !OCL XFILL
@@ -603,7 +611,7 @@ contains
 
     do step = 1, nstep
 
-       call HIST_switch( Llast .AND. step == nstep )
+       call FILE_HISTORY_set_disable( .not. (Llast .AND. step == nstep ) )
 
        !-----< prepare tendency >-----
 
@@ -651,8 +659,8 @@ contains
        enddo
        call COMM_vars8( DENS_t(:,:,:), I_COMM_DENS_t )
 #ifdef HIST_TEND
-       call HIST_in(DENS_tp, 'DENS_t_phys', 'tendency of dencity due to physics', 'kg/m3/s' )
-       call HIST_in(damp_t,  'DENS_t_damp', 'tendency of dencity due to damping', 'kg/m3/s' )
+       call FILE_HISTORY_in(DENS_tp, 'DENS_t_phys', 'tendency of dencity due to physics', 'kg/m3/s' )
+       call FILE_HISTORY_in(damp_t,  'DENS_t_damp', 'tendency of dencity due to damping', 'kg/m3/s' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -697,8 +705,8 @@ contains
        enddo
        call COMM_vars8( MOMZ_t(:,:,:), I_COMM_MOMZ_t )
 #ifdef HIST_TEND
-       call HIST_in(MOMZ_tp, 'MOMZ_t_phys', 'tendency of momentum z due to physics',  'kg/m2/s2', zdim='half' )
-       call HIST_in(damp_t,  'MOMZ_t_damp', 'tendency of momentum z due to damping', 'kg/m2/s2', zdim='half' )
+       call FILE_HISTORY_in(MOMZ_tp, 'MOMZ_t_phys', 'tendency of momentum z due to physics', 'kg/m2/s2', dim_type='ZHXY' )
+       call FILE_HISTORY_in(damp_t,  'MOMZ_t_damp', 'tendency of momentum z due to damping', 'kg/m2/s2', dim_type='ZHXY' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -742,8 +750,8 @@ contains
        enddo
        call COMM_vars8( MOMX_t(:,:,:), I_COMM_MOMX_t )
 #ifdef HIST_TEND
-       call HIST_in(MOMX_tp, 'MOMX_t_phys', 'tendency of momentum x due to physics', 'kg/m2/s2', xdim='half' )
-       call HIST_in(damp_t,  'MOMX_t_damp', 'tendency of momentum x due to damping', 'kg/m2/s2', xdim='half' )
+       call FILE_HISTORY_in(MOMX_tp, 'MOMX_t_phys', 'tendency of momentum x due to physics', 'kg/m2/s2', dim_type='ZXHY' )
+       call FILE_HISTORY_in(damp_t,  'MOMX_t_damp', 'tendency of momentum x due to damping', 'kg/m2/s2', dim_type='ZXHY' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -787,8 +795,8 @@ contains
        enddo
        call COMM_vars8( MOMY_t(:,:,:), I_COMM_MOMY_t )
 #ifdef HIST_TEND
-       call HIST_in(MOMY_tp, 'MOMY_t_phys', 'tendency of momentum y due to physics', 'kg/m2/s2', ydim='half' )
-       call HIST_in(damp_t,  'MOMY_t_damp', 'tendency of momentum y due to damping', 'kg/m2/s2', ydim='half' )
+       call FILE_HISTORY_in(MOMY_tp, 'MOMY_t_phys', 'tendency of momentum y due to physics', 'kg/m2/s2', dim_type='ZXYH' )
+       call FILE_HISTORY_in(damp_t,  'MOMY_t_damp', 'tendency of momentum y due to damping', 'kg/m2/s2', dim_type='ZXYH' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -832,8 +840,8 @@ contains
        enddo
        call COMM_vars8( RHOT_t(:,:,:), I_COMM_RHOT_t )
 #ifdef HIST_TEND
-       call HIST_in(RHOT_tp, 'RHOT_t_phys', 'tendency of rho*theta temperature due to physics', 'K kg/m3/s' )
-       call HIST_in(damp_t,  'RHOT_t_damp', 'tendency of rho*theta temperature due to damping', 'K kg/m3/s' )
+       call FILE_HISTORY_in(RHOT_tp, 'RHOT_t_phys', 'tendency of rho*theta temperature due to physics', 'K kg/m3/s' )
+       call FILE_HISTORY_in(damp_t,  'RHOT_t_damp', 'tendency of rho*theta temperature due to damping', 'K kg/m3/s' )
 #endif
 
        call COMM_wait ( DENS_t(:,:,:), I_COMM_DENS_t, .false. )
@@ -908,11 +916,11 @@ contains
 #endif
 
        !$omp parallel do default(none) private(i,j,iv) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JS,JE,IS,IE,KS,KA,DENS,MOMZ,MOMX,MOMY,RHOT,VA,PROG,KE)
-       do j  = JS, JE
-       do i  = IS, IE
+       !$omp shared(JSB,JEB,ISB,IEB,KS,KA,DENS,MOMZ,MOMX,MOMY,RHOT,VA,PROG,KE)
+       do j  = JSB, JEB
+       do i  = ISB, IEB
           DENS(   1:KS-1,i,j) = DENS(KS,i,j)
-          MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
+          MOMZ(   1:KS-1,i,j) = 0.0_RP
           MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
           MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
           RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
@@ -920,7 +928,7 @@ contains
              PROG(   1:KS-1,i,j,iv) = PROG(KS,i,j,iv)
           end do
           DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
-          MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
+          MOMZ(KE+1:KA,  i,j) = 0.0_RP
           MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
           MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
           RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
@@ -1018,9 +1026,25 @@ contains
 
           call PROF_rapstart("DYN_Tracer_Tinteg", 2)
 
+          if ( FLAG_TRACER_SPLIT_TEND ) then
+             !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+             !$omp shared(KA,IA,JA,iq,QTRC,RHOQ_t,DENS,dtl)
+             do j = 1, JA
+             do i = 1, IA
+             do k = 1, KA
+                QTRC(k,i,j,iq) = QTRC(k,i,j,iq) &
+                               + RHOQ_t(k,i,j,iq) * dtl / DENS(k,i,j)
+             end do
+             end do
+             end do
+             RHOQ_tn => ZERO
+          else
+             RHOQ_tn => RHOQ_t(:,:,:,iq)
+          end if
+
           call ATMOS_DYN_tinteg_tracer( &
                QTRC(:,:,:,iq), & ! (inout)
-               QTRC0(:,:,:,iq), RHOQ_t(:,:,:,iq), &! (in)
+               QTRC0(:,:,:,iq), RHOQ_tn, &! (in)
                DENS00, DENS, & ! (in)
                mflx_hi, num_diff_q, & ! (in)
                GSQRT, MAPF(:,:,:,I_XY), & ! (in)
@@ -1075,8 +1099,8 @@ contains
     use scale_comm, only: &
        COMM_datatype, &
        COMM_world
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_gridtrans, only: &
        I_XYZ, &
        I_XY
@@ -1110,13 +1134,13 @@ contains
     integer :: ierr
 
 
-    call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', zdim='half' )
-    call HIST_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction', 'kg/m2/s', xdim='half' )
-    call HIST_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction', 'kg/m2/s', ydim='half' )
+    call FILE_HISTORY_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', dim_type='ZHXY' )
+    call FILE_HISTORY_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction', 'kg/m2/s', dim_type='ZXHY' )
+    call FILE_HISTORY_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction', 'kg/m2/s', dim_type='ZXYH' )
 
-    call HIST_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction', 'K*kg/m2/s', zdim='half' )
-    call HIST_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction', 'K*kg/m2/s', xdim='half' )
-    call HIST_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction', 'K*kg/m2/s', ydim='half' )
+    call FILE_HISTORY_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction', 'K*kg/m2/s', dim_type='ZHXY' )
+    call FILE_HISTORY_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction', 'K*kg/m2/s', dim_type='ZXHY' )
+    call FILE_HISTORY_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction', 'K*kg/m2/s', dim_type='ZXYH' )
 
     mflx_lb_total            = 0.0_RP
     mflx_lb_horizontal(:)    = 0.0_RP
@@ -1219,7 +1243,7 @@ contains
                         COMM_world,                   &
                         ierr                          )
 
-    call HIST_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz',                           &
+    call FILE_HISTORY_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz',                           &
                     'horizontally total momentum flux from lateral boundary', 'kg/m2/s' )
 
     return

@@ -30,23 +30,15 @@ module scale_roughness
 
   abstract interface
      subroutine rl( &
-          Z0M_t, &
-          Z0H_t, &
-          Z0E_t, &
-          Z0M,   &
-          Z0H,   &
-          Z0E,   &
-          UA,    &
-          VA,    &
-          Z1,    &
-          dt     )
+          IA, IS, IE, JA, JS, JE, &
+          Z0M, Z0H, Z0E,      &
+          UA, VA, Z1,         &
+          dt,                 &
+          Z0M_t, Z0H_t, Z0E_t )
        use scale_precision
-       use scale_grid_index
        implicit none
-
-       real(RP), intent(out) :: Z0M_t(IA,JA) ! tendency of roughness length for momentum [m]
-       real(RP), intent(out) :: Z0H_t(IA,JA) ! tendency of roughness length for heat [m]
-       real(RP), intent(out) :: Z0E_t(IA,JA) ! tendency of roughness length for vapor [m]
+       integer, intent(in) :: IA, IS, IE
+       integer, intent(in) :: JA, JS, JE
 
        real(RP), intent(in) :: Z0M(IA,JA) ! roughness length for momentum [m]
        real(RP), intent(in) :: Z0H(IA,JA) ! roughness length for heat [m]
@@ -55,6 +47,11 @@ module scale_roughness
        real(RP), intent(in) :: VA (IA,JA) ! velocity v at the lowest atmospheric layer [m/s]
        real(RP), intent(in) :: Z1 (IA,JA) ! cell center height at the lowest atmospheric layer [m]
        real(DP), intent(in) :: dt         ! delta time
+
+       real(RP), intent(out) :: Z0M_t(IA,JA) ! tendency of roughness length for momentum [m]
+       real(RP), intent(out) :: Z0H_t(IA,JA) ! tendency of roughness length for heat [m]
+       real(RP), intent(out) :: Z0E_t(IA,JA) ! tendency of roughness length for vapor [m]
+
      end subroutine rl
   end interface
 
@@ -228,24 +225,22 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ROUGHNESS_miller92( &
-       Z0M_t, & ! [OUT]
-       Z0H_t, & ! [OUT]
-       Z0E_t, & ! [OUT]
+       IA, IS, IE, JA, JS, JE, &
        Z0M,   & ! [IN]
        Z0H,   & ! [IN]
        Z0E,   & ! [IN]
        UA,    & ! [IN]
        VA,    & ! [IN]
        Z1,    & ! [IN]
-       dt     ) ! [IN]
+       dt,    & ! [IN]
+       Z0M_t, & ! [OUT]
+       Z0H_t, & ! [OUT]
+       Z0E_t  ) ! [OUT]
     use scale_const, only: &
        GRAV => CONST_GRAV
     implicit none
-
-    ! arguments
-    real(RP), intent(out) :: Z0M_t(IA,JA) ! tendency of roughness length for momentum [m]
-    real(RP), intent(out) :: Z0H_t(IA,JA) ! tendency of roughness length for heat [m]
-    real(RP), intent(out) :: Z0E_t(IA,JA) ! tendency of roughness length for vapor [m]
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
     real(RP), intent(in) :: Z0M(IA,JA) ! roughness length for momentum [m]
     real(RP), intent(in) :: Z0H(IA,JA) ! roughness length for heat [m]
@@ -254,6 +249,10 @@ contains
     real(RP), intent(in) :: VA (IA,JA) ! velocity v at the lowest atomspheric layer [m/s]
     real(RP), intent(in) :: Z1 (IA,JA) ! cell center height at the lowest atmospheric layer [m]
     real(DP), intent(in) :: dt         ! delta time
+
+    real(RP), intent(out) :: Z0M_t(IA,JA) ! tendency of roughness length for momentum [m]
+    real(RP), intent(out) :: Z0H_t(IA,JA) ! tendency of roughness length for heat [m]
+    real(RP), intent(out) :: Z0E_t(IA,JA) ! tendency of roughness length for vapor [m]
 
     ! works
     real(RP) :: Z0M1(IA,JA)
@@ -265,6 +264,8 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
+    !omp parallel do &
+    !omp private(Uabs,Ustar)
     do j = JS, JE
     do i = IS, IE
 
@@ -300,25 +301,23 @@ contains
   !> A Physics-Based Parameterization of Air-Sea Momentum Flux at High Wind Speeds
   !> and Its Impact on Hurricane Intensity Predictions, Mon. Wea. Rev., 135, 2869-2878
   subroutine ROUGHNESS_moon07( &
-       Z0M_t, & ! [OUT]
-       Z0H_t, & ! [OUT]
-       Z0E_t, & ! [OUT]
+       IA, IS, IE, JA, JS, JE, &
        Z0M,   & ! [IN]
        Z0H,   & ! [IN]
        Z0E,   & ! [IN]
        UA,    & ! [IN]
        VA,    & ! [IN]
        Z1,    & ! [IN]
-       dt     ) ! [IN]
+       dt,    & ! [IN]
+       Z0M_t, & ! [OUT]
+       Z0H_t, & ! [OUT]
+       Z0E_t  ) ! [OUT]
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
        KARMAN => CONST_KARMAN
     implicit none
-
-    ! arguments
-    real(RP), intent(out) :: Z0M_t(IA,JA) ! tendency of roughness length for momentum [m]
-    real(RP), intent(out) :: Z0H_t(IA,JA) ! tendency of roughness length for heat [m]
-    real(RP), intent(out) :: Z0E_t(IA,JA) ! tendency of roughness length for vapor [m]
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
     real(RP), intent(in) :: Z0M(IA,JA) ! roughness length for momentum [m]
     real(RP), intent(in) :: Z0H(IA,JA) ! roughness length for heat [m]
@@ -327,6 +326,10 @@ contains
     real(RP), intent(in) :: VA (IA,JA) ! velocity v at the lowest atomspheric layer [m/s]
     real(RP), intent(in) :: Z1 (IA,JA) ! cell center height at the lowest atmospheric layer [m]
     real(DP), intent(in) :: dt         ! delta time
+
+    real(RP), intent(out) :: Z0M_t(IA,JA) ! tendency of roughness length for momentum [m]
+    real(RP), intent(out) :: Z0H_t(IA,JA) ! tendency of roughness length for heat [m]
+    real(RP), intent(out) :: Z0E_t(IA,JA) ! tendency of roughness length for vapor [m]
 
     ! works
     real(RP) :: Z0M1(IA,JA)
@@ -396,22 +399,20 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ROUGHNESS_const( &
-       Z0M_t, & ! [OUT]
-       Z0H_t, & ! [OUT]
-       Z0E_t, & ! [OUT]
+       IA, IS, IE, JA, JS, JE, &
        Z0M,   & ! [IN]
        Z0H,   & ! [IN]
        Z0E,   & ! [IN]
        UA,    & ! [IN]
        VA,    & ! [IN]
        Z1,    & ! [IN]
-       dt     ) ! [IN]
+       dt,    & ! [IN]
+       Z0M_t, & ! [OUT]
+       Z0H_t, & ! [OUT]
+       Z0E_t  ) ! [OUT]
     implicit none
-
-    ! arguments
-    real(RP), intent(out) :: Z0M_t(IA,JA) ! tendency of roughness length for momentum [m]
-    real(RP), intent(out) :: Z0H_t(IA,JA) ! tendency of roughness length for heat [m]
-    real(RP), intent(out) :: Z0E_t(IA,JA) ! tendency of roughness length for vapor [m]
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
     real(RP), intent(in) :: Z0M(IA,JA) ! roughness length for momentum [m]
     real(RP), intent(in) :: Z0H(IA,JA) ! roughness length for heat [m]
@@ -420,6 +421,10 @@ contains
     real(RP), intent(in) :: VA (IA,JA) ! velocity v at the lowest atomspheric layer [m/s]
     real(RP), intent(in) :: Z1 (IA,JA) ! cell center height at the lowest atmospheric layer [m]
     real(DP), intent(in) :: dt         ! delta time
+
+    real(RP), intent(out) :: Z0M_t(IA,JA) ! tendency of roughness length for momentum [m]
+    real(RP), intent(out) :: Z0H_t(IA,JA) ! tendency of roughness length for heat [m]
+    real(RP), intent(out) :: Z0E_t(IA,JA) ! tendency of roughness length for vapor [m]
 
     Z0M_t(:,:) = 0.0_RP
     Z0H_t(:,:) = 0.0_RP

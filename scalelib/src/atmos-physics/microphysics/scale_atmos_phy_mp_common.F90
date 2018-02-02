@@ -33,6 +33,22 @@ module scale_atmos_phy_mp_common
   public :: ATMOS_PHY_MP_negative_fixer
   public :: ATMOS_PHY_MP_saturation_adjustment
   public :: ATMOS_PHY_MP_precipitation
+  public :: ATMOS_PHY_MP_precipitation_momentum
+
+  interface ATMOS_PHY_MP_negative_fixer
+     module procedure ATMOS_PHY_MP_negative_fixer
+     module procedure ATMOS_PHY_MP_negative_fixer_obsolute
+  end interface ATMOS_PHY_MP_negative_fixer
+
+  interface ATMOS_PHY_MP_saturation_adjustment
+     module procedure ATMOS_PHY_MP_saturation_adjustment_3D
+     module procedure ATMOS_PHY_MP_saturation_adjustment_obsolute
+  end interface ATMOS_PHY_MP_saturation_adjustment
+
+  interface ATMOS_PHY_MP_precipitation
+     module procedure ATMOS_PHY_MP_precipitation
+     module procedure ATMOS_PHY_MP_precipitation_obsolute
+  end interface ATMOS_PHY_MP_precipitation
 
   !-----------------------------------------------------------------------------
   !
@@ -42,9 +58,6 @@ module scale_atmos_phy_mp_common
   !
   !++ Private procedure
   !
-  private :: moist_conversion_liq
-  private :: moist_conversion_all
-
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -53,9 +66,108 @@ module scale_atmos_phy_mp_common
 contains
 
   !-----------------------------------------------------------------------------
-  !> Negative fixer
+  !> ATMOS_PHY_MP_negative_fixer
+  !! negative fixer
+  !<
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_negative_fixer( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, QHA, &
+       limit_negative, &
+       DENS, QV, QTRC )
+    use scale_process, only: &
+       PRC_myrank, &
+       PRC_abort
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: QHA
+
+    real(RP), intent(in)    :: limit_negative
+
+    real(RP), intent(inout) :: DENS(KA,IA,JA)
+    real(RP), intent(inout) :: QV  (KA,IA,JA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QHA)
+
+    real(RP) :: diffq
+    real(RP) :: diffq_check(KA,IA,JA)
+    real(RP) :: diffq_min
+
+    integer  :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('MP_filter', 3)
+
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k, &
+    !$omp         iq,diffq) &
+    !$omp shared(KS,KE,IS,IE,JS,JE,QHA, &
+    !$omp        QV,QTRC,DENS,diffq_check)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+
+       diffq = 0.0_RP
+       do iq = 1, QHA
+          ! total hydrometeor (before correction)
+          diffq = diffq + QTRC(k,i,j,iq)
+          ! remove negative value of hydrometeors (mass)
+          QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq), 0.0_RP )
+       enddo
+
+       do iq = 1, QHA
+          ! difference between before and after correction
+          diffq = diffq - QTRC(k,i,j,iq)
+       enddo
+
+       ! Compensate for the lack of hydrometeors by the water vapor
+       QV(k,i,j) = QV(k,i,j) + diffq
+       diffq_check(k,i,j) = diffq
+
+       ! TODO: We have to consider energy conservation (but very small)
+
+       ! remove negative value of water vapor (mass)
+       diffq = QV(k,i,j)
+       QV(k,i,j) = max( QV(k,i,j), 0.0_RP )
+       diffq = diffq - QV(k,i,j)
+
+       ! Apply correction to total density
+       ! TODO: We have to consider energy conservation (but very small)
+       DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - diffq ) ! diffq is negative
+
+    enddo
+    enddo
+    enddo
+
+    diffq_min = minval( diffq_check(KS:KE,ISB:IEB,JSB:JEB) )
+
+    if (       abs(limit_negative) > 0.0_RP         &
+         .AND. abs(limit_negative) < abs(diffq_min) ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx [MP_negative_fixer] large negative is found.'
+       write(*,*)                     'xxx [MP_negative_fixer] large negative is found. rank = ', PRC_myrank
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS,  KE
+          if (     abs(limit_negative) < abs(diffq_check(k,i,j)) &
+              .OR. abs(QV(k,i,j)     ) < abs(diffq_check(k,i,j)) ) then
+             if( IO_L ) write(IO_FID_LOG,*) &
+                        'xxx k,i,j,value(QHYD,QV) = ', k, i, j, diffq_check(k,i,j), QV(k,i,j)
+          endif
+       enddo
+       enddo
+       enddo
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx criteria: total negative hydrometeor < ', abs(limit_negative)
+
+       call PRC_abort
+    endif
+
+    call PROF_rapend('MP_filter', 3)
+
+    return
+  end subroutine ATMOS_PHY_MP_negative_fixer
+
+  subroutine ATMOS_PHY_MP_negative_fixer_obsolute( &
        DENS,          &
        RHOT,          &
        QTRC,          &
@@ -149,17 +261,162 @@ contains
     call PROF_rapend('MP_filter', 3)
 
     return
-  end subroutine ATMOS_PHY_MP_negative_fixer
+  end subroutine ATMOS_PHY_MP_negative_fixer_obsolute
 
   !-----------------------------------------------------------------------------
   !> Saturation adjustment
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_MP_saturation_adjustment( &
+  subroutine ATMOS_PHY_MP_saturation_adjustment_3D( &
+         KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+         DENS,         &
+         flag_liquid,  &
+         TEMP,         &
+         QV, QC, QI,   &
+         CPtot, CVtot, &
+         RHOE_d        )
+    use scale_process, only: &
+       PRC_abort
+    use scale_atmos_hydrometeor, only: &
+       CP_VAPOR, &
+       CP_WATER, &
+       CP_ICE,   &
+       CV_VAPOR, &
+       CV_WATER, &
+       CV_ICE,   &
+       LHV,   &
+       LHF
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_moist_conversion_dens_all, &
+       ATMOS_SATURATION_moist_conversion_dens_liq
+    implicit none
+
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    logical , intent(in) :: flag_liquid !> use scheme only for the liquid water?
+
+    real(RP), intent(inout) :: TEMP (KA,IA,JA)
+    real(RP), intent(inout) :: QV   (KA,IA,JA)
+    real(RP), intent(inout) :: QC   (KA,IA,JA)
+    real(RP), intent(inout) :: QI   (KA,IA,JA)
+    real(RP), intent(inout) :: CPtot(KA,IA,JA)
+    real(RP), intent(inout) :: CVtot(KA,IA,JA)
+
+    real(RP), intent(out) :: RHOE_d(KA,IA,JA)
+
+    ! working
+    real(RP) :: QV1
+    real(RP) :: QC1
+    real(RP) :: QI1
+
+    real(RP) :: Emoist ! moist internal energy
+
+    logical :: converged, error
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('MP_Saturation_adjustment', 2)
+
+    error = .false.
+
+    if ( flag_liquid ) then ! warm rain
+
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(KS,KE,IS,IE,JS,JE, &
+       !$omp        CP_VAPOR,CP_WATER,CV_VAPOR,CV_WATER,LHV,LHF, &
+       !$omp        DENS,QV,QC,TEMP,CPtot,CVtot,RHOE_d,error) &
+       !$omp private(i,j,k, &
+       !$omp         QV1,QC1,Emoist,converged)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+
+          QV1 = QV(k,i,j)
+          QC1 = QC(k,i,j)
+
+          Emoist = TEMP(k,i,j) * CVtot(k,i,j) &
+                 + QV1 * LHV
+
+          call ATMOS_SATURATION_moist_conversion_dens_liq( DENS(k,i,j), Emoist,        & ! [IN]
+                                                           TEMP(k,i,j), QV1, QC1,      & ! [INOUT]
+                                                           CPtot(k,i,j), CVtot(k,i,j), & ! [INOUT]
+                                                           converged                   ) ! [OUT]
+
+          if ( .NOT. converged ) then
+             write(*,*) 'xxx [moist_conversion] not converged! ', k,i,j
+             error = .true.
+             exit
+          endif
+
+          RHOE_d(k,i,j) = - LHV * ( QV1 - QV(k,i,j) ) * DENS(k,i,j)
+
+          QV(k,i,j) = QV1
+          QC(k,i,j) = QC1
+
+       end do
+       end do
+       end do
+
+       if ( error ) call PRC_abort
+
+    else ! cold rain
+
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared (KS,KE,IS,IE,JS,JE, &
+       !$omp         CP_VAPOR,CP_WATER,CP_ICE,CV_VAPOR,CV_WATER,CV_ICE,LHV,LHF, &
+       !$omp         DENS,QV,QC,QI,TEMP,CPtot,CVtot,RHOE_d,error) &
+       !$omp private(i,j,k, &
+       !$omp         QV1,QC1,QI1,Emoist,converged)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QV1 = QV(k,i,j)
+          QC1 = QC(k,i,j)
+          QI1 = QI(k,i,j)
+
+          Emoist = TEMP(k,i,j) * CVtot(k,i,j) &
+                 + QV1 * LHV &
+                 - QI1 * LHF
+
+          call ATMOS_SATURATION_moist_conversion_dens_all( DENS(k,i,j), Emoist,        & ! [IN]
+                                                           TEMP(k,i,j), QV1, QC1, QI1, & ! [INOUT]
+                                                           CPtot(k,i,j), CVtot(k,i,j), & ! [INOUT]
+                                                           converged                   ) ! [OUT]
+
+          if ( .NOT. converged ) then
+             write(*,*) 'xxx [moist_conversion] not converged! ', k,i,j
+             error = .true.
+             exit
+          endif
+
+          RHOE_d(k,i,j) = ( - LHV * ( QV1 - QV(k,i,j) ) &
+                            + LHF * ( QI1 - QI(k,i,j) ) ) * DENS(k,i,j)
+
+          QV(k,i,j) = QV1
+          QC(k,i,j) = QC1
+          QI(k,i,j) = QI1
+
+       end do
+       end do
+       end do
+
+       if ( error ) call PRC_abort
+    endif
+
+    call PROF_rapend  ('MP_Saturation_adjustment', 2)
+
+    return
+  end subroutine ATMOS_PHY_MP_saturation_adjustment_3D
+
+  subroutine ATMOS_PHY_MP_saturation_adjustment_obsolute( &
        RHOE_t,     &
        QTRC_t,     &
        RHOE0,      &
        QTRC0,      &
-       DENS0,      &
+       DENS ,      &
        I_QV,       &
        I_QC,       &
        I_QI,       &
@@ -168,6 +425,8 @@ contains
     use scale_const, only: &
        UNDEF => CONST_UNDEF
 #endif
+    use scale_process, only: &
+       PRC_abort
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_atmos_thermodyn, only: &
@@ -178,15 +437,15 @@ contains
        LHV, &
        LHF
     use scale_atmos_saturation, only: &
-       SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
-       SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all
+       ATMOS_SATURATION_moist_conversion_dens_all, &
+       ATMOS_SATURATION_moist_conversion_dens_liq
     implicit none
 
     real(RP), intent(inout) :: RHOE_t(KA,IA,JA)    ! tendency rhoe             [J/m3/s]
     real(RP), intent(inout) :: QTRC_t(KA,IA,JA,QA) ! tendency tracer           [kg/kg/s]
     real(RP), intent(inout) :: RHOE0 (KA,IA,JA)    ! density * internal energy [J/m3]
     real(RP), intent(inout) :: QTRC0 (KA,IA,JA,QA) ! mass concentration        [kg/kg]
-    real(RP), intent(in)    :: DENS0 (KA,IA,JA)    ! density                   [kg/m3]
+    real(RP), intent(in)    :: DENS  (KA,IA,JA)    ! density                   [kg/m3]
     integer,  intent(in)    :: I_QV                ! index for water vapor
     integer,  intent(in)    :: I_QC                ! index for water cloud
     integer,  intent(in)    :: I_QI                ! index for ice cloud
@@ -196,6 +455,7 @@ contains
     real(RP) :: TEMP0 (KA,IA,JA)
     real(RP) :: PRES0 (KA,IA,JA)
     real(RP) :: QDRY0 (KA,IA,JA)
+    real(RP) :: CPtot (KA,IA,JA)
     real(RP) :: CVtot (KA,IA,JA)
 
     real(RP) :: Emoist(KA,IA,JA) ! moist internal energy
@@ -205,6 +465,8 @@ contains
     real(RP) :: RHOE1 (KA,IA,JA)
     real(RP) :: QTRC1 (KA,IA,JA,QA)
     real(RP) :: rdt
+
+    logical :: converged
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -228,7 +490,7 @@ contains
 
     call THERMODYN_temp_pres_E( TEMP0(:,:,:),   & ! [OUT]
                                 PRES0(:,:,:),   & ! [OUT]
-                                DENS0(:,:,:),   & ! [IN]
+                                DENS (:,:,:),   & ! [IN]
                                 RHOE0(:,:,:),   & ! [IN]
                                 QTRC0(:,:,:,:), & ! [IN]
                                 TRACER_CV(:),   & ! [IN]
@@ -275,18 +537,22 @@ contains
        do i = ISB, IEB
        do k = KS, KE
           TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV ) / CVtot(k,i,j)
-       enddo
-       enddo
-       enddo
 
-       call moist_conversion_liq( TEMP1 (:,:,:),   & ! [INOUT]
-                                  QTRC1 (:,:,:,:), & ! [INOUT]
-                                  DENS0 (:,:,:),   & ! [IN]
-                                  QSUM1 (:,:,:),   & ! [IN]
-                                  QDRY0 (:,:,:),   & ! [IN]
-                                  Emoist(:,:,:),   & ! [IN]
-                                  I_QV,            & ! [IN]
-                                  I_QC             ) ! [IN]
+          call ATMOS_SATURATION_moist_conversion_dens_liq( &
+               DENS(k,i,j), Emoist(k,i,j),           & ! [IN]
+               TEMP1(k,i,j),                         & ! [INOUT]
+               QTRC1(k,i,j,I_QV), QTRC1(k,i,j,I_QC), & ! [INOUT]
+               CPtot(k,i,j), CVtot(k,i,j),           & ! [INOUT]
+               converged                             ) ! [OUT]
+
+          if ( .NOT. converged ) then
+             write(*,*) 'xxx [moist_conversion] not converged! ', k,i,j
+             call PRC_abort
+          endif
+
+       enddo
+       enddo
+       enddo
 
     else ! cold rain
 
@@ -322,19 +588,21 @@ contains
        do i = ISB, IEB
        do k = KS, KE
           TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV ) / CVtot(k,i,j)
-       enddo
-       enddo
-       enddo
+          call ATMOS_SATURATION_moist_conversion_dens_all( &
+               DENS(k,i,j), Emoist(k,i,j),                              & ! [IN]
+               TEMP1(k,i,j),                                            & ! [INOUT]
+               QTRC1(k,i,j,I_QV), QTRC1(k,i,j,I_QC), QTRC1(k,i,j,I_QI), & ! [INOUT]
+               CPtot(k,i,j), CVtot(k,i,j),                              & ! [INOUT]
+               converged                                                ) ! [OUT]
 
-       call moist_conversion_all( TEMP1 (:,:,:),   & ! [INOUT]
-                                  QTRC1 (:,:,:,:), & ! [INOUT]
-                                  DENS0 (:,:,:),   & ! [IN]
-                                  QSUM1 (:,:,:),   & ! [IN]
-                                  QDRY0 (:,:,:),   & ! [IN]
-                                  Emoist(:,:,:),   & ! [IN]
-                                  I_QV,            & ! [IN]
-                                  I_QC,            & ! [IN]
-                                  I_QI             )
+          if ( .NOT. converged ) then
+             write(*,*) 'xxx [moist_conversion] not converged! ', k,i,j
+             call PRC_abort
+          endif
+
+       enddo
+       enddo
+       enddo
 
     endif
 
@@ -384,11 +652,11 @@ contains
 
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JS,JE,IS,IE,KS,KE,RHOE1,DENS0,TEMP1,CVtot,RHOE_t,RHOE0,rdt)
+    !$omp shared(JS,JE,IS,IE,KS,KE,RHOE1,DENS,TEMP1,CVtot,RHOE_t,RHOE0,rdt)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       RHOE1(k,i,j) = DENS0(k,i,j) * TEMP1(k,i,j) * CVtot(k,i,j)
+       RHOE1(k,i,j) = DENS(k,i,j) * TEMP1(k,i,j) * CVtot(k,i,j)
 
        RHOE_t(k,i,j) = RHOE_t(k,i,j) + ( RHOE1(k,i,j) - RHOE0(k,i,j) ) * rdt
 
@@ -406,346 +674,188 @@ contains
     QTRC0  = UNDEF
 #endif
     return
-  end subroutine ATMOS_PHY_MP_saturation_adjustment
+  end subroutine ATMOS_PHY_MP_saturation_adjustment_obsolute
 
   !-----------------------------------------------------------------------------
-  !> Iterative moist conversion for warm rain
-  !-----------------------------------------------------------------------------
-  subroutine moist_conversion_liq( &
-       TEMP1,  &
-       QTRC1,  &
-       DENS0,  &
-       QSUM1,  &
-       QDRY0,  &
-       Emoist, &
-       I_QV,   &
-       I_QC    )
-#ifdef DRY
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
-#endif
-    use scale_process, only: &
-       PRC_MPIstop
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_cv => ATMOS_THERMODYN_cv
-    use scale_atmos_hydrometeor, only: &
-       LHV
-    use scale_atmos_saturation, only: &
-       SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
-       CVovR_liq, &
-       LovR_liq
-    implicit none
-
-    real(RP), intent(inout) :: TEMP1 (KA,IA,JA)
-    real(RP), intent(inout) :: QTRC1 (KA,IA,JA,QA)
-    real(RP), intent(in)    :: DENS0 (KA,IA,JA)
-    real(RP), intent(in)    :: QSUM1 (KA,IA,JA)
-    real(RP), intent(in)    :: QDRY0 (KA,IA,JA)
-    real(RP), intent(in)    :: Emoist(KA,IA,JA)
-    integer,  intent(in)    :: I_QV
-    integer,  intent(in)    :: I_QC
-
-    real(RP) :: QSAT(KA,IA,JA) ! saturated water vapor
-
-    ! working
-    real(RP) :: temp
-    real(RP) :: q(QA)
-    real(RP) :: CVtot
-    real(RP) :: qsatl_new
-    real(RP) :: Emoist_new ! moist internal energy
-
-    ! d(X)/dT
-    real(RP) :: dqsatl_dT
-    real(RP) :: dqc_dT
-    real(RP) :: dCVtot_dT
-    real(RP) :: dEmoist_dT
-    real(RP) :: dtemp
-
-    integer  :: ijk_sat
-    integer  :: index_sat(KA*IA*JA,3) ! list vector
-
-    integer, parameter :: itelim = 100
-    real(RP) :: dtemp_criteria
-    logical  :: converged
-    integer  :: k, i, j, ijk, iq, ite
-    !---------------------------------------------------------------------------
-
-#ifndef DRY
-
-    dtemp_criteria = 0.1_RP**(2+RP/2)
-
-    call SATURATION_dens2qsat_liq( QSAT (:,:,:), & ! [OUT]
-                                   TEMP1(:,:,:), & ! [IN]
-                                   DENS0(:,:,:)  ) ! [IN]
-
-    ijk_sat = 0
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       if ( QSUM1(k,i,j) > QSAT(k,i,j) ) then
-          !$omp critical
-          ijk_sat = ijk_sat + 1
-          index_sat(ijk_sat,1) = k
-          index_sat(ijk_sat,2) = i
-          index_sat(ijk_sat,3) = j
-          !$omp end critical
-       endif
-    enddo
-    enddo
-    enddo
-
-    do ijk = 1, ijk_sat
-       k = index_sat(ijk,1)
-       i = index_sat(ijk,2)
-       j = index_sat(ijk,3)
-
-       ! store to work
-       temp = TEMP1(k,i,j)
-       do iq = 1, QA
-          q(iq) = QTRC1(k,i,j,iq)
-       enddo
-
-       converged = .false.
-       do ite = 1, itelim
-
-          call SATURATION_dens2qsat_liq( qsatl_new,   & ! [OUT]
-                                         temp,        & ! [IN]
-                                         DENS0(k,i,j) ) ! [IN]
-
-          ! Separation
-          q(I_QV) = qsatl_new
-          q(I_QC) = QSUM1(k,i,j) - qsatl_new
-
-          call THERMODYN_cv( CVtot,        & ! [OUT]
-                             q(:),         & ! [IN]
-                             TRACER_CV(:), & ! [IN]
-                             QDRY0(k,i,j)  ) ! [IN]
-
-          Emoist_new = temp * CVtot + qsatl_new * LHV
-
-          ! dX/dT
-          dqsatl_dT = ( LovR_liq / ( temp*temp ) + CVovR_liq / temp ) * qsatl_new
-
-          dqc_dT = - dqsatl_dT
-
-          dCVtot_dT = dqsatl_dT * TRACER_CV(I_QV) &
-                    + dqc_dT    * TRACER_CV(I_QC)
-
-          dEmoist_dT = temp * dCVtot_dT + CVtot + dqsatl_dT * LHV
-
-          dtemp = ( Emoist_new - Emoist(k,i,j) ) / dEmoist_dT
-          temp  = temp - dtemp
-
-          if ( abs(dtemp) < dtemp_criteria ) then
-             converged = .true.
-             exit
-          endif
-
-          if( temp*0.0_RP /= 0.0_RP) exit
-       enddo
-
-       if ( .NOT. converged ) then
-          write(*,*) 'xxx [moist_conversion] not converged! dtemp=', dtemp,k,i,j,ite
-          call PRC_MPIstop
-       endif
-
-       TEMP1(k,i,j) = temp
-       QTRC1(k,i,j,I_QV) = q(I_QV)
-       QTRC1(k,i,j,I_QC) = q(I_QC)
-    enddo
-
-#else
-    TEMP1 = UNDEF
-    QTRC1 = UNDEF
-#endif
-
-    return
-  end subroutine moist_conversion_liq
-
-  !-----------------------------------------------------------------------------
-  !> Iterative moist conversion (liquid/ice mixture)
-  !-----------------------------------------------------------------------------
-  subroutine moist_conversion_all( &
-       TEMP1,  &
-       QTRC1,  &
-       DENS0,  &
-       QSUM1,  &
-       QDRY0,  &
-       Emoist, &
-       I_QV,   &
-       I_QC,   &
-       I_QI    )
-#ifdef DRY
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
-#endif
-    use scale_process, only: &
-       PRC_MPIstop
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_cv => ATMOS_THERMODYN_cv
-    use scale_atmos_hydrometeor, only: &
-       LHV, &
-       LHF
-    use scale_atmos_saturation, only: &
-       SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all, &
-       SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
-       SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice, &
-       SATURATION_alpha         => ATMOS_SATURATION_alpha,         &
-       SATURATION_dalphadT      => ATMOS_SATURATION_dalphadT,      &
-       CVovR_liq, &
-       CVovR_ice, &
-       LovR_liq,  &
-       LovR_ice
-    implicit none
-
-    real(RP), intent(inout) :: TEMP1 (KA,IA,JA)
-    real(RP), intent(inout) :: QTRC1 (KA,IA,JA,QA)
-    real(RP), intent(in)    :: DENS0 (KA,IA,JA)
-    real(RP), intent(in)    :: QSUM1 (KA,IA,JA)
-    real(RP), intent(in)    :: QDRY0 (KA,IA,JA)
-    real(RP), intent(in)    :: Emoist(KA,IA,JA)
-    integer,  intent(in)    :: I_QV
-    integer,  intent(in)    :: I_QC
-    integer,  intent(in)    :: I_QI
-
-    real(RP) :: QSAT(KA,IA,JA) ! saturated water vapor
-
-    ! working
-    real(RP) :: temp
-    real(RP) :: q(QA)
-    real(RP) :: CVtot
-    real(RP) :: alpha
-    real(RP) :: qsat_new, qsatl_new, qsati_new
-    real(RP) :: Emoist_new ! moist internal energy
-
-    ! d(X)/dT
-    real(RP) :: dalpha_dT
-    real(RP) :: dqsat_dT, dqsatl_dT, dqsati_dT
-    real(RP) :: dqc_dT, dqi_dT
-    real(RP) :: dCVtot_dT
-    real(RP) :: dEmoist_dT
-    real(RP) :: dtemp
-
-    integer  :: ijk_sat
-    integer  :: index_sat(KA*IA*JA,3) ! list vector
-
-    integer, parameter :: itelim = 100
-    real(RP) :: dtemp_criteria
-    logical  :: converged
-    integer  :: k, i, j, ijk, iq, ite
-    !---------------------------------------------------------------------------
-
-#ifndef DRY
-    dtemp_criteria = 0.1_RP**(2+RP/2)
-
-    call SATURATION_dens2qsat_all( QSAT (:,:,:), & ! [OUT]
-                                   TEMP1(:,:,:), & ! [IN]
-                                   DENS0(:,:,:)  ) ! [IN]
-
-    ijk_sat = 0
-    !!$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !!$omp shared(JS,JE,IS,IE,KS,KE,QSUM1,QSAT,index_sat,ijk_sat)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       if ( QSUM1(k,i,j) > QSAT(k,i,j) ) then
-          !!$omp critical
-          ijk_sat = ijk_sat + 1
-          index_sat(ijk_sat,1) = k
-          index_sat(ijk_sat,2) = i
-          index_sat(ijk_sat,3) = j
-          !!$omp end critical
-       endif
-    enddo
-    enddo
-    enddo
-
-    do ijk = 1, ijk_sat
-       k = index_sat(ijk,1)
-       i = index_sat(ijk,2)
-       j = index_sat(ijk,3)
-
-       ! store to work
-       temp = TEMP1(k,i,j)
-       do iq = 1, QA
-          q(iq) = QTRC1(k,i,j,iq)
-       enddo
-
-       converged = .false.
-       do ite = 1, itelim
-
-          ! liquid/ice separation factor
-          call SATURATION_alpha( alpha, temp )
-          ! Saturation
-          call SATURATION_dens2qsat_all( qsat_new,  temp, DENS0(k,i,j) )
-          call SATURATION_dens2qsat_liq( qsatl_new, temp, DENS0(k,i,j) )
-          call SATURATION_dens2qsat_ice( qsati_new, temp, DENS0(k,i,j) )
-
-          ! Separation
-          q(I_QV) = qsat_new
-          q(I_QC) = ( QSUM1(k,i,j)-qsat_new ) * (        alpha )
-          q(I_QI) = ( QSUM1(k,i,j)-qsat_new ) * ( 1.0_RP-alpha )
-
-          call THERMODYN_cv( CVtot,        & ! [OUT]
-                             q(:),         & ! [IN]
-                             TRACER_CV(:), & ! [IN]
-                             QDRY0(k,i,j)  ) ! [IN]
-
-          Emoist_new = temp * CVtot + qsat_new * LHV - q(I_QI) * LHF
-
-          ! dX/dT
-          call SATURATION_dalphadT( dalpha_dT, temp )
-
-          dqsatl_dT = ( LovR_liq / ( temp*temp ) + CVovR_liq / temp ) * qsatl_new
-          dqsati_dT = ( LovR_ice / ( temp*temp ) + CVovR_ice / temp ) * qsati_new
-
-          dqsat_dT  = qsatl_new * dalpha_dT + dqsatl_dT * (        alpha ) &
-                    - qsati_new * dalpha_dT + dqsati_dT * ( 1.0_RP-alpha )
-
-          dqc_dT =  ( QSUM1(k,i,j)-qsat_new ) * dalpha_dT - dqsat_dT * (        alpha )
-          dqi_dT = -( QSUM1(k,i,j)-qsat_new ) * dalpha_dT - dqsat_dT * ( 1.0_RP-alpha )
-
-          dCVtot_dT = dqsat_dT * TRACER_CV(I_QV) &
-                    + dqc_dT   * TRACER_CV(I_QC) &
-                    + dqi_dT   * TRACER_CV(I_QI)
-
-          dEmoist_dT = temp * dCVtot_dT + CVtot + dqsat_dT * LHV - dqi_dT * LHF
-
-          dtemp = ( Emoist_new - Emoist(k,i,j) ) / dEmoist_dT
-          temp  = temp - dtemp
-
-          if ( abs(dtemp) < dtemp_criteria ) then
-             converged = .true.
-             exit
-          endif
-
-          if( temp*0.0_RP /= 0.0_RP) exit
-       enddo
-
-       if ( .NOT. converged ) then
-          write(*,*) TEMP1(k,i,j), dens0(k,i,j),q,QTRC1(k,i,j,I_QV),QTRC1(k,i,j,I_QC),QTRC1(k,i,j,I_QI)
-          write(*,*) 'xxx [moist_conversion] not converged! dtemp=', dtemp, k,i,j,ite
-          call PRC_MPIstop
-       endif
-
-       TEMP1(k,i,j) = temp
-       QTRC1(k,i,j,I_QV) = q(I_QV)
-       QTRC1(k,i,j,I_QC) = q(I_QC)
-       QTRC1(k,i,j,I_QI) = q(I_QI)
-    enddo
-
-#else
-    TEMP1 = UNDEF
-    QTRC1 = UNDEF
-#endif
-
-    return
-  end subroutine moist_conversion_all
-
-  !-----------------------------------------------------------------------------
-  !> precipitation transport
+  !> ATMOS_PHY_MP_precipitation
+  !! precipitation transport
+  !<
+!OCL SINGLE
   subroutine ATMOS_PHY_MP_precipitation( &
+       KA, KS, KE, QHA, QLA, QIA, &
+       TEMP, vterm, FDZ, RCDZ, dt,     &
+       i, j,                           &
+       DENS, RHOQ, CPtot, CVtot, RHOE, &
+       mflx, sflx                      )
+    use scale_const, only: &
+       GRAV  => CONST_GRAV
+    use scale_atmos_hydrometeor, only: &
+       CP_WATER, &
+       CP_ICE, &
+       CV_WATER, &
+       CV_ICE
+    implicit none
+    integer,  intent(in) :: KA, KS, KE
+    integer,  intent(in) :: QHA, QLA, QIA ! QHA = QLA + QIA
+
+    real(RP), intent(in) :: TEMP (KA)
+    real(RP), intent(in) :: vterm(KA,QHA) ! terminal velocity of cloud mass
+    real(RP), intent(in) :: FDZ  (KA)
+    real(RP), intent(in) :: RCDZ (KA)
+    real(DP), intent(in) :: dt
+    integer,  intent(in) :: i, j         ! for debug
+
+    real(RP), intent(inout) :: DENS (KA)
+    real(RP), intent(inout) :: RHOQ (KA,QHA)
+    real(RP), intent(inout) :: CPtot(KA)
+    real(RP), intent(inout) :: CVtot(KA)
+    real(RP), intent(inout) :: RHOE (KA)
+
+    real(RP), intent(out)   :: mflx (KA)
+    real(RP), intent(out)   :: sflx (2) !> 1: rain, 2: snow
+
+    real(RP) :: qflx(KA)
+    real(RP) :: eflx(KA)
+    real(RP) :: RHOCP(KA)
+    real(RP) :: RHOCV(KA)
+    real(RP) :: dDENS
+    real(RP) :: CP, CV
+
+    integer  :: k, iq
+    !---------------------------------------------------------------------------
+
+    ! tracer/energy transport by falldown
+    ! 1st order upwind, forward euler, velocity is always negative
+
+    mflx(:) = 0.0_RP
+    sflx(:) = 0.0_RP
+    qflx(KE) = 0.0_RP
+    eflx(KE) = 0.0_RP
+
+    do k = KS, KE
+       RHOCP(k) = CPtot(k) * DENS(k)
+       RHOCV(k) = CVtot(k) * DENS(k)
+    end do
+
+    do iq = 1, QHA
+
+       !--- mass flux for each tracer, upwind with vel < 0
+       do k = KS-1, KE-1
+          qflx(k) = vterm(k+1,iq) * RHOQ(k+1,iq)
+       enddo
+
+       !--- update falling tracer
+       do k  = KS, KE
+          rhoq(k,iq) = rhoq(k,iq) - dt * ( qflx(k) - qflx(k-1) ) * RCDZ(k)
+       enddo ! falling (water mass & number) tracer
+
+       ! QTRC(iq; iq>QLA+QLI) is not mass tracer, such as number density
+       if ( iq > QLA + QIA ) cycle
+
+       do k = KS-1, KE-1
+          mflx(k) = mflx(k) + qflx(k)
+       end do
+
+       if ( iq > QLA ) then ! ice water
+          CP = CP_ICE
+          CV = CV_ICE
+          sflx(2) = sflx(2) + qflx(KS-1)
+       else                 ! liquid water
+          CP = CP_WATER
+          CV = CV_WATER
+          sflx(1) = sflx(1) + qflx(KS-1)
+       end if
+
+       !--- update density
+       do k = KS, KE
+          dDENS = - ( qflx(k) - qflx(k-1) ) * RCDZ(k) * dt
+          RHOCP(k) = RHOCP(k) + CP * dDENS
+          RHOCV(k) = RHOCV(k) + CV * dDENS
+          DENS(k) = DENS(k) + dDENS
+       end do
+
+       ! internal energy flux
+       do k = KS-1, KE-1
+          eflx(k) = qflx(k) * TEMP(k+1) * CV &
+                  + qflx(k) * FDZ(k) * GRAV               ! potential energy
+       end do
+       !--- update internal energy
+       do k = KS, KE
+          RHOE(k) = RHOE(k) - ( eflx(k) - eflx(k-1) ) * RCDZ(k) * dt
+       end do
+
+    end do
+
+    do k = KS, KE
+       CPtot(k) = RHOCP(k) / DENS(k)
+       CVtot(k) = RHOCV(k) / DENS(k)
+    end do
+
+    return
+  end subroutine ATMOS_PHY_MP_precipitation
+  !-----------------------------------------------------------------------------
+  !> ATMOS_PHY_MP_precipitation_transfer
+  !! precipitation transport
+  !<
+!OCL SINGLE
+  subroutine ATMOS_PHY_MP_precipitation_momentum( &
+       KA, KS, KE, &
+       DENS, MOMZ, U, V, mflx, &
+       RCDZ, RFDZ,             &
+       MOMZ_t, RHOU_t, RHOV_t  )
+    implicit none
+    integer,  intent(in) :: KA, KS, KE
+
+    real(RP), intent(in) :: DENS(KA)
+    real(RP), intent(in) :: MOMZ(KA)
+    real(RP), intent(in) :: U   (KA)
+    real(RP), intent(in) :: V   (KA)
+    real(RP), intent(in) :: mflx(KA)
+    real(RP), intent(in) :: RCDZ(KA)
+    real(RP), intent(in) :: RFDZ(KA)
+
+    real(RP), intent(out) :: MOMZ_t(KA)
+    real(RP), intent(out) :: RHOU_t(KA)
+    real(RP), intent(out) :: RHOV_t(KA)
+
+    real(RP) :: flx(KA)
+
+    integer  :: k
+    integer  :: iq, iqa
+    !---------------------------------------------------------------------------
+
+    flx(KE) = 0.0_RP
+
+    !--- momentum z (half level)
+    do k = KS, KE-2
+       flx(k) = ( mflx(k) + mflx(k-1) ) * MOMZ(k+1) / ( DENS(k+2) + DENS(k+1) )
+    enddo
+    flx(KE-1) = 0.0_RP
+    do k  = KS, KE-1
+       MOMZ_t(k) = - ( flx(k+1) - flx(k) ) * RFDZ(k)
+    enddo
+    MOMZ_t(KE) = 0.0_RP
+
+    !--- momentum x
+    do k = KS-1, KE-1
+       flx(k) = mflx(k) * U(k+1)
+    enddo
+    do k = KS, KE
+       RHOU_t(k) = - ( flx(k) - flx(k-1) ) * RCDZ(k)
+    enddo
+
+    !--- momentum y
+    do k = KS-1, KE-1
+       flx(k) = mflx(k) * V(k+1)
+    enddo
+    do k = KS, KE
+       RHOV_t(k) = - ( flx(k) - flx(k-1) ) * RCDZ(k)
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_precipitation_momentum
+
+  subroutine ATMOS_PHY_MP_precipitation_obsolute( &
        QA_MP,   &
        QS_MP,   &
        qflx,    &
@@ -977,6 +1087,6 @@ contains
     call PROF_rapend  ('MP_Precipitation', 2)
 
     return
-  end subroutine ATMOS_PHY_MP_precipitation
+  end subroutine ATMOS_PHY_MP_precipitation_obsolute
 
 end module scale_atmos_phy_mp_common

@@ -51,12 +51,16 @@ module scale_atmos_phy_rd
           fact_urban,            &
           temp_sfc, albedo_land, &
           solins, cosSZA,        &
+          CLDFRAC, Re, Qe,       &
           flux_rad,              &
           flux_rad_top,          &
-          flux_sfc_dn            )
+          flux_sfc_dn,           &
+          dtau_s,                &
+          dem_s                  )
        use scale_precision
        use scale_grid_index
        use scale_tracer
+       use scale_atmos_hydrometeor, only: N_HYD
        implicit none
 
        real(RP), intent(in)  :: DENS        (KA,IA,JA)
@@ -71,9 +75,14 @@ module scale_atmos_phy_rd
        real(RP), intent(in)  :: albedo_land (IA,JA,2)
        real(RP), intent(in)  :: solins      (IA,JA)
        real(RP), intent(in)  :: cosSZA      (IA,JA)
+       real(RP), intent(in)  :: cldfrac     (KA,IA,JA)
+       real(RP), intent(in)  :: Re          (KA,IA,JA,N_HYD)
+       real(RP), intent(in)  :: Qe          (KA,IA,JA,N_HYD)
        real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2,2)
        real(RP), intent(out) :: flux_rad_top(IA,JA,2,2,2)
        real(RP), intent(out) :: flux_sfc_dn (IA,JA,2,2)
+       real(RP), intent(out) :: dtau_s      (KA,IA,JA)
+       real(RP), intent(out) :: dem_s       (KA,IA,JA)
      end subroutine rd
   end interface
   procedure(rd), pointer :: ATMOS_PHY_RD => NULL()
@@ -86,14 +95,9 @@ contains
   subroutine ATMOS_PHY_RD_setup( RD_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_atmos_phy_rd_mstrnx, only: &
-       ATMOS_PHY_RD_mstrnx_setup, &
-       ATMOS_PHY_RD_mstrnx
     use scale_atmos_phy_rd_offline, only: &
        ATMOS_PHY_RD_offline_setup, &
        ATMOS_PHY_RD_offline
-    use scale_atmos_phy_rd_mm5sw, only: &
-       swinit
     implicit none
 
     character(len=*), intent(in) :: RD_TYPE
@@ -104,16 +108,9 @@ contains
     select case( RD_TYPE )
     case('OFF')
        ! do nothing
-    case( 'MSTRNX' )
-       call ATMOS_PHY_RD_mstrnx_setup( RD_TYPE )
-       ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
     case( 'OFFLINE' )
        call ATMOS_PHY_RD_offline_setup( RD_TYPE )
        ATMOS_PHY_RD => ATMOS_PHY_RD_offline
-    case( 'WRF' )
-       call ATMOS_PHY_RD_mstrnx_setup( 'MSTRNX' )
-       ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
-       call swinit
     case default
        write(*,*) 'xxx invalid Radiation type(', trim(RD_TYPE), '). CHECK!'
        call PRC_MPIstop

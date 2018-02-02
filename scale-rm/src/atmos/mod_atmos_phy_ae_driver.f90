@@ -64,7 +64,6 @@ contains
     ! note: tentatively, aerosol module should be called at all time. we need dummy subprogram.
 !    if ( ATMOS_sw_phy_ae ) then
        call ATMOS_PHY_AE_config( ATMOS_PHY_AE_TYPE )
-
 !    else
 !       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
 !    endif
@@ -127,20 +126,20 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_atmos_phy_ae, only: &
        ATMOS_PHY_AE, &
        QA_AE, &
        QS_AE, &
        QE_AE
     use mod_atmos_vars, only: &
-       DENS,              &
-       MOMZ,              &
-       MOMX,              &
-       MOMY,              &
-       RHOT,              &
-       QTRC,              &
+       DENS   => DENS_av, &
+       MOMZ   => MOMZ_av, &
+       MOMX   => MOMX_av, &
+       MOMY   => MOMY_av, &
+       RHOT   => RHOT_av, &
+       QTRC   => QTRC_av, &
        RHOQ_t => RHOQ_tp
     use mod_atmos_phy_ae_vars, only: &
        RHOQ_t_AE => ATMOS_PHY_AE_RHOQ_t, &
@@ -165,8 +164,6 @@ contains
 
 !OCL XFILL
        CCN      (:,:,:)   = 0.0_RP ! reset
-!OCL XFILL
-       CCN_t    (:,:,:)   = 0.0_RP ! reset
 !OCL XFILL
        RHOQ_t_AE(:,:,:,:) = 0.0_RP ! reset
 
@@ -193,20 +190,20 @@ contains
 
        CCN_t(:,:,:) = CCN(:,:,:) / dt_AE
 
-       call HIST_in( CN (:,:,:)*1.E-6_RP, 'CN',  'condensation nucrei',       'num/cc' )
-       call HIST_in( CCN(:,:,:)*1.E-6_RP, 'CCN', 'cloud condensation nucrei', 'num/cc' )
+       call FILE_HISTORY_in( CN (:,:,:)*1.E-6_RP, 'CN',  'condensation nucrei',       'num/cc' )
+       call FILE_HISTORY_in( CCN(:,:,:)*1.E-6_RP, 'CCN', 'cloud condensation nucrei', 'num/cc' )
 
     endif
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do iq = QS_AE, QE_AE
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-       RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_AE(k,i,j,iq)
-    enddo
-    enddo
-    enddo
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_AE(k,i,j,iq)
+       enddo
+       enddo
+       enddo
     enddo
 
     if ( STATISTICS_checktotal ) then

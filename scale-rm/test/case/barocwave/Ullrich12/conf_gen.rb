@@ -238,14 +238,15 @@ def gen_run_conf( conf_name,
  ATMOS_DYN_FVM_FLUX_TYPE        = "#{flxEvalType}",             
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}", 
  ATMOS_DYN_NUMERICAL_DIFF_COEF  = 0.D0,
- ATMOS_DYN_DIVDMP_COEF          = 0.D0,
  ATMOS_DYN_FLAG_FCT_TRACER      = #{fctFlag}, 
- ATMOS_DYN_ENABLE_CORIOLIS      = T
+ ATMOS_DYN_WDAMP_HEIGHT         = 15.D3,
+ ATMOS_DYN_coriolis_type        = "PLANE",
+ ATMOS_DYN_coriolis_f0          = 1.031244D-4  ! 45 degrees north
+ ATMOS_DYN_coriolis_beta        = 1.618598D-11 ! 45 degrees north
 /
 
 &PARAM_USER
  USER_do = .true., 
- Phi0Deg = 45.D0, 
 /
 
 &PARAM_HISTORY

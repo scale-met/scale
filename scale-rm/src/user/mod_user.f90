@@ -215,8 +215,8 @@ contains
     use scale_const, only: &
          I_SW  => CONST_I_SW, &
          I_LW  => CONST_I_LW
-    use scale_fileio, only: &
-         FILEIO_read
+    use scale_file_cartesC, only: &
+         FILE_CARTESC_read
     use mod_land_vars, only: &
          LAND_TEMP, &
          LAND_WATER, &
@@ -256,64 +256,63 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (LAND) in mod_user ***'
 
     if ( READ_LAND_TEMP ) then
-       call FILEIO_read( LAND_TEMP(:,:,:),                                          & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'LAND_TEMP',      'Land', step=1 ) ! [IN]
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_TEMP', 'LXY', & ! [IN]
+                               LAND_TEMP(:,:,:), step=1                      ) ! [OUT]
     end if
 
     if ( READ_LAND_WATER ) then
-       call FILEIO_read( LAND_WATER(:,:,:),                                         & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'LAND_WATER',     'Land', step=1 ) ! [IN]
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_WATER', 'LXY', & ! [IN]
+                               LAND_WATER(:,:,:), step=1                      ) ! [OUT]
     end if
 
     if ( READ_LAND_SFC_TEMP ) then
-       call FILEIO_read( LAND_SFC_TEMP(:,:),                                        & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'LAND_SFC_TEMP',  'XY',   step=1 ) ! [IN]
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFC_TEMP', 'XY', & ! [IN]
+                               LAND_SFC_TEMP(:,:), step=1                       ) ! [OUT]
     end if
 
     if ( READ_LAND_ALB_LW ) then
-       call FILEIO_read( LAND_SFC_albedo(:,:,I_LW),                                 & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'LAND_ALB_LW',    'XY',   step=1 ) ! [IN]
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_ALB_LW', 'XY', & ! [IN]
+                               LAND_SFC_albedo(:,:,I_LW), step=1              ) ! [OUT]
     end if
 
     if ( READ_LAND_ALB_SW ) then
-       call FILEIO_read( LAND_SFC_albedo(:,:,I_SW),                                 & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'LAND_ALB_SW',    'XY',   step=1 ) ! [IN]
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_ALB_SW', 'XY', & ! [IN]
+                               LAND_SFC_albedo(:,:,I_SW), step=1              ) ! [OUT]
     end if
 
     if ( READ_LAND_SFLX_MW ) then
-       call FILEIO_read( LAND_SFLX_MW(:,:),                                         & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'LAND_SFLX_MW',   'XY',   step=1 ) ! [IN]
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFLX_MW', 'XY', & ! [IN]
+                               LAND_SFLX_MW(:,:), step=1                       ) ! [OUT]
     end if
 
     if ( READ_LAND_SFLX_MU ) then
-       call FILEIO_read( LAND_SFLX_MU(:,:),                                         & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'LAND_SFLX_MU',   'XY',   step=1 ) ! [IN]
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFLX_MU', 'XY', & ! [IN]
+                               LAND_SFLX_MU(:,:), step=1                       ) ! [OUT]
     end if
 
     if ( READ_LAND_SFLX_MV ) then
-       call FILEIO_read( LAND_SFLX_MV(:,:),                                         & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'LAND_SFLX_MV',   'XY',   step=1 ) ! [IN]
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFLX_MV', 'XY', & ! [IN]
+                               LAND_SFLX_MV(:,:), step=1                       ) ! [OUT]
     end if
 
     if ( READ_LAND_SFLX_SH ) then
-       call FILEIO_read( LAND_SFLX_SH(:,:),                                         & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'LAND_SFLX_SH',   'XY',   step=1 ) ! [IN]
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFLX_SH', 'XY', & ! [IN]
+                               LAND_SFLX_SH(:,:), step=1                       ) ! [OUT]
     end if
 
     if ( READ_LAND_SFLX_LH ) then
-       call FILEIO_read( LAND_SFLX_LH(:,:),                                         & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'LAND_SFLX_LH',   'XY',   step=1 ) ! [IN]
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFLX_LH', 'XY', & ! [IN]
+                               LAND_SFLX_LH(:,:), step=1                       ) ! [OUT]
     end if
 
     if ( READ_LAND_SFLX_GH ) then
-       call FILEIO_read( LAND_SFLX_GH(:,:),                                         & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'LAND_SFLX_GH',   'XY',   step=1 ) ! [IN]
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFLX_GH', 'XY', & ! [IN]
+                               LAND_SFLX_GH(:,:), step=1                       ) ! [OUT]
     end if
 
     if ( READ_LAND_SFLX_evap ) then
-       call FILEIO_read( LAND_SFLX_evap(:,:),                                       & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'LAND_SFLX_evap', 'XY',   step=1 ) ! [IN]
-
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFLX_evap', 'XY', & ! [IN]
+                               LAND_SFLX_evap(:,:), step=1                       ) ! [OUT]
     endif
 
     !---------------------------------------------------------------------------
@@ -322,73 +321,73 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (OCEAN) in mod_user ***'
 
     if ( READ_OCEAN_TEMP ) then
-       call FILEIO_read( OCEAN_TEMP(:,:),                                           & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'OCEAN_TEMP',      'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_TEMP', 'OXY', & ! [IN]
+                               OCEAN_TEMP(:,:,:), step=1                       ) ! [OUT]
     endif
 
     if ( READ_OCEAN_SFC_TEMP ) then
-       call FILEIO_read( OCEAN_SFC_TEMP(:,:),                                       & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_TEMP',  'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_TEMP', 'XY', & ! [IN]
+                               OCEAN_SFC_TEMP(:,:), step=1                        ) ! [OUT]
     endif
 
     if ( READ_OCEAN_ALB_LW ) then
-       call FILEIO_read( OCEAN_SFC_albedo(:,:,I_LW),                                & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'OCEAN_ALB_LW',    'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_ALB_LW', 'XY', & ! [IN]
+                               OCEAN_SFC_albedo(:,:,I_LW), step=1               ) ! [OUT]
     endif
 
     if ( READ_OCEAN_ALB_SW ) then
-       call FILEIO_read( OCEAN_SFC_albedo(:,:,I_SW),                                & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'OCEAN_ALB_SW',    'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_ALB_SW', 'XY', & ! [IN]
+                               OCEAN_SFC_albedo(:,:,I_SW), step=1               ) ! [OUT]
     endif
 
     if ( READ_OCEAN_SFC_Z0M ) then
-       call FILEIO_read( OCEAN_SFC_Z0M(:,:),                                        & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_Z0M',   'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_Z0M', 'XY', & ! [IN]
+                               OCEAN_SFC_Z0M(:,:), step=1                        ) ! [OUT]
     endif
 
     if ( READ_OCEAN_SFC_Z0H ) then
-       call FILEIO_read( OCEAN_SFC_Z0H(:,:),                                        & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_Z0H',   'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_Z0H', 'XY', & ! [IN]
+                               OCEAN_SFC_Z0H(:,:), step=1                        ) ! [OUT]
     endif
 
     if ( READ_OCEAN_SFC_Z0E ) then
-       call FILEIO_read( OCEAN_SFC_Z0E(:,:),                                        & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_Z0E',   'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_Z0E', 'XY', & ! [IN]
+                               OCEAN_SFC_Z0E(:,:), step=1                        ) ! [OUT]
     endif
 
     if ( READ_OCEAN_SFLX_MW ) then
-       call FILEIO_read( OCEAN_SFLX_MW(:,:),                                        & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_MW',   'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_MW', 'XY', & ! [IN]
+                               OCEAN_SFLX_MW(:,:), step=1                        ) ! [OUT]
     endif
 
     if ( READ_OCEAN_SFLX_MU ) then
-       call FILEIO_read( OCEAN_SFLX_MU(:,:),                                        & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_MU',   'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_MU', 'XY', & ! [IN]
+                               OCEAN_SFLX_MU(:,:), step=1                        ) ! [OUT]
     endif
 
     if ( READ_OCEAN_SFLX_MV ) then
-       call FILEIO_read( OCEAN_SFLX_MV(:,:),                                        & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_MV',   'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_MV', 'XY', & ! [IN]
+                               OCEAN_SFLX_MV(:,:), step=1                        ) ! [OUT]
     endif
 
     if ( READ_OCEAN_SFLX_SH ) then
-       call FILEIO_read( OCEAN_SFLX_SH(:,:),                                        & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_SH',   'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_SH', 'XY', & ! [IN]
+                               OCEAN_SFLX_SH(:,:), step=1                        ) ! [OUT]
     endif
 
     if ( READ_OCEAN_SFLX_LH ) then
-       call FILEIO_read( OCEAN_SFLX_LH(:,:),                                        & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_LH',   'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_LH', 'XY', & ! [IN]
+                               OCEAN_SFLX_LH(:,:), step=1                        ) ! [OUT]
     endif
 
     if ( READ_OCEAN_SFLX_WH ) then
-       call FILEIO_read( OCEAN_SFLX_WH(:,:),                                        & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_WH',   'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_WH', 'XY', & ! [IN]
+                               OCEAN_SFLX_WH(:,:), step=1                        ) ! [OUT]
     endif
 
     if ( READ_OCEAN_SFLX_evap ) then
-       call FILEIO_read( OCEAN_SFLX_evap(:,:),                                      & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_evap', 'XY', step=1 ) ! [IN]
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_evap', 'XY', & ! [IN]
+                               OCEAN_SFLX_evap(:,:), step=1                        ) ! [OUT]
     endif
 
     return

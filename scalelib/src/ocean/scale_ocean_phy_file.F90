@@ -18,6 +18,7 @@ module scale_ocean_phy_file
   use scale_prof
   use scale_debug
   use scale_grid_index
+  use scale_ocean_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -52,6 +53,7 @@ contains
     use scale_landuse, only: &
        LANDUSE_fact_ocean
     use scale_external_input, only: &
+       EXTIN_file_limit, &
        EXTIN_regist
     use scale_const, only: &
        UNDEF => CONST_UNDEF
@@ -59,15 +61,15 @@ contains
 
     character(len=*), intent(in) :: OCEAN_TYPE
 
-    character(len=H_LONG) :: OCEAN_PHY_FILE_basename              = ''
-    logical               :: OCEAN_PHY_FILE_enable_periodic_year  = .false.
-    logical               :: OCEAN_PHY_FILE_enable_periodic_month = .false.
-    logical               :: OCEAN_PHY_FILE_enable_periodic_day   = .false.
-    integer               :: OCEAN_PHY_FILE_step_fixed            = 0
-    real(RP)              :: OCEAN_PHY_FILE_offset                = 0.0_RP
-    real(RP)              :: OCEAN_PHY_FILE_defval              ! = UNDEF
-    logical               :: OCEAN_PHY_FILE_check_coordinates     = .true.
-    integer               :: OCEAN_PHY_FILE_step_limit            = 0
+    character(len=H_LONG) :: OCEAN_PHY_FILE_basename(EXTIN_file_limit) = ''
+    logical               :: OCEAN_PHY_FILE_enable_periodic_year       = .false.
+    logical               :: OCEAN_PHY_FILE_enable_periodic_month      = .false.
+    logical               :: OCEAN_PHY_FILE_enable_periodic_day        = .false.
+    integer               :: OCEAN_PHY_FILE_step_fixed                 = 0
+    real(RP)              :: OCEAN_PHY_FILE_offset                     = 0.0_RP
+    real(RP)              :: OCEAN_PHY_FILE_defval                   ! = UNDEF
+    logical               :: OCEAN_PHY_FILE_check_coordinates          = .true.
+    integer               :: OCEAN_PHY_FILE_step_limit                 = 0
 
     NAMELIST / PARAM_OCEAN_PHY_FILE / &
        OCEAN_PHY_FILE_basename,              &
@@ -105,12 +107,12 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN_PHY_FILE)
 
-    if ( OCEAN_PHY_FILE_basename == '' ) then
+    if ( OCEAN_PHY_FILE_basename(1) == '' ) then
        write(*,*) 'xxx OCEAN_PHY_FILE_basename is necessary'
        call PRC_MPIstop
     end if
 
-    call EXTIN_regist( OCEAN_PHY_FILE_basename,              & ! [IN]
+    call EXTIN_regist( OCEAN_PHY_FILE_basename(:),           & ! [IN]
                        'OCEAN_TEMP',                         & ! [IN]
                        'XY',                                 & ! [IN]
                        OCEAN_PHY_FILE_enable_periodic_year,  & ! [IN]
@@ -156,8 +158,8 @@ contains
          EXTIN_update
     implicit none
 
-    real(RP), intent(out) :: OCEAN_TEMP_t   (IA,JA)
-    real(RP), intent(in)  :: OCEAN_TEMP     (IA,JA)
+    real(RP), intent(out) :: OCEAN_TEMP_t   (OKMAX,IA,JA)
+    real(RP), intent(in)  :: OCEAN_TEMP     (OKMAX,IA,JA)
     real(RP), intent(in)  :: OCEAN_SFLX_WH  (IA,JA)
     real(RP), intent(in)  :: OCEAN_SFLX_prec(IA,JA)
     real(RP), intent(in)  :: OCEAN_SFLX_evap(IA,JA)
@@ -167,7 +169,7 @@ contains
 
     logical :: error
 
-    integer :: i, j
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean physics step: File'
@@ -184,10 +186,12 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       if( is_OCN(i,j) ) then
-          OCEAN_TEMP_t(i,j) = ( OCEAN_TEMP_new(i,j) - OCEAN_TEMP(i,j) ) / dt
-       else
-          OCEAN_TEMP_t(i,j) = 0.0_RP
+       do k = OKS, OKE
+          OCEAN_TEMP_t(k,i,j) = 0.0_RP
+       enddo
+
+       if ( is_OCN(i,j) ) then
+          OCEAN_TEMP_t(OKS,i,j) = ( OCEAN_TEMP_new(i,j) - OCEAN_TEMP(OKS,i,j) ) / dt
        endif
     enddo
     enddo

@@ -8,9 +8,9 @@ rm -f energy.dat mass.dat mass_q.dat
 while read -a line
 do
    if [ ${line[0]} == "STEP=" ]; then
-      echo ${line[1]} ${line[7]} ${line[8]}  ${line[9]}  ${line[10]} >> energy.dat
-      echo ${line[1]} ${line[3]} ${line[4]}  ${line[5]}  ${line[6]}  >> mass.dat
-      echo ${line[1]} ${line[4]} ${line[11]} ${line[12]} ${line[13]} >> mass_q.dat
+      echo ${line[1]} ${line[10]} ${line[11]} ${line[12]} ${line[13]} >> energy.dat
+      echo ${line[1]} ${line[6]}  ${line[7]} ${line[8]} ${line[9]} >> mass.dat
+      echo ${line[1]} ${line[3]}  ${line[4]}  ${line[5]}  ${line[7]} >> mass_q.dat
    fi
 done < monitor.pe000000
 

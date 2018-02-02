@@ -140,11 +140,8 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_time, only: &
        dt_TB => TIME_DTSEC_ATMOS_PHY_TB
     use scale_atmos_phy_tb, only: &
@@ -156,13 +153,13 @@ contains
        calc_tend_momy => ATMOS_PHY_TB_calc_tend_momy, &
        calc_tend_phi  => ATMOS_PHY_TB_calc_tend_phi
     use mod_atmos_vars, only: &
+       ATMOS_vars_get_diagnostic, &
        DENS => DENS_av,   &
        MOMZ => MOMZ_av,   &
        MOMX => MOMX_av,   &
        MOMY => MOMY_av,   &
        RHOT => RHOT_av,   &
        QTRC => QTRC_av,   &
-       N2   => N2,        &
        MOMZ_t => MOMZ_tp, &
        MOMX_t => MOMX_tp, &
        MOMY_t => MOMY_tp, &
@@ -195,6 +192,8 @@ contains
     real(RP) :: Ri(KA,IA,JA) ! Richardson number
     real(RP) :: Pr(KA,IA,JA) ! Prandtl number
 
+    real(RP) :: N2(KA,IA,JA)
+
     real(RP) :: tend(KA,IA,JA)
     real(RP) :: total ! dummy
 
@@ -208,6 +207,7 @@ contains
 
        RHOQ_t_TB = 0.0_RP
 
+       call ATMOS_vars_get_diagnostic( "N2", N2 )
        call ATMOS_PHY_TB( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,        & ! [OUT]
                           QFLX_RHOT, QFLX_RHOQ,                   & ! [OUT]
                           RHOQ_t_TB,                              & ! [INOUT]
@@ -286,61 +286,61 @@ contains
           end do
        end do
 
-       call HIST_in( NU (:,:,:), 'NU',  'eddy viscosity',           'm2/s' , nohalo=.true. )
-       call HIST_in( Ri (:,:,:), 'Ri',  'Richardson number',        'NIL'  , nohalo=.true. )
-       call HIST_in( Pr (:,:,:), 'Pr',  'Prantle number',           'NIL'  , nohalo=.true. )
+       call FILE_HISTORY_in( NU (:,:,:), 'NU',  'eddy viscosity',           'm2/s' , fill_halo=.true. )
+       call FILE_HISTORY_in( Ri (:,:,:), 'Ri',  'Richardson number',        'NIL'  , fill_halo=.true. )
+       call FILE_HISTORY_in( Pr (:,:,:), 'Pr',  'Prantle number',           'NIL'  , fill_halo=.true. )
 
-       call HIST_in( MOMZ_t_TB(:,:,:), 'MOMZ_t_TB', 'MOMZ tendency (TB)', 'kg/m2/s2',  nohalo=.true. )
-       call HIST_in( MOMX_t_TB(:,:,:), 'MOMX_t_TB', 'MOMX tendency (TB)', 'kg/m2/s2',  nohalo=.true. )
-       call HIST_in( MOMY_t_TB(:,:,:), 'MOMY_t_TB', 'MOMY tendency (TB)', 'kg/m2/s2',  nohalo=.true. )
-       call HIST_in( RHOT_t_TB(:,:,:), 'RHOT_t_TB', 'RHOT tendency (TB)', 'K.kg/m3/s', nohalo=.true. )
+       call FILE_HISTORY_in( MOMZ_t_TB(:,:,:), 'MOMZ_t_TB', 'MOMZ tendency (TB)', 'kg/m2/s2',  fill_halo=.true. )
+       call FILE_HISTORY_in( MOMX_t_TB(:,:,:), 'MOMX_t_TB', 'MOMX tendency (TB)', 'kg/m2/s2',  fill_halo=.true. )
+       call FILE_HISTORY_in( MOMY_t_TB(:,:,:), 'MOMY_t_TB', 'MOMY tendency (TB)', 'kg/m2/s2',  fill_halo=.true. )
+       call FILE_HISTORY_in( RHOT_t_TB(:,:,:), 'RHOT_t_TB', 'RHOT tendency (TB)', 'K.kg/m3/s', fill_halo=.true. )
 
        do iq = 1, QA
-          call HIST_in( RHOQ_t_TB(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_TB',                      &
-                        'RHO*'//trim(TRACER_NAME(iq))//' tendency (TB)', 'kg/m3/s', nohalo=.true. )
+          call FILE_HISTORY_in( RHOQ_t_TB(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_TB',                      &
+                        'tendency rho*'//trim(TRACER_NAME(iq))//' in TB', 'kg/m3/s', fill_halo=.true. )
        enddo
 
-       call HIST_in( QFLX_MOMZ(:,:,:,ZDIR), 'SGS_ZFLX_MOMZ', 'SGS Z FLUX of MOMZ', 'kg/m/s2', &
-                     nohalo=.true.)
-       call HIST_in( QFLX_MOMZ(:,:,:,XDIR), 'SGS_XFLX_MOMZ', 'SGS X FLUX of MOMZ', 'kg/m/s2', &
-                     xdim='half', zdim='half', nohalo=.true.)
-       call HIST_in( QFLX_MOMZ(:,:,:,YDIR), 'SGS_YFLX_MOMZ', 'SGS Y FLUX of MOMZ', 'kg/m/s2', &
-                     ydim='half', zdim='half', nohalo=.true.)
+       call FILE_HISTORY_in( QFLX_MOMZ(:,:,:,ZDIR), 'SGS_ZFLX_MOMZ', 'SGS Z FLUX of MOMZ', 'kg/m/s2', &
+                     fill_halo=.true.)
+       call FILE_HISTORY_in( QFLX_MOMZ(:,:,:,XDIR), 'SGS_XFLX_MOMZ', 'SGS X FLUX of MOMZ', 'kg/m/s2', &
+                     dim_type='ZHXHY', fill_halo=.true.)
+       call FILE_HISTORY_in( QFLX_MOMZ(:,:,:,YDIR), 'SGS_YFLX_MOMZ', 'SGS Y FLUX of MOMZ', 'kg/m/s2', &
+                     dim_type='ZHXYH', fill_halo=.true.)
 
-       call HIST_in( QFLX_MOMX(:,:,:,ZDIR), 'SGS_ZFLX_MOMX', 'SGS Z FLUX of MOMX', 'kg/m/s2', &
-                     xdim='half', zdim='half', nohalo=.true.)
-       call HIST_in( QFLX_MOMX(:,:,:,XDIR), 'SGS_XFLX_MOMX', 'SGS X FLUX of MOMX', 'kg/m/s2', &
-                     nohalo=.true.)
-       call HIST_in( QFLX_MOMX(:,:,:,YDIR), 'SGS_YFLX_MOMX', 'SGS Y FLUX of MOMX', 'kg/m/s2', &
-                     xdim='half', ydim='half', nohalo=.true.)
+       call FILE_HISTORY_in( QFLX_MOMX(:,:,:,ZDIR), 'SGS_ZFLX_MOMX', 'SGS Z FLUX of MOMX', 'kg/m/s2', &
+                     dim_type='ZHXHY', fill_halo=.true.)
+       call FILE_HISTORY_in( QFLX_MOMX(:,:,:,XDIR), 'SGS_XFLX_MOMX', 'SGS X FLUX of MOMX', 'kg/m/s2', &
+                     fill_halo=.true.)
+       call FILE_HISTORY_in( QFLX_MOMX(:,:,:,YDIR), 'SGS_YFLX_MOMX', 'SGS Y FLUX of MOMX', 'kg/m/s2', &
+                     dim_type='ZXHYH', fill_halo=.true.)
 
-       call HIST_in( QFLX_MOMY(:,:,:,ZDIR), 'SGS_ZFLX_MOMY', 'SGS Z FLUX of MOMY', 'kg/m/s2', &
-                     ydim='half', zdim='half', nohalo=.true.)
-       call HIST_in( QFLX_MOMY(:,:,:,XDIR), 'SGS_XFLX_MOMY', 'SGS X FLUX of MOMY', 'kg/m/s2', &
-                     xdim='half', ydim='half', nohalo=.true.)
-       call HIST_in( QFLX_MOMY(:,:,:,YDIR), 'SGS_YFLX_MOMY', 'SGS Y FLUX of MOMY', 'kg/m/s2', &
-                     nohalo=.true.)
+       call FILE_HISTORY_in( QFLX_MOMY(:,:,:,ZDIR), 'SGS_ZFLX_MOMY', 'SGS Z FLUX of MOMY', 'kg/m/s2', &
+                     dim_type='ZHXYH', fill_halo=.true.)
+       call FILE_HISTORY_in( QFLX_MOMY(:,:,:,XDIR), 'SGS_XFLX_MOMY', 'SGS X FLUX of MOMY', 'kg/m/s2', &
+                     dim_type='ZXHYH', fill_halo=.true.)
+       call FILE_HISTORY_in( QFLX_MOMY(:,:,:,YDIR), 'SGS_YFLX_MOMY', 'SGS Y FLUX of MOMY', 'kg/m/s2', &
+                     fill_halo=.true.)
 
-       call HIST_in( QFLX_RHOT(:,:,:,ZDIR), 'SGS_ZFLX_RHOT', 'SGS Z FLUX of RHOT', 'K*kg/m2/s', &
-                     zdim='half', nohalo=.true.)
-       call HIST_in( QFLX_RHOT(:,:,:,XDIR), 'SGS_XFLX_RHOT', 'SGS X FLUX of RHOT', 'K*kg/m2/s', &
-                     xdim='half', nohalo=.true.)
-       call HIST_in( QFLX_RHOT(:,:,:,YDIR), 'SGS_YFLX_RHOT', 'SGS Y FLUX of RHOT', 'K*kg/m2/s', &
-                     ydim='half', nohalo=.true.)
+       call FILE_HISTORY_in( QFLX_RHOT(:,:,:,ZDIR), 'SGS_ZFLX_RHOT', 'SGS Z FLUX of RHOT', 'K*kg/m2/s', &
+                     dim_type='ZHXY', fill_halo=.true.)
+       call FILE_HISTORY_in( QFLX_RHOT(:,:,:,XDIR), 'SGS_XFLX_RHOT', 'SGS X FLUX of RHOT', 'K*kg/m2/s', &
+                     dim_type='ZXHY', fill_halo=.true.)
+       call FILE_HISTORY_in( QFLX_RHOT(:,:,:,YDIR), 'SGS_YFLX_RHOT', 'SGS Y FLUX of RHOT', 'K*kg/m2/s', &
+                     dim_type='ZXYH', fill_halo=.true.)
 
 
        do iq = 1, QA
           if ( iq == I_TKE .or. .not. TRACER_ADVC(iq) ) cycle
 
-          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,iq), &
+          call FILE_HISTORY_in( QFLX_RHOQ(:,:,:,ZDIR,iq), &
                'SGS_ZFLX_'//trim(TRACER_NAME(iq)), 'SGS Z FLUX of '//trim(TRACER_NAME(iq)), 'kg/m2/s', &
-               zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,iq), &
+               dim_type='ZHXY', fill_halo=.true.)
+          call FILE_HISTORY_in( QFLX_RHOQ(:,:,:,XDIR,iq), &
                'SGS_XFLX_'//trim(TRACER_NAME(iq)), 'SGS X FLUX of '//trim(TRACER_NAME(iq)), 'kg/m2/s', &
-               xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,iq), &
+               dim_type='ZXHY', fill_halo=.true.)
+          call FILE_HISTORY_in( QFLX_RHOQ(:,:,:,YDIR,iq), &
                'SGS_YFLX_'//trim(TRACER_NAME(iq)), 'SGS Y FLUX of '//trim(TRACER_NAME(ia)), 'kg/m2/s', &
-               ydim='half', nohalo=.true.)
+               dim_type='ZXYH', fill_halo=.true.)
        end do
 
        if ( STATISTICS_checktotal ) then

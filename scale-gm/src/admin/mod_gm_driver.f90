@@ -16,8 +16,8 @@ module mod_gm_driver
   !
   use dc_log, only: &
      LogInit
-  use gtool_file, only: &
-     FileCloseAll
+  use scale_file, only: &
+     FILE_Close_All
   use scale_precision
   use scale_stdio
   use scale_prof
@@ -202,7 +202,7 @@ contains
     !########## Initial setup ##########
 
     ! setup standard I/O
-    call IO_setup( MODELNAME, .true., cnf_fname )
+    call IO_setup( MODELNAME, cnf_fname )
 
     ! setup MPI
     call PRC_LOCAL_setup( comm_world, & ! [IN]
@@ -384,7 +384,7 @@ contains
     !########## Finalize ##########
 
     call PROF_rapstart('File', 2)
-    call FileCloseAll
+    call FILE_Close_All
     call PROF_rapend  ('File', 2)
 
     call PROF_rapend  ('All', 1)

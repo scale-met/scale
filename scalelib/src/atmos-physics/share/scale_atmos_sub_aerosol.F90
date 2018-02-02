@@ -43,6 +43,23 @@ module scale_atmos_aerosol
   integer, public, parameter :: I_AT  = 8 !< tropo
   integer, public, parameter :: I_AOC = 9 !< yellow dust
 
+  character(len=H_SHORT), public, parameter :: AE_NAME(N_AE) = &
+       (/ "AD ", "ASO", "AVA", "AS ", "AR ", "ASS", "AU ", "AT ", "AOC" /)
+  character(len=H_MID),   public, parameter :: AE_DESC(N_AE) = &
+       (/ "dust-like      ", &
+          "soot           ", &
+          "volcanic ash   ", &
+          "sulfate (H2SO4)", &
+          "rural          ", &
+          "sea salt       ", &
+          "urban          ", &
+          "tropo          ", &
+          "yellow dust    " /)
+
+  real(RP), parameter, private :: rhod_ae = 1.83_RP ! particle density [g/cm3] sulfate assumed
+  real(RP), parameter, public :: AE_DENS(N_AE) = (/ rhod_ae, rhod_ae, rhod_ae, rhod_ae, rhod_ae, rhod_ae, rhod_ae, rhod_ae, rhod_ae /)
+
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure

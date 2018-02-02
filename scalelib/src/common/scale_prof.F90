@@ -165,7 +165,13 @@ contains
 
     integer :: id
     integer :: level_
+    integer :: tn
+    !$ integer :: omp_get_thread_num
     !---------------------------------------------------------------------------
+
+    tn = 0
+    !$ tn = omp_get_thread_num()
+    if ( tn > 0 ) return
 
     if ( present(level) ) then
        level_ = level
@@ -213,7 +219,13 @@ contains
 
     integer :: id
     integer :: level_
+    integer :: tn
+    !$ integer :: omp_get_thread_num
     !---------------------------------------------------------------------------
+
+    tn = 0
+    !$ tn = omp_get_thread_num()
+    if ( tn > 0 ) return
 
     if ( present(level) ) then
        if( level > PROF_rap_level ) return
@@ -357,6 +369,7 @@ contains
     integer  :: maxidx(3)
     integer  :: minidx(3)
 
+    real(DP) :: zerosw
     real(DP) :: PROF_PAPI_gflop
     real(DP) :: statistics(3)
     !---------------------------------------------------------------------------
@@ -385,6 +398,8 @@ contains
                              minidx(1:3), &
                              statistics (1:3)  )
 
+       zerosw = 0.5_DP - sign(0.5_DP,maxvar(2)-1.D-12) ! if maxvar(2) = 0 then zerosw = 1
+
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** PAPI Report'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
@@ -400,9 +415,9 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3,A,I6,A)') &
                   '*** TOTAL FLOP    [GFLOP] : ', avgvar(3)*PRC_nprocs, '(',PRC_nprocs,' PEs)'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') &
-                  '*** FLOPS        [GFLOPS] : ', avgvar(3)*PRC_nprocs/maxvar(2)
+                  '*** FLOPS        [GFLOPS] : ', avgvar(3)*PRC_nprocs * ( 1.0_DP-zerosw ) / ( maxvar(2)+zerosw )
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') &
-                  '*** FLOPS per PE [GFLOPS] : ', avgvar(3)/maxvar(2)
+                  '*** FLOPS per PE [GFLOPS] : ', avgvar(3)            * ( 1.0_DP-zerosw ) / ( maxvar(2)+zerosw )
        if( IO_L ) write(IO_FID_LOG,*)
 
        if ( IO_LOG_SUPPRESS ) then ! report to STDOUT
@@ -422,9 +437,9 @@ contains
              write(*,'(1x,A,F15.3,A,I6,A)') &
                   '*** TOTAL FLOP    [GFLOP] : ', avgvar(3)*PRC_nprocs, '(',PRC_nprocs,' PEs)'
              write(*,'(1x,A,F15.3)') &
-                  '*** FLOPS        [GFLOPS] : ', avgvar(3)*PRC_nprocs/maxvar(2)
+                  '*** FLOPS        [GFLOPS] : ', avgvar(3)*PRC_nprocs * ( 1.0_DP-zerosw ) / ( maxvar(2)+zerosw )
              write(*,'(1x,A,F15.3)') &
-                  '*** FLOPS per PE [GFLOPS] : ', avgvar(3)/maxvar(2)
+                  '*** FLOPS per PE [GFLOPS] : ', avgvar(3)            * ( 1.0_DP-zerosw ) / ( maxvar(2)+zerosw )
           endif
        endif
     endif

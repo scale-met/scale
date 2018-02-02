@@ -24,7 +24,7 @@
 !! @li      2012-07-27 (Y.Miyamoto)  [mod] divegence damping option
 !! @li      2012-08-16 (S.Nishizawa) [mod] use FCT for momentum and temperature
 !! @li      2012-09-21 (Y.Sato)      [mod] merge DYCOMS-II experimental set
-!! @li      2013-03-26 (Y.Sato)      [mod] modify Large scale forcing and corioli forcing
+!! @li      2013-03-26 (Y.Sato)      [mod] modify Large scale forcing and coriolis forcing
 !! @li      2013-04-04 (Y.Sato)      [mod] modify Large scale forcing
 !! @li      2013-06-14 (S.Nishizawa) [mod] enable to change order of numerical diffusion
 !! @li      2013-06-18 (S.Nishizawa) [mod] split part of RK to other files
@@ -65,7 +65,7 @@ module scale_atmos_dyn
   !
   !++ Public parameters & variables
   !
-  real(RP), public, allocatable :: CORIOLI   (:,:)       ! coriolis term
+  real(RP), public, allocatable :: CORIOLIS(:,:) ! coriolis term
 
   !-----------------------------------------------------------------------------
   !
@@ -116,11 +116,15 @@ contains
        wdamp_tau,                    &
        wdamp_height,                 &
        FZ,                           &
-       enable_coriolis,              &
+       coriolis_type,                &
+       coriolis_f0,                  &
+       coriolis_beta,                &
+       coriolis_y0,                  &
+       CY,                           &
        lat,                          &
        none                          )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_rm_process, only: &
        PRC_HAS_E, &
        PRC_HAS_W, &
@@ -173,10 +177,15 @@ contains
     real(RP),          intent(in)    :: wdamp_tau
     real(RP),          intent(in)    :: wdamp_height
     real(RP),          intent(in)    :: FZ(0:KA)
-    logical,           intent(in)    :: enable_coriolis
+    character(len=*),  intent(in)    :: coriolis_type
+    real(RP),          intent(in)    :: coriolis_f0
+    real(RP),          intent(in)    :: coriolis_beta
+    real(RP),          intent(in)    :: coriolis_y0
+    real(RP),          intent(in)    :: CY(JA)
     real(RP),          intent(in)    :: lat(IA,JA)
     logical, optional, intent(in)    :: none
 
+    integer :: j
     integer :: iv, iq
     !---------------------------------------------------------------------------
 
@@ -195,7 +204,7 @@ contains
        BND_S = .NOT. PRC_HAS_S
        BND_N = .NOT. PRC_HAS_N
 
-       allocate( CORIOLI   (IA,JA)        )
+       allocate( CORIOLIS  (IA,JA)        )
        allocate( mflx_hi   (KA,IA,JA,3)   )
        allocate( num_diff  (KA,IA,JA,5,3) )
        allocate( num_diff_q(KA,IA,JA,3)   )
@@ -230,11 +239,18 @@ contains
                                    FZ(:)                    ) ! [IN]
 
        ! coriolis parameter
-       if ( enable_coriolis ) then
-          CORIOLI(:,:) = 2.0_RP * OHM * sin( lat(:,:) )
-       else
-          CORIOLI(:,:) = 0.0_RP
-       endif
+       select case ( coriolis_type )
+       case ( 'PLANE' )
+          do j = 1, JA
+             CORIOLIS(:,j) = coriolis_f0 + coriolis_beta * ( CY(j) - coriolis_y0 )
+          end do
+       case ( 'SPHERE' )
+          CORIOLIS(:,:) = 2.0_RP * OHM * sin( lat(:,:) )
+       case default
+          write(*,*) 'xxx Coriolis type is invalid: ', trim(coriolis_type)
+          write(*,*) 'xxx The type must be PLANE or SPHERE'
+          call PRC_abort
+       end select
 
     else
 
@@ -278,6 +294,7 @@ contains
        DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    &
        DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
        divdmp_coef,                                          &
+       FLAG_TRACER_SPLIT_TEND,                               &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
        USE_AVERAGE,                                          &
@@ -364,6 +381,7 @@ contains
 
     real(RP), intent(in)    :: divdmp_coef
 
+    logical,  intent(in)    :: FLAG_TRACER_SPLIT_TEND
     logical,  intent(in)    :: FLAG_FCT_MOMENTUM
     logical,  intent(in)    :: FLAG_FCT_T
     logical,  intent(in)    :: FLAG_FCT_TRACER
@@ -486,7 +504,7 @@ contains
                                  mflx_hi, tflx_hi,                                     & ! [OUT]
                                  num_diff, num_diff_q,                                 & ! [OUT;WORK]
                                  DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, & ! [IN]
-                                 CORIOLI,                                              & ! [IN]
+                                 CORIOLIS,                                             & ! [IN]
                                  CDZ, CDX, CDY, FDZ, FDX, FDY,                         & ! [IN]
                                  RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   & ! [IN]
                                  PHI, GSQRT,                                           & ! [IN]
@@ -501,6 +519,7 @@ contains
                                  DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    & ! [IN]
                                  wdamp_coef,                                           & ! [IN]
                                  divdmp_coef,                                          & ! [IN]
+                                 FLAG_TRACER_SPLIT_TEND,                               & ! [IN]
                                  FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       & ! [IN]
                                  FLAG_FCT_ALONG_STREAM,                                & ! [IN]
                                  USE_AVERAGE,                                          & ! [IN]
@@ -535,8 +554,8 @@ contains
     use scale_comm, only: &
        COMM_datatype, &
        COMM_world
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_gridtrans, only: &
        I_XYZ, &
        I_XY
@@ -570,13 +589,13 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', zdim='half' )
-    call HIST_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction', 'kg/m2/s', xdim='half' )
-    call HIST_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction', 'kg/m2/s', ydim='half' )
+    call FILE_HISTORY_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', dim_type='ZHXY' )
+    call FILE_HISTORY_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction', 'kg/m2/s', dim_type='ZXHY' )
+    call FILE_HISTORY_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction', 'kg/m2/s', dim_type='ZXYH' )
 
-    call HIST_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction', 'K*kg/m2/s', zdim='half' )
-    call HIST_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction', 'K*kg/m2/s', xdim='half' )
-    call HIST_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction', 'K*kg/m2/s', ydim='half' )
+    call FILE_HISTORY_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction', 'K*kg/m2/s', dim_type='ZHXY' )
+    call FILE_HISTORY_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction', 'K*kg/m2/s', dim_type='ZXHY' )
+    call FILE_HISTORY_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction', 'K*kg/m2/s', dim_type='ZXYH' )
 
     mflx_lb_total            = 0.0_RP
     mflx_lb_horizontal(:)    = 0.0_RP
@@ -679,7 +698,7 @@ contains
                         COMM_world,                   &
                         ierr                          )
 
-    call HIST_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz',                           &
+    call FILE_HISTORY_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz',                           &
                     'horizontally total momentum flux from lateral boundary', 'kg/m2/s' )
 
     return

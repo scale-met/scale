@@ -53,6 +53,14 @@ else
 endif
 
 
+# for the netcdf-fortran package of Fedra and Cent OS
+ifneq ($(shell ls /etc/redhat-release 2> /dev/null),)
+  ifeq ($(SCALE_SYS),Linux64-gnu-ompi)
+    SCALE_NETCDF_INCLUDE += -I/usr/lib64/gfortran/modules
+  endif
+endif
+
+
 checknetcdf:
 	@echo SCALE_NETCDF_LIBS    : $(SCALE_NETCDF_LIBS)
 	@echo SCALE_NETCDF_INCLUDE : $(SCALE_NETCDF_INCLUDE)

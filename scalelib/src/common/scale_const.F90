@@ -105,13 +105,14 @@ module scale_const
   !
   !++ Private parameters & variables
   !
+  logical, private :: initialized = .false.
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CONST_setup
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
 
     real(RP) :: CONST_SmallPlanetFactor = 1.0_RP !< factor for small planet
@@ -132,6 +133,9 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    if ( initialized ) return
+    initialized = .true.
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CONST] / Categ[COMMON] / Origin[SCALElib]'
 
@@ -142,7 +146,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CONST. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_CONST)
 
@@ -152,7 +156,7 @@ contains
        CONST_UNDEF = real(CONST_UNDEF8,kind=RP)
     else
        write(*,*) 'xxx unsupported precision: ', RP
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     CONST_PI      = 4.0_RP * atan( 1.0_RP )

@@ -8,9 +8,9 @@ rm -f energy.dat mass.dat mass_q.dat
 while read -a line
 do
    if [ ${line[0]} == "STEP=" ]; then
-      echo ${line[1]} ${line[7]} ${line[8]}  ${line[9]}  ${line[10]} >> energy.dat
-      echo ${line[1]} ${line[3]} ${line[4]}  ${line[5]}  ${line[6]}  >> mass.dat
-      echo ${line[1]} ${line[4]} ${line[11]} ${line[12]} ${line[13]} ${line[14]} ${line[15]} ${line[16]} >> mass_q.dat
+      echo ${line[1]} ${line[13]} ${line[14]} ${line[15]} ${line[16]} >> energy.dat
+      echo ${line[1]} ${line[9]}  ${line[10]} ${line[11]} ${line[12]} >> mass.dat
+      echo ${line[1]} ${line[3]}  ${line[4]}  ${line[5]}  ${line[6]} ${line[7]} ${line[8]} ${line[10]} >> mass_q.dat
    fi
 done < monitor.pe000000
 
@@ -62,8 +62,8 @@ do
    let i="${i} + 1"
 done
 
-var__set=(RH QC QR QI QS QG)
-rangeset=(auto auto auto auto auto auto)
+var__set=(RH QC QR QI QS QG Re_QC Re_QR)
+rangeset=(auto auto auto auto auto auto auto auto)
 time_set=
 
 i=0
@@ -86,6 +86,28 @@ do
    rm -f dcl.pdf
    gpview history.pe\*.nc@${var},y=16000,z=0:15000 --nocont --mean z ${eddy} --exch --wsn 2 || exit
    convert -density 150 -rotate 90 +antialias dcl.pdf column_${var}.png
+   rm -f dcl.pdf
+
+   let i="${i} + 1"
+done
+
+var__set=(PREC RAIN SNOW)
+rangeset=(auto auto auto)
+
+i=0
+for var in ${var__set[@]}
+do
+   if [ ${rangeset[${i}]} == "auto" ]; then
+      eddy=""
+   elif [ ${rangeset[${i}]} == "eddy" ]; then
+      eddy="--eddy time"
+   else
+      eddy=""
+   fi
+
+   # time series
+   gpview history.pe\*.nc@${var} --nocont --mean y ${eddy} --wsn 2 || exit
+   convert -density 150 -rotate 90 +antialias dcl.pdf hov_${var}.png
    rm -f dcl.pdf
 
    let i="${i} + 1"

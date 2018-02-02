@@ -54,6 +54,7 @@ module scale_atmos_dyn_tinteg_large
           DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
           wdamp_coef,                                           &
           divdmp_coef,                                          &
+          FLAG_TRACER_SPLIT_TEND,                               &
           FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
           FLAG_FCT_ALONG_STREAM,                                &
           USE_AVERAGE,                                          &
@@ -149,6 +150,7 @@ module scale_atmos_dyn_tinteg_large
 
        real(RP), intent(in)    :: wdamp_coef(KA)
        real(RP), intent(in)    :: divdmp_coef
+       logical,  intent(in)    :: FLAG_TRACER_SPLIT_TEND
        logical,  intent(in)    :: FLAG_FCT_MOMENTUM
        logical,  intent(in)    :: FLAG_FCT_T
        logical,  intent(in)    :: FLAG_FCT_TRACER

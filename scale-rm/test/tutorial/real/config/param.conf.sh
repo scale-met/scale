@@ -14,10 +14,12 @@ cat << EOF > param.admin.conf
 
 &PARAM_ATMOS
  ATMOS_DYN_TYPE    = "${ATMOS_DYN_TYPE[$D]}",
+ ATMOS_PHY_CP_TYPE = "${ATMOS_PHY_CP_TYPE[$D]}",
  ATMOS_PHY_MP_TYPE = "${ATMOS_PHY_MP_TYPE[$D]}",
  ATMOS_PHY_RD_TYPE = "${ATMOS_PHY_RD_TYPE[$D]}",
  ATMOS_PHY_SF_TYPE = "${ATMOS_PHY_SF_TYPE[$D]}",
  ATMOS_PHY_TB_TYPE = "${ATMOS_PHY_TB_TYPE[$D]}",
+ ATMOS_PHY_BL_TYPE = "${ATMOS_PHY_BL_TYPE[$D]}",
 /
 
 &PARAM_OCEAN
@@ -132,7 +134,7 @@ cat << EOF > param.physics.conf
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "UD3KOREN1993",
  ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.0,
  ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.0,
- ATMOS_DYN_enable_coriolis            = .true.,
+ ATMOS_DYN_coriolis_type              = "SPHERE",
  ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
  ATMOS_DYN_WDAMP_HEIGHT               = 15.D3,
 /
@@ -151,18 +153,15 @@ cat << EOF > param.physics.conf
 
 EOF
 
-if [ ${ATMOS_PHY_TB_TYPE[$D]} = "HYBRID" ]; then
+if [ ${ATMOS_PHY_BL_TYPE[$D]} = "MYNN" ]; then
+if [ ${ATMOS_PHY_TB_TYPE[$D]} = "SMAGORINSKY" ]; then
   cat <<EOF >> param.physics.conf
-&PARAM_ATMOS_PHY_TB_HYBRID
- ATMOS_PHY_TB_HYBRID_SGS_TYPE = "SMAGORINSKY",
- ATMOS_PHY_TB_HYBRID_PBL_TYPE = "MYNN",
-/
-
 &PARAM_ATMOS_PHY_TB_SMG
  ATMOS_PHY_TB_SMG_horizontal = .true.,
 /
 
 EOF
+fi
 fi
 
 cat <<EOF >> param.physics.conf
@@ -220,14 +219,14 @@ cat << EOF > param.history.conf
 #
 #################################################
 
-&PARAM_HISTORY
- HISTORY_DEFAULT_BASENAME  = "${HISTORY_DEFAULT_BASENAME}",
- HISTORY_DEFAULT_TINTERVAL = ${TIME_DT_HISTORY_2D},
- HISTORY_DEFAULT_TUNIT     = "${TIME_DT_UNIT}",
- HISTORY_DEFAULT_TAVERAGE  = .false.,
- HISTORY_DEFAULT_DATATYPE  = "REAL4",
- HISTORY_DEFAULT_ZCOORD    = "model",
- HISTORY_OUTPUT_STEP0      = .true.,
+&PARAM_FILE_HISTORY
+ FILE_HISTORY_DEFAULT_BASENAME  = "${HISTORY_DEFAULT_BASENAME}",
+ FILE_HISTORY_DEFAULT_TINTERVAL = ${TIME_DT_HISTORY_2D},
+ FILE_HISTORY_DEFAULT_TUNIT     = "${TIME_DT_UNIT}",
+ FILE_HISTORY_DEFAULT_TAVERAGE  = .false.,
+ FILE_HISTORY_DEFAULT_DATATYPE  = "REAL4",
+ FILE_HISTORY_DEFAULT_ZCOORD    = "model",
+ FILE_HISTORY_OUTPUT_STEP0      = .true.,
 /
 
 &PARAM_HIST
@@ -239,24 +238,24 @@ EOF
 if [ ${#HIST_ITEMS_SNAPSHOT_2D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_SNAPSHOT_2D[*]}
   do
-    echo "&HISTITEM item=\"${VAR}\" /" >> param.history.conf
+    echo "&HISTORY_ITEM name=\"${VAR}\" /" >> param.history.conf
   done
 fi
 if [ ${#HIST_ITEMS_SNAPSHOT_3D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_SNAPSHOT_3D[*]}
   do
-    echo "&HISTITEM item=\"${VAR}\", tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
+    echo "&HISTORY_ITEM name=\"${VAR}\", tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
   done
 fi
 if [ ${#HIST_ITEMS_AVERAGE_2D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_AVERAGE_2D[*]}
   do
-    echo "&HISTITEM item=\"${VAR}\", taverage=.true. /" >> param.history.conf
+    echo "&HISTORY_ITEM name=\"${VAR}\", taverage=.true. /" >> param.history.conf
   done
 fi
 if [ ${#HIST_ITEMS_AVERAGE_3D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_AVERAGE_3D[*]}
   do
-    echo "&HISTITEM item=\"${VAR}\", taverage=.true., tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
+    echo "&HISTORY_ITEM name=\"${VAR}\", taverage=.true., tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
   done
 fi

@@ -164,6 +164,7 @@ contains
        PRC_MPIstop
     use scale_landuse, only: &
        LANDUSE_calc_fact,  &
+       LANDUSE_fillhalo,   &
        LANDUSE_write
     implicit none
     !---------------------------------------------------------------------------
@@ -189,6 +190,7 @@ contains
 
        ! calculate landuse factors
        call LANDUSE_calc_fact
+       call LANDUSE_fillhalo( FILL_BND=.true. )
 
        if( IO_L ) write(IO_FID_LOG,*) '++++++ END   CONVERT LANDUSE DATA ++++++'
 
@@ -222,13 +224,13 @@ contains
        REAL_LONX
     implicit none
 
+    character(len=H_LONG) :: GLCCv2_IN_DIR        = '.'    !< directory contains GLCCv2 files (GrADS format)
     character(len=H_LONG) :: GLCCv2_IN_CATALOGUE  = ''     !< metadata files for GLCCv2
-    character(len=H_LONG) :: GLCCv2_IN_DIR        = ''     !< directory contains GLCCv2 files (GrADS format)
     real(RP)              :: limit_urban_fraction = 1.0_RP !< fraction limiter for urban area
 
     NAMELIST / PARAM_CNVLANDUSE_GLCCv2 / &
-       GLCCv2_IN_CATALOGUE, &
        GLCCv2_IN_DIR,       &
+       GLCCv2_IN_CATALOGUE, &
        limit_urban_fraction
 
     ! data catalogue list
@@ -259,7 +261,7 @@ contains
     real(RP) :: ifrac_l ! fraction for iloc
     real(RP) :: jfrac_b ! fraction for jloc
 
-    real(RP) :: REAL_LONX_mod(IA,JA)
+    real(RP) :: REAL_LONX_mod(0:IA,JA)
     real(RP) :: DOMAIN_LATS, DOMAIN_LATE
     real(RP) :: DOMAIN_LONS, DOMAIN_LONE
     integer  :: DOMAIN_LONSLOC(2), DOMAIN_LONELOC(2)
@@ -343,7 +345,7 @@ contains
     DOMAIN_LONELOC = maxloc(REAL_LONX_mod(:,:))
 
     check_IDL = .false.
-    if (      DOMAIN_LONS < REAL_LONX_mod(1 ,DOMAIN_LONSLOC(2)) &
+    if (      DOMAIN_LONS < REAL_LONX_mod(0 ,DOMAIN_LONSLOC(2)) &
          .OR. DOMAIN_LONE > REAL_LONX_mod(IA,DOMAIN_LONELOC(2)) ) then
        check_IDL = .true.
        DOMAIN_LONS = minval(REAL_LONX_mod(:,:),mask=(REAL_LONX_mod>0.0_RP))
@@ -629,7 +631,7 @@ contains
        ! land fraction : 1 - ocean / total
        allsum = categ_sum(i,j,-2) + categ_sum(i,j,-1) + categ_sum(i,j,0) + categ_pftsum
        zerosw = 0.5_RP - sign( 0.5_RP, allsum-EPS )
-       LANDUSE_frac_land (i,j) = 1.0_RP-zerosw - categ_sum(i,j,-1) * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
+       LANDUSE_frac_land (i,j) = ( allsum-categ_sum(i,j,-1) ) * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
 
        ! lake fraction : lake / ( total - ocean )
        allsum = categ_sum(i,j,-2) + categ_sum(i,j,0) + categ_pftsum
@@ -702,13 +704,13 @@ contains
        REAL_LONX
     implicit none
 
+    character(len=H_LONG) :: LU100M_IN_DIR       = '.'     !< directory contains LU100M files (GrADS format)
     character(len=H_LONG) :: LU100M_IN_CATALOGUE = ''      !< metadata files for LU100M
-    character(len=H_LONG) :: LU100M_IN_DIR       = ''      !< directory contains LU100M files (GrADS format)
     real(RP)              :: limit_urban_fraction = 1.0_RP !< fraction limiter for urban area
 
     NAMELIST / PARAM_CNVLANDUSE_LU100M / &
-       LU100M_IN_CATALOGUE, &
        LU100M_IN_DIR,       &
+       LU100M_IN_CATALOGUE, &
        limit_urban_fraction
 
     ! data catalogue list
@@ -739,7 +741,7 @@ contains
     real(RP) :: ifrac_l ! fraction for iloc
     real(RP) :: jfrac_b ! fraction for jloc
 
-    real(RP) :: REAL_LONX_mod(IA,JA)
+    real(RP) :: REAL_LONX_mod(0:IA,JA)
     real(RP) :: DOMAIN_LATS, DOMAIN_LATE
     real(RP) :: DOMAIN_LONS, DOMAIN_LONE
     integer  :: DOMAIN_LONSLOC(2), DOMAIN_LONELOC(2)
@@ -816,7 +818,7 @@ contains
     DOMAIN_LONELOC = maxloc(REAL_LONX_mod(:,:))
 
     check_IDL = .false.
-    if (      DOMAIN_LONS < REAL_LONX_mod(1 ,DOMAIN_LONSLOC(2)) &
+    if (      DOMAIN_LONS < REAL_LONX_mod(0 ,DOMAIN_LONSLOC(2)) &
          .OR. DOMAIN_LONE > REAL_LONX_mod(IA,DOMAIN_LONELOC(2)) ) then
        check_IDL = .true.
        DOMAIN_LONS = minval(REAL_LONX_mod(:,:),mask=(REAL_LONX_mod>0.0_RP))

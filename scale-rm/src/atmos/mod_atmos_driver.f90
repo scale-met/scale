@@ -14,6 +14,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module mod_atmos_driver
   !-----------------------------------------------------------------------------
   !
@@ -57,16 +58,26 @@ contains
   !> Config
   subroutine ATMOS_driver_config
     use mod_atmos_phy_mp_driver, only: &
-       ATMOS_PHY_MP_driver_config
+       ATMOS_PHY_MP_driver_tracer_setup
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_config
+    use mod_atmos_phy_ch_driver, only: &
+       ATMOS_PHY_CH_driver_config
     use mod_atmos_phy_tb_driver, only: &
        ATMOS_PHY_TB_driver_config
+    use mod_atmos_phy_bl_driver, only: &
+       ATMOS_PHY_BL_driver_tracer_setup
     implicit none
+    !---------------------------------------------------------------------------
 
-    call ATMOS_PHY_MP_driver_config
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CONFIG] / Categ[ATMOS] / Origin[SCALE-RM]'
+
+    call ATMOS_PHY_MP_driver_tracer_setup
     call ATMOS_PHY_AE_driver_config
+    call ATMOS_PHY_CH_driver_config
     call ATMOS_PHY_TB_driver_config
+    call ATMOS_PHY_BL_driver_tracer_setup
 
     return
   end subroutine ATMOS_driver_config
@@ -86,16 +97,20 @@ contains
        ATMOS_DYN_driver_setup
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_setup
-    use mod_atmos_phy_rd_driver, only: &
-       ATMOS_PHY_RD_driver_setup
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP
     use mod_atmos_phy_ch_driver, only: &
        ATMOS_PHY_CH_driver_setup
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_setup
+    use mod_atmos_phy_rd_driver, only: &
+       ATMOS_PHY_RD_driver_setup
     use mod_atmos_phy_sf_driver, only: &
        ATMOS_PHY_SF_driver_setup
     use mod_atmos_phy_tb_driver, only: &
        ATMOS_PHY_TB_driver_setup
+    use mod_atmos_phy_bl_driver, only: &
+       ATMOS_PHY_BL_driver_setup
     use mod_atmos_phy_cp_driver, only: &
        ATMOS_PHY_CP_driver_setup
     implicit none
@@ -115,7 +130,7 @@ contains
     call PROF_rapend  ('ATM_Refstate', 2)
 
     call PROF_rapstart('ATM_Boundary', 2)
-    call ATMOS_BOUNDARY_setup
+    call ATMOS_BOUNDARY_setup( QA_MP )
     call PROF_rapend  ('ATM_Boundary', 2)
 
     ! setup each components
@@ -126,6 +141,7 @@ contains
     call ATMOS_PHY_RD_driver_setup
     call ATMOS_PHY_SF_driver_setup
     call ATMOS_PHY_TB_driver_setup
+    call ATMOS_PHY_BL_driver_setup
     call ATMOS_PHY_CP_driver_setup
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -138,7 +154,7 @@ contains
   !> Resume
   subroutine ATMOS_driver_resume1
     use mod_atmos_vars, only: &
-       ATMOS_vars_diagnostics,     &
+       ATMOS_vars_calc_diagnostics,     &
        ATMOS_vars_history_setpres, &
        DENS,                       &
        MOMZ,                       &
@@ -158,12 +174,12 @@ contains
        ATMOS_BOUNDARY_resume
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_resume
-    use mod_atmos_phy_rd_driver, only: &
-       ATMOS_PHY_RD_driver_resume
     use mod_atmos_phy_ch_driver, only: &
        ATMOS_PHY_CH_driver_resume
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_resume
+    use mod_atmos_phy_rd_driver, only: &
+       ATMOS_PHY_RD_driver_resume
     implicit none
     !---------------------------------------------------------------------------
 
@@ -207,7 +223,7 @@ contains
     call ATMOS_PHY_RD_driver_resume
 
     !########## Calculate diagnostic variables ##########
-    call ATMOS_vars_diagnostics
+    call ATMOS_vars_calc_diagnostics
     call ATMOS_vars_history_setpres
 
     !########## Set Surface Boundary Condition ##########
@@ -227,12 +243,14 @@ contains
     use mod_atmos_vars, only: &
        ATMOS_vars_history, &
        ATMOS_vars_monitor
-    use mod_atmos_phy_cp_driver, only: &
-       ATMOS_PHY_CP_driver_resume
     use mod_atmos_phy_sf_driver, only: &
        ATMOS_PHY_SF_driver_resume
     use mod_atmos_phy_tb_driver, only: &
        ATMOS_PHY_TB_driver_resume
+    use mod_atmos_phy_cp_driver, only: &
+       ATMOS_PHY_CP_driver_resume
+    use mod_atmos_phy_bl_driver, only: &
+       ATMOS_PHY_BL_driver_resume
     implicit none
     !---------------------------------------------------------------------------
 
@@ -250,6 +268,7 @@ contains
     ! setup each components
     call ATMOS_PHY_SF_driver_resume
     call ATMOS_PHY_TB_driver_resume
+    call ATMOS_PHY_BL_driver_resume
     call ATMOS_PHY_CP_driver_resume
 
     !########## Set Surface Boundary Condition ##########
@@ -280,6 +299,7 @@ contains
        do_phy_rd => TIME_DOATMOS_PHY_RD, &
        do_phy_sf => TIME_DOATMOS_PHY_SF, &
        do_phy_tb => TIME_DOATMOS_PHY_TB, &
+       do_phy_bl => TIME_DOATMOS_PHY_BL, &
        do_phy_cp => TIME_DOATMOS_PHY_CP
     use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_UPDATE_FLAG, &
@@ -295,10 +315,11 @@ contains
        ATMOS_sw_phy_rd, &
        ATMOS_sw_phy_sf, &
        ATMOS_sw_phy_tb, &
+       ATMOS_sw_phy_bl, &
        ATMOS_sw_phy_cp
     use mod_atmos_vars, only: &
        ATMOS_vars_history,         &
-       ATMOS_vars_diagnostics,     &
+       ATMOS_vars_calc_diagnostics,     &
        ATMOS_vars_history_setpres, &
        ATMOS_vars_monitor,         &
        DENS,                       &
@@ -309,14 +330,18 @@ contains
        QTRC,                       &
        DENS_tp,                    &
        MOMZ_tp,                    &
-       MOMX_tp,                    &
-       MOMY_tp,                    &
+       RHOU_tp,                    &
+       RHOV_tp,                    &
        RHOT_tp,                    &
-       RHOQ_tp
+       RHOH_p,                     &
+       RHOQ_tp,                    &
+       MOMX_tp,                    &
+       MOMY_tp
     use mod_atmos_dyn_driver, only: &
        ATMOS_DYN_driver
     use mod_atmos_phy_mp_driver, only: &
-       ATMOS_PHY_MP_driver
+       ATMOS_PHY_MP_driver_calc_tendency, &
+       ATMOS_PHY_MP_driver_adjustment
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver
     use mod_atmos_phy_ch_driver, only: &
@@ -327,6 +352,8 @@ contains
        ATMOS_PHY_SF_driver
     use mod_atmos_phy_tb_driver, only: &
        ATMOS_PHY_TB_driver
+    use mod_atmos_phy_bl_driver, only: &
+       ATMOS_PHY_BL_driver_calc_tendency
     use mod_atmos_phy_cp_driver, only: &
        ATMOS_PHY_CP_driver
     implicit none
@@ -358,79 +385,102 @@ contains
        call PROF_rapend  ('ATM_Boundary', 2)
     endif
 
-    !########## reset tendencies ##########
+
+    !########## Calculate diagnostic variables ##########
+    call ATMOS_vars_calc_diagnostics
+
+
+    !########## Adjustment ##########
+    ! Microphysics
+    if ( ATMOS_sw_phy_mp .and. do_phy_mp ) then
+       call PROF_rapstart('ATM_Microphysics', 1)
+       call ATMOS_PHY_MP_driver_adjustment
+       call PROF_rapend  ('ATM_Microphysics', 1)
+       call ATMOS_vars_calc_diagnostics
+    endif
+
+    !########## Set hydrostatic pressure coordinate ##########
+    call PROF_rapstart('ATM_History', 1)
+    call ATMOS_vars_history_setpres
+    call PROF_rapend  ('ATM_History', 1)
+
+
+    !########## calculate tendency ##########
+    ! reset tendencies
 !OCL XFILL
     DENS_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
     MOMZ_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
-    MOMX_tp(:,:,:)   = 0.0_RP
+    RHOU_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
-    MOMY_tp(:,:,:)   = 0.0_RP
+    RHOV_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
     RHOT_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
+    RHOH_p (:,:,:)   = 0.0_RP
+!OCL XFILL
     RHOQ_tp(:,:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMX_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
+    MOMY_tp(:,:,:)   = 0.0_RP
 
-    !########## Calculate diagnostic variables ##########
-    call PROF_rapstart('ATM_History', 1)
-    call ATMOS_vars_diagnostics
-    call ATMOS_vars_history_setpres
-    call PROF_rapend  ('ATM_History', 1)
-
-    !########## Microphysics ##########
+    ! Microphysics
     if ( ATMOS_sw_phy_mp ) then
        call PROF_rapstart('ATM_Microphysics', 1)
-       call ATMOS_PHY_MP_driver( update_flag = do_phy_mp )
+       call ATMOS_PHY_MP_driver_calc_tendency( update_flag = do_phy_mp )
        call PROF_rapend  ('ATM_Microphysics', 1)
     endif
-
-    !########## Aerosol ##########
+    ! Aerosol
     if ( ATMOS_sw_phy_ae ) then
        call PROF_rapstart('ATM_Aerosol', 1)
        call ATMOS_PHY_AE_driver( update_flag = do_phy_ae )
        call PROF_rapend  ('ATM_Aerosol', 1)
     endif
-
-    !########## Chemistry ##########
+    ! Chemistry
     if ( ATMOS_sw_phy_ch ) then
        call PROF_rapstart('ATM_Chemistry', 1)
        call ATMOS_PHY_CH_driver( update_flag = do_phy_ch )
        call PROF_rapend  ('ATM_Chemistry', 1)
     endif
-
-    !########## Radiation ##########
+    ! Radiation
     if ( ATMOS_sw_phy_rd ) then
        call PROF_rapstart('ATM_Radiation', 1)
        call ATMOS_PHY_RD_driver( update_flag = do_phy_rd )
        call PROF_rapend  ('ATM_Radiation', 1)
     endif
-
-    !########## Surface Flux ##########
+    ! Surface Flux
     if ( ATMOS_sw_phy_sf ) then
        call PROF_rapstart('ATM_SurfaceFlux', 1)
        call ATMOS_PHY_SF_driver( update_flag = do_phy_sf )
        call PROF_rapend  ('ATM_SurfaceFlux', 1)
     endif
-
-    !########## Turbulence ##########
+    ! Turbulence
     if ( ATMOS_sw_phy_tb ) then
        call PROF_rapstart('ATM_Turbulence', 1)
        call ATMOS_PHY_TB_driver( update_flag = do_phy_tb )
        call PROF_rapend  ('ATM_Turbulence', 1)
     endif
-
-    !########## Cumulus ##########
+    ! Pnaletary Boundary layer
+    if ( ATMOS_sw_phy_bl ) then
+       call PROF_rapstart('ATM_PBL', 1)
+       call ATMOS_PHY_BL_driver_calc_tendency( update_flag = do_phy_bl )
+       call PROF_rapend  ('ATM_PBL', 1)
+    endif
+    ! Cumulus
     if ( ATMOS_sw_phy_cp ) then
        call PROF_rapstart('ATM_Cumulus', 1)
        call ATMOS_PHY_CP_driver( update_flag = do_phy_cp )
        call PROF_rapend  ('ATM_Cumulus', 1)
     endif
 
+
     !########## Set Surface Boundary Condition ##########
     call PROF_rapstart('ATM_SfcExch', 2)
     call ATMOS_SURFACE_SET( countup = .true. )
     call PROF_rapend  ('ATM_SfcExch', 2)
+
 
     !########## History & Monitor ##########
     call PROF_rapstart('ATM_History', 1)
@@ -532,11 +582,15 @@ contains
        U,    &
        V
     use mod_atmos_phy_mp_vars, only: &
-       SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
-       SFLX_snow => ATMOS_PHY_MP_SFLX_snow
+       SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
+       SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow
+    use mod_atmos_phy_cp_vars, only: &
+       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain
     use mod_atmos_phy_rd_vars, only: &
        SFLX_rad_dn => ATMOS_PHY_RD_SFLX_downall, &
        cosSZA      => ATMOS_PHY_RD_cosSZA
+    use mod_atmos_phy_bl_vars, only: &
+       ATM_PBL => ATMOS_PHY_BL_Zi
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_cpl_vars, only: &
@@ -549,13 +603,24 @@ contains
     ! works
     real(RP) :: SFC_DENS(IA,JA)
     real(RP) :: SFC_PRES(IA,JA)
-    real(RP) :: ATM_PBL (IA,JA)
+
+    real(RP) :: SFLX_rain(IA,JA)
+    real(RP) :: SFLX_snow(IA,JA)
+
+    integer  :: i,j
     !---------------------------------------------------------------------------
 
     if ( CPL_sw ) then
-       ! planetary boundary layer
-       ATM_PBL(:,:) = 100.0_RP ! tentative
+       ! sum of rainfall from mp and cp
+       !$omp parallel do private(i,j) OMP_SCHEDULE_
+       do j = 1, JA
+       do i = 1, IA
+          SFLX_rain(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j)
+          SFLX_snow(i,j) = SFLX_snow_MP(i,j)
+       enddo
+       enddo
 
+       ! planetary boundary layer
        call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
                              PRES     (:,:,:), & ! [IN]
                              REAL_CZ  (:,:,:), & ! [IN]
@@ -572,6 +637,7 @@ contains
                         DENS       (KS,:,:),   & ! [IN]
                         QTRC       (KS,:,:,:), & ! [IN]
                         ATM_PBL    (:,:),      & ! [IN]
+                        SFC_DENS   (:,:),      & ! [IN]
                         SFC_PRES   (:,:),      & ! [IN]
                         SFLX_rad_dn(:,:,:,:),  & ! [IN]
                         cosSZA     (:,:),      & ! [IN]

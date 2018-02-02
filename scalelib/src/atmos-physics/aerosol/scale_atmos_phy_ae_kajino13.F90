@@ -644,8 +644,8 @@ contains
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
     use scale_time, only: &
        TIME_DTSEC_ATMOS_PHY_AE
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     implicit none
     integer,  intent(in)    :: QQA
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -693,7 +693,6 @@ contains
 !    real(RP),allocatable :: conc_h2so4(:,:,:,:)    !concentration [ug/m3]
 !    real(RP) :: conc_gas(KA,IA,JA,GAS_CTG)    !concentration [ug/m3]
     real(RP) :: conc_gas(GAS_CTG)    !concentration [ug/m3]
-    character(len=H_LONG) :: ofilename
     integer :: i, j, k, iq, it
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Aerosol(kajino13)'
@@ -768,7 +767,8 @@ contains
           if ( I_QV > 0 ) then
              qv_ae(k,i,j) = QTRC(k,i,j,I_QV)
              !--- calculate super saturation of water
-             call pres2qsat_liq( qsat_tmp,temp_ae(k,i,j),pres_ae(k,i,j) )
+             call pres2qsat_liq( temp_ae(k,i,j), pres_ae(k,i,j), qdry(k,i,j), & ! [IN]
+                                 qsat_tmp                                     ) ! [OUT]
              ssliq_ae(k,i,j) = qv_ae(k,i,j)/qsat_tmp - 1.0_RP
           else
              ssliq_ae(k,i,j) = - 1.0_RP
@@ -957,29 +957,14 @@ contains
     enddo
 
     do ic = 1, n_ctg
-      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'mass'
-      call HIST_in( total_aerosol_mass  (:,:,:,ic), trim(ofilename), 'Total mass mixing ratio of aerosol', 'kg/kg' )
-      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'number'
-      call HIST_in( total_aerosol_number(:,:,:,ic), trim(ofilename), 'Total number mixing ratio of aerosol', 'num/kg' )
-      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'mass_emit'
-      call HIST_in( total_emit_aerosol_mass  (:,:,:,ic), trim(ofilename), 'Total mass mixing ratio of emitted aerosol', 'kg/kg' )
-      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'number_emit'
-      call HIST_in( total_emit_aerosol_number(:,:,:,ic), trim(ofilename), 'Total number mixing ratio of emitted aerosol', 'num/kg' )
+      call FILE_HISTORY_in( total_aerosol_mass  (:,:,:,ic), trim(ctg_name(ic))//' mass', 'Total mass mixing ratio of aerosol', 'kg/kg' )
+      call FILE_HISTORY_in( total_aerosol_number(:,:,:,ic), trim(ctg_name(ic))//' number', 'Total number mixing ratio of aerosol', 'num/kg' )
+      call FILE_HISTORY_in( total_emit_aerosol_mass  (:,:,:,ic), trim(ctg_name(ic))//' mass_emit', 'Total mass mixing ratio of emitted aerosol', 'kg/kg' )
+      call FILE_HISTORY_in( total_emit_aerosol_number(:,:,:,ic), trim(ctg_name(ic))//' number_emit', 'Total number mixing ratio of emitted aerosol', 'num/kg' )
     enddo
 
-    do ic = 1, n_ctg
-      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'mass'
-      call HIST_in( total_aerosol_mass  (:,:,:,ic), trim(ofilename), 'Total mass mixing ratio of aerosol', 'kg/kg' )
-      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'number'
-      call HIST_in( total_aerosol_number(:,:,:,ic), trim(ofilename), 'Total number mixing ratio of aerosol', 'num/kg' )
-      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'mass_emit'
-      call HIST_in( total_emit_aerosol_mass  (:,:,:,ic), trim(ofilename), 'Total mass mixing ratio of emitted aerosol', 'kg/kg' )
-      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'number_emit'
-      call HIST_in( total_emit_aerosol_number(:,:,:,ic), trim(ofilename), 'Total number mixing ratio of emitted aerosol', 'num/kg' )
-    enddo
-
-    call HIST_in( EMIT(:,:,:,QA_AE-GAS_CTG+IG_H2SO4), 'H2SO4_emit', 'Emission ratio of H2SO4 gas', 'ug/m3/s' )
-    call HIST_in( EMIT(:,:,:,QA_AE-GAS_CTG+IG_CGAS),  'CGAS_emit',  'Emission ratio of Condensabule gas', 'ug/m3/s' )
+    call FILE_HISTORY_in( EMIT(:,:,:,QA_AE-GAS_CTG+IG_H2SO4), 'H2SO4_emit', 'Emission ratio of H2SO4 gas', 'ug/m3/s' )
+    call FILE_HISTORY_in( EMIT(:,:,:,QA_AE-GAS_CTG+IG_CGAS),  'CGAS_emit',  'Emission ratio of Condensabule gas', 'ug/m3/s' )
 
     deallocate( aerosol_procs )
     deallocate( aerosol_activ )
@@ -2489,7 +2474,8 @@ contains
           pres = CONST_PRE00 * ( RHOT(k,i,j) * Rmoist / CONST_PRE00 )**(cpa/cva)
           temp = pres / ( DENS(k,i,j) * Rmoist )
 
-          call SATURATION_pres2qsat_liq( qsat_tmp, temp, pres )
+          call SATURATION_pres2qsat_liq( temp, pres, qdry, & ! [IN]
+                                         qsat_tmp          ) ! [OUT]
 
           ssliq = QTRC(k,i,j,I_QV) / qsat_tmp - 1.0_RP
        else

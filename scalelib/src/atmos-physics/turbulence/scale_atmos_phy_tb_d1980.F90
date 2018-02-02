@@ -786,8 +786,9 @@ contains
             qflx_sgs_rhot, &
             DENS, POTT, Kh, 1.0_RP, &
             GSQRT, J13G, J23G, J33G, MAPF, &
-            a, b, c, dt, &
+            .false., &
             ATMOS_PHY_TB_D1980_implicit, &
+            a, b, c, dt, &
             IIS, IIE, JJS, JJE )
 
     enddo
@@ -812,8 +813,9 @@ contains
                qflx_sgs_rhoq(:,:,:,:,iq), &
                DENS, QTRC(:,:,:,iq), Kh, 1.0_RP, &
                GSQRT, J13G, J23G, J33G, MAPF, &
-               a, b, c, dt, &
+               .false., &
                ATMOS_PHY_TB_D1980_implicit, &
+               a, b, c, dt, &
                IIS, IIE, JJS, JJE )
 
        enddo
@@ -865,8 +867,9 @@ contains
             qflx_tke,                            & ! (out)
             DENS, QTRC(:,:,:,I_TKE), Km, 2.0_RP, & ! (in)
             GSQRT, J13G, J23G, J33G, MAPF,       & ! (in)
-            a, b, c, dt,                         & ! (in)
+            .false.,                             & ! (in)
             ATMOS_PHY_TB_D1980_implicit,         & ! (in)
+            a, b, c, dt,                         & ! (in)
             IIS, IIE, JJS, JJE                   ) ! (in)
 
        call calc_tend_phi( RHOQ_t(:,:,:,I_TKE),           & ! (out)

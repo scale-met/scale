@@ -58,6 +58,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_external_input, only: &
+       EXTIN_file_limit, &
        EXTIN_regist
     use scale_const, only: &
        UNDEF => CONST_UNDEF
@@ -73,16 +74,16 @@ contains
     data vars_2d    / 'SFLX_LW_up', 'SFLX_LW_dn', 'SFLX_SW_up', 'SFLX_SW_dn' /
     data vars_2d_op / 'SFLX_SW_dn_dir' /
 
-    character(len=H_LONG)  :: ATMOS_PHY_RD_offline_basename              = ''
-    character(len=H_SHORT) :: ATMOS_PHY_RD_offline_axistype              = 'XYZ'
-    logical                :: ATMOS_PHY_RD_offline_enable_periodic_year  = .false.
-    logical                :: ATMOS_PHY_RD_offline_enable_periodic_month = .false.
-    logical                :: ATMOS_PHY_RD_offline_enable_periodic_day   = .false.
-    integer                :: ATMOS_PHY_RD_offline_step_fixed            = 0
-    real(RP)               :: ATMOS_PHY_RD_offline_offset                = 0.0_RP
-    real(RP)               :: ATMOS_PHY_RD_offline_defval                !> = UNDEF
-    logical                :: ATMOS_PHY_RD_offline_check_coordinates     = .true.
-    integer                :: ATMOS_PHY_RD_offline_step_limit            = 0
+    character(len=H_LONG)  :: ATMOS_PHY_RD_offline_basename(EXTIN_file_limit) = ''
+    character(len=H_SHORT) :: ATMOS_PHY_RD_offline_axistype                   = 'XYZ'
+    logical                :: ATMOS_PHY_RD_offline_enable_periodic_year       = .false.
+    logical                :: ATMOS_PHY_RD_offline_enable_periodic_month      = .false.
+    logical                :: ATMOS_PHY_RD_offline_enable_periodic_day        = .false.
+    integer                :: ATMOS_PHY_RD_offline_step_fixed                 = 0
+    real(RP)               :: ATMOS_PHY_RD_offline_offset                     = 0.0_RP
+    real(RP)               :: ATMOS_PHY_RD_offline_defval                   ! = UNDEF
+    logical                :: ATMOS_PHY_RD_offline_check_coordinates          = .true.
+    integer                :: ATMOS_PHY_RD_offline_step_limit                 = 0
 
     NAMELIST / PARAM_ATMOS_PHY_RD_OFFLINE / &
        ATMOS_PHY_RD_offline_basename,              &
@@ -123,13 +124,13 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_RD_OFFLINE)
 
-    if ( ATMOS_PHY_RD_offline_basename == '' ) then
+    if ( ATMOS_PHY_RD_offline_basename(1) == '' ) then
        write(*,*) 'xxx ATMOS_PHY_RD_offline_basename is necessary'
        call PRC_MPIstop
     end if
 
     do n = 1, num_vars_3d
-       call EXTIN_regist( ATMOS_PHY_RD_offline_basename,              & ! [IN]
+       call EXTIN_regist( ATMOS_PHY_RD_offline_basename(:),           & ! [IN]
                           vars_3d(n),                                 & ! [IN]
                           ATMOS_PHY_RD_offline_axistype,              & ! [IN]
                           ATMOS_PHY_RD_offline_enable_periodic_year,  & ! [IN]
@@ -143,7 +144,7 @@ contains
     end do
 
     do n = 1, num_vars_2d
-       call EXTIN_regist( ATMOS_PHY_RD_offline_basename,              & ! [IN]
+       call EXTIN_regist( ATMOS_PHY_RD_offline_basename(:),           & ! [IN]
                           vars_2d(n),                                 & ! [IN]
                           'XY',                                       & ! [IN]
                           ATMOS_PHY_RD_offline_enable_periodic_year,  & ! [IN]
@@ -157,7 +158,7 @@ contains
     end do
 
     do n = 1, num_vars_2d_op
-       call EXTIN_regist( ATMOS_PHY_RD_offline_basename,              & ! [IN]
+       call EXTIN_regist( ATMOS_PHY_RD_offline_basename(:),           & ! [IN]
                           vars_2d_op(n),                              & ! [IN]
                           'XY',                                       & ! [IN]
                           ATMOS_PHY_RD_offline_enable_periodic_year,  & ! [IN]
@@ -189,9 +190,12 @@ contains
        fact_urban,            &
        temp_sfc, albedo_land, &
        solins, cosSZA,        &
+       cldfrac, Re, Qe,       &
        flux_rad,              &
        flux_rad_top,          &
-       SFLX_rad_dn            )
+       SFLX_rad_dn,           &
+       dtau_s,                &
+       dem_s                  )
 !       Jval                   )
     use scale_grid_index
     use scale_tracer
@@ -208,6 +212,8 @@ contains
        I_up,     &
        I_direct, &
        I_diffuse
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
     real(RP), intent(in)  :: DENS        (KA,IA,JA)
     real(RP), intent(in)  :: RHOT        (KA,IA,JA)
@@ -221,9 +227,14 @@ contains
     real(RP), intent(in)  :: albedo_land (IA,JA,2)
     real(RP), intent(in)  :: solins      (IA,JA)
     real(RP), intent(in)  :: cosSZA      (IA,JA)
+    real(RP), intent(in)  :: cldfrac     (KA,IA,JA)
+    real(RP), intent(in)  :: Re          (KA,IA,JA,N_HYD)
+    real(RP), intent(in)  :: Qe          (KA,IA,JA,N_HYD)
     real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2,2)
     real(RP), intent(out) :: flux_rad_top(IA,JA,2,2,2)
     real(RP), intent(out) :: SFLX_rad_dn (IA,JA,2,2)
+    real(RP), intent(out) :: dtau_s      (KA,IA,JA) ! 0.67 micron cloud optical depth
+    real(RP), intent(out) :: dem_s       (KA,IA,JA) ! 10.5 micron cloud emissivity
 !    real(RP), intent(out) :: Jval        (KA,IA,JA,CH_QA_photo)
 
     real(RP) :: buffer(IA,JA)
@@ -361,6 +372,9 @@ contains
     ! clearsky and TOA value are not defined
     flux_rad    (:,:,:,:,:,1) = 0.0_RP
     flux_rad_top(:,:,:,:,:)   = 0.0_RP
+
+    dtau_s      (:,:,:) = 0.0_RP
+    dem_s       (:,:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_RD_offline

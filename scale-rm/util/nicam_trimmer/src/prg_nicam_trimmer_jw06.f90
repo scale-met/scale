@@ -19,10 +19,9 @@ program nicam_trimmer
   !  ExternalFileGetShape,     &
      ExternalFileRead,         &
      ExternalFileReadOffset
-  use gtool_file, only: &
-     FileGetShape,      &
-     FileRead,          &
-     FileCloseAll
+  use scale_file, only: &
+     FILE_Read,      &
+     FILE_Close_All
 
   implicit none
 
@@ -92,7 +91,7 @@ program nicam_trimmer
   !########## Initial setup ##########
 
   ! setup standard I/O
-  call IO_setup( MODELNAME, .false. )
+  call IO_setup( MODELNAME )
 
   ! setup Log
   call LogInit( IO_FID_CONF,       &
@@ -324,7 +323,7 @@ program nicam_trimmer
   deallocate( llev    )
   deallocate( time    )
 
-  call FileCloseAll
+  call FILE_Close_All
 
   !-----------------------------------------------------------------------------
   !> END MAIN ROUTINE
@@ -352,10 +351,10 @@ contains
     character(len=*), intent(in)  :: filename
     !---------------------------------------------------------------------------
 
-    call FileRead( lon(:),  trim(filename), "lon",  1, 1, single=.true. )
-    call FileRead( lat(:),  trim(filename), "lat",  1, 1, single=.true. )
-    call FileRead( lev(:),  trim(filename), "lev",  1, 1, single=.true. )
-    call FileRead( time(:), trim(filename), "time", 1, 1, single=.true. )
+    call FILE_Read( filename, "lon",  lon(:),  single=.true. )
+    call FILE_Read( filename, "lat",  lat(:),  single=.true. )
+    call FILE_Read( filename, "lev",  lev(:),  single=.true. )
+    call FILE_Read( filename, "time", time(:), single=.true. )
 
     return
   end subroutine nicamread_grid

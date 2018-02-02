@@ -81,10 +81,12 @@ contains
     if(vname(1:3)=="lat")    vname="lat"
 
     select case( trim(vname) )
-    case ( "TRL_URB", "TBL_URB", "TGL_URB" )
+    case ( "URBAN_TRL", "URBAN_TBL", "URBAN_TGL" )
        vtype = vt_urban
-    case ( "LAND_TEMP", "LAND_WATER" )
+    case ( "LAND_TEMP", "LAND_WATER", "LAND_DSAT" )
        vtype = vt_land
+    case ( "OCEAN_3D_TEMP", "OCEAN_3D_SALT", "OCEAN_3D_UVEL", "OCEAN_3D_VVEL" )
+       vtype = vt_ocean
     case ( "height" )
        vtype = vt_height
     case ( "topo", "lsmask", "lon", "lat" )
@@ -440,6 +442,7 @@ contains
       count_2d,      & ! [out]
       count_urban,   & ! [out]
       count_land,    & ! [out]
+      count_ocean,   & ! [out]
       count_height,  & ! [out]
       count_tpmsk    ) ! [out]
     implicit none
@@ -449,7 +452,7 @@ contains
     integer, intent(in)  :: nxp, nyp
     integer, intent(in)  :: mnxp, mnyp
     integer, intent(in)  :: it
-    integer, intent(in)  :: nz(3), zz        !nz: 1=atom, 2=urban, 3=land
+    integer, intent(in)  :: nz(4), zz        !nz: 1=atom, 2=urban, 3=land, 4=ocean
     character(CMID), intent(in) :: varname
     integer, intent(out) :: is, ie           ! start index, end index
     integer, intent(out) :: js, je           ! start index, end index
@@ -461,6 +464,7 @@ contains
     integer, intent(out) :: count_2d(3)      ! data count for reading
     integer, intent(out) :: count_urban(4)   ! data count for reading
     integer, intent(out) :: count_land(4)    ! data count for reading
+    integer, intent(out) :: count_ocean(4)   ! data count for reading
     integer, intent(out) :: count_height(3)  ! data count for reading
     integer, intent(out) :: count_tpmsk(2)   ! data count for reading
 
@@ -498,6 +502,7 @@ contains
        count_2d    (1:3) = (/ ie, je,     1  /)
        count_urban (1:4) = (/ ie, je, 1,  1  /)
        count_land  (1:4) = (/ ie, je, 1,  1  /)
+       count_ocean (1:4) = (/ ie, je, 1,  1  /)
        count_height(1:3) = (/ ie, je, 1      /)
        start_3d    (1:4) = (/ 1,  1,  zz, it /)
        nzn = 1
@@ -506,6 +511,7 @@ contains
        count_2d    (1:3) = (/ ie, je,        1  /)
        count_urban (1:4) = (/ ie, je, nz(2), 1  /)
        count_land  (1:4) = (/ ie, je, nz(3), 1  /)
+       count_ocean (1:4) = (/ ie, je, nz(4), 1  /)
        count_height(1:3) = (/ ie, je, nz(1)     /)
        start_3d    (1:4) = (/ 1,  1,  1,     it /)
 
@@ -514,6 +520,8 @@ contains
           nzn = nz(2)
        case ( vt_land )
           nzn = nz(3)
+       case ( vt_ocean )
+          nzn = nz(4)
        case ( vt_3d, vt_height )
           nzn = nz(1)
        case ( vt_2d, vt_tpmsk )

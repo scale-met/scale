@@ -65,7 +65,7 @@ contains
     implicit none
 
     integer, intent(in) :: mnxp, mnyp
-    integer, intent(in) :: nz(3)
+    integer, intent(in) :: nz(4)
     integer, intent(in) :: nmnge
     !---------------------------------------------------------------------------
 

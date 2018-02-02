@@ -17,8 +17,6 @@ module scale_process
   !++ used modules
   !
   use mpi
-  use gtool_file, only: &
-     FileCloseAll
   use scale_precision
   use scale_stdio
   !-----------------------------------------------------------------------------
@@ -33,7 +31,9 @@ module scale_process
   public :: PRC_UNIVERSAL_setup
   public :: PRC_GLOBAL_setup
   public :: PRC_LOCAL_setup
-  public :: PRC_MPIstop
+  public :: PRC_SINGLECOM_setup
+  public :: PRC_abort
+  public :: PRC_MPIstop ! obsolute
   public :: PRC_MPIfinish
   public :: PRC_MPIsplit
   public :: PRC_MPIsplit_letkf
@@ -41,6 +41,17 @@ module scale_process
   public :: PRC_MPIbarrier
   public :: PRC_MPItime
   public :: PRC_MPItimestat
+
+  public :: PRC_set_file_closer
+
+  abstract interface
+     subroutine closer
+     end subroutine closer
+  end interface
+
+  interface PRC_MPIstop
+     procedure PRC_abort
+  end interface PRC_MPIstop
 
   !-----------------------------------------------------------------------------
   !
@@ -99,6 +110,8 @@ module scale_process
   integer, private, parameter :: PRC_ABORT_code = -1     !< MPI abort code in error handler
 !  integer, private, parameter :: PRC_ABORT_code_p = 2 !< mpi abort code in error handler from parent
 !  integer, private, parameter :: PRC_ABORT_code_d = 3 !< mpi abort code in error handler from daughter
+
+  procedure(closer), pointer :: PRC_FILE_Closer => NULL()
 
   !-----------------------------------------------------------------------------
 contains
@@ -230,7 +243,7 @@ contains
   end subroutine PRC_GLOBAL_setup
 
   !-----------------------------------------------------------------------------
-  !> Setup MPI
+  !> Setup MPI in local communicator
   subroutine PRC_LOCAL_setup( &
        comm,    &
        myrank,  &
@@ -262,8 +275,59 @@ contains
   end subroutine PRC_LOCAL_setup
 
   !-----------------------------------------------------------------------------
-  !> Abort MPI
-  subroutine PRC_MPIstop
+  !> Setup MPI single communicator (not use universal-global-local setting)
+  subroutine PRC_SINGLECOM_setup( &
+       comm,    &
+       nprocs,  &
+       myrank,  &
+       ismaster )
+    implicit none
+
+    integer, intent(in)  :: comm     ! communicator
+    integer, intent(out) :: nprocs   ! number of procs
+    integer, intent(out) :: myrank   ! myrank
+    logical, intent(out) :: ismaster ! master process?
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    call MPI_Comm_size(comm,nprocs,ierr)
+    call MPI_Comm_rank(comm,myrank,ierr)
+
+    if ( myrank == PRC_masterrank ) then
+       ismaster = .true.
+    else
+       ismaster = .false.
+    endif
+
+    PRC_UNIVERSAL_COMM_WORLD = comm
+    PRC_UNIVERSAL_nprocs     = nprocs
+    PRC_UNIVERSAL_myrank     = myrank
+    PRC_UNIVERSAL_IsMaster   = ismaster
+
+    PRC_GLOBAL_COMM_WORLD    = comm
+    PRC_GLOBAL_nprocs        = nprocs
+    PRC_GLOBAL_myrank        = myrank
+    PRC_GLOBAL_IsMaster      = ismaster
+
+    PRC_LOCAL_COMM_WORLD     = comm
+    PRC_nprocs               = nprocs
+    PRC_myrank               = myrank
+    PRC_IsMaster             = ismaster
+
+
+
+    PRC_ABORT_COMM_WORLD = comm
+
+    call MPI_Comm_set_errhandler(PRC_ABORT_COMM_WORLD,PRC_UNIVERSAL_handler,ierr)
+    call MPI_Comm_get_errhandler(PRC_ABORT_COMM_WORLD,PRC_ABORT_handler    ,ierr)
+
+    return
+  end subroutine PRC_SINGLECOM_setup
+
+  !-----------------------------------------------------------------------------
+  !> Abort Process
+  subroutine PRC_abort
     implicit none
 
     integer :: ierr
@@ -275,7 +339,7 @@ contains
     endif
 
     stop
-  end subroutine PRC_MPIstop
+  end subroutine PRC_abort
 
   !-----------------------------------------------------------------------------
   !> Stop MPI peacefully
@@ -560,6 +624,14 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    ORDER2DOM     (:) = -1
+    DOM2ORDER     (:) = -1
+    RO_PRC_DOMAINS(:) = -1
+    RO_DOM2COL    (:) = -1
+    RO_CONF_FILES (:) = ""
+    RO_PARENT_COL (:) = -1
+    RO_CHILD_COL  (:) = -1
+
     call MPI_COMM_SIZE(ORG_COMM,ORG_nmax, ierr)
 
     if ( color_reorder ) then
@@ -637,12 +709,6 @@ contains
        enddo
 
     else !--- without reordering of colors
-       ORDER2DOM(:)      = -1
-       RO_DOM2COL(:)     = -1
-       RO_PRC_DOMAINS(:) = -1
-       RO_PRC_DOMAINS(:) = -1
-       RO_PARENT_COL(:)  = -1
-       RO_CHILD_COL(:)   = -1
 
        do i = 1, NUM_DOMAIN
           ORDER2DOM(i)      = i
@@ -873,7 +939,7 @@ contains
        write(*,*)                     ''
     endif
 
-    call FileCloseAll
+    if ( associated( PRC_FILE_CLOSER ) ) call PRC_FILE_Closer
 
     ! Close logfile, configfile
     if ( IO_L ) then
@@ -889,5 +955,13 @@ contains
 
     stop
   end subroutine PRC_MPI_errorhandler
+
+  subroutine PRC_set_file_closer( routine )
+    procedure(closer) :: routine
+
+    PRC_FILE_Closer => routine
+
+    return
+  end subroutine PRC_set_file_closer
 
 end module scale_process

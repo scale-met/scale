@@ -13,6 +13,7 @@
 !! @par History
 !! @li      2013-12-04 (S.Nishizawa)  [mod] splited from scale_atmos_dyn.f90
 !<
+#include "inc_openmp.h"
 module mod_atmos_dyn_driver
   !-----------------------------------------------------------------------------
   !
@@ -57,6 +58,15 @@ module mod_atmos_dyn_driver
                                                                    ! 'UD5'
                                                                    ! 'CD6'
 
+  ! Coriolis force
+  !> If ATMOS_DYN_coriolis_type=='PLANE', then f = ATMOS_DYN_coriolis_f0 + ATMOS_DYN_coriolis_beta * ( CY - ATMOS_DYN_coriolis_y0 )
+  !> If ATMOS_DYN_coriolis_type=='SPHERE', then f = 2 * CONST_OHM * sin( lat )
+  character(len=H_SHORT), public :: ATMOS_DYN_coriolis_type = 'PLANE'   ! type of coriolis force: 'PLANE', 'SPHERE'
+  real(RP), public :: ATMOS_DYN_coriolis_f0                 = 0.0_RP
+  real(RP), public :: ATMOS_DYN_coriolis_beta               = 0.0_RP
+  real(RP), public :: ATMOS_DYN_coriolis_y0                             ! default is domain center
+
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -76,13 +86,11 @@ module mod_atmos_dyn_driver
   real(RP), private :: ATMOS_DYN_wdamp_height                = -1.0_RP   ! height       to start apply Rayleigh damping [m]
   integer,  private :: ATMOS_DYN_wdamp_layer                 = -1        ! layer number to start apply Rayleigh damping [num]
 
-  ! Coriolis force
-  logical,  private :: ATMOS_DYN_enable_coriolis             = .false.   ! enable coriolis force?
-
   ! Divergence damping
   real(RP), private :: ATMOS_DYN_divdmp_coef                 = 0.0_RP    ! Divergence dumping coef
 
   ! Flux-Corrected Transport limiter
+  logical,  private :: ATMOS_DYN_FLAG_TRACER_SPLIT_TEND      = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_momentum           = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_T                  = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_TRACER             = .false.
@@ -96,6 +104,8 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_grid, only: &
+       GRID_DOMAIN_CENTER_Y, &
+       GRID_CY,  &
        GRID_FZ,  &
        GRID_CDZ, &
        GRID_CDX, &
@@ -137,8 +147,12 @@ contains
        ATMOS_DYN_wdamp_tau,                   &
        ATMOS_DYN_wdamp_height,                &
        ATMOS_DYN_wdamp_layer,                 &
-       ATMOS_DYN_enable_coriolis,             &
+       ATMOS_DYN_coriolis_type,               &
+       ATMOS_DYN_coriolis_f0,                 &
+       ATMOS_DYN_coriolis_beta,               &
+       ATMOS_DYN_coriolis_y0,                 &
        ATMOS_DYN_divdmp_coef,                 &
+       ATMOS_DYN_FLAG_TRACER_SPLIT_TEND,      &
        ATMOS_DYN_FLAG_FCT_momentum,           &
        ATMOS_DYN_FLAG_FCT_T,                  &
        ATMOS_DYN_FLAG_FCT_TRACER,             &
@@ -153,6 +167,7 @@ contains
 
     if ( ATMOS_sw_dyn ) then
 
+       ATMOS_DYN_coriolis_y0 = GRID_DOMAIN_CENTER_Y
        !--- read namelist
        rewind(IO_FID_CONF)
        read(IO_FID_CONF,nml=PARAM_ATMOS_DYN,iostat=ierr)
@@ -201,7 +216,11 @@ contains
                              ATMOS_DYN_wdamp_tau,                & ! [IN]
                              ATMOS_DYN_wdamp_height,             & ! [IN]
                              GRID_FZ,                            & ! [IN]
-                             ATMOS_DYN_enable_coriolis,          & ! [IN]
+                             ATMOS_DYN_coriolis_type,            & ! [IN]
+                             ATMOS_DYN_coriolis_f0,              & ! [IN]
+                             ATMOS_DYN_coriolis_beta,            & ! [IN]
+                             ATMOS_DYN_coriolis_y0,              & ! [IN]
+                             GRID_CY,                            & ! [IN]
                              REAL_LAT,                           & ! [IN]
                              none = ATMOS_DYN_TYPE=='NONE'       ) ! [IN]
     endif
@@ -253,11 +272,16 @@ contains
        RHOT_av, &
        QTRC_av, &
        DENS_tp, &
+       RHOU_tp, &
+       RHOV_tp, &
+       RHOT_tp, &
+       RHOQ_tp, &
+       RHOH_p,  &
        MOMZ_tp, &
        MOMX_tp, &
        MOMY_tp, &
-       RHOT_tp, &
-       RHOQ_tp
+       CPtot,   &
+       EXNER
     use mod_atmos_dyn_vars, only: &
        PROG
     use scale_atmos_refstate, only: &
@@ -280,12 +304,79 @@ contains
        ATMOS_BOUNDARY_alpha_QTRC
     use scale_atmos_dyn, only: &
        ATMOS_DYN
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     implicit none
 
     logical, intent(in) :: do_flag
+
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( do_flag ) then
+
+       call COMM_vars8( RHOU_tp, 1 )
+       call COMM_vars8( RHOV_tp, 2 )
+       call COMM_vars8( MOMZ_tp, 3 )
+       do iq = 1, QA
+          call COMM_vars8( RHOQ_tp(:,:,:,iq), 4+iq)
+       end do
+       
+
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j) &
+       !$omp shared (KA,KS,KE,ISB,IEB,JSB,JEB, &
+       !$omp         RHOT_tp,RHOH_p,CPtot,EXNER)
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          RHOT_tp(k,i,j) = RHOT_tp(k,i,j) &
+                         + RHOH_p (k,i,j) / ( CPtot(k,i,j) * EXNER(k,i,j) )
+       end do
+       end do
+       end do
+       call COMM_vars8( RHOT_tp, 4 )
+
+       call COMM_wait ( RHOU_tp, 1 )
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j) &
+       !$omp shared (KA,KS,KE,IS,IE,JS,JE, &
+       !$omp         MOMX_tp,RHOU_tp)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          MOMX_tp(k,i,j) = MOMX_tp(k,i,j) &
+                         + 0.5_RP * ( RHOU_tp(k,i,j) + RHOU_tp(k,i+1,j) )
+       end do
+       end do
+       end do
+       call COMM_vars8( MOMX_tp, 1 )
+
+       call COMM_wait ( RHOV_tp, 2 )
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(k,i,j) &
+       !$omp shared (KA,KS,KE,IS,IE,JS,JE, &
+       !$omp         MOMY_tp,RHOV_tp)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          MOMY_tp(k,i,j) = MOMY_tp(k,i,j) &
+                         + 0.5_RP * ( RHOV_tp(k,i,j) + RHOV_tp(k,i,j+1) )
+       end do
+       end do
+       end do
+       call COMM_vars8( MOMY_tp, 2 )
+
+       call COMM_wait ( MOMZ_tp, 3 )
+       call COMM_wait ( RHOT_tp, 4, .false. )
+       do iq = 1, QA
+          call COMM_wait ( RHOQ_tp(:,:,:,iq), 4+iq, .false. )
+       end do
+       call COMM_wait ( MOMX_tp, 1 )
+       call COMM_wait ( MOMY_tp, 2 )
+
+
        call ATMOS_DYN( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   & ! [INOUT]
                        PROG,                                                 & ! [IN]
                        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]
@@ -320,6 +411,7 @@ contains
                        ATMOS_BOUNDARY_alpha_POTT,                            & ! [IN]
                        ATMOS_BOUNDARY_alpha_QTRC,                            & ! [IN]
                        ATMOS_DYN_divdmp_coef,                                & ! [IN]
+                       ATMOS_DYN_FLAG_TRACER_SPLIT_TEND,                     & ! [IN]
                        ATMOS_DYN_FLAG_FCT_momentum,                          & ! [IN]
                        ATMOS_DYN_FLAG_FCT_T,                                 & ! [IN]
                        ATMOS_DYN_FLAG_FCT_TRACER,                            & ! [IN]

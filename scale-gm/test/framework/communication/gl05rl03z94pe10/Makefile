@@ -33,7 +33,7 @@ include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 
 BINS = $(BINDIR)/$(BINNAME)
-LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libdcutils.a
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
   DEPENDLIB = $(LIBS)
@@ -71,7 +71,6 @@ OBJS =	\
 makelocal:
 	$(MAKE) makedir
 	$(MAKE) -C $(DCUTILSDIR)
-	$(MAKE) -C $(GTOOLDIR)
 	$(MAKE) -C $(SCALELIBDIR)/src
 	@echo;echo "Entering scale-gm...";echo "Current version is " $(VERSION)
 	$(MAKE) makebin
@@ -85,10 +84,7 @@ makedir:
 $(LIBDIR)/libdcutils.a :
 	$(MAKE) -C $(DCUTILSDIR)
 
-$(LIBDIR)/libgtool.a : $(LIBDIR)/libdcutils.a
-	$(MAKE) -C $(GTOOLDIR)
-
-$(LIBDIR)/libscale.a : $(LIBDIR)/libdcutils.a $(LIBDIR)/libgtool.a
+$(LIBDIR)/libscale.a : $(LIBDIR)/libdcutils.a
 	$(MAKE) -C $(SCALELIBDIR)/src
 
 makebin: $(BINS)
@@ -102,7 +98,6 @@ $(BUILD_DIR)/$(BINNAME).o : $(BINNAME).f90 $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 
 allclean: distclean
 	$(MAKE) -C $(DCUTILSDIR)      allclean
-	$(MAKE) -C $(GTOOLDIR)        allclean
 	$(MAKE) -C $(SCALELIBDIR)/src allclean
 	rm -f $(BINDIR)/$(BINNAME)
 
@@ -121,12 +116,12 @@ clean:
 	make $(patsubst %.f90,%.o,$<)
 
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALEGMDIR)/include -o $@ -c $<
 
-.PHONY : clean distclean allclean dcutils gtool scalelib
+.PHONY : clean distclean allclean dcutils scalelib
 
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)

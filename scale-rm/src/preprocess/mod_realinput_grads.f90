@@ -28,9 +28,9 @@ module mod_realinput_grads
   !
   !++ Public procedure
   !
-  public :: ParentAtomSetupGrADS
-  public :: ParentAtomOpenGrADS
-  public :: ParentAtomInputGrADS
+  public :: ParentAtmosSetupGrADS
+  public :: ParentAtmosOpenGrADS
+  public :: ParentAtmosInputGrADS
   public :: ParentLandSetupGrADS
   public :: ParentLandInputGrADS
   public :: ParentOceanSetupGrADS
@@ -187,7 +187,7 @@ module mod_realinput_grads
 contains
   !-----------------------------------------------------------------------------
   !> Atmos Setup
-  subroutine ParentAtomSetupGrADS( &
+  subroutine ParentAtmosSetupGrADS( &
       dims,                        & ! (out)
       basename                     ) ! (in)
     implicit none
@@ -205,7 +205,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: GrADS format'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atmos Input File Type: GrADS format'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -335,19 +335,19 @@ contains
     end do
 
     return
-  end subroutine ParentAtomSetupGrADS
+  end subroutine ParentAtmosSetupGrADS
 
   !-----------------------------------------------------------------------------
-  subroutine ParentAtomOpenGrADS
+  subroutine ParentAtmosOpenGrADS
     implicit none
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomOpenGrADS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosOpenGrADS]'
 
     return
-  end subroutine ParentAtomOpenGrADS
+  end subroutine ParentAtmosOpenGrADS
 
   !-----------------------------------------------------------------------------
-  subroutine ParentAtomInputGrADS( &
+  subroutine ParentAtmosInputGrADS( &
        velz_org, &
        velx_org, &
        vely_org, &
@@ -398,7 +398,7 @@ contains
     integer,          intent(in)  :: nt
 
     real(RP) :: rhprs_org(dims(1)+2,dims(2),dims(3))
-    real(RP) :: pott(dims(2),dims(3))
+    real(RP) :: pott
 
     real(RP) :: RovCP
     real(RP) :: CPovR
@@ -408,7 +408,7 @@ contains
     ! data
     character(len=H_LONG) :: gfile
 
-    real(RP) :: p_sat, qm, rhsfc
+    real(RP) :: p_sat, qm, rhsfc, dz
     real(RP) :: lp2, lp3
 
     integer  :: i, j, k, iq, ielem
@@ -416,14 +416,14 @@ contains
     logical  :: pressure_coordinates
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomInputGrADS]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosInputGrADS]'
 
     dens_org(:,:,:)   = UNDEF ! read data or set data by build-rho-3D
     velz_org(:,:,:)   = 0.0_RP
     qtrc_org(:,:,:,:) = 0.0_RP
 
     !--- read grads data
-    loop_InputAtomGrADS : do ielem = 1, num_item_list_atom
+    loop_InputAtmosGrADS : do ielem = 1, num_item_list_atom
 
        if ( .not. data_available(ielem,1) ) cycle
 
@@ -793,7 +793,7 @@ contains
                       qtrc_org(k+2,i,j,I_QV) = UNDEF
                    else
                       rhprs_org(k+2,i,j) = qtrc_org(k+2,i,j,I_QV) / 100.0_RP   ! relative humidity
-                      call psat( p_sat, temp_org(k+2,i,j) )                    ! satulation pressure
+                      call psat( temp_org(k+2,i,j), p_sat )                    ! satulation pressure
                       qm = EPSvap * rhprs_org(k+2,i,j) * p_sat &
                          / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat )  ! mixing ratio
                       qtrc_org(k+2,i,j,I_QV) = qm / ( 1.0_RP + qm )            ! specific humidity
@@ -809,7 +809,7 @@ contains
                    do i = 1, dims(2)
                    do k = knum+1, dims(1)
                       rhprs_org(k+2,i,j) = rhprs_org(knum+2,i,j)              ! relative humidity
-                      call psat( p_sat, temp_org(k+2,i,j) )                   ! satulated specific humidity
+                      call psat( temp_org(k+2,i,j), p_sat )                   ! satulated specific humidity
                       qm = EPSvap * rhprs_org(k+2,i,j) * p_sat &
                          / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat ) ! mixing ratio
                       qtrc_org(k+2,i,j,I_QV) = qm / ( 1.0_RP + qm )           ! specific humidity
@@ -915,7 +915,7 @@ contains
                    qtrc_org(2,i,j,I_QV) = UNDEF
                 else
                    rhsfc = qtrc_org(2,i,j,I_QV) / 100.0_RP
-                   call psat( p_sat, temp_org(2,i,j) )         ! satulation pressure
+                   call psat( temp_org(2,i,j), p_sat )         ! satulation pressure
                    qm = EPSvap * rhsfc * p_sat &
                       / ( pres_org(2,i,j) - rhsfc * p_sat )    ! mixing ratio
                    qtrc_org(2,i,j,I_QV) = qm / ( 1.0_RP + qm ) ! specific humidity
@@ -937,7 +937,7 @@ contains
              enddo
           endif
        end select
-    enddo loop_InputAtomGrADS
+    enddo loop_InputAtmosGrADS
 
     lm_layer(:,:) = 3
 
@@ -954,94 +954,67 @@ contains
     end do
     end do
 
-    ! fill surface density
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-       k = lm_layer(i,j)
-       dens_org(1:2,i,j) = dens_org(k,i,j)
-    end do
-    end do
-
     RovCP = Rdry / CPdry
     CPovR = CPdry / Rdry
 
     if ( data_available(Ia_t2,1) .and. data_available(Ia_ps,1) ) then
        do j = 1, dims(3)
        do i = 1, dims(2)
-          pott(i,j) = temp_org(2,i,j) * (P00/pres_org(2,i,j))**RovCP
+          dens_org(2,i,j) = pres_org(2,i,j) / ( Rdry * temp_org(2,i,j) )
        end do
        end do
-    else
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-          k = lm_layer(i,j)
-          pott(i,j) = temp_org(k,i,j) * (P00/pres_org(k,i,j))**RovCP
-       end do
-       end do
-    end if
-
-    if ( .not. data_available(Ia_t2,1) ) then
-       if ( data_available(Ia_ps,1) ) then
+    else if ( data_available(Ia_ps,1) ) then
+       if ( data_available(Ia_topo,1) ) then
           do j = 1, dims(3)
           do i = 1, dims(2)
-             temp_org(2,i,j) = pott(i,j) * (pres_org(2,i,j)/P00)**RovCP
-          end do
-          end do
-       else
-          if ( data_available(Ia_topo,1) ) then
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                k = lm_layer(i,j)
-                temp_org(2,i,j) = temp_org(k,i,j) &
-                                + LAPS * (cz_org(k,i,j)-cz_org(2,i,j))
-             end do
-             end do
-          else
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                k = lm_layer(i,j)
-                temp_org(2,i,j) = temp_org(k,i,j)
-             end do
-             end do
-          end if
-       end if
-    end if
-
-    if ( .not. data_available(Ia_ps,1) ) then
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-          pres_org(2,i,j) = P00 * (temp_org(2,i,j)/pott(i,j))**CPovR
-       end do
-       end do
-    end if
-
-    if ( data_available(Ia_slp,1) ) then
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-          temp_org(1,i,j) = pott(i,j) * (pres_org(1,i,j)/P00)**RovCP
-       end do
-       end do
-    else
-       if ( data_available(Ia_t2,1) .and. data_available(Ia_topo,1) ) then
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-             temp_org(1,i,j) = temp_org(2,i,j) + LAPS * cz_org(2,i,j)
+             k = lm_layer(i,j)
+             dz = cz_org(k,i,j) - cz_org(2,i,j)
+             dens_org(2,i,j) = ( pres_org(k,i,j) - pres_org(2,i,j) ) * 2.0_RP / ( GRAV * dz ) &
+                             - dens_org(k,i,j) 
+             temp_org(2,i,j) = pres_org(2,i,j) / ( Rdry * dens_org(2,i,j) )
           end do
           end do
        else
           do j = 1, dims(3)
           do i = 1, dims(2)
              k = lm_layer(i,j)
-             temp_org(1,i,j) = temp_org(k,i,j) + LAPS * cz_org(k,i,j)
+             dz = cz_org(k,i,j) - cz_org(2,i,j)
+             temp_org(2,i,j) = temp_org(k,i,j)
+             dens_org(2,i,j) = pres_org(2,i,j) / ( Rdry * temp_org(2,i,j) )
+          end do
+          end do
+       end if
+    else if ( data_available(Ia_topo,1) ) then
+       if ( .not. data_available(Ia_t2,1) ) then
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             k = lm_layer(i,j)
+             dz = cz_org(k,i,j) - cz_org(2,i,j)
+             temp_org(2,i,j) = temp_org(k,i,j) + LAPS * dz
           end do
           end do
        end if
        do j = 1, dims(3)
        do i = 1, dims(2)
-          pres_org(1,i,j) = P00 * (temp_org(1,i,j)/pott(i,j))**CPovR
+          k = lm_layer(i,j)
+          dz = cz_org(k,i,j) - cz_org(2,i,j)
+
+          dens_org(2,i,j) = ( pres_org(k,i,j) + GRAV * dens_org(k,i,j) * dz * 0.5_RP ) &
+                          / ( Rdry * temp_org(2,i,j) - GRAV * dz * 0.5_RP )
+          pres_org(2,i,j) = dens_org(2,i,j) * Rdry * temp_org(2,i,j)
+       end do
+       end do
+    else
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          k = lm_layer(i,j)
+          temp_org(2,i,j) = temp_org(k,i,j)
+          dens_org(2,i,j) = dens_org(k,i,j)
+          pres_org(2,i,j) = pres_org(k,i,j)
        end do
        end do
     end if
+
 
     if ( .not. data_available(Ia_topo,1) ) then
        ! guess surface height (elevation)
@@ -1059,6 +1032,28 @@ contains
              lp3 = 1.0_RP
           end if
           cz_org(2,i,j) = max( 0.0_RP, cz_org(k,i,j) * lp2 / lp3 )
+       end do
+       end do
+    end if
+
+
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       temp_org(1,i,j) = temp_org(2,i,j) + LAPS * cz_org(2,i,j)
+    end do
+    end do
+    if ( data_available(Ia_slp,1) ) then
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          dens_org(1,i,j) = pres_org(1,i,j) / ( Rdry * temp_org(1,i,j) )
+       end do
+       end do
+    else
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          dens_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens_org(2,i,j) * cz_org(2,i,j) * 0.5_RP ) &
+                          / ( Rdry * temp_org(1,i,j) - GRAV * cz_org(2,i,j) * 0.5_RP )
+          pres_org(1,i,j) = dens_org(1,i,j) * Rdry * temp_org(1,i,j)
        end do
        end do
     end if
@@ -1099,7 +1094,7 @@ contains
     end if
 
     return
-  end subroutine ParentAtomInputGrADS
+  end subroutine ParentAtmosInputGrADS
 
   !-----------------------------------------------------------------------------
   !> Land Setup

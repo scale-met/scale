@@ -177,17 +177,17 @@ contains
        MPRJ_mapfactor
     use scale_grid_real, only: &
        REAL_calc_areavol, &
-       REAL_LAT,  &
-       REAL_LATX, &
-       REAL_LATY, &
+       REAL_LAT,          &
+       REAL_LATX,         &
+       REAL_LATY,         &
        REAL_LATXY
     implicit none
     !---------------------------------------------------------------------------
 
-    call MPRJ_mapfactor( REAL_LAT  , GTRANS_MAPF(:,:,1,I_XY), GTRANS_MAPF (:,:,2,I_XY))
-    call MPRJ_mapfactor( REAL_LATX , GTRANS_MAPF(:,:,1,I_UY), GTRANS_MAPF (:,:,2,I_UY))
-    call MPRJ_mapfactor( REAL_LATY , GTRANS_MAPF(:,:,1,I_XV), GTRANS_MAPF (:,:,2,I_XV))
-    call MPRJ_mapfactor( REAL_LATXY, GTRANS_MAPF(:,:,1,I_UV), GTRANS_MAPF (:,:,2,I_UV))
+    call MPRJ_mapfactor( REAL_LAT  (1:IA,1:JA), GTRANS_MAPF(:,:,1,I_XY), GTRANS_MAPF (:,:,2,I_XY))
+    call MPRJ_mapfactor( REAL_LATX (1:IA,1:JA), GTRANS_MAPF(:,:,1,I_UY), GTRANS_MAPF (:,:,2,I_UY))
+    call MPRJ_mapfactor( REAL_LATY (1:IA,1:JA), GTRANS_MAPF(:,:,1,I_XV), GTRANS_MAPF (:,:,2,I_XV))
+    call MPRJ_mapfactor( REAL_LATXY(1:IA,1:JA), GTRANS_MAPF(:,:,1,I_UV), GTRANS_MAPF (:,:,2,I_UV))
 
     call REAL_calc_areavol( GTRANS_MAPF(:,:,:,I_XY) )
 
@@ -757,8 +757,8 @@ contains
        CONST_RADIUS
     use scale_vector, only: &
        VECTR_distance
-    use scale_fileio, only: &
-       FILEIO_write
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_write
     use scale_grid_real, only: &
        REAL_BASEPOINT_LON, &
        REAL_BASEPOINT_LAT, &
@@ -780,29 +780,29 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output metrics file ***'
 
-       call FILEIO_write( GTRANS_MAPF(:,:,1,I_XY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( GTRANS_MAPF(:,:,1,I_XY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_X_XY', 'Map factor x-dir at XY', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,2,I_XY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( GTRANS_MAPF(:,:,2,I_XY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_Y_XY', 'Map factor y-dir at XY', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,1,I_UY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( GTRANS_MAPF(:,:,1,I_UY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_X_UY', 'Map factor x-dir at UY', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,2,I_UY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( GTRANS_MAPF(:,:,2,I_UY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_Y_UY', 'Map factor y-dir at UY', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,1,I_XV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( GTRANS_MAPF(:,:,1,I_XV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_X_XV', 'Map factor x-dir at XV', 'NIL', 'XV', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,2,I_XV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( GTRANS_MAPF(:,:,2,I_XV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_Y_XV', 'Map factor y-dir at XV', 'NIL', 'XV', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,1,I_UV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( GTRANS_MAPF(:,:,1,I_UV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_X_UV', 'Map factor x-dir at UV', 'NIL', 'UV', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,2,I_UV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( GTRANS_MAPF(:,:,2,I_UV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_Y_UV', 'Map factor y-dir at UV', 'NIL', 'UV', GTRANS_OUT_DTYPE  ) ! [IN]
 
-       call FILEIO_write( GTRANS_ROTC(:,:,1),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( GTRANS_ROTC(:,:,1),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'ROTC_COS',  'Rotation factor (cos)',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_ROTC(:,:,2),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( GTRANS_ROTC(:,:,2),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'ROTC_SIN',  'Rotation factor (sin)',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
 
-       call FILEIO_write( GTRANS_ROTC(:,:,1),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( GTRANS_ROTC(:,:,1),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'ROTC_COS',  'Rotation factor (cos)',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
 
        do j = 1, JA
@@ -811,9 +811,9 @@ contains
        enddo
        enddo
 
-       call FILEIO_write( check_X_XY(:,:),     GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( check_X_XY(:,:),     GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'X_XY', 'x at XY for check', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( check_Y_XY(:,:),     GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( check_Y_XY(:,:),     GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'Y_XY', 'y at XY for check', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
 
        do j = 1, JA
@@ -827,7 +827,7 @@ contains
        enddo
        enddo
 
-       call FILEIO_write( distance(:,:),               GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( distance(:,:),               GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'distance', 'distance from basepoint', 'm', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
 
     endif

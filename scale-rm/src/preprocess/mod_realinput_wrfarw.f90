@@ -31,9 +31,9 @@ module mod_realinput_wrfarw
   !
   !++ Public procedure
   !
-  public :: ParentAtomSetupWRFARW
-  public :: ParentAtomOpenWRFARW
-  public :: ParentAtomInputWRFARW
+  public :: ParentAtmosSetupWRFARW
+  public :: ParentAtmosOpenWRFARW
+  public :: ParentAtmosInputWRFARW
   public :: ParentLandSetupWRFARW
   public :: ParentLandInputWRFARW
   public :: ParentOceanSetupWRFARW
@@ -85,7 +85,7 @@ module mod_realinput_wrfarw
 contains
   !-----------------------------------------------------------------------------
   !> Atmos Setup
-  subroutine ParentAtomSetupWRFARW( &
+  subroutine ParentAtmosSetupWRFARW( &
       dims,    &
       timelen, &
       basename_org )
@@ -107,7 +107,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: WRF-ARW'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atmos Input File Type: WRF-ARW'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -144,18 +144,18 @@ contains
     allocate( phb_org  (dims(4),dims(2),dims(3)) )
 
     return
-  end subroutine ParentAtomSetupWRFARW
+  end subroutine ParentAtmosSetupWRFARW
 
   !-----------------------------------------------------------------------------
-  subroutine ParentAtomOpenWRFARW
+  subroutine ParentAtmosOpenWRFARW
     implicit none
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomOpenWRFARW]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosOpenWRFARW]'
     return
-  end subroutine ParentAtomOpenWRFARW
+  end subroutine ParentAtmosOpenWRFARW
 
   !-----------------------------------------------------------------------------
-  subroutine ParentAtomInputWRFARW( &
+  subroutine ParentAtmosInputWRFARW( &
        velz_org,      &
        llvelx_org,    &
        llvely_org,    &
@@ -172,6 +172,7 @@ contains
     use scale_const, only: &
          D2R => CONST_D2R, &
          LAPS => CONST_LAPS, &
+         Rdry => CONST_Rdry, &
          GRAV => CONST_GRAV
     use scale_external_io, only: &
          ExternalFileRead
@@ -217,6 +218,7 @@ contains
     real(RP) :: velys_org(dims(1),dims(2),dims(6))
     real(RP) :: geof_org (dims(4),dims(2),dims(3))
 
+    real(RP) :: dens
     real(RP) :: qhyd
 
     integer :: k, i, j, iq
@@ -225,8 +227,6 @@ contains
     character(len=H_MID) :: varname_W
     character(len=H_MID) :: varname_U
     character(len=H_MID) :: varname_V
-
-    logical :: lack_of_val
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -387,7 +387,10 @@ contains
        end do
        pott_org(2,i,j) = temp_org(2,i,j) * ( p0/pres_org(2,i,j) )**RCP
        temp_org(1,i,j) = temp_org(2,i,j) + LAPS * topo_org(i,j)
-       pres_org(1,i,j) = p0 * ( temp_org(1,i,j) / pott_org(2,i,j) )**(1.0_RP/RCP) ! pott_org(1,i,j) == pott_org(2,i,j)
+       dens = pres_org(2,i,j) / ( Rdry * temp_org(2,i,j) )
+       pres_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens * cz_org(2,i,j) * 0.5_RP ) &
+                       / ( Rdry * temp_org(1,i,j) - GRAV * cz_org(2,i,j) * 0.5_RP ) &
+                       * Rdry * temp_org(1,i,j)
     end do
     end do
 
@@ -434,7 +437,7 @@ contains
 #endif
 
     return
-  end subroutine ParentAtomInputWRFARW
+  end subroutine ParentAtmosInputWRFARW
 
   !-----------------------------------------------------------------------------
   !> Land Setup
@@ -459,7 +462,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: WRF-ARW'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atmos Input File Type: WRF-ARW'
 
     !--- read namelist
     rewind(IO_FID_CONF)

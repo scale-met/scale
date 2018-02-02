@@ -34,10 +34,11 @@ module scale_ocean_phy
            dt               )
        use scale_precision
        use scale_grid_index
+       use scale_ocean_grid_index
        implicit none
 
-       real(RP), intent(out) :: OCEAN_TEMP_t   (IA,JA)
-       real(RP), intent(in)  :: OCEAN_TEMP     (IA,JA)
+       real(RP), intent(out) :: OCEAN_TEMP_t   (OKMAX,IA,JA)
+       real(RP), intent(in)  :: OCEAN_TEMP     (OKMAX,IA,JA)
        real(RP), intent(in)  :: OCEAN_SFLX_WH  (IA,JA)
        real(RP), intent(in)  :: OCEAN_SFLX_prec(IA,JA)
        real(RP), intent(in)  :: OCEAN_SFLX_evap(IA,JA)

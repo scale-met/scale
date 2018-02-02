@@ -39,11 +39,11 @@ module mod_net2g_vars
   integer,         public :: TARGET_ZLEV(max_zcount) = -1
   real(DP),        public :: EXTRA_TINTERVAL = -9.999
   character(5),    public :: EXTRA_TUNIT    = ""
-  character(CLNG), public :: IDIR           = "./data"
+  character(CLNG), public :: IDIR           = "./"
   character(CLNG), public :: ODIR           = "."
   character(CLNG), public :: CONFFILE       = "./run.conf"
-  character(CSHT), public :: VNAME(max_vcount) = ""
-  character(CSHT), public :: Z_LEV_TYPE     = "plev"
+  character(CMID), public :: VNAME(max_vcount) = ""
+  character(CSHT), public :: Z_LEV_TYPE     = "original"
   character(5),    public :: DELT           = "1mn"
   character(15),   public :: STIME          = "00:00Z01JAN2000"
   character(15),   public :: FTIME          = "200001010000"
@@ -62,10 +62,10 @@ module mod_net2g_vars
   integer,         public :: PRC_NUM_X
   integer,         public :: PRC_NUM_Y
   integer,         public :: TIME_STARTDATE(6)
-  real(DP),        public :: HISTORY_DEFAULT_TINTERVAL
-  character(CMID), public :: HISTORY_DEFAULT_BASENAME
-  character(5),    public :: HISTORY_DEFAULT_TUNIT
-  character(CSHT), public :: HISTORY_DEFAULT_ZDIM = 'native'
+  real(DP),        public :: FILE_HISTORY_DEFAULT_TINTERVAL
+  character(CMID), public :: FILE_HISTORY_DEFAULT_BASENAME
+  character(5),    public :: FILE_HISTORY_DEFAULT_TUNIT
+  character(CSHT), public :: FILE_HISTORY_DEFAULT_ZDIM = 'native'
   logical,         public :: HIST_BND = .true.
 
   real(DP),        public :: MPRJ_basepoint_lon

@@ -13,38 +13,37 @@ pros = Hash.new
 
 SUFFIX = ".F90"
 
-def parse(deps, pros, srcdir, dir="")
+def parse(deps, pros, srcdir, dir=".")
   dirs = Dir[ File.join(srcdir, dir, "*") ]
   dirs.each do |fdir|
-    dir = fdir.sub(/#{srcdir}\//,"")
-    next if /\A\./ =~ dir
-    parse(deps, pros, srcdir, dir)
-    files = Dir[ File.join(fdir, "*#{SUFFIX}") ]
-    files.each do |file|
-      basename = File.basename(file, SUFFIX)
-      dep = {
-        :dir => dir,
-        :depends => Array.new
-      }
-      pro = {
-        :dir => dir,
-        :file => basename
-      }
-      deps[basename] = dep
-      File.foreach(file) do |line|
-        case line
-        when /^\s*module (\w+)/
-          mod = $1
-          next if /procedure/ =~ mod
-          pros[mod] = pro
-        when /^\s*use (\w+)/
-          mod = $1
-#          next if /(dc_types|gtool|mpi|netcdf|NAME)/ =~ mod
-#          next if /(dc_types|gtool|mpi|netcdf|gadg|rng|m_|mt|NAME)/ =~ mod
-          next if (/(dc_types|gtool|mpi|MPI|netcdf|gadg|rng|mt|NAME)/ =~ mod)
+    next unless File.directory?(fdir)
+    fdir = fdir.sub(/#{srcdir}\//,"")
+    next if /\.\Z/ =~ fdir
+    parse(deps, pros, srcdir, fdir)
+  end
+  files = Dir[ File.join(srcdir, dir, "*#{SUFFIX}") ]
+  files.each do |file|
+    basename = File.basename(file, SUFFIX)
+    dep = {
+      :dir => dir,
+      :depends => Array.new
+    }
+    pro = {
+      :dir => dir,
+      :file => basename
+    }
+    deps[basename] = dep
+    File.foreach(file) do |line|
+      case line
+      when /^\s*module (\w+)/
+        mod = $1
+        next if /procedure/ =~ mod
+        pros[mod] = pro
+      when /^\s*use (\w+)/
+        mod = $1
+        next if (/(dc_log|dc_types|mpi|MPI|netcdf|gadg|rng|mt|NAME)/ =~ mod)
 
-          dep[:depends].push(mod) unless dep[:depends].include?(mod)
-        end
+        dep[:depends].push(mod) unless dep[:depends].include?(mod)
       end
     end
   end
@@ -56,7 +55,7 @@ File.open( File.join(srcdir, "depend"), "w" ) do |file|
   deps.sort.each do |name, dep|
     file.print "$(OBJ_DIR)/#{name}.o: #{dep[:dir]}/#{name}.F90 $(inc_index) $(DEPENDLIB)"
     ptype = ""
-    if /\Ascale_atmos_phy_(mp|tb|rd)\Z/ =~ name
+    if /\Ascale_atmos_phy_(mp|tb|bl|rd)\Z/ =~ name
       ptype = $1
       file.print " $(patsubst %,$(OBJ_DIR)/%,$(OBJS_#{ptype.upcase}))"
     end
@@ -79,11 +78,12 @@ File.open( File.join(srcdir, "depend"), "w" ) do |file|
   mods = Array.new
   mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_MP))"
   mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_TB))"
+  mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_BL))"
   mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_RD))"
 
   pros.keys.sort.map{|mod|
      mod = mod.downcase
-     unless /\Ascale_atmos_phy_(mp|tb|rd)_(\w+)\Z/ =~ mod && ( $2 != "common" && $2 != "convert" )
+     unless /\Ascale_atmos_phy_(mp|tb|bl|rd)_(\w+)\Z/ =~ mod && ( $2 != "common" && $2 != "convert" )
        mods.push "$(OBJ_DIR)/#{mod}.mod"
      end
   }

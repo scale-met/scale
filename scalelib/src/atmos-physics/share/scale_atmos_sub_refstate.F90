@@ -236,11 +236,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Read reference state profile
   subroutine ATMOS_REFSTATE_read
-    use scale_fileio, only: &
-       FILEIO_open, &
-       FILEIO_check_coordinates, &
-       FILEIO_read, &
-       FILEIO_close
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_open, &
+       FILE_CARTESC_check_coordinates, &
+       FILE_CARTESC_read, &
+       FILE_CARTESC_close
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -253,25 +253,25 @@ contains
 
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
 
-       call FILEIO_open( fid, ATMOS_REFSTATE_IN_BASENAME )
+       call FILE_CARTESC_open( ATMOS_REFSTATE_IN_BASENAME, fid )
 
        if ( ATMOS_REFSTATE_IN_CHECK_COORDINATES ) then
-          call FILEIO_check_coordinates( fid, atmos=.true. )
+          call FILE_CARTESC_check_coordinates( fid, atmos=.true. )
        end if
 
        ! 1D
-       call FILEIO_read( ATMOS_REFSTATE1D_pres(:), fid, 'PRES_ref', 'Z', step=1 )
-       call FILEIO_read( ATMOS_REFSTATE1D_temp(:), fid, 'TEMP_ref', 'Z', step=1 )
-       call FILEIO_read( ATMOS_REFSTATE1D_dens(:), fid, 'DENS_ref', 'Z', step=1 )
-       call FILEIO_read( ATMOS_REFSTATE1D_pott(:), fid, 'POTT_ref', 'Z', step=1 )
-       call FILEIO_read( ATMOS_REFSTATE1D_qv(:),   fid, 'QV_ref',   'Z', step=1 )
+       call FILE_CARTESC_read( fid, 'PRES_ref', 'Z', ATMOS_REFSTATE1D_pres(:) )
+       call FILE_CARTESC_read( fid, 'TEMP_ref', 'Z', ATMOS_REFSTATE1D_temp(:) )
+       call FILE_CARTESC_read( fid, 'DENS_ref', 'Z', ATMOS_REFSTATE1D_dens(:) )
+       call FILE_CARTESC_read( fid, 'POTT_ref', 'Z', ATMOS_REFSTATE1D_pott(:) )
+       call FILE_CARTESC_read( fid, 'QV_ref',   'Z', ATMOS_REFSTATE1D_qv  (:) )
 
        ! 3D
-       call FILEIO_read( ATMOS_REFSTATE_pres(:,:,:), fid, 'PRES_ref3D', 'ZXY', step=1 )
-       call FILEIO_read( ATMOS_REFSTATE_temp(:,:,:), fid, 'TEMP_ref3D', 'ZXY', step=1 )
-       call FILEIO_read( ATMOS_REFSTATE_dens(:,:,:), fid, 'DENS_ref3D', 'ZXY', step=1 )
-       call FILEIO_read( ATMOS_REFSTATE_pott(:,:,:), fid, 'POTT_ref3D', 'ZXY', step=1 )
-       call FILEIO_read( ATMOS_REFSTATE_qv(:,:,:),   fid, 'QV_ref3D',   'ZXY', step=1 )
+       call FILE_CARTESC_read( fid, 'PRES_ref3D', 'ZXY', ATMOS_REFSTATE_pres(:,:,:) )
+       call FILE_CARTESC_read( fid, 'TEMP_ref3D', 'ZXY', ATMOS_REFSTATE_temp(:,:,:) )
+       call FILE_CARTESC_read( fid, 'DENS_ref3D', 'ZXY', ATMOS_REFSTATE_dens(:,:,:) )
+       call FILE_CARTESC_read( fid, 'POTT_ref3D', 'ZXY', ATMOS_REFSTATE_pott(:,:,:) )
+       call FILE_CARTESC_read( fid, 'QV_ref3D',   'ZXY', ATMOS_REFSTATE_qv  (:,:,:) )
 
     else
        write(*,*) 'xxx [ATMOS_REFSTATE_read] refstate file is not specified.'
@@ -287,8 +287,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Write reference state profile
   subroutine ATMOS_REFSTATE_write
-    use scale_fileio, only: &
-       FILEIO_write
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_write
     implicit none
     !---------------------------------------------------------------------------
 
@@ -298,27 +298,27 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Output reference state profile ***'
 
        ! 1D
-       call FILEIO_write( ATMOS_REFSTATE1D_pres(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( ATMOS_REFSTATE1D_pres(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
                           'PRES_ref', 'Reference profile of pres.', 'Pa', 'Z',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_REFSTATE1D_temp(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( ATMOS_REFSTATE1D_temp(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
                           'TEMP_ref', 'Reference profile of temp.', 'K', 'Z',    ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_REFSTATE1D_dens(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( ATMOS_REFSTATE1D_dens(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
                           'DENS_ref', 'Reference profile of rho', 'kg/m3', 'Z',  ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_REFSTATE1D_pott(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( ATMOS_REFSTATE1D_pott(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
                           'POTT_ref', 'Reference profile of theta', 'K', 'Z',    ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_REFSTATE1D_qv(:),   ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
+       call FILE_CARTESC_write( ATMOS_REFSTATE1D_qv(:),   ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
                           'QV_ref',   'Reference profile of qv', 'kg/kg', 'Z',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
 
        ! 3D
-       call FILEIO_write( ATMOS_REFSTATE_pres(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
+       call FILE_CARTESC_write( ATMOS_REFSTATE_pres(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
                           'PRES_ref3D', 'Reference profile of pres.', 'Pa', 'ZXY',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_REFSTATE_temp(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
+       call FILE_CARTESC_write( ATMOS_REFSTATE_temp(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
                           'TEMP_ref3D', 'Reference profile of temp.', 'K', 'ZXY',    ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_REFSTATE_dens(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
+       call FILE_CARTESC_write( ATMOS_REFSTATE_dens(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
                           'DENS_ref3D', 'Reference profile of rho', 'kg/m3', 'ZXY',  ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_REFSTATE_pott(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
+       call FILE_CARTESC_write( ATMOS_REFSTATE_pott(:,:,:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
                           'POTT_ref3D', 'Reference profile of theta', 'K', 'ZXY',    ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_REFSTATE_qv(:,:,:),   ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
+       call FILE_CARTESC_write( ATMOS_REFSTATE_qv(:,:,:),   ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE,   & ! [IN]
                           'QV_ref3D',   'Reference profile of qv', 'kg/kg', 'ZXY',   ATMOS_REFSTATE_OUT_DTYPE  ) ! [IN]
 
     endif
@@ -397,7 +397,9 @@ contains
 
     ! calc QV from RH
     call SATURATION_psat_all( psat_sfc, temp_sfc )
-    call SATURATION_dens2qsat_all( qsat(:),  temp(:),  dens(:)  )
+    call SATURATION_dens2qsat_all( KA, KS, KE, &
+                                   temp(:),  dens(:), & ! [IN]
+                                   qsat(:)            ) ! [OUT]
 
     psat_sfc = ATMOS_REFSTATE_RH * 1.E-2_RP * psat_sfc ! rh * e
     qv_sfc = EPSvap * psat_sfc / ( pres_sfc - (1.0_RP-EPSvap) * psat_sfc )
@@ -487,7 +489,9 @@ contains
 
     ! calc QV from RH
     call SATURATION_psat_all( psat_sfc, temp_sfc )
-    call SATURATION_dens2qsat_all( qsat(:),  temp(:),  pres(:)  )
+    call SATURATION_dens2qsat_all( KA, KS, KE, &
+                                   temp(:), pres(:), & ! [IN]
+                                   qsat(:)           ) ! [OUT]
 
     psat_sfc = ATMOS_REFSTATE_RH * 1.E-2_RP * psat_sfc ! rh * e
     qv_sfc = EPSvap * psat_sfc / ( pres_sfc - (1.0_RP - EPSvap) * psat_sfc )
