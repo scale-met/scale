@@ -974,6 +974,10 @@ contains
     call FILE_HISTORY_Set_Axis( 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', GRID_LFZ,  gsize=LKMAX+1, start=startZ, down=.true. )
     call FILE_HISTORY_Set_Axis( 'LCDZ', 'Land Grid Cell length Z',      'm', 'LCZ', GRID_LCDZ, gsize=LKMAX,   start=startZ              )
 
+    call FILE_HISTORY_Set_Axis( 'OCZ',  'Ocean Grid Center Position Z', 'm', 'OCZ', GRID_OCZ,  gsize=OKMAX,   start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'OFZ',  'Ocean Grid Face Position Z',   'm', 'OFZ', GRID_OFZ,  gsize=OKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'OCDZ', 'Ocean Grid Cell length Z',     'm', 'OCZ', GRID_OCDZ, gsize=OKMAX,   start=startZ              )
+
     call FILE_HISTORY_Set_Axis( 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', GRID_UCZ,  gsize=UKMAX,   start=startZ, down=.true. )
     call FILE_HISTORY_Set_Axis( 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', GRID_UFZ,  gsize=UKMAX+1, start=startZ, down=.true. )
     call FILE_HISTORY_Set_Axis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', GRID_UCDZ, gsize=UKMAX,   start=startZ              )
