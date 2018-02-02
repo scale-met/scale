@@ -960,8 +960,8 @@ contains
                                MOMZ(:,:,:)                                ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, PV_info(I_MOMX)%NAME, 'ZXHY', & ! [IN]
                                MOMX(:,:,:)                                ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, PV_info(I_MOMX)%NAME, 'ZXYH', & ! [IN]
-                               MOMX(:,:,:)                                ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, PV_info(I_MOMY)%NAME, 'ZXYH', & ! [IN]
+                               MOMY(:,:,:)                                ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, PV_info(I_RHOT)%NAME, 'ZXY', & ! [IN]
                                RHOT(:,:,:)                               ) ! [OUT]
 
