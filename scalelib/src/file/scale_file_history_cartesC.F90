@@ -97,8 +97,8 @@ contains
        TIME_STARTDAYSEC
 !!$    use scale_grid_cartesC, only: &
 !!$       GRID_CARTESC_NAME
-    use scale_interpolation, only: &
-       INTERP_setup_pres
+    use scale_interp_vert, only: &
+       INTERP_VERT_alloc_pres
     use scale_mapproj, only: &
        MPRJ_get_attributes
     implicit none
@@ -159,7 +159,7 @@ contains
           FILE_HISTORY_CARTESC_PRES_val(k) = FILE_HISTORY_CARTESC_PRES(k) * 100.0_RP ! [hPa->Pa]
        enddo
 
-       call INTERP_setup_pres( FILE_HISTORY_CARTESC_PRES_nlayer ) ! [IN]
+       call INTERP_VERT_alloc_pres( FILE_HISTORY_CARTESC_PRES_nlayer, IA, JA ) ! [IN]
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** FILE_HISTORY_CARTESC_PRES_nlayer is not set.'
        if( IO_L ) write(IO_FID_LOG,*) '*** Output with pressure coordinate is disabled'
@@ -254,8 +254,8 @@ contains
        PRES,    &
        PRESH,   &
        SFC_PRES )
-    use scale_interpolation, only: &
-       INTERP_update_pres
+    use scale_interp_vert, only: &
+       INTERP_VERT_setcoef_pres
     implicit none
 
     real(RP), intent(in) :: PRES    (:,:,:) ! pressure at the full level [Pa]
@@ -264,9 +264,14 @@ contains
     !---------------------------------------------------------------------------
 
     if ( FILE_HISTORY_CARTESC_PRES_nlayer > 0 ) then
-       call INTERP_update_pres( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
-                                PRES(:,:,:), SFC_PRES(:,:),       & ! [IN]
-                                FILE_HISTORY_CARTESC_PRES_val(:)  ) ! [IN]
+       call INTERP_VERT_setcoef_pres( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
+                                      KA, KS, KE,                       & ! [IN]
+                                      IA, IS, IE,                       & ! [IN]
+                                      JA, JS, JE,                       & ! [IN]
+                                      PRES         (:,:,:),             & ! [IN]
+                                      PRESH        (:,:,:),             & ! [IN]
+                                      SFC_PRES     (:,:)  ,             & ! [IN]
+                                      FILE_HISTORY_CARTESC_PRES_val(:)  ) ! [IN]
     endif
 
     return
@@ -587,12 +592,18 @@ contains
        dst )
     use scale_file_h, only: &
        RMISS => FILE_RMISS
-    use scale_interpolation, only: &
-       INTERP_available, &
-       INTERP_vertical_xi2z, &
-       INTERP_vertical_xih2zh, &
-       INTERP_vertical_xi2p, &
-       INTERP_vertical_xih2p
+    use scale_grid, only: &
+       GRID_CZ, &
+       GRID_FZ
+    use scale_grid_real, only: &
+       REAL_CZ, &
+       REAL_FZ
+    use scale_interp_vert, only: &
+       INTERP_VERT_xi2z,   &
+       INTERP_VERT_xi2p,   &
+       INTERP_VERT_xih2zh, &
+       INTERP_VERT_xih2p,  &
+       INTERP_available
     implicit none
 
     real(RP),         intent(in)  :: src(:,:,:)
@@ -601,8 +612,8 @@ contains
     logical,          intent(in)  :: fill_halo
     real(DP),         intent(out) :: dst(:)
 
-    real(RP) :: var_Z(KA,IA,JA)
-    real(RP) :: var_P(FILE_HISTORY_CARTESC_PRES_nlayer,IA,JA)
+    real(RP) :: src_Z(KA,IA,JA)
+    real(RP) :: src_P(FILE_HISTORY_CARTESC_PRES_nlayer,IA,JA)
 
     integer  :: isize,  jsize,  ksize
     integer  :: istart, jstart, kstart
@@ -652,15 +663,20 @@ contains
     if ( ksize == KMAX .and. zcoord == "z" .and. INTERP_available ) then ! z*->z interpolation (full level)
 
        call PROF_rapstart('FILE_O_interp', 2)
-       call INTERP_vertical_xi2z( src  (:,:,:), & ! [IN]
-                                  var_Z(:,:,:)  ) ! [OUT]
+       call INTERP_VERT_xi2z( KA, KS, KE,     & ! [IN]
+                              IA, ISB, IEB,   & ! [IN]
+                              JA, JSB, JEB,   & ! [IN]
+                              GRID_CZ(:),     & ! [IN]
+                              REAL_CZ(:,:,:), & ! [IN]
+                              src    (:,:,:), & ! [IN]
+                              src_Z  (:,:,:)  ) ! [OUT]
        call PROF_rapend  ('FILE_O_interp', 2)
 
        !$omp parallel do
        do k = 1, ksize
        do j = 1, jsize
        do i = 1, isize
-          dst((k-1)*jsize*isize+(j-1)*isize+i) = var_Z(kstart+k-1,istart+i-1,jstart+j-1)
+          dst((k-1)*jsize*isize+(j-1)*isize+i) = src_Z(kstart+k-1,istart+i-1,jstart+j-1)
        enddo
        enddo
        enddo
@@ -669,15 +685,20 @@ contains
 
 
        call PROF_rapstart('FILE_O_interp', 2)
-       call INTERP_vertical_xih2zh( src  (:,:,:), & ! [IN]
-                                    var_Z(:,:,:)  ) ! [OUT]
+       call INTERP_VERT_xih2zh( KA, KS, KE,     & ! [IN]
+                                IA, ISB, IEB,   & ! [IN]
+                                JA, JSB, JEB,   & ! [IN]
+                                GRID_FZ(:),     & ! [IN]
+                                REAL_FZ(:,:,:), & ! [IN]
+                                src    (:,:,:), & ! [IN]
+                                src_Z  (:,:,:)  ) ! [OUT]
        call PROF_rapend  ('FILE_O_interp', 2)
 
        !$omp parallel do
        do k = 1, ksize
        do j = 1, jsize
        do i = 1, isize
-          dst((k-1)*jsize*isize+(j-1)*isize+i) = var_Z(kstart+k-1,istart+i-1,jstart+j-1)
+          dst((k-1)*jsize*isize+(j-1)*isize+i) = src_Z(kstart+k-1,istart+i-1,jstart+j-1)
        enddo
        enddo
        enddo
@@ -690,16 +711,19 @@ contains
        end if
 
        call PROF_rapstart('FILE_O_interp', 2)
-       call INTERP_vertical_xi2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
-                                  src  (:,:,:),     & ! [IN]
-                                  var_P(:,:,:)      ) ! [OUT]
+       call INTERP_VERT_xi2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
+                              KA,                               & ! [IN]
+                              IA, ISB, IEB,                     & ! [IN]
+                              JA, JSB, JEB,                     & ! [IN]
+                              src  (:,:,:),                     & ! [IN]
+                              src_P(:,:,:)                      ) ! [OUT]
        call PROF_rapend  ('FILE_O_interp', 2)
 
        !$omp parallel do
        do k = 1, ksize
        do j = 1, jsize
        do i = 1, isize
-          dst((k-1)*jsize*isize+(j-1)*isize+i) = var_P(k,istart+i-1,jstart+j-1)
+          dst((k-1)*jsize*isize+(j-1)*isize+i) = src_P(k,istart+i-1,jstart+j-1)
        enddo
        enddo
        enddo
@@ -712,15 +736,18 @@ contains
        end if
 
        call PROF_rapstart('FILE_O_interp', 2)
-       call INTERP_vertical_xih2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
-                                   src  (:,:,:),     & ! [IN]
-                                   var_P(:,:,:)      ) ! [OUT]
+       call INTERP_VERT_xih2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
+                               KA,                               & ! [IN]
+                               IA, ISB, IEB,                     & ! [IN]
+                               JA, JSB, JEB,                     & ! [IN]
+                               src  (:,:,:),                     & ! [IN]
+                               src_P(:,:,:)                      ) ! [OUT]
        call PROF_rapend  ('FILE_O_interp', 2)
 
        do k = 1, ksize
        do j = 1, jsize
        do i = 1, isize
-          dst((k-1)*jsize*isize+(j-1)*isize+i) = var_P(k,istart+i-1,jstart+j-1)
+          dst((k-1)*jsize*isize+(j-1)*isize+i) = src_P(k,istart+i-1,jstart+j-1)
        enddo
        enddo
        enddo

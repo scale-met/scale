@@ -138,6 +138,7 @@ module mod_atmos_vars
   real(RP), public, allocatable, target :: PRES (:,:,:) !> pressure              [Pa=J/m3]
   real(RP), public, allocatable, target :: EXNER(:,:,:) !> Exner function (t/pt) [1]
   real(RP), public, allocatable, target :: PHYD (:,:,:) !> hydrostatic pressure  [Pa=J/m3]
+  real(RP), public, allocatable, target :: PHYDH(:,:,:) !> hydrostatic pressure  [Pa=J/m3], layer interface
 
   real(RP), public, allocatable, target :: Qdry (:,:,:) !> dry air                [1]
   real(RP), public, allocatable, target :: Rtot (:,:,:) !> specific gass constant [J/kg/K]
@@ -558,6 +559,7 @@ contains
     allocate( PRES (KA,IA,JA) )
     allocate( EXNER(KA,IA,JA) )
     allocate( PHYD (KA,IA,JA) )
+    allocate( PHYDH(0:KA,IA,JA) )
 
     allocate( Qdry (KA,IA,JA) )
     allocate( Rtot (KA,IA,JA) )
@@ -1045,11 +1047,9 @@ contains
                           SFC_DENS (:,:),   & ! [OUT]
                           SFC_PRES (:,:)    ) ! [OUT]
 
-    ! TODO: PHYDH (half level) must be used
-    call FILE_HISTORY_CARTESC_set_pres( PHYD(:,:,:),  & ! [IN]
-!                                        PHYDH(:,:,:), & ! [IN]
-                                        PHYD(:,:,:),  & ! [IN]
-                                        SFC_PRES(:,:) ) ! [IN]
+    call FILE_HISTORY_CARTESC_set_pres( PHYD    (:,:,:), & ! [IN]
+                                        PHYDH   (:,:,:), & ! [IN]
+                                        SFC_PRES(:,:)    ) ! [IN]
 
     return
   end subroutine ATMOS_vars_history_setpres
@@ -1380,7 +1380,7 @@ contains
          KA, KS, KE, IA, 1, IA, JA, 1, JA, &
          DENS_av(:,:,:), PRES(:,:,:),    & ! (in)
          REAL_CZ(:,:,:), REAL_FZ(:,:,:), & ! (in)
-         PHYD(:,:,:)                     ) ! (out)
+         PHYD(:,:,:), PHYDH(:,:,:)       ) ! (out)
 
     call ATMOS_PHY_MP_vars_reset_diagnostics
     call ATMOS_PHY_AE_vars_reset_diagnostics

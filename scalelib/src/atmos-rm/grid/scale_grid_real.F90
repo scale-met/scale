@@ -87,11 +87,17 @@ contains
        PRC_MPIstop
     use scale_grid, only: &
        GRID_DOMAIN_CENTER_X, &
-       GRID_DOMAIN_CENTER_Y
+       GRID_DOMAIN_CENTER_Y, &
+       GRID_CZ,              &
+       GRID_FZ
+    use scale_topography, only: &
+       TOPO_exist
     use scale_mapproj, only: &
        MPRJ_setup
     use scale_file_cartesC, only: &
        FILE_CARTESC_set_coordinates
+    use scale_interp_vert, only: &
+       INTERP_VERT_setcoef
     implicit none
 
     character(len=H_LONG) :: DOMAIN_CATALOGUE_FNAME  = 'latlon_domain_catalogue.txt' !< metadata files for lat-lon domain for all processes
@@ -155,6 +161,15 @@ contains
     call FILE_CARTESC_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, & ! [IN]
                                        REAL_LAT, REAL_LATX, REAL_LATY, REAL_LATXY, & ! [IN]
                                        REAL_CZ,  REAL_FZ                           ) ! [IN]
+
+    call INTERP_VERT_setcoef( KA, KS, KE,     & ! [IN]
+                              IA, 1,  IA,     & ! [IN]
+                              JA, 1,  JA,     & ! [IN]
+                              TOPO_exist,     & ! [IN]
+                              GRID_CZ(:),     & ! [IN]
+                              GRID_FZ(:),     & ! [IN]
+                              REAL_CZ(:,:,:), & ! [IN]
+                              REAL_FZ(:,:,:)  ) ! [IN]
 
     return
   end subroutine REAL_setup
