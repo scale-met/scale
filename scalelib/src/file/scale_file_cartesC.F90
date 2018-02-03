@@ -339,7 +339,7 @@ contains
     if( present(transpose) ) transpose_ = transpose
 
     call FILE_CARTESC_open( basename, fid )
-                            
+
 
     call FILE_CARTESC_check_coordinates_id( fid,                           & ! [IN]
                                             atmos_, ocean_, land_, urban_, & ! [IN]
@@ -978,7 +978,7 @@ contains
 
     call FILE_CARTESC_read_var_1D( fid, varname, dim_type, & ! [IN]
                                    var(:),                 & ! [OUT]
-                                   step=step               ) ! [IN]                                   
+                                   step=step               ) ! [IN]
 
     call FILE_CARTESC_close( fid )
 
@@ -1011,7 +1011,7 @@ contains
 
     call FILE_CARTESC_read_var_2D( fid, varname, dim_type, & ! [IN]
                                    var(:,:),               & ! [OUT]
-                                   step=step               ) ! [IN]                                   
+                                   step=step               ) ! [IN]
 
     call FILE_CARTESC_close( fid )
 
@@ -1391,7 +1391,7 @@ contains
        endif
 
        call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), step=step )
-                       
+
     endif
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
@@ -1690,7 +1690,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,'(1x,3A)') '*** Write to file (3D), name : ', trim(varname), 'with time dimension'
- 
+
     call FILE_CARTESC_create( basename, title, datatype,         & ! [IN]
                               fid,                               & ! [OUT]
                               date=tsince,                       & ! [IN]

@@ -738,8 +738,8 @@ contains
           end do
           end do
 
-          call FILE_HISTORY_in( flux_rad(:,:,:), 'RADFLUX_DYCOMS', 'net radiation flux', 'W/m2', nohalo=.true. )
-          call FILE_HISTORY_in( Zi      (:,:),   'Zi',             'cloud top height'  , 'm'   , nohalo=.true. )
+          call FILE_HISTORY_in( flux_rad(:,:,:), 'RADFLUX_DYCOMS', 'net radiation flux', 'W/m2', fill_halo=.true. )
+          call FILE_HISTORY_in( Zi      (:,:),   'Zi',             'cloud top height'  , 'm'   , fill_halo=.true. )
 
        elseif( USER_LS_TYPE == 'RICO' ) then
 

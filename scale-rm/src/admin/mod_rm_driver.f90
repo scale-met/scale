@@ -103,8 +103,6 @@ contains
        REAL_setup
     use scale_gridtrans, only: &
        GTRANS_setup
-    use scale_interpolation, only: &
-       INTERP_setup
     use scale_rm_statistics, only: &
        STAT_setup
     use scale_time, only: &
@@ -278,8 +276,6 @@ contains
 
     ! setup grid transfer metrics (uses in ATMOS_dynamics)
     call GTRANS_setup
-    ! setup Z-ZS interpolation factor (uses in History)
-    call INTERP_setup
 
     ! setup restart
     call ADMIN_restart_setup

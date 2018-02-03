@@ -165,7 +165,7 @@ contains
        V(k,i,1) = MOMY(k,i,1) / DENS(k,i,1)
     enddo
     enddo
- 
+
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j  = JS, JE
     do i  = IS, IE
@@ -223,7 +223,7 @@ contains
                               DENS(:,:,:), RHOT(:,:,:),                & ! (in)
                               Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:), & ! (in)
                               TEMP(:,:,:), PRES(:,:,:)                 ) ! (out)
-                              
+
 
 !OCL XFILL
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
@@ -244,44 +244,44 @@ contains
 
   !-----------------------------------------------------------------------------
   !> ATMOS_DIAGNOSTIC_get_phyd
-  !! hydrostatic pressure 
+  !! hydrostatic pressure
   !<
   subroutine ATMOS_DIAGNOSTIC_get_phyd( &
-       KA, KS, KE, &       
+       KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
        DENS, PRES, &
        CZ, FZ,     &
-       PHYD        )
+       PHYD,       &
+       PHYDH       )
     use scale_const, only: &
        GRAV => CONST_GRAV
+    implicit none
+
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
-
-    real(RP), intent(in)  :: DENS(KA,IA,JA)
-    real(RP), intent(in)  :: PRES(KA,IA,JA)
-
-    real(RP), intent(in)  :: CZ(KA,IA,JA)
-    real(RP), intent(in)  :: FZ(0:KA,IA,JA)
-
-    real(RP), intent(out) :: PHYD(KA,IA,JA)
-
-    real(RP) :: ph(KA)  !> hydrostatic pressure at the half level
+    real(RP), intent(in)  :: DENS (  KA,IA,JA)
+    real(RP), intent(in)  :: PRES (  KA,IA,JA)
+    real(RP), intent(in)  :: CZ   (  KA,IA,JA)
+    real(RP), intent(in)  :: FZ   (0:KA,IA,JA)
+    real(RP), intent(out) :: PHYD (  KA,IA,JA)
+    real(RP), intent(out) :: PHYDH(0:KA,IA,JA)
 
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j,k,ph) &
-    !$omp shared(PHYD,DENS,PRES,CZ,FZ,GRAV) &
+    !$omp parallel do default(none) OMP_SCHEDULE_ &
+    !$omp private(i,j,k) &
+    !$omp shared(PHYD,PHYDH,DENS,PRES,CZ,FZ,GRAV) &
     !$omp shared(KS,KE,IS,IE,JS,JE)
     do j = JS, JE
     do i = IS, IE
-       ph(KE) = PRES(KE,i,j) - DENS(KE,i,j) * GRAV * ( FZ(KE,i,j) - CZ(KE,i,j) )
+       PHYDH(KE,i,j) = PRES(KE,i,j) - DENS(KE,i,j) * GRAV * ( FZ(KE,i,j) - CZ(KE,i,j) )
        do k = KE, KS, -1
-          ph(k-1) = ph(k) + DENS(k,i,j) * GRAV * ( FZ(k,i,j) - FZ(k-1,i,j) )
-          PHYD(k,i,j) = ( ph(k) + ph(k-1) ) * 0.5_RP
+          PHYDH(k-1,i,j) = PHYDH(k,i,j) + DENS(k,i,j) * GRAV * ( FZ(k,i,j) - FZ(k-1,i,j) )
+!          PHYD (k  ,i,j) = 0.5_RP * ( PHYDH(k,i,j) + PHYDH(k-1,i,j) )
+          PHYD (k  ,i,j) = sqrt(PHYDH(k,i,j)) * sqrt(PHYDH(k-1,i,j))
        end do
     enddo
     enddo
@@ -294,7 +294,7 @@ contains
   !! N^2
   !<
   subroutine ATMOS_DIAGNOSTIC_get_n2( &
-       KA, KS, KE, &       
+       KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
        POTT, &
@@ -346,7 +346,7 @@ contains
   !! virtual potential temperature
   !<
   subroutine ATMOS_DIAGNOSTIC_get_potv( &
-       KA, KS, KE, &       
+       KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
        POTT, &
@@ -387,7 +387,7 @@ contains
   !! liqued water temperature
   !<
   subroutine ATMOS_DIAGNOSTIC_get_teml( &
-       KA, KS, KE, &       
+       KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
        TEMP,     &
