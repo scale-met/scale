@@ -446,6 +446,8 @@ int32_t file_read_data_c(       void       *var,       // (out)
   int fid;
   size_t *str, *cnt;
   MPI_Offset *strp, *cntp;
+  size_t size;
+  int l_rescale;
 
   fid = dinfo->fid;
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
@@ -480,6 +482,9 @@ int32_t file_read_data_c(       void       *var,       // (out)
     cnt[0] = 1;
   }
 
+  size = 1;
+  for (i=0; i<rank; i++) size *= cnt[i];
+
   if ( files[fid]->shared_mode ) {
     for (i=0; i<rank; i++) {
       strp[i] = (MPI_Offset) str[i];
@@ -490,13 +495,78 @@ int32_t file_read_data_c(       void       *var,       // (out)
     CHECK_PNC_ERROR( ncmpi_iget_vara(ncid, varid, strp, cntp, var, ntypes, dtype, NULL) )
     free(strp);
     free(cntp);
+    switch ( dtype ) {
+    case MPI_FLOAT:
+      {
+	float factor, offset;
+	l_rescale = 0;
+	if ( ncmpi_get_att_float(ncid, varid, "scale_factor", &factor) != NC_NOERR )
+	  factor = 1.0f;
+	else
+	  l_rescale = 1;
+	if ( ncmpi_get_att_float(ncid, varid, "add_offset", &offset) != NC_NOERR )
+	  offset = 0.0f;
+	else
+	  l_rescale = 1;
+	if ( l_rescale ) for (i=0; i<size; i++) ((float*)var)[i] = ((float*)var)[i] * factor + offset;
+      }
+    case MPI_DOUBLE:
+      {
+	double factor, offset;
+	l_rescale = 0;
+	if ( ncmpi_get_att_double(ncid, varid, "scale_factor", &factor) != NC_NOERR )
+	  factor = 1.0;
+	else
+	  l_rescale = 1;
+	if ( ncmpi_get_att_double(ncid, varid, "add_offset", &offset) != NC_NOERR )
+	  offset = 0.0;
+	else
+	  l_rescale = 1;
+	if ( l_rescale ) for (i=0; i<size; i++) ((double*)var)[i] = ((double*)var)[i] * factor + offset;
+      }
+    default:
+      {
+	float factor, offset;
+	if (    ( ncmpi_get_att_float(ncid, varid, "scale_factor", &factor) == NC_NOERR ) 
+             || ( ncmpi_get_att_float(ncid, varid, "add_offset",   &offset) == NC_NOERR ) ) {
+	  fprintf(stderr, "scale_factor and add_offset is not supported with a MPI derived type\n");
+	  return ERROR_CODE;
+	}
+      }
+    }
   } else {
     switch ( precision ) {
     case 8:
       CHECK_ERROR( nc_get_vara_double(ncid, varid, str, cnt, (double*)var) )
+      {
+	double factor, offset;
+	l_rescale = 0;
+	if ( nc_get_att_double(ncid, varid, "scale_factor", &factor) != NC_NOERR )
+	  factor = 1.0;
+	else
+	  l_rescale = 1;
+	if ( nc_get_att_double(ncid, varid, "add_offset", &offset) != NC_NOERR )
+	  offset = 0.0;
+	else
+	  l_rescale = 1;
+	if ( l_rescale ) for (i=0; i<size; i++) ((double*)var)[i] = ((double*)var)[i] * factor + offset;
+      }
       break;
     case 4:
       CHECK_ERROR( nc_get_vara_float(ncid, varid, str, cnt, (float*)var) )
+      {
+	float factor, offset;
+	l_rescale = 0;
+	if ( nc_get_att_float(ncid, varid, "scale_factor", &factor) != NC_NOERR )
+	  factor = 1.0f;
+	else
+	  l_rescale = 1;
+	if ( nc_get_att_float(ncid, varid, "add_offset", &offset) != NC_NOERR )
+	  offset = 0.0f;
+	else
+	  l_rescale = 1;
+	if ( l_rescale ) for (i=0; i<size; i++) ((float*)var)[i] = ((float*)var)[i] * factor + offset;
+      }
       break;
     default:
       free(str);

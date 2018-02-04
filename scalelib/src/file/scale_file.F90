@@ -1462,11 +1462,14 @@ contains
   subroutine FILE_get_attribute_text_fid( &
        fid,        &
        vname, key, &
-       val         )
+       val,        &
+       existed     )
     integer,          intent(in ) :: fid
     character(len=*), intent(in ) :: vname
     character(len=*), intent(in ) :: key
     character(len=*), intent(out) :: val
+
+    logical, intent(out), optional :: existed
 
     integer :: error
 
@@ -1475,16 +1478,23 @@ contains
          key,                        & ! (in)
          val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get text attribute for '//trim(vname)//': '//trim(key)
-       call PRC_abort
+       if ( present(existed) ) then
+          existed = .false.
+       else
+          write(*,*) 'xxx failed to get text attribute for '//trim(vname)//': '//trim(key)
+          call PRC_abort
+       end if
+    else
+       if ( present(existed) ) existed = .true.
     end if
 
     return
   end subroutine FILE_get_attribute_text_fid
   subroutine FILE_get_attribute_text_fname( &
-      basename, vname, key,    &
-      val,                     &
-      single, mpi_comm, rankid )
+      basename, vname, key,     &
+      val,                      &
+      single, mpi_comm, rankid, &
+      existed                   )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1497,6 +1507,7 @@ contains
     integer, intent(in), optional :: mpi_comm
     integer, intent(in), optional :: rankid
 
+    logical, intent(out), optional :: existed
     integer :: fid
 
     call FILE_open( basename, & ! (in)
@@ -1507,7 +1518,8 @@ contains
 
     call FILE_get_attribute_text_fid( &
          fid, vname, key, & ! (in)
-         val              ) ! (out)
+         val,             & ! (out)
+         existed          ) ! (out)
 
     return
   end subroutine FILE_get_attribute_text_fname
@@ -1515,11 +1527,14 @@ contains
   !-----------------------------------------------------------------------------
   subroutine FILE_get_attribute_int_fid( &
        fid, vname, key, &
-       val              )
+       val,             &
+       existed          )
     integer,          intent(in ) :: fid
     character(len=*), intent(in ) :: vname
     character(len=*), intent(in ) :: key
     integer,          intent(out) :: val(:)
+
+    logical, intent(out), optional :: existed
 
     integer :: error
 
@@ -1530,16 +1545,23 @@ contains
          key, size(val),             & ! (in)
          val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get integer attribute for '//trim(vname)//': '//trim(key)
-       call PRC_abort
+       if ( present(existed) ) then
+          existed = .false.
+       else
+          write(*,*) 'xxx failed to get integer attribute for '//trim(vname)//': '//trim(key)
+          call PRC_abort
+       end if
+    else
+       if ( present(existed) ) existed = .true.
     end if
 
     return
   end subroutine FILE_get_attribute_int_fid
   subroutine FILE_get_attribute_int_fname( &
-      basename, vname, key,    &
-      val,                     &
-      single, mpi_comm, rankid )
+      basename, vname, key,     &
+      val,                      &
+      single, mpi_comm, rankid, &
+      existed                   )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1552,6 +1574,8 @@ contains
     integer, intent(in), optional :: mpi_comm
     integer, intent(in), optional :: rankid
 
+    logical, intent(out), optional :: existed
+
     integer :: fid
 
     call FILE_open( basename, & ! (in)
@@ -1562,7 +1586,8 @@ contains
 
     call FILE_get_attribute_int_fid( &
          fid, vname, key, & ! (in)
-         val              ) ! (out)
+         val,             & ! (out)
+         existed          ) ! (out)
 
     return
   end subroutine FILE_get_attribute_int_fname
@@ -1570,11 +1595,14 @@ contains
 
   subroutine FILE_get_attribute_float_fid( &
        fid, vname, key, &
-       val              )
+       val,             &
+       existed          )
     integer,          intent(in ) :: fid
     character(len=*), intent(in ) :: vname
     character(len=*), intent(in ) :: key
     real(SP),    intent(out) :: val(:)
+
+    logical, intent(out), optional :: existed
 
     integer :: error
 
@@ -1585,16 +1613,23 @@ contains
          key, size(val),             & ! (in)
          val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get float attribute for '//trim(vname)//': '//trim(key)
-       call PRC_abort
+       if ( present(existed) ) then
+          existed = .false.
+       else
+          write(*,*) 'xxx failed to get float attribute for '//trim(vname)//': '//trim(key)
+          call PRC_abort
+       end if
+    else
+       if ( present(existed) ) existed = .true.
     end if
 
     return
   end subroutine FILE_get_attribute_float_fid
   subroutine FILE_get_attribute_float_fname( &
-      basename, vname, key,    &
-      val,                     &
-      single, mpi_comm, rankid )
+      basename, vname, key,     &
+      val,                      &
+      single, mpi_comm, rankid, &
+      existed                   )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1607,6 +1642,8 @@ contains
     integer, intent(in), optional :: mpi_comm
     integer, intent(in), optional :: rankid
 
+    logical, intent(out), optional :: existed
+
     integer :: fid
 
     call FILE_open( basename, & ! (in)
@@ -1617,17 +1654,21 @@ contains
 
     call FILE_get_attribute_float_fid( &
          fid, vname, key, & ! (in)
-         val              ) ! (out)
+         val,             & ! (out)
+         existed          ) ! (out)
 
     return
   end subroutine FILE_get_attribute_float_fname
   subroutine FILE_get_attribute_double_fid( &
        fid, vname, key, &
-       val              )
+       val,             &
+       existed          )
     integer,          intent(in ) :: fid
     character(len=*), intent(in ) :: vname
     character(len=*), intent(in ) :: key
     real(DP),    intent(out) :: val(:)
+
+    logical, intent(out), optional :: existed
 
     integer :: error
 
@@ -1638,16 +1679,23 @@ contains
          key, size(val),             & ! (in)
          val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get double attribute for '//trim(vname)//': '//trim(key)
-       call PRC_abort
+       if ( present(existed) ) then
+          existed = .false.
+       else
+          write(*,*) 'xxx failed to get double attribute for '//trim(vname)//': '//trim(key)
+          call PRC_abort
+       end if
+    else
+       if ( present(existed) ) existed = .true.
     end if
 
     return
   end subroutine FILE_get_attribute_double_fid
   subroutine FILE_get_attribute_double_fname( &
-      basename, vname, key,    &
-      val,                     &
-      single, mpi_comm, rankid )
+      basename, vname, key,     &
+      val,                      &
+      single, mpi_comm, rankid, &
+      existed                   )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1660,6 +1708,8 @@ contains
     integer, intent(in), optional :: mpi_comm
     integer, intent(in), optional :: rankid
 
+    logical, intent(out), optional :: existed
+
     integer :: fid
 
     call FILE_open( basename, & ! (in)
@@ -1670,7 +1720,8 @@ contains
 
     call FILE_get_attribute_double_fid( &
          fid, vname, key, & ! (in)
-         val              ) ! (out)
+         val,             & ! (out)
+         existed          ) ! (out)
 
     return
   end subroutine FILE_get_attribute_double_fname

@@ -37,11 +37,6 @@ module mod_realinput
      FZ  => REAL_FZ
   use scale_grid_nest, only: &
      NEST_INTERP_LEVEL
-  use scale_external_io, only: &
-     iSCALE, &
-     iWRFARW, &
-     iNICAM, &
-     iGrADS
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -75,6 +70,11 @@ module mod_realinput
   !
   !++ Private parameters & variables
   !
+  integer, public, parameter :: iSCALE  = 1
+  integer, public, parameter :: iWRFARW = 2
+  integer, public, parameter :: iNICAM  = 3
+  integer, public, parameter :: iGrADS  = 4
+
   real(RP), private, allocatable :: LON_org (:,:)
   real(RP), private, allocatable :: LAT_org (:,:)
   real(RP), private, allocatable :: CZ_org  (:,:,:)
@@ -870,11 +870,6 @@ contains
        use_file_density_in, &
        dims,                &
        timelen              )
-    use scale_external_io, only: &
-       iSCALE, &
-       iWRFARW, &
-       iNICAM, &
-       iGrADS
     use mod_realinput_scale, only: &
        ParentAtmosSetupSCALE
     use mod_realinput_wrfarw, only: &
@@ -1693,11 +1688,6 @@ contains
        intrp_land_sfc_temp, &
        intrp_ocean_temp,    &
        intrp_ocean_sfc_temp )
-    use scale_external_io, only: &
-         iSCALE, &
-         iWRFARW, &
-         iNICAM, &
-         iGrADS
     use mod_realinput_scale, only: &
          ParentLandSetupSCALE, &
          ParentOceanSetupSCALE
