@@ -832,14 +832,14 @@ contains
              basename_out_mod = trim(BASENAME_BOUNDARY)
           endif
 
-          call ParentSurfaceBoundary( LAND_TEMP_org       (:,:,:,ns:ne), &
-                                      LAND_WATER_org      (:,:,:,ns:ne), &
-                                      LAND_SFC_TEMP_org   (:,:,  ns:ne), &
-                                      LAND_SFC_albedo_org (:,:,:,ns:ne), &
-                                      OCEAN_TEMP_org      (OKS,:,:,  ns:ne), &
-                                      OCEAN_SFC_TEMP_org  (    :,:,  ns:ne), &
-                                      OCEAN_SFC_albedo_org(    :,:,:,ns:ne), &
-                                      OCEAN_SFC_Z0_org    (    :,:,  ns:ne), &
+          call ParentSurfaceBoundary( LAND_TEMP_org       (:,:,:,  ns:ne), &
+                                      LAND_WATER_org      (:,:,:,  ns:ne), &
+                                      LAND_SFC_TEMP_org   (  :,:,  ns:ne), &
+                                      LAND_SFC_albedo_org (  :,:,:,ns:ne), &
+                                      OCEAN_TEMP_org      (:,:,:,  ns:ne), &
+                                      OCEAN_SFC_TEMP_org  (  :,:,  ns:ne), &
+                                      OCEAN_SFC_albedo_org(  :,:,:,ns:ne), &
+                                      OCEAN_SFC_Z0_org    (  :,:,  ns:ne), &
                                       totaltimesteps,                    &
                                       BOUNDARY_UPDATE_DT,                &
                                       basename_out_mod,                  &
@@ -2494,7 +2494,7 @@ contains
     real(RP),         intent(in)   :: strg(:,:,:,:)
     real(RP),         intent(in)   :: lst(:,:,:)
     real(RP),         intent(in)   :: albg(:,:,:,:)
-    real(RP),         intent(in)   :: tw(:,:,:)
+    real(RP),         intent(in)   :: tw(:,:,:,:)
     real(RP),         intent(in)   :: sst(:,:,:)
     real(RP),         intent(in)   :: albw(:,:,:,:)
     real(RP),         intent(in)   :: z0(:,:,:)
@@ -2549,7 +2549,7 @@ contains
          timeintv=update_dt, nsteps=numsteps                             ) ! [IN]
     call FILE_CARTESC_def_var( fid,                        & ! [IN]
          'OCEAN_TEMP', 'Reference Ocean Temperature', 'K', & ! [IN]
-          'XYT', boundary_out_dtype,                       & ! [IN]
+          'OXYT', boundary_out_dtype,                      & ! [IN]
          vid(6),                                           & ! [OUT]
          timeintv=update_dt, nsteps=numsteps               ) ! [IN]
     call FILE_CARTESC_def_var( fid,                                    & ! [IN]
@@ -2580,7 +2580,7 @@ contains
     call FILE_CARTESC_write_var( fid, vid(3),  lst (  :,:,     ts:te), 'LAND_SFC_TEMP',  'XYT',  update_dt )
     call FILE_CARTESC_write_var( fid, vid(4),  albg(  :,:,I_LW,ts:te), 'LAND_ALB_LW',    'XYT',  update_dt )
     call FILE_CARTESC_write_var( fid, vid(5),  albg(  :,:,I_SW,ts:te), 'LAND_ALB_SW',    'XYT',  update_dt )
-    call FILE_CARTESC_write_var( fid, vid(6),  tw  (  :,:,     ts:te), 'OCEAN_TEMP',     'XYT',  update_dt )
+    call FILE_CARTESC_write_var( fid, vid(6),  tw  (:,:,:,     ts:te), 'OCEAN_TEMP',     'OXYT', update_dt )
     call FILE_CARTESC_write_var( fid, vid(7),  sst (  :,:,     ts:te), 'OCEAN_SFC_TEMP', 'XYT',  update_dt )
     call FILE_CARTESC_write_var( fid, vid(8),  albw(  :,:,I_LW,ts:te), 'OCEAN_ALB_LW',   'XYT',  update_dt )
     call FILE_CARTESC_write_var( fid, vid(9),  albw(  :,:,I_SW,ts:te), 'OCEAN_ALB_SW',   'XYT',  update_dt )
