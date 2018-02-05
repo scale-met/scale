@@ -21,8 +21,6 @@ module mod_realinput_nicam
   use scale_process, only: &
      myrank => PRC_myrank,  &
      PRC_MPIstop
-  use scale_external_io, only: &
-     iNICAM
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -60,11 +58,9 @@ module mod_realinput_nicam
   real(SP), allocatable :: read1DX(:)
   real(SP), allocatable :: read1DY(:)
   real(SP), allocatable :: read1DZ(:)
-  real(SP), allocatable :: read3DS(:,:,:,:)
-  real(SP), allocatable :: read4D (:,:,:,:)
+  real(SP), allocatable :: read3D (:,:,:)
 
-  real(SP), allocatable :: read1DLZ(:)
-  real(SP), allocatable :: read4DL(:,:,:,:)
+  real(SP), allocatable :: read3DL(:,:,:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -104,11 +100,10 @@ contains
     dims(5) = dims(2)
     dims(6) = dims(3)
 
-    allocate( read1DX( dims(2)                      ) )
-    allocate( read1DY( dims(3)                      ) )
-    allocate( read1DZ( dims(1)                      ) )
-    allocate( read3DS( 1,       dims(2), dims(3), 1 ) )
-    allocate( read4D ( dims(1), dims(2), dims(3), 1 ) )
+    allocate( read1DX( dims(2)                   ) )
+    allocate( read1DY( dims(3)                   ) )
+    allocate( read1DZ( dims(1)                   ) )
+    allocate( read3D ( dims(1), dims(2), dims(3) ) )
 
     return
   end subroutine ParentAtmosSetupNICAM
@@ -123,9 +118,8 @@ contains
     use scale_const, only: &
          D2R => CONST_D2R
     use scale_file, only: &
+         FILE_open, &
          FILE_Read
-    use scale_external_io, only: &
-         ExternalFILERead
     implicit none
 
     real(RP),         intent(out) :: lon_org(:,:)
@@ -136,39 +130,44 @@ contains
 
     character(len=H_LONG) :: basename
 
+    integer :: fid
     integer :: k, i, j
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosOpenNICAM]'
 
     basename = "ms_pres"//trim(basename_num)
-    call FILE_Read( basename, "lon", read1DX(:), single=.true. )
+    call FILE_open( basename, fid, single=.true., postfix="" )
+
+    call FILE_read( fid, "lon", read1DX(:) )
     do j = 1, dims(3)
        lon_org (:,j)  = read1DX(:) * D2R
     enddo
 
-    call FILE_Read( basename, "lat", read1DY(:), single=.true. )
+    call FILE_read( fid, "lat", read1DY(:) )
     do i = 1, dims(2)
        lat_org (i,:)  = read1DY(:) * D2R
     enddo
 
-    call FILE_Read( basename, "lev", read1DZ(:), single=.true. )
+    call FILE_read( fid, "lev", read1DZ(:) )
     do j = 1, dims(3)
     do i = 1, dims(2)
        cz_org(3:,i,j) = read1DZ(:)
     end do
     end do
 
-    call ExternalFileRead( read4D(:,:,:,:), trim(basename), "ms_pres", 1, 1, myrank, iNICAM, single=.true. )
+    call FILE_read( fid, "ms_pres", read3D(:,:,:) )
     do j = 1, dims(3)
     do i = 1, dims(2)
        do k = dims(1)+2, 3, -1
           ! missing data implies under ground
           ! For more accurate surface height, we need topograph data
           ! So surface data is not used at this moment
-          if ( read4D(k-2,i,j,1) <= 0.0_RP ) then
+          if ( read3D(i,j,k-2) <= 0.0_RP ) then
 !             cz_org(k,i,j) = max( ( cz_org(k+1,i,j) + cz_org(k,i,j) ) * 0.5_RP, 0.0_RP )
              cz_org(1:k,i,j) = 0.0_RP
              exit
+          else
+             cz_org(k,i,j) = read3D(i,j,k)
           endif
        enddo
     enddo
@@ -194,9 +193,8 @@ contains
        P00 => CONST_PRE00, &
        D2R => CONST_D2R, &
        EPS => CONST_EPS
-    use scale_external_io, only: &
-         ExternalFileRead, &
-         ExternalFileReadOffset
+    use scale_file, only: &
+       FILE_read
     use scale_atmos_hydrometeor, only: &
        I_QV
     implicit none
@@ -226,16 +224,15 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosInputNICAM]'
 
-    !> [scale-offset]
     basename = "ms_u"//trim(basename_num)
-    call ExternalFileReadOffset( read4D(:,:,:,:), trim(basename), "ms_u", it, it, myrank, iNICAM, single=.true. )
+    call FILE_read( basename, "ms_u", read3D(:,:,:), step=it, rankid=myrank, single=.true., postfix="" )
     do j = 1, dims(3)
     do i = 1, dims(2)
        do k = 1, dims(1)
-          if ( abs(abs(read4D(k,i,j,1))-300.0_SP) < sqrt(EPS) ) then ! missing value
+          if ( abs(abs(read3D(i,j,k))-300.0_SP) < sqrt(EPS) ) then ! missing value
              velx_org(k+2,i,j) = 0.0_RP
           else
-             velx_org(k+2,i,j) = real( read4D(k,i,j,1), kind=RP )
+             velx_org(k+2,i,j) = read3D(i,j,k)
           end if
        end do
        velx_org(1:2,i,j) = 0.0_RP
@@ -243,20 +240,14 @@ contains
     end do
 
     basename = "ms_v"//trim(basename_num)
-    call ExternalFileReadOffset( read4D(:,:,:,:),  &
-                                 trim(basename),   &
-                                 "ms_v",           &
-                                 it, it,      &
-                                 myrank,           &
-                                 iNICAM,           &
-                                 single=.true.     )
+    call FILE_read( basename, "ms_v", read3D(:,:,:), step=it, rankid=myrank, single=.true., postfix="" )
     do j = 1, dims(3)
     do i = 1, dims(2)
        do k = 1, dims(1)
-          if ( abs(abs(read4D(k,i,j,1))-300.0_SP) < sqrt(EPS) ) then ! missing value
+          if ( abs(abs(read3D(i,j,k))-300.0_SP) < sqrt(EPS) ) then ! missing value
              vely_org(k+2,i,j) = 0.0_RP
           else
-             vely_org(k+2,i,j) = real( read4D(k,i,j,1), kind=RP )
+             vely_org(k+2,i,j) = read3D(i,j,k)
           end if
        end do
        vely_org(1:2,i,j) = 0.0_RP
@@ -268,18 +259,18 @@ contains
 
     ! The surface height is not available, so t2 is not used, at this moment.
 !    basename = "ss_t2m"//trim(basename_num)
-!    call ExternalFileRead( read3DS(:,:,:,:), trim(basename), "ss_t2m", it, it, myrank, iNICAM, single=.true. )
-!    tsfc_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
+!    call FILE_read( basename, "ss_t2m", tsfc_org(:,:), step=it, rankid=myrank, single=.true., postfix="" )
+
     basename = "ms_tem"//trim(basename_num)
-    call ExternalFileReadOffset( read4D(:,:,:,:), trim(basename), "ms_tem", it, it, myrank, iNICAM, single=.true. )
+    call FILE_read( basename, "ms_tem", read3D(:,:,:), step=it, rankid=myrank, single=.true., postfix="" )
     do j = 1, dims(3)
     do i = 1, dims(2)
        do k = dims(1), 1, -1
-          if ( read4D(k,i,j,1) <= 50.0_SP ) then ! missing value
-!             temp_org(k+2,i,j) = tsfc_org(i,j)
+          if ( read3D(i,j,k) <= 50.0_RP ) then ! missing value
+             temp_org(1:k+2,i,j) = temp_org(k+3,i,j)
              exit
           else
-             temp_org(1:k+2,i,j) = real( read4D(k,i,j,1), kind=RP )
+             temp_org(k+2,i,j) = read3D(i,j,k)
           end if
 !          if( k==1 ) temp_org(2,i,j) = tsfc_org(i,j) ! no missing value case
        end do
@@ -290,18 +281,17 @@ contains
     CPovR = CPdry/Rdry
 
     basename = "ss_slp"//trim(basename_num)
-    call ExternalFileReadOffset( read3DS(:,:,:,:), trim(basename), "ss_slp", it, it, myrank, iNICAM, single=.true. )
-    slp_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
+    call FILE_read( basename, "ss_slp", slp_org(:,:), step=it, rankid=myrank, single=.true., postfix="" )
+
     basename = "ms_pres"//trim(basename_num)
-    call ExternalFileRead( read4D(:,:,:,:), trim(basename), "ms_pres", it, it, myrank, iNICAM, single=.true. )
-    pres_org(3:,:,:) = read4D(:,:,:,1)
+    call FILE_read( basename, "ms_pres", read3D(:,:,:), step=it, rankid=myrank, single=.true., postfix="" )
     do j = 1, dims(3)
     do i = 1, dims(2)
        do k = dims(1), 1, -1
-          if ( read4D(k,i,j,1) < 0.0_SP ) then ! missing value
+          if ( read3D(i,j,k) < 0.0_RP ) then ! missing value
              exit
           else
-             pres_org(k+2,i,j) = real( read4D(k,i,j,1), kind=RP )
+             pres_org(k+2,i,j) = read3D(i,j,k)
           end if
        end do
        ! If data has missing value, k is the top layer having missing value,
@@ -314,22 +304,21 @@ contains
     end do
 
     basename = "ss_q2m"//trim(basename_num)
-    call ExternalFileRead( read3DS(:,:,:,:), trim(basename), "ss_q2m", it, it, myrank, iNICAM, single=.true. )
-    qvsfc_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
+    call FILE_read( basename, "ss_q2m", qvsfc_org(:,:), step=it, rankid=myrank, single=.true., postfix="" )
+
     qtrc_org(:,:,:,:) = 0.0_RP
     basename = "ms_qv"//trim(basename_num)
-    call ExternalFileRead( read4D(:,:,:,:), trim(basename), "ms_qv", it, it, myrank, iNICAM, single=.true. )
+    call FILE_read( basename, "ms_qv", read3D(:,:,:), step=it, rankid=myrank, single=.true., postfix="" )
     do j = 1, dims(3)
     do i = 1, dims(2)
        do k = dims(1), 1, -1
-          if ( read4D(k,i,j,1) < 0.0_SP ) then ! missing value
-             qtrc_org(1:k+2,i,j,I_QV) = qvsfc_org(i,j) ! surface and sealevel
+          if ( read3D(i,j,k) < 0.0_RP ) then ! missing value
              exit
           else
-             qtrc_org(k+2,i,j,I_QV) = real( read4D(k,i,j,1), kind=RP )
+             qtrc_org(k+2,i,j,I_QV) = read3D(i,j,k)
           end if
        end do
-       qtrc_org(1:2,i,j,I_QV) = qvsfc_org(i,j)
+       qtrc_org(1:k+2,i,j,I_QV) = qvsfc_org(i,j)
     end do
     end do
 
@@ -367,11 +356,9 @@ contains
     if ( .not. allocated(read1DX) ) then
        allocate( read1DX( ldims(2)                       ) )
        allocate( read1DY( ldims(3)                       ) )
-       allocate( read3DS( 1,       ldims(2), ldims(3), 1 ) )
     end if
 
-    allocate( read1DLZ( ldims(1)                      ) )
-    allocate( read4DL ( ldims(1), ldims(2), ldims(3), 1 ) )
+    allocate( read3DL ( ldims(2), ldims(3), ldims(1) ) )
 
     return
   end subroutine ParentLandSetupNICAM
@@ -397,9 +384,6 @@ contains
          EPS   => CONST_EPS
     use scale_file, only: &
          FILE_Read
-    use scale_external_io, only: &
-         ExternalFileRead, &
-         ExternalFileReadOffset
     implicit none
 
     real(RP), intent(out) :: tg_org(:,:,:)
@@ -424,62 +408,45 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[LandInputNICAM]'
 
     basename = "la_tg"//trim(basename_num)
-    call FILE_Read( basename, "lev", read1DLZ(:), single=.true. )
-    lz_org(:) = read1DLZ(:)
+    call FILE_Read( basename, "lev", lz_org(:), single=.true., postfix="" )
 
-    call FILE_Read( basename, "lon", read1DX(:), single=.true. )
+    call FILE_Read( basename, "lon", read1DX(:), single=.true., postfix="" )
     do j = 1, ldims(3)
        llon_org (:,j)  = read1DX(:) * D2R
     enddo
 
-    call FILE_Read( basename, "lat", read1DY(:), single=.true. )
+    call FILE_Read( basename, "lat", read1DY(:), single=.true., postfix="" )
     do i = 1, ldims(2)
        llat_org (i,:)  = read1DY(:) * D2R
     enddo
 
     basename = "lsmask"//trim(basename_num)
-    call ExternalFileRead( read3DS(:,:,:,:), &
-                           trim(basename),   &
-                           "lsmask",         &
-                           it, it, &
-                           myrank,           &
-                           iNICAM,           &
-                           single=.true.,    &
-                           option=.true.     )
-    lmask_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
+    call FILE_read( basename, "lsmask", lmask_org(:,:), step=it, rankid=myrank, single=.true., allow_missing=.true., missing_value=UNDEF, postfix="" )
 
     basename = "la_tg"//trim(basename_num)
-    call ExternalFileReadOffset( read4DL(:,:,:,:), &
-                                 trim(basename),   &
-                                 "la_tg",          &
-                                 it, it,      &
-                                 myrank,           &
-                                 iNICAM,           &
-                                 single=.true.     )
-    tg_org(:,:,:) = real( read4DL(:,:,:,1), kind=RP )
+    call FILE_read( basename, "la_tg", read3DL(:,:,:), step=it, rankid=myrank, single=.true., postfix="" )
+    do j = 1, ldims(3)
+    do i = 1, ldims(2)
+    do k = 1, ldims(1)
+       tg_org(k,i,j) = read3DL(i,j,k)
+    end do
+    end do
+    end do
 
     if( use_file_landwater ) then
        basename = "la_wg"//trim(basename_num)
-       call ExternalFileReadOffset( read4DL(:,:,:,:), &
-                                    trim(basename),   &
-                                    "la_wg",          &
-                                    it, it,      &
-                                    myrank,           &
-                                    iNICAM,           &
-                                    single=.true.     )
-       strg_org(:,:,:) = real( read4DL(:,:,:,1), kind=RP )
+       call FILE_read( basename, "la_wg", read3DL(:,:,:), step=it, rankid=myrank, single=.true., postfix="" )
+       do j = 1, ldims(3)
+       do i = 1, ldims(2)
+       do k = 1, ldims(1)
+          strg_org(k,i,j) = read3DL(i,j,k)
+       end do
+       end do
+       end do
     end if
 
     basename = "ss_tem_sfc"//trim(basename_num)
-    call ExternalFileRead( read3DS(:,:,:,:), &
-                           trim(basename),   &
-                           "ss_tem_sfc",     &
-                           it, it,       &
-                           myrank,           &
-                           iNICAM,           &
-                           single=.true.     )
-    lst_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
-
+    call FILE_read( basename, "ss_tem_sfc", lst_org(:,:), step=it, rankid=myrank, single=.true., postfix="" )
 
     ! replace missing value
     do j = 1, ldims(3)
@@ -529,7 +496,6 @@ contains
     if ( .not. allocated(read1DX) ) then
        allocate( read1DX( odims(1)                       ) )
        allocate( read1DY( odims(2)                       ) )
-       allocate( read3DS( 1,       odims(1), odims(2), 1 ) )
     end if
 
     return
@@ -543,11 +509,10 @@ contains
        basename_num, &
        odims         )
     use scale_const, only: &
-         D2R => CONST_D2R
+         D2R   => CONST_D2R, &
+         UNDEF => CONST_UNDEF
     use scale_file, only: &
-         FILE_Read
-    use scale_external_io, only: &
-         ExternalFileRead
+         FILE_read
     implicit none
 
     real(RP),         intent(out) :: olon_org(:,:)
@@ -563,26 +528,18 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[OceanOpenNICAM]'
 
     basename = "oa_sst"//trim(basename_num)
-    call FILE_Read( basename, "lon", read1DX(:), single=.true. )
+    call FILE_read( basename, "lon", read1DX(:), single=.true., postfix="" )
     do j = 1, odims(2)
        olon_org (:,j)  = read1DX(:) * D2R
     enddo
 
-    call FILE_Read( basename, "lat", read1DY(:), single=.true. )
+    call FILE_read( basename, "lat", read1DY(:), single=.true., postfix="" )
     do i = 1, odims(1)
        olat_org (i,:)  = read1DY(:) * D2R
     enddo
 
     basename = "lsmask"//trim(basename_num)
-    call ExternalFileRead( read3DS(:,:,:,:), &
-                           trim(basename),   &
-                           "lsmask",         &
-                           1, 1, &
-                           myrank,           &
-                           iNICAM,           &
-                           single=.true.,    &
-                           option=.true.     )
-    omask_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
+    call FILE_read( basename, "lsmask", omask_org(:,:), step=1, rankid=myrank, single=.true., allow_missing=.true., missing_value=UNDEF, postfix="" )
 
     return
   end subroutine ParentOceanOpenNICAM
@@ -600,9 +557,8 @@ contains
          D2R   => CONST_D2R,   &
          TEM00 => CONST_TEM00, &
          EPS   => CONST_EPS
-    use scale_external_io, only: &
-         ExternalFileRead, &
-         ExternalFileReadOffset
+    use scale_file, only: &
+         FILE_read
     implicit none
 
     real(RP), intent(out) :: tw_org(:,:)
@@ -622,19 +578,10 @@ contains
 
 
     basename = "oa_sst"//trim(basename_num)
-    call ExternalFileReadOffset( read3DS(:,:,:,:), &
-                                 trim(basename),   &
-                                 "oa_sst",         &
-                                 1, 1,      &
-                                 myrank,           &
-                                 iNICAM,           &
-                                 single=.true.     )
-    sst_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
+    call FILE_read( basename, "oa_sst", sst_org(:,:), step=1, rankid=myrank, single=.true., postfix="" )
 
     !basename = "oa_ice"//trim(basename_num)
-    !call ExternalFileRead( read3DS(:,:,:,:), trim(basename), &
-    !                       "oa_ice", 1, 1, myrank, iNICAM, single=.true. )
-    !ice_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
+    !call FILE_read( basename, "oa_ice", ice_org(:,:), step=1, rankid=myrank, single=.true., postfix="" )
 
 
     ! SST: retrieve SST data around coast

@@ -21,8 +21,6 @@ module mod_realinput_wrfarw
   use scale_process, only: &
      myrank => PRC_myrank,  &
      PRC_MPIstop
-  use scale_external_io, only: &
-     iWRFARW
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -53,7 +51,6 @@ module mod_realinput_wrfarw
   !++ Private parameters & variables
   !
   ! Defined parameters in WRF
-  integer,  parameter :: mdlid = iWRFARW
 
   real(RP), parameter :: t0  = 300.0_RP
   real(RP), parameter :: p0  = 1000.0E+2_RP
@@ -64,15 +61,10 @@ module mod_realinput_wrfarw
   integer, parameter :: cosin = 1
   integer, parameter :: sine  = 2
 
-  real(SP), allocatable :: read_xy (:,:,:)
-  real(SP), allocatable :: read_uy (:,:,:)
-  real(SP), allocatable :: read_xv (:,:,:)
-  real(SP), allocatable :: read_zxy(:,:,:,:)
-  real(SP), allocatable :: read_wxy(:,:,:,:)
-  real(SP), allocatable :: read_zuy(:,:,:,:)
-  real(SP), allocatable :: read_zxv(:,:,:,:)
-  real(SP), allocatable :: read_lzxy(:,:,:,:)
-  real(SP), allocatable :: read_lz(:,:)
+  real(RP), allocatable :: read_xy (:,:)
+  real(RP), allocatable :: read_xyz(:,:,:)
+  real(RP), allocatable :: read_xyw(:,:,:)
+  real(RP), allocatable :: read_xyl(:,:,:)
 
   real(RP), allocatable :: p_org   (:,:,:)
   real(RP), allocatable :: pb_org  (:,:,:)
@@ -89,9 +81,9 @@ contains
       dims,    &
       timelen, &
       basename_org )
-    use scale_external_io, only: &
-         iWRFARW, &
-         ExternalFileGetShape
+    use scale_file, only: &
+       FILE_open, &
+       FILE_get_dimLength
     implicit none
 
     integer,          intent(out) :: dims(6)
@@ -103,8 +95,9 @@ contains
     NAMELIST / PARAM_MKINIT_REAL_WRFARW / &
          WRF_FILE_TYPE
 
-    integer :: dims_wrf(7)
+    integer :: fid
     integer :: ierr
+    logical :: error
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atmos Input File Type: WRF-ARW'
@@ -118,8 +111,18 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
 
-    call ExternalFileGetShape( dims_wrf, timelen, mdlid, basename_org, myrank, single=.true. )
-    dims(1:6) = dims_wrf(1:6)
+    call FILE_open( basename_org, fid, rankid=myrank, single=.true., postfix="" )
+
+    call FILE_get_dimLength( fid, "bottom_top",       dims(1) )
+    call FILE_get_dimLength( fid, "west_east",        dims(2) )
+    call FILE_get_dimLength( fid, "south_north",      dims(3) )
+    call FILE_get_dimLength( fid, "bottom_top_stag",  dims(4) )
+    call FILE_get_dimLength( fid, "west_east_stag",   dims(5) )
+    call FILE_get_dimLength( fid, "south_north_stag", dims(6) )
+
+    call FILE_get_dimLength( fid, "Time", timelen, error=error )
+    if ( error ) call FILE_get_dimLength( fid, "time", timelen, error=error)
+    if ( error ) timelen = 0
 
     if ( wrf_file_type ) then
        wrfout = .true.
@@ -130,13 +133,9 @@ contains
     endif
 
 
-    allocate( read_xy  (        dims(2),dims(3),1) )
-    allocate( read_uy  (        dims(5),dims(3),1) )
-    allocate( read_xv  (        dims(2),dims(6),1) )
-    allocate( read_zxy (dims(1),dims(2),dims(3),1) )
-    allocate( read_wxy (dims(4),dims(2),dims(3),1) )
-    allocate( read_zuy (dims(1),dims(5),dims(3),1) )
-    allocate( read_zxv (dims(1),dims(2),dims(6),1) )
+    allocate( read_xy  (dims(2),dims(3)) )
+    allocate( read_xyz (dims(2),dims(3),dims(1)) )
+    allocate( read_xyw (dims(2),dims(3),dims(4)) )
 
     allocate( p_org    (dims(1),dims(2),dims(3)) )
     allocate( pb_org   (dims(1),dims(2),dims(3)) )
@@ -170,15 +169,18 @@ contains
        dims,          &
        it             ) ! (in)
     use scale_const, only: &
-         D2R => CONST_D2R, &
-         LAPS => CONST_LAPS, &
-         Rdry => CONST_Rdry, &
-         GRAV => CONST_GRAV
-    use scale_external_io, only: &
-         ExternalFileRead
+       D2R => CONST_D2R, &
+       LAPS => CONST_LAPS, &
+       Rdry => CONST_Rdry, &
+       GRAV => CONST_GRAV
+    use scale_file, only: &
+       FILE_open, &
+       FILE_read
     use scale_atmos_thermodyn, only: &
        THERMODYN_pott => ATMOS_THERMODYN_pott
     use scale_atmos_hydrometeor, only: &
+       QHS, &
+       QHE, &
        I_QV, &
        I_QC, &
        I_QR, &
@@ -206,20 +208,21 @@ contains
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: it
 
-    ! full level
+    ! k, i, j
     real(RP) :: velx_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: vely_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: pott_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: topo_org(          dims(2),dims(3))
+    real(RP) :: geof_org(dims(4)  ,dims(2),dims(3))
 
-    ! half level
-    real(RP) :: velzs_org(dims(4),dims(2),dims(3))
-    real(RP) :: velxs_org(dims(1),dims(5),dims(3))
-    real(RP) :: velys_org(dims(1),dims(2),dims(6))
-    real(RP) :: geof_org (dims(4),dims(2),dims(3))
+
+    ! i, j, k
+    real(RP) :: velzs_org(dims(2),dims(3),dims(4))
+    real(RP) :: velxs_org(dims(5),dims(3),dims(1))
+    real(RP) :: velys_org(dims(2),dims(6),dims(1))
 
     real(RP) :: dens
-    real(RP) :: qhyd
+    real(RP) :: qtot
 
     integer :: k, i, j, iq
 
@@ -228,6 +231,7 @@ contains
     character(len=H_MID) :: varname_U
     character(len=H_MID) :: varname_V
 
+    integer :: fid
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -246,44 +250,66 @@ contains
     endif
 
 
-    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "XLAT",    it, it, myrank, mdlid, single=.true.               )
-    lat_org (:,:) = real( read_xy(:,:,1), kind=RP ) * D2R
+    call FILE_open( basename, fid, rankid=myrank, single=.true., postfix="" )
 
-    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "XLONG",   it, it, myrank, mdlid, single=.true.               )
-    lon_org (:,:) = real( read_xy(:,:,1), kind=RP ) * D2R
+    call FILE_read( fid, "XLAT", lat_org(:,:), step=it )
+    lat_org(:,:) = lat_org(:,:) * D2R
 
-    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "HGT",     it, it, myrank, mdlid, single=.true.               )
-    topo_org (:,:) = real( read_xy(:,:,1), kind=RP )
+    call FILE_read( fid, "XLONG", lon_org(:,:), step=it )
+    lon_org(:,:) = lon_org(:,:) * D2R
 
-    call ExternalFileRead( read_wxy(:,:,:,:), BASENAME, "PH",      it, it, myrank, mdlid, single=.true., zstag=.true. )
-    ph_org  (:,:,:) = real( read_wxy(:,:,:,1), kind=RP )
+    call FILE_read( fid, "HGT", topo_org(:,:), step=it )
 
-    call ExternalFileRead( read_wxy(:,:,:,:), BASENAME, "PHB",     it, it, myrank, mdlid, single=.true., zstag=.true. )
-    phb_org (:,:,:) = real( read_wxy(:,:,:,1), kind=RP )
+    call FILE_read( fid, "PH", read_xyw(:,:,:), step=it )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(4)
+       ph_org(k,i,j) = read_xyw(i,j,k)
+    end do
+    end do
+    end do
 
-    call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "P",       it, it, myrank, mdlid, single=.true.               )
-    p_org   (:,:,:) = real( read_zxy(:,:,:,1), kind=RP )
+    call FILE_read( fid, "PHB", read_xyw(:,:,:), step=it )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(4)
+       phb_org(k,i,j) = read_xyw(i,j,k)
+    end do
+    end do
+    end do
 
-    call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "PB",      it, it, myrank, mdlid, single=.true.               )
-    pb_org  (:,:,:) = real( read_zxy(:,:,:,1), kind=RP )
+    call FILE_read( fid, "P", read_xyz(:,:,:), step=it )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       p_org(k,i,j) = read_xyz(i,j,k)
+    end do
+    end do
+    end do
 
-    call ExternalFileRead( read_wxy(:,:,:,:), BASENAME, varname_W, it, it, myrank, mdlid, single=.true., zstag=.true. )
-    velzs_org(:,:,:) = real( read_wxy(:,:,:,1), kind=RP )
+    call FILE_read( fid, "PB", read_xyz(:,:,:), step=it )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       pb_org(k,i,j) = read_xyz(i,j,k)
+    end do
+    end do
+    end do
 
-    call ExternalFileRead( read_zuy(:,:,:,:), BASENAME, varname_U, it, it, myrank, mdlid, single=.true., xstag=.true. )
+    call FILE_read( fid, varname_W, velzs_org(:,:,:), step=it )
 
-    velxs_org(:,:,:) = real( read_zuy(:,:,:,1), kind=RP )
+    call FILE_read( fid, varname_U, velxs_org(:,:,:), step=it )
 
-    call ExternalFileRead( read_zxv(:,:,:,:), BASENAME, varname_V, it, it, myrank, mdlid, single=.true., ystag=.true. )
-    velys_org(:,:,:) = real( read_zxv(:,:,:,1), kind=RP )
+    call FILE_read( fid, varname_V, velys_org(:,:,:), step=it )
+
 
     ! from half level to full level
     do j = 1, dims(3)
     do i = 1, dims(2)
        do k = 1, dims(1)
-          velz_org(k+2,i,j) = ( velzs_org(k,i,j) + velzs_org(k+1,i,j) ) * 0.5_RP
-          velx_org(k+2,i,j) = ( velxs_org(k,i,j) + velxs_org(k,i+1,j) ) * 0.5_RP
-          vely_org(k+2,i,j) = ( velys_org(k,i,j) + velys_org(k,i,j+1) ) * 0.5_RP
+          velz_org(k+2,i,j) = ( velzs_org(i,j,k) + velzs_org(i,j,k+1) ) * 0.5_RP
+          velx_org(k+2,i,j) = ( velxs_org(i,j,k) + velxs_org(i+1,j,k) ) * 0.5_RP
+          vely_org(k+2,i,j) = ( velys_org(i,j,k) + velys_org(i,j+1,k) ) * 0.5_RP
        end do
        velz_org(1:2,i,j) = 0.0_RP
        velx_org(1:2,i,j) = 0.0_RP
@@ -298,67 +324,151 @@ contains
                                  dims(1)+2, dims(2), dims(3) ) ! (in)
 
     qtrc_org(:,:,:,:) = 0.0_RP
-    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "Q2",      it, it, myrank, mdlid, single=.true.               )
-    qtrc_org(2,:,:,I_QV) = real(read_xy(:,:,1),kind=RP)
-    qtrc_org(1,:,:,I_QV) = qtrc_org(2,:,:,I_QV)
 
-    call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QVAPOR",  it, it, myrank, mdlid, single=.true. )
-    qtrc_org(3:,:,:,I_QV) = real(read_zxy(:,:,:,1),kind=RP)
+    call FILE_read( fid, "Q2", read_xy(:,:), step=it )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       qtrc_org(1,i,j,I_QV) = read_xy(i,j)
+       qtrc_org(2,i,j,I_QV) = read_xy(i,j)
+    end do
+    end do
 
-#ifndef DRY
-    if( mptype_parent > 0 ) then
-       call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QCLOUD", it, it, myrank, mdlid, single=.true. )
-       qtrc_org(3:,:,:,I_QC) = real( read_zxy(:,:,:,1), kind=RP)
+    call FILE_read( fid, "QVAPOR", read_xyz(:,:,:), step=it )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       qtrc_org(k+2,i,j,I_QV) = read_xyz(i,j,k)
+    end do
+    end do
+    end do
 
-       call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QRAIN",  it, it, myrank, mdlid, single=.true. )
-       qtrc_org(3:,:,:,I_QR) = real( read_zxy(:,:,:,1), kind=RP)
-    endif
 
-    if( mptype_parent > 3 ) then
-       call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QICE",   it, it, myrank, mdlid, single=.true. )
-       qtrc_org(3:,:,:,I_QI) = real( read_zxy(:,:,:,1), kind=RP)
+    if ( I_QC > 0 ) then
+       call FILE_read( fid, "QCLOUD", read_xyz(:,:,:), step=it, allow_missing=.true. )
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+       do k = 1, dims(1)
+          qtrc_org(k+2,i,j,I_QC) = read_xyz(i,j,k)
+       end do
+       end do
+       end do
+    end if
 
-       call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QSNOW",  it, it, myrank, mdlid, single=.true. )
-       qtrc_org(3:,:,:,I_QS) = real( read_zxy(:,:,:,1), kind=RP)
-    endif
+    if ( I_QR > 0 ) then
+       call FILE_read( fid, "QRAIN", read_xyz(:,:,:), step=it, allow_missing=.true. )
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+       do k = 1, dims(1)
+          qtrc_org(k+2,i,j,I_QC) = read_xyz(i,j,k)
+       end do
+       end do
+       end do
+    end if
 
-    if( mptype_parent > 5 ) then
-       call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QGRAUP", it, it, myrank, mdlid, single=.true. )
-       qtrc_org(3:,:,:,I_QG) = real( read_zxy(:,:,:,1), kind=RP)
-    endif
+    if ( I_QI > 0 ) then
+       call FILE_read( fid, "QICE", read_xyz(:,:,:), step=it, allow_missing=.true. )
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+       do k = 1, dims(1)
+          qtrc_org(k+2,i,j,I_QI) = read_xyz(i,j,k)
+       end do
+       end do
+       end do
+    end if
+
+    if ( I_QS > 0 ) then
+       call FILE_read( fid, "QSNOW", read_xyz(:,:,:), step=it, allow_missing=.true. )
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+       do k = 1, dims(1)
+          qtrc_org(k+2,i,j,I_QS) = read_xyz(i,j,k)
+       end do
+       end do
+       end do
+    end if
+
+    if ( I_QG > 0 ) then
+       call FILE_read( fid, "QGRAUP", read_xyz(:,:,:), step=it, allow_missing=.true. )
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+       do k = 1, dims(1)
+          qtrc_org(k+2,i,j,I_QG) = read_xyz(i,j,k)
+       end do
+       end do
+       end do
+    end if
+
 
     ! convert mixing ratio to specific ratio
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)+2
-       qhyd = 0.0_RP
-       do iq = 1, min( mptype_parent, 6)
-          qhyd = qhyd + qtrc_org(k,i,j,iq)
+       qtot = qtrc_org(k,i,j,I_QV)
+       do iq = QHS, QHE
+          qtot = qtot + qtrc_org(k,i,j,iq)
        end do
-       do iq = 1, min( mptype_parent, 6)
-          qtrc_org(k,i,j,iq) = qtrc_org(k,i,j,iq) / ( 1.0_RP + qhyd )
+       qtrc_org(k,i,j,I_QV) = qtrc_org(k,i,j,I_QV) / ( 1.0_RP + qtot )
+       do iq = QHS, QHE
+          qtrc_org(k,i,j,iq) = qtrc_org(k,i,j,iq) / ( 1.0_RP + qtot )
        end do
     end do
     end do
     end do
 
-    if( mptype_parent > 6 ) then
-       call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "NC",     it, it, myrank, mdlid, single=.true. )
-       qtrc_org(3:,:,:,I_NC) = real( read_zxy(:,:,:,1), kind=RP )
+    if ( I_NC > 0 ) then
+       call FILE_read( fid, "NC", read_xyz(:,:,:), step=it, allow_missing=.true. )
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+       do k = 1, dims(1)
+          qtrc_org(k+2,i,j,I_NC) = read_xyz(i,j,k)
+       end do
+       end do
+       end do
+    end if
 
-       call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "NR",     it, it, myrank, mdlid, single=.true. )
-       qtrc_org(3:,:,:,I_NR) = real( read_zxy(:,:,:,1), kind=RP )
+    if ( I_NR > 0 ) then
+       call FILE_read( fid, "NR", read_xyz(:,:,:), step=it, allow_missing=.true. )
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+       do k = 1, dims(1)
+          qtrc_org(k+2,i,j,I_NR) = read_xyz(i,j,k)
+       end do
+       end do
+       end do
+    end if
 
-       call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "NI",     it, it, myrank, mdlid, single=.true. )
-       qtrc_org(3:,:,:,I_NI) = real( read_zxy(:,:,:,1), kind=RP )
+    if ( I_NI > 0 ) then
+       call FILE_read( fid, "NI", read_xyz(:,:,:), step=it, allow_missing=.true. )
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+       do k = 1, dims(1)
+          qtrc_org(k+2,i,j,I_NI) = read_xyz(i,j,k)
+       end do
+       end do
+       end do
+    end if
 
-       call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "NS",     it, it, myrank, mdlid, single=.true. )
-       qtrc_org(3:,:,:,I_NS) = real( read_zxy(:,:,:,1), kind=RP )
+    if ( I_NS > 0 ) then
+       call FILE_read( fid, "NS", read_xyz(:,:,:), step=it, allow_missing=.true. )
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+       do k = 1, dims(1)
+          qtrc_org(k+2,i,j,I_NS) = read_xyz(i,j,k)
+       end do
+       end do
+       end do
+    end if
 
-       call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "NG",     it, it, myrank, mdlid, single=.true. )
-       qtrc_org(3:,:,:,I_NG) = real( read_zxy(:,:,:,1), kind=RP )
-    endif
-#endif
+    if ( I_NG > 0 ) then
+       call FILE_read( fid, "NG", read_xyz(:,:,:), step=it, allow_missing=.true. )
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+       do k = 1, dims(1)
+          qtrc_org(k+2,i,j,I_NG) = read_xyz(i,j,k)
+       end do
+       end do
+       end do
+    end if
 
     do iq = 1, QA
     do j = 1, dims(3)
@@ -371,13 +481,27 @@ contains
     end do
 
 
-    call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, varname_T, it, it, myrank, mdlid, single=.true.               )
-    pott_org(3:,:,:) = real( read_zxy(:,:,:,1), kind=RP ) + t0
-    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "T2",      it, it, myrank, mdlid, single=.true.               )
-    temp_org(2,:,:) = real( read_xy(:,:,1), kind=RP )
+    call FILE_read( fid, varname_T, read_xyz(:,:,:), step=it, allow_missing=.true. )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       pott_org(k+2,i,j) = read_xyz(i,j,k) + t0
+    end do
+    end do
+    end do
+    call FILE_read( fid, "T2", read_xy(:,:), step=it, allow_missing=.true. )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       temp_org(2,i,j) = read_xy(i,j)
+    end do
+    end do
 
-    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "PSFC",    it, it, myrank, mdlid, single=.true.               )
-    pres_org(2,:,:) = real( read_xy(:,:,1), kind=RP )
+    call FILE_read( fid, "PSFC", read_xy(:,:), step=it, allow_missing=.true. )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       pres_org(2,i,j) = read_xy(i,j)
+    end do
+    end do
 
     do j = 1, dims(3)
     do i = 1, dims(2)
@@ -443,10 +567,10 @@ contains
   !> Land Setup
   subroutine ParentLandSetupWRFARW( &
        ldims,    &
-      basename_land )
-    use scale_external_io, only: &
-         iWRFARW, &
-         ExternalFileGetShape
+       basename_land )
+    use scale_file, only: &
+       FILE_open, &
+       FILE_get_dimLength
     implicit none
 
     integer,          intent(out) :: ldims(3)
@@ -457,7 +581,7 @@ contains
     NAMELIST / PARAM_MKINIT_REAL_WRFARW / &
          WRF_FILE_TYPE
 
-    integer :: dims_wrf(7)
+    integer :: fid
     integer :: timelen
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -474,10 +598,11 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
 
 
-    call ExternalFileGetShape( dims_wrf, timelen, mdlid, basename_land, myrank, single=.true. )
-    ldims(1) = dims_wrf(7)
-    ldims(2) = dims_wrf(2)
-    ldims(3) = dims_wrf(3)
+    call FILE_open( basename_land, fid, rankid=myrank, single=.true., postfix="" )
+
+    call FILE_get_dimLength( fid, "soil_layers_stag", ldims(1) )
+    call FILE_get_dimLength( fid, "west_east",        ldims(2) )
+    call FILE_get_dimLength( fid, "south_north",      ldims(3) )
 
     if ( wrf_file_type ) then
        wrfout = .true.
@@ -489,11 +614,10 @@ contains
 
 
     if ( .not. allocated(read_xy) ) then
-       allocate( read_xy  (        ldims(2),ldims(3),1) )
+       allocate( read_xy  (ldims(2),ldims(3)) )
     end if
 
-    allocate( read_lzxy(ldims(1),ldims(2),ldims(3),1) )
-    allocate( read_lz  (ldims(1),1) )
+    allocate( read_xyl(ldims(2),ldims(3),ldims(1)) )
 
     return
   end subroutine ParentLandSetupWRFARW
@@ -515,13 +639,13 @@ contains
       use_file_landwater, &
       it                  )
     use scale_const, only: &
-         D2R => CONST_D2R, &
-         UNDEF => CONST_UNDEF, &
-         I_LW => CONST_I_LW, &
-         I_SW => CONST_I_SW
-    use scale_external_io, only: &
-         ExternalFileRead, &
-         ExternalFileVarExistence
+       D2R => CONST_D2R, &
+       UNDEF => CONST_UNDEF, &
+       I_LW => CONST_I_LW, &
+       I_SW => CONST_I_SW
+    use scale_file, only: &
+       FILE_open, &
+       FILE_read
     implicit none
     real(RP),         intent(out)  :: tg_org(:,:,:)
     real(RP),         intent(out)  :: sh2o_org(:,:,:)
@@ -538,106 +662,87 @@ contains
     logical,          intent( in)  :: use_file_landwater   ! use land water data from files
     integer,          intent( in)  :: it
 
-
-    integer  :: k, i, j
-
-    logical  :: existence
-
+    integer :: fid
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[LandInputWRF]'
 
-    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "XLAT",    it, it, myrank, mdlid, single=.true.               )
-    llat_org (:,:) = read_xy(:,:,1) * D2R
+    call FILE_open( basename, fid, rankid=myrank, single=.true., postfix="" )
 
-    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "XLONG",   it, it, myrank, mdlid, single=.true.               )
-    llon_org (:,:) = read_xy(:,:,1) * D2R
+    call FILE_read( fid, "XLAT", llat_org(:,:), step=it )
+    llat_org(:,:) = llat_org(:,:) * D2R
 
-    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "HGT",     it, it, myrank, mdlid, single=.true.               )
-    topo_org (:,:) = read_xy(:,:,1)
+    call FILE_read( fid, "XLONG", llon_org(:,:), step=it )
+    llon_org(:,:) = llon_org(:,:) * D2R
+
+    call FILE_read( fid, "HGT", topo_org(:,:), step=it )
+
 
     ! depth
-    call ExternalFileRead( read_lz(:,:),                               &
-                      BASENAME, "ZS",      it, 1, myrank, mdlid, ldims(1), single=.true. )
-    lz_org(:) = read_lz(:,1)
+    call FILE_read( fid, "ZS", lz_org(:), step=it )
 
     ! land mask (1:land, 0:water)
-    call ExternalFileRead( read_xy(:,:,:),                             &
-                      BASENAME, "LANDMASK",  it, 1, myrank, mdlid, single=.true. )
-    lmask_org(:,:) = read_xy(:,:,1)
+    call FILE_read( fid, "LANDMASK", lmask_org(:,:), step=it )
 
     ! soil temperature [K]
-    call ExternalFileRead( read_lzxy(:,:,:,:),                             &
-                      BASENAME, "TSLB",  it, 1, myrank, mdlid, single=.true., landgrid=.true. )
-    tg_org(:,:,:) = read_lzxy(:,:,:,1)
+    call FILE_read( fid, "TSLB", read_xyl(:,:,:), step=it )
+    do j = 1, ldims(3)
+    do i = 1, ldims(2)
+    do k = 1, ldims(1)
+       tg_org(k,i,j) = read_xyl(i,j,k)
+    end do
+    end do
+    end do
 
     ! soil liquid water [m3 m-3] (no wrfout-default)
     if( use_file_landwater ) then
-       call ExternalFileVarExistence( existence, BASENAME, "SH2O", myrank, mdlid, single=.true. )
-       if ( existence ) then
-          call ExternalFileRead( read_lzxy(:,:,:,:),                             &
-                         BASENAME, "SH2O", it, 1, myrank, mdlid, single=.true., landgrid=.true.  )
-          sh2o_org(:,:,:) = read_lzxy(:,:,:,1)
-       else
-          sh2o_org(:,:,:) = UNDEF
-       endif
+       call FILE_read( fid, "SH2O", read_xyl(:,:,:), step=it, allow_missing=.true., missing_value=UNDEF )
+       do j = 1, ldims(3)
+       do i = 1, ldims(2)
+       do k = 1, ldims(1)
+          sh2o_org(k,i,j) = read_xyl(i,j,k)
+       end do
+       end do
+       end do
     endif
 
 !    ! surface runoff [mm]
-!    call ExternalFileRead( read_xy(:,:,:),                             &
-!                      BASENAME, "SFROFF",  it, 1, myrank, mdlid, single=.true. )
-!       do j = 1, dims(9)
-!       do i = 1, dims(8)
-!          org_3D(i,j) = read_xy(i,j,1) * 1000.0_DP * dwatr
-!       enddo
-!       enddo
+!    call FILE_read( fid, "SFROFF", org_3D(:,:), step=it )
+!    do j = 1, ldims(3)
+!    do i = 1, ldims(2)
+!       org_3D(k,i,j) = org_3D(i,j,k) * 1000.0_RP * dwatr
+!    end do
+!    end do
 
 
     ! SURFACE SKIN TEMPERATURE [K]
-    call ExternalFileRead( read_xy(:,:,:),                             &
-                      BASENAME, "TSK",  it, 1, myrank, mdlid, single=.true. )
-    lst_org(:,:) = read_xy(:,:,1)
+    call FILE_read( fid, "TSK", lst_org(:,:), step=it )
 
     ust_org(:,:) = lst_org(:,:)
 
     ! ALBEDO [-]
-    call ExternalFileRead( read_xy(:,:,:),                             &
-                      BASENAME, "ALBEDO",  it, 1, myrank, mdlid, single=.true. )
-    albg_org(:,:,I_SW) = read_xy(:,:,1)
+    call FILE_read( fid, "ALBEDO", albg_org(:,:,I_SW), step=it )
 
     ! SURFACE EMISSIVITY [-]
-    call ExternalFileRead( read_xy(:,:,:),                             &
-                      BASENAME, "EMISS",  it, 1, myrank, mdlid, single=.true. )
+    call FILE_read( fid, "EMISS", read_xy(:,:), step=it )
     do j = 1, ldims(3)
     do i = 1, ldims(2)
-       albg_org(i,j,I_LW) = 1.0_DP - read_xy(i,j,1)
-    enddo
-    enddo
+       albg_org(i,j,I_LW) = 1.0_RP - read_xy(i,j)
+    end do
+    end do
 
 
 !    ! SNOW WATER EQUIVALENT [kg m-2] (no wrfout-default)
-!    call ExternalFileVarExistence( existence, BASENAME, "SNOW", myrank, mdlid, single=.true. )
-!    if ( existence ) then
-!       call ExternalFileRead( read_xy(:,:,:),                             &
-!                         BASENAME, "SNOW",  it, 1, myrank, mdlid, single=.true. )
-!       swowq_org(:,:,:) = read_xy(:,:,1)
-!    else
-!       snowq_org(:,:) = UNDEF
-!    endif
+!    call FILE_read( fid, "SNOW", snowq_org(:,:), step=it, allow_missing=.true., missing_value=UNDEF )
 
 !    ! AVERAGE SNOW TEMPERATURE [C] (no wrfout-default)
-!    call ExternalFileVarExistence( existence, BASENAME, "TSNAV", myrank, mdlid, single=.true. )
-!    if ( existence ) then
-!       call ExternalFileRead( read_xy(:,:,:),                             &
-!                         BASENAME, "TSNAV",  it, 1, myrank, mdlid, single=.true. )
-!       do j = 1, dims(9)
-!       do i = 1, dims(8)
-!          snowt_org(i,j,n) = read_xy(i,j,1) + TEM00
-!       enddo
-!       enddo
-!    else
-!       snowt_org(:,:) = UNDEFF
-!    endif
+!    call FILE_read( fid, "TSNAV", snowt_org(:,:), step=it, allow_missing=.true., missing_value=UNDEF )
+!    do j = 1, ldims(3)
+!    do i = 1, ldims(2)
+!       if ( snowt_org(k,i,j) /= UNDEF ) snowt_org(k,i,j) = snowt_org(i,j,k) + TEM00
+!    end do
+!    end do
 
     return
   end subroutine ParentLandInputWRFARW
@@ -648,9 +753,9 @@ contains
        odims,    &
        timelen, &
        basename_org )
-    use scale_external_io, only: &
-         iWRFARW, &
-         ExternalFileGetShape
+    use scale_file, only: &
+       FILE_open, &
+       FILE_get_dimLength
     implicit none
 
     integer,          intent(out) :: odims(2)
@@ -662,8 +767,9 @@ contains
     NAMELIST / PARAM_MKINIT_REAL_WRFARW / &
          WRF_FILE_TYPE
 
-    integer :: dims_wrf(7)
+    integer :: fid
     integer :: ierr
+    logical :: error
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Ocean Input File Type: WRF-ARW'
@@ -678,9 +784,14 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
 
 
-    call ExternalFileGetShape( dims_wrf, timelen, mdlid, basename_org, myrank, single=.true. )
-    odims(1) = dims_wrf(2)
-    odims(2) = dims_wrf(3)
+    call FILE_open( basename_org, fid, rankid=myrank, single=.true., postfix="" )
+
+    call FILE_get_dimLength(fid, "west_east",   odims(1) )
+    call FILE_get_dimLength(fid, "south_north", odims(2) )
+
+    call FILE_get_dimLength(fid, "Time", timelen, error=error )
+    if ( error ) call FILE_get_dimLength(fid, "time",  timelen, error=error)
+    if ( error ) timelen = 0
 
     if ( wrf_file_type ) then
        wrfout = .true.
@@ -692,7 +803,7 @@ contains
 
 
     if ( .not. allocated(read_xy) ) then
-       allocate( read_xy  (        odims(1),odims(2),1) )
+       allocate( read_xy(odims(1),odims(2)) )
     end if
 
     return
@@ -719,13 +830,13 @@ contains
       odims,              &
       it                  )
     use scale_const, only: &
-         D2R => CONST_D2R, &
-         UNDEF => CONST_UNDEF, &
-         I_LW => CONST_I_LW, &
-         I_SW => CONST_I_SW
-    use scale_external_io, only: &
-         ExternalFileRead, &
-         ExternalFileVarExistence
+       D2R => CONST_D2R, &
+       UNDEF => CONST_UNDEF, &
+       I_LW => CONST_I_LW, &
+       I_SW => CONST_I_SW
+    use scale_file, only: &
+       FILE_open, &
+       FILE_read
     implicit none
     real(RP),         intent(out)  :: tw_org(:,:)
     real(RP),         intent(out)  :: sst_org(:,:)
@@ -738,56 +849,43 @@ contains
     integer,          intent( in)  :: odims(2)
     integer,          intent( in)  :: it
 
-
-    integer  :: i, j
-
-    logical  :: existence
-
+    integer :: fid
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[OceanInputWRF]'
 
-    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "XLAT",    it, it, myrank, mdlid, single=.true.               )
-    olat_org (:,:) = read_xy(:,:,1) * D2R
+    call FILE_open( basename, fid, rankid=myrank, single=.true., postfix="" )
 
-    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "XLONG",   it, it, myrank, mdlid, single=.true.               )
-    olon_org (:,:) = read_xy(:,:,1) * D2R
+    call FILE_read( fid, "XLAT", olat_org(:,:), step=it )
+    olat_org(:,:) = olat_org(:,:) * D2R
+
+    call FILE_read( fid, "XLONG", olon_org(:,:), step=it )
+    olon_org(:,:) = olon_org(:,:) * D2R
+
 
     ! land mask (1:land, 0:water)
-    call ExternalFileRead( read_xy(:,:,:),                             &
-                      BASENAME, "LANDMASK",  it, 1, myrank, mdlid, single=.true. )
-    omask_org(:,:) = read_xy(:,:,1)
+    call FILE_read( fid, "LANDMASK", omask_org(:,:), step=it )
 
     ! SEA SURFACE TEMPERATURE [K]
-    call ExternalFileRead( read_xy(:,:,:),                             &
-                      BASENAME, "SST",  it, 1, myrank, mdlid, single=.true. )
-    sst_org(:,:) = read_xy(:,:,1)
+    call FILE_read( fid, "SST", sst_org(:,:), step=it )
 
     tw_org(:,:) = sst_org(:,:)
 
     ! ALBEDO [-]
-    call ExternalFileRead( read_xy(:,:,:),                             &
-                      BASENAME, "ALBEDO",  it, 1, myrank, mdlid, single=.true. )
-    albw_org(:,:,I_SW) = read_xy(:,:,1)
+    call FILE_read( fid, "ALBEDO", albw_org(:,:,I_SW), step=it )
 
     ! SURFACE EMISSIVITY [-]
-    call ExternalFileRead( read_xy(:,:,:),                             &
-                      BASENAME, "EMISS",  it, 1, myrank, mdlid, single=.true. )
+    call FILE_read( fid, "EMISS", read_xy(:,:), step=it )
     do j = 1, odims(2)
     do i = 1, odims(1)
-       albw_org(i,j,I_LW) = 1.0_DP - read_xy(i,j,1)
+       albw_org(i,j,I_LW) = 1.0_RP - read_xy(i,j)
     enddo
     enddo
 
     ! TIME-VARYING ROUGHNESS LENGTH [m] (no wrfout-default)
-    call ExternalFileVarExistence( existence, BASENAME, "ZNT", myrank, mdlid, single=.true. )
-    if ( existence ) then
-       call ExternalFileRead( read_xy(:,:,:),                             &
-                         BASENAME, "ZNT",  it, 1, myrank, mdlid, single=.true. )
-       z0w_org(:,:) = read_xy(:,:,1)
-    else
-       z0w_org(:,:) = UNDEF
-    endif
+    call FILE_read( fid, "ZNT", z0w_org(:,:), step=it, allow_missing=.true., missing_value=UNDEF )
+
 
     return
   end subroutine ParentOceanInputWRFARW
@@ -807,8 +905,9 @@ contains
     use scale_const, only: &
        D2R => CONST_D2R, &
        PI => CONST_PI
-    use scale_external_io, only: &
-         ExternalFileGetGlobalAttV
+    use scale_file, only: &
+       FILE_open, &
+       FILE_get_attribute
     implicit none
     real(RP), intent(out) :: u_latlon(:,:,:)
     real(RP), intent(out) :: v_latlon(:,:,:)
@@ -819,6 +918,8 @@ contains
     integer , intent(in ) :: K1, I1, J1
 
     character(len=*), intent( in) :: basename
+
+    integer :: fid
 
     real(RP) :: truelat1, truelat2
     real(RP) :: stand_lon
@@ -836,13 +937,16 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    call ExternalFileGetGlobalAttV( dum_i, iWRFARW, BASENAME, "MAP_PROJ",  myrank, single=.true. )
+    call FILE_open( basename, fid, rankid=myrank, single=.true., postfix="" )
+
+    call FILE_get_attribute( fid, "global", "MAP_PROJ", dum_i(:) )
     map_proj = dum_i(1)
-    call ExternalFileGetGlobalAttV( dum_r, iWRFARW, BASENAME, "TRUELAT1",  myrank, single=.true. )
+
+    call FILE_get_attribute( fid, "global", "TRUELAT1", dum_r(:) )
     truelat1 = dum_r(1) * D2R
-    call ExternalFileGetGlobalAttV( dum_r, iWRFARW, BASENAME, "TRUELAT2",  myrank, single=.true. )
+    call FILE_get_attribute( fid, "global", "TRUELAT2", dum_r(:) )
     truelat2 = dum_r(1) * D2R
-    call ExternalFileGetGlobalAttV( dum_r, iWRFARW, BASENAME, "STAND_LON", myrank, single=.true. )
+    call FILE_get_attribute( fid, "global", "STAND_LON", dum_r(:) )
     stand_lon = dum_r(1) * D2R
 
     ! No need to rotate

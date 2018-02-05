@@ -939,7 +939,7 @@ contains
        update_coord     = .true.
        apply_rotate_uv  = .true.
 
-    case('NETCDF')
+    case('NICAM-NETCDF')
 
        if ( read_by_myproc_atmos ) then
           call ParentAtmosSetupNICAM ( dims(:), & ! [OUT]
