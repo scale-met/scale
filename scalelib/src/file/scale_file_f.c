@@ -643,8 +643,6 @@ void file_write_data_c_( const int32_t  *fid,       // (in)
 			 const int32_t  *count,     // (in)
 			       int32_t  *error)     // (out)
 {
-  int i;
-
   *error = file_write_data_c( *fid, *vid, var, *t_start, *t_end, *precision, *ndims, start, count );
 }
 

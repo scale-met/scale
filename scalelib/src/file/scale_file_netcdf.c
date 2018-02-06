@@ -275,7 +275,7 @@ int32_t file_get_varname_c( const int32_t  fid,  // (in)
 {
   int ncid, varid;
   char buf[MAX_NC_NAME+1];
-  int i, error;
+  int i;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid  = files[fid]->ncid;
@@ -305,7 +305,7 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
   int dimids[RANK_MAX], tdim, uldims[NC_MAX_DIMS];
   char name[NC_MAX_NAME+1];
   char *buf;
-  size_t size, len;
+  size_t size;
   int i, n;
   int status;
 
@@ -326,6 +326,7 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
     MPI_Offset l;
     // description
     CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, "long_name", &l) )
+    buf = (char*) malloc(l+1);
     CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "long_name", buf) )
     for (i=0; i<MIN(File_HMID-1,l); i++)
       dinfo->description[i] = buf[i];
@@ -545,43 +546,36 @@ int32_t file_read_data_c(       void       *var,       // (out)
     CHECK_PNC_ERROR( ncmpi_iget_vara(ncid, varid, strp, cntp, var, ntypes, dtype, NULL) )
     free(strp);
     free(cntp);
-    switch ( dtype ) {
-    case MPI_FLOAT:
-      {
-	float factor, offset;
-	l_rescale = 0;
-	if ( ncmpi_get_att_float(ncid, varid, "scale_factor", &factor) != NC_NOERR )
-	  factor = 1.0f;
-	else
-	  l_rescale = 1;
-	if ( ncmpi_get_att_float(ncid, varid, "add_offset", &offset) != NC_NOERR )
-	  offset = 0.0f;
-	else
-	  l_rescale = 1;
-	if ( l_rescale ) for (i=0; i<size; i++) ((float*)var)[i] = ((float*)var)[i] * factor + offset;
-      }
-    case MPI_DOUBLE:
-      {
-	double factor, offset;
-	l_rescale = 0;
-	if ( ncmpi_get_att_double(ncid, varid, "scale_factor", &factor) != NC_NOERR )
-	  factor = 1.0;
-	else
-	  l_rescale = 1;
-	if ( ncmpi_get_att_double(ncid, varid, "add_offset", &offset) != NC_NOERR )
-	  offset = 0.0;
-	else
-	  l_rescale = 1;
-	if ( l_rescale ) for (i=0; i<size; i++) ((double*)var)[i] = ((double*)var)[i] * factor + offset;
-      }
-    default:
-      {
-	float factor, offset;
-	if (    ( ncmpi_get_att_float(ncid, varid, "scale_factor", &factor) == NC_NOERR ) 
-             || ( ncmpi_get_att_float(ncid, varid, "add_offset",   &offset) == NC_NOERR ) ) {
-	  fprintf(stderr, "scale_factor and add_offset is not supported with a MPI derived type\n");
-	  return ERROR_CODE;
-	}
+    if ( dtype == MPI_FLOAT ) {
+      float factor, offset;
+      l_rescale = 0;
+      if ( ncmpi_get_att_float(ncid, varid, "scale_factor", &factor) != NC_NOERR )
+	factor = 1.0f;
+      else
+	l_rescale = 1;
+      if ( ncmpi_get_att_float(ncid, varid, "add_offset", &offset) != NC_NOERR )
+	offset = 0.0f;
+      else
+	l_rescale = 1;
+      if ( l_rescale ) for (i=0; i<size; i++) ((float*)var)[i] = ((float*)var)[i] * factor + offset;
+    } else if ( dtype == MPI_DOUBLE ) {
+      double factor, offset;
+      l_rescale = 0;
+      if ( ncmpi_get_att_double(ncid, varid, "scale_factor", &factor) != NC_NOERR )
+	factor = 1.0;
+      else
+	l_rescale = 1;
+      if ( ncmpi_get_att_double(ncid, varid, "add_offset", &offset) != NC_NOERR )
+	offset = 0.0;
+      else
+	l_rescale = 1;
+      if ( l_rescale ) for (i=0; i<size; i++) ((double*)var)[i] = ((double*)var)[i] * factor + offset;
+    } else {
+      float factor, offset;
+      if (    ( ncmpi_get_att_float(ncid, varid, "scale_factor", &factor) == NC_NOERR ) 
+           || ( ncmpi_get_att_float(ncid, varid, "add_offset",   &offset) == NC_NOERR ) ) {
+	fprintf(stderr, "scale_factor and add_offset is not supported with a MPI derived type\n");
+	return ERROR_CODE;
       }
     }
   } else {
