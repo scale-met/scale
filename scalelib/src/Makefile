@@ -119,6 +119,8 @@ OBJS_NAME = \
 	scale_file_cartesC.o	\
 	scale_file_history.o	\
 	scale_file_history_cartesC.o	\
+	scale_file_external_input.o	\
+	scale_file_external_input_cartesC.o	\
 	scale_atmos_dyn.o	\
 	scale_atmos_dyn_common.o	\
 	$(OBJS_DYN)	\
@@ -168,8 +170,6 @@ OBJS_NAME = \
 	scale_comm.o	\
 	scale_const.o	\
 	scale_debug.o	\
-	scale_external_input.o	\
-	scale_external_input_rm.o	\
 	scale_grid_cartesian.o	\
 	scale_grid_index.o	\
 	scale_grid_nest.o	\

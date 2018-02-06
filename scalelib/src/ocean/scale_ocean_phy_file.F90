@@ -52,24 +52,24 @@ contains
        PRC_MPIstop
     use scale_landuse, only: &
        LANDUSE_fact_ocean
-    use scale_external_input, only: &
-       EXTIN_file_limit, &
-       EXTIN_regist
+    use scale_file_external_input, only: &
+       FILE_EXTERNAL_INPUT_file_limit, &
+       FILE_EXTERNAL_INPUT_regist
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     implicit none
 
     character(len=*), intent(in) :: OCEAN_TYPE
 
-    character(len=H_LONG) :: OCEAN_PHY_FILE_basename(EXTIN_file_limit) = ''
-    logical               :: OCEAN_PHY_FILE_enable_periodic_year       = .false.
-    logical               :: OCEAN_PHY_FILE_enable_periodic_month      = .false.
-    logical               :: OCEAN_PHY_FILE_enable_periodic_day        = .false.
-    integer               :: OCEAN_PHY_FILE_step_fixed                 = 0
-    real(RP)              :: OCEAN_PHY_FILE_offset                     = 0.0_RP
-    real(RP)              :: OCEAN_PHY_FILE_defval                   ! = UNDEF
-    logical               :: OCEAN_PHY_FILE_check_coordinates          = .true.
-    integer               :: OCEAN_PHY_FILE_step_limit                 = 0
+    character(len=H_LONG) :: OCEAN_PHY_FILE_basename(FILE_EXTERNAL_INPUT_file_limit) = ''
+    logical               :: OCEAN_PHY_FILE_enable_periodic_year                     = .false.
+    logical               :: OCEAN_PHY_FILE_enable_periodic_month                    = .false.
+    logical               :: OCEAN_PHY_FILE_enable_periodic_day                      = .false.
+    integer               :: OCEAN_PHY_FILE_step_fixed                               = 0
+    real(RP)              :: OCEAN_PHY_FILE_offset                                   = 0.0_RP
+    real(RP)              :: OCEAN_PHY_FILE_defval                                 ! = UNDEF
+    logical               :: OCEAN_PHY_FILE_check_coordinates                        = .true.
+    integer               :: OCEAN_PHY_FILE_step_limit                               = 0
 
     NAMELIST / PARAM_OCEAN_PHY_FILE / &
        OCEAN_PHY_FILE_basename,              &
@@ -112,17 +112,17 @@ contains
        call PRC_MPIstop
     end if
 
-    call EXTIN_regist( OCEAN_PHY_FILE_basename(:),           & ! [IN]
-                       'OCEAN_TEMP',                         & ! [IN]
-                       'XY',                                 & ! [IN]
-                       OCEAN_PHY_FILE_enable_periodic_year,  & ! [IN]
-                       OCEAN_PHY_FILE_enable_periodic_month, & ! [IN]
-                       OCEAN_PHY_FILE_enable_periodic_day,   & ! [IN]
-                       OCEAN_PHY_FILE_step_fixed,            & ! [IN]
-                       OCEAN_PHY_FILE_offset,                & ! [IN]
-                       OCEAN_PHY_FILE_defval,                & ! [IN]
-                       OCEAN_PHY_FILE_check_coordinates,     & ! [IN]
-                       OCEAN_PHY_FILE_step_limit             ) ! [IN]
+    call FILE_EXTERNAL_INPUT_regist( OCEAN_PHY_FILE_basename(:),           & ! [IN]
+                                     'OCEAN_TEMP',                         & ! [IN]
+                                     'XY',                                 & ! [IN]
+                                     OCEAN_PHY_FILE_enable_periodic_year,  & ! [IN]
+                                     OCEAN_PHY_FILE_enable_periodic_month, & ! [IN]
+                                     OCEAN_PHY_FILE_enable_periodic_day,   & ! [IN]
+                                     OCEAN_PHY_FILE_step_fixed,            & ! [IN]
+                                     OCEAN_PHY_FILE_offset,                & ! [IN]
+                                     OCEAN_PHY_FILE_defval,                & ! [IN]
+                                     OCEAN_PHY_FILE_check_coordinates,     & ! [IN]
+                                     OCEAN_PHY_FILE_step_limit             ) ! [IN]
 
     ! judge to run slab ocean model
     allocate( is_OCN(IA,JA) )
@@ -154,8 +154,8 @@ contains
          NOWDAYSEC => TIME_NOWDAYSEC
     use scale_process, only: &
          PRC_MPIstop
-    use scale_external_input, only: &
-         EXTIN_update
+    use scale_file_external_input, only: &
+         FILE_EXTERNAL_INPUT_update
     implicit none
 
     real(RP), intent(out) :: OCEAN_TEMP_t   (OKMAX,IA,JA)
@@ -174,10 +174,10 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean physics step: File'
 
-    call EXTIN_update( &
-         OCEAN_TEMP_new, & ! (out)
+    call FILE_EXTERNAL_INPUT_update( &
          'OCEAN_TEMP',   & ! (in)
          NOWDAYSEC,      & ! (in)
+         OCEAN_TEMP_new, & ! (out)
          error           ) ! (out)
     if ( error ) then
        write(*,*) 'xxx Requested data is not found!'

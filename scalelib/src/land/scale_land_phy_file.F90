@@ -47,24 +47,24 @@ contains
   subroutine LAND_PHY_FILE_setup( LAND_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_external_input, only: &
-       EXTIN_file_limit, &
-       EXTIN_regist
+    use scale_file_external_input, only: &
+       FILE_EXTERNAL_INPUT_file_limit, &
+       FILE_EXTERNAL_INPUT_regist
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     implicit none
 
     character(len=*), intent(in) :: LAND_TYPE
 
-    character(len=H_LONG) :: LAND_PHY_FILE_basename(EXTIN_file_limit) = ''
-    logical               :: LAND_PHY_FILE_enable_periodic_year       = .false.
-    logical               :: LAND_PHY_FILE_enable_periodic_month      = .false.
-    logical               :: LAND_PHY_FILE_enable_periodic_day        = .false.
-    integer               :: LAND_PHY_FILE_step_fixed                 = 0
-    real(RP)              :: LAND_PHY_FILE_offset                     = 0.0_RP
-    real(RP)              :: LAND_PHY_FILE_defval                   ! = UNDEF
-    logical               :: LAND_PHY_FILE_check_coordinates          = .true.
-    integer               :: LAND_PHY_FILE_step_limit                 = 0
+    character(len=H_LONG) :: LAND_PHY_FILE_basename(FILE_EXTERNAL_INPUT_file_limit) = ''
+    logical               :: LAND_PHY_FILE_enable_periodic_year                     = .false.
+    logical               :: LAND_PHY_FILE_enable_periodic_month                    = .false.
+    logical               :: LAND_PHY_FILE_enable_periodic_day                      = .false.
+    integer               :: LAND_PHY_FILE_step_fixed                               = 0
+    real(RP)              :: LAND_PHY_FILE_offset                                   = 0.0_RP
+    real(RP)              :: LAND_PHY_FILE_defval                                 ! = UNDEF
+    logical               :: LAND_PHY_FILE_check_coordinates                        = .true.
+    integer               :: LAND_PHY_FILE_step_limit                               = 0
 
     NAMELIST / PARAM_LAND_PHY_FILE / &
        LAND_PHY_FILE_basename,              &
@@ -106,29 +106,29 @@ contains
        call PRC_MPIstop
     end if
 
-    call EXTIN_regist( LAND_PHY_FILE_basename(:),           & ! [IN]
-                       'LAND_TEMP',                         & ! [IN]
-                       'LXY',                               & ! [IN]
-                       LAND_PHY_FILE_enable_periodic_year,  & ! [IN]
-                       LAND_PHY_FILE_enable_periodic_month, & ! [IN]
-                       LAND_PHY_FILE_enable_periodic_day,   & ! [IN]
-                       LAND_PHY_FILE_step_fixed,            & ! [IN]
-                       LAND_PHY_FILE_offset,                & ! [IN]
-                       LAND_PHY_FILE_defval,                & ! [IN]
-                       LAND_PHY_FILE_check_coordinates,     & ! [IN]
-                       LAND_PHY_FILE_step_limit             ) ! [IN]
+    call FILE_EXTERNAL_INPUT_regist( LAND_PHY_FILE_basename(:),           & ! [IN]
+                                     'LAND_TEMP',                         & ! [IN]
+                                     'LXY',                               & ! [IN]
+                                     LAND_PHY_FILE_enable_periodic_year,  & ! [IN]
+                                     LAND_PHY_FILE_enable_periodic_month, & ! [IN]
+                                     LAND_PHY_FILE_enable_periodic_day,   & ! [IN]
+                                     LAND_PHY_FILE_step_fixed,            & ! [IN]
+                                     LAND_PHY_FILE_offset,                & ! [IN]
+                                     LAND_PHY_FILE_defval,                & ! [IN]
+                                     LAND_PHY_FILE_check_coordinates,     & ! [IN]
+                                     LAND_PHY_FILE_step_limit             ) ! [IN]
 
-    call EXTIN_regist( LAND_PHY_FILE_basename(:),           & ! [IN]
-                       'LAND_WATER',                        & ! [IN]
-                       'LXY',                               & ! [IN]
-                       LAND_PHY_FILE_enable_periodic_year,  & ! [IN]
-                       LAND_PHY_FILE_enable_periodic_month, & ! [IN]
-                       LAND_PHY_FILE_enable_periodic_day,   & ! [IN]
-                       LAND_PHY_FILE_step_fixed,            & ! [IN]
-                       LAND_PHY_FILE_offset,                & ! [IN]
-                       LAND_PHY_FILE_defval,                & ! [IN]
-                       LAND_PHY_FILE_check_coordinates,     & ! [IN]
-                       LAND_PHY_FILE_step_limit             ) ! [IN]
+    call FILE_EXTERNAL_INPUT_regist( LAND_PHY_FILE_basename(:),           & ! [IN]
+                                     'LAND_WATER',                        & ! [IN]
+                                     'LXY',                               & ! [IN]
+                                     LAND_PHY_FILE_enable_periodic_year,  & ! [IN]
+                                     LAND_PHY_FILE_enable_periodic_month, & ! [IN]
+                                     LAND_PHY_FILE_enable_periodic_day,   & ! [IN]
+                                     LAND_PHY_FILE_step_fixed,            & ! [IN]
+                                     LAND_PHY_FILE_offset,                & ! [IN]
+                                     LAND_PHY_FILE_defval,                & ! [IN]
+                                     LAND_PHY_FILE_check_coordinates,     & ! [IN]
+                                     LAND_PHY_FILE_step_limit             ) ! [IN]
 
     return
   end subroutine LAND_PHY_FILE_setup
@@ -155,8 +155,8 @@ contains
        NOWDAYSEC => TIME_NOWDAYSEC
     use scale_process, only: &
        PRC_MPIstop
-    use scale_external_input, only: &
-       EXTIN_update
+    use scale_file_external_input, only: &
+       FILE_EXTERNAL_INPUT_update
     implicit none
 
     ! arguments
@@ -185,20 +185,20 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land physics step: File'
 
-    call EXTIN_update( &
-         LAND_TEMP_new, & ! (out)
+    call FILE_EXTERNAL_INPUT_update( &
          'LAND_TEMP',   & ! (in)
          NOWDAYSEC,     & ! (in)
+         LAND_TEMP_new, & ! (out)
          error          ) ! (out)
     if ( error ) then
        write(*,*) 'xxx Requested data is not found!'
        call PRC_MPIstop
     end if
 
-    call EXTIN_update( &
-         LAND_WATER_new, & ! (out)
+    call FILE_EXTERNAL_INPUT_update( &
          'LAND_WATER',   & ! (in)
          NOWDAYSEC,      & ! (in)
+         LAND_WATER_new, & ! (out)
          error           ) ! (out)
     if ( error ) then
        write(*,*) 'xxx Requested data is not found!'

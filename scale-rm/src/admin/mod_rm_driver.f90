@@ -119,8 +119,8 @@ contains
        MONIT_setup, &
        MONIT_write, &
        MONIT_finalize
-    use scale_external_input, only: &
-       EXTIN_setup
+    use scale_file_external_input_cartesC, only: &
+       FILE_EXTERNAL_INPUT_CARTESC_setup
     use scale_atmos_hydrostatic, only: &
        ATMOS_HYDROSTATIC_setup
     use scale_atmos_thermodyn, only: &
@@ -288,7 +288,7 @@ contains
     ! setup monitor I/O
     call MONIT_setup
     ! setup external in
-    call EXTIN_setup( 'RM' )
+    call FILE_EXTERNAL_INPUT_CARTESC_setup
 
     ! setup nesting grid
     call NEST_setup ( intercomm_parent, intercomm_child )
