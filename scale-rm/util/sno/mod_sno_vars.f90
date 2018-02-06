@@ -93,8 +93,7 @@ contains
     integer :: v, d, t
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Read information of variables'
+    if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_vars_getinfo] Read information of variables'
 
     if ( ismaster ) then
        nowrank = 0 ! first file
@@ -220,12 +219,15 @@ contains
     integer  :: gout1, gout2, gout3
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Allocate variable array'
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_vars_alloc] Allocate variable array'
+    endif
 
     if ( dinfo%dim_rank == 1 ) then
 
        gout1 = dinfo%dim_size(1)
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,3A,I6)') '+ [',trim(dinfo%dim_name(1)),'] = ', gout1
 
        allocate( dinfo%VAR_1d(gout1) )
        dinfo%VAR_1d(:) = 0.0_RP
@@ -247,6 +249,9 @@ contains
        else
           gout2 = dinfo%dim_size(2)
        endif
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,5A,2I6)') '+ [',trim(dinfo%dim_name(1)),',',&
+                                                        trim(dinfo%dim_name(2)),'] = ', gout1, gout2
 
        allocate( dinfo%VAR_2d(gout1,gout2) )
        dinfo%VAR_2d(:,:) = 0.0_RP
@@ -271,6 +276,10 @@ contains
           else
              gout3 = dinfo%dim_size(2)
           endif
+
+          if( IO_L ) write(IO_FID_LOG,'(1x,7A,3I6)') '+ [',trim(dinfo%dim_name(3)),',',&
+                                                           trim(dinfo%dim_name(1)),',',&
+                                                           trim(dinfo%dim_name(2)),'] = ', gout1, gout2, gout3
        else
           gout1 = dinfo%dim_size(1)
 
@@ -289,6 +298,10 @@ contains
           else
              gout3 = dinfo%dim_size(3)
           endif
+
+          if( IO_L ) write(IO_FID_LOG,'(1x,7A,3I6)') '+ [',trim(dinfo%dim_name(1)),',',&
+                                                           trim(dinfo%dim_name(2)),',',&
+                                                           trim(dinfo%dim_name(3)),'] = ', gout1, gout2, gout3
        endif
 
        allocate( dinfo%VAR_3d(gout1,gout2,gout3) )
@@ -311,8 +324,9 @@ contains
     logical,        intent(in)    :: debug
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Deallocate variable array'
+    if ( debug ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_vars_dealloc] Deallocate variable array'
+    endif
 
     if( allocated(dinfo%VAR_1d) ) deallocate( dinfo%VAR_1d )
     if( allocated(dinfo%VAR_2d) ) deallocate( dinfo%VAR_2d )
@@ -815,6 +829,8 @@ contains
        output_grads,  &
        nowrank,       &
        nowstep,       &
+       finalize,      &
+       add_rm_attr,   &
        nprocs_x_out,  &
        nprocs_y_out,  &
        nhalos_x,      &
@@ -837,6 +853,8 @@ contains
     logical,          intent(in)    :: output_grads
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
+    logical,          intent(in)    :: finalize                              ! finalize in this step?
+    logical,          intent(in)    :: add_rm_attr                           ! add SCALE-RM specific attributes?
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (output)
     integer,          intent(in)    :: nprocs_y_out                          ! y length of 2D processor topology  (output)
     integer,          intent(in)    :: nhalos_x                              ! number of x-axis halo grids        (global domain)
@@ -851,6 +869,7 @@ contains
     if ( output_grads ) then
        call SNO_grads_write( dirpath,  & ! [IN]
                              nowstep,  & ! [IN]
+                             finalize, & ! [IN]
                              hinfo,    & ! [IN]
                              naxis,    & ! [IN]
                              ainfo(:), & ! [IN]
@@ -861,6 +880,7 @@ contains
                                    basename,                   & ! [IN]
                                    nowrank,                    & ! [IN]
                                    nowstep,                    & ! [IN]
+                                   add_rm_attr,                & ! [IN]
                                    nprocs_x_out, nprocs_y_out, & ! [IN]
                                    nhalos_x,     nhalos_y,     & ! [IN]
                                    hinfo,                      & ! [IN]
@@ -879,6 +899,7 @@ contains
        basename,      &
        nowrank,       &
        nowstep,       &
+       add_rm_attr,   &
        nprocs_x_out,  &
        nprocs_y_out,  &
        nhalos_x,      &
@@ -914,6 +935,7 @@ contains
     character(len=*), intent(in)    :: basename                              ! basename of file                   (output)
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
+    logical,          intent(in)    :: add_rm_attr                           ! add SCALE-RM specific attributes?
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (output)
     integer,          intent(in)    :: nprocs_y_out                          ! y length of 2D processor topology  (output)
     integer,          intent(in)    :: nhalos_x                              ! number of x-axis halo grids        (global domain)
@@ -926,7 +948,7 @@ contains
 
     character(len=H_LONG) :: basename_mod
     integer               :: fid
-    logical               :: fileexisted
+    logical               :: fileexisted, varexisted
     integer               :: vid
     real(SP), allocatable :: VAR_1d_SP(:), VAR_2d_SP(:,:), VAR_3d_SP(:,:,:)
     real(DP), allocatable :: VAR_1d_DP(:), VAR_2d_DP(:,:), VAR_3d_DP(:,:,:)
@@ -958,46 +980,49 @@ contains
                              ainfo(:), & ! [IN]
                              debug     ) ! [IN]
 
-       call SNO_attributes_write( fid,          & ! [IN]
-                                  nowrank,      & ! [IN]
-                                  nprocs_x_out, & ! [IN]
-                                  nprocs_y_out, & ! [IN]
-                                  nhalos_x,     & ! [IN]
-                                  nhalos_y,     & ! [IN]
-                                  hinfo,        & ! [IN]
-                                  dinfo,        & ! [IN]
-                                  debug         ) ! [IN]
-
+       if ( add_rm_attr ) then
+          call SNO_attributes_write( fid,          & ! [IN]
+                                     nowrank,      & ! [IN]
+                                     nprocs_x_out, & ! [IN]
+                                     nprocs_y_out, & ! [IN]
+                                     nhalos_x,     & ! [IN]
+                                     nhalos_y,     & ! [IN]
+                                     hinfo,        & ! [IN]
+                                     dinfo,        & ! [IN]
+                                     debug         ) ! [IN]
+       endif
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** + + + define variable'
-
     if ( dinfo%dt > 0.0_DP ) then
-       call FILE_Def_Variable( fid,                & ! [IN]
-                               dinfo%varname,      & ! [IN]
-                               dinfo%description,  & ! [IN]
-                               dinfo%units,        & ! [IN]
-                               dinfo%dim_rank,     & ! [IN]
-                               dinfo%dim_name,     & ! [IN]
-                               dinfo%datatype,     & ! [IN]
-                               vid,                & ! [OUT]
-                               time_int = dinfo%dt ) ! [IN]
+       call FILE_Def_Variable( fid,                 & ! [IN]
+                               dinfo%varname,       & ! [IN]
+                               dinfo%description,   & ! [IN]
+                               dinfo%units,         & ! [IN]
+                               dinfo%dim_rank,      & ! [IN]
+                               dinfo%dim_name,      & ! [IN]
+                               dinfo%datatype,      & ! [IN]
+                               vid,                 & ! [OUT]
+                               time_int = dinfo%dt, & ! [IN]
+                               existed = varexisted ) ! [OUT]
     else
-       call FILE_Def_Variable( fid,               & ! [IN]
-                               dinfo%varname,     & ! [IN]
-                               dinfo%description, & ! [IN]
-                               dinfo%units,       & ! [IN]
-                               dinfo%dim_rank,    & ! [IN]
-                               dinfo%dim_name,    & ! [IN]
-                               dinfo%datatype,    & ! [IN]
-                               vid                ) ! [OUT]
+       call FILE_Def_Variable( fid,                 & ! [IN]
+                               dinfo%varname,       & ! [IN]
+                               dinfo%description,   & ! [IN]
+                               dinfo%units,         & ! [IN]
+                               dinfo%dim_rank,      & ! [IN]
+                               dinfo%dim_name,      & ! [IN]
+                               dinfo%datatype,      & ! [IN]
+                               vid,                 & ! [OUT]
+                               existed = varexisted ) ! [OUT]
     endif
 
     if ( hinfo%minfo_mapping_name /= "" ) then
        call FILE_Set_Attribute( fid, dinfo%varname, "grid_mapping", hinfo%minfo_mapping_name )
     endif
 
-    call FILE_EndDef( fid )
+    if ( .NOT. varexisted ) then ! do below only once when file is created
+       call FILE_enddef( fid )
+    endif
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
 
@@ -1007,8 +1032,6 @@ contains
                             debug     ) ! [IN]
 
     endif
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** + + + write variable'
 
     if ( dinfo%dim_rank == 1 ) then
 

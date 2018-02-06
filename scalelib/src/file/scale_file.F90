@@ -1382,7 +1382,8 @@ contains
        ndims, dims,          &
        dtype,                &
        vid,                  &
-       time_int, time_avg    )
+       time_int, time_avg,   &
+       existed               )
     integer,          intent( in) :: fid
     character(len=*), intent( in) :: varname
     character(len=*), intent( in) :: desc
@@ -1393,6 +1394,7 @@ contains
     integer,          intent(out) :: vid
     real(DP),         intent( in), optional :: time_int
     logical,          intent( in), optional :: time_avg
+    logical,          intent(out), optional :: existed
 
     real(DP) :: tint_
     integer  :: itavg
@@ -1445,6 +1447,10 @@ contains
 
        if (IO_L) write(IO_FID_LOG,'(A,I3.3,A,I4.4,2A)') &
        '###### FILE variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
+
+       if ( present(existed) ) existed = .false.
+    else
+       if ( present(existed) ) existed = .true.
     endif
 
     return
