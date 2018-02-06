@@ -2394,7 +2394,6 @@ contains
     character(len=2) :: dims(3)
     real(DP)         :: time_interval
     character(len=H_SHORT) :: mapping
-    logical          :: varexisted
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -2588,11 +2587,11 @@ contains
     if ( present(timeintv) ) then  ! 3D/4D variable with time dimension
       time_interval = timeintv
       call FILE_Def_Variable( fid, varname, desc, unit, ndims, dims, dtype, & ! [IN]
-                              vid, varexisted,                              & ! [OUT]
+                              vid,                                          & ! [OUT]
                               time_int=time_interval                        ) ! [IN]
     else
       call FILE_Def_Variable( fid, varname, desc, unit, ndims, dims, dtype, & ! [IN]
-                              vid, varexisted                               ) ! [OUT]
+                              vid                                           ) ! [OUT]
     endif
 
     if ( mapping /= "" ) call FILE_Set_Attribute( fid, varname, "grid_mapping", mapping )
