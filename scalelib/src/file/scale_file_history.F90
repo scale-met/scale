@@ -571,7 +571,7 @@ contains
           call PRC_abort
        endif
 
-       if ( abs(dtsec-real(dstep,kind=DP)*FILE_HISTORY_DTSEC ) > eps ) then
+       if ( abs(dtsec-real(dstep,kind=DP)*FILE_HISTORY_DTSEC) > dtsec*1.0-3_DP ) then
           write(*,*) 'xxx time interval must be a multiple of delta t. (interval,dt)=', dtsec, FILE_HISTORY_DTSEC
           call PRC_abort
        endif
