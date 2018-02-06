@@ -76,7 +76,6 @@ $(OBJ_DIR)/scale_const.o: ./common/scale_const.F90 $(inc_index) $(DEPENDLIB) $(O
 $(OBJ_DIR)/scale_debug.o: ./common/scale_debug.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_external_input.o: ./io/scale_external_input.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_calendar.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_external_input_rm.o $(OBJ_DIR)/scale_file.o $(OBJ_DIR)/scale_file_cartesC.o $(OBJ_DIR)/scale_file_h.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_land_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_time.o $(OBJ_DIR)/scale_urban_grid_index.o
 $(OBJ_DIR)/scale_external_input_rm.o: ./atmos-rm/io/scale_external_input_rm.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_land_grid_index.o $(OBJ_DIR)/scale_ocean_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_urban_grid_index.o
-$(OBJ_DIR)/scale_external_io.o: ./io/scale_external_io.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_file.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_file.o: ./file/scale_file.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_file_h.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_file_cartesC.o: ./file/scale_file_cartesC.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file.o $(OBJ_DIR)/scale_file_h.o $(OBJ_DIR)/scale_grid_cartesian.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_land_grid.o $(OBJ_DIR)/scale_land_grid_index.o $(OBJ_DIR)/scale_mapproj.o $(OBJ_DIR)/scale_ocean_grid.o $(OBJ_DIR)/scale_ocean_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_rm_process.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_time.o $(OBJ_DIR)/scale_urban_grid.o $(OBJ_DIR)/scale_urban_grid_index.o
 $(OBJ_DIR)/scale_file_h.o: ./file/scale_file_h.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o
@@ -202,7 +201,6 @@ MODS =	\
 	$(OBJ_DIR)/scale_debug.mod	\
 	$(OBJ_DIR)/scale_external_input.mod	\
 	$(OBJ_DIR)/scale_external_input_rm.mod	\
-	$(OBJ_DIR)/scale_external_io.mod	\
 	$(OBJ_DIR)/scale_file.mod	\
 	$(OBJ_DIR)/scale_file_cartesc.mod	\
 	$(OBJ_DIR)/scale_file_h.mod	\
