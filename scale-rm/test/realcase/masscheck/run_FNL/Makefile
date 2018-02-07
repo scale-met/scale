@@ -39,6 +39,7 @@ DATDISTS    = " [4 $(PREPDIR)/topo_d01    topo_d01   ] \
                 [4 $(PREPDIR)/landuse_d01 landuse_d01] \
                 [4 $(PREPDIR)/landuse_d02 landuse_d02] \
                 [4 $(INITDIR)/boundary_d01 boundary_d01] \
+                [4 $(INITDIR)/boundary_d02 boundary_d02] \
                 [4 $(INITDIR)/init_d01_20100501-000000.000 init_d01_20100501-000000.000] \
                 [4 $(INITDIR)/init_d02_20100501-000000.000 init_d02_20100501-000000.000] "
 
