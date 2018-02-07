@@ -57,9 +57,9 @@ contains
   subroutine ATMOS_PHY_RD_offline_setup( RD_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_external_input, only: &
-       EXTIN_file_limit, &
-       EXTIN_regist
+    use scale_file_external_input, only: &
+       FILE_EXTERNAL_INPUT_file_limit, &
+       FILE_EXTERNAL_INPUT_regist
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     implicit none
@@ -74,16 +74,16 @@ contains
     data vars_2d    / 'SFLX_LW_up', 'SFLX_LW_dn', 'SFLX_SW_up', 'SFLX_SW_dn' /
     data vars_2d_op / 'SFLX_SW_dn_dir' /
 
-    character(len=H_LONG)  :: ATMOS_PHY_RD_offline_basename(EXTIN_file_limit) = ''
-    character(len=H_SHORT) :: ATMOS_PHY_RD_offline_axistype                   = 'XYZ'
-    logical                :: ATMOS_PHY_RD_offline_enable_periodic_year       = .false.
-    logical                :: ATMOS_PHY_RD_offline_enable_periodic_month      = .false.
-    logical                :: ATMOS_PHY_RD_offline_enable_periodic_day        = .false.
-    integer                :: ATMOS_PHY_RD_offline_step_fixed                 = 0
-    real(RP)               :: ATMOS_PHY_RD_offline_offset                     = 0.0_RP
-    real(RP)               :: ATMOS_PHY_RD_offline_defval                   ! = UNDEF
-    logical                :: ATMOS_PHY_RD_offline_check_coordinates          = .true.
-    integer                :: ATMOS_PHY_RD_offline_step_limit                 = 0
+    character(len=H_LONG)  :: ATMOS_PHY_RD_offline_basename(FILE_EXTERNAL_INPUT_file_limit) = ''
+    character(len=H_SHORT) :: ATMOS_PHY_RD_offline_axistype                                 = 'XYZ'
+    logical                :: ATMOS_PHY_RD_offline_enable_periodic_year                     = .false.
+    logical                :: ATMOS_PHY_RD_offline_enable_periodic_month                    = .false.
+    logical                :: ATMOS_PHY_RD_offline_enable_periodic_day                      = .false.
+    integer                :: ATMOS_PHY_RD_offline_step_fixed                               = 0
+    real(RP)               :: ATMOS_PHY_RD_offline_offset                                   = 0.0_RP
+    real(RP)               :: ATMOS_PHY_RD_offline_defval                                 ! = UNDEF
+    logical                :: ATMOS_PHY_RD_offline_check_coordinates                        = .true.
+    integer                :: ATMOS_PHY_RD_offline_step_limit                               = 0
 
     NAMELIST / PARAM_ATMOS_PHY_RD_OFFLINE / &
        ATMOS_PHY_RD_offline_basename,              &
@@ -130,46 +130,46 @@ contains
     end if
 
     do n = 1, num_vars_3d
-       call EXTIN_regist( ATMOS_PHY_RD_offline_basename(:),           & ! [IN]
-                          vars_3d(n),                                 & ! [IN]
-                          ATMOS_PHY_RD_offline_axistype,              & ! [IN]
-                          ATMOS_PHY_RD_offline_enable_periodic_year,  & ! [IN]
-                          ATMOS_PHY_RD_offline_enable_periodic_month, & ! [IN]
-                          ATMOS_PHY_RD_offline_enable_periodic_day,   & ! [IN]
-                          ATMOS_PHY_RD_offline_step_fixed,            & ! [IN]
-                          ATMOS_PHY_RD_offline_offset,                & ! [IN]
-                          ATMOS_PHY_RD_offline_defval,                & ! [IN]
-                          ATMOS_PHY_RD_offline_check_coordinates,     & ! [IN]
-                          ATMOS_PHY_RD_offline_step_limit             ) ! [IN]
+       call FILE_EXTERNAL_INPUT_regist( ATMOS_PHY_RD_offline_basename(:),           & ! [IN]
+                                        vars_3d(n),                                 & ! [IN]
+                                        ATMOS_PHY_RD_offline_axistype,              & ! [IN]
+                                        ATMOS_PHY_RD_offline_enable_periodic_year,  & ! [IN]
+                                        ATMOS_PHY_RD_offline_enable_periodic_month, & ! [IN]
+                                        ATMOS_PHY_RD_offline_enable_periodic_day,   & ! [IN]
+                                        ATMOS_PHY_RD_offline_step_fixed,            & ! [IN]
+                                        ATMOS_PHY_RD_offline_offset,                & ! [IN]
+                                        ATMOS_PHY_RD_offline_defval,                & ! [IN]
+                                        ATMOS_PHY_RD_offline_check_coordinates,     & ! [IN]
+                                        ATMOS_PHY_RD_offline_step_limit             ) ! [IN]
     end do
 
     do n = 1, num_vars_2d
-       call EXTIN_regist( ATMOS_PHY_RD_offline_basename(:),           & ! [IN]
-                          vars_2d(n),                                 & ! [IN]
-                          'XY',                                       & ! [IN]
-                          ATMOS_PHY_RD_offline_enable_periodic_year,  & ! [IN]
-                          ATMOS_PHY_RD_offline_enable_periodic_month, & ! [IN]
-                          ATMOS_PHY_RD_offline_enable_periodic_day,   & ! [IN]
-                          ATMOS_PHY_RD_offline_step_fixed,            & ! [IN]
-                          ATMOS_PHY_RD_offline_offset,                & ! [IN]
-                          ATMOS_PHY_RD_offline_defval,                & ! [IN]
-                          ATMOS_PHY_RD_offline_check_coordinates,     & ! [IN]
-                          ATMOS_PHY_RD_offline_step_limit             ) ! [IN]
+       call FILE_EXTERNAL_INPUT_regist( ATMOS_PHY_RD_offline_basename(:),           & ! [IN]
+                                        vars_2d(n),                                 & ! [IN]
+                                        'XY',                                       & ! [IN]
+                                        ATMOS_PHY_RD_offline_enable_periodic_year,  & ! [IN]
+                                        ATMOS_PHY_RD_offline_enable_periodic_month, & ! [IN]
+                                        ATMOS_PHY_RD_offline_enable_periodic_day,   & ! [IN]
+                                        ATMOS_PHY_RD_offline_step_fixed,            & ! [IN]
+                                        ATMOS_PHY_RD_offline_offset,                & ! [IN]
+                                        ATMOS_PHY_RD_offline_defval,                & ! [IN]
+                                        ATMOS_PHY_RD_offline_check_coordinates,     & ! [IN]
+                                        ATMOS_PHY_RD_offline_step_limit             ) ! [IN]
     end do
 
     do n = 1, num_vars_2d_op
-       call EXTIN_regist( ATMOS_PHY_RD_offline_basename(:),           & ! [IN]
-                          vars_2d_op(n),                              & ! [IN]
-                          'XY',                                       & ! [IN]
-                          ATMOS_PHY_RD_offline_enable_periodic_year,  & ! [IN]
-                          ATMOS_PHY_RD_offline_enable_periodic_month, & ! [IN]
-                          ATMOS_PHY_RD_offline_enable_periodic_day,   & ! [IN]
-                          ATMOS_PHY_RD_offline_step_fixed,            & ! [IN]
-                          ATMOS_PHY_RD_offline_offset,                & ! [IN]
-                          ATMOS_PHY_RD_offline_defval,                & ! [IN]
-                          ATMOS_PHY_RD_offline_check_coordinates,     & ! [IN]
-                          ATMOS_PHY_RD_offline_step_limit,            & ! [IN]
-                          exist = vars_2d_exist(n)                    ) ! [OUT]
+       call FILE_EXTERNAL_INPUT_regist( ATMOS_PHY_RD_offline_basename(:),           & ! [IN]
+                                        vars_2d_op(n),                              & ! [IN]
+                                        'XY',                                       & ! [IN]
+                                        ATMOS_PHY_RD_offline_enable_periodic_year,  & ! [IN]
+                                        ATMOS_PHY_RD_offline_enable_periodic_month, & ! [IN]
+                                        ATMOS_PHY_RD_offline_enable_periodic_day,   & ! [IN]
+                                        ATMOS_PHY_RD_offline_step_fixed,            & ! [IN]
+                                        ATMOS_PHY_RD_offline_offset,                & ! [IN]
+                                        ATMOS_PHY_RD_offline_defval,                & ! [IN]
+                                        ATMOS_PHY_RD_offline_check_coordinates,     & ! [IN]
+                                        ATMOS_PHY_RD_offline_step_limit,            & ! [IN]
+                                        exist = vars_2d_exist(n)                    ) ! [OUT]
        if ( vars_2d_exist(n) ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** ', trim(vars_2d_op(n)), ' found.'
        else
@@ -201,8 +201,8 @@ contains
     use scale_tracer
     use scale_process, only: &
        PRC_MPIstop
-    use scale_external_input, only: &
-       EXTIN_update
+    use scale_file_external_input, only: &
+       FILE_EXTERNAL_INPUT_update
     use scale_time, only: &
        TIME_NOWDAYSEC
     use scale_atmos_phy_rd_common, only: &
@@ -250,21 +250,21 @@ contains
     error_sum = .false.
 
     ! 3D
-    call EXTIN_update( flux_rad(:,:,:,I_LW,I_up,2), 'RFLX_LW_up', TIME_NOWDAYSEC, error )
+    call FILE_EXTERNAL_INPUT_update( 'RFLX_LW_up', TIME_NOWDAYSEC, flux_rad(:,:,:,I_LW,I_up,2), error )
     error_sum = ( error .OR. error_sum )
 
-    call EXTIN_update( flux_rad(:,:,:,I_LW,I_dn,2), 'RFLX_LW_dn', TIME_NOWDAYSEC, error )
+    call FILE_EXTERNAL_INPUT_update( 'RFLX_LW_dn', TIME_NOWDAYSEC, flux_rad(:,:,:,I_LW,I_dn,2), error )
     error_sum = ( error .OR. error_sum )
 
-    call EXTIN_update( flux_rad(:,:,:,I_SW,I_up,2), 'RFLX_SW_up', TIME_NOWDAYSEC, error )
+    call FILE_EXTERNAL_INPUT_update( 'RFLX_SW_up', TIME_NOWDAYSEC, flux_rad(:,:,:,I_SW,I_up,2), error )
     error_sum = ( error .OR. error_sum )
 
-    call EXTIN_update( flux_rad(:,:,:,I_SW,I_dn,2), 'RFLX_SW_dn', TIME_NOWDAYSEC, error )
+    call FILE_EXTERNAL_INPUT_update( 'RFLX_SW_dn', TIME_NOWDAYSEC, flux_rad(:,:,:,I_SW,I_dn,2), error )
     error_sum = ( error .OR. error_sum )
 
 
     ! 2D
-    call EXTIN_update( buffer(:,:), 'SFLX_LW_up', TIME_NOWDAYSEC, error )
+    call FILE_EXTERNAL_INPUT_update( 'SFLX_LW_up', TIME_NOWDAYSEC, buffer(:,:), error )
     if ( error ) then
        error_sum = .true.
     else
@@ -279,7 +279,7 @@ contains
        end do
     end if
 
-    call EXTIN_update( buffer(:,:), 'SFLX_LW_dn', TIME_NOWDAYSEC, error )
+    call FILE_EXTERNAL_INPUT_update( 'SFLX_LW_dn', TIME_NOWDAYSEC, buffer(:,:), error )
     if ( error ) then
        error_sum = .true.
     else
@@ -294,7 +294,7 @@ contains
        end do
     end if
 
-    call EXTIN_update( buffer(:,:), 'SFLX_SW_up', TIME_NOWDAYSEC, error )
+    call FILE_EXTERNAL_INPUT_update( 'SFLX_SW_up', TIME_NOWDAYSEC, buffer(:,:), error )
     if ( error ) then
        error_sum = .true.
     else
@@ -309,7 +309,7 @@ contains
        end do
     end if
 
-    call EXTIN_update( buffer(:,:), 'SFLX_SW_dn', TIME_NOWDAYSEC, error )
+    call FILE_EXTERNAL_INPUT_update( 'SFLX_SW_dn', TIME_NOWDAYSEC, buffer(:,:), error )
     if ( error ) then
        error_sum = .true.
     else
@@ -337,7 +337,7 @@ contains
 
     ! 2D optional
     if ( vars_2d_exist(1) ) then
-       call EXTIN_update( SFLX_rad_dn(:,:,I_SW,I_direct), 'SFLX_SW_dn_dir', TIME_NOWDAYSEC, error )
+       call FILE_EXTERNAL_INPUT_update( 'SFLX_SW_dn_dir', TIME_NOWDAYSEC, SFLX_rad_dn(:,:,I_SW,I_direct), error )
        if ( error ) then
           error_sum = .true.
        else

@@ -537,6 +537,7 @@ int32_t file_read_data_c(       void       *var,       // (out)
   for (i=0; i<rank; i++) size *= cnt[i];
 
   if ( files[fid]->shared_mode ) {
+#ifdef PNETCDF
     for (i=0; i<rank; i++) {
       strp[i] = (MPI_Offset) str[i];
       cntp[i] = (MPI_Offset) cnt[i];
@@ -578,6 +579,9 @@ int32_t file_read_data_c(       void       *var,       // (out)
 	return ERROR_CODE;
       }
     }
+#else
+    CHECK_PNC_ERROR( dummy )
+#endif
   } else {
     switch ( precision ) {
     case 8:

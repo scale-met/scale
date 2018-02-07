@@ -327,8 +327,6 @@ contains
        FILE_AGGREGATE
     use scale_calendar, only: &
        CALENDAR_unit2sec
-    use scale_const, only: &
-       EPS => CONST_EPS
     implicit none
 
     character(len=*), intent(in)  :: title
