@@ -20,7 +20,7 @@ module scale_rm_statistics
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_process, only: &
      PRC_LOCAL_COMM_WORLD
   !-----------------------------------------------------------------------------
@@ -105,8 +105,8 @@ contains
        PRC_MPIstop
     use scale_comm, only: &
        COMM_datatype
-    use scale_grid_real, only: &
-       area => REAL_AREA
+    use scale_atmos_grid_cartesC_real, only: &
+       area => ATMOS_GRID_CARTESC_REAL_AREA
     implicit none
 
     real(RP),         intent(out) :: allstatval !< volume/area-weighted total
@@ -174,8 +174,8 @@ contains
        PRC_MPIstop
     use scale_comm, only: &
        COMM_datatype
-    use scale_grid_real, only: &
-       vol  => REAL_VOL
+    use scale_atmos_grid_cartesC_real, only: &
+       vol  => ATMOS_GRID_CARTESC_REAL_VOL
     implicit none
 
     real(RP),         intent(out) :: allstatval    !< volume/area-weighted total

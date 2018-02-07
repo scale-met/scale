@@ -21,7 +21,7 @@ module scale_atmos_phy_mp_convert
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   use scale_atmos_phy_mp_suzuki10, only: &
       nbin, &
@@ -85,7 +85,7 @@ contains
        basename_org,        & ! [IN]
        dens_org,            & ! [IN]
        qtrc_org             ) ! [INOUT]
-    use scale_grid_nest, only: &
+    use scale_comm_cartesC_nest, only: &
        PARENT_IMAX,     &
        PARENT_JMAX
     use scale_specfunc, only: &

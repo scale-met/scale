@@ -20,7 +20,7 @@ module scale_gridtrans
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -175,21 +175,21 @@ contains
   subroutine GTRANS_mapfactor
     use scale_mapproj, only: &
        MPRJ_mapfactor
-    use scale_grid_real, only: &
-       REAL_calc_areavol, &
-       REAL_LAT,          &
-       REAL_LATX,         &
-       REAL_LATY,         &
-       REAL_LATXY
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_calc_areavol, &
+       ATMOS_GRID_CARTESC_REAL_LAT,          &
+       ATMOS_GRID_CARTESC_REAL_LATX,         &
+       ATMOS_GRID_CARTESC_REAL_LATY,         &
+       ATMOS_GRID_CARTESC_REAL_LATXY
     implicit none
     !---------------------------------------------------------------------------
 
-    call MPRJ_mapfactor( REAL_LAT  (1:IA,1:JA), GTRANS_MAPF(:,:,1,I_XY), GTRANS_MAPF (:,:,2,I_XY))
-    call MPRJ_mapfactor( REAL_LATX (1:IA,1:JA), GTRANS_MAPF(:,:,1,I_UY), GTRANS_MAPF (:,:,2,I_UY))
-    call MPRJ_mapfactor( REAL_LATY (1:IA,1:JA), GTRANS_MAPF(:,:,1,I_XV), GTRANS_MAPF (:,:,2,I_XV))
-    call MPRJ_mapfactor( REAL_LATXY(1:IA,1:JA), GTRANS_MAPF(:,:,1,I_UV), GTRANS_MAPF (:,:,2,I_UV))
+    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LAT  (1:IA,1:JA), GTRANS_MAPF(:,:,1,I_XY), GTRANS_MAPF (:,:,2,I_XY))
+    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LATX (1:IA,1:JA), GTRANS_MAPF(:,:,1,I_UY), GTRANS_MAPF (:,:,2,I_UY))
+    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LATY (1:IA,1:JA), GTRANS_MAPF(:,:,1,I_XV), GTRANS_MAPF (:,:,2,I_XV))
+    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LATXY(1:IA,1:JA), GTRANS_MAPF(:,:,1,I_UV), GTRANS_MAPF (:,:,2,I_UV))
 
-    call REAL_calc_areavol( GTRANS_MAPF(:,:,:,I_XY) )
+    call ATMOS_GRID_CARTESC_REAL_calc_areavol( GTRANS_MAPF(:,:,:,I_XY) )
 
     return
   end subroutine GTRANS_mapfactor
@@ -199,15 +199,15 @@ contains
   subroutine GTRANS_rotcoef
     use scale_mapproj, only: &
        MPRJ_rotcoef
-    use scale_grid_real, only: &
-       REAL_LON,  &
-       REAL_LAT
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_LON,  &
+       ATMOS_GRID_CARTESC_REAL_LAT
     implicit none
     !---------------------------------------------------------------------------
 
     call MPRJ_rotcoef( GTRANS_ROTC(:,:,:), & ! [OUT]
-                       REAL_LON   (:,:),   & ! [IN]
-                       REAL_LAT   (:,:)    ) ! [IN]
+                       ATMOS_GRID_CARTESC_REAL_LON   (:,:),   & ! [IN]
+                       ATMOS_GRID_CARTESC_REAL_LAT   (:,:)    ) ! [IN]
 
     return
   end subroutine GTRANS_rotcoef
@@ -215,27 +215,27 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate G^1/2 & Jacobian
   subroutine GTRANS_terrainfollowing
-    use scale_grid, only: &
-       GRID_RCDZ, &
-       GRID_RCDX, &
-       GRID_RCDY, &
-       GRID_RFDZ, &
-       GRID_RFDX, &
-       GRID_RFDY
-    use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_FZ
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_RCDZ, &
+       ATMOS_GRID_CARTESC_RCDX, &
+       ATMOS_GRID_CARTESC_RCDY, &
+       ATMOS_GRID_CARTESC_RFDZ, &
+       ATMOS_GRID_CARTESC_RFDX, &
+       ATMOS_GRID_CARTESC_RFDY
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_CZ, &
+       ATMOS_GRID_CARTESC_REAL_FZ
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
 
-    real(RP) :: REAL_CZ_U (  KA,IA,JA) !< Z coordinate [m] at (u,y,z)
-    real(RP) :: REAL_CZ_V (  KA,IA,JA) !< Z coordinate [m] at (x,v,z)
-    real(RP) :: REAL_CZ_UV(  KA,IA,JA) !< Z coordinate [m] at (u,y,z)
-    real(RP) :: REAL_FZ_U (0:KA,IA,JA) !< Z coordinate [m] at (u,y,w)
-    real(RP) :: REAL_FZ_V (0:KA,IA,JA) !< Z coordinate [m] at (x,v,w)
-    real(RP) :: REAL_FZ_UV(0:KA,IA,JA) !< Z coordinate [m] at (u,v,w)
+    real(RP) :: ATMOS_GRID_CARTESC_REAL_CZ_U (  KA,IA,JA) !< Z coordinate [m] at (u,y,z)
+    real(RP) :: ATMOS_GRID_CARTESC_REAL_CZ_V (  KA,IA,JA) !< Z coordinate [m] at (x,v,z)
+    real(RP) :: ATMOS_GRID_CARTESC_REAL_CZ_UV(  KA,IA,JA) !< Z coordinate [m] at (u,y,z)
+    real(RP) :: ATMOS_GRID_CARTESC_REAL_FZ_U (0:KA,IA,JA) !< Z coordinate [m] at (u,y,w)
+    real(RP) :: ATMOS_GRID_CARTESC_REAL_FZ_V (0:KA,IA,JA) !< Z coordinate [m] at (x,v,w)
+    real(RP) :: ATMOS_GRID_CARTESC_REAL_FZ_UV(0:KA,IA,JA) !< Z coordinate [m] at (u,v,w)
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -244,7 +244,7 @@ contains
     do j = 1, JA
     do i = 1, IA-1
     do k = 1, KA
-       REAL_CZ_U(k,i,j) = 0.5_RP * ( REAL_CZ(k,i+1,j) + REAL_CZ(k,i,j) )
+       ATMOS_GRID_CARTESC_REAL_CZ_U(k,i,j) = 0.5_RP * ( ATMOS_GRID_CARTESC_REAL_CZ(k,i+1,j) + ATMOS_GRID_CARTESC_REAL_CZ(k,i,j) )
     enddo
     enddo
     enddo
@@ -252,7 +252,7 @@ contains
     do j = 1, JA
     do i = 1, IA-1
     do k = 0, KA
-       REAL_FZ_U(k,i,j) = 0.5_RP * ( REAL_FZ(k,i+1,j) + REAL_FZ(k,i,j) )
+       ATMOS_GRID_CARTESC_REAL_FZ_U(k,i,j) = 0.5_RP * ( ATMOS_GRID_CARTESC_REAL_FZ(k,i+1,j) + ATMOS_GRID_CARTESC_REAL_FZ(k,i,j) )
     enddo
     enddo
     enddo
@@ -260,7 +260,7 @@ contains
     do j = 1, JA-1
     do i = 1, IA
     do k = 1, KA
-       REAL_CZ_V(k,i,j) = 0.5_RP * ( REAL_CZ(k,i,j+1) + REAL_CZ(k,i,j) )
+       ATMOS_GRID_CARTESC_REAL_CZ_V(k,i,j) = 0.5_RP * ( ATMOS_GRID_CARTESC_REAL_CZ(k,i,j+1) + ATMOS_GRID_CARTESC_REAL_CZ(k,i,j) )
     enddo
     enddo
     enddo
@@ -268,7 +268,7 @@ contains
     do j = 1, JA-1
     do i = 1, IA
     do k = 0, KA
-       REAL_FZ_V(k,i,j) = 0.5_RP * ( REAL_FZ(k,i,j+1) + REAL_FZ(k,i,j) )
+       ATMOS_GRID_CARTESC_REAL_FZ_V(k,i,j) = 0.5_RP * ( ATMOS_GRID_CARTESC_REAL_FZ(k,i,j+1) + ATMOS_GRID_CARTESC_REAL_FZ(k,i,j) )
     enddo
     enddo
     enddo
@@ -276,8 +276,8 @@ contains
     do j = 1, JA-1
     do i = 1, IA-1
     do k = 1, KA
-       REAL_CZ_UV(k,i,j) = 0.25_RP * ( REAL_CZ(k,i+1,j+1) + REAL_CZ(k,i+1,j) &
-                                    + REAL_CZ(k,i  ,j+1) + REAL_CZ(k,i  ,j) )
+       ATMOS_GRID_CARTESC_REAL_CZ_UV(k,i,j) = 0.25_RP * ( ATMOS_GRID_CARTESC_REAL_CZ(k,i+1,j+1) + ATMOS_GRID_CARTESC_REAL_CZ(k,i+1,j) &
+                                    + ATMOS_GRID_CARTESC_REAL_CZ(k,i  ,j+1) + ATMOS_GRID_CARTESC_REAL_CZ(k,i  ,j) )
     enddo
     enddo
     enddo
@@ -285,8 +285,8 @@ contains
     do j = 1, JA-1
     do i = 1, IA-1
     do k = 0, KA
-       REAL_FZ_UV(k,i,j) = 0.25_RP * ( REAL_FZ(k,i+1,j+1) + REAL_FZ(k,i+1,j) &
-                                    + REAL_FZ(k,i  ,j+1) + REAL_FZ(k,i  ,j) )
+       ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i,j) = 0.25_RP * ( ATMOS_GRID_CARTESC_REAL_FZ(k,i+1,j+1) + ATMOS_GRID_CARTESC_REAL_FZ(k,i+1,j) &
+                                    + ATMOS_GRID_CARTESC_REAL_FZ(k,i  ,j+1) + ATMOS_GRID_CARTESC_REAL_FZ(k,i  ,j) )
     enddo
     enddo
     enddo
@@ -296,40 +296,40 @@ contains
     do i = IS, IE
        ! at (x,y,z)
        do k = 1, KA
-          GTRANS_GSQRT(k,i,j,I_XYZ) = ( REAL_FZ(k,i,j) - REAL_FZ(k-1,i,j) ) * GRID_RCDZ(k)
+          GTRANS_GSQRT(k,i,j,I_XYZ) = ( ATMOS_GRID_CARTESC_REAL_FZ(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
        enddo
 
        ! at (x,y,w)
        do k = 1, KA-1
-          GTRANS_GSQRT(k,i,j,I_XYW) = ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) ) * GRID_RFDZ(k)
+          GTRANS_GSQRT(k,i,j,I_XYW) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZ(k,i,j) ) * ATMOS_GRID_CARTESC_RFDZ(k)
        enddo
        GTRANS_GSQRT(KA,i,j,I_XYW) = GTRANS_GSQRT(KA-1,i,j,I_XYW)
 
        ! at (u,y,w)
        do k = 1, KA-1
-          GTRANS_GSQRT(k,i,j,I_UYW) = ( REAL_CZ_U(k+1,i,j) - REAL_CZ_U(k,i,j) ) * GRID_RFDZ(k)
+          GTRANS_GSQRT(k,i,j,I_UYW) = ( ATMOS_GRID_CARTESC_REAL_CZ_U(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZ_U(k,i,j) ) * ATMOS_GRID_CARTESC_RFDZ(k)
        enddo
        GTRANS_GSQRT(KA,i,j,I_UYW) = GTRANS_GSQRT(KA-1,i,j,I_UYW)
 
        ! at (x,v,w)
        do k = 1, KA-1
-          GTRANS_GSQRT(k,i,j,I_XVW) = ( REAL_CZ_V(k+1,i,j) - REAL_CZ_V(k,i,j) ) * GRID_RFDZ(k)
+          GTRANS_GSQRT(k,i,j,I_XVW) = ( ATMOS_GRID_CARTESC_REAL_CZ_V(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZ_V(k,i,j) ) * ATMOS_GRID_CARTESC_RFDZ(k)
        enddo
        GTRANS_GSQRT(KA,i,j,I_XVW) = GTRANS_GSQRT(KA-1,i,j,I_XVW)
 
        ! at (u,y,z)
        do k = 1, KA
-          GTRANS_GSQRT(k,i,j,I_UYZ) = ( REAL_FZ_U(k,i,j) - REAL_FZ_U(k-1,i,j) ) * GRID_RCDZ(k)
+          GTRANS_GSQRT(k,i,j,I_UYZ) = ( ATMOS_GRID_CARTESC_REAL_FZ_U(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ_U(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
        enddo
 
        ! at (x,v,z)
        do k = 1, KA
-          GTRANS_GSQRT(k,i,j,I_XVZ) = ( REAL_FZ_V(k,i,j) - REAL_FZ_V(k-1,i,j) ) * GRID_RCDZ(k)
+          GTRANS_GSQRT(k,i,j,I_XVZ) = ( ATMOS_GRID_CARTESC_REAL_FZ_V(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ_V(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
        enddo
 
        ! at (u,v,z)
        do k = 1, KA
-          GTRANS_GSQRT(k,i,j,I_UVZ) = ( REAL_FZ_UV(k,i,j) - REAL_FZ_UV(k-1,i,j) ) * GRID_RCDZ(k)
+          GTRANS_GSQRT(k,i,j,I_UVZ) = ( ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ_UV(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
        enddo
     enddo
     enddo
@@ -353,13 +353,13 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = 1,  KA
-       GTRANS_J13G(k,i,j,I_XYZ) = -( REAL_CZ_U (k,i  ,j) - REAL_CZ_U (k,i-1,j) ) * GRID_RCDX(i)
-       GTRANS_J13G(k,i,j,I_XYW) = -( REAL_FZ_U (k,i  ,j) - REAL_FZ_U (k,i-1,j) ) * GRID_RCDX(i)
-       GTRANS_J13G(k,i,j,I_UYW) = -( REAL_FZ   (k,i+1,j) - REAL_FZ   (k,i  ,j) ) * GRID_RFDX(i)
-       GTRANS_J13G(k,i,j,I_XVW) = -( REAL_FZ_UV(k,i  ,j) - REAL_FZ_UV(k,i-1,j) ) * GRID_RCDX(i)
-       GTRANS_J13G(k,i,j,I_UYZ) = -( REAL_CZ   (k,i+1,j) - REAL_CZ   (k,i  ,j) ) * GRID_RFDX(i)
-       GTRANS_J13G(k,i,j,I_XVZ) = -( REAL_CZ_UV(k,i  ,j) - REAL_CZ_UV(k,i-1,j) ) * GRID_RCDX(i)
-       GTRANS_J13G(k,i,j,I_UVZ) = -( REAL_CZ_V (k,i+1,j) - REAL_CZ_V (k,i  ,j) ) * GRID_RFDX(i)
+       GTRANS_J13G(k,i,j,I_XYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_U (k,i  ,j) - ATMOS_GRID_CARTESC_REAL_CZ_U (k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
+       GTRANS_J13G(k,i,j,I_XYW) = -( ATMOS_GRID_CARTESC_REAL_FZ_U (k,i  ,j) - ATMOS_GRID_CARTESC_REAL_FZ_U (k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
+       GTRANS_J13G(k,i,j,I_UYW) = -( ATMOS_GRID_CARTESC_REAL_FZ   (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_FZ   (k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
+       GTRANS_J13G(k,i,j,I_XVW) = -( ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
+       GTRANS_J13G(k,i,j,I_UYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ   (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_CZ   (k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
+       GTRANS_J13G(k,i,j,I_XVZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_UV(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_CZ_UV(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
+       GTRANS_J13G(k,i,j,I_UVZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_V (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_CZ_V (k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
     enddo
     enddo
     enddo
@@ -367,13 +367,13 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = 1,  KA
-       GTRANS_J23G(k,i,j,I_XYZ) = -( REAL_CZ_V (k,i,j  ) - REAL_CZ_V (k,i,j-1) ) * GRID_RCDY(j)
-       GTRANS_J23G(k,i,j,I_XYW) = -( REAL_FZ_V (k,i,j  ) - REAL_FZ_V (k,i,j-1) ) * GRID_RCDY(j)
-       GTRANS_J23G(k,i,j,I_XVW) = -( REAL_FZ   (k,i,j+1) - REAL_FZ   (k,i,j  ) ) * GRID_RFDY(j)
-       GTRANS_J23G(k,i,j,I_UYW) = -( REAL_FZ_UV(k,i,j  ) - REAL_FZ_UV(k,i,j-1) ) * GRID_RCDY(j)
-       GTRANS_J23G(k,i,j,I_XVZ) = -( REAL_CZ   (k,i,j+1) - REAL_CZ   (k,i,j  ) ) * GRID_RFDY(j)
-       GTRANS_J23G(k,i,j,I_UYZ) = -( REAL_CZ_UV(k,i,j  ) - REAL_CZ_UV(k,i,j-1) ) * GRID_RCDY(j)
-       GTRANS_J23G(k,i,j,I_UVZ) = -( REAL_CZ_U (k,i,j+1) - REAL_CZ_U (k,i,j  ) ) * GRID_RFDY(j)
+       GTRANS_J23G(k,i,j,I_XYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_V (k,i,j  ) - ATMOS_GRID_CARTESC_REAL_CZ_V (k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
+       GTRANS_J23G(k,i,j,I_XYW) = -( ATMOS_GRID_CARTESC_REAL_FZ_V (k,i,j  ) - ATMOS_GRID_CARTESC_REAL_FZ_V (k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
+       GTRANS_J23G(k,i,j,I_XVW) = -( ATMOS_GRID_CARTESC_REAL_FZ   (k,i,j+1) - ATMOS_GRID_CARTESC_REAL_FZ   (k,i,j  ) ) * ATMOS_GRID_CARTESC_RFDY(j)
+       GTRANS_J23G(k,i,j,I_UYW) = -( ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
+       GTRANS_J23G(k,i,j,I_XVZ) = -( ATMOS_GRID_CARTESC_REAL_CZ   (k,i,j+1) - ATMOS_GRID_CARTESC_REAL_CZ   (k,i,j  ) ) * ATMOS_GRID_CARTESC_RFDY(j)
+       GTRANS_J23G(k,i,j,I_UYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_UV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_CZ_UV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
+       GTRANS_J23G(k,i,j,I_UVZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_U (k,i,j+1) - ATMOS_GRID_CARTESC_REAL_CZ_U (k,i,j  ) ) * ATMOS_GRID_CARTESC_RFDY(j)
     enddo
     enddo
     enddo
@@ -417,13 +417,13 @@ contains
   subroutine GTRANS_thin_wall
     use scale_process, only: &
        PRC_MPIstop
-    use scale_grid, only: &
-       GRID_CZ, &
-       GRID_CX, &
-       GRID_CY, &
-       GRID_FZ, &
-       GRID_FX, &
-       GRID_FY
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_CZ, &
+       ATMOS_GRID_CARTESC_CX, &
+       ATMOS_GRID_CARTESC_CY, &
+       ATMOS_GRID_CARTESC_FZ, &
+       ATMOS_GRID_CARTESC_FX, &
+       ATMOS_GRID_CARTESC_FY
     use scale_topography, only : &
        TOPO_Zsfc
     use scale_comm, only : &
@@ -509,22 +509,22 @@ contains
     do k = 1, KA
        kk = (k-1) * 2 + 1
 
-       QDZ(kk  ) = GRID_CZ(k) - GRID_FZ(k-1)
-       QDZ(kk+1) = GRID_FZ(k) - GRID_CZ(k  )
+       QDZ(kk  ) = ATMOS_GRID_CARTESC_CZ(k) - ATMOS_GRID_CARTESC_FZ(k-1)
+       QDZ(kk+1) = ATMOS_GRID_CARTESC_FZ(k) - ATMOS_GRID_CARTESC_CZ(k  )
     enddo
 
     do i = 1, IA-1
        ii = (i-1) * 2 + 1
 
-       QDX(ii  ) = GRID_FX(i  ) - GRID_CX(i)
-       QDX(ii+1) = GRID_CX(i+1) - GRID_FX(i)
+       QDX(ii  ) = ATMOS_GRID_CARTESC_FX(i  ) - ATMOS_GRID_CARTESC_CX(i)
+       QDX(ii+1) = ATMOS_GRID_CARTESC_CX(i+1) - ATMOS_GRID_CARTESC_FX(i)
     enddo
 
     do j = 1, JA-1
        jj = (j-1) * 2 + 1
 
-       QDY(jj  ) = GRID_FY(j  ) - GRID_CY(j)
-       QDY(jj+1) = GRID_CY(j+1) - GRID_FY(j)
+       QDY(jj  ) = ATMOS_GRID_CARTESC_FY(j  ) - ATMOS_GRID_CARTESC_CY(j)
+       QDY(jj+1) = ATMOS_GRID_CARTESC_CY(j+1) - ATMOS_GRID_CARTESC_FY(j)
     enddo
 
     ! quarter flux limiter
@@ -759,11 +759,11 @@ contains
        VECTR_distance
     use scale_file_cartesC, only: &
        FILE_CARTESC_write
-    use scale_grid_real, only: &
-       REAL_BASEPOINT_LON, &
-       REAL_BASEPOINT_LAT, &
-       REAL_LON,           &
-       REAL_LAT
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_BASEPOINT_LON, &
+       ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT, &
+       ATMOS_GRID_CARTESC_REAL_LON,           &
+       ATMOS_GRID_CARTESC_REAL_LAT
     use scale_mapproj, only: &
        MPRJ_lonlat2xy
     implicit none
@@ -807,7 +807,7 @@ contains
 
        do j = 1, JA
        do i = 1, IA
-          call MPRJ_lonlat2xy( REAL_LON(i,j), REAL_LAT(i,j), check_X_XY(i,j), check_Y_XY(i,j) )
+          call MPRJ_lonlat2xy( ATMOS_GRID_CARTESC_REAL_LON(i,j), ATMOS_GRID_CARTESC_REAL_LAT(i,j), check_X_XY(i,j), check_Y_XY(i,j) )
        enddo
        enddo
 
@@ -819,10 +819,10 @@ contains
        do j = 1, JA
        do i = 1, IA
           call VECTR_distance( CONST_RADIUS,       & ! [IN]
-                               REAL_BASEPOINT_LON, & ! [IN]
-                               REAL_BASEPOINT_LAT, & ! [IN]
-                               REAL_LON(i,j),      & ! [IN]
-                               REAL_LAT(i,j),      & ! [IN]
+                               ATMOS_GRID_CARTESC_REAL_BASEPOINT_LON, & ! [IN]
+                               ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT, & ! [IN]
+                               ATMOS_GRID_CARTESC_REAL_LON(i,j),      & ! [IN]
+                               ATMOS_GRID_CARTESC_REAL_LAT(i,j),      & ! [IN]
                                distance(i,j)       ) ! [OUT]
        enddo
        enddo

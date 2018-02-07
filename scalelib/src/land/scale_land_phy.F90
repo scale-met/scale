@@ -40,8 +40,8 @@ module scale_land_phy
            CDZ,               &
            dt                 )
        use scale_precision
-       use scale_grid_index
-       use scale_land_grid_index
+       use scale_atmos_grid_cartesC_index
+       use scale_land_grid_cartesC_index
        implicit none
 
        real(RP), intent(out) :: LAND_TEMP_t      (LKMAX,IA,JA)

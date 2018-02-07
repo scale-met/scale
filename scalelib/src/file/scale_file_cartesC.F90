@@ -15,10 +15,10 @@ module scale_file_cartesC
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
-  use scale_land_grid_index
-  use scale_ocean_grid_index
-  use scale_urban_grid_index
+  use scale_atmos_grid_cartesC_index
+  use scale_land_grid_cartesC_index
+  use scale_ocean_grid_cartesC_index
+  use scale_urban_grid_cartesC_index
   use scale_file_h, only: &
      FILE_FILE_MAX
   !-----------------------------------------------------------------------------
@@ -125,10 +125,10 @@ module scale_file_cartesC
   real(RP), private, allocatable :: AXIS_HGTWXY(:,:,:)
 
   logical,  private              :: File_axes_written(0:FILE_FILE_MAX-1) ! whether axes have been written
-  !                                                                       ! fid starts from zero so index should start from zero
-  logical,  private              :: File_closed      (0:FILE_FILE_MAX-1) ! whether file has been closed
+  !                                                                      ! fid starts from zero so index should start from zero
+  logical,  private              :: File_closed      (0:FILE_FILE_MAX-1) = .true. ! whether file has been closed
   logical,  private              :: File_haszcoord   (0:FILE_FILE_MAX-1) ! z-coordinates exist?
-  integer,  private              :: write_buf_amount = 0                  ! sum of write buffer amounts
+  integer,  private              :: write_buf_amount = 0                 ! sum of write buffer amounts
 
   ! global star and count
   integer,  private              :: startXY   (3), countXY   (3)
@@ -234,8 +234,6 @@ contains
 
     call Construct_Derived_Datatype
 
-    File_closed(:) = .true.
-
     return
   end subroutine FILE_CARTESC_setup
 
@@ -262,6 +260,72 @@ contains
 
     return
   end subroutine FILE_CARTESC_cleanup
+
+  !-----------------------------------------------------------------------------
+  !> Get dimension information from file
+  !! This subroutine can be called without setup
+  !<
+  !-----------------------------------------------------------------------------
+  subroutine FILE_CARTESC_get_size( &
+       basename,                  &
+       KMAX, OKMAX, LKMAX, UKMAX, &
+       IMAXG, JMAXG,              &
+       KHALO, IHALO, JHALO,       &
+       aggregate                  )
+    use scale_file, only: &
+       FILE_open, &
+       FILE_get_attribute
+    character(len=*), intent(in) :: basename
+
+    integer, intent(out) :: KMAX, OKMAX, LKMAX, UKMAX
+    integer, intent(out) :: IMAXG, JMAXG
+    integer, intent(out) :: KHALO, IHALO, JHALO
+
+    logical, intent(in), optional :: aggregate
+
+    integer :: fid
+    integer :: buf(1)
+    logical :: existed
+
+    call FILE_open( basename,           & ! (in)
+                    fid,                & ! (out)
+                    aggregate=aggregate ) ! (in)
+
+    call FILE_Get_Attribute( fid, "global", "scale_atmos_grid_cartesC_index_kmax",  buf(:)  )
+    KMAX = buf(1)
+    call FILE_Get_Attribute( fid, "global", "scale_ocean_grid_cartesC_index_kmax",  buf(:), existed=existed  )
+    if ( existed ) then
+       OKMAX = buf(1)
+    else
+       OKMAX = -1
+    end if
+    call FILE_Get_Attribute( fid, "global", "scale_land_grid_cartesC_index_kmax",  buf(:), existed=existed  )
+    if ( existed ) then
+       LKMAX = buf(1)
+    else
+       LKMAX = -1
+    end if
+    call FILE_Get_Attribute( fid, "global", "scale_urban_grid_cartesC_index_kmax",  buf(:), existed=existed  )
+    if ( existed ) then
+       UKMAX = buf(1)
+    else
+       UKMAX = -1
+    end if
+
+    call FILE_Get_Attribute( fid, "global", "scale_atmos_grid_cartesC_index_imaxg", buf(:)  )
+    IMAXG = buf(1)
+    call FILE_Get_Attribute( fid, "global", "scale_atmos_grid_cartesC_index_jmaxg", buf(:)  )
+    JMAXG = buf(1)
+
+    call FILE_Get_Attribute( fid, "global", "scale_atmos_grid_cartesC_index_khalo", buf(:)  )
+    KHALO = buf(1)
+    call FILE_Get_Attribute( fid, "global", "scale_atmos_grid_cartesC_index_ihalo", buf(:)  )
+    IHALO = buf(1)
+    call FILE_Get_Attribute( fid, "global", "scale_atmos_grid_cartesC_index_jhalo", buf(:)  )
+    JHALO = buf(1)
+
+    return
+  end subroutine FILE_CARTESC_get_size
 
   !-----------------------------------------------------------------------------
   !> set latlon and z
@@ -354,16 +418,16 @@ contains
        fid,                       &
        atmos, ocean, land, urban, &
        transpose                  )
-    use scale_grid, only: &
-       GRID_CZ, &
-       GRID_CX, &
-       GRID_CY
-    use scale_ocean_grid, only: &
-       GRID_OCZ
-    use scale_land_grid, only: &
-       GRID_LCZ
-    use scale_urban_grid, only: &
-       GRID_UCZ
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_CZ, &
+       ATMOS_GRID_CARTESC_CX, &
+       ATMOS_GRID_CARTESC_CY
+    use scale_ocean_grid_cartesC, only: &
+       OCEAN_GRID_CARTESC_CZ
+    use scale_land_grid_cartesC, only: &
+       LAND_GRID_CARTESC_CZ
+    use scale_urban_grid_cartesC, only: &
+       URBAN_GRID_CARTESC_CZ
     implicit none
 
     integer, intent(in) :: fid
@@ -415,8 +479,8 @@ contains
     call FILE_CARTESC_read_var_1D( fid, 'x',  'X', buffer_x(:) )
     call FILE_CARTESC_read_var_1D( fid, 'y',  'Y', buffer_y(:) )
     call FILE_CARTESC_flush( fid ) ! for non-blocking I/O
-    call check_1d( GRID_CX(ISB:IEB), buffer_x(ISB:IEB), 'x' )
-    call check_1d( GRID_CY(JSB:JEB), buffer_y(JSB:JEB), 'y' )
+    call check_1d( ATMOS_GRID_CARTESC_CX(ISB:IEB), buffer_x(ISB:IEB), 'x' )
+    call check_1d( ATMOS_GRID_CARTESC_CY(JSB:JEB), buffer_y(JSB:JEB), 'y' )
 
     if ( set_coordinates ) then
        call FILE_CARTESC_read_var_2D( fid, 'lon', 'XY', buffer_xy(:,:) )
@@ -434,7 +498,7 @@ contains
           call FILE_CARTESC_read_var_3D( fid, 'height', 'ZXY', buffer_zxy(:,:,:) )
        endif
        call FILE_CARTESC_flush( fid ) ! for non-blocking I/O
-       call check_1d( GRID_CZ(KS:KE), buffer_z(KS:KE), 'z' )
+       call check_1d( ATMOS_GRID_CARTESC_CZ(KS:KE), buffer_z(KS:KE), 'z' )
        if ( .not. transpose_ ) then
           call check_3d( AXIS_HGT(:,XSB:XEB,YSB:YEB), buffer_zxy(KS:KE,ISB:IEB,JSB:JEB), 'height', transpose_ )
        endif
@@ -443,19 +507,19 @@ contains
     if ( ocean_ ) then
        call FILE_CARTESC_read_var_1D( fid, 'oz', 'OZ', buffer_o(:) )
        call FILE_CARTESC_flush( fid ) ! for non-blocking I/O
-       call check_1d( GRID_OCZ(OKS:OKE), buffer_o(OKS:OKE), 'oz' )
+       call check_1d( OCEAN_GRID_CARTESC_CZ(OKS:OKE), buffer_o(OKS:OKE), 'oz' )
     endif
 
     if ( land_ ) then
        call FILE_CARTESC_read_var_1D( fid, 'lz',  'LZ', buffer_l(:) )
        call FILE_CARTESC_flush( fid ) ! for non-blocking I/O
-       call check_1d( GRID_LCZ(LKS:LKE), buffer_l(LKS:LKE), 'lz' )
+       call check_1d( LAND_GRID_CARTESC_CZ(LKS:LKE), buffer_l(LKS:LKE), 'lz' )
     endif
 
     if ( urban_ ) then
        call FILE_CARTESC_read_var_1D( fid, 'uz',  'UZ', buffer_u(:) )
        call FILE_CARTESC_flush( fid ) ! for non-blocking I/O
-       call check_1d( GRID_UCZ(UKS:UKE), buffer_u(UKS:UKE), 'uz' )
+       call check_1d( URBAN_GRID_CARTESC_CZ(UKS:UKE), buffer_u(UKS:UKE), 'uz' )
     endif
 
     return
@@ -617,9 +681,7 @@ contains
        FILE_AGGREGATE, &
        FILE_Open
     use scale_process, only: &
-       PRC_myrank, &
-       PRC_LOCAL_COMM_WORLD
-    use mpi, only : MPI_COMM_NULL
+       PRC_myrank
     implicit none
     character(len=*), intent(in)  :: basename !< basename of the file
 
@@ -632,18 +694,10 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    comm = MPI_COMM_NULL
-    ! check to do PnetCDF I/O
-    if ( present(aggregate) ) then
-       if (aggregate) comm = PRC_LOCAL_COMM_WORLD
-    else if ( FILE_AGGREGATE ) then
-       comm = PRC_LOCAL_COMM_WORLD
-    end if
-
-    call FILE_Open( basename,           & ! [IN]
-                    fid,                & ! [OUT]
-                    mpi_comm = comm,    & ! [IN]
-                    rankid = PRC_myrank ) ! [IN]
+    call FILE_Open( basename,            & ! [IN]
+                    fid,                 & ! [OUT]
+                    aggregate=aggregate, & ! [IN]
+                    rankid=PRC_myrank    ) ! [IN]
 
     File_closed(fid) = .false.
 
@@ -660,8 +714,6 @@ contains
        date, subsec,              &
        haszcoord,                 &
        append, aggregate          )
-    use mpi, only: &
-       MPI_COMM_NULL
     use scale_file_h, only: &
        FILE_REAL8, &
        FILE_REAL4
@@ -673,8 +725,7 @@ contains
     use scale_process, only: &
        PRC_Ismaster, &
        PRC_myrank,   &
-       PRC_abort,  &
-       PRC_LOCAL_COMM_WORLD
+       PRC_abort
     use scale_rm_process, only: &
        PRC_2Drank,     &
        PRC_NUM_X,      &
@@ -684,6 +735,8 @@ contains
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE, &
        NOWMS   => TIME_NOWMS
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_NAME
     implicit none
     character(len=*), intent(in)  :: basename !< basename of the file
     character(len=*), intent(in)  :: title    !< title    of the file
@@ -697,7 +750,6 @@ contains
     logical,          intent(in), optional :: haszcoord !< switch whether include zcoordinate or not (default=true)
     logical,          intent(in), optional :: aggregate
 
-    character(len=5)  :: periodic_z, periodic_x, periodic_y
     integer           :: dtype
     logical           :: append_sw
     character(len=34) :: tunits
@@ -744,24 +796,17 @@ contains
        aggregate_ = FILE_AGGREGATE
     endif
 
-    if ( aggregate_ ) then
-       comm = PRC_LOCAL_COMM_WORLD
-    else
-       comm = MPI_COMM_NULL
-    end if
-
     call FILE_Create( basename,                & ! [IN]
                       title,                   & ! [IN]
                       H_SOURCE,                & ! [IN]
                       H_INSTITUTE,             & ! [IN]
-                      "cartesC",               & ! [IN]
-!                      GRID_CARTESC_NAME,       & ! [IN]
                       fid,                     & ! [OUT]
                       fileexisted,             & ! [OUT]
                       rankid     = PRC_myrank, & ! [IN]
+                      aggregate  = aggregate_, & ! [IN]
                       time_units = tunits,     & ! [IN]
-                      append     = append_sw,  & ! [IN]
-                      mpi_comm   = comm        ) ! [IN]
+                      append     = append_sw   ) ! [IN]
+
 
 
 
@@ -773,17 +818,7 @@ contains
           File_haszcoord(fid) = .true.
        endif
 
-       periodic_z = "false"
-       if ( PRC_PERIODIC_X ) then
-          periodic_x = "true"
-       else
-          periodic_x = "false"
-       endif
-       if ( PRC_PERIODIC_Y ) then
-          periodic_y = "true"
-       else
-          periodic_y = "false"
-       endif
+       call FILE_Set_Attribute( fid, "global", "grid_name", ATMOS_GRID_CARTESC_NAME ) ! [IN]
 
        if ( aggregate_ ) then
           call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_rank_x", (/0/) ) ! [IN]
@@ -799,21 +834,26 @@ contains
           call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_y",  (/PRC_NUM_Y/) ) ! [IN]
        endif
 
-       call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_periodic_z", periodic_z ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_periodic_x", periodic_x ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_periodic_y", periodic_y ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_cartesC_periodic_z", .false.                 ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_cartesC_periodic_x", PRC_PERIODIC_X ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_cartesC_periodic_y", PRC_PERIODIC_Y ) ! [IN]
 
-       call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_kmax",  (/KMAX/)  ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_imaxg", (/IMAXG/) ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_jmaxg", (/JMAXG/) ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_imaxg", (/IMAXG/) ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_jmaxg", (/JMAXG/) ) ! [IN]
 
-       call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_khalo", (/KHALO/) ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_ihalo", (/IHALO/) ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_jhalo", (/JHALO/) ) ! [IN]
+                        call FILE_Set_Attribute( fid, "global", "scale_atmos_cartesC_grid_kmax", (/KMAX/)  ) ! [IN]
+       if ( OKMAX > 0 ) call FILE_Set_Attribute( fid, "global", "scale_ocean_cartesC_grid_kmax", (/OKMAX/) ) ! [IN]
+       if ( LKMAX > 0 ) call FILE_Set_Attribute( fid, "global", "scale_land_cartesC_grid_kmax",  (/LKMAX/) ) ! [IN]
+       if ( UKMAX > 0 ) call FILE_Set_Attribute( fid, "global", "scale_urban_cartesC_grid_kmax", (/UKMAX/) ) ! [IN]
+
+
+       call FILE_Set_Attribute( fid, "global", "scale_atmos_cartesC_grid_khalo", (/KHALO/) ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_atmos_cartesC_grid_ihalo", (/IHALO/) ) ! [IN]
+       call FILE_Set_Attribute( fid, "global", "scale_atmos_cartesC_grid_jhalo", (/JHALO/) ) ! [IN]
 
        call FILE_CARTESC_def_axes( fid,                & ! [IN]
-                             dtype,              & ! [IN]
-                             File_haszcoord(fid) ) ! [IN]
+                                   dtype,              & ! [IN]
+                                   File_haszcoord(fid) ) ! [IN]
 
        if ( present( date ) ) then
           call FILE_get_CFtunits( date(:), tunits )
@@ -2142,49 +2182,49 @@ contains
        PRC_IsMaster
     use scale_rm_process, only: &
        PRC_2Drank
-    use scale_grid, only: &
-       GRID_CZ,    &
-       GRID_CX,    &
-       GRID_CY,    &
-       GRID_FZ,    &
-       GRID_FX,    &
-       GRID_FY,    &
-       GRID_CDZ,   &
-       GRID_CDX,   &
-       GRID_CDY,   &
-       GRID_FDZ,   &
-       GRID_FDX,   &
-       GRID_FDY,   &
-       GRID_CBFZ,  &
-       GRID_CBFX,  &
-       GRID_CBFY,  &
-       GRID_FBFZ,  &
-       GRID_FBFX,  &
-       GRID_FBFY,  &
-       GRID_CXG,   &
-       GRID_CYG,   &
-       GRID_FXG,   &
-       GRID_FYG,   &
-       GRID_CDXG,  &
-       GRID_CDYG,  &
-       GRID_FDXG,  &
-       GRID_FDYG,  &
-       GRID_CBFXG, &
-       GRID_CBFYG, &
-       GRID_FBFXG, &
-       GRID_FBFYG
-    use scale_ocean_grid, only: &
-       GRID_OCZ,  &
-       GRID_OFZ,  &
-       GRID_OCDZ
-    use scale_land_grid, only: &
-       GRID_LCZ,  &
-       GRID_LFZ,  &
-       GRID_LCDZ
-    use scale_urban_grid, only: &
-       GRID_UCZ,  &
-       GRID_UFZ,  &
-       GRID_UCDZ
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_CZ,    &
+       ATMOS_GRID_CARTESC_CX,    &
+       ATMOS_GRID_CARTESC_CY,    &
+       ATMOS_GRID_CARTESC_FZ,    &
+       ATMOS_GRID_CARTESC_FX,    &
+       ATMOS_GRID_CARTESC_FY,    &
+       ATMOS_GRID_CARTESC_CDZ,   &
+       ATMOS_GRID_CARTESC_CDX,   &
+       ATMOS_GRID_CARTESC_CDY,   &
+       ATMOS_GRID_CARTESC_FDZ,   &
+       ATMOS_GRID_CARTESC_FDX,   &
+       ATMOS_GRID_CARTESC_FDY,   &
+       ATMOS_GRID_CARTESC_CBFZ,  &
+       ATMOS_GRID_CARTESC_CBFX,  &
+       ATMOS_GRID_CARTESC_CBFY,  &
+       ATMOS_GRID_CARTESC_FBFZ,  &
+       ATMOS_GRID_CARTESC_FBFX,  &
+       ATMOS_GRID_CARTESC_FBFY,  &
+       ATMOS_GRID_CARTESC_CXG,   &
+       ATMOS_GRID_CARTESC_CYG,   &
+       ATMOS_GRID_CARTESC_FXG,   &
+       ATMOS_GRID_CARTESC_FYG,   &
+       ATMOS_GRID_CARTESC_CDXG,  &
+       ATMOS_GRID_CARTESC_CDYG,  &
+       ATMOS_GRID_CARTESC_FDXG,  &
+       ATMOS_GRID_CARTESC_FDYG,  &
+       ATMOS_GRID_CARTESC_CBFXG, &
+       ATMOS_GRID_CARTESC_CBFYG, &
+       ATMOS_GRID_CARTESC_FBFXG, &
+       ATMOS_GRID_CARTESC_FBFYG
+    use scale_ocean_grid_cartesC, only: &
+       OCEAN_GRID_CARTESC_CZ,  &
+       OCEAN_GRID_CARTESC_FZ,  &
+       OCEAN_GRID_CARTESC_CDZ
+    use scale_land_grid_cartesC, only: &
+       LAND_GRID_CARTESC_CZ,  &
+       LAND_GRID_CARTESC_FZ,  &
+       LAND_GRID_CARTESC_CDZ
+    use scale_urban_grid_cartesC, only: &
+       URBAN_GRID_CARTESC_CZ,  &
+       URBAN_GRID_CARTESC_FZ,  &
+       URBAN_GRID_CARTESC_CDZ
     implicit none
 
     integer, intent(in)  :: fid
@@ -2217,104 +2257,104 @@ contains
     end if
 
     if ( haszcoord .and. put_z ) then
-       call FILE_Write_Axis( fid, 'z'  , GRID_CZ (KS  :KE)  , start(1:1) )
-       call FILE_Write_Axis( fid, 'zh' , GRID_FZ (KS-1:KE)  , start(1:1) )
+       call FILE_Write_Axis( fid, 'z'  , ATMOS_GRID_CARTESC_CZ(KS  :KE)  , start(1:1) )
+       call FILE_Write_Axis( fid, 'zh' , ATMOS_GRID_CARTESC_FZ(KS-1:KE)  , start(1:1) )
 
-       call FILE_Write_Axis( fid, 'oz' , GRID_OCZ(OKS  :OKE), start(1:1) )
-       call FILE_Write_Axis( fid, 'ozh', GRID_OFZ(OKS-1:OKE), start(1:1) )
+       call FILE_Write_Axis( fid, 'oz' , OCEAN_GRID_CARTESC_CZ(OKS  :OKE), start(1:1) )
+       call FILE_Write_Axis( fid, 'ozh', OCEAN_GRID_CARTESC_FZ(OKS-1:OKE), start(1:1) )
 
-       call FILE_Write_Axis( fid, 'lz' , GRID_LCZ(LKS  :LKE), start(1:1) )
-       call FILE_Write_Axis( fid, 'lzh', GRID_LFZ(LKS-1:LKE), start(1:1) )
+       call FILE_Write_Axis( fid, 'lz' , LAND_GRID_CARTESC_CZ(LKS  :LKE), start(1:1) )
+       call FILE_Write_Axis( fid, 'lzh', LAND_GRID_CARTESC_FZ(LKS-1:LKE), start(1:1) )
 
-       call FILE_Write_Axis( fid, 'uz' , GRID_UCZ(UKS  :UKE), start(1:1) )
-       call FILE_Write_Axis( fid, 'uzh', GRID_UFZ(UKS-1:UKE), start(1:1) )
+       call FILE_Write_Axis( fid, 'uz' , URBAN_GRID_CARTESC_CZ(UKS  :UKE), start(1:1) )
+       call FILE_Write_Axis( fid, 'uzh', URBAN_GRID_CARTESC_FZ(UKS-1:UKE), start(1:1) )
     end if
 
     if ( put_x ) then
        if ( FILE_get_aggregate(fid) ) then
-          call FILE_Write_Axis( fid, 'x' ,  GRID_CX(ISB2:IEB2),  start(2:2) )
-          call FILE_Write_Axis( fid, 'xh',  GRID_FX(ISB2:IEB2),  start(2:2) )
+          call FILE_Write_Axis( fid, 'x' ,  ATMOS_GRID_CARTESC_CX(ISB2:IEB2),  start(2:2) )
+          call FILE_Write_Axis( fid, 'xh',  ATMOS_GRID_CARTESC_FX(ISB2:IEB2),  start(2:2) )
        else
-          call FILE_Write_Axis( fid, 'x' ,  GRID_CX(ISB:IEB),  start(2:2) )
-          call FILE_Write_Axis( fid, 'xh',  GRID_FX(ISB:IEB),  start(2:2) )
+          call FILE_Write_Axis( fid, 'x' ,  ATMOS_GRID_CARTESC_CX(ISB:IEB),  start(2:2) )
+          call FILE_Write_Axis( fid, 'xh',  ATMOS_GRID_CARTESC_FX(ISB:IEB),  start(2:2) )
        end if
     end if
 
     if ( put_y ) then
        if ( FILE_get_aggregate(fid) ) then
-          call FILE_Write_Axis( fid, 'y' ,  GRID_CY(JSB2:JEB2),  start(3:3) )
-          call FILE_Write_Axis( fid, 'yh',  GRID_FY(JSB2:JEB2),  start(3:3) )
+          call FILE_Write_Axis( fid, 'y' ,  ATMOS_GRID_CARTESC_CY(JSB2:JEB2),  start(3:3) )
+          call FILE_Write_Axis( fid, 'yh',  ATMOS_GRID_CARTESC_FY(JSB2:JEB2),  start(3:3) )
        else
-          call FILE_Write_Axis( fid, 'y' ,  GRID_CY(JSB:JEB),  start(3:3) )
-          call FILE_Write_Axis( fid, 'yh',  GRID_FY(JSB:JEB),  start(3:3) )
+          call FILE_Write_Axis( fid, 'y' ,  ATMOS_GRID_CARTESC_CY(JSB:JEB),  start(3:3) )
+          call FILE_Write_Axis( fid, 'yh',  ATMOS_GRID_CARTESC_FY(JSB:JEB),  start(3:3) )
        end if
     end if
 
     ! global coordinates (always including halo)
     if ( haszcoord .and. put_z ) then
-       call FILE_Write_Axis( fid, 'CZ'  , GRID_CZ  (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'FZ'  , GRID_FZ  (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'CDZ' , GRID_CDZ (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'FDZ' , GRID_FDZ (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'CBFZ', GRID_CBFZ(:), start(1:1) )
-       call FILE_Write_Axis( fid, 'FBFZ', GRID_FBFZ(:), start(1:1) )
+       call FILE_Write_Axis( fid, 'CZ'  , ATMOS_GRID_CARTESC_CZ  (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'FZ'  , ATMOS_GRID_CARTESC_FZ  (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'CDZ' , ATMOS_GRID_CARTESC_CDZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'FDZ' , ATMOS_GRID_CARTESC_FDZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'CBFZ', ATMOS_GRID_CARTESC_CBFZ(:), start(1:1) )
+       call FILE_Write_Axis( fid, 'FBFZ', ATMOS_GRID_CARTESC_FBFZ(:), start(1:1) )
 
-       call FILE_Write_Axis( fid, 'OCZ' , GRID_OCZ (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'OFZ' , GRID_OFZ (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'OCDZ', GRID_OCDZ(:), start(1:1) )
+       call FILE_Write_Axis( fid, 'OCZ' , OCEAN_GRID_CARTESC_CZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'OFZ' , OCEAN_GRID_CARTESC_FZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'OCDZ', OCEAN_GRID_CARTESC_CDZ(:), start(1:1) )
 
-       call FILE_Write_Axis( fid, 'LCZ' , GRID_LCZ (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'LFZ' , GRID_LFZ (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'LCDZ', GRID_LCDZ(:), start(1:1) )
+       call FILE_Write_Axis( fid, 'LCZ' , LAND_GRID_CARTESC_CZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'LFZ' , LAND_GRID_CARTESC_FZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'LCDZ', LAND_GRID_CARTESC_CDZ(:), start(1:1) )
 
-       call FILE_Write_Axis( fid, 'UCZ' , GRID_UCZ (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'UFZ' , GRID_UFZ (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'UCDZ', GRID_UCDZ(:), start(1:1) )
+       call FILE_Write_Axis( fid, 'UCZ' , URBAN_GRID_CARTESC_CZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'UFZ' , URBAN_GRID_CARTESC_FZ (:), start(1:1) )
+       call FILE_Write_Axis( fid, 'UCDZ', URBAN_GRID_CARTESC_CDZ(:), start(1:1) )
     end if
 
     if ( FILE_get_AGGREGATE(fid) ) then
        if ( PRC_IsMaster ) then
-          call FILE_Write_Axis( fid, 'CX',   GRID_CXG  (:) )
-          call FILE_Write_Axis( fid, 'CY',   GRID_CYG  (:) )
-          call FILE_Write_Axis( fid, 'FX',   GRID_FXG  (:) )
-          call FILE_Write_Axis( fid, 'FY',   GRID_FYG  (:) )
-          call FILE_Write_Axis( fid, 'CDX',  GRID_CDXG (:) )
-          call FILE_Write_Axis( fid, 'CDY',  GRID_CDYG (:) )
-          call FILE_Write_Axis( fid, 'FDX',  GRID_FDXG (:) )
-          call FILE_Write_Axis( fid, 'FDY',  GRID_FDYG (:) )
-          call FILE_Write_Axis( fid, 'CBFX', GRID_CBFXG(:) )
-          call FILE_Write_Axis( fid, 'CBFY', GRID_CBFYG(:) )
-          call FILE_Write_Axis( fid, 'FBFX', GRID_FBFXG(:) )
-          call FILE_Write_Axis( fid, 'FBFY', GRID_FBFYG(:) )
+          call FILE_Write_Axis( fid, 'CX',   ATMOS_GRID_CARTESC_CXG  (:) )
+          call FILE_Write_Axis( fid, 'CY',   ATMOS_GRID_CARTESC_CYG  (:) )
+          call FILE_Write_Axis( fid, 'FX',   ATMOS_GRID_CARTESC_FXG  (:) )
+          call FILE_Write_Axis( fid, 'FY',   ATMOS_GRID_CARTESC_FYG  (:) )
+          call FILE_Write_Axis( fid, 'CDX',  ATMOS_GRID_CARTESC_CDXG (:) )
+          call FILE_Write_Axis( fid, 'CDY',  ATMOS_GRID_CARTESC_CDYG (:) )
+          call FILE_Write_Axis( fid, 'FDX',  ATMOS_GRID_CARTESC_FDXG (:) )
+          call FILE_Write_Axis( fid, 'FDY',  ATMOS_GRID_CARTESC_FDYG (:) )
+          call FILE_Write_Axis( fid, 'CBFX', ATMOS_GRID_CARTESC_CBFXG(:) )
+          call FILE_Write_Axis( fid, 'CBFY', ATMOS_GRID_CARTESC_CBFYG(:) )
+          call FILE_Write_Axis( fid, 'FBFX', ATMOS_GRID_CARTESC_FBFXG(:) )
+          call FILE_Write_Axis( fid, 'FBFY', ATMOS_GRID_CARTESC_FBFYG(:) )
        endif
     else
-       call FILE_Write_Axis( fid, 'CX',   GRID_CX  (:) )
-       call FILE_Write_Axis( fid, 'CY',   GRID_CY  (:) )
-       call FILE_Write_Axis( fid, 'FX',   GRID_FX  (:) )
-       call FILE_Write_Axis( fid, 'FY',   GRID_FY  (:) )
-       call FILE_Write_Axis( fid, 'CDX',  GRID_CDX (:) )
-       call FILE_Write_Axis( fid, 'CDY',  GRID_CDY (:) )
-       call FILE_Write_Axis( fid, 'FDX',  GRID_FDX (:) )
-       call FILE_Write_Axis( fid, 'FDY',  GRID_FDY (:) )
-       call FILE_Write_Axis( fid, 'CBFX', GRID_CBFX(:) )
-       call FILE_Write_Axis( fid, 'CBFY', GRID_CBFY(:) )
-       call FILE_Write_Axis( fid, 'FBFX', GRID_FBFX(:) )
-       call FILE_Write_Axis( fid, 'FBFY', GRID_FBFY(:) )
+       call FILE_Write_Axis( fid, 'CX',   ATMOS_GRID_CARTESC_CX  (:) )
+       call FILE_Write_Axis( fid, 'CY',   ATMOS_GRID_CARTESC_CY  (:) )
+       call FILE_Write_Axis( fid, 'FX',   ATMOS_GRID_CARTESC_FX  (:) )
+       call FILE_Write_Axis( fid, 'FY',   ATMOS_GRID_CARTESC_FY  (:) )
+       call FILE_Write_Axis( fid, 'CDX',  ATMOS_GRID_CARTESC_CDX (:) )
+       call FILE_Write_Axis( fid, 'CDY',  ATMOS_GRID_CARTESC_CDY (:) )
+       call FILE_Write_Axis( fid, 'FDX',  ATMOS_GRID_CARTESC_FDX (:) )
+       call FILE_Write_Axis( fid, 'FDY',  ATMOS_GRID_CARTESC_FDY (:) )
+       call FILE_Write_Axis( fid, 'CBFX', ATMOS_GRID_CARTESC_CBFX(:) )
+       call FILE_Write_Axis( fid, 'CBFY', ATMOS_GRID_CARTESC_CBFY(:) )
+       call FILE_Write_Axis( fid, 'FBFX', ATMOS_GRID_CARTESC_FBFX(:) )
+       call FILE_Write_Axis( fid, 'FBFY', ATMOS_GRID_CARTESC_FBFY(:) )
     endif
 
     if ( (.not. FILE_get_AGGREGATE(fid)) .or. PRC_IsMaster ) then
-       call FILE_Write_Axis( fid, 'CXG',   GRID_CXG  (:) )
-       call FILE_Write_Axis( fid, 'CYG',   GRID_CYG  (:) )
-       call FILE_Write_Axis( fid, 'FXG',   GRID_FXG  (:) )
-       call FILE_Write_Axis( fid, 'FYG',   GRID_FYG  (:) )
-       call FILE_Write_Axis( fid, 'CDXG',  GRID_CDXG (:) )
-       call FILE_Write_Axis( fid, 'CDYG',  GRID_CDYG (:) )
-       call FILE_Write_Axis( fid, 'FDXG',  GRID_FDXG (:) )
-       call FILE_Write_Axis( fid, 'FDYG',  GRID_FDYG (:) )
-       call FILE_Write_Axis( fid, 'CBFXG', GRID_CBFXG(:) )
-       call FILE_Write_Axis( fid, 'CBFYG', GRID_CBFYG(:) )
-       call FILE_Write_Axis( fid, 'FBFXG', GRID_FBFXG(:) )
-       call FILE_Write_Axis( fid, 'FBFYG', GRID_FBFYG(:) )
+       call FILE_Write_Axis( fid, 'CXG',   ATMOS_GRID_CARTESC_CXG  (:) )
+       call FILE_Write_Axis( fid, 'CYG',   ATMOS_GRID_CARTESC_CYG  (:) )
+       call FILE_Write_Axis( fid, 'FXG',   ATMOS_GRID_CARTESC_FXG  (:) )
+       call FILE_Write_Axis( fid, 'FYG',   ATMOS_GRID_CARTESC_FYG  (:) )
+       call FILE_Write_Axis( fid, 'CDXG',  ATMOS_GRID_CARTESC_CDXG (:) )
+       call FILE_Write_Axis( fid, 'CDYG',  ATMOS_GRID_CARTESC_CDYG (:) )
+       call FILE_Write_Axis( fid, 'FDXG',  ATMOS_GRID_CARTESC_FDXG (:) )
+       call FILE_Write_Axis( fid, 'FDYG',  ATMOS_GRID_CARTESC_FDYG (:) )
+       call FILE_Write_Axis( fid, 'CBFXG', ATMOS_GRID_CARTESC_CBFXG(:) )
+       call FILE_Write_Axis( fid, 'CBFYG', ATMOS_GRID_CARTESC_CBFYG(:) )
+       call FILE_Write_Axis( fid, 'FBFXG', ATMOS_GRID_CARTESC_FBFXG(:) )
+       call FILE_Write_Axis( fid, 'FBFYG', ATMOS_GRID_CARTESC_FBFYG(:) )
     end if
 
     ! associate coordinates

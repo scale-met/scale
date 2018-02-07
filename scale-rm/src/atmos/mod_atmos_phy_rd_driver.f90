@@ -19,7 +19,7 @@ module mod_atmos_phy_rd_driver
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -55,9 +55,9 @@ contains
        ATMOS_PHY_RD_mstrnx_setup
     use scale_atmos_phy_rd_mm5sw, only: &
        swinit
-    use scale_grid, only: &
-       CZ => GRID_CZ, &
-       FZ => GRID_FZ
+    use scale_atmos_grid_cartesC, only: &
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       FZ => ATMOS_GRID_CARTESC_FZ
     use mod_atmos_admin, only: &
        ATMOS_PHY_RD_TYPE, &
        ATMOS_sw_phy_rd
@@ -137,11 +137,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_RD_driver( update_flag )
-    use scale_grid_real, only: &
-       REAL_CZ,            &
-       REAL_FZ,            &
-       REAL_LON,           &
-       REAL_LAT
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ,            &
+       REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ,            &
+       REAL_LON => ATMOS_GRID_CARTESC_REAL_LON,           &
+       REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &

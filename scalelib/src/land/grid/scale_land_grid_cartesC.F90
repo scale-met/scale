@@ -5,12 +5,9 @@
 !!          Grid module for cartesian coordinate for land
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!!
 !<
 !-------------------------------------------------------------------------------
-module scale_land_grid
+module scale_land_grid_cartesC
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -18,8 +15,8 @@ module scale_land_grid
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
-  use scale_land_grid_index
+  use scale_atmos_grid_cartesC_index
+  use scale_land_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -27,22 +24,22 @@ module scale_land_grid
   !
   !++ Public procedure
   !
-  public :: LAND_GRID_setup
+  public :: LAND_GRID_CARTESC_setup
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(RP), public, allocatable :: GRID_LCZ (:) !< center coordinate [m]: z, local=global
-  real(RP), public, allocatable :: GRID_LFZ (:) !< face   coordinate [m]: z, local=global
-  real(RP), public, allocatable :: GRID_LCDZ(:) !< z-length of control volume [m]
+  real(RP), public, allocatable :: LAND_GRID_CARTESC_CZ (:) !< center coordinate [m]: z, local=global
+  real(RP), public, allocatable :: LAND_GRID_CARTESC_FZ (:) !< face   coordinate [m]: z, local=global
+  real(RP), public, allocatable :: LAND_GRID_CARTESC_CDZ(:) !< z-length of control volume [m]
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
-  private :: LAND_GRID_read
-  private :: LAND_GRID_generate
+  private :: LAND_GRID_CARTESC_read
+  private :: LAND_GRID_CARTESC_generate
 
   !-----------------------------------------------------------------------------
   !
@@ -50,21 +47,23 @@ module scale_land_grid
   !
   real(RP), private :: LDZ(100)
 
-  character(len=H_LONG), private :: LAND_GRID_IN_BASENAME  = ''
-  character(len=H_LONG), private :: LAND_GRID_OUT_BASENAME = ''
+  character(len=H_LONG) :: LAND_GRID_CARTESC_IN_BASENAME  = ''
+  logical               :: LAND_GRID_CARTESC_IN_AGGREGATE 
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine LAND_GRID_setup
+  subroutine LAND_GRID_CARTESC_setup
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
+    use scale_file, only: &
+       FILE_AGGREGATE
     implicit none
 
-    namelist / PARAM_LAND_GRID / &
-       LAND_GRID_IN_BASENAME,  &
-       LAND_GRID_OUT_BASENAME, &
+    namelist / PARAM_LAND_GRID_CARTESC / &
+       LAND_GRID_CARTESC_IN_BASENAME,  &
+       LAND_GRID_CARTESC_IN_AGGREGATE, &
        LDZ
 
     integer :: ierr
@@ -72,34 +71,36 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID] / Categ[LAND GRID] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CartesC] / Categ[LAND GRID] / Origin[SCALElib]'
 
     LDZ(:) = 0.0_RP
 
+    LAND_GRID_CARTESC_IN_AGGREGATE = FILE_AGGREGATE
+
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_LAND_GRID,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_LAND_GRID_CARTESC,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_GRID. Check!'
-       call PRC_MPIstop
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_GRID_CARTESC. Check!'
+       call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_GRID)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_GRID_CARTESC)
 
-    allocate( GRID_LCZ (LKS  :LKE) )
-    allocate( GRID_LFZ (LKS-1:LKE) )
-    allocate( GRID_LCDZ(LKS  :LKE) )
+    allocate( LAND_GRID_CARTESC_CZ (LKS  :LKE) )
+    allocate( LAND_GRID_CARTESC_FZ (LKS-1:LKE) )
+    allocate( LAND_GRID_CARTESC_CDZ(LKS  :LKE) )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Land grid information ***'
 
-    if ( LAND_GRID_IN_BASENAME /= '' ) then
-       call LAND_GRID_read
+    if ( LAND_GRID_CARTESC_IN_BASENAME /= '' ) then
+       call LAND_GRID_CARTESC_read
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found input grid file. Grid position is calculated.'
 
-       call LAND_GRID_generate
+       call LAND_GRID_CARTESC_generate
     endif
 
     if ( LKE == LKS ) then
@@ -115,104 +116,70 @@ contains
        '|         [m]     [m]     [m]     |'
        k = LKS-1
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,A,I4,A)') &
-       '|            ',GRID_LFZ(k),'        ',k,' | Atmosphere interface'
+       '|            ',LAND_GRID_CARTESC_FZ(k),'        ',k,' | Atmosphere interface'
        do k = LKS, LKE-1
        if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,F8.3,A,F8.3,A)') &
-       '|',k,GRID_LCZ(k),'        ',GRID_LCDZ(k),'     | '
+       '|',k,LAND_GRID_CARTESC_CZ(k),'        ',LAND_GRID_CARTESC_CDZ(k),'     | '
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,A,I4,A)') &
-       '|            ',GRID_LFZ(k),'       |',k,' | '
+       '|            ',LAND_GRID_CARTESC_FZ(k),'       |',k,' | '
        enddo
        k = LKE
        if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,F8.3,A,F8.3,A)') &
-       '|',k,GRID_LCZ(k),'        ',GRID_LCDZ(k),'     | '
+       '|',k,LAND_GRID_CARTESC_CZ(k),'        ',LAND_GRID_CARTESC_CDZ(k),'     | '
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,A,I4,A)') &
-       '|            ',GRID_LFZ(k),'        ',k,' | bedrock'
+       '|            ',LAND_GRID_CARTESC_FZ(k),'        ',k,' | bedrock'
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
        '|=================================|'
     endif
 
     return
-  end subroutine LAND_GRID_setup
+  end subroutine LAND_GRID_CARTESC_setup
 
   !-----------------------------------------------------------------------------
   !> Read land grid
-  subroutine LAND_GRID_read
+  subroutine LAND_GRID_CARTESC_read
     use scale_file, only: &
-       FILE_Read
+       FILE_open, &
+       FILE_read
     use scale_process, only: &
-       PRC_myrank, &
-       PRC_MPIstop
-    use scale_grid, only: &
-       GRID_CBFZ, &
-       GRID_CBFX, &
-       GRID_CBFY
+       PRC_myrank
     implicit none
 
-    character(len=H_LONG) :: bname
-    real(RP)              :: tmp_CBFZ(KA)
-    real(RP)              :: tmp_CBFX(IA)
-    real(RP)              :: tmp_CBFY(JA)
-
-    integer  :: i, j, k
+    integer :: fid
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input land grid file ***'
 
-    write(bname,'(A,A,F15.3)') trim(LAND_GRID_IN_BASENAME)
+    call FILE_open( LAND_GRID_CARTESC_IN_BASENAME, fid, rankid=PRC_myrank, aggregate=LAND_GRID_CARTESC_IN_AGGREGATE )
 
-    call FILE_Read( bname, 'LCZ',  GRID_LCZ (:) )
-    call FILE_Read( bname, 'LCDZ', GRID_LCDZ(:) )
-    call FILE_Read( bname, 'LFZ',  GRID_LFZ (:) )
+    call FILE_read( fid, 'LCZ',  LAND_GRID_CARTESC_CZ (:) )
+    call FILE_read( fid, 'LCDZ', LAND_GRID_CARTESC_CDZ(:) )
+    call FILE_read( fid, 'LFZ',  LAND_GRID_CARTESC_FZ (:) )
                                                  
-    call FILE_Read( bname, 'CBFZ', tmp_CBFZ (:) )
-    call FILE_Read( bname, 'CBFX', tmp_CBFX (:) )
-    call FILE_Read( bname, 'CBFY', tmp_CBFY (:) )
-
-    do i = 1, IA
-       if ( tmp_CBFX(i) /= GRID_CBFX(i) ) then
-          write(*,*) 'xxx Buffer layer in LAND_GRID_IN_BASENAME is different from GRID_IN_BASENAME'
-          call PRC_MPIstop
-       endif
-    enddo
-
-    do j = 1, JA
-       if ( tmp_CBFY(j) /= GRID_CBFY(j) ) then
-          write(*,*) 'xxx Buffer layer in LAND_GRID_IN_BASENAME is different from GRID_IN_BASENAME'
-          call PRC_MPIstop
-       endif
-    enddo
-
-    do k = 1, KA
-       if ( tmp_CBFZ(k) /= GRID_CBFZ(k) ) then
-          write(*,*) 'xxx Buffer layer in LAND_GRID_IN_BASENAME is different from GRID_IN_BASENAME'
-          call PRC_MPIstop
-       endif
-    enddo
-
     return
-  end subroutine LAND_GRID_read
+  end subroutine LAND_GRID_CARTESC_read
 
   !-----------------------------------------------------------------------------
   !> Generate land grid
-  subroutine LAND_GRID_generate
+  subroutine LAND_GRID_CARTESC_generate
     implicit none
 
     integer :: k
     !---------------------------------------------------------------------------
 
     do k = LKS, LKE
-       GRID_LCDZ(k) = LDZ(k)
+       LAND_GRID_CARTESC_CDZ(k) = LDZ(k)
     enddo
 
-    GRID_LFZ(LKS-1) = 0.0_RP
+    LAND_GRID_CARTESC_FZ(LKS-1) = 0.0_RP
 
     do k = LKS, LKE
-       GRID_LCZ(k) = GRID_LCDZ(k) / 2.0_RP + GRID_LFZ(k-1)
-       GRID_LFZ(k) = GRID_LCDZ(k)          + GRID_LFZ(k-1)
+       LAND_GRID_CARTESC_CZ(k) = LAND_GRID_CARTESC_CDZ(k) / 2.0_RP + LAND_GRID_CARTESC_FZ(k-1)
+       LAND_GRID_CARTESC_FZ(k) = LAND_GRID_CARTESC_CDZ(k)          + LAND_GRID_CARTESC_FZ(k-1)
     enddo
 
     return
-  end subroutine LAND_GRID_generate
+  end subroutine LAND_GRID_CARTESC_generate
 
-end module scale_land_grid
+end module scale_land_grid_cartesC

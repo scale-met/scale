@@ -16,7 +16,7 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -142,11 +142,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
-    use scale_grid, only: &
-       CZ => GRID_CZ, &
-       FZ => GRID_FZ, &
-       RCDZ => GRID_RCDZ, &
-       RFDZ => GRID_RFDZ
+    use scale_atmos_grid_cartesC, only: &
+       CZ => GRID_CARTESC_CZ, &
+       FZ => GRID_CARTESC_FZ, &
+       RCDZ => GRID_CARTESC_RCDZ, &
+       RFDZ => GRID_CARTESC_RFDZ
     implicit none
 
     integer :: k
@@ -288,10 +288,10 @@ contains
     use scale_time, only: &
        NOWSEC => TIME_NOWSEC, &
        dt     => TIME_DTSEC
-    use scale_grid, only: &
-       FDZ  => GRID_FDZ, &
-       RCDZ => GRID_RCDZ, &
-       RFDZ => GRID_RFDZ
+    use scale_atmos_grid_cartesC, only: &
+       FDZ  => GRID_CARTESC_FDZ, &
+       RCDZ => GRID_CARTESC_RCDZ, &
+       RFDZ => GRID_CARTESC_RFDZ
     use scale_atmos_dyn, only: &
        CORIOLIS
     use mod_atmos_vars, only: &
@@ -405,8 +405,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine interporate( d_out, d_in )
-    use scale_grid, only: &
-       CZ => GRID_CZ
+    use scale_atmos_grid_cartesC, only: &
+       CZ => GRID_CARTESC_CZ
     implicit none
 
     real(RP), intent(out) :: d_out(KA)

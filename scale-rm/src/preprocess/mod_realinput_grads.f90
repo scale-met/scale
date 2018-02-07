@@ -196,7 +196,7 @@ contains
     character(len=*), intent(in)  :: basename
 
 
-    NAMELIST / PARAM_MKINIT_REAL_GrADS / &
+    NAMELIST / PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS / &
         upper_qv_type
 
     integer :: ielem
@@ -209,17 +209,17 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_GrADS,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS,iostat=ierr)
 
     if( ierr > 0 ) then
-       write(*,*) 'xxx [realinput_grads] Not appropriate names in namelist PARAM_MKINIT_REAL_GrADS. Check!'
+       write(*,*) 'xxx [realinput_grads] Not appropriate names in namelist PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_GrADS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS)
 
 
     if ( len_trim(basename) == 0 ) then
-       write(*,*) 'xxx [realinput_grads] "BASENAME_ORG" is not specified in "PARAM_MKINIT_REAL_ATMOS"!', trim(basename)
+       write(*,*) 'xxx [realinput_grads] "BASENAME_ORG" is not specified in "PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_ATMOS"!', trim(basename)
        call PRC_MPIstop
     endif
 
@@ -695,7 +695,7 @@ contains
                 case("ZERO")
                    ! do nothing
                 case default
-                   write(*,*) 'xxx upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
+                   write(*,*) 'xxx upper_qv_type in PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS is invalid! ', upper_qv_type
                    call PRC_MPIstop
                 end select
              endif
@@ -820,7 +820,7 @@ contains
                 case("ZERO")
                    ! do nothing
                 case default
-                   write(*,*) 'xxx upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
+                   write(*,*) 'xxx upper_qv_type in PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS is invalid! ', upper_qv_type
                    call PRC_MPIstop
                 end select
              endif
@@ -1122,7 +1122,7 @@ contains
     use_waterratio = .false.
 
     if ( len_trim(basename) == 0 ) then
-       write(*,*) 'xxx [realinput_grads] "BASEMAAME" is not specified in "PARAM_MKINIT_REAL_ATOMS"!', trim(basename)
+       write(*,*) 'xxx [realinput_grads] "BASEMAAME" is not specified in "PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_ATOMS"!', trim(basename)
        call PRC_MPIstop
     endif
 

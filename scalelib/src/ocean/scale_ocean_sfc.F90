@@ -15,7 +15,7 @@ module scale_ocean_sfc
   !
   use scale_precision
   use scale_stdio
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -60,7 +60,7 @@ module scale_ocean_sfc
            Z0E,    &
            dt      )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        implicit none
 
        real(RP), intent(out) :: SST_t(IA,JA) ! tendency of sea surface temperature
@@ -152,7 +152,7 @@ contains
        SFC_albedo,   &
        cosSZA,       &
        dt            )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_const, only: &
        I_SW  => CONST_I_SW, &
        I_LW  => CONST_I_LW

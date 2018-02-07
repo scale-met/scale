@@ -17,7 +17,7 @@ module mod_atmos_phy_bl_driver
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -89,12 +89,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_BL_driver_setup
-    use scale_grid, only: &
-       CDZ => GRID_CDZ, &
-       CDX => GRID_CDX, &
-       CDY => GRID_CDY
-    use scale_grid_real, only: &
-       CZ  => REAL_CZ
+    use scale_atmos_grid_cartesC, only: &
+       CDZ => ATMOS_GRID_CARTESC_CDZ, &
+       CDX => ATMOS_GRID_CARTESC_CDX, &
+       CDY => ATMOS_GRID_CARTESC_CDY
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ
     use scale_atmos_phy_bl_mynn, only: &
        ATMOS_PHY_BL_MYNN_setup
     use mod_atmos_admin, only: &
@@ -113,7 +113,7 @@ contains
        case ( 'MYNN' )
           call ATMOS_PHY_BL_MYNN_setup( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               CZ ) ! (in)
+               REAL_CZ ) ! (in)
        end select
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -157,9 +157,9 @@ contains
        ATMOS_PHY_BL_MYNN_tendency_tracer
     use scale_atmos_hydrometeor, only: &
        I_QV
-    use scale_grid_real, only: &
-       CZ => REAL_CZ, &
-       FZ => REAL_FZ
+    use scale_atmos_grid_cartesC_real, only: &
+       CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl

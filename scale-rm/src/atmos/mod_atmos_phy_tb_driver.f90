@@ -19,7 +19,7 @@ module mod_atmos_phy_tb_driver
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -71,12 +71,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_TB_driver_setup
-    use scale_grid, only: &
-       CDZ => GRID_CDZ, &
-       CDX => GRID_CDX, &
-       CDY => GRID_CDY
-    use scale_grid_real, only: &
-       CZ  => REAL_CZ
+    use scale_atmos_grid_cartesC, only: &
+       CDZ => ATMOS_GRID_CARTESC_CDZ, &
+       CDX => ATMOS_GRID_CARTESC_CDX, &
+       CDY => ATMOS_GRID_CARTESC_CDY
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ
     use scale_atmos_phy_tb, only: &
        ATMOS_PHY_TB_setup
     use mod_atmos_admin, only: &
@@ -101,7 +101,7 @@ contains
 
     if ( ATMOS_sw_phy_tb ) then
        ! setup library component
-       call ATMOS_PHY_TB_setup( CDZ, CDX, CDY, CZ ) ! [IN]
+       call ATMOS_PHY_TB_setup( CDZ, CDX, CDY, REAL_CZ ) ! [IN]
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
     endif

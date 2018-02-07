@@ -41,7 +41,7 @@ def parse(deps, pros, srcdir, dir=".")
         pros[mod] = pro
       when /^\s*use (\w+)/
         mod = $1
-        next if (/(dc_log|dc_types|mpi|MPI|netcdf|gadg|rng|mt|NAME)/ =~ mod)
+        next if (/(mpi|MPI|netcdf|gadg|rng|mt|NAME)/ =~ mod)
 
         dep[:depends].push(mod) unless dep[:depends].include?(mod)
       end
@@ -53,7 +53,7 @@ parse(deps, pros, srcdir)
 
 File.open( File.join(srcdir, "depend"), "w" ) do |file|
   deps.sort.each do |name, dep|
-    file.print "$(OBJ_DIR)/#{name}.o: #{dep[:dir]}/#{name}.F90 $(inc_index) $(DEPENDLIB)"
+    file.print "$(OBJ_DIR)/#{name}.o: #{dep[:dir]}/#{name}.F90 $(DEPENDLIB)"
     ptype = ""
     if /\Ascale_atmos_phy_(mp|tb|bl|rd)\Z/ =~ name
       ptype = $1
@@ -67,9 +67,8 @@ File.open( File.join(srcdir, "depend"), "w" ) do |file|
           file.print " $(OBJ_DIR)/#{pro[:file]}.o"
         end
       else
-        p name
-        p mod
-        raise
+        $stderr.print "Module '#{mod}' is used in '#{name}', but it is not found.\n"
+        raise "ERROR"
       end
     end
     file.print "\n"

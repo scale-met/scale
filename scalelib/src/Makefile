@@ -18,6 +18,9 @@ VPATH = common:                          \
         coupler:                         \
         io:                              \
 	file:                            \
+	grid:                            \
+	communication:                   \
+        atmosphere/grid:                 \
         atmosphere/physics/pbl:          \
         atmosphere/physics/microphysics: \
         atmosphere/physics/radiation:    \
@@ -121,6 +124,10 @@ OBJS_NAME = \
 	scale_file_history_cartesC.o	\
 	scale_file_external_input.o	\
 	scale_file_external_input_cartesC.o	\
+	scale_atmos_grid_cartesC_index.o	\
+	scale_atmos_grid_cartesC.o	\
+	scale_atmos_grid_cartesC_real.o	\
+	scale_atmos_grid_cartesC_metric.o	\
 	scale_atmos_dyn.o	\
 	scale_atmos_dyn_common.o	\
 	$(OBJS_DYN)	\
@@ -167,19 +174,26 @@ OBJS_NAME = \
 	scale_atmos_sub_diagnostic.o	\
 	scale_bulkflux.o	\
 	scale_calendar.o	\
-	scale_comm.o	\
+	scale_comm_cartesC.o	\
+	scale_comm_cartesC_nest.o	\
 	scale_const.o	\
 	scale_debug.o	\
-	scale_grid_cartesian.o	\
-	scale_grid_index.o	\
-	scale_grid_nest.o	\
-	scale_grid_real.o	\
 	scale_index.o		\
-	scale_gridtrans.o	\
 	scale_interp.o	\
 	scale_interp_vert.o	\
-	scale_land_grid.o	\
-	scale_land_grid_index.o	\
+	scale_ocean_grid_cartesC_index.o	\
+	scale_ocean_grid_cartesC.o	\
+	scale_ocean_phy.o	\
+	scale_ocean_phy_const.o	\
+	scale_ocean_phy_slab.o	\
+	scale_ocean_sfc.o	\
+	scale_ocean_sfc_const.o	\
+	scale_ocean_sfc_slab.o	\
+	scale_ocean_sfc.o	\
+	scale_ocean_sfc_const.o	\
+	scale_ocean_sfc_slab.o	\
+	scale_land_grid_cartesC_index.o	\
+	scale_land_grid_cartesC.o	\
 	scale_land_phy.o	\
 	scale_land_phy_const.o	\
 	scale_land_phy_slab.o	\
@@ -190,20 +204,16 @@ OBJS_NAME = \
 	scale_land_sfc_const.o	\
 	scale_land_sfc_thin-slab.o	\
 	scale_land_sfc_thick-slab.o	\
+	scale_urban_grid_cartesC_index.o	\
+	scale_urban_grid_cartesC.o	\
+	scale_urban_phy.o	\
+	scale_urban_phy_slc.o	\
 	scale_landuse.o	\
 	scale_rm_process.o	\
 	scale_rm_statistics.o	\
-	scale_mapproj.o	\
+	scale_mapprojection.o	\
 	scale_matrix.o	\
 	scale_monitor.o	\
-	scale_ocean_grid.o	\
-	scale_ocean_grid_index.o	\
-	scale_ocean_phy.o	\
-	scale_ocean_phy_const.o	\
-	scale_ocean_phy_slab.o	\
-	scale_ocean_sfc.o	\
-	scale_ocean_sfc_const.o	\
-	scale_ocean_sfc_slab.o	\
 	scale_precision.o	\
 	scale_process.o	\
 	scale_prof.o	\
@@ -214,10 +224,6 @@ OBJS_NAME = \
 	scale_time.o	\
 	scale_topography.o	\
 	scale_tracer.o	\
-	scale_urban_grid.o	\
-	scale_urban_grid_index.o	\
-	scale_urban_phy.o	\
-	scale_urban_phy_slc.o	\
 	scale_vector.o
 
 OBJS = $(patsubst %,$(OBJ_DIR)/%,$(OBJS_NAME))
@@ -258,6 +264,7 @@ endif
 	@echo "Complete making scalelib."
 
 makedir:
+	mkdir -p $(OBJ_DIR)
 	mkdir -p $(MODDIR)
 	mkdir -p $(LIBDIR)
 
@@ -329,6 +336,7 @@ ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) restoresdm
 	$(MAKE) cleansdm
 endif
+	rm -rf .libs
 	rm -f *.o *.mod *.lst
 
 dependency:
@@ -349,9 +357,9 @@ $(MODDIR)/%.mod : %.mod
 	install $< $@
 
 $(OBJ_DIR)/%.o : %.F90
-	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJS_FOR_DYN) :
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 
 file/scale_file.F90 : scale_file.F90.erb
 

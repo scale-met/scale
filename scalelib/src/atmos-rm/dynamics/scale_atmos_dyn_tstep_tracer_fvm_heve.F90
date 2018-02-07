@@ -20,7 +20,7 @@ module scale_atmos_dyn_tstep_tracer_fvm_heve
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
 

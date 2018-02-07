@@ -15,8 +15,7 @@ module mod_urban_phy_driver
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
-  use scale_urban_grid_index
+  use scale_urban_grid_cartesC_index
 
   use scale_const, only: &
      I_SW  => CONST_I_SW, &
@@ -117,8 +116,8 @@ contains
     use scale_mapproj, only: &
        BASE_LON => MPRJ_basepoint_lon, &
        BASE_LAT => MPRJ_basepoint_lat
-    use scale_grid_real, only: &
-       REAL_Z1
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_Z1
     use scale_urban_phy, only: &
        URBAN_PHY
     use mod_urban_vars, only: &
@@ -183,8 +182,8 @@ contains
     logical, intent(in) :: update_flag
 
     ! works
-    real(RP) :: LHV(IA,JA) ! latent heat of vaporization [J/kg]
-    real(RP) :: total      ! dummy
+    real(RP) :: LHV(UIA,UJA) ! latent heat of vaporization [J/kg]
+    real(RP) :: total        ! dummy
 
     character(len=2) :: sk
 
@@ -229,7 +228,7 @@ contains
                        ATMOS_V         (:,:),      & ! [IN]
                        ATMOS_DENS      (:,:),      & ! [IN]
                        ATMOS_QV        (:,:),      & ! [IN]
-                       REAL_Z1         (:,:),      & ! [IN]
+                       ATMOS_GRID_CARTESC_REAL_Z1         (:,:),      & ! [IN]
                        ATMOS_PBL       (:,:),      & ! [IN]
                        ATMOS_SFC_DENS  (:,:),      & ! [IN]
                        ATMOS_SFC_PRES  (:,:),      & ! [IN]
@@ -257,8 +256,8 @@ contains
        call HYDROMETEOR_LHV( LHV(:,:), ATMOS_TEMP(:,:) )
 
 !OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
+       do j = UJS, UJE
+       do i = UIS, UIE
           URBAN_SFLX_evap(i,j) = URBAN_SFLX_LH(i,j) / LHV(i,j)
        end do
        end do

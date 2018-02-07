@@ -15,7 +15,7 @@ module scale_land_sfc_thin_slab
   !
   use scale_precision
   use scale_stdio
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private

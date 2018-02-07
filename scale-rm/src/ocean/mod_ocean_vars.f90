@@ -17,8 +17,7 @@ module mod_ocean_vars
   use scale_stdio
   use scale_prof
   use scale_debug
-  use scale_grid_index
-  use scale_ocean_grid_index
+  use scale_ocean_grid_cartesC_index
 
   use scale_const, only: &
      I_SW  => CONST_I_SW, &
@@ -233,53 +232,53 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[OCEAN] / Origin[SCALE-RM]'
 
-    allocate( OCEAN_TEMP(OKMAX,IA,JA) )
-    allocate( OCEAN_SALT(OKMAX,IA,JA) )
-    allocate( OCEAN_UVEL(OKMAX,IA,JA) )
-    allocate( OCEAN_VVEL(OKMAX,IA,JA) )
+    allocate( OCEAN_TEMP(OKMAX,OIA,OJA) )
+    allocate( OCEAN_SALT(OKMAX,OIA,OJA) )
+    allocate( OCEAN_UVEL(OKMAX,OIA,OJA) )
+    allocate( OCEAN_VVEL(OKMAX,OIA,OJA) )
     OCEAN_TEMP      (:,:,:) = UNDEF
     OCEAN_SALT      (:,:,:) = UNDEF
     OCEAN_UVEL      (:,:,:) = UNDEF
     OCEAN_VVEL      (:,:,:) = UNDEF
 
-    allocate( OCEAN_SFC_TEMP  (IA,JA)   )
-    allocate( OCEAN_SFC_albedo(IA,JA,2) )
-    allocate( OCEAN_SFC_Z0M   (IA,JA)   )
-    allocate( OCEAN_SFC_Z0H   (IA,JA)   )
-    allocate( OCEAN_SFC_Z0E   (IA,JA)   )
+    allocate( OCEAN_SFC_TEMP  (OIA,OJA)   )
+    allocate( OCEAN_SFC_albedo(OIA,OJA,2) )
+    allocate( OCEAN_SFC_Z0M   (OIA,OJA)   )
+    allocate( OCEAN_SFC_Z0H   (OIA,OJA)   )
+    allocate( OCEAN_SFC_Z0E   (OIA,OJA)   )
     OCEAN_SFC_TEMP  (:,:)   = UNDEF
     OCEAN_SFC_albedo(:,:,:) = UNDEF
     OCEAN_SFC_Z0M   (:,:)   = UNDEF
     OCEAN_SFC_Z0H   (:,:)   = UNDEF
     OCEAN_SFC_Z0E   (:,:)   = UNDEF
 
-    allocate( OCEAN_TEMP_t(OKMAX,IA,JA) )
-    allocate( OCEAN_SALT_t(OKMAX,IA,JA) )
-    allocate( OCEAN_UVEL_t(OKMAX,IA,JA) )
-    allocate( OCEAN_VVEL_t(OKMAX,IA,JA) )
+    allocate( OCEAN_TEMP_t(OKMAX,OIA,OJA) )
+    allocate( OCEAN_SALT_t(OKMAX,OIA,OJA) )
+    allocate( OCEAN_UVEL_t(OKMAX,OIA,OJA) )
+    allocate( OCEAN_VVEL_t(OKMAX,OIA,OJA) )
     OCEAN_TEMP_t(:,:,:) = UNDEF
     OCEAN_SALT_t(:,:,:) = UNDEF
     OCEAN_UVEL_t(:,:,:) = UNDEF
     OCEAN_VVEL_t(:,:,:) = UNDEF
 
-    allocate( OCEAN_SFC_TEMP_t  (IA,JA)   )
-    allocate( OCEAN_SFC_albedo_t(IA,JA,2) )
-    allocate( OCEAN_SFC_Z0M_t   (IA,JA)   )
-    allocate( OCEAN_SFC_Z0H_t   (IA,JA)   )
-    allocate( OCEAN_SFC_Z0E_t   (IA,JA)   )
+    allocate( OCEAN_SFC_TEMP_t  (OIA,OJA)   )
+    allocate( OCEAN_SFC_albedo_t(OIA,OJA,2) )
+    allocate( OCEAN_SFC_Z0M_t   (OIA,OJA)   )
+    allocate( OCEAN_SFC_Z0H_t   (OIA,OJA)   )
+    allocate( OCEAN_SFC_Z0E_t   (OIA,OJA)   )
     OCEAN_SFC_TEMP_t  (:,:)   = UNDEF
     OCEAN_SFC_albedo_t(:,:,:) = UNDEF
     OCEAN_SFC_Z0M_t   (:,:)   = UNDEF
     OCEAN_SFC_Z0H_t   (:,:)   = UNDEF
     OCEAN_SFC_Z0E_t   (:,:)   = UNDEF
 
-    allocate( OCEAN_SFLX_MW  (IA,JA) )
-    allocate( OCEAN_SFLX_MU  (IA,JA) )
-    allocate( OCEAN_SFLX_MV  (IA,JA) )
-    allocate( OCEAN_SFLX_SH  (IA,JA) )
-    allocate( OCEAN_SFLX_LH  (IA,JA) )
-    allocate( OCEAN_SFLX_WH  (IA,JA) )
-    allocate( OCEAN_SFLX_evap(IA,JA) )
+    allocate( OCEAN_SFLX_MW  (OIA,OJA) )
+    allocate( OCEAN_SFLX_MU  (OIA,OJA) )
+    allocate( OCEAN_SFLX_MV  (OIA,OJA) )
+    allocate( OCEAN_SFLX_SH  (OIA,OJA) )
+    allocate( OCEAN_SFLX_LH  (OIA,OJA) )
+    allocate( OCEAN_SFLX_WH  (OIA,OJA) )
+    allocate( OCEAN_SFLX_evap(OIA,OJA) )
     OCEAN_SFLX_MW  (:,:) = UNDEF
     OCEAN_SFLX_MU  (:,:) = UNDEF
     OCEAN_SFLX_MV  (:,:) = UNDEF
@@ -288,29 +287,29 @@ contains
     OCEAN_SFLX_WH  (:,:) = UNDEF
     OCEAN_SFLX_evap(:,:) = UNDEF
 
-    allocate( OCEAN_U10(IA,JA) )
-    allocate( OCEAN_V10(IA,JA) )
-    allocate( OCEAN_T2 (IA,JA) )
-    allocate( OCEAN_Q2 (IA,JA) )
+    allocate( OCEAN_U10(OIA,OJA) )
+    allocate( OCEAN_V10(OIA,OJA) )
+    allocate( OCEAN_T2 (OIA,OJA) )
+    allocate( OCEAN_Q2 (OIA,OJA) )
     OCEAN_U10(:,:) = UNDEF
     OCEAN_V10(:,:) = UNDEF
     OCEAN_T2 (:,:) = UNDEF
     OCEAN_Q2 (:,:) = UNDEF
 
-    allocate( ATMOS_TEMP     (IA,JA) )
-    allocate( ATMOS_PRES     (IA,JA) )
-    allocate( ATMOS_W        (IA,JA) )
-    allocate( ATMOS_U        (IA,JA) )
-    allocate( ATMOS_V        (IA,JA) )
-    allocate( ATMOS_DENS     (IA,JA) )
-    allocate( ATMOS_QV       (IA,JA) )
-    allocate( ATMOS_PBL      (IA,JA) )
-    allocate( ATMOS_SFC_DENS (IA,JA) )
-    allocate( ATMOS_SFC_PRES (IA,JA) )
-    allocate( ATMOS_SFLX_LW  (IA,JA) )
-    allocate( ATMOS_SFLX_SW  (IA,JA) )
-    allocate( ATMOS_cosSZA   (IA,JA) )
-    allocate( ATMOS_SFLX_prec(IA,JA) )
+    allocate( ATMOS_TEMP     (OIA,OJA) )
+    allocate( ATMOS_PRES     (OIA,OJA) )
+    allocate( ATMOS_W        (OIA,OJA) )
+    allocate( ATMOS_U        (OIA,OJA) )
+    allocate( ATMOS_V        (OIA,OJA) )
+    allocate( ATMOS_DENS     (OIA,OJA) )
+    allocate( ATMOS_QV       (OIA,OJA) )
+    allocate( ATMOS_PBL      (OIA,OJA) )
+    allocate( ATMOS_SFC_DENS (OIA,OJA) )
+    allocate( ATMOS_SFC_PRES (OIA,OJA) )
+    allocate( ATMOS_SFLX_LW  (OIA,OJA) )
+    allocate( ATMOS_SFLX_SW  (OIA,OJA) )
+    allocate( ATMOS_cosSZA   (OIA,OJA) )
+    allocate( ATMOS_SFLX_prec(OIA,OJA) )
     ATMOS_TEMP     (:,:) = UNDEF
     ATMOS_PRES     (:,:) = UNDEF
     ATMOS_W        (:,:) = UNDEF
@@ -482,26 +481,26 @@ contains
     !---------------------------------------------------------------------------
 
     if ( OCEAN_VARS_CHECKRANGE ) then
-       call VALCHECK( OCEAN_TEMP      (OKS:OKE,IS:IE,JS:JE), 0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP), &
+       call VALCHECK( OCEAN_TEMP      (OKS:OKE,OIS:OIE,OJS:OJE), 0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP), &
                      __FILE__, __LINE__ )
-!        call VALCHECK( OCEAN_SALT      (OKS:OKE,IS:IE,JS:JE), 0.0_RP, 1000.0_RP, VAR_NAME(I_SALT), &
+!        call VALCHECK( OCEAN_SALT      (OKS:OKE,OIS:OIE,OJS:OJE), 0.0_RP, 1000.0_RP, VAR_NAME(I_SALT), &
 !                      __FILE__, __LINE__ )
-!        call VALCHECK( OCEAN_UVEL      (OKS:OKE,IS:IE,JS:JE), 0.0_RP, 1000.0_RP, VAR_NAME(I_UVEL), &
+!        call VALCHECK( OCEAN_UVEL      (OKS:OKE,OIS:OIE,OJS:OJE), 0.0_RP, 1000.0_RP, VAR_NAME(I_UVEL), &
 !                      __FILE__, __LINE__ )
-!        call VALCHECK( OCEAN_VVEL      (OKS:OKE,IS:IE,JS:JE), 0.0_RP, 1000.0_RP, VAR_NAME(I_VVEL), &
+!        call VALCHECK( OCEAN_VVEL      (OKS:OKE,OIS:OIE,OJS:OJE), 0.0_RP, 1000.0_RP, VAR_NAME(I_VVEL), &
 !                      __FILE__, __LINE__ )
 
-       call VALCHECK( OCEAN_SFC_TEMP  (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP), &
+       call VALCHECK( OCEAN_SFC_TEMP  (OIS:OIE,OJS:OJE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP), &
                      __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_albedo(IS:IE,JS:JE,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALB_LW),   &
+       call VALCHECK( OCEAN_SFC_albedo(OIS:OIE,OJS:OJE,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALB_LW),   &
                      __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_albedo(IS:IE,JS:JE,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALB_SW),   &
+       call VALCHECK( OCEAN_SFC_albedo(OIS:OIE,OJS:OJE,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALB_SW),   &
                      __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_Z0M   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0M),  &
+       call VALCHECK( OCEAN_SFC_Z0M   (OIS:OIE,OJS:OJE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0M),  &
                      __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_Z0H   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0H),  &
+       call VALCHECK( OCEAN_SFC_Z0H   (OIS:OIE,OJS:OJE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0H),  &
                      __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_Z0E   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0E),  &
+       call VALCHECK( OCEAN_SFC_Z0E   (OIS:OIE,OJS:OJE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0E),  &
                      __FILE__, __LINE__ )
     endif
 
@@ -584,12 +583,12 @@ contains
        OCEAN_SFC_Z0E_in     )
     implicit none
 
-    real(RP), intent(in) :: OCEAN_TEMP_in      (OKMAX,IA,JA)
-    real(RP), intent(in) :: OCEAN_SFC_TEMP_in  (IA,JA)
-    real(RP), intent(in) :: OCEAN_SFC_albedo_in(IA,JA,2)
-    real(RP), intent(in) :: OCEAN_SFC_Z0M_in   (IA,JA)
-    real(RP), intent(in) :: OCEAN_SFC_Z0H_in   (IA,JA)
-    real(RP), intent(in) :: OCEAN_SFC_Z0E_in   (IA,JA)
+    real(RP), intent(in) :: OCEAN_TEMP_in      (OKMAX,OIA,OJA)
+    real(RP), intent(in) :: OCEAN_SFC_TEMP_in  (OIA,OJA)
+    real(RP), intent(in) :: OCEAN_SFC_albedo_in(OIA,OJA,2)
+    real(RP), intent(in) :: OCEAN_SFC_Z0M_in   (OIA,OJA)
+    real(RP), intent(in) :: OCEAN_SFC_Z0H_in   (OIA,OJA)
+    real(RP), intent(in) :: OCEAN_SFC_Z0E_in   (OIA,OJA)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)

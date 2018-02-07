@@ -19,7 +19,7 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -263,9 +263,9 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_grid, only: &
-         RCDZ => GRID_RCDZ, &
-         RFDZ => GRID_RFDZ
+    use scale_atmos_grid_cartesC, only: &
+         RCDZ => GRID_CARTESC_RCDZ, &
+         RFDZ => GRID_CARTESC_RFDZ
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_atmos_vars, only: &
@@ -549,8 +549,8 @@ contains
     use scale_time, only: &
        TIME_DTSEC, &
        TIME_NOWSTEP
-    use scale_grid, only: &
-       CZ => GRID_CZ
+    use scale_atmos_grid_cartesC, only: &
+       CZ => GRID_CARTESC_CZ
     implicit none
 
     real(RP) :: f

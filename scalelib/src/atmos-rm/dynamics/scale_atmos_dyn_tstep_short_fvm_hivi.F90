@@ -22,7 +22,7 @@ module scale_atmos_dyn_tstep_short_fvm_hivi
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
 #if defined DEBUG || defined QUICKDEBUG
@@ -176,7 +176,7 @@ contains
        REF_dens, REF_rhot,                          &
        BND_W, BND_E, BND_S, BND_N,                  &
        dtrk, last                                   )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
        P00    => CONST_PRE00

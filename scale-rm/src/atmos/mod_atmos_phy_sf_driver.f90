@@ -19,7 +19,7 @@ module mod_atmos_phy_sf_driver
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
 
   use scale_const, only: &
@@ -141,10 +141,10 @@ contains
        GRAV   => CONST_GRAV,   &
        KARMAN => CONST_KARMAN, &
        CPdry  => CONST_CPdry
-    use scale_grid_real, only: &
-       CZ => REAL_CZ, &
-       FZ => REAL_FZ, &
-       Z1 => REAL_Z1
+    use scale_atmos_grid_cartesC_real, only: &
+       CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
+       Z1 => ATMOS_GRID_CARTESC_REAL_Z1
     use scale_topography, only: &
        TOPO_Zsfc
     use scale_time, only: &

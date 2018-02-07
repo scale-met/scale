@@ -42,7 +42,7 @@ module scale_atmos_phy_cp_kf
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_const, only: &
        TEM00 => CONST_TEM00
 
@@ -127,7 +127,7 @@ module scale_atmos_phy_cp_kf
 
   real(RP), private, allocatable :: deltaz (:,:,:) ! height interval (center level) [m]
   real(RP), private, allocatable :: Z      (:,:,:) ! centerlevel real height [m]
-  real(RP)                       :: deltax         ! delta x [m]
+  real(RP), private, allocatable :: deltax (:,:)   ! delta x [m]
 
   !------------------------------------------------------------------------------
 contains
@@ -139,11 +139,9 @@ contains
     use scale_time , only :&
        TIME_DTSEC,             &
        KF_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
-    use scale_grid_real, only: &
-       CZ => REAL_CZ
-    use scale_grid,only: &
-       DX => DX, &
-       DY => DY
+    use scale_atmos_grid_cartesC_real, only: &
+       CZ   => ATMOS_GRID_CARTESC_REAL_CZ, &
+       AREA => ATMOS_GRID_CARTESC_REAL_AREA
     use scale_atmos_hydrometeor, only: &
        I_QV, &
        I_QC, &
@@ -270,7 +268,12 @@ contains
     enddo
     deltaz(KE,:,:) = 0.0_RP
 
-    deltax = sqrt( DX*DY )
+    allocate( deltax(IA,JA) )
+    do j = JS, JE
+    do i = IS, IE
+       deltax(i,j) = sqrt( AREA(i,j) )
+    end do
+    end do
 
     return
   end subroutine ATMOS_PHY_CP_kf_setup
@@ -297,7 +300,7 @@ contains
        cldfrac_dp,     &
        cldfrac_sh,     &
        nca             )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_phy_mp, only: &
@@ -436,7 +439,7 @@ contains
        zlcl,        &
        I_convflag   )
     use scale_precision
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer
     use scale_const, only: &
        GRAV => CONST_GRAV, &
@@ -453,8 +456,8 @@ contains
        I_QS
     use scale_time , only :&
        KF_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
-    use scale_grid_real, only: &
-       FZ => REAL_FZ
+    use scale_atmos_grid_cartesC_real, only: &
+       FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres   => ATMOS_THERMODYN_temp_pres,   &
        THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,        &
@@ -672,6 +675,7 @@ contains
             QSAT  (:),       & ! saturation water vapor mixing ratio
             pres  (:),       & ! pressure [Pa]
             deltap(:),       & ! interval of pressure [Pa]
+            deltax(i,j),     &
             temp  (:),       & ! temperature [K]
             w0avg (:,i,j),   & ! average w
             ! [OUT]
@@ -719,7 +723,7 @@ contains
           ems(k_top+1:KE) = 0._RP
           emsd(k_top+1:KE) = 0._RP
           do k = KS, k_top
-             ems(k) = deltap(k)*deltax*deltax/GRAV
+             ems(k) = deltap(k) * deltax(i,j)**2 / GRAV
              emsd(k) = 1._RP/ems(k)
              umfnewdold(k) = 1._RP/umfnewdold(k)
           end do
@@ -733,6 +737,7 @@ contains
             zlcl(i,j)        ,& ! lcl height [m]
             rh(:)            ,& ! relative humidity
             deltap(:)        ,& ! interval of pressure [Pa]
+            deltax(i,j)      ,& ! deltax
             pres(:)          ,& ! pressure [Pa]
             qv(:)            ,& ! water vapor mixing ratio [kg/kg]
             ems(:)           ,& ! ems(box weight[kg])
@@ -767,6 +772,7 @@ contains
             deltaz(:,i,j),Z(:,i,j) ,& ! deltaz and height [m]
             pres(:),          & ! pressure [Pa]
             deltap(:),        & ! deltap [Pa]
+            deltax(i,j),      & ! deltax
             temp(:),          & ! temperature [K]
             qv(:),            & ! water vapor mixing ratio
             ! form kf_trigger
@@ -932,6 +938,7 @@ contains
        qes        ,& ! saturated vapor [kg/kg]
        pres       ,& ! pressure [Pa]
        deltap     ,& ! interval of pressure [Pa]
+       deltax     ,&
        temp       ,& ! temperature [K]
        w0avg      ,& ! running mean w
        ! [OUT]
@@ -972,7 +979,7 @@ contains
        zmix       ,& ! usl layer depth [m]
        umfnewdold ) ! ratio of umf/umfold(see updraft)
     use scale_precision
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_const,only :&
          CP => CONST_CPdry   ,  &
          PRE00 => CONST_PRE00,  &
@@ -987,6 +994,7 @@ contains
     real(RP), intent(in)      :: qes(KA)            ! saturation water vapor
     real(RP), intent(in)      :: pres(KA)           ! pressure [Pa]
     real(RP), intent(in)      :: deltap(KA)         ! delta pressure [Pa]
+    real(RP), intent(in)      :: deltax             ! delta pressure [Pa]
     real(RP), intent(in)      :: temp(KA)           ! temperature
     real(RP), intent(in)      :: w0avg(KA)          ! running mean w
     ! [OUT]
@@ -1340,6 +1348,7 @@ contains
                zlcl             ,& ! z[m]@LCL will be intent in
                pres(:)          ,& ! preassure
                deltap(:)        ,& ! dp
+               deltax           ,&
                radius           ,& ! cloud radius
                dpthmx           ,& ! pressure of depth of USL layer
                k_lcl            ,& ! index of LCL layer
@@ -1574,12 +1583,13 @@ contains
        zlcl          ,& ! z[m]@LCL will be intent in
        pres          ,& ! preassure [hPa]
        deltap        ,& ! dp [pa]
+       deltax        ,& ! deltax
        radius        ,& ! cloud radius [m]
        dpthmx        ,& ! pressure of depth of USL layer
        k_lcl         ,& ! index of LCL layer
        k_pbl )          ! index of USL layer
     use scale_precision
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_const,only :&
          CP => CONST_CPdry    , &
          PRE00 => CONST_PRE00 , &
@@ -1626,6 +1636,7 @@ contains
     real(RP),intent(in)     :: zlcl ! z[m]@LCL will be intent in
     real(RP),intent(in)     :: pres(KA)
     real(RP),intent(in)     :: deltap(KA)
+    real(RP),intent(in)     :: deltax
     real(RP),intent(in)     :: radius
     real(RP),intent(in)     :: dpthmx ! pressure of depth of USL layer
     integer ,intent(in)     :: k_lcl
@@ -1692,7 +1703,7 @@ contains
     k_lclm1          = k_lcl - 1
     wtw              = w_lcl*w_lcl
     denslcl          = pres_lcl/(R*tempv_lcl)
-    umf(k_lclm1)     = denslcl*1.e-2_RP*deltax*deltax ! (A0)
+    umf(k_lclm1)     = denslcl*1.e-2_RP*deltax**2 ! (A0)
     umflcl           = umf(k_lclm1)
     umfold           = umflcl
     umfnew           = umfold
@@ -1915,6 +1926,7 @@ contains
        zlcl       ,& ! lcl_hight [m]
        rh         ,& ! relative humidity initial make kf_init
        deltap     ,& ! delta P
+       deltax     ,&
        pres       ,& ! pressure [Pa]
        qv         ,& ! watervapor
        ems        ,& !
@@ -1944,7 +1956,7 @@ contains
        CPR        ,&
        tder)
     use scale_precision
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_const,only :&
          CP => CONST_CPdry    , &
          PRE00 => CONST_PRE00 , &
@@ -1963,6 +1975,7 @@ contains
     real(RP),intent(in) :: v(KA)      ! y velocity
     real(RP),intent(in) :: rh(KA)     ! ! initial make kf_init
     real(RP),intent(in) :: deltap(KA) ! delta pressure
+    real(RP),intent(in) :: deltax
     real(RP),intent(in) :: pres(KA)   ! pressure
     real(RP),intent(in) :: qv(KA)     ! watervapor
     real(RP),intent(in) :: ems(KA)    ! dp*(deltax)**2/g
@@ -2130,7 +2143,7 @@ contains
           !! take a first guess at hte initial downdraft mass flux
           tempv_d(k_lfs) = temp_d(k_lfs)*(1._RP + 0.608_RP*qvs_tmp)
           dens_d         = pres(k_lfs)/(R*tempv_d(k_lfs))
-          dmf(k_lfs)     = -(1._RP - pef)*1.e-2_RP*deltax*deltax*dens_d ! AU0 = 1.e-2*dx**2
+          dmf(k_lfs)     = -(1._RP - pef)*1.e-2_RP*deltax**2*dens_d ! AU0 = 1.e-2*dx**2
           downent(k_lfs) = dmf(k_lfs)
           downdet(k_lfs) = 0._RP
           rhbar          = rh(k_lfs)*deltap(k_lfs)
@@ -2329,6 +2342,7 @@ contains
        dz_kf,z_kf  ,&
        pres        ,& ! pressure
        deltap      ,& ! deltap
+       deltax      ,& ! deltax
        temp_bf     ,& ! temperature
        qv          ,& ! water vapor
        ems         ,&
@@ -2384,7 +2398,7 @@ contains
        timecp      ,&
        time_advec)
     use scale_precision
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_const,only :&
          CP => CONST_CPdry    , &
          PRE00 => CONST_PRE00 , &
@@ -2402,6 +2416,7 @@ contains
     real(RP),intent(in)    :: dz_kf(KA),z_kf(KA) ! delta Z, and haight [m] full point
     real(RP),intent(in)    :: pres(KA)           ! pressure [Pa]
     real(RP),intent(in)    :: deltap(KA)         ! delta pressure
+    real(RP),intent(in)    :: deltax             !
     real(RP),intent(in)    :: temp_bf(KA)        ! temperature berore
     real(RP),intent(in)    :: qv(KA)             ! cloud vaper mixing ratio
     real(RP),intent(in)    :: ems(KA)
@@ -2612,7 +2627,7 @@ contains
        ! refarence Kain 2004
        tkemax = 5._RP
        evac = 0.50_RP*tkemax*1.e-1_RP
-       ainc = evac*dpthmx*deltax*deltax/( umflcl*GRAV*timecp)
+       ainc = evac*dpthmx*deltax**2/( umflcl*GRAV*timecp)
        tder = tder2*ainc
        prcp_flux = prcp_flux2*ainc
        do kk = KS,k_top
@@ -2659,7 +2674,7 @@ contains
        do kk = KS, k_top
           theta_nw(kk) = theta(kk)
           qv_nw(kk)    = qv(kk)
-          fxm(kk)      = omg(kk)*deltax*deltax/GRAV ! fluxmass
+          fxm(kk)      = omg(kk)*deltax**2/GRAV ! fluxmass
        end do
        nstep  = nint(timecp/dtt + 1) ! how many time step forwad
        deltat = timecp/real(nstep,RP) ! deltat*nstep = timecp
@@ -2902,14 +2917,14 @@ contains
     cldfrac_KF(:,:) = 0._RP
     if (I_convflag == 1) then
        do kk = k_lcl-1, k_top
-          umf_tmp = umf(kk)/(deltax*deltax)
+          umf_tmp = umf(kk)/(deltax**2)
           xcldfrac = 0.07_RP*log(1._RP+(500._RP*UMF_tmp))
           xcldfrac = max(1.e-2_RP,xcldfrac)
           cldfrac_KF(kk,1) = min(2.e-2_RP,xcldfrac) ! shallow
        end do
     else
        do kk = k_lcl-1, k_top
-          umf_tmp = umf(kk)/(deltax*deltax)
+          umf_tmp = umf(kk)/(deltax**2)
           xcldfrac = 0.14_RP*log(1._RP+(500._RP*UMF_tmp))
           xcldfrac = max(1.e-2_RP,xcldfrac)
           cldfrac_KF(kk,2) = min(6.e-1_RP,xcldfrac) ! deep
@@ -2983,7 +2998,7 @@ contains
     end do
 
     !! cumulus parameterization rain (rainrate_cp)and rain rate (rainratecp) is detern
-    rainrate_cp =  prcp_flux*(1._RP - fbfrc)/(deltax*deltax) ! if shallow convection then fbfrc = 1. -> noprcpitation
+    rainrate_cp =  prcp_flux*(1._RP - fbfrc)/(deltax**2) ! if shallow convection then fbfrc = 1. -> noprcpitation
     !! evaluate moisuture budget
     qinit      = 0._RP ! initial qv
     qvfnl      = 0._RP ! final qv

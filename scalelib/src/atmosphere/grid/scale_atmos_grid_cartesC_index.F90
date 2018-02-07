@@ -1,24 +1,20 @@
 !-------------------------------------------------------------------------------
-!> module grid index
+!> module atmosphere / grid / cartesC index
 !!
 !! @par Description
-!!          Grid Index module
+!!          Atmospheric grid Index module for the CartesianC grid
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-12-02 (S.Nishizawa)   [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-module scale_grid_index
+module scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
   use scale_stdio
-  use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -26,20 +22,16 @@ module scale_grid_index
   !
   !++ Public procedure
   !
-  public :: GRID_INDEX_setup
-
+  public :: ATMOS_GRID_CARTESC_INDEX_setup
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
+
   integer, public, parameter :: ZDIR  = 1
   integer, public, parameter :: XDIR  = 2
   integer, public, parameter :: YDIR  = 3
 
-#ifdef FIXEDINDEX
-  include "inc_index.h"
-  include "inc_index_common.h"
-#else
   integer, public :: KMAX   = -1 !< # of computational cells: z, local
   integer, public :: IMAX   = -1 !< # of computational cells: x, local
   integer, public :: JMAX   = -1 !< # of computational cells: y, local
@@ -63,7 +55,6 @@ module scale_grid_index
   integer, public :: JE          !< end   point of inner domain: y, local
 
   integer, public :: KIJMAX = -1 !< # of computational cells: z*x*y
-#endif
 
   ! indices considering boundary
   integer, public :: IMAXB
@@ -95,21 +86,17 @@ module scale_grid_index
   integer, public :: JSGB        !< start point of the inner domain: y, global
   integer, public :: JEGB        !< end   point of the inner domain: y, global
 
-  !-----------------------------------------------------------------------------
-  !
-  !++ Private procedure
-  !
-  !-----------------------------------------------------------------------------
-  !
-  !++ Private parameters & variables
-  !
-  !-----------------------------------------------------------------------------
 contains
+
   !-----------------------------------------------------------------------------
-  !> Setup
-  subroutine GRID_INDEX_setup
+  !> setup index
+  subroutine ATMOS_GRID_CARTESC_INDEX_setup( &
+       KMAX_in,                     &
+       IMAXG_in, JMAXG_in,          &
+       IMAX_in, JMAX_in,            &
+       KHALO_in, IHALO_in, JHALO_in )
     use scale_process, only: &
-       PRC_MPIstop, &
+       PRC_abort, &
        PRC_myrank
     use scale_rm_process, only: &
        PRC_PERIODIC_X, &
@@ -122,52 +109,55 @@ contains
        PRC_HAS_S,   &
        PRC_HAS_N
     implicit none
+    integer, intent(in), optional :: KMAX_in
+    integer, intent(in), optional :: IMAXG_in, JMAXG_in
+    integer, intent(in), optional :: IMAX_in, JMAX_in
+    integer, intent(in), optional :: KHALO_in, IHALO_in, JHALO_in
 
-#ifndef FIXEDINDEX
-    namelist / PARAM_INDEX / &
-       IMAXG,  &
-       JMAXG,  &
-       KMAX,   &
-       IMAX,   &
-       JMAX,   &
-       IHALO,  &
-       JHALO,  &
-       IBLOCK, &
-       JBLOCK
-#endif
+    namelist / PARAM_ATMOS_GRID_CARTESC_INDEX / &
+       KMAX,       &
+       IMAXG,      &
+       JMAXG,      &
+       IMAX,       &
+       JMAX,       &
+       IHALO,      &
+       JHALO
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_INDEX] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
+    if ( present(KMAX_in)  ) KMAX   = KMAX_in
+    if ( present(IMAXG_in) ) IMAXG  = IMAXG_in
+    if ( present(JMAXG_in) ) JMAXG  = JMAXG_in
+    if ( present(IMAX_in)  ) IMAX   = IMAX_in
+    if ( present(JMAX_in)  ) JMAX   = JMAX_in
+!    if ( present(KHALO_in) ) KHALO  = KHALO_in
+    if ( present(KHALO_in) ) IHALO  = IHALO_in
+    if ( present(KHALO_in) ) JHALO  = JHALO_in
 
-#ifdef FIXEDINDEX
-    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** fixed index mode'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CartesC INDEX] / Categ[ATMOSPHER GRID] / Origin[SCALElib]'
 
-    IMAXG = IMAX * PRC_NUM_Y
-    JMAXG = JMAX * PRC_NUM_Y
-#else
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_INDEX,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_GRID_CARTESC_INDEX,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_INDEX. Check!'
-       call PRC_MPIstop
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_GRID_CARTESC_INDEX. Check!'
+       call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_INDEX)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_GRID_CARTESC_INDEX)
+
+
 
     if ( IMAXG * JMAXG < 0 ) then
        write(*,*) 'xxx Both IMAXG and JMAXG must set! ', IMAXG, JMAXG
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if ( IMAX * JMAX < 0 ) then
        write(*,*) 'xxx Both IMAX and JMAX must set! ', IMAX, JMAX
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( IMAX > 0 .AND. JMAX > 0 ) then
@@ -180,7 +170,7 @@ contains
        if ( mod(IMAXG,PRC_NUM_X) > 0 ) then
           if( IO_L ) write(IO_FID_LOG,*) 'xxx number of IMAXG should be divisible by PRC_NUM_X'
           write(*,*)                     'xxx number of IMAXG should be divisible by PRC_NUM_X'
-          call PRC_MPIstop
+          call PRC_abort
 !           if( IO_L ) write(IO_FID_LOG,*) '*** number of IMAXG should be divisible by PRC_NUM_X'
 !           if( IO_L ) write(IO_FID_LOG,*) '*** Small IMAX is used in ranks(X,*)=', PRC_NUM_X-1
 !           if ( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) then
@@ -192,7 +182,7 @@ contains
        if ( mod(JMAXG,PRC_NUM_Y) > 0 ) then
           if( IO_L ) write(IO_FID_LOG,*) 'xxx number of JMAXG should be divisible by PRC_NUM_Y'
           write(*,*)                     'xxx number of JMAXG should be divisible by PRC_NUM_Y'
-          call PRC_MPIstop
+          call PRC_abort
 !           if( IO_L ) write(IO_FID_LOG,*) '*** number of JMAXG should be divisible by PRC_NUM_Y'
 !           if( IO_L ) write(IO_FID_LOG,*) '*** Small JMAX is used in ranks(*,Y)=', PRC_NUM_Y-1
 !           if ( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) then
@@ -202,16 +192,16 @@ contains
        endif
     else
        write(*,*) 'xxx IMAXG&JMAXG or IMAX&JMAX must set!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( IMAX < IHALO ) then
        write(*,*) 'xxx number of grid size IMAX must >= IHALO! ', IMAX, IHALO
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if ( JMAX < JHALO ) then
        write(*,*) 'xxx number of grid size JMAX must >= JHALO! ', JMAX, JHALO
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     KA = KMAX + KHALO * 2
@@ -229,15 +219,15 @@ contains
     if( JBLOCK == -1 ) JBLOCK = JMAX
 
     KIJMAX = KMAX * IMAX * JMAX
-#endif
+
 
     !-- Block size must be divisible
     if    ( mod(IMAX,IBLOCK) > 0 ) then
        write(*,*) 'xxx number of grid size IMAX must be divisible by IBLOCK! ', IMAX, IBLOCK
-       call PRC_MPIstop
+       call PRC_abort
     elseif( mod(JMAX,JBLOCK) > 0 ) then
        write(*,*) 'xxx number of grid size JMAX must be divisible by JBLOCK! ', JMAX, JBLOCK
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! array size (global domain)
@@ -358,6 +348,6 @@ contains
                                                 JSB," - ",JEB
 
     return
-  end subroutine GRID_INDEX_setup
-
-end module scale_grid_index
+  end subroutine ATMOS_GRID_CARTESC_INDEX_setup
+  
+end module scale_atmos_grid_cartesC_index

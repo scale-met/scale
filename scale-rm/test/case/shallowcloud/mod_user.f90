@@ -20,7 +20,7 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   use scale_index
   !-----------------------------------------------------------------------------
@@ -109,9 +109,9 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        PI => CONST_PI
-    use scale_grid, only: &
-       CZ => GRID_CZ, &
-       FZ => GRID_FZ
+    use scale_atmos_grid_cartesC, only: &
+       CZ => GRID_CARTESC_CZ, &
+       FZ => GRID_CARTESC_FZ
     implicit none
 
     namelist / PARAM_USER / &
@@ -412,12 +412,12 @@ contains
        I_QV, &
        QHS,  &
        QHE
-    use scale_grid, only: &
-       RCDZ => GRID_RCDZ, &
-       RFDZ => GRID_RFDZ, &
-       CDZ  => GRID_CDZ,  &
-       CZ   => GRID_CZ,   &
-       FZ   => GRID_FZ
+    use scale_atmos_grid_cartesC, only: &
+       RCDZ => GRID_CARTESC_RCDZ, &
+       RFDZ => GRID_CARTESC_RFDZ, &
+       CDZ  => GRID_CARTESC_CDZ,  &
+       CZ   => GRID_CARTESC_CZ,   &
+       FZ   => GRID_CARTESC_FZ
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd => ATMOS_THERMODYN_qd, &
        THERMODYN_cp => ATMOS_THERMODYN_cp, &

@@ -20,19 +20,19 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
 
   use scale_gridtrans
   use scale_const, only: &
        PI => CONST_PI
-  use scale_grid, only: &
-       CZ   => GRID_CZ, &
-       CX   => GRID_CX, &
-       FX   => GRID_FX, &
-       CDX  => GRID_CDX, &
-       RCDX => GRID_RCDX
+  use scale_atmos_grid_cartesC, only: &
+       CZ   => GRID_CARTESC_CZ, &
+       CX   => GRID_CARTESC_CX, &
+       FX   => GRID_CARTESC_FX, &
+       CDX  => GRID_CARTESC_CDX, &
+       RCDX => GRID_CARTESC_RCDX
   use mpi
   use scale_comm, only: &
        COMM_datatype, &
@@ -111,8 +111,8 @@ contains
   subroutine USER_setup
     use scale_process, only: &
        PRC_MPIstop
-    use scale_grid, only : &
-       FXG   => GRID_FXG
+    use scale_atmos_grid_cartesC, only : &
+       FXG   => GRID_CARTESC_FXG
     implicit none
 
     namelist / PARAM_USER / &
@@ -296,8 +296,8 @@ contains
 
 !!$  subroutine eval_RHS(var, mflx_hi, exactRHS, lblFluxScheme)
 !!$
-!!$    use scale_grid, only : &
-!!$         CDZ => GRID_CDZ
+!!$    use scale_atmos_grid_cartesC, only : &
+!!$         CDZ => GRID_CARTESC_CDZ
 !!$
 !!$    real(RP), intent(in) :: var(KA,IA,JA)
 !!$    real(RP), intent(in) :: mflx_hi(KA,IA,JA,3), exactRHS(KA,IA,JA)

@@ -16,8 +16,7 @@ module scale_land_phy_matsiro
   use scale_stdio
   use scale_prof
   use scale_debug
-  use scale_grid_index
-  use scale_land_grid_index
+  use scale_land_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -92,22 +91,22 @@ contains
        LAND_SFLX_evap,    &
        CDZ,               &
        dt                 )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     implicit none
 
     ! arguments
-    real(RP), intent(out) :: LAND_TEMP_t      (LKMAX,IA,JA)
-    real(RP), intent(out) :: LAND_WATER_t     (LKMAX,IA,JA)
+    real(RP), intent(out) :: LAND_TEMP_t      (LKMAX,LIA,LJA)
+    real(RP), intent(out) :: LAND_WATER_t     (LKMAX,LIA,LJA)
 
-    real(RP), intent(in)  :: LAND_TEMP        (LKMAX,IA,JA)
-    real(RP), intent(in)  :: LAND_WATER       (LKMAX,IA,JA)
-    real(RP), intent(in)  :: LAND_WaterLimit  (IA,JA)
-    real(RP), intent(in)  :: LAND_ThermalCond (IA,JA)
-    real(RP), intent(in)  :: LAND_HeatCapacity(IA,JA)
-    real(RP), intent(in)  :: LAND_WaterDiff   (IA,JA)
-    real(RP), intent(in)  :: LAND_SFLX_GH     (IA,JA)
-    real(RP), intent(in)  :: LAND_SFLX_prec   (IA,JA)
-    real(RP), intent(in)  :: LAND_SFLX_evap   (IA,JA)
+    real(RP), intent(in)  :: LAND_TEMP        (LKMAX,LIA,LJA)
+    real(RP), intent(in)  :: LAND_WATER       (LKMAX,LIA,LJA)
+    real(RP), intent(in)  :: LAND_WaterLimit  (LIA,LJA)
+    real(RP), intent(in)  :: LAND_ThermalCond (LIA,LJA)
+    real(RP), intent(in)  :: LAND_HeatCapacity(LIA,LJA)
+    real(RP), intent(in)  :: LAND_WaterDiff   (LIA,LJA)
+    real(RP), intent(in)  :: LAND_SFLX_GH     (LIA,LJA)
+    real(RP), intent(in)  :: LAND_SFLX_prec   (LIA,LJA)
+    real(RP), intent(in)  :: LAND_SFLX_evap   (LIA,LJA)
     real(RP), intent(in)  :: CDZ              (LKMAX)
     real(DP), intent(in)  :: dt
     !---------------------------------------------------------------------------

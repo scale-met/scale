@@ -17,7 +17,7 @@ module mod_atmos_phy_mp_driver
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -135,8 +135,8 @@ contains
   subroutine ATMOS_PHY_MP_driver_setup
     use scale_process, only: &
        PRC_abort
-    use scale_grid, only: &
-       CDZ => GRID_CDZ
+    use scale_atmos_grid_cartesC, only: &
+       CDZ => ATMOS_GRID_CARTESC_CDZ
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_time, only: &
@@ -321,9 +321,9 @@ contains
        PRE00 => CONST_PRE00
     use scale_time, only: &
        dt_MP => TIME_DTSEC_ATMOS_PHY_MP
-    use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_FZ
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total

@@ -1,15 +1,15 @@
 program unit
   use scale
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   use scale_rm_process, only: &
      PRC_setup
   use scale_comm, only: &
      COMM_setup
-  use scale_grid, only: &
+  use scale_atmos_grid_cartesC, only: &
      DZ, DX, DY, &
-     GRID_allocate, &
-     GRID_generate
+     GRID_CARTESC_allocate, &
+     GRID_CARTESC_generate
   use scale_atmos_hydrometeor, only: &
      ATMOS_HYDROMETEOR_regist
 
@@ -27,7 +27,7 @@ program unit
   ! setup process
   call PRC_setup
 
-  call GRID_INDEX_setup
+  call GRID_CARTESC_INDEX_setup
 
   call ATMOS_HYDROMETEOR_regist(q0, 1, 1, 0, (/'QV','QC'/), (/'QV','QC'/), (/"kg/kg","kg/kg"/) )
 
@@ -35,8 +35,8 @@ program unit
   DZ = 500.0_RP
   DX = 500.0_RP
   DY = 500.0_RP
-  call GRID_allocate
-  call GRID_generate
+  call GRID_CARTESC_allocate
+  call GRID_CARTESC_generate
 
   ! setup mpi communication
   call COMM_setup

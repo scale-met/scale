@@ -19,7 +19,7 @@ module scale_atmos_phy_ae_dummy
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -111,7 +111,7 @@ contains
        CN,   &
        CCN,  &
        RHOQ_t_AE )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer
     implicit none
     integer,  intent(in)    :: QQA
@@ -141,7 +141,7 @@ contains
        Re,   &
        QTRC, &
        RH    )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer
     use scale_const, only: &
        UNDEF => CONST_UNDEF

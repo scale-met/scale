@@ -71,7 +71,7 @@ module scale_atmos_phy_mp_sn14
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
 
   use scale_const, only: &
      GRAV   => CONST_GRAV,   &
@@ -614,8 +614,8 @@ contains
   subroutine ATMOS_PHY_MP_sn14_setup
     use scale_process, only: &
        PRC_MPIstop
-    use scale_grid, only: &
-       CDZ => GRID_CDZ
+    use scale_atmos_grid_cartesC, only: &
+       CDZ => ATMOS_GRID_CARTESC_CDZ
     use scale_const, only: &
        CONST_UNDEF, &
        CONST_DWATR, &
@@ -713,7 +713,7 @@ contains
        EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer, only: &
        QA
     implicit none
@@ -1391,9 +1391,9 @@ contains
        SFLX_snow  )
     use scale_time, only: &
        dt_DP => TIME_DTSEC_ATMOS_PHY_MP
-    use scale_grid, only: &
-       z    => GRID_CZ, &
-       dz   => GRID_CDZ
+    use scale_atmos_grid_cartesC, only: &
+       z    => ATMOS_GRID_CARTESC_CZ, &
+       dz   => ATMOS_GRID_CARTESC_CDZ
     use scale_tracer, only: &
        QA,         &
        TRACER_R,   &
@@ -4495,7 +4495,7 @@ contains
        cldfrac,       &
        QTRC,          &
        mask_criterion )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer, only: &
        QA
     implicit none
@@ -4530,7 +4530,7 @@ contains
        QTRC0, &
        DENS0, &
        TEMP0  )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer, only: &
        QA
     use scale_atmos_hydrometeor, only: &
@@ -4673,7 +4673,7 @@ contains
   subroutine ATMOS_PHY_MP_sn14_Mixingratio( &
        Qe,   &
        QTRC0 )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer, only: &
        QA
     use scale_atmos_hydrometeor, only: &

@@ -23,7 +23,7 @@ module mod_atmos_driver
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -497,8 +497,8 @@ contains
     use scale_atmos_boundary, only: &
        ATMOS_BOUNDARY_UPDATE_FLAG, &
        ATMOS_BOUNDARY_finalize
-    use scale_grid_nest, only: &
-       NEST_COMM_disconnect
+    use scale_comm_cartesC_nest, only: &
+       NEST_COMM_disconnect => COMM_CARTESC_NEST_disconnect
     implicit none
     !---------------------------------------------------------------------------
 
@@ -566,9 +566,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Set surface boundary condition
   subroutine ATMOS_SURFACE_SET( countup )
-    use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_Z1
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_CZ, &
+       ATMOS_GRID_CARTESC_REAL_Z1
     use scale_topography, only: &
        TOPO_Zsfc
     use scale_atmos_bottom, only: &
@@ -623,9 +623,9 @@ contains
        ! planetary boundary layer
        call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
                              PRES     (:,:,:), & ! [IN]
-                             REAL_CZ  (:,:,:), & ! [IN]
+                             ATMOS_GRID_CARTESC_REAL_CZ  (:,:,:), & ! [IN]
                              TOPO_Zsfc(:,:),   & ! [IN]
-                             REAL_Z1  (:,:),   & ! [IN]
+                             ATMOS_GRID_CARTESC_REAL_Z1  (:,:),   & ! [IN]
                              SFC_DENS (:,:),   & ! [OUT]
                              SFC_PRES (:,:)    ) ! [OUT]
 

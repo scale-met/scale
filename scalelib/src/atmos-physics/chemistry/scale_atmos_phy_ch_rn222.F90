@@ -19,7 +19,7 @@ module scale_atmos_phy_ch_rn222
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -170,9 +170,9 @@ contains
        DENS,  &
        QTRC,  &
        RHOQ_t )
-    use scale_grid_index
-    use scale_grid, only: &
-       GRID_RCDZ
+    use scale_atmos_grid_cartesC_index
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_FZ
     use scale_landuse, only: &
        LANDUSE_fact_land
     use scale_file_history, only: &
@@ -221,7 +221,7 @@ contains
 
     do j  = JS, JE
     do i  = IS, IE
-       RHOQ_t(KS,i,j,I_ch_rn222) = RHOQ_t(KS,i,j,I_ch_rn222) + emission(i,j) * GRID_RCDZ(KS) ! [Bq/m3/s]
+       RHOQ_t(KS,i,j,I_ch_rn222) = RHOQ_t(KS,i,j,I_ch_rn222) + emission(i,j) / ( ATMOS_GRID_CARTESC_REAL_FZ(KS,i,j) - ATMOS_GRID_CARTESC_REAL_FZ(KS-1,i,j) )
     enddo
     enddo
 

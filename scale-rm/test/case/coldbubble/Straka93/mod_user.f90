@@ -19,16 +19,16 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
 
-  use scale_grid, only : &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
-       RCDZ => GRID_RCDZ, &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY, &
-       RFDZ => GRID_RFDZ
+  use scale_atmos_grid_cartesC, only : &
+       RCDX => GRID_CARTESC_RCDX, &
+       RCDY => GRID_CARTESC_RCDY, &
+       RCDZ => GRID_CARTESC_RCDZ, &
+       RFDX => GRID_CARTESC_RFDX, &
+       RFDY => GRID_CARTESC_RFDY, &
+       RFDZ => GRID_CARTESC_RFDZ
 
   use mod_atmos_vars, only: &
        DENS, &

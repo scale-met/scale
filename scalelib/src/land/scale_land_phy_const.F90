@@ -16,8 +16,7 @@ module scale_land_phy_const
   use scale_stdio
   use scale_prof
   use scale_debug
-  use scale_grid_index
-  use scale_land_grid_index
+  use scale_land_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -75,18 +74,18 @@ contains
     implicit none
 
     ! arguments
-    real(RP), intent(out) :: TEMP_t      (LKMAX,IA,JA)
-    real(RP), intent(out) :: WATER_t     (LKMAX,IA,JA)
+    real(RP), intent(out) :: TEMP_t      (LKMAX,LIA,LJA)
+    real(RP), intent(out) :: WATER_t     (LKMAX,LIA,LJA)
 
-    real(RP), intent(in)  :: TEMP        (LKMAX,IA,JA)
-    real(RP), intent(in)  :: WATER       (LKMAX,IA,JA)
-    real(RP), intent(in)  :: WaterLimit  (IA,JA)
-    real(RP), intent(in)  :: ThermalCond (IA,JA)
-    real(RP), intent(in)  :: HeatCapacity(IA,JA)
-    real(RP), intent(in)  :: WaterDiff   (IA,JA)
-    real(RP), intent(in)  :: SFLX_GH     (IA,JA)
-    real(RP), intent(in)  :: SFLX_prec   (IA,JA)
-    real(RP), intent(in)  :: SFLX_evap   (IA,JA)
+    real(RP), intent(in)  :: TEMP        (LKMAX,LIA,LJA)
+    real(RP), intent(in)  :: WATER       (LKMAX,LIA,LJA)
+    real(RP), intent(in)  :: WaterLimit  (LIA,LJA)
+    real(RP), intent(in)  :: ThermalCond (LIA,LJA)
+    real(RP), intent(in)  :: HeatCapacity(LIA,LJA)
+    real(RP), intent(in)  :: WaterDiff   (LIA,LJA)
+    real(RP), intent(in)  :: SFLX_GH     (LIA,LJA)
+    real(RP), intent(in)  :: SFLX_prec   (LIA,LJA)
+    real(RP), intent(in)  :: SFLX_evap   (LIA,LJA)
     real(RP), intent(in)  :: CDZ         (LKMAX)
     real(DP), intent(in)  :: dt
     !---------------------------------------------------------------------------

@@ -92,7 +92,7 @@ contains
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
 
-    NAMELIST / PARAM_MKINIT_REAL_WRFARW / &
+    NAMELIST / PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_WRFARW / &
          WRF_FILE_TYPE
 
     integer :: fid
@@ -104,12 +104,12 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_WRFARW,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_WRFARW,iostat=ierr)
     if( ierr > 0 ) then
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_WRFARW. Check!'
        call PRC_MPIstop
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_WRFARW)
 
     call FILE_open( basename_org, fid, rankid=myrank, single=.true., postfix="" )
 
@@ -578,7 +578,7 @@ contains
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
 
-    NAMELIST / PARAM_MKINIT_REAL_WRFARW / &
+    NAMELIST / PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_WRFARW / &
          WRF_FILE_TYPE
 
     integer :: fid
@@ -590,12 +590,12 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_WRFARW,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_WRFARW,iostat=ierr)
     if( ierr > 0 ) then
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_WRFARW. Check!'
        call PRC_MPIstop
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_WRFARW)
 
 
     call FILE_open( basename_land, fid, rankid=myrank, single=.true., postfix="" )
@@ -764,7 +764,7 @@ contains
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
 
-    NAMELIST / PARAM_MKINIT_REAL_WRFARW / &
+    NAMELIST / PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_WRFARW / &
          WRF_FILE_TYPE
 
     integer :: fid
@@ -776,12 +776,12 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_WRFARW,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_WRFARW,iostat=ierr)
     if( ierr > 0 ) then
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_WRFARW. Check!'
        call PRC_MPIstop
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_WRFARW)
 
 
     call FILE_open( basename_org, fid, rankid=myrank, single=.true., postfix="" )

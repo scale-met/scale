@@ -21,14 +21,14 @@ module mod_realinput_scale
   use scale_process, only: &
        myrank => PRC_myrank,  &
        PRC_MPIstop
-  use scale_grid_nest, only: &
+  use scale_comm_cartesC_nest, only: &
        PARENT_KMAX,     &
        PARENT_IMAX,     &
        PARENT_JMAX,     &
        PARENT_LKMAX,    &
-       NEST_TILE_NUM_X, &
-       NEST_TILE_NUM_Y, &
-       NEST_TILE_ID
+       NEST_TILE_NUM_X => COMM_CARTESC_NEST_TILE_NUM_X, &
+       NEST_TILE_NUM_Y => COMM_CARTESC_NEST_TILE_NUM_Y, &
+       NEST_TILE_ID    => COMM_CARTESC_NEST_TILE_ID
 
   !-----------------------------------------------------------------------------
   implicit none

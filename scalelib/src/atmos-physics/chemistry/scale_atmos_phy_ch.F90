@@ -19,7 +19,7 @@ module scale_atmos_phy_ch
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -35,7 +35,7 @@ module scale_atmos_phy_ch
           QTRC,  &
           RHOQ_t )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_tracer
 
        integer,  intent(in)    :: QQA

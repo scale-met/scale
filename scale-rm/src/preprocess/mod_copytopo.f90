@@ -15,7 +15,7 @@ module mod_copytopo
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -48,7 +48,6 @@ module mod_copytopo
   character(len=H_LONG), private :: COPYTOPO_IN_BASENAME   = ''
   real(RP),              private :: COPYTOPO_TRANSITION_DX = -1.0_RP  !< thickness of transition region [m]: x
   real(RP),              private :: COPYTOPO_TRANSITION_DY = -1.0_RP  !< thickness of transition region [m]: y
-  real(RP),              private :: COPYTOPO_TRANSFACT     = -1.0_RP  !< stretch factor of transition region
   real(RP),              private :: COPYTOPO_FRACX         =  1.0_RP  !< fraction of transition region (x) (0-1)
   real(RP),              private :: COPYTOPO_FRACY         =  1.0_RP  !< fraction of transition region (y) (0-1)
   real(RP),              private :: COPYTOPO_taux          =  1.0_RP  !< maximum value for mixing tau (x) [s]
@@ -65,10 +64,6 @@ contains
        TOPO_child )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_grid, only: &
-       BUFFER_DX,  &
-       BUFFER_DY,  &
-       BUFFFACT
     implicit none
 
     real(RP), intent(inout) :: TOPO_child(:,:) !< topography of child domain
@@ -82,7 +77,6 @@ contains
        COPYTOPO_IN_BASENAME,    &
        COPYTOPO_TRANSITION_DX,  &
        COPYTOPO_TRANSITION_DY,  &
-       COPYTOPO_TRANSFACT,      &
        COPYTOPO_FRACX,          &
        COPYTOPO_FRACY,          &
        COPYTOPO_taux,           &
@@ -107,18 +101,6 @@ contains
        call PRC_MPIstop
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_COPYTOPO)
-
-    if ( COPYTOPO_TRANSITION_DX < 0.0_RP ) then
-       COPYTOPO_TRANSITION_DX = BUFFER_DX
-    endif
-
-    if ( COPYTOPO_TRANSITION_DY < 0.0_RP ) then
-       COPYTOPO_TRANSITION_DY = BUFFER_DY
-    endif
-
-    if ( COPYTOPO_TRANSFACT < 0.0_RP ) then
-       COPYTOPO_TRANSFACT = BUFFFACT
-    endif
 
     ! copy topography from parent domain to transition region
 
@@ -148,16 +130,13 @@ contains
        PRC_2Drank
     use scale_const, only: &
        EPS => CONST_EPS
-    use scale_grid, only: &
-       DX,                  &
-       DY,                  &
-       CXG   => GRID_CXG,   &
-       FXG   => GRID_FXG,   &
-       CYG   => GRID_CYG,   &
-       FYG   => GRID_FYG,   &
-       CBFXG => GRID_CBFXG, &
-       CBFYG => GRID_CBFYG, &
-       BUFFFACT
+    use scale_atmos_grid_cartesC, only: &
+       CXG   => ATMOS_GRID_CARTESC_CXG,   &
+       FXG   => ATMOS_GRID_CARTESC_FXG,   &
+       CYG   => ATMOS_GRID_CARTESC_CYG,   &
+       FYG   => ATMOS_GRID_CARTESC_FYG,   &
+       CBFXG => ATMOS_GRID_CARTESC_CBFXG, &
+       CBFYG => ATMOS_GRID_CARTESC_CBFYG
     implicit none
 
     real(RP), intent(out) :: CTRX(IA) !< transition factor (0-1): x, local
@@ -165,13 +144,9 @@ contains
 
     real(RP) :: CTRXG (  IAG) !< transition factor (0-1): x, global
     real(RP) :: CTRYG (  JAG) !< transition factor (0-1): y, global
-    real(RP) :: buffx (0:IAG)
-    real(RP) :: buffy (0:JAG)
-    real(RP) :: transx(0:IAG)
-    real(RP) :: transy(0:JAG)
 
-    real(RP) :: bufftotx,  bufftoty
-    real(RP) :: transtotx, transtoty
+    real(RP) :: bufftotx, transtotx
+    real(RP) :: bufftoty, transtoty
     integer  :: imain, ibuff, itrans
     integer  :: jmain, jbuff, jtrans
     integer  :: copy_is, copy_ie
@@ -182,24 +157,31 @@ contains
 
     ! X-direction
     ! calculate buffer grid size
-    buffx(:)  = DX
-    transx(0) = DX
-    bufftotx  = 0.0_RP
-    transtotx = 0.0_RP
 
     do i = IHALO+1, IAG
        if( abs(CBFXG(i)) < EPS ) exit
-       buffx(i) = buffx(i-1) * BUFFFACT
-       bufftotx = bufftotx + buffx(i)
     enddo
     ibuff = i - 1 - IHALO
+    if ( ibuff == 0 ) then
+       bufftotx = 0.0_RP
+    else
+       bufftotx = CXG(ibuff+IHALO) - FXG(IHALO)
+    end if
 
-    do i = 1, IAG
-       if( transtotx >= COPYTOPO_TRANSITION_DX ) exit
-       transx(i) = transx(i-1) * COPYTOPO_TRANSFACT
-       transtotx = transtotx + transx(i)
-    enddo
-    itrans = i - 1
+    if ( COPYTOPO_TRANSITION_DX < 0.0_RP ) then
+       itrans = 0
+       transtotx = 0.0_RP
+    else
+       do i = ibuff+IHALO+1, IAG
+          if( CXG(i) - bufftotx - FXG(IHALO) >= COPYTOPO_TRANSITION_DX ) exit
+       enddo
+       itrans = i - 1 - IHALO - ibuff
+       if ( itrans == 0 ) then
+          transtotx = 0.0_RP
+       else
+          transtotx = CXG(itrans+ibuff+IHALO) - FXG(IHALO) - bufftotx
+       end if
+    end if
 
     imain  = IAG - 2*ibuff - 2*itrans - 2*IHALO
 
@@ -242,24 +224,30 @@ contains
 
     ! Y-direction
     ! calculate buffer grid size
-    buffy(:)  = DY
-    transy(0) = DY
-    bufftoty  = 0.0_RP
-    transtoty = 0.0_RP
-
     do j = JHALO+1, JAG
        if( abs(CBFYG(j)) < EPS ) exit
-       buffy(j) = buffy(j-1) * BUFFFACT
-       bufftoty = bufftoty + buffy(j)
     enddo
     jbuff = j - 1 - JHALO
+    if ( jbuff == 0 ) then
+       bufftoty = 0.0_RP
+    else
+       bufftoty = CYG(jbuff+JHALO) - FYG(JHALO)
+    end if
 
-    do j = 1, JAG
-       if( transtoty >= COPYTOPO_TRANSITION_DY ) exit
-       transy(j) = transy(j-1) * COPYTOPO_TRANSFACT
-       transtoty = transtoty + transy(j)
-    enddo
-    jtrans = j - 1
+    if ( COPYTOPO_TRANSITION_DY < 0.0_RP ) then
+       jtrans = 0
+       transtoty = 0.0_RP
+    else
+       do j = jbuff+JHALO+1, JAG
+          if( CYG(j) - bufftoty - FYG(JHALO) >= COPYTOPO_TRANSITION_DY ) exit
+       enddo
+       jtrans = j - 1 - JHALO - jbuff
+       if ( jtrans == 0 ) then
+          transtoty = 0.0_RP
+       else
+          transtoty = CYG(jtrans+jbuff+JHALO) - FYG(JHALO) - bufftoty
+       end if
+    end if
 
     jmain  = JAG - 2*jbuff - 2*jtrans - 2*JHALO
 
@@ -413,17 +401,17 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_grid_real, only: &
-       LAT => REAL_LAT, &
-       LON => REAL_LON
-    use scale_grid_nest, only: &
-       NEST_INTERP_LEVEL, &
+    use scale_atmos_grid_cartesC_real, only: &
+       LAT => ATMOS_GRID_CARTESC_REAL_LAT, &
+       LON => ATMOS_GRID_CARTESC_REAL_LON
+    use scale_comm_cartesC_nest, only: &
+       NEST_INTERP_LEVEL => COMM_CARTESC_NEST_INTERP_LEVEL, &
+       NEST_domain_shape => COMM_CARTESC_NEST_domain_shape, &
+       NEST_TILE_NUM_X   => COMM_CARTESC_NEST_TILE_NUM_X,   &
+       NEST_TILE_NUM_Y   => COMM_CARTESC_NEST_TILE_NUM_X,   &
+       NEST_TILE_ID      => COMM_CARTESC_NEST_TILE_ID,      &
        PARENT_IMAX,       &
-       PARENT_JMAX,       &
-       NEST_TILE_NUM_X,   &
-       NEST_TILE_NUM_Y,   &
-       NEST_TILE_ID,      &
-       NEST_domain_shape
+       PARENT_JMAX
     implicit none
 
     real(RP), intent(out) :: TOPO_parent(:,:)

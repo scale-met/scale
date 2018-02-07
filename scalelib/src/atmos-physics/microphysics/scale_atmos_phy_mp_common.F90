@@ -21,7 +21,7 @@ module scale_atmos_phy_mp_common
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -872,9 +872,9 @@ contains
        vt_fixed )
     use scale_const, only: &
        GRAV  => CONST_GRAV
-    use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_FZ
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_gridtrans, only: &
        J33G => GTRANS_J33G
     use scale_comm, only: &

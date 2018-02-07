@@ -20,7 +20,7 @@ module scale_atmos_diagnostic
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -68,9 +68,9 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_grid_real, only: &
-       CZ => REAL_CZ, &
-       FZ => REAL_FZ
+    use scale_atmos_grid_cartesC_real, only: &
+       CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_gridtrans, only: &
        GSQRT => GTRANS_GSQRT, &
        J13G  => GTRANS_J13G,  &
