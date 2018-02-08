@@ -182,12 +182,10 @@ OBJS_NAME = \
 	scale_land_grid_index.o	\
 	scale_land_phy.o	\
 	scale_land_phy_const.o	\
-	scale_land_phy_file.o	\
 	scale_land_phy_slab.o	\
 	scale_land_phy_matsiro.o	\
 	scale_land_sfc.o	\
 	scale_land_sfc_const.o	\
-	scale_land_sfc_file.o	\
 	scale_land_sfc_thin-slab.o	\
 	scale_land_sfc_thick-slab.o	\
 	scale_landuse.o	\
