@@ -113,9 +113,9 @@ contains
        STAT_total
     use scale_file_history, only: &
        FILE_HISTORY_in
-    use scale_mapproj, only: &
-       BASE_LON => MPRJ_basepoint_lon, &
-       BASE_LAT => MPRJ_basepoint_lat
+    use scale_mapprojection, only: &
+       BASE_LON => MAPPROJECTION_basepoint_lon, &
+       BASE_LAT => MAPPROJECTION_basepoint_lat
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_Z1
     use scale_urban_phy, only: &

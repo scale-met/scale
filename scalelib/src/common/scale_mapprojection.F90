@@ -11,7 +11,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module scale_mapproj
+module scale_mapprojection
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -27,120 +27,120 @@ module scale_mapproj
   !
   !++ Public procedure
   !
-  public :: MPRJ_setup
-  public :: MPRJ_xy2lonlat
-  public :: MPRJ_lonlat2xy
-  public :: MPRJ_mapfactor
-  public :: MPRJ_rotcoef
-  public :: MPRJ_get_attributes
+  public :: MAPPROJECTION_setup
+  public :: MAPPROJECTION_xy2lonlat
+  public :: MAPPROJECTION_lonlat2xy
+  public :: MAPPROJECTION_mapfactor
+  public :: MAPPROJECTION_rotcoef
+  public :: MAPPROJECTION_get_attributes
 
-  interface MPRJ_rotcoef
-     module procedure MPRJ_rotcoef_0D
-     module procedure MPRJ_rotcoef_2D
-  end interface MPRJ_rotcoef
+  interface MAPPROJECTION_rotcoef
+     module procedure MAPPROJECTION_rotcoef_0D
+     module procedure MAPPROJECTION_rotcoef_2D
+  end interface MAPPROJECTION_rotcoef
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(RP), public :: MPRJ_basepoint_lon = 135.221_RP ! position of base point (domain center) in real world [deg]
-  real(RP), public :: MPRJ_basepoint_lat =  34.653_RP ! position of base point (domain center) in real world [deg]
+  real(RP), public :: MAPPROJECTION_basepoint_lon = 135.221_RP ! position of base point (domain center) in real world [deg]
+  real(RP), public :: MAPPROJECTION_basepoint_lat =  34.653_RP ! position of base point (domain center) in real world [deg]
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
-  private :: MPRJ_None_setup
-  private :: MPRJ_LambertConformal_setup
-  private :: MPRJ_PolarStereographic_setup
-  private :: MPRJ_Mercator_setup
-  private :: MPRJ_EquidistantCylindrical_setup
+  private :: MAPPROJECTION_None_setup
+  private :: MAPPROJECTION_LambertConformal_setup
+  private :: MAPPROJECTION_PolarStereographic_setup
+  private :: MAPPROJECTION_Mercator_setup
+  private :: MAPPROJECTION_EquidistantCylindrical_setup
 
-  private :: MPRJ_None_xy2lonlat
-  private :: MPRJ_LambertConformal_xy2lonlat
-  private :: MPRJ_PolarStereographic_xy2lonlat
-  private :: MPRJ_Mercator_xy2lonlat
-  private :: MPRJ_EquidistantCylindrical_xy2lonlat
+  private :: MAPPROJECTION_None_xy2lonlat
+  private :: MAPPROJECTION_LambertConformal_xy2lonlat
+  private :: MAPPROJECTION_PolarStereographic_xy2lonlat
+  private :: MAPPROJECTION_Mercator_xy2lonlat
+  private :: MAPPROJECTION_EquidistantCylindrical_xy2lonlat
 
-  private :: MPRJ_None_lonlat2xy
-  private :: MPRJ_LambertConformal_lonlat2xy
-  private :: MPRJ_PolarStereographic_lonlat2xy
-  private :: MPRJ_Mercator_lonlat2xy
-  private :: MPRJ_EquidistantCylindrical_lonlat2xy
+  private :: MAPPROJECTION_None_lonlat2xy
+  private :: MAPPROJECTION_LambertConformal_lonlat2xy
+  private :: MAPPROJECTION_PolarStereographic_lonlat2xy
+  private :: MAPPROJECTION_Mercator_lonlat2xy
+  private :: MAPPROJECTION_EquidistantCylindrical_lonlat2xy
 
-  private :: MPRJ_None_mapfactor
-  private :: MPRJ_LambertConformal_mapfactor
-  private :: MPRJ_PolarStereographic_mapfactor
-  private :: MPRJ_Mercator_mapfactor
-  private :: MPRJ_EquidistantCylindrical_mapfactor
+  private :: MAPPROJECTION_None_mapfactor
+  private :: MAPPROJECTION_LambertConformal_mapfactor
+  private :: MAPPROJECTION_PolarStereographic_mapfactor
+  private :: MAPPROJECTION_Mercator_mapfactor
+  private :: MAPPROJECTION_EquidistantCylindrical_mapfactor
 
-  private :: MPRJ_None_rotcoef_2D
-  private :: MPRJ_LambertConformal_rotcoef_2D
-  private :: MPRJ_PolarStereographic_rotcoef_2D
-  private :: MPRJ_Mercator_rotcoef_2D
-  private :: MPRJ_EquidistantCylindrical_rotcoef_2D
+  private :: MAPPROJECTION_None_rotcoef_2D
+  private :: MAPPROJECTION_LambertConformal_rotcoef_2D
+  private :: MAPPROJECTION_PolarStereographic_rotcoef_2D
+  private :: MAPPROJECTION_Mercator_rotcoef_2D
+  private :: MAPPROJECTION_EquidistantCylindrical_rotcoef_2D
 
-  private :: MPRJ_None_rotcoef_0D
-  private :: MPRJ_LambertConformal_rotcoef_0D
-  private :: MPRJ_PolarStereographic_rotcoef_0D
-  private :: MPRJ_Mercator_rotcoef_0D
-  private :: MPRJ_EquidistantCylindrical_rotcoef_0D
+  private :: MAPPROJECTION_None_rotcoef_0D
+  private :: MAPPROJECTION_LambertConformal_rotcoef_0D
+  private :: MAPPROJECTION_PolarStereographic_rotcoef_0D
+  private :: MAPPROJECTION_Mercator_rotcoef_0D
+  private :: MAPPROJECTION_EquidistantCylindrical_rotcoef_0D
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private :: MPRJ_type = 'NONE' !< map projection type
+  character(len=H_SHORT), private :: MAPPROJECTION_type = 'NONE' !< map projection type
                                                ! 'NONE'
                                                ! 'LC'
                                                ! 'PS'
                                                ! 'MER'
                                                ! 'EC'
 
-  real(DP), private :: MPRJ_hemisphere         ! hemisphere flag: 1=north, -1=south
+  real(DP), private :: MAPPROJECTION_hemisphere         ! hemisphere flag: 1=north, -1=south
 
-  real(DP), private :: MPRJ_basepoint_x        ! position of base point in the model [m]
-  real(DP), private :: MPRJ_basepoint_y        ! position of base point in the model [m]
+  real(DP), private :: MAPPROJECTION_basepoint_x        ! position of base point in the model [m]
+  real(DP), private :: MAPPROJECTION_basepoint_y        ! position of base point in the model [m]
 
-  real(DP), private :: MPRJ_pole_x             ! position of north/south pole in the model [m]
-  real(DP), private :: MPRJ_pole_y             ! position of north/south pole in the model [m]
-  real(DP), private :: MPRJ_eq_x               ! position of equator at the base lon. in the model [m]
-  real(DP), private :: MPRJ_eq_y               ! position of equator at the base lon. in the model [m]
+  real(DP), private :: MAPPROJECTION_pole_x             ! position of north/south pole in the model [m]
+  real(DP), private :: MAPPROJECTION_pole_y             ! position of north/south pole in the model [m]
+  real(DP), private :: MAPPROJECTION_eq_x               ! position of equator at the base lon. in the model [m]
+  real(DP), private :: MAPPROJECTION_eq_y               ! position of equator at the base lon. in the model [m]
 
-  real(DP), private :: MPRJ_rotation =  0.0_DP ! rotation factor (only for 'NONE' type)
+  real(DP), private :: MAPPROJECTION_rotation =  0.0_DP ! rotation factor (only for 'NONE' type)
 
-  real(DP), private :: MPRJ_LC_lat1  = 30.0_DP ! standard latitude1 for L.C. projection [deg]
-  real(DP), private :: MPRJ_LC_lat2  = 60.0_DP ! standard latitude2 for L.C. projection [deg]
-  real(DP), private :: MPRJ_LC_c               ! conformal factor
-  real(DP), private :: MPRJ_LC_fact            ! pre-calc factor
+  real(DP), private :: MAPPROJECTION_LC_lat1  = 30.0_DP ! standard latitude1 for L.C. projection [deg]
+  real(DP), private :: MAPPROJECTION_LC_lat2  = 60.0_DP ! standard latitude2 for L.C. projection [deg]
+  real(DP), private :: MAPPROJECTION_LC_c               ! conformal factor
+  real(DP), private :: MAPPROJECTION_LC_fact            ! pre-calc factor
 
-  real(DP), private :: MPRJ_PS_lat             ! standard latitude1 for P.S. projection [deg]
-  real(DP), private :: MPRJ_PS_fact            ! pre-calc factor
+  real(DP), private :: MAPPROJECTION_PS_lat             ! standard latitude1 for P.S. projection [deg]
+  real(DP), private :: MAPPROJECTION_PS_fact            ! pre-calc factor
 
-  real(DP), private :: MPRJ_M_lat    =  0.0_DP ! standard latitude1 for Mer. projection [deg]
-  real(DP), private :: MPRJ_M_fact             ! pre-calc factor
+  real(DP), private :: MAPPROJECTION_M_lat    =  0.0_DP ! standard latitude1 for Mer. projection [deg]
+  real(DP), private :: MAPPROJECTION_M_fact             ! pre-calc factor
 
-  real(DP), private :: MPRJ_EC_lat   =  0.0_DP ! standard latitude1 for E.C. projection [deg]
-  real(DP), private :: MPRJ_EC_fact            ! pre-calc factor
+  real(DP), private :: MAPPROJECTION_EC_lat   =  0.0_DP ! standard latitude1 for E.C. projection [deg]
+  real(DP), private :: MAPPROJECTION_EC_fact            ! pre-calc factor
 
   real(DP), private :: PI
   real(DP), private :: D2R
   real(DP), private :: RADIUS
 
-  character(len=H_SHORT) :: MPRJ_mapping
-  real(DP), private :: MPRJ_false_easting
-  real(DP), private :: MPRJ_false_northing
-  real(DP), private :: MPRJ_longitude_of_central_meridian
-  real(DP), private :: MPRJ_longitude_of_projection_origin
-  real(DP), private :: MPRJ_latitude_of_projection_origin
-  real(DP), private :: MPRJ_straight_vertical_longitude_from_pole
-  real(DP), private :: MPRJ_standard_parallel(2)
+  character(len=H_SHORT) :: MAPPROJECTION_mapping
+  real(DP), private :: MAPPROJECTION_false_easting
+  real(DP), private :: MAPPROJECTION_false_northing
+  real(DP), private :: MAPPROJECTION_longitude_of_central_meridian
+  real(DP), private :: MAPPROJECTION_longitude_of_projection_origin
+  real(DP), private :: MAPPROJECTION_latitude_of_projection_origin
+  real(DP), private :: MAPPROJECTION_straight_vertical_longitude_from_pole
+  real(DP), private :: MAPPROJECTION_standard_parallel(2)
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine MPRJ_setup( DOMAIN_CENTER_X, DOMAIN_CENTER_Y )
+  subroutine MAPPROJECTION_setup( DOMAIN_CENTER_X, DOMAIN_CENTER_Y )
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
@@ -153,18 +153,18 @@ contains
     real(RP), intent(in) :: DOMAIN_CENTER_X !< center position of global domain [m]: x
     real(RP), intent(in) :: DOMAIN_CENTER_Y !< center position of global domain [m]: y
 
-    namelist / PARAM_MAPPROJ / &
-       MPRJ_basepoint_lon, &
-       MPRJ_basepoint_lat, &
-       MPRJ_basepoint_x,   &
-       MPRJ_basepoint_y,   &
-       MPRJ_type,          &
-       MPRJ_rotation,      &
-       MPRJ_LC_lat1,       &
-       MPRJ_LC_lat2,       &
-       MPRJ_PS_lat,        &
-       MPRJ_M_lat,         &
-       MPRJ_EC_lat
+    namelist / PARAM_MAPPROJECTION / &
+       MAPPROJECTION_basepoint_lon, &
+       MAPPROJECTION_basepoint_lat, &
+       MAPPROJECTION_basepoint_x,   &
+       MAPPROJECTION_basepoint_y,   &
+       MAPPROJECTION_type,          &
+       MAPPROJECTION_rotation,      &
+       MAPPROJECTION_LC_lat1,       &
+       MAPPROJECTION_LC_lat2,       &
+       MAPPROJECTION_PS_lat,        &
+       MAPPROJECTION_M_lat,         &
+       MAPPROJECTION_EC_lat
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -176,70 +176,70 @@ contains
     D2R    = real(D2R_RP,    kind=DP)
     RADIUS = real(RADIUS_RP, kind=DP)
 
-    MPRJ_basepoint_x = UNDEF
-    MPRJ_basepoint_y = UNDEF
-    MPRJ_PS_lat      = UNDEF
+    MAPPROJECTION_basepoint_x = UNDEF
+    MAPPROJECTION_basepoint_y = UNDEF
+    MAPPROJECTION_PS_lat      = UNDEF
 
-    MPRJ_basepoint_x = DOMAIN_CENTER_X
-    MPRJ_basepoint_y = DOMAIN_CENTER_Y
+    MAPPROJECTION_basepoint_x = DOMAIN_CENTER_X
+    MAPPROJECTION_basepoint_y = DOMAIN_CENTER_Y
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MAPPROJ,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_MAPPROJECTION,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MAPPROJ. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MAPPROJECTION. Check!'
        call PRC_MPIstop
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MAPPROJ)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MAPPROJECTION)
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Map projection type : ', trim(MPRJ_type)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Map projection type : ', trim(MAPPROJECTION_type)
 
 
-    MPRJ_mapping = ""
-    MPRJ_false_easting = UNDEF
-    MPRJ_false_northing = UNDEF
-    MPRJ_longitude_of_central_meridian = UNDEF
-    MPRJ_longitude_of_projection_origin = UNDEF
-    MPRJ_latitude_of_projection_origin = UNDEF
-    MPRJ_straight_vertical_longitude_from_pole = UNDEF
-    MPRJ_standard_parallel(:) = UNDEF
+    MAPPROJECTION_mapping = ""
+    MAPPROJECTION_false_easting = UNDEF
+    MAPPROJECTION_false_northing = UNDEF
+    MAPPROJECTION_longitude_of_central_meridian = UNDEF
+    MAPPROJECTION_longitude_of_projection_origin = UNDEF
+    MAPPROJECTION_latitude_of_projection_origin = UNDEF
+    MAPPROJECTION_straight_vertical_longitude_from_pole = UNDEF
+    MAPPROJECTION_standard_parallel(:) = UNDEF
 
-    if( MPRJ_PS_lat == UNDEF ) MPRJ_PS_lat = MPRJ_basepoint_lat
+    if( MAPPROJECTION_PS_lat == UNDEF ) MAPPROJECTION_PS_lat = MAPPROJECTION_basepoint_lat
 
-    select case(trim(MPRJ_type))
+    select case(trim(MAPPROJECTION_type))
     case('NONE')
        if( IO_L ) write(IO_FID_LOG,*) '*** => NO map projection'
-       call MPRJ_None_setup
+       call MAPPROJECTION_None_setup
     case('LC')
        if( IO_L ) write(IO_FID_LOG,*) '*** => Lambert Conformal projection'
-       call MPRJ_LambertConformal_setup
+       call MAPPROJECTION_LambertConformal_setup
     case('PS')
        if( IO_L ) write(IO_FID_LOG,*) '*** => Polar Stereographic projection'
-       call MPRJ_PolarStereographic_setup
+       call MAPPROJECTION_PolarStereographic_setup
     case('MER')
        if( IO_L ) write(IO_FID_LOG,*) '*** => Mercator projection'
-       call MPRJ_Mercator_setup
+       call MAPPROJECTION_Mercator_setup
     case('EC')
        if( IO_L ) write(IO_FID_LOG,*) '*** => Equidistant Cylindrical projection'
-       call MPRJ_EquidistantCylindrical_setup
+       call MAPPROJECTION_EquidistantCylindrical_setup
     case default
-       write(*,*) 'xxx Unsupported MPRJ_type. STOP'
+       write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
        call PRC_MPIstop
     endselect
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') '*** Basepoint(x)    = ', MPRJ_basepoint_x
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') '*** Basepoint(y)    = ', MPRJ_basepoint_y
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') '*** Basepoint(x)    = ', MAPPROJECTION_basepoint_x
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') '*** Basepoint(y)    = ', MAPPROJECTION_basepoint_y
 
     return
-  end subroutine MPRJ_setup
+  end subroutine MAPPROJECTION_setup
 
   !-----------------------------------------------------------------------------
   !> (x,y) -> (lon,lat)
-  subroutine MPRJ_xy2lonlat( &
+  subroutine MAPPROJECTION_xy2lonlat( &
        x,   &
        y,   &
        lon, &
@@ -254,28 +254,28 @@ contains
     real(RP), intent(out) :: lat ! [rad]
     !---------------------------------------------------------------------------
 
-    select case(MPRJ_type)
+    select case(MAPPROJECTION_type)
     case('NONE')
-       call MPRJ_None_xy2lonlat( x, y, lon, lat )
+       call MAPPROJECTION_None_xy2lonlat( x, y, lon, lat )
     case('LC')
-       call MPRJ_LambertConformal_xy2lonlat( x, y, lon, lat )
+       call MAPPROJECTION_LambertConformal_xy2lonlat( x, y, lon, lat )
     case('PS')
-       call MPRJ_PolarStereographic_xy2lonlat( x, y, lon, lat )
+       call MAPPROJECTION_PolarStereographic_xy2lonlat( x, y, lon, lat )
     case('MER')
-       call MPRJ_Mercator_xy2lonlat( x, y, lon, lat )
+       call MAPPROJECTION_Mercator_xy2lonlat( x, y, lon, lat )
     case('EC')
-       call MPRJ_EquidistantCylindrical_xy2lonlat( x, y, lon, lat )
+       call MAPPROJECTION_EquidistantCylindrical_xy2lonlat( x, y, lon, lat )
     case default
-       write(*,*) 'xxx Unsupported MPRJ_type. STOP'
+       write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
        call PRC_MPIstop
     endselect
 
     return
-  end subroutine MPRJ_xy2lonlat
+  end subroutine MAPPROJECTION_xy2lonlat
 
   !-----------------------------------------------------------------------------
   !> (lon,lat) -> (x,y)
-  subroutine MPRJ_lonlat2xy( &
+  subroutine MAPPROJECTION_lonlat2xy( &
        lon, &
        lat, &
        x,   &
@@ -290,28 +290,28 @@ contains
     real(RP), intent(out) :: y
     !---------------------------------------------------------------------------
 
-    select case(MPRJ_type)
+    select case(MAPPROJECTION_type)
     case('NONE')
-       call MPRJ_None_lonlat2xy( lon, lat, x, y )
+       call MAPPROJECTION_None_lonlat2xy( lon, lat, x, y )
     case('LC')
-       call MPRJ_LambertConformal_lonlat2xy( lon, lat, x, y )
+       call MAPPROJECTION_LambertConformal_lonlat2xy( lon, lat, x, y )
     case('PS')
-       call MPRJ_PolarStereographic_lonlat2xy( lon, lat, x, y )
+       call MAPPROJECTION_PolarStereographic_lonlat2xy( lon, lat, x, y )
     case('MER')
-       call MPRJ_Mercator_lonlat2xy( lon, lat, x, y )
+       call MAPPROJECTION_Mercator_lonlat2xy( lon, lat, x, y )
     case('EC')
-       call MPRJ_EquidistantCylindrical_lonlat2xy( lon, lat, x, y )
+       call MAPPROJECTION_EquidistantCylindrical_lonlat2xy( lon, lat, x, y )
     case default
-       write(*,*) 'xxx Unsupported MPRJ_type. STOP'
+       write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
        call PRC_MPIstop
     endselect
 
     return
-  end subroutine MPRJ_lonlat2xy
+  end subroutine MAPPROJECTION_lonlat2xy
 
   !-----------------------------------------------------------------------------
   !> (x,y) -> (lon,lat)
-  subroutine MPRJ_mapfactor( &
+  subroutine MAPPROJECTION_mapfactor( &
        lat, &
        m1,  &
        m2   )
@@ -324,29 +324,29 @@ contains
     real(RP), intent(out) :: m2 (IA,JA)
     !---------------------------------------------------------------------------
 
-    select case(MPRJ_type)
+    select case(MAPPROJECTION_type)
     case('NONE')
-       call MPRJ_None_mapfactor( lat, m1, m2 )
+       call MAPPROJECTION_None_mapfactor( lat, m1, m2 )
     case('LC')
-       call MPRJ_LambertConformal_mapfactor( lat, m1, m2 )
+       call MAPPROJECTION_LambertConformal_mapfactor( lat, m1, m2 )
     case('PS')
-       call MPRJ_PolarStereographic_mapfactor( lat, m1, m2 )
+       call MAPPROJECTION_PolarStereographic_mapfactor( lat, m1, m2 )
     case('MER')
-       call MPRJ_Mercator_mapfactor( lat, m1, m2 )
+       call MAPPROJECTION_Mercator_mapfactor( lat, m1, m2 )
     case('EC')
-       call MPRJ_EquidistantCylindrical_mapfactor( lat, m1, m2 )
+       call MAPPROJECTION_EquidistantCylindrical_mapfactor( lat, m1, m2 )
     case default
-       write(*,*) 'xxx Unsupported MPRJ_type. STOP'
+       write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
        call PRC_MPIstop
     endselect
 
     return
-  end subroutine MPRJ_mapfactor
+  end subroutine MAPPROJECTION_mapfactor
 
   !-----------------------------------------------------------------------------
   !> u(lat,lon) = cos u(x,y) - sin v(x,y)
   !> v(lat,lon) = sin u(x,y) + cos v(x,y)
-  subroutine MPRJ_rotcoef_0D( &
+  subroutine MAPPROJECTION_rotcoef_0D( &
        rotc, &
        lon,  &
        lat   )
@@ -359,29 +359,29 @@ contains
     real(RP), intent(in)  :: lat   ! [rad]
     !---------------------------------------------------------------------------
 
-    select case(MPRJ_type)
+    select case(MAPPROJECTION_type)
     case('NONE')
-       call MPRJ_None_rotcoef_0D( rotc )
+       call MAPPROJECTION_None_rotcoef_0D( rotc )
     case('LC')
-       call MPRJ_LambertConformal_rotcoef_0D( rotc, lon, lat )
+       call MAPPROJECTION_LambertConformal_rotcoef_0D( rotc, lon, lat )
     case('PS')
-       call MPRJ_PolarStereographic_rotcoef_0D( rotc, lon, lat )
+       call MAPPROJECTION_PolarStereographic_rotcoef_0D( rotc, lon, lat )
     case('MER')
-       call MPRJ_Mercator_rotcoef_0D( rotc )
+       call MAPPROJECTION_Mercator_rotcoef_0D( rotc )
     case('EC')
-       call MPRJ_EquidistantCylindrical_rotcoef_0D( rotc )
+       call MAPPROJECTION_EquidistantCylindrical_rotcoef_0D( rotc )
     case default
-       write(*,*) 'xxx Unsupported MPRJ_type. STOP'
+       write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
        call PRC_MPIstop
     endselect
 
     return
-  end subroutine MPRJ_rotcoef_0D
+  end subroutine MAPPROJECTION_rotcoef_0D
 
   !-----------------------------------------------------------------------------
   !> u(lat,lon) = cos u(x,y) - sin v(x,y)
   !> v(lat,lon) = sin u(x,y) + cos v(x,y)
-  subroutine MPRJ_rotcoef_2D( &
+  subroutine MAPPROJECTION_rotcoef_2D( &
        rotc, &
        lon,  &
        lat   )
@@ -394,29 +394,29 @@ contains
     real(RP), intent(in)  :: lat (IA,JA) ! [rad]
     !---------------------------------------------------------------------------
 
-    select case(MPRJ_type)
+    select case(MAPPROJECTION_type)
     case('NONE')
-       call MPRJ_None_rotcoef_2D( rotc )
+       call MAPPROJECTION_None_rotcoef_2D( rotc )
     case('LC')
-       call MPRJ_LambertConformal_rotcoef_2D( rotc, lon, lat )
+       call MAPPROJECTION_LambertConformal_rotcoef_2D( rotc, lon, lat )
     case('PS')
-       call MPRJ_PolarStereographic_rotcoef_2D( rotc, lon, lat )
+       call MAPPROJECTION_PolarStereographic_rotcoef_2D( rotc, lon, lat )
     case('MER')
-       call MPRJ_Mercator_rotcoef_2D( rotc )
+       call MAPPROJECTION_Mercator_rotcoef_2D( rotc )
     case('EC')
-       call MPRJ_EquidistantCylindrical_rotcoef_2D( rotc )
+       call MAPPROJECTION_EquidistantCylindrical_rotcoef_2D( rotc )
     case default
-       write(*,*) 'xxx Unsupported MPRJ_type. STOP'
+       write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
        call PRC_MPIstop
     endselect
 
     return
-  end subroutine MPRJ_rotcoef_2D
+  end subroutine MAPPROJECTION_rotcoef_2D
 
 
   !-----------------------------------------------------------------------------
   !> Get mapping attributes
-  subroutine MPRJ_get_attributes( &
+  subroutine MAPPROJECTION_get_attributes( &
        mapping,                               &
        false_easting,                         &
        false_northing,                        &
@@ -438,43 +438,43 @@ contains
     real(DP), intent(out), optional :: standard_parallel(2)
     !---------------------------------------------------------------------------
 
-    mapping = MPRJ_mapping
+    mapping = MAPPROJECTION_mapping
 
     if ( present(false_easting)                         ) &
-                 false_easting                          = MPRJ_false_easting
+                 false_easting                          = MAPPROJECTION_false_easting
     if ( present(false_northing)                        ) &
-                 false_northing                         = MPRJ_false_northing
+                 false_northing                         = MAPPROJECTION_false_northing
     if ( present(longitude_of_central_meridian)         ) &
-                 longitude_of_central_meridian          = MPRJ_longitude_of_central_meridian
+                 longitude_of_central_meridian          = MAPPROJECTION_longitude_of_central_meridian
     if ( present(longitude_of_projection_origin)        ) &
-                 longitude_of_projection_origin         = MPRJ_longitude_of_projection_origin
+                 longitude_of_projection_origin         = MAPPROJECTION_longitude_of_projection_origin
     if ( present(latitude_of_projection_origin)         ) &
-                 latitude_of_projection_origin          = MPRJ_latitude_of_projection_origin
+                 latitude_of_projection_origin          = MAPPROJECTION_latitude_of_projection_origin
     if ( present(straight_vertical_longitude_from_pole) ) &
-                 straight_vertical_longitude_from_pole  = MPRJ_straight_vertical_longitude_from_pole
+                 straight_vertical_longitude_from_pole  = MAPPROJECTION_straight_vertical_longitude_from_pole
     if ( present(standard_parallel)                     ) &
-                 standard_parallel(:)                   = MPRJ_standard_parallel(:)
+                 standard_parallel(:)                   = MAPPROJECTION_standard_parallel(:)
 
     return
-  end subroutine MPRJ_get_attributes
+  end subroutine MAPPROJECTION_get_attributes
 
   !-----------------------------------------------------------------------------
   !> No projection
-  subroutine MPRJ_None_setup
+  subroutine MAPPROJECTION_None_setup
     implicit none
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_rotation   = ', MPRJ_rotation
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_rotation   = ', MAPPROJECTION_rotation
 
-    MPRJ_mapping = ""
+    MAPPROJECTION_mapping = ""
 
     return
-  end subroutine MPRJ_None_setup
+  end subroutine MAPPROJECTION_None_setup
 
   !-----------------------------------------------------------------------------
   !> No projection, lon,lat are determined by gnomonic projection: (x,y) -> (lon,lat)
-  subroutine MPRJ_None_xy2lonlat( &
+  subroutine MAPPROJECTION_None_xy2lonlat( &
        x,   &
        y,   &
        lon, &
@@ -490,31 +490,31 @@ contains
     real(DP) :: rho, gmm
     !---------------------------------------------------------------------------
 
-    gno(1) = ( (y-MPRJ_basepoint_y) * sin(MPRJ_rotation*D2R) &
-             + (x-MPRJ_basepoint_x) * cos(MPRJ_rotation*D2R) ) / RADIUS
-    gno(2) = ( (y-MPRJ_basepoint_y) * cos(MPRJ_rotation*D2R) &
-             - (x-MPRJ_basepoint_x) * sin(MPRJ_rotation*D2R) ) / RADIUS
+    gno(1) = ( (y-MAPPROJECTION_basepoint_y) * sin(MAPPROJECTION_rotation*D2R) &
+             + (x-MAPPROJECTION_basepoint_x) * cos(MAPPROJECTION_rotation*D2R) ) / RADIUS
+    gno(2) = ( (y-MAPPROJECTION_basepoint_y) * cos(MAPPROJECTION_rotation*D2R) &
+             - (x-MAPPROJECTION_basepoint_x) * sin(MAPPROJECTION_rotation*D2R) ) / RADIUS
 
     rho = sqrt( gno(1) * gno(1) + gno(2) * gno(2) )
     gmm = atan( rho )
 
     if ( rho == 0.0_DP ) then
-       lon = MPRJ_basepoint_lon * D2R
-       lat = MPRJ_basepoint_lat * D2R
+       lon = MAPPROJECTION_basepoint_lon * D2R
+       lat = MAPPROJECTION_basepoint_lat * D2R
     else
-       lon = MPRJ_basepoint_lon * D2R &
-           + atan( gno(1)*sin(gmm) / ( rho   *cos(MPRJ_basepoint_lat*D2R)*cos(gmm) &
-                                     - gno(2)*sin(MPRJ_basepoint_lat*D2R)*sin(gmm) ) )
-       lat = asin(        sin(MPRJ_basepoint_lat*D2R)*cos(gmm)       &
-                 + gno(2)*cos(MPRJ_basepoint_lat*D2R)*sin(gmm) / rho )
+       lon = MAPPROJECTION_basepoint_lon * D2R &
+           + atan( gno(1)*sin(gmm) / ( rho   *cos(MAPPROJECTION_basepoint_lat*D2R)*cos(gmm) &
+                                     - gno(2)*sin(MAPPROJECTION_basepoint_lat*D2R)*sin(gmm) ) )
+       lat = asin(        sin(MAPPROJECTION_basepoint_lat*D2R)*cos(gmm)       &
+                 + gno(2)*cos(MAPPROJECTION_basepoint_lat*D2R)*sin(gmm) / rho )
     endif
 
     return
-  end subroutine MPRJ_None_xy2lonlat
+  end subroutine MAPPROJECTION_None_xy2lonlat
 
   !-----------------------------------------------------------------------------
   !> No projection
-  subroutine MPRJ_None_lonlat2xy( &
+  subroutine MAPPROJECTION_None_lonlat2xy( &
        lon, &
        lat, &
        x,   &
@@ -535,9 +535,9 @@ contains
     ! http://mathworld.wolfram.com/GnomonicProjection.html
 
     lat_d  = real(lat,kind=DP)
-    lat0_d = real(MPRJ_basepoint_lat*D2R,kind=DP)
+    lat0_d = real(MAPPROJECTION_basepoint_lat*D2R,kind=DP)
 
-    dlon = lon - MPRJ_basepoint_lon * D2R
+    dlon = lon - MAPPROJECTION_basepoint_lon * D2R
 
     cos_gmm = sin(lat0_d) * sin(lat_d) &
             + cos(lat0_d) * cos(lat_d) * cos(dlon)
@@ -546,17 +546,17 @@ contains
     gno(2) = ( cos(lat0_d) * sin(lat_d) &
              - sin(lat0_d) * cos(lat_d) * cos(dlon) ) / cos_gmm
 
-    x = MPRJ_basepoint_x + ( gno(1) * cos(MPRJ_rotation*D2R) &
-                           - gno(2) * sin(MPRJ_rotation*D2R) ) * RADIUS
-    y = MPRJ_basepoint_y + ( gno(1) * sin(MPRJ_rotation*D2R) &
-                           + gno(2) * cos(MPRJ_rotation*D2R) ) * RADIUS
+    x = MAPPROJECTION_basepoint_x + ( gno(1) * cos(MAPPROJECTION_rotation*D2R) &
+                           - gno(2) * sin(MAPPROJECTION_rotation*D2R) ) * RADIUS
+    y = MAPPROJECTION_basepoint_y + ( gno(1) * sin(MAPPROJECTION_rotation*D2R) &
+                           + gno(2) * cos(MAPPROJECTION_rotation*D2R) ) * RADIUS
 
     return
-  end subroutine MPRJ_None_lonlat2xy
+  end subroutine MAPPROJECTION_None_lonlat2xy
 
   !-----------------------------------------------------------------------------
   !> No projection: m1=m2=1
-  subroutine MPRJ_None_mapfactor( &
+  subroutine MAPPROJECTION_None_mapfactor( &
        lat, &
        m1,  &
        m2   )
@@ -571,11 +571,11 @@ contains
     m2 = m1
 
     return
-  end subroutine MPRJ_None_mapfactor
+  end subroutine MAPPROJECTION_None_mapfactor
 
   !-----------------------------------------------------------------------------
   !> No projection:
-  subroutine MPRJ_None_rotcoef_0D( &
+  subroutine MAPPROJECTION_None_rotcoef_0D( &
        rotc )
     implicit none
 
@@ -586,11 +586,11 @@ contains
     rotc(2) = 0.0_RP
 
     return
-  end subroutine MPRJ_None_rotcoef_0D
+  end subroutine MAPPROJECTION_None_rotcoef_0D
 
   !-----------------------------------------------------------------------------
   !> No projection:
-  subroutine MPRJ_None_rotcoef_2D( &
+  subroutine MAPPROJECTION_None_rotcoef_2D( &
        rotc )
     implicit none
 
@@ -601,11 +601,11 @@ contains
     rotc(:,:,2) = 0.0_RP
 
     return
-  end subroutine MPRJ_None_rotcoef_2D
+  end subroutine MAPPROJECTION_None_rotcoef_2D
 
   !-----------------------------------------------------------------------------
   !> Lambert Conformal projection
-  subroutine MPRJ_LambertConformal_setup
+  subroutine MAPPROJECTION_LambertConformal_setup
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -614,56 +614,56 @@ contains
     real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
 
-    if ( MPRJ_LC_lat1 >= MPRJ_LC_lat2 ) then
-       write(*,*) 'xxx Please set MPRJ_LC_lat1 < MPRJ_LC_lat2 in degree. STOP'
+    if ( MAPPROJECTION_LC_lat1 >= MAPPROJECTION_LC_lat2 ) then
+       write(*,*) 'xxx Please set MAPPROJECTION_LC_lat1 < MAPPROJECTION_LC_lat2 in degree. STOP'
        call PRC_MPIstop
     endif
 
     ! check hemisphere: 1=north, -1=south
-    MPRJ_hemisphere = sign(1.0_DP,MPRJ_LC_lat1+MPRJ_LC_lat2)
+    MAPPROJECTION_hemisphere = sign(1.0_DP,MAPPROJECTION_LC_lat1+MAPPROJECTION_LC_lat2)
 
-    lat1rot = 0.5_DP*PI - MPRJ_hemisphere * MPRJ_LC_lat1 * D2R
-    lat2rot = 0.5_DP*PI - MPRJ_hemisphere * MPRJ_LC_lat2 * D2R
+    lat1rot = 0.5_DP*PI - MAPPROJECTION_hemisphere * MAPPROJECTION_LC_lat1 * D2R
+    lat2rot = 0.5_DP*PI - MAPPROJECTION_hemisphere * MAPPROJECTION_LC_lat2 * D2R
 
     ! calc conformal factor c
-    MPRJ_LC_c = ( log( sin(lat1rot)        ) - log( sin(lat2rot)        ) ) &
+    MAPPROJECTION_LC_c = ( log( sin(lat1rot)        ) - log( sin(lat2rot)        ) ) &
               / ( log( tan(0.5_DP*lat1rot) ) - log( tan(0.5_DP*lat2rot) ) )
 
     ! pre-calc factor
-    MPRJ_LC_fact = sin(lat1rot) / MPRJ_LC_c / tan(0.5_DP*lat1rot)**MPRJ_LC_c
+    MAPPROJECTION_LC_fact = sin(lat1rot) / MAPPROJECTION_LC_c / tan(0.5_DP*lat1rot)**MAPPROJECTION_LC_c
 
     ! calc (x,y) at pole point
     dlon = 0.0_DP
 
-    latrot = 0.5_DP*PI - MPRJ_hemisphere * MPRJ_basepoint_lat * D2R
+    latrot = 0.5_DP*PI - MAPPROJECTION_hemisphere * MAPPROJECTION_basepoint_lat * D2R
 
-    dist = MPRJ_LC_fact * RADIUS * tan(0.5_DP*latrot)**MPRJ_LC_c
+    dist = MAPPROJECTION_LC_fact * RADIUS * tan(0.5_DP*latrot)**MAPPROJECTION_LC_c
 
-    MPRJ_pole_x = MPRJ_basepoint_x -                   dist * sin(MPRJ_LC_c*dlon)
-    MPRJ_pole_y = MPRJ_basepoint_y + MPRJ_hemisphere * dist * cos(MPRJ_LC_c*dlon)
+    MAPPROJECTION_pole_x = MAPPROJECTION_basepoint_x -                   dist * sin(MAPPROJECTION_LC_c*dlon)
+    MAPPROJECTION_pole_y = MAPPROJECTION_basepoint_y + MAPPROJECTION_hemisphere * dist * cos(MAPPROJECTION_LC_c*dlon)
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_LC_lat1    = ', MPRJ_LC_lat1
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_LC_lat2    = ', MPRJ_LC_lat2
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_hemisphere = ', MPRJ_hemisphere
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_LC_c       = ', MPRJ_LC_c
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_LC_fact    = ', MPRJ_LC_fact
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_pole_x     = ', MPRJ_pole_x
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_pole_y     = ', MPRJ_pole_y
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_LC_lat1    = ', MAPPROJECTION_LC_lat1
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_LC_lat2    = ', MAPPROJECTION_LC_lat2
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_hemisphere = ', MAPPROJECTION_hemisphere
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_LC_c       = ', MAPPROJECTION_LC_c
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_LC_fact    = ', MAPPROJECTION_LC_fact
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_pole_x     = ', MAPPROJECTION_pole_x
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_pole_y     = ', MAPPROJECTION_pole_y
 
-    MPRJ_mapping = "lambert_conformal_conic"
-    MPRJ_standard_parallel(:) = (/ MPRJ_LC_lat1, MPRJ_LC_lat2 /)
-    MPRJ_longitude_of_central_meridian = MPRJ_basepoint_lon
-    MPRJ_latitude_of_projection_origin = MPRJ_basepoint_lat
-    MPRJ_false_easting  = MPRJ_basepoint_x
-    MPRJ_false_northing = MPRJ_basepoint_y
+    MAPPROJECTION_mapping = "lambert_conformal_conic"
+    MAPPROJECTION_standard_parallel(:) = (/ MAPPROJECTION_LC_lat1, MAPPROJECTION_LC_lat2 /)
+    MAPPROJECTION_longitude_of_central_meridian = MAPPROJECTION_basepoint_lon
+    MAPPROJECTION_latitude_of_projection_origin = MAPPROJECTION_basepoint_lat
+    MAPPROJECTION_false_easting  = MAPPROJECTION_basepoint_x
+    MAPPROJECTION_false_northing = MAPPROJECTION_basepoint_y
 
     return
-  end subroutine MPRJ_LambertConformal_setup
+  end subroutine MAPPROJECTION_LambertConformal_setup
 
   !-----------------------------------------------------------------------------
   !> Lambert Conformal projection: (x,y) -> (lon,lat)
-  subroutine MPRJ_LambertConformal_xy2lonlat( &
+  subroutine MAPPROJECTION_LambertConformal_xy2lonlat( &
        x,   &
        y,   &
        lon, &
@@ -678,22 +678,22 @@ contains
     real(DP) :: xx, yy, dist
     !---------------------------------------------------------------------------
 
-    xx =                    ( x - MPRJ_pole_x ) / RADIUS / MPRJ_LC_fact
-    yy = -MPRJ_hemisphere * ( y - MPRJ_pole_y ) / RADIUS / MPRJ_LC_fact
+    xx =                    ( x - MAPPROJECTION_pole_x ) / RADIUS / MAPPROJECTION_LC_fact
+    yy = -MAPPROJECTION_hemisphere * ( y - MAPPROJECTION_pole_y ) / RADIUS / MAPPROJECTION_LC_fact
 
     dist = sqrt( xx*xx + yy*yy )
 
-    lon = MPRJ_basepoint_lon * D2R + atan2(xx,yy) / MPRJ_LC_c
+    lon = MAPPROJECTION_basepoint_lon * D2R + atan2(xx,yy) / MAPPROJECTION_LC_c
 
     ! check hemisphere: 1=north, -1=south
-    lat = MPRJ_hemisphere * ( 0.5_DP*PI - 2.0_DP*atan( dist**(1.0_DP/MPRJ_LC_c) ) )
+    lat = MAPPROJECTION_hemisphere * ( 0.5_DP*PI - 2.0_DP*atan( dist**(1.0_DP/MAPPROJECTION_LC_c) ) )
 
     return
-  end subroutine MPRJ_LambertConformal_xy2lonlat
+  end subroutine MAPPROJECTION_LambertConformal_xy2lonlat
 
   !-----------------------------------------------------------------------------
   !> Lambert Conformal projection: (lon,lat) -> (x,y)
-  subroutine MPRJ_LambertConformal_lonlat2xy( &
+  subroutine MAPPROJECTION_LambertConformal_lonlat2xy( &
        lon, &
        lat, &
        x,   &
@@ -708,23 +708,23 @@ contains
     real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
 
-    dlon = lon - MPRJ_basepoint_lon * D2R
+    dlon = lon - MAPPROJECTION_basepoint_lon * D2R
     if ( dlon >  PI ) dlon = dlon - PI*2.0_DP
     if ( dlon < -PI ) dlon = dlon + PI*2.0_DP
 
-    latrot = 0.5_DP*PI - MPRJ_hemisphere * lat
+    latrot = 0.5_DP*PI - MAPPROJECTION_hemisphere * lat
 
-    dist = MPRJ_LC_fact * RADIUS * tan(0.5_DP*latrot)**MPRJ_LC_c
+    dist = MAPPROJECTION_LC_fact * RADIUS * tan(0.5_DP*latrot)**MAPPROJECTION_LC_c
 
-    x = MPRJ_pole_x +                   dist * sin(MPRJ_LC_c*dlon)
-    y = MPRJ_pole_y - MPRJ_hemisphere * dist * cos(MPRJ_LC_c*dlon)
+    x = MAPPROJECTION_pole_x +                   dist * sin(MAPPROJECTION_LC_c*dlon)
+    y = MAPPROJECTION_pole_y - MAPPROJECTION_hemisphere * dist * cos(MAPPROJECTION_LC_c*dlon)
 
     return
-  end subroutine MPRJ_LambertConformal_lonlat2xy
+  end subroutine MAPPROJECTION_LambertConformal_lonlat2xy
 
   !-----------------------------------------------------------------------------
   !> Lambert Conformal projection: (lon,lat) -> (m1=m2)
-  subroutine MPRJ_LambertConformal_mapfactor( &
+  subroutine MAPPROJECTION_LambertConformal_mapfactor( &
        lat, &
        m1,  &
        m2   )
@@ -740,18 +740,18 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       latrot = 0.5_DP*PI - MPRJ_hemisphere * lat(i,j)
+       latrot = 0.5_DP*PI - MAPPROJECTION_hemisphere * lat(i,j)
 
-       m1(i,j) = MPRJ_LC_fact / sin(latrot) * MPRJ_LC_c * tan(0.5_DP*latrot)**MPRJ_LC_c
+       m1(i,j) = MAPPROJECTION_LC_fact / sin(latrot) * MAPPROJECTION_LC_c * tan(0.5_DP*latrot)**MAPPROJECTION_LC_c
        m2(i,j) = m1(i,j)
     enddo
     enddo
 
     return
-  end subroutine MPRJ_LambertConformal_mapfactor
+  end subroutine MAPPROJECTION_LambertConformal_mapfactor
 
   !-----------------------------------------------------------------------------
-  subroutine MPRJ_LambertConformal_rotcoef_0D( &
+  subroutine MAPPROJECTION_LambertConformal_rotcoef_0D( &
        rotc, &
        lon,  &
        lat   )
@@ -765,20 +765,20 @@ contains
     real(DP) :: alpha
     !---------------------------------------------------------------------------
 
-    dlon = lon - MPRJ_basepoint_lon * D2R
+    dlon = lon - MAPPROJECTION_basepoint_lon * D2R
     if ( dlon >  PI ) dlon = dlon - PI*2.0_DP
     if ( dlon < -PI ) dlon = dlon + PI*2.0_DP
 
-    alpha = - MPRJ_LC_c * dlon * MPRJ_hemisphere
+    alpha = - MAPPROJECTION_LC_c * dlon * MAPPROJECTION_hemisphere
 
     rotc(1) = cos( alpha )
     rotc(2) = sin( alpha )
 
     return
-  end subroutine MPRJ_LambertConformal_rotcoef_0D
+  end subroutine MAPPROJECTION_LambertConformal_rotcoef_0D
 
   !-----------------------------------------------------------------------------
-  subroutine MPRJ_LambertConformal_rotcoef_2D( &
+  subroutine MAPPROJECTION_LambertConformal_rotcoef_2D( &
        rotc, &
        lon,  &
        lat   )
@@ -796,11 +796,11 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
+       dlon = lon(i,j) - MAPPROJECTION_basepoint_lon * D2R
        if ( dlon >  PI ) dlon = dlon - PI*2.0_DP
        if ( dlon < -PI ) dlon = dlon + PI*2.0_DP
 
-       alpha = - MPRJ_LC_c * dlon * MPRJ_hemisphere
+       alpha = - MAPPROJECTION_LC_c * dlon * MAPPROJECTION_hemisphere
 
        rotc(i,j,1) = cos( alpha )
        rotc(i,j,2) = sin( alpha )
@@ -808,11 +808,11 @@ contains
     enddo
 
     return
-  end subroutine MPRJ_LambertConformal_rotcoef_2D
+  end subroutine MAPPROJECTION_LambertConformal_rotcoef_2D
 
   !-----------------------------------------------------------------------------
   !> Polar Stereographic projection
-  subroutine MPRJ_PolarStereographic_setup
+  subroutine MAPPROJECTION_PolarStereographic_setup
     implicit none
 
     real(DP) :: lat0
@@ -820,43 +820,43 @@ contains
     !---------------------------------------------------------------------------
 
     ! check hemisphere: 1=north, -1=south
-    MPRJ_hemisphere = sign(1.0_DP,MPRJ_PS_lat)
+    MAPPROJECTION_hemisphere = sign(1.0_DP,MAPPROJECTION_PS_lat)
 
-    lat0 = MPRJ_hemisphere * MPRJ_PS_lat * D2R
+    lat0 = MAPPROJECTION_hemisphere * MAPPROJECTION_PS_lat * D2R
 
     ! pre-calc factor
-    MPRJ_PS_fact = 1.0_DP + sin(lat0)
+    MAPPROJECTION_PS_fact = 1.0_DP + sin(lat0)
 
     ! calc (x,y) at pole point
     dlon = 0.0_DP
 
-    latrot = 0.5_DP*PI - MPRJ_hemisphere * MPRJ_basepoint_lat * D2R
+    latrot = 0.5_DP*PI - MAPPROJECTION_hemisphere * MAPPROJECTION_basepoint_lat * D2R
 
-    dist = MPRJ_PS_fact * RADIUS * tan(0.5_DP*latrot)
+    dist = MAPPROJECTION_PS_fact * RADIUS * tan(0.5_DP*latrot)
 
-    MPRJ_pole_x = MPRJ_basepoint_x -                   dist * sin(dlon)
-    MPRJ_pole_y = MPRJ_basepoint_y + MPRJ_hemisphere * dist * cos(dlon)
+    MAPPROJECTION_pole_x = MAPPROJECTION_basepoint_x -                   dist * sin(dlon)
+    MAPPROJECTION_pole_y = MAPPROJECTION_basepoint_y + MAPPROJECTION_hemisphere * dist * cos(dlon)
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_PS_lat1    = ', MPRJ_PS_lat
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_hemisphere = ', MPRJ_hemisphere
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_PS_fact    = ', MPRJ_PS_fact
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_pole_x     = ', MPRJ_pole_x
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_pole_y     = ', MPRJ_pole_y
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_PS_lat1    = ', MAPPROJECTION_PS_lat
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_hemisphere = ', MAPPROJECTION_hemisphere
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_PS_fact    = ', MAPPROJECTION_PS_fact
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_pole_x     = ', MAPPROJECTION_pole_x
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_pole_y     = ', MAPPROJECTION_pole_y
 
-    MPRJ_mapping = "polar_stereographic"
-    MPRJ_straight_vertical_longitude_from_pole = MPRJ_basepoint_lon
-    MPRJ_latitude_of_projection_origin = MPRJ_basepoint_lat
-    MPRJ_standard_parallel(1) = MPRJ_PS_lat
-    MPRJ_false_easting = MPRJ_basepoint_x
-    MPRJ_false_northing = MPRJ_basepoint_y
+    MAPPROJECTION_mapping = "polar_stereographic"
+    MAPPROJECTION_straight_vertical_longitude_from_pole = MAPPROJECTION_basepoint_lon
+    MAPPROJECTION_latitude_of_projection_origin = MAPPROJECTION_basepoint_lat
+    MAPPROJECTION_standard_parallel(1) = MAPPROJECTION_PS_lat
+    MAPPROJECTION_false_easting = MAPPROJECTION_basepoint_x
+    MAPPROJECTION_false_northing = MAPPROJECTION_basepoint_y
 
     return
-  end subroutine MPRJ_PolarStereographic_setup
+  end subroutine MAPPROJECTION_PolarStereographic_setup
 
   !-----------------------------------------------------------------------------
   !> Polar Stereographic projection: (x,y) -> (lon,lat)
-  subroutine MPRJ_PolarStereographic_xy2lonlat( &
+  subroutine MAPPROJECTION_PolarStereographic_xy2lonlat( &
        x,   &
        y,   &
        lon, &
@@ -871,21 +871,21 @@ contains
     real(DP) :: xx, yy, dist
     !---------------------------------------------------------------------------
 
-    xx =                    ( x - MPRJ_pole_x ) / RADIUS / MPRJ_PS_fact
-    yy = -MPRJ_hemisphere * ( y - MPRJ_pole_y ) / RADIUS / MPRJ_PS_fact
+    xx =                    ( x - MAPPROJECTION_pole_x ) / RADIUS / MAPPROJECTION_PS_fact
+    yy = -MAPPROJECTION_hemisphere * ( y - MAPPROJECTION_pole_y ) / RADIUS / MAPPROJECTION_PS_fact
 
     dist = sqrt( xx*xx + yy*yy )
 
-    lon = MPRJ_basepoint_lon * D2R + atan2(xx,yy)
+    lon = MAPPROJECTION_basepoint_lon * D2R + atan2(xx,yy)
 
-    lat = MPRJ_hemisphere * ( 0.5_DP*PI - 2.0_DP*atan(dist) )
+    lat = MAPPROJECTION_hemisphere * ( 0.5_DP*PI - 2.0_DP*atan(dist) )
 
     return
-  end subroutine MPRJ_PolarStereographic_xy2lonlat
+  end subroutine MAPPROJECTION_PolarStereographic_xy2lonlat
 
   !-----------------------------------------------------------------------------
   !> Polar Stereographic projection: (lon,lat) -> (x,y)
-  subroutine MPRJ_PolarStereographic_lonlat2xy( &
+  subroutine MAPPROJECTION_PolarStereographic_lonlat2xy( &
        lon, &
        lat, &
        x,   &
@@ -900,21 +900,21 @@ contains
     real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
 
-    dlon = lon - MPRJ_basepoint_lon * D2R
+    dlon = lon - MAPPROJECTION_basepoint_lon * D2R
 
-    latrot = 0.5_DP*PI - MPRJ_hemisphere * lat
+    latrot = 0.5_DP*PI - MAPPROJECTION_hemisphere * lat
 
-    dist = MPRJ_PS_fact * RADIUS * tan(0.5_DP*latrot)
+    dist = MAPPROJECTION_PS_fact * RADIUS * tan(0.5_DP*latrot)
 
-    x = MPRJ_pole_x +                   dist * sin(dlon)
-    y = MPRJ_pole_y - MPRJ_hemisphere * dist * cos(dlon)
+    x = MAPPROJECTION_pole_x +                   dist * sin(dlon)
+    y = MAPPROJECTION_pole_y - MAPPROJECTION_hemisphere * dist * cos(dlon)
 
     return
-  end subroutine MPRJ_PolarStereographic_lonlat2xy
+  end subroutine MAPPROJECTION_PolarStereographic_lonlat2xy
 
   !-----------------------------------------------------------------------------
   !> Polar Stereographic projection: (lon,lat) -> (m1=m2)
-  subroutine MPRJ_PolarStereographic_mapfactor( &
+  subroutine MAPPROJECTION_PolarStereographic_mapfactor( &
        lat, &
        m1,  &
        m2   )
@@ -929,16 +929,16 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       m1(i,j) = MPRJ_PS_fact / ( 1.0_DP + sin(MPRJ_hemisphere*lat(i,j)) )
+       m1(i,j) = MAPPROJECTION_PS_fact / ( 1.0_DP + sin(MAPPROJECTION_hemisphere*lat(i,j)) )
        m2(i,j) = m1(i,j)
     enddo
     enddo
 
     return
-  end subroutine MPRJ_PolarStereographic_mapfactor
+  end subroutine MAPPROJECTION_PolarStereographic_mapfactor
 
   !-----------------------------------------------------------------------------
-  subroutine MPRJ_PolarStereographic_rotcoef_0D( &
+  subroutine MAPPROJECTION_PolarStereographic_rotcoef_0D( &
        rotc, &
        lon,  &
        lat   )
@@ -952,20 +952,20 @@ contains
     real(DP) :: alpha
     !---------------------------------------------------------------------------
 
-    dlon = lon - MPRJ_basepoint_lon * D2R
+    dlon = lon - MAPPROJECTION_basepoint_lon * D2R
     if ( dlon >  PI ) dlon = dlon - PI*2.0_DP
     if ( dlon < -PI ) dlon = dlon + PI*2.0_DP
 
-    alpha = - dlon * MPRJ_hemisphere
+    alpha = - dlon * MAPPROJECTION_hemisphere
 
     rotc(1) = cos( alpha )
     rotc(2) = sin( alpha )
 
     return
-  end subroutine MPRJ_PolarStereographic_rotcoef_0D
+  end subroutine MAPPROJECTION_PolarStereographic_rotcoef_0D
 
   !-----------------------------------------------------------------------------
-  subroutine MPRJ_PolarStereographic_rotcoef_2D( &
+  subroutine MAPPROJECTION_PolarStereographic_rotcoef_2D( &
        rotc, &
        lon,  &
        lat   )
@@ -983,11 +983,11 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
+       dlon = lon(i,j) - MAPPROJECTION_basepoint_lon * D2R
        if ( dlon >  PI ) dlon = dlon - PI*2.0_DP
        if ( dlon < -PI ) dlon = dlon + PI*2.0_DP
 
-       alpha = - dlon * MPRJ_hemisphere
+       alpha = - dlon * MAPPROJECTION_hemisphere
 
        rotc(i,j,1) = cos( alpha )
        rotc(i,j,2) = sin( alpha )
@@ -995,11 +995,11 @@ contains
     enddo
 
     return
-  end subroutine MPRJ_PolarStereographic_rotcoef_2D
+  end subroutine MAPPROJECTION_PolarStereographic_rotcoef_2D
 
   !-----------------------------------------------------------------------------
   !> Mercator projection
-  subroutine MPRJ_Mercator_setup
+  subroutine MAPPROJECTION_Mercator_setup
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -1008,42 +1008,42 @@ contains
     real(DP) :: latrot, dist
     !---------------------------------------------------------------------------
 
-    lat0 = MPRJ_M_lat * D2R
+    lat0 = MAPPROJECTION_M_lat * D2R
 
     ! pre-calc factor
-    MPRJ_M_fact = cos(lat0)
+    MAPPROJECTION_M_fact = cos(lat0)
 
-    if ( MPRJ_M_fact == 0.0_DP ) then
-       write(*,*) 'xxx MPRJ_M_lat cannot be set to pole point! value=', MPRJ_M_lat
+    if ( MAPPROJECTION_M_fact == 0.0_DP ) then
+       write(*,*) 'xxx MAPPROJECTION_M_lat cannot be set to pole point! value=', MAPPROJECTION_M_lat
        call PRC_MPIstop
     endif
 
     ! calc (x,y) at (lon,lat) = (base,0)
-    latrot = 0.5_DP*PI - MPRJ_basepoint_lat * D2R
+    latrot = 0.5_DP*PI - MAPPROJECTION_basepoint_lat * D2R
 
     dist = 1.0_DP / tan(0.5_DP*latrot)
 
-    MPRJ_eq_x = MPRJ_basepoint_x
-    MPRJ_eq_y = MPRJ_basepoint_y - RADIUS * MPRJ_M_fact * log(dist)
+    MAPPROJECTION_eq_x = MAPPROJECTION_basepoint_x
+    MAPPROJECTION_eq_y = MAPPROJECTION_basepoint_y - RADIUS * MAPPROJECTION_M_fact * log(dist)
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_M_lat      = ', MPRJ_M_lat
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_M_fact     = ', MPRJ_M_fact
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_eq_x       = ', MPRJ_eq_x
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_eq_y       = ', MPRJ_eq_y
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_M_lat      = ', MAPPROJECTION_M_lat
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_M_fact     = ', MAPPROJECTION_M_fact
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_eq_x       = ', MAPPROJECTION_eq_x
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_eq_y       = ', MAPPROJECTION_eq_y
 
-    MPRJ_mapping = "mercator"
-    MPRJ_longitude_of_projection_origin = MPRJ_basepoint_lon
-    MPRJ_standard_parallel(1) = MPRJ_M_lat
-    MPRJ_false_easting = MPRJ_basepoint_x
-    MPRJ_false_northing = MPRJ_basepoint_y
+    MAPPROJECTION_mapping = "mercator"
+    MAPPROJECTION_longitude_of_projection_origin = MAPPROJECTION_basepoint_lon
+    MAPPROJECTION_standard_parallel(1) = MAPPROJECTION_M_lat
+    MAPPROJECTION_false_easting = MAPPROJECTION_basepoint_x
+    MAPPROJECTION_false_northing = MAPPROJECTION_basepoint_y
 
     return
-  end subroutine MPRJ_Mercator_setup
+  end subroutine MAPPROJECTION_Mercator_setup
 
   !-----------------------------------------------------------------------------
   !> Mercator projection: (x,y) -> (lon,lat)
-  subroutine MPRJ_Mercator_xy2lonlat( &
+  subroutine MAPPROJECTION_Mercator_xy2lonlat( &
        x,   &
        y,   &
        lon, &
@@ -1058,19 +1058,19 @@ contains
     real(DP) :: xx, yy
     !---------------------------------------------------------------------------
 
-    xx = ( x - MPRJ_eq_x ) / RADIUS / MPRJ_M_fact
-    yy = ( y - MPRJ_eq_y ) / RADIUS / MPRJ_M_fact
+    xx = ( x - MAPPROJECTION_eq_x ) / RADIUS / MAPPROJECTION_M_fact
+    yy = ( y - MAPPROJECTION_eq_y ) / RADIUS / MAPPROJECTION_M_fact
 
-    lon = xx + MPRJ_basepoint_lon * D2R
+    lon = xx + MAPPROJECTION_basepoint_lon * D2R
 
     lat = 0.5_DP*PI - 2.0_DP*atan( 1.0_DP/exp(yy) )
 
     return
-  end subroutine MPRJ_Mercator_xy2lonlat
+  end subroutine MAPPROJECTION_Mercator_xy2lonlat
 
   !-----------------------------------------------------------------------------
   !> Mercator projection: (lon,lat) -> (x,y)
-  subroutine MPRJ_Mercator_lonlat2xy( &
+  subroutine MAPPROJECTION_Mercator_lonlat2xy( &
        lon, &
        lat, &
        x,   &
@@ -1085,21 +1085,21 @@ contains
     real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
 
-    dlon = lon - MPRJ_basepoint_lon * D2R
+    dlon = lon - MAPPROJECTION_basepoint_lon * D2R
 
     latrot = 0.5_DP*PI - lat
 
     dist = 1.0_DP / tan(0.5_DP*latrot)
 
-    x = MPRJ_eq_x + RADIUS * MPRJ_M_fact * dlon
-    y = MPRJ_eq_y + RADIUS * MPRJ_M_fact * log(dist)
+    x = MAPPROJECTION_eq_x + RADIUS * MAPPROJECTION_M_fact * dlon
+    y = MAPPROJECTION_eq_y + RADIUS * MAPPROJECTION_M_fact * log(dist)
 
     return
-  end subroutine MPRJ_Mercator_lonlat2xy
+  end subroutine MAPPROJECTION_Mercator_lonlat2xy
 
   !-----------------------------------------------------------------------------
   !> Mercator projection: (lon,lat) -> (m1=m2)
-  subroutine MPRJ_Mercator_mapfactor( &
+  subroutine MAPPROJECTION_Mercator_mapfactor( &
        lat, &
        m1,  &
        m2   )
@@ -1113,16 +1113,16 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       m1(i,j) = MPRJ_M_fact / cos(real(lat(i,j),kind=DP))
+       m1(i,j) = MAPPROJECTION_M_fact / cos(real(lat(i,j),kind=DP))
        m2(i,j) = m1(i,j)
     enddo
     enddo
 
     return
-  end subroutine MPRJ_Mercator_mapfactor
+  end subroutine MAPPROJECTION_Mercator_mapfactor
 
   !-----------------------------------------------------------------------------
-  subroutine MPRJ_Mercator_rotcoef_0D( &
+  subroutine MAPPROJECTION_Mercator_rotcoef_0D( &
        rotc )
     implicit none
 
@@ -1133,10 +1133,10 @@ contains
     rotc(2) = 0.0_RP
 
     return
-  end subroutine MPRJ_Mercator_rotcoef_0D
+  end subroutine MAPPROJECTION_Mercator_rotcoef_0D
 
   !-----------------------------------------------------------------------------
-  subroutine MPRJ_Mercator_rotcoef_2D( &
+  subroutine MAPPROJECTION_Mercator_rotcoef_2D( &
        rotc )
     implicit none
 
@@ -1147,11 +1147,11 @@ contains
     rotc(:,:,2) = 0.0_RP
 
     return
-  end subroutine MPRJ_Mercator_rotcoef_2D
+  end subroutine MAPPROJECTION_Mercator_rotcoef_2D
 
   !-----------------------------------------------------------------------------
   !> Equidistant Cylindrical projection
-  subroutine MPRJ_EquidistantCylindrical_setup
+  subroutine MAPPROJECTION_EquidistantCylindrical_setup
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -1159,37 +1159,37 @@ contains
     real(DP) :: lat0
     !---------------------------------------------------------------------------
 
-    lat0 = MPRJ_EC_lat * D2R
+    lat0 = MAPPROJECTION_EC_lat * D2R
 
     ! pre-calc factor
-    MPRJ_EC_fact = cos(lat0)
+    MAPPROJECTION_EC_fact = cos(lat0)
 
-    if ( MPRJ_EC_fact == 0.0_DP ) then
-       write(*,*) 'xxx MPRJ_EC_lat cannot be set to pole point! value=', MPRJ_EC_lat
+    if ( MAPPROJECTION_EC_fact == 0.0_DP ) then
+       write(*,*) 'xxx MAPPROJECTION_EC_lat cannot be set to pole point! value=', MAPPROJECTION_EC_lat
        call PRC_MPIstop
     endif
 
-    MPRJ_eq_x = MPRJ_basepoint_x
-    MPRJ_eq_y = MPRJ_basepoint_y - RADIUS * MPRJ_basepoint_lat * D2R
+    MAPPROJECTION_eq_x = MAPPROJECTION_basepoint_x
+    MAPPROJECTION_eq_y = MAPPROJECTION_basepoint_y - RADIUS * MAPPROJECTION_basepoint_lat * D2R
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_EC_lat     = ', MPRJ_EC_lat
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_EC_fact    = ', MPRJ_EC_fact
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_eq_x       = ', MPRJ_eq_x
-    if( IO_L ) write(IO_FID_LOG,*) '*** MPRJ_eq_y       = ', MPRJ_eq_y
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_EC_lat     = ', MAPPROJECTION_EC_lat
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_EC_fact    = ', MAPPROJECTION_EC_fact
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_eq_x       = ', MAPPROJECTION_eq_x
+    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_eq_y       = ', MAPPROJECTION_eq_y
 
-    MPRJ_mapping = "equirectangular"
-    MPRJ_standard_parallel(1) = MPRJ_EC_lat
-    MPRJ_longitude_of_central_meridian = MPRJ_basepoint_lon
-    MPRJ_false_easting  = MPRJ_basepoint_x
-    MPRJ_false_northing = MPRJ_basepoint_y
+    MAPPROJECTION_mapping = "equirectangular"
+    MAPPROJECTION_standard_parallel(1) = MAPPROJECTION_EC_lat
+    MAPPROJECTION_longitude_of_central_meridian = MAPPROJECTION_basepoint_lon
+    MAPPROJECTION_false_easting  = MAPPROJECTION_basepoint_x
+    MAPPROJECTION_false_northing = MAPPROJECTION_basepoint_y
 
     return
-  end subroutine MPRJ_EquidistantCylindrical_setup
+  end subroutine MAPPROJECTION_EquidistantCylindrical_setup
 
   !-----------------------------------------------------------------------------
   !> Equidistant Cylindrical projection: (x,y) -> (lon,lat)
-  subroutine MPRJ_EquidistantCylindrical_xy2lonlat( &
+  subroutine MAPPROJECTION_EquidistantCylindrical_xy2lonlat( &
        x,   &
        y,   &
        lon, &
@@ -1206,10 +1206,10 @@ contains
     real(DP) :: xx, yy
     !---------------------------------------------------------------------------
 
-    xx = ( x - MPRJ_eq_x ) / RADIUS / MPRJ_EC_fact
-    yy = ( y - MPRJ_eq_y ) / RADIUS
+    xx = ( x - MAPPROJECTION_eq_x ) / RADIUS / MAPPROJECTION_EC_fact
+    yy = ( y - MAPPROJECTION_eq_y ) / RADIUS
 
-    lon = xx + MPRJ_basepoint_lon * D2R
+    lon = xx + MAPPROJECTION_basepoint_lon * D2R
 
     lat = yy
 
@@ -1219,11 +1219,11 @@ contains
     endif
 
     return
-  end subroutine MPRJ_EquidistantCylindrical_xy2lonlat
+  end subroutine MAPPROJECTION_EquidistantCylindrical_xy2lonlat
 
   !-----------------------------------------------------------------------------
   !> Equidistant Cylindrical projection: (lon,lat) -> (x,y)
-  subroutine MPRJ_EquidistantCylindrical_lonlat2xy( &
+  subroutine MAPPROJECTION_EquidistantCylindrical_lonlat2xy( &
        lon, &
        lat, &
        x,   &
@@ -1238,17 +1238,17 @@ contains
     real(DP) :: dlon
     !---------------------------------------------------------------------------
 
-    dlon = lon - MPRJ_basepoint_lon * D2R
+    dlon = lon - MAPPROJECTION_basepoint_lon * D2R
 
-    x = MPRJ_eq_x + RADIUS * MPRJ_EC_fact * dlon
-    y = MPRJ_eq_y + RADIUS * lat
+    x = MAPPROJECTION_eq_x + RADIUS * MAPPROJECTION_EC_fact * dlon
+    y = MAPPROJECTION_eq_y + RADIUS * lat
 
     return
-  end subroutine MPRJ_EquidistantCylindrical_lonlat2xy
+  end subroutine MAPPROJECTION_EquidistantCylindrical_lonlat2xy
 
   !-----------------------------------------------------------------------------
   !> Equidistant Cylindrical projection: (lon,lat) -> (m1,m2)
-  subroutine MPRJ_EquidistantCylindrical_mapfactor( &
+  subroutine MAPPROJECTION_EquidistantCylindrical_mapfactor( &
        lat, &
        m1,  &
        m2   )
@@ -1262,16 +1262,16 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       m1(i,j) = MPRJ_EC_fact / cos(real(lat(i,j),kind=DP))
+       m1(i,j) = MAPPROJECTION_EC_fact / cos(real(lat(i,j),kind=DP))
        m2(i,j) = 1.0_RP
     enddo
     enddo
 
     return
-  end subroutine MPRJ_EquidistantCylindrical_mapfactor
+  end subroutine MAPPROJECTION_EquidistantCylindrical_mapfactor
 
   !-----------------------------------------------------------------------------
-  subroutine MPRJ_EquidistantCylindrical_rotcoef_0D( &
+  subroutine MAPPROJECTION_EquidistantCylindrical_rotcoef_0D( &
        rotc )
     implicit none
 
@@ -1282,10 +1282,10 @@ contains
     rotc(2) = 0.0_RP
 
     return
-  end subroutine MPRJ_EquidistantCylindrical_rotcoef_0D
+  end subroutine MAPPROJECTION_EquidistantCylindrical_rotcoef_0D
 
   !-----------------------------------------------------------------------------
-  subroutine MPRJ_EquidistantCylindrical_rotcoef_2D( &
+  subroutine MAPPROJECTION_EquidistantCylindrical_rotcoef_2D( &
        rotc )
     implicit none
 
@@ -1296,6 +1296,6 @@ contains
     rotc(:,:,2) = 0.0_RP
 
     return
-  end subroutine MPRJ_EquidistantCylindrical_rotcoef_2D
+  end subroutine MAPPROJECTION_EquidistantCylindrical_rotcoef_2D
 
-end module scale_mapproj
+end module scale_mapprojection

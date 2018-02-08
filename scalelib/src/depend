@@ -226,7 +226,7 @@ MODS =	\
 	$(OBJ_DIR)/scale_land_sfc_thick_slab.mod	\
 	$(OBJ_DIR)/scale_land_sfc_thin_slab.mod	\
 	$(OBJ_DIR)/scale_landuse.mod	\
-	$(OBJ_DIR)/scale_mapproj.mod	\
+	$(OBJ_DIR)/scale_mapprojection.mod	\
 	$(OBJ_DIR)/scale_matrix.mod	\
 	$(OBJ_DIR)/scale_monitor.mod	\
 	$(OBJ_DIR)/scale_ocean_grid_cartesc.mod	\

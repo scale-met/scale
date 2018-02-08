@@ -116,13 +116,13 @@ program netcdf2grads_h
   logical :: PRC_PERIODIC_X   = .true.  !< periodic condition or not (X)?
   logical :: PRC_PERIODIC_Y   = .true.  !< periodic condition or not (Y)?
   logical :: PRC_CART_REORDER = .false. !< flag for rank reordering over the cartesian map
-  real    :: MPRJ_basepoint_x        ! position of base point in the model [m]
-  real    :: MPRJ_basepoint_y        ! position of base point in the model [m]
-  real    :: MPRJ_rotation =  0.0_DP ! rotation factor (only for 'NONE' type)
-  real    :: MPRJ_PS_lat             ! standard latitude1 for P.S. projection [deg]
-  real    :: MPRJ_PS_fact            ! pre-calc factor
-  real    :: MPRJ_M_lat              ! standard latitude1 for Mer. projection [deg]
-  real    :: MPRJ_EC_lat             ! standard latitude1 for E.C. projection [deg]
+  real    :: MAPPROJECTION_basepoint_x        ! position of base point in the model [m]
+  real    :: MAPPROJECTION_basepoint_y        ! position of base point in the model [m]
+  real    :: MAPPROJECTION_rotation =  0.0_DP ! rotation factor (only for 'NONE' type)
+  real    :: MAPPROJECTION_PS_lat             ! standard latitude1 for P.S. projection [deg]
+  real    :: MAPPROJECTION_PS_fact            ! pre-calc factor
+  real    :: MAPPROJECTION_M_lat              ! standard latitude1 for Mer. projection [deg]
+  real    :: MAPPROJECTION_EC_lat             ! standard latitude1 for E.C. projection [deg]
   character(len=CMID) :: FILE_HISTORY_TITLE
   character(len=CMID) :: FILE_HISTORY_SOURCE
   character(len=CMID) :: FILE_HISTORY_INSTITUTION
@@ -176,18 +176,18 @@ program netcdf2grads_h
     PRC_PERIODIC_Y,            & ! not required
     PRC_CART_REORDER             ! not required
 
-  namelist /PARAM_MAPPROJ/     &
-    MPRJ_basepoint_lon,        &
-    MPRJ_basepoint_lat,        &
-    MPRJ_type,                 &
-    MPRJ_LC_lat1,              &
-    MPRJ_LC_lat2,              &
-    MPRJ_basepoint_x,          & ! not required
-    MPRJ_basepoint_y,          & ! not required
-    MPRJ_rotation,             & ! not required
-    MPRJ_PS_lat,               & ! currently not required
-    MPRJ_M_lat,                & ! currently not required
-    MPRJ_EC_lat                  ! currently not required
+  namelist /PARAM_MAPPROJECTION/     &
+    MAPPROJECTION_basepoint_lon,        &
+    MAPPROJECTION_basepoint_lat,        &
+    MAPPROJECTION_type,                 &
+    MAPPROJECTION_LC_lat1,              &
+    MAPPROJECTION_LC_lat2,              &
+    MAPPROJECTION_basepoint_x,          & ! not required
+    MAPPROJECTION_basepoint_y,          & ! not required
+    MAPPROJECTION_rotation,             & ! not required
+    MAPPROJECTION_PS_lat,               & ! currently not required
+    MAPPROJECTION_M_lat,                & ! currently not required
+    MAPPROJECTION_EC_lat                  ! currently not required
 
   namelist  /PARAM_FILE_HISTORY/    &
     FILE_HISTORY_DEFAULT_BASENAME,  &
@@ -807,8 +807,8 @@ contains
 
     if ( MAPPROJ_ctl )then
        rewind( FID_RCNF )
-       read  ( FID_RCNF, nml=PARAM_MAPPROJ, iostat=ierr )
-       if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_MAPPROJ )
+       read  ( FID_RCNF, nml=PARAM_MAPPROJECTION, iostat=ierr )
+       if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_MAPPROJECTION )
     endif
 
     close(FID_RCNF)

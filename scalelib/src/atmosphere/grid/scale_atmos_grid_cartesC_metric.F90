@@ -169,8 +169,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate map factor
   subroutine ATMOS_GRID_CARTESC_METRIC_mapfactor
-    use scale_mapproj, only: &
-       MPRJ_mapfactor
+    use scale_mapprojection, only: &
+       MAPPROJECTION_mapfactor
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_calc_areavol, &
        ATMOS_GRID_CARTESC_REAL_LAT,          &
@@ -180,10 +180,10 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LAT  (1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XY), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_XY))
-    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LATX (1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UY), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_UY))
-    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LATY (1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_XV))
-    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LATXY(1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_UV))
+    call MAPPROJECTION_mapfactor( ATMOS_GRID_CARTESC_REAL_LAT  (1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XY), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_XY))
+    call MAPPROJECTION_mapfactor( ATMOS_GRID_CARTESC_REAL_LATX (1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UY), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_UY))
+    call MAPPROJECTION_mapfactor( ATMOS_GRID_CARTESC_REAL_LATY (1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_XV))
+    call MAPPROJECTION_mapfactor( ATMOS_GRID_CARTESC_REAL_LATXY(1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_UV))
 
     call ATMOS_GRID_CARTESC_REAL_calc_areavol( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,:,I_XY) )
 
@@ -193,15 +193,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate rotation coeffient
   subroutine ATMOS_GRID_CARTESC_METRIC_rotcoef
-    use scale_mapproj, only: &
-       MPRJ_rotcoef
+    use scale_mapprojection, only: &
+       MAPPROJECTION_rotcoef
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_LON,  &
        ATMOS_GRID_CARTESC_REAL_LAT
     implicit none
     !---------------------------------------------------------------------------
 
-    call MPRJ_rotcoef( ATMOS_GRID_CARTESC_METRIC_ROTC(:,:,:), & ! [OUT]
+    call MAPPROJECTION_rotcoef( ATMOS_GRID_CARTESC_METRIC_ROTC(:,:,:), & ! [OUT]
                        ATMOS_GRID_CARTESC_REAL_LON   (:,:),   & ! [IN]
                        ATMOS_GRID_CARTESC_REAL_LAT   (:,:)    ) ! [IN]
 
@@ -760,8 +760,8 @@ contains
        ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT, &
        ATMOS_GRID_CARTESC_REAL_LON,           &
        ATMOS_GRID_CARTESC_REAL_LAT
-    use scale_mapproj, only: &
-       MPRJ_lonlat2xy
+    use scale_mapprojection, only: &
+       MAPPROJECTION_lonlat2xy
     implicit none
 
     real(RP) :: check_X_XY(IA,JA)
@@ -803,7 +803,7 @@ contains
 
        do j = 1, JA
        do i = 1, IA
-          call MPRJ_lonlat2xy( ATMOS_GRID_CARTESC_REAL_LON(i,j), ATMOS_GRID_CARTESC_REAL_LAT(i,j), check_X_XY(i,j), check_Y_XY(i,j) )
+          call MAPPROJECTION_lonlat2xy( ATMOS_GRID_CARTESC_REAL_LON(i,j), ATMOS_GRID_CARTESC_REAL_LAT(i,j), check_X_XY(i,j), check_Y_XY(i,j) )
        enddo
        enddo
 

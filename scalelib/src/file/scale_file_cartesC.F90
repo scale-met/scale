@@ -1838,8 +1838,8 @@ contains
        PRC_HAS_E,      &
        PRC_HAS_S,      &
        PRC_HAS_N
-    use scale_mapproj, only: &
-       MPRJ_get_attributes
+    use scale_mapprojection, only: &
+       MAPPROJECTION_get_attributes
     implicit none
 
     integer, intent(in) :: fid
@@ -1873,7 +1873,7 @@ contains
        ainfo(4)%periodic = "false"
     endif
 
-    call MPRJ_get_attributes( minfo%mapping_name,                             & ! [OUT]
+    call MAPPROJECTION_get_attributes( minfo%mapping_name,                             & ! [OUT]
                               minfo%false_easting                        (1), & ! [OUT]
                               minfo%false_northing                       (1), & ! [OUT]
                               minfo%longitude_of_central_meridian        (1), & ! [OUT]
@@ -2414,8 +2414,8 @@ contains
        FILE_Set_Attribute
     use scale_process, only: &
        PRC_abort
-    use scale_mapproj, only: &
-       MPRJ_get_attributes
+    use scale_mapprojection, only: &
+       MAPPROJECTION_get_attributes
     implicit none
 
     integer,          intent(in)  :: fid      !< file ID
@@ -2477,25 +2477,25 @@ contains
        dims(1) = 'x'
        dims(2) = 'y'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'UY' ) then
        ndims   = 2
        dims(1) = 'xh'
        dims(2) = 'y'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'XV' ) then
        ndims   = 2
        dims(1) = 'x'
        dims(2) = 'yh'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'UV' ) then
        ndims   = 2
        dims(1) = 'xh'
        dims(2) = 'yh'
        write_buf_amount = write_buf_amount + IA * JA * elm_size
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'ZX' ) then
        ndims   = 2
        dims(1) = 'z'
@@ -2506,37 +2506,37 @@ contains
        ndims   = 3
        dims    = (/'z','x','y'/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'ZHXY' ) then
        ndims   = 3
        dims    = (/'zh','x ','y '/)
        write_buf_amount = write_buf_amount + (KA+1) * IA * JA * elm_size
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'ZXHY' ) then
        ndims   = 3
        dims    = (/'z ','xh','y '/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'ZXYH' ) then
        ndims   = 3
        dims    = (/'z ','x ','yh'/)
        write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'OXY' ) then
        ndims   = 3
        dims    = (/'oz','x ','y '/)
        write_buf_amount = write_buf_amount + OKMAX * IA * JA * elm_size
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'LXY' ) then
        ndims   = 3
        dims    = (/'lz','x ','y '/)
        write_buf_amount = write_buf_amount + LKMAX * IA * JA * elm_size
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'UXY' ) then
        ndims   = 3
        dims    = (/'uz','x ','y '/)
        write_buf_amount = write_buf_amount + UKMAX * IA * JA * elm_size
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'XYT' ) then  ! 3D variable with time dimension
        ndims   = 2
        dims(1) = 'x'
@@ -2546,7 +2546,7 @@ contains
        else
           write_buf_amount = write_buf_amount + IA * JA * elm_size
        endif
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'ZXYT' ) then ! 4D variable
        ndims   = 3
        dims    = (/'z','x','y'/)
@@ -2555,7 +2555,7 @@ contains
        else
          write_buf_amount = write_buf_amount + KA * IA * JA * elm_size
        endif
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'ZHXYT' ) then ! 4D variable
        ndims   = 3
        dims    = (/'zh','x ','y '/)
@@ -2564,7 +2564,7 @@ contains
        else
          write_buf_amount = write_buf_amount + (KA+1) * IA * JA * elm_size
        endif
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'ZXHYT' ) then ! 4D variable
        ndims   = 3
        dims    = (/'z ','xh','y '/)
@@ -2573,7 +2573,7 @@ contains
        else
          write_buf_amount = write_buf_amount + KA * (IA+1) * JA * elm_size
        endif
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'ZXYHT' ) then ! 4D variable
        ndims   = 3
        dims    = (/'z ','x ','yh'/)
@@ -2582,7 +2582,7 @@ contains
        else
          write_buf_amount = write_buf_amount + KA * IA * (JA+1) * elm_size
        endif
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'OXYT' ) then ! 4D variable
        ndims   = 3
        dims    = (/'oz','x ','y '/)
@@ -2591,7 +2591,7 @@ contains
        else
          write_buf_amount = write_buf_amount + OKMAX * IA * JA * elm_size
        endif
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'OHXYT' ) then ! 4D variable
        ndims   = 3
        dims    = (/'ozh','x  ','y  '/)
@@ -2600,7 +2600,7 @@ contains
        else
          write_buf_amount = write_buf_amount + (OKMAX+1) * IA * JA * elm_size
        endif
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'LXYT' ) then ! 4D variable
        ndims   = 3
        dims    = (/'lz','x ','y '/)
@@ -2609,7 +2609,7 @@ contains
        else
          write_buf_amount = write_buf_amount + LKMAX * IA * JA * elm_size
        endif
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     elseif( dim_type == 'LHXYT' ) then ! 4D variable
        ndims   = 3
        dims    = (/'lzh','x  ','y  '/)
@@ -2618,7 +2618,7 @@ contains
        else
          write_buf_amount = write_buf_amount + (LKMAX+1) * IA * JA * elm_size
        endif
-       call MPRJ_get_attributes( mapping )
+       call MAPPROJECTION_get_attributes( mapping )
     else
        write(*,*) 'xxx [FILE_CARTESC_def_var] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
        call PRC_abort

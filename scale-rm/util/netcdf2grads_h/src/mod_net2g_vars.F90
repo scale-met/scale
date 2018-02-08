@@ -68,11 +68,11 @@ module mod_net2g_vars
   character(CSHT), public :: FILE_HISTORY_DEFAULT_ZDIM = 'native'
   logical,         public :: HIST_BND = .true.
 
-  real(DP),        public :: MPRJ_basepoint_lon
-  real(DP),        public :: MPRJ_basepoint_lat
-  character(CSHT), public :: MPRJ_type
-  real(DP),        public :: MPRJ_LC_lat1
-  real(DP),        public :: MPRJ_LC_lat2
+  real(DP),        public :: MAPPROJECTION_basepoint_lon
+  real(DP),        public :: MAPPROJECTION_basepoint_lat
+  character(CSHT), public :: MAPPROJECTION_type
+  real(DP),        public :: MAPPROJECTION_LC_lat1
+  real(DP),        public :: MAPPROJECTION_LC_lat2
 
   integer,         public :: FID_LOG        = 22
   logical,         public :: LOUT           = .false.

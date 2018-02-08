@@ -88,8 +88,8 @@ contains
        ATMOS_GRID_CARTESC_FZ
     use scale_topography, only: &
        TOPO_exist
-    use scale_mapproj, only: &
-       MPRJ_setup
+    use scale_mapprojection, only: &
+       MAPPROJECTION_setup
     use scale_file_cartesC, only: &
        FILE_CARTESC_set_coordinates
     use scale_interp_vert, only: &
@@ -142,7 +142,7 @@ contains
     allocate( ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(PRC_nprocs,4,2) )
 
     ! setup map projection
-    call MPRJ_setup( ATMOS_GRID_CARTESC_DOMAIN_CENTER_X, ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y )
+    call MAPPROJECTION_setup( ATMOS_GRID_CARTESC_DOMAIN_CENTER_X, ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y )
 
     ! calc longitude & latitude
     call ATMOS_GRID_CARTESC_REAL_calc_latlon( DOMAIN_CATALOGUE_FNAME, DOMAIN_CATALOGUE_OUTPUT )
@@ -208,10 +208,10 @@ contains
     use scale_comm, only: &
        COMM_gather,  &
        COMM_bcast
-    use scale_mapproj, only: &
-       MPRJ_basepoint_lon, &
-       MPRJ_basepoint_lat, &
-       MPRJ_xy2lonlat
+    use scale_mapprojection, only: &
+       MAPPROJECTION_basepoint_lon, &
+       MAPPROJECTION_basepoint_lat, &
+       MAPPROJECTION_xy2lonlat
     implicit none
 
     character(len=*), intent(in) :: catalogue_fname  !< metadata files for lat-lon domain for all processes
@@ -231,8 +231,8 @@ contains
     integer  :: fid, ierr
     !---------------------------------------------------------------------------
 
-    ATMOS_GRID_CARTESC_REAL_BASEPOINT_LON = MPRJ_basepoint_lon * D2R
-    ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT = MPRJ_basepoint_lat * D2R
+    ATMOS_GRID_CARTESC_REAL_BASEPOINT_LON = MAPPROJECTION_basepoint_lon * D2R
+    ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT = MAPPROJECTION_basepoint_lat * D2R
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Base position in the global domain (lat,lon)'
@@ -240,25 +240,25 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       call MPRJ_xy2lonlat( ATMOS_GRID_CARTESC_CX(i), ATMOS_GRID_CARTESC_CY(j), ATMOS_GRID_CARTESC_REAL_LON  (i,j), ATMOS_GRID_CARTESC_REAL_LAT  (i,j) )
+       call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_CX(i), ATMOS_GRID_CARTESC_CY(j), ATMOS_GRID_CARTESC_REAL_LON  (i,j), ATMOS_GRID_CARTESC_REAL_LAT  (i,j) )
     enddo
     enddo
 
     do j = 1, JA
     do i = 0, IA
-       call MPRJ_xy2lonlat( ATMOS_GRID_CARTESC_FX(i), ATMOS_GRID_CARTESC_CY(j), ATMOS_GRID_CARTESC_REAL_LONX (i,j), ATMOS_GRID_CARTESC_REAL_LATX (i,j) )
+       call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_FX(i), ATMOS_GRID_CARTESC_CY(j), ATMOS_GRID_CARTESC_REAL_LONX (i,j), ATMOS_GRID_CARTESC_REAL_LATX (i,j) )
     enddo
     enddo
 
     do j = 0, JA
     do i = 1, IA
-       call MPRJ_xy2lonlat( ATMOS_GRID_CARTESC_CX(i), ATMOS_GRID_CARTESC_FY(j), ATMOS_GRID_CARTESC_REAL_LONY (i,j), ATMOS_GRID_CARTESC_REAL_LATY (i,j) )
+       call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_CX(i), ATMOS_GRID_CARTESC_FY(j), ATMOS_GRID_CARTESC_REAL_LONY (i,j), ATMOS_GRID_CARTESC_REAL_LATY (i,j) )
     enddo
     enddo
 
     do j = 0, JA
     do i = 0, IA
-       call MPRJ_xy2lonlat( ATMOS_GRID_CARTESC_FX(i), ATMOS_GRID_CARTESC_FY(j), ATMOS_GRID_CARTESC_REAL_LONXY(i,j), ATMOS_GRID_CARTESC_REAL_LATXY(i,j) )
+       call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_FX(i), ATMOS_GRID_CARTESC_FY(j), ATMOS_GRID_CARTESC_REAL_LONXY(i,j), ATMOS_GRID_CARTESC_REAL_LATXY(i,j) )
     enddo
     enddo
 

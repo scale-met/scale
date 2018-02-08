@@ -97,8 +97,8 @@ contains
        TIME_STARTDAYSEC
     use scale_interp_vert, only: &
        INTERP_VERT_alloc_pres
-    use scale_mapproj, only: &
-       MPRJ_get_attributes
+    use scale_mapprojection, only: &
+       MAPPROJECTION_get_attributes
     implicit none
 
     integer, parameter :: nlayer_max = 300
@@ -216,7 +216,7 @@ contains
     endif
 
     ! get mapping name
-    call MPRJ_get_attributes( mapping_name )
+    call MAPPROJECTION_get_attributes( mapping_name )
 
     call FILE_HISTORY_Setup( &
          FILE_HISTORY_CARTESCORY_H_TITLE,              & ! [IN]
@@ -1294,8 +1294,8 @@ contains
     use scale_file_cartesC, only: &
        axisattinfo,        &
        mappinginfo
-    use scale_mapproj, only: &
-       MPRJ_get_attributes
+    use scale_mapprojection, only: &
+       MAPPROJECTION_get_attributes
     implicit none
 
     character(len=34) :: tunits
@@ -1451,7 +1451,7 @@ contains
     call FILE_HISTORY_Set_Attribute( "yh", "periodic"    , ainfo(4)%periodic        )
 
     ! map projection info
-    call MPRJ_get_attributes( minfo%mapping_name,                             & ! [OUT]
+    call MAPPROJECTION_get_attributes( minfo%mapping_name,                             & ! [OUT]
                               minfo%false_easting                        (1), & ! [OUT]
                               minfo%false_northing                       (1), & ! [OUT]
                               minfo%longitude_of_central_meridian        (1), & ! [OUT]

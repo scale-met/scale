@@ -87,12 +87,12 @@ cat << EOF > param.region.conf
  BUFFER_DY = ${BUFFER_DY[$D]},
 /
 
-&PARAM_MAPPROJ
- MPRJ_basepoint_lon = ${MPRJ_BASEPOINT_LON},
- MPRJ_basepoint_lat = ${MPRJ_BASEPOINT_LAT},
- MPRJ_type          = "${MPRJ_TYPE}",
- MPRJ_LC_lat1       = ${MPRJ_LC_LAT1},
- MPRJ_LC_lat2       = ${MPRJ_LC_LAT2},
+&PARAM_MAPPROJECTION
+ MAPPROJECTION_basepoint_lon = ${MAPPROJECTION_BASEPOINT_LON},
+ MAPPROJECTION_basepoint_lat = ${MAPPROJECTION_BASEPOINT_LAT},
+ MAPPROJECTION_type          = "${MAPPROJECTION_TYPE}",
+ MAPPROJECTION_LC_lat1       = ${MAPPROJECTION_LC_LAT1},
+ MAPPROJECTION_LC_lat2       = ${MAPPROJECTION_LC_LAT2},
 /
 EOF
 
