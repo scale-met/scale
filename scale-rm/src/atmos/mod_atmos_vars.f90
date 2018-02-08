@@ -2638,8 +2638,8 @@ contains
        RFDY => ATMOS_GRID_CARTESC_RFDY
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ
-    use scale_gridtrans, only: &
-       MAPF => GTRANS_MAPF, &
+    use scale_atmos_grid_cartesC_metric, only: &
+       MAPF => ATMOS_GRID_CARTESC_METRIC_MAPF, &
        I_UY, &
        I_XV
     use scale_rm_statistics, only: &

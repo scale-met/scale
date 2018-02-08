@@ -1,18 +1,14 @@
 !-------------------------------------------------------------------------------
-!> module GRIDTRANS
+!> module Atmospher Grid CartesianC metirc
 !!
 !! @par Description
-!!          Grid transfer module
-!!          Map projection and Terrain-following metrics
+!!          Map projection and Terrain-following metrics for the CaresianC grid
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-10-24 (H.Yashiro)  [new] reconstruct from scale_topography
-!!
 !<
 !-------------------------------------------------------------------------------
-module scale_gridtrans
+module scale_atmos_grid_cartesC_metric
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -28,23 +24,23 @@ module scale_gridtrans
   !
   !++ Public procedure
   !
-  public :: GTRANS_setup
+  public :: ATMOS_GRID_CARTESC_METRIC_setup
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(RP), public, allocatable :: GTRANS_MAPF (:,:,:,:) !< map factor
-  real(RP), public, allocatable :: GTRANS_ROTC (:,:,:)   !< rotation coefficient
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,:,:) !< map factor
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_METRIC_ROTC (:,:,:)   !< rotation coefficient
 
-  real(RP), public, allocatable :: GTRANS_GSQRT(:,:,:,:) !< transformation metrics from Z to Xi, {G}^1/2
-  real(RP), public, allocatable :: GTRANS_J13G (:,:,:,:) !< (1,3) element of Jacobian matrix * {G}^1/2
-  real(RP), public, allocatable :: GTRANS_J23G (:,:,:,:) !< (2,3) element of Jacobian matrix * {G}^1/2
-  real(RP), public              :: GTRANS_J33G           !< (3,3) element of Jacobian matrix * {G}^1/2
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,:) !< transformation metrics from Z to Xi, {G}^1/2
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_METRIC_J13G (:,:,:,:) !< (1,3) element of Jacobian matrix * {G}^1/2
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_METRIC_J23G (:,:,:,:) !< (2,3) element of Jacobian matrix * {G}^1/2
+  real(RP), public              :: ATMOS_GRID_CARTESC_METRIC_J33G           !< (3,3) element of Jacobian matrix * {G}^1/2
 
-  real(RP), public, allocatable :: GTRANS_LIMYZ(:,:,:,:) !< flux limiter y-z face
-  real(RP), public, allocatable :: GTRANS_LIMXZ(:,:,:,:) !< flux limiter x-z face
-  real(RP), public, allocatable :: GTRANS_LIMXY(:,:,:,:) !< flux limiter x-y face
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,:) !< flux limiter y-z face
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,:) !< flux limiter x-z face
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,:) !< flux limiter x-y face
 
   integer,  public :: I_XYZ = 1 ! at (x,y,z)
   integer,  public :: I_XYW = 2 ! at (x,y,w)
@@ -67,39 +63,39 @@ module scale_gridtrans
   !
   !++ Private procedure
   !
-  private :: GTRANS_mapfactor
-  private :: GTRANS_terrainfollowing
-  private :: GTRANS_thin_wall
-  private :: GTRANS_step_mountain
-  private :: GTRANS_write
+  private :: ATMOS_GRID_CARTESC_METRIC_mapfactor
+  private :: ATMOS_GRID_CARTESC_METRIC_terrainfollowing
+  private :: ATMOS_GRID_CARTESC_METRIC_thin_wall
+  private :: ATMOS_GRID_CARTESC_METRIC_step_mountain
+  private :: ATMOS_GRID_CARTESC_METRIC_write
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG),  private :: GTRANS_OUT_BASENAME  = ''                     !< basename of the output file
-  character(len=H_MID),   private :: GTRANS_OUT_TITLE     = 'SCALE-RM GEOMETRICS'  !< title    of the output file
-  character(len=H_SHORT), private :: GTRANS_OUT_DTYPE     = 'DEFAULT'              !< REAL4 or REAL8
+  character(len=H_LONG),  private :: ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME  = ''                     !< basename of the output file
+  character(len=H_MID),   private :: ATMOS_GRID_CARTESC_METRIC_OUT_TITLE     = 'SCALE-RM GEOMETRICS'  !< title    of the output file
+  character(len=H_SHORT), private :: ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE     = 'DEFAULT'              !< REAL4 or REAL8
 
-  character(len=H_SHORT), private :: GTRANS_TOPO_type     = 'TERRAINFOLLOWING'     !< topographical shceme
-  integer,                private :: GTRANS_ThinWall_XDIV = 50                     !< number dividing quarter-cell (x)
-  integer,                private :: GTRANS_ThinWall_YDIV = 50                     !< number dividing quarter-cell (y)
+  character(len=H_SHORT), private :: ATMOS_GRID_CARTESC_METRIC_TOPO_type     = 'TERRAINFOLLOWING'     !< topographical shceme
+  integer,                private :: ATMOS_GRID_CARTESC_METRIC_ThinWall_XDIV = 50                     !< number dividing quarter-cell (x)
+  integer,                private :: ATMOS_GRID_CARTESC_METRIC_ThinWall_YDIV = 50                     !< number dividing quarter-cell (y)
   logical,                private :: debug                = .false.
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine GTRANS_setup
+  subroutine ATMOS_GRID_CARTESC_METRIC_setup
     use scale_process, only: &
        PRC_MPIstop
     implicit none
 
-    namelist / PARAM_GTRANS / &
-       GTRANS_OUT_BASENAME,  &
-       GTRANS_OUT_DTYPE,     &
-       GTRANS_TOPO_type,     &
-       GTRANS_ThinWall_XDIV, &
-       GTRANS_ThinWall_YDIV, &
+    namelist / PARAM_ATMOS_GRID_CARTESC_METRIC / &
+       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME,  &
+       ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE,     &
+       ATMOS_GRID_CARTESC_METRIC_TOPO_type,     &
+       ATMOS_GRID_CARTESC_METRIC_ThinWall_XDIV, &
+       ATMOS_GRID_CARTESC_METRIC_ThinWall_YDIV, &
        debug
 
     integer :: ierr
@@ -110,69 +106,69 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_GTRANS,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_GRID_CARTESC_METRIC,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_GTRANS. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_GRID_CARTESC_METRIC. Check!'
        call PRC_MPIstop
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_GTRANS)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_GRID_CARTESC_METRIC)
 
-    allocate( GTRANS_MAPF (IA,JA,2,4) )
+    allocate( ATMOS_GRID_CARTESC_METRIC_MAPF (IA,JA,2,4) )
 
-    allocate( GTRANS_ROTC (IA,JA,2) )
+    allocate( ATMOS_GRID_CARTESC_METRIC_ROTC (IA,JA,2) )
 
-    allocate( GTRANS_GSQRT(KA,IA,JA,7) )
-    allocate( GTRANS_J13G (KA,IA,JA,7) )
-    allocate( GTRANS_J23G (KA,IA,JA,7) )
+    allocate( ATMOS_GRID_CARTESC_METRIC_GSQRT(KA,IA,JA,7) )
+    allocate( ATMOS_GRID_CARTESC_METRIC_J13G (KA,IA,JA,7) )
+    allocate( ATMOS_GRID_CARTESC_METRIC_J23G (KA,IA,JA,7) )
 
-    GTRANS_GSQRT(:,:,:,:) = 1.0_RP
-    GTRANS_J13G (:,:,:,:) = 0.0_RP
-    GTRANS_J23G (:,:,:,:) = 0.0_RP
-    GTRANS_J33G = 1.0_RP
+    ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,:) = 1.0_RP
+    ATMOS_GRID_CARTESC_METRIC_J13G (:,:,:,:) = 0.0_RP
+    ATMOS_GRID_CARTESC_METRIC_J23G (:,:,:,:) = 0.0_RP
+    ATMOS_GRID_CARTESC_METRIC_J33G = 1.0_RP
 
-    allocate( GTRANS_LIMYZ(KA,IA,JA,7) )
-    allocate( GTRANS_LIMXZ(KA,IA,JA,7) )
-    allocate( GTRANS_LIMXY(KA,IA,JA,7) )
-    GTRANS_LIMYZ(:,:,:,:) = 1.0_RP
-    GTRANS_LIMXZ(:,:,:,:) = 1.0_RP
-    GTRANS_LIMXY(:,:,:,:) = 1.0_RP
+    allocate( ATMOS_GRID_CARTESC_METRIC_LIMYZ(KA,IA,JA,7) )
+    allocate( ATMOS_GRID_CARTESC_METRIC_LIMXZ(KA,IA,JA,7) )
+    allocate( ATMOS_GRID_CARTESC_METRIC_LIMXY(KA,IA,JA,7) )
+    ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,:) = 1.0_RP
+    ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,:) = 1.0_RP
+    ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,:) = 1.0_RP
 
     ! calc metrics for orthogonal curvelinear coordinate
-    call GTRANS_mapfactor
+    call ATMOS_GRID_CARTESC_METRIC_mapfactor
 
     ! calc coeficient for rotaion of velocity vector
-    call GTRANS_rotcoef
+    call ATMOS_GRID_CARTESC_METRIC_rotcoef
 
     ! calc metrics for terrain-following,step-mountain,thin-wall coordinate
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Terrain coordinate type : ', trim(GTRANS_TOPO_type)
-    select case(GTRANS_TOPO_type)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Terrain coordinate type : ', trim(ATMOS_GRID_CARTESC_METRIC_TOPO_type)
+    select case(ATMOS_GRID_CARTESC_METRIC_TOPO_type)
     case('TERRAINFOLLOWING')
       if( IO_L ) write(IO_FID_LOG,*) '*** => Terrain-following method'
-      call GTRANS_terrainfollowing
+      call ATMOS_GRID_CARTESC_METRIC_terrainfollowing
     case('STEPMOUNTAIN')
       if( IO_L ) write(IO_FID_LOG,*) '*** => Step-mountain method'
-      call GTRANS_thin_wall
-      call GTRANS_step_mountain
+      call ATMOS_GRID_CARTESC_METRIC_thin_wall
+      call ATMOS_GRID_CARTESC_METRIC_step_mountain
     case('THINWALL')
       if( IO_L ) write(IO_FID_LOG,*) '*** => Thin-wall approximation method'
-      call GTRANS_thin_wall
+      call ATMOS_GRID_CARTESC_METRIC_thin_wall
     case default
-       write(*,*) 'xxx Unsupported GTRANS_TOPO_type. STOP'
+       write(*,*) 'xxx Unsupported ATMOS_GRID_CARTESC_METRIC_TOPO_type. STOP'
        call PRC_MPIstop
     end select
 
     ! output metrics (for debug)
-    call GTRANS_write
+    call ATMOS_GRID_CARTESC_METRIC_write
 
     return
-  end subroutine GTRANS_setup
+  end subroutine ATMOS_GRID_CARTESC_METRIC_setup
 
   !-----------------------------------------------------------------------------
   !> Calculate map factor
-  subroutine GTRANS_mapfactor
+  subroutine ATMOS_GRID_CARTESC_METRIC_mapfactor
     use scale_mapproj, only: &
        MPRJ_mapfactor
     use scale_atmos_grid_cartesC_real, only: &
@@ -184,19 +180,19 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LAT  (1:IA,1:JA), GTRANS_MAPF(:,:,1,I_XY), GTRANS_MAPF (:,:,2,I_XY))
-    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LATX (1:IA,1:JA), GTRANS_MAPF(:,:,1,I_UY), GTRANS_MAPF (:,:,2,I_UY))
-    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LATY (1:IA,1:JA), GTRANS_MAPF(:,:,1,I_XV), GTRANS_MAPF (:,:,2,I_XV))
-    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LATXY(1:IA,1:JA), GTRANS_MAPF(:,:,1,I_UV), GTRANS_MAPF (:,:,2,I_UV))
+    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LAT  (1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XY), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_XY))
+    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LATX (1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UY), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_UY))
+    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LATY (1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_XV))
+    call MPRJ_mapfactor( ATMOS_GRID_CARTESC_REAL_LATXY(1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_UV))
 
-    call ATMOS_GRID_CARTESC_REAL_calc_areavol( GTRANS_MAPF(:,:,:,I_XY) )
+    call ATMOS_GRID_CARTESC_REAL_calc_areavol( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,:,I_XY) )
 
     return
-  end subroutine GTRANS_mapfactor
+  end subroutine ATMOS_GRID_CARTESC_METRIC_mapfactor
 
   !-----------------------------------------------------------------------------
   !> Calculate rotation coeffient
-  subroutine GTRANS_rotcoef
+  subroutine ATMOS_GRID_CARTESC_METRIC_rotcoef
     use scale_mapproj, only: &
        MPRJ_rotcoef
     use scale_atmos_grid_cartesC_real, only: &
@@ -205,16 +201,16 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call MPRJ_rotcoef( GTRANS_ROTC(:,:,:), & ! [OUT]
+    call MPRJ_rotcoef( ATMOS_GRID_CARTESC_METRIC_ROTC(:,:,:), & ! [OUT]
                        ATMOS_GRID_CARTESC_REAL_LON   (:,:),   & ! [IN]
                        ATMOS_GRID_CARTESC_REAL_LAT   (:,:)    ) ! [IN]
 
     return
-  end subroutine GTRANS_rotcoef
+  end subroutine ATMOS_GRID_CARTESC_METRIC_rotcoef
 
   !-----------------------------------------------------------------------------
   !> Calculate G^1/2 & Jacobian
-  subroutine GTRANS_terrainfollowing
+  subroutine ATMOS_GRID_CARTESC_METRIC_terrainfollowing
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_RCDZ, &
        ATMOS_GRID_CARTESC_RCDX, &
@@ -296,70 +292,70 @@ contains
     do i = IS, IE
        ! at (x,y,z)
        do k = 1, KA
-          GTRANS_GSQRT(k,i,j,I_XYZ) = ( ATMOS_GRID_CARTESC_REAL_FZ(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
+          ATMOS_GRID_CARTESC_METRIC_GSQRT(k,i,j,I_XYZ) = ( ATMOS_GRID_CARTESC_REAL_FZ(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
        enddo
 
        ! at (x,y,w)
        do k = 1, KA-1
-          GTRANS_GSQRT(k,i,j,I_XYW) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZ(k,i,j) ) * ATMOS_GRID_CARTESC_RFDZ(k)
+          ATMOS_GRID_CARTESC_METRIC_GSQRT(k,i,j,I_XYW) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZ(k,i,j) ) * ATMOS_GRID_CARTESC_RFDZ(k)
        enddo
-       GTRANS_GSQRT(KA,i,j,I_XYW) = GTRANS_GSQRT(KA-1,i,j,I_XYW)
+       ATMOS_GRID_CARTESC_METRIC_GSQRT(KA,i,j,I_XYW) = ATMOS_GRID_CARTESC_METRIC_GSQRT(KA-1,i,j,I_XYW)
 
        ! at (u,y,w)
        do k = 1, KA-1
-          GTRANS_GSQRT(k,i,j,I_UYW) = ( ATMOS_GRID_CARTESC_REAL_CZ_U(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZ_U(k,i,j) ) * ATMOS_GRID_CARTESC_RFDZ(k)
+          ATMOS_GRID_CARTESC_METRIC_GSQRT(k,i,j,I_UYW) = ( ATMOS_GRID_CARTESC_REAL_CZ_U(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZ_U(k,i,j) ) * ATMOS_GRID_CARTESC_RFDZ(k)
        enddo
-       GTRANS_GSQRT(KA,i,j,I_UYW) = GTRANS_GSQRT(KA-1,i,j,I_UYW)
+       ATMOS_GRID_CARTESC_METRIC_GSQRT(KA,i,j,I_UYW) = ATMOS_GRID_CARTESC_METRIC_GSQRT(KA-1,i,j,I_UYW)
 
        ! at (x,v,w)
        do k = 1, KA-1
-          GTRANS_GSQRT(k,i,j,I_XVW) = ( ATMOS_GRID_CARTESC_REAL_CZ_V(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZ_V(k,i,j) ) * ATMOS_GRID_CARTESC_RFDZ(k)
+          ATMOS_GRID_CARTESC_METRIC_GSQRT(k,i,j,I_XVW) = ( ATMOS_GRID_CARTESC_REAL_CZ_V(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZ_V(k,i,j) ) * ATMOS_GRID_CARTESC_RFDZ(k)
        enddo
-       GTRANS_GSQRT(KA,i,j,I_XVW) = GTRANS_GSQRT(KA-1,i,j,I_XVW)
+       ATMOS_GRID_CARTESC_METRIC_GSQRT(KA,i,j,I_XVW) = ATMOS_GRID_CARTESC_METRIC_GSQRT(KA-1,i,j,I_XVW)
 
        ! at (u,y,z)
        do k = 1, KA
-          GTRANS_GSQRT(k,i,j,I_UYZ) = ( ATMOS_GRID_CARTESC_REAL_FZ_U(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ_U(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
+          ATMOS_GRID_CARTESC_METRIC_GSQRT(k,i,j,I_UYZ) = ( ATMOS_GRID_CARTESC_REAL_FZ_U(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ_U(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
        enddo
 
        ! at (x,v,z)
        do k = 1, KA
-          GTRANS_GSQRT(k,i,j,I_XVZ) = ( ATMOS_GRID_CARTESC_REAL_FZ_V(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ_V(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
+          ATMOS_GRID_CARTESC_METRIC_GSQRT(k,i,j,I_XVZ) = ( ATMOS_GRID_CARTESC_REAL_FZ_V(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ_V(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
        enddo
 
        ! at (u,v,z)
        do k = 1, KA
-          GTRANS_GSQRT(k,i,j,I_UVZ) = ( ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ_UV(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
+          ATMOS_GRID_CARTESC_METRIC_GSQRT(k,i,j,I_UVZ) = ( ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ_UV(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
        enddo
     enddo
     enddo
 
-    call COMM_vars8( GTRANS_GSQRT(:,:,:,1), 1 )
-    call COMM_vars8( GTRANS_GSQRT(:,:,:,2), 2 )
-    call COMM_vars8( GTRANS_GSQRT(:,:,:,3), 3 )
-    call COMM_vars8( GTRANS_GSQRT(:,:,:,4), 4 )
-    call COMM_vars8( GTRANS_GSQRT(:,:,:,5), 5 )
-    call COMM_vars8( GTRANS_GSQRT(:,:,:,6), 6 )
-    call COMM_vars8( GTRANS_GSQRT(:,:,:,7), 7 )
-    call COMM_wait ( GTRANS_GSQRT(:,:,:,1), 1 )
-    call COMM_wait ( GTRANS_GSQRT(:,:,:,2), 2 )
-    call COMM_wait ( GTRANS_GSQRT(:,:,:,3), 3 )
-    call COMM_wait ( GTRANS_GSQRT(:,:,:,4), 4 )
-    call COMM_wait ( GTRANS_GSQRT(:,:,:,5), 5 )
-    call COMM_wait ( GTRANS_GSQRT(:,:,:,6), 6 )
-    call COMM_wait ( GTRANS_GSQRT(:,:,:,7), 7 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,1), 1 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,2), 2 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,3), 3 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,4), 4 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,5), 5 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,6), 6 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,7), 7 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,1), 1 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,2), 2 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,3), 3 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,4), 4 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,5), 5 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,6), 6 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,7), 7 )
 
     ! Jacobian * G^1/2
     do j = JS, JE
     do i = IS, IE
     do k = 1,  KA
-       GTRANS_J13G(k,i,j,I_XYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_U (k,i  ,j) - ATMOS_GRID_CARTESC_REAL_CZ_U (k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
-       GTRANS_J13G(k,i,j,I_XYW) = -( ATMOS_GRID_CARTESC_REAL_FZ_U (k,i  ,j) - ATMOS_GRID_CARTESC_REAL_FZ_U (k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
-       GTRANS_J13G(k,i,j,I_UYW) = -( ATMOS_GRID_CARTESC_REAL_FZ   (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_FZ   (k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
-       GTRANS_J13G(k,i,j,I_XVW) = -( ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
-       GTRANS_J13G(k,i,j,I_UYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ   (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_CZ   (k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
-       GTRANS_J13G(k,i,j,I_XVZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_UV(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_CZ_UV(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
-       GTRANS_J13G(k,i,j,I_UVZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_V (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_CZ_V (k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_U (k,i  ,j) - ATMOS_GRID_CARTESC_REAL_CZ_U (k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XYW) = -( ATMOS_GRID_CARTESC_REAL_FZ_U (k,i  ,j) - ATMOS_GRID_CARTESC_REAL_FZ_U (k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_UYW) = -( ATMOS_GRID_CARTESC_REAL_FZ   (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_FZ   (k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XVW) = -( ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_UYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ   (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_CZ   (k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XVZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_UV(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_CZ_UV(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_UVZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_V (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_CZ_V (k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
     enddo
     enddo
     enddo
@@ -367,54 +363,54 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = 1,  KA
-       GTRANS_J23G(k,i,j,I_XYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_V (k,i,j  ) - ATMOS_GRID_CARTESC_REAL_CZ_V (k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
-       GTRANS_J23G(k,i,j,I_XYW) = -( ATMOS_GRID_CARTESC_REAL_FZ_V (k,i,j  ) - ATMOS_GRID_CARTESC_REAL_FZ_V (k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
-       GTRANS_J23G(k,i,j,I_XVW) = -( ATMOS_GRID_CARTESC_REAL_FZ   (k,i,j+1) - ATMOS_GRID_CARTESC_REAL_FZ   (k,i,j  ) ) * ATMOS_GRID_CARTESC_RFDY(j)
-       GTRANS_J23G(k,i,j,I_UYW) = -( ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
-       GTRANS_J23G(k,i,j,I_XVZ) = -( ATMOS_GRID_CARTESC_REAL_CZ   (k,i,j+1) - ATMOS_GRID_CARTESC_REAL_CZ   (k,i,j  ) ) * ATMOS_GRID_CARTESC_RFDY(j)
-       GTRANS_J23G(k,i,j,I_UYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_UV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_CZ_UV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
-       GTRANS_J23G(k,i,j,I_UVZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_U (k,i,j+1) - ATMOS_GRID_CARTESC_REAL_CZ_U (k,i,j  ) ) * ATMOS_GRID_CARTESC_RFDY(j)
+       ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_XYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_V (k,i,j  ) - ATMOS_GRID_CARTESC_REAL_CZ_V (k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
+       ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_XYW) = -( ATMOS_GRID_CARTESC_REAL_FZ_V (k,i,j  ) - ATMOS_GRID_CARTESC_REAL_FZ_V (k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
+       ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_XVW) = -( ATMOS_GRID_CARTESC_REAL_FZ   (k,i,j+1) - ATMOS_GRID_CARTESC_REAL_FZ   (k,i,j  ) ) * ATMOS_GRID_CARTESC_RFDY(j)
+       ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_UYW) = -( ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_FZ_UV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
+       ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_XVZ) = -( ATMOS_GRID_CARTESC_REAL_CZ   (k,i,j+1) - ATMOS_GRID_CARTESC_REAL_CZ   (k,i,j  ) ) * ATMOS_GRID_CARTESC_RFDY(j)
+       ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_UYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_UV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_CZ_UV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
+       ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_UVZ) = -( ATMOS_GRID_CARTESC_REAL_CZ_U (k,i,j+1) - ATMOS_GRID_CARTESC_REAL_CZ_U (k,i,j  ) ) * ATMOS_GRID_CARTESC_RFDY(j)
     enddo
     enddo
     enddo
 
-    GTRANS_J33G = 1.0_RP ! - 1 / G^1/2 * G^1/2
+    ATMOS_GRID_CARTESC_METRIC_J33G = 1.0_RP ! - 1 / G^1/2 * G^1/2
 
-    call COMM_vars8( GTRANS_J13G(:,:,:,I_XYZ),  8 )
-    call COMM_vars8( GTRANS_J13G(:,:,:,I_XYW),  9 )
-    call COMM_vars8( GTRANS_J13G(:,:,:,I_UYW), 10 )
-    call COMM_vars8( GTRANS_J13G(:,:,:,I_XVW), 11 )
-    call COMM_vars8( GTRANS_J13G(:,:,:,I_UYZ), 12 )
-    call COMM_vars8( GTRANS_J13G(:,:,:,I_XVZ), 13 )
-    call COMM_vars8( GTRANS_J13G(:,:,:,I_UVZ), 14 )
-    call COMM_wait ( GTRANS_J13G(:,:,:,I_XYZ),  8 )
-    call COMM_wait ( GTRANS_J13G(:,:,:,I_XYW),  9 )
-    call COMM_wait ( GTRANS_J13G(:,:,:,I_UYW), 10 )
-    call COMM_wait ( GTRANS_J13G(:,:,:,I_XVW), 11 )
-    call COMM_wait ( GTRANS_J13G(:,:,:,I_UYZ), 12 )
-    call COMM_wait ( GTRANS_J13G(:,:,:,I_XVZ), 13 )
-    call COMM_wait ( GTRANS_J13G(:,:,:,I_UVZ), 14 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYZ),  8 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYW),  9 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYW), 10 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVW), 11 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYZ), 12 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVZ), 13 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UVZ), 14 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYZ),  8 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYW),  9 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYW), 10 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVW), 11 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYZ), 12 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVZ), 13 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UVZ), 14 )
 
-    call COMM_vars8( GTRANS_J23G(:,:,:,I_XYZ), 15 )
-    call COMM_vars8( GTRANS_J23G(:,:,:,I_XYW), 16 )
-    call COMM_vars8( GTRANS_J23G(:,:,:,I_UYW), 17 )
-    call COMM_vars8( GTRANS_J23G(:,:,:,I_XVW), 18 )
-    call COMM_vars8( GTRANS_J23G(:,:,:,I_UYZ), 19 )
-    call COMM_vars8( GTRANS_J23G(:,:,:,I_XVZ), 20 )
-    call COMM_vars8( GTRANS_J23G(:,:,:,I_UVZ), 21 )
-    call COMM_wait ( GTRANS_J23G(:,:,:,I_XYZ), 15 )
-    call COMM_wait ( GTRANS_J23G(:,:,:,I_XYW), 16 )
-    call COMM_wait ( GTRANS_J23G(:,:,:,I_UYW), 17 )
-    call COMM_wait ( GTRANS_J23G(:,:,:,I_XVW), 18 )
-    call COMM_wait ( GTRANS_J23G(:,:,:,I_UYZ), 19 )
-    call COMM_wait ( GTRANS_J23G(:,:,:,I_XVZ), 20 )
-    call COMM_wait ( GTRANS_J23G(:,:,:,I_UVZ), 21 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XYZ), 15 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XYW), 16 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYW), 17 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVW), 18 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYZ), 19 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVZ), 20 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UVZ), 21 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XYZ), 15 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XYW), 16 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYW), 17 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVW), 18 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYZ), 19 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVZ), 20 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UVZ), 21 )
 
     return
-  end subroutine GTRANS_terrainfollowing
+  end subroutine ATMOS_GRID_CARTESC_METRIC_terrainfollowing
 
   !-----------------------------------------------------------------------------
-  subroutine GTRANS_thin_wall
+  subroutine ATMOS_GRID_CARTESC_METRIC_thin_wall
     use scale_process, only: &
        PRC_MPIstop
     use scale_atmos_grid_cartesC, only: &
@@ -437,7 +433,7 @@ contains
     real(RP) :: TOPO_ZsfcXV (IA,JA)            !< absolute height at (x,v)
     real(RP) :: TOPO_ZsfcUV (IA,JA)            !< absolute height at (u,v)
 
-    real(RP) :: GTRANS_QLIM (2*KA,2*IA,2*JA,3) !< quarter size flux limiter
+    real(RP) :: ATMOS_GRID_CARTESC_METRIC_QLIM (2*KA,2*IA,2*JA,3) !< quarter size flux limiter
     real(RP) :: QDZ(2*KA)                      !< length of control volume of quarter cell
     real(RP) :: QDX(2*IA)                      !< length of control volume of quarter cell
     real(RP) :: QDY(2*JA)                      !< length of control volume of quarter cell
@@ -531,8 +527,8 @@ contains
     do jj = 1, 2*(JA-1)
     do ii = 1, 2*(IA-1)
     do kk = KS, 2*KE
-       DX_piece = QDX(ii) / real(GTRANS_ThinWall_XDIV,kind=RP)
-       DY_piece = QDY(jj) / real(GTRANS_ThinWall_YDIV,kind=RP)
+       DX_piece = QDX(ii) / real(ATMOS_GRID_CARTESC_METRIC_ThinWall_XDIV,kind=RP)
+       DY_piece = QDY(jj) / real(ATMOS_GRID_CARTESC_METRIC_ThinWall_YDIV,kind=RP)
 
        AQAF(1:3) = 0.0_RP
        Ztop = sum(QDZ(KS:kk))
@@ -540,7 +536,7 @@ contains
        !--- y-z face ---
        YSLOPE = ( TOPO_ZsfcALL(ii,jj+1) - TOPO_ZsfcALL(ii,jj) ) / QDY(jj)
 
-       do jjj = 1, GTRANS_ThinWall_YDIV
+       do jjj = 1, ATMOS_GRID_CARTESC_METRIC_ThinWall_YDIV
           DY = ( real(jjj,kind=RP) - 0.5_RP ) * DY_piece
           DZ = Ztop - TOPO_ZsfcALL(ii,jj) - YSLOPE * DY
 
@@ -556,7 +552,7 @@ contains
        !--- x-z face ---
        XSLOPE = ( TOPO_ZsfcALL(ii+1,jj) - TOPO_ZsfcALL(ii,jj) ) / QDX(ii)
 
-       do iii = 1, GTRANS_ThinWall_XDIV
+       do iii = 1, ATMOS_GRID_CARTESC_METRIC_ThinWall_XDIV
           DX = ( real(iii,kind=RP) - 0.5_RP ) * DX_piece
           DZ = Ztop - TOPO_ZsfcALL(ii,jj) + XSLOPE * DX
 
@@ -570,8 +566,8 @@ contains
        enddo
 
        !--- x-y face ---
-       do jjj = 1, GTRANS_ThinWall_YDIV
-       do iii = 1, GTRANS_ThinWall_XDIV
+       do jjj = 1, ATMOS_GRID_CARTESC_METRIC_ThinWall_YDIV
+       do iii = 1, ATMOS_GRID_CARTESC_METRIC_ThinWall_XDIV
           DX = ( real(iii,kind=RP) - 0.5_RP ) * DX_piece
           DY = ( real(jjj,kind=RP) - 0.5_RP ) * DY_piece
           DZ = Ztop - TOPO_ZsfcALL(ii,jj) - XSLOPE * DX - YSLOPE * DY
@@ -582,9 +578,9 @@ contains
        enddo
        enddo
 
-       GTRANS_QLIM(kk,ii,jj,I_FYZ) = AQAF(I_FYZ) / ( QDY(jj) * QDZ(kk) )
-       GTRANS_QLIM(kk,ii,jj,I_FXZ) = AQAF(I_FXZ) / ( QDX(ii) * QDZ(kk) )
-       GTRANS_QLIM(kk,ii,jj,I_FXY) = AQAF(I_FXY) / ( QDY(jj) * QDX(ii) )
+       ATMOS_GRID_CARTESC_METRIC_QLIM(kk,ii,jj,I_FYZ) = AQAF(I_FYZ) / ( QDY(jj) * QDZ(kk) )
+       ATMOS_GRID_CARTESC_METRIC_QLIM(kk,ii,jj,I_FXZ) = AQAF(I_FXZ) / ( QDX(ii) * QDZ(kk) )
+       ATMOS_GRID_CARTESC_METRIC_QLIM(kk,ii,jj,I_FXY) = AQAF(I_FXY) / ( QDY(jj) * QDX(ii) )
     enddo
     enddo
     enddo
@@ -606,16 +602,16 @@ contains
           jj = (j-1) * 2 + 1 - I_QLIMtoLIM(2,n)
           kk = (k-1) * 2 + 1 - I_QLIMtoLIM(3,n)
 
-         GTRANS_LIMYZ(k,i,j,n) = 0.25_RP * ( GTRANS_QLIM(kk  ,ii,jj,I_FYZ) + GTRANS_QLIM(kk  ,ii  ,jj+1,I_FYZ) &
-                                           + GTRANS_QLIM(kk+1,ii,jj,I_FYZ) + GTRANS_QLIM(kk+1,ii  ,jj+1,I_FYZ) )
-         GTRANS_LIMXZ(k,i,j,n) = 0.25_RP * ( GTRANS_QLIM(kk  ,ii,jj,I_FXZ) + GTRANS_QLIM(kk  ,ii+1,jj  ,I_FXZ) &
-                                           + GTRANS_QLIM(kk+1,ii,jj,I_FXZ) + GTRANS_QLIM(kk+1,ii+1,jj  ,I_FXZ) )
-         GTRANS_LIMXY(k,i,j,n) = 0.25_RP * ( GTRANS_QLIM(kk  ,ii,jj,I_FXY) + GTRANS_QLIM(kk  ,ii+1,jj+1,I_FXY) &
-                                           + GTRANS_QLIM(kk  ,ii,jj,I_FXY) + GTRANS_QLIM(kk  ,ii+1,jj  ,I_FXY) )
+         ATMOS_GRID_CARTESC_METRIC_LIMYZ(k,i,j,n) = 0.25_RP * ( ATMOS_GRID_CARTESC_METRIC_QLIM(kk  ,ii,jj,I_FYZ) + ATMOS_GRID_CARTESC_METRIC_QLIM(kk  ,ii  ,jj+1,I_FYZ) &
+                                           + ATMOS_GRID_CARTESC_METRIC_QLIM(kk+1,ii,jj,I_FYZ) + ATMOS_GRID_CARTESC_METRIC_QLIM(kk+1,ii  ,jj+1,I_FYZ) )
+         ATMOS_GRID_CARTESC_METRIC_LIMXZ(k,i,j,n) = 0.25_RP * ( ATMOS_GRID_CARTESC_METRIC_QLIM(kk  ,ii,jj,I_FXZ) + ATMOS_GRID_CARTESC_METRIC_QLIM(kk  ,ii+1,jj  ,I_FXZ) &
+                                           + ATMOS_GRID_CARTESC_METRIC_QLIM(kk+1,ii,jj,I_FXZ) + ATMOS_GRID_CARTESC_METRIC_QLIM(kk+1,ii+1,jj  ,I_FXZ) )
+         ATMOS_GRID_CARTESC_METRIC_LIMXY(k,i,j,n) = 0.25_RP * ( ATMOS_GRID_CARTESC_METRIC_QLIM(kk  ,ii,jj,I_FXY) + ATMOS_GRID_CARTESC_METRIC_QLIM(kk  ,ii+1,jj+1,I_FXY) &
+                                           + ATMOS_GRID_CARTESC_METRIC_QLIM(kk  ,ii,jj,I_FXY) + ATMOS_GRID_CARTESC_METRIC_QLIM(kk  ,ii+1,jj  ,I_FXY) )
 
-         if ( GTRANS_LIMYZ(k,i,j,n) > 1.D0 ) then
+         if ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(k,i,j,n) > 1.D0 ) then
             write(*,*) 'xxx Facter miss! Check!'
-            write(*,*) k,i,j,n,GTRANS_LIMYZ(k,i,j,n)
+            write(*,*) k,i,j,n,ATMOS_GRID_CARTESC_METRIC_LIMYZ(k,i,j,n)
             call PRC_MPIstop
          endif
        enddo
@@ -623,56 +619,56 @@ contains
        enddo
     enddo
 
-    call COMM_vars8( GTRANS_LIMYZ(:,:,:,I_XYZ),  1 )
-    call COMM_vars8( GTRANS_LIMYZ(:,:,:,I_XYW),  2 )
-    call COMM_vars8( GTRANS_LIMYZ(:,:,:,I_UYW),  3 )
-    call COMM_vars8( GTRANS_LIMYZ(:,:,:,I_XVW),  4 )
-    call COMM_vars8( GTRANS_LIMYZ(:,:,:,I_UYZ),  5 )
-    call COMM_vars8( GTRANS_LIMYZ(:,:,:,I_XVZ),  6 )
-    call COMM_vars8( GTRANS_LIMYZ(:,:,:,I_UVZ),  7 )
-    call COMM_wait ( GTRANS_LIMYZ(:,:,:,I_XYZ),  1 )
-    call COMM_wait ( GTRANS_LIMYZ(:,:,:,I_XYW),  2 )
-    call COMM_wait ( GTRANS_LIMYZ(:,:,:,I_UYW),  3 )
-    call COMM_wait ( GTRANS_LIMYZ(:,:,:,I_XVW),  4 )
-    call COMM_wait ( GTRANS_LIMYZ(:,:,:,I_UYZ),  5 )
-    call COMM_wait ( GTRANS_LIMYZ(:,:,:,I_XVZ),  6 )
-    call COMM_wait ( GTRANS_LIMYZ(:,:,:,I_UVZ),  7 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XYZ),  1 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XYW),  2 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_UYW),  3 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XVW),  4 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_UYZ),  5 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XVZ),  6 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_UVZ),  7 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XYZ),  1 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XYW),  2 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_UYW),  3 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XVW),  4 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_UYZ),  5 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XVZ),  6 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_UVZ),  7 )
 
-    call COMM_vars8( GTRANS_LIMXZ(:,:,:,I_XYZ),  8 )
-    call COMM_vars8( GTRANS_LIMXZ(:,:,:,I_XYW),  9 )
-    call COMM_vars8( GTRANS_LIMXZ(:,:,:,I_UYW), 10 )
-    call COMM_vars8( GTRANS_LIMXZ(:,:,:,I_XVW), 11 )
-    call COMM_vars8( GTRANS_LIMXZ(:,:,:,I_UYZ), 12 )
-    call COMM_vars8( GTRANS_LIMXZ(:,:,:,I_XVZ), 13 )
-    call COMM_vars8( GTRANS_LIMXZ(:,:,:,I_UVZ), 14 )
-    call COMM_wait ( GTRANS_LIMXZ(:,:,:,I_XYZ),  8 )
-    call COMM_wait ( GTRANS_LIMXZ(:,:,:,I_XYW),  9 )
-    call COMM_wait ( GTRANS_LIMXZ(:,:,:,I_UYW), 10 )
-    call COMM_wait ( GTRANS_LIMXZ(:,:,:,I_XVW), 11 )
-    call COMM_wait ( GTRANS_LIMXZ(:,:,:,I_UYZ), 12 )
-    call COMM_wait ( GTRANS_LIMXZ(:,:,:,I_XVZ), 13 )
-    call COMM_wait ( GTRANS_LIMXZ(:,:,:,I_UVZ), 14 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XYZ),  8 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XYW),  9 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_UYW), 10 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XVW), 11 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_UYZ), 12 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XVZ), 13 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_UVZ), 14 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XYZ),  8 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XYW),  9 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_UYW), 10 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XVW), 11 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_UYZ), 12 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XVZ), 13 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_UVZ), 14 )
 
-    call COMM_vars8( GTRANS_LIMXY(:,:,:,I_XYZ), 15 )
-    call COMM_vars8( GTRANS_LIMXY(:,:,:,I_XYW), 16 )
-    call COMM_vars8( GTRANS_LIMXY(:,:,:,I_UYW), 17 )
-    call COMM_vars8( GTRANS_LIMXY(:,:,:,I_XVW), 18 )
-    call COMM_vars8( GTRANS_LIMXY(:,:,:,I_UYZ), 19 )
-    call COMM_vars8( GTRANS_LIMXY(:,:,:,I_XVZ), 20 )
-    call COMM_vars8( GTRANS_LIMXY(:,:,:,I_UVZ), 21 )
-    call COMM_wait ( GTRANS_LIMXY(:,:,:,I_XYZ), 15 )
-    call COMM_wait ( GTRANS_LIMXY(:,:,:,I_XYW), 16 )
-    call COMM_wait ( GTRANS_LIMXY(:,:,:,I_UYW), 17 )
-    call COMM_wait ( GTRANS_LIMXY(:,:,:,I_XVW), 18 )
-    call COMM_wait ( GTRANS_LIMXY(:,:,:,I_UYZ), 19 )
-    call COMM_wait ( GTRANS_LIMXY(:,:,:,I_XVZ), 20 )
-    call COMM_wait ( GTRANS_LIMXY(:,:,:,I_UVZ), 21 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XYZ), 15 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XYW), 16 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_UYW), 17 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XVW), 18 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_UYZ), 19 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XVZ), 20 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_UVZ), 21 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XYZ), 15 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XYW), 16 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_UYW), 17 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XVW), 18 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_UYZ), 19 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XVZ), 20 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_UVZ), 21 )
 
     return
-  end subroutine GTRANS_thin_wall
+  end subroutine ATMOS_GRID_CARTESC_METRIC_thin_wall
 
   !-----------------------------------------------------------------------------
-  subroutine GTRANS_step_mountain
+  subroutine ATMOS_GRID_CARTESC_METRIC_step_mountain
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -686,73 +682,73 @@ contains
        do i = IS, IE
        do k = KS, KE
 
-         if ( GTRANS_LIMYZ(k,i,j,n) > 0.0_RP ) then
-            GTRANS_LIMYZ(k,i,j,n) = 1.0_RP
+         if ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(k,i,j,n) > 0.0_RP ) then
+            ATMOS_GRID_CARTESC_METRIC_LIMYZ(k,i,j,n) = 1.0_RP
          endif
 
-         if ( GTRANS_LIMXZ(k,i,j,n) > 0.0_RP ) then
-            GTRANS_LIMXZ(k,i,j,n) = 1.0_RP
+         if ( ATMOS_GRID_CARTESC_METRIC_LIMXZ(k,i,j,n) > 0.0_RP ) then
+            ATMOS_GRID_CARTESC_METRIC_LIMXZ(k,i,j,n) = 1.0_RP
          endif
 
-         if ( GTRANS_LIMXY(k,i,j,n) > 0.0_RP ) then
-            GTRANS_LIMXY(k,i,j,n) = 1.0_RP
+         if ( ATMOS_GRID_CARTESC_METRIC_LIMXY(k,i,j,n) > 0.0_RP ) then
+            ATMOS_GRID_CARTESC_METRIC_LIMXY(k,i,j,n) = 1.0_RP
          endif
        enddo
        enddo
        enddo
     enddo
 
-    call COMM_vars8( GTRANS_LIMYZ(:,:,:,I_XYZ),  1 )
-    call COMM_vars8( GTRANS_LIMYZ(:,:,:,I_XYW),  2 )
-    call COMM_vars8( GTRANS_LIMYZ(:,:,:,I_UYW),  3 )
-    call COMM_vars8( GTRANS_LIMYZ(:,:,:,I_XVW),  4 )
-    call COMM_vars8( GTRANS_LIMYZ(:,:,:,I_UYZ),  5 )
-    call COMM_vars8( GTRANS_LIMYZ(:,:,:,I_XVZ),  6 )
-    call COMM_vars8( GTRANS_LIMYZ(:,:,:,I_UVZ),  7 )
-    call COMM_wait ( GTRANS_LIMYZ(:,:,:,I_XYZ),  1 )
-    call COMM_wait ( GTRANS_LIMYZ(:,:,:,I_XYW),  2 )
-    call COMM_wait ( GTRANS_LIMYZ(:,:,:,I_UYW),  3 )
-    call COMM_wait ( GTRANS_LIMYZ(:,:,:,I_XVW),  4 )
-    call COMM_wait ( GTRANS_LIMYZ(:,:,:,I_UYZ),  5 )
-    call COMM_wait ( GTRANS_LIMYZ(:,:,:,I_XVZ),  6 )
-    call COMM_wait ( GTRANS_LIMYZ(:,:,:,I_UVZ),  7 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XYZ),  1 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XYW),  2 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_UYW),  3 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XVW),  4 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_UYZ),  5 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XVZ),  6 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_UVZ),  7 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XYZ),  1 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XYW),  2 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_UYW),  3 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XVW),  4 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_UYZ),  5 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XVZ),  6 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_UVZ),  7 )
 
-    call COMM_vars8( GTRANS_LIMXZ(:,:,:,I_XYZ),  8 )
-    call COMM_vars8( GTRANS_LIMXZ(:,:,:,I_XYW),  9 )
-    call COMM_vars8( GTRANS_LIMXZ(:,:,:,I_UYW), 10 )
-    call COMM_vars8( GTRANS_LIMXZ(:,:,:,I_XVW), 11 )
-    call COMM_vars8( GTRANS_LIMXZ(:,:,:,I_UYZ), 12 )
-    call COMM_vars8( GTRANS_LIMXZ(:,:,:,I_XVZ), 13 )
-    call COMM_vars8( GTRANS_LIMXZ(:,:,:,I_UVZ), 14 )
-    call COMM_wait ( GTRANS_LIMXZ(:,:,:,I_XYZ),  8 )
-    call COMM_wait ( GTRANS_LIMXZ(:,:,:,I_XYW),  9 )
-    call COMM_wait ( GTRANS_LIMXZ(:,:,:,I_UYW), 10 )
-    call COMM_wait ( GTRANS_LIMXZ(:,:,:,I_XVW), 11 )
-    call COMM_wait ( GTRANS_LIMXZ(:,:,:,I_UYZ), 12 )
-    call COMM_wait ( GTRANS_LIMXZ(:,:,:,I_XVZ), 13 )
-    call COMM_wait ( GTRANS_LIMXZ(:,:,:,I_UVZ), 14 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XYZ),  8 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XYW),  9 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_UYW), 10 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XVW), 11 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_UYZ), 12 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XVZ), 13 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_UVZ), 14 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XYZ),  8 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XYW),  9 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_UYW), 10 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XVW), 11 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_UYZ), 12 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_XVZ), 13 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXZ(:,:,:,I_UVZ), 14 )
 
-    call COMM_vars8( GTRANS_LIMXY(:,:,:,I_XYZ), 15 )
-    call COMM_vars8( GTRANS_LIMXY(:,:,:,I_XYW), 16 )
-    call COMM_vars8( GTRANS_LIMXY(:,:,:,I_UYW), 17 )
-    call COMM_vars8( GTRANS_LIMXY(:,:,:,I_XVW), 18 )
-    call COMM_vars8( GTRANS_LIMXY(:,:,:,I_UYZ), 19 )
-    call COMM_vars8( GTRANS_LIMXY(:,:,:,I_XVZ), 20 )
-    call COMM_vars8( GTRANS_LIMXY(:,:,:,I_UVZ), 21 )
-    call COMM_wait ( GTRANS_LIMXY(:,:,:,I_XYZ), 15 )
-    call COMM_wait ( GTRANS_LIMXY(:,:,:,I_XYW), 16 )
-    call COMM_wait ( GTRANS_LIMXY(:,:,:,I_UYW), 17 )
-    call COMM_wait ( GTRANS_LIMXY(:,:,:,I_XVW), 18 )
-    call COMM_wait ( GTRANS_LIMXY(:,:,:,I_UYZ), 19 )
-    call COMM_wait ( GTRANS_LIMXY(:,:,:,I_XVZ), 20 )
-    call COMM_wait ( GTRANS_LIMXY(:,:,:,I_UVZ), 21 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XYZ), 15 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XYW), 16 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_UYW), 17 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XVW), 18 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_UYZ), 19 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XVZ), 20 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_UVZ), 21 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XYZ), 15 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XYW), 16 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_UYW), 17 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XVW), 18 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_UYZ), 19 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_XVZ), 20 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_LIMXY(:,:,:,I_UVZ), 21 )
 
     return
-  end subroutine GTRANS_step_mountain
+  end subroutine ATMOS_GRID_CARTESC_METRIC_step_mountain
 
   !-----------------------------------------------------------------------------
   !> Write metrics
-  subroutine GTRANS_write
+  subroutine ATMOS_GRID_CARTESC_METRIC_write
     use scale_const, only: &
        CONST_RADIUS
     use scale_vector, only: &
@@ -775,35 +771,35 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if ( GTRANS_OUT_BASENAME /= '' ) then
+    if ( ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME /= '' ) then
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output metrics file ***'
 
-       call FILE_CARTESC_write( GTRANS_MAPF(:,:,1,I_XY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_X_XY', 'Map factor x-dir at XY', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_write( GTRANS_MAPF(:,:,2,I_XY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_Y_XY', 'Map factor y-dir at XY', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_write( GTRANS_MAPF(:,:,1,I_UY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_X_UY', 'Map factor x-dir at UY', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_write( GTRANS_MAPF(:,:,2,I_UY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_Y_UY', 'Map factor y-dir at UY', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_write( GTRANS_MAPF(:,:,1,I_XV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_X_XV', 'Map factor x-dir at XV', 'NIL', 'XV', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_write( GTRANS_MAPF(:,:,2,I_XV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_Y_XV', 'Map factor y-dir at XV', 'NIL', 'XV', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_write( GTRANS_MAPF(:,:,1,I_UV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_X_UV', 'Map factor x-dir at UV', 'NIL', 'UV', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_write( GTRANS_MAPF(:,:,2,I_UV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'MAPF_Y_UV', 'Map factor y-dir at UV', 'NIL', 'UV', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XY),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
+                          'MAPF_X_XY', 'Map factor x-dir at XY', 'NIL', 'XY', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_XY),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
+                          'MAPF_Y_XY', 'Map factor y-dir at XY', 'NIL', 'XY', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UY),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
+                          'MAPF_X_UY', 'Map factor x-dir at UY', 'NIL', 'UY', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_UY),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
+                          'MAPF_Y_UY', 'Map factor y-dir at UY', 'NIL', 'UY', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XV),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
+                          'MAPF_X_XV', 'Map factor x-dir at XV', 'NIL', 'XV', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_XV),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
+                          'MAPF_Y_XV', 'Map factor y-dir at XV', 'NIL', 'XV', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UV),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
+                          'MAPF_X_UV', 'Map factor x-dir at UV', 'NIL', 'UV', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_UV),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
+                          'MAPF_Y_UV', 'Map factor y-dir at UV', 'NIL', 'UV', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
 
-       call FILE_CARTESC_write( GTRANS_ROTC(:,:,1),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'ROTC_COS',  'Rotation factor (cos)',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_write( GTRANS_ROTC(:,:,2),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'ROTC_SIN',  'Rotation factor (sin)',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_ROTC(:,:,1),            ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
+                          'ROTC_COS',  'Rotation factor (cos)',  'NIL', 'XY', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_ROTC(:,:,2),            ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
+                          'ROTC_SIN',  'Rotation factor (sin)',  'NIL', 'XY', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
 
-       call FILE_CARTESC_write( GTRANS_ROTC(:,:,1),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'ROTC_COS',  'Rotation factor (cos)',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_ROTC(:,:,1),            ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
+                          'ROTC_COS',  'Rotation factor (cos)',  'NIL', 'XY', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
 
        do j = 1, JA
        do i = 1, IA
@@ -811,10 +807,10 @@ contains
        enddo
        enddo
 
-       call FILE_CARTESC_write( check_X_XY(:,:),     GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'X_XY', 'x at XY for check', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILE_CARTESC_write( check_Y_XY(:,:),     GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'Y_XY', 'y at XY for check', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILE_CARTESC_write( check_X_XY(:,:),     ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
+                          'X_XY', 'x at XY for check', 'NIL', 'XY', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       call FILE_CARTESC_write( check_Y_XY(:,:),     ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
+                          'Y_XY', 'y at XY for check', 'NIL', 'XY', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
 
        do j = 1, JA
        do i = 1, IA
@@ -827,12 +823,12 @@ contains
        enddo
        enddo
 
-       call FILE_CARTESC_write( distance(:,:),               GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'distance', 'distance from basepoint', 'm', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILE_CARTESC_write( distance(:,:),               ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
+                          'distance', 'distance from basepoint', 'm', 'XY', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
 
     endif
 
     return
-  end subroutine GTRANS_write
+  end subroutine ATMOS_GRID_CARTESC_METRIC_write
 
-end module scale_gridtrans
+end module scale_atmos_grid_cartesC_metric

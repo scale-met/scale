@@ -556,7 +556,7 @@ contains
        COMM_world
     use scale_file_history, only: &
        FILE_HISTORY_in
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XY
     implicit none

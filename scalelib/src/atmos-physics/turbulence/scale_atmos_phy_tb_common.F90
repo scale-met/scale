@@ -67,7 +67,7 @@ contains
        S2,                  &
        DENS, MOMZ, MOMX, MOMY, &
        GSQRT, J13G, J23G, J33G, MAPF )
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW, &
        I_UYW, &
@@ -1202,7 +1202,7 @@ contains
        implicit, &
        a, b, c, dt, &
        IIS, IIE, JJS, JJE )
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW, &
        I_UYZ, &
@@ -1510,7 +1510,7 @@ contains
        RCDY => ATMOS_GRID_CARTESC_RCDY, &
        RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
        CDZ  => ATMOS_GRID_CARTESC_CDZ
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW, &
        I_UYW, &
@@ -1605,7 +1605,7 @@ contains
        RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
        RFDX => ATMOS_GRID_CARTESC_RFDX, &
        FDZ  => ATMOS_GRID_CARTESC_FDZ
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_UYW, &
        I_UYZ, &
@@ -1697,7 +1697,7 @@ contains
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
        RFDY => ATMOS_GRID_CARTESC_RFDY, &
        FDZ  => ATMOS_GRID_CARTESC_FDZ
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XVW, &
        I_UVZ, &
@@ -1789,7 +1789,7 @@ contains
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
        RCDY => ATMOS_GRID_CARTESC_RCDY, &
        FDZ  => ATMOS_GRID_CARTESC_FDZ
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW, &
        I_UYZ, &

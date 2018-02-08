@@ -179,7 +179,7 @@ contains
        ATMOS_DYN_FVM_fluxJ23_XVZ,   &
        ATMOS_DYN_FVM_fluxX_XVZ,     &
        ATMOS_DYN_FVM_fluxY_XVZ
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW, &
        I_UYW, &
@@ -1158,7 +1158,7 @@ contains
     use scale_atmos_grid_cartesC_index
          RCDZ => GRID_CARTESC_RCDZ, &
          RFDZ => GRID_CARTESC_RFDZ
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW
     implicit none

@@ -152,7 +152,6 @@ contains
     use scale_time, only: &
        DTSEC => TIME_DTSEC, &
        NOWTSEC => TIME_NOWSEC
-    use scale_gridtrans
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_comm

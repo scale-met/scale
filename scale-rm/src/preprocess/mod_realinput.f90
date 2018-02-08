@@ -1061,8 +1061,8 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_gridtrans, only: &
-       GTRANS_ROTC
+    use scale_atmos_grid_cartesC_metric, only: &
+       ROTC => ATMOS_GRID_CARTESC_METRIC_ROTC
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_diagnose_number_concentration, &
        QLS,  &
@@ -1307,8 +1307,8 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          u_on_map =  U(k,i,j) * GTRANS_ROTC(i,j,1) + V(k,i,j) * GTRANS_ROTC(i,j,2)
-          v_on_map = -U(k,i,j) * GTRANS_ROTC(i,j,2) + V(k,i,j) * GTRANS_ROTC(i,j,1)
+          u_on_map =  U(k,i,j) * ROTC(i,j,1) + V(k,i,j) * ROTC(i,j,2)
+          v_on_map = -U(k,i,j) * ROTC(i,j,2) + V(k,i,j) * ROTC(i,j,1)
 
           U(k,i,j) = u_on_map
           V(k,i,j) = v_on_map

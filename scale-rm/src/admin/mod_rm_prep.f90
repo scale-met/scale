@@ -102,8 +102,8 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_setup,   &
        ATMOS_GRID_CARTESC_REAL_update_Z
-    use scale_gridtrans, only: &
-       GTRANS_setup
+    use scale_atmos_grid_cartesC_metric, only: &
+       ATMOS_GRID_CARTESC_METRIC_setup
     use scale_rm_statistics, only: &
        STAT_setup
     use scale_atmos_hydrostatic, only: &
@@ -235,7 +235,7 @@ contains
     call ATMOS_GRID_CARTESC_REAL_setup
 
     ! setup grid transfer metrics (uses in ATMOS_dynamics)
-    call GTRANS_setup
+    call ATMOS_GRID_CARTESC_METRIC_setup
 
     ! setup restart
     call ADMIN_restart_setup

@@ -71,10 +71,10 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        FZ => ATMOS_GRID_CARTESC_REAL_FZ
-    use scale_gridtrans, only: &
-       GSQRT => GTRANS_GSQRT, &
-       J13G  => GTRANS_J13G,  &
-       J23G  => GTRANS_J23G,  &
+    use scale_atmos_grid_cartesC_metric, only: &
+       GSQRT => ATMOS_GRID_CARTESC_METRIC_GSQRT, &
+       J13G  => ATMOS_GRID_CARTESC_METRIC_J13G,  &
+       J23G  => ATMOS_GRID_CARTESC_METRIC_J23G,  &
        I_XYW, &
        I_XYZ
     integer,  intent(in)  :: KA, KS, KE

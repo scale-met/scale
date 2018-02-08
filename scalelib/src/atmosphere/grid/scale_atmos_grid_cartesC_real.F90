@@ -150,9 +150,6 @@ contains
     ! calc real height
     call ATMOS_GRID_CARTESC_REAL_calc_Z
 
-    ! calc control area & volume
-    ! call ATMOS_GRID_CARTESC_REAL_calc_areavol ! must be called after GTRANS_setup
-
     ! set latlon and z to fileio module
     call FILE_CARTESC_set_coordinates( ATMOS_GRID_CARTESC_REAL_LON, ATMOS_GRID_CARTESC_REAL_LONX, ATMOS_GRID_CARTESC_REAL_LONY, ATMOS_GRID_CARTESC_REAL_LONXY, & ! [IN]
                                        ATMOS_GRID_CARTESC_REAL_LAT, ATMOS_GRID_CARTESC_REAL_LATX, ATMOS_GRID_CARTESC_REAL_LATY, ATMOS_GRID_CARTESC_REAL_LATXY, & ! [IN]

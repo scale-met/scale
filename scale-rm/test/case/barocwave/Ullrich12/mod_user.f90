@@ -176,8 +176,6 @@ contains
        CZ => GRID_CARTESC_CZ
     use scale_time, only: &
        DTSEC => TIME_DTSEC
-    use scale_gridtrans
-    
     use scale_file_history, only: &
        FILE_HISTORY_in
     implicit none

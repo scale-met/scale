@@ -24,15 +24,14 @@ module mod_user
   use scale_index
   use scale_tracer
 
-  use scale_gridtrans
   use scale_const, only: &
        PI => CONST_PI
   use scale_atmos_grid_cartesC, only: &
-       CZ   => GRID_CARTESC_CZ, &
-       CX   => GRID_CARTESC_CX, &
-       FX   => GRID_CARTESC_FX, &
-       CDX  => GRID_CARTESC_CDX, &
-       RCDX => GRID_CARTESC_RCDX
+       CZ   => ATMOS_GRID_CARTESC_CZ, &
+       CX   => ATMOS_GRID_CARTESC_CX, &
+       FX   => ATMOS_GRID_CARTESC_FX, &
+       CDX  => ATMOS_GRID_CARTESC_CDX, &
+       RCDX => ATMOS_GRID_CARTESC_RCDX
   use mpi
   use scale_comm, only: &
        COMM_datatype, &

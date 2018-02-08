@@ -131,12 +131,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_TB_driver( update_flag )
-    use scale_gridtrans, only: &
-       GSQRT => GTRANS_GSQRT, &
-       J13G  => GTRANS_J13G,  &
-       J23G  => GTRANS_J23G,  &
-       J33G  => GTRANS_J33G,  &
-       MAPF  => GTRANS_MAPF
+    use scale_atmos_grid_cartesC_metric, only: &
+       GSQRT => ATMOS_GRID_CARTESC_METRIC_GSQRT, &
+       J13G  => ATMOS_GRID_CARTESC_METRIC_J13G,  &
+       J23G  => ATMOS_GRID_CARTESC_METRIC_J23G,  &
+       J33G  => ATMOS_GRID_CARTESC_METRIC_J33G,  &
+       MAPF  => ATMOS_GRID_CARTESC_METRIC_MAPF
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total

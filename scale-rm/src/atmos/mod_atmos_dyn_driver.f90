@@ -245,12 +245,12 @@ contains
        RFDY => ATMOS_GRID_CARTESC_RFDY
     use scale_atmos_grid_cartesC_real, only: &
        REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI
-    use scale_gridtrans, only: &
-       GTRANS_GSQRT, &
-       GTRANS_J13G,  &
-       GTRANS_J23G,  &
-       GTRANS_J33G,  &
-       GTRANS_MAPF
+    use scale_atmos_grid_cartesC_metric, only: &
+       GSQRT => ATMOS_GRID_CARTESC_METRIC_GSQRT, &
+       J13G  => ATMOS_GRID_CARTESC_METRIC_J13G,  &
+       J23G  => ATMOS_GRID_CARTESC_METRIC_J23G,  &
+       J33G  => ATMOS_GRID_CARTESC_METRIC_J33G,  &
+       MAPF  => ATMOS_GRID_CARTESC_METRIC_MAPF
     use scale_time, only: &
        TIME_DTSEC,           &
        TIME_DTSEC_ATMOS_DYN
@@ -383,8 +383,7 @@ contains
                        CDZ,  CDX,  CDY,  FDZ,  FDX,  FDY,                    & ! [IN]
                        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   & ! [IN]
                        REAL_PHI,                                             & ! [IN]
-                       GTRANS_GSQRT,                                         & ! [IN]
-                       GTRANS_J13G, GTRANS_J23G, GTRANS_J33G, GTRANS_MAPF,   & ! [IN]
+                       GSQRT, J13G, J23G, J33G, MAPF,                        & ! [IN]
                        TRACER_R, TRACER_CV, TRACER_CP, TRACER_MASS,          & ! [IN]
                        ATMOS_REFSTATE_dens,                                  & ! [IN]
                        ATMOS_REFSTATE_pott,                                  & ! [IN]

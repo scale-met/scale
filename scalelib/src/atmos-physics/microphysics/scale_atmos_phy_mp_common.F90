@@ -875,8 +875,6 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
-    use scale_gridtrans, only: &
-       J33G => GTRANS_J33G
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -955,16 +953,16 @@ contains
        endif
        call COMM_wait( QTRC(:,:,:,iqa), QA_MP+iq )
 
-       !$omp parallel do default(none)                                                        &
-       !$omp shared(JS,JE,IS,IE,KS,KE,qflx,iq,vterm,DENS,QTRC,iqa,J33G,eflx,temp,CVq,RHOE,dt) &
-       !$omp shared(rcdz,GRAV,rfdz,MOMZ,MOMX,rcdz_u,MOMY,rcdz_v)                              &
+       !$omp parallel do default(none)                                                   &
+       !$omp shared(JS,JE,IS,IE,KS,KE,qflx,iq,vterm,DENS,QTRC,iqa,eflx,temp,CVq,RHOE,dt) &
+       !$omp shared(rcdz,GRAV,rfdz,MOMZ,MOMX,rcdz_u,MOMY,rcdz_v)                         &
        !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
 
           !--- mass flux for each mass tracer, upwind with vel < 0
           do k  = KS-1, KE-1
-             qflx(k,i,j,iq) = vterm(k+1,i,j,iq) * DENS(k+1,i,j) * QTRC(k+1,i,j,iqa) * J33G
+             qflx(k,i,j,iq) = vterm(k+1,i,j,iq) * DENS(k+1,i,j) * QTRC(k+1,i,j,iqa)
           enddo
           qflx(KE,i,j,iq) = 0.0_RP
 

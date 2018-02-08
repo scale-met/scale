@@ -143,9 +143,6 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        GRAV  => CONST_GRAV
-
-    use scale_gridtrans
-
     use scale_file_history, only: &
        FILE_HISTORY_in
 

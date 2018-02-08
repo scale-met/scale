@@ -1701,8 +1701,8 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_gridtrans, only: &
-       GTRANS_ROTC
+    use scale_atmos_grid_cartesC_metric, only: &
+       ROTC => ATMOS_GRID_CARTESC_METRIC_ROTC
     implicit none
 
     integer,  intent(in)    :: HANDLE !< id number of nesting relation in this process target
@@ -1823,8 +1823,8 @@ contains
              u_on_map = WORK1_send(k,i,j) / org_DENS(k,i,j)
              v_on_map = WORK2_send(k,i,j) / org_DENS(k,i,j)
 
-             org_U_ll(k,i,j) = u_on_map * GTRANS_ROTC(i,j,1) - v_on_map * GTRANS_ROTC(i,j,2)
-             org_V_ll(k,i,j) = u_on_map * GTRANS_ROTC(i,j,2) + v_on_map * GTRANS_ROTC(i,j,1)
+             org_U_ll(k,i,j) = u_on_map * ROTC(i,j,1) - v_on_map * ROTC(i,j,2)
+             org_V_ll(k,i,j) = u_on_map * ROTC(i,j,2) + v_on_map * ROTC(i,j,1)
           enddo
           enddo
           enddo
@@ -2039,8 +2039,8 @@ contains
           do j = 1, DAUGHTER_JA(HANDLE)
           do i = 1, DAUGHTER_IA(HANDLE)
           do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-             WORK1_recv(k,i,j) =  U_ll_recv(k,i,j) * GTRANS_ROTC(i,j,1) + V_ll_recv(k,i,j) * GTRANS_ROTC(i,j,2)
-             WORK2_recv(k,i,j) = -U_ll_recv(k,i,j) * GTRANS_ROTC(i,j,2) + V_ll_recv(k,i,j) * GTRANS_ROTC(i,j,1)
+             WORK1_recv(k,i,j) =  U_ll_recv(k,i,j) * ROTC(i,j,1) + V_ll_recv(k,i,j) * ROTC(i,j,2)
+             WORK2_recv(k,i,j) = -U_ll_recv(k,i,j) * ROTC(i,j,2) + V_ll_recv(k,i,j) * ROTC(i,j,1)
           enddo
           enddo
           enddo

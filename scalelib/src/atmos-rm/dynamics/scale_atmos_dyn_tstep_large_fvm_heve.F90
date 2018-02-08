@@ -207,7 +207,7 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW, &
        I_UYZ, &
@@ -1101,7 +1101,7 @@ contains
        COMM_world
     use scale_file_history, only: &
        FILE_HISTORY_in
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XY
     implicit none

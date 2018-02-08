@@ -185,8 +185,8 @@ contains
        THERMODYN_pott      => ATMOS_THERMODYN_pott
     use scale_atmos_phy_mp, only: &
        QS_MP
-    use scale_gridtrans, only: &
-       rotc => GTRANS_ROTC
+    use scale_atmos_grid_cartesC_metric, only: &
+       rotc => ATMOS_GRID_CARTESC_METRIC_ROTC
     use scale_topography, only: &
        topo => TOPO_Zsfc
     use scale_atmos_phy_mp_convert, only: &
