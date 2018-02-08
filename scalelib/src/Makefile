@@ -199,7 +199,6 @@ OBJS_NAME = \
 	scale_ocean_phy.o	\
 	scale_ocean_phy_const.o	\
 	scale_ocean_phy_slab.o	\
-	scale_ocean_phy_file.o	\
 	scale_ocean_sfc.o	\
 	scale_ocean_sfc_const.o	\
 	scale_ocean_sfc_slab.o	\
