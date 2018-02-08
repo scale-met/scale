@@ -107,7 +107,7 @@ module scale_file_external_input
   !
   !++ Public parameters & variables
   !
-  integer, public, parameter :: FILE_EXTERNAL_INPUT_file_limit = 100 !< limit of file (for one item)
+  integer, public, parameter :: FILE_EXTERNAL_INPUT_file_limit = 1000 !< limit of file (for one item)
 
   !-----------------------------------------------------------------------------
   !

@@ -19,8 +19,8 @@ module scale_land_phy_slab
   use scale_grid_index
   use scale_land_grid_index
 
-  use scale_external_input, only: &
-     EXTIN_file_limit
+  use scale_file_external_input, only: &
+     FILE_EXTERNAL_INPUT_file_limit
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -46,17 +46,17 @@ module scale_land_phy_slab
   logical,               private :: LAND_PHY_update_bottom_temp  = .false. ! Is LAND_TEMP  updated in the lowest level?
   logical,               private :: LAND_PHY_update_bottom_water = .false. ! Is LAND_WATER updated in the lowest level?
 
-  logical,               private :: LAND_PHY_SLAB_nudging                            = .false. ! Is nudging for land physics used?
-  real(RP),              private :: LAND_PHY_SLAB_nudging_tau                        = 0.0_RP  ! time constant for nudging [sec]
-  character(len=H_LONG), private :: LAND_PHY_SLAB_nudging_basename(EXTIN_file_limit) = ''
-  logical,               private :: LAND_PHY_SLAB_nudging_enable_periodic_year       = .false.
-  logical,               private :: LAND_PHY_SLAB_nudging_enable_periodic_month      = .false.
-  logical,               private :: LAND_PHY_SLAB_nudging_enable_periodic_day        = .false.
-  integer,               private :: LAND_PHY_SLAB_nudging_step_fixed                 = 0
-  real(RP),              private :: LAND_PHY_SLAB_nudging_offset                     = 0.0_RP
-  real(RP),              private :: LAND_PHY_SLAB_nudging_defval                   ! = UNDEF
-  logical,               private :: LAND_PHY_SLAB_nudging_check_coordinates          = .true.
-  integer,               private :: LAND_PHY_SLAB_nudging_step_limit                 = 0
+  logical,               private :: LAND_PHY_SLAB_nudging                                          = .false. ! Is nudging for land physics used?
+  real(RP),              private :: LAND_PHY_SLAB_nudging_tau                                      = 0.0_RP  ! time constant for nudging [sec]
+  character(len=H_LONG), private :: LAND_PHY_SLAB_nudging_basename(FILE_EXTERNAL_INPUT_file_limit) = ''
+  logical,               private :: LAND_PHY_SLAB_nudging_enable_periodic_year                     = .false.
+  logical,               private :: LAND_PHY_SLAB_nudging_enable_periodic_month                    = .false.
+  logical,               private :: LAND_PHY_SLAB_nudging_enable_periodic_day                      = .false.
+  integer,               private :: LAND_PHY_SLAB_nudging_step_fixed                               = 0
+  real(RP),              private :: LAND_PHY_SLAB_nudging_offset                                   = 0.0_RP
+  real(RP),              private :: LAND_PHY_SLAB_nudging_defval                                 ! = UNDEF
+  logical,               private :: LAND_PHY_SLAB_nudging_check_coordinates                        = .true.
+  integer,               private :: LAND_PHY_SLAB_nudging_step_limit                               = 0
 
   real(RP),              private :: WATER_DENSCS !< Heat Capacity (rho*CS) for soil moisture [J/K/m3]
 
@@ -70,8 +70,8 @@ contains
     use scale_const, only: &
        DWATR => CONST_DWATR, &
        CL    => CONST_CL
-    use scale_external_input, only: &
-       EXTIN_regist
+    use scale_file_external_input, only: &
+       FILE_EXTERNAL_INPUT_regist
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     implicit none
@@ -118,29 +118,29 @@ contains
           call PRC_MPIstop
        end if
 
-       call EXTIN_regist( LAND_PHY_SLAB_nudging_basename(:),           & ! [IN]
-                          'LAND_TEMP',                                 & ! [IN]
-                          'LXY',                                       & ! [IN]
-                          LAND_PHY_SLAB_nudging_enable_periodic_year,  & ! [IN]
-                          LAND_PHY_SLAB_nudging_enable_periodic_month, & ! [IN]
-                          LAND_PHY_SLAB_nudging_enable_periodic_day,   & ! [IN]
-                          LAND_PHY_SLAB_nudging_step_fixed,            & ! [IN]
-                          LAND_PHY_SLAB_nudging_offset,                & ! [IN]
-                          LAND_PHY_SLAB_nudging_defval,                & ! [IN]
-                          LAND_PHY_SLAB_nudging_check_coordinates,     & ! [IN]
-                          LAND_PHY_SLAB_nudging_step_limit             ) ! [IN]
+       call FILE_EXTERNAL_INPUT_regist( LAND_PHY_SLAB_nudging_basename(:),           & ! [IN]
+                                        'LAND_TEMP',                                 & ! [IN]
+                                        'LXY',                                       & ! [IN]
+                                        LAND_PHY_SLAB_nudging_enable_periodic_year,  & ! [IN]
+                                        LAND_PHY_SLAB_nudging_enable_periodic_month, & ! [IN]
+                                        LAND_PHY_SLAB_nudging_enable_periodic_day,   & ! [IN]
+                                        LAND_PHY_SLAB_nudging_step_fixed,            & ! [IN]
+                                        LAND_PHY_SLAB_nudging_offset,                & ! [IN]
+                                        LAND_PHY_SLAB_nudging_defval,                & ! [IN]
+                                        LAND_PHY_SLAB_nudging_check_coordinates,     & ! [IN]
+                                        LAND_PHY_SLAB_nudging_step_limit             ) ! [IN]
 
-       call EXTIN_regist( LAND_PHY_SLAB_nudging_basename(:),           & ! [IN]
-                          'LAND_WATER',                                & ! [IN]
-                          'LXY',                                       & ! [IN]
-                          LAND_PHY_SLAB_nudging_enable_periodic_year,  & ! [IN]
-                          LAND_PHY_SLAB_nudging_enable_periodic_month, & ! [IN]
-                          LAND_PHY_SLAB_nudging_enable_periodic_day,   & ! [IN]
-                          LAND_PHY_SLAB_nudging_step_fixed,            & ! [IN]
-                          LAND_PHY_SLAB_nudging_offset,                & ! [IN]
-                          LAND_PHY_SLAB_nudging_defval,                & ! [IN]
-                          LAND_PHY_SLAB_nudging_check_coordinates,     & ! [IN]
-                          LAND_PHY_SLAB_nudging_step_limit             ) ! [IN]
+       call FILE_EXTERNAL_INPUT_regist( LAND_PHY_SLAB_nudging_basename(:),           & ! [IN]
+                                        'LAND_WATER',                                & ! [IN]
+                                        'LXY',                                       & ! [IN]
+                                        LAND_PHY_SLAB_nudging_enable_periodic_year,  & ! [IN]
+                                        LAND_PHY_SLAB_nudging_enable_periodic_month, & ! [IN]
+                                        LAND_PHY_SLAB_nudging_enable_periodic_day,   & ! [IN]
+                                        LAND_PHY_SLAB_nudging_step_fixed,            & ! [IN]
+                                        LAND_PHY_SLAB_nudging_offset,                & ! [IN]
+                                        LAND_PHY_SLAB_nudging_defval,                & ! [IN]
+                                        LAND_PHY_SLAB_nudging_check_coordinates,     & ! [IN]
+                                        LAND_PHY_SLAB_nudging_step_limit             ) ! [IN]
 
        if( IO_L ) write(IO_FID_LOG,*) '*** Use nudging for Land physics: ON'
     else
@@ -178,8 +178,8 @@ contains
        NOWDAYSEC => TIME_NOWDAYSEC
     use scale_process, only: &
        PRC_MPIstop
-    use scale_external_input, only: &
-       EXTIN_update
+    use scale_file_external_input, only: &
+       FILE_EXTERNAL_INPUT_update
     use scale_landuse, only: &
        LANDUSE_fact_land
     use scale_matrix, only: &
@@ -229,21 +229,21 @@ contains
 
     if( LAND_PHY_SLAB_nudging ) then
 
-      call EXTIN_update( &
-           TEMP1,       & ! (out)
-           'LAND_TEMP', & ! (in)
-           NOWDAYSEC,   & ! (in)
-           error        ) ! (out)
+      call FILE_EXTERNAL_INPUT_update( &
+                          'LAND_TEMP', & ! (in)
+                          NOWDAYSEC,   & ! (in)
+                          TEMP1,       & ! (out)
+                          error        ) ! (out)
       if ( error ) then
          write(*,*) 'xxx Requested data is not found!'
          call PRC_MPIstop
       end if
 
-      call EXTIN_update( &
-           WATER1,       & ! (out)
-           'LAND_WATER', & ! (in)
-           NOWDAYSEC,    & ! (in)
-           error         ) ! (out)
+      call FILE_EXTERNAL_INPUT_update( &
+                         'LAND_WATER', & ! (in)
+                         NOWDAYSEC,    & ! (in)
+                         WATER1,       & ! (out)
+                         error         ) ! (out)
       if ( error ) then
          write(*,*) 'xxx Requested data is not found!'
          call PRC_MPIstop
