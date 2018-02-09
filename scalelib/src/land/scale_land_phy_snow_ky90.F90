@@ -8,7 +8,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
-module scale_land_phy_snow_KY90
+module scale_land_phy_snow_ky90
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -33,6 +33,8 @@ module scale_land_phy_snow_KY90
   !
   !++ Public parameters & variables
   !
+  real(RP), public          :: W0                    ! Maximum water content [ratio:0-1]
+  real(RP), public          :: RHOSNOW   = 400.0_RP  ! Snow density [kg/m3]
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -49,11 +51,10 @@ module scale_land_phy_snow_KY90
   integer, parameter        :: data_length_max=10000
 
   ! model parameters
-  real(RP)                  :: LAMBDAS               ! Snow thermal conductivity [W m^-1 K^-1]
-  real(RP)                  :: W0                    ! Maximum water content [%]
-  real(RP)                  :: CSRHOS                ! Heat capacity [J/m^3/K]
-                                                     ! (Specific heat of snow [J kg^-1 K^-1])*(Snow density[kg m^-3])
-  real(RP)                  :: RHOSNOW   = 400.0_RP  ! Snow density [kg m^-3]
+  real(RP)                  :: LAMBDAS               ! Snow thermal conductivity [W/m/K]
+  real(RP)                  :: CSRHOS                ! Heat capacity             [J/m3/K]
+                                                     ! (Specific heat of snow [J/kg/K])*(Snow density [kg/m3])
+  !real(RP)                  :: RHOSNOW   = 400.0_RP  ! Snow density [kg/m3]
   real(RP)                  :: CS                    ! Specific heat for unit mass [J/kg/K]
   real(RP)                  :: ALBEDO                ! albedo
   real(RP)                  :: ALBEDOMIN = 0.4_RP
@@ -66,9 +67,8 @@ module scale_land_phy_snow_KY90
   !real(RP), parameter       :: rhoair    = 1.289_RP      ! [kg/m3]
   real(RP), parameter       :: CH        = 0.002_RP
   real(RP), parameter       :: CE        = 0.0021_RP
-  real(RP), parameter       :: LV        = 2.5e6_RP
-  real(RP), parameter       :: LF        = 3.34e5_RP
-  real(RP), parameter       :: T0        = 273.15_RP
+  real(RP), parameter       :: LV        = 2.5e6_RP       ! [J/kg] at 0 deg.C
+  real(RP), parameter       :: LF        = 3.34e5_RP      ! [J/kg] at 0 deg.C
 
   logical                   :: ALBEDO_const = .true.
 
@@ -81,21 +81,8 @@ contains
   subroutine LAND_PHY_SNOW_KY90_setup
     use scale_process, only: &
        PRC_MPIstop
-    !use mod_land_vars, only: &  ! tentative
-    !   SNOW_TEMP,         &
-    !   SNOW_SWE,          &
-    !   SNOW_Depth,        &
-    !   SNOW_Dzero,        &
-    !   SNOW_nosnowsec
+
     implicit none
-
-    ! initial value
-    !real(RP), intent(out)      :: TSNOW0   ! Initial time snow surface temperature [K]
-    !real(RP), intent(out)      :: ZNSNOW0 ! ZNSNOW0 = initial freezing depth      [m]
-    !real(RP), intent(out)      :: SWE0    ! SWE0 = snow depth initial value in snow water equivalen [kg/m2]
-    !real(RP), intent(out)      :: DEPTH0  ! DEPTH0 = initial snow depth           [m]
-    !real(RP)                   :: nosnowsec                   ! number of hours from latest snow event
-
     real(RP)                  :: snow_conductivity     = 0.42_RP
     real(RP)                  :: water_content         = 0.1_RP
     real(RP)                  :: snow_heat_capacityRHO = 8.4e+05_RP
@@ -114,11 +101,6 @@ contains
 
     integer :: ierr
     !---------------------------------------------------------------------------
-
-    !open(10,file='variable_snow2.in',status='OLD')
-    !read(10,nml=variables)
-    !write(6,nml=variables)
-    !close(10)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SNOW_KY90] / Categ[LAND PHY] / Origin[SCALElib]'
@@ -142,14 +124,6 @@ contains
     !write(*,*)   "Specific heat capacity of snow [J/kg/K]: ",CS
     ALBEDO        = albedo_value
 
-
-    ! Set initial value: tentative
-    !SNOW_TEMP      = T0
-    !SNOW_SWE       = snowDepth_initial*RHOSNOW
-    !SNOW_Depth     = snowDepth_initial
-    !SNOW_Dzero     = SNOW_Depth
-    !SNOW_nosnowsec = 0.0_RP
-
     return
   endsubroutine LAND_PHY_SNOW_KY90_setup
 
@@ -167,6 +141,7 @@ contains
              SFLX_SH,                & ! [OUT]
              SFLX_LH,                & ! [OUT]
              SFLX_GH,                & ! [OUT]
+             SFLX_evap,              & ! [OUT]
              SNOW_LAND_GH,           & ! [OUT]
              SNOW_LAND_Water,        & ! [OUT]
              SNOW_frac,              & ! [OUT]
@@ -190,9 +165,10 @@ contains
        qsatf => ATMOS_SATURATION_pres2qsat_all  ! better to  change name from qsatf to qsat
     use scale_landuse, only: &
        LANDUSE_fact_land
-    use scale_const, only: &
-     I_SW  => CONST_I_SW, &
-     I_LW  => CONST_I_LW
+    use scale_const, only:   &
+       T0    => CONST_TEM00, &
+       I_SW  => CONST_I_SW,  &
+       I_LW  => CONST_I_LW
 
     implicit none
     ! prognostic variables
@@ -207,8 +183,9 @@ contains
     real(RP), intent(out)     :: TSNOW_t        (IA,JA) ! updated tendency of snow temperature [K]
     real(RP), intent(out)     :: SFLX_SH        (IA,JA) ! sensible heat flux between atmos and snow [W/m2]
     real(RP), intent(out)     :: SFLX_LH        (IA,JA) ! latente  heat flux between atmos and snow [W/m2]
-    real(RP), intent(out)     :: SFLX_GH        (IA,JA) ! whole snowpack Ground flux [W/m2]
-    real(RP), intent(out)     :: SNOW_LAND_GH   (IA,JA) ! heat flux from snow to land [W/m2]
+    real(RP), intent(out)     :: SFLX_GH        (IA,JA) ! whole snowpack Ground flux   [W/m2]
+    real(RP), intent(out)     :: SFLX_evap      (IA,JA) ! evaporation due to LH        [kg/m2/s]
+    real(RP), intent(out)     :: SNOW_LAND_GH   (IA,JA) ! heat flux from snow to land  [W/m2]
     real(RP), intent(out)     :: SNOW_LAND_Water(IA,JA) ! water flux from snow to land [W/m2]
     real(RP), intent(out)     :: SNOW_frac      (IA,JA) ! snow fraction, defined by time direction [-]
 
@@ -233,9 +210,9 @@ contains
 
     ! works
     real(RP)                  :: TSNOW1           ! updated snow surface temperature [K]
-    real(RP)                  :: ZNSNOW1          ! updated freezing depth      [m]
-    real(RP)                  :: SWE1             ! updated snow water equivalen [kg/m2]
-    real(RP)                  :: DEPTH1           ! updated snow depth           [m]
+    real(RP)                  :: ZNSNOW1          ! updated freezing depth           [m]
+    real(RP)                  :: SWE1             ! updated snow water equivalence   [kg/m2]
+    real(RP)                  :: DEPTH1           ! updated snow depth               [m]
 
     real(RP), parameter       :: Uabs_min = 0.1_RP
     real(RP)                  :: Uabs
@@ -274,6 +251,7 @@ contains
                             SFLX_SH     (i,j),      & ! [OUT]
                             SFLX_LH     (i,j),      & ! [OUT]
                             SFLX_GH     (i,j),      & ! [OUT]
+                            SFLX_evap   (i,j),      & ! [OUT]
                             QCC         (i,j),      & ! [OUT]
                             QFUSION     (i,j),      & ! [OUT]
                             MELT        (i,j),      & ! [OUT]
@@ -320,6 +298,7 @@ contains
        SFLX_SH        (i,j)   = 0.0_RP
        SFLX_LH        (i,j)   = 0.0_RP
        SFLX_GH        (i,j)   = 0.0_RP
+       SFLX_evap      (i,j)   = 0.0_RP
        QCC            (i,j)   = 0.0_RP
        QFUSION        (i,j)   = 0.0_RP
        MELT           (i,j)   = 0.0_RP
@@ -354,6 +333,7 @@ contains
        HFLUX,                 & ! [OUT]
        LATENTFLUX,            & ! [OUT]
        GFLUX,                 & ! [OUT]
+       EvapFLX,               & ! [OUT]
        QCC,                   & ! [OUT]
        QFUSION,               & ! [OUT]
        MELT,                  & ! [OUT]
@@ -367,6 +347,8 @@ contains
        SW,                    & ! [IN]
        LW,                    & ! [IN]
        time                   ) ! [IN]
+    use scale_const, only:   &
+       T0    => CONST_TEM00
 
     implicit none
     ! prognostic variables
@@ -380,9 +362,10 @@ contains
     real(RP), intent(out)      :: Emiss
 
     ! output variables
-    real(RP), intent(out)      :: HFLUX         ! HFLUX = whole snow Sensible heat flux [W/m2]
+    real(RP), intent(out)      :: HFLUX         ! HFLUX = whole snow Sensible heat flux    [W/m2]
     real(RP), intent(out)      :: LATENTFLUX    ! LATENTFLUX = whole snow Latent heat flux [W/m2]
-    real(RP), intent(out)      :: GFLUX         ! GFLUX = whole snow Ground flux [W/m2]
+    real(RP), intent(out)      :: GFLUX         ! GFLUX = whole snow Ground flux           [W/m2]
+    real(RP), intent(out)      :: EvapFLX       ! Evapolation due to LATENTFLUX            [kg/m2/s]
 
     real(RP), intent(out)      :: QCC           ! QCC = heat used for change snow condition to isothermal [J m^-2]
     real(RP), intent(out)      :: QFUSION       ! QFUSION = heat used for change snow condition to melt point [J m^-2]
@@ -429,6 +412,7 @@ contains
     QCC     = 0.0_RP
     QFUSION = 0.0_RP
     MELT    = 0.0_RP
+    SWEMELT = 0.0_RP
 
     ! snowfall during timestep
     SNOW    = SFLX_SNOW * time
@@ -469,6 +453,13 @@ contains
    call groundflux (TSNOW0, TA, UA, RH, DENS, ALBEDO, SW, LW, &  ! [IN]
                     GFLUX, RFLUX, SFLUX, LINFLUX, LOUTFLUX, HFLUX, LATENTFLUX) ! [OUT]
 
+   ! SWE change due to latent heat flux
+   EvapFLX = LATENTFLUX / LV                 ! [kg/m2/s] positive => snow decrease
+
+   SWE0        = SWE0    - EvapFLX * time    ! [kg/m2]
+   DELTADEPTH  = (EvapFLX * time) /RHOSNOW
+   DEPTH0      = DEPTH0  - DELTADEPTH        ! [m]
+   ZNSNOW0     = ZNSNOW0 - DELTADEPTH        ! [m]
 
 !! Check whether GFLUX (energy into snowpack) is enough to melt all snow.
 !! If GFLUX is enough, the model melts all snow and then go to next timestep.
@@ -483,7 +474,8 @@ contains
       ZNSNOW     = 0.0_RP
       DEPTH      = 0.0_RP
       SWE        = 0.0_RP
-      SWEMELT    = MELT /((1.0_RP-W0)*LF)
+      !SWEMELT    = MELT /((1.0_RP-W0)*LF)
+      SWEMELT    = RHOSNOW*DEPTH0
       Gflux2land = GFLUX*time - (QCC + QFUSION + MELT)   ! [J/m2]
 
    else
@@ -563,11 +555,12 @@ contains
       if( IO_L ) write(IO_FID_LOG,*) '### Heat flux from snowpack to land surface: ', Gflux2land
 
       DELTADEPTH             = MELT / ((1.0_RP-W0)*LF*RHOSNOW)
-      SWEMELT                = DELTADEPTH*RHOSNOW
+      SWEMELT                = RHOSNOW*DELTADEPTH
       SWE                    = SWE0        - SWEMELT
       DEPTH                  = DEPTH0      - DELTADEPTH
       if (DEPTH < ZNSNOW) then
          ! NOTICE: energy budget has not been considered thought this process yet.
+         write(*,*) "replace ZNSNOW <= DEPTH"
          ZNSNOW               = DEPTH
       endif
 
@@ -601,10 +594,10 @@ subroutine groundflux (TS, TA, UA, RH, rhoair, ALPHA, SW, LW, &
   RFLUX              = epsilon * (LW-(sigma*(TS**4)))
   LINFLUX            = epsilon * LW
   LOUTFLUX           = -1.0_RP * (epsilon * sigma * (TS**4))
-  HFLUX              = -1.0_RP * (cp * rhoair * CH * UA * (TS-TA))
-  LATENTFLUX         = -1.0_RP * (LV * rhoair * CE * UA * ((1-RH)*QSAT + (DELTAQSAT*(TS-TA))))
+  HFLUX              = cp * rhoair * CH * UA * (TS-TA)
+  LATENTFLUX         = LV * rhoair * CE * UA * ((1-RH)*QSAT + (DELTAQSAT*(TS-TA)))
 
-  GFLUX              = (SFLUX + RFLUX + HFLUX + LATENTFLUX)
+  GFLUX              = (SFLUX + RFLUX - HFLUX - LATENTFLUX)
 
   write(*,*) "-------------- groundflux --------------"
   write(*,*) "GFLUX is:    ", GFLUX
@@ -620,6 +613,8 @@ end subroutine groundflux
 
 !==============================================================
 subroutine check_allSnowMelt (GFLUX, TS1, ZN1, D, sflag, time)
+  use scale_const, only:   &
+       T0    => CONST_TEM00
 
   implicit none
   real(RP), intent(in)     :: GFLUX, TS1, ZN1, D, time
@@ -647,6 +642,8 @@ end subroutine
 
 !==============================================================
 subroutine cal_param (ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
+  use scale_const, only:   &
+       T0    => CONST_TEM00
 
   implicit none
   real(RP), intent(in) ::  ZN1, TS1, TA, UA, RH, rhoair, LW
@@ -674,6 +671,8 @@ end subroutine
 
 !==============================================================
 subroutine check_applicability (GFLUX, TS1, ZN1, TA, UA, RH, rhoair, LW, GFLUX_res, beta, time)
+  use scale_const, only:   &
+       T0    => CONST_TEM00
 
   implicit none
   real(RP), intent(in)     :: GFLUX, TS1, ZN1, time
@@ -717,6 +716,8 @@ return
 end subroutine snowdepth
 !==============================================================
 subroutine equation415(LAMBDAS, C2, ZN2, RH, QSAT, TS1, ZN1, GFLUX, TA, UA, rhoair, LW, TS2, time)
+  use scale_const, only:   &
+       T0    => CONST_TEM00
 
   implicit none
 
@@ -739,6 +740,8 @@ subroutine equation415(LAMBDAS, C2, ZN2, RH, QSAT, TS1, ZN1, GFLUX, TA, UA, rhoa
 end subroutine equation415
 !==============================================================
 subroutine recalculateZ(ZN1, TS, GFLUX, ZN2, time)
+  use scale_const, only:   &
+       T0    => CONST_TEM00
 
   implicit none
 
@@ -756,6 +759,9 @@ end subroutine recalculateZ
 !==============================================================
 subroutine calculationMO(GFLUX, CSRHOS, ZN1, TS1, ZN2, TS2, &
                          MELT, QCC, QFUSION, time)
+  use scale_const, only:   &
+       T0    => CONST_TEM00
+
   implicit none
 
   real(RP), intent(in)      :: GFLUX, CSRHOS, ZN1, TS1, TS2, ZN2, time
@@ -785,8 +791,10 @@ end subroutine calculationMO
 !==============================================================
 subroutine calculationNoMO(GFLUX, CSRHOS, ZN1, TS1, ZN2, TS2, &
                            MELT, QCC, QFUSION, time)
- implicit none
+  use scale_const, only:   &
+       T0    => CONST_TEM00
 
+ implicit none
  real(RP), intent(in)        :: GFLUX, CSRHOS, ZN1, TS1, TS2, ZN2, time
  real(RP), intent(out)       :: MELT, QCC, QFUSION
 
@@ -812,6 +820,8 @@ end subroutine calculationNoMO
 
 !==============================================================
 subroutine check_res(ZN1, ZN2, TS1, TS2, GFLUX, TA, UA, RH, rhoair, LW, flag, time)
+  use scale_const, only:   &
+       T0    => CONST_TEM00
 
   implicit none
   real(RP) , intent(in)  :: ZN1, ZN2, TS1, TS2, GFLUX, time
@@ -842,6 +852,8 @@ end subroutine check_res
 
 !==============================================================
 subroutine cal_R1R2(ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
+  use scale_const, only:   &
+       T0    => CONST_TEM00
 
   implicit none
   real(RP), intent(in)   :: ZN1, TS1
@@ -929,4 +941,4 @@ subroutine cal_R1R2(ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
 end subroutine cal_R1R2
 
 !!!!!!!!!!!!!!!!!!!!!!SUBROUTINE END!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-end module scale_land_phy_snow_KY90
+end module scale_land_phy_snow_ky90
