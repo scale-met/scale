@@ -159,8 +159,8 @@ contains
              dt                      ) ! [IN]
     use scale_process, only: &
        PRC_MPIstop
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_atmos_saturation, only:  &
        qsatf => ATMOS_SATURATION_pres2qsat_all  ! better to  change name from qsatf to qsat
     use scale_landuse, only: &
@@ -218,6 +218,7 @@ contains
     real(RP)                  :: Uabs
     real(RP)                  :: QAsat
     real(RP)                  :: RH
+    real(RP)                  :: qdry
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -232,9 +233,13 @@ contains
        Uabs = max( sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 ), Uabs_min )
        !Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
 
-       call qsatf( QAsat, TA(i,j), PRSA(i,j) )
+       !!!!! please check  from here
+       qdry = 1.0_RP - QA(i,j)
+       call qsatf(  TA(i,j), PRSA(i,j), qdry, & ![IN]
+                    QAsat                     ) ![OUT]
        RH  = QA(i,j) / QAsat
        write(*,*) "RH,  ",RH," DENS (1.289 org) ",DENS(i,j)
+       !!!!! please check  to here
 
        TSNOW1  = TSNOW (i,j)
        SWE1    = SWE   (i,j)
@@ -307,11 +312,11 @@ contains
 
     endif
 
-    call HIST_in( TSNOW_t (:,:), 'SNOW_SFC_TEMP_t', 'tendency of snow surface temperature',        'K'    )
-    call HIST_in( QCC     (:,:), 'SNOW_QCC',        'Heat used for changing temperature profile',  'J/m2' )
-    call HIST_in( QFUSION (:,:), 'SNOW_QFUSION',    'Heat used for phase change of snow',          'J/m2' )
-    call HIST_in( MELT    (:,:), 'SNOW_MELT',       'Heat used for snow melt',                     'J/m2' )
-    call HIST_in( SWEMELT (:,:), 'SNOW_SWEMELT',    'Equivalent water of melt snow',               'kg/m2')
+    call FILE_HISTORY_in( TSNOW_t (:,:), 'SNOW_SFC_TEMP_t', 'tendency of snow surface temperature',       'K',     dim_type='XY' )
+    call FILE_HISTORY_in( QCC     (:,:), 'SNOW_QCC',        'Heat used for changing temperature profile', 'J/m2',  dim_type='XY' )
+    call FILE_HISTORY_in( QFUSION (:,:), 'SNOW_QFUSION',    'Heat used for phase change of snow',         'J/m2',  dim_type='XY' )
+    call FILE_HISTORY_in( MELT    (:,:), 'SNOW_MELT',       'Heat used for snow melt',                    'J/m2',  dim_type='XY' )
+    call FILE_HISTORY_in( SWEMELT (:,:), 'SNOW_SWEMELT',    'Equivalent water of melt snow',              'kg/m2', dim_type='XY' )
 
     end do
     end do

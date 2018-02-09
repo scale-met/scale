@@ -203,27 +203,29 @@ contains
     use mod_land_admin, only: &
        LAND_sw
     use mod_land_vars, only: &
-       ATMOS_TEMP,     &
-       ATMOS_PRES,     &
-       ATMOS_W,        &
-       ATMOS_U,        &
-       ATMOS_V,        &
-       ATMOS_DENS,     &
-       ATMOS_QV,       &
-       ATMOS_PBL,      &
-       ATMOS_SFC_DENS, &
-       ATMOS_SFC_PRES, &
-       ATMOS_SFLX_LW,  &
-       ATMOS_SFLX_SW,  &
-       ATMOS_cosSZA,   &
-       ATMOS_SFLX_prec
+       ATMOS_TEMP,      &
+       ATMOS_PRES,      &
+       ATMOS_W,         &
+       ATMOS_U,         &
+       ATMOS_V,         &
+       ATMOS_DENS,      &
+       ATMOS_QV,        &
+       ATMOS_PBL,       &
+       ATMOS_SFC_DENS,  &
+       ATMOS_SFC_PRES,  &
+       ATMOS_SFLX_LW,   &
+       ATMOS_SFLX_SW,   &
+       ATMOS_cosSZA,    &
+       ATMOS_SFLX_prec, &
+       ATMOS_SFLX_rain, &
+       ATMOS_SFLX_snow
     use mod_cpl_vars, only: &
        CPL_getATM_LND
     implicit none
 
     real(RP) :: ATMOS_SFLX_rad_dn(IA,JA,2,2)
-    real(RP) :: ATMOS_SFLX_rain  (IA,JA)
-    real(RP) :: ATMOS_SFLX_snow  (IA,JA)
+    !real(RP) :: ATMOS_SFLX_rain  (IA,JA)
+    !real(RP) :: ATMOS_SFLX_snow  (IA,JA)
 
     integer  :: i, j
     !---------------------------------------------------------------------------

@@ -120,6 +120,8 @@ contains
 
     real(RP) :: QVsat  ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: QVS    ! water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: Rtot   ! total gas constant
+    real(RP) :: qdry   ! dry air mass ratio [kg/kg]
 
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
@@ -136,9 +138,11 @@ contains
 
       if( SNOW_frac(i,j) > 0.0_RP ) then
 
-        call qsat( QVsat,     & ! [OUT]
-                   LST1(i,j), & ! [IN]
-                   PRSS(i,j)  ) ! [IN]
+        qdry = 1.0_RP - QVA(i,j)
+        Rtot = qdry * Rdry + QVA(i,j) * Rvap
+
+        call qsat( LST1(i,j),  PRSS(i,j), qdry, & ! [IN]
+                   QVsat                        ) ! [OUT]
 
         QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
 
