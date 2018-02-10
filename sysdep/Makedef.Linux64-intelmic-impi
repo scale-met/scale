@@ -13,7 +13,7 @@ MODDIROPT = -module
 
 FFLAGS_FAST  = -fpp -m64 -O3 -xMIC-AVX512           \
                -assume byterecl -convert big_endian \
-               -fp-model fast=2 -align array64byte  \
+               -fp-model source -align array64byte  \
                -qopt-streaming-stores always        \
                -static_intel
 
@@ -29,6 +29,8 @@ FFLAGS_DEBUG = -fpp -m64 -O0 -xMIC-AVX512                \
                -check bounds -warn all -g -traceback     \
                -assume nobuffered_io
 
+
+
 ##### C setting
 #CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
 
@@ -43,11 +45,7 @@ CFLAGS_DEBUG = -O0 -xMIC-AVX512
 
 FFLAGS_OPENMP = -qopenmp -no-heap-arrays
 
-ifeq ($(SCALE_DISABLE_INTELVEC),T)
-   NOVEC = -no-vec
-endif
-
-FFLAGS_SYSDEPEND = $(NOVEC)
+FFLAGS_SYSDEPEND =
 CFLAGS_SYSDEPEND =
 
 FFLAGS_TENTATIVE = -no-ip -no-ipo
