@@ -162,7 +162,8 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_saturation, only:  &
-       qsatf => ATMOS_SATURATION_pres2qsat_all  ! better to  change name from qsatf to qsat
+       !qsatf => ATMOS_SATURATION_pres2qsat_all  ! better to  change name from qsatf to qsat
+        qsatf => ATMOS_SATURATION_dens2qsat_all
     use scale_landuse, only: &
        LANDUSE_fact_land
     use scale_const, only:   &
@@ -233,13 +234,13 @@ contains
        Uabs = max( sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 ), Uabs_min )
        !Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
 
-       !!!!! please check  from here
-       qdry = 1.0_RP - QA(i,j)
-       call qsatf(  TA(i,j), PRSA(i,j), qdry, & ![IN]
+       !qdry = 1.0_RP - QA(i,j)
+       !call qsatf(  TA(i,j), PRSA(i,j), qdry, & ![IN]
+       !             QAsat                     ) ![OUT]
+       call qsatf(  TA(i,j), DENS(i,j),       & ![IN]
                     QAsat                     ) ![OUT]
        RH  = QA(i,j) / QAsat
        write(*,*) "RH,  ",RH," DENS (1.289 org) ",DENS(i,j)
-       !!!!! please check  to here
 
        TSNOW1  = TSNOW (i,j)
        SWE1    = SWE   (i,j)

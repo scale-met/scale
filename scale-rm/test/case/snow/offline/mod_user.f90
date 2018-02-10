@@ -180,14 +180,15 @@ contains
        Rdry  => CONST_Rdry,  &    ! specific gas constant (dry air)
        CPdry => CONST_CPdry       ! specific heat (dry air,constant pressure) [J/kg/K]
     use scale_atmos_saturation, only:  &
-       qsatf => ATMOS_SATURATION_pres2qsat_all  ! better to  change name from qsatf to qsat
+       !qsatf => ATMOS_SATURATION_pres2qsat_all  ! better to  change name from qsatf to qsat
+        qsatf => ATMOS_SATURATION_dens2qsat_all
     use scale_grid_real, only: &
        REAL_lon
     use scale_time, only:   &
        NOWSEC => TIME_NOWSEC,      & ! subday part  of current time [sec]
        dt_LND => TIME_DTSEC_LAND     ! time interval of land step  [sec]
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use mod_cpl_vars, only: &
        TMPA  => LND_ATM_TEMP,        &
        PRSA  => LND_ATM_PRES,        &
@@ -209,6 +210,7 @@ contains
     real(RP) :: WORK(IA,JA)
     real(RP) :: RH
     real(RP) :: QAsat
+    real(RP) :: qdry
 
     !real(RP) :: LON
     !real(RP) :: dsec
@@ -276,22 +278,28 @@ contains
           LWD (i,j) = RWD(i,j,I_LW,1) + RWD(i,j,I_LW,2)
           SWD (i,j) = RWD(i,j,I_SW,1) + RWD(i,j,I_SW,2)
 
-          call qsatf( QAsat, TMPA(i,j), PRSA(i,j) )
+          !qdry = 1.0_RP - QA(i,j)
+          !call qsatf( TMPA(i,j), PRSA(i,j), qdry,    & ! [IN]
+          !            QAsat                          ) ! [OUT]
+          call qsatf(  TMPA(i,j), RHOS(i,j),          & ![IN]
+                       QAsat                          ) ![OUT]
+          !call qsatf(  TMPA(i,j), RHOA(i,j),          & ![IN]
+          !              QAsat                          ) ![OUT]
           QVA (i,j) = QAsat * (RH * 0.01)
           SNOW(i,j) = SNOW(i,j) / real(INPUT_UPDATE_DT, kind=RP) ! [mm/h->kg/m2/s]
 
        enddo
        enddo
 
-       call HIST_in( TMPA (:,:), 'TA_snow',   'Potential air temperature',    'K'     )
-       call HIST_in( QVA  (:,:), 'QA_snow',   'Specific humidity',            'kg/kg' )
-       call HIST_in( UA   (:,:), 'UA_snow',   'Wind speed',                   'm/s'   )
-       call HIST_in( SWD  (:,:), 'SWD_snow',  'Downward shortwave radiation', 'W/m2'  )
-       call HIST_in( LWD  (:,:), 'LWD_snow',  'Downward longwave  radiation', 'W/m2'  )
+       call FILE_HISTORY_in( TMPA (:,:), 'TA_snow',   'Potential air temperature',    'K',      dim_type='XY' )
+       call FILE_HISTORY_in( QVA  (:,:), 'QA_snow',   'Specific humidity',            'kg/kg',  dim_type='XY' )
+       call FILE_HISTORY_in( UA   (:,:), 'UA_snow',   'Wind speed',                   'm/s',    dim_type='XY' )
+       call FILE_HISTORY_in( SWD  (:,:), 'SWD_snow',  'Downward shortwave radiation', 'W/m2',   dim_type='XY' )
+       call FILE_HISTORY_in( LWD  (:,:), 'LWD_snow',  'Downward longwave  radiation', 'W/m2',   dim_type='XY' )
        !WORK(:,:) = ( RAIN (:,:) + SNOW(:,:) ) * dt_URB
-       !call HIST_in( WORK (:,:), 'RAIN_snow', 'Precipitation',                'kg/m2' )
-       call HIST_in( RAIN (:,:), 'RAIN_snow', 'Rainfall',                     'kg/m2/s' )
-       call HIST_in( SNOW (:,:), 'SNOW_snow', 'Snowfall',                     'kg/m2/s' )
+       !call FILE_HISTORY_in( WORK (:,:), 'RAIN_snow', 'Precipitation',                'kg/m2',  dim_type='XY' )
+       call FILE_HISTORY_in( RAIN (:,:), 'RAIN_snow', 'Rainfall',                     'kg/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW (:,:), 'SNOW_snow', 'Snowfall',                     'kg/m2/s', dim_type='XY' )
 
     endif
 
