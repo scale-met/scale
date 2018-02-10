@@ -519,7 +519,7 @@ contains
        call FILE_Read( BASENAME_land, "lon", read2D(:,:), rankid=rank )
        llon_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
 
-       call FILE_Read( BASENAME_land, "la", read2D(:,:), rankid=rank )
+       call FILE_Read( BASENAME_land, "lat", read2D(:,:), rankid=rank )
        llat_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
 
        call FILE_Read( BASENAME_land, "LAND_SFC_TEMP", read2D(:,:), step=it, rankid=rank )
