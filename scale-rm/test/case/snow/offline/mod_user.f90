@@ -178,10 +178,12 @@ contains
        D2R   => CONST_D2R,   &
        PRE00 => CONST_PRE00, &
        Rdry  => CONST_Rdry,  &    ! specific gas constant (dry air)
-       CPdry => CONST_CPdry       ! specific heat (dry air,constant pressure) [J/kg/K]
+       CPdry => CONST_CPdry, &    ! specific heat (dry air,constant pressure) [J/kg/K]
+       EPSvap => CONST_EPSvap
     use scale_atmos_saturation, only:  &
        !qsatf => ATMOS_SATURATION_pres2qsat_all  ! better to  change name from qsatf to qsat
-        qsatf => ATMOS_SATURATION_dens2qsat_all
+       !qsatf => ATMOS_SATURATION_dens2qsat_all
+        qsatf => ATMOS_SATURATION_psat_all
     use scale_grid_real, only: &
        REAL_lon
     use scale_time, only:   &
@@ -209,7 +211,7 @@ contains
     real(RP) :: SWD (IA,JA)
     real(RP) :: WORK(IA,JA)
     real(RP) :: RH
-    real(RP) :: QAsat
+    real(RP) :: QAsat, psat
     real(RP) :: qdry
 
     !real(RP) :: LON
@@ -281,10 +283,12 @@ contains
           !qdry = 1.0_RP - QA(i,j)
           !call qsatf( TMPA(i,j), PRSA(i,j), qdry,    & ! [IN]
           !            QAsat                          ) ! [OUT]
-          call qsatf(  TMPA(i,j), RHOS(i,j),          & ![IN]
-                       QAsat                          ) ![OUT]
+          !call qsatf(  TMPA(i,j), RHOS(i,j),          & ![IN]
+          !             QAsat                          ) ![OUT]
           !call qsatf(  TMPA(i,j), RHOA(i,j),          & ![IN]
           !              QAsat                          ) ![OUT]
+          call qsatf( TMPA(i,j), psat )
+          QAsat = EPSvap * psat / ( PRSA(i,j) - ( 1.0_RP-EPSvap ) * psat )
           QVA (i,j) = QAsat * (RH * 0.01)
           SNOW(i,j) = SNOW(i,j) / real(INPUT_UPDATE_DT, kind=RP) ! [mm/h->kg/m2/s]
 

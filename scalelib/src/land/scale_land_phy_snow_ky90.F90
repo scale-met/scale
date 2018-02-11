@@ -163,14 +163,15 @@ contains
        FILE_HISTORY_in
     use scale_atmos_saturation, only:  &
        !qsatf => ATMOS_SATURATION_pres2qsat_all  ! better to  change name from qsatf to qsat
-        qsatf => ATMOS_SATURATION_dens2qsat_all
+       !qsatf => ATMOS_SATURATION_dens2qsat_all
+        qsatf => ATMOS_SATURATION_psat_all
     use scale_landuse, only: &
        LANDUSE_fact_land
     use scale_const, only:   &
        T0    => CONST_TEM00, &
        I_SW  => CONST_I_SW,  &
-       I_LW  => CONST_I_LW
-
+       I_LW  => CONST_I_LW,  &
+       EPSvap => CONST_EPSvap
     implicit none
     ! prognostic variables
     real(RP), intent(inout)   :: TSNOW          (IA,JA)   ! snow temperature        [K]
@@ -219,7 +220,7 @@ contains
     real(RP)                  :: Uabs
     real(RP)                  :: QAsat
     real(RP)                  :: RH
-    real(RP)                  :: qdry
+    real(RP)                  :: qdry, psat
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -237,8 +238,8 @@ contains
        !qdry = 1.0_RP - QA(i,j)
        !call qsatf(  TA(i,j), PRSA(i,j), qdry, & ![IN]
        !             QAsat                     ) ![OUT]
-       call qsatf(  TA(i,j), DENS(i,j),       & ![IN]
-                    QAsat                     ) ![OUT]
+       call qsatf(  TA(i,j), psat )
+       QAsat = EPSvap * psat / ( PRSA(i,j) - ( 1.0_RP-EPSvap ) * psat )
        RH  = QA(i,j) / QAsat
        write(*,*) "RH,  ",RH," DENS (1.289 org) ",DENS(i,j)
 
