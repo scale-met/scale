@@ -229,8 +229,8 @@ cat << EOF > param.history.conf
  FILE_HISTORY_OUTPUT_STEP0      = .true.,
 /
 
-&PARAM_HIST
- HIST_BND = .false.,
+&PARAM_FILE_HISTORY_CARTESC
+ FILE_HISTORY_CARTESC_BOUNDARY = .false.,
 /
 
 EOF

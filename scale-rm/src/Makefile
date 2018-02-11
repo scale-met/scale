@@ -171,7 +171,7 @@ $(BUILD_DIR)/%.o : %.c
 
 .PHONY : clean distclean allclean scalelib depend dependency
 
-include $(TOPDIR)/utils/Make_environments
+include $(TOPDIR)/utils/make/Make_environments
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
 -include depend
