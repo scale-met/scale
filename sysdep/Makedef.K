@@ -43,6 +43,7 @@ CFLAGS_DEBUG = -O0
 
 
 ##### Special setting
+SCALE_ENABLE_OPENMP ?= T
 
 FFLAGS_OPENMP = -Kopenmp
 # enable + disable parallel
