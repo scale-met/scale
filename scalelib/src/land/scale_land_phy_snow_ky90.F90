@@ -71,6 +71,7 @@ module scale_land_phy_snow_ky90
   real(RP), parameter       :: LF        = 3.34e5_RP      ! [J/kg] at 0 deg.C
 
   logical                   :: ALBEDO_const = .true.
+  logical                   :: debug = .false.
 
   integer                   :: ZN_flag, TS_flag, sflag
 
@@ -91,13 +92,14 @@ contains
     real(RP)                  :: albedo_value          = 0.686_RP
 
     namelist / PARAM_LAND_PHY_SNOW_KY90 /  &
-         ALBEDO_const,      &
-         snow_conductivity, &
-         water_content,     &
+         ALBEDO_const,          &
+         snow_conductivity,     &
+         water_content,         &
          snow_heat_capacityRHO, &
-         snow_rho,          &
-         snowDepth_initial, &
-         albedo_value
+         snow_rho,              &
+         snowDepth_initial,     &
+         albedo_value,          &
+         debug
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -241,7 +243,7 @@ contains
        call qsatf(  TA(i,j), psat )
        QAsat = EPSvap * psat / ( PRSA(i,j) - ( 1.0_RP-EPSvap ) * psat )
        RH  = QA(i,j) / QAsat
-       write(*,*) "RH,  ",RH," DENS (1.289 org) ",DENS(i,j)
+       if ( debug ) write(*,*) "RH,  ",RH," DENS (1.289 org) ",DENS(i,j)
 
        TSNOW1  = TSNOW (i,j)
        SWE1    = SWE   (i,j)
@@ -289,7 +291,7 @@ contains
        SDepth  (i,j) = DEPTH1
        SDzero  (i,j) = ZNSNOW1
 
-       write(*,*) "SNOW_frac, SWE, TSNOW", SNOW_frac(i,j), SWE(i,j), TSNOW(i,j)
+       if ( debug ) write(*,*) "SNOW_frac, SWE, TSNOW", SNOW_frac(i,j), SWE(i,j), TSNOW(i,j)
 
     else
 
@@ -435,10 +437,12 @@ contains
     DEPTH0  = DEPTH0  + (SNOW /RHOSNOW)
     ZNSNOW0 = ZNSNOW0 + (SNOW /RHOSNOW)
 
-    write(*,*) "UA, SNOW,SFLX_SNOW,time : ", UA, SNOW, SFLX_SNOW, time
-    write(*,*) "SWE , TSNOW, and TA :     ", SWE0, TSNOW0, TA
-    write(*,*) "DEPTH is:                 ", DEPTH0
-    write(*,*) "ZN beginning:             ", ZNSNOW0
+    if ( debug ) then
+       write(*,*) "UA, SNOW,SFLX_SNOW,time : ", UA, SNOW, SFLX_SNOW, time
+       write(*,*) "SWE , TSNOW, and TA :     ", SWE0, TSNOW0, TA
+       write(*,*) "DEPTH is:                 ", DEPTH0
+       write(*,*) "ZN beginning:             ", ZNSNOW0
+    end if
 
 !----- Calculating albedo -------------------------------------------!
 
@@ -453,7 +457,7 @@ contains
 
     ALBEDO_out = ALBEDO
     Emiss      = 1.0_RP - epsilon
-    write(*,*) "Albedo                    ",ALBEDO
+    if ( debug ) write(*,*) "Albedo                    ",ALBEDO
 
 !----- Energy balance at snow surface -------------------------------!
 
@@ -506,21 +510,21 @@ contains
 
          call snowdepth ( GFLUX, ZNSNOW0, ZNSNOW, time)
 
-         write(*,*) "ZN is: ", ZNSNOW
+         if ( debug ) write(*,*) "ZN is: ", ZNSNOW
          IF(ZNSNOW < ZMIN) THEN
             ZN_flag = 1
-            write(*,*) "ZN is replaced to: ", ZNSNOW ," to ", ZMIN
+            if ( debug ) write(*,*) "ZN is replaced to: ", ZNSNOW ," to ", ZMIN
             ZNSNOW = ZMIN
          ELSE IF(ZNSNOW > DEPTH0) THEN
             ZN_flag = 2
-            write(*,*) "ZN is replaced to: ", ZNSNOW ," to ", DEPTH0
+            if ( debug ) write(*,*) "ZN is replaced to: ", ZNSNOW ," to ", DEPTH0
             ZNSNOW = DEPTH0
          END IF
 
          ! This equation is to calculate TSN
          call  equation415(LAMBDAS, C2, ZNSNOW, RH, QSAT, TSNOW0, ZNSNOW0, GFLUX, TA, UA, DENS, LW, TSNOW, time)
 
-         write(*,*) 'TSNOW is:       ', TSNOW
+         if ( debug ) write(*,*) 'TSNOW is:       ', TSNOW
 
          if (TSNOW > T0) then
             TS_flag = 1
@@ -529,18 +533,20 @@ contains
             call check_res(ZNSNOW0, ZNSNOW, TSNOW0, TSNOW, GFLUX, TA, UA, RH, DENS, LW, "1", time)
             IF (ZNSNOW < ZMIN) THEN
                ZN_flag = 4
-               write(*,*) "ZN is updated/replaced to: ", ZNSNOW ," to ", ZMIN
+               if ( debug ) write(*,*) "ZN is updated/replaced to: ", ZNSNOW ," to ", ZMIN
                ZNSNOW = ZMIN
             ELSE IF(ZNSNOW > DEPTH0) THEN
                ZN_flag = 5
-               write(*,*) "ZN is updated/replaced to: ", ZNSNOW ," to ", DEPTH0
+               if ( debug ) write(*,*) "ZN is updated/replaced to: ", ZNSNOW ," to ", DEPTH0
                ZNSNOW = DEPTH0
             ELSE
                ZN_flag = 3
             END IF
 
-            write(*,*) 'TSNOW  is updated:  ', TSNOW
-            write(*,*) 'ZNSNOW is updated:  ', ZNSNOW
+            if ( debug ) then
+               write(*,*) 'TSNOW  is updated:  ', TSNOW
+               write(*,*) 'ZNSNOW is updated:  ', ZNSNOW
+            end if
          else
             call check_res( ZNSNOW0, ZNSNOW, TSNOW0, TSNOW, GFLUX, TA, UA, RH, DENS, LW, "0", time)
          endif
@@ -567,15 +573,17 @@ contains
       DEPTH                  = DEPTH0      - DELTADEPTH
       if (DEPTH < ZNSNOW) then
          ! NOTICE: energy budget has not been considered thought this process yet.
-         write(*,*) "replace ZNSNOW <= DEPTH"
+         if ( debug ) write(*,*) "replace ZNSNOW <= DEPTH"
          ZNSNOW               = DEPTH
       endif
 
-      write(*,*) 'MELT in water equivalent is: ', SWEMELT
-      write(*,*) 'SWE0 is:                     ', SWE
-      write(*,*) 'DELTADEPTH is:               ', DELTADEPTH
-      write(*,*) 'DEPTH0 is:                   ', DEPTH
-      write(*,*) 'ZNSNOW0 is:                  ', ZNSNOW
+      if ( debug ) then
+         write(*,*) 'MELT in water equivalent is: ', SWEMELT
+         write(*,*) 'SWE0 is:                     ', SWE
+         write(*,*) 'DELTADEPTH is:               ', DELTADEPTH
+         write(*,*) 'DEPTH0 is:                   ', DEPTH
+         write(*,*) 'ZNSNOW0 is:                  ', ZNSNOW
+      end if
 
    endif
 
@@ -606,14 +614,16 @@ subroutine groundflux (TS, TA, UA, RH, rhoair, ALPHA, SW, LW, &
 
   GFLUX              = (SFLUX + RFLUX - HFLUX - LATENTFLUX)
 
-  write(*,*) "-------------- groundflux --------------"
-  write(*,*) "GFLUX is:    ", GFLUX
-  write(*,*) "SFLUX:       ", SFLUX
-  write(*,*) "RFLUX:       ", RFLUX, LINFLUX+LOUTFLUX
-  write(*,*) " (LONG in:   ", LINFLUX,")"
-  write(*,*) " (LONG out:  ", LOUTFLUX,")"
-  write(*,*) "HFLUX is:    ", HFLUX
-  write(*,*) "LATENT FLUX: ", LATENTFLUX
+  if ( debug ) then
+     write(*,*) "-------------- groundflux --------------"
+     write(*,*) "GFLUX is:    ", GFLUX
+     write(*,*) "SFLUX:       ", SFLUX
+     write(*,*) "RFLUX:       ", RFLUX, LINFLUX+LOUTFLUX
+     write(*,*) " (LONG in:   ", LINFLUX,")"
+     write(*,*) " (LONG out:  ", LOUTFLUX,")"
+     write(*,*) "HFLUX is:    ", HFLUX
+     write(*,*) "LATENT FLUX: ", LATENTFLUX
+  end if
 
 return
 end subroutine groundflux
@@ -641,8 +651,10 @@ subroutine check_allSnowMelt (GFLUX, TS1, ZN1, D, sflag, time)
      sflag=0
   endif
 
-  write(*,*) "Energy in  =",energy_in
-  write(*,*) "Energy use =",energy_use
+  if ( debug ) then
+     write(*,*) "Energy in  =",energy_in
+     write(*,*) "Energy use =",energy_use
+  end if
 
   return
 end subroutine
@@ -666,13 +678,15 @@ subroutine cal_param (ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
             ( epsilon*(LW-(sigma*(TA**4))) + (C2*(TA-T0)) - (LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT) ) &
             - C2*C3
 
-  write(*,*) "-------------- snowdepth --------------"
-  print*, "C1",C1
-  print*, "C2",C2,(4.0_RP*epsilon*sigma*(TA**3)),(cp*rhoair*CH*UA), (LV*rhoair*CE*UA*DELTAQSAT)
-  print*, "C3",C3
-  print*, "A0",A0
-  print*, "A1",A1
-  print*, "A2",A2
+  if ( debug ) then
+     write(*,*) "-------------- snowdepth --------------"
+     write(*,*) "C1",C1
+     write(*,*) "C2",C2,(4.0_RP*epsilon*sigma*(TA**3)),(cp*rhoair*CH*UA), (LV*rhoair*CE*UA*DELTAQSAT)
+     write(*,*) "C3",C3
+     write(*,*) "A0",A0
+     write(*,*) "A1",A1
+     write(*,*) "A2",A2
+  end if
 
 end subroutine
 
@@ -717,7 +731,7 @@ subroutine snowdepth (GFLUX, ZN1, ZN2, time)
 
    ZN2  = ((-1.0_RP*A1) - ((A1**2.0_RP - 4.0_RP*A2*A0)**0.5_RP)) / (2.0_RP*A2)
 
-   write(*,*) "ZN old = ",ZN1, "ZN new = ",ZN2
+   if ( debug ) write(*,*) "ZN old = ",ZN1, "ZN new = ",ZN2
 
 return
 end subroutine snowdepth
@@ -736,12 +750,14 @@ subroutine equation415(LAMBDAS, C2, ZN2, RH, QSAT, TS1, ZN1, GFLUX, TA, UA, rhoa
   TS2      = ((LAMBDAS*T0) + (TA*C2*ZN2) - (ZN2*LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT) &
            + ZN2*epsilon*(LW - (sigma*(TA**4))))/ (LAMBDAS + (C2*ZN2))
 
-  write(*,*) "-------------- equation415 --------------"
+  if ( debug ) then
+     write(*,*) "-------------- equation415 --------------"
 
-  TS_check = GFLUX*time/(0.5*CSRHOS*ZN2) + T0 - ZN1*(T0-TS1)/ZN2 - W0*RHOSNOW*LF*(ZN1-ZN2)/(0.5*CSRHOS*ZN2)
+     TS_check = GFLUX*time/(0.5*CSRHOS*ZN2) + T0 - ZN1*(T0-TS1)/ZN2 - W0*RHOSNOW*LF*(ZN1-ZN2)/(0.5*CSRHOS*ZN2)
 
-  write(*,*) "compare ",TS2, TS_check, TS2-TS_check
-  ! When ZN2 is replaced, TS2 does not equal to TS_check.
+     write(*,*) "compare ",TS2, TS_check, TS2-TS_check
+     ! When ZN2 is replaced, TS2 does not equal to TS_check.
+  end if
 
  return
 end subroutine equation415
@@ -758,7 +774,7 @@ subroutine recalculateZ(ZN1, TS, GFLUX, ZN2, time)
 
   ZN2 = ZN1 + ((C1*ZN1*(T0-TS) - GFLUX*time) / C3)
 
-  write(*,*) "-------------- recalculate Z --------------"
+  if ( debug ) write(*,*) "-------------- recalculate Z --------------"
 
  return
 end subroutine recalculateZ
@@ -768,6 +784,8 @@ subroutine calculationMO(GFLUX, CSRHOS, ZN1, TS1, ZN2, TS2, &
                          MELT, QCC, QFUSION, time)
   use scale_const, only:   &
        T0    => CONST_TEM00
+  use scale_process, only: &
+       PRC_abort
 
   implicit none
 
@@ -778,17 +796,20 @@ subroutine calculationMO(GFLUX, CSRHOS, ZN1, TS1, ZN2, TS2, &
   QFUSION         = W0*RHOSNOW*LF*(ZN1-ZN2)
   MELT            = ( GFLUX*time - QCC - QFUSION )
 
-  write(*,*) "--------------------------MELT----------------"
-  write(*,*) "GFLUX*time is: ", GFLUX*time
-  write(*,*) "QCC is       : ", QCC
-  write(*,*) "QFUSION is   : ", QFUSION
-  write(*,*) "QMELT is     : ", MELT
+  if ( debug ) then
+     write(*,*) "--------------------------MELT----------------"
+     write(*,*) "GFLUX*time is: ", GFLUX*time
+     write(*,*) "QCC is       : ", QCC
+     write(*,*) "QFUSION is   : ", QFUSION
+     write(*,*) "QMELT is     : ", MELT
 
-  write(*,*) QCC+QFUSION+MELT
-  write(*,*) "diff= ", QCC + QFUSION + MELT - (GFLUX*time)
+     write(*,*) QCC+QFUSION+MELT
+     write(*,*) "diff= ", QCC + QFUSION + MELT - (GFLUX*time)
+  end if
+
   if ( ABS(QCC+QFUSION+MELT - (GFLUX*time)) > 10.) then
-    print *, "Calculation is fault. Model would include bugs. Please check! Melt"
-    stop
+     write(*,*) "Calculation is fault. Model would include bugs. Please check! Melt"
+     call PRC_abort
   endif
 
 
@@ -809,17 +830,20 @@ subroutine calculationNoMO(GFLUX, CSRHOS, ZN1, TS1, ZN2, TS2, &
   QFUSION         = W0*RHOSNOW*LF*(ZN1-ZN2)
   MELT            = 0.0_RP
 
-  write(*,*) "--------------------------NOMELT----------------"
-  write(*,*) "GFLUX*time is: ", GFLUX*time
-  write(*,*) "QCC is       : ", QCC
-  write(*,*) "QFUSION is   : ", QFUSION
-  write(*,*) "QMELT is     : ", MELT
+  if ( debug ) then
+     write(*,*) "--------------------------NOMELT----------------"
+     write(*,*) "GFLUX*time is: ", GFLUX*time
+     write(*,*) "QCC is       : ", QCC
+     write(*,*) "QFUSION is   : ", QFUSION
+     write(*,*) "QMELT is     : ", MELT
 
-  write(*,*) QCC+QFUSION+MELT
-  write(*,*) "diff= ", QCC +QFUSION - (GFLUX*time)
+     write(*,*) QCC+QFUSION+MELT
+     write(*,*) "diff= ", QCC +QFUSION - (GFLUX*time)
+  end if
+
   !if ( ABS(QCC+QFUSION - (GFLUX*time)) > 10.) then
-  !  print *, "Calculation is fault. Model would include bugs. Please check! No Melt"
-  !  stop
+  !  write(*,*) "Calculation is fault. Model would include bugs. Please check! No Melt"
+  !  call PRC_abort
   !endif
 
  return
@@ -846,13 +870,14 @@ subroutine check_res(ZN1, ZN2, TS1, TS2, GFLUX, TA, UA, RH, rhoair, LW, flag, ti
            + ZN2*epsilon*( LW - (sigma*(TA**4))))/ (LAMBDAS + (C2*ZN2))-TS2
 
 
-  write(*,*) "R1 is         : ", R1, "flag = ", flag
-  write(*,*) "R2 is         : ", R2, R3,"flag = ", flag
+  if ( debug ) then
+     write(*,*) "R1 is         : ", R1, "flag = ", flag
+     write(*,*) "R2 is         : ", R2, R3,"flag = ", flag
 
-
-  if(abs(R1)>10000)then
-     write(*,*) C1 * (ZN1*(T0-TS1) - ZN2*(T0-TS2)), C3*(ZN1-ZN2), -GFLUX*time
-  endif
+     if(abs(R1)>10000)then
+        write(*,*) C1 * (ZN1*(T0-TS1) - ZN2*(T0-TS2)), C3*(ZN1-ZN2), -GFLUX*time
+     endif
+  end if
 
   return
 end subroutine check_res
@@ -892,7 +917,7 @@ subroutine cal_R1R2(ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
         ts_r2 = ((LAMBDAS*T0) + (TA*C2*ZN2) - (ZN2*LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT) &
              + ZN2*epsilon*( LW - (sigma*(TA**4))))/ (LAMBDAS + (C2*ZN2))
      endif
-     write(70,'(3f15.5)') ZN2, ts_r1, ts_r2
+     if ( debug ) write(70,'(3f15.5)') ZN2, ts_r1, ts_r2
   enddo
   do j=1,100000
      ZN2 = -1.0_RP + 2.0_RP*0.00001_RP*real((j-1),kind=RP)
@@ -903,7 +928,7 @@ subroutine cal_R1R2(ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
         ts_r2 = ((LAMBDAS*T0) + (TA*C2*ZN2) - (ZN2*LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT) &
              + ZN2*epsilon*( LW - (sigma*(TA**4))))/ (LAMBDAS + (C2*ZN2))
      endif
-     write(70,'(3f15.5)') ZN2, ts_r1, ts_r2
+     if ( debug ) write(70,'(3f15.5)') ZN2, ts_r1, ts_r2
   enddo
   do j=2,10000
      ZN2 = 1.0_RP + 9.0_RP*0.0001_RP*real((j-1),kind=RP)
@@ -914,7 +939,7 @@ subroutine cal_R1R2(ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
         ts_r2 = ((LAMBDAS*T0) + (TA*C2*ZN2) - (ZN2*LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT) &
              + ZN2*epsilon*( LW - (sigma*(TA**4))))/ (LAMBDAS + (C2*ZN2))
      endif
-     write(70,'(3f15.5)') ZN2, ts_r1, ts_r2
+     if ( debug ) write(70,'(3f15.5)') ZN2, ts_r1, ts_r2
   enddo
   close(70)
 
@@ -927,23 +952,24 @@ subroutine cal_R1R2(ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
   f=(LAMBDAS + (C2*ZN2))
 
 
-  open(71,file='check_R1-R2-grad'//ttt//'.dat',status='unknown')
-  write(71,'(5f15.5)') b/c, d,e,LAMBDAS,C2
-  close(71)
+  if ( debug ) then
+     open(71,file='check_R1-R2-grad'//ttt//'.dat',status='unknown')
+     write(71,'(5f15.5)') b/c, d,e,LAMBDAS,C2
+     close(71)
 
+     open(70,file='check_R1-R2_ts-base'//ttt//'.dat',status='unknown')
+     do i=1,100000
+        TS2 = ts0 + 150.0_RP*0.00001_RP*real((i-1),kind=RP)
 
-  open(70,file='check_R1-R2_ts-base'//ttt//'.dat',status='unknown')
-  do i=1,100000
-     TS2 = ts0 + 150.0_RP*0.00001_RP*real((i-1),kind=RP)
+        zn_r1 = (C1*ZN1*(T0-TS1) + C3*ZN1 - GFLUX*time)/(C1*(T0-TS2)+C3)
+        zn_r2 = -1.0_RP*LAMBDAS*(T0-TS2)/(LW*epsilon-epsilon*sigma*(TA**4) - (C2*(TS2-TA)) - (LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT))
 
-     zn_r1 = (C1*ZN1*(T0-TS1) + C3*ZN1 - GFLUX*time)/(C1*(T0-TS2)+C3)
-     zn_r2 = -1.0_RP*LAMBDAS*(T0-TS2)/(LW*epsilon-epsilon*sigma*(TA**4) - (C2*(TS2-TA)) - (LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT))
+        write(70,'(3f15.5)') TS2, zn_r1, zn_r2
+     enddo
+     close(70)
+  end if
 
-     write(70,'(3f15.5)') TS2, zn_r1, zn_r2
-  enddo
-  close(70)
-
-  !print  *,"aa",(LINFLUX-epsilon*sigma*(TA**4) + (C2*TA) - (LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT))/C2
+  !write(*,*) "aa",(LINFLUX-epsilon*sigma*(TA**4) + (C2*TA) - (LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT))/C2
   return
 end subroutine cal_R1R2
 
