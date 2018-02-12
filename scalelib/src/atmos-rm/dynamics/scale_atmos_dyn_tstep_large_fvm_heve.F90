@@ -371,20 +371,14 @@ contains
 
     ! For tracer advection
     real(RP) :: mflx_av  (KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face average
-    real(RP) :: qflx_hi  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
-    real(RP) :: qflx_lo  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi,  monotone flux
-    real(RP) :: qflx_anti(KA,IA,JA,3)  ! anti-diffusive flux
 
     real(RP) :: dtl
     real(RP) :: dts
     integer  :: nstep
 
-    integer  :: IIS, IIE
-    integer  :: JJS, JJE
     integer  :: i, j, k, iq, step
     integer  :: iv
-
-    real(RP) :: diff_coef
+    integer  :: n
     !---------------------------------------------------------------------------
 
     call PROF_rapstart("DYN_Large_Preparation", 2)
@@ -405,9 +399,6 @@ contains
 
     mflx_hi(:,:,:,:) = UNDEF
     tflx_hi(:,:,:,:) = UNDEF
-
-    qflx_hi(:,:,:,:) = UNDEF
-    qflx_lo(:,:,:,:) = UNDEF
 #endif
 
 !OCL XFILL
@@ -956,25 +947,67 @@ contains
        end do
 
        if ( USE_AVERAGE ) then
-          DENS_av(:,:,:) = DENS_av(:,:,:) + DENS(:,:,:)
-          MOMZ_av(:,:,:) = MOMZ_av(:,:,:) + MOMZ(:,:,:)
-          MOMX_av(:,:,:) = MOMX_av(:,:,:) + MOMX(:,:,:)
-          MOMY_av(:,:,:) = MOMY_av(:,:,:) + MOMY(:,:,:)
-          RHOT_av(:,:,:) = RHOT_av(:,:,:) + RHOT(:,:,:)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             DENS_av(k,i,j) = DENS_av(k,i,j) + DENS(k,i,j)
+             MOMZ_av(k,i,j) = MOMZ_av(k,i,j) + MOMZ(k,i,j)
+             MOMX_av(k,i,j) = MOMX_av(k,i,j) + MOMX(k,i,j)
+             MOMY_av(k,i,j) = MOMY_av(k,i,j) + MOMY(k,i,j)
+             RHOT_av(k,i,j) = RHOT_av(k,i,j) + RHOT(k,i,j)
+          end do
+          end do
+          end do
        endif
 
 #ifndef DRY
-       mflx_av(:,:,:,:) = mflx_av(:,:,:,:) + mflx_hi(:,:,:,:)
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          mflx_av(k,i,j,:) = mflx_av(k,i,j,:) + mflx_hi(k,i,j,:)
+       end do
+       end do
+       end do
 #endif
 
     enddo ! dynamical steps
 
     if ( USE_AVERAGE ) then
-       DENS_av(:,:,:) = DENS_av(:,:,:) / nstep
-       MOMZ_av(:,:,:) = MOMZ_av(:,:,:) / nstep
-       MOMX_av(:,:,:) = MOMX_av(:,:,:) / nstep
-       MOMY_av(:,:,:) = MOMY_av(:,:,:) / nstep
-       RHOT_av(:,:,:) = RHOT_av(:,:,:) / nstep
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          DENS_av(k,i,j) = DENS_av(k,i,j) / nstep
+       end do
+       end do
+       end do
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          MOMZ_av(k,i,j) = MOMZ_av(k,i,j) / nstep
+       end do
+       end do
+       end do
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          MOMX_av(k,i,j) = MOMX_av(k,i,j) / nstep
+       end do
+       end do
+       end do
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          MOMY_av(k,i,j) = MOMY_av(k,i,j) / nstep
+       end do
+       end do
+       end do
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          RHOT_av(k,i,j) = RHOT_av(k,i,j) / nstep
+       end do
+       end do
+       end do
     endif
 
 #ifndef DRY
@@ -983,7 +1016,15 @@ contains
     !###########################################################################
 
 !OCL XFILL
-    mflx_hi(:,:,:,:) = mflx_av(:,:,:,:) / nstep
+    do n = 1, 3
+    do j = JSB, JEB
+    do i = ISB, IEB
+    do k = KS, KE
+       mflx_hi(k,i,j,n) = mflx_av(k,i,j,n) / nstep
+    end do
+    end do
+    end do
+    end do
 
     call COMM_vars8( mflx_hi(:,:,:,ZDIR), I_COMM_mflx_z )
     call COMM_vars8( mflx_hi(:,:,:,XDIR), I_COMM_mflx_x )
@@ -1069,7 +1110,13 @@ contains
        end if
 
        if ( USE_AVERAGE ) then
-          QTRC_av(:,:,:,iq) = QTRC(:,:,:,iq)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             QTRC_av(k,i,j,iq) = QTRC(k,i,j,iq)
+          end do
+          end do
+          end do
        endif
 
        call COMM_vars8( QTRC(:,:,:,iq), I_COMM_QTRC(iq) )

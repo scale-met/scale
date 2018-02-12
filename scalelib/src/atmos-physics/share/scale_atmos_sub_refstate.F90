@@ -86,6 +86,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_REFSTATE_setup
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -113,12 +115,22 @@ contains
     allocate( ATMOS_REFSTATE_dens(KA,IA,JA) )
     allocate( ATMOS_REFSTATE_pott(KA,IA,JA) )
     allocate( ATMOS_REFSTATE_qv  (KA,IA,JA) )
+    ATMOS_REFSTATE_pres(:,:,:) = UNDEF
+    ATMOS_REFSTATE_temp(:,:,:) = UNDEF
+    ATMOS_REFSTATE_dens(:,:,:) = UNDEF
+    ATMOS_REFSTATE_pott(:,:,:) = UNDEF
+    ATMOS_REFSTATE_qv  (:,:,:) = UNDEF
 
     allocate( ATMOS_REFSTATE1D_pres(KA) )
     allocate( ATMOS_REFSTATE1D_temp(KA) )
     allocate( ATMOS_REFSTATE1D_dens(KA) )
     allocate( ATMOS_REFSTATE1D_pott(KA) )
     allocate( ATMOS_REFSTATE1D_qv  (KA) )
+    ATMOS_REFSTATE1D_pres(:) = UNDEF
+    ATMOS_REFSTATE1D_temp(:) = UNDEF
+    ATMOS_REFSTATE1D_dens(:) = UNDEF
+    ATMOS_REFSTATE1D_pott(:) = UNDEF
+    ATMOS_REFSTATE1D_qv  (:) = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
