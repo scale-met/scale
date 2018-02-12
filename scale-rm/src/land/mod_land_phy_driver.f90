@@ -45,6 +45,7 @@ module mod_land_phy_driver
   !
   !++ Private parameters & variables
   !
+  logical :: snow_flag
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -56,6 +57,7 @@ contains
        LAND_SFC_setup
     use mod_land_admin, only: &
        LAND_TYPE, &
+       SNOW_TYPE, &
        LAND_sw
     implicit none
     !---------------------------------------------------------------------------
@@ -63,11 +65,23 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[LAND PHY] / Origin[SCALE-RM]'
 
+    snow_flag = .false.
+
     if ( LAND_sw ) then
 
        ! setup library component
        call LAND_PHY_setup( LAND_TYPE )
        call LAND_SFC_setup( LAND_TYPE )
+
+       if (   SNOW_TYPE == 'KY90' .and. &
+            ( LAND_TYPE == 'SLAB'      .or.  &
+              LAND_TYPE == 'THIN-SLAB' .or.  &
+              LAND_TYPE == 'THICK-SLAB' ) ) then
+          if ( IO_L ) write(IO_FID_LOG,*) '*** SNOW model is enabled'
+          if ( IO_L ) write(IO_FID_LOG,*) '*** SNOW model is on experimental stage.'
+          if ( IO_L ) write(IO_FID_LOG,*) '*** Use this with your own risk.'
+          snow_flag = .true.
+       end if
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -250,11 +264,9 @@ contains
     !------------------------------------------------------------------------
     !> snow area only for slab model
 
-    SNOW_frac = 0.0_RP
+    SNOW_frac(:,:) = 0.0_RP
 
-    if ( LAND_TYPE == 'SLAB'      .or.  &
-         LAND_TYPE == 'THIN-SLAB' .or.  &
-         LAND_TYPE == 'THICK-SLAB' )then
+    if ( snow_flag ) then
 
 !OCL XFILL
        do j = JS, JE
@@ -351,7 +363,7 @@ contains
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
-          SNOW_LAND_SFLX_GH   (i,j) = -1.0_RP * SNOW_LAND_SFLX_GH(i,j)
+          SNOW_LAND_SFLX_GH(i,j) = - SNOW_LAND_SFLX_GH(i,j)
        enddo
        enddo
 
@@ -371,7 +383,7 @@ contains
     endif
 
     !------------------------------------------------------------------------
-    !> no snow area
+    !> all land area without snow model or no snow area with snow model
 
 
        call LAND_SFC( LAND_SFC_TEMP_t(:,:),                 & ! [OUT]
@@ -437,9 +449,7 @@ contains
 
        ! marge land surface and snow surface !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    if ( LAND_TYPE == 'SLAB'      .or.  &
-         LAND_TYPE == 'THIN-SLAB' .or.  &
-         LAND_TYPE == 'THICK-SLAB' )then
+    if ( snow_flag ) then
 
 !OCL XFILL
        do j = JS, JE
@@ -465,7 +475,7 @@ contains
            LAND_T2 (i,j)        = SNOW_frac(i,j)*SNOW_T2 (i,j)            + (1.0_RP-SNOW_frac(i,j))*LAND_T2(i,j)
            LAND_Q2 (i,j)        = SNOW_frac(i,j)*SNOW_Q2 (i,j)            + (1.0_RP-SNOW_frac(i,j))*LAND_Q2(i,j)
 
-         do k = LKS+1, LKE-1
+         do k = LKS, LKE
            LAND_TEMP_t (k,i,j)  = SNOW_frac(i,j)*SNOW_LAND_TEMP_t (k,i,j) + (1.0_RP-SNOW_frac(i,j))*LAND_TEMP_t (k,i,j)
            LAND_WATER_t(k,i,j)  = SNOW_frac(i,j)*SNOW_LAND_WATER_t(k,i,j) + (1.0_RP-SNOW_frac(i,j))*LAND_WATER_t(k,i,j)
          enddo
