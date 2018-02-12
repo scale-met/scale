@@ -184,6 +184,8 @@ OBJS_NAME = \
 	scale_land_phy_const.o	\
 	scale_land_phy_slab.o	\
 	scale_land_phy_matsiro.o	\
+	scale_land_phy_snow_ky90.o	\
+	scale_land_phy_snow_diagnos.o	\
 	scale_land_sfc.o	\
 	scale_land_sfc_const.o	\
 	scale_land_sfc_thin-slab.o	\

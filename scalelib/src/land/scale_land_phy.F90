@@ -88,6 +88,8 @@ contains
     use scale_land_phy_slab, only: &
        LAND_PHY_SLAB_setup, &
        LAND_PHY_SLAB
+    use scale_land_phy_snow_ky90, only: &
+       LAND_PHY_SNOW_KY90_setup
     use scale_land_phy_matsiro, only: &
        LAND_PHY_matsiro_setup, &
        LAND_PHY_matsiro
@@ -103,6 +105,7 @@ contains
     case( 'SLAB', 'THIN-SLAB', 'THICK-SLAB' )
        call LAND_PHY_SLAB_setup( LAND_TYPE )
        LAND_PHY => LAND_PHY_SLAB
+       call LAND_PHY_SNOW_KY90_setup
     case( 'MATSIRO' )
        call LAND_PHY_MATSIRO_setup( LAND_TYPE )
        LAND_PHY => LAND_PHY_MATSIRO

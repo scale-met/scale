@@ -45,6 +45,7 @@ module mod_land_phy_driver
   !
   !++ Private parameters & variables
   !
+  logical :: snow_flag
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -56,6 +57,7 @@ contains
        LAND_SFC_setup
     use mod_land_admin, only: &
        LAND_TYPE, &
+       SNOW_TYPE, &
        LAND_sw
     implicit none
     !---------------------------------------------------------------------------
@@ -63,11 +65,23 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[LAND PHY] / Origin[SCALE-RM]'
 
+    snow_flag = .false.
+
     if ( LAND_sw ) then
 
        ! setup library component
        call LAND_PHY_setup( LAND_TYPE )
        call LAND_SFC_setup( LAND_TYPE )
+
+       if (   SNOW_TYPE == 'KY90' .and. &
+            ( LAND_TYPE == 'SLAB'      .or.  &
+              LAND_TYPE == 'THIN-SLAB' .or.  &
+              LAND_TYPE == 'THICK-SLAB' ) ) then
+          if ( IO_L ) write(IO_FID_LOG,*) '*** SNOW model is enabled'
+          if ( IO_L ) write(IO_FID_LOG,*) '*** SNOW model is on experimental stage.'
+          if ( IO_L ) write(IO_FID_LOG,*) '*** Use this with your own risk.'
+          snow_flag = .true.
+       end if
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -119,6 +133,12 @@ contains
        LAND_PHY
     use scale_land_sfc, only: &
        LAND_SFC
+    use scale_land_phy_snow_ky90, only: &
+       LAND_PHY_SNOW_KY90
+    use scale_land_phy_snow_diagnos, only: &
+       LAND_PHY_SNOW_DIAGS
+    use mod_land_admin, only: &
+       LAND_TYPE
     use mod_land_vars, only: &
        LAND_PROPERTY,     &
        I_WaterLimit,      &
@@ -134,6 +154,7 @@ contains
        LAND_WATER,        &
        LAND_SFC_TEMP,     &
        LAND_SFC_albedo,   &
+       LAND_type_albedo,  &
        LAND_TEMP_t,       &
        LAND_WATER_t,      &
        LAND_SFC_TEMP_t,   &
@@ -149,6 +170,11 @@ contains
        LAND_V10,          &
        LAND_T2,           &
        LAND_Q2,           &
+       SNOW_SFC_TEMP,     &
+       SNOW_SWE,          &
+       SNOW_Depth,        &
+       SNOW_Dzero,        &
+       SNOW_nosnowsec,    &
        ATMOS_TEMP,        &
        ATMOS_PRES,        &
        ATMOS_W,           &
@@ -161,7 +187,9 @@ contains
        ATMOS_SFC_PRES,    &
        ATMOS_SFLX_LW,     &
        ATMOS_SFLX_SW,     &
-       ATMOS_SFLX_prec
+       ATMOS_SFLX_prec,   & ! rain + snow
+       ATMOS_SFLX_rain,   &
+       ATMOS_SFLX_snow
     implicit none
 
     ! parameters
@@ -179,6 +207,40 @@ contains
     real(RP) :: total            ! dummy
 
     character(len=2) :: sk
+
+    ! for snow
+    real(RP) :: SNOW_SFC_TEMP_t     (IA,JA)
+    real(RP) :: SNOW_albedo         (IA,JA,2)
+    real(RP) :: SNOW_ATMO_SFLX_SH   (IA,JA)
+    real(RP) :: SNOW_ATMO_SFLX_LH   (IA,JA)
+    real(RP) :: SNOW_ATMO_SFLX_GH   (IA,JA)
+    real(RP) :: SNOW_ATMO_SFLX_evap (IA,JA)
+    real(RP) :: SNOW_LAND_SFLX_GH   (IA,JA)
+    real(RP) :: SNOW_LAND_SFLX_evap (IA,JA)
+    real(RP) :: SNOW_LAND_SFLX_Water(IA,JA)
+    real(RP) :: SNOW_frac           (IA,JA)
+
+    real(RP) :: SNOW_ATMO_SFLX_MW   (IA,JA)
+    real(RP) :: SNOW_ATMO_SFLX_MU   (IA,JA)
+    real(RP) :: SNOW_ATMO_SFLX_MV   (IA,JA)
+    real(RP) :: SNOW_U10            (IA,JA)
+    real(RP) :: SNOW_V10            (IA,JA)
+    real(RP) :: SNOW_T2             (IA,JA)
+    real(RP) :: SNOW_Q2             (IA,JA)
+
+    real(RP) :: SNOW_LAND_TEMP_t    (LKMAX,IA,JA)
+    real(RP) :: SNOW_LAND_WATER_t   (LKMAX,IA,JA)
+
+    ! monitor
+    !real(RP) :: MONIT_WCONT0        (IA,JA)
+    !real(RP) :: MONIT_WCONT1        (IA,JA)
+    !real(RP) :: MONIT_ENG0          (IA,JA)
+    !real(RP) :: MONIT_ENG1          (IA,JA)
+    !
+    !real(RP) :: MONIT_SNOW_heat     (IA,JA)
+    !real(RP) :: MONIT_SNOW_water    (IA,JA)
+    !real(RP) :: MONIT_LAND_heat     (IA,JA)
+    !real(RP) :: MONIT_LAND_water    (IA,JA)
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -198,6 +260,131 @@ contains
           LAND_DZ1 (i,j) = GRID_LCDZ(LKS)
        end do
        end do
+
+    !------------------------------------------------------------------------
+    !> snow area only for slab model
+
+    SNOW_frac(:,:) = 0.0_RP
+
+    if ( snow_flag ) then
+
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          ! This is for debug---adachi start
+          !if(( int(SNOW_frac(i,j)) == 1 ).and.( abs(SNOW_SFC_TEMP(i,j)-LAND_SFC_TEMP(i,j))/=0 ))then
+          !   write(*,*) "xxx Error please check SNOW_SFC_TEMP routine"
+          !endif
+          ! This is for debug---adachi end
+          SNOW_SFC_TEMP(i,j) = LAND_SFC_TEMP(i,j)
+       end do
+       end do
+
+       ! accumulation and melt of snow if there is snow
+
+       !MONIT_WCONT0 = 0.0_RP
+       !call monitor_snow_water(  SNOW_Depth          (:,:),   & ! [IN]
+       !                          SNOW_Dzero          (:,:),   & ! [IN]
+       !                          MONIT_WCONT0        (:,:)    ) ! [OUT]
+
+       call LAND_PHY_SNOW_KY90(  SNOW_SFC_TEMP       (:,:),   & ! [INOUT]
+                                 SNOW_SWE            (:,:),   & ! [INOUT]
+                                 SNOW_Depth          (:,:),   & ! [INOUT]
+                                 SNOW_Dzero          (:,:),   & ! [INOUT]
+                                 SNOW_nosnowsec      (:,:),   & ! [INOUT]
+                                 SNOW_albedo         (:,:,:), & ! [OUT]
+                                 SNOW_SFC_TEMP_t     (:,:),   & ! [OUT]
+                                 SNOW_ATMO_SFLX_SH   (:,:),   & ! [OUT]
+                                 SNOW_ATMO_SFLX_LH   (:,:),   & ! [OUT]
+                                 SNOW_ATMO_SFLX_GH   (:,:),   & ! [OUT]
+                                 SNOW_ATMO_SFLX_evap (:,:),   & ! [OUT] != LAND_SFLX_LH(i,j) / LHV(i,j)
+                                 SNOW_LAND_SFLX_GH   (:,:),   & ! [OUT]
+                                 SNOW_LAND_SFLX_Water(:,:),   & ! [OUT]
+                                 SNOW_frac           (:,:),   & ! [OUT]
+                                 ATMOS_SFLX_rain     (:,:),   & ! [IN]
+                                 ATMOS_SFLX_snow     (:,:),   & ! [IN]
+                                 ATMOS_PRES          (:,:),   & ! [IN]
+                                 ATMOS_TEMP          (:,:),   & ! [IN]
+                                 ATMOS_W             (:,:),   & ! [IN]
+                                 ATMOS_U             (:,:),   & ! [IN]
+                                 ATMOS_V             (:,:),   & ! [IN]
+                                 ATMOS_QV            (:,:),   & ! [IN]
+                                 ATMOS_SFC_DENS      (:,:),   & ! [IN]
+                                 ATMOS_SFLX_SW       (:,:),   & ! [IN]
+                                 ATMOS_SFLX_LW       (:,:),   & ! [IN]
+                                 dt                           ) ! [IN]
+
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          SNOW_LAND_SFLX_evap (i,j) = 0.0_RP
+       enddo
+       enddo
+
+       !call monitor_snow_water(  SNOW_Depth          (:,:),   & ! [IN]
+       !                          SNOW_Dzero          (:,:),   & ! [IN]
+       !                          MONIT_WCONT1        (:,:)    ) ! [OUT]
+
+       !call monitor_land_regidual( ATMOS_SFLX_prec     (:,:),   & ! [IN] ! downward at surface
+       !                            SNOW_ATMO_SFLX_evap (:,:),   & ! [IN] ! upward   at surface
+       !                            SNOW_LAND_SFLX_Water(:,:),   & ! [IN] ! downward at bottom
+       !                            SNOW_LAND_SFLX_evap (:,:),   & ! [IN] ! upward   at bottom
+       !                            MONIT_WCONT0        (:,:),   & ! [IN]
+       !                            MONIT_WCONT1        (:,:),   & ! [IN]
+       !                            MONIT_SNOW_water    (:,:)    ) ! [OUT]
+
+       ! momentum fluxes and diagnostic variables above snowpack
+       call LAND_PHY_SNOW_DIAGS( SNOW_ATMO_SFLX_MW   (:,:),  & ! [OUT]
+                                 SNOW_ATMO_SFLX_MU   (:,:),  & ! [OUT]
+                                 SNOW_ATMO_SFLX_MV   (:,:),  & ! [OUT]
+                                 SNOW_U10       (:,:),       & ! [OUT]
+                                 SNOW_V10       (:,:),       & ! [OUT]
+                                 SNOW_T2        (:,:),       & ! [OUT]
+                                 SNOW_Q2        (:,:),       & ! [OUT]
+                                 SNOW_frac      (:,:),       & ! [IN]
+                                 ATMOS_TEMP     (:,:),       & ! [IN]
+                                 ATMOS_PRES     (:,:),       & ! [IN]
+                                 ATMOS_W        (:,:),       & ! [IN]
+                                 ATMOS_U        (:,:),       & ! [IN]
+                                 ATMOS_V        (:,:),       & ! [IN]
+                                 ATMOS_DENS     (:,:),       & ! [IN]
+                                 ATMOS_QV       (:,:),       & ! [IN]
+                                 REAL_Z1        (:,:),       & ! [IN]
+                                 ATMOS_PBL      (:,:),       & ! [IN]
+                                 ATMOS_SFC_DENS (:,:),       & ! [IN]
+                                 ATMOS_SFC_PRES (:,:),       & ! [IN]
+                                 SNOW_SFC_TEMP  (:,:),       & ! [IN]
+                                 LAND_QVEF      (:,:),       & ! [IN]  ! ? beta?
+                                 LAND_PROPERTY  (:,:,I_Z0M), & ! [IN]
+                                 LAND_PROPERTY  (:,:,I_Z0H), & ! [IN]
+                                 LAND_PROPERTY  (:,:,I_Z0E)  ) ! [IN]
+
+       ! update land temp and land water under snowpack
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          SNOW_LAND_SFLX_GH(i,j) = - SNOW_LAND_SFLX_GH(i,j)
+       enddo
+       enddo
+
+       call LAND_PHY( SNOW_LAND_TEMP_t    (:,:,:),              & ! [OUT]
+                      SNOW_LAND_WATER_t   (:,:,:),              & ! [OUT]
+                      LAND_TEMP           (:,:,:),              & ! [IN]
+                      LAND_WATER          (:,:,:),              & ! [IN]
+                      LAND_PROPERTY       (:,:,I_WaterLimit),   & ! [IN]
+                      LAND_PROPERTY       (:,:,I_ThermalCond),  & ! [IN]
+                      LAND_PROPERTY       (:,:,I_HeatCapacity), & ! [IN]
+                      LAND_PROPERTY       (:,:,I_WaterDiff),    & ! [IN]
+                      SNOW_LAND_SFLX_GH   (:,:),                & ! [IN]
+                      SNOW_LAND_SFLX_Water(:,:),                & ! [IN]
+                      SNOW_LAND_SFLX_evap (:,:),                & ! [IN]
+                      GRID_LCDZ           (:),                  & ! [IN]
+                      dt                                        ) ! [IN]
+    endif
+
+    !------------------------------------------------------------------------
+    !> all land area without snow model or no snow area with snow model
+
 
        call LAND_SFC( LAND_SFC_TEMP_t(:,:),                 & ! [OUT]
                       LAND_SFLX_MW   (:,:),                 & ! [OUT]
@@ -226,8 +413,8 @@ contains
                       LAND_TEMP      (LKS,:,:),             & ! [IN]
                       LAND_SFC_TEMP  (:,:),                 & ! [IN]
                       LAND_QVEF      (:,:),                 & ! [IN]
-                      LAND_SFC_albedo(:,:,I_LW),            & ! [IN]
-                      LAND_SFC_albedo(:,:,I_SW),            & ! [IN]
+                      LAND_type_albedo(:,:,I_LW),           & ! [IN]
+                      LAND_type_albedo(:,:,I_SW),           & ! [IN]
                       LAND_DZ1       (:,:),                 & ! [IN]
                       LAND_PROPERTY  (:,:,I_StomataResist), & ! [IN]
                       LAND_PROPERTY  (:,:,I_ThermalCond),   & ! [IN]
@@ -259,9 +446,66 @@ contains
                       GRID_LCDZ      (:),                  & ! [IN]
                       dt                                   ) ! [IN]
 
+
+       ! marge land surface and snow surface !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    if ( snow_flag ) then
+
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+           LAND_SFC_TEMP_t(i,j)        =         SNOW_frac(i,j) *SNOW_SFC_TEMP_t(i,j)                                       &
+                                       + (1.0_RP-SNOW_frac(i,j))*LAND_SFC_TEMP_t(i,j)
+
+           ! tentative: it is not considered that LAND_SFC_albedo is updated in land physics model
+           LAND_SFC_albedo_t(i,j,I_SW) =         SNOW_frac(i,j) *(SNOW_albedo(i,j,I_SW)     -LAND_SFC_albedo(i,j,I_SW))/dt  &
+                                       + (1.0_RP-SNOW_frac(i,j))*(LAND_type_albedo(i,j,I_SW)-LAND_SFC_albedo(i,j,I_SW))/dt
+           LAND_SFC_albedo_t(i,j,I_LW) =         SNOW_frac(i,j) *(SNOW_albedo(i,j,I_LW)     -LAND_SFC_albedo(i,j,I_LW))/dt  &
+                                       + (1.0_RP-SNOW_frac(i,j))*(LAND_type_albedo(i,j,I_LW)-LAND_SFC_albedo(i,j,I_LW))/dt
+
+           LAND_SFLX_MW(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_MW(i,j)   + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_MW(i,j)
+           LAND_SFLX_MU(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_MU(i,j)   + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_MU(i,j)
+           LAND_SFLX_MV(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_MV(i,j)   + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_MV(i,j)
+           LAND_SFLX_SH(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_SH(i,j)   + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_SH(i,j)
+           LAND_SFLX_LH(i,j)    = SNOW_frac(i,j)*SNOW_ATMO_SFLX_LH(i,j)   + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_LH(i,j)
+           LAND_SFLX_GH(i,j)    = SNOW_frac(i,j)*SNOW_LAND_SFLX_GH(i,j)   + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_GH(i,j)
+           LAND_SFLX_evap(i,j)  = SNOW_frac(i,j)*SNOW_ATMO_SFLX_evap(i,j) + (1.0_RP-SNOW_frac(i,j))*LAND_SFLX_evap(i,j)
+           LAND_U10(i,j)        = SNOW_frac(i,j)*SNOW_U10(i,j)            + (1.0_RP-SNOW_frac(i,j))*LAND_U10(i,j)
+           LAND_V10(i,j)        = SNOW_frac(i,j)*SNOW_V10(i,j)            + (1.0_RP-SNOW_frac(i,j))*LAND_V10(i,j)
+           LAND_T2 (i,j)        = SNOW_frac(i,j)*SNOW_T2 (i,j)            + (1.0_RP-SNOW_frac(i,j))*LAND_T2(i,j)
+           LAND_Q2 (i,j)        = SNOW_frac(i,j)*SNOW_Q2 (i,j)            + (1.0_RP-SNOW_frac(i,j))*LAND_Q2(i,j)
+
+         do k = LKS, LKE
+           LAND_TEMP_t (k,i,j)  = SNOW_frac(i,j)*SNOW_LAND_TEMP_t (k,i,j) + (1.0_RP-SNOW_frac(i,j))*LAND_TEMP_t (k,i,j)
+           LAND_WATER_t(k,i,j)  = SNOW_frac(i,j)*SNOW_LAND_WATER_t(k,i,j) + (1.0_RP-SNOW_frac(i,j))*LAND_WATER_t(k,i,j)
+         enddo
+       enddo
+       enddo
+
+       call FILE_HISTORY_in( SNOW_albedo         (:,:,I_SW), 'SNOW_ALB_SW',          'Snow surface albedo (short wave)',         '0-1',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_albedo         (:,:,I_LW), 'SNOW_ALB_LW',          'Snow surface albedo (long wave)',          '0-1',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_SH   (:,:),      'SNOW_ATMO_SFLX_SH',    'Snow surface sensible heat flux',          'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_LH   (:,:),      'SNOW_ATMO_SFLX_LH',    'Snow surface latent heat flux',            'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_GH   (:,:),      'SNOW_ATMO_SFLX_GH',    'Snowpack received heat flux',              'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_evap (:,:),      'SNOW_ATMO_SFLX_evap',  'Evapolation flux from snowpack to atmos',  'kg/m2/s', dim_type='XY')
+       call FILE_HISTORY_in( SNOW_LAND_SFLX_GH   (:,:),      'SNOW_LAND_SFLX_GH',    'land surface ground heat flux under snow', 'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_LAND_SFLX_Water(:,:),      'SNOW_LAND_SFLX_Water', 'land surface water vapor flux under snow', 'kg/m2/s',dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_frac           (:,:),      'SNOW_frac',            'Snow fraction on land subgrid',            '0-1',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_MW   (:,:),      'SNOW_ATMO_SFLX_MW',    'Snow surface w-momentum flux',             'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_MU   (:,:),      'SNOW_ATMO_SFLX_MU',    'Snow surface u-momentum flux',             'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_ATMO_SFLX_MV   (:,:),      'SNOW_ATMO_SFLX_MV',    'Snow surface v-momentum flux',             'J/m2/s', dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_U10            (:,:),      'SNOW_U10',             'Wind velocity u at 10 m on snow surface',  'm/s',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_V10            (:,:),      'SNOW_V10',             'Wind velocity v at 10 m on snow surface',  'm/s',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_T2             (:,:),      'SNOW_T2',              'Air temperature at 2m on snow surface',    'K',      dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_Q2             (:,:),      'SNOW_Q2',              'Specific humidity at 2m on snow surface',  'kg/kg',  dim_type='XY' )
+
+    else
+
        ! no albedo update (tentative)
 !OCL XFILL
        LAND_SFC_albedo_t(:,:,:) = 0.0_RP
+
+    endif
 
        call FILE_HISTORY_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'tendency of LAND_TEMP',  'K',     dim_type='LXY' )
        call FILE_HISTORY_in( LAND_WATER_t(:,:,:), 'LAND_WATER_t', 'tendency of LAND_WATER', 'm3/m3', dim_type='LXY' )

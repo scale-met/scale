@@ -66,6 +66,14 @@ module mod_land_vars
   real(RP), public, allocatable :: LAND_SFC_TEMP  (:,:)   !< land surface skin temperature  [K]
   real(RP), public, allocatable :: LAND_SFC_albedo(:,:,:) !< land surface albedo            (0-1)
 
+  ! for snow model
+  real(RP), public, allocatable :: SNOW_SFC_TEMP  (:,:)    !< snow surface temperature     [K]
+  real(RP), public, allocatable :: SNOW_SWE       (:,:)    !< snow water equivalent        [kg/m2]
+  real(RP), public, allocatable :: SNOW_Depth     (:,:)    !< snow depth                   [m]
+  real(RP), public, allocatable :: SNOW_Dzero     (:,:)    !< snow depth at melting point  [m]
+  real(RP), public, allocatable :: SNOW_nosnowsec (:,:)    !< sec while no snow            [s]
+  real(RP), public, allocatable :: LAND_type_albedo(:,:,:) !< land surface albedo (Initial) (0-1)
+
   ! tendency variables
   real(RP), public, allocatable :: LAND_TEMP_t      (:,:,:) !< tendency of LAND_TEMP
   real(RP), public, allocatable :: LAND_WATER_t     (:,:,:) !< tendency of LAND_WATER
@@ -102,6 +110,8 @@ module mod_land_vars
   real(RP), public, allocatable :: ATMOS_SFLX_SW  (:,:)
   real(RP), public, allocatable :: ATMOS_cosSZA   (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_prec(:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_rain(:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_snow(:,:)
 
   real(RP), public, allocatable :: LAND_PROPERTY  (:,:,:) !< land surface property
 
@@ -239,10 +249,23 @@ contains
     allocate( LAND_WATER     (LKMAX,IA,JA) )
     allocate( LAND_SFC_TEMP  (IA,JA)       )
     allocate( LAND_SFC_albedo(IA,JA,2)     )
+    allocate( LAND_type_albedo(IA,JA,2)     )
     LAND_TEMP      (:,:,:) = UNDEF
     LAND_WATER     (:,:,:) = UNDEF
     LAND_SFC_TEMP  (:,:)   = UNDEF
     LAND_SFC_albedo(:,:,:) = UNDEF
+    LAND_type_albedo(:,:,:) = UNDEF
+
+    allocate( SNOW_SFC_TEMP  (IA,JA)       )
+    allocate( SNOW_SWE       (IA,JA)       )
+    allocate( SNOW_Depth     (IA,JA)       )
+    allocate( SNOW_Dzero     (IA,JA)       )
+    allocate( SNOW_nosnowsec (IA,JA)       )
+    SNOW_SFC_TEMP  (:,:)   = UNDEF
+    SNOW_SWE       (:,:)   = UNDEF
+    SNOW_Depth     (:,:)   = UNDEF
+    SNOW_Dzero     (:,:)   = UNDEF
+    SNOW_nosnowsec (:,:)   = UNDEF
 
     allocate( LAND_TEMP_t      (LKMAX,IA,JA) )
     allocate( LAND_WATER_t     (LKMAX,IA,JA) )
@@ -291,6 +314,8 @@ contains
     allocate( ATMOS_SFLX_SW  (IA,JA) )
     allocate( ATMOS_cosSZA   (IA,JA) )
     allocate( ATMOS_SFLX_prec(IA,JA) )
+    allocate( ATMOS_SFLX_rain(IA,JA) )
+    allocate( ATMOS_SFLX_snow(IA,JA) )
     ATMOS_TEMP     (:,:) = UNDEF
     ATMOS_PRES     (:,:) = UNDEF
     ATMOS_W        (:,:) = UNDEF
@@ -305,6 +330,8 @@ contains
     ATMOS_SFLX_SW  (:,:) = UNDEF
     ATMOS_cosSZA   (:,:) = UNDEF
     ATMOS_SFLX_prec(:,:) = UNDEF
+    ATMOS_SFLX_rain(:,:) = UNDEF
+    ATMOS_SFLX_snow(:,:) = UNDEF
 
     LAND_QA_comm = LKMAX &
                  + LKMAX &
@@ -460,9 +487,27 @@ contains
                                LAND_SFLX_GH(:,:)                          ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_evap), 'XY',  & ! [IN]
                                LAND_SFLX_evap(:,:)                        ) ! [OUT]
-            
 
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
+
+       !call FILE_CARTESC_read( restart_fid, 'SNOW_SFC_TEMP',      'XY',  & ! [OUT]
+       !                        SNOW_SFC_TEMP(:,:)                        ) ! [IN]
+       !call FILE_CARTESC_read( restart_fid, 'SNOW_SWE',           'XY',  & ! [OUT]
+       !                        SNOW_SWE(:,:)                             ) ! [IN]
+       !call FILE_CARTESC_read( restart_fid, 'SNOW_Depth',         'XY',  & ! [OUT]
+       !                        SNOW_Depth(:,:)                           ) ! [IN]
+       !call FILE_CARTESC_read( restart_fid, 'SNOW_Dzero',         'XY',  & ! [OUT]
+       !                        SNOW_Dzero(:,:)                           ) ! [IN]
+       !call FILE_CARTESC_read( restart_fid, 'SNOW_nosnowsec',     'XY'   & ! [OUT]
+       !                        SNOW_nosnowsec(:,:)                       ) ! [IN]
+
+       !!!!! Tentative for snow model !!!!!
+       LAND_type_albedo = LAND_SFC_albedo
+       SNOW_SFC_TEMP    = 273.15_RP
+       SNOW_SWE         = 0.0_RP
+       SNOW_Depth       = 0.0_RP
+       SNOW_Dzero       = 0.0_RP
+       SNOW_nosnowsec   = 0.0_RP
 
        call LAND_vars_total
     else
@@ -494,6 +539,15 @@ contains
                      __FILE__, __LINE__ )
        call VALCHECK( LAND_SFC_albedo(IS:IE,JS:JE,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALB_SW),     &
                      __FILE__, __LINE__ )
+
+       !call VALCHECK( SNOW_SFC_TEMP (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, 'SNOW_SFC_TEMP',        &
+       !              __FILE__, __LINE__ )
+       !call VALCHECK( SNOW_SWE      (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, 'SNOW_SWE',             &
+       !              __FILE__, __LINE__ )
+       !call VALCHECK( SNOW_Depth    (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, 'SNOW_Depth',           &
+       !              __FILE__, __LINE__ )
+       !call VALCHECK( SNOW_Dzero    (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, 'SNOW_Dzero',           &
+       !              __FILE__, __LINE__ )
     endif
 
     call FILE_HISTORY_in( LAND_TEMP (:,:,:), VAR_NAME(I_TEMP),  VAR_DESC(I_TEMP),  VAR_UNIT(I_TEMP),  dim_type='LXY' )
@@ -519,6 +573,13 @@ contains
     call FILE_HISTORY_in( LAND_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH)   )
     call FILE_HISTORY_in( LAND_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH),   VAR_DESC(I_SFLX_GH),   VAR_UNIT(I_SFLX_GH)   )
     call FILE_HISTORY_in( LAND_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap) )
+
+    ! snow model
+    call FILE_HISTORY_in( SNOW_SFC_TEMP (:,:), 'SNOW_SFC_TEMP',  'Snow surface temperature',    'K'      )
+    call FILE_HISTORY_in( SNOW_SWE      (:,:), 'SNOW_SWE',       'Snow water equivalent',       'kg/m2'  )
+    call FILE_HISTORY_in( SNOW_Depth    (:,:), 'SNOW_Depth',     'Snow depth',                  'm'      )
+    call FILE_HISTORY_in( SNOW_Dzero    (:,:), 'SNOW_Dzero',     'Snow depth at melting point', 'm'      )
+    call FILE_HISTORY_in( SNOW_nosnowsec(:,:), 'SNOW_nosnowsec', 'Time duration without snow',  's'      )
 
     return
   end subroutine LAND_vars_history
@@ -549,6 +610,11 @@ contains
        call STAT_total( total, LAND_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP) )
        call STAT_total( total, LAND_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW)   )
        call STAT_total( total, LAND_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW)   )
+
+       call STAT_total( total, SNOW_SFC_TEMP  (:,:),     'SNOW_SFC_TEMP'  )
+       call STAT_total( total, SNOW_SWE       (:,:),     'SNOW_SWE'       )
+       call STAT_total( total, SNOW_Depth     (:,:),     'SNOW_Depth'     )
+       call STAT_total( total, SNOW_Dzero     (:,:),     'SNOW_Dzero'     )
 
     endif
 
@@ -863,6 +929,17 @@ contains
                VAR_ID(i)                              ) ! [OUT]
        end do
 
+       !call FILE_CARTESC_def_var( restart_fid, 'SNOW_SFC_TEMP',  'Snow surface temperature',    &
+       !                           'K',                   'XY',   LAND_RESTART_OUT_DTYPE, ?????  )
+       !call FILE_CARTESC_def_var( restart_fid, 'SNOW_SWE',       'Snow water equivalent',       &
+       !                           'kg/m2',               'XY',   LAND_RESTART_OUT_DTYPE, ?????  )
+       !call FILE_CARTESC_def_var( restart_fid, 'SNOW_Depth',     'Snow depth',                  &
+       !                           'm',                   'XY',   LAND_RESTART_OUT_DTYPE, ?????  )
+       !call FILE_CARTESC_def_var( restart_fid, 'SNOW_Dzero',     'Snow depth at melting point', &
+       !                           'm',                   'XY',   LAND_RESTART_OUT_DTYPE, ?????  )
+       !call FILE_CARTESC_def_var( restart_fid, 'SNOW_nosnowsec', 'Time duration without snow', &
+       !                           's',                 'XY',   LAND_RESTART_OUT_DTYPE,   ?????  )
+
     endif
 
     return
@@ -880,30 +957,41 @@ contains
 
        call LAND_vars_total
 
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_TEMP),      LAND_TEMP(:,:,:), & ! [IN]
-                                    VAR_NAME(I_TEMP),      'LXY', fill_halo=.true.     ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_TEMP),      LAND_TEMP(:,:,:),          & ! [IN]
+                                    VAR_NAME(I_TEMP),      'LXY',  fill_halo=.true.              ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_WATER),     LAND_WATER(:,:,:),         & ! [IN]
-                                    VAR_NAME(I_WATER),     'LXY', fill_halo=.true.                 ) ! [IN]
+                                    VAR_NAME(I_WATER),     'LXY',  fill_halo=.true.              ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_TEMP),  LAND_SFC_TEMP(:,:),        & ! [IN]
-                                    VAR_NAME(I_SFC_TEMP),  'XY',   fill_halo=.true.                 ) ! [IN]
+                                    VAR_NAME(I_SFC_TEMP),  'XY',   fill_halo=.true.              ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_ALB_LW),    LAND_SFC_albedo(:,:,I_LW), & ! [IN]
-                                    VAR_NAME(I_ALB_LW),    'XY',   fill_halo=.true.                 ) ! [IN]
+                                    VAR_NAME(I_ALB_LW),    'XY',   fill_halo=.true.              ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_ALB_SW),    LAND_SFC_albedo(:,:,I_SW), & ! [IN]
-                                    VAR_NAME(I_ALB_SW),    'XY',   fill_halo=.true.                 ) ! [IN]
+                                    VAR_NAME(I_ALB_SW),    'XY',   fill_halo=.true.              ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_MW),   LAND_SFLX_MW(:,:),         & ! [IN]
-                                    VAR_NAME(I_SFLX_MW),   'XY',   fill_halo=.true.                 ) ! [IN]
+                                    VAR_NAME(I_SFLX_MW),   'XY',   fill_halo=.true.              ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_MU),   LAND_SFLX_MU(:,:),         & ! [IN]
-                                    VAR_NAME(I_SFLX_MU),   'XY',   fill_halo=.true.                 ) ! [IN]
+                                    VAR_NAME(I_SFLX_MU),   'XY',   fill_halo=.true.              ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_MV),   LAND_SFLX_MV(:,:),         & ! [IN]
-                                    VAR_NAME(I_SFLX_MV),   'XY',   fill_halo=.true.                 ) ! [IN]
+                                    VAR_NAME(I_SFLX_MV),   'XY',   fill_halo=.true.              ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_SH),   LAND_SFLX_SH(:,:),         & ! [IN]
-                                    VAR_NAME(I_SFLX_SH),   'XY',   fill_halo=.true.                 ) ! [IN]
+                                    VAR_NAME(I_SFLX_SH),   'XY',   fill_halo=.true.              ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_LH),   LAND_SFLX_LH(:,:),         & ! [IN]
-                                    VAR_NAME(I_SFLX_LH),   'XY',   fill_halo=.true.                 ) ! [IN]
+                                    VAR_NAME(I_SFLX_LH),   'XY',   fill_halo=.true.              ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_GH),   LAND_SFLX_GH(:,:),         & ! [IN]
-                                    VAR_NAME(I_SFLX_GH),   'XY',   fill_halo=.true.                 ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_evap), LAND_SFLX_evap(:,:), & ! [IN]
-                                    VAR_NAME(I_SFLX_evap), 'XY',   fill_halo=.true.        ) ! [IN]
+                                    VAR_NAME(I_SFLX_GH),   'XY',   fill_halo=.true.              ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_evap), LAND_SFLX_evap(:,:),       & ! [IN]
+                                    VAR_NAME(I_SFLX_evap), 'XY',   fill_halo=.true.              ) ! [IN]
+
+       !call FILE_CARTESC_write_var( restart_fid, VMAX+1, SNOW_SFC_TEMP(:,:),                    &
+       !                           'SNOW_SFC_TEMP',       'XY',   fill_halo=.true.               )
+       !call FILE_CARTESC_write_var( restart_fid, VMAX+2, SNOW_SWE(:,:),                         &
+       !                           'SNOW_SWE',            'XY',   fill_halo=.true.               )
+       !call FILE_CARTESC_write_var( restart_fid, VMAX+3, SNOW_Depth(:,:),                       &
+       !                           'SNOW_Depth',          'XY',   fill_halo=.true.               )
+       !call FILE_CARTESC_write_var( restart_fid, VMAX+4, SNOW_Dzero(:,:),                       &
+       !                           'SNOW_Dzero',          'XY',   fill_halo=.true.               )
+       !call FILE_CARTESC_write_var( restart_fid, VMAX+5, SNOW_nosnowsec(:,:),                   &
+       !                           'SNOW_nosnowsec',      'XY',   fill_halo=.true.               )
 
     endif
 

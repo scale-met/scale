@@ -33,8 +33,10 @@ module mod_land_admin
   logical,                public :: LAND_do   = .true. ! main switch for the model
 
   character(len=H_SHORT), public :: LAND_TYPE = 'NONE'
+  character(len=H_SHORT), public :: SNOW_TYPE = 'NONE'
 
   logical,                public :: LAND_sw
+  logical,                public :: SNOW_sw
 
   !-----------------------------------------------------------------------------
   !
@@ -55,7 +57,8 @@ contains
 
     NAMELIST / PARAM_LAND / &
        LAND_do,  &
-       LAND_TYPE
+       LAND_TYPE, &
+       SNOW_TYPE
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -95,6 +98,14 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** + Land  physics : OFF'
        LAND_sw = .false.
+    endif
+
+    if ( SNOW_TYPE /= 'OFF' .AND. SNOW_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Snow  physics : ON, ', trim(SNOW_TYPE)
+       SNOW_sw = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Snow  physics : OFF'
+       SNOW_sw = .false.
     endif
 
     return

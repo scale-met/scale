@@ -246,7 +246,7 @@ contains
                      QVsat                            ) ! [OUT]
           call qsat( LST1(i,j)+dTS0, PRSS(i,j), qdry, & ! [IN]
                      dQVsat                           ) ! [OUT]
-                     
+
           QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
           dQVS = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * dQVsat
 
@@ -460,8 +460,6 @@ contains
 
         call qsat( LST1(i,j), PRSS(i,j), qdry, & ! [IN]
                    QVsat                       ) ! [OUT]
-                   
-                   
 
         QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
 
