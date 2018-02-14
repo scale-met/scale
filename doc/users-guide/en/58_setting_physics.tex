@@ -76,7 +76,7 @@ The cumulus parameterization is specified in \nmitem{ATMOS_PHY_CP_TYPE} in \name
   \label{tab:nml_atm_cp}
   \begin{tabularx}{150mm}{lXX} \hline
     \rowcolor[gray]{0.9}  Value & Description of scheme & Reference\\ \hline
-      \verb|OFF|  & Do not calculate the cumulus parameterization &  \\
+      \verb|OFF|  & No use of the cumulus parameterization &  \\
       \verb|KF|   & The Kain-Fritsch convective parameterization & \citet{kain_1990,kain_2004} \\
     \hline
   \end{tabularx}
@@ -84,10 +84,11 @@ The cumulus parameterization is specified in \nmitem{ATMOS_PHY_CP_TYPE} in \name
 \end{table}
 
 In this version of \scalerm, only \verb|KF| is supported as cumulus parameterization. \verb|KF| is a mass flux conservation type of cumulus parameterization to represent one convection in the sub-grid scale.
-Utilization of cumulus paramterization is strongly recommended when grid spacing is more than 5 km to avoid calculation of unnatual strong deep convections.
-The precipitation from cumulus parameterization and micro physics are outputted to the variables \verb|RAIN_CP| and \verb|RAIN_MP|, individually. In addtion, precipitation from cumulus parameterization is summed in the variable \verb|RAIN| (i.e. \verb|RAIN| = \verb|RAIN_CP| + \verb|RAIN_MP|). This is same as the variable \verb|PREC|.
+The cumulus paramterization is recommended to be used when grid spacing is more than about 5 km to avoid calculation of unnatual strong deep convections.
+The precipitation from cumulus parameterization and cloud micro-physics are individually output as the variables \verb|RAIN_CP| and \verb|RAIN_MP|, respectively. 
+\verb|RAIN| and \verb|PREC| are the sum of precipitation from cumulus parameterization and cloud micro-physics (i.e. \verb|RAIN| = \verb|RAIN_CP| + \verb|RAIN_MP|).
 Note that \verb|KF| creates hydrometeor of cloud water, and the cloud water is calculated in micro physics schemes.
-When use \verb|KF| with the double-moment micro physics schemes, number concentration variables about created hydrometeor in \verb|KF| are estimated by a prescribed fuction.
+When use \verb|KF| with the double-moment micro-physics schemes, number concentration variables about created hydrometeor in \verb|KF| are estimated by a prescribed fuction.
 
 
 \subsubsection{Configuration for \texttt{Kain-Fritsch}}
@@ -95,14 +96,14 @@ When use \verb|KF| with the double-moment micro physics schemes, number concentr
 Following tuning parameters are available in \verb|KF|:
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_CP_KF  | & \\
-\verb| PARAM_ATMOS_PHY_CP_kf_trigger   = 1,|     & ; trigger function type: 1=Kain, 3=Narita-Ohmori\\
-\verb| PARAM_ATMOS_PHY_CP_kf_dlcape    = 0.1,|   & ; cape decleace rate\\
-\verb| PARAM_ATMOS_PHY_CP_kf_dlifetime = 1800,|  & ; lifetime scale of deep convection [sec]\\
-\verb| PARAM_ATMOS_PHY_CP_kf_slifetime = 2400,|  & ; lifetime scale of shallow convection [sec]\\
-\verb| PARAM_ATMOS_PHY_CP_kf_DEPTH_USL =  300,|  & ; depth of updraft source layer [hPa]\\
-\verb| PARAM_ATMOS_PHY_CP_kf_prec      = 1,|     & ; precipitation type: 1=Ogura-Cho, 2=Kessler\\
-\verb| PARAM_ATMOS_PHY_CP_kf_rate      = 0.03, | & ; ratio of cloud water and precipitation for Ogura-Cho precipitation fuction\\
-\verb| PARAM_ATMOS_PHY_CP_kf_thres     = 1.E-3,| & ; autoconversion rate for Kessler precipitation fuction\\
+\verb| PARAM_ATMOS_PHY_CP_kf_trigger   = 1,|     & ; Trigger function type: 1=Kain, 3=Narita-Ohmori\\
+\verb| PARAM_ATMOS_PHY_CP_kf_dlcape    = 0.1,|   & ; Cape decleace rate\\
+\verb| PARAM_ATMOS_PHY_CP_kf_dlifetime = 1800,|  & ; Lifetime scale of deep convection [sec]\\
+\verb| PARAM_ATMOS_PHY_CP_kf_slifetime = 2400,|  & ; Lifetime scale of shallow convection [sec]\\
+\verb| PARAM_ATMOS_PHY_CP_kf_DEPTH_USL =  300,|  & ; Depth of updraft source layer [hPa]\\
+\verb| PARAM_ATMOS_PHY_CP_kf_prec      = 1,|     & ; Precipitation type: 1=Ogura-Cho, 2=Kessler\\
+\verb| PARAM_ATMOS_PHY_CP_kf_rate      = 0.03, | & ; Ratio of cloud water and precipitation for Ogura-Cho precipitation fuction\\
+\verb| PARAM_ATMOS_PHY_CP_kf_thres     = 1.E-3,| & ; Autoconversion rate for Kessler precipitation fuction\\
 \verb|/             | & \\
 }\\
 Users can select trigger fuction from two options:
@@ -120,7 +121,7 @@ Users can select precipitation fuction from two options:
   Kessler type simple precipitation fuction. For this type, additional tuning parameter of \nmitem{PARAM_ATMOS_PHY_CP_kf_thres} is available.
 \end{enumerate}
 
-The time interval of the calling KF specified \nmitem{TIME_DT_ATMOS_PHY_CP} in \namelist{PARAM_TIME} is also tuning parameter effective to the precipitation amount. For the first setting, recommend 300s for \nmitem{TIME_DT_ATMOS_PHY_CP}.
+The time interval of calling KF specified by \nmitem{TIME_DT_ATMOS_PHY_CP} in \namelist{PARAM_TIME} is also a tuning parameter, which is effective to the precipitation amount. As the first setting of \nmitem{TIME_DT_ATMOS_PHY_CP}, 300s is recommended.
 
 
 

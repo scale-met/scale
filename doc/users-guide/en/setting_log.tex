@@ -1,9 +1,9 @@
-\section{Setting log file output and how to read log file} \label{sec:log}
+\section{Log file output and how to read log file} \label{sec:log}
 %====================================================================================
 
-% Ticket #920
 
-\scalerm can output log files when you execute \verb|scale-rm|, \verb|scale-rm_init|, \verb|scale-rm_pp|. In a default setting, one log file for the process of number zero is outputed as "\verb|LOG.pe000000|" for \verb|scale-rm|, "\verb|init_LOG.pe000000|" for \verb|scale-rm_init|", and \verb|pp_LOG.pe000000|" for \verb|scale-rm_pp|. Users can modify the log file outputs by editing configuration files of \texttt{run.conf}, \texttt{init.conf}, and \texttt{pp.conf}} as follows:
+\scalerm can output log files when you execute \verb|scale-rm|, \verb|scale-rm_init|, and \verb|scale-rm_pp|. On a default setting, log messages from the process of number zero is written into "\verb|LOG.pe000000|" for \verb|scale-rm|, "\verb|init_LOG.pe000000|" for \verb|scale-rm_init|", and \verb|pp_LOG.pe000000|" for \verb|scale-rm_pp|. 
+Users can modify the settings of log file outputs by editing configuration files of \texttt{run.conf}, \texttt{init.conf}, and \texttt{pp.conf} as follows:
 
 \editboxtwo{
 \verb|&PARAM_IO| & \\
@@ -12,18 +12,18 @@
 \verb|/|\\
 }
 
-A name of log file is controled by \nmitem{IO_LOG_BASENAME} in \namelist{PARAM_IO}. In the above sample, log files will be outputted as "\verb|LOG-test1.pe000000|". \nmitem{IO_LOG_ALLNODE} in \namelist{PARAM_IO} controls to output log files for all processes or not. When \nmitem{IO_LOG_ALLNODE} is set as "\verb|.true.|", log files for all processes will be outputted. The default setting for this parameter is "\verb|.false.|".
-An example of log output line is a follow when you execute \verb|scale-rm|:\\
+A name of log file is controled by \nmitem{IO_LOG_BASENAME} in \namelist{PARAM_IO}. In the case of above sample, the name of log files is "\verb|LOG-test1.pe000000|". \nmitem{IO_LOG_ALLNODE} in \namelist{PARAM_IO} controls whether to output log files for all processes or not. When \nmitem{IO_LOG_ALLNODE} is "\verb|.true.|", log files for all processes will be created. The default setting of \nmitem{IO_LOG_ALLNODE} is "\verb|.false.|".
+You can find the lines with following format in the log file when you execute \verb|scale-rm|:\\
 \msgbox{
   *** TIME: 0000/01/01 00:06:36 + 0.600 STEP:   1984/ 432000 WCLOCK:    2000.2\\
 }
-From this line, you can recognize following condtions of the computation:
+This line presents messages about status of computation as follows:
 \begin{itemize}
  \item Now, carrying out 6m36.6s of time integration from the initial time of "0000/01/01 00:00:00 + 0.000".
- \item This is 1984 step in whole time steps of 432000.
+ \item This is 1984th step in whole time steps of 432000.
  \item 2000.2s was taken in a wall clock time (cpu time) .
 \end{itemize}
-Furthermore, the elapsed time to the finish of this computation can be estimated from these infromation.
+Furthermore, the required time for this computation can be estimated from these infromation.
 In this case, 440000s ( $= 2000.2 \times 432000 \div 1984$ ) is the estimated elapsed time.
 
 
