@@ -315,6 +315,7 @@ module scale_atmos_phy_mp_tomita08
                 'Pgmlt  '  /
 
   real(RP), private, allocatable :: w3d(:,:,:,:) !< for history output
+  integer,  private              :: HIST_id(w_nmax)
 
   !-----------------------------------------------------------------------------
 contains
@@ -334,6 +335,8 @@ contains
        dens_i => CONST_DICE
     use scale_specfunc, only: &
        SF_gamma
+    use scale_file_history, only: &
+       FILE_HISTORY_reg
     implicit none
 
     integer, intent(in) :: KA, KS, KE
@@ -390,7 +393,7 @@ contains
     real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
 
     integer  :: ierr
-    integer  :: i, j
+    integer  :: i, j, ip
     !---------------------------------------------------------------------------
 
 
@@ -512,6 +515,12 @@ contains
     GAM_5dg_h = SF_gamma( 0.5_RP * (5.0_RP+Dg) )
 
     ln10 = log(10.0_RP)
+
+    ! history
+    do ip = 1, w_nmax
+       call FILE_HISTORY_reg( w_name(ip), 'individual tendency term in tomita08', 'kg/kg/s', & ! [IN]
+                              hist_id(ip)                                                    ) ! [OUT]
+    end do
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_setup
@@ -651,7 +660,8 @@ contains
        PRE00 => CONST_PRE00, &
        DWATR => CONST_DWATR
     use scale_file_history, only: &
-       FILE_HISTORY_in
+       FILE_HISTORY_query, &
+       FILE_HISTORY_put
     use scale_atmos_hydrometeor, only: &
        LHV, &
        LHF, &
@@ -746,12 +756,18 @@ contains
     !---< Explicit ice generation >---
     real(RP) :: sw, rhoqi, XNi, XMi, Di, Nig, Qig
 
+    logical :: HIST_sw(w_nmax), hist_flag
     real(RP) :: w(w_nmax)
 
     integer  :: k, i, j, ip
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_tomita08', 3)
+
+    do ip = 1, w_nmax
+       call FILE_HISTORY_query( HIST_id(ip), HIST_sw(ip) )
+       hist_flag = hist_flag .and. HIST_sw(ip)
+    end do
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KS,KE,IS,IE,JS,JE, &
@@ -763,7 +779,7 @@ contains
     !$omp        Cr,Cs,Cg,Erw,Eri,Eiw,Esw,Esr,Esi,Egw,Egr,Egi,Egs,Ar,As,Ag, &
     !$omp        gamma_sacr,gamma_gacs,gamma_saut,gamma_gaut,beta_saut,beta_gaut,qicrt_saut,qscrt_gaut,mi, &
     !$omp        GAM,GAM_2,GAM_3,GAM_1br,GAM_1bs,GAM_1bsds,GAM_1bg,GAM_1bgdg,GAM_1brdr,GAM_2br,GAM_2bs,GAM_3br,GAM_3bs,GAM_3dr,GAM_3ds,GAM_3dg,GAM_5dr_h,GAM_5ds_h,GAM_5dg_h,GAM_6dr, &
-    !$omp        w3d) &
+    !$omp        w3d,HIST_sw,hist_flag) &
     !$omp private(dens,temp,cptot,cvtot,qv,qc,qr,qi,qs,qg,qv_t,qc_t,qr_t,qi_t,qs_t,qg_t,e_t,cp_t,cv_t, &
     !$omp         QSATL,QSATI,Sliq,Sice,Rdens,rho_fact,temc,N0r,N0s,N0g, &
     !$omp         RLMDr,RLMDr_2,RLMDr_3,RLMDs,RLMDs_2,RLMDs_3,RLMDg,RLMDg_2,RLMDg_3, &
@@ -1461,15 +1477,18 @@ contains
        CPtot0(k,i,j) = cptot
        CVtot0(k,i,j) = cvtot
 
-       do ip = 1, w_nmax
-          w3d(k,i,j,ip) = w(ip)
-       enddo
+       if ( hist_flag ) then
+          do ip = 1, w_nmax
+             if ( HIST_sw(ip) ) w3d(k,i,j,ip) = w(ip)
+          enddo
+       end if
+
     enddo
     enddo
     enddo
 
     do ip = 1, w_nmax
-       call FILE_HISTORY_in( w3d(:,:,:,ip), w_name(ip), 'individual tendency term in tomita08', 'kg/kg/s' )
+       if ( HIST_sw(ip) ) call FILE_HISTORY_put( HIST_id(ip), w3d(:,:,:,ip) )
     enddo
 
     call PROF_rapend  ('MP_tomita08', 3)
