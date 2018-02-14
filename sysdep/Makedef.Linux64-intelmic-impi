@@ -11,11 +11,13 @@ FC  = mpiifort
 SFC = ifort
 MODDIROPT = -module
 
-FFLAGS_FAST  = -fpp -m64 -O3 -xMIC-AVX512           \
+FFLAGS_FAST  = -fpp -m64 -O3 -xMIC-AVX512 -ip       \
                -assume byterecl -convert big_endian \
                -fp-model source -align array64byte  \
                -qopt-streaming-stores always        \
                -static_intel
+
+FFLAGS_AGGRESSIVE = -ipo -no-prec-div
 
 FFLAGS_QUICKDEBUG = -traceback -fpe0 -CB -CU
 
@@ -36,8 +38,9 @@ FFLAGS_DEBUG = -fpp -m64 -O0 -xMIC-AVX512                \
 
 CC = mpiicc
 
-CFLAGS_FAST  = -O3 -xMIC-AVX512
-CFLAGS_DEBUG = -O0 -xMIC-AVX512
+CFLAGS_FAST       = -O3 -xMIC-AVX512
+CFLAGS_AGGRESSIVE = -ipo -no-prec-div
+CFLAGS_DEBUG      = -O0 -xMIC-AVX512
 
 
 
@@ -79,7 +82,7 @@ LDFLAGS = $(FFLAGS)
 
 ##### for frontend
 INSTALL = install
-AR      = ar
+AR      = xiar
 ARFLAGS = r
 RANLIB  = ranlib
 JOBSUB  = sh
