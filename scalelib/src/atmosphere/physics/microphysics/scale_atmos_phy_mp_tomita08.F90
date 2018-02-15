@@ -146,10 +146,28 @@ module scale_atmos_phy_mp_tomita08
   !---< Roh and Satoh (2014) >---
   logical,  private              :: enable_RS2014   = .false. !< use scheme by Roh and Satoh (2014)
   real(RP), private              :: ln10                 !< log(10)
-  real(RP), private, parameter   :: coef_a(10)  = (/ 5.065339_RP, -0.062659_RP, -3.032362_RP, 0.029469_RP, -0.000285_RP, &
-                                                     0.31255_RP,   0.000204_RP,  0.003199_RP, 0.0_RP,      -0.015952_RP  /)
-  real(RP), private, parameter   :: coef_b(10)  = (/ 0.476221_RP, -0.015896_RP,  0.165977_RP, 0.007468_RP, -0.000141_RP, &
-                                                     0.060366_RP,  0.000079_RP,  0.000594_RP, 0.0_RP,      -0.003577_RP  /)
+  real(RP), private, parameter   :: coef_a01 =  5.065339_RP
+  real(RP), private, parameter   :: coef_a02 = -0.062659_RP
+  real(RP), private, parameter   :: coef_a03 = -3.032362_RP
+  real(RP), private, parameter   :: coef_a04 =  0.029469_RP
+  real(RP), private, parameter   :: coef_a05 = -0.000285_RP
+  real(RP), private, parameter   :: coef_a06 =  0.31255_RP
+  real(RP), private, parameter   :: coef_a07 =  0.000204_RP
+  real(RP), private, parameter   :: coef_a08 =  0.003199_RP
+  real(RP), private, parameter   :: coef_a09 =  0.0_RP
+  real(RP), private, parameter   :: coef_a10 = -0.015952_RP
+
+  real(RP), private, parameter   :: coef_b01 =  0.476221_RP
+  real(RP), private, parameter   :: coef_b02 = -0.015896_RP
+  real(RP), private, parameter   :: coef_b03 =  0.165977_RP
+  real(RP), private, parameter   :: coef_b04 =  0.007468_RP
+  real(RP), private, parameter   :: coef_b05 = -0.000141_RP
+  real(RP), private, parameter   :: coef_b06 =  0.060366_RP
+  real(RP), private, parameter   :: coef_b07 =  0.000079_RP
+  real(RP), private, parameter   :: coef_b08 =  0.000594_RP
+  real(RP), private, parameter   :: coef_b09 =  0.0_RP
+  real(RP), private, parameter   :: coef_b10 = -0.003577_RP
+
   !---< Wainwright et al. (2014) >---
   logical,  private              :: enable_WDXZ2014 = .false. !< use scheme by Wainwright et al. (2014)
 
@@ -908,14 +926,14 @@ contains
 
              Xs2    = dens(k) * qs(k) / As
              tems       = min( -0.1_RP, temc(k) )
-             coef_at(1) = coef_a( 1) + tems * ( coef_a( 2) + tems * ( coef_a( 5) + tems * coef_a( 9) ) )
-             coef_at(2) = coef_a( 3) + tems * ( coef_a( 4) + tems *   coef_a( 7) )
-             coef_at(3) = coef_a( 6) + tems *   coef_a( 8)
-             coef_at(4) = coef_a(10)
-             coef_bt(1) = coef_b( 1) + tems * ( coef_b( 2) + tems * ( coef_b( 5) + tems * coef_b( 9) ) )
-             coef_bt(2) = coef_b( 3) + tems * ( coef_b( 4) + tems *   coef_b( 7) )
-             coef_bt(3) = coef_b( 6) + tems *   coef_b( 8)
-             coef_bt(4) = coef_b(10)
+             coef_at(1) = coef_a01 + tems * ( coef_a02 + tems * ( coef_a05 + tems * coef_a09 ) )
+             coef_at(2) = coef_a03 + tems * ( coef_a04 + tems *   coef_a07 )
+             coef_at(3) = coef_a06 + tems *   coef_a08
+             coef_at(4) = coef_a10
+             coef_bt(1) = coef_b01 + tems * ( coef_b02 + tems * ( coef_b05 + tems * coef_b09 ) )
+             coef_bt(2) = coef_b03 + tems * ( coef_b04 + tems *   coef_b07 )
+             coef_bt(3) = coef_b06 + tems *   coef_b08
+             coef_bt(4) = coef_b10
              ! 0th moment
              loga_  = coef_at(1)
              b_     = coef_bt(1)
@@ -1696,14 +1714,14 @@ contains
           Xs2    = dens(k) * qs(k) / As
 
           tems       = min( -0.1_RP, temc(k) )
-          coef_at(1) = coef_a( 1) + tems * ( coef_a( 2) + tems * ( coef_a( 5) + tems * coef_a( 9) ) )
-          coef_at(2) = coef_a( 3) + tems * ( coef_a( 4) + tems *   coef_a( 7) )
-          coef_at(3) = coef_a( 6) + tems *   coef_a( 8)
-          coef_at(4) = coef_a(10)
-          coef_bt(1) = coef_b( 1) + tems * ( coef_b( 2) + tems * ( coef_b( 5) + tems * coef_b( 9) ) )
-          coef_bt(2) = coef_b( 3) + tems * ( coef_b( 4) + tems *   coef_b( 7) )
-          coef_bt(3) = coef_b( 6) + tems *   coef_b( 8)
-          coef_bt(4) = coef_b(10)
+          coef_at(1) = coef_a01 + tems * ( coef_a02 + tems * ( coef_a05 + tems * coef_a09 ) )
+          coef_at(2) = coef_a03 + tems * ( coef_a04 + tems *   coef_a07 )
+          coef_at(3) = coef_a06 + tems *   coef_a08
+          coef_at(4) = coef_a10
+          coef_bt(1) = coef_b01 + tems * ( coef_b02 + tems * ( coef_b05 + tems * coef_b09 ) )
+          coef_bt(2) = coef_b03 + tems * ( coef_b04 + tems *   coef_b07 )
+          coef_bt(3) = coef_b06 + tems *   coef_b08
+          coef_bt(4) = coef_b10
           ! 0 + Bs(=2) moment
           nm = 2.0_RP
           loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
@@ -2003,14 +2021,14 @@ contains
                 Xs2    = dens(k) * qs(k) / As
 
                 tems       = min( -0.1_RP, temc(k) )
-                coef_at(1) = coef_a( 1) + tems * ( coef_a( 2) + tems * ( coef_a( 5) + tems * coef_a( 9) ) )
-                coef_at(2) = coef_a( 3) + tems * ( coef_a( 4) + tems *   coef_a( 7) )
-                coef_at(3) = coef_a( 6) + tems *   coef_a( 8)
-                coef_at(4) = coef_a(10)
-                coef_bt(1) = coef_b( 1) + tems * ( coef_b( 2) + tems * ( coef_b( 5) + tems * coef_b( 9) ) )
-                coef_bt(2) = coef_b( 3) + tems * ( coef_b( 4) + tems *   coef_b( 7) )
-                coef_bt(3) = coef_b( 6) + tems *   coef_b( 8)
-                coef_bt(4) = coef_b(10)
+                coef_at(1) = coef_a01 + tems * ( coef_a02 + tems * ( coef_a05 + tems * coef_a09 ) )
+                coef_at(2) = coef_a03 + tems * ( coef_a04 + tems *   coef_a07 )
+                coef_at(3) = coef_a06 + tems *   coef_a08
+                coef_at(4) = coef_a10
+                coef_bt(1) = coef_b01 + tems * ( coef_b02 + tems * ( coef_b05 + tems * coef_b09 ) )
+                coef_bt(2) = coef_b03 + tems * ( coef_b04 + tems *   coef_b07 )
+                coef_bt(3) = coef_b06 + tems *   coef_b08
+                coef_bt(4) = coef_b10
                 ! 1 + Bs(=2) moment
                 nm = 3.0_RP
                 loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
