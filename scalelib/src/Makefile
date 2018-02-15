@@ -244,10 +244,10 @@ OBJS_FOR_SDM = $(OBJ_DIR)/scale_precision.o	\
 	$(OBJ_DIR)/scale_history.o	\
 	$(OBJ_DIR)/scale_const.o	\
 	$(OBJ_DIR)/scale_time.o	\
-	$(OBJ_DIR)/scale_grid_index.o	\
+	$(OBJ_DIR)/scale_atmos_grid_cartesC_index.o	\
 	$(OBJ_DIR)/scale_topography.o	\
 	$(OBJ_DIR)/scale_grid_cartesian.o	\
-	$(OBJ_DIR)/scale_grid_real.o	\
+	$(OBJ_DIR)/scale_atmos_grid_cartesC_real.o	\
 	$(OBJ_DIR)/scale_gridtrans.o	\
 	$(OBJ_DIR)/scale_rm_process.o
 

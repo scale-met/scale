@@ -25,7 +25,7 @@ module scale_atmos_phy_mp
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -49,7 +49,7 @@ module scale_atmos_phy_mp
           SFLX_rain, &
           SFLX_snow  )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_tracer
        real(RP), intent(inout) :: DENS(KA,IA,JA)
        real(RP), intent(inout) :: MOMZ(KA,IA,JA)
@@ -69,7 +69,7 @@ module scale_atmos_phy_mp
           QTRC,          &
           mask_criterion )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_tracer
        real(RP), intent(out) :: cldfrac(KA,IA,JA)
        real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
@@ -81,7 +81,7 @@ module scale_atmos_phy_mp
           DENS0, &
           TEMP0  )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_tracer
        use scale_atmos_hydrometeor, only: N_HYD
        real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
@@ -93,7 +93,7 @@ module scale_atmos_phy_mp
           Qe,   &
           QTRC0 )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_tracer
        use scale_atmos_hydrometeor, only: N_HYD
        real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]

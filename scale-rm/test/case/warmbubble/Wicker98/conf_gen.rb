@@ -77,7 +77,7 @@ def gen_init_conf( conf_name,
  DY =  #{dy},
  BUFFER_DZ =   0.D0,
  BUFFFACT  =   1.D0,
- GRID_OFFSET_X = -10.D3,
+ OFFSET_X = -10.D3,
 /
 
 &PARAM_TIME
@@ -150,7 +150,7 @@ def gen_run_conf( conf_name,
  DY =  #{dy},
  BUFFER_DZ =   0.D0,
  BUFFFACT  =   1.D0,
- GRID_OFFSET_X = -10.D3,
+ OFFSET_X = -10.D3,
 /
 &PARAM_TIME
  TIME_STARTDATE             = 0000, 1, 1, 0, 0, 0,

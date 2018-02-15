@@ -16,7 +16,7 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -184,8 +184,8 @@ contains
        !qsatf => ATMOS_SATURATION_pres2qsat_all  ! better to  change name from qsatf to qsat
        !qsatf => ATMOS_SATURATION_dens2qsat_all
         qsatf => ATMOS_SATURATION_psat_all
-    use scale_grid_real, only: &
-       REAL_lon
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_LON => ATMOS_GRID_CARTESC_REAL_LON
     use scale_time, only:   &
        NOWSEC => TIME_NOWSEC,      & ! subday part  of current time [sec]
        dt_LND => TIME_DTSEC_LAND     ! time interval of land step  [sec]

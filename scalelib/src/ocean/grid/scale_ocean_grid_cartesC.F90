@@ -157,13 +157,13 @@ contains
     call FILE_read( fid, 'OCZ',  OCEAN_GRID_CARTESC_CZ (:) )
     call FILE_read( fid, 'OCDZ', OCEAN_GRID_CARTESC_CDZ(:) )
     call FILE_read( fid, 'OFZ',  OCEAN_GRID_CARTESC_FZ (:) )
-                                                 
+
     return
   end subroutine OCEAN_GRID_CARTESC_read
 
   !-----------------------------------------------------------------------------
   !> Generate ocean grid
-  ! It uses FZ, not DZ. Note, LAND_GRID_generate uses DZ
+  ! It uses FZ, not DZ. Note, LAND_GRID_CARTESC_generate uses DZ
   subroutine OCEAN_GRID_CARTESC_generate
     implicit none
 

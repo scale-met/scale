@@ -142,8 +142,8 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
-    Lx = GRID_CARTESC_FXG(IAG-IHALO) - GRID_FXG(IHALO)
-    Ly = GRID_CARTESC_FYG(JAG-JHALO) - GRID_FYG(JHALO)
+    Lx = GRID_CARTESC_FXG(IAG-IHALO) - GRID_CARTESC_FXG(IHALO)
+    Ly = GRID_CARTESC_FYG(JAG-JHALO) - GRID_CARTESC_FYG(JHALO)
 
     return
   end subroutine USER_setup
