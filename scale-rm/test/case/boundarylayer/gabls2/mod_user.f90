@@ -187,6 +187,9 @@ contains
        NOWSEC => TIME_NOWSEC
     use scale_atmos_hydrostatic, only: &
        buildrho => ATMOS_HYDROSTATIC_buildrho
+    use scale_atmos_grid_cartesC, only: &
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       FZ => ATMOS_GRID_CARTESC_FZ
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -231,6 +234,8 @@ contains
                       PT  (:),   & ! (in)
                       QV  (:),   & ! (in)
                       QC  (:),   & ! (in)
+                      CZ  (:),   & ! (in)
+                      FZ  (:),   & ! (in)
                       Ts,        & ! (out)
                       Ps,        & ! (in)
                       pt_ini(1), & ! (in)
