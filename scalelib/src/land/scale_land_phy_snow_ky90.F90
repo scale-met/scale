@@ -205,7 +205,7 @@ contains
     real(RP), intent(in)      :: DENS      (IA,JA)
     real(RP), intent(in)      :: SFLX_SW_dn(IA,JA)
     real(RP), intent(in)      :: SFLX_LW_dn(IA,JA)
-    real(RP), intent(in)      :: dt                     ! dt of land
+    real(DP), intent(in)      :: dt                     ! dt of land
 
     real(RP)                  :: QCC       (IA,JA)
     real(RP)                  :: QFUSION   (IA,JA)
@@ -391,7 +391,7 @@ contains
     real(RP), intent(in)       :: DENS
     real(RP), intent(in)       :: SW
     real(RP), intent(in)       :: LW
-    real(RP), intent(in)       :: time
+    real(DP), intent(in)       :: time
 
     ! initial value
     real(RP)                   :: TSNOW0           ! Initial time snow surface temperature [K]
@@ -634,10 +634,11 @@ subroutine check_allSnowMelt (GFLUX, TS1, ZN1, D, sflag, time)
        T0    => CONST_TEM00
 
   implicit none
-  real(RP), intent(in)     :: GFLUX, TS1, ZN1, D, time
-  integer, intent(out)     :: sflag
-  real(RP)                 :: energy_in, energy_use
-  real(RP)                 :: energy_use_ripe, energy_use_melt
+  real(RP), intent(in) :: GFLUX, TS1, ZN1, D
+  real(DP), intent(in) ::time
+  integer, intent(out) :: sflag
+  real(RP)             :: energy_in, energy_use
+  real(RP)             :: energy_use_ripe, energy_use_melt
 
   energy_in  = GFLUX * time
 
@@ -666,7 +667,8 @@ subroutine cal_param (ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
 
   implicit none
   real(RP), intent(in) ::  ZN1, TS1, TA, UA, RH, rhoair, LW
-  real(RP), intent(in) ::  GFLUX, time
+  real(RP), intent(in) ::  GFLUX
+  real(DP), intent(in) :: time
 
   C1      = csrhos*0.5_RP
   C2      = (4.0_RP*epsilon*sigma*(TA**3)) + (cp*rhoair*CH*UA) + (LV*rhoair*CE*UA*DELTAQSAT)
@@ -696,10 +698,11 @@ subroutine check_applicability (GFLUX, TS1, ZN1, TA, UA, RH, rhoair, LW, GFLUX_r
        T0    => CONST_TEM00
 
   implicit none
-  real(RP), intent(in)     :: GFLUX, TS1, ZN1, time
-  real(RP), intent(in)     :: TA, UA, RH, rhoair, LW
-  real(RP), intent(out)    :: GFLUX_res, beta
-  real(RP)                 :: energy_in, energy_use_max
+  real(RP), intent(in)  :: GFLUX, TS1, ZN1
+  real(RP), intent(in)  :: TA, UA, RH, rhoair, LW
+  real(DP), intent(in)  :: time
+  real(RP), intent(out) :: GFLUX_res, beta
+  real(RP)              :: energy_in, energy_use_max
 
   energy_in      = GFLUX * time
   energy_use_max = 0.5_RP*CSRHOS*ZN1*(T0-TS1) + W0*RHOSNOW*LF*ZN1
@@ -718,9 +721,10 @@ subroutine snowdepth (GFLUX, ZN1, ZN2, time)
 
   implicit none
 
-  real(RP), intent(in)      :: GFLUX, time
-  real(RP), intent(in)      :: ZN1
-  real(RP), intent(out)     :: ZN2
+  real(RP), intent(in)  :: GFLUX
+  real(RP), intent(in)  :: ZN1
+  real(DP), intent(in)  ::  time
+  real(RP), intent(out) :: ZN2
 
 !calcultaing snowdepth
 
@@ -739,13 +743,13 @@ end subroutine snowdepth
 subroutine equation415(LAMBDAS, C2, ZN2, RH, QSAT, TS1, ZN1, GFLUX, TA, UA, rhoair, LW, TS2, time)
   use scale_const, only:   &
        T0    => CONST_TEM00
-
   implicit none
 
-  real(RP), intent(in)     :: TA, UA, rhoair, LW, ZN2, GFLUX, TS1,ZN1
-  real(RP), intent(in)     :: C2, LAMBDAS, RH, QSAT, time
-  real(RP), intent(out)    :: TS2
-  real(RP)                 :: TS_check
+  real(RP), intent(in)  :: TA, UA, rhoair, LW, ZN2, GFLUX, TS1,ZN1
+  real(RP), intent(in)  :: C2, LAMBDAS, RH, QSAT
+  real(DP), intent(in)  :: time
+  real(RP), intent(out) :: TS2
+  real(RP)              :: TS_check
 
   TS2      = ((LAMBDAS*T0) + (TA*C2*ZN2) - (ZN2*LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT) &
            + ZN2*epsilon*(LW - (sigma*(TA**4))))/ (LAMBDAS + (C2*ZN2))
@@ -765,12 +769,12 @@ end subroutine equation415
 subroutine recalculateZ(ZN1, TS, GFLUX, ZN2, time)
   use scale_const, only:   &
        T0    => CONST_TEM00
-
   implicit none
 
-  real(RP), intent(in)     :: ZN1
-  real(RP), intent(in)     :: TS, GFLUX, time
-  real(RP), intent(out)    :: ZN2
+  real(RP), intent(in)  :: ZN1
+  real(RP), intent(in)  :: TS, GFLUX
+  real(DP), intent(in)  :: time
+  real(RP), intent(out) :: ZN2
 
   ZN2 = ZN1 + ((C1*ZN1*(T0-TS) - GFLUX*time) / C3)
 
@@ -786,11 +790,10 @@ subroutine calculationMO(GFLUX, CSRHOS, ZN1, TS1, ZN2, TS2, &
        T0    => CONST_TEM00
   use scale_process, only: &
        PRC_abort
-
   implicit none
-
-  real(RP), intent(in)      :: GFLUX, CSRHOS, ZN1, TS1, TS2, ZN2, time
-  real(RP), intent(out)     :: MELT, QCC, QFUSION
+  real(RP), intent(in)  :: GFLUX, CSRHOS, ZN1, TS1, TS2, ZN2
+  real(DP), intent(in)  :: time
+  real(RP), intent(out) :: MELT, QCC, QFUSION
 
   QCC             = 0.5_RP*CSRHOS*(ZN1*(T0-TS1)-ZN2*(T0-TS2))
   QFUSION         = W0*RHOSNOW*LF*(ZN1-ZN2)
@@ -821,10 +824,10 @@ subroutine calculationNoMO(GFLUX, CSRHOS, ZN1, TS1, ZN2, TS2, &
                            MELT, QCC, QFUSION, time)
   use scale_const, only:   &
        T0    => CONST_TEM00
-
  implicit none
- real(RP), intent(in)        :: GFLUX, CSRHOS, ZN1, TS1, TS2, ZN2, time
- real(RP), intent(out)       :: MELT, QCC, QFUSION
+ real(RP), intent(in)  :: GFLUX, CSRHOS, ZN1, TS1, TS2, ZN2
+ real(DP), intent(in)  :: time
+ real(RP), intent(out) :: MELT, QCC, QFUSION
 
   QCC             = 0.5_RP*CSRHOS*(ZN1*(T0-TS1)-ZN2*(T0-TS2))
   QFUSION         = W0*RHOSNOW*LF*(ZN1-ZN2)
@@ -853,14 +856,14 @@ end subroutine calculationNoMO
 subroutine check_res(ZN1, ZN2, TS1, TS2, GFLUX, TA, UA, RH, rhoair, LW, flag, time)
   use scale_const, only:   &
        T0    => CONST_TEM00
-
   implicit none
-  real(RP) , intent(in)  :: ZN1, ZN2, TS1, TS2, GFLUX, time
-  real(RP) , intent(in)  :: TA, UA, RH, rhoair, LW
-  character(len=*)       :: flag
-  real(RP)               :: R1 ! Eq. (2)
-  real(RP)               :: R2 ! Eq. (8)
-  real(RP)               :: R3 ! Eq. (8)
+  real(RP), intent(in) :: ZN1, ZN2, TS1, TS2, GFLUX
+  real(RP), intent(in) :: TA, UA, RH, rhoair, LW
+  real(DP), intent(in) :: time
+  character(len=*)     :: flag
+  real(RP)             :: R1 ! Eq. (2)
+  real(RP)             :: R2 ! Eq. (8)
+  real(RP)             :: R3 ! Eq. (8)
 
   R3 = -999.
   R1 = C1 * (ZN1*(T0-TS1) - ZN2*(T0-TS2)) + C3*(ZN1-ZN2)-GFLUX*time
@@ -886,19 +889,19 @@ end subroutine check_res
 subroutine cal_R1R2(ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
   use scale_const, only:   &
        T0    => CONST_TEM00
-
   implicit none
-  real(RP), intent(in)   :: ZN1, TS1
-  real(RP), intent(in)   :: GFLUX, TA, UA, RH, rhoair, LW, time
-  real(RP)               :: ZN2, TS2
-  real(RP)               :: R1 ! Eq. (2)
-  real(RP)               :: R2 ! Eq. (8)
-  real(RP)               :: R3 ! Eq. (8)
+  real(RP), intent(in) :: ZN1, TS1
+  real(RP), intent(in) :: GFLUX, TA, UA, RH, rhoair, LW
+  real(DP), intent(in) :: time
+  real(RP)             :: ZN2, TS2
+  real(RP)             :: R1 ! Eq. (2)
+  real(RP)             :: R2 ! Eq. (8)
+  real(RP)             :: R3 ! Eq. (8)
 
-  real(RP)               :: ts0,zn0
-  integer                :: i,j
-  real(RP)               :: ts_r1,ts_r2,zn_r1,zn_r2
-  character(len=3)       :: ttt
+  real(RP)             :: ts0,zn0
+  integer              :: i,j
+  real(RP)             :: ts_r1,ts_r2,zn_r1,zn_r2
+  character(len=3)     :: ttt
 
   real(RP)               :: a,b,c,d,e,f,g
 
