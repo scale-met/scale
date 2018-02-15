@@ -86,4 +86,4 @@ $(BUILD_DIR)/%.o : %.f90
 
 .PHONY : clean distclean allclean dcutils scalelib
 
-include $(TOPDIR)/utils/Make_environments
+include $(TOPDIR)/utils/make/Make_environments
