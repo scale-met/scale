@@ -143,10 +143,10 @@ contains
   !> Setup
   subroutine USER_setup
     use scale_atmos_grid_cartesC, only: &
-       CZ => GRID_CARTESC_CZ, &
-       FZ => GRID_CARTESC_FZ, &
-       RCDZ => GRID_CARTESC_RCDZ, &
-       RFDZ => GRID_CARTESC_RFDZ
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       FZ => ATMOS_GRID_CARTESC_FZ, &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ
     implicit none
 
     integer :: k
@@ -289,9 +289,9 @@ contains
        NOWSEC => TIME_NOWSEC, &
        dt     => TIME_DTSEC
     use scale_atmos_grid_cartesC, only: &
-       FDZ  => GRID_CARTESC_FDZ, &
-       RCDZ => GRID_CARTESC_RCDZ, &
-       RFDZ => GRID_CARTESC_RFDZ
+       FDZ  => ATMOS_GRID_CARTESC_FDZ, &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ
     use scale_atmos_dyn, only: &
        CORIOLIS
     use mod_atmos_vars, only: &
@@ -406,7 +406,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine interporate( d_out, d_in )
     use scale_atmos_grid_cartesC, only: &
-       CZ => GRID_CARTESC_CZ
+       CZ => ATMOS_GRID_CARTESC_CZ
     implicit none
 
     real(RP), intent(out) :: d_out(KA)

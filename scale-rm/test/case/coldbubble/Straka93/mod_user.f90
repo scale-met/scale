@@ -23,12 +23,12 @@ module mod_user
   use scale_tracer
 
   use scale_atmos_grid_cartesC, only : &
-       RCDX => GRID_CARTESC_RCDX, &
-       RCDY => GRID_CARTESC_RCDY, &
-       RCDZ => GRID_CARTESC_RCDZ, &
-       RFDX => GRID_CARTESC_RFDX, &
-       RFDY => GRID_CARTESC_RFDY, &
-       RFDZ => GRID_CARTESC_RFDZ
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY, &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ
 
   use mod_atmos_vars, only: &
        DENS, &

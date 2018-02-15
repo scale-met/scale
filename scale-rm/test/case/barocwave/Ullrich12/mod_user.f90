@@ -172,8 +172,8 @@ contains
        PRC_HAS_N, &
        PRC_HAS_S
     use scale_atmos_grid_cartesC, only : &
-       CX => GRID_CARTESC_CX, &
-       CZ => GRID_CARTESC_CZ
+       CX => ATMOS_GRID_CARTESC_CX, &
+       CZ => ATMOS_GRID_CARTESC_CZ
     use scale_time, only: &
        DTSEC => TIME_DTSEC
     use scale_file_history, only: &

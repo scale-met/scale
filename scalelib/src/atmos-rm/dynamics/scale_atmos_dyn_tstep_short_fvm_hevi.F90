@@ -1155,9 +1155,9 @@ contains
          GRAV => CONST_GRAV
     use scale_process, only: &
          PRC_MPIstop
-    use scale_atmos_grid_cartesC_index
-         RCDZ => GRID_CARTESC_RCDZ, &
-         RFDZ => GRID_CARTESC_RFDZ
+    use scale_atmos_grid_cartesC, only: &
+         RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+         RFDZ => ATMOS_GRID_CARTESC_RFDZ
     use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW

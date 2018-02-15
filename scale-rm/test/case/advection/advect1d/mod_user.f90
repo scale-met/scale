@@ -111,7 +111,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_atmos_grid_cartesC, only : &
-       FXG   => GRID_CARTESC_FXG
+       FXG   => ATMOS_GRID_CARTESC_FXG
     implicit none
 
     namelist / PARAM_USER / &
@@ -296,7 +296,7 @@ contains
 !!$  subroutine eval_RHS(var, mflx_hi, exactRHS, lblFluxScheme)
 !!$
 !!$    use scale_atmos_grid_cartesC, only : &
-!!$         CDZ => GRID_CARTESC_CDZ
+!!$         CDZ => ATMOS_GRID_CARTESC_CDZ
 !!$
 !!$    real(RP), intent(in) :: var(KA,IA,JA)
 !!$    real(RP), intent(in) :: mflx_hi(KA,IA,JA,3), exactRHS(KA,IA,JA)

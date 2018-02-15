@@ -83,7 +83,7 @@ contains
     use scale_time, only: &
        NOWSEC => TIME_NOWSEC
     use scale_atmos_grid_cartesC, only: &
-       CZ => GRID_CARTESC_CZ
+       CZ => ATMOS_GRID_CARTESC_CZ
     implicit none
 
     namelist / PARAM_USER / &
@@ -168,8 +168,8 @@ contains
        RHOT, &
        QTRC
     use scale_atmos_grid_cartesC, only: &
-       CX => GRID_CARTESC_CX, &
-       CY => GRID_CARTESC_CY
+       CX => ATMOS_GRID_CARTESC_CX, &
+       CY => ATMOS_GRID_CARTESC_CY
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait

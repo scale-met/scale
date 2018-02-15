@@ -72,11 +72,11 @@ contains
      ATMOS_PHY_TB_config, &
      ATMOS_PHY_TB_setup
   use scale_atmos_grid_cartesC, only: &
-     CDZ => GRID_CARTESC_CDZ, &
-     CDX => GRID_CARTESC_CDX, &
-     CDY => GRID_CARTESC_CDX, &
-     CZ  => GRID_CARTESC_CZ, &
-     GRID_CARTESC_CBFZ
+     CDZ  => ATMOS_GRID_CARTESC_CDZ, &
+     CDX  => ATMOS_GRID_CARTESC_CDX, &
+     CDY  => ATMOS_GRID_CARTESC_CDX, &
+     CZ   => ATMOS_GRID_CARTESC_CZ,  &
+     CBFZ => ATMOS_GRID_CARTESC_CBFZ
   use scale_process, only: &
      PRC_myrank
   !-----------------------------------------------------------------------------
@@ -145,7 +145,7 @@ contains
 
   KME = KE
   do k = KS+1, KE
-     if ( GRID_CARTESC_CBFZ(k) > 0.0_RP ) then
+     if ( CBFZ(k) > 0.0_RP ) then
         KME = k - 1
         exit
      end if
@@ -255,7 +255,7 @@ subroutine test_big
   use scale_const, only: &
      GRAV => CONST_GRAV
   use scale_atmos_grid_cartesC, only: &
-     RCDZ => GRID_CARTESC_RCDZ
+     RCDZ => ATMOS_GRID_CARTESC_RCDZ
   use scale_atmos_phy_tb, only: &
      ATMOS_PHY_TB
 

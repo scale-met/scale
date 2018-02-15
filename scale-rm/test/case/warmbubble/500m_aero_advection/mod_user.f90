@@ -87,9 +87,9 @@ contains
        PRC_MPIstop, &
        PRC_myrank
     use scale_atmos_grid_cartesC, only: &
-       CZ => GRID_CARTESC_CZ, &
-       CY => GRID_CARTESC_CY, &
-       CX => GRID_CARTESC_CX
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       CY => ATMOS_GRID_CARTESC_CY, &
+       CX => ATMOS_GRID_CARTESC_CX
 
     implicit none
 

@@ -103,14 +103,14 @@ contains
        CP   => CONST_CPdry, &
        CV   => CONST_CVdry
     use scale_atmos_grid_cartesC, only: &
-       GRID_CARTESC_DOMAIN_CENTER_Y, &
-       FXG  => GRID_CARTESC_FXG, &
-       FZ   => GRID_CARTESC_FZ, &
-       CZ   => GRID_CARTESC_CZ, &
-       CX   => GRID_CARTESC_CX, &
-       CY   => GRID_CARTESC_CY, &
-       RCDX => GRID_CARTESC_RCDX, &
-       RCDY => GRID_CARTESC_RCDY
+       ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
+       FXG  => ATMOS_GRID_CARTESC_FXG, &
+       FZ   => ATMOS_GRID_CARTESC_FZ, &
+       CZ   => ATMOS_GRID_CARTESC_CZ, &
+       CX   => ATMOS_GRID_CARTESC_CX, &
+       CY   => ATMOS_GRID_CARTESC_CY, &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY
     use scale_atmos_dyn, only: &
        CORIOLIS
     use scale_comm, only: &
@@ -152,7 +152,7 @@ contains
 
     ! initial profile
     do j = 1, JA
-       dy = CY(j) - GRID_CARTESC_DOMAIN_CENTER_Y
+       dy = CY(j) - ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y
        if ( abs(dy) <= JET_RY ) then
           do i = 1, IA
           do k = KS, KE

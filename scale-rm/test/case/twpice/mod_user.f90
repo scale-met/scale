@@ -264,8 +264,8 @@ contains
        COMM_vars8, &
        COMM_wait
     use scale_atmos_grid_cartesC, only: &
-         RCDZ => GRID_CARTESC_RCDZ, &
-         RFDZ => GRID_CARTESC_RFDZ
+         RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+         RFDZ => ATMOS_GRID_CARTESC_RFDZ
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_atmos_vars, only: &
@@ -550,7 +550,7 @@ contains
        TIME_DTSEC, &
        TIME_NOWSTEP
     use scale_atmos_grid_cartesC, only: &
-       CZ => GRID_CARTESC_CZ
+       CZ => ATMOS_GRID_CARTESC_CZ
     implicit none
 
     real(RP) :: f

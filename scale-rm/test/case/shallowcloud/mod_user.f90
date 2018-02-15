@@ -110,8 +110,8 @@ contains
     use scale_const, only: &
        PI => CONST_PI
     use scale_atmos_grid_cartesC, only: &
-       CZ => GRID_CARTESC_CZ, &
-       FZ => GRID_CARTESC_FZ
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       FZ => ATMOS_GRID_CARTESC_FZ
     implicit none
 
     namelist / PARAM_USER / &
@@ -413,11 +413,11 @@ contains
        QHS,  &
        QHE
     use scale_atmos_grid_cartesC, only: &
-       RCDZ => GRID_CARTESC_RCDZ, &
-       RFDZ => GRID_CARTESC_RFDZ, &
-       CDZ  => GRID_CARTESC_CDZ,  &
-       CZ   => GRID_CARTESC_CZ,   &
-       FZ   => GRID_CARTESC_FZ
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
+       CDZ  => ATMOS_GRID_CARTESC_CDZ,  &
+       CZ   => ATMOS_GRID_CARTESC_CZ,   &
+       FZ   => ATMOS_GRID_CARTESC_FZ
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd => ATMOS_THERMODYN_qd, &
        THERMODYN_cp => ATMOS_THERMODYN_cp, &

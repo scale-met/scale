@@ -26,9 +26,9 @@ module mod_user
   use scale_index
 
   use scale_atmos_grid_cartesC, only: &
-       CX => GRID_CARTESC_CX, &
-       CY => GRID_CARTESC_CY, &
-       CZ => GRID_CARTESC_CZ
+       CX => ATMOS_GRID_CARTESC_CX, &
+       CY => ATMOS_GRID_CARTESC_CY, &
+       CZ => ATMOS_GRID_CARTESC_CZ
   use scale_time, only: &
        TIME_NOWSTEP,&
        TIME_NOWSEC,&
@@ -170,7 +170,7 @@ contains
        PRC_MPIstop,         &
        PRC_MPIfinish
     use scale_atmos_grid_cartesC, only:   &
-       CZ => GRID_CARTESC_CZ
+       CZ => ATMOS_GRID_CARTESC_CZ
     implicit none
 
     real(RP) :: USER_SF_U_minM ! minimum U_abs for u,v,w
@@ -368,8 +368,8 @@ contains
          RHOT_tp, &
          RHOQ_tp
     use scale_atmos_grid_cartesC, only: &
-         RCDZ => GRID_CARTESC_RCDZ, &
-         RFDZ => GRID_CARTESC_RFDZ
+         RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+         RFDZ => ATMOS_GRID_CARTESC_RFDZ
     use scale_time, only: &
         TIME_NOWSEC
     use scale_const, only: &

@@ -126,12 +126,12 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_atmos_grid_cartesC, only : &
-       RCDX => GRID_CARTESC_RCDX, &
-       RCDY => GRID_CARTESC_RCDY, &
-       RCDZ => GRID_CARTESC_RCDZ, &
-       RFDX => GRID_CARTESC_RFDX, &
-       RFDY => GRID_CARTESC_RFDY, &
-       RFDZ => GRID_CARTESC_RFDZ
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY, &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ
     use mod_atmos_vars, only: &
        DENS, &
        MOMX, &
@@ -146,9 +146,9 @@ contains
     use scale_const, only: &
        GRAV  => CONST_GRAV
     use scale_atmos_grid_cartesC, only : &
-       CX => GRID_CARTESC_CX, &
-       CY => GRID_CARTESC_CY, &
-       CZ => GRID_CARTESC_CZ
+       CX => ATMOS_GRID_CARTESC_CX, &
+       CY => ATMOS_GRID_CARTESC_CY, &
+       CZ => ATMOS_GRID_CARTESC_CZ
     use scale_time, only: &
        DTSEC => TIME_DTSEC, &
        NOWTSEC => TIME_NOWSEC

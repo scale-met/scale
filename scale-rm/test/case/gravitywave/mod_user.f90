@@ -120,7 +120,7 @@ contains
     use scale_const, only: &
        GRAV  => CONST_GRAV
     use scale_atmos_grid_cartesC, only : &
-       CZ => GRID_CARTESC_CZ
+       CZ => ATMOS_GRID_CARTESC_CZ
     use mod_atmos_vars, only: &
        DENS, &
        RHOT

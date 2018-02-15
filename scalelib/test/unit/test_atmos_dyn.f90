@@ -17,22 +17,22 @@ module test_atmos_dyn
      COMM_vars8, &
      COMM_wait
   use scale_atmos_grid_cartesC, only: &
-     DOMAIN_CENTER_Y => GRID_CARTESC_DOMAIN_CENTER_Y, &
-     CY              => GRID_CARTESC_CY,              &
-     CZ              => GRID_CARTESC_CZ,              &
-     FZ              => GRID_CARTESC_FZ,              &
-     CDZ             => GRID_CARTESC_CDZ,             &
-     CDX             => GRID_CARTESC_CDX,             &
-     CDY             => GRID_CARTESC_CDY,             &
-     FDZ             => GRID_CARTESC_FDZ,             &
-     FDX             => GRID_CARTESC_FDX,             &
-     FDY             => GRID_CARTESC_FDY,             &
-     RCDZ            => GRID_CARTESC_RCDZ,            &
-     RCDX            => GRID_CARTESC_RCDX,            &
-     RCDY            => GRID_CARTESC_RCDY,            &
-     RFDZ            => GRID_CARTESC_RFDZ,            &
-     RFDX            => GRID_CARTESC_RFDX,            &
-     RFDY            => GRID_CARTESC_RFDY
+     DOMAIN_CENTER_Y => ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
+     CY              => ATMOS_GRID_CARTESC_CY,              &
+     CZ              => ATMOS_GRID_CARTESC_CZ,              &
+     FZ              => ATMOS_GRID_CARTESC_FZ,              &
+     CDZ             => ATMOS_GRID_CARTESC_CDZ,             &
+     CDX             => ATMOS_GRID_CARTESC_CDX,             &
+     CDY             => ATMOS_GRID_CARTESC_CDY,             &
+     FDZ             => ATMOS_GRID_CARTESC_FDZ,             &
+     FDX             => ATMOS_GRID_CARTESC_FDX,             &
+     FDY             => ATMOS_GRID_CARTESC_FDY,             &
+     RCDZ            => ATMOS_GRID_CARTESC_RCDZ,            &
+     RCDX            => ATMOS_GRID_CARTESC_RCDX,            &
+     RCDY            => ATMOS_GRID_CARTESC_RCDY,            &
+     RFDZ            => ATMOS_GRID_CARTESC_RFDZ,            &
+     RFDX            => ATMOS_GRID_CARTESC_RFDX,            &
+     RFDY            => ATMOS_GRID_CARTESC_RFDY
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -135,7 +135,7 @@ contains
   use scale_atmos_dyn_Tstep_short, only: &
      ATMOS_DYN_Tstep_short_regist
   use scale_atmos_grid_cartesC, only: &
-     GRID_CARTESC_CBFZ
+     CBFZ => ATMOS_GRID_CARTESC_CBFZ
   use scale_const, only: &
      GRAV => CONST_GRAV
   use scale_atmos_boundary, only: &
@@ -251,7 +251,7 @@ contains
        DOMAIN_CENTER_Y, CY, lat            ) ! (in)
 
   do k = KS+1, KE
-     if ( GRID_CARTESC_CBFZ(k) > 0.0_RP ) then
+     if ( CBFZ(k) > 0.0_RP ) then
         KME = k - 1
         exit
      end if
