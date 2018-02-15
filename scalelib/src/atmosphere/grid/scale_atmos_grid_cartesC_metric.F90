@@ -80,7 +80,6 @@ module scale_atmos_grid_cartesC_metric
   character(len=H_SHORT), private :: ATMOS_GRID_CARTESC_METRIC_TOPO_type     = 'TERRAINFOLLOWING'     !< topographical shceme
   integer,                private :: ATMOS_GRID_CARTESC_METRIC_ThinWall_XDIV = 50                     !< number dividing quarter-cell (x)
   integer,                private :: ATMOS_GRID_CARTESC_METRIC_ThinWall_YDIV = 50                     !< number dividing quarter-cell (y)
-  logical,                private :: debug                = .false.
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -95,8 +94,7 @@ contains
        ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE,     &
        ATMOS_GRID_CARTESC_METRIC_TOPO_type,     &
        ATMOS_GRID_CARTESC_METRIC_ThinWall_XDIV, &
-       ATMOS_GRID_CARTESC_METRIC_ThinWall_YDIV, &
-       debug
+       ATMOS_GRID_CARTESC_METRIC_ThinWall_YDIV
 
     integer :: ierr
     !---------------------------------------------------------------------------

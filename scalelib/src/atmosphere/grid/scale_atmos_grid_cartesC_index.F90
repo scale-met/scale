@@ -91,10 +91,34 @@ contains
   !-----------------------------------------------------------------------------
   !> setup index
   subroutine ATMOS_GRID_CARTESC_INDEX_setup( &
-       KMAX_in,                     &
-       IMAXG_in, JMAXG_in,          &
-       IMAX_in, JMAX_in,            &
-       KHALO_in, IHALO_in, JHALO_in )
+       KMAX,                &
+       IMAXG, JMAXG,        &
+       IMAX, JMAX,          &
+       KHALO, IHALO, JHALO, &
+       IBLOCK, JBLOCK       )
+    implicit none
+    integer, intent(in), optional :: KMAX
+    integer, intent(in), optional :: IMAXG, JMAXG
+    integer, intent(in), optional :: IMAX, JMAX
+    integer, intent(in), optional :: KHALO, IHALO, JHALO
+    integer, intent(in), optional :: IBLOCK, JBLOCK
+
+    call setup_main( &
+         KMAX,                &
+         IMAXG, JMAXG,        &
+         IMAX, JMAX,          &
+         KHALO, IHALO, JHALO, &
+         IBLOCK, JBLOCK       )
+
+    return
+  end subroutine ATMOS_GRID_CARTESC_INDEX_setup
+
+  subroutine setup_main( &
+       KMAX_in,                      &
+       IMAXG_in, JMAXG_in,           &
+       IMAX_in, JMAX_in,             &
+       KHALO_in, IHALO_in, JHALO_in, &
+       IBLOCK_in, JBLOCK_in          )
     use scale_process, only: &
        PRC_abort, &
        PRC_myrank
@@ -113,6 +137,7 @@ contains
     integer, intent(in), optional :: IMAXG_in, JMAXG_in
     integer, intent(in), optional :: IMAX_in, JMAX_in
     integer, intent(in), optional :: KHALO_in, IHALO_in, JHALO_in
+    integer, intent(in), optional :: IBLOCK_in, JBLOCK_in
 
     namelist / PARAM_ATMOS_GRID_CARTESC_INDEX / &
        KMAX,       &
@@ -121,7 +146,9 @@ contains
        IMAX,       &
        JMAX,       &
        IHALO,      &
-       JHALO
+       JHALO,      &
+       IBLOCK,     &
+       JBLOCK
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -132,8 +159,10 @@ contains
     if ( present(IMAX_in)  ) IMAX   = IMAX_in
     if ( present(JMAX_in)  ) JMAX   = JMAX_in
 !    if ( present(KHALO_in) ) KHALO  = KHALO_in
-    if ( present(KHALO_in) ) IHALO  = IHALO_in
-    if ( present(KHALO_in) ) JHALO  = JHALO_in
+    if ( present(IHALO_in) ) IHALO  = IHALO_in
+    if ( present(JHALO_in) ) JHALO  = JHALO_in
+    if ( present(IBLOCK_in) ) IBLOCK = IBLOCK_in
+    if ( present(JBLOCK_in) ) JBLOCK = JBLOCK_in
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CartesC INDEX] / Categ[ATMOSPHER GRID] / Origin[SCALElib]'
@@ -348,6 +377,6 @@ contains
                                                 JSB," - ",JEB
 
     return
-  end subroutine ATMOS_GRID_CARTESC_INDEX_setup
+  end subroutine setup_main
   
 end module scale_atmos_grid_cartesC_index

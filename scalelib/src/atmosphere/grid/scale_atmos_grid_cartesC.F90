@@ -25,6 +25,8 @@ module scale_atmos_grid_cartesC
   !++ Public procedure
   !
   public :: ATMOS_GRID_CARTESC_setup
+  public :: ATMOS_GRID_CARTESC_allocate
+  public :: ATMOS_GRID_CARTESC_generate
 
   !-----------------------------------------------------------------------------
   !
@@ -273,7 +275,6 @@ contains
     logical, intent(in), optional :: aggregate
 
     integer :: fid
-    real(RP) :: rbuf(1)
     !---------------------------------------------------------------------------
 
 
@@ -343,13 +344,14 @@ contains
        PRC_NUM_X,   &
        PRC_NUM_Y
     implicit none
-    real(RP), intent(in) :: DZ, DX, DY, FZ(:)
-    integer,  intent(in) :: FZ_MAX
-    real(RP), intent(in) :: OFFSET_X, OFFSET_Y
-    real(RP), intent(in) :: BUFFER_DZ, BUFFER_DX, BUFFER_DY
-    integer,  intent(in) :: BUFFER_NZ, BUFFER_NX, BUFFER_NY
-    real(RP), intent(in) :: BUFFFACT
-    real(RP), intent(in) :: BUFFFACT_Z, BUFFFACT_X, BUFFFACT_Y
+    real(RP), intent(in) :: DZ, DX, DY
+    real(RP), intent(in), optional :: FZ(:)
+    integer,  intent(in), optional :: FZ_MAX
+    real(RP), intent(in), optional :: OFFSET_X, OFFSET_Y
+    real(RP), intent(in), optional :: BUFFER_DZ, BUFFER_DX, BUFFER_DY
+    integer,  intent(in), optional :: BUFFER_NZ, BUFFER_NX, BUFFER_NY
+    real(RP), intent(in), optional :: BUFFFACT
+    real(RP), intent(in), optional :: BUFFFACT_Z, BUFFFACT_X, BUFFFACT_Y
 
     real(RP), allocatable :: buffz(:), buffx(:), buffy(:)
     real(RP)              :: bufftotz, bufftotx, bufftoty
@@ -374,30 +376,30 @@ contains
     ! X-direction
     ! calculate buffer grid size
 
-    if ( BUFFFACT_X < 0.0_RP ) then
+    if ( present(BUFFFACT_X) .and. BUFFFACT_X >= 0.0_RP ) then
+       fact = BUFFFACT_X
+    else if ( present(BUFFFACT) .and. BUFFFACT >= 0.0_RP ) then
        fact = BUFFFACT
     else
-       fact = BUFFFACT_X
+       fact = 1.0_RP
     end if
 
-    if ( BUFFER_NX > 0 ) then
+    buffx(0) = DX
+    bufftotx = 0.0_RP
+    if ( present(BUFFER_NX) .and. BUFFER_NX > 0 ) then
        if ( 2*BUFFER_NX > IMAXG ) then
           write(*,*) 'xxx Buffer grid size (', BUFFER_NX, &
                      'x2) must be smaller than global domain size (X). Use smaller BUFFER_NX!'
           call PRC_abort
        endif
 
-       buffx(0) = DX
-       bufftotx = 0.0_RP
        do i = 1, BUFFER_NX
           buffx(i) = buffx(i-1) * fact
           bufftotx = bufftotx + buffx(i)
        enddo
        ibuff = BUFFER_NX
        imain = IMAXG - 2*BUFFER_NX
-    else
-       buffx(0) = DX
-       bufftotx = 0.0_RP
+    else if ( present(BUFFER_DZ) ) then
        do i = 1, IAG
           if( bufftotx >= BUFFER_DX ) exit
           buffx(i) = buffx(i-1) * fact
@@ -411,10 +413,17 @@ contains
                      'x2[m]) must be smaller than global domain size (X). Use smaller BUFFER_DX!'
           call PRC_abort
        endif
+    else
+       ibuff = 0
+       imain = IMAXG
     endif
 
     ! horizontal coordinate (global domain)
-    ATMOS_GRID_CARTESC_FXG(IHALO) = OFFSET_X
+    if ( present(OFFSET_X) ) then
+       ATMOS_GRID_CARTESC_FXG(IHALO) = OFFSET_X
+    else
+       ATMOS_GRID_CARTESC_FXG(IHALO) = 0.0_RP
+    end if
     do i = IHALO-1, 0, -1
        ATMOS_GRID_CARTESC_FXG(i) = ATMOS_GRID_CARTESC_FXG(i+1) - buffx(ibuff)
     enddo
@@ -487,30 +496,30 @@ contains
     ! Y-direction
     ! calculate buffer grid size
 
-    if ( BUFFFACT_Y < 0.0_RP ) then
+    if ( present(BUFFFACT_Y) .and. BUFFFACT_Y >= 0.0_RP ) then
+       fact = BUFFFACT_Y
+    else if ( present(BUFFFACT) .and. BUFFFACT >= 0.0_RP ) then
        fact = BUFFFACT
     else
-       fact = BUFFFACT_Y
+       fact = 1.0_RP
     end if
 
-    if ( BUFFER_NY > 0 ) then
+    buffy(0) = DY
+    bufftoty = 0.0_RP
+    if ( present(BUFFER_NY) .and. BUFFER_NY > 0 ) then
        if ( 2*BUFFER_NY > JMAXG ) then
           write(*,*) 'xxx Buffer grid size (', BUFFER_NY, &
                      'x2) must be smaller than global domain size (Y). Use smaller BUFFER_NY!'
           call PRC_abort
        endif
 
-       buffy(0) = DY
-       bufftoty = 0.0_RP
        do j = 1, BUFFER_NY
           buffy(j) = buffy(j-1) * fact
           bufftoty = bufftoty + buffy(j)
        enddo
        jbuff = BUFFER_NY
        jmain = JMAXG - 2*BUFFER_NY
-    else
-       buffy(0) = DY
-       bufftoty = 0.0_RP
+    else if ( present(BUFFER_DY) ) then
        do j = 1, JAG
           if( bufftoty >= BUFFER_DY ) exit
           buffy(j) = buffy(j-1) * fact
@@ -524,10 +533,17 @@ contains
                      'x2[m]) must be smaller than global domain size (Y). Use smaller BUFFER_DY!'
           call PRC_abort
        endif
+    else
+       jbuff = 0
+       jmain = JMAXG
     endif
 
     ! horizontal coordinate (global domain)
-    ATMOS_GRID_CARTESC_FYG(JHALO) = OFFSET_Y
+    if ( present(OFFSET_Y) ) then
+       ATMOS_GRID_CARTESC_FYG(JHALO) = OFFSET_Y
+    else
+       ATMOS_GRID_CARTESC_FYG(JHALO) = 0.0_RP
+    end if
     do j = JHALO-1, 0, -1
        ATMOS_GRID_CARTESC_FYG(j) = ATMOS_GRID_CARTESC_FYG(j+1) - buffy(jbuff)
     enddo
@@ -604,33 +620,35 @@ contains
     allocate( buffz(0:KA) )
 
     use_user_input = .false.
-    if ( maxval(FZ(:)) > 0.0_RP ) then ! try to use input from namelist
-       if( IO_L ) write(IO_FID_LOG,*) '*** Z coordinate is given from NAMELIST.'
+    if ( present(FZ) ) then
+       if ( maxval(FZ(:)) > 0.0_RP ) then ! try to use input from namelist
+          if( IO_L ) write(IO_FID_LOG,*) '*** Z coordinate is given from NAMELIST.'
 
-       if ( KMAX < 2 ) then
-          write(*,*) 'xxx KMAX must be larger than 1. Check!', KMAX
-          call PRC_abort
+          if ( KMAX < 2 ) then
+             write(*,*) 'xxx KMAX must be larger than 1. Check!', KMAX
+             call PRC_abort
+          endif
+
+          if ( KMAX > FZ_MAX ) then
+             write(*,*) 'xxx KMAX must be smaller than ', FZ_MAX, '. Check!', KMAX
+             call PRC_abort
+          endif
+
+          if ( minval(FZ(1:KMAX)) <= 0.0_RP ) then
+             write(*,*) 'xxx FZ must be positive. Check! minval(FZ(1:KMAX))=', minval(FZ(1:KMAX))
+             call PRC_abort
+          endif
+
+          use_user_input = .true.
        endif
-
-       if ( KMAX > FZ_MAX ) then
-          write(*,*) 'xxx KMAX must be smaller than ', FZ_MAX, '. Check!', KMAX
-          call PRC_abort
-       endif
-
-       if ( minval(FZ(1:KMAX)) <= 0.0_RP ) then
-          write(*,*) 'xxx FZ must be positive. Check! minval(FZ(1:KMAX))=', minval(FZ(1:KMAX))
-          call PRC_abort
-       endif
-
-       use_user_input = .true.
-    endif
+    end if
 
     if ( use_user_input ) then ! input from namelist
 
        ! Z-direction
        ! calculate buffer grid size
 
-       if ( BUFFER_NZ > 0 ) then
+       if ( present(BUFFER_NZ) .and. BUFFER_NZ > 0 ) then
           if ( BUFFER_NZ > KMAX ) then
              write(*,*) 'xxx Buffer grid size (', BUFFER_NZ, &
                         ') must be smaller than global domain size (Z). Use smaller BUFFER_NZ!'
@@ -643,7 +661,7 @@ contains
           enddo
           kbuff = BUFFER_NZ
           kmain = KMAX - BUFFER_NZ
-       else
+       else if ( present(BUFFER_DZ) ) then
           if ( BUFFER_DZ > FZ(KMAX) ) then
              write(*,*) 'xxx Buffer length (', BUFFER_DZ, &
                         '[m]) must be smaller than global domain size (Z). Use smaller BUFFER_DZ!'
@@ -657,6 +675,10 @@ contains
           enddo
           kbuff = KMAX - k
           kmain = k
+       else
+          bufftotz = 0.0_RP
+          kbuff = 0
+          kmain = KMAX
        endif
 
        ! vertical coordinate (local=global domain)
@@ -685,30 +707,30 @@ contains
        ! Z-direction
        ! calculate buffer grid size
 
-       if ( BUFFFACT_Z < 0.0_RP ) then
+       if ( present(BUFFFACT_Z) .and. BUFFFACT_Z >= 0.0_RP ) then
+          fact = BUFFFACT_Z
+       else if ( present(BUFFFACT) .and. BUFFFACT >= 0.0_RP ) then
           fact = BUFFFACT
        else
-          fact = BUFFFACT_Z
+          fact = 1.0_RP
        end if
 
-       if ( BUFFER_NZ > 0 ) then
+       buffz(0) = DZ
+       bufftotz = 0.0_RP
+       if ( present(BUFFER_NZ) .and. BUFFER_NZ > 0 ) then
           if ( BUFFER_NZ > KMAX ) then
              write(*,*) 'xxx Buffer grid size (', BUFFER_NZ, &
                         ') must be smaller than global domain size (Z). Use smaller BUFFER_NZ!'
              call PRC_abort
           endif
 
-          buffz(0) = DZ
-          bufftotz = 0.0_RP
           do k = 1, BUFFER_NZ
              buffz(k) = buffz(k-1) * fact
              bufftotz = bufftotz + buffz(k)
           enddo
           kbuff = BUFFER_NZ
           kmain = KMAX - BUFFER_NZ
-       else
-          buffz(0) = DZ
-          bufftotz = 0.0_RP
+       else if ( present(BUFFER_DZ) ) then
           do k = 1, KA
              if( bufftotz >= BUFFER_DZ ) exit
              buffz(k) = buffz(k-1) * fact
@@ -722,6 +744,9 @@ contains
                         '[m]) must be smaller than global domain size (Z). Use smaller BUFFER_DZ!'
              call PRC_abort
           endif
+       else
+          kbuff = 0
+          kmain = KMAX
        endif
 
        ! vertical coordinate (local=global domain)
