@@ -204,8 +204,8 @@ program netcdf2grads_h
     FILE_HISTORY_OUTPUT_START,      & ! not required
     FILE_HISTORY_ERROR_PUTMISS        ! not required
 
-  namelist  /PARAM_HIST/       &
-    HIST_BND
+  namelist  /PARAM_FILE_HISTORY_CARTESC/       &
+    FILE_HISTORY_CARTESC_BOUNDARY
   !-----------------------------------------------------------------------------------------
 
   !### initialization
@@ -798,8 +798,8 @@ contains
     if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_PRC )
 
     rewind( FID_RCNF )
-    read  ( FID_RCNF, nml=PARAM_HIST, iostat=ierr )
-    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_HIST )
+    read  ( FID_RCNF, nml=PARAM_FILE_HISTORY_CARTESC, iostat=ierr )
+    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_FILE_HISTORY_CARTESC )
 
     rewind( FID_RCNF )
     read  ( FID_RCNF, nml=PARAM_FILE_HISTORY, iostat=ierr )
@@ -821,8 +821,8 @@ contains
     endif
 
     !--- tentative
-    if ( HIST_BND ) then
-       if ( LOUT ) write (*, *) "HIST_BND is currently unsupported"
+    if ( FILE_HISTORY_CARTESC_BOUNDARY ) then
+       if ( LOUT ) write (*, *) "FILE_HISTORY_CARTESC_BOUNDARY is currently unsupported"
        call err_abort( 1, __LINE__, loc_main )
     endif
 

@@ -66,7 +66,7 @@ module mod_net2g_vars
   character(CMID), public :: FILE_HISTORY_DEFAULT_BASENAME
   character(5),    public :: FILE_HISTORY_DEFAULT_TUNIT
   character(CSHT), public :: FILE_HISTORY_DEFAULT_ZDIM = 'native'
-  logical,         public :: HIST_BND = .true.
+  logical,         public :: FILE_HISTORY_CARTESC_BOUNDARY = .false.
 
   real(DP),        public :: MAPPROJECTION_basepoint_lon
   real(DP),        public :: MAPPROJECTION_basepoint_lat

@@ -208,7 +208,7 @@ contains
 
     flag_bnd = .false.
 
-    if ( HIST_BND ) then
+    if ( FILE_HISTORY_CARTESC_BOUNDARY ) then
        if ( ix == 1 .or. ix == xproc ) then
           flag_bnd = .true.
        endif
@@ -240,7 +240,7 @@ contains
     xproc = PRC_NUM_X
     yproc = PRC_NUM_Y
 
-    if ( HIST_BND ) then
+    if ( FILE_HISTORY_CARTESC_BOUNDARY ) then
        if ( ix == 1 ) then
           is = 1
           ie = nxp
@@ -320,7 +320,7 @@ contains
     xproc = PRC_NUM_X
     yproc = PRC_NUM_Y
 
-    if ( HIST_BND ) then
+    if ( FILE_HISTORY_CARTESC_BOUNDARY ) then
        if ( ix == 1 .or. ix == xproc ) then
           is = 1
           ie = mnxp
@@ -376,7 +376,7 @@ contains
        if ( im_bnd ) not_bnd = .false.
     endif
 
-    if ( HIST_BND ) then
+    if ( FILE_HISTORY_CARTESC_BOUNDARY ) then
        if ( not_bnd ) then
           is = 1
           ie = nxp
@@ -476,7 +476,7 @@ contains
     is = 1
     js = 1
 
-    if ( HIST_BND ) then
+    if ( FILE_HISTORY_CARTESC_BOUNDARY ) then
        if ( ix == 1 .or. ix == xproc ) then
           ie = mnxp
        else
@@ -589,7 +589,7 @@ contains
     yproc = PRC_NUM_Y
     tproc = xproc * yproc
 
-    if ( HIST_BND ) then
+    if ( FILE_HISTORY_CARTESC_BOUNDARY ) then
        mnxp = nxgp - 2
        mnyp = nygp - 2
        nx = (mnxp-2) * xproc + 4
