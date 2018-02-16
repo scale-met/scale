@@ -33,6 +33,7 @@ module scale_file_cartesC
   public :: FILE_CARTESC_set_coordinates
   public :: FILE_CARTESC_check_coordinates
 
+  public :: FILE_CARTESC_get_size
   public :: FILE_CARTESC_create
   public :: FILE_CARTESC_open
   public :: FILE_CARTESC_def_var

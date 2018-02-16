@@ -228,9 +228,9 @@ module scale_file_history
   integer, parameter :: I_TEXT = 1, I_INT = 2, I_FLOAT = 3, I_DOUBLE = 4
   type attr
      character(len=FILE_HSHORT) :: varname
-     character(len=FILE_HSHORT) :: key
+     character(len=FILE_HMID)   :: key
      integer                    :: type
-     character(len=FILE_HSHORT) :: text
+     character(len=FILE_HLONG)  :: text
      integer,  pointer          :: int(:)
      real(SP), pointer          :: float(:)
      real(DP), pointer          :: double(:)

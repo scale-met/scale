@@ -1322,8 +1322,8 @@ contains
     call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_periodic_x", PRC_PERIODIC_X ) ! [IN]
     call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_periodic_y", PRC_PERIODIC_Y ) ! [IN]
 
-    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_imaxg", (/IMAXG/) ) ! [IN]
-    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_jmaxg", (/JMAXG/) ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_imaxg", (/IMAXG/) ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_jmaxg", (/JMAXG/) ) ! [IN]
 
                      call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_kmax", (/KMAX/)  ) ! [IN]
     if ( OKMAX > 0 ) call FILE_HISTORY_Set_Attribute( "global", "scale_ocean_grid_cartesC_index_kmax", (/OKMAX/)  ) ! [IN]

@@ -206,13 +206,14 @@ contains
        hinfo%periodic(2) = trim(periodic(2))
        hinfo%periodic(3) = trim(periodic(3))
 
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_kmax",  hinfo%gridsize(1:1) )
        call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_imaxg", hinfo%gridsize(2:2) )
        call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_jmaxg", hinfo%gridsize(3:3) )
 
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_khalo", hinfo%halosize(1:1) )
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_ihalo", hinfo%halosize(2:2) )
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_jhalo", hinfo%halosize(3:3) )
+       call FILE_Get_Attribute( fid, "global", "scale_atmos_cartesC_grid_index_kmax",  hinfo%gridsize(1:1) )
+
+       call FILE_Get_Attribute( fid, "global", "scale_atmos_cartesC_grid_index_khalo", hinfo%halosize(1:1) )
+       call FILE_Get_Attribute( fid, "global", "scale_atmos_cartesC_grid_index_ihalo", hinfo%halosize(2:2) )
+       call FILE_Get_Attribute( fid, "global", "scale_atmos_cartesC_grid_index_jhalo", hinfo%halosize(3:3) )
 
        call FILE_Get_Attribute( fid, "global", "time_units", hinfo%time_units    )
        call FILE_Get_Attribute( fid, "global", "time_start", hinfo%time_start(:) )
