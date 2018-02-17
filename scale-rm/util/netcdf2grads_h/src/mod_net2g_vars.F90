@@ -62,17 +62,20 @@ module mod_net2g_vars
   integer,         public :: PRC_NUM_X
   integer,         public :: PRC_NUM_Y
   integer,         public :: TIME_STARTDATE(6)
-  real(DP),        public :: FILE_HISTORY_DEFAULT_TINTERVAL
-  character(CMID), public :: FILE_HISTORY_DEFAULT_BASENAME
-  character(5),    public :: FILE_HISTORY_DEFAULT_TUNIT
-  character(CSHT), public :: FILE_HISTORY_DEFAULT_ZDIM = 'native'
-  logical,         public :: FILE_HISTORY_CARTESC_BOUNDARY = .false.
 
-  real(DP),        public :: MAPPROJECTION_basepoint_lon
-  real(DP),        public :: MAPPROJECTION_basepoint_lat
-  character(CSHT), public :: MAPPROJECTION_type
-  real(DP),        public :: MAPPROJECTION_LC_lat1
-  real(DP),        public :: MAPPROJECTION_LC_lat2
+  real(DP),            public :: MAPPROJECTION_basepoint_lon               !> position of base point (domain center) in real world [deg]
+  real(DP),            public :: MAPPROJECTION_basepoint_lat               !> position of base point (domain center) in real world [deg]
+  character(len=CSHT), public :: MAPPROJECTION_type             = 'NONE'   !> map projection type
+  real(DP),            public :: MAPPROJECTION_LC_lat1                     !> standard latitude1 for L.C. projection [deg]
+  real(DP),            public :: MAPPROJECTION_LC_lat2                     !> standard latitude2 for L.C. projection [deg]
+
+  character(len=CLNG), public :: FILE_HISTORY_DEFAULT_BASENAME  = ''       !> Base name of the file
+  real(DP),            public :: FILE_HISTORY_DEFAULT_TINTERVAL = -1.0_DP  !> Time interval
+  character(len=CSHT), public :: FILE_HISTORY_DEFAULT_TUNIT     = ''       !> Time unit
+
+  character(len=CSHT), public :: FILE_HISTORY_DEFAULT_ZDIM      = 'native'
+
+  logical,             public :: FILE_HISTORY_CARTESC_BOUNDARY  = .false.
 
   integer,         public :: FID_LOG        = 22
   logical,         public :: LOUT           = .false.

@@ -113,28 +113,37 @@ program netcdf2grads_h
 
   !----------------------------------------------------------------------------------------
   ! Below variables are not required for net2g
-  logical :: PRC_PERIODIC_X   = .true.  !< periodic condition or not (X)?
-  logical :: PRC_PERIODIC_Y   = .true.  !< periodic condition or not (Y)?
-  logical :: PRC_CART_REORDER = .false. !< flag for rank reordering over the cartesian map
-  real    :: MAPPROJECTION_basepoint_x        ! position of base point in the model [m]
-  real    :: MAPPROJECTION_basepoint_y        ! position of base point in the model [m]
-  real    :: MAPPROJECTION_rotation =  0.0_DP ! rotation factor (only for 'NONE' type)
-  real    :: MAPPROJECTION_PS_lat             ! standard latitude1 for P.S. projection [deg]
-  real    :: MAPPROJECTION_PS_fact            ! pre-calc factor
-  real    :: MAPPROJECTION_M_lat              ! standard latitude1 for Mer. projection [deg]
-  real    :: MAPPROJECTION_EC_lat             ! standard latitude1 for E.C. projection [deg]
-  character(len=CMID) :: FILE_HISTORY_TITLE
-  character(len=CMID) :: FILE_HISTORY_SOURCE
-  character(len=CMID) :: FILE_HISTORY_INSTITUTION
-  character(len=CMID) :: FILE_HISTORY_TIME_UNITS
-  character(len=CMID) :: FILE_HISTORY_TIME_SINCE
-  real                :: FILE_HISTORY_DTSEC
-  real                :: FILE_HISTORY_STARTDAYSEC
-  logical             :: FILE_HISTORY_OUTPUT_STEP0  = .false. !> output value of step=0?
-  real                :: FILE_HISTORY_OUTPUT_START  = 0.0_DP  !> start time for output in second
-  logical             :: FILE_HISTORY_ERROR_PUTMISS = .false.
-  logical             :: FILE_HISTORY_DEFAULT_TAVERAGE  = .false.
-  character(len=CSHT) :: FILE_HISTORY_DEFAULT_DATATYPE  = 'REAL4'
+  logical             :: PRC_PERIODIC_X                         = .true.    !< periodic condition or not (X)?
+  logical             :: PRC_PERIODIC_Y                         = .true.    !< periodic condition or not (Y)?
+  logical             :: PRC_CART_REORDER                       = .false.   !< flag for rank reordering over the cartesian map
+
+  real(DP)            :: MAPPROJECTION_basepoint_x                          !> position of base point in the model [m]
+  real(DP)            :: MAPPROJECTION_basepoint_y                          !> position of base point in the model [m]
+  real(DP)            :: MAPPROJECTION_rotation                 = 0.0_DP    !> rotation factor (only for 'NONE' type)
+  real(DP)            :: MAPPROJECTION_PS_lat                               !> standard latitude1 for P.S. projection [deg]
+  real(DP)            :: MAPPROJECTION_M_lat                    = 0.0_DP    !> standard latitude1 for Mer. projection [deg]
+  real(DP)            :: MAPPROJECTION_EC_lat                   = 0.0_DP    !> standard latitude1 for E.C. projection [deg]
+
+  character(len=CMID) :: FILE_HISTORY_TITLE                     = ""        !> Header information of the output file: title
+  character(len=CMID) :: FILE_HISTORY_SOURCE                    = ""        !> Header information of the output file: model name
+  character(len=CMID) :: FILE_HISTORY_INSTITUTION               = ""        !> Header information of the output file: institution
+  character(len=CMID) :: FILE_HISTORY_TIME_UNITS                = "seconds" !> Unit for time axis
+  logical             :: FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL = .false.   !> Add timelabel to the basename?
+  character(len=CSHT) :: FILE_HISTORY_DEFAULT_ZCOORD            = ""        !> Default z-coordinate
+  logical             :: FILE_HISTORY_DEFAULT_TAVERAGE          = .false.   !> Apply time average?
+  character(len=CSHT) :: FILE_HISTORY_DEFAULT_DATATYPE          = "REAL4"   !> Data type
+  logical             :: FILE_HISTORY_OUTPUT_STEP0              = .false.   !> Output value at step=0?
+  real(DP)            :: FILE_HISTORY_OUTPUT_WAIT               = 0.0_DP    !> Time length to suppress output
+  character(len=CSHT) :: FILE_HISTORY_OUTPUT_WAIT_TUNIT         = "SEC"     !> Time unit
+  real(DP)            :: FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL   = -1.0_DP   !> Time interval to switch output file
+  character(len=CSHT) :: FILE_HISTORY_OUTPUT_SWITCH_TUNIT       = "SEC"     !> Time unit
+  logical             :: FILE_HISTORY_ERROR_PUTMISS             = .true.    !> Abort if the value is never stored after last output?
+  logical             :: FILE_HISTORY_AGGREGATE                 = .false.   !> Switch to use aggregate file I/O
+  character(len=CMID) :: FILE_HISTORY_options                   = ""        !> option to give file.  'filetype1:key1=val1&filetype2:key2=val2&...'
+  logical             :: debug                                  = .false.
+
+  integer             :: FILE_HISTORY_CARTESC_PRES_nlayer       = 0
+  real(DP)            :: FILE_HISTORY_CARTESC_PRES(300)         = 0.0_DP    !> pressure level to output [hPa]
   !-----------------------------------------------------------------------------------------
 
   namelist /LOGOUT/            &
@@ -176,36 +185,46 @@ program netcdf2grads_h
     PRC_PERIODIC_Y,            & ! not required
     PRC_CART_REORDER             ! not required
 
-  namelist /PARAM_MAPPROJECTION/     &
-    MAPPROJECTION_basepoint_lon,        &
-    MAPPROJECTION_basepoint_lat,        &
-    MAPPROJECTION_type,                 &
-    MAPPROJECTION_LC_lat1,              &
-    MAPPROJECTION_LC_lat2,              &
-    MAPPROJECTION_basepoint_x,          & ! not required
-    MAPPROJECTION_basepoint_y,          & ! not required
-    MAPPROJECTION_rotation,             & ! not required
-    MAPPROJECTION_PS_lat,               & ! currently not required
-    MAPPROJECTION_M_lat,                & ! currently not required
-    MAPPROJECTION_EC_lat                  ! currently not required
+  NAMELIST / PARAM_MAPPROJECTION / &
+     MAPPROJECTION_basepoint_lon, &
+     MAPPROJECTION_basepoint_lat, &
+     MAPPROJECTION_basepoint_x,   & ! not required
+     MAPPROJECTION_basepoint_y,   & ! not required
+     MAPPROJECTION_type,          &
+     MAPPROJECTION_rotation,      & ! not required
+     MAPPROJECTION_LC_lat1,       &
+     MAPPROJECTION_LC_lat2,       &
+     MAPPROJECTION_PS_lat,        & ! not required
+     MAPPROJECTION_M_lat,         & ! not required
+     MAPPROJECTION_EC_lat           ! not required
 
-  namelist  /PARAM_FILE_HISTORY/    &
-    FILE_HISTORY_DEFAULT_BASENAME,  &
-    FILE_HISTORY_DEFAULT_TINTERVAL, &
-    FILE_HISTORY_DEFAULT_TUNIT,     &
-    FILE_HISTORY_DEFAULT_ZDIM,      &
-    FILE_HISTORY_TITLE,             & ! not required
-    FILE_HISTORY_SOURCE,            & ! not required
-    FILE_HISTORY_INSTITUTION,       & ! not required
-    FILE_HISTORY_TIME_UNITS,        & ! not required
-    FILE_HISTORY_DEFAULT_TAVERAGE,  & ! not required
-    FILE_HISTORY_DEFAULT_DATATYPE,  & ! not required
-    FILE_HISTORY_OUTPUT_STEP0,      & ! not required
-    FILE_HISTORY_OUTPUT_START,      & ! not required
-    FILE_HISTORY_ERROR_PUTMISS        ! not required
+  NAMELIST / PARAM_FILE_HISTORY / &
+     FILE_HISTORY_TITLE,                     & ! not required
+     FILE_HISTORY_SOURCE,                    & ! not required
+     FILE_HISTORY_INSTITUTION,               & ! not required
+     FILE_HISTORY_TIME_UNITS,                & ! not required
+     FILE_HISTORY_DEFAULT_BASENAME,          &
+     FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL, & ! not required
+     FILE_HISTORY_DEFAULT_ZCOORD,            & ! not required
+     FILE_HISTORY_DEFAULT_TINTERVAL,         &
+     FILE_HISTORY_DEFAULT_TUNIT,             &
+     FILE_HISTORY_DEFAULT_TAVERAGE,          & ! not required
+     FILE_HISTORY_DEFAULT_DATATYPE,          & ! not required
+     FILE_HISTORY_OUTPUT_STEP0,              & ! not required
+     FILE_HISTORY_OUTPUT_WAIT,               & ! not required
+     FILE_HISTORY_OUTPUT_WAIT_TUNIT,         & ! not required
+     FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL,   & ! not required
+     FILE_HISTORY_OUTPUT_SWITCH_TUNIT,       & ! not required
+     FILE_HISTORY_ERROR_PUTMISS,             & ! not required
+     FILE_HISTORY_AGGREGATE,                 & ! not required
+     FILE_HISTORY_OPTIONS,                   & ! not required
+     debug,                                  & ! not required
+     FILE_HISTORY_DEFAULT_ZDIM                 ! added?
 
-  namelist  /PARAM_FILE_HISTORY_CARTESC/       &
-    FILE_HISTORY_CARTESC_BOUNDARY
+  NAMELIST / PARAM_FILE_HISTORY_CARTESC / &
+     FILE_HISTORY_CARTESC_PRES_nlayer, & ! not required
+     FILE_HISTORY_CARTESC_PRES,        & ! not required
+     FILE_HISTORY_CARTESC_BOUNDARY
   !-----------------------------------------------------------------------------------------
 
   !### initialization
