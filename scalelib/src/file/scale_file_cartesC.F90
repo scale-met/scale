@@ -36,6 +36,7 @@ module scale_file_cartesC
   public :: FILE_CARTESC_get_size
   public :: FILE_CARTESC_create
   public :: FILE_CARTESC_open
+  public :: FILE_CARTESC_put_globalAttributes
   public :: FILE_CARTESC_def_var
   public :: FILE_CARTESC_enddef
   public :: FILE_CARTESC_write_var
@@ -48,6 +49,11 @@ module scale_file_cartesC
      module procedure FILE_CARTESC_check_coordinates_name
      module procedure FILE_CARTESC_check_coordinates_id
   end interface FILE_CARTESC_check_coordinates
+
+  interface FILE_CARTESC_get_size
+     module procedure FILE_CARTESC_get_size_id
+     module procedure FILE_CARTESC_get_size_name
+  end interface FILE_CARTESC_get_size
 
   interface FILE_CARTESC_read
      module procedure FILE_CARTESC_read_1D
@@ -81,11 +87,11 @@ module scale_file_cartesC
   !++ Public parameters & variables
   !
   type, public :: axisattinfo
-    integer          :: size_global (1)
-    integer          :: start_global(1)
-    integer          :: halo_global (2)
-    integer          :: halo_local  (2)
-    character(len=5) :: periodic
+    integer :: size_global (1)
+    integer :: start_global(1)
+    integer :: halo_global (2)
+    integer :: halo_local  (2)
+    logical :: periodic
   end type axisattinfo
 
   type, public :: mappinginfo
@@ -267,15 +273,14 @@ contains
   !! This subroutine can be called without setup
   !<
   !-----------------------------------------------------------------------------
-  subroutine FILE_CARTESC_get_size( &
+  subroutine FILE_CARTESC_get_size_name( &
        basename,                  &
        KMAX, OKMAX, LKMAX, UKMAX, &
        IMAXG, JMAXG,              &
        KHALO, IHALO, JHALO,       &
        aggregate                  )
     use scale_file, only: &
-       FILE_open, &
-       FILE_get_attribute
+       FILE_open
     character(len=*), intent(in) :: basename
 
     integer, intent(out) :: KMAX, OKMAX, LKMAX, UKMAX
@@ -285,12 +290,34 @@ contains
     logical, intent(in), optional :: aggregate
 
     integer :: fid
-    integer :: buf(1)
-    logical :: existed
 
     call FILE_open( basename,           & ! (in)
                     fid,                & ! (out)
                     aggregate=aggregate ) ! (in)
+
+    call FILE_CARTESC_get_size_id( fid,                       & ! (in)
+                                   KMAX, OKMAX, LKMAX, UKMAX, & ! (out)
+                                   IMAXG, JMAXG,              & ! (out)
+                                   KHALO, IHALO, JHALO        ) ! (out)
+
+    return
+  end subroutine FILE_CARTESC_get_size_name
+  subroutine FILE_CARTESC_get_size_id( &
+       fid,                       &
+       KMAX, OKMAX, LKMAX, UKMAX, &
+       IMAXG, JMAXG,              &
+       KHALO, IHALO, JHALO        )
+    use scale_file, only: &
+       FILE_get_attribute
+
+    integer, intent(in) :: fid
+
+    integer, intent(out) :: KMAX, OKMAX, LKMAX, UKMAX
+    integer, intent(out) :: IMAXG, JMAXG
+    integer, intent(out) :: KHALO, IHALO, JHALO
+
+    integer :: buf(1)
+    logical :: existed
 
     call FILE_Get_Attribute( fid, "global", "scale_atmos_grid_cartesC_index_kmax",  buf(:)  )
     KMAX = buf(1)
@@ -326,7 +353,7 @@ contains
     JHALO = buf(1)
 
     return
-  end subroutine FILE_CARTESC_get_size
+  end subroutine FILE_CARTESC_get_size_id
 
   !-----------------------------------------------------------------------------
   !> set latlon and z
@@ -721,23 +748,20 @@ contains
     use scale_file, only: &
        FILE_AGGREGATE,    &
        FILE_Create,       &
-       FILE_get_CFtunits, &
-       FILE_Set_Attribute
+       FILE_get_CFtunits
     use scale_process, only: &
        PRC_Ismaster, &
        PRC_myrank,   &
        PRC_abort
+    use scale_time, only: &
+       NOWDATE => TIME_NOWDATE, &
+       NOWMS   => TIME_NOWMS
     use scale_rm_process, only: &
        PRC_2Drank,     &
        PRC_NUM_X,      &
        PRC_NUM_Y,      &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y
-    use scale_time, only: &
-       NOWDATE => TIME_NOWDATE, &
-       NOWMS   => TIME_NOWMS
-    use scale_atmos_grid_cartesC, only: &
-       ATMOS_GRID_CARTESC_NAME
     implicit none
     character(len=*), intent(in)  :: basename !< basename of the file
     character(len=*), intent(in)  :: title    !< title    of the file
@@ -754,6 +778,9 @@ contains
     integer           :: dtype
     logical           :: append_sw
     character(len=34) :: tunits
+    real(DP)          :: subsec_
+    integer           :: rank_x, rank_y
+    integer           :: num_x, num_y
     integer           :: comm
     logical           :: fileexisted
     logical           :: aggregate_
@@ -819,55 +846,42 @@ contains
           File_haszcoord(fid) = .true.
        endif
 
-       call FILE_Set_Attribute( fid, "global", "grid_name", ATMOS_GRID_CARTESC_NAME ) ! [IN]
-
        if ( aggregate_ ) then
-          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_rank_x", (/0/) ) ! [IN]
-          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_rank_y", (/0/) ) ! [IN]
-
-          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_x",  (/1/) ) ! [IN]
-          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_y",  (/1/) ) ! [IN]
+          rank_x = 0
+          rank_y = 0
+          num_x = 1
+          num_y = 1
        else
-          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_rank_x", (/PRC_2Drank(PRC_myrank,1)/) ) ! [IN]
-          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_rank_y", (/PRC_2Drank(PRC_myrank,2)/) ) ! [IN]
-
-          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_x",  (/PRC_NUM_X/) ) ! [IN]
-          call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_y",  (/PRC_NUM_Y/) ) ! [IN]
-       endif
-
-       call FILE_Set_Attribute( fid, "global", "scale_cartesC_periodic_z", .false.                 ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_cartesC_periodic_x", PRC_PERIODIC_X ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_cartesC_periodic_y", PRC_PERIODIC_Y ) ! [IN]
-
-       call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_imaxg", (/IMAXG/) ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_jmaxg", (/JMAXG/) ) ! [IN]
-
-                        call FILE_Set_Attribute( fid, "global", "scale_atmos_cartesC_grid_kmax", (/KMAX/)  ) ! [IN]
-       if ( OKMAX > 0 ) call FILE_Set_Attribute( fid, "global", "scale_ocean_cartesC_grid_kmax", (/OKMAX/) ) ! [IN]
-       if ( LKMAX > 0 ) call FILE_Set_Attribute( fid, "global", "scale_land_cartesC_grid_kmax",  (/LKMAX/) ) ! [IN]
-       if ( UKMAX > 0 ) call FILE_Set_Attribute( fid, "global", "scale_urban_cartesC_grid_kmax", (/UKMAX/) ) ! [IN]
-
-
-       call FILE_Set_Attribute( fid, "global", "scale_atmos_cartesC_grid_khalo", (/KHALO/) ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_atmos_cartesC_grid_ihalo", (/IHALO/) ) ! [IN]
-       call FILE_Set_Attribute( fid, "global", "scale_atmos_cartesC_grid_jhalo", (/JHALO/) ) ! [IN]
-
-       call FILE_CARTESC_def_axes( fid,                & ! [IN]
-                                   dtype,              & ! [IN]
-                                   File_haszcoord(fid) ) ! [IN]
+          rank_x = PRC_2Drank(PRC_myrank,1)
+          rank_y = PRC_2Drank(PRC_myrank,2)
+          num_x = PRC_NUM_X
+          num_y = PRC_NUM_Y
+       end if
 
        if ( present( date ) ) then
           call FILE_get_CFtunits( date(:), tunits )
        else
           call FILE_get_CFtunits( NOWDATE(:), tunits )
        endif
-       call FILE_Set_Attribute( fid, "global", "time_units", tunits )
 
        if ( present( subsec ) ) then
-          call FILE_Set_Attribute( fid, "global", "time_start", (/subsec/) )
+          subsec_ = subsec
        else
-          call FILE_Set_Attribute( fid, "global", "time_start", (/NOWMS/)  )
-       endif
+          subsec_= NOWMS
+       end if
+
+       call FILE_CARTESC_put_globalAttributes( fid,                            & ! [IN]
+                                               rank_x, rank_y,                 & ! [IN]
+                                               num_x, num_y,                   & ! [IN]
+                                               PRC_PERIODIC_X, PRC_PERIODIC_Y, & ! [IN]
+                                               KMAX, OKMAX, LKMAX, UKMAX,      & ! [IN]
+                                               IMAXG, JMAXG,                   & ! [IN]
+                                               KHALO, IHALO, JHALO,            & ! [IN]
+                                               subsec_, tunits                 ) ! [IN]
+
+       call FILE_CARTESC_def_axes( fid,                & ! [IN]
+                                   dtype,              & ! [IN]
+                                   File_haszcoord(fid) ) ! [IN]
 
        File_axes_written(fid) = .false.  ! indicating axes have not been written yet
        File_closed      (fid) = .false.
@@ -1817,6 +1831,62 @@ contains
   end subroutine FILE_CARTESC_write_4D
 
   !-----------------------------------------------------------------------------
+  !> put global attributes
+  subroutine FILE_CARTESC_put_globalAttributes( &
+       fid, &
+       prc_rank_x, prc_rank_y,         &
+       prc_num_x, prc_num_y,           &
+       prc_periodic_x, prc_periodic_y, &
+       kmax, okmax, lkmax, ukmax,      &
+       imaxg, jmaxg,                   &
+       khalo, ihalo, jhalo,            &
+       time, tunits                    )
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_NAME
+    use scale_file, only: &
+       FILE_Set_Attribute
+
+    integer,          intent(in) :: fid
+    integer,          intent(in) :: prc_rank_x, prc_rank_y
+    integer,          intent(in) :: prc_num_x, prc_num_y
+    logical,          intent(in) :: prc_periodic_x, prc_periodic_y
+    integer,          intent(in) :: kmax, okmax, lkmax, ukmax
+    integer,          intent(in) :: imaxg, jmaxg
+    integer,          intent(in) :: khalo, ihalo, jhalo
+    real(DP),         intent(in) :: time
+    character(len=*), intent(in) :: tunits
+
+    call FILE_Set_Attribute( fid, "global", "grid_name", ATMOS_GRID_CARTESC_NAME ) ! [IN]
+
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_rank_x", (/prc_rank_x/) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_rank_y", (/prc_rank_y/) ) ! [IN]
+
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_x",  (/prc_num_x/) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_y",  (/prc_num_y/) ) ! [IN]
+
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_periodic_z", .false.                 ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_periodic_x", prc_periodic_x ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_periodic_y", prc_periodic_y ) ! [IN]
+
+    call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_imaxg", (/imaxg/) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_jmaxg", (/jmaxg/) ) ! [IN]
+
+                     call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_kmax", (/kmax/)  ) ! [IN]
+    if ( okmax > 0 ) call FILE_Set_Attribute( fid, "global", "scale_ocean_grid_cartesC_kmax", (/okmax/) ) ! [IN]
+    if ( lkmax > 0 ) call FILE_Set_Attribute( fid, "global", "scale_land_grid_cartesC_kmax",  (/lkmax/) ) ! [IN]
+    if ( ukmax > 0 ) call FILE_Set_Attribute( fid, "global", "scale_urban_grid_cartesC_kmax", (/ukmax/) ) ! [IN]
+
+    call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_khalo", (/khalo/) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_ihalo", (/ihalo/) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_jhalo", (/jhalo/) ) ! [IN]
+
+    call FILE_Set_Attribute( fid, "global", "time_start", (/time/) )
+    call FILE_Set_Attribute( fid, "global", "time_units", tunits )
+
+    return
+  end subroutine FILE_CARTESC_put_globalAttributes
+
+  !-----------------------------------------------------------------------------
   !> define axis variables in the file
   subroutine FILE_CARTESC_def_axes( &
        fid,   &
@@ -1859,19 +1929,19 @@ contains
     !---------------------------------------------------------------------------
 
     if ( PRC_PERIODIC_X ) then
-       ainfo(1)%periodic = "true"
-       ainfo(2)%periodic = "true"
+       ainfo(1)%periodic = .true.
+       ainfo(2)%periodic = .true.
     else
-       ainfo(1)%periodic = "false"
-       ainfo(2)%periodic = "false"
+       ainfo(1)%periodic = .false.
+       ainfo(2)%periodic = .false.
     endif
 
     if ( PRC_PERIODIC_Y ) then
-       ainfo(3)%periodic = "true"
-       ainfo(4)%periodic = "true"
+       ainfo(3)%periodic = .true.
+       ainfo(4)%periodic = .true.
     else
-       ainfo(3)%periodic = "false"
-       ainfo(4)%periodic = "false"
+       ainfo(3)%periodic = .false.
+       ainfo(4)%periodic = .false.
     endif
 
     call MAPPROJECTION_get_attributes( minfo%mapping_name,                             & ! [OUT]

@@ -345,34 +345,34 @@ contains
     dims (2,:) = 'lat'
     count(1,:) = xc
     count(2,:) = yc
-    call FILE_HISTORY_Set_Dim( "XY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "XY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     start(3,:) = 1
     dims (3,:) = (/ "height    ", "z         ", "pressure  " /)
     count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZXY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,:) = (/ "height_xyw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZHXY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZHXY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     dims (3,1) = "oz"
     count(3,1) = OKMAX
-    call FILE_HISTORY_Set_Dim( "OXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "OXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,1) = "ozh"
     count(3,1) = OKMAX + 1
-    call FILE_HISTORY_Set_Dim( "OHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "OHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,1) = "lz"
     count(3,1) = LKMAX
-    call FILE_HISTORY_Set_Dim( "LXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "LXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,1) = "lzh"
     count(3,1) = LKMAX + 1
-    call FILE_HISTORY_Set_Dim( "LHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "LHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,1) = "uz"
     count(3,1) = UKMAX
-    call FILE_HISTORY_Set_Dim( "UXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "UXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,1) = "uzh"
     count(3,1) = UKMAX + 1
-    call FILE_HISTORY_Set_Dim( "UHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "UHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     ! XH, Y
     dims(1,:) = 'lon_uy'
@@ -384,14 +384,14 @@ contains
        start(1,:) = xs
        count(1,:) = xc+1
     endif
-    call FILE_HISTORY_Set_Dim( "XHY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "XHY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     dims (3,:) = (/ "height_uyz", "z         ", "pressure  " /)
     count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXHY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZXHY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,:) = (/ "height_uyw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZHXHY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZHXHY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     ! X, YH
     dims (1,:) = 'lon_xv'
@@ -405,14 +405,14 @@ contains
        start(2,:) = ys
        count(2,:) = yc+1
     endif
-    call FILE_HISTORY_Set_Dim( "XYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "XYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     dims (3,:) = (/ "height_xvz", "z         ", "pressure  " /)
     count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZXYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,:) = (/ "height_xvw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZHXYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZHXYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     ! XH, YH
     dims(1,:) = 'lon_uv'
@@ -424,14 +424,14 @@ contains
        start(1,:) = xs
        count(1,:) = xc+1
     endif
-    call FILE_HISTORY_Set_Dim( "XHYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "XHYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     dims (3,:) = (/ "height_uvz", "z         ", "pressure  " /)
     count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXHYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZXHYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,:) = (/ "height_uvw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZHXHYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZHXHYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     return
   end subroutine FILE_HISTORY_CARTESC_set_dims
@@ -1272,6 +1272,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_CARTESC_set_axes_attributes
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_NAME
     use scale_file_history, only: &
        FILE_HISTORY_AGGREGATE, &
        FILE_HISTORY_Set_Attribute
@@ -1303,6 +1305,8 @@ contains
     type(axisattinfo) :: ainfo(4) ! x, xh, y, yh
     type(mappinginfo) :: minfo
     !---------------------------------------------------------------------------
+
+    call FILE_HISTORY_Set_Attribute( "global", "grid_name", ATMOS_GRID_CARTESC_NAME ) ! [IN]
 
     if ( FILE_HISTORY_AGGREGATE ) then
        call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_rank_x", (/0/) ) ! [IN]
@@ -1338,19 +1342,19 @@ contains
     call FILE_HISTORY_Set_Attribute( "global", "time_start", (/FILE_HISTORY_CARTESCORY_STARTMS/) )
 
     if ( PRC_PERIODIC_X ) then
-       ainfo(1)%periodic = "true"
-       ainfo(2)%periodic = "true"
+       ainfo(1)%periodic = .true.
+       ainfo(2)%periodic = .true.
     else
-       ainfo(1)%periodic = "false"
-       ainfo(2)%periodic = "false"
+       ainfo(1)%periodic = .false.
+       ainfo(2)%periodic = .false.
     endif
 
     if ( PRC_PERIODIC_Y ) then
-       ainfo(3)%periodic = "true"
-       ainfo(4)%periodic = "true"
+       ainfo(3)%periodic = .true.
+       ainfo(4)%periodic = .true.
     else
-       ainfo(3)%periodic = "false"
-       ainfo(4)%periodic = "false"
+       ainfo(3)%periodic = .false.
+       ainfo(4)%periodic = .false.
     endif
 
     ! for x
