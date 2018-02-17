@@ -39,7 +39,7 @@ module scale_atmos_phy_tb_smg
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
 
 #if defined DEBUG || defined QUICKDEBUG
@@ -238,15 +238,15 @@ contains
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_Q,  &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
     use scale_precision
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer
     use scale_const, only: &
        EPS  => CONST_EPS, &
        GRAV => CONST_GRAV
-    use scale_grid, only: &
-       RCDZ => GRID_RCDZ, &
-       RFDZ => GRID_RFDZ
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC, only: &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW, &
        I_UYW, &

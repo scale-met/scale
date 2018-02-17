@@ -287,7 +287,7 @@ void file_set_attribute_text_c_( const int32_t *fid,        // (in)
   l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
   fstr2cstr(_vname, vname, l);
 
-  l = key_len > File_HLONG ? File_HLONG : key_len;
+  l = key_len > File_HMID ? File_HLONG : key_len;
   fstr2cstr(_key, key, l);
 
   l = value_len > File_HLONG ? File_HLONG : value_len;

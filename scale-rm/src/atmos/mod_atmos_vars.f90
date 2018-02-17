@@ -24,7 +24,7 @@ module mod_atmos_vars
   use scale_stdio
   use scale_prof
   use scale_debug
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   !-----------------------------------------------------------------------------
@@ -1024,9 +1024,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Set pressure for history output
   subroutine ATMOS_vars_history_setpres
-    use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_Z1
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
     use scale_topography, only: &
        TOPO_Zsfc
     use scale_atmos_bottom, only: &
@@ -1334,9 +1334,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Calc diagnostic variables
   subroutine ATMOS_vars_calc_diagnostics
-    use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_FZ
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_specific_heat
     use scale_atmos_diagnostic, only: &
@@ -1415,12 +1415,12 @@ contains
        CVdry => CONST_CVdry
     use scale_process, only: &
        PRC_abort
-    use scale_grid, only: &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY
-    use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_FZ
+    use scale_atmos_grid_cartesC, only: &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_hydrometeor, only: &
        LHVc => LHV, &
        LHFc => LHF, &
@@ -2221,9 +2221,9 @@ contains
        var )
     use scale_process, only: &
        PRC_abort
-    use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_FZ
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_adiabat, only: &
        ATMOS_ADIABAT_cape
     use mod_atmos_phy_mp_vars, only: &
@@ -2633,13 +2633,13 @@ contains
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        CVdry => CONST_CVdry
-    use scale_grid, only: &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY
-    use scale_grid_real, only: &
-       REAL_CZ
-    use scale_gridtrans, only: &
-       MAPF => GTRANS_MAPF, &
+    use scale_atmos_grid_cartesC, only: &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ
+    use scale_atmos_grid_cartesC_metric, only: &
+       MAPF => ATMOS_GRID_CARTESC_METRIC_MAPF, &
        I_UY, &
        I_XV
     use scale_rm_statistics, only: &

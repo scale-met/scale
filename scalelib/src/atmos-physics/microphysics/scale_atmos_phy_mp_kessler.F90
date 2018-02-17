@@ -25,7 +25,7 @@ module scale_atmos_phy_mp_kessler
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
 
   use scale_atmos_hydrometeor, only: &
      N_HYD, &
@@ -161,8 +161,8 @@ contains
        CONST_DWATR
     use scale_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP
-    use scale_grid, only: &
-       CDZ => GRID_CDZ
+    use scale_atmos_grid_cartesC, only: &
+       CDZ => ATMOS_GRID_CARTESC_CDZ
     implicit none
 
     real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
@@ -236,7 +236,7 @@ contains
        EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_const, only: &
        DWATR => CONST_DWATR, &
        PI    => CONST_PI
@@ -636,7 +636,7 @@ contains
        cldfrac,       &
        QTRC,          &
        mask_criterion )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer, only: &
        QA
     implicit none
@@ -671,7 +671,7 @@ contains
        QTRC0, &
        DENS0, &
        TEMP0  )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer, only: &
        QA
     use scale_atmos_hydrometeor, only: &
@@ -705,7 +705,7 @@ contains
   subroutine ATMOS_PHY_MP_kessler_Mixingratio( &
        Qe,   &
        QTRC0 )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer, only: &
        QA
     use scale_atmos_hydrometeor, only: &

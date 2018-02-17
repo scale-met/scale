@@ -33,7 +33,7 @@ module scale_atmos_dyn_tstep_short_fvm_hevi
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
 #if defined DEBUG || defined QUICKDEBUG
@@ -147,7 +147,7 @@ contains
        REF_dens, REF_rhot,                          &
        BND_W, BND_E, BND_S, BND_N,                  &
        dtrk, last                                   )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_const, only: &
 #ifdef DRY
        Rdry   => CONST_Rdry,  &
@@ -179,7 +179,7 @@ contains
        ATMOS_DYN_FVM_fluxJ23_XVZ,   &
        ATMOS_DYN_FVM_fluxX_XVZ,     &
        ATMOS_DYN_FVM_fluxY_XVZ
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW, &
        I_UYW, &
@@ -1155,10 +1155,10 @@ contains
          GRAV => CONST_GRAV
     use scale_process, only: &
          PRC_MPIstop
-    use scale_grid, only: &
-         RCDZ => GRID_RCDZ, &
-         RFDZ => GRID_RFDZ
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC, only: &
+         RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+         RFDZ => ATMOS_GRID_CARTESC_RFDZ
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW
     implicit none

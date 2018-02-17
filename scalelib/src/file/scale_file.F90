@@ -143,16 +143,19 @@ module scale_file
   end interface FILE_write
   interface FILE_get_attribute
      module procedure FILE_get_attribute_text_fname
+     module procedure FILE_get_attribute_logical_fname
      module procedure FILE_get_attribute_int_fname
      module procedure FILE_get_attribute_float_fname
      module procedure FILE_get_attribute_double_fname
      module procedure FILE_get_attribute_text_fid
+     module procedure FILE_get_attribute_logical_fid
      module procedure FILE_get_attribute_int_fid
      module procedure FILE_get_attribute_float_fid
      module procedure FILE_get_attribute_double_fid
   end interface FILE_get_attribute
   interface FILE_set_attribute
      module procedure FILE_set_attribute_text
+     module procedure FILE_set_attribute_logical
      module procedure FILE_set_attribute_int
      module procedure FILE_set_attribute_float
      module procedure FILE_set_attribute_double
@@ -234,32 +237,28 @@ contains
        title,       &
        source,      &
        institution, &
-       grid_name,   &
        fid,         &
        existed,     &
        rankid,      &
        single,      &
+       aggregate,   &
        time_units,  &
-       append,      &
-       mpi_comm     )
-    use mpi, only: &
-       MPI_COMM_NULL
+       append       )
     implicit none
 
     character(len=*), intent(in)  :: basename
     character(len=*), intent(in)  :: title
     character(len=*), intent(in)  :: source
     character(len=*), intent(in)  :: institution
-    character(len=*), intent(in)  :: grid_name
 
     integer,          intent(out) :: fid
     logical,          intent(out) :: existed
 
     integer,          intent(in), optional :: rankid
     logical,          intent(in), optional :: single
+    logical,          intent(in), optional :: aggregate
     character(len=*), intent(in), optional :: time_units
     logical,          intent(in), optional :: append
-    integer,          intent(in), optional :: mpi_comm !> MPI communicator. If this is set, files are aggregated used by PnetCDF
 
     character(len=FILE_HMID) :: time_units_
     integer :: rankid_
@@ -294,10 +293,10 @@ contains
 
     if ( single_ .and. rankid_ /= 0 ) return
 
-    call FILE_get_fid( basename, mode,   & ! [IN]
-                       rankid_, single_, & ! [IN]
-                       fid, existed,     & ! [OUT]
-                       mpi_comm=mpi_comm ) ! [IN]
+    call FILE_get_fid( basename, mode,     & ! [IN]
+                       rankid_, single_,   & ! [IN]
+                       fid, existed,       & ! [OUT]
+                       aggregate=aggregate ) ! [IN]
 
     if( existed ) return
 
@@ -305,9 +304,8 @@ contains
     call FILE_set_attribute( fid, "global", "title"      , title       ) ! [IN]
     call FILE_set_attribute( fid, "global", "source"     , source      ) ! [IN]
     call FILE_set_attribute( fid, "global", "institution", institution ) ! [IN]
-    call FILE_set_attribute( fid, "global", "grid_name",   grid_name   ) ! [IN]
 
-    if ( ( .not. present(mpi_comm) ) .or. mpi_comm == MPI_COMM_NULL ) then
+    if ( ( .not. present(aggregate) ) .or. .not. aggregate ) then
        ! for shared-file parallel I/O, skip attributes related to MPI processes
        call FILE_set_attribute( fid, "global", "rankid"  , (/rankid/)  ) ! [IN]
     endif
@@ -431,7 +429,7 @@ contains
       fid,       &
       mode,      &
       single,    &
-      mpi_comm,  &
+      aggregate, &
       rankid,    &
       postfix    )
     implicit none
@@ -440,7 +438,7 @@ contains
     integer,          intent(out) :: fid
     integer,          intent( in), optional :: mode
     logical,          intent( in), optional :: single
-    integer,          intent( in), optional :: mpi_comm
+    logical,          intent( in), optional :: aggregate
     integer,          intent( in), optional :: rankid
     character(len=*), intent( in), optional :: postfix
 
@@ -466,7 +464,7 @@ contains
 
     call FILE_get_fid( basename, mode_, rankid_, single_,   & ! (in)
                        fid, existed,                        & ! (out)
-                       mpi_comm = mpi_comm, postfix=postfix ) ! (in)
+                       aggregate=aggregate, postfix=postfix ) ! (in)
 
     return
   end subroutine FILE_open
@@ -1526,10 +1524,10 @@ contains
     return
   end subroutine FILE_get_attribute_text_fid
   subroutine FILE_get_attribute_text_fname( &
-      basename, vname, key,     &
-      val,                      &
-      single, mpi_comm, rankid, &
-      existed                   )
+      basename, vname, key,      &
+      val,                       &
+      single, aggregate, rankid, &
+      existed                    )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1539,7 +1537,7 @@ contains
     character(len=*), intent(out) :: val
 
     logical, intent(in), optional :: single
-    integer, intent(in), optional :: mpi_comm
+    logical, intent(in), optional :: aggregate
     integer, intent(in), optional :: rankid
 
     logical, intent(out), optional :: existed
@@ -1547,9 +1545,9 @@ contains
 
     call FILE_open( basename, & ! (in)
          fid,                 & ! (out)
-         single = single,     & ! (in)
-         mpi_comm = mpi_comm, & ! (in)
-         rankid = rankid      ) ! (in)
+         single=single,       & ! (in)
+         aggregate=aggregate, & ! (in)
+         rankid=rankid        ) ! (in)
 
     call FILE_get_attribute_text_fid( &
          fid, vname, key, & ! (in)
@@ -1558,6 +1556,74 @@ contains
 
     return
   end subroutine FILE_get_attribute_text_fname
+
+  !-----------------------------------------------------------------------------
+  subroutine FILE_get_attribute_logical_fid( &
+       fid,        &
+       vname, key, &
+       val,        &
+       existed     )
+    integer,          intent(in ) :: fid
+    character(len=*), intent(in ) :: vname
+    character(len=*), intent(in ) :: key
+    logical,          intent(out) :: val
+
+    logical, intent(out), optional :: existed
+
+    logical :: existed_
+    character(len=5) :: buf
+
+    call FILE_get_attribute_text_fid( fid, vname, key, & ! (in)
+                                      buf, existed_    ) ! (out)
+
+    if ( existed_ ) then
+       if ( buf == "true" ) then
+          val = .true.
+       else if ( buf == "false" ) then
+          val = .false.
+       else
+          write(*,*) 'xxx value is not eigher true or false'
+          call PRC_abort
+       end if
+    end if
+
+    if ( present(existed) ) existed = existed_
+
+    return
+  end subroutine FILE_get_attribute_logical_fid
+  subroutine FILE_get_attribute_logical_fname( &
+      basename, vname, key,      &
+      val,                       &
+      single, aggregate, rankid, &
+      existed                    )
+    implicit none
+
+    character(len=*), intent(in) :: basename
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+
+    logical, intent(out) :: val
+
+    logical, intent(in), optional :: single
+    logical, intent(in), optional :: aggregate
+    integer, intent(in), optional :: rankid
+
+    logical, intent(out), optional :: existed
+    integer :: fid
+
+    call FILE_open( basename, & ! (in)
+         fid,                 & ! (out)
+         single=single,       & ! (in)
+         aggregate=aggregate, & ! (in)
+         rankid=rankid        ) ! (in)
+
+    call FILE_get_attribute_logical_fid( &
+         fid, vname, key, & ! (in)
+         val,             & ! (out)
+         existed          ) ! (out)
+
+    return
+  end subroutine FILE_get_attribute_logical_fname
 
   !-----------------------------------------------------------------------------
   subroutine FILE_get_attribute_int_fid( &
@@ -1593,10 +1659,10 @@ contains
     return
   end subroutine FILE_get_attribute_int_fid
   subroutine FILE_get_attribute_int_fname( &
-      basename, vname, key,     &
-      val,                      &
-      single, mpi_comm, rankid, &
-      existed                   )
+      basename, vname, key,      &
+      val,                       &
+      single, aggregate, rankid, &
+      existed                    )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1606,7 +1672,7 @@ contains
     integer, intent(out) :: val(:)
 
     logical, intent(in), optional :: single
-    integer, intent(in), optional :: mpi_comm
+    logical, intent(in), optional :: aggregate
     integer, intent(in), optional :: rankid
 
     logical, intent(out), optional :: existed
@@ -1615,9 +1681,9 @@ contains
 
     call FILE_open( basename, & ! (in)
          fid,                 & ! (out)
-         single = single,     & ! (in)
-         mpi_comm = mpi_comm, & ! (in)
-         rankid = rankid      ) ! (in)
+         single=single,       & ! (in)
+         aggregate=aggregate, &
+         rankid=rankid        ) ! (in)
 
     call FILE_get_attribute_int_fid( &
          fid, vname, key, & ! (in)
@@ -1661,10 +1727,10 @@ contains
     return
   end subroutine FILE_get_attribute_float_fid
   subroutine FILE_get_attribute_float_fname( &
-      basename, vname, key,     &
-      val,                      &
-      single, mpi_comm, rankid, &
-      existed                   )
+      basename, vname, key,      &
+      val,                       &
+      single, aggregate, rankid, &
+      existed                    )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1674,7 +1740,7 @@ contains
     real(SP), intent(out) :: val(:)
 
     logical, intent(in), optional :: single
-    integer, intent(in), optional :: mpi_comm
+    logical, intent(in), optional :: aggregate
     integer, intent(in), optional :: rankid
 
     logical, intent(out), optional :: existed
@@ -1683,9 +1749,9 @@ contains
 
     call FILE_open( basename, & ! (in)
          fid,                 & ! (out)
-         single = single,     & ! (in)
-         mpi_comm = mpi_comm, & ! (in)
-         rankid = rankid      ) ! (in)
+         single=single,       & ! (in)
+         aggregate=aggregate, & ! (in)
+         rankid=rankid        ) ! (in)
 
     call FILE_get_attribute_float_fid( &
          fid, vname, key, & ! (in)
@@ -1727,10 +1793,10 @@ contains
     return
   end subroutine FILE_get_attribute_double_fid
   subroutine FILE_get_attribute_double_fname( &
-      basename, vname, key,     &
-      val,                      &
-      single, mpi_comm, rankid, &
-      existed                   )
+      basename, vname, key,      &
+      val,                       &
+      single, aggregate, rankid, &
+      existed                    )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1740,7 +1806,7 @@ contains
     real(DP), intent(out) :: val(:)
 
     logical, intent(in), optional :: single
-    integer, intent(in), optional :: mpi_comm
+    logical, intent(in), optional :: aggregate
     integer, intent(in), optional :: rankid
 
     logical, intent(out), optional :: existed
@@ -1749,9 +1815,9 @@ contains
 
     call FILE_open( basename, & ! (in)
          fid,                 & ! (out)
-         single = single,     & ! (in)
-         mpi_comm = mpi_comm, & ! (in)
-         rankid = rankid      ) ! (in)
+         single=single,       & ! (in)
+         aggregate=aggregate, & ! (in)
+         rankid=rankid        ) ! (in)
 
     call FILE_get_attribute_double_fid( &
          fid, vname, key, & ! (in)
@@ -1785,6 +1851,27 @@ contains
 
     return
   end subroutine FILE_set_attribute_text
+
+  subroutine FILE_set_attribute_logical( &
+     fid, vname, &
+     key, val    )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    logical,          intent(in) :: val
+
+    character(len=5) :: buf
+
+    if ( val ) then
+       buf = "true"
+    else
+       buf = "false"
+    end if
+
+    call FILE_set_attribute_text( fid, vname, key, buf )
+
+    return
+  end subroutine FILE_set_attribute_logical
 
   !-----------------------------------------------------------------------------
   subroutine FILE_set_attribute_int( &
@@ -1958,7 +2045,6 @@ contains
        title,       &
        source,      &
        institution, &
-       grid_name,   &
        nvars,       &
        varname      )
     implicit none
@@ -1969,7 +2055,6 @@ contains
     character(len=FILE_HMID),   intent(out) :: title                ! title of the file
     character(len=FILE_HMID),   intent(out) :: source               ! for file header
     character(len=FILE_HMID),   intent(out) :: institution          ! for file header
-    character(len=FILE_HSHORT), intent(out) :: grid_name            ! for file header
     integer,                    intent(out) :: nvars                ! number of variables
     character(len=FILE_HSHORT), intent(out) :: varname(nvars_limit) ! name of variables
 
@@ -1985,7 +2070,6 @@ contains
                                   title,       & ! [OUT]
                                   source,      & ! [OUT]
                                   institution, & ! [OUT]
-                                  grid_name,   & ! [OUT]
                                   nvars,       & ! [OUT]
                                   varname(:)   ) ! [OUT]
 
@@ -1998,7 +2082,6 @@ contains
        title,       &
        source,      &
        institution, &
-       grid_name,   &
        nvars,       &
        varname      )
     implicit none
@@ -2008,7 +2091,6 @@ contains
     character(len=FILE_HMID),   intent(out) :: title                ! title of the file
     character(len=FILE_HMID),   intent(out) :: source               ! for file header
     character(len=FILE_HMID),   intent(out) :: institution          ! for file header
-    character(len=FILE_HSHORT), intent(out) :: grid_name            ! for file header
     integer,                    intent(out) :: nvars                ! number of variables
     character(len=FILE_HSHORT), intent(out) :: varname(nvars_limit) ! name of variables
 
@@ -2018,7 +2100,6 @@ contains
     call FILE_get_attribute( fid, 'global', 'title',       title       )
     call FILE_get_attribute( fid, 'global', 'source',      source      )
     call FILE_get_attribute( fid, 'global', 'institution', institution )
-    call FILE_get_attribute( fid, 'global', 'grid_name',   grid_name   )
 
     call FILE_get_var_num( fid, nvars_limit, nvars )
 
@@ -2669,7 +2750,6 @@ contains
       missing_value, &
       ntypes, dtype, &
       start, count   )
-    use MPI, only : MPI_COMM_NULL
     implicit none
 
     integer,          intent( in)           :: fid
@@ -2779,7 +2859,6 @@ contains
       missing_value, &
       ntypes, dtype, &
       start, count   )
-    use MPI, only : MPI_COMM_NULL
     implicit none
 
     integer,          intent( in)           :: fid
@@ -2889,7 +2968,6 @@ contains
       missing_value, &
       ntypes, dtype, &
       start, count   )
-    use MPI, only : MPI_COMM_NULL
     implicit none
 
     integer,          intent( in)           :: fid
@@ -2999,7 +3077,6 @@ contains
       missing_value, &
       ntypes, dtype, &
       start, count   )
-    use MPI, only : MPI_COMM_NULL
     implicit none
 
     integer,          intent( in)           :: fid
@@ -3109,7 +3186,6 @@ contains
       missing_value, &
       ntypes, dtype, &
       start, count   )
-    use MPI, only : MPI_COMM_NULL
     implicit none
 
     integer,          intent( in)           :: fid
@@ -3219,7 +3295,6 @@ contains
       missing_value, &
       ntypes, dtype, &
       start, count   )
-    use MPI, only : MPI_COMM_NULL
     implicit none
 
     integer,          intent( in)           :: fid
@@ -3329,7 +3404,6 @@ contains
       missing_value, &
       ntypes, dtype, &
       start, count   )
-    use MPI, only : MPI_COMM_NULL
     implicit none
 
     integer,          intent( in)           :: fid
@@ -3439,7 +3513,6 @@ contains
       missing_value, &
       ntypes, dtype, &
       start, count   )
-    use MPI, only : MPI_COMM_NULL
     implicit none
 
     integer,          intent( in)           :: fid
@@ -4205,16 +4278,17 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_get_fid( &
-      basename,   &
-      mode,       &
-      rankid,     &
-      single,     &
-      fid,        &
-      existed,    &
-      mpi_comm,   &
-      postfix     )
-    use MPI, only: &
-      MPI_COMM_NULL
+      basename,  &
+      mode,      &
+      rankid,    &
+      single,    &
+      fid,       &
+      existed,   &
+      aggregate, &
+      postfix    )
+    use scale_process, only: &
+       PRC_LOCAL_COMM_WORLD, &
+       PRC_COMM_NULL
     implicit none
 
     character(len=*), intent( in) :: basename
@@ -4225,7 +4299,7 @@ contains
     integer,          intent(out) :: fid
     logical,          intent(out) :: existed
 
-    integer,          intent( in), optional :: mpi_comm
+    logical,          intent( in), optional :: aggregate
     character(len=*), intent( in), optional :: postfix
 
     character(len=FILE_HSHORT) :: rwname(0:2)
@@ -4234,21 +4308,30 @@ contains
     character(len=FILE_HLONG) :: fname
     integer                   :: n
 
-    logical :: aggregate
+    logical :: aggregate_
     integer :: cfid
     integer :: error
-    integer :: mpi_comm_
+    integer :: mpi_comm
     !---------------------------------------------------------------------------
 
     !--- check aggregate (parallel I/O on a single shared netCDF file)
-    mpi_comm_ = MPI_COMM_NULL
-    if ( present(mpi_comm) ) mpi_comm_ = mpi_comm
 
-    aggregate = ( mpi_comm_ .ne. MPI_COMM_NULL )
+    ! check to do PnetCDF I/O
+    if ( present(aggregate) ) then
+       aggregate_ = aggregate
+    else
+       aggregate_ = FILE_AGGREGATE
+    end if
+
+    if ( aggregate_ ) then
+       mpi_comm = PRC_LOCAL_COMM_WORLD
+    else
+       mpi_comm = PRC_COMM_NULL
+    end if
 
     if ( present(postfix) ) then
        fname = trim(basename)//trim(postfix)
-    elseif ( aggregate ) then
+    elseif ( aggregate_ ) then
        fname = basename
     elseif ( single ) then
        fname = trim(basename)//'.peall'
@@ -4270,9 +4353,9 @@ contains
        return
     end if
 
-    call file_open_c( cfid,                   & ! (out)
-                      fname, mode, mpi_comm_, & ! (in)
-                      error                   ) ! (out)
+    call file_open_c( cfid,                  & ! (out)
+                      fname, mode, mpi_comm, & ! (in)
+                      error                  ) ! (out)
 
     if ( error /= FILE_SUCCESS_CODE ) then
        write(*,*) 'xxx failed to open file :'//trim(fname)//'.nc'
@@ -4287,7 +4370,7 @@ contains
     fid = FILE_nfiles
     FILE_files(fid)%name      = fname
     FILE_files(fid)%fid       = cfid
-    FILE_files(fid)%aggregate = aggregate
+    FILE_files(fid)%aggregate = aggregate_
 
     existed = .false.
 

@@ -19,7 +19,7 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -104,9 +104,9 @@ contains
   subroutine USER_step
     use scale_process, only: &
        PRC_MPIstop
-    use scale_grid_real, only : &
-       CZ => REAL_CZ, &
-       FZ => REAL_FZ
+    use scale_atmos_grid_cartesC_real, only : &
+       CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_time, only : &
        NOWSEC => TIME_NOWSEC
     use mod_atmos_vars, only: &

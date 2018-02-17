@@ -18,10 +18,10 @@ module mod_realinput
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
-  use scale_ocean_grid_index
-  use scale_land_grid_index
-  use scale_urban_grid_index
+  use scale_atmos_grid_cartesC_index
+  use scale_ocean_grid_cartesC_index
+  use scale_land_grid_cartesC_index
+  use scale_urban_grid_cartesC_index
   use scale_index
   use scale_tracer
 
@@ -30,13 +30,13 @@ module mod_realinput
      PRC_MPIstop
   use scale_comm, only: &
      COMM_bcast
-  use scale_grid_real, only: &
-     LON => REAL_LON, &
-     LAT => REAL_LAT, &
-     CZ  => REAL_CZ,  &
-     FZ  => REAL_FZ
-  use scale_grid_nest, only: &
-     NEST_INTERP_LEVEL
+  use scale_atmos_grid_cartesC_real, only: &
+     LON => ATMOS_GRID_CARTESC_REAL_LON, &
+     LAT => ATMOS_GRID_CARTESC_REAL_LAT, &
+     CZ  => ATMOS_GRID_CARTESC_REAL_CZ,  &
+     FZ  => ATMOS_GRID_CARTESC_REAL_FZ
+  use scale_comm_cartesC_nest, only: &
+     COMM_CARTESC_NEST_INTERP_LEVEL
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -977,8 +977,8 @@ contains
     allocate( DENS_org( dims(1)+2, dims(2), dims(3)     ) )
     allocate( QTRC_org( dims(1)+2, dims(2), dims(3), QA ) )
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Horizontal Interpolation Level: ', NEST_INTERP_LEVEL
-    itp_nh = NEST_INTERP_LEVEL
+    if( IO_L ) write(IO_FID_LOG,*) '*** Horizontal Interpolation Level: ', COMM_CARTESC_NEST_INTERP_LEVEL
+    itp_nh = COMM_CARTESC_NEST_INTERP_LEVEL
     itp_nv = 2
 
     allocate( igrd (          IA,JA,itp_nh) )
@@ -1061,8 +1061,8 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_gridtrans, only: &
-       GTRANS_ROTC
+    use scale_atmos_grid_cartesC_metric, only: &
+       ROTC => ATMOS_GRID_CARTESC_METRIC_ROTC
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_diagnose_number_concentration, &
        QLS,  &
@@ -1307,8 +1307,8 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          u_on_map =  U(k,i,j) * GTRANS_ROTC(i,j,1) + V(k,i,j) * GTRANS_ROTC(i,j,2)
-          v_on_map = -U(k,i,j) * GTRANS_ROTC(i,j,2) + V(k,i,j) * GTRANS_ROTC(i,j,1)
+          u_on_map =  U(k,i,j) * ROTC(i,j,1) + V(k,i,j) * ROTC(i,j,2)
+          v_on_map = -U(k,i,j) * ROTC(i,j,2) + V(k,i,j) * ROTC(i,j,1)
 
           U(k,i,j) = u_on_map
           V(k,i,j) = v_on_map
@@ -1969,8 +1969,8 @@ contains
     use scale_interp, only: &
          INTRP_factor2d, &
          INTRP_interp2d
-    use scale_land_grid, only: &
-         LCZ  => GRID_LCZ
+    use scale_land_grid_cartesC, only: &
+         LCZ => LAND_GRID_CARTESC_CZ
     use scale_atmos_thermodyn, only: &
          THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_atmos_hydrometeor, only: &

@@ -558,9 +558,9 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        CONST_D2R
-    use scale_grid_real, only: &
-       REAL_BASEPOINT_LON, &
-       REAL_BASEPOINT_LAT
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_BASEPOINT_LON, &
+       ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT
     implicit none
 
     integer, intent(in) :: iyear ! year at setup
@@ -587,8 +587,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SOLARINS] / Categ[ATMOS SHARE] / Origin[SCALElib]'
 
-    ATMOS_SOLARINS_lon     = REAL_BASEPOINT_LON
-    ATMOS_SOLARINS_lat     = REAL_BASEPOINT_LAT
+    ATMOS_SOLARINS_lon     = ATMOS_GRID_CARTESC_REAL_BASEPOINT_LON
+    ATMOS_SOLARINS_lat     = ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT
     ATMOS_SOLARINS_date(:) = -1
 
     !--- read namelist
@@ -937,7 +937,7 @@ contains
        real_lat,   &
        now_date,   &
        offset_year )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none

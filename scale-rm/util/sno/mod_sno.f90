@@ -115,12 +115,18 @@ contains
        varname,      &
        debug         )
     use mpi
+    use scale_process, only: &
+       PRC_abort
     use scale_file_h, only: &
        FILE_FREAD
     use scale_file, only: &
        FILE_Open,                &
        FILE_Get_Commoninfo,      &
        FILE_Get_Attribute
+    use scale_file_cartesc, only: &
+       FILE_CARTESC_get_size
+    use scale_atmos_grid_cartesc, only: &
+       ATMOS_GRID_CARTESC_NAME
     use scale_process, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD, &
@@ -151,7 +157,6 @@ contains
     logical,                intent(in)  :: debug
 
     integer                :: procsize(2)                   ! total process size        (x:y)
-    character(len=6)       :: periodic(3)
 
     integer                :: nvars_file                    ! number of variables from input file
     character(len=H_SHORT) :: varname_file(item_limit) = '' ! name   of variables from input file
@@ -192,44 +197,49 @@ contains
                                  hinfo%title,     & ! [OUT]
                                  hinfo%source,    & ! [OUT]
                                  hinfo%institute, & ! [OUT]
-                                 hinfo%grid_name, & ! [OUT]
                                  nvars_file,      & ! [OUT]
                                  varname_file(:)  ) ! [OUT]
+
 
        call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_num_x", procsize(1:1) )
        call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_num_y", procsize(2:2) )
 
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_z",   periodic(1) )
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_x",   periodic(2) )
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_y",   periodic(3) )
-       hinfo%periodic(1) = trim(periodic(1))
-       hinfo%periodic(2) = trim(periodic(2))
-       hinfo%periodic(3) = trim(periodic(3))
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_z",   hinfo%periodic(1) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_x",   hinfo%periodic(2) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_y",   hinfo%periodic(3) )
 
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_kmax",  hinfo%gridsize(1:1) )
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_imaxg", hinfo%gridsize(2:2) )
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_jmaxg", hinfo%gridsize(3:3) )
+       call FILE_Get_Attribute( fid, "global", "grid_name", hinfo%grid_name )
 
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_khalo", hinfo%halosize(1:1) )
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_ihalo", hinfo%halosize(2:2) )
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_grid_index_jhalo", hinfo%halosize(3:3) )
+       select case ( hinfo%grid_name )
+       case ( ATMOS_GRID_CARTESC_NAME )
 
-       call FILE_Get_Attribute( fid, "global", "time_units", hinfo%time_units    )
-       call FILE_Get_Attribute( fid, "global", "time_start", hinfo%time_start(:) )
+          call FILE_CARTESC_get_size( fid, & ! (in)
+                                      hinfo%gridsize(1),                                       & ! (out) KMAX
+                                      hinfo%gridsize(4), hinfo%gridsize(5), hinfo%gridsize(6), & ! (out) OKMAX, LKMAX, UKMAX
+                                      hinfo%gridsize(2), hinfo%gridsize(3),                    & ! (out) IMAXG, JMAXG
+                                      hinfo%halosize(1), hinfo%halosize(2), hinfo%halosize(3)  ) ! (out) KHALO, IHALO, JHALO
 
-       call FILE_Get_Attribute( fid, 'x', 'size_global', hinfo%xatt_size_global(:) )
-       call FILE_Get_Attribute( fid, 'x', 'halo_global', hinfo%xatt_halo_global(:) )
+          call FILE_Get_Attribute( fid, "global", "time_units", hinfo%time_units    )
+          call FILE_Get_Attribute( fid, "global", "time_start", hinfo%time_start(:) )
 
-       call FILE_Get_Attribute( fid, 'y', 'size_global', hinfo%yatt_size_global(:) )
-       call FILE_Get_Attribute( fid, 'y', 'halo_global', hinfo%yatt_halo_global(:) )
+          call FILE_Get_Attribute( fid, 'x', 'size_global', hinfo%xatt_size_global(:) )
+          call FILE_Get_Attribute( fid, 'x', 'halo_global', hinfo%xatt_halo_global(:) )
+
+          call FILE_Get_Attribute( fid, 'y', 'size_global', hinfo%yatt_size_global(:) )
+          call FILE_Get_Attribute( fid, 'y', 'halo_global', hinfo%yatt_halo_global(:) )
+       case default
+          write(*,*) 'xxx currently only ', trim(ATMOS_GRID_CARTESC_NAME), ' is supported as grid_name'
+          call PRC_abort
+       end select
+
     endif
 
     call MPI_BCAST( hinfo%title              , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%source             , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%institute          , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%grid_name          , H_SHORT, MPI_CHARACTER     , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%periodic        (1), 5*3  , MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-    call MPI_BCAST( hinfo%gridsize        (1), 3    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%periodic        (1), 3    , MPI_LOGICAL         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%gridsize        (1), 6    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%halosize        (1), 3    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%time_units         , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%time_start      (1), 1    , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -502,7 +512,7 @@ contains
     if( py == nprocs_y ) ngrids_y = ngrids_y + nhalos_y
 
     ngrids_yh = ngrids_y
-    if ( nhalos_y == 0 .AND. py == 1 .AND. hinfo%periodic(3) == 'false' ) then
+    if ( nhalos_y == 0 .AND. py == 1 .AND. (.not. hinfo%periodic(3)) ) then
        ngrids_yh = ngrids_yh + 1
     endif
 
@@ -511,7 +521,7 @@ contains
     if( px == nprocs_x ) ngrids_x = ngrids_x + nhalos_x
 
     ngrids_xh = ngrids_x
-    if ( nhalos_x == 0 .AND. px == 1 .AND. hinfo%periodic(2) == 'false' ) then
+    if ( nhalos_x == 0 .AND. px == 1 .AND. (.not. hinfo%periodic(2)) ) then
        ngrids_xh = ngrids_xh + 1
     endif
 
@@ -901,12 +911,17 @@ contains
        hinfo,        &
        dinfo,        &
        debug         )
+    use scale_process, only: &
+       PRC_abort
     use scale_file, only: &
        FILE_Set_Attribute,         &
        FILE_Add_AssociatedVariable
     use scale_const, &
        UNDEF => CONST_UNDEF
+    use scale_atmos_grid_cartesc, only: &
+       ATMOS_GRID_CARTESC_NAME
     use scale_file_cartesC, only: &
+       FILE_CARTESC_put_globalAttributes, &
        axisattinfo, &
        mappinginfo
     use mod_sno_h, only: &
@@ -934,26 +949,23 @@ contains
     rankidx(1) = mod(nowrank,nprocs_x_out)
     rankidx(2) =     nowrank/nprocs_x_out
 
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_rank_x", rankidx(1:1) ) ! [IN]
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_rank_y", rankidx(2:2) ) ! [IN]
+    select case ( hinfo%grid_name )
+    case ( ATMOS_GRID_CARTESC_NAME )
 
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_x",  (/nprocs_x_out/) ) ! [IN]
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_y",  (/nprocs_y_out/) ) ! [IN]
+       call FILE_CARTESC_put_globalAttributes( fid,                                                     &
+                                               rankidx(1), rankidx(2),                                  &
+                                               nprocs_x_out, nprocs_y_out,                              &
+                                               hinfo%periodic(2), hinfo%periodic(3),                    &
+                                               hinfo%gridsize(1),                                       &
+                                               hinfo%gridsize(4), hinfo%gridsize(5), hinfo%gridsize(6), &
+                                               hinfo%gridsize(2), hinfo%gridsize(3),                    &
+                                               hinfo%halosize(1), hinfo%halosize(2), hinfo%halosize(3), &
+                                               hinfo%time_start(1), hinfo%time_units                    )
 
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_periodic_z",   hinfo%periodic(1) ) ! [IN]
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_periodic_x",   hinfo%periodic(2) ) ! [IN]
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_periodic_y",   hinfo%periodic(3) ) ! [IN]
-
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_kmax",  hinfo%gridsize(1:1) ) ! [IN]
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_imaxg", hinfo%gridsize(2:2) ) ! [IN]
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_jmaxg", hinfo%gridsize(3:3) ) ! [IN]
-
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_khalo", hinfo%halosize(1:1) ) ! [IN]
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_ihalo", hinfo%halosize(2:2) ) ! [IN]
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_grid_index_jhalo", hinfo%halosize(3:3) ) ! [IN]
-
-    call FILE_Set_Attribute( fid, "global", "time_units", hinfo%time_units    ) ! [IN]
-    call FILE_Set_Attribute( fid, "global", "time_start", hinfo%time_start(:) ) ! [IN]
+    case default
+       write(*,*) 'invalud grid_name: ', trim(hinfo%grid_name)
+       call PRC_abort
+    end select
 
     IMAX = hinfo%gridsize(2) / nprocs_x_out
     JMAX = hinfo%gridsize(3) / nprocs_y_out
@@ -972,7 +984,7 @@ contains
 
     ! for xh
     ainfo(2) = ainfo(1)
-    if ( ainfo(2)%periodic == "false" .AND. ainfo(2)%halo_global(1) == 0 ) then
+    if ( (.not. ainfo(2)%periodic) .AND. ainfo(2)%halo_global(1) == 0 ) then
        ainfo(2)%size_global(1) = ainfo(2)%size_global(1) + 1
        ainfo(2)%halo_global(1) = ainfo(2)%halo_global(1) + 1
        if ( rankidx(1) == 0 ) then
@@ -996,7 +1008,7 @@ contains
 
     ! for yh
     ainfo(4) = ainfo(3)
-    if ( ainfo(4)%periodic == "false" .AND. ainfo(4)%halo_global(1) == 0 ) then
+    if ( (.not. ainfo(4)%periodic) .AND. ainfo(4)%halo_global(1) == 0 ) then
        ainfo(4)%size_global(1) = ainfo(4)%size_global(1) + 1
        ainfo(4)%halo_global(1) = ainfo(4)%halo_global(1) + 1
        if ( rankidx(2) == 0 ) then

@@ -2,7 +2,7 @@ module test_comm
 
   !-----------------------------------------------------------------------------
   use scale_precision
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   !-----------------------------------------------------------------------------
   implicit none

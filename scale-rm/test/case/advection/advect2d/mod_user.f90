@@ -19,19 +19,19 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   use scale_const, only: &
        PI => CONST_PI
-  use scale_grid, only: &
-       CX   => GRID_CX,   &
-       CY   => GRID_CY,   &
-       FX   => GRID_FX,   &
-       FY   => GRID_FY,   &
-       CDX  => GRID_CDX,  &
-       CDY  => GRID_CDY,  &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY
+  use scale_atmos_grid_cartesC, only: &
+       CX   => ATMOS_GRID_CARTESC_CX,   &
+       CY   => ATMOS_GRID_CARTESC_CY,   &
+       FX   => ATMOS_GRID_CARTESC_FX,   &
+       FY   => ATMOS_GRID_CARTESC_FY,   &
+       CDX  => ATMOS_GRID_CARTESC_CDX,  &
+       CDY  => ATMOS_GRID_CARTESC_CDY,  &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY
   use mpi
   use scale_comm, only: &
        COMM_datatype, &
@@ -113,9 +113,9 @@ contains
   subroutine USER_setup
     use scale_process, only: &
        PRC_MPIstop
-    use scale_grid, only: &
-       GRID_FXG, &
-       GRID_FYG
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_FXG, &
+       ATMOS_GRID_CARTESC_FYG
     implicit none
 
     integer :: ierr
@@ -142,8 +142,8 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
-    Lx = GRID_FXG(IAG-IHALO) - GRID_FXG(IHALO)
-    Ly = GRID_FYG(JAG-JHALO) - GRID_FYG(JHALO)
+    Lx = ATMOS_GRID_CARTESC_FXG(IAG-IHALO) - ATMOS_GRID_CARTESC_FXG(IHALO)
+    Ly = ATMOS_GRID_CARTESC_FYG(JAG-JHALO) - ATMOS_GRID_CARTESC_FYG(JHALO)
 
     return
   end subroutine USER_setup
@@ -385,8 +385,8 @@ contains
 !!$
 !!$  subroutine eval_RHS(var, mflx_hi, exactRHS, lblFluxScheme)
 !!$
-!!$    use scale_grid, only : &
-!!$         CDZ => GRID_CDZ
+!!$    use scale_atmos_grid_cartesC, only : &
+!!$         CDZ => ATMOS_GRID_CARTESC_CDZ
 !!$
 !!$    real(RP), intent(in) :: var(KA,IA,JA)
 !!$    real(RP), intent(in) :: mflx_hi(KA,IA,JA,3), exactRHS(KA,IA,JA)

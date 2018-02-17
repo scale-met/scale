@@ -20,7 +20,7 @@ module scale_atmos_dyn_common
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
 
@@ -1376,7 +1376,7 @@ contains
        MOMZ, MOMX, MOMY, &
        GSQRT, J13G, J23G, J33G, MAPF, &
        RCDZ, RCDX, RCDY, RFDZ, FDZ )
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW, &
        I_UYZ, &

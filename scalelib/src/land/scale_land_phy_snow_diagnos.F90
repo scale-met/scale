@@ -14,7 +14,7 @@ module scale_land_phy_snow_diagnos
   !
   use scale_precision
   use scale_stdio
-  use scale_grid_index
+  use scale_land_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -83,33 +83,33 @@ contains
     implicit none
 
     ! arguments
-    real(RP), intent(out) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m/s2]
-    real(RP), intent(out) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m/s2]
-    real(RP), intent(out) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m/s2]
-    real(RP), intent(out) :: U10  (IA,JA) ! velocity u at 10m [m/s]
-    real(RP), intent(out) :: V10  (IA,JA) ! velocity v at 10m [m/s]
-    real(RP), intent(out) :: T2   (IA,JA) ! temperature at 2m [K]
-    real(RP), intent(out) :: Q2   (IA,JA) ! water vapor at 2m [kg/kg]
+    real(RP), intent(out) :: ZMFLX(LIA,LJA) ! z-momentum flux at the surface [kg/m/s2]
+    real(RP), intent(out) :: XMFLX(LIA,LJA) ! x-momentum flux at the surface [kg/m/s2]
+    real(RP), intent(out) :: YMFLX(LIA,LJA) ! y-momentum flux at the surface [kg/m/s2]
+    real(RP), intent(out) :: U10  (LIA,LJA) ! velocity u at 10m [m/s]
+    real(RP), intent(out) :: V10  (LIA,LJA) ! velocity v at 10m [m/s]
+    real(RP), intent(out) :: T2   (LIA,LJA) ! temperature at 2m [K]
+    real(RP), intent(out) :: Q2   (LIA,LJA) ! water vapor at 2m [kg/kg]
 
-    real(RP), intent(in) :: SNOW_frac(IA,JA) ! snow fraction
-    real(RP), intent(in) :: TMPA(IA,JA) ! temperature at the lowest atmospheric layer [K]
-    real(RP), intent(in) :: PRSA(IA,JA) ! pressure at the lowest atmospheric layer [Pa]
-    real(RP), intent(in) :: WA  (IA,JA) ! velocity w at the lowest atmospheric layer [m/s]
-    real(RP), intent(in) :: UA  (IA,JA) ! velocity u at the lowest atmospheric layer [m/s]
-    real(RP), intent(in) :: VA  (IA,JA) ! velocity v at the lowest atmospheric layer [m/s]
-    real(RP), intent(in) :: RHOA(IA,JA) ! density at the lowest atmospheric layer [kg/m3]
-    real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
-    real(RP), intent(in) :: Z1  (IA,JA) ! cell center height at the lowest atmospheric layer [m]
-    real(RP), intent(in) :: PBL (IA,JA) ! the top of atmospheric mixing layer [m]
-    real(RP), intent(in) :: RHOS(IA,JA) ! density  at the surface [kg/m3]
-    real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
+    real(RP), intent(in) :: SNOW_frac(LIA,LJA) ! snow fraction
+    real(RP), intent(in) :: TMPA(LIA,LJA) ! temperature at the lowest atmospheric layer [K]
+    real(RP), intent(in) :: PRSA(LIA,LJA) ! pressure at the lowest atmospheric layer [Pa]
+    real(RP), intent(in) :: WA  (LIA,LJA) ! velocity w at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: UA  (LIA,LJA) ! velocity u at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: VA  (LIA,LJA) ! velocity v at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: RHOA(LIA,LJA) ! density at the lowest atmospheric layer [kg/m3]
+    real(RP), intent(in) :: QVA (LIA,LJA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in) :: Z1  (LIA,LJA) ! cell center height at the lowest atmospheric layer [m]
+    real(RP), intent(in) :: PBL (LIA,LJA) ! the top of atmospheric mixing layer [m]
+    real(RP), intent(in) :: RHOS(LIA,LJA) ! density  at the surface [kg/m3]
+    real(RP), intent(in) :: PRSS(LIA,LJA) ! pressure at the surface [Pa]
 
-    real(RP), intent(in) :: LST1   (IA,JA) ! land surface temperature [K]
-    real(RP), intent(in) :: QVEF  (IA,JA) ! efficiency of evaporation (0-1)
+    real(RP), intent(in) :: LST1   (LIA,LJA) ! land surface temperature [K]
+    real(RP), intent(in) :: QVEF  (LIA,LJA) ! efficiency of evaporation (0-1)
 
-    real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
-    real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
-    real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
+    real(RP), intent(in) :: Z0M   (LIA,LJA) ! roughness length for momemtum [m]
+    real(RP), intent(in) :: Z0H   (LIA,LJA) ! roughness length for heat [m]
+    real(RP), intent(in) :: Z0E   (LIA,LJA) ! roughness length for vapor [m]
 
     ! works
     real(RP) :: Ustar  ! friction velocity [m]
@@ -133,8 +133,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Snow surface step: SNOW DIAGS'
 
     ! calculate surface flux
-    do j = JS, JE
-    do i = IS, IE
+    do j = LJS, LJE
+    do i = LIS, LIE
 
       if( SNOW_frac(i,j) > 0.0_RP ) then
 

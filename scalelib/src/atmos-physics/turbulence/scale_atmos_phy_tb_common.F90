@@ -20,7 +20,7 @@ module scale_atmos_phy_tb_common
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
 
 #ifdef DEBUG
@@ -67,7 +67,7 @@ contains
        S2,                  &
        DENS, MOMZ, MOMX, MOMY, &
        GSQRT, J13G, J23G, J33G, MAPF )
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW, &
        I_UYW, &
@@ -79,16 +79,16 @@ contains
        I_UY,  &
        I_XV,  &
        I_UV
-    use scale_grid, only: &
-       FDZ  => GRID_FDZ,  &
-       FDX  => GRID_FDX,  &
-       FDY  => GRID_FDY,  &
-       RCDZ => GRID_RCDZ, &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
-       RFDZ => GRID_RFDZ, &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY
+    use scale_atmos_grid_cartesC, only: &
+       FDZ  => ATMOS_GRID_CARTESC_FDZ,  &
+       FDX  => ATMOS_GRID_CARTESC_FDX,  &
+       FDY  => ATMOS_GRID_CARTESC_FDY,  &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY
     implicit none
 
     real(RP), intent(out) :: S33_C (KA,IA,JA) ! (cell center)
@@ -1202,18 +1202,18 @@ contains
        implicit, &
        a, b, c, dt, &
        IIS, IIE, JJS, JJE )
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW, &
        I_UYZ, &
        I_XVZ, &
        I_UY,  &
        I_XV
-    use scale_grid, only: &
-       FDZ  => GRID_FDZ,  &
-       RFDZ => GRID_RFDZ, &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY
+    use scale_atmos_grid_cartesC, only: &
+       FDZ  => ATMOS_GRID_CARTESC_FDZ,  &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY
     implicit none
 
     real(RP), intent(inout) :: qflx_phi(KA,IA,JA,3)
@@ -1505,12 +1505,12 @@ contains
        QFLX_MOMZ, &
        GSQRT, J13G, J23G, J33G, MAPF, &
        IIS, IIE, JJS, JJE )
-    use scale_grid, only: &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
-       RFDZ => GRID_RFDZ, &
-       CDZ  => GRID_CDZ
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC, only: &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
+       CDZ  => ATMOS_GRID_CARTESC_CDZ
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW, &
        I_UYW, &
@@ -1599,13 +1599,13 @@ contains
        QFLX_MOMX, &
        GSQRT, J13G, J23G, J33G, MAPF, &
        IIS, IIE, JJS, JJE )
-    use scale_grid, only: &
-       RCDZ => GRID_RCDZ, &
-       RCDY => GRID_RCDY, &
-       RFDZ => GRID_RFDZ, &
-       RFDX => GRID_RFDX, &
-       FDZ  => GRID_FDZ
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC, only: &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       FDZ  => ATMOS_GRID_CARTESC_FDZ
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_UYW, &
        I_UYZ, &
@@ -1692,12 +1692,12 @@ contains
        QFLX_MOMY, &
        GSQRT, J13G, J23G, J33G, MAPF, &
        IIS, IIE, JJS, JJE )
-    use scale_grid, only: &
-       RCDZ => GRID_RCDZ, &
-       RCDX => GRID_RCDX, &
-       RFDY => GRID_RFDY, &
-       FDZ  => GRID_FDZ
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC, only: &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY, &
+       FDZ  => ATMOS_GRID_CARTESC_FDZ
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XVW, &
        I_UVZ, &
@@ -1784,12 +1784,12 @@ contains
        QFLX_phi, &
        GSQRT, J13G, J23G, J33G, MAPF, &
        IIS, IIE, JJS, JJE )
-    use scale_grid, only: &
-       RCDZ => GRID_RCDZ, &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
-       FDZ  => GRID_FDZ
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC, only: &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY, &
+       FDZ  => ATMOS_GRID_CARTESC_FDZ
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW, &
        I_UYZ, &

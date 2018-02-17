@@ -17,8 +17,7 @@ module scale_land_phy_snow_ky90
   use scale_stdio
   !use scale_prof
   !use scale_debug
-  use scale_grid_index
-  !use scale_land_grid_index
+  use scale_land_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -176,41 +175,41 @@ contains
        EPSvap => CONST_EPSvap
     implicit none
     ! prognostic variables
-    real(RP), intent(inout)   :: TSNOW          (IA,JA)   ! snow temperature        [K]
-    real(RP), intent(inout)   :: SWE            (IA,JA)   ! equivalent water        [kg/m2]
-    real(RP), intent(inout)   :: SDepth         (IA,JA)   ! depth of melting point  [m]
-    real(RP), intent(inout)   :: SDzero         (IA,JA)   ! total snow depth        [m]
-    real(RP), intent(inout)   :: nosnowsec      (IA,JA)   ! elapsed time of no snow condition [s]
+    real(RP), intent(inout)   :: TSNOW          (LIA,LJA)   ! snow temperature        [K]
+    real(RP), intent(inout)   :: SWE            (LIA,LJA)   ! equivalent water        [kg/m2]
+    real(RP), intent(inout)   :: SDepth         (LIA,LJA)   ! depth of melting point  [m]
+    real(RP), intent(inout)   :: SDzero         (LIA,LJA)   ! total snow depth        [m]
+    real(RP), intent(inout)   :: nosnowsec      (LIA,LJA)   ! elapsed time of no snow condition [s]
 
     ! updated variables
-    real(RP), intent(out)     :: Salbedo        (IA,JA,2) ! snow albedo             [-]
-    real(RP), intent(out)     :: TSNOW_t        (IA,JA) ! updated tendency of snow temperature [K]
-    real(RP), intent(out)     :: SFLX_SH        (IA,JA) ! sensible heat flux between atmos and snow [W/m2]
-    real(RP), intent(out)     :: SFLX_LH        (IA,JA) ! latente  heat flux between atmos and snow [W/m2]
-    real(RP), intent(out)     :: SFLX_GH        (IA,JA) ! whole snowpack Ground flux   [W/m2]
-    real(RP), intent(out)     :: SFLX_evap      (IA,JA) ! evaporation due to LH        [kg/m2/s]
-    real(RP), intent(out)     :: SNOW_LAND_GH   (IA,JA) ! heat flux from snow to land  [W/m2]
-    real(RP), intent(out)     :: SNOW_LAND_Water(IA,JA) ! water flux from snow to land [W/m2]
-    real(RP), intent(out)     :: SNOW_frac      (IA,JA) ! snow fraction, defined by time direction [-]
+    real(RP), intent(out)     :: Salbedo        (LIA,LJA,2) ! snow albedo             [-]
+    real(RP), intent(out)     :: TSNOW_t        (LIA,LJA) ! updated tendency of snow temperature [K]
+    real(RP), intent(out)     :: SFLX_SH        (LIA,LJA) ! sensible heat flux between atmos and snow [W/m2]
+    real(RP), intent(out)     :: SFLX_LH        (LIA,LJA) ! latente  heat flux between atmos and snow [W/m2]
+    real(RP), intent(out)     :: SFLX_GH        (LIA,LJA) ! whole snowpack Ground flux   [W/m2]
+    real(RP), intent(out)     :: SFLX_evap      (LIA,LJA) ! evaporation due to LH        [kg/m2/s]
+    real(RP), intent(out)     :: SNOW_LAND_GH   (LIA,LJA) ! heat flux from snow to land  [W/m2]
+    real(RP), intent(out)     :: SNOW_LAND_Water(LIA,LJA) ! water flux from snow to land [W/m2]
+    real(RP), intent(out)     :: SNOW_frac      (LIA,LJA) ! snow fraction, defined by time direction [-]
 
     ! input data
-    real(RP), intent(in)      :: SFLX_rain (IA,JA)
-    real(RP), intent(in)      :: SFLX_snow (IA,JA)
-    real(RP), intent(in)      :: PRSA      (IA,JA)
-    real(RP), intent(in)      :: TA        (IA,JA)
-    real(RP), intent(in)      :: WA        (IA,JA)
-    real(RP), intent(in)      :: UA        (IA,JA)
-    real(RP), intent(in)      :: VA        (IA,JA)
-    real(RP), intent(in)      :: QA        (IA,JA)      ! specific humidity [kg/kg]
-    real(RP), intent(in)      :: DENS      (IA,JA)
-    real(RP), intent(in)      :: SFLX_SW_dn(IA,JA)
-    real(RP), intent(in)      :: SFLX_LW_dn(IA,JA)
+    real(RP), intent(in)      :: SFLX_rain (LIA,LJA)
+    real(RP), intent(in)      :: SFLX_snow (LIA,LJA)
+    real(RP), intent(in)      :: PRSA      (LIA,LJA)
+    real(RP), intent(in)      :: TA        (LIA,LJA)
+    real(RP), intent(in)      :: WA        (LIA,LJA)
+    real(RP), intent(in)      :: UA        (LIA,LJA)
+    real(RP), intent(in)      :: VA        (LIA,LJA)
+    real(RP), intent(in)      :: QA        (LIA,LJA)      ! specific humidity [kg/kg]
+    real(RP), intent(in)      :: DENS      (LIA,LJA)
+    real(RP), intent(in)      :: SFLX_SW_dn(LIA,LJA)
+    real(RP), intent(in)      :: SFLX_LW_dn(LIA,LJA)
     real(DP), intent(in)      :: dt                     ! dt of land
 
-    real(RP)                  :: QCC       (IA,JA)
-    real(RP)                  :: QFUSION   (IA,JA)
-    real(RP)                  :: MELT      (IA,JA)
-    real(RP)                  :: SWEMELT   (IA,JA)
+    real(RP)                  :: QCC       (LIA,LJA)
+    real(RP)                  :: QFUSION   (LIA,LJA)
+    real(RP)                  :: MELT      (LIA,LJA)
+    real(RP)                  :: SWEMELT   (LIA,LJA)
 
     ! works
     real(RP)                  :: TSNOW1           ! updated snow surface temperature [K]
@@ -228,8 +227,8 @@ contains
     !---------------------------------------------------------------------------
     if( IO_L ) write(IO_FID_LOG,*) '*** Snow surface physics step: SNOW KY90'
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = LJS, LJE
+    do i = LIS, LIE
 
     if( ( LANDUSE_fact_land(i,j) > 0.0_RP    ) .and.    &
         ( SWE(i,j)>0. .or. SFLX_snow(i,j)>0. ) )then

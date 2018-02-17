@@ -111,6 +111,7 @@ module scale_file_history
 
   interface FILE_HISTORY_Set_Attribute
      module procedure FILE_HISTORY_Set_Attribute_Text
+     module procedure FILE_HISTORY_Set_Attribute_Logical
      module procedure FILE_HISTORY_Set_Attribute_Int
      module procedure FILE_HISTORY_Set_Attribute_Float
      module procedure FILE_HISTORY_Set_Attribute_Double
@@ -227,9 +228,9 @@ module scale_file_history
   integer, parameter :: I_TEXT = 1, I_INT = 2, I_FLOAT = 3, I_DOUBLE = 4
   type attr
      character(len=FILE_HSHORT) :: varname
-     character(len=FILE_HSHORT) :: key
+     character(len=FILE_HMID)   :: key
      integer                    :: type
-     character(len=FILE_HSHORT) :: text
+     character(len=FILE_HLONG)  :: text
      integer,  pointer          :: int(:)
      real(SP), pointer          :: float(:)
      real(DP), pointer          :: double(:)
@@ -247,7 +248,6 @@ module scale_file_history
   character(len=FILE_HMID)   :: FILE_HISTORY_TITLE       !> Header information of the output file: title
   character(len=FILE_HMID)   :: FILE_HISTORY_SOURCE      !> Header information of the output file: model name
   character(len=FILE_HMID)   :: FILE_HISTORY_INSTITUTION !> Header information of the output file: institution
-  character(len=FILE_HSHORT) :: FILE_HISTORY_GRIDNAME    !> Header information of grid name
   character(len=FILE_HSHORT) :: FILE_HISTORY_MAPPINGNAME !> Header information of mapping name
 
   character(len=FILE_HMID) :: FILE_HISTORY_TIME_UNITS             !> Unit for time axis
@@ -289,7 +289,6 @@ module scale_file_history
   real(DP)                   :: FILE_HISTORY_NOWMS              !> milli sec
   integer                    :: FILE_HISTORY_NOWSTEP            !> step at the time
 
-  integer                    :: FILE_HISTORY_MPI_COMM           !> MPI Communication id
   integer                    :: FILE_HISTORY_io_buffer_size = 0 !> internal buffer for PnetCDF
 
   character(len=FILE_HMID)   :: FILE_HISTORY_options = ''       !> option to give file.  'filetype1:key1=val1&filetype2:key2=val2&...'
@@ -308,7 +307,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Setup( &
        title, source, institution, &
-       grid_name, mapping_name,    &
+       mapping_name,               &
        time_start, time_interval,  &
        time_units, time_since,     &
        default_basename,           &
@@ -318,7 +317,7 @@ contains
        default_tunit,              &
        default_taverage,           &
        default_datatype,           &
-       myrank, mpi_comm            )
+       myrank                      )
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8, &
@@ -332,7 +331,6 @@ contains
     character(len=*), intent(in)  :: title
     character(len=*), intent(in)  :: source
     character(len=*), intent(in)  :: institution
-    character(len=*), intent(in)  :: grid_name
     character(len=*), intent(in)  :: mapping_name
     real(DP),         intent(in)  :: time_start
     real(DP),         intent(in)  :: time_interval
@@ -347,7 +345,6 @@ contains
     logical,          intent(in), optional :: default_taverage
     character(len=*), intent(in), optional :: default_datatype
     integer,          intent(in), optional :: myrank
-    integer         , intent(in), optional :: mpi_comm
 
     character(len=FILE_HLONG)  :: FILE_HISTORY_DEFAULT_BASENAME          !> Base name of the file
     logical                    :: FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL !> Add timelabel to the basename?
@@ -453,7 +450,6 @@ contains
     FILE_HISTORY_TITLE       = title
     FILE_HISTORY_SOURCE      = source
     FILE_HISTORY_INSTITUTION = institution
-    FILE_HISTORY_GRIDNAME    = grid_name
     FILE_HISTORY_MAPPINGNAME = mapping_name
     if( present(time_units)                ) FILE_HISTORY_TIME_UNITS                = time_units
     if( present(default_basename)          ) FILE_HISTORY_DEFAULT_BASENAME          = default_basename
@@ -493,8 +489,6 @@ contains
     endif
     FILE_HISTORY_OUTPUT_SWITCH_LASTSTEP = 0
 
-
-    if ( present(mpi_comm) ) FILE_HISTORY_MPI_COMM = mpi_comm
 
     ! count history request
     FILE_HISTORY_nreqs = 0
@@ -1600,8 +1594,6 @@ contains
        timelabel, &
        options,   &
        existed    )
-    use mpi, only: &
-       MPI_COMM_NULL
     use scale_process, only: &
        PRC_LOCAL_COMM_WORLD
     use scale_file_h, only: &
@@ -1636,7 +1628,6 @@ contains
     integer                    :: ndims
     character(len=FILE_HSHORT) :: dims(3)
     real(DP)                   :: dtsec
-    integer                    :: mpi_comm
 
     integer :: ic, ie, is, lo
     integer :: m
@@ -1660,21 +1651,14 @@ contains
           basename_mod = trim(FILE_HISTORY_vars(id)%basename)
        endif
 
-       if ( FILE_HISTORY_AGGREGATE ) then
-          mpi_comm = PRC_LOCAL_COMM_WORLD
-       else
-          mpi_comm = MPI_COMM_NULL
-       end if
-
-       call FILE_Create( basename_mod,                 & ! [IN]
-                         FILE_HISTORY_TITLE,           & ! [IN]
-                         FILE_HISTORY_SOURCE,          & ! [IN]
-                         FILE_HISTORY_INSTITUTION,     & ! [IN]
-                         FILE_HISTORY_GRIDNAME,        & ! [IN]
-                         fid, fileexisted,             & ! [OUT]
-                         rankid = FILE_HISTORY_myrank, & ! [IN]
-                         time_units = tunits,          & ! [IN]
-                         mpi_comm = mpi_comm           ) ! [IN]
+       call FILE_Create( basename_mod,                     & ! [IN]
+                         FILE_HISTORY_TITLE,               & ! [IN]
+                         FILE_HISTORY_SOURCE,              & ! [IN]
+                         FILE_HISTORY_INSTITUTION,         & ! [IN]
+                         fid, fileexisted,                 & ! [OUT]
+                         rankid = FILE_HISTORY_myrank,     & ! [IN]
+                         aggregate=FILE_HISTORY_AGGREGATE, &
+                         time_units = tunits               ) ! [IN]
        FILE_HISTORY_vars(id)%fid = fid
 
        if ( .NOT. fileexisted ) then ! new file
@@ -2132,6 +2116,33 @@ contains
     return
   end subroutine FILE_HISTORY_Set_Attribute_Text
 
+  subroutine FILE_HISTORY_Set_Attribute_Logical( &
+       varname, &
+       key,     &
+       val      )
+    use scale_file, only: &
+       FILE_Set_Attribute
+    implicit none
+
+    character(len=*), intent(in) :: varname
+    character(len=*), intent(in) :: key
+    logical,          intent(in) :: val
+
+    character(len=5) :: buf
+    integer :: id
+    !---------------------------------------------------------------------------
+
+    if ( val ) then
+       buf = "true"
+    else
+       buf = "false"
+    end if
+
+    call FILE_HISTORY_Set_Attribute_Text( varname, key, buf )
+
+    return
+  end subroutine FILE_HISTORY_Set_Attribute_Logical
+
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Set_Attribute_Int( &
        varname, &
@@ -2364,8 +2375,8 @@ contains
        if ( FILE_HISTORY_ERROR_PUTMISS ) then
           write(*,*) 'xxx The time interval of history output ', trim(FILE_HISTORY_vars(id)%name), &
                      ' and the time interval of its related scheme are inconsistent.'
-          write(*,*) 'xxx Please check the namelist PARAM_TIME, PARAM_HISTORY, and HISTORY_ITEM.'
-          write(*,*) 'xxx Please set FILE_HISTORY_ERROR_PUTMISS in the namelist PARAM_HISTORY to .false.', &
+          write(*,*) 'xxx Please check the namelist PARAM_TIME, PARAM_FILE_HISTORY, and HISTORY_ITEM.'
+          write(*,*) 'xxx Please set FILE_HISTORY_ERROR_PUTMISS in the namelist PARAM_FILE_HISTORY to .false.', &
                      ' when you want to disable this check.'
           write(*,*) 'xxx The time interval of history output ', trim(FILE_HISTORY_vars(id)%name), &
                      ' and the time interval of its related scheme are inconsistent.',        &
@@ -2445,7 +2456,7 @@ contains
           if( IO_L ) write(IO_FID_LOG,'(A,A24,A,L1)') '*** NAME : ', FILE_HISTORY_req(id)%name, &
                                                       ', registered? : ', FILE_HISTORY_req(id)%registered
        enddo
-       if( IO_L ) write(IO_FID_LOG,*)  '*** Please set FILE_HISTORY_ERROR_PUTMISS in the namelist PARAM_HISTORY to .false.', &
+       if( IO_L ) write(IO_FID_LOG,*)  '*** Please set FILE_HISTORY_ERROR_PUTMISS in the namelist PARAM_FILE_HISTORY to .false.', &
                                       ' when you want to disable this check.'
 
        if ( FILE_HISTORY_ERROR_PUTMISS ) then

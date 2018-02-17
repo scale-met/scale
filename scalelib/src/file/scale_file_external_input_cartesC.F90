@@ -16,10 +16,10 @@ module scale_file_external_input_cartesC
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
-  use scale_ocean_grid_index
-  use scale_land_grid_index
-  use scale_urban_grid_index
+  use scale_atmos_grid_cartesC_index
+  use scale_ocean_grid_cartesC_index
+  use scale_land_grid_cartesC_index
+  use scale_urban_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private

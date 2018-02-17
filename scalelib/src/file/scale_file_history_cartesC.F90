@@ -16,10 +16,10 @@ module scale_file_history_cartesC
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
-  use scale_ocean_grid_index
-  use scale_land_grid_index
-  use scale_urban_grid_index
+  use scale_atmos_grid_cartesC_index
+  use scale_ocean_grid_cartesC_index
+  use scale_land_grid_cartesC_index
+  use scale_urban_grid_cartesC_index
   use scale_process, only: &
      PRC_abort
   !-----------------------------------------------------------------------------
@@ -95,15 +95,11 @@ contains
        TIME_NOWSTEP,     &
        TIME_DTSEC,       &
        TIME_STARTDAYSEC
-!!$    use scale_grid_cartesC, only: &
-!!$       GRID_CARTESC_NAME
     use scale_interp_vert, only: &
        INTERP_VERT_alloc_pres
-    use scale_mapproj, only: &
-       MPRJ_get_attributes
+    use scale_mapprojection, only: &
+       MAPPROJECTION_get_attributes
     implicit none
-
-    character(len=*), parameter :: GRID_CARTESC_NAME = "cartesC"
 
     integer, parameter :: nlayer_max = 300
     real(RP)           :: FILE_HISTORY_CARTESC_PRES(nlayer_max) !> pressure level to output [hPa]
@@ -220,17 +216,16 @@ contains
     endif
 
     ! get mapping name
-    call MPRJ_get_attributes( mapping_name )
+    call MAPPROJECTION_get_attributes( mapping_name )
 
     call FILE_HISTORY_Setup( &
          FILE_HISTORY_CARTESCORY_H_TITLE,              & ! [IN]
          H_SOURCE, H_INSTITUTE,                        & ! [IN]
-         GRID_CARTESC_NAME, mapping_name,              & ! [IN]
+         mapping_name,                                 & ! [IN]
          start_daysec, TIME_DTSEC,                     & ! [IN]
          time_since = FILE_HISTORY_CARTESCORY_T_SINCE, & ! [IN]
          default_zcoord = 'model',                     & ! [IN]
-         myrank = PRC_myrank,                          & ! [IN]
-         mpi_comm = PRC_LOCAL_COMM_WORLD               ) ! [IN]
+         myrank = PRC_myrank                           ) ! [IN]
 
     call FILE_HISTORY_Set_NowDate( TIME_NOWDATE, TIME_NOWMS, TIME_NOWSTEP )
 
@@ -350,34 +345,34 @@ contains
     dims (2,:) = 'lat'
     count(1,:) = xc
     count(2,:) = yc
-    call FILE_HISTORY_Set_Dim( "XY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "XY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     start(3,:) = 1
     dims (3,:) = (/ "height    ", "z         ", "pressure  " /)
     count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZXY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,:) = (/ "height_xyw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZHXY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZHXY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     dims (3,1) = "oz"
     count(3,1) = OKMAX
-    call FILE_HISTORY_Set_Dim( "OXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "OXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,1) = "ozh"
     count(3,1) = OKMAX + 1
-    call FILE_HISTORY_Set_Dim( "OHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "OHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,1) = "lz"
     count(3,1) = LKMAX
-    call FILE_HISTORY_Set_Dim( "LXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "LXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,1) = "lzh"
     count(3,1) = LKMAX + 1
-    call FILE_HISTORY_Set_Dim( "LHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "LHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,1) = "uz"
     count(3,1) = UKMAX
-    call FILE_HISTORY_Set_Dim( "UXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "UXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,1) = "uzh"
     count(3,1) = UKMAX + 1
-    call FILE_HISTORY_Set_Dim( "UHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "UHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     ! XH, Y
     dims(1,:) = 'lon_uy'
@@ -389,14 +384,14 @@ contains
        start(1,:) = xs
        count(1,:) = xc+1
     endif
-    call FILE_HISTORY_Set_Dim( "XHY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "XHY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     dims (3,:) = (/ "height_uyz", "z         ", "pressure  " /)
     count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXHY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZXHY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,:) = (/ "height_uyw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZHXHY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZHXHY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     ! X, YH
     dims (1,:) = 'lon_xv'
@@ -410,14 +405,14 @@ contains
        start(2,:) = ys
        count(2,:) = yc+1
     endif
-    call FILE_HISTORY_Set_Dim( "XYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "XYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     dims (3,:) = (/ "height_xvz", "z         ", "pressure  " /)
     count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZXYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,:) = (/ "height_xvw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZHXYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZHXYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     ! XH, YH
     dims(1,:) = 'lon_uv'
@@ -429,14 +424,14 @@ contains
        start(1,:) = xs
        count(1,:) = xc+1
     endif
-    call FILE_HISTORY_Set_Dim( "XHYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "XHYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     dims (3,:) = (/ "height_uvz", "z         ", "pressure  " /)
     count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXHYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZXHYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
     dims (3,:) = (/ "height_uvw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZHXHYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZHXHYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
 
     return
   end subroutine FILE_HISTORY_CARTESC_set_dims
@@ -592,12 +587,12 @@ contains
        dst )
     use scale_file_h, only: &
        RMISS => FILE_RMISS
-    use scale_grid, only: &
-       GRID_CZ, &
-       GRID_FZ
-    use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_FZ
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_CZ, &
+       ATMOS_GRID_CARTESC_FZ
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_CZ, &
+       ATMOS_GRID_CARTESC_REAL_FZ
     use scale_interp_vert, only: &
        INTERP_VERT_xi2z,   &
        INTERP_VERT_xi2p,   &
@@ -663,11 +658,9 @@ contains
     if ( ksize == KMAX .and. zcoord == "z" .and. INTERP_available ) then ! z*->z interpolation (full level)
 
        call PROF_rapstart('FILE_O_interp', 2)
-       call INTERP_VERT_xi2z( KA, KS, KE,     & ! [IN]
-                              IA, ISB, IEB,   & ! [IN]
-                              JA, JSB, JEB,   & ! [IN]
-                              GRID_CZ(:),     & ! [IN]
-                              REAL_CZ(:,:,:), & ! [IN]
+       call INTERP_VERT_xi2z( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                              ATMOS_GRID_CARTESC_CZ(:),          & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
                               src    (:,:,:), & ! [IN]
                               src_Z  (:,:,:)  ) ! [OUT]
        call PROF_rapend  ('FILE_O_interp', 2)
@@ -685,11 +678,9 @@ contains
 
 
        call PROF_rapstart('FILE_O_interp', 2)
-       call INTERP_VERT_xih2zh( KA, KS, KE,     & ! [IN]
-                                IA, ISB, IEB,   & ! [IN]
-                                JA, JSB, JEB,   & ! [IN]
-                                GRID_FZ(:),     & ! [IN]
-                                REAL_FZ(:,:,:), & ! [IN]
+       call INTERP_VERT_xih2zh( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                ATMOS_GRID_CARTESC_FZ(:),          & ! [IN]
+                                ATMOS_GRID_CARTESC_REAL_FZ(:,:,:), & ! [IN]
                                 src    (:,:,:), & ! [IN]
                                 src_Z  (:,:,:)  ) ! [OUT]
        call PROF_rapend  ('FILE_O_interp', 2)
@@ -823,60 +814,60 @@ contains
        PRC_PERIODIC_Y, &
        PRC_HAS_W,      &
        PRC_HAS_S
-    use scale_grid, only: &
-       GRID_CZ,    &
-       GRID_CX,    &
-       GRID_CY,    &
-       GRID_FZ,    &
-       GRID_FX,    &
-       GRID_FY,    &
-       GRID_CDZ,   &
-       GRID_CDX,   &
-       GRID_CDY,   &
-       GRID_FDZ,   &
-       GRID_FDX,   &
-       GRID_FDY,   &
-       GRID_CBFZ,  &
-       GRID_CBFX,  &
-       GRID_CBFY,  &
-       GRID_FBFZ,  &
-       GRID_FBFX,  &
-       GRID_FBFY,  &
-       GRID_CXG,   &
-       GRID_CYG,   &
-       GRID_FXG,   &
-       GRID_FYG,   &
-       GRID_CDXG,  &
-       GRID_CDYG,  &
-       GRID_FDXG,  &
-       GRID_FDYG,  &
-       GRID_CBFXG, &
-       GRID_CBFYG, &
-       GRID_FBFXG, &
-       GRID_FBFYG
-    use scale_ocean_grid, only: &
-       GRID_OCZ, &
-       GRID_OFZ, &
-       GRID_OCDZ
-    use scale_land_grid, only: &
-       GRID_LCZ, &
-       GRID_LFZ, &
-       GRID_LCDZ
-    use scale_urban_grid, only: &
-       GRID_UCZ, &
-       GRID_UFZ, &
-       GRID_UCDZ
-    use scale_grid_real, only: &
-       REAL_CZ,   &
-       REAL_FZ,   &
-       REAL_LON,  &
-       REAL_LONX, &
-       REAL_LONY, &
-       REAL_LONXY, &
-       REAL_LAT,  &
-       REAL_LATX, &
-       REAL_LATY, &
-       REAL_LATXY
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_CZ,    &
+       ATMOS_GRID_CARTESC_CX,    &
+       ATMOS_GRID_CARTESC_CY,    &
+       ATMOS_GRID_CARTESC_FZ,    &
+       ATMOS_GRID_CARTESC_FX,    &
+       ATMOS_GRID_CARTESC_FY,    &
+       ATMOS_GRID_CARTESC_CDZ,   &
+       ATMOS_GRID_CARTESC_CDX,   &
+       ATMOS_GRID_CARTESC_CDY,   &
+       ATMOS_GRID_CARTESC_FDZ,   &
+       ATMOS_GRID_CARTESC_FDX,   &
+       ATMOS_GRID_CARTESC_FDY,   &
+       ATMOS_GRID_CARTESC_CBFZ,  &
+       ATMOS_GRID_CARTESC_CBFX,  &
+       ATMOS_GRID_CARTESC_CBFY,  &
+       ATMOS_GRID_CARTESC_FBFZ,  &
+       ATMOS_GRID_CARTESC_FBFX,  &
+       ATMOS_GRID_CARTESC_FBFY,  &
+       ATMOS_GRID_CARTESC_CXG,   &
+       ATMOS_GRID_CARTESC_CYG,   &
+       ATMOS_GRID_CARTESC_FXG,   &
+       ATMOS_GRID_CARTESC_FYG,   &
+       ATMOS_GRID_CARTESC_CDXG,  &
+       ATMOS_GRID_CARTESC_CDYG,  &
+       ATMOS_GRID_CARTESC_FDXG,  &
+       ATMOS_GRID_CARTESC_FDYG,  &
+       ATMOS_GRID_CARTESC_CBFXG, &
+       ATMOS_GRID_CARTESC_CBFYG, &
+       ATMOS_GRID_CARTESC_FBFXG, &
+       ATMOS_GRID_CARTESC_FBFYG
+    use scale_ocean_grid_cartesC, only: &
+       OCEAN_GRID_CARTESC_CZ, &
+       OCEAN_GRID_CARTESC_FZ, &
+       OCEAN_GRID_CARTESC_CDZ
+    use scale_land_grid_cartesC, only: &
+       LAND_GRID_CARTESC_CZ, &
+       LAND_GRID_CARTESC_FZ, &
+       LAND_GRID_CARTESC_CDZ
+    use scale_urban_grid_cartesC, only: &
+       URBAN_GRID_CARTESC_CZ, &
+       URBAN_GRID_CARTESC_FZ, &
+       URBAN_GRID_CARTESC_CDZ
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_CZ,   &
+       ATMOS_GRID_CARTESC_REAL_FZ,   &
+       ATMOS_GRID_CARTESC_REAL_LON,  &
+       ATMOS_GRID_CARTESC_REAL_LONX, &
+       ATMOS_GRID_CARTESC_REAL_LONY, &
+       ATMOS_GRID_CARTESC_REAL_LONXY, &
+       ATMOS_GRID_CARTESC_REAL_LAT,  &
+       ATMOS_GRID_CARTESC_REAL_LATX, &
+       ATMOS_GRID_CARTESC_REAL_LATY, &
+       ATMOS_GRID_CARTESC_REAL_LATXY
     use scale_topography, only: &
        TOPO_Zsfc
     use scale_landuse, only: &
@@ -970,89 +961,89 @@ contains
     ! for the shared-file I/O method, the axes are global (gsize)
     ! for one-file-per-process I/O method, the axes size is equal to the local buffer size
 
-    call FILE_HISTORY_Set_Axis( 'z',   'Z',               'm', 'z',   GRID_CZ (KS  :KE),   gsize=KMAX   , start=startZ )
-    call FILE_HISTORY_Set_Axis( 'zh',  'Z (half level)',  'm', 'zh',  GRID_FZ (KS-1:KE),   gsize=KMAX+1 , start=startZ )
+    call FILE_HISTORY_Set_Axis( 'z',   'Z',               'm', 'z',   ATMOS_GRID_CARTESC_CZ (KS  :KE),   gsize=KMAX   , start=startZ )
+    call FILE_HISTORY_Set_Axis( 'zh',  'Z (half level)',  'm', 'zh',  ATMOS_GRID_CARTESC_FZ (KS-1:KE),   gsize=KMAX+1 , start=startZ )
 
     if ( FILE_HISTORY_CARTESC_PRES_nlayer > 0 ) then
        call FILE_HISTORY_Set_Axis( 'pressure', 'Pressure', 'hPa', 'pressure', FILE_HISTORY_CARTESC_PRES_val(:)/100.0_RP, &
                                     gsize=FILE_HISTORY_CARTESC_PRES_nlayer, start=startZ, down=.true.                    )
     endif
 
-    call FILE_HISTORY_Set_Axis( 'oz',  'OZ',              'm', 'oz',  GRID_OCZ(OKS  :OKE), gsize=OKMAX  , start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'ozh', 'OZ (half level)', 'm', 'ozh', GRID_OFZ(OKS-1:OKE), gsize=OKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'oz',  'OZ',              'm', 'oz',  OCEAN_GRID_CARTESC_CZ(OKS  :OKE), gsize=OKMAX  , start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'ozh', 'OZ (half level)', 'm', 'ozh', OCEAN_GRID_CARTESC_FZ(OKS-1:OKE), gsize=OKMAX+1, start=startZ, down=.true. )
 
-    call FILE_HISTORY_Set_Axis( 'lz',  'LZ',              'm', 'lz',  GRID_LCZ(LKS  :LKE), gsize=LKMAX  , start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'lzh', 'LZ (half level)', 'm', 'lzh', GRID_LFZ(LKS-1:LKE), gsize=LKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'lz',  'LZ',              'm', 'lz',  LAND_GRID_CARTESC_CZ(LKS  :LKE), gsize=LKMAX  , start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'lzh', 'LZ (half level)', 'm', 'lzh', LAND_GRID_CARTESC_FZ(LKS-1:LKE), gsize=LKMAX+1, start=startZ, down=.true. )
 
-    call FILE_HISTORY_Set_Axis( 'uz',  'UZ',              'm', 'uz',  GRID_UCZ(UKS  :UKE), gsize=UKMAX  , start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'uzh', 'UZ (half level)', 'm', 'uzh', GRID_UFZ(UKS-1:UKE), gsize=UKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'uz',  'UZ',              'm', 'uz',  URBAN_GRID_CARTESC_CZ(UKS  :UKE), gsize=UKMAX  , start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'uzh', 'UZ (half level)', 'm', 'uzh', URBAN_GRID_CARTESC_FZ(UKS-1:UKE), gsize=UKMAX+1, start=startZ, down=.true. )
 
-    call FILE_HISTORY_Set_Axis( 'x',   'X',               'm', 'x',   GRID_CX (ims :ime),  gsize=XAG , start=startX  )
-    call FILE_HISTORY_Set_Axis( 'xh',  'X (half level)',  'm', 'xh',  GRID_FX (imsh:ime),  gsize=XAGH, start=startXH )
+    call FILE_HISTORY_Set_Axis( 'x',   'X',               'm', 'x',   ATMOS_GRID_CARTESC_CX (ims :ime),  gsize=XAG , start=startX  )
+    call FILE_HISTORY_Set_Axis( 'xh',  'X (half level)',  'm', 'xh',  ATMOS_GRID_CARTESC_FX (imsh:ime),  gsize=XAGH, start=startXH )
 
-    call FILE_HISTORY_Set_Axis( 'y',   'Y',               'm', 'y',   GRID_CY (jms :jme),  gsize=YAG , start=startY  )
-    call FILE_HISTORY_Set_Axis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY (jmsh:jme),  gsize=YAGH, start=startYH )
+    call FILE_HISTORY_Set_Axis( 'y',   'Y',               'm', 'y',   ATMOS_GRID_CARTESC_CY (jms :jme),  gsize=YAG , start=startY  )
+    call FILE_HISTORY_Set_Axis( 'yh',  'Y (half level)',  'm', 'yh',  ATMOS_GRID_CARTESC_FY (jmsh:jme),  gsize=YAGH, start=startYH )
 
     ! axes below always include halos when written to file regardless of PRC_PERIODIC_X/PRC_PERIODIC_Y
-    call FILE_HISTORY_Set_Axis( 'CZ',   'Atmos Grid Center Position Z', 'm', 'CZ',  GRID_CZ,   gsize=KA,      start=startZ )
-    call FILE_HISTORY_Set_Axis( 'FZ',   'Atmos Grid Face Position Z',   'm', 'FZ',  GRID_FZ,   gsize=KA+1,    start=startZ )
-    call FILE_HISTORY_Set_Axis( 'CDZ',  'Grid Cell length Z',           'm', 'CZ',  GRID_CDZ,  gsize=KA,      start=startZ )
-    call FILE_HISTORY_Set_Axis( 'FDZ',  'Grid distance Z',              'm', 'FDZ', GRID_FDZ,  gsize=KA-1,    start=startZ )
-    call FILE_HISTORY_Set_Axis( 'CBFZ', 'Boundary factor Center Z',     '1', 'CZ',  GRID_CBFZ, gsize=KA,      start=startZ )
-    call FILE_HISTORY_Set_Axis( 'FBFZ', 'Boundary factor Face Z',       '1', 'FZ',  GRID_FBFZ, gsize=KA+1,    start=startZ )
+    call FILE_HISTORY_Set_Axis( 'CZ',   'Atmos Grid Center Position Z', 'm', 'CZ',  ATMOS_GRID_CARTESC_CZ,   gsize=KA,      start=startZ )
+    call FILE_HISTORY_Set_Axis( 'FZ',   'Atmos Grid Face Position Z',   'm', 'FZ',  ATMOS_GRID_CARTESC_FZ,   gsize=KA+1,    start=startZ )
+    call FILE_HISTORY_Set_Axis( 'CDZ',  'Grid Cell length Z',           'm', 'CZ',  ATMOS_GRID_CARTESC_CDZ,  gsize=KA,      start=startZ )
+    call FILE_HISTORY_Set_Axis( 'FDZ',  'Grid distance Z',              'm', 'FDZ', ATMOS_GRID_CARTESC_FDZ,  gsize=KA-1,    start=startZ )
+    call FILE_HISTORY_Set_Axis( 'CBFZ', 'Boundary factor Center Z',     '1', 'CZ',  ATMOS_GRID_CARTESC_CBFZ, gsize=KA,      start=startZ )
+    call FILE_HISTORY_Set_Axis( 'FBFZ', 'Boundary factor Face Z',       '1', 'FZ',  ATMOS_GRID_CARTESC_FBFZ, gsize=KA+1,    start=startZ )
 
-    call FILE_HISTORY_Set_Axis( 'OCZ',  'Ocean Grid Center Position Z', 'm', 'OCZ', GRID_OCZ,  gsize=OKMAX,   start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'OFZ',  'Ocean Grid Face Position Z',   'm', 'OFZ', GRID_OFZ,  gsize=OKMAX+1, start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'OCDZ', 'Ocean Grid Cell length Z',     'm', 'OCZ', GRID_OCDZ, gsize=OKMAX,   start=startZ              )
+    call FILE_HISTORY_Set_Axis( 'OCZ',  'Ocean Grid Center Position Z', 'm', 'OCZ', OCEAN_GRID_CARTESC_CZ,  gsize=OKMAX,   start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'OFZ',  'Ocean Grid Face Position Z',   'm', 'OFZ', OCEAN_GRID_CARTESC_FZ,  gsize=OKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'OCDZ', 'Ocean Grid Cell length Z',     'm', 'OCZ', OCEAN_GRID_CARTESC_CDZ, gsize=OKMAX,   start=startZ              )
 
-    call FILE_HISTORY_Set_Axis( 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', GRID_LCZ,  gsize=LKMAX,   start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', GRID_LFZ,  gsize=LKMAX+1, start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'LCDZ', 'Land Grid Cell length Z',      'm', 'LCZ', GRID_LCDZ, gsize=LKMAX,   start=startZ              )
+    call FILE_HISTORY_Set_Axis( 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', LAND_GRID_CARTESC_CZ,  gsize=LKMAX,   start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', LAND_GRID_CARTESC_FZ,  gsize=LKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'LCDZ', 'Land Grid Cell length Z',      'm', 'LCZ', LAND_GRID_CARTESC_CDZ, gsize=LKMAX,   start=startZ              )
 
-    call FILE_HISTORY_Set_Axis( 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', GRID_UCZ,  gsize=UKMAX,   start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', GRID_UFZ,  gsize=UKMAX+1, start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', GRID_UCDZ, gsize=UKMAX,   start=startZ              )
+    call FILE_HISTORY_Set_Axis( 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', URBAN_GRID_CARTESC_CZ,  gsize=UKMAX,   start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', URBAN_GRID_CARTESC_FZ,  gsize=UKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', URBAN_GRID_CARTESC_CDZ, gsize=UKMAX,   start=startZ              )
 
     if ( FILE_HISTORY_AGGREGATE ) then
-       call FILE_HISTORY_Set_Axis( 'CX',   'Atmos Grid Center Position X', 'm', 'CX',  GRID_CXG,   gsize=IAG,   start=startZ )
-       call FILE_HISTORY_Set_Axis( 'CY',   'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CYG,   gsize=JAG,   start=startZ )
-       call FILE_HISTORY_Set_Axis( 'FX',   'Atmos Grid Face Position X',   'm', 'FX',  GRID_FXG,   gsize=IAG+1, start=startZ )
-       call FILE_HISTORY_Set_Axis( 'FY',   'Atmos Grid Face Position Y',   'm', 'FY',  GRID_FYG,   gsize=JAG+1, start=startZ )
-       call FILE_HISTORY_Set_Axis( 'CDX',  'Grid Cell length X',           'm', 'CX',  GRID_CDXG,  gsize=IAG,   start=startZ )
-       call FILE_HISTORY_Set_Axis( 'CDY',  'Grid Cell length Y',           'm', 'CY',  GRID_CDYG,  gsize=JAG,   start=startZ )
-       call FILE_HISTORY_Set_Axis( 'FDX',  'Grid distance X',              'm', 'FDX', GRID_FDXG,  gsize=IAG-1, start=startZ )
-       call FILE_HISTORY_Set_Axis( 'FDY',  'Grid distance Y',              'm', 'FDY', GRID_FDYG,  gsize=JAG-1, start=startZ )
-       call FILE_HISTORY_Set_Axis( 'CBFX', 'Boundary factor Center X',     '1', 'CX',  GRID_CBFXG, gsize=IAG,   start=startZ )
-       call FILE_HISTORY_Set_Axis( 'CBFY', 'Boundary factor Center Y',     '1', 'CY',  GRID_CBFYG, gsize=JAG,   start=startZ )
-       call FILE_HISTORY_Set_Axis( 'FBFX', 'Boundary factor Face X',       '1', 'FX',  GRID_FBFXG, gsize=IAG+1, start=startZ )
-       call FILE_HISTORY_Set_Axis( 'FBFY', 'Boundary factor Face Y',       '1', 'FY',  GRID_FBFYG, gsize=JAG+1, start=startZ )
+       call FILE_HISTORY_Set_Axis( 'CX',   'Atmos Grid Center Position X', 'm', 'CX',  ATMOS_GRID_CARTESC_CXG,   gsize=IAG,   start=startZ )
+       call FILE_HISTORY_Set_Axis( 'CY',   'Atmos Grid Center Position Y', 'm', 'CY',  ATMOS_GRID_CARTESC_CYG,   gsize=JAG,   start=startZ )
+       call FILE_HISTORY_Set_Axis( 'FX',   'Atmos Grid Face Position X',   'm', 'FX',  ATMOS_GRID_CARTESC_FXG,   gsize=IAG+1, start=startZ )
+       call FILE_HISTORY_Set_Axis( 'FY',   'Atmos Grid Face Position Y',   'm', 'FY',  ATMOS_GRID_CARTESC_FYG,   gsize=JAG+1, start=startZ )
+       call FILE_HISTORY_Set_Axis( 'CDX',  'Grid Cell length X',           'm', 'CX',  ATMOS_GRID_CARTESC_CDXG,  gsize=IAG,   start=startZ )
+       call FILE_HISTORY_Set_Axis( 'CDY',  'Grid Cell length Y',           'm', 'CY',  ATMOS_GRID_CARTESC_CDYG,  gsize=JAG,   start=startZ )
+       call FILE_HISTORY_Set_Axis( 'FDX',  'Grid distance X',              'm', 'FDX', ATMOS_GRID_CARTESC_FDXG,  gsize=IAG-1, start=startZ )
+       call FILE_HISTORY_Set_Axis( 'FDY',  'Grid distance Y',              'm', 'FDY', ATMOS_GRID_CARTESC_FDYG,  gsize=JAG-1, start=startZ )
+       call FILE_HISTORY_Set_Axis( 'CBFX', 'Boundary factor Center X',     '1', 'CX',  ATMOS_GRID_CARTESC_CBFXG, gsize=IAG,   start=startZ )
+       call FILE_HISTORY_Set_Axis( 'CBFY', 'Boundary factor Center Y',     '1', 'CY',  ATMOS_GRID_CARTESC_CBFYG, gsize=JAG,   start=startZ )
+       call FILE_HISTORY_Set_Axis( 'FBFX', 'Boundary factor Face X',       '1', 'FX',  ATMOS_GRID_CARTESC_FBFXG, gsize=IAG+1, start=startZ )
+       call FILE_HISTORY_Set_Axis( 'FBFY', 'Boundary factor Face Y',       '1', 'FY',  ATMOS_GRID_CARTESC_FBFYG, gsize=JAG+1, start=startZ )
     else
-       call FILE_HISTORY_Set_Axis( 'CX',   'Atmos Grid Center Position X', 'm', 'CX',  GRID_CX   )
-       call FILE_HISTORY_Set_Axis( 'CY',   'Atmos Grid Center Position Y', 'm', 'CY',  GRID_CY   )
-       call FILE_HISTORY_Set_Axis( 'FX',   'Atmos Grid Face Position X',   'm', 'FX',  GRID_FX   )
-       call FILE_HISTORY_Set_Axis( 'FY',   'Atmos Grid Face Position Y',   'm', 'FY',  GRID_FY   )
-       call FILE_HISTORY_Set_Axis( 'CDX',  'Grid Cell length X',           'm', 'CX',  GRID_CDX  )
-       call FILE_HISTORY_Set_Axis( 'CDY',  'Grid Cell length Y',           'm', 'CY',  GRID_CDY  )
-       call FILE_HISTORY_Set_Axis( 'FDX',  'Grid distance X',              'm', 'FDX', GRID_FDX  )
-       call FILE_HISTORY_Set_Axis( 'FDY',  'Grid distance Y',              'm', 'FDY', GRID_FDY  )
-       call FILE_HISTORY_Set_Axis( 'CBFX', 'Boundary factor Center X',     '1', 'CX',  GRID_CBFX )
-       call FILE_HISTORY_Set_Axis( 'CBFY', 'Boundary factor Center Y',     '1', 'CY',  GRID_CBFY )
-       call FILE_HISTORY_Set_Axis( 'FBFX', 'Boundary factor Face X',       '1', 'FX',  GRID_FBFX )
-       call FILE_HISTORY_Set_Axis( 'FBFY', 'Boundary factor Face Y',       '1', 'FY',  GRID_FBFY )
+       call FILE_HISTORY_Set_Axis( 'CX',   'Atmos Grid Center Position X', 'm', 'CX',  ATMOS_GRID_CARTESC_CX   )
+       call FILE_HISTORY_Set_Axis( 'CY',   'Atmos Grid Center Position Y', 'm', 'CY',  ATMOS_GRID_CARTESC_CY   )
+       call FILE_HISTORY_Set_Axis( 'FX',   'Atmos Grid Face Position X',   'm', 'FX',  ATMOS_GRID_CARTESC_FX   )
+       call FILE_HISTORY_Set_Axis( 'FY',   'Atmos Grid Face Position Y',   'm', 'FY',  ATMOS_GRID_CARTESC_FY   )
+       call FILE_HISTORY_Set_Axis( 'CDX',  'Grid Cell length X',           'm', 'CX',  ATMOS_GRID_CARTESC_CDX  )
+       call FILE_HISTORY_Set_Axis( 'CDY',  'Grid Cell length Y',           'm', 'CY',  ATMOS_GRID_CARTESC_CDY  )
+       call FILE_HISTORY_Set_Axis( 'FDX',  'Grid distance X',              'm', 'FDX', ATMOS_GRID_CARTESC_FDX  )
+       call FILE_HISTORY_Set_Axis( 'FDY',  'Grid distance Y',              'm', 'FDY', ATMOS_GRID_CARTESC_FDY  )
+       call FILE_HISTORY_Set_Axis( 'CBFX', 'Boundary factor Center X',     '1', 'CX',  ATMOS_GRID_CARTESC_CBFX )
+       call FILE_HISTORY_Set_Axis( 'CBFY', 'Boundary factor Center Y',     '1', 'CY',  ATMOS_GRID_CARTESC_CBFY )
+       call FILE_HISTORY_Set_Axis( 'FBFX', 'Boundary factor Face X',       '1', 'FX',  ATMOS_GRID_CARTESC_FBFX )
+       call FILE_HISTORY_Set_Axis( 'FBFY', 'Boundary factor Face Y',       '1', 'FY',  ATMOS_GRID_CARTESC_FBFY )
     endif
 
-    call FILE_HISTORY_Set_Axis('CXG',   'Grid Center Position X (global)',   'm', 'CXG',  GRID_CXG,   gsize=IAG,   start=startZ )
-    call FILE_HISTORY_Set_Axis('CYG',   'Grid Center Position Y (global)',   'm', 'CYG',  GRID_CYG,   gsize=JAG,   start=startZ )
-    call FILE_HISTORY_Set_Axis('FXG',   'Grid Face Position X (global)',     'm', 'FXG',  GRID_FXG,   gsize=IAG+1, start=startZ )
-    call FILE_HISTORY_Set_Axis('FYG',   'Grid Face Position Y (global)',     'm', 'FYG',  GRID_FYG,   gsize=JAG+1, start=startZ )
-    call FILE_HISTORY_Set_Axis('CDXG',  'Grid Cell length X (global)',       'm', 'CXG',  GRID_CDXG,  gsize=IAG,   start=startZ )
-    call FILE_HISTORY_Set_Axis('CDYG',  'Grid Cell length Y (global)',       'm', 'CYG',  GRID_CDYG,  gsize=JAG,   start=startZ )
-    call FILE_HISTORY_Set_Axis('FDXG',  'Grid distance X (global)',          'm', 'FDXG', GRID_FDXG,  gsize=IAG-1, start=startZ )
-    call FILE_HISTORY_Set_Axis('FDYG',  'Grid distance Y (global)',          'm', 'FDYG', GRID_FDYG,  gsize=JAG-1, start=startZ )
-    call FILE_HISTORY_Set_Axis('CBFXG', 'Boundary factor Center X (global)', '1', 'CXG',  GRID_CBFXG, gsize=IAG,   start=startZ )
-    call FILE_HISTORY_Set_Axis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG',  GRID_CBFYG, gsize=JAG,   start=startZ )
-    call FILE_HISTORY_Set_Axis('FBFXG', 'Boundary factor Face X (global)',   '1', 'FXG',  GRID_FBFXG, gsize=IAG+1, start=startZ )
-    call FILE_HISTORY_Set_Axis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'FYG',  GRID_FBFYG, gsize=JAG+1, start=startZ )
+    call FILE_HISTORY_Set_Axis('CXG',   'Grid Center Position X (global)',   'm', 'CXG',  ATMOS_GRID_CARTESC_CXG,   gsize=IAG,   start=startZ )
+    call FILE_HISTORY_Set_Axis('CYG',   'Grid Center Position Y (global)',   'm', 'CYG',  ATMOS_GRID_CARTESC_CYG,   gsize=JAG,   start=startZ )
+    call FILE_HISTORY_Set_Axis('FXG',   'Grid Face Position X (global)',     'm', 'FXG',  ATMOS_GRID_CARTESC_FXG,   gsize=IAG+1, start=startZ )
+    call FILE_HISTORY_Set_Axis('FYG',   'Grid Face Position Y (global)',     'm', 'FYG',  ATMOS_GRID_CARTESC_FYG,   gsize=JAG+1, start=startZ )
+    call FILE_HISTORY_Set_Axis('CDXG',  'Grid Cell length X (global)',       'm', 'CXG',  ATMOS_GRID_CARTESC_CDXG,  gsize=IAG,   start=startZ )
+    call FILE_HISTORY_Set_Axis('CDYG',  'Grid Cell length Y (global)',       'm', 'CYG',  ATMOS_GRID_CARTESC_CDYG,  gsize=JAG,   start=startZ )
+    call FILE_HISTORY_Set_Axis('FDXG',  'Grid distance X (global)',          'm', 'FDXG', ATMOS_GRID_CARTESC_FDXG,  gsize=IAG-1, start=startZ )
+    call FILE_HISTORY_Set_Axis('FDYG',  'Grid distance Y (global)',          'm', 'FDYG', ATMOS_GRID_CARTESC_FDYG,  gsize=JAG-1, start=startZ )
+    call FILE_HISTORY_Set_Axis('CBFXG', 'Boundary factor Center X (global)', '1', 'CXG',  ATMOS_GRID_CARTESC_CBFXG, gsize=IAG,   start=startZ )
+    call FILE_HISTORY_Set_Axis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG',  ATMOS_GRID_CARTESC_CBFYG, gsize=JAG,   start=startZ )
+    call FILE_HISTORY_Set_Axis('FBFXG', 'Boundary factor Face X (global)',   '1', 'FXG',  ATMOS_GRID_CARTESC_FBFXG, gsize=IAG+1, start=startZ )
+    call FILE_HISTORY_Set_Axis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'FYG',  ATMOS_GRID_CARTESC_FBFYG, gsize=JAG+1, start=startZ )
 
 
 
@@ -1079,14 +1070,14 @@ contains
     endif
 
     do k = 1, KMAX
-       AXIS(1:im,1:jm,k) = REAL_CZ(k+KS-1,ims:ime,jms:jme)
+       AXIS(1:im,1:jm,k) = ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,ims:ime,jms:jme)
     enddo
     AXIS_name(1:3) = (/'x ', 'y ', 'z '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'height', 'height above ground level',                        &
                                                 'm', AXIS_name(1:3), AXIS(1:im,1:jm,1:KMAX), start=start(:,1) )
 
     do k = 0, KMAX
-       AXIS(1:im,1:jm,k) = REAL_FZ(k+KS-1,ims:ime,jms:jme)
+       AXIS(1:im,1:jm,k) = ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,ims:ime,jms:jme)
     enddo
     AXIS_name(1:3) = (/'x ', 'y ', 'zh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xyw', 'height above ground level (half level xyw)',    &
@@ -1095,14 +1086,14 @@ contains
     do k = 1, KMAX
     do j = 1, jm
     do i = 1, min(imh,IA-imsh)
-       AXIS(i,j,k) = ( REAL_CZ(k+KS-1,imsh+i-1,jms+j-1) + REAL_CZ(k+KS-1,imsh+i,jms+j-1) ) * 0.5_RP
+       AXIS(i,j,k) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i-1,jms+j-1) + ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i,jms+j-1) ) * 0.5_RP
     enddo
     enddo
     enddo
     if ( imh == IA-imsh+1 ) then
        do k = 1, KMAX
        do j = 1, jm
-          AXIS(imh,j,k) = REAL_CZ(k+KS-1,imsh+imh-1,jms+j-1)
+          AXIS(imh,j,k) = ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+imh-1,jms+j-1)
        enddo
        enddo
     endif
@@ -1113,14 +1104,14 @@ contains
     do k = 1, KMAX
     do j = 1, min(jmh,JA-jmsh)
     do i = 1, im
-       AXIS(i,j,k) = ( REAL_CZ(k+KS-1,ims+i-1,jmsh+j-1) + REAL_CZ(k+KS-1,ims+i-1,jmsh+j) ) * 0.5_RP
+       AXIS(i,j,k) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,ims+i-1,jmsh+j-1) + ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,ims+i-1,jmsh+j) ) * 0.5_RP
     enddo
     enddo
     enddo
     if ( jmh == JA-jmsh+1 ) then
        do k = 1, KMAX
        do i = 1, im
-          AXIS(i,jmh,k) = REAL_CZ(k+KS-1,ims+i-1,jmsh+jmh-1)
+          AXIS(i,jmh,k) = ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,ims+i-1,jmsh+jmh-1)
        enddo
        enddo
     endif
@@ -1131,28 +1122,28 @@ contains
     do k = 1, KMAX
     do j = 1, min(jmh,JA-jmsh)
     do i = 1, min(imh,IA-imsh)
-       AXIS(i,j,k) = ( REAL_CZ(k+KS-1,imsh+i-1,jmsh+j-1) + REAL_CZ(k+KS-1,imsh+i  ,jmsh+j-1) &
-                     + REAL_CZ(k+KS-1,imsh+i-1,jmsh+j  ) + REAL_CZ(k+KS-1,imsh+i  ,jmsh+j  ) ) * 0.25_RP
+       AXIS(i,j,k) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i-1,jmsh+j-1) + ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i  ,jmsh+j-1) &
+                     + ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i-1,jmsh+j  ) + ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i  ,jmsh+j  ) ) * 0.25_RP
     enddo
     enddo
     enddo
     if ( jmh == JA-jmsh+1 ) then
        do k = 1, KMAX
        do i = 1, min(imh,IA-imsh)
-          AXIS(i,jmh,k) = ( REAL_CZ(k+KS-1,imsh+i-1,jmsh+jmh-1) + REAL_CZ(k+KS-1,imsh+i,jmsh+jmh-1) ) * 0.5_RP
+          AXIS(i,jmh,k) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i-1,jmsh+jmh-1) + ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i,jmsh+jmh-1) ) * 0.5_RP
        enddo
        enddo
     endif
     if ( imh == IA-imsh+1 ) then
        do k = 1, KMAX
        do j = 1, min(jmh,JA-jmsh)
-          AXIS(imh,j,k) = ( REAL_CZ(k+KS-1,imsh+imh-1,jmsh+j-1) + REAL_CZ(k+KS-1,imsh+imh-1,jmsh+j) ) * 0.5_RP
+          AXIS(imh,j,k) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+imh-1,jmsh+j-1) + ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+imh-1,jmsh+j) ) * 0.5_RP
        enddo
        enddo
     endif
     if ( imh == IA-imsh+1 .AND. jmh == JA-jmsh+1 ) then
        do k = 1, KMAX
-          AXIS(imh,jmh,k) = REAL_CZ(k+KS-1,imsh+imh-1,jmsh+jmh-1)
+          AXIS(imh,jmh,k) = ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+imh-1,jmsh+jmh-1)
        enddo
     endif
     AXIS_name(1:3) = (/'xh', 'yh', 'z '/)
@@ -1162,14 +1153,14 @@ contains
     do k = 0, KMAX
     do j = 1, jm
     do i = 1, min(imh,IA-imsh)
-       AXIS(i,j,k) = ( REAL_FZ(k+KS-1,imsh+i-1,jms+j-1) + REAL_FZ(k+KS-1,imsh+i,jms+j-1) ) * 0.5_RP
+       AXIS(i,j,k) = ( ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+i-1,jms+j-1) + ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+i,jms+j-1) ) * 0.5_RP
     enddo
     enddo
     enddo
     if ( imh == IA-imsh+1 ) then
        do k = 0, KMAX
        do j = 1, jm
-          AXIS(imh,j,k) = REAL_FZ(k+KS-1,imsh+imh-1,jms+j-1)
+          AXIS(imh,j,k) = ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+imh-1,jms+j-1)
        enddo
        enddo
     endif
@@ -1180,14 +1171,14 @@ contains
     do k = 0, KMAX
     do j = 1, min(jmh,JA-jmsh)
     do i = 1, im
-       AXIS(i,j,k) = ( REAL_FZ(k+KS-1,ims+i-1,jmsh+j-1) + REAL_FZ(k+KS-1,ims+i-1,jmsh+j) ) * 0.5_RP
+       AXIS(i,j,k) = ( ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,ims+i-1,jmsh+j-1) + ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,ims+i-1,jmsh+j) ) * 0.5_RP
     enddo
     enddo
     enddo
     if ( jmh == JA-jmsh+1 ) then
        do k = 0, KMAX
        do i = 1, im
-          AXIS(i,jmh,k) = REAL_FZ(k+KS-1,ims+i-1,jmsh+jmh-1)
+          AXIS(i,jmh,k) = ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,ims+i-1,jmsh+jmh-1)
        enddo
        enddo
     endif
@@ -1198,70 +1189,70 @@ contains
     do k = 0, KMAX
     do j = 1, min(jmh,JA-jmsh)
     do i = 1, min(imh,IA-imsh)
-       AXIS(i,j,k) = ( REAL_FZ(k+KS-1,imsh+i-1,jmsh+j-1) + REAL_FZ(k+KS-1,imsh+i  ,jmsh+j-1) &
-                     + REAL_FZ(k+KS-1,imsh+i-1,jmsh+j  ) + REAL_FZ(k+KS-1,imsh+i  ,jmsh+j  ) ) * 0.25_RP
+       AXIS(i,j,k) = ( ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+i-1,jmsh+j-1) + ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+i  ,jmsh+j-1) &
+                     + ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+i-1,jmsh+j  ) + ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+i  ,jmsh+j  ) ) * 0.25_RP
     enddo
     enddo
     enddo
     if ( jmh == JA-jmsh+1 ) then
        do k = 0, KMAX
        do i = 1, min(imh,IA-imsh)
-          AXIS(i,jmh,k) = ( REAL_FZ(k+KS-1,imsh+i-1,jmsh+jmh-1) + REAL_FZ(k+KS-1,imsh+i,jmsh+jmh-1) ) * 0.5_RP
+          AXIS(i,jmh,k) = ( ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+i-1,jmsh+jmh-1) + ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+i,jmsh+jmh-1) ) * 0.5_RP
        enddo
        enddo
     endif
     if ( imh == IA-imsh+1 ) then
        do k = 0, KMAX
        do j = 1, min(jmh,JA-jmsh)
-          AXIS(imh,j,k) = ( REAL_FZ(k+KS-1,imsh+imh-1,jmsh+j-1) + REAL_FZ(k+KS-1,imsh+imh-1,jmsh+j) ) * 0.5_RP
+          AXIS(imh,j,k) = ( ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+imh-1,jmsh+j-1) + ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+imh-1,jmsh+j) ) * 0.5_RP
        enddo
        enddo
     endif
     if ( imh == IA-imsh+1 .AND. jm == JA-jmsh+1 ) then
        do k = 0, KMAX
-          AXIS(imh,jmh,k) = REAL_FZ(k+KS-1,imsh+imh-1,jmsh+jmh-1)
+          AXIS(imh,jmh,k) = ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+imh-1,jmsh+jmh-1)
        enddo
     endif
     AXIS_name(1:3) = (/'xh', 'yh', 'zh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uvw', 'height above ground level (half level uvw)',     &
                                                 'm', AXIS_name(1:3), AXIS(1:imh,1:jmh,0:KMAX), start=start(:,4) )
 
-    AXIS(1:im,1:jm,1) = REAL_LON (ims:ime,jms:jme) / D2R
+    AXIS(1:im,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LON (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'y '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lon', 'longitude',                                                 &
                                                 'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
-    AXIS(1:imh,1:jm,1) = REAL_LONX(imsh:ime,jms:jme) / D2R
+    AXIS(1:imh,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LONX(imsh:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'y '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lon_uy', 'longitude (half level uy)',                               &
                                                 'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
 
-    AXIS(1:im,1:jmh,1) = REAL_LONY(ims:ime,jmsh:jme) / D2R
+    AXIS(1:im,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LONY(ims:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'yh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lon_xv', 'longitude (half level xv)',                               &
                                                 'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
 
-    AXIS(1:imh,1:jmh,1) = REAL_LONXY(imsh:ime,jmsh:jme) / D2R
+    AXIS(1:imh,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LONXY(imsh:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'yh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lon_uv', 'longitude (half level uv)',                                &
                                                 'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )
 
-    AXIS(1:im,1:jm,1) = REAL_LAT (ims:ime,jms:jme) / D2R
+    AXIS(1:im,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LAT (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'y '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lat', 'latitude',                                                   &
                                                 'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
-    AXIS(1:imh,1:jm,1) = REAL_LATX(imsh:ime,jms:jme) / D2R
+    AXIS(1:imh,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LATX(imsh:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'y '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lat_uy', 'latitude (half level uy)',                                 &
                                                 'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
 
-    AXIS(1:im,1:jmh,1) = REAL_LATY(ims:ime,jmsh:jme) / D2R
+    AXIS(1:im,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LATY(ims:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'yh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lat_xv', 'latitude (half level xv)',                                 &
                                                 'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
 
-    AXIS(1:imh,1:jmh,1) = REAL_LATXY(imsh:ime,jmsh:jme) / D2R
+    AXIS(1:imh,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LATXY(imsh:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'yh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lat_uv', 'latitude (half level uv)',                                  &
                                                 'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )
@@ -1281,6 +1272,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_CARTESC_set_axes_attributes
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_NAME
     use scale_file_history, only: &
        FILE_HISTORY_AGGREGATE, &
        FILE_HISTORY_Set_Attribute
@@ -1303,30 +1296,25 @@ contains
     use scale_file_cartesC, only: &
        axisattinfo,        &
        mappinginfo
-    use scale_mapproj, only: &
-       MPRJ_get_attributes
+    use scale_mapprojection, only: &
+       MAPPROJECTION_get_attributes
     implicit none
 
-    character(len=5)  :: periodic_z, periodic_x, periodic_y
     character(len=34) :: tunits
 
     type(axisattinfo) :: ainfo(4) ! x, xh, y, yh
     type(mappinginfo) :: minfo
     !---------------------------------------------------------------------------
 
-    periodic_z = "false"
-    if ( PRC_PERIODIC_X ) then
-       periodic_x = "true"
-    else
-       periodic_x = "false"
-    endif
-    if ( PRC_PERIODIC_Y ) then
-       periodic_y = "true"
-    else
-       periodic_y = "false"
-    endif
+    call FILE_HISTORY_Set_Attribute( "global", "grid_name", ATMOS_GRID_CARTESC_NAME ) ! [IN]
 
-    if ( .NOT. FILE_HISTORY_AGGREGATE ) then
+    if ( FILE_HISTORY_AGGREGATE ) then
+       call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_rank_x", (/0/) ) ! [IN]
+       call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_rank_y", (/0/) ) ! [IN]
+
+       call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_num_x", (/1/) ) ! [IN]
+       call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_num_y", (/1/) ) ! [IN]
+    else
        call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_rank_x", (/PRC_2Drank(PRC_myrank,1)/) ) ! [IN]
        call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_rank_y", (/PRC_2Drank(PRC_myrank,2)/) ) ! [IN]
 
@@ -1334,36 +1322,39 @@ contains
        call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_num_y", (/PRC_NUM_Y/) ) ! [IN]
     endif
 
-    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_periodic_z", periodic_z ) ! [IN]
-    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_periodic_x", periodic_x ) ! [IN]
-    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_periodic_y", periodic_y ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_periodic_z", .false.        ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_periodic_x", PRC_PERIODIC_X ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_prc_periodic_y", PRC_PERIODIC_Y ) ! [IN]
 
-    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_kmax",  (/KMAX/)  ) ! [IN]
-    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_imaxg", (/IMAXG/) ) ! [IN]
-    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_jmaxg", (/JMAXG/) ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_imaxg", (/IMAXG/) ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_jmaxg", (/JMAXG/) ) ! [IN]
 
-    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_khalo", (/KHALO/) ) ! [IN]
-    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_ihalo", (/IHALO/) ) ! [IN]
-    call FILE_HISTORY_Set_Attribute( "global", "scale_cartesC_grid_index_jhalo", (/JHALO/) ) ! [IN]
+                     call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_kmax", (/KMAX/)  ) ! [IN]
+    if ( OKMAX > 0 ) call FILE_HISTORY_Set_Attribute( "global", "scale_ocean_grid_cartesC_index_kmax", (/OKMAX/)  ) ! [IN]
+    if ( LKMAX > 0 ) call FILE_HISTORY_Set_Attribute( "global", "scale_land_grid_cartesC_index_kmax",  (/LKMAX/)  ) ! [IN]
+    if ( UKMAX > 0 ) call FILE_HISTORY_Set_Attribute( "global", "scale_urban_grid_cartesC_index_kmax", (/UKMAX/)  ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_khalo", (/KHALO/) ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_ihalo", (/IHALO/) ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_jhalo", (/JHALO/) ) ! [IN]
 
     call FILE_get_CFtunits( FILE_HISTORY_CARTESCORY_STARTDATE(:), tunits )
     call FILE_HISTORY_Set_Attribute( "global", "time_units", tunits )
     call FILE_HISTORY_Set_Attribute( "global", "time_start", (/FILE_HISTORY_CARTESCORY_STARTMS/) )
 
     if ( PRC_PERIODIC_X ) then
-       ainfo(1)%periodic = "true"
-       ainfo(2)%periodic = "true"
+       ainfo(1)%periodic = .true.
+       ainfo(2)%periodic = .true.
     else
-       ainfo(1)%periodic = "false"
-       ainfo(2)%periodic = "false"
+       ainfo(1)%periodic = .false.
+       ainfo(2)%periodic = .false.
     endif
 
     if ( PRC_PERIODIC_Y ) then
-       ainfo(3)%periodic = "true"
-       ainfo(4)%periodic = "true"
+       ainfo(3)%periodic = .true.
+       ainfo(4)%periodic = .true.
     else
-       ainfo(3)%periodic = "false"
-       ainfo(4)%periodic = "false"
+       ainfo(3)%periodic = .false.
+       ainfo(4)%periodic = .false.
     endif
 
     ! for x
@@ -1464,7 +1455,7 @@ contains
     call FILE_HISTORY_Set_Attribute( "yh", "periodic"    , ainfo(4)%periodic        )
 
     ! map projection info
-    call MPRJ_get_attributes( minfo%mapping_name,                             & ! [OUT]
+    call MAPPROJECTION_get_attributes( minfo%mapping_name,                             & ! [OUT]
                               minfo%false_easting                        (1), & ! [OUT]
                               minfo%false_northing                       (1), & ! [OUT]
                               minfo%longitude_of_central_meridian        (1), & ! [OUT]

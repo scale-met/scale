@@ -20,7 +20,7 @@ module mod_user
   use scale_stdio
   use scale_prof
   use scale_grid
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
 
@@ -212,10 +212,10 @@ contains
     front_posi = front_posi + UEND * TIME_DTSEC
     if( IO_L ) write(IO_FID_LOG,*) '*** front position', front_posi
 
-    if ( front_posi > 0.0_RP .and. front_posi < GRID_FX(IA) ) then
+    if ( front_posi > 0.0_RP .and. front_posi < ATMOS_GRID_CARTESC_FX(IA) ) then
        mini = 9.999D10
        do i = 1, IA
-          diff = GRID_FX(i) - front_posi
+          diff = ATMOS_GRID_CARTESC_FX(i) - front_posi
           if ( diff > 0.0_RP .and. diff < mini ) then
              mini = diff
              front_grid = i
@@ -223,9 +223,9 @@ contains
        enddo
 
        dist1 = mini
-       dist2 = GRID_FDX(front_grid) - dist1
-       fact_A = dist1 / GRID_FDX(front_grid)
-       fact_B = dist2 / GRID_FDX(front_grid)
+       dist2 = ATMOS_GRID_CARTESC_FDX(front_grid) - dist1
+       fact_A = dist1 / ATMOS_GRID_CARTESC_FDX(front_grid)
+       fact_B = dist2 / ATMOS_GRID_CARTESC_FDX(front_grid)
        if( IO_L ) write(IO_FID_LOG,*) '*** front grid', front_grid
 
        ii = front_grid
@@ -253,7 +253,7 @@ contains
           enddo
        endif
 
-    elseif ( front_posi > GRID_FX(IE) ) then
+    elseif ( front_posi > ATMOS_GRID_CARTESC_FX(IE) ) then
           do j = 1, JA
           do i = 1, IA
           do k = 1, KA

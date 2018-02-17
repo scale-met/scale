@@ -16,8 +16,7 @@ module mod_urban_driver
   use scale_stdio
   use scale_prof
   use scale_debug
-  use scale_grid_index
-  use scale_urban_grid_index
+  use scale_urban_grid_cartesC_index
 
   use scale_const, only: &
      I_SW  => CONST_I_SW, &
@@ -154,8 +153,8 @@ contains
     endif
 
     !########## Update ##########
-    do j = JS, JE
-    do i = IS, IE
+    do j = UJS, UJE
+    do i = UIS, UIE
     do k = UKS, UKE
        URBAN_TRL(k,i,j) = URBAN_TRL(k,i,j) + URBAN_TRL_t(k,i,j) * dt
        URBAN_TBL(k,i,j) = URBAN_TBL(k,i,j) + URBAN_TBL_t(k,i,j) * dt
@@ -163,8 +162,8 @@ contains
     end do
     end do
     end do
-    do j = JS, JE
-    do i = IS, IE
+    do j = UJS, UJE
+    do i = UIS, UIE
        URBAN_TR(i,j) = URBAN_TR(i,j) + URBAN_TR_t(i,j) * dt
        URBAN_TB(i,j) = URBAN_TB(i,j) + URBAN_TB_t(i,j) * dt
        URBAN_TG(i,j) = URBAN_TG(i,j) + URBAN_TG_t(i,j) * dt
@@ -188,8 +187,8 @@ contains
 
     !########## reset tendencies ##########
 !OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
+    do j = UJS, UJE
+    do i = UIS, UIE
     do k = UKS, UKE
        URBAN_TRL_t(k,i,j) = 0.0_RP
        URBAN_TBL_t(k,i,j) = 0.0_RP
@@ -199,8 +198,8 @@ contains
     end do
 
 !OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
+    do j = UJS, UJE
+    do i = UIS, UIE
        URBAN_TR_t(i,j) = 0.0_RP
        URBAN_TB_t(i,j) = 0.0_RP
        URBAN_TG_t(i,j) = 0.0_RP
@@ -247,9 +246,9 @@ contains
        CPL_getATM_URB
     implicit none
 
-    real(RP) :: ATMOS_SFLX_rad_dn(IA,JA,2,2)
-    real(RP) :: ATMOS_SFLX_rain  (IA,JA)
-    real(RP) :: ATMOS_SFLX_snow  (IA,JA)
+    real(RP) :: ATMOS_SFLX_rad_dn(UIA,UJA,2,2)
+    real(RP) :: ATMOS_SFLX_rain  (UIA,UJA)
+    real(RP) :: ATMOS_SFLX_snow  (UIA,UJA)
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -272,8 +271,8 @@ contains
     endif
 
 !OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
+    do j = UJS, UJE
+    do i = UIS, UIE
        ATMOS_SFLX_SW  (i,j,1) = ATMOS_SFLX_rad_dn(i,j,I_SW,1) ! direct
        ATMOS_SFLX_LW  (i,j,1) = ATMOS_SFLX_rad_dn(i,j,I_LW,1) ! direct
        ATMOS_SFLX_SW  (i,j,2) = ATMOS_SFLX_rad_dn(i,j,I_SW,2) ! diffuse

@@ -67,6 +67,7 @@ module scale_process
   !-----------------------------------------------------------------------------
   integer, public, parameter :: PRC_masterrank      = 0    !< master process in each communicator
   integer, public, parameter :: PRC_DOMAIN_nlim = 10000    !< max depth of domains
+  integer, public, parameter :: PRC_COMM_NULL = MPI_COMM_NULL
 
   ! universal world
   integer, public :: PRC_UNIVERSAL_COMM_WORLD = -1      !< original communicator

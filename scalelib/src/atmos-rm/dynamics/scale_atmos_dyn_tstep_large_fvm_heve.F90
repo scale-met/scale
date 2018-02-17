@@ -20,7 +20,7 @@ module scale_atmos_dyn_tstep_large_fvm_heve
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
 
@@ -207,7 +207,7 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW, &
        I_UYZ, &
@@ -1094,14 +1094,14 @@ contains
        BND_W, BND_E, BND_S, BND_N &
        )
     use mpi
-    use scale_grid_real, only: &
-       vol => REAL_VOL
+    use scale_atmos_grid_cartesC_real, only: &
+       vol => ATMOS_GRID_CARTESC_REAL_VOL
     use scale_comm, only: &
        COMM_datatype, &
        COMM_world
     use scale_file_history, only: &
        FILE_HISTORY_in
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XY
     implicit none

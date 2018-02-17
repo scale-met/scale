@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-cd ../scalelib/src
+cd ../../scalelib/src
 
 echo
 echo "Update .erb -> .F90 (scalelib)"
@@ -33,7 +33,7 @@ echo "Update dependency (scalelib)"
 
 cd -
 
-cd ../scale-rm/src
+cd ../../scale-rm/src
 
 echo
 echo "Update dependency (scale-rm)"
@@ -41,7 +41,7 @@ echo "Update dependency (scale-rm)"
 
 cd -
 
-cd ../scale-gm/src
+cd ../../scale-gm/src
 
 echo
 echo "Update dependency (scale-gm)"

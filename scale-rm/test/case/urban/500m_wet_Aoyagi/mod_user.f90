@@ -16,7 +16,7 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -139,8 +139,8 @@ contains
        PRE00 => CONST_PRE00, &
        Rdry  => CONST_Rdry,  &    ! specific gas constant (dry air)
        CPdry => CONST_CPdry       ! specific heat (dry air,constant pressure) [J/kg/K]
-    use scale_grid_real, only: &
-       REAL_lon
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_lon
     use scale_time, only:   &
        NOWSEC => TIME_NOWSEC,      & !< subday part  of current time [sec]
        dt_URB => TIME_DTSEC_URBAN    !< time interval of urban step  [sec]
@@ -331,7 +331,7 @@ contains
        do j = 1, JA
        do i = 1, IA
 
-          LON = REAL_lon(i,j) / D2R
+          LON = ATMOS_GRID_CARTESC_REAL_lon(i,j) / D2R
 
           tloc = mod(int(NOWSEC/3600.0_RP)+int(LON/15.0_RP),24)
 

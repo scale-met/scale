@@ -17,8 +17,7 @@ module mod_land_vars
   use scale_stdio
   use scale_prof
   use scale_debug
-  use scale_grid_index
-  use scale_land_grid_index
+  use scale_land_grid_cartesC_index
 
   use scale_const, only: &
      I_SW  => CONST_I_SW, &
@@ -245,44 +244,44 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[LAND] / Origin[SCALE-RM]'
 
-    allocate( LAND_TEMP      (LKMAX,IA,JA) )
-    allocate( LAND_WATER     (LKMAX,IA,JA) )
-    allocate( LAND_SFC_TEMP  (IA,JA)       )
-    allocate( LAND_SFC_albedo(IA,JA,2)     )
-    allocate( LAND_type_albedo(IA,JA,2)     )
+    allocate( LAND_TEMP       (LKMAX,LIA,LJA) )
+    allocate( LAND_WATER      (LKMAX,LIA,LJA) )
+    allocate( LAND_SFC_TEMP   (LIA,LJA)       )
+    allocate( LAND_SFC_albedo (LIA,LJA,2)     )
+    allocate( LAND_type_albedo(LIA,LJA,2)     )
     LAND_TEMP      (:,:,:) = UNDEF
     LAND_WATER     (:,:,:) = UNDEF
     LAND_SFC_TEMP  (:,:)   = UNDEF
     LAND_SFC_albedo(:,:,:) = UNDEF
     LAND_type_albedo(:,:,:) = UNDEF
 
-    allocate( SNOW_SFC_TEMP  (IA,JA)       )
-    allocate( SNOW_SWE       (IA,JA)       )
-    allocate( SNOW_Depth     (IA,JA)       )
-    allocate( SNOW_Dzero     (IA,JA)       )
-    allocate( SNOW_nosnowsec (IA,JA)       )
+    allocate( SNOW_SFC_TEMP  (LIA,LJA)       )
+    allocate( SNOW_SWE       (LIA,LJA)       )
+    allocate( SNOW_Depth     (LIA,LJA)       )
+    allocate( SNOW_Dzero     (LIA,LJA)       )
+    allocate( SNOW_nosnowsec (LIA,LJA)       )
     SNOW_SFC_TEMP  (:,:)   = UNDEF
     SNOW_SWE       (:,:)   = UNDEF
     SNOW_Depth     (:,:)   = UNDEF
     SNOW_Dzero     (:,:)   = UNDEF
     SNOW_nosnowsec (:,:)   = UNDEF
 
-    allocate( LAND_TEMP_t      (LKMAX,IA,JA) )
-    allocate( LAND_WATER_t     (LKMAX,IA,JA) )
-    allocate( LAND_SFC_TEMP_t  (IA,JA)       )
-    allocate( LAND_SFC_albedo_t(IA,JA,2)     )
+    allocate( LAND_TEMP_t      (LKMAX,LIA,LJA) )
+    allocate( LAND_WATER_t     (LKMAX,LIA,LJA) )
+    allocate( LAND_SFC_TEMP_t  (LIA,LJA)       )
+    allocate( LAND_SFC_albedo_t(LIA,LJA,2)     )
     LAND_TEMP_t      (:,:,:) = UNDEF
     LAND_WATER_t     (:,:,:) = UNDEF
     LAND_SFC_TEMP_t  (:,:)   = UNDEF
     LAND_SFC_albedo_t(:,:,:) = UNDEF
 
-    allocate( LAND_SFLX_MW  (IA,JA) )
-    allocate( LAND_SFLX_MU  (IA,JA) )
-    allocate( LAND_SFLX_MV  (IA,JA) )
-    allocate( LAND_SFLX_SH  (IA,JA) )
-    allocate( LAND_SFLX_LH  (IA,JA) )
-    allocate( LAND_SFLX_GH  (IA,JA) )
-    allocate( LAND_SFLX_evap(IA,JA) )
+    allocate( LAND_SFLX_MW  (LIA,LJA) )
+    allocate( LAND_SFLX_MU  (LIA,LJA) )
+    allocate( LAND_SFLX_MV  (LIA,LJA) )
+    allocate( LAND_SFLX_SH  (LIA,LJA) )
+    allocate( LAND_SFLX_LH  (LIA,LJA) )
+    allocate( LAND_SFLX_GH  (LIA,LJA) )
+    allocate( LAND_SFLX_evap(LIA,LJA) )
     LAND_SFLX_MW  (:,:) = UNDEF
     LAND_SFLX_MU  (:,:) = UNDEF
     LAND_SFLX_MV  (:,:) = UNDEF
@@ -291,31 +290,31 @@ contains
     LAND_SFLX_GH  (:,:) = UNDEF
     LAND_SFLX_evap(:,:) = UNDEF
 
-    allocate( LAND_U10(IA,JA) )
-    allocate( LAND_V10(IA,JA) )
-    allocate( LAND_T2 (IA,JA) )
-    allocate( LAND_Q2 (IA,JA) )
+    allocate( LAND_U10(LIA,LJA) )
+    allocate( LAND_V10(LIA,LJA) )
+    allocate( LAND_T2 (LIA,LJA) )
+    allocate( LAND_Q2 (LIA,LJA) )
     LAND_U10(:,:) = UNDEF
     LAND_V10(:,:) = UNDEF
     LAND_T2 (:,:) = UNDEF
     LAND_Q2 (:,:) = UNDEF
 
-    allocate( ATMOS_TEMP     (IA,JA) )
-    allocate( ATMOS_PRES     (IA,JA) )
-    allocate( ATMOS_W        (IA,JA) )
-    allocate( ATMOS_U        (IA,JA) )
-    allocate( ATMOS_V        (IA,JA) )
-    allocate( ATMOS_DENS     (IA,JA) )
-    allocate( ATMOS_QV       (IA,JA) )
-    allocate( ATMOS_PBL      (IA,JA) )
-    allocate( ATMOS_SFC_DENS (IA,JA) )
-    allocate( ATMOS_SFC_PRES (IA,JA) )
-    allocate( ATMOS_SFLX_LW  (IA,JA) )
-    allocate( ATMOS_SFLX_SW  (IA,JA) )
-    allocate( ATMOS_cosSZA   (IA,JA) )
-    allocate( ATMOS_SFLX_prec(IA,JA) )
-    allocate( ATMOS_SFLX_rain(IA,JA) )
-    allocate( ATMOS_SFLX_snow(IA,JA) )
+    allocate( ATMOS_TEMP     (LIA,LJA) )
+    allocate( ATMOS_PRES     (LIA,LJA) )
+    allocate( ATMOS_W        (LIA,LJA) )
+    allocate( ATMOS_U        (LIA,LJA) )
+    allocate( ATMOS_V        (LIA,LJA) )
+    allocate( ATMOS_DENS     (LIA,LJA) )
+    allocate( ATMOS_QV       (LIA,LJA) )
+    allocate( ATMOS_PBL      (LIA,LJA) )
+    allocate( ATMOS_SFC_DENS (LIA,LJA) )
+    allocate( ATMOS_SFC_PRES (LIA,LJA) )
+    allocate( ATMOS_SFLX_LW  (LIA,LJA) )
+    allocate( ATMOS_SFLX_SW  (LIA,LJA) )
+    allocate( ATMOS_cosSZA   (LIA,LJA) )
+    allocate( ATMOS_SFLX_prec(LIA,LJA) )
+    allocate( ATMOS_SFLX_rain(LIA,LJA) )
+    allocate( ATMOS_SFLX_snow(LIA,LJA) )
     ATMOS_TEMP     (:,:) = UNDEF
     ATMOS_PRES     (:,:) = UNDEF
     ATMOS_W        (:,:) = UNDEF
@@ -338,7 +337,7 @@ contains
                  + 1     &
                  + 2
 
-    allocate( work_comm(IA,JA,LAND_QA_comm) )
+    allocate( work_comm(LIA,LJA,LAND_QA_comm) )
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -384,12 +383,12 @@ contains
     call LAND_param_read
 
     ! Apply land property to 2D map
-    allocate( LAND_PROPERTY(IA,JA,LAND_PROPERTY_nmax) )
+    allocate( LAND_PROPERTY(LIA,LJA,LAND_PROPERTY_nmax) )
 
     ! tentative, mosaic is off
     do p = 1, LAND_PROPERTY_nmax
-    do j = JS, JE
-    do i = IS, IE
+    do j = LJS, LJE
+    do i = LIS, LIE
        LAND_PROPERTY(i,j,p) = LAND_PROPERTY_table( LANDUSE_index_PFT(i,j,1), p )
     enddo
     enddo
@@ -524,20 +523,20 @@ contains
        FILE_HISTORY_in
     implicit none
 
-    real(RP) :: LAND_WATERDS(LKMAX,IA,JA)
+    real(RP) :: LAND_WATERDS(LKMAX,LIA,LJA)
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( LAND_VARS_CHECKRANGE ) then
-       call VALCHECK( LAND_TEMP      (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),       &
+       call VALCHECK( LAND_TEMP      (:,LIS:LIE,LJS:LJE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),       &
                      __FILE__, __LINE__ )
-       call VALCHECK( LAND_WATER     (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_WATER),      &
+       call VALCHECK( LAND_WATER     (:,LIS:LIE,LJS:LJE),    0.0_RP, 1000.0_RP, VAR_NAME(I_WATER),      &
                      __FILE__, __LINE__ )
-       call VALCHECK( LAND_SFC_TEMP  (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),   &
+       call VALCHECK( LAND_SFC_TEMP  (LIS:LIE,LJS:LJE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),   &
                      __FILE__, __LINE__ )
-       call VALCHECK( LAND_SFC_albedo(IS:IE,JS:JE,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALB_LW),     &
+       call VALCHECK( LAND_SFC_albedo(LIS:LIE,LJS:LJE,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALB_LW),     &
                      __FILE__, __LINE__ )
-       call VALCHECK( LAND_SFC_albedo(IS:IE,JS:JE,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALB_SW),     &
+       call VALCHECK( LAND_SFC_albedo(LIS:LIE,LJS:LJE,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALB_SW),     &
                      __FILE__, __LINE__ )
 
        !call VALCHECK( SNOW_SFC_TEMP (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, 'SNOW_SFC_TEMP',        &
@@ -552,8 +551,8 @@ contains
 
     call FILE_HISTORY_in( LAND_TEMP (:,:,:), VAR_NAME(I_TEMP),  VAR_DESC(I_TEMP),  VAR_UNIT(I_TEMP),  dim_type='LXY' )
     call FILE_HISTORY_in( LAND_WATER(:,:,:), VAR_NAME(I_WATER), VAR_DESC(I_WATER), VAR_UNIT(I_WATER), dim_type='LXY' )
-    do j = JS, JE
-    do i = IS, IE
+    do j = LJS, LJE
+    do i = LIS, LIE
     do k = 1, LKMAX
        LAND_WATERDS(k,i,j) = LAND_WATER(k,i,j) / LAND_PROPERTY(i,j,I_WaterLimit)
     end do
@@ -632,8 +631,8 @@ contains
 
     real(RP), intent(in) :: LAND_TEMP_in (:,:,:)
     real(RP), intent(in) :: LAND_WATER_in(:,:,:)
-    real(RP), intent(in) :: LAND_SFC_TEMP_in  (IA,JA)
-    real(RP), intent(in) :: LAND_SFC_albedo_in(IA,JA,2)
+    real(RP), intent(in) :: LAND_SFC_TEMP_in  (LIA,LJA)
+    real(RP), intent(in) :: LAND_SFC_albedo_in(LIA,LJA,2)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -807,10 +806,10 @@ contains
   function convert_WS2VWC( WS, critical ) result( VWC )
     implicit none
 
-    real(RP), intent(in) :: WS(IA,JA) ! water saturation [fraction]
+    real(RP), intent(in) :: WS(LIA,LJA) ! water saturation [fraction]
     logical,  intent(in) :: critical  ! is I_WaterCritical used?
 
-    real(RP) :: VWC(IA,JA) ! volumetric water content [m3/m3]
+    real(RP) :: VWC(LIA,LJA) ! volumetric water content [m3/m3]
 
     ! work
     integer :: i, j, num
@@ -822,8 +821,8 @@ contains
       num = I_WaterLimit
     end if
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = LJS, LJE
+    do i = LIS, LIE
       VWC(i,j) = max( min( WS(i,j)*LAND_PROPERTY(i,j,num), LAND_PROPERTY(i,j,num) ), 0.0_RP )
     end do
     end do

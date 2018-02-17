@@ -318,7 +318,7 @@ contains
         clev = "ave"
      end select
 
-     select case ( MPRJ_type )
+     select case ( MAPPROJECTION_type )
      case ("LC")
         cmproj = "lccr"
         DX=cx(2)-cx(1)
@@ -345,7 +345,7 @@ contains
      write( FID_CTLM, '(a)') "OPTIONS BIG_ENDIAN"
      write( FID_CTLM, '(a,1x,ES15.7)') "UNDEF", -9.9999001E+30
      write( FID_CTLM, '(a,1x,2i5,1x,a,1x,f9.5,1x,f10.5,1x,2f7.1,2f10.5,1x,f10.5,1x,f8.1,1x,f8.1)')  &
-          "PDEF",nx,ny,trim(cmproj),MPRJ_basepoint_lat,MPRJ_basepoint_lon,real(nx)/2.,real(ny)/2.,MPRJ_LC_lat1,MPRJ_LC_lat2,MPRJ_basepoint_lon,DX,DY
+          "PDEF",nx,ny,trim(cmproj),MAPPROJECTION_basepoint_lat,MAPPROJECTION_basepoint_lon,real(nx)/2.,real(ny)/2.,MAPPROJECTION_LC_lat1,MAPPROJECTION_LC_lat2,MAPPROJECTION_basepoint_lon,DX,DY
      write( FID_CTLM, '(a,3x,i7,1x,a,f8.2,f10.5)') "XDEF", int(real(nx)*1.2), "linear", slon, DLON
      write( FID_CTLM, '(a,3x,i7,1x,a,f8.2,f10.5)') "YDEF", int(real(ny)*1.2), "linear", slat, DLAT
 
@@ -432,7 +432,7 @@ contains
     f             = 1.0/CONST_f
     e             = sqrt(f*2.0-f*f)
     CONST_D2R     = CONST_PI / 180.0
-    alat          = MPRJ_basepoint_lat*CONST_D2R
+    alat          = MAPPROJECTION_basepoint_lat*CONST_D2R
     Nphi          = CONST_RADIUS / sqrt(1.0-e**2*(sin(alat))**2)
     Mphi          = CONST_RADIUS*(1.0-e**2) / (1.0-e**2*(sin(alat))**2)**1.5
 

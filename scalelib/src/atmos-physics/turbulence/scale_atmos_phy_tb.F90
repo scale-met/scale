@@ -16,7 +16,7 @@ module scale_atmos_phy_tb
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -35,7 +35,7 @@ module scale_atmos_phy_tb
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_Q,  &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_tracer
        implicit none
 
@@ -76,7 +76,7 @@ module scale_atmos_phy_tb
      subroutine su( &
           CDZ, CDX, CDY, CZ )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_tracer
        implicit none
 

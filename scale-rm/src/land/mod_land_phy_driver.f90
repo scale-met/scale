@@ -16,8 +16,7 @@ module mod_land_phy_driver
   use scale_stdio
   use scale_prof
   use scale_debug
-  use scale_grid_index
-  use scale_land_grid_index
+  use scale_land_grid_cartesC_index
 
   use scale_const, only: &
      I_SW  => CONST_I_SW, &
@@ -125,10 +124,10 @@ contains
        STAT_total
     use scale_file_history, only: &
        FILE_HISTORY_in
-    use scale_grid_real, only: &
-       REAL_Z1
-    use scale_land_grid, only: &
-       GRID_LCDZ
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
+    use scale_land_grid_cartesC, only: &
+       LCDZ => LAND_GRID_CARTESC_CDZ
     use scale_land_phy, only: &
        LAND_PHY
     use scale_land_sfc, only: &
@@ -200,47 +199,47 @@ contains
     logical, intent(in) :: update_flag
 
     ! works
-    real(RP) :: LAND_QVEF(IA,JA)
-    real(RP) :: LAND_DZ1 (IA,JA)
+    real(RP) :: LAND_QVEF(LIA,LJA)
+    real(RP) :: LAND_DZ1 (LIA,LJA)
 
-    real(RP) :: LHV      (IA,JA) ! latent heat of vaporization [J/kg]
+    real(RP) :: LHV      (LIA,LJA) ! latent heat of vaporization [J/kg]
     real(RP) :: total            ! dummy
 
     character(len=2) :: sk
 
     ! for snow
-    real(RP) :: SNOW_SFC_TEMP_t     (IA,JA)
-    real(RP) :: SNOW_albedo         (IA,JA,2)
-    real(RP) :: SNOW_ATMO_SFLX_SH   (IA,JA)
-    real(RP) :: SNOW_ATMO_SFLX_LH   (IA,JA)
-    real(RP) :: SNOW_ATMO_SFLX_GH   (IA,JA)
-    real(RP) :: SNOW_ATMO_SFLX_evap (IA,JA)
-    real(RP) :: SNOW_LAND_SFLX_GH   (IA,JA)
-    real(RP) :: SNOW_LAND_SFLX_evap (IA,JA)
-    real(RP) :: SNOW_LAND_SFLX_Water(IA,JA)
-    real(RP) :: SNOW_frac           (IA,JA)
+    real(RP) :: SNOW_SFC_TEMP_t     (LIA,LJA)
+    real(RP) :: SNOW_albedo         (LIA,LJA,2)
+    real(RP) :: SNOW_ATMO_SFLX_SH   (LIA,LJA)
+    real(RP) :: SNOW_ATMO_SFLX_LH   (LIA,LJA)
+    real(RP) :: SNOW_ATMO_SFLX_GH   (LIA,LJA)
+    real(RP) :: SNOW_ATMO_SFLX_evap (LIA,LJA)
+    real(RP) :: SNOW_LAND_SFLX_GH   (LIA,LJA)
+    real(RP) :: SNOW_LAND_SFLX_evap (LIA,LJA)
+    real(RP) :: SNOW_LAND_SFLX_Water(LIA,LJA)
+    real(RP) :: SNOW_frac           (LIA,LJA)
 
-    real(RP) :: SNOW_ATMO_SFLX_MW   (IA,JA)
-    real(RP) :: SNOW_ATMO_SFLX_MU   (IA,JA)
-    real(RP) :: SNOW_ATMO_SFLX_MV   (IA,JA)
-    real(RP) :: SNOW_U10            (IA,JA)
-    real(RP) :: SNOW_V10            (IA,JA)
-    real(RP) :: SNOW_T2             (IA,JA)
-    real(RP) :: SNOW_Q2             (IA,JA)
+    real(RP) :: SNOW_ATMO_SFLX_MW   (LIA,LJA)
+    real(RP) :: SNOW_ATMO_SFLX_MU   (LIA,LJA)
+    real(RP) :: SNOW_ATMO_SFLX_MV   (LIA,LJA)
+    real(RP) :: SNOW_U10            (LIA,LJA)
+    real(RP) :: SNOW_V10            (LIA,LJA)
+    real(RP) :: SNOW_T2             (LIA,LJA)
+    real(RP) :: SNOW_Q2             (LIA,LJA)
 
-    real(RP) :: SNOW_LAND_TEMP_t    (LKMAX,IA,JA)
-    real(RP) :: SNOW_LAND_WATER_t   (LKMAX,IA,JA)
+    real(RP) :: SNOW_LAND_TEMP_t    (LKMAX,LIA,LJA)
+    real(RP) :: SNOW_LAND_WATER_t   (LKMAX,LIA,LJA)
 
     ! monitor
-    !real(RP) :: MONIT_WCONT0        (IA,JA)
-    !real(RP) :: MONIT_WCONT1        (IA,JA)
-    !real(RP) :: MONIT_ENG0          (IA,JA)
-    !real(RP) :: MONIT_ENG1          (IA,JA)
+    !real(RP) :: MONIT_WCONT0        (LIA,LJA)
+    !real(RP) :: MONIT_WCONT1        (LIA,LJA)
+    !real(RP) :: MONIT_ENG0          (LIA,LJA)
+    !real(RP) :: MONIT_ENG1          (LIA,LJA)
     !
-    !real(RP) :: MONIT_SNOW_heat     (IA,JA)
-    !real(RP) :: MONIT_SNOW_water    (IA,JA)
-    !real(RP) :: MONIT_LAND_heat     (IA,JA)
-    !real(RP) :: MONIT_LAND_water    (IA,JA)
+    !real(RP) :: MONIT_SNOW_heat     (LIA,LJA)
+    !real(RP) :: MONIT_SNOW_water    (LIA,LJA)
+    !real(RP) :: MONIT_LAND_heat     (LIA,LJA)
+    !real(RP) :: MONIT_LAND_water    (LIA,LJA)
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -248,8 +247,8 @@ contains
     if ( update_flag ) then
 
 !OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
+       do j = LJS, LJE
+       do i = LIS, LIE
           LAND_QVEF(i,j) = min( LAND_WATER(LKS,i,j) / LAND_PROPERTY(i,j,I_WaterCritical), BETA_MAX )
 
           ! eq.(12) in Merlin et al.(2011) but simplified P=0.5 used
@@ -257,7 +256,7 @@ contains
           !LAND_QVEF(i,j) = (        sw ) * 1.0_RP &
           !               + ( 1.0_RP-sw ) * sqrt( 0.5_RP - 0.5_RP * cos( PI * LAND_WATER(LKS,i,j) / LAND_PROPERTY(i,j,I_WaterCritical) ) )
 
-          LAND_DZ1 (i,j) = GRID_LCDZ(LKS)
+          LAND_DZ1 (i,j) = LCDZ(LKS)
        end do
        end do
 
@@ -269,8 +268,8 @@ contains
     if ( snow_flag ) then
 
 !OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
+       do j = LJS, LJE
+       do i = LIS, LIE
           ! This is for debug---adachi start
           !if(( int(SNOW_frac(i,j)) == 1 ).and.( abs(SNOW_SFC_TEMP(i,j)-LAND_SFC_TEMP(i,j))/=0 ))then
           !   write(*,*) "xxx Error please check SNOW_SFC_TEMP routine"
@@ -315,8 +314,8 @@ contains
                                  dt                           ) ! [IN]
 
 !OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
+       do j = LJS, LJE
+       do i = LIS, LIE
           SNOW_LAND_SFLX_evap (i,j) = 0.0_RP
        enddo
        enddo
@@ -361,8 +360,8 @@ contains
 
        ! update land temp and land water under snowpack
 !OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
+       do j = LJS, LJE
+       do i = LIS, LIE
           SNOW_LAND_SFLX_GH(i,j) = - SNOW_LAND_SFLX_GH(i,j)
        enddo
        enddo
@@ -378,7 +377,7 @@ contains
                       SNOW_LAND_SFLX_GH   (:,:),                & ! [IN]
                       SNOW_LAND_SFLX_Water(:,:),                & ! [IN]
                       SNOW_LAND_SFLX_evap (:,:),                & ! [IN]
-                      GRID_LCDZ           (:),                  & ! [IN]
+                      LCDZ                (:),                  & ! [IN]
                       dt                                        ) ! [IN]
     endif
 
@@ -426,8 +425,8 @@ contains
        call HYDROMETEOR_LHV( LHV(:,:), ATMOS_TEMP(:,:) )
 
 !OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
+       do j = LJS, LJE
+       do i = LIS, LIE
           LAND_SFLX_evap(i,j) = LAND_SFLX_LH(i,j) / LHV(i,j)
        end do
        end do
@@ -443,7 +442,7 @@ contains
                       LAND_SFLX_GH   (:,:),                & ! [IN]
                       ATMOS_SFLX_prec(:,:),                & ! [IN]
                       LAND_SFLX_evap (:,:),                & ! [IN]
-                      GRID_LCDZ      (:),                  & ! [IN]
+                      LCDZ           (:),                  & ! [IN]
                       dt                                   ) ! [IN]
 
 
@@ -452,8 +451,8 @@ contains
     if ( snow_flag ) then
 
 !OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
+       do j = LJS, LJE
+       do i = LIS, LIE
            LAND_SFC_TEMP_t(i,j)        =         SNOW_frac(i,j) *SNOW_SFC_TEMP_t(i,j)                                       &
                                        + (1.0_RP-SNOW_frac(i,j))*LAND_SFC_TEMP_t(i,j)
 

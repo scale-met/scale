@@ -19,14 +19,14 @@ module mod_mktopo
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
 
   use scale_process, only: &
      PRC_MPIstop
-  use scale_grid, only: &
-     CX => GRID_CX, &
-     CY => GRID_CY
+  use scale_atmos_grid_cartesC, only: &
+     CX => ATMOS_GRID_CARTESC_CX, &
+     CY => ATMOS_GRID_CARTESC_CY
   use scale_topography, only: &
      TOPO_Zsfc
   !-----------------------------------------------------------------------------

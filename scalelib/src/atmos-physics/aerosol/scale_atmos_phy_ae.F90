@@ -19,7 +19,7 @@ module scale_atmos_phy_ae
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -43,7 +43,7 @@ module scale_atmos_phy_ae
           CCN,   &
           RHOQ_t )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_tracer
 
        integer,  intent(in)    :: QQA
@@ -68,7 +68,7 @@ module scale_atmos_phy_ae
           QTRC, &
           RH    )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_tracer
        use scale_atmos_aerosol, only: N_AE
 

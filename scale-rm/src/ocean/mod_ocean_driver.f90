@@ -16,8 +16,7 @@ module mod_ocean_driver
   use scale_stdio
   use scale_prof
   use scale_debug
-  use scale_grid_index
-  use scale_ocean_grid_index
+  use scale_ocean_grid_cartesC_index
 
   use scale_const, only: &
      I_SW  => CONST_I_SW, &
@@ -192,8 +191,8 @@ contains
 !    endif
 
     !########## Update ##########
-    do j = JS, JE
-    do i = IS, IE
+    do j = OJS, OJE
+    do i = OIS, OIE
        OCEAN_SFC_TEMP  (i,j)      = OCEAN_SFC_TEMP  (i,j)      + OCEAN_SFC_TEMP_t  (i,j)      * dt
        OCEAN_SFC_albedo(i,j,I_LW) = OCEAN_SFC_albedo(i,j,I_LW) + OCEAN_SFC_albedo_t(i,j,I_LW) * dt
        OCEAN_SFC_albedo(i,j,I_SW) = OCEAN_SFC_albedo(i,j,I_SW) + OCEAN_SFC_albedo_t(i,j,I_SW) * dt
@@ -203,8 +202,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = OJS, OJE
+    do i = OIS, OIE
     do k = OKS, OKE
        OCEAN_TEMP(k,i,j) = OCEAN_TEMP(k,i,j) + OCEAN_TEMP_t(k,i,j) * dt
        OCEAN_SALT(k,i,j) = OCEAN_SALT(k,i,j) + OCEAN_SALT_t(k,i,j) * dt
@@ -223,8 +222,8 @@ contains
 
     !########## reset tendencies ##########
 !OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
+    do j = OJS, OJE
+    do i = OIS, OIE
        OCEAN_SFC_TEMP_t  (i,j)      = 0.0_RP
        OCEAN_SFC_albedo_t(i,j,I_LW) = 0.0_RP
        OCEAN_SFC_albedo_t(i,j,I_SW) = 0.0_RP
@@ -234,8 +233,8 @@ contains
     enddo
     enddo
 !OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
+    do j = OJS, OJE
+    do i = OIS, OIE
     do k = OKS, OKE
        OCEAN_TEMP_t(k,i,j) = 0.0_RP
        OCEAN_SALT_t(k,i,j) = 0.0_RP
@@ -277,9 +276,9 @@ contains
        CPL_getATM_OCN
     implicit none
 
-    real(RP) :: ATMOS_SFLX_rad_dn(IA,JA,2,2)
-    real(RP) :: ATMOS_SFLX_rain  (IA,JA)
-    real(RP) :: ATMOS_SFLX_snow  (IA,JA)
+    real(RP) :: ATMOS_SFLX_rad_dn(OIA,OJA,2,2)
+    real(RP) :: ATMOS_SFLX_rain  (OIA,OJA)
+    real(RP) :: ATMOS_SFLX_snow  (OIA,OJA)
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -302,8 +301,8 @@ contains
     endif
 
 !OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
+    do j = OJS, OJE
+    do i = OIS, OIE
        ATMOS_SFLX_SW  (i,j) = ATMOS_SFLX_rad_dn(i,j,I_SW,1) + ATMOS_SFLX_rad_dn(i,j,I_SW,2) ! direct+diffuse
        ATMOS_SFLX_LW  (i,j) = ATMOS_SFLX_rad_dn(i,j,I_LW,1) + ATMOS_SFLX_rad_dn(i,j,I_LW,2) ! direct+diffuse
 

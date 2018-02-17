@@ -18,7 +18,7 @@ module scale_atmos_phy_rd_offline
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -197,7 +197,7 @@ contains
        dtau_s,                &
        dem_s                  )
 !       Jval                   )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer
     use scale_process, only: &
        PRC_MPIstop

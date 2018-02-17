@@ -20,7 +20,7 @@ module scale_atmos_dyn_tstep_large
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   !-----------------------------------------------------------------------------
@@ -62,7 +62,7 @@ module scale_atmos_dyn_tstep_large
           USE_AVERAGE,                                          &
           DTL, DTS, Llast                                       )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_index
        use scale_tracer
        use scale_atmos_boundary, only: &
@@ -197,7 +197,7 @@ contains
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG, &
        mflx_hi )
     use scale_precision
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_index
     use scale_process, only: &
        PRC_MPIstop

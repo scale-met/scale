@@ -15,7 +15,7 @@ module mod_cnvlanduse
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -62,9 +62,9 @@ contains
        D2R => CONST_D2R
     use scale_comm, only: &
        COMM_horizontal_min
-    use scale_grid_real, only: &
-       REAL_DLAT, &
-       REAL_DLON
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_DLAT => ATMOS_GRID_CARTESC_REAL_DLAT, &
+       REAL_DLON => ATMOS_GRID_CARTESC_REAL_DLON
     implicit none
 
     character(len=H_SHORT) :: CNVLANDUSE_name = 'NONE' ! keep backward compatibility
@@ -219,9 +219,9 @@ contains
        LANDUSE_PFT_nmax,   &
        LANDUSE_frac_PFT,   &
        LANDUSE_index_PFT
-    use scale_grid_real, only: &
-       REAL_LATY, &
-       REAL_LONX
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_LATY => ATMOS_GRID_CARTESC_REAL_LATY, &
+       REAL_LONX => ATMOS_GRID_CARTESC_REAL_LONX
     implicit none
 
     character(len=H_LONG) :: GLCCv2_IN_DIR        = '.'    !< directory contains GLCCv2 files (GrADS format)
@@ -699,9 +699,9 @@ contains
        LANDUSE_PFT_nmax,   &
        LANDUSE_frac_PFT,   &
        LANDUSE_index_PFT
-    use scale_grid_real, only: &
-       REAL_LATY, &
-       REAL_LONX
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_LATY => ATMOS_GRID_CARTESC_REAL_LATY, &
+       REAL_LONX => ATMOS_GRID_CARTESC_REAL_LONX
     implicit none
 
     character(len=H_LONG) :: LU100M_IN_DIR       = '.'     !< directory contains LU100M files (GrADS format)
