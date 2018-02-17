@@ -4,7 +4,7 @@
 #
 # &PARAM_NEST            (ALL configs)
 # &PARAM_TIME            (ALL configs)
-# &PARAM_HISTORY         (run config)
+# &PARAM_FILE_HISTORY    (run config)
 # &PARAM_ATMOS_BOUNDARY  (run config)
 # &PARAM_ATMOS_REFSTATE  (run config)
 #

@@ -2375,8 +2375,8 @@ contains
        if ( FILE_HISTORY_ERROR_PUTMISS ) then
           write(*,*) 'xxx The time interval of history output ', trim(FILE_HISTORY_vars(id)%name), &
                      ' and the time interval of its related scheme are inconsistent.'
-          write(*,*) 'xxx Please check the namelist PARAM_TIME, PARAM_HISTORY, and HISTORY_ITEM.'
-          write(*,*) 'xxx Please set FILE_HISTORY_ERROR_PUTMISS in the namelist PARAM_HISTORY to .false.', &
+          write(*,*) 'xxx Please check the namelist PARAM_TIME, PARAM_FILE_HISTORY, and HISTORY_ITEM.'
+          write(*,*) 'xxx Please set FILE_HISTORY_ERROR_PUTMISS in the namelist PARAM_FILE_HISTORY to .false.', &
                      ' when you want to disable this check.'
           write(*,*) 'xxx The time interval of history output ', trim(FILE_HISTORY_vars(id)%name), &
                      ' and the time interval of its related scheme are inconsistent.',        &
@@ -2456,7 +2456,7 @@ contains
           if( IO_L ) write(IO_FID_LOG,'(A,A24,A,L1)') '*** NAME : ', FILE_HISTORY_req(id)%name, &
                                                       ', registered? : ', FILE_HISTORY_req(id)%registered
        enddo
-       if( IO_L ) write(IO_FID_LOG,*)  '*** Please set FILE_HISTORY_ERROR_PUTMISS in the namelist PARAM_HISTORY to .false.', &
+       if( IO_L ) write(IO_FID_LOG,*)  '*** Please set FILE_HISTORY_ERROR_PUTMISS in the namelist PARAM_FILE_HISTORY to .false.', &
                                       ' when you want to disable this check.'
 
        if ( FILE_HISTORY_ERROR_PUTMISS ) then
