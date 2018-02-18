@@ -36,7 +36,6 @@ module scale_prc
   public :: PRC_abort
   public :: PRC_MPIfinish
   public :: PRC_MPIsplit
-  public :: PRC_MPIsplit_letkf
 
   public :: PRC_MPIbarrier
   public :: PRC_MPItime
@@ -593,48 +592,6 @@ contains
 
     return
   end subroutine PRC_MPIsplit
-
-  !-----------------------------------------------------------------------------
-  !> MPI Communicator Split for SCALE-LETKF ensemble
-  subroutine PRC_MPIsplit_letkf( &
-      ORG_COMM,  &
-      mem_np,    &
-      nitmax,    &
-      nprocs,    &
-      proc2mem,  &
-      INTRA_COMM )
-    implicit none
-
-    integer, intent(in)  :: ORG_COMM
-    integer, intent(in)  :: mem_np
-    integer, intent(in)  :: nitmax
-    integer, intent(in)  :: nprocs
-    integer, intent(in)  :: proc2mem(2,nitmax,nprocs)
-    integer, intent(out) :: intra_comm
-
-    integer :: ORG_myrank  ! my rank number in the original communicator
-    integer :: color, key
-    integer :: ierr
-    !---------------------------------------------------------------------------
-
-    call MPI_COMM_RANK( ORG_COMM, ORG_myrank, ierr )
-
-    if ( proc2mem(1,1,ORG_myrank+1) >= 1 ) then
-       color = proc2mem(1,1,ORG_myrank+1) - 1
-       key   = proc2mem(2,1,ORG_myrank+1)
-    else
-       color = MPI_UNDEFINED
-       key   = MPI_UNDEFINED
-    endif
-
-    call MPI_COMM_SPLIT( ORG_COMM,   &
-                         color,      &
-                         key,        &
-                         intra_comm, &
-                         ierr        )
-
-    return
-  end subroutine PRC_MPIsplit_letkf
 
   !-----------------------------------------------------------------------------
   !> Set color and keys for COMM_SPLIT
