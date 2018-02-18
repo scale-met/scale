@@ -31,6 +31,7 @@ module scale_file
   public :: FILE_setup
   public :: FILE_open
   public :: FILE_create
+  public :: FILE_get_dimLength
   public :: FILE_set_option
   public :: FILE_def_axis
   public :: FILE_put_axis
@@ -206,7 +207,7 @@ contains
 
     NAMELIST / PARAM_FILE / &
          FILE_AGGREGATE
-    
+
     integer :: ierr
 
        !--- read namelist
@@ -431,7 +432,8 @@ contains
       mode,      &
       single,    &
       mpi_comm,  &
-      rankid     )
+      rankid,    &
+      postfix    )
     implicit none
 
     character(len=*), intent( in) :: basename
@@ -440,6 +442,7 @@ contains
     logical,          intent( in), optional :: single
     integer,          intent( in), optional :: mpi_comm
     integer,          intent( in), optional :: rankid
+    character(len=*), intent( in), optional :: postfix
 
     integer :: mode_
     integer :: rankid_
@@ -461,12 +464,44 @@ contains
        rankid_ = mpi_myrank
     end if
 
-    call FILE_get_fid( basename, mode_, rankid_, single_, & ! (in)
-                       fid, existed,                      & ! (out)
-                       mpi_comm = mpi_comm                ) ! (in)
+    call FILE_get_fid( basename, mode_, rankid_, single_,   & ! (in)
+                       fid, existed,                        & ! (out)
+                       mpi_comm = mpi_comm, postfix=postfix ) ! (in)
 
     return
   end subroutine FILE_open
+
+  !-----------------------------------------------------------------------------
+  !> get length of dimension
+  !-----------------------------------------------------------------------------
+  subroutine FILE_get_dimLength( &
+       fid, dimname, &
+       len,          &
+       error         )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: dimname
+
+    integer, intent(out) :: len
+
+    logical, intent(out), optional :: error
+
+    integer :: ierror
+
+    call file_get_dim_length_c( FILE_files(fid)%fid, dimname, & ! (in)
+                                len, ierror                   ) ! (out)
+    if ( ierror /= FILE_SUCCESS_CODE .and. ierror /= FILE_ALREADY_EXISTED_CODE ) then
+       if ( present(error) ) then
+          error = .true.
+       else
+          write(*,*) 'xxx failed to get dimension length'
+          call PRC_abort
+       end if
+    else
+       if ( present(error) ) error = .false.
+    end if
+
+    return
+  end subroutine FILE_get_dimLength
 
   !-----------------------------------------------------------------------------
   ! interface FILE_PutAxis
@@ -1382,7 +1417,8 @@ contains
        ndims, dims,          &
        dtype,                &
        vid,                  &
-       time_int, time_avg    )
+       time_int, time_avg,   &
+       existed               )
     integer,          intent( in) :: fid
     character(len=*), intent( in) :: varname
     character(len=*), intent( in) :: desc
@@ -1393,6 +1429,7 @@ contains
     integer,          intent(out) :: vid
     real(DP),         intent( in), optional :: time_int
     logical,          intent( in), optional :: time_avg
+    logical,          intent(out), optional :: existed
 
     real(DP) :: tint_
     integer  :: itavg
@@ -1445,6 +1482,10 @@ contains
 
        if (IO_L) write(IO_FID_LOG,'(A,I3.3,A,I4.4,2A)') &
        '###### FILE variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
+
+       if ( present(existed) ) existed = .false.
+    else
+       if ( present(existed) ) existed = .true.
     endif
 
     return
@@ -1456,11 +1497,14 @@ contains
   subroutine FILE_get_attribute_text_fid( &
        fid,        &
        vname, key, &
-       val         )
+       val,        &
+       existed     )
     integer,          intent(in ) :: fid
     character(len=*), intent(in ) :: vname
     character(len=*), intent(in ) :: key
     character(len=*), intent(out) :: val
+
+    logical, intent(out), optional :: existed
 
     integer :: error
 
@@ -1469,16 +1513,23 @@ contains
          key,                        & ! (in)
          val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get text attribute for '//trim(vname)//': '//trim(key)
-       call PRC_abort
+       if ( present(existed) ) then
+          existed = .false.
+       else
+          write(*,*) 'xxx failed to get text attribute for '//trim(vname)//': '//trim(key)
+          call PRC_abort
+       end if
+    else
+       if ( present(existed) ) existed = .true.
     end if
 
     return
   end subroutine FILE_get_attribute_text_fid
   subroutine FILE_get_attribute_text_fname( &
-      basename, vname, key,    &
-      val,                     &
-      single, mpi_comm, rankid )
+      basename, vname, key,     &
+      val,                      &
+      single, mpi_comm, rankid, &
+      existed                   )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1491,6 +1542,7 @@ contains
     integer, intent(in), optional :: mpi_comm
     integer, intent(in), optional :: rankid
 
+    logical, intent(out), optional :: existed
     integer :: fid
 
     call FILE_open( basename, & ! (in)
@@ -1501,7 +1553,8 @@ contains
 
     call FILE_get_attribute_text_fid( &
          fid, vname, key, & ! (in)
-         val              ) ! (out)
+         val,             & ! (out)
+         existed          ) ! (out)
 
     return
   end subroutine FILE_get_attribute_text_fname
@@ -1509,11 +1562,14 @@ contains
   !-----------------------------------------------------------------------------
   subroutine FILE_get_attribute_int_fid( &
        fid, vname, key, &
-       val              )
+       val,             &
+       existed          )
     integer,          intent(in ) :: fid
     character(len=*), intent(in ) :: vname
     character(len=*), intent(in ) :: key
     integer,          intent(out) :: val(:)
+
+    logical, intent(out), optional :: existed
 
     integer :: error
 
@@ -1524,16 +1580,23 @@ contains
          key, size(val),             & ! (in)
          val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get integer attribute for '//trim(vname)//': '//trim(key)
-       call PRC_abort
+       if ( present(existed) ) then
+          existed = .false.
+       else
+          write(*,*) 'xxx failed to get integer attribute for '//trim(vname)//': '//trim(key)
+          call PRC_abort
+       end if
+    else
+       if ( present(existed) ) existed = .true.
     end if
 
     return
   end subroutine FILE_get_attribute_int_fid
   subroutine FILE_get_attribute_int_fname( &
-      basename, vname, key,    &
-      val,                     &
-      single, mpi_comm, rankid )
+      basename, vname, key,     &
+      val,                      &
+      single, mpi_comm, rankid, &
+      existed                   )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1546,6 +1609,8 @@ contains
     integer, intent(in), optional :: mpi_comm
     integer, intent(in), optional :: rankid
 
+    logical, intent(out), optional :: existed
+
     integer :: fid
 
     call FILE_open( basename, & ! (in)
@@ -1556,7 +1621,8 @@ contains
 
     call FILE_get_attribute_int_fid( &
          fid, vname, key, & ! (in)
-         val              ) ! (out)
+         val,             & ! (out)
+         existed          ) ! (out)
 
     return
   end subroutine FILE_get_attribute_int_fname
@@ -1564,11 +1630,14 @@ contains
 
   subroutine FILE_get_attribute_float_fid( &
        fid, vname, key, &
-       val              )
+       val,             &
+       existed          )
     integer,          intent(in ) :: fid
     character(len=*), intent(in ) :: vname
     character(len=*), intent(in ) :: key
     real(SP),    intent(out) :: val(:)
+
+    logical, intent(out), optional :: existed
 
     integer :: error
 
@@ -1579,16 +1648,23 @@ contains
          key, size(val),             & ! (in)
          val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get float attribute for '//trim(vname)//': '//trim(key)
-       call PRC_abort
+       if ( present(existed) ) then
+          existed = .false.
+       else
+          write(*,*) 'xxx failed to get float attribute for '//trim(vname)//': '//trim(key)
+          call PRC_abort
+       end if
+    else
+       if ( present(existed) ) existed = .true.
     end if
 
     return
   end subroutine FILE_get_attribute_float_fid
   subroutine FILE_get_attribute_float_fname( &
-      basename, vname, key,    &
-      val,                     &
-      single, mpi_comm, rankid )
+      basename, vname, key,     &
+      val,                      &
+      single, mpi_comm, rankid, &
+      existed                   )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1601,6 +1677,8 @@ contains
     integer, intent(in), optional :: mpi_comm
     integer, intent(in), optional :: rankid
 
+    logical, intent(out), optional :: existed
+
     integer :: fid
 
     call FILE_open( basename, & ! (in)
@@ -1611,17 +1689,21 @@ contains
 
     call FILE_get_attribute_float_fid( &
          fid, vname, key, & ! (in)
-         val              ) ! (out)
+         val,             & ! (out)
+         existed          ) ! (out)
 
     return
   end subroutine FILE_get_attribute_float_fname
   subroutine FILE_get_attribute_double_fid( &
        fid, vname, key, &
-       val              )
+       val,             &
+       existed          )
     integer,          intent(in ) :: fid
     character(len=*), intent(in ) :: vname
     character(len=*), intent(in ) :: key
     real(DP),    intent(out) :: val(:)
+
+    logical, intent(out), optional :: existed
 
     integer :: error
 
@@ -1632,16 +1714,23 @@ contains
          key, size(val),             & ! (in)
          val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get double attribute for '//trim(vname)//': '//trim(key)
-       call PRC_abort
+       if ( present(existed) ) then
+          existed = .false.
+       else
+          write(*,*) 'xxx failed to get double attribute for '//trim(vname)//': '//trim(key)
+          call PRC_abort
+       end if
+    else
+       if ( present(existed) ) existed = .true.
     end if
 
     return
   end subroutine FILE_get_attribute_double_fid
   subroutine FILE_get_attribute_double_fname( &
-      basename, vname, key,    &
-      val,                     &
-      single, mpi_comm, rankid )
+      basename, vname, key,     &
+      val,                      &
+      single, mpi_comm, rankid, &
+      existed                   )
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -1654,6 +1743,8 @@ contains
     integer, intent(in), optional :: mpi_comm
     integer, intent(in), optional :: rankid
 
+    logical, intent(out), optional :: existed
+
     integer :: fid
 
     call FILE_open( basename, & ! (in)
@@ -1664,7 +1755,8 @@ contains
 
     call FILE_get_attribute_double_fid( &
          fid, vname, key, & ! (in)
-         val              ) ! (out)
+         val,             & ! (out)
+         existed          ) ! (out)
 
     return
   end subroutine FILE_get_attribute_double_fname
@@ -1804,10 +1896,11 @@ contains
        dims,         &
        error         )
     implicit none
-
-    integer,          intent(out)           :: dims(:)
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+
+    integer,          intent(out)           :: dims(:)
+
     logical,          intent(out), optional :: error
 
     type(datainfo) :: dinfo
@@ -2033,7 +2126,7 @@ contains
     else
        istep_ = 1
     end if
-       
+
 
     !--- get data information
     call file_get_datainfo_c( dinfo,               & ! [OUT]
@@ -2248,10 +2341,10 @@ contains
   ! interface FILE_read
   !-----------------------------------------------------------------------------
   subroutine FILE_read_realSP_1D( &
-      basename, varname,    &
-      var,                  &
-      step, rankid, single, &
-      allow_missing         )
+      basename, varname,             &
+      var,                           &
+      step, rankid, single, postfix, &
+      allow_missing, missing_value   )
     implicit none
 
     character(len=*), intent( in)           :: basename
@@ -2260,7 +2353,9 @@ contains
     integer,          intent( in), optional :: step
     integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    character(len=*), intent( in), optional :: postfix
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(SP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2272,22 +2367,24 @@ contains
     !---------------------------------------------------------------------------
 
     !--- search/register file
-    call FILE_open( basename,                    & ! (in)
-                    fid,                         & ! (out)
-                    rankid=rankid, single=single ) ! (in)
+    call FILE_open( basename,                     & ! (in)
+                    fid,                          & ! (out)
+                    rankid=rankid, single=single, & ! (in)
+                    postfix=postfix               ) ! (in)
 
     call FILE_read_var_realSP_1D( &
-         fid, varname,                          & ! (in)
-         var(:),                         & ! (out)
-         step=step, allow_missing=allow_missing ) ! (in)
+         fid, varname,                                            & ! (in)
+         var(:),                                           & ! (out)
+         step=step,                                               & ! (in)
+         allow_missing=allow_missing, missing_value=missing_value ) ! (in)
 
     return
   end subroutine FILE_read_realSP_1D
   subroutine FILE_read_realDP_1D( &
-      basename, varname,    &
-      var,                  &
-      step, rankid, single, &
-      allow_missing         )
+      basename, varname,             &
+      var,                           &
+      step, rankid, single, postfix, &
+      allow_missing, missing_value   )
     implicit none
 
     character(len=*), intent( in)           :: basename
@@ -2296,7 +2393,9 @@ contains
     integer,          intent( in), optional :: step
     integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    character(len=*), intent( in), optional :: postfix
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(DP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2308,22 +2407,24 @@ contains
     !---------------------------------------------------------------------------
 
     !--- search/register file
-    call FILE_open( basename,                    & ! (in)
-                    fid,                         & ! (out)
-                    rankid=rankid, single=single ) ! (in)
+    call FILE_open( basename,                     & ! (in)
+                    fid,                          & ! (out)
+                    rankid=rankid, single=single, & ! (in)
+                    postfix=postfix               ) ! (in)
 
     call FILE_read_var_realDP_1D( &
-         fid, varname,                          & ! (in)
-         var(:),                         & ! (out)
-         step=step, allow_missing=allow_missing ) ! (in)
+         fid, varname,                                            & ! (in)
+         var(:),                                           & ! (out)
+         step=step,                                               & ! (in)
+         allow_missing=allow_missing, missing_value=missing_value ) ! (in)
 
     return
   end subroutine FILE_read_realDP_1D
   subroutine FILE_read_realSP_2D( &
-      basename, varname,    &
-      var,                  &
-      step, rankid, single, &
-      allow_missing         )
+      basename, varname,             &
+      var,                           &
+      step, rankid, single, postfix, &
+      allow_missing, missing_value   )
     implicit none
 
     character(len=*), intent( in)           :: basename
@@ -2332,7 +2433,9 @@ contains
     integer,          intent( in), optional :: step
     integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    character(len=*), intent( in), optional :: postfix
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(SP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2344,22 +2447,24 @@ contains
     !---------------------------------------------------------------------------
 
     !--- search/register file
-    call FILE_open( basename,                    & ! (in)
-                    fid,                         & ! (out)
-                    rankid=rankid, single=single ) ! (in)
+    call FILE_open( basename,                     & ! (in)
+                    fid,                          & ! (out)
+                    rankid=rankid, single=single, & ! (in)
+                    postfix=postfix               ) ! (in)
 
     call FILE_read_var_realSP_2D( &
-         fid, varname,                          & ! (in)
-         var(:,:),                         & ! (out)
-         step=step, allow_missing=allow_missing ) ! (in)
+         fid, varname,                                            & ! (in)
+         var(:,:),                                           & ! (out)
+         step=step,                                               & ! (in)
+         allow_missing=allow_missing, missing_value=missing_value ) ! (in)
 
     return
   end subroutine FILE_read_realSP_2D
   subroutine FILE_read_realDP_2D( &
-      basename, varname,    &
-      var,                  &
-      step, rankid, single, &
-      allow_missing         )
+      basename, varname,             &
+      var,                           &
+      step, rankid, single, postfix, &
+      allow_missing, missing_value   )
     implicit none
 
     character(len=*), intent( in)           :: basename
@@ -2368,7 +2473,9 @@ contains
     integer,          intent( in), optional :: step
     integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    character(len=*), intent( in), optional :: postfix
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(DP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2380,22 +2487,24 @@ contains
     !---------------------------------------------------------------------------
 
     !--- search/register file
-    call FILE_open( basename,                    & ! (in)
-                    fid,                         & ! (out)
-                    rankid=rankid, single=single ) ! (in)
+    call FILE_open( basename,                     & ! (in)
+                    fid,                          & ! (out)
+                    rankid=rankid, single=single, & ! (in)
+                    postfix=postfix               ) ! (in)
 
     call FILE_read_var_realDP_2D( &
-         fid, varname,                          & ! (in)
-         var(:,:),                         & ! (out)
-         step=step, allow_missing=allow_missing ) ! (in)
+         fid, varname,                                            & ! (in)
+         var(:,:),                                           & ! (out)
+         step=step,                                               & ! (in)
+         allow_missing=allow_missing, missing_value=missing_value ) ! (in)
 
     return
   end subroutine FILE_read_realDP_2D
   subroutine FILE_read_realSP_3D( &
-      basename, varname,    &
-      var,                  &
-      step, rankid, single, &
-      allow_missing         )
+      basename, varname,             &
+      var,                           &
+      step, rankid, single, postfix, &
+      allow_missing, missing_value   )
     implicit none
 
     character(len=*), intent( in)           :: basename
@@ -2404,7 +2513,9 @@ contains
     integer,          intent( in), optional :: step
     integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    character(len=*), intent( in), optional :: postfix
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(SP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2416,22 +2527,24 @@ contains
     !---------------------------------------------------------------------------
 
     !--- search/register file
-    call FILE_open( basename,                    & ! (in)
-                    fid,                         & ! (out)
-                    rankid=rankid, single=single ) ! (in)
+    call FILE_open( basename,                     & ! (in)
+                    fid,                          & ! (out)
+                    rankid=rankid, single=single, & ! (in)
+                    postfix=postfix               ) ! (in)
 
     call FILE_read_var_realSP_3D( &
-         fid, varname,                          & ! (in)
-         var(:,:,:),                         & ! (out)
-         step=step, allow_missing=allow_missing ) ! (in)
+         fid, varname,                                            & ! (in)
+         var(:,:,:),                                           & ! (out)
+         step=step,                                               & ! (in)
+         allow_missing=allow_missing, missing_value=missing_value ) ! (in)
 
     return
   end subroutine FILE_read_realSP_3D
   subroutine FILE_read_realDP_3D( &
-      basename, varname,    &
-      var,                  &
-      step, rankid, single, &
-      allow_missing         )
+      basename, varname,             &
+      var,                           &
+      step, rankid, single, postfix, &
+      allow_missing, missing_value   )
     implicit none
 
     character(len=*), intent( in)           :: basename
@@ -2440,7 +2553,9 @@ contains
     integer,          intent( in), optional :: step
     integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    character(len=*), intent( in), optional :: postfix
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(DP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2452,22 +2567,24 @@ contains
     !---------------------------------------------------------------------------
 
     !--- search/register file
-    call FILE_open( basename,                    & ! (in)
-                    fid,                         & ! (out)
-                    rankid=rankid, single=single ) ! (in)
+    call FILE_open( basename,                     & ! (in)
+                    fid,                          & ! (out)
+                    rankid=rankid, single=single, & ! (in)
+                    postfix=postfix               ) ! (in)
 
     call FILE_read_var_realDP_3D( &
-         fid, varname,                          & ! (in)
-         var(:,:,:),                         & ! (out)
-         step=step, allow_missing=allow_missing ) ! (in)
+         fid, varname,                                            & ! (in)
+         var(:,:,:),                                           & ! (out)
+         step=step,                                               & ! (in)
+         allow_missing=allow_missing, missing_value=missing_value ) ! (in)
 
     return
   end subroutine FILE_read_realDP_3D
   subroutine FILE_read_realSP_4D( &
-      basename, varname,    &
-      var,                  &
-      step, rankid, single, &
-      allow_missing         )
+      basename, varname,             &
+      var,                           &
+      step, rankid, single, postfix, &
+      allow_missing, missing_value   )
     implicit none
 
     character(len=*), intent( in)           :: basename
@@ -2476,7 +2593,9 @@ contains
     integer,          intent( in), optional :: step
     integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    character(len=*), intent( in), optional :: postfix
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(SP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2488,22 +2607,24 @@ contains
     !---------------------------------------------------------------------------
 
     !--- search/register file
-    call FILE_open( basename,                    & ! (in)
-                    fid,                         & ! (out)
-                    rankid=rankid, single=single ) ! (in)
+    call FILE_open( basename,                     & ! (in)
+                    fid,                          & ! (out)
+                    rankid=rankid, single=single, & ! (in)
+                    postfix=postfix               ) ! (in)
 
     call FILE_read_var_realSP_4D( &
-         fid, varname,                          & ! (in)
-         var(:,:,:,:),                         & ! (out)
-         step=step, allow_missing=allow_missing ) ! (in)
+         fid, varname,                                            & ! (in)
+         var(:,:,:,:),                                           & ! (out)
+         step=step,                                               & ! (in)
+         allow_missing=allow_missing, missing_value=missing_value ) ! (in)
 
     return
   end subroutine FILE_read_realSP_4D
   subroutine FILE_read_realDP_4D( &
-      basename, varname,    &
-      var,                  &
-      step, rankid, single, &
-      allow_missing         )
+      basename, varname,             &
+      var,                           &
+      step, rankid, single, postfix, &
+      allow_missing, missing_value   )
     implicit none
 
     character(len=*), intent( in)           :: basename
@@ -2512,7 +2633,9 @@ contains
     integer,          intent( in), optional :: step
     integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
+    character(len=*), intent( in), optional :: postfix
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(DP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
     type(datainfo) :: dinfo
@@ -2524,14 +2647,16 @@ contains
     !---------------------------------------------------------------------------
 
     !--- search/register file
-    call FILE_open( basename,                    & ! (in)
-                    fid,                         & ! (out)
-                    rankid=rankid, single=single ) ! (in)
+    call FILE_open( basename,                     & ! (in)
+                    fid,                          & ! (out)
+                    rankid=rankid, single=single, & ! (in)
+                    postfix=postfix               ) ! (in)
 
     call FILE_read_var_realDP_4D( &
-         fid, varname,                          & ! (in)
-         var(:,:,:,:),                         & ! (out)
-         step=step, allow_missing=allow_missing ) ! (in)
+         fid, varname,                                            & ! (in)
+         var(:,:,:,:),                                           & ! (out)
+         step=step,                                               & ! (in)
+         allow_missing=allow_missing, missing_value=missing_value ) ! (in)
 
     return
   end subroutine FILE_read_realDP_4D
@@ -2541,6 +2666,7 @@ contains
       var,           &
       step,          &
       allow_missing, &
+      missing_value, &
       ntypes, dtype, &
       start, count   )
     use MPI, only : MPI_COMM_NULL
@@ -2550,13 +2676,15 @@ contains
     character(len=*), intent( in)           :: varname
     real(SP),    intent(out)           :: var(:)
     integer,          intent( in), optional :: step
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    integer,          intent( in), optional :: ntypes      ! number of dtypes
-    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in), optional :: start(:)    ! request starts to global variable
-    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(SP),    intent( in), optional :: missing_value !> default is zero
+    integer,          intent( in), optional :: ntypes      !> number of dtypes
+    integer,          intent( in), optional :: dtype       !> MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    !> request starts to global variable
+    integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(1)
@@ -2566,10 +2694,21 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( fid < 0 ) then
+       write(*,*) 'xxx [File_read_var_readSP_4D] fid is invalid'
+       call PRC_abort
+    end if
+
     if ( present(step) ) then
        step_ = step
     else
        step_ = 1
+    end if
+
+    if ( present(missing_value) ) then
+       missing_value_ = missing_value
+    else
+       missing_value_ = 0.0_SP
     end if
 
     !--- get data information
@@ -2583,8 +2722,8 @@ contains
           if ( allow_missing ) then
              if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
                   'varname= ',trim(varname),', step=',step_
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
-             var(:) = 0.0_SP
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to ', missing_value_
+             var(:) = missing_value_
              return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
@@ -2637,6 +2776,7 @@ contains
       var,           &
       step,          &
       allow_missing, &
+      missing_value, &
       ntypes, dtype, &
       start, count   )
     use MPI, only : MPI_COMM_NULL
@@ -2646,13 +2786,15 @@ contains
     character(len=*), intent( in)           :: varname
     real(DP),    intent(out)           :: var(:)
     integer,          intent( in), optional :: step
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    integer,          intent( in), optional :: ntypes      ! number of dtypes
-    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in), optional :: start(:)    ! request starts to global variable
-    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(DP),    intent( in), optional :: missing_value !> default is zero
+    integer,          intent( in), optional :: ntypes      !> number of dtypes
+    integer,          intent( in), optional :: dtype       !> MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    !> request starts to global variable
+    integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(1)
@@ -2662,10 +2804,21 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( fid < 0 ) then
+       write(*,*) 'xxx [File_read_var_readDP_4D] fid is invalid'
+       call PRC_abort
+    end if
+
     if ( present(step) ) then
        step_ = step
     else
        step_ = 1
+    end if
+
+    if ( present(missing_value) ) then
+       missing_value_ = missing_value
+    else
+       missing_value_ = 0.0_DP
     end if
 
     !--- get data information
@@ -2679,8 +2832,8 @@ contains
           if ( allow_missing ) then
              if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
                   'varname= ',trim(varname),', step=',step_
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
-             var(:) = 0.0_DP
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to ', missing_value_
+             var(:) = missing_value_
              return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
@@ -2733,6 +2886,7 @@ contains
       var,           &
       step,          &
       allow_missing, &
+      missing_value, &
       ntypes, dtype, &
       start, count   )
     use MPI, only : MPI_COMM_NULL
@@ -2742,13 +2896,15 @@ contains
     character(len=*), intent( in)           :: varname
     real(SP),    intent(out)           :: var(:,:)
     integer,          intent( in), optional :: step
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    integer,          intent( in), optional :: ntypes      ! number of dtypes
-    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in), optional :: start(:)    ! request starts to global variable
-    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(SP),    intent( in), optional :: missing_value !> default is zero
+    integer,          intent( in), optional :: ntypes      !> number of dtypes
+    integer,          intent( in), optional :: dtype       !> MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    !> request starts to global variable
+    integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(2)
@@ -2758,10 +2914,21 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( fid < 0 ) then
+       write(*,*) 'xxx [File_read_var_readSP_4D] fid is invalid'
+       call PRC_abort
+    end if
+
     if ( present(step) ) then
        step_ = step
     else
        step_ = 1
+    end if
+
+    if ( present(missing_value) ) then
+       missing_value_ = missing_value
+    else
+       missing_value_ = 0.0_SP
     end if
 
     !--- get data information
@@ -2775,8 +2942,8 @@ contains
           if ( allow_missing ) then
              if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
                   'varname= ',trim(varname),', step=',step_
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
-             var(:,:) = 0.0_SP
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to ', missing_value_
+             var(:,:) = missing_value_
              return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
@@ -2829,6 +2996,7 @@ contains
       var,           &
       step,          &
       allow_missing, &
+      missing_value, &
       ntypes, dtype, &
       start, count   )
     use MPI, only : MPI_COMM_NULL
@@ -2838,13 +3006,15 @@ contains
     character(len=*), intent( in)           :: varname
     real(DP),    intent(out)           :: var(:,:)
     integer,          intent( in), optional :: step
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    integer,          intent( in), optional :: ntypes      ! number of dtypes
-    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in), optional :: start(:)    ! request starts to global variable
-    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(DP),    intent( in), optional :: missing_value !> default is zero
+    integer,          intent( in), optional :: ntypes      !> number of dtypes
+    integer,          intent( in), optional :: dtype       !> MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    !> request starts to global variable
+    integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(2)
@@ -2854,10 +3024,21 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( fid < 0 ) then
+       write(*,*) 'xxx [File_read_var_readDP_4D] fid is invalid'
+       call PRC_abort
+    end if
+
     if ( present(step) ) then
        step_ = step
     else
        step_ = 1
+    end if
+
+    if ( present(missing_value) ) then
+       missing_value_ = missing_value
+    else
+       missing_value_ = 0.0_DP
     end if
 
     !--- get data information
@@ -2871,8 +3052,8 @@ contains
           if ( allow_missing ) then
              if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
                   'varname= ',trim(varname),', step=',step_
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
-             var(:,:) = 0.0_DP
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to ', missing_value_
+             var(:,:) = missing_value_
              return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
@@ -2925,6 +3106,7 @@ contains
       var,           &
       step,          &
       allow_missing, &
+      missing_value, &
       ntypes, dtype, &
       start, count   )
     use MPI, only : MPI_COMM_NULL
@@ -2934,13 +3116,15 @@ contains
     character(len=*), intent( in)           :: varname
     real(SP),    intent(out)           :: var(:,:,:)
     integer,          intent( in), optional :: step
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    integer,          intent( in), optional :: ntypes      ! number of dtypes
-    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in), optional :: start(:)    ! request starts to global variable
-    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(SP),    intent( in), optional :: missing_value !> default is zero
+    integer,          intent( in), optional :: ntypes      !> number of dtypes
+    integer,          intent( in), optional :: dtype       !> MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    !> request starts to global variable
+    integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(3)
@@ -2950,10 +3134,21 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( fid < 0 ) then
+       write(*,*) 'xxx [File_read_var_readSP_4D] fid is invalid'
+       call PRC_abort
+    end if
+
     if ( present(step) ) then
        step_ = step
     else
        step_ = 1
+    end if
+
+    if ( present(missing_value) ) then
+       missing_value_ = missing_value
+    else
+       missing_value_ = 0.0_SP
     end if
 
     !--- get data information
@@ -2967,8 +3162,8 @@ contains
           if ( allow_missing ) then
              if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
                   'varname= ',trim(varname),', step=',step_
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
-             var(:,:,:) = 0.0_SP
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to ', missing_value_
+             var(:,:,:) = missing_value_
              return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
@@ -3021,6 +3216,7 @@ contains
       var,           &
       step,          &
       allow_missing, &
+      missing_value, &
       ntypes, dtype, &
       start, count   )
     use MPI, only : MPI_COMM_NULL
@@ -3030,13 +3226,15 @@ contains
     character(len=*), intent( in)           :: varname
     real(DP),    intent(out)           :: var(:,:,:)
     integer,          intent( in), optional :: step
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    integer,          intent( in), optional :: ntypes      ! number of dtypes
-    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in), optional :: start(:)    ! request starts to global variable
-    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(DP),    intent( in), optional :: missing_value !> default is zero
+    integer,          intent( in), optional :: ntypes      !> number of dtypes
+    integer,          intent( in), optional :: dtype       !> MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    !> request starts to global variable
+    integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(3)
@@ -3046,10 +3244,21 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( fid < 0 ) then
+       write(*,*) 'xxx [File_read_var_readDP_4D] fid is invalid'
+       call PRC_abort
+    end if
+
     if ( present(step) ) then
        step_ = step
     else
        step_ = 1
+    end if
+
+    if ( present(missing_value) ) then
+       missing_value_ = missing_value
+    else
+       missing_value_ = 0.0_DP
     end if
 
     !--- get data information
@@ -3063,8 +3272,8 @@ contains
           if ( allow_missing ) then
              if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
                   'varname= ',trim(varname),', step=',step_
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
-             var(:,:,:) = 0.0_DP
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to ', missing_value_
+             var(:,:,:) = missing_value_
              return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
@@ -3117,6 +3326,7 @@ contains
       var,           &
       step,          &
       allow_missing, &
+      missing_value, &
       ntypes, dtype, &
       start, count   )
     use MPI, only : MPI_COMM_NULL
@@ -3126,13 +3336,15 @@ contains
     character(len=*), intent( in)           :: varname
     real(SP),    intent(out)           :: var(:,:,:,:)
     integer,          intent( in), optional :: step
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    integer,          intent( in), optional :: ntypes      ! number of dtypes
-    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in), optional :: start(:)    ! request starts to global variable
-    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(SP),    intent( in), optional :: missing_value !> default is zero
+    integer,          intent( in), optional :: ntypes      !> number of dtypes
+    integer,          intent( in), optional :: dtype       !> MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    !> request starts to global variable
+    integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(4)
@@ -3142,10 +3354,21 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( fid < 0 ) then
+       write(*,*) 'xxx [File_read_var_readSP_4D] fid is invalid'
+       call PRC_abort
+    end if
+
     if ( present(step) ) then
        step_ = step
     else
        step_ = 1
+    end if
+
+    if ( present(missing_value) ) then
+       missing_value_ = missing_value
+    else
+       missing_value_ = 0.0_SP
     end if
 
     !--- get data information
@@ -3159,8 +3382,8 @@ contains
           if ( allow_missing ) then
              if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
                   'varname= ',trim(varname),', step=',step_
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
-             var(:,:,:,:) = 0.0_SP
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to ', missing_value_
+             var(:,:,:,:) = missing_value_
              return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
@@ -3213,6 +3436,7 @@ contains
       var,           &
       step,          &
       allow_missing, &
+      missing_value, &
       ntypes, dtype, &
       start, count   )
     use MPI, only : MPI_COMM_NULL
@@ -3222,13 +3446,15 @@ contains
     character(len=*), intent( in)           :: varname
     real(DP),    intent(out)           :: var(:,:,:,:)
     integer,          intent( in), optional :: step
-    logical,          intent( in), optional :: allow_missing !--- if data is missing, set value to zero
-    integer,          intent( in), optional :: ntypes      ! number of dtypes
-    integer,          intent( in), optional :: dtype       ! MPI derived datatype for read buffer
-    integer,          intent( in), optional :: start(:)    ! request starts to global variable
-    integer,          intent( in), optional :: count(:)    ! request sizes to global variable
+    logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
+    real(DP),    intent( in), optional :: missing_value !> default is zero
+    integer,          intent( in), optional :: ntypes      !> number of dtypes
+    integer,          intent( in), optional :: dtype       !> MPI derived datatype for read buffer
+    integer,          intent( in), optional :: start(:)    !> request starts to global variable
+    integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(4)
@@ -3238,10 +3464,21 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
+    if ( fid < 0 ) then
+       write(*,*) 'xxx [File_read_var_readDP_4D] fid is invalid'
+       call PRC_abort
+    end if
+
     if ( present(step) ) then
        step_ = step
     else
        step_ = 1
+    end if
+
+    if ( present(missing_value) ) then
+       missing_value_ = missing_value
+    else
+       missing_value_ = 0.0_DP
     end if
 
     !--- get data information
@@ -3255,8 +3492,8 @@ contains
           if ( allow_missing ) then
              if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] data not found! : ', &
                   'varname= ',trim(varname),', step=',step_
-             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to 0.'
-             var(:,:,:,:) = 0.0_DP
+             if (IO_L) write(IO_FID_LOG,*) 'xxx [INPUT]/[FILE] Value is set to ', missing_value_
+             var(:,:,:,:) = missing_value_
              return
           else
              write(*,*) 'xxx failed to get data information :'//trim(varname)
@@ -3974,7 +4211,8 @@ contains
       single,     &
       fid,        &
       existed,    &
-      mpi_comm    )
+      mpi_comm,   &
+      postfix     )
     use MPI, only: &
       MPI_COMM_NULL
     implicit none
@@ -3988,6 +4226,7 @@ contains
     logical,          intent(out) :: existed
 
     integer,          intent( in), optional :: mpi_comm
+    character(len=*), intent( in), optional :: postfix
 
     character(len=FILE_HSHORT) :: rwname(0:2)
     data rwname / 'READ','WRITE','APPEND' /
@@ -4007,7 +4246,9 @@ contains
 
     aggregate = ( mpi_comm_ .ne. MPI_COMM_NULL )
 
-    if ( aggregate ) then
+    if ( present(postfix) ) then
+       fname = trim(basename)//trim(postfix)
+    elseif ( aggregate ) then
        fname = basename
     elseif ( single ) then
        fname = trim(basename)//'.peall'

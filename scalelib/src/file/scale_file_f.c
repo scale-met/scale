@@ -52,6 +52,21 @@ void file_open_c_(       int32_t *fid,       // (out)
   *error = file_open_c( fid, _fname, *mode, MPI_Comm_f2c(*comm) );
 }
 
+void file_get_dim_length_c_( const int32_t *fid,          // (in)
+			     const char    *dimname,      // (in)
+			           int32_t *len,          // (out)
+			           int32_t *error,        // (out)
+			     const int32_t  dimname_len ) // (in)
+{
+  char _dimname[File_HSHORT+1];
+  int32_t clen;
+
+  clen = dimname_len > File_HSHORT ? File_HSHORT : dimname_len;
+  fstr2cstr(_dimname, dimname, clen);
+
+  *error = file_get_dim_length_c( *fid, _dimname, len );
+}
+
 void file_set_option_c_( const int32_t *fid,         // (in)
                          const char    *filetype,    // (in)
                          const char    *key,         // (in)
@@ -628,8 +643,6 @@ void file_write_data_c_( const int32_t  *fid,       // (in)
 			 const int32_t  *count,     // (in)
 			       int32_t  *error)     // (out)
 {
-  int i;
-
   *error = file_write_data_c( *fid, *vid, var, *t_start, *t_end, *precision, *ndims, start, count );
 }
 

@@ -189,10 +189,6 @@ contains
        rotc => GTRANS_ROTC
     use scale_topography, only: &
        topo => TOPO_Zsfc
-    use scale_interpolation_nest, only: &
-       INTRPNEST_interp_fact_llz,  &
-       INTRPNEST_interp_2d,        &
-       INTRPNEST_interp_3d
     use scale_atmos_phy_mp_convert, only: &
        ATMOS_PHY_MP_bulk2bin
     implicit none
@@ -523,7 +519,7 @@ contains
        call FILE_Read( BASENAME_land, "lon", read2D(:,:), rankid=rank )
        llon_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
 
-       call FILE_Read( BASENAME_land, "la", read2D(:,:), rankid=rank )
+       call FILE_Read( BASENAME_land, "lat", read2D(:,:), rankid=rank )
        llat_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
 
        call FILE_Read( BASENAME_land, "LAND_SFC_TEMP", read2D(:,:), step=it, rankid=rank )

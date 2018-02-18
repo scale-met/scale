@@ -37,11 +37,6 @@ module mod_realinput
      FZ  => REAL_FZ
   use scale_grid_nest, only: &
      NEST_INTERP_LEVEL
-  use scale_external_io, only: &
-     iSCALE, &
-     iWRFARW, &
-     iNICAM, &
-     iGrADS
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -75,25 +70,29 @@ module mod_realinput
   !
   !++ Private parameters & variables
   !
+  integer, public, parameter :: iSCALE  = 1
+  integer, public, parameter :: iWRFARW = 2
+  integer, public, parameter :: iNICAM  = 3
+  integer, public, parameter :: iGrADS  = 4
+
   real(RP), private, allocatable :: LON_org (:,:)
   real(RP), private, allocatable :: LAT_org (:,:)
   real(RP), private, allocatable :: CZ_org  (:,:,:)
 
-  real(RP), private, allocatable :: VELZ_org(:,:,:)
-  real(RP), private, allocatable :: VELX_org(:,:,:)
-  real(RP), private, allocatable :: VELY_org(:,:,:)
+  real(RP), private, allocatable :: W_org   (:,:,:) ! scalar point
+  real(RP), private, allocatable :: U_org   (:,:,:) ! scalar point
+  real(RP), private, allocatable :: V_org   (:,:,:) ! scalar point
+  real(RP), private, allocatable :: DENS_org(:,:,:)
   real(RP), private, allocatable :: POTT_org(:,:,:)
   real(RP), private, allocatable :: TEMP_org(:,:,:)
   real(RP), private, allocatable :: PRES_org(:,:,:)
-  real(RP), private, allocatable :: DENS_org(:,:,:)
   real(RP), private, allocatable :: QTRC_org(:,:,:,:)
 
-  real(RP), private, allocatable :: hfact(:,:,:)
-  real(RP), private, allocatable :: vfact(:,:,:,:,:)
-  integer,  private, allocatable :: kgrd (:,:,:,:,:)
   integer,  private, allocatable :: igrd (:,:,:)
   integer,  private, allocatable :: jgrd (:,:,:)
-  integer,  private, allocatable :: ncopy(:,:,:)
+  real(RP), private, allocatable :: hfact(:,:,:)
+  integer,  private, allocatable :: kgrd (:,:,:,:,:)
+  real(RP), private, allocatable :: vfact(:,:,:,:,:)
 
   real(RP), private, allocatable :: tw_org   (:,:)
   real(RP), private, allocatable :: sst_org  (:,:)
@@ -205,17 +204,17 @@ contains
     integer  :: fid_atmos
     integer  :: vid_atmos(5+QA)
 
-    real(RP) :: DENS_org(KA,IA,JA)
-    real(RP) :: MOMZ_org(KA,IA,JA)
-    real(RP) :: MOMX_org(KA,IA,JA)
-    real(RP) :: MOMY_org(KA,IA,JA)
-    real(RP) :: RHOT_org(KA,IA,JA)
-    real(RP) :: QTRC_org(KA,IA,JA,QA)
+    real(RP) :: DENS_in(KA,IA,JA)
+    real(RP) :: MOMZ_in(KA,IA,JA) ! staggered point
+    real(RP) :: MOMX_in(KA,IA,JA) ! staggered point
+    real(RP) :: MOMY_in(KA,IA,JA) ! staggered point
+    real(RP) :: RHOT_in(KA,IA,JA)
+    real(RP) :: QTRC_in(KA,IA,JA,QA)
 
-    real(RP) :: VELZ_org(KA,IA,JA)
-    real(RP) :: VELX_org(KA,IA,JA)
-    real(RP) :: VELY_org(KA,IA,JA)
-    real(RP) :: POTT_org(KA,IA,JA)
+    real(RP) :: VELZ_in(KA,IA,JA) ! staggered point
+    real(RP) :: VELX_in(KA,IA,JA) ! staggered point
+    real(RP) :: VELY_in(KA,IA,JA) ! staggered point
+    real(RP) :: POTT_in(KA,IA,JA)
 
     integer  :: ifile, istep, t, tall
     integer  :: k, i, j, iq
@@ -309,24 +308,24 @@ contains
                         '*** [file,step,cons.] = [', ifile, ',', istep, ',', tall, ']'
 
              ! read prepared data
-             call ParentAtmosInput( FILETYPE_ORG,      & ! [IN]
-                                    basename_mod,      & ! [IN]
-                                    dims(:),           & ! [IN]
-                                    istep,             & ! [IN]
-                                    PARENT_MP_TYPE,    & ! [IN]
-                                    QA_MP,             & ! [IN]
-                                    flg_bin,           & ! [IN]
-                                    flg_bin_intrp,     & ! [IN]
-                                    DENS_org(:,:,:),   & ! [OUT]
-                                    MOMZ_org(:,:,:),   & ! [OUT]
-                                    MOMX_org(:,:,:),   & ! [OUT]
-                                    MOMY_org(:,:,:),   & ! [OUT]
-                                    RHOT_org(:,:,:),   & ! [OUT]
-                                    QTRC_org(:,:,:,:), & ! [OUT]
-                                    VELZ_org(:,:,:),   & ! [OUT]
-                                    VELX_org(:,:,:),   & ! [OUT]
-                                    VELY_org(:,:,:),   & ! [OUT]
-                                    POTT_org(:,:,:)    ) ! [OUT]
+             call ParentAtmosInput( FILETYPE_ORG,     & ! [IN]
+                                    basename_mod,     & ! [IN]
+                                    dims(:),          & ! [IN]
+                                    istep,            & ! [IN]
+                                    PARENT_MP_TYPE,   & ! [IN]
+                                    QA_MP,            & ! [IN]
+                                    flg_bin,          & ! [IN]
+                                    flg_bin_intrp,    & ! [IN]
+                                    DENS_in(:,:,:),   & ! [OUT]
+                                    MOMZ_in(:,:,:),   & ! [OUT]
+                                    MOMX_in(:,:,:),   & ! [OUT]
+                                    MOMY_in(:,:,:),   & ! [OUT]
+                                    RHOT_in(:,:,:),   & ! [OUT]
+                                    QTRC_in(:,:,:,:), & ! [OUT]
+                                    VELZ_in(:,:,:),   & ! [OUT]
+                                    VELX_in(:,:,:),   & ! [OUT]
+                                    VELY_in(:,:,:),   & ! [OUT]
+                                    POTT_in(:,:,:)    ) ! [OUT]
           else
              if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,A,I5,A,I6,A)') &
                         '*** [file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
@@ -339,11 +338,11 @@ contains
              do j = 1, JA
              do i = 1, IA
              do k = 1, KA
-                DENS(k,i,j) = DENS_org(k,i,j)
-                MOMZ(k,i,j) = MOMZ_org(k,i,j)
-                MOMX(k,i,j) = MOMX_org(k,i,j)
-                MOMY(k,i,j) = MOMY_org(k,i,j)
-                RHOT(k,i,j) = RHOT_org(k,i,j)
+                DENS(k,i,j) = DENS_in(k,i,j)
+                MOMZ(k,i,j) = MOMZ_in(k,i,j)
+                MOMX(k,i,j) = MOMX_in(k,i,j)
+                MOMY(k,i,j) = MOMY_in(k,i,j)
+                RHOT(k,i,j) = RHOT_in(k,i,j)
              enddo
              enddo
              enddo
@@ -352,7 +351,7 @@ contains
              do j  = 1, JA
              do i  = 1, IA
              do k  = 1, KA
-                QTRC(k,i,j,iq) = QTRC_org(k,i,j,iq)
+                QTRC(k,i,j,iq) = QTRC_in(k,i,j,iq)
              enddo
              enddo
              enddo
@@ -379,12 +378,12 @@ contains
                                          vid_atmos(:)        ) ! [OUT]
              endif
 
-             call BoundaryAtmosOutput( DENS_org(:,:,:),    & ! [IN]
-                                       VELZ_org(:,:,:),    & ! [IN]
-                                       VELX_org(:,:,:),    & ! [IN]
-                                       VELY_org(:,:,:),    & ! [IN]
-                                       POTT_org(:,:,:),    & ! [IN]
-                                       QTRC_org(:,:,:,:),  & ! [IN]
+             call BoundaryAtmosOutput( DENS_in(:,:,:),     & ! [IN]
+                                       VELZ_in(:,:,:),     & ! [IN]
+                                       VELX_in(:,:,:),     & ! [IN]
+                                       VELY_in(:,:,:),     & ! [IN]
+                                       POTT_in(:,:,:),     & ! [IN]
+                                       QTRC_in(:,:,:,:),   & ! [IN]
                                        fid_atmos,          & ! [IN]
                                        vid_atmos(:),       & ! [IN]
                                        BOUNDARY_UPDATE_DT, & ! [IN]
@@ -833,14 +832,14 @@ contains
              basename_out_mod = trim(BASENAME_BOUNDARY)
           endif
 
-          call ParentSurfaceBoundary( LAND_TEMP_org       (:,:,:,ns:ne), &
-                                      LAND_WATER_org      (:,:,:,ns:ne), &
-                                      LAND_SFC_TEMP_org   (:,:,  ns:ne), &
-                                      LAND_SFC_albedo_org (:,:,:,ns:ne), &
-                                      OCEAN_TEMP_org      (OKS,:,:,  ns:ne), &
-                                      OCEAN_SFC_TEMP_org  (    :,:,  ns:ne), &
-                                      OCEAN_SFC_albedo_org(    :,:,:,ns:ne), &
-                                      OCEAN_SFC_Z0_org    (    :,:,  ns:ne), &
+          call ParentSurfaceBoundary( LAND_TEMP_org       (:,:,:,  ns:ne), &
+                                      LAND_WATER_org      (:,:,:,  ns:ne), &
+                                      LAND_SFC_TEMP_org   (  :,:,  ns:ne), &
+                                      LAND_SFC_albedo_org (  :,:,:,ns:ne), &
+                                      OCEAN_TEMP_org      (:,:,:,  ns:ne), &
+                                      OCEAN_SFC_TEMP_org  (  :,:,  ns:ne), &
+                                      OCEAN_SFC_albedo_org(  :,:,:,ns:ne), &
+                                      OCEAN_SFC_Z0_org    (  :,:,  ns:ne), &
                                       totaltimesteps,                    &
                                       BOUNDARY_UPDATE_DT,                &
                                       basename_out_mod,                  &
@@ -871,11 +870,6 @@ contains
        use_file_density_in, &
        dims,                &
        timelen              )
-    use scale_external_io, only: &
-       iSCALE, &
-       iWRFARW, &
-       iNICAM, &
-       iGrADS
     use mod_realinput_scale, only: &
        ParentAtmosSetupSCALE
     use mod_realinput_wrfarw, only: &
@@ -945,7 +939,7 @@ contains
        update_coord     = .true.
        apply_rotate_uv  = .true.
 
-    case('NETCDF')
+    case('NICAM-NETCDF')
 
        if ( read_by_myproc_atmos ) then
           call ParentAtmosSetupNICAM ( dims(:), & ! [OUT]
@@ -974,9 +968,9 @@ contains
     allocate( LAT_org (            dims(2), dims(3)     ) )
     allocate( CZ_org  ( dims(1)+2, dims(2), dims(3)     ) )
 
-    allocate( VELZ_org( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( VELX_org( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( VELY_org( dims(1)+2, dims(2), dims(3)     ) )
+    allocate( W_org   ( dims(1)+2, dims(2), dims(3)     ) )
+    allocate( U_org   ( dims(1)+2, dims(2), dims(3)     ) )
+    allocate( V_org   ( dims(1)+2, dims(2), dims(3)     ) )
     allocate( POTT_org( dims(1)+2, dims(2), dims(3)     ) )
     allocate( TEMP_org( dims(1)+2, dims(2), dims(3)     ) )
     allocate( PRES_org( dims(1)+2, dims(2), dims(3)     ) )
@@ -984,15 +978,14 @@ contains
     allocate( QTRC_org( dims(1)+2, dims(2), dims(3), QA ) )
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Horizontal Interpolation Level: ', NEST_INTERP_LEVEL
-    itp_nh = int( NEST_INTERP_LEVEL )
+    itp_nh = NEST_INTERP_LEVEL
     itp_nv = 2
 
-    allocate( hfact(     IA, JA, itp_nh         ) )
-    allocate( vfact( KA, IA, JA, itp_nh, itp_nv ) )
-    allocate( igrd (     IA, JA, itp_nh         ) )
-    allocate( jgrd (     IA, JA, itp_nh         ) )
-    allocate( kgrd ( KA, IA, JA, itp_nh, itp_nv ) )
-    allocate( ncopy(     IA, JA, itp_nh         ) )
+    allocate( igrd (          IA,JA,itp_nh) )
+    allocate( jgrd (          IA,JA,itp_nh) )
+    allocate( hfact(          IA,JA,itp_nh) )
+    allocate( kgrd (KA,itp_nv,IA,JA,itp_nh) )
+    allocate( vfact(KA,itp_nv,IA,JA,itp_nh) )
 
     return
   end subroutine ParentAtmosSetup
@@ -1080,10 +1073,10 @@ contains
        THERMODYN_POTT => ATMOS_THERMODYN_POTT
     use scale_atmos_hydrostatic, only: &
        HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
-    use scale_interpolation_nest, only: &
-       INTRPNEST_domain_compatibility, &
-       INTRPNEST_interp_fact_llz,      &
-       INTRPNEST_interp_3d
+    use scale_interp, only: &
+       INTRP_domain_compatibility, &
+       INTRP_factor3d,             &
+       INTRP_interp3d
     use mod_realinput_scale, only: &
        ParentAtmosInputSCALE
     use mod_realinput_wrfarw, only: &
@@ -1115,9 +1108,11 @@ contains
 
     real(RP) :: PRES (KA,IA,JA)
     real(RP) :: TEMP (KA,IA,JA)
-    real(RP) :: work1(KA,IA,JA)
-    real(RP) :: work2(KA,IA,JA)
+    real(RP) :: W    (KA,IA,JA)
+    real(RP) :: U    (KA,IA,JA)
+    real(RP) :: V    (KA,IA,JA)
     real(RP) :: QC   (KA,IA,JA)
+    real(RP) :: u_on_map, v_on_map
 
     logical, save :: first = .true.
 
@@ -1130,9 +1125,9 @@ contains
 
        select case(inputtype)
        case('SCALE-RM')
-          call ParentAtmosInputSCALE ( VELZ_org(:,:,:),   & ! [OUT]
-                                       VELX_org(:,:,:),   & ! [OUT]
-                                       VELY_org(:,:,:),   & ! [OUT]
+          call ParentAtmosInputSCALE ( W_org   (:,:,:),   & ! [OUT]
+                                       U_org   (:,:,:),   & ! [OUT]
+                                       V_org   (:,:,:),   & ! [OUT]
                                        PRES_org(:,:,:),   & ! [OUT]
                                        DENS_org(:,:,:),   & ! [OUT]
                                        POTT_org(:,:,:),   & ! [OUT]
@@ -1145,9 +1140,9 @@ contains
                                        dims(:),           & ! [IN]
                                        istep              ) ! [IN]
        case('GrADS')
-          call ParentAtmosInputGrADS ( VELZ_org(:,:,:),   & ! [OUT]
-                                       VELX_org(:,:,:),   & ! [OUT]
-                                       VELY_org(:,:,:),   & ! [OUT]
+          call ParentAtmosInputGrADS ( W_org   (:,:,:),   & ! [OUT]
+                                       U_org   (:,:,:),   & ! [OUT]
+                                       V_org   (:,:,:),   & ! [OUT]
                                        PRES_org(:,:,:),   & ! [OUT]
                                        DENS_org(:,:,:),   & ! [OUT]
                                        TEMP_org(:,:,:),   & ! [OUT]
@@ -1159,9 +1154,9 @@ contains
                                        dims(:),           & ! [IN]
                                        istep              ) ! [IN]
        case('WRF-ARW')
-          call ParentAtmosInputWRFARW( VELZ_org(:,:,:),   & ! [OUT]
-                                       VELX_org(:,:,:),   & ! [OUT]
-                                       VELY_org(:,:,:),   & ! [OUT]
+          call ParentAtmosInputWRFARW( W_org   (:,:,:),   & ! [OUT]
+                                       U_org   (:,:,:),   & ! [OUT]
+                                       V_org   (:,:,:),   & ! [OUT]
                                        PRES_org(:,:,:),   & ! [OUT]
                                        TEMP_org(:,:,:),   & ! [OUT]
                                        QTRC_org(:,:,:,:), & ! [OUT]
@@ -1174,9 +1169,9 @@ contains
                                        istep              ) ! [IN]
           DENS_org(:,:,:) = 0.0_RP
        case('NETCDF')
-          call ParentAtmosInputNICAM ( VELZ_org(:,:,:),   & ! [OUT]
-                                       VELX_org(:,:,:),   & ! [OUT]
-                                       VELY_org(:,:,:),   & ! [OUT]
+          call ParentAtmosInputNICAM ( W_org   (:,:,:),   & ! [OUT]
+                                       U_org   (:,:,:),   & ! [OUT]
+                                       V_org   (:,:,:),   & ! [OUT]
                                        PRES_org(:,:,:),   & ! [OUT]
                                        TEMP_org(:,:,:),   & ! [OUT]
                                        QTRC_org(:,:,:,:), & ! [OUT]
@@ -1214,9 +1209,9 @@ contains
           call COMM_bcast( CZ_org,  dims(1)+2, dims(2), dims(3) )
        endif
 
-       call COMM_bcast( VELZ_org, dims(1)+2, dims(2), dims(3) )
-       call COMM_bcast( VELX_org, dims(1)+2, dims(2), dims(3) )
-       call COMM_bcast( VELY_org, dims(1)+2, dims(2), dims(3) )
+       call COMM_bcast( W_org   , dims(1)+2, dims(2), dims(3) )
+       call COMM_bcast( U_org   , dims(1)+2, dims(2), dims(3) )
+       call COMM_bcast( V_org   , dims(1)+2, dims(2), dims(3) )
        call COMM_bcast( POTT_org, dims(1)+2, dims(2), dims(3) )
        call COMM_bcast( PRES_org, dims(1)+2, dims(2), dims(3) )
        call COMM_bcast( DENS_org, dims(1)+2, dims(2), dims(3) )
@@ -1246,101 +1241,131 @@ contains
     if ( first .OR. update_coord ) then
        first = .false.
 
-       call INTRPNEST_domain_compatibility( LON_org(:,:),      & ! [IN]
-                                            LAT_org(:,:),      & ! [IN]
-                                            CZ_org (:,:,:),    & ! [IN]
-                                            LON    (:,:),      & ! [IN]
-                                            LAT    (:,:),      & ! [IN]
-                                            CZ     (KS:KE,:,:) ) ! [IN]
+       call INTRP_domain_compatibility( LON_org(:,:),      & ! [IN]
+                                        LAT_org(:,:),      & ! [IN]
+                                        CZ_org (:,:,:),    & ! [IN]
+                                        LON    (:,:),      & ! [IN]
+                                        LAT    (:,:),      & ! [IN]
+                                        CZ     (KS:KE,:,:) ) ! [IN]
 
        ! full level
-       call INTRPNEST_interp_fact_llz( hfact  (:,:,:),             & ! [OUT]
-                                       vfact  (:,:,:,:,:),         & ! [OUT]
-                                       kgrd   (:,:,:,:,:),         & ! [OUT]
-                                       igrd   (:,:,:),             & ! [OUT]
-                                       jgrd   (:,:,:),             & ! [OUT]
-                                       ncopy  (:,:,:),             & ! [OUT]
-                                       CZ     (:,:,:),             & ! [IN]
-                                       LAT    (:,:),               & ! [IN]
-                                       LON    (:,:),               & ! [IN]
-                                       KS, KE, IA, JA,             & ! [IN]
-                                       CZ_org (:,:,:),             & ! [IN]
-                                       LAT_org(:,:),               & ! [IN]
-                                       LON_org(:,:),               & ! [IN]
-                                       dims(1)+2, dims(2), dims(3) ) ! [IN]
-
+       call INTRP_factor3d( itp_nh,                  & ! [IN]
+                            dims(1)+2, 1, dims(1)+2, & ! [IN]
+                            dims(2), dims(3),        & ! [IN]
+                            LON_org(:,:),            & ! [IN]
+                            LAT_org(:,:),            & ! [IN]
+                            CZ_org (:,:,:),          & ! [IN]
+                            KA, KS, KE,              & ! [IN]
+                            IA, JA,                  & ! [IN]
+                            LON    (:,:),            & ! [IN]
+                            LAT    (:,:),            & ! [IN]
+                            CZ     (:,:,:),          & ! [IN]
+                            igrd   (    :,:,:),      & ! [OUT]
+                            jgrd   (    :,:,:),      & ! [OUT]
+                            hfact  (    :,:,:),      & ! [OUT]
+                            kgrd   (:,:,:,:,:),      & ! [OUT]
+                            vfact  (:,:,:,:,:)       ) ! [OUT]
     endif
 
-    call INTRPNEST_interp_3d( VELZ    (:,:,:),     &
-                              VELZ_org(:,:,:),     &
-                              hfact   (:,:,:),     &
-                              vfact   (:,:,:,:,:), &
-                              kgrd    (:,:,:,:,:), &
-                              igrd    (:,:,:),     &
-                              jgrd    (:,:,:),     &
-                              IA, JA, KS, KE-1  )
+    call INTRP_interp3d( itp_nh,                      & ! [IN]
+                         dims(1)+2, dims(2), dims(3), & ! [IN]
+                         KA, KS, KE,                  & ! [IN]
+                         IA, JA,                      & ! [IN]
+                         igrd    (    :,:,:),         & ! [IN]
+                         jgrd    (    :,:,:),         & ! [IN]
+                         hfact   (    :,:,:),         & ! [IN]
+                         kgrd    (:,:,:,:,:),         & ! [IN]
+                         vfact   (:,:,:,:,:),         & ! [IN]
+                         W_org   (:,:,:),             & ! [INOUT]
+                         W       (:,:,:)              ) ! [OUT]
 
-    call INTRPNEST_interp_3d( VELX    (:,:,:),     &
-                              VELX_org(:,:,:),     &
-                              hfact   (:,:,:),     &
-                              vfact   (:,:,:,:,:), &
-                              kgrd    (:,:,:,:,:), &
-                              igrd    (:,:,:),     &
-                              jgrd    (:,:,:),     &
-                              IA, JA, KS, KE       )
+    call INTRP_interp3d( itp_nh,                      & ! [IN]
+                         dims(1)+2, dims(2), dims(3), & ! [IN]
+                         KA, KS, KE,                  & ! [IN]
+                         IA, JA,                      & ! [IN]
+                         igrd    (    :,:,:),         & ! [IN]
+                         jgrd    (    :,:,:),         & ! [IN]
+                         hfact   (    :,:,:),         & ! [IN]
+                         kgrd    (:,:,:,:,:),         & ! [IN]
+                         vfact   (:,:,:,:,:),         & ! [IN]
+                         U_org   (:,:,:),             & ! [INOUT]
+                         U       (:,:,:)              ) ! [OUT]
 
-    call INTRPNEST_interp_3d( VELY    (:,:,:),     &
-                              VELY_org(:,:,:),     &
-                              hfact   (:,:,:),     &
-                              vfact   (:,:,:,:,:), &
-                              kgrd    (:,:,:,:,:), &
-                              igrd    (:,:,:),     &
-                              jgrd    (:,:,:),     &
-                              IA, JA, KS, KE       )
+    call INTRP_interp3d( itp_nh,                      & ! [IN]
+                         dims(1)+2, dims(2), dims(3), & ! [IN]
+                         KA, KS, KE,                  & ! [IN]
+                         IA, JA,                      & ! [IN]
+                         igrd    (    :,:,:),         & ! [IN]
+                         jgrd    (    :,:,:),         & ! [IN]
+                         hfact   (    :,:,:),         & ! [IN]
+                         kgrd    (:,:,:,:,:),         & ! [IN]
+                         vfact   (:,:,:,:,:),         & ! [IN]
+                         V_org   (:,:,:),             & ! [INOUT]
+                         V       (:,:,:)              ) ! [OUT]
 
-    if ( apply_rotate_uv ) then ! convert from latlon coordinate to local mapping (x or y)
+    if ( apply_rotate_uv ) then ! rotation from latlon field to map-projected field
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          work1(k,i,j) = VELX(k,i,j) * GTRANS_ROTC(i,j,1) &
-                       + VELY(k,i,j) * GTRANS_ROTC(i,j,2)
-          work2(k,i,j) = VELY(k,i,j) * GTRANS_ROTC(i,j,1) &
-                       - VELX(k,i,j) * GTRANS_ROTC(i,j,2)
-       enddo
-       enddo
-       enddo
+          u_on_map =  U(k,i,j) * GTRANS_ROTC(i,j,1) + V(k,i,j) * GTRANS_ROTC(i,j,2)
+          v_on_map = -U(k,i,j) * GTRANS_ROTC(i,j,2) + V(k,i,j) * GTRANS_ROTC(i,j,1)
 
-       ! from scalar point to staggered point
-       do j = 1, JA
-       do i = 1, IA-1
-       do k = KS, KE
-          VELX(k,i,j) = 0.5_RP * ( work1(k,i+1,j) + work1(k,i,j) )
+          U(k,i,j) = u_on_map
+          V(k,i,j) = v_on_map
        enddo
-       enddo
-       enddo
-
-       i = IA
-       do j = 1, JA
-       do k = KS, KE
-          VELX(k,i,j) = work1(k,i,j)
-       enddo
-       enddo
-
-       do j = 1, JA-1
-       do i = 1, IA
-       do k = KS, KE
-          VELY(k,i,j) = 0.5_RP * ( work2(k,i,j+1) + work2(k,i,j) )
-       enddo
-       enddo
-       enddo
-
-       j = JA
-       do i = 1, IA
-       do k = KS, KE
-          VELY(k,i,j) = work2(k,i,j)
        enddo
        enddo
     endif
+
+    ! from scalar point to staggered point
+    do j = 1, JA
+    do i = 1, IA
+    do k = KS, KE-1
+       VELZ(k,i,j) = 0.5_RP * ( W(k+1,i,j) + W(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    do j = 1, JA
+    do i = 1, IA-1
+    do k = KS, KE
+       VELX(k,i,j) = 0.5_RP * ( U(k,i+1,j) + U(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    i = IA
+    do j = 1, JA
+    do k = KS, KE
+       VELX(k,i,j) = U(k,i,j)
+    enddo
+    enddo
+
+    do j = 1, JA-1
+    do i = 1, IA
+    do k = KS, KE
+       VELY(k,i,j) = 0.5_RP * ( V(k,i,j+1) + V(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    j = JA
+    do i = 1, IA
+    do k = KS, KE
+       VELY(k,i,j) = V(k,i,j)
+    enddo
+    enddo
+
+    do j = 1, JA
+    do i = 1, IA
+       VELZ(   1:KS-1,i,j) = 0.0_RP
+       VELZ(KE  :KA  ,i,j) = 0.0_RP
+       VELX(   1:KS-1,i,j) = 0.0_RP
+       VELX(KE+1:KA  ,i,j) = 0.0_RP
+       VELY(   1:KS-1,i,j) = 0.0_RP
+       VELY(KE+1:KA  ,i,j) = 0.0_RP
+    enddo
+    enddo
 
     call COMM_vars8( VELZ(:,:,:), 1 )
     call COMM_vars8( VELX(:,:,:), 2 )
@@ -1349,56 +1374,79 @@ contains
     call COMM_wait ( VELX(:,:,:), 2, .false. )
     call COMM_wait ( VELY(:,:,:), 3, .false. )
 
-    call INTRPNEST_interp_3d( POTT    (:,:,:),     &
-                              POTT_org(:,:,:),     &
-                              hfact   (:,:,:),     &
-                              vfact   (:,:,:,:,:), &
-                              kgrd    (:,:,:,:,:), &
-                              igrd    (:,:,:),     &
-                              jgrd    (:,:,:),     &
-                              IA, JA, KS, KE       )
+    call INTRP_interp3d( itp_nh,                      & ! [IN]
+                         dims(1)+2, dims(2), dims(3), & ! [IN]
+                         KA, KS, KE,                  & ! [IN]
+                         IA, JA,                      & ! [IN]
+                         igrd    (    :,:,:),         & ! [IN]
+                         jgrd    (    :,:,:),         & ! [IN]
+                         hfact   (    :,:,:),         & ! [IN]
+                         kgrd    (:,:,:,:,:),         & ! [IN]
+                         vfact   (:,:,:,:,:),         & ! [IN]
+                         POTT_org(:,:,:),             & ! [INOUT]
+                         POTT    (:,:,:)              ) ! [OUT]
+
+    do j = 1, JA
+    do i = 1, IA
+       POTT(   1:KS-1,i,j) = 0.0_RP
+       POTT(KE+1:KA  ,i,j) = 0.0_RP
+    enddo
+    enddo
 
     do iq = 1, QA
-       call INTRPNEST_interp_3d( QTRC    (:,:,:,iq),  &
-                                 QTRC_org(:,:,:,iq),  &
-                                 hfact   (:,:,:),     &
-                                 vfact   (:,:,:,:,:), &
-                                 kgrd    (:,:,:,:,:), &
-                                 igrd    (:,:,:),     &
-                                 jgrd    (:,:,:),     &
-                                 IA, JA, KS, KE       )
+       call INTRP_interp3d( itp_nh,                      & ! [IN]
+                            dims(1)+2, dims(2), dims(3), & ! [IN]
+                            KA, KS, KE,                  & ! [IN]
+                            IA, JA,                      & ! [IN]
+                            igrd    (    :,:,:),         & ! [IN]
+                            jgrd    (    :,:,:),         & ! [IN]
+                            hfact   (    :,:,:),         & ! [IN]
+                            kgrd    (:,:,:,:,:),         & ! [IN]
+                            vfact   (:,:,:,:,:),         & ! [IN]
+                            QTRC_org(:,:,:,iq),          & ! [INOUT]
+                            QTRC    (:,:,:,iq)           ) ! [OUT]
+
+
+       do j = 1, JA
+       do i = 1, IA
+          QTRC(   1:KS-1,i,j,iq) = 0.0_RP
+          QTRC(KE+1:KA  ,i,j,iq) = 0.0_RP
+       enddo
+       enddo
     enddo
 
     if ( use_file_density ) then
-
-       DENS_org(:,:,:) = log(DENS_org(:,:,:)) ! use logarithmic density to interpolate more accurately
-       call INTRPNEST_interp_3d( DENS    (:,:,:),     &
-                                 DENS_org(:,:,:),     &
-                                 hfact   (:,:,:),     &
-                                 vfact   (:,:,:,:,:), &
-                                 kgrd    (:,:,:,:,:), &
-                                 igrd    (:,:,:),     &
-                                 jgrd    (:,:,:),     &
-                                 IA, JA, KS, KE,      &
-                                 logwegt=.true.       )
+       call INTRP_interp3d( itp_nh,                      & ! [IN]
+                            dims(1)+2, dims(2), dims(3), & ! [IN]
+                            KA, KS, KE,                  & ! [IN]
+                            IA, JA,                      & ! [IN]
+                            igrd    (    :,:,:),         & ! [IN]
+                            jgrd    (    :,:,:),         & ! [IN]
+                            hfact   (    :,:,:),         & ! [IN]
+                            kgrd    (:,:,:,:,:),         & ! [IN]
+                            vfact   (:,:,:,:,:),         & ! [IN]
+                            DENS_org(:,:,:),             & ! [INOUT]
+                            DENS    (:,:,:),             & ! [OUT]
+                            logwgt = .true.              ) ! [IN]
     else
-
-       PRES_org(:,:,:) = log(PRES_org(:,:,:))
-       call INTRPNEST_interp_3d( PRES    (:,:,:),     &
-                                 PRES_org(:,:,:),     &
-                                 hfact   (:,:,:),     &
-                                 vfact   (:,:,:,:,:), &
-                                 kgrd    (:,:,:,:,:), &
-                                 igrd    (:,:,:),     &
-                                 jgrd    (:,:,:),     &
-                                 IA, JA, KS, KE,      &
-                                 logwegt=.true.       )
+       call INTRP_interp3d( itp_nh,                      & ! [IN]
+                            dims(1)+2, dims(2), dims(3), & ! [IN]
+                            KA, KS, KE,                  & ! [IN]
+                            IA, JA,                      & ! [IN]
+                            igrd    (    :,:,:),         & ! [IN]
+                            jgrd    (    :,:,:),         & ! [IN]
+                            hfact   (    :,:,:),         & ! [IN]
+                            kgrd    (:,:,:,:,:),         & ! [IN]
+                            vfact   (:,:,:,:,:),         & ! [IN]
+                            PRES_org(:,:,:),             & ! [INOUT]
+                            PRES    (:,:,:),             & ! [OUT]
+                            logwgt = .true.              ) ! [IN]
 
        QC(:,:,:) = 0.0_RP
 #ifndef DRY
        if ( I_QC > 0 ) then
           do iq = QLS, QLE
-            QC(:,:,:) = QC(:,:,:) + QTRC(:,:,:,iq)
+             QC(:,:,:) = QC(:,:,:) + QTRC(:,:,:,iq)
           enddo
        endif
 #endif
@@ -1416,16 +1464,16 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-    do k = KS, KE-1
-       MOMZ(k,i,j) = VELZ(k,i,j) * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
-    enddo
+       DENS(   1:KS-1,i,j) = 0.0_RP
+       DENS(KE+1:KA  ,i,j) = 0.0_RP
     enddo
     enddo
 
-    k = KE
     do j = 1, JA
     do i = 1, IA
-       MOMZ(k,i,j) = 0.0_RP
+    do k = KS, KE-1
+       MOMZ(k,i,j) = VELZ(k,i,j) * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
+    enddo
     enddo
     enddo
 
@@ -1461,16 +1509,29 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-    do k = KS, KE
+    do k = 1, KA
        RHOT(k,i,j) = POTT(k,i,j) * DENS(k,i,j)
     enddo
     enddo
     enddo
 
-    call COMM_vars8( MOMX(:,:,:), 1 )
-    call COMM_vars8( MOMY(:,:,:), 2 )
-    call COMM_wait ( MOMX(:,:,:), 1, .false. )
-    call COMM_wait ( MOMY(:,:,:), 2, .false. )
+    do j = 1, JA
+    do i = 1, IA
+       MOMZ(   1:KS-1,i,j) = 0.0_RP
+       MOMZ(KE  :KA  ,i,j) = 0.0_RP
+       MOMX(   1:KS-1,i,j) = 0.0_RP
+       MOMX(KE+1:KA  ,i,j) = 0.0_RP
+       MOMY(   1:KS-1,i,j) = 0.0_RP
+       MOMY(KE+1:KA  ,i,j) = 0.0_RP
+    enddo
+    enddo
+
+    call COMM_vars8( MOMZ(:,:,:), 1 )
+    call COMM_vars8( MOMX(:,:,:), 2 )
+    call COMM_vars8( MOMY(:,:,:), 3 )
+    call COMM_wait ( MOMZ(:,:,:), 1, .false. )
+    call COMM_wait ( MOMX(:,:,:), 2, .false. )
+    call COMM_wait ( MOMY(:,:,:), 3, .false. )
 
     call PROF_rapend  ('___AtmosInterp',3)
 
@@ -1627,11 +1688,6 @@ contains
        intrp_land_sfc_temp, &
        intrp_ocean_temp,    &
        intrp_ocean_sfc_temp )
-    use scale_external_io, only: &
-         iSCALE, &
-         iWRFARW, &
-         iNICAM, &
-         iGrADS
     use mod_realinput_scale, only: &
          ParentLandSetupSCALE, &
          ParentOceanSetupSCALE
@@ -1910,9 +1966,9 @@ contains
          UNDEF => CONST_UNDEF, &
          I_SW => CONST_I_SW, &
          I_LW => CONST_I_LW
-    use scale_interpolation_nest, only: &
-         INTRPNEST_interp_fact_latlon, &
-         INTRPNEST_interp_2d
+    use scale_interp, only: &
+         INTRP_factor2d, &
+         INTRP_interp2d
     use scale_land_grid, only: &
          LCZ  => GRID_LCZ
     use scale_atmos_thermodyn, only: &
@@ -2238,15 +2294,17 @@ contains
        call PROF_rapstart('___SurfaceInterp',3)
 
        if ( first .or. update_coord ) then
-
-          ! interpolation facter between outer ocean grid
-          call INTRPNEST_interp_fact_latlon( hfact_o(:,:,:),               & ! [OUT]
-                                             igrd_o(:,:,:), jgrd_o(:,:,:), & ! [OUT]
-                                             olat_org(:,:), olon_org(:,:), & ! [IN]
-                                             odims(1), odims(2),           & ! [IN]
-                                             llat_org(:,:), llon_org(:,:), & ! [IN]
-                                             ldims(2), ldims(3)            ) ! [IN]
-
+          ! interpolation factor between outer ocean grid and land grid
+          call INTRP_factor2d( itp_nh,             & ! [IN]
+                               ldims(2), ldims(3), & ! [IN]
+                               llon_org(:,:),      & ! [IN]
+                               llat_org(:,:),      & ! [IN]
+                               odims(1), odims(2), & ! [IN]
+                               olon_org(:,:),      & ! [IN]
+                               olat_org(:,:),      & ! [IN]
+                               igrd_o  (:,:,:),    & ! [OUT]
+                               jgrd_o  (:,:,:),    & ! [OUT]
+                               hfact_o (:,:,:)     ) ! [OUT]
        end if
 
        ! Ocean temp: interpolate over the land
@@ -2299,8 +2357,14 @@ contains
 
        if ( first .or. update_coord ) then
           ! land surface temperature at ocean grid
-          call INTRPNEST_interp_2d( lst_ocean(:,:), lst_org(:,:), hfact_o(:,:,:),        &
-                                    igrd_o(:,:,:), jgrd_o(:,:,:), odims(1), odims(2) )
+          call INTRP_interp2d( itp_nh,             & ! [IN]
+                               ldims(2), ldims(3), & ! [IN]
+                               odims(1), odims(2), & ! [IN]
+                               igrd_o   (:,:,:),   & ! [IN]
+                               jgrd_o   (:,:,:),   & ! [IN]
+                               hfact_o  (:,:,:),   & ! [IN]
+                               lst_org  (:,:),     & ! [IN]
+                               lst_ocean(:,:)      ) ! [OUT]
        end if
 
        call replace_misval_map( sst_org, lst_ocean, odims(1), odims(2), "SST")
@@ -2317,24 +2381,62 @@ contains
 
        if ( first .or. update_coord ) then
           ! interporation for ocean variables
-          call INTRPNEST_interp_fact_latlon( hfact(:,:,:),                 & ! [OUT]
-                                             igrd(:,:,:), jgrd(:,:,:),     & ! [OUT]
-                                             LAT(:,:), LON(:,:),           & ! [IN]
-                                             IA, JA,                       & ! [IN]
-                                             olat_org(:,:), olon_org(:,:), & ! [IN]
-                                             odims(1), odims(2)            ) ! [IN]
+          call INTRP_factor2d( itp_nh,             & ! [IN]
+                               odims(1), odims(2), & ! [IN]
+                               olon_org(:,:),      & ! [IN]
+                               olat_org(:,:),      & ! [IN]
+                               IA, JA,             & ! [IN]
+                               lon     (:,:),      & ! [IN]
+                               lat     (:,:),      & ! [IN]
+                               igrd    (:,:,:),    & ! [OUT]
+                               jgrd    (:,:,:),    & ! [OUT]
+                               hfact   (:,:,:)     ) ! [OUT]
        end if
 
-       call INTRPNEST_interp_2d( tw(:,:,nn), tw_org(:,:), hfact(:,:,:), &
-                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
-       call INTRPNEST_interp_2d( sst(:,:,nn), sst_org(:,:), hfact(:,:,:), &
-                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
-       call INTRPNEST_interp_2d( albw(:,:,I_LW,nn), albw_org(:,:,I_LW), hfact(:,:,:), &
-                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
-       call INTRPNEST_interp_2d( albw(:,:,I_SW,nn), albw_org(:,:,I_SW), hfact(:,:,:), &
-                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
-       call INTRPNEST_interp_2d( z0w(:,:,nn),   z0w_org(:,:),   hfact(:,:,:), &
-                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
+       call INTRP_interp2d( itp_nh,               & ! [IN]
+                            odims(1), odims(2),   & ! [IN]
+                            IA, JA,               & ! [IN]
+                            igrd    (:,:,:),      & ! [IN]
+                            jgrd    (:,:,:),      & ! [IN]
+                            hfact   (:,:,:),      & ! [IN]
+                            tw_org  (:,:),        & ! [IN]
+                            tw      (:,:,nn)      ) ! [OUT]
+
+       call INTRP_interp2d( itp_nh,               & ! [IN]
+                            odims(1), odims(2),   & ! [IN]
+                            IA, JA,               & ! [IN]
+                            igrd    (:,:,:),      & ! [IN]
+                            jgrd    (:,:,:),      & ! [IN]
+                            hfact   (:,:,:),      & ! [IN]
+                            sst_org (:,:),        & ! [IN]
+                            sst     (:,:,nn)      ) ! [OUT]
+
+       call INTRP_interp2d( itp_nh,               & ! [IN]
+                            odims(1), odims(2),   & ! [IN]
+                            IA, JA,               & ! [IN]
+                            igrd    (:,:,:),      & ! [IN]
+                            jgrd    (:,:,:),      & ! [IN]
+                            hfact   (:,:,:),      & ! [IN]
+                            albw_org(:,:,I_LW),   & ! [IN]
+                            albw    (:,:,I_LW,nn) ) ! [OUT]
+
+       call INTRP_interp2d( itp_nh,               & ! [IN]
+                            odims(1), odims(2),   & ! [IN]
+                            IA, JA,               & ! [IN]
+                            igrd    (:,:,:),      & ! [IN]
+                            jgrd    (:,:,:),      & ! [IN]
+                            hfact   (:,:,:),      & ! [IN]
+                            albw_org(:,:,I_SW),   & ! [IN]
+                            albw    (:,:,I_SW,nn) ) ! [OUT]
+
+       call INTRP_interp2d( itp_nh,               & ! [IN]
+                            odims(1), odims(2),   & ! [IN]
+                            IA, JA,               & ! [IN]
+                            igrd    (:,:,:),      & ! [IN]
+                            jgrd    (:,:,:),      & ! [IN]
+                            hfact   (:,:,:),      & ! [IN]
+                            z0w_org (:,:),        & ! [IN]
+                            z0w     (:,:,nn)      ) ! [OUT]
 
        if ( first ) then
 
@@ -2392,7 +2494,7 @@ contains
     real(RP),         intent(in)   :: strg(:,:,:,:)
     real(RP),         intent(in)   :: lst(:,:,:)
     real(RP),         intent(in)   :: albg(:,:,:,:)
-    real(RP),         intent(in)   :: tw(:,:,:)
+    real(RP),         intent(in)   :: tw(:,:,:,:)
     real(RP),         intent(in)   :: sst(:,:,:)
     real(RP),         intent(in)   :: albw(:,:,:,:)
     real(RP),         intent(in)   :: z0(:,:,:)
@@ -2447,7 +2549,7 @@ contains
          timeintv=update_dt, nsteps=numsteps                             ) ! [IN]
     call FILE_CARTESC_def_var( fid,                        & ! [IN]
          'OCEAN_TEMP', 'Reference Ocean Temperature', 'K', & ! [IN]
-          'XYT', boundary_out_dtype,                       & ! [IN]
+          'OXYT', boundary_out_dtype,                      & ! [IN]
          vid(6),                                           & ! [OUT]
          timeintv=update_dt, nsteps=numsteps               ) ! [IN]
     call FILE_CARTESC_def_var( fid,                                    & ! [IN]
@@ -2478,7 +2580,7 @@ contains
     call FILE_CARTESC_write_var( fid, vid(3),  lst (  :,:,     ts:te), 'LAND_SFC_TEMP',  'XYT',  update_dt )
     call FILE_CARTESC_write_var( fid, vid(4),  albg(  :,:,I_LW,ts:te), 'LAND_ALB_LW',    'XYT',  update_dt )
     call FILE_CARTESC_write_var( fid, vid(5),  albg(  :,:,I_SW,ts:te), 'LAND_ALB_SW',    'XYT',  update_dt )
-    call FILE_CARTESC_write_var( fid, vid(6),  tw  (  :,:,     ts:te), 'OCEAN_TEMP',     'XYT',  update_dt )
+    call FILE_CARTESC_write_var( fid, vid(6),  tw  (:,:,:,     ts:te), 'OCEAN_TEMP',     'OXYT', update_dt )
     call FILE_CARTESC_write_var( fid, vid(7),  sst (  :,:,     ts:te), 'OCEAN_SFC_TEMP', 'XYT',  update_dt )
     call FILE_CARTESC_write_var( fid, vid(8),  albw(  :,:,I_LW,ts:te), 'OCEAN_ALB_LW',   'XYT',  update_dt )
     call FILE_CARTESC_write_var( fid, vid(9),  albw(  :,:,I_SW,ts:te), 'OCEAN_ALB_SW',   'XYT',  update_dt )
@@ -2531,11 +2633,11 @@ contains
          I_SW => CONST_I_SW, &
          I_LW => CONST_I_LW, &
          LAPS => CONST_LAPS
-    use scale_interpolation_nest, only: &
-         INTRPNEST_interp_fact_llz, &
-         INTRPNEST_interp_fact_latlon, &
-         INTRPNEST_interp_3d, &
-         INTRPNEST_interp_2d
+    use scale_interp, only: &
+         INTRP_factor2d, &
+         INTRP_factor3d, &
+         INTRP_interp2d, &
+         INTRP_interp3d
     use scale_topography, only: &
          TOPO_Zsfc
     use mod_land_vars, only: &
@@ -2626,17 +2728,27 @@ contains
     !end if
 
     ! interpolation facter between outer land grid and ocean grid
-    call INTRPNEST_interp_fact_latlon( hfact_l(:,:,:),               & ! [OUT]
-                                       igrd_l(:,:,:), jgrd_l(:,:,:), & ! [OUT]
-                                       llat_org(:,:), llon_org(:,:), & ! [IN]
-                                       ldims(2), ldims(3),           & ! [IN]
-                                       olat_org(:,:), olon_org(:,:), & ! [IN]
-                                       odims(1), odims(2)            ) ! [IN]
-
+    call INTRP_factor2d( itp_nh,             & ! [IN]
+                         odims(1), odims(2), & ! [IN]
+                         olon_org(:,:),      & ! [IN]
+                         olat_org(:,:),      & ! [IN]
+                         ldims(2), ldims(3), & ! [IN]
+                         llon_org(:,:),      & ! [IN]
+                         llat_org(:,:),      & ! [IN]
+                         igrd_l  (:,:,:),    & ! [OUT]
+                         jgrd_l  (:,:,:),    & ! [OUT]
+                         hfact_l (:,:,:)     ) ! [OUT]
 
     ! sst on land grid
-    call INTRPNEST_interp_2d( sst_land(:,:), sst_org(:,:), hfact_l(:,:,:),      &
-                              igrd_l(:,:,:), jgrd_l(:,:,:), ldims(2), ldims(3) )
+    call INTRP_interp2d( itp_nh,             & ! [IN]
+                         odims(1), odims(2), & ! [IN]
+                         ldims(2), ldims(3), & ! [IN]
+                         igrd_l   (:,:,:),   & ! [IN]
+                         jgrd_l   (:,:,:),   & ! [IN]
+                         hfact_l  (:,:,:),   & ! [IN]
+                         sst_org  (:,:),     & ! [IN]
+                         sst_land (:,:)      ) ! [OUT]
+
     call replace_misval_map( lst_org, sst_land, ldims(2), ldims(3), "SKINT")
 
     ! replace missing value
@@ -2682,48 +2794,76 @@ contains
     enddo
     enddo
 
-    call INTRPNEST_interp_fact_llz( hfact  (:,:,:),               & ! [OUT]
-                                    vfactl (:,:,:,:,:),           & ! [OUT]
-                                    kgrdl  (:,:,:,:,:),           & ! [OUT]
-                                    igrd   (:,:,:), jgrd(:,:,:),  & ! [OUT]
-                                    ncopy  (:,:,:),               & ! [OUT]
-                                    lcz_3D (:,:,:),               & ! [IN]
-                                    LAT    (:,:), LON    (:,:),   & ! [IN]
-                                    1, LKMAX, IA, JA,             & ! [IN]
-                                    lz3d_org(:,:,:),              & ! [IN]
-                                    llat_org(:,:), llon_org(:,:), & ! [IN]
-                                    ldims(1), ldims(2), ldims(3), & ! [IN]
-                                    landgrid=.true.               ) ! [IN]
+    call INTRP_factor3d( itp_nh,                & ! [IN]
+                         ldims(1), 1, ldims(1), & ! [IN]
+                         ldims(2), ldims(3),    & ! [IN]
+                         llon_org(:,:),         & ! [IN]
+                         llat_org(:,:),         & ! [IN]
+                         lz3d_org(:,:,:),       & ! [IN]
+                         LKMAX, LKS, LKE,       & ! [IN]
+                         IA, JA,                & ! [IN]
+                         lon     (:,:),         & ! [IN]
+                         lat     (:,:),         & ! [IN]
+                         lcz_3D  (:,:,:),       & ! [IN]
+                         igrd    (    :,:,:),   & ! [OUT]
+                         jgrd    (    :,:,:),   & ! [OUT]
+                         hfact   (    :,:,:),   & ! [OUT]
+                         kgrdl   (:,:,:,:,:),   & ! [OUT]
+                         vfactl  (:,:,:,:,:)    ) ! [OUT]
 
-    call INTRPNEST_interp_2d( lst(:,:),   lst_org(:,:),   hfact(:,:,:), &
-                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
-    call INTRPNEST_interp_2d( ust(:,:),   ust_org(:,:),   hfact(:,:,:), &
-                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
-!    call INTRPNEST_interp_2d( skinw(:,:), skinw_org(:,:), hfact(:,:,:), &
-!                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
-!    call INTRPNEST_interp_2d( snowq(:,:), snowq_org(:,:), hfact(:,:,:), &
-!                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
-!    call INTRPNEST_interp_2d( snowt(:,:), snowt_org(:,:), hfact(:,:,:), &
-!                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
-    call INTRPNEST_interp_2d( albg(:,:,I_LW), albg_org(:,:,I_LW), hfact(:,:,:), &
-                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
-    call INTRPNEST_interp_2d( albg(:,:,I_SW), albg_org(:,:,I_SW), hfact(:,:,:), &
-                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRP_interp2d( itp_nh,             & ! [IN]
+                         ldims(2), ldims(3), & ! [IN]
+                         IA, JA,             & ! [IN]
+                         igrd    (:,:,:),    & ! [IN]
+                         jgrd    (:,:,:),    & ! [IN]
+                         hfact   (:,:,:),    & ! [IN]
+                         lst_org (:,:),      & ! [IN]
+                         lst     (:,:)       ) ! [OUT]
 
-    call INTRPNEST_interp_3d( tg    (:,:,:),     &
-                              tg_org(:,:,:),     &
-                              hfact (:,:,:),     &
-                              vfactl(:,:,:,:,:), &
-                              kgrdl (:,:,:,:,:), &
-                              igrd  (:,:,:),     &
-                              jgrd  (:,:,:),     &
-                              IA, JA, 1, LKMAX-1 )
+    call INTRP_interp2d( itp_nh,             & ! [IN]
+                         ldims(2), ldims(3), & ! [IN]
+                         IA, JA,             & ! [IN]
+                         igrd    (:,:,:),    & ! [IN]
+                         jgrd    (:,:,:),    & ! [IN]
+                         hfact   (:,:,:),    & ! [IN]
+                         ust_org (:,:),      & ! [IN]
+                         ust     (:,:)       ) ! [OUT]
+
+    call INTRP_interp2d( itp_nh,             & ! [IN]
+                         ldims(2), ldims(3), & ! [IN]
+                         IA, JA,             & ! [IN]
+                         igrd    (:,:,:),    & ! [IN]
+                         jgrd    (:,:,:),    & ! [IN]
+                         hfact   (:,:,:),    & ! [IN]
+                         albg_org(:,:,I_LW), & ! [IN]
+                         albg    (:,:,I_LW)  ) ! [OUT]
+
+    call INTRP_interp2d( itp_nh,             & ! [IN]
+                         ldims(2), ldims(3), & ! [IN]
+                         IA, JA,             & ! [IN]
+                         igrd    (:,:,:),    & ! [IN]
+                         jgrd    (:,:,:),    & ! [IN]
+                         hfact   (:,:,:),    & ! [IN]
+                         albg_org(:,:,I_SW), & ! [IN]
+                         albg    (:,:,I_SW)  ) ! [OUT]
+
+    call INTRP_interp3d( itp_nh,                       & ! [IN]
+                         ldims(1), ldims(2), ldims(3), & ! [IN]
+                         LKMAX, LKS, LKE,              & ! [IN]
+                         IA, JA,                       & ! [IN]
+                         igrd  (    :,:,:),            & ! [IN]
+                         jgrd  (    :,:,:),            & ! [IN]
+                         hfact (    :,:,:),            & ! [IN]
+                         kgrdl (:,:,:,:,:),            & ! [IN]
+                         vfactl(:,:,:,:,:),            & ! [IN]
+                         tg_org(:,:,:),                & ! [INOUT]
+                         tg    (:,:,:)                 ) ! [OUT]
 
     do j = 1, JA
     do i = 1, IA
        tg(LKMAX,i,j) = tg(LKMAX-1,i,j)
-    enddo ! i
-    enddo ! j
+    enddo
+    enddo
 
     ! replace values over the ocean
     do k = 1, LKMAX
@@ -2733,8 +2873,14 @@ contains
 
     ! elevation collection
     if ( elevation_collection ) then
-       call INTRPNEST_interp_2d( topo(:,:),   topo_org(:,:),   hfact(:,:,:), &
-                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
+       call INTRP_interp2d( itp_nh,             & ! [IN]
+                            ldims(2), ldims(3), & ! [IN]
+                            IA, JA,             & ! [IN]
+                            igrd    (:,:,:),    & ! [IN]
+                            jgrd    (:,:,:),    & ! [IN]
+                            hfact   (:,:,:),    & ! [IN]
+                            topo_org(:,:),      & ! [IN]
+                            topo    (:,:)       ) ! [OUT]
 
        do j = 1, JA
        do i = 1, IA
@@ -2774,14 +2920,18 @@ contains
              enddo
           end if
 
-          call INTRPNEST_interp_3d( smds    (:,:,:),     &
-                                    smds_org(:,:,:),     &
-                                    hfact   (:,:,:),     &
-                                    vfactl  (:,:,:,:,:), &
-                                    kgrdl   (:,:,:,:,:), &
-                                    igrd    (:,:,:),     &
-                                    jgrd    (:,:,:),     &
-                                    IA, JA, 1, LKMAX-1   )
+          call INTRP_interp3d( itp_nh,                       & ! [IN]
+                               ldims(1), ldims(2), ldims(3), & ! [IN]
+                               LKMAX, LKS, LKE,              & ! [IN]
+                               IA, JA,                       & ! [IN]
+                               igrd    (    :,:,:),          & ! [IN]
+                               jgrd    (    :,:,:),          & ! [IN]
+                               hfact   (    :,:,:),          & ! [IN]
+                               kgrdl   (:,:,:,:,:),          & ! [IN]
+                               vfactl  (:,:,:,:,:),          & ! [IN]
+                               smds_org(:,:,:),              & ! [INOUT]
+                               smds    (:,:,:)               ) ! [OUT]
+
           do k = 1, LKMAX-1
              strg(k,:,:) = convert_WS2VWC( smds(k,:,:), critical=soilwater_DS2VC_flag )
           end do
@@ -2805,14 +2955,17 @@ contains
              enddo
           end if
 
-          call INTRPNEST_interp_3d( strg    (:,:,:),     &
-                                    strg_org(:,:,:),     &
-                                    hfact   (:,:,:),     &
-                                    vfactl  (:,:,:,:,:), &
-                                    kgrdl   (:,:,:,:,:), &
-                                    igrd    (:,:,:),     &
-                                    jgrd    (:,:,:),     &
-                                    IA, JA, 1, LKMAX-1   )
+          call INTRP_interp3d( itp_nh,                       & ! [IN]
+                               ldims(1), ldims(2), ldims(3), & ! [IN]
+                               LKMAX, LKS, LKE,              & ! [IN]
+                               IA, JA,                       & ! [IN]
+                               igrd    (    :,:,:),          & ! [IN]
+                               jgrd    (    :,:,:),          & ! [IN]
+                               hfact   (    :,:,:),          & ! [IN]
+                               kgrdl   (:,:,:,:,:),          & ! [IN]
+                               vfactl  (:,:,:,:,:),          & ! [IN]
+                               strg_org(:,:,:),              & ! [INOUT]
+                               strg    (:,:,:)               ) ! [OUT]
        end if
 
        ! replace values over the ocean

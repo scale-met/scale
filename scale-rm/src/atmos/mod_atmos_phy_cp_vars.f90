@@ -411,11 +411,11 @@ contains
                                ATMOS_PHY_CP_cloudtop(:,:)       ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(4), 'XY',  & ! [IN]
                                ATMOS_PHY_CP_cloudbase(:,:)      ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(5), 'XY',  & ! [IN]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(5), 'ZXY', & ! [IN]
                                ATMOS_PHY_CP_cldfrac_dp(:,:,:)   ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(6), 'XY',  & ! [IN]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(6), 'ZXY', & ! [IN]
                                ATMOS_PHY_CP_cldfrac_sh(:,:,:)   ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(7), 'XY',  & ! [IN]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(7), 'ZXY', & ! [IN]
                                ATMOS_PHY_CP_w0avg(:,:,:)        ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(8), 'XY',  & ! [IN]
                                ATMOS_PHY_CP_kf_nca(:,:)         ) ! [OUT]
@@ -578,7 +578,7 @@ contains
        do i = 1, 2
           call FILE_CARTESC_def_var( restart_fid,           & ! [IN]
                VAR_t_NAME(i), VAR_t_DESC(i), VAR_t_UNIT(i), & ! [IN]
-               'XY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE,       & ! [IN]
+               'ZXY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE,       & ! [IN]
                VAR_t_ID(i)                                  ) ! [OUT]
        end do
 

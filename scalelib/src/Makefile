@@ -119,6 +119,8 @@ OBJS_NAME = \
 	scale_file_cartesC.o	\
 	scale_file_history.o	\
 	scale_file_history_cartesC.o	\
+	scale_file_external_input.o	\
+	scale_file_external_input_cartesC.o	\
 	scale_atmos_dyn.o	\
 	scale_atmos_dyn_common.o	\
 	$(OBJS_DYN)	\
@@ -168,27 +170,22 @@ OBJS_NAME = \
 	scale_comm.o	\
 	scale_const.o	\
 	scale_debug.o	\
-	scale_external_io.o	\
-	scale_external_input.o	\
-	scale_external_input_rm.o	\
 	scale_grid_cartesian.o	\
 	scale_grid_index.o	\
 	scale_grid_nest.o	\
 	scale_grid_real.o	\
 	scale_index.o		\
 	scale_gridtrans.o	\
-	scale_interpolation.o	\
-	scale_interpolation_nest.o	\
+	scale_interp.o	\
+	scale_interp_vert.o	\
 	scale_land_grid.o	\
 	scale_land_grid_index.o	\
 	scale_land_phy.o	\
 	scale_land_phy_const.o	\
-	scale_land_phy_file.o	\
 	scale_land_phy_slab.o	\
 	scale_land_phy_matsiro.o	\
 	scale_land_sfc.o	\
 	scale_land_sfc_const.o	\
-	scale_land_sfc_file.o	\
 	scale_land_sfc_thin-slab.o	\
 	scale_land_sfc_thick-slab.o	\
 	scale_landuse.o	\
@@ -202,7 +199,6 @@ OBJS_NAME = \
 	scale_ocean_phy.o	\
 	scale_ocean_phy_const.o	\
 	scale_ocean_phy_slab.o	\
-	scale_ocean_phy_file.o	\
 	scale_ocean_sfc.o	\
 	scale_ocean_sfc_const.o	\
 	scale_ocean_sfc_slab.o	\

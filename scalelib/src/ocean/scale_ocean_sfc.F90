@@ -138,7 +138,7 @@ contains
     case( 'CONST' )
        call OCEAN_SFC_CONST_setup( OCEAN_TYPE )
        OCEAN_SFC => OCEAN_SFC_CONST
-    case( 'SLAB', 'FILE' )
+    case( 'SLAB' )
        call OCEAN_SFC_SLAB_setup( OCEAN_TYPE )
        OCEAN_SFC => OCEAN_SFC_SLAB
     end select

@@ -570,17 +570,22 @@ contains
   !> Update reference state profile (Horizontal average)
   subroutine ATMOS_REFSTATE_update( &
        DENS, RHOT, QTRC )
+    use scale_grid, only: &
+       GRID_CZ
+    use scale_grid_real, only: &
+       REAL_CZ
     use scale_time, only: &
        TIME_NOWSEC
     use scale_comm, only: &
        COMM_horizontal_mean
-    use scale_interpolation, only: &
-       INTERP_vertical_xi2z
+    use scale_interp_vert, only: &
+       INTERP_VERT_xi2z
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_atmos_hydrometeor, only: &
        I_QV
     implicit none
+
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
@@ -614,29 +619,54 @@ contains
        enddo
        enddo
 
-       call INTERP_vertical_xi2z( temp(:,:,:), & ! [IN]
-                                  work(:,:,:)  ) ! [OUT]
+       call INTERP_VERT_xi2z( KA, KS, KE,     & ! [IN]
+                              IA, ISB, IEB,   & ! [IN]
+                              JA, JSB, JEB,   & ! [IN]
+                              GRID_CZ(:),     & ! [IN]
+                              REAL_CZ(:,:,:), & ! [IN]
+                              temp   (:,:,:), & ! [IN]
+                              work   (:,:,:)  ) ! [OUT]
 
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_temp(:), work(:,:,:) )
 
-       call INTERP_vertical_xi2z( pres(:,:,:), & ! [IN]
-                                  work(:,:,:)  ) ! [OUT]
+       call INTERP_VERT_xi2z( KA, KS, KE,     & ! [IN]
+                              IA, ISB, IEB,   & ! [IN]
+                              JA, JSB, JEB,   & ! [IN]
+                              GRID_CZ(:),     & ! [IN]
+                              REAL_CZ(:,:,:), & ! [IN]
+                              pres   (:,:,:), & ! [IN]
+                              work   (:,:,:)  ) ! [OUT]
 
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_pres(:), work(:,:,:) )
 
-       call INTERP_vertical_xi2z( DENS(:,:,:), & ! [IN]
-                                  work(:,:,:)  ) ! [OUT]
+       call INTERP_VERT_xi2z( KA, KS, KE,     & ! [IN]
+                              IA, ISB, IEB,   & ! [IN]
+                              JA, JSB, JEB,   & ! [IN]
+                              GRID_CZ(:),     & ! [IN]
+                              REAL_CZ(:,:,:), & ! [IN]
+                              DENS   (:,:,:), & ! [IN]
+                              work   (:,:,:)  ) ! [OUT]
 
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_dens(:), work(:,:,:) )
 
-       call INTERP_vertical_xi2z( pott(:,:,:), & ! [IN]
-                                  work(:,:,:)  ) ! [OUT]
+       call INTERP_VERT_xi2z( KA, KS, KE,     & ! [IN]
+                              IA, ISB, IEB,   & ! [IN]
+                              JA, JSB, JEB,   & ! [IN]
+                              GRID_CZ(:),     & ! [IN]
+                              REAL_CZ(:,:,:), & ! [IN]
+                              pott   (:,:,:), & ! [IN]
+                              work   (:,:,:)  ) ! [OUT]
 
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_pott(:), work(:,:,:) )
 
        if ( I_QV > 0 ) then
-          call INTERP_vertical_xi2z( QTRC(:,:,:,I_QV), & ! [IN]
-                                     work(:,:,:)       ) ! [OUT]
+          call INTERP_VERT_xi2z( KA, KS, KE,          & ! [IN]
+                                 IA, ISB, IEB,        & ! [IN]
+                                 JA, JSB, JEB,        & ! [IN]
+                                 GRID_CZ(:),          & ! [IN]
+                                 REAL_CZ(:,:,:),      & ! [IN]
+                                 QTRC   (:,:,:,I_QV), & ! [IN]
+                                 work   (:,:,:)       ) ! [OUT]
 
           call COMM_horizontal_mean( ATMOS_REFSTATE1D_qv(:), work(:,:,:) )
        else
@@ -680,8 +710,8 @@ contains
        REAL_PHI, &
        REAL_CZ,  &
        REAL_FZ
-    use scale_interpolation, only: &
-       INTERP_vertical_z2xi
+    use scale_interp_vert, only: &
+       INTERP_VERT_z2xi
     use scale_atmos_hydrostatic, only: &
        HYDROSTATIC_buildrho_atmos_0D     => ATMOS_HYDROSTATIC_buildrho_atmos_0D,     &
        HYDROSTATIC_buildrho_atmos_rev_2D => ATMOS_HYDROSTATIC_buildrho_atmos_rev_2D, &
@@ -717,8 +747,13 @@ contains
     enddo
     enddo
 
-    call INTERP_vertical_z2xi( work(:,:,:), & ! [IN]
-                               pott(:,:,:)  ) ! [OUT]
+    call INTERP_VERT_z2xi( KA, KS, KE,     & ! [IN]
+                           IA, ISB, IEB,   & ! [IN]
+                           JA, JSB, JEB,   & ! [IN]
+                           REAL_CZ(:,:,:), & ! [IN]
+                           GRID_CZ(:),     & ! [IN]
+                           work   (:,:,:), & ! [IN]
+                           pott   (:,:,:)  ) ! [OUT]
 
     !--- water vapor
     do j = JSB, JEB
@@ -727,8 +762,13 @@ contains
     enddo
     enddo
 
-    call INTERP_vertical_z2xi( work(:,:,:), & ! [IN]
-                               qv  (:,:,:)  ) ! [OUT]
+    call INTERP_VERT_z2xi( KA, KS, KE,     & ! [IN]
+                           IA, ISB, IEB,   & ! [IN]
+                           JA, JSB, JEB,   & ! [IN]
+                           REAL_CZ(:,:,:), & ! [IN]
+                           GRID_CZ(:),     & ! [IN]
+                           work   (:,:,:), & ! [IN]
+                           qv     (:,:,:)  ) ! [OUT]
 
 
 

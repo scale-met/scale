@@ -134,6 +134,7 @@ int32_t file_open_c(       int32_t  *fid,     // (out)
   int len;
   int shared_mode;
   char _fname[File_HLONG+4];
+  int add_suffix;
 
   if ( nfile >= FILE_MAX ) {
     fprintf(stderr, "exceed max number of file limit\n");
@@ -142,8 +143,21 @@ int32_t file_open_c(       int32_t  *fid,     // (out)
 
   len = strlen(fname);
   strcpy(_fname, fname);
-  if (fname[len-3] != '.' || fname[len-2] != 'n' || fname[len-1] != 'c' )
-    strcat(_fname, ".nc");
+
+  if ( mode==File_FREAD || mode==File_FAPPEND ) {
+    FILE *fp = fopen(_fname, "r");
+    if ( fp==NULL ) {
+      add_suffix = 1;
+    } else {
+      fclose(fp);
+      add_suffix = 0;
+    }
+  } else
+    add_suffix = 1;
+
+  if ( add_suffix )
+    if (fname[len-3] != '.' || fname[len-2] != 'n' || fname[len-1] != 'c' )
+      strcat(_fname, ".nc");
 
   if ( comm == MPI_COMM_NULL || comm == MPI_COMM_SELF )
     shared_mode = 0;
@@ -197,6 +211,30 @@ int32_t file_open_c(       int32_t  *fid,     // (out)
   return SUCCESS_CODE;
 }
 
+int32_t file_get_dim_length_c( const int32_t  fid,      // (in)
+			       const char*    dimname,  // (in)
+			             int32_t *len     ) // (out)
+{
+  int ncid, dimid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  if ( files[fid]->shared_mode ) {
+    MPI_Offset l;
+    CHECK_PNC_ERROR( ncmpi_inq_dimid(ncid, dimname, &dimid) )
+    CHECK_PNC_ERROR( ncmpi_inq_dimlen(ncid, dimid, &l) )
+    *len = l;
+  } else {
+    size_t l;
+    CHECK_ERROR( nc_inq_dimid(ncid, dimname, &dimid) )
+    CHECK_ERROR( nc_inq_dimlen(ncid, dimid, &l) )
+    *len = l;
+  }
+
+  return SUCCESS_CODE;
+}
+
 int32_t file_set_option_c( const int32_t fid,    // (in)
 			   const char* filetype, // (in)
 			   const char* key,      // (in)
@@ -237,7 +275,7 @@ int32_t file_get_varname_c( const int32_t  fid,  // (in)
 {
   int ncid, varid;
   char buf[MAX_NC_NAME+1];
-  int i, error;
+  int i;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid  = files[fid]->ncid;
@@ -267,8 +305,9 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
   int dimids[RANK_MAX], tdim, uldims[NC_MAX_DIMS];
   char name[NC_MAX_NAME+1];
   char *buf;
-  size_t size, len;
+  size_t size;
   int i, n;
+  int status;
 
   ERROR_SUPPRESS = suppress;
 
@@ -286,7 +325,7 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
   if ( files[fid]->shared_mode ) {
     MPI_Offset l;
     // description
-    CHECK_PNC_ERROR( ncmpi_inq_attlen  (ncid, varid, "long_name", &l) )
+    CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, "long_name", &l) )
     buf = (char*) malloc(l+1);
     CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "long_name", buf) )
     for (i=0; i<MIN(File_HMID-1,l); i++)
@@ -294,7 +333,7 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
     dinfo->description[i] = '\0';
     free(buf);
     // units
-    CHECK_PNC_ERROR( ncmpi_inq_attlen  (ncid, varid, "units", &l) )
+    CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, "units", &l) )
     buf = (char*) malloc(l+1);
     CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "units", buf) )
     for (i=0; i<MIN(File_HSHORT-1,l); i++)
@@ -317,9 +356,15 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
   else {
     size_t l;
     // description
-    CHECK_ERROR( nc_inq_attlen  (ncid, varid, "long_name", &l) )
-    buf = (char*) malloc(l+1);
-    CHECK_ERROR( nc_get_att_text(ncid, varid, "long_name", buf) )
+    status = nc_inq_attlen(ncid, varid, "long_name", &l);
+    if ( status == NC_NOERR ) {
+      buf = (char*) malloc(l+1);
+      CHECK_ERROR( nc_get_att_text(ncid, varid, "long_name", buf) )
+    } else { // for WRF file
+      CHECK_ERROR( nc_inq_attlen(ncid, varid, "description", &l) )
+      buf = (char*) malloc(l+1);
+      CHECK_ERROR( nc_get_att_text(ncid, varid, "description", buf) )
+    }
     for (i=0; i<MIN(File_HMID-1,l); i++)
       dinfo->description[i] = buf[i];
     dinfo->description[i] = '\0';
@@ -404,22 +449,28 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
       size_t l;
       // time_end
       CHECK_ERROR( nc_inq_dimname(ncid, tdim, name) )
-      CHECK_ERROR( nc_inq_varid(ncid, name, &varid) )
-      idx[0] = step - 1;
-      CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_end)) )
-      // time_start
-      strcat(name, "_bnds");
-      CHECK_ERROR( nc_inq_varid(ncid, name, &varid) )
-      idx[1] = 0;
-      CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_start)) )
-      // units
-      CHECK_ERROR( nc_inq_attlen  (ncid, varid, "units", &l) )
-      buf = (char*) malloc(l+1);
-      CHECK_ERROR( nc_get_att_text(ncid, varid, "units", buf) )
-      for (i=0; i<MIN(File_HMID-1,l); i++)
-        dinfo->time_units[i] = buf[i];
-      dinfo->time_units[i] = '\0';
-      free(buf);
+      status = nc_inq_varid(ncid, name, &varid);
+      if ( status == NC_NOERR ) {
+        idx[0] = step - 1;
+	CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_end)) )
+	// time_start
+	strcat(name, "_bnds");
+	CHECK_ERROR( nc_inq_varid(ncid, name, &varid) )
+        idx[1] = 0;
+        CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_start)) )
+	// units
+        CHECK_ERROR( nc_inq_attlen  (ncid, varid, "units", &l) )
+        buf = (char*) malloc(l+1);
+        CHECK_ERROR( nc_get_att_text(ncid, varid, "units", buf) )
+        for (i=0; i<MIN(File_HMID-1,l); i++)
+          dinfo->time_units[i] = buf[i];
+        dinfo->time_units[i] = '\0';
+        free(buf);
+      } else {
+	dinfo->time_start = 0.0;
+	dinfo->time_end = 0.0;
+	dinfo->time_units[0] = '\0';
+      }
     }
   } else {
     if ( step > 1 ) { // if variable does not have time dimention, step > 1 should not exist
@@ -446,6 +497,8 @@ int32_t file_read_data_c(       void       *var,       // (out)
   int fid;
   size_t *str, *cnt;
   MPI_Offset *strp, *cntp;
+  size_t size;
+  int l_rescale;
 
   fid = dinfo->fid;
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
@@ -480,7 +533,11 @@ int32_t file_read_data_c(       void       *var,       // (out)
     cnt[0] = 1;
   }
 
+  size = 1;
+  for (i=0; i<rank; i++) size *= cnt[i];
+
   if ( files[fid]->shared_mode ) {
+#ifdef PNETCDF
     for (i=0; i<rank; i++) {
       strp[i] = (MPI_Offset) str[i];
       cntp[i] = (MPI_Offset) cnt[i];
@@ -490,13 +547,74 @@ int32_t file_read_data_c(       void       *var,       // (out)
     CHECK_PNC_ERROR( ncmpi_iget_vara(ncid, varid, strp, cntp, var, ntypes, dtype, NULL) )
     free(strp);
     free(cntp);
+    if ( dtype == MPI_FLOAT ) {
+      float factor, offset;
+      l_rescale = 0;
+      if ( ncmpi_get_att_float(ncid, varid, "scale_factor", &factor) != NC_NOERR )
+	factor = 1.0f;
+      else
+	l_rescale = 1;
+      if ( ncmpi_get_att_float(ncid, varid, "add_offset", &offset) != NC_NOERR )
+	offset = 0.0f;
+      else
+	l_rescale = 1;
+      if ( l_rescale ) for (i=0; i<size; i++) ((float*)var)[i] = ((float*)var)[i] * factor + offset;
+    } else if ( dtype == MPI_DOUBLE ) {
+      double factor, offset;
+      l_rescale = 0;
+      if ( ncmpi_get_att_double(ncid, varid, "scale_factor", &factor) != NC_NOERR )
+	factor = 1.0;
+      else
+	l_rescale = 1;
+      if ( ncmpi_get_att_double(ncid, varid, "add_offset", &offset) != NC_NOERR )
+	offset = 0.0;
+      else
+	l_rescale = 1;
+      if ( l_rescale ) for (i=0; i<size; i++) ((double*)var)[i] = ((double*)var)[i] * factor + offset;
+    } else {
+      float factor, offset;
+      if (    ( ncmpi_get_att_float(ncid, varid, "scale_factor", &factor) == NC_NOERR ) 
+           || ( ncmpi_get_att_float(ncid, varid, "add_offset",   &offset) == NC_NOERR ) ) {
+	fprintf(stderr, "scale_factor and add_offset is not supported with a MPI derived type\n");
+	return ERROR_CODE;
+      }
+    }
+#else
+    CHECK_PNC_ERROR( dummy )
+#endif
   } else {
     switch ( precision ) {
     case 8:
       CHECK_ERROR( nc_get_vara_double(ncid, varid, str, cnt, (double*)var) )
+      {
+	double factor, offset;
+	l_rescale = 0;
+	if ( nc_get_att_double(ncid, varid, "scale_factor", &factor) != NC_NOERR )
+	  factor = 1.0;
+	else
+	  l_rescale = 1;
+	if ( nc_get_att_double(ncid, varid, "add_offset", &offset) != NC_NOERR )
+	  offset = 0.0;
+	else
+	  l_rescale = 1;
+	if ( l_rescale ) for (i=0; i<size; i++) ((double*)var)[i] = ((double*)var)[i] * factor + offset;
+      }
       break;
     case 4:
       CHECK_ERROR( nc_get_vara_float(ncid, varid, str, cnt, (float*)var) )
+      {
+	float factor, offset;
+	l_rescale = 0;
+	if ( nc_get_att_float(ncid, varid, "scale_factor", &factor) != NC_NOERR )
+	  factor = 1.0f;
+	else
+	  l_rescale = 1;
+	if ( nc_get_att_float(ncid, varid, "add_offset", &offset) != NC_NOERR )
+	  offset = 0.0f;
+	else
+	  l_rescale = 1;
+	if ( l_rescale ) for (i=0; i<size; i++) ((float*)var)[i] = ((float*)var)[i] * factor + offset;
+      }
       break;
     default:
       free(str);

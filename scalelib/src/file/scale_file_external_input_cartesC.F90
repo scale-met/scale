@@ -1,14 +1,14 @@
 !-------------------------------------------------------------------------------
-!> module EXTERNAL INPUT
+!> module file / external_input_cartesC
 !!
 !! @par Description
-!!          External file input RM module
+!!          External file input module for the cartesian-C grid
 !!
 !! @author Team SCALE
 !!
 !<
 !-------------------------------------------------------------------------------
-module scale_external_input_rm
+module scale_file_external_input_cartesC
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -27,14 +27,16 @@ module scale_external_input_rm
   !
   !++ Public procedures
   !
-  public :: EXTIN_RM_get_dims_1D
-  public :: EXTIN_RM_get_dims_2D
-  public :: EXTIN_RM_get_dims_3D
+  public :: FILE_EXTERNAL_INPUT_CARTESC_setup
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
+  private :: FILE_EXTERNAL_INPUT_CARTESC_get_dims1D
+  private :: FILE_EXTERNAL_INPUT_CARTESC_get_dims2D
+  private :: FILE_EXTERNAL_INPUT_CARTESC_get_dims3D
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedures
@@ -46,15 +48,34 @@ module scale_external_input_rm
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
+  !> Setup
+  !-----------------------------------------------------------------------------
+  subroutine FILE_EXTERNAL_INPUT_CARTESC_setup
+    use scale_file_external_input, only: &
+       FILE_EXTERNAL_INPUT_setup, &
+       FILE_EXTERNAL_INPUT_get_dims1D, &
+       FILE_EXTERNAL_INPUT_get_dims2D, &
+       FILE_EXTERNAL_INPUT_get_dims3D
+
+    call FILE_EXTERNAL_INPUT_setup
+
+    FILE_EXTERNAL_INPUT_get_dims1D => FILE_EXTERNAL_INPUT_CARTESC_get_dims1D
+    FILE_EXTERNAL_INPUT_get_dims2D => FILE_EXTERNAL_INPUT_CARTESC_get_dims2D
+    FILE_EXTERNAL_INPUT_get_dims3D => FILE_EXTERNAL_INPUT_CARTESC_get_dims3D
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_CARTESC_setup
+
+  !-----------------------------------------------------------------------------
   !> get_dims
-  subroutine EXTIN_RM_get_dims_1D( &
+  subroutine FILE_EXTERNAL_INPUT_CARTESC_get_dims1D( &
        dim1_max, &
        dim1_S,   &
        dim1_E,   &
        varname,  &
        axistype  )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
     integer,          intent(out) :: dim1_max
     integer,          intent(out) :: dim1_S
@@ -80,14 +101,14 @@ contains
        dim1_S   = OKS
        dim1_E   = OKE
     case default
-       write(*,*) 'xxx [EXTIN_RM_get_dims_1D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
-       call PRC_MPIstop
+       write(*,*) 'xxx [FILE_EXTERNAL_INPUT_CARTESC_get_dims1D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
+       call PRC_abort
     end select
 
     return
-  end subroutine EXTIN_RM_get_dims_1D
+  end subroutine FILE_EXTERNAL_INPUT_CARTESC_get_dims1D
 
-  subroutine EXTIN_RM_get_dims_2D( &
+  subroutine FILE_EXTERNAL_INPUT_CARTESC_get_dims2D( &
        dim1_max,  &
        dim1_S,    &
        dim1_E,    &
@@ -98,7 +119,7 @@ contains
        varname,   &
        axistype   )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
     integer,          intent(out) :: dim1_max
     integer,          intent(out) :: dim1_S
@@ -136,14 +157,14 @@ contains
        dim2_E   = KE
        transpose = .true.
     case default
-       write(*,*) 'xxx [EXTIN_RM_get_dims_2D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
-       call PRC_MPIstop
+       write(*,*) 'xxx [FILE_EXTERNAL_INPUT_CARTESC_get_dims2D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
+       call PRC_abort
     end select
 
     return
-  end subroutine EXTIN_RM_get_dims_2D
+  end subroutine FILE_EXTERNAL_INPUT_CARTESC_get_dims2D
 
-  subroutine EXTIN_RM_get_dims_3D( &
+  subroutine FILE_EXTERNAL_INPUT_CARTESC_get_dims3D( &
        dim1_max,  &
        dim1_S,    &
        dim1_E,    &
@@ -157,7 +178,7 @@ contains
        varname,   &
        axistype   )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
     integer,          intent(out) :: dim1_max
     integer,          intent(out) :: dim1_S
@@ -262,11 +283,11 @@ contains
        dim3_E   = UKE
        transpose = .true.
     case default
-       write(*,*) 'xxx [EXTIN_RM_get_dims_3D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
-       call PRC_MPIstop
+       write(*,*) 'xxx [FILE_EXTERNAL_INPUT_CARTESC_get_dims3D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
+       call PRC_abort
     end select
 
     return
-  end subroutine EXTIN_RM_get_dims_3D
+  end subroutine FILE_EXTERNAL_INPUT_CARTESC_get_dims3D
 
-end module scale_external_input_rm
+end module scale_file_external_input_cartesC

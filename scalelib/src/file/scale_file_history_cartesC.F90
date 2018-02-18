@@ -51,11 +51,10 @@ module scale_file_history_cartesC
   integer,          parameter :: nzs = 3
   character(len=8), parameter :: zs(nzs) = (/ "model   ", &
                                               "z       ", &
-                                              "pressure" /)
+                                              "pressure"  /)
 
   integer               :: FILE_HISTORY_CARTESC_PRES_nlayer = 0
   real(RP), allocatable :: FILE_HISTORY_CARTESC_PRES_val(:)
-
 
   integer  :: im,   jm,  km
   integer  :: ims,  ime
@@ -98,8 +97,8 @@ contains
        TIME_STARTDAYSEC
 !!$    use scale_grid_cartesC, only: &
 !!$       GRID_CARTESC_NAME
-    use scale_interpolation, only: &
-       INTERP_setup_pres
+    use scale_interp_vert, only: &
+       INTERP_VERT_alloc_pres
     use scale_mapproj, only: &
        MPRJ_get_attributes
     implicit none
@@ -110,8 +109,8 @@ contains
     real(RP)           :: FILE_HISTORY_CARTESC_PRES(nlayer_max) !> pressure level to output [hPa]
 
     NAMELIST / PARAM_FILE_HISTORY_CARTESC / &
-       FILE_HISTORY_CARTESC_PRES_nlayer,               &
-       FILE_HISTORY_CARTESC_PRES,                      &
+       FILE_HISTORY_CARTESC_PRES_nlayer, &
+       FILE_HISTORY_CARTESC_PRES,        &
        FILE_HISTORY_CARTESC_BOUNDARY
 
     character(len=H_MID) :: FILE_HISTORY_CARTESCORY_H_TITLE = 'SCALE-RM FILE_HISTORY_CARTESCORY OUTPUT' !< title of the output file
@@ -125,7 +124,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[FILE_HISTORY_CARTESCORY] / Categ[ATMOS-RM IO] / Origin[SCALElib]'
-
 
     FILE_HISTORY_CARTESC_PRES(:) = 0.0_RP
 
@@ -161,7 +159,7 @@ contains
           FILE_HISTORY_CARTESC_PRES_val(k) = FILE_HISTORY_CARTESC_PRES(k) * 100.0_RP ! [hPa->Pa]
        enddo
 
-       call INTERP_setup_pres( FILE_HISTORY_CARTESC_PRES_nlayer ) ! [IN]
+       call INTERP_VERT_alloc_pres( FILE_HISTORY_CARTESC_PRES_nlayer, IA, JA ) ! [IN]
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** FILE_HISTORY_CARTESC_PRES_nlayer is not set.'
        if( IO_L ) write(IO_FID_LOG,*) '*** Output with pressure coordinate is disabled'
@@ -174,12 +172,12 @@ contains
 
     start_daysec = TIME_STARTDAYSEC
     if ( TIME_NOWDATE(1) > 0 ) then
-       write(FILE_HISTORY_CARTESCORY_T_SINCE,'(I4.4,5(A1,I2.2))')      TIME_NOWDATE(1), &
-                                                  '-', TIME_NOWDATE(2), &
-                                                  '-', TIME_NOWDATE(3), &
-                                                  ' ', TIME_NOWDATE(4), &
-                                                  ':', TIME_NOWDATE(5), &
-                                                  ':', TIME_NOWDATE(6)
+       write(FILE_HISTORY_CARTESCORY_T_SINCE,'(I4.4,5(A1,I2.2))') TIME_NOWDATE(1), &
+                                                             '-', TIME_NOWDATE(2), &
+                                                             '-', TIME_NOWDATE(3), &
+                                                             ' ', TIME_NOWDATE(4), &
+                                                             ':', TIME_NOWDATE(5), &
+                                                             ':', TIME_NOWDATE(6)
        start_daysec = TIME_NOWMS
     else
        FILE_HISTORY_CARTESCORY_T_SINCE = ''
@@ -253,9 +251,11 @@ contains
   !> set hydrostatic pressure for pressure coordinate
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_CARTESC_Set_Pres( &
-       PRES, PRESH, SFC_PRES )
-    use scale_interpolation, only: &
-       INTERP_update_pres
+       PRES,    &
+       PRESH,   &
+       SFC_PRES )
+    use scale_interp_vert, only: &
+       INTERP_VERT_setcoef_pres
     implicit none
 
     real(RP), intent(in) :: PRES    (:,:,:) ! pressure at the full level [Pa]
@@ -264,14 +264,18 @@ contains
     !---------------------------------------------------------------------------
 
     if ( FILE_HISTORY_CARTESC_PRES_nlayer > 0 ) then
-       call INTERP_update_pres( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
-                                PRES(:,:,:), SFC_PRES(:,:),       & ! [IN]
-                                FILE_HISTORY_CARTESC_PRES_val(:)  ) ! [IN]
+       call INTERP_VERT_setcoef_pres( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
+                                      KA, KS, KE,                       & ! [IN]
+                                      IA, IS, IE,                       & ! [IN]
+                                      JA, JS, JE,                       & ! [IN]
+                                      PRES         (:,:,:),             & ! [IN]
+                                      PRESH        (:,:,:),             & ! [IN]
+                                      SFC_PRES     (:,:)  ,             & ! [IN]
+                                      FILE_HISTORY_CARTESC_PRES_val(:)  ) ! [IN]
     endif
 
     return
   end subroutine FILE_HISTORY_CARTESC_Set_Pres
-
 
   ! private routines
 
@@ -309,119 +313,128 @@ contains
        yc = JMAX
     end if
 
-
-    !  Virtical 1D
+    !  Vertical 1D
     start(1,1) = 1
-    dims(1,1) = "z"
+    dims (1,1) = "z"
     count(1,1) = KMAX
-    call FILE_HISTORY_Set_Dim( "Z", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(1,1) = "zh"
+    call FILE_HISTORY_Set_Dim( "Z",   1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    dims (1,1) = "zh"
     count(1,1) = KMAX + 1
-    call FILE_HISTORY_Set_Dim( "ZH", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZH",  1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
-    dims(1,1) = "lz"
-    count(1,1) = LKMAX
-    call FILE_HISTORY_Set_Dim( "LZ", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(1,1) = "lzh"
-    count(1,1) = LKMAX + 1
-    call FILE_HISTORY_Set_Dim( "LZH", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-
-    dims(1,1) = "oz"
+    dims (1,1) = "oz"
     count(1,1) = OKMAX
-    call FILE_HISTORY_Set_Dim( "OZ", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(1,1) = "ozh"
+    call FILE_HISTORY_Set_Dim( "OZ",  1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    dims (1,1) = "ozh"
     count(1,1) = OKMAX + 1
     call FILE_HISTORY_Set_Dim( "OZH", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
-    dims(1,1) = "uz"
-    count(1,1) = UKMAX
-    call FILE_HISTORY_Set_Dim( "UZ", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    dims (1,1) = "lz"
+    count(1,1) = LKMAX
+    call FILE_HISTORY_Set_Dim( "LZ",  1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    dims (1,1) = "lzh"
+    count(1,1) = LKMAX + 1
+    call FILE_HISTORY_Set_Dim( "LZH", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
-    dims(1,1) = "uzh"
+    dims (1,1) = "uz"
+    count(1,1) = UKMAX
+    call FILE_HISTORY_Set_Dim( "UZ",  1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    dims (1,1) = "uzh"
     count(1,1) = UKMAX + 1
     call FILE_HISTORY_Set_Dim( "UZH", 1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
-
     ! X, Y
-    dims(1,:) = 'lon'
-    dims(2,:) = 'lat'
-    start(1,:) = xs; count(1,:) = xc
-    start(2,:) = ys; count(2,:) = yc
+    start(1,:) = xs
+    start(2,:) = ys
+    dims (1,:) = 'lon'
+    dims (2,:) = 'lat'
+    count(1,:) = xc
+    count(2,:) = yc
     call FILE_HISTORY_Set_Dim( "XY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(3,:) = (/ "height  ", "z       ", "pressure" /)
+
     start(3,:) = 1
-    count(3,:) = (/ KMAX, KMAX, FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(3,:) = (/ "height_xyw", "zh        ", "pressure  " /)
+    dims (3,:) = (/ "height    ", "z         ", "pressure  " /)
+    count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
+    call FILE_HISTORY_Set_Dim( "ZXY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    dims (3,:) = (/ "height_xyw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
     call FILE_HISTORY_Set_Dim( "ZHXY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(3,1) = "oz"
+
+    dims (3,1) = "oz"
     count(3,1) = OKMAX
-    call FILE_HISTORY_Set_Dim( "OXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(3,1) = "ozh"
+    call FILE_HISTORY_Set_Dim( "OXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    dims (3,1) = "ozh"
     count(3,1) = OKMAX + 1
     call FILE_HISTORY_Set_Dim( "OHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(3,1) = "lz"
+    dims (3,1) = "lz"
     count(3,1) = LKMAX
-    call FILE_HISTORY_Set_Dim( "LXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(3,1) = "lzh"
+    call FILE_HISTORY_Set_Dim( "LXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    dims (3,1) = "lzh"
     count(3,1) = LKMAX + 1
     call FILE_HISTORY_Set_Dim( "LHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(3,1) = "uz"
+    dims (3,1) = "uz"
     count(3,1) = UKMAX
-    call FILE_HISTORY_Set_Dim( "UXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(3,1) = "uzh"
+    call FILE_HISTORY_Set_Dim( "UXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    dims (3,1) = "uzh"
     count(3,1) = UKMAX + 1
     call FILE_HISTORY_Set_Dim( "UHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-
-
 
     ! XH, Y
     dims(1,:) = 'lon_uy'
     dims(2,:) = 'lat_uy'
     if ( PRC_HAS_W ) then
-       start(1,:) = xs+1; count(1,:) = xc
+       start(1,:) = xs+1
+       count(1,:) = xc
     else
-       start(1,:) = xs  ; count(1,:) = xc+1
+       start(1,:) = xs
+       count(1,:) = xc+1
     endif
     call FILE_HISTORY_Set_Dim( "XHY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(3,:) = (/ "height_uyz", "z         ", "pressure  " /)
-    count(3,:) = (/ KMAX, KMAX, FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXHY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(3,:) = (/ "height_uyw", "zh        ", "pressure  " /)
+
+    dims (3,:) = (/ "height_uyz", "z         ", "pressure  " /)
+    count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
+    call FILE_HISTORY_Set_Dim( "ZXHY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    dims (3,:) = (/ "height_uyw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
     call FILE_HISTORY_Set_Dim( "ZHXHY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
-
     ! X, YH
-    dims(1,:) = 'lon_xv'
-    dims(2,:) = 'lat_xv'
-    start(1,:) = xs; count(1,:) = xc
+    dims (1,:) = 'lon_xv'
+    dims (2,:) = 'lat_xv'
+    start(1,:) = xs
+    count(1,:) = xc
     if ( PRC_HAS_S ) then
-       start(2,:) = ys+1; count(2,:) = yc
+       start(2,:) = ys+1
+       count(2,:) = yc
     else
-       start(2,:) = ys  ; count(2,:) = yc+1
+       start(2,:) = ys
+       count(2,:) = yc+1
     endif
     call FILE_HISTORY_Set_Dim( "XYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(3,:) = (/ "height_xvz", "z         ", "pressure  " /)
-    count(3,:) = (/ KMAX, KMAX, FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(3,:) = (/ "height_xvw", "zh        ", "pressure  " /)
+
+    dims (3,:) = (/ "height_xvz", "z         ", "pressure  " /)
+    count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
+    call FILE_HISTORY_Set_Dim( "ZXYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    dims (3,:) = (/ "height_xvw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
     call FILE_HISTORY_Set_Dim( "ZHXYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
+    ! XH, YH
     dims(1,:) = 'lon_uv'
     dims(2,:) = 'lat_uv'
     if ( PRC_HAS_W ) then
-       start(1,:) = xs+1; count(1,:) = xc
+       start(1,:) = xs+1
+       count(1,:) = xc
     else
-       start(1,:) = xs  ; count(1,:) = xc+1
+       start(1,:) = xs
+       count(1,:) = xc+1
     endif
     call FILE_HISTORY_Set_Dim( "XHYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(3,:) = (/ "height_uvz", "z         ", "pressure  " /)
-    count(3,:) = (/ KMAX, KMAX, FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXHYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
-    dims(3,:) = (/ "height_uvw", "zh        ", "pressure  " /)
+
+    dims (3,:) = (/ "height_uvz", "z         ", "pressure  " /)
+    count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
+    call FILE_HISTORY_Set_Dim( "ZXHYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+    dims (3,:) = (/ "height_uvw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
     call FILE_HISTORY_Set_Dim( "ZHXHYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
@@ -443,9 +456,8 @@ contains
 
     real(DP), intent(out) :: dst(:)
 
-    integer                :: ksize
-    integer                :: kstart
-
+    integer  :: ksize
+    integer  :: kstart
     integer  :: k
     !---------------------------------------------------------------------------
 
@@ -457,18 +469,18 @@ contains
     case ('ZH')
        ksize  = KMAX+1
        kstart = KS-1
-    case ('LZ')
-       ksize  = LKMAX
-       kstart = LKS
-    case ('LZH')
-       ksize  = LKMAX+1
-       kstart = LKS-1
     case ('OZ')
        ksize  = OKMAX
        kstart = OKS
     case ('OZH')
        ksize  = OKMAX+1
        kstart = OKS-1
+    case ('LZ')
+       ksize  = LKMAX
+       kstart = LKS
+    case ('LZH')
+       ksize  = LKMAX+1
+       kstart = LKS-1
     case ('UZ')
        ksize  = UKMAX
        kstart = UKS
@@ -580,28 +592,32 @@ contains
        dst )
     use scale_file_h, only: &
        RMISS => FILE_RMISS
-    use scale_interpolation, only: &
-       INTERP_available, &
-       INTERP_vertical_xi2z, &
-       INTERP_vertical_xih2zh, &
-       INTERP_vertical_xi2p, &
-       INTERP_vertical_xih2p
+    use scale_grid, only: &
+       GRID_CZ, &
+       GRID_FZ
+    use scale_grid_real, only: &
+       REAL_CZ, &
+       REAL_FZ
+    use scale_interp_vert, only: &
+       INTERP_VERT_xi2z,   &
+       INTERP_VERT_xi2p,   &
+       INTERP_VERT_xih2zh, &
+       INTERP_VERT_xih2p,  &
+       INTERP_available
     implicit none
 
-    real(RP),         intent(in) :: src(:,:,:)
-    character(len=*), intent(in) :: dim_type
-    character(len=*), intent(in) :: zcoord
-    logical,          intent(in) :: fill_halo
+    real(RP),         intent(in)  :: src(:,:,:)
+    character(len=*), intent(in)  :: dim_type
+    character(len=*), intent(in)  :: zcoord
+    logical,          intent(in)  :: fill_halo
+    real(DP),         intent(out) :: dst(:)
 
-    real(DP), intent(out) :: dst(:)
+    real(RP) :: src_Z(KA,IA,JA)
+    real(RP) :: src_P(FILE_HISTORY_CARTESC_PRES_nlayer,IA,JA)
 
-    real(RP) :: var_Z(KA,IA,JA)
-    real(RP) :: var_P(FILE_HISTORY_CARTESC_PRES_nlayer,IA,JA)
-    integer :: isize, jsize, ksize
-    integer :: istart, jstart, kstart
-
-    integer :: i, j, k
-
+    integer  :: isize,  jsize,  ksize
+    integer  :: istart, jstart, kstart
+    integer  :: i, j, k
     !---------------------------------------------------------------------------
 
     ! select dimension
@@ -625,12 +641,12 @@ contains
     case ( 'Z' )
        ksize  = KMAX
        kstart = KS
-    case('L')
-       ksize  = LKMAX
-       kstart = LKS
     case('O')
        ksize  = OKMAX
        kstart = OKS
+    case('L')
+       ksize  = LKMAX
+       kstart = LKS
     case('U')
        ksize  = UKMAX
        kstart = UKS
@@ -647,15 +663,20 @@ contains
     if ( ksize == KMAX .and. zcoord == "z" .and. INTERP_available ) then ! z*->z interpolation (full level)
 
        call PROF_rapstart('FILE_O_interp', 2)
-       call INTERP_vertical_xi2z( src  (:,:,:), & ! [IN]
-                                  var_Z(:,:,:)  ) ! [OUT]
+       call INTERP_VERT_xi2z( KA, KS, KE,     & ! [IN]
+                              IA, ISB, IEB,   & ! [IN]
+                              JA, JSB, JEB,   & ! [IN]
+                              GRID_CZ(:),     & ! [IN]
+                              REAL_CZ(:,:,:), & ! [IN]
+                              src    (:,:,:), & ! [IN]
+                              src_Z  (:,:,:)  ) ! [OUT]
        call PROF_rapend  ('FILE_O_interp', 2)
 
        !$omp parallel do
        do k = 1, ksize
        do j = 1, jsize
        do i = 1, isize
-          dst((k-1)*jsize*isize+(j-1)*isize+i) = var_Z(kstart+k-1,istart+i-1,jstart+j-1)
+          dst((k-1)*jsize*isize+(j-1)*isize+i) = src_Z(kstart+k-1,istart+i-1,jstart+j-1)
        enddo
        enddo
        enddo
@@ -664,15 +685,20 @@ contains
 
 
        call PROF_rapstart('FILE_O_interp', 2)
-       call INTERP_vertical_xih2zh( src  (:,:,:), & ! [IN]
-                                    var_Z(:,:,:)  ) ! [OUT]
+       call INTERP_VERT_xih2zh( KA, KS, KE,     & ! [IN]
+                                IA, ISB, IEB,   & ! [IN]
+                                JA, JSB, JEB,   & ! [IN]
+                                GRID_FZ(:),     & ! [IN]
+                                REAL_FZ(:,:,:), & ! [IN]
+                                src    (:,:,:), & ! [IN]
+                                src_Z  (:,:,:)  ) ! [OUT]
        call PROF_rapend  ('FILE_O_interp', 2)
 
        !$omp parallel do
        do k = 1, ksize
        do j = 1, jsize
        do i = 1, isize
-          dst((k-1)*jsize*isize+(j-1)*isize+i) = var_Z(kstart+k-1,istart+i-1,jstart+j-1)
+          dst((k-1)*jsize*isize+(j-1)*isize+i) = src_Z(kstart+k-1,istart+i-1,jstart+j-1)
        enddo
        enddo
        enddo
@@ -685,16 +711,19 @@ contains
        end if
 
        call PROF_rapstart('FILE_O_interp', 2)
-       call INTERP_vertical_xi2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
-                                  src  (:,:,:),     & ! [IN]
-                                  var_P(:,:,:)      ) ! [OUT]
+       call INTERP_VERT_xi2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
+                              KA,                               & ! [IN]
+                              IA, ISB, IEB,                     & ! [IN]
+                              JA, JSB, JEB,                     & ! [IN]
+                              src  (:,:,:),                     & ! [IN]
+                              src_P(:,:,:)                      ) ! [OUT]
        call PROF_rapend  ('FILE_O_interp', 2)
 
        !$omp parallel do
        do k = 1, ksize
        do j = 1, jsize
        do i = 1, isize
-          dst((k-1)*jsize*isize+(j-1)*isize+i) = var_P(k,istart+i-1,jstart+j-1)
+          dst((k-1)*jsize*isize+(j-1)*isize+i) = src_P(k,istart+i-1,jstart+j-1)
        enddo
        enddo
        enddo
@@ -707,15 +736,18 @@ contains
        end if
 
        call PROF_rapstart('FILE_O_interp', 2)
-       call INTERP_vertical_xih2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
-                                   src  (:,:,:),     & ! [IN]
-                                   var_P(:,:,:)      ) ! [OUT]
+       call INTERP_VERT_xih2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
+                               KA,                               & ! [IN]
+                               IA, ISB, IEB,                     & ! [IN]
+                               JA, JSB, JEB,                     & ! [IN]
+                               src  (:,:,:),                     & ! [IN]
+                               src_P(:,:,:)                      ) ! [OUT]
        call PROF_rapend  ('FILE_O_interp', 2)
 
        do k = 1, ksize
        do j = 1, jsize
        do i = 1, isize
-          dst((k-1)*jsize*isize+(j-1)*isize+i) = var_P(k,istart+i-1,jstart+j-1)
+          dst((k-1)*jsize*isize+(j-1)*isize+i) = src_P(k,istart+i-1,jstart+j-1)
        enddo
        enddo
        enddo
@@ -766,7 +798,6 @@ contains
        enddo
        enddo
     endif
-
 
     return
   end subroutine FILE_HISTORY_CARTESC_truncate_3D
@@ -823,14 +854,14 @@ contains
        GRID_CBFYG, &
        GRID_FBFXG, &
        GRID_FBFYG
-    use scale_land_grid, only: &
-       GRID_LCZ, &
-       GRID_LFZ, &
-       GRID_LCDZ
     use scale_ocean_grid, only: &
        GRID_OCZ, &
        GRID_OFZ, &
        GRID_OCDZ
+    use scale_land_grid, only: &
+       GRID_LCZ, &
+       GRID_LFZ, &
+       GRID_LCDZ
     use scale_urban_grid, only: &
        GRID_UCZ, &
        GRID_UFZ, &
@@ -944,14 +975,14 @@ contains
 
     if ( FILE_HISTORY_CARTESC_PRES_nlayer > 0 ) then
        call FILE_HISTORY_Set_Axis( 'pressure', 'Pressure', 'hPa', 'pressure', FILE_HISTORY_CARTESC_PRES_val(:)/100.0_RP, &
-                                    gsize=FILE_HISTORY_CARTESC_PRES_nlayer, start=startZ, down=.true. )
+                                    gsize=FILE_HISTORY_CARTESC_PRES_nlayer, start=startZ, down=.true.                    )
     endif
-
-    call FILE_HISTORY_Set_Axis( 'lz',  'LZ',              'm', 'lz',  GRID_LCZ(LKS  :LKE), gsize=LKMAX  , start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'lzh', 'LZ (half level)', 'm', 'lzh', GRID_LFZ(LKS-1:LKE), gsize=LKMAX+1, start=startZ, down=.true. )
 
     call FILE_HISTORY_Set_Axis( 'oz',  'OZ',              'm', 'oz',  GRID_OCZ(OKS  :OKE), gsize=OKMAX  , start=startZ, down=.true. )
     call FILE_HISTORY_Set_Axis( 'ozh', 'OZ (half level)', 'm', 'ozh', GRID_OFZ(OKS-1:OKE), gsize=OKMAX+1, start=startZ, down=.true. )
+
+    call FILE_HISTORY_Set_Axis( 'lz',  'LZ',              'm', 'lz',  GRID_LCZ(LKS  :LKE), gsize=LKMAX  , start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'lzh', 'LZ (half level)', 'm', 'lzh', GRID_LFZ(LKS-1:LKE), gsize=LKMAX+1, start=startZ, down=.true. )
 
     call FILE_HISTORY_Set_Axis( 'uz',  'UZ',              'm', 'uz',  GRID_UCZ(UKS  :UKE), gsize=UKMAX  , start=startZ, down=.true. )
     call FILE_HISTORY_Set_Axis( 'uzh', 'UZ (half level)', 'm', 'uzh', GRID_UFZ(UKS-1:UKE), gsize=UKMAX+1, start=startZ, down=.true. )
@@ -969,6 +1000,10 @@ contains
     call FILE_HISTORY_Set_Axis( 'FDZ',  'Grid distance Z',              'm', 'FDZ', GRID_FDZ,  gsize=KA-1,    start=startZ )
     call FILE_HISTORY_Set_Axis( 'CBFZ', 'Boundary factor Center Z',     '1', 'CZ',  GRID_CBFZ, gsize=KA,      start=startZ )
     call FILE_HISTORY_Set_Axis( 'FBFZ', 'Boundary factor Face Z',       '1', 'FZ',  GRID_FBFZ, gsize=KA+1,    start=startZ )
+
+    call FILE_HISTORY_Set_Axis( 'OCZ',  'Ocean Grid Center Position Z', 'm', 'OCZ', GRID_OCZ,  gsize=OKMAX,   start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'OFZ',  'Ocean Grid Face Position Z',   'm', 'OFZ', GRID_OFZ,  gsize=OKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'OCDZ', 'Ocean Grid Cell length Z',     'm', 'OCZ', GRID_OCDZ, gsize=OKMAX,   start=startZ              )
 
     call FILE_HISTORY_Set_Axis( 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', GRID_LCZ,  gsize=LKMAX,   start=startZ, down=.true. )
     call FILE_HISTORY_Set_Axis( 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', GRID_LFZ,  gsize=LKMAX+1, start=startZ, down=.true. )
@@ -1048,14 +1083,14 @@ contains
     enddo
     AXIS_name(1:3) = (/'x ', 'y ', 'z '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'height', 'height above ground level',                        &
-                                          'm', AXIS_name(1:3), AXIS(1:im,1:jm,1:KMAX), start=start(:,1) )
+                                                'm', AXIS_name(1:3), AXIS(1:im,1:jm,1:KMAX), start=start(:,1) )
 
     do k = 0, KMAX
        AXIS(1:im,1:jm,k) = REAL_FZ(k+KS-1,ims:ime,jms:jme)
     enddo
     AXIS_name(1:3) = (/'x ', 'y ', 'zh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xyw', 'height above ground level (half level xyw)',    &
-                                          'm' , AXIS_name(1:3), AXIS(1:im,1:jm,0:KMAX), start=start(:,1) )
+                                                'm' , AXIS_name(1:3), AXIS(1:im,1:jm,0:KMAX), start=start(:,1) )
 
     do k = 1, KMAX
     do j = 1, jm
@@ -1073,7 +1108,7 @@ contains
     endif
     AXIS_name(1:3) = (/'xh', 'y ', 'z '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uyz', 'height above ground level (half level uyz)',    &
-                                          'm', AXIS_name(1:3), AXIS(1:imh,1:jm,1:KMAX), start=start(:,2) )
+                                                'm', AXIS_name(1:3), AXIS(1:imh,1:jm,1:KMAX), start=start(:,2) )
 
     do k = 1, KMAX
     do j = 1, min(jmh,JA-jmsh)
@@ -1091,7 +1126,7 @@ contains
     endif
     AXIS_name(1:3) = (/'x ', 'yh', 'z '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xvz', 'height above ground level (half level xvz)',    &
-                                          'm', AXIS_name(1:3), AXIS(1:im,1:jmh,1:KMAX), start=start(:,3) )
+                                                'm', AXIS_name(1:3), AXIS(1:im,1:jmh,1:KMAX), start=start(:,3) )
 
     do k = 1, KMAX
     do j = 1, min(jmh,JA-jmsh)
@@ -1122,7 +1157,7 @@ contains
     endif
     AXIS_name(1:3) = (/'xh', 'yh', 'z '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uvz', 'height above ground level (half level uvz)',     &
-                                          'm', AXIS_name(1:3), AXIS(1:imh,1:jmh,1:KMAX), start=start(:,4) )
+                                                'm', AXIS_name(1:3), AXIS(1:imh,1:jmh,1:KMAX), start=start(:,4) )
 
     do k = 0, KMAX
     do j = 1, jm
@@ -1140,7 +1175,7 @@ contains
     endif
     AXIS_name(1:3) = (/'xh', 'y ', 'zh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uyw', 'height above ground level (half level uyw)',    &
-                                          'm', AXIS_name(1:3), AXIS(1:imh,1:jm,0:KMAX), start=start(:,2) )
+                                                'm', AXIS_name(1:3), AXIS(1:imh,1:jm,0:KMAX), start=start(:,2) )
 
     do k = 0, KMAX
     do j = 1, min(jmh,JA-jmsh)
@@ -1158,7 +1193,7 @@ contains
     endif
     AXIS_name(1:3) = (/'x ', 'yh', 'zh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xvw', 'height above ground level (half level xvw)',    &
-                                          'm', AXIS_name(1:3), AXIS(1:im,1:jmh,0:KMAX), start=start(:,3) )
+                                                'm', AXIS_name(1:3), AXIS(1:im,1:jmh,0:KMAX), start=start(:,3) )
 
     do k = 0, KMAX
     do j = 1, min(jmh,JA-jmsh)
@@ -1189,57 +1224,57 @@ contains
     endif
     AXIS_name(1:3) = (/'xh', 'yh', 'zh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uvw', 'height above ground level (half level uvw)',     &
-                                          'm', AXIS_name(1:3), AXIS(1:imh,1:jmh,0:KMAX), start=start(:,4) )
+                                                'm', AXIS_name(1:3), AXIS(1:imh,1:jmh,0:KMAX), start=start(:,4) )
 
     AXIS(1:im,1:jm,1) = REAL_LON (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'y '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lon', 'longitude',                                                 &
-                                          'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
+                                                'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
     AXIS(1:imh,1:jm,1) = REAL_LONX(imsh:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'y '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lon_uy', 'longitude (half level uy)',                               &
-                                          'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
+                                                'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
 
     AXIS(1:im,1:jmh,1) = REAL_LONY(ims:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'yh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lon_xv', 'longitude (half level xv)',                               &
-                                          'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
+                                                'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
 
     AXIS(1:imh,1:jmh,1) = REAL_LONXY(imsh:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'yh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lon_uv', 'longitude (half level uv)',                                &
-                                          'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )
+                                                'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )
 
     AXIS(1:im,1:jm,1) = REAL_LAT (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'y '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lat', 'latitude',                                                   &
-                                          'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
+                                                'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
     AXIS(1:imh,1:jm,1) = REAL_LATX(imsh:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'y '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lat_uy', 'latitude (half level uy)',                                 &
-                                          'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
+                                                'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
 
     AXIS(1:im,1:jmh,1) = REAL_LATY(ims:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'yh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lat_xv', 'latitude (half level xv)',                                 &
-                                          'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
+                                                'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
 
     AXIS(1:imh,1:jmh,1) = REAL_LATXY(imsh:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'yh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lat_uv', 'latitude (half level uv)',                                  &
-                                          'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )
+                                                'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )
 
     AXIS(1:im,1:jm,1) = TOPO_Zsfc(ims:ime,jms:jme)
     AXIS_name(1:2) = (/'x ', 'y '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'topo', 'topography',                                    &
-                                          'm', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
+                                                'm', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
     AXIS(1:im,1:jm,1) = LANDUSE_frac_land(ims:ime,jms:jme)
     AXIS_name(1:2) = (/'x ', 'y '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lsmask', 'fraction for land-sea mask',                  &
-                                          '1', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
+                                                '1', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
     return
   end subroutine FILE_HISTORY_CARTESC_set_axes
@@ -1446,49 +1481,49 @@ contains
 
        if ( minfo%false_easting(1) /= UNDEF ) then
           call FILE_HISTORY_Set_Attribute( minfo%mapping_name,    & ! [IN]
-                                    "false_easting",       & ! [IN]
-                                    minfo%false_easting(:) ) ! [IN]
+                                           "false_easting",       & ! [IN]
+                                           minfo%false_easting(:) ) ! [IN]
        endif
 
        if ( minfo%false_northing(1) /= UNDEF ) then
           call FILE_HISTORY_Set_Attribute( minfo%mapping_name,     & ! [IN]
-                                    "false_northing",       & ! [IN]
-                                    minfo%false_northing(:) ) ! [IN]
+                                           "false_northing",       & ! [IN]
+                                           minfo%false_northing(:) ) ! [IN]
        endif
 
        if ( minfo%longitude_of_central_meridian(1) /= UNDEF ) then
           call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                    & ! [IN]
-                                    "longitude_of_central_meridian",       & ! [IN]
-                                    minfo%longitude_of_central_meridian(:) ) ! [IN]
+                                           "longitude_of_central_meridian",       & ! [IN]
+                                           minfo%longitude_of_central_meridian(:) ) ! [IN]
        endif
 
        if ( minfo%longitude_of_projection_origin(1) /= UNDEF ) then
           call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                     & ! [IN]
-                                    "longitude_of_projection_origin",       & ! [IN]
-                                    minfo%longitude_of_projection_origin(:) ) ! [IN]
+                                           "longitude_of_projection_origin",       & ! [IN]
+                                           minfo%longitude_of_projection_origin(:) ) ! [IN]
        endif
 
        if ( minfo%latitude_of_projection_origin(1) /= UNDEF ) then
           call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                    & ! [IN]
-                                    "latitude_of_projection_origin",       & ! [IN]
-                                    minfo%latitude_of_projection_origin(:) ) ! [IN]
+                                           "latitude_of_projection_origin",       & ! [IN]
+                                           minfo%latitude_of_projection_origin(:) ) ! [IN]
        endif
 
        if ( minfo%straight_vertical_longitude_from_pole(1) /= UNDEF ) then
           call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                            & ! [IN]
-                                    "straight_vertical_longitude_from_pole",       & ! [IN]
-                                    minfo%straight_vertical_longitude_from_pole(:) ) ! [IN]
+                                           "straight_vertical_longitude_from_pole",       & ! [IN]
+                                           minfo%straight_vertical_longitude_from_pole(:) ) ! [IN]
        endif
 
        if ( minfo%standard_parallel(1) /= UNDEF ) then
           if ( minfo%standard_parallel(2) /= UNDEF ) then
              call FILE_HISTORY_Set_Attribute( minfo%mapping_name,          & ! [IN]
-                                       "standard_parallel",         & ! [IN]
-                                       minfo%standard_parallel(1:2) ) ! [IN]
+                                              "standard_parallel",         & ! [IN]
+                                              minfo%standard_parallel(1:2) ) ! [IN]
           else
              call FILE_HISTORY_Set_Attribute( minfo%mapping_name,          & ! [IN]
-                                       "standard_parallel",         & ! [IN]
-                                       minfo%standard_parallel(1:1) ) ! [IN]
+                                              "standard_parallel",         & ! [IN]
+                                              minfo%standard_parallel(1:1) ) ! [IN]
           endif
        endif
     endif

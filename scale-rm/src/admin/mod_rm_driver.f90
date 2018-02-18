@@ -103,8 +103,6 @@ contains
        REAL_setup
     use scale_gridtrans, only: &
        GTRANS_setup
-    use scale_interpolation, only: &
-       INTERP_setup
     use scale_rm_statistics, only: &
        STAT_setup
     use scale_time, only: &
@@ -121,8 +119,8 @@ contains
        MONIT_setup, &
        MONIT_write, &
        MONIT_finalize
-    use scale_external_input, only: &
-       EXTIN_setup
+    use scale_file_external_input_cartesC, only: &
+       FILE_EXTERNAL_INPUT_CARTESC_setup
     use scale_atmos_hydrostatic, only: &
        ATMOS_HYDROSTATIC_setup
     use scale_atmos_thermodyn, only: &
@@ -278,8 +276,6 @@ contains
 
     ! setup grid transfer metrics (uses in ATMOS_dynamics)
     call GTRANS_setup
-    ! setup Z-ZS interpolation factor (uses in History)
-    call INTERP_setup
 
     ! setup restart
     call ADMIN_restart_setup
@@ -292,7 +288,7 @@ contains
     ! setup monitor I/O
     call MONIT_setup
     ! setup external in
-    call EXTIN_setup( 'RM' )
+    call FILE_EXTERNAL_INPUT_CARTESC_setup
 
     ! setup nesting grid
     call NEST_setup ( intercomm_parent, intercomm_child )

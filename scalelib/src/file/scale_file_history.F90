@@ -327,8 +327,6 @@ contains
        FILE_AGGREGATE
     use scale_calendar, only: &
        CALENDAR_unit2sec
-    use scale_const, only: &
-       EPS => CONST_EPS
     implicit none
 
     character(len=*), intent(in)  :: title
@@ -571,7 +569,7 @@ contains
           call PRC_abort
        endif
 
-       if ( abs(dtsec-real(dstep,kind=DP)*FILE_HISTORY_DTSEC ) > eps ) then
+       if ( abs(dtsec-real(dstep,kind=DP)*FILE_HISTORY_DTSEC) > dtsec*1.0-3_DP ) then
           write(*,*) 'xxx time interval must be a multiple of delta t. (interval,dt)=', dtsec, FILE_HISTORY_DTSEC
           call PRC_abort
        endif
@@ -642,6 +640,7 @@ contains
     integer :: n
     !---------------------------------------------------------------------------
 
+    itemid = -1
     if ( FILE_HISTORY_nreqs == 0 ) return
 
     itemid = FILE_HISTORY_find_id( name )

@@ -80,13 +80,14 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine SNO_grads_write( &
-       dirpath, &
-       nowstep, &
-       hinfo,   &
-       naxis,   &
-       ainfo,   &
-       dinfo,   &
-       debug    )
+       dirpath,  &
+       nowstep,  &
+       finalize, &
+       hinfo,    &
+       naxis,    &
+       ainfo,    &
+       dinfo,    &
+       debug     )
     use scale_process, only: &
        PRC_MPIstop
     use mod_sno_h, only: &
@@ -97,6 +98,7 @@ contains
 
     character(len=*), intent(in)  :: dirpath                               ! directory path                     (output)
     integer,          intent(in)  :: nowstep                               ! current step                       (output)
+    logical,          intent(in)  :: finalize                              ! finalize in this step?
     type(commoninfo), intent(in)  :: hinfo                                 ! common information                 (input)
     integer,          intent(in)  :: naxis                                 ! number of axis variables           (input)
     type(axisinfo),   intent(in)  :: ainfo(naxis)                          ! axis information                   (input)
@@ -130,7 +132,7 @@ contains
 
        recsize = int(imax,kind=8) * int(jmax,kind=8) * int(kmax,kind=8) * 4_8
 
-       if( IO_L ) write(IO_FID_LOG,*) 'Output: ', trim(grdname), recsize, imax, jmax, kmax
+       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_grads_write] filename : ', trim(grdname)
 
        GRADS_grd_fid = IO_get_available_fid()
        open( unit   = GRADS_grd_fid, &
@@ -144,8 +146,6 @@ contains
     endif
 
 
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** + + + write variable'
 
     if ( dinfo%dim_rank == 2 ) then
        do j = 1, jmax
@@ -168,7 +168,7 @@ contains
 
 
     ! Close data file
-    if ( nowstep == dinfo%step_nmax ) then
+    if ( finalize ) then
        deallocate( TMPDATA )
 
        close(GRADS_grd_fid)
@@ -277,6 +277,8 @@ contains
 
     !##### write control file #####
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_grads_write_ctl] filename : ', trim(ctlname)
+
     fid = IO_get_available_fid()
     open( unit   = fid,                    &
           file   = trim(ctlname),          &
@@ -297,7 +299,7 @@ contains
              dlon = dx / ( CONST_RADIUS * cos(clat) ) / CONST_D2R
 
              if    ( hinfo%minfo_mapping_name == 'lambert_conformal_conic' ) then
-                imax_ = int(imax*0.9_RP)
+                imax_ = int(imax*1.1_RP)
                 write(fid,'(A,I5,A,1x,F9.2,1x,F9.3)') 'XDEF ', imax_, ' LINEAR', lonstart, dlon
              elseif( hinfo%minfo_mapping_name == 'polar_stereographic' ) then
                 write(fid,'(A)') 'XDEF   720 LINEAR -179.5 0.5'
@@ -450,7 +452,6 @@ contains
     real(RP)               :: dx, dy
     real(RP)               :: dlat, dlon
 
-    real(DP)               :: dt
     character(len=20)      :: cdate, dhour
 
     character(len=20)      :: dimorder

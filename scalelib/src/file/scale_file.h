@@ -37,6 +37,10 @@ extern int32_t file_open_c(       int32_t  *fid,   // (out)
 			    const int32_t   mode,  // (in)
 			    const MPI_Comm  comm); // (in)
 
+extern int32_t file_get_dim_length_c( const int32_t  fid,       // (in)
+				      const char*    dimname,   // (in)
+				            int32_t *len     ); // (out)
+
 extern int32_t file_set_option_c( const int32_t  fid,      // (in)
 				  const char    *filetype, // (in)
 				  const char    *key,      // (in)
