@@ -580,7 +580,7 @@ contains
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
-          CLDFRAC(i,j,k) = ATMOS_PHY_MP_CLDFRAC(i,j,k)
+          CLDFRAC(k,i,j) = ATMOS_PHY_MP_CLDFRAC(k,i,j)
        end do
        end do
        end do
