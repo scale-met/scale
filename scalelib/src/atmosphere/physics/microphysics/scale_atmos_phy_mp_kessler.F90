@@ -117,8 +117,6 @@ contains
     use scale_const, only: &
        DWATR => CONST_DWATR, &
        PI    => CONST_PI
-    use scale_comm, only: &
-       COMM_horizontal_mean
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_phy_mp_common, only: &
