@@ -2044,67 +2044,71 @@ contains
        jsize = JMAXB
     endif
 
-    if( hasZ ) call FILE_Def_Axis( fid, 'z'  , 'Z'              , 'm', 'z'  , dtype, KMAX    )
-    if( hasZ ) call FILE_Def_Axis( fid, 'zh' , 'Z (half level)' , 'm', 'zh' , dtype, KMAX+1  )
+    if ( hasZ ) then
+       call FILE_Def_Axis( fid, 'z'  , 'Z'              , 'm', 'z'  , dtype, KMAX,   bounds=.true. )
+       call FILE_Def_Axis( fid, 'zh' , 'Z (half level)' , 'm', 'zh' , dtype, KMAX+1, bounds=.true. )
 
-    if( hasZ ) call FILE_Def_Axis( fid, 'oz' , 'OZ'             , 'm', 'oz' , dtype, OKMAX   )
-    if( hasZ ) call FILE_Def_Axis( fid, 'ozh', 'OZ (half level)', 'm', 'ozh', dtype, OKMAX+1 )
+       call FILE_Def_Axis( fid, 'oz' , 'OZ'             , 'm', 'oz' , dtype, OKMAX,   bounds=.true. )
+       call FILE_Def_Axis( fid, 'ozh', 'OZ (half level)', 'm', 'ozh', dtype, OKMAX+1, bounds=.true. )
 
-    if( hasZ ) call FILE_Def_Axis( fid, 'lz' , 'LZ'             , 'm', 'lz' , dtype, LKMAX   )
-    if( hasZ ) call FILE_Def_Axis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, LKMAX+1 )
+       call FILE_Def_Axis( fid, 'lz' , 'LZ'             , 'm', 'lz' , dtype, LKMAX,   bounds=.true. )
+       call FILE_Def_Axis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, LKMAX+1, bounds=.true. )
 
-    if( hasZ ) call FILE_Def_Axis( fid, 'uz' , 'UZ'             , 'm', 'uz' , dtype, UKMAX   )
-    if( hasZ ) call FILE_Def_Axis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, UKMAX+1 )
+       call FILE_Def_Axis( fid, 'uz' , 'UZ'             , 'm', 'uz' , dtype, UKMAX,   bounds=.true. )
+       call FILE_Def_Axis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, UKMAX+1, bounds=.true. )
+    end if
 
-               call FILE_Def_Axis( fid, 'x'  , 'X'              , 'm', 'x'  , dtype, isize   )
-               call FILE_Def_Axis( fid, 'xh' , 'X (half level)' , 'm', 'xh' , dtype, isize   )
-               call FILE_Def_Axis( fid, 'y'  , 'Y'              , 'm', 'y'  , dtype, jsize   )
-               call FILE_Def_Axis( fid, 'yh' , 'Y (half level)' , 'm', 'yh' , dtype, jsize   )
+    call FILE_Def_Axis( fid, 'x'  , 'X'              , 'm', 'x'  , dtype, isize, bounds=.true. )
+    call FILE_Def_Axis( fid, 'xh' , 'X (half level)' , 'm', 'xh' , dtype, isize, bounds=.true. )
+    call FILE_Def_Axis( fid, 'y'  , 'Y'              , 'm', 'y'  , dtype, jsize, bounds=.true. )
+    call FILE_Def_Axis( fid, 'yh' , 'Y (half level)' , 'm', 'yh' , dtype, jsize, bounds=.true. )
 
-    if( hasZ ) call FILE_Def_Axis( fid, 'CZ'   , 'Atmos Grid Center Position Z',      'm', 'CZ',   dtype, KA      )
-    if( hasZ ) call FILE_Def_Axis( fid, 'FZ'   , 'Atmos Grid Face   Position Z',      'm', 'FZ',   dtype, KA+1    )
-    if( hasZ ) call FILE_Def_Axis( fid, 'CDZ'  , 'Grid Cell length Z',                'm', 'CZ',   dtype, KA      )
-    if( hasZ ) call FILE_Def_Axis( fid, 'FDZ'  , 'Grid distance Z',                   'm', 'FDZ',  dtype, KA-1    )
-    if( hasZ ) call FILE_Def_Axis( fid, 'CBFZ' , 'Boundary factor Center Z',          '1', 'CZ',   dtype, KA      )
-    if( hasZ ) call FILE_Def_Axis( fid, 'FBFZ' , 'Boundary factor Face Z',            '1', 'FZ',   dtype, KA+1    )
+    if ( hasZ ) then
+       call FILE_Def_Axis( fid, 'CZ'   , 'Atmos Grid Center Position Z',      'm', 'CZ',   dtype, KA      )
+       call FILE_Def_Axis( fid, 'FZ'   , 'Atmos Grid Face   Position Z',      'm', 'FZ',   dtype, KA+1    )
+       call FILE_Def_Axis( fid, 'CDZ'  , 'Grid Cell length Z',                'm', 'CZ',   dtype, KA      )
+       call FILE_Def_Axis( fid, 'FDZ'  , 'Grid distance Z',                   'm', 'FDZ',  dtype, KA-1    )
+       call FILE_Def_Axis( fid, 'CBFZ' , 'Boundary factor Center Z',          '1', 'CZ',   dtype, KA      )
+       call FILE_Def_Axis( fid, 'FBFZ' , 'Boundary factor Face Z',            '1', 'FZ',   dtype, KA+1    )
 
-    if( hasZ ) call FILE_Def_Axis( fid, 'OCZ'  , 'Ocean Grid Center Position Z',      'm', 'OCZ',  dtype, OKMAX   )
-    if( hasZ ) call FILE_Def_Axis( fid, 'OFZ'  , 'Ocean Grid Face   Position Z',      'm', 'OFZ',  dtype, OKMAX+1 )
-    if( hasZ ) call FILE_Def_Axis( fid, 'OCDZ' , 'Ocean Grid Cell length Z',          'm', 'OCZ',  dtype, OKMAX   )
+       call FILE_Def_Axis( fid, 'OCZ'  , 'Ocean Grid Center Position Z',      'm', 'OCZ',  dtype, OKMAX   )
+       call FILE_Def_Axis( fid, 'OFZ'  , 'Ocean Grid Face   Position Z',      'm', 'OFZ',  dtype, OKMAX+1 )
+       call FILE_Def_Axis( fid, 'OCDZ' , 'Ocean Grid Cell length Z',          'm', 'OCZ',  dtype, OKMAX   )
 
-    if( hasZ ) call FILE_Def_Axis( fid, 'LCZ'  , 'Land Grid Center Position Z',       'm', 'LCZ',  dtype, LKMAX   )
-    if( hasZ ) call FILE_Def_Axis( fid, 'LFZ'  , 'Land Grid Face   Position Z',       'm', 'LFZ',  dtype, LKMAX+1 )
-    if( hasZ ) call FILE_Def_Axis( fid, 'LCDZ' , 'Land Grid Cell length Z',           'm', 'LCZ',  dtype, LKMAX   )
+       call FILE_Def_Axis( fid, 'LCZ'  , 'Land Grid Center Position Z',       'm', 'LCZ',  dtype, LKMAX   )
+       call FILE_Def_Axis( fid, 'LFZ'  , 'Land Grid Face   Position Z',       'm', 'LFZ',  dtype, LKMAX+1 )
+       call FILE_Def_Axis( fid, 'LCDZ' , 'Land Grid Cell length Z',           'm', 'LCZ',  dtype, LKMAX   )
 
-    if( hasZ ) call FILE_Def_Axis( fid, 'UCZ'  , 'Urban Grid Center Position Z',      'm', 'UCZ',  dtype, UKMAX   )
-    if( hasZ ) call FILE_Def_Axis( fid, 'UFZ'  , 'Urban Grid Face   Position Z',      'm', 'UFZ',  dtype, UKMAX+1 )
-    if( hasZ ) call FILE_Def_Axis( fid, 'UCDZ' , 'Urban Grid Cell length Z',          'm', 'UCZ',  dtype, UKMAX   )
+       call FILE_Def_Axis( fid, 'UCZ'  , 'Urban Grid Center Position Z',      'm', 'UCZ',  dtype, UKMAX   )
+       call FILE_Def_Axis( fid, 'UFZ'  , 'Urban Grid Face   Position Z',      'm', 'UFZ',  dtype, UKMAX+1 )
+       call FILE_Def_Axis( fid, 'UCDZ' , 'Urban Grid Cell length Z',          'm', 'UCZ',  dtype, UKMAX   )
+    end if
 
-               call FILE_Def_Axis( fid, 'CX'   , 'Atmos Grid Center Position X',      'm', 'CX',   dtype, iall   )
-               call FILE_Def_Axis( fid, 'CY'   , 'Atmos Grid Center Position Y',      'm', 'CY',   dtype, jall   )
-               call FILE_Def_Axis( fid, 'FX'   , 'Atmos Grid Face   Position X',      'm', 'FX',   dtype, iall+1 )
-               call FILE_Def_Axis( fid, 'FY'   , 'Atmos Grid Face   Position Y',      'm', 'FY',   dtype, jall+1 )
-               call FILE_Def_Axis( fid, 'CDX'  , 'Grid Cell length X',                'm', 'CX',   dtype, iall   )
-               call FILE_Def_Axis( fid, 'CDY'  , 'Grid Cell length Y',                'm', 'CY',   dtype, jall   )
-               call FILE_Def_Axis( fid, 'FDX'  , 'Grid distance X',                   'm', 'FDX',  dtype, iall-1 )
-               call FILE_Def_Axis( fid, 'FDY'  , 'Grid distance Y',                   'm', 'FDY',  dtype, jall-1 )
-               call FILE_Def_Axis( fid, 'CBFX' , 'Boundary factor Center X',          '1', 'CX',   dtype, iall   )
-               call FILE_Def_Axis( fid, 'CBFY' , 'Boundary factor Center Y',          '1', 'CY',   dtype, jall   )
-               call FILE_Def_Axis( fid, 'FBFX' , 'Boundary factor Face X',            '1', 'FX',   dtype, iall+1 )
-               call FILE_Def_Axis( fid, 'FBFY' , 'Boundary factor Face Y',            '1', 'FY',   dtype, jall+1 )
+    call FILE_Def_Axis( fid, 'CX'   , 'Atmos Grid Center Position X',      'm', 'CX',   dtype, iall   )
+    call FILE_Def_Axis( fid, 'CY'   , 'Atmos Grid Center Position Y',      'm', 'CY',   dtype, jall   )
+    call FILE_Def_Axis( fid, 'FX'   , 'Atmos Grid Face   Position X',      'm', 'FX',   dtype, iall+1 )
+    call FILE_Def_Axis( fid, 'FY'   , 'Atmos Grid Face   Position Y',      'm', 'FY',   dtype, jall+1 )
+    call FILE_Def_Axis( fid, 'CDX'  , 'Grid Cell length X',                'm', 'CX',   dtype, iall   )
+    call FILE_Def_Axis( fid, 'CDY'  , 'Grid Cell length Y',                'm', 'CY',   dtype, jall   )
+    call FILE_Def_Axis( fid, 'FDX'  , 'Grid distance X',                   'm', 'FDX',  dtype, iall-1 )
+    call FILE_Def_Axis( fid, 'FDY'  , 'Grid distance Y',                   'm', 'FDY',  dtype, jall-1 )
+    call FILE_Def_Axis( fid, 'CBFX' , 'Boundary factor Center X',          '1', 'CX',   dtype, iall   )
+    call FILE_Def_Axis( fid, 'CBFY' , 'Boundary factor Center Y',          '1', 'CY',   dtype, jall   )
+    call FILE_Def_Axis( fid, 'FBFX' , 'Boundary factor Face X',            '1', 'FX',   dtype, iall+1 )
+    call FILE_Def_Axis( fid, 'FBFY' , 'Boundary factor Face Y',            '1', 'FY',   dtype, jall+1 )
 
-               call FILE_Def_Axis( fid, 'CXG'  , 'Grid Center Position X (global)',   'm', 'CXG',  dtype, IAG   )
-               call FILE_Def_Axis( fid, 'CYG'  , 'Grid Center Position Y (global)',   'm', 'CYG',  dtype, JAG   )
-               call FILE_Def_Axis( fid, 'FXG'  , 'Grid Face   Position X (global)',   'm', 'FXG',  dtype, IAG+1 )
-               call FILE_Def_Axis( fid, 'FYG'  , 'Grid Face   Position Y (global)',   'm', 'FYG',  dtype, JAG+1 )
-               call FILE_Def_Axis( fid, 'CDXG' , 'Grid Cell length X (global)',       'm', 'CXG',  dtype, IAG   )
-               call FILE_Def_Axis( fid, 'CDYG' , 'Grid Cell length Y (global)',       'm', 'CYG',  dtype, JAG   )
-               call FILE_Def_Axis( fid, 'FDXG' , 'Grid distance X (global)',          'm', 'FDXG', dtype, IAG-1 )
-               call FILE_Def_Axis( fid, 'FDYG' , 'Grid distance Y (global)',          'm', 'FDYG', dtype, JAG-1 )
-               call FILE_Def_Axis( fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG',  dtype, IAG   )
-               call FILE_Def_Axis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG',  dtype, JAG   )
-               call FILE_Def_Axis( fid, 'FBFXG', 'Boundary factor Face   X (global)', '1', 'FXG',  dtype, IAG+1 )
-               call FILE_Def_Axis( fid, 'FBFYG', 'Boundary factor Face   Y (global)', '1', 'FYG',  dtype, JAG+1 )
+    call FILE_Def_Axis( fid, 'CXG'  , 'Grid Center Position X (global)',   'm', 'CXG',  dtype, IAG   )
+    call FILE_Def_Axis( fid, 'CYG'  , 'Grid Center Position Y (global)',   'm', 'CYG',  dtype, JAG   )
+    call FILE_Def_Axis( fid, 'FXG'  , 'Grid Face   Position X (global)',   'm', 'FXG',  dtype, IAG+1 )
+    call FILE_Def_Axis( fid, 'FYG'  , 'Grid Face   Position Y (global)',   'm', 'FYG',  dtype, JAG+1 )
+    call FILE_Def_Axis( fid, 'CDXG' , 'Grid Cell length X (global)',       'm', 'CXG',  dtype, IAG   )
+    call FILE_Def_Axis( fid, 'CDYG' , 'Grid Cell length Y (global)',       'm', 'CYG',  dtype, JAG   )
+    call FILE_Def_Axis( fid, 'FDXG' , 'Grid distance X (global)',          'm', 'FDXG', dtype, IAG-1 )
+    call FILE_Def_Axis( fid, 'FDYG' , 'Grid distance Y (global)',          'm', 'FDYG', dtype, JAG-1 )
+    call FILE_Def_Axis( fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG',  dtype, IAG   )
+    call FILE_Def_Axis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG',  dtype, JAG   )
+    call FILE_Def_Axis( fid, 'FBFXG', 'Boundary factor Face   X (global)', '1', 'FXG',  dtype, IAG+1 )
+    call FILE_Def_Axis( fid, 'FBFYG', 'Boundary factor Face   Y (global)', '1', 'FYG',  dtype, JAG+1 )
 
     ! associate coordinates
     axisname(1:2) = (/'x ','y '/)
@@ -2311,6 +2315,14 @@ contains
 
     logical :: put_z, put_x, put_y
     integer :: XSB, XEB, YSB, YEB
+
+    real(RP) :: z_bnds(2,KA), zh_bnds(2,0:KA)
+    real(RP) :: oz_bnds(2,OKA), ozh_bnds(2,0:OKA)
+    real(RP) :: lz_bnds(2,LKA), lzh_bnds(2,0:LKA)
+    real(RP) :: uz_bnds(2,UKA), uzh_bnds(2,0:UKA)
+    real(RP) :: x_bnds(2,IA), xh_bnds(2,0:IA)
+    real(RP) :: y_bnds(2,IA), yh_bnds(2,0:IA)
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( FILE_get_AGGREGATE(fid) ) then
@@ -2335,36 +2347,158 @@ contains
     end if
 
     if ( haszcoord .and. put_z ) then
-       call FILE_Write_Axis( fid, 'z'  , ATMOS_GRID_CARTESC_CZ(KS  :KE)  , start(1:1) )
-       call FILE_Write_Axis( fid, 'zh' , ATMOS_GRID_CARTESC_FZ(KS-1:KE)  , start(1:1) )
+       ! atmos
+       call FILE_Write_Axis( fid, 'z', ATMOS_GRID_CARTESC_CZ(KS:KE), start(1:1) )
+       do k = KS, KE
+          z_bnds(1,k) = ATMOS_GRID_CARTESC_FZ(k-1)
+          z_bnds(2,k) = ATMOS_GRID_CARTESC_FZ(k  )
+       end do
+       call FILE_Write_AssociatedCoordinate( fid, 'z_bnds', z_bnds(:,KS:KE), start(1:1) )
 
-       call FILE_Write_Axis( fid, 'oz' , OCEAN_GRID_CARTESC_CZ(OKS  :OKE), start(1:1) )
+       call FILE_Write_Axis( fid, 'zh', ATMOS_GRID_CARTESC_FZ(KS-1:KE)  , start(1:1) )
+       do k = KS-1, KE
+          zh_bnds(1,k) = ATMOS_GRID_CARTESC_CZ(k  )
+          zh_bnds(2,k) = ATMOS_GRID_CARTESC_CZ(k+1)
+       end do
+       call FILE_Write_AssociatedCoordinate( fid, 'zh_bnds', zh_bnds(:,KS-1:KE), start(1:1) )
+
+       ! ocean
+       call FILE_Write_Axis( fid, 'oz', OCEAN_GRID_CARTESC_CZ(OKS:OKE), start(1:1) )
+       do k = OKS, OKE
+          oz_bnds(1,k) = OCEAN_GRID_CARTESC_FZ(k-1)
+          oz_bnds(2,k) = OCEAN_GRID_CARTESC_FZ(k  )
+       end do
+       call FILE_Write_AssociatedCoordinate( fid, 'oz_bnds', oz_bnds(:,OKS:OKE), start(1:1) )
+
        call FILE_Write_Axis( fid, 'ozh', OCEAN_GRID_CARTESC_FZ(OKS-1:OKE), start(1:1) )
+       ozh_bnds(1,OKS-1) = OCEAN_GRID_CARTESC_FZ(OKS-1)
+       do k = OKS-1, OKE-1
+          ozh_bnds(2,k  ) = OCEAN_GRID_CARTESC_CZ(k+1)
+          ozh_bnds(1,k+1) = OCEAN_GRID_CARTESC_CZ(k+1)
+       end do
+       ozh_bnds(2,OKE) = OCEAN_GRID_CARTESC_FZ(OKE)
+       call FILE_Write_AssociatedCoordinate( fid, 'ozh_bnds', ozh_bnds(:,OKS-1:OKE), start(1:1) )
 
-       call FILE_Write_Axis( fid, 'lz' , LAND_GRID_CARTESC_CZ(LKS  :LKE), start(1:1) )
+       ! land
+       call FILE_Write_Axis( fid, 'lz', LAND_GRID_CARTESC_CZ(LKS:LKE), start(1:1) )
+       do k = LKS, LKE
+          lz_bnds(1,k) = LAND_GRID_CARTESC_FZ(k-1)
+          lz_bnds(2,k) = LAND_GRID_CARTESC_FZ(k  )
+       end do
+       call FILE_Write_AssociatedCoordinate( fid, 'lz_bnds', lz_bnds(:,LKS:LKE), start(1:1) )
+
        call FILE_Write_Axis( fid, 'lzh', LAND_GRID_CARTESC_FZ(LKS-1:LKE), start(1:1) )
+       lzh_bnds(1,LKS-1) = LAND_GRID_CARTESC_FZ(LKS-1)
+       do k = LKS-1, LKE-1
+          lzh_bnds(2,k  ) = LAND_GRID_CARTESC_CZ(k+1)
+          lzh_bnds(1,k+1) = LAND_GRID_CARTESC_CZ(k+1)
+       end do
+       lzh_bnds(2,LKE) = LAND_GRID_CARTESC_FZ(LKE)
+       call FILE_Write_AssociatedCoordinate( fid, 'lzh_bnds', lzh_bnds(:,LKS-1:LKE), start(1:1) )
 
-       call FILE_Write_Axis( fid, 'uz' , URBAN_GRID_CARTESC_CZ(UKS  :UKE), start(1:1) )
+       ! urban
+       call FILE_Write_Axis( fid, 'uz', URBAN_GRID_CARTESC_CZ(UKS:UKE), start(1:1) )
+       do k = UKS, UKE
+          uz_bnds(1,k) = URBAN_GRID_CARTESC_FZ(k-1)
+          uz_bnds(2,k) = URBAN_GRID_CARTESC_FZ(k  )
+       end do
+       call FILE_Write_AssociatedCoordinate( fid, 'uz_bnds', uz_bnds(:,UKS:UKE), start(1:1) )
+
        call FILE_Write_Axis( fid, 'uzh', URBAN_GRID_CARTESC_FZ(UKS-1:UKE), start(1:1) )
+       uzh_bnds(1,UKS-1) = URBAN_GRID_CARTESC_FZ(UKS-1)
+       do k = UKS-1, UKE-1
+          uzh_bnds(2,k  ) = URBAN_GRID_CARTESC_CZ(k+1)
+          uzh_bnds(1,k+1) = URBAN_GRID_CARTESC_CZ(k+1)
+       end do
+       uzh_bnds(2,UKE) = URBAN_GRID_CARTESC_FZ(UKE)
+       call FILE_Write_AssociatedCoordinate( fid, 'uzh_bnds', uzh_bnds(:,UKS-1:UKE), start(1:1) )
     end if
 
     if ( put_x ) then
        if ( FILE_get_aggregate(fid) ) then
           call FILE_Write_Axis( fid, 'x' ,  ATMOS_GRID_CARTESC_CX(ISB2:IEB2),  start(2:2) )
+          do i = ISB2, IEB2
+             x_bnds(1,i) = ATMOS_GRID_CARTESC_FX(i-1)
+             x_bnds(2,i) = ATMOS_GRID_CARTESC_FX(i  )
+          end do
+          call FILE_Write_AssociatedCoordinate( fid, 'x_bnds', x_bnds(:,ISB2:IEB2), (/1,start(2)/) )
+
           call FILE_Write_Axis( fid, 'xh',  ATMOS_GRID_CARTESC_FX(ISB2:IEB2),  start(2:2) )
+          do i = ISB2, IEB2-1
+             xh_bnds(1,i) = ATMOS_GRID_CARTESC_CX(i  )
+             xh_bnds(2,i) = ATMOS_GRID_CARTESC_CX(i+1)
+          end do
+          xh_bnds(1,IEB2) = ATMOS_GRID_CARTESC_CX(IEB2)
+          if ( IEB2 == IA ) then
+             xh_bnds(2,IEB2) = ATMOS_GRID_CARTESC_FX(IEB2)
+          else
+             xh_bnds(2,IEB2) = ATMOS_GRID_CARTESC_CX(IEB2+1)
+          end if
+          call FILE_Write_AssociatedCoordinate( fid, 'xh_bnds', xh_bnds(:,ISB2:IEB2), (/1,start(2)/) )
        else
           call FILE_Write_Axis( fid, 'x' ,  ATMOS_GRID_CARTESC_CX(ISB:IEB),  start(2:2) )
+          do i = ISB2, IEB
+             x_bnds(1,i) = ATMOS_GRID_CARTESC_FX(i-1)
+             x_bnds(2,i) = ATMOS_GRID_CARTESC_FX(i  )
+          end do
+          call FILE_Write_AssociatedCoordinate( fid, 'x_bnds', x_bnds(:,ISB:IEB), (/1,start(2)/) )
+
           call FILE_Write_Axis( fid, 'xh',  ATMOS_GRID_CARTESC_FX(ISB:IEB),  start(2:2) )
+          do i = ISB, IEB-1
+             xh_bnds(1,i) = ATMOS_GRID_CARTESC_CX(i  )
+             xh_bnds(2,i) = ATMOS_GRID_CARTESC_CX(i+1)
+          end do
+          xh_bnds(1,IEB) = ATMOS_GRID_CARTESC_CX(IEB)
+          if ( IEB == IA ) then
+             xh_bnds(2,IEB) = ATMOS_GRID_CARTESC_FX(IEB)
+          else
+             xh_bnds(2,IEB) = ATMOS_GRID_CARTESC_CX(IEB+1)
+          end if
+          call FILE_Write_AssociatedCoordinate( fid, 'xh_bnds', xh_bnds(:,ISB:IEB), (/1,start(2)/) )
        end if
     end if
 
     if ( put_y ) then
        if ( FILE_get_aggregate(fid) ) then
           call FILE_Write_Axis( fid, 'y' ,  ATMOS_GRID_CARTESC_CY(JSB2:JEB2),  start(3:3) )
+          do j = JSB2, JEB2
+             y_bnds(1,j) = ATMOS_GRID_CARTESC_FY(j-1)
+             y_bnds(2,j) = ATMOS_GRID_CARTESC_FY(j  )
+          end do
+          call FILE_Write_AssociatedCoordinate( fid, 'y_bnds', y_bnds(:,JSB2:JEB2), (/1,start(2)/) )
+
           call FILE_Write_Axis( fid, 'yh',  ATMOS_GRID_CARTESC_FY(JSB2:JEB2),  start(3:3) )
+          do j = JSB2, JEB2-1
+             yh_bnds(1,j) = ATMOS_GRID_CARTESC_CY(j  )
+             yh_bnds(2,j) = ATMOS_GRID_CARTESC_CY(j+1)
+          end do
+          yh_bnds(1,JEB2) = ATMOS_GRID_CARTESC_CY(JEB2)
+          if ( JEB2 == JA ) then
+             yh_bnds(2,JEB2) = ATMOS_GRID_CARTESC_FY(JEB2)
+          else
+             yh_bnds(2,JEB2) = ATMOS_GRID_CARTESC_CY(JEB2+1)
+          end if
+          call FILE_Write_AssociatedCoordinate( fid, 'yh_bnds', yh_bnds(:,JSB2:JEB2), (/1,start(2)/) )
        else
           call FILE_Write_Axis( fid, 'y' ,  ATMOS_GRID_CARTESC_CY(JSB:JEB),  start(3:3) )
+          do j = JSB, JEB
+             y_bnds(1,j) = ATMOS_GRID_CARTESC_FY(j-1)
+             y_bnds(2,j) = ATMOS_GRID_CARTESC_FY(j  )
+          end do
+          call FILE_Write_AssociatedCoordinate( fid, 'y_bnds', y_bnds(:,JSB:JEB), (/1,start(2)/) )
+
           call FILE_Write_Axis( fid, 'yh',  ATMOS_GRID_CARTESC_FY(JSB:JEB),  start(3:3) )
+          do j = JSB, JEB-1
+             yh_bnds(1,j) = ATMOS_GRID_CARTESC_CY(j  )
+             yh_bnds(2,j) = ATMOS_GRID_CARTESC_CY(j+1)
+          end do
+          yh_bnds(1,JEB) = ATMOS_GRID_CARTESC_CY(JEB2)
+          if ( JEB == JA ) then
+             yh_bnds(2,JEB) = ATMOS_GRID_CARTESC_FY(JEB)
+          else
+             yh_bnds(2,JEB) = ATMOS_GRID_CARTESC_CY(JEB+1)
+          end if
+          call FILE_Write_AssociatedCoordinate( fid, 'yh_bnds', yh_bnds(:,JSB:JEB), (/1,start(2)/) )
        end if
     end if
 

@@ -176,24 +176,27 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '*** calendar    : ', trim(dinfo(v)%calendar)
           if( IO_L ) write(IO_FID_LOG,*) '*** step_nmax   : ', dinfo(v)%step_nmax
 
-          start_day = 0
-          start_sec = CALENDAR_CFunits2sec( cftime=0.0_DP, cfunits=dinfo(v)%time_units, offset_year=0 )
-          call CALENDAR_adjust_daysec( start_day, start_sec )
+          if ( dinfo(v)%time_units /= "" ) then
+             start_day = 0
+             start_sec = CALENDAR_CFunits2sec( cftime=0.0_DP, cfunits=dinfo(v)%time_units, offset_year=0 )
+             call CALENDAR_adjust_daysec( start_day, start_sec )
 
-          do t = 1, dinfo(v)%step_nmax
-             now_day = start_day
-             now_sec = start_sec + 0.5_DP * ( dinfo(v)%time_start(t) + dinfo(v)%time_end(t) )
+             do t = 1, dinfo(v)%step_nmax
+                now_day = start_day
+                now_sec = start_sec + 0.5_DP * ( dinfo(v)%time_start(t) + dinfo(v)%time_end(t) )
 
-             call CALENDAR_adjust_daysec( now_day, now_sec ) ! [INOUT]
+                call CALENDAR_adjust_daysec( now_day, now_sec ) ! [INOUT]
 
-             call CALENDAR_daysec2date  ( now_date, now_ms,                & ! [OUT]
-                                          now_day,  now_sec, offset_year=0 ) ! [IN]
+                call CALENDAR_daysec2date  ( now_date, now_ms,                & ! [OUT]
+                                             now_day,  now_sec, offset_year=0 ) ! [IN]
 
-             call CALENDAR_date2char    ( now_chardate,    & ! [OUT]
-                                          now_date, now_ms ) ! [IN]
+                call CALENDAR_date2char    ( now_chardate,    & ! [OUT]
+                                             now_date, now_ms ) ! [IN]
 
-             if( IO_L ) write(IO_FID_LOG,*) '*** + ', now_chardate
-          enddo
+                if( IO_L ) write(IO_FID_LOG,*) '*** + ', now_chardate
+             enddo
+          end if
+
        endif
     enddo
 

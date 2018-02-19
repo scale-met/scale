@@ -11,12 +11,9 @@ static void fstr2cstr(       char   *cstr, // (out)
       cstr[i] = fstr[i];
 
   for ( i=len-1; i>=0; i-- ) {
-    if ( cstr[i] != ' ' ) {
-      i += 1;
-      break;
-    }
+    if ( cstr[i] != ' ' ) break;
   }
-  cstr[i] = '\0';
+  cstr[i+1] = '\0';
 }
 
 static void cstr2fstr(       char   *fstr, // (out)
@@ -445,6 +442,7 @@ void file_def_axis_c_( const int32_t *fid,          // (in)
 		       const char    *dim_name,     // (in)
 		       const int32_t *dtype,        // (in)
 		       const int32_t *dim_size,     // (in)
+		       const int32_t *bounds,       // (in)
 		             int32_t *error,        // (out)
 		       const int32_t  name_len,     // (in)
 		       const int32_t  desc_len,     // (in)
@@ -469,7 +467,7 @@ void file_def_axis_c_( const int32_t *fid,          // (in)
   len = dim_name_len > File_HSHORT ? File_HSHORT : dim_name_len;
   fstr2cstr(_dim_name, dim_name, len);
 
-  *error = file_def_axis_c( *fid, _name, _desc, _units, _dim_name, *dtype, *dim_size );
+  *error = file_def_axis_c( *fid, _name, _desc, _units, _dim_name, *dtype, *dim_size, *bounds );
 }
 
 void file_write_axis_c_( const int32_t *fid,          // (in)

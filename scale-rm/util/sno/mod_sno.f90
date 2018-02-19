@@ -366,7 +366,9 @@ contains
             'height_uvz','height_uyw','height_xvw','height_uvw'                                           )
           naxis           = naxis + 1
           axisname(naxis) = varname_file(n)
-       case('time','time_bnds')
+       case('time','time_bnds',                                                                &
+            'z_bnds','zh_bnds','oz_bnds','ozh_bnds','lz_bnds','lzh_bnds','uz_bnds','uzh_bnds', &
+            'x_bnds','xh_bnds','y_bnds','yh_bnds'                                              )
           ! do nothing
        case('lambert_conformal_conic')
           if ( ismaster ) then

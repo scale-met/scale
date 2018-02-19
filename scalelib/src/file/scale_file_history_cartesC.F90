@@ -891,6 +891,13 @@ contains
     integer :: startXH, startYH
     integer :: XAG, YAG
     integer :: XAGH, YAGH
+
+    real(RP) :: z_bnds(2,KA), zh_bnds(2,0:KA)
+    real(RP) :: oz_bnds(2,OKA), ozh_bnds(2,0:OKA)
+    real(RP) :: lz_bnds(2,LKA), lzh_bnds(2,0:LKA)
+    real(RP) :: uz_bnds(2,UKA), uzh_bnds(2,0:UKA)
+    real(RP) :: x_bnds(2,IA), xh_bnds(2,0:IA)
+    real(RP) :: y_bnds(2,IA), yh_bnds(2,0:IA)
     !---------------------------------------------------------------------------
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
@@ -965,31 +972,126 @@ contains
        YAGH    = jmh
     endif
 
+
+    ! bounds
+    do k = KS, KE
+       z_bnds(1,k) = ATMOS_GRID_CARTESC_FZ(k-1)
+       z_bnds(2,k) = ATMOS_GRID_CARTESC_FZ(k  )
+    end do
+    do k = KS-1, KE
+       zh_bnds(1,k) = ATMOS_GRID_CARTESC_CZ(k  )
+       zh_bnds(2,k) = ATMOS_GRID_CARTESC_CZ(k+1)
+    end do
+
+    do k = OKS, OKE
+       oz_bnds(1,k) = OCEAN_GRID_CARTESC_FZ(k-1)
+       oz_bnds(2,k) = OCEAN_GRID_CARTESC_FZ(k  )
+    end do
+    ozh_bnds(1,OKS-1) = OCEAN_GRID_CARTESC_FZ(OKS-1)
+    do k = OKS-1, OKE-1
+       ozh_bnds(2,k  ) = OCEAN_GRID_CARTESC_CZ(k+1)
+       ozh_bnds(1,k+1) = OCEAN_GRID_CARTESC_CZ(k+1)
+    end do
+    ozh_bnds(2,OKE) = OCEAN_GRID_CARTESC_FZ(OKE)
+
+    do k = LKS, LKE
+       lz_bnds(1,k) = LAND_GRID_CARTESC_FZ(k-1)
+       lz_bnds(2,k) = LAND_GRID_CARTESC_FZ(k  )
+    end do
+    lzh_bnds(1,LKS-1) = LAND_GRID_CARTESC_FZ(LKS-1)
+    do k = LKS-1, LKE-1
+       lzh_bnds(2,k  ) = LAND_GRID_CARTESC_CZ(k+1)
+       lzh_bnds(1,k+1) = LAND_GRID_CARTESC_CZ(k+1)
+    end do
+    lzh_bnds(2,LKE) = LAND_GRID_CARTESC_FZ(LKE)
+
+    do k = UKS, UKE
+       uz_bnds(1,k) = URBAN_GRID_CARTESC_FZ(k-1)
+       uz_bnds(2,k) = URBAN_GRID_CARTESC_FZ(k  )
+    end do
+    uzh_bnds(1,UKS-1) = URBAN_GRID_CARTESC_FZ(UKS-1)
+    do k = UKS-1, UKE-1
+       uzh_bnds(2,k  ) = URBAN_GRID_CARTESC_CZ(k+1)
+       uzh_bnds(1,k+1) = URBAN_GRID_CARTESC_CZ(k+1)
+    end do
+    uzh_bnds(2,UKE) = URBAN_GRID_CARTESC_FZ(UKE)
+
+    do i = ims, ime
+       x_bnds(1,i) = ATMOS_GRID_CARTESC_FX(i-1)
+       x_bnds(2,i) = ATMOS_GRID_CARTESC_FX(i  )
+    end do
+    if ( imsh == 0 ) then
+       xh_bnds(1,0) = ATMOS_GRID_CARTESC_FX(0)
+    else
+       xh_bnds(1,imsh) = ATMOS_GRID_CARTESC_CX(imsh)
+    end if
+    do i = imsh, ime-1
+       xh_bnds(2,i  ) = ATMOS_GRID_CARTESC_CX(i+1)
+       xh_bnds(1,i+1) = ATMOS_GRID_CARTESC_CX(i+1)
+    end do
+    if ( ime == IA ) then
+       xh_bnds(2,ime) = ATMOS_GRID_CARTESC_FX(IA)
+    else
+       xh_bnds(2,ime) = ATMOS_GRID_CARTESC_CX(ime+1)
+    end if
+
+    do j = jms, jme
+       y_bnds(1,j) = ATMOS_GRID_CARTESC_FY(j-1)
+       y_bnds(2,j) = ATMOS_GRID_CARTESC_FY(j  )
+    end do
+    if ( jmsh == 0 ) then
+       yh_bnds(1,jmsh) = ATMOS_GRID_CARTESC_FY(jmsh)
+    else
+       yh_bnds(1,jmsh) = ATMOS_GRID_CARTESC_CY(jmsh)
+    end if
+    do j = jmsh, jme-1
+       yh_bnds(2,j  ) = ATMOS_GRID_CARTESC_CY(j+1)
+       yh_bnds(1,j+1) = ATMOS_GRID_CARTESC_CY(j+1)
+    end do
+    if ( jme == JA ) then
+       yh_bnds(2,jme) = ATMOS_GRID_CARTESC_FY(jme)
+    else
+       yh_bnds(2,jme) = ATMOS_GRID_CARTESC_CY(jme+1)
+    end if
+
+
     ! for the shared-file I/O method, the axes are global (gsize)
     ! for one-file-per-process I/O method, the axes size is equal to the local buffer size
 
-    call FILE_HISTORY_Set_Axis( 'z',   'Z',               'm', 'z',   ATMOS_GRID_CARTESC_CZ (KS  :KE),   gsize=KMAX   , start=startZ )
-    call FILE_HISTORY_Set_Axis( 'zh',  'Z (half level)',  'm', 'zh',  ATMOS_GRID_CARTESC_FZ (KS-1:KE),   gsize=KMAX+1 , start=startZ )
+    call FILE_HISTORY_Set_Axis( 'z',   'Z',               'm', 'z',   ATMOS_GRID_CARTESC_CZ (KS  :KE), &
+                                bounds=z_bnds (:,KS  :KE), gsize=KMAX   , start=startZ                 )
+    call FILE_HISTORY_Set_Axis( 'zh',  'Z (half level)',  'm', 'zh',  ATMOS_GRID_CARTESC_FZ (KS-1:KE), &
+                                bounds=zh_bnds(:,KS-1:KE), gsize=KMAX+1 , start=startZ                 )
 
     if ( FILE_HISTORY_CARTESC_PRES_nlayer > 0 ) then
        call FILE_HISTORY_Set_Axis( 'pressure', 'Pressure', 'hPa', 'pressure', FILE_HISTORY_CARTESC_PRES_val(:)/100.0_RP, &
                                     gsize=FILE_HISTORY_CARTESC_PRES_nlayer, start=startZ, down=.true.                    )
     endif
 
-    call FILE_HISTORY_Set_Axis( 'oz',  'OZ',              'm', 'oz',  OCEAN_GRID_CARTESC_CZ(OKS  :OKE), gsize=OKMAX  , start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'ozh', 'OZ (half level)', 'm', 'ozh', OCEAN_GRID_CARTESC_FZ(OKS-1:OKE), gsize=OKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'oz',  'OZ',              'm', 'oz',  OCEAN_GRID_CARTESC_CZ(OKS  :OKE), &
+                                bounds=oz_bnds (:,OKS  :OKE), gsize=OKMAX  , start=startZ, down=.true.  )
+    call FILE_HISTORY_Set_Axis( 'ozh', 'OZ (half level)', 'm', 'ozh', OCEAN_GRID_CARTESC_FZ(OKS-1:OKE), &
+                                bounds=ozh_bnds(:,OKS-1:OKE), gsize=OKMAX+1, start=startZ, down=.true.  )
 
-    call FILE_HISTORY_Set_Axis( 'lz',  'LZ',              'm', 'lz',  LAND_GRID_CARTESC_CZ(LKS  :LKE), gsize=LKMAX  , start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'lzh', 'LZ (half level)', 'm', 'lzh', LAND_GRID_CARTESC_FZ(LKS-1:LKE), gsize=LKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'lz',  'LZ',              'm', 'lz',  LAND_GRID_CARTESC_CZ(LKS  :LKE),  &
+                                bounds=lz_bnds (:,LKS  :LKE), gsize=LKMAX  , start=startZ, down=.true.  )
+    call FILE_HISTORY_Set_Axis( 'lzh', 'LZ (half level)', 'm', 'lzh', LAND_GRID_CARTESC_FZ(LKS-1:LKE),  &
+                                bounds=lzh_bnds(:,LKS-1:LKE), gsize=LKMAX+1, start=startZ, down=.true.  )
 
-    call FILE_HISTORY_Set_Axis( 'uz',  'UZ',              'm', 'uz',  URBAN_GRID_CARTESC_CZ(UKS  :UKE), gsize=UKMAX  , start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'uzh', 'UZ (half level)', 'm', 'uzh', URBAN_GRID_CARTESC_FZ(UKS-1:UKE), gsize=UKMAX+1, start=startZ, down=.true. )
+    call FILE_HISTORY_Set_Axis( 'uz',  'UZ',              'm', 'uz',  URBAN_GRID_CARTESC_CZ(UKS  :UKE), &
+                                bounds=uz_bnds (:,UKS  :UKE), gsize=UKMAX  , start=startZ, down=.true.  )
+    call FILE_HISTORY_Set_Axis( 'uzh', 'UZ (half level)', 'm', 'uzh', URBAN_GRID_CARTESC_FZ(UKS-1:UKE), &
+                                bounds=uzh_bnds(:,UKS-1:UKE), gsize=UKMAX+1, start=startZ, down=.true.  )
 
-    call FILE_HISTORY_Set_Axis( 'x',   'X',               'm', 'x',   ATMOS_GRID_CARTESC_CX (ims :ime),  gsize=XAG , start=startX  )
-    call FILE_HISTORY_Set_Axis( 'xh',  'X (half level)',  'm', 'xh',  ATMOS_GRID_CARTESC_FX (imsh:ime),  gsize=XAGH, start=startXH )
+    call FILE_HISTORY_Set_Axis( 'x',   'X',               'm', 'x',   ATMOS_GRID_CARTESC_CX (ims :ime), &
+                                bounds=x_bnds (:,ims :ime), gsize=XAG , start=startX                    )
+    call FILE_HISTORY_Set_Axis( 'xh',  'X (half level)',  'm', 'xh',  ATMOS_GRID_CARTESC_FX (imsh:ime), &
+                                bounds=xh_bnds(:,imsh:ime), gsize=XAGH, start=startXH                   )
 
-    call FILE_HISTORY_Set_Axis( 'y',   'Y',               'm', 'y',   ATMOS_GRID_CARTESC_CY (jms :jme),  gsize=YAG , start=startY  )
-    call FILE_HISTORY_Set_Axis( 'yh',  'Y (half level)',  'm', 'yh',  ATMOS_GRID_CARTESC_FY (jmsh:jme),  gsize=YAGH, start=startYH )
+    call FILE_HISTORY_Set_Axis( 'y',   'Y',               'm', 'y',   ATMOS_GRID_CARTESC_CY (jms :jme), &
+                                bounds=y_bnds (:,jms :jme), gsize=YAG , start=startY                    )
+    call FILE_HISTORY_Set_Axis( 'yh',  'Y (half level)',  'm', 'yh',  ATMOS_GRID_CARTESC_FY (jmsh:jme), &
+                                bounds=yh_bnds(:,jmsh:jme), gsize=YAGH, start=startYH                   )
 
     ! axes below always include halos when written to file regardless of PRC_PERIODIC_X/PRC_PERIODIC_Y
     call FILE_HISTORY_Set_Axis( 'CZ',   'Atmos Grid Center Position Z', 'm', 'CZ',  ATMOS_GRID_CARTESC_CZ,   gsize=KA,      start=startZ )

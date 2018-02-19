@@ -501,6 +501,10 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
       fprintf(stderr, "requested step is larger than tdim: step=%d tdim=%d\n", step, tdim);
       return ERROR_CODE;
     }
+    dinfo->time_start = 0.0;
+    dinfo->time_end = 0.0;
+    dinfo->time_units[0] = '\0';
+    dinfo->calendar[0] = '\0';
   }
   ERROR_SUPPRESS = 0;
 
@@ -1108,16 +1112,19 @@ int32_t file_put_axis_c( const int32_t fid,        // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_def_axis_c( const int32_t fid,        // (in)
-			 const char   *name,       // (in)
-			 const char   *desc,       // (in)
-			 const char   *units,      // (in)
-			 const char   *dim_name,   // (in)
-			 const int32_t dtype,      // (in)
-			 const int32_t dim_size)   // (in)
+int32_t file_def_axis_c( const int32_t fid,      // (in)
+			 const char   *name,     // (in)
+			 const char   *desc,     // (in)
+			 const char   *units,    // (in)
+			 const char   *dim_name, // (in)
+			 const int32_t dtype,    // (in)
+			 const int32_t dim_size, // (in)
+			 const int32_t bounds)   // (in)
 {
   int ncid, dimid, varid;
   nc_type xtype = -1;
+  int dimids[2];
+  char buf[File_HSHORT+6];
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
@@ -1133,8 +1140,17 @@ int32_t file_def_axis_c( const int32_t fid,        // (in)
     CHECK_PNC_ERROR( ncmpi_def_var(ncid, name, xtype, 1, &dimid, &varid) )
     CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, varid, "long_name", strlen(desc), desc) )
     CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, varid, "units", strlen(units), units) )
-  }
-  else {
+
+    if ( bounds ) {
+      dimids[0] = dimid;
+      if ( ncmpi_inq_dimid(ncid, "nv", &(dimids[1])) != NC_NOERR ) // first called
+	CHECK_PNC_ERROR( nc_def_dim(ncid, "nv", 2, &(dimids[1])) )
+      sprintf(buf, "%s_bnds", dim_name);
+      CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, varid, "bounds", strlen(buf), buf) )
+      CHECK_PNC_ERROR( ncmpi_def_var(ncid, buf, NC_DOUBLE, 2, dimids, &varid) )
+    }
+
+  } else {
     if ( nc_inq_varid(ncid, name, &varid) == NC_NOERR ) // check if existed
       return ALREADY_EXISTED_CODE;
 
@@ -1152,6 +1168,15 @@ int32_t file_def_axis_c( const int32_t fid,        // (in)
     CHECK_ERROR( nc_def_var(ncid, name, xtype, 1, &dimid, &varid) )
     CHECK_ERROR( nc_put_att_text(ncid, varid, "long_name", strlen(desc), desc) )
     CHECK_ERROR( nc_put_att_text(ncid, varid, "units", strlen(units), units) )
+
+    if ( bounds ) {
+      dimids[0] = dimid;
+      if ( nc_inq_dimid(ncid, "nv", &(dimids[1])) != NC_NOERR ) // first called
+	CHECK_ERROR( nc_def_dim(ncid, "nv", 2, &(dimids[1])) )
+      sprintf(buf, "%s_bnds", dim_name);
+      CHECK_ERROR( nc_put_att_text(ncid, varid, "bounds", strlen(buf), buf) )
+      CHECK_ERROR( nc_def_var(ncid, buf, NC_DOUBLE, 2, dimids, &varid) )
+    }
   }
 
   return SUCCESS_CODE;

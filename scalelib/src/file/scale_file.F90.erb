@@ -526,7 +526,8 @@ contains
   subroutine FILE_def_axis( &
        fid,                       &
        name, desc, units,         &
-       dim_name, dtype, dim_size  )
+       dim_name, dtype, dim_size, &
+       bounds                     )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -535,11 +536,19 @@ contains
     integer,          intent(in) :: dtype
     integer,          intent(in) :: dim_size
 
+    logical,          intent(in), optional :: bounds
+
     integer :: error
+    integer :: bounds_
+
+    bounds_ = 0 ! .false.
+    if ( present(bounds) ) then
+       if ( bounds ) bounds_ = 1 ! .true.
+    end if
 
     call file_def_axis_c( FILE_files(fid)%fid, &
-         name, desc, units, dim_name, dtype, dim_size, & ! (in)
-         error                                         ) ! (out)
+         name, desc, units, dim_name, dtype, dim_size, bounds_, & ! (in)
+         error                                                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        write(*,*) 'xxx failed to define axis'
        call PRC_abort
