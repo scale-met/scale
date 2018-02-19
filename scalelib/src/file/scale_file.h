@@ -28,6 +28,7 @@ typedef struct{
   real64_t time_start;
   real64_t time_end;
   char     time_units[File_HMID];
+  char     calendar[File_HSHORT];
   int32_t  fid;
 } datainfo_t;
 
@@ -122,8 +123,9 @@ extern int32_t file_set_attribute_double_c( const int32_t  fid,   // (in)
 extern int32_t file_add_associatedvariable_c( const int32_t  fid,    // (in)
 					      const char    *vname); // (in)
 
-extern int32_t file_set_tunits_c( const int32_t fid,          // (in)
-				  const char    *time_units); // (in)
+extern int32_t file_set_tunits_c( const int32_t fid,         // (in)
+				  const char    *time_units, // (in)
+				  const char    *calendar);  // (in)
 
 extern int32_t file_put_axis_c( const int32_t fid,        // (in)
 				const char   *name,       // (in)

@@ -178,6 +178,7 @@ contains
     integer :: nowrank
     integer :: n, nn
     integer :: fid, ierr
+    logical :: existed
     !---------------------------------------------------------------------------
 
     !---  read info from global file
@@ -220,6 +221,8 @@ contains
                                       hinfo%halosize(1), hinfo%halosize(2), hinfo%halosize(3)  ) ! (out) KHALO, IHALO, JHALO
 
           call FILE_Get_Attribute( fid, "global", "time_units", hinfo%time_units    )
+          call FILE_Get_Attribute( fid, "global", "calendar", hinfo%calendar, existed )
+          if ( .not. existed ) hinfo%calendar = ""
           call FILE_Get_Attribute( fid, "global", "time_start", hinfo%time_start(:) )
 
           call FILE_Get_Attribute( fid, 'x', 'size_global', hinfo%xatt_size_global(:) )
@@ -242,6 +245,7 @@ contains
     call MPI_BCAST( hinfo%gridsize        (1), 6    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%halosize        (1), 3    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%time_units         , H_MID, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+    call MPI_BCAST( hinfo%calendar           , H_SHORT, MPI_CHARACTER     , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%time_start      (1), 1    , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%xatt_size_global(1), 1    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%xatt_halo_global(1), 2    , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -960,7 +964,7 @@ contains
                                                hinfo%gridsize(4), hinfo%gridsize(5), hinfo%gridsize(6), &
                                                hinfo%gridsize(2), hinfo%gridsize(3),                    &
                                                hinfo%halosize(1), hinfo%halosize(2), hinfo%halosize(3), &
-                                               hinfo%time_start(1), hinfo%time_units                    )
+                                               hinfo%time_start(1), hinfo%time_units, hinfo%calendar    )
 
     case default
        write(*,*) 'invalud grid_name: ', trim(hinfo%grid_name)

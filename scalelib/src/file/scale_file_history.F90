@@ -250,12 +250,13 @@ module scale_file_history
   character(len=FILE_HMID)   :: FILE_HISTORY_INSTITUTION !> Header information of the output file: institution
   character(len=FILE_HSHORT) :: FILE_HISTORY_MAPPINGNAME !> Header information of mapping name
 
-  character(len=FILE_HMID) :: FILE_HISTORY_TIME_UNITS             !> Unit for time axis
-  logical                  :: FILE_HISTORY_OUTPUT_STEP0 = .false. !> Output value at step=0?
-  integer                  :: FILE_HISTORY_OUTPUT_WAIT_STEP       !> Step length to suppress output
-  integer                  :: FILE_HISTORY_OUTPUT_SWITCH_STEP     !> Step interval to switch output file
-  integer                  :: FILE_HISTORY_OUTPUT_SWITCH_LASTSTEP !> Last step when the file is switched
-  logical                  :: FILE_HISTORY_ERROR_PUTMISS = .true. !> Abort if the value is never stored after last output?
+  character(len=FILE_HMID)   :: FILE_HISTORY_TIME_UNITS             !> Unit for time axis
+  character(len=FILE_HSHORT) :: FILE_HISTORY_CALENDAR               !> Calendar name
+  logical                    :: FILE_HISTORY_OUTPUT_STEP0 = .false. !> Output value at step=0?
+  integer                    :: FILE_HISTORY_OUTPUT_WAIT_STEP       !> Step length to suppress output
+  integer                    :: FILE_HISTORY_OUTPUT_SWITCH_STEP     !> Step interval to switch output file
+  integer                    :: FILE_HISTORY_OUTPUT_SWITCH_LASTSTEP !> Last step when the file is switched
+  logical                    :: FILE_HISTORY_ERROR_PUTMISS = .true. !> Abort if the value is never stored after last output?
 
   ! working
   integer,       parameter   :: FILE_HISTORY_req_max = 1000 !> number limit for history item request
@@ -306,18 +307,18 @@ contains
   !> Setup
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Setup( &
-       title, source, institution, &
-       mapping_name,               &
-       time_start, time_interval,  &
-       time_units, time_since,     &
-       default_basename,           &
-       default_postfix_timelabel,  &
-       default_zcoord,             &
-       default_tinterval,          &
-       default_tunit,              &
-       default_taverage,           &
-       default_datatype,           &
-       myrank                      )
+       title, source, institution,       &
+       mapping_name,                     &
+       time_start, time_interval,        &
+       time_units, time_since, calendar, &
+       default_basename,                 &
+       default_postfix_timelabel,        &
+       default_zcoord,                   &
+       default_tinterval,                &
+       default_tunit,                    &
+       default_taverage,                 &
+       default_datatype,                 &
+       myrank                            )
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8, &
@@ -339,6 +340,7 @@ contains
 
     character(len=*), intent(in), optional :: time_units
     character(len=*), intent(in), optional :: time_since
+    character(len=*), intent(in), optional :: calendar
     character(len=*), intent(in), optional :: default_basename
     logical,          intent(in), optional :: default_postfix_timelabel
     character(len=*), intent(in), optional :: default_zcoord
@@ -432,6 +434,12 @@ contains
     else
        FILE_HISTORY_TIME_SINCE = ''
     endif
+
+    if ( present(calendar) ) then
+       FILE_HISTORY_CALENDAR = calendar
+    else
+       FILE_HISTORY_CALENDAR = ""
+    end if
 
     FILE_HISTORY_TIME_UNITS                = 'seconds' !> Unit for time axis
     FILE_HISTORY_DEFAULT_BASENAME          = ''        !> Base name of the file
@@ -1621,6 +1629,7 @@ contains
 
     integer                    :: fid
     character(len=FILE_HMID)   :: tunits
+    character(len=FILE_HSHORT) :: calendar
     character(len=FILE_HLONG)  :: basename_mod
     logical                    :: fileexisted
     integer(8)                 :: array_size
@@ -1653,14 +1662,16 @@ contains
           basename_mod = trim(FILE_HISTORY_vars(id)%basename)
        endif
 
-       call FILE_Create( basename_mod,                     & ! [IN]
-                         FILE_HISTORY_TITLE,               & ! [IN]
-                         FILE_HISTORY_SOURCE,              & ! [IN]
-                         FILE_HISTORY_INSTITUTION,         & ! [IN]
-                         fid, fileexisted,                 & ! [OUT]
-                         rankid = FILE_HISTORY_myrank,     & ! [IN]
-                         aggregate=FILE_HISTORY_AGGREGATE, &
-                         time_units = tunits               ) ! [IN]
+       call FILE_Create( basename_mod,                       & ! [IN]
+                         FILE_HISTORY_TITLE,                 & ! [IN]
+                         FILE_HISTORY_SOURCE,                & ! [IN]
+                         FILE_HISTORY_INSTITUTION,           & ! [IN]
+                         fid, fileexisted,                   & ! [OUT]
+                         rankid = FILE_HISTORY_myrank,       & ! [IN]
+                         aggregate = FILE_HISTORY_AGGREGATE, & ! [IN]
+                         time_units = tunits,                & ! [IN]
+                         calendar = FILE_HISTORY_CALENDAR    ) ! [IN]
+
        FILE_HISTORY_vars(id)%fid = fid
 
        if ( .NOT. fileexisted ) then ! new file

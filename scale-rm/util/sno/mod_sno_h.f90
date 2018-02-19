@@ -48,6 +48,7 @@ module mod_sno_h
     integer                :: gridsize(6)         ! total grid size     in global  (z,x,y,oz,lz,uz), always including halo
     integer                :: halosize(3)         ! halo  grid size     in global  (z,x,y), always existing
     character(len=H_MID)   :: time_units
+    character(len=H_SHORT) :: calendar
     real(DP)               :: time_start(1)
     integer                :: xatt_size_global(1)
     integer                :: xatt_halo_global(2)
@@ -95,6 +96,7 @@ module mod_sno_h
     real(DP)               :: time_end  (step_limit)
     real(DP)               :: dt
     character(len=H_MID)   :: time_units
+    character(len=H_SHORT) :: calendar
     real(RP), allocatable  :: VAR_1d(:)
     real(RP), allocatable  :: VAR_2d(:,:)
     real(RP), allocatable  :: VAR_3d(:,:,:)

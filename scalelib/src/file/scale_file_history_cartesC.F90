@@ -95,6 +95,8 @@ contains
        TIME_NOWSTEP,     &
        TIME_DTSEC,       &
        TIME_STARTDAYSEC
+    use scale_calendar, only: &
+       CALENDAR_get_name
     use scale_interp_vert, only: &
        INTERP_VERT_alloc_pres
     use scale_mapprojection, only: &
@@ -113,6 +115,7 @@ contains
     character(len=H_MID) :: FILE_HISTORY_CARTESCORY_T_SINCE
 
     character(len=FILE_HSHORT) :: mapping_name
+    character(len=FILE_HSHORT) :: calendar
     real(DP) :: start_daysec
     integer  :: ierr
     integer  :: k
@@ -218,12 +221,16 @@ contains
     ! get mapping name
     call MAPPROJECTION_get_attributes( mapping_name )
 
+    ! get calendar name
+    call CALENDAR_get_name( calendar )
+
     call FILE_HISTORY_Setup( &
          FILE_HISTORY_CARTESCORY_H_TITLE,              & ! [IN]
          H_SOURCE, H_INSTITUTE,                        & ! [IN]
          mapping_name,                                 & ! [IN]
          start_daysec, TIME_DTSEC,                     & ! [IN]
          time_since = FILE_HISTORY_CARTESCORY_T_SINCE, & ! [IN]
+         calendar = calendar,                          & ! [IN]
          default_zcoord = 'model',                     & ! [IN]
          myrank = PRC_myrank                           ) ! [IN]
 
@@ -1274,6 +1281,8 @@ contains
   subroutine FILE_HISTORY_CARTESC_set_axes_attributes
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_NAME
+    use scale_calendar, only: &
+       CALENDAR_get_name
     use scale_file_history, only: &
        FILE_HISTORY_AGGREGATE, &
        FILE_HISTORY_Set_Attribute
@@ -1301,6 +1310,7 @@ contains
     implicit none
 
     character(len=34) :: tunits
+    character(len=H_SHORT) :: calendar
 
     type(axisattinfo) :: ainfo(4) ! x, xh, y, yh
     type(mappinginfo) :: minfo
@@ -1340,6 +1350,9 @@ contains
     call FILE_get_CFtunits( FILE_HISTORY_CARTESCORY_STARTDATE(:), tunits )
     call FILE_HISTORY_Set_Attribute( "global", "time_units", tunits )
     call FILE_HISTORY_Set_Attribute( "global", "time_start", (/FILE_HISTORY_CARTESCORY_STARTMS/) )
+
+    call CALENDAR_get_name( calendar )
+    if ( calendar /= "" ) call FILE_HISTORY_Set_Attribute( "global", "calendar", calendar )
 
     if ( PRC_PERIODIC_X ) then
        ainfo(1)%periodic = .true.

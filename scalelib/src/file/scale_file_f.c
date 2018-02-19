@@ -136,6 +136,7 @@ void file_get_datainfo_c_(       datainfo_t *dinfo,       // (out)
   cstr2fstr(dinfo->description, dinfo->description, File_HMID);
   cstr2fstr(dinfo->units,       dinfo->units,       File_HSHORT);
   cstr2fstr(dinfo->time_units,  dinfo->time_units,  File_HMID);
+  cstr2fstr(dinfo->calendar,    dinfo->calendar,    File_HSHORT);
   for ( i=0; i<RANK_MAX; i++ )
     cstr2fstr(dinfo->dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT);
 }
@@ -165,6 +166,7 @@ void file_read_data_c_(       void       *var,       // (out)
   fstr2cstr(cdinfo.description, dinfo->description, File_HMID-1);
   fstr2cstr(cdinfo.units, dinfo->units, File_HSHORT-1);
   fstr2cstr(cdinfo.time_units, dinfo->time_units, File_HMID-1);
+  fstr2cstr(cdinfo.calendar, dinfo->calendar, File_HSHORT-1);
   for ( i=0; i<RANK_MAX; i++ )
     fstr2cstr(cdinfo.dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT-1);
 
@@ -382,16 +384,22 @@ void file_add_associatedvariable_c_( const int32_t *fid,        // (in)
 
 void file_set_tunits_c_( const int32_t *fid,        // (in)
 			 const char    *time_units, // (in)
+			 const char    *calendar,   // (in)
 			       int32_t *error,      // (out)
-			 const int32_t  len)        // (in)
+			 const int32_t  unit_len,   // (in)
+			 const int32_t  cal_len)    // (in)
 {
   char _time_units[File_HMID+1];
+  char _calendar[File_HSHORT+1];
   int32_t l;
 
-  l = len > File_HMID ? File_HMID : len;
+  l = unit_len > File_HMID ? File_HMID : unit_len;
   fstr2cstr(_time_units, time_units, l);
 
-  *error = file_set_tunits_c( *fid, _time_units );
+  l = cal_len > File_HSHORT ? File_HSHORT : cal_len;
+  fstr2cstr(_calendar, calendar, l);
+
+  *error = file_set_tunits_c( *fid, _time_units, _calendar );
 }
 
 void file_put_axis_c_( const int32_t *fid,          // (in)

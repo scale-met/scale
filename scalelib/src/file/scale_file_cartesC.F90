@@ -749,6 +749,8 @@ contains
        FILE_AGGREGATE,    &
        FILE_Create,       &
        FILE_get_CFtunits
+    use scale_calendar, only: &
+       CALENDAR_get_name
     use scale_process, only: &
        PRC_Ismaster, &
        PRC_myrank,   &
@@ -775,15 +777,16 @@ contains
     logical,          intent(in), optional :: haszcoord !< switch whether include zcoordinate or not (default=true)
     logical,          intent(in), optional :: aggregate
 
-    integer           :: dtype
-    logical           :: append_sw
-    character(len=34) :: tunits
-    real(DP)          :: subsec_
-    integer           :: rank_x, rank_y
-    integer           :: num_x, num_y
-    integer           :: comm
-    logical           :: fileexisted
-    logical           :: aggregate_
+    integer                :: dtype
+    logical                :: append_sw
+    character(len=34)      :: tunits
+    character(len=H_SHORT) :: calendar
+    real(DP)               :: subsec_
+    integer                :: rank_x, rank_y
+    integer                :: num_x, num_y
+    integer                :: comm
+    logical                :: fileexisted
+    logical                :: aggregate_
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -812,8 +815,13 @@ contains
     ! create a netCDF file if not already existed. Otherwise, open it.
     if ( present(date) ) then
        call FILE_get_CFtunits( date(:), tunits )
+       call CALENDAR_get_name( calendar )
+    else if ( NOWDATE(1) > 0 ) then
+       call FILE_get_CFtunits( NOWDATE(:), tunits )
+       call CALENDAR_get_name( calendar )
     else
        tunits = 'seconds'
+       calendar = ''
     endif
 
 
@@ -833,6 +841,7 @@ contains
                       rankid     = PRC_myrank, & ! [IN]
                       aggregate  = aggregate_, & ! [IN]
                       time_units = tunits,     & ! [IN]
+                      calendar   = calendar,   & ! [IN]
                       append     = append_sw   ) ! [IN]
 
 
@@ -858,12 +867,6 @@ contains
           num_y = PRC_NUM_Y
        end if
 
-       if ( present( date ) ) then
-          call FILE_get_CFtunits( date(:), tunits )
-       else
-          call FILE_get_CFtunits( NOWDATE(:), tunits )
-       endif
-
        if ( present( subsec ) ) then
           subsec_ = subsec
        else
@@ -877,7 +880,7 @@ contains
                                                KMAX, OKMAX, LKMAX, UKMAX,      & ! [IN]
                                                IMAXG, JMAXG,                   & ! [IN]
                                                KHALO, IHALO, JHALO,            & ! [IN]
-                                               subsec_, tunits                 ) ! [IN]
+                                               subsec_, tunits, calendar       ) ! [IN]
 
        call FILE_CARTESC_def_axes( fid,                & ! [IN]
                                    dtype,              & ! [IN]
@@ -1840,7 +1843,7 @@ contains
        kmax, okmax, lkmax, ukmax,      &
        imaxg, jmaxg,                   &
        khalo, ihalo, jhalo,            &
-       time, tunits                    )
+       time, tunits, calendar          )
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_NAME
     use scale_file, only: &
@@ -1855,6 +1858,9 @@ contains
     integer,          intent(in) :: khalo, ihalo, jhalo
     real(DP),         intent(in) :: time
     character(len=*), intent(in) :: tunits
+    character(len=*), intent(in) :: calendar
+
+    call FILE_Set_Attribute( fid, "global", "Conventions", "CF-1.6" ) ! [IN]
 
     call FILE_Set_Attribute( fid, "global", "grid_name", ATMOS_GRID_CARTESC_NAME ) ! [IN]
 
@@ -1882,6 +1888,7 @@ contains
 
     call FILE_Set_Attribute( fid, "global", "time_start", (/time/) )
     call FILE_Set_Attribute( fid, "global", "time_units", tunits )
+    if ( calendar /= "" ) call FILE_Set_Attribute( fid, "global", "calendar", calendar )
 
     return
   end subroutine FILE_CARTESC_put_globalAttributes

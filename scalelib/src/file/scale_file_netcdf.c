@@ -87,6 +87,7 @@ static int32_t ERROR_SUPPRESS = 0;
 typedef struct {
   int ncid;
   char time_units[File_HMID+1];
+  char calendar[File_HSHORT+1];
   int deflate_level;
 #if defined(NETCDF3) || defined(PNETCDF)
   int defmode;
@@ -431,11 +432,6 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
       CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, name, &varid) )
       idx[0] = step - 1;
       CHECK_PNC_ERROR( ncmpi_get_var1_double_all(ncid, varid, idx, &(dinfo->time_end)) )
-      // time_start
-      strcat(name, "_bnds");
-      CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, name, &varid) )
-      idx[1] = 0;
-      CHECK_PNC_ERROR( ncmpi_get_var1_double_all(ncid, varid, idx, &(dinfo->time_start)) )
       // units
       CHECK_PNC_ERROR( ncmpi_inq_attlen  (ncid, varid, "units", &l) )
       buf = (char*) malloc(l+1);
@@ -444,6 +440,22 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
         dinfo->time_units[i] = buf[i];
       dinfo->time_units[i] = '\0';
       free(buf);
+      // calendar
+      status = ncmpi_inq_attlen  (ncid, varid, "calendar", &l);
+      if ( status == NC_NOERR ) {
+	buf = (char*) malloc(l+1);
+	CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "calendar", buf) )
+	for (i=0; i<MIN(File_HSHORT-1,l); i++)
+	  dinfo->calendar[i] = buf[i];
+	dinfo->calendar[i] = '\0';
+	free(buf);
+      } else
+	dinfo->calendar[0] = '\0';
+      // time_start
+      strcat(name, "_bnds");
+      CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, name, &varid) )
+      idx[1] = 0;
+      CHECK_PNC_ERROR( ncmpi_get_var1_double_all(ncid, varid, idx, &(dinfo->time_start)) )
     } else {
       size_t idx[2];
       size_t l;
@@ -453,11 +465,6 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
       if ( status == NC_NOERR ) {
         idx[0] = step - 1;
 	CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_end)) )
-	// time_start
-	strcat(name, "_bnds");
-	CHECK_ERROR( nc_inq_varid(ncid, name, &varid) )
-        idx[1] = 0;
-        CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_start)) )
 	// units
         CHECK_ERROR( nc_inq_attlen  (ncid, varid, "units", &l) )
         buf = (char*) malloc(l+1);
@@ -466,10 +473,27 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
           dinfo->time_units[i] = buf[i];
         dinfo->time_units[i] = '\0';
         free(buf);
+	// calendar
+        status = nc_inq_attlen  (ncid, varid, "calendar", &l);
+	if ( status == NC_NOERR ) {
+	  buf = (char*) malloc(l+1);
+	  CHECK_ERROR( nc_get_att_text(ncid, varid, "calendar", buf) )
+	  for (i=0; i<MIN(File_HSHORT-1,l); i++)
+	    dinfo->calendar[i] = buf[i];
+	  dinfo->calendar[i] = '\0';
+	  free(buf);
+	} else
+	  dinfo->calendar[0] = '\0';
+	// time_start
+	strcat(name, "_bnds");
+	CHECK_ERROR( nc_inq_varid(ncid, name, &varid) )
+        idx[1] = 0;
+        CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_start)) )
       } else {
 	dinfo->time_start = 0.0;
 	dinfo->time_end = 0.0;
 	dinfo->time_units[0] = '\0';
+	dinfo->calendar[0] = '\0';
       }
     }
   } else {
@@ -1021,9 +1045,11 @@ int32_t file_add_associatedvariable_c( const int32_t  fid,   // (in)
 }
 
 int32_t file_set_tunits_c( const int32_t fid,         // (in)
-			   const char    *time_units) // (in)
+			   const char    *time_units, // (in)
+			   const char    *calendar)   // (in)
 {
   strcpy(files[fid]->time_units, time_units);
+  strcpy(files[fid]->calendar, calendar);
 
   return SUCCESS_CODE;
 }
@@ -1421,6 +1447,8 @@ int32_t file_add_variable_c(       int32_t *vid,     // (out)
         strcpy(buf, "time");
         CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, tvarid, "long_name", strlen(buf), buf) )
         CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, tvarid, "units", strlen(files[fid]->time_units), files[fid]->time_units) )
+        if ( strlen(files[fid]->calendar) > 0 )
+          CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, tvarid, "calendar", strlen(files[fid]->calendar), files[fid]->calendar) )
         // define boundary variable
         if ( ncmpi_inq_dimid(ncid, "nv", &(dimids[1])) != NC_NOERR ) // first called
           CHECK_PNC_ERROR( ncmpi_def_dim(ncid, "nv", 2, &(dimids[1])) )
@@ -1429,7 +1457,7 @@ int32_t file_add_variable_c(       int32_t *vid,     // (out)
         dimids[0] = tdimid;
         CHECK_PNC_ERROR( ncmpi_def_var(ncid, buf, NC_DOUBLE, 2, dimids, &tvarid) )
         tdims[nt]->bndsid = tvarid;
-        CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, tvarid, "units", strlen(files[fid]->time_units), files[fid]->time_units) )
+        //CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, tvarid, "units", strlen(files[fid]->time_units), files[fid]->time_units) )
       }
       else {
         CHECK_ERROR( nc_def_dim(ncid, tname, 0, &tdimid) )
@@ -1439,6 +1467,8 @@ int32_t file_add_variable_c(       int32_t *vid,     // (out)
         strcpy(buf, "time");
         CHECK_ERROR( nc_put_att_text(ncid, tvarid, "long_name", strlen(buf), buf) )
         CHECK_ERROR( nc_put_att_text(ncid, tvarid, "units", strlen(files[fid]->time_units), files[fid]->time_units) )
+        if ( strlen(files[fid]->calendar) > 0 )
+          CHECK_ERROR( nc_put_att_text(ncid, tvarid, "calendar", strlen(files[fid]->calendar), files[fid]->calendar) )
         // define boundary variable
         if ( nc_inq_dimid(ncid, "nv", &(dimids[1])) != NC_NOERR ) // first called
           CHECK_ERROR( nc_def_dim(ncid, "nv", 2, &(dimids[1])) )
@@ -1447,7 +1477,7 @@ int32_t file_add_variable_c(       int32_t *vid,     // (out)
         dimids[0] = tdimid;
         CHECK_ERROR( nc_def_var(ncid, buf, NC_DOUBLE, 2, dimids, &tvarid) )
         tdims[nt]->bndsid = tvarid;
-        CHECK_ERROR( nc_put_att_text(ncid, tvarid, "units", strlen(files[fid]->time_units), files[fid]->time_units) )
+        //CHECK_ERROR( nc_put_att_text(ncid, tvarid, "units", strlen(files[fid]->time_units), files[fid]->time_units) )
       }
 
       vars[nvar]->t = tdims[nt];

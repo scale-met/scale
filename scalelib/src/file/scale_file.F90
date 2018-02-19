@@ -233,17 +233,12 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_create( &
-       basename,    &
-       title,       &
-       source,      &
-       institution, &
-       fid,         &
-       existed,     &
-       rankid,      &
-       single,      &
-       aggregate,   &
-       time_units,  &
-       append       )
+       basename,                   &
+       title, source, institution, &
+       fid, existed,               &
+       rankid, single, aggregate,  &
+       time_units, calendar,       &
+       append                      )
     implicit none
 
     character(len=*), intent(in)  :: basename
@@ -258,9 +253,11 @@ contains
     logical,          intent(in), optional :: single
     logical,          intent(in), optional :: aggregate
     character(len=*), intent(in), optional :: time_units
+    character(len=*), intent(in), optional :: calendar
     logical,          intent(in), optional :: append
 
-    character(len=FILE_HMID) :: time_units_
+    character(len=FILE_HMID)   :: time_units_
+    character(len=FILE_HSHORT) :: calendar_
     integer :: rankid_
     logical :: single_
     integer :: mode
@@ -286,6 +283,12 @@ contains
        time_units_ = 'seconds'
     endif
 
+    if ( present(calendar) ) then
+       calendar_ = calendar
+    else
+       calendar_ = ""
+    end if
+
     mode = FILE_FWRITE
     if ( present(append) ) then
        if( append ) mode = FILE_FAPPEND
@@ -310,9 +313,9 @@ contains
        call FILE_set_attribute( fid, "global", "rankid"  , (/rankid/)  ) ! [IN]
     endif
 
-    call file_set_tunits_c( FILE_files(fid)%fid, & ! [IN]
-                            time_units_,         & ! [IN]
-                            error                ) ! [OUT]
+    call file_set_tunits_c( FILE_files(fid)%fid,    & ! [IN]
+                            time_units_, calendar_, & ! [IN]
+                            error                   ) ! [OUT]
 
     if ( error /= FILE_SUCCESS_CODE ) then
        write(*,*) 'xxx [FILE_create] failed to set time units'
@@ -2142,7 +2145,8 @@ contains
        description, units,              &
        datatype,                        &
        dim_rank, dim_name, dim_size,    &
-       time_start, time_end, time_units )
+       time_start, time_end,            &
+       time_units, calendar             )
     implicit none
 
     character(len=*),           intent(in)  :: basename
@@ -2160,6 +2164,7 @@ contains
     real(DP),                   intent(out), optional :: time_start
     real(DP),                   intent(out), optional :: time_end
     character(len=FILE_HMID),   intent(out), optional :: time_units
+    character(len=FILE_HSHORT), intent(out), optional :: calendar
 
     logical :: single_
     integer :: fid
@@ -2187,7 +2192,8 @@ contains
                                 dim_size,    & ! [OUT], optional
                                 time_start,  & ! [OUT], optional
                                 time_end,    & ! [OUT], optional
-                                time_units   ) ! [OUT], optional
+                                time_units,  & ! [OUT], optional
+                                calendar     ) ! [OUT], optional
 
     return
   end subroutine FILE_get_dataInfo_fname
@@ -2198,7 +2204,8 @@ contains
        description, units,              &
        datatype,                        &
        dim_rank, dim_name, dim_size,    &
-       time_start, time_end, time_units )
+       time_start, time_end,            &
+       time_units, calendar             )
     implicit none
 
     integer,          intent(in)  :: fid
@@ -2214,6 +2221,7 @@ contains
     real(DP),                   intent(out), optional :: time_start
     real(DP),                   intent(out), optional :: time_end
     character(len=FILE_HMID),   intent(out), optional :: time_units
+    character(len=FILE_HSHORT), intent(out), optional :: calendar
 
     type(datainfo) :: dinfo
 
@@ -2221,6 +2229,7 @@ contains
     real(DP) :: time(1)
     integer  :: ndim, idim
     integer  :: error
+    logical  :: existed
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -2273,6 +2282,15 @@ contains
        endif
     endif
 
+    if ( present(calendar) ) then
+       if ( dinfo%time_units == "" ) then
+          call FILE_get_attribute( fid, "global", "calendar", calendar, existed )
+          if ( .not. existed ) calendar = ""
+       else
+          calendar = dinfo%calendar
+       end if
+    end if
+
     if ( present(time_start)  ) then
        if ( dinfo%time_units == "" ) then
           call FILE_get_Attribute( fid, "global", "time_start", time )
@@ -2303,7 +2321,8 @@ contains
        step_nmax,                        &
        description, units, datatype,     &
        dim_rank, dim_name, dim_size,     &
-       time_start, time_end, time_units, &
+       time_start, time_end,             &
+       time_units, calendar,             &
        rankid, single                    )
     implicit none
 
@@ -2321,6 +2340,7 @@ contains
     real(DP),                   intent(out) :: time_start(step_limit)
     real(DP),                   intent(out) :: time_end  (step_limit)
     character(len=FILE_HMID),   intent(out) :: time_units
+    character(len=FILE_HSHORT), intent(out) :: calendar
 
     integer,                    intent(in), optional :: rankid
     logical,                    intent(in), optional :: single
@@ -2345,7 +2365,8 @@ contains
                                     step_nmax,                       & ! [OUT]
                                     description, units, datatype,    & ! [OUT]
                                     dim_rank, dim_name, dim_size,    & ! [OUT]
-                                    time_start, time_end, time_units ) ! [OUT]
+                                    time_start, time_end,            & ! [OUT]
+                                    time_units, calendar             ) ! [OUT]
 
     return
   end subroutine FILE_get_all_dataInfo_fname
@@ -2356,7 +2377,8 @@ contains
        step_nmax,                       &
        description, units, datatype,    &
        dim_rank, dim_name, dim_size,    &
-       time_start, time_end, time_units )
+       time_start, time_end,            &
+       time_units, calendar             )
     implicit none
 
     integer,                    intent(in)  :: step_limit
@@ -2373,12 +2395,14 @@ contains
     real(DP),                   intent(out) :: time_start(step_limit)
     real(DP),                   intent(out) :: time_end  (step_limit)
     character(len=FILE_HMID),   intent(out) :: time_units
+    character(len=FILE_HSHORT), intent(out) :: calendar
 
     type(datainfo) :: dinfo
 
     real(DP) :: time(1)
     integer  :: ndim, idim
     integer  :: error
+    logical  :: existed
 
     integer  :: istep
     !---------------------------------------------------------------------------
@@ -2422,6 +2446,8 @@ contains
 
           if ( dinfo%time_units == "" ) then
              call FILE_get_attribute( fid, "global", "time_units", time_units )
+             call FILE_get_attribute( fid, "global", "calendar", calendar, existed )
+             if ( .not. existed ) calendar = ""
              call FILE_get_attribute( fid, "global", "time_start", time )
              time_start(1) = time(1)
              time_end  (1) = time(1)
@@ -2429,6 +2455,7 @@ contains
              exit
           else
              time_units    = dinfo%time_units
+             calendar      = dinfo%calendar
              time_start(1) = dinfo%time_start
              time_end  (1) = dinfo%time_end
           endif

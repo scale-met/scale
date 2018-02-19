@@ -306,6 +306,7 @@ contains
     real(DP)               :: time_start(FILE_EXTERNAL_INPUT_step_limit)
     real(DP)               :: time_end  (FILE_EXTERNAL_INPUT_step_limit)
     character(len=H_MID)   :: time_units
+    character(len=H_SHORT) :: calendar
 
     integer  :: datadate(6)   !< date
     real(DP) :: datasubsec    !< subsecond
@@ -365,7 +366,7 @@ contains
                                 dim_size  (:),                 & ! [OUT]
                                 time_start(1:step_limit_),     & ! [OUT]
                                 time_end  (1:step_limit_),     & ! [OUT]
-                                time_units                     ) ! [OUT]
+                                time_units, calendar           ) ! [OUT]
 
     if ( step_nmax > 0 ) then
        if ( present(exist) ) then
@@ -966,6 +967,7 @@ contains
     real(DP)               :: time_start(FILE_EXTERNAL_INPUT_step_limit)
     real(DP)               :: time_end  (FILE_EXTERNAL_INPUT_step_limit)
     character(len=H_MID)   :: time_units
+    character(len=H_SHORT) :: calendar
 
     integer  :: datadate(6)   !< date
     real(DP) :: datasubsec    !< subsecond
@@ -1060,7 +1062,7 @@ contains
                                                dim_size  (:),                                          & ! [OUT]
                                                time_start(1:FILE_EXTERNAL_INPUT_item(nid)%step_limit), & ! [OUT]
                                                time_end  (1:FILE_EXTERNAL_INPUT_item(nid)%step_limit), & ! [OUT]
-                                               time_units                                              ) ! [OUT]
+                                               time_units, calendar                                    ) ! [OUT]
 
                    if ( step_nmax == 0 ) then
                       write(*,*) 'xxx Data not found! basename = ', trim(FILE_EXTERNAL_INPUT_item(nid)%basename(FILE_EXTERNAL_INPUT_item(nid)%file_current)), &

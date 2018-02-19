@@ -113,7 +113,8 @@ contains
                                       dim_size    = dinfo(v)%dim_size  (:), & ! [OUT]
                                       time_start  = dinfo(v)%time_start(:), & ! [OUT]
                                       time_end    = dinfo(v)%time_end  (:), & ! [OUT]
-                                      time_units  = dinfo(v)%time_units     ) ! [OUT]
+                                      time_units  = dinfo(v)%time_units,    & ! [OUT]
+                                      calendar    = dinfo(v)%calendar       ) ! [OUT]
 
           dinfo(v)%varname = varname(v)
 
@@ -154,6 +155,7 @@ contains
        call MPI_BCAST( dinfo(v)%time_end  (:), step_limit       , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%dt           , 1                , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%time_units   , H_MID            , MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+       call MPI_BCAST( dinfo(v)%calendar     , H_SHORT          , MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
        if ( debug ) then
           if( IO_L ) write(IO_FID_LOG,*)
@@ -171,6 +173,7 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '*** transpose   : ', dinfo(v)%transpose
 
           if( IO_L ) write(IO_FID_LOG,*) '*** time_units  : ', trim(dinfo(v)%time_units)
+          if( IO_L ) write(IO_FID_LOG,*) '*** calendar    : ', trim(dinfo(v)%calendar)
           if( IO_L ) write(IO_FID_LOG,*) '*** step_nmax   : ', dinfo(v)%step_nmax
 
           start_day = 0
@@ -963,14 +966,15 @@ contains
        basename_mod = trim(dirpath)//'/'//trim(basename)
     endif
 
-    call FILE_Create( basename_mod,                 & ! [IN]
-                      hinfo%title,                  & ! [IN]
-                      hinfo%source,                 & ! [IN]
-                      hinfo%institute,              & ! [IN]
-                      fid,                          & ! [OUT]
-                      fileexisted,                  & ! [OUT]
-                      rankid     = nowrank,         & ! [IN]
-                      time_units = dinfo%time_units ) ! [IN]
+    call FILE_Create( basename_mod,                  & ! [IN]
+                      hinfo%title,                   & ! [IN]
+                      hinfo%source,                  & ! [IN]
+                      hinfo%institute,               & ! [IN]
+                      fid,                           & ! [OUT]
+                      fileexisted,                   & ! [OUT]
+                      rankid     = nowrank,          & ! [IN]
+                      time_units = dinfo%time_units, & ! [IN]
+                      calendar   = dinfo%calendar    ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
 

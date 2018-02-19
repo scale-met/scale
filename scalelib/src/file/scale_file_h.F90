@@ -57,6 +57,7 @@ module scale_file_h
      real(DP)                   :: time_start
      real(DP)                   :: time_end
      character(len=FILE_HMID)   :: time_units
+     character(len=FILE_HSHORT) :: calendar
      integer                    :: fid
   endtype datainfo
 
