@@ -536,6 +536,10 @@ contains
        I_HH,  &
        QHS,   &
        QHE
+    use scale_atmos_phy_mp_kessler, only: &
+       ATMOS_PHY_MP_KESSLER_mass_ratio, &
+       ATMOS_PHY_MP_KESSLER_effective_radius, &
+       ATMOS_PHY_MP_KESSLER_cloud_fraction
     use scale_atmos_phy_mp_tomita08, only: &
        ATMOS_PHY_MP_TOMITA08_mass_ratio, &
        ATMOS_PHY_MP_TOMITA08_effective_radius, &
@@ -559,6 +563,11 @@ contains
     if ( present(CLDFRAC) ) then
        if ( .not. DIAG_CLDFRAC ) then
           select case ( ATMOS_PHY_MP_TYPE )
+          case ( 'KESSLER' )
+             call ATMOS_PHY_MP_kessler_cloud_fraction( &
+                  KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                  QTRC(:,:,:,QHS:QHE), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
+                  ATMOS_PHY_MP_CLDFRAC(:,:,:)                          ) ! [OUT]
           case ( 'TOMITA08' )
              call ATMOS_PHY_MP_tomita08_cloud_fraction( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -589,6 +598,11 @@ contains
     if ( present(Re) ) then
        if ( .not. DIAG_Re ) then
           select case ( ATMOS_PHY_MP_TYPE )
+          case ( 'KESSLER' )
+             call ATMOS_PHY_MP_kessler_effective_radius( &
+                  KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                  DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QHS:QHE), & ! [IN]
+                  ATMOS_PHY_MP_Re(:,:,:,:)                       ) ! [OUT]
           case ( 'TOMITA08' )
              call ATMOS_PHY_MP_tomita08_effective_radius( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -621,6 +635,11 @@ contains
     if ( present(Qe) ) then
        if ( .not. DIAG_Qe ) then
           select case ( ATMOS_PHY_MP_TYPE )
+          case ( 'KESSLER' )
+             call ATMOS_PHY_MP_kessler_mass_ratio( &
+                  KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                  QTRC(:,:,:,QHS:QHE),     & ! [IN]
+                  ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]
           case ( 'TOMITA08' )
              call ATMOS_PHY_MP_tomita08_mass_ratio( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
