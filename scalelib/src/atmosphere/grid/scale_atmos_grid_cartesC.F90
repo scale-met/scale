@@ -376,29 +376,27 @@ contains
     ! X-direction
     ! calculate buffer grid size
 
-    if ( present(BUFFFACT_X) .and. BUFFFACT_X >= 0.0_RP ) then
-       fact = BUFFFACT_X
-    else if ( present(BUFFFACT) .and. BUFFFACT >= 0.0_RP ) then
-       fact = BUFFFACT
-    else
-       fact = 1.0_RP
-    end if
+    fact = -1.0_RP
+    if ( present(BUFFFACT_X) ) fact = BUFFFACT_X
+    if ( fact < 0.0_RP .and. present(BUFFFACT) ) fact = BUFFFACT
+    if ( fact < 0.0_RP ) fact = 1.0_RP
 
     buffx(0) = DX
     bufftotx = 0.0_RP
-    if ( present(BUFFER_NX) .and. BUFFER_NX > 0 ) then
-       if ( 2*BUFFER_NX > IMAXG ) then
-          write(*,*) 'xxx Buffer grid size (', BUFFER_NX, &
+    ibuff = -1
+    if ( present(BUFFER_NX) ) ibuff = BUFFER_NX
+    if ( ibuff > 0 ) then
+       if ( 2*ibuff > IMAXG ) then
+          write(*,*) 'xxx Buffer grid size (', ibuff, &
                      'x2) must be smaller than global domain size (X). Use smaller BUFFER_NX!'
           call PRC_abort
        endif
 
-       do i = 1, BUFFER_NX
+       do i = 1, ibuff
           buffx(i) = buffx(i-1) * fact
           bufftotx = bufftotx + buffx(i)
        enddo
-       ibuff = BUFFER_NX
-       imain = IMAXG - 2*BUFFER_NX
+       imain = IMAXG - 2*ibuff
     else if ( present(BUFFER_DZ) ) then
        do i = 1, IAG
           if( bufftotx >= BUFFER_DX ) exit
@@ -496,29 +494,27 @@ contains
     ! Y-direction
     ! calculate buffer grid size
 
-    if ( present(BUFFFACT_Y) .and. BUFFFACT_Y >= 0.0_RP ) then
-       fact = BUFFFACT_Y
-    else if ( present(BUFFFACT) .and. BUFFFACT >= 0.0_RP ) then
-       fact = BUFFFACT
-    else
-       fact = 1.0_RP
-    end if
+    fact = -1.0_RP
+    if ( present(BUFFFACT_Y) ) fact = BUFFFACT_Y
+    if ( fact < 0.0_RP .and. present(BUFFFACT) )fact = BUFFFACT
+    if ( fact < 0.0_RP ) fact = 1.0_RP
 
     buffy(0) = DY
     bufftoty = 0.0_RP
-    if ( present(BUFFER_NY) .and. BUFFER_NY > 0 ) then
-       if ( 2*BUFFER_NY > JMAXG ) then
-          write(*,*) 'xxx Buffer grid size (', BUFFER_NY, &
+    jbuff = -1
+    if ( present(BUFFER_NY) ) jbuff = BUFFER_NY
+    if ( jbuff > 0 ) then
+       if ( 2*jbuff > JMAXG ) then
+          write(*,*) 'xxx Buffer grid size (', jbuff, &
                      'x2) must be smaller than global domain size (Y). Use smaller BUFFER_NY!'
           call PRC_abort
        endif
 
-       do j = 1, BUFFER_NY
+       do j = 1, jbuff
           buffy(j) = buffy(j-1) * fact
           bufftoty = bufftoty + buffy(j)
        enddo
-       jbuff = BUFFER_NY
-       jmain = JMAXG - 2*BUFFER_NY
+       jmain = JMAXG - 2*jbuff
     else if ( present(BUFFER_DY) ) then
        do j = 1, JAG
           if( bufftoty >= BUFFER_DY ) exit
@@ -648,19 +644,20 @@ contains
        ! Z-direction
        ! calculate buffer grid size
 
-       if ( present(BUFFER_NZ) .and. BUFFER_NZ > 0 ) then
-          if ( BUFFER_NZ > KMAX ) then
-             write(*,*) 'xxx Buffer grid size (', BUFFER_NZ, &
+       kbuff = -1
+       if ( present(BUFFER_NZ) ) kbuff = BUFFER_NZ
+       if ( kbuff > 0 ) then
+          if ( kbuff > KMAX ) then
+             write(*,*) 'xxx Buffer grid size (', kbuff, &
                         ') must be smaller than global domain size (Z). Use smaller BUFFER_NZ!'
              call PRC_abort
           endif
 
           bufftotz = 0.0_RP
-          do k = KMAX, KMAX-BUFFER_NZ+1, -1
+          do k = KMAX, KMAX-kbuff+1, -1
              bufftotz = bufftotz + ( FZ(k) - FZ(k-1) )
           enddo
-          kbuff = BUFFER_NZ
-          kmain = KMAX - BUFFER_NZ
+          kmain = KMAX - kbuff
        else if ( present(BUFFER_DZ) ) then
           if ( BUFFER_DZ > FZ(KMAX) ) then
              write(*,*) 'xxx Buffer length (', BUFFER_DZ, &
@@ -707,29 +704,27 @@ contains
        ! Z-direction
        ! calculate buffer grid size
 
-       if ( present(BUFFFACT_Z) .and. BUFFFACT_Z >= 0.0_RP ) then
-          fact = BUFFFACT_Z
-       else if ( present(BUFFFACT) .and. BUFFFACT >= 0.0_RP ) then
-          fact = BUFFFACT
-       else
-          fact = 1.0_RP
-       end if
+       fact = -1.0_RP
+       if ( present(BUFFFACT_Z) ) fact = BUFFFACT_Z
+       if ( fact < 0.0_RP .and. present(BUFFFACT) ) fact = BUFFFACT
+       if ( fact < 0.0_RP ) fact = 1.0_RP
 
        buffz(0) = DZ
        bufftotz = 0.0_RP
-       if ( present(BUFFER_NZ) .and. BUFFER_NZ > 0 ) then
-          if ( BUFFER_NZ > KMAX ) then
-             write(*,*) 'xxx Buffer grid size (', BUFFER_NZ, &
+       kbuff = -1
+       if ( present(BUFFER_NZ) ) kbuff = BUFFER_NZ
+       if ( kbuff > 0 ) then
+          if ( kbuff > KMAX ) then
+             write(*,*) 'xxx Buffer grid size (', kbuff, &
                         ') must be smaller than global domain size (Z). Use smaller BUFFER_NZ!'
              call PRC_abort
           endif
 
-          do k = 1, BUFFER_NZ
+          do k = 1, kbuff
              buffz(k) = buffz(k-1) * fact
              bufftotz = bufftotz + buffz(k)
           enddo
-          kbuff = BUFFER_NZ
-          kmain = KMAX - BUFFER_NZ
+          kmain = KMAX - kbuff
        else if ( present(BUFFER_DZ) ) then
           do k = 1, KA
              if( bufftotz >= BUFFER_DZ ) exit
