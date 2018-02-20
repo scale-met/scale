@@ -379,7 +379,7 @@ contains
        qr     = RHOQ0(k,I_hyd_QR) / DENS0(k)
        zerosw = 0.5_RP - sign(0.5_RP, qr - 1.E-12_RP )
 
-       vterm(k,I_hyd_QR) = - 36.34_RP * ( DENS0(k) * qr )**0.1364_RP &
+       vterm(k,I_hyd_QR) = - 36.34_RP * ( DENS0(k) * ( qr + zerosw ) )**0.1364_RP &
                          * REFSTATE_dens_profile(KS) / REFSTATE_dens_profile(k) * ( 1.0_RP - zerosw )
     enddo
 
