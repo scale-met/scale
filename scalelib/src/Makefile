@@ -211,6 +211,7 @@ OBJS_NAME = \
 	scale_landuse.o	\
 	scale_rm_process.o	\
 	scale_rm_statistics.o	\
+	scale_fpm.o  \
 	scale_mapprojection.o	\
 	scale_matrix.o	\
 	scale_monitor.o	\
@@ -219,8 +220,10 @@ OBJS_NAME = \
 	scale_prof.o	\
 	scale_random.o	\
 	scale_roughness.o	\
+	scale_sigvars.o \
 	scale_specfunc.o	\
 	scale_stdio.o	\
+	scale_sys_sigvars.o  \
 	scale_time.o	\
 	scale_topography.o	\
 	scale_tracer.o	\
