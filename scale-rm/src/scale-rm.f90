@@ -26,6 +26,7 @@ program scalerm_launcher
      PRC_MPIsplit,        &
      PRC_UNIVERSAL_setup, &
      PRC_GLOBAL_setup,    &
+     PRC_GLOBAL_ROOT,     &
      PRC_ERRHANDLER_setup
   use scale_fpm, only: &
      FPM_Init
