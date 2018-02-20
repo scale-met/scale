@@ -25,7 +25,10 @@ program scalerm_launcher
      PRC_MPIfinish,       &
      PRC_MPIsplit,        &
      PRC_UNIVERSAL_setup, &
-     PRC_GLOBAL_setup
+     PRC_GLOBAL_setup,    &
+     PRC_ERRHANDLER_setup
+  use scale_fpm, only: &
+     FPM_Init
   use mod_rm_prep, only: &
      scalerm_prep
   use mod_rm_driver, only: &
@@ -46,6 +49,7 @@ program scalerm_launcher
   logical               :: EXECUTE_MODEL                = .false. ! execute main model?
   integer               :: NUM_BULKJOB                  = 1       ! number of bulk jobs
   integer               :: NUM_DOMAIN                   = 1       ! number of domains
+  integer               :: NUM_FAIL_TOLERANCE           = 1       ! tolerance number of failure processes
   integer               :: PRC_DOMAINS(PRC_DOMAIN_nlim) = 0       ! number of total process in each domain
   character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim) = ""      ! name of configulation files
   logical               :: ABORT_ALL_JOBS               = .false. ! abort all jobs or not?
@@ -57,6 +61,7 @@ program scalerm_launcher
      EXECUTE_MODEL,      &
      NUM_BULKJOB,        &
      NUM_DOMAIN,         &
+     NUM_FAIL_TOLERANCE, &
      PRC_DOMAINS,        &
      CONF_FILES,         &
      ABORT_ALL_JOBS,     &
@@ -75,6 +80,8 @@ program scalerm_launcher
   integer               :: intercomm_parent_null                  ! NULL inter communicator with parent
   integer               :: intercomm_child_null                   ! NULL inter communicator with child
   character(len=H_LONG) :: bulk_prefix                            ! dirname of each member
+
+  logical               :: use_fpm = .false.                      ! switch for fpm module
 
   integer               :: local_comm       ! assigned local communicator
   integer               :: intercomm_parent ! inter communicator with parent
@@ -138,6 +145,13 @@ program scalerm_launcher
   if ( NUM_BULKJOB > 1 ) then
      if( universal_master ) write(*,'(1x,A,I5)') "*** TOTAL BULK JOB NUMBER   = ", NUM_BULKJOB
      if( universal_master ) write(*,'(1x,A,I5)') "*** PROCESS NUM of EACH JOB = ", global_nprocs
+
+     use_fpm = .true.                    !--- available only in bulk job
+     if ( NUM_FAIL_TOLERANCE <= 0 ) then !--- fatal error
+        if( universal_master ) write(*,*) 'xxx Num of Failure Processes must be positive number. Check!'
+        if( universal_master ) write(*,*) 'xxx NUM_FAIL_TOLERANCE = ', NUM_FAIL_TOLERANCE
+        call PRC_MPIstop
+     endif
   endif
 
   ! communicator split for bulk/ensemble
@@ -175,6 +189,17 @@ program scalerm_launcher
                      intercomm_parent, & ! [OUT]
                      intercomm_child,  & ! [OUT]
                      local_cnf_fname   ) ! [OUT]
+
+  !--- initialize FPM module & error handler
+  call FPM_Init( NUM_FAIL_TOLERANCE, & ! [IN]
+                 universal_comm,     & ! [IN]
+                 global_comm,        & ! [IN]
+                 local_comm,         & ! [IN]
+                 NUM_BULKJOB,        & ! [IN]
+                 PRC_GLOBAL_ROOT,    & ! [IN]
+                 use_fpm             ) ! [IN]
+
+  call PRC_ERRHANDLER_setup( use_fpm, universal_master )
 
   !--- start main routine
 
