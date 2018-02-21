@@ -290,8 +290,8 @@ contains
        temp = TEMP0(k,i,j)
        pres = PRES0(k,i,j)
        qv   = QTRC0(k,i,j,I_QV)
-       qc   = QTRC0(k,i,j,i_QC)
-       qr   = QTRC0(k,i,j,i_QR)
+       qc   = QTRC0(k,i,j,I_QC)
+       qr   = QTRC0(k,i,j,I_QR)
 
        call SATURATION_dens2qsat_liq( &
             temp, dens, & ! [IN]
