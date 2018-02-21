@@ -42,7 +42,7 @@ module scale_fpm
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: FPM_master_rank = 0  !< rank number of master
+  integer, private, parameter :: FPM_MANAGER_MASTER = 0  !< rank number of master
 
   integer, private :: FPM_UNIVERSAL_COMM           !< universal communicator
   integer, private :: FPM_unv_myproc               !< my proc in universal world
@@ -51,6 +51,7 @@ module scale_fpm
   integer, private :: FPM_glb_myproc               !< my proc in global world
   integer, private :: FPM_glb_nprocs               !< num proc in global world
   integer, private :: FPM_LOCAL_COMM               !< local communicator
+  integer, private :: FPM_LOCAL_MASTER             !< master proc in local communicator
   integer, private :: FPM_lcl_myproc               !< my proc in local world
   integer, private :: FPM_lcl_nprocs               !< num proc in local world
 
@@ -108,10 +109,12 @@ contains
        call MPI_COMM_RANK( FPM_GLOBAL_COMM, FPM_glb_myproc, ierr )
        call MPI_COMM_SIZE( FPM_GLOBAL_COMM, FPM_glb_nprocs, ierr )
        FPM_LOCAL_COMM     = local_comm
+       FPM_LOCAL_MASTER   = 0
        call MPI_COMM_RANK( FPM_LOCAL_COMM, FPM_lcl_myproc, ierr )
        call MPI_COMM_SIZE( FPM_LOCAL_COMM, FPM_lcl_nprocs, ierr )
+!print *, "FPMinit:", FPM_UNIVERSAL_COMM, FPM_GLOBAL_COMM, FPM_LOCAL_COMM, FPM_num_member
 
-       if ( FPM_unv_myproc == FPM_master_rank ) FPM_master = .true.
+       if ( FPM_unv_myproc == FPM_MANAGER_MASTER ) FPM_master = .true.
        if ( FPM_master ) write(*,*) ''
        if ( FPM_master ) write(*,*) '*** Failure Procs Manager: available'
        if ( FPM_master ) write(*,*) '*** Threshold of Failure Procs = ', FPM_max_failure
@@ -121,6 +124,7 @@ contains
        do i=1, FPM_num_member
           manager_list(i) = global_root(i)
           if ( FPM_unv_myproc == manager_list(i) ) FPM_manager = .true.
+!print *, "member list", i, manager_list(i)
        enddo
 
        num_exclude = FPM_unv_nprocs - FPM_num_member
@@ -132,6 +136,7 @@ contains
              if ( j < FPM_num_member ) j = j + 1
           else
              exclude_list(k) = i
+!print *, "exclude list", k, exclude_list(k)
              if ( k < num_exclude ) k = k + 1
           endif
        enddo
@@ -188,12 +193,13 @@ contains
                      FPM_lcl_running(:), &
                      recvcounts,         &
                      MPI_LOGICAL,        &
-                     FPM_master_rank,    &
+                     FPM_LOCAL_MASTER,   &
                      FPM_LOCAL_COMM,     &
                      ierr                )
 
-
-    if ( FPM_manager ) then  ! manager level
+    ! manager level
+    !-------------------------------------------<<<
+    if ( FPM_manager ) then
        do i=1, FPM_lcl_nprocs
           if ( .NOT. FPM_lcl_running(i) ) then
              local_stat = .false.
@@ -204,47 +210,68 @@ print *, "lcl running", FPM_lcl_running
 
        !call MPI_BARRIER(FPM_MANAGER_COMM, ierr)
        sendbuff = local_stat
-       call MPI_GATHER( sendbuff,         &
-                        sendcounts,       &
-                        MPI_LOGICAL,      &
-                        FPM_running(:),   &
-                        recvcounts,       &
-                        MPI_LOGICAL,      &
-                        FPM_master_rank,  &
-                        FPM_MANAGER_COMM, &
-                        ierr              )
+       call MPI_GATHER( sendbuff,           &
+                        sendcounts,         &
+                        MPI_LOGICAL,        &
+                        FPM_running(:),     &
+                        recvcounts,         &
+                        MPI_LOGICAL,        &
+                        FPM_MANAGER_MASTER, &
+                        FPM_MANAGER_COMM,   &
+                        ierr                )
 
-       if ( FPM_master ) then  ! master level
+       ! master level
+       !=======================================<<<
+       if ( FPM_master ) then
           failcount = 0
           do i=1, FPM_num_member
              if ( .NOT. FPM_running(i) ) then
                 failcount = failcount + 1
              endif
           enddo
-if (FPM_master) print *, "running", FPM_running
+if (FPM_master) print *, "running", FPM_running, failcount
 
           if ( failcount >= FPM_max_failure ) then
              stop_signal = .true.
           else
              stop_signal = .false.
           endif
+print *, "MASTER signal: ", stop_signal
        endif
+       !========================================>>>
 
-       call MPI_BCAST( stop_signal,      &
-                       sendcounts,       &
-                       MPI_LOGICAL,      &
-                       FPM_master_rank,  &
-                       FPM_MANAGER_COMM, &
-                       ierr              )
+!!print *, "FPM: A"
+!       call MPI_BCAST( stop_signal,        &
+!                       sendcounts,         &
+!                       MPI_LOGICAL,        &
+!                       FPM_MANAGER_MASTER, &
+!                       FPM_MANAGER_COMM,   &
+!                       ierr                )
+!print *, "manager signal: ", stop_signal
     endif
+    !------------------------------------------->>>
 
-    ! participants level
-    call MPI_BCAST( stop_signal,      &
-                    sendcounts,       &
-                    MPI_LOGICAL,      &
-                    FPM_master_rank,  &
-                    FPM_MANAGER_COMM, &
-                    ierr              )
+!!print *, "FPM: B"
+!    ! participants level
+!    call MPI_BCAST( stop_signal,      &
+!                    sendcounts,       &
+!                    MPI_LOGICAL,      &
+!                    FPM_LOCAL_MASTER, &
+!                    FPM_LOCAL_COMM,   &
+!                    ierr              )
+
+
+
+       call MPI_BCAST( stop_signal,        &
+                       sendcounts,         &
+                       MPI_LOGICAL,        &
+                       FPM_MANAGER_MASTER, &
+                       FPM_UNIVERSAL_COMM, &
+                       ierr                )
+
+
+print *, "local signal: ", stop_signal
+!print *, "FPM: C"
 
   end subroutine FPM_Polling
 

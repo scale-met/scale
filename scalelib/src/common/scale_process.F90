@@ -363,19 +363,19 @@ contains
 
     if ( use_fpm ) then
        call SIGVARS_Get_all( master )
-!       call signal( SIGINT,  PRC_MPIstop )
-!       call signal( SIGQUIT, PRC_MPIstop )
-!       call signal( SIGABRT, PRC_MPIstop )
-!       call signal( SIGFPE,  PRC_MPIstop )
-!       call signal( SIGSEGV, PRC_MPIstop )
-!       call signal( SIGTERM, PRC_MPIstop )
+!!!       call signal( SIGINT,  PRC_MPIstop )
+!!!       call signal( SIGQUIT, PRC_MPIstop )
+!!!       call signal( SIGABRT, PRC_MPIstop )
+!!!       call signal( SIGFPE,  PRC_MPIstop )
+!!!       call signal( SIGSEGV, PRC_MPIstop )
+!!!       call signal( SIGTERM, PRC_MPIstop )
 
-       call signal( SIGINT,  PRC_abort )
-       call signal( SIGQUIT, PRC_abort )
-       call signal( SIGABRT, PRC_abort )
-       call signal( SIGFPE,  PRC_abort )
-       call signal( SIGSEGV, PRC_abort )
-       call signal( SIGTERM, PRC_abort )
+!       call signal( SIGINT,  PRC_abort )
+!       call signal( SIGQUIT, PRC_abort )
+!       call signal( SIGABRT, PRC_abort )
+!       call signal( SIGFPE,  PRC_abort )
+!       call signal( SIGSEGV, PRC_abort )
+!       call signal( SIGTERM, PRC_abort )
     endif
 
     return
@@ -415,6 +415,7 @@ print *, "Finish => Polling"
        sign_exit   = .false.
        do while ( .NOT. sign_exit )
           call FPM_Polling( sign_status, sign_exit )
+!print *, "MPI-Finish signal: ", sign_exit, PRC_UNIVERSAL_myrank
        enddo
     endif
 
