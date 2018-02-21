@@ -60,7 +60,11 @@ contains
     use scale_file, only: &
        FILE_Close_All
     use scale_process, only: &
+       PRC_MPIstop,  &
        PRC_LOCAL_setup
+    use scale_fpm, only: &
+       FPM_alive,  &
+       FPM_Polling
     use scale_rm_process, only: &
        PRC_setup
     use scale_const, only: &
@@ -199,7 +203,9 @@ contains
     character(len=*), intent(in) :: cnf_fname
 
     integer :: myrank
+    integer :: fpm_counter
     logical :: ismaster
+    logical :: sign_exit
     !---------------------------------------------------------------------------
 
     !########## Initial setup ##########
@@ -332,6 +338,8 @@ contains
     call PROF_setprefx('MAIN')
     call PROF_rapstart('Main_Loop', 0)
 
+    fpm_counter = 0
+
     do
 
       ! report current time
@@ -370,6 +378,20 @@ contains
       if( TIME_DOend ) exit
 
       if( IO_L ) call flush(IO_FID_LOG)
+
+      ! FPM polling
+      if ( FPM_alive ) then
+         if ( fpm_counter > 5 ) then
+            sign_exit = .false.
+            call FPM_Polling( .true., sign_exit )
+            if ( sign_exit ) then
+               if( IO_L ) write(IO_FID_LOG,*) 'xxx receive stop signal'
+               call PRC_MPIstop
+            endif
+            fpm_counter = 0
+         endif
+         fpm_counter = fpm_counter + 1
+      endif
 
     enddo
 

@@ -112,7 +112,6 @@ contains
        FPM_LOCAL_MASTER   = 0
        call MPI_COMM_RANK( FPM_LOCAL_COMM, FPM_lcl_myproc, ierr )
        call MPI_COMM_SIZE( FPM_LOCAL_COMM, FPM_lcl_nprocs, ierr )
-!print *, "FPMinit:", FPM_UNIVERSAL_COMM, FPM_GLOBAL_COMM, FPM_LOCAL_COMM, FPM_num_member
 
        if ( FPM_unv_myproc == FPM_MANAGER_MASTER ) FPM_master = .true.
        if ( FPM_master ) write(*,*) ''
@@ -124,7 +123,6 @@ contains
        do i=1, FPM_num_member
           manager_list(i) = global_root(i)
           if ( FPM_unv_myproc == manager_list(i) ) FPM_manager = .true.
-!print *, "member list", i, manager_list(i)
        enddo
 
        num_exclude = FPM_unv_nprocs - FPM_num_member
@@ -136,7 +134,6 @@ contains
              if ( j < FPM_num_member ) j = j + 1
           else
              exclude_list(k) = i
-!print *, "exclude list", k, exclude_list(k)
              if ( k < num_exclude ) k = k + 1
           endif
        enddo
@@ -178,6 +175,7 @@ contains
 
     logical :: local_stat
     logical :: sendbuff
+    logical :: force_stop
     !---------------------------------------------------------------------------
 
     sendcounts  = 1
@@ -206,7 +204,6 @@ contains
              exit
           endif
        enddo
-print *, "lcl running", FPM_lcl_running
 
        !call MPI_BARRIER(FPM_MANAGER_COMM, ierr)
        sendbuff = local_stat
@@ -229,49 +226,24 @@ print *, "lcl running", FPM_lcl_running
                 failcount = failcount + 1
              endif
           enddo
-if (FPM_master) print *, "running", FPM_running, failcount
 
           if ( failcount >= FPM_max_failure ) then
              stop_signal = .true.
           else
              stop_signal = .false.
           endif
-print *, "MASTER signal: ", stop_signal
        endif
        !========================================>>>
-
-!!print *, "FPM: A"
-!       call MPI_BCAST( stop_signal,        &
-!                       sendcounts,         &
-!                       MPI_LOGICAL,        &
-!                       FPM_MANAGER_MASTER, &
-!                       FPM_MANAGER_COMM,   &
-!                       ierr                )
-!print *, "manager signal: ", stop_signal
     endif
     !------------------------------------------->>>
 
-!!print *, "FPM: B"
-!    ! participants level
-!    call MPI_BCAST( stop_signal,      &
-!                    sendcounts,       &
-!                    MPI_LOGICAL,      &
-!                    FPM_LOCAL_MASTER, &
-!                    FPM_LOCAL_COMM,   &
-!                    ierr              )
-
-
-
-       call MPI_BCAST( stop_signal,        &
-                       sendcounts,         &
-                       MPI_LOGICAL,        &
-                       FPM_MANAGER_MASTER, &
-                       FPM_UNIVERSAL_COMM, &
-                       ierr                )
-
-
-print *, "local signal: ", stop_signal
-!print *, "FPM: C"
+    ! broadcast signal
+    call MPI_BCAST( stop_signal,        &
+                    sendcounts,         &
+                    MPI_LOGICAL,        &
+                    FPM_MANAGER_MASTER, &
+                    FPM_UNIVERSAL_COMM, &
+                    ierr                )
 
   end subroutine FPM_Polling
 
