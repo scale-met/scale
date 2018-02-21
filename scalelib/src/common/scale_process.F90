@@ -403,7 +403,20 @@ contains
     implicit none
 
     integer :: ierr
+    logical :: sign_status
+    logical :: sign_exit
     !---------------------------------------------------------------------------
+
+print *, "into MPI finish", PRC_UNIVERSAL_myrank
+    ! FPM polling
+    if ( FPM_alive ) then
+print *, "Finish => Polling"
+       sign_status = .false.
+       sign_exit   = .false.
+       do while ( .NOT. sign_exit )
+          call FPM_Polling( sign_status, sign_exit )
+       enddo
+    endif
 
     if (PRC_UNIVERSAL_handler .NE. MPI_ERRHANDLER_NULL) then
         call MPI_Errhandler_free(PRC_UNIVERSAL_handler, ierr)
@@ -484,7 +497,7 @@ contains
     character(len=H_LONG) :: COL_FILE(0:PRC_DOMAIN_nlim)
     character(len=4)      :: col_num
 
-    integer :: i
+    integer :: i, ii
     integer :: itag, ierr
     !---------------------------------------------------------------------------
 
@@ -527,6 +540,13 @@ contains
                              CHILD_COL,   & ! [OUT]
                              COL_FILE     ) ! [OUT]
 
+       if ( bulk_split ) then
+          ii = 1
+          do i=0, PRC_DOMAIN_nlim
+             PRC_GLOBAL_ROOT(ii) = PRC_ROOT(i)
+             ii = ii + 1
+          enddo
+       endif
 
        ! split comm_world
        call MPI_COMM_SPLIT(ORG_COMM,               &
