@@ -207,14 +207,6 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_atmos_grid_cartesC_metric, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_XY,  &
-       I_UY,  &
-       I_XV
     use scale_atmos_dyn_common, only: &
        ATMOS_DYN_divergence, &
        ATMOS_DYN_numfilter_coef,   &
@@ -1148,9 +1140,6 @@ contains
        COMM_world
     use scale_file_history, only: &
        FILE_HISTORY_in
-    use scale_atmos_grid_cartesC_metric, only: &
-       I_XYZ, &
-       I_XY
     implicit none
     real(RP), intent(in) :: DENS     (KA,IA,JA)
     real(RP), intent(in) :: DAMP_DENS(KA,IA,JA)

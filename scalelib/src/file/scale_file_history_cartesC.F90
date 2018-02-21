@@ -868,13 +868,13 @@ contains
        ATMOS_GRID_CARTESC_REAL_CZ,   &
        ATMOS_GRID_CARTESC_REAL_FZ,   &
        ATMOS_GRID_CARTESC_REAL_LON,  &
-       ATMOS_GRID_CARTESC_REAL_LONX, &
-       ATMOS_GRID_CARTESC_REAL_LONY, &
-       ATMOS_GRID_CARTESC_REAL_LONXY, &
+       ATMOS_GRID_CARTESC_REAL_LONU, &
+       ATMOS_GRID_CARTESC_REAL_LONV, &
+       ATMOS_GRID_CARTESC_REAL_LONUV, &
        ATMOS_GRID_CARTESC_REAL_LAT,  &
-       ATMOS_GRID_CARTESC_REAL_LATX, &
-       ATMOS_GRID_CARTESC_REAL_LATY, &
-       ATMOS_GRID_CARTESC_REAL_LATXY
+       ATMOS_GRID_CARTESC_REAL_LATU, &
+       ATMOS_GRID_CARTESC_REAL_LATV, &
+       ATMOS_GRID_CARTESC_REAL_LATUV
     use scale_topography, only: &
        TOPO_Zsfc
     use scale_landuse, only: &
@@ -1331,17 +1331,17 @@ contains
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lon', 'longitude',                                                 &
                                                 'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
-    AXIS(1:imh,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LONX(imsh:ime,jms:jme) / D2R
+    AXIS(1:imh,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LONU(imsh:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'y '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lon_uy', 'longitude (half level uy)',                               &
                                                 'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
 
-    AXIS(1:im,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LONY(ims:ime,jmsh:jme) / D2R
+    AXIS(1:im,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LONV(ims:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'yh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lon_xv', 'longitude (half level xv)',                               &
                                                 'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
 
-    AXIS(1:imh,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LONXY(imsh:ime,jmsh:jme) / D2R
+    AXIS(1:imh,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LONUV(imsh:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'yh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lon_uv', 'longitude (half level uv)',                                &
                                                 'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )
@@ -1351,17 +1351,17 @@ contains
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lat', 'latitude',                                                   &
                                                 'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
-    AXIS(1:imh,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LATX(imsh:ime,jms:jme) / D2R
+    AXIS(1:imh,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LATU(imsh:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'y '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lat_uy', 'latitude (half level uy)',                                 &
                                                 'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
 
-    AXIS(1:im,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LATY(ims:ime,jmsh:jme) / D2R
+    AXIS(1:im,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LATV(ims:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'yh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lat_xv', 'latitude (half level xv)',                                 &
                                                 'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
 
-    AXIS(1:imh,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LATXY(imsh:ime,jmsh:jme) / D2R
+    AXIS(1:imh,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LATUV(imsh:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'yh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lat_uv', 'latitude (half level uv)',                                  &
                                                 'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )

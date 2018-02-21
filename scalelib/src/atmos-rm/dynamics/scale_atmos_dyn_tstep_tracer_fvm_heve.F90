@@ -82,14 +82,6 @@ contains
        dtl, & ! (in)
        FLAG_FCT_TRACER, & ! (in)
        FLAG_FCT_ALONG_STREAM ) ! (in)
-    use scale_atmos_grid_cartesC_metric, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_XY,  &
-       I_UY,  &
-       I_XV
     use scale_atmos_dyn_common, only: &
        ATMOS_DYN_fct
     use scale_atmos_dyn_fvm_flux, only: &

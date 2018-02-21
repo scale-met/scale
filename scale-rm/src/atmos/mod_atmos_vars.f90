@@ -2638,9 +2638,7 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ
     use scale_atmos_grid_cartesC_metric, only: &
-       MAPF => ATMOS_GRID_CARTESC_METRIC_MAPF, &
-       I_UY, &
-       I_XV
+       MAPF => ATMOS_GRID_CARTESC_METRIC_MAPF
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total,            &

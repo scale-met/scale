@@ -1376,14 +1376,6 @@ contains
        MOMZ, MOMX, MOMY, &
        GSQRT, J13G, J23G, J33G, MAPF, &
        RCDZ, RCDX, RCDY, RFDZ, FDZ )
-    use scale_atmos_grid_cartesC_metric, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_XY,  &
-       I_UY,  &
-       I_XV
     implicit none
     real(RP), intent(out) :: DDIV(KA,IA,JA)
     real(RP), intent(in)  :: MOMZ(KA,IA,JA)

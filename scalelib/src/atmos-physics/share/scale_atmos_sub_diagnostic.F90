@@ -74,9 +74,7 @@ contains
     use scale_atmos_grid_cartesC_metric, only: &
        GSQRT => ATMOS_GRID_CARTESC_METRIC_GSQRT, &
        J13G  => ATMOS_GRID_CARTESC_METRIC_J13G,  &
-       J23G  => ATMOS_GRID_CARTESC_METRIC_J23G,  &
-       I_XYW, &
-       I_XYZ
+       J23G  => ATMOS_GRID_CARTESC_METRIC_J23G
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
