@@ -11,10 +11,12 @@ FC  = mpiifort
 SFC = ifort
 MODDIROPT = -module
 
-FFLAGS_FAST  = -fpp -m64 -O3 -xHost                 \
+FFLAGS_FAST  = -fpp -m64 -O3 -xHost -ip             \
                -assume byterecl -convert big_endian \
                -fp-model source                     \
                -mcmodel=medium -heap-arrays
+
+FFLAGS_AGGRESSIVE = -ipo -no-prec-div
 
 FFLAGS_QUICKDEBUG = -traceback -fpe0 -CB -CU
 
@@ -34,8 +36,9 @@ FFLAGS_DEBUG = -fpp -m64 -O0                        \
 
 CC = mpiicc
 
-CFLAGS_FAST  = -O3 -xHost -ip -ftz -mcmodel=medium -shared-intel
-CFLAGS_DEBUG = -O0
+CFLAGS_FAST       = -O3 -xHost -ip -ftz -mcmodel=medium -shared-intel
+CFLAGS_AGGRESSIVE = -ipo -no-prec-div
+CFLAGS_DEBUG      = -O0
 
 
 
@@ -81,7 +84,7 @@ LDFLAGS = $(FFLAGS)
 
 ##### for frontend
 INSTALL = install
-AR      = ar
+AR      = xiar
 ARFLAGS = r
 RANLIB  = ranlib
 JOBSUB  = qsub

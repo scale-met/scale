@@ -209,7 +209,9 @@ contains
        allocate( num_diff  (KA,IA,JA,5,3) )
        allocate( num_diff_q(KA,IA,JA,3)   )
        allocate( wdamp_coef(KA)           )
-       mflx_hi(:,:,:,:) = UNDEF
+       mflx_hi   (:,:,:,:)   = UNDEF
+       num_diff  (:,:,:,:,:) = UNDEF
+       num_diff_q(:,:,:,:)   = UNDEF
 
        call ATMOS_DYN_FVM_flux_setup     ( DYN_FVM_FLUX_TYPE,            & ! [IN]
                                            DYN_FVM_FLUX_TYPE_TRACER      ) ! [IN]

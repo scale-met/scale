@@ -672,6 +672,7 @@ contains
        qdry  = 1.0_RP
        CVtot = 0.0_RP
        Rtot  = 0.0_RP
+!OCL SERIAL
        do iqw = 1, QA
           qdry  = qdry  - q(k,i,j,iqw) * mass(iqw)
           CVtot = CVtot + q(k,i,j,iqw) * CVq (iqw)

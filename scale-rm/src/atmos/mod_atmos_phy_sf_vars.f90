@@ -192,8 +192,8 @@ contains
     allocate( ATMOS_PHY_SF_SFC_Z0M   (IA,JA)    )
     allocate( ATMOS_PHY_SF_SFC_Z0H   (IA,JA)    )
     allocate( ATMOS_PHY_SF_SFC_Z0E   (IA,JA)    )
-!   ATMOS_PHY_SF_SFC_TEMP  (:,:)   = UNDEF ! [del] 2014/8/28 A.Noda
-!   ATMOS_PHY_SF_SFC_albedo(:,:,:) = UNDEF ! [del] 2014/8/28 A.Noda
+    ATMOS_PHY_SF_SFC_TEMP  (:,:)   = UNDEF
+    ATMOS_PHY_SF_SFC_albedo(:,:,:) = UNDEF
     ATMOS_PHY_SF_SFC_Z0M   (:,:)   = UNDEF
     ATMOS_PHY_SF_SFC_Z0H   (:,:)   = UNDEF
     ATMOS_PHY_SF_SFC_Z0E   (:,:)   = UNDEF

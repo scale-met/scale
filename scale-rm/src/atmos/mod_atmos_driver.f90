@@ -164,10 +164,13 @@ contains
        QTRC,                       &
        DENS_tp,                    &
        MOMZ_tp,                    &
-       MOMX_tp,                    &
-       MOMY_tp,                    &
+       RHOU_tp,                    &
+       RHOV_tp,                    &
        RHOT_tp,                    &
-       RHOQ_tp
+       RHOH_p,                     &
+       RHOQ_tp,                    &
+       MOMX_tp,                    &
+       MOMY_tp
     use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_resume
     use scale_atmos_boundary, only: &
@@ -208,13 +211,19 @@ contains
 !OCL XFILL
     MOMZ_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
-    MOMX_tp(:,:,:)   = 0.0_RP
+    RHOU_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
-    MOMY_tp(:,:,:)   = 0.0_RP
+    RHOV_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
     RHOT_tp(:,:,:)   = 0.0_RP
 !OCL XFILL
+    RHOH_p (:,:,:)   = 0.0_RP
+!OCL XFILL
     RHOQ_tp(:,:,:,:) = 0.0_RP
+!OCL XFILL
+    MOMX_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
+    MOMY_tp(:,:,:)   = 0.0_RP
 
     ! setup each components
     call ATMOS_PHY_MP_driver_resume

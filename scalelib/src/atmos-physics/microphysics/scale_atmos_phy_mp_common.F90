@@ -680,7 +680,7 @@ contains
   !> ATMOS_PHY_MP_precipitation
   !! precipitation transport
   !<
-!OCL SINGLE
+!OCL SERIAL
   subroutine ATMOS_PHY_MP_precipitation( &
        KA, KS, KE, QHA, QLA, QIA, &
        TEMP, vterm, FDZ, RCDZ, dt,     &
@@ -797,7 +797,7 @@ contains
   !> ATMOS_PHY_MP_precipitation_transfer
   !! precipitation transport
   !<
-!OCL SINGLE
+!OCL SERIAL
   subroutine ATMOS_PHY_MP_precipitation_momentum( &
        KA, KS, KE, &
        DENS, MOMZ, U, V, mflx, &
