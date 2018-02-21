@@ -189,9 +189,12 @@ contains
        PRC_abort
     use scale_time, only: &
        dt_AE => TIME_DTSEC_ATMOS_PHY_AE
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_VOL, &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL
     use scale_file_history, only: &
        FILE_HISTORY_in
     use mod_atmos_vars, only: &
@@ -222,8 +225,6 @@ contains
 
     real(RP) :: CN(KA,IA,JA)
     real(RP) :: NREG(KA,IA,JA)
-
-    real(RP) :: total ! dummy
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -280,7 +281,10 @@ contains
 
     if ( STATISTICS_checktotal ) then
        do iq = QS_AE, QE_AE
-          call STAT_total( total, RHOQ_t_AE(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_AE' )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 RHOQ_t_AE(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_AE', &
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                  &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL                       )
        enddo
     endif
 

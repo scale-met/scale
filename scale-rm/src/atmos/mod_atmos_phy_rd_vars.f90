@@ -321,17 +321,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_RD_vars_restart_read
-    use scale_rm_statistics, only: &
-       STATISTICS_checktotal, &
-       STAT_total
     use scale_file, only: &
        FILE_get_aggregate
     use scale_file_cartesC, only: &
        FILE_CARTESC_read, &
        FILE_CARTESC_flush
     implicit none
-
-    real(RP) :: total
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
@@ -369,20 +364,8 @@ contains
           call ATMOS_PHY_RD_vars_fillhalo
        end if
 
-       if ( STATISTICS_checktotal ) then
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_up  (:,:),     VAR_NAME(1)  )
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_dn  (:,:),     VAR_NAME(2)  )
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_up  (:,:),     VAR_NAME(3)  )
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_dn  (:,:),     VAR_NAME(4)  )
-          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_up(:,:),     VAR_NAME(5)  )
-          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),     VAR_NAME(6)  )
-          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_up(:,:),     VAR_NAME(7)  )
-          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),     VAR_NAME(8)  )
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,1,1), VAR_NAME(9)  )
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,1,2), VAR_NAME(10) )
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,1), VAR_NAME(11) )
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,2), VAR_NAME(12) )
-       end if
+       call ATMOS_PHY_RD_vars_checktotal
+
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_PHY_RD.'
     endif
@@ -512,34 +495,17 @@ contains
   !-----------------------------------------------------------------------------
   !> Write variables to restart file
   subroutine ATMOS_PHY_RD_vars_restart_write
-    use scale_rm_statistics, only: &
-       STATISTICS_checktotal, &
-       STAT_total
     use scale_file_cartesC, only: &
        FILE_CARTESC_write_var
     implicit none
 
-    real(RP) :: total
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
 
        call ATMOS_PHY_RD_vars_fillhalo
 
-       if ( STATISTICS_checktotal ) then
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_up  (:,:),     VAR_NAME(1)  )
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_LW_dn  (:,:),     VAR_NAME(2)  )
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_up  (:,:),     VAR_NAME(3)  )
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_SW_dn  (:,:),     VAR_NAME(4)  )
-          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_up(:,:),     VAR_NAME(5)  )
-          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),     VAR_NAME(6)  )
-          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_up(:,:),     VAR_NAME(7)  )
-          call STAT_total( total, ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),     VAR_NAME(8)  )
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,1,1), VAR_NAME(9)  )
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,1,2), VAR_NAME(10) )
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,1), VAR_NAME(11) )
-          call STAT_total( total, ATMOS_PHY_RD_SFLX_downall(:,:,2,2), VAR_NAME(12) )
-       endif
+       call ATMOS_PHY_RD_vars_checktotal
 
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_RD_SFLX_LW_up(:,:), &
                               VAR_NAME(1) , 'XY'  ) ! [IN]
@@ -570,5 +536,69 @@ contains
 
     return
   end subroutine ATMOS_PHY_RD_vars_restart_write
+
+  subroutine ATMOS_PHY_RD_vars_checktotal
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_AREA, &
+       ATMOS_GRID_CARTESC_REAL_TOTAREA
+
+    !---------------------------------------------------------------------------
+
+    if ( STATISTICS_checktotal ) then
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_RD_SFLX_LW_up  (:,:),     VAR_NAME(1),  & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_RD_SFLX_LW_dn  (:,:),     VAR_NAME(2),  & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_RD_SFLX_SW_up  (:,:),     VAR_NAME(3),  & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_RD_SFLX_SW_dn  (:,:),     VAR_NAME(4),  & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_RD_TOAFLX_LW_up(:,:),     VAR_NAME(5),  & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),     VAR_NAME(6),  & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_RD_TOAFLX_SW_up(:,:),     VAR_NAME(7),  & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),     VAR_NAME(8),  & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_RD_SFLX_downall(:,:,1,1), VAR_NAME(9),  & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_RD_SFLX_downall(:,:,1,2), VAR_NAME(10), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_RD_SFLX_downall(:,:,2,1), VAR_NAME(11), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_RD_SFLX_downall(:,:,2,2), VAR_NAME(12), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+    end if
+
+    return
+  end subroutine ATMOS_PHY_RD_vars_checktotal
 
 end module mod_atmos_phy_rd_vars

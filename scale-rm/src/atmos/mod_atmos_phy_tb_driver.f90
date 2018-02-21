@@ -137,9 +137,18 @@ contains
        J23G  => ATMOS_GRID_CARTESC_METRIC_J23G,  &
        J33G  => ATMOS_GRID_CARTESC_METRIC_J33G,  &
        MAPF  => ATMOS_GRID_CARTESC_METRIC_MAPF
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_VOL,     &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL,  &
+       ATMOS_GRID_CARTESC_REAL_VOLW,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLW, &
+       ATMOS_GRID_CARTESC_REAL_VOLU,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLU, &
+       ATMOS_GRID_CARTESC_REAL_VOLV,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLV
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_time, only: &
@@ -195,7 +204,6 @@ contains
     real(RP) :: N2(KA,IA,JA)
 
     real(RP) :: tend(KA,IA,JA)
-    real(RP) :: total ! dummy
 
     integer  :: JJS, JJE
     integer  :: IIS, IIE
@@ -344,16 +352,40 @@ contains
        end do
 
        if ( STATISTICS_checktotal ) then
-          call STAT_total( total, MOMZ_t_TB(:,:,:), 'MOMZ_t_TB' )
-          call STAT_total( total, MOMX_t_TB(:,:,:), 'MOMX_t_TB' )
-          call STAT_total( total, MOMY_t_TB(:,:,:), 'MOMY_t_TB' )
-          call STAT_total( total, RHOT_t_TB(:,:,:), 'RHOT_t_TB' )
-          call STAT_total( total, Nu(:,:,:), 'Nu' )
-          call STAT_total( total, Ri(:,:,:), 'Ri' )
-          call STAT_total( total, Pr(:,:,:), 'Pr' )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 MOMZ_t_TB(:,:,:), 'MOMZ_t_TB',       &
+                                 ATMOS_GRID_CARTESC_REAL_VOLW(:,:,:), &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOLW      )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 MOMX_t_TB(:,:,:), 'MOMX_t_TB',       &
+                                 ATMOS_GRID_CARTESC_REAL_VOLU(:,:,:), &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOLU      )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 MOMY_t_TB(:,:,:), 'MOMY_t_TB',       &
+                                 ATMOS_GRID_CARTESC_REAL_VOLV(:,:,:), &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOLV      )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 RHOT_t_TB(:,:,:), 'RHOT_t_TB',       &
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL       )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 Nu(:,:,:),        'Nu',              &
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL       )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 Ri(:,:,:),        'Ri',              &
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL       )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 Pr(:,:,:),        'Pr',              &
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL       )
 
           do iq = 1, QA
-             call STAT_total( total, RHOQ_t_TB(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_TB' )
+             call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                    RHOQ_t_TB(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_TB', &
+                                    ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                  &
+                                    ATMOS_GRID_CARTESC_REAL_TOTVOL                       )
           enddo
        endif
 

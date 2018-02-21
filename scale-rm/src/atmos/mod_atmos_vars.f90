@@ -454,7 +454,7 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_reg
     use scale_monitor, only: &
-       MONIT_reg
+       MONITOR_reg
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_QV, &
@@ -725,39 +725,83 @@ contains
 
     !-----< monitor output setup >-----
     do iv = 1, PV_nmax
-       call MONIT_reg( PV_MONIT_id(iv), PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, ndim=PV_info(iv)%ndims, isflux=.false. )
+       call MONITOR_reg( PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, & ! (in)
+                         PV_MONIT_id(iv),                                      & ! (out)
+                         dim_type=PV_info(iv)%dim_type, isflux=.false.         ) ! (in)
     end do
     do iq = 1, QA
-       call MONIT_reg( QP_MONIT_id(iq), TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), ndim=3, isflux=.false. )
+       call MONITOR_reg( TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), & ! (in)
+                         QP_MONIT_id(iq),                                   & ! (out)
+                         dim_type='ZXY', isflux=.false.                     ) ! (in)
     enddo
 
-    call MONIT_reg( DV_MONIT_id(IM_QDRY),         'QDRY',         'dry air mass',           'kg', ndim=3, isflux=.false. )
-    call MONIT_reg( DV_MONIT_id(IM_QTOT),         'QTOT',         'water mass',             'kg', ndim=3, isflux=.false. )
-    call MONIT_reg( DV_MONIT_id(IM_EVAP),         'EVAP',         'evaporation',            'kg', ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_PREC),         'PRCP',         'precipitation',          'kg', ndim=2, isflux=.true.  )
+    call MONITOR_reg( 'QDRY',         'dry air mass',           'kg', & ! (in)
+                      DV_MONIT_id(IM_QDRY),                           & ! (out)
+                      dim_type='ZXY', isflux=.false.                  ) ! (in)
+    call MONITOR_reg( 'QTOT',         'water mass',             'kg', & ! (in)
+                      DV_MONIT_id(IM_QTOT),                           & ! (out)
+                      dim_type='ZXY', isflux=.false.                  ) ! (in)
+    call MONITOR_reg( 'EVAP',         'evaporation',            'kg', & ! (in)
+                      DV_MONIT_id(IM_EVAP),                           & ! (out)
+                      dim_type='XY', isflux=.true.                    ) ! (in)
+    call MONITOR_reg( 'PRCP',         'precipitation',          'kg', & ! (in)
+                      DV_MONIT_id(IM_PREC),                           & ! (out)
+                      dim_type='XY', isflux=.true.                    ) ! (in)
 
-    call MONIT_reg( DV_MONIT_id(IM_ENGT),         'ENGT',         'total     energy',       'J',  ndim=3, isflux=.false. )
-    call MONIT_reg( DV_MONIT_id(IM_ENGP),         'ENGP',         'potential energy',       'J',  ndim=3, isflux=.false. )
-    call MONIT_reg( DV_MONIT_id(IM_ENGK),         'ENGK',         'kinetic   energy',       'J',  ndim=3, isflux=.false. )
-    call MONIT_reg( DV_MONIT_id(IM_ENGI),         'ENGI',         'internal  energy',       'J',  ndim=3, isflux=.false. )
+    call MONITOR_reg( 'ENGT',         'total     energy',       'J', & ! (in)
+                      DV_MONIT_id(IM_ENGT),                          & ! (out)
+                      dim_type='ZXY', isflux=.false.                 ) ! (in)
+    call MONITOR_reg( 'ENGP',         'potential energy',       'J', & ! (in)
+                      DV_MONIT_id(IM_ENGP),                          & ! (out)
+                      dim_type='ZXY', isflux=.false.                 ) ! (in)
+    call MONITOR_reg( 'ENGK',         'kinetic   energy',       'J', & ! (in)
+                      DV_MONIT_id(IM_ENGK),                          & ! (out)
+                      dim_type='ZXY', isflux=.false.                 ) ! (in)
+    call MONITOR_reg( 'ENGI',         'internal  energy',       'J', & ! (in)
+                      DV_MONIT_id(IM_ENGI),                          & ! (out)
+                      dim_type='ZXY', isflux=.false.                 ) ! (in)
 
-    call MONIT_reg( DV_MONIT_id(IM_ENGFLXT),      'ENGFLXT',      'total energy flux',      'J',  ndim=2, isflux=.true.  )
+    call MONITOR_reg( 'ENGFLXT',      'total energy flux',      'J', & ! (in)
+                      DV_MONIT_id(IM_ENGFLXT),                       & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGSFC_SH',    'SFC specific heat flux', 'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_SH),                     & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGSFC_LH',    'SFC latent   heat flux', 'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_LH),                     & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGSFC_RD',    'SFC net radiation flux', 'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_RD),                     & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGTOA_RD',    'TOA net radiation flux', 'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOA_RD),                     & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
 
-    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_SH),    'ENGSFC_SH',    'SFC specific heat flux', 'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_LH),    'ENGSFC_LH',    'SFC latent   heat flux', 'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_RD),    'ENGSFC_RD',    'SFC net radiation flux', 'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGTOA_RD),    'ENGTOA_RD',    'TOA net radiation flux', 'J',  ndim=2, isflux=.true.  )
+    call MONITOR_reg( 'ENGSFC_LW_up', 'SFC LW upward   flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_LW_up),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGSFC_LW_dn', 'SFC LW downward flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_LW_dn),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGSFC_SW_up', 'SFC SW upward   flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_SW_up),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGSFC_SW_dn', 'SFC SW downward flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_SW_dn),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
 
-    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_LW_up), 'ENGSFC_LW_up', 'SFC LW upward   flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_LW_dn), 'ENGSFC_LW_dn', 'SFC LW downward flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_SW_up), 'ENGSFC_SW_up', 'SFC SW upward   flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_SW_dn), 'ENGSFC_SW_dn', 'SFC SW downward flux',   'J',  ndim=2, isflux=.true.  )
-
-    call MONIT_reg( DV_MONIT_id(IM_ENGTOA_LW_up), 'ENGTOA_LW_up', 'TOA LW upward   flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGTOA_LW_dn), 'ENGTOA_LW_dn', 'TOA LW downward flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGTOA_SW_up), 'ENGTOA_SW_up', 'TOA SW upward   flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGTOA_SW_dn), 'ENGTOA_SW_dn', 'TOA SW downward flux',   'J',  ndim=2, isflux=.true.  )
-
+    call MONITOR_reg( 'ENGTOA_LW_up', 'TOA LW upward   flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOA_LW_up),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGTOA_LW_dn', 'TOA LW downward flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOA_LW_dn),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGTOA_SW_up', 'TOA SW upward   flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOA_SW_up),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGTOA_SW_dn', 'TOA SW downward flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOA_SW_dn),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
 
     return
   end subroutine ATMOS_vars_setup
@@ -1285,49 +1329,96 @@ contains
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        CVdry => CONST_CVdry
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_VOL,     &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL,  &
+       ATMOS_GRID_CARTESC_REAL_VOLW,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLW, &
+       ATMOS_GRID_CARTESC_REAL_VOLU,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLU, &
+       ATMOS_GRID_CARTESC_REAL_VOLV,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLV
+    use scale_atmos_thermodyn, only: &
+       THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     implicit none
 
     real(RP) :: RHOQ(KA,IA,JA)
 
-    real(RP) :: total ! dummy
     integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
 
     if ( STATISTICS_checktotal ) then
 
-       call STAT_total( total, DENS(:,:,:), PV_info(I_DENS)%NAME )
-       call STAT_total( total, MOMZ(:,:,:), PV_info(I_MOMZ)%NAME )
-       call STAT_total( total, MOMX(:,:,:), PV_info(I_MOMX)%NAME )
-       call STAT_total( total, MOMY(:,:,:), PV_info(I_MOMY)%NAME )
-       call STAT_total( total, RHOT(:,:,:), PV_info(I_RHOT)%NAME )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              DENS(:,:,:), PV_info(I_DENS)%NAME,    & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL  (:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL        ) ! (in)
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                             MOMZ(:,:,:), PV_info(I_MOMZ)%NAME,    & ! (in)
+                             ATMOS_GRID_CARTESC_REAL_VOLW (:,:,:), & ! (in)
+                             ATMOS_GRID_CARTESC_REAL_TOTVOLW       ) ! (in)
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              MOMX(:,:,:), PV_info(I_MOMX)%NAME,    & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOLU (:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOLU       ) ! (in)
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              MOMY(:,:,:), PV_info(I_MOMY)%NAME,    & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOLV (:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOLV       ) ! (in)
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              RHOT(:,:,:), PV_info(I_RHOT)%NAME,    & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL  (:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL        ) ! (in)
 
        do iq = 1, QA
           RHOQ(:,:,:) = DENS(:,:,:) * QTRC(:,:,:,iq)
 
-          call STAT_total( total, RHOQ(:,:,:), TRACER_NAME(iq) )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 RHOQ(:,:,:), TRACER_NAME(iq),       & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
        enddo
 
        call ATMOS_vars_calc_diagnostics
 
 
        RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * QDRY (KS:KE,IS:IE,JS:JE)
-       call STAT_total( total, RHOQ(:,:,:), 'QDRY' )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              RHOQ(:,:,:), 'QDRY',                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
 
        RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * ( 1.0_RP - QDRY (KS:KE,IS:IE,JS:JE) ) ! Qtotal
-       call STAT_total( total, RHOQ(:,:,:), 'QTOT' )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              RHOQ(:,:,:), 'QTOT',                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
 
 
        call ATMOS_vars_get_diagnostic( 'ENGT', WORK3D(:,:,:) )
-       call STAT_total( total, WORK3D(:,:,:), 'ENGT' )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              WORK3D(:,:,:), 'ENGT',              & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
        call ATMOS_vars_get_diagnostic( 'ENGP', WORK3D(:,:,:) )
-       call STAT_total( total, WORK3D(:,:,:), 'ENGP' )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              WORK3D(:,:,:), 'ENGP',              & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
        call ATMOS_vars_get_diagnostic( 'ENGK', WORK3D(:,:,:) )
-       call STAT_total( total, WORK3D(:,:,:), 'ENGK' )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              WORK3D(:,:,:), 'ENGK',              & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
        call ATMOS_vars_get_diagnostic( 'ENGI', WORK3D(:,:,:) )
-       call STAT_total( total, WORK3D(:,:,:), 'ENGI' )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              WORK3D(:,:,:), 'ENGI',              & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
 
     endif
 
@@ -2639,12 +2730,12 @@ contains
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ
     use scale_atmos_grid_cartesC_metric, only: &
        MAPF => ATMOS_GRID_CARTESC_METRIC_MAPF
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total,            &
-       STAT_detail
+       STATISTICS_total,            &
+       STATISTICS_detail
     use scale_monitor, only: &
-       MONIT_put
+       MONITOR_put
     use scale_time, only: &
        TIME_DTSEC_ATMOS_DYN
     use mod_atmos_admin, only: &
@@ -2684,11 +2775,11 @@ contains
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call MONIT_put( PV_MONIT_id(I_DENS), DENS(:,:,:) )
-    call MONIT_put( PV_MONIT_id(I_MOMZ), MOMZ(:,:,:) )
-    call MONIT_put( PV_MONIT_id(I_MOMX), MOMX(:,:,:) )
-    call MONIT_put( PV_MONIT_id(I_MOMY), MOMY(:,:,:) )
-    call MONIT_put( PV_MONIT_id(I_RHOT), RHOT(:,:,:) )
+    call MONITOR_put( PV_MONIT_id(I_DENS), DENS(:,:,:) )
+    call MONITOR_put( PV_MONIT_id(I_MOMZ), MOMZ(:,:,:) )
+    call MONITOR_put( PV_MONIT_id(I_MOMX), MOMX(:,:,:) )
+    call MONITOR_put( PV_MONIT_id(I_MOMY), MOMY(:,:,:) )
+    call MONITOR_put( PV_MONIT_id(I_RHOT), RHOT(:,:,:) )
 
     !##### Mass Budget #####
 
@@ -2703,7 +2794,7 @@ contains
        enddo
        enddo
 
-       call MONIT_put( QP_MONIT_id(iq), RHOQ(:,:,:) )
+       call MONITOR_put( QP_MONIT_id(iq), RHOQ(:,:,:) )
     enddo
 
     ! total dry airmass
@@ -2717,7 +2808,7 @@ contains
        enddo
        enddo
        enddo
-       call MONIT_put( DV_MONIT_id(IM_QDRY), RHOQ(:,:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_QDRY), RHOQ(:,:,:) )
     end if
 
     ! total vapor,liquid,solid tracers
@@ -2732,19 +2823,19 @@ contains
        enddo
        enddo
        enddo
-       call MONIT_put( DV_MONIT_id(IM_QTOT), RHOQ(:,:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_QTOT), RHOQ(:,:,:) )
     end if
 
     ! total evapolation
     if ( moist ) then
-       call MONIT_put( DV_MONIT_id(IM_EVAP), SFLX_QTRC(:,:,I_QV) )
+       call MONITOR_put( DV_MONIT_id(IM_EVAP), SFLX_QTRC(:,:,I_QV) )
 
     endif
 
     ! total precipitation
     if ( DV_MONIT_id(IM_PREC) > 0 ) then
        call ATMOS_vars_get_diagnostic( 'PREC', WORK2D(:,:) )
-       call MONIT_put( DV_MONIT_id(IM_PREC), WORK2D(:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_PREC), WORK2D(:,:) )
     end if
 
 
@@ -2752,19 +2843,19 @@ contains
 
     if ( DV_MONIT_id(IM_ENGT) > 0 ) then
        call ATMOS_vars_get_diagnostic( 'ENGT', WORK3D(:,:,:) )
-       call MONIT_put( DV_MONIT_id(IM_ENGT), WORK3D(:,:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_ENGT), WORK3D(:,:,:) )
     end if
     if ( DV_MONIT_id(IM_ENGP) > 0 ) then
        call ATMOS_vars_get_diagnostic( 'ENGP', WORK3D(:,:,:) )
-       call MONIT_put( DV_MONIT_id(IM_ENGP), WORK3D(:,:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_ENGP), WORK3D(:,:,:) )
     end if
     if ( DV_MONIT_id(IM_ENGK) > 0 ) then
        call ATMOS_vars_get_diagnostic( 'ENGK', WORK3D(:,:,:) )
-       call MONIT_put( DV_MONIT_id(IM_ENGK), WORK3D(:,:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_ENGK), WORK3D(:,:,:) )
     end if
     if ( DV_MONIT_id(IM_ENGI) > 0 ) then
        call ATMOS_vars_get_diagnostic( 'ENGI', WORK3D(:,:,:) )
-       call MONIT_put( DV_MONIT_id(IM_ENGI), WORK3D(:,:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_ENGI), WORK3D(:,:,:) )
     end if
 
 
@@ -2784,22 +2875,22 @@ contains
     enddo
     enddo
 
-    call MONIT_put( DV_MONIT_id(IM_ENGFLXT),      ENGFLXT     (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGFLXT),      ENGFLXT     (:,:) )
 
-    call MONIT_put( DV_MONIT_id(IM_ENGSFC_SH),    SFLX_SH     (:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGSFC_LH),    SFLX_LH     (:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGSFC_RD),    SFLX_RD_net (:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGTOA_RD),    TFLX_RD_net (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_SH),    SFLX_SH     (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_LH),    SFLX_LH     (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_RD),    SFLX_RD_net (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_RD),    TFLX_RD_net (:,:) )
 
-    call MONIT_put( DV_MONIT_id(IM_ENGSFC_LW_up), SFLX_LW_up  (:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGSFC_LW_dn), SFLX_LW_dn  (:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGSFC_SW_up), SFLX_SW_up  (:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGSFC_SW_dn), SFLX_SW_dn  (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_LW_up), SFLX_LW_up  (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_LW_dn), SFLX_LW_dn  (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_SW_up), SFLX_SW_up  (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_SW_dn), SFLX_SW_dn  (:,:) )
 
-    call MONIT_put( DV_MONIT_id(IM_ENGTOA_LW_up), TOAFLX_LW_up(:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGTOA_LW_dn), TOAFLX_LW_dn(:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGTOA_SW_up), TOAFLX_SW_up(:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGTOA_SW_dn), TOAFLX_SW_dn(:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_LW_up), TOAFLX_LW_up(:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_LW_dn), TOAFLX_LW_dn(:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_SW_up), TOAFLX_SW_up(:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_SW_dn), TOAFLX_SW_dn(:,:) )
 
 
 
@@ -2815,7 +2906,8 @@ contains
        WNAME(2) = "U"
        WNAME(3) = "V"
 
-       call STAT_detail( WORK(:,:,:,:), WNAME(:) )
+       call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
+                               WNAME(:), WORK(:,:,:,:)                )
     endif
 
     if (       ( ATMOS_DYN_TYPE /= 'OFF' .AND. ATMOS_DYN_TYPE /= 'NONE' )                   &
@@ -2847,8 +2939,9 @@ contains
           WNAME(1) = "Courant num. Z"
           WNAME(2) = "Courant num. X"
           WNAME(3) = "Courant num. Y"
-
-          call STAT_detail( WORK(:,:,:,:), WNAME(:), supress_globalcomm=.true. )
+          call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
+                                  WNAME(:), WORK(:,:,:,:),               &
+                                  supress_globalcomm=.true.              )
 
           call PRC_abort
        endif
@@ -2861,8 +2954,9 @@ contains
           WNAME(1) = "Courant num. Z"
           WNAME(2) = "Courant num. X"
           WNAME(3) = "Courant num. Y"
-
-          call STAT_detail( WORK(:,:,:,:), WNAME(:), supress_globalcomm=.true. )
+          call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
+                                  WNAME(:), WORK(:,:,:,:),               &
+                                  supress_globalcomm=.true.              )
        endif
     endif
 

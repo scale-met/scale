@@ -120,9 +120,12 @@ contains
   subroutine ATMOS_PHY_CH_driver( update_flag )
     use scale_time, only: &
        dt_CH => TIME_DTSEC_ATMOS_PHY_CH
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_VOL, &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_phy_ch, only: &
@@ -140,8 +143,6 @@ contains
     implicit none
 
     logical, intent(in) :: update_flag
-
-    real(RP) :: total ! dummy
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -176,7 +177,10 @@ contains
 
     if ( STATISTICS_checktotal ) then
        do iq = QS_CH, QE_CH
-          call STAT_total( total, RHOQ_t_CH(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CH' )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 RHOQ_t_CH(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CH', &
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                  &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL                       )
        enddo
     endif
 

@@ -236,9 +236,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_DYN_vars_restart_read
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_VOL, &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL
     use scale_file, only: &
        FILE_get_AGGREGATE
     use scale_file_cartesC, only: &
@@ -246,7 +249,6 @@ contains
        FILE_CARTESC_flush
     implicit none
 
-    real(RP) :: total
     integer  :: i, j, iv
     !---------------------------------------------------------------------------
 
@@ -279,7 +281,10 @@ contains
 
        if ( STATISTICS_checktotal ) then
           do iv = 1, VA
-             call STAT_total( total, PROG(:,:,:,iv), VAR_NAME(iv) )
+             call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                    PROG(:,:,:,iv), VAR_NAME(iv),       & ! (in)
+                                    ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                                    ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
           enddo
        endif
     else
@@ -384,14 +389,16 @@ contains
   !-----------------------------------------------------------------------------
   !> Write variables to restart file
   subroutine ATMOS_DYN_vars_restart_write
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_VOL, &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL
     use scale_file_cartesC, only: &
        FILE_CARTESC_write_var
     implicit none
 
-    real(RP) :: total
     integer  :: iv
     !---------------------------------------------------------------------------
 
@@ -401,7 +408,10 @@ contains
 
        if ( STATISTICS_checktotal ) then
           do iv = 1, VA
-             call STAT_total( total, PROG(:,:,:,iv), VAR_NAME(iv) )
+             call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                    PROG(:,:,:,iv), VAR_NAME(iv),       & ! (in)
+                                    ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                                    ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
           enddo
        endif
 

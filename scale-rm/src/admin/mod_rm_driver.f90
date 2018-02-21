@@ -86,14 +86,20 @@ contains
        OCEAN_GRID_CARTESC_INDEX_setup
     use scale_ocean_grid_cartesC, only: &
        OCEAN_GRID_CARTESC_setup
+    use scale_ocean_grid_cartesC_real, only: &
+       OCEAN_GRID_CARTESC_REAL_setup
     use scale_land_grid_cartesC_index, only: &
        LAND_GRID_CARTESC_INDEX_setup
     use scale_land_grid_cartesC, only: &
        LAND_GRID_CARTESC_setup
+    use scale_land_grid_cartesC_real, only: &
+       LAND_GRID_CARTESC_REAL_setup
     use scale_urban_grid_cartesC_index, only: &
        URBAN_GRID_CARTESC_INDEX_setup
     use scale_urban_grid_cartesC, only: &
        URBAN_GRID_CARTESC_setup
+    use scale_urban_grid_cartesC_real, only: &
+       URBAN_GRID_CARTESC_REAL_setup
     use scale_file_cartesC, only: &
        FILE_CARTESC_setup, &
        FILE_CARTESC_cleanup
@@ -108,22 +114,24 @@ contains
        ATMOS_GRID_CARTESC_REAL_setup
     use scale_atmos_grid_cartesC_metric, only: &
        ATMOS_GRID_CARTESC_METRIC_setup
-    use scale_rm_statistics, only: &
-       STAT_setup
+    use scale_statistics, only: &
+       STATISTICS_setup
     use scale_time, only: &
        TIME_NOWDATE, &
        TIME_NOWMS,   &
-       TIME_NOWSTEP
+       TIME_NOWSTEP, &
+       TIME_DTSEC
     use scale_file_history, only: &
        FILE_HISTORY_write, &
        FILE_HISTORY_set_nowdate, &
        FILE_HISTORY_finalize
     use scale_file_history_cartesC, only: &
        FILE_HISTORY_CARTESC_setup
+    use scale_monitor_cartesC, only: &
+       MONITOR_CARTESC_setup
     use scale_monitor, only: &
-       MONIT_setup, &
-       MONIT_write, &
-       MONIT_finalize
+       MONITOR_write, &
+       MONITOR_finalize
     use scale_file_external_input_cartesC, only: &
        FILE_EXTERNAL_INPUT_CARTESC_setup
     use scale_atmos_hydrostatic, only: &
@@ -284,16 +292,20 @@ contains
     ! setup grid transfer metrics (uses in ATMOS_dynamics)
     call ATMOS_GRID_CARTESC_METRIC_setup
 
+    call OCEAN_GRID_CARTESC_REAL_setup
+    call LAND_GRID_CARTESC_REAL_setup
+    call URBAN_GRID_CARTESC_REAL_setup
+
     ! setup restart
     call ADMIN_restart_setup
     ! setup time
     call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
     ! setup statistics
-    call STAT_setup
+    call STATISTICS_setup
     ! setup history I/O
     call FILE_HISTORY_CARTESC_setup
     ! setup monitor I/O
-    call MONIT_setup
+    call MONITOR_CARTESC_setup( TIME_DTSEC )
     ! setup external in
     call FILE_EXTERNAL_INPUT_CARTESC_setup
 
@@ -351,7 +363,7 @@ contains
          call resume_state
 
          ! history&monitor file output
-         call MONIT_write('MAIN')
+         call MONITOR_write('MAIN', TIME_NOWSTEP)
          call FILE_HISTORY_write ! if needed
       end if
 
@@ -370,7 +382,7 @@ contains
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver
 
       ! history&monitor file output
-      call MONIT_write('MAIN')
+      call MONITOR_write('MAIN', TIME_NOWSTEP)
       call FILE_HISTORY_write
 
       ! restart output
@@ -423,7 +435,7 @@ contains
     if( ATMOS_sw_check ) call ATMOS_vars_restart_check
 
     call PROF_rapstart('Monit', 2)
-    call MONIT_finalize
+    call MONITOR_finalize
     call PROF_rapend  ('Monit', 2)
 
     call PROF_rapstart('File', 2)

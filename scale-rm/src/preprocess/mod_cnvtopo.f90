@@ -1637,16 +1637,15 @@ contains
        FDY => ATMOS_GRID_CARTESC_FDY
     use scale_comm, only: &
        COMM_horizontal_max
-    use scale_rm_statistics, only: &
-       STAT_detail
+    use scale_statistics, only: &
+       STATISTICS_detail
     use scale_topography, only: &
        TOPO_fillhalo
     implicit none
 
     real(RP), intent(inout) :: Zsfc(IA,JA)
 
-    real(RP) :: DZsfc_DX(1,IA,JA,1) ! d(Zsfc)/dx at u-position
-    real(RP) :: DZsfc_DY(1,IA,JA,1) ! d(Zsfc)/dy at v-position
+    real(RP) :: DZsfc_DXY(IA,JA,2) ! d(Zsfc)/dx at u-position and d(Zsfc)/dy at v-position
 
     real(RP) :: DXL(IA-1)
     real(RP) :: DYL(JA-1)
@@ -1658,7 +1657,8 @@ contains
     real(RP) :: maxslope
     real(RP) :: flag
 
-    character(len=H_SHORT) :: varname(1)
+    character(len=8), parameter :: varname(2) = (/ "DZsfc_DX", "DZsfc_DY" /)
+
 
     integer :: ite
     integer :: i, j
@@ -1690,28 +1690,26 @@ contains
 
        do j = 1, JA
        do i = 1, IA-1
-          DZsfc_DX(1,i,j,1) = atan2( ( Zsfc(i+1,j)-Zsfc(i,j) ), DXL(i) ) / D2R
+          DZsfc_DXY(i,j,1) = atan2( ( Zsfc(i+1,j)-Zsfc(i,j) ), DXL(i) ) / D2R
        enddo
        enddo
-       DZsfc_DX(1,IA,:,1) = 0.0_RP
+       DZsfc_DXY(IA,:,1) = 0.0_RP
        do j = 1, JA-1
        do i = 1, IA
-          DZsfc_DY(1,i,j,1) = atan2( ( Zsfc(i,j+1)-Zsfc(i,j) ), DYL(j) ) / D2R
+          DZsfc_DXY(i,j,2) = atan2( ( Zsfc(i,j+1)-Zsfc(i,j) ), DYL(j) ) / D2R
        enddo
        enddo
-       DZsfc_DY(1,:,JA,1) = 0.0_RP
+       DZsfc_DXY(:,JA,2) = 0.0_RP
 
-       slope(:,:) = max( abs(DZsfc_DX(1,:,:,1)), abs(DZsfc_DY(1,:,:,1)) )
+       slope(:,:) = max( abs(DZsfc_DXY(:,:,1)), abs(DZsfc_DXY(:,:,2)) )
        call COMM_horizontal_max( maxslope, slope(:,:) )
 
        if( IO_L ) write(IO_FID_LOG,*) '*** maximum slope [deg] : ', maxslope
 
        if( maxslope < CNVTOPO_smooth_maxslope_limit ) exit
 
-       varname(1) = "DZsfc_DX"
-       call STAT_detail( DZsfc_DX(:,:,:,:), varname(:) )
-       varname(1) = "DZsfc_DY"
-       call STAT_detail( DZsfc_DY(:,:,:,:), varname(:) )
+       call STATISTICS_detail( IA, IS, IE, JA, JS, JE, 2, &
+                               varname(:), DZsfc_DXY(:,:,:) )
 
        select case( CNVTOPO_smooth_type )
        case( 'GAUSSIAN' )
@@ -1764,13 +1762,13 @@ contains
              do j = JS  , JE
              do i = IS-1, IE
                 flag = 0.5_RP &
-                     + sign(0.5_RP, max( abs(DZsfc_DX(1,i+1,j  ,1)), &
-                                         abs(DZsfc_DX(1,i  ,j  ,1)), &
-                                         abs(DZsfc_DX(1,i-1,j  ,1)), &
-                                         abs(DZsfc_DY(1,i+1,j  ,1)), &
-                                         abs(DZsfc_DY(1,i+1,j-1,1)), &
-                                         abs(DZsfc_DY(1,i  ,j  ,1)), &
-                                         abs(DZsfc_DY(1,i  ,j-1,1))  &
+                     + sign(0.5_RP, max( abs(DZsfc_DXY(i+1,j  ,1)), &
+                                         abs(DZsfc_DXY(i  ,j  ,1)), &
+                                         abs(DZsfc_DXY(i-1,j  ,1)), &
+                                         abs(DZsfc_DXY(i+1,j  ,2)), &
+                                         abs(DZsfc_DXY(i+1,j-1,2)), &
+                                         abs(DZsfc_DXY(i  ,j  ,2)), &
+                                         abs(DZsfc_DXY(i  ,j-1,2))  &
                                        ) - CNVTOPO_smooth_maxslope_limit )
                 FLX_X(i,j) = FLX_X(i,j) * flag
              enddo
@@ -1778,13 +1776,13 @@ contains
              do j = JS-1, JE
              do i = IS  , IE
                 flag = 0.5_RP &
-                     + sign(0.5_RP, max( abs(DZsfc_DY(1,i  ,j+1,1)), &
-                                         abs(DZsfc_DY(1,i  ,j  ,1)), &
-                                         abs(DZsfc_DY(1,i  ,j-1,1)), &
-                                         abs(DZsfc_DX(1,i  ,j+1,1)), &
-                                         abs(DZsfc_DX(1,i-1,j+1,1)), &
-                                         abs(DZsfc_DX(1,i  ,j  ,1)), &
-                                         abs(DZsfc_DX(1,i-1,j  ,1))  &
+                     + sign(0.5_RP, max( abs(DZsfc_DXY(i  ,j+1,2)), &
+                                         abs(DZsfc_DXY(i  ,j  ,2)), &
+                                         abs(DZsfc_DXY(i  ,j-1,2)), &
+                                         abs(DZsfc_DXY(i  ,j+1,1)), &
+                                         abs(DZsfc_DXY(i-1,j+1,1)), &
+                                         abs(DZsfc_DXY(i  ,j  ,1)), &
+                                         abs(DZsfc_DXY(i-1,j  ,1))  &
                                        ) - CNVTOPO_smooth_maxslope_limit )
                 FLX_Y(i,j) = FLX_Y(i,j) * flag
              enddo
@@ -1825,18 +1823,18 @@ contains
 
        do j = 1, JA
        do i = 1, IA-1
-          DZsfc_DX(1,i,j,1) = atan2( ( Zsfc(i+1,j)-Zsfc(i,j) ), DXL(i) ) / D2R
+          DZsfc_DXY(i,j,1) = atan2( ( Zsfc(i+1,j)-Zsfc(i,j) ), DXL(i) ) / D2R
        enddo
        enddo
-       DZsfc_DX(1,IA,:,1) = 0.0_RP
+       DZsfc_DXY(IA,:,1) = 0.0_RP
        do j = 1, JA-1
        do i = 1, IA
-          DZsfc_DY(1,i,j,1) = atan2( ( Zsfc(i,j+1)-Zsfc(i,j) ), DYL(j) ) / D2R
+          DZsfc_DXY(i,j,2) = atan2( ( Zsfc(i,j+1)-Zsfc(i,j) ), DYL(j) ) / D2R
        enddo
        enddo
-       DZsfc_DY(1,:,JA,1) = 0.0_RP
+       DZsfc_DXY(:,JA,2) = 0.0_RP
 
-       slope(:,:) = max( abs(DZsfc_DX(1,:,:,1)), abs(DZsfc_DY(1,:,:,1)) )
+       slope(:,:) = max( abs(DZsfc_DXY(:,:,1)), abs(DZsfc_DXY(:,:,2)) )
        call COMM_horizontal_max( maxslope, slope(:,:) )
 
        if( IO_L ) write(IO_FID_LOG,*) '*** maximum slope [deg] : ', maxslope
@@ -1845,10 +1843,8 @@ contains
 
     call TOPO_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
 
-    varname(1) = "DZsfc_DX"
-    call STAT_detail( DZsfc_DX(:,:,:,:), varname(:) )
-    varname(1) = "DZsfc_DY"
-    call STAT_detail( DZsfc_DY(:,:,:,:), varname(:) )
+    call STATISTICS_detail( IA, IS, IE, JA, JS, JE, 2, &
+                            varname(:), DZsfc_DXY(:,:,:) )
 
     if( IO_L ) write(IO_FID_LOG,*)
 

@@ -530,42 +530,92 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for ocean
   subroutine OCEAN_vars_total
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
+    use scale_ocean_grid_cartesC_real, only: &
+       OCEAN_GRID_CARTESC_REAL_AREA,    &
+       OCEAN_GRID_CARTESC_REAL_TOTAREA, &
+       OCEAN_GRID_CARTESC_REAL_VOL,     &
+       OCEAN_GRID_CARTESC_REAL_TOTVOL
     implicit none
 
-    real(RP) :: total
-
-    character(len=2) :: sk
-    integer          :: k
     !---------------------------------------------------------------------------
 
     if ( STATISTICS_checktotal ) then
 
-       do k = OKS, OKE
-          write(sk,'(I2.2)') k
+       ! 3D
+       call STATISTICS_total( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_TEMP(:,:,:), VAR_NAME(I_TEMP), & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_VOL(:,:,:),  & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTVOL       ) ! (in)
+       call STATISTICS_total( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SALT(:,:,:), VAR_NAME(I_SALT), & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_VOL(:,:,:),  & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTVOL       ) ! (in)
+       call STATISTICS_total( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_UVEL(:,:,:), VAR_NAME(I_UVEL), & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_VOL(:,:,:),  & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTVOL       ) ! (in)
+       call STATISTICS_total( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_VVEL(:,:,:), VAR_NAME(I_VVEL), & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_VOL(:,:,:),  & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTVOL       ) ! (in)
 
-          call STAT_total( total, OCEAN_TEMP(k,:,:), trim(VAR_NAME(I_TEMP))//sk )
-          call STAT_total( total, OCEAN_SALT(k,:,:), trim(VAR_NAME(I_SALT))//sk )
-          call STAT_total( total, OCEAN_UVEL(k,:,:), trim(VAR_NAME(I_UVEL))//sk )
-          call STAT_total( total, OCEAN_VVEL(k,:,:), trim(VAR_NAME(I_VVEL))//sk )
-       enddo
+       ! 2D
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP), & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW),   & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW),   & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFC_Z0M   (:,:),      VAR_NAME(I_SFC_Z0M),  & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFC_Z0H   (:,:),      VAR_NAME(I_SFC_Z0H),  & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFC_Z0E   (:,:),      VAR_NAME(I_SFC_Z0E),  & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
 
-       call STAT_total( total, OCEAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP) )
-       call STAT_total( total, OCEAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW)   )
-       call STAT_total( total, OCEAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW)   )
-       call STAT_total( total, OCEAN_SFC_Z0M   (:,:),      VAR_NAME(I_SFC_Z0M)  )
-       call STAT_total( total, OCEAN_SFC_Z0H   (:,:),      VAR_NAME(I_SFC_Z0H)  )
-       call STAT_total( total, OCEAN_SFC_Z0E   (:,:),      VAR_NAME(I_SFC_Z0E)  )
-
-       call STAT_total( total, OCEAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW)   )
-       call STAT_total( total, OCEAN_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU)   )
-       call STAT_total( total, OCEAN_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV)   )
-       call STAT_total( total, OCEAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH)   )
-       call STAT_total( total, OCEAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH)   )
-       call STAT_total( total, OCEAN_SFLX_WH  (:,:), VAR_NAME(I_SFLX_WH)   )
-       call STAT_total( total, OCEAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap) )
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW),   & ! (in) 
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU),   & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV),   & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH),   & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH),   & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFLX_WH  (:,:), VAR_NAME(I_SFLX_WH),   & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap), & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
 
     endif
 

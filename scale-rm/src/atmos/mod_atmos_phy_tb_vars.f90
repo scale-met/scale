@@ -215,9 +215,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_TB_vars_restart_read
-    use scale_rm_statistics, only: &
-       STATISTICS_checktotal, &
-       STAT_total
+!!$    use scale_statistics, only: &
+!!$       STATISTICS_checktotal, &
+!!$       STAT_total
+!!$    use scale_atmos_grid_cartesC_real, only: &
+!!$       ATMOS_GRID_CARTESC_REAL_VOL, &
+!!$       ATMOS_GRID_CARTESC_REAL_TOTVOL
 !!$    use scale_file, only: &
 !!$       FILE_get_aggregate
 !!$    use scale_file_cartesC, only: &
@@ -225,7 +228,6 @@ contains
 !!$       FILE_CARTESC_flush
 !!$    implicit none
 
-    real(RP) :: total
     integer  :: i, j
     !---------------------------------------------------------------------------
 
@@ -252,7 +254,10 @@ contains
 !       end if
 !
 !       if ( STATISTICS_checktotal ) then
-!          call STAT_total( total, ATMOS_PHY_TB_??(:,:,:), VAR_NAME(1) )
+!          call STAT_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+!                           ATMOS_PHY_TB_??(:,:,:), VAR_NAME(1), &
+!                           ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  & ! (in)
+!                           ATMOS_GRID_CARTESC_REAL_TOTVOL       ) ! (in)
 !       endif
 !    else
 !       if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_PHY_TB.'
@@ -354,14 +359,16 @@ contains
   !-----------------------------------------------------------------------------
   !> Write restart
   subroutine ATMOS_PHY_TB_vars_restart_write
-    use scale_rm_statistics, only: &
-       STATISTICS_checktotal, &
-       STAT_total
-    use scale_file_cartesC, only: &
-       FILE_CARTESC_write_var
+!!$    use scale_statistics, only: &
+!!$       STATISTICS_checktotal, &
+!!$       STAT_total
+!!$    use scale_atmos_grid_cartesC_real, only: &
+!!$       ATMOS_GRID_CARTESC_REAL_VOL, &
+!!$       ATMOS_GRID_CARTESC_REAL_TOTVOL
+!!$    use scale_file_cartesC, only: &
+!!$       FILE_CARTESC_write_var
     implicit none
 
-    real(RP) :: total
     !---------------------------------------------------------------------------
 
 !    if ( restart_fid /= -1 ) then
@@ -369,7 +376,10 @@ contains
 !       call ATMOS_PHY_TB_vars_fillhalo
 !
 !       if ( STATISTICS_checktotal ) then
-!          call STAT_total( total, ATMOS_PHY_TB_??(:,:,:), VAR_NAME(1) )
+!          call STAT_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+!                           ATMOS_PHY_TB_??(:,:,:), VAR_NAME(1), &
+!                           ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  & ! (in)
+!                           ATMOS_GRID_CARTESC_REAL_TOTVOL       ) ! (in)
 !       endif
 !
 !       call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_TB_??(:,:,:), &

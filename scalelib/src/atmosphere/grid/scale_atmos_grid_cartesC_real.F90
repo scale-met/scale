@@ -563,6 +563,9 @@ contains
        ATMOS_GRID_CARTESC_FDX, &
        ATMOS_GRID_CARTESC_CDY, &
        ATMOS_GRID_CARTESC_FDY
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     implicit none
 
     real(RP), intent(in) :: MAPF(IA,JA,2,4)
@@ -578,14 +581,20 @@ contains
     ATMOS_GRID_CARTESC_REAL_TOTAREAU  = 0.0_RP
     ATMOS_GRID_CARTESC_REAL_TOTAREAV  = 0.0_RP
     ATMOS_GRID_CARTESC_REAL_TOTAREAUV = 0.0_RP
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        ATMOS_GRID_CARTESC_REAL_AREA  (i,j) = ATMOS_GRID_CARTESC_CDX(i) * ATMOS_GRID_CARTESC_CDY(j) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
        ATMOS_GRID_CARTESC_REAL_AREAU (i,j) = ATMOS_GRID_CARTESC_FDX(i) * ATMOS_GRID_CARTESC_CDY(j) / ( MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) )
        ATMOS_GRID_CARTESC_REAL_AREAV (i,j) = ATMOS_GRID_CARTESC_CDX(i) * ATMOS_GRID_CARTESC_FDY(j) / ( MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) )
        ATMOS_GRID_CARTESC_REAL_AREAUV(i,j) = ATMOS_GRID_CARTESC_FDX(i) * ATMOS_GRID_CARTESC_FDY(j) / ( MAPF(i,j,1,I_UV) * MAPF(i,j,2,I_UV) )
     end do
     end do
+
+    call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREA  (:,:), 1 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAU (:,:), 2 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAV (:,:), 3 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAUV(:,:), 4 )
+
     do j = JS, JE
     do i = IS, IE
        ATMOS_GRID_CARTESC_REAL_TOTAREA   = ATMOS_GRID_CARTESC_REAL_TOTAREA   + ATMOS_GRID_CARTESC_REAL_AREA  (i,j)
@@ -595,6 +604,12 @@ contains
     enddo
     enddo
 
+    call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREA  (:,:), 1 )
+    call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREAU (:,:), 2 )
+    call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREAV (:,:), 3 )
+    call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREAUV(:,:), 4 )
+
+
     ATMOS_GRID_CARTESC_REAL_VOL (:,:,:) = 0.0_RP
     ATMOS_GRID_CARTESC_REAL_VOLW(:,:,:) = 0.0_RP
     ATMOS_GRID_CARTESC_REAL_VOLU(:,:,:) = 0.0_RP
@@ -603,8 +618,8 @@ contains
     ATMOS_GRID_CARTESC_REAL_TOTVOLW = 0.0_RP
     ATMOS_GRID_CARTESC_REAL_TOTVOLU = 0.0_RP
     ATMOS_GRID_CARTESC_REAL_TOTVOLV = 0.0_RP
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        ATMOS_GRID_CARTESC_REAL_VOL (k,i,j) = ( ATMOS_GRID_CARTESC_REAL_FZ (k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ (k-1,i,j) ) * ATMOS_GRID_CARTESC_REAL_AREA (i,j)
        ATMOS_GRID_CARTESC_REAL_VOLU(k,i,j) = ( ATMOS_GRID_CARTESC_REAL_FZU(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZU(k-1,i,j) ) * ATMOS_GRID_CARTESC_REAL_AREAU(i,j)

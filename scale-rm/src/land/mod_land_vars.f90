@@ -586,35 +586,60 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for land
   subroutine LAND_vars_total
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
+    use scale_land_grid_cartesC_real, only: &
+       LAND_GRID_CARTESC_REAL_AREA,    &
+       LAND_GRID_CARTESC_REAL_TOTAREA, &
+       LAND_GRID_CARTESC_REAL_VOL,     &
+       LAND_GRID_CARTESC_REAL_TOTVOL
     implicit none
 
-    real(RP) :: total
-
-    character(len=2) :: sk
-    integer          :: k
     !---------------------------------------------------------------------------
 
     if ( STATISTICS_checktotal ) then
 
-       do k = LKS, LKE
-          write(sk,'(I2.2)') k
+       ! 3D
+       call STATISTICS_total( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_TEMP (:,:,:), VAR_NAME(I_TEMP),  & ! (in)
+                              LAND_GRID_CARTESC_REAL_VOL(:,:,:),    & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTVOL         ) ! (in)
+       call STATISTICS_total( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_WATER(:,:,:), VAR_NAME(I_WATER), & ! (in)
+                              LAND_GRID_CARTESC_REAL_VOL(:,:,:),    & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTVOL         ) ! (in)
 
-          call STAT_total( total, LAND_TEMP (k,:,:), trim(VAR_NAME(I_TEMP) )//sk )
-          call STAT_total( total, LAND_WATER(k,:,:), trim(VAR_NAME(I_WATER))//sk )
-       enddo
+       ! 2D
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP), & ! (in)
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW),   & ! (in)
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW),   & ! (in)
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
 
-       call STAT_total( total, LAND_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP) )
-       call STAT_total( total, LAND_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW)   )
-       call STAT_total( total, LAND_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW)   )
-
-       call STAT_total( total, SNOW_SFC_TEMP  (:,:),     'SNOW_SFC_TEMP'  )
-       call STAT_total( total, SNOW_SWE       (:,:),     'SNOW_SWE'       )
-       call STAT_total( total, SNOW_Depth     (:,:),     'SNOW_Depth'     )
-       call STAT_total( total, SNOW_Dzero     (:,:),     'SNOW_Dzero'     )
-
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              SNOW_SFC_TEMP  (:,:),     'SNOW_SFC_TEMP', & ! (in)
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),          & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTAREA             ) ! (in)
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              SNOW_SWE       (:,:),     'SNOW_SWE',      &
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),          & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTAREA             ) ! (in)
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              SNOW_Depth     (:,:),     'SNOW_Depth',    & ! (in)
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),          & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTAREA             ) ! (in)
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              SNOW_Dzero     (:,:),     'SNOW_Dzero',    & ! (in)
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),          & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTAREA             ) ! (in)
     endif
 
     return
