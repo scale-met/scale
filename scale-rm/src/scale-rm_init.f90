@@ -56,6 +56,7 @@ program scalerm_launcher
   logical               :: ABORT_ALL_JOBS               = .false. ! abort all jobs or not?
   logical               :: LOG_SPLIT                    = .false. ! log-output for mpi splitting?
   logical               :: COLOR_REORDER                = .true.  ! coloring reorder for mpi splitting?
+  logical               :: FAILURE_PRC_MANAGE           = .false. ! use failure process management?
 
   namelist / PARAM_LAUNCHER / &
      EXECUTE_PREPROCESS, &
@@ -67,7 +68,8 @@ program scalerm_launcher
      CONF_FILES,         &
      ABORT_ALL_JOBS,     &
      LOG_SPLIT,          &
-     COLOR_REORDER
+     COLOR_REORDER,      &
+     FAILURE_PRC_MANAGE
 
   integer               :: universal_comm                         ! universal communicator
   integer               :: universal_nprocs                       ! number of procs in universal communicator
@@ -147,11 +149,20 @@ program scalerm_launcher
      if( universal_master ) write(*,'(1x,A,I5)') "*** TOTAL BULK JOB NUMBER   = ", NUM_BULKJOB
      if( universal_master ) write(*,'(1x,A,I5)') "*** PROCESS NUM of EACH JOB = ", global_nprocs
 
-     use_fpm = .true.                    !--- available only in bulk job
-     if ( NUM_FAIL_TOLERANCE <= 0 ) then !--- fatal error
-        if( universal_master ) write(*,*) 'xxx Num of Failure Processes must be positive number. Check!'
-        if( universal_master ) write(*,*) 'xxx NUM_FAIL_TOLERANCE = ', NUM_FAIL_TOLERANCE
-        call PRC_MPIstop
+     if ( FAILURE_PRC_MANAGE ) then
+        if( universal_master ) write(*,'(1x,A)') "*** Available: Failure Process Management"
+        use_fpm = .true.                    !--- available only in bulk job
+        if ( NUM_FAIL_TOLERANCE <= 0 ) then !--- fatal error
+           if( universal_master ) write(*,*) 'xxx Num of Failure Processes must be positive number. Check!'
+           if( universal_master ) write(*,*) 'xxx NUM_FAIL_TOLERANCE = ', NUM_FAIL_TOLERANCE
+           call PRC_MPIstop
+        endif
+
+        if ( NUM_FAIL_TOLERANCE > NUM_BULKJOB ) then !--- fatal error
+           write(*,*) 'xxx NUM_FAIL_TOLERANCE is bigger than NUM_BLUKJOB number'
+           write(*,*) '    set to be: NUM_FAIL_TOLERANCE <= NUM_BLUKJOB'
+           call PRC_MPIstop
+        endif
      endif
   endif
 
@@ -201,6 +212,7 @@ program scalerm_launcher
                  use_fpm             ) ! [IN]
 
   call PRC_ERRHANDLER_setup( use_fpm, universal_master )
+
 
   !--- start main routine
 
