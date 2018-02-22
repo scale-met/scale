@@ -63,8 +63,9 @@ contains
        PRC_MPIstop,  &
        PRC_LOCAL_setup
     use scale_fpm, only: &
-       FPM_alive,  &
-       FPM_Polling
+       FPM_alive,       &
+       FPM_Polling,     &
+       FPM_POLLING_FREQ
     use scale_rm_process, only: &
        PRC_setup
     use scale_const, only: &
@@ -381,7 +382,8 @@ contains
 
       ! FPM polling
       if ( FPM_alive ) then
-         if ( fpm_counter > 5 ) then
+      if ( FPM_POLLING_FREQ > 0 ) then
+         if ( fpm_counter > FPM_POLLING_FREQ ) then
             sign_exit = .false.
             call FPM_Polling( .true., sign_exit )
             if ( sign_exit ) then
@@ -391,6 +393,7 @@ contains
             fpm_counter = 0
          endif
          fpm_counter = fpm_counter + 1
+      endif
       endif
 
     enddo

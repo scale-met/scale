@@ -30,7 +30,8 @@ module scale_fpm
   !
   !++ Public parameters & variables
   !
-  integer, public :: FPM_max_failure = 1
+  integer, public :: FPM_MAX_FAILURE  = 1
+  integer, public :: FPM_POLLING_FREQ = 5
   logical, public :: FPM_alive
 
   !-----------------------------------------------------------------------------
@@ -71,6 +72,7 @@ contains
   !> Initialize FPM
   subroutine FPM_Init( &
       max_failure,     &
+      polling_freq,    &
       universal_comm,  &
       global_comm,     &
       local_comm,      &
@@ -79,6 +81,7 @@ contains
       use_fpm          )
     implicit none
     integer, intent(in) :: max_failure     !< threshold of failure procs
+    integer, intent(in) :: polling_freq    !< polling frequency per time step (0: no polling)
     integer, intent(in) :: universal_comm  !< communicator
     integer, intent(in) :: global_comm     !< communicator
     integer, intent(in) :: local_comm      !< communicator
@@ -93,13 +96,15 @@ contains
     integer :: group_manager            !< group ID for manager world
     integer :: i, j, k
     integer :: ierr
+
     !---------------------------------------------------------------------------
 
     FPM_alive       = use_fpm
     FPM_master      = .false.
     FPM_manager     = .false.
     FPM_num_member  = num_member
-    FPM_max_failure = max_failure
+    FPM_MAX_FAILURE = max_failure
+    FPM_POLLING_FREQ = polling_freq
 
     if ( FPM_alive ) then
        FPM_UNIVERSAL_COMM = universal_comm
@@ -116,7 +121,14 @@ contains
        if ( FPM_unv_myproc == FPM_MANAGER_MASTER ) FPM_master = .true.
        if ( FPM_master ) write(*,*) ''
        if ( FPM_master ) write(*,*) '*** Failure Procs Manager: available'
-       if ( FPM_master ) write(*,*) '*** Threshold of Failure Procs = ', FPM_max_failure
+       if ( FPM_master ) write(*,*) '*** Threshold of Failure Procs = ', FPM_MAX_FAILURE
+       if ( FPM_master ) then
+          if ( FPM_POLLING_FREQ > 0 ) then
+             write(*,*) '*** FPM Polling Frequency per DT = ', FPM_POLLING_FREQ
+          else
+             write(*,*) '*** FPM: NO Polling'
+          endif
+       endif
 
        ! create manager communicator
        allocate( manager_list(FPM_num_member) )
@@ -227,7 +239,7 @@ contains
              endif
           enddo
 
-          if ( failcount >= FPM_max_failure ) then
+          if ( failcount >= FPM_MAX_FAILURE ) then
              stop_signal = .true.
           else
              stop_signal = .false.

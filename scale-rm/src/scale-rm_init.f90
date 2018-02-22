@@ -51,6 +51,7 @@ program scalerm_launcher
   integer               :: NUM_BULKJOB                  = 1       ! number of bulk jobs
   integer               :: NUM_DOMAIN                   = 1       ! number of domains
   integer               :: NUM_FAIL_TOLERANCE           = 1       ! tolerance number of failure processes
+  integer               :: FREQ_FAIL_CHECK              = 0       ! FPM polling frequency per DT (0: no polling)
   integer               :: PRC_DOMAINS(PRC_DOMAIN_nlim) = 0       ! number of total process in each domain
   character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim) = ""      ! name of configulation files
   logical               :: ABORT_ALL_JOBS               = .false. ! abort all jobs or not?
@@ -64,6 +65,7 @@ program scalerm_launcher
      NUM_BULKJOB,        &
      NUM_DOMAIN,         &
      NUM_FAIL_TOLERANCE, &
+     FREQ_FAIL_CHECK,    &
      PRC_DOMAINS,        &
      CONF_FILES,         &
      ABORT_ALL_JOBS,     &
@@ -124,6 +126,7 @@ program scalerm_launcher
   endif
 
   close(fid)
+  FREQ_FAIL_CHECK = 0 ! force 0, coz no time integrations
 
   if (      EXECUTE_PREPROCESS &
        .OR. EXECUTE_MODEL      ) then
@@ -204,6 +207,7 @@ program scalerm_launcher
 
   !--- initialize FPM module & error handler
   call FPM_Init( NUM_FAIL_TOLERANCE, & ! [IN]
+                 FREQ_FAIL_CHECK,    & ! [IN]
                  universal_comm,     & ! [IN]
                  global_comm,        & ! [IN]
                  local_comm,         & ! [IN]
