@@ -165,6 +165,16 @@ program scalerm_launcher
            write(*,*) '    set to be: NUM_FAIL_TOLERANCE <= NUM_BLUKJOB'
            call PRC_MPIstop
         endif
+
+        if ( NUM_DOMAIN > 1 ) then !--- avoid error in the current implementation
+        if ( FREQ_FAIL_CHECK >= 1 .or. NUM_FAIL_TOLERANCE /= NUM_BULKJOB ) then
+           write(*,*) 'xxx Full function of FPM is not available with online nesting.'
+           write(*,*) '    You can use this only to avoid job stop until all members finish.'
+           write(*,*) '    for this purpose, set: FREQ_FAIL_CHECK    =  0'
+           write(*,*) '                           NUM_FAIL_TOLERANCE == NUM_BULKJOB'
+           call PRC_MPIstop
+        endif
+        endif
      endif
   endif
 
