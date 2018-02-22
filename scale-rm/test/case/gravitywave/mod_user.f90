@@ -19,7 +19,7 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -119,8 +119,8 @@ contains
   subroutine USER_step
     use scale_const, only: &
        GRAV  => CONST_GRAV
-    use scale_grid, only : &
-       CZ => GRID_CZ
+    use scale_atmos_grid_cartesC, only : &
+       CZ => ATMOS_GRID_CARTESC_CZ
     use mod_atmos_vars, only: &
        DENS, &
        RHOT

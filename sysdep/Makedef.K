@@ -13,7 +13,7 @@ MODDIROPT = -M
 
 FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
-               -x-                                                       \
+               -x-     	    	       		  			 \
                -Ksimd                                                    \
                -Kauto,threadsafe
 
@@ -43,6 +43,7 @@ CFLAGS_DEBUG = -O0
 
 
 ##### Special setting
+SCALE_ENABLE_OPENMP ?= T
 
 FFLAGS_OPENMP = -Kopenmp
 # enable + disable parallel

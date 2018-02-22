@@ -22,7 +22,7 @@ module mod_atmos_dyn_driver
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   !-----------------------------------------------------------------------------
@@ -103,18 +103,18 @@ contains
   subroutine ATMOS_DYN_driver_setup
     use scale_process, only: &
        PRC_MPIstop
-    use scale_grid, only: &
-       GRID_DOMAIN_CENTER_Y, &
-       GRID_CY,  &
-       GRID_FZ,  &
-       GRID_CDZ, &
-       GRID_CDX, &
-       GRID_CDY, &
-       GRID_FDZ, &
-       GRID_FDX, &
-       GRID_FDY
-    use scale_grid_real, only: &
-       REAL_LAT
+    use scale_atmos_grid_cartesC, only: &
+       DOMAIN_CENTER_Y => ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
+       CY  => ATMOS_GRID_CARTESC_CY,  &
+       FZ  => ATMOS_GRID_CARTESC_FZ,  &
+       CDZ => ATMOS_GRID_CARTESC_CDZ, &
+       CDX => ATMOS_GRID_CARTESC_CDX, &
+       CDY => ATMOS_GRID_CARTESC_CDY, &
+       FDZ => ATMOS_GRID_CARTESC_FDZ, &
+       FDX => ATMOS_GRID_CARTESC_FDX, &
+       FDY => ATMOS_GRID_CARTESC_FDY
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT
     use scale_time, only: &
        TIME_DTSEC_ATMOS_DYN
     use mod_atmos_admin, only: &
@@ -167,7 +167,7 @@ contains
 
     if ( ATMOS_sw_dyn ) then
 
-       ATMOS_DYN_coriolis_y0 = GRID_DOMAIN_CENTER_Y
+       ATMOS_DYN_coriolis_y0 = DOMAIN_CENTER_Y
        !--- read namelist
        rewind(IO_FID_CONF)
        read(IO_FID_CONF,nml=PARAM_ATMOS_DYN,iostat=ierr)
@@ -185,7 +185,7 @@ contains
           write(*,*) 'xxx ATMOS_DYN_wdamp_layer should be less than total number of vertical layer(KA). Check!'
           call PRC_MPIstop
        elseif( ATMOS_DYN_wdamp_layer > 0 ) then
-          ATMOS_DYN_wdamp_height = GRID_FZ(ATMOS_DYN_wdamp_layer+KS-1)
+          ATMOS_DYN_wdamp_height = FZ(ATMOS_DYN_wdamp_layer+KS-1)
        endif
 
        if ( ATMOS_DYN_wdamp_tau < 0.0_RP ) then
@@ -211,16 +211,15 @@ contains
                              ATMOS_DYN_FVM_FLUX_TRACER_TYPE,     & ! [IN]
                              DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! [IN]
                              PROG,                               & ! [IN]
-                             GRID_CDZ, GRID_CDX, GRID_CDY,       & ! [IN]
-                             GRID_FDZ, GRID_FDX, GRID_FDY,       & ! [IN]
+                             CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! [IN]
                              ATMOS_DYN_wdamp_tau,                & ! [IN]
                              ATMOS_DYN_wdamp_height,             & ! [IN]
-                             GRID_FZ,                            & ! [IN]
+                             FZ,                            & ! [IN]
                              ATMOS_DYN_coriolis_type,            & ! [IN]
                              ATMOS_DYN_coriolis_f0,              & ! [IN]
                              ATMOS_DYN_coriolis_beta,            & ! [IN]
                              ATMOS_DYN_coriolis_y0,              & ! [IN]
-                             GRID_CY,                            & ! [IN]
+                             CY,                            & ! [IN]
                              REAL_LAT,                           & ! [IN]
                              none = ATMOS_DYN_TYPE=='NONE'       ) ! [IN]
     endif
@@ -231,27 +230,27 @@ contains
   !-----------------------------------------------------------------------------
   !> Dynamical Process (Wrapper)
   subroutine ATMOS_DYN_driver( do_flag )
-    use scale_grid, only: &
-       GRID_CDZ,  &
-       GRID_CDX,  &
-       GRID_CDY,  &
-       GRID_FDZ,  &
-       GRID_FDX,  &
-       GRID_FDY,  &
-       GRID_RCDZ, &
-       GRID_RCDX, &
-       GRID_RCDY, &
-       GRID_RFDZ, &
-       GRID_RFDX, &
-       GRID_RFDY
-    use scale_grid_real, only: &
-       REAL_PHI
-    use scale_gridtrans, only: &
-       GTRANS_GSQRT, &
-       GTRANS_J13G,  &
-       GTRANS_J23G,  &
-       GTRANS_J33G,  &
-       GTRANS_MAPF
+    use scale_atmos_grid_cartesC, only: &
+       CDZ  => ATMOS_GRID_CARTESC_CDZ,  &
+       CDX  => ATMOS_GRID_CARTESC_CDX,  &
+       CDY  => ATMOS_GRID_CARTESC_CDY,  &
+       FDZ  => ATMOS_GRID_CARTESC_FDZ,  &
+       FDX  => ATMOS_GRID_CARTESC_FDX,  &
+       FDY  => ATMOS_GRID_CARTESC_FDY,  &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI
+    use scale_atmos_grid_cartesC_metric, only: &
+       GSQRT => ATMOS_GRID_CARTESC_METRIC_GSQRT, &
+       J13G  => ATMOS_GRID_CARTESC_METRIC_J13G,  &
+       J23G  => ATMOS_GRID_CARTESC_METRIC_J23G,  &
+       J33G  => ATMOS_GRID_CARTESC_METRIC_J33G,  &
+       MAPF  => ATMOS_GRID_CARTESC_METRIC_MAPF
     use scale_time, only: &
        TIME_DTSEC,           &
        TIME_DTSEC_ATMOS_DYN
@@ -381,13 +380,10 @@ contains
                        PROG,                                                 & ! [IN]
                        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]
                        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, & ! [IN]
-                       GRID_CDZ,  GRID_CDX,  GRID_CDY,                       & ! [IN]
-                       GRID_FDZ,  GRID_FDX,  GRID_FDY,                       & ! [IN]
-                       GRID_RCDZ, GRID_RCDX, GRID_RCDY,                      & ! [IN]
-                       GRID_RFDZ, GRID_RFDX, GRID_RFDY,                      & ! [IN]
+                       CDZ,  CDX,  CDY,  FDZ,  FDX,  FDY,                    & ! [IN]
+                       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   & ! [IN]
                        REAL_PHI,                                             & ! [IN]
-                       GTRANS_GSQRT,                                         & ! [IN]
-                       GTRANS_J13G, GTRANS_J23G, GTRANS_J33G, GTRANS_MAPF,   & ! [IN]
+                       GSQRT, J13G, J23G, J33G, MAPF,                        & ! [IN]
                        TRACER_R, TRACER_CV, TRACER_CP, TRACER_MASS,          & ! [IN]
                        ATMOS_REFSTATE_dens,                                  & ! [IN]
                        ATMOS_REFSTATE_pott,                                  & ! [IN]

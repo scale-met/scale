@@ -967,7 +967,6 @@ contains
                       hinfo%title,                  & ! [IN]
                       hinfo%source,                 & ! [IN]
                       hinfo%institute,              & ! [IN]
-                      hinfo%grid_name,              & ! [IN]
                       fid,                          & ! [OUT]
                       fileexisted,                  & ! [OUT]
                       rankid     = nowrank,         & ! [IN]

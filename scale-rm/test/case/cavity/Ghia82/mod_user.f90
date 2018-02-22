@@ -20,7 +20,7 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -125,13 +125,13 @@ contains
   subroutine USER_step
     use scale_process, only: &
        PRC_MPIstop
-    use scale_grid, only : &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
-       RCDZ => GRID_RCDZ, &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY, &
-       RFDZ => GRID_RFDZ
+    use scale_atmos_grid_cartesC, only : &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY, &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ
     use mod_atmos_vars, only: &
        DENS, &
        MOMX, &
@@ -145,14 +145,13 @@ contains
        PRC_HAS_W
     use scale_const, only: &
        GRAV  => CONST_GRAV
-    use scale_grid, only : &
-       CX => GRID_CX, &
-       CY => GRID_CY, &
-       CZ => GRID_CZ
+    use scale_atmos_grid_cartesC, only : &
+       CX => ATMOS_GRID_CARTESC_CX, &
+       CY => ATMOS_GRID_CARTESC_CY, &
+       CZ => ATMOS_GRID_CARTESC_CZ
     use scale_time, only: &
        DTSEC => TIME_DTSEC, &
        NOWTSEC => TIME_NOWSEC
-    use scale_gridtrans
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_comm

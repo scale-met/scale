@@ -24,7 +24,7 @@ module scale_atmos_phy_rd_profile
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -1172,7 +1172,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
        '|      -GRID CENTER-            -GRID INTERFACE-      |'
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '| RD_k       z    k GRID_CZ GRID_FZ    k      zh RD_k |'
+       '| RD_k       z    k CZ      FZ         k      zh RD_k |'
        if ( kadd > 0 ) then
        RD_k = 1
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,I5,A)') &

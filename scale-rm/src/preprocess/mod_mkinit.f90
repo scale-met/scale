@@ -16,7 +16,7 @@ module mod_mkinit
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
 
   use scale_process, only: &
@@ -36,19 +36,19 @@ module mod_mkinit
   use scale_comm, only: &
      COMM_vars8, &
      COMM_wait
-  use scale_grid, only: &
-     GRID_CZ,  &
-     GRID_CX,  &
-     GRID_CY,  &
-     GRID_FZ,  &
-     GRID_FX,  &
-     GRID_FY,  &
-     GRID_CXG, &
-     GRID_FXG, &
-     GRID_FYG
-  use scale_grid_real, only: &
-     REAL_CZ, &
-     REAL_FZ
+  use scale_atmos_grid_cartesC, only: &
+     CZ  => ATMOS_GRID_CARTESC_CZ,  &
+     CX  => ATMOS_GRID_CARTESC_CX,  &
+     CY  => ATMOS_GRID_CARTESC_CY,  &
+     FZ  => ATMOS_GRID_CARTESC_FZ,  &
+     FX  => ATMOS_GRID_CARTESC_FX,  &
+     FY  => ATMOS_GRID_CARTESC_FY,  &
+     CXG => ATMOS_GRID_CARTESC_CXG, &
+     FXG => ATMOS_GRID_CARTESC_FXG, &
+     FYG => ATMOS_GRID_CARTESC_FYG
+  use scale_atmos_grid_cartesC_real, only: &
+     REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+     REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
   use scale_atmos_profile, only: &
      PROFILE_isa => ATMOS_PROFILE_isa
   use scale_atmos_hydrometeor, only: &
@@ -573,17 +573,17 @@ contains
        bubble(:,:,:) = CONST_UNDEF8
 
        if ( BBL_eachnode ) then
-          CZ_offset = GRID_CZ(KS)
-          CX_offset = GRID_CX(IS)
-          CY_offset = GRID_CY(JS)
-          Domain_RX = GRID_FX(IE) - GRID_FX(IS-1)
-          Domain_RY = GRID_FY(JE) - GRID_FY(JS-1)
+          CZ_offset = CZ(KS)
+          CX_offset = CX(IS)
+          CY_offset = CY(JS)
+          Domain_RX = FX(IE) - FX(IS-1)
+          Domain_RY = FY(JE) - FY(JS-1)
        else
           CZ_offset = 0.0_RP
           CX_offset = 0.0_RP
           CY_offset = 0.0_RP
-          Domain_RX = GRID_FXG(IAG-IHALO) - GRID_FXG(IHALO)
-          Domain_RY = GRID_FYG(JAG-JHALO) - GRID_FYG(JHALO)
+          Domain_RX = FXG(IAG-IHALO) - FXG(IHALO)
+          Domain_RY = FYG(JAG-JHALO) - FYG(JHALO)
        endif
 
        ! make bubble coefficient
@@ -591,15 +591,15 @@ contains
        do i = 1, IA
        do k = KS, KE
 
-          distz = ( (GRID_CZ(k)-CZ_offset-BBL_CZ)/BBL_RZ )**2
+          distz = ( (CZ(k)-CZ_offset-BBL_CZ)/BBL_RZ )**2
 
-          distx = min( ( (GRID_CX(i)-CX_offset-BBL_CX          )/BBL_RX )**2, &
-                       ( (GRID_CX(i)-CX_offset-BBL_CX-Domain_RX)/BBL_RX )**2, &
-                       ( (GRID_CX(i)-CX_offset-BBL_CX+Domain_RX)/BBL_RX )**2  )
+          distx = min( ( (CX(i)-CX_offset-BBL_CX          )/BBL_RX )**2, &
+                       ( (CX(i)-CX_offset-BBL_CX-Domain_RX)/BBL_RX )**2, &
+                       ( (CX(i)-CX_offset-BBL_CX+Domain_RX)/BBL_RX )**2  )
 
-          disty = min( ( (GRID_CY(j)-CY_offset-BBL_CY          )/BBL_RY )**2, &
-                       ( (GRID_CY(j)-CY_offset-BBL_CY-Domain_RY)/BBL_RY )**2, &
-                       ( (GRID_CY(j)-CY_offset-BBL_CY+Domain_RY)/BBL_RY )**2  )
+          disty = min( ( (CY(j)-CY_offset-BBL_CY          )/BBL_RY )**2, &
+                       ( (CY(j)-CY_offset-BBL_CY-Domain_RY)/BBL_RY )**2, &
+                       ( (CY(j)-CY_offset-BBL_CY+Domain_RY)/BBL_RY )**2  )
 
           bubble(k,i,j) = cos( 0.5_RP*PI*sqrt( min(distz+distx+disty,1.0_RP) ) )**2
 
@@ -663,9 +663,9 @@ contains
     rect(:,:,:) = CONST_UNDEF8
 
     if ( RCT_eachnode ) then
-       CZ_offset = GRID_CZ(KS)
-       CX_offset = GRID_CX(IS)
-       CY_offset = GRID_CY(JS)
+       CZ_offset = CZ(KS)
+       CX_offset = CX(IS)
+       CY_offset = CY(JS)
     else
        CZ_offset = 0.0_RP
        CX_offset = 0.0_RP
@@ -678,9 +678,9 @@ contains
 
        ! make tracer rectangle
        dist = 2.0_RP * max( &
-            abs(GRID_CZ(k) - CZ_offset - RCT_CZ)/RCT_RZ,   &
-            abs(GRID_CX(i) - CX_offset - RCT_CX)/RCT_RX,   &
-            abs(GRID_CY(j) - CY_offset - RCT_CY)/RCT_RY    &
+            abs(CZ(k) - CZ_offset - RCT_CZ)/RCT_RZ,   &
+            abs(CX(i) - CX_offset - RCT_CX)/RCT_RX,   &
+            abs(CY(j) - CY_offset - RCT_CY)/RCT_RY    &
             & )
        if ( dist <= 1.0_RP ) then
          rect(k,i,j) = 1.0_RP
@@ -1321,11 +1321,11 @@ contains
        qc(k) = 0.0_RP
 
        do kref = 2, EXP_kmax+1
-          if (       GRID_CZ(k) >  EXP_z(kref-1) &
-               .AND. GRID_CZ(k) <= EXP_z(kref  ) ) then
+          if (       CZ(k) >  EXP_z(kref-1) &
+               .AND. CZ(k) <= EXP_z(kref  ) ) then
 
-             fact1 = ( EXP_z(kref) - GRID_CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
-             fact2 = ( GRID_CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
+             fact1 = ( EXP_z(kref) - CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
+             fact2 = ( CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
 
              pott(k) = EXP_pott(kref-1) * fact1 &
                      + EXP_pott(kref  ) * fact2
@@ -1347,6 +1347,7 @@ contains
                                pott(:),         & ! [IN]
                                qv  (:),         & ! [IN]
                                qc  (:),         & ! [IN]
+                               CZ(:), FZ(:),    & ! [IN]
                                temp_sfc(1,1,1), & ! [OUT]
                                pres_sfc(1,1,1), & ! [IN]
                                pott_sfc(1,1,1), & ! [IN]
@@ -1636,6 +1637,7 @@ contains
                                pott    (:,1,1), & ! [IN]
                                qv      (:,1,1), & ! [IN]
                                qc      (:,1,1), & ! [IN]
+                               CZ(:), FZ(:),    & ! [IN]
                                temp_sfc(1,1,1), & ! [OUT]
                                pres_sfc(1,1,1), & ! [IN]
                                pott_sfc(1,1,1), & ! [IN]
@@ -1769,6 +1771,7 @@ contains
                                pott    (:,1,1), & ! [IN]
                                qv      (:,1,1), & ! [IN]
                                qc      (:,1,1), & ! [IN]
+                               CZ(:), FZ(:),    & ! [IN]
                                temp_sfc(1,1,1), & ! [OUT]
                                pres_sfc(1,1,1), & ! [IN]
                                pott_sfc(1,1,1), & ! [IN]
@@ -1853,7 +1856,7 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       DENS(k,i,j) = SFC_PRES/(Rdry*ENV_TEMP) * exp( - GRAV/(Rdry*ENV_TEMP) * GRID_CZ(k) )
+       DENS(k,i,j) = SFC_PRES/(Rdry*ENV_TEMP) * exp( - GRAV/(Rdry*ENV_TEMP) * CZ(k) )
        MOMZ(k,i,j) = 0.0_RP
        MOMX(k,i,j) = ENV_U * DENS(k,i,j)
        MOMY(k,i,j) = ENV_V * DENS(k,i,j)
@@ -1933,7 +1936,7 @@ contains
     qc_sfc  (1,1,1) = 0.0_RP
 
     do k = KS, KE
-       pott(k,1,1) = SFC_THETA * exp( ENV_BVF*ENV_BVF / GRAV * GRID_CZ(k) )
+       pott(k,1,1) = SFC_THETA * exp( ENV_BVF*ENV_BVF / GRAV * CZ(k) )
        qv  (k,1,1) = 0.0_RP
        qc  (k,1,1) = 0.0_RP
     enddo
@@ -1945,6 +1948,7 @@ contains
                                pott    (:,1,1), & ! [IN]
                                qv      (:,1,1), & ! [IN]
                                qc      (:,1,1), & ! [IN]
+                               CZ(:), FZ(:),    & ! [IN]
                                temp_sfc(1,1,1), & ! [OUT]
                                pres_sfc(1,1,1), & ! [IN]
                                pott_sfc(1,1,1), & ! [IN]
@@ -2039,7 +2043,7 @@ contains
     qc_sfc  (1,1,1) = 0.0_RP
 
     do k = KS, KE
-       fact = ( GRID_CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
+       fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
        fact = max( min( fact, 1.0_RP ), 0.0_RP )
 
        pott(k,1,1) = ENV_L1_THETA * ( 1.0_RP - fact ) &
@@ -2056,6 +2060,7 @@ contains
                                pott    (:,1,1), & ! [IN]
                                qv      (:,1,1), & ! [IN]
                                qc      (:,1,1), & ! [IN]
+                               CZ(:), FZ(:),    & ! [IN]
                                temp_sfc(1,1,1), & ! [OUT]
                                pres_sfc(1,1,1), & ! [IN]
                                pott_sfc(1,1,1), & ! [IN]
@@ -2081,7 +2086,7 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       fact = ( GRID_CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
+       fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
        fact = max( min( fact, 1.0_RP ), 0.0_RP )
 
        MOMX(k,i,j) = ( ENV_L1_U * ( 1.0_RP - fact )                 &
@@ -2169,7 +2174,7 @@ contains
     qc_sfc  (1,:,:) = 0.0_RP
 
     do k = KS, KE
-       pott(k,1,1) = ENV_THETA + ENV_TLAPS * GRID_CZ(k)
+       pott(k,1,1) = ENV_THETA + ENV_TLAPS * CZ(k)
        qv  (k,:,:) = 0.0_RP
        qc  (k,:,:) = 0.0_RP
     enddo
@@ -2181,6 +2186,7 @@ contains
                                pott    (:,1,1), & ! [IN]
                                qv      (:,1,1), & ! [IN]
                                qc      (:,1,1), & ! [IN]
+                               CZ(:), FZ(:),    & ! [IN]
                                temp_sfc(1,1,1), & ! [OUT]
                                pres_sfc(1,1,1), & ! [IN]
                                pott_sfc(1,1,1), & ! [IN]
@@ -2216,7 +2222,7 @@ contains
        pott_sfc(1,i,j) = SFC_THETA + rndm(KS-1,i,j) * RANDOM_THETA
 
        do k = KS, KE
-          pott(k,i,j) = ENV_THETA + ENV_TLAPS * GRID_CZ(k) + rndm(k,i,j) * RANDOM_THETA
+          pott(k,i,j) = ENV_THETA + ENV_TLAPS * CZ(k) + rndm(k,i,j) * RANDOM_THETA
        enddo
     enddo
     enddo
@@ -2497,9 +2503,9 @@ contains
       RPlanet => CONST_RADIUS, &
       GRAV    => CONST_GRAV
     use scale_process
-    use scale_grid, only: &
-         y0 => GRID_DOMAIN_CENTER_Y, &
-         GRID_FYG
+    use scale_atmos_grid_cartesC, only: &
+         y0  => ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
+         FYG => ATMOS_GRID_CARTESC_FYG
     use scale_atmos_hydrometeor, only: &
          I_QV
 
@@ -2571,7 +2577,7 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BAROCWAVE)
 
-    Ly = GRID_FYG(JAG-JHALO) - GRID_FYG(JHALO)
+    Ly = FYG(JAG-JHALO) - FYG(JHALO)
 
     ! Set coriolis parameters
     f0 = 2.0_RP*OHM*sin(phi0Deg*PI/180.0_RP)
@@ -2585,7 +2591,7 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB            ! Note that initial fields are zonaly symmetric
 
-       y = GRID_CY(j)
+       y = CY(j)
        yphase  = 2.0_RP*PI*y/Ly
 
        ! Calc horizontal variation of geopotential height
@@ -2620,14 +2626,14 @@ contains
                   REF_TEMP*GRAV/LAPSE_RATE*(1.0_RP - temp_vfunc)  &
                   + geopot_hvari*ln_eta*exp(-(ln_eta/b)**2)
 
-             del_eta = -  ( - Grav*GRID_CZ(k) + geopot(k,i,j) )   & ! <- F
-                  &      *( - eta(k,i,j)/(Rdry*temp(k,i,j))   )     ! <- (dF/deta)^-1
+             del_eta = -  ( - Grav*CZ(k) + geopot(k,i,j) )    & ! <- F
+                  &      *( - eta(k,i,j)/(Rdry*temp(k,i,j))   ) ! <- (dF/deta)^-1
 
              eta(k,i,j) = eta(k,i,j) + del_eta
              itr = itr + 1
 
              if ( itr > ITRMAX ) then
-                write(*,*) "* (X,Y,Z)=", GRID_CX(i), GRID_CY(j), GRID_CZ(k)
+                write(*,*) "* (X,Y,Z)=", CX(i), CY(j), CZ(k)
                 write(*,*) "Fail the convergence of iteration. Check!"
                 write(*,*) "itr=", itr, "del_eta=", del_eta, "eta=", eta(k,i,j), "temp=", temp(k,i,j)
                 call PRC_MPIstop
@@ -2648,6 +2654,8 @@ contains
                                   pott    (:,i,j), & ! [IN]
                                   qv      (:,i,j), & ! [IN]
                                   qc      (:,i,j), & ! [IN]
+                                  REAL_CZ (:,i,j), & ! [IN]
+                                  REAL_FZ (:,i,j), & ! [IN]
                                   temp_sfc(1,i,j), & ! [OUT]
                                   pres_sfc(1,i,j), & ! [IN]
                                   pott_sfc(1,i,j), & ! [IN]
@@ -2663,7 +2671,7 @@ contains
 
        eta(k,IS,j) = pres(k,IS,j)/REF_PRES
        ln_eta = log(eta(k,IS,j))
-       yphase = 2.0_RP*PI*GRID_CY(j)/Ly
+       yphase = 2.0_RP*PI*CY(j)/Ly
 !!$       PRES(k,IS:IE,j) = eta(k,IS,j)*REF_PRES
 !!$       DENS(k,IS:IE,j) = PRES(k,IS,j)/(Rdry*temp(k,IS,j))
        DENS(k,IS:IE,j) = DENS(k,IS,j)
@@ -2682,7 +2690,7 @@ contains
     do j = JSB, JEB
     do i = max(ISB-1,1), IEB
        MOMX(KS:kE,i,j) = MOMX(KS:KE,i,j) &
-           +  DENS(KS:KE,i,j)* Up*exp( - ((GRID_FX(i) - Xc)**2 + (GRID_CY(j) - Yc)**2)/Lp**2 )
+           +  DENS(KS:KE,i,j)* Up*exp( - ((FX(i) - Xc)**2 + (CY(j) - Yc)**2)/Lp**2 )
     enddo
     enddo
 
@@ -2757,12 +2765,12 @@ contains
     qc_sfc  (1,:,:) = 0.0_RP
 
     do k = KS, KE
-       if    ( GRID_CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
+       if    ( CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
           pott(k,1,1) = SFC_THETA
-       elseif( GRID_CZ(k) <  ENV_L2_ZTOP ) then ! Layer 2
-          pott(k,1,1) = pott(k-1,1,1) + ENV_L2_TLAPS * ( GRID_CZ(k)-GRID_CZ(k-1) )
+       elseif( CZ(k) <  ENV_L2_ZTOP ) then ! Layer 2
+          pott(k,1,1) = pott(k-1,1,1) + ENV_L2_TLAPS * ( CZ(k)-CZ(k-1) )
        else                                ! Layer 3
-          pott(k,1,1) = pott(k-1,1,1) + ENV_L3_TLAPS * ( GRID_CZ(k)-GRID_CZ(k-1) )
+          pott(k,1,1) = pott(k-1,1,1) + ENV_L3_TLAPS * ( CZ(k)-CZ(k-1) )
        endif
        qv(k,1,1) = 0.0_RP
        qc(k,1,1) = 0.0_RP
@@ -2775,6 +2783,7 @@ contains
                                pott    (:,1,1), & ! [IN]
                                qv      (:,1,1), & ! [IN]
                                qc      (:,1,1), & ! [IN]
+                               CZ(:), FZ(:),    & ! [IN]
                                temp_sfc(1,1,1), & ! [OUT]
                                pres_sfc(1,1,1), & ! [IN]
                                pott_sfc(1,1,1), & ! [IN]
@@ -2791,9 +2800,9 @@ contains
                                    temp(:,1,1), pres(:,1,1), qdry(:,1,1), & ! [IN]
                                    qsat(:,1,1)                            ) ! [OUT]
     do k = KS, KE
-       if    ( GRID_CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
+       if    ( CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
           qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
-       elseif( GRID_CZ(k) <= ENV_L2_ZTOP ) then ! Layer 2
+       elseif( CZ(k) <= ENV_L2_ZTOP ) then ! Layer 2
           qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
        else                                ! Layer 3
           qv(k,1,1) = 0.0_RP
@@ -2807,6 +2816,7 @@ contains
                                pott    (:,1,1), & ! [IN]
                                qv      (:,1,1), & ! [IN]
                                qc      (:,1,1), & ! [IN]
+                               CZ(:), FZ(:),    & ! [IN]
                                temp_sfc(1,1,1), & ! [OUT]
                                pres_sfc(1,1,1), & ! [IN]
                                pott_sfc(1,1,1), & ! [IN]
@@ -3238,16 +3248,16 @@ contains
        do k = KS, KE
           velx(k,i,j) =   7.0_RP
           vely(k,i,j) =  -5.5_RP
-          if ( GRID_CZ(k) < 820.0_RP ) then ! below initial cloud top
-             potl(k,i,j) = 289.0_RP - GRAV / CPdry * GRID_CZ(k) * GEOP_sw
-          elseif( GRID_CZ(k) <= 860.0_RP ) then
-             sint = sin( pi2 * ( GRID_CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
-             potl(k,i,j) = ( 289.0_RP - GRAV / CPdry * GRID_CZ(k) * GEOP_sw                          ) * (0.5_RP-sint) &
-                         + ( 297.5_RP+sign(abs(GRID_CZ(k)-840.0_RP)**(1.0_RP/3.0_RP),GRID_CZ(k)-840.0_RP) &
-                           - GRAV / CPdry * GRID_CZ(k) * GEOP_sw                                     ) * (0.5_RP+sint)
+          if ( CZ(k) < 820.0_RP ) then ! below initial cloud top
+             potl(k,i,j) = 289.0_RP - GRAV / CPdry * CZ(k) * GEOP_sw
+          elseif( CZ(k) <= 860.0_RP ) then
+             sint = sin( pi2 * ( CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
+             potl(k,i,j) = ( 289.0_RP - GRAV / CPdry * CZ(k) * GEOP_sw                          ) * (0.5_RP-sint) &
+                         + ( 297.5_RP+sign(abs(CZ(k)-840.0_RP)**(1.0_RP/3.0_RP),CZ(k)-840.0_RP) &
+                           - GRAV / CPdry * CZ(k) * GEOP_sw                                     ) * (0.5_RP+sint)
           else
-             potl(k,i,j) = 297.5_RP + ( GRID_CZ(k)-840.0_RP )**(1.0_RP/3.0_RP) &
-                         - GRAV / CPdry * GRID_CZ(k) * GEOP_sw
+             potl(k,i,j) = 297.5_RP + ( CZ(k)-840.0_RP )**(1.0_RP/3.0_RP) &
+                         - GRAV / CPdry * CZ(k) * GEOP_sw
           endif
 
           qv(k,i,j) = 0.0_RP
@@ -3277,26 +3287,26 @@ contains
        qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
-          if    ( GRID_CZ(k) <   820.0_RP ) then ! below initial cloud top
+          if    ( CZ(k) <   820.0_RP ) then ! below initial cloud top
              qall = 9.0E-3_RP
-          elseif( GRID_CZ(k) <=  860.0_RP ) then ! boundary
-             sint = sin( pi2 * ( GRID_CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
+          elseif( CZ(k) <=  860.0_RP ) then ! boundary
+             sint = sin( pi2 * ( CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
              qall = 9.0E-3_RP * (0.5_RP-sint) &
                   + 1.5E-3_RP * (0.5_RP+sint)
-          elseif( GRID_CZ(k) <= 5000.0_RP ) then
+          elseif( CZ(k) <= 5000.0_RP ) then
              qall = 1.5E-3_RP
           else
              qall = 0.0_RP
           endif
 
-          if    ( GRID_CZ(k) <=  600.0_RP ) then
+          if    ( CZ(k) <=  600.0_RP ) then
              qc(k,i,j) = 0.0_RP
-          elseif( GRID_CZ(k) < 820.0_RP ) then ! in the cloud
-             fact = ( GRID_CZ(k)-600.0_RP ) / ( 840.0_RP-600.0_RP )
+          elseif( CZ(k) < 820.0_RP ) then ! in the cloud
+             fact = ( CZ(k)-600.0_RP ) / ( 840.0_RP-600.0_RP )
              qc(k,i,j) = 0.45E-3_RP * fact
-          elseif( GRID_CZ(k) <= 860.0_RP ) then ! boundary
-             sint = sin( pi2 * ( GRID_CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
-             fact = ( GRID_CZ(k)-600.0_RP ) / ( 840.0_RP-600.0_RP )
+          elseif( CZ(k) <= 860.0_RP ) then ! boundary
+             sint = sin( pi2 * ( CZ(k)-840.0_RP ) / 20.0_RP ) * 0.5_RP
+             fact = ( CZ(k)-600.0_RP ) / ( 840.0_RP-600.0_RP )
              qc(k,i,j) = 0.45E-3_RP * fact * (0.5_RP-sint)
           else
              qc(k,i,j) = 0.0_RP
@@ -3507,18 +3517,18 @@ contains
        qc_sfc(1,i,j) = 0.0_RP
 
        do k = KS, KE
-          velx(k,i,j) =  3.0_RP + 4.3 * GRID_CZ(k)*1.E-3_RP
-          vely(k,i,j) = -9.0_RP + 5.6 * GRID_CZ(k)*1.E-3_RP
+          velx(k,i,j) =  3.0_RP + 4.3 * CZ(k)*1.E-3_RP
+          vely(k,i,j) = -9.0_RP + 5.6 * CZ(k)*1.E-3_RP
 
-          if ( GRID_CZ(k) < 775.0_RP ) then ! below initial cloud top
+          if ( CZ(k) < 775.0_RP ) then ! below initial cloud top
              potl(k,i,j) = 288.3_RP ! [K]
-          else if ( GRID_CZ(k) <= 815.0_RP ) then
-             sint = sin( pi2 * (GRID_CZ(k) - 795.0_RP)/20.0_RP )
+          else if ( CZ(k) <= 815.0_RP ) then
+             sint = sin( pi2 * (CZ(k) - 795.0_RP)/20.0_RP )
              potl(k,i,j) = 288.3_RP * (1.0_RP-sint)*0.5_RP &
-                         + ( 295.0_RP+sign(abs(GRID_CZ(k)-795.0_RP)**(1.0_RP/3.0_RP),GRID_CZ(k)-795.0_RP) ) &
+                         + ( 295.0_RP+sign(abs(CZ(k)-795.0_RP)**(1.0_RP/3.0_RP),CZ(k)-795.0_RP) ) &
                          * (1.0_RP+sint)*0.5_RP
           else
-             potl(k,i,j) = 295.0_RP + ( GRID_CZ(k)-795.0_RP )**(1.0_RP/3.0_RP)
+             potl(k,i,j) = 295.0_RP + ( CZ(k)-795.0_RP )**(1.0_RP/3.0_RP)
           endif
 
           qv(k,i,j) = 0.0_RP
@@ -3547,24 +3557,24 @@ contains
        qc_sfc  (1,i,j) = 0.0_RP
 
        do k = KS, KE
-          if ( GRID_CZ(k) < 775.0_RP ) then ! below initial cloud top
+          if ( CZ(k) < 775.0_RP ) then ! below initial cloud top
              qall = 9.45E-3_RP ! [kg/kg]
-          else if ( GRID_CZ(k) <= 815.0_RP ) then
-             sint = sin( pi2 * (GRID_CZ(k) - 795.0_RP)/20.0_RP )
+          else if ( CZ(k) <= 815.0_RP ) then
+             sint = sin( pi2 * (CZ(k) - 795.0_RP)/20.0_RP )
              qall = 9.45E-3_RP * (1.0_RP-sint)*0.5_RP + &
-                  ( 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-GRID_CZ(k))/500.0_RP ) ) ) * (1.0_RP+sint)*0.5_RP
+                  ( 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-CZ(k))/500.0_RP ) ) ) * (1.0_RP+sint)*0.5_RP
           else
-             qall = 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-GRID_CZ(k))/500.0_RP ) ) ! [kg/kg]
+             qall = 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-CZ(k))/500.0_RP ) ) ! [kg/kg]
           endif
 
-          if( GRID_CZ(k) < 400.0_RP ) then
+          if( CZ(k) < 400.0_RP ) then
              qc(k,i,j) = 0.0_RP
-          elseif( GRID_CZ(k) < 775.0_RP ) then
-             fact = ( GRID_CZ(k)-400.0_RP ) / ( 795.0_RP-400.0_RP )
+          elseif( CZ(k) < 775.0_RP ) then
+             fact = ( CZ(k)-400.0_RP ) / ( 795.0_RP-400.0_RP )
              qc(k,i,j) = 0.65E-3_RP * fact
-          elseif( GRID_CZ(k) <= 815.0_RP ) then
-             sint = sin( pi2 * ( GRID_CZ(k)-795.0_RP )/20.0_RP )
-             fact = ( GRID_CZ(k)-400.0_RP ) / ( 795.0_RP-400.0_RP )
+          elseif( CZ(k) <= 815.0_RP ) then
+             sint = sin( pi2 * ( CZ(k)-795.0_RP )/20.0_RP )
+             fact = ( CZ(k)-400.0_RP ) / ( 795.0_RP-400.0_RP )
              qc(k,i,j) = 0.65E-3_RP * fact * (1.0_RP-sint) * 0.5_RP
           else
              qc(k,i,j) = 0.0_RP
@@ -3785,26 +3795,26 @@ contains
           velx(k,i,j) = CONST_U
           vely(k,i,j) = CONST_V
 
-!         if ( ZB+GRID_CZ(k) < 775.0_RP ) then ! below initial cloud top
-          if ( ZB+GRID_CZ(k) <= 795.0_RP ) then ! below initial cloud top
+!         if ( ZB+CZ(k) < 775.0_RP ) then ! below initial cloud top
+          if ( ZB+CZ(k) <= 795.0_RP ) then ! below initial cloud top
              potl(k,i,j) = 288.3_RP ! [K]
              qall = 9.45E-3_RP ! [kg/kg]
 ! necessary?
-!         else if ( GRID_CZ(k) <= 815.0_RP ) then
-!            sint = sin( pi2 * (GRID_CZ(k) - 795.0_RP)/20.0_RP )
+!         else if ( CZ(k) <= 815.0_RP ) then
+!            sint = sin( pi2 * (CZ(k) - 795.0_RP)/20.0_RP )
 !            potl(k,i,j) = 288.3_RP * (1.0_RP-sint)*0.5_RP + &
-!                  ( 295.0_RP+sign(abs(GRID_CZ(k)-795.0_RP)**(1.0_RP/3.0_RP),GRID_CZ(k)-795.0_RP) ) * (1.0_RP+sint)*0.5_RP
+!                  ( 295.0_RP+sign(abs(CZ(k)-795.0_RP)**(1.0_RP/3.0_RP),CZ(k)-795.0_RP) ) * (1.0_RP+sint)*0.5_RP
 !            qall = 9.45E-3_RP * (1.0_RP-sint)*0.5_RP + &
-!                  ( 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-GRID_CZ(k))/500.0_RP ) ) ) * (1.0_RP+sint)*0.5_RP
+!                  ( 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-CZ(k))/500.0_RP ) ) ) * (1.0_RP+sint)*0.5_RP
           else
-             potl(k,i,j) = 295.0_RP + ( zb+GRID_CZ(k)-795.0_RP )**(1.0_RP/3.0_RP)
-             qall = 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-(zb+GRID_CZ(k)))/500.0_RP ) ) ! [kg/kg]
+             potl(k,i,j) = 295.0_RP + ( zb+CZ(k)-795.0_RP )**(1.0_RP/3.0_RP)
+             qall = 5.E-3_RP - 3.E-3_RP * ( 1.0_RP - exp( (795.0_RP-(zb+CZ(k)))/500.0_RP ) ) ! [kg/kg]
           endif
 
-          if( ZB+GRID_CZ(k) < 400.0_RP ) then
+          if( ZB+CZ(k) < 400.0_RP ) then
              qc(k,i,j) = 0.0_RP
-          elseif( ZB+GRID_CZ(k) <= 795.0_RP ) then
-             fact = ( (zb+GRID_CZ(k))-400.0_RP ) / ( 795.0_RP-400.0_RP )
+          elseif( ZB+CZ(k) <= 795.0_RP ) then
+             fact = ( (zb+CZ(k))-400.0_RP ) / ( 795.0_RP-400.0_RP )
              qc(k,i,j) = 0.8E-3_RP * fact
           else
              qc(k,i,j) = 0.0_RP
@@ -4042,16 +4052,16 @@ contains
 
        do k = KS, KE
           !--- potential temperature
-          if ( GRID_CZ(k) < 740.0_RP ) then ! below initial cloud top
+          if ( CZ(k) < 740.0_RP ) then ! below initial cloud top
              potl(k,i,j) = 297.9_RP
           else
-             fact = ( GRID_CZ(k)-740.0_RP ) * ( 317.0_RP-297.9_RP ) / ( 4000.0_RP-740.0_RP )
+             fact = ( CZ(k)-740.0_RP ) * ( 317.0_RP-297.9_RP ) / ( 4000.0_RP-740.0_RP )
              potl(k,i,j) = 297.9_RP + fact
           endif
 
           !--- horizontal wind velocity
-          if ( GRID_CZ(k) <= 4000.0_RP ) then ! below initial cloud top
-             fact = ( GRID_CZ(k)-0.0_RP ) * ( -1.9_RP+9.9_RP ) / ( 4000.0_RP-0.0_RP )
+          if ( CZ(k) <= 4000.0_RP ) then ! below initial cloud top
+             fact = ( CZ(k)-0.0_RP ) * ( -1.9_RP+9.9_RP ) / ( 4000.0_RP-0.0_RP )
              velx(k,i,j) =  -9.9_RP + fact
              vely(k,i,j) =  -3.8_RP
           else
@@ -4088,14 +4098,14 @@ contains
 
        do k = KS, KE
           !--- mixing ratio of vapor
-          if ( GRID_CZ(k) <= 740.0_RP ) then ! below initial cloud top
-             fact = ( GRID_CZ(k)-0.0_RP ) * ( 13.8E-3_RP-16.0E-3_RP ) / ( 740.0_RP-0.0_RP )
+          if ( CZ(k) <= 740.0_RP ) then ! below initial cloud top
+             fact = ( CZ(k)-0.0_RP ) * ( 13.8E-3_RP-16.0E-3_RP ) / ( 740.0_RP-0.0_RP )
              qall = 16.0E-3_RP + fact
-          elseif ( GRID_CZ(k) <= 3260.0_RP ) then ! boundary
-             fact = ( GRID_CZ(k)-740.0_RP ) * ( 2.4E-3_RP-13.8E-3_RP ) / ( 3260.0_RP-740.0_RP )
+          elseif ( CZ(k) <= 3260.0_RP ) then ! boundary
+             fact = ( CZ(k)-740.0_RP ) * ( 2.4E-3_RP-13.8E-3_RP ) / ( 3260.0_RP-740.0_RP )
              qall = 13.8E-3_RP + fact
-          elseif( GRID_CZ(k) <= 4000.0_RP ) then
-             fact = ( GRID_CZ(k)-3260.0_RP ) * ( 1.8E-3_RP-2.4E-3_RP ) / ( 4000.0_RP-3260.0_RP )
+          elseif( CZ(k) <= 4000.0_RP ) then
+             fact = ( CZ(k)-3260.0_RP ) * ( 1.8E-3_RP-2.4E-3_RP ) / ( 4000.0_RP-3260.0_RP )
              qall = 2.4E-3_RP + fact
           else
              qall = 0.0_RP
@@ -4281,25 +4291,25 @@ contains
 
        do k = KS, KE
           !--- potential temperature
-          if ( GRID_CZ(k) < 520.0_RP ) then ! below initial cloud top
+          if ( CZ(k) < 520.0_RP ) then ! below initial cloud top
              potl(k,i,j) = 298.7_RP
-          elseif( GRID_CZ(k) < 1480.0_RP ) then
-             fact = ( GRID_CZ(k)-520.0_RP ) * ( 302.4_RP-298.7_RP ) / ( 1480.0_RP-520.0_RP )
+          elseif( CZ(k) < 1480.0_RP ) then
+             fact = ( CZ(k)-520.0_RP ) * ( 302.4_RP-298.7_RP ) / ( 1480.0_RP-520.0_RP )
              potl(k,i,j) = 298.7_RP + fact
-          elseif( GRID_CZ(k) < 2000.0_RP ) then
-             fact = ( GRID_CZ(k)-1480.0_RP ) * ( 308.2_RP-302.4_RP ) / ( 2000.0_RP-1480.0_RP )
+          elseif( CZ(k) < 2000.0_RP ) then
+             fact = ( CZ(k)-1480.0_RP ) * ( 308.2_RP-302.4_RP ) / ( 2000.0_RP-1480.0_RP )
              potl(k,i,j) = 302.4_RP + fact
           else
-             fact = ( GRID_CZ(k)-2000.0_RP ) * 3.65E-3_RP
+             fact = ( CZ(k)-2000.0_RP ) * 3.65E-3_RP
              potl(k,i,j) = 308.2_RP + fact
           endif
 
           !--- horizontal wind velocity
-          if ( GRID_CZ(k) <= 700.0_RP ) then ! below initial cloud top
+          if ( CZ(k) <= 700.0_RP ) then ! below initial cloud top
              velx(k,i,j) =  -8.75_RP
              vely(k,i,j) =   0.0_RP
           else
-             fact = 1.8E-3_RP * ( GRID_CZ(k)-700.0_RP )
+             fact = 1.8E-3_RP * ( CZ(k)-700.0_RP )
              velx(k,i,j) =  -8.75_RP + fact
              vely(k,i,j) =  0.0_RP
           endif
@@ -4333,17 +4343,17 @@ contains
 
        do k = KS, KE
           !--- mixing ratio of vapor
-          if ( GRID_CZ(k) <= 520.0_RP ) then ! below initial cloud top
-             fact = ( GRID_CZ(k)-0.0_RP ) * ( 16.3E-3_RP-17.0E-3_RP ) / ( 520.0_RP-0.0_RP )
+          if ( CZ(k) <= 520.0_RP ) then ! below initial cloud top
+             fact = ( CZ(k)-0.0_RP ) * ( 16.3E-3_RP-17.0E-3_RP ) / ( 520.0_RP-0.0_RP )
              qall = 17.0E-3_RP + fact
-          elseif ( GRID_CZ(k) <= 1480.0_RP ) then ! boundary
-             fact = ( GRID_CZ(k)-520.0_RP ) * ( 10.7E-3_RP-16.3E-3_RP ) / ( 1480.0_RP-520.0_RP )
+          elseif ( CZ(k) <= 1480.0_RP ) then ! boundary
+             fact = ( CZ(k)-520.0_RP ) * ( 10.7E-3_RP-16.3E-3_RP ) / ( 1480.0_RP-520.0_RP )
              qall = 16.3E-3_RP + fact
-          elseif( GRID_CZ(k) <= 2000.0_RP ) then
-             fact = ( GRID_CZ(k)-1480.0_RP ) * ( 4.2E-3_RP-10.7E-3_RP ) / ( 2000.0_RP-1480.0_RP )
+          elseif( CZ(k) <= 2000.0_RP ) then
+             fact = ( CZ(k)-1480.0_RP ) * ( 4.2E-3_RP-10.7E-3_RP ) / ( 2000.0_RP-1480.0_RP )
              qall = 10.7E-3_RP + fact
           else
-             fact = ( GRID_CZ(k)-2000.0_RP ) * ( -1.2E-6_RP )
+             fact = ( CZ(k)-2000.0_RP ) * ( -1.2E-6_RP )
              qall = 4.2E-3_RP + fact
           endif
 
@@ -4416,7 +4426,7 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       if( GRID_CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
+       if( CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
          RHOT(k,i,j) = ( pott(k,i,j)+2.0_RP*( rndm(k,i,j)-0.5_RP )*PERTURB_AMP_PT ) * DENS(k,i,j)
        else
          RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
@@ -4432,7 +4442,7 @@ contains
        do i = ISB, IEB
        do k = KS, KE
           !--- Super saturated air at initial
-          if( GRID_CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
+          if( CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
              QTRC(k,i,j,I_QV) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV &
                               + qc(k,i,j)
           else
@@ -4448,7 +4458,7 @@ contains
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
-          if( GRID_CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
+          if( CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
             QTRC(k,i,j,I_QV) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV
           else
             QTRC(k,i,j,I_QV) = qv(k,i,j)
@@ -4531,8 +4541,8 @@ contains
     use scale_landuse, only: &
        LANDUSE_calc_fact, &
        LANDUSE_frac_land
-    use scale_grid, only: &
-       GRID_DOMAIN_CENTER_X
+    use scale_atmos_grid_cartesC, only: &
+       DOMAIN_CENTER_X => ATMOS_GRID_CARTESC_DOMAIN_CENTER_X
     implicit none
 
     real(RP) :: LAND_SIZE
@@ -4570,7 +4580,7 @@ contains
     ! make landuse conditions
     do j = JSB, JEB
     do i = ISB, IEB
-       if ( abs( GRID_CX(i) - GRID_DOMAIN_CENTER_X ) < LAND_SIZE ) then
+       if ( abs( CX(i) - DOMAIN_CENTER_X ) < LAND_SIZE ) then
           LANDUSE_frac_land(i,j) = 1.0_RP
        else
           LANDUSE_frac_land(i,j) = 0.0_RP
@@ -4609,13 +4619,13 @@ contains
     call urban_setup
 
     ! 1/9 size of domain
-    dist = ( GRID_CXG(IMAX*PRC_NUM_X) - GRID_CXG(1) ) / 9.0_RP
+    dist = ( CXG(IMAX*PRC_NUM_X) - CXG(1) ) / 9.0_RP
 
     ! make landuse conditions
     do j = JSB, JEB
     do i = ISB, IEB
-       if (       GRID_CX(i) >= dist * 4.0_RP &
-            .AND. GRID_CX(i) <  dist * 5.0_RP ) then
+       if (       CX(i) >= dist * 4.0_RP &
+            .AND. CX(i) <  dist * 5.0_RP ) then
           LANDUSE_frac_land(i,j)  = 1.0_RP
           LANDUSE_frac_urban(i,j) = 1.0_RP
        else
@@ -4909,12 +4919,12 @@ contains
     qc_sfc  (1,1,1) = 0.0_RP
 
     do k = KS, KE
-       if    ( GRID_CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
+       if    ( CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
           pott(k,1,1) = SFC_THETA
-       elseif( GRID_CZ(k) <  ENV_L2_ZTOP ) then ! Layer 2
-          pott(k,1,1) = pott(k-1,1,1) + ENV_L2_TLAPS * ( GRID_CZ(k)-GRID_CZ(k-1) )
+       elseif( CZ(k) <  ENV_L2_ZTOP ) then ! Layer 2
+          pott(k,1,1) = pott(k-1,1,1) + ENV_L2_TLAPS * ( CZ(k)-CZ(k-1) )
        else                                ! Layer 3
-          pott(k,1,1) = pott(k-1,1,1) + ENV_L3_TLAPS * ( GRID_CZ(k)-GRID_CZ(k-1) )
+          pott(k,1,1) = pott(k-1,1,1) + ENV_L3_TLAPS * ( CZ(k)-CZ(k-1) )
        endif
        qv(k,1,1) = 0.0_RP
        qc(k,1,1) = 0.0_RP
@@ -4927,6 +4937,7 @@ contains
                                pott    (:,1,1), & ! [IN]
                                qv      (:,1,1), & ! [IN]
                                qc      (:,1,1), & ! [IN]
+                               CZ(:), FZ(:),    & ! [IN]
                                temp_sfc(1,1,1), & ! [OUT]
                                pres_sfc(1,1,1), & ! [IN]
                                pott_sfc(1,1,1), & ! [IN]
@@ -4943,9 +4954,9 @@ contains
                                    qsat(:,1,1)                            ) ! [OUT]
     qv_sfc(1,1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
     do k = KS, KE
-       if    ( GRID_CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
+       if    ( CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
           qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
-       elseif( GRID_CZ(k) <= ENV_L2_ZTOP ) then ! Layer 2
+       elseif( CZ(k) <= ENV_L2_ZTOP ) then ! Layer 2
           qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
        else                                ! Layer 3
           qv(k,1,1) = 0.0_RP
@@ -4959,6 +4970,7 @@ contains
                                pott    (:,1,1), & ! [IN]
                                qv      (:,1,1), & ! [IN]
                                qc      (:,1,1), & ! [IN]
+                               CZ(:), FZ(:),    & ! [IN]
                                temp_sfc(1,1,1), & ! [OUT]
                                pres_sfc(1,1,1), & ! [IN]
                                pott_sfc(1,1,1), & ! [IN]

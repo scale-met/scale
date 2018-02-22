@@ -21,7 +21,7 @@ module scale_atmos_refstate
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -86,6 +86,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_REFSTATE_setup
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -113,12 +115,22 @@ contains
     allocate( ATMOS_REFSTATE_dens(KA,IA,JA) )
     allocate( ATMOS_REFSTATE_pott(KA,IA,JA) )
     allocate( ATMOS_REFSTATE_qv  (KA,IA,JA) )
+    ATMOS_REFSTATE_pres(:,:,:) = UNDEF
+    ATMOS_REFSTATE_temp(:,:,:) = UNDEF
+    ATMOS_REFSTATE_dens(:,:,:) = UNDEF
+    ATMOS_REFSTATE_pott(:,:,:) = UNDEF
+    ATMOS_REFSTATE_qv  (:,:,:) = UNDEF
 
     allocate( ATMOS_REFSTATE1D_pres(KA) )
     allocate( ATMOS_REFSTATE1D_temp(KA) )
     allocate( ATMOS_REFSTATE1D_dens(KA) )
     allocate( ATMOS_REFSTATE1D_pott(KA) )
     allocate( ATMOS_REFSTATE1D_qv  (KA) )
+    ATMOS_REFSTATE1D_pres(:) = UNDEF
+    ATMOS_REFSTATE1D_temp(:) = UNDEF
+    ATMOS_REFSTATE1D_dens(:) = UNDEF
+    ATMOS_REFSTATE1D_pott(:) = UNDEF
+    ATMOS_REFSTATE1D_qv  (:) = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -185,8 +197,8 @@ contains
        DENS, RHOT, QTRC )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_grid, only: &
-       CZ => GRID_CZ
+    use scale_atmos_grid_cartesC, only: &
+       CZ => ATMOS_GRID_CARTESC_CZ
     implicit none
 
     real(RP), intent(in) :: DENS(KA,IA,JA)
@@ -332,8 +344,8 @@ contains
     use scale_const, only: &
        EPSvap => CONST_EPSvap, &
        Pstd => CONST_Pstd
-    use scale_grid_real, only: &
-       REAL_CZ
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_CZ
     use scale_comm, only: &
        COMM_horizontal_mean
     use scale_atmos_profile, only: &
@@ -343,6 +355,9 @@ contains
     use scale_atmos_saturation, only: &
        SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
        SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all
+    use scale_atmos_grid_cartesC, only: &
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       FZ => ATMOS_GRID_CARTESC_FZ
     implicit none
 
     real(RP) :: z(KA)
@@ -369,7 +384,7 @@ contains
     pott_sfc = ATMOS_REFSTATE_TEMP_SFC
     pres_sfc = Pstd
 
-    call COMM_horizontal_mean( z(:), REAL_CZ(:,:,:) )
+    call COMM_horizontal_mean( z(:), ATMOS_GRID_CARTESC_REAL_CZ(:,:,:) )
 
     call PROFILE_isa( KA, KS, KE, & ! [IN]
                       pott_sfc,   & ! [IN]
@@ -389,6 +404,8 @@ contains
                                pott(:),  & ! [IN]
                                qv  (:),  & ! [IN]
                                qc  (:),  & ! [IN]
+                               CZ  (:),  & ! [IN]
+                               FZ  (:),  & ! [IN]
                                temp_sfc, & ! [OUT]
                                pres_sfc, & ! [IN]
                                pott_sfc, & ! [IN]
@@ -414,6 +431,8 @@ contains
                                pott(:),  & ! [IN]
                                qv  (:),  & ! [IN]
                                qc  (:),  & ! [IN]
+                               CZ  (:),  & ! [IN]
+                               FZ  (:),  & ! [IN]
                                temp_sfc, & ! [OUT]
                                pres_sfc, & ! [IN]
                                pott_sfc, & ! [IN]
@@ -442,6 +461,9 @@ contains
     use scale_atmos_saturation, only: &
        SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
        SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all
+    use scale_atmos_grid_cartesC, only: &
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       FZ => ATMOS_GRID_CARTESC_FZ
     implicit none
 
     real(RP) :: temp(KA)
@@ -481,6 +503,8 @@ contains
                                pott(:),  & ! [IN]
                                qv  (:),  & ! [IN]
                                qc  (:),  & ! [IN]
+                               CZ  (:),  & ! [IN]
+                               FZ  (:),  & ! [IN]
                                temp_sfc, & ! [OUT]
                                pres_sfc, & ! [IN]
                                pott_sfc, & ! [IN]
@@ -506,6 +530,8 @@ contains
                                pott(:),  & ! [IN]
                                qv  (:),  & ! [IN]
                                qc  (:),  & ! [IN]
+                               CZ  (:),  & ! [IN]
+                               FZ  (:),  & ! [IN]
                                temp_sfc, & ! [OUT]
                                pres_sfc, & ! [IN]
                                pott_sfc, & ! [IN]
@@ -570,10 +596,10 @@ contains
   !> Update reference state profile (Horizontal average)
   subroutine ATMOS_REFSTATE_update( &
        DENS, RHOT, QTRC )
-    use scale_grid, only: &
-       GRID_CZ
-    use scale_grid_real, only: &
-       REAL_CZ
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_CZ
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_CZ
     use scale_time, only: &
        TIME_NOWSEC
     use scale_comm, only: &
@@ -622,8 +648,8 @@ contains
        call INTERP_VERT_xi2z( KA, KS, KE,     & ! [IN]
                               IA, ISB, IEB,   & ! [IN]
                               JA, JSB, JEB,   & ! [IN]
-                              GRID_CZ(:),     & ! [IN]
-                              REAL_CZ(:,:,:), & ! [IN]
+                              ATMOS_GRID_CARTESC_CZ(:),     & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
                               temp   (:,:,:), & ! [IN]
                               work   (:,:,:)  ) ! [OUT]
 
@@ -632,8 +658,8 @@ contains
        call INTERP_VERT_xi2z( KA, KS, KE,     & ! [IN]
                               IA, ISB, IEB,   & ! [IN]
                               JA, JSB, JEB,   & ! [IN]
-                              GRID_CZ(:),     & ! [IN]
-                              REAL_CZ(:,:,:), & ! [IN]
+                              ATMOS_GRID_CARTESC_CZ(:),     & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
                               pres   (:,:,:), & ! [IN]
                               work   (:,:,:)  ) ! [OUT]
 
@@ -642,8 +668,8 @@ contains
        call INTERP_VERT_xi2z( KA, KS, KE,     & ! [IN]
                               IA, ISB, IEB,   & ! [IN]
                               JA, JSB, JEB,   & ! [IN]
-                              GRID_CZ(:),     & ! [IN]
-                              REAL_CZ(:,:,:), & ! [IN]
+                              ATMOS_GRID_CARTESC_CZ(:),     & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
                               DENS   (:,:,:), & ! [IN]
                               work   (:,:,:)  ) ! [OUT]
 
@@ -652,8 +678,8 @@ contains
        call INTERP_VERT_xi2z( KA, KS, KE,     & ! [IN]
                               IA, ISB, IEB,   & ! [IN]
                               JA, JSB, JEB,   & ! [IN]
-                              GRID_CZ(:),     & ! [IN]
-                              REAL_CZ(:,:,:), & ! [IN]
+                              ATMOS_GRID_CARTESC_CZ(:),     & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
                               pott   (:,:,:), & ! [IN]
                               work   (:,:,:)  ) ! [OUT]
 
@@ -663,8 +689,8 @@ contains
           call INTERP_VERT_xi2z( KA, KS, KE,          & ! [IN]
                                  IA, ISB, IEB,        & ! [IN]
                                  JA, JSB, JEB,        & ! [IN]
-                                 GRID_CZ(:),          & ! [IN]
-                                 REAL_CZ(:,:,:),      & ! [IN]
+                                 ATMOS_GRID_CARTESC_CZ(:),          & ! [IN]
+                                 ATMOS_GRID_CARTESC_REAL_CZ(:,:,:),      & ! [IN]
                                  QTRC   (:,:,:,I_QV), & ! [IN]
                                  work   (:,:,:)       ) ! [OUT]
 
@@ -703,13 +729,13 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_grid, only: &
-       GRID_CZ, &
-       GRID_FZ
-    use scale_grid_real, only: &
-       REAL_PHI, &
-       REAL_CZ,  &
-       REAL_FZ
+    use scale_atmos_grid_cartesC, only: &
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       FZ => ATMOS_GRID_CARTESC_FZ
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI, &
+       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ,  &
+       REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_interp_vert, only: &
        INTERP_VERT_z2xi
     use scale_atmos_hydrostatic, only: &
@@ -751,7 +777,7 @@ contains
                            IA, ISB, IEB,   & ! [IN]
                            JA, JSB, JEB,   & ! [IN]
                            REAL_CZ(:,:,:), & ! [IN]
-                           GRID_CZ(:),     & ! [IN]
+                           CZ(:),          & ! [IN]
                            work   (:,:,:), & ! [IN]
                            pott   (:,:,:)  ) ! [OUT]
 
@@ -766,7 +792,7 @@ contains
                            IA, ISB, IEB,   & ! [IN]
                            JA, JSB, JEB,   & ! [IN]
                            REAL_CZ(:,:,:), & ! [IN]
-                           GRID_CZ(:),     & ! [IN]
+                           CZ(:),          & ! [IN]
                            work   (:,:,:), & ! [IN]
                            qv     (:,:,:)  ) ! [OUT]
 
@@ -774,7 +800,7 @@ contains
 
     !--- build up density to TOA (1D)
     qc_1D = 0.0_RP
-    dz_1D = GRID_FZ(KE) - GRID_CZ(KE)
+    dz_1D = FZ(KE) - CZ(KE)
 
     call HYDROSTATIC_buildrho_atmos_0D( dens_toa_1D,               & ! [OUT]
                                         temp_toa_1D,               & ! [OUT]
@@ -914,9 +940,9 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        EPS => CONST_EPS
-    use scale_grid, only: &
-       FDZ  => GRID_FDZ,  &
-       RCDZ => GRID_RCDZ
+    use scale_atmos_grid_cartesC, only: &
+       FDZ  => ATMOS_GRID_CARTESC_FDZ,  &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ
     implicit none
 
     real(RP), intent(inout) :: phi(KA)

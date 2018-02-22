@@ -37,7 +37,7 @@ ifneq ($(origin ENABLE_OPENACC),undefined)
 endif
 
 ifneq ($(origin AGGRESSIVE),undefined)
-   SCALE_USE_AGRESSIVEOPT ?= $(AGGRESSIVE)
+   SCALE_USE_AGGRESSIVEOPT ?= $(AGGRESSIVE)
 endif
 
 ifneq ($(origin DISABLE_VEC),undefined)

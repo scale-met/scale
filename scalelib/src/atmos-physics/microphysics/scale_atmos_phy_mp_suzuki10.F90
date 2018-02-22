@@ -36,7 +36,7 @@ module scale_atmos_phy_mp_suzuki10
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
 
   use scale_const, only: &
      pi  => CONST_PI,  &
@@ -411,9 +411,9 @@ contains
     use scale_comm, only: &
        COMM_world,    &
        COMM_datatype
-    use scale_grid, only: &
-       CDZ => GRID_CDZ, &
-       CZ  => GRID_CZ
+    use scale_atmos_grid_cartesC, only: &
+       CDZ => ATMOS_GRID_CARTESC_CDZ, &
+       CZ  => ATMOS_GRID_CARTESC_CZ
     use scale_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP
     use scale_tracer, only: &
@@ -834,7 +834,7 @@ contains
        EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_tracer, only: &
@@ -1156,7 +1156,7 @@ contains
 !                          * 10.0_RP**( 1.19_RP * exp( -bparam*bparam ) )
 !         ! convert from [#/m^2/um/s] -> [kg/m^3/unit log (m)]
 !         SFLX_AERO(i,j,n) = SFLX_AERO(i,j,n) / DENS(KS,i,j) &
-!                          / GRID_CDZ(KS) * rada( n ) / 3.0_RP * dt * expxactr( n )
+!                          / CDZ(KS) * rada( n ) / 3.0_RP * dt * expxactr( n )
 !         Gaer_ijk(n,ijk) = Gaer_ijk(n,ijk) + SFLX_AERO(i,j,n)/dxaer
 !        endif
 !       enddo
@@ -4076,7 +4076,7 @@ contains
        cldfrac,       &
        QTRC,          &
        mask_criterion )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer, only: &
        QA
     implicit none
@@ -4129,7 +4129,7 @@ contains
        QTRC0, &
        DENS0, &
        TEMP0  )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_tracer, only: &
@@ -4260,7 +4260,7 @@ contains
   subroutine ATMOS_PHY_MP_suzuki10_Mixingratio( &
        Qe,   &
        QTRC0 )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_tracer, only: &

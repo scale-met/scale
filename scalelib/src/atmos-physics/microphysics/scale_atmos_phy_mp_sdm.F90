@@ -20,7 +20,7 @@ module scale_atmos_phy_mp_sdm
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_atmos_hydrometeor, only: &
      N_HYD
   !-----------------------------------------------------------------------------
@@ -130,7 +130,7 @@ contains
        EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_tracer, only: &
@@ -168,7 +168,7 @@ contains
        cldfrac,       &
        QTRC,          &
        mask_criterion )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer, only: &
        QA
     implicit none
@@ -190,7 +190,7 @@ contains
        QTRC0, &
        DENS0, &
        TEMP0  )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer, only: &
        QA
     use scale_atmos_hydrometeor, only: &
@@ -214,7 +214,7 @@ contains
        QTRC0 )
     use scale_const, only: &
        EPS => CONST_EPS
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer, only: &
        QA
     use scale_atmos_hydrometeor, only: &

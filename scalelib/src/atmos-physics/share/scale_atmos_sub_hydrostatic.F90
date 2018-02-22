@@ -16,7 +16,7 @@ module scale_atmos_hydrostatic
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
 
   use scale_const, only: &
      GRAV    => CONST_GRAV,    &
@@ -31,12 +31,9 @@ module scale_atmos_hydrostatic
      LAPSdry => CONST_LAPSdry, &
      P00     => CONST_PRE00,   &
      THERMODYN_TYPE => CONST_THERMODYN_TYPE
-  use scale_grid, only: &
-     GRID_CZ, &
-     GRID_FDZ
-  use scale_grid_real, only: &
-     REAL_CZ, &
-     REAL_FZ
+  use scale_atmos_grid_cartesC_real, only: &
+     CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+     FZ => ATMOS_GRID_CARTESC_REAL_FZ
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -186,6 +183,8 @@ contains
        pott,     &
        qv,       &
        qc,       &
+       cz,       &
+       fz,       &
        temp_sfc, &
        pres_sfc, &
        pott_sfc, &
@@ -201,6 +200,8 @@ contains
     real(RP), intent(in)  :: pott(KA) !< potential temperature [K]
     real(RP), intent(in)  :: qv  (KA) !< water vapor           [kg/kg]
     real(RP), intent(in)  :: qc  (KA) !< liquid water          [kg/kg]
+    real(RP), intent(in)  :: cz  (KA)
+    real(RP), intent(in)  :: fz  (0:KA)
 
     real(RP), intent(out) :: temp_sfc !< surface temperature           [K]
     real(RP), intent(in)  :: pres_sfc !< surface pressure              [Pa]
@@ -222,6 +223,10 @@ contains
     real(RP) :: dens_s, dhyd, dgrd
     integer  :: ite
     logical  :: converged
+
+    real(RP) :: dz(KA)
+
+    integer :: k
     !---------------------------------------------------------------------------
 
     !--- from surface to lowermost atmosphere
@@ -248,13 +253,19 @@ contains
     dens_sfc   = P00 / Rtot_sfc / pott_sfc * ( pres_sfc/P00 )**CVovCP_sfc
     temp_sfc   = pres_sfc / ( dens_sfc * Rtot_sfc )
 
+    dz(KS-1) = CZ(KS) - FZ(KS-1)
+    do k = KS, KE-1
+       dz(k) = CZ(k+1) - CZ(k)
+    end do
+
+
     ! make density at lowermost cell center
     if ( HYDROSTATIC_uselapserate ) then
 
        CPovR  = CPtot / Rtot
        CVovCP = 1.0_RP / CPovCV
 
-       temp(KS) = pott_sfc - LAPSdry * GRID_CZ(KS) ! use dry lapse rate
+       temp(KS) = pott_sfc - LAPSdry * dz(KS-1) ! use dry lapse rate
        pres(KS) = P00 * ( temp(KS)/pott(KS) )**CPovR
        dens(KS) = P00 / Rtot / pott(KS) * ( pres(KS)/P00 )**CVovCP
 
@@ -275,11 +286,11 @@ contains
           dens_s = dens(KS)
 
           dhyd = + ( P00 * ( dens_sfc * Rtot_sfc * pott_sfc / P00 )**CPovCV_sfc &
-                   - P00 * ( dens_s   * Rtot     * pott(KS) / P00 )**CPovCV     ) / GRID_CZ(KS) & ! dp/dz
+                   - P00 * ( dens_s   * Rtot     * pott(KS) / P00 )**CPovCV     ) / dz(KS-1) & ! dp/dz
                  - GRAV * 0.5_RP * ( dens_sfc + dens_s )                                     ! rho*g
 
-          dgrd = - P00 * ( Rtot * pott(KS) / P00 )**CPovCV / GRID_CZ(KS) &
-                 * CPovCV * dens_s**RovCV                           &
+          dgrd = - P00 * ( Rtot * pott(KS) / P00 )**CPovCV / dz(KS-1) &
+                 * CPovCV * dens_s**RovCV                             &
                  - 0.5_RP * GRAV
 
           dens(KS) = dens_s - dhyd/dgrd
@@ -301,7 +312,8 @@ contains
                                               pres(:), & ! [OUT]
                                               pott(:), & ! [IN]
                                               qv  (:), & ! [IN]
-                                              qc  (:)  ) ! [IN]
+                                              qc  (:), & ! [IN]
+                                              dz  (:)  ) ! [IN]
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_1D
@@ -365,11 +377,11 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-       dz(KS,i,j) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ! distance from surface to cell center
+       dz(KS,i,j) = CZ(KS,i,j) - FZ(KS-1,i,j) ! distance from surface to cell center
        do k = KS+1, KE
-          dz(k,i,j) = REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j) ! distance from cell center to cell center
+          dz(k,i,j) = CZ(k,i,j) - CZ(k-1,i,j) ! distance from cell center to cell center
        enddo
-       dz(KE+1,i,j) = REAL_FZ(KE,i,j) - REAL_CZ(KE,i,j) ! distance from cell center to TOA
+       dz(KE+1,i,j) = FZ(KE,i,j) - CZ(KE,i,j) ! distance from cell center to TOA
     enddo
     enddo
 
@@ -427,7 +439,7 @@ contains
           CPovR  = CPtot(i,j) / Rtot(i,j)
           CVovCP = 1.0_RP / CPovCV(i,j)
 
-          temp(KS,i,j) = pott_sfc(1,i,j) - LAPSdry * ( REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ) ! use dry lapse rate
+          temp(KS,i,j) = pott_sfc(1,i,j) - LAPSdry * ( CZ(KS,i,j) - FZ(KS-1,i,j) ) ! use dry lapse rate
           pres(KS,i,j) = P00 * ( temp(KS,i,j)/pott(KS,i,j) )**CPovR
           dens(KS,i,j) = P00 / Rtot(i,j) / pott(KS,i,j) * ( pres(KS,i,j)/P00 )**CVovCP
        enddo
@@ -547,11 +559,11 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-       dz(KS,i,j) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ! distance from surface to cell center
+       dz(KS,i,j) = CZ(KS,i,j) - FZ(KS-1,i,j) ! distance from surface to cell center
        do k = KS+1, KE
-          dz(k,i,j) = REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j) ! distance from cell center to cell center
+          dz(k,i,j) = CZ(k,i,j) - CZ(k-1,i,j) ! distance from cell center to cell center
        enddo
-       dz(KE+1,i,j) = REAL_FZ(KE,i,j) - REAL_CZ(KE,i,j) ! distance from cell center to TOA
+       dz(KE+1,i,j) = FZ(KE,i,j) - CZ(KE,i,j) ! distance from cell center to TOA
     enddo
     enddo
 
@@ -729,7 +741,8 @@ contains
        pres, &
        pott, &
        qv,   &
-       qc    )
+       qc,   &
+       dz    )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -740,6 +753,7 @@ contains
     real(RP), intent(in)    :: pott(KA) !< potential temperature [K]
     real(RP), intent(in)    :: qv  (KA) !< water vapor           [kg/kg]
     real(RP), intent(in)    :: qc  (KA) !< liquid water          [kg/kg]
+    real(RP), intent(in)    :: dz  (KA)
 
     real(RP) :: Rtot  (KA)
     real(RP) :: CVtot (KA)
@@ -782,11 +796,11 @@ contains
           dens_s = dens(k)
 
           dhyd = + ( P00 * ( dens(k-1) * Rtot(k-1) * pott(k-1) / P00 )**CPovCV(k-1) &
-                   - P00 * ( dens_s    * Rtot(k  ) * pott(k  ) / P00 )**CPovCV(k  ) ) / GRID_FDZ(k-1) & ! dpdz
-                 - GRAV * 0.5_RP * ( dens(k-1) + dens_s )                                          ! rho*g
+                   - P00 * ( dens_s    * Rtot(k  ) * pott(k  ) / P00 )**CPovCV(k  ) ) / dz(k-1) & ! dpdz
+                 - GRAV * 0.5_RP * ( dens(k-1) + dens_s )                                         ! rho*g
 
-          dgrd = - P00 * ( Rtot(k) * pott(k) / P00 )**CPovCV(k) / GRID_FDZ(k-1) &
-                 * CPovCV(k) * dens_s**RovCV                               &
+          dgrd = - P00 * ( Rtot(k) * pott(k) / P00 )**CPovCV(k) / dz(k-1) &
+                 * CPovCV(k) * dens_s**RovCV                              &
                  - 0.5_RP * GRAV
 
           dens(k) = dens_s - dhyd/dgrd
@@ -1273,17 +1287,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Build up density from surface (1D)
   subroutine ATMOS_HYDROSTATIC_buildrho_bytemp_1D( &
-       dens,     &
-       pott,     &
-       pres,     &
-       temp,     &
-       qv,       &
-       qc,       &
-       pott_sfc, &
-       pres_sfc, &
-       temp_sfc, &
-       qv_sfc,   &
-       qc_sfc    )
+       dens, pott, pres, temp,       &
+       qv, qc,                       &
+       cz, fz,                       &
+       pott_sfc, pres_sfc, temp_sfc, &
+       qv_sfc, qc_sfc                )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -1294,6 +1302,8 @@ contains
     real(RP), intent(in)  :: temp(KA) !< temperature           [K]
     real(RP), intent(in)  :: qv  (KA) !< water vapor           [kg/kg]
     real(RP), intent(in)  :: qc  (KA) !< liquid water          [kg/kg]
+    real(RP), intent(in)  :: cz  (KA)
+    real(RP), intent(in)  :: fz  (0:KA)
 
     real(RP), intent(out) :: pott_sfc !< surface potential temperature [K]
     real(RP), intent(in)  :: pres_sfc !< surface pressure              [Pa]
@@ -1314,6 +1324,10 @@ contains
     real(RP) :: dens_s, dhyd, dgrd
     integer  :: ite
     logical  :: converged
+
+    real(RP) :: dz(KA)
+
+    integer :: k
     !---------------------------------------------------------------------------
 
     !--- from surface to lowermost atmosphere
@@ -1345,6 +1359,11 @@ contains
     dens_s   = 0.0_RP
     dens(KS) = dens_sfc ! first guess
 
+    dz(KS-1) = CZ(KS) - FZ(KS-1)
+    do k = KS, KE-1
+       dz(k) = CZ(k+1) - CZ(k)
+    end do
+
     converged = .false.
     do ite = 1, itelim
        if ( abs(dens(KS)-dens_s) <= criteria ) then
@@ -1355,10 +1374,10 @@ contains
        dens_s = dens(KS)
 
        dhyd = + ( dens_sfc * Rtot_sfc * temp_sfc &
-                - dens_s   * Rtot     * temp(KS) ) / GRID_CZ(KS) & ! dp/dz
+                - dens_s   * Rtot     * temp(KS) ) / dz(KS-1) & ! dp/dz
               - GRAV * 0.5_RP * ( dens_sfc + dens_s )         ! rho*g
 
-       dgrd = - Rtot * temp(KS) / GRID_CZ(KS) &
+       dgrd = - Rtot * temp(KS) / dz(KS-1) &
               - 0.5_RP * GRAV
 
        dens(KS) = dens_s - dhyd/dgrd
@@ -1378,7 +1397,8 @@ contains
                                                      pres(:), & ! [OUT]
                                                      temp(:), & ! [IN]
                                                      qv  (:), & ! [IN]
-                                                     qc  (:)  ) ! [IN]
+                                                     qc  (:), & ! [IN]
+                                                     dz  (:)  ) ! [IN]
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_bytemp_1D
@@ -1472,7 +1492,7 @@ contains
     ! make density at lowermost cell center
     do j = JSB, JEB
     do i = ISB, IEB
-       DZ = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j)
+       DZ = CZ(KS,i,j) - FZ(KS-1,i,j)
 
        dens_s       = 0.0_RP
        dens(KS,i,j) = dens_sfc(1,i,j) ! first guess
@@ -1525,7 +1545,8 @@ contains
        pres, &
        temp, &
        qv,   &
-       qc    )
+       qc,   &
+       dz    )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -1536,6 +1557,7 @@ contains
     real(RP), intent(in)    :: temp(KA) !< temperature           [K]
     real(RP), intent(in)    :: qv  (KA) !< water vapor           [kg/kg]
     real(RP), intent(in)    :: qc  (KA) !< liquid water          [kg/kg]
+    real(RP), intent(in)    :: dz  (KA)
 
     real(RP) :: Rtot  (KA)
     real(RP) :: CVtot (KA)
@@ -1575,10 +1597,10 @@ contains
           dens_s = dens(k)
 
           dhyd = + ( dens(k-1) * Rtot(k-1) * temp(k-1)  &
-                   - dens_s    * Rtot(k  ) * temp(k  ) ) / GRID_FDZ(k-1) & ! dp/dz
-                 - GRAV * 0.5_RP * ( dens(k-1) + dens_s )             ! rho*g
+                   - dens_s    * Rtot(k  ) * temp(k  ) ) / dz(k-1) & ! dp/dz
+                 - GRAV * 0.5_RP * ( dens(k-1) + dens_s )            ! rho*g
 
-          dgrd = - Rtot(k) * temp(k) / GRID_FDZ(k-1) &
+          dgrd = - Rtot(k) * temp(k) / dz(k-1) &
                  - 0.5_RP * GRAV
 
           dens(k) = dens_s - dhyd/dgrd
@@ -1653,7 +1675,7 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS+1, KE
-       DZ = REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j)
+       DZ = CZ(k,i,j) - CZ(k-1,i,j)
 
        dens_s      = 0.0_RP
        dens(k,i,j) = dens(k-1,i,j) ! first guess

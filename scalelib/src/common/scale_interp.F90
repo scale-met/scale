@@ -20,7 +20,7 @@ module scale_interp
   use scale_stdio
   use scale_prof
   use scale_debug
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   !-----------------------------------------------------------------------------

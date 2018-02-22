@@ -20,7 +20,7 @@ module scale_atmos_dyn_tinteg_short
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   !-----------------------------------------------------------------------------
@@ -49,7 +49,7 @@ module scale_atmos_dyn_tinteg_short
           BND_W, BND_E, BND_S, BND_N,               & ! (in)
           dt                                        ) ! (in)
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_index
        real(RP), intent(inout) :: DENS(KA,IA,JA)
        real(RP), intent(inout) :: MOMZ(KA,IA,JA)
@@ -132,7 +132,7 @@ contains
        ATMOS_DYN_Tinteg_short_TYPE )
 
     use scale_precision
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_index
     use scale_process, only: &
        PRC_MPIstop

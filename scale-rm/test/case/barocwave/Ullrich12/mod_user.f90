@@ -19,7 +19,7 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
 
   use scale_time, only: &
@@ -171,13 +171,11 @@ contains
     use scale_rm_process, only: &
        PRC_HAS_N, &
        PRC_HAS_S
-    use scale_grid, only : &
-       CX => GRID_CX, &
-       CZ => GRID_CZ
+    use scale_atmos_grid_cartesC, only : &
+       CX => ATMOS_GRID_CARTESC_CX, &
+       CZ => ATMOS_GRID_CARTESC_CZ
     use scale_time, only: &
        DTSEC => TIME_DTSEC
-    use scale_gridtrans
-    
     use scale_file_history, only: &
        FILE_HISTORY_in
     implicit none

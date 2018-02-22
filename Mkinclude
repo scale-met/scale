@@ -2,18 +2,10 @@
 
 
 # Backward compatibility of SCALE environments for ver < 5.1
-include $(TOPDIR)/utils/Make_compatibility
+include $(TOPDIR)/utils/make/Make_compatibility
 
-ifeq ($(SCALE_USE_FIXEDINDEX),T)
-   FFLAGS   += -DFIXEDINDEX
-   inc_index = $(INDEX_DIR)/inc_index.h
-   OBJ_DIR   = $(BUILD_DIR)
-   INST_DIR  = $(BUILD_DIR)
-else
-   inc_index =
-   OBJ_DIR   = .
-   INST_DIR  = $(TOPDIR)
-endif
+OBJ_DIR   = ./.libs
+INST_DIR  = $(TOPDIR)
 
 ifeq ($(origin BINDIR),undefined)
    BINDIR = $(INST_DIR)/bin
@@ -32,18 +24,15 @@ SCALELIBDIR = $(TOPDIR)/scalelib
 SCALERMDIR  = $(TOPDIR)/scale-rm
 SCALEGMDIR  = $(TOPDIR)/scale-gm
 
-ifeq ($(origin INDEX_DIR), undefined)
-   INDEX_DIR = $(SCALELIBDIR)/include
-endif
-
 ifeq ($(SCALE_DEBUG),T)
    FFLAGS = $(FFLAGS_DEBUG) $(FFLAGS_SYSDEPEND) -DDEBUG
    CFLAGS = $(CFLAGS_DEBUG) $(CFLAGS_SYSDEPEND)
 else
    FFLAGS = $(FFLAGS_FAST)  $(FFLAGS_SYSDEPEND)
    CFLAGS = $(CFLAGS_FAST)  $(CFLAGS_SYSDEPEND)
-   ifeq ($(SCALE_USE_AGRESSIVEOPT),T)
+   ifeq ($(SCALE_USE_AGGRESSIVEOPT),T)
       FFLAGS += $(FFLAGS_AGGRESSIVE)
+      CFLAGS += $(CFLAGS_AGGRESSIVE)
    endif
    ifeq ($(SCALE_QUICKDEBUG),T)
       FFLAGS += $(FFLAGS_QUICKDEBUG) -DQUICKDEBUG
@@ -68,7 +57,7 @@ endif
 
 # NetCDF library setting
 # library location are inquired in order of: environment variable->Makedef.XXX->here
-include $(TOPDIR)/utils/Make_checknetcdf
+include $(TOPDIR)/utils/make/Make_checknetcdf
 
 ifeq ($(SCALE_ENABLE_PNETCDF),T)
    SCALE_NETCDF_INCLUDE += -DPNETCDF

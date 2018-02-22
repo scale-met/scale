@@ -17,8 +17,7 @@ module scale_ocean_phy_const
   use scale_stdio
   use scale_prof
   use scale_debug
-  use scale_grid_index
-  use scale_ocean_grid_index
+  use scale_ocean_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -68,11 +67,11 @@ contains
        dt               )
     implicit none
 
-    real(RP), intent(out) :: OCEAN_TEMP_t   (OKMAX,IA,JA)
-    real(RP), intent(in)  :: OCEAN_TEMP     (OKMAX,IA,JA)
-    real(RP), intent(in)  :: OCEAN_SFLX_WH  (IA,JA)
-    real(RP), intent(in)  :: OCEAN_SFLX_prec(IA,JA)
-    real(RP), intent(in)  :: OCEAN_SFLX_evap(IA,JA)
+    real(RP), intent(out) :: OCEAN_TEMP_t   (OKMAX,OIA,OJA)
+    real(RP), intent(in)  :: OCEAN_TEMP     (OKMAX,OIA,OJA)
+    real(RP), intent(in)  :: OCEAN_SFLX_WH  (OIA,OJA)
+    real(RP), intent(in)  :: OCEAN_SFLX_prec(OIA,OJA)
+    real(RP), intent(in)  :: OCEAN_SFLX_evap(OIA,OJA)
     real(DP), intent(in)  :: dt
     !---------------------------------------------------------------------------
 

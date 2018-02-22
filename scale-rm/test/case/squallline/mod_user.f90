@@ -20,7 +20,7 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -82,8 +82,8 @@ contains
        PRC_MPIstop
     use scale_time, only: &
        NOWSEC => TIME_NOWSEC
-    use scale_grid, only: &
-       CZ => GRID_CZ
+    use scale_atmos_grid_cartesC, only: &
+       CZ => ATMOS_GRID_CARTESC_CZ
     implicit none
 
     namelist / PARAM_USER / &
@@ -167,9 +167,9 @@ contains
        DENS, &
        RHOT, &
        QTRC
-    use scale_grid, only: &
-       CX => GRID_CX, &
-       CY => GRID_CY
+    use scale_atmos_grid_cartesC, only: &
+       CX => ATMOS_GRID_CARTESC_CX, &
+       CY => ATMOS_GRID_CARTESC_CY
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait

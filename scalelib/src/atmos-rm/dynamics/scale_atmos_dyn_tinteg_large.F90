@@ -20,7 +20,7 @@ module scale_atmos_dyn_tinteg_large
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   !-----------------------------------------------------------------------------
@@ -60,7 +60,7 @@ module scale_atmos_dyn_tinteg_large
           USE_AVERAGE,                                          &
           DTL, DTS                                              )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_index
        use scale_tracer
        use scale_atmos_boundary, only: &
@@ -183,7 +183,7 @@ contains
   subroutine ATMOS_DYN_Tinteg_large_setup( &
        ATMOS_DYN_Tinteg_large_TYPE )
     use scale_precision
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_index
     use scale_process, only: &
        PRC_MPIstop

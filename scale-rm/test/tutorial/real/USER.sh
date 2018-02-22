@@ -4,7 +4,7 @@
 #
 # &PARAM_NEST            (ALL configs)
 # &PARAM_TIME            (ALL configs)
-# &PARAM_HISTORY         (run config)
+# &PARAM_FILE_HISTORY    (run config)
 # &PARAM_ATMOS_BOUNDARY  (run config)
 # &PARAM_ATMOS_REFSTATE  (run config)
 #
@@ -42,14 +42,16 @@ TIME_DT_URBAN=(        "450.0" ) # required parameters for each domain - unit: S
 
 #################################################
 #
-# &PARAM_PRC          (ALL configs)
-# &PARAM_INDEX        (ALL configs)
-# &PARAM_LAND_INDEX   (ALL configs)
-# &PARAM_LAND_GRID    (ALL configs)
-# &PARAM_URBAN_INDEX  (ALL configs)
-# &PARAM_URBAN_GRID   (ALL configs)
-# &PARAM_GRID         (ALL configs)
-# &PARAM_MAPPROJ      (ALL configs)
+# &PARAM_PRC                      (ALL configs)
+# &PARAM_ATMOS_GRID_CARTESC_INDEX (ALL configs)
+# &PARAM_ATMOS_GRID_CARTESC       (ALL configs)
+# &PARAM_OCEAN_GRID_CARTESC_INDEX (ALL configs)
+# &PARAM_OCEAN_GRID_CARTESC       (ALL configs)
+# &PARAM_LAND_GRID_CARTESC_INDEX  (ALL configs)
+# &PARAM_LAND_GRID_CARTESC        (ALL configs)
+# &PARAM_URBAN_CARTESC_INDEX      (ALL configs)
+# &PARAM_URBAN_GRID_CARTESC       (ALL configs)
+# &PARAM_MAPPROJECTION            (ALL configs)
 #
 #################################################
 
@@ -84,11 +86,11 @@ BUFFER_DZ=( "5000.0"   ) # required parameters for each domain
 BUFFER_DX=( "400000.0" ) # required parameters for each domain
 BUFFER_DY=( "400000.0" ) # required parameters for each domain
 
-MPRJ_BASEPOINT_LON="135.220404"
-MPRJ_BASEPOINT_LAT="34.653396"
-MPRJ_TYPE="LC"
-MPRJ_LC_LAT1="30.0"
-MPRJ_LC_LAT2="40.0"
+MAPPROJECTION_BASEPOINT_LON="135.220404"
+MAPPROJECTION_BASEPOINT_LAT="34.653396"
+MAPPROJECTION_TYPE="LC"
+MAPPROJECTION_LC_LAT1="30.0"
+MAPPROJECTION_LC_LAT2="40.0"
 
 #################################################
 #

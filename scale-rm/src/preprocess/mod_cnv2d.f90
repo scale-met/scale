@@ -15,7 +15,7 @@ module mod_cnv2d
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -73,9 +73,9 @@ contains
        D2R  => CONST_D2R
     use scale_comm, only: &
        COMM_horizontal_min
-    use scale_grid_real, only: &
-       REAL_DLAT, &
-       REAL_DLON
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_DLAT => ATMOS_GRID_CARTESC_REAL_DLAT, &
+       REAL_DLON => ATMOS_GRID_CARTESC_REAL_DLON
     implicit none
 
     NAMELIST / PARAM_CNV2D / &
@@ -181,9 +181,9 @@ contains
        D2R   => CONST_D2R
     use scale_calendar, only: &
        CALENDAR_unit2sec
-    use scale_grid_real, only: &
-       REAL_LATY, &
-       REAL_LONX
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_LATY => ATMOS_GRID_CARTESC_REAL_LATY, &
+       REAL_LONX => ATMOS_GRID_CARTESC_REAL_LONX
     implicit none
 
     integer                :: GrADS_NLAT         = -1        ! number of latitude  tile
@@ -497,9 +497,9 @@ contains
        PI     => CONST_PI,     &
        EPS    => CONST_EPS,    &
        D2R    => CONST_D2R
-    use scale_grid_real, only: &
-       REAL_LAT, &
-       REAL_LON
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT, &
+       REAL_LON => ATMOS_GRID_CARTESC_REAL_LON
     implicit none
 
     real(RP),              intent(in)  :: DOMAIN_LATS
@@ -859,9 +859,9 @@ contains
        PI     => CONST_PI,     &
        EPS    => CONST_EPS,    &
        D2R    => CONST_D2R
-    use scale_grid_real, only: &
-       REAL_LATY, &
-       REAL_LONX
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_LATY => ATMOS_GRID_CARTESC_REAL_LATY, &
+       REAL_LONX => ATMOS_GRID_CARTESC_REAL_LONX
     implicit none
 
     real(RP),              intent(in)  :: DOMAIN_LATS

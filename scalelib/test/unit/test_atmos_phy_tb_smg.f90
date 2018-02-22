@@ -2,7 +2,7 @@ module test_atmos_phy_tb_smg
 
   !-----------------------------------------------------------------------------
   use scale_precision
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   use dc_test, only: &
      AssertEqual, &
@@ -71,12 +71,12 @@ contains
   use scale_atmos_phy_tb, only: &
      ATMOS_PHY_TB_config, &
      ATMOS_PHY_TB_setup
-  use scale_grid, only: &
-     CDZ => GRID_CDZ, &
-     CDX => GRID_CDX, &
-     CDY => GRID_CDX, &
-     CZ  => GRID_CZ, &
-     GRID_CBFZ
+  use scale_atmos_grid_cartesC, only: &
+     CDZ  => ATMOS_GRID_CARTESC_CDZ, &
+     CDX  => ATMOS_GRID_CARTESC_CDX, &
+     CDY  => ATMOS_GRID_CARTESC_CDX, &
+     CZ   => ATMOS_GRID_CARTESC_CZ,  &
+     CBFZ => ATMOS_GRID_CARTESC_CBFZ
   use scale_process, only: &
      PRC_myrank
   !-----------------------------------------------------------------------------
@@ -145,7 +145,7 @@ contains
 
   KME = KE
   do k = KS+1, KE
-     if ( GRID_CBFZ(k) > 0.0_RP ) then
+     if ( CBFZ(k) > 0.0_RP ) then
         KME = k - 1
         exit
      end if
@@ -254,8 +254,8 @@ end subroutine test_constant
 subroutine test_big
   use scale_const, only: &
      GRAV => CONST_GRAV
-  use scale_grid, only: &
-     RCDZ => GRID_RCDZ
+  use scale_atmos_grid_cartesC, only: &
+     RCDZ => ATMOS_GRID_CARTESC_RCDZ
   use scale_atmos_phy_tb, only: &
      ATMOS_PHY_TB
 

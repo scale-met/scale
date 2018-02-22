@@ -69,26 +69,26 @@ contains
        CALENDAR_setup
     use scale_random, only: &
        RANDOM_setup
-    use scale_grid_index, only: &
-       GRID_INDEX_setup
-    use scale_grid, only: &
-       GRID_setup, &
+    use scale_atmos_grid_cartesC_index, only: &
+       ATMOS_GRID_CARTESC_INDEX_setup
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_setup, &
        DX, &
        DY
-    use scale_grid_nest, only: &
-       NEST_setup
-    use scale_ocean_grid_index, only: &
-       OCEAN_GRID_INDEX_setup
-    use scale_ocean_grid, only: &
-       OCEAN_GRID_setup
-    use scale_land_grid_index, only: &
-       LAND_GRID_INDEX_setup
-    use scale_land_grid, only: &
-       LAND_GRID_setup
-    use scale_urban_grid_index, only: &
-       URBAN_GRID_INDEX_setup
-    use scale_urban_grid, only: &
-       URBAN_GRID_setup
+    use scale_comm_cartesC_nest, only: &
+       COMM_CARTESC_NEST_setup
+    use scale_ocean_grid_cartesC_index, only: &
+       OCEAN_GRID_CARTESC_INDEX_setup
+    use scale_ocean_grid_cartesC, only: &
+       OCEAN_GRID_CARTESC_setup
+    use scale_land_grid_cartesC_index, only: &
+       LAND_GRID_CARTESC_INDEX_setup
+    use scale_land_grid_cartesC, only: &
+       LAND_GRID_CARTESC_setup
+    use scale_urban_grid_cartesC_index, only: &
+       URBAN_GRID_CARTESC_INDEX_setup
+    use scale_urban_grid_cartesC, only: &
+       URBAN_GRID_CARTESC_setup
     use scale_file_cartesC, only: &
        FILE_CARTESC_setup, &
        FILE_CARTESC_cleanup
@@ -99,10 +99,10 @@ contains
        TOPO_setup
     use scale_landuse, only: &
        LANDUSE_setup
-    use scale_grid_real, only: &
-       REAL_setup
-    use scale_gridtrans, only: &
-       GTRANS_setup
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_setup
+    use scale_atmos_grid_cartesC_metric, only: &
+       ATMOS_GRID_CARTESC_METRIC_setup
     use scale_rm_statistics, only: &
        STAT_setup
     use scale_time, only: &
@@ -237,17 +237,17 @@ contains
     call RANDOM_setup
 
     ! setup horizontal/vertical grid coordinates (cartesian,idealized)
-    call GRID_INDEX_setup
-    call GRID_setup
+    call ATMOS_GRID_CARTESC_INDEX_setup
+    call ATMOS_GRID_CARTESC_setup
 
-    call OCEAN_GRID_INDEX_setup
-    call OCEAN_GRID_setup
+    call OCEAN_GRID_CARTESC_INDEX_setup
+    call OCEAN_GRID_CARTESC_setup
 
-    call LAND_GRID_INDEX_setup
-    call LAND_GRID_setup
+    call LAND_GRID_CARTESC_INDEX_setup
+    call LAND_GRID_CARTESC_setup
 
-    call URBAN_GRID_INDEX_setup
-    call URBAN_GRID_setup
+    call URBAN_GRID_CARTESC_INDEX_setup
+    call URBAN_GRID_CARTESC_setup
 
     ! setup submodel administrator
     call ATMOS_admin_setup
@@ -272,10 +272,10 @@ contains
     ! setup land use category index/fraction
     call LANDUSE_setup
     ! setup grid coordinates (real world)
-    call REAL_setup
+    call ATMOS_GRID_CARTESC_REAL_setup
 
     ! setup grid transfer metrics (uses in ATMOS_dynamics)
-    call GTRANS_setup
+    call ATMOS_GRID_CARTESC_METRIC_setup
 
     ! setup restart
     call ADMIN_restart_setup
@@ -291,7 +291,7 @@ contains
     call FILE_EXTERNAL_INPUT_CARTESC_setup
 
     ! setup nesting grid
-    call NEST_setup ( intercomm_parent, intercomm_child )
+    call COMM_CARTESC_NEST_setup ( intercomm_parent, intercomm_child )
 
     ! setup common tools
     call ATMOS_HYDROSTATIC_setup

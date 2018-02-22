@@ -20,7 +20,7 @@ module scale_atmos_dyn_tinteg_tracer
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   !-----------------------------------------------------------------------------
@@ -45,7 +45,7 @@ module scale_atmos_dyn_tinteg_tracer
           FLAG_FCT_TRACER, & ! (in)
           FLAG_FCT_ALONG_STREAM ) ! (in)
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_index
        real(RP), intent(inout) :: QTRC    (KA,IA,JA)
        real(RP), intent(in)    :: QTRC0   (KA,IA,JA)
@@ -88,7 +88,7 @@ contains
        ATMOS_DYN_Tinteg_tracer_TYPE )
 
     use scale_precision
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_index
     use scale_process, only: &
        PRC_MPIstop

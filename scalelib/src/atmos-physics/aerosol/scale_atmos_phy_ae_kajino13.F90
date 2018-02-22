@@ -20,7 +20,7 @@ module scale_atmos_phy_ae_kajino13
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   use scale_const, only: &
       mwair => CONST_Mdry, &              ! molecular weight for dry air
@@ -630,7 +630,7 @@ contains
        CN,   &
        CCN,  &
        RHOQ_t_AE )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer
     use scale_const, only: &
        CONST_CPdry, &
@@ -2225,7 +2225,7 @@ contains
        Re,   &
        QTRC, &
        RH    )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_tracer
     use scale_const, only: &
        UNDEF => CONST_UNDEF

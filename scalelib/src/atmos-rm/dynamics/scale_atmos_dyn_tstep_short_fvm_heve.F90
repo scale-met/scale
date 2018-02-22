@@ -20,7 +20,7 @@ module scale_atmos_dyn_tstep_short_fvm_heve
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   use scale_process
@@ -127,7 +127,7 @@ contains
        REF_dens, REF_rhot,                          &
        BND_W, BND_E, BND_S, BND_N,                  &
        dtrk, last                                   )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_const, only: &
        EPS    => CONST_EPS,   &
        GRAV   => CONST_GRAV,  &
@@ -169,7 +169,7 @@ contains
        ATMOS_DYN_FVM_fluxJ23_XVZ, &
        ATMOS_DYN_FVM_fluxX_XVZ,   &
        ATMOS_DYN_FVM_fluxY_XVZ
-    use scale_gridtrans, only: &
+    use scale_atmos_grid_cartesC_metric, only: &
        I_XYZ, &
        I_XYW, &
        I_UYW, &

@@ -2,7 +2,7 @@ module test_atmos_dyn
 
   !-----------------------------------------------------------------------------
   use scale_precision
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   use scale_atmos_dyn, only: &
@@ -16,23 +16,23 @@ module test_atmos_dyn
   use scale_comm, only: &
      COMM_vars8, &
      COMM_wait
-  use scale_grid, only: &
-     DOMAIN_CENTER_Y => GRID_DOMAIN_CENTER_Y, &
-     CY              => GRID_CY,              &
-     CZ              => GRID_CZ,              &
-     FZ              => GRID_FZ,              &
-     CDZ             => GRID_CDZ,             &
-     CDX             => GRID_CDX,             &
-     CDY             => GRID_CDY,             &
-     FDZ             => GRID_FDZ,             &
-     FDX             => GRID_FDX,             &
-     FDY             => GRID_FDY,             &
-     RCDZ            => GRID_RCDZ,            &
-     RCDX            => GRID_RCDX,            &
-     RCDY            => GRID_RCDY,            &
-     RFDZ            => GRID_RFDZ,            &
-     RFDX            => GRID_RFDX,            &
-     RFDY            => GRID_RFDY
+  use scale_atmos_grid_cartesC, only: &
+     DOMAIN_CENTER_Y => ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
+     CY              => ATMOS_GRID_CARTESC_CY,              &
+     CZ              => ATMOS_GRID_CARTESC_CZ,              &
+     FZ              => ATMOS_GRID_CARTESC_FZ,              &
+     CDZ             => ATMOS_GRID_CARTESC_CDZ,             &
+     CDX             => ATMOS_GRID_CARTESC_CDX,             &
+     CDY             => ATMOS_GRID_CARTESC_CDY,             &
+     FDZ             => ATMOS_GRID_CARTESC_FDZ,             &
+     FDX             => ATMOS_GRID_CARTESC_FDX,             &
+     FDY             => ATMOS_GRID_CARTESC_FDY,             &
+     RCDZ            => ATMOS_GRID_CARTESC_RCDZ,            &
+     RCDX            => ATMOS_GRID_CARTESC_RCDX,            &
+     RCDY            => ATMOS_GRID_CARTESC_RCDY,            &
+     RFDZ            => ATMOS_GRID_CARTESC_RFDZ,            &
+     RFDX            => ATMOS_GRID_CARTESC_RFDX,            &
+     RFDY            => ATMOS_GRID_CARTESC_RFDY
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -134,8 +134,8 @@ contains
      ATMOS_DYN_setup
   use scale_atmos_dyn_Tstep_short, only: &
      ATMOS_DYN_Tstep_short_regist
-  use scale_grid, only: &
-     GRID_CBFZ
+  use scale_atmos_grid_cartesC, only: &
+     CBFZ => ATMOS_GRID_CARTESC_CBFZ
   use scale_const, only: &
      GRAV => CONST_GRAV
   use scale_atmos_boundary, only: &
@@ -223,7 +223,7 @@ contains
 
   DYN_TYPE = "FVM-HEVE"
   call ATMOS_DYN_Tstep_short_regist( DYN_TYPE, & !(in)
-                            VA, CSDUMMY, CMDUMMY, CSDUMMY ) ! (out)
+                                     VA, CSDUMMY, CMDUMMY, CSDUMMY ) ! (out)
 
   DYN_Tinteg_Short_TYPE = "RK4"
   DYN_Tinteg_Tracer_TYPE = "RK3WS2002"
@@ -251,7 +251,7 @@ contains
        DOMAIN_CENTER_Y, CY, lat            ) ! (in)
 
   do k = KS+1, KE
-     if ( GRID_CBFZ(k) > 0.0_RP ) then
+     if ( CBFZ(k) > 0.0_RP ) then
         KME = k - 1
         exit
      end if

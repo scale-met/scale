@@ -17,7 +17,7 @@ module mod_atmos_phy_mp_driver
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -135,8 +135,8 @@ contains
   subroutine ATMOS_PHY_MP_driver_setup
     use scale_process, only: &
        PRC_abort
-    use scale_grid, only: &
-       CDZ => GRID_CDZ
+    use scale_atmos_grid_cartesC, only: &
+       CDZ => ATMOS_GRID_CARTESC_CDZ
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_time, only: &
@@ -321,9 +321,9 @@ contains
        PRE00 => CONST_PRE00
     use scale_time, only: &
        dt_MP => TIME_DTSEC_ATMOS_PHY_MP
-    use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_FZ
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
@@ -450,13 +450,39 @@ contains
        select case ( ATMOS_PHY_MP_TYPE )
        case ( 'TOMITA08' )
 !OCL XFILL
-          TEMP1(:,:,:) = TEMP(:,:,:)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             TEMP1(k,i,j) = TEMP(k,i,j)
+          end do
+          end do
+          end do
 !OCL XFILL
-          QTRC1(:,:,:,QS_MP:QE_MP) = QTRC(:,:,:,QS_MP:QE_MP)
+          do iq = QS_MP, QE_MP
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             QTRC1(k,i,j,iq) = QTRC(k,i,j,iq)
+          end do
+          end do
+          end do
+          end do
 !OCL XFILL
-          CVtot1(:,:,:) = CVtot(:,:,:)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             CVtot1(k,i,j) = CVtot(k,i,j)
+          end do
+          end do
+          end do
 !OCL XFILL
-          CPtot1(:,:,:) = CPtot(:,:,:)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             CPtot1(k,i,j) = CPtot(k,i,j)
+          end do
+          end do
+          end do
 
           call ATMOS_PHY_MP_tomita08_adjustment( &
                KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -595,13 +621,13 @@ contains
                 RCDZ(k) = 1.0_RP / ( REAL_FZ(k  ,i,j) - REAL_FZ(k-1,i,j) )
              enddo
 
-             DENS2(:) = DENS(:,i,j)
-             TEMP2(:) = TEMP(:,i,j)
-             CPtot2(:) = CPtot(:,i,j)
-             CVtot2(:) = CVtot(:,i,j)
              do k = KS, KE
-                RHOE(k) = TEMP(k,i,j) * CVtot(k,i,j) * DENS2(k)
-                RHOE2(k) = RHOE(k)
+                DENS2(k)  = DENS(k,i,j)
+                TEMP2(k)  = TEMP(k,i,j)
+                CPtot2(k) = CPtot(k,i,j)
+                CVtot2(k) = CVtot(k,i,j)
+                RHOE(k)   = TEMP(k,i,j) * CVtot(k,i,j) * DENS2(k)
+                RHOE2(k)  = RHOE(k)
              end do
              do iq = QS_MP+1, QE_MP
              do k = KS, KE
@@ -627,9 +653,10 @@ contains
                 ! store to history output
                 do iq = QS_MP+1, QE_MP
                    if ( hist_vterm_idx(iq) > 0 ) then
-                      vterm_hist(:,i,j,hist_vterm_idx(iq)) = &
-                          vterm_hist(:,i,j,hist_vterm_idx(iq)) &
-                        + vterm(:,iq) * MP_RNSTEP_SEDIMENTATION
+                      do k = KS, KE
+                         vterm_hist(k,i,j,hist_vterm_idx(iq)) = vterm_hist(k,i,j,hist_vterm_idx(iq)) &
+                                                              + vterm(k,iq) * MP_RNSTEP_SEDIMENTATION
+                      end do
                    end if
                 end do
 

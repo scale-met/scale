@@ -18,7 +18,7 @@ program scaleles_make_bufffact
   integer :: NUM_STRETCHED_GRID = 10
 
   real(8) :: DEFAULT_BUFFFACT = 1.1D0
-  real(8) :: GRID_DISTANCE    = 100.0D0
+  real(8) :: GRID_CARTESC_DISTANCE    = 100.0D0
   real(8) :: TOTAL_LENGTH     = 100.0D+3
   real(8) :: LIMIT_ITERATION  = epsilon(0.0D0)
 
@@ -26,7 +26,7 @@ program scaleles_make_bufffact
     MAXIMUM_ITERATION,  &
     DEFAULT_BUFFFACT,   &
     NUM_STRETCHED_GRID, &
-    GRID_DISTANCE,      &
+    GRID_CARTESC_DISTANCE,      &
     TOTAL_LENGTH,       &
     LIMIT_ITERATION
 
@@ -64,7 +64,7 @@ program scaleles_make_bufffact
   num = NUM_STRETCHED_GRID
 
   bf  = DEFAULT_BUFFFACT
-  dx  = GRID_DISTANCE
+  dx  = GRID_CARTESC_DISTANCE
   L   = TOTAL_LENGTH
   EPS = LIMIT_ITERATION
 

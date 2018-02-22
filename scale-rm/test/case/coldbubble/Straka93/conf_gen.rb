@@ -22,7 +22,7 @@ HISTORY_TINTERVAL_SEC   = "100.D0"
 #
 CONF_GEN_RESOL_HASHLIST = \
 [ \
-  { "TAG"=>"400m", "DX"=>400E0, "DZ"=>400.0E0, 
+  { "TAG"=>"400m", "DX"=>400E0, "DZ"=>400.0E0,
     "KMAX"=>16, "IMAX"=>16, "JMAX"=>3, "DTDYN"=>0.5E0, "NPRCX"=> 8, "NPRCY"=>1}, \
   { "TAG"=>"200m", "DX"=>200E0, "DZ"=>200.0E0,
     "KMAX"=>32, "IMAX"=>16, "JMAX"=>3, "DTDYN"=>0.25E0, "NPRCX"=> 16, "NPRCY"=>1}, \
@@ -49,7 +49,7 @@ require 'fileutils'
 
 def gen_init_conf( conf_name,
                    nprocx, nprocy, imax, jmax, kmax, dx, dy, dz )
-  
+
   f = File.open(conf_name, "w")
   f.print <<EOS
 #####
@@ -64,23 +64,23 @@ def gen_init_conf( conf_name,
 /
 
 &PARAM_PRC
- PRC_NUM_X       = #{nprocx},  
+ PRC_NUM_X       = #{nprocx},
  PRC_NUM_Y       = #{nprocy},
 /
 
 &PARAM_INDEX
- KMAX = #{kmax}, 
- IMAX = #{imax}, IHALO = 3, 
+ KMAX = #{kmax},
+ IMAX = #{imax}, IHALO = 3,
  JMAX = #{jmax}, JHALO = 3,
 /
 
 &PARAM_GRID
- DZ =  #{dz}, 
- DX =  #{dx},  
- DY =  #{dy}, 
- BUFFER_DZ =   0.D0,  
+ DZ =  #{dz},
+ DX =  #{dx},
+ DY =  #{dy},
+ BUFFER_DZ =   0.D0,
  BUFFFACT  =   1.D0,
- GRID_OFFSET_X = -25.6D3,
+ OFFSET_X = -25.6D3,
 /
 
 &PARAM_TIME
@@ -120,7 +120,7 @@ def gen_init_conf( conf_name,
 /
 EOS
   f.close
-  
+
 end
 
 def gen_run_conf( conf_name,
@@ -137,23 +137,23 @@ def gen_run_conf( conf_name,
 #####
 
 &PARAM_PRC
- PRC_NUM_X       = #{nprocx},  
+ PRC_NUM_X       = #{nprocx},
  PRC_NUM_Y       = #{nprocy},
 /
 
 &PARAM_INDEX
- KMAX = #{kmax}, 
- IMAX = #{imax}, IHALO = 3, 
+ KMAX = #{kmax},
+ IMAX = #{imax}, IHALO = 3,
  JMAX = #{jmax}, JHALO = 3,
 /
 
 &PARAM_GRID
- DZ =  #{dz}, 
- DX =  #{dx},  
- DY =  #{dy}, 
- BUFFER_DZ =   0.D0,  
+ DZ =  #{dz},
+ DX =  #{dx},
+ DY =  #{dy},
+ BUFFER_DZ =   0.D0,
  BUFFFACT  =   1.D0,
- GRID_OFFSET_X = -25.6D3,
+ OFFSET_X = -25.6D3,
 /
 &PARAM_TIME
  TIME_STARTDATE             = 0000, 1, 1, 0, 0, 0,
@@ -162,7 +162,7 @@ def gen_run_conf( conf_name,
  TIME_DURATION_UNIT         = "SEC",
  TIME_DT                    = #{TIME_DT_SEC},
  TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = #{dtsec_dyn}, 
+ TIME_DT_ATMOS_DYN          = #{dtsec_dyn},
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
 /
 
@@ -188,7 +188,7 @@ def gen_run_conf( conf_name,
 &PARAM_ATMOS_REFSTATE
 ! ATMOS_REFSTATE_TYPE       = "INIT",
 ! ATMOS_REFSTATE_TYPE       = "UNIFORM",
-  ATMOS_REFSTATE_POTT_UNIFORM = 300.0D0, 
+  ATMOS_REFSTATE_POTT_UNIFORM = 300.0D0,
 /
 
 &PARAM_ATMOS_BOUNDARY
@@ -202,16 +202,16 @@ def gen_run_conf( conf_name,
  ATMOS_DYN_TINTEG_LARGE_TYPE = "EULER",
  ATMOS_DYN_TINTEG_SHORT_TYPE = "RK3WS2002",
  ATMOS_DYN_TINTEG_TRACER_TYPE = "RK3WS2002",
- ATMOS_DYN_FVM_FLUX_TYPE        = "#{flxEvalType}",             
- ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}", 
+ ATMOS_DYN_FVM_FLUX_TYPE        = "#{flxEvalType}",
+ ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}",
  ATMOS_DYN_NUMERICAL_DIFF_COEF  = 0.D0,
  ATMOS_DYN_DIVDMP_COEF          = 0.1D0,
- ATMOS_DYN_FLAG_FCT_TRACER      = ${fctFlag}, 
+ ATMOS_DYN_FLAG_FCT_TRACER      = ${fctFlag},
 /
 
 &PARAM_USER
- USER_do = .true., 
- Kdiff   = 75.E0, 
+ USER_do = .true.,
+ Kdiff   = 75.E0,
 /
 
 &PARAM_HISTORY
@@ -258,16 +258,16 @@ CONF_GEN_RESOL_HASHLIST.each{|resol_hash|
           puts "Create directory .."
           FileUtils.mkdir_p(dataDir)
         end
-      
-        init_conf_name = "#{dataDir}init.conf" 
-        gen_init_conf(init_conf_name, 
-                      resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
+
+        init_conf_name = "#{dataDir}init.conf"
+        gen_init_conf(init_conf_name,
+                      resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"],
                       resol_hash["DX"], resol_hash["DX"], resol_hash["DZ"]  )
 
         run_conf_name = "#{dataDir}run.conf"
-        gen_run_conf(run_conf_name, 
-                     resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
-                     resol_hash["DX"], resol_hash["DX"], resol_hash["DZ"], resol_hash["DTDYN"], 
+        gen_run_conf(run_conf_name,
+                     resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"],
+                     resol_hash["DX"], resol_hash["DX"], resol_hash["DZ"], resol_hash["DTDYN"],
                      numeric_hash["TAG"].sub("FVM_",""), fct_flag, dataDir )
       }
     }

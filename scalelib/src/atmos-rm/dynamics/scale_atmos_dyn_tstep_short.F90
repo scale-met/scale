@@ -20,7 +20,7 @@ module scale_atmos_dyn_tstep_short
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   !-----------------------------------------------------------------------------
@@ -56,7 +56,7 @@ module scale_atmos_dyn_tstep_short
                        BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                        dtrk, last                                        ) ! (in)
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_index
        real(RP), intent(out) :: DENS_new(KA,IA,JA)   ! prognostic variables
        real(RP), intent(out) :: MOMZ_new(KA,IA,JA)   !
@@ -158,7 +158,7 @@ contains
        VA_out, &
        VAR_NAME, VAR_DESC, VAR_UNIT )
     use scale_precision
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_index
     use scale_process, only: &
        PRC_MPIstop

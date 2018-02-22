@@ -17,8 +17,7 @@ module scale_urban_phy_slc
   !
   use scale_precision
   use scale_stdio
-  use scale_grid_index
-  use scale_urban_grid_index
+  use scale_urban_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -125,9 +124,9 @@ contains
     implicit none
 
     character(len=*), intent(in)  :: URBAN_TYPE
-    real(RP)        , intent(out) :: Z0M(IA,JA)
-    real(RP)        , intent(out) :: Z0H(IA,JA)
-    real(RP)        , intent(out) :: Z0E(IA,JA)
+    real(RP)        , intent(out) :: Z0M(UIA,UJA)
+    real(RP)        , intent(out) :: Z0H(UIA,UJA)
+    real(RP)        , intent(out) :: Z0E(UIA,UJA)
 
     NAMELIST / PARAM_URBAN_PHY_SLC / &
        DTS_MAX,    &
@@ -196,10 +195,10 @@ contains
     call urban_param_setup
 
     ! judge to run slab land model
-    allocate( is_URB(IA,JA) )
+    allocate( is_URB(UIA,UJA) )
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = UJS, UJE
+    do i = UIS, UIE
        if ( LANDUSE_fact_urban(i,j) > 0.0_RP ) then
           is_URB(i,j) = .true.
        else
@@ -211,8 +210,8 @@ contains
     Z0M(:,:) = UNDEF
     Z0H(:,:) = UNDEF
     Z0E(:,:) = UNDEF
-    do j = JS, JE
-    do i = IS, IE
+    do j = UJS, UJE
+    do i = UIS, UIE
        if ( is_URB(i,j) ) then
           Z0M(i,j) = Z0C
           Z0H(i,j) = Z0HC
@@ -288,8 +287,7 @@ contains
         LAT,         &
         NOWDATE,     &
         dt           )
-    use scale_grid_index
-    use scale_urban_grid_index
+    use scale_urban_grid_cartesC_index
     use scale_const, only: &
        Rdry => CONST_Rdry, &
        Rvap => CONST_Rvap
@@ -307,65 +305,65 @@ contains
     real(RP), parameter :: Uabs_min = 0.1_RP
 
     ! arguments
-    real(RP), intent(out) :: TR_URB_t   (IA,JA)
-    real(RP), intent(out) :: TB_URB_t   (IA,JA)
-    real(RP), intent(out) :: TG_URB_t   (IA,JA)
-    real(RP), intent(out) :: TC_URB_t   (IA,JA)
-    real(RP), intent(out) :: QC_URB_t   (IA,JA)
-    real(RP), intent(out) :: UC_URB_t   (IA,JA)
-    real(RP), intent(out) :: TRL_URB_t  (UKS:UKE,IA,JA)
-    real(RP), intent(out) :: TBL_URB_t  (UKS:UKE,IA,JA)
-    real(RP), intent(out) :: TGL_URB_t  (UKS:UKE,IA,JA)
-    real(RP), intent(out) :: RAINR_URB_t(IA,JA)
-    real(RP), intent(out) :: RAINB_URB_t(IA,JA)
-    real(RP), intent(out) :: RAING_URB_t(IA,JA)
-    real(RP), intent(out) :: ROFF_URB_t (IA,JA)
+    real(RP), intent(out) :: TR_URB_t   (UIA,UJA)
+    real(RP), intent(out) :: TB_URB_t   (UIA,UJA)
+    real(RP), intent(out) :: TG_URB_t   (UIA,UJA)
+    real(RP), intent(out) :: TC_URB_t   (UIA,UJA)
+    real(RP), intent(out) :: QC_URB_t   (UIA,UJA)
+    real(RP), intent(out) :: UC_URB_t   (UIA,UJA)
+    real(RP), intent(out) :: TRL_URB_t  (UKS:UKE,UIA,UJA)
+    real(RP), intent(out) :: TBL_URB_t  (UKS:UKE,UIA,UJA)
+    real(RP), intent(out) :: TGL_URB_t  (UKS:UKE,UIA,UJA)
+    real(RP), intent(out) :: RAINR_URB_t(UIA,UJA)
+    real(RP), intent(out) :: RAINB_URB_t(UIA,UJA)
+    real(RP), intent(out) :: RAING_URB_t(UIA,UJA)
+    real(RP), intent(out) :: ROFF_URB_t (UIA,UJA)
 
-    real(RP), intent(out) :: SFC_TEMP(IA,JA)
-    real(RP), intent(out) :: ALBD_LW (IA,JA)
-    real(RP), intent(out) :: ALBD_SW (IA,JA)
-    real(RP), intent(out) :: MWFLX   (IA,JA)
-    real(RP), intent(out) :: MUFLX   (IA,JA)
-    real(RP), intent(out) :: MVFLX   (IA,JA)
-    real(RP), intent(out) :: SHFLX   (IA,JA)
-    real(RP), intent(out) :: LHFLX   (IA,JA)
-    real(RP), intent(out) :: GHFLX   (IA,JA)
-    real(RP), intent(out) :: Z0M     (IA,JA)
-    real(RP), intent(out) :: Z0H     (IA,JA)
-    real(RP), intent(out) :: Z0E     (IA,JA)
-    real(RP), intent(out) :: U10     (IA,JA)
-    real(RP), intent(out) :: V10     (IA,JA)
-    real(RP), intent(out) :: T2      (IA,JA)
-    real(RP), intent(out) :: Q2      (IA,JA)
+    real(RP), intent(out) :: SFC_TEMP(UIA,UJA)
+    real(RP), intent(out) :: ALBD_LW (UIA,UJA)
+    real(RP), intent(out) :: ALBD_SW (UIA,UJA)
+    real(RP), intent(out) :: MWFLX   (UIA,UJA)
+    real(RP), intent(out) :: MUFLX   (UIA,UJA)
+    real(RP), intent(out) :: MVFLX   (UIA,UJA)
+    real(RP), intent(out) :: SHFLX   (UIA,UJA)
+    real(RP), intent(out) :: LHFLX   (UIA,UJA)
+    real(RP), intent(out) :: GHFLX   (UIA,UJA)
+    real(RP), intent(out) :: Z0M     (UIA,UJA)
+    real(RP), intent(out) :: Z0H     (UIA,UJA)
+    real(RP), intent(out) :: Z0E     (UIA,UJA)
+    real(RP), intent(out) :: U10     (UIA,UJA)
+    real(RP), intent(out) :: V10     (UIA,UJA)
+    real(RP), intent(out) :: T2      (UIA,UJA)
+    real(RP), intent(out) :: Q2      (UIA,UJA)
 
-    real(RP), intent(in) :: TMPA  (IA,JA)
-    real(RP), intent(in) :: PRSA  (IA,JA)
-    real(RP), intent(in) :: W1    (IA,JA)
-    real(RP), intent(in) :: U1    (IA,JA)
-    real(RP), intent(in) :: V1    (IA,JA)
-    real(RP), intent(in) :: DENS  (IA,JA)
-    real(RP), intent(in) :: QA    (IA,JA)
-    real(RP), intent(in) :: Z1    (IA,JA)
-    real(RP), intent(in) :: PBL   (IA,JA)
-    real(RP), intent(in) :: RHOS  (IA,JA) ! density  at the surface [kg/m3]
-    real(RP), intent(in) :: PRSS  (IA,JA)
-    real(RP), intent(in) :: LWD   (IA,JA,2)
-    real(RP), intent(in) :: SWD   (IA,JA,2)
-    real(RP), intent(in) :: PREC  (IA,JA)
+    real(RP), intent(in) :: TMPA  (UIA,UJA)
+    real(RP), intent(in) :: PRSA  (UIA,UJA)
+    real(RP), intent(in) :: W1    (UIA,UJA)
+    real(RP), intent(in) :: U1    (UIA,UJA)
+    real(RP), intent(in) :: V1    (UIA,UJA)
+    real(RP), intent(in) :: DENS  (UIA,UJA)
+    real(RP), intent(in) :: QA    (UIA,UJA)
+    real(RP), intent(in) :: Z1    (UIA,UJA)
+    real(RP), intent(in) :: PBL   (UIA,UJA)
+    real(RP), intent(in) :: RHOS  (UIA,UJA) ! density  at the surface [kg/m3]
+    real(RP), intent(in) :: PRSS  (UIA,UJA)
+    real(RP), intent(in) :: LWD   (UIA,UJA,2)
+    real(RP), intent(in) :: SWD   (UIA,UJA,2)
+    real(RP), intent(in) :: PREC  (UIA,UJA)
 
-    real(RP), intent(in) :: TR_URB   (IA,JA)
-    real(RP), intent(in) :: TB_URB   (IA,JA)
-    real(RP), intent(in) :: TG_URB   (IA,JA)
-    real(RP), intent(in) :: TC_URB   (IA,JA)
-    real(RP), intent(in) :: QC_URB   (IA,JA)
-    real(RP), intent(in) :: UC_URB   (IA,JA)
-    real(RP), intent(in) :: TRL_URB  (UKS:UKE,IA,JA)
-    real(RP), intent(in) :: TBL_URB  (UKS:UKE,IA,JA)
-    real(RP), intent(in) :: TGL_URB  (UKS:UKE,IA,JA)
-    real(RP), intent(in) :: RAINR_URB(IA,JA)
-    real(RP), intent(in) :: RAINB_URB(IA,JA)
-    real(RP), intent(in) :: RAING_URB(IA,JA)
-    real(RP), intent(in) :: ROFF_URB (IA,JA)
+    real(RP), intent(in) :: TR_URB   (UIA,UJA)
+    real(RP), intent(in) :: TB_URB   (UIA,UJA)
+    real(RP), intent(in) :: TG_URB   (UIA,UJA)
+    real(RP), intent(in) :: TC_URB   (UIA,UJA)
+    real(RP), intent(in) :: QC_URB   (UIA,UJA)
+    real(RP), intent(in) :: UC_URB   (UIA,UJA)
+    real(RP), intent(in) :: TRL_URB  (UKS:UKE,UIA,UJA)
+    real(RP), intent(in) :: TBL_URB  (UKS:UKE,UIA,UJA)
+    real(RP), intent(in) :: TGL_URB  (UKS:UKE,UIA,UJA)
+    real(RP), intent(in) :: RAINR_URB(UIA,UJA)
+    real(RP), intent(in) :: RAINB_URB(UIA,UJA)
+    real(RP), intent(in) :: RAING_URB(UIA,UJA)
+    real(RP), intent(in) :: ROFF_URB (UIA,UJA)
 
     real(RP), intent(in) :: LON
     real(RP), intent(in) :: LAT
@@ -387,19 +385,19 @@ contains
     real(RP) :: RAING
     real(RP) :: ROFF
 
-    real(RP) :: SHR  (IA,JA)
-    real(RP) :: SHB  (IA,JA)
-    real(RP) :: SHG  (IA,JA)
-    real(RP) :: LHR  (IA,JA)
-    real(RP) :: LHB  (IA,JA)
-    real(RP) :: LHG  (IA,JA)
-    real(RP) :: GHR  (IA,JA)
-    real(RP) :: GHB  (IA,JA)
-    real(RP) :: GHG  (IA,JA)
-    real(RP) :: RNR  (IA,JA)
-    real(RP) :: RNB  (IA,JA)
-    real(RP) :: RNG  (IA,JA)
-    real(RP) :: RNgrd(IA,JA)
+    real(RP) :: SHR  (UIA,UJA)
+    real(RP) :: SHB  (UIA,UJA)
+    real(RP) :: SHG  (UIA,UJA)
+    real(RP) :: LHR  (UIA,UJA)
+    real(RP) :: LHB  (UIA,UJA)
+    real(RP) :: LHG  (UIA,UJA)
+    real(RP) :: GHR  (UIA,UJA)
+    real(RP) :: GHB  (UIA,UJA)
+    real(RP) :: GHG  (UIA,UJA)
+    real(RP) :: RNR  (UIA,UJA)
+    real(RP) :: RNB  (UIA,UJA)
+    real(RP) :: RNG  (UIA,UJA)
+    real(RP) :: RNgrd(UIA,UJA)
 
     real(RP) :: Ustar ! friction velocity [m]
     real(RP) :: Tstar ! friction temperature [K]
@@ -420,8 +418,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Urban surface physics step: Single Layer Canopy'
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = UJS, UJE
+    do i = UIS, UIE
 
     if( is_URB(i,j) ) then
 
@@ -679,7 +677,7 @@ contains
         NOWDATE,      & ! (in)
         dt,           & ! (in)
         i, j          ) ! (in)
-    use scale_grid_index
+    use scale_urban_grid_cartesC_index
     use scale_process, only: &
        PRC_myrank, &
        PRC_MPIstop

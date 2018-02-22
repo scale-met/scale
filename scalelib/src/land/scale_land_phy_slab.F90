@@ -16,9 +16,7 @@ module scale_land_phy_slab
   use scale_stdio
   use scale_prof
   use scale_debug
-  use scale_grid_index
-  use scale_land_grid_index
-
+  use scale_land_grid_cartesC_index
   use scale_file_external_input, only: &
      FILE_EXTERNAL_INPUT_file_limit
   !-----------------------------------------------------------------------------
@@ -187,18 +185,18 @@ contains
     implicit none
 
     ! arguments
-    real(RP), intent(out) :: TEMP_t      (LKMAX,IA,JA)
-    real(RP), intent(out) :: WATER_t     (LKMAX,IA,JA)
+    real(RP), intent(out) :: TEMP_t      (LKMAX,LIA,LJA)
+    real(RP), intent(out) :: WATER_t     (LKMAX,LIA,LJA)
 
-    real(RP), intent(in)  :: TEMP        (LKMAX,IA,JA)
-    real(RP), intent(in)  :: WATER       (LKMAX,IA,JA)
-    real(RP), intent(in)  :: WaterLimit  (IA,JA)
-    real(RP), intent(in)  :: ThermalCond (IA,JA)
-    real(RP), intent(in)  :: HeatCapacity(IA,JA)
-    real(RP), intent(in)  :: WaterDiff   (IA,JA)
-    real(RP), intent(in)  :: SFLX_GH     (IA,JA)
-    real(RP), intent(in)  :: SFLX_prec   (IA,JA)
-    real(RP), intent(in)  :: SFLX_evap   (IA,JA)
+    real(RP), intent(in)  :: TEMP        (LKMAX,LIA,LJA)
+    real(RP), intent(in)  :: WATER       (LKMAX,LIA,LJA)
+    real(RP), intent(in)  :: WaterLimit  (LIA,LJA)
+    real(RP), intent(in)  :: ThermalCond (LIA,LJA)
+    real(RP), intent(in)  :: HeatCapacity(LIA,LJA)
+    real(RP), intent(in)  :: WaterDiff   (LIA,LJA)
+    real(RP), intent(in)  :: SFLX_GH     (LIA,LJA)
+    real(RP), intent(in)  :: SFLX_prec   (LIA,LJA)
+    real(RP), intent(in)  :: SFLX_evap   (LIA,LJA)
     real(RP), intent(in)  :: CDZ         (LKMAX)
     real(DP), intent(in)  :: dt
 
@@ -206,21 +204,21 @@ contains
     logical :: solve_matrix
     logical :: error
 
-    real(RP) :: TEMP1 (LKMAX,IA,JA)
-    real(RP) :: WATER1(LKMAX,IA,JA)
+    real(RP) :: TEMP1 (LKMAX,LIA,LJA)
+    real(RP) :: WATER1(LKMAX,LIA,LJA)
 
-    real(RP) :: LAND_DENSCS(LKMAX,IA,JA)
-    real(RP) :: ThermalDiff(LKMAX,IA,JA)
+    real(RP) :: LAND_DENSCS(LKMAX,LIA,LJA)
+    real(RP) :: ThermalDiff(LKMAX,LIA,LJA)
 
-!    real(RP) :: RUNOFF(IA,JA)
+!    real(RP) :: RUNOFF(LIA,LJA)
 
-    real(RP) :: U(LKMAX,IA,JA)
-    real(RP) :: M(LKMAX,IA,JA)
-    real(RP) :: L(LKMAX,IA,JA)
-    real(RP) :: V(LKMAX,IA,JA)
+    real(RP) :: U(LKMAX,LIA,LJA)
+    real(RP) :: M(LKMAX,LIA,LJA)
+    real(RP) :: L(LKMAX,LIA,LJA)
+    real(RP) :: V(LKMAX,LIA,LJA)
 
-    real(RP) :: NDG_TEMP (LKMAX,IA,JA)
-    real(RP) :: NDG_WATER(LKMAX,IA,JA)
+    real(RP) :: NDG_TEMP (LKMAX,LIA,LJA)
+    real(RP) :: NDG_WATER(LKMAX,LIA,LJA)
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -274,8 +272,8 @@ contains
     if( solve_matrix ) then
 
       ! Solve diffusion of soil moisture (tridiagonal matrix)
-      do j = JS, JE
-      do i = IS, IE
+      do j = LJS, LJE
+      do i = LIS, LIE
         L(LKS,i,j) = 0.0_RP
         U(LKS,i,j) = -2.0_RP * WaterDiff(i,j) / ( CDZ(LKS) * ( CDZ(LKS) + CDZ(LKS+1) ) ) * dt
         L(LKE,i,j) = -2.0_RP * WaterDiff(i,j) / ( CDZ(LKE) * ( CDZ(LKE) + CDZ(LKE-1) ) ) * dt
@@ -286,8 +284,8 @@ contains
       end do
       end do
 
-      do j = JS, JE
-      do i = IS, IE
+      do j = LJS, LJE
+      do i = LIS, LIE
       do k = LKS+1, LKE-1
         L(k,i,j) = -2.0_RP * WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k-1) ) ) * dt
         U(k,i,j) = -2.0_RP * WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k+1) ) ) * dt
@@ -297,15 +295,15 @@ contains
       end do
 
       ! input from atmosphere
-      do j = JS, JE
-      do i = IS, IE
+      do j = LJS, LJE
+      do i = LIS, LIE
         V(LKS,i,j) = WATER(LKS,i,j) + NDG_WATER(LKS,i,j) &
                    + ( SFLX_prec(i,j) - SFLX_evap(i,j) ) / ( CDZ(LKS) * DWATR ) * dt
       end do
       end do
 
-      do j = JS, JE
-      do i = IS, IE
+      do j = LJS, LJE
+      do i = LIS, LIE
       do k = LKS+1, LKE
         V(k,i,j) = WATER(k,i,j) + NDG_WATER(k,i,j)
       end do
@@ -313,8 +311,8 @@ contains
       end do
 
       call MATRIX_SOLVER_tridiagonal( LKMAX,         & ! [IN]
-                                      IA, IS, IE,    & ! [IN]
-                                      JA, JS, JE,    & ! [IN]
+                                      LIA, LIS, LIE, & ! [IN]
+                                      LJA, LJS, LJE, & ! [IN]
                                       U     (:,:,:), & ! [IN]
                                       M     (:,:,:), & ! [IN]
                                       L     (:,:,:), & ! [IN]
@@ -322,16 +320,16 @@ contains
                                       WATER1(:,:,:)  ) ! [OUT]
 
       if ( .not. LAND_PHY_UPDATE_BOTTOM_WATER ) then
-        do j = JS, JE
-        do i = IS, IE
+        do j = LJS, LJE
+        do i = LIS, LIE
           WATER1(LKE,i,j) = WATER(LKE,i,j)
         end do
         end do
       endif
 
       ! runoff of soil moisture (vertical sum)
-      do j = JS, JE
-      do i = IS, IE
+      do j = LJS, LJE
+      do i = LIS, LIE
 !        RUNOFF(i,j) = 0.0_RP
         do k = LKS, LKE
 !          RUNOFF(i,j) = RUNOFF(i,j) + max( WATER1(k,i,j) - WaterLimit(i,j), 0.0_RP ) * CDZ(k) * DWATR
@@ -341,8 +339,8 @@ contains
       end do
 
       ! estimate thermal diffusivity
-      do j = JS, JE
-      do i = IS, IE
+      do j = LJS, LJE
+      do i = LIS, LIE
       do k = LKS, LKE
         LAND_DENSCS(k,i,j) = ( 1.0_RP - WaterLimit(i,j) ) * HeatCapacity(i,j) + WATER_DENSCS * WATER1(k,i,j)
         ThermalDiff(k,i,j) = ThermalCond(i,j) / LAND_DENSCS(k,i,j)
@@ -351,8 +349,8 @@ contains
       end do
 
       ! Solve diffusion of soil temperature (tridiagonal matrix)
-      do j = JS, JE
-      do i = IS, IE
+      do j = LJS, LJE
+      do i = LIS, LIE
         L(LKS,i,j) = 0.0_RP
         U(LKS,i,j) = -2.0_RP * ThermalDiff(LKS,i,j) / ( CDZ(LKS) * ( CDZ(LKS) + CDZ(LKS+1) ) ) * dt
         L(LKE,i,j) = -2.0_RP * ThermalDiff(LKE,i,j) / ( CDZ(LKE) * ( CDZ(LKE) + CDZ(LKE-1) ) ) * dt
@@ -363,8 +361,8 @@ contains
       end do
       end do
 
-      do j = JS, JE
-      do i = IS, IE
+      do j = LJS, LJE
+      do i = LIS, LIE
       do k = LKS+1, LKE-1
         L(k,i,j) = -2.0_RP * ThermalDiff(k,i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k-1) ) ) * dt
         U(k,i,j) = -2.0_RP * ThermalDiff(k,i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k+1) ) ) * dt
@@ -374,33 +372,33 @@ contains
       end do
 
       ! input from atmosphere
-      do j = JS, JE
-      do i = IS, IE
+      do j = LJS, LJE
+      do i = LIS, LIE
         V(LKS,i,j) = TEMP(LKS,i,j) + NDG_TEMP(LKS,i,j) &
                    - SFLX_GH(i,j) / ( LAND_DENSCS(LKS,i,j) * CDZ(LKS) ) * dt
       end do
       end do
 
-      do j = JS, JE
-      do i = IS, IE
+      do j = LJS, LJE
+      do i = LIS, LIE
       do k = LKS+1, LKE
         V(k,i,j) = TEMP(k,i,j) + NDG_TEMP(k,i,j)
       end do
       end do
       end do
 
-      call MATRIX_SOLVER_tridiagonal( LKMAX,        & ! [IN]
-                                      IA, IS, IE,   & ! [IN]
-                                      JA, JS, JE,   & ! [IN]
-                                      U    (:,:,:), & ! [IN]
-                                      M    (:,:,:), & ! [IN]
-                                      L    (:,:,:), & ! [IN]
-                                      V    (:,:,:), & ! [IN]
-                                      TEMP1(:,:,:)  ) ! [OUT]
+      call MATRIX_SOLVER_tridiagonal( LKMAX,         & ! [IN]
+                                      LIA, LIS, LIE, & ! [IN]
+                                      LJA, LJS, LJE, & ! [IN]
+                                      U    (:,:,:),  & ! [IN]
+                                      M    (:,:,:),  & ! [IN]
+                                      L    (:,:,:),  & ! [IN]
+                                      V    (:,:,:),  & ! [IN]
+                                      TEMP1(:,:,:)   ) ! [OUT]
 
       if ( .not. LAND_PHY_UPDATE_BOTTOM_TEMP ) then
-        do j = JS, JE
-        do i = IS, IE
+        do j = LJS, LJE
+        do i = LIS, LIE
           TEMP1(LKE,i,j) = TEMP(LKE,i,j)
         end do
         end do
@@ -409,8 +407,8 @@ contains
     end if
 
     ! calculate tendency
-    do j = JS, JE
-    do i = IS, IE
+    do j = LJS, LJE
+    do i = LIS, LIE
     do k = LKS, LKE
       if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
         TEMP_t (k,i,j) = ( TEMP1 (k,i,j) - TEMP (k,i,j) ) / dt

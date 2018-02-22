@@ -17,8 +17,7 @@ module mod_urban_vars
   use scale_stdio
   use scale_prof
   use scale_debug
-  use scale_grid_index
-  use scale_urban_grid_index
+  use scale_urban_grid_cartesC_index
 
   use scale_const, only: &
      I_SW  => CONST_I_SW, &
@@ -270,19 +269,19 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[URBAN] / Origin[SCALE-RM]'
 
-    allocate( URBAN_TR   (IA,JA)         )
-    allocate( URBAN_TB   (IA,JA)         )
-    allocate( URBAN_TG   (IA,JA)         )
-    allocate( URBAN_TC   (IA,JA)         )
-    allocate( URBAN_QC   (IA,JA)         )
-    allocate( URBAN_UC   (IA,JA)         )
-    allocate( URBAN_TRL  (UKS:UKE,IA,JA) )
-    allocate( URBAN_TBL  (UKS:UKE,IA,JA) )
-    allocate( URBAN_TGL  (UKS:UKE,IA,JA) )
-    allocate( URBAN_RAINR(IA,JA)         )
-    allocate( URBAN_RAINB(IA,JA)         )
-    allocate( URBAN_RAING(IA,JA)         )
-    allocate( URBAN_ROFF (IA,JA)         )
+    allocate( URBAN_TR   (UIA,UJA)         )
+    allocate( URBAN_TB   (UIA,UJA)         )
+    allocate( URBAN_TG   (UIA,UJA)         )
+    allocate( URBAN_TC   (UIA,UJA)         )
+    allocate( URBAN_QC   (UIA,UJA)         )
+    allocate( URBAN_UC   (UIA,UJA)         )
+    allocate( URBAN_TRL  (UKS:UKE,UIA,UJA) )
+    allocate( URBAN_TBL  (UKS:UKE,UIA,UJA) )
+    allocate( URBAN_TGL  (UKS:UKE,UIA,UJA) )
+    allocate( URBAN_RAINR(UIA,UJA)         )
+    allocate( URBAN_RAINB(UIA,UJA)         )
+    allocate( URBAN_RAING(UIA,UJA)         )
+    allocate( URBAN_ROFF (UIA,UJA)         )
     URBAN_TR   (:,:)   = UNDEF
     URBAN_TB   (:,:)   = UNDEF
     URBAN_TG   (:,:)   = UNDEF
@@ -297,19 +296,19 @@ contains
     URBAN_RAING(:,:)   = UNDEF
     URBAN_ROFF (:,:)   = UNDEF
 
-    allocate( URBAN_TR_t   (IA,JA)         )
-    allocate( URBAN_TB_t   (IA,JA)         )
-    allocate( URBAN_TG_t   (IA,JA)         )
-    allocate( URBAN_TC_t   (IA,JA)         )
-    allocate( URBAN_QC_t   (IA,JA)         )
-    allocate( URBAN_UC_t   (IA,JA)         )
-    allocate( URBAN_TRL_t  (UKS:UKE,IA,JA) )
-    allocate( URBAN_TBL_t  (UKS:UKE,IA,JA) )
-    allocate( URBAN_TGL_t  (UKS:UKE,IA,JA) )
-    allocate( URBAN_RAINR_t(IA,JA)         )
-    allocate( URBAN_RAINB_t(IA,JA)         )
-    allocate( URBAN_RAING_t(IA,JA)         )
-    allocate( URBAN_ROFF_t (IA,JA)         )
+    allocate( URBAN_TR_t   (UIA,UJA)         )
+    allocate( URBAN_TB_t   (UIA,UJA)         )
+    allocate( URBAN_TG_t   (UIA,UJA)         )
+    allocate( URBAN_TC_t   (UIA,UJA)         )
+    allocate( URBAN_QC_t   (UIA,UJA)         )
+    allocate( URBAN_UC_t   (UIA,UJA)         )
+    allocate( URBAN_TRL_t  (UKS:UKE,UIA,UJA) )
+    allocate( URBAN_TBL_t  (UKS:UKE,UIA,UJA) )
+    allocate( URBAN_TGL_t  (UKS:UKE,UIA,UJA) )
+    allocate( URBAN_RAINR_t(UIA,UJA)         )
+    allocate( URBAN_RAINB_t(UIA,UJA)         )
+    allocate( URBAN_RAING_t(UIA,UJA)         )
+    allocate( URBAN_ROFF_t (UIA,UJA)         )
     URBAN_TR_t   (:,:)   = UNDEF
     URBAN_TB_t   (:,:)   = UNDEF
     URBAN_TG_t   (:,:)   = UNDEF
@@ -324,15 +323,15 @@ contains
     URBAN_RAING_t(:,:)   = UNDEF
     URBAN_ROFF_t (:,:)   = UNDEF
 
-    allocate( URBAN_SFC_TEMP  (IA,JA)   )
-    allocate( URBAN_SFC_albedo(IA,JA,2) )
-    allocate( URBAN_SFLX_MW   (IA,JA)   )
-    allocate( URBAN_SFLX_MU   (IA,JA)   )
-    allocate( URBAN_SFLX_MV   (IA,JA)   )
-    allocate( URBAN_SFLX_SH   (IA,JA)   )
-    allocate( URBAN_SFLX_LH   (IA,JA)   )
-    allocate( URBAN_SFLX_GH   (IA,JA)   )
-    allocate( URBAN_SFLX_evap (IA,JA)   )
+    allocate( URBAN_SFC_TEMP  (UIA,UJA)   )
+    allocate( URBAN_SFC_albedo(UIA,UJA,2) )
+    allocate( URBAN_SFLX_MW   (UIA,UJA)   )
+    allocate( URBAN_SFLX_MU   (UIA,UJA)   )
+    allocate( URBAN_SFLX_MV   (UIA,UJA)   )
+    allocate( URBAN_SFLX_SH   (UIA,UJA)   )
+    allocate( URBAN_SFLX_LH   (UIA,UJA)   )
+    allocate( URBAN_SFLX_GH   (UIA,UJA)   )
+    allocate( URBAN_SFLX_evap (UIA,UJA)   )
     URBAN_SFC_TEMP  (:,:)   = UNDEF
     URBAN_SFC_albedo(:,:,:) = UNDEF
     URBAN_SFLX_MW   (:,:)   = UNDEF
@@ -343,13 +342,13 @@ contains
     URBAN_SFLX_GH   (:,:)   = UNDEF
     URBAN_SFLX_evap (:,:)   = UNDEF
 
-    allocate( URBAN_Z0M(IA,JA) )
-    allocate( URBAN_Z0H(IA,JA) )
-    allocate( URBAN_Z0E(IA,JA) )
-    allocate( URBAN_U10(IA,JA) )
-    allocate( URBAN_V10(IA,JA) )
-    allocate( URBAN_T2 (IA,JA) )
-    allocate( URBAN_Q2 (IA,JA) )
+    allocate( URBAN_Z0M(UIA,UJA) )
+    allocate( URBAN_Z0H(UIA,UJA) )
+    allocate( URBAN_Z0E(UIA,UJA) )
+    allocate( URBAN_U10(UIA,UJA) )
+    allocate( URBAN_V10(UIA,UJA) )
+    allocate( URBAN_T2 (UIA,UJA) )
+    allocate( URBAN_Q2 (UIA,UJA) )
     URBAN_Z0M(:,:) = UNDEF
     URBAN_Z0H(:,:) = UNDEF
     URBAN_Z0E(:,:) = UNDEF
@@ -358,20 +357,20 @@ contains
     URBAN_T2 (:,:) = UNDEF
     URBAN_Q2 (:,:) = UNDEF
 
-    allocate( ATMOS_TEMP     (IA,JA)   )
-    allocate( ATMOS_PRES     (IA,JA)   )
-    allocate( ATMOS_W        (IA,JA)   )
-    allocate( ATMOS_U        (IA,JA)   )
-    allocate( ATMOS_V        (IA,JA)   )
-    allocate( ATMOS_DENS     (IA,JA)   )
-    allocate( ATMOS_QV       (IA,JA)   )
-    allocate( ATMOS_PBL      (IA,JA)   )
-    allocate( ATMOS_SFC_DENS (IA,JA)   )
-    allocate( ATMOS_SFC_PRES (IA,JA)   )
-    allocate( ATMOS_SFLX_LW  (IA,JA,2) )
-    allocate( ATMOS_SFLX_SW  (IA,JA,2) )
-    allocate( ATMOS_cosSZA   (IA,JA)   )
-    allocate( ATMOS_SFLX_prec(IA,JA)   )
+    allocate( ATMOS_TEMP     (UIA,UJA)   )
+    allocate( ATMOS_PRES     (UIA,UJA)   )
+    allocate( ATMOS_W        (UIA,UJA)   )
+    allocate( ATMOS_U        (UIA,UJA)   )
+    allocate( ATMOS_V        (UIA,UJA)   )
+    allocate( ATMOS_DENS     (UIA,UJA)   )
+    allocate( ATMOS_QV       (UIA,UJA)   )
+    allocate( ATMOS_PBL      (UIA,UJA)   )
+    allocate( ATMOS_SFC_DENS (UIA,UJA)   )
+    allocate( ATMOS_SFC_PRES (UIA,UJA)   )
+    allocate( ATMOS_SFLX_LW  (UIA,UJA,2) )
+    allocate( ATMOS_SFLX_SW  (UIA,UJA,2) )
+    allocate( ATMOS_cosSZA   (UIA,UJA)   )
+    allocate( ATMOS_SFLX_prec(UIA,UJA)   )
     ATMOS_TEMP     (:,:)   = UNDEF
     ATMOS_PRES     (:,:)   = UNDEF
     ATMOS_W        (:,:)   = UNDEF
@@ -555,37 +554,37 @@ contains
     !---------------------------------------------------------------------------
 
     if ( URBAN_VARS_CHECKRANGE ) then
-       call VALCHECK( URBAN_TR        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TR),        &
+       call VALCHECK( URBAN_TR        (UIS:UIE,UJS:UJE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TR),        &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TB        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TB),        &
+       call VALCHECK( URBAN_TB        (UIS:UIE,UJS:UJE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TB),        &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TG        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TG),        &
+       call VALCHECK( URBAN_TG        (UIS:UIE,UJS:UJE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TG),        &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TC        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TC),        &
+       call VALCHECK( URBAN_TC        (UIS:UIE,UJS:UJE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TC),        &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_QC        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_QC),        &
+       call VALCHECK( URBAN_QC        (UIS:UIE,UJS:UJE),          0.0_RP, 1000.0_RP, VAR_NAME(I_QC),        &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_UC        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_UC),        &
+       call VALCHECK( URBAN_UC        (UIS:UIE,UJS:UJE),          0.0_RP, 1000.0_RP, VAR_NAME(I_UC),        &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TRL       (:,IS:IE,JS:JE),        0.0_RP, 1000.0_RP, VAR_NAME(I_TRL),       &
+       call VALCHECK( URBAN_TRL       (:,UIS:UIE,UJS:UJE),        0.0_RP, 1000.0_RP, VAR_NAME(I_TRL),       &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TBL       (:,IS:IE,JS:JE),        0.0_RP, 1000.0_RP, VAR_NAME(I_TBL),       &
+       call VALCHECK( URBAN_TBL       (:,UIS:UIE,UJS:UJE),        0.0_RP, 1000.0_RP, VAR_NAME(I_TBL),       &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TGL       (:,IS:IE,JS:JE),        0.0_RP, 1000.0_RP, VAR_NAME(I_TGL),       &
+       call VALCHECK( URBAN_TGL       (:,UIS:UIE,UJS:UJE),        0.0_RP, 1000.0_RP, VAR_NAME(I_TGL),       &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_RAINR     (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_RAINR),     &
+       call VALCHECK( URBAN_RAINR     (UIS:UIE,UJS:UJE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_RAINR),     &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_RAINB     (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_RAINB),     &
+       call VALCHECK( URBAN_RAINB     (UIS:UIE,UJS:UJE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_RAINB),     &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_RAING     (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_RAING),     &
+       call VALCHECK( URBAN_RAING     (UIS:UIE,UJS:UJE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_RAING),     &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_ROFF      (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_ROFF),      &
+       call VALCHECK( URBAN_ROFF      (UIS:UIE,UJS:UJE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_ROFF),      &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFC_TEMP  (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),  &
+       call VALCHECK( URBAN_SFC_TEMP  (UIS:UIE,UJS:UJE),          0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),  &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFC_albedo(IS:IE,JS:JE,I_LW),     0.0_RP,    2.0_RP, VAR_NAME(I_ALB_LW),    &
+       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_LW),     0.0_RP,    2.0_RP, VAR_NAME(I_ALB_LW),    &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFC_albedo(IS:IE,JS:JE,I_SW),     0.0_RP,    2.0_RP, VAR_NAME(I_ALB_SW),    &
+       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_SW),     0.0_RP,    2.0_RP, VAR_NAME(I_ALB_SW),    &
                      __FILE__, __LINE__ )
     endif
 
@@ -678,11 +677,11 @@ contains
        URBAN_SFC_albedo_in )
     implicit none
 
-    real(RP), intent(in) :: URBAN_TC_in        (IA,JA)
-    real(RP), intent(in) :: URBAN_QC_in        (IA,JA)
-    real(RP), intent(in) :: URBAN_UC_in        (IA,JA)
-    real(RP), intent(in) :: URBAN_SFC_TEMP_in  (IA,JA)
-    real(RP), intent(in) :: URBAN_SFC_albedo_in(IA,JA,2)
+    real(RP), intent(in) :: URBAN_TC_in        (UIA,UJA)
+    real(RP), intent(in) :: URBAN_QC_in        (UIA,UJA)
+    real(RP), intent(in) :: URBAN_UC_in        (UIA,UJA)
+    real(RP), intent(in) :: URBAN_SFC_TEMP_in  (UIA,UJA)
+    real(RP), intent(in) :: URBAN_SFC_albedo_in(UIA,UJA,2)
 
     integer :: k
     !---------------------------------------------------------------------------

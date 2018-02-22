@@ -23,8 +23,8 @@ FFLAGS_QUICKDEBUG = -ffpe-trap=invalid,zero,overflow -fbounds-check -finit-real=
 
 FFLAGS_DYN   = $(FFLAGS)
 
-FFLAGS_DEBUG = -O0 $(FFLAGS_CORE) -fbounds-check                                                    \
-               -ffpe-trap=invalid,zero,overflow                                                     \
+FFLAGS_DEBUG = -O0 $(FFLAGS_CORE)                                                                   \
+               -ffpe-trap=invalid,zero,overflow -fbounds-check                                      \
                -finit-integer=-32768 -finit-real=nan -finit-logical=false -finit-character=9        \
                -Wall -Wextra -Wcharacter-truncation -Wunderflow -Warray-temporaries -Wuninitialized \
                -g -fbacktrace

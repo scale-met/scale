@@ -24,7 +24,7 @@ module scale_atmos_dyn_fvm_flux_ud3Koren1993
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   use scale_process

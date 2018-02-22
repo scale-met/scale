@@ -20,7 +20,7 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
 
   use mod_atmos_vars, only: &
@@ -131,8 +131,8 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        GRAV  => CONST_GRAV
-    use scale_grid, only : &
-       CZ => GRID_CZ
+    use scale_atmos_grid_cartesC, only : &
+       CZ => ATMOS_GRID_CARTESC_CZ
     use scale_time, only: &
        NOWSEC  => TIME_NOWSEC, &
        DTSEC => TIME_DTSEC

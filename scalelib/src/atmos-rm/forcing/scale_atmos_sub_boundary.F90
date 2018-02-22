@@ -25,7 +25,7 @@ module scale_atmos_boundary
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
 
@@ -203,7 +203,7 @@ contains
        CONST_UNDEF
     use scale_time, only: &
        DT => TIME_DTSEC
-    use scale_grid_nest, only: &
+    use scale_comm_cartesC_nest, only: &
        USE_NESTING,         &
        OFFLINE,             &
        ONLINE_IAM_PARENT,   &
@@ -698,14 +698,14 @@ contains
     use scale_const, only: &
        EPS => CONST_EPS, &
        PI  => CONST_PI
-    use scale_grid, only: &
-       CBFZ => GRID_CBFZ, &
-       CBFX => GRID_CBFX, &
-       CBFY => GRID_CBFY, &
-       FBFZ => GRID_FBFZ, &
-       FBFX => GRID_FBFX, &
-       FBFY => GRID_FBFY
-    use scale_grid_nest, only: &
+    use scale_atmos_grid_cartesC, only: &
+       CBFZ => ATMOS_GRID_CARTESC_CBFZ, &
+       CBFX => ATMOS_GRID_CARTESC_CBFX, &
+       CBFY => ATMOS_GRID_CARTESC_CBFY, &
+       FBFZ => ATMOS_GRID_CARTESC_FBFZ, &
+       FBFX => ATMOS_GRID_CARTESC_FBFX, &
+       FBFY => ATMOS_GRID_CARTESC_FBFY
+    use scale_comm_cartesC_nest, only: &
        ONLINE_USE_VELZ
 
     real(RP) :: coef_z, alpha_z1, alpha_z2
@@ -1077,7 +1077,7 @@ contains
   subroutine ATMOS_BOUNDARY_write
     use scale_file_cartesC, only: &
        FILE_CARTESC_write
-    use scale_grid_nest, only: &
+    use scale_comm_cartesC_nest, only: &
        ONLINE_USE_VELZ
     implicit none
 
@@ -1405,11 +1405,11 @@ contains
   subroutine ATMOS_BOUNDARY_initialize_online
     use scale_process, only: &
        PRC_MPIstop
-    use scale_grid_nest, only: &
-       NEST_COMM_recvwait_issue, &
+    use scale_comm_cartesC_nest, only: &
+       COMM_CARTESC_NEST_recvwait_issue, &
        ONLINE_USE_VELZ,          &
        PARENT_DTSEC,             &
-       NESTQA => NEST_BND_QA
+       NESTQA => COMM_CARTESC_NEST_BND_QA
     implicit none
 
     ! parameters
@@ -1424,7 +1424,7 @@ contains
        call PRC_MPIstop
     end if
 
-    call NEST_COMM_recvwait_issue( handle, NESTQA )
+    call COMM_CARTESC_NEST_recvwait_issue( handle, NESTQA )
 
     return
   end subroutine ATMOS_BOUNDARY_initialize_online
@@ -1437,8 +1437,7 @@ contains
     use scale_time, only: &
        TIME_DTSEC,        &
        TIME_NSTEP
-    use scale_grid_nest, only: &
-       NEST_COMM_recvwait_issue, &
+    use scale_comm_cartesC_nest, only: &
        ONLINE_USE_VELZ,          &
        PARENT_NSTEP
     implicit none
@@ -1547,10 +1546,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Finalize boundary value
   subroutine ATMOS_BOUNDARY_finalize
-    use scale_grid_nest, only: &
-       NEST_COMM_recvwait_issue, &
-       NEST_COMM_recv_cancel,    &
-       NESTQA => NEST_BND_QA
+    use scale_comm_cartesC_nest, only: &
+       COMM_CARTESC_NEST_recvwait_issue, &
+       COMM_CARTESC_NEST_recv_cancel, &
+       NESTQA => COMM_CARTESC_NEST_BND_QA
     use scale_file_cartesC, only: &
        FILE_CARTESC_close
     implicit none
@@ -1561,12 +1560,12 @@ contains
 
     if ( do_parent_process ) then !online [parent]
        handle = 1
-       call NEST_COMM_recvwait_issue( handle, NESTQA )
+       call COMM_CARTESC_NEST_recvwait_issue( handle, NESTQA )
     endif
 
     if ( do_daughter_process ) then !online [daughter]
        handle = 2
-       call NEST_COMM_recv_cancel( handle )
+       call COMM_CARTESC_NEST_recv_cancel( handle )
     endif
 
     if ( ATMOS_BOUNDARY_fid > 0 ) then
@@ -1590,9 +1589,9 @@ contains
        PRC_HAS_N
     use scale_atmos_phy_mp, only: &
        QS_MP
-    use scale_grid_nest, only: &
+    use scale_comm_cartesC_nest, only: &
        ONLINE_USE_VELZ,       &
-       NEST_COMM_test
+       COMM_CARTESC_NEST_test
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -1949,11 +1948,11 @@ contains
     ! To be enable to do asynchronous communicaton
     if ( do_parent_process ) then !online [parent]
        handle = 1
-       call NEST_COMM_test( handle )
+       call COMM_CARTESC_NEST_test( handle )
     endif
     if ( do_daughter_process ) then !online [daughter]
        handle = 2
-       call NEST_COMM_test( handle )
+       call COMM_CARTESC_NEST_test( handle )
     endif
 
     return
@@ -2001,9 +2000,9 @@ contains
        MOMY, & ! [in]
        RHOT, & ! [in]
        QTRC )  ! [in]
-    use scale_grid_nest, only: &
-       NEST_COMM_recvwait_issue, &
-       NESTQA => NEST_BND_QA
+    use scale_comm_cartesC_nest, only: &
+       COMM_CARTESC_NEST_recvwait_issue, &
+       NESTQA => COMM_CARTESC_NEST_BND_QA
     implicit none
 
     ! arguments
@@ -2020,7 +2019,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)"*** ATMOS BOUNDARY update online: PARENT"
 
     ! issue wait
-    call NEST_COMM_recvwait_issue( handle, NESTQA )
+    call COMM_CARTESC_NEST_recvwait_issue( handle, NESTQA )
 
     ! issue send
     call ATMOS_BOUNDARY_send( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
@@ -2032,9 +2031,9 @@ contains
   !> Update reference boundary by communicate with parent domain
   subroutine ATMOS_BOUNDARY_update_online_daughter( &
        ref ) ! [in]
-    use scale_grid_nest, only: &
-       NEST_COMM_recvwait_issue, &
-       NESTQA => NEST_BND_QA
+    use scale_comm_cartesC_nest, only: &
+       COMM_CARTESC_NEST_recvwait_issue, &
+       NESTQA => COMM_CARTESC_NEST_BND_QA
     implicit none
 
     ! arguments
@@ -2052,7 +2051,7 @@ contains
     call ATMOS_BOUNDARY_ref_fillhalo( ref )
 
     ! issue receive
-    call NEST_COMM_recvwait_issue( handle, NESTQA )
+    call COMM_CARTESC_NEST_recvwait_issue( handle, NESTQA )
 
     return
   end subroutine ATMOS_BOUNDARY_update_online_daughter
@@ -2063,12 +2062,12 @@ contains
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
     use scale_atmos_phy_mp, only: &
        QS_MP
-    use scale_grid_nest, only: &
-       NEST_COMM_nestdown,    &
+    use scale_comm_cartesC_nest, only: &
+       COMM_CARTESC_NEST_nestdown,    &
        DAUGHTER_KA,           &
        DAUGHTER_IA,           &
        DAUGHTER_JA,           &
-       NESTQA => NEST_BND_QA
+       NESTQA => COMM_CARTESC_NEST_BND_QA
     implicit none
 
     ! parameters
@@ -2089,20 +2088,20 @@ contains
 !OCL XFILL
     dummy_d(:,:,:,:) = 0.0_RP
 
-    call NEST_COMM_nestdown( handle,                 &
-                             NESTQA,                 &
-                             DENS(:,:,:),            &  !(KA,IA,JA)
-                             MOMZ(:,:,:),            &  !(KA,IA,JA)
-                             MOMX(:,:,:),            &  !(KA,IA,JA)
-                             MOMY(:,:,:),            &  !(KA,IA,JA)
-                             RHOT(:,:,:),            &  !(KA,IA,JA)
-                             QTRC(:,:,:,QS_MP:QS_MP+NESTQA-1), &  !(KA,IA,JA,QA)
-                             dummy_d(:,:,:,1),       &  !(KA,IA,JA)
-                             dummy_d(:,:,:,1),       &  !(KA,IA,JA)
-                             dummy_d(:,:,:,1),       &  !(KA,IA,JA)
-                             dummy_d(:,:,:,1),       &  !(KA,IA,JA)
-                             dummy_d(:,:,:,1),       &  !(KA,IA,JA)
-                             dummy_d(:,:,:,1:NESTQA) )  !(KA,IA,JA,QA)
+    call COMM_CARTESC_NEST_nestdown( handle,                 &
+                                     NESTQA,                 &
+                                     DENS(:,:,:),            &  !(KA,IA,JA)
+                                     MOMZ(:,:,:),            &  !(KA,IA,JA)
+                                     MOMX(:,:,:),            &  !(KA,IA,JA)
+                                     MOMY(:,:,:),            &  !(KA,IA,JA)
+                                     RHOT(:,:,:),            &  !(KA,IA,JA)
+                                     QTRC(:,:,:,QS_MP:QS_MP+NESTQA-1), &  !(KA,IA,JA,QA)
+                                     dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                                     dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                                     dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                                     dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                                     dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                                     dummy_d(:,:,:,1:NESTQA) )  !(KA,IA,JA,QA)
 
     return
   end subroutine ATMOS_BOUNDARY_send
@@ -2111,13 +2110,13 @@ contains
   !> Recieve boundary value
   subroutine ATMOS_BOUNDARY_recv( &
        ref_idx )
-    use scale_grid_nest, only: &
+    use scale_comm_cartesC_nest, only: &
        ONLINE_BOUNDARY_DIAGQNUM, &
-       NEST_COMM_nestdown,       &
+       COMM_CARTESC_NEST_nestdown,       &
        PARENT_KA,                &
        PARENT_IA,                &
        PARENT_JA,                &
-       NESTQA => NEST_BND_QA
+       NESTQA => COMM_CARTESC_NEST_BND_QA
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_diagnose_number_concentration
     implicit none
@@ -2135,20 +2134,20 @@ contains
 !OCL XFILL
     dummy_p(:,:,:,:) = 0.0_RP
 
-    call NEST_COMM_nestdown( handle,                                         &
-                             NESTQA,                                         &
-                             dummy_p(:,:,:,1),                               & !(KA,IA,JA)
-                             dummy_p(:,:,:,1),                               & !(KA,IA,JA)
-                             dummy_p(:,:,:,1),                               & !(KA,IA,JA)
-                             dummy_p(:,:,:,1),                               & !(KA,IA,JA)
-                             dummy_p(:,:,:,1),                               & !(KA,IA,JA)
-                             dummy_p(:,:,:,1:NESTQA),                        & !(KA,IA,JA,QA)
-                             ATMOS_BOUNDARY_ref_DENS(:,:,:,ref_idx),         & !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_VELZ(:,:,:,ref_idx),         & !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_VELX(:,:,:,ref_idx),         & !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_VELY(:,:,:,ref_idx),         & !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_idx),         & !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,ref_idx) ) !(KA,IA,JA,QA)
+    call COMM_CARTESC_NEST_nestdown( handle,                                         &
+                                     NESTQA,                                         &
+                                     dummy_p(:,:,:,1),                               & !(KA,IA,JA)
+                                     dummy_p(:,:,:,1),                               & !(KA,IA,JA)
+                                     dummy_p(:,:,:,1),                               & !(KA,IA,JA)
+                                     dummy_p(:,:,:,1),                               & !(KA,IA,JA)
+                                     dummy_p(:,:,:,1),                               & !(KA,IA,JA)
+                                     dummy_p(:,:,:,1:NESTQA),                        & !(KA,IA,JA,QA)
+                                     ATMOS_BOUNDARY_ref_DENS(:,:,:,ref_idx),         & !(KA,IA,JA)
+                                     ATMOS_BOUNDARY_ref_VELZ(:,:,:,ref_idx),         & !(KA,IA,JA)
+                                     ATMOS_BOUNDARY_ref_VELX(:,:,:,ref_idx),         & !(KA,IA,JA)
+                                     ATMOS_BOUNDARY_ref_VELY(:,:,:,ref_idx),         & !(KA,IA,JA)
+                                     ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_idx),         & !(KA,IA,JA)
+                                     ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,ref_idx) ) !(KA,IA,JA,QA)
 
     if ( ONLINE_BOUNDARY_DIAGQNUM ) then
        call ATMOS_HYDROMETEOR_diagnose_number_concentration( ATMOS_BOUNDARY_ref_QTRC(:,:,:,:,ref_idx) ) ! [INOUT]

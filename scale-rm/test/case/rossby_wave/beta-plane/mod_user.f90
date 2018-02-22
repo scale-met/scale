@@ -16,7 +16,7 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -102,15 +102,15 @@ contains
        R    => CONST_Rdry, &
        CP   => CONST_CPdry, &
        CV   => CONST_CVdry
-    use scale_grid, only: &
-       GRID_DOMAIN_CENTER_Y, &
-       FXG  => GRID_FXG, &
-       FZ   => GRID_FZ, &
-       CZ   => GRID_CZ, &
-       CX   => GRID_CX, &
-       CY   => GRID_CY, &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
+       FXG  => ATMOS_GRID_CARTESC_FXG, &
+       FZ   => ATMOS_GRID_CARTESC_FZ, &
+       CZ   => ATMOS_GRID_CARTESC_CZ, &
+       CX   => ATMOS_GRID_CARTESC_CX, &
+       CY   => ATMOS_GRID_CARTESC_CY, &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY
     use scale_atmos_dyn, only: &
        CORIOLIS
     use scale_comm, only: &
@@ -152,7 +152,7 @@ contains
 
     ! initial profile
     do j = 1, JA
-       dy = CY(j) - GRID_DOMAIN_CENTER_Y
+       dy = CY(j) - ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y
        if ( abs(dy) <= JET_RY ) then
           do i = 1, IA
           do k = KS, KE

@@ -20,7 +20,7 @@ module mod_atmos_phy_mp_vars
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -554,14 +554,14 @@ contains
     real(RP), intent(out), optional :: Re     (KA,IA,JA,N_HYD) !> effective radius [cm]
     real(RP), intent(out), optional :: Qe     (KA,IA,JA,N_HYD) !> mass ratio [kg/kg]
 
-    integer :: ih
+    integer :: k, i, j, ih
 
     if ( present(CLDFRAC) ) then
        if ( .not. DIAG_CLDFRAC ) then
           select case ( ATMOS_PHY_MP_TYPE )
           case ( 'TOMITA08' )
              call ATMOS_PHY_MP_tomita08_cloud_fraction( &
-                  KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                  KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   QTRC(:,:,:,QHS:QHE), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
                   ATMOS_PHY_MP_CLDFRAC(:,:,:)                          ) ! [OUT]
           case default
@@ -577,7 +577,13 @@ contains
           DIAG_CLDFRAC = .true.
        end if
 !OCL XFILL
-       CLDFRAC(:,:,:) = ATMOS_PHY_MP_CLDFRAC(:,:,:)
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          CLDFRAC(k,i,j) = ATMOS_PHY_MP_CLDFRAC(k,i,j)
+       end do
+       end do
+       end do
     end if
 
     if ( present(Re) ) then
@@ -585,7 +591,7 @@ contains
           select case ( ATMOS_PHY_MP_TYPE )
           case ( 'TOMITA08' )
              call ATMOS_PHY_MP_tomita08_effective_radius( &
-                  KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                  KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QHS:QHE), & ! [IN]
                   ATMOS_PHY_MP_Re(:,:,:,:)                       ) ! [OUT]
           case default
@@ -601,7 +607,15 @@ contains
           DIAG_Re = .true.
        end if
 !OCL XFILL
-       Re(:,:,:,:) = ATMOS_PHY_MP_Re(:,:,:,:)
+       do ih = 1, N_HYD
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          Re(k,i,j,ih) = ATMOS_PHY_MP_Re(k,i,j,ih)
+       end do
+       end do
+       end do
+       end do
     end if
 
     if ( present(Qe) ) then
@@ -609,7 +623,7 @@ contains
           select case ( ATMOS_PHY_MP_TYPE )
           case ( 'TOMITA08' )
              call ATMOS_PHY_MP_tomita08_mass_ratio( &
-                  KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                  KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   QTRC(:,:,:,QHS:QHE),     & ! [IN]
                   ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]
           case default
@@ -625,7 +639,15 @@ contains
           DIAG_Qe = .true.
        end if
 !OCL XIFLL
-       Qe(:,:,:,:) = ATMOS_PHY_MP_Qe(:,:,:,:)
+       do ih = 1, N_HYD
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          Qe(k,i,j,ih) = ATMOS_PHY_MP_Qe(k,i,j,ih)
+       end do
+       end do
+       end do
+       end do
     end if
 
     return

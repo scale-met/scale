@@ -24,7 +24,7 @@ module scale_atmos_thermodyn
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
 
   use scale_const, only: &
@@ -672,6 +672,7 @@ contains
        qdry  = 1.0_RP
        CVtot = 0.0_RP
        Rtot  = 0.0_RP
+!OCL SERIAL
        do iqw = 1, QA
           qdry  = qdry  - q(k,i,j,iqw) * mass(iqw)
           CVtot = CVtot + q(k,i,j,iqw) * CVq (iqw)

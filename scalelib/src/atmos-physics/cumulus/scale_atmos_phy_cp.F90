@@ -18,7 +18,7 @@ module scale_atmos_phy_cp
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
   use scale_atmos_phy_mp
   private
@@ -48,7 +48,7 @@ module scale_atmos_phy_cp
        use scale_precision
        use scale_stdio
        use scale_prof
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_tracer
        use scale_atmos_phy_mp
        real(RP), intent(in)    :: DENS(KA,IA,JA)

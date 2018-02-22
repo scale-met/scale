@@ -15,7 +15,7 @@ module scale_land_sfc
   !
   use scale_precision
   use scale_stdio
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -64,7 +64,7 @@ module scale_land_sfc
            Z0E,    &
            dt      )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        implicit none
 
        real(RP), intent(out) :: LST_t(IA,JA) ! tendency of LST

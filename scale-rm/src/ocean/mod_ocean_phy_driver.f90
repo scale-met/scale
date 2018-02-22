@@ -17,7 +17,7 @@ module mod_ocean_phy_driver
   use scale_stdio
   use scale_prof
   use scale_debug
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
 
   use scale_const, only: &
      I_SW  => CONST_I_SW, &
@@ -111,8 +111,8 @@ contains
        STAT_total
     use scale_file_history, only: &
        FILE_HISTORY_in
-    use scale_grid_real, only: &
-       REAL_Z1
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_Z1
     use scale_roughness, only: &
        ROUGHNESS
     use scale_ocean_phy, only: &
@@ -182,7 +182,7 @@ contains
             OCEAN_SFC_Z0H(:,:),         & ! [IN]
             OCEAN_SFC_Z0E(:,:),         & ! [IN]
             ATMOS_U(:,:), ATMOS_V(:,:), & ! [IN]
-            REAL_Z1(:,:),               & ! [IN]
+            ATMOS_GRID_CARTESC_REAL_Z1(:,:),               & ! [IN]
             dt,                         & ! [IN]
             OCEAN_SFC_Z0M_t(:,:),       & ! [OUT]
             OCEAN_SFC_Z0H_t(:,:),       & ! [OUT]
@@ -211,7 +211,7 @@ contains
                        ATMOS_V         (:,:),      & ! [IN]
                        ATMOS_DENS      (:,:),      & ! [IN]
                        ATMOS_QV        (:,:),      & ! [IN]
-                       REAL_Z1         (:,:),      & ! [IN]
+                       ATMOS_GRID_CARTESC_REAL_Z1         (:,:),      & ! [IN]
                        ATMOS_PBL       (:,:),      & ! [IN]
                        ATMOS_SFC_DENS  (:,:),      & ! [IN]
                        ATMOS_SFC_PRES  (:,:),      & ! [IN]

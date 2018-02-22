@@ -19,7 +19,7 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   !-----------------------------------------------------------------------------
@@ -86,10 +86,10 @@ contains
     use scale_process, only: &
        PRC_MPIstop, &
        PRC_myrank
-    use scale_grid, only: &
-       CZ => GRID_CZ, &
-       CY => GRID_CY, &
-       CX => GRID_CX
+    use scale_atmos_grid_cartesC, only: &
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       CY => ATMOS_GRID_CARTESC_CY, &
+       CX => ATMOS_GRID_CARTESC_CX
 
     implicit none
 

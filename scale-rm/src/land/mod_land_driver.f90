@@ -17,8 +17,7 @@ module mod_land_driver
   use scale_stdio
   use scale_prof
   use scale_debug
-  use scale_grid_index
-  use scale_land_grid_index
+  use scale_land_grid_cartesC_index
 
   use scale_const, only: &
      I_SW  => CONST_I_SW, &
@@ -137,16 +136,16 @@ contains
     endif
 
     !########## Update ##########
-    do j = JS, JE
-    do i = IS, IE
+    do j = LJS, LJE
+    do i = LIS, LIE
     do k = LKS, LKE
        LAND_TEMP (k,i,j) = LAND_TEMP (k,i,j) + LAND_TEMP_t (k,i,j) * dt
        LAND_WATER(k,i,j) = LAND_WATER(k,i,j) + LAND_WATER_t(k,i,j) * dt
     enddo
     enddo
     enddo
-    do j = JS, JE
-    do i = IS, IE
+    do j = LJS, LJE
+    do i = LIS, LIE
        LAND_SFC_TEMP  (i,j)      = LAND_SFC_TEMP  (i,j)      + LAND_SFC_TEMP_t  (i,j)      * dt
        LAND_SFC_albedo(i,j,I_LW) = LAND_SFC_albedo(i,j,I_LW) + LAND_SFC_albedo_t(i,j,I_LW) * dt
        LAND_SFC_albedo(i,j,I_SW) = LAND_SFC_albedo(i,j,I_SW) + LAND_SFC_albedo_t(i,j,I_SW) * dt
@@ -154,8 +153,8 @@ contains
     enddo
 
     !########## Negative Fixer ##########
-    do j = JS, JE
-    do i = IS, IE
+    do j = LJS, LJE
+    do i = LIS, LIE
     do k = LKS, LKE
        LAND_WATER(k,i,j) = max( LAND_WATER(k,i,j), 0.0_RP )
     enddo
@@ -171,8 +170,8 @@ contains
 
     !########## reset tendencies ##########
 !OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
+    do j = LJS, LJE
+    do i = LIS, LIE
     do k = LKS, LKE
        LAND_TEMP_t (k,i,j) = 0.0_RP
        LAND_WATER_t(k,i,j) = 0.0_RP
@@ -181,8 +180,8 @@ contains
     enddo
 
 !OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
+    do j = LJS, LJE
+    do i = LIS, LIE
        LAND_SFC_TEMP_t  (i,j)      = 0.0_RP
        LAND_SFC_albedo_t(i,j,I_LW) = 0.0_RP
        LAND_SFC_albedo_t(i,j,I_SW) = 0.0_RP
@@ -203,27 +202,27 @@ contains
     use mod_land_admin, only: &
        LAND_sw
     use mod_land_vars, only: &
-       ATMOS_TEMP,     &
-       ATMOS_PRES,     &
-       ATMOS_W,        &
-       ATMOS_U,        &
-       ATMOS_V,        &
-       ATMOS_DENS,     &
-       ATMOS_QV,       &
-       ATMOS_PBL,      &
-       ATMOS_SFC_DENS, &
-       ATMOS_SFC_PRES, &
-       ATMOS_SFLX_LW,  &
-       ATMOS_SFLX_SW,  &
-       ATMOS_cosSZA,   &
-       ATMOS_SFLX_prec
+       ATMOS_TEMP,      &
+       ATMOS_PRES,      &
+       ATMOS_W,         &
+       ATMOS_U,         &
+       ATMOS_V,         &
+       ATMOS_DENS,      &
+       ATMOS_QV,        &
+       ATMOS_PBL,       &
+       ATMOS_SFC_DENS,  &
+       ATMOS_SFC_PRES,  &
+       ATMOS_SFLX_LW,   &
+       ATMOS_SFLX_SW,   &
+       ATMOS_cosSZA,    &
+       ATMOS_SFLX_prec, &
+       ATMOS_SFLX_rain, &
+       ATMOS_SFLX_snow
     use mod_cpl_vars, only: &
        CPL_getATM_LND
     implicit none
 
-    real(RP) :: ATMOS_SFLX_rad_dn(IA,JA,2,2)
-    real(RP) :: ATMOS_SFLX_rain  (IA,JA)
-    real(RP) :: ATMOS_SFLX_snow  (IA,JA)
+    real(RP) :: ATMOS_SFLX_rad_dn(LIA,LJA,2,2)
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -246,8 +245,8 @@ contains
     endif
 
 !OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
+    do j = LJS, LJE
+    do i = LIS, LIE
        ATMOS_SFLX_SW  (i,j) = ATMOS_SFLX_rad_dn(i,j,I_SW,1) + ATMOS_SFLX_rad_dn(i,j,I_SW,2) ! direct+diffuse
        ATMOS_SFLX_LW  (i,j) = ATMOS_SFLX_rad_dn(i,j,I_LW,1) + ATMOS_SFLX_rad_dn(i,j,I_LW,2) ! direct+diffuse
 

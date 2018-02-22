@@ -20,7 +20,7 @@ module scale_atmos_dyn_fvm_flux
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   use scale_process
@@ -46,7 +46,7 @@ module scale_atmos_dyn_fvm_flux
           mflx, val, GSQRT, &
           CDZ )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        implicit none
        real(RP), intent(out) :: valW (KA)
        real(RP), intent(in)  :: mflx (KA)
@@ -61,7 +61,7 @@ module scale_atmos_dyn_fvm_flux
           CDZ, &
           IIS, IIE, JJS, JJE )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        implicit none
        real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mflx    (KA,IA,JA)
@@ -79,7 +79,7 @@ module scale_atmos_dyn_fvm_flux
           CDZ, &
           IIS, IIE, JJS, JJE )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        implicit none
        real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
@@ -99,7 +99,7 @@ module scale_atmos_dyn_fvm_flux
           CDZ, &
           IIS, IIE, JJS, JJE )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        implicit none
        real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
@@ -120,7 +120,7 @@ module scale_atmos_dyn_fvm_flux
           dtrk, &
           IIS, IIE, JJS, JJE )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        implicit none
        real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
@@ -141,7 +141,7 @@ module scale_atmos_dyn_fvm_flux
           CDZ, &
           IIS, IIE, JJS, JJE )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        implicit none
        real(RP), intent(inout) :: flux    (KA,IA,JA)
        real(RP), intent(in)  :: mom     (KA,IA,JA)
