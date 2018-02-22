@@ -141,14 +141,14 @@ contains
        STATISTICS_checktotal, &
        STATISTICS_total
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_VOL,     &
-       ATMOS_GRID_CARTESC_REAL_TOTVOL,  &
-       ATMOS_GRID_CARTESC_REAL_VOLW,    &
-       ATMOS_GRID_CARTESC_REAL_TOTVOLW, &
-       ATMOS_GRID_CARTESC_REAL_VOLU,    &
-       ATMOS_GRID_CARTESC_REAL_TOTVOLU, &
-       ATMOS_GRID_CARTESC_REAL_VOLV,    &
-       ATMOS_GRID_CARTESC_REAL_TOTVOLV
+       ATMOS_GRID_CARTESC_REAL_VOL,       &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL,    &
+       ATMOS_GRID_CARTESC_REAL_VOLWXY,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLWXY, &
+       ATMOS_GRID_CARTESC_REAL_VOLZUY,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLZUY, &
+       ATMOS_GRID_CARTESC_REAL_VOLZXV,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLZXV
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_time, only: &
@@ -353,17 +353,17 @@ contains
 
        if ( STATISTICS_checktotal ) then
           call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                 MOMZ_t_TB(:,:,:), 'MOMZ_t_TB',       &
-                                 ATMOS_GRID_CARTESC_REAL_VOLW(:,:,:), &
-                                 ATMOS_GRID_CARTESC_REAL_TOTVOLW      )
+                                 MOMZ_t_TB(:,:,:), 'MOMZ_t_TB',         &
+                                 ATMOS_GRID_CARTESC_REAL_VOLWXY(:,:,:), &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOLWXY      )
           call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                 MOMX_t_TB(:,:,:), 'MOMX_t_TB',       &
-                                 ATMOS_GRID_CARTESC_REAL_VOLU(:,:,:), &
-                                 ATMOS_GRID_CARTESC_REAL_TOTVOLU      )
+                                 MOMX_t_TB(:,:,:), 'MOMX_t_TB',         &
+                                 ATMOS_GRID_CARTESC_REAL_VOLZUY(:,:,:), &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOLZUY      )
           call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                 MOMY_t_TB(:,:,:), 'MOMY_t_TB',       &
-                                 ATMOS_GRID_CARTESC_REAL_VOLV(:,:,:), &
-                                 ATMOS_GRID_CARTESC_REAL_TOTVOLV      )
+                                 MOMY_t_TB(:,:,:), 'MOMY_t_TB',         &
+                                 ATMOS_GRID_CARTESC_REAL_VOLZXV(:,:,:), &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOLZXV      )
           call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                  RHOT_t_TB(:,:,:), 'RHOT_t_TB',       &
                                  ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  &

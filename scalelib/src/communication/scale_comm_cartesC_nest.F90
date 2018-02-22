@@ -183,14 +183,14 @@ module scale_comm_cartesC_nest
   integer,  private   :: itp_nh   = 4                       !< # of interpolation kinds of horizontal direction
   integer,  private   :: itp_nv   = 2                       !< # of interpolation kinds of vertical direction
 
-  integer,  parameter :: tag_lon  = 1
-  integer,  parameter :: tag_lat  = 2
-  integer,  parameter :: tag_lonu = 3
-  integer,  parameter :: tag_latu = 4
-  integer,  parameter :: tag_lonv = 5
-  integer,  parameter :: tag_latv = 6
-  integer,  parameter :: tag_cz   = 7
-  integer,  parameter :: tag_fz   = 8
+  integer,  parameter :: tag_lon   = 1
+  integer,  parameter :: tag_lat   = 2
+  integer,  parameter :: tag_lonuy = 3
+  integer,  parameter :: tag_latuy = 4
+  integer,  parameter :: tag_lonxv = 5
+  integer,  parameter :: tag_latxv = 6
+  integer,  parameter :: tag_cz    = 7
+  integer,  parameter :: tag_fz    = 8
 
   integer,  parameter :: tag_dens = 1
   integer,  parameter :: tag_momz = 2
@@ -226,12 +226,12 @@ module scale_comm_cartesC_nest
   real(RP), private, allocatable :: recvbuf_3D (:,:,:,:)   ! buffer of receiver: 3D (with HALO)
   real(RP), private, allocatable :: recvbuf_3DF(:,:,:,:)   ! buffer of receiver: 3D-Kface (with HALO)
 
-  real(RP), private, allocatable :: buffer_ref_LON (:,:)   ! buffer of communicator: LON
-  real(RP), private, allocatable :: buffer_ref_LONU(:,:)   ! buffer of communicator: LONU
-  real(RP), private, allocatable :: buffer_ref_LONV(:,:)   ! buffer of communicator: LONV
-  real(RP), private, allocatable :: buffer_ref_LAT (:,:)   ! buffer of communicator: LAT
-  real(RP), private, allocatable :: buffer_ref_LATU(:,:)   ! buffer of communicator: LATU
-  real(RP), private, allocatable :: buffer_ref_LATV(:,:)   ! buffer of communicator: LATV
+  real(RP), private, allocatable :: buffer_ref_LON  (:,:)  ! buffer of communicator: LON
+  real(RP), private, allocatable :: buffer_ref_LONUY(:,:)  ! buffer of communicator: LONUY
+  real(RP), private, allocatable :: buffer_ref_LONXV(:,:)  ! buffer of communicator: LONXV
+  real(RP), private, allocatable :: buffer_ref_LAT  (:,:)  ! buffer of communicator: LAT
+  real(RP), private, allocatable :: buffer_ref_LATUY(:,:)  ! buffer of communicator: LATUY
+  real(RP), private, allocatable :: buffer_ref_LATXV(:,:)  ! buffer of communicator: LATXV
   real(RP), private, allocatable :: buffer_ref_CZ  (:,:,:) ! buffer of communicator: CZ
   real(RP), private, allocatable :: buffer_ref_FZ  (:,:,:) ! buffer of communicator: FZ
 
@@ -286,11 +286,11 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_LON,   &
        ATMOS_GRID_CARTESC_REAL_LAT,   &
-       ATMOS_GRID_CARTESC_REAL_LONU,  &
-       ATMOS_GRID_CARTESC_REAL_LONV,  &
+       ATMOS_GRID_CARTESC_REAL_LONUY, &
+       ATMOS_GRID_CARTESC_REAL_LONXV, &
        ATMOS_GRID_CARTESC_REAL_LONUV, &
-       ATMOS_GRID_CARTESC_REAL_LATU,  &
-       ATMOS_GRID_CARTESC_REAL_LATV,  &
+       ATMOS_GRID_CARTESC_REAL_LATUY, &
+       ATMOS_GRID_CARTESC_REAL_LATXV, &
        ATMOS_GRID_CARTESC_REAL_LATUV, &
        ATMOS_GRID_CARTESC_REAL_CZ,    &
        ATMOS_GRID_CARTESC_REAL_FZ
@@ -697,17 +697,18 @@ contains
             allocate( recvbuf_3D (   PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM), max_isu  ) )
             allocate( recvbuf_3DF( 0:PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM), max_isuf ) )
 
-            allocate( buffer_ref_LON (                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
-            allocate( buffer_ref_LONU(                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
-            allocate( buffer_ref_LONV(                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
-            allocate( buffer_ref_LAT (                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
-            allocate( buffer_ref_LATU(                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
-            allocate( buffer_ref_LATV(                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
-            allocate( buffer_ref_CZ  (  TILEAL_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
-            allocate( buffer_ref_FZ  (0:TILEAL_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_LON  (                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_LONUY(                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_LONXV(                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_LAT  (                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_LATUY(                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_LATXV(                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
 
-            allocate( buffer_ref_3D  (  TILEAL_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
-            allocate( buffer_ref_3DF (0:TILEAL_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_CZ(  TILEAL_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_FZ(0:TILEAL_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+
+            allocate( buffer_ref_3D (  TILEAL_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_3DF(0:TILEAL_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
 
             allocate( igrd (                                 DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
             allocate( jgrd (                                 DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
@@ -767,52 +768,52 @@ contains
                                  vfact          (:,:,:,:,:,I_ZSTG)  ) ! [OUT]
 
             ! for x staggered points
-            call INTRP_factor3d( itp_nh,                            & ! [IN]
-                                 TILEAL_KA  (HANDLING_NUM),         & ! [IN]
-                                 1,                                 & ! [IN]
-                                 TILEAL_KA  (HANDLING_NUM),         & ! [IN]
-                                 TILEAL_IA  (HANDLING_NUM),         & ! [IN]
-                                 TILEAL_JA  (HANDLING_NUM),         & ! [IN]
-                                 buffer_ref_LONU(:,:),              & ! [IN]
-                                 buffer_ref_LATV(:,:),              & ! [IN]
-                                 buffer_ref_CZ  (:,:,:),            & ! [IN]
-                                 DAUGHTER_KA(HANDLING_NUM),         & ! [IN]
-                                 DATR_KS    (HANDLING_NUM),         & ! [IN]
-                                 DATR_KE    (HANDLING_NUM),         & ! [IN]
-                                 DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
-                                 DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
-                                 ATMOS_GRID_CARTESC_REAL_LONU      (1:IA,1:JA),        & ! [IN]
-                                 ATMOS_GRID_CARTESC_REAL_LATU      (1:IA,1:JA),        & ! [IN]
-                                 ATMOS_GRID_CARTESC_REAL_CZ        (:,:,:),            & ! [IN]
-                                 igrd           (    :,:,:,I_XSTG), & ! [OUT]
-                                 jgrd           (    :,:,:,I_XSTG), & ! [OUT]
-                                 hfact          (    :,:,:,I_XSTG), & ! [OUT]
-                                 kgrd           (:,:,:,:,:,I_XSTG), & ! [OUT]
-                                 vfact          (:,:,:,:,:,I_XSTG)  ) ! [OUT]
+            call INTRP_factor3d( itp_nh,                                   & ! [IN]
+                                 TILEAL_KA  (HANDLING_NUM),                & ! [IN]
+                                 1,                                        & ! [IN]
+                                 TILEAL_KA  (HANDLING_NUM),                & ! [IN]
+                                 TILEAL_IA  (HANDLING_NUM),                & ! [IN]
+                                 TILEAL_JA  (HANDLING_NUM),                & ! [IN]
+                                 buffer_ref_LONUY(:,:),                    & ! [IN]
+                                 buffer_ref_LATXV(:,:),                    & ! [IN]
+                                 buffer_ref_CZ  (:,:,:),                   & ! [IN]
+                                 DAUGHTER_KA(HANDLING_NUM),                & ! [IN]
+                                 DATR_KS    (HANDLING_NUM),                & ! [IN]
+                                 DATR_KE    (HANDLING_NUM),                & ! [IN]
+                                 DAUGHTER_IA(HANDLING_NUM),                & ! [IN]
+                                 DAUGHTER_JA(HANDLING_NUM),                & ! [IN]
+                                 ATMOS_GRID_CARTESC_REAL_LONUY(1:IA,1:JA), & ! [IN]
+                                 ATMOS_GRID_CARTESC_REAL_LATUY(1:IA,1:JA), & ! [IN]
+                                 ATMOS_GRID_CARTESC_REAL_CZ(:,:,:),        & ! [IN]
+                                 igrd (    :,:,:,I_XSTG),                  & ! [OUT]
+                                 jgrd (    :,:,:,I_XSTG),                  & ! [OUT]
+                                 hfact(    :,:,:,I_XSTG),                  & ! [OUT]
+                                 kgrd (:,:,:,:,:,I_XSTG),                  & ! [OUT]
+                                 vfact(:,:,:,:,:,I_XSTG)                   ) ! [OUT]
 
             ! for y staggered points
-            call INTRP_factor3d( itp_nh,                            & ! [IN]
-                                 TILEAL_KA  (HANDLING_NUM),         & ! [IN]
-                                 1,                                 & ! [IN]
-                                 TILEAL_KA  (HANDLING_NUM),         & ! [IN]
-                                 TILEAL_IA  (HANDLING_NUM),         & ! [IN]
-                                 TILEAL_JA  (HANDLING_NUM),         & ! [IN]
-                                 buffer_ref_LONV(:,:),              & ! [IN]
-                                 buffer_ref_LATV(:,:),              & ! [IN]
-                                 buffer_ref_CZ  (:,:,:),            & ! [IN]
-                                 DAUGHTER_KA(HANDLING_NUM),         & ! [IN]
-                                 DATR_KS    (HANDLING_NUM),         & ! [IN]
-                                 DATR_KE    (HANDLING_NUM),         & ! [IN]
-                                 DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
-                                 DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
-                                 ATMOS_GRID_CARTESC_REAL_LONV      (1:IA,1:JA),        & ! [IN]
-                                 ATMOS_GRID_CARTESC_REAL_LATV      (1:IA,1:JA),        & ! [IN]
-                                 ATMOS_GRID_CARTESC_REAL_CZ        (:,:,:),            & ! [IN]
-                                 igrd           (    :,:,:,I_YSTG), & ! [OUT]
-                                 jgrd           (    :,:,:,I_YSTG), & ! [OUT]
-                                 hfact          (    :,:,:,I_YSTG), & ! [OUT]
-                                 kgrd           (:,:,:,:,:,I_YSTG), & ! [OUT]
-                                 vfact          (:,:,:,:,:,I_YSTG)  ) ! [OUT]
+            call INTRP_factor3d( itp_nh,                                   & ! [IN]
+                                 TILEAL_KA  (HANDLING_NUM),                & ! [IN]
+                                 1,                                        & ! [IN]
+                                 TILEAL_KA  (HANDLING_NUM),                & ! [IN]
+                                 TILEAL_IA  (HANDLING_NUM),                & ! [IN]
+                                 TILEAL_JA  (HANDLING_NUM),                & ! [IN]
+                                 buffer_ref_LONXV(:,:),                    & ! [IN]
+                                 buffer_ref_LATXV(:,:),                    & ! [IN]
+                                 buffer_ref_CZ  (:,:,:),                   & ! [IN]
+                                 DAUGHTER_KA(HANDLING_NUM),                & ! [IN]
+                                 DATR_KS    (HANDLING_NUM),                & ! [IN]
+                                 DATR_KE    (HANDLING_NUM),                & ! [IN]
+                                 DAUGHTER_IA(HANDLING_NUM),                & ! [IN]
+                                 DAUGHTER_JA(HANDLING_NUM),                & ! [IN]
+                                 ATMOS_GRID_CARTESC_REAL_LONXV(1:IA,1:JA), & ! [IN]
+                                 ATMOS_GRID_CARTESC_REAL_LATXV(1:IA,1:JA), & ! [IN]
+                                 ATMOS_GRID_CARTESC_REAL_CZ(:,:,:),        & ! [IN]
+                                 igrd (    :,:,:,I_YSTG),                  & ! [OUT]
+                                 jgrd (    :,:,:,I_YSTG),                  & ! [OUT]
+                                 hfact(    :,:,:,I_YSTG),                  & ! [OUT]
+                                 kgrd (:,:,:,:,:,I_YSTG),                  & ! [OUT]
+                                 vfact(:,:,:,:,:,I_YSTG)                   ) ! [OUT]
 
             deallocate( buffer_2D  )
             deallocate( buffer_3D  )
@@ -1544,13 +1545,13 @@ contains
        PRC_myrank,  &
        PRC_MPIstop
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_LON,  &
-       ATMOS_GRID_CARTESC_REAL_LAT,  &
-       ATMOS_GRID_CARTESC_REAL_LONU, &
-       ATMOS_GRID_CARTESC_REAL_LONV, &
-       ATMOS_GRID_CARTESC_REAL_LATU, &
-       ATMOS_GRID_CARTESC_REAL_LATV, &
-       ATMOS_GRID_CARTESC_REAL_CZ,   &
+       ATMOS_GRID_CARTESC_REAL_LON,   &
+       ATMOS_GRID_CARTESC_REAL_LAT,   &
+       ATMOS_GRID_CARTESC_REAL_LONUY, &
+       ATMOS_GRID_CARTESC_REAL_LONXV, &
+       ATMOS_GRID_CARTESC_REAL_LATUY, &
+       ATMOS_GRID_CARTESC_REAL_LATXV, &
+       ATMOS_GRID_CARTESC_REAL_CZ,    &
        ATMOS_GRID_CARTESC_REAL_FZ
     use scale_comm, only: &
        COMM_datatype
@@ -1598,26 +1599,26 @@ contains
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
-          tag   = tagbase + tag_lonu
-          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LONU(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          tag   = tagbase + tag_lonuy
+          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LONUY(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
           call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
-          tag   = tagbase + tag_latu
-          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LATU(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          tag   = tagbase + tag_latuy
+          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LATUY(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
           call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
-          tag   = tagbase + tag_lonv
-          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LONV(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          tag   = tagbase + tag_lonxv
+          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LONXV(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
           call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
-          tag   = tagbase + tag_latv
-          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LATV(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          tag   = tagbase + tag_latxv
+          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LATXV(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
           call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
           rq = rq + 1
@@ -1665,31 +1666,31 @@ contains
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
-          tag   = tagbase + tag_lonu
+          tag   = tagbase + tag_lonuy
           call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
           call MPI_WAIT(ireq_d(rq), istatus, ierr)
-          buffer_ref_LONU(xs:xe,ys:ye)  = buffer_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
+          buffer_ref_LONUY(xs:xe,ys:ye)  = buffer_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
-          tag   = tagbase + tag_latu
+          tag   = tagbase + tag_latuy
           call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
           call MPI_WAIT(ireq_d(rq), istatus, ierr)
-          buffer_ref_LATU(xs:xe,ys:ye)  = buffer_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
+          buffer_ref_LATUY(xs:xe,ys:ye)  = buffer_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
-          tag   = tagbase + tag_lonv
+          tag   = tagbase + tag_lonxv
           call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
           call MPI_WAIT(ireq_d(rq), istatus, ierr)
-          buffer_ref_LONV(xs:xe,ys:ye)  = buffer_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
+          buffer_ref_LONXV(xs:xe,ys:ye)  = buffer_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
-          tag   = tagbase + tag_latv
+          tag   = tagbase + tag_latxv
           call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
           call MPI_WAIT(ireq_d(rq), istatus, ierr)
-          buffer_ref_LATV(xs:xe,ys:ye)  = buffer_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
+          buffer_ref_LATXV(xs:xe,ys:ye)  = buffer_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
 
           rq = rq + 1
           ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)

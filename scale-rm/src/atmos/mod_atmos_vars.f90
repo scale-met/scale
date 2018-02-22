@@ -1333,14 +1333,14 @@ contains
        STATISTICS_checktotal, &
        STATISTICS_total
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_VOL,     &
-       ATMOS_GRID_CARTESC_REAL_TOTVOL,  &
-       ATMOS_GRID_CARTESC_REAL_VOLW,    &
-       ATMOS_GRID_CARTESC_REAL_TOTVOLW, &
-       ATMOS_GRID_CARTESC_REAL_VOLU,    &
-       ATMOS_GRID_CARTESC_REAL_TOTVOLU, &
-       ATMOS_GRID_CARTESC_REAL_VOLV,    &
-       ATMOS_GRID_CARTESC_REAL_TOTVOLV
+       ATMOS_GRID_CARTESC_REAL_VOL,       &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL,    &
+       ATMOS_GRID_CARTESC_REAL_VOLWXY,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLWXY, &
+       ATMOS_GRID_CARTESC_REAL_VOLZUY,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLZUY, &
+       ATMOS_GRID_CARTESC_REAL_VOLZXV,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLZXV
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
@@ -1358,17 +1358,17 @@ contains
                               ATMOS_GRID_CARTESC_REAL_VOL  (:,:,:), & ! (in)
                               ATMOS_GRID_CARTESC_REAL_TOTVOL        ) ! (in)
        call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                             MOMZ(:,:,:), PV_info(I_MOMZ)%NAME,    & ! (in)
-                             ATMOS_GRID_CARTESC_REAL_VOLW (:,:,:), & ! (in)
-                             ATMOS_GRID_CARTESC_REAL_TOTVOLW       ) ! (in)
+                             MOMZ(:,:,:), PV_info(I_MOMZ)%NAME,     & ! (in)
+                             ATMOS_GRID_CARTESC_REAL_VOLWXY(:,:,:), & ! (in)
+                             ATMOS_GRID_CARTESC_REAL_TOTVOLWXY      ) ! (in)
        call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                              MOMX(:,:,:), PV_info(I_MOMX)%NAME,    & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_VOLU (:,:,:), & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTVOLU       ) ! (in)
+                              MOMX(:,:,:), PV_info(I_MOMX)%NAME,     & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOLZUY(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOLZUY      ) ! (in)
        call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                              MOMY(:,:,:), PV_info(I_MOMY)%NAME,    & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_VOLV (:,:,:), & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTVOLV       ) ! (in)
+                              MOMY(:,:,:), PV_info(I_MOMY)%NAME,     & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOLZXV(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOLZXV      ) ! (in)
        call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               RHOT(:,:,:), PV_info(I_RHOT)%NAME,    & ! (in)
                               ATMOS_GRID_CARTESC_REAL_VOL  (:,:,:), & ! (in)

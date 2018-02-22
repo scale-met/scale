@@ -153,6 +153,7 @@ module scale_file_history
      integer                    :: dstep             !> Time unit
      logical                    :: taverage          !> Apply time average?
      integer                    :: dtype             !> Data type
+     character(len=FILE_HSHORT) :: cell_measures     !> Cell measures
      logical                    :: registered        !> This item is registered?
   end type request
 
@@ -172,6 +173,7 @@ module scale_file_history
      character(len=FILE_HLONG)  :: desc              !> Variable description
      character(len=FILE_HSHORT) :: units             !> Variable units
      integer                    :: dimid             !> dimension ID
+     character(len=FILE_HSHORT) :: cell_measures     !> Cell measures
      integer                    :: waitstep          !> Step length to suppress output [step]
      integer                    :: laststep_write    !> Last step when the variable is written
      integer                    :: laststep_put      !> Last step when the variable is put
@@ -199,6 +201,10 @@ module scale_file_history
      integer                   , pointer :: size(:)
      character(len=FILE_HSHORT), pointer :: zcoords(:)
      logical                             :: mapping
+     character(len=FILE_HSHORT)          :: area
+     character(len=FILE_HSHORT)          :: area_x
+     character(len=FILE_HSHORT)          :: area_y
+     character(len=FILE_HSHORT)          :: volume
   end type dim
 
   type axis
@@ -279,7 +285,7 @@ module scale_file_history
   integer                    :: FILE_HISTORY_naxes    =   0
   type(axis)                 :: FILE_HISTORY_axes(FILE_HISTORY_axis_max)
 
-  integer,       parameter   :: FILE_HISTORY_assoc_max = 20
+  integer,       parameter   :: FILE_HISTORY_assoc_max = 40
   integer                    :: FILE_HISTORY_nassocs   =  0
   type(assoc)                :: FILE_HISTORY_assocs(FILE_HISTORY_assoc_max)
 
@@ -628,6 +634,7 @@ contains
        name, desc, unit, &
        itemid,           &
        ndims, dim_type,  &
+       cell_measures,    &
        fill_halo         )
     implicit none
 
@@ -639,8 +646,10 @@ contains
 
     integer,          intent(in), optional :: ndims    !< if ndims is set and dim_type is not set, the dim_type that set firstry by FILE_HISTORY_set_dim of ndims is used
     character(len=*), intent(in), optional :: dim_type
+    character(len=*), intent(in), optional :: cell_measures
     logical,          intent(in), optional :: fill_halo
 
+    character(len=FILE_HSHORT) :: cell_measures_
     integer :: dimid, iid
     integer :: n
     !---------------------------------------------------------------------------
@@ -700,25 +709,75 @@ contains
        end if
     end if
 
+    if ( present(cell_measures) ) then
+       select case ( cell_measures )
+       case ( "area" )
+          if ( FILE_HISTORY_dims(dimid)%area == "" ) then
+             write(*,*) 'xxx area is not supported for cell_measures'
+             call PRC_abort
+          end if
+       case ( "area_z" )
+          if ( FILE_HISTORY_dims(dimid)%area == "" ) then
+             write(*,*) 'xxx area_z is not supported for cell_measures'
+             call PRC_abort
+          end if
+       case ( "area_x" )
+          if ( FILE_HISTORY_dims(dimid)%area_x == "" ) then
+             write(*,*) 'xxx area_x is not supported for cell_measures'
+             call PRC_abort
+          end if
+       case ( "area_y" )
+          if ( FILE_HISTORY_dims(dimid)%area_y == "" ) then
+             write(*,*) 'xxx area_y is not supported for cell_measures'
+             call PRC_abort
+          end if
+       case ( "volume" )
+          if ( FILE_HISTORY_dims(dimid)%volume == "" ) then
+             write(*,*) 'xxx volume is not supported for cell_measures'
+             call PRC_abort
+          end if
+       case default
+          write(*,*) 'xxx cell_measures must be "area" or "volume"'
+          call PRC_abort
+       end select
+       cell_measures_ = cell_measures
+    else if ( FILE_HISTORY_dims(dimid)%ndims == 2 ) then
+       cell_measures_ = "area"
+    else if ( FILE_HISTORY_dims(dimid)%ndims == 3 ) then
+       cell_measures_ = "volume"
+    else
+       cell_measures_ = ""
+    end if
+
     if ( FILE_HISTORY_dims(dimid)%nzcoords > 0 ) then
 
        itemid = -1
        do n = 1, FILE_HISTORY_dims(dimid)%nzcoords
-          call FILE_HISTORY_Add_Variable( name, desc, unit,                    & ! (in)
-                                          dimid,                               & ! (in)
-                                          FILE_HISTORY_dims(dimid)%zcoords(n), & ! (in)
-                                          iid,                                 & ! (out)
-                                          fill_halo                            ) ! (in)
+          if ( FILE_HISTORY_dims(dimid)%zcoords(n) == "model" ) then
+             call FILE_HISTORY_Add_Variable( name, desc, unit,                    & ! (in)
+                                             dimid,                               & ! (in)
+                                             FILE_HISTORY_dims(dimid)%zcoords(n), & ! (in)
+                                             iid,                                 & ! (out)
+                                             cell_measures=cell_measures_, & ! (in)
+                                             fill_halo=fill_halo                  ) ! (in)
+          else
+             call FILE_HISTORY_Add_Variable( name, desc, unit,                    & ! (in)
+                                             dimid,                               & ! (in)
+                                             FILE_HISTORY_dims(dimid)%zcoords(n), & ! (in)
+                                             iid,                                 & ! (out)
+                                             fill_halo=fill_halo                  ) ! (in)
+          end if
           if ( iid > 0 ) itemid = iid
        end do
 
     else
 
-       call FILE_HISTORY_Add_Variable( name, desc, unit, & ! (in)
-                                       dimid,            & ! (in)
-                                       "model",          & ! (in)
-                                       itemid,           & ! (out)
-                                       fill_halo         ) ! (in)
+       call FILE_HISTORY_Add_Variable( name, desc, unit,             & ! (in)
+                                       dimid,                        & ! (in)
+                                       "model",                      & ! (in)
+                                       itemid,                       & ! (out)
+                                       cell_measures=cell_measures_, & ! (in)
+                                       fill_halo=fill_halo           ) ! (in)
 
     end if
 
@@ -1204,11 +1263,13 @@ contains
   !> set dimension information
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Set_Dim( &
-       name,            &
-       ndims, nzcoords, &
-       dims, zcoords,   &
-       start, count,    &
-       mapping          )
+       name,                 &
+       ndims, nzcoords,      &
+       dims, zcoords,        &
+       start, count,         &
+       mapping,              &
+       area, area_x, area_y, &
+       volume                )
     implicit none
 
     character(len=*), intent(in) :: name
@@ -1219,7 +1280,11 @@ contains
     integer,          intent(in) :: start(ndims,nzcoords)
     integer,          intent(in) :: count(ndims,nzcoords)
 
-    logical, intent(in), optional :: mapping
+    logical,          intent(in), optional :: mapping
+    character(len=*), intent(in), optional :: area
+    character(len=*), intent(in), optional :: area_x
+    character(len=*), intent(in), optional :: area_y
+    character(len=*), intent(in), optional :: volume
 
     integer :: id
     integer :: size, n, m
@@ -1257,6 +1322,27 @@ contains
        FILE_HISTORY_dims(id)%mapping = mapping
     else
        FILE_HISTORY_dims(id)%mapping = .false.
+    end if
+
+    if ( present(area) ) then
+       FILE_HISTORY_dims(id)%area = area
+    else
+       FILE_HISTORY_dims(id)%area = ""
+    end if
+    if ( present(area_x) ) then
+       FILE_HISTORY_dims(id)%area_x = area_x
+    else
+       FILE_HISTORY_dims(id)%area_x = ""
+    end if
+    if ( present(area_y) ) then
+       FILE_HISTORY_dims(id)%area_y = area_y
+    else
+       FILE_HISTORY_dims(id)%area_y = ""
+    end if
+    if ( present(volume) ) then
+       FILE_HISTORY_dims(id)%volume = volume
+    else
+       FILE_HISTORY_dims(id)%volume = ""
     end if
 
     return
@@ -1479,6 +1565,7 @@ contains
        dimid,              &
        zcoord,             &
        itemid,             &
+       cell_measures,      &
        fill_halo           )
     use scale_file_h, only: &
        FILE_dtypelist
@@ -1489,6 +1576,7 @@ contains
     integer,          intent(in) :: dimid
     character(len=*), intent(in) :: zcoord
     integer,          intent(out) :: itemid
+    character(len=*), intent(in), optional :: cell_measures
     logical,          intent(in), optional :: fill_halo
 
     integer :: reqid, zid, id
@@ -1537,29 +1625,34 @@ contains
              call PRC_abort
           end if
 
-          FILE_HISTORY_vars(id)%fid               = -1
-          FILE_HISTORY_vars(id)%vid               = -1
-          FILE_HISTORY_vars(id)%desc              = desc
-          FILE_HISTORY_vars(id)%units             = units
-          FILE_HISTORY_vars(id)%dimid             = dimid
-          if ( present(fill_halo) ) then
-             FILE_HISTORY_vars(id)%fill_halo         = fill_halo
+          FILE_HISTORY_vars(id)%fid   = -1
+          FILE_HISTORY_vars(id)%vid   = -1
+          FILE_HISTORY_vars(id)%desc  = desc
+          FILE_HISTORY_vars(id)%units = units
+          FILE_HISTORY_vars(id)%dimid = dimid
+          if ( present(cell_measures) ) then
+             FILE_HISTORY_vars(id)%cell_measures = cell_measures
           else
-             FILE_HISTORY_vars(id)%fill_halo         = .false.
+             FILE_HISTORY_vars(id)%cell_measures = ""
+          end if
+          if ( present(fill_halo) ) then
+             FILE_HISTORY_vars(id)%fill_halo = fill_halo
+          else
+             FILE_HISTORY_vars(id)%fill_halo = .false.
           end if
 
-          FILE_HISTORY_vars(id)%waitstep          = FILE_HISTORY_OUTPUT_WAIT_STEP
+          FILE_HISTORY_vars(id)%waitstep = FILE_HISTORY_OUTPUT_WAIT_STEP
           if ( FILE_HISTORY_OUTPUT_STEP0 .AND. FILE_HISTORY_NOWSTEP == 1 ) then
              FILE_HISTORY_vars(id)%laststep_write = 1 - FILE_HISTORY_vars(id)%dstep
           else
              FILE_HISTORY_vars(id)%laststep_write = 1
           endif
-          FILE_HISTORY_vars(id)%laststep_put      = FILE_HISTORY_vars(id)%laststep_write
-          FILE_HISTORY_vars(id)%flag_clear        = .true.
+          FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_vars(id)%laststep_write
+          FILE_HISTORY_vars(id)%flag_clear   = .true.
           FILE_HISTORY_vars(id)%size = FILE_HISTORY_dims(dimid)%size(zid)
           allocate( FILE_HISTORY_vars(id)%varsum( FILE_HISTORY_vars(id)%size ) )
 
-          FILE_HISTORY_vars(id)%timesum           = 0.0_DP
+          FILE_HISTORY_vars(id)%timesum = 0.0_DP
 
           if ( debug ) then
              if( IO_L ) write(IO_FID_LOG,*) '*** [HISTORY] Item registration No.= ', id
@@ -1838,13 +1931,33 @@ contains
                                time_avg=FILE_HISTORY_vars(id)%taverage ) ! [IN]
 
 
-       if (       FILE_HISTORY_dims(dimid)%mapping &
-            .and. FILE_HISTORY_mappingname /= "" ) then
-          call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid,     & ! [IN]
-                                   FILE_HISTORY_vars(id)%outname, & ! [IN]
-                                   'grid_mapping',                & ! [IN]
-                                   FILE_HISTORY_mappingname       ) ! [IN]
+       if (       FILE_HISTORY_dims(dimid)%mapping .and. FILE_HISTORY_mappingname /= "" ) then
+          call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname, & ! [IN]
+                                   'grid_mapping', FILE_HISTORY_mappingname                  ) ! [IN]
        endif
+
+       select case( FILE_HISTORY_vars(id)%cell_measures )
+       case ( "area", "area_z" )
+          if ( FILE_HISTORY_dims(dimid)%area /= "" ) then
+             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname,      & ! [IN]
+                                      'cell_measures', "area: "//trim(FILE_HISTORY_dims(dimid)%area) ) ! [IN]
+          end if
+       case ( "area_x" )
+          if ( FILE_HISTORY_dims(dimid)%area_x /= "" ) then
+             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname,        & ! [IN]
+                                      'cell_measures', "area: "//trim(FILE_HISTORY_dims(dimid)%area_x) ) ! [IN]
+          end if
+       case ( "area_y" )
+          if ( FILE_HISTORY_dims(dimid)%area_x /= "" ) then
+             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname,        & ! [IN]
+                                      'cell_measures', "area: "//trim(FILE_HISTORY_dims(dimid)%area_y) ) ! [IN]
+          end if
+       case ( "volume" )
+          if ( FILE_HISTORY_dims(dimid)%area_x /= "" ) then
+             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname,        & ! [IN]
+                                      'cell_measures', "volume: "//trim(FILE_HISTORY_dims(dimid)%volume) ) ! [IN]
+          end if
+       end select
 
     endif
 

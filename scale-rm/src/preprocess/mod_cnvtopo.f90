@@ -325,8 +325,8 @@ contains
     use scale_topography, only: &
        TOPO_Zsfc
     use scale_atmos_grid_cartesC_real, only: &
-       LATV => ATMOS_GRID_CARTESC_REAL_LATV, &
-       LONU => ATMOS_GRID_CARTESC_REAL_LONU
+       LATXV => ATMOS_GRID_CARTESC_REAL_LATXV, &
+       LONUY => ATMOS_GRID_CARTESC_REAL_LONUY
     implicit none
 
     character(len=H_LONG) :: GTOPO30_IN_DIR       = '.' !< directory contains GTOPO30 files (GrADS format)
@@ -366,7 +366,7 @@ contains
     real(RP) :: jfrac_b ! fraction for jloc
     real(RP) :: ifrac_l ! fraction for iloc
 
-    real(RP) :: LONU_mod(0:IA,JA)
+    real(RP) :: LONUY_mod(0:IA,JA)
     real(RP) :: DOMAIN_LATS, DOMAIN_LATE
     real(RP) :: DOMAIN_LONS, DOMAIN_LONE
     integer  :: DOMAIN_LONSLOC(2), DOMAIN_LONELOC(2)
@@ -406,21 +406,21 @@ contains
     enddo
     enddo
 
-    LONU_mod(:,:) = mod( LONU(:,:)+3.0_DP*PI, 2.0_DP*PI ) - PI
+    LONUY_mod(:,:) = mod( LONUY(:,:)+3.0_DP*PI, 2.0_DP*PI ) - PI
 
-    DOMAIN_LATS    = minval(LATV    (:,:))
-    DOMAIN_LATE    = maxval(LATV    (:,:))
-    DOMAIN_LONS    = minval(LONU_mod(:,:))
-    DOMAIN_LONE    = maxval(LONU_mod(:,:))
-    DOMAIN_LONSLOC = minloc(LONU_mod(:,:))
-    DOMAIN_LONELOC = maxloc(LONU_mod(:,:))
+    DOMAIN_LATS    = minval(LATXV    (:,:))
+    DOMAIN_LATE    = maxval(LATXV    (:,:))
+    DOMAIN_LONS    = minval(LONUY_mod(:,:))
+    DOMAIN_LONE    = maxval(LONUY_mod(:,:))
+    DOMAIN_LONSLOC = minloc(LONUY_mod(:,:))
+    DOMAIN_LONELOC = maxloc(LONUY_mod(:,:))
 
     check_IDL = .false.
-    if (      DOMAIN_LONS < LONU_mod( 0,DOMAIN_LONSLOC(2)) &
-         .OR. DOMAIN_LONE > LONU_mod(IA,DOMAIN_LONELOC(2)) ) then
+    if (      DOMAIN_LONS < LONUY_mod( 0,DOMAIN_LONSLOC(2)) &
+         .OR. DOMAIN_LONE > LONUY_mod(IA,DOMAIN_LONELOC(2)) ) then
        check_IDL = .true.
-       DOMAIN_LONS = minval(LONU_mod(:,:),mask=(LONU_mod>0.0_RP))
-       DOMAIN_LONE = maxval(LONU_mod(:,:),mask=(LONU_mod<0.0_RP))
+       DOMAIN_LONS = minval(LONUY_mod(:,:),mask=(LONUY_mod>0.0_RP))
+       DOMAIN_LONE = maxval(LONUY_mod(:,:),mask=(LONUY_mod<0.0_RP))
     endif
 
     jos   = nint( GTOPO30_DLAT / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
@@ -602,42 +602,42 @@ contains
 
       jloop: do j = JS-1, JE+1
       iloop: do i = IS-1, IE+1
-                if (       TILE_LONH(ii-1) >= LONU_mod(i-1,j  ) &
-                     .AND. TILE_LONH(ii-1) <  LONU_mod(i  ,j  ) &
-                     .AND. TILE_LATH(jj-1) >= LATV    (i  ,j-1) &
-                     .AND. TILE_LATH(jj-1) <  LATV    (i  ,j  ) ) then
+                if (       TILE_LONH(ii-1) >= LONUY_mod(i-1,j  ) &
+                     .AND. TILE_LONH(ii-1) <  LONUY_mod(i  ,j  ) &
+                     .AND. TILE_LATH(jj-1) >= LATXV    (i  ,j-1) &
+                     .AND. TILE_LATH(jj-1) <  LATXV    (i  ,j  ) ) then
 
                    iloc    = i
-                   ifrac_l = min( LONU_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
+                   ifrac_l = min( LONUY_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
 
                    jloc    = j
-                   jfrac_b = min( LATV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                   jfrac_b = min( LATXV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
                    exit jloop
 
                 endif
 
-                if (       LONU_mod (i-1,j) >= LONU_mod(i  ,j  ) &
-                     .AND. TILE_LATH(jj-1)  >= LATV    (i  ,j-1) &
-                     .AND. TILE_LATH(jj-1)  <  LATV    (i  ,j  ) ) then ! across the IDL
+                if (       LONUY_mod(i-1,j) >= LONUY_mod(i  ,j  ) &
+                     .AND. TILE_LATH(jj-1)  >= LATXV    (i  ,j-1) &
+                     .AND. TILE_LATH(jj-1)  <  LATXV    (i  ,j  ) ) then ! across the IDL
 
-                   if    (       TILE_LONH(ii-1) >= LONU_mod(i-1,j) &
-                           .AND. TILE_LONH(ii-1) <  PI              ) then
+                   if    (       TILE_LONH(ii-1) >= LONUY_mod(i-1,j) &
+                           .AND. TILE_LONH(ii-1) <  PI               ) then
 
                       iloc    = i
-                      ifrac_l = min( LONU_mod(i,j)-TILE_LONH(ii-1)+2.0_RP*PI, TILE_DLON ) / TILE_DLON
+                      ifrac_l = min( LONUY_mod(i,j)-TILE_LONH(ii-1)+2.0_RP*PI, TILE_DLON ) / TILE_DLON
 
                       jloc    = j
-                      jfrac_b = min( LATV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                      jfrac_b = min( LATXV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
                       exit jloop
 
                    elseif(       TILE_LONH(ii-1) >= -PI                  &
-                           .AND. TILE_LONH(ii-1) <  LONU_mod(i  ,j) ) then
+                           .AND. TILE_LONH(ii-1) <  LONUY_mod(i  ,j) ) then
 
                       iloc    = i
-                      ifrac_l = min( LONU_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
+                      ifrac_l = min( LONUY_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
 
                       jloc    = j
-                      jfrac_b = min( LATV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                      jfrac_b = min( LATXV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
                       exit jloop
 
                    endif
@@ -708,8 +708,8 @@ contains
     use scale_topography, only: &
        TOPO_Zsfc
     use scale_atmos_grid_cartesC_real, only: &
-       LATV => ATMOS_GRID_CARTESC_REAL_LATV, &
-       LONU => ATMOS_GRID_CARTESC_REAL_LONU
+       LATXV => ATMOS_GRID_CARTESC_REAL_LATXV, &
+       LONUY => ATMOS_GRID_CARTESC_REAL_LONUY
     implicit none
 
     character(len=H_LONG) :: DEM50M_IN_DIR       = '.' !< directory contains DEM50M files (GrADS format)
@@ -749,7 +749,7 @@ contains
     real(RP) :: jfrac_b ! fraction for jloc
     real(RP) :: ifrac_l ! fraction for iloc
 
-    real(RP) :: LONU_mod(0:IA,JA)
+    real(RP) :: LONUY_mod(0:IA,JA)
     real(RP) :: DOMAIN_LATS, DOMAIN_LATE
     real(RP) :: DOMAIN_LONS, DOMAIN_LONE
     integer  :: DOMAIN_LONSLOC(2), DOMAIN_LONELOC(2)
@@ -789,21 +789,21 @@ contains
     enddo
     enddo
 
-    LONU_mod(:,:) = mod( LONU(:,:)+3.0_DP*PI, 2.0_DP*PI ) - PI
+    LONUY_mod(:,:) = mod( LONUY(:,:)+3.0_DP*PI, 2.0_DP*PI ) - PI
 
-    DOMAIN_LATS    = minval(LATV    (:,:))
-    DOMAIN_LATE    = maxval(LATV    (:,:))
-    DOMAIN_LONS    = minval(LONU_mod(:,:))
-    DOMAIN_LONE    = maxval(LONU_mod(:,:))
-    DOMAIN_LONSLOC = minloc(LONU_mod(:,:))
-    DOMAIN_LONELOC = maxloc(LONU_mod(:,:))
+    DOMAIN_LATS    = minval(LATXV    (:,:))
+    DOMAIN_LATE    = maxval(LATXV    (:,:))
+    DOMAIN_LONS    = minval(LONUY_mod(:,:))
+    DOMAIN_LONE    = maxval(LONUY_mod(:,:))
+    DOMAIN_LONSLOC = minloc(LONUY_mod(:,:))
+    DOMAIN_LONELOC = maxloc(LONUY_mod(:,:))
 
     check_IDL = .false.
-    if (      DOMAIN_LONS < LONU_mod( 0,DOMAIN_LONSLOC(2)) &
-         .OR. DOMAIN_LONE > LONU_mod(IA,DOMAIN_LONELOC(2)) ) then
+    if (      DOMAIN_LONS < LONUY_mod( 0,DOMAIN_LONSLOC(2)) &
+         .OR. DOMAIN_LONE > LONUY_mod(IA,DOMAIN_LONELOC(2)) ) then
        check_IDL = .true.
-       DOMAIN_LONS = minval(LONU_mod(:,:),mask=(LONU_mod>0.0_RP))
-       DOMAIN_LONE = maxval(LONU_mod(:,:),mask=(LONU_mod<0.0_RP))
+       DOMAIN_LONS = minval(LONUY_mod(:,:),mask=(LONUY_mod>0.0_RP))
+       DOMAIN_LONE = maxval(LONUY_mod(:,:),mask=(LONUY_mod<0.0_RP))
     endif
 
     jos   = nint( DEM50M_DLAT / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
@@ -985,42 +985,42 @@ contains
 
       jloop: do j = JS-1, JE+1
       iloop: do i = IS-1, IE+1
-                if (       TILE_LONH(ii-1) >= LONU_mod(i-1,j  ) &
-                     .AND. TILE_LONH(ii-1) <  LONU_mod(i  ,j  ) &
-                     .AND. TILE_LATH(jj-1) >= LATV    (i  ,j-1) &
-                     .AND. TILE_LATH(jj-1) <  LATV    (i  ,j  ) ) then
+                if (       TILE_LONH(ii-1) >= LONUY_mod(i-1,j  ) &
+                     .AND. TILE_LONH(ii-1) <  LONUY_mod(i  ,j  ) &
+                     .AND. TILE_LATH(jj-1) >= LATXV    (i  ,j-1) &
+                     .AND. TILE_LATH(jj-1) <  LATXV    (i  ,j  ) ) then
 
                    iloc    = i
-                   ifrac_l = min( LONU_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
+                   ifrac_l = min( LONUY_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
 
                    jloc    = j
-                   jfrac_b = min( LATV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                   jfrac_b = min( LATXV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
                    exit jloop
 
                 endif
 
-                if (       LONU_mod (i-1,j) >= LONU_mod(i  ,j  ) &
-                     .AND. TILE_LATH(jj-1)  >= LATV    (i  ,j-1) &
-                     .AND. TILE_LATH(jj-1)  <  LATV    (i  ,j  ) ) then ! across the IDL
+                if (       LONUY_mod(i-1,j) >= LONUY_mod(i  ,j  ) &
+                     .AND. TILE_LATH(jj-1)  >= LATXV    (i  ,j-1) &
+                     .AND. TILE_LATH(jj-1)  <  LATXV    (i  ,j  ) ) then ! across the IDL
 
-                   if    (       TILE_LONH(ii-1) >= LONU_mod(i-1,j) &
-                           .AND. TILE_LONH(ii-1) <  PI              ) then
+                   if    (       TILE_LONH(ii-1) >= LONUY_mod(i-1,j) &
+                           .AND. TILE_LONH(ii-1) <  PI               ) then
 
                       iloc    = i
-                      ifrac_l = min( LONU_mod(i,j)-TILE_LONH(ii-1)+2.0_RP*PI, TILE_DLON ) / TILE_DLON
+                      ifrac_l = min( LONUY_mod(i,j)-TILE_LONH(ii-1)+2.0_RP*PI, TILE_DLON ) / TILE_DLON
 
                       jloc    = j
-                      jfrac_b = min( LATV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                      jfrac_b = min( LATXV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
                       exit jloop
 
                    elseif(       TILE_LONH(ii-1) >= -PI             &
-                           .AND. TILE_LONH(ii-1) <  LONU_mod(i  ,j) ) then
+                           .AND. TILE_LONH(ii-1) <  LONUY_mod(i  ,j) ) then
 
                       iloc    = i
-                      ifrac_l = min( LONU_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
+                      ifrac_l = min( LONUY_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
 
                       jloc    = j
-                      jfrac_b = min( LATV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                      jfrac_b = min( LATXV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
                       exit jloop
 
                    endif
@@ -1085,8 +1085,8 @@ contains
     use scale_topography, only: &
        TOPO_Zsfc
     use scale_atmos_grid_cartesC_real, only: &
-       LATV => ATMOS_GRID_CARTESC_REAL_LATV, &
-       LONU => ATMOS_GRID_CARTESC_REAL_LONU
+       LATXV => ATMOS_GRID_CARTESC_REAL_LATXV, &
+       LONUY => ATMOS_GRID_CARTESC_REAL_LONUY
     implicit none
 
     integer               :: USERFILE_NLAT         = -1       ! number of latitude  tile
@@ -1147,7 +1147,7 @@ contains
     real(RP) :: jfrac_b ! fraction for jloc
     real(RP) :: ifrac_l ! fraction for iloc
 
-    real(RP) :: LONU_mod(0:IA,JA)
+    real(RP) :: LONUY_mod(0:IA,JA)
     real(RP) :: DOMAIN_LATS, DOMAIN_LATE
     real(RP) :: DOMAIN_LONS, DOMAIN_LONE
     integer  :: DOMAIN_LONSLOC(2), DOMAIN_LONELOC(2)
@@ -1243,21 +1243,21 @@ contains
     enddo
     enddo
 
-    LONU_mod(:,:) = mod( LONU(:,:)+3.0_DP*PI, 2.0_DP*PI ) - PI
+    LONUY_mod(:,:) = mod( LONUY(:,:)+3.0_DP*PI, 2.0_DP*PI ) - PI
 
-    DOMAIN_LATS    = minval(LATV    (:,:))
-    DOMAIN_LATE    = maxval(LATV    (:,:))
-    DOMAIN_LONS    = minval(LONU_mod(:,:))
-    DOMAIN_LONE    = maxval(LONU_mod(:,:))
-    DOMAIN_LONSLOC = minloc(LONU_mod(:,:))
-    DOMAIN_LONELOC = maxloc(LONU_mod(:,:))
+    DOMAIN_LATS    = minval(LATXV    (:,:))
+    DOMAIN_LATE    = maxval(LATXV    (:,:))
+    DOMAIN_LONS    = minval(LONUY_mod(:,:))
+    DOMAIN_LONE    = maxval(LONUY_mod(:,:))
+    DOMAIN_LONSLOC = minloc(LONUY_mod(:,:))
+    DOMAIN_LONELOC = maxloc(LONUY_mod(:,:))
 
     check_IDL = .false.
-    if (      DOMAIN_LONS < LONU_mod( 0,DOMAIN_LONSLOC(2)) &
-         .OR. DOMAIN_LONE > LONU_mod(IA,DOMAIN_LONELOC(2)) ) then
+    if (      DOMAIN_LONS < LONUY_mod( 0,DOMAIN_LONSLOC(2)) &
+         .OR. DOMAIN_LONE > LONUY_mod(IA,DOMAIN_LONELOC(2)) ) then
        check_IDL = .true.
-       DOMAIN_LONS = minval(LONU_mod(:,:),mask=(LONU_mod>0.0_RP))
-       DOMAIN_LONE = maxval(LONU_mod(:,:),mask=(LONU_mod<0.0_RP))
+       DOMAIN_LONS = minval(LONUY_mod(:,:),mask=(LONUY_mod>0.0_RP))
+       DOMAIN_LONE = maxval(LONUY_mod(:,:),mask=(LONUY_mod<0.0_RP))
     endif
 
     jos   = nint( USERFILE_DLAT / CNVTOPO_unittile_ddeg - 0.5_RP ) + 1
@@ -1537,42 +1537,42 @@ contains
 
       jloop: do j = JS-1, JE+1
       iloop: do i = IS-1, IE+1
-                if (       TILE_LONH(ii-1) >= LONU_mod(i-1,j  ) &
-                     .AND. TILE_LONH(ii-1) <  LONU_mod(i  ,j  ) &
-                     .AND. TILE_LATH(jj-1) >= LATV    (i  ,j-1) &
-                     .AND. TILE_LATH(jj-1) <  LATV    (i  ,j  ) ) then
+                if (       TILE_LONH(ii-1) >= LONUY_mod(i-1,j  ) &
+                     .AND. TILE_LONH(ii-1) <  LONUY_mod(i  ,j  ) &
+                     .AND. TILE_LATH(jj-1) >= LATXV    (i  ,j-1) &
+                     .AND. TILE_LATH(jj-1) <  LATXV    (i  ,j  ) ) then
 
                    iloc    = i
-                   ifrac_l = min( LONU_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
+                   ifrac_l = min( LONUY_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
 
                    jloc    = j
-                   jfrac_b = min( LATV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                   jfrac_b = min( LATXV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
                    exit jloop
 
                 endif
 
-                if (       LONU_mod (i-1,j) >= LONU_mod(i  ,j  ) &
-                     .AND. TILE_LATH(jj-1)  >= LATV    (i  ,j-1) &
-                     .AND. TILE_LATH(jj-1)  <  LATV    (i  ,j  ) ) then ! across the IDL
+                if (       LONUY_mod(i-1,j) >= LONUY_mod(i  ,j  ) &
+                     .AND. TILE_LATH(jj-1)  >= LATXV    (i  ,j-1) &
+                     .AND. TILE_LATH(jj-1)  <  LATXV    (i  ,j  ) ) then ! across the IDL
 
-                   if    (       TILE_LONH(ii-1) >= LONU_mod(i-1,j) &
-                           .AND. TILE_LONH(ii-1) <  PI              ) then
+                   if    (       TILE_LONH(ii-1) >= LONUY_mod(i-1,j) &
+                           .AND. TILE_LONH(ii-1) <  PI               ) then
 
                       iloc    = i
-                      ifrac_l = min( LONU_mod(i,j)-TILE_LONH(ii-1)+2.0_RP*PI, TILE_DLON ) / TILE_DLON
+                      ifrac_l = min( LONUY_mod(i,j)-TILE_LONH(ii-1)+2.0_RP*PI, TILE_DLON ) / TILE_DLON
 
                       jloc    = j
-                      jfrac_b = min( LATV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                      jfrac_b = min( LATXV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
                       exit jloop
 
-                   elseif(       TILE_LONH(ii-1) >= -PI             &
-                           .AND. TILE_LONH(ii-1) <  LONU_mod(i  ,j) ) then
+                   elseif(       TILE_LONH(ii-1) >= -PI              &
+                           .AND. TILE_LONH(ii-1) <  LONUY_mod(i  ,j) ) then
 
                       iloc    = i
-                      ifrac_l = min( LONU_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
+                      ifrac_l = min( LONUY_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
 
                       jloc    = j
-                      jfrac_b = min( LATV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                      jfrac_b = min( LATXV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
                       exit jloop
 
                    endif

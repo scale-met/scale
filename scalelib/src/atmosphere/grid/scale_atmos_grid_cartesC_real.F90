@@ -35,21 +35,21 @@ module scale_atmos_grid_cartesC_real
   real(RP), public              :: ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT  !< position of base point in real world [rad,-pi,pi]
 
   real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_CZ  (:,:,:)    !< geopotential height [m] (zxy)
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_CZU (:,:,:)    !< geopotential height [m] (zuy)
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_CZV (:,:,:)    !< geopotential height [m] (zxv)
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_CZUY(:,:,:)    !< geopotential height [m] (zuy)
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_CZXV(:,:,:)    !< geopotential height [m] (zxv)
   real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_CZUV(:,:,:)    !< geopotential height [m] (zuv)
   real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_FZ  (:,:,:)    !< geopotential height [m] (wxy)
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_FZU (:,:,:)    !< geopotential height [m] (wuy)
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_FZV (:,:,:)    !< geopotential height [m] (wxv)
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_FZUY(:,:,:)    !< geopotential height [m] (wuy)
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_FZXV(:,:,:)    !< geopotential height [m] (wxv)
   real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_FZUV(:,:,:)    !< geopotential height [m] (wuv)
 
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LON(:,:)       !< longitude [rad,0-2pi]
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LONU (:,:)     !< longitude at staggered point (uy) [rad,0-2pi]
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LONV (:,:)     !< longitude at staggered point (xv) [rad,0-2pi]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LON  (:,:)     !< longitude [rad,0-2pi]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LONUY(:,:)     !< longitude at staggered point (uy) [rad,0-2pi]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LONXV(:,:)     !< longitude at staggered point (xv) [rad,0-2pi]
   real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LONUV(:,:)     !< longitude at staggered point (uv) [rad,0-2pi]
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LAT(:,:)       !< latitude  [rad,-pi,pi]
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LATU (:,:)     !< latitude  at staggered point (uy) [rad,-pi,pi]
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LATV (:,:)     !< latitude  at staggered point (xv) [rad,-pi,pi]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LAT  (:,:)     !< latitude  [rad,-pi,pi]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LATUY(:,:)     !< latitude  at staggered point (uy) [rad,-pi,pi]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LATXV(:,:)     !< latitude  at staggered point (xv) [rad,-pi,pi]
   real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LATUV(:,:)     !< latitude  at staggered point (uv) [rad,-pi,pi]
   real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_DLON (:,:)     !< delta longitude
   real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_DLAT (:,:)     !< delta latitude
@@ -60,23 +60,30 @@ module scale_atmos_grid_cartesC_real
 
   real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_PHI (:,:,:)    !< geopotential [m2/s2] (cell center)
 
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_AREA  (:,:)     !< horizontal area (xy) [m2]
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_AREAU (:,:)     !< horizontal area (uy) [m2]
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_AREAV (:,:)     !< horizontal area (xv) [m2]
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_AREAUV(:,:)     !< horizontal area (uv) [m2]
-  real(RP), public              :: ATMOS_GRID_CARTESC_REAL_TOTAREA        !< total area (xy, local) [m2]
-  real(RP), public              :: ATMOS_GRID_CARTESC_REAL_TOTAREAU       !< total area (uy, local) [m2]
-  real(RP), public              :: ATMOS_GRID_CARTESC_REAL_TOTAREAV       !< total area (xv, local) [m2]
-  real(RP), public              :: ATMOS_GRID_CARTESC_REAL_TOTAREAUV      !< total area (uv, local) [m2]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_AREA     (:,:)   !< horizontal area ( xy, normal z) [m2]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_AREAZUY_X(:,:,:) !< virtical   area (zuy, normal x) [m2]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_AREAZXV_Y(:,:,:) !< virtical   area (zxv, normal y) [m2]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_AREAWUY_X(:,:,:) !< virtical   area (wuy, normal x) [m2]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_AREAWXV_Y(:,:,:) !< virtical   area (wxv, normal y) [m2]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_AREAUY   (:,:)   !< horizontal area ( uy, normal z) [m2]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_AREAZXY_X(:,:,:) !< virtical   area (zxy, normal x) [m2]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_AREAZUV_Y(:,:,:) !< virtical   area (zuv, normal y) [m2]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_AREAXV   (:,:)   !< horizontal area ( xv, normal z) [m2]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_AREAZUV_X(:,:,:) !< virtical   area (zuv, normal x) [m2]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_AREAZXY_Y(:,:,:) !< virtical   area (zxy, normal y) [m2]
 
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_VOL (:,:,:)    !< control volume (zxy) [m3]
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_VOLW(:,:,:)    !< control volume (wxy) [m3]
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_VOLU(:,:,:)    !< control volume (zuy) [m3]
-  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_VOLV(:,:,:)    !< control volume (zxv) [m3]
+  real(RP), public              :: ATMOS_GRID_CARTESC_REAL_TOTAREA        !< total area (xy, local) [m2]
+  real(RP), public              :: ATMOS_GRID_CARTESC_REAL_TOTAREAUY      !< total area (uy, local) [m2]
+  real(RP), public              :: ATMOS_GRID_CARTESC_REAL_TOTAREAXV      !< total area (xv, local) [m2]
+
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_VOL   (:,:,:)  !< control volume (zxy) [m3]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_VOLWXY(:,:,:)  !< control volume (wxy) [m3]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_VOLZUY(:,:,:)  !< control volume (zuy) [m3]
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_VOLZXV(:,:,:)  !< control volume (zxv) [m3]
   real(RP), public              :: ATMOS_GRID_CARTESC_REAL_TOTVOL         !< total volume (zxy, local) [m3]
-  real(RP), public              :: ATMOS_GRID_CARTESC_REAL_TOTVOLW        !< total volume (wxy, local) [m3]
-  real(RP), public              :: ATMOS_GRID_CARTESC_REAL_TOTVOLU        !< total volume (zuy, local) [m3]
-  real(RP), public              :: ATMOS_GRID_CARTESC_REAL_TOTVOLV        !< total volume (zxv, local) [m3]
+  real(RP), public              :: ATMOS_GRID_CARTESC_REAL_TOTVOLWXY      !< total volume (wxy, local) [m3]
+  real(RP), public              :: ATMOS_GRID_CARTESC_REAL_TOTVOLZUY      !< total volume (zuy, local) [m3]
+  real(RP), public              :: ATMOS_GRID_CARTESC_REAL_TOTVOLZXV      !< total volume (zxv, local) [m3]
 
   real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(:,:,:) !< domain latlon catalogue [rad]
 
@@ -98,7 +105,7 @@ contains
   subroutine ATMOS_GRID_CARTESC_REAL_setup
     use scale_process, only: &
        PRC_nprocs,  &
-       PRC_MPIstop
+       PRC_abort
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_DOMAIN_CENTER_X, &
        ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
@@ -108,8 +115,6 @@ contains
        TOPO_exist
     use scale_mapprojection, only: &
        MAPPROJECTION_setup
-    use scale_file_cartesC, only: &
-       FILE_CARTESC_set_coordinates
     use scale_interp_vert, only: &
        INTERP_VERT_setcoef
     implicit none
@@ -134,41 +139,48 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_DOMAIN_CATALOGUE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_DOMAIN_CATALOGUE)
 
     allocate( ATMOS_GRID_CARTESC_REAL_LON  (  IA,  JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_LAT  (  IA,  JA) )
-    allocate( ATMOS_GRID_CARTESC_REAL_LONU (0:IA,  JA) )
-    allocate( ATMOS_GRID_CARTESC_REAL_LONV (  IA,0:JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_LONUY(0:IA,  JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_LONXV(  IA,0:JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_LONUV(0:IA,0:JA) )
-    allocate( ATMOS_GRID_CARTESC_REAL_LATU (0:IA,  JA) )
-    allocate( ATMOS_GRID_CARTESC_REAL_LATV (  IA,0:JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_LATUY(0:IA,  JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_LATXV(  IA,0:JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_LATUV(0:IA,0:JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_DLON (  IA,  JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_DLAT (  IA,  JA) )
 
     allocate( ATMOS_GRID_CARTESC_REAL_CZ  (  KA,IA,JA) )
-    allocate( ATMOS_GRID_CARTESC_REAL_CZU (  KA,IA,JA) )
-    allocate( ATMOS_GRID_CARTESC_REAL_CZV (  KA,IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_CZUY(  KA,IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_CZXV(  KA,IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_CZUV(  KA,IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_FZ  (0:KA,IA,JA) )
-    allocate( ATMOS_GRID_CARTESC_REAL_FZU (0:KA,IA,JA) )
-    allocate( ATMOS_GRID_CARTESC_REAL_FZV (0:KA,IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_FZUY(0:KA,IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_FZXV(0:KA,IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_FZUV(0:KA,IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_Z1 (     IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_PHI(  KA,IA,JA) )
 
-    allocate( ATMOS_GRID_CARTESC_REAL_AREA  (   IA,JA) )
-    allocate( ATMOS_GRID_CARTESC_REAL_AREAU (   IA,JA) )
-    allocate( ATMOS_GRID_CARTESC_REAL_AREAV (   IA,JA) )
-    allocate( ATMOS_GRID_CARTESC_REAL_AREAUV(   IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_AREA     (     IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_AREAZUY_X(KA  ,IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_AREAZXV_Y(KA  ,IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_AREAWUY_X(KA+1,IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_AREAWXV_Y(KA+1,IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_AREAUY   (     IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_AREAZXY_X(KA,  IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_AREAZUV_Y(KA,  IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_AREAXV   (     IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_AREAZUV_X(KA,  IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_AREAZXY_Y(KA,  IA,JA) )
 
-    allocate( ATMOS_GRID_CARTESC_REAL_VOL (KA,IA,JA) )
-    allocate( ATMOS_GRID_CARTESC_REAL_VOLW(KA,IA,JA) )
-    allocate( ATMOS_GRID_CARTESC_REAL_VOLU(KA,IA,JA) )
-    allocate( ATMOS_GRID_CARTESC_REAL_VOLV(KA,IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_VOL   (  KA,IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_VOLWXY(0:KA,IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_VOLZUY(  KA,IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_VOLZXV(  KA,IA,JA) )
 
     allocate( ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(PRC_nprocs,4,2) )
 
@@ -180,11 +192,6 @@ contains
 
     ! calc real height
     call ATMOS_GRID_CARTESC_REAL_calc_Z
-
-    ! set latlon and z to fileio module
-    call FILE_CARTESC_set_coordinates( ATMOS_GRID_CARTESC_REAL_LON, ATMOS_GRID_CARTESC_REAL_LONU, ATMOS_GRID_CARTESC_REAL_LONV, ATMOS_GRID_CARTESC_REAL_LONUV, & ! [IN]
-                                       ATMOS_GRID_CARTESC_REAL_LAT, ATMOS_GRID_CARTESC_REAL_LATU, ATMOS_GRID_CARTESC_REAL_LATV, ATMOS_GRID_CARTESC_REAL_LATUV, & ! [IN]
-                                       ATMOS_GRID_CARTESC_REAL_CZ,  ATMOS_GRID_CARTESC_REAL_FZ                           ) ! [IN]
 
     call INTERP_VERT_setcoef( KA, KS, KE,     & ! [IN]
                               IA, 1,  IA,     & ! [IN]
@@ -201,10 +208,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Re-setup with updated topography
   subroutine ATMOS_GRID_CARTESC_REAL_update_Z
-    use scale_process, only: &
-       PRC_MPIstop
     use scale_file_cartesC, only: &
-       FILE_CARTESC_set_coordinates
+       FILE_CARTESC_set_coordinates_atmos
     implicit none
     !---------------------------------------------------------------------------
 
@@ -212,9 +217,14 @@ contains
     call ATMOS_GRID_CARTESC_REAL_calc_Z
 
     ! set latlon and z to fileio module
-    call FILE_CARTESC_set_coordinates( ATMOS_GRID_CARTESC_REAL_LON, ATMOS_GRID_CARTESC_REAL_LONU, ATMOS_GRID_CARTESC_REAL_LONV, ATMOS_GRID_CARTESC_REAL_LONUV, & ! [IN]
-                                       ATMOS_GRID_CARTESC_REAL_LAT, ATMOS_GRID_CARTESC_REAL_LATU, ATMOS_GRID_CARTESC_REAL_LATV, ATMOS_GRID_CARTESC_REAL_LATUV, & ! [IN]
-                                       ATMOS_GRID_CARTESC_REAL_CZ,  ATMOS_GRID_CARTESC_REAL_FZ                           ) ! [IN]
+    call FILE_CARTESC_set_coordinates_atmos( ATMOS_GRID_CARTESC_REAL_CZ,  ATMOS_GRID_CARTESC_REAL_FZ,                                                                      & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_LON, ATMOS_GRID_CARTESC_REAL_LONUY, ATMOS_GRID_CARTESC_REAL_LONXV, ATMOS_GRID_CARTESC_REAL_LONUV,     & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_LAT, ATMOS_GRID_CARTESC_REAL_LATUY, ATMOS_GRID_CARTESC_REAL_LATXV, ATMOS_GRID_CARTESC_REAL_LATUV,     & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_AREA,   ATMOS_GRID_CARTESC_REAL_AREAZUY_X, ATMOS_GRID_CARTESC_REAL_AREAZXV_Y,                         & ! [IN]
+                                                                             ATMOS_GRID_CARTESC_REAL_AREAWUY_X, ATMOS_GRID_CARTESC_REAL_AREAWXV_Y,                         & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_AREAUY, ATMOS_GRID_CARTESC_REAL_AREAZXY_X, ATMOS_GRID_CARTESC_REAL_AREAZUV_Y,                         & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_AREAXV, ATMOS_GRID_CARTESC_REAL_AREAZUV_X, ATMOS_GRID_CARTESC_REAL_AREAZXY_Y,                         & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_VOL, ATMOS_GRID_CARTESC_REAL_VOLWXY, ATMOS_GRID_CARTESC_REAL_VOLZUY, ATMOS_GRID_CARTESC_REAL_VOLZXV   ) ! [IN]
 
     return
   end subroutine ATMOS_GRID_CARTESC_REAL_update_Z
@@ -277,13 +287,13 @@ contains
 
     do j = 1, JA
     do i = 0, IA
-       call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_FX(i), ATMOS_GRID_CARTESC_CY(j), ATMOS_GRID_CARTESC_REAL_LONU (i,j), ATMOS_GRID_CARTESC_REAL_LATU (i,j) )
+       call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_FX(i), ATMOS_GRID_CARTESC_CY(j), ATMOS_GRID_CARTESC_REAL_LONUY(i,j), ATMOS_GRID_CARTESC_REAL_LATUY(i,j) )
     enddo
     enddo
 
     do j = 0, JA
     do i = 1, IA
-       call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_CX(i), ATMOS_GRID_CARTESC_FY(j), ATMOS_GRID_CARTESC_REAL_LONV (i,j), ATMOS_GRID_CARTESC_REAL_LATV (i,j) )
+       call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_CX(i), ATMOS_GRID_CARTESC_FY(j), ATMOS_GRID_CARTESC_REAL_LONXV(i,j), ATMOS_GRID_CARTESC_REAL_LATXV(i,j) )
     enddo
     enddo
 
@@ -297,15 +307,15 @@ contains
     ATMOS_GRID_CARTESC_REAL_DLAT(:,:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
-       ATMOS_GRID_CARTESC_REAL_DLON(i,j) = ATMOS_GRID_CARTESC_REAL_LONU(i,j) - ATMOS_GRID_CARTESC_REAL_LONU(i-1,j)
-       ATMOS_GRID_CARTESC_REAL_DLAT(i,j) = ATMOS_GRID_CARTESC_REAL_LATV(i,j) - ATMOS_GRID_CARTESC_REAL_LATV(i,j-1)
+       ATMOS_GRID_CARTESC_REAL_DLON(i,j) = ATMOS_GRID_CARTESC_REAL_LONUY(i,j) - ATMOS_GRID_CARTESC_REAL_LONUY(i-1,j)
+       ATMOS_GRID_CARTESC_REAL_DLAT(i,j) = ATMOS_GRID_CARTESC_REAL_LATXV(i,j) - ATMOS_GRID_CARTESC_REAL_LATXV(i,j-1)
        if( ATMOS_GRID_CARTESC_REAL_DLON(i,j) < 0.0_RP ) ATMOS_GRID_CARTESC_REAL_DLON(i,j) = ATMOS_GRID_CARTESC_REAL_DLON(i,j) + 2.0_RP*PI
 
        if (      ATMOS_GRID_CARTESC_REAL_DLON(i,j) == 0.0_RP &
             .OR. ATMOS_GRID_CARTESC_REAL_DLAT(i,j) == 0.0_RP ) then
           write(*,*) 'xxx Invalid grid distance in lat-lon! i,j=', i,j
-          write(*,*) 'xxx Lon(i-1),Lon(i),dlon=', ATMOS_GRID_CARTESC_REAL_LONU(i-1,j)/D2R,ATMOS_GRID_CARTESC_REAL_LONU(i,j)/D2R,ATMOS_GRID_CARTESC_REAL_DLON(i,j)/D2R
-          write(*,*) 'xxx Lat(j-1),Lat(j),dlat=', ATMOS_GRID_CARTESC_REAL_LATV(i,j-1)/D2R,ATMOS_GRID_CARTESC_REAL_LATV(i,j)/D2R,ATMOS_GRID_CARTESC_REAL_DLAT(i,j)/D2R
+          write(*,*) 'xxx Lon(i-1),Lon(i),dlon=', ATMOS_GRID_CARTESC_REAL_LONUY(i-1,j)/D2R,ATMOS_GRID_CARTESC_REAL_LONUY(i,j)/D2R,ATMOS_GRID_CARTESC_REAL_DLON(i,j)/D2R
+          write(*,*) 'xxx Lat(j-1),Lat(j),dlat=', ATMOS_GRID_CARTESC_REAL_LATXV(i,j-1)/D2R,ATMOS_GRID_CARTESC_REAL_LATXV(i,j)/D2R,ATMOS_GRID_CARTESC_REAL_DLAT(i,j)/D2R
           call PRC_MPIstop
        endif
     enddo
@@ -414,14 +424,14 @@ contains
     do i = 1, IA-1
        Zs = ( Zsfc(i,j) + Zsfc(i+1,j) ) * 0.5_RP
        do k = 1, KA
-          ATMOS_GRID_CARTESC_REAL_CZU(k,i,j) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_CZ(k) + Zs
+          ATMOS_GRID_CARTESC_REAL_CZUY(k,i,j) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_CZ(k) + Zs
        enddo
     enddo
     enddo
     do j = 1, JA
        Zs = Zsfc(IA,j)
        do k = 1, KA
-          ATMOS_GRID_CARTESC_REAL_CZU(k,IA,j) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_CZ(k) + Zs
+          ATMOS_GRID_CARTESC_REAL_CZUY(k,IA,j) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_CZ(k) + Zs
        enddo
     enddo
 
@@ -429,14 +439,14 @@ contains
     do i = 1, IA
        Zs = ( Zsfc(i,j) + Zsfc(i,j+1) ) * 0.5_RP
        do k = 1, KA
-          ATMOS_GRID_CARTESC_REAL_CZV(k,i,j) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_CZ(k) + Zs
+          ATMOS_GRID_CARTESC_REAL_CZXV(k,i,j) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_CZ(k) + Zs
        enddo
     enddo
     enddo
     do i = 1, IA
        Zs = Zsfc(i,JA)
        do k = 1, KA
-          ATMOS_GRID_CARTESC_REAL_CZV(k,i,JA) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_CZ(k) + Zs
+          ATMOS_GRID_CARTESC_REAL_CZXV(k,i,JA) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_CZ(k) + Zs
        enddo
     enddo
 
@@ -479,14 +489,14 @@ contains
     do i = 1, IA-1
        Zs = ( Zsfc(i,j) + Zsfc(i+1,j) ) * 0.5_RP
        do k = 0, KA
-          ATMOS_GRID_CARTESC_REAL_FZU(k,i,j) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_FZ(k) + Zs
+          ATMOS_GRID_CARTESC_REAL_FZUY(k,i,j) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_FZ(k) + Zs
        end do
     end do
     end do
     do j = 1, JA
        Zs = Zsfc(IA,j)
        do k = 0, KA
-          ATMOS_GRID_CARTESC_REAL_FZU(k,IA,j) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_FZ(k) + Zs
+          ATMOS_GRID_CARTESC_REAL_FZUY(k,IA,j) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_FZ(k) + Zs
        end do
     end do
 
@@ -494,14 +504,14 @@ contains
     do i = 1, IA
        Zs = ( Zsfc(i,j) + Zsfc(i,j+1) ) * 0.5_RP
        do k = 0, KA
-          ATMOS_GRID_CARTESC_REAL_FZV(k,i,j) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_FZ(k) + Zs
+          ATMOS_GRID_CARTESC_REAL_FZXV(k,i,j) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_FZ(k) + Zs
        enddo
     enddo
     enddo
     do i = 1, IA
        Zs = Zsfc(i,JA)
        do k = 0, KA
-          ATMOS_GRID_CARTESC_REAL_FZV(k,i,JA) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_FZ(k) + Zs
+          ATMOS_GRID_CARTESC_REAL_FZXV(k,i,JA) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_FZ(k) + Zs
        enddo
     enddo
 
@@ -566,78 +576,123 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_set_coordinates_atmos
     implicit none
 
     real(RP), intent(in) :: MAPF(IA,JA,2,4)
 
+    real(RP) :: AREAUV(IA,JA)
+
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    ATMOS_GRID_CARTESC_REAL_AREA  (:,:) = 0.0_RP
-    ATMOS_GRID_CARTESC_REAL_AREAU (:,:) = 0.0_RP
-    ATMOS_GRID_CARTESC_REAL_AREAV (:,:) = 0.0_RP
-    ATMOS_GRID_CARTESC_REAL_AREAUV(:,:) = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_AREA     (:,:)   = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_AREAZUY_X(:,:,:) = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_AREAZXV_Y(:,:,:) = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_AREAWUY_X(:,:,:) = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_AREAWXV_Y(:,:,:) = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_AREAUY   (:,:)   = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_AREAZXY_X(:,:,:) = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_AREAZUV_Y(:,:,:) = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_AREAXV   (:,:)   = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_AREAZUV_Y(:,:,:) = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_AREAZXY_Y(:,:,:) = 0.0_RP
+
     ATMOS_GRID_CARTESC_REAL_TOTAREA   = 0.0_RP
-    ATMOS_GRID_CARTESC_REAL_TOTAREAU  = 0.0_RP
-    ATMOS_GRID_CARTESC_REAL_TOTAREAV  = 0.0_RP
-    ATMOS_GRID_CARTESC_REAL_TOTAREAUV = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_TOTAREAUY = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_TOTAREAXV = 0.0_RP
+
+    ATMOS_GRID_CARTESC_REAL_VOL   (:,:,:) = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_VOLWXY(:,:,:) = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_VOLZUY(:,:,:) = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_VOLZXV(:,:,:) = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_TOTVOL    = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_TOTVOLWXY = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_TOTVOLZUY = 0.0_RP
+    ATMOS_GRID_CARTESC_REAL_TOTVOLZXV = 0.0_RP
+
     do j = JS, JE
     do i = IS, IE
        ATMOS_GRID_CARTESC_REAL_AREA  (i,j) = ATMOS_GRID_CARTESC_CDX(i) * ATMOS_GRID_CARTESC_CDY(j) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
-       ATMOS_GRID_CARTESC_REAL_AREAU (i,j) = ATMOS_GRID_CARTESC_FDX(i) * ATMOS_GRID_CARTESC_CDY(j) / ( MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) )
-       ATMOS_GRID_CARTESC_REAL_AREAV (i,j) = ATMOS_GRID_CARTESC_CDX(i) * ATMOS_GRID_CARTESC_FDY(j) / ( MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) )
-       ATMOS_GRID_CARTESC_REAL_AREAUV(i,j) = ATMOS_GRID_CARTESC_FDX(i) * ATMOS_GRID_CARTESC_FDY(j) / ( MAPF(i,j,1,I_UV) * MAPF(i,j,2,I_UV) )
+       ATMOS_GRID_CARTESC_REAL_AREAUY(i,j) = ATMOS_GRID_CARTESC_FDX(i) * ATMOS_GRID_CARTESC_CDY(j) / ( MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) )
+       ATMOS_GRID_CARTESC_REAL_AREAXV(i,j) = ATMOS_GRID_CARTESC_CDX(i) * ATMOS_GRID_CARTESC_FDY(j) / ( MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) )
+                               AREAUV(i,j) = ATMOS_GRID_CARTESC_FDX(i) * ATMOS_GRID_CARTESC_FDY(j) / ( MAPF(i,j,1,I_UV) * MAPF(i,j,2,I_UV) )
     end do
     end do
 
     call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREA  (:,:), 1 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAU (:,:), 2 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAV (:,:), 3 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAUV(:,:), 4 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAUY(:,:), 2 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAXV(:,:), 3 )
+    call COMM_vars8(                         AREAUV(:,:), 4 )
 
     do j = JS, JE
     do i = IS, IE
        ATMOS_GRID_CARTESC_REAL_TOTAREA   = ATMOS_GRID_CARTESC_REAL_TOTAREA   + ATMOS_GRID_CARTESC_REAL_AREA  (i,j)
-       ATMOS_GRID_CARTESC_REAL_TOTAREAU  = ATMOS_GRID_CARTESC_REAL_TOTAREAU  + ATMOS_GRID_CARTESC_REAL_AREAU (i,j)
-       ATMOS_GRID_CARTESC_REAL_TOTAREAV  = ATMOS_GRID_CARTESC_REAL_TOTAREAV  + ATMOS_GRID_CARTESC_REAL_AREAV (i,j)
-       ATMOS_GRID_CARTESC_REAL_TOTAREAUV = ATMOS_GRID_CARTESC_REAL_TOTAREAUV + ATMOS_GRID_CARTESC_REAL_AREAUV(i,j)
+       ATMOS_GRID_CARTESC_REAL_TOTAREAUY = ATMOS_GRID_CARTESC_REAL_TOTAREAUY + ATMOS_GRID_CARTESC_REAL_AREAUY(i,j)
+       ATMOS_GRID_CARTESC_REAL_TOTAREAXV = ATMOS_GRID_CARTESC_REAL_TOTAREAXV + ATMOS_GRID_CARTESC_REAL_AREAXV(i,j)
     enddo
     enddo
 
-    call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREA  (:,:), 1 )
-    call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREAU (:,:), 2 )
-    call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREAV (:,:), 3 )
-    call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREAUV(:,:), 4 )
-
-
-    ATMOS_GRID_CARTESC_REAL_VOL (:,:,:) = 0.0_RP
-    ATMOS_GRID_CARTESC_REAL_VOLW(:,:,:) = 0.0_RP
-    ATMOS_GRID_CARTESC_REAL_VOLU(:,:,:) = 0.0_RP
-    ATMOS_GRID_CARTESC_REAL_VOLV(:,:,:) = 0.0_RP
-    ATMOS_GRID_CARTESC_REAL_TOTVOL  = 0.0_RP
-    ATMOS_GRID_CARTESC_REAL_TOTVOLW = 0.0_RP
-    ATMOS_GRID_CARTESC_REAL_TOTVOLU = 0.0_RP
-    ATMOS_GRID_CARTESC_REAL_TOTVOLV = 0.0_RP
     do j = 1, JA
     do i = 1, IA
-    do k = KS, KE
-       ATMOS_GRID_CARTESC_REAL_VOL (k,i,j) = ( ATMOS_GRID_CARTESC_REAL_FZ (k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ (k-1,i,j) ) * ATMOS_GRID_CARTESC_REAL_AREA (i,j)
-       ATMOS_GRID_CARTESC_REAL_VOLU(k,i,j) = ( ATMOS_GRID_CARTESC_REAL_FZU(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZU(k-1,i,j) ) * ATMOS_GRID_CARTESC_REAL_AREAU(i,j)
-       ATMOS_GRID_CARTESC_REAL_VOLV(k,i,j) = ( ATMOS_GRID_CARTESC_REAL_FZV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZV(k-1,i,j) ) * ATMOS_GRID_CARTESC_REAL_AREAV(i,j)
-       ATMOS_GRID_CARTESC_REAL_VOLW(k,i,j) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZ(k,i,j) ) * ATMOS_GRID_CARTESC_REAL_AREA(i,j)
+       do k = KS, KE
+          ATMOS_GRID_CARTESC_REAL_AREAZUY_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_UY) * ( ATMOS_GRID_CARTESC_REAL_FZUY(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUY(k-1,i,j) )
+          ATMOS_GRID_CARTESC_REAL_AREAZXV_Y(k,i,j) = ATMOS_GRID_CARTESC_CDX(i) / MAPF(i,j,2,I_XV) * ( ATMOS_GRID_CARTESC_REAL_FZXV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZXV(k-1,i,j) )
+       end do
+       do k = KS-1, KE
+          ATMOS_GRID_CARTESC_REAL_AREAWUY_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_UY) * ( ATMOS_GRID_CARTESC_REAL_CZUY(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZUY(k,i,j) )
+          ATMOS_GRID_CARTESC_REAL_AREAWXV_Y(k,i,j) = ATMOS_GRID_CARTESC_CDX(i) / MAPF(i,j,2,I_XV) * ( ATMOS_GRID_CARTESC_REAL_CZXV(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZXV(k,i,j) )
+       end do
+       do k = KS, KE
+          ATMOS_GRID_CARTESC_REAL_AREAZXY_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_XY) * ( ATMOS_GRID_CARTESC_REAL_FZ  (k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ  (k-1,i,j) )
+          ATMOS_GRID_CARTESC_REAL_AREAZUV_Y(k,i,j) = ATMOS_GRID_CARTESC_CDX(i) / MAPF(i,j,2,I_UV) * ( ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUV(k-1,i,j) )
+          ATMOS_GRID_CARTESC_REAL_AREAZUV_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_UV) * ( ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUV(k-1,i,j) )
+          ATMOS_GRID_CARTESC_REAL_AREAZXY_Y(k,i,j) = ATMOS_GRID_CARTESC_CDX(i) / MAPF(i,j,2,I_XY) * ( ATMOS_GRID_CARTESC_REAL_FZ  (k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ  (k-1,i,j) )
+       end do
     end do
+    end do
+
+
+    call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREA  (:,:), 1 )
+    call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREAUY(:,:), 2 )
+    call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREAXV(:,:), 3 )
+    call COMM_wait(                         AREAUV(:,:), 4 )
+
+
+    do j = 1, JA
+    do i = 1, IA
+       do k = KS, KE
+          ATMOS_GRID_CARTESC_REAL_VOL   (k,i,j) = ( ATMOS_GRID_CARTESC_REAL_FZ  (k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ  (k-1,i,j) ) * ATMOS_GRID_CARTESC_REAL_AREA (i,j)
+          ATMOS_GRID_CARTESC_REAL_VOLZUY(k,i,j) = ( ATMOS_GRID_CARTESC_REAL_FZUY(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUY(k-1,i,j) ) * ATMOS_GRID_CARTESC_REAL_AREAUY(i,j)
+          ATMOS_GRID_CARTESC_REAL_VOLZXV(k,i,j) = ( ATMOS_GRID_CARTESC_REAL_FZXV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZXV(k-1,i,j) ) * ATMOS_GRID_CARTESC_REAL_AREAXV(i,j)
+       end do
+       do k = KS-1, KE
+          ATMOS_GRID_CARTESC_REAL_VOLWXY(k,i,j) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZ(k,i,j) ) * ATMOS_GRID_CARTESC_REAL_AREA(i,j)
+       end do
     end do
     end do
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       ATMOS_GRID_CARTESC_REAL_TOTVOL  = ATMOS_GRID_CARTESC_REAL_TOTVOL  + ATMOS_GRID_CARTESC_REAL_VOL (k,i,j)
-       ATMOS_GRID_CARTESC_REAL_TOTVOLW = ATMOS_GRID_CARTESC_REAL_TOTVOLW + ATMOS_GRID_CARTESC_REAL_VOLW(k,i,j)
-       ATMOS_GRID_CARTESC_REAL_TOTVOLU = ATMOS_GRID_CARTESC_REAL_TOTVOLU + ATMOS_GRID_CARTESC_REAL_VOLU(k,i,j)
-       ATMOS_GRID_CARTESC_REAL_TOTVOLV = ATMOS_GRID_CARTESC_REAL_TOTVOLV + ATMOS_GRID_CARTESC_REAL_VOLV(k,i,j)
+       ATMOS_GRID_CARTESC_REAL_TOTVOL    = ATMOS_GRID_CARTESC_REAL_TOTVOL    + ATMOS_GRID_CARTESC_REAL_VOL   (k,i,j)
+       ATMOS_GRID_CARTESC_REAL_TOTVOLWXY = ATMOS_GRID_CARTESC_REAL_TOTVOLWXY + ATMOS_GRID_CARTESC_REAL_VOLWXY(k,i,j)
+       ATMOS_GRID_CARTESC_REAL_TOTVOLZUY = ATMOS_GRID_CARTESC_REAL_TOTVOLZUY + ATMOS_GRID_CARTESC_REAL_VOLZUY(k,i,j)
+       ATMOS_GRID_CARTESC_REAL_TOTVOLZXV = ATMOS_GRID_CARTESC_REAL_TOTVOLZXV + ATMOS_GRID_CARTESC_REAL_VOLZXV(k,i,j)
     enddo
     enddo
     enddo
+
+
+    ! set latlon and z to fileio module
+    call FILE_CARTESC_set_coordinates_atmos( ATMOS_GRID_CARTESC_REAL_CZ,  ATMOS_GRID_CARTESC_REAL_FZ,                                                                      & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_LON, ATMOS_GRID_CARTESC_REAL_LONUY, ATMOS_GRID_CARTESC_REAL_LONXV, ATMOS_GRID_CARTESC_REAL_LONUV,     & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_LAT, ATMOS_GRID_CARTESC_REAL_LATUY, ATMOS_GRID_CARTESC_REAL_LATXV, ATMOS_GRID_CARTESC_REAL_LATUV,     & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_AREA,   ATMOS_GRID_CARTESC_REAL_AREAZUY_X, ATMOS_GRID_CARTESC_REAL_AREAZXV_Y,                         & ! [IN]
+                                                                             ATMOS_GRID_CARTESC_REAL_AREAWUY_X, ATMOS_GRID_CARTESC_REAL_AREAWXV_Y,                         & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_AREAUY, ATMOS_GRID_CARTESC_REAL_AREAZXY_X, ATMOS_GRID_CARTESC_REAL_AREAZUV_Y,                         & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_AREAXV, ATMOS_GRID_CARTESC_REAL_AREAZUV_X, ATMOS_GRID_CARTESC_REAL_AREAZXY_Y,                         & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_VOL, ATMOS_GRID_CARTESC_REAL_VOLWXY, ATMOS_GRID_CARTESC_REAL_VOLZUY, ATMOS_GRID_CARTESC_REAL_VOLZXV   ) ! [IN]
 
     return
   end subroutine ATMOS_GRID_CARTESC_REAL_calc_areavol

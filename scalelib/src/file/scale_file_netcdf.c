@@ -441,7 +441,8 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
       dinfo->time_units[i] = '\0';
       free(buf);
       // calendar
-      status = ncmpi_inq_attlen  (ncid, varid, "calendar", &l);
+#ifdef PNETCDF
+      status = ncmpi_inq_attlen(ncid, varid, "calendar", &l);
       if ( status == NC_NOERR ) {
 	buf = (char*) malloc(l+1);
 	CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, "calendar", buf) )
@@ -451,6 +452,7 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
 	free(buf);
       } else
 	dinfo->calendar[0] = '\0';
+#endif
       // time_start
       strcat(name, "_bnds");
       CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, name, &varid) )
@@ -1144,7 +1146,7 @@ int32_t file_def_axis_c( const int32_t fid,      // (in)
     if ( bounds ) {
       dimids[0] = dimid;
       if ( ncmpi_inq_dimid(ncid, "nv", &(dimids[1])) != NC_NOERR ) // first called
-	CHECK_PNC_ERROR( nc_def_dim(ncid, "nv", 2, &(dimids[1])) )
+	CHECK_PNC_ERROR( ncmpi_def_dim(ncid, "nv", 2, &(dimids[1])) )
       sprintf(buf, "%s_bnds", dim_name);
       CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, varid, "bounds", strlen(buf), buf) )
       CHECK_PNC_ERROR( ncmpi_def_var(ncid, buf, NC_DOUBLE, 2, dimids, &varid) )
@@ -1736,7 +1738,7 @@ int32_t file_write_data_c( const int32_t   fid,       // (in)
 
   if ( ndims != vars[vid]->ndims ) {
     fprintf(stderr, "Error: at line %d in %s\n", __LINE__, __FILE__);
-    fprintf(stderr, "       dimension size %d is not consistent that was added by file_add_variable %d\n", ndims, vars[vid]->ndims );
+    fprintf(stderr, "       dimension size %d is not consistent that was added by file_add_variable %d\n", ndims, (int)vars[vid]->ndims );
     return ERROR_CODE;
   }
 

@@ -188,14 +188,14 @@ void file_get_attribute_text_c_( const int32_t *fid,        // (in)
 				 const int32_t  value_len ) // (in)
 {
   char _vname[File_HSHORT+1];
-  char _key[File_HLONG+1];
+  char _key[File_HMID+1];
   char _value[File_HLONG+1];
   int32_t l;
 
   l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
   fstr2cstr(_vname, vname, l);
 
-  l = key_len > File_HLONG ? File_HLONG : key_len;
+  l = key_len > File_HMID ? File_HMID : key_len;
   fstr2cstr(_key, key, l);
 
   *error = file_get_attribute_text_c( *fid, _vname, _key, *suppress, _value, value_len );
@@ -215,13 +215,13 @@ void file_get_attribute_int_c_( const int32_t *fid,       // (in)
 				const int32_t  key_len )  // (in)
 {
   char _vname[File_HSHORT+1];
-  char _key[File_HLONG+1];
+  char _key[File_HMID+1];
   int32_t l;
 
   l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
   fstr2cstr(_vname, vname, l);
 
-  l = key_len > File_HLONG ? File_HLONG : key_len;
+  l = key_len > File_HMID ? File_HMID : key_len;
   fstr2cstr(_key, key, l);
 
   *error = file_get_attribute_int_c( *fid, _vname, _key, *suppress, value, (size_t)*len );
@@ -238,13 +238,13 @@ void file_get_attribute_float_c_( const int32_t *fid,       // (in)
 				  const int32_t  key_len )  // (in)
 {
   char _vname[File_HSHORT+1];
-  char _key[File_HLONG+1];
+  char _key[File_HMID+1];
   int32_t l;
 
   l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
   fstr2cstr(_vname, vname, l);
 
-  l = key_len > File_HLONG ? File_HLONG : key_len;
+  l = key_len > File_HMID ? File_HMID : key_len;
   fstr2cstr(_key, key, l);
 
   *error = file_get_attribute_float_c( *fid, _vname, _key, *suppress, value, (size_t)*len );
@@ -261,13 +261,13 @@ void file_get_attribute_double_c_( const int32_t *fid,       // (in)
 				   const int32_t  key_len )  // (in)
 {
   char _vname[File_HSHORT+1];
-  char _key[File_HLONG+1];
+  char _key[File_HMID+1];
   int32_t l;
 
   l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
   fstr2cstr(_vname, vname, l);
 
-  l = key_len > File_HLONG ? File_HLONG : key_len;
+  l = key_len > File_HMID ? File_HMID : key_len;
   fstr2cstr(_key, key, l);
 
   *error = file_get_attribute_double_c( *fid, _vname, _key, *suppress, value, (size_t)*len );
@@ -283,14 +283,14 @@ void file_set_attribute_text_c_( const int32_t *fid,        // (in)
 				 const int32_t  value_len ) // (in)
 {
   char _vname[File_HSHORT+1];
-  char _key[File_HLONG+1];
+  char _key[File_HMID+1];
   char _value[File_HLONG+1];
   int32_t l;
 
   l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
   fstr2cstr(_vname, vname, l);
 
-  l = key_len > File_HMID ? File_HLONG : key_len;
+  l = key_len > File_HMID ? File_HMID : key_len;
   fstr2cstr(_key, key, l);
 
   l = value_len > File_HLONG ? File_HLONG : value_len;
@@ -309,13 +309,13 @@ void file_set_attribute_int_c_( const int32_t *fid,       // (in)
 				const int32_t  key_len )  // (in)
 {
   char _vname[File_HSHORT+1];
-  char _key[File_HLONG+1];
+  char _key[File_HMID+1];
   int32_t l;
 
   l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
   fstr2cstr(_vname, vname, l);
 
-  l = key_len > File_HLONG ? File_HLONG : key_len;
+  l = key_len > File_HMID ? File_HMID : key_len;
   fstr2cstr(_key, key, l);
 
   *error = file_set_attribute_int_c( *fid, _vname, _key, value, (size_t)*len );
@@ -331,13 +331,13 @@ void file_set_attribute_float_c_( const int32_t *fid,       // (in)
 				  const int32_t  key_len )  // (in)
 {
   char _vname[File_HSHORT+1];
-  char _key[File_HLONG+1];
+  char _key[File_HMID+1];
   int32_t l;
 
   l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
   fstr2cstr(_vname, vname, l);
 
-  l = key_len > File_HLONG ? File_HLONG : key_len;
+  l = key_len > File_HMID ? File_HMID : key_len;
   fstr2cstr(_key, key, l);
 
   *error = file_set_attribute_float_c( *fid, _vname, _key, value, (size_t)*len );
@@ -353,13 +353,13 @@ void file_set_attribute_double_c_( const int32_t *fid,       // (in)
 				   const int32_t  key_len )  // (in)
 {
   char _vname[File_HSHORT+1];
-  char _key[File_HLONG+1];
+  char _key[File_HMID+1];
   int32_t l;
 
   l = vname_len > File_HSHORT ? File_HSHORT : vname_len;
   fstr2cstr(_vname, vname, l);
 
-  l = key_len > File_HLONG ? File_HLONG : key_len;
+  l = key_len > File_HMID ? File_HMID : key_len;
   fstr2cstr(_key, key, l);
 
   *error = file_set_attribute_double_c( *fid, _vname, _key, value, (size_t)*len );

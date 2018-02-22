@@ -352,34 +352,35 @@ contains
     dims (2,:) = 'lat'
     count(1,:) = xc
     count(2,:) = yc
-    call FILE_HISTORY_Set_Dim( "XY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "XY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., area="cell_area" ) ! [IN]
 
     start(3,:) = 1
     dims (3,:) = (/ "height    ", "z         ", "pressure  " /)
     count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZXY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., & ! [IN]
+                               area="cell_area", area_x="cell_area_xyz_x", area_y="cell_area_xyz_y", volume="cell_volume" ) ! [IN]
     dims (3,:) = (/ "height_xyw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZHXY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZHXY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., area="cell_area", volume="cell_volume_xyw" )
 
     dims (3,1) = "oz"
     count(3,1) = OKMAX
-    call FILE_HISTORY_Set_Dim( "OXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "OXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., area="cell_area", volume="cell_volume_xyo" ) ! [IN]
     dims (3,1) = "ozh"
     count(3,1) = OKMAX + 1
-    call FILE_HISTORY_Set_Dim( "OHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "OHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., area="cell_area" ) ! [IN]
     dims (3,1) = "lz"
     count(3,1) = LKMAX
-    call FILE_HISTORY_Set_Dim( "LXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "LXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., area="cell_area", volume="cell_volume_xyl" ) ! [IN]
     dims (3,1) = "lzh"
     count(3,1) = LKMAX + 1
-    call FILE_HISTORY_Set_Dim( "LHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "LHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., area="cell_area" ) ! [IN]
     dims (3,1) = "uz"
     count(3,1) = UKMAX
-    call FILE_HISTORY_Set_Dim( "UXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "UXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., area="cell_area", volume="cell_volume_xyu" ) ! [IN]
     dims (3,1) = "uzh"
     count(3,1) = UKMAX + 1
-    call FILE_HISTORY_Set_Dim( "UHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "UHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., area="cell_area" ) ! [IN]
 
     ! XH, Y
     dims(1,:) = 'lon_uy'
@@ -391,14 +392,14 @@ contains
        start(1,:) = xs
        count(1,:) = xc+1
     endif
-    call FILE_HISTORY_Set_Dim( "XHY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "XHY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., area="cell_area_uy" ) ! [IN]
 
     dims (3,:) = (/ "height_uyz", "z         ", "pressure  " /)
     count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXHY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZXHY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., area="cell_area_uy", volume="cell_volume_uyz" ) ! [IN]
     dims (3,:) = (/ "height_uyw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZHXHY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZHXHY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., area="cell_area_uy" ) ! [IN]
 
     ! X, YH
     dims (1,:) = 'lon_xv'
@@ -412,14 +413,14 @@ contains
        start(2,:) = ys
        count(2,:) = yc+1
     endif
-    call FILE_HISTORY_Set_Dim( "XYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "XYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., area="cell_area_xv" ) ! [IN]
 
     dims (3,:) = (/ "height_xvz", "z         ", "pressure  " /)
     count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZXYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., area="cell_area_xv", volume="cell_volume_xvz" ) ! [IN]
     dims (3,:) = (/ "height_xvw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZHXYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZHXYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., area="cell_area_xv" ) ! [IN]
 
     ! XH, YH
     dims(1,:) = 'lon_uv'
@@ -435,7 +436,8 @@ contains
 
     dims (3,:) = (/ "height_uvz", "z         ", "pressure  " /)
     count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
-    call FILE_HISTORY_Set_Dim( "ZXHYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
+    call FILE_HISTORY_Set_Dim( "ZXHYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true., & ![IN]
+                               area="cell_area_uv", area_x="cell_area_uvz_x", area_y="cell_area_uvz_y" ) ! [IN]
     dims (3,:) = (/ "height_uvw", "zh        ", "pressure  " /)
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
     call FILE_HISTORY_Set_Dim( "ZHXHYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=.true. ) ! [IN]
@@ -865,16 +867,37 @@ contains
        URBAN_GRID_CARTESC_FZ, &
        URBAN_GRID_CARTESC_CDZ
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_CZ,   &
-       ATMOS_GRID_CARTESC_REAL_FZ,   &
-       ATMOS_GRID_CARTESC_REAL_LON,  &
-       ATMOS_GRID_CARTESC_REAL_LONU, &
-       ATMOS_GRID_CARTESC_REAL_LONV, &
+       ATMOS_GRID_CARTESC_REAL_CZ,    &
+       ATMOS_GRID_CARTESC_REAL_FZ,    &
+       ATMOS_GRID_CARTESC_REAL_LON,   &
+       ATMOS_GRID_CARTESC_REAL_LONUY, &
+       ATMOS_GRID_CARTESC_REAL_LONXV, &
        ATMOS_GRID_CARTESC_REAL_LONUV, &
-       ATMOS_GRID_CARTESC_REAL_LAT,  &
-       ATMOS_GRID_CARTESC_REAL_LATU, &
-       ATMOS_GRID_CARTESC_REAL_LATV, &
-       ATMOS_GRID_CARTESC_REAL_LATUV
+       ATMOS_GRID_CARTESC_REAL_LAT,   &
+       ATMOS_GRID_CARTESC_REAL_LATUY, &
+       ATMOS_GRID_CARTESC_REAL_LATXV, &
+       ATMOS_GRID_CARTESC_REAL_LATUV, &
+       AREA   => ATMOS_GRID_CARTESC_REAL_AREA,   &
+       AREAUY => ATMOS_GRID_CARTESC_REAL_AREAUY, &
+       AREAXV => ATMOS_GRID_CARTESC_REAL_AREAXV, &
+       AREAZUY_X => ATMOS_GRID_CARTESC_REAL_AREAZUY_X, &
+       AREAZXV_Y => ATMOS_GRID_CARTESC_REAL_AREAZXV_Y, &
+       AREAWUY_X => ATMOS_GRID_CARTESC_REAL_AREAWUY_X, &
+       AREAWXV_Y => ATMOS_GRID_CARTESC_REAL_AREAWXV_Y, &
+       AREAZXY_X => ATMOS_GRID_CARTESC_REAL_AREAZXY_X, &
+       AREAZUV_Y => ATMOS_GRID_CARTESC_REAL_AREAZUV_Y, &
+       AREAZUV_X => ATMOS_GRID_CARTESC_REAL_AREAZUV_X, &
+       AREAZXY_Y => ATMOS_GRID_CARTESC_REAL_AREAZXY_Y, &
+       VOL    => ATMOS_GRID_CARTESC_REAL_VOL,    &
+       VOLWXY => ATMOS_GRID_CARTESC_REAL_VOLWXY, &
+       VOLZUY => ATMOS_GRID_CARTESC_REAL_VOLZUY, &
+       VOLZXV => ATMOS_GRID_CARTESC_REAL_VOLZXV
+    use scale_ocean_grid_cartesC_real, only: &
+       VOLO => OCEAN_GRID_CARTESC_REAL_VOL
+    use scale_land_grid_cartesC_real, only: &
+       VOLL => LAND_GRID_CARTESC_REAL_VOL
+    use scale_urban_grid_cartesC_real, only: &
+       VOLU => URBAN_GRID_CARTESC_REAL_VOL
     use scale_topography, only: &
        TOPO_Zsfc
     use scale_landuse, only: &
@@ -1323,58 +1346,219 @@ contains
        enddo
     endif
     AXIS_name(1:3) = (/'xh', 'yh', 'zh'/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uvw', 'height above ground level (half level uvw)',     &
-                                                'm', AXIS_name(1:3), AXIS(1:imh,1:jmh,0:KMAX), start=start(:,4) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uvw', 'height above ground level (half level uvw)', 'm', &
+                                                AXIS_name(1:3), AXIS(1:imh,1:jmh,0:KMAX), start=start(:,4)       )
 
     AXIS(1:im,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LON (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'y '/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'lon', 'longitude',                                                 &
-                                                'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'lon', 'longitude', 'degrees_east',                 &
+                                                AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
 
-    AXIS(1:imh,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LONU(imsh:ime,jms:jme) / D2R
+    AXIS(1:imh,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LONUY(imsh:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'y '/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'lon_uy', 'longitude (half level uy)',                               &
-                                                'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'lon_uy', 'longitude (half level uy)', 'degrees_east', &
+                                                AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2)   )
 
-    AXIS(1:im,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LONV(ims:ime,jmsh:jme) / D2R
+    AXIS(1:im,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LONXV(ims:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'yh'/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'lon_xv', 'longitude (half level xv)',                               &
-                                                'degrees_east', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'lon_xv', 'longitude (half level xv)', 'degrees_east', &
+                                                AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3)   )
 
     AXIS(1:imh,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LONUV(imsh:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'yh'/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'lon_uv', 'longitude (half level uv)',                                &
-                                                'degrees_east', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'lon_uv', 'longitude (half level uv)', 'degrees_east', &
+                                                AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4)  )
 
     AXIS(1:im,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LAT (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'y '/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'lat', 'latitude',                                                   &
-                                                'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'lat', 'latitude',                     'degrees_north', &
+                                                AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1)     )
 
-    AXIS(1:imh,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LATU(imsh:ime,jms:jme) / D2R
+    AXIS(1:imh,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LATUY(imsh:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'y '/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'lat_uy', 'latitude (half level uy)',                                 &
-                                                'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'lat_uy', 'latitude (half level uy)',  'degrees_north', &
+                                                AXIS_name(1:2), AXIS(1:imh,1:jm,1), start=start(:,2)    )
 
-    AXIS(1:im,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LATV(ims:ime,jmsh:jme) / D2R
+    AXIS(1:im,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LATXV(ims:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'yh'/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'lat_xv', 'latitude (half level xv)',                                 &
-                                                'degrees_north', AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'lat_xv', 'latitude (half level xv)',  'degrees_north', &
+                                                AXIS_name(1:2), AXIS(1:im,1:jmh,1), start=start(:,3)    )
 
     AXIS(1:imh,1:jmh,1) = ATMOS_GRID_CARTESC_REAL_LATUV(imsh:ime,jmsh:jme) / D2R
     AXIS_name(1:2) = (/'xh', 'yh'/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'lat_uv', 'latitude (half level uv)',                                  &
-                                                'degrees_north', AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'lat_uv', 'latitude (half level uv)',  'degrees_north', &
+                                                AXIS_name(1:2), AXIS(1:imh,1:jmh,1), start=start(:,4)   )
 
-    AXIS(1:im,1:jm,1) = TOPO_Zsfc(ims:ime,jms:jme)
     AXIS_name(1:2) = (/'x ', 'y '/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'topo', 'topography',                                    &
-                                                'm', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'topo', 'topography', 'm', AXIS_name(1:2),   &
+                                                TOPO_Zsfc(ims:ime,jms:jme), start=start(:,1) )
 
-    AXIS(1:im,1:jm,1) = LANDUSE_frac_land(ims:ime,jms:jme)
     AXIS_name(1:2) = (/'x ', 'y '/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'lsmask', 'fraction for land-sea mask',                  &
-                                                '1', AXIS_name(1:2), AXIS(1:im,1:jm,1), start=start(:,1) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'lsmask', 'fraction for land-sea mask', '1', AXIS_name(1:2), &
+                                                LANDUSE_frac_land(ims:ime,jms:jme), start=start(:,1)         )
+
+    AXIS_name(1:2) = (/'x ','y '/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area',    'area of grid cell',                  'm2', AXIS_name(1:2), &
+                                                AREA(ims:ime,jms:jme),   start=start(:,1)                                   )
+    AXIS_name(1:2) = (/'xh','y '/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_uy', 'area of grid cell (half level uy)',  'm2', AXIS_name(1:2), &
+                                                AREAUY(ims:ime,jms:jme), start=start(:,2)                                   )
+    AXIS_name(1:2) = (/'x ','yh'/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_xv', 'area of grid cell (half level xv)',  'm2', AXIS_name(1:2), &
+                                                AREAXV(ims:ime,jms:jme), start=start(:,3)                                   )
+
+    do k = 1, KMAX
+    do j = 1, jm
+    do i = 1, imh
+       AXIS(i,j,k) = AREAZUY_X(KS+k-1,imsh+i-1,jms+j-1)
+    end do
+    end do
+    end do
+    AXIS_name = (/'xh', 'y ', 'z '/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_uyz_x', 'area of grid cell face (half level uyz, normal x)', 'm2', &
+                                                AXIS_name(1:3), AXIS(1:imh,1:jm,1:KMAX), start=start(:,2)                     )
+    do k = 1, KMAX
+    do j = 1, jmh
+    do i = 1, im
+       AXIS(i,j,k) = AREAZXV_Y(KS+k-1,ims+i-1,jmsh+j-1)
+    end do
+    end do
+    end do
+    AXIS_name = (/'x ', 'yh', 'z '/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_xvz_y', 'area of grid cell face (half level xvz, normal y)', 'm2', &
+                                                AXIS_name(1:3), AXIS(1:im,1:jmh,1:KMAX), start=start(:,3)                     )
+    do k = 0, KMAX
+    do j = 1, jmh
+    do i = 1, imh
+       AXIS(i,j,k) = AREAWUY_X(KS+k-1,imsh+i-1,jmsh+j-1)
+    end do
+    end do
+    end do
+    AXIS_name = (/'xh', 'y ', 'zh'/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_uyw_x', 'area of grid cell face (half level uyw, normal x)', 'm2', &
+                                                AXIS_name(1:3), AXIS(1:imh,1:jmh,0:KMAX), start=start(:,2)                    )
+    do k = 0, KMAX
+    do j = 1, jmh
+    do i = 1, im
+       AXIS(i,j,k) = AREAWXV_Y(KS+k-1,ims+i-1,jmsh+j-1)
+    end do
+    end do
+    end do
+    AXIS_name = (/'x ', 'yh', 'zh'/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_xvw_y', 'area of grid cell face (half level xvw, normal y)', 'm2', &
+                                                AXIS_name(1:3), AXIS(1:im,1:jmh,0:KMAX), start=start(:,3)                     )
+    do k = 1, KMAX
+    do j = 1, jm
+    do i = 1, im
+       AXIS(i,j,k) = AREAZXY_X(KS+k-1,ims+i-1,jms+j-1)
+    end do
+    end do
+    end do
+    AXIS_name = (/'x ', 'y ', 'z '/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_xyz_x', 'area of grid cell face (half level xyz, normal x)', 'm2', &
+                                                AXIS_name(1:3), AXIS(1:im,1:jm,1:KMAX), start=start(:,1)                      )
+    do k = 1, KMAX
+    do j = 1, jmh
+    do i = 1, imh
+       AXIS(i,j,k) = AREAZUV_Y(KS+k-1,imsh+i-1,jmsh+j-1)
+    end do
+    end do
+    end do
+    AXIS_name = (/'xh', 'yh', 'z '/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_uvz_y', 'area of grid cell face (half level uvz, normal y)', 'm2', &
+                                                AXIS_name(1:3), AXIS(1:imh,1:jmh,1:KMAX), start=start(:,4)                    )
+    do k = 1, KMAX
+    do j = 1, jmh
+    do i = 1, imh
+       AXIS(i,j,k) = AREAZUV_X(KS+k-1,imsh+i-1,jmsh+j-1)
+    end do
+    end do
+    end do
+    AXIS_name = (/'xh', 'yh', 'z '/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_uvz_x', 'area of grid cell face (half level uvz, normal x)', 'm2', &
+                                                AXIS_name(1:3), AXIS(1:imh,1:jmh,1:KMAX), start=start(:,4)                    )
+    do k = 1, KMAX
+    do j = 1, jm
+    do i = 1, im
+       AXIS(i,j,k) = AREAZXY_Y(KS+k-1,ims+i-1,jms+j-1)
+    end do
+    end do
+    end do
+    AXIS_name = (/'x ', 'y ', 'z '/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_xyz_y', 'area of grid cell face (half level xyz, normal y)', 'm2', &
+                                                AXIS_name(1:3), AXIS(1:im,1:jm,1:KMAX), start=start(:,1)                      )
+
+    do k = 1, KMAX
+    do j = 1, jm
+    do i = 1, im
+       AXIS(i,j,k) = VOL(KS+k-1,ims+i-1,jms+j-1)
+    end do
+    end do
+    end do
+    AXIS_name = (/ 'x ', 'y ', 'z '/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume',     'volume of grid cell',                  'm3', &
+                                                AXIS_name(1:3), AXIS(1:im,1:jm,1:KMAX), start=start(:,1)         )
+    do k = 0, KMAX
+    do j = 1, jm
+    do i = 1, im
+       AXIS(i,j,k) = VOLWXY(KS+k-1,ims+i-1,jms+j-1)
+    end do
+    end do
+    end do
+    AXIS_name = (/'x ', 'y ', 'zh'/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_xyw', 'volume of grid cell (half level xyw)', 'm3', &
+                                                AXIS_name(1:3), AXIS(1:im,1:jm,0:KMAX), start=start(:,1)         )
+    do k = 1, KMAX
+    do j = 1, jm
+    do i = 1, imh
+       AXIS(i,j,k) = VOLZUY(KS+k-1,imsh+i-1,jms+j-1)
+    end do
+    end do
+    end do
+    AXIS_name = (/'xh', 'y ', 'z '/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_uyz', 'volume of grid cell (half level uyz)',  'm3', &
+                                                AXIS_name(1:3), AXIS(1:imh,1:jm,1:KMAX), start=start(:,2)         )
+    do k = 1, KMAX
+    do j = 1, jmh
+    do i = 1, im
+       AXIS(i,j,k) = VOLZXV(KS+k-1,ims+i-1,jmsh+j-1)
+    end do
+    end do
+    end do
+    AXIS_name = (/'x ', 'yh', 'z '/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_xvz', 'volume of grid cell (half level xvz)',  'm3', &
+                                                AXIS_name(1:3), AXIS(1:im,1:jmh,1:KMAX), start=start(:,3)         )
+
+    do k = 1, OKMAX
+    do j = 1, jm
+    do i = 1, im
+       AXIS(i,j,k) = VOLO(KS+k-1,ims+i-1,jms+j-1)
+    end do
+    end do
+    end do
+    AXIS_name = (/'x ', 'y ', 'oz'/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_xyo', 'volume of grid cell',  'm3',          &
+                                                AXIS_name(1:3), AXIS(1:im,1:jm,1:OKMAX), start=start(:,1) )
+    do k = 1, LKMAX
+    do j = 1, jm
+    do i = 1, im
+       AXIS(i,j,k) = VOLL(KS+k-1,ims+i-1,jms+j-1)
+    end do
+    end do
+    end do
+    AXIS_name = (/'x ', 'y ', 'lz'/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_xyl', 'volume of grid cell',  'm3',          &
+                                                AXIS_name(1:3), AXIS(1:im,1:jm,1:LKMAX), start=start(:,1) )
+    do k = 1, UKMAX
+    do j = 1, jm
+    do i = 1, im
+       AXIS(i,j,k) = VOLU(KS+k-1,ims+i-1,jms+j-1)
+    end do
+    end do
+    end do
+    AXIS_name = (/'x ', 'y ', 'uz'/)
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_xyu', 'volume of grid cell',  'm3',          &
+                                                AXIS_name(1:3), AXIS(1:im,1:jm,1:UKMAX), start=start(:,1) )
 
     return
   end subroutine FILE_HISTORY_CARTESC_set_axes
@@ -1633,6 +1817,28 @@ contains
           endif
        endif
     endif
+
+    call FILE_HISTORY_Set_Attribute( "cell_area",    "standard_name", "area" ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "cell_area_uy", "standard_name", "area" ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "cell_area_xv", "standard_name", "area" ) ! [IN]
+
+    call FILE_HISTORY_Set_Attribute( "cell_area_uyz_x", "standard_name", "area" ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "cell_area_xvz_y", "standard_name", "area" ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "cell_area_uyw_x", "standard_name", "area" ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "cell_area_xvw_y", "standard_name", "area" ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "cell_area_xyz_x", "standard_name", "area" ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "cell_area_uvz_y", "standard_name", "area" ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "cell_area_uvz_x", "standard_name", "area" ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "cell_area_xyz_y", "standard_name", "area" ) ! [IN]
+
+    call FILE_HISTORY_Set_Attribute( "cell_volume",     "standard_name", "volume" ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "cell_volume_xyw", "standard_name", "volume" ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "cell_volume_uyz", "standard_name", "volume" ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "cell_volume_xvz", "standard_name", "volume" ) ! [IN]
+
+    call FILE_HISTORY_Set_Attribute( "cell_volume_xyo", "standard_name", "volume" ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "cell_volume_xyl", "standard_name", "volume" ) ! [IN]
+    call FILE_HISTORY_Set_Attribute( "cell_volume_xyu", "standard_name", "volume" ) ! [IN]
 
     return
   end subroutine FILE_HISTORY_CARTESC_set_axes_attributes

@@ -35,6 +35,10 @@ module scale_statistics
      module procedure STATISTICS_total_3D
   end interface STATISTICS_total
 
+  interface STATISTICS_detail
+     module procedure STATISTICS_detail_2D
+     module procedure STATISTICS_detail_3D
+  end interface STATISTICS_detail
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -252,7 +256,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Search global maximum & minimum value
-  subroutine STATISTICS_detail( &
+  subroutine STATISTICS_detail_3D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, VA, &
        varname,           &
        var,               &
@@ -394,6 +398,140 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
 
     return
-  end subroutine STATISTICS_detail
+  end subroutine STATISTICS_detail_3D
+
+  subroutine STATISTICS_detail_2D( &
+       IA, IS, IE, JA, JS, JE, VA, &
+       varname,           &
+       var,               &
+       supress_globalcomm )
+    use scale_process, only: &
+       PRC_nprocs,   &
+       PRC_myrank
+    use scale_const, only: &
+       CONST_UNDEF, &
+       CONST_UNDEF2
+    use scale_comm, only: &
+       COMM_datatype
+    implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: VA
+
+    character(len=*), intent(in) :: varname(VA)      !< name of item
+    real(RP),         intent(in) :: var(IA,JA,VA) !< values
+
+    logical,          intent(in), optional :: supress_globalcomm !< supress global comm.?
+
+    real(RP) :: statval_l (  VA,2)
+    integer  :: statidx_l (2,VA,2)
+    real(RP) :: statval   (  VA,2,0:PRC_nprocs-1)
+    integer  :: statidx   (2,VA,2,0:PRC_nprocs-1)
+    real(RP) :: allstatval(VA,2)
+    integer  :: allstatidx(VA,2)
+    logical :: do_globalcomm
+
+    integer :: i, j
+    integer :: ierr
+    integer :: v, p
+    !---------------------------------------------------------------------------
+
+    do_globalcomm = STATISTICS_use_globalcomm
+    if ( present(supress_globalcomm) ) then
+       if ( supress_globalcomm ) then
+          do_globalcomm = .false.
+       endif
+    endif
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Variable Statistics ***'
+    do v = 1, VA
+       statval_l(  v,:) = var(IS,JS,v)
+       statidx_l(1,v,:) = IS
+       statidx_l(2,v,:) = JS
+       do j = JS, JE
+       do i = IS, IE
+          if ( var(i,j,v) > statval_l(v,1) ) then
+             statval_l(  v,1) = var(i,j,v)
+             statidx_l(1,v,1) = i
+             statidx_l(2,v,1) = j
+          end if
+          if ( var(i,j,v) < statval_l(v,2) ) then
+             statval_l(  v,2) = var(i,j,v)
+             statidx_l(1,v,2) = i
+             statidx_l(2,v,2) = j
+          end if
+       end do
+       end do
+    enddo
+
+    if ( do_globalcomm ) then
+       call PROF_rapstart('COMM_Bcast', 2)
+
+       call MPI_AllGather( statval_l(:,:),       &
+                           VA*2,                 &
+                           COMM_datatype,        &
+                           statval(:,:,:),       &
+                           VA*2,                 &
+                           COMM_datatype,        &
+                           PRC_LOCAL_COMM_WORLD, &
+                           ierr )
+
+       call MPI_AllGather( statidx_l(:,:,:),     &
+                           2*VA*2,               &
+                           MPI_INTEGER,          &
+                           statidx(:,:,:,:),     &
+                           2*VA*2,               &
+                           MPI_INTEGER,          &
+                           PRC_LOCAL_COMM_WORLD, &
+                           ierr )
+
+       call PROF_rapend  ('COMM_Bcast', 2)
+
+       do v = 1, VA
+          allstatval(v,1) = statval(v,1,0)
+          allstatval(v,2) = statval(v,2,0)
+          allstatidx(v,:) = 0
+          do p = 1, PRC_nprocs-1
+             if ( statval(v,1,p) > allstatval(v,1) ) then
+                allstatval(v,1) = statval(v,1,p)
+                allstatidx(v,1) = p
+             end if
+             if ( statval(v,2,p) < allstatval(v,2) ) then
+                allstatval(v,2) = statval(v,2,p)
+                allstatidx(v,2) = p
+             end if
+          end do
+          if( IO_L ) write(IO_FID_LOG,*) '[', trim(varname(v)), ']'
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,3(I5,A))') '  MAX =', &
+                                                       allstatval(v,1), ' (rank=', &
+                                                       allstatidx(v,1), '; ', &
+                                         statidx(1,v,1,allstatidx(v,1)),',', &
+                                         statidx(2,v,1,allstatidx(v,1)),')'
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,3(I5,A))') '  MIN =', &
+                                                       allstatval(v,2), ' (rank=', &
+                                                       allstatidx(v,2), '; ', &
+                                         statidx(1,v,2,allstatidx(v,2)),',', &
+                                         statidx(2,v,2,allstatidx(v,2)),')'
+       enddo
+    else
+       ! statistics on each node
+       do v = 1, VA
+          if( IO_L ) write(IO_FID_LOG,*) '*** [', trim(varname(v)), ']'
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,2(I5,A))') '*** MAX = ', &
+                                                statval_l(  v,1),' (', &
+                                                statidx_l(1,v,1),',', &
+                                                statidx_l(2,v,1),')'
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,2(I5,A))') '*** MIN = ', &
+                                                statval_l(  v,2),' (', &
+                                                statidx_l(1,v,2),',', &
+                                                statidx_l(2,v,2),')'
+       enddo
+    endif
+
+    if( IO_L ) write(IO_FID_LOG,*)
+
+    return
+  end subroutine STATISTICS_detail_2D
 
 end module scale_statistics

@@ -779,7 +779,7 @@ contains
           if( time_avg ) itavg = 1
        endif
 
-       call file_add_variable_c( cvid,                              & ! [OUT]
+       call file_add_variable_c( cvid,                             & ! [OUT]
                                  FILE_files(fid)%fid,              & ! [IN]
                                  varname, desc, units,             & ! [IN]
                                  dims, ndims, dtype, tint8, itavg, & ! [IN]

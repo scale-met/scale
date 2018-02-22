@@ -188,10 +188,10 @@ contains
 
     character(len=*), intent(in) :: dim_type
     integer,          intent(in) :: dim_size
-    real(RP),         intent(in) :: area(IA,JA)
-    real(RP),         intent(in) :: total_area
-    real(RP),         intent(in) :: volume(KA,IA,JA)
-    real(RP),         intent(in) :: total_volume
+    real(RP),         intent(in), optional :: area(IA,JA)
+    real(RP),         intent(in), optional :: total_area
+    real(RP),         intent(in), optional :: volume(KA,IA,JA)
+    real(RP),         intent(in), optional :: total_volume
 
     integer :: n
 
@@ -211,13 +211,17 @@ contains
     MONITOR_dims(n)%JS = JS
     MONITOR_dims(n)%JE = JE
 
-    allocate( MONITOR_dims(n)%area(IA,JA) )
-    MONITOR_dims(n)%area(:,:) = area(:,:)
-    MONITOR_dims(n)%total_area = total_area
+    if ( dim_size >= 2 ) then
+       allocate( MONITOR_dims(n)%area(IA,JA) )
+       MONITOR_dims(n)%area(:,:) = area(:,:)
+       MONITOR_dims(n)%total_area = total_area
+    end if
 
-    allocate( MONITOR_dims(n)%volume(KA,IA,JA) )
-    MONITOR_dims(n)%volume(:,:,:) = volume(:,:,:)
-    MONITOR_dims(n)%total_volume = total_volume
+    if ( dim_size >= 3 ) then
+       allocate( MONITOR_dims(n)%volume(KA,IA,JA) )
+       MONITOR_dims(n)%volume(:,:,:) = volume(:,:,:)
+       MONITOR_dims(n)%total_volume = total_volume
+    end if
 
     return
   end subroutine MONITOR_set_dim
@@ -611,8 +615,8 @@ contains
     endif
 
     do n = 1, MONITOR_ndims
-       deallocate( MONITOR_dims(n)%area )
-       deallocate( MONITOR_dims(n)%volume )
+       if ( MONITOR_dims(n)%dim_size >= 2 ) deallocate( MONITOR_dims(n)%area )
+       if ( MONITOR_dims(n)%dim_size >= 3 ) deallocate( MONITOR_dims(n)%volume )
     end do
     MONITOR_ndims = 0
 
