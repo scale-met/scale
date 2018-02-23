@@ -767,9 +767,10 @@ contains
 
     call PROF_rapstart('MP_tomita08', 3)
 
+    hist_flag = .false.
     do ip = 1, w_nmax
        call FILE_HISTORY_query( HIST_id(ip), HIST_sw(ip) )
-       hist_flag = hist_flag .and. HIST_sw(ip)
+       hist_flag = hist_flag .or. HIST_sw(ip)
     end do
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
