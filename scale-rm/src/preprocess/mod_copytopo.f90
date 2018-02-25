@@ -393,7 +393,9 @@ contains
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_file, only: &
-       FILE_Read
+       FILE_open, &
+       FILE_read, &
+       FILE_close
     use scale_interp, only: &
        INTRP_domain_compatibility, &
        INTRP_factor2d,             &
@@ -432,6 +434,7 @@ contains
     integer :: pxs, pxe, pys, pye ! for parent domain
     integer :: rank
 
+    integer :: fid
     integer :: n
     !---------------------------------------------------------------------------
 
@@ -455,14 +458,19 @@ contains
 
        allocate( read2D(tilei,tilej) )
 
-       call FILE_Read( COPYTOPO_IN_BASENAME, "lon",  read2D(:,:), rankid=rank )
-       LON_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
-       call FILE_Read( COPYTOPO_IN_BASENAME, "lat",  read2D(:,:), rankid=rank )
-       LAT_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
-       call FILE_Read( COPYTOPO_IN_BASENAME, "TOPO", read2D(:,:), rankid=rank )
-       TOPO_org(cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye)
+       call FILE_open( COPYTOPO_IN_BASENAME,          & ! [IN]
+                       fid,                           & ! [OUT]
+                       aggregate=.false., rankid=rank ) ! [IN]
 
+       call FILE_read( fid, "lon",  read2D(:,:) )
+       LON_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
+       call FILE_read( fid, "lat",  read2D(:,:) )
+       LAT_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
+       call FILE_read( fid, "TOPO", read2D(:,:) )
+       TOPO_org(cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye)
        deallocate( read2D )
+
+       call FILE_close( fid )
 
     enddo
 

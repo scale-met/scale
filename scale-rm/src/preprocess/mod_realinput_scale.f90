@@ -103,7 +103,8 @@ contains
     use scale_const, only: &
          D2R => CONST_D2R
     use scale_file, only: &
-         FILE_Read
+         FILE_open, &
+         FILE_read
     implicit none
     real(RP), intent(out) :: lon_org(:,:)
     real(RP), intent(out) :: lat_org(:,:)
@@ -115,6 +116,7 @@ contains
     integer :: xloc, yloc
     integer :: xs, xe, ys, ye
 
+    integer :: fid
     integer :: i, k
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosOpenSCALE]'
@@ -131,18 +133,22 @@ contains
        ys = PARENT_JMAX(handle) * (yloc-1) + 1
        ye = PARENT_JMAX(handle) * yloc
 
-       call FILE_Read( BASENAME_ORG, "lon", read2D(:,:), rankid=rank )
+       call FILE_open( BASENAME_ORG,                  & ! (in)
+                       fid,                           & ! (out)
+                       aggregate=.false., rankid=rank ) ! (in)
+
+       call FILE_read( fid, "lon", read2D(:,:) )
        lon_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
 
-       call FILE_Read( BASENAME_ORG, "lat", read2D(:,:), rankid=rank )
+       call FILE_read( fid, "lat", read2D(:,:) )
        lat_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
 
-       call FILE_Read( BASENAME_ORG, "height", read3D(:,:,:), rankid=rank )
+       call FILE_read( fid, "height", read3D(:,:,:) )
        do k = 1, dims(1)
           cz_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
-       call FILE_Read( BASENAME_ORG, "topo", read2D(:,:), rankid=rank )
+       call FILE_read( fid, "topo", read2D(:,:) )
        cz_org(2,xs:xe,ys:ye)  = read2D(:,:)
 
     end do
@@ -177,7 +183,8 @@ contains
        COMM_vars8, &
        COMM_wait
     use scale_file, only: &
-       FILE_Read
+       FILE_open, &
+       FILE_read
     use scale_atmos_hydrostatic, only: &
        HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_atmos_thermodyn, only: &
@@ -223,6 +230,7 @@ contains
     integer :: xloc, yloc
     integer :: rank
 
+    integer :: fid
     integer :: k, i, j, iq, iqa
     !---------------------------------------------------------------------------
 
@@ -238,39 +246,43 @@ contains
        ys = PARENT_JMAX(handle) * (yloc-1) + 1
        ye = PARENT_JMAX(handle) * yloc
 
-       call FILE_Read( BASENAME_ORG, "T2", read2D(:,:), step=it, rankid=rank )
+       call FILE_open( BASENAME_ORG,                  & ! (in)
+                       fid,                           & ! (out)
+                       aggregate=.false., rankid=rank ) ! (in)
+
+       call FILE_read( fid, "T2", read2D(:,:), step=it )
 !OCL XFILL
        tsfc_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_Read( BASENAME_ORG, "MSLP", read2D(:,:), step=it, rankid=rank )
+       call FILE_read( fid, "MSLP", read2D(:,:), step=it )
 !OCL XFILL
        pres_org(1,xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_Read( BASENAME_ORG, "DENS", read3D(:,:,:), step=it, rankid=rank )
+       call FILE_read( fid, "DENS", read3D(:,:,:), step=it )
 !OCL XFILL
        do k = 1, dims(1)
           dens_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
-       call FILE_Read( BASENAME_ORG, "MOMZ", read3D(:,:,:), step=it, rankid=rank )
+       call FILE_read( fid, "MOMZ", read3D(:,:,:), step=it )
 !OCL XFILL
        do k = 1, dims(1)
           momz_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
-       call FILE_Read( BASENAME_ORG, "MOMX", read3D(:,:,:), step=it, rankid=rank )
+       call FILE_read( fid, "MOMX", read3D(:,:,:), step=it )
 !OCL XFILL
        do k = 1, dims(1)
           momx_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
-       call FILE_Read( BASENAME_ORG, "MOMY", read3D(:,:,:), step=it, rankid=rank )
+       call FILE_read( fid, "MOMY", read3D(:,:,:), step=it )
 !OCL XFILL
        do k = 1, dims(1)
           momy_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
-       call FILE_Read( BASENAME_ORG, "RHOT", read3D(:,:,:), step=it, rankid=rank )
+       call FILE_read( fid, "RHOT", read3D(:,:,:), step=it )
 !OCL XFILL
        do k = 1, dims(1)
           rhot_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
@@ -303,7 +315,7 @@ contains
 
           do iq = 1, mptype_parent
              iqa = QS_MP + iq - 1
-             call FILE_Read( BASENAME_ORG, TRACER_NAME(iq), read3D(:,:,:), step=it, rankid=rank )
+             call FILE_read( fid, TRACER_NAME(iq), read3D(:,:,:), step=it )
 !OCL XFILL
              do k = 1, dims(1)
                 qtrc_org(k+2,xs:xe,ys:ye,iqa) = read3D(:,:,k)
@@ -316,7 +328,7 @@ contains
 
        endif
 
-!       call FILE_Read( BASENAME_ORG, "Q2", read2D(:,:), step=it, rankid=rank )
+!       call FILE_read( fid, "Q2", read2D(:,:), step=it )
 !       qtrc_org(2,xs:xe,ys:ye,I_QV) = read2D(:,:)
 
     end do
@@ -461,7 +473,8 @@ contains
       use_file_landwater, &
       it                  )
     use scale_file, only: &
-         FILE_Read
+         FILE_open, &
+         FILE_read
     use scale_const, only: &
          D2R => CONST_D2R
     implicit none
@@ -484,6 +497,7 @@ contains
 
     integer :: rank
 
+    integer :: fid
     integer :: k, i, j, n
     integer :: xloc, yloc
     integer :: xs, xe
@@ -504,45 +518,49 @@ contains
        ys = PARENT_JMAX(handle) * (yloc-1) + 1
        ye = PARENT_JMAX(handle) * yloc
 
-       call FILE_Read( BASENAME_land, "LAND_TEMP",  read3DL(:,:,:), step=it, rankid=rank )
+       call FILE_open( BASENAME_land,                 & ! (in)
+                       fid,                           & ! (out)
+                       aggregate=.false., rankid=rank ) ! (in)
+
+       call FILE_read( fid, "LAND_TEMP",  read3DL(:,:,:), step=it )
        do k = 1, ldims(1)
          tg_org(k,xs:xe,ys:ye) = read3DL(:,:,k)
        end do
 
        if( use_file_landwater )then
-          call FILE_Read( BASENAME_land, "LAND_WATER", read3DL(:,:,:), step=it, rankid=rank )
+          call FILE_read( fid, "LAND_WATER", read3DL(:,:,:), step=it )
           do k = 1, ldims(1)
              strg_org(k,xs:xe,ys:ye) = read3DL(:,:,k)
           end do
        endif
 
-       call FILE_Read( BASENAME_land, "lon", read2D(:,:), rankid=rank )
+       call FILE_read( fid, "lon", read2D(:,:) )
        llon_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
 
-       call FILE_Read( BASENAME_land, "lat", read2D(:,:), rankid=rank )
+       call FILE_read( fid, "lat", read2D(:,:) )
        llat_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
 
-       call FILE_Read( BASENAME_land, "LAND_SFC_TEMP", read2D(:,:), step=it, rankid=rank )
+       call FILE_read( fid, "LAND_SFC_TEMP", read2D(:,:), step=it )
        lst_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_Read( BASENAME_land, "URBAN_SFC_TEMP", read2D(:,:), step=it, rankid=rank )
+       call FILE_read( fid, "URBAN_SFC_TEMP", read2D(:,:), step=it )
        ust_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_Read( BASENAME_land, "LAND_ALB_LW", read2D(:,:), step=it, rankid=rank )
+       call FILE_read( fid, "LAND_ALB_LW", read2D(:,:), step=it )
        albg_org(xs:xe,ys:ye,1) = read2D(:,:)
 
-       call FILE_Read( BASENAME_land, "LAND_ALB_SW", read2D(:,:), step=it, rankid=rank )
+       call FILE_read( fid, "LAND_ALB_SW", read2D(:,:), step=it )
        albg_org(xs:xe,ys:ye,2) = read2D(:,:)
 
-       call FILE_Read( BASENAME_land, "topo", read2D(:,:), rankid=rank )
+       call FILE_read( fid, "topo", read2D(:,:) )
        topo_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_Read( BASENAME_land, "lsmask", read2D(:,:), rankid=rank )
+       call FILE_read( fid, "lsmask", read2D(:,:) )
        lmask_org(xs:xe,ys:ye) = read2D(:,:)
 
     end do
 
-    call FILE_Read( BASENAME_land, "lz", lz_org(:), rankid=rank )
+    call FILE_read( fid, "lz", lz_org(:) )
 
     return
   end subroutine ParentLandInputSCALE
@@ -579,7 +597,8 @@ contains
     use scale_const, only: &
          D2R => CONST_D2R
     use scale_file, only: &
-         FILE_Read
+         FILE_open, &
+         FILE_read
     implicit none
     real(RP), intent(out) :: olon_org (:,:)
     real(RP), intent(out) :: olat_org (:,:)
@@ -591,6 +610,7 @@ contains
     integer :: xloc, yloc
     integer :: xs, xe, ys, ye
 
+    integer :: fid
     integer :: i, k
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[OceanOpenSCALE]'
@@ -607,13 +627,17 @@ contains
        ys = PARENT_JMAX(handle) * (yloc-1) + 1
        ye = PARENT_JMAX(handle) * yloc
 
-       call FILE_Read( BASENAME_ocean, "lon", read2D(:,:), rankid=rank )
+       call FILE_open( BASENAME_ocean,                & ! (in)
+                       fid,                           & ! (out)
+                       aggregate=.false., rankid=rank ) ! (in)
+
+       call FILE_read( fid, "lon", read2D(:,:) )
        olon_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
 
-       call FILE_Read( BASENAME_ocean, "lat", read2D(:,:), rankid=rank )
+       call FILE_read( fid, "lat", read2D(:,:) )
        olat_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
 
-       call FILE_Read( BASENAME_ocean, "lsmask", read2D(:,:), rankid=rank )
+       call FILE_read( fid, "lsmask", read2D(:,:) )
        omask_org(xs:xe,ys:ye)  = read2D(:,:)
 
     end do
@@ -632,7 +656,8 @@ contains
       odims,          &
       it              )
     use scale_file, only: &
-         FILE_Read
+         FILE_open, &
+         FILE_read
     implicit none
 
     real(RP), intent(out) :: tw_org(:,:)
@@ -647,6 +672,7 @@ contains
 
     integer :: rank
 
+    integer :: fid
     integer :: i, j, n
     integer :: xloc, yloc
     integer :: xs, xe
@@ -667,22 +693,26 @@ contains
        ys = PARENT_JMAX(handle) * (yloc-1) + 1
        ye = PARENT_JMAX(handle) * yloc
 
-       call FILE_Read( BASENAME_ocean, "OCEAN_TEMP", read2D(:,:), step=it, rankid=rank )
+       call FILE_open( BASENAME_ocean,                & ! (in)
+                       fid,                           & ! (out)
+                       aggregate=.false., rankid=rank ) ! (in)
+
+       call FILE_read( fid, "OCEAN_TEMP", read2D(:,:), step=it )
        tw_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_Read( BASENAME_ocean, "OCEAN_SFC_TEMP", read2D(:,:), step=it, rankid=rank )
+       call FILE_read( fid, "OCEAN_SFC_TEMP", read2D(:,:), step=it )
        sst_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_Read( BASENAME_ocean, "OCEAN_ALB_LW", read2D(:,:), step=it, rankid=rank )
+       call FILE_read( fid, "OCEAN_ALB_LW", read2D(:,:), step=it )
        albw_org(xs:xe,ys:ye,1) = read2D(:,:)
 
-       call FILE_Read( BASENAME_ocean, "OCEAN_ALB_SW", read2D(:,:), step=it, rankid=rank )
+       call FILE_read( fid, "OCEAN_ALB_SW", read2D(:,:), step=it )
        albw_org(xs:xe,ys:ye,2) = read2D(:,:)
 
-       call FILE_Read( BASENAME_ocean, "OCEAN_SFC_Z0M", read2D(:,:), step=it, rankid=rank )
+       call FILE_read( fid, "OCEAN_SFC_Z0M", read2D(:,:), step=it )
        z0w_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_Read( BASENAME_ocean, "lsmask", read2D(:,:), rankid=rank )
+       call FILE_read( fid, "lsmask", read2D(:,:) )
        omask_org(xs:xe,ys:ye) = read2D(:,:)
 
     end do

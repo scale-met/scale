@@ -264,7 +264,9 @@ contains
        inter_parent, &
        inter_child   )
     use scale_file, only: &
-       FILE_Get_Shape
+       FILE_open, &
+       FILE_get_attribute, &
+       FILE_get_shape
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_process, only: &
@@ -308,15 +310,14 @@ contains
     integer :: i
     integer :: fid, ierr
     integer :: parent_id
-    integer, allocatable :: errcodes(:)
-
-    character(len=2) :: dom_num
 
     logical :: flag_parent = .false.
     logical :: flag_child  = .false.
 
+    integer :: imaxg(1), jmaxg(1)
+    integer :: pnum_x(1), pnum_y(1)
     integer :: dims(1)
-    logical :: error
+    logical :: error, existed
 
     namelist / PARAM_COMM_CARTESC_NEST /      &
        LATLON_CATALOGUE_FNAME,   &
@@ -375,30 +376,79 @@ contains
        USE_NESTING = .true.
 
        if ( PRC_IsMaster ) then
-          call FILE_Get_Shape( OFFLINE_PARENT_BASENAME, "CX", dims(:) )
-          OFFLINE_PARENT_IMAX = dims(1)-4
-          call FILE_Get_Shape( OFFLINE_PARENT_BASENAME, "CY", dims(:) )
-          OFFLINE_PARENT_JMAX = dims(1)-4
-          call FILE_Get_Shape( OFFLINE_PARENT_BASENAME, "z", dims(:), error=error )
-          if ( error ) then
-             OFFLINE_PARENT_KMAX = 0
+          call FILE_open( OFFLINE_PARENT_BASENAME, & ! (in)
+                          fid,                     & ! (out)
+                          aggregate = .false.      ) ! (in)
+
+          call FILE_get_attribute( fid, "global", "scale_atmos_grid_cartesC_imaxg", &
+                                   imaxg(:), existed=existed                        )
+          if ( existed ) then
+             call FILE_get_attribute( fid, "global", "scale_cartesC_prc_num_x", &
+                                      pnum_x(:), existed=existed                )
+          end if
+          if ( existed ) then
+             OFFLINE_PARENT_IMAX = imaxg(1) / pnum_x(1)
           else
+             ! for old file
+             call FILE_get_shape( fid, "CX", dims(:) )
+             OFFLINE_PARENT_IMAX = dims(1)-IHALO*2
+          end if
+
+          call FILE_get_attribute( fid, "global", "scale_atmos_grid_cartesC_jmaxg", &
+                                   jmaxg(:), existed=existed                        )
+          if ( existed ) then
+             call FILE_get_attribute( fid, "global", "scale_cartesC_prc_num_y", &
+                                      pnum_y(:), existed=existed                )
+          end if
+          if ( existed ) then
+             OFFLINE_PARENT_JMAX = jmaxg(1) / pnum_y(1)
+          else
+             ! for old file
+             call FILE_get_shape( fid, "CY", dims(:) )
+             OFFLINE_PARENT_JMAX = dims(1)-JHALO*2
+          end if
+
+          call FILE_get_attribute( fid, "global", "scale_atmos_grid_cartesC_kmax", &
+                                   dims(:), existed=existed                        )
+          if ( existed ) then
              OFFLINE_PARENT_KMAX = dims(1)
-          endif
-
-          call FILE_Get_Shape( OFFLINE_PARENT_BASENAME, "oz", dims(:), error=error )
-          if ( error ) then
-             OFFLINE_PARENT_OKMAX = 0
           else
+             call FILE_get_shape( fid, "z", dims(:), error=error )
+             if ( error ) then
+                OFFLINE_PARENT_KMAX = 0
+             else
+                OFFLINE_PARENT_KMAX = dims(1)
+             endif
+          end if
+
+          call FILE_get_attribute( fid, "global", "scale_ocean_grid_cartesC_kmax", &
+                                   dims(:), existed=existed                        )
+          if ( existed ) then
              OFFLINE_PARENT_OKMAX = dims(1)
-          endif
-
-          call FILE_Get_Shape( OFFLINE_PARENT_BASENAME, "lz", dims(:), error=error )
-          if ( error ) then
-             OFFLINE_PARENT_LKMAX = 0
           else
+             ! for old file
+             call FILE_get_shape( fid, "oz", dims(:), error=error )
+             if ( error ) then
+                OFFLINE_PARENT_OKMAX = 0
+             else
+                OFFLINE_PARENT_OKMAX = dims(1)
+             endif
+          end if
+
+          call FILE_get_attribute( fid, "global", "scale_land_grid_cartesC_kmax", &
+                                   dims(:), existed=existed                       )
+          if ( existed ) then
              OFFLINE_PARENT_LKMAX = dims(1)
-          endif
+          else
+             ! for old file
+             call FILE_get_shape( fid, "lz", dims(:), error=error )
+             if ( error ) then
+                OFFLINE_PARENT_LKMAX = 0
+             else
+                OFFLINE_PARENT_LKMAX = dims(1)
+             endif
+          end if
+
        endif
        call COMM_Bcast( OFFLINE_PARENT_IMAX  )
        call COMM_Bcast( OFFLINE_PARENT_JMAX  )
@@ -2327,7 +2377,7 @@ contains
     logical :: logarithmic = .false.
 
     integer :: ierr
-    integer :: k, i, j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( .NOT. USE_NESTING ) return
