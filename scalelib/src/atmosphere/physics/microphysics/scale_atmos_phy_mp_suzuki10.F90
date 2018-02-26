@@ -17,14 +17,6 @@
 !!
 !! @author : Team SCALE
 !!
-!! @par History: scale_atmos_phy_mp_suzuki10
-!! @li  ver.0.00   2012-06-14 (Y.Sato) [new] Import from version 4.1 of original code
-!! @li  ver.0.01   2012-09-14 (Y.Sato) [mod] add a stochastic method (Sato et al. 2009)
-!! @li  ver.0.02   2013-02-12 (Y.Sato) [mod] modified for latest version
-!! @li  ver.0.03   2013-12-26 (Y.Sato) [mod] mearge all version of Bin scheme
-!! @li  ver.0.04   2015-09-02 (Y.Sato) [mod] Tuning for K and FX10
-!! @li  ver.0.05   2015-09-08 (Y.Sato) [mod] Add evaporated cloud number concentration
-!! @li  ver.0.06   2016-01-22 (Y.Sato) [mod] Modify several bugs for using with MSTRNX
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -36,43 +28,7 @@ module scale_atmos_phy_mp_suzuki10
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_atmos_grid_cartesC_index
 
-  use scale_const, only: &
-     pi  => CONST_PI,  &
-     EPS => CONST_EPS, &
-     CONST_CPvap,  &
-     CONST_CPdry,  &
-     CONST_CVdry,  &
-     CONST_CL,     &
-     CONST_CI,     &
-     CONST_DWATR,  &
-     CONST_GRAV,   &
-     CONST_Rvap,   &
-     CONST_Rdry,   &
-     CONST_LHV0,   &
-     CONST_LHS0,   &
-     CONST_EMELT,  &
-     CONST_TEM00,  &
-     CONST_TMELT,  &
-     CONST_PSAT0,  &
-     CONST_PRE00,  &
-     CONST_EPSvap, &
-     CONST_THERMODYN_TYPE
-  use scale_const, only: &
-     CP    => CONST_CPdry, &
-     Rvap  => CONST_Rvap,  &
-     ESAT0 => CONST_PSAT0, &
-     QLMLT => CONST_EMELT, &
-     TMLT  => CONST_TMELT, &
-     TEMP0 => CONST_TEM00, &
-     RHOW  => CONST_DWATR
-  use scale_atmos_saturation, only: &
-     ATMOS_SATURATION_pres2qsat_liq, &
-     ATMOS_SATURATION_pres2qsat_ice
-  use scale_atmos_thermodyn, only: &
-     THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
-     THERMODYN_pott      => ATMOS_THERMODYN_pott
   use scale_atmos_hydrometeor, only: &
      N_HYD
   !-----------------------------------------------------------------------------
@@ -84,23 +40,21 @@ module scale_atmos_phy_mp_suzuki10
   !
   public :: ATMOS_PHY_MP_suzuki10_config
   public :: ATMOS_PHY_MP_suzuki10_setup
-  public :: ATMOS_PHY_MP_suzuki10
-  public :: ATMOS_PHY_MP_suzuki10_CloudFraction
-  public :: ATMOS_PHY_MP_suzuki10_EffectiveRadius
-  public :: ATMOS_PHY_MP_suzuki10_Mixingratio
+  public :: ATMOS_PHY_MP_suzuki10_adjustment
+  public :: ATMOS_PHY_MP_suzuki10_cloud_fraction
+  public :: ATMOS_PHY_MP_suzuki10_effective_radius
+  public :: ATMOS_PHY_MP_suzuki10_mixing_ratio
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
   !-----------------------------------------------------------------------------
-  integer, private            :: QA_MP
-
   character(len=H_SHORT), public, target, allocatable :: ATMOS_PHY_MP_suzuki10_NAME(:)
   character(len=H_MID)  , public, target, allocatable :: ATMOS_PHY_MP_suzuki10_DESC(:)
   character(len=H_SHORT), public, target, allocatable :: ATMOS_PHY_MP_suzuki10_UNIT(:)
 
-  real(RP), public, target :: ATMOS_PHY_MP_suzuki10_DENS(N_HYD) ! hydrometeor density [kg/m3]=[g/L]
+  real(RP), public :: ATMOS_PHY_MP_suzuki10_DENS(N_HYD) ! hydrometeor density [kg/m3]=[g/L]
 
   integer, public :: nbin = 33
   integer, public :: nspc = 7
@@ -109,42 +63,92 @@ module scale_atmos_phy_mp_suzuki10
   integer, public :: kphase = 0
   integer, public :: ICEFLG = 1
 
-  character(len=3)  :: namspc(8) =(/'Qcl','Qic','Qip','Qid','Qis','Qig','Qih','Qae'/)
-  character(len=27) :: lnamspc(8) = &
-                             (/'Mixing ratio of cloud   bin', &
-                               'Mixing ratio of colum   bin', &
-                               'Mixing ratio of plate   bin', &
-                               'Mixing ratio of dendrit bin', &
-                               'Mixing ratio of snow    bin', &
-                               'Mixing ratio of graupel bin', &
-                               'Mixing ratio of hail    bin', &
-                               'Mixing ratio of aerosol bin' /)
-
 # include "kernels.h"
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
+  private :: MP_suzuki10
+  private :: nucleat
+  private :: nucleata
+  private :: cndevpsbl
+  private :: cndevpsbla
+  private :: liqphase
+  private :: icephase
+  private :: mixphase
+  private :: ice_nucleat
+  private :: freezing
+  private :: melting
+  private :: collmain
+  private :: collmainf
+  private :: collcoag
+  private :: getrule
+  private :: faero
+  private :: random_setup
+  private :: r_collcoag
+  private :: mkpara
+  private :: rdkdat
+  private :: sdfgrid
+  private :: getcp
+  private :: fcpc
+  private :: getck
+  private :: fckrn
+  private :: getvt
+  private :: fvterm
+  private :: getbr
+  private :: fbulkrad
+  private :: paraout
+  private :: TINVSS
+  private :: getknot
+  private :: fbspl
+  private :: fpb
+  private :: getmatrx
+  private :: getcoef
+  private :: fspline
+  private :: getcoef2
+  private :: fspline2
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters
   !
-  integer,  private, parameter   :: I_mp_QC  = 1
-  integer,  private, parameter   :: I_mp_QP  = 2
-  integer,  private, parameter   :: I_mp_QCL = 3
-  integer,  private, parameter   :: I_mp_QD  = 4
-  integer,  private, parameter   :: I_mp_QS  = 5
-  integer,  private, parameter   :: I_mp_QG  = 6
-  integer,  private, parameter   :: I_mp_QH  = 7
-  integer,  private              :: QS_MP
-  integer,  private              :: QE_MP
-  integer,  private              :: I_QV
+  integer :: QA_MP
 
-  logical,  private              :: MP_doautoconversion = .true.  ! apply collision process ?
-  logical,  private              :: MP_doprecipitation  = .true.  ! apply sedimentation of hydrometeor ?
-  logical,  private              :: MP_donegative_fixer = .true.  ! apply negative fixer?
-  logical,  private              :: MP_couple_aerosol   = .false. ! apply CCN effect?
-  real(RP), private              :: MP_limit_negative   = 1.0_RP  ! Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
+  character(len=3)  :: namspc (8) = (/ 'Qcl', &
+                                       'Qic', &
+                                       'Qip', &
+                                       'Qid', &
+                                       'Qis', &
+                                       'Qig', &
+                                       'Qih', &
+                                       'Qae'  /)
+
+  character(len=27) :: lnamspc(8) = (/ 'Mixing ratio of cloud   bin', &
+                                       'Mixing ratio of colum   bin', &
+                                       'Mixing ratio of plate   bin', &
+                                       'Mixing ratio of dendrit bin', &
+                                       'Mixing ratio of snow    bin', &
+                                       'Mixing ratio of graupel bin', &
+                                       'Mixing ratio of hail    bin', &
+                                       'Mixing ratio of aerosol bin'  /)
+
+  integer, parameter   :: I_mp_QC  = 1
+  integer, parameter   :: I_mp_QP  = 2
+  integer, parameter   :: I_mp_QCL = 3
+  integer, parameter   :: I_mp_QD  = 4
+  integer, parameter   :: I_mp_QS  = 5
+  integer, parameter   :: I_mp_QG  = 6
+  integer, parameter   :: I_mp_QH  = 7
+
+  integer :: QS_MP
+  integer :: QE_MP
+  integer :: I_QV
+
+  logical  :: MP_doautoconversion = .true.  ! apply collision process ?
+  logical  :: MP_doprecipitation  = .true.  ! apply sedimentation of hydrometeor ?
+  logical  :: MP_donegative_fixer = .true.  ! apply negative fixer?
+  logical  :: MP_couple_aerosol   = .false. ! apply CCN effect?
+  real(RP) :: MP_limit_negative   = 1.0_RP  ! Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
 
 
   !--- Indeces for determining species of cloud particle
@@ -166,7 +170,7 @@ module scale_atmos_phy_mp_suzuki10
   real(RP), allocatable :: ck( :,:,:,: )     !-- collection kernel (K of equation A.20 in Suzuki 2004)
   real(RP), allocatable :: vt( :,: )         !--- terminal velocity of hydrometeor [m/s]
   real(RP), allocatable :: br( :,: )         !--- bulk density of hydrometeor [kg/m^3]
-  integer,  allocatable  :: ifrsl( :,:,: )     !--- type of species after collision
+  integer,  allocatable :: ifrsl( :,:,: )    !--- type of species after collision
   !--- bin information of aerosol (not supported)
   real(RP), allocatable :: xactr( : )        !--- log( ma ) value of bin center ( ma is mass of aerosol )
   real(RP), allocatable :: xabnd( : )        !--- log( ma ) value of bin boundary ( ma is mass of aerosol )
@@ -184,22 +188,25 @@ module scale_atmos_phy_mp_suzuki10
   real(RP) :: dxaer                          !--- d( log(ma) ) of aerosol bin
   real(RP) :: xasta                          !--- exponential of mass of aerosol for smallest aerosol bin
   real(RP) :: xaend                          !--- exponential of mass of aerosol for largest aerosol bin
-  real(RP), allocatable, save :: vterm( :,:,:,: )      ! terminal velocity
-  integer, private, save :: MP_NSTEP_SEDIMENTATION    ! number of fractional step for sedimentation
-  real(RP), private, save :: MP_RNSTEP_SEDIMENTATION  ! 1/MP_NSTEP_SEDIMENTATION
-  real(DP), private, save :: MP_DTSEC_SEDIMENTATION   ! DT for sedimentation
-  integer, private, save :: MP_ntmax_sedimentation= 1 ! maxinum fractional step
-  real(RP), private :: flg_thermodyn         !--- flg for lhv and lhs (0 -> SIMPLE, 1 -> EXACT )
-  real(RP), private :: RTEM00                !--- 1/CONST_TEM00
+
+  real(RP), allocatable, save :: vterm( :,:,:,: ) !--- terminal velocity
+
+  integer,  save :: MP_NSTEP_SEDIMENTATION     !--- number of fractional step for sedimentation
+  real(RP), save :: MP_RNSTEP_SEDIMENTATION    !--- 1/MP_NSTEP_SEDIMENTATION
+  real(DP), save :: MP_DTSEC_SEDIMENTATION     !--- DT for sedimentation
+  integer,  save :: MP_ntmax_sedimentation = 1 !--- maxinum fractional step
+  real(RP)       :: flg_thermodyn              !--- flg for lhv and lhs (0 -> SIMPLE, 1 -> EXACT )
+  real(RP)       :: RTEM00                     !--- 1/CONST_TEM00
 
   !--- constant for bin
-  real(RP), parameter :: cldmin = 1.0E-10_RP !--- threshould for cloud is regarded existing
-  real(RP), parameter :: OneovThird   = 1.0_RP/3.0_RP
-  real(RP), parameter :: ThirdovForth = 3.0_RP/4.0_RP
-  real(RP), parameter :: TwoovThird   = 2.0_RP/3.0_RP
+  real(RP), parameter :: cldmin       = 1.0E-10_RP      !--- threshould for cloud is regarded existing
+  real(RP), parameter :: OneovThird   = 1.0_RP / 3.0_RP
+  real(RP), parameter :: ThirdovForth = 3.0_RP / 4.0_RP
+  real(RP), parameter :: TwoovThird   = 2.0_RP / 3.0_RP
 
   real(RP) :: rbnd = 40.E-06_RP              ! boundary radius of cloud and rian
   integer  :: nbnd                           ! boundary bin number corresponding to rbnd
+
   !--- constant for aerosol
   real(RP) :: rhoa   = 2.25E+03_RP           ! density of aerosol ( NaCl )
   real(RP) :: emaer  = 58.0_RP               ! molecular weight of aerosol ( salt )
@@ -207,47 +214,55 @@ module scale_atmos_phy_mp_suzuki10
   real(RP) :: rasta  = 1.E-08_RP             ! minimum radius of aerosol (m)
   real(RP) :: raend  = 1.E-06_RP             ! maximum radius of aerosol (m)
   real(RP) :: r0a    = 1.E-07_RP             ! average radius of aerosol (m)
-  logical :: flg_regeneration=.false.        ! flag regeneration of aerosol
-  logical :: flg_nucl=.false.                ! flag nucleated cloud move into smallest bin
-  logical :: flg_icenucl=.false.             ! flag ice nucleation
-  logical :: flg_sf_aero =.false.            ! flag surface flux of aerosol
-  integer, private, save :: rndm_flgp = 0    ! flag for sthastic integration for coll.-coag.
 
-  real(RP), allocatable :: marate( : )                ! mass rate of each aerosol bin to total aerosol mass
-  integer, allocatable, save :: ncld( : )             ! bin number of aerosol in bin of hydrometeor
-!  integer, private, save       :: K10_1, K10_2        ! scaling factor for 10m value (momentum)
-!  real(RP), private            :: R10M1, R10M2        ! scaling factor for 10m value (momentum)
-!  real(RP), private            :: R10H1, R10H2        ! scaling factor for 10m value (heat)
-!  real(RP), private            :: R10E1, R10E2        ! scaling factor for 10m value (tracer)
+  logical :: flg_regeneration = .false.      ! flag regeneration of aerosol
+  logical :: flg_nucl         = .false.      ! flag nucleated cloud move into smallest bin
+  logical :: flg_icenucl      = .false.      ! flag ice nucleation
+  logical :: flg_sf_aero      = .false.      ! flag surface flux of aerosol
+
+  integer, save :: rndm_flgp = 0    ! flag for sthastic integration for coll.-coag.
+
+  real(RP), allocatable        :: marate( : )         ! mass rate of each aerosol bin to total aerosol mass
+  integer,  allocatable, save  :: ncld( : )           ! bin number of aerosol in bin of hydrometeor
+!  integer, save                :: K10_1, K10_2        ! scaling factor for 10m value (momentum)
+!  real(RP)                     :: R10M1, R10M2        ! scaling factor for 10m value (momentum)
+!  real(RP)                     :: R10H1, R10H2        ! scaling factor for 10m value (heat)
+!  real(RP)                     :: R10E1, R10E2        ! scaling factor for 10m value (tracer)
 
   character(len=11), parameter :: fname_micpara="micpara.dat" !--- file name
+
   integer(4) :: fid_micpara
 
   !--- Use for stochastic method
-  integer, allocatable :: blrg( :,: ), bsml( :,: )
-  real(RP) :: wgtbin
-  integer  :: mspc, mbin
-  real(RP), private :: rndm(1,1,1)
+  integer, allocatable :: blrg( :,: )
+  integer, allocatable :: bsml( :,: )
+  real(RP)             :: wgtbin
+  integer              :: mspc, mbin
+  real(RP)             :: rndm(1,1,1)
 
   !--- use for model without aerosol
-  real(RP), private :: c_ccn = 100.E+6_RP    ! N0 of Nc = N0*s^kappa
-  real(RP), private :: kappa = 0.462_RP      ! kappa of Nc = N0*s^kappa
-  !--- use for aerosol coupled model
-  real(RP), private :: sigma = 7.5E-02_RP    ! water surface tension [ N/m2 ] (sigma in eq. (A.11) of Suzuki (2004) )
-  real(RP), private :: vhfct = 2.0_RP        ! van't hoff factor (i in eq.(A.11) of Suzuki (2004))
+  real(RP) :: c_ccn = 100.E+6_RP    ! N0 of Nc = N0*s^kappa
+  real(RP) :: kappa = 0.462_RP      ! kappa of Nc = N0*s^kappa
 
-  real(RP), parameter :: tcrit = 271.15_RP
-  integer, private, allocatable :: kindx( :,: )
+  !--- use for aerosol coupled model
+  real(RP) :: sigma = 7.5E-02_RP    ! water surface tension [ N/m2 ] (sigma in eq. (A.11) of Suzuki (2004) )
+  real(RP) :: vhfct = 2.0_RP        ! van't hoff factor (i in eq.(A.11) of Suzuki (2004))
+
+  real(RP), parameter  :: tcrit = 271.15_RP
+  integer, allocatable :: kindx( :,: )
 
   !--- for creating micpara.dat (mkpara)
   integer, parameter :: ndat = 33, icemax = 3
   integer, parameter :: kdeg = 4, ldeg = 4, nspc_mk = 7
+
   real(DP) :: dxmic_mk
+
   real(DP), allocatable :: radc_mk( : ), xctr_mk( : ), xbnd_mk( : )
   real(DP), allocatable :: cctr_mk( :,: ), cbnd_mk( :,: )
   real(DP), allocatable :: ck_mk( :,:,:,: )
   real(DP), allocatable :: vt_mk( :,: )
   real(DP), allocatable :: br_mk( :,: )
+
   real(DP) :: xmss( nspc_mk,ndat ), zcap( nspc_mk,ndat ), vtrm( nspc_mk,ndat )
   real(DP) :: blkr( nspc_mk,ndat ), blkd( nspc_mk,ndat ), ykrn( nspc_mk,nspc_mk,ndat,ndat )
 
@@ -305,7 +320,6 @@ contains
        write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not SUZUKI10. Check!'
        call PRC_MPIstop
     endif
-
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ READ BIN NUMBER'
@@ -400,24 +414,24 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_MP_suzuki10_setup
+  subroutine ATMOS_PHY_MP_suzuki10_setup( &
+       KA, IA, JA, &
+       CDZ         )
     use scale_process, only: &
        PRC_MPIstop,    &
        PRC_masterrank, &
        PRC_IsMaster
     use scale_const, only: &
-       CONST_DWATR, &
-       CONST_DICE
+       PI => CONST_PI,       &
+       CONST_DWATR,          &
+       CONST_DICE,           &
+       CONST_TEM00,          &
+       CONST_THERMODYN_TYPE
     use scale_comm, only: &
        COMM_world,    &
        COMM_datatype
-    use scale_atmos_grid_cartesC, only: &
-       CDZ => ATMOS_GRID_CARTESC_CDZ, &
-       CZ  => ATMOS_GRID_CARTESC_CZ
     use scale_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP
-    use scale_tracer, only: &
-       QA
     use scale_atmos_hydrometeor, only: &
        I_HC, &
        I_HR, &
@@ -427,11 +441,18 @@ contains
        I_HH
     implicit none
 
+    integer, intent(in) :: KA
+    integer, intent(in) :: IA
+    integer, intent(in) :: JA
+
+    real(RP), intent(in) :: CDZ(:)
+
     real(RP) :: RHO_AERO  !--- density of aerosol
     real(RP) :: R0_AERO   !--- center radius of aerosol (um)
     real(RP) :: R_MIN     !--- minimum radius of aerosol (um)
     real(RP) :: R_MAX     !--- maximum radius of aerosol (um)
     real(RP) :: S10_EMAER !--- moleculer weight of aerosol
+
     logical :: S10_FLAG_REGENE  !--- flag of regeneration
     logical :: S10_FLAG_NUCLEAT !--- flag of regeneration
     logical :: S10_FLAG_ICENUCLEAT !--- flag of regeneration
@@ -463,6 +484,7 @@ contains
        sigma, vhfct
 
     real(RP), parameter :: max_term_vel = 10.0_RP !-- terminal velocity for calculate dt of sedimentation
+
     integer :: nstep_max
     integer :: nnspc, nnbin
     integer :: nn, mm, mmyu, nnyu
@@ -806,7 +828,7 @@ contains
     endif
     RTEM00 = 1.0_RP / CONST_TEM00
 
-    nstep_max = int ( ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ ) )
+    nstep_max = int ( ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ(:) ) )
     MP_ntmax_sedimentation = max( MP_ntmax_sedimentation, nstep_max )
 
     MP_NSTEP_SEDIMENTATION  = MP_ntmax_sedimentation
@@ -823,22 +845,28 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
-  subroutine ATMOS_PHY_MP_suzuki10( &
-       DENS,      &
-       MOMZ,      &
-       MOMX,      &
-       MOMY,      &
-       RHOT,      &
-       QTRC,      &
-       CCN,       &
-       EVAPORATE, &
-       SFLX_rain, &
-       SFLX_snow  )
-    use scale_atmos_grid_cartesC_index
+  subroutine ATMOS_PHY_MP_suzuki10_adjustment( &
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       QA,         &
+       KIJMAX,     &
+       CCN,        &
+       DENS,       &
+       MOMZ,       &
+       MOMX,       &
+       MOMY,       &
+       RHOT,       &
+       QTRC,       &
+       EVAPORATE,  &
+       SFLX_rain,  &
+       SFLX_snow   )
+    use scale_const, only: &
+       EPS => CONST_EPS, &
+       CONST_TEM00
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_tracer, only: &
-       QA, &
        TRACER_R, &
        TRACER_CV, &
        TRACER_MASS
@@ -846,7 +874,12 @@ contains
        THERMODYN_qd          => ATMOS_THERMODYN_qd,         &
        THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,       &
        THERMODYN_rhot        => ATMOS_THERMODYN_rhot,       &
+       THERMODYN_pott        => ATMOS_THERMODYN_pott,       &
+       THERMODYN_temp_pres   => ATMOS_THERMODYN_temp_pres,  &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_pres2qsat_liq, &
+       ATMOS_SATURATION_pres2qsat_ice
     use scale_atmos_phy_mp_common, only: &
        MP_negative_fixer => ATMOS_PHY_MP_negative_fixer, &
        MP_precipitation  => ATMOS_PHY_MP_precipitation
@@ -854,13 +887,21 @@ contains
        FILE_HISTORY_in
     implicit none
 
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: QA
+    integer, intent(in) :: KIJMAX
+
+    real(RP), intent(in)    :: CCN      (KA,IA,JA)
+
     real(RP), intent(inout) :: DENS     (KA,IA,JA)
     real(RP), intent(inout) :: MOMZ     (KA,IA,JA)
     real(RP), intent(inout) :: MOMX     (KA,IA,JA)
     real(RP), intent(inout) :: MOMY     (KA,IA,JA)
     real(RP), intent(inout) :: RHOT     (KA,IA,JA)
     real(RP), intent(inout) :: QTRC     (KA,IA,JA,QA)
-    real(RP), intent(in)    :: CCN      (KA,IA,JA)
+
     real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
@@ -957,7 +998,9 @@ contains
                               TRACER_R(:),   & ! [IN]
                               TRACER_MASS(:) ) ! [IN]
 
-    call ATMOS_SATURATION_pres2qsat_liq( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+    call ATMOS_SATURATION_pres2qsat_liq( KA, KS, KE, & ! [IN]
+                                         IA, IS, IE, & ! [IN]
+                                         JA, JS, JE, & ! [IN]
                                          TEMP(:,:,:), PRES(:,:,:), QDRY(:,:,:), & ! [IN]
                                          qsat(:,:,:)                            ) ! [OUT]
     do j = JS, JE
@@ -971,7 +1014,9 @@ contains
     if ( nspc == 1 ) then
        ssice(:,:,:) = 0.0_RP
     else
-       call ATMOS_SATURATION_pres2qsat_ice( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       call ATMOS_SATURATION_pres2qsat_ice( KA, KS, KE, & ! [IN]
+                                            IA, IS, IE, & ! [IN]
+                                            JA, JS, JE, & ! [IN]
                                             TEMP(:,:,:), PRES(:,:,:), QDRY(:,:,:), & ! [IN]
                                             qsat(:,:,:)                            ) ! [OUT]
 
@@ -1104,7 +1149,8 @@ contains
 
     call PROF_rapstart('MP_suzuki10', 3)
 
-    call MP_suzuki10( ijkcount,                   & ! [IN]
+    call MP_suzuki10( KA, IA, JA,                 & ! [IN]
+                      ijkcount,                   & ! [IN]
                       ijkcount_cold,              & ! [IN]
                       ijkcount_warm,              & ! [IN]
                       index_cold(    1:ijkcount), & ! [IN]
@@ -1421,10 +1467,304 @@ contains
     endif
 
     return
-  end subroutine ATMOS_PHY_MP_suzuki10
+  end subroutine ATMOS_PHY_MP_suzuki10_adjustment
+
+  !-----------------------------------------------------------------------------
+  !> Calculate Cloud Fraction
+  subroutine ATMOS_PHY_MP_suzuki10_cloud_fraction( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, QA, &
+       QTRC,           &
+       mask_criterion, &
+       cldfrac         )
+    implicit none
+
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: QA
+
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
+    real(RP), intent(in)  :: mask_criterion
+    real(RP), intent(out) :: cldfrac(KA,IA,JA)
+
+    real(RP) :: qhydro
+    integer  :: k, i, j, iq, ihydro
+    !---------------------------------------------------------------------------
+
+    if( nspc > 1 ) then
+      do j  = JS, JE
+      do i  = IS, IE
+      do k  = KS, KE
+         qhydro = 0.0_RP
+         do ihydro = 1, nspc
+          do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
+            qhydro = qhydro + QTRC(k,i,j,iq)
+          enddo
+         enddo
+         cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
+      enddo
+      enddo
+      enddo
+    elseif( nspc == 1 ) then
+      do j  = JS, JE
+      do i  = IS, IE
+      do k  = KS, KE
+         qhydro = 0.0_RP
+         do ihydro = 1, I_mp_QC
+          do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
+            qhydro = qhydro + QTRC(k,i,j,iq)
+          enddo
+         enddo
+         cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
+      enddo
+      enddo
+      enddo
+    endif
+
+    return
+  end subroutine ATMOS_PHY_MP_suzuki10_cloud_fraction
+
+  !-----------------------------------------------------------------------------
+  !> Calculate Effective Radius
+  subroutine ATMOS_PHY_MP_suzuki10_effective_radius( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, QA, &
+       QTRC0, &
+       DENS0, &
+       TEMP0, &
+       Re     )
+    use scale_const, only: &
+       EPS => CONST_EPS
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC,  &
+       I_HR,  &
+       I_HI,  &
+       I_HS,  &
+       I_HG,  &
+       I_HH
+    implicit none
+
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: QA
+
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
+    real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! temperature               [K]
+    real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
+
+    real(RP), parameter :: um2cm = 100.0_RP
+
+    real(RP) :: sum0(nspc), sum2, sum3, re_tmp(nspc)
+    integer  :: i, j, k, iq, ihydro
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+    do j = JS, JE
+    do i = IS, IE
+       Re(k,i,j,:) = 0.0_RP
+
+       ! HC
+       sum3 = 0.0_RP
+       sum2 = 0.0_RP
+       ihydro = I_mp_QC
+       do iq = QS_MP+1, QS_MP+nbnd
+          sum3 = sum3 &
+               + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
+               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
+               * radc( iq-(I_QV+nbin*(ihydro-1)) )**3.0_RP )
+          sum2 = sum2 &
+               + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
+               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
+               * radc( iq-(I_QV+nbin*(ihydro-1)) )**2.0_RP )
+       enddo
+       sum3 = max( sum3, 0.0_RP )
+       sum2 = max( sum2, 0.0_RP )
+       if ( sum2 /= 0.0_RP ) then
+          Re(k,i,j,I_HC) = sum3 / sum2 * um2cm
+       else
+          Re(k,i,j,I_HC) = 0.0_RP
+       endif
+
+       ! HR
+       sum3 = 0.0_RP
+       sum2 = 0.0_RP
+       ihydro = I_mp_QC
+       do iq = QS_MP+nbnd+1, QS_MP+nbin
+          sum3 = sum3 &
+               + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
+               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
+               * radc( iq-(I_QV+nbin*(ihydro-1)) )**3.0_RP )
+          sum2 = sum2 &
+               + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
+               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
+               * radc( iq-(I_QV+nbin*(ihydro-1)) )**2.0_RP )
+       enddo
+       sum3 = max( sum3, 0.0_RP )
+       sum2 = max( sum2, 0.0_RP )
+       if ( sum2 /= 0.0_RP ) then
+          Re(k,i,j,I_HR) = sum3 / sum2 * um2cm
+       else
+          Re(k,i,j,I_HR) = 0.0_RP
+       endif
+
+    enddo
+    enddo
+    enddo
+
+    ! other hydrometeors
+    if ( nspc > 1 ) then
+       do k = KS, KE
+       do j = JS, JE
+       do i = IS, IE
+          do ihydro = 2, nspc
+             sum0(ihydro) = 0.0_RP
+             sum2 = 0.0_RP
+             sum3 = 0.0_RP
+             do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
+                sum0(ihydro) = sum0(ihydro) &
+                     + ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) !--- [kg/kg] -> [kg/m3]
+                sum3 = sum3 &
+                     + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
+                     * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
+                     * radc( iq-(I_QV+nbin*(ihydro-1)) )**3.0_RP )
+                sum2 = sum2 &
+                     + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
+                     * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
+                     * radc( iq-(I_QV+nbin*(ihydro-1)) )**2.0_RP )
+             enddo
+             sum3 = max( sum3, 0.0_RP )
+             sum2 = max( sum2, 0.0_RP )
+             if ( sum2 == 0.0_RP ) then
+                re_tmp(ihydro) = 0.0_RP
+             else
+                re_tmp(ihydro) = sum3 / sum2 * um2cm
+             end if
+          end do
+
+          Re(k,i,j,I_HI) = ( re_tmp(I_mp_QP ) * sum0(I_mp_QP ) &
+                           + re_tmp(I_mp_QCL) * sum0(I_mp_QCL) &
+                           + re_tmp(I_mp_QD ) * sum0(I_mp_QD ) ) &
+                         / ( sum0(I_mp_QP) + sum0(I_mp_QCL) + sum0(I_mp_QD) + EPS )
+          Re(k,i,j,I_HS) = re_tmp(I_mp_QS)
+          Re(k,i,j,I_HG) = re_tmp(I_mp_QG)
+          Re(k,i,j,I_HH) = re_tmp(I_mp_QH)
+
+       enddo
+       enddo
+       enddo
+
+    end if
+
+    return
+  end subroutine ATMOS_PHY_MP_suzuki10_effective_radius
+
+  !-----------------------------------------------------------------------------
+  !> Calculate mixing ratio of each category
+  subroutine ATMOS_PHY_MP_suzuki10_mixing_ratio( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, QA, &
+       QTRC0, &
+       Qe     )
+    use scale_const, only: &
+       EPS => CONST_EPS
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC,  &
+       I_HR,  &
+       I_HI,  &
+       I_HS,  &
+       I_HG,  &
+       I_HH
+    implicit none
+
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: QA
+
+    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+
+    real(RP) :: sum2
+    integer  :: i, j, k, iq, ihydro
+    !---------------------------------------------------------------------------
+
+
+    do k = KS, KE
+    do j = JS, JE
+    do i = IS, IE
+
+       Qe(k,i,j,:) = 0.0_RP
+
+       ! HC
+       sum2 = 0.0_RP
+       do iq = QS_MP+1, QS_MP+nbnd
+          sum2 = sum2 + QTRC0(k,i,j,iq)
+       enddo
+       Qe(k,i,j,I_HC) = sum2
+
+       ! HR
+       sum2 = 0.0_RP
+       do iq = QS_MP+nbnd+1, QS_MP+nbin
+          sum2 = sum2 + QTRC0(k,i,j,iq)
+       enddo
+       Qe(k,i,j,I_HR) = sum2
+
+    enddo
+    enddo
+    enddo
+
+    ! other hydrometeors
+    if ( nspc > 1 ) then
+
+       do k = KS, KE
+       do j = JS, JE
+       do i = IS, IE
+          ! HI
+          sum2 = 0.0_RP
+          do ihydro = I_mp_QP, I_mp_QD
+          do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
+             sum2 = sum2 + QTRC0(k,i,j,iq)
+          enddo
+          enddo
+          Qe(k,i,j,I_HI) = sum2
+
+          ! HS
+          sum2 = 0.0_RP
+          ihydro = I_mp_QS
+          do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
+             sum2 = sum2 + QTRC0(k,i,j,iq)
+          enddo
+          Qe(k,i,j,I_HS) = sum2
+
+          ! HG
+          sum2 = 0.0_RP
+          ihydro = I_mp_QG
+          do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
+             sum2 = sum2 + QTRC0(k,i,j,iq)
+          enddo
+          Qe(k,i,j,I_HG) = sum2
+
+          ! HS
+          sum2 = 0.0_RP
+          ihydro = I_mp_QH
+          do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
+             sum2 = sum2 + QTRC0(k,i,j,iq)
+          enddo
+          Qe(k,i,j,I_HH) = sum2
+
+       enddo
+       enddo
+       enddo
+     endif
+
+    return
+  end subroutine ATMOS_PHY_MP_suzuki10_mixing_ratio
 
   !-----------------------------------------------------------------------------
   subroutine MP_suzuki10( &
+       KA, IA, JA,  &
        ijkmax,      &
        ijkmax_cold, &
        ijkmax_warm, &
@@ -1441,6 +1781,10 @@ contains
        evaporate,   &
        dt           )
     implicit none
+
+    integer,  intent(in)    :: KA
+    integer,  intent(in)    :: IA
+    integer,  intent(in)    :: JA
 
     integer,  intent(in)    :: ijkmax
     integer,  intent(in)    :: ijkmax_cold
@@ -1488,7 +1832,8 @@ contains
 
           if ( MP_doautoconversion ) then
              ! collision-coagulation
-             call collmain( ijkmax,      & ! [IN]
+             call collmain( KA, IA, JA,  & ! [IN]
+                            ijkmax,      & ! [IN]
                             temp(:),     & ! [IN]
                             ghyd(:,:,:), & ! [INOUT]
                             dt           ) ! [IN]
@@ -1550,7 +1895,8 @@ contains
 
           if ( MP_doautoconversion ) then
              ! collision-coagulation
-             call collmainf( ijkmax,      & ! [IN]
+             call collmainf( KA, IA, JA,  & ! [IN]
+                             ijkmax,      & ! [IN]
                              temp(:),     & ! [IN]
                              ghyd(:,:,:), & ! [INOUT]
                              dt           ) ! [IN]
@@ -1587,7 +1933,8 @@ contains
 
           if ( MP_doautoconversion ) then
              ! collision-coagulation
-             call collmain( ijkmax,      & ! [IN]
+             call collmain( KA, IA, JA,  & ! [IN]
+                            ijkmax,      & ! [IN]
                             temp(:),     & ! [IN]
                             ghyd(:,:,:), & ! [INOUT]
                             dt           ) ! [IN]
@@ -1648,7 +1995,8 @@ contains
 
           if ( MP_doautoconversion ) then
              ! collision-coagulation
-             call collmainf( ijkmax,      & ! [IN]
+             call collmainf( KA, IA, JA,  & ! [IN]
+                             ijkmax,      & ! [IN]
                              temp(:),     & ! [IN]
                              ghyd(:,:,:), & ! [INOUT]
                              dt           ) ! [IN]
@@ -1672,6 +2020,14 @@ contains
        qvap,   &
        gc,     &
        dtime   )
+    use scale_const, only: &
+       CP => CONST_CPdry, &
+       CONST_CPvap,       &
+       CONST_CL,          &
+       CONST_LHV0,        &
+       CONST_TEM00
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_pres2qsat_liq
     implicit none
 
     integer,  intent(in)    :: ijkmax
@@ -1767,6 +2123,18 @@ contains
        gc,     &
        ga,     &
        dtime   )
+    use scale_const, only: &
+       PI   => CONST_PI,    &
+       CP   => CONST_CPdry, &
+       Rvap => CONST_Rvap,  &
+       RHOW => CONST_DWATR, &
+       CONST_CPvap,         &
+       CONST_CL,            &
+       CONST_LHV0,          &
+       CONST_TEM00
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_pres2qsat_liq, &
+       ATMOS_SATURATION_pres2qsat_ice
     implicit none
 
     integer,  intent(in)    :: ijkmax
@@ -2018,6 +2386,22 @@ contains
        gc,         &
        regene_gcn, &
        dtime       )
+    use scale_const, only: &
+       PI    => CONST_PI,    &
+       EPS   => CONST_EPS,   &
+       CP    => CONST_CPdry, &
+       ESAT0 => CONST_PSAT0, &
+       Rvap  => CONST_Rvap,  &
+       RHOW  => CONST_DWATR, &
+       TMLT  => CONST_TMELT, &
+       TEMP0 => CONST_TEM00, &
+       CONST_CPvap,          &
+       CONST_CL,             &
+       CONST_LHV0,           &
+       CONST_TEM00
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_pres2qsat_liq, &
+       ATMOS_SATURATION_pres2qsat_ice
     implicit none
 
     integer,  intent(in)    :: ijkmax
@@ -2387,6 +2771,21 @@ contains
        qvap,   &
        gc,     &
        dtime   )
+    use scale_const, only: &
+       PI    => CONST_PI,    &
+       EPS   => CONST_EPS,   &
+       CP    => CONST_CPdry, &
+       ESAT0 => CONST_PSAT0, &
+       Rvap  => CONST_Rvap,  &
+       TMLT  => CONST_TMELT, &
+       TEMP0 => CONST_TEM00, &
+       CONST_CPvap,          &
+       CONST_CI,             &
+       CONST_LHS0,           &
+       CONST_TEM00
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_pres2qsat_liq, &
+       ATMOS_SATURATION_pres2qsat_ice
     implicit none
 
     integer,  intent(in)    :: ijkmax
@@ -2750,6 +3149,23 @@ contains
        qvap,   &
        gc,     &
        dtime   )
+    use scale_const, only: &
+       PI    => CONST_PI,    &
+       EPS   => CONST_EPS,   &
+       CP    => CONST_CPdry, &
+       ESAT0 => CONST_PSAT0, &
+       Rvap  => CONST_Rvap,  &
+       TMLT  => CONST_TMELT, &
+       TEMP0 => CONST_TEM00, &
+       CONST_CPvap,          &
+       CONST_CL,             &
+       CONST_CI,             &
+       CONST_LHV0,           &
+       CONST_LHS0,           &
+       CONST_TEM00
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_pres2qsat_liq, &
+       ATMOS_SATURATION_pres2qsat_ice
     implicit none
 
     integer,  intent(in)    :: ijkmax
@@ -3178,6 +3594,14 @@ contains
        qvap,       &
        gc,         &
        dtime       )
+    use scale_const, only: &
+       PI    => CONST_PI,    &
+       CP    => CONST_CPdry, &
+       Rvap  => CONST_Rvap,  &
+       QLMLT => CONST_EMELT
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_pres2qsat_liq, &
+       ATMOS_SATURATION_pres2qsat_ice
     implicit none
 
     integer,  intent(in)    :: ijkmax
@@ -3256,6 +3680,12 @@ contains
        temp,       &
        gc,         &
        dtime       )
+    use scale_const, only: &
+       PI    => CONST_PI,    &
+       CP    => CONST_CPdry, &
+       TMLT  => CONST_TMELT, &
+       QLMLT => CONST_EMELT, &
+       RHOW  => CONST_DWATR
     implicit none
 
     integer,  intent(in)    :: ijkmax
@@ -3349,6 +3779,9 @@ contains
        temp,       &
        gc,         &
        dtime       )
+    use scale_const, only: &
+       CP    => CONST_CPdry, &
+       QLMLT => CONST_EMELT
     implicit none
 
     integer,  intent(in)    :: ijkmax
@@ -3392,11 +3825,16 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine collmain( &
+       KA, IA, JA , &
        ijkmax, &
        temp,   &
        ghyd,   &
        dt      )
     implicit none
+
+    integer,  intent(in)    :: KA
+    integer,  intent(in)    :: IA
+    integer,  intent(in)    :: JA
 
     integer,  intent(in)    :: ijkmax
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
@@ -3405,7 +3843,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( rndm_flgp == 1 ) then ! stochastic method
-       call r_collcoag( ijkmax,      & ! [IN]
+       call r_collcoag( KA, IA, JA,  & ! [IN]
+                        ijkmax,      & ! [IN]
                         wgtbin,      & ! [IN]
                         temp(:),     & ! [IN]
                         ghyd(:,:,:), & ! [INOUT]
@@ -3422,11 +3861,16 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine collmainf( &
+       KA, IA, JA, &
        ijkmax, &
        temp,   &
        ghyd,   &
        dt      )
     implicit none
+
+    integer,  intent(in)    :: KA
+    integer,  intent(in)    :: IA
+    integer,  intent(in)    :: JA
 
     integer,  intent(in)    :: ijkmax
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
@@ -3435,7 +3879,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( rndm_flgp == 1 ) then ! stochastic method
-       call r_collcoag( ijkmax,      & ! [IN]
+       call r_collcoag( KA, IA, JA,  & ! [IN]
+                        ijkmax,      & ! [IN]
                         wgtbin,      & ! [IN]
                         temp(:),     & ! [IN]
                         ghyd(:,:,:), & ! [INOUT]
@@ -3872,6 +4317,7 @@ contains
   !    Bott et al. (1998) J. Atmos. Sci. vol.55, pp. 2284-
   !    Bott et al. (2000) J. Atmos. Sci. Vol.57, pp. 284-
   subroutine r_collcoag( &
+       KA, IA, JA, &
        ijkmax, &
        swgt,   &
        temp,   &
@@ -3880,6 +4326,10 @@ contains
     use scale_random, only: &
        RANDOM_get
     implicit none
+
+    integer,  intent(in)    :: KA
+    integer,  intent(in)    :: IA
+    integer,  intent(in)    :: JA
 
     integer,  intent(in)    :: ijkmax
     real(RP), intent(in)    :: swgt
@@ -4069,290 +4519,6 @@ contains
 
     return
   end subroutine r_collcoag
-
-  !-----------------------------------------------------------------------------
-  !> Calculate Cloud Fraction
-  subroutine ATMOS_PHY_MP_suzuki10_CloudFraction( &
-       cldfrac,       &
-       QTRC,          &
-       mask_criterion )
-    use scale_atmos_grid_cartesC_index
-    use scale_tracer, only: &
-       QA
-    implicit none
-
-    real(RP), intent(out) :: cldfrac(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
-    real(RP), intent(in)  :: mask_criterion
-
-    real(RP) :: qhydro
-    integer  :: k, i, j, iq, ihydro
-    !---------------------------------------------------------------------------
-
-    if( nspc > 1 ) then
-      do j  = JS, JE
-      do i  = IS, IE
-      do k  = KS, KE
-         qhydro = 0.0_RP
-         do ihydro = 1, nspc
-          do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
-            qhydro = qhydro + QTRC(k,i,j,iq)
-          enddo
-         enddo
-         cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
-      enddo
-      enddo
-      enddo
-    elseif( nspc == 1 ) then
-      do j  = JS, JE
-      do i  = IS, IE
-      do k  = KS, KE
-         qhydro = 0.0_RP
-         do ihydro = 1, I_mp_QC
-          do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
-            qhydro = qhydro + QTRC(k,i,j,iq)
-          enddo
-         enddo
-         cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
-      enddo
-      enddo
-      enddo
-    endif
-
-    return
-  end subroutine ATMOS_PHY_MP_suzuki10_CloudFraction
-
-  !-----------------------------------------------------------------------------
-  !> Calculate Effective Radius
-  subroutine ATMOS_PHY_MP_suzuki10_EffectiveRadius( &
-       Re,    &
-       QTRC0, &
-       DENS0, &
-       TEMP0  )
-    use scale_atmos_grid_cartesC_index
-    use scale_const, only: &
-       EPS => CONST_EPS
-    use scale_tracer, only: &
-       QA
-    use scale_atmos_hydrometeor, only: &
-       N_HYD, &
-       I_HC,  &
-       I_HR,  &
-       I_HI,  &
-       I_HS,  &
-       I_HG,  &
-       I_HH
-    implicit none
-
-    real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
-    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
-    real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! temperature               [K]
-
-    real(RP), parameter :: um2cm = 100.0_RP
-
-    real(RP) :: sum0(nspc), sum2, sum3, re_tmp(nspc)
-    integer  :: i, j, k, iq, ihydro
-    !---------------------------------------------------------------------------
-
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE
-       Re(k,i,j,:) = 0.0_RP
-
-       ! HC
-       sum3 = 0.0_RP
-       sum2 = 0.0_RP
-       ihydro = I_mp_QC
-       do iq = QS_MP+1, QS_MP+nbnd
-          sum3 = sum3 &
-               + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
-               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
-               * radc( iq-(I_QV+nbin*(ihydro-1)) )**3.0_RP )
-          sum2 = sum2 &
-               + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
-               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
-               * radc( iq-(I_QV+nbin*(ihydro-1)) )**2.0_RP )
-       enddo
-       sum3 = max( sum3, 0.0_RP )
-       sum2 = max( sum2, 0.0_RP )
-       if ( sum2 /= 0.0_RP ) then
-          Re(k,i,j,I_HC) = sum3 / sum2 * um2cm
-       else
-          Re(k,i,j,I_HC) = 0.0_RP
-       endif
-
-       ! HR
-       sum3 = 0.0_RP
-       sum2 = 0.0_RP
-       ihydro = I_mp_QC
-       do iq = QS_MP+nbnd+1, QS_MP+nbin
-          sum3 = sum3 &
-               + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
-               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
-               * radc( iq-(I_QV+nbin*(ihydro-1)) )**3.0_RP )
-          sum2 = sum2 &
-               + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
-               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
-               * radc( iq-(I_QV+nbin*(ihydro-1)) )**2.0_RP )
-       enddo
-       sum3 = max( sum3, 0.0_RP )
-       sum2 = max( sum2, 0.0_RP )
-       if ( sum2 /= 0.0_RP ) then
-          Re(k,i,j,I_HR) = sum3 / sum2 * um2cm
-       else
-          Re(k,i,j,I_HR) = 0.0_RP
-       endif
-
-    enddo
-    enddo
-    enddo
-
-    ! other hydrometeors
-    if ( nspc > 1 ) then
-       do k = KS, KE
-       do j = JS, JE
-       do i = IS, IE
-          do ihydro = 2, nspc
-             sum0(ihydro) = 0.0_RP
-             sum2 = 0.0_RP
-             sum3 = 0.0_RP
-             do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
-                sum0(ihydro) = sum0(ihydro) &
-                     + ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) !--- [kg/kg] -> [kg/m3]
-                sum3 = sum3 &
-                     + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
-                     * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
-                     * radc( iq-(I_QV+nbin*(ihydro-1)) )**3.0_RP )
-                sum2 = sum2 &
-                     + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
-                     * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
-                     * radc( iq-(I_QV+nbin*(ihydro-1)) )**2.0_RP )
-             enddo
-             sum3 = max( sum3, 0.0_RP )
-             sum2 = max( sum2, 0.0_RP )
-             if ( sum2 == 0.0_RP ) then
-                re_tmp(ihydro) = 0.0_RP
-             else
-                re_tmp(ihydro) = sum3 / sum2 * um2cm
-             end if
-          end do
-
-          Re(k,i,j,I_HI) = ( re_tmp(I_mp_QP ) * sum0(I_mp_QP ) &
-                           + re_tmp(I_mp_QCL) * sum0(I_mp_QCL) &
-                           + re_tmp(I_mp_QD ) * sum0(I_mp_QD ) ) &
-                         / ( sum0(I_mp_QP) + sum0(I_mp_QCL) + sum0(I_mp_QD) + EPS )
-          Re(k,i,j,I_HS) = re_tmp(I_mp_QS)
-          Re(k,i,j,I_HG) = re_tmp(I_mp_QG)
-          Re(k,i,j,I_HH) = re_tmp(I_mp_QH)
-
-       enddo
-       enddo
-       enddo
-
-    end if
-
-    return
-  end subroutine ATMOS_PHY_MP_suzuki10_EffectiveRadius
-
-  !-----------------------------------------------------------------------------
-  !> Calculate mixing ratio of each category
-  subroutine ATMOS_PHY_MP_suzuki10_Mixingratio( &
-       Qe,   &
-       QTRC0 )
-    use scale_atmos_grid_cartesC_index
-    use scale_const, only: &
-       EPS => CONST_EPS
-    use scale_tracer, only: &
-       QA
-    use scale_atmos_hydrometeor, only: &
-       N_HYD, &
-       I_HC,  &
-       I_HR,  &
-       I_HI,  &
-       I_HS,  &
-       I_HG,  &
-       I_HH
-    implicit none
-
-    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
-
-    real(RP) :: sum2
-    integer  :: i, j, k, iq, ihydro
-    !---------------------------------------------------------------------------
-
-
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE
-
-       Qe(k,i,j,:) = 0.0_RP
-
-       ! HC
-       sum2 = 0.0_RP
-       do iq = QS_MP+1, QS_MP+nbnd
-          sum2 = sum2 + QTRC0(k,i,j,iq)
-       enddo
-       Qe(k,i,j,I_HC) = sum2
-
-       ! HR
-       sum2 = 0.0_RP
-       do iq = QS_MP+nbnd+1, QS_MP+nbin
-          sum2 = sum2 + QTRC0(k,i,j,iq)
-       enddo
-       Qe(k,i,j,I_HR) = sum2
-
-    enddo
-    enddo
-    enddo
-
-    ! other hydrometeors
-    if ( nspc > 1 ) then
-
-       do k = KS, KE
-       do j = JS, JE
-       do i = IS, IE
-          ! HI
-          sum2 = 0.0_RP
-          do ihydro = I_mp_QP, I_mp_QD
-          do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
-             sum2 = sum2 + QTRC0(k,i,j,iq)
-          enddo
-          enddo
-          Qe(k,i,j,I_HI) = sum2
-
-          ! HS
-          sum2 = 0.0_RP
-          ihydro = I_mp_QS
-          do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
-             sum2 = sum2 + QTRC0(k,i,j,iq)
-          enddo
-          Qe(k,i,j,I_HS) = sum2
-
-          ! HG
-          sum2 = 0.0_RP
-          ihydro = I_mp_QG
-          do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
-             sum2 = sum2 + QTRC0(k,i,j,iq)
-          enddo
-          Qe(k,i,j,I_HG) = sum2
-
-          ! HS
-          sum2 = 0.0_RP
-          ihydro = I_mp_QH
-          do iq = QS_MP+nbin*(ihydro-1)+1, QS_MP+nbin*ihydro
-             sum2 = sum2 + QTRC0(k,i,j,iq)
-          enddo
-          Qe(k,i,j,I_HH) = sum2
-
-       enddo
-       enddo
-       enddo
-     endif
-
-    return
-  end subroutine ATMOS_PHY_MP_suzuki10_Mixingratio
 
   !-----------------------------------------------------------------------------
   !----- mkpara is module to create micpara.dat, which is parameter file of

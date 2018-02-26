@@ -83,6 +83,8 @@ contains
        ATMOS_PHY_MP_TOMITA08_tracer_names,        &
        ATMOS_PHY_MP_TOMITA08_tracer_descriptions, &
        ATMOS_PHY_MP_TOMITA08_tracer_units
+    use scale_atmos_phy_mp_suzuki10, only: &
+       ATMOS_PHY_MP_suzuki10_config
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE, &
        ATMOS_sw_phy_mp
@@ -129,6 +131,9 @@ contains
           I_QI = QS_MP+3
           I_QS = QS_MP+4
           I_QG = QS_MP+5
+       case ( 'SUZUKI10' )
+          call ATMOS_PHY_MP_SUZUKI10_config( ATMOS_PHY_MP_TYPE, & ! [IN]
+                                             QA_MP, QS_MP       ) ! [OUT]
        case default
           call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
           QA_MP = QA_MP_obsolute
@@ -170,6 +175,8 @@ contains
        ATMOS_PHY_MP_KESSLER_setup
     use scale_atmos_phy_mp_tomita08, only: &
        ATMOS_PHY_MP_TOMITA08_setup
+    use scale_atmos_phy_mp_suzuki10, only: &
+       ATMOS_PHY_MP_suzuki10_setup
     use scale_file_history, only: &
        FILE_HISTORY_reg
     use mod_atmos_admin, only: &
@@ -238,6 +245,9 @@ contains
        case ( 'TOMITA08' )
           call ATMOS_PHY_MP_tomita08_setup( &
                KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB )
+       case ( 'SUZUKI10' )
+          call ATMOS_PHY_MP_suzuki10_setup( &
+               KA, IA, JA, CDZ )
        case default
           ! setup library component
           call ATMOS_PHY_MP_setup
@@ -384,6 +394,8 @@ contains
     use scale_atmos_phy_mp_tomita08, only: &
        ATMOS_PHY_MP_TOMITA08_adjustment, &
        ATMOS_PHY_MP_TOMITA08_terminal_velocity
+    use scale_atmos_phy_mp_suzuki10, only: &
+       ATMOS_PHY_MP_suzuki10_adjustment
     use scale_file_history, only: &
        FILE_HISTORY_query, &
        FILE_HISTORY_put
@@ -415,6 +427,7 @@ contains
        MOMX_t => MOMX_tp, &
        MOMY_t => MOMY_tp
     use mod_atmos_phy_mp_vars, only: &
+       QA_MP, &
        QS_MP, &
        QE_MP, &
        DENS_t_MP => ATMOS_PHY_MP_DENS_t,    &
@@ -591,6 +604,68 @@ contains
           enddo
           enddo
           enddo
+
+       case ( 'SUZUKI10' )
+
+!OCL XFILL
+          DENS1(:,:,:) = DENS(:,:,:) ! save
+!OCL XFILL
+          MOMZ1(:,:,:) = MOMZ(:,:,:) ! save
+!OCL XFILL
+          MOMX1(:,:,:) = MOMX(:,:,:) ! save
+!OCL XFILL
+          MOMY1(:,:,:) = MOMY(:,:,:) ! save
+!OCL XFILL
+          RHOT1(:,:,:) = RHOT(:,:,:) ! save
+!OCL XFILL
+          QTRC1(:,:,:,:) = QTRC(:,:,:,:) ! save
+
+          call ATMOS_PHY_MP_suzuki10_adjustment( KA, KS,  KE,        & ! [IN]
+                                                 IA, ISB, IEB,       & ! [IN]
+                                                 JA, JSB, JEB,       & ! [IN]
+                                                 QA_MP,              & ! [IN]
+                                                 KIJMAX,             & ! [IN]
+                                                 CCN      (:,:,:),   & ! [IN] 
+                                                 DENS1    (:,:,:),   & ! [INOUT]
+                                                 MOMZ1    (:,:,:),   & ! [INOUT]
+                                                 MOMX1    (:,:,:),   & ! [INOUT]
+                                                 MOMY1    (:,:,:),   & ! [INOUT]
+                                                 RHOT1    (:,:,:),   & ! [INOUT]
+                                                 QTRC1    (:,:,:,:), & ! [INOUT]
+                                                 EVAPORATE(:,:,:),   & ! [OUT]
+                                                 SFLX_rain(:,:),     & ! [OUT]
+                                                 SFLX_snow(:,:)      ) ! [OUT]
+!OCL XFILL
+          !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JSB,JEB,ISB,IEB,KS,KE,DENS_t_MP,DENS1,DENS,MOMZ_t_MP,MOMZ1,MOMZ,MOMX_t_MP,MOMX1) &
+          !$omp shared(MOMX,MOMY_t_MP,MOMY1,MOMY,RHOT_t_MP,RHOT1,RHOT,dt_MP)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             DENS_t_MP(k,i,j) = ( DENS1(k,i,j) - DENS(k,i,j) ) / dt_MP
+             MOMZ_t_MP(k,i,j) = ( MOMZ1(k,i,j) - MOMZ(k,i,j) ) / dt_MP
+             MOMX_t_MP(k,i,j) = ( MOMX1(k,i,j) - MOMX(k,i,j) ) / dt_MP
+             MOMY_t_MP(k,i,j) = ( MOMY1(k,i,j) - MOMY(k,i,j) ) / dt_MP
+             RHOT_t_MP(k,i,j) = ( RHOT1(k,i,j) - RHOT(k,i,j) ) / dt_MP
+          enddo
+          enddo
+          enddo
+!OCL XFILL
+          do iq = QS_MP, QE_MP
+          !$omp parallel do default(none) &
+          !$omp shared(JSB,JEB,ISB,IEB,KS,KE,RHOQ_t_MP,iq,QTRC1,QTRC,DENS1,DENS,dt_MP) &
+          !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             RHOQ_t_MP(k,i,j,iq) = ( QTRC1(k,i,j,iq) * DENS1(k,i,j) &
+                                   - QTRC (k,i,j,iq) * DENS (k,i,j) ) / dt_MP
+          enddo
+          enddo
+          enddo
+          enddo
+
+          integ_precip = .false.
 
        case default
 
