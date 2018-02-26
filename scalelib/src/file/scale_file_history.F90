@@ -168,6 +168,7 @@ module scale_file_history
      integer                :: vid               !> Variable id
      character(len=H_LONG)  :: desc              !> Variable description
      character(len=H_SHORT) :: units             !> Variable units
+     character(len=H_SHORT) :: standard_name     !> Variable standard_name
      integer                :: dimid             !> dimension ID
      character(len=H_SHORT) :: cell_measures     !> Cell measures
      integer                :: waitstep          !> Step length to suppress output [step]
@@ -628,6 +629,7 @@ contains
   subroutine FILE_HISTORY_reg( &
        name, desc, unit, &
        itemid,           &
+       standard_name,    &
        ndims, dim_type,  &
        cell_measures,    &
        fill_halo         )
@@ -639,11 +641,13 @@ contains
 
     integer,          intent(out) :: itemid !< index number of the item
 
+    character(len=*), intent(in), optional :: standard_name
     integer,          intent(in), optional :: ndims    !< if ndims is set and dim_type is not set, the dim_type that set firstry by FILE_HISTORY_set_dim of ndims is used
     character(len=*), intent(in), optional :: dim_type
     character(len=*), intent(in), optional :: cell_measures
     logical,          intent(in), optional :: fill_halo
 
+    character(len=H_SHORT) :: standard_name_
     character(len=H_SHORT) :: cell_measures_
     integer :: dimid, iid
     integer :: n
@@ -661,6 +665,13 @@ contains
        write(*,'(1x,A,I2,A,A)') 'xxx Length of history name should be <= ', H_SHORT-1 ,' chars. STOP', trim(name)
        call PRC_abort
     endif
+
+    ! standard_name
+    if ( present(standard_name) ) then
+       standard_name_ = standard_name
+    else
+       standard_name_ = ""
+    end if
 
     ! get dimension id
     if ( FILE_HISTORY_ndims < 1 ) then
@@ -749,14 +760,14 @@ contains
        itemid = -1
        do n = 1, FILE_HISTORY_dims(dimid)%nzcoords
           if ( FILE_HISTORY_dims(dimid)%zcoords(n) == "model" ) then
-             call FILE_HISTORY_Add_Variable( name, desc, unit,                    & ! (in)
+             call FILE_HISTORY_Add_Variable( name, desc, unit, standard_name_,    & ! (in)
                                              dimid,                               & ! (in)
                                              FILE_HISTORY_dims(dimid)%zcoords(n), & ! (in)
                                              iid,                                 & ! (out)
                                              cell_measures=cell_measures_, & ! (in)
                                              fill_halo=fill_halo                  ) ! (in)
           else
-             call FILE_HISTORY_Add_Variable( name, desc, unit,                    & ! (in)
+             call FILE_HISTORY_Add_Variable( name, desc, unit, standard_name_,    & ! (in)
                                              dimid,                               & ! (in)
                                              FILE_HISTORY_dims(dimid)%zcoords(n), & ! (in)
                                              iid,                                 & ! (out)
@@ -767,12 +778,12 @@ contains
 
     else
 
-       call FILE_HISTORY_Add_Variable( name, desc, unit,             & ! (in)
-                                       dimid,                        & ! (in)
-                                       "model",                      & ! (in)
-                                       itemid,                       & ! (out)
-                                       cell_measures=cell_measures_, & ! (in)
-                                       fill_halo=fill_halo           ) ! (in)
+       call FILE_HISTORY_Add_Variable( name, desc, unit, standard_name_, & ! (in)
+                                       dimid,                            & ! (in)
+                                       "model",                          & ! (in)
+                                       itemid,                           & ! (out)
+                                       cell_measures=cell_measures_,     & ! (in)
+                                       fill_halo=fill_halo               ) ! (in)
 
     end if
 
@@ -851,8 +862,9 @@ contains
   !> Wrapper routine of FILE_HISTORY_reg + FILE_HISTORY_put
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_in_0D( &
-       var,   &
+       var,              &
        name, desc, unit, &
+       standard_name,    &
        dim_type )
     implicit none
 
@@ -861,6 +873,7 @@ contains
     character(len=*), intent(in) :: desc       !< description of the item
     character(len=*), intent(in) :: unit       !< unit        of the item
 
+    character(len=*), intent(in), optional :: standard_name
     character(len=*), intent(in), optional :: dim_type
 
     logical, parameter     :: fill_halo = .false.
@@ -874,11 +887,12 @@ contains
     if ( FILE_HISTORY_disabled ) return
 
     ! Check whether the item has been already registered
-    call FILE_HISTORY_reg( name, desc, unit,   & ! [IN]
-                           itemid,             & ! [OUT]
-                           ndims=ndim,         & ! [IN]
-                           dim_type=dim_type,  & ! [IN]
-                           fill_halo=fill_halo ) ! [IN]
+    call FILE_HISTORY_reg( name, desc, unit,            & ! [IN]
+                           itemid,                      & ! [OUT]
+                           standard_name=standard_name, & ! [IN]
+                           ndims=ndim,                  & ! [IN]
+                           dim_type=dim_type,           & ! [IN]
+                           fill_halo=fill_halo          ) ! [IN]
 
     if ( itemid < 0 ) return
 
@@ -972,8 +986,9 @@ contains
   !> Wrapper routine of FILE_HISTORY_reg + FILE_HISTORY_put
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_in_1D( &
-       var,   &
+       var,              &
        name, desc, unit, &
+       standard_name,    &
        dim_type )
     implicit none
 
@@ -982,6 +997,7 @@ contains
     character(len=*), intent(in) :: desc       !< description of the item
     character(len=*), intent(in) :: unit       !< unit        of the item
 
+    character(len=*), intent(in), optional :: standard_name
     character(len=*), intent(in), optional :: dim_type
 
     logical, parameter     :: fill_halo = .false.
@@ -995,11 +1011,12 @@ contains
     if ( FILE_HISTORY_disabled ) return
 
     ! Check whether the item has been already registered
-    call FILE_HISTORY_reg( name, desc, unit,   & ! [IN]
-                           itemid,             & ! [OUT]
-                           ndims=ndim,         & ! [IN]
-                           dim_type=dim_type,  & ! [IN]
-                           fill_halo=fill_halo ) ! [IN]
+    call FILE_HISTORY_reg( name, desc, unit,            & ! [IN]
+                           itemid,                      & ! [OUT]
+                           standard_name=standard_name, & ! [IN]
+                           ndims=ndim,                  & ! [IN]
+                           dim_type=dim_type,           & ! [IN]
+                           fill_halo=fill_halo          ) ! [IN]
 
     if ( itemid < 0 ) return
 
@@ -1093,8 +1110,9 @@ contains
   !> Wrapper routine of FILE_HISTORY_reg + FILE_HISTORY_put
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_in_2D( &
-       var,   &
+       var,              &
        name, desc, unit, &
+       standard_name,    &
        dim_type, &
        fill_halo )
     implicit none
@@ -1104,6 +1122,7 @@ contains
     character(len=*), intent(in) :: desc       !< description of the item
     character(len=*), intent(in) :: unit       !< unit        of the item
 
+    character(len=*), intent(in), optional :: standard_name
     character(len=*), intent(in), optional :: dim_type
     logical,          intent(in), optional :: fill_halo
     character(len=H_SHORT) :: dim_type_
@@ -1116,11 +1135,12 @@ contains
     if ( FILE_HISTORY_disabled ) return
 
     ! Check whether the item has been already registered
-    call FILE_HISTORY_reg( name, desc, unit,   & ! [IN]
-                           itemid,             & ! [OUT]
-                           ndims=ndim,         & ! [IN]
-                           dim_type=dim_type,  & ! [IN]
-                           fill_halo=fill_halo ) ! [IN]
+    call FILE_HISTORY_reg( name, desc, unit,            & ! [IN]
+                           itemid,                      & ! [OUT]
+                           standard_name=standard_name, & ! [IN]
+                           ndims=ndim,                  & ! [IN]
+                           dim_type=dim_type,           & ! [IN]
+                           fill_halo=fill_halo          ) ! [IN]
 
     if ( itemid < 0 ) return
 
@@ -1214,8 +1234,9 @@ contains
   !> Wrapper routine of FILE_HISTORY_reg + FILE_HISTORY_put
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_in_3D( &
-       var,   &
+       var,              &
        name, desc, unit, &
+       standard_name,    &
        dim_type, &
        fill_halo )
     implicit none
@@ -1225,6 +1246,7 @@ contains
     character(len=*), intent(in) :: desc       !< description of the item
     character(len=*), intent(in) :: unit       !< unit        of the item
 
+    character(len=*), intent(in), optional :: standard_name
     character(len=*), intent(in), optional :: dim_type
     logical,          intent(in), optional :: fill_halo
     character(len=H_SHORT) :: dim_type_
@@ -1237,11 +1259,12 @@ contains
     if ( FILE_HISTORY_disabled ) return
 
     ! Check whether the item has been already registered
-    call FILE_HISTORY_reg( name, desc, unit,   & ! [IN]
-                           itemid,             & ! [OUT]
-                           ndims=ndim,         & ! [IN]
-                           dim_type=dim_type,  & ! [IN]
-                           fill_halo=fill_halo ) ! [IN]
+    call FILE_HISTORY_reg( name, desc, unit,            & ! [IN]
+                           itemid,                      & ! [OUT]
+                           standard_name=standard_name, & ! [IN]
+                           ndims=ndim,                  & ! [IN]
+                           dim_type=dim_type,           & ! [IN]
+                           fill_halo=fill_halo          ) ! [IN]
 
     if ( itemid < 0 ) return
 
@@ -1572,6 +1595,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Add_Variable( &
        name, desc, units,  &
+       standard_name,      &
        dimid,              &
        zcoord,             &
        itemid,             &
@@ -1583,6 +1607,7 @@ contains
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
     character(len=*), intent(in) :: units
+    character(len=*), intent(in) :: standard_name
     integer,          intent(in) :: dimid
     character(len=*), intent(in) :: zcoord
     integer,          intent(out) :: itemid
@@ -1639,6 +1664,7 @@ contains
           FILE_HISTORY_vars(id)%vid   = -1
           FILE_HISTORY_vars(id)%desc  = desc
           FILE_HISTORY_vars(id)%units = units
+          FILE_HISTORY_vars(id)%standard_name = standard_name
           FILE_HISTORY_vars(id)%dimid = dimid
           if ( present(cell_measures) ) then
              FILE_HISTORY_vars(id)%cell_measures = cell_measures
@@ -1929,6 +1955,7 @@ contains
                                FILE_HISTORY_vars(id)%outname,          & ! [IN]
                                FILE_HISTORY_vars(id)%desc,             & ! [IN]
                                FILE_HISTORY_vars(id)%units,            & ! [IN]
+                               FILE_HISTORY_vars(id)%standard_name,    & ! [IN]
                                dims(1:ndims),                          & ! [IN]
                                FILE_HISTORY_vars(id)%dtype,            & ! [IN]
                                dtsec,                                  & ! [IN]
@@ -1970,7 +1997,7 @@ contains
                                      'grid', FILE_HISTORY_dims(dimid)%grid                     ) ! [IN]
           else
              call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname, & ! [IN]
-                                     'grid', trim(FILE_HISTORY_dims(dimid)%grid)//trim(FILE_HISTORY_vars(id)%zcoord) ) ! [IN]
+                                     'grid', trim(FILE_HISTORY_dims(dimid)%grid)//'_'//trim(FILE_HISTORY_vars(id)%zcoord) ) ! [IN]
           end if
           call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname, & ! [IN]
                                    'location', FILE_HISTORY_dims(dimid)%location             ) ! [IN]

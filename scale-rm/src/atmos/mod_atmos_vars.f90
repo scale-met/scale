@@ -162,6 +162,7 @@ module mod_atmos_vars
      character(len=H_SHORT) :: UNIT
      integer                :: ndims
      character(len=H_SHORT) :: dim_type
+     character(len=H_MID)   :: STDNAME
   end type Vinfo
 
   ! prognostic variables
@@ -170,11 +171,11 @@ module mod_atmos_vars
   integer,     private, allocatable :: PV_ID(:)
 
   data PV_info / &
-       Vinfo( 'DENS', 'density',     'kg/m3',   3, 'ZXY' ), &
-       Vinfo( 'MOMZ', 'momentum z',  'kg/m2/s', 3, 'ZHXY'), &
-       Vinfo( 'MOMX', 'momentum x',  'kg/m2/s', 3, 'ZXHY'), &
-       Vinfo( 'MOMY', 'momentum y',  'kg/m2/s', 3, 'ZXYH'), &
-       Vinfo( 'RHOT', 'rho * theta', 'kg/m3*K', 3, 'ZXY' ) /
+       Vinfo( 'DENS', 'density',     'kg/m3',   3, 'ZXY',  'air_density' ), &
+       Vinfo( 'MOMZ', 'momentum z',  'kg/m2/s', 3, 'ZHXY', 'upward_mass_flux_of_air' ), &
+       Vinfo( 'MOMX', 'momentum x',  'kg/m2/s', 3, 'ZXHY', 'eastward_mass_flux_of_air' ), &
+       Vinfo( 'MOMY', 'momentum y',  'kg/m2/s', 3, 'ZXYH', 'northward_mass_flux_of_air' ), &
+       Vinfo( 'RHOT', 'rho * theta', 'kg/m3*K', 3, 'ZXY',  '' ) /
 
 
   ! private diagnostic variables
@@ -326,75 +327,75 @@ module mod_atmos_vars
   logical,     private            :: DV_calclated(DV_nmax)
 
   data DV_info / &
-       Vinfo( 'W',         'velocity w',                      'm/s',     3, 'ZXY' ), &
-       Vinfo( 'U',         'velocity u',                      'm/s',     3, 'ZXY' ), &
-       Vinfo( 'V',         'velocity v',                      'm/s',     3, 'ZXY' ), &
-       Vinfo( 'PT',        'potential temp.',                 'K',       3, 'ZXY' ), &
-       Vinfo( 'T',         'temperature',                     'K',       3, 'ZXY' ), &
-       Vinfo( 'PRES',      'pressure',                        'Pa',      3, 'ZXY' ), &
-       Vinfo( 'EXNER',     'Exner function',                  '1',       3, 'ZXY' ), &
-       Vinfo( 'PHYD',      'hydrostatic pressure',            'Pa',      3, 'ZXY' ), &
-       Vinfo( 'QDRY',      'dry air',                         'kg/kg',   3, 'ZXY' ), &
-       Vinfo( 'RTOT',      'Total gas constant',              'J/kg/K',  3, 'ZXY' ), &
-       Vinfo( 'CVTOT',     'Total heat capacity',             'J/kg/K',  3, 'ZXY' ), &
-       Vinfo( 'CPTOT',     'Total heat capacity',             'J/kg/K',  3, 'ZXY' ), &
-       Vinfo( 'LHV',       'latent heat for vaporization',    'J/kg',    3, 'ZXY' ), &
-       Vinfo( 'LHS',       'latent heat for sublimation',     'J/kg',    3, 'ZXY' ), &
-       Vinfo( 'LHF',       'latent heat for fusion',          'J/kg',    3, 'ZXY' ), &
-       Vinfo( 'POTV',      'virtual potential temp.',         'K',       3, 'ZXY' ), &
-       Vinfo( 'TEML',      'liquid water temperature',        'K',       3, 'ZXY' ), &
-       Vinfo( 'POTL',      'liquid water potential temp.',    'K',       3, 'ZXY' ), &
-       Vinfo( 'POTE',      'equivalent potential temp.',      'K',       3, 'ZXY' ), &
-       Vinfo( 'QTOT',      'total water',                     'kg/kg',   3, 'ZXY' ), &
-       Vinfo( 'QHYD',      'total hydrometeors',              'kg/kg',   3, 'ZXY' ), &
-       Vinfo( 'QLIQ',      'total liquid water',              'kg/kg',   3, 'ZXY' ), &
-       Vinfo( 'QICE',      'total ice water',                 'kg/kg',   3, 'ZXY' ), &
-       Vinfo( 'LWP',       'liquid water path',               'g/m2',    2, 'XY'  ), &
-       Vinfo( 'IWP',       'ice water path',                  'g/m2',    2, 'XY'  ), &
-       Vinfo( 'PW',        'precipitable water',              'g/m2',    2, 'XY'  ), &
-       Vinfo( 'PREC',      'surface precipitation rate',      'kg/m2/s', 2, 'XY'  ), &
-       Vinfo( 'RAIN',      'surface rain rate',               'kg/m2/s', 2, 'XY'  ), &
-       Vinfo( 'SNOW',      'surface snow rate',               'kg/m2/s', 2, 'XY'  ), &
-       Vinfo( 'QSAT',      'saturation specific humidity',    'kg/kg',   3, 'ZXY' ), &
-       Vinfo( 'RHA',       'relative humidity(liq+ice)',      '%',       3, 'ZXY' ), &
-       Vinfo( 'RH',        'relative humidity(liq)',          '%',       3, 'ZXY' ), &
-       Vinfo( 'RHI',       'relative humidity(ice)',          '%',       3, 'ZXY' ), &
-       Vinfo( 'VOR',       'vertical vorticity',              '1/s',     3, 'ZXY' ), &
-       Vinfo( 'DIV',       'divergence',                      '1/s',     3, 'ZXY' ), &
-       Vinfo( 'HDIV',      'horizontal divergence',           '1/s',     3, 'ZXY' ), &
-       Vinfo( 'Uabs',      'absolute velocity',               'm/s',     3, 'ZXY' ), &
-       Vinfo( 'N2',        'squared Brunt-Vaisala frequency', '1/s2',    3, 'ZXY' ), &
-       Vinfo( 'PBLH',      'PBL height',                      'm',       2, 'XY'  ), &
-       Vinfo( 'MSE',       'moist static energy',             'm2/s2',   3, 'ZXY' ), &
-       Vinfo( 'TDEW',      'dew point',                       'K',       3, 'ZXY' ), &
-       Vinfo( 'CAPE',      'convection avail. pot. energy',   'm2/s2',   2, 'XY'  ), &
-       Vinfo( 'CIN',       'convection inhibition',           'm2/s2',   2, 'XY'  ), &
-       Vinfo( 'LCL',       'lifted condensation level',       'm',       2, 'XY'  ), &
-       Vinfo( 'LFC',       'level of free convection',        'm',       2, 'XY'  ), &
-       Vinfo( 'LNB',       'level of neutral buoyancy',       'm',       2, 'XY'  ), &
-       Vinfo( 'ENGT',      'total energy',                    'J/m3',    3, 'ZXY' ), &
-       Vinfo( 'ENGP',      'potential energy',                'J/m3',    3, 'ZXY' ), &
-       Vinfo( 'ENGK',      'kinetic energy',                  'J/m3',    3, 'ZXY' ), &
-       Vinfo( 'ENGI',      'internal energy',                 'J/m3',    3, 'ZXY' ), &
-       Vinfo( 'DENS_MEAN', 'horiz. mean of density',          'kg/m3',   1, 'Z'   ), &
-       Vinfo( 'W_MEAN',    'horiz. mean of w',                'm/s',     1, 'Z'   ), &
-       Vinfo( 'U_MEAN',    'horiz. mean of u',                'm/s',     1, 'Z'   ), &
-       Vinfo( 'V_MEAN',    'horiz. mean of v',                'm/s',     1, 'Z'   ), &
-       Vinfo( 'PT_MEAN',   'horiz. mean of pot.',             'K',       1, 'Z'   ), &
-       Vinfo( 'T_MEAN',    'horiz. mean of t',                'K',       1, 'Z'   ), &
-       Vinfo( 'QV_MEAN',   'horiz. mean of QV',               '1',       1, 'Z'   ), &
-       Vinfo( 'QHYD_MEAN', 'horiz. mean of QHYD',             '1',       1, 'Z'   ), &
-       Vinfo( 'QLIQ_MEAN', 'horiz. mean of QLIQ',             '1',       1, 'Z'   ), &
-       Vinfo( 'QICE_MEAN', 'horiz. mean of QICE',             '1',       1, 'Z'   ), &
-       Vinfo( 'DENS_PRIM', 'horiz. deviation of density',     'kg/m3',   1, 'Z'   ), &
-       Vinfo( 'W_PRIM',    'horiz. deviation of w',           'm/s',     3, 'ZXY' ), &
-       Vinfo( 'U_PRIM',    'horiz. deviation of u',           'm/s',     3, 'ZXY' ), &
-       Vinfo( 'V_PRIM',    'horiz. deviation of v',           'm/s',     3, 'ZXY' ), &
-       Vinfo( 'PT_PRIM',   'horiz. deviation of pot. temp.',  'K',       3, 'ZXY' ), &
-       Vinfo( 'W_PRIM2',   'variance of w',                   'm2/s2',   3, 'ZXY' ), &
-       Vinfo( 'PT_W_PRIM', 'resolved scale heat flux',        'W/s',     3, 'ZXY' ), &
-       Vinfo( 'W_PRIM3',   'skewness of w',                   'm3/s3',   3, 'ZXY' ), &
-       Vinfo( 'TKE_RS',    'resolved scale TKE',              'm2/s2',   3, 'ZXY' ) /
+       Vinfo( 'W',         'velocity w',                      'm/s',     3, 'ZXY', 'upward_air_velocity' ), &
+       Vinfo( 'U',         'velocity u',                      'm/s',     3, 'ZXY', 'eastward_air_velocity' ), &
+       Vinfo( 'V',         'velocity v',                      'm/s',     3, 'ZXY', 'northward_air_velocity' ), &
+       Vinfo( 'PT',        'potential temp.',                 'K',       3, 'ZXY', 'air_potential_temperature' ), &
+       Vinfo( 'T',         'temperature',                     'K',       3, 'ZXY', 'air_temperature' ), &
+       Vinfo( 'PRES',      'pressure',                        'Pa',      3, 'ZXY', 'air_pressure' ), &
+       Vinfo( 'EXNER',     'Exner function',                  '1',       3, 'ZXY', 'dimensionless_exner_function' ), &
+       Vinfo( 'PHYD',      'hydrostatic pressure',            'Pa',      3, 'ZXY', '' ), &
+       Vinfo( 'QDRY',      'dry air',                         'kg/kg',   3, 'ZXY', '' ), &
+       Vinfo( 'RTOT',      'Total gas constant',              'J/kg/K',  3, 'ZXY', '' ), &
+       Vinfo( 'CVTOT',     'Total heat capacity',             'J/kg/K',  3, 'ZXY', '' ), &
+       Vinfo( 'CPTOT',     'Total heat capacity',             'J/kg/K',  3, 'ZXY', '' ), &
+       Vinfo( 'LHV',       'latent heat for vaporization',    'J/kg',    3, 'ZXY', '' ), &
+       Vinfo( 'LHS',       'latent heat for sublimation',     'J/kg',    3, 'ZXY', '' ), &
+       Vinfo( 'LHF',       'latent heat for fusion',          'J/kg',    3, 'ZXY', '' ), &
+       Vinfo( 'POTV',      'virtual potential temp.',         'K',       3, 'ZXY', '' ), &
+       Vinfo( 'TEML',      'liquid water temperature',        'K',       3, 'ZXY', '' ), &
+       Vinfo( 'POTL',      'liquid water potential temp.',    'K',       3, 'ZXY', '' ), &
+       Vinfo( 'POTE',      'equivalent potential temp.',      'K',       3, 'ZXY', 'pseudo_equivalent_potential_temperature'  ), &
+       Vinfo( 'QTOT',      'total water',                     'kg/kg',   3, 'ZXY', 'mass_fraction_of_water_in_air' ), &
+       Vinfo( 'QHYD',      'total hydrometeors',              'kg/kg',   3, 'ZXY', 'mass_fraction_of_cloud_condensed_water_in_air' ), &
+       Vinfo( 'QLIQ',      'total liquid water',              'kg/kg',   3, 'ZXY', '' ), &
+       Vinfo( 'QICE',      'total ice water',                 'kg/kg',   3, 'ZXY', '' ), &
+       Vinfo( 'LWP',       'liquid water path',               'g/m2',    2, 'XY',  'atmosphere_mass_content_of_cloud_liquid_water' ), &
+       Vinfo( 'IWP',       'ice water path',                  'g/m2',    2, 'XY',  '' ), &
+       Vinfo( 'PW',        'precipitable water',              'g/m2',    2, 'XY',  'atmosphere_mass_content_of_vapor' ), &
+       Vinfo( 'PREC',      'surface precipitation flux',      'kg/m2/s', 2, 'XY',  'precipitation_flux' ), &
+       Vinfo( 'RAIN',      'surface rain flux',               'kg/m2/s', 2, 'XY',  'rainfall_flux' ), &
+       Vinfo( 'SNOW',      'surface snow flux',               'kg/m2/s', 2, 'XY',  'snowfall_flux' ), &
+       Vinfo( 'QSAT',      'saturation specific humidity',    'kg/kg',   3, 'ZXY', '' ), &
+       Vinfo( 'RHA',       'relative humidity(liq+ice)',      '%',       3, 'ZXY', '' ), &
+       Vinfo( 'RH',        'relative humidity(liq)',          '%',       3, 'ZXY', 'relative_humidity' ), &
+       Vinfo( 'RHI',       'relative humidity(ice)',          '%',       3, 'ZXY', '' ), &
+       Vinfo( 'VOR',       'vertical vorticity',              '1/s',     3, 'ZXY', 'atmosphere_relative_vorticity' ), &
+       Vinfo( 'DIV',       'divergence',                      '1/s',     3, 'ZXY', 'divergence_of_wind' ), &
+       Vinfo( 'HDIV',      'horizontal divergence',           '1/s',     3, 'ZXY', '' ), &
+       Vinfo( 'Uabs',      'absolute velocity',               'm/s',     3, 'ZXY', '' ), &
+       Vinfo( 'N2',        'squared Brunt-Vaisala frequency', '1/s2',    3, 'ZXY', 'square_of_brunt_vaisala_frequency_in_air' ), &
+       Vinfo( 'PBLH',      'PBL height',                      'm',       2, 'XY', 'atmosphere_boundary_layer_thickness'  ), &
+       Vinfo( 'MSE',       'moist static energy',             'm2/s2',   3, 'ZXY', '' ), &
+       Vinfo( 'TDEW',      'dew point',                       'K',       3, 'ZXY', 'dew_point_temperature' ), &
+       Vinfo( 'CAPE',      'convective avail. pot. energy',   'm2/s2',   2, 'XY',  'atmosphere_specific_convective_available_potential_energy'  ), &
+       Vinfo( 'CIN',       'convection inhibition',           'm2/s2',   2, 'XY',  '' ), &
+       Vinfo( 'LCL',       'lifted condensation level',       'm',       2, 'XY',  'atmosphere_lifting_condensation_level' ), &
+       Vinfo( 'LFC',       'level of free convection',        'm',       2, 'XY',  'atmosphere_level_of_free_convection' ), &
+       Vinfo( 'LNB',       'level of neutral buoyancy',       'm',       2, 'XY',  '' ), &
+       Vinfo( 'ENGT',      'total energy',                    'J/m3',    3, 'ZXY', '' ), &
+       Vinfo( 'ENGP',      'potential energy',                'J/m3',    3, 'ZXY', '' ), &
+       Vinfo( 'ENGK',      'kinetic energy',                  'J/m3',    3, 'ZXY', '' ), &
+       Vinfo( 'ENGI',      'internal energy',                 'J/m3',    3, 'ZXY', '' ), &
+       Vinfo( 'DENS_MEAN', 'horiz. mean of density',          'kg/m3',   1, 'Z',   '' ), &
+       Vinfo( 'W_MEAN',    'horiz. mean of w',                'm/s',     1, 'Z',   '' ), &
+       Vinfo( 'U_MEAN',    'horiz. mean of u',                'm/s',     1, 'Z',   '' ), &
+       Vinfo( 'V_MEAN',    'horiz. mean of v',                'm/s',     1, 'Z',   '' ), &
+       Vinfo( 'PT_MEAN',   'horiz. mean of pot.',             'K',       1, 'Z',   '' ), &
+       Vinfo( 'T_MEAN',    'horiz. mean of t',                'K',       1, 'Z',   '' ), &
+       Vinfo( 'QV_MEAN',   'horiz. mean of QV',               '1',       1, 'Z',   '' ), &
+       Vinfo( 'QHYD_MEAN', 'horiz. mean of QHYD',             '1',       1, 'Z',   '' ), &
+       Vinfo( 'QLIQ_MEAN', 'horiz. mean of QLIQ',             '1',       1, 'Z',   '' ), &
+       Vinfo( 'QICE_MEAN', 'horiz. mean of QICE',             '1',       1, 'Z',   '' ), &
+       Vinfo( 'DENS_PRIM', 'horiz. deviation of density',     'kg/m3',   1, 'Z',   '' ), &
+       Vinfo( 'W_PRIM',    'horiz. deviation of w',           'm/s',     3, 'ZXY', '' ), &
+       Vinfo( 'U_PRIM',    'horiz. deviation of u',           'm/s',     3, 'ZXY', '' ), &
+       Vinfo( 'V_PRIM',    'horiz. deviation of v',           'm/s',     3, 'ZXY', '' ), &
+       Vinfo( 'PT_PRIM',   'horiz. deviation of pot. temp.',  'K',       3, 'ZXY', '' ), &
+       Vinfo( 'W_PRIM2',   'variance of w',                   'm2/s2',   3, 'ZXY', '' ), &
+       Vinfo( 'PT_W_PRIM', 'resolved scale heat flux',        'W/s',     3, 'ZXY', '' ), &
+       Vinfo( 'W_PRIM3',   'skewness of w',                   'm3/s3',   3, 'ZXY', '' ), &
+       Vinfo( 'TKE_RS',    'resolved scale TKE',              'm2/s2',   3, 'ZXY', '' ) /
 
   ! for history output and monitor
   integer, private              :: PV_HIST_id (PV_nmax) !> prognostic variables
@@ -711,7 +712,7 @@ contains
 
 
     do iv = 1, PV_nmax
-       call FILE_HISTORY_reg( PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, PV_HIST_id(iv), dim_type=PV_info(iv)%dim_type )
+       call FILE_HISTORY_reg( PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, PV_HIST_id(iv), dim_type=PV_info(iv)%dim_type, standard_name=PV_info(iv)%STDNAME )
     end do
 
     do iq = 1, QA
@@ -719,7 +720,7 @@ contains
     enddo
 
     do iv = 1, DV_nmax
-       call FILE_HISTORY_reg( DV_info(iv)%NAME, DV_info(iv)%DESC, DV_info(iv)%UNIT, DV_HIST_id(iv), dim_type=DV_info(iv)%dim_type )
+       call FILE_HISTORY_reg( DV_info(iv)%NAME, DV_info(iv)%DESC, DV_info(iv)%UNIT, DV_HIST_id(iv), dim_type=DV_info(iv)%dim_type, standard_name=DV_info(iv)%STDNAME )
     end do
 
 
@@ -3226,15 +3227,20 @@ contains
     if ( restart_fid /= -1 ) then
 
        call FILE_CARTESC_def_var( restart_fid, PV_info(I_DENS)%NAME, PV_info(I_DENS)%DESC, PV_info(I_DENS)%UNIT, 'ZXY',  ATMOS_RESTART_OUT_DTYPE, &
-                                  PV_ID(I_DENS) )
+                                  PV_ID(I_DENS), &
+                                  standard_name=PV_info(I_DENS)%STDNAME )
        call FILE_CARTESC_def_var( restart_fid, PV_info(I_MOMZ)%NAME, PV_info(I_MOMZ)%DESC, PV_info(I_MOMZ)%UNIT, 'ZHXY', ATMOS_RESTART_OUT_DTYPE, &
-                                  PV_ID(I_MOMZ) )
+                                  PV_ID(I_MOMZ), &
+                                  standard_name=PV_info(I_MOMZ)%STDNAME )
        call FILE_CARTESC_def_var( restart_fid, PV_info(I_MOMX)%NAME, PV_info(I_MOMX)%DESC, PV_info(I_MOMX)%UNIT, 'ZXHY', ATMOS_RESTART_OUT_DTYPE, &
-                                  PV_ID(I_MOMX) )
+                                  PV_ID(I_MOMX), &
+                                  standard_name=PV_info(I_MOMX)%STDNAME )
        call FILE_CARTESC_def_var( restart_fid, PV_info(I_MOMY)%NAME, PV_info(I_MOMY)%DESC, PV_info(I_MOMY)%UNIT, 'ZXYH', ATMOS_RESTART_OUT_DTYPE, &
-                                  PV_ID(I_MOMY) )
+                                  PV_ID(I_MOMY), &
+                                  standard_name=PV_info(I_MOMY)%STDNAME )
        call FILE_CARTESC_def_var( restart_fid, PV_info(I_RHOT)%NAME, PV_info(I_RHOT)%DESC, PV_info(I_RHOT)%UNIT, 'ZXY',  ATMOS_RESTART_OUT_DTYPE, &
-                                  PV_ID(I_RHOT) )
+                                  PV_ID(I_RHOT), &
+                                  standard_name=PV_info(I_RHOT)%STDNAME )
        do iq = 1, QA
           call FILE_CARTESC_def_var( restart_fid, TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE, &
                                      PV_ID(PV_nmax+iq) )

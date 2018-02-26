@@ -1388,16 +1388,17 @@ int32_t file_write_associatedcoordinate_c( const int32_t     fid,        // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_add_variable_c(       int32_t *vid,     // (out)
-			     const int32_t  fid,     // (in)
+int32_t file_add_variable_c( const int32_t  fid,     // (in)
 			     const char    *varname, // (in)
 			     const char    *desc,    // (in)
 			     const char    *units,   // (in)
+			     const char    *stdname, // (in)
 			     const char   **dims,    // (in)
 			     const int32_t  ndims,   // (in)
 			     const int32_t  dtype,   // (in)
 			     const real64_t tint,    // (in)
-			     const int32_t  tavg)    // (in)
+			     const int32_t  tavg,    // (in)
+			           int32_t *vid)     // (out)
 {
   int ncid, varid, acid, *acdimids;
   int dimids[NC_MAX_DIMS], dimid;
@@ -1588,6 +1589,9 @@ int32_t file_add_variable_c(       int32_t *vid,     // (out)
     // put variable attribute
     CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, varid, "long_name", strlen(desc), desc) )
     CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, varid, "units", strlen(units), units) )
+    if ( strlen(stdname) > 0 )
+      CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, varid, "standard_name", strlen(stdname), stdname) )
+	
 //    CHECK_PNC_ERROR( ncmpi_put_att_double(ncid, varid, _FillValue, xtype, 1, &rmiss) )
     CHECK_PNC_ERROR( ncmpi_put_att_double(ncid, varid, "missing_value", xtype, 1, &rmiss) )
   }
@@ -1596,6 +1600,8 @@ int32_t file_add_variable_c(       int32_t *vid,     // (out)
     // put variable attribute
     CHECK_ERROR( nc_put_att_text(ncid, varid, "long_name", strlen(desc), desc) )
     CHECK_ERROR( nc_put_att_text(ncid, varid, "units", strlen(units), units) )
+    if ( strlen(stdname) > 0 )
+      CHECK_ERROR( nc_put_att_text(ncid, varid, "standard_name", strlen(stdname), stdname) )
     CHECK_ERROR( nc_put_att_double(ncid, varid, _FillValue, xtype, 1, &rmiss) )
     CHECK_ERROR( nc_put_att_double(ncid, varid, "missing_value", xtype, 1, &rmiss) )
   }

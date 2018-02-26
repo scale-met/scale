@@ -596,24 +596,27 @@ void file_write_associatedcoordinate_c_( const int32_t *fid,          // (in)
   *error = file_write_associatedcoordinate_c( *fid, _name, val, *precision, start_, count_ );
 }
 
-void file_add_variable_c_(       int32_t  *vid,         // (out)
-			   const int32_t  *fid,         // (in)
-			   const char     *varname,     // (in)
-			   const char     *desc,        // (in)
-			   const char     *units,       // (in)
-			   const char     *dims,        // (in)
-			   const int32_t  *ndims,       // (in)
-			   const int32_t  *dtype,       // (in)
-			   const real64_t *tint,        // (in)
-			   const int32_t  *tavg,        // (in)
-			         int32_t  *error,       // (out)
-			   const int32_t   varname_len, // (in)
-			   const int32_t   desc_len,    // (in)
-			   const int32_t   units_len,   // (in)
-			   const int32_t   dims_len)    // (in)
+void file_add_variable_c_( const int32_t  *fid,           // (in)
+			   const char     *varname,       // (in)
+			   const char     *desc,          // (in)
+			   const char     *units,         // (in)
+			   const char     *standard_name, // (in)
+			   const char     *dims,          // (in)
+			   const int32_t  *ndims,         // (in)
+			   const int32_t  *dtype,         // (in)
+			   const real64_t *tint,          // (in)
+			   const int32_t  *tavg,          // (in)
+			         int32_t  *vid,           // (out)
+			         int32_t  *error,         // (out)
+			   const int32_t   varname_len,   // (in)
+			   const int32_t   desc_len,      // (in)
+			   const int32_t   units_len,     // (in)
+			   const int32_t   stdname_len,   // (in)
+			   const int32_t   dims_len)      // (in)
 {
   char _varname[File_HSHORT+1];
   char _desc[File_HMID+1];
+  char _stdname[File_HMID+1];
   char _units[File_HMID+1];
   char **_dims;
   int len;
@@ -625,6 +628,9 @@ void file_add_variable_c_(       int32_t  *vid,         // (out)
   len = desc_len > File_HMID ? File_HMID : desc_len;
   fstr2cstr(_desc, desc, len);
 
+  len = stdname_len > File_HMID ? File_HMID : stdname_len;
+  fstr2cstr(_stdname, standard_name, len);
+
   len = units_len > File_HMID ? File_HMID : units_len;
   fstr2cstr(_units, units, len);
 
@@ -635,7 +641,7 @@ void file_add_variable_c_(       int32_t  *vid,         // (out)
     fstr2cstr(_dims[i], dims+i*dims_len, len);
   }
 
-  *error = file_add_variable_c( vid, *fid, _varname, _desc, _units, (const char**)_dims, *ndims, *dtype, *tint, *tavg );
+  *error = file_add_variable_c( *fid, _varname, _desc, _units, _stdname, (const char**)_dims, *ndims, *dtype, *tint, *tavg, vid );
 
   for ( i=0; i<*ndims; i++ )
     free( _dims[i] );

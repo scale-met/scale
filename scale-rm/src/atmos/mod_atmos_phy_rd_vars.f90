@@ -96,6 +96,7 @@ module mod_atmos_phy_rd_vars
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
+  character(len=H_MID),   private            :: VAR_STDN(VMAX) !< standard name of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
   integer,                private            :: VAR_ID(VMAX)   !< ID    of the variables
   integer,                private            :: restart_fid = -1  ! file ID
@@ -124,6 +125,18 @@ module mod_atmos_phy_rd_vars
                   'sfc. down. longwave  flux diffuse', &
                   'sfc. down. shortwave flux direct',  &
                   'sfc. down. shortwave flux diffuse'  /
+  data VAR_STDN / 'surface_upwelling_longwave_flux_in_air',    &
+                  'surface_downwelling_longwave_flux_in_air',  &
+                  'surface_upwelling_shortwave_flux_in_air',   &
+                  'surface_downwelling_shortwave_flux_in_air', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '' /
   data VAR_UNIT / 'W/m2', &
                   'W/m2', &
                   'W/m2', &
@@ -485,7 +498,8 @@ contains
           call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
                VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
                'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE,  & ! [IN]
-               VAR_ID(i)                              ) ! [OUT]
+               VAR_ID(i),                             & ! [OUT]
+               standard_name=VAR_STDN(i)              ) ! [IN]
        end do
     endif
 

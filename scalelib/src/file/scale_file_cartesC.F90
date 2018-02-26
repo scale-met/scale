@@ -1596,6 +1596,7 @@ contains
        dim_type, datatype,  &
        date, subsec,        &
        append, aggregate,   &
+       standard_name,       &
        cell_measures        )
     implicit none
 
@@ -1612,6 +1613,7 @@ contains
     real(DP),         intent(in), optional :: subsec  !< subsec of the time
     logical,          intent(in), optional :: append  !< switch whether append existing file or not (default=false)
     logical,          intent(in), optional :: aggregate
+    character(len=*), intent(in), optional :: standard_name
     character(len=*), intent(in), optional :: cell_measures
 
     integer :: fid, vid
@@ -1626,6 +1628,7 @@ contains
 
     call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
                                vid,                                          & ! [OUT]
+                               standard_name=standard_name,                  & ! [IN]
                                cell_measures=cell_measures                   ) ! [IN]
 
     call FILE_CARTESC_enddef( fid )
@@ -1645,6 +1648,7 @@ contains
        date, subsec,         &
        fill_halo, haszcoord, &
        append, aggregate,    &
+       standard_name,        &
        cell_measures         )
     implicit none
 
@@ -1663,6 +1667,7 @@ contains
     logical,          intent(in), optional :: haszcoord !< switch whether include zcoordinate or not  (default=true)
     logical,          intent(in), optional :: append    !< switch whether append existing file or not (default=false)
     logical,          intent(in), optional :: aggregate
+    character(len=*), intent(in), optional :: standard_name
     character(len=*), intent(in), optional :: cell_measures
 
     integer :: fid, vid
@@ -1678,6 +1683,7 @@ contains
 
     call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
                                vid,                                          & ! [OUT]
+                               standard_name=standard_name,                  & ! [IN]
                                cell_measures=cell_measures                   ) ! [IN]
 
     call FILE_CARTESC_enddef( fid )
@@ -1697,6 +1703,7 @@ contains
        date, subsec,        &
        fill_halo,           &
        append, aggregate,   &
+       standard_name,       &
        cell_measures        )
     implicit none
 
@@ -1714,6 +1721,7 @@ contains
     logical,          intent(in), optional :: fill_halo !< include halo data?
     logical,          intent(in), optional :: append    !< append existing (closed) file?
     logical,          intent(in), optional :: aggregate
+    character(len=*), intent(in), optional :: standard_name
     character(len=*), intent(in), optional :: cell_measures
 
     integer :: fid, vid
@@ -1728,6 +1736,7 @@ contains
 
     call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
                                vid,                                          & ! [OUT]
+                               standard_name=standard_name,                  & ! [IN]
                                cell_measures=cell_measures                   ) ! [IN]
 
     call FILE_CARTESC_enddef( fid )
@@ -1748,6 +1757,7 @@ contains
        timetarg, timeofs,   &
        fill_halo,           &
        append, aggregate,   &
+       standard_name,       &
        cell_measures        )
     implicit none
 
@@ -1767,6 +1777,7 @@ contains
     logical,          intent(in), optional :: fill_halo !< include halo data?
     logical,          intent(in), optional :: append    !< append existing (closed) file?
     logical,          intent(in), optional :: aggregate
+    character(len=*), intent(in), optional :: standard_name
     character(len=*), intent(in), optional :: cell_measures
 
     integer  :: fid, vid
@@ -1789,6 +1800,7 @@ contains
     endif
     call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
                                vid,                                          & ! [OUT]
+                               standard_name=standard_name,                  & ! [IN]
                                cell_measures=cell_measures,                  & ! [IN]
                                timeintv=timeintv, nsteps=nsteps              ) ! [IN]
 
@@ -1810,7 +1822,9 @@ contains
        timeintv, tsince,    &
        timetarg, timeofs,   &
        fill_halo,           &
-       append, aggregate    )
+       append, aggregate,   &
+       standard_name,       &
+       cell_measures        )
     implicit none
 
     real(RP),         intent(in) :: var(:,:,:,:) !< value of the variable
@@ -1829,6 +1843,8 @@ contains
     logical,          intent(in), optional :: fill_halo !< include halo data?
     logical,          intent(in), optional :: append    !< append existing (closed) file?
     logical,          intent(in), optional :: aggregate
+    character(len=*), intent(in), optional :: standard_name
+    character(len=*), intent(in), optional :: cell_measures
 
     integer  :: fid, vid
     integer  :: nsteps
@@ -1850,7 +1866,9 @@ contains
     endif
     call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
                                vid,                                          & ! [OUT]
-                               timeintv, nsteps                              ) ! [IN]
+                               standard_name=standard_name,                  & ! [IN]
+                               cell_measures=cell_measures,                  & ! [IN]
+                               timeintv=timeintv, nsteps=nsteps              ) ! [IN]
 
     call FILE_CARTESC_enddef( fid )
 
@@ -2766,6 +2784,7 @@ contains
        varname, desc, unit, &
        dim_type, datatype,  &
        vid,                 &
+       standard_name,       &
        timeintv, nsteps,    &
        cell_measures        )
     use scale_file_h, only: &
@@ -2789,10 +2808,12 @@ contains
 
     integer, intent(out) :: vid      !< variable ID
 
-    real(DP),         intent(in), optional :: timeintv !< time interval [sec]
-    integer,          intent(in), optional :: nsteps   !< number of time steps
+    character(len=*), intent(in), optional :: standard_name !< standard name of the variable
+    real(DP),         intent(in), optional :: timeintv      !< time interval [sec]
+    integer,          intent(in), optional :: nsteps        !< number of time steps
     character(len=*), intent(in), optional :: cell_measures !< "area" or "volume"
 
+    character(len=H_MID)   :: standard_name_
     character(len=H_SHORT) :: cell_measures_
 
     integer :: dtype, elm_size, ndims
@@ -2839,13 +2860,20 @@ contains
     end if
 
     ndims = FILE_CARTESC_dims(dimid)%ndims
+
+    if ( present(standard_name) ) then
+       standard_name_ = standard_name
+    else
+       standard_name_ = ""
+    end if
+
     if ( present(timeintv) ) then  ! 3D/4D variable with time dimension
-      call FILE_Def_Variable( fid, varname, desc, unit,                             & ! [IN]
+      call FILE_Def_Variable( fid, varname, desc, unit, standard_name_,             & ! [IN]
                               ndims, FILE_CARTESC_dims(dimid)%dims(1:ndims), dtype, & ! [IN]
                               vid,                                                  & ! [OUT]
                               time_int=timeintv                                     ) ! [IN]
     else
-      call FILE_Def_Variable( fid, varname, desc, unit,                             & ! [IN]
+      call FILE_Def_Variable( fid, varname, desc, unit, standard_name_,             & ! [IN]
                               ndims, FILE_CARTESC_dims(dimid)%dims(1:ndims), dtype, & ! [IN]
                               vid                                                   ) ! [OUT]
     endif

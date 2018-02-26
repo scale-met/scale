@@ -143,6 +143,7 @@ module mod_ocean_vars
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
+  character(len=H_MID),   private            :: VAR_STDN(VMAX) !< standard name of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
   integer,                private            :: VAR_ID(VMAX)   !< ID    of the variables
   integer,                private            :: restart_fid = -1  ! file ID
@@ -183,6 +184,23 @@ module mod_ocean_vars
                   'ocean surface latent heat flux',             &
                   'ocean surface water heat flux',              &
                   'ocean surface water vapor flux'              /
+  data VAR_STDN / 'sea_water_temperature', &
+                  'sea_water_salinity', &
+                  'eastward_sea_water_velocity', &
+                  'northward_sea_water_velocity', &
+                  'sea_surface_skin_temperature', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '' /
   data VAR_UNIT / 'K',       &
                   'PSU',     &
                   'm/s',     &
@@ -504,25 +522,25 @@ contains
                      __FILE__, __LINE__ )
     endif
 
-    call FILE_HISTORY_in( OCEAN_TEMP      (:,:,:),    VAR_NAME(I_TEMP),     VAR_DESC(I_TEMP),     VAR_UNIT(I_TEMP)    , dim_type="OXY" )
-    call FILE_HISTORY_in( OCEAN_SALT      (:,:,:),    VAR_NAME(I_SALT),     VAR_DESC(I_SALT),     VAR_UNIT(I_SALT)    , dim_type="OXY" )
-    call FILE_HISTORY_in( OCEAN_UVEL      (:,:,:),    VAR_NAME(I_UVEL),     VAR_DESC(I_UVEL),     VAR_UNIT(I_UVEL)    , dim_type="OXY" )
-    call FILE_HISTORY_in( OCEAN_VVEL      (:,:,:),    VAR_NAME(I_VVEL),     VAR_DESC(I_VVEL),     VAR_UNIT(I_VVEL)    , dim_type="OXY" )
+    call FILE_HISTORY_in( OCEAN_TEMP      (:,:,:),    VAR_NAME(I_TEMP),     VAR_DESC(I_TEMP),     VAR_UNIT(I_TEMP)    , dim_type="OXY", standard_name=VAR_STDN(I_TEMP) )
+    call FILE_HISTORY_in( OCEAN_SALT      (:,:,:),    VAR_NAME(I_SALT),     VAR_DESC(I_SALT),     VAR_UNIT(I_SALT)    , dim_type="OXY", standard_name=VAR_STDN(I_SALT) )
+    call FILE_HISTORY_in( OCEAN_UVEL      (:,:,:),    VAR_NAME(I_UVEL),     VAR_DESC(I_UVEL),     VAR_UNIT(I_UVEL)    , dim_type="OXY", standard_name=VAR_STDN(I_UVEL) )
+    call FILE_HISTORY_in( OCEAN_VVEL      (:,:,:),    VAR_NAME(I_VVEL),     VAR_DESC(I_VVEL),     VAR_UNIT(I_VVEL)    , dim_type="OXY", standard_name=VAR_STDN(I_VVEL) )
 
-    call FILE_HISTORY_in( OCEAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP), VAR_DESC(I_SFC_TEMP), VAR_UNIT(I_SFC_TEMP) )
-    call FILE_HISTORY_in( OCEAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW),   VAR_DESC(I_ALB_LW),   VAR_UNIT(I_ALB_LW)   )
-    call FILE_HISTORY_in( OCEAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW),   VAR_DESC(I_ALB_SW),   VAR_UNIT(I_ALB_SW)   )
-    call FILE_HISTORY_in( OCEAN_SFC_Z0M   (:,:),      VAR_NAME(I_SFC_Z0M),  VAR_DESC(I_SFC_Z0M),  VAR_UNIT(I_SFC_Z0M)  )
-    call FILE_HISTORY_in( OCEAN_SFC_Z0H   (:,:),      VAR_NAME(I_SFC_Z0H),  VAR_DESC(I_SFC_Z0H),  VAR_UNIT(I_SFC_Z0H)  )
-    call FILE_HISTORY_in( OCEAN_SFC_Z0E   (:,:),      VAR_NAME(I_SFC_Z0E),  VAR_DESC(I_SFC_Z0E),  VAR_UNIT(I_SFC_Z0E)  )
+    call FILE_HISTORY_in( OCEAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP), VAR_DESC(I_SFC_TEMP), VAR_UNIT(I_SFC_TEMP), standard_name=VAR_STDN(I_SFC_TEMP) )
+    call FILE_HISTORY_in( OCEAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW),   VAR_DESC(I_ALB_LW),   VAR_UNIT(I_ALB_LW),  standard_name=VAR_STDN(I_ALB_LW) )
+    call FILE_HISTORY_in( OCEAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW),   VAR_DESC(I_ALB_SW),   VAR_UNIT(I_ALB_SW),  standard_name=VAR_STDN(I_ALB_LW) )
+    call FILE_HISTORY_in( OCEAN_SFC_Z0M   (:,:),      VAR_NAME(I_SFC_Z0M),  VAR_DESC(I_SFC_Z0M),  VAR_UNIT(I_SFC_Z0M), standard_name=VAR_STDN(I_SFC_Z0M) )
+    call FILE_HISTORY_in( OCEAN_SFC_Z0H   (:,:),      VAR_NAME(I_SFC_Z0H),  VAR_DESC(I_SFC_Z0H),  VAR_UNIT(I_SFC_Z0H), standard_name=VAR_STDN(I_SFC_Z0H) )
+    call FILE_HISTORY_in( OCEAN_SFC_Z0E   (:,:),      VAR_NAME(I_SFC_Z0E),  VAR_DESC(I_SFC_Z0E),  VAR_UNIT(I_SFC_Z0E), standard_name=VAR_STDN(I_SFC_Z0H) )
 
-    call FILE_HISTORY_in( OCEAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   VAR_UNIT(I_SFLX_MW)   )
-    call FILE_HISTORY_in( OCEAN_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   VAR_UNIT(I_SFLX_MU)   )
-    call FILE_HISTORY_in( OCEAN_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV),   VAR_DESC(I_SFLX_MV),   VAR_UNIT(I_SFLX_MV)   )
-    call FILE_HISTORY_in( OCEAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   VAR_UNIT(I_SFLX_SH)   )
-    call FILE_HISTORY_in( OCEAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH)   )
-    call FILE_HISTORY_in( OCEAN_SFLX_WH  (:,:), VAR_NAME(I_SFLX_WH),   VAR_DESC(I_SFLX_WH),   VAR_UNIT(I_SFLX_WH)   )
-    call FILE_HISTORY_in( OCEAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap) )
+    call FILE_HISTORY_in( OCEAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   VAR_UNIT(I_SFLX_MW),     standard_name=VAR_STDN(I_SFLX_MW) )
+    call FILE_HISTORY_in( OCEAN_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   VAR_UNIT(I_SFLX_MU),     standard_name=VAR_STDN(I_SFLX_MU) )
+    call FILE_HISTORY_in( OCEAN_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV),   VAR_DESC(I_SFLX_MV),   VAR_UNIT(I_SFLX_MV),     standard_name=VAR_STDN(I_SFLX_MV) )
+    call FILE_HISTORY_in( OCEAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   VAR_UNIT(I_SFLX_SH),     standard_name=VAR_STDN(I_SFLX_SH) )
+    call FILE_HISTORY_in( OCEAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH),     standard_name=VAR_STDN(I_SFLX_LH) )
+    call FILE_HISTORY_in( OCEAN_SFLX_WH  (:,:), VAR_NAME(I_SFLX_WH),   VAR_DESC(I_SFLX_WH),   VAR_UNIT(I_SFLX_WH),     standard_name=VAR_STDN(I_SFLX_WH) )
+    call FILE_HISTORY_in( OCEAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap),   standard_name=VAR_STDN(I_SFLX_evap) )
 
     return
   end subroutine OCEAN_vars_history
@@ -749,39 +767,56 @@ contains
     if ( restart_fid /= -1 ) then
 
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_TEMP),      VAR_DESC(I_TEMP),      VAR_UNIT(I_TEMP),      'OXY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_TEMP) )
+                                  VAR_ID(I_TEMP), &
+                                  standard_name=VAR_STDN(I_TEMP) )
 !       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SALT),      VAR_DESC(I_SALT),      VAR_UNIT(I_SALT),      'OXY', OCEAN_RESTART_OUT_DTYPE, &
-!                                  VAR_ID(I_SALT) )
+!                                  VAR_ID(I_SALT), &
+!                                  standard_name=VAR_STDN(I_SALT) )
 !       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_UVEL),      VAR_DESC(I_UVEL),      VAR_UNIT(I_UVEL),      'OXY', OCEAN_RESTART_OUT_DTYPE, &
-!                                  VAR_ID(I_UVEL) )
+!                                  VAR_ID(I_UVEL), &
+!                                  standard_name=VAR_STDN(I_UVEL) )
 !       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_VVEL),      VAR_DESC(I_VVEL),      VAR_UNIT(I_VVEL),      'OXY', OCEAN_RESTART_OUT_DTYPE, &
-!                                  VAR_ID(I_VVEL) )
+!                                  VAR_ID(I_VVEL), &
+!                                  standard_name=VAR_STDN(I_VVEL) )
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFC_TEMP),  VAR_DESC(I_SFC_TEMP),  VAR_UNIT(I_SFC_TEMP),  'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFC_TEMP) )
+                                  VAR_ID(I_SFC_TEMP), &
+                                  standard_name=VAR_STDN(I_SFC_TEMP) )
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_ALB_LW),    VAR_DESC(I_ALB_LW),    VAR_UNIT(I_ALB_LW),    'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_ALB_LW) )
+                                  VAR_ID(I_ALB_LW), &
+                                  standard_name=VAR_STDN(I_ALB_LW) )
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_ALB_SW),    VAR_DESC(I_ALB_SW),    VAR_UNIT(I_ALB_SW),    'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_ALB_SW) )
+                                  VAR_ID(I_ALB_SW), &
+                                  standard_name=VAR_STDN(I_ALB_SW) )
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFC_Z0M),   VAR_DESC(I_SFC_Z0M),   VAR_UNIT(I_SFC_Z0M),   'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFC_Z0M) )
+                                  VAR_ID(I_SFC_Z0M), &
+                                  standard_name=VAR_STDN(I_SFC_Z0M) )
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFC_Z0H),   VAR_DESC(I_SFC_Z0H),   VAR_UNIT(I_SFC_Z0H),   'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFC_Z0H) )
+                                  VAR_ID(I_SFC_Z0H), &
+                                  standard_name=VAR_STDN(I_SFC_Z0H) )
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFC_Z0E),   VAR_DESC(I_SFC_Z0E),   VAR_UNIT(I_SFC_Z0E),   'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFC_Z0E) )
+                                  VAR_ID(I_SFC_Z0E), &
+                                  standard_name=VAR_STDN(I_SFC_Z0E) )
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   VAR_UNIT(I_SFLX_MW),   'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_MW) )
+                                  VAR_ID(I_SFLX_MW), &
+                                  standard_name=VAR_STDN(I_SFLX_MW) )
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   VAR_UNIT(I_SFLX_MU),  'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_MU) )
+                                  VAR_ID(I_SFLX_MU), &
+                                  standard_name=VAR_STDN(I_SFLX_MU) )
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_MV),   VAR_DESC(I_SFLX_MV),   VAR_UNIT(I_SFLX_MV),   'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_MV) )
+                                  VAR_ID(I_SFLX_MV), &
+                                  standard_name=VAR_STDN(I_SFLX_MV) )
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   VAR_UNIT(I_SFLX_SH),   'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_SH) )
+                                  VAR_ID(I_SFLX_SH), &
+                                  standard_name=VAR_STDN(I_SFLX_SH) )
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH),   'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_LH) )
+                                  VAR_ID(I_SFLX_LH), &
+                                  standard_name=VAR_STDN(I_SFLX_LH) )
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_WH),   VAR_DESC(I_SFLX_WH),   VAR_UNIT(I_SFLX_WH),   'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_WH) )
+                                  VAR_ID(I_SFLX_WH), &
+                                  standard_name=VAR_STDN(I_SFLX_WH) )
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap), 'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_evap) )
+                                  VAR_ID(I_SFLX_evap), &
+                                  standard_name=VAR_STDN(I_SFLX_evap) )
 
     endif
 

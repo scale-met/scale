@@ -111,6 +111,7 @@ module mod_atmos_phy_sf_vars
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
+  character(len=H_MID),   private            :: VAR_STDN(VMAX) !< standard name of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
   integer,                private            :: VAR_ID(VMAX)   !< ID    of the variables
   integer,                private            :: restart_fid = -1  ! file ID
@@ -128,6 +129,13 @@ module mod_atmos_phy_sf_vars
                   'surface roughness length (momentum)', &
                   'surface roughness length (heat)',     &
                   'surface roughness length (vapor)'     /
+
+  data VAR_STDN / 'surface_temp', &
+                  '', &
+                  '', &
+                  'surface_roughness_length_for_momentum_in_air', &
+                  'surface_roughness_length_for_heat_in_air', &
+                  '' /
 
   data VAR_UNIT / 'K', &
                   '1', &
@@ -514,7 +522,8 @@ contains
           call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
                VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
                'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE,  & ! [IN]
-               VAR_ID(i)                              ) ! [OUT]
+               VAR_ID(i),                             & ! [OUT]
+               standard_name=VAR_STDN(i)              ) ! [IN]
        end do
 
     endif

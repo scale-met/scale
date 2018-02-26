@@ -110,8 +110,7 @@ module scale_file
   end interface FILE_write_associatedCoordinate
   interface FILE_add_variable
      module procedure FILE_add_variable_no_time
-     module procedure FILE_add_variable_realSP
-     module procedure FILE_add_variable_realDP
+     module procedure FILE_add_variable_with_time
   end interface FILE_add_variable
   interface FILE_read
     module procedure FILE_read_realSP_1D
@@ -1255,6 +1254,7 @@ contains
   subroutine FILE_add_variable_no_time( &
        fid,                  &
        varname, desc, units, &
+       standard_name,        &
        dims, dtype,          &
        vid,                  &
        time_avg              )
@@ -1262,23 +1262,26 @@ contains
     character(len=*), intent( in) :: varname
     character(len=*), intent( in) :: desc
     character(len=*), intent( in) :: units
+    character(len=*), intent( in) :: standard_name
     character(len=*), intent( in) :: dims(:)
     integer,          intent( in) :: dtype
     integer,          intent(out) :: vid
     logical,          intent( in), optional :: time_avg
 
-    call FILE_add_variable_realDP( fid,              & ! (in)
-         varname, desc, units, dims, dtype, -1.0_DP, & ! (in)
-         vid,                                        & ! (out)
-         time_avg = time_avg                         ) ! (in)
+    call FILE_add_variable_with_time( fid,    & ! (in)
+         varname, desc, units, standard_name, & ! (in)
+         dims, dtype, -1.0_DP,                & ! (in)
+         vid,                                 & ! (out)
+         time_avg = time_avg                  ) ! (in)
 
     return
   end subroutine FILE_add_variable_no_time
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_add_variable_realSP( &
+  subroutine FILE_add_variable_with_time( &
        fid,                  &
        varname, desc, units, &
+       standard_name,        &
        dims, dtype,          &
        time_int,             &
        vid,                  &
@@ -1288,15 +1291,15 @@ contains
     character(len=*), intent(in)  :: varname
     character(len=*), intent(in)  :: desc
     character(len=*), intent(in)  :: units
+    character(len=*), intent(in)  :: standard_name
     character(len=*), intent(in)  :: dims(:)
     integer,          intent(in)  :: dtype
-    real(SP),    intent(in)  :: time_int
+    real(DP),         intent(in)  :: time_int
 
     integer,          intent(out) :: vid
 
     logical,          intent(in), optional :: time_avg
 
-    real(DP) :: tint8
     integer  :: cvid
     integer  :: ndims
     integer  :: itavg
@@ -1316,7 +1319,6 @@ contains
 
     if ( vid < 0 ) then ! variable registration
 
-       tint8 = real(time_int,DP)
        ndims = size(dims)
        itavg = 0
 
@@ -1324,11 +1326,10 @@ contains
           if( time_avg ) itavg = 1
        endif
 
-       call file_add_variable_c( cvid,                             & ! [OUT]
-                                 FILE_files(fid)%fid,              & ! [IN]
-                                 varname, desc, units,             & ! [IN]
-                                 dims, ndims, dtype, tint8, itavg, & ! [IN]
-                                 error                             ) ! [OUT]
+       call file_add_variable_c( FILE_files(fid)%fid,                 & ! [IN]
+                                 varname, desc, units, standard_name, & ! [IN]
+                                 dims, ndims, dtype, time_int, itavg, & ! [IN]
+                                 cvid, error                          ) ! [OUT]
 
        if ( error /= FILE_SUCCESS_CODE ) then
           write(*,*) 'xxx failed to add variable: '//trim(varname)
@@ -1346,84 +1347,12 @@ contains
     endif
 
     return
-  end subroutine FILE_add_variable_realSP
-
-  !-----------------------------------------------------------------------------
-  subroutine FILE_add_variable_realDP( &
-       fid,                  &
-       varname, desc, units, &
-       dims, dtype,          &
-       time_int,             &
-       vid,                  &
-       time_avg              )
-    implicit none
-    integer,          intent(in)  :: fid
-    character(len=*), intent(in)  :: varname
-    character(len=*), intent(in)  :: desc
-    character(len=*), intent(in)  :: units
-    character(len=*), intent(in)  :: dims(:)
-    integer,          intent(in)  :: dtype
-    real(DP),    intent(in)  :: time_int
-
-    integer,          intent(out) :: vid
-
-    logical,          intent(in), optional :: time_avg
-
-    real(DP) :: tint8
-    integer  :: cvid
-    integer  :: ndims
-    integer  :: itavg
-    integer  :: error
-    integer  :: n
-
-    intrinsic size
-    !---------------------------------------------------------------------------
-
-    vid = -1
-    do n = 1, FILE_nvars
-       if ( FILE_vars(n)%fid == fid .and. FILE_vars(n)%name == varname ) then
-          vid = FILE_vars(n)%vid
-          exit
-       endif
-    enddo
-
-    if ( vid < 0 ) then ! variable registration
-
-       tint8 = real(time_int,DP)
-       ndims = size(dims)
-       itavg = 0
-
-       if ( present(time_avg) ) then
-          if( time_avg ) itavg = 1
-       endif
-
-       call file_add_variable_c( cvid,                             & ! [OUT]
-                                 FILE_files(fid)%fid,              & ! [IN]
-                                 varname, desc, units,             & ! [IN]
-                                 dims, ndims, dtype, tint8, itavg, & ! [IN]
-                                 error                             ) ! [OUT]
-
-       if ( error /= FILE_SUCCESS_CODE ) then
-          write(*,*) 'xxx failed to add variable: '//trim(varname)
-          call PRC_abort
-       endif
-
-       FILE_nvars = FILE_nvars + 1
-       vid = FILE_nvars
-       FILE_vars(vid)%name = varname
-       FILE_vars(vid)%vid  = cvid
-       FILE_vars(vid)%fid  = fid
-
-       if (IO_L) write(IO_FID_LOG,'(A,I3.3,A,I4.4,2A)') &
-       '###### FILE variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
-    endif
-
-    return
-  end subroutine FILE_add_variable_realDP
+  end subroutine FILE_add_variable_with_time
 
   subroutine FILE_def_variable( &
        fid,                  &
        varname, desc, units, &
+       standard_name,        &
        ndims, dims,          &
        dtype,                &
        vid,                  &
@@ -1433,6 +1362,7 @@ contains
     character(len=*), intent( in) :: varname
     character(len=*), intent( in) :: desc
     character(len=*), intent( in) :: units
+    character(len=*), intent( in) :: standard_name
     integer,          intent( in) :: ndims
     character(len=*), intent( in) :: dims(:)
     integer,          intent( in) :: dtype
@@ -1474,11 +1404,11 @@ contains
           itavg = 0
        end if
 
-       call file_add_variable_c( cvid,                & ! (out)
-            FILE_files(fid)%fid,                      & ! (in)
-            varname, desc, units, dims, ndims, dtype, & ! (in)
-            tint_, itavg,                             & ! (in)
-            error                                     ) ! (out)
+       call file_add_variable_c( FILE_files(fid)%fid,                 & ! (in)
+                                 varname, desc, units, standard_name, & ! (in)
+                                 dims, ndims, dtype,                  & ! (in)
+                                 tint_, itavg,                        & ! (in)
+                                 cvid, error                          ) ! (out)
        if ( error /= FILE_SUCCESS_CODE ) then
           write(*,*) 'xxx failed to add variable: '//trim(varname)
           call PRC_abort
