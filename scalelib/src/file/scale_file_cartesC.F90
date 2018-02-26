@@ -133,8 +133,10 @@ module scale_file_cartesC
      character(len=H_SHORT) :: area_x
      character(len=H_SHORT) :: area_y
      character(len=H_SHORT) :: volume
+     character(len=H_SHORT) :: location
+     character(len=H_SHORT) :: grid
   end type dims
-  integer, parameter :: FILE_CARTESC_ndims = 26
+  integer, parameter :: FILE_CARTESC_ndims = 40
   type(dims) :: FILE_CARTESC_dims(FILE_CARTESC_ndims)
 
   type(axisattinfo) :: FILE_CARTESC_AXIS_info(4) ! x, xh, y, yh
@@ -2005,31 +2007,31 @@ contains
        call FILE_Def_Axis( fid, 'UCDZ' , 'Urban Grid Cell length Z',          'm', 'UCZ',  dtype, UKMAX   )
     end if
 
-    call FILE_Def_Axis( fid, 'CX'   , 'Atmos Grid Center Position X',      'm', 'CX',   dtype, iall   )
-    call FILE_Def_Axis( fid, 'CY'   , 'Atmos Grid Center Position Y',      'm', 'CY',   dtype, jall   )
-    call FILE_Def_Axis( fid, 'FX'   , 'Atmos Grid Face   Position X',      'm', 'FX',   dtype, iall+1 )
-    call FILE_Def_Axis( fid, 'FY'   , 'Atmos Grid Face   Position Y',      'm', 'FY',   dtype, jall+1 )
-    call FILE_Def_Axis( fid, 'CDX'  , 'Grid Cell length X',                'm', 'CX',   dtype, iall   )
-    call FILE_Def_Axis( fid, 'CDY'  , 'Grid Cell length Y',                'm', 'CY',   dtype, jall   )
-    call FILE_Def_Axis( fid, 'FDX'  , 'Grid distance X',                   'm', 'FDX',  dtype, iall-1 )
-    call FILE_Def_Axis( fid, 'FDY'  , 'Grid distance Y',                   'm', 'FDY',  dtype, jall-1 )
-    call FILE_Def_Axis( fid, 'CBFX' , 'Boundary factor Center X',          '1', 'CX',   dtype, iall   )
-    call FILE_Def_Axis( fid, 'CBFY' , 'Boundary factor Center Y',          '1', 'CY',   dtype, jall   )
-    call FILE_Def_Axis( fid, 'FBFX' , 'Boundary factor Face X',            '1', 'FX',   dtype, iall+1 )
-    call FILE_Def_Axis( fid, 'FBFY' , 'Boundary factor Face Y',            '1', 'FY',   dtype, jall+1 )
+    call FILE_Def_Axis( fid, 'CX'   , 'Atmos Grid Center Position X',      'm', 'CX',  dtype, iall   )
+    call FILE_Def_Axis( fid, 'CY'   , 'Atmos Grid Center Position Y',      'm', 'CY',  dtype, jall   )
+    call FILE_Def_Axis( fid, 'FX'   , 'Atmos Grid Face   Position X',      'm', 'FX',  dtype, iall+1 )
+    call FILE_Def_Axis( fid, 'FY'   , 'Atmos Grid Face   Position Y',      'm', 'FY',  dtype, jall+1 )
+    call FILE_Def_Axis( fid, 'CDX'  , 'Grid Cell length X',                'm', 'CX',  dtype, iall   )
+    call FILE_Def_Axis( fid, 'CDY'  , 'Grid Cell length Y',                'm', 'CY',  dtype, jall   )
+    call FILE_Def_Axis( fid, 'FDX'  , 'Grid distance X',                   'm', 'FX',  dtype, iall+1 )
+    call FILE_Def_Axis( fid, 'FDY'  , 'Grid distance Y',                   'm', 'FY',  dtype, jall+1 )
+    call FILE_Def_Axis( fid, 'CBFX' , 'Boundary factor Center X',          '1', 'CX',  dtype, iall   )
+    call FILE_Def_Axis( fid, 'CBFY' , 'Boundary factor Center Y',          '1', 'CY',  dtype, jall   )
+    call FILE_Def_Axis( fid, 'FBFX' , 'Boundary factor Face X',            '1', 'FX',  dtype, iall+1 )
+    call FILE_Def_Axis( fid, 'FBFY' , 'Boundary factor Face Y',            '1', 'FY',  dtype, jall+1 )
 
-    call FILE_Def_Axis( fid, 'CXG'  , 'Grid Center Position X (global)',   'm', 'CXG',  dtype, IAG   )
-    call FILE_Def_Axis( fid, 'CYG'  , 'Grid Center Position Y (global)',   'm', 'CYG',  dtype, JAG   )
-    call FILE_Def_Axis( fid, 'FXG'  , 'Grid Face   Position X (global)',   'm', 'FXG',  dtype, IAG+1 )
-    call FILE_Def_Axis( fid, 'FYG'  , 'Grid Face   Position Y (global)',   'm', 'FYG',  dtype, JAG+1 )
-    call FILE_Def_Axis( fid, 'CDXG' , 'Grid Cell length X (global)',       'm', 'CXG',  dtype, IAG   )
-    call FILE_Def_Axis( fid, 'CDYG' , 'Grid Cell length Y (global)',       'm', 'CYG',  dtype, JAG   )
-    call FILE_Def_Axis( fid, 'FDXG' , 'Grid distance X (global)',          'm', 'FDXG', dtype, IAG-1 )
-    call FILE_Def_Axis( fid, 'FDYG' , 'Grid distance Y (global)',          'm', 'FDYG', dtype, JAG-1 )
-    call FILE_Def_Axis( fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG',  dtype, IAG   )
-    call FILE_Def_Axis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG',  dtype, JAG   )
-    call FILE_Def_Axis( fid, 'FBFXG', 'Boundary factor Face   X (global)', '1', 'FXG',  dtype, IAG+1 )
-    call FILE_Def_Axis( fid, 'FBFYG', 'Boundary factor Face   Y (global)', '1', 'FYG',  dtype, JAG+1 )
+    call FILE_Def_Axis( fid, 'CXG'  , 'Grid Center Position X (global)',   'm', 'CXG', dtype, IAG   )
+    call FILE_Def_Axis( fid, 'CYG'  , 'Grid Center Position Y (global)',   'm', 'CYG', dtype, JAG   )
+    call FILE_Def_Axis( fid, 'FXG'  , 'Grid Face   Position X (global)',   'm', 'FXG', dtype, IAG+1 )
+    call FILE_Def_Axis( fid, 'FYG'  , 'Grid Face   Position Y (global)',   'm', 'FYG', dtype, JAG+1 )
+    call FILE_Def_Axis( fid, 'CDXG' , 'Grid Cell length X (global)',       'm', 'CXG', dtype, IAG   )
+    call FILE_Def_Axis( fid, 'CDYG' , 'Grid Cell length Y (global)',       'm', 'CYG', dtype, JAG   )
+    call FILE_Def_Axis( fid, 'FDXG' , 'Grid distance X (global)',          'm', 'FXG', dtype, IAG+1 )
+    call FILE_Def_Axis( fid, 'FDYG' , 'Grid distance Y (global)',          'm', 'FYG', dtype, JAG+1 )
+    call FILE_Def_Axis( fid, 'CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', dtype, IAG   )
+    call FILE_Def_Axis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', dtype, JAG   )
+    call FILE_Def_Axis( fid, 'FBFXG', 'Boundary factor Face   X (global)', '1', 'FXG', dtype, IAG+1 )
+    call FILE_Def_Axis( fid, 'FBFYG', 'Boundary factor Face   Y (global)', '1', 'FYG', dtype, JAG+1 )
 
     ! associate coordinates
     axisname(1:2) = (/'x ','y '/)
@@ -2248,6 +2250,8 @@ contains
        endif
     endif
 
+    ! cell measures
+
     call FILE_Set_Attribute( fid, "cell_area",    "standard_name", "area" ) ! [IN]
     call FILE_Set_Attribute( fid, "cell_area_uy", "standard_name", "area" ) ! [IN]
     call FILE_Set_Attribute( fid, "cell_area_xv", "standard_name", "area" ) ! [IN]
@@ -2272,6 +2276,65 @@ contains
        call FILE_Set_Attribute( fid, "cell_volume_uxy", "standard_name", "volume" ) ! [IN]
     end if
 
+    ! SGRID
+    call FILE_Add_AssociatedVariable( fid, "grid" )
+    call FILE_Set_Attribute( fid, "grid", "cf_role",             "grid_topology" )
+    call FILE_Set_Attribute( fid, "grid", "topology_dimension",  (/ 2 /) )
+    call FILE_Set_Attribute( fid, "grid", "node_dimensions",     "xh yh" )
+    call FILE_Set_Attribute( fid, "grid", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_Set_Attribute( fid, "grid", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_Set_Attribute( fid, "grid", "face_coordinates",    "lon lat" )
+    call FILE_Set_Attribute( fid, "grid", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_Set_Attribute( fid, "grid", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_Set_Attribute( fid, "grid", "vertical_dimensions", "z: zh (padding: none)" )
+
+    call FILE_Add_AssociatedVariable( fid, "grid_ocean" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "cf_role",             "grid_topology" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "topology_dimension",  (/ 2 /) )
+    call FILE_Set_Attribute( fid, "grid_ocean", "node_dimensions",     "xh yh" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "face_coordinates",    "lon lat" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "vertical_dimensions", "oz: ozh (padding: none)" )
+
+    call FILE_Add_AssociatedVariable( fid, "grid_land" )
+    call FILE_Set_Attribute( fid, "grid_land", "cf_role",             "grid_topology" )
+    call FILE_Set_Attribute( fid, "grid_land", "topology_dimension",  (/ 2 /) )
+    call FILE_Set_Attribute( fid, "grid_land", "node_dimensions",     "xh yh" )
+    call FILE_Set_Attribute( fid, "grid_land", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_Set_Attribute( fid, "grid_land", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_Set_Attribute( fid, "grid_land", "face_coordinates",    "lon lat" )
+    call FILE_Set_Attribute( fid, "grid_land", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_Set_Attribute( fid, "grid_land", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_Set_Attribute( fid, "grid_land", "vertical_dimensions", "lz: lzh (padding: none)" )
+
+    call FILE_Add_AssociatedVariable( fid, "grid_urban" )
+    call FILE_Set_Attribute( fid, "grid_urban", "cf_role",             "grid_topology" )
+    call FILE_Set_Attribute( fid, "grid_urban", "topology_dimension",  (/ 2 /) )
+    call FILE_Set_Attribute( fid, "grid_urban", "node_dimensions",     "xh yh" )
+    call FILE_Set_Attribute( fid, "grid_urban", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_Set_Attribute( fid, "grid_urban", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_Set_Attribute( fid, "grid_urban", "face_coordinates",    "lon lat" )
+    call FILE_Set_Attribute( fid, "grid_urban", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_Set_Attribute( fid, "grid_urban", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_Set_Attribute( fid, "grid_urban", "vertical_dimensions", "uz: uzh (padding: none)" )
+
+    call FILE_Add_AssociatedVariable( fid, "grid_model" )
+    call FILE_Set_Attribute( fid, "grid_model", "cf_role",             "grid_topology" )
+    call FILE_Set_Attribute( fid, "grid_model", "topology_dimension",  (/ 2 /) )
+    call FILE_Set_Attribute( fid, "grid_model", "node_dimensions",     "FX FY" )
+    call FILE_Set_Attribute( fid, "grid_model", "face_dimensions",     "CX: FY (padding: none) CY: FY (padding: none)" )
+    call FILE_Set_Attribute( fid, "grid_model", "vertical_dimensions", "CZ: FZ (padding: none)" )
+
+    call FILE_Add_AssociatedVariable( fid, "grid_model_global" )
+    call FILE_Set_Attribute( fid, "grid_model_global", "cf_role",             "grid_topology" )
+    call FILE_Set_Attribute( fid, "grid_model_global", "topology_dimension",  (/ 2 /) )
+    call FILE_Set_Attribute( fid, "grid_model_global", "node_dimensions",     "FXG FYG" )
+    call FILE_Set_Attribute( fid, "grid_model_global", "face_dimensions",     "CXG: FYG (padding: none) CYG: FYG (padding: none)" )
+    call FILE_Set_Attribute( fid, "grid_model_global", "vertical_dimensions", "CZ: FZ (padding: none)" )
+
     return
   end subroutine FILE_CARTESC_def_axes
 
@@ -2281,6 +2344,8 @@ contains
        fid,       &
        haszcoord, &
        start      )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_Write_Axis,                 &
@@ -2347,7 +2412,10 @@ contains
     real(RP) :: lz_bnds(2,LKA), lzh_bnds(2,0:LKA)
     real(RP) :: uz_bnds(2,UKA), uzh_bnds(2,0:UKA)
     real(RP) :: x_bnds(2,IA), xh_bnds(2,0:IA)
-    real(RP) :: y_bnds(2,IA), yh_bnds(2,0:IA)
+    real(RP) :: y_bnds(2,JA), yh_bnds(2,0:JA)
+
+    real(RP) :: FDXG(0:IAG), FDYG(0:JAG)
+    real(RP) :: FDX(0:IA), FDY(0:JA)
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -2528,6 +2596,20 @@ contains
        end if
     end if
 
+    FDXG(1:IAG-1) = ATMOS_GRID_CARTESC_FDXG(:)
+    FDXG(0  ) = UNDEF
+    FDXG(IAG) = UNDEF
+    FDYG(1:JAG-1) = ATMOS_GRID_CARTESC_FDYG(:)
+    FDYG(0  ) = UNDEF
+    FDYG(JAG) = UNDEF
+
+    FDX(1:IA-1) = ATMOS_GRID_CARTESC_FDX(:)
+    FDX(0 ) = FDXG(IS_inG-IHALO-1)
+    FDX(IA) = FDXG(IE_inG+IHALO  )
+    FDY(1:JA-1) = ATMOS_GRID_CARTESC_FDY(:)
+    FDY(0 ) = FDYG(JS_inG-JHALO-1)
+    FDY(JA) = FDYG(JE_inG+JHALO  )
+
     ! global coordinates (always including halo)
     if ( haszcoord .and. put_z ) then
        call FILE_Write_Axis( fid, 'CZ'  , ATMOS_GRID_CARTESC_CZ  (:), start(1:1) )
@@ -2558,8 +2640,9 @@ contains
           call FILE_Write_Axis( fid, 'FY',   ATMOS_GRID_CARTESC_FYG  (:) )
           call FILE_Write_Axis( fid, 'CDX',  ATMOS_GRID_CARTESC_CDXG (:) )
           call FILE_Write_Axis( fid, 'CDY',  ATMOS_GRID_CARTESC_CDYG (:) )
-          call FILE_Write_Axis( fid, 'FDX',  ATMOS_GRID_CARTESC_FDXG (:) )
-          call FILE_Write_Axis( fid, 'FDY',  ATMOS_GRID_CARTESC_FDYG (:) )
+
+          call FILE_Write_Axis( fid, 'FDX',                     FDXG (:) )
+          call FILE_Write_Axis( fid, 'FDY',                     FDYG (:) )
           call FILE_Write_Axis( fid, 'CBFX', ATMOS_GRID_CARTESC_CBFXG(:) )
           call FILE_Write_Axis( fid, 'CBFY', ATMOS_GRID_CARTESC_CBFYG(:) )
           call FILE_Write_Axis( fid, 'FBFX', ATMOS_GRID_CARTESC_FBFXG(:) )
@@ -2572,28 +2655,26 @@ contains
        call FILE_Write_Axis( fid, 'FY',   ATMOS_GRID_CARTESC_FY  (:) )
        call FILE_Write_Axis( fid, 'CDX',  ATMOS_GRID_CARTESC_CDX (:) )
        call FILE_Write_Axis( fid, 'CDY',  ATMOS_GRID_CARTESC_CDY (:) )
-       call FILE_Write_Axis( fid, 'FDX',  ATMOS_GRID_CARTESC_FDX (:) )
-       call FILE_Write_Axis( fid, 'FDY',  ATMOS_GRID_CARTESC_FDY (:) )
+       call FILE_Write_Axis( fid, 'FDX',                     FDX (:) )
+       call FILE_Write_Axis( fid, 'FDY',                     FDY (:) )
        call FILE_Write_Axis( fid, 'CBFX', ATMOS_GRID_CARTESC_CBFX(:) )
        call FILE_Write_Axis( fid, 'CBFY', ATMOS_GRID_CARTESC_CBFY(:) )
        call FILE_Write_Axis( fid, 'FBFX', ATMOS_GRID_CARTESC_FBFX(:) )
        call FILE_Write_Axis( fid, 'FBFY', ATMOS_GRID_CARTESC_FBFY(:) )
     endif
 
-    if ( (.not. FILE_get_AGGREGATE(fid)) .or. PRC_IsMaster ) then
-       call FILE_Write_Axis( fid, 'CXG',   ATMOS_GRID_CARTESC_CXG  (:) )
-       call FILE_Write_Axis( fid, 'CYG',   ATMOS_GRID_CARTESC_CYG  (:) )
-       call FILE_Write_Axis( fid, 'FXG',   ATMOS_GRID_CARTESC_FXG  (:) )
-       call FILE_Write_Axis( fid, 'FYG',   ATMOS_GRID_CARTESC_FYG  (:) )
-       call FILE_Write_Axis( fid, 'CDXG',  ATMOS_GRID_CARTESC_CDXG (:) )
-       call FILE_Write_Axis( fid, 'CDYG',  ATMOS_GRID_CARTESC_CDYG (:) )
-       call FILE_Write_Axis( fid, 'FDXG',  ATMOS_GRID_CARTESC_FDXG (:) )
-       call FILE_Write_Axis( fid, 'FDYG',  ATMOS_GRID_CARTESC_FDYG (:) )
-       call FILE_Write_Axis( fid, 'CBFXG', ATMOS_GRID_CARTESC_CBFXG(:) )
-       call FILE_Write_Axis( fid, 'CBFYG', ATMOS_GRID_CARTESC_CBFYG(:) )
-       call FILE_Write_Axis( fid, 'FBFXG', ATMOS_GRID_CARTESC_FBFXG(:) )
-       call FILE_Write_Axis( fid, 'FBFYG', ATMOS_GRID_CARTESC_FBFYG(:) )
-    end if
+    call FILE_Write_Axis( fid, 'CXG',   ATMOS_GRID_CARTESC_CXG  (:) )
+    call FILE_Write_Axis( fid, 'CYG',   ATMOS_GRID_CARTESC_CYG  (:) )
+    call FILE_Write_Axis( fid, 'FXG',   ATMOS_GRID_CARTESC_FXG  (:) )
+    call FILE_Write_Axis( fid, 'FYG',   ATMOS_GRID_CARTESC_FYG  (:) )
+    call FILE_Write_Axis( fid, 'CDXG',  ATMOS_GRID_CARTESC_CDXG (:) )
+    call FILE_Write_Axis( fid, 'CDYG',  ATMOS_GRID_CARTESC_CDYG (:) )
+    call FILE_Write_Axis( fid, 'FDXG',                     FDXG (:) )
+    call FILE_Write_Axis( fid, 'FDYG',                     FDYG (:) )
+    call FILE_Write_Axis( fid, 'CBFXG', ATMOS_GRID_CARTESC_CBFXG(:) )
+    call FILE_Write_Axis( fid, 'CBFYG', ATMOS_GRID_CARTESC_CBFYG(:) )
+    call FILE_Write_Axis( fid, 'FBFXG', ATMOS_GRID_CARTESC_FBFXG(:) )
+    call FILE_Write_Axis( fid, 'FBFYG', ATMOS_GRID_CARTESC_FBFYG(:) )
 
     ! associate coordinates
     if ( FILE_get_AGGREGATE(fid) ) then
@@ -2820,8 +2901,15 @@ contains
        call FILE_Set_Attribute( fid, varname, "cell_measures", "volume: "//trim(FILE_CARTESC_dims(dimid)%volume) )
     end select
 
+    ! mapping
     if ( FILE_CARTESC_dims(dimid)%mapping .and. FILE_CARTESC_mapping_info%mapping_name /= "" ) then
        call FILE_Set_Attribute( fid, varname, "grid_mapping", FILE_CARTESC_mapping_info%mapping_name )
+    end if
+
+    ! SGRID
+    if ( FILE_CARTESC_dims(dimid)%location /= "" ) then
+       call FILE_Set_Attribute( fid, varname, "grid",     FILE_CARTESC_dims(dimid)%grid     )
+       call FILE_Set_Attribute( fid, varname, "location", FILE_CARTESC_dims(dimid)%location )
     end if
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
@@ -3799,253 +3887,43 @@ contains
 
     ! Dimension Information
 
-    FILE_CARTESC_dims(:)%area    = ''
-    FILE_CARTESC_dims(:)%area_x  = ''
-    FILE_CARTESC_dims(:)%area_y  = ''
-    FILE_CARTESC_dims(:)%volume  = ''
+    ! 1D variable
+    call set_dimension( 'Z', 1, 'z', KA )
+    call set_dimension( 'X', 1, 'x', IA )
+    call set_dimension( 'Y', 1, 'y', JA )
 
-    dimid = 1
-    FILE_CARTESC_dims(dimid)%name    = 'Z'
-    FILE_CARTESC_dims(dimid)%ndims   = 1
-    FILE_CARTESC_dims(dimid)%dims(1) = 'z'
-    FILE_CARTESC_dims(dimid)%size    = KA
-    FILE_CARTESC_dims(dimid)%mapping = .false.
+    ! 2D variable
+    call set_dimension( 'XY', 2, (/ 'x' , 'y'  /), IA*JA, .true., area='cell_area',    location='face'  )
+    call set_dimension( 'UY', 2, (/ 'xh', 'y ' /), IA*JA, .true., area='cell_area_uy', location='edge1' )
+    call set_dimension( 'XV', 2, (/ 'x ', 'yh' /), IA*JA, .true., area='cell_area_xv', location='edge2' )
+    call set_dimension( 'UV', 2, (/ 'xh', 'yh' /), IA*JA, .true.,                      location='node'  )
 
-    dimid = 2
-    FILE_CARTESC_dims(dimid)%name    = 'X'
-    FILE_CARTESC_dims(dimid)%ndims   = 1
-    FILE_CARTESC_dims(dimid)%dims(1) = 'x'
-    FILE_CARTESC_dims(dimid)%size    = IA
-    FILE_CARTESC_dims(dimid)%mapping = .false.
-
-    dimid = 3
-    FILE_CARTESC_dims(dimid)%name    = 'Y'
-    FILE_CARTESC_dims(dimid)%ndims   = 1
-    FILE_CARTESC_dims(dimid)%dims(1) = 'y'
-    FILE_CARTESC_dims(dimid)%size    = JA
-    FILE_CARTESC_dims(dimid)%mapping = .false.
-
-    dimid = 4
-    FILE_CARTESC_dims(dimid)%name    = 'XY'
-    FILE_CARTESC_dims(dimid)%ndims   = 2
-    FILE_CARTESC_dims(dimid)%dims(1) = 'x'
-    FILE_CARTESC_dims(dimid)%dims(2) = 'y'
-    FILE_CARTESC_dims(dimid)%size    = IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area'
-
-    dimid = 5
-    FILE_CARTESC_dims(dimid)%name    = 'XV'
-    FILE_CARTESC_dims(dimid)%ndims   = 2
-    FILE_CARTESC_dims(dimid)%dims(1) = 'x'
-    FILE_CARTESC_dims(dimid)%dims(2) = 'yh'
-    FILE_CARTESC_dims(dimid)%size    = IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area_xv'
-
-    dimid = 6
-    FILE_CARTESC_dims(dimid)%name    = 'UV'
-    FILE_CARTESC_dims(dimid)%ndims   = 2
-    FILE_CARTESC_dims(dimid)%dims(1) = 'xh'
-    FILE_CARTESC_dims(dimid)%dims(2) = 'yh'
-    FILE_CARTESC_dims(dimid)%size    = IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-
-    dimid = 7
-    FILE_CARTESC_dims(dimid)%name    = 'ZX'
-    FILE_CARTESC_dims(dimid)%ndims   = 2
-    FILE_CARTESC_dims(dimid)%dims(1) = 'z'
-    FILE_CARTESC_dims(dimid)%dims(2) = 'x'
-    FILE_CARTESC_dims(dimid)%size    = KA * IA
-    FILE_CARTESC_dims(dimid)%mapping = .false.
+    call set_dimension( 'ZX', 2, (/ 'z', 'x' /), KA*IA )
+    call set_dimension( 'ZY', 2, (/ 'z', 'y' /), KA*JA )
 
     ! 3D variable
+    call set_dimension( 'ZXY',   3, (/ 'z',  'x',  'y'  /), KA*IA*JA,     .true.,                &
+                        area='cell_area',    area_x='cell_area_zxy_x', area_y='cell_area_zxy_y', &
+                        volume='cell_volume',     location='face'                                )
+    call set_dimension( 'ZHXY',  3, (/ 'zh', 'x ', 'y ' /), (KA+1)*IA*JA, .true.,                &
+                        area='cell_area',    area_x='cell_area_wxy_x', area_y='cell_area_wxy_y', &
+                        volume='cell_volume_wxy', location='face'                                )
+    call set_dimension( 'ZXHY',  3, (/ 'z ', 'xh', 'y ' /), KA*IA*JA,     .true.,                &
+                        area='cell_area_uy', area_x='cell_area_zuy_x',                           &
+                        volume='cell_volume_zuy', location='edge1'                               )
+    call set_dimension( 'ZXYH',  3, (/ 'z ', 'x ', 'yh' /), KA*IA*JA,     .true.,                &
+                        area='cell_area_xv',                           area_y='cell_area_zxv_y', &
+                        volume='cell_volume_zxv', location='edge2'                               )
+    call set_dimension( 'ZXHYH', 3, (/ 'z ', 'xh', 'yh' /), KA*IA*JA,     .true., &
+                                             area_x='cell_area_zuv_x', area_y='cell_area_zuv_y', &
+                                                  location='node'                                )
 
-    dimid = 8
-    FILE_CARTESC_dims(dimid)%name    = 'ZXY'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'z','x','y'/)
-    FILE_CARTESC_dims(dimid)%size    = KA * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area'
-    FILE_CARTESC_dims(dimid)%area_x  = 'cell_area_zxy_x'
-    FILE_CARTESC_dims(dimid)%area_y  = 'cell_area_zxy_y'
-    FILE_CARTESC_dims(dimid)%volume  = 'cell_volume'
-
-    dimid = 9
-    FILE_CARTESC_dims(dimid)%name    = 'ZHXY'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'zh','x ','y '/)
-    FILE_CARTESC_dims(dimid)%size    = (KA+1) * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area'
-    FILE_CARTESC_dims(dimid)%area_x  = 'cell_area_wxy_x'
-    FILE_CARTESC_dims(dimid)%area_y  = 'cell_area_wxy_y'
-    FILE_CARTESC_dims(dimid)%volume  = 'cell_volume_wxy'
-
-    dimid = 10
-    FILE_CARTESC_dims(dimid)%name    = 'ZXHY'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'z ','xh','y '/)
-    FILE_CARTESC_dims(dimid)%size    = KA * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area_uy'
-    FILE_CARTESC_dims(dimid)%area_x  = 'cell_area_zuy_x'
-    FILE_CARTESC_dims(dimid)%volume  = 'cell_volume_zuy'
-
-    dimid = 11
-    FILE_CARTESC_dims(dimid)%name    = 'ZXYH'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'z ','x ','yh'/)
-    FILE_CARTESC_dims(dimid)%size    = KA * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area_xv'
-    FILE_CARTESC_dims(dimid)%area_y  = 'cell_area_zxv_y'
-    FILE_CARTESC_dims(dimid)%volume  = 'cell_volume_zxv'
-
-    dimid = 12
-    FILE_CARTESC_dims(dimid)%name    = 'ZXHYH'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'z ','xh','yh'/)
-    FILE_CARTESC_dims(dimid)%size    = KA * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area_x  = 'cell_area_zuv_x'
-    FILE_CARTESC_dims(dimid)%area_y  = 'cell_area_zuv_y'
-    FILE_CARTESC_dims(dimid)%volume  = ''
-
-    dimid = 13
-    FILE_CARTESC_dims(dimid)%name    = 'OXY'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'oz','x ','y '/)
-    FILE_CARTESC_dims(dimid)%size    = OKMAX * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area'
-    FILE_CARTESC_dims(dimid)%volume  = 'cell_volume_oxy'
-
-    dimid = 14
-    FILE_CARTESC_dims(dimid)%name    = 'LXY'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'lz','x ','y '/)
-    FILE_CARTESC_dims(dimid)%size    = LKMAX * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area'
-    FILE_CARTESC_dims(dimid)%volume  = 'cell_volume_lxy'
-
-    dimid = 15
-    FILE_CARTESC_dims(dimid)%name    = 'UXY'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'uz','x ','y '/)
-    FILE_CARTESC_dims(dimid)%size    = UKMAX * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area'
-    FILE_CARTESC_dims(dimid)%volume  = 'cell_volume_uxy'
-
-    ! 3D variable with time dimension
-    dimid = 16
-    FILE_CARTESC_dims(dimid)%name    = 'XYT'
-    FILE_CARTESC_dims(dimid)%ndims   = 2
-    FILE_CARTESC_dims(dimid)%dims(1) = 'x'
-    FILE_CARTESC_dims(dimid)%dims(2) = 'y'
-    FILE_CARTESC_dims(dimid)%size    = IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area'
-
-    ! 4D variable
-    dimid = 17
-    FILE_CARTESC_dims(dimid)%name    = 'ZXYT'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'z','x','y'/)
-    FILE_CARTESC_dims(dimid)%size    = KA * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area'
-    FILE_CARTESC_dims(dimid)%area_x  = 'cell_area_zxy_x'
-    FILE_CARTESC_dims(dimid)%area_y  = 'cell_area_zxy_y'
-    FILE_CARTESC_dims(dimid)%volume  = 'cell_volume'
-
-    dimid = 18
-    FILE_CARTESC_dims(dimid)%name    = 'ZHXYT'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'zh','x ','y '/)
-    FILE_CARTESC_dims(dimid)%size    = (KA+1) * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area'
-    FILE_CARTESC_dims(dimid)%area_x  = 'cell_area_wxy_x'
-    FILE_CARTESC_dims(dimid)%area_y  = 'cell_area_wxy_y'
-    FILE_CARTESC_dims(dimid)%volume  = 'cell_volume_wxy'
-
-    dimid = 19
-    FILE_CARTESC_dims(dimid)%name    = 'ZXHYT'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'z ','xh','y '/)
-    FILE_CARTESC_dims(dimid)%size    = KA * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area_uy'
-    FILE_CARTESC_dims(dimid)%area_x  = 'cell_area_zuy_x'
-    FILE_CARTESC_dims(dimid)%volume  = 'cell_volume_zuy'
-
-    dimid = 20
-    FILE_CARTESC_dims(dimid)%name    = 'ZXYHT'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'z ','x ','yh'/)
-    FILE_CARTESC_dims(dimid)%size    = KA * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area_xv'
-    FILE_CARTESC_dims(dimid)%area_y  = 'cell_area_zxv_y'
-    FILE_CARTESC_dims(dimid)%volume  = 'cell_volume_zxv'
-
-    dimid = 21
-    FILE_CARTESC_dims(dimid)%name    = 'OXYT'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'oz','x ','y '/)
-    FILE_CARTESC_dims(dimid)%size    = OKMAX * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area'
-    FILE_CARTESC_dims(dimid)%volume  = 'cell_volume_oxy'
-
-    dimid = 22
-    FILE_CARTESC_dims(dimid)%name    = 'OHXYT'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'ozh','x  ','y  '/)
-    FILE_CARTESC_dims(dimid)%size    = (OKMAX+1) * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area'
-    FILE_CARTESC_dims(dimid)%volume  = ''
-
-    dimid = 23
-    FILE_CARTESC_dims(dimid)%name    = 'LXYT'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'lz','x ','y '/)
-    FILE_CARTESC_dims(dimid)%size    = LKMAX * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area'
-    FILE_CARTESC_dims(dimid)%volume  = 'cell_volume_lxy'
-
-    dimid = 24
-    FILE_CARTESC_dims(dimid)%name    = 'LHXYT'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'lzh','x  ','y  '/)
-    FILE_CARTESC_dims(dimid)%size    = (LKMAX+1) * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area'
-    FILE_CARTESC_dims(dimid)%volume  = ''
-
-    dimid = 25
-    FILE_CARTESC_dims(dimid)%name    = 'UXYT'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'uz','x ','y '/)
-    FILE_CARTESC_dims(dimid)%size    = UKMAX * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area'
-    FILE_CARTESC_dims(dimid)%volume  = 'cell_volume_uxy'
-
-    dimid = 26
-    FILE_CARTESC_dims(dimid)%name    = 'UHXYT'
-    FILE_CARTESC_dims(dimid)%ndims   = 3
-    FILE_CARTESC_dims(dimid)%dims    = (/'uzh','x  ','y  '/)
-    FILE_CARTESC_dims(dimid)%size    = (UKMAX+1) * IA * JA
-    FILE_CARTESC_dims(dimid)%mapping = .true.
-    FILE_CARTESC_dims(dimid)%area    = 'cell_area'
-    FILE_CARTESC_dims(dimid)%volume  = ''
+    call set_dimension( 'OXY',  3, (/ 'oz',  'x ',  'y '  /), OKMAX*IA*JA,     .true., area='cell_area', volume='cell_volume_oxy', location='face', grid='ocean' )
+    call set_dimension( 'OHXY', 3, (/ 'ozh', 'x  ', 'y  ' /), (OKMAX+1)*IA*JA, .true., area='cell_area', volume='cell_volume_oxy', location='face', grid='ocean' )
+    call set_dimension( 'LXY',  3, (/ 'lz',  'x ',  'y '  /), LKMAX*IA*JA,     .true., area='cell_area', volume='cell_volume_lxy', location='face', grid='land'  )
+    call set_dimension( 'LHXY', 3, (/ 'lzh', 'x  ', 'y  ' /), (LKMAX+1)*IA*JA, .true., area='cell_area', volume='cell_volume_lxy', location='face', grid='land'  )
+    call set_dimension( 'UXY',  3, (/ 'uz',  'x ',  'y '  /), UKMAX*IA*JA,     .true., area='cell_area', volume='cell_volume_uxy', location='face', grid='urban' )
+    call set_dimension( 'UHXY', 3, (/ 'uzh', 'x  ', 'y  ' /), (UKMAX+1)*IA*JA, .true., area='cell_area', volume='cell_volume_uxy', location='face', grid='urban' )
 
 
     ! Axis information
@@ -4125,6 +4003,86 @@ contains
 
     return
   end subroutine set_dimension_informations
+
+  subroutine set_dimension( name, ndims, dims, size, mapping, area, area_x, area_y, volume, location, grid )
+    use scale_process, only: &
+       PRC_abort
+    character(len=*), intent(in) :: name
+    integer,          intent(in) :: ndims
+    character(len=*), intent(in) :: dims(ndims)
+    integer,          intent(in) :: size
+    logical,          intent(in), optional :: mapping
+    character(len=*), intent(in), optional :: area
+    character(len=*), intent(in), optional :: area_x
+    character(len=*), intent(in), optional :: area_y
+    character(len=*), intent(in), optional :: volume
+    character(len=*), intent(in), optional :: location
+    character(len=*), intent(in), optional :: grid
+
+    integer, save :: dimid = 0
+
+    integer :: n
+
+    do n = 1, 2
+       dimid = dimid + 1
+       if ( dimid > FILE_CARTESC_ndims ) then
+          write(*,*) 'xxx number of dimensions exceeds the limit'
+          call PRC_abort
+       end if
+
+       if ( n==1 ) then
+          FILE_CARTESC_dims(dimid)%name = name
+       else
+          FILE_CARTESC_dims(dimid)%name = trim(name)//"T"
+       end if
+       FILE_CARTESC_dims(dimid)%ndims         = ndims
+       FILE_CARTESC_dims(dimid)%dims(1:ndims) = dims(:)
+       FILE_CARTESC_dims(dimid)%size          = size
+
+       if ( present(mapping) ) then
+          FILE_CARTESC_dims(dimid)%mapping  = mapping
+       else
+          FILE_CARTESC_dims(dimid)%mapping  = .false.
+       end if
+
+       if ( present(area) ) then
+          FILE_CARTESC_dims(dimid)%area     = area
+       else
+          FILE_CARTESC_dims(dimid)%area     = ''
+       end if
+       if ( present(area_x) ) then
+          FILE_CARTESC_dims(dimid)%area     = area_x
+       else
+          FILE_CARTESC_dims(dimid)%area     = ''
+       end if
+       if ( present(area_y) ) then
+          FILE_CARTESC_dims(dimid)%area     = area_y
+       else
+          FILE_CARTESC_dims(dimid)%area     = ''
+       end if
+
+       if ( present(volume) ) then
+          FILE_CARTESC_dims(dimid)%volume   = volume
+       else
+          FILE_CARTESC_dims(dimid)%volume   = ''
+       end if
+
+       if ( present(location) ) then
+          FILE_CARTESC_dims(dimid)%location = location
+          if ( present(grid) ) then
+             FILE_CARTESC_dims(dimid)%grid = 'grid_'//trim(grid)
+          else
+             FILE_CARTESC_dims(dimid)%grid = 'grid'
+          end if
+       else
+          FILE_CARTESC_dims(dimid)%location = ''
+          FILE_CARTESC_dims(dimid)%grid     = ''
+       end if
+
+    end do
+
+    return
+  end subroutine set_dimension
 
   !-----------------------------------------------------------------------------
   !> construct MPI derived datatypes for read buffers
