@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Physics Cumulus Parameterization - Common
+!> module ATMOSPHERE / Physics / Cumulus Parameterization / Common
 !!
 !! @par Description
 !!          Common module for Cumulus convection parameterization

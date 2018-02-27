@@ -2,12 +2,9 @@
 !> module ATMOSPHERE / Physics Cumulus Parameterization
 !!
 !! @par Description
-!!         Cumulus convection parameterization
+!!         Cumulus Convection parameterization
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2016-06-27 (S.Matsugishi) [new]
 !!
 !<
 module scale_atmos_phy_cp
