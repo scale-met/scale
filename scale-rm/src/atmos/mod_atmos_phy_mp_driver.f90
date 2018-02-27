@@ -497,7 +497,7 @@ contains
              CP_t = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
              CV_t = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
              RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
-                  - ( CP_t + log( PRE00 / PRES(k,i,j) ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
+                  - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
                   * DENS(k,i,j) * TEMP(k,i,j)
           end do
           end do
@@ -561,7 +561,7 @@ contains
              CP_t = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
              CV_t = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
              RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
-                  - ( CP_t + log( PRE00 / PRES(k,i,j) ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
+                  - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
                   * DENS(k,i,j) * TEMP(k,i,j)
 !             RHOT_t_MP(k,i,j) = RHOE_t(k,i,j) / ( EXNER(k,i,j) * CPtot(k,i,j) ) &
 !                  - RHOT(k,i,j) * CP_t / CPtot(k,i,j) &
@@ -765,7 +765,7 @@ contains
                 CV_t = ( CVtot2(k) - CVtot(k,i,j) ) / dt_MP
                 RHOH_MP(k,i,j) = RHOH_MP(k,i,j) &
                      + ( RHOE2(k) - RHOE(k) ) / dt_MP &
-                     - ( CP_t + log( PRE00 / PRES(k,i,j) ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
+                     - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
                      * DENS(k,i,j) * TEMP(k,i,j)
 !                RHOT_t_MP(k,i,j) = RHOT_t_MP(k,i,j) &
 !                     + ( RHOE2(k) - RHOE(k) ) / ( dt_MP * EXNER(k,i,j) * CPtot(k,i,j) ) &
