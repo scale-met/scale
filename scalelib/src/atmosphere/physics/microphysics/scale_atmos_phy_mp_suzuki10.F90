@@ -1472,7 +1472,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate Cloud Fraction
   subroutine ATMOS_PHY_MP_suzuki10_cloud_fraction( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, QA, &
+       KA, KS, KE,     &
+       IA, IS, IE,     &
+       JA, JS, JE,     &
+       QA,             &
        QTRC,           &
        mask_criterion, &
        cldfrac         )
@@ -1527,11 +1530,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate Effective Radius
   subroutine ATMOS_PHY_MP_suzuki10_effective_radius( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, QA, &
-       QTRC0, &
-       DENS0, &
-       TEMP0, &
-       Re     )
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       QA,         &
+       DENS0,      &
+       TEMP0,      &
+       QTRC0,      &
+       Re          )
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_atmos_hydrometeor, only: &
@@ -1549,9 +1555,9 @@ contains
     integer, intent(in) :: JA, JS, JE
     integer, intent(in) :: QA
 
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
     real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! temperature               [K]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
     real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
 
     real(RP), parameter :: um2cm = 100.0_RP
@@ -1663,9 +1669,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate mixing ratio of each category
   subroutine ATMOS_PHY_MP_suzuki10_mixing_ratio( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, QA, &
-       QTRC0, &
-       Qe     )
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       QA,         &
+       QTRC0,      &
+       Qe          )
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_atmos_hydrometeor, only: &
@@ -1683,8 +1692,8 @@ contains
     integer, intent(in) :: JA, JS, JE
     integer, intent(in) :: QA
 
-    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
 
     real(RP) :: sum2
     integer  :: i, j, k, iq, ihydro

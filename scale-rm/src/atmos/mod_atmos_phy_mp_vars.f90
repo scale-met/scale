@@ -559,6 +559,10 @@ contains
        ATMOS_PHY_MP_TOMITA08_mass_ratio, &
        ATMOS_PHY_MP_TOMITA08_effective_radius, &
        ATMOS_PHY_MP_TOMITA08_cloud_fraction
+    use scale_atmos_phy_mp_suzuki10, only: &
+       ATMOS_PHY_MP_suzuki10_mixing_ratio, &
+       ATMOS_PHY_MP_suzuki10_effective_radius, &
+       ATMOS_PHY_MP_suzuki10_cloud_fraction
     use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP_CloudFraction,   &
        ATMOS_PHY_MP_EffectiveRadius, &
@@ -588,6 +592,15 @@ contains
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   QTRC(:,:,:,QHS:QHE), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
                   ATMOS_PHY_MP_CLDFRAC(:,:,:)                          ) ! [OUT]
+          case ( 'SUZUKI10' )
+             call ATMOS_PHY_MP_suzuki10_cloud_fraction( &
+                  KA, KS,  KE,                    & ! [IN]
+                  IA, ISB, IEB,                   & ! [IN]
+                  JA, JSB, JEB,                   & ! [IN]
+                  QA,                             & ! [IN]
+                  QTRC(:,:,:,:),                  & ! [IN]
+                  ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
+                  ATMOS_PHY_MP_CLDFRAC(:,:,:)     ) ! [OUT]
           case default
              if ( associated(ATMOS_PHY_MP_CloudFraction) ) then
                 call ATMOS_PHY_MP_CloudFraction( &
@@ -623,6 +636,16 @@ contains
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QHS:QHE), & ! [IN]
                   ATMOS_PHY_MP_Re(:,:,:,:)                       ) ! [OUT]
+          case ( 'SUZUKI10' )
+             call ATMOS_PHY_MP_suzuki10_effective_radius( &
+                  KA, KS,  KE,             & ! [IN]
+                  IA, ISB, IEB,            & ! [IN]
+                  JA, JSB, JEB,            & ! [IN]
+                  QA,                      & ! [IN]
+                  DENS(:,:,:),             & ! [IN]
+                  TEMP(:,:,:),             & ! [IN]
+                  QTRC(:,:,:,:),           & ! [IN]
+                  ATMOS_PHY_MP_Re(:,:,:,:) ) ! [OUT]
           case default
              if ( associated(ATMOS_PHY_MP_EffectiveRadius) ) then
                 call ATMOS_PHY_MP_EffectiveRadius( &
@@ -659,6 +682,14 @@ contains
              call ATMOS_PHY_MP_tomita08_mass_ratio( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   QTRC(:,:,:,QHS:QHE),     & ! [IN]
+                  ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]
+          case ( 'SUZUKI10' )
+             call ATMOS_PHY_MP_suzuki10_mixing_ratio( &
+                  KA, KS,  KE,             & ! [IN]
+                  IA, ISB, IEB,            & ! [IN]
+                  JA, JSB, JEB,            & ! [IN]
+                  QA,                      & ! [IN]
+                  QTRC(:,:,:,:),           & ! [IN]
                   ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]
           case default
              if ( associated(ATMOS_PHY_MP_MixingRatio) ) then
