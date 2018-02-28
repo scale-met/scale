@@ -181,6 +181,7 @@ void file_read_data_c_(       void       *var,       // (out)
 void file_get_attribute_text_c_( const int32_t *fid,        // (in)
 				 const char    *vname,      // (in)
 				 const char    *key,        // (in)
+				 const int32_t *suppress,   // (in)
      				       char    *value,      // (out)
    				       int32_t *error,      // (out)
 				 const int32_t  vname_len,  // (in)
@@ -198,7 +199,7 @@ void file_get_attribute_text_c_( const int32_t *fid,        // (in)
   l = key_len > File_HLONG ? File_HLONG : key_len;
   fstr2cstr(_key, key, l);
 
-  *error = file_get_attribute_text_c( *fid, _vname, _key, _value, value_len );
+  *error = file_get_attribute_text_c( *fid, _vname, _key, *suppress, _value, value_len );
 
   l = value_len > File_HLONG ? File_HLONG : value_len;
   cstr2fstr(value, _value, l);
@@ -208,6 +209,7 @@ void file_get_attribute_int_c_( const int32_t *fid,       // (in)
 				const char    *vname,     // (in)
 				const char    *key,       // (in)
 				const int32_t *len,       // (in)
+				const int32_t *suppress,  // (in)
 				      int32_t *value,     // (out)
 				      int32_t *error,     // (out)
 				const int32_t  vname_len, // (in)
@@ -223,13 +225,14 @@ void file_get_attribute_int_c_( const int32_t *fid,       // (in)
   l = key_len > File_HLONG ? File_HLONG : key_len;
   fstr2cstr(_key, key, l);
 
-  *error = file_get_attribute_int_c( *fid, _vname, _key, value, (size_t)*len );
+  *error = file_get_attribute_int_c( *fid, _vname, _key, *suppress, value, (size_t)*len );
 }
 
 void file_get_attribute_float_c_( const int32_t *fid,       // (in)
 				  const char    *vname,     // (in)
 				  const char    *key,       // (in)
 				  const int32_t *len,       // (in)
+				  const int32_t *suppress,  // (in)
 				        float   *value,     // (out)
 				        int32_t *error,     // (out)
 				  const int32_t  vname_len, // (in)
@@ -245,13 +248,14 @@ void file_get_attribute_float_c_( const int32_t *fid,       // (in)
   l = key_len > File_HLONG ? File_HLONG : key_len;
   fstr2cstr(_key, key, l);
 
-  *error = file_get_attribute_float_c( *fid, _vname, _key, value, (size_t)*len );
+  *error = file_get_attribute_float_c( *fid, _vname, _key, *suppress, value, (size_t)*len );
 }
 
 void file_get_attribute_double_c_( const int32_t *fid,       // (in)
 				   const char    *vname,     // (in)
 				   const char    *key,       // (in)
 				   const int32_t *len,       // (in)
+				   const int32_t *suppress,  // (in)
 				         double  *value,     // (out)
 				         int32_t *error,     // (out)
 				   const int32_t  vname_len, // (in)
@@ -267,7 +271,7 @@ void file_get_attribute_double_c_( const int32_t *fid,       // (in)
   l = key_len > File_HLONG ? File_HLONG : key_len;
   fstr2cstr(_key, key, l);
 
-  *error = file_get_attribute_double_c( *fid, _vname, _key, value, (size_t)*len );
+  *error = file_get_attribute_double_c( *fid, _vname, _key, *suppress, value, (size_t)*len );
 }
 
 void file_set_attribute_text_c_( const int32_t *fid,        // (in)

@@ -410,7 +410,7 @@ contains
        NEST_INTERP_LEVEL => COMM_CARTESC_NEST_INTERP_LEVEL, &
        NEST_domain_shape => COMM_CARTESC_NEST_domain_shape, &
        NEST_TILE_NUM_X   => COMM_CARTESC_NEST_TILE_NUM_X,   &
-       NEST_TILE_NUM_Y   => COMM_CARTESC_NEST_TILE_NUM_X,   &
+       NEST_TILE_NUM_Y   => COMM_CARTESC_NEST_TILE_NUM_Y,   &
        NEST_TILE_ID      => COMM_CARTESC_NEST_TILE_ID,      &
        PARENT_IMAX,       &
        PARENT_JMAX

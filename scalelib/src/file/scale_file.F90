@@ -1504,11 +1504,17 @@ contains
 
     logical, intent(out), optional :: existed
 
+    integer :: suppress
     integer :: error
 
+    if ( present(existed) ) then
+       suppress = 1
+    else
+       suppress = 0
+    end if
     call file_get_attribute_text_c( &
          FILE_files(fid)%fid, vname, & ! (in)
-         key,                        & ! (in)
+         key, suppress,              & ! (in)
          val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(existed) ) then
@@ -1570,24 +1576,23 @@ contains
 
     logical, intent(out), optional :: existed
 
-    logical :: existed_
     character(len=5) :: buf
 
     call FILE_get_attribute_text_fid( fid, vname, key, & ! (in)
-                                      buf, existed_    ) ! (out)
+                                      buf, existed     ) ! (out)
 
-    if ( existed_ ) then
-       if ( buf == "true" ) then
-          val = .true.
-       else if ( buf == "false" ) then
-          val = .false.
-       else
-          write(*,*) 'xxx value is not eigher true or false'
-          call PRC_abort
-       end if
+    if ( present(existed) ) then
+       if ( .not. existed ) return
     end if
 
-    if ( present(existed) ) existed = existed_
+    if ( buf == "true" ) then
+       val = .true.
+    else if ( buf == "false" ) then
+       val = .false.
+    else
+       write(*,*) 'xxx value is not eigher true or false'
+       call PRC_abort
+    end if
 
     return
   end subroutine FILE_get_attribute_logical_fid
@@ -1637,13 +1642,19 @@ contains
 
     logical, intent(out), optional :: existed
 
+    integer :: suppress
     integer :: error
 
     intrinsic size
 
+    if ( present(existed) ) then
+       suppress = 1
+    else
+       suppress = 0
+    end if
     call file_get_attribute_int_c( &
          FILE_files(fid)%fid, vname, & ! (in)
-         key, size(val),             & ! (in)
+         key, size(val), suppress,   & ! (in)
          val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(existed) ) then
@@ -1705,13 +1716,19 @@ contains
 
     logical, intent(out), optional :: existed
 
+    integer :: suppress
     integer :: error
 
     intrinsic size
 
+    if ( present(existed) ) then
+       suppress = 1
+    else
+       suppress = 0
+    end if
     call file_get_attribute_float_c( &
          FILE_files(fid)%fid, vname, & ! (in)
-         key, size(val),             & ! (in)
+         key, size(val), suppress,   & ! (in)
          val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(existed) ) then
@@ -1771,13 +1788,19 @@ contains
 
     logical, intent(out), optional :: existed
 
+    integer :: suppress
     integer :: error
 
     intrinsic size
 
+    if ( present(existed) ) then
+       suppress = 1
+    else
+       suppress = 0
+    end if
     call file_get_attribute_double_c( &
          FILE_files(fid)%fid, vname, & ! (in)
-         key, size(val),             & ! (in)
+         key, size(val), suppress,   & ! (in)
          val, error                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(existed) ) then
@@ -2439,10 +2462,6 @@ contains
     real(SP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
-    type(datainfo) :: dinfo
-    integer :: dim_size(1)
-    integer :: error
-    integer :: n
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -2479,10 +2498,6 @@ contains
     real(DP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
-    type(datainfo) :: dinfo
-    integer :: dim_size(1)
-    integer :: error
-    integer :: n
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -2519,10 +2534,6 @@ contains
     real(SP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
-    type(datainfo) :: dinfo
-    integer :: dim_size(2)
-    integer :: error
-    integer :: n
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -2559,10 +2570,6 @@ contains
     real(DP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
-    type(datainfo) :: dinfo
-    integer :: dim_size(2)
-    integer :: error
-    integer :: n
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -2599,10 +2606,6 @@ contains
     real(SP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
-    type(datainfo) :: dinfo
-    integer :: dim_size(3)
-    integer :: error
-    integer :: n
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -2639,10 +2642,6 @@ contains
     real(DP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
-    type(datainfo) :: dinfo
-    integer :: dim_size(3)
-    integer :: error
-    integer :: n
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -2679,10 +2678,6 @@ contains
     real(SP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
-    type(datainfo) :: dinfo
-    integer :: dim_size(4)
-    integer :: error
-    integer :: n
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -2719,10 +2714,6 @@ contains
     real(DP),    intent( in), optional :: missing_value !> default is zero
 
     integer :: fid
-    type(datainfo) :: dinfo
-    integer :: dim_size(4)
-    integer :: error
-    integer :: n
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4048,7 +4039,7 @@ contains
 
     integer, intent(in) :: fid
 
-    integer :: error, n
+    integer :: error
     !---------------------------------------------------------------------------
 
     if ( fid < 0 ) return
@@ -4079,7 +4070,7 @@ contains
     integer, intent(in) :: fid
     integer, intent(in) :: buf_amount
 
-    integer :: error, n
+    integer :: error
     !---------------------------------------------------------------------------
 
     if ( fid < 0 ) return
@@ -4107,7 +4098,7 @@ contains
 
     integer, intent(in) :: fid
 
-    integer :: error, n
+    integer :: error
     !---------------------------------------------------------------------------
 
     if ( fid < 0 ) return
@@ -4137,7 +4128,7 @@ contains
 
     integer, intent(in) :: fid
 
-    integer :: error, n
+    integer :: error
     !---------------------------------------------------------------------------
 
     if ( fid < 0 ) return
@@ -4166,7 +4157,6 @@ contains
 
     integer, intent(in) :: fid
 
-    character(len=FILE_HLONG) :: fname
     integer                   :: error
     integer                   :: n
     !---------------------------------------------------------------------------

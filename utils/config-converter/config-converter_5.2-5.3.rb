@@ -173,7 +173,7 @@ params.each do |param|
 
   # Nesting
   if /&PARAM_NEST/ =~ param_name
-    print param_name, "\n"
+    print "&PARAM_COMM_CARTESC_NEST\n"
     param_items.each do |item|
       if /^(\s*)USE_NESTING\s*=/ !~ item && /^(\s*)OFFLINE\s*=/ !~ item
         print item, "\n"
