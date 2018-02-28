@@ -20,6 +20,7 @@ typedef struct{
   char     varname[File_HSHORT];
   char     description[File_HMID];
   char     units[File_HSHORT];
+  char     standard_name[File_HMID];
   int32_t  datatype;
   int32_t  rank;
   char     dim_name[File_HSHORT*RANK_MAX];
@@ -29,6 +30,10 @@ typedef struct{
   real64_t time_end;
   char     time_units[File_HMID];
   char     calendar[File_HSHORT];
+  int32_t  natts;
+  char     att_name[File_HSHORT*ATT_MAX];
+  int32_t  att_type[ATT_MAX];
+  int32_t  att_len[ATT_MAX];
   int32_t  fid;
 } datainfo_t;
 

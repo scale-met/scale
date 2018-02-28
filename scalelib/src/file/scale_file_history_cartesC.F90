@@ -109,7 +109,7 @@ contains
        FILE_HISTORY_CARTESC_PRES,        &
        FILE_HISTORY_CARTESC_BOUNDARY
 
-    character(len=H_MID) :: FILE_HISTORY_CARTESCORY_H_TITLE = 'SCALE-RM FILE_HISTORY_CARTESCORY OUTPUT' !< title of the output file
+    character(len=H_MID) :: FILE_HISTORY_CARTESCORY_H_TITLE = 'SCALE-RM FILE_HISTORY_CARTESC OUTPUT' !< title of the output file
     character(len=H_MID) :: FILE_HISTORY_CARTESCORY_T_SINCE
 
     character(len=FILE_HSHORT) :: calendar

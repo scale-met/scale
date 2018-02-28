@@ -129,6 +129,7 @@ module scale_file_external_input
   integer, private, parameter :: FILE_EXTERNAL_INPUT_item_limit = 1000  !< limit of item
   integer, private, parameter :: FILE_EXTERNAL_INPUT_step_limit = 10000 !< limit of steps          for each item
   integer, private, parameter :: FILE_EXTERNAL_INPUT_dim_limit  = 3     !< limit of dimension rank for each item
+  integer, private, parameter :: FILE_EXTERNAL_INPUT_att_limit  = 10    !< limit of dimension rank for each item
 
   type, private :: itemcontainer
      character(len=H_SHORT)             :: varname                   !< variable name
@@ -297,12 +298,17 @@ contains
     logical,          intent(out), optional :: exist
 
     integer                :: step_nmax
-    character(len=H_LONG)  :: description
+    character(len=H_MID)   :: description
     character(len=H_SHORT) :: unit
+    character(len=H_MID)   :: standard_name
     integer                :: datatype
     integer                :: dim_rank
-    character(len=H_SHORT) :: dim_name  (3)
-    integer                :: dim_size  (3)
+    character(len=H_SHORT) :: dim_name  (FILE_EXTERNAL_INPUT_dim_limit)
+    integer                :: dim_size  (FILE_EXTERNAL_INPUT_dim_limit)
+    integer                :: natts
+    character(len=H_SHORT) :: att_name  (FILE_EXTERNAL_INPUT_att_limit)
+    integer                :: att_type  (FILE_EXTERNAL_INPUT_att_limit)
+    integer                :: att_len   (FILE_EXTERNAL_INPUT_att_limit)
     real(DP)               :: time_start(FILE_EXTERNAL_INPUT_step_limit)
     real(DP)               :: time_end  (FILE_EXTERNAL_INPUT_step_limit)
     character(len=H_MID)   :: time_units
@@ -353,20 +359,14 @@ contains
                     rankid=PRC_myrank ) ! [IN]
 
     ! read from file
-    call FILE_Get_All_Datainfo( step_limit_,                   & ! [IN]
-                                FILE_EXTERNAL_INPUT_dim_limit, & ! [IN]
-                                fid,                           & ! [IN]
-                                varname,                       & ! [IN]
-                                step_nmax,                     & ! [OUT]
-                                description,                   & ! [OUT]
-                                unit,                          & ! [OUT]
-                                datatype,                      & ! [OUT]
-                                dim_rank,                      & ! [OUT]
-                                dim_name  (:),                 & ! [OUT]
-                                dim_size  (:),                 & ! [OUT]
-                                time_start(1:step_limit_),     & ! [OUT]
-                                time_end  (1:step_limit_),     & ! [OUT]
-                                time_units, calendar           ) ! [OUT]
+    call FILE_Get_All_Datainfo( fid, varname,                                       & ! [IN]
+                                step_nmax,                                          & ! [OUT]
+                                description, unit,  standard_name,                  & ! [OUT]
+                                datatype,                                           & ! [OUT]
+                                dim_rank, dim_name(:), dim_size(:),                 & ! [OUT]
+                                natts, att_name(:), att_type(:), att_len(:),        & ! [OUT]
+                                time_start(1:step_limit_), time_end(1:step_limit_), & ! [OUT]
+                                time_units, calendar                                ) ! [OUT]
 
     if ( step_nmax > 0 ) then
        if ( present(exist) ) then
@@ -958,12 +958,17 @@ contains
     logical,  intent(out) :: do_readfile  ! read new data at this time?
 
     integer                :: step_nmax
-    character(len=H_LONG)  :: description
+    character(len=H_MID)   :: description
     character(len=H_SHORT) :: unit
+    character(len=H_MID)   :: standard_name
     integer                :: datatype
     integer                :: dim_rank
-    character(len=H_SHORT) :: dim_name  (3)
-    integer                :: dim_size  (3)
+    character(len=H_SHORT) :: dim_name  (FILE_EXTERNAL_INPUT_dim_limit)
+    integer                :: dim_size  (FILE_EXTERNAL_INPUT_dim_limit)
+    integer                :: natts
+    character(len=H_SHORT) :: att_name  (FILE_EXTERNAL_INPUT_att_limit)
+    integer                :: att_type  (FILE_EXTERNAL_INPUT_att_limit)
+    integer                :: att_len   (FILE_EXTERNAL_INPUT_att_limit)
     real(DP)               :: time_start(FILE_EXTERNAL_INPUT_step_limit)
     real(DP)               :: time_end  (FILE_EXTERNAL_INPUT_step_limit)
     character(len=H_MID)   :: time_units
@@ -1049,17 +1054,12 @@ contains
                                    rankid=PRC_myrank ) ! [IN]
 
                    ! read from file
-                   call FILE_Get_All_Datainfo( FILE_EXTERNAL_INPUT_item(nid)%step_limit,               & ! [IN]
-                                               FILE_EXTERNAL_INPUT_dim_limit,                          & ! [IN]
-                                               fid,                                                    & ! [IN]
-                                               FILE_EXTERNAL_INPUT_item(nid)%varname,                  & ! [IN]
+                   call FILE_Get_All_Datainfo( fid, FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
                                                step_nmax,                                              & ! [OUT]
-                                               description,                                            & ! [OUT]
-                                               unit,                                                   & ! [OUT]
+                                               description, unit, standard_name,                       & ! [OUT]
                                                datatype,                                               & ! [OUT]
-                                               dim_rank,                                               & ! [OUT]
-                                               dim_name  (:),                                          & ! [OUT]
-                                               dim_size  (:),                                          & ! [OUT]
+                                               dim_rank, dim_name(:), dim_size(:),                     & ! [OUT]
+                                               natts, att_name(:), att_type(:), att_len(:),            & ! [OUT]
                                                time_start(1:FILE_EXTERNAL_INPUT_item(nid)%step_limit), & ! [OUT]
                                                time_end  (1:FILE_EXTERNAL_INPUT_item(nid)%step_limit), & ! [OUT]
                                                time_units, calendar                                    ) ! [OUT]

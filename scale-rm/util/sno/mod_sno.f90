@@ -28,6 +28,7 @@ module mod_sno
   public :: SNO_file_getinfo
   public :: SNO_calc_localsize
   public :: SNO_read_bcast_1d
+  public :: SNO_read_bcast_2d
   public :: SNO_read_map_1d
   public :: SNO_read_map_2d
   public :: SNO_read_map_3d
@@ -205,9 +206,9 @@ contains
        call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_num_x", procsize(1:1) )
        call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_num_y", procsize(2:2) )
 
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_z",   hinfo%periodic(1) )
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_x",   hinfo%periodic(2) )
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_y",   hinfo%periodic(3) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_z", hinfo%periodic(1) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_x", hinfo%periodic(2) )
+       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_y", hinfo%periodic(3) )
 
        call FILE_Get_Attribute( fid, "global", "grid_name", hinfo%grid_name )
 
@@ -357,6 +358,8 @@ contains
 
        select case(varname_file(n))
        case('z','zh','oz','ozh','lz','lzh','uz','uzh','pressure',                                         &
+            'z_bnds','zh_bnds','oz_bnds','ozh_bnds','lz_bnds','lzh_bnds','uz_bnds','uzh_bnds',            &
+            'x_bnds','xh_bnds','y_bnds','yh_bnds',                                                        &
             'CZ','FZ','CDZ','FDZ','CBFZ','FBFZ','OCZ','OFZ','OCDZ','LCZ','LFZ','LCDZ','UCZ','UFZ','UCDZ', &
             'x','xh','y','yh',                                                                            &
             'CX','CY','FX','FY','CDX','CDY','FDX','FDY','CBFX','CBFY','FBFX','FBFY',                      &
@@ -366,9 +369,7 @@ contains
             'height_uvz','height_uyw','height_xvw','height_uvw'                                           )
           naxis           = naxis + 1
           axisname(naxis) = varname_file(n)
-       case('time','time_bnds',                                                                &
-            'z_bnds','zh_bnds','oz_bnds','ozh_bnds','lz_bnds','lzh_bnds','uz_bnds','uzh_bnds', &
-            'x_bnds','xh_bnds','y_bnds','yh_bnds'                                              )
+       case('time','time_bnds')
           ! do nothing
        case('lambert_conformal_conic')
           if ( ismaster ) then
@@ -683,6 +684,86 @@ contains
 
     return
   end subroutine SNO_read_map_1d
+
+  !-----------------------------------------------------------------------------
+  subroutine SNO_read_bcast_2d( &
+       ismaster,  &
+       basename,  &
+       varname,   &
+       datatype,  &
+       varsize1,  &
+       varsize2,  &
+       var        )
+    use mpi
+    use scale_file_h, only: &
+       FILE_REAL4, &
+       FILE_REAL8, &
+       FILE_dtypelist
+    use scale_file, only: &
+       FILE_Read
+    use scale_process, only: &
+       PRC_masterrank,       &
+       PRC_LOCAL_COMM_WORLD, &
+       PRC_MPIstop
+    implicit none
+
+    logical,          intent(in)  :: ismaster
+    character(len=*), intent(in)  :: basename
+    character(len=*), intent(in)  :: varname
+    integer,          intent(in)  :: datatype
+    integer,          intent(in)  :: varsize1
+    integer,          intent(in)  :: varsize2
+    real(RP),         intent(out) :: var(varsize1,varsize2)
+
+    real(SP), allocatable :: tmp_SP(:,:)
+    real(DP), allocatable :: tmp_DP(:,:)
+
+    integer :: nowrank
+    integer :: datatype_mpi
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    nowrank = 0 ! first file
+
+    if    ( RP == 4 ) then
+       datatype_mpi = MPI_REAL
+    elseif( RP == 8 ) then
+       datatype_mpi = MPI_DOUBLE_PRECISION
+    endif
+
+    if ( datatype == FILE_REAL4 ) then
+
+       if ( ismaster ) then
+          allocate( tmp_SP(varsize1,varsize2) )
+
+          call FILE_Read( basename, varname, tmp_SP(:,:), rankid=nowrank )
+
+          var(:,:) = real(tmp_SP(:,:),kind=RP)
+
+          deallocate( tmp_SP )
+       endif
+
+    elseif( datatype == FILE_REAL8 ) then
+
+       if ( ismaster ) then
+          allocate( tmp_DP(varsize1,varsize2) )
+
+          call FILE_Read( basename, varname, tmp_DP(:,:), rankid=nowrank )
+
+          var(:,:) = real(tmp_DP(:,:),kind=RP)
+
+          deallocate( tmp_DP )
+       endif
+
+    else
+       write(*,*) 'xxx [read_bcast_2d] Unsupported datatype : ', trim(FILE_dtypelist(datatype))
+       call PRC_MPIstop
+    endif
+
+    call MPI_BCAST( var(:,:), varsize1*varsize2, datatype_mpi, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+    return
+  end subroutine SNO_read_bcast_2d
 
   !-----------------------------------------------------------------------------
   subroutine SNO_read_map_2d( &

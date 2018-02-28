@@ -134,8 +134,10 @@ void file_get_datainfo_c_(       datainfo_t *dinfo,       // (out)
   cstr2fstr(dinfo->units,       dinfo->units,       File_HSHORT);
   cstr2fstr(dinfo->time_units,  dinfo->time_units,  File_HMID);
   cstr2fstr(dinfo->calendar,    dinfo->calendar,    File_HSHORT);
-  for ( i=0; i<RANK_MAX; i++ )
+  for ( i=0; i<dinfo->rank; i++ )
     cstr2fstr(dinfo->dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT);
+  for ( i=0; i<dinfo->natts; i++ )
+    cstr2fstr(dinfo->att_name+i*File_HSHORT, dinfo->att_name+i*File_HSHORT, File_HSHORT);
 }
 
 void file_read_data_c_(       void       *var,       // (out)
@@ -162,10 +164,13 @@ void file_read_data_c_(       void       *var,       // (out)
   fstr2cstr(cdinfo.varname, dinfo->varname, File_HSHORT-1);
   fstr2cstr(cdinfo.description, dinfo->description, File_HMID-1);
   fstr2cstr(cdinfo.units, dinfo->units, File_HSHORT-1);
+  fstr2cstr(cdinfo.standard_name, dinfo->standard_name, File_HMID-1);
   fstr2cstr(cdinfo.time_units, dinfo->time_units, File_HMID-1);
   fstr2cstr(cdinfo.calendar, dinfo->calendar, File_HSHORT-1);
   for ( i=0; i<RANK_MAX; i++ )
     fstr2cstr(cdinfo.dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT-1);
+  for ( i=0; i<ATT_MAX; i++ )
+    fstr2cstr(cdinfo.att_name+i*File_HSHORT, dinfo->att_name+i*File_HSHORT, File_HSHORT-1);
 
   ntypes_ = (MPI_Offset) (*ntypes);
 

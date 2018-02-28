@@ -25,6 +25,7 @@ module scale_file_h
   integer, public, parameter :: FILE_INTEGER2 = File_INTEGER2
   integer, public, parameter :: FILE_INTEGER4 = File_INTEGER4
   integer, public, parameter :: FILE_INTEGER8 = File_INTEGER8
+  integer, public, parameter :: FILE_TEXT     = File_TEXT
 
   !--- action type
   integer, public, parameter :: FILE_FREAD   = File_FREAD
@@ -37,6 +38,7 @@ module scale_file_h
   integer, public, parameter :: FILE_ALREADY_CLOSED_CODE  = ALREADY_CLOSED_CODE
   integer, public, parameter :: FILE_ALREADY_EXISTED_CODE = ALREADY_EXISTED_CODE
 
+  !--- max
   integer, public, parameter :: FILE_FILE_MAX = FILE_MAX
   integer, public, parameter :: FILE_VAR_MAX  = VAR_MAX
   integer, public, parameter :: FILE_RANK_MAX = RANK_MAX
@@ -49,6 +51,7 @@ module scale_file_h
      character(len=FILE_HSHORT) :: varname
      character(len=FILE_HMID)   :: description
      character(len=FILE_HSHORT) :: units
+     character(len=FILE_HMID)   :: standard_name
      integer                    :: datatype
      integer                    :: rank
      character(len=FILE_HSHORT) :: dim_name(RANK_MAX)
@@ -58,6 +61,10 @@ module scale_file_h
      real(DP)                   :: time_end
      character(len=FILE_HMID)   :: time_units
      character(len=FILE_HSHORT) :: calendar
+     integer                    :: natts
+     character(len=FILE_HSHORT) :: att_name(ATT_MAX)
+     integer                    :: att_type(ATT_MAX)
+     integer                    :: att_len (ATT_MAX)
      integer                    :: fid
   endtype datainfo
 

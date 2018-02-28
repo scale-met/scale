@@ -9,6 +9,7 @@
 #define File_INTEGER2  2
 #define File_INTEGER4  3
 #define File_INTEGER8  4
+#define File_TEXT      5
 
 /* action type */
 #define File_FREAD   0
@@ -27,6 +28,8 @@
 #define VAR_MAX 40960
 /* limit of dimensions */
 #define RANK_MAX 10
+/* limit of attributes */
+#define ATT_MAX 10
 
 /* missing value */
 #define RMISS -9.9999e+30
