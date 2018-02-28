@@ -630,17 +630,20 @@ int32_t file_read_data_c(       void       *var,       // (out)
   return SUCCESS_CODE;
 }
 
-int32_t file_get_attribute_text_c( const int32_t  fid,   // (in)
-				   const char    *vname, // (in)
-				   const char    *key,   // (in)
-				         char    *value, // (out)
-				   const int32_t len)    // (in)
+int32_t file_get_attribute_text_c( const int32_t  fid,      // (in)
+				   const char    *vname,    // (in)
+				   const char    *key,      // (in)
+				   const int32_t  suppress, // (in)
+				         char    *value,    // (out)
+				   const int32_t len)       // (in)
 {
   int ncid;
   int varid;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
+
+  ERROR_SUPPRESS = suppress;
 
   if ( files[fid]->shared_mode ) {
     MPI_Offset l;
@@ -650,7 +653,7 @@ int32_t file_get_attribute_text_c( const int32_t  fid,   // (in)
       CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l+1 ) return ERROR_CODE;
+    if ( len < l ) return ERROR_CODE;
 
     CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, key, value) )
     value[l] = '\0';
@@ -663,26 +666,31 @@ int32_t file_get_attribute_text_c( const int32_t  fid,   // (in)
       CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l+1 ) return ERROR_CODE;
+    if ( len < l ) return ERROR_CODE;
 
     CHECK_ERROR( nc_get_att_text(ncid, varid, key, value) )
     value[l] = '\0';
   }
 
+  ERROR_SUPPRESS = 0;
+
   return SUCCESS_CODE;
 }
 
-int32_t file_get_attribute_int_c( const int32_t  fid,   // (in)
-				  const char    *vname, // (in)
-				  const char    *key,   // (in)
-				        int     *value, // (out)
-				  const size_t   len)   // (in)
+int32_t file_get_attribute_int_c( const int32_t  fid,      // (in)
+				  const char    *vname,    // (in)
+				  const char    *key,      // (in)
+				  const int32_t  suppress, // (in)
+				        int     *value,    // (out)
+				  const size_t   len)      // (in)
 {
   int ncid;
   int varid;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
+
+  ERROR_SUPPRESS = suppress;
 
   if ( files[fid]->shared_mode ) {
     MPI_Offset l;
@@ -707,20 +715,25 @@ int32_t file_get_attribute_int_c( const int32_t  fid,   // (in)
     CHECK_ERROR( nc_get_att_int(ncid, varid, key, value) )
   }
 
+  ERROR_SUPPRESS = 0;
+
   return SUCCESS_CODE;
 }
 
-int32_t file_get_attribute_float_c( const int32_t  fid,   // (in)
-				    const char    *vname, // (in)
-				    const char    *key,   // (in)
-				          float   *value, // (out)
-				    const size_t   len)   // (in)
+int32_t file_get_attribute_float_c( const int32_t  fid,      // (in)
+				    const char    *vname,    // (in)
+				    const char    *key,      // (in)
+				    const int32_t  suppress, // (in)
+				          float   *value,    // (out)
+				    const size_t   len)      // (in)
 {
   int ncid;
   int varid;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
+
+  ERROR_SUPPRESS = suppress;
 
   if ( files[fid]->shared_mode ) {
     MPI_Offset l;
@@ -745,20 +758,25 @@ int32_t file_get_attribute_float_c( const int32_t  fid,   // (in)
     CHECK_ERROR( nc_get_att_float(ncid, varid, key, value) )
   }
 
+  ERROR_SUPPRESS = 0;
+
   return SUCCESS_CODE;
 }
 
-int32_t file_get_attribute_double_c( const int32_t  fid,   // (in)
-				     const char    *vname, // (in)
-				     const char    *key,   // (in)
-				           double  *value, // (out)
-				     const size_t   len)   // (in)
+int32_t file_get_attribute_double_c( const int32_t  fid,      // (in)
+				     const char    *vname,    // (in)
+				     const char    *key,      // (in)
+				     const int32_t  suppress, // (in)
+				           double  *value,    // (out)
+				     const size_t   len)      // (in)
 {
   int ncid;
   int varid;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
+
+  ERROR_SUPPRESS = suppress;
 
   if ( files[fid]->shared_mode ) {
     MPI_Offset l;
@@ -782,6 +800,8 @@ int32_t file_get_attribute_double_c( const int32_t  fid,   // (in)
     if ( len < l ) return ERROR_CODE;
     CHECK_ERROR( nc_get_att_double(ncid, varid, key, value) )
   }
+
+  ERROR_SUPPRESS = 0;
 
   return SUCCESS_CODE;
 }
