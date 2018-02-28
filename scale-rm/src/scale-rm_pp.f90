@@ -25,7 +25,11 @@ program scalerm_launcher
      PRC_MPIfinish,       &
      PRC_MPIsplit,        &
      PRC_UNIVERSAL_setup, &
-     PRC_GLOBAL_setup
+     PRC_GLOBAL_setup,    &
+     PRC_GLOBAL_ROOT,     &
+     PRC_ERRHANDLER_setup
+  use scale_fpm, only: &
+     FPM_Init
   use mod_rm_prep, only: &
      scalerm_prep
   use mod_rm_driver, only: &
@@ -46,22 +50,28 @@ program scalerm_launcher
   logical               :: EXECUTE_MODEL                = .false. ! execute main model?
   integer               :: NUM_BULKJOB                  = 1       ! number of bulk jobs
   integer               :: NUM_DOMAIN                   = 1       ! number of domains
+  integer               :: NUM_FAIL_TOLERANCE           = 1       ! tolerance number of failure processes
+  integer               :: FREQ_FAIL_CHECK              = 0       ! FPM polling frequency per DT (0: no polling)
   integer               :: PRC_DOMAINS(PRC_DOMAIN_nlim) = 0       ! number of total process in each domain
   character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim) = ""      ! name of configulation files
   logical               :: ABORT_ALL_JOBS               = .false. ! abort all jobs or not?
   logical               :: LOG_SPLIT                    = .false. ! log-output for mpi splitting?
   logical               :: COLOR_REORDER                = .true.  ! coloring reorder for mpi splitting?
+  logical               :: FAILURE_PRC_MANAGE           = .false. ! use failure process management?
 
   namelist / PARAM_LAUNCHER / &
      EXECUTE_PREPROCESS, &
      EXECUTE_MODEL,      &
      NUM_BULKJOB,        &
      NUM_DOMAIN,         &
+     NUM_FAIL_TOLERANCE, &
+     FREQ_FAIL_CHECK,    &
      PRC_DOMAINS,        &
      CONF_FILES,         &
      ABORT_ALL_JOBS,     &
      LOG_SPLIT,          &
-     COLOR_REORDER
+     COLOR_REORDER,      &
+     FAILURE_PRC_MANAGE
 
   integer               :: universal_comm                         ! universal communicator
   integer               :: universal_nprocs                       ! number of procs in universal communicator
@@ -75,6 +85,8 @@ program scalerm_launcher
   integer               :: intercomm_parent_null                  ! NULL inter communicator with parent
   integer               :: intercomm_child_null                   ! NULL inter communicator with child
   character(len=H_LONG) :: bulk_prefix                            ! dirname of each member
+
+  logical               :: use_fpm = .false.                      ! switch for fpm module
 
   integer               :: local_comm       ! assigned local communicator
   integer               :: intercomm_parent ! inter communicator with parent
@@ -114,6 +126,7 @@ program scalerm_launcher
   endif
 
   close(fid)
+  FREQ_FAIL_CHECK = 0 ! force 0, coz no time integrations
 
   if (      EXECUTE_PREPROCESS &
        .OR. EXECUTE_MODEL      ) then
@@ -138,6 +151,22 @@ program scalerm_launcher
   if ( NUM_BULKJOB > 1 ) then
      if( universal_master ) write(*,'(1x,A,I5)') "*** TOTAL BULK JOB NUMBER   = ", NUM_BULKJOB
      if( universal_master ) write(*,'(1x,A,I5)') "*** PROCESS NUM of EACH JOB = ", global_nprocs
+
+     if ( FAILURE_PRC_MANAGE ) then
+        if( universal_master ) write(*,'(1x,A)') "*** Available: Failure Process Management"
+        use_fpm = .true.                    !--- available only in bulk job
+        if ( NUM_FAIL_TOLERANCE <= 0 ) then !--- fatal error
+           if( universal_master ) write(*,*) 'xxx Num of Failure Processes must be positive number. Check!'
+           if( universal_master ) write(*,*) 'xxx NUM_FAIL_TOLERANCE = ', NUM_FAIL_TOLERANCE
+           call PRC_MPIstop
+        endif
+
+        if ( NUM_FAIL_TOLERANCE > NUM_BULKJOB ) then !--- fatal error
+           write(*,*) 'xxx NUM_FAIL_TOLERANCE is bigger than NUM_BLUKJOB number'
+           write(*,*) '    set to be: NUM_FAIL_TOLERANCE <= NUM_BLUKJOB'
+           call PRC_MPIstop
+        endif
+     endif
   endif
 
   ! communicator split for bulk/ensemble
@@ -175,6 +204,18 @@ program scalerm_launcher
                      intercomm_parent, & ! [OUT]
                      intercomm_child,  & ! [OUT]
                      local_cnf_fname   ) ! [OUT]
+
+  !--- initialize FPM module & error handler
+  call FPM_Init( NUM_FAIL_TOLERANCE, & ! [IN]
+                 FREQ_FAIL_CHECK,    & ! [IN]
+                 universal_comm,     & ! [IN]
+                 global_comm,        & ! [IN]
+                 local_comm,         & ! [IN]
+                 NUM_BULKJOB,        & ! [IN]
+                 PRC_GLOBAL_ROOT,    & ! [IN]
+                 use_fpm             ) ! [IN]
+
+  call PRC_ERRHANDLER_setup( use_fpm, universal_master )
 
   !--- start main routine
 

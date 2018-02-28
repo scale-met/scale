@@ -86,6 +86,7 @@ $(OBJ_DIR)/scale_file_external_input_cartesC.o: ./file/scale_file_external_input
 $(OBJ_DIR)/scale_file_h.o: ./file/scale_file_h.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o
 $(OBJ_DIR)/scale_file_history.o: ./file/scale_file_history.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_calendar.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file.o $(OBJ_DIR)/scale_file_h.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_time.o
 $(OBJ_DIR)/scale_file_history_cartesC.o: ./file/scale_file_history_cartesC.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC.o $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_grid_cartesC_real.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file.o $(OBJ_DIR)/scale_file_cartesC.o $(OBJ_DIR)/scale_file_h.o $(OBJ_DIR)/scale_file_history.o $(OBJ_DIR)/scale_interp_vert.o $(OBJ_DIR)/scale_land_grid_cartesC.o $(OBJ_DIR)/scale_land_grid_cartesC_index.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_mapprojection.o $(OBJ_DIR)/scale_ocean_grid_cartesC.o $(OBJ_DIR)/scale_ocean_grid_cartesC_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_rm_process.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_time.o $(OBJ_DIR)/scale_topography.o $(OBJ_DIR)/scale_urban_grid_cartesC.o $(OBJ_DIR)/scale_urban_grid_cartesC_index.o
+$(OBJ_DIR)/scale_fpm.o: ./common/scale_fpm.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_index.o: ./common/scale_index.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_interp.o: ./common/scale_interp.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_debug.o $(OBJ_DIR)/scale_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_tracer.o
 $(OBJ_DIR)/scale_interp_vert.o: ./common/scale_interp_vert.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_matrix.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
@@ -114,12 +115,13 @@ $(OBJ_DIR)/scale_ocean_sfc.o: ./ocean/scale_ocean_sfc.F90 $(DEPENDLIB) $(OBJ_DIR
 $(OBJ_DIR)/scale_ocean_sfc_const.o: ./ocean/scale_ocean_sfc_const.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_sub_hydrometeor.o $(OBJ_DIR)/scale_atmos_sub_saturation.o $(OBJ_DIR)/scale_bulkflux.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_ocean_sfc_slab.o: ./ocean/scale_ocean_sfc_slab.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_sub_hydrometeor.o $(OBJ_DIR)/scale_atmos_sub_saturation.o $(OBJ_DIR)/scale_bulkflux.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_precision.o: ./common/scale_precision.F90 $(DEPENDLIB)
-$(OBJ_DIR)/scale_process.o: ./common/scale_process.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_stdio.o
+$(OBJ_DIR)/scale_process.o: ./common/scale_process.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_fpm.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_sigvars.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_prof.o: ./common/scale_prof.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_random.o: ./common/scale_random.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_rm_process.o: ./atmos-rm/communication/scale_rm_process.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_rm_statistics.o: ./atmos-rm/communication/scale_rm_statistics.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_grid_cartesC_real.o $(OBJ_DIR)/scale_comm_cartesC.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_roughness.o: ./coupler/scale_roughness.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
+$(OBJ_DIR)/scale_sigvars.o: ./common/scale_sigvars.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_specfunc.o: ./common/scale_specfunc.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_stdio.o: ./io/scale_stdio.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_file_h.o
 $(OBJ_DIR)/scale_time.o: ./common/scale_time.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
@@ -210,6 +212,7 @@ MODS =	\
 	$(OBJ_DIR)/scale_file_h.mod	\
 	$(OBJ_DIR)/scale_file_history.mod	\
 	$(OBJ_DIR)/scale_file_history_cartesc.mod	\
+	$(OBJ_DIR)/scale_fpm.mod	\
 	$(OBJ_DIR)/scale_index.mod	\
 	$(OBJ_DIR)/scale_interp.mod	\
 	$(OBJ_DIR)/scale_interp_vert.mod	\
@@ -244,6 +247,7 @@ MODS =	\
 	$(OBJ_DIR)/scale_rm_process.mod	\
 	$(OBJ_DIR)/scale_rm_statistics.mod	\
 	$(OBJ_DIR)/scale_roughness.mod	\
+	$(OBJ_DIR)/scale_sigvars.mod	\
 	$(OBJ_DIR)/scale_specfunc.mod	\
 	$(OBJ_DIR)/scale_stdio.mod	\
 	$(OBJ_DIR)/scale_time.mod	\

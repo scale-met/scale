@@ -19,6 +19,10 @@ module scale_process
   use mpi
   use scale_precision
   use scale_stdio
+  use scale_fpm, only: &
+     FPM_alive,  &
+     FPM_Polling
+  use scale_sigvars
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -43,6 +47,8 @@ module scale_process
   public :: PRC_MPItimestat
 
   public :: PRC_set_file_closer
+
+  public :: PRC_ERRHANDLER_setup
 
   abstract interface
      subroutine closer
@@ -84,6 +90,7 @@ module scale_process
   logical, public :: PRC_GLOBAL_IsMaster      = .false. !< master process in global communicator?
 
   integer, public :: PRC_GLOBAL_domainID      = 0       !< my domain ID   in global communicator
+  integer, public :: PRC_GLOBAL_ROOT(PRC_DOMAIN_nlim+1) !< root processes in global members
 
   ! local world
   integer, public :: PRC_LOCAL_COMM_WORLD     = -1      !< local communicator
@@ -130,10 +137,11 @@ contains
     call MPI_Init(ierr)
 
     PRC_mpi_alive = .true.
-    PRC_UNIVERSAL_handler = MPI_ERRHANDLER_NULL
-    call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, PRC_UNIVERSAL_handler, ierr )
+!    PRC_UNIVERSAL_handler = MPI_ERRHANDLER_NULL
+!    call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, PRC_UNIVERSAL_handler, ierr )
 
     comm = MPI_COMM_WORLD
+    PRC_ABORT_COMM_WORLD = comm
 
     return
   end subroutine PRC_MPIstart
@@ -158,10 +166,11 @@ contains
     call MPI_Init(ierr)
 
     PRC_mpi_alive = .true.
-    PRC_UNIVERSAL_handler = MPI_ERRHANDLER_NULL
-    call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, PRC_UNIVERSAL_handler, ierr )
+!    PRC_UNIVERSAL_handler = MPI_ERRHANDLER_NULL
+!    call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, PRC_UNIVERSAL_handler, ierr )
 
     comm = MPI_COMM_WORLD
+    PRC_ABORT_COMM_WORLD = comm
 
     call PRC_UNIVERSAL_setup( comm, nprocs, ismaster )
     call PRC_GLOBAL_setup   ( abortall, comm )
@@ -201,10 +210,10 @@ contains
 
 
 
-    PRC_ABORT_COMM_WORLD = PRC_UNIVERSAL_COMM_WORLD
-
-    call MPI_Comm_set_errhandler(PRC_ABORT_COMM_WORLD,PRC_UNIVERSAL_handler,ierr)
-    call MPI_Comm_get_errhandler(PRC_ABORT_COMM_WORLD,PRC_ABORT_handler    ,ierr)
+!    PRC_ABORT_COMM_WORLD = PRC_UNIVERSAL_COMM_WORLD
+!
+!    call MPI_Comm_set_errhandler(PRC_ABORT_COMM_WORLD,PRC_UNIVERSAL_handler,ierr)
+!    call MPI_Comm_get_errhandler(PRC_ABORT_COMM_WORLD,PRC_ABORT_handler    ,ierr)
 
     return
   end subroutine PRC_UNIVERSAL_setup
@@ -327,6 +336,45 @@ contains
   end subroutine PRC_SINGLECOM_setup
 
   !-----------------------------------------------------------------------------
+  !> Setup MPI error handler
+  subroutine PRC_ERRHANDLER_setup( &
+       use_fpm,  &
+       master    )
+    implicit none
+    logical, intent(in) :: use_fpm  ! fpm switch
+    logical, intent(in) :: master   ! master flag
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+
+
+    call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, PRC_UNIVERSAL_handler, ierr )
+    call MPI_COMM_SET_errhandler(PRC_ABORT_COMM_WORLD,PRC_UNIVERSAL_handler,ierr)
+    call MPI_COMM_GET_errhandler(PRC_ABORT_COMM_WORLD,PRC_ABORT_handler    ,ierr)
+
+    if( PRC_UNIVERSAL_handler /= PRC_ABORT_handler )then
+       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) ""
+       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "ERROR: MPI HANDLER is INCONSISTENT"
+       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "PRC_UNIVERSAL_handler = ", PRC_UNIVERSAL_handler
+       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "PRC_ABORT_handler     = ", PRC_ABORT_handler
+       call PRC_MPIstop
+    endif
+
+    if ( use_fpm ) then
+       call SIGVARS_Get_all( master )
+       call signal( SIGINT,  PRC_abort )
+       call signal( SIGQUIT, PRC_abort )
+       call signal( SIGABRT, PRC_abort )
+       call signal( SIGFPE,  PRC_abort )
+       call signal( SIGSEGV, PRC_abort )
+       call signal( SIGTERM, PRC_abort )
+    endif
+
+    return
+  end subroutine PRC_ERRHANDLER_setup
+
+  !-----------------------------------------------------------------------------
   !> Abort Process
   subroutine PRC_abort
     implicit none
@@ -348,7 +396,18 @@ contains
     implicit none
 
     integer :: ierr
+    logical :: sign_status
+    logical :: sign_exit
     !---------------------------------------------------------------------------
+
+    ! FPM polling
+    if ( FPM_alive ) then
+       sign_status = .false.
+       sign_exit   = .false.
+       do while ( .NOT. sign_exit )
+          call FPM_Polling( sign_status, sign_exit )
+       enddo
+    endif
 
     if (PRC_UNIVERSAL_handler .NE. MPI_ERRHANDLER_NULL) then
         call MPI_Errhandler_free(PRC_UNIVERSAL_handler, ierr)
@@ -429,7 +488,7 @@ contains
     character(len=H_LONG) :: COL_FILE(0:PRC_DOMAIN_nlim)
     character(len=4)      :: col_num
 
-    integer :: i
+    integer :: i, ii
     integer :: itag, ierr
     !---------------------------------------------------------------------------
 
@@ -472,6 +531,13 @@ contains
                              CHILD_COL,   & ! [OUT]
                              COL_FILE     ) ! [OUT]
 
+       if ( bulk_split ) then
+          ii = 1
+          do i=0, PRC_DOMAIN_nlim
+             PRC_GLOBAL_ROOT(ii) = PRC_ROOT(i)
+             ii = ii + 1
+          enddo
+       endif
 
        ! split comm_world
        call MPI_COMM_SPLIT(ORG_COMM,               &
@@ -917,7 +983,20 @@ contains
     character(len=MPI_MAX_ERROR_STRING) :: msg
     integer :: len
     integer :: ierr
+    logical :: sign_status
+    logical :: sign_exit
     !---------------------------------------------------------------------------
+
+!print *, "into errhandler:", PRC_UNIVERSAL_myrank
+
+    ! FPM polling
+    if ( FPM_alive ) then
+       sign_status = .false.
+       sign_exit   = .false.
+       do while ( .NOT. sign_exit )
+          call FPM_Polling( sign_status, sign_exit )
+       enddo
+    endif
 
     ! Print Error Messages
     if ( PRC_mpi_alive ) then
