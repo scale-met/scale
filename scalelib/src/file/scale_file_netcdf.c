@@ -1102,7 +1102,7 @@ int32_t file_add_associatedvariable_c( const int32_t  fid,   // (in)
   else
     CHECK_ERROR( nc_def_var(ncid, vname, NC_INT, 0, 0, &varid) )
 
-  return file_enddef(fid, ncid);
+  return SUCCESS_CODE;
 }
 
 int32_t file_set_tunits_c( const int32_t fid,         // (in)
