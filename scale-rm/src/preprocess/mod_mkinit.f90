@@ -697,8 +697,16 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup aerosol condition for Kajino 2013 scheme
   subroutine AEROSOL_setup
+    use scale_atmos_phy_ae, only: &
+       QA_AE
     use scale_atmos_phy_ae_kajino13, only: &
-       ATMOS_PHY_AE_kajino13_mkinit
+       ATMOS_PHY_AE_kajino13_mkinit, &
+       QAES, &
+       QAEE
+    use mod_atmos_vars, only: &
+       TEMP, &
+       PRES, &
+       QDRY
     implicit none
 
     real(RP), parameter :: d_min_def = 1.e-9_RP ! default lower bound of 1st size bin
@@ -744,12 +752,25 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_AERO)
 
-    call ATMOS_PHY_AE_kajino13_mkinit( QTRC, CCN,                 & ! (out)
-                                       DENS, RHOT,                & ! (in)
-                                       m0_init, dg_init, sg_init, & ! (in)
-                                       d_min_inp, d_max_inp,      & ! (in)
-                                       k_min_inp, k_max_inp,      & ! (in)
-                                       n_kap_inp                  ) ! (in)
+    call ATMOS_PHY_AE_kajino13_mkinit( KA, KS, KE,            & ! (in)
+                                       IA, IS, IE,            & ! (in)
+                                       JA, JS, JE,            & ! (in)
+                                       QA_AE,                 & ! (in)
+                                       DENS(:,:,:),           & ! (in)
+                                       RHOT(:,:,:),           & ! (in)
+                                       TEMP(:,:,:),           & ! (in)
+                                       PRES(:,:,:),           & ! (in)
+                                       QDRY(:,:,:),           & ! (in)
+                                       m0_init,               & ! (in)
+                                       dg_init,               & ! (in)
+                                       sg_init,               & ! (in)
+                                       d_min_inp(:),          & ! (in)
+                                       d_max_inp(:),          & ! (in)
+                                       k_min_inp(:),          & ! (in)
+                                       k_max_inp(:),          & ! (in)
+                                       n_kap_inp(:),          & ! (in)
+                                       QTRC(:,:,:,QAES:QAEE), & ! (inout)
+                                       CCN(:,:,:)             ) ! (out)
 
     return
   end subroutine AEROSOL_setup

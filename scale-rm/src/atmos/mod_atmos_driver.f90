@@ -60,7 +60,7 @@ contains
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_tracer_setup
     use mod_atmos_phy_ae_driver, only: &
-       ATMOS_PHY_AE_driver_config
+       ATMOS_PHY_AE_driver_tracer_setup
     use mod_atmos_phy_ch_driver, only: &
        ATMOS_PHY_CH_driver_config
     use mod_atmos_phy_tb_driver, only: &
@@ -74,7 +74,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CONFIG] / Categ[ATMOS] / Origin[SCALE-RM]'
 
     call ATMOS_PHY_MP_driver_tracer_setup
-    call ATMOS_PHY_AE_driver_config
+    call ATMOS_PHY_AE_driver_tracer_setup
     call ATMOS_PHY_CH_driver_config
     call ATMOS_PHY_TB_driver_config
     call ATMOS_PHY_BL_driver_tracer_setup
@@ -352,7 +352,7 @@ contains
        ATMOS_PHY_MP_driver_calc_tendency, &
        ATMOS_PHY_MP_driver_adjustment
     use mod_atmos_phy_ae_driver, only: &
-       ATMOS_PHY_AE_driver
+       ATMOS_PHY_AE_driver_tendency
     use mod_atmos_phy_ch_driver, only: &
        ATMOS_PHY_CH_driver
     use mod_atmos_phy_rd_driver, only: &
@@ -444,7 +444,7 @@ contains
     ! Aerosol
     if ( ATMOS_sw_phy_ae ) then
        call PROF_rapstart('ATM_Aerosol', 1)
-       call ATMOS_PHY_AE_driver( update_flag = do_phy_ae )
+       call ATMOS_PHY_AE_driver_tendency( update_flag = do_phy_ae )
        call PROF_rapend  ('ATM_Aerosol', 1)
     endif
     ! Chemistry

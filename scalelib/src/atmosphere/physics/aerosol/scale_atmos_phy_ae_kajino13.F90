@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Physics Aerosol Microphysics
+!> module atmosphere / physics / aerosol / Kajino13
 !!
 !! @par Description
 !!          kajino13 code
@@ -20,7 +20,6 @@ module scale_atmos_phy_ae_kajino13
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_atmos_grid_cartesC_index
   use scale_tracer
   use scale_const, only: &
       mwair => CONST_Mdry, &              ! molecular weight for dry air
@@ -41,9 +40,8 @@ module scale_atmos_phy_ae_kajino13
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_AE_kajino13_config
   public :: ATMOS_PHY_AE_kajino13_setup
-  public :: ATMOS_PHY_AE_kajino13
+  public :: ATMOS_PHY_AE_kajino13_tendency
   public :: ATMOS_PHY_AE_kajino13_EffectiveRadius
   public :: ATMOS_PHY_AE_kajino13_mkinit
 
@@ -68,21 +66,21 @@ module scale_atmos_phy_ae_kajino13
   !
   !++ Private parameters & variables
   !
-  integer :: AE_CTG = 1
-  integer, parameter :: GAS_CTG = 2
-  integer, parameter :: N_ATR = 5
-  integer, allocatable :: NKAP(:)
-  integer, allocatable :: NSIZ(:)
+  integer, public :: AE_CTG = 1
+  integer, public, parameter :: GAS_CTG = 2
+  integer, parameter, public :: N_ATR = 5
+  integer, allocatable, public :: NKAP(:)
+  integer, allocatable, public :: NSIZ(:)
 
-  integer :: QAES
-  integer :: QAEE
+  integer, public :: QAES
+  integer, public :: QAEE
 
-  integer, parameter :: IC_MIX   =  1
-  integer, parameter :: IC_SEA   =  2
-  integer, parameter :: IC_DUS   =  3
+  integer, parameter, public :: IC_MIX   =  1
+  integer, parameter, public :: IC_SEA   =  2
+  integer, parameter, public :: IC_DUS   =  3
 
-  integer, parameter :: IG_H2SO4 =  1
-  integer, parameter :: IG_CGAS  =  2
+  integer, parameter, public :: IG_H2SO4 =  1
+  integer, parameter, public :: IG_CGAS  =  2
 
 
   ! physical parameters
@@ -180,198 +178,6 @@ module scale_atmos_phy_ae_kajino13
                                              !  D =10 um resulted in 1.e-6 ug/m3
   !-----------------------------------------------------------------------------
 contains
-  !-----------------------------------------------------------------------------
-  !> Config
-  subroutine ATMOS_PHY_AE_kajino13_config( &
-       AE_TYPE, &
-       QA, QS )
-    use scale_process, only: &
-       PRC_MPIstop
-    use scale_tracer, only: &
-       TRACER_regist
-    implicit none
-
-    character(len=*), intent(in)  :: AE_TYPE
-    integer,          intent(out) :: QA
-    integer,          intent(out) :: QS
-
-    integer, allocatable :: aero_idx(:,:,:,:)
-    integer :: n_kap_max, n_siz_max, ncat_max
-    integer :: NASIZ(3), NAKAP(3)
-    character(len=H_SHORT) :: attribute, catego, aunit
-
-    NAMELIST / PARAM_TRACER_KAJINO13 / &
-       AE_CTG, &
-       NASIZ,  &
-       NAKAP
-
-    integer :: m, ierr, ik, ic, ia0, is0
-
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Aerosol Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Kajino(2013) scheme'
-
-    if ( AE_TYPE /= 'KAJINO13' .AND. AE_TYPE /= 'NONE' ) then
-       write(*,*) 'xxx ATMOS_PHY_AE_TYPE is not KAJINO13. Check!'
-       call PRC_MPIstop
-    endif
-
-    ncat_max = max( IC_MIX, IC_SEA, IC_DUS )
-
-    NASIZ(:) = 64
-    NAKAP(:) = 1
-
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_TRACER_KAJINO13,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*)  '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_TRACER_KAJINO13, Check!'
-       call PRC_MPIstop
-    end if
-
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_TRACER_KAJINO13)
-
-    if( AE_CTG > ncat_max ) then
-       write(*,*) 'xxx AE_CTG should be smaller than', ncat_max+1, 'stop'
-       call PRC_MPIstop
-    endif
-
-    allocate( NSIZ(AE_CTG) )
-    allocate( NKAP(AE_CTG) )
-
-    NKAP(1:AE_CTG) = NAKAP(1:AE_CTG)
-    NSIZ(1:AE_CTG) = NASIZ(1:AE_CTG)
-
-    if( maxval( NKAP ) /= 1 .OR. minval( NKAP ) /= 1 ) then
-       write(*,*) 'xxx NKAP(:) /= 1 is not supported now, Stop!'
-       call PRC_MPIstop
-    end if
-
-!    do ia0 = 1, N_ATR
-    do ic = 1, AE_CTG
-    do ik = 1, NKAP(ic)
-    do is0 = 1, NSIZ(ic)
-       QA_AE   = QA_AE + N_ATR
-    enddo
-    enddo
-    enddo
-    QA_AE = QA_AE + GAS_CTG
-
-    allocate( ATMOS_PHY_AE_kajino13_NAME(QA_AE) )
-    allocate( ATMOS_PHY_AE_kajino13_DESC(QA_AE) )
-    allocate( ATMOS_PHY_AE_kajino13_UNIT(QA_AE) )
-
-    n_siz_max = 0
-    n_kap_max = 0
-    do ic = 1, AE_CTG
-      n_siz_max = max(n_siz_max, NSIZ(ic))
-      n_kap_max = max(n_kap_max, NKAP(ic))
-    enddo
-
-    allocate( aero_idx(N_ATR,AE_CTG,n_kap_max,n_siz_max) )
-    m = 0
-!    do ia0 = 1, N_ATR
-    do ic = 1, AE_CTG
-    do ik = 1, NKAP(ic)
-    do is0 = 1, NSIZ(ic)
-    do ia0 = 1, N_ATR
-      m = m+1
-      aero_idx(ia0,ic,ik,is0) = m
-    enddo
-    enddo
-    enddo
-    enddo
-
-    !-----------------------------------------------------------------------------
-    !
-    !++ calculate each category and aerosol
-    !
-    !-----------------------------------------------------------------------------
-    ic = QA_AE-GAS_CTG+IG_H2SO4
-    write(ATMOS_PHY_AE_kajino13_UNIT(ic),'(a)')  'kg/kg'
-    ic = QA_AE-GAS_CTG+IG_CGAS
-    write(ATMOS_PHY_AE_kajino13_UNIT(ic),'(a)')  'kg/kg'
-
-!    do ia0 = 1, N_ATR
-!      if( ia0 == 1 ) then
-!         write(attribute,'(a)') "Number"
-!         write(aunit,'(a)') "num/kg"
-!      elseif( ia0 == 2 ) then
-!         write(attribute,'(a)') "Section"
-!         write(aunit,'(a)') "m2/kg"
-!      elseif( ia0 == 3 ) then
-!         write(attribute,'(a)') "Volume"
-!         write(aunit,'(a)') "m3/kg"
-!      elseif( ia0 == 4 ) then
-!         write(attribute,'(a)') "Mass"
-!         write(aunit,'(a)') "kg/kg"
-!      elseif( ia0 == 5 ) then
-!         write(attribute,'(a)') "kpXmass"
-!         write(aunit,'(a)') "kg/kg"
-!      endif
-    do ic = 1, AE_CTG       !aerosol category
-    do ik = 1, NKAP(ic)   !kappa bin
-    do is0 = 1, NSIZ(ic)
-    do ia0 = 1, N_ATR
-      if( ia0 == 1 ) then
-         write(attribute,'(a)') "Number"
-         write(aunit,'(a)') "num/kg"
-      elseif( ia0 == 2 ) then
-         write(attribute,'(a)') "Section"
-         write(aunit,'(a)') "m2/kg"
-      elseif( ia0 == 3 ) then
-         write(attribute,'(a)') "Volume"
-         write(aunit,'(a)') "m3/kg"
-      elseif( ia0 == 4 ) then
-         write(attribute,'(a)') "Mass"
-         write(aunit,'(a)') "kg/kg"
-      elseif( ia0 == 5 ) then
-         write(attribute,'(a)') "kXm"
-         write(aunit,'(a)') "kg/kg"
-      endif
-      if( ic == IC_MIX ) then
-         write(catego,'(a)') "Sulf_"
-      elseif( ic == IC_SEA ) then
-         write(catego,'(a)') "Salt_"
-      elseif( ic == IC_DUS ) then
-         write(catego,'(a)') "Dust_"
-      endif
-      write(ATMOS_PHY_AE_kajino13_UNIT(aero_idx(ia0,ic,ik,is0)),'(a)')  trim(aunit)
-      write(ATMOS_PHY_AE_kajino13_NAME(aero_idx(ia0,ic,ik,is0)),'(a,a,i0)') trim(catego), trim(attribute), is0
-      write(ATMOS_PHY_AE_kajino13_DESC(aero_idx(ia0,ic,ik,is0)),'(a,a,a,i0)') trim(attribute), ' mixing radio of ', trim(catego), is0
-    enddo
-    enddo
-    enddo
-    enddo
-    ic = QA_AE-GAS_CTG+IG_H2SO4
-    write(ATMOS_PHY_AE_kajino13_NAME(ic),'(a)') 'H2SO4_Gas'
-    ic = QA_AE-GAS_CTG+IG_CGAS
-    write(ATMOS_PHY_AE_kajino13_NAME(ic),'(a)') 'Condensable_GAS'
-
-    ic = QA_AE-GAS_CTG+IG_H2SO4
-    write(ATMOS_PHY_AE_kajino13_DESC(ic),'(a)') 'Mixing ratio of H2SO4 Gas'
-    ic = QA_AE-GAS_CTG+IG_CGAS
-    write(ATMOS_PHY_AE_kajino13_DESC(ic),'(a)') 'Mixing ratio of Condensable GAS'
-
-    deallocate(aero_idx)
-
-    call TRACER_regist( QS,                         & ! [OUT]
-                        QA_AE,                      & ! [IN]
-                        ATMOS_PHY_AE_kajino13_NAME, & ! [IN]
-                        ATMOS_PHY_AE_kajino13_DESC, & ! [IN]
-                        ATMOS_PHY_AE_kajino13_UNIT  ) ! [IN]
-
-    QA   = QA_AE
-    QAES = QS
-    QAEE = QS + QA_AE - 1
-
-    return
-  end subroutine ATMOS_PHY_AE_kajino13_config
-
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_AE_kajino13_setup
@@ -617,20 +423,25 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Aerosol Microphysics
-  subroutine ATMOS_PHY_AE_kajino13( &
-       QQA,  &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       EMIT, &
-       NREG, &
-       QTRC, &
-       CN,   &
-       CCN,  &
-       RHOQ_t_AE )
-    use scale_atmos_grid_cartesC_index
+  subroutine ATMOS_PHY_AE_kajino13_tendency( &
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       QQA,        &
+       RHOT,       &
+       TEMP,       &
+       PRES,       &
+       QDRY,       &
+       NREG,       &
+       DENS,       &
+       MOMZ,       &
+       MOMX,       &
+       MOMY,       &
+       QTRC,       &
+       RHOQ_t_AE,  &
+       EMIT,       &
+       CN,         &
+       CCN         )
     use scale_tracer
     use scale_const, only: &
        CONST_CPdry, &
@@ -647,35 +458,41 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_in
     implicit none
+    integer,  intent(in)    :: KA
+    integer,  intent(in)    :: KS
+    integer,  intent(in)    :: KE
+    integer,  intent(in)    :: IA
+    integer,  intent(in)    :: IS
+    integer,  intent(in)    :: IE
+    integer,  intent(in)    :: JA
+    integer,  intent(in)    :: JS
+    integer,  intent(in)    :: JE
     integer,  intent(in)    :: QQA
+    real(RP), intent(in)    :: RHOT(KA,IA,JA)
+    real(RP), intent(in)    :: TEMP(KA,IA,JA)
+    real(RP), intent(in)    :: PRES(KA,IA,JA)
+    real(RP), intent(in)    :: QDRY(KA,IA,JA)
+    real(RP), intent(in)    :: NREG(KA,IA,JA)
     real(RP), intent(inout) :: DENS(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ(KA,IA,JA)
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
-    real(RP), intent(inout) :: RHOT(KA,IA,JA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QQA)
+    real(RP), intent(inout) :: RHOQ_t_AE(KA,IA,JA,QQA)
     real(RP), intent(inout) :: EMIT(KA,IA,JA,QQA)
-    real(RP), intent(in)    :: NREG(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(out)   :: CN(KA,IA,JA)
     real(RP), intent(out)   :: CCN(KA,IA,JA)
-    real(RP), intent(inout) :: RHOQ_t_AE(KA,IA,JA,QA)
 
-    real(RP) :: QTRC0(KA,IA,JA,QA)
-    real(RP) :: QTRC1(KA,IA,JA,QA)
+    real(RP) :: QTRC0(KA,IA,JA,QQA)
+    real(RP) :: QTRC1(KA,IA,JA,QQA)
 
     !--- local
-    real(RP) :: pres_ae(KA,IA,JA)
-    real(RP) :: temp_ae(KA,IA,JA)
     real(RP) :: qv_ae(KA,IA,JA)
     real(RP) :: ssliq_ae(KA,IA,JA)
     real(RP) :: th(KA,IA,JA)
-    real(RP) :: q(KA,IA,JA,QA)
-    real(RP) :: qdry(KA,IA,JA)
+    real(RP) :: q(KA,IA,JA,QQA)
     real(RP) :: rrhog(KA,IA,JA)
-    real(RP) :: cva(KA,IA,JA)
-    real(RP) :: cpa(KA,IA,JA)
     real(RP) :: t_ccn, t_cn
-    real(RP) :: Rmoist
     real(RP) :: qsat_tmp
     real(RP) :: m0_reg, m2_reg, m3_reg      !regenerated aerosols [m^k/m3]
     real(RP) :: ms_reg                      !regenerated aerosol mass [ug/m3]
@@ -718,7 +535,7 @@ contains
     enddo
     enddo
 
-    do iq = 1, QA
+    do iq = 1, QQA
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -742,8 +559,6 @@ contains
     aerosol_activ(:,:,:,:) = 0.0_RP
     emis_procs(:,:,:,:) = 0.0_RP
     emis_gas(:) = 0.0_RP
-    pres_ae(:,:,:) = 0.0_RP
-    temp_ae(:,:,:) = 0.0_RP
     qv_ae(:,:,:) = 0.0_RP
 
     do j = JS, JE
@@ -754,20 +569,10 @@ contains
           th(k,i,j) = RHOT(k,i,j) * rrhog(k,i,j)
        enddo
        do k = KS, KE
-          CALC_QDRY( qdry(k,i,j), QTRC, TRACER_MASS, k, i, j, iq )
-       enddo
-       do k = KS, KE
-          CALC_CV( cva(k,i,j), qdry(k,i,j), QTRC, k, i, j, iq, CONST_CVdry, TRACER_CV )
-       enddo
-       do k = KS, KE
-          CALC_R( Rmoist, qdry(k,i,j), QTRC, k, i, j, iq, CONST_Rdry, TRACER_R )
-          cpa(k,i,j) = cva(k,i,j) + Rmoist
-          CALC_PRE( pres_ae(k,i,j), DENS(k,i,j), th(k,i,j), Rmoist, cpa(k,i,j), CONST_PRE00 )
-          temp_ae(k,i,j) = pres_ae(k,i,j) / ( DENS(k,i,j) * Rmoist )
           if ( I_QV > 0 ) then
              qv_ae(k,i,j) = QTRC(k,i,j,I_QV)
              !--- calculate super saturation of water
-             call pres2qsat_liq( temp_ae(k,i,j), pres_ae(k,i,j), qdry(k,i,j), & ! [IN]
+             call pres2qsat_liq( temp(k,i,j), pres(k,i,j), qdry(k,i,j), & ! [IN]
                                  qsat_tmp                                     ) ! [OUT]
              ssliq_ae(k,i,j) = qv_ae(k,i,j)/qsat_tmp - 1.0_RP
           else
@@ -797,7 +602,7 @@ contains
     enddo
     enddo
 
-    do iq = 1, QA
+    do iq = 1, QQA
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -834,8 +639,8 @@ contains
 
        call aerosol_zerochem(           &
          TIME_DTSEC_ATMOS_PHY_AE,       & !--- in
-         temp_ae(k,i,j),                & !--- in
-         pres_ae(k,i,j),                & !--- in
+         temp(k,i,j),                & !--- in
+         pres(k,i,j),                & !--- in
          ssliq_ae(k,i,j),               & !--- in
          flag_npf, flag_cond, flag_coag,& !--- in
          aerosol_procs,                 & !--- inout
@@ -971,7 +776,7 @@ contains
     deallocate( emis_procs )
     deallocate( emis_gas )
 
-    do iq = 1, QA
+    do iq = 1, QQA
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -982,7 +787,7 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_PHY_AE_kajino13
+  end subroutine ATMOS_PHY_AE_kajino13_tendency
   !-----------------------------------------------------------------------------
   ! subroutine 4. aerosol_zerochem
   !-----------------------------------------------------------------------------
@@ -2222,16 +2027,20 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate Effective Radius
   subroutine ATMOS_PHY_AE_kajino13_EffectiveRadius( &
+       KA,   &
+       IA,   &
+       JA,   &
        Re,   &
        QTRC, &
        RH    )
-    use scale_atmos_grid_cartesC_index
-    use scale_tracer
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_atmos_aerosol, only: &
        N_AE
     implicit none
+    integer,  intent(in)    :: KA
+    integer,  intent(in)    :: IA
+    integer,  intent(in)    :: JA
     real(RP), intent(out) :: Re  (KA,IA,JA,N_AE) ! effective radius
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)   ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: RH  (KA,IA,JA)      ! relative humidity         (0-1)
@@ -2250,12 +2059,25 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_AE_kajino13_mkinit( &
-       QTRC, CCN, &
-       DENS, RHOT, &
-       m0_init, dg_init, sg_init, &
-       d_min_inp, d_max_inp, &
-       k_min_inp, k_max_inp, &
-       n_kap_inp )
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       QQA,        &
+       DENS,       &
+       RHOT,       &
+       TEMP,       &
+       PRES,       &
+       QDRY,       &
+       m0_init,    &
+       dg_init,    &
+       sg_init,    &
+       d_min_inp,  &
+       d_max_inp,  &
+       k_min_inp,  &
+       k_max_inp,  &
+       n_kap_inp,  &
+       QTRC,       &
+       CCN         )
     use scale_const, only: &
        PI => CONST_PI, &
        CONST_CVdry, &
@@ -2268,10 +2090,21 @@ contains
        SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
     implicit none
 
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
-    real(RP), intent(out)   :: CCN (KA,IA,JA)
+    integer,  intent(in)    :: KA
+    integer,  intent(in)    :: KS
+    integer,  intent(in)    :: KE
+    integer,  intent(in)    :: IA
+    integer,  intent(in)    :: IS
+    integer,  intent(in)    :: IE
+    integer,  intent(in)    :: JA
+    integer,  intent(in)    :: JS
+    integer,  intent(in)    :: JE
+    integer,  intent(in)    :: QQA
     real(RP), intent(in)    :: DENS(KA,IA,JA)
     real(RP), intent(in)    :: RHOT(KA,IA,JA)
+    real(RP), intent(in)    :: TEMP(KA,IA,JA)
+    real(RP), intent(in)    :: PRES(KA,IA,JA)
+    real(RP), intent(in)    :: QDRY(KA,IA,JA)
     real(RP), intent(in)    :: m0_init             ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]
     real(RP), intent(in)    :: dg_init             ! initial number equivalen diameters of modes     [m]
     real(RP), intent(in)    :: sg_init             ! initial standard deviation                      [-]
@@ -2280,6 +2113,8 @@ contains
     real(RP), intent(in)    :: k_min_inp(3)
     real(RP), intent(in)    :: k_max_inp(3)
     integer,  intent(in)    :: n_kap_inp(3)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QQA)
+    real(RP), intent(out)   :: CCN (KA,IA,JA)
 
     integer,  parameter :: ia_m0  = 1             ! 1. number conc        [#/m3]
     integer,  parameter :: ia_m2  = 2             ! 2. 2nd mom conc       [m2/m3]
@@ -2317,8 +2152,7 @@ contains
     real(RP), allocatable :: k_min(:)              !lower bound of 1st kappa bin  (n_ctg)
     real(RP), allocatable :: k_max(:)
 
-    real(RP) :: pott, qdry, pres
-    real(RP) :: temp, cpa, cva, qsat_tmp, ssliq, Rmoist
+    real(RP) :: qsat_tmp, ssliq
     real(RP) :: pi6
 
     integer  :: ia0, ik, is0, ic, k, i, j, it, iq
@@ -2466,15 +2300,7 @@ contains
     do k = KS, KE
        !--- calculate super saturation of water
        if ( I_QV > 0 ) then
-          CALC_QDRY(qdry, QTRC, TRACER_MASS, k, i, j, iq)
-          CALC_R   (Rmoist, qdry, QTRC, k, i, j, iq, CONST_Rdry,  TRACER_R )
-          CALC_CV  (cva,    qdry, QTRC, k, i, j, iq, CONST_CVdry, TRACER_CV)
-          CALC_CP  (cpa,    qdry, QTRC, k, i, j, iq, CONST_CPdry, TRACER_CP)
-
-          pres = CONST_PRE00 * ( RHOT(k,i,j) * Rmoist / CONST_PRE00 )**(cpa/cva)
-          temp = pres / ( DENS(k,i,j) * Rmoist )
-
-          call SATURATION_pres2qsat_liq( temp, pres, qdry, & ! [IN]
+          call SATURATION_pres2qsat_liq( TEMP(k,i,j), PRES(k,i,j), QDRY(k,i,j), & ! [IN]
                                          qsat_tmp          ) ! [OUT]
 
           ssliq = QTRC(k,i,j,I_QV) / qsat_tmp - 1.0_RP
@@ -2482,7 +2308,7 @@ contains
           ssliq = -1.0_RP
        endif
 
-       call aerosol_activation( c_kappa, ssliq, temp, ia_m0, ia_m2, ia_m3,       &
+       call aerosol_activation( c_kappa, ssliq, temp(k,i,j), ia_m0, ia_m2, ia_m3,       &
                                 N_ATR, n_siz_max, n_kap_max, n_ctg, NSIZ, n_kap, &
                                 d_ct, aerosol_procs, aerosol_activ               )
 

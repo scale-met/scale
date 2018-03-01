@@ -25,6 +25,7 @@ VPATH = common:                          \
         atmosphere/physics/microphysics: \
         atmosphere/physics/radiation:    \
         atmosphere/physics/surface:      \
+        atmosphere/physics/aerosol:      \
         atmos-physics:                   \
         atmos-physics/share:             \
         atmos-physics/microphysics:      \

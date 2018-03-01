@@ -124,15 +124,6 @@ contains
        ATMOS_PHY_AE_dummy_UNIT, &
        ATMOS_PHY_AE_dummy_DESC, &
        ATMOS_PHY_AE_dummy_DENS
-    use scale_atmos_phy_ae_kajino13, only: &
-       ATMOS_PHY_AE_kajino13_config, &
-       ATMOS_PHY_AE_kajino13_setup, &
-       ATMOS_PHY_AE_kajino13, &
-       ATMOS_PHY_AE_kajino13_EffectiveRadius, &
-       ATMOS_PHY_AE_kajino13_NAME, &
-       ATMOS_PHY_AE_kajino13_UNIT, &
-       ATMOS_PHY_AE_kajino13_DESC, &
-       ATMOS_PHY_AE_kajino13_DENS
     implicit none
 
     character(len=*), intent(in) :: AE_TYPE
@@ -150,16 +141,6 @@ contains
        ATMOS_PHY_AE_DESC            => ATMOS_PHY_AE_dummy_DESC
        ATMOS_PHY_AE_UNIT            => ATMOS_PHY_AE_dummy_UNIT
        ATMOS_PHY_AE_DENS            => ATMOS_PHY_AE_dummy_DENS
-    case('KAJINO13')
-       call ATMOS_PHY_AE_kajino13_config( AE_TYPE, QA_AE, QS_AE )
-       ATMOS_PHY_AE_setup           => ATMOS_PHY_AE_kajino13_setup
-       ATMOS_PHY_AE                 => ATMOS_PHY_AE_kajino13
-       ATMOS_PHY_AE_EffectiveRadius => ATMOS_PHY_AE_kajino13_EffectiveRadius
-       ATMOS_PHY_AE_NAME            => ATMOS_PHY_AE_kajino13_NAME
-       ATMOS_PHY_AE_DESC            => ATMOS_PHY_AE_kajino13_DESC
-       ATMOS_PHY_AE_UNIT            => ATMOS_PHY_AE_kajino13_UNIT
-       ATMOS_PHY_AE_DENS            => ATMOS_PHY_AE_kajino13_DENS
-       write(*,*) '### aerosol type(', AE_TYPE, '). is not recommended in current version!'
     case default
        write(*,*) 'xxx invalid aerosol type(', AE_TYPE, '). CHECK!'
        call PRC_MPIstop
