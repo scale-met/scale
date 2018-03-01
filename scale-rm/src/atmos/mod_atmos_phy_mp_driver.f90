@@ -69,6 +69,13 @@ contains
        I_QI, &
        I_QS, &
        I_QG
+    use scale_atmos_phy_mp_kessler, only: &
+       ATMOS_PHY_MP_KESSLER_ntracers,            &
+       ATMOS_PHY_MP_KESSLER_nwaters,             &
+       ATMOS_PHY_MP_KESSLER_nices,               &
+       ATMOS_PHY_MP_KESSLER_tracer_names,        &
+       ATMOS_PHY_MP_KESSLER_tracer_descriptions, &
+       ATMOS_PHY_MP_KESSLER_tracer_units
     use scale_atmos_phy_mp_tomita08, only: &
        ATMOS_PHY_MP_TOMITA08_ntracers,            &
        ATMOS_PHY_MP_TOMITA08_nwaters,             &
@@ -97,6 +104,17 @@ contains
 
     if ( ATMOS_sw_phy_mp ) then
        select case ( ATMOS_PHY_MP_TYPE )
+       case ( 'KESSLER' )
+          call ATMOS_HYDROMETEOR_regist( &
+               QS_MP,                                        & ! [OUT]
+               ATMOS_PHY_MP_KESSLER_nwaters,                & ! [IN]
+               ATMOS_PHY_MP_KESSLER_nices,                  & ! [IN]
+               ATMOS_PHY_MP_KESSLER_tracer_names(:),        & ! [IN]
+               ATMOS_PHY_MP_KESSLER_tracer_descriptions(:), & ! [IN]
+               ATMOS_PHY_MP_KESSLER_tracer_units(:)         ) ! [IN]
+          QA_MP = ATMOS_PHY_MP_KESSLER_ntracers
+          I_QC = QS_MP+1
+          I_QR = QS_MP+2
        case ( 'TOMITA08' )
           call ATMOS_HYDROMETEOR_regist( &
                QS_MP,                                        & ! [OUT]
@@ -143,6 +161,8 @@ contains
        TIME_DTSEC_ATMOS_PHY_MP
     use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP_setup
+    use scale_atmos_phy_mp_kessler, only: &
+       ATMOS_PHY_MP_KESSLER_setup
     use scale_atmos_phy_mp_tomita08, only: &
        ATMOS_PHY_MP_TOMITA08_setup
     use scale_file_history, only: &
@@ -208,6 +228,8 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** DT of sedimentation                       : ', MP_DTSEC_SEDIMENTATION, '[s]'
 
        select case ( ATMOS_PHY_MP_TYPE )
+       case ( 'KESSLER' )
+          call ATMOS_PHY_MP_kessler_setup
        case ( 'TOMITA08' )
           call ATMOS_PHY_MP_tomita08_setup( &
                KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB )
@@ -341,6 +363,11 @@ contains
     use scale_atmos_phy_mp_common, only: &
        ATMOS_PHY_MP_precipitation, &
        ATMOS_PHY_MP_precipitation_momentum
+    use scale_atmos_refstate, only: &
+       REFSTATE_dens => ATMOS_REFSTATE_dens
+    use scale_atmos_phy_mp_kessler, only: &
+       ATMOS_PHY_MP_KESSLER_adjustment, &
+       ATMOS_PHY_MP_KESSLER_terminal_velocity
     use scale_atmos_phy_mp_tomita08, only: &
        ATMOS_PHY_MP_TOMITA08_adjustment, &
        ATMOS_PHY_MP_TOMITA08_terminal_velocity
@@ -448,6 +475,44 @@ contains
        CCN(:,:,:) = CCN_t(:,:,:) * dt_MP
 
        select case ( ATMOS_PHY_MP_TYPE )
+       case ( 'KESSLER' )
+!OCL XFILL
+          TEMP1(:,:,:) = TEMP(:,:,:)
+!OCL XFILL
+          QTRC1(:,:,:,QS_MP:QE_MP) = QTRC(:,:,:,QS_MP:QE_MP)
+!OCL XFILL
+          CVtot1(:,:,:) = CVtot(:,:,:)
+!OCL XFILL
+          CPtot1(:,:,:) = CPtot(:,:,:)
+
+          call ATMOS_PHY_MP_kessler_adjustment( &
+               KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+               DENS(:,:,:), PRES(:,:,:), dt_MP,                                      & ! [IN]
+               TEMP1(:,:,:), QTRC1(:,:,:,QS_MP:QE_MP), CPtot1(:,:,:), CVtot1(:,:,:), & ! [INOUT]
+               RHOE_t(:,:,:), EVAPORATE(:,:,:)                                       ) ! [OUT]
+
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             CP_t = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
+             CV_t = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
+             RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
+                  - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
+                  * DENS(k,i,j) * TEMP(k,i,j)
+          end do
+          end do
+          end do
+
+          do iq = QS_MP, QE_MP
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             RHOQ_t_MP(k,i,j,iq) = ( QTRC1(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_MP
+          enddo
+          enddo
+          enddo
+          enddo
+
        case ( 'TOMITA08' )
 !OCL XFILL
           do j = JSB, JEB
@@ -496,7 +561,7 @@ contains
              CP_t = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
              CV_t = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
              RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
-                  - ( CP_t + log( PRE00 / PRES(k,i,j) ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
+                  - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
                   * DENS(k,i,j) * TEMP(k,i,j)
 !             RHOT_t_MP(k,i,j) = RHOE_t(k,i,j) / ( EXNER(k,i,j) * CPtot(k,i,j) ) &
 !                  - RHOT(k,i,j) * CP_t / CPtot(k,i,j) &
@@ -604,6 +669,7 @@ contains
           !$omp         DENS,MOMZ,U,V,RHOT,TEMP,PRES,QTRC,CPtot,CVtot,EXNER, &
           !$omp         DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOQ_t_MP,RHOH_MP, &
           !$omp         SFLX_rain,SFLX_snow, &
+          !$omp         REFSTATE_dens, &
           !$omp         integ_precip, &
           !$omp         vterm_hist,hist_vterm_idx) &
           !$omp private(i,j,k,iq,step, &
@@ -641,6 +707,12 @@ contains
              do step = 1, MP_NSTEP_SEDIMENTATION
 
                 select case ( ATMOS_PHY_MP_TYPE )
+                case ( 'KESSLER' )
+                   call ATMOS_PHY_MP_kessler_terminal_velocity( &
+                        KA, KS, KE, &
+                        DENS2(:), RHOQ2(:,:), & ! [IN]
+                        REFSTATE_dens(:,i,j), & ! [IN]
+                        vterm(:,:)            ) ! [OUT]
                 case ( 'TOMITA08' )
                    call ATMOS_PHY_MP_tomita08_terminal_velocity( &
                         KA, KS, KE, &
@@ -694,7 +766,7 @@ contains
                 CV_t = ( CVtot2(k) - CVtot(k,i,j) ) / dt_MP
                 RHOH_MP(k,i,j) = RHOH_MP(k,i,j) &
                      + ( RHOE2(k) - RHOE(k) ) / dt_MP &
-                     - ( CP_t + log( PRE00 / PRES(k,i,j) ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
+                     - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
                      * DENS(k,i,j) * TEMP(k,i,j)
 !                RHOT_t_MP(k,i,j) = RHOT_t_MP(k,i,j) &
 !                     + ( RHOE2(k) - RHOE(k) ) / ( dt_MP * EXNER(k,i,j) * CPtot(k,i,j) ) &

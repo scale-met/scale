@@ -146,16 +146,6 @@ contains
        ATMOS_PHY_MP_dry_NAME, &
        ATMOS_PHY_MP_dry_DESC, &
        ATMOS_PHY_MP_dry_UNIT
-    use scale_atmos_phy_mp_kessler, only: &
-       ATMOS_PHY_MP_kessler_config, &
-       ATMOS_PHY_MP_kessler_setup, &
-       ATMOS_PHY_MP_kessler, &
-       ATMOS_PHY_MP_kessler_CloudFraction, &
-       ATMOS_PHY_MP_kessler_EffectiveRadius, &
-       ATMOS_PHY_MP_kessler_MixingRatio, &
-       ATMOS_PHY_MP_kessler_NAME, &
-       ATMOS_PHY_MP_kessler_DESC, &
-       ATMOS_PHY_MP_kessler_UNIT
     use scale_atmos_phy_mp_sn14, only: &
        ATMOS_PHY_MP_sn14_config, &
        ATMOS_PHY_MP_sn14_setup, &
@@ -206,18 +196,6 @@ contains
        ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_dry_NAME
        ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_dry_DESC
        ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_dry_UNIT
-    case( 'KESSLER' )
-       call ATMOS_PHY_MP_kessler_config( &
-            MP_TYPE,     & ! (in)
-            QA_MP, QS_MP ) ! (out)
-       ATMOS_PHY_MP                 => ATMOS_PHY_MP_kessler
-       ATMOS_PHY_MP_setup           => ATMOS_PHY_MP_kessler_setup
-       ATMOS_PHY_MP_CloudFraction   => ATMOS_PHY_MP_kessler_CloudFraction
-       ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_kessler_EffectiveRadius
-       ATMOS_PHY_MP_MixingRatio     => ATMOS_PHY_MP_kessler_MixingRatio
-       ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_kessler_NAME
-       ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_kessler_DESC
-       ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_kessler_UNIT
     case( 'SN14' )
        call ATMOS_PHY_MP_sn14_config( &
             MP_TYPE,     & ! (in)
