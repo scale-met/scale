@@ -1923,9 +1923,9 @@ contains
 
     if ( QSUM <= qsat ) then
        QV = QSUM
-       QC = 0.0_RP
        CPtot = CPtot + QC * ( CP_VAPOR - CP_WATER )
        CVtot = CVtot + QC * ( CV_VAPOR - CV_WATER )
+       QC = 0.0_RP
        TEMP = ( Emoist0 - LHV * QV ) / CVtot
        converged = .true.
        return
@@ -2039,10 +2039,10 @@ contains
 
     if ( QSUM <= qsat ) then
        QV = QSUM
-       QC = 0.0_RP
-       QI = 0.0_RP
        CPtot = CPtot + QC * ( CP_VAPOR - CP_WATER ) + QI * ( CP_VAPOR - CP_ICE )
        CVtot = CVtot + QC * ( CV_VAPOR - CV_WATER ) + QI * ( CV_VAPOR - CV_ICE )
+       QC = 0.0_RP
+       QI = 0.0_RP
        TEMP = ( Emoist0 - LHV * QV ) / CVtot
        converged = .true.
        return
