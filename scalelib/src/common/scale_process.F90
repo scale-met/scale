@@ -329,8 +329,8 @@ contains
 
     PRC_ABORT_COMM_WORLD = comm
 
-    call MPI_Comm_set_errhandler(PRC_ABORT_COMM_WORLD,PRC_UNIVERSAL_handler,ierr)
-    call MPI_Comm_get_errhandler(PRC_ABORT_COMM_WORLD,PRC_ABORT_handler    ,ierr)
+!    call MPI_Comm_set_errhandler(PRC_ABORT_COMM_WORLD,PRC_UNIVERSAL_handler,ierr)
+!    call MPI_Comm_get_errhandler(PRC_ABORT_COMM_WORLD,PRC_ABORT_handler    ,ierr)
 
     return
   end subroutine PRC_SINGLECOM_setup

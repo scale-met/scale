@@ -59,7 +59,8 @@ contains
        app_name )
     use scale_process, only: &
        PRC_MPIstart, &
-       PRC_SINGLECOM_setup
+       PRC_SINGLECOM_setup, &
+       PRC_ERRHANDLER_setup
     use scale_const, only: &
        CONST_setup
     use scale_prof, only: &
@@ -91,6 +92,10 @@ contains
                               nprocs,  & ! [OUT]
                               myrank,  & ! [OUT]
                               ismaster ) ! [OUT]
+
+    ! setup errhandler
+    call PRC_ERRHANDLER_setup( .false., & ! [IN]
+                               ismaster ) ! [IN]
 
     ! setup scale_io
     call IO_setup( name, allow_noconf = .true. )
