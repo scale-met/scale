@@ -272,11 +272,11 @@ contains
 
     rdt = 1.0_RP / dt
 
-    !$omp parallel do default(none)
+    !$omp parallel do default(none) &
     !$omp shared(KS,KE,IS,IE,JS,JE, &
-    !$omp        DENS0,TEMP0,PRES0,QCTR0,CPtot0,CVtot0,dt, &
+    !$omp        DENS0,TEMP0,PRES0,QTRC0,CPtot0,CVtot0,dt, &
     !$omp        RHOE_t, &
-    !$omp        EPS,LHV,CP_VAPOR,CP_WATER,CV_VAPOR,CV_WATER,rdt)
+    !$omp        EPS,LHV,CP_VAPOR,CP_WATER,CV_VAPOR,CV_WATER,rdt) &
     !$omp private(k,i,j,dens,temp,pres,cptot,cvtot,qv,qc,qr,qv_t,qc_t,qr_t,e_t,cp_t,cv_t, &
     !$omp         QSATL,Sliq, &
     !$omp         dq_evap,dq_auto,dq_accr,vent_factor) &

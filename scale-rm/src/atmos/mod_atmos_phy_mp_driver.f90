@@ -669,6 +669,7 @@ contains
           !$omp         DENS,MOMZ,U,V,RHOT,TEMP,PRES,QTRC,CPtot,CVtot,EXNER, &
           !$omp         DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOQ_t_MP,RHOH_MP, &
           !$omp         SFLX_rain,SFLX_snow, &
+          !$omp         REFSTATE_dens, &
           !$omp         integ_precip, &
           !$omp         vterm_hist,hist_vterm_idx) &
           !$omp private(i,j,k,iq,step, &
