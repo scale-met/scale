@@ -46,7 +46,7 @@ File.foreach(fname) do |line|
       hybrid = false
     end
   end
-    
+
   if hybrid
     if /ATMOS_PHY_TB_HYBRID_SGS_TYPE\s*=\s*["'](.+)['"]/ =~ line
       tb = $1
@@ -93,7 +93,7 @@ params.each do |param|
     print "&PARAM_FILE_HISTORY_CARTESC\n"
     param_items.each do |item|
       item.sub!("HIST_BND", "FILE_HISTORY_CARTESC_BOUNDARY")
-      print item.sub("HIST_", "FILE_HISTORY_CARTESC"), "\n"
+      print item.sub("HIST_", "FILE_HISTORY_CARTESC_"), "\n"
     end
     print "/\n"
     next

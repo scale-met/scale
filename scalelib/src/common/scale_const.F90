@@ -209,7 +209,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** lapse rate of ISA                           [K/m] : LAPS    = ', CONST_LAPS
     if( IO_L ) write(IO_FID_LOG,*) '*** dry adiabatic lapse rate                    [K/m] : LAPSdry = ', CONST_LAPSdry
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** mass weight (water vapor)                 [g/mol] : Rvap    = ', CONST_Rvap
+    if( IO_L ) write(IO_FID_LOG,*) '*** mass weight (water vapor)                 [g/mol] : Mvap    = ', CONST_Mvap
     if( IO_L ) write(IO_FID_LOG,*) '*** specific gas constant (water vapor)      [J/kg/K] : Rvap    = ', CONST_Rvap
     if( IO_L ) write(IO_FID_LOG,*) '*** specific heat (vapor, const. pressure)   [J/kg/K] : CPvap   = ', CONST_CPvap
     if( IO_L ) write(IO_FID_LOG,*) '*** specific heat (vapor, const. volume)     [J/kg/K] : CVvap   = ', CONST_CVvap

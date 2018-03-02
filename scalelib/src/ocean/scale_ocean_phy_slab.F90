@@ -40,12 +40,12 @@ module scale_ocean_phy_slab
   !
   !++ Private parameters & variables
   !
-  real(RP),              private :: OCEAN_PHY_SLAB_DEPTH          = 10.0_RP !< water depth of slab ocean [m]
-  real(RP),              private :: OCEAN_PHY_SLAB_HeatCapacity             !< heat capacity of slab ocean [J/K/m2]
+  real(RP), private :: OCEAN_PHY_SLAB_DEPTH          = 10.0_RP !< water depth of slab ocean [m]
+  real(RP), private :: OCEAN_PHY_SLAB_HeatCapacity             !< heat capacity of slab ocean [J/K/m2]
 
-  logical,               private :: OCEAN_PHY_SLAB_nudging        = .false. ! SST Nudging is used?
-  real(DP),              private :: OCEAN_PHY_SLAB_nudging_tausec           ! Relaxation time [sec]
-  logical,               private :: OCEAN_PHY_SLAB_fixedsst       = .false. ! SST is fixed?
+  logical,  private :: OCEAN_PHY_SLAB_nudging        = .false. !< SST Nudging is used?
+  real(DP), private :: OCEAN_PHY_SLAB_nudging_tausec           !< Relaxation time [sec]
+  logical,  private :: OCEAN_PHY_SLAB_offline_mode   = .false. !< Use offline mode?
 
   !-----------------------------------------------------------------------------
 contains
@@ -126,7 +126,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Relaxation time Tau [sec]     : ', OCEAN_PHY_SLAB_nudging_tausec
 
        if ( OCEAN_PHY_SLAB_nudging_tausec == 0.0_RP ) then
-          OCEAN_PHY_SLAB_fixedsst = .true.
+          OCEAN_PHY_SLAB_offline_mode = .true.
           if( IO_L ) write(IO_FID_LOG,*) '*** Tau=0 means that SST is completely replaced by the external data.'
        endif
 
@@ -200,7 +200,7 @@ contains
           call PRC_MPIstop
        endif
 
-       ! if OCEAN_PHY_SLAB_nudging_tau < dt, Nudging acts as fixed boundary
+       ! if OCEAN_PHY_SLAB_nudging_tau < dt, Nudging acts as quasi-prescribed boundary
        rtau = 1.0_RP / max(OCEAN_PHY_SLAB_nudging_tausec,dt)
 
        do j = OJS, OJE
@@ -227,7 +227,7 @@ contains
     enddo
     enddo
 
-    if ( .NOT. OCEAN_PHY_SLAB_fixedsst ) then ! heat flux from atm/ice at uppermost ocean layer
+    if ( .NOT. OCEAN_PHY_SLAB_offline_mode ) then ! heat flux from atm/ice at uppermost ocean layer
        do j = OJS, OJE
        do i = OIS, OIE
           if ( LANDUSE_fact_ocean(i,j) > 0.0_RP ) then
