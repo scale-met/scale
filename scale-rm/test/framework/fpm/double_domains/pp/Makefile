@@ -19,13 +19,11 @@ PPCONF      = pp.d01.conf,pp.d02.conf
 TPROC       = 1,2
 
 # required data (parameters,distributed files)
-DATPARAM    =
+DATPARAM    = " [$(SCALE_DB)/topo/GTOPO30/Products   input_topo   ] \
+                [$(SCALE_DB)/landuse/GLCCv2/Products input_landuse] "
 DATDISTS    =
+
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.common
-
-
-all: run
-
