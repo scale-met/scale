@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Physics Chemistry
+!> module atmosphere / physics / chemistry / RN222
 !!
 !! @par Description
 !!          General component for rn222 tracer
@@ -19,8 +19,6 @@ module scale_atmos_phy_ch_rn222
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_atmos_grid_cartesC_index
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -28,9 +26,8 @@ module scale_atmos_phy_ch_rn222
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_CH_rn222_config
   public :: ATMOS_PHY_CH_rn222_setup
-  public :: ATMOS_PHY_CH_rn222
+  public :: ATMOS_PHY_CH_rn222_tendency
 
   !-----------------------------------------------------------------------------
   !
@@ -59,9 +56,9 @@ module scale_atmos_phy_ch_rn222
   !
   !++ Private parameters & variables
   !
-  integer,  private, parameter :: I_ch_rn222 = 1
-  integer,  private            :: QS_CH
-  integer,  private            :: QE_CH
+  integer,  public, parameter :: I_ch_rn222 = 1
+  integer,  public            :: QS_CH
+  integer,  public            :: QE_CH
 
   real(RP),          private :: Rn222_decay_ratio                       ! Decay constant [/s]
 
@@ -71,45 +68,6 @@ module scale_atmos_phy_ch_rn222
 
   !-----------------------------------------------------------------------------
 contains
-  !-----------------------------------------------------------------------------
-  !> Config
-  subroutine ATMOS_PHY_CH_rn222_config( &
-       CH_TYPE, &
-       QA,      &
-       QS       )
-    use scale_process, only: &
-       PRC_MPIstop
-    use scale_tracer, only: &
-       TRACER_regist
-    implicit none
-
-    character(len=*), intent(in)  :: CH_TYPE
-    integer,          intent(out) :: QA
-    integer,          intent(out) :: QS
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Chemical Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Rn222'
-
-    if ( CH_TYPE /= 'RN222' ) then
-       write(*,*) 'xxx ATMOS_PHY_CH_TYPE is not RN222. Check!'
-       call PRC_MPIstop
-    endif
-
-    call TRACER_regist( QS_CH,                   & ! [OUT]
-                        QA_CH,                   & ! [IN]
-                        ATMOS_PHY_CH_rn222_NAME, & ! [IN]
-                        ATMOS_PHY_CH_rn222_DESC, & ! [IN]
-                        ATMOS_PHY_CH_rn222_UNIT  ) ! [IN]
-
-    QA    = QA_CH
-    QS    = QS_CH
-    QE_CH = QS_CH + QA_CH - 1
-
-    return
-  end subroutine ATMOS_PHY_CH_rn222_config
-
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_CH_rn222_setup
@@ -165,25 +123,36 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Aerosol Microphysics
-  subroutine ATMOS_PHY_CH_rn222( &
-       QQA,   &
-       DENS,  &
-       QTRC,  &
-       RHOQ_t )
-    use scale_atmos_grid_cartesC_index
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_FZ
-    use scale_landuse, only: &
-       LANDUSE_fact_land
+  subroutine ATMOS_PHY_CH_rn222_tendency( &
+       KA, KS, KE,                 &
+       IA, IS, IE,                 &
+       JA, JS, JE,                 &
+       QQA,                        &
+       DENS,                       &
+       QTRC,                       &
+       ATMOS_GRID_CARTESC_REAL_FZ, &
+       LANDUSE_fact_land,          &
+       RHOQ_t                      )
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_tracer, only: &
        QA
     implicit none
 
+    integer,  intent(in)    :: KA
+    integer,  intent(in)    :: KS
+    integer,  intent(in)    :: KE
+    integer,  intent(in)    :: IA
+    integer,  intent(in)    :: IS
+    integer,  intent(in)    :: IE
+    integer,  intent(in)    :: JA
+    integer,  intent(in)    :: JS
+    integer,  intent(in)    :: JE
     integer,  intent(in)    :: QQA
     real(RP), intent(in)    :: DENS  (KA,IA,JA)
-    real(RP), intent(in)    :: QTRC  (KA,IA,JA,QA)
+    real(RP), intent(in)    :: QTRC  (KA,IA,JA,1)
+    real(RP), intent(in)    :: ATMOS_GRID_CARTESC_REAL_FZ (0:KA,IA,JA)
+    real(RP), intent(in)    :: LANDUSE_fact_land (IA,JA)
     real(RP), intent(inout) :: RHOQ_t(KA,IA,JA,QQA)
 
     real(RP) :: emission(IA,JA)
@@ -193,7 +162,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Chemistry(Rn222)'
 
-    iq = QS_CH - 1 + I_ch_rn222
+    !iq = QS_CH - 1 + I_ch_rn222
 
     !--- Decay based on half life
 
@@ -201,7 +170,7 @@ contains
     do i  = IS, IE
     do k  = KS, KE
        RHOQ_t(k,i,j,I_ch_rn222) = RHOQ_t(k,i,j,I_ch_rn222) &
-                                - DENS(k,i,j) * QTRC(k,i,j,iq) * Rn222_decay_ratio ! [Bq/m3/s]
+                                - DENS(k,i,j) * QTRC(k,i,j,1) * Rn222_decay_ratio ! [Bq/m3/s]
     enddo
     enddo
     enddo
@@ -228,6 +197,6 @@ contains
     call FILE_HISTORY_in( emission(:,:), 'EMIT_RN222', 'Emission Rn222', 'Bq/m2/s' )
 
     return
-  end subroutine ATMOS_PHY_CH_rn222
+  end subroutine ATMOS_PHY_CH_rn222_tendency
 
 end module scale_atmos_phy_ch_rn222

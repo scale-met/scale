@@ -82,13 +82,6 @@ contains
   subroutine ATMOS_PHY_CH_config( CH_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_atmos_phy_ch_rn222, only: &
-       ATMOS_PHY_CH_rn222_config, &
-       ATMOS_PHY_CH_rn222_setup,  &
-       ATMOS_PHY_CH_rn222,        &
-       ATMOS_PHY_CH_rn222_NAME,   &
-       ATMOS_PHY_CH_rn222_UNIT,   &
-       ATMOS_PHY_CH_rn222_DESC
     implicit none
 
     character(len=*), intent(in) :: CH_TYPE
@@ -99,13 +92,6 @@ contains
     select case( CH_TYPE )
     case('OFF')
        ! do nothing
-    case('RN222')
-       call ATMOS_PHY_CH_rn222_config( CH_TYPE, QA_CH, QS_CH )
-       ATMOS_PHY_CH_setup => ATMOS_PHY_CH_rn222_setup
-       ATMOS_PHY_CH       => ATMOS_PHY_CH_rn222
-       ATMOS_PHY_CH_NAME  => ATMOS_PHY_CH_rn222_NAME
-       ATMOS_PHY_CH_DESC  => ATMOS_PHY_CH_rn222_DESC
-       ATMOS_PHY_CH_UNIT  => ATMOS_PHY_CH_rn222_UNIT
     case default
        write(*,*) 'xxx invalid chemistry type(', CH_TYPE, '). CHECK!'
        call PRC_MPIstop
