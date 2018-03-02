@@ -352,7 +352,8 @@ contains
        ATMOS_PHY_MP_driver_calc_tendency, &
        ATMOS_PHY_MP_driver_adjustment
     use mod_atmos_phy_ae_driver, only: &
-       ATMOS_PHY_AE_driver_tendency
+       ATMOS_PHY_AE_driver_calc_tendency, &
+       ATMOS_PHY_AE_driver_adjustment
     use mod_atmos_phy_ch_driver, only: &
        ATMOS_PHY_CH_driver
     use mod_atmos_phy_rd_driver, only: &
@@ -407,6 +408,13 @@ contains
        call PROF_rapend  ('ATM_Microphysics', 1)
        call ATMOS_vars_calc_diagnostics
     endif
+    ! Aerosol
+    if ( ATMOS_sw_phy_ae .and. do_phy_ae ) then
+       call PROF_rapstart('ATM_Aerosol', 1)
+       call ATMOS_PHY_AE_driver_adjustment
+       call PROF_rapend  ('ATM_Aerosol', 1)
+       call ATMOS_vars_calc_diagnostics
+    endif
 
     !########## Set hydrostatic pressure coordinate ##########
     call PROF_rapstart('ATM_History', 1)
@@ -444,7 +452,7 @@ contains
     ! Aerosol
     if ( ATMOS_sw_phy_ae ) then
        call PROF_rapstart('ATM_Aerosol', 1)
-       call ATMOS_PHY_AE_driver_tendency( update_flag = do_phy_ae )
+       call ATMOS_PHY_AE_driver_calc_tendency( update_flag = do_phy_ae )
        call PROF_rapend  ('ATM_Aerosol', 1)
     endif
     ! Chemistry

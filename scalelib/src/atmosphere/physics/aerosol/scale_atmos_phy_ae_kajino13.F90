@@ -40,10 +40,12 @@ module scale_atmos_phy_ae_kajino13
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_AE_kajino13_tracer_setup
   public :: ATMOS_PHY_AE_kajino13_setup
   public :: ATMOS_PHY_AE_kajino13_tendency
-  public :: ATMOS_PHY_AE_kajino13_EffectiveRadius
+  public :: ATMOS_PHY_AE_kajino13_effective_radius
   public :: ATMOS_PHY_AE_kajino13_mkinit
+  public :: ATMOS_PHY_AE_kajino13_negative_fixer
 
   !-----------------------------------------------------------------------------
   !
@@ -71,9 +73,6 @@ module scale_atmos_phy_ae_kajino13
   integer, parameter, public :: N_ATR = 5
   integer, allocatable, public :: NKAP(:)
   integer, allocatable, public :: NSIZ(:)
-
-  integer, public :: QAES
-  integer, public :: QAEE
 
   integer, parameter, public :: IC_MIX   =  1
   integer, parameter, public :: IC_SEA   =  2
@@ -176,13 +175,194 @@ module scale_atmos_phy_ae_kajino13
   character(len=H_SHORT),allocatable :: ctg_name(:)
   real(RP), parameter :: cleannumber = 1.E-3 ! tiny number of aerosol per bin for neglectable mass,
                                              !  D =10 um resulted in 1.e-6 ug/m3
+
+
+  real(RP), allocatable :: aerosol_procs(:,:,:,:) ! (n_atr,n_siz_max,n_kap_max,n_ctg)
+  real(RP), allocatable :: aerosol_activ(:,:,:,:) ! (n_atr,n_siz_max,n_kap_max,n_ctg)
+  real(RP), allocatable :: emis_procs   (:,:,:,:) ! (n_atr,n_siz_max,n_kap_max,n_ctg)
+  real(RP), allocatable :: emis_gas     (:)       ! emission of gas
+
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Tracer setup
+  subroutine ATMOS_PHY_AE_kajino13_tracer_setup( QA_AE )
+    use scale_process, only: &
+       PRC_abort
+
+    integer, intent(out) :: QA_AE
+
+    integer, allocatable :: aero_idx(:,:,:,:)
+    integer :: ncat_max
+    integer :: NASIZ(3), NAKAP(3)
+    character(len=H_SHORT) :: attribute, catego, aunit
+
+    NAMELIST / PARAM_TRACER_KAJINO13 / &
+       AE_CTG, &
+       NASIZ,  &
+       NAKAP
+
+    integer :: m, ierr, ik, ic, ia0, is0
+
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Aerosol] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+
+    ! note: tentatively, aerosol module should be called at all time. we need dummy subprogram.
+    !if ( ATMOS_sw_phy_ae ) then
+
+    write(*,*) '### Kajino13 scheme is still experimental'
+
+    ncat_max = max( IC_MIX, IC_SEA, IC_DUS )
+   
+    NASIZ(:) = 64
+    NAKAP(:) = 1
+   
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_TRACER_KAJINO13,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*)  '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_TRACER_KAJINO13, Check!'
+       call PRC_abort
+    end if
+   
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_TRACER_KAJINO13)
+   
+    if( AE_CTG > ncat_max ) then
+       write(*,*) 'xxx AE_CTG should be smaller than', ncat_max+1, 'stop'
+       call PRC_abort
+    endif
+   
+    allocate( NSIZ(AE_CTG) )
+    allocate( NKAP(AE_CTG) )
+   
+    NKAP(1:AE_CTG) = NAKAP(1:AE_CTG)
+    NSIZ(1:AE_CTG) = NASIZ(1:AE_CTG)
+
+    if( maxval( NKAP ) /= 1 .OR. minval( NKAP ) /= 1 ) then
+       write(*,*) 'xxx NKAP(:) /= 1 is not supported now, Stop!'
+       call PRC_abort
+    end if
+   
+    ! do ia0 = 1, N_ATR
+    do ic = 1, AE_CTG
+    do ik = 1, NKAP(ic)
+    do is0 = 1, NSIZ(ic)
+       QA_AE   = QA_AE + N_ATR
+    enddo
+    enddo
+    enddo
+    QA_AE = QA_AE + GAS_CTG
+   
+    allocate( ATMOS_PHY_AE_kajino13_NAME(QA_AE) )
+    allocate( ATMOS_PHY_AE_kajino13_DESC(QA_AE) )
+    allocate( ATMOS_PHY_AE_kajino13_UNIT(QA_AE) )
+   
+    n_siz_max = 0
+    n_kap_max = 0
+    do ic = 1, AE_CTG
+       n_siz_max = max(n_siz_max, NSIZ(ic))
+       n_kap_max = max(n_kap_max, NKAP(ic))
+    enddo
+   
+    allocate( aero_idx(N_ATR,AE_CTG,n_kap_max,n_siz_max) )
+    m = 0
+   !       do ia0 = 1, N_ATR
+    do ic = 1, AE_CTG
+    do ik = 1, NKAP(ic)
+    do is0 = 1, NSIZ(ic)
+    do ia0 = 1, N_ATR
+       m = m+1
+       aero_idx(ia0,ic,ik,is0) = m
+    enddo
+    enddo
+    enddo
+    enddo
+   
+    !-----------------------------------------------------------------------------
+    !
+    !++ calculate each category and aerosol
+    !
+    !-----------------------------------------------------------------------------
+    ic = QA_AE-GAS_CTG+IG_H2SO4
+    write(ATMOS_PHY_AE_kajino13_UNIT(ic),'(a)')  'kg/kg'
+    ic = QA_AE-GAS_CTG+IG_CGAS
+    write(ATMOS_PHY_AE_kajino13_UNIT(ic),'(a)')  'kg/kg'
+   
+   !do ia0 = 1, N_ATR
+   !  if( ia0 == 1 ) then
+   !     write(attribute,'(a)') "Number"
+   !     write(aunit,'(a)') "num/kg"
+   !  elseif( ia0 == 2 ) then
+   !     write(attribute,'(a)') "Section"
+   !     write(aunit,'(a)') "m2/kg"
+   !  elseif( ia0 == 3 ) then
+   !     write(attribute,'(a)') "Volume"
+   !     write(aunit,'(a)') "m3/kg"
+   !  elseif( ia0 == 4 ) then
+   !     write(attribute,'(a)') "Mass"
+   !     write(aunit,'(a)') "kg/kg"
+   !  elseif( ia0 == 5 ) then
+   !     write(attribute,'(a)') "kpXmass"
+   !     write(aunit,'(a)') "kg/kg"
+   !  endif
+    do ic = 1, AE_CTG       !aerosol category
+    do ik = 1, NKAP(ic)   !kappa bin
+    do is0 = 1, NSIZ(ic)
+    do ia0 = 1, N_ATR
+       if( ia0 == 1 ) then
+          write(attribute,'(a)') "Number"
+          write(aunit,'(a)') "num/kg"
+       elseif( ia0 == 2 ) then
+          write(attribute,'(a)') "Section"
+          write(aunit,'(a)') "m2/kg"
+       elseif( ia0 == 3 ) then
+          write(attribute,'(a)') "Volume"
+          write(aunit,'(a)') "m3/kg"
+       elseif( ia0 == 4 ) then
+          write(attribute,'(a)') "Mass"
+          write(aunit,'(a)') "kg/kg"
+       elseif( ia0 == 5 ) then
+          write(attribute,'(a)') "kXm"
+          write(aunit,'(a)') "kg/kg"
+       endif
+       if( ic == IC_MIX ) then
+          write(catego,'(a)') "Sulf_"
+       elseif( ic == IC_SEA ) then
+          write(catego,'(a)') "Salt_"
+       elseif( ic == IC_DUS ) then
+          write(catego,'(a)') "Dust_"
+       endif
+       write(ATMOS_PHY_AE_kajino13_UNIT(aero_idx(ia0,ic,ik,is0)),'(a)')  trim(aunit)
+       write(ATMOS_PHY_AE_kajino13_NAME(aero_idx(ia0,ic,ik,is0)),'(a,a,i0)') trim(catego), trim(attribute), is0
+       write(ATMOS_PHY_AE_kajino13_DESC(aero_idx(ia0,ic,ik,is0)),'(a,a,a,i0)') trim(attribute), ' mixing radio of ', trim(catego), is0
+    enddo
+    enddo
+    enddo
+    enddo
+    ic = QA_AE-GAS_CTG+IG_H2SO4
+    write(ATMOS_PHY_AE_kajino13_NAME(ic),'(a)') 'H2SO4_Gas'
+    ic = QA_AE-GAS_CTG+IG_CGAS
+    write(ATMOS_PHY_AE_kajino13_NAME(ic),'(a)') 'Condensable_GAS'
+
+    ic = QA_AE-GAS_CTG+IG_H2SO4
+    write(ATMOS_PHY_AE_kajino13_DESC(ic),'(a)') 'Mixing ratio of H2SO4 Gas'
+    ic = QA_AE-GAS_CTG+IG_CGAS
+    write(ATMOS_PHY_AE_kajino13_DESC(ic),'(a)') 'Mixing ratio of Condensable GAS'
+   
+    deallocate(aero_idx)
+
+    return
+  end subroutine ATMOS_PHY_AE_kajino13_tracer_setup
+
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_AE_kajino13_setup
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_time, only: &
        TIME_DTSEC_ATMOS_PHY_AE
     implicit none
@@ -273,7 +453,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_AE_KAJINO13. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_AE_KAJINO13)
 
@@ -418,6 +598,15 @@ contains
 
     ATMOS_PHY_AE_kajino13_DENS(:) = rhod_ae
 
+    allocate( aerosol_procs (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
+    allocate( aerosol_activ (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
+    allocate( emis_procs    (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
+    allocate( emis_gas      (GAS_CTG)  )
+    aerosol_procs(:,:,:,:) = 0.0_RP
+    aerosol_activ(:,:,:,:) = 0.0_RP
+    emis_procs   (:,:,:,:) = 0.0_RP
+    emis_gas     (:)       = 0.0_RP
+
     return
   end subroutine ATMOS_PHY_AE_kajino13_setup
 
@@ -427,19 +616,16 @@ contains
        KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
-       QQA,        &
-       RHOT,       &
+       QA_AE,      &
        TEMP,       &
        PRES,       &
        QDRY,       &
        NREG,       &
        DENS,       &
-       MOMZ,       &
-       MOMX,       &
-       MOMY,       &
+       QV,         &
        QTRC,       &
-       RHOQ_t_AE,  &
        EMIT,       &
+       RHOQ_t_AE,  &
        CN,         &
        CCN         )
     use scale_tracer
@@ -449,8 +635,6 @@ contains
        CONST_Rvap, &
        CONST_PRE00, &
        CONST_Rdry
-    use scale_atmos_hydrometeor, only: &
-       I_QV
     use scale_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
     use scale_time, only: &
@@ -458,39 +642,28 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_in
     implicit none
-    integer,  intent(in)    :: KA
-    integer,  intent(in)    :: KS
-    integer,  intent(in)    :: KE
-    integer,  intent(in)    :: IA
-    integer,  intent(in)    :: IS
-    integer,  intent(in)    :: IE
-    integer,  intent(in)    :: JA
-    integer,  intent(in)    :: JS
-    integer,  intent(in)    :: JE
-    integer,  intent(in)    :: QQA
-    real(RP), intent(in)    :: RHOT(KA,IA,JA)
-    real(RP), intent(in)    :: TEMP(KA,IA,JA)
-    real(RP), intent(in)    :: PRES(KA,IA,JA)
-    real(RP), intent(in)    :: QDRY(KA,IA,JA)
-    real(RP), intent(in)    :: NREG(KA,IA,JA)
-    real(RP), intent(inout) :: DENS(KA,IA,JA)
-    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
-    real(RP), intent(inout) :: MOMX(KA,IA,JA)
-    real(RP), intent(inout) :: MOMY(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QQA)
-    real(RP), intent(inout) :: RHOQ_t_AE(KA,IA,JA,QQA)
-    real(RP), intent(inout) :: EMIT(KA,IA,JA,QQA)
-    real(RP), intent(out)   :: CN(KA,IA,JA)
-    real(RP), intent(out)   :: CCN(KA,IA,JA)
+    integer,  intent(in) :: KA, KS, KE
+    integer,  intent(in) :: IA, IS, IE
+    integer,  intent(in) :: JA, JS, JE
+    integer,  intent(in) :: QA_AE
+    real(RP), intent(in) :: TEMP(KA,IA,JA)
+    real(RP), intent(in) :: PRES(KA,IA,JA)
+    real(RP), intent(in) :: QDRY(KA,IA,JA)
+    real(RP), intent(in) :: NREG(KA,IA,JA)
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: QV  (KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA_AE)
+    real(RP), intent(in) :: EMIT(KA,IA,JA,QA_AE)
 
-    real(RP) :: QTRC0(KA,IA,JA,QQA)
-    real(RP) :: QTRC1(KA,IA,JA,QQA)
+    real(RP), intent(out) :: RHOQ_t_AE(KA,IA,JA,QA_AE)
+    real(RP), intent(out) :: CN(KA,IA,JA)
+    real(RP), intent(out) :: CCN(KA,IA,JA)
+
+    real(RP) :: QTRC0(KA,IA,JA,QA_AE)
+    real(RP) :: QTRC1(KA,IA,JA,QA_AE)
 
     !--- local
-    real(RP) :: qv_ae(KA,IA,JA)
     real(RP) :: ssliq_ae(KA,IA,JA)
-    real(RP) :: th(KA,IA,JA)
-    real(RP) :: q(KA,IA,JA,QQA)
     real(RP) :: rrhog(KA,IA,JA)
     real(RP) :: t_ccn, t_cn
     real(RP) :: qsat_tmp
@@ -498,10 +671,6 @@ contains
     real(RP) :: ms_reg                      !regenerated aerosol mass [ug/m3]
     real(RP) :: reg_factor_m2,reg_factor_m3 !to save cpu time for moment conversion
     !--- aerosol variables
-    real(RP),allocatable :: aerosol_procs(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
-    real(RP),allocatable :: aerosol_activ(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
-    real(RP),allocatable :: emis_procs(:,:,:,:)    !(n_atr,n_siz_max,n_kap_max,n_ctg)
-    real(RP),allocatable :: emis_gas(:)            !emission of gas
     real(RP) :: total_aerosol_mass(KA,IA,JA,n_ctg)
     real(RP) :: total_aerosol_number(KA,IA,JA,n_ctg)
     real(RP) :: total_emit_aerosol_mass(KA,IA,JA,n_ctg)
@@ -514,28 +683,12 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Aerosol(kajino13)'
 
-    !--- Negative fixer
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-      do ic = 1, n_ctg       !aerosol category
-      do ik = 1, n_kap(ic)   !kappa bin
-      do is0 = 1, n_siz(ic)   !size bin
-        if (QTRC(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic)) < 0.0_RP .or. &
-            QTRC(k,i,j,QAES-1+it_procs2trans(ia_m2,is0,ik,ic)) < 0.0_RP .or. &
-            QTRC(k,i,j,QAES-1+it_procs2trans(ia_m3,is0,ik,ic)) < 0.0_RP .or. &
-            QTRC(k,i,j,QAES-1+it_procs2trans(ia_ms,is0,ik,ic)) < 0.0_RP .or. &
-            QTRC(k,i,j,QAES-1+it_procs2trans(ia_kp,is0,ik,ic)) < 0.0_RP ) then
-          QTRC(k,i,j,QAES-1+it_procs2trans(1:N_ATR,is0,ik,ic)) = 0.0_RP
-        endif
-      enddo
-      enddo
-      enddo
-    enddo
-    enddo
-    enddo
+    aerosol_procs(:,:,:,:) = 0.0_RP
+    aerosol_activ(:,:,:,:) = 0.0_RP
+    emis_procs   (:,:,:,:) = 0.0_RP
+    emis_gas     (:)       = 0.0_RP
 
-    do iq = 1, QQA
+    do iq = 1, QA_AE
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -545,39 +698,22 @@ contains
     enddo
     enddo
 
-    allocate( aerosol_procs (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
-    allocate( aerosol_activ (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
-    allocate( emis_procs    (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
-    allocate( emis_gas      (GAS_CTG)  )
-
     reg_factor_m2 = dg_reg**2._RP * exp( 2.0_RP *(log(sg_reg)**2._RP)) !m0_reg to m2_reg
     reg_factor_m3 = dg_reg**3._RP * exp( 4.5_RP *(log(sg_reg)**2._RP)) !m0_reg to m3_reg
 
     !--- convert SCALE variable to zerochem variable
-
-    aerosol_procs(:,:,:,:) = 0.0_RP
-    aerosol_activ(:,:,:,:) = 0.0_RP
-    emis_procs(:,:,:,:) = 0.0_RP
-    emis_gas(:) = 0.0_RP
-    qv_ae(:,:,:) = 0.0_RP
 
     do j = JS, JE
     do i = IS, IE
 
        do k = KS, KE
           rrhog(k,i,j) = 1.0_RP / DENS(k,i,j)
-          th(k,i,j) = RHOT(k,i,j) * rrhog(k,i,j)
        enddo
        do k = KS, KE
-          if ( I_QV > 0 ) then
-             qv_ae(k,i,j) = QTRC(k,i,j,I_QV)
-             !--- calculate super saturation of water
-             call pres2qsat_liq( temp(k,i,j), pres(k,i,j), qdry(k,i,j), & ! [IN]
-                                 qsat_tmp                                     ) ! [OUT]
-             ssliq_ae(k,i,j) = qv_ae(k,i,j)/qsat_tmp - 1.0_RP
-          else
-             ssliq_ae(k,i,j) = - 1.0_RP
-          end if
+          !--- calculate super saturation of water
+          call pres2qsat_liq( temp(k,i,j), pres(k,i,j), qdry(k,i,j), & ! [IN]
+                              qsat_tmp                               ) ! [OUT]
+          ssliq_ae(k,i,j) = QV(k,i,j)/qsat_tmp - 1.0_RP
        enddo
 
     enddo
@@ -590,9 +726,9 @@ contains
       do ic = 1, n_ctg       !aerosol category
       do ik = 1, n_kap(ic)   !kappa bin
       do is0 = 1, n_siz(ic)   !size bin
-        if (QTRC0(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic))*DENS(k,i,j) < cleannumber) then
+        if (QTRC0(k,i,j,it_procs2trans(ia_m0,is0,ik,ic))*DENS(k,i,j) < cleannumber) then
           do ia0 = 1, N_ATR
-            QTRC0(k,i,j,QAES-1+it_procs2trans(ia0,is0,ik,ic)) = 0._RP !to save cpu time and avoid underflow
+            QTRC0(k,i,j,it_procs2trans(ia0,is0,ik,ic)) = 0._RP !to save cpu time and avoid underflow
           enddo !ia0 (1:n_atr      )
         endif
       enddo !is (1:n_siz(ic)  )
@@ -602,7 +738,7 @@ contains
     enddo
     enddo
 
-    do iq = 1, QQA
+    do iq = 1, QA_AE
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -625,7 +761,7 @@ contains
             aerosol_procs(ia_trans2procs(it), &
                           is_trans2procs(it), &
                           ik_trans2procs(it), &
-                          ic_trans2procs(it)) = QTRC1(k,i,j,QAES-1+it)*DENS(k,i,j)
+                          ic_trans2procs(it)) = QTRC1(k,i,j,it)*DENS(k,i,j)
             emis_procs(ia_trans2procs(it), &
                           is_trans2procs(it), &
                           ik_trans2procs(it), &
@@ -633,7 +769,7 @@ contains
        enddo !it(1:n_trans)
        ! mixing ratio [kg/kg] -> concentration [ug/m3]
        conc_gas(1:GAS_CTG) &
-               = QTRC1(k,i,j,QAEE-GAS_CTG+1:QAEE-GAS_CTG+GAS_CTG)*DENS(k,i,j)*1.E+9_RP
+               = QTRC1(k,i,j,QA_AE-GAS_CTG+1:QA_AE-GAS_CTG+GAS_CTG)*DENS(k,i,j)*1.E+9_RP
 
        emis_gas(1:GAS_CTG) = EMIT(k,i,j,QA_AE-GAS_CTG+IG_H2SO4:QA_AE-GAS_CTG+IG_CGAS)
 
@@ -655,6 +791,7 @@ contains
          do ia0 = 1, N_ATR       !attributes
            aerosol_activ(ia0,is0,ik_out,ic_mix) = min(max(0._RP, aerosol_activ(ia0,is0,ik_out,ic_mix)), &
                                                                  aerosol_procs(ia0,is0,ik_out,ic_mix) )
+
            aerosol_procs(ia0,is0,ik_out,ic_mix) = &
            aerosol_procs(ia0,is0,ik_out,ic_mix) - aerosol_activ(ia0,is0,ik_out,ic_mix)
          enddo
@@ -684,7 +821,7 @@ contains
 ! diagnosed variables
        do is0 = 1, n_siz(ic_mix)
          CCN(k,i,j) = CCN(k,i,j) + aerosol_activ(ia_m0,is0,ik_out,ic_mix)
-         CN(k,i,j)  = CN(k,i,j)  + aerosol_procs(ia_m0,is0,ik_out,ic_mix)
+         CN (k,i,j) = CN (k,i,j) + aerosol_procs(ia_m0,is0,ik_out,ic_mix)
        enddo
 
 !       call trans_ccn(aerosol_procs, aerosol_activ, t_ccn, t_cn,  &
@@ -700,42 +837,26 @@ contains
        do ik = 1, n_kap(ic)   !kappa bin
        do is0 = 1, n_siz(ic)   !size bin
        do ia0 = 1, N_ATR       !attributes
-          QTRC1(k,i,j,QAES-1+it_procs2trans(ia0,is0,ik,ic)) = aerosol_procs(ia0,is0,ik,ic) / DENS(k,i,j)
+          QTRC1(k,i,j,it_procs2trans(ia0,is0,ik,ic)) = aerosol_procs(ia0,is0,ik,ic) / DENS(k,i,j)
        enddo !ia (1:N_ATR )
        enddo !is (1:n_siz(ic)  )
        enddo !ik (1:n_kap(ic)  )
        enddo !ic (1:n_ctg      )
        !  [ug/m3] -> mixing ratio [kg/kg]
-       QTRC1(k,i,j,QAEE-GAS_CTG+1:QAEE-GAS_CTG+GAS_CTG) &
-            = conc_gas(1:GAS_CTG) / DENS(k,i,j)*1.E-9_RP
+       QTRC1(k,i,j,QA_AE-GAS_CTG+1:QA_AE-GAS_CTG+GAS_CTG) = conc_gas(1:GAS_CTG) / DENS(k,i,j)*1.E-9_RP
 
        ! tiny number, tiny mass
        do ic = 1, n_ctg       !aerosol category
        do ik = 1, n_kap(ic)   !kappa bin
        do is0 = 1, n_siz(ic)   !size bin
-         if (QTRC1(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic))*DENS(k,i,j) < cleannumber) then
+         if (QTRC1(k,i,j,it_procs2trans(ia_m0,is0,ik,ic))*DENS(k,i,j) < cleannumber) then
            do ia0 = 1, N_ATR
-             QTRC1(k,i,j,QAES-1+it_procs2trans(ia0,is0,ik,ic)) = 0._RP !to save cpu time and avoid underflow
+             QTRC1(k,i,j,it_procs2trans(ia0,is0,ik,ic)) = 0._RP !to save cpu time and avoid underflow
            enddo !ia0 (1:n_atr      )
          endif
        enddo !is (1:n_siz(ic)  )
        enddo !ik (1:n_kap(ic)  )
        enddo !ic (1:n_ctg      )
-
-       !--- Negative fixer
-       do ic = 1, n_ctg       !aerosol category
-       do ik = 1, n_kap(ic)   !kappa bin
-       do is0 = 1, n_siz(ic)   !size bin
-         if (QTRC(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic)) < 0.0_RP .or. &
-             QTRC(k,i,j,QAES-1+it_procs2trans(ia_m2,is0,ik,ic)) < 0.0_RP .or. &
-             QTRC(k,i,j,QAES-1+it_procs2trans(ia_m3,is0,ik,ic)) < 0.0_RP .or. &
-             QTRC(k,i,j,QAES-1+it_procs2trans(ia_ms,is0,ik,ic)) < 0.0_RP .or. &
-             QTRC(k,i,j,QAES-1+it_procs2trans(ia_kp,is0,ik,ic)) < 0.0_RP ) then
-           QTRC(k,i,j,QAES-1+it_procs2trans(1:N_ATR,is0,ik,ic)) = 0.0_RP
-         endif
-       enddo
-       enddo
-       enddo
 
        ! for history
        total_aerosol_mass(k,i,j,:) = 0.0_RP
@@ -746,9 +867,9 @@ contains
        do ik = 1, n_kap(ic)
        do is0 = 1, n_siz(ic)
            total_aerosol_mass       (k,i,j,ic) = total_aerosol_mass (k,i,j,ic) &
-                                               + QTRC1(k,i,j,QAES-1+it_procs2trans(ia_ms,is0,ik,ic))
+                                               + QTRC1(k,i,j,it_procs2trans(ia_ms,is0,ik,ic))
            total_aerosol_number     (k,i,j,ic) = total_aerosol_number     (k,i,j,ic) &
-                                               + QTRC1(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic))
+                                               + QTRC1(k,i,j,it_procs2trans(ia_m0,is0,ik,ic))
            total_emit_aerosol_mass  (k,i,j,ic) = total_emit_aerosol_mass  (k,i,j,ic) &
                                                + EMIT(k,i,j,it_procs2trans(ia_ms,is0,ik,ic))
            total_emit_aerosol_number(k,i,j,ic) = total_emit_aerosol_number(k,i,j,ic) &
@@ -771,12 +892,8 @@ contains
     call FILE_HISTORY_in( EMIT(:,:,:,QA_AE-GAS_CTG+IG_H2SO4), 'H2SO4_emit', 'Emission ratio of H2SO4 gas', 'ug/m3/s' )
     call FILE_HISTORY_in( EMIT(:,:,:,QA_AE-GAS_CTG+IG_CGAS),  'CGAS_emit',  'Emission ratio of Condensabule gas', 'ug/m3/s' )
 
-    deallocate( aerosol_procs )
-    deallocate( aerosol_activ )
-    deallocate( emis_procs )
-    deallocate( emis_gas )
 
-    do iq = 1, QQA
+    do iq = 1, QA_AE
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -788,6 +905,313 @@ contains
 
     return
   end subroutine ATMOS_PHY_AE_kajino13_tendency
+
+  !-----------------------------------------------------------------------------
+  !> Calculate Effective Radius
+  subroutine ATMOS_PHY_AE_kajino13_effective_radius( &
+       KA, IA, JA, QA_AE, &
+       QTRC, RH, &
+       Re        )
+    use scale_atmos_aerosol, only: &
+       N_AE
+    implicit none
+    integer,  intent(in)  :: KA, IA, JA, QA_AE
+
+    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA_AE) ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: RH  (KA,IA,JA)       ! relative humidity         (0-1)
+
+    real(RP), intent(out) :: Re  (KA,IA,JA,N_AE)  ! effective radius
+    !---------------------------------------------------------------------------
+
+    Re(:,:,:,:) = 0.0_RP
+
+!    Re(:,:,:,I_ae_seasalt) = 2.E-4_RP
+!    Re(:,:,:,I_ae_dust   ) = 4.E-6_RP
+!    Re(:,:,:,I_ae_bc     ) = 4.E-8_RP
+!    Re(:,:,:,I_ae_oc     ) = RH(:,:,:)
+!    Re(:,:,:,I_ae_sulfate) = RH(:,:,:)
+
+    return
+  end subroutine ATMOS_PHY_AE_kajino13_effective_radius
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_PHY_AE_kajino13_mkinit( &
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       QA_AE,      &
+       DENS,       &
+       RHOT,       &
+       TEMP,       &
+       PRES,       &
+       QDRY,       &
+       QV,         &
+       m0_init,    &
+       dg_init,    &
+       sg_init,    &
+       d_min_inp,  &
+       d_max_inp,  &
+       k_min_inp,  &
+       k_max_inp,  &
+       n_kap_inp,  &
+       QTRC,       &
+       CCN         )
+    use scale_const, only: &
+       PI => CONST_PI, &
+       CONST_CVdry, &
+       CONST_CPdry, &
+       CONST_Rdry, &
+       CONST_PRE00
+    use scale_atmos_saturation, only: &
+       SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
+    implicit none
+
+    integer,  intent(in)    :: KA, KS, KE
+    integer,  intent(in)    :: IA, IS, IE
+    integer,  intent(in)    :: JA, JS, JE
+    integer,  intent(in)    :: QA_AE
+
+    real(RP), intent(in)    :: DENS(KA,IA,JA)
+    real(RP), intent(in)    :: RHOT(KA,IA,JA)
+    real(RP), intent(in)    :: TEMP(KA,IA,JA)
+    real(RP), intent(in)    :: PRES(KA,IA,JA)
+    real(RP), intent(in)    :: QDRY(KA,IA,JA)
+    real(RP), intent(in)    :: QV  (KA,IA,JA)
+    real(RP), intent(in)    :: m0_init             ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]
+    real(RP), intent(in)    :: dg_init             ! initial number equivalen diameters of modes     [m]
+    real(RP), intent(in)    :: sg_init             ! initial standard deviation                      [-]
+    real(RP), intent(in)    :: d_min_inp(3)
+    real(RP), intent(in)    :: d_max_inp(3)
+    real(RP), intent(in)    :: k_min_inp(3)
+    real(RP), intent(in)    :: k_max_inp(3)
+    integer,  intent(in)    :: n_kap_inp(3)
+
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA_AE)
+    real(RP), intent(out)   :: CCN (KA,IA,JA)
+
+    integer,  parameter :: ia_m0  = 1             ! 1. number conc        [#/m3]
+    integer,  parameter :: ia_m2  = 2             ! 2. 2nd mom conc       [m2/m3]
+    integer,  parameter :: ia_m3  = 3             ! 3. 3rd mom conc       [m3/m3]
+    integer,  parameter :: ia_ms  = 4             ! 4. mass conc          [ug/m3]
+    integer,  parameter :: ia_kp  = 5
+    integer,  parameter :: ik_out = 1
+
+    real(RP)            :: c_kappa     = 0.3_RP     ! hygroscopicity of condensable mass [-]
+    real(RP), parameter :: cleannumber = 1.e-3_RP
+    ! local variables
+    real(RP), parameter :: rhod_ae    = 1.83_RP              ! particle density [g/cm3] sulfate assumed
+    real(RP), parameter :: conv_vl_ms = rhod_ae/1.e-12_RP     ! M3(volume)[m3/m3] to mass[m3/m3]
+
+    integer  :: n_trans
+    real(RP) :: m0t, dgt, sgt, m2t, m3t, mst
+    !--- gas
+    real(RP) :: conc_gas(GAS_CTG)    !concentration [ug/m3]
+!   integer,  allocatable :: it_procs2trans(:,:,:,:) !procs to trans conversion
+!   integer,  allocatable :: ia_trans2procs(:) !trans to procs conversion
+!   integer,  allocatable :: is_trans2procs(:) !trans to procs conversion
+!   integer,  allocatable :: ik_trans2procs(:) !trans to procs conversion
+!   integer,  allocatable :: ic_trans2procs(:)
+    !--- bin  settings (lower bound, center, upper bound)
+    real(RP), allocatable :: d_lw(:,:), d_ct(:,:), d_up(:,:)  !diameter [m]
+    real(RP), allocatable :: k_lw(:,:), k_ct(:,:), k_up(:,:)  !kappa    [-]
+    real(RP)  :: dlogd, dk                                    !delta log(D), delta K
+    real(RP), allocatable :: d_min(:)              !lower bound of 1st size bin   (n_ctg)
+    real(RP), allocatable :: d_max(:)              !upper bound of last size bin  (n_ctg)
+    integer,  allocatable :: n_kap(:)              !number of kappa bins          (n_ctg)
+    real(RP), allocatable :: k_min(:)              !lower bound of 1st kappa bin  (n_ctg)
+    real(RP), allocatable :: k_max(:)
+
+    real(RP) :: qsat_tmp, ssliq
+    real(RP) :: pi6
+
+    integer  :: ia0, ik, is0, ic, k, i, j, it, iq
+    !---------------------------------------------------------------------------
+
+
+    call ATMOS_PHY_AE_kajino13_setup
+
+
+    pi6   = pi / 6._RP
+    n_ctg = AE_CTG
+
+    allocate( d_min(n_ctg) )
+    allocate( d_max(n_ctg) )
+    allocate( n_kap(n_ctg) )
+    allocate( k_min(n_ctg) )
+    allocate( k_max(n_ctg) )
+
+
+    d_min(1:n_ctg) = d_min_inp(1:n_ctg)  ! lower bound of 1st size bin
+    d_max(1:n_ctg) = d_max_inp(1:n_ctg)  ! upper bound of last size bin
+    n_kap(1:n_ctg) = n_kap_inp(1:n_ctg)  ! number of kappa bins
+    k_min(1:n_ctg) = k_min_inp(1:n_ctg)  ! lower bound of 1st kappa bin
+    k_max(1:n_ctg) = k_max_inp(1:n_ctg)  ! upper bound of last kappa bin
+
+
+!   allocate( it_procs2trans(N_ATR,n_siz_max,n_kap_max,n_ctg)  )
+!   allocate( ia_trans2procs(n_trans) )
+!   allocate( is_trans2procs(n_trans) )
+!   allocate( ik_trans2procs(n_trans) )
+!   allocate( ic_trans2procs(n_trans) )
+
+    !bin setting
+    allocate(d_lw(n_siz_max,n_ctg))
+    allocate(d_ct(n_siz_max,n_ctg))
+    allocate(d_up(n_siz_max,n_ctg))
+    allocate(k_lw(n_kap_max,n_ctg))
+    allocate(k_ct(n_kap_max,n_ctg))
+    allocate(k_up(n_kap_max,n_ctg))
+    d_lw(:,:) = 0._RP
+    d_ct(:,:) = 0._RP
+    d_up(:,:) = 0._RP
+    k_lw(:,:) = 0._RP
+    k_ct(:,:) = 0._RP
+    k_up(:,:) = 0._RP
+
+    do ic = 1, n_ctg
+
+      dlogd = (log(d_max(ic)) - log(d_min(ic)))/real(NSIZ(ic),kind=RP)
+
+      do is0 = 1, NSIZ(ic)  !size bin
+        d_lw(is0,ic) = exp(log(d_min(ic))+dlogd* real(is0-1,kind=RP)        )
+        d_ct(is0,ic) = exp(log(d_min(ic))+dlogd*(real(is0  ,kind=RP)-0.5_RP))
+        d_up(is0,ic) = exp(log(d_min(ic))+dlogd* real(is0  ,kind=RP)        )
+      enddo !is (1:n_siz(ic))
+      dk    = (k_max(ic) - k_min(ic))/real(n_kap(ic),kind=RP)
+      do ik = 1, n_kap(ic)  !size bin
+        k_lw(ik,ic) = k_min(ic) + dk  * real(ik-1,kind=RP)
+        k_ct(ik,ic) = k_min(ic) + dk  *(real(ik  ,kind=RP)-0.5_RP)
+        k_up(ik,ic) = k_min(ic) + dk  * real(ik  ,kind=RP)
+      enddo !ik (1:n_kap(ic))
+
+    enddo !ic (1:n_ctg)
+!    ik  = 1       !only one kappa bin
+
+    m0t = m0_init !total M0 [#/m3]
+    dgt = dg_init ![m]
+    sgt = sg_init ![-]
+
+    if ( m0t <= cleannumber ) then
+       m0t = cleannumber
+       dgt = 0.1E-6_RP
+       sgt = 1.3_RP
+       if( IO_L ) write(IO_FID_LOG,*) '*** WARNING! Initial aerosol number is set as ', cleannumber, '[#/m3]'
+    endif
+
+    m2t = m0t*dgt**(2.d0) *dexp(2.0d0 *(dlog(real(sgt,kind=DP))**2.d0)) !total M2 [m2/m3]
+    m3t = m0t*dgt**(3.d0) *dexp(4.5d0 *(dlog(real(sgt,kind=DP))**2.d0)) !total M3 [m3/m3]
+    mst = m3t*pi6*conv_vl_ms                              !total Ms [ug/m3]
+
+    do ic = 1, n_ctg
+    !aerosol_procs initial condition
+    do ik = 1, n_kap(ic)   !kappa bin
+    do is0 = 1, NSIZ(ic)
+       if (dgt >= d_lw(is0,ic) .and. dgt < d_up(is0,ic)) then
+         aerosol_procs(ia_m0,is0,ik,ic) = aerosol_procs(ia_m0,is0,ik,ic) + m0t          ![#/m3]
+         aerosol_procs(ia_m2,is0,ik,ic) = aerosol_procs(ia_m2,is0,ik,ic) + m2t          ![m2/m3]
+         aerosol_procs(ia_m3,is0,ik,ic) = aerosol_procs(ia_m3,is0,ik,ic) + m3t          ![m3/m3]
+         aerosol_procs(ia_ms,is0,ik,ic) = aerosol_procs(ia_ms,is0,ik,ic) + mst*1.E-9_RP ![kg/m3]
+       elseif (dgt < d_lw(1,ic)) then
+         aerosol_procs(ia_m0,1 ,ik,ic) = aerosol_procs(ia_m0,1 ,ik,ic) + m0t          ![#/m3]
+         aerosol_procs(ia_m2,1 ,ik,ic) = aerosol_procs(ia_m2,1 ,ik,ic) + m2t          ![m2/m3]
+         aerosol_procs(ia_m3,1 ,ik,ic) = aerosol_procs(ia_m3,1 ,ik,ic) + m3t          ![m3/m3]
+         aerosol_procs(ia_ms,1 ,ik,ic) = aerosol_procs(ia_ms,1 ,ik,ic) + mst*1.E-9_RP ![kg/m3]
+       elseif (dgt >= d_up(NSIZ(ic),ic)) then
+         aerosol_procs(ia_m0,NSIZ(ic),ik,ic) = aerosol_procs(ia_m0,NSIZ(ic),ik,ic) + m0t          ![#/m3]
+         aerosol_procs(ia_m2,NSIZ(ic),ik,ic) = aerosol_procs(ia_m2,NSIZ(ic),ik,ic) + m2t          ![m2/m3]
+         aerosol_procs(ia_m3,NSIZ(ic),ik,ic) = aerosol_procs(ia_m3,NSIZ(ic),ik,ic) + m3t          ![m3/m3]
+         aerosol_procs(ia_ms,NSIZ(ic),ik,ic) = aerosol_procs(ia_ms,NSIZ(ic),ik,ic) + mst*1.E-9_RP ![kg/m3]
+       endif
+    enddo
+    enddo
+    enddo
+
+    conc_gas(:) = 0.0_RP
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       it = 1
+       do ic  = 1, n_ctg    ! category
+       do ik  = 1, NKAP(ic) ! kappa bin
+       do is0 = 1, NSIZ(ic) ! size bin
+       do ia0 = 1, N_ATR    ! attributes
+          QTRC(k,i,j,it) = aerosol_procs(ia0,is0,ik,ic) / DENS(k,i,j) !#,m2,m3,kg/m3 -> #,m2,m3,kg/kg
+          it = it + 1
+       enddo !ia0 (1:N_ATR )
+       enddo !is (1:n_siz(ic)  )
+       enddo !ik (1:n_kap(ic)  )
+       enddo !ic (1:n_ctg      )
+
+       do ic  = 1, GAS_CTG ! GAS category
+          QTRC(k,i,j,it) = conc_gas(ic) / DENS(k,i,j) * 1.E-9_RP !mixing ratio [kg/kg]
+          it = it + 1
+       enddo
+    enddo
+    enddo
+    enddo
+
+    CCN(:,:,:) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       !--- calculate super saturation of water
+       call SATURATION_pres2qsat_liq( TEMP(k,i,j), PRES(k,i,j), QDRY(k,i,j), & ! [IN]
+                                      qsat_tmp                               ) ! [OUT]
+       ssliq = QV(k,i,j) / qsat_tmp - 1.0_RP
+
+       call aerosol_activation( c_kappa, ssliq, temp(k,i,j), ia_m0, ia_m2, ia_m3,       &
+                                N_ATR, n_siz_max, n_kap_max, n_ctg, NSIZ, n_kap, &
+                                d_ct, aerosol_procs, aerosol_activ               )
+
+       do is0 = 1, NSIZ(ic_mix)
+          CCN(k,i,j) = CCN(k,i,j) + aerosol_activ(ia_m0,is0,ik_out,ic_mix)
+       enddo
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_AE_kajino13_mkinit
+
+  subroutine ATMOS_PHY_AE_kajino13_negative_fixer( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, QA_AE, &
+       QTRC )
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: QA_AE
+
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA_AE)
+
+    integer :: k ,i, j
+    integer :: ic, ik, is0
+
+    !--- Negative fixer
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+      do ic = 1, n_ctg       !aerosol category
+      do ik = 1, n_kap(ic)   !kappa bin
+      do is0 = 1, n_siz(ic)   !size bin
+        if (QTRC(k,i,j,it_procs2trans(ia_m0,is0,ik,ic)) < 0.0_RP .or. &
+            QTRC(k,i,j,it_procs2trans(ia_m2,is0,ik,ic)) < 0.0_RP .or. &
+            QTRC(k,i,j,it_procs2trans(ia_m3,is0,ik,ic)) < 0.0_RP .or. &
+            QTRC(k,i,j,it_procs2trans(ia_ms,is0,ik,ic)) < 0.0_RP .or. &
+            QTRC(k,i,j,it_procs2trans(ia_kp,is0,ik,ic)) < 0.0_RP ) then
+          QTRC(k,i,j,it_procs2trans(1:N_ATR,is0,ik,ic)) = 0.0_RP
+        endif
+      enddo
+      enddo
+      enddo
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_AE_kajino13_negative_fixer
+
+  ! private subroutines
+
   !-----------------------------------------------------------------------------
   ! subroutine 4. aerosol_zerochem
   !-----------------------------------------------------------------------------
@@ -1289,16 +1713,18 @@ contains
           if ( is_i(mc) == is_j(mc) .AND. &
                ik_i(mc) == ik_j(mc) .AND. &
                ic_i(mc) == ic_j(mc) ) then
-            call aero_intra(m0i,  m3i,          & !i
-                            dm0i, dm3i, dm6i,   & !o
-                            dgi,  sgi,  lambda, & !i
-                            rknc, rkfm, deltt   ) !i
+            call aero_intra(m0i,  m3i,              & !i
+                            dm0i, dm3i, dm6i, dmsi, & !o
+                            dgi,  sgi,  lambda,     & !i
+                            rknc, rkfm, deltt       ) !i
             dm0j = dm0i
             dm3j = dm3i
             dm6j = dm6i
+            dmsj = dmsi
             dm0k = -dm0i
             dm3k = -dm3i
             dm6k = -dm6i
+            dmsk = -dmsi
           !inter sectional coagulation
           else
             call aero_inter(m0i ,m3i ,m6i ,      & !input unchanged
@@ -1455,10 +1881,12 @@ contains
       integer, intent(in) :: n_siz_max
       integer, intent(in) :: n_kap_max
       integer, intent(in) :: n_ctg
-      real(RP),intent(in) :: d_ct(n_siz_max,n_ctg)
-      real(RP) :: aerosol_procs(n_atr,n_siz_max,n_kap_max,n_ctg)
-      real(RP) :: aerosol_activ(n_atr,n_siz_max,n_kap_max,n_ctg)
       integer, intent(in) :: n_siz(n_ctg), n_kap(n_ctg)
+      real(RP),intent(in) :: d_ct(n_siz_max,n_ctg)
+      real(RP),intent(in) :: aerosol_procs(n_atr,n_siz_max,n_kap_max,n_ctg)
+
+      real(RP), intent(out) :: aerosol_activ(n_atr,n_siz_max,n_kap_max,n_ctg)
+
     !local variables
       real(RP),parameter :: two3 = 2._RP/3._RP
       real(RP),parameter :: rt2  = sqrt(2._RP)
@@ -1605,9 +2033,9 @@ contains
   !----------------------------------------------------------------------------------------
   ! subroutine 7. aero_intra            :: intra_sectional Brownian coagulation
   !----------------------------------------------------------------------------------------
-  subroutine aero_intra(m0, m3,         & !input
-                          dm0,dm3,dm6,    & !output
-                          dg, sg, lambda, & !input
+  subroutine aero_intra(m0, m3,            & !input
+                          dm0,dm3,dm6,dmi, & !output
+                          dg, sg, lambda,  & !input
                           rknc,rkfm,dt)     !input
 
   !---intra-modal coagulation for spheres
@@ -1620,6 +2048,7 @@ contains
     real(RP), intent(out)  :: dm0        ![/m3]
     real(RP), intent(out)  :: dm3        ![m2/m3]
     real(RP), intent(out)  :: dm6        ![m3/m3]
+    real(RP), intent(out)  :: dmi        ! [ug/m3/s]
     real(RP), intent(in)   :: dg         ![m]
     real(RP), intent(in)   :: sg         ![-]
     real(RP), intent(in)   :: lambda     ! mean free path of air molecules [cm]
@@ -1678,6 +2107,8 @@ contains
     dm0    = dm0dt * dt
     dm3    = 0._RP
     dm6    = dm6dt * dt
+
+    dmi    = 0.0_RP !! should be check (S. Nishizawa 2018/3/2)
 
     return
   end subroutine aero_intra
@@ -2024,302 +2455,6 @@ contains
 
   return
   end subroutine trans_ccn
-  !-----------------------------------------------------------------------------
-  !> Calculate Effective Radius
-  subroutine ATMOS_PHY_AE_kajino13_EffectiveRadius( &
-       KA,   &
-       IA,   &
-       JA,   &
-       Re,   &
-       QTRC, &
-       RH    )
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
-    use scale_atmos_aerosol, only: &
-       N_AE
-    implicit none
-    integer,  intent(in)    :: KA
-    integer,  intent(in)    :: IA
-    integer,  intent(in)    :: JA
-    real(RP), intent(out) :: Re  (KA,IA,JA,N_AE) ! effective radius
-    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)   ! tracer mass concentration [kg/kg]
-    real(RP), intent(in)  :: RH  (KA,IA,JA)      ! relative humidity         (0-1)
-    !---------------------------------------------------------------------------
 
-    Re(:,:,:,:) = 0.0_RP
-
-!    Re(:,:,:,I_ae_seasalt) = 2.E-4_RP
-!    Re(:,:,:,I_ae_dust   ) = 4.E-6_RP
-!    Re(:,:,:,I_ae_bc     ) = 4.E-8_RP
-!    Re(:,:,:,I_ae_oc     ) = RH(:,:,:)
-!    Re(:,:,:,I_ae_sulfate) = RH(:,:,:)
-
-    return
-  end subroutine ATMOS_PHY_AE_kajino13_EffectiveRadius
-
-  !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_AE_kajino13_mkinit( &
-       KA, KS, KE, &
-       IA, IS, IE, &
-       JA, JS, JE, &
-       QQA,        &
-       DENS,       &
-       RHOT,       &
-       TEMP,       &
-       PRES,       &
-       QDRY,       &
-       m0_init,    &
-       dg_init,    &
-       sg_init,    &
-       d_min_inp,  &
-       d_max_inp,  &
-       k_min_inp,  &
-       k_max_inp,  &
-       n_kap_inp,  &
-       QTRC,       &
-       CCN         )
-    use scale_const, only: &
-       PI => CONST_PI, &
-       CONST_CVdry, &
-       CONST_CPdry, &
-       CONST_Rdry, &
-       CONST_PRE00
-    use scale_atmos_hydrometeor, only: &
-       I_QV
-    use scale_atmos_saturation, only: &
-       SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
-    implicit none
-
-    integer,  intent(in)    :: KA
-    integer,  intent(in)    :: KS
-    integer,  intent(in)    :: KE
-    integer,  intent(in)    :: IA
-    integer,  intent(in)    :: IS
-    integer,  intent(in)    :: IE
-    integer,  intent(in)    :: JA
-    integer,  intent(in)    :: JS
-    integer,  intent(in)    :: JE
-    integer,  intent(in)    :: QQA
-    real(RP), intent(in)    :: DENS(KA,IA,JA)
-    real(RP), intent(in)    :: RHOT(KA,IA,JA)
-    real(RP), intent(in)    :: TEMP(KA,IA,JA)
-    real(RP), intent(in)    :: PRES(KA,IA,JA)
-    real(RP), intent(in)    :: QDRY(KA,IA,JA)
-    real(RP), intent(in)    :: m0_init             ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]
-    real(RP), intent(in)    :: dg_init             ! initial number equivalen diameters of modes     [m]
-    real(RP), intent(in)    :: sg_init             ! initial standard deviation                      [-]
-    real(RP), intent(in)    :: d_min_inp(3)
-    real(RP), intent(in)    :: d_max_inp(3)
-    real(RP), intent(in)    :: k_min_inp(3)
-    real(RP), intent(in)    :: k_max_inp(3)
-    integer,  intent(in)    :: n_kap_inp(3)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QQA)
-    real(RP), intent(out)   :: CCN (KA,IA,JA)
-
-    integer,  parameter :: ia_m0  = 1             ! 1. number conc        [#/m3]
-    integer,  parameter :: ia_m2  = 2             ! 2. 2nd mom conc       [m2/m3]
-    integer,  parameter :: ia_m3  = 3             ! 3. 3rd mom conc       [m3/m3]
-    integer,  parameter :: ia_ms  = 4             ! 4. mass conc          [ug/m3]
-    integer,  parameter :: ia_kp  = 5
-    integer,  parameter :: ik_out = 1
-
-    real(RP)            :: c_kappa     = 0.3_RP     ! hygroscopicity of condensable mass [-]
-    real(RP), parameter :: cleannumber = 1.e-3_RP
-    ! local variables
-    real(RP), parameter :: rhod_ae    = 1.83_RP              ! particle density [g/cm3] sulfate assumed
-    real(RP), parameter :: conv_vl_ms = rhod_ae/1.e-12_RP     ! M3(volume)[m3/m3] to mass[m3/m3]
-
-    integer  :: n_trans
-    real(RP) :: m0t, dgt, sgt, m2t, m3t, mst
-    real(RP), allocatable :: aerosol_procs(:,:,:,:) ! (n_atr,n_siz_max,n_kap_max,n_ctg)
-    real(RP), allocatable :: aerosol_activ(:,:,:,:) ! (n_atr,n_siz_max,n_kap_max,n_ctg)
-    real(RP), allocatable :: emis_procs   (:,:,:,:) ! (n_atr,n_siz_max,n_kap_max,n_ctg)
-    !--- gas
-    real(RP) :: conc_gas(GAS_CTG)    !concentration [ug/m3]
-    integer  :: n_siz_max, n_kap_max, n_ctg
-!   integer,  allocatable :: it_procs2trans(:,:,:,:) !procs to trans conversion
-!   integer,  allocatable :: ia_trans2procs(:) !trans to procs conversion
-!   integer,  allocatable :: is_trans2procs(:) !trans to procs conversion
-!   integer,  allocatable :: ik_trans2procs(:) !trans to procs conversion
-!   integer,  allocatable :: ic_trans2procs(:)
-    !--- bin  settings (lower bound, center, upper bound)
-    real(RP), allocatable :: d_lw(:,:), d_ct(:,:), d_up(:,:)  !diameter [m]
-    real(RP), allocatable :: k_lw(:,:), k_ct(:,:), k_up(:,:)  !kappa    [-]
-    real(RP)  :: dlogd, dk                                    !delta log(D), delta K
-    real(RP), allocatable :: d_min(:)              !lower bound of 1st size bin   (n_ctg)
-    real(RP), allocatable :: d_max(:)              !upper bound of last size bin  (n_ctg)
-    integer,  allocatable :: n_kap(:)              !number of kappa bins          (n_ctg)
-    real(RP), allocatable :: k_min(:)              !lower bound of 1st kappa bin  (n_ctg)
-    real(RP), allocatable :: k_max(:)
-
-    real(RP) :: qsat_tmp, ssliq
-    real(RP) :: pi6
-
-    integer  :: ia0, ik, is0, ic, k, i, j, it, iq
-    !---------------------------------------------------------------------------
-
-
-    pi6   = pi / 6._RP
-    n_ctg = AE_CTG
-
-    allocate( d_min(n_ctg) )
-    allocate( d_max(n_ctg) )
-    allocate( n_kap(n_ctg) )
-    allocate( k_min(n_ctg) )
-    allocate( k_max(n_ctg) )
-
-
-    d_min(1:n_ctg) = d_min_inp(1:n_ctg)  ! lower bound of 1st size bin
-    d_max(1:n_ctg) = d_max_inp(1:n_ctg)  ! upper bound of last size bin
-    n_kap(1:n_ctg) = n_kap_inp(1:n_ctg)  ! number of kappa bins
-    k_min(1:n_ctg) = k_min_inp(1:n_ctg)  ! lower bound of 1st kappa bin
-    k_max(1:n_ctg) = k_max_inp(1:n_ctg)  ! upper bound of last kappa bin
-
-    !--- diagnose parameters (n_trans, n_siz_max, n_kap_max)
-    n_trans   = 0
-    n_siz_max = 0
-    n_kap_max = 0
-    do ic = 1, n_ctg
-      n_trans   = n_trans + NSIZ(ic) * NKAP(ic) * N_ATR
-      n_siz_max = max(n_siz_max, NSIZ(ic))
-      n_kap_max = max(n_kap_max, NKAP(ic))
-    enddo
-
-    allocate( aerosol_procs (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
-    allocate( aerosol_activ (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
-    allocate( emis_procs    (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
-    aerosol_procs(:,:,:,:) = 0._RP
-    aerosol_activ(:,:,:,:) = 0._RP
-    emis_procs   (:,:,:,:) = 0._RP
-
-!   allocate( it_procs2trans(N_ATR,n_siz_max,n_kap_max,n_ctg)  )
-!   allocate( ia_trans2procs(n_trans) )
-!   allocate( is_trans2procs(n_trans) )
-!   allocate( ik_trans2procs(n_trans) )
-!   allocate( ic_trans2procs(n_trans) )
-
-    !bin setting
-    allocate(d_lw(n_siz_max,n_ctg))
-    allocate(d_ct(n_siz_max,n_ctg))
-    allocate(d_up(n_siz_max,n_ctg))
-    allocate(k_lw(n_kap_max,n_ctg))
-    allocate(k_ct(n_kap_max,n_ctg))
-    allocate(k_up(n_kap_max,n_ctg))
-    d_lw(:,:) = 0._RP
-    d_ct(:,:) = 0._RP
-    d_up(:,:) = 0._RP
-    k_lw(:,:) = 0._RP
-    k_ct(:,:) = 0._RP
-    k_up(:,:) = 0._RP
-
-    do ic = 1, n_ctg
-
-      dlogd = (log(d_max(ic)) - log(d_min(ic)))/real(NSIZ(ic),kind=RP)
-
-      do is0 = 1, NSIZ(ic)  !size bin
-        d_lw(is0,ic) = exp(log(d_min(ic))+dlogd* real(is0-1,kind=RP)        )
-        d_ct(is0,ic) = exp(log(d_min(ic))+dlogd*(real(is0  ,kind=RP)-0.5_RP))
-        d_up(is0,ic) = exp(log(d_min(ic))+dlogd* real(is0  ,kind=RP)        )
-      enddo !is (1:n_siz(ic))
-      dk    = (k_max(ic) - k_min(ic))/real(n_kap(ic),kind=RP)
-      do ik = 1, n_kap(ic)  !size bin
-        k_lw(ik,ic) = k_min(ic) + dk  * real(ik-1,kind=RP)
-        k_ct(ik,ic) = k_min(ic) + dk  *(real(ik  ,kind=RP)-0.5_RP)
-        k_up(ik,ic) = k_min(ic) + dk  * real(ik  ,kind=RP)
-      enddo !ik (1:n_kap(ic))
-
-    enddo !ic (1:n_ctg)
-!    ik  = 1       !only one kappa bin
-
-    m0t = m0_init !total M0 [#/m3]
-    dgt = dg_init ![m]
-    sgt = sg_init ![-]
-
-    if ( m0t <= cleannumber ) then
-       m0t = cleannumber
-       dgt = 0.1E-6_RP
-       sgt = 1.3_RP
-       if( IO_L ) write(IO_FID_LOG,*) '*** WARNING! Initial aerosol number is set as ', cleannumber, '[#/m3]'
-    endif
-
-    m2t = m0t*dgt**(2.d0) *dexp(2.0d0 *(dlog(real(sgt,kind=DP))**2.d0)) !total M2 [m2/m3]
-    m3t = m0t*dgt**(3.d0) *dexp(4.5d0 *(dlog(real(sgt,kind=DP))**2.d0)) !total M3 [m3/m3]
-    mst = m3t*pi6*conv_vl_ms                              !total Ms [ug/m3]
-
-    do ic = 1, n_ctg
-    !aerosol_procs initial condition
-    do ik = 1, n_kap(ic)   !kappa bin
-    do is0 = 1, NSIZ(ic)
-       if (dgt >= d_lw(is0,ic) .and. dgt < d_up(is0,ic)) then
-         aerosol_procs(ia_m0,is0,ik,ic) = aerosol_procs(ia_m0,is0,ik,ic) + m0t          ![#/m3]
-         aerosol_procs(ia_m2,is0,ik,ic) = aerosol_procs(ia_m2,is0,ik,ic) + m2t          ![m2/m3]
-         aerosol_procs(ia_m3,is0,ik,ic) = aerosol_procs(ia_m3,is0,ik,ic) + m3t          ![m3/m3]
-         aerosol_procs(ia_ms,is0,ik,ic) = aerosol_procs(ia_ms,is0,ik,ic) + mst*1.E-9_RP ![kg/m3]
-       elseif (dgt < d_lw(1,ic)) then
-         aerosol_procs(ia_m0,1 ,ik,ic) = aerosol_procs(ia_m0,1 ,ik,ic) + m0t          ![#/m3]
-         aerosol_procs(ia_m2,1 ,ik,ic) = aerosol_procs(ia_m2,1 ,ik,ic) + m2t          ![m2/m3]
-         aerosol_procs(ia_m3,1 ,ik,ic) = aerosol_procs(ia_m3,1 ,ik,ic) + m3t          ![m3/m3]
-         aerosol_procs(ia_ms,1 ,ik,ic) = aerosol_procs(ia_ms,1 ,ik,ic) + mst*1.E-9_RP ![kg/m3]
-       elseif (dgt >= d_up(NSIZ(ic),ic)) then
-         aerosol_procs(ia_m0,NSIZ(ic),ik,ic) = aerosol_procs(ia_m0,NSIZ(ic),ik,ic) + m0t          ![#/m3]
-         aerosol_procs(ia_m2,NSIZ(ic),ik,ic) = aerosol_procs(ia_m2,NSIZ(ic),ik,ic) + m2t          ![m2/m3]
-         aerosol_procs(ia_m3,NSIZ(ic),ik,ic) = aerosol_procs(ia_m3,NSIZ(ic),ik,ic) + m3t          ![m3/m3]
-         aerosol_procs(ia_ms,NSIZ(ic),ik,ic) = aerosol_procs(ia_ms,NSIZ(ic),ik,ic) + mst*1.E-9_RP ![kg/m3]
-       endif
-    enddo
-    enddo
-    enddo
-
-    conc_gas(:) = 0.0_RP
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       it = 0
-       do ic  = 1, n_ctg    ! category
-       do ik  = 1, NKAP(ic) ! kappa bin
-       do is0 = 1, NSIZ(ic) ! size bin
-       do ia0 = 1, N_ATR    ! attributes
-          QTRC(k,i,j,QAES+it) = aerosol_procs(ia0,is0,ik,ic) / DENS(k,i,j) !#,m2,m3,kg/m3 -> #,m2,m3,kg/kg
-          it = it + 1
-       enddo !ia0 (1:N_ATR )
-       enddo !is (1:n_siz(ic)  )
-       enddo !ik (1:n_kap(ic)  )
-       enddo !ic (1:n_ctg      )
-
-       do ic  = 1, GAS_CTG ! GAS category
-          QTRC(k,i,j,QAES+it) = conc_gas(ic) / DENS(k,i,j) * 1.E-9_RP !mixing ratio [kg/kg]
-          it = it + 1
-       enddo
-    enddo
-    enddo
-    enddo
-
-    CCN(:,:,:) = 0.0_RP
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       !--- calculate super saturation of water
-       if ( I_QV > 0 ) then
-          call SATURATION_pres2qsat_liq( TEMP(k,i,j), PRES(k,i,j), QDRY(k,i,j), & ! [IN]
-                                         qsat_tmp          ) ! [OUT]
-
-          ssliq = QTRC(k,i,j,I_QV) / qsat_tmp - 1.0_RP
-       else
-          ssliq = -1.0_RP
-       endif
-
-       call aerosol_activation( c_kappa, ssliq, temp(k,i,j), ia_m0, ia_m2, ia_m3,       &
-                                N_ATR, n_siz_max, n_kap_max, n_ctg, NSIZ, n_kap, &
-                                d_ct, aerosol_procs, aerosol_activ               )
-
-       do is0 = 1, NSIZ(ic_mix)
-          CCN(k,i,j) = CCN(k,i,j) + aerosol_activ(ia_m0,is0,ik_out,ic_mix)
-       enddo
-    enddo
-    enddo
-    enddo
-
-    return
-  end subroutine ATMOS_PHY_AE_kajino13_mkinit
 
 end module scale_atmos_phy_ae_kajino13
