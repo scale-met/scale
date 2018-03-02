@@ -122,6 +122,16 @@ params.each do |param|
     next
   end
 
+  # Metrics
+  if /&PARAM_GTRANS/ =~ param_name
+    print "&PARAM_ATMOS_GRID_CARTESC_METRIC\n"
+    param_items.each do |item|
+      print item.sub(/^(\s*)GTRANS_/, '\1ATMOS_GRID_CARTESC_METRIC_'), "\n"
+    end
+    print "/\n"
+    next
+  end
+
   # Dynamics
   ## mod_atmos_dyn
   if /&PARAM_ATMOS_DYN/ =~ param_name
