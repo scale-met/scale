@@ -20,7 +20,6 @@ module mod_atmos_phy_ae_vars
   use scale_stdio
   use scale_prof
   use scale_atmos_grid_cartesC_index
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -432,6 +431,8 @@ contains
 
   subroutine ATMOS_PHY_AE_vars_history( &
        QTRC, RH )
+    use scale_tracer, only: &
+       QA
     use scale_atmos_aerosol, only: &
        N_AE
     use scale_file_history, only: &
@@ -458,6 +459,8 @@ contains
   subroutine ATMOS_PHY_AE_vars_get_diagnostic( &
        QTRC, RH, &
        Re, Qe   )
+    use scale_tracer, only: &
+       QA
     use scale_atmos_aerosol, only: &
        N_AE
     use scale_atmos_phy_ae_kajino13, only: &
@@ -478,6 +481,8 @@ contains
                      KA, IA, JA, QA_AE, &
                      QTRC(:,:,:,QS_AE:QE_AE), RH(:,:,:), & ! [IN]
                      ATMOS_PHY_AE_Re(:,:,:,:)            ) ! [OUT]
+          case default
+             ATMOS_PHY_AE_Re(:,:,:,:) = 0.0_RP
           end select
           DIAG_Re = .true.
        end if

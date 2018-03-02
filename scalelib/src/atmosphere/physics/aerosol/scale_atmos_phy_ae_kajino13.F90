@@ -20,7 +20,6 @@ module scale_atmos_phy_ae_kajino13
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_tracer
   use scale_const, only: &
       mwair => CONST_Mdry, &              ! molecular weight for dry air
       mwwat => CONST_Mvap, &              ! mean molecular weight for water vapor [g/mol]
@@ -363,8 +362,6 @@ contains
   subroutine ATMOS_PHY_AE_kajino13_setup
     use scale_process, only: &
        PRC_abort
-    use scale_time, only: &
-       TIME_DTSEC_ATMOS_PHY_AE
     implicit none
 
     real(RP), allocatable :: d_min_inp(:)
@@ -413,7 +410,6 @@ contains
     forpi = 4._RP / pi              ! 4/pi
 
 
-!    deltt = TIME_DTSEC_ATMOS_PHY_AE
     n_ctg = AE_CTG
     allocate( rnum_out(nbins_out) )
     allocate( n_siz(n_ctg) )
@@ -625,10 +621,10 @@ contains
        QV,         &
        QTRC,       &
        EMIT,       &
+       dt,         &
        RHOQ_t_AE,  &
        CN,         &
        CCN         )
-    use scale_tracer
     use scale_const, only: &
        CONST_CPdry, &
        CONST_CVdry, &
@@ -637,8 +633,6 @@ contains
        CONST_Rdry
     use scale_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
-    use scale_time, only: &
-       TIME_DTSEC_ATMOS_PHY_AE
     use scale_file_history, only: &
        FILE_HISTORY_in
     implicit none
@@ -654,6 +648,7 @@ contains
     real(RP), intent(in) :: QV  (KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA_AE)
     real(RP), intent(in) :: EMIT(KA,IA,JA,QA_AE)
+    real(RP), intent(in) :: dt
 
     real(RP), intent(out) :: RHOQ_t_AE(KA,IA,JA,QA_AE)
     real(RP), intent(out) :: CN(KA,IA,JA)
@@ -897,7 +892,7 @@ contains
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
-      RHOQ_t_AE(k,i,j,iq) = ( QTRC1(k,i,j,iq) - QTRC0(k,i,j,iq) ) * DENS(k,i,j) / TIME_DTSEC_ATMOS_PHY_AE
+      RHOQ_t_AE(k,i,j,iq) = ( QTRC1(k,i,j,iq) - QTRC0(k,i,j,iq) ) * DENS(k,i,j) / dt
     enddo
     enddo
     enddo

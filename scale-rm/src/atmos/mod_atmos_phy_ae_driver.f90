@@ -20,7 +20,6 @@ module mod_atmos_phy_ae_driver
   use scale_stdio
   use scale_prof
   use scale_atmos_grid_cartesC_index
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -54,6 +53,8 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_PHY_AE_TYPE, &
        ATMOS_sw_phy_ae
+    use scale_tracer, only: &
+       TRACER_regist
     use scale_atmos_phy_ae_kajino13, only: &
        ATMOS_PHY_AE_kajino13_tracer_setup, &
        ATMOS_PHY_AE_kajino13_NAME, &
@@ -101,8 +102,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_AE_driver_setup
-    use scale_atmos_phy_ae, only: &
-       ATMOS_PHY_AE_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_AE_TYPE, &
        ATMOS_sw_phy_ae
@@ -184,6 +183,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_AE_driver_calc_tendency( update_flag )
+    use scale_tracer, only: &
+       TRACER_NAME
     use scale_process, only: &
        PRC_abort
     use scale_time, only: &
@@ -193,8 +194,6 @@ contains
        STAT_total
     use scale_file_history, only: &
        FILE_HISTORY_in
-    use scale_atmos_phy_ae, only: &
-       ATMOS_PHY_AE
     use mod_atmos_vars, only: &
        DENS => DENS_av, &
        QTRC => QTRC_av, &
@@ -255,6 +254,7 @@ contains
                                                QV       (:,:,:),             & ! [IN]
                                                QTRC     (:,:,:,QS_AE:QE_AE), & ! [IN]
                                                AE_EMIT  (:,:,:,QS_AE:QE_AE), & ! [IN]
+                                               dt_AE,                        & ! [IN]
                                                RHOQ_t_AE(:,:,:,QS_AE:QE_AE), & ! [OUT]
                                                CN       (:,:,:),             & ! [OUT]
                                                CCN      (:,:,:)              ) ! [OUT]
