@@ -53,6 +53,8 @@ module mod_user
 
   data QUNIT / 'kg/kg' /
 
+  real(DP) :: t_npf = 21600.D0 ! duration time for new particle formation
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -74,8 +76,26 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup before setup of other components
   subroutine USER_setup
+    use scale_process, only: &
+       PRC_abort
     implicit none
+
+    integer :: ierr
     !---------------------------------------------------------------------------
+
+    NAMELIST /PARAM_USER/ &
+         t_npf
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_USER,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
+       call PRC_abort
+    endif
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
     return
   end subroutine USER_setup
@@ -101,8 +121,20 @@ contains
   !-----------------------------------------------------------------------------
   !> User step
   subroutine USER_step
+    use scale_time, only: &
+       TIME_NOWSEC, &
+       TIME_STARTDAYSEC
+    use scale_atmos_phy_ae_kajino13, only: &
+       ATMOS_PHY_AE_KAJINO13_flag_npf
     implicit none
     !---------------------------------------------------------------------------
+    real(DP) :: t_elaps
+
+    t_elaps = TIME_NOWSEC - TIME_STARTDAYSEC
+
+    if ( t_elaps > t_npf ) then ! no more new particle formation does not occur
+       ATMOS_PHY_AE_KAJINO13_flag_npf = .false.
+    end if
 
     return
   end subroutine USER_step
