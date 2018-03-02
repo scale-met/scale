@@ -19,7 +19,11 @@ RUNCONF     = run.launch.conf
 TPROC       = 6
 
 # required data (parameters,distributed files)
-DATPARAM    =
+DATPARAM    = " [${TESTDIR}/data/rad/PARAG.29      PARAG.29    ] \
+                [${TESTDIR}/data/rad/PARAPC.29     PARAPC.29   ] \
+                [${TESTDIR}/data/rad/VARDATA.RM29  VARDATA.RM29] \
+                [${TESTDIR}/data/rad/cira.nc       cira.nc     ] \
+                [${TESTDIR}/data/rad/MIPAS         MIPAS       ] "
 DATDISTS    =
 
 
