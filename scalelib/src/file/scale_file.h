@@ -199,7 +199,7 @@ extern int32_t file_write_data_c( const int32_t   fid,       // (in)
 extern int32_t file_enddef_c( const int32_t fid ); // (in)
 
 extern int32_t file_attach_buffer_c( const int32_t fid,          // (in)
-				     const int32_t buf_amount ); // (in)
+				     const int64_t buf_amount ); // (in)
 
 extern int32_t file_detach_buffer_c( const int32_t fid ); // (in)
 

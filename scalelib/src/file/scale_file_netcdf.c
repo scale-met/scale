@@ -1622,16 +1622,15 @@ int32_t file_enddef_c( const int32_t fid ) // (in)
 }
 
 int32_t file_attach_buffer_c( const int32_t fid,         // (in)
-			      const int32_t buf_amount ) // (in)
+			      const int64_t buf_amount ) // (in)
 {
   int ncid;
-  MPI_Offset buf_amount_ = buf_amount;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
 
   if ( files[fid]->shared_mode )
-    CHECK_PNC_ERROR( ncmpi_buffer_attach(ncid, buf_amount_) )
+    CHECK_PNC_ERROR( ncmpi_buffer_attach(ncid, (MPI_Offset)buf_amount) )
 
   return SUCCESS_CODE;
 }
