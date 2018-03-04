@@ -663,7 +663,7 @@ void file_enddef_c_( const int32_t *fid ,   // (in)
 }
 
 void file_attach_buffer_c_( const int32_t *fid ,       // (in)
-			          int32_t *buf_amount, // (out)
+			    const int64_t *buf_amount, // (in)
 			          int32_t *error )     // (out)
 {
   *error = file_attach_buffer_c( *fid, *buf_amount );

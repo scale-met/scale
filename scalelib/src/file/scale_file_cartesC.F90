@@ -131,36 +131,36 @@ module scale_file_cartesC
   real(RP), private, allocatable :: AXIS_HGT   (:,:,:)
   real(RP), private, allocatable :: AXIS_HGTWXY(:,:,:)
 
-  logical,  private              :: File_axes_written(0:FILE_FILE_MAX-1) ! whether axes have been written
-  !                                                                      ! fid starts from zero so index should start from zero
-  logical,  private              :: File_closed      (0:FILE_FILE_MAX-1) = .true. ! whether file has been closed
-  logical,  private              :: File_haszcoord   (0:FILE_FILE_MAX-1) ! z-coordinates exist?
-  integer,  private              :: write_buf_amount = 0                 ! sum of write buffer amounts
+  logical,    private :: File_axes_written(0:FILE_FILE_MAX-1)          ! whether axes have been written
+  !                                                                    ! fid starts from zero so index should start from zero
+  logical,    private :: File_closed      (0:FILE_FILE_MAX-1) = .true. ! whether file has been closed
+  logical,    private :: File_haszcoord   (0:FILE_FILE_MAX-1)          ! z-coordinates exist?
+  integer(8), private :: write_buf_amount = 0                          ! sum of write buffer amounts
 
   ! global star and count
-  integer,  private              :: startXY   (3), countXY   (3)
-  integer,  private              :: startZX   (2), countZX   (2)
-  integer,  private              :: startZXY  (4), countZXY  (4)
-  integer,  private              :: startZHXY (4), countZHXY (4)
-  integer,  private              :: startOCEAN(3), countOCEAN(3)
-  integer,  private              :: startLAND (3), countLAND (3)
-  integer,  private              :: startURBAN(3), countURBAN(3)
+  integer,  private :: startXY   (3), countXY   (3)
+  integer,  private :: startZX   (2), countZX   (2)
+  integer,  private :: startZXY  (4), countZXY  (4)
+  integer,  private :: startZHXY (4), countZHXY (4)
+  integer,  private :: startOCEAN(3), countOCEAN(3)
+  integer,  private :: startLAND (3), countLAND (3)
+  integer,  private :: startURBAN(3), countURBAN(3)
   ! local start and end
-  integer,  private              :: ISB2, IEB2, JSB2, JEB2 !> for FILE_AGGREGATE
+  integer,  private :: ISB2, IEB2, JSB2, JEB2 !> for FILE_AGGREGATE
 
   ! MPI element datatype for restart variables
-  integer,  private              :: etype
+  integer,  private :: etype
 
   ! MPI derived datatypes
-  integer,  private              :: centerTypeXY
-  integer,  private              :: centerTypeZX
-  integer,  private              :: centerTypeZXY
-  integer,  private              :: centerTypeZHXY
-  integer,  private              :: centerTypeOCEAN
-  integer,  private              :: centerTypeLAND
-  integer,  private              :: centerTypeURBAN
+  integer,  private :: centerTypeXY
+  integer,  private :: centerTypeZX
+  integer,  private :: centerTypeZXY
+  integer,  private :: centerTypeZHXY
+  integer,  private :: centerTypeOCEAN
+  integer,  private :: centerTypeLAND
+  integer,  private :: centerTypeURBAN
 
-  logical,  private              :: set_coordinates = .false.
+  logical,  private :: set_coordinates = .false.
 
   !-----------------------------------------------------------------------------
 contains

@@ -268,7 +268,7 @@ module scale_file_history
   real(DP)                   :: FILE_HISTORY_NOWMS              !> milli sec
   integer                    :: FILE_HISTORY_NOWSTEP            !> step at the time
 
-  integer                    :: FILE_HISTORY_io_buffer_size = 0 !> internal buffer for PnetCDF
+  integer(8)                 :: FILE_HISTORY_io_buffer_size = 0 !> internal buffer for PnetCDF
 
   character(len=FILE_HMID)   :: FILE_HISTORY_options = ''       !> option to give file.  'filetype1:key1=val1&filetype2:key2=val2&...'
 
@@ -563,7 +563,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Number of requested history item             : ', FILE_HISTORY_nreqs
-    if( IO_L ) write(IO_FID_LOG,*) '*** Output default data type                     : ', FILE_HISTORY_DEFAULT_DATATYPE
+    if( IO_L ) write(IO_FID_LOG,*) '*** Output default data type                     : ', trim(FILE_HISTORY_DEFAULT_DATATYPE)
     if( IO_L ) write(IO_FID_LOG,*) '*** Output value at the initial step?            : ', FILE_HISTORY_OUTPUT_STEP0
     if ( FILE_HISTORY_OUTPUT_WAIT_STEP > 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Time when the output is suppressed [step]    : ', FILE_HISTORY_OUTPUT_WAIT_STEP
@@ -1269,7 +1269,7 @@ contains
     character(len=FILE_HMID)   :: tunits
     character(len=FILE_HLONG)  :: basename_mod
     logical                    :: fileexisted
-    integer                    :: array_size
+    integer(8)                 :: array_size
     integer                    :: dim_size
     integer                    :: dtype
     integer                    :: dimid, zid
@@ -1431,7 +1431,7 @@ contains
              do m = 1, FILE_HISTORY_nitems
                 array_size = array_size + FILE_HISTORY_vars(m)%size
              end do
-             FILE_HISTORY_io_buffer_size = array_size * FILE_HISTORY_nitems * DP
+             FILE_HISTORY_io_buffer_size = array_size * DP
           end if
           call FILE_Attach_Buffer( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_io_buffer_size ) ! [IN]
 
