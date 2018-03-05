@@ -132,6 +132,41 @@ static tdim_t *tdims[VAR_MAX];
 static int nt = 0;
 
 
+static inline int32_t file_enddef( const int32_t fid, const int ncid ) // (in)
+{
+#if defined(NETCDF3) || defined(PNETCDF)
+  if (files[fid]->defmode == 1) {
+    if ( files[fid]->shared_mode )
+      CHECK_PNC_ERROR( ncmpi_enddef(ncid) )
+#ifdef NETCDF3
+    else
+      CHECK_ERROR( nc_enddef(ncid) )
+#endif
+    files[fid]->defmode = 0;
+  }
+#endif
+
+  return SUCCESS_CODE;
+}
+
+static inline int32_t file_redef( const int32_t fid, const int ncid ) // (in)
+{
+#if defined(NETCDF3) || defined(PNETCDF)
+  if (files[fid]->defmode == 0) {
+    if (files[fid]->shared_mode)
+      CHECK_PNC_ERROR( ncmpi_redef(ncid) )
+#ifdef NETCDF3
+    else
+      CHECK_ERROR( nc_redef(ncid) )
+#endif
+    files[fid]->defmode = 1;
+  }
+#endif
+
+  return SUCCESS_CODE;
+}
+
+
 int32_t file_open_c(       int32_t  *fid,     // (out)
 		     const char     *fname,   // (in)
 		     const int32_t   mode,    // (in)
@@ -338,6 +373,7 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
     // rank
     CHECK_PNC_ERROR( ncmpi_inq_varndims(ncid, varid, &rank) )
     if ( rank > 0 ) {
+#ifdef PNETCDF
       // description
       if ( ncmpi_inq_attlen(ncid, varid, "long_name", &l) == NC_NOERR ) {
 	buf = (char*) malloc(l+1);
@@ -358,7 +394,6 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
 	free(buf);
       } else
 	dinfo->units[0] = '\0';
-#ifdef PNETCDF
       // standard_name
       if ( ncmpi_inq_attlen(ncid, varid, "standard_name", &l) == NC_NOERR ) {
 	buf = (char*) malloc(l+1);
@@ -1697,40 +1732,6 @@ int32_t file_enddef_c( const int32_t fid ) // (in)
 
   return file_enddef(fid, ncid);
 }
-
-static inline int32_t file_enddef( const int32_t fid, const int ncid ) // (in)
-{
-#if defined(NETCDF3) || defined(PNETCDF)
-  if (files[fid]->defmode == 1) {
-    if ( files[fid]->shared_mode )
-      CHECK_PNC_ERROR( ncmpi_enddef(ncid) )
-#ifdef NETCDF3
-    else
-      CHECK_ERROR( nc_enddef(ncid) )
-#endif
-    files[fid]->defmode = 0;
-  }
-#endif
-
-  return SUCCESS_CODE;
-}
-
-static inline int32_t file_redef( const int32_t fid, const int ncid ) // (in)
-{
-#if defined(NETCDF3) || defined(PNETCDF)
-  if (files[fid]->defmode == 0) {
-    if (files[fid]->shared_mode)
-      CHECK_PNC_ERROR( ncmpi_redef(ncid) )
-#ifdef NETCDF3
-    else
-      CHECK_ERROR( nc_redef(ncid) )
-#endif
-    files[fid]->defmode = 1;
-  }
-#endif
-
-  return SUCCESS_CODE;
-}  
 
 int32_t file_attach_buffer_c( const int32_t fid,         // (in)
 			      const int64_t buf_amount ) // (in)
