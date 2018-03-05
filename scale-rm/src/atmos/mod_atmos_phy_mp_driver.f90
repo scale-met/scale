@@ -62,6 +62,8 @@ contains
   subroutine ATMOS_PHY_MP_driver_tracer_setup
     use scale_process, only: &
        PRC_abort
+    use scale_tracer, only: &
+       TRACER_regist
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_regist, &
        I_QC, &
@@ -84,7 +86,14 @@ contains
        ATMOS_PHY_MP_TOMITA08_tracer_descriptions, &
        ATMOS_PHY_MP_TOMITA08_tracer_units
     use scale_atmos_phy_mp_suzuki10, only: &
-       ATMOS_PHY_MP_suzuki10_config
+       ATMOS_PHY_MP_suzuki10_tracer_setup,        &
+       ATMOS_PHY_MP_suzuki10_ntracers,            &
+       ATMOS_PHY_MP_suzuki10_nwaters,             &
+       ATMOS_PHY_MP_suzuki10_nices,               &
+       ATMOS_PHY_MP_suzuki10_nccn,                &
+       ATMOS_PHY_MP_suzuki10_tracer_names,        &
+       ATMOS_PHY_MP_suzuki10_tracer_descriptions, &
+       ATMOS_PHY_MP_suzuki10_tracer_units
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE, &
        ATMOS_sw_phy_mp
@@ -99,6 +108,8 @@ contains
        QS_MP_obsolute => QS_MP, &
        QE_MP_obsolute => QE_MP
     implicit none
+
+    integer :: QS2
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -132,8 +143,31 @@ contains
           I_QS = QS_MP+4
           I_QG = QS_MP+5
        case ( 'SUZUKI10' )
-          call ATMOS_PHY_MP_SUZUKI10_config( ATMOS_PHY_MP_TYPE, & ! [IN]
-                                             QA_MP, QS_MP       ) ! [OUT]
+          call ATMOS_PHY_MP_suzuki10_tracer_setup
+
+          call ATMOS_HYDROMETEOR_regist( &
+               QS_MP,                                        & ! [OUT]
+               ATMOS_PHY_MP_suzuki10_nwaters,                & ! [IN]
+               ATMOS_PHY_MP_suzuki10_nices,                  & ! [IN]
+               ATMOS_PHY_MP_suzuki10_tracer_names(:),        & ! [IN]
+               ATMOS_PHY_MP_suzuki10_tracer_descriptions(:), & ! [IN]
+               ATMOS_PHY_MP_suzuki10_tracer_units(:)         ) ! [IN]
+
+          if( ATMOS_PHY_MP_suzuki10_nccn > 0 ) then
+             call TRACER_regist( QS2,                                                                     & ! [OUT]
+                                 ATMOS_PHY_MP_suzuki10_nccn,                                              & ! [IN]
+                                 ATMOS_PHY_MP_suzuki10_tracer_names       ( ATMOS_PHY_MP_suzuki10_nwaters &
+                                                                          + ATMOS_PHY_MP_suzuki10_nices   &
+                                                                          + 2 : ),                        & ! [IN]
+                                 ATMOS_PHY_MP_suzuki10_tracer_descriptions( ATMOS_PHY_MP_suzuki10_nwaters &
+                                                                          + ATMOS_PHY_MP_suzuki10_nices   &
+                                                                          + 2 : ),                        & ! [IN]
+                                 ATMOS_PHY_MP_suzuki10_tracer_units       ( ATMOS_PHY_MP_suzuki10_nwaters &
+                                                                          + ATMOS_PHY_MP_suzuki10_nices   &
+                                                                          + 2 : )                         ) ! [IN]
+          end if
+
+          QA_MP = ATMOS_PHY_MP_suzuki10_ntracers
        case default
           call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
           QA_MP = QA_MP_obsolute
@@ -623,7 +657,7 @@ contains
           call ATMOS_PHY_MP_suzuki10_adjustment( KA, KS,  KE,        & ! [IN]
                                                  IA, ISB, IEB,       & ! [IN]
                                                  JA, JSB, JEB,       & ! [IN]
-                                                 QA_MP,              & ! [IN]
+                                                 QA_MP, QS_MP,       & ! [IN]
                                                  KIJMAX,             & ! [IN]
                                                  CCN      (:,:,:),   & ! [IN] 
                                                  DENS1    (:,:,:),   & ! [INOUT]
