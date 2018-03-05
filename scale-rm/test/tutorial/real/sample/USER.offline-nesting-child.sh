@@ -2,11 +2,11 @@
 
 #################################################
 #
-# &PARAM_NEST            (ALL configs)
-# &PARAM_TIME            (ALL configs)
-# &PARAM_FILE_HISTORY    (run config)
-# &PARAM_ATMOS_BOUNDARY  (run config)
-# &PARAM_ATMOS_REFSTATE  (run config)
+# &PARAM_COMM_CARTESC_NEST(ALL configs)
+# &PARAM_TIME             (ALL configs)
+# &PARAM_FILE_HISTORY     (run config)
+# &PARAM_ATMOS_BOUNDARY   (run config)
+# &PARAM_ATMOS_REFSTATE   (run config)
 #
 #################################################
 
