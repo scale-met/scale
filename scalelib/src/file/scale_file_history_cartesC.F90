@@ -62,8 +62,8 @@ module scale_file_history_cartesC
   integer  :: imh,  jmh
   integer  :: imsh, jmsh
 
-  integer  :: FILE_HISTORY_CARTESCORY_STARTDATE(6) !< start time [YYYY MM DD HH MM SS]
-  real(DP) :: FILE_HISTORY_CARTESCORY_STARTMS      !< subsecond part of start time [millisec]
+  integer  :: FILE_HISTORY_CARTESC_STARTDATE(6) !< start time [YYYY MM DD HH MM SS]
+  real(DP) :: FILE_HISTORY_CARTESC_STARTMS      !< subsecond part of start time [millisec]
 
   logical  :: FILE_HISTORY_CARTESC_BOUNDARY = .false.
 
@@ -109,8 +109,8 @@ contains
        FILE_HISTORY_CARTESC_PRES,        &
        FILE_HISTORY_CARTESC_BOUNDARY
 
-    character(len=H_MID) :: FILE_HISTORY_CARTESCORY_H_TITLE = 'SCALE-RM FILE_HISTORY_CARTESC OUTPUT' !< title of the output file
-    character(len=H_MID) :: FILE_HISTORY_CARTESCORY_T_SINCE
+    character(len=H_MID) :: FILE_HISTORY_CARTESC_H_TITLE = 'SCALE-RM FILE_HISTORY_CARTESC OUTPUT' !< title of the output file
+    character(len=H_MID) :: FILE_HISTORY_CARTESC_T_SINCE
 
     character(len=FILE_HSHORT) :: calendar
     real(DP) :: start_daysec
@@ -119,7 +119,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[FILE_HISTORY_CARTESCORY] / Categ[ATMOS-RM IO] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[FILE_HISTORY_CARTESC] / Categ[ATMOS-RM IO] / Origin[SCALElib]'
 
     FILE_HISTORY_CARTESC_PRES(:) = 0.0_RP
 
@@ -163,20 +163,20 @@ contains
 
 
 
-    FILE_HISTORY_CARTESCORY_STARTDATE(:) = TIME_NOWDATE
-    FILE_HISTORY_CARTESCORY_STARTMS      = TIME_NOWMS
+    FILE_HISTORY_CARTESC_STARTDATE(:) = TIME_NOWDATE
+    FILE_HISTORY_CARTESC_STARTMS      = TIME_NOWMS
 
     start_daysec = TIME_STARTDAYSEC
     if ( TIME_NOWDATE(1) > 0 ) then
-       write(FILE_HISTORY_CARTESCORY_T_SINCE,'(I4.4,5(A1,I2.2))') TIME_NOWDATE(1), &
-                                                             '-', TIME_NOWDATE(2), &
-                                                             '-', TIME_NOWDATE(3), &
-                                                             ' ', TIME_NOWDATE(4), &
-                                                             ':', TIME_NOWDATE(5), &
-                                                             ':', TIME_NOWDATE(6)
+       write(FILE_HISTORY_CARTESC_T_SINCE,'(I4.4,5(A1,I2.2))') TIME_NOWDATE(1), &
+                                                          '-', TIME_NOWDATE(2), &
+                                                          '-', TIME_NOWDATE(3), &
+                                                          ' ', TIME_NOWDATE(4), &
+                                                          ':', TIME_NOWDATE(5), &
+                                                          ':', TIME_NOWDATE(6)
        start_daysec = TIME_NOWMS
     else
-       FILE_HISTORY_CARTESCORY_T_SINCE = ''
+       FILE_HISTORY_CARTESC_T_SINCE = ''
     endif
 
     if ( FILE_HISTORY_CARTESC_BOUNDARY ) then
@@ -218,14 +218,13 @@ contains
     ! get calendar name
     call CALENDAR_get_name( calendar )
 
-    call FILE_HISTORY_Setup( &
-         FILE_HISTORY_CARTESCORY_H_TITLE,              & ! [IN]
-         H_SOURCE, H_INSTITUTE,                        & ! [IN]
-         start_daysec, TIME_DTSEC,                     & ! [IN]
-         time_since = FILE_HISTORY_CARTESCORY_T_SINCE, & ! [IN]
-         calendar = calendar,                          & ! [IN]
-         default_zcoord = 'model',                     & ! [IN]
-         myrank = PRC_myrank                           ) ! [IN]
+    call FILE_HISTORY_Setup( FILE_HISTORY_CARTESC_H_TITLE,              & ! [IN]
+                             H_SOURCE, H_INSTITUTE,                     & ! [IN]
+                             start_daysec, TIME_DTSEC,                  & ! [IN]
+                             time_since = FILE_HISTORY_CARTESC_T_SINCE, & ! [IN]
+                             calendar = calendar,                       & ! [IN]
+                             default_zcoord = 'model',                  & ! [IN]
+                             myrank = PRC_myrank                        ) ! [IN]
 
     call FILE_HISTORY_Set_NowDate( TIME_NOWDATE, TIME_NOWMS, TIME_NOWSTEP )
 
@@ -1652,9 +1651,10 @@ contains
     call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_jmaxg", (/JMAXG/) ) ! [IN]
 
                      call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_kmax", (/KMAX/)  ) ! [IN]
-    if ( OKMAX > 0 ) call FILE_HISTORY_Set_Attribute( "global", "scale_ocean_grid_cartesC_index_kmax", (/OKMAX/)  ) ! [IN]
-    if ( LKMAX > 0 ) call FILE_HISTORY_Set_Attribute( "global", "scale_land_grid_cartesC_index_kmax",  (/LKMAX/)  ) ! [IN]
-    if ( UKMAX > 0 ) call FILE_HISTORY_Set_Attribute( "global", "scale_urban_grid_cartesC_index_kmax", (/UKMAX/)  ) ! [IN]
+    if ( OKMAX > 0 ) call FILE_HISTORY_Set_Attribute( "global", "scale_ocean_grid_cartesC_index_kmax", (/OKMAX/) ) ! [IN]
+    if ( LKMAX > 0 ) call FILE_HISTORY_Set_Attribute( "global", "scale_land_grid_cartesC_index_kmax",  (/LKMAX/) ) ! [IN]
+    if ( UKMAX > 0 ) call FILE_HISTORY_Set_Attribute( "global", "scale_urban_grid_cartesC_index_kmax", (/UKMAX/) ) ! [IN]
+
     call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_khalo", (/KHALO/) ) ! [IN]
     call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_ihalo", (/IHALO/) ) ! [IN]
     call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_jhalo", (/JHALO/) ) ! [IN]
@@ -1780,13 +1780,13 @@ contains
 
     ! map projection info
     call MAPPROJECTION_get_attributes( minfo%mapping_name,                             & ! [OUT]
-                              minfo%false_easting                        (1), & ! [OUT]
-                              minfo%false_northing                       (1), & ! [OUT]
-                              minfo%longitude_of_central_meridian        (1), & ! [OUT]
-                              minfo%longitude_of_projection_origin       (1), & ! [OUT]
-                              minfo%latitude_of_projection_origin        (1), & ! [OUT]
-                              minfo%straight_vertical_longitude_from_pole(1), & ! [OUT]
-                              minfo%standard_parallel                    (:)  ) ! [OUT]
+                                       minfo%false_easting                        (1), & ! [OUT]
+                                       minfo%false_northing                       (1), & ! [OUT]
+                                       minfo%longitude_of_central_meridian        (1), & ! [OUT]
+                                       minfo%longitude_of_projection_origin       (1), & ! [OUT]
+                                       minfo%latitude_of_projection_origin        (1), & ! [OUT]
+                                       minfo%straight_vertical_longitude_from_pole(1), & ! [OUT]
+                                       minfo%standard_parallel                    (:)  ) ! [OUT]
 
     if ( minfo%mapping_name /= "" ) then
        call FILE_HISTORY_Set_Attribute( "x" , "standard_name", "projection_x_coordinate" )
@@ -1940,7 +1940,6 @@ contains
     call FILE_HISTORY_Set_Attribute( "grid_model_global", "node_dimensions",     "FXG FYG" )
     call FILE_HISTORY_Set_Attribute( "grid_model_global", "face_dimensions",     "CXG: FYG (padding: none) CYG: FYG (padding: none)" )
     call FILE_HISTORY_Set_Attribute( "grid_model_global", "vertical_dimensions", "CZ: FZ (padding: none)" )
-    
 
     return
   end subroutine FILE_HISTORY_CARTESC_set_axes_attributes

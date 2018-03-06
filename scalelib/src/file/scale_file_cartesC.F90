@@ -2193,12 +2193,10 @@ contains
        call FILE_Set_Attribute( fid, "yh", "halo_local"  , FILE_CARTESC_AXIS_info(4)%halo_local  (:) )
     end if
 
-
     call FILE_Set_Attribute( fid, "x" , "periodic"    , FILE_CARTESC_AXIS_info(1)%periodic        )
     call FILE_Set_Attribute( fid, "xh", "periodic"    , FILE_CARTESC_AXIS_info(2)%periodic        )
     call FILE_Set_Attribute( fid, "y" , "periodic"    , FILE_CARTESC_AXIS_info(3)%periodic        )
     call FILE_Set_Attribute( fid, "yh", "periodic"    , FILE_CARTESC_AXIS_info(4)%periodic        )
-
 
     ! map projection info
 

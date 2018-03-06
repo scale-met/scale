@@ -223,7 +223,7 @@ contains
 
           call FILE_Get_Attribute( fid, "global", "time_units", hinfo%time_units    )
           call FILE_Get_Attribute( fid, "global", "calendar", hinfo%calendar, existed )
-          if ( .not. existed ) hinfo%calendar = ""
+          if ( .NOT. existed ) hinfo%calendar = ""
           call FILE_Get_Attribute( fid, "global", "time_start", hinfo%time_start(:) )
 
           call FILE_Get_Attribute( fid, 'x', 'size_global', hinfo%xatt_size_global(:) )
@@ -519,7 +519,7 @@ contains
     if( py == nprocs_y ) ngrids_y = ngrids_y + nhalos_y
 
     ngrids_yh = ngrids_y
-    if ( nhalos_y == 0 .AND. py == 1 .AND. (.not. hinfo%periodic(3)) ) then
+    if ( nhalos_y == 0 .AND. py == 1 .AND. (.NOT. hinfo%periodic(3)) ) then
        ngrids_yh = ngrids_yh + 1
     endif
 
@@ -528,7 +528,7 @@ contains
     if( px == nprocs_x ) ngrids_x = ngrids_x + nhalos_x
 
     ngrids_xh = ngrids_x
-    if ( nhalos_x == 0 .AND. px == 1 .AND. (.not. hinfo%periodic(2)) ) then
+    if ( nhalos_x == 0 .AND. px == 1 .AND. (.NOT. hinfo%periodic(2)) ) then
        ngrids_xh = ngrids_xh + 1
     endif
 
@@ -1036,8 +1036,8 @@ contains
     rankidx(1) = mod(nowrank,nprocs_x_out)
     rankidx(2) =     nowrank/nprocs_x_out
 
-    select case ( hinfo%grid_name )
-    case ( ATMOS_GRID_CARTESC_NAME )
+    select case( hinfo%grid_name )
+    case( ATMOS_GRID_CARTESC_NAME )
 
        call FILE_CARTESC_put_globalAttributes( fid,                                                     &
                                                rankidx(1), rankidx(2),                                  &
@@ -1071,7 +1071,7 @@ contains
 
     ! for xh
     ainfo(2) = ainfo(1)
-    if ( (.not. ainfo(2)%periodic) .AND. ainfo(2)%halo_global(1) == 0 ) then
+    if ( (.NOT. ainfo(2)%periodic) .AND. ainfo(2)%halo_global(1) == 0 ) then
        ainfo(2)%size_global(1) = ainfo(2)%size_global(1) + 1
        ainfo(2)%halo_global(1) = ainfo(2)%halo_global(1) + 1
        if ( rankidx(1) == 0 ) then
@@ -1095,7 +1095,7 @@ contains
 
     ! for yh
     ainfo(4) = ainfo(3)
-    if ( (.not. ainfo(4)%periodic) .AND. ainfo(4)%halo_global(1) == 0 ) then
+    if ( (.NOT. ainfo(4)%periodic) .AND. ainfo(4)%halo_global(1) == 0 ) then
        ainfo(4)%size_global(1) = ainfo(4)%size_global(1) + 1
        ainfo(4)%halo_global(1) = ainfo(4)%halo_global(1) + 1
        if ( rankidx(2) == 0 ) then
