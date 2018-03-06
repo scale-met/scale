@@ -1626,6 +1626,8 @@ contains
     type(mappinginfo) :: minfo
     !---------------------------------------------------------------------------
 
+    call FILE_HISTORY_Set_Attribute( "global", "Conventions", "CF-1.6" ) ! [IN]
+
     call FILE_HISTORY_Set_Attribute( "global", "grid_name", ATMOS_GRID_CARTESC_NAME ) ! [IN]
 
     if ( FILE_HISTORY_AGGREGATE ) then
@@ -1657,12 +1659,11 @@ contains
     call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_ihalo", (/IHALO/) ) ! [IN]
     call FILE_HISTORY_Set_Attribute( "global", "scale_atmos_grid_cartesC_index_jhalo", (/JHALO/) ) ! [IN]
 
-    call FILE_get_CFtunits( FILE_HISTORY_CARTESCORY_STARTDATE(:), tunits )
-    call FILE_HISTORY_Set_Attribute( "global", "time_units", tunits )
-    call FILE_HISTORY_Set_Attribute( "global", "time_start", (/FILE_HISTORY_CARTESCORY_STARTMS/) )
-
     call CALENDAR_get_name( calendar )
     if ( calendar /= "" ) call FILE_HISTORY_Set_Attribute( "global", "calendar", calendar )
+    call FILE_get_CFtunits( FILE_HISTORY_CARTESC_STARTDATE(:), tunits )
+    call FILE_HISTORY_Set_Attribute( "global", "time_units", tunits )
+    call FILE_HISTORY_Set_Attribute( "global", "time_start", (/FILE_HISTORY_CARTESC_STARTMS/) )
 
     if ( PRC_PERIODIC_X ) then
        ainfo(1)%periodic = .true.

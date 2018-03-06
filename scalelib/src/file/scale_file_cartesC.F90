@@ -546,7 +546,7 @@ contains
     real(RP), intent(in) :: VOL(LKA,LIA,LJA)
     !---------------------------------------------------------------------------
 
-    AXIS_VOLL(:,:,:) = VOL(LKS:OKE,ISB2:IEB2,JSB2:JEB2)
+    AXIS_VOLL(:,:,:) = VOL(LKS:LKE,ISB2:IEB2,JSB2:JEB2)
 
     return
   end subroutine FILE_CARTESC_set_coordinates_land
@@ -1915,25 +1915,25 @@ contains
     call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_x",  (/prc_num_x/) ) ! [IN]
     call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_num_y",  (/prc_num_y/) ) ! [IN]
 
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_periodic_z", .false.                 ) ! [IN]
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_periodic_x", prc_periodic_x ) ! [IN]
-    call FILE_Set_Attribute( fid, "global", "scale_cartesC_periodic_y", prc_periodic_y ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_periodic_z", .false.        ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_periodic_x", prc_periodic_x ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_cartesC_prc_periodic_y", prc_periodic_y ) ! [IN]
 
-    call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_imaxg", (/imaxg/) ) ! [IN]
-    call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_jmaxg", (/jmaxg/) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_index_imaxg", (/imaxg/) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_index_jmaxg", (/jmaxg/) ) ! [IN]
 
-                     call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_kmax", (/kmax/)  ) ! [IN]
-    if ( okmax > 0 ) call FILE_Set_Attribute( fid, "global", "scale_ocean_grid_cartesC_kmax", (/okmax/) ) ! [IN]
-    if ( lkmax > 0 ) call FILE_Set_Attribute( fid, "global", "scale_land_grid_cartesC_kmax",  (/lkmax/) ) ! [IN]
-    if ( ukmax > 0 ) call FILE_Set_Attribute( fid, "global", "scale_urban_grid_cartesC_kmax", (/ukmax/) ) ! [IN]
+                     call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_index_kmax", (/kmax/)  ) ! [IN]
+    if ( okmax > 0 ) call FILE_Set_Attribute( fid, "global", "scale_ocean_grid_cartesC_index_kmax", (/okmax/) ) ! [IN]
+    if ( lkmax > 0 ) call FILE_Set_Attribute( fid, "global", "scale_land_grid_cartesC_index_kmax",  (/lkmax/) ) ! [IN]
+    if ( ukmax > 0 ) call FILE_Set_Attribute( fid, "global", "scale_urban_grid_cartesC_index_kmax", (/ukmax/) ) ! [IN]
 
-    call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_khalo", (/khalo/) ) ! [IN]
-    call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_ihalo", (/ihalo/) ) ! [IN]
-    call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_jhalo", (/jhalo/) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_index_khalo", (/khalo/) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_index_ihalo", (/ihalo/) ) ! [IN]
+    call FILE_Set_Attribute( fid, "global", "scale_atmos_grid_cartesC_index_jhalo", (/jhalo/) ) ! [IN]
 
-    call FILE_Set_Attribute( fid, "global", "time_start", (/time/) )
-    call FILE_Set_Attribute( fid, "global", "time_units", tunits )
     if ( calendar /= "" ) call FILE_Set_Attribute( fid, "global", "calendar", calendar )
+    call FILE_Set_Attribute( fid, "global", "time_units", tunits )
+    call FILE_Set_Attribute( fid, "global", "time_start", (/time/) )
 
     return
   end subroutine FILE_CARTESC_put_globalAttributes

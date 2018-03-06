@@ -129,11 +129,12 @@ void file_get_datainfo_c_(       datainfo_t *dinfo,       // (out)
 
   *error = file_get_datainfo_c( dinfo, *fid, _varname, *step, *suppress );
 
-  cstr2fstr(dinfo->varname,     dinfo->varname,     File_HSHORT);
-  cstr2fstr(dinfo->description, dinfo->description, File_HMID);
-  cstr2fstr(dinfo->units,       dinfo->units,       File_HSHORT);
-  cstr2fstr(dinfo->time_units,  dinfo->time_units,  File_HMID);
-  cstr2fstr(dinfo->calendar,    dinfo->calendar,    File_HSHORT);
+  cstr2fstr(dinfo->varname,      dinfo->varname,      File_HSHORT);
+  cstr2fstr(dinfo->description,  dinfo->description,  File_HMID);
+  cstr2fstr(dinfo->units,        dinfo->units,        File_HSHORT);
+  cstr2fstr(dinfo->standard_name,dinfo->standard_name,File_HMID);
+  cstr2fstr(dinfo->time_units,   dinfo->time_units,   File_HMID);
+  cstr2fstr(dinfo->calendar,     dinfo->calendar,     File_HSHORT);
   for ( i=0; i<dinfo->rank; i++ )
     cstr2fstr(dinfo->dim_name+i*File_HSHORT, dinfo->dim_name+i*File_HSHORT, File_HSHORT);
   for ( i=0; i<dinfo->natts; i++ )
