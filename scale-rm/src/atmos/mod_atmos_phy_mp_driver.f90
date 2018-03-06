@@ -429,7 +429,8 @@ contains
        ATMOS_PHY_MP_TOMITA08_adjustment, &
        ATMOS_PHY_MP_TOMITA08_terminal_velocity
     use scale_atmos_phy_mp_suzuki10, only: &
-       ATMOS_PHY_MP_suzuki10_adjustment
+       ATMOS_PHY_MP_suzuki10_adjustment, &
+       ATMOS_PHY_MP_suzuki10_terminal_velocity
     use scale_file_history, only: &
        FILE_HISTORY_query, &
        FILE_HISTORY_put
@@ -838,6 +839,10 @@ contains
                         KA, KS, KE, &
                         DENS2(:), TEMP2(:), RHOQ2(:,:), & ! [IN]
                         vterm(:,:)                      ) ! [OUT]
+                !case ( 'SUZUKI10' )
+                !   call ATMOS_PHY_MP_suzuki10_terminal_velocity( &
+                !        KA,        & ! [IN]
+                !        vterm(:,:) ) ! [OUT]
                 case default
                    vterm(:,:) = 0.0_RP ! tentative
                 end select

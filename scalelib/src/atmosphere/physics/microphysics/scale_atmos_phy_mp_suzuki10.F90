@@ -39,6 +39,7 @@ module scale_atmos_phy_mp_suzuki10
   public :: ATMOS_PHY_MP_suzuki10_tracer_setup
   public :: ATMOS_PHY_MP_suzuki10_setup
   public :: ATMOS_PHY_MP_suzuki10_adjustment
+  public :: ATMOS_PHY_MP_suzuki10_terminal_velocity
   public :: ATMOS_PHY_MP_suzuki10_cloud_fraction
   public :: ATMOS_PHY_MP_suzuki10_effective_radius
   public :: ATMOS_PHY_MP_suzuki10_mixing_ratio
@@ -506,7 +507,7 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_SUZUKI10)
 
     if ( nspc /= 1 .AND. nspc /= 7 ) then
-       write(*,*) 'xxx nspc should be set as 1(warm rain) or 7(mixed phase) check!'
+       write(*,*) 'xxx nspc should be set as 1 (warm rain) or 7 (mixed phase). Check !!'
        call PRC_MPIstop
     endif
 
@@ -536,7 +537,7 @@ contains
         read( fid_micpara,* ) nnspc, nnbin
 
         if ( nnbin /= nbin ) then
-           write(*,*) 'xxx nbin in inc_tracer and nbin in micpara.dat is different check!'
+           write(*,*) 'xxx nbin in inc_tracer and nbin in micpara.dat is different. check!'
            call PRC_MPIstop
         endif
 
@@ -854,14 +855,14 @@ contains
     integer, intent(in) :: QA, QS
     integer, intent(in) :: KIJMAX
 
-    real(RP), intent(in)    :: CCN      (KA,IA,JA)
+    real(RP), intent(in)    :: CCN(KA,IA,JA)
 
-    real(RP), intent(inout) :: DENS     (KA,IA,JA)
-    real(RP), intent(inout) :: MOMZ     (KA,IA,JA)
-    real(RP), intent(inout) :: MOMX     (KA,IA,JA)
-    real(RP), intent(inout) :: MOMY     (KA,IA,JA)
-    real(RP), intent(inout) :: RHOT     (KA,IA,JA)
-    real(RP), intent(inout) :: QTRC     (KA,IA,JA,QA)
+    real(RP), intent(inout) :: DENS(KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
+    real(RP), intent(inout) :: MOMX(KA,IA,JA)
+    real(RP), intent(inout) :: MOMY(KA,IA,JA)
+    real(RP), intent(inout) :: RHOT(KA,IA,JA)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
 
     real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
@@ -1429,6 +1430,23 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_adjustment
+
+  !-----------------------------------------------------------------------------
+  !> get terminal velocity
+  subroutine ATMOS_PHY_MP_suzuki10_terminal_velocity( &
+       KA,          &
+       output_vterm )
+    implicit none
+
+    integer, intent(in) :: KA
+
+    real(RP), intent(out) :: output_vterm(KA,ATMOS_PHY_MP_suzuki10_ntracers-1)
+    !---------------------------------------------------------------------------
+
+    output_vterm(:,:) = vterm(:,1,1,:)
+
+    return
+  end subroutine ATMOS_PHY_MP_suzuki10_terminal_velocity
 
   !-----------------------------------------------------------------------------
   !> Calculate Cloud Fraction
