@@ -357,19 +357,26 @@ contains
        endif
 
        select case(varname_file(n))
-       case('z','zh','oz','ozh','lz','lzh','uz','uzh','pressure',                                         &
-            'z_bnds','zh_bnds','oz_bnds','ozh_bnds','lz_bnds','lzh_bnds','uz_bnds','uzh_bnds',            &
-            'x_bnds','xh_bnds','y_bnds','yh_bnds',                                                        &
-            'CZ','FZ','CDZ','FDZ','CBFZ','FBFZ','OCZ','OFZ','OCDZ','LCZ','LFZ','LCDZ','UCZ','UFZ','UCDZ', &
-            'x','xh','y','yh',                                                                            &
-            'CX','CY','FX','FY','CDX','CDY','FDX','FDY','CBFX','CBFY','FBFX','FBFY',                      &
-            'CXG','CYG','FXG','FYG','CDXG','CDYG','FDXG','FDYG','CBFXG','CBFYG','FBFXG','FBFYG',          &
-            'lon','lon_uy','lon_xv','lon_uv','lat','lat_uy','lat_xv','lat_uv','topo','lsmask',            &
-            'height','height_wxy','height_xyw','height_uyz','height_xvz',                                 &
-            'height_uvz','height_uyw','height_xvw','height_uvw'                                           )
+       case('z','zh','oz','ozh','lz','lzh','uz','uzh','pressure',                                                            &
+            'z_bnds','zh_bnds','oz_bnds','ozh_bnds','lz_bnds','lzh_bnds','uz_bnds','uzh_bnds',                               &
+            'CZ','FZ','CDZ','FDZ','CBFZ','FBFZ','OCZ','OFZ','OCDZ','LCZ','LFZ','LCDZ','UCZ','UFZ','UCDZ',                    &
+            'x','xh','y','yh',                                                                                               &
+            'x_bnds','xh_bnds','y_bnds','yh_bnds',                                                                           &
+            'CX','CY','FX','FY','CDX','CDY','FDX','FDY','CBFX','CBFY','FBFX','FBFY',                                         &
+            'CXG','CYG','FXG','FYG','CDXG','CDYG','FDXG','FDYG','CBFXG','CBFYG','FBFXG','FBFYG',                             &
+            'lon','lon_uy','lon_xv','lon_uv','lat','lat_uy','lat_xv','lat_uv','topo','lsmask',                               &
+            'cell_area','cell_area_uy','cell_area_xv',                                                                       &
+            'cell_area_zuy_x','cell_area_zxv_y','cell_area_wuy_x','cell_area_wxv_y',                                         &
+            'cell_area_zxy_x','cell_area_zuv_y','cell_area_zuv_x','cell_area_zxy_y',                                         &
+            'cell_area_uyz_x','cell_area_xvz_y','cell_area_uyw_x','cell_area_xvw_y',                                         &
+            'cell_area_xyz_x','cell_area_uvz_y','cell_area_uvz_x','cell_area_xyz_y',                                         &
+            'cell_volume',                                                                                                   &
+            'cell_volume_wxy','cell_volume_zuy','cell_volume_zxv','cell_volume_oxy','cell_volume_lxy','cell_volume_uxy',     &
+            'cell_volume_xyw','cell_volume_uyz','cell_volume_xvz','cell_volume_xyo','cell_volume_xyl','cell_volume_xyu',     &
+            'height','height_wxy','height_xyw','height_uyz','height_xvz','height_uvz','height_uyw','height_xvw','height_uvw' )
           naxis           = naxis + 1
           axisname(naxis) = varname_file(n)
-       case('time','time_bnds')
+       case('time','time_bnds','grid','grid_ocean','grid_land','grid_urban','grid_pressure','grid_z','grid_model','grid_model_global')
           ! do nothing
        case('lambert_conformal_conic')
           if ( ismaster ) then
@@ -1074,11 +1081,11 @@ contains
     if ( (.NOT. ainfo(2)%periodic) .AND. ainfo(2)%halo_global(1) == 0 ) then
        ainfo(2)%size_global(1) = ainfo(2)%size_global(1) + 1
        ainfo(2)%halo_global(1) = ainfo(2)%halo_global(1) + 1
-       if ( rankidx(1) == 0 ) then
-          ainfo(2)%start_global(1) = ainfo(2)%start_global(1) + 1
-       else
+!        if ( rankidx(1) == 0 ) then
+!           ainfo(2)%start_global(1) = ainfo(2)%start_global(1) + 1
+!        else
           ainfo(2)%halo_local  (1) = ainfo(2)%halo_local  (1) + 1
-       endif
+!        endif
     endif
 
     ! for y
@@ -1098,11 +1105,11 @@ contains
     if ( (.NOT. ainfo(4)%periodic) .AND. ainfo(4)%halo_global(1) == 0 ) then
        ainfo(4)%size_global(1) = ainfo(4)%size_global(1) + 1
        ainfo(4)%halo_global(1) = ainfo(4)%halo_global(1) + 1
-       if ( rankidx(2) == 0 ) then
-          ainfo(4)%start_global(1) = ainfo(4)%start_global(1) + 1
-       else
+!        if ( rankidx(2) == 0 ) then
+!           ainfo(4)%start_global(1) = ainfo(4)%start_global(1) + 1
+!        else
           ainfo(4)%halo_local  (1) = ainfo(4)%halo_local  (1) + 1
-       endif
+!        endif
     endif
 
     minfo%mapping_name                             = hinfo%minfo_mapping_name
@@ -1203,6 +1210,87 @@ contains
           endif
        endif
     endif
+
+    ! SGRID
+    call FILE_Add_AssociatedVariable( fid, "grid" )
+    call FILE_Set_Attribute( fid, "grid", "cf_role",             "grid_topology" )
+    call FILE_Set_Attribute( fid, "grid", "topology_dimension",  (/ 2 /) )
+    call FILE_Set_Attribute( fid, "grid", "node_dimensions",     "xh yh" )
+    call FILE_Set_Attribute( fid, "grid", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_Set_Attribute( fid, "grid", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_Set_Attribute( fid, "grid", "face_coordinates",    "lon lat" )
+    call FILE_Set_Attribute( fid, "grid", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_Set_Attribute( fid, "grid", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_Set_Attribute( fid, "grid", "vertical_dimensions", "z: zh (padding: none)" )
+
+    call FILE_Add_AssociatedVariable( fid, "grid_ocean" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "cf_role",             "grid_topology" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "topology_dimension",  (/ 2 /) )
+    call FILE_Set_Attribute( fid, "grid_ocean", "node_dimensions",     "xh yh" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "face_coordinates",    "lon lat" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_Set_Attribute( fid, "grid_ocean", "vertical_dimensions", "oz: ozh (padding: none)" )
+
+    call FILE_Add_AssociatedVariable( fid, "grid_land" )
+    call FILE_Set_Attribute( fid, "grid_land", "cf_role",             "grid_topology" )
+    call FILE_Set_Attribute( fid, "grid_land", "topology_dimension",  (/ 2 /) )
+    call FILE_Set_Attribute( fid, "grid_land", "node_dimensions",     "xh yh" )
+    call FILE_Set_Attribute( fid, "grid_land", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_Set_Attribute( fid, "grid_land", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_Set_Attribute( fid, "grid_land", "face_coordinates",    "lon lat" )
+    call FILE_Set_Attribute( fid, "grid_land", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_Set_Attribute( fid, "grid_land", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_Set_Attribute( fid, "grid_land", "vertical_dimensions", "lz: lzh (padding: none)" )
+
+    call FILE_Add_AssociatedVariable( fid, "grid_urban" )
+    call FILE_Set_Attribute( fid, "grid_urban", "cf_role",             "grid_topology" )
+    call FILE_Set_Attribute( fid, "grid_urban", "topology_dimension",  (/ 2 /) )
+    call FILE_Set_Attribute( fid, "grid_urban", "node_dimensions",     "xh yh" )
+    call FILE_Set_Attribute( fid, "grid_urban", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_Set_Attribute( fid, "grid_urban", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_Set_Attribute( fid, "grid_urban", "face_coordinates",    "lon lat" )
+    call FILE_Set_Attribute( fid, "grid_urban", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_Set_Attribute( fid, "grid_urban", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_Set_Attribute( fid, "grid_urban", "vertical_dimensions", "uz: uzh (padding: none)" )
+
+    call FILE_Add_AssociatedVariable( fid, "grid_pressure" )
+    call FILE_Set_Attribute( fid, "grid_pressure", "cf_role",             "grid_topology" )
+    call FILE_Set_Attribute( fid, "grid_pressure", "topology_dimension",  (/ 2 /) )
+    call FILE_Set_Attribute( fid, "grid_pressure", "node_dimensions",     "xh yh" )
+    call FILE_Set_Attribute( fid, "grid_pressure", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_Set_Attribute( fid, "grid_pressure", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_Set_Attribute( fid, "grid_pressure", "face_coordinates",    "lon lat" )
+    call FILE_Set_Attribute( fid, "grid_pressure", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_Set_Attribute( fid, "grid_pressure", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_Set_Attribute( fid, "grid_pressure", "vertical_dimensions", "pressure" )
+
+    call FILE_Add_AssociatedVariable( fid, "grid_z" )
+    call FILE_Set_Attribute( fid, "grid_z", "cf_role",             "grid_topology" )
+    call FILE_Set_Attribute( fid, "grid_z", "topology_dimension",  (/ 2 /) )
+    call FILE_Set_Attribute( fid, "grid_z", "node_dimensions",     "xh yh" )
+    call FILE_Set_Attribute( fid, "grid_z", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_Set_Attribute( fid, "grid_z", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_Set_Attribute( fid, "grid_z", "face_coordinates",    "lon lat" )
+    call FILE_Set_Attribute( fid, "grid_z", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_Set_Attribute( fid, "grid_z", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_Set_Attribute( fid, "grid_z", "vertical_dimensions", "height_xyw: height (padding: none)" )
+
+    call FILE_Add_AssociatedVariable( fid, "grid_model" )
+    call FILE_Set_Attribute( fid, "grid_model", "cf_role",             "grid_topology" )
+    call FILE_Set_Attribute( fid, "grid_model", "topology_dimension",  (/ 2 /) )
+    call FILE_Set_Attribute( fid, "grid_model", "node_dimensions",     "FX FY" )
+    call FILE_Set_Attribute( fid, "grid_model", "face_dimensions",     "CX: FY (padding: none) CY: FY (padding: none)" )
+    call FILE_Set_Attribute( fid, "grid_model", "vertical_dimensions", "CZ: FZ (padding: none)" )
+
+    call FILE_Add_AssociatedVariable( fid, "grid_model_global" )
+    call FILE_Set_Attribute( fid, "grid_model_global", "cf_role",             "grid_topology" )
+    call FILE_Set_Attribute( fid, "grid_model_global", "topology_dimension",  (/ 2 /) )
+    call FILE_Set_Attribute( fid, "grid_model_global", "node_dimensions",     "FXG FYG" )
+    call FILE_Set_Attribute( fid, "grid_model_global", "face_dimensions",     "CXG: FYG (padding: none) CYG: FYG (padding: none)" )
+    call FILE_Set_Attribute( fid, "grid_model_global", "vertical_dimensions", "CZ: FZ (padding: none)" )
 
     return
   end subroutine SNO_attributes_write

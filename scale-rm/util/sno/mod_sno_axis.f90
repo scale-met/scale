@@ -558,7 +558,7 @@ contains
           do nn = 1, naxis
              if ( ainfo(nn)%varname == 'FDXG' ) then
                 IS = (px-1) * IMAX_out + 1
-                IE = (px-1) * IMAX_out + IA_out - 1
+                IE = (px-1) * IMAX_out + IA_out + 1
 
                 ainfo(n)%AXIS_1d(:) = ainfo(nn)%AXIS_1d(IS:IE)
                 exist = .true.
@@ -575,7 +575,7 @@ contains
           do nn = 1, naxis
              if ( ainfo(nn)%varname == 'FDYG' ) then
                 JS = (py-1) * JMAX_out + 1
-                JE = (py-1) * JMAX_out + JA_out - 1
+                JE = (py-1) * JMAX_out + JA_out + 1
 
                 ainfo(n)%AXIS_1d(:) = ainfo(nn)%AXIS_1d(JS:JE)
                 exist = .true.
@@ -722,8 +722,6 @@ contains
     integer  :: staggered_y_in
     integer  :: staggered_x_out
     integer  :: staggered_y_out
-
-    integer :: ngrids1_out, ngrids2_out
 
     integer  :: gin1, gin2, gin3
     integer  :: gout1, gout2, gout3
@@ -931,139 +929,223 @@ contains
 
                    elseif( ainfo(n)%dim_rank == 2 ) then
 
-                      if    ( ainfo(n)%dim_name(1) == 'x'  ) then
-                         gin1        = ngrids_x_in
-                         gout1       = ngrids_x_out
-                         stgin1      = 0
-                         stgout1     = 0
-                         ngrids1_out = ngrids_x_out
-                      elseif( ainfo(n)%dim_name(1) == 'xh' ) then
-                         gin1        = ngrids_xh_in
-                         gout1       = ngrids_xh_out
-                         stgin1      = staggered_x_in
-                         stgout1     = staggered_x_out
-                         ngrids1_out = ngrids_x_out
-                      elseif( ainfo(n)%dim_name(1) == 'y'  ) then
-                         gin1        = ngrids_y_in
-                         gout1       = ngrids_y_out
-                         stgin1      = 0
-                         stgout1     = 0
-                         ngrids1_out = ngrids_y_out
-                      elseif( ainfo(n)%dim_name(1) == 'yh' ) then
-                         gin1        = ngrids_yh_in
-                         gout1       = ngrids_yh_out
-                         stgin1      = staggered_y_in
-                         stgout1     = staggered_y_out
-                         ngrids1_out = ngrids_y_out
-                      else
-                         gin1        = ainfo(n)%dim_size(1)
-                         gout1       = ainfo(n)%dim_size(1)
-                         stgin1      = 0
-                         stgout1     = 0
-                         ngrids1_out = ainfo(n)%dim_size(1)
-                      endif
+                      if ( ainfo(n)%is_bounds ) then ! axis bounds
+                         gin1    = ainfo(n)%dim_size(1)
+                         gout1   = ainfo(n)%dim_size(1)
+                         stgin1  = 0
+                         stgout1 = 0
 
-                      if    ( ainfo(n)%dim_name(2) == 'x'  ) then
-                         gin2        = ngrids_x_in
-                         gout2       = ngrids_x_out
-                         stgin2      = 0
-                         stgout2     = 0
-                         ngrids2_out = ngrids_x_out
-                      elseif( ainfo(n)%dim_name(2) == 'xh' ) then
-                         gin2        = ngrids_xh_in
-                         gout2       = ngrids_xh_out
-                         stgin2      = staggered_x_in
-                         stgout2     = staggered_x_out
-                         ngrids2_out = ngrids_x_out
-                      elseif( ainfo(n)%dim_name(2) == 'y'  ) then
-                         gin2        = ngrids_y_in
-                         gout2       = ngrids_y_out
-                         stgin2      = 0
-                         stgout2     = 0
-                         ngrids2_out = ngrids_y_out
-                      elseif( ainfo(n)%dim_name(2) == 'yh' ) then
-                         gin2        = ngrids_yh_in
-                         gout2       = ngrids_yh_out
-                         stgin2      = staggered_y_in
-                         stgout2     = staggered_y_out
-                         ngrids2_out = ngrids_y_out
-                      else
-                         gin2        = ainfo(n)%dim_size(1)
-                         gout2       = ainfo(n)%dim_size(1)
-                         stgin2      = 0
-                         stgout2     = 0
-                         ngrids2_out = ainfo(n)%dim_size(1)
-                      endif
+                         if    ( ainfo(n)%varname == 'x_bnds' ) then
+                            gin2    = ngrids_x_in
+                            gout2   = ngrids_x_out
+                            stgin2  = 0
+                            stgout2 = 0
 
-                      allocate( localmap_2d(gout1,gout2,3) )
+                            allocate( localmap_2d(gout1,gout2,3) )
 
-                      do j = 1, ngrids2_out
-                      do i = 1, ngrids1_out
-                         localmap_2d(i+stgout1,j+stgout2,I_map_p) = localmap(i,j,I_map_p)
-                         localmap_2d(i+stgout1,j+stgout2,I_map_i) = localmap(i,j,I_map_i) + stgin1
-                         localmap_2d(i+stgout1,j+stgout2,I_map_j) = localmap(i,j,I_map_j) + stgin2
-                      enddo
-                      enddo
+                            do j = 1, ngrids_x_out
+                            do i = 1, gout1
+                               localmap_2d(i,j,I_map_p) = localmap(j,1,I_map_p)
+                               localmap_2d(i,j,I_map_i) = i
+                               localmap_2d(i,j,I_map_j) = localmap(j,1,I_map_i)
+                            enddo
+                            enddo
+                         elseif( ainfo(n)%varname == 'xh_bnds' ) then
+                            gin2    = ngrids_xh_in
+                            gout2   = ngrids_xh_out
+                            stgin2  = staggered_x_in
+                            stgout2 = staggered_x_out
 
-                      if ( stgout1 > 0 ) then
-                         if ( stgin1 > 0 ) then
-                            do j = 1, ngrids2_out
-                            do i = 1, stgout1
+                            allocate( localmap_2d(gout1,gout2,3) )
+
+                            do j = 1, ngrids_x_out
+                            do i = 1, gout1
+                               localmap_2d(i,j+stgout2,I_map_p) = localmap(j,1,I_map_p)
+                               localmap_2d(i,j+stgout2,I_map_i) = i
+                               localmap_2d(i,j+stgout2,I_map_j) = localmap(j,1,I_map_i) + stgin2
+                            enddo
+                            enddo
+
+                            if ( stgout2 > 0 ) then
+                               if ( stgin2 > 0 ) then
+                                  do j = 1, stgout2
+                                  do i = 1, gout1
+                                     localmap_2d(i,j,I_map_p) = localmap(1,1,I_map_p)
+                                     localmap_2d(i,j,I_map_i) = i
+                                     localmap_2d(i,j,I_map_j) = j
+                                  enddo
+                                  enddo
+                               else
+                                  do j = 1, stgout2
+                                  do i = 1, gout1
+                                     localmap_2d(i,j,I_map_p) = -1
+                                     localmap_2d(i,j,I_map_i) = -1
+                                     localmap_2d(i,j,I_map_j) = -1
+                                  enddo
+                                  enddo
+                               endif
+                            endif
+                         elseif( ainfo(n)%varname == 'y_bnds' ) then
+                            gin2    = ngrids_y_in
+                            gout2   = ngrids_y_out
+                            stgin2  = 0
+                            stgout2 = 0
+
+                            allocate( localmap_2d(gout1,gout2,3) )
+
+                            do j = 1, ngrids_y_out
+                            do i = 1, gout1
+                               localmap_2d(i,j,I_map_p) = localmap(1,j,I_map_p)
+                               localmap_2d(i,j,I_map_i) = i
+                               localmap_2d(i,j,I_map_j) = localmap(1,j,I_map_j)
+                            enddo
+                            enddo
+
+                            readflag_1d = .true.
+                         elseif( ainfo(n)%varname == 'yh_bnds' ) then
+                            gin2    = ngrids_yh_in
+                            gout2   = ngrids_yh_out
+                            stgin2  = staggered_y_in
+                            stgout2 = staggered_y_out
+
+                            allocate( localmap_2d(gout1,gout2,3) )
+
+                            do j = 1, ngrids_y_out
+                            do i = 1, gout1
                                localmap_2d(i,j+stgout2,I_map_p) = localmap(1,j,I_map_p)
                                localmap_2d(i,j+stgout2,I_map_i) = i
                                localmap_2d(i,j+stgout2,I_map_j) = localmap(1,j,I_map_j) + stgin2
                             enddo
                             enddo
-                         else
-                            do j = 1, ngrids2_out
-                            do i = 1, stgout1
-                               localmap_2d(i,j+stgout2,I_map_p) = -1
-                               localmap_2d(i,j+stgout2,I_map_i) = -1
-                               localmap_2d(i,j+stgout2,I_map_j) = -1
-                            enddo
-                            enddo
-                         endif
-                      endif
 
-                      if ( stgout2 > 0 ) then
-                         if ( stgin2 > 0 ) then
-                            do j = 1, stgout2
-                            do i = 1, ngrids1_out
-                               localmap_2d(i+stgout1,j,I_map_p) = localmap(i,1,I_map_p)
-                               localmap_2d(i+stgout1,j,I_map_i) = localmap(i,1,I_map_i) + stgin1
-                               localmap_2d(i+stgout1,j,I_map_j) = j
-                            enddo
-                            enddo
-                         else
-                            do j = 1, stgout2
-                            do i = 1, ngrids1_out
-                               localmap_2d(i+stgout1,j,I_map_p) = -1
-                               localmap_2d(i+stgout1,j,I_map_i) = -1
-                               localmap_2d(i+stgout1,j,I_map_j) = -1
-                            enddo
-                            enddo
+                            if ( stgout2 > 0 ) then
+                               if ( stgin2 > 0 ) then
+                                  do j = 1, stgout2
+                                  do i = 1, gout1
+                                     localmap_2d(i,j,I_map_p) = localmap(1,1,I_map_p)
+                                     localmap_2d(i,j,I_map_i) = i
+                                     localmap_2d(i,j,I_map_j) = j
+                                  enddo
+                                  enddo
+                               else
+                                  do j = 1, stgout2
+                                  do i = 1, gout1
+                                     localmap_2d(i,j,I_map_p) = -1
+                                     localmap_2d(i,j,I_map_i) = -1
+                                     localmap_2d(i,j,I_map_j) = -1
+                                  enddo
+                                  enddo
+                               endif
+                            endif
                          endif
-                      endif
 
-                      if ( stgout1 > 0 .AND. stgout2 > 0 ) then
-                         if ( stgin1 > 0 .AND. stgin2 > 0 ) then
-                            do j = 1, stgout2
-                            do i = 1, stgout1
-                               localmap_2d(i,j,I_map_p) = localmap(1,1,I_map_p)
-                               localmap_2d(i,j,I_map_i) = i
-                               localmap_2d(i,j,I_map_j) = j
-                            enddo
-                            enddo
+                      else ! normal 2D array
+
+                         if    ( ainfo(n)%dim_name(1) == 'x'  ) then
+                            gin1    = ngrids_x_in
+                            gout1   = ngrids_x_out
+                            stgin1  = 0
+                            stgout1 = 0
+                         elseif( ainfo(n)%dim_name(1) == 'xh' ) then
+                            gin1    = ngrids_xh_in
+                            gout1   = ngrids_xh_out
+                            stgin1  = staggered_x_in
+                            stgout1 = staggered_x_out
                          else
-                            do j = 1, stgout2
-                            do i = 1, stgout1
-                               localmap_2d(i,j,I_map_p) = -1
-                               localmap_2d(i,j,I_map_i) = -1
-                               localmap_2d(i,j,I_map_j) = -1
-                            enddo
-                            enddo
+                            gin1    = ainfo(n)%dim_size(1)
+                            gout1   = ainfo(n)%dim_size(1)
+                            stgin1  = 0
+                            stgout1 = 0
                          endif
-                      endif
+
+                         if    ( ainfo(n)%dim_name(2) == 'y'  ) then
+                            gin2    = ngrids_y_in
+                            gout2   = ngrids_y_out
+                            stgin2  = 0
+                            stgout2 = 0
+                         elseif( ainfo(n)%dim_name(2) == 'yh' ) then
+                            gin2    = ngrids_yh_in
+                            gout2   = ngrids_yh_out
+                            stgin2  = staggered_y_in
+                            stgout2 = staggered_y_out
+                         else
+                            gin2    = ainfo(n)%dim_size(2)
+                            gout2   = ainfo(n)%dim_size(2)
+                            stgin2  = 0
+                            stgout2 = 0
+                         endif
+
+                         allocate( localmap_2d(gout1,gout2,3) )
+
+                         do j = 1, ngrids_y_out
+                         do i = 1, ngrids_x_out
+                            localmap_2d(i+stgout1,j+stgout2,I_map_p) = localmap(i,j,I_map_p)
+                            localmap_2d(i+stgout1,j+stgout2,I_map_i) = localmap(i,j,I_map_i) + stgin1
+                            localmap_2d(i+stgout1,j+stgout2,I_map_j) = localmap(i,j,I_map_j) + stgin2
+                         enddo
+                         enddo
+
+                         if ( stgout1 > 0 ) then
+                            if ( stgin1 > 0 ) then
+                               do j = 1, ngrids_y_out
+                               do i = 1, stgout1
+                                  localmap_2d(i,j+stgout2,I_map_p) = localmap(1,j,I_map_p)
+                                  localmap_2d(i,j+stgout2,I_map_i) = i
+                                  localmap_2d(i,j+stgout2,I_map_j) = localmap(1,j,I_map_j) + stgin2
+                               enddo
+                               enddo
+                            else
+                               do j = 1, ngrids_y_out
+                               do i = 1, stgout1
+                                  localmap_2d(i,j+stgout2,I_map_p) = -1
+                                  localmap_2d(i,j+stgout2,I_map_i) = -1
+                                  localmap_2d(i,j+stgout2,I_map_j) = -1
+                               enddo
+                               enddo
+                            endif
+                         endif
+
+                         if ( stgout2 > 0 ) then
+                            if ( stgin2 > 0 ) then
+                               do j = 1, stgout2
+                               do i = 1, ngrids_x_out
+                                  localmap_2d(i+stgout1,j,I_map_p) = localmap(i,1,I_map_p)
+                                  localmap_2d(i+stgout1,j,I_map_i) = localmap(i,1,I_map_i) + stgin1
+                                  localmap_2d(i+stgout1,j,I_map_j) = j
+                               enddo
+                               enddo
+                            else
+                               do j = 1, stgout2
+                               do i = 1, ngrids_x_out
+                                  localmap_2d(i+stgout1,j,I_map_p) = -1
+                                  localmap_2d(i+stgout1,j,I_map_i) = -1
+                                  localmap_2d(i+stgout1,j,I_map_j) = -1
+                               enddo
+                               enddo
+                            endif
+                         endif
+
+                         if ( stgout1 > 0 .AND. stgout2 > 0 ) then
+                            if ( stgin1 > 0 .AND. stgin2 > 0 ) then
+                               do j = 1, stgout2
+                               do i = 1, stgout1
+                                  localmap_2d(i,j,I_map_p) = localmap(1,1,I_map_p)
+                                  localmap_2d(i,j,I_map_i) = i
+                                  localmap_2d(i,j,I_map_j) = j
+                               enddo
+                               enddo
+                            else
+                               do j = 1, stgout2
+                               do i = 1, stgout1
+                                  localmap_2d(i,j,I_map_p) = -1
+                                  localmap_2d(i,j,I_map_i) = -1
+                                  localmap_2d(i,j,I_map_j) = -1
+                               enddo
+                               enddo
+                            endif
+                         endif
+
+                      endif ! bounds or not?
 
 !                       if ( debug ) then
 !                          if( IO_L ) write(IO_FID_LOG,*)
@@ -1384,8 +1466,9 @@ contains
        ainfo, &
        debug  )
     use scale_file, only: &
-       FILE_Def_Axis,                &
-       FILE_Def_AssociatedCoordinate
+       FILE_Def_Axis,                 &
+       FILE_Def_AssociatedCoordinate, &
+       FILE_Set_Attribute
     use mod_sno_h, only: &
        axisinfo
     implicit none
@@ -1419,6 +1502,12 @@ contains
                               ainfo(n)%datatype,         & ! [IN]
                               dsize,                     & ! [IN]
                               bounds=ainfo(n)%has_bounds ) ! [IN]
+
+          select case(ainfo(n)%varname)
+          case('oz','ozh','lz','lzh','uz','uzh','OCZ','OFZ','LCZ','LFZ','UCZ','UFZ')
+             call FILE_Set_Attribute( fid, ainfo(n)%varname, 'positive', 'down' )
+          end select
+
        else
           drank = ainfo(n)%dim_rank
 
@@ -1428,6 +1517,23 @@ contains
                                               ainfo(n)%units,             & ! [IN]
                                               ainfo(n)%dim_name(1:drank), & ! [IN]
                                               ainfo(n)%datatype           ) ! [IN]
+
+          select case(ainfo(n)%varname)
+          case('cell_area','cell_area_uy','cell_area_xv',                               &
+               'cell_area_zuy_x','cell_area_zxv_y','cell_area_wuy_x','cell_area_wxv_y', &
+               'cell_area_zxy_x','cell_area_zuv_y','cell_area_zuv_x','cell_area_zxy_y', &
+               'cell_area_uyz_x','cell_area_xvz_y','cell_area_uyw_x','cell_area_xvw_y', &
+               'cell_area_xyz_x','cell_area_uvz_y','cell_area_uvz_x','cell_area_xyz_y'  )
+
+             call FILE_Set_Attribute( fid, ainfo(n)%varname, "standard_name", "area" ) ! [IN]
+
+          case('cell_volume',                                                                                               &
+               'cell_volume_wxy','cell_volume_zuy','cell_volume_zxv','cell_volume_oxy','cell_volume_lxy','cell_volume_uxy', &
+               'cell_volume_xyw','cell_volume_uyz','cell_volume_xvz','cell_volume_xyo','cell_volume_xyl','cell_volume_xyu'  )
+
+             call FILE_Set_Attribute( fid, ainfo(n)%varname, "standard_name", "volume" ) ! [IN]
+
+          end select
        endif
     enddo
 
