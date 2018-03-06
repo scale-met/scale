@@ -28,11 +28,11 @@ module scale_atmos_phy_cp_common
   !++ Public procedure
   !
   public :: ATMOS_PHY_CP_common_setup
-  public :: ATMOS_PHY_CP_wmean
+  public :: ATMOS_PHY_CP_common_wmean
 
-  interface ATMOS_PHY_CP_wmean
-     module procedure ATMOS_PHY_CP_wmean
-  end interface ATMOS_PHY_CP_wmean
+!  interface ATMOS_PHY_CP_common_wmean
+!     module procedure ATMOS_PHY_CP_common_wmean
+!  end interface ATMOS_PHY_CP_common_wmean
 
   !-----------------------------------------------------------------------------
   !
@@ -47,11 +47,10 @@ module scale_atmos_phy_cp_common
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-
   ! tuning parameter
   logical,  private :: PARAM_ATMOS_PHY_CP_wadapt = .true.
   integer,  private :: PARAM_ATMOS_PHY_CP_w_time = 16
-
+  !------------------------------------------------------------------------------
 contains
   !------------------------------------------------------------------------------
   !> Setup
@@ -101,31 +100,31 @@ contains
   !! ...BECAUSE THE ORDERING IS REVERSED IN KFPARA...
   !<
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_CP_wmean( &
-       W0_avg, &
-       DENS,   &
-       MOMZ    )
+  subroutine ATMOS_PHY_CP_common_wmean( &
+       W0_mean, &
+       DENS,    &
+       MOMZ     )
     use scale_time , only :&
        TIME_DTSEC,             &
        CP_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
     implicit none
 
-    real(RP), intent(inout) :: W0_avg(KA,IA,JA)
-    real(RP), intent(in)    :: DENS  (KA,IA,JA)
-    real(RP), intent(in)    :: MOMZ  (KA,IA,JA)
+    real(RP), intent(inout) :: W0_mean(KA,IA,JA)
+    real(RP), intent(in)    :: DENS   (KA,IA,JA)
+    real(RP), intent(in)    :: MOMZ   (KA,IA,JA)
 
     real(RP) :: W0
-    real(RP) :: fact_W0_avg, fact_W0
+    real(RP) :: fact_W0_mean, fact_W0
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( PARAM_ATMOS_PHY_CP_wadapt ) then
-       fact_W0_avg = 2.0_RP * max(CP_DTSEC,TIME_DTSEC) - TIME_DTSEC
-       fact_W0     = TIME_DTSEC
+       fact_W0_mean = 2.0_RP * max(CP_DTSEC,TIME_DTSEC) - TIME_DTSEC
+       fact_W0      = TIME_DTSEC
     else ! w_time is tuning parameter
-       fact_W0_avg = real(PARAM_ATMOS_PHY_CP_w_time,RP)
-       fact_W0     = 1.0_RP
+       fact_W0_mean = real(PARAM_ATMOS_PHY_CP_w_time,RP)
+       fact_W0      = 1.0_RP
     endif
 
     do j = JS, JE
@@ -133,13 +132,13 @@ contains
     do k = KS, KE
        W0 = 0.5_RP * ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) / DENS(k,i,j)
 
-       W0_avg(k,i,j) = ( W0_avg(k,i,j) * fact_W0_avg &
-                       + W0            * fact_W0     ) / ( fact_W0_avg + fact_W0 )
+       W0_mean(k,i,j) = ( W0_mean(k,i,j) * fact_W0_mean &
+                        + W0             * fact_W0      ) / ( fact_W0_mean + fact_W0 )
     enddo
     enddo
     enddo
 
     return
-  end subroutine ATMOS_PHY_CP_wmean
+  end subroutine ATMOS_PHY_CP_common_wmean
 
 end module scale_atmos_phy_cp_common

@@ -19,7 +19,10 @@ module scale_atmos_phy_cp
   use scale_tracer
   use scale_atmos_phy_mp
   private
-
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public procedure
+  !
   abstract interface
      subroutine cp( &
           DENS,           &
@@ -73,7 +76,18 @@ module scale_atmos_phy_cp
   procedure(cp), pointer :: ATMOS_PHY_CP => NULL()
   public :: ATMOS_PHY_CP
   public :: ATMOS_PHY_CP_setup
-
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public parameters & variables
+  !
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private procedure
+  !
+  !-----------------------------------------------------------------------------
+  !
+  !++ Private parameters & variables
+  !
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
