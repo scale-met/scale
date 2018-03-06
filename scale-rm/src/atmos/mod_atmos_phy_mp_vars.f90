@@ -49,7 +49,7 @@ module mod_atmos_phy_mp_vars
   !
   !++ Public parameters & variables
   !
-  logical,               public :: ATMOS_PHY_MP_RESTART_OUTPUT                 = .false.                !< output restart file?
+  logical,                public :: ATMOS_PHY_MP_RESTART_OUTPUT                = .false.                !< output restart file?
 
   character(len=H_LONG),  public :: ATMOS_PHY_MP_RESTART_IN_BASENAME           = ''                     !< Basename of the input  file
   logical,                public :: ATMOS_PHY_MP_RESTART_IN_AGGREGATE                                   !< Switch to use aggregate file

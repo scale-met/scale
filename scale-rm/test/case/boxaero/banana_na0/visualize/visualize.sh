@@ -18,7 +18,7 @@ do
    fi
 
    # time series
-   gpview history.pe\*.nc@${var},x=0,y=0 --nocont --exch --wsn 2 || exit
+   gpview history.pe\*.nc@${var},x=0,y=0,z=0 --nocont --wsn 2 || exit
    convert -density 150 -rotate 90 +antialias dcl.pdf slice_${var}.png
    rm -f dcl.pdf
 

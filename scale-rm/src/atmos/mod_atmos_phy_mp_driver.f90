@@ -136,9 +136,14 @@ contains
           ! if ( IO_L ) write(IO_FID_LOG,*) '+++ ATMOS_PHY_MP_TYPE is invalud: ', trim(ATMOS_PHY_MP_TYPE)
           ! call PRC_abort
        end select
-    end if
 
-    QE_MP = QS_MP + QA_MP - 1
+       QE_MP = QS_MP + QA_MP - 1
+
+    else
+       QA_MP = 0
+       QS_MP = -1
+       QE_MP = -1
+    end if
 
     ! tentative
     QA_MP_obsolute = QA_MP

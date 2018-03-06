@@ -14,7 +14,6 @@
 !<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
-#include "macro_thermodyn.h"
 module mod_atmos_vars
   !-----------------------------------------------------------------------------
   !
@@ -840,9 +839,6 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_open, &
        FILE_CARTESC_check_coordinates
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_atmos_admin, only: &
        ATMOS_USE_AVERAGE, &
        ATMOS_sw_dyn,      &
@@ -931,9 +927,6 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_read, &
        FILE_CARTESC_flush
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_atmos_admin, only: &
        ATMOS_USE_AVERAGE, &
        ATMOS_sw_dyn,      &
@@ -1295,9 +1288,6 @@ contains
     use scale_rm_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     implicit none
 
     real(RP) :: RHOQ(KA,IA,JA)
@@ -2661,9 +2651,6 @@ contains
        TIME_DTSEC_ATMOS_DYN
     use mod_atmos_admin, only: &
        ATMOS_DYN_TYPE
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_atmos_hydrometeor, only: &
        I_QV
     use mod_atmos_phy_cp_vars, only: &

@@ -25,10 +25,10 @@ VPATH = common:                          \
         atmosphere/physics/microphysics: \
         atmosphere/physics/radiation:    \
         atmosphere/physics/surface:      \
+        atmosphere/physics/aerosol:      \
         atmos-physics:                   \
         atmos-physics/share:             \
         atmos-physics/microphysics:      \
-        atmos-physics/aerosol:           \
         atmos-physics/chemistry:         \
         atmos-physics/radiation:         \
         atmos-physics/surfaceflux:       \
@@ -90,8 +90,7 @@ OBJS_MP = scale_atmos_phy_mp_dry.o	\
           scale_atmos_phy_mp_suzuki10.o	\
           scale_atmos_phy_mp_tomita08.o
 
-OBJS_AE = scale_atmos_phy_ae_dummy.o	\
-          scale_atmos_phy_ae_kajino13.o
+OBJS_AE = scale_atmos_phy_ae_kajino13.o
 
 OBJS_CH = scale_atmos_phy_ch_rn222.o
 
@@ -138,7 +137,6 @@ OBJS_NAME = \
 	scale_atmos_phy_mp_convert.o	\
 	$(OBJS_MP)	\
 	\
-	scale_atmos_phy_ae.o	\
 	$(OBJS_AE)	\
 	\
 	scale_atmos_phy_ch.o	\

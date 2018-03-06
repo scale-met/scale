@@ -20,7 +20,6 @@ module mod_atmos_phy_ae_vars
   use scale_stdio
   use scale_prof
   use scale_atmos_grid_cartesC_index
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -48,7 +47,7 @@ module mod_atmos_phy_ae_vars
   !
   !++ Public parameters & variables
   !
-  logical,               public :: ATMOS_PHY_AE_RESTART_OUTPUT                 = .false.                !< output restart file?
+  logical,                public :: ATMOS_PHY_AE_RESTART_OUTPUT                = .false.                !< output restart file?
 
   character(len=H_LONG),  public :: ATMOS_PHY_AE_RESTART_IN_BASENAME           = ''                     !< Basename of the input  file
   logical,                public :: ATMOS_PHY_AE_RESTART_IN_AGGREGATE                                   !< Switch to use aggregate file
@@ -64,6 +63,10 @@ module mod_atmos_phy_ae_vars
   real(RP), public, allocatable :: ATMOS_PHY_AE_CCN(:,:,:)                                    ! cloud condensation nuclei [/m3]
   real(RP), public, allocatable :: ATMOS_PHY_AE_CCN_t(:,:,:)                                  ! tendency CCN [/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_AE_EMIT(:,:,:,:)                                 ! emission of aerosol and gas
+
+  integer, public :: QA_AE
+  integer, public :: QS_AE
+  integer, public :: QE_AE
 
   !-----------------------------------------------------------------------------
   !
@@ -103,16 +106,13 @@ contains
   !> Setup
   subroutine ATMOS_PHY_AE_vars_setup
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_atmos_aerosol, only: &
        N_AE, &
        AE_NAME, &
        AE_DESC
-    use scale_atmos_phy_ae, only: &
-       QS_AE, &
-       QE_AE
     use scale_file_history, only: &
        FILE_HISTORY_reg
     implicit none
@@ -154,7 +154,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_AE_VARS. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_AE_VARS)
 
@@ -431,6 +431,8 @@ contains
 
   subroutine ATMOS_PHY_AE_vars_history( &
        QTRC, RH )
+    use scale_tracer, only: &
+       QA
     use scale_atmos_aerosol, only: &
        N_AE
     use scale_file_history, only: &
@@ -457,10 +459,12 @@ contains
   subroutine ATMOS_PHY_AE_vars_get_diagnostic( &
        QTRC, RH, &
        Re, Qe   )
+    use scale_tracer, only: &
+       QA
     use scale_atmos_aerosol, only: &
        N_AE
-    use scale_atmos_phy_ae, only: &
-       ATMOS_PHY_AE_EffectiveRadius
+    use scale_atmos_phy_ae_kajino13, only: &
+       ATMOS_PHY_AE_kajino13_effective_radius
     use mod_atmos_admin, only: &
        ATMOS_PHY_AE_TYPE
 
@@ -472,15 +476,13 @@ contains
     if ( present(Re) ) then
        if ( .not. DIAG_Re ) then
           select case ( ATMOS_PHY_AE_TYPE )
+          case ( 'KAJINO13' )
+             call ATMOS_PHY_AE_kajino13_effective_radius( &
+                     KA, IA, JA, QA_AE, &
+                     QTRC(:,:,:,QS_AE:QE_AE), RH(:,:,:), & ! [IN]
+                     ATMOS_PHY_AE_Re(:,:,:,:)            ) ! [OUT]
           case default
-             if ( associated(ATMOS_PHY_AE_EffectiveRadius) ) then
-                call ATMOS_PHY_AE_EffectiveRadius( &
-                     ATMOS_PHY_AE_Re(:,:,:,:),  & ! [OUT]
-                     QTRC(:,:,:,:), RH(:,:,:) ) ! [IN]
-             else
-!OCL XFILL
-                ATMOS_PHY_AE_Re(:,:,:,:) = 0.0_RP
-             end if
+             ATMOS_PHY_AE_Re(:,:,:,:) = 0.0_RP
           end select
           DIAG_Re = .true.
        end if

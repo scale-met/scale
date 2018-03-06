@@ -699,6 +699,10 @@ contains
   subroutine AEROSOL_setup
     use scale_atmos_phy_ae_kajino13, only: &
        ATMOS_PHY_AE_kajino13_mkinit
+    use mod_atmos_phy_ae_vars, only: &
+       QA_AE, &
+       QS_AE, &
+       QE_AE
     implicit none
 
     real(RP), parameter :: d_min_def = 1.e-9_RP ! default lower bound of 1st size bin
@@ -744,12 +748,25 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_AERO)
 
-    call ATMOS_PHY_AE_kajino13_mkinit( QTRC, CCN,                 & ! (out)
-                                       DENS, RHOT,                & ! (in)
-                                       m0_init, dg_init, sg_init, & ! (in)
-                                       d_min_inp, d_max_inp,      & ! (in)
-                                       k_min_inp, k_max_inp,      & ! (in)
-                                       n_kap_inp                  ) ! (in)
+    qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
+    call ATMOS_PHY_AE_kajino13_mkinit( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! (in)
+                                       QA_AE,                   & ! (in)
+                                       DENS(:,:,:),             & ! (in)
+                                       RHOT(:,:,:),             & ! (in)
+                                       TEMP(:,:,:),             & ! (in)
+                                       PRES(:,:,:),             & ! (in)
+                                       QDRY(:,:,:),             & ! (in)
+                                       QV  (:,:,:),             & ! (in)
+                                       m0_init,                 & ! (in)
+                                       dg_init,                 & ! (in)
+                                       sg_init,                 & ! (in)
+                                       d_min_inp(:),            & ! (in)
+                                       d_max_inp(:),            & ! (in)
+                                       k_min_inp(:),            & ! (in)
+                                       k_max_inp(:),            & ! (in)
+                                       n_kap_inp(:),            & ! (in)
+                                       QTRC(:,:,:,QS_AE:QE_AE), & ! (inout)
+                                       CCN(:,:,:)                ) ! (out)
 
     return
   end subroutine AEROSOL_setup
@@ -4776,8 +4793,17 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state of Box model experiment for zerochemical module
   subroutine MKINIT_boxaero
+    use scale_const, only: &
+       Rdry  => CONST_Rdry, &
+       Rvap  => CONST_Rvap, &
+       CVdry => CONST_CVdry, &
+       CVvap => CONST_CVvap, &
+       CPdry => CONST_CPdry, &
+       CPvap => CONST_CPvap
     use scale_atmos_hydrometeor, only: &
        I_QV
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_temp_pres
     use mod_atmos_admin, only: &
        ATMOS_PHY_AE_TYPE
     implicit none
@@ -4793,6 +4819,10 @@ contains
        init_pres, &
        init_ssliq
 
+    real(RP) :: rtot (KA,IA,JA)
+    real(RP) :: cvtot(KA,IA,JA)
+    real(RP) :: cptot(KA,IA,JA)
+    real(RP) :: qdry
     real(RP) :: psat, qsat
     integer  :: i, j, k, ierr
     !---------------------------------------------------------------------------
@@ -4836,10 +4866,22 @@ contains
        pott(k,i,j) = init_temp * ( P00/init_pres )**(Rdry/CPdry)
        RHOT(k,i,j) = init_dens * pott(k,i,j)
 
-       QTRC(k,i,j,I_QV) = ( init_ssliq + 1.0_RP ) * qsat
+       qv(k,i,j) = ( init_ssliq + 1.0_RP ) * qsat
+       QTRC(k,i,j,I_QV) = qv(k,i,j)
+
+       qdry = 1.0 - qv(k,i,j)
+       rtot (k,i,j) = Rdry  * qdry + Rvap  * QTRC(i,i,j,I_QV)
+       cvtot(k,i,j) = CVdry * qdry + CVvap * QTRC(i,i,j,I_QV)
+       cptot(k,i,j) = CPdry * qdry + CPvap * QTRC(i,i,j,I_QV)
     enddo
     enddo
     enddo
+    qc(:,:,:) = 0.0_RP
+
+    call ATMOS_THERMODYN_temp_pres( KA, 1, KA, IA, 1, IA, JA, 1, JA, &
+                                    dens(:,:,:), RHOT(:,:,:),                & ! (in)
+                                    rtot(:,:,:), cvtot(:,:,:), cptot(:,:,:), & ! (in)
+                                    temp(:,:,:), pres(:,:,:)                 ) ! (out)
 
     if ( ATMOS_PHY_AE_TYPE == 'KAJINO13' ) then
        call AEROSOL_setup
