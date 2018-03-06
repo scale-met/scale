@@ -27,10 +27,12 @@ ifeq ($(SCALE_NETCDF_LIBS),)
     ifeq ($(shell nf-config --help > /dev/null 2>&1 && echo OK),OK)
       SCALE_NF_CONFIG=nf-config
     else
-      ifeq ($(shell $(SCALE_NC_CONFIG) --flibs > /dev/null 2>&1 && echo OK),OK)
-        SCALE_NF_CONFIG=$(SCALE_NC_CONFIG)
+      ifeq ($(shell $(SCALE_NC_CONFIG) --flibs 2> /dev/null |grep unknown > /dev/null 2>& 1 && echo OK),OK)
+        $(warning nf-config command is not found and nc-config command does not support fortran.)
+        $(warning NetCDF-fortran is required for the net2g and scale-gm.)
+        $(warning If you need them, you need to set PATH for nf-config or set SCALE_NETCDF_LIBS and SCALE_NETCDF_INCLUDE variable appropriately)
       else
-        $(error nf-config command is not found and nc-config command does not support fortran. You need to set PATH for nf-config or set SCALE_NETCDF_LIBS and SCALE_NETCDF_INCLUDE variable appropriately)
+        SCALE_NF_CONFIG=$(SCALE_NC_CONFIG)
       endif
     endif
   else
@@ -39,9 +41,11 @@ ifeq ($(SCALE_NETCDF_LIBS),)
     endif
   endif
 
-  SCALE_NETCDF_LIBS=$(shell $(SCALE_NF_CONFIG) --flibs) $(shell $(SCALE_NC_CONFIG) --libs)
-  ifeq ($(SCALE_NETCDF_INCLUDE),)
-    SCALE_NETCDF_INCLUDE=$(shell $(SCALE_NF_CONFIG) --fflags) $(shell $(SCALE_NC_CONFIG) --cflags)
+  ifneq ($(SCALE_NF_CONFIG),)
+    SCALE_NETCDF_LIBS=$(shell $(SCALE_NF_CONFIG) --flibs) $(shell $(SCALE_NC_CONFIG) --libs)
+    ifeq ($(SCALE_NETCDF_INCLUDE),)
+      SCALE_NETCDF_INCLUDE=$(shell $(SCALE_NF_CONFIG) --fflags) $(shell $(SCALE_NC_CONFIG) --cflags)
+    endif
   endif
 
 else
