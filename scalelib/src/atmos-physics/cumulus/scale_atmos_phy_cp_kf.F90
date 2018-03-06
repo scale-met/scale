@@ -79,14 +79,14 @@ module scale_atmos_phy_cp_kf
   private :: CP_kf_updraft
   private :: CP_kf_downdraft
   private :: CP_kf_compensational
-  private :: CP_kf_calcexn  !! ADD
-  private :: CP_kf_precipitation_OC1973 !! ADD
-  private :: CP_kf_precipitation_Kessler !! ADD
-  private :: CP_kf_TPMIX2 !! ADD
-  private :: CP_kf_DTFRZNEW !! ADD
-  private :: CP_kf_PROF5 !! ADD
-  private :: CP_kf_TPMIX2DD !! ADD
-  private :: CP_kf_ENVIRTHT !! ADD
+  private :: CP_kf_calcexn
+  private :: CP_kf_precipitation_OC1973
+  private :: CP_kf_precipitation_Kessler
+  private :: CP_kf_tpmix2
+  private :: CP_kf_dtfrznew
+  private :: CP_kf_prof5
+  private :: CP_kf_tpmix2dd
+  private :: CP_kf_envirtht
 
   abstract interface
      subroutine kf_precipitation( &
@@ -121,7 +121,7 @@ module scale_atmos_phy_cp_kf
   real(RP),private,parameter     :: XLV1=2370._RP, XLV0=3.15e6_RP
   real(RP),private,parameter     :: KF_EPS=1.E-12_RP
   !< Naming list tuning parameters
-  !< RATE is used subroutine precipitation_OC1973
+  !< RATE is used subroutine CP_kf_precipitation_OC1973
   real(RP),private, save       :: RATE            = 0.03_RP  !< ratio of cloud water and precipitation (Ogura and Cho 1973)
   integer ,private, save       :: TRIGGER         = 3        !< triger select will be modifid
   logical ,private, save       :: FLAG_QS         = .true.   !< FLAG_OS:  qs is allowed or not
@@ -1236,7 +1236,7 @@ contains
           ! theta_lclm1 is need
 
           ! calc updraft theta_E
-          call envirtht(presmix,temp_mix,qv_mix,theta_eu(k_lclm1))
+          call CP_kf_envirtht(presmix,temp_mix,qv_mix,theta_eu(k_lclm1))
           !
           if (dtvv + dtrh > 1.e-4_RP ) then
              w_lcl = 1._RP + 0.5_RP*sqrt(2._RP*GRAV*(dtvv + dtrh)*500._RP/tempv_env)! Kain(2004) eq. 3??
@@ -1456,7 +1456,7 @@ contains
        qcdet(kk)   = 0._RP
        qidet(kk)   = 0._RP
        !!calc theta_E environment
-       call envirtht(pres(KK),temp(kk),qv(kk),theta_ee(kk))
+       call CP_kf_envirtht(pres(KK),temp(kk),qv(kk),theta_ee(kk))
        !!
     end do
 
@@ -1592,7 +1592,7 @@ contains
     real(RP) :: tempvq_u(KA)                    !< temperature vertial for updraft ,qv, qc, qi
     real(RP) :: denslcl                         !< density @LCL
     real(RP) :: ee1,ud1, ee2,ud2                !< entrainment and detrainment calc valiables
-    real(RP) :: f_eq(KA)                        !< prof5 variable
+    real(RP) :: f_eq(KA)                        !< CP_kf_prof5 variable
     real(RP) :: f_mix1,f_mix2                   !< factor of mixed fraction
     real(RP) :: REI,DILBE                       !< REI KF(1990) Eq.1 , DILBE is tempvar for calc cape
     real(RP) :: qcnew,qinew                     !< qcnew is qc new var , qinew is qi newver
@@ -1676,7 +1676,7 @@ contains
        !! and calc updraft pacel temperature
        !< it is use determinnent of frozn or not
        !
-       call tpmix2(pres(kkp1),theta_eu(kkp1),temp_u(kkp1),qv_u(kkp1),qc(kkp1),qi(kkp1),qcnew,qinew)
+       call CP_kf_tpmix2(pres(kkp1),theta_eu(kkp1),temp_u(kkp1),qv_u(kkp1),qc(kkp1),qi(kkp1),qcnew,qinew)
        !> check to see if updraft temperature is avove the temperature at which
        !! glaciation is assumed to initiate. if it is, calculate the
        !! fraction of remainning liquid water to freeze... temp_frzT is the
@@ -1700,7 +1700,7 @@ contains
           qc(kkp1) = qc(kkp1) - qc(kkp1)*f_frozen1 ! liquit old - convet liquit to ice
           ! calculate effect of freezing
           ! and determin new create frozen
-          call DTFRZNEW(temp_u(kkp1), pres(kkp1),theta_eu(kkp1),qv_u(kkp1),qfrz,qi(kkp1) )
+          call CP_kf_dtfrznew(temp_u(kkp1), pres(kkp1),theta_eu(kkp1),qv_u(kkp1),qfrz,qi(kkp1) )
        end if
        tempv_u(kkp1) = temp_u(kkp1)*(1._RP + 0.608_RP*qv_u(kkp1)) ! updraft vertual temperature
        ! calc bouyancy term  for verticl velocity
@@ -1719,8 +1719,8 @@ contains
        call CP_kf_precipitation(&
             qc(kkp1), qi(kkp1), WTW, dztmp, boterm, entterm, qcnew, qinew, qrout(kkp1), &
             qsout(kkp1),GRAV )
-       !> precipitation_OC1973 or precipitation_Kessler
-       !! in Ogura and Cho (1973), 'RATE' is nessesary but this rate is parameter in subroutine "precipitation_OC1973"
+       !> CP_kf_precipitation_OC1973 or CP_kf_precipitation_Kessler
+       !! in Ogura and Cho (1973), 'RATE' is nessesary but this rate is parameter in subroutine "CP_kf_precipitation_OC1973"
        !! RATE is tuning parameter
        !< read Kain 1990
        if (wtw < 1.e-3_RP ) then ! if no vertical velocity
@@ -1729,7 +1729,7 @@ contains
           wu(kkp1) = sqrt(wtw)
        end if
        !!# calc tehta_e in environment to entrain into updraft
-       call envirtht(pres(kkp1),temp(kkp1),qv(kkp1),theta_ee(kkp1))
+       call CP_kf_envirtht(pres(kkp1),temp(kkp1),qv(kkp1),theta_ee(kkp1))
        ! rei is the rate of environment inflow
        rei = umflcl*deltap(kkp1)*0.03_RP/radius !!# Kain 1990 eq.1 ;Kain 2004 eq.5
 
@@ -1764,7 +1764,7 @@ contains
           qctmp = f_mix2*qc(kkp1)
           qitmp = f_mix2*qi(kkp1)
           ! need only temptmp because calc bouyancy
-          call tpmix2(pres(kkp1),theta_tmp,temptmp,qvtmp,qctmp,qitmp,qcnew,qinew)
+          call CP_kf_tpmix2(pres(kkp1),theta_tmp,temptmp,qvtmp,qctmp,qitmp,qcnew,qinew)
           ! qinew and qcnew is damy valuavle(not use )
           temp_u95 = temptmp*(1._RP + 0.608_RP*qvtmp - qctmp - qitmp)
           ! TU95 in old coad
@@ -1780,7 +1780,7 @@ contains
              qctmp     = f_mix2*qc(kkp1)
              qitmp     = f_mix2*qi(kkp1)
              ! need only temptmp because calc bouyancy
-             call tpmix2(pres(kkp1),theta_tmp,temptmp,qvtmp,qctmp,qitmp,qcnew,qinew)
+             call CP_kf_tpmix2(pres(kkp1),theta_tmp,temptmp,qvtmp,qctmp,qitmp,qcnew,qinew)
              ! qinew and qcnew is damy valuavle(not use )
              temp_u10 = temptmp*(1._RP + 0.608_RP*qvtmp - qctmp - qitmp)
              if (abs(temp_u10 - tempvq_u(kkp1)) < 1.e-3_RP ) then !if10%
@@ -1799,9 +1799,9 @@ contains
                    ee2 = 0._RP
                    ud2 = 1._RP
                 else
-                   !< subroutine prof5 integrates over the gaussian dist to determine
+                   !< subroutine CP_kf_prof5 integrates over the gaussian dist to determine
                    !< the fractional entrainment and detrainment rates...
-                   call prof5(f_eq(kkp1),ee2,ud2)
+                   call CP_kf_prof5(f_eq(kkp1),ee2,ud2)
                 end if ! end of f_iq
              end if ! end of if10%
           end if ! end of if95%
@@ -2074,9 +2074,9 @@ contains
        if(pres(k_dstart) - pres(k_lfs) > 50.e2_RP) then   ! LFS > 50mb(minimum of downdraft source layer)
           theta_ed(k_lfs) = theta_ee(k_lfs)
           qv_d(k_lfs)     = qv(k_lfs)
-          ! call tpmix2dd to find wet-bulb temperature and qv
-          call tpmix2dd(pres(k_lfs),theta_ed(k_lfs),temp_d(k_lfs),qvs_tmp)
-          call calcexn(pres(k_lfs),qvs_tmp,exn(k_lfs))
+          ! call CP_kf_tpmix2dd to find wet-bulb temperature and qv
+          call CP_kf_tpmix2dd(pres(k_lfs),theta_ed(k_lfs),temp_d(k_lfs),qvs_tmp)
+          call CP_kf_calcexn(pres(k_lfs),qvs_tmp,exn(k_lfs))
           !!          exn(kk) = (PRE00/pres(k_lfs))**(0.2854*(1._RP - 0.28_RP*qv_d(k_lfs)))
           !!                theta_d(k_lfs) = temp_d(k_lfs)*(PRE00/pres(k_lfs))**(0.2854*(1._RP -
           !!                0.28*qv_d(k_lfs)))
@@ -2118,7 +2118,7 @@ contains
           else
              dtempmlt = 0._RP
           end if
-          call tpmix2dd(pres(k_dstart),theta_ed(k_dstart),temp_d(k_dstart),qvs_tmp)
+          call CP_kf_tpmix2dd(pres(k_dstart),theta_ed(k_dstart),temp_d(k_dstart),qvs_tmp)
           temp_d(k_dstart) = temp_d(k_dstart) - dtempmlt
 
           ! use check theis subroutine is this
@@ -2137,7 +2137,7 @@ contains
              dpthdet      = dpthdet + deltap(kk)
              theta_ed(kk) = theta_ed(k_dstart)
              qv_d(kk)     = qv_d(k_dstart)
-             call tpmix2dd(pres(kk),theta_ed(kk),temp_d(kk),qvs_tmp)
+             call CP_kf_tpmix2dd(pres(kk),theta_ed(kk),temp_d(kk),qvs_tmp)
              qvsd(kk)     = qvs_tmp
              ! specify RH decrease of 20%/km indowndraft
              rhh = 1._RP - 2.E-4_RP*(z_kf(k_dstart) -z_kf(kk) ) ! 0.2/1000.
@@ -2183,7 +2183,7 @@ contains
                 dmf(kk)     = dmf(kkp1) + downdet(kk)
                 tder        = tder + (qvsd(kk) - qv_d(kk))*downdet(kk)
                 qv_d(kk)    = qvsd(kk)
-                call calcexn(pres(kk),qv_d(kk),exn(kk))
+                call CP_kf_calcexn(pres(kk),qv_d(kk),exn(kk))
                 theta_d(kk) = temp_d(kk)*exn(kk)
              end do
           end if
@@ -2574,9 +2574,9 @@ contains
     ! theta set up by Emanuel Atmospheric convection, 1994 111p
     ! original KF theta is calced  apploximatly.
     do kk = KS,k_top
-       call calcexn(pres(kk),qv(kk),exn(kk))
+       call CP_kf_calcexn(pres(kk),qv(kk),exn(kk))
        theta(kk) = temp_bf(kk)*exn(kk)
-       call calcexn(pres(kk),qvdet(kk),exn(kk))
+       call CP_kf_calcexn(pres(kk),qvdet(kk),exn(kk))
        theta_u(kk) = temp_u(kk)*exn(kk)
     end do
     temp_g(k_top+1:KE) = temp_bf(k_top+1:KE)
@@ -2686,7 +2686,7 @@ contains
        end if
        ! convert theta to T
        do kk = KS,k_top
-          call calcexn(pres(kk),qv_g(kk),exn(kk))
+          call CP_kf_calcexn(pres(kk),qv_g(kk),exn(kk))
           temp_g(kk)  = theta_g(kk)/exn(kk)
           tempv_g(kk) = temp_g(kk)*(1._RP + 0.608_RP*qv_g(kk))
        end do
@@ -2752,7 +2752,7 @@ contains
        do kk=k_lclm1,k_top-1 ! LTOPM1
           kkp1=kk+1
           theta_eu(kkp1) = theta_eu(kk)
-          call tpmix2dd(pres(kkp1),theta_eu(kkp1),temp_gu(kkp1),qv_gu(kkp1)) ! get temp_gu and qv_gu
+          call CP_kf_tpmix2dd(pres(kkp1),theta_eu(kkp1),temp_gu(kkp1),qv_gu(kkp1)) ! get temp_gu and qv_gu
           tempvq_u(kkp1) = temp_gu(kkp1)*(1._RP + 0.608_RP*qv_gu(kkp1) - qc(kkp1)- qi(kkp1))
           if(kk == k_lclm1) then !  interporate
              dzz = z_kf(k_lcl) - z_lcl
@@ -2764,7 +2764,7 @@ contains
           if(dilbe > 0._RP) cape_g = cape_g + dilbe*GRAV
 
           ! DILUTE BY ENTRAINMENT BY THE RATE AS ORIGINAL UPDRAFT...
-          call ENVIRTHT(pres(kkp1),temp_g(kkp1),qv_g(kkp1),theta_eg(kkp1)) ! calc get theta_eg
+          call CP_kf_envirtht(pres(kkp1),temp_g(kkp1),qv_g(kkp1),theta_eg(kkp1)) ! calc get theta_eg
           !! theta_eg(environment theta_E )
           !! theta_eu(kkp1) = theta_eu(kkp1)*(1._RP/umfnewdold(kkp1)) + theta_eg(kkp1)*(1._RP - (1._RP/umfnewdold(kkp1)))
           theta_eu(kkp1) = theta_eu(kkp1)*(umfnewdold(kkp1)) + theta_eg(kkp1)*(1._RP - (umfnewdold(kkp1)))
@@ -3007,7 +3007,7 @@ contains
   !! calculate exner function for potential temperature(contain water vapor)
   !! Emanuel (1994) pp.111: check potential temperature definition
   !<
-  subroutine calcexn( pres,qv,exn)
+  subroutine CP_kf_calcexn( pres,qv,exn)
     use scale_const,only :&
          CP_dry => CONST_CPdry , &
          PRE00 => CONST_PRE00  , &
@@ -3020,7 +3020,7 @@ contains
     ! --- exect
     !    exn = (PRE00/pres)**(( R_dry + qv*R_vap)/(Cp_dry + qv*Cp_vap))
     return
-  end subroutine calcexn
+  end subroutine CP_kf_calcexn
 
   !------------------------------------------------------------------------------
   !> CP_kf_precipitation_OC1973
@@ -3031,7 +3031,7 @@ contains
   !! CONTINUOUS PROCESS, AND TO ELIMINATE A DEPENDENCY ON VERTICAL
   !! RESOLUTION THIS IS EXPRESSED AS Q=Q*EXP(-RATE*DZ).
   !<
-  subroutine precipitation_OC1973( &
+  subroutine CP_kf_precipitation_OC1973( &
        QLIQ,QICE,WTW,DZ,BOTERM,ENTERM,QNEWLQ,           &
        QNEWIC,QLQOUT,QICOUT,G)
     !-----------------------------------------------------------------------
@@ -3084,13 +3084,13 @@ contains
     QNEWLQ=0._RP
     QNEWIC=0._RP
     return
-  end subroutine precipitation_OC1973
+  end subroutine CP_kf_precipitation_OC1973
 
   !------------------------------------------------------------------------------
   !> CP_kf_precipitation_Kessler
   !! calculate precipitain fallout by Kessler type auto conversion
   !<
-  subroutine precipitation_Kessler( &
+  subroutine CP_kf_precipitation_Kessler( &
        QLIQ,QICE,WTW,DZ,BOTERM,ENTERM,QNEWLQ,           &
        QNEWIC,QLQOUT,QICOUT,G)
      implicit none
@@ -3125,7 +3125,7 @@ contains
     QNEWIC=0.0_RP
 
     return
-  end subroutine precipitation_Kessler
+  end subroutine CP_kf_precipitation_Kessler
 
   !------------------------------------------------------------------------------
   !> CP_kf_TPMIX2
@@ -3135,7 +3135,7 @@ contains
   !!    COMMON/KFLUT/ ttab(kfnt,kfnp),qstab(kfnt,kfnp),the0k(kfnp),
   !!                  alu(200),rdpr,rdthk,plutop
   !<
-  subroutine TPMIX2(p,thes,tu,qu,qliq,qice,qnewlq,qnewic )
+  subroutine CP_kf_tpmix2(p,thes,tu,qu,qliq,qice,qnewlq,qnewic )
     implicit none
     real(RP), intent(in)    :: P,THES
     real(RP), intent(out)   :: QNEWLQ,QNEWIC
@@ -3223,13 +3223,13 @@ contains
     qnewlq=qnew
     qnewic=0._RP
     return
-  end subroutine TPMIX2
+  end subroutine CP_kf_tpmix2
 
   !------------------------------------------------------------------------------
-  !> CP_kf_DTFRZNEW
+  !> CP_kf_dtfrznew
   !! calculate temperature differential of air including frozen droplets
   !<
-  subroutine DTFRZNEW(TU,P,THTEU,QU,QFRZ,QICE)!,ALIQ,BLIQ,CLIQ,DLIQ)
+  subroutine CP_kf_dtfrznew(TU,P,THTEU,QU,QFRZ,QICE)!,ALIQ,BLIQ,CLIQ,DLIQ)
     !-----------------------------------------------------------------------
     use scale_precision
     use scale_atmos_saturation ,only :&
@@ -3277,10 +3277,10 @@ contains
     !< Emanuel 1994 132p eq(4.7.9) pseudoequivalent PT
     THTEU = TU*PII*EXP((3374.6525_RP/TU - 2.5403_RP)*QU*(1._RP + 0.81_RP*QU))
     !
-  end subroutine DTFRZNEW
+  end subroutine CP_kf_dtfrznew
 
   !------------------------------------------------------------------------------
-  !> CP_kf_PROF5
+  !> CP_kf_prof5
   !! calculate gaussian type mixing profile
   !! THIS SUBROUTINE INTEGRATES THE AREA UNDER THE CURVE IN THE GAUSSIAN
   !! DISTRIBUTION...THE NUMERICAL APPROXIMATION TO THE INTEGRAL IS TAKEN FROM
@@ -3291,7 +3291,7 @@ contains
   !!                                     7/6/89
   !!  Solves for KF90 Eq. 2
   !<
-  subroutine PROF5(EQ,EE,UD)
+  subroutine CP_kf_prof5(EQ,EE,UD)
     implicit none
     !-----------------------------------------------------------------------
     real(RP), intent(in)    :: EQ
@@ -3321,17 +3321,17 @@ contains
     ENDIF
     EE=EE/FE
     UD=UD/FE
-  end subroutine PROF5
+  end subroutine CP_kf_prof5
 
   !------------------------------------------------------------------------------
-  !> CP_kf_TPMIX2DD
+  !> CP_kf_tpmix2dd
   !! calculate temperature of a lifting parcel    
   !! LOOKUP TABLE VARIABLES (F77 format)
   !!     parameter(kfnt=250,kfnp=220
   !!     COMMON/KFLUT/ ttab(kfnt,kfnp),qstab(kfnt,kfnp),the0k(kfnp),        &
   !!                   alu(200),rdpr,rdthk,plutop
   !<
-  subroutine TPMIX2DD(p,thes,ts,qs)!,i,j)
+  subroutine CP_kf_tpmix2dd(p,thes,ts,qs)!,i,j)
 
     implicit none
     real(RP), intent(in)    :: P,THES
@@ -3366,10 +3366,10 @@ contains
     qs=(q00+(q10-q00)*pp+(q01-q00)*qq+(q00-q10-q01+q11)*pp*qq)
 
     return
-  end subroutine TPMIX2DD
+  end subroutine CP_kf_tpmix2dd
 
   !------------------------------------------------------------------------------
-  !> CP_kf_ENVIRTHT
+  !> CP_kf_envirtht
   !! CALCULATE ENVIRONMENTAL EQUIVALENT POTENTIAL TEMPERATURE...
   !!
   !! NOTE: Calculations for mixed/ice phase no longer used...jsk 8/00
@@ -3377,7 +3377,7 @@ contains
   !! DATA: T00,P00,C1,C2,C3,C4,C5/273.16_RP,1.E5_RP,3374.6525_RP,2.5403_RP,3114.834_RP, &
   !!        0.278296_RP,1.0723E-3_RP/
   !<
-  subroutine ENVIRTHT(P1,T1,Q1,THT1)!,ALIQ,BLIQ,CLIQ,DLIQ)
+  subroutine CP_kf_envirtht(P1,T1,Q1,THT1)!,ALIQ,BLIQ,CLIQ,DLIQ)
     !
     !-----------------------------------------------------------------------
     use scale_precision
@@ -3417,7 +3417,7 @@ contains
     THT1=THT*EXP((C1/TSAT-C2)*Q1*(1._RP+0.81_RP*Q1))
     !
     return
-  end subroutine ENVIRTHT
+  end subroutine CP_kf_envirtht
 
   !------------------------------------------------------------------------------
   !> CP_kf_kf_lutab

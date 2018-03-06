@@ -116,7 +116,7 @@ contains
     use scale_atmos_phy_cp, only: &
        ATMOS_PHY_CP
     use scale_atmos_phy_cp_common, only: &
-       ATMOS_PHY_CP_wmean
+       ATMOS_PHY_CP_common_wmean
     use scale_atmos_phy_mp, only: &
        QS_MP, &
        QE_MP
@@ -159,9 +159,9 @@ contains
     !---------------------------------------------------------------------------
 
     ! temporal running mean of vertical velocity
-    call ATMOS_PHY_CP_wmean( w0avg(:,:,:), & ! [OUT]
-                             DENS (:,:,:), & ! [IN]
-                             MOMZ (:,:,:)  ) ! [IN]
+    call ATMOS_PHY_CP_common_wmean( w0avg(:,:,:), & ! [OUT]
+                                    DENS (:,:,:), & ! [IN]
+                                    MOMZ (:,:,:)  ) ! [IN]
     call FILE_HISTORY_in( w0avg(:,:,:), 'w0avg', 'running mean vertical wind velocity', 'kg/m2/s', fill_halo=.true. )
 
     if ( update_flag ) then ! update
