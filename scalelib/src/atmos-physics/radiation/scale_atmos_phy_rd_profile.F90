@@ -202,16 +202,21 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup CIRA86 climatological data (temperature, pressure)
   subroutine PROFILE_setup_CIRA86
-    use netcdf
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        CONST_D2R
     use scale_calendar, only: &
        CALENDAR_date2daysec
+    use scale_file, only: &
+       FILE_open,      &
+       FILE_get_shape, &
+       FILE_read,      &
+       FILE_close
     implicit none
 
-    integer  :: status, ncid, varid, dimid ! for netCDF
+    integer :: fid ! for netCDF
+    integer :: dims(3)
 
     integer, allocatable :: CIRA_date(:,:)
     integer  :: nday
@@ -219,8 +224,8 @@ contains
     real(DP) :: subsec = 0.0_DP
     integer  :: offset_year = 0
 
-    real(4), allocatable :: tmp1d(:)
-    real(4), allocatable :: tmp3d(:,:,:)
+    real(RP), allocatable :: tmp1d(:)
+    real(RP), allocatable :: tmp3d(:,:,:)
 
     logical  :: exist
     integer  :: n, m, t
@@ -232,27 +237,18 @@ contains
     inquire( file=trim(PROFILE_CIRA86_fname), exist=exist )
     if ( .NOT. exist ) then !--- missing
        write(*,*) '*** [PROFILE_setup_CIRA86] File not found. check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! open CIRA86 datafile (netCDF)
-    status = nf90_open( PROFILE_CIRA86_fname, nf90_NoWrite, ncid )
-    !if( status /= nf90_noerr ) call handle_err(status)
+    call FILE_open( PROFILE_CIRA86_fname, & ! (in)
+                    fid,                  & ! (out)
+                    postfix=""            ) ! (in)
 
-    status = nf90_inq_dimid( ncid, "time", dimid )
-    !if( status /= nf90_NoErr ) call handle_err(status)
-    status = nf90_inquire_dimension( ncid, dimid, len=CIRA_ntime )
-    !if( status /= nf90_NoErr ) call handle_err(status)
-
-    status = nf90_inq_dimid( ncid, "plev", dimid )
-    !if( status /= nf90_NoErr ) call handle_err(status)
-    status = nf90_inquire_dimension( ncid, dimid, len=CIRA_nplev )
-    !if( status /= nf90_NoErr ) call handle_err(status)
-
-    status = nf90_inq_dimid( ncid, "latitude", dimid )
-    !if( status /= nf90_NoErr ) call handle_err(status)
-    status = nf90_inquire_dimension( ncid, dimid, len=CIRA_nlat )
-    !if( status /= nf90_NoErr ) call handle_err(status)
+    call FILE_get_shape( fid, "ta", dims(:) )
+    CIRA_nlat  = dims(1)
+    CIRA_nplev = dims(2)
+    CIRA_ntime = dims(3)
 
     !print *, "CIRA_ntime", CIRA_ntime
     !print *, "CIRA_nplev", CIRA_nplev
@@ -296,11 +292,7 @@ contains
     ! read pressure level [hPa]
     allocate( tmp1d(CIRA_nplev) )
 
-    status = nf90_inq_varid( ncid, "plev", varid )
-    !if( status /= nf90_NoErr ) call handle_err(status)
-    status = nf90_get_var( ncid, varid, tmp1d(:) )
-    !if( status /= nf90_NoErr ) call handle_err(status)
-
+    call FILE_read( fid, "plev", tmp1d(:) )
     do n = 1, CIRA_nplev
        CIRA_plog(n) = log( real(tmp1d(n),kind=RP) )
     enddo
@@ -309,11 +301,7 @@ contains
     ! read latitude bin
     allocate( tmp1d(CIRA_nlat) )
 
-    status = nf90_inq_varid( ncid, "latitude", varid )
-    !if( status /= nf90_NoErr ) call handle_err(status)
-    status = nf90_get_var( ncid, varid, tmp1d(:) )
-    !if( status /= nf90_NoErr ) call handle_err(status)
-
+    call FILE_read( fid, "latitude", tmp1d(:) )
     do n = 1, CIRA_nlat
        CIRA_lat(n) = real(tmp1d(n),kind=RP) * CONST_D2R ! [deg]->[rad]
     enddo
@@ -326,11 +314,7 @@ contains
     ! read temperature [K]
     allocate( tmp3d(CIRA_nlat,CIRA_nplev,CIRA_ntime) )
 
-    status = nf90_inq_varid( ncid, "ta", varid )
-    !if( status /= nf90_NoErr ) call handle_err(status)
-    status = nf90_get_var( ncid, varid, tmp3d(:,:,:) )
-    !if( status /= nf90_NoErr ) call handle_err(status)
-
+    call FILE_read( fid, "ta", tmp3d(:,:,:) )
     do m = 1, CIRA_nlat
     do n = 1, CIRA_nplev
     do t = 1, CIRA_ntime
@@ -354,11 +338,7 @@ contains
     !print *, "CIRA_temp", CIRA_temp
 
     ! read geopotencial height [m]
-    status = nf90_inq_varid( ncid, "zg", varid )
-    !if( status /= nf90_NoErr ) call handle_err(status)
-    status = nf90_get_var( ncid, varid, tmp3d(:,:,:) )
-    !if( status /= nf90_NoErr ) call handle_err(status)
-
+    call FILE_read( fid, "zg", tmp3d(:,:,:) )
     do m = 1, CIRA_nlat
     do n = 1, CIRA_nplev
     do t = 1, CIRA_ntime
@@ -382,8 +362,7 @@ contains
     deallocate( tmp3d )
 
     ! close CIRA86 datafile (netCDF)
-    status = nf90_close(ncid)
-    !if( status /= nf90_NoErr ) call handle_err(status)
+    call FILE_close( fid )
 
     allocate( interp_temp(CIRA_nplev) )
     allocate( interp_z   (CIRA_nplev) )
