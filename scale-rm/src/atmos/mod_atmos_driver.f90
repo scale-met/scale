@@ -355,7 +355,7 @@ contains
        ATMOS_PHY_AE_driver_calc_tendency, &
        ATMOS_PHY_AE_driver_adjustment
     use mod_atmos_phy_ch_driver, only: &
-       ATMOS_PHY_CH_driver_tendency
+       ATMOS_PHY_CH_driver_calc_tendency
     use mod_atmos_phy_rd_driver, only: &
        ATMOS_PHY_RD_driver
     use mod_atmos_phy_sf_driver, only: &
@@ -458,7 +458,7 @@ contains
     ! Chemistry
     if ( ATMOS_sw_phy_ch ) then
        call PROF_rapstart('ATM_Chemistry', 1)
-       call ATMOS_PHY_CH_driver_tendency( update_flag = do_phy_ch )
+       call ATMOS_PHY_CH_driver_calc_tendency( update_flag = do_phy_ch )
        call PROF_rapend  ('ATM_Chemistry', 1)
     endif
     ! Radiation

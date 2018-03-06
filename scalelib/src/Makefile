@@ -140,7 +140,6 @@ OBJS_NAME = \
 	\
 	$(OBJS_AE)	\
 	\
-	scale_atmos_phy_ch.o	\
 	$(OBJS_CH)	\
 	\
 	scale_atmos_phy_rd.o	\

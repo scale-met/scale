@@ -20,7 +20,6 @@ module mod_atmos_phy_ch_driver
   use scale_stdio
   use scale_prof
   use scale_atmos_grid_cartesC_index
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -31,7 +30,7 @@ module mod_atmos_phy_ch_driver
   public :: ATMOS_PHY_CH_driver_tracer_setup
   public :: ATMOS_PHY_CH_driver_setup
   public :: ATMOS_PHY_CH_driver_resume
-  public :: ATMOS_PHY_CH_driver_tendency
+  public :: ATMOS_PHY_CH_driver_calc_tendency
 
   !-----------------------------------------------------------------------------
   !
@@ -50,24 +49,22 @@ contains
   !-----------------------------------------------------------------------------
   !> Config
   subroutine ATMOS_PHY_CH_driver_tracer_setup
-    use scale_atmos_phy_ch, only: &
-       ATMOS_PHY_CH_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_CH_TYPE, &
        ATMOS_sw_phy_ch
+    use scale_tracer, only: &
+       TRACER_regist
     use scale_atmos_phy_ch_rn222, only: &
-       QS_CH, &
-       QE_CH, &
-       QA_CH, &
+       ATMOS_PHY_CH_rn222_tracer_setup, &
        ATMOS_PHY_CH_rn222_NAME, &
        ATMOS_PHY_CH_rn222_DESC, &
        ATMOS_PHY_CH_rn222_UNIT
-    use scale_atmos_phy_ch, only: &
-       QA => QA_CH, &
-       QS => QS_CH, &
-       QE => QE_CH
+    use mod_atmos_phy_ch_vars, only: &
+       QA_CH, &
+       QS_CH, &
+       QE_CH
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
     !---------------------------------------------------------------------------
 
@@ -77,24 +74,28 @@ contains
     if ( ATMOS_sw_phy_ch ) then
 
        select case ( ATMOS_PHY_CH_TYPE )
+       case ( 'OFF', 'NONE' )
+          if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
        case ( 'RN222' )
+          call ATMOS_PHY_CH_rn222_tracer_setup( QA_CH )  ! [OUT]
+
           call TRACER_regist( QS_CH,                   & ! [OUT]
                               QA_CH,                   & ! [IN]
                               ATMOS_PHY_CH_rn222_NAME, & ! [IN]
                               ATMOS_PHY_CH_rn222_DESC, & ! [IN]
                               ATMOS_PHY_CH_rn222_UNIT  ) ! [IN]
 
-          QA    = QA_CH
-          QS    = QS_CH
-          QE_CH = QS_CH + QA_CH - 1
-          QE    = QE_CH
        case default
           write(*,*) 'xxx invalid chemistry type(', ATMOS_PHY_CH_TYPE, '). CHECK!'
-          call PRC_MPIstop
+          call PRC_abort
        end select
 
+       QE_CH = QS_CH + QA_CH - 1
+
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
+       QA_CH = 0
+       QS_CH = -1
+       QE_CH = -1
     endif
 
     return
@@ -138,7 +139,7 @@ contains
 
        ! run once (only for the diagnostic value)
        call PROF_rapstart('ATM_Chemistry', 1)
-       call ATMOS_PHY_CH_driver_tendency( update_flag = .true. )
+       call ATMOS_PHY_CH_driver_calc_tendency( update_flag = .true. )
        call PROF_rapend  ('ATM_Chemistry', 1)
 
     end if
@@ -148,7 +149,9 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Driver
-  subroutine ATMOS_PHY_CH_driver_tendency( update_flag )
+  subroutine ATMOS_PHY_CH_driver_calc_tendency( update_flag )
+    use scale_tracer, only: &
+       TRACER_NAME
     use scale_time, only: &
        dt_CH => TIME_DTSEC_ATMOS_PHY_CH
     use scale_statistics, only: &
@@ -159,17 +162,15 @@ contains
        ATMOS_GRID_CARTESC_REAL_TOTVOL
     use scale_file_history, only: &
        FILE_HISTORY_in
-    use scale_atmos_phy_ch, only: &
-       ATMOS_PHY_CH, &
-       QA_CH,        &
-       QS_CH,        &
-       QE_CH
     use mod_atmos_vars, only: &
        DENS   => DENS_av, &
        QTRC   => QTRC_av, &
        RHOQ_t => RHOQ_tp
     use mod_atmos_phy_ch_vars, only: &
-       RHOQ_t_CH => ATMOS_PHY_CH_RHOQ_t
+       RHOQ_t_CH => ATMOS_PHY_CH_RHOQ_t, &
+       QA_CH,        &
+       QS_CH,        &
+       QE_CH
 !       O3        => ATMOS_PHY_CH_O3
     use scale_landuse, only: &
        LANDUSE_fact_land
@@ -182,15 +183,13 @@ contains
        ATMOS_PHY_CH_rn222_tendency, &
        I_ch_rn222
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
 
     logical, intent(in) :: update_flag
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
-
-    iq = QS_CH - 1 + I_ch_rn222
 
     if ( update_flag ) then
 
@@ -199,18 +198,12 @@ contains
 
        select case ( ATMOS_PHY_CH_TYPE )
        case ( 'RN222' )
-          call ATMOS_PHY_CH_RN222_TENDENCY( KA, KS, KE,                                    & ! [IN]
-                                            IA, IS, IE,                                    & ! [IN]
-                                            JA, JS, JE,                                    & ! [IN]
-                                            QA_CH,                                         & ! [IN]
+          call ATMOS_PHY_CH_RN222_TENDENCY( KA, KS, KE, IA, IS, IE, JA, JS, JE, QA_CH, &
                                             DENS                      (:,:,:),             & ! [IN]
-                                            QTRC                      (:,:,:,iq), & ! [IN]
+                                            QTRC                      (:,:,:,QS_CH:QE_CH), & ! [IN]
                                             ATMOS_GRID_CARTESC_REAL_FZ(:,:,:),             & ! [IN]
                                             LANDUSE_fact_land         (:,:),               & ! [IN]
-                                            RHOQ_t_CH                 (:,:,:,:)            ) ! [INOUT]
-       case default
-          write(*,*) 'xxx invalid chemistry type(', ATMOS_PHY_CH_TYPE, '). CHECK!'
-          call PRC_MPIstop
+                                            RHOQ_t_CH                 (:,:,:,QS_CH:QE_CH)  ) ! [INOUT]
        end select
 
        do iq = QS_CH, QE_CH
@@ -240,6 +233,6 @@ contains
     endif
 
     return
-  end subroutine ATMOS_PHY_CH_driver_tendency
+  end subroutine ATMOS_PHY_CH_driver_calc_tendency
 
 end module mod_atmos_phy_ch_driver

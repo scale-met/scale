@@ -26,6 +26,7 @@ module scale_atmos_phy_ch_rn222
   !
   !++ Public procedure
   !
+  public :: ATMOS_PHY_CH_rn222_tracer_setup
   public :: ATMOS_PHY_CH_rn222_setup
   public :: ATMOS_PHY_CH_rn222_tendency
 
@@ -33,20 +34,11 @@ module scale_atmos_phy_ch_rn222
   !
   !++ Public parameters & variables
   !
-  integer, public, parameter :: QA_CH = 1
+  integer, public, parameter :: QA_CH = 0
 
-  character(len=H_SHORT), public, target :: ATMOS_PHY_CH_rn222_NAME(QA_CH)
-  character(len=H_MID)  , public, target :: ATMOS_PHY_CH_rn222_DESC(QA_CH)
-  character(len=H_SHORT), public, target :: ATMOS_PHY_CH_rn222_UNIT(QA_CH)
-
-  data ATMOS_PHY_CH_rn222_NAME / &
-                 'RN222'  /
-
-  data ATMOS_PHY_CH_rn222_DESC / &
-                 'Mixing Ratio of Rn222'   /
-
-  data ATMOS_PHY_CH_rn222_UNIT / &
-                 'Bq/kg'  /
+  character(len=H_SHORT), public, target, allocatable :: ATMOS_PHY_CH_rn222_NAME(:)
+  character(len=H_MID)  , public, target, allocatable :: ATMOS_PHY_CH_rn222_DESC(:)
+  character(len=H_SHORT), public, target, allocatable :: ATMOS_PHY_CH_rn222_UNIT(:)
 
   !-----------------------------------------------------------------------------
   !
@@ -57,33 +49,56 @@ module scale_atmos_phy_ch_rn222
   !++ Private parameters & variables
   !
   integer,  public, parameter :: I_ch_rn222 = 1
-  integer,  public            :: QS_CH
-  integer,  public            :: QE_CH
 
-  real(RP),          private :: Rn222_decay_ratio                       ! Decay constant [/s]
+  real(RP),          private :: ATMOS_PHY_CH_Rn222_decay_ratio                       ! Decay constant [/s]
 
-  character(len=64), private :: Rn222_emission_type        = 'CONST'    ! Emission type
-  real(RP),          private :: Rn222_const_emission_land  = 20.8E-3_RP ! Surface flux from land  [Bq/m2/s]
-  real(RP),          private :: Rn222_const_emission_ocean = 0.14E-3_RP ! Surface flux from ocean [Bq/m2/s]
+  character(len=64), private :: ATMOS_PHY_CH_Rn222_emission_type        = 'CONST'    ! Emission type
+  real(RP),          private :: ATMOS_PHY_CH_Rn222_const_emission_land  = 20.8E-3_RP ! Surface flux from land  [Bq/m2/s]
+  real(RP),          private :: ATMOS_PHY_CH_Rn222_const_emission_ocean = 0.14E-3_RP ! Surface flux from ocean [Bq/m2/s]
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
+  !> Tracer setup
+  subroutine ATMOS_PHY_CH_rn222_tracer_setup( QA_CH )
+
+    integer, intent(out) :: QA_CH
+
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Chemistry] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+
+    QA_CH = 1
+
+    allocate( ATMOS_PHY_CH_rn222_NAME(QA_CH) )
+    allocate( ATMOS_PHY_CH_rn222_DESC(QA_CH) )
+    allocate( ATMOS_PHY_CH_rn222_UNIT(QA_CH) )
+
+    write(ATMOS_PHY_CH_rn222_NAME(1),'(a)') 'RN222'
+    write(ATMOS_PHY_CH_rn222_DESC(1),'(a)') 'Mixing Ratio of Rn222'
+    write(ATMOS_PHY_CH_rn222_UNIT(1),'(a)') 'Bq/kg'
+
+    return
+  end subroutine ATMOS_PHY_CH_rn222_tracer_setup
+
+
+  !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_CH_rn222_setup
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        CONST_UNDEF
     implicit none
 
-    real(RP) :: Rn222_half_life = 3.30048E+5_RP
+    real(RP) :: ATMOS_PHY_CH_Rn222_half_life = 3.30048E+5_RP
 
     namelist / PARAM_ATMOS_PHY_CH_RN222 / &
-       Rn222_half_life,           &
-       Rn222_emission_type,       &
-       Rn222_const_emission_land, &
-       Rn222_const_emission_ocean
+       ATMOS_PHY_CH_Rn222_half_life,           &
+       ATMOS_PHY_CH_Rn222_emission_type,       &
+       ATMOS_PHY_CH_Rn222_const_emission_land, &
+       ATMOS_PHY_CH_Rn222_const_emission_ocean
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -99,35 +114,35 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_CH_RN222. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_CH_RN222)
 
-    Rn222_decay_ratio = log(2.0_RP) / Rn222_half_life
+    ATMOS_PHY_CH_Rn222_decay_ratio = log(2.0_RP) / ATMOS_PHY_CH_Rn222_half_life
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,'(A)')           ' *** Characteristics of Rn222'
-    if( IO_L ) write(IO_FID_LOG,'(A,E16.6)')     ' *** Half life   [s]      : ', rn222_half_life
-    if( IO_L ) write(IO_FID_LOG,'(A,E16.6)')     ' *** Decay ratio [1/s]    : ', Rn222_decay_ratio
-    if( IO_L ) write(IO_FID_LOG,*)               ' *** Type of emission     : ', trim(RN222_emission_type)
-    if ( Rn222_emission_type == 'CONST' ) then
-       if( IO_L ) write(IO_FID_LOG,'(A,ES16.6)') ' *** From land  [Bq/m2/s] : ', Rn222_const_emission_land
-       if( IO_L ) write(IO_FID_LOG,'(A,ES16.6)') ' *** From ocean [Bq/m2/s] : ', Rn222_const_emission_ocean
+    if( IO_L ) write(IO_FID_LOG,'(A,E16.6)')     ' *** Half life   [s]      : ', ATMOS_PHY_CH_rn222_half_life
+    if( IO_L ) write(IO_FID_LOG,'(A,E16.6)')     ' *** Decay ratio [1/s]    : ', ATMOS_PHY_CH_Rn222_decay_ratio
+    if( IO_L ) write(IO_FID_LOG,*)               ' *** Type of emission     : ', trim(ATMOS_PHY_CH_RN222_emission_type)
+    if ( ATMOS_PHY_CH_Rn222_emission_type == 'CONST' ) then
+       if( IO_L ) write(IO_FID_LOG,'(A,ES16.6)') ' *** From land  [Bq/m2/s] : ', ATMOS_PHY_CH_Rn222_const_emission_land
+       if( IO_L ) write(IO_FID_LOG,'(A,ES16.6)') ' *** From ocean [Bq/m2/s] : ', ATMOS_PHY_CH_Rn222_const_emission_ocean
     else
        write(*,*) 'xxx Not supported type of Rn222 emission! Stop.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
   end subroutine ATMOS_PHY_CH_rn222_setup
 
   !-----------------------------------------------------------------------------
-  !> Aerosol Microphysics
+  !> Chemistry Microphysics
   subroutine ATMOS_PHY_CH_rn222_tendency( &
        KA, KS, KE,                 &
        IA, IS, IE,                 &
        JA, JS, JE,                 &
-       QQA,                        &
+       QA_CH,                      &
        DENS,                       &
        QTRC,                       &
        ATMOS_GRID_CARTESC_REAL_FZ, &
@@ -135,8 +150,6 @@ contains
        RHOQ_t                      )
     use scale_file_history, only: &
        FILE_HISTORY_in
-    use scale_tracer, only: &
-       QA
     implicit none
 
     integer,  intent(in)    :: KA
@@ -148,21 +161,19 @@ contains
     integer,  intent(in)    :: JA
     integer,  intent(in)    :: JS
     integer,  intent(in)    :: JE
-    integer,  intent(in)    :: QQA
+    integer,  intent(in)    :: QA_CH
     real(RP), intent(in)    :: DENS  (KA,IA,JA)
-    real(RP), intent(in)    :: QTRC  (KA,IA,JA,1)
+    real(RP), intent(in)    :: QTRC  (KA,IA,JA,QA_CH)
     real(RP), intent(in)    :: ATMOS_GRID_CARTESC_REAL_FZ (0:KA,IA,JA)
     real(RP), intent(in)    :: LANDUSE_fact_land (IA,JA)
-    real(RP), intent(inout) :: RHOQ_t(KA,IA,JA,QQA)
+    real(RP), intent(inout) :: RHOQ_t(KA,IA,JA,QA_CH)
 
     real(RP) :: emission(IA,JA)
 
-    integer  :: k, i, j, iq
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Chemistry(Rn222)'
-
-    !iq = QS_CH - 1 + I_ch_rn222
 
     !--- Decay based on half life
 
@@ -170,19 +181,19 @@ contains
     do i  = IS, IE
     do k  = KS, KE
        RHOQ_t(k,i,j,I_ch_rn222) = RHOQ_t(k,i,j,I_ch_rn222) &
-                                - DENS(k,i,j) * QTRC(k,i,j,1) * Rn222_decay_ratio ! [Bq/m3/s]
+                                - DENS(k,i,j) * QTRC(k,i,j,1) * ATMOS_PHY_CH_Rn222_decay_ratio ! [Bq/m3/s]
     enddo
     enddo
     enddo
 
     !--- Surface emission
 
-    if ( RN222_emission_type == "CONST" ) then
+    if ( ATMOS_PHY_CH_RN222_emission_type == "CONST" ) then
 
        do j  = JS, JE
        do i  = IS, IE
-          emission(i,j) = ( 1.0_RP-LANDUSE_fact_land(i,j) ) * Rn222_const_emission_ocean &
-                        + (        LANDUSE_fact_land(i,j) ) * Rn222_const_emission_land
+          emission(i,j) = ( 1.0_RP-LANDUSE_fact_land(i,j) ) * ATMOS_PHY_CH_Rn222_const_emission_ocean &
+                        + (        LANDUSE_fact_land(i,j) ) * ATMOS_PHY_CH_Rn222_const_emission_land
        enddo
        enddo
 
