@@ -2,12 +2,9 @@
 !> module atmosphere / physics / aerosol / Kajino13
 !!
 !! @par Description
-!!          kajino13 code
+!!          kajino13 aerosol microphysics scheme
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2015-03-25 (Y.Sato)  [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -24,8 +21,6 @@ module scale_atmos_phy_ae_kajino13
       mwair => CONST_Mdry, &              ! molecular weight for dry air
       mwwat => CONST_Mvap, &              ! mean molecular weight for water vapor [g/mol]
       dnwat => CONST_DWATR, &             ! water density   [kg/m3]
-      rair  => CONST_Rdry, &              ! gas constant of dry air            [J/kg/K]
-      rwat  => CONST_Rvap, &              ! gas constant of water              [J/kg/K]
       rgas  => CONST_R, &                 ! universal gas constant             [J/mol/K]
       stdatmpa =>  CONST_Pstd, &          ! standard pressure                   [Pa]
       stdtemp  =>  CONST_TEM00, &         ! standard temperature                [K]
@@ -53,11 +48,9 @@ module scale_atmos_phy_ae_kajino13
 
   integer, private :: QA_AE  = 0
 
-  character(len=H_SHORT), public, target, allocatable :: ATMOS_PHY_AE_kajino13_NAME(:)
-  character(len=H_MID)  , public, target, allocatable :: ATMOS_PHY_AE_kajino13_DESC(:)
-  character(len=H_SHORT), public, target, allocatable :: ATMOS_PHY_AE_kajino13_UNIT(:)
-
-  real(RP), public, target :: ATMOS_PHY_AE_kajino13_DENS(N_AE) ! hydrometeor density [kg/m3]=[g/L]
+  character(len=H_SHORT), public, allocatable :: ATMOS_PHY_AE_kajino13_NAME(:)
+  character(len=H_MID)  , public, allocatable :: ATMOS_PHY_AE_kajino13_DESC(:)
+  character(len=H_SHORT), public, allocatable :: ATMOS_PHY_AE_kajino13_UNIT(:)
 
   real(RP), public :: ATMOS_PHY_AE_KAJINO13_h2so4dt = 5.E-6_RP   ! h2so4 production rate (Temporal)                [ug/m3/s]
   real(RP), public :: ATMOS_PHY_AE_KAJINO13_ocgasdt = 8.E-5_RP   ! other condensational bas production rate 16*h2so4dt (see Kajino et al. 2013)
@@ -100,8 +93,6 @@ module scale_atmos_phy_ae_kajino13
 !  real(RP), parameter  :: mwair = 28.9628_RP              ! molecular weight for dry air
 !  real(RP), parameter  :: mwwat = 18.0153_RP              ! mean molecular weight for water vapor [g/mol]
 !  real(RP), parameter  :: dnwat = 1.E3_RP                 ! water density   [kg/m3]
-!  real(RP), parameter  :: rair    = 287._RP               ! gas constant of dry air            [J/kg/K]
-!  real(RP), parameter  :: rwat    = rair*mwair/mwwat      ! gas constant of water              [J/kg/K]
 !  real(RP), parameter  :: rgas    = 8.31447_RP            ! universal gas constant             [J/mol/K]
 !  real(RP), parameter  :: stdatmpa =  101325._RP          ! standard pressure                   [Pa]
 !  real(RP), parameter  :: stdtemp  =  273.15_RP           ! standard temperature                [K]
@@ -149,7 +140,6 @@ module scale_atmos_phy_ae_kajino13
   real(RP),allocatable :: d_lw(:,:), d_ct(:,:), d_up(:,:)  !diameter [m]
   real(RP),allocatable :: k_lw(:,:), k_ct(:,:), k_up(:,:)  !kappa    [-]
   real(RP) :: dlogd, dk                                    !delta log(D), delta K
-!  real(RP) :: deltt                                        ! dt
 
   !--- coagulation rule (i+j=k)
   integer, allocatable :: is_i(:), is_j(:), is_k(:)    !(mcomb)
@@ -595,8 +585,6 @@ contains
     enddo !ik (1:n_kap(ic)  )
     enddo !ic (1:n_ctg      )
 
-    ATMOS_PHY_AE_kajino13_DENS(:) = rhod_ae
-
     allocate( aerosol_procs (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
     allocate( aerosol_activ (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
     allocate( emis_procs    (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
@@ -628,12 +616,6 @@ contains
        RHOQ_t_AE,  &
        CN,         &
        CCN         )
-    use scale_const, only: &
-       CONST_CPdry, &
-       CONST_CVdry, &
-       CONST_Rvap, &
-       CONST_PRE00, &
-       CONST_Rdry
     use scale_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
     use scale_file_history, only: &
@@ -651,7 +633,7 @@ contains
     real(RP), intent(in) :: QV  (KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA_AE)
     real(RP), intent(in) :: EMIT(KA,IA,JA,QA_AE)
-    real(RP), intent(in) :: dt
+    real(DP), intent(in) :: dt
 
     real(RP), intent(out) :: RHOQ_t_AE(KA,IA,JA,QA_AE)
     real(RP), intent(out) :: CN(KA,IA,JA)
@@ -663,7 +645,7 @@ contains
     !--- local
     real(RP) :: ssliq_ae(KA,IA,JA)
     real(RP) :: rrhog(KA,IA,JA)
-    real(RP) :: t_ccn, t_cn
+!    real(RP) :: t_ccn, t_cn
     real(RP) :: qsat_tmp
     real(RP) :: m0_reg, m2_reg, m3_reg      !regenerated aerosols [m^k/m3]
     real(RP) :: ms_reg                      !regenerated aerosol mass [ug/m3]
@@ -941,7 +923,6 @@ contains
        JA, JS, JE, &
        QA_AE,      &
        DENS,       &
-       RHOT,       &
        TEMP,       &
        PRES,       &
        QDRY,       &
@@ -957,37 +938,32 @@ contains
        QTRC,       &
        CCN         )
     use scale_const, only: &
-       PI => CONST_PI, &
-       CONST_CVdry, &
-       CONST_CPdry, &
-       CONST_Rdry, &
-       CONST_PRE00
+       PI => CONST_PI
     use scale_atmos_saturation, only: &
        SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
     implicit none
 
-    integer,  intent(in)    :: KA, KS, KE
-    integer,  intent(in)    :: IA, IS, IE
-    integer,  intent(in)    :: JA, JS, JE
-    integer,  intent(in)    :: QA_AE
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+    integer,  intent(in)  :: QA_AE
 
-    real(RP), intent(in)    :: DENS(KA,IA,JA)
-    real(RP), intent(in)    :: RHOT(KA,IA,JA)
-    real(RP), intent(in)    :: TEMP(KA,IA,JA)
-    real(RP), intent(in)    :: PRES(KA,IA,JA)
-    real(RP), intent(in)    :: QDRY(KA,IA,JA)
-    real(RP), intent(in)    :: QV  (KA,IA,JA)
-    real(RP), intent(in)    :: m0_init             ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]
-    real(RP), intent(in)    :: dg_init             ! initial number equivalen diameters of modes     [m]
-    real(RP), intent(in)    :: sg_init             ! initial standard deviation                      [-]
-    real(RP), intent(in)    :: d_min_inp(3)
-    real(RP), intent(in)    :: d_max_inp(3)
-    real(RP), intent(in)    :: k_min_inp(3)
-    real(RP), intent(in)    :: k_max_inp(3)
-    integer,  intent(in)    :: n_kap_inp(3)
+    real(RP), intent(in)  :: DENS(KA,IA,JA)
+    real(RP), intent(in)  :: TEMP(KA,IA,JA)
+    real(RP), intent(in)  :: PRES(KA,IA,JA)
+    real(RP), intent(in)  :: QDRY(KA,IA,JA)
+    real(RP), intent(in)  :: QV  (KA,IA,JA)
+    real(RP), intent(in)  :: m0_init             ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]
+    real(RP), intent(in)  :: dg_init             ! initial number equivalen diameters of modes     [m]
+    real(RP), intent(in)  :: sg_init             ! initial standard deviation                      [-]
+    real(RP), intent(in)  :: d_min_inp(3)
+    real(RP), intent(in)  :: d_max_inp(3)
+    real(RP), intent(in)  :: k_min_inp(3)
+    real(RP), intent(in)  :: k_max_inp(3)
+    integer,  intent(in)  :: n_kap_inp(3)
 
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA_AE)
-    real(RP), intent(out)   :: CCN (KA,IA,JA)
+    real(RP), intent(out) :: QTRC(KA,IA,JA,QA_AE)
+    real(RP), intent(out) :: CCN (KA,IA,JA)
 
     integer,  parameter :: ia_m0  = 1             ! 1. number conc        [#/m3]
     integer,  parameter :: ia_m2  = 2             ! 2. 2nd mom conc       [m2/m3]
@@ -1002,15 +978,9 @@ contains
     real(RP), parameter :: rhod_ae    = 1.83_RP              ! particle density [g/cm3] sulfate assumed
     real(RP), parameter :: conv_vl_ms = rhod_ae/1.e-12_RP     ! M3(volume)[m3/m3] to mass[m3/m3]
 
-    integer  :: n_trans
     real(RP) :: m0t, dgt, sgt, m2t, m3t, mst
     !--- gas
     real(RP) :: conc_gas(GAS_CTG)    !concentration [ug/m3]
-!   integer,  allocatable :: it_procs2trans(:,:,:,:) !procs to trans conversion
-!   integer,  allocatable :: ia_trans2procs(:) !trans to procs conversion
-!   integer,  allocatable :: is_trans2procs(:) !trans to procs conversion
-!   integer,  allocatable :: ik_trans2procs(:) !trans to procs conversion
-!   integer,  allocatable :: ic_trans2procs(:)
     !--- bin  settings (lower bound, center, upper bound)
     real(RP), allocatable :: d_lw(:,:), d_ct(:,:), d_up(:,:)  !diameter [m]
     real(RP), allocatable :: k_lw(:,:), k_ct(:,:), k_up(:,:)  !kappa    [-]
@@ -1024,7 +994,7 @@ contains
     real(RP) :: qsat_tmp, ssliq
     real(RP) :: pi6
 
-    integer  :: ia0, ik, is0, ic, k, i, j, it, iq
+    integer  :: ia0, ik, is0, ic, k, i, j, it
     !---------------------------------------------------------------------------
 
 
@@ -1047,12 +1017,6 @@ contains
     k_min(1:n_ctg) = k_min_inp(1:n_ctg)  ! lower bound of 1st kappa bin
     k_max(1:n_ctg) = k_max_inp(1:n_ctg)  ! upper bound of last kappa bin
 
-
-!   allocate( it_procs2trans(N_ATR,n_siz_max,n_kap_max,n_ctg)  )
-!   allocate( ia_trans2procs(n_trans) )
-!   allocate( is_trans2procs(n_trans) )
-!   allocate( ik_trans2procs(n_trans) )
-!   allocate( ic_trans2procs(n_trans) )
 
     !bin setting
     allocate(d_lw(n_siz_max,n_ctg))
@@ -2396,15 +2360,14 @@ contains
 !    real(RP),intent(out):: dlog10d_out
     real(RP),intent(out):: t_ccn !total ccn number concentration [#/m3]
     real(RP),intent(out):: t_cn  !total cn number concentration  [#/m3]
-    real(RP) :: dlog10d_out
     !local variables
-    real(RP) :: m0t,m2t,m3t,dgt,sgt,dm2
-    real(RP) :: d_lw2,d_up2,dg2,sg2,fnum0,fnum1
-    real(RP) :: dlogd
-    integer  :: is0, is_out
-    real(RP), parameter :: d_max = 1.E-5_RP
-    real(RP), parameter :: d_min = 1.E-9_RP
-    real(RP) :: d_lw(nbins_out), d_up(nbins_out)
+!    real(RP) :: m0t,m2t,m3t,dgt,sgt,dm2
+!    real(RP) :: d_lw2,d_up2,dg2,sg2,fnum0,fnum1
+!    real(RP) :: dlogd
+    integer  :: is0!, is_out
+!    real(RP), parameter :: d_max = 1.E-5_RP
+!    real(RP), parameter :: d_min = 1.E-9_RP
+!    real(RP) :: d_lw(nbins_out), d_up(nbins_out)
 
     rnum_out(:) = 0._RP
 !
