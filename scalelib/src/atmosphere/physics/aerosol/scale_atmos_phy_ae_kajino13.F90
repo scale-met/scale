@@ -651,7 +651,7 @@ contains
     real(RP), intent(in) :: QV  (KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA_AE)
     real(RP), intent(in) :: EMIT(KA,IA,JA,QA_AE)
-    real(RP), intent(in) :: dt
+    real(DP), intent(in) :: dt
 
     real(RP), intent(out) :: RHOQ_t_AE(KA,IA,JA,QA_AE)
     real(RP), intent(out) :: CN(KA,IA,JA)
