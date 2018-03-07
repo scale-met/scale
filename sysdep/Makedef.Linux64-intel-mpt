@@ -44,7 +44,12 @@ CFLAGS_DEBUG      = -O0
 
 ##### Special setting
 
-FFLAGS_OPENMP = -openmp -no-heap-arrays
+IFORT_VERSION=$(shell $(SFC) -v 2>&1 | cut -f3 -d' ' | cut -f1 -d.)
+ifeq ($(shell if [ $(IFORT_VERSION) -ge 15 ]; then echo yes; fi),yes)
+  FFLAGS_OPENMP = -qopenmp -no-heap-arrays
+else
+  FFLAGS_OPENMP = -openmp -no-heap-arrays
+endif
 
 ifeq ($(SCALE_DISABLE_INTELVEC),T)
    NOVEC = -no-vec
