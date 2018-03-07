@@ -2942,7 +2942,7 @@ contains
           WNAME(3) = "Courant num. Y"
           call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
                                   WNAME(:), WORK(:,:,:,:),               &
-                                  supress_globalcomm=.true.              )
+                                  local=.true.                           )
 
           call PRC_abort
        endif
@@ -2957,7 +2957,7 @@ contains
           WNAME(3) = "Courant num. Y"
           call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
                                   WNAME(:), WORK(:,:,:,:),               &
-                                  supress_globalcomm=.true.              )
+                                  local=.true.                           )
        endif
     endif
 

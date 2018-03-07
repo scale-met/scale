@@ -98,12 +98,13 @@ contains
   end subroutine STATISTICS_setup
 
   !-----------------------------------------------------------------------------
-  !> Calc volume/area-weighted global sum
+  !> Calc domain sum and area-weighted mean
   subroutine STATISTICS_total_2D( &
        IA, IS, IE, JA, JS, JE, &
        var, varname, &
        area, total,  &
-       mean          )
+       log_suppress, &
+       mean, sum     )
     use scale_process, only: &
        PRC_myrank, &
        PRC_abort
@@ -118,11 +119,15 @@ contains
     real(RP),         intent(in) :: area(IA,JA) !< area of the grid cell
     real(RP),         intent(in) :: total       !< total area
 
+    logical,  intent(in),  optional :: log_suppress !< suppress log output
     real(RP), intent(out), optional :: mean !< area-weighted mean
+    real(RP), intent(out), optional :: sum  !< domain sum
 
-    real(RP) :: statval, allstatval
+    real(RP) :: statval
     real(RP) :: sendbuf(2), recvbuf(2)
+    real(RP) :: sum_, mean_
 
+    logical :: suppress_
     integer :: ierr
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -140,6 +145,12 @@ contains
        call PRC_abort
     endif
 
+    if ( present(log_suppress) ) then
+       suppress_ = log_suppress
+    else
+       suppress_ = .false.
+    end if
+
     if ( STATISTICS_use_globalcomm ) then
        call PROF_rapstart('COMM_Allreduce', 2)
        sendbuf(1) = statval
@@ -153,34 +164,38 @@ contains
                            ierr                    )
        call PROF_rapend  ('COMM_Allreduce', 2)
 
-       allstatval = recvbuf(1) / recvbuf(2)
+       sum_  = recvbuf(1)
+       mean_ = recvbuf(1) / recvbuf(2)
        ! statistics over the all node
-       if ( varname /= "" ) then ! if varname is empty, suppress output
+       if ( .not. suppress_ ) then ! if varname is empty, suppress output
           if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,ES24.17)') &
-                     '[', trim(varname), '] MEAN(global) = ', allstatval
+                     '[', trim(varname), '] MEAN(global) = ', mean_
        endif
     else
-       allstatval = statval / total
+       sum_ = statval
+       mean_ = statval / total
 
        ! statistics on each node
-       if ( varname /= "" ) then ! if varname is empty, suppress output
+       if ( .not. suppress_ ) then ! if varname is empty, suppress output
           if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,ES24.17)') &
-                     '[', trim(varname), '] MEAN(local)  = ', allstatval
+                     '[', trim(varname), '] MEAN(local)  = ', mean_
        endif
     endif
 
-    if ( present(mean) ) mean = allstatval
+    if ( present(mean) ) mean = mean_
+    if ( present(sum ) ) sum  = sum_
 
     return
   end subroutine STATISTICS_total_2D
 
   !-----------------------------------------------------------------------------
-  !> Calc volume-weighted global mean
+  !> Calc domain sum and volume-weighted mean
   subroutine STATISTICS_total_3D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        var, varname, &
        vol, total,   &
-       mean          )
+       log_suppress, &
+       mean, sum     )
     use scale_process, only: &
        PRC_myrank, &
        PRC_abort
@@ -196,11 +211,15 @@ contains
     real(RP),         intent(in) :: vol(KA,IA,JA) !< volume of the grid cell
     real(RP),         intent(in) :: total         !< total volume
 
+    logical,  intent(in),  optional :: log_suppress !< suppress log output
     real(RP), intent(out), optional :: mean !< volume/area-weighted total
+    real(RP), intent(out), optional :: sum  !< domain sum
 
-    real(RP) :: statval, allstatval
+    real(RP) :: statval
     real(RP) :: sendbuf(2), recvbuf(2)
+    real(RP) :: mean_, sum_
 
+    logical :: suppress_
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -220,6 +239,12 @@ contains
        call PRC_abort
     endif
 
+    if ( present(log_suppress) ) then
+       suppress_ = log_suppress
+    else
+       suppress_ = .false.
+    end if
+
     if ( STATISTICS_use_globalcomm ) then
        call PROF_rapstart('COMM_Allreduce', 2)
        sendbuf(1) = statval
@@ -233,23 +258,26 @@ contains
                            ierr                    )
        call PROF_rapend  ('COMM_Allreduce', 2)
 
-       allstatval = recvbuf(1) / recvbuf(2)
+       sum_  = recvbuf(1)
+       mean_ = recvbuf(1) / recvbuf(2)
        ! statistics over the all node
-       if ( varname /= "" ) then ! if varname is empty, suppress output
+       if ( .not. suppress_ ) then ! if varname is empty, suppress output
           if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,ES24.17)') &
-                     '[', trim(varname), '] MEAN(global) = ', allstatval
+                     '[', trim(varname), '] MEAN(global) = ', mean_
        endif
     else
-       allstatval = statval / total
+       sum_  = statval
+       mean_ = statval / total
 
        ! statistics on each node
-       if ( varname /= "" ) then ! if varname is empty, suppress output
+       if ( .not. suppress_ ) then ! if varname is empty, suppress output
           if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,ES24.17)') &
-                     '[', trim(varname), '] MEAN(local)  = ', allstatval
+                     '[', trim(varname), '] MEAN(local)  = ', mean_
        endif
     endif
 
-    if ( present(mean) ) mean = allstatval
+    if ( present(mean) ) mean = mean_
+    if ( present(sum ) ) sum  = sum_
 
     return
   end subroutine STATISTICS_total_3D
@@ -258,9 +286,8 @@ contains
   !> Search global maximum & minimum value
   subroutine STATISTICS_detail_3D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, VA, &
-       varname,           &
-       var,               &
-       supress_globalcomm )
+       varname, var, &
+       local         )
     use scale_process, only: &
        PRC_nprocs,   &
        PRC_myrank
@@ -278,7 +305,7 @@ contains
     character(len=*), intent(in) :: varname(VA)      !< name of item
     real(RP),         intent(in) :: var(KA,IA,JA,VA) !< values
 
-    logical,          intent(in), optional :: supress_globalcomm !< supress global comm.?
+    logical,          intent(in), optional :: local  !< calc in local node
 
     real(RP) :: statval_l (  VA,2)
     integer  :: statidx_l (3,VA,2)
@@ -294,11 +321,7 @@ contains
     !---------------------------------------------------------------------------
 
     do_globalcomm = STATISTICS_use_globalcomm
-    if ( present(supress_globalcomm) ) then
-       if ( supress_globalcomm ) then
-          do_globalcomm = .false.
-       endif
-    endif
+    if ( present(local) ) do_globalcomm = ( .not. local )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Variable Statistics ***'
@@ -402,9 +425,8 @@ contains
 
   subroutine STATISTICS_detail_2D( &
        IA, IS, IE, JA, JS, JE, VA, &
-       varname,           &
-       var,               &
-       supress_globalcomm )
+       varname, var, &
+       local         )
     use scale_process, only: &
        PRC_nprocs,   &
        PRC_myrank
@@ -418,10 +440,10 @@ contains
     integer, intent(in) :: JA, JS, JE
     integer, intent(in) :: VA
 
-    character(len=*), intent(in) :: varname(VA)      !< name of item
+    character(len=*), intent(in) :: varname(VA)   !< name of item
     real(RP),         intent(in) :: var(IA,JA,VA) !< values
 
-    logical,          intent(in), optional :: supress_globalcomm !< supress global comm.?
+    logical,          intent(in), optional :: local ! calc in local node
 
     real(RP) :: statval_l (  VA,2)
     integer  :: statidx_l (2,VA,2)
@@ -437,11 +459,7 @@ contains
     !---------------------------------------------------------------------------
 
     do_globalcomm = STATISTICS_use_globalcomm
-    if ( present(supress_globalcomm) ) then
-       if ( supress_globalcomm ) then
-          do_globalcomm = .false.
-       endif
-    endif
+    if ( present(local) ) do_globalcomm = ( .not. local )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Variable Statistics ***'

@@ -352,7 +352,8 @@ contains
                            MONITOR_dims(dimid)%JA, MONITOR_dims(dimid)%JS, MONITOR_dims(dimid)%JE, &
                            var(:,:), MONITOR_items(itemid)%name,                          & ! (in)
                            MONITOR_dims(dimid)%area(:,:), MONITOR_dims(dimid)%total_area, & ! (in)
-                           mean = total                                                   ) ! (out)
+                           log_suppress = .true.,                                         & ! (in)
+                           sum = total                                                    ) ! (out)
 
     if ( MONITOR_items(itemid)%flux ) then
        if ( MONITOR_items(itemid)%first ) then
@@ -404,7 +405,8 @@ contains
                            MONITOR_dims(dimid)%JA, MONITOR_dims(dimid)%JS, MONITOR_dims(dimid)%JE, &
                            var(:,:,:), MONITOR_items(itemid)%name,                              & ! (in)
                            MONITOR_dims(dimid)%volume(:,:,:), MONITOR_dims(dimid)%total_volume, & ! (in)
-                           mean = total                                                         ) ! (out)
+                           log_suppress = .true.,                                               & ! (in)
+                           sum = total                                                          ) ! (out)
 
     if ( MONITOR_items(itemid)%flux ) then
        if ( MONITOR_items(itemid)%first ) then
