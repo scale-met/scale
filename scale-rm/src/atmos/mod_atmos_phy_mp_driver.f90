@@ -106,7 +106,7 @@ contains
        select case ( ATMOS_PHY_MP_TYPE )
        case ( 'KESSLER' )
           call ATMOS_HYDROMETEOR_regist( &
-               QS_MP,                                        & ! [OUT]
+               QS_MP,                                       & ! [OUT]
                ATMOS_PHY_MP_KESSLER_nwaters,                & ! [IN]
                ATMOS_PHY_MP_KESSLER_nices,                  & ! [IN]
                ATMOS_PHY_MP_KESSLER_tracer_names(:),        & ! [IN]

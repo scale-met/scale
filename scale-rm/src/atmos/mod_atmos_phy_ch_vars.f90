@@ -58,6 +58,10 @@ module mod_atmos_phy_ch_vars
 
   real(RP), public, allocatable :: ATMOS_PHY_CH_O3(:,:,:) ! ozone [PPM]
 
+  integer, public :: QA_CH
+  integer, public :: QS_CH
+  integer, public :: QE_CH
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -85,12 +89,9 @@ contains
   !> Setup
   subroutine ATMOS_PHY_CH_vars_setup
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_atmos_phy_ch, only: &
-       QS_CH, &
-       QE_CH
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_CH_VARS / &
@@ -124,7 +125,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_CH_VARS. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_CH_VARS)
 
