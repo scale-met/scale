@@ -156,6 +156,7 @@ module mod_land_vars
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
+  character(len=H_MID),   private            :: VAR_STDN(VMAX) !< standard name of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
   integer,                private            :: VAR_ID(VMAX)   !< ID    of the variables
   integer,                private            :: restart_fid = -1  ! file ID
@@ -186,6 +187,19 @@ module mod_land_vars
                   'land surface latent heat flux',   &
                   'land surface ground heat flux',   &
                   'land surface water vapor flux'    /
+  data VAR_STDN / 'soil_temperature', &
+                  'volume_fraction_of_condensed_water_in_soil', &
+                  'volume_fraction_of_condensed_water_in_soil_at_field_capacity', &
+                  'surface_temperature_where_land', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '' /
   data VAR_UNIT / 'K',       &
                   'm3/m3',   &
                   '1',       &
@@ -549,8 +563,8 @@ contains
        !              __FILE__, __LINE__ )
     endif
 
-    call FILE_HISTORY_in( LAND_TEMP (:,:,:), VAR_NAME(I_TEMP),  VAR_DESC(I_TEMP),  VAR_UNIT(I_TEMP),  dim_type='LXY' )
-    call FILE_HISTORY_in( LAND_WATER(:,:,:), VAR_NAME(I_WATER), VAR_DESC(I_WATER), VAR_UNIT(I_WATER), dim_type='LXY' )
+    call FILE_HISTORY_in( LAND_TEMP (:,:,:), VAR_NAME(I_TEMP),  VAR_DESC(I_TEMP),  VAR_UNIT(I_TEMP),  dim_type='LXY', standard_name=VAR_STDN(I_TEMP) )
+    call FILE_HISTORY_in( LAND_WATER(:,:,:), VAR_NAME(I_WATER), VAR_DESC(I_WATER), VAR_UNIT(I_WATER), dim_type='LXY', standard_name=VAR_STDN(I_WATER) )
     do j = LJS, LJE
     do i = LIS, LIE
     do k = 1, LKMAX
@@ -558,20 +572,20 @@ contains
     end do
     end do
     end do
-    call FILE_HISTORY_in( LAND_WATERDS(:,:,:), VAR_NAME(I_WATERDS), VAR_DESC(I_WATERDS), VAR_UNIT(I_WATERDS), dim_type='LXY', fill_halo=.true. )
+    call FILE_HISTORY_in( LAND_WATERDS(:,:,:), VAR_NAME(I_WATERDS), VAR_DESC(I_WATERDS), VAR_UNIT(I_WATERDS), dim_type='LXY', fill_halo=.true., standard_name=VAR_STDN(I_WATERDS) )
 
 
-    call FILE_HISTORY_in( LAND_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP),   VAR_DESC(I_SFC_TEMP),   VAR_UNIT(I_SFC_TEMP) )
-    call FILE_HISTORY_in( LAND_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW),     VAR_DESC(I_ALB_LW),     VAR_UNIT(I_ALB_LW)   )
-    call FILE_HISTORY_in( LAND_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW),     VAR_DESC(I_ALB_SW),     VAR_UNIT(I_ALB_SW)   )
+    call FILE_HISTORY_in( LAND_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP),   VAR_DESC(I_SFC_TEMP),   VAR_UNIT(I_SFC_TEMP), standard_name=VAR_STDN(I_SFC_TEMP) )
+    call FILE_HISTORY_in( LAND_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW),     VAR_DESC(I_ALB_LW),     VAR_UNIT(I_ALB_LW),   standard_name=VAR_STDN(I_ALB_LW) )
+    call FILE_HISTORY_in( LAND_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW),     VAR_DESC(I_ALB_SW),     VAR_UNIT(I_ALB_SW),   standard_name=VAR_STDN(I_ALB_SW) )
 
-    call FILE_HISTORY_in( LAND_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   VAR_UNIT(I_SFLX_MW)   )
-    call FILE_HISTORY_in( LAND_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   VAR_UNIT(I_SFLX_MU)   )
-    call FILE_HISTORY_in( LAND_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV),   VAR_DESC(I_SFLX_MV),   VAR_UNIT(I_SFLX_MV)   )
-    call FILE_HISTORY_in( LAND_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   VAR_UNIT(I_SFLX_SH)   )
-    call FILE_HISTORY_in( LAND_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH)   )
-    call FILE_HISTORY_in( LAND_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH),   VAR_DESC(I_SFLX_GH),   VAR_UNIT(I_SFLX_GH)   )
-    call FILE_HISTORY_in( LAND_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap) )
+    call FILE_HISTORY_in( LAND_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   VAR_UNIT(I_SFLX_MW), standard_name=VAR_STDN(I_SFLX_MW) )
+    call FILE_HISTORY_in( LAND_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   VAR_UNIT(I_SFLX_MU), standard_name=VAR_STDN(I_SFLX_MU) )
+    call FILE_HISTORY_in( LAND_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV),   VAR_DESC(I_SFLX_MV),   VAR_UNIT(I_SFLX_MV), standard_name=VAR_STDN(I_SFLX_MV) )
+    call FILE_HISTORY_in( LAND_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   VAR_UNIT(I_SFLX_SH), standard_name=VAR_STDN(I_SFLX_SH) )
+    call FILE_HISTORY_in( LAND_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH), standard_name=VAR_STDN(I_SFLX_LH) )
+    call FILE_HISTORY_in( LAND_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH),   VAR_DESC(I_SFLX_GH),   VAR_UNIT(I_SFLX_GH), standard_name=VAR_STDN(I_SFLX_GH) )
+    call FILE_HISTORY_in( LAND_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap), standard_name=VAR_STDN(I_SFLX_evap) )
 
     ! snow model
     call FILE_HISTORY_in( SNOW_SFC_TEMP (:,:), 'SNOW_SFC_TEMP',  'Snow surface temperature',    'K'      )
@@ -586,35 +600,60 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for land
   subroutine LAND_vars_total
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
+    use scale_land_grid_cartesC_real, only: &
+       LAND_GRID_CARTESC_REAL_AREA,    &
+       LAND_GRID_CARTESC_REAL_TOTAREA, &
+       LAND_GRID_CARTESC_REAL_VOL,     &
+       LAND_GRID_CARTESC_REAL_TOTVOL
     implicit none
 
-    real(RP) :: total
-
-    character(len=2) :: sk
-    integer          :: k
     !---------------------------------------------------------------------------
 
     if ( STATISTICS_checktotal ) then
 
-       do k = LKS, LKE
-          write(sk,'(I2.2)') k
+       ! 3D
+       call STATISTICS_total( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_TEMP (:,:,:), VAR_NAME(I_TEMP),  & ! (in)
+                              LAND_GRID_CARTESC_REAL_VOL(:,:,:),    & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTVOL         ) ! (in)
+       call STATISTICS_total( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_WATER(:,:,:), VAR_NAME(I_WATER), & ! (in)
+                              LAND_GRID_CARTESC_REAL_VOL(:,:,:),    & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTVOL         ) ! (in)
 
-          call STAT_total( total, LAND_TEMP (k,:,:), trim(VAR_NAME(I_TEMP) )//sk )
-          call STAT_total( total, LAND_WATER(k,:,:), trim(VAR_NAME(I_WATER))//sk )
-       enddo
+       ! 2D
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP), & ! (in)
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW),   & ! (in)
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW),   & ! (in)
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
 
-       call STAT_total( total, LAND_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP) )
-       call STAT_total( total, LAND_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW)   )
-       call STAT_total( total, LAND_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW)   )
-
-       call STAT_total( total, SNOW_SFC_TEMP  (:,:),     'SNOW_SFC_TEMP'  )
-       call STAT_total( total, SNOW_SWE       (:,:),     'SNOW_SWE'       )
-       call STAT_total( total, SNOW_Depth     (:,:),     'SNOW_Depth'     )
-       call STAT_total( total, SNOW_Dzero     (:,:),     'SNOW_Dzero'     )
-
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              SNOW_SFC_TEMP  (:,:),     'SNOW_SFC_TEMP', & ! (in)
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),          & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTAREA             ) ! (in)
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              SNOW_SWE       (:,:),     'SNOW_SWE',      &
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),          & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTAREA             ) ! (in)
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              SNOW_Depth     (:,:),     'SNOW_Depth',    & ! (in)
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),          & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTAREA             ) ! (in)
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              SNOW_Dzero     (:,:),     'SNOW_Dzero',    & ! (in)
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),          & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTAREA             ) ! (in)
     endif
 
     return
@@ -919,13 +958,15 @@ contains
           call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
                VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
                'LXY', LAND_RESTART_OUT_DTYPE,         & ! [IN]
-               VAR_ID(i)                              ) ! [OUT]
+               VAR_ID(i),                             & ! [OUT]
+               standard_name=VAR_STDN(i)              ) ! [IN]
        end do
        do i = I_SFC_TEMP, VMAX
           call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
                VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
                'XY', LAND_RESTART_OUT_DTYPE,          & ! [IN]
-               VAR_ID(i)                              ) ! [OUT]
+               VAR_ID(i),                             & ! [OUT]
+               standard_name=VAR_STDN(i)              ) ! [IN]
        end do
 
        !call FILE_CARTESC_def_var( restart_fid, 'SNOW_SFC_TEMP',  'Snow surface temperature',    &

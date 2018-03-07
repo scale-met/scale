@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module GRID (cartesian) for urban
+!> module urban / grid / cartesianC
 !!
 !! @par Description
 !!          Grid module for cartesian coordinate for urban

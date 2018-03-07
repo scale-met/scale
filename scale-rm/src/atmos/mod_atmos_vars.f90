@@ -162,6 +162,7 @@ module mod_atmos_vars
      character(len=H_SHORT) :: UNIT
      integer                :: ndims
      character(len=H_SHORT) :: dim_type
+     character(len=H_MID)   :: STDNAME
   end type Vinfo
 
   ! prognostic variables
@@ -170,11 +171,11 @@ module mod_atmos_vars
   integer,     private, allocatable :: PV_ID(:)
 
   data PV_info / &
-       Vinfo( 'DENS', 'density',     'kg/m3',   3, 'ZXY' ), &
-       Vinfo( 'MOMZ', 'momentum z',  'kg/m2/s', 3, 'ZHXY'), &
-       Vinfo( 'MOMX', 'momentum x',  'kg/m2/s', 3, 'ZXHY'), &
-       Vinfo( 'MOMY', 'momentum y',  'kg/m2/s', 3, 'ZXYH'), &
-       Vinfo( 'RHOT', 'rho * theta', 'kg/m3*K', 3, 'ZXY' ) /
+       Vinfo( 'DENS', 'density',     'kg/m3',   3, 'ZXY',  'air_density' ), &
+       Vinfo( 'MOMZ', 'momentum z',  'kg/m2/s', 3, 'ZHXY', 'upward_mass_flux_of_air' ), &
+       Vinfo( 'MOMX', 'momentum x',  'kg/m2/s', 3, 'ZXHY', 'eastward_mass_flux_of_air' ), &
+       Vinfo( 'MOMY', 'momentum y',  'kg/m2/s', 3, 'ZXYH', 'northward_mass_flux_of_air' ), &
+       Vinfo( 'RHOT', 'rho * theta', 'kg/m3*K', 3, 'ZXY',  '' ) /
 
 
   ! private diagnostic variables
@@ -326,75 +327,75 @@ module mod_atmos_vars
   logical,     private            :: DV_calclated(DV_nmax)
 
   data DV_info / &
-       Vinfo( 'W',         'velocity w',                      'm/s',     3, 'ZXY' ), &
-       Vinfo( 'U',         'velocity u',                      'm/s',     3, 'ZXY' ), &
-       Vinfo( 'V',         'velocity v',                      'm/s',     3, 'ZXY' ), &
-       Vinfo( 'PT',        'potential temp.',                 'K',       3, 'ZXY' ), &
-       Vinfo( 'T',         'temperature',                     'K',       3, 'ZXY' ), &
-       Vinfo( 'PRES',      'pressure',                        'Pa',      3, 'ZXY' ), &
-       Vinfo( 'EXNER',     'Exner function',                  '1',       3, 'ZXY' ), &
-       Vinfo( 'PHYD',      'hydrostatic pressure',            'Pa',      3, 'ZXY' ), &
-       Vinfo( 'QDRY',      'dry air',                         'kg/kg',   3, 'ZXY' ), &
-       Vinfo( 'RTOT',      'Total gas constant',              'J/kg/K',  3, 'ZXY' ), &
-       Vinfo( 'CVTOT',     'Total heat capacity',             'J/kg/K',  3, 'ZXY' ), &
-       Vinfo( 'CPTOT',     'Total heat capacity',             'J/kg/K',  3, 'ZXY' ), &
-       Vinfo( 'LHV',       'latent heat for vaporization',    'J/kg',    3, 'ZXY' ), &
-       Vinfo( 'LHS',       'latent heat for sublimation',     'J/kg',    3, 'ZXY' ), &
-       Vinfo( 'LHF',       'latent heat for fusion',          'J/kg',    3, 'ZXY' ), &
-       Vinfo( 'POTV',      'virtual potential temp.',         'K',       3, 'ZXY' ), &
-       Vinfo( 'TEML',      'liquid water temperature',        'K',       3, 'ZXY' ), &
-       Vinfo( 'POTL',      'liquid water potential temp.',    'K',       3, 'ZXY' ), &
-       Vinfo( 'POTE',      'equivalent potential temp.',      'K',       3, 'ZXY' ), &
-       Vinfo( 'QTOT',      'total water',                     'kg/kg',   3, 'ZXY' ), &
-       Vinfo( 'QHYD',      'total hydrometeors',              'kg/kg',   3, 'ZXY' ), &
-       Vinfo( 'QLIQ',      'total liquid water',              'kg/kg',   3, 'ZXY' ), &
-       Vinfo( 'QICE',      'total ice water',                 'kg/kg',   3, 'ZXY' ), &
-       Vinfo( 'LWP',       'liquid water path',               'g/m2',    2, 'XY'  ), &
-       Vinfo( 'IWP',       'ice water path',                  'g/m2',    2, 'XY'  ), &
-       Vinfo( 'PW',        'precipitable water',              'g/m2',    2, 'XY'  ), &
-       Vinfo( 'PREC',      'surface precipitation rate',      'kg/m2/s', 2, 'XY'  ), &
-       Vinfo( 'RAIN',      'surface rain rate',               'kg/m2/s', 2, 'XY'  ), &
-       Vinfo( 'SNOW',      'surface snow rate',               'kg/m2/s', 2, 'XY'  ), &
-       Vinfo( 'QSAT',      'saturation specific humidity',    'kg/kg',   3, 'ZXY' ), &
-       Vinfo( 'RHA',       'relative humidity(liq+ice)',      '%',       3, 'ZXY' ), &
-       Vinfo( 'RH',        'relative humidity(liq)',          '%',       3, 'ZXY' ), &
-       Vinfo( 'RHI',       'relative humidity(ice)',          '%',       3, 'ZXY' ), &
-       Vinfo( 'VOR',       'vertical vorticity',              '1/s',     3, 'ZXY' ), &
-       Vinfo( 'DIV',       'divergence',                      '1/s',     3, 'ZXY' ), &
-       Vinfo( 'HDIV',      'horizontal divergence',           '1/s',     3, 'ZXY' ), &
-       Vinfo( 'Uabs',      'absolute velocity',               'm/s',     3, 'ZXY' ), &
-       Vinfo( 'N2',        'squared Brunt-Vaisala frequency', '1/s2',    3, 'ZXY' ), &
-       Vinfo( 'PBLH',      'PBL height',                      'm',       2, 'XY'  ), &
-       Vinfo( 'MSE',       'moist static energy',             'm2/s2',   3, 'ZXY' ), &
-       Vinfo( 'TDEW',      'dew point',                       'K',       3, 'ZXY' ), &
-       Vinfo( 'CAPE',      'convection avail. pot. energy',   'm2/s2',   2, 'XY'  ), &
-       Vinfo( 'CIN',       'convection inhibition',           'm2/s2',   2, 'XY'  ), &
-       Vinfo( 'LCL',       'lifted condensation level',       'm',       2, 'XY'  ), &
-       Vinfo( 'LFC',       'level of free convection',        'm',       2, 'XY'  ), &
-       Vinfo( 'LNB',       'level of neutral buoyancy',       'm',       2, 'XY'  ), &
-       Vinfo( 'ENGT',      'total energy',                    'J/m3',    3, 'ZXY' ), &
-       Vinfo( 'ENGP',      'potential energy',                'J/m3',    3, 'ZXY' ), &
-       Vinfo( 'ENGK',      'kinetic energy',                  'J/m3',    3, 'ZXY' ), &
-       Vinfo( 'ENGI',      'internal energy',                 'J/m3',    3, 'ZXY' ), &
-       Vinfo( 'DENS_MEAN', 'horiz. mean of density',          'kg/m3',   1, 'Z'   ), &
-       Vinfo( 'W_MEAN',    'horiz. mean of w',                'm/s',     1, 'Z'   ), &
-       Vinfo( 'U_MEAN',    'horiz. mean of u',                'm/s',     1, 'Z'   ), &
-       Vinfo( 'V_MEAN',    'horiz. mean of v',                'm/s',     1, 'Z'   ), &
-       Vinfo( 'PT_MEAN',   'horiz. mean of pot.',             'K',       1, 'Z'   ), &
-       Vinfo( 'T_MEAN',    'horiz. mean of t',                'K',       1, 'Z'   ), &
-       Vinfo( 'QV_MEAN',   'horiz. mean of QV',               '1',       1, 'Z'   ), &
-       Vinfo( 'QHYD_MEAN', 'horiz. mean of QHYD',             '1',       1, 'Z'   ), &
-       Vinfo( 'QLIQ_MEAN', 'horiz. mean of QLIQ',             '1',       1, 'Z'   ), &
-       Vinfo( 'QICE_MEAN', 'horiz. mean of QICE',             '1',       1, 'Z'   ), &
-       Vinfo( 'DENS_PRIM', 'horiz. deviation of density',     'kg/m3',   1, 'Z'   ), &
-       Vinfo( 'W_PRIM',    'horiz. deviation of w',           'm/s',     3, 'ZXY' ), &
-       Vinfo( 'U_PRIM',    'horiz. deviation of u',           'm/s',     3, 'ZXY' ), &
-       Vinfo( 'V_PRIM',    'horiz. deviation of v',           'm/s',     3, 'ZXY' ), &
-       Vinfo( 'PT_PRIM',   'horiz. deviation of pot. temp.',  'K',       3, 'ZXY' ), &
-       Vinfo( 'W_PRIM2',   'variance of w',                   'm2/s2',   3, 'ZXY' ), &
-       Vinfo( 'PT_W_PRIM', 'resolved scale heat flux',        'W/s',     3, 'ZXY' ), &
-       Vinfo( 'W_PRIM3',   'skewness of w',                   'm3/s3',   3, 'ZXY' ), &
-       Vinfo( 'TKE_RS',    'resolved scale TKE',              'm2/s2',   3, 'ZXY' ) /
+       Vinfo( 'W',         'velocity w',                      'm/s',     3, 'ZXY', 'upward_air_velocity' ), &
+       Vinfo( 'U',         'velocity u',                      'm/s',     3, 'ZXY', 'eastward_air_velocity' ), &
+       Vinfo( 'V',         'velocity v',                      'm/s',     3, 'ZXY', 'northward_air_velocity' ), &
+       Vinfo( 'PT',        'potential temp.',                 'K',       3, 'ZXY', 'air_potential_temperature' ), &
+       Vinfo( 'T',         'temperature',                     'K',       3, 'ZXY', 'air_temperature' ), &
+       Vinfo( 'PRES',      'pressure',                        'Pa',      3, 'ZXY', 'air_pressure' ), &
+       Vinfo( 'EXNER',     'Exner function',                  '1',       3, 'ZXY', 'dimensionless_exner_function' ), &
+       Vinfo( 'PHYD',      'hydrostatic pressure',            'Pa',      3, 'ZXY', '' ), &
+       Vinfo( 'QDRY',      'dry air',                         'kg/kg',   3, 'ZXY', '' ), &
+       Vinfo( 'RTOT',      'Total gas constant',              'J/kg/K',  3, 'ZXY', '' ), &
+       Vinfo( 'CVTOT',     'Total heat capacity',             'J/kg/K',  3, 'ZXY', '' ), &
+       Vinfo( 'CPTOT',     'Total heat capacity',             'J/kg/K',  3, 'ZXY', '' ), &
+       Vinfo( 'LHV',       'latent heat for vaporization',    'J/kg',    3, 'ZXY', '' ), &
+       Vinfo( 'LHS',       'latent heat for sublimation',     'J/kg',    3, 'ZXY', '' ), &
+       Vinfo( 'LHF',       'latent heat for fusion',          'J/kg',    3, 'ZXY', '' ), &
+       Vinfo( 'POTV',      'virtual potential temp.',         'K',       3, 'ZXY', '' ), &
+       Vinfo( 'TEML',      'liquid water temperature',        'K',       3, 'ZXY', '' ), &
+       Vinfo( 'POTL',      'liquid water potential temp.',    'K',       3, 'ZXY', '' ), &
+       Vinfo( 'POTE',      'equivalent potential temp.',      'K',       3, 'ZXY', 'pseudo_equivalent_potential_temperature'  ), &
+       Vinfo( 'QTOT',      'total water',                     'kg/kg',   3, 'ZXY', 'mass_fraction_of_water_in_air' ), &
+       Vinfo( 'QHYD',      'total hydrometeors',              'kg/kg',   3, 'ZXY', 'mass_fraction_of_cloud_condensed_water_in_air' ), &
+       Vinfo( 'QLIQ',      'total liquid water',              'kg/kg',   3, 'ZXY', '' ), &
+       Vinfo( 'QICE',      'total ice water',                 'kg/kg',   3, 'ZXY', '' ), &
+       Vinfo( 'LWP',       'liquid water path',               'g/m2',    2, 'XY',  'atmosphere_mass_content_of_cloud_liquid_water' ), &
+       Vinfo( 'IWP',       'ice water path',                  'g/m2',    2, 'XY',  '' ), &
+       Vinfo( 'PW',        'precipitable water',              'g/m2',    2, 'XY',  'atmosphere_mass_content_of_vapor' ), &
+       Vinfo( 'PREC',      'surface precipitation flux',      'kg/m2/s', 2, 'XY',  'precipitation_flux' ), &
+       Vinfo( 'RAIN',      'surface rain flux',               'kg/m2/s', 2, 'XY',  'rainfall_flux' ), &
+       Vinfo( 'SNOW',      'surface snow flux',               'kg/m2/s', 2, 'XY',  'snowfall_flux' ), &
+       Vinfo( 'QSAT',      'saturation specific humidity',    'kg/kg',   3, 'ZXY', '' ), &
+       Vinfo( 'RHA',       'relative humidity(liq+ice)',      '%',       3, 'ZXY', '' ), &
+       Vinfo( 'RH',        'relative humidity(liq)',          '%',       3, 'ZXY', 'relative_humidity' ), &
+       Vinfo( 'RHI',       'relative humidity(ice)',          '%',       3, 'ZXY', '' ), &
+       Vinfo( 'VOR',       'vertical vorticity',              '1/s',     3, 'ZXY', 'atmosphere_relative_vorticity' ), &
+       Vinfo( 'DIV',       'divergence',                      '1/s',     3, 'ZXY', 'divergence_of_wind' ), &
+       Vinfo( 'HDIV',      'horizontal divergence',           '1/s',     3, 'ZXY', '' ), &
+       Vinfo( 'Uabs',      'absolute velocity',               'm/s',     3, 'ZXY', '' ), &
+       Vinfo( 'N2',        'squared Brunt-Vaisala frequency', '1/s2',    3, 'ZXY', 'square_of_brunt_vaisala_frequency_in_air' ), &
+       Vinfo( 'PBLH',      'PBL height',                      'm',       2, 'XY', 'atmosphere_boundary_layer_thickness'  ), &
+       Vinfo( 'MSE',       'moist static energy',             'm2/s2',   3, 'ZXY', '' ), &
+       Vinfo( 'TDEW',      'dew point',                       'K',       3, 'ZXY', 'dew_point_temperature' ), &
+       Vinfo( 'CAPE',      'convective avail. pot. energy',   'm2/s2',   2, 'XY',  'atmosphere_specific_convective_available_potential_energy'  ), &
+       Vinfo( 'CIN',       'convection inhibition',           'm2/s2',   2, 'XY',  '' ), &
+       Vinfo( 'LCL',       'lifted condensation level',       'm',       2, 'XY',  'atmosphere_lifting_condensation_level' ), &
+       Vinfo( 'LFC',       'level of free convection',        'm',       2, 'XY',  'atmosphere_level_of_free_convection' ), &
+       Vinfo( 'LNB',       'level of neutral buoyancy',       'm',       2, 'XY',  '' ), &
+       Vinfo( 'ENGT',      'total energy',                    'J/m3',    3, 'ZXY', '' ), &
+       Vinfo( 'ENGP',      'potential energy',                'J/m3',    3, 'ZXY', '' ), &
+       Vinfo( 'ENGK',      'kinetic energy',                  'J/m3',    3, 'ZXY', '' ), &
+       Vinfo( 'ENGI',      'internal energy',                 'J/m3',    3, 'ZXY', '' ), &
+       Vinfo( 'DENS_MEAN', 'horiz. mean of density',          'kg/m3',   1, 'Z',   '' ), &
+       Vinfo( 'W_MEAN',    'horiz. mean of w',                'm/s',     1, 'Z',   '' ), &
+       Vinfo( 'U_MEAN',    'horiz. mean of u',                'm/s',     1, 'Z',   '' ), &
+       Vinfo( 'V_MEAN',    'horiz. mean of v',                'm/s',     1, 'Z',   '' ), &
+       Vinfo( 'PT_MEAN',   'horiz. mean of pot.',             'K',       1, 'Z',   '' ), &
+       Vinfo( 'T_MEAN',    'horiz. mean of t',                'K',       1, 'Z',   '' ), &
+       Vinfo( 'QV_MEAN',   'horiz. mean of QV',               '1',       1, 'Z',   '' ), &
+       Vinfo( 'QHYD_MEAN', 'horiz. mean of QHYD',             '1',       1, 'Z',   '' ), &
+       Vinfo( 'QLIQ_MEAN', 'horiz. mean of QLIQ',             '1',       1, 'Z',   '' ), &
+       Vinfo( 'QICE_MEAN', 'horiz. mean of QICE',             '1',       1, 'Z',   '' ), &
+       Vinfo( 'DENS_PRIM', 'horiz. deviation of density',     'kg/m3',   1, 'Z',   '' ), &
+       Vinfo( 'W_PRIM',    'horiz. deviation of w',           'm/s',     3, 'ZXY', '' ), &
+       Vinfo( 'U_PRIM',    'horiz. deviation of u',           'm/s',     3, 'ZXY', '' ), &
+       Vinfo( 'V_PRIM',    'horiz. deviation of v',           'm/s',     3, 'ZXY', '' ), &
+       Vinfo( 'PT_PRIM',   'horiz. deviation of pot. temp.',  'K',       3, 'ZXY', '' ), &
+       Vinfo( 'W_PRIM2',   'variance of w',                   'm2/s2',   3, 'ZXY', '' ), &
+       Vinfo( 'PT_W_PRIM', 'resolved scale heat flux',        'W/s',     3, 'ZXY', '' ), &
+       Vinfo( 'W_PRIM3',   'skewness of w',                   'm3/s3',   3, 'ZXY', '' ), &
+       Vinfo( 'TKE_RS',    'resolved scale TKE',              'm2/s2',   3, 'ZXY', '' ) /
 
   ! for history output and monitor
   integer, private              :: PV_HIST_id (PV_nmax) !> prognostic variables
@@ -454,7 +455,7 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_reg
     use scale_monitor, only: &
-       MONIT_reg
+       MONITOR_reg
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_QV, &
@@ -711,7 +712,7 @@ contains
 
 
     do iv = 1, PV_nmax
-       call FILE_HISTORY_reg( PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, PV_HIST_id(iv), dim_type=PV_info(iv)%dim_type )
+       call FILE_HISTORY_reg( PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, PV_HIST_id(iv), dim_type=PV_info(iv)%dim_type, standard_name=PV_info(iv)%STDNAME )
     end do
 
     do iq = 1, QA
@@ -719,45 +720,89 @@ contains
     enddo
 
     do iv = 1, DV_nmax
-       call FILE_HISTORY_reg( DV_info(iv)%NAME, DV_info(iv)%DESC, DV_info(iv)%UNIT, DV_HIST_id(iv), dim_type=DV_info(iv)%dim_type )
+       call FILE_HISTORY_reg( DV_info(iv)%NAME, DV_info(iv)%DESC, DV_info(iv)%UNIT, DV_HIST_id(iv), dim_type=DV_info(iv)%dim_type, standard_name=DV_info(iv)%STDNAME )
     end do
 
 
     !-----< monitor output setup >-----
     do iv = 1, PV_nmax
-       call MONIT_reg( PV_MONIT_id(iv), PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, ndim=PV_info(iv)%ndims, isflux=.false. )
+       call MONITOR_reg( PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, & ! (in)
+                         PV_MONIT_id(iv),                                      & ! (out)
+                         dim_type=PV_info(iv)%dim_type, isflux=.false.         ) ! (in)
     end do
     do iq = 1, QA
-       call MONIT_reg( QP_MONIT_id(iq), TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), ndim=3, isflux=.false. )
+       call MONITOR_reg( TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), & ! (in)
+                         QP_MONIT_id(iq),                                   & ! (out)
+                         dim_type='ZXY', isflux=.false.                     ) ! (in)
     enddo
 
-    call MONIT_reg( DV_MONIT_id(IM_QDRY),         'QDRY',         'dry air mass',           'kg', ndim=3, isflux=.false. )
-    call MONIT_reg( DV_MONIT_id(IM_QTOT),         'QTOT',         'water mass',             'kg', ndim=3, isflux=.false. )
-    call MONIT_reg( DV_MONIT_id(IM_EVAP),         'EVAP',         'evaporation',            'kg', ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_PREC),         'PRCP',         'precipitation',          'kg', ndim=2, isflux=.true.  )
+    call MONITOR_reg( 'QDRY',         'dry air mass',           'kg', & ! (in)
+                      DV_MONIT_id(IM_QDRY),                           & ! (out)
+                      dim_type='ZXY', isflux=.false.                  ) ! (in)
+    call MONITOR_reg( 'QTOT',         'water mass',             'kg', & ! (in)
+                      DV_MONIT_id(IM_QTOT),                           & ! (out)
+                      dim_type='ZXY', isflux=.false.                  ) ! (in)
+    call MONITOR_reg( 'EVAP',         'evaporation',            'kg', & ! (in)
+                      DV_MONIT_id(IM_EVAP),                           & ! (out)
+                      dim_type='XY', isflux=.true.                    ) ! (in)
+    call MONITOR_reg( 'PRCP',         'precipitation',          'kg', & ! (in)
+                      DV_MONIT_id(IM_PREC),                           & ! (out)
+                      dim_type='XY', isflux=.true.                    ) ! (in)
 
-    call MONIT_reg( DV_MONIT_id(IM_ENGT),         'ENGT',         'total     energy',       'J',  ndim=3, isflux=.false. )
-    call MONIT_reg( DV_MONIT_id(IM_ENGP),         'ENGP',         'potential energy',       'J',  ndim=3, isflux=.false. )
-    call MONIT_reg( DV_MONIT_id(IM_ENGK),         'ENGK',         'kinetic   energy',       'J',  ndim=3, isflux=.false. )
-    call MONIT_reg( DV_MONIT_id(IM_ENGI),         'ENGI',         'internal  energy',       'J',  ndim=3, isflux=.false. )
+    call MONITOR_reg( 'ENGT',         'total     energy',       'J', & ! (in)
+                      DV_MONIT_id(IM_ENGT),                          & ! (out)
+                      dim_type='ZXY', isflux=.false.                 ) ! (in)
+    call MONITOR_reg( 'ENGP',         'potential energy',       'J', & ! (in)
+                      DV_MONIT_id(IM_ENGP),                          & ! (out)
+                      dim_type='ZXY', isflux=.false.                 ) ! (in)
+    call MONITOR_reg( 'ENGK',         'kinetic   energy',       'J', & ! (in)
+                      DV_MONIT_id(IM_ENGK),                          & ! (out)
+                      dim_type='ZXY', isflux=.false.                 ) ! (in)
+    call MONITOR_reg( 'ENGI',         'internal  energy',       'J', & ! (in)
+                      DV_MONIT_id(IM_ENGI),                          & ! (out)
+                      dim_type='ZXY', isflux=.false.                 ) ! (in)
 
-    call MONIT_reg( DV_MONIT_id(IM_ENGFLXT),      'ENGFLXT',      'total energy flux',      'J',  ndim=2, isflux=.true.  )
+    call MONITOR_reg( 'ENGFLXT',      'total energy flux',      'J', & ! (in)
+                      DV_MONIT_id(IM_ENGFLXT),                       & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGSFC_SH',    'SFC specific heat flux', 'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_SH),                     & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGSFC_LH',    'SFC latent   heat flux', 'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_LH),                     & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGSFC_RD',    'SFC net radiation flux', 'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_RD),                     & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGTOA_RD',    'TOA net radiation flux', 'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOA_RD),                     & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
 
-    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_SH),    'ENGSFC_SH',    'SFC specific heat flux', 'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_LH),    'ENGSFC_LH',    'SFC latent   heat flux', 'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_RD),    'ENGSFC_RD',    'SFC net radiation flux', 'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGTOA_RD),    'ENGTOA_RD',    'TOA net radiation flux', 'J',  ndim=2, isflux=.true.  )
+    call MONITOR_reg( 'ENGSFC_LW_up', 'SFC LW upward   flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_LW_up),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGSFC_LW_dn', 'SFC LW downward flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_LW_dn),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGSFC_SW_up', 'SFC SW upward   flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_SW_up),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGSFC_SW_dn', 'SFC SW downward flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_SW_dn),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
 
-    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_LW_up), 'ENGSFC_LW_up', 'SFC LW upward   flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_LW_dn), 'ENGSFC_LW_dn', 'SFC LW downward flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_SW_up), 'ENGSFC_SW_up', 'SFC SW upward   flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGSFC_SW_dn), 'ENGSFC_SW_dn', 'SFC SW downward flux',   'J',  ndim=2, isflux=.true.  )
-
-    call MONIT_reg( DV_MONIT_id(IM_ENGTOA_LW_up), 'ENGTOA_LW_up', 'TOA LW upward   flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGTOA_LW_dn), 'ENGTOA_LW_dn', 'TOA LW downward flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGTOA_SW_up), 'ENGTOA_SW_up', 'TOA SW upward   flux',   'J',  ndim=2, isflux=.true.  )
-    call MONIT_reg( DV_MONIT_id(IM_ENGTOA_SW_dn), 'ENGTOA_SW_dn', 'TOA SW downward flux',   'J',  ndim=2, isflux=.true.  )
-
+    call MONITOR_reg( 'ENGTOA_LW_up', 'TOA LW upward   flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOA_LW_up),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGTOA_LW_dn', 'TOA LW downward flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOA_LW_dn),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGTOA_SW_up', 'TOA SW upward   flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOA_SW_up),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGTOA_SW_dn', 'TOA SW downward flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOA_SW_dn),                  & ! (out)
+                      dim_type='XY', isflux=.true.                   ) ! (in)
 
     return
   end subroutine ATMOS_vars_setup
@@ -1285,49 +1330,96 @@ contains
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        CVdry => CONST_CVdry
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_VOL,       &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL,    &
+       ATMOS_GRID_CARTESC_REAL_VOLWXY,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLWXY, &
+       ATMOS_GRID_CARTESC_REAL_VOLZUY,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLZUY, &
+       ATMOS_GRID_CARTESC_REAL_VOLZXV,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLZXV
+    use scale_atmos_thermodyn, only: &
+       THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     implicit none
 
     real(RP) :: RHOQ(KA,IA,JA)
 
-    real(RP) :: total ! dummy
     integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
 
     if ( STATISTICS_checktotal ) then
 
-       call STAT_total( total, DENS(:,:,:), PV_info(I_DENS)%NAME )
-       call STAT_total( total, MOMZ(:,:,:), PV_info(I_MOMZ)%NAME )
-       call STAT_total( total, MOMX(:,:,:), PV_info(I_MOMX)%NAME )
-       call STAT_total( total, MOMY(:,:,:), PV_info(I_MOMY)%NAME )
-       call STAT_total( total, RHOT(:,:,:), PV_info(I_RHOT)%NAME )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              DENS(:,:,:), PV_info(I_DENS)%NAME,    & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL  (:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL        ) ! (in)
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                             MOMZ(:,:,:), PV_info(I_MOMZ)%NAME,     & ! (in)
+                             ATMOS_GRID_CARTESC_REAL_VOLWXY(:,:,:), & ! (in)
+                             ATMOS_GRID_CARTESC_REAL_TOTVOLWXY      ) ! (in)
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              MOMX(:,:,:), PV_info(I_MOMX)%NAME,     & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOLZUY(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOLZUY      ) ! (in)
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              MOMY(:,:,:), PV_info(I_MOMY)%NAME,     & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOLZXV(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOLZXV      ) ! (in)
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              RHOT(:,:,:), PV_info(I_RHOT)%NAME,    & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL  (:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL        ) ! (in)
 
        do iq = 1, QA
           RHOQ(:,:,:) = DENS(:,:,:) * QTRC(:,:,:,iq)
 
-          call STAT_total( total, RHOQ(:,:,:), TRACER_NAME(iq) )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 RHOQ(:,:,:), TRACER_NAME(iq),       & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
        enddo
 
        call ATMOS_vars_calc_diagnostics
 
 
        RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * QDRY (KS:KE,IS:IE,JS:JE)
-       call STAT_total( total, RHOQ(:,:,:), 'QDRY' )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              RHOQ(:,:,:), 'QDRY',                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
 
        RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * ( 1.0_RP - QDRY (KS:KE,IS:IE,JS:JE) ) ! Qtotal
-       call STAT_total( total, RHOQ(:,:,:), 'QTOT' )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              RHOQ(:,:,:), 'QTOT',                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
 
 
        call ATMOS_vars_get_diagnostic( 'ENGT', WORK3D(:,:,:) )
-       call STAT_total( total, WORK3D(:,:,:), 'ENGT' )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              WORK3D(:,:,:), 'ENGT',              & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
        call ATMOS_vars_get_diagnostic( 'ENGP', WORK3D(:,:,:) )
-       call STAT_total( total, WORK3D(:,:,:), 'ENGP' )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              WORK3D(:,:,:), 'ENGP',              & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
        call ATMOS_vars_get_diagnostic( 'ENGK', WORK3D(:,:,:) )
-       call STAT_total( total, WORK3D(:,:,:), 'ENGK' )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              WORK3D(:,:,:), 'ENGK',              & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
        call ATMOS_vars_get_diagnostic( 'ENGI', WORK3D(:,:,:) )
-       call STAT_total( total, WORK3D(:,:,:), 'ENGI' )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              WORK3D(:,:,:), 'ENGI',              & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
 
     endif
 
@@ -2638,15 +2730,13 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ
     use scale_atmos_grid_cartesC_metric, only: &
-       MAPF => ATMOS_GRID_CARTESC_METRIC_MAPF, &
-       I_UY, &
-       I_XV
-    use scale_rm_statistics, only: &
+       MAPF => ATMOS_GRID_CARTESC_METRIC_MAPF
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total,            &
-       STAT_detail
+       STATISTICS_total,            &
+       STATISTICS_detail
     use scale_monitor, only: &
-       MONIT_put
+       MONITOR_put
     use scale_time, only: &
        TIME_DTSEC_ATMOS_DYN
     use mod_atmos_admin, only: &
@@ -2686,11 +2776,11 @@ contains
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call MONIT_put( PV_MONIT_id(I_DENS), DENS(:,:,:) )
-    call MONIT_put( PV_MONIT_id(I_MOMZ), MOMZ(:,:,:) )
-    call MONIT_put( PV_MONIT_id(I_MOMX), MOMX(:,:,:) )
-    call MONIT_put( PV_MONIT_id(I_MOMY), MOMY(:,:,:) )
-    call MONIT_put( PV_MONIT_id(I_RHOT), RHOT(:,:,:) )
+    call MONITOR_put( PV_MONIT_id(I_DENS), DENS(:,:,:) )
+    call MONITOR_put( PV_MONIT_id(I_MOMZ), MOMZ(:,:,:) )
+    call MONITOR_put( PV_MONIT_id(I_MOMX), MOMX(:,:,:) )
+    call MONITOR_put( PV_MONIT_id(I_MOMY), MOMY(:,:,:) )
+    call MONITOR_put( PV_MONIT_id(I_RHOT), RHOT(:,:,:) )
 
     !##### Mass Budget #####
 
@@ -2705,7 +2795,7 @@ contains
        enddo
        enddo
 
-       call MONIT_put( QP_MONIT_id(iq), RHOQ(:,:,:) )
+       call MONITOR_put( QP_MONIT_id(iq), RHOQ(:,:,:) )
     enddo
 
     ! total dry airmass
@@ -2719,7 +2809,7 @@ contains
        enddo
        enddo
        enddo
-       call MONIT_put( DV_MONIT_id(IM_QDRY), RHOQ(:,:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_QDRY), RHOQ(:,:,:) )
     end if
 
     ! total vapor,liquid,solid tracers
@@ -2734,19 +2824,19 @@ contains
        enddo
        enddo
        enddo
-       call MONIT_put( DV_MONIT_id(IM_QTOT), RHOQ(:,:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_QTOT), RHOQ(:,:,:) )
     end if
 
     ! total evapolation
     if ( moist ) then
-       call MONIT_put( DV_MONIT_id(IM_EVAP), SFLX_QTRC(:,:,I_QV) )
+       call MONITOR_put( DV_MONIT_id(IM_EVAP), SFLX_QTRC(:,:,I_QV) )
 
     endif
 
     ! total precipitation
     if ( DV_MONIT_id(IM_PREC) > 0 ) then
        call ATMOS_vars_get_diagnostic( 'PREC', WORK2D(:,:) )
-       call MONIT_put( DV_MONIT_id(IM_PREC), WORK2D(:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_PREC), WORK2D(:,:) )
     end if
 
 
@@ -2754,19 +2844,19 @@ contains
 
     if ( DV_MONIT_id(IM_ENGT) > 0 ) then
        call ATMOS_vars_get_diagnostic( 'ENGT', WORK3D(:,:,:) )
-       call MONIT_put( DV_MONIT_id(IM_ENGT), WORK3D(:,:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_ENGT), WORK3D(:,:,:) )
     end if
     if ( DV_MONIT_id(IM_ENGP) > 0 ) then
        call ATMOS_vars_get_diagnostic( 'ENGP', WORK3D(:,:,:) )
-       call MONIT_put( DV_MONIT_id(IM_ENGP), WORK3D(:,:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_ENGP), WORK3D(:,:,:) )
     end if
     if ( DV_MONIT_id(IM_ENGK) > 0 ) then
        call ATMOS_vars_get_diagnostic( 'ENGK', WORK3D(:,:,:) )
-       call MONIT_put( DV_MONIT_id(IM_ENGK), WORK3D(:,:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_ENGK), WORK3D(:,:,:) )
     end if
     if ( DV_MONIT_id(IM_ENGI) > 0 ) then
        call ATMOS_vars_get_diagnostic( 'ENGI', WORK3D(:,:,:) )
-       call MONIT_put( DV_MONIT_id(IM_ENGI), WORK3D(:,:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_ENGI), WORK3D(:,:,:) )
     end if
 
 
@@ -2786,22 +2876,22 @@ contains
     enddo
     enddo
 
-    call MONIT_put( DV_MONIT_id(IM_ENGFLXT),      ENGFLXT     (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGFLXT),      ENGFLXT     (:,:) )
 
-    call MONIT_put( DV_MONIT_id(IM_ENGSFC_SH),    SFLX_SH     (:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGSFC_LH),    SFLX_LH     (:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGSFC_RD),    SFLX_RD_net (:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGTOA_RD),    TFLX_RD_net (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_SH),    SFLX_SH     (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_LH),    SFLX_LH     (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_RD),    SFLX_RD_net (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_RD),    TFLX_RD_net (:,:) )
 
-    call MONIT_put( DV_MONIT_id(IM_ENGSFC_LW_up), SFLX_LW_up  (:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGSFC_LW_dn), SFLX_LW_dn  (:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGSFC_SW_up), SFLX_SW_up  (:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGSFC_SW_dn), SFLX_SW_dn  (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_LW_up), SFLX_LW_up  (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_LW_dn), SFLX_LW_dn  (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_SW_up), SFLX_SW_up  (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_SW_dn), SFLX_SW_dn  (:,:) )
 
-    call MONIT_put( DV_MONIT_id(IM_ENGTOA_LW_up), TOAFLX_LW_up(:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGTOA_LW_dn), TOAFLX_LW_dn(:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGTOA_SW_up), TOAFLX_SW_up(:,:) )
-    call MONIT_put( DV_MONIT_id(IM_ENGTOA_SW_dn), TOAFLX_SW_dn(:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_LW_up), TOAFLX_LW_up(:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_LW_dn), TOAFLX_LW_dn(:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_SW_up), TOAFLX_SW_up(:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_SW_dn), TOAFLX_SW_dn(:,:) )
 
 
 
@@ -2817,7 +2907,8 @@ contains
        WNAME(2) = "U"
        WNAME(3) = "V"
 
-       call STAT_detail( WORK(:,:,:,:), WNAME(:) )
+       call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
+                               WNAME(:), WORK(:,:,:,:)                )
     endif
 
     if (       ( ATMOS_DYN_TYPE /= 'OFF' .AND. ATMOS_DYN_TYPE /= 'NONE' )                   &
@@ -2849,8 +2940,9 @@ contains
           WNAME(1) = "Courant num. Z"
           WNAME(2) = "Courant num. X"
           WNAME(3) = "Courant num. Y"
-
-          call STAT_detail( WORK(:,:,:,:), WNAME(:), supress_globalcomm=.true. )
+          call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
+                                  WNAME(:), WORK(:,:,:,:),               &
+                                  local=.true.                           )
 
           call PRC_abort
        endif
@@ -2863,8 +2955,9 @@ contains
           WNAME(1) = "Courant num. Z"
           WNAME(2) = "Courant num. X"
           WNAME(3) = "Courant num. Y"
-
-          call STAT_detail( WORK(:,:,:,:), WNAME(:), supress_globalcomm=.true. )
+          call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
+                                  WNAME(:), WORK(:,:,:,:),               &
+                                  local=.true.                           )
        endif
     endif
 
@@ -3134,15 +3227,20 @@ contains
     if ( restart_fid /= -1 ) then
 
        call FILE_CARTESC_def_var( restart_fid, PV_info(I_DENS)%NAME, PV_info(I_DENS)%DESC, PV_info(I_DENS)%UNIT, 'ZXY',  ATMOS_RESTART_OUT_DTYPE, &
-                                  PV_ID(I_DENS) )
+                                  PV_ID(I_DENS), &
+                                  standard_name=PV_info(I_DENS)%STDNAME )
        call FILE_CARTESC_def_var( restart_fid, PV_info(I_MOMZ)%NAME, PV_info(I_MOMZ)%DESC, PV_info(I_MOMZ)%UNIT, 'ZHXY', ATMOS_RESTART_OUT_DTYPE, &
-                                  PV_ID(I_MOMZ) )
+                                  PV_ID(I_MOMZ), &
+                                  standard_name=PV_info(I_MOMZ)%STDNAME )
        call FILE_CARTESC_def_var( restart_fid, PV_info(I_MOMX)%NAME, PV_info(I_MOMX)%DESC, PV_info(I_MOMX)%UNIT, 'ZXHY', ATMOS_RESTART_OUT_DTYPE, &
-                                  PV_ID(I_MOMX) )
+                                  PV_ID(I_MOMX), &
+                                  standard_name=PV_info(I_MOMX)%STDNAME )
        call FILE_CARTESC_def_var( restart_fid, PV_info(I_MOMY)%NAME, PV_info(I_MOMY)%DESC, PV_info(I_MOMY)%UNIT, 'ZXYH', ATMOS_RESTART_OUT_DTYPE, &
-                                  PV_ID(I_MOMY) )
+                                  PV_ID(I_MOMY), &
+                                  standard_name=PV_info(I_MOMY)%STDNAME )
        call FILE_CARTESC_def_var( restart_fid, PV_info(I_RHOT)%NAME, PV_info(I_RHOT)%DESC, PV_info(I_RHOT)%UNIT, 'ZXY',  ATMOS_RESTART_OUT_DTYPE, &
-                                  PV_ID(I_RHOT) )
+                                  PV_ID(I_RHOT), &
+                                  standard_name=PV_info(I_RHOT)%STDNAME )
        do iq = 1, QA
           call FILE_CARTESC_def_var( restart_fid, TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), 'ZXY',  ATMOS_RESTART_OUT_DTYPE, &
                                      PV_ID(PV_nmax+iq) )

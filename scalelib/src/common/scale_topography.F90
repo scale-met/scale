@@ -191,6 +191,7 @@ contains
 
        call FILE_CARTESC_write( TOPO_Zsfc(:,:), TOPO_OUT_BASENAME, TOPO_OUT_TITLE, & ! [IN]
                                 'TOPO', 'Topography', 'm', 'XY',   TOPO_OUT_DTYPE, & ! [IN]
+                                standard_name="surface_altitude",                  & ! [IN]
                                 haszcoord=.false., aggregate=TOPO_OUT_AGGREGATE    ) ! [IN]
 
     endif

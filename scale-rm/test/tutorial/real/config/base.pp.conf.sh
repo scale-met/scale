@@ -8,7 +8,7 @@ cat << EOF > base.pp.conf
 #
 #################################################
 
-&PARAM_NEST
+&PARAM_COMM_CARTESC_NEST
  OFFLINE_PARENT_BASENAME   = "${PARENT_BASENAME}",
  OFFLINE_PARENT_PRC_NUM_X  = ${PARENT_PRC_NUM_X},
  OFFLINE_PARENT_PRC_NUM_Y  = ${PARENT_PRC_NUM_Y},

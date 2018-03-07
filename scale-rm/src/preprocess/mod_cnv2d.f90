@@ -182,8 +182,8 @@ contains
     use scale_calendar, only: &
        CALENDAR_unit2sec
     use scale_atmos_grid_cartesC_real, only: &
-       REAL_LATY => ATMOS_GRID_CARTESC_REAL_LATY, &
-       REAL_LONX => ATMOS_GRID_CARTESC_REAL_LONX
+       REAL_LATXV => ATMOS_GRID_CARTESC_REAL_LATXV, &
+       REAL_LONUY => ATMOS_GRID_CARTESC_REAL_LONUY
     implicit none
 
     integer                :: GrADS_NLAT         = -1        ! number of latitude  tile
@@ -226,7 +226,7 @@ contains
     real(RP)              :: VAR2D(IA,JA) !< 2D data array
     real(DP)              :: VAR2D_DTSEC
 
-    real(RP)              :: REAL_LONX_mod(0:IA,JA)
+    real(RP)              :: REAL_LONUY_mod(0:IA,JA)
     real(RP)              :: DOMAIN_LATS, DOMAIN_LATE
     real(RP)              :: DOMAIN_LONS, DOMAIN_LONE
     integer               :: DOMAIN_LONSLOC(2), DOMAIN_LONELOC(2)
@@ -320,21 +320,21 @@ contains
 
 
 
-    REAL_LONX_mod(:,:) = mod( REAL_LONX(:,:)+3.0_DP*PI, 2.0_DP*PI ) - PI ! [-> 0..180,-180..0]
+    REAL_LONUY_mod(:,:) = mod( REAL_LONUY(:,:)+3.0_DP*PI, 2.0_DP*PI ) - PI ! [-> 0..180,-180..0]
 
-    DOMAIN_LATS    = minval(REAL_LATY    (:,:))
-    DOMAIN_LATE    = maxval(REAL_LATY    (:,:))
-    DOMAIN_LONS    = minval(REAL_LONX_mod(:,:))
-    DOMAIN_LONE    = maxval(REAL_LONX_mod(:,:))
-    DOMAIN_LONSLOC = minloc(REAL_LONX_mod(:,:))
-    DOMAIN_LONELOC = maxloc(REAL_LONX_mod(:,:))
+    DOMAIN_LATS    = minval(REAL_LATXV    (:,:))
+    DOMAIN_LATE    = maxval(REAL_LATXV    (:,:))
+    DOMAIN_LONS    = minval(REAL_LONUY_mod(:,:))
+    DOMAIN_LONE    = maxval(REAL_LONUY_mod(:,:))
+    DOMAIN_LONSLOC = minloc(REAL_LONUY_mod(:,:))
+    DOMAIN_LONELOC = maxloc(REAL_LONUY_mod(:,:))
 
     check_IDL = .false.
-    if (      DOMAIN_LONS < REAL_LONX_mod( 0,DOMAIN_LONSLOC(2)) &
-         .OR. DOMAIN_LONE > REAL_LONX_mod(IA,DOMAIN_LONELOC(2)) ) then
+    if (      DOMAIN_LONS < REAL_LONUY_mod( 0,DOMAIN_LONSLOC(2)) &
+         .OR. DOMAIN_LONE > REAL_LONUY_mod(IA,DOMAIN_LONELOC(2)) ) then
        check_IDL = .true.
-       DOMAIN_LONS = minval(REAL_LONX_mod(:,:),mask=(REAL_LONX_mod>0.0_RP))
-       DOMAIN_LONE = maxval(REAL_LONX_mod(:,:),mask=(REAL_LONX_mod<0.0_RP))
+       DOMAIN_LONS = minval(REAL_LONUY_mod(:,:),mask=(REAL_LONUY_mod>0.0_RP))
+       DOMAIN_LONE = maxval(REAL_LONUY_mod(:,:),mask=(REAL_LONUY_mod<0.0_RP))
     endif
 
     TILE_NLAT = GrADS_NLAT
@@ -860,8 +860,8 @@ contains
        EPS    => CONST_EPS,    &
        D2R    => CONST_D2R
     use scale_atmos_grid_cartesC_real, only: &
-       REAL_LATY => ATMOS_GRID_CARTESC_REAL_LATY, &
-       REAL_LONX => ATMOS_GRID_CARTESC_REAL_LONX
+       REAL_LATXV => ATMOS_GRID_CARTESC_REAL_LATXV, &
+       REAL_LONUY => ATMOS_GRID_CARTESC_REAL_LONUY
     implicit none
 
     real(RP),              intent(in)  :: DOMAIN_LATS
@@ -886,7 +886,7 @@ contains
     integer,               intent(in)  :: nowstep
     real(RP),              intent(out) :: VAR2D(IA,JA)
 
-    real(RP)   :: REAL_LONX_mod(0:IA,JA)
+    real(RP)   :: REAL_LONUY_mod(0:IA,JA)
 
     real(RP)   :: TILE_LATH    (0:TILE_NLAT)
     real(RP)   :: TILE_LONH    (0:TILE_NLON)
@@ -912,7 +912,7 @@ contains
     integer  :: i, j, ii, jj, t
     !---------------------------------------------------------------------------
 
-    REAL_LONX_mod(:,:) = mod( REAL_LONX(:,:)+3.0_DP*PI, 2.0_DP*PI ) - PI ! [-> 0..180,-180..0]
+    REAL_LONUY_mod(:,:) = mod( REAL_LONUY(:,:)+3.0_DP*PI, 2.0_DP*PI ) - PI ! [-> 0..180,-180..0]
 
     ! data file
     do t = 1, TILE_nmax
@@ -1106,42 +1106,42 @@ contains
 
       jloop: do j = JS-1, JE+1
       iloop: do i = IS-1, IE+1
-                if (       TILE_LONH(ii-1) >= REAL_LONX_mod(i-1,j  ) &
-                     .AND. TILE_LONH(ii-1) <  REAL_LONX_mod(i  ,j  ) &
-                     .AND. TILE_LATH(jj-1) >= REAL_LATY    (i  ,j-1) &
-                     .AND. TILE_LATH(jj-1) <  REAL_LATY    (i  ,j  ) ) then
+                if (       TILE_LONH(ii-1) >= REAL_LONUY_mod(i-1,j  ) &
+                     .AND. TILE_LONH(ii-1) <  REAL_LONUY_mod(i  ,j  ) &
+                     .AND. TILE_LATH(jj-1) >= REAL_LATXV    (i  ,j-1) &
+                     .AND. TILE_LATH(jj-1) <  REAL_LATXV    (i  ,j  ) ) then
 
                    iloc    = i
-                   ifrac_l = min( REAL_LONX_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
+                   ifrac_l = min( REAL_LONUY_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
 
                    jloc    = j
-                   jfrac_b = min( REAL_LATY(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                   jfrac_b = min( REAL_LATXV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
                    exit jloop
 
                 endif
 
-                if (       REAL_LONX_mod(i-1,j) >= REAL_LONX_mod(i  ,j  ) &
-                     .AND. TILE_LATH    (jj-1)  >= REAL_LATY    (i  ,j-1) &
-                     .AND. TILE_LATH    (jj-1)  <  REAL_LATY    (i  ,j  ) ) then ! across the IDL
+                if (       REAL_LONUY_mod(i-1,j) >= REAL_LONUY_mod(i  ,j  ) &
+                     .AND. TILE_LATH     (jj-1)  >= REAL_LATXV    (i  ,j-1) &
+                     .AND. TILE_LATH     (jj-1)  <  REAL_LATXV    (i  ,j  ) ) then ! across the IDL
 
-                   if    (       TILE_LONH(ii-1) >= REAL_LONX_mod(i-1,j) &
-                           .AND. TILE_LONH(ii-1) <  PI                   ) then
+                   if    (       TILE_LONH(ii-1) >= REAL_LONUY_mod(i-1,j) &
+                           .AND. TILE_LONH(ii-1) <  PI                    ) then
 
                       iloc    = i
-                      ifrac_l = min( REAL_LONX_mod(i,j)-TILE_LONH(ii-1)+2.0_RP*PI, TILE_DLON ) / TILE_DLON
+                      ifrac_l = min( REAL_LONUY_mod(i,j)-TILE_LONH(ii-1)+2.0_RP*PI, TILE_DLON ) / TILE_DLON
 
                       jloc    = j
-                      jfrac_b = min( REAL_LATY(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                      jfrac_b = min( REAL_LATXV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
                       exit jloop
 
-                   elseif(       TILE_LONH(ii-1) >= -PI                  &
-                           .AND. TILE_LONH(ii-1) <  REAL_LONX_mod(i  ,j) ) then
+                   elseif(       TILE_LONH(ii-1) >= -PI                   &
+                           .AND. TILE_LONH(ii-1) <  REAL_LONUY_mod(i  ,j) ) then
 
                       iloc    = i
-                      ifrac_l = min( REAL_LONX_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
+                      ifrac_l = min( REAL_LONUY_mod(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
 
                       jloc    = j
-                      jfrac_b = min( REAL_LATY(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                      jfrac_b = min( REAL_LATXV(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
                       exit jloop
 
                    endif

@@ -1412,7 +1412,7 @@ contains
        RANDOM_RH
 
     integer :: ierr
-    integer :: k, i, j
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -1536,7 +1536,7 @@ contains
 
     call RANDOM_get(rndm) ! make random
     do j = JSB, JEB
-    do i = ISB, IEB
+    do i = ISB, min(IEB,IA-1)
     do k = KS, KE
        MOMX(k,i,j) = ( ENV_U + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_U ) &
                    * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
@@ -1545,7 +1545,7 @@ contains
     enddo
 
     call RANDOM_get(rndm) ! make random
-    do j = JSB, JEB
+    do j = JSB, min(JEB,JA-1)
     do i = ISB, IEB
     do k = KS, KE
        MOMY(k,i,j) = ( ENV_V + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_V ) &
@@ -1559,6 +1559,8 @@ contains
     do k = KS, KE
        MOMZ(k,i,j) = 0.0_RP
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
+
+       QTRC(k,i,j,:) = 0.0_RP
     enddo
     enddo
     enddo

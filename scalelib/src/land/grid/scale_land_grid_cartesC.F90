@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module GRID (cartesian) for land
+!> module land / grid / cartesianC
 !!
 !! @par Description
 !!          Grid module for cartesian coordinate for land

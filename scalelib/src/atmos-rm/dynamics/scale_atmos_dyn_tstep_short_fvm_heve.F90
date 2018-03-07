@@ -169,18 +169,6 @@ contains
        ATMOS_DYN_FVM_fluxJ23_XVZ, &
        ATMOS_DYN_FVM_fluxX_XVZ,   &
        ATMOS_DYN_FVM_fluxY_XVZ
-    use scale_atmos_grid_cartesC_metric, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYW, &
-       I_XVW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_UVZ, &
-       I_XY,  &
-       I_UY,  &
-       I_XV,  &
-       I_UV
 #ifdef HIST_TEND
     use scale_file_history, only: &
        FILE_HISTORY_in

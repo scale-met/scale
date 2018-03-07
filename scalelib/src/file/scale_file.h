@@ -20,6 +20,7 @@ typedef struct{
   char     varname[File_HSHORT];
   char     description[File_HMID];
   char     units[File_HSHORT];
+  char     standard_name[File_HMID];
   int32_t  datatype;
   int32_t  rank;
   char     dim_name[File_HSHORT*RANK_MAX];
@@ -28,6 +29,11 @@ typedef struct{
   real64_t time_start;
   real64_t time_end;
   char     time_units[File_HMID];
+  char     calendar[File_HSHORT];
+  int32_t  natts;
+  char     att_name[File_HSHORT*ATT_MAX];
+  int32_t  att_type[ATT_MAX];
+  int32_t  att_len[ATT_MAX];
   int32_t  fid;
 } datainfo_t;
 
@@ -122,8 +128,9 @@ extern int32_t file_set_attribute_double_c( const int32_t  fid,   // (in)
 extern int32_t file_add_associatedvariable_c( const int32_t  fid,    // (in)
 					      const char    *vname); // (in)
 
-extern int32_t file_set_tunits_c( const int32_t fid,          // (in)
-				  const char    *time_units); // (in)
+extern int32_t file_set_tunits_c( const int32_t fid,         // (in)
+				  const char    *time_units, // (in)
+				  const char    *calendar);  // (in)
 
 extern int32_t file_put_axis_c( const int32_t fid,        // (in)
 				const char   *name,       // (in)
@@ -135,13 +142,14 @@ extern int32_t file_put_axis_c( const int32_t fid,        // (in)
 				const int32_t size,       // (in)
 				const int32_t precision); // (in)
 
-extern int32_t file_def_axis_c( const int32_t fid,        // (in)
-				const char   *name,       // (in)
-				const char   *desc,       // (in)
-				const char   *units,      // (in)
-				const char   *dim_name,   // (in)
-				const int32_t dtype,      // (in)
-				const int32_t dim_size);  // (in)
+extern int32_t file_def_axis_c( const int32_t fid,      // (in)
+				const char   *name,     // (in)
+				const char   *desc,     // (in)
+				const char   *units,    // (in)
+				const char   *dim_name, // (in)
+				const int32_t dtype,    // (in)
+				const int32_t dim_size, // (in)
+				const int32_t bounds);  // (in)
 
 extern int32_t file_write_axis_c( const int32_t     fid,        // (in)
 				  const char       *name,       // (in)
@@ -175,16 +183,17 @@ extern int32_t file_write_associatedcoordinate_c( const int32_t     fid,        
 						  const MPI_Offset *start,      // (in)
 						  const MPI_Offset *count);     // (in)
 
-extern int32_t file_add_variable_c(       int32_t *vid,     // (out)
-				    const int32_t  fid,     // (in)
+extern int32_t file_add_variable_c( const int32_t  fid,     // (in)
 				    const char    *varname, // (in)
 				    const char    *desc,    // (in)
 				    const char    *units,   // (in)
+				    const char    *stdname, // (in)
 				    const char   **dims,    // (in)
 				    const int32_t  ndims,   // (in)
 				    const int32_t  dtype,   // (in)
 				    const real64_t tint,    // (in)
-				    const int32_t  tavg);   // (in)
+				    const int32_t  tavg,    // (in)
+				          int32_t *vid);    // (out)
 
 extern int32_t file_write_data_c( const int32_t   fid,       // (in)
 				  const int32_t   vid,       // (in)

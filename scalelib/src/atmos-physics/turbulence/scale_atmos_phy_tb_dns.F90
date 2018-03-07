@@ -140,10 +140,6 @@ contains
        RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
        RFDX => ATMOS_GRID_CARTESC_RFDX, &
        RFDY => ATMOS_GRID_CARTESC_RFDY
-    use scale_atmos_grid_cartesC_metric, only: &
-       I_XY, &
-       I_UY, &
-       I_XV
     implicit none
 
     ! SGS flux

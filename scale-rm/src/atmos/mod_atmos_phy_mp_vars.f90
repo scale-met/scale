@@ -306,9 +306,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_MP_vars_restart_read
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_AREA, &
+       ATMOS_GRID_CARTESC_REAL_TOTAREA
     use scale_file, only: &
        FILE_get_aggregate
     use scale_file_cartesC, only: &
@@ -316,7 +319,6 @@ contains
        FILE_CARTESC_flush
     implicit none
 
-    real(RP) :: total
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
@@ -336,8 +338,14 @@ contains
        end if
 
        if ( STATISTICS_checktotal ) then
-          call STAT_total( total, ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1) )
-          call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2) )
+          call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                                 ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1), & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),        & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_TOTAREA           ) ! (in)
+          call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                                 ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2), & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),        & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_TOTAREA           ) ! (in)
        endif
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_PHY_MP.'
@@ -439,14 +447,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Write restart
   subroutine ATMOS_PHY_MP_vars_restart_write
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_AREA, &
+       ATMOS_GRID_CARTESC_REAL_TOTAREA
     use scale_file_cartesC, only: &
        FILE_CARTESC_write_var
     implicit none
-
-    real(RP) :: total
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
@@ -454,8 +463,14 @@ contains
        call ATMOS_PHY_MP_vars_fillhalo
 
        if ( STATISTICS_checktotal ) then
-          call STAT_total( total, ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1) )
-          call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2) )
+          call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                                 ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1), & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),        & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_TOTAREA           ) ! (in)
+          call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                                 ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2), & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),        & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_TOTAREA           ) ! (in)
        endif
 
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_MP_SFLX_rain(:,:), &

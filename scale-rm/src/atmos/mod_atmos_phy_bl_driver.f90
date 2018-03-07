@@ -145,9 +145,9 @@ contains
   !-----------------------------------------------------------------------------
   !> calculate tendency
   subroutine ATMOS_PHY_BL_driver_calc_tendency( update_flag )
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_time, only: &
@@ -159,7 +159,9 @@ contains
        I_QV
     use scale_atmos_grid_cartesC_real, only: &
        CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
-       FZ => ATMOS_GRID_CARTESC_REAL_FZ
+       FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
+       ATMOS_GRID_CARTESC_REAL_VOL, &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
@@ -203,8 +205,6 @@ contains
     real(RP) :: N2  (KA,IA,JA) !> static stability
     real(RP) :: POTL(KA,IA,JA) !> liquid water potential temperature
     real(RP) :: POTV(KA,IA,JA) !> virtual potential temperature
-
-    real(RP) :: total ! dummy
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -263,15 +263,33 @@ contains
        enddo
 
        if ( STATISTICS_checktotal ) then
-          call STAT_total( total, RHOU_t_BL(:,:,:), 'RHOU_t_BL' )
-          call STAT_total( total, RHOV_t_BL(:,:,:), 'RHOV_t_BL' )
-          call STAT_total( total, RHOT_t_BL(:,:,:), 'RHOT_t_BL' )
-          call STAT_total( total, Nu(:,:,:), 'Nu_BL' )
-          call STAT_total( total, Kh(:,:,:), 'Kh_BL' )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 RHOU_t_BL(:,:,:), 'RHOU_t_BL',      &
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL      )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 RHOV_t_BL(:,:,:), 'RHOV_t_BL',      &
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL      )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 RHOT_t_BL(:,:,:), 'RHOT_t_BL',      &
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL      )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                  Nu(:,:,:),       'Nu_BL',          &
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL      )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 Kh(:,:,:),         'Kh_BL',         &
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL      )
 
           do iq = 1, QA
              if ( .not. TRACER_ADVC(iq) ) cycle
-             call STAT_total( total, RHOQ_t_BL(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_BL' )
+             call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                    RHOQ_t_BL(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_BL', &
+                                    ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                  &
+                                    ATMOS_GRID_CARTESC_REAL_TOTVOL                       )
           enddo
        endif
 

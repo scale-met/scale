@@ -144,14 +144,16 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
-       Z1 => ATMOS_GRID_CARTESC_REAL_Z1
+       Z1 => ATMOS_GRID_CARTESC_REAL_Z1, &
+       ATMOS_GRID_CARTESC_REAL_AREA, &
+       ATMOS_GRID_CARTESC_REAL_TOTAREA
     use scale_topography, only: &
        TOPO_Zsfc
     use scale_time, only: &
        dt_SF => TIME_DTSEC_ATMOS_PHY_SF
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_bottom, only: &
@@ -238,7 +240,6 @@ contains
 
     real(RP) :: Uabs10(IA,JA) ! 10m absolute wind [m/s]
     real(RP) :: MSLP  (IA,JA) ! mean sea-level pressure [Pa]
-    real(RP) :: total ! dummy
 
     real(RP) :: q(QA)
     real(RP) :: qdry
@@ -417,15 +418,36 @@ contains
     end if
 
     if ( STATISTICS_checktotal ) then
-       call STAT_total( total, DENS_t_SF(:,:), 'DENS_t_SF' )
-       call STAT_total( total, MOMZ_t_SF(:,:), 'MOMZ_t_SF' )
-       call STAT_total( total, RHOU_t_SF(:,:), 'RHOU_t_SF' )
-       call STAT_total( total, RHOV_t_SF(:,:), 'RHOV_t_SF' )
-       call STAT_total( total, RHOH_SF  (:,:), 'RHOH_SF'   )
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              DENS_t_SF(:,:), 'DENS_t_SF',       &
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA    )
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              MOMZ_t_SF(:,:), 'MOMZ_t_SF',       &
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA    )
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              RHOU_t_SF(:,:), 'RHOU_t_SF',       &
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA    )
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              RHOV_t_SF(:,:), 'RHOV_t_SF',       &
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA    )
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              RHOH_SF  (:,:), 'RHOH_SF',         &
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA    )
 
        if ( I_QV > 0 ) then
-          call STAT_total( total, RHOT_t_SF(:,:)     , 'RHOT_t_SF' )
-          call STAT_total( total, RHOQ_t_SF(:,:,I_QV), trim(TRACER_NAME(I_QV))//'_t_SF' )
+          call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                                 RHOT_t_SF(:,:)     , 'RHOT_t_SF',                      &
+                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),                     &
+                                 ATMOS_GRID_CARTESC_REAL_TOTAREA                        )
+          call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                                 RHOQ_t_SF(:,:,I_QV), trim(TRACER_NAME(I_QV))//'_t_SF', &
+                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),                     &
+                                 ATMOS_GRID_CARTESC_REAL_TOTAREA                        )
        end if
     endif
 

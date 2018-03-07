@@ -110,8 +110,7 @@ module scale_file
   end interface FILE_write_associatedCoordinate
   interface FILE_add_variable
      module procedure FILE_add_variable_no_time
-     module procedure FILE_add_variable_realSP
-     module procedure FILE_add_variable_realDP
+     module procedure FILE_add_variable_with_time
   end interface FILE_add_variable
   interface FILE_read
     module procedure FILE_read_realSP_1D
@@ -233,17 +232,12 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_create( &
-       basename,    &
-       title,       &
-       source,      &
-       institution, &
-       fid,         &
-       existed,     &
-       rankid,      &
-       single,      &
-       aggregate,   &
-       time_units,  &
-       append       )
+       basename,                   &
+       title, source, institution, &
+       fid, existed,               &
+       rankid, single, aggregate,  &
+       time_units, calendar,       &
+       append                      )
     implicit none
 
     character(len=*), intent(in)  :: basename
@@ -258,9 +252,11 @@ contains
     logical,          intent(in), optional :: single
     logical,          intent(in), optional :: aggregate
     character(len=*), intent(in), optional :: time_units
+    character(len=*), intent(in), optional :: calendar
     logical,          intent(in), optional :: append
 
-    character(len=FILE_HMID) :: time_units_
+    character(len=FILE_HMID)   :: time_units_
+    character(len=FILE_HSHORT) :: calendar_
     integer :: rankid_
     logical :: single_
     integer :: mode
@@ -286,6 +282,12 @@ contains
        time_units_ = 'seconds'
     endif
 
+    if ( present(calendar) ) then
+       calendar_ = calendar
+    else
+       calendar_ = ""
+    end if
+
     mode = FILE_FWRITE
     if ( present(append) ) then
        if( append ) mode = FILE_FAPPEND
@@ -310,9 +312,9 @@ contains
        call FILE_set_attribute( fid, "global", "rankid"  , (/rankid/)  ) ! [IN]
     endif
 
-    call file_set_tunits_c( FILE_files(fid)%fid, & ! [IN]
-                            time_units_,         & ! [IN]
-                            error                ) ! [OUT]
+    call file_set_tunits_c( FILE_files(fid)%fid,    & ! [IN]
+                            time_units_, calendar_, & ! [IN]
+                            error                   ) ! [OUT]
 
     if ( error /= FILE_SUCCESS_CODE ) then
        write(*,*) 'xxx [FILE_create] failed to set time units'
@@ -560,7 +562,8 @@ contains
   subroutine FILE_def_axis( &
        fid,                       &
        name, desc, units,         &
-       dim_name, dtype, dim_size  )
+       dim_name, dtype, dim_size, &
+       bounds                     )
     integer,          intent(in) :: fid
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
@@ -569,11 +572,19 @@ contains
     integer,          intent(in) :: dtype
     integer,          intent(in) :: dim_size
 
+    logical,          intent(in), optional :: bounds
+
     integer :: error
+    integer :: bounds_
+
+    bounds_ = 0 ! .false.
+    if ( present(bounds) ) then
+       if ( bounds ) bounds_ = 1 ! .true.
+    end if
 
     call file_def_axis_c( FILE_files(fid)%fid, &
-         name, desc, units, dim_name, dtype, dim_size, & ! (in)
-         error                                         ) ! (out)
+         name, desc, units, dim_name, dtype, dim_size, bounds_, & ! (in)
+         error                                                  ) ! (out)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        write(*,*) 'xxx failed to define axis'
        call PRC_abort
@@ -1243,6 +1254,7 @@ contains
   subroutine FILE_add_variable_no_time( &
        fid,                  &
        varname, desc, units, &
+       standard_name,        &
        dims, dtype,          &
        vid,                  &
        time_avg              )
@@ -1250,23 +1262,26 @@ contains
     character(len=*), intent( in) :: varname
     character(len=*), intent( in) :: desc
     character(len=*), intent( in) :: units
+    character(len=*), intent( in) :: standard_name
     character(len=*), intent( in) :: dims(:)
     integer,          intent( in) :: dtype
     integer,          intent(out) :: vid
     logical,          intent( in), optional :: time_avg
 
-    call FILE_add_variable_realDP( fid,              & ! (in)
-         varname, desc, units, dims, dtype, -1.0_DP, & ! (in)
-         vid,                                        & ! (out)
-         time_avg = time_avg                         ) ! (in)
+    call FILE_add_variable_with_time( fid,    & ! (in)
+         varname, desc, units, standard_name, & ! (in)
+         dims, dtype, -1.0_DP,                & ! (in)
+         vid,                                 & ! (out)
+         time_avg = time_avg                  ) ! (in)
 
     return
   end subroutine FILE_add_variable_no_time
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_add_variable_realSP( &
+  subroutine FILE_add_variable_with_time( &
        fid,                  &
        varname, desc, units, &
+       standard_name,        &
        dims, dtype,          &
        time_int,             &
        vid,                  &
@@ -1276,15 +1291,15 @@ contains
     character(len=*), intent(in)  :: varname
     character(len=*), intent(in)  :: desc
     character(len=*), intent(in)  :: units
+    character(len=*), intent(in)  :: standard_name
     character(len=*), intent(in)  :: dims(:)
     integer,          intent(in)  :: dtype
-    real(SP),    intent(in)  :: time_int
+    real(DP),         intent(in)  :: time_int
 
     integer,          intent(out) :: vid
 
     logical,          intent(in), optional :: time_avg
 
-    real(DP) :: tint8
     integer  :: cvid
     integer  :: ndims
     integer  :: itavg
@@ -1304,7 +1319,6 @@ contains
 
     if ( vid < 0 ) then ! variable registration
 
-       tint8 = real(time_int,DP)
        ndims = size(dims)
        itavg = 0
 
@@ -1312,11 +1326,10 @@ contains
           if( time_avg ) itavg = 1
        endif
 
-       call file_add_variable_c( cvid,                              & ! [OUT]
-                                 FILE_files(fid)%fid,              & ! [IN]
-                                 varname, desc, units,             & ! [IN]
-                                 dims, ndims, dtype, tint8, itavg, & ! [IN]
-                                 error                             ) ! [OUT]
+       call file_add_variable_c( FILE_files(fid)%fid,                 & ! [IN]
+                                 varname, desc, units, standard_name, & ! [IN]
+                                 dims, ndims, dtype, time_int, itavg, & ! [IN]
+                                 cvid, error                          ) ! [OUT]
 
        if ( error /= FILE_SUCCESS_CODE ) then
           write(*,*) 'xxx failed to add variable: '//trim(varname)
@@ -1334,84 +1347,12 @@ contains
     endif
 
     return
-  end subroutine FILE_add_variable_realSP
-
-  !-----------------------------------------------------------------------------
-  subroutine FILE_add_variable_realDP( &
-       fid,                  &
-       varname, desc, units, &
-       dims, dtype,          &
-       time_int,             &
-       vid,                  &
-       time_avg              )
-    implicit none
-    integer,          intent(in)  :: fid
-    character(len=*), intent(in)  :: varname
-    character(len=*), intent(in)  :: desc
-    character(len=*), intent(in)  :: units
-    character(len=*), intent(in)  :: dims(:)
-    integer,          intent(in)  :: dtype
-    real(DP),    intent(in)  :: time_int
-
-    integer,          intent(out) :: vid
-
-    logical,          intent(in), optional :: time_avg
-
-    real(DP) :: tint8
-    integer  :: cvid
-    integer  :: ndims
-    integer  :: itavg
-    integer  :: error
-    integer  :: n
-
-    intrinsic size
-    !---------------------------------------------------------------------------
-
-    vid = -1
-    do n = 1, FILE_nvars
-       if ( FILE_vars(n)%fid == fid .and. FILE_vars(n)%name == varname ) then
-          vid = FILE_vars(n)%vid
-          exit
-       endif
-    enddo
-
-    if ( vid < 0 ) then ! variable registration
-
-       tint8 = real(time_int,DP)
-       ndims = size(dims)
-       itavg = 0
-
-       if ( present(time_avg) ) then
-          if( time_avg ) itavg = 1
-       endif
-
-       call file_add_variable_c( cvid,                              & ! [OUT]
-                                 FILE_files(fid)%fid,              & ! [IN]
-                                 varname, desc, units,             & ! [IN]
-                                 dims, ndims, dtype, tint8, itavg, & ! [IN]
-                                 error                             ) ! [OUT]
-
-       if ( error /= FILE_SUCCESS_CODE ) then
-          write(*,*) 'xxx failed to add variable: '//trim(varname)
-          call PRC_abort
-       endif
-
-       FILE_nvars = FILE_nvars + 1
-       vid = FILE_nvars
-       FILE_vars(vid)%name = varname
-       FILE_vars(vid)%vid  = cvid
-       FILE_vars(vid)%fid  = fid
-
-       if (IO_L) write(IO_FID_LOG,'(A,I3.3,A,I4.4,2A)') &
-       '###### FILE variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
-    endif
-
-    return
-  end subroutine FILE_add_variable_realDP
+  end subroutine FILE_add_variable_with_time
 
   subroutine FILE_def_variable( &
        fid,                  &
        varname, desc, units, &
+       standard_name,        &
        ndims, dims,          &
        dtype,                &
        vid,                  &
@@ -1421,6 +1362,7 @@ contains
     character(len=*), intent( in) :: varname
     character(len=*), intent( in) :: desc
     character(len=*), intent( in) :: units
+    character(len=*), intent( in) :: standard_name
     integer,          intent( in) :: ndims
     character(len=*), intent( in) :: dims(:)
     integer,          intent( in) :: dtype
@@ -1462,11 +1404,11 @@ contains
           itavg = 0
        end if
 
-       call file_add_variable_c( cvid,                & ! (out)
-            FILE_files(fid)%fid,                      & ! (in)
-            varname, desc, units, dims, ndims, dtype, & ! (in)
-            tint_, itavg,                             & ! (in)
-            error                                     ) ! (out)
+       call file_add_variable_c( FILE_files(fid)%fid,                 & ! (in)
+                                 varname, desc, units, standard_name, & ! (in)
+                                 dims, ndims, dtype,                  & ! (in)
+                                 tint_, itavg,                        & ! (in)
+                                 cvid, error                          ) ! (out)
        if ( error /= FILE_SUCCESS_CODE ) then
           write(*,*) 'xxx failed to add variable: '//trim(varname)
           call PRC_abort
@@ -2137,12 +2079,14 @@ contains
   ! FILE_get_dataInfo
   !-----------------------------------------------------------------------------
   subroutine FILE_get_dataInfo_fname( &
-       basename, varname,               &
-       rankid, istep, single,           &
-       description, units,              &
-       datatype,                        &
-       dim_rank, dim_name, dim_size,    &
-       time_start, time_end, time_units )
+       basename, varname,                  &
+       rankid, istep, single,              &
+       description, units, standard_name,  &
+       datatype,                           &
+       dim_rank, dim_name, dim_size,       &
+       natts, att_name, att_type, att_len, &
+       time_start, time_end,               &
+       time_units, calendar                )
     implicit none
 
     character(len=*),           intent(in)  :: basename
@@ -2153,13 +2097,19 @@ contains
     logical,                    intent(in),  optional :: single
     character(len=FILE_HMID),   intent(out), optional :: description
     character(len=FILE_HSHORT), intent(out), optional :: units
+    character(len=FILE_HMID),   intent(out), optional :: standard_name
     integer,                    intent(out), optional :: datatype
     integer,                    intent(out), optional :: dim_rank
     character(len=FILE_HSHORT), intent(out), optional :: dim_name(:)
     integer,                    intent(out), optional :: dim_size(:)
+    integer,                    intent(out), optional :: natts
+    character(len=FILE_HSHORT), intent(out), optional :: att_name(:)
+    integer,                    intent(out), optional :: att_type(:)
+    integer,                    intent(out), optional :: att_len (:)
     real(DP),                   intent(out), optional :: time_start
     real(DP),                   intent(out), optional :: time_end
     character(len=FILE_HMID),   intent(out), optional :: time_units
+    character(len=FILE_HSHORT), intent(out), optional :: calendar
 
     logical :: single_
     integer :: fid
@@ -2176,29 +2126,26 @@ contains
                     fid,                          & ! [OUT]
                     rankid=rankid, single=single_ ) ! [IN]
 
-    call FILE_get_dataInfo_fid( fid,         & ! [IN]
-                                varname,     & ! [IN]
-                                istep,       & ! [IN] , optional
-                                description, & ! [OUT], optional
-                                units,       & ! [OUT], optional
-                                datatype,    & ! [OUT], optional
-                                dim_rank,    & ! [OUT], optional
-                                dim_name,    & ! [OUT], optional
-                                dim_size,    & ! [OUT], optional
-                                time_start,  & ! [OUT], optional
-                                time_end,    & ! [OUT], optional
-                                time_units   ) ! [OUT], optional
+    call FILE_get_dataInfo_fid( fid, varname,                              & ! [IN]
+                                istep,                                     & ! [IN] , optional
+                                description, units, standard_name,         & ! [OUT], optional
+                                datatype,                                  & ! [OUT], optional
+                                dim_rank, dim_name, dim_size,              & ! [OUT], optional
+                                natts, att_name, att_type, att_len,        & ! [OUT], optional
+                                time_start, time_end, time_units, calendar ) ! [OUT], optional
 
     return
   end subroutine FILE_get_dataInfo_fname
 
   subroutine FILE_get_dataInfo_fid( &
-       fid, varname,                    &
-       istep,                           &
-       description, units,              &
-       datatype,                        &
-       dim_rank, dim_name, dim_size,    &
-       time_start, time_end, time_units )
+       fid, varname,                       &
+       istep,                              &
+       description, units, standard_name,  &
+       datatype,                           &
+       dim_rank, dim_name, dim_size,       &
+       natts, att_name, att_type, att_len, &
+       time_start, time_end,               &
+       time_units, calendar                )
     implicit none
 
     integer,          intent(in)  :: fid
@@ -2207,20 +2154,27 @@ contains
     integer,                    intent(in),  optional :: istep
     character(len=FILE_HMID),   intent(out), optional :: description
     character(len=FILE_HSHORT), intent(out), optional :: units
+    character(len=FILE_HMID),   intent(out), optional :: standard_name
     integer,                    intent(out), optional :: datatype
     integer,                    intent(out), optional :: dim_rank
     character(len=FILE_HSHORT), intent(out), optional :: dim_name(:)
     integer,                    intent(out), optional :: dim_size(:)
+    integer,                    intent(out), optional :: natts
+    character(len=FILE_HSHORT), intent(out), optional :: att_name(:)
+    integer,                    intent(out), optional :: att_type(:)
+    integer,                    intent(out), optional :: att_len (:)
     real(DP),                   intent(out), optional :: time_start
     real(DP),                   intent(out), optional :: time_end
     character(len=FILE_HMID),   intent(out), optional :: time_units
+    character(len=FILE_HSHORT), intent(out), optional :: calendar
 
     type(datainfo) :: dinfo
 
     integer  :: istep_
     real(DP) :: time(1)
-    integer  :: ndim, idim
+    integer  :: i
     integer  :: error
+    logical  :: existed
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -2246,24 +2200,40 @@ contains
        call PRC_abort
     endif
 
-    if( present(description) ) description = dinfo%description
-    if( present(units)       ) units       = dinfo%units
-    if( present(datatype)    ) datatype    = dinfo%datatype
-    if( present(dim_rank)    ) dim_rank    = dinfo%rank
+    if( present(description)   ) description   = dinfo%description
+    if( present(units)         ) units         = dinfo%units
+    if( present(standard_name) ) standard_name = dinfo%standard_name
+    if( present(datatype)      ) datatype      = dinfo%datatype
+    if( present(dim_rank)      ) dim_rank      = dinfo%rank
 
     if ( present(dim_name) ) then
-       ndim = min( dinfo%rank, size(dim_name) ) ! limit dimension rank
-       do idim = 1, ndim
-          dim_name(idim) = dinfo%dim_name(idim)
+       do i = 1, min( dinfo%rank, size(dim_name) ) ! limit dimension rank
+          dim_name(i) = dinfo%dim_name(i)
        enddo
     endif
 
     if ( present(dim_size) ) then
-       ndim = min( dinfo%rank, size(dim_size) ) ! limit dimension rank
-       do idim = 1, ndim
-          dim_size(idim) = dinfo%dim_size(idim)
+       do i = 1, min( dinfo%rank, size(dim_size) ) ! limit dimension rank
+          dim_size(i) = dinfo%dim_size(i)
        enddo
     endif
+
+    if ( present(natts) ) natts = dinfo%natts
+    if ( present(att_name) ) then
+       do i = 1, min( dinfo%natts, size(att_name) )
+          att_name(i) = dinfo%att_name(i)
+       end do
+    end if
+    if ( present(att_type) ) then
+       do i = 1, min( dinfo%natts, size(att_type) )
+          att_type(i) = dinfo%att_type(i)
+       end do
+    end if
+    if ( present(att_len) ) then
+       do i = 1, min( dinfo%natts, size(att_len) )
+          att_len(i) = dinfo%att_len(i)
+       end do
+    end if
 
     if ( present(time_units)  ) then
        if ( dinfo%time_units == "" ) then
@@ -2272,6 +2242,15 @@ contains
           time_units = dinfo%time_units
        endif
     endif
+
+    if ( present(calendar) ) then
+       if ( dinfo%time_units == "" ) then
+          call FILE_get_attribute( fid, "global", "calendar", calendar, existed )
+          if ( .not. existed ) calendar = ""
+       else
+          calendar = dinfo%calendar
+       end if
+    end if
 
     if ( present(time_start)  ) then
        if ( dinfo%time_units == "" ) then
@@ -2297,30 +2276,35 @@ contains
   !-----------------------------------------------------------------------------
   ! FILE_get_data_all_dataInfo
   !-----------------------------------------------------------------------------
-  subroutine FILE_get_all_dataInfo_fname( &
-       step_limit, dim_limit,            &
-       basename, varname,                &
-       step_nmax,                        &
-       description, units, datatype,     &
-       dim_rank, dim_name, dim_size,     &
-       time_start, time_end, time_units, &
-       rankid, single                    )
+  subroutine FILE_get_all_dataInfo_fname(  &
+       basename, varname,                  &
+       step_nmax,                          &
+       description, units, standard_name,  &
+       datatype,                           &
+       dim_rank, dim_name, dim_size,       &
+       natts, att_name, att_type, att_len, &
+       time_start, time_end,               &
+       time_units, calendar,               &
+       rankid, single                      )
     implicit none
-
-    integer,                    intent(in)  :: step_limit
-    integer,                    intent(in)  :: dim_limit
     character(len=*),           intent(in)  :: basename
     character(len=*),           intent(in)  :: varname
     integer,                    intent(out) :: step_nmax
     character(len=FILE_HMID),   intent(out) :: description
     character(len=FILE_HSHORT), intent(out) :: units
+    character(len=FILE_HMID),   intent(out) :: standard_name
     integer,                    intent(out) :: datatype
     integer,                    intent(out) :: dim_rank
-    character(len=FILE_HSHORT), intent(out) :: dim_name  (dim_limit)
-    integer,                    intent(out) :: dim_size  (dim_limit)
-    real(DP),                   intent(out) :: time_start(step_limit)
-    real(DP),                   intent(out) :: time_end  (step_limit)
+    character(len=FILE_HSHORT), intent(out) :: dim_name  (:)
+    integer,                    intent(out) :: dim_size  (:)
+    integer,                    intent(out) :: natts
+    character(len=FILE_HSHORT), intent(out) :: att_name  (:)
+    integer,                    intent(out) :: att_type  (:)
+    integer,                    intent(out) :: att_len   (:)
+    real(DP),                   intent(out) :: time_start(:)
+    real(DP),                   intent(out) :: time_end  (:)
     character(len=FILE_HMID),   intent(out) :: time_units
+    character(len=FILE_HSHORT), intent(out) :: calendar
 
     integer,                    intent(in), optional :: rankid
     logical,                    intent(in), optional :: single
@@ -2340,52 +2324,64 @@ contains
                     fid,                          & ! [OUT]
                     rankid=rankid, single=single_ ) ! [IN]
 
-    call FILE_get_all_datainfo_fid( step_limit, dim_limit,           & ! [IN]
-                                    fid, varname,                    & ! [IN]
-                                    step_nmax,                       & ! [OUT]
-                                    description, units, datatype,    & ! [OUT]
-                                    dim_rank, dim_name, dim_size,    & ! [OUT]
-                                    time_start, time_end, time_units ) ! [OUT]
+    call FILE_get_all_datainfo_fid( fid, varname,                                & ! [IN]
+                                    step_nmax,                                   & ! [OUT]
+                                    description, units, standard_name,           & ! [OUT]
+                                    datatype,                                    & ! [OUT]
+                                    dim_rank, dim_name(:), dim_size(:),          & ! [OUT]
+                                    natts, att_name(:), att_type(:), att_len(:), & ! [OUT]
+                                    time_start(:), time_end(:),                  & ! [OUT]
+                                    time_units, calendar                         ) ! [OUT]
 
     return
   end subroutine FILE_get_all_dataInfo_fname
 
   subroutine FILE_get_all_dataInfo_fid( &
-       step_limit, dim_limit,           &
-       fid, varname,                    &
-       step_nmax,                       &
-       description, units, datatype,    &
-       dim_rank, dim_name, dim_size,    &
-       time_start, time_end, time_units )
+       fid, varname,                       &
+       step_nmax,                          &
+       description, units, standard_name,  &
+       datatype,                           &
+       dim_rank, dim_name, dim_size,       &
+       natts, att_name, att_type, att_len, &
+       time_start, time_end,               &
+       time_units, calendar                )
     implicit none
 
-    integer,                    intent(in)  :: step_limit
-    integer,                    intent(in)  :: dim_limit
     integer,                    intent(in)  :: fid
     character(len=*),           intent(in)  :: varname
     integer,                    intent(out) :: step_nmax
     character(len=FILE_HMID),   intent(out) :: description
     character(len=FILE_HSHORT), intent(out) :: units
+    character(len=FILE_HMID),   intent(out) :: standard_name
     integer,                    intent(out) :: datatype
     integer,                    intent(out) :: dim_rank
-    character(len=FILE_HSHORT), intent(out) :: dim_name  (dim_limit)
-    integer,                    intent(out) :: dim_size  (dim_limit)
-    real(DP),                   intent(out) :: time_start(step_limit)
-    real(DP),                   intent(out) :: time_end  (step_limit)
+    character(len=FILE_HSHORT), intent(out) :: dim_name  (:)
+    integer,                    intent(out) :: dim_size  (:)
+    integer,                    intent(out) :: natts
+    character(len=FILE_HSHORT), intent(out) :: att_name  (:)
+    integer,                    intent(out) :: att_type  (:)
+    integer,                    intent(out) :: att_len   (:)
+    real(DP),                   intent(out) :: time_start(:)
+    real(DP),                   intent(out) :: time_end  (:)
     character(len=FILE_HMID),   intent(out) :: time_units
+    character(len=FILE_HSHORT), intent(out) :: calendar
 
     type(datainfo) :: dinfo
 
     real(DP) :: time(1)
-    integer  :: ndim, idim
+    integer  :: i
     integer  :: error
+    logical  :: existed
 
     integer  :: istep
+
+    intrinsic size
     !---------------------------------------------------------------------------
 
     ! initialize
     description   = ""
     units         = ""
+    standard_name = ""
     datatype      = -1
     dim_rank      = -1
     dim_name  (:) = ""
@@ -2393,7 +2389,7 @@ contains
     time_start(:) = FILE_RMISS
     time_end  (:) = FILE_RMISS
 
-    do istep = 1, step_limit
+    do istep = 1, min( size(time_start), size(time_end) )
        !--- get data information
        call file_get_datainfo_c( dinfo,               & ! [OUT]
                                  FILE_files(fid)%fid, & ! [IN]
@@ -2409,19 +2405,28 @@ contains
        endif
 
        if ( istep == 1 ) then
-          description = dinfo%description
-          units       = dinfo%units
-          datatype    = dinfo%datatype
-          dim_rank    = dinfo%rank
+          description   = dinfo%description
+          units         = dinfo%units
+          standard_name = dinfo%standard_name
+          datatype      = dinfo%datatype
+          dim_rank      = dinfo%rank
+          natts         = dinfo%natts
 
-          ndim = min( dinfo%rank, dim_limit ) ! limit dimension rank
-          do idim = 1, ndim
-             dim_name(idim) = dinfo%dim_name(idim)
-             dim_size(idim) = dinfo%dim_size(idim)
+          do i = 1, min( dinfo%rank, size(dim_name) ) ! limit dimension rank
+             dim_name(i) = dinfo%dim_name(i)
+             dim_size(i) = dinfo%dim_size(i)
           enddo
+
+          do i = 1, min( dinfo%natts, size(att_name) )
+             att_name(i) = dinfo%att_name(i)
+             att_type(i) = dinfo%att_type(i)
+             att_len (i) = dinfo%att_len (i)
+          end do
 
           if ( dinfo%time_units == "" ) then
              call FILE_get_attribute( fid, "global", "time_units", time_units )
+             call FILE_get_attribute( fid, "global", "calendar", calendar, existed )
+             if ( .not. existed ) calendar = ""
              call FILE_get_attribute( fid, "global", "time_start", time )
              time_start(1) = time(1)
              time_end  (1) = time(1)
@@ -2429,6 +2434,7 @@ contains
              exit
           else
              time_units    = dinfo%time_units
+             calendar      = dinfo%calendar
              time_start(1) = dinfo%time_start
              time_end  (1) = dinfo%time_end
           endif
@@ -2813,30 +2819,28 @@ contains
        end if
     end if
 
-    if (present(ntypes) ) then
+    if ( present(ntypes) ) then
        call file_read_data_c( var(:),             & ! (out)
             dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
+    else if ( present(start) .and. present(count) ) then
+       call file_read_data_c( var(:),          & ! (out)
+            dinfo, SP, 0, 0, start(:), count(:), & ! (in)
+            error                                     ) ! (out)
     else
-       if ( present(start) .and. present(count) ) then
-          call file_read_data_c( var(:),          & ! (out)
-               dinfo, SP, 0, 0, start(:), count(:), & ! (in)
-               error                                     ) ! (out)
-       else
-          dim_size(:) = shape(var)
-          do n = 1, 1
-             if ( dinfo%dim_size(n) /= dim_size(n) ) then
-                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-                call PRC_abort
-             end if
-          end do
-          call file_read_data_c( var(:), & ! (out)
-               dinfo, SP, 0, 0, -1, -1,    & ! (in)
-               error                            ) ! (out)
-       end if
+       dim_size(:) = shape(var)
+       do n = 1, 1
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
+          end if
+       end do
+       call file_read_data_c( var(:), & ! (out)
+            dinfo, SP, 0, 0, -1, -1,    & ! (in)
+            error                            ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
+       write(*,*) 'xxx failed to get data value: ', trim(varname)
        call PRC_abort
     end if
 
@@ -2922,30 +2926,28 @@ contains
        end if
     end if
 
-    if (present(ntypes) ) then
+    if ( present(ntypes) ) then
        call file_read_data_c( var(:),             & ! (out)
             dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
+    else if ( present(start) .and. present(count) ) then
+       call file_read_data_c( var(:),          & ! (out)
+            dinfo, DP, 0, 0, start(:), count(:), & ! (in)
+            error                                     ) ! (out)
     else
-       if ( present(start) .and. present(count) ) then
-          call file_read_data_c( var(:),          & ! (out)
-               dinfo, DP, 0, 0, start(:), count(:), & ! (in)
-               error                                     ) ! (out)
-       else
-          dim_size(:) = shape(var)
-          do n = 1, 1
-             if ( dinfo%dim_size(n) /= dim_size(n) ) then
-                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-                call PRC_abort
-             end if
-          end do
-          call file_read_data_c( var(:), & ! (out)
-               dinfo, DP, 0, 0, -1, -1,    & ! (in)
-               error                            ) ! (out)
-       end if
+       dim_size(:) = shape(var)
+       do n = 1, 1
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
+          end if
+       end do
+       call file_read_data_c( var(:), & ! (out)
+            dinfo, DP, 0, 0, -1, -1,    & ! (in)
+            error                            ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
+       write(*,*) 'xxx failed to get data value: ', trim(varname)
        call PRC_abort
     end if
 
@@ -3031,30 +3033,28 @@ contains
        end if
     end if
 
-    if (present(ntypes) ) then
+    if ( present(ntypes) ) then
        call file_read_data_c( var(:,:),             & ! (out)
             dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
+    else if ( present(start) .and. present(count) ) then
+       call file_read_data_c( var(:,:),          & ! (out)
+            dinfo, SP, 0, 0, start(:), count(:), & ! (in)
+            error                                     ) ! (out)
     else
-       if ( present(start) .and. present(count) ) then
-          call file_read_data_c( var(:,:),          & ! (out)
-               dinfo, SP, 0, 0, start(:), count(:), & ! (in)
-               error                                     ) ! (out)
-       else
-          dim_size(:) = shape(var)
-          do n = 1, 2
-             if ( dinfo%dim_size(n) /= dim_size(n) ) then
-                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-                call PRC_abort
-             end if
-          end do
-          call file_read_data_c( var(:,:), & ! (out)
-               dinfo, SP, 0, 0, -1, -1,    & ! (in)
-               error                            ) ! (out)
-       end if
+       dim_size(:) = shape(var)
+       do n = 1, 2
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
+          end if
+       end do
+       call file_read_data_c( var(:,:), & ! (out)
+            dinfo, SP, 0, 0, -1, -1,    & ! (in)
+            error                            ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
+       write(*,*) 'xxx failed to get data value: ', trim(varname)
        call PRC_abort
     end if
 
@@ -3140,30 +3140,28 @@ contains
        end if
     end if
 
-    if (present(ntypes) ) then
+    if ( present(ntypes) ) then
        call file_read_data_c( var(:,:),             & ! (out)
             dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
+    else if ( present(start) .and. present(count) ) then
+       call file_read_data_c( var(:,:),          & ! (out)
+            dinfo, DP, 0, 0, start(:), count(:), & ! (in)
+            error                                     ) ! (out)
     else
-       if ( present(start) .and. present(count) ) then
-          call file_read_data_c( var(:,:),          & ! (out)
-               dinfo, DP, 0, 0, start(:), count(:), & ! (in)
-               error                                     ) ! (out)
-       else
-          dim_size(:) = shape(var)
-          do n = 1, 2
-             if ( dinfo%dim_size(n) /= dim_size(n) ) then
-                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-                call PRC_abort
-             end if
-          end do
-          call file_read_data_c( var(:,:), & ! (out)
-               dinfo, DP, 0, 0, -1, -1,    & ! (in)
-               error                            ) ! (out)
-       end if
+       dim_size(:) = shape(var)
+       do n = 1, 2
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
+          end if
+       end do
+       call file_read_data_c( var(:,:), & ! (out)
+            dinfo, DP, 0, 0, -1, -1,    & ! (in)
+            error                            ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
+       write(*,*) 'xxx failed to get data value: ', trim(varname)
        call PRC_abort
     end if
 
@@ -3249,30 +3247,28 @@ contains
        end if
     end if
 
-    if (present(ntypes) ) then
+    if ( present(ntypes) ) then
        call file_read_data_c( var(:,:,:),             & ! (out)
             dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
+    else if ( present(start) .and. present(count) ) then
+       call file_read_data_c( var(:,:,:),          & ! (out)
+            dinfo, SP, 0, 0, start(:), count(:), & ! (in)
+            error                                     ) ! (out)
     else
-       if ( present(start) .and. present(count) ) then
-          call file_read_data_c( var(:,:,:),          & ! (out)
-               dinfo, SP, 0, 0, start(:), count(:), & ! (in)
-               error                                     ) ! (out)
-       else
-          dim_size(:) = shape(var)
-          do n = 1, 3
-             if ( dinfo%dim_size(n) /= dim_size(n) ) then
-                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-                call PRC_abort
-             end if
-          end do
-          call file_read_data_c( var(:,:,:), & ! (out)
-               dinfo, SP, 0, 0, -1, -1,    & ! (in)
-               error                            ) ! (out)
-       end if
+       dim_size(:) = shape(var)
+       do n = 1, 3
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
+          end if
+       end do
+       call file_read_data_c( var(:,:,:), & ! (out)
+            dinfo, SP, 0, 0, -1, -1,    & ! (in)
+            error                            ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
+       write(*,*) 'xxx failed to get data value: ', trim(varname)
        call PRC_abort
     end if
 
@@ -3358,30 +3354,28 @@ contains
        end if
     end if
 
-    if (present(ntypes) ) then
+    if ( present(ntypes) ) then
        call file_read_data_c( var(:,:,:),             & ! (out)
             dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
+    else if ( present(start) .and. present(count) ) then
+       call file_read_data_c( var(:,:,:),          & ! (out)
+            dinfo, DP, 0, 0, start(:), count(:), & ! (in)
+            error                                     ) ! (out)
     else
-       if ( present(start) .and. present(count) ) then
-          call file_read_data_c( var(:,:,:),          & ! (out)
-               dinfo, DP, 0, 0, start(:), count(:), & ! (in)
-               error                                     ) ! (out)
-       else
-          dim_size(:) = shape(var)
-          do n = 1, 3
-             if ( dinfo%dim_size(n) /= dim_size(n) ) then
-                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-                call PRC_abort
-             end if
-          end do
-          call file_read_data_c( var(:,:,:), & ! (out)
-               dinfo, DP, 0, 0, -1, -1,    & ! (in)
-               error                            ) ! (out)
-       end if
+       dim_size(:) = shape(var)
+       do n = 1, 3
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
+          end if
+       end do
+       call file_read_data_c( var(:,:,:), & ! (out)
+            dinfo, DP, 0, 0, -1, -1,    & ! (in)
+            error                            ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
+       write(*,*) 'xxx failed to get data value: ', trim(varname)
        call PRC_abort
     end if
 
@@ -3467,30 +3461,28 @@ contains
        end if
     end if
 
-    if (present(ntypes) ) then
+    if ( present(ntypes) ) then
        call file_read_data_c( var(:,:,:,:),             & ! (out)
             dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
+    else if ( present(start) .and. present(count) ) then
+       call file_read_data_c( var(:,:,:,:),          & ! (out)
+            dinfo, SP, 0, 0, start(:), count(:), & ! (in)
+            error                                     ) ! (out)
     else
-       if ( present(start) .and. present(count) ) then
-          call file_read_data_c( var(:,:,:,:),          & ! (out)
-               dinfo, SP, 0, 0, start(:), count(:), & ! (in)
-               error                                     ) ! (out)
-       else
-          dim_size(:) = shape(var)
-          do n = 1, 4
-             if ( dinfo%dim_size(n) /= dim_size(n) ) then
-                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-                call PRC_abort
-             end if
-          end do
-          call file_read_data_c( var(:,:,:,:), & ! (out)
-               dinfo, SP, 0, 0, -1, -1,    & ! (in)
-               error                            ) ! (out)
-       end if
+       dim_size(:) = shape(var)
+       do n = 1, 4
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
+          end if
+       end do
+       call file_read_data_c( var(:,:,:,:), & ! (out)
+            dinfo, SP, 0, 0, -1, -1,    & ! (in)
+            error                            ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
+       write(*,*) 'xxx failed to get data value: ', trim(varname)
        call PRC_abort
     end if
 
@@ -3576,30 +3568,28 @@ contains
        end if
     end if
 
-    if (present(ntypes) ) then
+    if ( present(ntypes) ) then
        call file_read_data_c( var(:,:,:,:),             & ! (out)
             dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
             error                                        ) ! (out)
+    else if ( present(start) .and. present(count) ) then
+       call file_read_data_c( var(:,:,:,:),          & ! (out)
+            dinfo, DP, 0, 0, start(:), count(:), & ! (in)
+            error                                     ) ! (out)
     else
-       if ( present(start) .and. present(count) ) then
-          call file_read_data_c( var(:,:,:,:),          & ! (out)
-               dinfo, DP, 0, 0, start(:), count(:), & ! (in)
-               error                                     ) ! (out)
-       else
-          dim_size(:) = shape(var)
-          do n = 1, 4
-             if ( dinfo%dim_size(n) /= dim_size(n) ) then
-                write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
-                call PRC_abort
-             end if
-          end do
-          call file_read_data_c( var(:,:,:,:), & ! (out)
-               dinfo, DP, 0, 0, -1, -1,    & ! (in)
-               error                            ) ! (out)
-       end if
+       dim_size(:) = shape(var)
+       do n = 1, 4
+          if ( dinfo%dim_size(n) /= dim_size(n) ) then
+             write(*,*) 'xxx shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             call PRC_abort
+          end if
+       end do
+       call file_read_data_c( var(:,:,:,:), & ! (out)
+            dinfo, DP, 0, 0, -1, -1,    & ! (in)
+            error                            ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       write(*,*) 'xxx failed to get data value'
+       write(*,*) 'xxx failed to get data value: ', trim(varname)
        call PRC_abort
     end if
 
@@ -4176,7 +4166,6 @@ contains
     elseif( error /= FILE_ALREADY_CLOSED_CODE ) then
        write(*,*) 'xxx failed to close file'
        call PRC_abort
-
     end if
 
     FILE_files(fid)%fid = -1
@@ -4352,15 +4341,16 @@ contains
        call PRC_abort
     end if
 
-    if (IO_L) write(IO_FID_LOG,*)
-    if (IO_L) write(IO_FID_LOG,'(A,A6,A,I3.3,2A)') &
-         '###### FILE registration (', trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
-
     FILE_nfiles = FILE_nfiles + 1
-    fid = FILE_nfiles
+    fid         = FILE_nfiles
+
     FILE_files(fid)%name      = fname
     FILE_files(fid)%fid       = cfid
     FILE_files(fid)%aggregate = aggregate_
+
+    if (IO_L) write(IO_FID_LOG,*)
+    if (IO_L) write(IO_FID_LOG,'(A,A6,A,I3.3,2A)') &
+    '###### FILE registration (', trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
 
     existed = .false.
 

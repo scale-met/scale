@@ -6,9 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2012-03-22 (H.Yashiro)   [new]
-!!
 !<
 !-------------------------------------------------------------------------------
 module scale_monitor
@@ -19,7 +16,6 @@ module scale_monitor
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -27,22 +23,23 @@ module scale_monitor
   !
   !++ Public procedures
   !
-  public :: MONIT_setup
-  public :: MONIT_reg
-  public :: MONIT_put
-  public :: MONIT_in
-  public :: MONIT_write
-  public :: MONIT_finalize
+  public :: MONITOR_setup
+  public :: MONITOR_set_dim
+  public :: MONITOR_reg
+  public :: MONITOR_put
+  public :: MONITOR_in
+  public :: MONITOR_write
+  public :: MONITOR_finalize
 
-  interface MONIT_in
-     module procedure MONIT_in_2D
-     module procedure MONIT_in_3D
-  end interface MONIT_in
+  interface MONITOR_in
+     module procedure MONITOR_in_2D
+     module procedure MONITOR_in_3D
+  end interface MONITOR_in
 
-  interface MONIT_put
-     module procedure MONIT_put_2D
-     module procedure MONIT_put_3D
-  end interface MONIT_put
+  interface MONITOR_put
+     module procedure MONITOR_put_2D
+     module procedure MONITOR_put_3D
+  end interface MONITOR_put
 
   !-----------------------------------------------------------------------------
   !
@@ -52,53 +49,72 @@ module scale_monitor
   !
   !++ Private procedures
   !
-  private :: MONIT_writeheader
+  private :: MONITOR_writeheader
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  integer                :: MONIT_FID = -1                    !< fileID for monitor output file
+  integer                :: MONITOR_FID = -1                    !< fileID for monitor output file
 
   character(len=H_LONG)  :: MONITOR_OUT_BASENAME  = 'monitor' !< filename of monitor output
   logical                :: MONITOR_USEDEVATION   = .true.    !< use deviation from first step?
   integer                :: MONITOR_STEP_INTERVAL = 1         !< step interval
 
-  integer, parameter     :: MONIT_req_limit = 1000            !< number limit for item request
-  integer                :: MONIT_req_nmax = 0                !< number of requested item
-  character(len=H_SHORT) :: MONIT_req_item(MONIT_req_limit)   !< name of requested monitor item
+  real(DP)               :: MONITOR_dt
 
-  integer                             :: MONIT_id_count = 0 !< number of item to output
-  character(len=H_SHORT), allocatable :: MONIT_item (:)     !< name                of the item
-  character(len=H_MID)  , allocatable :: MONIT_desc (:)     !< description         of the item
-  character(len=H_SHORT), allocatable :: MONIT_unit (:)     !< unit                of the item
-  character(len=H_SHORT), allocatable :: MONIT_ktype(:)     !< vertical layer type of the item
-  integer,                allocatable :: MONIT_kmax (:)     !< # of vertical grid  of the item
-  real(RP),               allocatable :: MONIT_var  (:)     !< value               of the item
-  real(RP),               allocatable :: MONIT_var0 (:)     !< value at first time of the item
-  logical,                allocatable :: MONIT_first(:)     !< first time?         of the item
-  logical,                allocatable :: MONIT_flux (:)     !< integrate value?    of the item
+  integer, parameter     :: MONITOR_req_max = 1000      !< number limit for item request
+  integer                :: MONITOR_nreqs   = 0         !< number of requested item
+  character(len=H_SHORT) :: MONITOR_reqs(MONITOR_req_max) !< name of requested monitor item
 
-  real(RP), parameter :: eps = 1.E-10_RP !< epsilon for timesec
+  type item
+     character(len=H_SHORT) :: name   !< name
+     character(len=H_MID)   :: desc   !< description
+     character(len=H_SHORT) :: unit   !< unit
+     real(RP)               :: var    !< value
+     real(RP)               :: var0   !< value at first time
+     logical                :: first  !< first time?
+     logical                :: flux   !< integrate value?
+     integer                :: dimid  !< dimension type
+  end type item
+  integer                 :: MONITOR_nitems = 0 !< number of item to output
+  type(item), allocatable :: MONITOR_items(:)
+
+  type dim_type
+     character(len=H_SHORT) :: name
+     integer                :: KA, KS, KE
+     integer                :: IA, IS, IE
+     integer                :: JA, JS, JE
+     integer                :: dim_size
+     real(RP), allocatable  :: area(:,:)
+     real(RP)               :: total_area
+     real(RP), allocatable  :: volume(:,:,:)
+     real(RP)               :: total_volume
+  end type dim_type
+  integer, parameter :: MONITOR_dim_max = 30
+  integer            :: MONITOR_ndims = 0
+  type(dim_type)     :: MONITOR_dims(MONITOR_dim_max)
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine MONIT_setup
+  subroutine MONITOR_setup( dt ) 
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
+
+    real(DP), intent(in) :: dt
 
     NAMELIST / PARAM_MONITOR / &
        MONITOR_OUT_BASENAME, &
        MONITOR_USEDEVATION,  &
        MONITOR_STEP_INTERVAL
 
-    character(len=H_SHORT) :: ITEM  !> name of monitor item
+    character(len=H_SHORT) :: NAME  !> name of monitor item
 
-    NAMELIST / MONITITEM / &
-       ITEM
+    NAMELIST / MONITOR_ITEM / &
+       NAME
 
     integer :: ierr
     integer :: n
@@ -114,305 +130,399 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MONITOR. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MONITOR)
 
     ! listup monitor request
     rewind(IO_FID_CONF)
-    do n = 1, MONIT_req_limit
-       read(IO_FID_CONF,nml=MONITITEM,iostat=ierr)
+    do n = 1, MONITOR_req_max
+       read(IO_FID_CONF,nml=MONITOR_ITEM,iostat=ierr)
        if( ierr /= 0 ) exit
     enddo
-    MONIT_req_nmax = n - 1
+    MONITOR_nreqs = n - 1
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if    ( MONIT_req_nmax > MONIT_req_limit ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** request of monitor file is exceed! n >', MONIT_req_limit
-    elseif( MONIT_req_nmax == 0 ) then
+    if    ( MONITOR_nreqs > MONITOR_req_max ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** request of monitor file is exceed! n >', MONITOR_req_max
+    elseif( MONITOR_nreqs == 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** No monitor file specified.'
        return
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Number of requested monitor item: ', MONIT_req_nmax
+       if( IO_L ) write(IO_FID_LOG,*) '*** Number of requested monitor item: ', MONITOR_nreqs
        if( IO_L ) write(IO_FID_LOG,*) '*** Monitor output interval [step]  : ', MONITOR_STEP_INTERVAL
        if( IO_L ) write(IO_FID_LOG,*) '*** Use deviation from first step?  : ', MONITOR_USEDEVATION
     endif
 
-    allocate( MONIT_item (MONIT_req_nmax) )
-    allocate( MONIT_desc (MONIT_req_nmax) )
-    allocate( MONIT_unit (MONIT_req_nmax) )
-    allocate( MONIT_ktype(MONIT_req_nmax) )
-    allocate( MONIT_kmax (MONIT_req_nmax) )
-    allocate( MONIT_var  (MONIT_req_nmax) )
-    allocate( MONIT_var0 (MONIT_req_nmax) )
-    allocate( MONIT_first(MONIT_req_nmax) )
-    allocate( MONIT_flux (MONIT_req_nmax) )
+    allocate( MONITOR_items(MONITOR_nreqs) )
 
     rewind(IO_FID_CONF)
-    do n = 1, MONIT_req_nmax
+    do n = 1, MONITOR_nreqs
        ! set default
-       ITEM  = 'unknown'
+       NAME  = 'unknown'
 
-       read(IO_FID_CONF,nml=MONITITEM,iostat=ierr)
+       read(IO_FID_CONF,nml=MONITOR_ITEM,iostat=ierr)
        if( ierr /= 0 ) exit
 
-       if( IO_NML .AND. IO_FID_NML /= IO_FID_LOG ) write(IO_FID_NML,nml=MONITITEM)
+       if( IO_NML .AND. IO_FID_NML /= IO_FID_LOG ) write(IO_FID_NML,nml=MONITOR_ITEM)
 
-       MONIT_req_item(n) = ITEM
+       MONITOR_reqs(n) = NAME
     enddo
 
+
+    MONITOR_dt = dt
+
     return
-  end subroutine MONIT_setup
+  end subroutine MONITOR_setup
+
+  !-----------------------------------------------------------------------------
+  !> Set area and volume
+  subroutine MONITOR_set_dim( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       dim_type, dim_size, &
+       area, total_area, &
+       volume, total_volume )
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    character(len=*), intent(in) :: dim_type
+    integer,          intent(in) :: dim_size
+    real(RP),         intent(in), optional :: area(IA,JA)
+    real(RP),         intent(in), optional :: total_area
+    real(RP),         intent(in), optional :: volume(KA,IA,JA)
+    real(RP),         intent(in), optional :: total_volume
+
+    integer :: n
+
+    MONITOR_ndims = MONITOR_ndims + 1
+    n = MONITOR_ndims
+
+    MONITOR_dims(n)%name = dim_type
+    MONITOR_dims(n)%dim_size = dim_size
+
+    MONITOR_dims(n)%KA = KA
+    MONITOR_dims(n)%KS = KS
+    MONITOR_dims(n)%KE = KE
+    MONITOR_dims(n)%IA = IA
+    MONITOR_dims(n)%IS = IS
+    MONITOR_dims(n)%IE = IE
+    MONITOR_dims(n)%JA = JA
+    MONITOR_dims(n)%JS = JS
+    MONITOR_dims(n)%JE = JE
+
+    if ( dim_size >= 2 ) then
+       allocate( MONITOR_dims(n)%area(IA,JA) )
+       MONITOR_dims(n)%area(:,:) = area(:,:)
+       MONITOR_dims(n)%total_area = total_area
+    end if
+
+    if ( dim_size >= 3 ) then
+       allocate( MONITOR_dims(n)%volume(KA,IA,JA) )
+       MONITOR_dims(n)%volume(:,:,:) = volume(:,:,:)
+       MONITOR_dims(n)%total_volume = total_volume
+    end if
+
+    return
+  end subroutine MONITOR_set_dim
 
   !-----------------------------------------------------------------------------
   !> Search existing item, or matching check between requested and registered item
-  subroutine MONIT_reg( &
-      itemid, &
-      item,   &
-      desc,   &
-      unit,   &
-      ndim,   &
-      isflux  )
+  subroutine MONITOR_reg( &
+       name, desc, unit, &
+       itemid,           &
+       ndims, dim_type,  &
+       isflux            )
+    use scale_process, only: &
+       PRC_abort
     implicit none
 
-    integer,          intent(out) :: itemid !< index number of the item
-    character(len=*), intent(in)  :: item   !< name         of the item
-    character(len=*), intent(in)  :: desc   !< description  of the item
-    character(len=*), intent(in)  :: unit   !< unit         of the item
-    integer,          intent(in)  :: ndim   !< dimension    of the item
-    logical,          intent(in)  :: isflux !< need to integrate value?
+    character(len=*), intent(in)  :: name !< name         of the item
+    character(len=*), intent(in)  :: desc !< description  of the item
+    character(len=*), intent(in)  :: unit !< unit         of the item
 
-    character(len=8) :: lname
+    integer, intent(out) :: itemid !< index number of the item
 
-    integer :: n, nmax, reqid
+    integer,          intent(in), optional :: ndims    !< # of dimension
+    character(len=*), intent(in), optional :: dim_type !< dimension type
+    logical,          intent(in), optional :: isflux   !< need to integrate value?
+
+    integer :: n, reqid, dimid
     !---------------------------------------------------------------------------
 
     !--- search existing item
-    itemid = -1
-    nmax = min( MONIT_id_count, MONIT_req_nmax )
-    do n = 1, nmax
-       if ( item == MONIT_item(n) ) then ! match existing item
-          itemid = n
-          return
-       endif
+    do itemid = 1, MONITOR_nitems
+       if ( name == MONITOR_items(itemid)%name ) return ! match existing item
     enddo
 
-    if ( itemid < 0 ) then ! request-register matching check
-       do n = 1, MONIT_req_nmax
-          if ( item == MONIT_req_item(n) ) then
-             MONIT_id_count = MONIT_id_count + 1
-             itemid = MONIT_id_count
-             reqid  = n
+    do reqid = 1, MONITOR_nreqs
+       if ( name == MONITOR_reqs(reqid) ) then
+          MONITOR_nitems = MONITOR_nitems + 1
+          itemid = MONITOR_nitems
 
-             ! new file registration
-             MONIT_item(itemid) = trim(item)
-             MONIT_desc(itemid) = trim(desc)
-             MONIT_unit(itemid) = trim(unit)
-             if    ( ndim == 2 ) then
-                MONIT_ktype(itemid) = 'ZSFC'
-                MONIT_kmax (itemid) = 1
-             elseif( ndim == 3 ) then
-                write(lname,'(A,I4.4)') 'ZDEF', KMAX
-                MONIT_ktype(itemid) = lname
-                MONIT_kmax (itemid) = KMAX
-             endif
-             MONIT_var  (itemid) = 0.0_RP
-             MONIT_var0 (itemid) = 0.0_RP
-             MONIT_first(itemid) = .true.
-             MONIT_flux (itemid) = isflux
+          ! new file registration
+          MONITOR_items(itemid)%name = name
+          MONITOR_items(itemid)%desc = desc
+          MONITOR_items(itemid)%unit = unit
 
-             if( IO_L ) write(IO_FID_LOG,*)
-             if( IO_L ) write(IO_FID_LOG,'(1x,A,I3)') ' *** [MONIT] Item registration No.= ', itemid
-             if( IO_L ) write(IO_FID_LOG,*) ' ] Name            : ', trim(MONIT_item (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) ' ] Description     : ', trim(MONIT_desc (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) ' ] Unit            : ', trim(MONIT_unit (itemid))
-             if( IO_L ) write(IO_FID_LOG,*) ' ] Vert. type      : ', trim(MONIT_ktype(itemid))
-             if( IO_L ) write(IO_FID_LOG,*) ' ] # of layer      : ', MONIT_kmax      (itemid)
-             if( IO_L ) write(IO_FID_LOG,*) ' ] Integ. with dt? : ', MONIT_flux      (itemid)
-          endif
-       enddo
-    endif
+          dimid = -1
+          if ( present(dim_type) ) then
+             do n = 1, MONITOR_ndims
+                if ( MONITOR_dims(n)%name == dim_type ) then
+                   dimid = n
+                   exit
+                end if
+             end do
+             if ( dimid < 0 ) then
+                write(*,*) 'xxx [MONITOR_reg] dim_type (', trim(dim_type), ') must be registerd by MONITOR_set_dim'
+                call PRC_abort
+             end if
+          else if ( present(ndims) ) then
+             do n = 1, MONITOR_ndims
+                if ( MONITOR_dims(n)%dim_size == ndims ) then
+                   dimid = n
+                   exit
+                end if
+             end do
+             if ( dimid == -1 ) then
+                write(*,'(a,i1,a)') 'xxx [MONITOR_reg] dim_type of ', ndims, 'D must be registerd with MONITOR_set_dim'
+                call PRC_abort
+             end if
+          else
+             ! ndims = 3 is assumed as default
+             do n = 1, MONITOR_ndims
+                if ( MONITOR_dims(n)%dim_size == 3 ) then
+                   dimid = n
+                   exit
+                end if
+             end do
+             if ( dimid == -1 ) then
+                write(*,*) 'xxx [MONITOR_reg] dim_type or ndims must be specified'
+                call PRC_abort
+             end if
+          end if
+
+          MONITOR_items(itemid)%dimid = dimid
+
+          MONITOR_items(itemid)%var   = 0.0_RP
+          MONITOR_items(itemid)%var0  = 0.0_RP
+          MONITOR_items(itemid)%first = .true.
+          if ( present(isflux) ) then
+             MONITOR_items(itemid)%flux  = isflux
+          else
+             MONITOR_items(itemid)%flux  = .false.
+          end if
+
+          if( IO_L ) write(IO_FID_LOG,*)
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,I3)') ' *** [MONIT] Item registration No.= ', itemid
+          if( IO_L ) write(IO_FID_LOG,*) ' ] Name            : ', trim(MONITOR_items(itemid)%name)
+          if( IO_L ) write(IO_FID_LOG,*) ' ] Description     : ', trim(MONITOR_items(itemid)%desc)
+          if( IO_L ) write(IO_FID_LOG,*) ' ] Unit            : ', trim(MONITOR_items(itemid)%unit)
+          if( IO_L ) write(IO_FID_LOG,*) ' ] Dimension type  : ', trim(MONITOR_dims(MONITOR_items(itemid)%dimid)%name)
+          if( IO_L ) write(IO_FID_LOG,*) ' ] Integ. with dt? : ', MONITOR_items(itemid)%flux
+
+          return
+       end if
+    end do
+
+    itemid = -1 ! not found
 
     return
-  end subroutine MONIT_reg
+  end subroutine MONITOR_reg
 
   !-----------------------------------------------------------------------------
   !> Put total value to the monitor buffer
-  subroutine MONIT_put_2D( &
-      itemid, &
-      var     )
-    use scale_time, only: &
-       dt => TIME_DTSEC
-    use scale_rm_statistics, only: &
-       STAT_total
+  subroutine MONITOR_put_2D( &
+      itemid, var )
+    use scale_statistics, only: &
+       STATISTICS_total
     implicit none
-
     integer,  intent(in) :: itemid     !< index number of the item
     real(RP), intent(in) :: var(:,:)   !< value
 
+    integer :: dimid
     real(RP) :: total
     !---------------------------------------------------------------------------
 
     if( itemid <= 0 ) return
 
-    call STAT_total( total, var(:,:), MONIT_item(itemid) )
+    dimid = MONITOR_items(itemid)%dimid
 
-    if ( MONIT_flux(itemid) ) then
-       if ( MONIT_first(itemid) ) then
-          MONIT_var  (itemid) = total * dt ! first put
-          MONIT_first(itemid) = .false.
+    call STATISTICS_total( MONITOR_dims(dimid)%IA, MONITOR_dims(dimid)%IS, MONITOR_dims(dimid)%IE, &
+                           MONITOR_dims(dimid)%JA, MONITOR_dims(dimid)%JS, MONITOR_dims(dimid)%JE, &
+                           var(:,:), MONITOR_items(itemid)%name,                          & ! (in)
+                           MONITOR_dims(dimid)%area(:,:), MONITOR_dims(dimid)%total_area, & ! (in)
+                           log_suppress = .true.,                                         & ! (in)
+                           sum = total                                                    ) ! (out)
+
+    if ( MONITOR_items(itemid)%flux ) then
+       if ( MONITOR_items(itemid)%first ) then
+          MONITOR_items(itemid)%var = total * MONITOR_dt ! first put
+          MONITOR_items(itemid)%first = .false.
        else
-          MONIT_var  (itemid) = MONIT_var(itemid) + total * dt ! integrate by last put
+          MONITOR_items(itemid)%var = MONITOR_items(itemid)%var + total * MONITOR_dt ! integrate by last put
        endif
     else
        if ( MONITOR_USEDEVATION ) then
-          if ( MONIT_first(itemid) ) then
-             MONIT_var  (itemid) = 0.0_RP
-             MONIT_var0 (itemid) = total
-             MONIT_first(itemid) = .false.
+          if ( MONITOR_items(itemid)%first ) then
+             MONITOR_items(itemid)%var  = 0.0_RP
+             MONITOR_items(itemid)%var0 = total
+             MONITOR_items(itemid)%first = .false.
           else
-             MONIT_var  (itemid) = total - MONIT_var0(itemid) ! overwrite by last put
+             MONITOR_items(itemid)%var = total - MONITOR_items(itemid)%var0 ! overwrite by last put
           endif
        else
-          MONIT_var(itemid) = total ! overwrite by last put
+          MONITOR_items(itemid)%var = total ! overwrite by last put
        endif
     endif
 
     return
-  end subroutine MONIT_put_2D
+  end subroutine MONITOR_put_2D
 
   !-----------------------------------------------------------------------------
   !> Put total value to the monitor buffer
-  subroutine MONIT_put_3D( &
-      itemid, &
-      var     )
-    use scale_time, only: &
-       dt => TIME_DTSEC
-    use scale_rm_statistics, only: &
-       STAT_total
+  subroutine MONITOR_put_3D( &
+      itemid, var )
+    use scale_statistics, only: &
+       STATISTICS_total
     implicit none
 
     integer,  intent(in) :: itemid     !< index number of the item
     real(RP), intent(in) :: var(:,:,:) !< value
 
+    integer :: dimid
+
     real(RP) :: total
     !---------------------------------------------------------------------------
 
     if( itemid <= 0 ) return
 
-    call STAT_total( total, var(:,:,:), MONIT_item(itemid) )
+    dimid = MONITOR_items(itemid)%dimid
 
-    if ( MONIT_flux(itemid) ) then
-       if ( MONIT_first(itemid) ) then
-          MONIT_var  (itemid) = total * dt ! first put
-          MONIT_first(itemid) = .false.
+
+    call STATISTICS_total( MONITOR_dims(dimid)%KA, MONITOR_dims(dimid)%KS, MONITOR_dims(dimid)%KE, &
+                           MONITOR_dims(dimid)%IA, MONITOR_dims(dimid)%IS, MONITOR_dims(dimid)%IE, &
+                           MONITOR_dims(dimid)%JA, MONITOR_dims(dimid)%JS, MONITOR_dims(dimid)%JE, &
+                           var(:,:,:), MONITOR_items(itemid)%name,                              & ! (in)
+                           MONITOR_dims(dimid)%volume(:,:,:), MONITOR_dims(dimid)%total_volume, & ! (in)
+                           log_suppress = .true.,                                               & ! (in)
+                           sum = total                                                          ) ! (out)
+
+    if ( MONITOR_items(itemid)%flux ) then
+       if ( MONITOR_items(itemid)%first ) then
+          MONITOR_items(itemid)%var   = total * MONITOR_dt ! first put
+          MONITOR_items(itemid)%first = .false.
        else
-          MONIT_var  (itemid) = MONIT_var(itemid) + total * dt ! integrate by last put
+          MONITOR_items(itemid)%var = MONITOR_items(itemid)%var + total * MONITOR_dt ! integrate by last put
        endif
     else
        if ( MONITOR_USEDEVATION ) then
-          if ( MONIT_first(itemid) ) then
-             MONIT_var  (itemid) = 0.0_RP
-             MONIT_var0 (itemid) = total
-             MONIT_first(itemid) = .false.
+          if ( MONITOR_items(itemid)%first ) then
+             MONITOR_items(itemid)%var   = 0.0_RP
+             MONITOR_items(itemid)%var0  = total
+             MONITOR_items(itemid)%first = .false.
           else
-             MONIT_var  (itemid) = total - MONIT_var0(itemid) ! overwrite by last put
+             MONITOR_items(itemid)%var = total - MONITOR_items(itemid)%var0 ! overwrite by last put
           endif
        else
-          MONIT_var(itemid) = total ! overwrite by last put
+          MONITOR_items(itemid)%var = total ! overwrite by last put
        endif
     endif
 
     return
-  end subroutine MONIT_put_3D
+  end subroutine MONITOR_put_3D
 
   !-----------------------------------------------------------------------------
-  !> Wrapper routine of MONIT_reg+MONIT_put
-  subroutine MONIT_in_2D( &
-      var,   &
-      item,  &
-      desc,  &
-      unit,  &
-      ndim,  &
-      isflux )
+  !> Wrapper routine of MONITOR_reg+MONITOR_put
+  subroutine MONITOR_in_2D( &
+      var,              &
+      name, desc, unit, &
+      ndims, dim_type,  &
+      isflux            )
     implicit none
 
     real(RP),         intent(in) :: var(:,:)   !< value
-    character(len=*), intent(in) :: item       !< name        of the item
-    character(len=*), intent(in) :: desc       !< description of the item
-    character(len=*), intent(in) :: unit       !< unit        of the item
-    integer,          intent(in) :: ndim       !< dimension   of the item
-    logical,          intent(in) :: isflux     !< need to integrate values?
+    character(len=*), intent(in) :: name       !< name
+    character(len=*), intent(in) :: desc       !< description
+    character(len=*), intent(in) :: unit       !< unit
+
+    integer,          intent(in), optional :: ndims    !< # of dimension
+    character(len=*), intent(in), optional :: dim_type !< dimension type
+    logical,          intent(in), optional :: isflux   !< need to integrate values?
 
     integer :: itemid
     !---------------------------------------------------------------------------
 
-    call MONIT_reg( itemid, item, desc, unit, ndim, isflux )
-    call MONIT_put( itemid, var(:,:) )
+    call MONITOR_reg( name, desc, unit,               & ! (in)
+                    itemid,                         & ! (out)
+                    ndims=ndims, dim_type=dim_type, & ! (in)
+                    isflux=isflux                   ) ! (in)
+    call MONITOR_put( itemid, var(:,:) )
 
     return
-  end subroutine MONIT_in_2D
+  end subroutine MONITOR_in_2D
 
   !-----------------------------------------------------------------------------
-  !> Wrapper routine of MONIT_reg+MONIT_put
-  subroutine MONIT_in_3D( &
-      var,   &
-      item,  &
-      desc,  &
-      unit,  &
-      ndim,  &
-      isflux )
+  !> Wrapper routine of MONITOR_reg+MONITOR_put
+  subroutine MONITOR_in_3D( &
+      var,              &
+      name, desc, unit, &
+      ndims, dim_type,  &
+      isflux            )
     implicit none
 
     real(RP),         intent(in) :: var(:,:,:) !< value
-    character(len=*), intent(in) :: item       !< name        of the item
-    character(len=*), intent(in) :: desc       !< description of the item
-    character(len=*), intent(in) :: unit       !< unit        of the item
-    integer,          intent(in) :: ndim       !< dimension   of the item
-    logical,          intent(in) :: isflux     !< need to integrate values?
+    character(len=*), intent(in) :: name       !< name
+    character(len=*), intent(in) :: desc       !< description
+    character(len=*), intent(in) :: unit       !< unit
+
+    integer,          intent(in), optional :: ndims    !< # of dimension
+    character(len=*), intent(in), optional :: dim_type !< dimension type
+    logical,          intent(in), optional :: isflux   !< need to integrate values?
 
     integer :: itemid
     !---------------------------------------------------------------------------
 
-    call MONIT_reg( itemid, item, desc, unit, ndim, isflux )
-    call MONIT_put( itemid, var(:,:,:) )
+    call MONITOR_reg( name, desc, unit,               & ! (in)
+                    itemid,                         & ! (out)
+                    ndims=ndims, dim_type=dim_type, & ! (in)
+                    isflux=isflux                   ) ! (in)
+    call MONITOR_put( itemid, var(:,:,:) )
 
     return
-  end subroutine MONIT_in_3D
+  end subroutine MONITOR_in_3D
 
   !-----------------------------------------------------------------------------
   !> Flush monitor buffer to formatted file
-  subroutine MONIT_write( memo )
-    use scale_time, only: &
-       NOWSTEP => TIME_NOWSTEP
+  subroutine MONITOR_write( memo, nowstep )
     implicit none
-
     character(len=*), intent(in) :: memo !< note
+    integer         , intent(in) :: nowstep
 
     logical, save :: firsttime = .true.
 
     integer :: n
     !---------------------------------------------------------------------------
 
-    if( MONIT_id_count == 0 ) return
+    if( MONITOR_nitems == 0 ) return
 
     call PROF_rapstart('FILE_O_ASCII', 2)
 
     if (firsttime) then
        firsttime = .false.
-       call MONIT_writeheader
+       call MONITOR_writeheader
     endif
 
-    if ( MONIT_FID > 0 ) then
+    if ( MONITOR_FID > 0 ) then
 
        if ( mod(NOWSTEP-1,MONITOR_STEP_INTERVAL) == 0 ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Output Monitor'
 
-          write(MONIT_FID,'(A,i7,A,A4,A)',advance='no') 'STEP=',NOWSTEP,' (',memo,')'
-          do n = 1, MONIT_id_count
-             write(MONIT_FID,'(A,ES15.8)',advance='no') ' ',MONIT_var(n)
+          write(MONITOR_FID,'(A,i7,A,A4,A)',advance='no') 'STEP=',NOWSTEP,' (',memo,')'
+          do n = 1, MONITOR_nitems
+             write(MONITOR_FID,'(A,ES15.8)',advance='no') ' ', MONITOR_items(n)%var
           enddo
-          write(MONIT_FID,*)
+          write(MONITOR_FID,*)
        endif
 
     endif
@@ -420,91 +530,102 @@ contains
     call PROF_rapend  ('FILE_O_ASCII', 2)
 
     return
-  end subroutine MONIT_write
+  end subroutine MONITOR_write
 
   !-----------------------------------------------------------------------------
   !> Open file and write header at the first time
-  subroutine MONIT_writeheader
+  subroutine MONITOR_writeheader
     use scale_process, only: &
-       PRC_MPIstop, &
+       PRC_abort, &
        PRC_myrank, &
        PRC_IsMaster
     implicit none
 
     character(len=H_LONG) :: fname !< name of monitor file for each process
 
-    logical :: MONIT_L
+    logical :: MONITOR_L
     integer :: ierr
     integer :: n
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [MONITOR] Output item list '
-    if( IO_L ) write(IO_FID_LOG,*) '*** Number of monitor item :', MONIT_req_nmax
+    if( IO_L ) write(IO_FID_LOG,*) '*** Number of monitor item :', MONITOR_nreqs
     if( IO_L ) write(IO_FID_LOG,'(1x,2A)') 'NAME                   :description                                    ', &
-                                           ':UNIT           :Layername'
+                                           ':UNIT           :dimension_type'
     if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '=======================================================================', &
                                            '=========================='
-    do n = 1, MONIT_id_count
-       if( IO_L ) write(IO_FID_LOG,'(1x,A24,A48,A16,A16)') MONIT_item(n), MONIT_desc(n), MONIT_unit(n), MONIT_ktype(n)
+    do n = 1, MONITOR_nitems
+       if( IO_L ) write(IO_FID_LOG,'(1x,A24,A48,A16,A16)') MONITOR_items(n)%name, MONITOR_items(n)%desc, MONITOR_items(n)%unit, MONITOR_dims(MONITOR_items(n)%dimid)%name
     enddo
     if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '=======================================================================', &
                                            '=========================='
 
     if ( PRC_IsMaster ) then ! master node
-       MONIT_L = .true.
+       MONITOR_L = .true.
     else
-       MONIT_L = IO_LOG_ALLNODE
+       MONITOR_L = IO_LOG_ALLNODE
     endif
 
-    if ( MONIT_L ) then
+    if ( MONITOR_L ) then
 
        !--- Open logfile
-       MONIT_FID = IO_get_available_fid()
+       MONITOR_FID = IO_get_available_fid()
        call IO_make_idstr(fname,trim(MONITOR_OUT_BASENAME),'pe',PRC_myrank)
-       open( unit   = MONIT_FID,  &
+       open( unit   = MONITOR_FID,  &
              file   = trim(fname),  &
              form   = 'formatted',  &
              iostat = ierr          )
        if ( ierr /= 0 ) then
           write(*,*) 'xxx File open error! :', trim(fname)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Open ASCII file for monitor, name : ', trim(fname)
 
-       write(MONIT_FID,'(A)',advance='no') '                   '
-       do n = 1, MONIT_id_count
-          write(MONIT_FID,'(A16)',advance='no') MONIT_item(n)
+       write(MONITOR_FID,'(A)',advance='no') '                   '
+       do n = 1, MONITOR_nitems
+          write(MONITOR_FID,'(A16)',advance='no') MONITOR_items(n)%name
        enddo
-       write(MONIT_FID,*)
+       write(MONITOR_FID,*)
 
     endif
 
     return
-  end subroutine MONIT_writeheader
+  end subroutine MONITOR_writeheader
 
   !-----------------------------------------------------------------------------
   !> Close file
-  subroutine MONIT_finalize
+  subroutine MONITOR_finalize
     use scale_process, only: &
        PRC_myrank
     implicit none
 
     character(len=H_LONG) :: fname !< name of monitor file for each process
+
+    integer :: n
     !---------------------------------------------------------------------------
 
-    if ( MONIT_FID > 0 ) then
+    if ( MONITOR_FID > 0 ) then
        call IO_make_idstr(fname,trim(MONITOR_OUT_BASENAME),'pe',PRC_myrank)
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Close ASCII file for monitor, name : ', trim(fname)
 
-       close(MONIT_FID)
+       close(MONITOR_FID)
     endif
 
+    do n = 1, MONITOR_ndims
+       if ( MONITOR_dims(n)%dim_size >= 2 ) deallocate( MONITOR_dims(n)%area )
+       if ( MONITOR_dims(n)%dim_size >= 3 ) deallocate( MONITOR_dims(n)%volume )
+    end do
+    MONITOR_ndims = 0
+
+    if ( allocated(MONITOR_items) ) deallocate( MONITOR_items )
+    MONITOR_nitems = 0
+
     return
-  end subroutine MONIT_finalize
+  end subroutine MONITOR_finalize
 
 end module scale_monitor

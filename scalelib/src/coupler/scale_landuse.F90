@@ -329,7 +329,7 @@ contains
             fid,                                                        & ! [OUT]
             haszcoord=.false., aggregate=LANDUSE_OUT_AGGREGATE          ) ! [IN]
 
-       call FILE_CARTESC_def_var( fid, 'FRAC_LAND'     , 'LAND fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE, vid(1) )
+       call FILE_CARTESC_def_var( fid, 'FRAC_LAND'     , 'LAND fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE, vid(1), standard_name="land_area_fraction" )
        call FILE_CARTESC_def_var( fid, 'FRAC_LAKE'     , 'LAKE fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE, vid(2) )
        call FILE_CARTESC_def_var( fid, 'FRAC_URBAN'    , 'URBAN fraction'         , '1', 'XY', LANDUSE_OUT_DTYPE, vid(3) )
        call FILE_CARTESC_def_var( fid, 'FRAC_OCEAN_abs', 'absolute OCEAN fraction', '1', 'XY', LANDUSE_OUT_DTYPE, vid(4) )

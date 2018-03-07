@@ -55,21 +55,29 @@ contains
        debug     )
     use mpi
     use scale_file_h, only: &
-       FILE_dtypelist
+       FILE_dtypelist, &
+       FILE_TEXT,      &
+       FILE_INTEGER4,  &
+       FILE_REAL4,     &
+       FILE_REAL8
     use scale_file, only: &
-       FILE_Get_All_Datainfo
+       FILE_open, &
+       FILE_Get_All_Datainfo, &
+       FILE_Get_Attribute
     use scale_process, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD, &
-       PRC_MPIstop
+       PRC_abort
     use scale_calendar, only: &
        CALENDAR_daysec2date,   &
        CALENDAR_adjust_daysec, &
        CALENDAR_CFunits2sec,   &
        CALENDAR_date2char
     use mod_sno_h, only: &
-       step_limit, &
-       dim_limit,  &
+       step_limit,     &
+       dim_limit,      &
+       att_limit,      &
+       att_size_limit, &
        iteminfo
     implicit none
 
@@ -88,9 +96,11 @@ contains
     real(DP)          :: now_ms       !< subsecond       (time=t)
     character(len=27) :: now_chardate !< date            (time=t)
 
+    integer :: fid
     integer :: nowrank
     integer :: ierr
     integer :: v, d, t
+    integer :: i
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_vars_getinfo] Read information of variables'
@@ -98,22 +108,16 @@ contains
     if ( ismaster ) then
        nowrank = 0 ! first file
 
+       call FILE_open( basename, fid, rankid = nowrank )
+
        do v = 1, nvars
-          call FILE_Get_All_Datainfo( step_limit  = step_limit,             & ! [IN]
-                                      dim_limit   = dim_limit,              & ! [IN]
-                                      basename    = basename,               & ! [IN]
-                                      varname     = varname(v),             & ! [IN]
-                                      rankid      = nowrank,                & ! [IN]
-                                      step_nmax   = dinfo(v)%step_nmax,     & ! [OUT]
-                                      description = dinfo(v)%description,   & ! [OUT]
-                                      units       = dinfo(v)%units,         & ! [OUT]
-                                      datatype    = dinfo(v)%datatype,      & ! [OUT]
-                                      dim_rank    = dinfo(v)%dim_rank,      & ! [OUT]
-                                      dim_name    = dinfo(v)%dim_name  (:), & ! [OUT]
-                                      dim_size    = dinfo(v)%dim_size  (:), & ! [OUT]
-                                      time_start  = dinfo(v)%time_start(:), & ! [OUT]
-                                      time_end    = dinfo(v)%time_end  (:), & ! [OUT]
-                                      time_units  = dinfo(v)%time_units     ) ! [OUT]
+          call FILE_Get_All_Datainfo( fid, varname(v),                                                                     & ! [IN]
+                                      dinfo(v)%step_nmax,                                                                  & ! [OUT]
+                                      dinfo(v)%description, dinfo(v)%units, dinfo(v)%standard_name,                        & ! [OUT]
+                                      dinfo(v)%datatype,                                                                   & ! [OUT]
+                                      dinfo(v)%dim_rank, dinfo(v)%dim_name(:), dinfo(v)%dim_size(:),                       & ! [OUT]
+                                      dinfo(v)%natts, dinfo(v)%att_name(:), dinfo(v)%att_type(:), dinfo(v)%att_len(:),     & ! [OUT]
+                                      dinfo(v)%time_start(:), dinfo(v)%time_end(:), dinfo(v)%time_units, dinfo(v)%calendar ) ! [OUT]
 
           dinfo(v)%varname = varname(v)
 
@@ -137,32 +141,61 @@ contains
              dinfo(v)%dt = 0.0_DP
           endif
 
+          do i = 1, dinfo(v)%natts
+             select case( dinfo(v)%att_type(i) )
+             case ( FILE_TEXT )
+                call FILE_get_attribute( fid, varname(v), dinfo(v)%att_name(i), dinfo(v)%atts(i)%text )
+             case ( FILE_INTEGER4 )
+                call FILE_get_attribute( fid, varname(v), dinfo(v)%att_name(i), dinfo(v)%atts(i)%int(:) )
+             case ( FILE_REAL4 )
+                call FILE_get_attribute( fid, varname(v), dinfo(v)%att_name(i), dinfo(v)%atts(i)%float(:) )
+             case ( FILE_REAL8 )
+                call FILE_get_attribute( fid, varname(v), dinfo(v)%att_name(i), dinfo(v)%atts(i)%double(:) )
+             case default
+                write(*,*) 'xxx attribute type is not supported'
+                call PRC_abort
+             end select
+          end do
+
        enddo
     endif
 
     do v = 1, nvars
        call MPI_BCAST( dinfo(v)%varname      , H_SHORT          , MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%description  , H_MID            , MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+       call MPI_BCAST( dinfo(v)%standard_name, H_MID            , MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%units        , H_SHORT          , MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%datatype     , 1                , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%dim_rank     , 1                , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%dim_name(:)  , H_SHORT*dim_limit, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%dim_size(:)  , dim_limit        , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+       call MPI_BCAST( dinfo(v)%natts        , 1                , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+       call MPI_BCAST( dinfo(v)%att_name(:)  , H_SHORT*att_limit, MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+       call MPI_BCAST( dinfo(v)%att_type(:)  , att_limit        , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+       call MPI_BCAST( dinfo(v)%att_len (:)  , att_limit        , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+       do i = 1, dinfo(v)%natts
+          call MPI_BCAST( dinfo(v)%atts(i)%text  , H_MID          , MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+          call MPI_BCAST( dinfo(v)%atts(i)%int   , att_size_limit , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+          call MPI_BCAST( dinfo(v)%atts(i)%float , att_size_limit , MPI_REAL            , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+          call MPI_BCAST( dinfo(v)%atts(i)%double, att_size_limit , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+       end do
        call MPI_BCAST( dinfo(v)%transpose    , 1                , MPI_LOGICAL         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%step_nmax    , 1                , MPI_INTEGER         , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%time_start(:), step_limit       , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%time_end  (:), step_limit       , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%dt           , 1                , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
        call MPI_BCAST( dinfo(v)%time_units   , H_MID            , MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+       call MPI_BCAST( dinfo(v)%calendar     , H_SHORT          , MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
        if ( debug ) then
           if( IO_L ) write(IO_FID_LOG,*)
           if( IO_L ) write(IO_FID_LOG,*) '*** Var No.', v
-          if( IO_L ) write(IO_FID_LOG,*) '*** varname     : ', trim(dinfo(v)%varname)
-          if( IO_L ) write(IO_FID_LOG,*) '*** description : ', trim(dinfo(v)%description)
-          if( IO_L ) write(IO_FID_LOG,*) '*** units       : ', trim(dinfo(v)%units)
-          if( IO_L ) write(IO_FID_LOG,*) '*** datatype    : ', trim(FILE_dtypelist(dinfo(v)%datatype))
-          if( IO_L ) write(IO_FID_LOG,*) '*** dim_rank    : ', dinfo(v)%dim_rank
+          if( IO_L ) write(IO_FID_LOG,*) '*** varname       : ', trim(dinfo(v)%varname)
+          if( IO_L ) write(IO_FID_LOG,*) '*** description   : ', trim(dinfo(v)%description)
+          if( IO_L ) write(IO_FID_LOG,*) '*** units         : ', trim(dinfo(v)%units)
+          if( IO_L ) write(IO_FID_LOG,*) '*** standard_name : ', trim(dinfo(v)%standard_name)
+          if( IO_L ) write(IO_FID_LOG,*) '*** datatype      : ', trim(FILE_dtypelist(dinfo(v)%datatype))
+          if( IO_L ) write(IO_FID_LOG,*) '*** dim_rank      : ', dinfo(v)%dim_rank
           do d = 1, dinfo(v)%dim_rank
              if( IO_L ) write(IO_FID_LOG,*) '*** dim No.', d
              if( IO_L ) write(IO_FID_LOG,*) '*** + dim_name  : ', trim(dinfo(v)%dim_name(d))
@@ -171,26 +204,30 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '*** transpose   : ', dinfo(v)%transpose
 
           if( IO_L ) write(IO_FID_LOG,*) '*** time_units  : ', trim(dinfo(v)%time_units)
+          if( IO_L ) write(IO_FID_LOG,*) '*** calendar    : ', trim(dinfo(v)%calendar)
           if( IO_L ) write(IO_FID_LOG,*) '*** step_nmax   : ', dinfo(v)%step_nmax
 
-          start_day = 0
-          start_sec = CALENDAR_CFunits2sec( cftime=0.0_DP, cfunits=dinfo(v)%time_units, offset_year=0 )
-          call CALENDAR_adjust_daysec( start_day, start_sec )
+          if ( dinfo(v)%time_units /= "" ) then
+             start_day = 0
+             start_sec = CALENDAR_CFunits2sec( cftime=0.0_DP, cfunits=dinfo(v)%time_units, offset_year=0 )
+             call CALENDAR_adjust_daysec( start_day, start_sec )
 
-          do t = 1, dinfo(v)%step_nmax
-             now_day = start_day
-             now_sec = start_sec + 0.5_DP * ( dinfo(v)%time_start(t) + dinfo(v)%time_end(t) )
+             do t = 1, dinfo(v)%step_nmax
+                now_day = start_day
+                now_sec = start_sec + 0.5_DP * ( dinfo(v)%time_start(t) + dinfo(v)%time_end(t) )
 
-             call CALENDAR_adjust_daysec( now_day, now_sec ) ! [INOUT]
+                call CALENDAR_adjust_daysec( now_day, now_sec ) ! [INOUT]
 
-             call CALENDAR_daysec2date  ( now_date, now_ms,                & ! [OUT]
-                                          now_day,  now_sec, offset_year=0 ) ! [IN]
+                call CALENDAR_daysec2date  ( now_date, now_ms,                & ! [OUT]
+                                             now_day,  now_sec, offset_year=0 ) ! [IN]
 
-             call CALENDAR_date2char    ( now_chardate,    & ! [OUT]
-                                          now_date, now_ms ) ! [IN]
+                call CALENDAR_date2char    ( now_chardate,    & ! [OUT]
+                                             now_date, now_ms ) ! [IN]
 
-             if( IO_L ) write(IO_FID_LOG,*) '*** + ', now_chardate
-          enddo
+                if( IO_L ) write(IO_FID_LOG,*) '*** + ', now_chardate
+             enddo
+          end if
+
        endif
     enddo
 
@@ -910,16 +947,17 @@ contains
        dinfo,         &
        debug          )
     use scale_file_h, only: &
-       FILE_REAL4, &
+       FILE_TEXT,     &
+       FILE_INTEGER4, &
+       FILE_REAL4,    &
        FILE_REAL8
     use scale_file, only: &
-       FILE_Create,         &
-       FILE_Def_Variable, &
-       FILE_Set_Attribute,   &
-       FILE_EndDef,         &
-       FILE_Write
-    use scale_process, only: &
-       PRC_MPIstop
+       FILE_create,         &
+       FILE_def_variable, &
+       FILE_add_associatedVariable, &
+       FILE_set_attribute,   &
+       FILE_endDef,         &
+       FILE_write
     use mod_sno_h, only: &
        commoninfo, &
        axisinfo,   &
@@ -963,14 +1001,15 @@ contains
        basename_mod = trim(dirpath)//'/'//trim(basename)
     endif
 
-    call FILE_Create( basename_mod,                 & ! [IN]
-                      hinfo%title,                  & ! [IN]
-                      hinfo%source,                 & ! [IN]
-                      hinfo%institute,              & ! [IN]
-                      fid,                          & ! [OUT]
-                      fileexisted,                  & ! [OUT]
-                      rankid     = nowrank,         & ! [IN]
-                      time_units = dinfo%time_units ) ! [IN]
+    call FILE_Create( basename_mod,                  & ! [IN]
+                      hinfo%title,                   & ! [IN]
+                      hinfo%source,                  & ! [IN]
+                      hinfo%institute,               & ! [IN]
+                      fid,                           & ! [OUT]
+                      fileexisted,                   & ! [OUT]
+                      rankid     = nowrank,          & ! [IN]
+                      time_units = dinfo%time_units, & ! [IN]
+                      calendar   = dinfo%calendar    ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
 
@@ -992,11 +1031,15 @@ contains
        endif
     endif
 
-    if ( dinfo%dt > 0.0_DP ) then
+    if ( dinfo%dim_rank == 0 ) then
+       call FILE_add_associatedVariable( fid, dinfo%varname,  & ! [IN]
+                                         existed = varexisted ) ! [OUT]
+    else if ( dinfo%dt > 0.0_DP ) then
        call FILE_Def_Variable( fid,                 & ! [IN]
                                dinfo%varname,       & ! [IN]
                                dinfo%description,   & ! [IN]
                                dinfo%units,         & ! [IN]
+                               dinfo%standard_name, & ! [IN]
                                dinfo%dim_rank,      & ! [IN]
                                dinfo%dim_name,      & ! [IN]
                                dinfo%datatype,      & ! [IN]
@@ -1008,6 +1051,7 @@ contains
                                dinfo%varname,       & ! [IN]
                                dinfo%description,   & ! [IN]
                                dinfo%units,         & ! [IN]
+                               dinfo%standard_name, & ! [IN]
                                dinfo%dim_rank,      & ! [IN]
                                dinfo%dim_name,      & ! [IN]
                                dinfo%datatype,      & ! [IN]
@@ -1015,9 +1059,18 @@ contains
                                existed = varexisted ) ! [OUT]
     endif
 
-    if ( hinfo%minfo_mapping_name /= "" ) then
-       call FILE_Set_Attribute( fid, dinfo%varname, "grid_mapping", hinfo%minfo_mapping_name )
-    endif
+    do i = 1, dinfo%natts
+       select case( dinfo%att_type(i) )
+       case ( FILE_TEXT )
+          call FILE_Set_Attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%text )
+       case ( FILE_INTEGER4 )
+          call FILE_Set_Attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%int(1:dinfo%att_len(i)) )
+       case ( FILE_REAL4 )
+          call FILE_Set_Attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%float(1:dinfo%att_len(i)) )
+       case ( FILE_REAL8 )
+          call FILE_Set_Attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%double(1:dinfo%att_len(i)) )
+       end select
+    end do
 
     if ( .NOT. varexisted ) then ! do below only once when file is created
        call FILE_enddef( fid )

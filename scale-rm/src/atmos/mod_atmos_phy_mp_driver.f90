@@ -350,10 +350,18 @@ contains
        dt_MP => TIME_DTSEC_ATMOS_PHY_MP
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
-       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
-    use scale_rm_statistics, only: &
+       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
+       ATMOS_GRID_CARTESC_REAL_VOL,       &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL,    &
+       ATMOS_GRID_CARTESC_REAL_VOLWXY,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLWXY, &
+       ATMOS_GRID_CARTESC_REAL_VOLZUY,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLZUY, &
+       ATMOS_GRID_CARTESC_REAL_VOLZXV,    &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLZXV
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_hydrometeor, only: &
@@ -462,8 +470,6 @@ contains
     real(RP) :: CP_t, CV_t
 
     real(RP) :: precip   (IA,JA)
-
-    real(RP) :: total ! dummy
 
     ! for history output
     real(RP), allocatable :: vterm_hist(:,:,:,:)
@@ -873,14 +879,32 @@ contains
     enddo
 
     if ( STATISTICS_checktotal ) then
-       call STAT_total( total, DENS_t_MP(:,:,:), 'DENS_t_MP' )
-       call STAT_total( total, MOMZ_t_MP(:,:,:), 'MOMZ_t_MP' )
-       call STAT_total( total, MOMX_t_MP(:,:,:), 'MOMX_t_MP' )
-       call STAT_total( total, MOMY_t_MP(:,:,:), 'MOMY_t_MP' )
-       call STAT_total( total, RHOT_t_MP(:,:,:), 'RHOT_t_MP' )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              DENS_t_MP(:,:,:), 'DENS_t_MP',       &
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  &
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL       )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              MOMZ_t_MP(:,:,:), 'MOMZ_t_MP',         &
+                              ATMOS_GRID_CARTESC_REAL_VOLWXY(:,:,:), &
+                              ATMOS_GRID_CARTESC_REAL_TOTVOLWXY      )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              MOMX_t_MP(:,:,:), 'MOMX_t_MP',         &
+                              ATMOS_GRID_CARTESC_REAL_VOLZUY(:,:,:), &
+                              ATMOS_GRID_CARTESC_REAL_TOTVOLZUY      )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              MOMY_t_MP(:,:,:), 'MOMY_t_MP',         &
+                              ATMOS_GRID_CARTESC_REAL_VOLZXV(:,:,:), &
+                              ATMOS_GRID_CARTESC_REAL_TOTVOLZXV      )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              RHOT_t_MP(:,:,:), 'RHOT_t_MP',      &
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), &
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL      )
 
        do iq = QS_MP, QE_MP
-          call STAT_total( total, RHOQ_t_MP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_MP' )
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 RHOQ_t_MP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_MP', &
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                  &
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL                       )
        enddo
     endif
 

@@ -622,46 +622,118 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for urban
   subroutine URBAN_vars_total
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
+    use scale_urban_grid_cartesC_real, only: &
+       URBAN_GRID_CARTESC_REAL_AREA,    &
+       URBAN_GRID_CARTESC_REAL_TOTAREA, &
+       URBAN_GRID_CARTESC_REAL_VOL,     &
+       URBAN_GRID_CARTESC_REAL_TOTVOL
     implicit none
 
-    real(RP) :: total
-    integer  :: k
     !---------------------------------------------------------------------------
 
     if ( STATISTICS_checktotal ) then
-       call STAT_total( total, URBAN_TR(:,:), VAR_NAME(I_TR) )
-       call STAT_total( total, URBAN_TB(:,:), VAR_NAME(I_TB) )
-       call STAT_total( total, URBAN_TG(:,:), VAR_NAME(I_TG) )
-       call STAT_total( total, URBAN_TC(:,:), VAR_NAME(I_TC) )
-       call STAT_total( total, URBAN_QC(:,:), VAR_NAME(I_QC) )
-       call STAT_total( total, URBAN_UC(:,:), VAR_NAME(I_UC) )
 
-       do k = UKS, UKE
-          call STAT_total( total, URBAN_TRL(k,:,:), VAR_NAME(I_TRL) )
-          call STAT_total( total, URBAN_TBL(k,:,:), VAR_NAME(I_TBL) )
-          call STAT_total( total, URBAN_TGL(k,:,:), VAR_NAME(I_TGL) )
-       enddo
+       ! 3D
+       call STATISTICS_total( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_TRL(:,:,:), VAR_NAME(I_TRL),  & ! (in)
+                              URBAN_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
+       call STATISTICS_total( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_TBL(:,:,:), VAR_NAME(I_TBL),  & ! (in)
+                              URBAN_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
+       call STATISTICS_total( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_TGL(:,:,:), VAR_NAME(I_TGL),  & ! (in)
+                              URBAN_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
 
-       call STAT_total( total, URBAN_RAINR(:,:), VAR_NAME(I_RAINR) )
-       call STAT_total( total, URBAN_RAINB(:,:), VAR_NAME(I_RAINB) )
-       call STAT_total( total, URBAN_RAING(:,:), VAR_NAME(I_RAING) )
-       call STAT_total( total, URBAN_ROFF (:,:), VAR_NAME(I_ROFF)  )
+       ! 2D
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_TR(:,:), VAR_NAME(I_TR),      & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),  & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA     ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_TB(:,:), VAR_NAME(I_TB),      & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),  & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA     ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_TG(:,:), VAR_NAME(I_TG),      & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),  & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA     ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_TC(:,:), VAR_NAME(I_TC),      & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),  & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA     ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_QC(:,:), VAR_NAME(I_QC),      & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),  & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA     ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_UC(:,:), VAR_NAME(I_UC),      & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),  & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA     ) ! (in)
 
-       call STAT_total( total, URBAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP) )
-       call STAT_total( total, URBAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW)   )
-       call STAT_total( total, URBAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW)   )
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_RAINR(:,:), VAR_NAME(I_RAINR), & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA      ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_RAINB(:,:), VAR_NAME(I_RAINB), & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA      ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_RAING(:,:), VAR_NAME(I_RAING), & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA      ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_ROFF (:,:), VAR_NAME(I_ROFF),  & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA      ) ! (in)
 
-       call STAT_total( total, URBAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW)   )
-       call STAT_total( total, URBAN_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU)   )
-       call STAT_total( total, URBAN_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV)   )
-       call STAT_total( total, URBAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH)   )
-       call STAT_total( total, URBAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH)   )
-       call STAT_total( total, URBAN_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH)   )
-       call STAT_total( total, URBAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap) )
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP), & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW),   & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW),   & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
 
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW),   & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU),   & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV),   & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH),   & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH),   & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH),   & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap), & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
     endif
 
     return

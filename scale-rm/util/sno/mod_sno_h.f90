@@ -33,6 +33,8 @@ module mod_sno_h
   integer, public, parameter :: item_limit = 1000  !< limit of item
   integer, public, parameter :: step_limit = 10000 !< limit of steps          for each item
   integer, public, parameter :: dim_limit  = 3     !< limit of dimension rank for each item
+  integer, public, parameter :: att_limit  = 10    !< limit of atts for each item
+  integer, public, parameter :: att_size_limit = 3 !< limit of length for each attribute
 
   integer, public, parameter :: I_map_p = 1
   integer, public, parameter :: I_map_i = 2
@@ -48,6 +50,7 @@ module mod_sno_h
     integer                :: gridsize(6)         ! total grid size     in global  (z,x,y,oz,lz,uz), always including halo
     integer                :: halosize(3)         ! halo  grid size     in global  (z,x,y), always existing
     character(len=H_MID)   :: time_units
+    character(len=H_SHORT) :: calendar
     real(DP)               :: time_start(1)
     integer                :: xatt_size_global(1)
     integer                :: xatt_halo_global(2)
@@ -78,23 +81,40 @@ module mod_sno_h
     real(RP), allocatable  :: AXIS_1d(:)
     real(RP), allocatable  :: AXIS_2d(:,:)
     real(RP), allocatable  :: AXIS_3d(:,:,:)
+    logical                :: has_bounds
+    logical                :: is_bounds
   end type axisinfo
+
+  ! struct for attribute value
+  type, public :: attval
+     character(len=H_MID)   :: text
+     integer                :: int   (att_size_limit)
+     real(SP)               :: float (att_size_limit)
+     real(DP)               :: double(att_size_limit)
+  end type attval
 
   ! struct for item infomation
   type, public :: iteminfo
     character(len=H_SHORT) :: varname
     character(len=H_MID)   :: description
     character(len=H_SHORT) :: units
+    character(len=H_MID)   :: standard_name
     integer                :: datatype
     integer                :: dim_rank
     character(len=H_SHORT) :: dim_name  (dim_limit)
     integer                :: dim_size  (dim_limit)
+    integer                :: natts
+    character(len=H_SHORT) :: att_name  (att_limit)
+    integer                :: att_type  (att_limit)
+    integer                :: att_len   (att_limit)
+    type(attval)           :: atts      (att_limit)
     logical                :: transpose
     integer                :: step_nmax
     real(DP)               :: time_start(step_limit)
     real(DP)               :: time_end  (step_limit)
     real(DP)               :: dt
     character(len=H_MID)   :: time_units
+    character(len=H_SHORT) :: calendar
     real(RP), allocatable  :: VAR_1d(:)
     real(RP), allocatable  :: VAR_2d(:,:)
     real(RP), allocatable  :: VAR_3d(:,:,:)

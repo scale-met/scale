@@ -138,10 +138,12 @@ contains
   !> Driver
   subroutine ATMOS_PHY_RD_driver( update_flag )
     use scale_atmos_grid_cartesC_real, only: &
-       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ,            &
-       REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ,            &
-       REAL_LON => ATMOS_GRID_CARTESC_REAL_LON,           &
-       REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT
+       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ,  &
+       REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ,  &
+       REAL_LON => ATMOS_GRID_CARTESC_REAL_LON, &
+       REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT, &
+       ATMOS_GRID_CARTESC_REAL_VOL, &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
@@ -156,9 +158,9 @@ contains
        dt_RD => TIME_DTSEC_ATMOS_PHY_RD, &
        TIME_NOWDATE,                     &
        TIME_OFFSET_YEAR
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_hydrometeor, only: &
@@ -609,7 +611,10 @@ contains
     enddo
 
     if ( STATISTICS_checktotal ) then
-       call STAT_total( total, RHOH_RD(:,:,:), 'RHOH_RD' )
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              RHOH_RD(:,:,:), 'RHOH_RD',          &
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), &
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL      )
     endif
 
     return

@@ -67,18 +67,6 @@ contains
        S2,                  &
        DENS, MOMZ, MOMX, MOMY, &
        GSQRT, J13G, J23G, J33G, MAPF )
-    use scale_atmos_grid_cartesC_metric, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYW, &
-       I_XVW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_UVZ, &
-       I_XY,  &
-       I_UY,  &
-       I_XV,  &
-       I_UV
     use scale_atmos_grid_cartesC, only: &
        FDZ  => ATMOS_GRID_CARTESC_FDZ,  &
        FDX  => ATMOS_GRID_CARTESC_FDX,  &
@@ -1202,13 +1190,6 @@ contains
        implicit, &
        a, b, c, dt, &
        IIS, IIE, JJS, JJE )
-    use scale_atmos_grid_cartesC_metric, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_UY,  &
-       I_XV
     use scale_atmos_grid_cartesC, only: &
        FDZ  => ATMOS_GRID_CARTESC_FDZ,  &
        RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
@@ -1510,12 +1491,6 @@ contains
        RCDY => ATMOS_GRID_CARTESC_RCDY, &
        RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
        CDZ  => ATMOS_GRID_CARTESC_CDZ
-    use scale_atmos_grid_cartesC_metric, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYW, &
-       I_XVW, &
-       I_XY
     implicit none
 
     real(RP), intent(out) :: MOMZ_t_TB(KA,IA,JA)
@@ -1605,12 +1580,6 @@ contains
        RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
        RFDX => ATMOS_GRID_CARTESC_RFDX, &
        FDZ  => ATMOS_GRID_CARTESC_FDZ
-    use scale_atmos_grid_cartesC_metric, only: &
-       I_XYZ, &
-       I_UYW, &
-       I_UYZ, &
-       I_UVZ, &
-       I_UY
     implicit none
     real(RP), intent(out) :: MOMX_t_TB(KA,IA,JA)
     real(RP), intent(in)  :: QFLX_MOMX(KA,IA,JA,3)
@@ -1697,11 +1666,6 @@ contains
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
        RFDY => ATMOS_GRID_CARTESC_RFDY, &
        FDZ  => ATMOS_GRID_CARTESC_FDZ
-    use scale_atmos_grid_cartesC_metric, only: &
-       I_XYZ, &
-       I_XVW, &
-       I_UVZ, &
-       I_XV
     implicit none
 
     real(RP), intent(out) :: MOMY_t_TB(KA,IA,JA)
@@ -1789,13 +1753,6 @@ contains
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
        RCDY => ATMOS_GRID_CARTESC_RCDY, &
        FDZ  => ATMOS_GRID_CARTESC_FDZ
-    use scale_atmos_grid_cartesC_metric, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_UVZ, &
-       I_XY
     implicit none
 
     real(RP), intent(out) :: phi_t_TB(KA,IA,JA)

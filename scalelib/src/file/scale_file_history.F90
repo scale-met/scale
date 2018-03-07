@@ -19,10 +19,6 @@ module scale_file_history
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_file_h, only: &
-     FILE_HLONG, &
-     FILE_HSHORT, &
-     FILE_HMID
   use scale_process, only: &
      PRC_abort
   !-----------------------------------------------------------------------------
@@ -145,117 +141,128 @@ module scale_file_history
   !
 
   type request
-     character(len=File_HSHORT) :: name              !> Name of variable (in the code)
-     character(len=File_HSHORT) :: outname           !> Name of variable (for output)
-     character(len=File_HLONG)  :: basename          !> Base name of the file
-     logical                    :: postfix_timelabel !> Add time label to basename?
-     character(len=File_HSHORT) :: zcoord            !> Z-coordinate
-     integer                    :: dstep             !> Time unit
-     logical                    :: taverage          !> Apply time average?
-     integer                    :: dtype             !> Data type
-     logical                    :: registered        !> This item is registered?
+     character(len=H_SHORT) :: name              !> Name of variable (in the code)
+     character(len=H_SHORT) :: outname           !> Name of variable (for output)
+     character(len=H_LONG)  :: basename          !> Base name of the file
+     logical                :: postfix_timelabel !> Add time label to basename?
+     character(len=H_SHORT) :: zcoord            !> Z-coordinate
+     integer                :: dstep             !> Time unit
+     logical                :: taverage          !> Apply time average?
+     integer                :: dtype             !> Data type
+     character(len=H_SHORT) :: cell_measures     !> Cell measures
+     logical                :: registered        !> This item is registered?
   end type request
 
   type var_out
-     character(len=FILE_HSHORT) :: name              !> Name of variable (in the code)
-     character(len=FILE_HSHORT) :: outname           !> Name of variable (for output)
-     character(len=FILE_HLONG)  :: basename          !> Base name of the file
-     logical                    :: postfix_timelabel !> Add time label to basename?
-     character(len=FILE_HSHORT) :: zcoord            !> Z-coordinate
-     integer                    :: zid               !> Z-coordinate index
-     integer                    :: dstep             !> Time unit
-     logical                    :: taverage          !> Apply time average?
-     integer                    :: dtype             !> Data type
+     character(len=H_SHORT) :: name              !> Name of variable (in the code)
+     character(len=H_SHORT) :: outname           !> Name of variable (for output)
+     character(len=H_LONG)  :: basename          !> Base name of the file
+     logical                :: postfix_timelabel !> Add time label to basename?
+     character(len=H_SHORT) :: zcoord            !> Z-coordinate
+     integer                :: zid               !> Z-coordinate index
+     integer                :: dstep             !> Time unit
+     logical                :: taverage          !> Apply time average?
+     integer                :: dtype             !> Data type
 
-     integer                    :: fid               !> FILE id of the file
-     integer                    :: vid               !> Variable id
-     character(len=FILE_HLONG)  :: desc              !> Variable description
-     character(len=FILE_HSHORT) :: units             !> Variable units
-     integer                    :: dimid             !> dimension ID
-     integer                    :: waitstep          !> Step length to suppress output [step]
-     integer                    :: laststep_write    !> Last step when the variable is written
-     integer                    :: laststep_put      !> Last step when the variable is put
-     logical                    :: flag_clear        !> Data buffer should be cleared at the timing of putting?
-     integer                    :: size              !> Size of array
-     real(DP)                   :: timesum           !> Buffer for time
-     real(DP), pointer          :: varsum(:)         !> Buffer for value
-     logical                    :: fill_halo         !> switch to fill halo with RMISS value
+     integer                :: fid               !> FILE id of the file
+     integer                :: vid               !> Variable id
+     character(len=H_LONG)  :: desc              !> Variable description
+     character(len=H_SHORT) :: units             !> Variable units
+     character(len=H_SHORT) :: standard_name     !> Variable standard_name
+     integer                :: dimid             !> dimension ID
+     character(len=H_SHORT) :: cell_measures     !> Cell measures
+     integer                :: waitstep          !> Step length to suppress output [step]
+     integer                :: laststep_write    !> Last step when the variable is written
+     integer                :: laststep_put      !> Last step when the variable is put
+     logical                :: flag_clear        !> Data buffer should be cleared at the timing of putting?
+     integer                :: size              !> Size of array
+     real(DP)               :: timesum           !> Buffer for time
+     real(DP), pointer      :: varsum(:)         !> Buffer for value
+     logical                :: fill_halo         !> switch to fill halo with RMISS value
   end type var_out
 
   integer, parameter :: FILE_HISTORY_variant_max = 10
   type var_in
-     character(len=FILE_HSHORT) :: name
-     integer                    :: nvariants
-     integer                    :: variants(FILE_HISTORY_variant_max)
+     character(len=H_SHORT) :: name
+     integer                :: nvariants
+     integer                :: variants(FILE_HISTORY_variant_max)
   end type var_in
 
   type dim
-     character(len=FILE_HSHORT)          :: name
-     integer                             :: ndims
-     integer                             :: nzcoords
-     character(len=FILE_HSHORT), pointer :: dims(:,:)
-     integer                   , pointer :: start(:,:)
-     integer                   , pointer :: count(:,:)
-     integer                   , pointer :: size(:)
-     character(len=FILE_HSHORT), pointer :: zcoords(:)
-     logical                             :: mapping
+     character(len=H_SHORT)          :: name
+     integer                         :: ndims
+     integer                         :: nzcoords
+     character(len=H_SHORT), pointer :: dims(:,:)
+     integer               , pointer :: start(:,:)
+     integer               , pointer :: count(:,:)
+     integer               , pointer :: size(:)
+     character(len=H_SHORT), pointer :: zcoords(:)
+     character(len=H_SHORT)          :: mapping
+     character(len=H_SHORT)          :: area
+     character(len=H_SHORT)          :: area_x
+     character(len=H_SHORT)          :: area_y
+     character(len=H_SHORT)          :: volume
+     character(len=H_SHORT)          :: location
+     character(len=H_SHORT)          :: grid
   end type dim
 
   type axis
-     character(len=FILE_HSHORT) :: name
-     character(len=FILE_HLONG)  :: desc
-     character(len=FILE_HSHORT) :: units
-     character(len=FILE_HSHORT) :: dim
-     integer                    :: dim_size
-     real(DP), pointer          :: var(:)
-     logical                    :: down
-     integer                    :: gdim_size  ! global dimension size
-     integer                    :: start(1)   ! global array start index
+     character(len=H_SHORT) :: name
+     character(len=H_LONG)  :: desc
+     character(len=H_SHORT) :: units
+     character(len=H_SHORT) :: dim
+     integer                :: dim_size
+     real(DP), pointer      :: var(:)
+     real(DP), pointer      :: bounds(:,:)
+     logical                :: down
+     integer                :: gdim_size  ! global dimension size
+     integer                :: start      ! global array start index
   end type axis
 
   type assoc
-     character(len=FILE_HSHORT) :: name
-     character(len=FILE_HLONG)  :: desc
-     character(len=FILE_HSHORT) :: units
-     integer                    :: ndims
-     character(len=FILE_HSHORT) :: dims(4)
-     integer                    :: dtype
-     real(DP), pointer          :: var(:)
-     integer                    :: start(4)   ! global array start indices
-     integer                    :: count(4)   ! global array request lengths
+     character(len=H_SHORT) :: name
+     character(len=H_LONG)  :: desc
+     character(len=H_SHORT) :: units
+     integer                :: ndims
+     character(len=H_SHORT) :: dims(4)
+     integer                :: dtype
+     real(DP), pointer      :: var(:)
+     integer                :: start(4)   ! global array start indices
+     integer                :: count(4)   ! global array request lengths
   end type assoc
 
   integer, parameter :: I_TEXT = 1, I_INT = 2, I_FLOAT = 3, I_DOUBLE = 4
   type attr
-     character(len=FILE_HSHORT) :: varname
-     character(len=FILE_HMID)   :: key
-     integer                    :: type
-     character(len=FILE_HLONG)  :: text
-     integer,  pointer          :: int(:)
-     real(SP), pointer          :: float(:)
-     real(DP), pointer          :: double(:)
+     character(len=H_SHORT) :: varname
+     character(len=H_MID)   :: key
+     integer                :: type
+     character(len=H_LONG)  :: text
+     integer,  pointer      :: int(:)
+     real(SP), pointer      :: float(:)
+     real(DP), pointer      :: double(:)
+     logical                :: add_variable
   end type attr
 
   ! From upstream side of the library
-  integer                    :: FILE_HISTORY_myrank      !> Number of my rank
+  integer                :: FILE_HISTORY_myrank      !> Number of my rank
 
 
-  real(DP)                   :: FILE_HISTORY_STARTDAYSEC !> Start date [second]
-  real(DP)                   :: FILE_HISTORY_DTSEC       !> Delta t    [second]
-  character(len=FILE_HMID)   :: FILE_HISTORY_TIME_SINCE  !> Offset time
+  real(DP)               :: FILE_HISTORY_STARTDAYSEC !> Start date [second]
+  real(DP)               :: FILE_HISTORY_DTSEC       !> Delta t    [second]
+  character(len=H_MID)   :: FILE_HISTORY_TIME_SINCE  !> Offset time
 
   ! From NAMELIST or upstream side of the library
-  character(len=FILE_HMID)   :: FILE_HISTORY_TITLE       !> Header information of the output file: title
-  character(len=FILE_HMID)   :: FILE_HISTORY_SOURCE      !> Header information of the output file: model name
-  character(len=FILE_HMID)   :: FILE_HISTORY_INSTITUTION !> Header information of the output file: institution
-  character(len=FILE_HSHORT) :: FILE_HISTORY_MAPPINGNAME !> Header information of mapping name
+  character(len=H_MID)   :: FILE_HISTORY_TITLE       !> Header information of the output file: title
+  character(len=H_MID)   :: FILE_HISTORY_SOURCE      !> Header information of the output file: model name
+  character(len=H_MID)   :: FILE_HISTORY_INSTITUTION !> Header information of the output file: institution
 
-  character(len=FILE_HMID) :: FILE_HISTORY_TIME_UNITS             !> Unit for time axis
-  logical                  :: FILE_HISTORY_OUTPUT_STEP0 = .false. !> Output value at step=0?
-  integer                  :: FILE_HISTORY_OUTPUT_WAIT_STEP       !> Step length to suppress output
-  integer                  :: FILE_HISTORY_OUTPUT_SWITCH_STEP     !> Step interval to switch output file
-  integer                  :: FILE_HISTORY_OUTPUT_SWITCH_LASTSTEP !> Last step when the file is switched
-  logical                  :: FILE_HISTORY_ERROR_PUTMISS = .true. !> Abort if the value is never stored after last output?
+  character(len=H_MID)   :: FILE_HISTORY_TIME_UNITS             !> Unit for time axis
+  character(len=H_SHORT) :: FILE_HISTORY_CALENDAR               !> Calendar name
+  logical                :: FILE_HISTORY_OUTPUT_STEP0 = .false. !> Output value at step=0?
+  integer                :: FILE_HISTORY_OUTPUT_WAIT_STEP       !> Step length to suppress output
+  integer                :: FILE_HISTORY_OUTPUT_SWITCH_STEP     !> Step interval to switch output file
+  integer                :: FILE_HISTORY_OUTPUT_SWITCH_LASTSTEP !> Last step when the file is switched
+  logical                :: FILE_HISTORY_ERROR_PUTMISS = .true. !> Abort if the value is never stored after last output?
 
   ! working
   integer,       parameter   :: FILE_HISTORY_req_max = 1000 !> number limit for history item request
@@ -277,11 +284,11 @@ module scale_file_history
   integer                    :: FILE_HISTORY_naxes    =   0
   type(axis)                 :: FILE_HISTORY_axes(FILE_HISTORY_axis_max)
 
-  integer,       parameter   :: FILE_HISTORY_assoc_max = 20
+  integer,       parameter   :: FILE_HISTORY_assoc_max = 40
   integer                    :: FILE_HISTORY_nassocs   =  0
   type(assoc)                :: FILE_HISTORY_assocs(FILE_HISTORY_assoc_max)
 
-  integer,       parameter   :: FILE_HISTORY_attr_max = 100
+  integer,       parameter   :: FILE_HISTORY_attr_max = 200
   integer                    :: FILE_HISTORY_nattrs   = 0
   type(attr)                 :: FILE_HISTORY_attrs(FILE_HISTORY_attr_max)
 
@@ -291,7 +298,7 @@ module scale_file_history
 
   integer(8)                 :: FILE_HISTORY_io_buffer_size = 0 !> internal buffer for PnetCDF
 
-  character(len=FILE_HMID)   :: FILE_HISTORY_options = ''       !> option to give file.  'filetype1:key1=val1&filetype2:key2=val2&...'
+  character(len=H_MID)       :: FILE_HISTORY_options = ''       !> option to give file.  'filetype1:key1=val1&filetype2:key2=val2&...'
 
 
   logical                    :: FILE_HISTORY_disabled = .true.
@@ -306,24 +313,21 @@ contains
   !> Setup
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Setup( &
-       title, source, institution, &
-       mapping_name,               &
-       time_start, time_interval,  &
-       time_units, time_since,     &
-       default_basename,           &
-       default_postfix_timelabel,  &
-       default_zcoord,             &
-       default_tinterval,          &
-       default_tunit,              &
-       default_taverage,           &
-       default_datatype,           &
-       myrank                      )
+       title, source, institution,       &
+       time_start, time_interval,        &
+       time_units, time_since, calendar, &
+       default_basename,                 &
+       default_postfix_timelabel,        &
+       default_zcoord,                   &
+       default_tinterval,                &
+       default_tunit,                    &
+       default_taverage,                 &
+       default_datatype,                 &
+       myrank                            )
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8, &
        FILE_preclist
-    use scale_file_h, only: &
-       FILE_FILE_MAX
     use scale_file, only: &
        FILE_AGGREGATE
     use scale_calendar, only: &
@@ -333,12 +337,12 @@ contains
     character(len=*), intent(in)  :: title
     character(len=*), intent(in)  :: source
     character(len=*), intent(in)  :: institution
-    character(len=*), intent(in)  :: mapping_name
     real(DP),         intent(in)  :: time_start
     real(DP),         intent(in)  :: time_interval
 
     character(len=*), intent(in), optional :: time_units
     character(len=*), intent(in), optional :: time_since
+    character(len=*), intent(in), optional :: calendar
     character(len=*), intent(in), optional :: default_basename
     logical,          intent(in), optional :: default_postfix_timelabel
     character(len=*), intent(in), optional :: default_zcoord
@@ -348,19 +352,19 @@ contains
     character(len=*), intent(in), optional :: default_datatype
     integer,          intent(in), optional :: myrank
 
-    character(len=FILE_HLONG)  :: FILE_HISTORY_DEFAULT_BASENAME          !> Base name of the file
-    logical                    :: FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL !> Add timelabel to the basename?
-    character(len=FILE_HSHORT) :: FILE_HISTORY_DEFAULT_ZCOORD            !> Default z-coordinate
-    real(DP)                   :: FILE_HISTORY_DEFAULT_TINTERVAL         !> Time interval
-    character(len=FILE_HSHORT) :: FILE_HISTORY_DEFAULT_TUNIT             !> Time unit
-    logical                    :: FILE_HISTORY_DEFAULT_TAVERAGE          !> Apply time average?
-    character(len=FILE_HSHORT) :: FILE_HISTORY_DEFAULT_DATATYPE          !> Data type
-                                                                         !> REAL4 : single precision
-                                                                         !> REAL8 : double precision
-    real(DP)                   :: FILE_HISTORY_OUTPUT_WAIT               !> Time length to suppress output
-    character(len=FILE_HSHORT) :: FILE_HISTORY_OUTPUT_WAIT_TUNIT         !> Time unit
-    real(DP)                   :: FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL   !> Time interval to switch output file
-    character(len=FILE_HSHORT) :: FILE_HISTORY_OUTPUT_SWITCH_TUNIT       !> Time unit
+    character(len=H_LONG)  :: FILE_HISTORY_DEFAULT_BASENAME          !> Base name of the file
+    logical                :: FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL !> Add timelabel to the basename?
+    character(len=H_SHORT) :: FILE_HISTORY_DEFAULT_ZCOORD            !> Default z-coordinate
+    real(DP)               :: FILE_HISTORY_DEFAULT_TINTERVAL         !> Time interval
+    character(len=H_SHORT) :: FILE_HISTORY_DEFAULT_TUNIT             !> Time unit
+    logical                :: FILE_HISTORY_DEFAULT_TAVERAGE          !> Apply time average?
+    character(len=H_SHORT) :: FILE_HISTORY_DEFAULT_DATATYPE          !> Data type
+                                                                     !> REAL4 : single precision
+                                                                     !> REAL8 : double precision
+    real(DP)               :: FILE_HISTORY_OUTPUT_WAIT               !> Time length to suppress output
+    character(len=H_SHORT) :: FILE_HISTORY_OUTPUT_WAIT_TUNIT         !> Time unit
+    real(DP)               :: FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL   !> Time interval to switch output file
+    character(len=H_SHORT) :: FILE_HISTORY_OUTPUT_SWITCH_TUNIT       !> Time unit
 
     NAMELIST / PARAM_FILE_HISTORY / &
        FILE_HISTORY_TITLE,                     &
@@ -384,15 +388,15 @@ contains
        FILE_HISTORY_OPTIONS,                   &
        debug
 
-    character(len=FILE_HSHORT) :: NAME              !> name of variable (in the code)
-    character(len=FILE_HSHORT) :: OUTNAME           !> name of variable (for output)
-    character(len=FILE_HLONG)  :: BASENAME          !> base name of the file
-    logical                    :: POSTFIX_TIMELABEL !> Add timelabel to the basename?
-    character(len=FILE_HSHORT) :: ZCOORD            !> z-coordinate
-    real(DP)                   :: TINTERVAL         !> time interval
-    character(len=FILE_HSHORT) :: TUNIT             !> time unit
-    logical                    :: TAVERAGE          !> apply time average?
-    character(len=FILE_HSHORT) :: DATATYPE          !> data type
+    character(len=H_SHORT) :: NAME              !> name of variable (in the code)
+    character(len=H_SHORT) :: OUTNAME           !> name of variable (for output)
+    character(len=H_LONG)  :: BASENAME          !> base name of the file
+    logical                :: POSTFIX_TIMELABEL !> Add timelabel to the basename?
+    character(len=H_SHORT) :: ZCOORD            !> z-coordinate
+    real(DP)               :: TINTERVAL         !> time interval
+    character(len=H_SHORT) :: TUNIT             !> time unit
+    logical                :: TAVERAGE          !> apply time average?
+    character(len=H_SHORT) :: DATATYPE          !> data type
 
     NAMELIST / HISTORY_ITEM / &
        NAME,              &
@@ -410,8 +414,8 @@ contains
     real(DP) :: dtsec
     integer  :: dstep
 
-    integer                    :: id1, id2, count
-    character(len=FILE_HSHORT) :: item1, item2
+    integer                :: id1, id2, count
+    character(len=H_SHORT) :: item1, item2
 
     integer  :: ierr
     integer  :: k, n, id
@@ -433,6 +437,12 @@ contains
        FILE_HISTORY_TIME_SINCE = ''
     endif
 
+    if ( present(calendar) ) then
+       FILE_HISTORY_CALENDAR = calendar
+    else
+       FILE_HISTORY_CALENDAR = ""
+    end if
+
     FILE_HISTORY_TIME_UNITS                = 'seconds' !> Unit for time axis
     FILE_HISTORY_DEFAULT_BASENAME          = ''        !> Base name of the file
     FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL = .false.   !> Add timelabel to the basename?
@@ -452,7 +462,6 @@ contains
     FILE_HISTORY_TITLE       = title
     FILE_HISTORY_SOURCE      = source
     FILE_HISTORY_INSTITUTION = institution
-    FILE_HISTORY_MAPPINGNAME = mapping_name
     if( present(time_units)                ) FILE_HISTORY_TIME_UNITS                = time_units
     if( present(default_basename)          ) FILE_HISTORY_DEFAULT_BASENAME          = default_basename
     if( present(default_postfix_timelabel) ) FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL = default_postfix_timelabel
@@ -565,7 +574,7 @@ contains
           call PRC_abort
        endif
 
-       if ( abs(dtsec-real(dstep,kind=DP)*FILE_HISTORY_DTSEC) > dtsec*1.0-3_DP ) then
+       if ( abs(dtsec-real(dstep,kind=DP)*FILE_HISTORY_DTSEC) > dtsec*1.E-3_DP ) then
           write(*,*) 'xxx time interval must be a multiple of delta t. (interval,dt)=', dtsec, FILE_HISTORY_DTSEC
           call PRC_abort
        endif
@@ -598,7 +607,7 @@ contains
 
     FILE_HISTORY_nitems = 0
     allocate( FILE_HISTORY_vars        (FILE_HISTORY_nreqs) )
-    allocate( FILE_HISTORY_axis_written(0:FILE_FILE_MAX-1) ) ! fid begins from 0
+    allocate( FILE_HISTORY_axis_written(FILE_HISTORY_nreqs) )
 
     FILE_HISTORY_nvar_inputs = 0
     allocate( FILE_HISTORY_var_inputs(FILE_HISTORY_nreqs) )
@@ -618,7 +627,9 @@ contains
   subroutine FILE_HISTORY_reg( &
        name, desc, unit, &
        itemid,           &
+       standard_name,    &
        ndims, dim_type,  &
+       cell_measures,    &
        fill_halo         )
     implicit none
 
@@ -628,10 +639,14 @@ contains
 
     integer,          intent(out) :: itemid !< index number of the item
 
+    character(len=*), intent(in), optional :: standard_name
     integer,          intent(in), optional :: ndims    !< if ndims is set and dim_type is not set, the dim_type that set firstry by FILE_HISTORY_set_dim of ndims is used
     character(len=*), intent(in), optional :: dim_type
+    character(len=*), intent(in), optional :: cell_measures
     logical,          intent(in), optional :: fill_halo
 
+    character(len=H_SHORT) :: standard_name_
+    character(len=H_SHORT) :: cell_measures_
     integer :: dimid, iid
     integer :: n
     !---------------------------------------------------------------------------
@@ -644,10 +659,17 @@ contains
 
     call PROF_rapstart('FILE_HISTORY_OUT', 2)
 
-    if ( len_trim(name) >= FILE_HSHORT ) then
-       write(*,'(1x,A,I2,A,A)') 'xxx Length of history name should be <= ', FILE_HSHORT-1 ,' chars. STOP', trim(name)
+    if ( len_trim(name) >= H_SHORT ) then
+       write(*,'(1x,A,I2,A,A)') 'xxx Length of history name should be <= ', H_SHORT-1 ,' chars. STOP', trim(name)
        call PRC_abort
     endif
+
+    ! standard_name
+    if ( present(standard_name) ) then
+       standard_name_ = standard_name
+    else
+       standard_name_ = ""
+    end if
 
     ! get dimension id
     if ( FILE_HISTORY_ndims < 1 ) then
@@ -691,25 +713,75 @@ contains
        end if
     end if
 
+    if ( present(cell_measures) ) then
+       select case ( cell_measures )
+       case ( "area" )
+          if ( FILE_HISTORY_dims(dimid)%area == "" ) then
+             write(*,*) 'xxx area is not supported for cell_measures'
+             call PRC_abort
+          end if
+       case ( "area_z" )
+          if ( FILE_HISTORY_dims(dimid)%area == "" ) then
+             write(*,*) 'xxx area_z is not supported for cell_measures'
+             call PRC_abort
+          end if
+       case ( "area_x" )
+          if ( FILE_HISTORY_dims(dimid)%area_x == "" ) then
+             write(*,*) 'xxx area_x is not supported for cell_measures'
+             call PRC_abort
+          end if
+       case ( "area_y" )
+          if ( FILE_HISTORY_dims(dimid)%area_y == "" ) then
+             write(*,*) 'xxx area_y is not supported for cell_measures'
+             call PRC_abort
+          end if
+       case ( "volume" )
+          if ( FILE_HISTORY_dims(dimid)%volume == "" ) then
+             write(*,*) 'xxx volume is not supported for cell_measures'
+             call PRC_abort
+          end if
+       case default
+          write(*,*) 'xxx cell_measures must be "area" or "volume"'
+          call PRC_abort
+       end select
+       cell_measures_ = cell_measures
+    else if ( FILE_HISTORY_dims(dimid)%ndims == 2 ) then
+       cell_measures_ = "area"
+    else if ( FILE_HISTORY_dims(dimid)%ndims == 3 ) then
+       cell_measures_ = "volume"
+    else
+       cell_measures_ = ""
+    end if
+
     if ( FILE_HISTORY_dims(dimid)%nzcoords > 0 ) then
 
        itemid = -1
        do n = 1, FILE_HISTORY_dims(dimid)%nzcoords
-          call FILE_HISTORY_Add_Variable( name, desc, unit,                    & ! (in)
-                                          dimid,                               & ! (in)
-                                          FILE_HISTORY_dims(dimid)%zcoords(n), & ! (in)
-                                          iid,                                 & ! (out)
-                                          fill_halo                            ) ! (in)
+          if ( FILE_HISTORY_dims(dimid)%zcoords(n) == "model" ) then
+             call FILE_HISTORY_Add_Variable( name, desc, unit, standard_name_,    & ! (in)
+                                             dimid,                               & ! (in)
+                                             FILE_HISTORY_dims(dimid)%zcoords(n), & ! (in)
+                                             iid,                                 & ! (out)
+                                             cell_measures=cell_measures_, & ! (in)
+                                             fill_halo=fill_halo                  ) ! (in)
+          else
+             call FILE_HISTORY_Add_Variable( name, desc, unit, standard_name_,    & ! (in)
+                                             dimid,                               & ! (in)
+                                             FILE_HISTORY_dims(dimid)%zcoords(n), & ! (in)
+                                             iid,                                 & ! (out)
+                                             fill_halo=fill_halo                  ) ! (in)
+          end if
           if ( iid > 0 ) itemid = iid
        end do
 
     else
 
-       call FILE_HISTORY_Add_Variable( name, desc, unit, & ! (in)
-                                       dimid,            & ! (in)
-                                       "model",          & ! (in)
-                                       itemid,           & ! (out)
-                                       fill_halo         ) ! (in)
+       call FILE_HISTORY_Add_Variable( name, desc, unit, standard_name_, & ! (in)
+                                       dimid,                            & ! (in)
+                                       "model",                          & ! (in)
+                                       itemid,                           & ! (out)
+                                       cell_measures=cell_measures_,     & ! (in)
+                                       fill_halo=fill_halo               ) ! (in)
 
     end if
 
@@ -788,8 +860,9 @@ contains
   !> Wrapper routine of FILE_HISTORY_reg + FILE_HISTORY_put
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_in_0D( &
-       var,   &
+       var,              &
        name, desc, unit, &
+       standard_name,    &
        dim_type )
     implicit none
 
@@ -798,10 +871,11 @@ contains
     character(len=*), intent(in) :: desc       !< description of the item
     character(len=*), intent(in) :: unit       !< unit        of the item
 
+    character(len=*), intent(in), optional :: standard_name
     character(len=*), intent(in), optional :: dim_type
 
     logical, parameter     :: fill_halo = .false.
-    character(len=FILE_HSHORT) :: dim_type_
+    character(len=H_SHORT) :: dim_type_
 
     integer, parameter :: ndim = 0
     integer :: itemid
@@ -811,11 +885,12 @@ contains
     if ( FILE_HISTORY_disabled ) return
 
     ! Check whether the item has been already registered
-    call FILE_HISTORY_reg( name, desc, unit,   & ! [IN]
-                           itemid,             & ! [OUT]
-                           ndims=ndim,         & ! [IN]
-                           dim_type=dim_type,  & ! [IN]
-                           fill_halo=fill_halo ) ! [IN]
+    call FILE_HISTORY_reg( name, desc, unit,            & ! [IN]
+                           itemid,                      & ! [OUT]
+                           standard_name=standard_name, & ! [IN]
+                           ndims=ndim,                  & ! [IN]
+                           dim_type=dim_type,           & ! [IN]
+                           fill_halo=fill_halo          ) ! [IN]
 
     if ( itemid < 0 ) return
 
@@ -909,8 +984,9 @@ contains
   !> Wrapper routine of FILE_HISTORY_reg + FILE_HISTORY_put
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_in_1D( &
-       var,   &
+       var,              &
        name, desc, unit, &
+       standard_name,    &
        dim_type )
     implicit none
 
@@ -919,10 +995,11 @@ contains
     character(len=*), intent(in) :: desc       !< description of the item
     character(len=*), intent(in) :: unit       !< unit        of the item
 
+    character(len=*), intent(in), optional :: standard_name
     character(len=*), intent(in), optional :: dim_type
 
     logical, parameter     :: fill_halo = .false.
-    character(len=FILE_HSHORT) :: dim_type_
+    character(len=H_SHORT) :: dim_type_
 
     integer, parameter :: ndim = 1
     integer :: itemid
@@ -932,11 +1009,12 @@ contains
     if ( FILE_HISTORY_disabled ) return
 
     ! Check whether the item has been already registered
-    call FILE_HISTORY_reg( name, desc, unit,   & ! [IN]
-                           itemid,             & ! [OUT]
-                           ndims=ndim,         & ! [IN]
-                           dim_type=dim_type,  & ! [IN]
-                           fill_halo=fill_halo ) ! [IN]
+    call FILE_HISTORY_reg( name, desc, unit,            & ! [IN]
+                           itemid,                      & ! [OUT]
+                           standard_name=standard_name, & ! [IN]
+                           ndims=ndim,                  & ! [IN]
+                           dim_type=dim_type,           & ! [IN]
+                           fill_halo=fill_halo          ) ! [IN]
 
     if ( itemid < 0 ) return
 
@@ -1030,8 +1108,9 @@ contains
   !> Wrapper routine of FILE_HISTORY_reg + FILE_HISTORY_put
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_in_2D( &
-       var,   &
+       var,              &
        name, desc, unit, &
+       standard_name,    &
        dim_type, &
        fill_halo )
     implicit none
@@ -1041,9 +1120,10 @@ contains
     character(len=*), intent(in) :: desc       !< description of the item
     character(len=*), intent(in) :: unit       !< unit        of the item
 
+    character(len=*), intent(in), optional :: standard_name
     character(len=*), intent(in), optional :: dim_type
     logical,          intent(in), optional :: fill_halo
-    character(len=FILE_HSHORT) :: dim_type_
+    character(len=H_SHORT) :: dim_type_
 
     integer, parameter :: ndim = 2
     integer :: itemid
@@ -1053,11 +1133,12 @@ contains
     if ( FILE_HISTORY_disabled ) return
 
     ! Check whether the item has been already registered
-    call FILE_HISTORY_reg( name, desc, unit,   & ! [IN]
-                           itemid,             & ! [OUT]
-                           ndims=ndim,         & ! [IN]
-                           dim_type=dim_type,  & ! [IN]
-                           fill_halo=fill_halo ) ! [IN]
+    call FILE_HISTORY_reg( name, desc, unit,            & ! [IN]
+                           itemid,                      & ! [OUT]
+                           standard_name=standard_name, & ! [IN]
+                           ndims=ndim,                  & ! [IN]
+                           dim_type=dim_type,           & ! [IN]
+                           fill_halo=fill_halo          ) ! [IN]
 
     if ( itemid < 0 ) return
 
@@ -1151,8 +1232,9 @@ contains
   !> Wrapper routine of FILE_HISTORY_reg + FILE_HISTORY_put
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_in_3D( &
-       var,   &
+       var,              &
        name, desc, unit, &
+       standard_name,    &
        dim_type, &
        fill_halo )
     implicit none
@@ -1162,9 +1244,10 @@ contains
     character(len=*), intent(in) :: desc       !< description of the item
     character(len=*), intent(in) :: unit       !< unit        of the item
 
+    character(len=*), intent(in), optional :: standard_name
     character(len=*), intent(in), optional :: dim_type
     logical,          intent(in), optional :: fill_halo
-    character(len=FILE_HSHORT) :: dim_type_
+    character(len=H_SHORT) :: dim_type_
 
     integer, parameter :: ndim = 3
     integer :: itemid
@@ -1174,11 +1257,12 @@ contains
     if ( FILE_HISTORY_disabled ) return
 
     ! Check whether the item has been already registered
-    call FILE_HISTORY_reg( name, desc, unit,   & ! [IN]
-                           itemid,             & ! [OUT]
-                           ndims=ndim,         & ! [IN]
-                           dim_type=dim_type,  & ! [IN]
-                           fill_halo=fill_halo ) ! [IN]
+    call FILE_HISTORY_reg( name, desc, unit,            & ! [IN]
+                           itemid,                      & ! [OUT]
+                           standard_name=standard_name, & ! [IN]
+                           ndims=ndim,                  & ! [IN]
+                           dim_type=dim_type,           & ! [IN]
+                           fill_halo=fill_halo          ) ! [IN]
 
     if ( itemid < 0 ) return
 
@@ -1195,11 +1279,14 @@ contains
   !> set dimension information
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Set_Dim( &
-       name,            &
-       ndims, nzcoords, &
-       dims, zcoords,   &
-       start, count,    &
-       mapping          )
+       name,                 &
+       ndims, nzcoords,      &
+       dims, zcoords,        &
+       start, count,         &
+       mapping,              &
+       area, area_x, area_y, &
+       volume,               &
+       location, grid        )
     implicit none
 
     character(len=*), intent(in) :: name
@@ -1210,7 +1297,13 @@ contains
     integer,          intent(in) :: start(ndims,nzcoords)
     integer,          intent(in) :: count(ndims,nzcoords)
 
-    logical, intent(in), optional :: mapping
+    character(len=*), intent(in), optional :: mapping
+    character(len=*), intent(in), optional :: area
+    character(len=*), intent(in), optional :: area_x
+    character(len=*), intent(in), optional :: area_y
+    character(len=*), intent(in), optional :: volume
+    character(len=*), intent(in), optional :: location
+    character(len=*), intent(in), optional :: grid
 
     integer :: id
     integer :: size, n, m
@@ -1247,7 +1340,40 @@ contains
     if ( present(mapping) ) then
        FILE_HISTORY_dims(id)%mapping = mapping
     else
-       FILE_HISTORY_dims(id)%mapping = .false.
+       FILE_HISTORY_dims(id)%mapping = ""
+    end if
+
+    if ( present(area) ) then
+       FILE_HISTORY_dims(id)%area = area
+    else
+       FILE_HISTORY_dims(id)%area = ""
+    end if
+    if ( present(area_x) ) then
+       FILE_HISTORY_dims(id)%area_x = area_x
+    else
+       FILE_HISTORY_dims(id)%area_x = ""
+    end if
+    if ( present(area_y) ) then
+       FILE_HISTORY_dims(id)%area_y = area_y
+    else
+       FILE_HISTORY_dims(id)%area_y = ""
+    end if
+    if ( present(volume) ) then
+       FILE_HISTORY_dims(id)%volume = volume
+    else
+       FILE_HISTORY_dims(id)%volume = ""
+    end if
+
+    if ( present(location) ) then
+       FILE_HISTORY_dims(id)%location = location
+       if ( present(grid) ) then
+          FILE_HISTORY_dims(id)%grid = "grid_"//trim(grid)
+       else
+          FILE_HISTORY_dims(id)%grid = "grid"
+       end if
+    else
+       FILE_HISTORY_dims(id)%location = ""
+       FILE_HISTORY_dims(id)%grid     = ""
     end if
 
     return
@@ -1260,6 +1386,7 @@ contains
        name, desc, units,    &
        dim,      &
        var,      &
+       bounds,   &
        down,     &
        gsize,    &
        start     )
@@ -1271,6 +1398,7 @@ contains
     character(len=*), intent(in) :: dim
     real(RP),         intent(in) :: var(:)
 
+    real(RP),         intent(in), optional :: bounds(:,:)
     logical,          intent(in), optional :: down
     integer,          intent(in), optional :: gsize ! global dim size
     integer,          intent(in), optional :: start ! global subarray start indices
@@ -1301,19 +1429,24 @@ contains
     FILE_HISTORY_axes(id)%var(:)   = var(:)
 
     if ( present(down) ) then
-       FILE_HISTORY_axes(FILE_HISTORY_naxes)%down = down
+       FILE_HISTORY_axes(id)%down = down
     else
-       FILE_HISTORY_axes(FILE_HISTORY_naxes)%down = .false.
+       FILE_HISTORY_axes(id)%down = .false.
     endif
     if ( present(gsize) ) then ! global dimension size
-         FILE_HISTORY_axes(FILE_HISTORY_naxes)%gdim_size = gsize
+         FILE_HISTORY_axes(id)%gdim_size = gsize
     else
-         FILE_HISTORY_axes(FILE_HISTORY_naxes)%gdim_size = -1
+         FILE_HISTORY_axes(id)%gdim_size = -1
     end if
     if ( present(start) ) then  ! global subarray starting indices
-       FILE_HISTORY_axes(FILE_HISTORY_naxes)%start(1) = start
+       FILE_HISTORY_axes(id)%start = start
     else
-       FILE_HISTORY_axes(FILE_HISTORY_naxes)%start(1) = 1
+       FILE_HISTORY_axes(id)%start = 1
+    end if
+
+    if ( present(bounds) ) then
+       allocate( FILE_HISTORY_axes(id)%bounds(2,dim_size) )
+       FILE_HISTORY_axes(id)%bounds(:,:) = bounds(:,:)
     end if
 
     return
@@ -1330,7 +1463,7 @@ contains
 
     integer :: fid, prev_fid
     integer :: id
-    character(len=FILE_HMID) :: timelabel
+    character(len=H_MID) :: timelabel
     !---------------------------------------------------------------------------
 
     if ( FILE_HISTORY_disabled ) return
@@ -1460,9 +1593,11 @@ contains
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Add_Variable( &
        name, desc, units,  &
+       standard_name,      &
        dimid,              &
        zcoord,             &
        itemid,             &
+       cell_measures,      &
        fill_halo           )
     use scale_file_h, only: &
        FILE_dtypelist
@@ -1470,9 +1605,11 @@ contains
     character(len=*), intent(in) :: name
     character(len=*), intent(in) :: desc
     character(len=*), intent(in) :: units
+    character(len=*), intent(in) :: standard_name
     integer,          intent(in) :: dimid
     character(len=*), intent(in) :: zcoord
     integer,          intent(out) :: itemid
+    character(len=*), intent(in), optional :: cell_measures
     logical,          intent(in), optional :: fill_halo
 
     integer :: reqid, zid, id
@@ -1521,29 +1658,35 @@ contains
              call PRC_abort
           end if
 
-          FILE_HISTORY_vars(id)%fid               = -1
-          FILE_HISTORY_vars(id)%vid               = -1
-          FILE_HISTORY_vars(id)%desc              = desc
-          FILE_HISTORY_vars(id)%units             = units
-          FILE_HISTORY_vars(id)%dimid             = dimid
-          if ( present(fill_halo) ) then
-             FILE_HISTORY_vars(id)%fill_halo         = fill_halo
+          FILE_HISTORY_vars(id)%fid   = -1
+          FILE_HISTORY_vars(id)%vid   = -1
+          FILE_HISTORY_vars(id)%desc  = desc
+          FILE_HISTORY_vars(id)%units = units
+          FILE_HISTORY_vars(id)%standard_name = standard_name
+          FILE_HISTORY_vars(id)%dimid = dimid
+          if ( present(cell_measures) ) then
+             FILE_HISTORY_vars(id)%cell_measures = cell_measures
           else
-             FILE_HISTORY_vars(id)%fill_halo         = .false.
+             FILE_HISTORY_vars(id)%cell_measures = ""
+          end if
+          if ( present(fill_halo) ) then
+             FILE_HISTORY_vars(id)%fill_halo = fill_halo
+          else
+             FILE_HISTORY_vars(id)%fill_halo = .false.
           end if
 
-          FILE_HISTORY_vars(id)%waitstep          = FILE_HISTORY_OUTPUT_WAIT_STEP
+          FILE_HISTORY_vars(id)%waitstep = FILE_HISTORY_OUTPUT_WAIT_STEP
           if ( FILE_HISTORY_OUTPUT_STEP0 .AND. FILE_HISTORY_NOWSTEP == 1 ) then
              FILE_HISTORY_vars(id)%laststep_write = 1 - FILE_HISTORY_vars(id)%dstep
           else
              FILE_HISTORY_vars(id)%laststep_write = 1
           endif
-          FILE_HISTORY_vars(id)%laststep_put      = FILE_HISTORY_vars(id)%laststep_write
-          FILE_HISTORY_vars(id)%flag_clear        = .true.
+          FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_vars(id)%laststep_write
+          FILE_HISTORY_vars(id)%flag_clear   = .true.
           FILE_HISTORY_vars(id)%size = FILE_HISTORY_dims(dimid)%size(zid)
           allocate( FILE_HISTORY_vars(id)%varsum( FILE_HISTORY_vars(id)%size ) )
 
-          FILE_HISTORY_vars(id)%timesum           = 0.0_DP
+          FILE_HISTORY_vars(id)%timesum = 0.0_DP
 
           if ( debug ) then
              if( IO_L ) write(IO_FID_LOG,*) '*** [HISTORY] Item registration No.= ', id
@@ -1619,17 +1762,18 @@ contains
     character(len=*),  intent(in),  optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
     logical,           intent(out), optional :: existed
 
-    integer                    :: fid
-    character(len=FILE_HMID)   :: tunits
-    character(len=FILE_HLONG)  :: basename_mod
-    logical                    :: fileexisted
-    integer(8)                 :: array_size
-    integer                    :: dim_size
-    integer                    :: dtype
-    integer                    :: dimid, zid
-    integer                    :: ndims
-    character(len=FILE_HSHORT) :: dims(3)
-    real(DP)                   :: dtsec
+    integer                :: fid
+    character(len=H_MID)   :: tunits
+    character(len=H_SHORT) :: calendar
+    character(len=H_LONG)  :: basename_mod
+    logical                :: fileexisted
+    integer(8)             :: array_size
+    integer                :: dim_size
+    integer                :: dtype
+    integer                :: dimid, zid
+    integer                :: ndims
+    character(len=H_SHORT) :: dims(3)
+    real(DP)               :: dtsec
 
     integer :: ic, ie, is, lo
     integer :: m
@@ -1653,14 +1797,16 @@ contains
           basename_mod = trim(FILE_HISTORY_vars(id)%basename)
        endif
 
-       call FILE_Create( basename_mod,                     & ! [IN]
-                         FILE_HISTORY_TITLE,               & ! [IN]
-                         FILE_HISTORY_SOURCE,              & ! [IN]
-                         FILE_HISTORY_INSTITUTION,         & ! [IN]
-                         fid, fileexisted,                 & ! [OUT]
-                         rankid = FILE_HISTORY_myrank,     & ! [IN]
-                         aggregate=FILE_HISTORY_AGGREGATE, &
-                         time_units = tunits               ) ! [IN]
+       call FILE_Create( basename_mod,                       & ! [IN]
+                         FILE_HISTORY_TITLE,                 & ! [IN]
+                         FILE_HISTORY_SOURCE,                & ! [IN]
+                         FILE_HISTORY_INSTITUTION,           & ! [IN]
+                         fid, fileexisted,                   & ! [OUT]
+                         rankid = FILE_HISTORY_myrank,       & ! [IN]
+                         aggregate = FILE_HISTORY_AGGREGATE, & ! [IN]
+                         time_units = tunits,                & ! [IN]
+                         calendar = FILE_HISTORY_CALENDAR    ) ! [IN]
+
        FILE_HISTORY_vars(id)%fid = fid
 
        if ( .NOT. fileexisted ) then ! new file
@@ -1714,12 +1860,13 @@ contains
                 dim_size = FILE_HISTORY_axes(m)%dim_size
              endif
 
-             call FILE_Def_Axis( fid,                        & ! [IN]
-                                 FILE_HISTORY_axes(m)%name,  & ! [IN]
-                                 FILE_HISTORY_axes(m)%desc,  & ! [IN]
-                                 FILE_HISTORY_axes(m)%units, & ! [IN]
-                                 FILE_HISTORY_axes(m)%dim,   & ! [IN]
-                                 dtype, dim_size             ) ! [IN]
+             call FILE_Def_Axis( fid,                                           & ! [IN]
+                                 FILE_HISTORY_axes(m)%name,                     & ! [IN]
+                                 FILE_HISTORY_axes(m)%desc,                     & ! [IN]
+                                 FILE_HISTORY_axes(m)%units,                    & ! [IN]
+                                 FILE_HISTORY_axes(m)%dim,                      & ! [IN]
+                                 dtype, dim_size,                               & ! [IN]
+                                 bounds=associated(FILE_HISTORY_axes(m)%bounds) ) ! [IN]
 
              if ( FILE_HISTORY_axes(m)%down ) then
                 call FILE_Set_Attribute( fid, FILE_HISTORY_axes(m)%name, 'positive', 'down' ) ! [IN]
@@ -1740,19 +1887,14 @@ contains
           enddo
 
 
-          ! mapping name
-          if ( FILE_HISTORY_mappingname /= "" ) then
-             call FILE_Add_AssociatedVariable( fid, FILE_HISTORY_mappingname ) ! [IN]
-
-             call FILE_Set_Attribute( fid,                      & ! [IN]
-                                      FILE_HISTORY_mappingname, & ! [IN]
-                                      "grid_mapping_name",      & ! [IN]
-                                      FILE_HISTORY_mappingname  ) ! [IN]
-          end if
-
-
           ! attributes
           do m = 1, FILE_HISTORY_nattrs
+
+             if ( FILE_HISTORY_attrs(m)%add_variable ) then
+                ! associated variable
+                call FILE_Add_AssociatedVariable( fid, FILE_HISTORY_attrs(m)%varname )
+             end if
+
              select case ( FILE_HISTORY_attrs(m)%type )
              case ( I_TEXT )
                 call FILE_Set_Attribute( fid,                           & ! [IN]
@@ -1811,6 +1953,7 @@ contains
                                FILE_HISTORY_vars(id)%outname,          & ! [IN]
                                FILE_HISTORY_vars(id)%desc,             & ! [IN]
                                FILE_HISTORY_vars(id)%units,            & ! [IN]
+                               FILE_HISTORY_vars(id)%standard_name,    & ! [IN]
                                dims(1:ndims),                          & ! [IN]
                                FILE_HISTORY_vars(id)%dtype,            & ! [IN]
                                dtsec,                                  & ! [IN]
@@ -1818,12 +1961,44 @@ contains
                                time_avg=FILE_HISTORY_vars(id)%taverage ) ! [IN]
 
 
-       if (       FILE_HISTORY_dims(dimid)%mapping &
-            .and. FILE_HISTORY_mappingname /= "" ) then
-          call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid,     & ! [IN]
-                                   FILE_HISTORY_vars(id)%outname, & ! [IN]
-                                   'grid_mapping',                & ! [IN]
-                                   FILE_HISTORY_mappingname       ) ! [IN]
+       if (       FILE_HISTORY_dims(dimid)%mapping /= "" ) then
+          call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname, & ! [IN]
+                                   'grid_mapping', FILE_HISTORY_dims(dimid)%mapping          ) ! [IN]
+       endif
+
+       select case( FILE_HISTORY_vars(id)%cell_measures )
+       case ( "area", "area_z" )
+          if ( FILE_HISTORY_dims(dimid)%area /= "" ) then
+             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname,      & ! [IN]
+                                      'cell_measures', "area: "//trim(FILE_HISTORY_dims(dimid)%area) ) ! [IN]
+          end if
+       case ( "area_x" )
+          if ( FILE_HISTORY_dims(dimid)%area_x /= "" ) then
+             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname,        & ! [IN]
+                                      'cell_measures', "area: "//trim(FILE_HISTORY_dims(dimid)%area_x) ) ! [IN]
+          end if
+       case ( "area_y" )
+          if ( FILE_HISTORY_dims(dimid)%area_x /= "" ) then
+             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname,        & ! [IN]
+                                      'cell_measures', "area: "//trim(FILE_HISTORY_dims(dimid)%area_y) ) ! [IN]
+          end if
+       case ( "volume" )
+          if ( FILE_HISTORY_dims(dimid)%area_x /= "" ) then
+             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname,        & ! [IN]
+                                      'cell_measures', "volume: "//trim(FILE_HISTORY_dims(dimid)%volume) ) ! [IN]
+          end if
+       end select
+
+       if ( FILE_HISTORY_dims(dimid)%location /= "" ) then
+          if ( FILE_HISTORY_vars(id)%zcoord == "model" ) then
+             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname, & ! [IN]
+                                     'grid', FILE_HISTORY_dims(dimid)%grid                     ) ! [IN]
+          else
+             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname, & ! [IN]
+                                     'grid', trim(FILE_HISTORY_dims(dimid)%grid)//'_'//trim(FILE_HISTORY_vars(id)%zcoord) ) ! [IN]
+          end if
+          call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname, & ! [IN]
+                                   'location', FILE_HISTORY_dims(dimid)%location             ) ! [IN]
        endif
 
     endif
@@ -2093,21 +2268,28 @@ contains
   ! interface FILE_HISTORY_Set_Attribute
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Set_Attribute_Text( &
-       varname, &
-       key,     &
-       val      )
+       varname,     &
+       key, val,    &
+       add_variable )
+    use scale_process, only: &
+       PRC_abort
     use scale_file, only: &
        FILE_Set_Attribute
     implicit none
-
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: key
     character(len=*), intent(in) :: val
+    logical,          intent(in), optional :: add_variable
 
     integer :: id
     !---------------------------------------------------------------------------
 
     FILE_HISTORY_nattrs = FILE_HISTORY_nattrs + 1
+    if ( FILE_HISTORY_nattrs > FILE_HISTORY_attr_max ) then
+       write(*,*) 'xxx number of attributes exceeds the limit'
+       call PRC_abort
+    end if
+
     id = FILE_HISTORY_nattrs
 
     FILE_HISTORY_attrs(id)%varname = varname
@@ -2115,20 +2297,26 @@ contains
     FILE_HISTORY_attrs(id)%text    = val
     FILE_HISTORY_attrs(id)%type    = I_TEXT
 
+    if ( present(add_variable) ) then
+       FILE_HISTORY_attrs(id)%add_variable = add_variable
+    else
+       FILE_HISTORY_attrs(id)%add_variable = .false.
+    end if
+
     return
   end subroutine FILE_HISTORY_Set_Attribute_Text
 
   subroutine FILE_HISTORY_Set_Attribute_Logical( &
-       varname, &
-       key,     &
-       val      )
+       varname,     &
+       key, val,    &
+       add_variable )
     use scale_file, only: &
        FILE_Set_Attribute
     implicit none
-
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: key
     logical,          intent(in) :: val
+    logical,          intent(in), optional :: add_variable
 
     character(len=5) :: buf
     integer :: id
@@ -2140,23 +2328,25 @@ contains
        buf = "false"
     end if
 
-    call FILE_HISTORY_Set_Attribute_Text( varname, key, buf )
+    call FILE_HISTORY_Set_Attribute_Text( varname, key, buf, add_variable=add_variable )
 
     return
   end subroutine FILE_HISTORY_Set_Attribute_Logical
 
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Set_Attribute_Int( &
-       varname, &
-       key,     &
-       val      )
+       varname,     &
+       key, val,    &
+       add_variable )
+    use scale_process, only: &
+       PRC_abort
     use scale_file, only: &
        FILE_Set_Attribute
     implicit none
-
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: key
     integer,          intent(in) :: val(:)
+    logical,          intent(in), optional :: add_variable
 
     integer :: id
 
@@ -2164,6 +2354,11 @@ contains
     !---------------------------------------------------------------------------
 
     FILE_HISTORY_nattrs = FILE_HISTORY_nattrs + 1
+    if ( FILE_HISTORY_nattrs > FILE_HISTORY_attr_max ) then
+       write(*,*) 'xxx number of attributes exceeds the limit'
+       call PRC_abort
+    end if
+
     id = FILE_HISTORY_nattrs
 
     allocate( FILE_HISTORY_attrs(id)%int( size(val) ) )
@@ -2173,21 +2368,29 @@ contains
     FILE_HISTORY_attrs(id)%int(:)    = val(:)
     FILE_HISTORY_attrs(id)%type    = I_INT
 
+    if ( present(add_variable) ) then
+       FILE_HISTORY_attrs(id)%add_variable = add_variable
+    else
+       FILE_HISTORY_attrs(id)%add_variable = .false.
+    end if
+
     return
   end subroutine FILE_HISTORY_Set_Attribute_Int
 
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Set_Attribute_Float( &
-       varname, &
-       key,     &
-       val      )
+       varname,     &
+       key, val,    &
+       add_variable )
+    use scale_process, only: &
+       PRC_abort
     use scale_file, only: &
        FILE_Set_Attribute
     implicit none
-
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: key
     real(SP),         intent(in) :: val(:)
+    logical,          intent(in), optional :: add_variable
 
     integer :: id
 
@@ -2195,6 +2398,11 @@ contains
     !---------------------------------------------------------------------------
 
     FILE_HISTORY_nattrs = FILE_HISTORY_nattrs + 1
+    if ( FILE_HISTORY_nattrs > FILE_HISTORY_attr_max ) then
+       write(*,*) 'xxx number of attributes exceeds the limit'
+       call PRC_abort
+    end if
+
     id = FILE_HISTORY_nattrs
 
     allocate( FILE_HISTORY_attrs(id)%float( size(val) ) )
@@ -2204,21 +2412,29 @@ contains
     FILE_HISTORY_attrs(id)%float(:)    = val(:)
     FILE_HISTORY_attrs(id)%type    = I_FLOAT
 
+    if ( present(add_variable) ) then
+       FILE_HISTORY_attrs(id)%add_variable = add_variable
+    else
+       FILE_HISTORY_attrs(id)%add_variable = .false.
+    end if
+
     return
   end subroutine FILE_HISTORY_Set_Attribute_Float
 
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Set_Attribute_Double( &
-       varname, &
-       key,     &
-       val      )
+       varname,     &
+       key, val,    &
+       add_variable )
+    use scale_process, only: &
+       PRC_abort
     use scale_file, only: &
        FILE_Set_Attribute
     implicit none
-
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: key
     real(DP),         intent(in) :: val(:)
+    logical,          intent(in), optional :: add_variable
 
     integer :: id
 
@@ -2226,6 +2442,11 @@ contains
     !---------------------------------------------------------------------------
 
     FILE_HISTORY_nattrs = FILE_HISTORY_nattrs + 1
+    if ( FILE_HISTORY_nattrs > FILE_HISTORY_attr_max ) then
+       write(*,*) 'xxx number of attributes exceeds the limit'
+       call PRC_abort
+    end if
+
     id = FILE_HISTORY_nattrs
 
     allocate( FILE_HISTORY_attrs(id)%double( size(val) ) )
@@ -2234,6 +2455,12 @@ contains
     FILE_HISTORY_attrs(id)%key     = key
     FILE_HISTORY_attrs(id)%double(:)    = val(:)
     FILE_HISTORY_attrs(id)%type    = I_DOUBLE
+
+    if ( present(add_variable) ) then
+       FILE_HISTORY_attrs(id)%add_variable = add_variable
+    else
+       FILE_HISTORY_attrs(id)%add_variable = .false.
+    end if
 
     return
   end subroutine FILE_HISTORY_Set_Attribute_Double
@@ -2319,13 +2546,20 @@ contains
 
        ! write registered history variables to file
        do m = 1, FILE_HISTORY_naxes
-          if ( FILE_HISTORY_axes(m)%start(1) > 0 ) then
-             start(1) = FILE_HISTORY_axes(m)%start(1)
+          if ( FILE_HISTORY_axes(m)%start > 0 ) then
+             start(1) = FILE_HISTORY_axes(m)%start
 
-             call FILE_Write_Axis( fid     ,                  & ! [IN]
-                                   FILE_HISTORY_axes(m)%name, & ! [IN]
-                                   FILE_HISTORY_axes(m)%var,  & ! [IN]
-                                   start                      ) ! [IN]
+             call FILE_Write_Axis( fid,                         & ! [IN]
+                                   FILE_HISTORY_axes(m)%name,   & ! [IN]
+                                   FILE_HISTORY_axes(m)%var(:), & ! [IN]
+                                   start(:)                     ) ! [IN]
+             if ( associated(FILE_HISTORY_axes(m)%bounds) ) then
+                call FILE_Write_AssociatedCoordinate( fid,                                      & ! [IN]
+                                                      trim(FILE_HISTORY_axes(m)%name)//'_bnds', & ! [IN]
+                                                      FILE_HISTORY_axes(m)%bounds(:,:),         & ! [IN]
+                                                      (/ 1, start(1) /)                         ) ! [IN]
+             end if
+
           endif
        enddo
 

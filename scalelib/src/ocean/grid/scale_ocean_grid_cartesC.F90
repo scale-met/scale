@@ -46,7 +46,8 @@ module scale_ocean_grid_cartesC
   !
   !++ Private parameters & variables
   !
-  real(RP), private :: FZ(100) ! face coordinate without surface (=0 m)
+  integer,  private, parameter :: FZ_MAX = 100
+  real(RP), private :: FZ(FZ_MAX) ! face coordinate without surface (=0 m)
 
   character(len=H_LONG) :: OCEAN_GRID_CARTESC_IN_BASENAME  = ''
   logical               :: OCEAN_GRID_CARTESC_IN_AGGREGATE
@@ -170,6 +171,9 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
+    if ( OKA == 1 .and. FZ(1) == 0.0_RP ) then
+       FZ(1) = 10.0_RP ! to avoid zero thickness (tentative)
+    end if
     OCEAN_GRID_CARTESC_FZ(OKS-1) = 0.0_RP
     do k = OKS, OKE
        OCEAN_GRID_CARTESC_FZ(k) = FZ(k)

@@ -82,14 +82,20 @@ contains
        OCEAN_GRID_CARTESC_INDEX_setup
     use scale_ocean_grid_cartesC, only: &
        OCEAN_GRID_CARTESC_setup
+    use scale_ocean_grid_cartesC_real, only: &
+       OCEAN_GRID_CARTESC_REAL_setup
     use scale_land_grid_cartesC_index, only: &
        LAND_GRID_CARTESC_INDEX_setup
     use scale_land_grid_cartesC, only: &
        LAND_GRID_CARTESC_setup
+    use scale_land_grid_cartesC_real, only: &
+       LAND_GRID_CARTESC_REAL_setup
     use scale_urban_grid_cartesC_index, only: &
        URBAN_GRID_CARTESC_INDEX_setup
     use scale_urban_grid_cartesC, only: &
        URBAN_GRID_CARTESC_setup
+    use scale_urban_grid_cartesC_real, only: &
+       URBAN_GRID_CARTESC_REAL_setup
     use scale_file_cartesC, only: &
        FILE_CARTESC_setup, &
        FILE_CARTESC_cleanup
@@ -104,8 +110,8 @@ contains
        ATMOS_GRID_CARTESC_REAL_update_Z
     use scale_atmos_grid_cartesC_metric, only: &
        ATMOS_GRID_CARTESC_METRIC_setup
-    use scale_rm_statistics, only: &
-       STAT_setup
+    use scale_statistics, only: &
+       STATISTICS_setup
     use scale_atmos_hydrostatic, only: &
        ATMOS_HYDROSTATIC_setup
     use scale_atmos_thermodyn, only: &
@@ -237,12 +243,16 @@ contains
     ! setup grid transfer metrics (uses in ATMOS_dynamics)
     call ATMOS_GRID_CARTESC_METRIC_setup
 
+    call OCEAN_GRID_CARTESC_REAL_setup
+    call LAND_GRID_CARTESC_REAL_setup
+    call URBAN_GRID_CARTESC_REAL_setup
+
     ! setup restart
     call ADMIN_restart_setup
     ! setup time
     call ADMIN_TIME_setup( setup_TimeIntegration = .false. )
     ! setup statistics
-    call STAT_setup
+    call STATISTICS_setup
 
     ! setup nesting grid
     call COMM_CARTESC_NEST_setup ( intercomm_parent, intercomm_child )

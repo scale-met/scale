@@ -119,9 +119,14 @@ contains
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_time, only: &
        dt => TIME_DTSEC_LAND
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
+    use scale_land_grid_cartesC_real, only: &
+       LAND_GRID_CARTESC_REAL_VOL,    &
+       LAND_GRID_CARTESC_REAL_TOTVOL, &
+       LAND_GRID_CARTESC_REAL_AREA,   &
+       LAND_GRID_CARTESC_REAL_TOTAREA
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_grid_cartesC_real, only: &
@@ -203,9 +208,6 @@ contains
     real(RP) :: LAND_DZ1 (LIA,LJA)
 
     real(RP) :: LHV      (LIA,LJA) ! latent heat of vaporization [J/kg]
-    real(RP) :: total            ! dummy
-
-    character(len=2) :: sk
 
     ! for snow
     real(RP) :: SNOW_SFC_TEMP_t     (LIA,LJA)
@@ -525,16 +527,27 @@ contains
     endif
 
     if ( STATISTICS_checktotal ) then
-       do k = LKS, LKE
-          write(sk,'(I2.2)') k
+       call STATISTICS_total( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  &
+                              LAND_GRID_CARTESC_REAL_VOL(:,:,:),   &
+                              LAND_GRID_CARTESC_REAL_TOTVOL        )
+       call STATISTICS_total( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_WATER_t(:,:,:), 'LAND_WATER_t', &
+                              LAND_GRID_CARTESC_REAL_VOL(:,:,:),   &
+                              LAND_GRID_CARTESC_REAL_TOTVOL        )
 
-          call STAT_total( total, LAND_TEMP_t (k,:,:), 'LAND_TEMP_t'//sk  )
-          call STAT_total( total, LAND_WATER_t(k,:,:), 'LAND_WATER_t'//sk )
-       enddo
-
-       call STAT_total( total, LAND_SFC_TEMP_t  (:,:),      'LAND_SFC_TEMP_t'  )
-       call STAT_total( total, LAND_SFC_albedo_t(:,:,I_LW), 'LAND_ALB_LW_t'    )
-       call STAT_total( total, LAND_SFC_albedo_t(:,:,I_SW), 'LAND_ALB_SW_t'    )
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_SFC_TEMP_t  (:,:),      'LAND_SFC_TEMP_t', &
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),               &
+                              LAND_GRID_CARTESC_REAL_TOTAREA                  )
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_SFC_albedo_t(:,:,I_LW), 'LAND_ALB_LW_t',   &
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),               &
+                              LAND_GRID_CARTESC_REAL_TOTAREA                  )
+       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_SFC_albedo_t(:,:,I_SW), 'LAND_ALB_SW_t',   &
+                              LAND_GRID_CARTESC_REAL_AREA(:,:),               &
+                              LAND_GRID_CARTESC_REAL_TOTAREA                  )
     endif
 
     return

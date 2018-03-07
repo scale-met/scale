@@ -38,6 +38,7 @@ module scale_calendar
   public :: CALENDAR_sec2unit
   public :: CALENDAR_CFunits2sec
   public :: CALENDAR_date2char
+  public :: CALENDAR_get_name
 
   !-----------------------------------------------------------------------------
   !
@@ -711,5 +712,19 @@ contains
 
     return
   end subroutine CALENDAR_ymdhms2mjd
+
+  subroutine CALENDAR_get_name(name)
+    character(len=*), intent(out) :: name
+
+    if    ( CALENDAR_360DAYS ) then
+       name = "360_day"
+    elseif( CALENDAR_365DAYS ) then
+       name = "365_day"
+    else
+       name = "gregorian"
+    endif
+
+    return
+  end subroutine CALENDAR_get_name
 
 end module scale_calendar

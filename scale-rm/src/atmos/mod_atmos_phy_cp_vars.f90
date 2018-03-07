@@ -383,9 +383,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_CP_vars_restart_read
-    use scale_rm_statistics, only: &
-       STATISTICS_checktotal, &
-       STAT_total
     use scale_file, only: &
        FILE_get_AGGREGATE
     use scale_file_cartesC, only: &
@@ -395,7 +392,6 @@ contains
        QA_MP
     implicit none
 
-    real(RP) :: total
     integer  :: i, j, iq
     !---------------------------------------------------------------------------
 
@@ -460,22 +456,8 @@ contains
           call ATMOS_PHY_CP_vars_fillhalo
        end if
 
-       if ( STATISTICS_checktotal ) then
-          call STAT_total( total, ATMOS_PHY_CP_MFLX_cloudbase(:,:)  , VAR_NAME(1) )
-          call STAT_total( total, ATMOS_PHY_CP_SFLX_rain     (:,:)  , VAR_NAME(2) )
-          call STAT_total( total, ATMOS_PHY_CP_cloudtop      (:,:)  , VAR_NAME(3) )
-          call STAT_total( total, ATMOS_PHY_CP_cloudbase     (:,:)  , VAR_NAME(4) )
-          call STAT_total( total, ATMOS_PHY_CP_cldfrac_dp    (:,:,:), VAR_NAME(5) )
-          call STAT_total( total, ATMOS_PHY_CP_cldfrac_sh    (:,:,:), VAR_NAME(6) )
-          call STAT_total( total, ATMOS_PHY_CP_w0avg         (:,:,:), VAR_NAME(7) )
-          call STAT_total( total, ATMOS_PHY_CP_kf_nca        (:,:)  , VAR_NAME(8) )
-          ! tendency
-          call STAT_total( total, ATMOS_PHY_CP_DENS_t        (:,:,:), VAR_t_NAME(1) )
-          call STAT_total( total, ATMOS_PHY_CP_RHOT_t        (:,:,:), VAR_t_NAME(2) )
-          do iq = 1, QA_MP
-             call STAT_total( total, ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), VAR_t_NAME(2+iq) )
-          enddo
-       endif
+       call ATMOS_PHY_CP_vars_checktotal
+
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** invalid restart file ID for ATMOS_PHY_CP.'
     endif
@@ -597,16 +579,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Write restart
   subroutine ATMOS_PHY_CP_vars_restart_write
-    use scale_rm_statistics, only: &
-       STATISTICS_checktotal, &
-       STAT_total
     use scale_file_cartesC, only: &
        FILE_CARTESC_write => FILE_CARTESC_write_var
     use mod_atmos_phy_mp_vars, only: &
        QA_MP
     implicit none
 
-    real(RP) :: total
     integer  :: iq
     !---------------------------------------------------------------------------
 
@@ -614,22 +592,7 @@ contains
 
        call ATMOS_PHY_CP_vars_fillhalo
 
-       if ( STATISTICS_checktotal ) then
-          call STAT_total( total, ATMOS_PHY_CP_MFLX_cloudbase(:,:)  , VAR_NAME(1) )
-          call STAT_total( total, ATMOS_PHY_CP_SFLX_rain     (:,:)  , VAR_NAME(2) )
-          call STAT_total( total, ATMOS_PHY_CP_cloudtop      (:,:)  , VAR_NAME(3) )
-          call STAT_total( total, ATMOS_PHY_CP_cloudbase     (:,:)  , VAR_NAME(4) )
-          call STAT_total( total, ATMOS_PHY_CP_cldfrac_dp    (:,:,:), VAR_NAME(5) )
-          call STAT_total( total, ATMOS_PHY_CP_cldfrac_sh    (:,:,:), VAR_NAME(6) )
-          call STAT_total( total, ATMOS_PHY_CP_w0avg         (:,:,:), VAR_NAME(7) )
-          call STAT_total( total, ATMOS_PHY_CP_kf_nca        (:,:)  , VAR_NAME(8) )
-          ! tendency
-          call STAT_total( total, ATMOS_PHY_CP_DENS_t        (:,:,:), VAR_t_NAME(1) )
-          call STAT_total( total, ATMOS_PHY_CP_RHOT_t        (:,:,:), VAR_t_NAME(2) )
-          do iq = 1, QA_MP
-             call STAT_total( total, ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), VAR_t_NAME(2+iq) )
-          enddo
-       endif
+       call ATMOS_PHY_CP_vars_checktotal
 
        call FILE_CARTESC_write( restart_fid, VAR_ID(1), ATMOS_PHY_CP_MFLX_cloudbase(:,:), & ! [IN]
                           VAR_NAME(1), 'XY' ) ! [IN]
@@ -662,5 +625,74 @@ contains
 
     return
   end subroutine ATMOS_PHY_CP_vars_restart_write
+
+  subroutine ATMOS_PHY_CP_vars_checktotal
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_AREA,    &
+       ATMOS_GRID_CARTESC_REAL_TOTAREA, &
+       ATMOS_GRID_CARTESC_REAL_VOL,     &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP
+
+    integer :: iq
+
+    !---------------------------------------------------------------------------
+
+    if ( STATISTICS_checktotal ) then
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_CP_MFLX_cloudbase(:,:)  , VAR_NAME(1), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_CP_SFLX_rain     (:,:)  , VAR_NAME(2), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_CP_cloudtop      (:,:)  , VAR_NAME(3), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_CP_cloudbase     (:,:)  , VAR_NAME(4), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! (in)
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_CP_cldfrac_dp    (:,:,:), VAR_NAME(5), &
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),              & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL                   ) ! (in)
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_CP_cldfrac_sh    (:,:,:), VAR_NAME(6), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),              & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL                   ) ! (in)
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_CP_w0avg         (:,:,:), VAR_NAME(7), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),              & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL                   ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_CP_kf_nca        (:,:)  , VAR_NAME(8), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! (in)
+       ! tendency
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_CP_DENS_t        (:,:,:), VAR_t_NAME(1), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL                     ) ! (in)
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_CP_RHOT_t        (:,:,:), VAR_t_NAME(2), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL                     ) ! (in)
+       do iq = 1, QA_MP
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), VAR_t_NAME(2+iq), & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),              & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL                   ) ! (in)
+       enddo
+    endif
+
+    return
+  end subroutine ATMOS_PHY_CP_vars_checktotal
 
 end module mod_atmos_phy_cp_vars

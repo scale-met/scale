@@ -17,7 +17,7 @@ module mod_ocean_phy_driver
   use scale_stdio
   use scale_prof
   use scale_debug
-  use scale_atmos_grid_cartesC_index
+  use scale_ocean_grid_cartesC_index
 
   use scale_const, only: &
      I_SW  => CONST_I_SW, &
@@ -106,11 +106,16 @@ contains
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_time, only: &
        dt => TIME_DTSEC_OCEAN
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
     use scale_file_history, only: &
        FILE_HISTORY_in
+    use scale_ocean_grid_cartesC_real, only: &
+       OCEAN_GRID_CARTESC_REAL_VOL, &
+       OCEAN_GRID_CARTESC_REAL_TOTVOL, &
+       OCEAN_GRID_CARTESC_REAL_AREA, &
+       OCEAN_GRID_CARTESC_REAL_TOTAREA
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_Z1
     use scale_roughness, only: &
@@ -168,8 +173,7 @@ contains
 
     logical, intent(in) :: update_flag
 
-    real(RP) :: LHV(IA,JA) ! latent heat of vaporization [J/kg]
-    real(RP) :: total      ! dummy
+    real(RP) :: LHV(OIA,OJA) ! latent heat of vaporization [J/kg]
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -177,7 +181,7 @@ contains
     if ( update_flag ) then
 
        call ROUGHNESS( &
-            IA, ISB, IEB, JA, JSB, JEB, &
+            OIA, OIS, OIE, OJA, OJS, OJE, &
             OCEAN_SFC_Z0M(:,:),         & ! [IN]
             OCEAN_SFC_Z0H(:,:),         & ! [IN]
             OCEAN_SFC_Z0E(:,:),         & ! [IN]
@@ -230,8 +234,8 @@ contains
        call HYDROMETEOR_LHV( LHV(:,:), ATMOS_TEMP(:,:) )
 
 !OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
+       do j = OJS, OJE
+       do i = OIS, OIE
           OCEAN_SFLX_evap(i,j) = OCEAN_SFLX_LH(i,j) / LHV(i,j)
        end do
        end do
@@ -254,14 +258,35 @@ contains
     end if
 
     if ( STATISTICS_checktotal ) then
-       call STAT_total( total, OCEAN_TEMP_t      (:,:,:),    'OCEAN_TEMP_t'     )
+       call STATISTICS_total( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_TEMP_t      (:,:,:),    'OCEAN_TEMP_t', &
+                              OCEAN_GRID_CARTESC_REAL_VOL(:,:,:),           &
+                              OCEAN_GRID_CARTESC_REAL_TOTVOL                )
 
-       call STAT_total( total, OCEAN_SFC_TEMP_t  (:,:),      'OCEAN_SFC_TEMP_t' )
-       call STAT_total( total, OCEAN_SFC_albedo_t(:,:,I_LW), 'OCEAN_ALB_LW_t'   )
-       call STAT_total( total, OCEAN_SFC_albedo_t(:,:,I_SW), 'OCEAN_ALB_SW_t'   )
-       call STAT_total( total, OCEAN_SFC_Z0M_t   (:,:),      'OCEAN_SFC_Z0M_t'  )
-       call STAT_total( total, OCEAN_SFC_Z0H_t   (:,:),      'OCEAN_SFC_Z0H_t'  )
-       call STAT_total( total, OCEAN_SFC_Z0E_t   (:,:),      'OCEAN_SFC_Z0E_t'  )
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFC_TEMP_t  (:,:),      'OCEAN_SFC_TEMP_t', &
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                &
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA                   )
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFC_albedo_t(:,:,I_LW), 'OCEAN_ALB_LW_t',   &
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                &
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA                   )
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFC_albedo_t(:,:,I_SW), 'OCEAN_ALB_SW_t',   &
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                &
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA                   )
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFC_Z0M_t   (:,:),      'OCEAN_SFC_Z0M_t',  &
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                &
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA                   )
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFC_Z0H_t   (:,:),      'OCEAN_SFC_Z0H_t',  &
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                &
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA                   )
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
+                              OCEAN_SFC_Z0E_t   (:,:),      'OCEAN_SFC_Z0E_t',  &
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                &
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA                   )
     end if
 
     return

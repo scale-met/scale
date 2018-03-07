@@ -108,9 +108,14 @@ contains
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE,     &
        dt      => TIME_DTSEC_URBAN
-    use scale_rm_statistics, only: &
+    use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STATISTICS_total
+    use scale_urban_grid_cartesC_real, only: &
+       URBAN_GRID_CARTESC_REAL_VOL,    &
+       URBAN_GRID_CARTESC_REAL_TOTVOL, &
+       URBAN_GRID_CARTESC_REAL_AREA,   &
+       URBAN_GRID_CARTESC_REAL_TOTAREA
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_mapprojection, only: &
@@ -183,9 +188,6 @@ contains
 
     ! works
     real(RP) :: LHV(UIA,UJA) ! latent heat of vaporization [J/kg]
-    real(RP) :: total        ! dummy
-
-    character(len=2) :: sk
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -281,25 +283,61 @@ contains
     endif
 
     if ( STATISTICS_checktotal ) then
-       call STAT_total( total, URBAN_TR_t(:,:), 'URBAN_TR_t' )
-       call STAT_total( total, URBAN_TB_t(:,:), 'URBAN_TB_t' )
-       call STAT_total( total, URBAN_TG_t(:,:), 'URBAN_TG_t' )
-       call STAT_total( total, URBAN_TC_t(:,:), 'URBAN_TC_t' )
-       call STAT_total( total, URBAN_QC_t(:,:), 'URBAN_QC_t' )
-       call STAT_total( total, URBAN_UC_t(:,:), 'URBAN_UC_t' )
 
-       do k = UKS, UKE
-          write(sk,'(I2.2)') k
+       call STATISTICS_total( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_TRL_t (:,:,:), 'URBAN_TRL_t', &
+                              URBAN_GRID_CARTESC_REAL_VOL(:,:,:), &
+                              URBAN_GRID_CARTESC_REAL_TOTVOL      )
+       call STATISTICS_total( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_TBL_t (:,:,:), 'URBAN_TBL_t', &
+                              URBAN_GRID_CARTESC_REAL_VOL(:,:,:), &
+                              URBAN_GRID_CARTESC_REAL_TOTVOL      )
+       call STATISTICS_total( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_TGL_t (:,:,:), 'URBAN_TGL_t', &
+                              URBAN_GRID_CARTESC_REAL_VOL(:,:,:), &
+                              URBAN_GRID_CARTESC_REAL_TOTVOL      )
 
-          call STAT_total( total, URBAN_TRL_t (k,:,:), 'URBAN_TRL_t'//sk  )
-          call STAT_total( total, URBAN_TBL_t (k,:,:), 'URBAN_TBL_t'//sk  )
-          call STAT_total( total, URBAN_TGL_t (k,:,:), 'URBAN_TGL_t'//sk  )
-       enddo
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_TR_t(:,:), 'URBAN_TR_t',     &
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
+                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_TB_t(:,:), 'URBAN_TB_t',     &
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
+                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_TG_t(:,:), 'URBAN_TG_t',     &
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
+                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_TC_t(:,:), 'URBAN_TC_t',     &
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
+                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_QC_t(:,:), 'URBAN_QC_t',     &
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
+                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_UC_t(:,:), 'URBAN_UC_t',     &
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
+                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
 
-       call STAT_total( total, URBAN_RAINR_t(:,:), 'URBAN_RAINR_t' )
-       call STAT_total( total, URBAN_RAINB_t(:,:), 'URBAN_RAINB_t' )
-       call STAT_total( total, URBAN_RAING_t(:,:), 'URBAN_RAING_t' )
-       call STAT_total( total, URBAN_ROFF_t (:,:), 'URBAN_ROFF_t'  )
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_RAINR_t(:,:), 'URBAN_RAINR_t', &
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   &
+                              URBAN_GRID_CARTESC_REAL_TOTAREA      )
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_RAINB_t(:,:), 'URBAN_RAINB_t', &
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   &
+                              URBAN_GRID_CARTESC_REAL_TOTAREA      )
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_RAING_t(:,:), 'URBAN_RAING_t', &
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   &
+                              URBAN_GRID_CARTESC_REAL_TOTAREA      )
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_ROFF_t (:,:), 'URBAN_ROFF_t',  &
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   &
+                              URBAN_GRID_CARTESC_REAL_TOTAREA      )
     endif
 
     return

@@ -275,6 +275,9 @@ contains
     logical, intent(in), optional :: aggregate
 
     integer :: fid
+
+    real(RP) :: FDXG(0:IAG), FDYG(0:JAG)
+    real(RP) :: FDX(0:IA), FDY(0:JA)
     !---------------------------------------------------------------------------
 
 
@@ -293,8 +296,10 @@ contains
     call FILE_read( fid, 'CDY', ATMOS_GRID_CARTESC_CDY(:) )
 
     call FILE_read( fid, 'FDZ', ATMOS_GRID_CARTESC_FDZ(:) )
-    call FILE_read( fid, 'FDX', ATMOS_GRID_CARTESC_FDX(:) )
-    call FILE_read( fid, 'FDY', ATMOS_GRID_CARTESC_FDY(:) )
+    call FILE_read( fid, 'FDX',                    FDX(:) )
+    call FILE_read( fid, 'FDY',                    FDY(:) )
+    ATMOS_GRID_CARTESC_FDX(:) = FDX(1:IA-1)
+    ATMOS_GRID_CARTESC_FDY(:) = FDY(1:JA-1)
 
     ATMOS_GRID_CARTESC_RCDZ(:) = 1.0_RP / ATMOS_GRID_CARTESC_CDZ(:)
     ATMOS_GRID_CARTESC_RCDX(:) = 1.0_RP / ATMOS_GRID_CARTESC_CDX(:)
@@ -317,8 +322,10 @@ contains
 
     call FILE_read( fid, 'CDXG', ATMOS_GRID_CARTESC_CDXG(:) )
     call FILE_read( fid, 'CDYG', ATMOS_GRID_CARTESC_CDYG(:) )
-    call FILE_read( fid, 'FDXG', ATMOS_GRID_CARTESC_FDXG(:) )
-    call FILE_read( fid, 'FDYG', ATMOS_GRID_CARTESC_FDYG(:) )
+    call FILE_read( fid, 'FDXG',                    FDXG(:) )
+    call FILE_read( fid, 'FDYG',                    FDYG(:) )
+    ATMOS_GRID_CARTESC_FDXG(:) = FDXG(1:IA-1)
+    ATMOS_GRID_CARTESC_FDYG(:) = FDYG(1:JA-1)
 
 
     ATMOS_GRID_CARTESC_DOMAIN_CENTER_X = 0.5_RP * ( ATMOS_GRID_CARTESC_FXG(IHALO) + ATMOS_GRID_CARTESC_FXG(IAG-IHALO) )
