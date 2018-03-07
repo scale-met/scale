@@ -752,7 +752,6 @@ contains
     call ATMOS_PHY_AE_kajino13_mkinit( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! (in)
                                        QA_AE,                   & ! (in)
                                        DENS(:,:,:),             & ! (in)
-                                       RHOT(:,:,:),             & ! (in)
                                        TEMP(:,:,:),             & ! (in)
                                        PRES(:,:,:),             & ! (in)
                                        QDRY(:,:,:),             & ! (in)
@@ -765,8 +764,8 @@ contains
                                        k_min_inp(:),            & ! (in)
                                        k_max_inp(:),            & ! (in)
                                        n_kap_inp(:),            & ! (in)
-                                       QTRC(:,:,:,QS_AE:QE_AE), & ! (inout)
-                                       CCN(:,:,:)                ) ! (out)
+                                       QTRC(:,:,:,QS_AE:QE_AE), & ! (out)
+                                       CCN(:,:,:)               ) ! (out)
 
     return
   end subroutine AEROSOL_setup
