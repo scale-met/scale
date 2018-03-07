@@ -525,7 +525,7 @@ contains
 
     kmax = KE - KS + 1
 
-    if ( kmax == 2 ) then
+    if ( kmax <= 2 ) then
 
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(k,i,j) &
