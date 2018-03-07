@@ -15,7 +15,6 @@ module mod_ocean_driver
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_debug
   use scale_ocean_grid_cartesC_index
 
   use scale_const, only: &
@@ -53,8 +52,6 @@ contains
   subroutine OCEAN_driver_setup
     use mod_ocean_phy_driver, only: &
        OCEAN_PHY_driver_setup
-!    use mod_ocean_frc_nudge, only: &
-!       OCEAN_FRC_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -63,7 +60,6 @@ contains
 
     call OCEAN_PHY_driver_setup
 
-!    if( OCEAN_FRC_sw ) call OCEAN_FRC_driver_setup
 
     return
   end subroutine OCEAN_driver_setup
@@ -73,8 +69,6 @@ contains
   subroutine OCEAN_driver_resume
     use mod_ocean_phy_driver, only: &
        OCEAN_PHY_driver_resume
-!    use mod_ocean_frc_nudge, only: &
-!       OCEAN_FRC_driver_resume
     use mod_ocean_vars, only: &
        OCEAN_vars_history, &
        OCEAN_TEMP_t,       &

@@ -5,7 +5,7 @@
 !!          Container for ocean variables
 !!
 !! @author Team SCALE
-!! @li      2013-08-31 (T.Yamaura)  [new]
+!!
 !<
 !-------------------------------------------------------------------------------
 module mod_ocean_vars
@@ -34,7 +34,6 @@ module mod_ocean_vars
   public :: OCEAN_vars_restart_write
   public :: OCEAN_vars_history
   public :: OCEAN_vars_total
-  public :: OCEAN_vars_external_in
 
   public :: OCEAN_vars_restart_create
   public :: OCEAN_vars_restart_open
@@ -46,7 +45,7 @@ module mod_ocean_vars
   !
   !++ Public parameters & variables
   !
-  logical,               public :: OCEAN_RESTART_OUTPUT                 = .false.         !< Output restart file?
+  logical,                public :: OCEAN_RESTART_OUTPUT                = .false.         !< Output restart file?
 
   character(len=H_LONG),  public :: OCEAN_RESTART_IN_BASENAME           = ''              !< Basename of the input  file
   logical,                public :: OCEAN_RESTART_IN_AGGREGATE                            !< Switch to use aggregate file
@@ -450,10 +449,10 @@ contains
 !                               OCEAN_UVEL(:,:,:)                          ) ! [OUT]
 !       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_VVEL),      'OXY', & ! [IN]
 !                               OCEAN_VVEL(:,:,:)                          ) ! [OUT]
-!                         
+!
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_TEMP),  'XY', & ! [IN]
                                OCEAN_SFC_TEMP(:,:)                       ) ! [OUT]
-            
+
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ALB_LW),    'XY', & ! [IN]
                                OCEAN_SFC_albedo(:,:,I_LW)                ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ALB_SW),    'XY', & ! [IN]
@@ -479,7 +478,7 @@ contains
                                OCEAN_SFLX_WH(:,:)                        ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_evap), 'XY', & ! [IN]
                                OCEAN_SFLX_evap(:,:)                      ) ! [OUT]
-            
+
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
 
        call OCEAN_vars_total

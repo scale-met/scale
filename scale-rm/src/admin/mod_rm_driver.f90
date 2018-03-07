@@ -329,7 +329,7 @@ contains
     call URBAN_vars_setup
     call CPL_vars_setup
 
-    ! setup submodel driver
+    ! setup driver
     call ATMOS_driver_setup
     call OCEAN_driver_setup
     call LAND_driver_setup

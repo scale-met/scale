@@ -15,7 +15,6 @@ module mod_ocean_admin
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_debug
   !-----------------------------------------------------------------------------
   implicit none
   private

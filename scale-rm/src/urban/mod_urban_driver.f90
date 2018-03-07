@@ -15,7 +15,6 @@ module mod_urban_driver
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_debug
   use scale_urban_grid_cartesC_index
 
   use scale_const, only: &

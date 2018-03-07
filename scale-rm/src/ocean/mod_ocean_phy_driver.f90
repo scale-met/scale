@@ -16,7 +16,6 @@ module mod_ocean_phy_driver
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_debug
   use scale_ocean_grid_cartesC_index
 
   use scale_const, only: &
