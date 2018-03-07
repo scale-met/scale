@@ -93,25 +93,29 @@ contains
   !> ATMOS_PHY_CP_wmean
   !! running mean vertical wind velocity
   !! comment for W0 imported from WRF
-  !! ...TST IS THE NUMBER OF TIME STEPS IN 10 MINUTES...W0AVG IS CLOSE TO A
-  !! ...RUNNING MEAN VERTICAL VELOCITY...NOTE THAT IF YOU CHANGE TST, IT WIL
-  !! ...CHANGE THE FREQUENCY OF THE CONVECTIVE INTITIATION CHECK (SEE BELOW)
-  !! ...NOTE THAT THE ORDERING OF VERTICAL LAYERS MUST BE REVERSED FOR W0AVG
-  !! ...BECAUSE THE ORDERING IS REVERSED IN KFPARA...
-  !<
+  !!
+  !! TST IS THE NUMBER OF TIME STEPS IN 10 MINUTES...W0AVG IS CLOSE TO A
+  !! RUNNING MEAN VERTICAL VELOCITY...NOTE THAT IF YOU CHANGE TST, IT WIL
+  !! CHANGE THE FREQUENCY OF THE CONVECTIVE INTITIATION CHECK (SEE BELOW)
+  !! NOTE THAT THE ORDERING OF VERTICAL LAYERS MUST BE REVERSED FOR W0AVG
+  !< BECAUSE THE ORDERING IS REVERSED IN KFPARA.
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_CP_common_wmean( &
-       W0_mean, &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS,    &
-       MOMZ     )
+       MOMZ,    &
+       W0_mean  )
     use scale_time , only :&
        TIME_DTSEC,             &
        CP_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(inout) :: W0_mean(KA,IA,JA)
     real(RP), intent(in)    :: DENS   (KA,IA,JA)
     real(RP), intent(in)    :: MOMZ   (KA,IA,JA)
+    real(RP), intent(inout) :: W0_mean(KA,IA,JA)
 
     real(RP) :: W0
     real(RP) :: fact_W0_mean, fact_W0

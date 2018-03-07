@@ -118,6 +118,7 @@ contains
     use scale_atmos_phy_cp_common, only: &
        ATMOS_PHY_CP_common_wmean
     use scale_atmos_phy_mp, only: &
+       QA_MP, &
        QS_MP, &
        QE_MP
     use mod_atmos_admin, only: &
@@ -148,7 +149,7 @@ contains
        cloudbase      => ATMOS_PHY_CP_cloudbase,      &  ! cloud base height [m]
        cldfrac_dp     => ATMOS_PHY_CP_cldfrac_dp,     &  ! cloud fraction (deep convection) (0-1)
        cldfrac_sh     => ATMOS_PHY_CP_cldfrac_sh,     &  ! cloud fraction (shallow convection) (0-1)
-       w0avg          => ATMOS_PHY_CP_w0avg,          &  ! running mean vertical wind velocity [m/s]
+       w0mean          => ATMOS_PHY_CP_w0mean,          &  ! running mean vertical wind velocity [m/s]
        kf_nca         => ATMOS_PHY_CP_kf_nca             ! advection/cumulus convection timescale/dt for KF [step]
 
     implicit none
@@ -159,33 +160,35 @@ contains
     !---------------------------------------------------------------------------
 
     ! temporal running mean of vertical velocity
-    call ATMOS_PHY_CP_common_wmean( w0avg(:,:,:), & ! [OUT]
+    call ATMOS_PHY_CP_common_wmean( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                                     DENS (:,:,:), & ! [IN]
-                                    MOMZ (:,:,:)  ) ! [IN]
-    call FILE_HISTORY_in( w0avg(:,:,:), 'w0avg', 'running mean vertical wind velocity', 'kg/m2/s', fill_halo=.true. )
+                                    MOMZ (:,:,:), & ! [IN]
+                                    w0mean(:,:,:)  ) ! [INOUT]
+    call FILE_HISTORY_in( w0mean(:,:,:), 'w0mean', 'running mean vertical wind velocity', 'kg/m2/s', fill_halo=.true. )
 
     if ( update_flag ) then ! update
 
-       call ATMOS_PHY_CP( DENS,           & ! [IN]
-                          MOMZ,           & ! [IN]
-                          MOMX,           & ! [IN]
-                          MOMY,           & ! [IN]
-                          RHOT,           & ! [IN]
-                          QTRC,           & ! [IN]
-                          w0avg,          & ! [IN]
-                          DENS_t_CP,      & ! [INOUT]
-                          MOMZ_t_CP,      & ! [INOUT]
-                          MOMX_t_CP,      & ! [INOUT]
-                          MOMY_t_CP,      & ! [INOUT]
-                          RHOT_t_CP,      & ! [INOUT]
-                          RHOQ_t_CP,      & ! [INOUT]
-                          MFLX_cloudbase, & ! [INOUT]
-                          SFLX_rain,      & ! [OUT]
-                          cloudtop,       & ! [OUT]
-                          cloudbase,      & ! [OUT]
-                          cldfrac_dp,     & ! [OUT]
-                          cldfrac_sh,     & ! [OUT]
-                          kf_nca          ) ! [OUT]
+       call ATMOS_PHY_CP( KA, KS, KE, IA, 1, IA, JA, 1, JA, QA_MP, QS_MP, QE_MP, &
+                          DENS(:,:,:),             & ! [IN]
+                          MOMZ(:,:,:),             & ! [IN]
+                          MOMX(:,:,:),             & ! [IN]
+                          MOMY(:,:,:),             & ! [IN]
+                          RHOT(:,:,:),             & ! [IN]
+                          QTRC(:,:,:,QS_MP:QE_MP), & ! [IN]
+                          w0mean(:,:,:),           & ! [IN]
+                          DENS_t_CP(:,:,:),        & ! [INOUT]
+                          MOMZ_t_CP(:,:,:),        & ! [INOUT]
+                          MOMX_t_CP(:,:,:),        & ! [INOUT]
+                          MOMY_t_CP(:,:,:),        & ! [INOUT]
+                          RHOT_t_CP(:,:,:),        & ! [INOUT]
+                          RHOQ_t_CP(:,:,:,:),      & ! [INOUT]
+                          MFLX_cloudbase(:,:),     & ! [INOUT]
+                          SFLX_rain(:,:),          & ! [OUT]
+                          cloudtop(:,:),           & ! [OUT]
+                          cloudbase(:,:),          & ! [OUT]
+                          cldfrac_dp(:,:,:),       & ! [OUT]
+                          cldfrac_sh(:,:,:),       & ! [OUT]
+                          kf_nca(:,:)              ) ! [OUT]
 
        ! tentative reset
 !OCL XFILL
