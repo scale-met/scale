@@ -2373,15 +2373,16 @@ contains
        call PRC_abort
     end if
 
-    if (IO_L) write(IO_FID_LOG,*)
-    if (IO_L) write(IO_FID_LOG,'(A,A6,A,I3.3,2A)') &
-         '###### FILE registration (', trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
-
     FILE_nfiles = FILE_nfiles + 1
-    fid = FILE_nfiles
+    fid         = FILE_nfiles
+
     FILE_files(fid)%name      = fname
     FILE_files(fid)%fid       = cfid
     FILE_files(fid)%aggregate = aggregate_
+
+    if (IO_L) write(IO_FID_LOG,*)
+    if (IO_L) write(IO_FID_LOG,'(A,A6,A,I3.3,2A)') &
+    '###### FILE registration (', trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
 
     existed = .false.
 

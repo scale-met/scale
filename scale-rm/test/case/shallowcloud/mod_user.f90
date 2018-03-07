@@ -556,7 +556,7 @@ contains
        do j = JS, JE
        do i = IS, IE
           MOMX_tp(KE,i,j) = MOMX_tp(KE,i,j) - MOMZ_LS(KE,1) * ( VELX(KE,i,j) - VELX(KE-1,i,j) ) * RFDZ(KE-1) &
-                          + 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
+                          + 0.5_RP * ( DENS(KE,i+1,j)+DENS(KE,i,j) ) &
                           * ( - CORIOLI * V_GEOS(KE)                                                                &
                               + CORIOLI * 0.25_RP * ( VELY(KE,i,j)+VELY(KE,i+1,j)+VELY(KE,i,j-1)+VELY(KE,i+1,j-1) ) )
        end do

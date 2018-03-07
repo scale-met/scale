@@ -307,8 +307,6 @@ contains
        FILE_REAL4, &
        FILE_REAL8, &
        FILE_preclist
-    use scale_file_h, only: &
-       FILE_FILE_MAX
     use scale_file, only: &
        FILE_AGGREGATE
     use scale_calendar, only: &
@@ -555,7 +553,7 @@ contains
           call PRC_abort
        endif
 
-       if ( abs(dtsec-real(dstep,kind=DP)*FILE_HISTORY_DTSEC) > dtsec*1.0-3_DP ) then
+       if ( abs(dtsec-real(dstep,kind=DP)*FILE_HISTORY_DTSEC) > dtsec*1.E-3_DP ) then
           write(*,*) 'xxx time interval must be a multiple of delta t. (interval,dt)=', dtsec, FILE_HISTORY_DTSEC
           call PRC_abort
        endif
@@ -588,7 +586,7 @@ contains
 
     FILE_HISTORY_nitems = 0
     allocate( FILE_HISTORY_vars        (FILE_HISTORY_nreqs) )
-    allocate( FILE_HISTORY_axis_written(0:FILE_FILE_MAX-1) ) ! fid begins from 0
+    allocate( FILE_HISTORY_axis_written(FILE_HISTORY_nreqs) )
 
     FILE_HISTORY_nvar_inputs = 0
     allocate( FILE_HISTORY_var_inputs(FILE_HISTORY_nreqs) )
