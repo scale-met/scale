@@ -55,7 +55,7 @@ contains
     use scale_tracer, only: &
        TRACER_regist
     use scale_atmos_phy_ch_rn222, only: &
-       ATMOS_PHY_CH_rn222_tracer_setup, &
+       ATMOS_PHY_CH_rn222_ntracers, &
        ATMOS_PHY_CH_rn222_NAME, &
        ATMOS_PHY_CH_rn222_DESC, &
        ATMOS_PHY_CH_rn222_UNIT
@@ -77,13 +77,13 @@ contains
        case ( 'OFF', 'NONE' )
           if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
        case ( 'RN222' )
-          call ATMOS_PHY_CH_rn222_tracer_setup( QA_CH )  ! [OUT]
 
-          call TRACER_regist( QS_CH,                   & ! [OUT]
-                              QA_CH,                   & ! [IN]
-                              ATMOS_PHY_CH_rn222_NAME, & ! [IN]
-                              ATMOS_PHY_CH_rn222_DESC, & ! [IN]
-                              ATMOS_PHY_CH_rn222_UNIT  ) ! [IN]
+          call TRACER_regist( QS_CH,                        & ! [OUT]
+                              ATMOS_PHY_CH_rn222_ntracers,  & ! [IN]
+                              ATMOS_PHY_CH_rn222_NAME(:),   & ! [IN]
+                              ATMOS_PHY_CH_rn222_DESC(:),   & ! [IN]
+                              ATMOS_PHY_CH_rn222_UNIT(:)    ) ! [IN]
+          QA_CH = ATMOS_PHY_CH_rn222_ntracers
 
        case default
           write(*,*) 'xxx invalid chemistry type(', ATMOS_PHY_CH_TYPE, '). CHECK!'
@@ -180,8 +180,7 @@ contains
        ATMOS_PHY_CH_TYPE
     use scale_atmos_grid_cartesC_index
     use scale_atmos_phy_ch_rn222, only: &
-       ATMOS_PHY_CH_rn222_tendency, &
-       I_ch_rn222
+       ATMOS_PHY_CH_rn222_tendency
     use scale_process, only: &
        PRC_abort
     implicit none

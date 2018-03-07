@@ -26,7 +26,6 @@ module scale_atmos_phy_ch_rn222
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_CH_rn222_tracer_setup
   public :: ATMOS_PHY_CH_rn222_setup
   public :: ATMOS_PHY_CH_rn222_tendency
 
@@ -34,11 +33,13 @@ module scale_atmos_phy_ch_rn222
   !
   !++ Public parameters & variables
   !
-  integer, public, parameter :: QA_CH = 0
+  integer, private, parameter :: QA_CH = 1
 
-  character(len=H_SHORT), public, target, allocatable :: ATMOS_PHY_CH_rn222_NAME(:)
-  character(len=H_MID)  , public, target, allocatable :: ATMOS_PHY_CH_rn222_DESC(:)
-  character(len=H_SHORT), public, target, allocatable :: ATMOS_PHY_CH_rn222_UNIT(:)
+  integer,                public :: ATMOS_PHY_CH_rn222_ntracers = QA_CH
+
+  character(len=H_SHORT), public :: ATMOS_PHY_CH_rn222_NAME(QA_CH) = (/ "RN222" /)
+  character(len=H_MID)  , public :: ATMOS_PHY_CH_rn222_DESC(QA_CH) = (/ "Ratio of Rn222 to total mass" /)
+  character(len=H_SHORT), public :: ATMOS_PHY_CH_rn222_UNIT(QA_CH) = (/ "Bq/kg" /)
 
   !-----------------------------------------------------------------------------
   !
@@ -48,7 +49,7 @@ module scale_atmos_phy_ch_rn222
   !
   !++ Private parameters & variables
   !
-  integer,  public, parameter :: I_ch_rn222 = 1
+  integer,  private, parameter :: I_ch_rn222 = 1
 
   real(RP),          private :: ATMOS_PHY_CH_Rn222_decay_ratio                       ! Decay constant [/s]
 
@@ -58,31 +59,6 @@ module scale_atmos_phy_ch_rn222
 
   !-----------------------------------------------------------------------------
 contains
-  !-----------------------------------------------------------------------------
-  !> Tracer setup
-  subroutine ATMOS_PHY_CH_rn222_tracer_setup( QA_CH )
-
-    integer, intent(out) :: QA_CH
-
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Chemistry] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-
-    QA_CH = 1
-
-    allocate( ATMOS_PHY_CH_rn222_NAME(QA_CH) )
-    allocate( ATMOS_PHY_CH_rn222_DESC(QA_CH) )
-    allocate( ATMOS_PHY_CH_rn222_UNIT(QA_CH) )
-
-    write(ATMOS_PHY_CH_rn222_NAME(1),'(a)') 'RN222'
-    write(ATMOS_PHY_CH_rn222_DESC(1),'(a)') 'Mixing Ratio of Rn222'
-    write(ATMOS_PHY_CH_rn222_UNIT(1),'(a)') 'Bq/kg'
-
-    return
-  end subroutine ATMOS_PHY_CH_rn222_tracer_setup
-
-
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_CH_rn222_setup
