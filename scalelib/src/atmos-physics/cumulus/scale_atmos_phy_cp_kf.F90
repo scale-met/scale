@@ -50,7 +50,7 @@ module scale_atmos_phy_cp_kf
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_atmos_grid_cartesC_index
+!  use scale_atmos_grid_cartesC_index
   use scale_const, only: &
        TEM00 => CONST_TEM00
 
@@ -153,7 +153,10 @@ contains
   !! initial setup for Kain-Fritsch Cumulus Parameterization
   !<
   subroutine ATMOS_PHY_CP_kf_setup ( &
-      CP_TYPE  )
+      KA, KS, KE,   &
+      IA, IS, IE,   &
+      JA, JS, JE,   &
+      CP_TYPE       )
     use scale_process, only: &
        PRC_MPIstop
     use scale_time , only :&
@@ -169,6 +172,9 @@ contains
        I_QI, &
        I_QS
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
     character(len=*), intent(in) :: CP_TYPE
 
@@ -381,13 +387,13 @@ contains
        cldfrac_dp,     &
        cldfrac_sh,     &
        nca             )
-    use scale_atmos_grid_cartesC_index
+!    use scale_atmos_grid_cartesC_index
     use scale_file_history, only: &
        FILE_HISTORY_in
 !    use scale_atmos_phy_mp, only: &
 !       QA_MP
     use scale_precision
-    use scale_atmos_grid_cartesC_index
+!    use scale_atmos_grid_cartesC_index
     use scale_tracer
     use scale_const, only: &
        GRAV => CONST_GRAV, &
@@ -899,7 +905,7 @@ contains
        zlcl, zmix,          &
        umfnewdold           )
     use scale_precision
-    use scale_atmos_grid_cartesC_index
+!    use scale_atmos_grid_cartesC_index
     use scale_const,only :&
          CP => CONST_CPdry   ,  &
          PRE00 => CONST_PRE00,  &

@@ -25,6 +25,10 @@ module scale_atmos_phy_cp
   !
   abstract interface
      subroutine cp( &
+          KA, KS, KE,     &
+          IA, IS, IE,     &
+          JA, JS, JE,     &
+          QA_MP, QS_MP, QE_MP, &
           DENS,           &
           MOMZ,           &
           MOMX,           &
@@ -45,18 +49,43 @@ module scale_atmos_phy_cp
           cldfrac_dp,     &
           cldfrac_sh,     &
           kf_nca          )
+       use scale_file_history, only: &
+          FILE_HISTORY_in
        use scale_precision
-       use scale_stdio
-       use scale_prof
-       use scale_atmos_grid_cartesC_index
        use scale_tracer
-       use scale_atmos_phy_mp
+       use scale_const, only: &
+          GRAV => CONST_GRAV, &
+          R    => CONST_Rdry
+       use scale_atmos_hydrometeor, only: &
+          I_QV, &
+          I_QC, &
+          I_QR, &
+          I_QI, &
+          I_QS
+       use scale_time , only :&
+          KF_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
+       use scale_atmos_grid_cartesC_real, only: &
+          FZ => ATMOS_GRID_CARTESC_REAL_FZ
+       use scale_atmos_thermodyn, only: &
+          THERMODYN_temp_pres   => ATMOS_THERMODYN_temp_pres,   &
+          THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,        &
+          THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E, &
+          THERMODYN_qd          => ATMOS_THERMODYN_qd,          &
+          THERMODYN_pott        => ATMOS_THERMODYN_pott
+       use scale_atmos_saturation ,only :&
+
+       SATURATION_psat_liq => ATMOS_SATURATION_psat_liq
+       integer, intent(in) :: KA, KS, KE
+       integer, intent(in) :: IA, IS, IE
+       integer, intent(in) :: JA, JS, JE
+       integer, intent(in) :: QA_MP, QS_MP, QE_MP
+
        real(RP), intent(in)    :: DENS(KA,IA,JA)
        real(RP), intent(in)    :: MOMX(KA,IA,JA)
        real(RP), intent(in)    :: MOMY(KA,IA,JA)
        real(RP), intent(in)    :: MOMZ(KA,IA,JA)
        real(RP), intent(in)    :: RHOT(KA,IA,JA)
-       real(RP), intent(in)    :: QTRC(KA,IA,JA,QA)
+       real(RP), intent(in)    :: QTRC(KA,IA,JA,QS_MP:QE_MP)
        real(RP), intent(in)    :: w0avg(KA,IA,JA)
        real(RP), intent(inout) :: DENS_t_CP(KA,IA,JA)
        real(RP), intent(inout) :: MOMZ_t_CP(KA,IA,JA)
@@ -93,13 +122,20 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup Cumulus parameterization
   !------------------------------------------------------------------------------
-  subroutine ATMOS_PHY_CP_setup( CP_TYPE )
+  subroutine ATMOS_PHY_CP_setup( &
+      KA, KS, KE,   &
+      IA, IS, IE,   &
+      JA, JS, JE,   &
+      CP_TYPE       )
     use scale_process, only: &
        PRC_MPIstop
     use scale_atmos_phy_cp_kf, only: &
          ATMOS_PHY_CP_kf_setup, &
          ATMOS_PHY_CP_kf
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
     character(len=*), intent(in) :: CP_TYPE
     !------------------------------------------------------------------------------
@@ -110,8 +146,10 @@ contains
     case('OFF')
        ! do nothing
     case('KF')
-       call ATMOS_PHY_CP_kf_setup( CP_TYPE )
+       call ATMOS_PHY_CP_kf_setup( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                                   CP_TYPE )
        ATMOS_PHY_CP => ATMOS_PHY_CP_kf
+
     case default
        write(*,*) 'xxx invalid Cumulus parameterization type(', trim(CP_TYPE), '). CHECK!'
        call PRC_MPIstop

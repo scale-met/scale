@@ -65,7 +65,8 @@ contains
     if ( ATMOS_sw_phy_cp ) then
 
        ! setup library component
-       call ATMOS_PHY_CP_setup( ATMOS_PHY_CP_TYPE )
+       call ATMOS_PHY_CP_setup( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                                ATMOS_PHY_CP_TYPE )
        call ATMOS_PHY_CP_common_setup
 
     else
