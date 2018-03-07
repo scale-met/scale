@@ -387,7 +387,7 @@ module mod_atmos_vars
        Vinfo( 'QHYD_MEAN', 'horiz. mean of QHYD',             '1',       1, 'Z',   '' ), &
        Vinfo( 'QLIQ_MEAN', 'horiz. mean of QLIQ',             '1',       1, 'Z',   '' ), &
        Vinfo( 'QICE_MEAN', 'horiz. mean of QICE',             '1',       1, 'Z',   '' ), &
-       Vinfo( 'DENS_PRIM', 'horiz. deviation of density',     'kg/m3',   1, 'Z',   '' ), &
+       Vinfo( 'DENS_PRIM', 'horiz. deviation of density',     'kg/m3',   3, 'ZXY', '' ), &
        Vinfo( 'W_PRIM',    'horiz. deviation of w',           'm/s',     3, 'ZXY', '' ), &
        Vinfo( 'U_PRIM',    'horiz. deviation of u',           'm/s',     3, 'ZXY', '' ), &
        Vinfo( 'V_PRIM',    'horiz. deviation of v',           'm/s',     3, 'ZXY', '' ), &
