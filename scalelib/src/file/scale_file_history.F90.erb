@@ -732,7 +732,7 @@ contains
        cell_measures_ = ""
     end if
 
-    if ( FILE_HISTORY_dims(dimid)%nzcoords > 0 ) then
+    if ( FILE_HISTORY_dims(dimid)%nzcoords > 1 ) then
 
        itemid = -1
        do n = 1, FILE_HISTORY_dims(dimid)%nzcoords
@@ -741,14 +741,14 @@ contains
                                              dimid,                               & ! (in)
                                              FILE_HISTORY_dims(dimid)%zcoords(n), & ! (in)
                                              iid,                                 & ! (out)
-                                             cell_measures=cell_measures_, & ! (in)
-                                             fill_halo=fill_halo                  ) ! (in)
+                                             cell_measures = cell_measures_,      & ! (in)
+                                             fill_halo     = fill_halo            ) ! (in)
           else
              call FILE_HISTORY_Add_Variable( name, desc, unit, standard_name_,    & ! (in)
                                              dimid,                               & ! (in)
                                              FILE_HISTORY_dims(dimid)%zcoords(n), & ! (in)
                                              iid,                                 & ! (out)
-                                             fill_halo=fill_halo                  ) ! (in)
+                                             fill_halo     = fill_halo            ) ! (in)
           end if
           if ( iid > 0 ) itemid = iid
        end do
@@ -759,8 +759,8 @@ contains
                                        dimid,                            & ! (in)
                                        "model",                          & ! (in)
                                        itemid,                           & ! (out)
-                                       cell_measures=cell_measures_,     & ! (in)
-                                       fill_halo=fill_halo               ) ! (in)
+                                       cell_measures = cell_measures_,   & ! (in)
+                                       fill_halo     = fill_halo         ) ! (in)
 
     end if
 
