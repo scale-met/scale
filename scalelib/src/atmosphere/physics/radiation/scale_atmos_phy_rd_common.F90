@@ -1,14 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Physics Radiation
+!> module atmosphere / physics / radiation / common
 !!
 !! @par Description
 !!          Common module for Radiation
-!!          Heating Rate
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2013-02-06 (H.Yashiro) [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -21,8 +17,6 @@ module scale_atmos_phy_rd_common
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_atmos_grid_cartesC_index
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -66,15 +60,6 @@ contains
        FZ,           &
        RHOH,         &
        TEMP_t        )
-    use scale_tracer, only: &
-       TRACER_R, &
-       TRACER_CV, &
-       TRACER_MASS
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd   => ATMOS_THERMODYN_qd,   &
-       THERMODYN_cv   => ATMOS_THERMODYN_cv,   &
-       THERMODYN_rhoe => ATMOS_THERMODYN_rhoe, &
-       THERMODYN_rhot => ATMOS_THERMODYN_rhot
     implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE

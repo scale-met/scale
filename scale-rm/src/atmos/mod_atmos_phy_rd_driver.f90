@@ -49,12 +49,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_RD_driver_setup
-    use scale_atmos_phy_rd, only: &
-       ATMOS_PHY_RD_setup
+    use scale_process, only: &
+       PRC_abort
     use scale_atmos_phy_rd_mstrnx, only: &
        ATMOS_PHY_RD_mstrnx_setup
-    use scale_atmos_phy_rd_mm5sw, only: &
-       swinit
+    use scale_atmos_phy_rd_offline, only: &
+       ATMOS_PHY_RD_offline_setup
     use scale_atmos_grid_cartesC, only: &
        CZ => ATMOS_GRID_CARTESC_CZ, &
        FZ => ATMOS_GRID_CARTESC_FZ
@@ -84,14 +84,11 @@ contains
        select case ( ATMOS_PHY_RD_TYPE )
        case ( "MSTRNX" )
           call ATMOS_PHY_RD_MSTRNX_setup( KA, KS, KE, CZ(:), FZ(:) )
-       case ( "WRF" )
-          call ATMOS_PHY_RD_MSTRNX_setup( KA, KS, KE, CZ(:), FZ(:) )
-          call swinit
+       case ( "OFFLINE" )
+          call ATMOS_PHY_RD_offline_setup
        case default
-          ! setup library component
-          call ATMOS_PHY_RD_setup( ATMOS_PHY_RD_TYPE )
-          !write(*,*) 'xxx invalid Radiation type(', trim(ATMOS_PHY_RD_TYPE), '). CHECK!'
-          !call PRC_abort
+          write(*,*) 'xxx invalid Radiation type(', trim(ATMOS_PHY_RD_TYPE), '). CHECK!'
+          call PRC_abort
        end select
 
     else
@@ -144,19 +141,13 @@ contains
        REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT, &
        ATMOS_GRID_CARTESC_REAL_VOL, &
        ATMOS_GRID_CARTESC_REAL_TOTVOL
-    use scale_process, only: &
-       PRC_MPIstop
-    use scale_const, only: &
-       PRE00 => CONST_PRE00, &
-       Rdry  => CONST_Rdry,  &
-       CPdry => CONST_CPdry
     use scale_landuse, only: &
        fact_ocean => LANDUSE_fact_ocean, &
        fact_land  => LANDUSE_fact_land,  &
        fact_urban => LANDUSE_fact_urban
     use scale_time, only: &
-       dt_RD => TIME_DTSEC_ATMOS_PHY_RD, &
        TIME_NOWDATE,                     &
+       TIME_NOWDAYSEC,                   &
        TIME_OFFSET_YEAR
     use scale_statistics, only: &
        STATISTICS_checktotal, &
@@ -171,12 +162,10 @@ contains
        ATMOS_PHY_RD_TYPE
     use scale_atmos_solarins, only: &
        SOLARINS_insolation => ATMOS_SOLARINS_insolation
-    use scale_atmos_phy_rd, only: &
-       ATMOS_PHY_RD
     use scale_atmos_phy_rd_mstrnx, only: &
        ATMOS_PHY_RD_MSTRNX_flux
-    use scale_atmos_phy_rd_mm5sw, only: &
-       SWRAD
+    use scale_atmos_phy_rd_offline, only: &
+       ATMOS_PHY_RD_OFFLINE_flux
     use scale_atmos_phy_rd_common, only: &
        ATMOS_PHY_RD_calc_heating, &
        I_SW,     &
@@ -185,20 +174,12 @@ contains
        I_up,     &
        I_direct, &
        I_diffuse
-    use scale_atmos_hydrometeor, only: &
-       I_QV, &
-       I_QC, &
-       I_QR, &
-       I_QI, &
-       I_QS, &
-       I_QG
     use mod_atmos_vars, only: &
        TEMP,              &
        PRES,              &
        QV,                &
        CVtot,             &
        DENS   => DENS_av, &
-       RHOT   => RHOT_av, &
        QTRC   => QTRC_av, &
        RHOH   => RHOH_p
     use mod_atmos_phy_sf_vars, only: &
@@ -255,23 +236,6 @@ contains
     real(RP) :: AE_Re  (KA,IA,JA,N_AE)
     real(RP) :: AE_Qe  (KA,IA,JA,N_AE)
 
-    ! for WRF radiation scheme added by Adachi; array order is (i,k,j)
-    real(RP) :: RTHRATENSW(IA,KA,JA)
-    real(RP) :: SDOWN3D   (IA,KA,JA)  ! downward short wave flux (W/m2)
-    real(RP) :: GSW       (IA,JA)     ! net short wave flux at ground surface (W/m2)
-    real(RP) :: RHO3D     (IA,KA,JA)
-    real(RP) :: T3D       (IA,KA,JA)
-    real(RP) :: P3D       (IA,KA,JA)
-    real(RP) :: PI3D      (IA,KA,JA)
-    real(RP) :: DZ8W      (IA,KA,JA)
-    real(RP) :: QV3D      (IA,KA,JA)
-    real(RP) :: QC3D      (IA,KA,JA)
-    real(RP) :: QR3D      (IA,KA,JA)
-    real(RP) :: QI3D      (IA,KA,JA)
-    real(RP) :: QS3D      (IA,KA,JA)
-    real(RP) :: QG3D      (IA,KA,JA)
-    real(RP) :: flux_rad_org(KA,IA,JA,2,2,2)
-
     real(RP) :: RH(KA,IA,JA)
 
     real(RP) :: total ! dummy
@@ -300,7 +264,8 @@ contains
 
 
        select case ( ATMOS_PHY_RD_TYPE )
-       case ( "MSTRNX", "WRF" )
+       case ( "MSTRNX" )
+
           call ATMOS_PHY_RD_MSTRNX_flux( &
                KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                DENS(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
@@ -315,18 +280,17 @@ contains
                flux_rad_top(:,:,:,:,:), SFLX_rad_dn(:,:,:,:),    & ! [OUT]
                dtau_s = dtau_s(:,:,:), dem_s = dem_s(:,:,:)      ) ! [OUT]
 
-       case default
-          call ATMOS_PHY_RD( DENS, RHOT, QTRC,          & ! [IN]
-                             REAL_CZ, REAL_FZ,          & ! [IN]
-                             fact_ocean,                & ! [IN]
-                             fact_land,                 & ! [IN]
-                             fact_urban,                & ! [IN]
-                             SFC_TEMP, SFC_albedo,      & ! [IN]
-                             solins, cosSZA,            & ! [IN]
-                             CLDFRAC, MP_Re, MP_Qe,     & ! [IN]
-                             flux_rad,                  & ! [OUT]
-                             flux_rad_top, SFLX_rad_dn, & ! [OUT]
-                             dtau_s, dem_s              ) ! [OUT]
+       case ( "OFFLINE" )
+
+          call ATMOS_PHY_RD_offline_flux( &
+               KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+               TIME_NOWDAYSEC,        & ! [IN]
+               flux_rad(:,:,:,:,:,2), & ! [OUT]
+               SFLX_rad_dn(:,:,:,:)   ) ! [OUT]
+          flux_rad(:,:,:,:,:,1)   = 0.0_RP ! clear sky
+          flux_rad_top(:,:,:,:,:) = 0.0_RP
+          dtau_s(:,:,:) = 0.0_RP
+          dem_s(:,:,:) = 0.0_RP
 
        end select
 
@@ -383,134 +347,6 @@ contains
        enddo
        enddo
        enddo
-
-       if ( ATMOS_PHY_RD_TYPE == 'WRF' ) then
-
-          flux_rad_org(:,:,:,:,:,:) = flux_rad(:,:,:,:,:,:)
-          RTHRATENSW = 0.0_RP
-          SDOWN3D    = 0.0_RP
-          GSW        = 0.0_RP
-
-          if ( I_QV > 0 ) then
-             QV3D(:,:,:) = QTRC(:,:,:,I_QV)
-          else
-             QV3D = 0.0_RP
-          end if
-          if ( I_QC > 0 ) then
-             QC3D(:,:,:) = QTRC(:,:,:,I_QC)
-          else
-             QC3D = 0.0_RP
-          end if
-          if ( I_QR > 0 ) then
-             QR3D(:,:,:) = QTRC(:,:,:,I_QR)
-          else
-             QR3D = 0.0_RP
-          end if
-          if ( I_QI > 0 ) then
-             QI3D(:,:,:) = QTRC(:,:,:,I_QI)
-          else
-             QI3D = 0.0_RP
-          end if
-          if ( I_QS > 0 ) then
-             QS3D(:,:,:) = QTRC(:,:,:,I_QS)
-          else
-             QS3D = 0.0_RP
-          end if
-          if ( I_QG > 0 ) then
-             QG3D(:,:,:) = QTRC(:,:,:,I_QG)
-          else
-             QG3D = 0.0_RP
-          end if
-
-          do j = 1, JA
-          do i = 1, IA
-          do k = 1, KA
-             T3D  (i,k,j) = TEMP(k,i,j)                       ! temperature (K)
-             RHO3D(i,k,j) = DENS(k,i,j)                       ! density (kg/m^3)
-             P3D  (i,k,j) = PRES(k,i,j)                       ! pressure (Pa)
-             PI3D (i,k,j) = (PRES(k,i,j)/PRE00)**(Rdry/CPdry) ! exner function (dimensionless)
-             DZ8W (i,k,j) = REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j)   ! dz between full levels(m)
-          enddo
-          enddo
-          enddo
-
-          call SWRAD( dt_RD,                & ! [IN]
-                      RTHRATENSW,           & ! [INOUT]
-                      SDOWN3D,              & ! [INOUT]
-                      GSW,                  & ! [INOUT]
-                      REAL_LAT,             & ! [IN]
-                      REAL_LON,             & ! [IN]
-                      SFC_albedo(:,:,I_SW), & ! [IN]
-                      RHO3D,                & ! [IN]
-                      T3D,                  & ! [IN]
-                      P3D,                  & ! [IN]
-                      PI3D,                 & ! [IN]
-                      DZ8W,                 & ! [IN]
-                      solins(:,:),          & ! [IN]
-                      cosSZA(:,:),          & ! [IN]
-                      QV3D,                 & ! [IN]
-                      QC3D,                 & ! [IN]
-                      QR3D,                 & ! [IN]
-                      QI3D,                 & ! [IN]
-                      QS3D,                 & ! [IN]
-                      QG3D,                 & ! [IN]
-                      F_QV      = .true.,   & ! [IN]
-                      F_QC      = .true.,   & ! [IN]
-                      F_QR      = .true.,   & ! [IN]
-                      F_QI      = .true.,   & ! [IN]
-                      F_QS      = .true.,   & ! [IN]
-                      F_QG      = .true.,   & ! [IN]
-                      icloud    = 1,        & ! [IN]
-                      warm_rain = .true.    ) ! [IN]
-
-          do j = JS, JE
-          do i = IS, IE
-             flux_net_sfc(i,j,I_SW) = GSW(i,j)
-             do k = KS-1, KE
-                flux_rad(k,i,j,I_SW,I_up,2) = 0.0_RP
-                flux_rad(k,i,j,I_SW,I_dn,2) = SDOWN3D(i,k,j)
-             enddo
-
-             do k = 1, KS-2
-                flux_rad(k,i,j,I_SW,I_dn,2) = SDOWN3D(i,KS-1,j)
-             enddo
-
-             do k = KE+1, KA
-                flux_rad(k,i,j,I_SW,I_dn,2) = SDOWN3D(i,KE,j)
-             enddo
-          enddo
-          enddo
-
-          do j = JS, JE
-          do i = IS, IE
-             SFCFLX_SW_up(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn,2) * SFC_albedo(i,j,I_SW)
-             SFCFLX_SW_dn(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn,2)
-
-             TOAFLX_SW_up(i,j) = 0.0_RP
-             TOAFLX_SW_dn(i,j) = flux_rad(KE,i,j,I_SW,I_dn,2) ! sometimes TOA altitude is very low
-          enddo
-          enddo
-
-          do j = JS, JE
-          do i = IS, IE
-             flux_net_toa(i,j,I_SW) = 0.0_RP
-             do k = KS, KE
-                flux_net(k,i,j,I_SW) = 0.0_RP
-                flux_up (k,i,j,I_SW) = 0.0_RP
-                flux_dn (k,i,j,I_SW) = 0.5_RP * ( flux_rad(k-1,i,j,I_SW,I_dn,2) + flux_rad(k,i,j,I_SW,I_dn,2) )
-             enddo
-          enddo
-          enddo
-
-          do j = JS, JE
-          do i = IS, IE
-             flux_net_sfc(i,j,I_SW) = flux_rad(KS-1,i,j,I_SW,I_dn,2)*SFC_albedo(i,j,I_SW)-flux_rad(KS-1,i,j,I_SW,I_dn,2)
-          enddo
-          enddo
-
-       endif
-
-
 
        ! apply radiative flux convergence -> heating rate
        call ATMOS_PHY_RD_calc_heating( &
@@ -583,22 +419,6 @@ contains
 
        call FILE_HISTORY_in( dtau_s(:,:,:), 'dtau_s', '0.67 micron cloud optical depth', '1', fill_halo=.true. )
        call FILE_HISTORY_in( dem_s (:,:,:), 'dem_s',  '10.5 micron cloud emissivity',    '1', fill_halo=.true. )
-
-       if ( ATMOS_PHY_RD_TYPE ==  'WRF' ) then
-          ! revert all radiation flux from MM5 scheme to default
-          flux_rad(:,:,:,:,:,:) = flux_rad_org(:,:,:,:,:,:)
-
-          do j = JS, JE
-          do i = IS, IE
-             SFCFLX_SW_up(i,j) = flux_rad(KS-1,i,j,I_SW,I_up,2)
-             SFCFLX_SW_dn(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn,2)
-
-             TOAFLX_SW_up(i,j) = flux_rad_top(i,j,I_SW,I_up,2) ! mstrnx
-             TOAFLX_SW_dn(i,j) = flux_rad_top(i,j,I_SW,I_dn,2) ! mstrnx
-          enddo
-          enddo
-
-       endif
 
     endif
 

@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Physics Radiation
+!> module atmosphere / physics / radiation / offline
 !!
 !! @par Description
 !!          Atmospheric radiation transfer process
@@ -18,8 +18,6 @@ module scale_atmos_phy_rd_offline
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_atmos_grid_cartesC_index
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -28,7 +26,7 @@ module scale_atmos_phy_rd_offline
   !++ Public procedure
   !
   public :: ATMOS_PHY_RD_offline_setup
-  public :: ATMOS_PHY_RD_offline
+  public :: ATMOS_PHY_RD_offline_flux
 
   !-----------------------------------------------------------------------------
   !
@@ -54,17 +52,15 @@ module scale_atmos_phy_rd_offline
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_RD_offline_setup( RD_TYPE )
+  subroutine ATMOS_PHY_RD_offline_setup
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_file_external_input, only: &
        FILE_EXTERNAL_INPUT_file_limit, &
        FILE_EXTERNAL_INPUT_regist
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     implicit none
-
-    character(len=*), intent(in) :: RD_TYPE
 
     character(len=H_SHORT) :: vars_3d   (num_vars_3d)
     character(len=H_SHORT) :: vars_2d   (num_vars_2d)
@@ -105,12 +101,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[RADIATION] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Offline radiation process'
 
-    if ( RD_TYPE /= 'OFFLINE' ) then
-       write(*,*) 'xxx RD_TYPE is not OFFLINE. Check!'
-       call PRC_MPIstop
-    endif
-
-
     ATMOS_PHY_RD_offline_defval = UNDEF
 
     !--- read namelist
@@ -120,13 +110,13 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_RD_OFFLINE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_RD_OFFLINE)
 
     if ( ATMOS_PHY_RD_offline_basename(1) == '' ) then
        write(*,*) 'xxx ATMOS_PHY_RD_offline_basename is necessary'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     do n = 1, num_vars_3d
@@ -182,29 +172,15 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Radiation main
-  subroutine ATMOS_PHY_RD_offline( &
-       DENS, RHOT, QTRC,      &
-       CZ, FZ,                &
-       fact_ocean,            &
-       fact_land,             &
-       fact_urban,            &
-       temp_sfc, albedo_land, &
-       solins, cosSZA,        &
-       cldfrac, Re, Qe,       &
+  subroutine ATMOS_PHY_RD_offline_flux( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       time_now,              &
        flux_rad,              &
-       flux_rad_top,          &
-       SFLX_rad_dn,           &
-       dtau_s,                &
-       dem_s                  )
-!       Jval                   )
-    use scale_atmos_grid_cartesC_index
-    use scale_tracer
+       SFLX_rad_dn            )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_file_external_input, only: &
        FILE_EXTERNAL_INPUT_update
-    use scale_time, only: &
-       TIME_NOWDAYSEC
     use scale_atmos_phy_rd_common, only: &
        I_SW,     &
        I_LW,     &
@@ -212,30 +188,14 @@ contains
        I_up,     &
        I_direct, &
        I_diffuse
-    use scale_atmos_hydrometeor, only: &
-       N_HYD
     implicit none
-    real(RP), intent(in)  :: DENS        (KA,IA,JA)
-    real(RP), intent(in)  :: RHOT        (KA,IA,JA)
-    real(RP), intent(in)  :: QTRC        (KA,IA,JA,QA)
-    real(RP), intent(in)  :: CZ          (  KA,IA,JA)    ! UNUSED
-    real(RP), intent(in)  :: FZ          (0:KA,IA,JA)
-    real(RP), intent(in)  :: fact_ocean  (IA,JA)
-    real(RP), intent(in)  :: fact_land   (IA,JA)
-    real(RP), intent(in)  :: fact_urban  (IA,JA)
-    real(RP), intent(in)  :: temp_sfc    (IA,JA)
-    real(RP), intent(in)  :: albedo_land (IA,JA,2)
-    real(RP), intent(in)  :: solins      (IA,JA)
-    real(RP), intent(in)  :: cosSZA      (IA,JA)
-    real(RP), intent(in)  :: cldfrac     (KA,IA,JA)
-    real(RP), intent(in)  :: Re          (KA,IA,JA,N_HYD)
-    real(RP), intent(in)  :: Qe          (KA,IA,JA,N_HYD)
-    real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2,2)
-    real(RP), intent(out) :: flux_rad_top(IA,JA,2,2,2)
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: time_now
+    real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2)
     real(RP), intent(out) :: SFLX_rad_dn (IA,JA,2,2)
-    real(RP), intent(out) :: dtau_s      (KA,IA,JA) ! 0.67 micron cloud optical depth
-    real(RP), intent(out) :: dem_s       (KA,IA,JA) ! 10.5 micron cloud emissivity
-!    real(RP), intent(out) :: Jval        (KA,IA,JA,CH_QA_photo)
 
     real(RP) :: buffer(IA,JA)
     logical  :: error, error_sum
@@ -250,21 +210,21 @@ contains
     error_sum = .false.
 
     ! 3D
-    call FILE_EXTERNAL_INPUT_update( 'RFLX_LW_up', TIME_NOWDAYSEC, flux_rad(:,:,:,I_LW,I_up,2), error )
+    call FILE_EXTERNAL_INPUT_update( 'RFLX_LW_up', time_now, flux_rad(:,:,:,I_LW,I_up), error )
     error_sum = ( error .OR. error_sum )
 
-    call FILE_EXTERNAL_INPUT_update( 'RFLX_LW_dn', TIME_NOWDAYSEC, flux_rad(:,:,:,I_LW,I_dn,2), error )
+    call FILE_EXTERNAL_INPUT_update( 'RFLX_LW_dn', time_now, flux_rad(:,:,:,I_LW,I_dn), error )
     error_sum = ( error .OR. error_sum )
 
-    call FILE_EXTERNAL_INPUT_update( 'RFLX_SW_up', TIME_NOWDAYSEC, flux_rad(:,:,:,I_SW,I_up,2), error )
+    call FILE_EXTERNAL_INPUT_update( 'RFLX_SW_up', time_now, flux_rad(:,:,:,I_SW,I_up), error )
     error_sum = ( error .OR. error_sum )
 
-    call FILE_EXTERNAL_INPUT_update( 'RFLX_SW_dn', TIME_NOWDAYSEC, flux_rad(:,:,:,I_SW,I_dn,2), error )
+    call FILE_EXTERNAL_INPUT_update( 'RFLX_SW_dn', time_now, flux_rad(:,:,:,I_SW,I_dn), error )
     error_sum = ( error .OR. error_sum )
 
 
     ! 2D
-    call FILE_EXTERNAL_INPUT_update( 'SFLX_LW_up', TIME_NOWDAYSEC, buffer(:,:), error )
+    call FILE_EXTERNAL_INPUT_update( 'SFLX_LW_up', time_now, buffer(:,:), error )
     if ( error ) then
        error_sum = .true.
     else
@@ -274,12 +234,12 @@ contains
        !$omp shared(flux_rad,buffer)
        do j = JS, JE
        do i = IS, IE
-          flux_rad(KS-1,i,j,I_LW,I_up,2) = buffer(i,j)
+          flux_rad(KS-1,i,j,I_LW,I_up) = buffer(i,j)
        end do
        end do
     end if
 
-    call FILE_EXTERNAL_INPUT_update( 'SFLX_LW_dn', TIME_NOWDAYSEC, buffer(:,:), error )
+    call FILE_EXTERNAL_INPUT_update( 'SFLX_LW_dn', time_now, buffer(:,:), error )
     if ( error ) then
        error_sum = .true.
     else
@@ -289,12 +249,12 @@ contains
        !$omp shared(flux_rad,buffer)
        do j = JS, JE
        do i = IS, IE
-          flux_rad(KS-1,i,j,I_LW,I_dn,2) = buffer(i,j)
+          flux_rad(KS-1,i,j,I_LW,I_dn) = buffer(i,j)
        end do
        end do
     end if
 
-    call FILE_EXTERNAL_INPUT_update( 'SFLX_SW_up', TIME_NOWDAYSEC, buffer(:,:), error )
+    call FILE_EXTERNAL_INPUT_update( 'SFLX_SW_up', time_now, buffer(:,:), error )
     if ( error ) then
        error_sum = .true.
     else
@@ -304,12 +264,12 @@ contains
        !$omp shared(flux_rad,buffer)
        do j = JS, JE
        do i = IS, IE
-          flux_rad(KS-1,i,j,I_SW,I_up,2) = buffer(i,j)
+          flux_rad(KS-1,i,j,I_SW,I_up) = buffer(i,j)
        end do
        end do
     end if
 
-    call FILE_EXTERNAL_INPUT_update( 'SFLX_SW_dn', TIME_NOWDAYSEC, buffer(:,:), error )
+    call FILE_EXTERNAL_INPUT_update( 'SFLX_SW_dn', time_now, buffer(:,:), error )
     if ( error ) then
        error_sum = .true.
     else
@@ -319,7 +279,7 @@ contains
        !$omp shared(flux_rad,buffer)
        do j = JS, JE
        do i = IS, IE
-          flux_rad(KS-1,i,j,I_SW,I_dn,2) = buffer(i,j)
+          flux_rad(KS-1,i,j,I_SW,I_dn) = buffer(i,j)
        end do
        end do
     end if
@@ -330,14 +290,14 @@ contains
     !$omp shared(SFLX_rad_dn,flux_rad)
     do j = JS, JE
     do i = IS, IE
-       SFLX_rad_dn(i,j,I_LW,I_diffuse) = flux_rad(KS-1,i,j,I_LW,I_dn,2)
+       SFLX_rad_dn(i,j,I_LW,I_diffuse) = flux_rad(KS-1,i,j,I_LW,I_dn)
        SFLX_rad_dn(i,j,I_LW,I_direct ) = 0.0_RP
     end do
     end do
 
     ! 2D optional
     if ( vars_2d_exist(1) ) then
-       call FILE_EXTERNAL_INPUT_update( 'SFLX_SW_dn_dir', TIME_NOWDAYSEC, SFLX_rad_dn(:,:,I_SW,I_direct), error )
+       call FILE_EXTERNAL_INPUT_update( 'SFLX_SW_dn_dir', time_now, SFLX_rad_dn(:,:,I_SW,I_direct), error )
        if ( error ) then
           error_sum = .true.
        else
@@ -347,7 +307,7 @@ contains
           !$omp shared(SFLX_rad_dn,flux_rad)
           do j = JS, JE
           do i = IS, IE
-             SFLX_rad_dn(i,j,I_SW,I_diffuse) = flux_rad(KS-1,i,j,I_SW,I_dn,2) - SFLX_rad_dn(i,j,I_SW,I_direct)
+             SFLX_rad_dn(i,j,I_SW,I_diffuse) = flux_rad(KS-1,i,j,I_SW,I_dn) - SFLX_rad_dn(i,j,I_SW,I_direct)
           end do
           end do
        end if
@@ -358,25 +318,18 @@ contains
        !$omp shared(SFLX_rad_dn,flux_rad)
        do j = JS, JE
        do i = IS, IE
-          SFLX_rad_dn(i,j,I_SW,I_diffuse) = (          ATMOS_PHY_RD_offline_diffuse_rate ) * flux_rad(KS-1,i,j,I_SW,I_dn,2)
-          SFLX_rad_dn(i,j,I_SW,I_direct ) = ( 1.0_RP - ATMOS_PHY_RD_offline_diffuse_rate ) * flux_rad(KS-1,i,j,I_SW,I_dn,2)
+          SFLX_rad_dn(i,j,I_SW,I_diffuse) = (          ATMOS_PHY_RD_offline_diffuse_rate ) * flux_rad(KS-1,i,j,I_SW,I_dn)
+          SFLX_rad_dn(i,j,I_SW,I_direct ) = ( 1.0_RP - ATMOS_PHY_RD_offline_diffuse_rate ) * flux_rad(KS-1,i,j,I_SW,I_dn)
        end do
        end do
     end if
 
     if ( error_sum ) then
        write(*,*) 'xxx Requested data is not found!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
-    ! clearsky and TOA value are not defined
-    flux_rad    (:,:,:,:,:,1) = 0.0_RP
-    flux_rad_top(:,:,:,:,:)   = 0.0_RP
-
-    dtau_s      (:,:,:) = 0.0_RP
-    dem_s       (:,:,:) = 0.0_RP
-
     return
-  end subroutine ATMOS_PHY_RD_offline
+  end subroutine ATMOS_PHY_RD_offline_flux
 
 end module scale_atmos_phy_rd_offline

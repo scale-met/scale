@@ -30,8 +30,6 @@ VPATH = common:                          \
         atmos-physics:                   \
         atmos-physics/share:             \
         atmos-physics/microphysics:      \
-        atmos-physics/chemistry:         \
-        atmos-physics/radiation:         \
         atmos-physics/surfaceflux:       \
         atmos-physics/turbulence:        \
         atmos-physics/cumulus:           \
@@ -96,7 +94,6 @@ OBJS_AE = scale_atmos_phy_ae_kajino13.o
 OBJS_CH = scale_atmos_phy_ch_rn222.o
 
 OBJS_RD = scale_atmos_phy_rd_mstrnx.o	\
-          scale_atmos_phy_rd_mm5sw.o	\
           scale_atmos_phy_rd_offline.o	\
           scale_atmos_phy_rd_profile.o
 
@@ -142,7 +139,6 @@ OBJS_NAME = \
 	\
 	$(OBJS_CH)	\
 	\
-	scale_atmos_phy_rd.o	\
 	scale_atmos_phy_rd_common.o	\
 	$(OBJS_RD)	\
 	\

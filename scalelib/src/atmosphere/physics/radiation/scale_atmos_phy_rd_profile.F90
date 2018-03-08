@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Physics Radiation / Vertical profile
+!> module atmosphere / physics/ radiation / profile
 !!
 !! @par Description
 !!          Climatological vertical profile (up to mesopause)
@@ -10,10 +10,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-02-06 (H.Yashiro)  [new]
-!!
-!<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
 module scale_atmos_phy_rd_profile
@@ -24,7 +20,6 @@ module scale_atmos_phy_rd_profile
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -137,7 +132,7 @@ contains
   !> Setup
   subroutine ATMOS_PHY_RD_PROFILE_setup
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
 
     character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
@@ -177,7 +172,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_RD_PROFILE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_RD_PROFILE)
 
@@ -374,7 +369,7 @@ contains
   !> Setup MIPAS2001 climatological data (gas)
   subroutine PROFILE_setup_MIPAS2001
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        CONST_D2R
     use scale_calendar, only: &
@@ -431,7 +426,7 @@ contains
 
           if ( ierr /= 0 ) then !--- missing
              write(*,*) '*** [PROFILE_setup_MIPAS2001] File not found. check!'
-             call PRC_MPIstop
+             call PRC_abort
           endif
 
           do l = 1, 24
@@ -1224,7 +1219,7 @@ contains
        gas,          &
        cfc           )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        Mdry => CONST_Mdry, &
        Mvap => CONST_Mvap, &
@@ -1280,7 +1275,7 @@ contains
 
        if ( ierr /= 0 ) then !--- missing
           write(*,*) '*** [PROFILE_read_user] File not found. check!'
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        read(fid,*) dummy
