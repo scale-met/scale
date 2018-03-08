@@ -104,8 +104,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_CH_driver_setup
-    use scale_atmos_phy_ch, only: &
-       ATMOS_PHY_CH_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_CH_TYPE, &
        ATMOS_sw_phy_ch
