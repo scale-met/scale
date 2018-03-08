@@ -20,6 +20,7 @@ VPATH = common:                          \
 	file:                            \
 	grid:                            \
 	communication:                   \
+        atmosphere/common:               \
         atmosphere/grid:                 \
         atmosphere/physics/pbl:          \
         atmosphere/physics/microphysics: \
@@ -163,7 +164,7 @@ OBJS_NAME = \
 	scale_atmos_sub_thermodyn.o	\
 	scale_atmos_sub_aerosol.o	\
 	scale_atmos_sub_hydrometeor.o	\
-	scale_atmos_sub_adiabat.o	\
+	scale_atmos_adiabat.o	\
 	scale_atmos_sub_diagnostic.o	\
 	scale_bulkflux.o	\
 	scale_calendar.o	\
