@@ -1627,9 +1627,9 @@ contains
     do reqid = 1, FILE_HISTORY_nreqs
 
        if ( FILE_HISTORY_req(reqid)%registered ) cycle
+       if ( name /= FILE_HISTORY_req(reqid)%name ) cycle
 
-       ! note: plural requests are allowed for each name
-       if ( name   == FILE_HISTORY_req(reqid)%name .and. &
+       if ( FILE_HISTORY_dims(dimid)%nzcoords == 1 .or. &
             zcoord == FILE_HISTORY_req(reqid)%zcoord ) then
 
           FILE_HISTORY_req(reqid)%registered = .true.
@@ -1641,7 +1641,7 @@ contains
           FILE_HISTORY_vars(id)%outname           = FILE_HISTORY_req(reqid)%outname
           FILE_HISTORY_vars(id)%basename          = FILE_HISTORY_req(reqid)%basename
           FILE_HISTORY_vars(id)%postfix_timelabel = FILE_HISTORY_req(reqid)%postfix_timelabel
-          FILE_HISTORY_vars(id)%zcoord            = FILE_HISTORY_req(reqid)%zcoord
+          FILE_HISTORY_vars(id)%zcoord            = zcoord
           FILE_HISTORY_vars(id)%dstep             = FILE_HISTORY_req(reqid)%dstep
           FILE_HISTORY_vars(id)%taverage          = FILE_HISTORY_req(reqid)%taverage
           FILE_HISTORY_vars(id)%dtype             = FILE_HISTORY_req(reqid)%dtype
