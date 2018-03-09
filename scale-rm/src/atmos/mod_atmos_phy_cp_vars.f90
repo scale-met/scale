@@ -668,7 +668,7 @@ contains
                               ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),              & ! (in)
                               ATMOS_GRID_CARTESC_REAL_TOTVOL                   ) ! (in)
        call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_CP_w0avg         (:,:,:), VAR_NAME(7), & ! (in)
+                              ATMOS_PHY_CP_w0mean        (:,:,:), VAR_NAME(7), & ! (in)
                               ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),              & ! (in)
                               ATMOS_GRID_CARTESC_REAL_TOTVOL                   ) ! (in)
        call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
