@@ -64,7 +64,7 @@ if [ ! ${N2GCONF} = "NONE" ]; then
    done
 fi
 
-NNODE=`expr \( $TPROC - 1 \) / 6 + 1`
+NNODE=`expr \( $TPROC - 1 \) / 70 + 1`
 NPROC=`expr $TPROC / $NNODE`
 NPIN=`expr 263 / \( $NPROC \) + 1`
 
@@ -85,7 +85,7 @@ unset KMP_AFFINITY
 #export KMP_AFFINITY=verbose
 #export I_MPI_DEBUG=5
 
-export OMP_NUM_THREADS=11
+export OMP_NUM_THREADS=1
 export I_MPI_PIN_DOMAIN=${NPIN}
 export I_MPI_PERHOST=${NPROC}
 export KMP_HW_SUBSET=1t
