@@ -976,6 +976,8 @@ contains
        do k = KS+2, KE-2
           sig0 = dev(k) * dev(k-1)
           sig1 = dev(k) * dev(k+1)
+          if( sig0 < EPS .and. sig0 > -EPS ) sig0 = 0.0_RP
+          if( sig1 < EPS .and. sig1 > -EPS ) sig1 = 0.0_RP
           ! if (sig0>0 .OR. sig1>0) then flux(k) = 0.0
           flux(k) = dev(k) &
                   / ( 2.0_RP*RCDZ(k) + ( FDZ(k-1)*RCDZ(k+1) + FDZ(k)*RCDZ(k-1) ) / ( FDZ(k) + FDZ(k-1) ) ) &
