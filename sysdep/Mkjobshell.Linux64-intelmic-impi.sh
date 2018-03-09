@@ -15,7 +15,7 @@ eval DATPARAM=(`echo ${11} | tr -s '[' '"' | tr -s ']' '"'`)
 eval DATDISTS=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
-MPIEXEC="mpirun -np"
+MPIEXEC="mpiexec.hydra -np"
 
 PROCLIST=(`echo ${PROCS} | tr -s ',' ' '`)
 TPROC=${PROCLIST[0]}
@@ -66,7 +66,7 @@ fi
 
 NNODE=`expr \( $TPROC - 1 \) / 70 + 1`
 NPROC=`expr $TPROC / $NNODE`
-NPIN=`expr 263 / \( $NPROC \) + 1`
+NPIN=`expr 287 / \( $NPROC \) + 1`
 
 cat << EOF1 > ./run.sh
 #! /bin/bash -x
@@ -79,8 +79,8 @@ export FORT_FMT_RECL=400
 
 export HFI_NO_CPUAFFINITY=1
 export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,72,73,144,145,216,217
-export I_MPI_HBW_POLICY=hbw_preferred,,
-export I_MPI_FABRICS_LIST=tmi
+#export I_MPI_HBW_POLICY=hbw_preferred,,
+#export I_MPI_FABRICS_LIST=tmi
 unset KMP_AFFINITY
 #export KMP_AFFINITY=verbose
 #export I_MPI_DEBUG=5
