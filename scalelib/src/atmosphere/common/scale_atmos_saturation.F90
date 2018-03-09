@@ -1,14 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Saturation adjustment
+!> module atmosphere / saturation
 !!
 !! @par Description
-!!          Saturation adjustment module
+!!          Saturation module
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2011-10-24 (T.Seiki)   [new] Import from NICAM
-!! @li      2012-02-10 (H.Yashiro) [mod] Reconstruction
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -190,20 +186,20 @@ module scale_atmos_saturation
   !
   real(RP), private, parameter :: TEM_MIN = 10.0_RP !> calculation of dew point is ommited under this temperature
 
-  real(RP), private,      save :: ATMOS_SATURATION_ULIMIT_TEMP = 273.15_RP !< upper limit temperature
-  real(RP), private,      save :: ATMOS_SATURATION_LLIMIT_TEMP = 233.15_RP !< lower limit temperature
+  real(RP), private :: ATMOS_SATURATION_ULIMIT_TEMP = 273.15_RP !< upper limit temperature
+  real(RP), private :: ATMOS_SATURATION_LLIMIT_TEMP = 233.15_RP !< lower limit temperature
 
-  real(RP), private,      save :: RTEM00         !> inverse of TEM00
-  real(RP), private,      save :: dalphadT_const !> d(alfa)/dt
-  real(RP), private,      save :: psat_min_liq   !> psat_liq for TEM_MIN
-  real(RP), private,      save :: psat_min_ice   !> psat_ice for TEM_MIN
+  real(RP), private :: RTEM00         !> inverse of TEM00
+  real(RP), private :: dalphadT_const !> d(alfa)/dt
+  real(RP), private :: psat_min_liq   !> psat_liq for TEM_MIN
+  real(RP), private :: psat_min_ice   !> psat_ice for TEM_MIN
 
-  real(RP), private,      save :: CPovR_liq
-  real(RP), private,      save :: CPovR_ice
-  real(RP), private,      save :: CVovR_liq
-  real(RP), private,      save :: CVovR_ice
-  real(RP), private,      save :: LovR_liq
-  real(RP), private,      save :: LovR_ice
+  real(RP), private :: CPovR_liq
+  real(RP), private :: CPovR_ice
+  real(RP), private :: CVovR_liq
+  real(RP), private :: CVovR_ice
+  real(RP), private :: LovR_liq
+  real(RP), private :: LovR_ice
 
   !-----------------------------------------------------------------------------
 contains
@@ -234,7 +230,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SATURATION] / Categ[ATMOS SHARE] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SATURATION] / Categ[ATMOS] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -394,9 +390,8 @@ contains
     implicit none
     integer,  intent(in)  :: KA, KS, KE
 
-    real(RP), intent(out) :: psat(KA) !< saturation vapor pressure [Pa]
-
     real(RP), intent(in)  :: temp(KA) !< temperature               [K]
+    real(RP), intent(out) :: psat(KA) !< saturation vapor pressure [Pa]
 
     integer  :: k
     !---------------------------------------------------------------------------
@@ -455,7 +450,6 @@ contains
     integer,  intent(in)  :: JA, JS, JE
 
     real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature               [K]
-
     real(RP), intent(out) :: psat(KA,IA,JA) !< saturation vapor pressure [Pa]
 
     real(RP) :: alpha, psatl, psati
@@ -532,7 +526,6 @@ contains
     integer,  intent(in)  :: JA, JS, JE
 
     real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature               [K]
-
     real(RP), intent(out) :: psat(KA,IA,JA) !< saturation vapor pressure [Pa]
 
     integer  :: k, i, j
@@ -608,7 +601,6 @@ contains
     integer,  intent(in)  :: JA, JS, JE
 
     real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature               [K]
-
     real(RP), intent(out) :: psat(KA,IA,JA) !< saturation vapor pressure [Pa]
 
     integer  :: k, i, j
@@ -1402,8 +1394,6 @@ contains
        dqsat_dT,                 &
        qsat, qsat_liq, qsat_ice, &
        alpha                     )
-    use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHS => ATMOS_HYDROMETEOR_LHS
     implicit none
 
     real(RP), intent(in)  :: temp
@@ -1600,8 +1590,6 @@ contains
        dqsat_dT, dqsat_dP,       &
        qsat, qsat_liq, qsat_ice, &
        alpha                     )
-    use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHS => ATMOS_HYDROMETEOR_LHS
     implicit none
 
     real(RP), intent(in)  :: temp
