@@ -94,10 +94,13 @@ contains
     use scale_process, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
-       ATMOS_HYDROMETEOR_regist, &
-       I_QV, &
-       I_QC, &
-       I_QI
+       ATMOS_HYDROMETEOR_regist
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP, &
+       QS_MP, &
+       QE_MP
+    use mod_atmos_phy_mp_driver, only: &
+       ATMOS_PHY_MP_USER_qhyd2qtrc
     implicit none
 
     namelist / PARAM_USER / &
@@ -128,13 +131,15 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
     if ( .not. dry ) then
-       call ATMOS_HYDROMETEOR_regist( QS,                 & ! (out)
-                                      1, 1, 1,            & ! (in)
-                                      QNAME, QDESC, QUNIT ) ! (in)
-       I_QV = QS
-       I_QC = QS + 1
-       I_QI = QS + 2
+       call ATMOS_HYDROMETEOR_regist( 1, 1,                & ! (in)
+                                      QNAME, QDESC, QUNIT, & ! (in)
+                                      QS_MP                ) ! (out)
     end if
+
+    QA_MP = 3
+    QE_MP = QS_MP + 2
+
+    ATMOS_PHY_MP_USER_qhyd2qtrc => USER_qhyd2qtrc
 
     return
   end subroutine USER_config
@@ -407,6 +412,36 @@ contains
 
     return
   end subroutine USER_step
+
+  subroutine USER_qhyd2qtrc( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       QV, QHYD, &
+       QTRC,     &
+       QNUM      )
+    use scale_atmos_hydrometeor, only: &
+         N_HYD, &
+         I_QV, &
+         I_HC, &
+         I_HI
+    use mod_atmos_phy_mp_vars, only: &
+         QA_MP
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: QV   (KA,IA,JA)
+    real(RP), intent(in) :: QHYD(KA,IA,JA,N_HYD)
+
+    real(RP), intent(out) :: QTRC(KA,IA,JA,QA_MP)
+
+    real(RP), intent(in), optional :: QNUM(KA,IA,JA,N_HYD)
+
+    QTRC(:,:,:,1) = QV(:,:,:)
+    QTRC(:,:,:,2) = QHYD(:,:,:,I_HC)
+    QTRC(:,:,:,3) = QHYD(:,:,:,I_HI)
+
+    return
+  end subroutine USER_qhyd2qtrc
 
   !-----------------------------------------------------------------------------
   subroutine interporate( d_out, d_in )

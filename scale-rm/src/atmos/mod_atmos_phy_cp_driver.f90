@@ -139,15 +139,16 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_hydrometeor, only: &
-       ATMOS_HYDROMETEOR_diagnose_number_concentration
+       HYD_NAME
     use scale_atmos_phy_cp_kf, only: &
        ATMOS_PHY_CP_kf_tendency
     use scale_atmos_phy_cp_common, only: &
        ATMOS_PHY_CP_common_wmean
-    use scale_atmos_phy_mp, only: &
-       QA_MP, &
+    use mod_atmos_phy_mp_vars, only: &
        QS_MP, &
        QE_MP
+    use mod_atmos_phy_mp_driver, only: &
+       ATMOS_PHY_MP_driver_qhyd2qtrc
     use mod_atmos_admin, only: &
        ATMOS_PHY_CP_TYPE
     use mod_atmos_vars, only: &
@@ -169,15 +170,16 @@ contains
        TEMP,              &
        PRES,              &
        QDRY,              &
+       QV,                &
        Rtot,              &
        CPtot
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     use mod_atmos_phy_cp_vars, only: &
        DENS_t_CP      => ATMOS_PHY_CP_DENS_t,         &
-       MOMZ_t_CP      => ATMOS_PHY_CP_MOMZ_t,         &
-       MOMX_t_CP      => ATMOS_PHY_CP_MOMX_t,         &
-       MOMY_t_CP      => ATMOS_PHY_CP_MOMY_t,         &
        RHOT_t_CP      => ATMOS_PHY_CP_RHOT_t,         &
-       RHOQ_t_CP      => ATMOS_PHY_CP_RHOQ_t,         &
+       RHOQV_t_CP     => ATMOS_PHY_CP_RHOQV_t,        &
+       RHOHYD_t_CP    => ATMOS_PHY_CP_RHOHYD_t,       &
        MFLX_cloudbase => ATMOS_PHY_CP_MFLX_cloudbase, &
        SFLX_rain      => ATMOS_PHY_CP_SFLX_rain,      &  ! convective rain [kg/m2/s]
        cloudtop       => ATMOS_PHY_CP_cloudtop,       &  ! cloud top height [m]
@@ -186,10 +188,11 @@ contains
        cldfrac_sh     => ATMOS_PHY_CP_cldfrac_sh,     &  ! cloud fraction (shallow convection) (0-1)
        w0mean         => ATMOS_PHY_CP_w0mean,         &  ! running mean vertical wind velocity [m/s]
        kf_nca         => ATMOS_PHY_CP_kf_nca             ! advection/cumulus convection timescale/dt for KF [step]
-
     implicit none
 
     logical, intent(in) :: update_flag
+
+    real(RP) :: RHOQ_t_CP(KA,IA,JA,QS_MP:QE_MP)
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -204,49 +207,32 @@ contains
     if ( update_flag ) then ! update
        select case ( ATMOS_PHY_CP_TYPE )
        case ( 'KF' )
-          call ATMOS_PHY_CP_kf_tendency( KA, KS, KE, IA, 1, IA, JA, 1, JA, QA_MP, QS_MP, QE_MP, &
-                                         DENS(:,:,:),                  & ! [IN]
-                                         U(:,:,:), V(:,:,:),           & ! [IN]
-                                         RHOT(:,:,:),                  & ! [IN]
-                                         TEMP(:,:,:), PRES(:,:,:),     & ! [IN]
-                                         QDRY(:,:,:),                  & ! [IN]
-                                         QTRC(:,:,:,QS_MP:QE_MP),      & ! [IN]
-                                         Rtot(:,:,:), CPtot(:,:,:),    & ! [IN]
-                                         w0mean(:,:,:),                & ! [IN]
-                                         FZ,                           & ! [IN]
-                                         TIME_DTSEC_ATMOS_PHY_CP,      & ! [IN]
-                                         DENS_t_CP(:,:,:),             & ! [INOUT]
-                                         RHOT_t_CP(:,:,:),             & ! [INOUT]
-                                         RHOQ_t_CP(:,:,:,QS_MP:QE_MP), & ! [INOUT]
-                                         SFLX_rain(:,:),               & ! [OUT]
-                                         cloudtop(:,:),                & ! [OUT]
-                                         cloudbase(:,:),               & ! [OUT]
-                                         cldfrac_dp(:,:,:),            & ! [OUT]
-                                         cldfrac_sh(:,:,:),            & ! [OUT]
-                                         kf_nca(:,:)                   ) ! [OUT]
+          call ATMOS_PHY_CP_kf_tendency( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                         DENS(:,:,:),                              & ! [IN]
+                                         U(:,:,:), V(:,:,:),                       & ! [IN]
+                                         RHOT(:,:,:), TEMP(:,:,:), PRES(:,:,:),    & ! [IN]
+                                         QDRY(:,:,:), QV(:,:,:),                   & ! [IN]
+                                         Rtot(:,:,:), CPtot(:,:,:),                & ! [IN]
+                                         w0mean(:,:,:),                            & ! [IN]
+                                         FZ,                                       & ! [IN]
+                                         TIME_DTSEC_ATMOS_PHY_CP,                  & ! [IN]
+                                         DENS_t_CP(:,:,:),                         & ! [INOUT]
+                                         RHOT_t_CP(:,:,:),                         & ! [INOUT]
+                                         RHOQV_t_CP(:,:,:), RHOHYD_t_CP(:,:,:,:),  & ! [INOUT]
+                                         SFLX_rain(:,:),                           & ! [OUT]
+                                         cloudtop(:,:), cloudbase(:,:),            & ! [OUT]
+                                         cldfrac_dp(:,:,:), cldfrac_sh(:,:,:),     & ! [OUT]
+                                         kf_nca(:,:)                               ) ! [OUT]
        end select
 
-       ! tentative reset
 !OCL XFILL
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          MOMZ_t_CP(k,i,j) = 0.0_RP
-          MOMX_t_CP(k,i,j) = 0.0_RP
-          MOMY_t_CP(k,i,j) = 0.0_RP
-       enddo
-       enddo
-       enddo
-
-!OCL XFILL
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = JSB, JEB
+       do i  = ISB, IEB
           MFLX_cloudbase(i,j) = 0.0_RP
        enddo
        enddo
 
        ! diagnose tendency of number concentration
-       call ATMOS_HYDROMETEOR_diagnose_number_concentration( RHOQ_t_CP(:,:,:,:) ) ! [INOUT]
 
        call FILE_HISTORY_in( MFLX_cloudbase(:,:),   'CBMFX',     'cloud base mass flux',             'kg/m2/s', fill_halo=.true. )
        call FILE_HISTORY_in( SFLX_rain     (:,:),   'RAIN_CP',   'surface rain rate by CP',          'kg/m2/s', fill_halo=.true. )
@@ -258,35 +244,34 @@ contains
        call FILE_HISTORY_in( kf_nca        (:,:),   'kf_nca',    'advection or cumulus convection timescale for KF', 's', fill_halo=.true. )
 
        call FILE_HISTORY_in( DENS_t_CP(:,:,:), 'DENS_t_CP', 'tendency DENS in CP', 'kg/m3/s'  , fill_halo=.true. )
-       call FILE_HISTORY_in( MOMZ_t_CP(:,:,:), 'MOMZ_t_CP', 'tendency MOMZ in CP', 'kg/m2/s2' , fill_halo=.true. )
-       call FILE_HISTORY_in( MOMX_t_CP(:,:,:), 'MOMX_t_CP', 'tendency MOMX in CP', 'kg/m2/s2' , fill_halo=.true. )
-       call FILE_HISTORY_in( MOMY_t_CP(:,:,:), 'MOMY_t_CP', 'tendency MOMY in CP', 'kg/m2/s2' , fill_halo=.true. )
        call FILE_HISTORY_in( RHOT_t_CP(:,:,:), 'RHOT_t_CP', 'tendency RHOT in CP', 'K*kg/m3/s', fill_halo=.true. )
 
-       do iq = QS_MP, QE_MP
-          call FILE_HISTORY_in( RHOQ_t_CP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_CP', &
-                        'tendency rho*'//trim(TRACER_NAME(iq))//' in CP', 'kg/m3/s', fill_halo=.true. )
+       call FILE_HISTORY_in( RHOQV_t_CP(:,:,:), 'QV_t_CP',  'tendency rho*QV in CP', 'kg/m3/s', fill_halo=.true. )
+       do iq = 1, N_HYD
+          call FILE_HISTORY_in( RHOHYD_t_CP(:,:,:,iq), trim(HYD_NAME(iq))//'_t_CP', &
+                                'tendency rho*'//trim(HYD_NAME(iq))//' in CP', 'kg/m3/s', fill_halo=.true. )
        enddo
 
     endif ! update
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        DENS_t(k,i,j) = DENS_t(k,i,j) + DENS_t_CP(k,i,j)
-       MOMZ_t(k,i,j) = MOMZ_t(k,i,j) + MOMZ_t_CP(k,i,j)
-       MOMX_t(k,i,j) = MOMX_t(k,i,j) + MOMX_t_CP(k,i,j)
-       MOMY_t(k,i,j) = MOMY_t(k,i,j) + MOMY_t_CP(k,i,j)
        RHOT_t(k,i,j) = RHOT_t(k,i,j) + RHOT_t_CP(k,i,j)
     enddo
     enddo
     enddo
 
-    do iq = QS_MP,  QE_MP
+    call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                        RHOQV_t_CP(:,:,:), RHOHYD_t_CP(:,:,:,:), & ! [IN]
+                                        RHOQ_t_CP(:,:,:,QS_MP:QE_MP)             ) ! [OUT]
+
+    do iq = QS_MP, QE_MP
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do j  = JS, JE
-    do i  = IS, IE
+    do j  = JSB, JEB
+    do i  = ISB, IEB
     do k  = KS, KE
        RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_CP(k,i,j,iq)
     enddo
@@ -299,18 +284,6 @@ contains
                               DENS_t_CP(:,:,:), 'DENS_t_CP',       &
                               ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  &
                               ATMOS_GRID_CARTESC_REAL_TOTVOL       )
-       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                              MOMZ_t_CP(:,:,:), 'MOMZ_t_CP',         &
-                              ATMOS_GRID_CARTESC_REAL_VOLWXY(:,:,:), &
-                              ATMOS_GRID_CARTESC_REAL_TOTVOLWXY      )
-       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                              MOMX_t_CP(:,:,:), 'MOMX_t_CP',         &
-                              ATMOS_GRID_CARTESC_REAL_VOLZUY(:,:,:), &
-                              ATMOS_GRID_CARTESC_REAL_TOTVOLZUY      )
-       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                              MOMY_t_CP(:,:,:), 'MOMY_t_CP',         &
-                              ATMOS_GRID_CARTESC_REAL_VOLZXV(:,:,:), &
-                              ATMOS_GRID_CARTESC_REAL_TOTVOLZXV      )
        call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               RHOT_t_CP(:,:,:), 'RHOT_t_CP',       &
                               ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  &

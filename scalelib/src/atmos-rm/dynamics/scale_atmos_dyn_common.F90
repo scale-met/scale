@@ -990,21 +990,20 @@ contains
   !> Calc coefficient of numerical filter
   subroutine ATMOS_DYN_numfilter_coef_q( &
        num_diff_q,                             &
-       DENS, QTRC,                             &
+       DENS, QTRC, is_qv,                      &
        CDZ, CDX, CDY, dt,                      &
        REF_qv, iq,                             &
        ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS )
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_atmos_hydrometeor, only: &
-       I_QV
     implicit none
 
     real(RP), intent(out) :: num_diff_q(KA,IA,JA,3)
 
     real(RP), intent(in)  :: DENS(KA,IA,JA)
     real(RP), intent(in)  :: QTRC(KA,IA,JA)
+    logical,  intent(in)  :: is_qv
 
     real(RP), intent(in)  :: CDZ(KA)
     real(RP), intent(in)  :: CDX(IA)
@@ -1050,7 +1049,7 @@ contains
        nd_coef_cdy(j) = DIFF4 * CDY(j)**nd_order4
     end do
 
-    if ( iq == I_QV .AND. (.NOT. ND_USE_RS) ) then
+    if ( is_qv .AND. (.NOT. ND_USE_RS) ) then
 
        call PROF_rapstart("NumFilter_Main", 3)
 
@@ -1094,7 +1093,7 @@ contains
 
     end if
 
-    if ( iq == I_QV ) then
+    if ( is_qv ) then
 
        if ( ND_USE_RS ) then
 
@@ -1118,7 +1117,7 @@ contains
                           nd_order, & ! (in)
                           0, 0, 0, KE )
 
-    else ! iq /= I_QV
+    else ! not qv
 
        call calc_numdiff( work, iwork, & ! (out)
                           QTRC, & ! (in)

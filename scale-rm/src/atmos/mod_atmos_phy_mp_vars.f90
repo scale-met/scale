@@ -70,10 +70,6 @@ module mod_atmos_phy_mp_vars
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOQ_t(:,:,:,:)  ! tendency rho*QTRC [kg/kg/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOH  (:,:,:)    ! diabatic heating rate [J/kg/s]
 
-  ! obsolute
-  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMX_t(:,:,:)    ! tendency MOMX [kg/m2/s2]
-  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMY_t(:,:,:)    ! tendency MOMY [kg/m2/s2]
-
   real(RP), public, allocatable :: ATMOS_PHY_MP_EVAPORATE(:,:,:) ! number concentration of evaporated cloud [/m3]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_rain(:,:)   ! precipitation flux (liquid) [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_snow(:,:)   ! precipitation flux (solid)  [kg/m2/s]
@@ -167,8 +163,6 @@ contains
     allocate( ATMOS_PHY_MP_RHOQ_t   (KA,IA,JA,QS_MP:QE_MP) )
     allocate( ATMOS_PHY_MP_RHOH     (KA,IA,JA)    )
     allocate( ATMOS_PHY_MP_EVAPORATE(KA,IA,JA)    )
-    allocate( ATMOS_PHY_MP_MOMX_t   (KA,IA,JA)    )
-    allocate( ATMOS_PHY_MP_MOMY_t   (KA,IA,JA)    )
     ! tentative approach
     ATMOS_PHY_MP_DENS_t   (:,:,:)   = 0.0_RP
     ATMOS_PHY_MP_MOMZ_t   (:,:,:)   = 0.0_RP
@@ -178,8 +172,6 @@ contains
     ATMOS_PHY_MP_RHOQ_t   (:,:,:,:) = 0.0_RP
     ATMOS_PHY_MP_RHOH     (:,:,:)   = 0.0_RP
     ATMOS_PHY_MP_EVAPORATE(:,:,:)   = 0.0_RP
-    ATMOS_PHY_MP_MOMX_t   (:,:,:)   = 0.0_RP
-    ATMOS_PHY_MP_MOMY_t   (:,:,:)   = 0.0_RP
 
     allocate( ATMOS_PHY_MP_SFLX_rain(IA,JA) )
     allocate( ATMOS_PHY_MP_SFLX_snow(IA,JA) )
@@ -552,25 +544,21 @@ contains
        QHS,   &
        QHE
     use scale_atmos_phy_mp_kessler, only: &
-       ATMOS_PHY_MP_KESSLER_mass_ratio, &
+       ATMOS_PHY_MP_KESSLER_qtrc2qhyd, &
        ATMOS_PHY_MP_KESSLER_effective_radius, &
        ATMOS_PHY_MP_KESSLER_cloud_fraction
     use scale_atmos_phy_mp_tomita08, only: &
-       ATMOS_PHY_MP_TOMITA08_mass_ratio, &
+       ATMOS_PHY_MP_TOMITA08_qtrc2qhyd, &
        ATMOS_PHY_MP_TOMITA08_effective_radius, &
        ATMOS_PHY_MP_TOMITA08_cloud_fraction
     use scale_atmos_phy_mp_sn14, only: &
-       ATMOS_PHY_MP_SN14_mass_ratio, &
+       ATMOS_PHY_MP_SN14_qtrc2qhyd, &
        ATMOS_PHY_MP_SN14_effective_radius, &
        ATMOS_PHY_MP_SN14_cloud_fraction
     use scale_atmos_phy_mp_suzuki10, only: &
        ATMOS_PHY_MP_suzuki10_mass_ratio, &
        ATMOS_PHY_MP_suzuki10_effective_radius, &
        ATMOS_PHY_MP_suzuki10_cloud_fraction
-    use scale_atmos_phy_mp, only: &
-       ATMOS_PHY_MP_CloudFraction,   &
-       ATMOS_PHY_MP_EffectiveRadius, &
-       ATMOS_PHY_MP_MixingRatio
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE
 
@@ -607,14 +595,8 @@ contains
                   QTRC(:,:,:,QHS:QHE), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
                   ATMOS_PHY_MP_CLDFRAC(:,:,:)                          ) ! [OUT]
           case default
-             if ( associated(ATMOS_PHY_MP_CloudFraction) ) then
-                call ATMOS_PHY_MP_CloudFraction( &
-                     ATMOS_PHY_MP_CLDFRAC(:,:,:),                   & ! [OUT]
-                     QTRC(:,:,:,:), ATMOS_PHY_MP_cldfrac_thleshold  ) ! [IN]
-             else
 !OCL XFILL
-                ATMOS_PHY_MP_CLDFRAC(:,:,:) = 0.0_RP
-             end if
+             ATMOS_PHY_MP_CLDFRAC(:,:,:) = 0.0_RP
           end select
           DIAG_CLDFRAC = .true.
        end if
@@ -652,14 +634,8 @@ contains
                   DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QHS:QHE), & ! [IN]
                   ATMOS_PHY_MP_Re(:,:,:,:)                       ) ! [OUT]
           case default
-             if ( associated(ATMOS_PHY_MP_EffectiveRadius) ) then
-                call ATMOS_PHY_MP_EffectiveRadius( &
-                     ATMOS_PHY_MP_Re(:,:,:,:),               & ! [OUT]
-                     QTRC(:,:,:,:), DENS(:,:,:), TEMP(:,:,:) ) ! [IN]
-             else
 !OCL XFILL
-                ATMOS_PHY_MP_Re(:,:,:,:) = 0.0_RP
-             end if
+             ATMOS_PHY_MP_Re(:,:,:,:) = 0.0_RP
           end select
           DIAG_Re = .true.
        end if
@@ -679,17 +655,17 @@ contains
        if ( .not. DIAG_Qe ) then
           select case ( ATMOS_PHY_MP_TYPE )
           case ( 'KESSLER' )
-             call ATMOS_PHY_MP_kessler_mass_ratio( &
+             call ATMOS_PHY_MP_kessler_qtrc2qhyd( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   QTRC(:,:,:,QHS:QHE),     & ! [IN]
                   ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]
           case ( 'TOMITA08' )
-             call ATMOS_PHY_MP_tomita08_mass_ratio( &
+             call ATMOS_PHY_MP_tomita08_qtrc2qhyd( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   QTRC(:,:,:,QHS:QHE),     & ! [IN]
                   ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]
           case ( 'SN14' )
-             call ATMOS_PHY_MP_sn14_mass_ratio( &
+             call ATMOS_PHY_MP_sn14_qtrc2qhyd( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   QTRC(:,:,:,QHS:QHE),     & ! [IN]
                   ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]
@@ -699,14 +675,8 @@ contains
                   QTRC(:,:,:,QHS:QHE),     & ! [IN]
                   ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]
           case default
-             if ( associated(ATMOS_PHY_MP_MixingRatio) ) then
-                call ATMOS_PHY_MP_MixingRatio( &
-                     ATMOS_PHY_MP_Qe(:,:,:,:),  & ! [OUT]
-                     QTRC(:,:,:,:)              ) ! [IN]
-             else
 !OCL XIFLL
-                ATMOS_PHY_MP_Qe(:,:,:,:) = 0.0_RP
-             end if
+             ATMOS_PHY_MP_Qe(:,:,:,:) = 0.0_RP
           end select
           DIAG_Qe = .true.
        end if

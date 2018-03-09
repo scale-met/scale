@@ -258,6 +258,7 @@ contains
        ATMOS_USE_AVERAGE
     use mod_atmos_vars, only: &
        ATMOS_vars_total,  &
+       I_QV,    &
        DENS,    &
        MOMZ,    &
        MOMX,    &
@@ -413,6 +414,7 @@ contains
                        ATMOS_DYN_FLAG_FCT_TRACER,                            & ! [IN]
                        ATMOS_DYN_FLAG_FCT_along_stream,                      & ! [IN]
                        ATMOS_USE_AVERAGE,                                    & ! [IN]
+                       I_QV,                                                 & ! [IN]
                        TIME_DTSEC,                                           & ! [IN]
                        TIME_DTSEC_ATMOS_DYN                                  ) ! [IN]
 

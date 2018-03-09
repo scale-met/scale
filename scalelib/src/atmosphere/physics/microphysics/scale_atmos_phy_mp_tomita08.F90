@@ -29,9 +29,10 @@ module scale_atmos_phy_mp_tomita08
   public :: ATMOS_PHY_MP_tomita08_setup
   public :: ATMOS_PHY_MP_tomita08_adjustment
   public :: ATMOS_PHY_MP_tomita08_terminal_velocity
-  public :: ATMOS_PHY_MP_tomita08_mass_ratio
   public :: ATMOS_PHY_MP_tomita08_effective_radius
   public :: ATMOS_PHY_MP_tomita08_cloud_fraction
+  public :: ATMOS_PHY_MP_tomita08_qtrc2qhyd
+  public :: ATMOS_PHY_MP_tomita08_qhyd2qtrc
 
   !-----------------------------------------------------------------------------
   !
@@ -2062,91 +2063,6 @@ contains
   end subroutine ATMOS_PHY_MP_tomita08_effective_radius
 
   !-----------------------------------------------------------------------------
-  !> Calculate mass ratio of each category
-  subroutine ATMOS_PHY_MP_tomita08_mass_ratio( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       QTRC0, &
-       Qe     )
-    use scale_atmos_hydrometeor, only: &
-       N_HYD, &
-       I_HC, &
-       I_HR, &
-       I_HI, &
-       I_HS, &
-       I_HG
-    implicit none
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
-
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA_MP-1)
-
-    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mass ratio of each cateory [kg/kg]
-
-    integer :: k, i, j, ih
-    !---------------------------------------------------------------------------
-
-    !$omp parallel do OMP_SCHEDULE_
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       Qe(k,i,j,I_HC) = QTRC0(k,i,j,I_hyd_QC)
-    end do
-    end do
-    end do
-    !$omp parallel do OMP_SCHEDULE_
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       Qe(k,i,j,I_HR) = QTRC0(k,i,j,I_hyd_QR)
-    end do
-    end do
-    end do
-    !$omp parallel do OMP_SCHEDULE_
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       Qe(k,i,j,I_HI) = QTRC0(k,i,j,I_hyd_QI)
-    end do
-    end do
-    end do
-    !$omp parallel do OMP_SCHEDULE_
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       Qe(k,i,j,I_HS) = QTRC0(k,i,j,I_hyd_QS)
-    end do
-    end do
-    end do
-    !$omp parallel do OMP_SCHEDULE_
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       Qe(k,i,j,I_HG) = QTRC0(k,i,j,I_hyd_QG)
-    end do
-    end do
-    end do
-    !$omp parallel do OMP_SCHEDULE_
-!OCL XFILL
-    do ih = I_HG+1, N_HYD
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       Qe(k,i,j,ih) = 0.0_RP
-    end do
-    end do
-    end do
-    end do
-
-    return
-  end subroutine ATMOS_PHY_MP_tomita08_mass_ratio
-
-  !-----------------------------------------------------------------------------
   subroutine MP_tomita08_BergeronParam( &
        KA, KS, KE, &
        temp,       &
@@ -2204,5 +2120,165 @@ contains
 
     return
   end subroutine MP_tomita08_BergeronParam
+
+  !-----------------------------------------------------------------------------
+  !> Calculate mass ratio of each category
+  subroutine ATMOS_PHY_MP_tomita08_qtrc2qhyd( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       QTRC, &
+       Qe    )
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC, &
+       I_HR, &
+       I_HI, &
+       I_HS, &
+       I_HG
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA_MP-1)
+
+    real(RP), intent(out) :: Qe(KA,IA,JA,N_HYD) ! mass ratio of each cateory [kg/kg]
+
+    integer :: k, i, j, ih
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Qe(k,i,j,I_HC) = QTRC(k,i,j,I_hyd_QC)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Qe(k,i,j,I_HR) = QTRC(k,i,j,I_hyd_QR)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Qe(k,i,j,I_HI) = QTRC(k,i,j,I_hyd_QI)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Qe(k,i,j,I_HS) = QTRC(k,i,j,I_hyd_QS)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Qe(k,i,j,I_HG) = QTRC(k,i,j,I_hyd_QG)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do ih = I_HG+1, N_HYD
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Qe(k,i,j,ih) = 0.0_RP
+    end do
+    end do
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_PHY_MP_tomita08_qtrc2qhyd
+
+  !-----------------------------------------------------------------------------
+  !> get mass ratio of each category
+  subroutine ATMOS_PHY_MP_tomita08_qhyd2qtrc( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       Qe,  &
+       QTRC )
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC, &
+       I_HR, &
+       I_HI, &
+       I_HS, &
+       I_HG, &
+       I_HH
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: Qe(KA,IA,JA,N_HYD) ! mass ratio of each cateory [kg/kg]
+
+    real(RP), intent(out)  :: QTRC(KA,IA,JA,QA_MP-1)
+
+    integer :: k, i, j, ih
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_hyd_QC) = Qe(k,i,j,I_HC)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_hyd_QR) = Qe(k,i,j,I_HR)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_hyd_QI) = Qe(k,i,j,I_HI)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_hyd_QS) = Qe(k,i,j,I_HS)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_hyd_QG) = Qe(k,i,j,I_HG) + Qe(k,i,j,I_HH)
+    end do
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_PHY_MP_tomita08_qhyd2qtrc
 
 end module scale_atmos_phy_mp_tomita08

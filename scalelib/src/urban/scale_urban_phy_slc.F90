@@ -850,7 +850,7 @@ contains
     ! Set parameters
     !-----------------------------------------------------------
 
-    call HYDROMETEOR_LHV( LHV, TA )
+    call HYDROMETEOR_LHV( TA, LHV )
 
     RovCP = Rdry / CPdry
     THA   = TA * ( PRE00 / PRSA )**RovCP

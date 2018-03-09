@@ -197,6 +197,7 @@ contains
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
        USE_AVERAGE,                                          &
+       I_QV,                                                 &
        DTLS, DTSS, Llast                                     )
     use scale_const, only: &
        EPS    => CONST_EPS, &
@@ -331,6 +332,8 @@ contains
     logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
 
     logical,  intent(in)    :: USE_AVERAGE
+
+    integer,  intent(in)    :: I_QV
 
     real(DP), intent(in)    :: DTLS
     real(DP), intent(in)    :: DTSS
@@ -1049,7 +1052,7 @@ contains
              num_diff_q(:,:,:,:) = 0.0_RP
           else
              call ATMOS_DYN_numfilter_coef_q( num_diff_q(:,:,:,:),                    & ! [OUT]
-                                              DENS00, QTRC(:,:,:,iq),                 & ! [IN]
+                                              DENS00, QTRC(:,:,:,iq), iq==I_QV,       & ! [IN]
                                               CDZ, CDX, CDY, dtl,                     & ! [IN]
                                               REF_qv, iq,                             & ! [IN]
                                               ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]

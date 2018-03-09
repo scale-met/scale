@@ -261,6 +261,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine COMM_CARTESC_NEST_setup ( &
+       QA_MP,        &
        inter_parent, &
        inter_child   )
     use scale_file, only: &
@@ -295,10 +296,9 @@ contains
        ATMOS_GRID_CARTESC_REAL_CZ,    &
        ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_hydrometeor, only: &
-       I_QV
-    use scale_atmos_phy_mp, only: &
-       QA_MP
+       ATMOS_HYDROMETEOR_dry
     implicit none
+    integer, intent(in) :: QA_MP
 
     integer, intent(in), optional :: inter_parent
     integer, intent(in), optional :: inter_child
@@ -555,10 +555,10 @@ contains
 
          if( ONLINE_BOUNDARY_USE_QHYD ) then
             COMM_CARTESC_NEST_BND_QA = QA_MP
-         elseif ( I_QV > 0 ) then
-            COMM_CARTESC_NEST_BND_QA = 1
-         else
+         elseif ( ATMOS_HYDROMETEOR_dry ) then
             COMM_CARTESC_NEST_BND_QA = 0
+         else
+            COMM_CARTESC_NEST_BND_QA = 1
          endif
 
          if( IO_L ) write(IO_FID_LOG,*) "flag_parent", flag_parent, "flag_child", flag_child

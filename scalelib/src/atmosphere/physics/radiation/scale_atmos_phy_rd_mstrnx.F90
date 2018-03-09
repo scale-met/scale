@@ -393,7 +393,6 @@ contains
        ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
-       I_QV, &
        I_HC, &
        I_HI, &
        HYD_DENS

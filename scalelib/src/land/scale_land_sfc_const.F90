@@ -175,7 +175,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land surface step: Const'
 
-    call HYDROMETEOR_LHV( LHV(:,:), TMPA(:,:) )
+    call HYDROMETEOR_LHV( IA, IS, IE, JA, JS, JE, &
+                          TMPA(:,:), LHV(:,:) )
 
     ! not update temperature
     do j = JS, JE

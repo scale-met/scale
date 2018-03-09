@@ -85,10 +85,10 @@ OBJS_DYN = scale_atmos_dyn_fvm_flux_cd2.o	\
 
 OBJS_MP = scale_atmos_phy_mp_dry.o	\
           scale_atmos_phy_mp_kessler.o	\
-          scale_atmos_phy_mp_sn14.o	\
           scale_atmos_phy_mp_sdm.o	\
-          scale_atmos_phy_mp_suzuki10.o	\
           scale_atmos_phy_mp_tomita08.o
+#          scale_atmos_phy_mp_suzuki10.o	\
+#          scale_atmos_phy_mp_sn14.o	\
 
 OBJS_AE = scale_atmos_phy_ae_kajino13.o
 
@@ -131,9 +131,7 @@ OBJS_NAME = \
 	$(OBJS_DYN)	\
 	$(OBJS_NUMERIC_FDM)	\
 	\
-	scale_atmos_phy_mp.o	\
 	scale_atmos_phy_mp_common.o	\
-	scale_atmos_phy_mp_convert.o	\
 	$(OBJS_MP)	\
 	\
 	$(OBJS_AE)	\
@@ -159,11 +157,11 @@ OBJS_NAME = \
 	scale_atmos_sub_hydrostatic.o	\
 	scale_atmos_sub_profile.o	\
 	scale_atmos_sub_refstate.o	\
-	scale_atmos_sub_saturation.o	\
+	scale_atmos_saturation.o	\
 	scale_atmos_sub_solarins.o	\
 	scale_atmos_thermodyn.o		\
 	scale_atmos_sub_aerosol.o	\
-	scale_atmos_sub_hydrometeor.o	\
+	scale_atmos_hydrometeor.o	\
 	scale_atmos_adiabat.o	\
 	scale_atmos_sub_diagnostic.o	\
 	scale_bulkflux.o	\
@@ -226,6 +224,8 @@ OBJS_NAME = \
 	scale_topography.o	\
 	scale_tracer.o	\
 	scale_vector.o
+#	scale_atmos_phy_mp_convert.o	\
+#	scale_atmos_phy_cp.o	\
 
 OBJS = $(patsubst %,$(OBJ_DIR)/%,$(OBJS_NAME))
 

@@ -30,9 +30,10 @@ module scale_atmos_phy_mp_kessler
   public :: ATMOS_PHY_MP_kessler_setup
   public :: ATMOS_PHY_MP_kessler_adjustment
   public :: ATMOS_PHY_MP_kessler_terminal_velocity
-  public :: ATMOS_PHY_MP_kessler_mass_ratio
   public :: ATMOS_PHY_MP_kessler_effective_radius
   public :: ATMOS_PHY_MP_kessler_cloud_fraction
+  public :: ATMOS_PHY_MP_kessler_qtrc2qhyd
+  public :: ATMOS_PHY_MP_kessler_qhyd2qtrc
 
   !-----------------------------------------------------------------------------
   !
@@ -168,7 +169,7 @@ contains
     enddo
     enddo
 
-  !OCL XFILL
+!OCL XFILL
     QTRC_dummy(:,:,:) = -1.0_RP
 
     call MP_saturation_adjustment( &
@@ -443,11 +444,11 @@ contains
     real(RP), parameter :: um2cm = 100.0_RP
     !---------------------------------------------------------------------------
 
-  !OCL XFILL
+!OCL XFILL
     Re(:,:,:,I_HC) =   8.E-6_RP * um2cm
-  !OCL XFILL
+!OCL XFILL
     Re(:,:,:,I_HR) = 100.E-6_RP * um2cm
-  !OCL XFILL
+!OCL XFILL
     Re(:,:,:,I_HR+1:) = 0.0_RP
 
     return
@@ -455,10 +456,10 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Calculate mass ratio of each category
-  subroutine ATMOS_PHY_MP_kessler_mass_ratio( &
+  subroutine ATMOS_PHY_MP_kessler_qtrc2qhyd( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       QTRC0, &
-       Qe     )
+       QTRC, &
+       Qe    )
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_HC, &
@@ -468,19 +469,50 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA_MP-1) ! hydrometeor mass concentration [kg/kg]
+    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA_MP-1) ! hydrometeor mass concentration [kg/kg]
 
-    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD)   ! mass ratio of each hydrometeor [kg/kg]
+    real(RP), intent(out) :: Qe(KA,IA,JA,N_HYD)   ! mass ratio of each hydrometeor [kg/kg]
     !---------------------------------------------------------------------------
 
-  !OCL XFILL
-    Qe(:,:,:,I_HC) = QTRC0(:,:,:,I_hyd_QC)
-  !OCL XFILL
-    Qe(:,:,:,I_HR) = QTRC0(:,:,:,I_hyd_QR)
-  !OCL XFILL
+!OCL XFILL
+    Qe(:,:,:,I_HC) = QTRC(:,:,:,I_hyd_QC)
+!OCL XFILL
+    Qe(:,:,:,I_HR) = QTRC(:,:,:,I_hyd_QR)
+!OCL XFILL
     Qe(:,:,:,I_HR+1:) = 0.0_RP
 
     return
-  end subroutine ATMOS_PHY_MP_kessler_mass_ratio
+  end subroutine ATMOS_PHY_MP_kessler_qtrc2qhyd
+
+  !-----------------------------------------------------------------------------
+  !> Calculate mass ratio of each category
+  subroutine ATMOS_PHY_MP_kessler_qhyd2qtrc( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       Qe,  &
+       QTRC )
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC, &
+       I_HR
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: Qe(KA,IA,JA,N_HYD)   ! mass ratio of each hydrometeor [kg/kg]
+
+    real(RP), intent(out) :: QTRC(KA,IA,JA,QA_MP-1) ! hydrometeor mass concentration [kg/kg]
+
+    !---------------------------------------------------------------------------
+
+!OCL XFILL
+    QTRC(:,:,:,I_hyd_QC) = Qe(:,:,:,I_HC)
+!OCL XFILL
+    QTRC(:,:,:,I_hyd_QR) = Qe(:,:,:,I_HR)
+
+    ! ignore ice water
+
+    return
+  end subroutine ATMOS_PHY_MP_kessler_qhyd2qtrc
 
 end module scale_atmos_phy_mp_kessler

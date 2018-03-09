@@ -60,6 +60,7 @@ module scale_atmos_dyn_tstep_large
           FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
           FLAG_FCT_ALONG_STREAM,                                &
           USE_AVERAGE,                                          &
+          I_QV,                                                 &
           DTL, DTS, Llast                                       )
        use scale_precision
        use scale_atmos_grid_cartesC_index
@@ -164,6 +165,8 @@ module scale_atmos_dyn_tstep_large
        logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
 
        logical,  intent(in)    :: USE_AVERAGE
+
+       integer,  intent(in)    :: I_QV
 
        real(DP), intent(in)    :: DTL
        real(DP), intent(in)    :: DTS

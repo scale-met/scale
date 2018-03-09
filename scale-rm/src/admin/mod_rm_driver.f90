@@ -172,6 +172,8 @@ contains
        ATMOS_driver_setup,    &
        ATMOS_driver,           &
        ATMOS_driver_finalize
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP
     use mod_ocean_admin, only: &
        OCEAN_admin_setup, &
        OCEAN_do
@@ -310,7 +312,7 @@ contains
     call FILE_EXTERNAL_INPUT_CARTESC_setup
 
     ! setup nesting grid
-    call COMM_CARTESC_NEST_setup ( intercomm_parent, intercomm_child )
+    call COMM_CARTESC_NEST_setup ( QA_MP, intercomm_parent, intercomm_child )
 
     ! setup common tools
     call ATMOS_HYDROSTATIC_setup

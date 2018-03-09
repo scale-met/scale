@@ -91,11 +91,11 @@ SUB_OBJS =	\
 	mod_mktopo.o              \
 	mod_realinput_scale.o     \
 	mod_realinput_wrfarw.o    \
-	mod_realinput_nicam.o     \
 	mod_realinput_grads.o     \
 	mod_realinput_scale.o     \
 	mod_realinput.o           \
 	mod_mkinit.o
+#	mod_realinput_nicam.o     \
 
 MAIN_OBJS =	\
 	mod_rm_driver.o           \

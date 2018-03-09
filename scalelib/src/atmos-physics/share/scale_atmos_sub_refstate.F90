@@ -194,7 +194,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Resume
   subroutine ATMOS_REFSTATE_resume( &
-       DENS, RHOT, QTRC )
+       DENS, RHOT, QTRC, QV )
     use scale_process, only: &
        PRC_MPIstop
     use scale_atmos_grid_cartesC, only: &
@@ -204,6 +204,7 @@ contains
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in) :: QV  (KA,IA,JA)
 
     integer :: k
 
@@ -215,7 +216,7 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type               : make from initial data'
           if( IO_L ) write(IO_FID_LOG,*) '*** Update state?                : ', ATMOS_REFSTATE_UPDATE_FLAG
           if( IO_L ) write(IO_FID_LOG,*) '*** Update interval [sec]        : ', ATMOS_REFSTATE_UPDATE_DT
-          call ATMOS_REFSTATE_generate_frominit( DENS, RHOT, QTRC ) ! (in)
+          call ATMOS_REFSTATE_generate_frominit( DENS, RHOT, QTRC, QV ) ! (in)
 
        endif
 
@@ -575,7 +576,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Generate reference state profile (Horizontal average from initial data)
   subroutine ATMOS_REFSTATE_generate_frominit( &
-       DENS, RHOT, QTRC )
+       DENS, RHOT, QTRC, QV )
     use scale_time, only: &
        TIME_NOWSEC
     use scale_atmos_thermodyn, only: &
@@ -692,19 +693,15 @@ contains
 
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_pott(:), work(:,:,:) )
 
-       if ( I_QV > 0 ) then
-          call INTERP_VERT_xi2z( KA, KS, KE,          & ! [IN]
-                                 IA, ISB, IEB,        & ! [IN]
-                                 JA, JSB, JEB,        & ! [IN]
-                                 ATMOS_GRID_CARTESC_CZ(:),          & ! [IN]
-                                 ATMOS_GRID_CARTESC_REAL_CZ(:,:,:),      & ! [IN]
-                                 QTRC   (:,:,:,I_QV), & ! [IN]
-                                 work   (:,:,:)       ) ! [OUT]
+       call INTERP_VERT_xi2z( KA, KS, KE,          & ! [IN]
+                              IA, ISB, IEB,        & ! [IN]
+                              JA, JSB, JEB,        & ! [IN]
+                              ATMOS_GRID_CARTESC_CZ(:),          & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_CZ(:,:,:),      & ! [IN]
+                              QV  (:,:,:),      & ! [IN]
+                              work(:,:,:)       ) ! [OUT]
 
-          call COMM_horizontal_mean( ATMOS_REFSTATE1D_qv(:), work(:,:,:) )
-       else
-          ATMOS_REFSTATE1D_qv(:) = 0.0_RP
-       endif
+       call COMM_horizontal_mean( ATMOS_REFSTATE1D_qv(:), work(:,:,:) )
 
        do k = KE-1, KS, -1 ! fill undefined value
           if( ATMOS_REFSTATE1D_dens(k) <= 0.0_RP ) ATMOS_REFSTATE1D_dens(k) = ATMOS_REFSTATE1D_dens(k+1)
@@ -714,7 +711,7 @@ contains
           if( ATMOS_REFSTATE1D_qv  (k) <= 0.0_RP ) ATMOS_REFSTATE1D_qv  (k) = ATMOS_REFSTATE1D_qv  (k+1)
        enddo
        call smoothing( ATMOS_REFSTATE1D_pott(:) )
-       if ( I_QV > 0 ) call smoothing( ATMOS_REFSTATE1D_qv(:) )
+       call smoothing( ATMOS_REFSTATE1D_qv(:) )
 
        call ATMOS_REFSTATE_calc3D
 

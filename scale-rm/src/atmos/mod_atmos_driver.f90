@@ -98,7 +98,9 @@ contains
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_setup
     use mod_atmos_phy_mp_vars, only: &
-       QA_MP
+       QA_MP, &
+       QS_MP, &
+       QE_MP
     use mod_atmos_phy_ch_driver, only: &
        ATMOS_PHY_CH_driver_setup
     use mod_atmos_phy_ae_driver, only: &
@@ -130,7 +132,7 @@ contains
     call PROF_rapend  ('ATM_Refstate', 2)
 
     call PROF_rapstart('ATM_Boundary', 2)
-    call ATMOS_BOUNDARY_setup( QA_MP )
+    call ATMOS_BOUNDARY_setup( QA_MP, QS_MP, QE_MP )
     call PROF_rapend  ('ATM_Boundary', 2)
 
     ! setup each components
@@ -162,6 +164,7 @@ contains
        MOMY,                       &
        RHOT,                       &
        QTRC,                       &
+       QV,                         &
        DENS_tp,                    &
        MOMZ_tp,                    &
        RHOU_tp,                    &
@@ -171,6 +174,9 @@ contains
        RHOQ_tp,                    &
        MOMX_tp,                    &
        MOMY_tp
+    use mod_atmos_phy_mp_vars, only: &
+       QS_MP, &
+       QE_MP
     use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_resume
     use scale_atmos_boundary, only: &
@@ -192,12 +198,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Resume each atmospheric components 1 ...'
 
-    call PROF_rapstart('ATM_Refstate', 2)
-    call ATMOS_REFSTATE_resume( DENS, RHOT, QTRC )
-    call PROF_rapend  ('ATM_Refstate', 2)
-
     call PROF_rapstart('ATM_Boundary', 2)
-    call ATMOS_BOUNDARY_resume( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+    call ATMOS_BOUNDARY_resume( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC(:,:,:,QS_MP:QE_MP) )
     call PROF_rapend  ('ATM_Boundary', 2)
 
     !########## Get Surface Boundary Condition ##########
@@ -234,6 +236,11 @@ contains
     !########## Calculate diagnostic variables ##########
     call ATMOS_vars_calc_diagnostics
     call ATMOS_vars_history_setpres
+
+    !########## Set reference state ##########
+    call PROF_rapstart('ATM_Refstate', 2)
+    call ATMOS_REFSTATE_resume( DENS, RHOT, QTRC, QV )
+    call PROF_rapend  ('ATM_Refstate', 2)
 
     !########## Set Surface Boundary Condition ##########
     call PROF_rapstart('ATM_SfcExch', 2)
@@ -328,7 +335,7 @@ contains
        ATMOS_sw_phy_cp
     use mod_atmos_vars, only: &
        ATMOS_vars_history,         &
-       ATMOS_vars_calc_diagnostics,     &
+       ATMOS_vars_calc_diagnostics,&
        ATMOS_vars_history_setpres, &
        ATMOS_vars_monitor,         &
        DENS,                       &
@@ -384,7 +391,6 @@ contains
        call ATMOS_DYN_driver( do_dyn )
        call PROF_rapend  ('ATM_Dynamics', 1)
     endif
-
 
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
@@ -677,4 +683,7 @@ contains
     return
   end subroutine ATMOS_SURFACE_SET
 
+  subroutine ATMOS_driver_boundary_update
+
+  end subroutine ATMOS_driver_boundary_update
 end module mod_atmos_driver

@@ -197,7 +197,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land surface step: Thick-Slab'
 
-    call HYDROMETEOR_LHV( LHV(:,:), TMPA(:,:) )
+    call HYDROMETEOR_LHV( IA, IS, IE, JA, JS, JE, &
+                          TMPA(:,:), LHV(:,:) )
 
     ! update surface temperature
     do j = JS, JE

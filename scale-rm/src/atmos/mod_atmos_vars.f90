@@ -61,7 +61,7 @@ module mod_atmos_vars
   !
   !++ Public parameters & variables
   !
-  logical,               public :: ATMOS_RESTART_OUTPUT                 = .false.         !< Output restart file?
+  logical,                public :: ATMOS_RESTART_OUTPUT                = .false.         !< Output restart file?
 
   character(len=H_LONG),  public :: ATMOS_RESTART_IN_BASENAME           = ''              !< Basename of the input  file
   logical,                public :: ATMOS_RESTART_IN_AGGREGATE                            !< Switch to use aggregate file
@@ -72,9 +72,9 @@ module mod_atmos_vars
   character(len=H_MID),   public :: ATMOS_RESTART_OUT_TITLE             = 'ATMOS restart' !< Title    of the output file
   character(len=H_SHORT), public :: ATMOS_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
 
-  logical,               public :: ATMOS_RESTART_CHECK                 = .false.         !< Check value consistency?
-  character(len=H_LONG), public :: ATMOS_RESTART_CHECK_BASENAME        = 'restart_check'
-  real(RP),              public :: ATMOS_RESTART_CHECK_CRITERION       = 1.E-6_RP
+  logical,                public :: ATMOS_RESTART_CHECK                 = .false.         !< Check value consistency?
+  character(len=H_LONG),  public :: ATMOS_RESTART_CHECK_BASENAME        = 'restart_check'
+  real(RP),               public :: ATMOS_RESTART_CHECK_CRITERION       = 1.E-6_RP
 
   ! prognostic variables
   real(RP), public, target, allocatable :: DENS(:,:,:)   ! Density     [kg/m3]
@@ -98,6 +98,7 @@ module mod_atmos_vars
   real(RP), public, pointer             :: RHOT_av(:,:,:)
   real(RP), public, pointer             :: QTRC_av(:,:,:,:)
 
+  integer,  public                      :: I_QV
   real(RP), public, pointer             :: QV(:,:,:)
   real(RP), public, pointer             :: QC(:,:,:)
   real(RP), public, pointer             :: QR(:,:,:)
@@ -457,6 +458,7 @@ contains
     use scale_monitor, only: &
        MONITOR_reg
     use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_dry, &
        N_HYD, &
        I_QV, &
        I_HC, &
@@ -667,21 +669,7 @@ contains
 
 
     ! water content
-    if ( I_QV > 0 ) then
-       allocate( Qe(KA,IA,JA,N_HYD) )
-!OCL XFILL
-       Qe(:,:,:,:) = UNDEF
-
-       QV => QTRC_av(:,:,:,I_QV)
-       QC => Qe(:,:,:,I_HC)
-       QR => Qe(:,:,:,I_HR)
-       QI => Qe(:,:,:,I_HI)
-       QS => Qe(:,:,:,I_HS)
-       QG => Qe(:,:,:,I_HG)
-       QH => Qe(:,:,:,I_HH)
-
-       moist = .true.
-    else
+    if ( ATMOS_HYDROMETEOR_dry ) then
        allocate( ZERO(KA,IA,JA) )
 !OCL XFILL
        ZERO(:,:,:) = 0.0_RP
@@ -695,6 +683,20 @@ contains
        QH => ZERO
 
        moist = .false.
+    else
+       allocate( Qe(KA,IA,JA,N_HYD) )
+!OCL XFILL
+       Qe(:,:,:,:) = UNDEF
+
+       QV => QTRC_av(:,:,:,I_QV)
+       QC => Qe(:,:,:,I_HC)
+       QR => Qe(:,:,:,I_HR)
+       QI => Qe(:,:,:,I_HI)
+       QS => Qe(:,:,:,I_HS)
+       QG => Qe(:,:,:,I_HG)
+       QH => Qe(:,:,:,I_HH)
+
+       moist = .true.
     end if
 
 
@@ -1435,8 +1437,6 @@ contains
        ATMOS_DIAGNOSTIC_get_vel, &
        ATMOS_DIAGNOSTIC_get_therm, &
        ATMOS_DIAGNOSTIC_get_phyd
-    use scale_atmos_phy_mp, only: &
-       ATMOS_PHY_MP_mixingratio
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -2825,10 +2825,7 @@ contains
     end if
 
     ! total evapolation
-    if ( moist ) then
-       call MONITOR_put( DV_MONIT_id(IM_EVAP), SFLX_QTRC(:,:,I_QV) )
-
-    endif
+    if ( moist ) call MONITOR_put( DV_MONIT_id(IM_EVAP), SFLX_QTRC(:,:,I_QV) )
 
     ! total precipitation
     if ( DV_MONIT_id(IM_PREC) > 0 ) then

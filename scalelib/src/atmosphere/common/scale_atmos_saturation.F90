@@ -1277,7 +1277,7 @@ contains
     real(RP) :: psat
     !---------------------------------------------------------------------------
 
-    call HYDROMETEOR_LHV( LHV, temp )
+    call HYDROMETEOR_LHV( temp, LHV )
     call ATMOS_SATURATION_psat_liq( temp, psat ) ! [IN], [OUT]
 
     dqsdtem = psat / ( dens* Rvap * temp**2 ) &
@@ -1342,7 +1342,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    call HYDROMETEOR_LHS( LHS, temp )
+    call HYDROMETEOR_LHS( temp, LHS ) ! [IN], [OUT]
     call ATMOS_SATURATION_psat_ice( temp, psat ) ! [IN], [OUT]
 
     dqsdtem = psat / ( dens * Rvap * temp**2 ) &
@@ -1455,7 +1455,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    call HYDROMETEOR_LHV( LHV, temp )
+    call HYDROMETEOR_LHV( temp, LHV )
     call ATMOS_SATURATION_psat_liq( temp, psat_ ) ! [IN], [OUT]
 
     den1 = ( pres - (1.0_RP-EPSvap) * psat_ )**2
@@ -1532,7 +1532,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    call HYDROMETEOR_LHS( LHS, temp )
+    call HYDROMETEOR_LHS( temp, LHS ) ! [IN], [OUT]
     call ATMOS_SATURATION_psat_ice( temp, psat ) ! [IN], [OUT]
 
     den1 = ( pres - (1.0_RP-EPSvap) * psat )**2
@@ -1680,7 +1680,7 @@ contains
     do ite = 1, itelim
 
        call ATMOS_SATURATION_psat_liq( Tdew, psat ) ! [IN], [OUT]
-       call ATMOS_HYDROMETEOR_LHV( lhv, Tdew )
+       call ATMOS_HYDROMETEOR_LHV( Tdew, lhv )
 
        dpsat_dT = psat * lhv / ( Rvap * Tdew**2 )
        dTdew = ( psat - pvap ) / dpsat_dT
@@ -1794,7 +1794,7 @@ contains
 
     Pv = DENS * QV * Rvap * TEMP
     TL = 55.0_RP + 2840.0_RP / ( CPdry / Rdry * log(TEMP) - log(Pv) - 4.805_RP )
-    call ATMOS_HYDROMETEOR_LHV( LHV, TEMP ) ! [OUT], [IN]
+    call ATMOS_HYDROMETEOR_LHV( TEMP, LHV ) ! [IN], [OUT]
 
     POTE = POTT * exp( LHV * QV / ( CPdry * TEMP ) &
                      * 1.0784_RP * ( 1.0_RP + 0.810_RP * QV ) )

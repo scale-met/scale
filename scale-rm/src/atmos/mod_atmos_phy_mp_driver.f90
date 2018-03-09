@@ -31,6 +31,28 @@ module mod_atmos_phy_mp_driver
   public :: ATMOS_PHY_MP_driver_resume
   public :: ATMOS_PHY_MP_driver_calc_tendency
   public :: ATMOS_PHY_MP_driver_adjustment
+  public :: ATMOS_PHY_MP_driver_qhyd2qtrc
+
+  interface abstract
+     subroutine qhyd2qtrc( &
+          KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+          QV, QHYD, &
+          QTRC,     &
+          QNUM      )
+       use scale_precision
+       use scale_atmos_hydrometeor, only: N_HYD
+       use mod_atmos_phy_mp_vars, only: QA_MP
+       integer, intent(in) :: KA, KS, KE
+       integer, intent(in) :: IA, IS, IE
+       integer, intent(in) :: JA, JS, JE
+       real(RP), intent(in) :: QV(KA,IA,JA)
+       real(RP), intent(in) :: QHYD(KA,IA,JA,N_HYD)
+       real(RP), intent(out) :: QTRC(KA,IA,JA,QA_MP)
+       real(RP), intent(in), optional :: QNUM(KA,IA,JA,N_HYD)
+     end subroutine qhyd2qtrc
+  end interface abstract
+  procedure(qhyd2qtrc), pointer :: ATMOS_PHY_MP_USER_qhyd2qtrc => NULL()
+  public :: ATMOS_PHY_MP_USER_qhyd2qtrc
 
   !-----------------------------------------------------------------------------
   !
@@ -65,17 +87,7 @@ contains
     use scale_tracer, only: &
        TRACER_regist
     use scale_atmos_hydrometeor, only: &
-       ATMOS_HYDROMETEOR_regist, &
-       I_QC, &
-       I_QR, &
-       I_QI, &
-       I_QS, &
-       I_QG, &
-       I_NC, &
-       I_NR, &
-       I_NI, &
-       I_NS, &
-       I_NG
+       ATMOS_HYDROMETEOR_regist
     use scale_atmos_phy_mp_kessler, only: &
        ATMOS_PHY_MP_KESSLER_ntracers,            &
        ATMOS_PHY_MP_KESSLER_nwaters,             &
@@ -113,12 +125,6 @@ contains
        QA_MP, &
        QS_MP, &
        QE_MP
-    ! obsolute
-    use scale_atmos_phy_mp, only: &
-       ATMOS_PHY_MP_config, &
-       QA_MP_obsolute => QA_MP, &
-       QS_MP_obsolute => QS_MP, &
-       QE_MP_obsolute => QE_MP
     implicit none
 
     integer :: QS2
@@ -131,60 +137,38 @@ contains
        select case ( ATMOS_PHY_MP_TYPE )
        case ( 'KESSLER' )
           call ATMOS_HYDROMETEOR_regist( &
-               QS_MP,                                       & ! [OUT]
                ATMOS_PHY_MP_KESSLER_nwaters,                & ! [IN]
                ATMOS_PHY_MP_KESSLER_nices,                  & ! [IN]
                ATMOS_PHY_MP_KESSLER_tracer_names(:),        & ! [IN]
                ATMOS_PHY_MP_KESSLER_tracer_descriptions(:), & ! [IN]
-               ATMOS_PHY_MP_KESSLER_tracer_units(:)         ) ! [IN]
+               ATMOS_PHY_MP_KESSLER_tracer_units(:),        & ! [IN]
+               QS_MP                                        ) ! [OUT]
           QA_MP = ATMOS_PHY_MP_KESSLER_ntracers
-          I_QC = QS_MP+1
-          I_QR = QS_MP+2
        case ( 'TOMITA08' )
           call ATMOS_HYDROMETEOR_regist( &
-               QS_MP,                                        & ! [OUT]
                ATMOS_PHY_MP_TOMITA08_nwaters,                & ! [IN]
                ATMOS_PHY_MP_TOMITA08_nices,                  & ! [IN]
                ATMOS_PHY_MP_TOMITA08_tracer_names(:),        & ! [IN]
                ATMOS_PHY_MP_TOMITA08_tracer_descriptions(:), & ! [IN]
-               ATMOS_PHY_MP_TOMITA08_tracer_units(:)         ) ! [IN]
+               ATMOS_PHY_MP_TOMITA08_tracer_units(:),        & ! [IN]
+               QS_MP                                         ) ! [OUT]
           QA_MP = ATMOS_PHY_MP_TOMITA08_ntracers
-          I_QC = QS_MP+1
-          I_QR = QS_MP+2
-          I_QI = QS_MP+3
-          I_QS = QS_MP+4
-          I_QG = QS_MP+5
-        case( 'SN14' )
-
-           call ATMOS_HYDROMETEOR_regist( &
-                QS_MP,                                       & ! [OUT]
-                ATMOS_PHY_MP_SN14_nwaters,                   & ! [IN]
-                ATMOS_PHY_MP_SN14_nices,                     & ! [IN]
-                ATMOS_PHY_MP_SN14_tracer_names(1:6),         & ! [IN]
-                ATMOS_PHY_MP_SN14_tracer_descriptions(1:6),  & ! [IN]
-                ATMOS_PHY_MP_SN14_tracer_units(1:6)          ) ! [IN]
-
-           call TRACER_regist( QS2,                          & ! [OUT]
-                5,                                           & ! [IN]
-                ATMOS_PHY_MP_SN14_tracer_names(7:11),        & ! [IN]
-                ATMOS_PHY_MP_SN14_tracer_descriptions(7:11), & ! [IN]
-                ATMOS_PHY_MP_SN14_tracer_units(7:11)         ) ! [IN]
-
-           QA_MP = ATMOS_PHY_MP_SN14_ntracers
-           I_QC = QS_MP+1
-           I_QR = QS_MP+2
-           I_QI = QS_MP+3
-           I_QS = QS_MP+4
-           I_QG = QS_MP+5
-           I_NC = QS_MP+6
-           I_NR = QS_MP+7
-           I_NI = QS_MP+8
-           I_NS = QS_MP+9
-           I_NG = QS_MP+10        
-
-        case ( 'SUZUKI10' )
+       case( 'SN14' )
+          call ATMOS_HYDROMETEOR_regist( &
+               QS_MP,                                       & ! [OUT]
+               ATMOS_PHY_MP_SN14_nwaters,                   & ! [IN]
+               ATMOS_PHY_MP_SN14_nices,                     & ! [IN]
+               ATMOS_PHY_MP_SN14_tracer_names(1:6),         & ! [IN]
+               ATMOS_PHY_MP_SN14_tracer_descriptions(1:6),  & ! [IN]
+               ATMOS_PHY_MP_SN14_tracer_units(1:6)          ) ! [IN]
+          call TRACER_regist( QS2,                          & ! [OUT]
+               5,                                           & ! [IN]
+               ATMOS_PHY_MP_SN14_tracer_names(7:11),        & ! [IN]
+               ATMOS_PHY_MP_SN14_tracer_descriptions(7:11), & ! [IN]
+               ATMOS_PHY_MP_SN14_tracer_units(7:11)         ) ! [IN]
+          QA_MP = ATMOS_PHY_MP_SN14_ntracers
+       case ( 'SUZUKI10' )
           call ATMOS_PHY_MP_suzuki10_tracer_setup
-
           call ATMOS_HYDROMETEOR_regist( &
                QS_MP,                                        & ! [OUT]
                ATMOS_PHY_MP_suzuki10_nwaters,                & ! [IN]
@@ -192,7 +176,6 @@ contains
                ATMOS_PHY_MP_suzuki10_tracer_names(:),        & ! [IN]
                ATMOS_PHY_MP_suzuki10_tracer_descriptions(:), & ! [IN]
                ATMOS_PHY_MP_suzuki10_tracer_units(:)         ) ! [IN]
-
           if( ATMOS_PHY_MP_suzuki10_nccn > 0 ) then
              call TRACER_regist( QS2,                                                                     & ! [OUT]
                                  ATMOS_PHY_MP_suzuki10_nccn,                                              & ! [IN]
@@ -206,14 +189,10 @@ contains
                                                                           + ATMOS_PHY_MP_suzuki10_nices   &
                                                                           + 2 : )                         ) ! [IN]
           end if
-
           QA_MP = ATMOS_PHY_MP_suzuki10_ntracers
        case default
-          call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
-          QA_MP = QA_MP_obsolute
-          QS_MP = QS_MP_obsolute
-          ! if ( IO_L ) write(IO_FID_LOG,*) '+++ ATMOS_PHY_MP_TYPE is invalud: ', trim(ATMOS_PHY_MP_TYPE)
-          ! call PRC_abort
+          if ( IO_L ) write(IO_FID_LOG,*) '+++ ATMOS_PHY_MP_TYPE is invalud: ', trim(ATMOS_PHY_MP_TYPE)
+          call PRC_abort
        end select
 
        QE_MP = QS_MP + QA_MP - 1
@@ -223,11 +202,6 @@ contains
        QS_MP = -1
        QE_MP = -1
     end if
-
-    ! tentative
-    QA_MP_obsolute = QA_MP
-    QS_MP_obsolute = QS_MP
-    QE_MP_obsolute = QE_MP
 
     return
   end subroutine ATMOS_PHY_MP_driver_tracer_setup
@@ -243,8 +217,6 @@ contains
        EPS => CONST_EPS
     use scale_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP
-    use scale_atmos_phy_mp, only: &
-       ATMOS_PHY_MP_setup
     use scale_atmos_phy_mp_kessler, only: &
        ATMOS_PHY_MP_KESSLER_setup
     use scale_atmos_phy_mp_tomita08, only: &
@@ -378,6 +350,7 @@ contains
   !> adjustment
   subroutine ATMOS_PHY_MP_driver_adjustment
     use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_dry, &
        I_QV, &
        QHA, &
        QHS, &
@@ -395,7 +368,7 @@ contains
 
     integer :: k, i, j, iq
 
-    if ( MP_do_negative_fixer .and. I_QV > 0) then
+    if ( MP_do_negative_fixer .and. (.not. ATMOS_HYDROMETEOR_dry) ) then
 
 !OCL XFILL
        DENS0(:,:,:) = DENS(:,:,:)
@@ -464,13 +437,6 @@ contains
        QHE,   &
        QLA,   &
        QIA
-    use scale_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_pott, &
-       ATMOS_THERMODYN_rhoe, &
-       ATMOS_THERMODYN_cv, &
-       ATMOS_THERMODYN_cp
-    use scale_atmos_phy_mp, only: &
-       ATMOS_PHY_MP
     use scale_atmos_phy_mp_common, only: &
        ATMOS_PHY_MP_precipitation, &
        ATMOS_PHY_MP_precipitation_momentum
@@ -505,7 +471,7 @@ contains
        MOMZ_t => MOMZ_tp, &
        RHOU_t => RHOU_tp, &
        RHOV_t => RHOV_tp, &
-       RHOT_t => RHOT_tp, &
+!       RHOT_t => RHOT_tp, &
        RHOQ_t => RHOQ_tp, &
        RHOH   => RHOH_p, &
        TEMP, &
@@ -514,27 +480,21 @@ contains
        CVtot, &
        CPtot, &
        EXNER, &
-       MOMX   => MOMX_av, &
-       MOMY   => MOMY_av, &
-       RHOT   => RHOT_av, &
-       MOMX_t => MOMX_tp, &
-       MOMY_t => MOMY_tp
+       RHOT   => RHOT_av
     use mod_atmos_phy_mp_vars, only: &
        QA_MP, &
        QS_MP, &
        QE_MP, &
        DENS_t_MP => ATMOS_PHY_MP_DENS_t,    &
        MOMZ_t_MP => ATMOS_PHY_MP_MOMZ_t,    &
-       RHOT_t_MP => ATMOS_PHY_MP_RHOT_t,    &
+!       RHOT_t_MP => ATMOS_PHY_MP_RHOT_t,    &
        RHOU_t_MP => ATMOS_PHY_MP_RHOU_t,    &
        RHOV_t_MP => ATMOS_PHY_MP_RHOV_t,    &
        RHOQ_t_MP => ATMOS_PHY_MP_RHOQ_t,    &
        RHOH_MP   => ATMOS_PHY_MP_RHOH,      &
        EVAPORATE => ATMOS_PHY_MP_EVAPORATE, &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
-       SFLX_snow => ATMOS_PHY_MP_SFLX_snow, &
-       MOMX_t_MP => ATMOS_PHY_MP_MOMX_t,    &
-       MOMY_t_MP => ATMOS_PHY_MP_MOMY_t
+       SFLX_snow => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_ae_vars, only: &
        CCN_t => ATMOS_PHY_AE_CCN_t
     implicit none
@@ -549,19 +509,7 @@ contains
     real(RP) :: CCN   (KA,IA,JA)
     real(RP) :: QHYD  (KA,IA,JA,6)
     real(RP) :: vterm (KA,QS_MP+1:QE_MP)
-!    real(RP), target :: QTRC1(KA,IA,JA,QS_MP:QA_MP)
-
-    ! obsolute
-    real(RP) :: DENS1(KA,IA,JA)
-    real(RP) :: MOMZ1(KA,IA,JA)
-    real(RP) :: MOMX1(KA,IA,JA)
-    real(RP) :: MOMY1(KA,IA,JA)
-    real(RP) :: RHOT1(KA,IA,JA)
-    real(RP) :: RHOE1(KA,IA,JA)
-    real(RP) :: RHOE0(KA,IA,JA)
-    real(RP) :: POTT1(KA,IA,JA)
-    real(RP), target :: QTRC1(KA,IA,JA,QA)
-    logical :: integ_precip = .true.
+    real(RP), target :: QTRC1(KA,IA,JA,QS_MP:QE_MP)
 
     real(RP) :: FLX_hydro(KA)
     real(RP) :: DENS2    (KA)
@@ -615,18 +563,6 @@ contains
                TEMP1(:,:,:), QTRC1(:,:,:,QS_MP:QE_MP), CPtot1(:,:,:), CVtot1(:,:,:), & ! [INOUT]
                RHOE_t(:,:,:), EVAPORATE(:,:,:)                                       ) ! [OUT]
 
-          do j = JSB, JEB
-          do i = ISB, IEB
-          do k = KS, KE
-             CP_t = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
-             CV_t = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
-             RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
-                  - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
-                  * DENS(k,i,j) * TEMP(k,i,j)
-          end do
-          end do
-          end do
-
           do iq = QS_MP, QE_MP
           do j = JSB, JEB
           do i = ISB, IEB
@@ -636,6 +572,15 @@ contains
           enddo
           enddo
           enddo
+
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             CPtot_t(k,i,j) = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
+             CVtot_t(k,i,j) = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
+          end do
+          end do
+          end do
 
        case ( 'TOMITA08' )
 !OCL XFILL
@@ -679,22 +624,6 @@ contains
                TEMP1(:,:,:), QTRC1(:,:,:,QS_MP:QE_MP), CPtot1(:,:,:), CVtot1(:,:,:), & ! [INOUT]
                RHOE_t(:,:,:), EVAPORATE(:,:,:)                                       ) ! [OUT]
 
-          do j = JSB, JEB
-          do i = ISB, IEB
-          do k = KS, KE
-             CP_t = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
-             CV_t = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
-             RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
-                  - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
-                  * DENS(k,i,j) * TEMP(k,i,j)
-!             RHOT_t_MP(k,i,j) = RHOE_t(k,i,j) / ( EXNER(k,i,j) * CPtot(k,i,j) ) &
-!                  - RHOT(k,i,j) * CP_t / CPtot(k,i,j) &
-!                  - RHOT(k,i,j) * CVtot(k,i,j) / ( CPtot(k,i,j) - CVtot(k,i,j) ) &
-!                  * log( EXNER(k,i,j) ) * ( CP_t / CPtot(k,i,j) - CV_t / CVtot(k,i,j) )
-          end do
-          end do
-          end do
-
           do iq = QS_MP, QE_MP
           do j = JSB, JEB
           do i = ISB, IEB
@@ -705,6 +634,15 @@ contains
           enddo
           enddo
 
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             CPtot_t(k,i,j) = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
+             CVtot_t(k,i,j) = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
+          end do
+          end do
+          end do
+
        case ( 'SN14' )
 
           call ATMOS_PHY_MP_sn14_tendency( &
@@ -713,16 +651,6 @@ contains
                Qdry(:,:,:), CPtot(:,:,:), CVtot(:,:,:), CCN(:,:,:), dt_MP, Z(:), DZ(:),                   & ! [IN]
                RHOQ_t_MP(:,:,:,QS_MP:QE_MP), RHOE_t(:,:,:), CPtot_t(:,:,:), CVtot_t(:,:,:), EVAPORATE(:,:,:) ) ! [OUT]
 
-          do j = JSB, JEB
-          do i = ISB, IEB
-          do k = KS, KE
-             RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
-                  - ( CPtot_t(k,i,j) + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CPtot_t(k,i,j) - CVtot_t(k,i,j) ) ) &
-                  * DENS(k,i,j) * TEMP(k,i,j)
-          end do
-          end do
-          end do
-          
        case ( 'SUZUKI10' )
 
           call ATMOS_PHY_MP_suzuki10_tendency( KA, KS,  KE, IA, ISB, IEB, JA, JSB, JEB, KIJMAX, &
@@ -736,75 +664,22 @@ contains
                                                CPtot_t(:,:,:), CVtot_t(:,:,:),         & ! [OUT]
                                                EVAPORATE(:,:,:)                        ) ! [OUT]
 
-          do j = JSB, JEB
-          do i = ISB, IEB
-          do k = KS, KE
-             RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
-                  - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CPtot_t(k,i,j) - CVtot_t(k,i,j) ) ) &
-                  * DENS(k,i,j) * TEMP(k,i,j)
-          end do
-          end do
-          end do
-
-       case default
-
-!OCL XFILL
-          DENS1(:,:,:) = DENS(:,:,:) ! save
-!OCL XFILL
-          MOMZ1(:,:,:) = MOMZ(:,:,:) ! save
-!OCL XFILL
-          MOMX1(:,:,:) = MOMX(:,:,:) ! save
-!OCL XFILL
-          MOMY1(:,:,:) = MOMY(:,:,:) ! save
-!OCL XFILL
-          RHOT1(:,:,:) = RHOT(:,:,:) ! save
-!OCL XFILL
-          QTRC1(:,:,:,:) = QTRC(:,:,:,:) ! save
-
-          call ATMOS_PHY_MP( DENS1    (:,:,:),   & ! [INOUT]
-                             MOMZ1    (:,:,:),   & ! [INOUT]
-                             MOMX1    (:,:,:),   & ! [INOUT]
-                             MOMY1    (:,:,:),   & ! [INOUT]
-                             RHOT1    (:,:,:),   & ! [INOUT]
-                             QTRC1    (:,:,:,:), & ! [INOUT]
-                             CCN      (:,:,:),   & ! [IN]
-                             EVAPORATE(:,:,:),   & ! [OUT]
-                             SFLX_rain(:,:),     & ! [OUT]
-                             SFLX_snow(:,:)      ) ! [OUT]
-!OCL XFILL
-          !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-          !$omp shared(JSB,JEB,ISB,IEB,KS,KE,DENS_t_MP,DENS1,DENS,MOMZ_t_MP,MOMZ1,MOMZ,MOMX_t_MP,MOMX1) &
-          !$omp shared(MOMX,MOMY_t_MP,MOMY1,MOMY,RHOT_t_MP,RHOT1,RHOT,dt_MP)
-          do j = JSB, JEB
-          do i = ISB, IEB
-          do k = KS, KE
-             DENS_t_MP(k,i,j) = ( DENS1(k,i,j) - DENS(k,i,j) ) / dt_MP
-             MOMZ_t_MP(k,i,j) = ( MOMZ1(k,i,j) - MOMZ(k,i,j) ) / dt_MP
-             MOMX_t_MP(k,i,j) = ( MOMX1(k,i,j) - MOMX(k,i,j) ) / dt_MP
-             MOMY_t_MP(k,i,j) = ( MOMY1(k,i,j) - MOMY(k,i,j) ) / dt_MP
-             RHOT_t_MP(k,i,j) = ( RHOT1(k,i,j) - RHOT(k,i,j) ) / dt_MP
-          enddo
-          enddo
-          enddo
-
-!OCL XFILL
-          do iq = QS_MP, QE_MP
-          !$omp parallel do default(none) &
-          !$omp shared(JSB,JEB,ISB,IEB,KS,KE,RHOQ_t_MP,iq,QTRC1,QTRC,DENS1,DENS,dt_MP) &
-          !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JSB, JEB
-          do i = ISB, IEB
-          do k = KS, KE
-             RHOQ_t_MP(k,i,j,iq) = ( QTRC1(k,i,j,iq) * DENS1(k,i,j) &
-                                   - QTRC (k,i,j,iq) * DENS (k,i,j) ) / dt_MP
-          enddo
-          enddo
-          enddo
-          enddo
-
-          integ_precip = .false.
-
        end select
+
+
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
+                  - ( CPtot_t(k,i,j) + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CPtot_t(k,i,j) - CVtot_t(k,i,j) ) ) &
+                  * DENS(k,i,j) * TEMP(k,i,j)
+!          RHOT_t_MP(k,i,j) = RHOE_t(k,i,j) / ( EXNER(k,i,j) * CPtot(k,i,j) ) &
+!                  - RHOT(k,i,j) * CPtot_t(k,i,j) / CPtot(k,i,j) &
+!                  - RHOT(k,i,j) * CVtot(k,i,j) / ( CPtot(k,i,j) - CVtot(k,i,j) ) &
+!                  * log( EXNER(k,i,j) ) * ( CPtot_t(k,i,j) / CPtot(k,i,j) - CVtot_t(k,i,j) / CVtot(k,i,j) )
+       end do
+       end do
+       end do
 
        if ( MP_do_precipitation ) then
 
@@ -835,7 +710,6 @@ contains
           !$omp         DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOQ_t_MP,RHOH_MP, &
           !$omp         SFLX_rain,SFLX_snow, &
           !$omp         REFSTATE_dens, &
-          !$omp         integ_precip, &
           !$omp         vterm_hist,hist_vterm_idx) &
           !$omp private(i,j,k,iq,step, &
           !$omp         FDZ,RFDZ,RCDZ, &
@@ -950,8 +824,6 @@ contains
 !                     * log( EXNER(k,i,j) ) * ( CP_t / CPtot(k,i,j) - CV_t / CVtot(k,i,j) )
              end do
 
-             if ( integ_precip ) then ! tentative
-
              do iq = QS_MP+1, QE_MP
              do k  = KS, KE
                 RHOQ_t_MP(k,i,j,iq) = RHOQ_t_MP(k,i,j,iq) &
@@ -965,8 +837,6 @@ contains
                      FLX_hydro(:),                                        & ! [IN]
                      RCDZ(:), RFDZ(:),                                    & ! [IN]
                      MOMZ_t_MP(:,i,j), RHOU_t_MP(:,i,j), RHOV_t_MP(:,i,j) ) ! [OUT]
-
-             end if
 
           enddo
           enddo
@@ -998,11 +868,8 @@ contains
        call FILE_HISTORY_in( MOMZ_t_MP(:,:,:), 'MOMZ_t_MP', 'tendency MOMZ in MP',         'kg/m2/s2' , fill_halo=.true. )
        call FILE_HISTORY_in( RHOU_t_MP(:,:,:), 'RHOU_t_MP', 'tendency RHOU in MP',         'kg/m2/s2' , fill_halo=.true. )
        call FILE_HISTORY_in( RHOV_t_MP(:,:,:), 'RHOV_t_MP', 'tendency RHOV in MP',         'kg/m2/s2' , fill_halo=.true. )
-       call FILE_HISTORY_in( RHOT_t_MP(:,:,:), 'RHOT_t_MP', 'tendency RHOT in MP',         'K*kg/m3/s', fill_halo=.true. )
+!       call FILE_HISTORY_in( RHOT_t_MP(:,:,:), 'RHOT_t_MP', 'tendency RHOT in MP',         'K*kg/m3/s', fill_halo=.true. )
        call FILE_HISTORY_in( RHOH_MP  (:,:,:), 'RHOH_MP',   'diabatic heating rate in MP', 'J/m3/s',    fill_halo=.true. )
-       call FILE_HISTORY_in( MOMX_t_MP(:,:,:), 'MOMX_t_MP', 'tendency MOMX in MP',         'kg/m2/s2' , fill_halo=.true. )
-       call FILE_HISTORY_in( MOMY_t_MP(:,:,:), 'MOMY_t_MP', 'tendency MOMY in MP',         'kg/m2/s2' , fill_halo=.true. )
-
        do iq = QS_MP, QE_MP
           call FILE_HISTORY_in( RHOQ_t_MP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_MP', &
                         'tendency rho*'//trim(TRACER_NAME(iq))//' in MP', 'kg/m3/s', fill_halo=.true. )
@@ -1012,8 +879,8 @@ contains
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KS,KE,ISB,IEB,JSB,JEB, &
-    !$omp        DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOT_t_MP,RHOH_MP,MOMX_t_MP,MOMY_t_MP, &
-    !$omp        DENS_t,MOMZ_t,RHOU_t,RHOV_t,RHOT_t,RHOH,MOMX_t,MOMY_t)
+    !$omp        DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOH_MP, &
+    !$omp        DENS_t,MOMZ_t,RHOU_t,RHOV_t,RHOH)
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -1021,10 +888,8 @@ contains
        MOMZ_t(k,i,j) = MOMZ_t(k,i,j) + MOMZ_t_MP(k,i,j)
        RHOU_t(k,i,j) = RHOU_t(k,i,j) + RHOU_t_MP(k,i,j)
        RHOV_t(k,i,j) = RHOV_t(k,i,j) + RHOV_t_MP(k,i,j)
-       RHOT_t(k,i,j) = RHOT_t(k,i,j) + RHOT_t_MP(k,i,j)
+!       RHOT_t(k,i,j) = RHOT_t(k,i,j) + RHOT_t_MP(k,i,j)
        RHOH  (k,i,j) = RHOH  (k,i,j) + RHOH_MP  (k,i,j)
-       MOMX_t(k,i,j) = MOMX_t(k,i,j) + MOMX_t_MP(k,i,j)
-       MOMY_t(k,i,j) = MOMY_t(k,i,j) + MOMY_t_MP(k,i,j)
     enddo
     enddo
     enddo
@@ -1051,17 +916,13 @@ contains
                               ATMOS_GRID_CARTESC_REAL_VOLWXY(:,:,:), &
                               ATMOS_GRID_CARTESC_REAL_TOTVOLWXY      )
        call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                              MOMX_t_MP(:,:,:), 'MOMX_t_MP',         &
-                              ATMOS_GRID_CARTESC_REAL_VOLZUY(:,:,:), &
-                              ATMOS_GRID_CARTESC_REAL_TOTVOLZUY      )
-       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                              MOMY_t_MP(:,:,:), 'MOMY_t_MP',         &
-                              ATMOS_GRID_CARTESC_REAL_VOLZXV(:,:,:), &
-                              ATMOS_GRID_CARTESC_REAL_TOTVOLZXV      )
-       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                              RHOT_t_MP(:,:,:), 'RHOT_t_MP',      &
+                              RHOH_MP(:,:,:),   'RHOH_MP',      &
                               ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), &
                               ATMOS_GRID_CARTESC_REAL_TOTVOL      )
+!       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+!                              RHOT_t_MP(:,:,:), 'RHOT_t_MP',      &
+!                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), &
+!                              ATMOS_GRID_CARTESC_REAL_TOTVOL      )
 
        do iq = QS_MP, QE_MP
           call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -1073,5 +934,105 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_driver_calc_tendency
+
+  subroutine ATMOS_PHY_MP_driver_qhyd2qtrc( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       QV, QHYD, &
+       QTRC,     &
+       QNUM      )
+    use scale_process, only: &
+       PRC_abort
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE
+    use scale_atmos_phy_mp_kessler, only: &
+       ATMOS_PHY_MP_KESSLER_qhyd2qtrc
+    use scale_atmos_phy_mp_tomita08, only: &
+       ATMOS_PHY_MP_TOMITA08_qhyd2qtrc
+    use scale_atmos_phy_mp_sn14, only: &
+       ATMOS_PHY_MP_SN14_qhyd2qtrc
+    use scale_atmos_phy_mp_suzuki10, only: &
+       ATMOS_PHY_MP_SUZUKI10_qhyd2qtrc
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: QV  (KA,IA,JA)
+    real(RP), intent(in) :: QHYD(KA,IA,JA,N_HYD)
+
+    real(RP), intent(out) :: QTRC(KA,IA,JA,QA_MP)
+
+    real(RP), intent(in), optional :: QNUM(KA,IA,JA,N_HYD)
+
+    integer :: k, i, j
+
+    select case( ATMOS_PHY_MP_TYPE )
+    case ( "NONE" )
+       if ( associated( ATMOS_PHY_MP_USER_qhyd2qtrc ) ) then
+          call ATMOS_PHY_MP_USER_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                            QV(:,:,:), QHYD(:,:,:,:), & ! [IN]
+                                            QTRC(:,:,:,:),            & ! [OUT]
+                                            QNUM=QNUM                 ) ! [IN]
+       end if
+    case ( "KESSLER" )
+       !$omp parallel do OMP_SCHEDULE_
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          QTRC(k,i,j,1) = QV(k,i,j)
+       end do
+       end do
+       end do
+       call ATMOS_PHY_MP_KESSLER_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                            QHYD(:,:,:,:),  & ! [IN]
+                                            QTRC(:,:,:,2:)  ) ! [OUT]
+    case ( "TOMITA08" )
+       !$omp parallel do OMP_SCHEDULE_
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,1) = QV(k,i,j)
+       end do
+       end do
+       end do
+       call ATMOS_PHY_MP_TOMITA08_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                             QHYD(:,:,:,:),  & ! [IN]
+                                             QTRC(:,:,:,2:)  ) ! [OUT]
+    case ( "SN14" )
+       !$omp parallel do OMP_SCHEDULE_
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,1) = QV(k,i,j)
+       end do
+       end do
+       end do
+       call ATMOS_PHY_MP_SN14_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                         QHYD(:,:,:,:),  & ! [IN]
+                                         QTRC(:,:,:,2:), & ! [OUT]
+                                         QNUM=QNUM       ) ! [IN]
+    case ( "SUZUKI10" )
+       !$omp parallel do OMP_SCHEDULE_
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,1) = QV(k,i,j)
+       end do
+       end do
+       end do
+       call ATMOS_PHY_MP_SUZUKI10_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                             QHYD(:,:,:,:),  & ! [IN]
+                                             QTRC(:,:,:,2:), & ! [OUT]
+                                             QNUM=QNUM       ) ! [IN]
+    case default
+       write(*,*) 'xxx ATMOS_PHY_MP_TYPE (', trim(ATMOS_PHY_MP_TYPE), ') is not supported'
+       call PRC_abort
+    end select
+
+    return
+  end subroutine ATMOS_PHY_MP_driver_qhyd2qtrc
 
 end module mod_atmos_phy_mp_driver

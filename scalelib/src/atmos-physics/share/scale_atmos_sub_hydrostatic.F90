@@ -109,11 +109,6 @@ module scale_atmos_hydrostatic
   logical,  private              :: HYDROSTATIC_uselapserate  = .false. !< use lapse rate?
   integer,  private              :: HYDROSTATIC_buildrho_real_kref = 1
 
-  real(RP), private :: CV_qv
-  real(RP), private :: CP_qv
-  real(RP), private :: CV_qc
-  real(RP), private :: CP_qc
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -123,12 +118,6 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        CONST_EPS
-    use scale_tracer, only: &
-       TRACER_CV, &
-       TRACER_CP
-    use scale_atmos_hydrometeor, only: &
-       I_QV, &
-       I_QC
     implicit none
 
     NAMELIST / PARAM_ATMOS_HYDROSTATIC / &
@@ -158,19 +147,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Use lapse rate for estimation of surface temperature? : ', HYDROSTATIC_uselapserate
     if( IO_L ) write(IO_FID_LOG,*) '*** Buildrho conversion criteria                          : ', criteria
 
-    if ( I_QV > 0 ) then
-       CV_qv = TRACER_CV(I_QV)
-       CP_qv = TRACER_CP(I_QV)
-    else
-       CV_qv = 0.0_RP
-       CP_qv = 0.0_RP
-    end if
-    if ( I_QC > 0 ) then
-       CV_qc = TRACER_CP(I_QC)
-    else
-       CV_qc = 0.0_RP
-    end if
-
     return
   end subroutine ATMOS_HYDROSTATIC_setup
 
@@ -192,6 +168,11 @@ contains
        qc_sfc    )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_atmos_hydrometeor, only: &
+       CV_VAPOR, &
+       CV_WATER, &
+       CP_VAPOR, &
+       CP_WATER
     implicit none
 
     real(RP), intent(out) :: dens(KA) !< density               [kg/m3]
@@ -213,6 +194,7 @@ contains
 
     real(RP) :: Rtot_sfc
     real(RP) :: CVtot_sfc
+    real(RP) :: CPtot_sfc
     real(RP) :: CPovCV_sfc
     real(RP) :: Rtot
     real(RP) :: CVtot
@@ -234,18 +216,21 @@ contains
     Rtot_sfc   = Rdry  * ( 1.0_RP - qv_sfc - qc_sfc ) &
                + Rvap  * qv_sfc
     CVtot_sfc  = CVdry * ( 1.0_RP - qv_sfc - qc_sfc ) &
-               + CV_qv * qv_sfc                       &
-               + CV_qc * qc_sfc
-    CPovCV_sfc = ( CVtot_sfc + Rtot_sfc ) / CVtot_sfc
+               + CV_VAPOR * qv_sfc                    &
+               + CV_WATER * qc_sfc
+    CPtot_sfc  = CPdry * ( 1.0_RP - qv_sfc - qc_sfc ) &
+               + CP_VAPOR * qv_sfc                    &
+               + CP_WATER * qc_sfc
+    CPovCV_sfc = CPtot_sfc / CVtot_sfc
 
     Rtot   = Rdry  * ( 1.0_RP - qv(KS) - qc(KS) ) &
            + Rvap  * qv(KS)
     CVtot  = CVdry * ( 1.0_RP - qv(KS) - qc(KS) ) &
-           + CV_qv * qv(KS)                       &
-           + CV_qc * qc(KS)
+           + CV_VAPOR * qv(KS)                    &
+           + CV_WATER * qc(KS)
     CPtot  = CPdry * ( 1.0_RP - qv(KS) - qc(KS) ) &
-           + CP_qv * qv(KS)                       &
-           + CV_qc * qc(KS)
+           + CP_VAPOR * qv(KS)                    &
+           + CP_WATER * qc(KS)
     CPovCV = CPtot / CVtot
 
     ! density at surface
@@ -336,6 +321,11 @@ contains
        PRC_MPIstop
     use scale_comm, only: &
        COMM_horizontal_mean
+    use scale_atmos_hydrometeor, only: &
+       CV_VAPOR, &
+       CV_WATER, &
+       CP_VAPOR, &
+       CP_WATER
     implicit none
 
     real(RP), intent(out) :: dens(KA,IA,JA) !< density               [kg/m3]
@@ -399,11 +389,11 @@ contains
        Rtot_sfc  (i,j) = Rdry  * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
                        + Rvap  * qv_sfc(1,i,j)
        CVtot_sfc (i,j) = CVdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
-                       + CV_qv * qv_sfc(1,i,j)                              &
-                       + CV_qc * qc_sfc(1,i,j)
+                       + CV_VAPOR * qv_sfc(1,i,j)                           &
+                       + CV_WATER * qc_sfc(1,i,j)
        CPtot_sfc (i,j) = CPdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
-                       + CP_qv * qv_sfc(1,i,j)                              &
-                       + CV_qc * qc_sfc(1,i,j)
+                       + CP_VAPOR * qv_sfc(1,i,j)                           &
+                       + CP_WATER * qc_sfc(1,i,j)
        CPovCV_sfc(i,j) = CPtot_sfc(i,j) / CVtot_sfc(i,j)
     enddo
     enddo
@@ -413,11 +403,11 @@ contains
        Rtot  (i,j) = Rdry  * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
                    + Rvap  * qv(KS,i,j)
        CVtot (i,j) = CVdry * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
-                   + CV_qv * qv(KS,i,j)                           &
-                   + CV_qc * qc(KS,i,j)
+                   + CV_VAPOR * qv(KS,i,j)                        &
+                   + CV_WATER * qc(KS,i,j)
        CPtot (i,j) = CPdry * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
-                   + CP_qv * qv(KS,i,j)                           &
-                   + CV_qc * qc(KS,i,j)
+                   + CP_VAPOR * qv(KS,i,j)                        &
+                   + CP_WATER * qc(KS,i,j)
        CPovCV(i,j) = CPtot(i,j) / CVtot(i,j)
     enddo
     enddo
@@ -531,6 +521,11 @@ contains
        qc    )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_atmos_hydrometeor, only: &
+       CV_VAPOR, &
+       CV_WATER, &
+       CP_VAPOR, &
+       CP_WATER
     implicit none
 
     real(RP), intent(out)   :: dens(KA,IA,JA) !< density               [kg/m3]
@@ -583,11 +578,11 @@ contains
        Rtot = Rdry  * ( 1.0_RP - qv(kref,i,j) - qc(kref,i,j) ) &
             + Rvap  * qv(kref,i,j)
        CVtot = CVdry * ( 1.0_RP - qv(kref,i,j) - qc(kref,i,j) ) &
-             + CV_qv * qv(kref,i,j)                           &
-             + CV_qc * qc(kref,i,j)
+             + CV_VAPOR * qv(kref,i,j)                          &
+             + CV_WATER * qc(kref,i,j)
        CPtot = CPdry * ( 1.0_RP - qv(kref,i,j) - qc(kref,i,j) ) &
-             + CP_qv * qv(kref,i,j)                           &
-             + CV_qc * qc(kref,i,j)
+             + CP_VAPOR * qv(kref,i,j)                          &
+             + CP_WATER * qc(kref,i,j)
        CVovCP = CVtot / CPtot
        dens(kref,i,j) = P00 / ( Rtot * pott(kref,i,j) ) * ( pres(kref,i,j)/P00 )**CVovCP
     enddo
@@ -648,6 +643,11 @@ contains
        k        )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_atmos_hydrometeor, only: &
+       CV_VAPOR, &
+       CV_WATER, &
+       CP_VAPOR, &
+       CP_WATER
     implicit none
 
     real(RP), intent(out) :: dens_L2 !< density               at layer 2 [kg/m3]
@@ -677,21 +677,21 @@ contains
     Rtot_L1   = Rdry  * ( 1.0_RP - qv_L1 - qc_L1 ) &
               + Rvap  * qv_L1
     CVtot_L1  = CVdry * ( 1.0_RP - qv_L1 - qc_L1 ) &
-              + CV_qv * qv_L1                      &
-              + CV_qc * qc_L1
+              + CV_VAPOR * qv_L1                   &
+              + CV_WATER * qc_L1
     CPtot_L1  = CPdry * ( 1.0_RP - qv_L1 - qc_L1 ) &
-              + CP_qv * qv_L1                      &
-              + CV_qc * qc_L1
+              + CP_VAPOR * qv_L1                   &
+              + CP_WATER * qc_L1
     CPovCV_L1 = CPtot_L1 / CVtot_L1
 
     Rtot_L2   = Rdry  * ( 1.0_RP - qv_L2 - qc_L2 ) &
               + Rvap  * qv_L2
     CVtot_L2  = CVdry * ( 1.0_RP - qv_L2 - qc_L2 ) &
-              + CV_qv * qv_L2                      &
-              + CV_qc * qc_L2
+              + CV_VAPOR * qv_L2                   &
+              + CV_WATER * qc_L2
     CPtot_L2  = CPdry * ( 1.0_RP - qv_L2 - qc_L2 ) &
-              + CP_qv * qv_L2                      &
-              + CP_qc * qc_L2
+              + CP_VAPOR * qv_L2                   &
+              + CP_WATER * qc_L2
     CPovCV_L2 = CPtot_L2 / CVtot_L2
 
     RovCV = Rtot_L2 / CVtot_L2
@@ -745,6 +745,11 @@ contains
        dz    )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_atmos_hydrometeor, only: &
+       CV_VAPOR, &
+       CV_WATER, &
+       CP_VAPOR, &
+       CP_WATER
     implicit none
 
     real(RP), intent(inout) :: dens(KA) !< density               [kg/m3]
@@ -772,11 +777,11 @@ contains
        Rtot  (k) = Rdry  * ( 1.0_RP - qv(k) - qc(k) ) &
                  + Rvap  * qv(k)
        CVtot (k) = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
-                 + CV_qv * qv(k)                      &
-                 + CV_qc * qc(k)
+                 + CV_VAPOR * qv(k)                   &
+                 + CV_WATER * qc(k)
        CPtot (k) = CPdry * ( 1.0_RP - qv(k) - qc(k) ) &
-                 + CP_qv * qv(k)                      &
-                 + CV_qc * qc(k)
+                 + CP_VAPOR * qv(k)                   &
+                 + CP_WATER * qc(k)
        CPovCV(k) = CPtot(k) / CVtot(k)
     enddo
 
@@ -847,6 +852,11 @@ contains
        k        )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_atmos_hydrometeor, only: &
+       CV_VAPOR, &
+       CV_WATER, &
+       CP_VAPOR, &
+       CP_WATER
     implicit none
 
     real(RP), intent(out) :: dens_L2(IA,JA) !< density               at layer 2 [kg/m3]
@@ -880,21 +890,21 @@ contains
        Rtot_L1  (i,j) = Rdry  * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
                       + Rvap  * qv_L1(i,j)
        CVtot_L1 (i,j) = CVdry * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
-                      + CV_qv * qv_L1(i,j)                           &
-                      + CV_qc * qc_L1(i,j)
+                      + CV_VAPOR * qv_L1(i,j)                        &
+                      + CV_WATER * qc_L1(i,j)
        CPtot_L1 (i,j) = CPdry * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
-                      + CP_qv * qv_L1(i,j)                           &
-                      + CV_qc * qc_L1(i,j)
+                      + CP_VAPOR * qv_L1(i,j)                        &
+                      + CP_WATER * qc_L1(i,j)
        CPovCV_L1(i,j) = CPtot_L1(i,j) / CVtot_L1(i,j)
 
        Rtot_L2  (i,j) = Rdry  * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
                       + Rvap  * qv_L2(i,j)
        CVtot_L2 (i,j) = CVdry * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
-                      + CV_qv * qv_L2(i,j)                           &
-                      + CV_qc * qc_L2(i,j)
+                      + CV_VAPOR * qv_L2(i,j)                        &
+                      + CV_WATER * qc_L2(i,j)
        CPtot_L2 (i,j) = CPdry * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
-                      + CP_qv * qv_L2(i,j)                           &
-                      + CV_qc * qc_L2(i,j)
+                      + CP_VAPOR * qv_L2(i,j)                        &
+                      + CP_WATER * qc_L2(i,j)
        CPovCV_L2(i,j) = CPtot_L2(i,j) / CVtot_L2(i,j)
     enddo
     enddo
@@ -959,6 +969,11 @@ contains
        kref_in )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_atmos_hydrometeor, only: &
+       CV_VAPOR, &
+       CV_WATER, &
+       CP_VAPOR, &
+       CP_WATER
     implicit none
 
     real(RP), intent(inout) :: dens(KA,IA,JA) !< density               [kg/m3]
@@ -996,11 +1011,11 @@ contains
        Rtot  (k,i,j) = Rdry  * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
                      + Rvap  * qv(k,i,j)
        CVtot (k,i,j) = CVdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
-                     + CV_qv * qv(k,i,j)                          &
-                     + CV_qc * qc(k,i,j)
+                     + CV_VAPOR * qv(k,i,j)                       &
+                     + CV_WATER * qc(k,i,j)
        CPtot (k,i,j) = CPdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
-                     + CP_qv * qv(k,i,j)                          &
-                     + CV_qc * qc(k,i,j)
+                     + CP_VAPOR * qv(k,i,j)                       &
+                     + CP_WATER * qc(k,i,j)
        CPovCV(k,i,j) = CPtot(k,i,j) / CVtot(k,i,j)
     enddo
     enddo
@@ -1074,6 +1089,11 @@ contains
        k        )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_atmos_hydrometeor, only: &
+       CV_VAPOR, &
+       CV_WATER, &
+       CP_VAPOR, &
+       CP_WATER
     implicit none
 
     real(RP), intent(out) :: dens_L1(IA,JA) !< density               at layer 1 [kg/m3]
@@ -1107,21 +1127,21 @@ contains
        Rtot_L1  (i,j) = Rdry  * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
                       + Rvap  * qv_L1(i,j)
        CVtot_L1 (i,j) = CVdry * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
-                      + CV_qv * qv_L1(i,j)                           &
-                      + CV_qc * qc_L1(i,j)
+                      + CV_VAPOR * qv_L1(i,j)                        &
+                      + CV_WATER * qc_L1(i,j)
        CPtot_L1 (i,j) = CPdry * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
-                      + CP_qv * qv_L1(i,j)                           &
-                      + CV_qc * qc_L1(i,j)
+                      + CP_VAPOR * qv_L1(i,j)                        &
+                      + CP_WATER * qc_L1(i,j)
        CPovCV_L1(i,j) = CPtot_L1(i,j) / CVtot_L1(i,j)
 
        Rtot_L2  (i,j) = Rdry  * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
                       + Rvap  * qv_L2(i,j)
        CVtot_L2 (i,j) = CVdry * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
-                      + CV_qv * qv_L2(i,j)                           &
-                      + CV_qc * qc_L2(i,j)
+                      + CV_VAPOR * qv_L2(i,j)                        &
+                      + CV_WATER * qc_L2(i,j)
        CPtot_L2 (i,j) = CPdry * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
-                      + CP_qv * qv_L2(i,j)                           &
-                      + CV_qc * qc_L2(i,j)
+                      + CP_VAPOR * qv_L2(i,j)                        &
+                      + CP_WATER * qc_L2(i,j)
        CPovCV_L2(i,j) = CPtot_L2(i,j) / CVtot_L2(i,j)
     enddo
     enddo
@@ -1186,6 +1206,11 @@ contains
        kref_in )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_atmos_hydrometeor, only: &
+       CV_VAPOR, &
+       CV_WATER, &
+       CP_VAPOR, &
+       CP_WATER
     implicit none
 
     real(RP), intent(inout) :: dens(KA,IA,JA) !< density               [kg/m3]
@@ -1223,11 +1248,11 @@ contains
        Rtot  (k,i,j) = Rdry  * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
                      + Rvap  * qv(k,i,j)
        CVtot (k,i,j) = CVdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
-                     + CV_qv * qv(k,i,j)                          &
-                     + CV_qc * qc(k,i,j)
+                     + CV_VAPOR * qv(k,i,j)                       &
+                     + CV_WATER * qc(k,i,j)
        CPtot (k,i,j) = CPdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
-                     + CP_qv * qv(k,i,j)                          &
-                     + CV_qc * qc(k,i,j)
+                     + CP_VAPOR * qv(k,i,j)                       &
+                     + CP_WATER * qc(k,i,j)
        CPovCV(k,i,j) = CPtot(k,i,j) / CVtot(k,i,j)
     enddo
     enddo
@@ -1294,6 +1319,11 @@ contains
        qv_sfc, qc_sfc                )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_atmos_hydrometeor, only: &
+       CV_VAPOR, &
+       CV_WATER, &
+       CP_VAPOR, &
+       CP_WATER
     implicit none
 
     real(RP), intent(out) :: dens(KA) !< density               [kg/m3]
@@ -1335,20 +1365,20 @@ contains
     Rtot_sfc   = Rdry  * ( 1.0_RP - qv_sfc - qc_sfc ) &
                + Rvap  * qv_sfc
     CVtot_sfc  = CVdry * ( 1.0_RP - qv_sfc - qc_sfc ) &
-               + CV_qv * qv_sfc                       &
-               + CV_qc * qc_sfc
+               + CV_VAPOR * qv_sfc                    &
+               + CV_WATER * qc_sfc
     CPtot_sfc  = CPdry * ( 1.0_RP - qv_sfc - qc_sfc ) &
-               + CP_qv * qv_sfc                       &
-               + CV_qc * qc_sfc
+               + CP_VAPOR * qv_sfc                    &
+               + CP_WATER * qc_sfc
 
     Rtot   = Rdry  * ( 1.0_RP - qv(KS) - qc(KS) ) &
            + Rvap  * qv(KS)
     CVtot  = CVdry * ( 1.0_RP - qv(KS) - qc(KS) ) &
-           + CV_qv * qv(KS)                       &
-           + CV_qc * qc(KS)
+           + CV_VAPOR * qv(KS)                    &
+           + CV_WATER * qc(KS)
     CPtot  = CPdry * ( 1.0_RP - qv(KS) - qc(KS) ) &
-           + CP_qv * qv(KS)                       &
-           + CV_qc * qc(KS)
+           + CP_VAPOR * qv(KS)                    &
+           + CP_WATER * qc(KS)
 
     ! density at surface
     RovCP_sfc = Rtot_sfc / CPtot_sfc
@@ -1419,6 +1449,11 @@ contains
        qc_sfc    )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_atmos_hydrometeor, only: &
+       CV_VAPOR, &
+       CV_WATER, &
+       CP_VAPOR, &
+       CP_WATER
     implicit none
 
     real(RP), intent(out) :: dens(KA,IA,JA) !< density               [kg/m3]
@@ -1459,11 +1494,11 @@ contains
        Rtot_sfc (i,j) = Rdry  * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
                       + Rvap  * qv_sfc(1,i,j)
        CVtot_sfc(i,j) = CVdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
-                      + CV_qv * qv_sfc(1,i,j)                              &
-                      + CV_qc * qc_sfc(1,i,j)
+                      + CV_VAPOR * qv_sfc(1,i,j)                           &
+                      + CV_WATER * qc_sfc(1,i,j)
        CPtot_sfc(i,j) = CPdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
-                      + CP_qv * qv_sfc(1,i,j)                              &
-                      + CV_qc * qc_sfc(1,i,j)
+                      + CP_VAPOR * qv_sfc(1,i,j)                           &
+                      + CP_WATER * qc_sfc(1,i,j)
     enddo
     enddo
 
@@ -1472,11 +1507,11 @@ contains
        Rtot (i,j) = Rdry  * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
                   + Rvap  * qv(KS,i,j)
        CVtot(i,j) = CVdry * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
-                  + CV_qv * qv(KS,i,j)                           &
-                  + CV_qc * qc(KS,i,j)
+                  + CV_VAPOR * qv(KS,i,j)                        &
+                  + CV_WATER * qc(KS,i,j)
        CPtot(i,j) = CPdry * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
-                  + CP_qv * qv(KS,i,j)                           &
-                  + CV_qc * qc(KS,i,j)
+                  + CP_VAPOR * qv(KS,i,j)                        &
+                  + CP_WATER * qc(KS,i,j)
     enddo
     enddo
 
@@ -1549,6 +1584,11 @@ contains
        dz    )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_atmos_hydrometeor, only: &
+       CV_VAPOR, &
+       CV_WATER, &
+       CP_VAPOR, &
+       CP_WATER
     implicit none
 
     real(RP), intent(inout) :: dens(KA) !< density               [kg/m3]
@@ -1575,11 +1615,11 @@ contains
        Rtot (k) = Rdry  * ( 1.0_RP - qv(k) - qc(k) ) &
                 + Rvap  * qv(k)
        CVtot(k) = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
-                + CV_qv * qv(k)                      &
-                + CV_qc * qc(k)
+                + CV_VAPOR * qv(k)                   &
+                + CV_WATER * qc(k)
        CPtot(k) = CPdry * ( 1.0_RP - qv(k) - qc(k) ) &
-                + CP_qv * qv(k)                      &
-                + CV_qc * qc(k)
+                + CP_VAPOR * qv(k)                   &
+                + CP_WATER * qc(k)
     enddo
 
     do k = KS+1, KE
@@ -1635,6 +1675,11 @@ contains
        qc    )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_atmos_hydrometeor, only: &
+       CV_VAPOR, &
+       CV_WATER, &
+       CP_VAPOR, &
+       CP_WATER
     implicit none
 
     real(RP), intent(inout) :: dens(KA,IA,JA) !< density               [kg/m3]
@@ -1663,11 +1708,11 @@ contains
        Rtot (k,i,j) = Rdry  * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
                     + Rvap  * qv(k,i,j)
        CVtot(k,i,j) = CVdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
-                    + CV_qv * qv(k,i,j)                          &
-                    + CV_qc * qc(k,i,j)
+                    + CV_VAPOR * qv(k,i,j)                       &
+                    + CV_WATER * qc(k,i,j)
        CPtot(k,i,j) = CPdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
-                    + CP_qv * qv(k,i,j)                          &
-                    + CV_qc * qc(k,i,j)
+                    + CP_VAPOR * qv(k,i,j)                       &
+                    + CP_WATER * qc(k,i,j)
     enddo
     enddo
     enddo

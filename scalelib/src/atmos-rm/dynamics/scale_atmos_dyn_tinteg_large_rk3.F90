@@ -106,6 +106,7 @@ contains
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
        USE_AVERAGE,                                          &
+       I_QV,                                                 &
        DTL, DTS                                              )
     use scale_const, only: &
        Rdry   => CONST_Rdry, &
@@ -234,6 +235,8 @@ contains
 
     logical,  intent(in)    :: USE_AVERAGE
 
+    integer,  intent(in)    :: I_QV
+
     real(DP), intent(in)    :: DTL
     real(DP), intent(in)    :: DTS
 
@@ -323,6 +326,7 @@ contains
                FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,              & ! (in)
                FLAG_FCT_ALONG_STREAM,                                       & ! (in)
                USE_AVERAGE .AND. last,                                      & ! (in)
+               I_QV,                                                        & ! (in)
                dtrk, dts, last                                              ) ! (in)
 
        end do

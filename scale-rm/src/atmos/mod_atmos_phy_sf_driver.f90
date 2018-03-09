@@ -161,6 +161,7 @@ contains
     use scale_atmos_hydrostatic, only: &
        barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
     use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_dry, &
        I_QV
     use scale_atmos_phy_sf_bulk, only: &
        ATMOS_PHY_SF_bulk_flux
@@ -306,7 +307,7 @@ contains
 
           end select
 
-          if ( I_QV > 0 ) then
+          if ( .not. ATMOS_HYDROMETEOR_dry ) then
              SFLX_QTRC(:,:,I_QV) = SFLX_QV(:,:)
           end if
 
@@ -382,7 +383,7 @@ contains
        enddo
        enddo
 
-       if ( I_QV > 0 ) then
+       if ( .not. ATMOS_HYDROMETEOR_dry ) then
           !omp parallel do
           do j = JSB, JEB
           do i = ISB, IEB
@@ -406,7 +407,7 @@ contains
     enddo
     enddo
 
-    if ( I_QV > 0 ) then
+    if ( .not. ATMOS_HYDROMETEOR_dry ) then
        !omp parallel do
        do j  = JS, JE
        do i  = IS, IE
@@ -439,7 +440,7 @@ contains
                               ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
                               ATMOS_GRID_CARTESC_REAL_TOTAREA    )
 
-       if ( I_QV > 0 ) then
+       if ( .not. ATMOS_HYDROMETEOR_dry ) then
           call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
                                  RHOT_t_SF(:,:)     , 'RHOT_t_SF',                      &
                                  ATMOS_GRID_CARTESC_REAL_AREA(:,:),                     &

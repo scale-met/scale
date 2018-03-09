@@ -231,7 +231,8 @@ contains
                        dt                          ) ! [IN]
 
 
-       call HYDROMETEOR_LHV( LHV(:,:), ATMOS_TEMP(:,:) )
+       call HYDROMETEOR_LHV( OIA, OIS, OIE, OJA, OJS, OJE, &
+                             ATMOS_TEMP(:,:), LHV(:,:) )
 
 !OCL XFILL
        do j = OJS, OJE

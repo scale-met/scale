@@ -54,12 +54,11 @@ module mod_atmos_phy_cp_vars
   character(len=H_MID),   public :: ATMOS_PHY_CP_RESTART_OUT_TITLE             = 'ATMOS_PHY_CP restart' !< title    of the output file
   character(len=H_SHORT), public :: ATMOS_PHY_CP_RESTART_OUT_DTYPE             = 'DEFAULT'              !< REAL4 or REAL8
 
-  real(RP), public, allocatable :: ATMOS_PHY_CP_DENS_t(:,:,:)    ! tendency DENS [kg/m3/s]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_MOMZ_t(:,:,:)    ! tendency MOMZ [kg/m2/s2]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_MOMX_t(:,:,:)    ! tendency MOMX [kg/m2/s2]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_MOMY_t(:,:,:)    ! tendency MOMY [kg/m2/s2]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_RHOT_t(:,:,:)    ! tendency RHOT [K*kg/m3/s]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_RHOQ_t(:,:,:,:)  ! tendency rho*QTRC [kg/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_DENS_t  (:,:,:)   ! tendency DENS [kg/m3/s]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_MOMZ_t  (:,:,:)   ! tendency MOMZ [kg/m2/s2]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_RHOT_t  (:,:,:)   ! tendency RHOT [K*kg/m3/s]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_RHOQV_t (:,:,:)   ! tendency rho*QV   [kg/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_RHOHYD_t(:,:,:,:) ! tendency rho*QHYD [kg/kg/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_CP_MFLX_cloudbase(:,:)   ! cloud base mass flux [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_CP_SFLX_rain     (:,:)   ! convective rain [kg/m2/s]
@@ -131,9 +130,10 @@ module mod_atmos_phy_cp_vars
                   'XY'   /
 
   ! tendency names
-  integer,                private              :: VMAX_t       !< number of the tendency variables dens+rhot+QA_MP
+  integer,                private              :: VMAX_t       !< number of the tendency variables dens+rhot+qv+N_HYD
   integer,                private              :: I_cp_dens_t = 1
   integer,                private              :: I_cp_rhot_t = 2
+  integer,                private              :: I_cp_qv_t   = 3
 
   character(len=H_SHORT), private, allocatable :: VAR_t_NAME(:) !< name  of the variables
   character(len=H_MID),   private, allocatable :: VAR_t_DESC(:) !< desc. of the variables
@@ -146,13 +146,12 @@ contains
   !> Setup
   subroutine ATMOS_PHY_CP_vars_setup
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use mod_atmos_phy_mp_vars, only: &
-       QS_MP,                        &
-       QE_MP,                        &
-       QA_MP
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       HYD_NAME
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_CP_VARS / &
@@ -174,18 +173,16 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[ATMOS PHY_CP] / Origin[SCALE-RM]'
 
-    allocate( ATMOS_PHY_CP_DENS_t(KA,IA,JA)       )
-    allocate( ATMOS_PHY_CP_MOMZ_t(KA,IA,JA)       )
-    allocate( ATMOS_PHY_CP_MOMX_t(KA,IA,JA)       )
-    allocate( ATMOS_PHY_CP_MOMY_t(KA,IA,JA)       )
-    allocate( ATMOS_PHY_CP_RHOT_t(KA,IA,JA)       )
-    allocate( ATMOS_PHY_CP_RHOQ_t(KA,IA,JA,QS_MP:QE_MP) )
-    ATMOS_PHY_CP_DENS_t(:,:,:)   = 0.0_RP
-    ATMOS_PHY_CP_MOMZ_t(:,:,:)   = UNDEF
-    ATMOS_PHY_CP_MOMX_t(:,:,:)   = UNDEF
-    ATMOS_PHY_CP_MOMY_t(:,:,:)   = UNDEF
-    ATMOS_PHY_CP_RHOT_t(:,:,:)   = 0.0_RP
-    ATMOS_PHY_CP_RHOQ_t(:,:,:,:) = 0.0_RP
+    allocate( ATMOS_PHY_CP_DENS_t  (KA,IA,JA)       )
+    allocate( ATMOS_PHY_CP_MOMZ_t  (KA,IA,JA)       )
+    allocate( ATMOS_PHY_CP_RHOT_t  (KA,IA,JA)       )
+    allocate( ATMOS_PHY_CP_RHOQV_t (KA,IA,JA)       )
+    allocate( ATMOS_PHY_CP_RHOHYD_t(KA,IA,JA,N_HYD) )
+    ATMOS_PHY_CP_DENS_t  (:,:,:)   = 0.0_RP
+    ATMOS_PHY_CP_MOMZ_t  (:,:,:)   = UNDEF
+    ATMOS_PHY_CP_RHOT_t  (:,:,:)   = 0.0_RP
+    ATMOS_PHY_CP_RHOQV_t (:,:,:)   = 0.0_RP
+    ATMOS_PHY_CP_RHOHYD_t(:,:,:,:) = 0.0_RP
 
     allocate( ATMOS_PHY_CP_MFLX_cloudbase(IA,JA)    )
     allocate( ATMOS_PHY_CP_SFLX_rain     (IA,JA)    )
@@ -205,7 +202,7 @@ contains
     ATMOS_PHY_CP_kf_nca        (:,:)   = -100.0_RP
 
     ! for tendency restart
-    VMAX_t = 2 + QA_MP
+    VMAX_t = 3 + N_HYD
     allocate( VAR_t_NAME(VMAX_t) )
     allocate( VAR_t_DESC(VMAX_t) )
     allocate( VAR_t_UNIT(VMAX_t) )
@@ -218,10 +215,13 @@ contains
     VAR_t_DESC(I_cp_rhot_t) = 'tendency RHOT in CP'
     VAR_t_UNIT(I_cp_rhot_t) = 'K*kg/m3/s'
 
-    do iq = 1, QA_MP
-       VAR_t_NAME(2+iq) = trim(TRACER_NAME(QS_MP+iq-1))//'_t_CP'
-       VAR_t_DESC(2+iq) = 'tendency rho*'//trim(TRACER_NAME(QS_MP+iq-1))//' in CP'
-       VAR_t_UNIT(2+iq) = 'kg/m3/s'
+    VAR_t_NAME(I_cp_qv_t) = 'QV_t_CP'
+    VAR_t_DESC(I_cp_qv_t) = 'tendency rho*QV in CP'
+    VAR_t_UNIT(I_cp_qv_t) = 'kg/m3/s'
+    do iq = 1, N_HYD
+       VAR_t_NAME(3+iq) = trim(HYD_NAME(iq))//'_t_CP'
+       VAR_t_DESC(3+iq) = 'tendency rho*'//trim(HYD_NAME(iq))//' in CP'
+       VAR_t_UNIT(3+iq) = 'kg/m3/s'
     enddo
 
     !--- read namelist
@@ -231,7 +231,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_CP_VARS. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_CP_VARS)
 
@@ -276,16 +276,16 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use mod_atmos_phy_mp_vars, only: &
-       QA_MP
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
 
     integer :: i, j
     integer :: iq
     !---------------------------------------------------------------------------
 
-    do j  = JS, JE
-    do i  = IS, IE
+    do j = JS, JE
+    do i = IS, IE
        ATMOS_PHY_CP_cldfrac_dp(   1:KS-1,i,j) = ATMOS_PHY_CP_cldfrac_dp(KS,i,j)
        ATMOS_PHY_CP_cldfrac_dp(KE+1:KA,  i,j) = ATMOS_PHY_CP_cldfrac_dp(KE,i,j)
        ATMOS_PHY_CP_cldfrac_sh(   1:KS-1,i,j) = ATMOS_PHY_CP_cldfrac_sh(KS,i,j)
@@ -296,14 +296,16 @@ contains
        ATMOS_PHY_CP_DENS_t    (KE+1:KA  ,i,j) = ATMOS_PHY_CP_DENS_t    (KE,i,j)
        ATMOS_PHY_CP_RHOT_t    (   1:KS-1,i,j) = ATMOS_PHY_CP_RHOT_t    (KS,i,j)
        ATMOS_PHY_CP_RHOT_t    (KE+1:KA  ,i,j) = ATMOS_PHY_CP_RHOT_t    (KE,i,j)
+       ATMOS_PHY_CP_RHOQV_t   (   1:KS-1,i,j) = ATMOS_PHY_CP_RHOQV_t   (KS,i,j)
+       ATMOS_PHY_CP_RHOQV_t   (KE+1:KA  ,i,j) = ATMOS_PHY_CP_RHOQV_t   (KE,i,j)
     enddo
     enddo
 
-    do iq = 1, QA_MP
-       do j  = JS, JE
-       do i  = IS, IE
-          ATMOS_PHY_CP_RHOQ_t(   1:KS-1,i,j,iq) = ATMOS_PHY_CP_RHOQ_t(KS,i,j,iq)
-          ATMOS_PHY_CP_RHOQ_t(KE+1:KA  ,i,j,iq) = ATMOS_PHY_CP_RHOQ_t(KE,i,j,iq)
+    do iq = 1, N_HYD
+       do j = JS, JE
+       do i = IS, IE
+          ATMOS_PHY_CP_RHOHYD_t(   1:KS-1,i,j,iq) = ATMOS_PHY_CP_RHOHYD_t(KS,i,j,iq)
+          ATMOS_PHY_CP_RHOHYD_t(KE+1:KA  ,i,j,iq) = ATMOS_PHY_CP_RHOHYD_t(KE,i,j,iq)
        enddo
        enddo
     end do
@@ -318,11 +320,11 @@ contains
     call COMM_vars8( ATMOS_PHY_CP_kf_nca         (:,:)  , 8 )
 
     ! tendency
-    call COMM_vars8( ATMOS_PHY_CP_DENS_t(:,:,:), VMAX+1 )
-    call COMM_vars8( ATMOS_PHY_CP_RHOT_t(:,:,:), VMAX+2 )
-
-    do iq = 1, QA_MP
-       call COMM_vars8( ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), VMAX+2+iq )
+    call COMM_vars8( ATMOS_PHY_CP_DENS_t (:,:,:), VMAX+1 )
+    call COMM_vars8( ATMOS_PHY_CP_RHOT_t (:,:,:), VMAX+2 )
+    call COMM_vars8( ATMOS_PHY_CP_RHOQV_t(:,:,:), VMAX+3 )
+    do iq = 1, N_HYD
+       call COMM_vars8( ATMOS_PHY_CP_RHOHYD_t(:,:,:,iq), VMAX+3+iq )
     enddo
 
     call COMM_wait ( ATMOS_PHY_CP_MFLX_cloudbase (:,:)  , 1 )
@@ -335,11 +337,11 @@ contains
     call COMM_wait ( ATMOS_PHY_CP_kf_nca         (:,:)  , 8 )
 
 
-    call COMM_wait ( ATMOS_PHY_CP_DENS_t(:,:,:), VMAX+1 )
-    call COMM_wait ( ATMOS_PHY_CP_RHOT_t(:,:,:), VMAX+2 )
-
-    do iq = 1, QA_MP
-       call COMM_wait ( ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), VMAX+2+iq )
+    call COMM_wait ( ATMOS_PHY_CP_DENS_t (:,:,:), VMAX+1 )
+    call COMM_wait ( ATMOS_PHY_CP_RHOT_t (:,:,:), VMAX+2 )
+    call COMM_wait ( ATMOS_PHY_CP_RHOQV_t(:,:,:), VMAX+3 )
+    do iq = 1, N_HYD
+       call COMM_wait ( ATMOS_PHY_CP_RHOHYD_t(:,:,:,iq), VMAX+3+iq )
     enddo
 
     return
@@ -388,8 +390,8 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_read, &
        FILE_CARTESC_flush
-    use mod_atmos_phy_mp_vars, only: &
-       QA_MP
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
 
     integer  :: i, j, iq
@@ -420,9 +422,11 @@ contains
                                ATMOS_PHY_CP_DENS_t(:,:,:)         ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_t_NAME(2), 'ZXY', & ! [IN]
                                ATMOS_PHY_CP_RHOT_t(:,:,:)         ) ! [OUT]
-       do iq = 1, QA_MP
-          call FILE_CARTESC_read( restart_fid, VAR_t_NAME(2+iq), 'ZXY', & ! [IN]
-                                  ATMOS_PHY_CP_RHOQ_t(:,:,:,iq)         ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_t_NAME(3), 'ZXY', & ! [IN]
+                               ATMOS_PHY_CP_RHOQV_t(:,:,:)        ) ! [OUT]
+       do iq = 1, N_HYD
+          call FILE_CARTESC_read( restart_fid, VAR_t_NAME(3+iq), 'ZXY', & ! [IN]
+                                  ATMOS_PHY_CP_RHOHYD_t(:,:,:,iq)       ) ! [OUT]
        enddo
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
@@ -441,14 +445,16 @@ contains
              ATMOS_PHY_CP_w0mean    (KE+1:KA,  i,j) = ATMOS_PHY_CP_w0mean    (KE,i,j)
              ATMOS_PHY_CP_DENS_t    (KE+1:KA,  i,j) = ATMOS_PHY_CP_DENS_t    (KE,i,j)
              ATMOS_PHY_CP_RHOT_t    (KE+1:KA,  i,j) = ATMOS_PHY_CP_RHOT_t    (KE,i,j)
+             ATMOS_PHY_CP_RHOQV_t   (   1:KS-1,i,j) = ATMOS_PHY_CP_RHOQV_t   (KS,i,j)
+             ATMOS_PHY_CP_RHOQV_t   (KE+1:KA,  i,j) = ATMOS_PHY_CP_RHOQV_t   (KE,i,j)
           enddo
           enddo
 
-          do iq = 1, QA_MP
+          do iq = 1, N_HYD
              do j  = 1, JA
              do i  = 1, IA
-                ATMOS_PHY_CP_RHOQ_t(   1:KS-1,i,j,iq) = ATMOS_PHY_CP_RHOQ_t(KS,i,j,iq)
-                ATMOS_PHY_CP_RHOQ_t(KE+1:KA,  i,j,iq) = ATMOS_PHY_CP_RHOQ_t(KE,i,j,iq)
+                ATMOS_PHY_CP_RHOHYD_t(   1:KS-1,i,j,iq) = ATMOS_PHY_CP_RHOHYD_t(KS,i,j,iq)
+                ATMOS_PHY_CP_RHOHYD_t(KE+1:KA,  i,j,iq) = ATMOS_PHY_CP_RHOHYD_t(KE,i,j,iq)
              enddo
              enddo
           enddo
@@ -541,8 +547,8 @@ contains
   subroutine ATMOS_PHY_CP_vars_restart_def_var
     use scale_file_cartesC, only: &
        FILE_CARTESC_def_var
-    use mod_atmos_phy_mp_vars, only: &
-       QA_MP
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
 
     integer :: i, iq
@@ -557,18 +563,18 @@ contains
                VAR_ID(i)                                   ) ! [OUT]
        end do
 
-       do i = 1, 2
+       do i = 1, 3
           call FILE_CARTESC_def_var( restart_fid,           & ! [IN]
                VAR_t_NAME(i), VAR_t_DESC(i), VAR_t_UNIT(i), & ! [IN]
                'ZXY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE,       & ! [IN]
                VAR_t_ID(i)                                  ) ! [OUT]
        end do
 
-       do iq = 1, QA_MP
+       do iq = 1, N_HYD
           call FILE_CARTESC_def_var( restart_fid,                    & ! [IN]
-               VAR_t_NAME(2+iq), VAR_t_DESC(2+iq), VAR_t_UNIT(2+iq), & ! [IN]
+               VAR_t_NAME(3+iq), VAR_t_DESC(3+iq), VAR_t_UNIT(3+iq), & ! [IN]
                'ZXY',  ATMOS_PHY_CP_RESTART_OUT_DTYPE,               & ! [IN]
-               VAR_t_ID(2+iq)                                        ) ! [OUT]
+               VAR_t_ID(3+iq)                                        ) ! [OUT]
        enddo
 
     endif
@@ -581,8 +587,8 @@ contains
   subroutine ATMOS_PHY_CP_vars_restart_write
     use scale_file_cartesC, only: &
        FILE_CARTESC_write => FILE_CARTESC_write_var
-    use mod_atmos_phy_mp_vars, only: &
-       QA_MP
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
 
     integer  :: iq
@@ -616,9 +622,11 @@ contains
                           VAR_t_NAME(1), 'ZXY' ) ! [IN]
        call FILE_CARTESC_write( restart_fid, VAR_t_ID(2), ATMOS_PHY_CP_RHOT_t(:,:,:), & ! [IN]
                           VAR_t_NAME(2), 'ZXY' ) ! [IN]
-       do iq = 1, QA_MP
-          call FILE_CARTESC_write( restart_fid, VAR_t_ID(2+iq), ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), & ! [IN]
-                             VAR_t_NAME(2+iq), 'ZXY' ) ! [IN]
+       call FILE_CARTESC_write( restart_fid, VAR_t_ID(3), ATMOS_PHY_CP_RHOQV_t(:,:,:), & ! [IN]
+                          VAR_t_NAME(3), 'ZXY' ) ! [IN]
+       do iq = 1, N_HYD
+          call FILE_CARTESC_write( restart_fid, VAR_t_ID(3+iq), ATMOS_PHY_CP_RHOHYD_t(:,:,:,iq), & ! [IN]
+                             VAR_t_NAME(3+iq), 'ZXY' ) ! [IN]
        enddo
 
     endif
@@ -635,8 +643,8 @@ contains
        ATMOS_GRID_CARTESC_REAL_TOTAREA, &
        ATMOS_GRID_CARTESC_REAL_VOL,     &
        ATMOS_GRID_CARTESC_REAL_TOTVOL
-    use mod_atmos_phy_mp_vars, only: &
-       QA_MP
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
 
     integer :: iq
 
@@ -684,11 +692,15 @@ contains
                               ATMOS_PHY_CP_RHOT_t        (:,:,:), VAR_t_NAME(2), & ! (in)
                               ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                & ! (in)
                               ATMOS_GRID_CARTESC_REAL_TOTVOL                     ) ! (in)
-       do iq = 1, QA_MP
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              ATMOS_PHY_CP_RHOQV_t       (:,:,:), VAR_t_NAME(3), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL                     ) ! (in)
+       do iq = 1, N_HYD
           call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                 ATMOS_PHY_CP_RHOQ_t(:,:,:,iq), VAR_t_NAME(2+iq), & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),              & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_TOTVOL                   ) ! (in)
+                                 ATMOS_PHY_CP_RHOHYD_t(:,:,:,iq), VAR_t_NAME(3+iq), & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL                     ) ! (in)
        enddo
     endif
 
