@@ -18,7 +18,6 @@ program moist_adiabat
   use scale_atmos_adiabat, only: &
      ATMOS_ADIABAT_setup, &
      ATMOS_ADIABAT_cape
-  use netcdf
   implicit none
 
   integer :: nx, ny, nz
