@@ -150,7 +150,7 @@ contains
        cloudbase      => ATMOS_PHY_CP_cloudbase,      &  ! cloud base height [m]
        cldfrac_dp     => ATMOS_PHY_CP_cldfrac_dp,     &  ! cloud fraction (deep convection) (0-1)
        cldfrac_sh     => ATMOS_PHY_CP_cldfrac_sh,     &  ! cloud fraction (shallow convection) (0-1)
-       w0mean          => ATMOS_PHY_CP_w0mean,          &  ! running mean vertical wind velocity [m/s]
+       w0mean         => ATMOS_PHY_CP_w0mean,         &  ! running mean vertical wind velocity [m/s]
        kf_nca         => ATMOS_PHY_CP_kf_nca             ! advection/cumulus convection timescale/dt for KF [step]
 
     implicit none
@@ -162,8 +162,8 @@ contains
 
     ! temporal running mean of vertical velocity
     call ATMOS_PHY_CP_common_wmean( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
-                                    DENS (:,:,:), & ! [IN]
-                                    MOMZ (:,:,:), & ! [IN]
+                                    DENS(:,:,:),   & ! [IN]
+                                    MOMZ(:,:,:),   & ! [IN]
                                     w0mean(:,:,:)  ) ! [INOUT]
     call FILE_HISTORY_in( w0mean(:,:,:), 'w0mean', 'running mean vertical wind velocity', 'kg/m2/s', fill_halo=.true. )
 

@@ -18,7 +18,6 @@ module scale_atmos_phy_cp_common
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -29,10 +28,6 @@ module scale_atmos_phy_cp_common
   !
   public :: ATMOS_PHY_CP_common_setup
   public :: ATMOS_PHY_CP_common_wmean
-
-!  interface ATMOS_PHY_CP_common_wmean
-!     module procedure ATMOS_PHY_CP_common_wmean
-!  end interface ATMOS_PHY_CP_common_wmean
 
   !-----------------------------------------------------------------------------
   !
@@ -109,9 +104,9 @@ contains
        TIME_DTSEC,             &
        CP_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
     implicit none
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
+    integer,  intent(in)    :: KA, KS, KE
+    integer,  intent(in)    :: IA, IS, IE
+    integer,  intent(in)    :: JA, JS, JE
 
     real(RP), intent(in)    :: DENS   (KA,IA,JA)
     real(RP), intent(in)    :: MOMZ   (KA,IA,JA)

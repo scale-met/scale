@@ -15,7 +15,6 @@ module scale_atmos_phy_cp
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_atmos_grid_cartesC_index
   use scale_tracer
   use scale_atmos_phy_mp
   private
@@ -75,10 +74,10 @@ module scale_atmos_phy_cp
        use scale_atmos_saturation ,only :&
 
        SATURATION_psat_liq => ATMOS_SATURATION_psat_liq
-       integer, intent(in) :: KA, KS, KE
-       integer, intent(in) :: IA, IS, IE
-       integer, intent(in) :: JA, JS, JE
-       integer, intent(in) :: QA_MP, QS_MP, QE_MP
+       integer,  intent(in)    :: KA, KS, KE
+       integer,  intent(in)    :: IA, IS, IE
+       integer,  intent(in)    :: JA, JS, JE
+       integer,  intent(in)    :: QA_MP, QS_MP, QE_MP
 
        real(RP), intent(in)    :: DENS(KA,IA,JA)
        real(RP), intent(in)    :: MOMX(KA,IA,JA)
