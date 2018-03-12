@@ -188,10 +188,14 @@ contains
     use scale_atmos_hydrostatic, only: &
        HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
-       THERMODYN_pott      => ATMOS_THERMODYN_pott
-    use scale_atmos_phy_mp, only: &
+       THERMODYN_specific_heat  => ATMOS_THERMODYN_specific_heat, &
+       THERMODYN_rhot2temp_pres => ATMOS_THERMODYN_rhot2temp_pres
+    use mod_atmos_phy_mp_vars, only: &
        QS_MP
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       HYD_NAME, &
+       NUM_NAME
     use scale_atmos_grid_cartesC_metric, only: &
        rotc => ATMOS_GRID_CARTESC_METRIC_ROTC
     use scale_topography, only: &
@@ -222,6 +226,7 @@ contains
     real(RP) :: momy_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: rhot_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: tsfc_org(          dims(2),dims(3))
+    real(RP) :: Qdry, Rtot, CVtot, CPtot
     real(RP) :: temp_org
     real(RP) :: dz
 
@@ -394,14 +399,12 @@ contains
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 3, dims(1)+2
-       call THERMODYN_temp_pres( temp_org,          & ! [OUT]
-                                 pres_org(k,i,j),   & ! [OUT]
-                                 dens_org(k,i,j),   & ! [IN]
-                                 rhot_org(k,i,j),   & ! [IN]
-                                 qtrc_org(k,i,j,:), & ! [IN]
-                                 TRACER_CV(:),      & ! [IN]
-                                 TRACER_R(:),       & ! [IN]
-                                 TRACER_MASS(:)     ) ! [IN]
+       call THERMODYN_specific_heat( QA, &
+                                     qtrc_org(k,i,j,:), &
+                                     TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+                                     Qdry, Rtot, CVtot, CPtot                                 ) ! [OUT]
+       call THERMODYN_rhot2temp_pres( dens_org(k,i,j), rhot_org(k,i,j), Rtot, CVtot, CPtot, &
+                                      temp_org, pres_org(k,i,j)                             )
     end do
     end do
     end do

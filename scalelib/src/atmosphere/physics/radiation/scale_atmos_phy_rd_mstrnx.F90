@@ -391,10 +391,6 @@ contains
        TIME_NOWDATE
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
-    use scale_atmos_saturation, only: &
-       SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_QV, &

@@ -198,7 +198,7 @@ contains
        Rtot, CVtot, CPtot,     &
        POTT, TEMP, PRES, EXNER )
     use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+       THERMODYN_rhot2temp_pres => ATMOS_THERMODYN_rhot2temp_pres
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
@@ -217,10 +217,10 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call THERMODYN_temp_pres( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                              DENS(:,:,:), RHOT(:,:,:),                & ! (in)
-                              Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:), & ! (in)
-                              TEMP(:,:,:), PRES(:,:,:)                 ) ! (out)
+    call THERMODYN_rhot2temp_pres( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                   DENS(:,:,:), RHOT(:,:,:),                & ! (in)
+                                   Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:), & ! (in)
+                                   TEMP(:,:,:), PRES(:,:,:)                 ) ! (out)
 
 
 !OCL XFILL

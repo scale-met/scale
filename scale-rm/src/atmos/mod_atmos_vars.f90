@@ -1342,9 +1342,6 @@ contains
        ATMOS_GRID_CARTESC_REAL_TOTVOLZUY, &
        ATMOS_GRID_CARTESC_REAL_VOLZXV,    &
        ATMOS_GRID_CARTESC_REAL_TOTVOLZXV
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     implicit none
 
     real(RP) :: RHOQ(KA,IA,JA)

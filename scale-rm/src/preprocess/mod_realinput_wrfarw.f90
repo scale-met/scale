@@ -176,8 +176,6 @@ contains
     use scale_file, only: &
        FILE_open, &
        FILE_read
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_pott => ATMOS_THERMODYN_pott
     use scale_atmos_hydrometeor, only: &
        QHS, &
        QHE, &

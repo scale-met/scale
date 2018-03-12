@@ -1070,7 +1070,10 @@ contains
        I_QV, &
        I_QC
     use scale_atmos_thermodyn, only: &
-       THERMODYN_POTT => ATMOS_THERMODYN_POTT
+       THERMODYN_qdry           => ATMOS_THERMODYN_qdry, &
+       THERMODYN_r              => ATMOS_THERMODYN_r,    &
+       THERMODYN_cp             => ATMOS_THERMODYN_cp,   &
+       THERMODYN_temp_pres2pott => ATMOS_THERMODYN_temp_pres2pott
     use scale_atmos_hydrostatic, only: &
        HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_interp, only: &
@@ -1113,6 +1116,8 @@ contains
     real(RP) :: V    (KA,IA,JA)
     real(RP) :: QC   (KA,IA,JA)
     real(RP) :: u_on_map, v_on_map
+
+    real(RP) :: qdry, Rtot, CPtot
 
     logical, save :: first = .true.
 
@@ -1185,13 +1190,11 @@ contains
           do j = 1, dims(3)
           do i = 1, dims(2)
           do k = 1, dims(1)+2
-             call THERMODYN_POTT( POTT_org   (k,i,j),   & ! [OUT]
-                                  TEMP_org   (k,i,j),   & ! [IN]
-                                  PRES_org   (k,i,j),   & ! [IN]
-                                  QTRC_org   (k,i,j,:), & ! [IN]
-                                  TRACER_CV  (:),       & ! [IN]
-                                  TRACER_R   (:),       & ! [IN]
-                                  TRACER_MASS(:)        ) ! [IN]
+             call THERMODYN_qdry( QA, QTRC_org(k,i,j,:), TRACER_MASS(:), qdry )
+             call THERMODYN_r   ( QA, QTRC_org(k,i,j,:), TRACER_R(:), qdry, Rtot )
+             call THERMODYN_cp  ( QA, QTRC_org(k,i,j,:), TRACER_CP(:), qdry, CPtot )
+             call THERMODYN_temp_pres2pott( TEMP_org(k,i,j), PRES_org(k,i,j), CPtot, Rtot, & ! [IN]
+                                            POTT_org(k,i,j)                                ) ! [OUT]
           enddo
           enddo
           enddo
@@ -1972,7 +1975,8 @@ contains
     use scale_land_grid_cartesC, only: &
          LCZ => LAND_GRID_CARTESC_CZ
     use scale_atmos_thermodyn, only: &
-         THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+         THERMODYN_specific_heat  => ATMOS_THERMODYN_specific_heat, &
+         THERMODYN_rhot2temp_pres => ATMOS_THERMODYN_rhot2temp_pres
     use scale_atmos_hydrometeor, only: &
          I_QV
     use scale_landuse, only: &
@@ -2057,8 +2061,8 @@ contains
     integer  :: igrd_o (odims(1),odims(2),itp_nh)
     integer  :: jgrd_o (odims(1),odims(2),itp_nh)
 
-    real(RP) :: temp
-    real(RP) :: pres
+    real(RP) :: Qdry, Rtot, CVtot, CPtot
+    real(RP) :: temp, pres
 
     integer :: i, j
     integer :: n, nn
@@ -2075,14 +2079,12 @@ contains
 
        do j = 1, JA
        do i = 1, IA
-          call THERMODYN_temp_pres( temp,           & ! [OUT]
-                                    pres,           & ! [OUT] not used
-                                    dens(KS,i,j),   & ! [IN]
-                                    rhot(KS,i,j),   & ! [IN]
-                                    qtrc(KS,i,j,:), & ! [IN]
-                                    TRACER_CV(:),   & ! [IN]
-                                    TRACER_R(:),    & ! [IN]
-                                    TRACER_MASS(:)  ) ! [IN]
+          call THERMODYN_specific_heat( QA, &
+                                        qtrc(KS,i,j,:), &
+                                        TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+                                        Qdry, Rtot, CVtot, CPtot                                 ) ! [OUT]
+          call THERMODYN_rhot2temp_pres( dens(KS,i,j), rhot(KS,i,j), Rtot, CVtot, CPtot, &
+                                         temp, pres                                      )
 
           tc_urb(i,j) = temp
 #ifdef DRY

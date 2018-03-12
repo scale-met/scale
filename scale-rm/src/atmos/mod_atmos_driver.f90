@@ -337,6 +337,10 @@ contains
        MOMY,                       &
        RHOT,                       &
        QTRC,                       &
+       QV,                         &
+       Rtot,                       &
+       CVtot,                      &
+       CPtot,                      &
        DENS_tp,                    &
        MOMZ_tp,                    &
        RHOU_tp,                    &
@@ -389,10 +393,15 @@ contains
        call PROF_rapend  ('ATM_Boundary', 2)
     endif
 
-
     !########## Calculate diagnostic variables ##########
     call ATMOS_vars_calc_diagnostics
 
+    !########## Reference State ###########
+    if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
+       call PROF_rapstart('ATM_Refstate', 2)
+       call ATMOS_REFSTATE_update( DENS, RHOT, QV, Rtot, CVtot, CPtot ) ! [IN]
+       call PROF_rapend  ('ATM_Refstate', 2)
+    endif
 
     !########## Adjustment ##########
     ! Microphysics

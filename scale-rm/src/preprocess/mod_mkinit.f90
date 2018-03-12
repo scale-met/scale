@@ -4804,7 +4804,7 @@ contains
     use scale_atmos_hydrometeor, only: &
        I_QV
     use scale_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_temp_pres
+       ATMOS_THERMODYN_rhot2temp_pres
     use mod_atmos_admin, only: &
        ATMOS_PHY_AE_TYPE
     implicit none
@@ -4879,10 +4879,10 @@ contains
     enddo
     qc(:,:,:) = 0.0_RP
 
-    call ATMOS_THERMODYN_temp_pres( KA, 1, KA, IA, 1, IA, JA, 1, JA, &
-                                    dens(:,:,:), RHOT(:,:,:),                & ! (in)
-                                    rtot(:,:,:), cvtot(:,:,:), cptot(:,:,:), & ! (in)
-                                    temp(:,:,:), pres(:,:,:)                 ) ! (out)
+    call ATMOS_THERMODYN_rhot2temp_pres( KA, 1, KA, IA, 1, IA, JA, 1, JA, &
+                                         dens(:,:,:), RHOT(:,:,:),                & ! (in)
+                                         rtot(:,:,:), cvtot(:,:,:), cptot(:,:,:), & ! (in)
+                                         temp(:,:,:), pres(:,:,:)                 ) ! (out)
 
     if ( ATMOS_PHY_AE_TYPE == 'KAJINO13' ) then
        call AEROSOL_setup

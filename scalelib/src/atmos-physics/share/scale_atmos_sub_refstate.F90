@@ -578,16 +578,27 @@ contains
        DENS, RHOT, QTRC )
     use scale_time, only: &
        TIME_NOWSEC
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_specific_heat
     implicit none
 
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in) :: QV  (KA,IA,JA)
+
+    real(RP) :: Qdry (KA,IA,JA)
+    real(RP) :: Rtot (KA,IA,JA)
+    real(RP) :: CVtot(KA,IA,JA)
+    real(RP) :: CPtot(KA,IA,JA)
     !---------------------------------------------------------------------------
 
     last_updated = TIME_NOWSEC - ATMOS_REFSTATE_UPDATE_DT
 
-    call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! (in)
+    call ATMOS_THERMODYN_specific_heat( KA, KS, KE, IA, IS, IE, JA, JS, JE, QA, &
+                                        QTRC(:,:,:,:), TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+                                        Qdry(:,:,:), Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:)                    ) ! [OUT]
+    call ATMOS_REFSTATE_update( DENS(:,:,:), RHOT(:,:,:), QV(:,:,:), Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:) ) ! (in)
 
     return
   end subroutine ATMOS_REFSTATE_generate_frominit
@@ -595,7 +606,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Update reference state profile (Horizontal average)
   subroutine ATMOS_REFSTATE_update( &
-       DENS, RHOT, QTRC )
+       DENS, RHOT, QV, Rtot, CVtot, CPtot )
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_CZ
     use scale_atmos_grid_cartesC_real, only: &
@@ -607,14 +618,15 @@ contains
     use scale_interp_vert, only: &
        INTERP_VERT_xi2z
     use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
-    use scale_atmos_hydrometeor, only: &
-       I_QV
+       THERMODYN_rhot2temp_pres => ATMOS_THERMODYN_rhot2temp_pres
     implicit none
 
-    real(RP), intent(in) :: DENS(KA,IA,JA)
-    real(RP), intent(in) :: RHOT(KA,IA,JA)
-    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in) :: DENS (KA,IA,JA)
+    real(RP), intent(in) :: RHOT (KA,IA,JA)
+    real(RP), intent(in) :: QV   (KA,IA,JA)
+    real(RP), intent(in) :: Rtot (KA,IA,JA)
+    real(RP), intent(in) :: CVtot(KA,IA,JA)
+    real(RP), intent(in) :: CPtot(KA,IA,JA)
 
     real(RP) :: temp(KA,IA,JA)
     real(RP) :: pres(KA,IA,JA)
@@ -628,14 +640,9 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** [REFSTATE] update reference state'
 
-       call THERMODYN_temp_pres( temp,       & ! [OUT]
-                                 pres,       & ! [OUT]
-                                 DENS,       & ! [IN]
-                                 RHOT,       & ! [IN]
-                                 QTRC,       & ! [IN]
-                                 TRACER_CV,  & ! [IN]
-                                 TRACER_CP,  & ! [IN]
-                                 TRACER_MASS ) ! [IN]
+       call THERMODYN_rhot2temp_pres( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                      dens(:,:,:), rhot(:,:,:), Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:), & ! [IN]
+                                      temp(:,:,:), pres(:,:,:)                                           ) ! [OUT]
 
        do j = 1, JA
        do i = 1, IA

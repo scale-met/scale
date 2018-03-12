@@ -161,7 +161,7 @@ OBJS_NAME = \
 	scale_atmos_sub_refstate.o	\
 	scale_atmos_sub_saturation.o	\
 	scale_atmos_sub_solarins.o	\
-	scale_atmos_sub_thermodyn.o	\
+	scale_atmos_thermodyn.o		\
 	scale_atmos_sub_aerosol.o	\
 	scale_atmos_sub_hydrometeor.o	\
 	scale_atmos_adiabat.o	\
