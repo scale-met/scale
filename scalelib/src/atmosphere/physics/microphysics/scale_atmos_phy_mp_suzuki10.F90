@@ -1326,13 +1326,13 @@ contains
 
     !##### END MP Main #####
 
-    if ( MP_donegative_fixer ) then
-       call MP_negative_fixer( DENS(:,:,:),      & ! [INOUT]
-                               RHOT(:,:,:),      & ! [INOUT]
-                               QTRC(:,:,:,:),    & ! [INOUT]
-                               I_QV,             & ! [IN]
-                               MP_limit_negative ) ! [IN]
-    endif
+    !if ( MP_donegative_fixer ) then
+    !   call MP_negative_fixer( DENS(:,:,:),      & ! [INOUT]
+    !                           RHOT(:,:,:),      & ! [INOUT]
+    !                           QTRC(:,:,:,:),    & ! [INOUT]
+    !                           I_QV,             & ! [IN]
+    !                           MP_limit_negative ) ! [IN]
+    !endif
 
     QHYD_out(:,:,:,:) = 0.0_RP
 
