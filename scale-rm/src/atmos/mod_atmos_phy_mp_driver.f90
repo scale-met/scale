@@ -409,6 +409,7 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_hydrometeor, only: &
+       I_QV,  &
        N_HYD, &
        QHA,   &
        QHS,   &
@@ -429,6 +430,14 @@ contains
        ATMOS_PHY_MP_TOMITA08_adjustment, &
        ATMOS_PHY_MP_TOMITA08_terminal_velocity
     use scale_atmos_phy_mp_suzuki10, only: &
+       ATMOS_PHY_MP_suzuki10_nbin, &
+       ATMOS_PHY_MP_suzuki10_nbnd, &
+       ATMOS_PHY_MP_suzuki10_nspc, &
+       ATMOS_PHY_MP_suzuki10_ic,   &
+       ATMOS_PHY_MP_suzuki10_id,   &
+       ATMOS_PHY_MP_suzuki10_iss,  &
+       ATMOS_PHY_MP_suzuki10_ig,   &
+       ATMOS_PHY_MP_suzuki10_ih,   &
        ATMOS_PHY_MP_suzuki10_adjustment, &
        ATMOS_PHY_MP_suzuki10_terminal_velocity
     use scale_file_history, only: &
@@ -488,6 +497,7 @@ contains
     real(RP) :: CPtot1(KA,IA,JA)
     real(RP) :: CVtot1(KA,IA,JA)
     real(RP) :: CCN   (KA,IA,JA)
+    real(RP) :: QHYD  (KA,IA,JA,6)
     real(RP) :: vterm (KA,QS_MP+1:QE_MP)
 !    real(RP), target :: QTRC1(KA,IA,JA,QS_MP:QA_MP)
 
@@ -933,7 +943,55 @@ contains
 
        end if
 
-       if( ATMOS_PHY_MP_TYPE == 'SUZUKI10' )
+       ! history output for QHYD when using SUZUKI10
+       if( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
+          QHYD(:,:,:,:) = 0.0_RP
+
+          do iq = 1, ATMOS_PHY_MP_suzuki10_nbnd
+             do j = JSB, JEB
+             do i = ISB, IEB
+             do k = KS, KE
+                QHYD(k,i,j,1) = QHYD(k,i,j,1) + QTRC1(k,i,j,iq+1)
+             enddo
+             enddo
+             enddo
+          enddo
+
+          do iq = ATMOS_PHY_MP_suzuki10_nbnd+1, ATMOS_PHY_MP_suzuki10_nbin
+             do j = JSB, JEB
+             do i = ISB, IEB
+             do k = KS, KE
+                QHYD(k,i,j,2) = QHYD(k,i,j,2) + QTRC1(k,i,j,iq+1)
+             enddo
+             enddo
+             enddo
+          enddo
+
+          call FILE_HISTORY_in( QHYD(:,:,:,1), 'QC', 'Mixing ratio of QC', 'kg/kg' )
+          call FILE_HISTORY_in( QHYD(:,:,:,2), 'QR', 'Mixing ratio of QR', 'kg/kg' )
+
+          if ( ATMOS_PHY_MP_suzuki10_nspc > 1 ) then
+             do iq = 1, ATMOS_PHY_MP_suzuki10_nbin
+                do j = JSB, JEB
+                do i = ISB, IEB
+                do k = KS, KE
+                   ! columnar,plate,dendrite = ice
+                   QHYD(k,i,j,3) = QHYD(k,i,j,3) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_ic-1 )*ATMOS_PHY_MP_suzuki10_nbin+iq)
+                   QHYD(k,i,j,3) = QHYD(k,i,j,3) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_id-1 )*ATMOS_PHY_MP_suzuki10_nbin+iq)
+                   QHYD(k,i,j,4) = QHYD(k,i,j,4) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_iss-1)*ATMOS_PHY_MP_suzuki10_nbin+iq)
+                   QHYD(k,i,j,5) = QHYD(k,i,j,5) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_ig-1 )*ATMOS_PHY_MP_suzuki10_nbin+iq)
+                   QHYD(k,i,j,6) = QHYD(k,i,j,6) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_ih-1 )*ATMOS_PHY_MP_suzuki10_nbin+iq)
+                enddo
+                enddo
+                enddo
+             enddo
+
+             call FILE_HISTORY_in( QHYD(:,:,:,3), 'QI', 'Mixing ratio of QI', 'kg/kg' )
+             call FILE_HISTORY_in( QHYD(:,:,:,4), 'QS', 'Mixing ratio of QS', 'kg/kg' )
+             call FILE_HISTORY_in( QHYD(:,:,:,5), 'QG', 'Mixing ratio of QG', 'kg/kg' )
+             call FILE_HISTORY_in( QHYD(:,:,:,6), 'QH', 'Mixing ratio of QH', 'kg/kg' )
+          endif
+
        end if
 
 !OCL XFILL

@@ -59,6 +59,17 @@ module scale_atmos_phy_mp_suzuki10
   integer, public :: ATMOS_PHY_MP_suzuki10_kphase = 0
   integer, public :: ATMOS_PHY_MP_suzuki10_iceflg = 1
 
+  integer, public :: ATMOS_PHY_MP_suzuki10_nbnd ! boundary bin number corresponding to rbnd
+
+  !--- Indeces for determining species of cloud particle
+  integer, public, parameter :: ATMOS_PHY_MP_suzuki10_il  = 1 !--- index for liquid  water
+  integer, public, parameter :: ATMOS_PHY_MP_suzuki10_ic  = 2 !--- index for columnar ice
+  integer, public, parameter :: ATMOS_PHY_MP_suzuki10_ip  = 3 !--- index for plate ice
+  integer, public, parameter :: ATMOS_PHY_MP_suzuki10_id  = 4 !--- index for dendrite ice
+  integer, public, parameter :: ATMOS_PHY_MP_suzuki10_iss = 5 !--- index for snow
+  integer, public, parameter :: ATMOS_PHY_MP_suzuki10_ig  = 6 !--- index for graupel
+  integer, public, parameter :: ATMOS_PHY_MP_suzuki10_ih  = 7 !--- index for hail
+
   character(len=H_SHORT), public, target, allocatable :: ATMOS_PHY_MP_suzuki10_tracer_names(:)
   character(len=H_MID)  , public, target, allocatable :: ATMOS_PHY_MP_suzuki10_tracer_descriptions(:)
   character(len=H_SHORT), public, target, allocatable :: ATMOS_PHY_MP_suzuki10_tracer_units(:)
@@ -741,6 +752,7 @@ contains
     do n = 1, nbin
       if( radc( n ) > rbnd ) then
         nbnd = n
+        ATMOS_PHY_MP_suzuki10_nbnd = n
         exit
       endif
     enddo
@@ -1336,92 +1348,6 @@ contains
     !                           I_QV,             & ! [IN]
     !                           MP_limit_negative ) ! [IN]
     !endif
-
-    QHYD_out(:,:,:,:) = 0.0_RP
-
-    do n = 1, nbnd
-       iq = QS + n
-
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          QHYD_out(k,i,j,1) = QHYD_out(k,i,j,1) + QTRC(k,i,j,iq)
-       enddo
-       enddo
-       enddo
-    enddo
-
-    do n = nbnd+1, nbin
-       iq = QS + n
-
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          QHYD_out(k,i,j,2) = QHYD_out(k,i,j,2) + QTRC(k,i,j,iq)
-       enddo
-       enddo
-       enddo
-    enddo
-
-    call FILE_HISTORY_in( QHYD_out(:,:,:,1), 'QC', 'Mixing ratio of QC', 'kg/kg' )
-    call FILE_HISTORY_in( QHYD_out(:,:,:,2), 'QR', 'Mixing ratio of QR', 'kg/kg' )
-
-    if ( nspc > 1 ) then
-       do m = ic, id ! columnar,plate,dendrite = ice
-       do n = 1, nbin
-          iq = QS + (m-1)*nbin + n
-
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             QHYD_out(k,i,j,3) = QHYD_out(k,i,j,3) + QTRC(k,i,j,iq)
-          enddo
-          enddo
-          enddo
-       enddo
-       enddo
-
-       do n = 1, nbin
-          iq = QS + (iss-1)*nbin + n
-
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             QHYD_out(k,i,j,4) = QHYD_out(k,i,j,4) + QTRC(k,i,j,iq)
-          enddo
-          enddo
-          enddo
-       enddo
-
-       do n = 1, nbin
-          iq = QS + (ig-1)*nbin + n
-
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             QHYD_out(k,i,j,5) = QHYD_out(k,i,j,5) + QTRC(k,i,j,iq)
-          enddo
-          enddo
-          enddo
-       enddo
-
-       do n = 1, nbin
-          iq = QS + (ih-1)*nbin + n
-
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             QHYD_out(k,i,j,6) = QHYD_out(k,i,j,6) + QTRC(k,i,j,iq)
-          enddo
-          enddo
-          enddo
-       enddo
-
-       call FILE_HISTORY_in( QHYD_out(:,:,:,3), 'QI', 'Mixing ratio of QI', 'kg/kg' )
-       call FILE_HISTORY_in( QHYD_out(:,:,:,4), 'QS', 'Mixing ratio of QS', 'kg/kg' )
-       call FILE_HISTORY_in( QHYD_out(:,:,:,5), 'QG', 'Mixing ratio of QG', 'kg/kg' )
-       call FILE_HISTORY_in( QHYD_out(:,:,:,6), 'QH', 'Mixing ratio of QH', 'kg/kg' )
-    endif
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_adjustment
