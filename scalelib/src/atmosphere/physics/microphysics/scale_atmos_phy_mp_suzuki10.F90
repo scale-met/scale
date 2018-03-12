@@ -120,6 +120,9 @@ module scale_atmos_phy_mp_suzuki10
   !
   !++ Private parameters
   !
+  integer :: QA
+  integer, parameter :: QS = 1
+
   character(len=3)  :: namspc (8) = (/ 'Qcl', &
                                        'Qic', &
                                        'Qip', &
@@ -340,9 +343,11 @@ contains
     ATMOS_PHY_MP_suzuki10_nwaters  = nbin                  ! number of liquid water
     ATMOS_PHY_MP_suzuki10_nices    = nbin * ( nspc - 1 )   ! number of ice water
 
-    allocate( ATMOS_PHY_MP_suzuki10_tracer_names       (ATMOS_PHY_MP_suzuki10_ntracers) )
-    allocate( ATMOS_PHY_MP_suzuki10_tracer_descriptions(ATMOS_PHY_MP_suzuki10_ntracers) )
-    allocate( ATMOS_PHY_MP_suzuki10_tracer_units       (ATMOS_PHY_MP_suzuki10_ntracers) )
+    QA = ATMOS_PHY_MP_suzuki10_ntracers
+
+    allocate( ATMOS_PHY_MP_suzuki10_tracer_names       (QA) )
+    allocate( ATMOS_PHY_MP_suzuki10_tracer_descriptions(QA) )
+    allocate( ATMOS_PHY_MP_suzuki10_tracer_units       (QA) )
 
     !---------------------------------------------------------------------------
     !
@@ -350,7 +355,7 @@ contains
     !
     !---------------------------------------------------------------------------
 
-    do n = 1, ATMOS_PHY_MP_suzuki10_ntracers
+    do n = 1, QA
        write(ATMOS_PHY_MP_suzuki10_tracer_units(n),'(a)')  'kg/kg'
     enddo
 
@@ -762,7 +767,7 @@ contains
      enddo
     endif
 
-    allocate( vterm(KA,IA,JA,ATMOS_PHY_MP_suzuki10_ntracers-1) )
+    allocate( vterm(KA,IA,JA,QA-1) )
     vterm(:,:,:,:) = 0.0_RP
     do myu = 1, nspc
     do n = 1, nbin
@@ -809,7 +814,6 @@ contains
        KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
-       QA, QS,     &
        KIJMAX,     &
        CCN,        &
        DENS,       &
@@ -852,7 +856,6 @@ contains
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
-    integer, intent(in) :: QA, QS
     integer, intent(in) :: KIJMAX
 
     real(RP), intent(in)    :: CCN(KA,IA,JA)
@@ -903,8 +906,8 @@ contains
 !    real(RP) :: Uabs, bparam
 !    real(RP) :: AMR(KA,IA,JA)
 
-    real(RP) :: pflux    (KA,IA,JA,ATMOS_PHY_MP_suzuki10_ntracers-1) ! precipitation flux of each tracer [kg/m2/s]
-    real(RP) :: FLX_hydro(KA,IA,JA,ATMOS_PHY_MP_suzuki10_ntracers-1)
+    real(RP) :: pflux    (KA,IA,JA,QA-1) ! precipitation flux of each tracer [kg/m2/s]
+    real(RP) :: FLX_hydro(KA,IA,JA,QA-1)
     real(RP) :: QHYD_out (KA,IA,JA,6)
 
     integer  :: step
@@ -1262,7 +1265,7 @@ contains
                                       TRACER_R(:),   & ! [IN]
                                       TRACER_MASS(:) ) ! [IN]
 
-          call MP_precipitation( ATMOS_PHY_MP_suzuki10_ntracers,                 & ! [IN]
+          call MP_precipitation( QA,                 & ! [IN]
                                  QS,                 & ! [IN]
                                  pflux    (:,:,:,:),    & ! [OUT]
                                  vterm    (:,:,:,:),    & ! [INOUT]
@@ -1276,7 +1279,7 @@ contains
                                  TRACER_CV(:),          & ! [IN]
                                  MP_DTSEC_SEDIMENTATION ) ! [IN]
 
-          do iq = 1, ATMOS_PHY_MP_suzuki10_ntracers-1
+          do iq = 1, QA-1
           do j  = JS, JE
           do i  = IS, IE
           do k  = KS-1, KE-1
@@ -1426,16 +1429,20 @@ contains
   !-----------------------------------------------------------------------------
   !> get terminal velocity
   subroutine ATMOS_PHY_MP_suzuki10_terminal_velocity( &
-       KA,          &
-       output_vterm )
+       KA,      &
+       QS_MP,   &
+       QE_MP,   &
+       vterm_MP )
     implicit none
 
     integer, intent(in) :: KA
+    integer, intent(in) :: QS_MP
+    integer, intent(in) :: QE_MP
 
-    real(RP), intent(out) :: output_vterm(KA,ATMOS_PHY_MP_suzuki10_ntracers-1)
+    real(RP), intent(out) :: vterm_MP(KA,QS_MP+1:QE_MP)
     !---------------------------------------------------------------------------
 
-    output_vterm(:,:) = vterm(:,1,1,:)
+    vterm_MP(:,:) = vterm(:,1,1,QS_MP+1:QE_MP)
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_terminal_velocity
@@ -1446,7 +1453,6 @@ contains
        KA, KS, KE,     &
        IA, IS, IE,     &
        JA, JS, JE,     &
-       QA, QS,         &
        QTRC,           &
        mask_criterion, &
        cldfrac         )
@@ -1455,7 +1461,6 @@ contains
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
-    integer, intent(in) :: QA, QS
 
     real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
     real(RP), intent(in)  :: mask_criterion
@@ -1504,7 +1509,6 @@ contains
        KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
-       QA, QS,     &
        DENS0,      &
        TEMP0,      &
        QTRC0,      &
@@ -1525,7 +1529,6 @@ contains
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
-    integer, intent(in) :: QA, QS
 
     real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
     real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! temperature               [K]
@@ -1644,7 +1647,6 @@ contains
        KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
-       QA, QS,     &
        QTRC0,      &
        Qe          )
     use scale_const, only: &
@@ -1662,7 +1664,6 @@ contains
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
-    integer, intent(in) :: QA, QS
 
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
     real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]

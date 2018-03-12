@@ -597,7 +597,6 @@ contains
                   KA, KS,  KE,                    & ! [IN]
                   IA, ISB, IEB,                   & ! [IN]
                   JA, JSB, JEB,                   & ! [IN]
-                  QA_MP, QS_MP,                   & ! [IN]
                   QTRC(:,:,:,:),                  & ! [IN]
                   ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
                   ATMOS_PHY_MP_CLDFRAC(:,:,:)     ) ! [OUT]
@@ -641,7 +640,6 @@ contains
                   KA, KS,  KE,             & ! [IN]
                   IA, ISB, IEB,            & ! [IN]
                   JA, JSB, JEB,            & ! [IN]
-                  QA_MP, QS_MP,            & ! [IN]
                   DENS(:,:,:),             & ! [IN]
                   TEMP(:,:,:),             & ! [IN]
                   QTRC(:,:,:,:),           & ! [IN]
@@ -688,7 +686,6 @@ contains
                   KA, KS,  KE,             & ! [IN]
                   IA, ISB, IEB,            & ! [IN]
                   JA, JSB, JEB,            & ! [IN]
-                  QA_MP, QS_MP,            & ! [IN]
                   QTRC(:,:,:,:),           & ! [IN]
                   ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]
           case default

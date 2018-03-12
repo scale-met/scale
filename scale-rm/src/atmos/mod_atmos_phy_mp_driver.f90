@@ -167,7 +167,7 @@ contains
                                                                           + 2 : )                         ) ! [IN]
           end if
 
-          QA_MP = ATMOS_PHY_MP_suzuki10_ntracers
+          QA_MP = ATMOS_PHY_MP_suzuki10_ntracers - ATMOS_PHY_MP_suzuki10_nccn
        case default
           call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
           QA_MP = QA_MP_obsolute
@@ -658,7 +658,6 @@ contains
           call ATMOS_PHY_MP_suzuki10_adjustment( KA, KS,  KE,        & ! [IN]
                                                  IA, ISB, IEB,       & ! [IN]
                                                  JA, JSB, JEB,       & ! [IN]
-                                                 QA_MP, QS_MP,       & ! [IN]
                                                  KIJMAX,             & ! [IN]
                                                  CCN      (:,:,:),   & ! [IN] 
                                                  DENS1    (:,:,:),   & ! [INOUT]
@@ -842,6 +841,8 @@ contains
                 !case ( 'SUZUKI10' )
                 !   call ATMOS_PHY_MP_suzuki10_terminal_velocity( &
                 !        KA,        & ! [IN]
+                !        QS_MP,     & ! [IN]
+                !        QE_MP,     & ! [IN]
                 !        vterm(:,:) ) ! [OUT]
                 case default
                    vterm(:,:) = 0.0_RP ! tentative
@@ -932,6 +933,8 @@ contains
 
        end if
 
+       if( ATMOS_PHY_MP_TYPE == 'SUZUKI10' )
+       end if
 
 !OCL XFILL
        do j = JS, JE
