@@ -172,11 +172,16 @@ contains
 
     if ( update_flag ) then ! update
 
+!    if( IO_L ) write(IO_FID_LOG,*) 'CHECKKF: ', maxval(U), maxval(MOMX)
+!    if( IO_L ) write(IO_FID_LOG,*) 'CHECKKF: ', minval(U), minval(MOMX)
+
        call ATMOS_PHY_CP( KA, KS, KE, IA, 1, IA, JA, 1, JA, QA_MP, QS_MP, QE_MP, &
                           DENS(:,:,:),             & ! [IN]
-                          MOMZ(:,:,:),             & ! [IN]
-                          MOMX(:,:,:),             & ! [IN]
-                          MOMY(:,:,:),             & ! [IN]
+!                          MOMZ(:,:,:),             & ! [IN]
+!                          MOMX(:,:,:),             & ! [IN]
+!                          MOMY(:,:,:),             & ! [IN]
+                          U(:,:,:),             & ! [IN]
+                          V(:,:,:),             & ! [IN]
                           RHOT(:,:,:),             & ! [IN]
                           QTRC(:,:,:,QS_MP:QE_MP), & ! [IN]
                           w0mean(:,:,:),           & ! [IN]

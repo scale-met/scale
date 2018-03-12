@@ -29,9 +29,11 @@ module scale_atmos_phy_cp
           JA, JS, JE,     &
           QA_MP, QS_MP, QE_MP, &
           DENS,           &
-          MOMZ,           &
-          MOMX,           &
-          MOMY,           &
+!          MOMZ,           &
+!          MOMX,           &
+!          MOMY,           &
+          U,           &
+          V,           &
           RHOT,           &
           QTRC,           &
           w0avg,          &
@@ -80,9 +82,11 @@ module scale_atmos_phy_cp
        integer,  intent(in)    :: QA_MP, QS_MP, QE_MP
 
        real(RP), intent(in)    :: DENS(KA,IA,JA)
-       real(RP), intent(in)    :: MOMX(KA,IA,JA)
-       real(RP), intent(in)    :: MOMY(KA,IA,JA)
-       real(RP), intent(in)    :: MOMZ(KA,IA,JA)
+!       real(RP), intent(in)    :: MOMX(KA,IA,JA)
+!       real(RP), intent(in)    :: MOMY(KA,IA,JA)
+!       real(RP), intent(in)    :: MOMZ(KA,IA,JA)
+       real(RP), intent(in)    :: U(KA,IA,JA)
+       real(RP), intent(in)    :: V(KA,IA,JA)
        real(RP), intent(in)    :: RHOT(KA,IA,JA)
        real(RP), intent(in)    :: QTRC(KA,IA,JA,QS_MP:QE_MP)
        real(RP), intent(in)    :: w0avg(KA,IA,JA)
