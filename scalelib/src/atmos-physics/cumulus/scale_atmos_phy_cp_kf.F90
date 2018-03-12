@@ -53,7 +53,7 @@ module scale_atmos_phy_cp_kf
   use scale_const, only: &
        TEM00 => CONST_TEM00
 
-  use scale_tracer, only: QA
+!  use scale_tracer, only: QA
   !------------------------------------------------------------------------------
   implicit none
   private
@@ -367,9 +367,11 @@ contains
        JA, JS, JE,     &
        QA_MP, QS_MP, QE_MP, &
        DENS,           &
-       MOMZ,           &
-       MOMX,           &
-       MOMY,           &
+!       MOMZ,           &
+!       MOMX,           &
+!       MOMY,           &
+       U,           &
+       V,           &
        RHOT,           &
        QTRC_in,        &
        w0avg,          &
@@ -418,11 +420,14 @@ contains
     integer,  intent(in)    :: QA_MP, QS_MP, QE_MP
 
     real(RP), intent(in)    :: DENS          (KA,IA,JA)
-    real(RP), intent(in)    :: MOMX          (KA,IA,JA)
-    real(RP), intent(in)    :: MOMY          (KA,IA,JA)
-    real(RP), intent(in)    :: MOMZ          (KA,IA,JA)
+!    real(RP), intent(in)    :: MOMX          (KA,IA,JA)
+!    real(RP), intent(in)    :: MOMY          (KA,IA,JA)
+!    real(RP), intent(in)    :: MOMZ          (KA,IA,JA)
+    real(RP), intent(in)    :: U          (KA,IA,JA)
+    real(RP), intent(in)    :: V          (KA,IA,JA)
     real(RP), intent(in)    :: RHOT          (KA,IA,JA)
-    real(RP), intent(in)    :: QTRC_in       (KA,IA,JA,QS_MP:QE_MP)
+!    real(RP), intent(in)    :: QTRC_in       (KA,IA,JA,QS_MP:QE_MP)
+    real(RP), intent(in)    :: QTRC_in       (KA,IA,JA,QA_MP)
     real(RP), intent(in)    :: w0avg         (KA,IA,JA)    !< running mean of vertical velocity [m/s]
     real(RP), intent(inout) :: DENS_t_CP     (KA,IA,JA)
     real(RP), intent(inout) :: MOMZ_t_CP     (KA,IA,JA)    !< not used
@@ -446,8 +451,8 @@ contains
     integer  :: k_lc,k_let,k_pbl                           !< indices
     integer  :: k_lfs                                      !< LFS layer index
 
-    real(RP) :: u     (KA)                                 !< x-direction wind velocity [m/s]
-    real(RP) :: v     (KA)                                 !< y-direction wind velocity [m/s]
+!    real(RP) :: u     (KA)                                 !< x-direction wind velocity [m/s]
+!    real(RP) :: v     (KA)                                 !< y-direction wind velocity [m/s]
     real(RP) :: temp  (KA)                                 !< temperature [K]
     real(RP) :: pres  (KA)                                 !< pressure of dry air [Pa]
     real(RP) :: qv    (KA)                                 !< water vapor mixing ratio[kg/kg] original in KF scheme
@@ -506,7 +511,8 @@ contains
     real(RP) :: qr_nw(KA)                                  !< new rain water mixing ratio  [kg/kg]
     real(RP) :: qs_nw(KA)                                  !< new snow water mixing ratio  [kg/kg]
     ! update variables
-    real(RP) :: qtrc_nw(KA,QA)                             !< qv,qc,qr,qi,qs (qg not change)
+!    real(RP) :: qtrc_nw(KA,QA)                             !< qv,qc,qr,qi,qs (qg not change)
+    real(RP) :: qtrc_nw(KA,QA_MP)                             !< qv,qc,qr,qi,qs (qg not change)
     real(RP) :: pott_nw(KA)                                !< new PT
     real(RP) :: RHOD(KA)                                   !< dry density
     real(RP) :: QV_resd(KA)                                !< residual vapor
@@ -541,9 +547,9 @@ contains
           call THERMODYN_qd( QDRY(k), QTRC_in(k,i,j,:), TRACER_MASS(:) )
           RHOD(k) = DENS(k,i,j) * QDRY(k)
 
-          ! calculate u(x-directin velocity ), v(y-direction velocity)
-          u(k) = 0.5_RP * ( MOMX(k,i,j) + MOMX(k,i-1,j) ) / DENS(k,i,j)
-          v(k) = 0.5_RP * ( MOMY(k,i,j) + MOMY(k,i,j-1) ) / DENS(k,i,j)
+!          ! calculate u(x-directin velocity ), v(y-direction velocity)
+!          u(k) = 0.5_RP * ( MOMX(k,i,j) + MOMX(k,i-1,j) ) / DENS(k,i,j)
+!          v(k) = 0.5_RP * ( MOMY(k,i,j) + MOMY(k,i,j-1) ) / DENS(k,i,j)
        enddo
 
        ! initialize variables
@@ -655,7 +661,8 @@ contains
             I_convflag(i,j),                         & ! [IN]
             k_lcl, k_ml, k_top, k_pbl, k_let, k_lc,  & ! [IN]
             deltaz(:,i,j), Z(:,i,j), cloudbase(i,j), & ! [IN]
-            u(:), v(:), rh(:), qv(:), pres(:),       & ! [IN]
+!            u(:), v(:), rh(:), qv(:), pres(:),       & ! [IN]
+            u(:,i,j), v(:,i,j), rh(:), qv(:), pres(:),       & ! [IN]
             deltap(:), deltax(i,j),                  & ! [IN]
             ems(:), emsd(:),                         & ! [IN]
             theta_ee(:),                             & ! [IN]
@@ -700,7 +707,10 @@ contains
 
           DENS_t_CP(KS:KE,i,j) = 0.0_RP
           RHOT_t_CP(KS:KE,i,j) = 0.0_RP
-          do iq = QS_MP, QE_MP
+!          do iq = QS_MP, QE_MP
+!             RHOQ_t_CP(KS:KE,i,j,iq) = 0.0_RP
+!          end do
+          do iq = 1, QA_MP
              RHOQ_t_CP(KS:KE,i,j,iq) = 0.0_RP
           end do
 
@@ -735,22 +745,28 @@ contains
 
              dens_nw(k) = dens(k,i,j) + DENS_t_CP(k,i,j) * lifetime(i,j)
 
-             do iq = QS_MP, QE_MP
+!             do iq = QS_MP, QE_MP
+!                qtrc_nw(k,iq) = ( qtrc_in(k,i,j,iq) * DENS(k,i,j) + RHOQ_t_CP(k,i,j,iq) * lifetime(i,j) ) / dens_nw(k)
+!             end do
+             do iq = 1, QA_MP
                 qtrc_nw(k,iq) = ( qtrc_in(k,i,j,iq) * DENS(k,i,j) + RHOQ_t_CP(k,i,j,iq) * lifetime(i,j) ) / dens_nw(k)
              end do
-             do iq = 1, QS_MP - 1
-                qtrc_nw(k,iq) = qtrc_in(k,i,j,iq) * DENS(k,i,j) / dens_nw(k)
-             end do
-             do iq = QE_MP + 1, QA
-                qtrc_nw(k,iq) = qtrc_in(k,i,j,iq) * DENS(k,i,j) / dens_nw(k)
-             end do
+!             do iq = 1, QS_MP - 1
+!                qtrc_nw(k,iq) = qtrc_in(k,i,j,iq) * DENS(k,i,j) / dens_nw(k)
+!             end do
+!             do iq = QE_MP + 1, QA
+!                qtrc_nw(k,iq) = qtrc_in(k,i,j,iq) * DENS(k,i,j) / dens_nw(k)
+!             end do
           end do
 
           ! treatment for not evaluated layers
           do k=k_top+1, KE
-             do iq = 1, QA
+             do iq = 1, QA_MP
                 qtrc_nw(k,iq) = QTRC_in(k,i,j,iq)
              end do
+!             do iq = 1, QA
+!                qtrc_nw(k,iq) = QTRC_in(k,i,j,iq)
+!             end do
              dens_nw(k) = DENS(k,i,j)
           enddo
 
@@ -767,7 +783,10 @@ contains
           do k=k_top+1, KE
              DENS_t_CP(k,i,j) = 0.0_RP
              RHOT_t_CP(k,i,j) = 0.0_RP
-             do iq = QS_MP, QE_MP
+!             do iq = QS_MP, QE_MP
+!                RHOQ_t_CP(k,i,j,iq) = 0.0_RP
+!             end do
+             do iq = 1, QA_MP
                 RHOQ_t_CP(k,i,j,iq) = 0.0_RP
              end do
           end do

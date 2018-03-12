@@ -136,7 +136,10 @@ contains
        MOMX_t => MOMX_tp, &
        MOMY_t => MOMY_tp, &
        RHOT_t => RHOT_tp, &
-       RHOQ_t => RHOQ_tp
+       RHOQ_t => RHOQ_tp, &
+       U,                 &
+       V,                 &
+       W
     use mod_atmos_phy_cp_vars, only: &
        DENS_t_CP      => ATMOS_PHY_CP_DENS_t,         &
        MOMZ_t_CP      => ATMOS_PHY_CP_MOMZ_t,         &
@@ -162,8 +165,8 @@ contains
 
     ! temporal running mean of vertical velocity
     call ATMOS_PHY_CP_common_wmean( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
-                                    DENS(:,:,:),   & ! [IN]
-                                    MOMZ(:,:,:),   & ! [IN]
+!                                    DENS(:,:,:),   & ! [IN]
+                                    W(:,:,:),   & ! [IN]
                                     w0mean(:,:,:)  ) ! [INOUT]
     call FILE_HISTORY_in( w0mean(:,:,:), 'w0mean', 'running mean vertical wind velocity', 'kg/m2/s', fill_halo=.true. )
 
@@ -182,14 +185,14 @@ contains
                           MOMX_t_CP(:,:,:),        & ! [INOUT]
                           MOMY_t_CP(:,:,:),        & ! [INOUT]
                           RHOT_t_CP(:,:,:),        & ! [INOUT]
-                          RHOQ_t_CP(:,:,:,:),      & ! [INOUT]
-                          MFLX_cloudbase(:,:),     & ! [INOUT]
-                          SFLX_rain(:,:),          & ! [OUT]
-                          cloudtop(:,:),           & ! [OUT]
-                          cloudbase(:,:),          & ! [OUT]
-                          cldfrac_dp(:,:,:),       & ! [OUT]
-                          cldfrac_sh(:,:,:),       & ! [OUT]
-                          kf_nca(:,:)              ) ! [OUT]
+                          RHOQ_t_CP(:,:,:,QS_MP:QE_MP), & ! [INOUT]
+                          MFLX_cloudbase(:,:),          & ! [INOUT]
+                          SFLX_rain(:,:),               & ! [OUT]
+                          cloudtop(:,:),                & ! [OUT]
+                          cloudbase(:,:),               & ! [OUT]
+                          cldfrac_dp(:,:,:),            & ! [OUT]
+                          cldfrac_sh(:,:,:),            & ! [OUT]
+                          kf_nca(:,:)                   ) ! [OUT]
 
        ! tentative reset
 !OCL XFILL

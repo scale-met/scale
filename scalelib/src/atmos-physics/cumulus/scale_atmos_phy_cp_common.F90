@@ -97,8 +97,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_CP_common_wmean( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS,    &
-       MOMZ,    &
+       W,       &
        W0_mean  )
     use scale_time , only :&
        TIME_DTSEC,             &
@@ -108,11 +107,11 @@ contains
     integer,  intent(in)    :: IA, IS, IE
     integer,  intent(in)    :: JA, JS, JE
 
-    real(RP), intent(in)    :: DENS   (KA,IA,JA)
-    real(RP), intent(in)    :: MOMZ   (KA,IA,JA)
+    real(RP), intent(in)    :: W(KA,IA,JA)
+!    real(RP), intent(in)    :: MOMZ   (KA,IA,JA)
     real(RP), intent(inout) :: W0_mean(KA,IA,JA)
 
-    real(RP) :: W0
+!    real(RP) :: W0
     real(RP) :: fact_W0_mean, fact_W0
 
     integer :: k, i, j
@@ -129,10 +128,10 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       W0 = 0.5_RP * ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) / DENS(k,i,j)
+!       W0 = 0.5_RP * ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) / DENS(k,i,j)
 
        W0_mean(k,i,j) = ( W0_mean(k,i,j) * fact_W0_mean &
-                        + W0             * fact_W0      ) / ( fact_W0_mean + fact_W0 )
+                        + W(k,i,j)       * fact_W0      ) / ( fact_W0_mean + fact_W0 )
     enddo
     enddo
     enddo
