@@ -917,14 +917,6 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(SBM Mixed phase)'
     endif
 
-    if ( MP_donegative_fixer ) then
-       call MP_negative_fixer( DENS(:,:,:),      & ! [INOUT]
-                               RHOT(:,:,:),      & ! [INOUT]
-                               QTRC(:,:,:,:),    & ! [INOUT]
-                               I_QV,             & ! [IN]
-                               MP_limit_negative ) ! [IN]
-    endif
-
     call PROF_rapstart('MP_ijkconvert', 3)
 
     ! Clear EVAPORATE
