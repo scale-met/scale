@@ -167,7 +167,7 @@ contains
                                                                           + 2 : )                         ) ! [IN]
           end if
 
-          QA_MP = ATMOS_PHY_MP_suzuki10_ntracers - ATMOS_PHY_MP_suzuki10_nccn
+          QA_MP = ATMOS_PHY_MP_suzuki10_ntracers
        case default
           call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
           QA_MP = QA_MP_obsolute
@@ -416,6 +416,10 @@ contains
        QHE,   &
        QLA,   &
        QIA
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_rhoe,       &
+       ATMOS_THERMODYN_rhot,       &
+       ATMOS_THERMODYN_temp_pres_E
     use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP
     use scale_atmos_phy_mp_common, only: &
@@ -537,6 +541,15 @@ contains
 
     integer :: k, i, j, iq
     integer :: step
+
+    ! tentative for suzuki10
+    real(RP) :: FLX_hydro_3D(KA,IA,JA,QA-1)
+    real(RP) :: pflux       (KA,IA,JA,QA-1)
+    real(RP) :: RHOE_3D     (KA,IA,JA)
+    real(RP) :: RHOT2       (KA,IA,JA)
+    real(RP) :: vterm_3D    (KA,IA,JA,QS_MP+1:QE_MP)
+    real(RP) :: QTRC2       (KA,IA,JA,QA)
+    integer  :: m, n
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
@@ -653,14 +666,6 @@ contains
        case ( 'SUZUKI10' )
 
 !OCL XFILL
-          DENS1(:,:,:) = DENS(:,:,:) ! save
-!OCL XFILL
-          MOMZ1(:,:,:) = MOMZ(:,:,:) ! save
-!OCL XFILL
-          MOMX1(:,:,:) = MOMX(:,:,:) ! save
-!OCL XFILL
-          MOMY1(:,:,:) = MOMY(:,:,:) ! save
-!OCL XFILL
           RHOT1(:,:,:) = RHOT(:,:,:) ! save
 !OCL XFILL
           QTRC1(:,:,:,:) = QTRC(:,:,:,:) ! save
@@ -670,44 +675,35 @@ contains
                                                  JA, JSB, JEB,       & ! [IN]
                                                  KIJMAX,             & ! [IN]
                                                  CCN      (:,:,:),   & ! [IN] 
-                                                 DENS1    (:,:,:),   & ! [INOUT]
-                                                 MOMZ1    (:,:,:),   & ! [INOUT]
-                                                 MOMX1    (:,:,:),   & ! [INOUT]
-                                                 MOMY1    (:,:,:),   & ! [INOUT]
+                                                 DENS     (:,:,:),   & ! [IN]
                                                  RHOT1    (:,:,:),   & ! [INOUT]
                                                  QTRC1    (:,:,:,:), & ! [INOUT]
-                                                 EVAPORATE(:,:,:),   & ! [OUT]
-                                                 SFLX_rain(:,:),     & ! [OUT]
-                                                 SFLX_snow(:,:)      ) ! [OUT]
+                                                 EVAPORATE(:,:,:)    ) ! [OUT]
+
 !OCL XFILL
-          !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-          !$omp shared(JSB,JEB,ISB,IEB,KS,KE,DENS_t_MP,DENS1,DENS,MOMZ_t_MP,MOMZ1,MOMZ,MOMX_t_MP,MOMX1) &
-          !$omp shared(MOMX,MOMY_t_MP,MOMY1,MOMY,RHOT_t_MP,RHOT1,RHOT,dt_MP)
-          do j = JSB, JEB
-          do i = ISB, IEB
-          do k = KS, KE
-             DENS_t_MP(k,i,j) = ( DENS1(k,i,j) - DENS(k,i,j) ) / dt_MP
-             MOMZ_t_MP(k,i,j) = ( MOMZ1(k,i,j) - MOMZ(k,i,j) ) / dt_MP
-             MOMX_t_MP(k,i,j) = ( MOMX1(k,i,j) - MOMX(k,i,j) ) / dt_MP
-             MOMY_t_MP(k,i,j) = ( MOMY1(k,i,j) - MOMY(k,i,j) ) / dt_MP
-             RHOT_t_MP(k,i,j) = ( RHOT1(k,i,j) - RHOT(k,i,j) ) / dt_MP
-          enddo
-          enddo
-          enddo
-!OCL XFILL
-          do iq = QS_MP, QE_MP
-          !$omp parallel do default(none) &
-          !$omp shared(JSB,JEB,ISB,IEB,KS,KE,RHOQ_t_MP,iq,QTRC1,QTRC,DENS1,DENS,dt_MP) &
-          !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JSB, JEB
-          do i = ISB, IEB
-          do k = KS, KE
-             RHOQ_t_MP(k,i,j,iq) = ( QTRC1(k,i,j,iq) * DENS1(k,i,j) &
-                                   - QTRC (k,i,j,iq) * DENS (k,i,j) ) / dt_MP
-          enddo
-          enddo
-          enddo
-          enddo
+          !!$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+          !!$omp shared(JSB,JEB,ISB,IEB,KS,KE,DENS_t_MP,DENS1,DENS,MOMZ_t_MP,MOMZ1,MOMZ,MOMX_t_MP,MOMX1) &
+          !!$omp shared(MOMX,MOMY_t_MP,MOMY1,MOMY,RHOT_t_MP,RHOT1,RHOT,dt_MP)
+          !do j = JSB, JEB
+          !do i = ISB, IEB
+          !do k = KS, KE
+          !   RHOT_t_MP(k,i,j) = ( RHOT1(k,i,j) - RHOT(k,i,j) ) / dt_MP
+          !enddo
+          !enddo
+          !enddo
+!OCL XFILL!
+          !do iq = QS_MP, QE_MP
+          !!$omp parallel do default(none) &
+          !!$omp shared(JSB,JEB,ISB,IEB,KS,KE,RHOQ_t_MP,iq,QTRC1,QTRC,DENS1,DENS,dt_MP) &
+          !!$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !do j = JSB, JEB
+          !do i = ISB, IEB
+          !do k = KS, KE
+          !   RHOQ_t_MP(k,i,j,iq) = ( QTRC1(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_MP
+          !enddo
+          !enddo
+          !enddo
+          !enddo
 
           integ_precip = .false.
 
@@ -774,6 +770,127 @@ contains
        if ( MP_do_precipitation ) then
 
           call PROF_rapstart('MP_Precipitation', 2)
+
+          if( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
+!OCL XFILL
+             DENS1(:,:,:) = DENS(:,:,:) ! save
+!OCL XFILL
+             MOMZ1(:,:,:) = MOMZ(:,:,:) ! save
+!OCL XFILL
+             MOMX1(:,:,:) = MOMX(:,:,:) ! save
+!OCL XFILL
+             MOMY1(:,:,:) = MOMY(:,:,:) ! save
+!OCL XFILL
+             RHOT2(:,:,:) = RHOT1(:,:,:) ! save
+!OCL XFILL
+             QTRC2(:,:,:,:) = QTRC1(:,:,:,:) ! save
+
+             call ATMOS_PHY_MP_suzuki10_terminal_velocity( &
+                  KA,        & ! [IN]
+                  vterm(:,:) ) ! [OUT]
+
+             do j = 1, JA
+             do i = 1, IA
+                vterm_3D(:,i,j,:) = vterm(:,:)
+             enddo
+             enddo
+             FLX_hydro_3D(:,:,:,:) = 0.0_RP
+
+             call ATMOS_THERMODYN_rhoe( RHOE_3D(:,:,:), & ! [OUT]
+                                        RHOT2(:,:,:),   & ! [IN]
+                                        QTRC2(:,:,:,:), & ! [IN]
+                                        TRACER_CV(:),   & ! [IN]
+                                        TRACER_R(:),    & ! [IN]
+                                        TRACER_MASS(:)  ) ! [IN]
+
+             do step = 1, MP_NSTEP_SEDIMENTATION
+
+                call ATMOS_THERMODYN_temp_pres_E( temp(:,:,:),    & ! [OUT]
+                                                  pres(:,:,:),    & ! [OUT]
+                                                  DENS(:,:,:),    & ! [IN]
+                                                  RHOE_3D(:,:,:), & ! [IN]
+                                                  QTRC2(:,:,:,:), & ! [IN]
+                                                  TRACER_CV(:),   & ! [IN]
+                                                  TRACER_R(:),    & ! [IN]
+                                                  TRACER_MASS(:)  ) ! [IN]
+
+                call ATMOS_PHY_MP_precipitation( QA_MP,                 & ! [IN]
+                                                 QS_MP,                 & ! [IN]
+                                                 pflux    (:,:,:,:),    & ! [OUT]
+                                                 vterm_3D (:,:,:,:),    & ! [INOUT]
+                                                 DENS1     (:,:,:),     & ! [INOUT]
+                                                 MOMZ1     (:,:,:),     & ! [INOUT]
+                                                 MOMX1     (:,:,:),     & ! [INOUT]
+                                                 MOMY1     (:,:,:),     & ! [INOUT]
+                                                 RHOE_3D  (:,:,:),      & ! [INOUT]
+                                                 QTRC2    (:,:,:,:),    & ! [INOUT]
+                                                 temp     (:,:,:),      & ! [IN]
+                                                 TRACER_CV(:),          & ! [IN]
+                                                 MP_DTSEC_SEDIMENTATION ) ! [IN]
+
+                do iq = 1, QA-1
+                do j  = JS, JE
+                do i  = IS, IE
+                do k  = KS-1, KE-1
+                   FLX_hydro_3D(k,i,j,iq) = FLX_hydro_3D(k,i,j,iq) + pflux(k,i,j,iq) * MP_RNSTEP_SEDIMENTATION
+                enddo
+                enddo
+                enddo
+                enddo
+
+             enddo
+
+             call ATMOS_THERMODYN_rhot( RHOT2(:,:,:),   & ! [OUT]
+                                        RHOE_3D(:,:,:), & ! [IN]
+                                        QTRC2(:,:,:,:), & ! [IN]
+                                        TRACER_CV(:),   & ! [IN]
+                                        TRACER_R(:),    & ! [IN]
+                                        TRACER_MASS(:)  ) ! [IN]
+             do j = JSB, JEB
+             do i = ISB, IEB
+             do k = KS, KE
+                DENS_t_MP(k,i,j) = ( DENS1(k,i,j) - DENS(k,i,j) ) / dt_MP
+                MOMZ_t_MP(k,i,j) = ( MOMZ1(k,i,j) - MOMZ(k,i,j) ) / dt_MP
+                MOMX_t_MP(k,i,j) = ( MOMX1(k,i,j) - MOMX(k,i,j) ) / dt_MP
+                MOMY_t_MP(k,i,j) = ( MOMY1(k,i,j) - MOMY(k,i,j) ) / dt_MP
+                RHOT_t_MP(k,i,j) = ( RHOT2(k,i,j) - RHOT(k,i,j) ) / dt_MP
+                do iq = QS_MP, QE_MP
+                   RHOQ_t_MP(k,i,j,iq) = ( QTRC2(k,i,j,iq) * DENS1(k,i,j) &
+                                         - QTRC (k,i,j,iq) * DENS (k,i,j) ) / dt_MP
+                enddo
+             enddo
+             enddo
+             enddo
+
+             SFLX_rain(:,:) = 0.0_RP
+             SFLX_snow(:,:) = 0.0_RP
+
+             !--- lowermost flux is saved for land process
+             do n = 1, ATMOS_PHY_MP_suzuki10_nbin
+                iq = n
+
+                do j  = JS, JE
+                do i  = IS, IE
+                   SFLX_rain(i,j) = SFLX_rain(i,j) - FLX_hydro_3D(KS-1,i,j,iq)
+                enddo
+                enddo
+             enddo
+
+             if ( ATMOS_PHY_MP_suzuki10_nspc > 1 ) then
+                do m = ATMOS_PHY_MP_suzuki10_ic, ATMOS_PHY_MP_suzuki10_ih
+                do n = 1, ATMOS_PHY_MP_suzuki10_nbin
+                   iq = (m-1)*ATMOS_PHY_MP_suzuki10_nbin + n
+
+                   do j  = JS, JE
+                   do i  = IS, IE
+                      SFLX_snow(i,j) = SFLX_snow(i,j) - FLX_hydro_3D(KS-1,i,j,iq)
+                   enddo
+                   enddo
+                enddo
+                enddo
+             endif
+
+          endif
 
           ! prepare for history output
           hist_vterm_idx(:) = -1
@@ -851,8 +968,6 @@ contains
                 !case ( 'SUZUKI10' )
                 !   call ATMOS_PHY_MP_suzuki10_terminal_velocity( &
                 !        KA,        & ! [IN]
-                !        QS_MP,     & ! [IN]
-                !        QE_MP,     & ! [IN]
                 !        vterm(:,:) ) ! [OUT]
                 case default
                    vterm(:,:) = 0.0_RP ! tentative

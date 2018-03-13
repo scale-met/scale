@@ -825,14 +825,9 @@ contains
        KIJMAX,     &
        CCN,        &
        DENS,       &
-       MOMZ,       &
-       MOMX,       &
-       MOMY,       &
        RHOT,       &
        QTRC,       &
-       EVAPORATE,  &
-       SFLX_rain,  &
-       SFLX_snow   )
+       EVAPORATE   )
     use scale_const, only: &
        EPS => CONST_EPS, &
        CONST_TEM00
@@ -846,16 +841,11 @@ contains
        I_QV
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd          => ATMOS_THERMODYN_qd,         &
-       THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,       &
-       THERMODYN_rhot        => ATMOS_THERMODYN_rhot,       &
        THERMODYN_pott        => ATMOS_THERMODYN_pott,       &
-       THERMODYN_temp_pres   => ATMOS_THERMODYN_temp_pres,  &
-       THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
+       THERMODYN_temp_pres   => ATMOS_THERMODYN_temp_pres
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_pres2qsat_liq, &
        ATMOS_SATURATION_pres2qsat_ice
-    use scale_atmos_phy_mp_common, only: &
-       MP_precipitation  => ATMOS_PHY_MP_precipitation
     implicit none
 
     integer, intent(in) :: KA, KS, KE
@@ -863,18 +853,13 @@ contains
     integer, intent(in) :: JA, JS, JE
     integer, intent(in) :: KIJMAX
 
-    real(RP), intent(in)    :: CCN(KA,IA,JA)
+    real(RP), intent(in) :: CCN(KA,IA,JA)
+    real(RP), intent(in) :: DENS(KA,IA,JA)
 
-    real(RP), intent(inout) :: DENS(KA,IA,JA)
-    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
-    real(RP), intent(inout) :: MOMX(KA,IA,JA)
-    real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
 
     real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
-    real(RP), intent(out)   :: SFLX_rain(IA,JA)
-    real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
     real(RP) :: RHOE (KA,IA,JA)
     real(RP) :: POTT (KA,IA,JA)
@@ -910,9 +895,6 @@ contains
 !    real(RP) :: SFLX_AERO(IA,JA,nccn)
 !    real(RP) :: Uabs, bparam
 !    real(RP) :: AMR(KA,IA,JA)
-
-    real(RP) :: pflux    (KA,IA,JA,QA-1) ! precipitation flux of each tracer [kg/m2/s]
-    real(RP) :: FLX_hydro(KA,IA,JA,QA-1)
 
     integer  :: step
     integer  :: k, i, j, m, n, iq
@@ -1247,110 +1229,22 @@ contains
 
     endif
 
-    FLX_hydro(:,:,:,:) = 0.0_RP
-
-    if ( MP_doprecipitation ) then
-
-       call THERMODYN_rhoe( RHOE(:,:,:),   & ! [OUT]
-                            RHOT(:,:,:),   & ! [IN]
-                            QTRC(:,:,:,:), & ! [IN]
-                            TRACER_CV(:),  & ! [IN]
-                            TRACER_R(:),   & ! [IN]
-                            TRACER_MASS(:) ) ! [IN]
-
-       do step = 1, MP_NSTEP_SEDIMENTATION
-
-          call THERMODYN_temp_pres_E( temp(:,:,:),   & ! [OUT]
-                                      pres(:,:,:),   & ! [OUT]
-                                      DENS(:,:,:),   & ! [IN]
-                                      RHOE(:,:,:),   & ! [IN]
-                                      QTRC(:,:,:,:), & ! [IN]
-                                      TRACER_CV(:),  & ! [IN]
-                                      TRACER_R(:),   & ! [IN]
-                                      TRACER_MASS(:) ) ! [IN]
-
-          call MP_precipitation( QA,                 & ! [IN]
-                                 QS,                 & ! [IN]
-                                 pflux    (:,:,:,:),    & ! [OUT]
-                                 vterm    (:,:,:,:),    & ! [INOUT]
-                                 DENS     (:,:,:),      & ! [INOUT]
-                                 MOMZ     (:,:,:),      & ! [INOUT]
-                                 MOMX     (:,:,:),      & ! [INOUT]
-                                 MOMY     (:,:,:),      & ! [INOUT]
-                                 RHOE     (:,:,:),      & ! [INOUT]
-                                 QTRC     (:,:,:,:),    & ! [INOUT]
-                                 temp     (:,:,:),      & ! [IN]
-                                 TRACER_CV(:),          & ! [IN]
-                                 MP_DTSEC_SEDIMENTATION ) ! [IN]
-
-          do iq = 1, QA-1
-          do j  = JS, JE
-          do i  = IS, IE
-          do k  = KS-1, KE-1
-             FLX_hydro(k,i,j,iq) = FLX_hydro(k,i,j,iq) + pflux(k,i,j,iq) * MP_RNSTEP_SEDIMENTATION
-          enddo
-          enddo
-          enddo
-          enddo
-
-       enddo
-
-       call THERMODYN_rhot( RHOT(:,:,:),   & ! [OUT]
-                            RHOE(:,:,:),   & ! [IN]
-                            QTRC(:,:,:,:), & ! [IN]
-                            TRACER_CV(:),  & ! [IN]
-                            TRACER_R(:),   & ! [IN]
-                            TRACER_MASS(:) ) ! [IN]
-    endif
-
-    SFLX_rain(:,:) = 0.0_RP
-    SFLX_snow(:,:) = 0.0_RP
-
-    !--- lowermost flux is saved for land process
-    do n = 1, nbin
-       iq = n
-
-       do j  = JS, JE
-       do i  = IS, IE
-          SFLX_rain(i,j) = SFLX_rain(i,j) - FLX_hydro(KS-1,i,j,iq)
-       enddo
-       enddo
-    enddo
-
-    if ( nspc > 1 ) then
-       do m = ic, ih
-       do n = 1, nbin
-          iq = (m-1)*nbin + n
-
-          do j  = JS, JE
-          do i  = IS, IE
-             SFLX_snow(i,j) = SFLX_snow(i,j) - FLX_hydro(KS-1,i,j,iq)
-          enddo
-          enddo
-       enddo
-       enddo
-    endif
-
     return
   end subroutine ATMOS_PHY_MP_suzuki10_adjustment
 
   !-----------------------------------------------------------------------------
   !> get terminal velocity
   subroutine ATMOS_PHY_MP_suzuki10_terminal_velocity( &
-       KA,      &
-       QS_MP,   &
-       QE_MP,   &
-       vterm_MP )
+       KA,     &
+       vterm_o )
     implicit none
 
     integer, intent(in) :: KA
-    integer, intent(in) :: QS_MP
-    integer, intent(in) :: QE_MP
 
-    real(RP), intent(out) :: vterm_MP(KA,QS_MP+1:QE_MP)
+    real(RP), intent(out) :: vterm_o(KA,QA-1)
     !---------------------------------------------------------------------------
 
-    vterm_MP(:,:) = vterm(:,1,1,QS_MP+1:QE_MP)
+    vterm_o(:,:) = vterm(:,1,1,:)
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_terminal_velocity
