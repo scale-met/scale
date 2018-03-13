@@ -281,7 +281,7 @@ contains
                KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB )
        case ( 'SUZUKI10' )
           call ATMOS_PHY_MP_suzuki10_setup( &
-               KA, IA, JA, CDZ )
+               KA, IA, JA )
        case default
           ! setup library component
           call ATMOS_PHY_MP_setup
