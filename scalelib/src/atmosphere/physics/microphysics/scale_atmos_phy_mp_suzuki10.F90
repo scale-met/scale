@@ -161,7 +161,6 @@ module scale_atmos_phy_mp_suzuki10
   integer, parameter   :: I_mp_QH  = 7
 
   logical  :: MP_doautoconversion = .true.  ! apply collision process ?
-  logical  :: MP_doprecipitation  = .true.  ! apply sedimentation of hydrometeor ?
   logical  :: MP_couple_aerosol   = .false. ! apply CCN effect?
 
 
@@ -205,10 +204,6 @@ module scale_atmos_phy_mp_suzuki10
 
   real(RP), allocatable, save :: vterm( :,:,:,: ) !--- terminal velocity
 
-  integer,  save :: MP_NSTEP_SEDIMENTATION     !--- number of fractional step for sedimentation
-  real(RP), save :: MP_RNSTEP_SEDIMENTATION    !--- 1/MP_NSTEP_SEDIMENTATION
-  real(DP), save :: MP_DTSEC_SEDIMENTATION     !--- DT for sedimentation
-  integer,  save :: MP_ntmax_sedimentation = 1 !--- maxinum fractional step
   real(RP)       :: flg_thermodyn              !--- flg for lhv and lhs (0 -> SIMPLE, 1 -> EXACT )
   real(RP)       :: RTEM00                     !--- 1/CONST_TEM00
 
@@ -389,8 +384,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_MP_suzuki10_setup( &
-       KA, IA, JA, &
-       CDZ         )
+       KA, IA, JA )
     use scale_process, only: &
        PRC_MPIstop,    &
        PRC_masterrank, &
@@ -404,8 +398,6 @@ contains
     use scale_comm, only: &
        COMM_world,    &
        COMM_datatype
-    use scale_time, only: &
-       TIME_DTSEC_ATMOS_PHY_MP
     use scale_atmos_hydrometeor, only: &
        I_HC, &
        I_HR, &
@@ -418,8 +410,6 @@ contains
     integer, intent(in) :: KA
     integer, intent(in) :: IA
     integer, intent(in) :: JA
-
-    real(RP), intent(in) :: CDZ(:)
 
     real(RP) :: RHO_AERO  !--- density of aerosol
     real(RP) :: R0_AERO   !--- center radius of aerosol (um)
@@ -436,8 +426,6 @@ contains
     integer :: S10_RNDM_MBIN
 
     NAMELIST / PARAM_ATMOS_PHY_MP_SUZUKI10 / &
-       MP_doprecipitation,     &
-       MP_ntmax_sedimentation, &
        MP_doautoconversion,    &
        MP_couple_aerosol,      &
        RHO_AERO,  &
@@ -457,7 +445,6 @@ contains
 
     real(RP), parameter :: max_term_vel = 10.0_RP !-- terminal velocity for calculate dt of sedimentation
 
-    integer :: nstep_max
     integer :: nnspc, nnbin
     integer :: nn, mm, mmyu, nnyu
     integer :: myu, nyu, i, j, k, n, ierr
@@ -801,17 +788,6 @@ contains
     endif
     RTEM00 = 1.0_RP / CONST_TEM00
 
-    nstep_max = int ( ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ(:) ) )
-    MP_ntmax_sedimentation = max( MP_ntmax_sedimentation, nstep_max )
-
-    MP_NSTEP_SEDIMENTATION  = MP_ntmax_sedimentation
-    MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(MP_ntmax_sedimentation,kind=RP)
-    MP_DTSEC_SEDIMENTATION  = TIME_DTSEC_ATMOS_PHY_MP * MP_RNSTEP_SEDIMENTATION
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Timestep of sedimentation is divided into : ', MP_ntmax_sedimentation, ' step'
-    if( IO_L ) write(IO_FID_LOG,*) '*** DT of sedimentation is : ', MP_DTSEC_SEDIMENTATION, '[s]'
-
     return
 
   end subroutine ATMOS_PHY_MP_suzuki10_setup
@@ -823,29 +799,21 @@ contains
        IA, IS, IE, &
        JA, JS, JE, &
        KIJMAX,     &
-       CCN,        &
+       dt,         &
        DENS,       &
-       RHOT,       &
+       PRES,       &
+       QDRY,       &
+       QSAT_L,     &
+       QSAT_I,     &
+       CCN,        &
+       TEMP,       &
        QTRC,       &
        EVAPORATE   )
     use scale_const, only: &
        EPS => CONST_EPS, &
        CONST_TEM00
-    use scale_time, only: &
-       dt => TIME_DTSEC_ATMOS_PHY_MP
-    use scale_tracer, only: &
-       TRACER_R, &
-       TRACER_CV, &
-       TRACER_MASS
     use scale_atmos_hydrometeor, only: &
        I_QV
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd          => ATMOS_THERMODYN_qd,         &
-       THERMODYN_pott        => ATMOS_THERMODYN_pott,       &
-       THERMODYN_temp_pres   => ATMOS_THERMODYN_temp_pres
-    use scale_atmos_saturation, only: &
-       ATMOS_SATURATION_pres2qsat_liq, &
-       ATMOS_SATURATION_pres2qsat_ice
     implicit none
 
     integer, intent(in) :: KA, KS, KE
@@ -853,20 +821,19 @@ contains
     integer, intent(in) :: JA, JS, JE
     integer, intent(in) :: KIJMAX
 
-    real(RP), intent(in) :: CCN(KA,IA,JA)
-    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(DP), intent(in) :: dt
+    real(RP), intent(in) :: DENS  (KA,IA,JA)
+    real(RP), intent(in) :: PRES  (KA,IA,JA)
+    real(RP), intent(in) :: QDRY  (KA,IA,JA)
+    real(RP), intent(in) :: QSAT_L(KA,IA,JA)
+    real(RP), intent(in) :: QSAT_I(KA,IA,JA)
+    real(RP), intent(in) :: CCN   (KA,IA,JA)
 
-    real(RP), intent(inout) :: RHOT(KA,IA,JA)
+    real(RP), intent(inout) :: TEMP(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
 
-    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
+    real(RP), intent(out) :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
 
-    real(RP) :: RHOE (KA,IA,JA)
-    real(RP) :: POTT (KA,IA,JA)
-    real(RP) :: TEMP (KA,IA,JA)
-    real(RP) :: PRES (KA,IA,JA)
-    real(RP) :: Qdry (KA,IA,JA)
-    real(RP) :: qsat (KA,IA,JA)
     real(RP) :: ssliq(KA,IA,JA)
     real(RP) :: ssice(KA,IA,JA)
 
@@ -906,70 +873,18 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(SBM Mixed phase)'
     endif
 
-    call PROF_rapstart('MP_ijkconvert', 3)
-
-    ! Clear EVAPORATE
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
        EVAPORATE(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
-
-    ijk = 0
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       ijk = ijk + 1
-       ijk_index(ijk,1) = i
-       ijk_index(ijk,2) = j
-       ijk_index(ijk,3) = k
-    enddo
-    enddo
-    enddo
-
-    call THERMODYN_qd( QDRY(:,:,:),                  & ! [OUT]
-                       QTRC(:,:,:,:), TRACER_MASS(:) ) ! [IN]
-
-    call THERMODYN_temp_pres( TEMP(:,:,:),   & ! [OUT]
-                              PRES(:,:,:),   & ! [OUT]
-                              DENS(:,:,:),   & ! [IN]
-                              RHOT(:,:,:),   & ! [IN]
-                              QTRC(:,:,:,:), & ! [IN]
-                              TRACER_CV(:),  & ! [IN]
-                              TRACER_R(:),   & ! [IN]
-                              TRACER_MASS(:) ) ! [IN]
-
-    call ATMOS_SATURATION_pres2qsat_liq( KA, KS, KE, & ! [IN]
-                                         IA, IS, IE, & ! [IN]
-                                         JA, JS, JE, & ! [IN]
-                                         TEMP(:,:,:), PRES(:,:,:), QDRY(:,:,:), & ! [IN]
-                                         qsat(:,:,:)                            ) ! [OUT]
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       ssliq(k,i,j) = QTRC(k,i,j,I_QV) / qsat(k,i,j) - 1.0_RP
+       ssliq(k,i,j) = QTRC(k,i,j,I_QV) / QSAT_L(k,i,j) - 1.0_RP
+       ssice(k,i,j) = QTRC(k,i,j,I_QV) / QSAT_I(k,i,j) - 1.0_RP
     enddo
     enddo
     enddo
 
     if ( nspc == 1 ) then
        ssice(:,:,:) = 0.0_RP
-    else
-       call ATMOS_SATURATION_pres2qsat_ice( KA, KS, KE, & ! [IN]
-                                            IA, IS, IE, & ! [IN]
-                                            JA, JS, JE, & ! [IN]
-                                            TEMP(:,:,:), PRES(:,:,:), QDRY(:,:,:), & ! [IN]
-                                            qsat(:,:,:)                            ) ! [OUT]
-
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          ssice(k,i,j) = QTRC(k,i,j,I_QV) / qsat(k,i,j) - 1.0_RP
-       enddo
-       enddo
-       enddo
     endif
 
 !--- store initial SDF of aerosol
@@ -994,6 +909,21 @@ contains
 !    endif
 
     !--- Arrange array for microphysics
+
+    call PROF_rapstart('MP_ijkconvert', 3)
+
+    ijk = 0
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       ijk = ijk + 1
+       ijk_index(ijk,1) = i
+       ijk_index(ijk,2) = j
+       ijk_index(ijk,3) = k
+    enddo
+    enddo
+    enddo
+
     ijkcount = 0
     ijkcount_cold = 0
     ijkcount_warm = 0
@@ -1192,22 +1122,6 @@ contains
           countbin = countbin + 1
        enddo
        enddo
-    enddo
-    enddo
-    enddo
-
-    call THERMODYN_pott( POTT(:,:,:),   & ! [OUT]
-                         TEMP(:,:,:),   & ! [IN]
-                         PRES(:,:,:),   & ! [IN]
-                         QTRC(:,:,:,:), & ! [IN]
-                         TRACER_CV(:),  & ! [IN]
-                         TRACER_R(:),   & ! [IN]
-                         TRACER_MASS(:) ) ! [IN]
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       RHOT(k,i,j) = POTT(k,i,j) * DENS(k,i,j)
     enddo
     enddo
     enddo

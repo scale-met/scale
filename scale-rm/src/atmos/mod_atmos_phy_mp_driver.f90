@@ -417,9 +417,15 @@ contains
        QLA,   &
        QIA
     use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_qd,         &
        ATMOS_THERMODYN_rhoe,       &
        ATMOS_THERMODYN_rhot,       &
+       ATMOS_THERMODYN_pott,       &
+       ATMOS_THERMODYN_temp_pres,  &
        ATMOS_THERMODYN_temp_pres_E
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_pres2qsat_liq, &
+       ATMOS_SATURATION_pres2qsat_ice
     use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP
     use scale_atmos_phy_mp_common, only: &
@@ -438,6 +444,7 @@ contains
        ATMOS_PHY_MP_suzuki10_nbnd, &
        ATMOS_PHY_MP_suzuki10_nspc, &
        ATMOS_PHY_MP_suzuki10_ic,   &
+       ATMOS_PHY_MP_suzuki10_ip,   &
        ATMOS_PHY_MP_suzuki10_id,   &
        ATMOS_PHY_MP_suzuki10_iss,  &
        ATMOS_PHY_MP_suzuki10_ig,   &
@@ -498,9 +505,13 @@ contains
 
     real(RP) :: RHOE_t(KA,IA,JA)
     real(RP) :: TEMP1 (KA,IA,JA)
+    real(RP) :: PRES1 (KA,IA,JA)
     real(RP) :: CPtot1(KA,IA,JA)
     real(RP) :: CVtot1(KA,IA,JA)
     real(RP) :: CCN   (KA,IA,JA)
+    real(RP) :: QDRY  (KA,IA,JA)
+    real(RP) :: QSAT_L(KA,IA,JA)
+    real(RP) :: QSAT_I(KA,IA,JA)
     real(RP) :: QHYD  (KA,IA,JA,6)
     real(RP) :: vterm (KA,QS_MP+1:QE_MP)
 !    real(RP), target :: QTRC1(KA,IA,JA,QS_MP:QA_MP)
@@ -511,6 +522,7 @@ contains
     real(RP) :: MOMX1(KA,IA,JA)
     real(RP) :: MOMY1(KA,IA,JA)
     real(RP) :: RHOT1(KA,IA,JA)
+    real(RP) :: POTT1(KA,IA,JA)
     real(RP), target :: QTRC1(KA,IA,JA,QA)
     logical :: integ_precip = .true.
 
@@ -547,8 +559,8 @@ contains
     real(RP) :: pflux       (KA,IA,JA,QA-1)
     real(RP) :: RHOE_3D     (KA,IA,JA)
     real(RP) :: RHOT2       (KA,IA,JA)
-    real(RP) :: vterm_3D    (KA,IA,JA,QS_MP+1:QE_MP)
     real(RP) :: QTRC2       (KA,IA,JA,QA)
+    real(RP) :: vterm_3D    (KA,IA,JA,QS_MP+1:QE_MP)
     integer  :: m, n
     !---------------------------------------------------------------------------
 
@@ -666,19 +678,62 @@ contains
        case ( 'SUZUKI10' )
 
 !OCL XFILL
-          RHOT1(:,:,:) = RHOT(:,:,:) ! save
-!OCL XFILL
           QTRC1(:,:,:,:) = QTRC(:,:,:,:) ! save
+
+          call ATMOS_THERMODYN_qd( QDRY(:,:,:),                   & ! [OUT]
+                                   QTRC1(:,:,:,:), TRACER_MASS(:) ) ! [IN]
+
+          call ATMOS_THERMODYN_temp_pres( TEMP1(:,:,:),  & ! [OUT]
+                                          PRES1(:,:,:),  & ! [OUT]
+                                          DENS(:,:,:),   & ! [IN]
+                                          RHOT(:,:,:),   & ! [IN]
+                                          QTRC1(:,:,:,:),& ! [IN]
+                                          TRACER_CV(:),  & ! [IN]
+                                          TRACER_R(:),   & ! [IN]
+                                          TRACER_MASS(:) ) ! [IN]
+
+          call ATMOS_SATURATION_pres2qsat_liq( KA, KS, KE, & ! [IN]
+                                               IA, IS, IE, & ! [IN]
+                                               JA, JS, JE, & ! [IN]
+                                               TEMP1(:,:,:), PRES1(:,:,:), QDRY(:,:,:), & ! [IN]
+                                               QSAT_L(:,:,:)                            ) ! [OUT]
+
+          call ATMOS_SATURATION_pres2qsat_ice( KA, KS, KE, & ! [IN]
+                                               IA, IS, IE, & ! [IN]
+                                               JA, JS, JE, & ! [IN]
+                                               TEMP1(:,:,:), PRES1(:,:,:), QDRY(:,:,:), & ! [IN]
+                                               QSAT_I(:,:,:)                            ) ! [OUT]
 
           call ATMOS_PHY_MP_suzuki10_adjustment( KA, KS,  KE,        & ! [IN]
                                                  IA, ISB, IEB,       & ! [IN]
                                                  JA, JSB, JEB,       & ! [IN]
                                                  KIJMAX,             & ! [IN]
-                                                 CCN      (:,:,:),   & ! [IN] 
+                                                 dt_MP,              & ! [IN]
                                                  DENS     (:,:,:),   & ! [IN]
-                                                 RHOT1    (:,:,:),   & ! [INOUT]
+                                                 PRES1    (:,:,:),   & ! [IN]
+                                                 QDRY     (:,:,:),   & ! [IN]
+                                                 QSAT_L   (:,:,:),   & ! [IN]
+                                                 QSAT_I   (:,:,:),   & ! [IN]
+                                                 CCN      (:,:,:),   & ! [IN] 
+                                                 TEMP1    (:,:,:),   & ! [INOUT]
                                                  QTRC1    (:,:,:,:), & ! [INOUT]
                                                  EVAPORATE(:,:,:)    ) ! [OUT]
+
+          call ATMOS_THERMODYN_pott( POTT1(:,:,:),   & ! [OUT]
+                                     TEMP1(:,:,:),   & ! [IN]
+                                     PRES1(:,:,:),   & ! [IN]
+                                     QTRC1(:,:,:,:), & ! [IN]
+                                     TRACER_CV(:),   & ! [IN]
+                                     TRACER_R(:),    & ! [IN]
+                                     TRACER_MASS(:)  ) ! [IN]
+
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             RHOT1(k,i,j) = POTT1(k,i,j) * DENS(k,i,j)
+          enddo
+          enddo
+          enddo
 
 !OCL XFILL
           !!$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
@@ -1092,6 +1147,7 @@ contains
                 do k = KS, KE
                    ! columnar,plate,dendrite = ice
                    QHYD(k,i,j,3) = QHYD(k,i,j,3) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_ic-1 )*ATMOS_PHY_MP_suzuki10_nbin+iq)
+                   QHYD(k,i,j,3) = QHYD(k,i,j,3) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_ip-1 )*ATMOS_PHY_MP_suzuki10_nbin+iq)
                    QHYD(k,i,j,3) = QHYD(k,i,j,3) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_id-1 )*ATMOS_PHY_MP_suzuki10_nbin+iq)
                    QHYD(k,i,j,4) = QHYD(k,i,j,4) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_iss-1)*ATMOS_PHY_MP_suzuki10_nbin+iq)
                    QHYD(k,i,j,5) = QHYD(k,i,j,5) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_ig-1 )*ATMOS_PHY_MP_suzuki10_nbin+iq)
