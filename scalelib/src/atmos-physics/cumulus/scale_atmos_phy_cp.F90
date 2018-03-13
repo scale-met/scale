@@ -29,27 +29,23 @@ module scale_atmos_phy_cp
           JA, JS, JE,     &
           QA_MP, QS_MP, QE_MP, &
           DENS,           &
-!          MOMZ,           &
-!          MOMX,           &
-!          MOMY,           &
-          U,           &
-          V,           &
+          U,              &
+          V,              &
           RHOT,           &
+!         TEMP,           &
+!         PRES,           &
+          QDRY,           &
           QTRC,           &
           w0avg,          &
           DENS_t_CP,      &
-          MOMZ_t_CP,      &
-          MOMX_t_CP,      &
-          MOMY_t_CP,      &
           RHOT_t_CP,      &
           RHOQ_t_CP,      &
-          MFLX_cloudbase, &
           SFLX_convrain,  &
           cloudtop,       &
           cloudbase,      &
           cldfrac_dp,     &
           cldfrac_sh,     &
-          kf_nca          )
+          nca             )
        use scale_file_history, only: &
           FILE_HISTORY_in
        use scale_precision
@@ -70,11 +66,8 @@ module scale_atmos_phy_cp
        use scale_atmos_thermodyn, only: &
           THERMODYN_temp_pres   => ATMOS_THERMODYN_temp_pres,   &
           THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,        &
-          THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E, &
-          THERMODYN_qd          => ATMOS_THERMODYN_qd,          &
           THERMODYN_pott        => ATMOS_THERMODYN_pott
        use scale_atmos_saturation ,only :&
-
        SATURATION_psat_liq => ATMOS_SATURATION_psat_liq
        integer,  intent(in)    :: KA, KS, KE
        integer,  intent(in)    :: IA, IS, IE
@@ -82,27 +75,23 @@ module scale_atmos_phy_cp
        integer,  intent(in)    :: QA_MP, QS_MP, QE_MP
 
        real(RP), intent(in)    :: DENS(KA,IA,JA)
-!       real(RP), intent(in)    :: MOMX(KA,IA,JA)
-!       real(RP), intent(in)    :: MOMY(KA,IA,JA)
-!       real(RP), intent(in)    :: MOMZ(KA,IA,JA)
        real(RP), intent(in)    :: U(KA,IA,JA)
        real(RP), intent(in)    :: V(KA,IA,JA)
        real(RP), intent(in)    :: RHOT(KA,IA,JA)
-       real(RP), intent(in)    :: QTRC(KA,IA,JA,QS_MP:QE_MP)
+!      real(RP), intent(in)    :: TEMP(KA,IA,JA)
+!      real(RP), intent(in)    :: PRES(KA,IA,JA)
+       real(RP), intent(in)    :: QDRY(KA,IA,JA)
+       real(RP), intent(in)    :: QTRC(KA,IA,JA,QA_MP)
        real(RP), intent(in)    :: w0avg(KA,IA,JA)
        real(RP), intent(inout) :: DENS_t_CP(KA,IA,JA)
-       real(RP), intent(inout) :: MOMZ_t_CP(KA,IA,JA)
-       real(RP), intent(inout) :: MOMX_t_CP(KA,IA,JA)
-       real(RP), intent(inout) :: MOMY_t_CP(KA,IA,JA)
        real(RP), intent(inout) :: RHOT_t_CP(KA,IA,JA)
        real(RP), intent(inout) :: RHOQ_t_CP(KA,IA,JA,QA_MP)
-       real(RP), intent(inout) :: MFLX_cloudbase(IA,JA)
-       real(RP), intent(inout) :: SFLX_convrain(IA,JA)
-       real(RP), intent(inout) :: cloudtop(IA,JA)
-       real(RP), intent(inout) :: cloudbase(IA,JA)
-       real(RP), intent(inout) :: cldfrac_dp(KA,IA,JA)
-       real(RP), intent(inout) :: cldfrac_sh(KA,IA,JA)
-       real(RP), intent(inout) :: kf_nca(IA,JA)
+       real(RP), intent(out)   :: SFLX_convrain(IA,JA)
+       real(RP), intent(out)   :: cloudtop(IA,JA)
+       real(RP), intent(out)   :: cloudbase(IA,JA)
+       real(RP), intent(out)   :: cldfrac_dp(KA,IA,JA)
+       real(RP), intent(out)   :: cldfrac_sh(KA,IA,JA)
+       real(RP), intent(out)   :: nca(IA,JA)
      end subroutine cp
   end interface
   procedure(cp), pointer :: ATMOS_PHY_CP => NULL()

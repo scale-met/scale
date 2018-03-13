@@ -139,7 +139,10 @@ contains
        RHOQ_t => RHOQ_tp, &
        U,                 &
        V,                 &
-       W
+       W,                 &
+!      TEMP,              &
+!      PRES,              &
+       QDRY
     use mod_atmos_phy_cp_vars, only: &
        DENS_t_CP      => ATMOS_PHY_CP_DENS_t,         &
        MOMZ_t_CP      => ATMOS_PHY_CP_MOMZ_t,         &
@@ -165,33 +168,24 @@ contains
 
     ! temporal running mean of vertical velocity
     call ATMOS_PHY_CP_common_wmean( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
-!                                    DENS(:,:,:),   & ! [IN]
-                                    W(:,:,:),   & ! [IN]
+                                    W(:,:,:),      & ! [IN]
                                     w0mean(:,:,:)  ) ! [INOUT]
     call FILE_HISTORY_in( w0mean(:,:,:), 'w0mean', 'running mean vertical wind velocity', 'kg/m2/s', fill_halo=.true. )
 
     if ( update_flag ) then ! update
-
-!    if( IO_L ) write(IO_FID_LOG,*) 'CHECKKF: ', maxval(U), maxval(MOMX)
-!    if( IO_L ) write(IO_FID_LOG,*) 'CHECKKF: ', minval(U), minval(MOMX)
-
        call ATMOS_PHY_CP( KA, KS, KE, IA, 1, IA, JA, 1, JA, QA_MP, QS_MP, QE_MP, &
-                          DENS(:,:,:),             & ! [IN]
-!                          MOMZ(:,:,:),             & ! [IN]
-!                          MOMX(:,:,:),             & ! [IN]
-!                          MOMY(:,:,:),             & ! [IN]
-                          U(:,:,:),             & ! [IN]
-                          V(:,:,:),             & ! [IN]
-                          RHOT(:,:,:),             & ! [IN]
-                          QTRC(:,:,:,QS_MP:QE_MP), & ! [IN]
-                          w0mean(:,:,:),           & ! [IN]
-                          DENS_t_CP(:,:,:),        & ! [INOUT]
-                          MOMZ_t_CP(:,:,:),        & ! [INOUT]
-                          MOMX_t_CP(:,:,:),        & ! [INOUT]
-                          MOMY_t_CP(:,:,:),        & ! [INOUT]
-                          RHOT_t_CP(:,:,:),        & ! [INOUT]
+                          DENS(:,:,:),                  & ! [IN]
+                          U(:,:,:),                     & ! [IN]
+                          V(:,:,:),                     & ! [IN]
+                          RHOT(:,:,:),                  & ! [IN]
+!                         TEMP(:,:,:),                  & ! [IN]
+!                         PRES(:,:,:),                  & ! [IN]
+                          QDRY(:,:,:),                  & ! [IN]
+                          QTRC(:,:,:,QS_MP:QE_MP),      & ! [IN]
+                          w0mean(:,:,:),                & ! [IN]
+                          DENS_t_CP(:,:,:),             & ! [INOUT]
+                          RHOT_t_CP(:,:,:),             & ! [INOUT]
                           RHOQ_t_CP(:,:,:,QS_MP:QE_MP), & ! [INOUT]
-                          MFLX_cloudbase(:,:),          & ! [INOUT]
                           SFLX_rain(:,:),               & ! [OUT]
                           cloudtop(:,:),                & ! [OUT]
                           cloudbase(:,:),               & ! [OUT]
@@ -228,7 +222,7 @@ contains
        call FILE_HISTORY_in( cloudbase     (:,:),   'CUBASE',    'CP cloud base height',             'm',       fill_halo=.true. )
        call FILE_HISTORY_in( cldfrac_dp    (:,:,:), 'CUMFRC_DP', 'CP cloud fraction (deep)',         '1',       fill_halo=.true. )
        call FILE_HISTORY_in( cldfrac_sh    (:,:,:), 'CUMFRC_SH', 'CP cloud fraction (shallow)',      '1',       fill_halo=.true. )
-       call FILE_HISTORY_in( kf_nca        (:,:),   'kf_nca',    'advection or cumulus convection timescale for KF', 's',       fill_halo=.true. )
+       call FILE_HISTORY_in( kf_nca        (:,:),   'kf_nca',    'advection or cumulus convection timescale for KF', 's', fill_halo=.true. )
 
        call FILE_HISTORY_in( DENS_t_CP(:,:,:), 'DENS_t_CP', 'tendency DENS in CP', 'kg/m3/s'  , fill_halo=.true. )
        call FILE_HISTORY_in( MOMZ_t_CP(:,:,:), 'MOMZ_t_CP', 'tendency MOMZ in CP', 'kg/m2/s2' , fill_halo=.true. )

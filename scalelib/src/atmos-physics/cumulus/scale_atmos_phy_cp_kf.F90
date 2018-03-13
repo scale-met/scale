@@ -367,21 +367,17 @@ contains
        JA, JS, JE,     &
        QA_MP, QS_MP, QE_MP, &
        DENS,           &
-!       MOMZ,           &
-!       MOMX,           &
-!       MOMY,           &
-       U,           &
-       V,           &
+       U,              &
+       V,              &
        RHOT,           &
+!      TEMP,           &
+!      PRES,           &
+       QDRY,           &
        QTRC_in,        &
        w0avg,          &
        DENS_t_CP,      &
-       MOMZ_t_CP,      &
-       MOMX_t_CP,      &
-       MOMY_t_CP,      &
        RHOT_t_CP,      &
        RHOQ_t_CP,      &
-       MFLX_cloudbase, &
        SFLX_convrain,  &
        cloudtop,       &
        cloudbase,      &
@@ -408,8 +404,6 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres   => ATMOS_THERMODYN_temp_pres,   &
        THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,        &
-       THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E, &
-       THERMODYN_qd          => ATMOS_THERMODYN_qd,          &
        THERMODYN_pott        => ATMOS_THERMODYN_pott
     use scale_atmos_saturation ,only :&
        SATURATION_psat_liq => ATMOS_SATURATION_psat_liq
@@ -419,44 +413,36 @@ contains
     integer,  intent(in)    :: JA, JS, JE
     integer,  intent(in)    :: QA_MP, QS_MP, QE_MP
 
-    real(RP), intent(in)    :: DENS          (KA,IA,JA)
-!    real(RP), intent(in)    :: MOMX          (KA,IA,JA)
-!    real(RP), intent(in)    :: MOMY          (KA,IA,JA)
-!    real(RP), intent(in)    :: MOMZ          (KA,IA,JA)
-    real(RP), intent(in)    :: U          (KA,IA,JA)
-    real(RP), intent(in)    :: V          (KA,IA,JA)
-    real(RP), intent(in)    :: RHOT          (KA,IA,JA)
-!    real(RP), intent(in)    :: QTRC_in       (KA,IA,JA,QS_MP:QE_MP)
-    real(RP), intent(in)    :: QTRC_in       (KA,IA,JA,QA_MP)
-    real(RP), intent(in)    :: w0avg         (KA,IA,JA)    !< running mean of vertical velocity [m/s]
-    real(RP), intent(inout) :: DENS_t_CP     (KA,IA,JA)
-    real(RP), intent(inout) :: MOMZ_t_CP     (KA,IA,JA)    !< not used
-    real(RP), intent(inout) :: MOMX_t_CP     (KA,IA,JA)    !< not used
-    real(RP), intent(inout) :: MOMY_t_CP     (KA,IA,JA)    !< not used
-    real(RP), intent(inout) :: RHOT_t_CP     (KA,IA,JA)
-    real(RP), intent(inout) :: RHOQ_t_CP     (KA,IA,JA,QA_MP)
-    real(RP), intent(inout) :: MFLX_cloudbase(IA,JA)       !< not used
-    real(RP), intent(inout) :: SFLX_convrain (IA,JA)       !< convective rain rate [kg/m2/s]
-    real(RP), intent(inout) :: cloudtop      (IA,JA)       !< cloud top height  [m]
-    real(RP), intent(inout) :: cloudbase     (IA,JA)       !< cloud base height [m]
-    real(RP), intent(inout) :: cldfrac_dp    (KA,IA,JA)    !< cloud fraction (deep convection)
-    real(RP), intent(inout) :: cldfrac_sh    (KA,IA,JA)    !< cloud fraction (shallow convection)
-    real(RP), intent(inout) :: nca           (IA,JA)       !< convection active time [sec]
+    real(RP), intent(in)    :: DENS          (KA,IA,JA)       !< Density [kg/m3]
+    real(RP), intent(in)    :: U             (KA,IA,JA)       !< velocity u [m/s]
+    real(RP), intent(in)    :: V             (KA,IA,JA)       !< velocity v [m/s]
+    real(RP), intent(in)    :: RHOT          (KA,IA,JA)       !< DENS * POTT [K*kg/m3]
+!   real(RP), intent(in)    :: TEMP          (KA,IA,JA)       !< temperature [K]
+!   real(RP), intent(in)    :: PRES          (KA,IA,JA)       !< pressure of dry air [Pa]
+    real(RP), intent(in)    :: QDRY          (KA,IA,JA)       !< dry air [1]
+    real(RP), intent(in)    :: QTRC_in       (KA,IA,JA,QA_MP) !< ratio of mass of tracer to total mass[kg/kg]
+    real(RP), intent(in)    :: w0avg         (KA,IA,JA)       !< running mean of vertical velocity [m/s]
+    real(RP), intent(inout) :: DENS_t_CP     (KA,IA,JA)       !< tendency DENS [kg/m3/s]
+    real(RP), intent(inout) :: RHOT_t_CP     (KA,IA,JA)       !< tendency RHOT [K*kg/m3/s]
+    real(RP), intent(inout) :: RHOQ_t_CP     (KA,IA,JA,QA_MP) !< tendency rho*QTRC [kg/kg/s]
+    real(RP), intent(out)   :: SFLX_convrain (IA,JA)          !< convective rain rate [kg/m2/s]
+    real(RP), intent(out)   :: cloudtop      (IA,JA)          !< cloud top height  [m]
+    real(RP), intent(out)   :: cloudbase     (IA,JA)          !< cloud base height [m]
+    real(RP), intent(out)   :: cldfrac_dp    (KA,IA,JA)       !< cloud fraction (deep convection)
+    real(RP), intent(out)   :: cldfrac_sh    (KA,IA,JA)       !< cloud fraction (shallow convection)
+    real(RP), intent(out)   :: nca           (IA,JA)          !< convection active time [sec]
 
-    integer  :: k, i, j, iq, iqa, ii
-    integer  :: nic
+    integer  :: k, i, j, iq, iqa, ii                       !< loop index
+    integer  :: nic                                        !< rate of timestep (time_advec/KF_DTSEC)
     integer  :: k_lcl                                      !< index of LCL layer
     integer  :: k_top                                      !< index of cloud top hight
     integer  :: k_ml                                       !< index of melt layer (temp < tem00)
     integer  :: k_lc,k_let,k_pbl                           !< indices
     integer  :: k_lfs                                      !< LFS layer index
 
-!    real(RP) :: u     (KA)                                 !< x-direction wind velocity [m/s]
-!    real(RP) :: v     (KA)                                 !< y-direction wind velocity [m/s]
     real(RP) :: temp  (KA)                                 !< temperature [K]
     real(RP) :: pres  (KA)                                 !< pressure of dry air [Pa]
     real(RP) :: qv    (KA)                                 !< water vapor mixing ratio[kg/kg] original in KF scheme
-    real(RP) :: QDRY  (KA)                                 !< ratio of dry air
     real(RP) :: PSAT  (KA)                                 !< saturation vaper pressure
     real(RP) :: QSAT  (KA)                                 !< saturate water vaper mixing ratio [kg/kg]
     real(RP) :: rh    (KA)                                 !< saturate vapor [%]
@@ -511,8 +497,7 @@ contains
     real(RP) :: qr_nw(KA)                                  !< new rain water mixing ratio  [kg/kg]
     real(RP) :: qs_nw(KA)                                  !< new snow water mixing ratio  [kg/kg]
     ! update variables
-!    real(RP) :: qtrc_nw(KA,QA)                             !< qv,qc,qr,qi,qs (qg not change)
-    real(RP) :: qtrc_nw(KA,QA_MP)                             !< qv,qc,qr,qi,qs (qg not change)
+    real(RP) :: qtrc_nw(KA,QA_MP)                          !< qv,qc,qr,qi,qs (qg not change)
     real(RP) :: pott_nw(KA)                                !< new PT
     real(RP) :: RHOD(KA)                                   !< dry density
     real(RP) :: QV_resd(KA)                                !< residual vapor
@@ -536,7 +521,7 @@ contains
        do k = KS, KE
           ! preparing a NON Hydriometeor condition to fit assumption in KF scheme
           call THERMODYN_temp_pres( TEMP(k),          & ! [OUT]
-                                    PRES(k),          & ! [OUT] !dummy
+                                    PRES(k),          & ! [OUT]
                                     DENS(k,i,j),      & ! [IN]
                                     RHOT(k,i,j),      & ! [IN]
                                     QTRC_in(k,i,j,:), & ! [IN]
@@ -544,12 +529,7 @@ contains
                                     TRACER_R(:),      & ! [IN]
                                     TRACER_MASS(:)    ) ! [IN]
 
-          call THERMODYN_qd( QDRY(k), QTRC_in(k,i,j,:), TRACER_MASS(:) )
-          RHOD(k) = DENS(k,i,j) * QDRY(k)
-
-!          ! calculate u(x-directin velocity ), v(y-direction velocity)
-!          u(k) = 0.5_RP * ( MOMX(k,i,j) + MOMX(k,i-1,j) ) / DENS(k,i,j)
-!          v(k) = 0.5_RP * ( MOMY(k,i,j) + MOMY(k,i,j-1) ) / DENS(k,i,j)
+          RHOD(k) = DENS(k,i,j) * QDRY(k,i,j)
        enddo
 
        ! initialize variables
@@ -603,7 +583,7 @@ contains
 
           ! calculate water vaper and relative humidity
           !QV  (k) = max( 0.000001_RP, min( QSAT(k), QV(k) ) ) ! conpare QSAT and QV, guess lower limit
-          QV(k) = max( KF_EPS, min( QSAT(k), QTRC_in(k,i,j,I_QV) / QDRY(k) ) ) ! conpare QSAT and QV, guess lower limit
+          QV(k) = max( KF_EPS, min( QSAT(k), QTRC_in(k,i,j,I_QV) / QDRY(k,i,j) ) ) ! conpare QSAT and QV, guess lower limit
           rh(k) = QV(k) / QSAT(k)
        enddo
 
@@ -657,21 +637,20 @@ contains
        end if
 
        call CP_kf_downdraft ( &
-            KA, KS, KE,                              & ! [IN]
-            I_convflag(i,j),                         & ! [IN]
-            k_lcl, k_ml, k_top, k_pbl, k_let, k_lc,  & ! [IN]
-            deltaz(:,i,j), Z(:,i,j), cloudbase(i,j), & ! [IN]
-!            u(:), v(:), rh(:), qv(:), pres(:),       & ! [IN]
-            u(:,i,j), v(:,i,j), rh(:), qv(:), pres(:),       & ! [IN]
-            deltap(:), deltax(i,j),                  & ! [IN]
-            ems(:), emsd(:),                         & ! [IN]
-            theta_ee(:),                             & ! [IN]
-            umf(:),                                  & ! [IN]
-            totalprcp, flux_qs(:), tempv(:),         & ! [IN]
-            wspd(:), dmf(:), downent(:), downdet(:), & ! [OUT]
-            theta_d(:), qv_d(:), prcp_flux, k_lfs,   & ! [OUT]
-            CPR,                                     & ! [OUT]
-            tder                                     ) ! [OUT]
+            KA, KS, KE,                                & ! [IN]
+            I_convflag(i,j),                           & ! [IN]
+            k_lcl, k_ml, k_top, k_pbl, k_let, k_lc,    & ! [IN]
+            deltaz(:,i,j), Z(:,i,j), cloudbase(i,j),   & ! [IN]
+            u(:,i,j), v(:,i,j), rh(:), qv(:), pres(:), & ! [IN]
+            deltap(:), deltax(i,j),                    & ! [IN]
+            ems(:), emsd(:),                           & ! [IN]
+            theta_ee(:),                               & ! [IN]
+            umf(:),                                    & ! [IN]
+            totalprcp, flux_qs(:), tempv(:),           & ! [IN]
+            wspd(:), dmf(:), downent(:), downdet(:),   & ! [OUT]
+            theta_d(:), qv_d(:), prcp_flux, k_lfs,     & ! [OUT]
+            CPR,                                       & ! [OUT]
+            tder                                       ) ! [OUT]
 
        call CP_kf_compensational ( &
             KA, KS, KE,                                                  & ! [IN]
@@ -707,9 +686,6 @@ contains
 
           DENS_t_CP(KS:KE,i,j) = 0.0_RP
           RHOT_t_CP(KS:KE,i,j) = 0.0_RP
-!          do iq = QS_MP, QE_MP
-!             RHOQ_t_CP(KS:KE,i,j,iq) = 0.0_RP
-!          end do
           do iq = 1, QA_MP
              RHOQ_t_CP(KS:KE,i,j,iq) = 0.0_RP
           end do
@@ -745,18 +721,9 @@ contains
 
              dens_nw(k) = dens(k,i,j) + DENS_t_CP(k,i,j) * lifetime(i,j)
 
-!             do iq = QS_MP, QE_MP
-!                qtrc_nw(k,iq) = ( qtrc_in(k,i,j,iq) * DENS(k,i,j) + RHOQ_t_CP(k,i,j,iq) * lifetime(i,j) ) / dens_nw(k)
-!             end do
              do iq = 1, QA_MP
                 qtrc_nw(k,iq) = ( qtrc_in(k,i,j,iq) * DENS(k,i,j) + RHOQ_t_CP(k,i,j,iq) * lifetime(i,j) ) / dens_nw(k)
              end do
-!             do iq = 1, QS_MP - 1
-!                qtrc_nw(k,iq) = qtrc_in(k,i,j,iq) * DENS(k,i,j) / dens_nw(k)
-!             end do
-!             do iq = QE_MP + 1, QA
-!                qtrc_nw(k,iq) = qtrc_in(k,i,j,iq) * DENS(k,i,j) / dens_nw(k)
-!             end do
           end do
 
           ! treatment for not evaluated layers
@@ -764,9 +731,6 @@ contains
              do iq = 1, QA_MP
                 qtrc_nw(k,iq) = QTRC_in(k,i,j,iq)
              end do
-!             do iq = 1, QA
-!                qtrc_nw(k,iq) = QTRC_in(k,i,j,iq)
-!             end do
              dens_nw(k) = DENS(k,i,j)
           enddo
 
@@ -783,9 +747,6 @@ contains
           do k=k_top+1, KE
              DENS_t_CP(k,i,j) = 0.0_RP
              RHOT_t_CP(k,i,j) = 0.0_RP
-!             do iq = QS_MP, QE_MP
-!                RHOQ_t_CP(k,i,j,iq) = 0.0_RP
-!             end do
              do iq = 1, QA_MP
                 RHOQ_t_CP(k,i,j,iq) = 0.0_RP
              end do
@@ -797,7 +758,6 @@ contains
 
        cldfrac_sh(KS:KE,i,j) = cldfrac_KF(KS:KE,1)
        cldfrac_dp(KS:KE,i,j) = cldfrac_KF(KS:KE,2)
-
     end do
     end do
 
