@@ -162,9 +162,7 @@ module scale_atmos_phy_mp_suzuki10
 
   logical  :: MP_doautoconversion = .true.  ! apply collision process ?
   logical  :: MP_doprecipitation  = .true.  ! apply sedimentation of hydrometeor ?
-  logical  :: MP_donegative_fixer = .true.  ! apply negative fixer?
   logical  :: MP_couple_aerosol   = .false. ! apply CCN effect?
-  real(RP) :: MP_limit_negative   = 1.0_RP  ! Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
 
 
   !--- Indeces for determining species of cloud particle
@@ -439,8 +437,6 @@ contains
 
     NAMELIST / PARAM_ATMOS_PHY_MP_SUZUKI10 / &
        MP_doprecipitation,     &
-       MP_donegative_fixer,    &
-       MP_limit_negative,      &
        MP_ntmax_sedimentation, &
        MP_doautoconversion,    &
        MP_couple_aerosol,      &
@@ -859,10 +855,7 @@ contains
        ATMOS_SATURATION_pres2qsat_liq, &
        ATMOS_SATURATION_pres2qsat_ice
     use scale_atmos_phy_mp_common, only: &
-       MP_negative_fixer => ATMOS_PHY_MP_negative_fixer, &
        MP_precipitation  => ATMOS_PHY_MP_precipitation
-    use scale_file_history, only: &
-       FILE_HISTORY_in
     implicit none
 
     integer, intent(in) :: KA, KS, KE
@@ -920,7 +913,6 @@ contains
 
     real(RP) :: pflux    (KA,IA,JA,QA-1) ! precipitation flux of each tracer [kg/m2/s]
     real(RP) :: FLX_hydro(KA,IA,JA,QA-1)
-    real(RP) :: QHYD_out (KA,IA,JA,6)
 
     integer  :: step
     integer  :: k, i, j, m, n, iq
@@ -1338,16 +1330,6 @@ contains
        enddo
        enddo
     endif
-
-    !##### END MP Main #####
-
-    !if ( MP_donegative_fixer ) then
-    !   call MP_negative_fixer( DENS(:,:,:),      & ! [INOUT]
-    !                           RHOT(:,:,:),      & ! [INOUT]
-    !                           QTRC(:,:,:,:),    & ! [INOUT]
-    !                           I_QV,             & ! [IN]
-    !                           MP_limit_negative ) ! [IN]
-    !endif
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_adjustment
