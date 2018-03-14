@@ -193,7 +193,7 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in)  :: time_now
+    real(DP), intent(in)  :: time_now
     real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2)
     real(RP), intent(out) :: SFLX_rad_dn (IA,JA,2,2)
 
