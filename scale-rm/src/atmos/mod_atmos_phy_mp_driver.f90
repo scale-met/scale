@@ -760,8 +760,6 @@ contains
           enddo
           enddo
 
-          integ_precip = .false.
-
        case default
 
 !OCL XFILL
@@ -1071,10 +1069,10 @@ contains
                         KA, KS, KE, &
                         DENS2(:), TEMP2(:), RHOQ2(:,:), & ! [IN]
                         vterm(:,:)                      ) ! [OUT]
-                !case ( 'SUZUKI10' )
-                !   call ATMOS_PHY_MP_suzuki10_terminal_velocity( &
-                !        KA,        & ! [IN]
-                !        vterm(:,:) ) ! [OUT]
+                case ( 'SUZUKI10' )
+                   call ATMOS_PHY_MP_suzuki10_terminal_velocity( &
+                        KA,        & ! [IN]
+                        vterm(:,:) ) ! [OUT]
                 case default
                    vterm(:,:) = 0.0_RP ! tentative
                 end select
@@ -1090,7 +1088,7 @@ contains
                 end do
 
                 call ATMOS_PHY_MP_precipitation( &
-                     KA, KS, KE, QHA, QLA, QIA, &
+                     KA, KS, KE, QE_MP-QS_MP, QLA, QIA, &
                      TEMP2(:), vterm(:,:),   & ! [IN]
                      FDZ(:), RCDZ(:),        & ! [IN]
                      MP_DTSEC_SEDIMENTATION, & ! [IN]
