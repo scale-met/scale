@@ -827,18 +827,12 @@ contains
           call PROF_rapstart('MP_Precipitation', 2)
 
           if( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
-!OCL XFILL
              DENS1(:,:,:) = DENS(:,:,:) ! save
-!OCL XFILL
              MOMZ1(:,:,:) = MOMZ(:,:,:) ! save
-!OCL XFILL
              MOMX1(:,:,:) = MOMX(:,:,:) ! save
-!OCL XFILL
              MOMY1(:,:,:) = MOMY(:,:,:) ! save
-!OCL XFILL
-             RHOT2(:,:,:) = RHOT1(:,:,:) ! save
-!OCL XFILL
-             QTRC2(:,:,:,:) = QTRC1(:,:,:,:) ! save
+             RHOT2(:,:,:) = RHOT(:,:,:) ! save
+             QTRC2(:,:,:,:) = QTRC(:,:,:,:) ! save
 
              call ATMOS_PHY_MP_suzuki10_terminal_velocity( &
                   KA,        & ! [IN]
@@ -908,10 +902,10 @@ contains
                 MOMZ_t_MP(k,i,j) = ( MOMZ1(k,i,j) - MOMZ(k,i,j) ) / dt_MP
                 MOMX_t_MP(k,i,j) = ( MOMX1(k,i,j) - MOMX(k,i,j) ) / dt_MP
                 MOMY_t_MP(k,i,j) = ( MOMY1(k,i,j) - MOMY(k,i,j) ) / dt_MP
-                RHOT_t_MP(k,i,j) = ( RHOT2(k,i,j) - RHOT(k,i,j) ) / dt_MP
+                RHOT_t_MP(k,i,j) = ( RHOT2(k,i,j) - RHOT(k,i,j) ) / dt_MP + RHOT_t_MP(k,i,j)
                 do iq = QS_MP, QE_MP
                    RHOQ_t_MP(k,i,j,iq) = ( QTRC2(k,i,j,iq) * DENS1(k,i,j) &
-                                         - QTRC (k,i,j,iq) * DENS (k,i,j) ) / dt_MP
+                                         - QTRC (k,i,j,iq) * DENS (k,i,j) ) / dt_MP + RHOQ_t_MP(k,i,j,iq)
                 enddo
              enddo
              enddo
