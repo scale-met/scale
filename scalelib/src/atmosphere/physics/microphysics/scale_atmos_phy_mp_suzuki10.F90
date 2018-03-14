@@ -76,11 +76,11 @@ module scale_atmos_phy_mp_suzuki10
 
   !real(RP), public :: ATMOS_PHY_MP_suzuki10_DENS(N_HYD) ! hydrometeor density [kg/m3]=[g/L]
 
-  integer, public :: nbin = 33  ! obsolute name
-  integer, public :: nspc = 7   ! obsolute name
-  integer, public :: nccn = 0   ! obsolute name
-  integer, public :: kphase = 0 ! obsolute name
-  integer, public :: ICEFLG = 1 ! obsolute name
+  integer, public :: nbin   = 33 ! obsolute name
+  integer, public :: nspc   = 7  ! obsolute name
+  integer, public :: nccn   = 0  ! obsolute name
+  integer, public :: kphase = 0  ! obsolute name
+  integer, public :: ICEFLG = 1  ! obsolute name
 
 # include "kernels.h"
   !-----------------------------------------------------------------------------
@@ -163,15 +163,14 @@ module scale_atmos_phy_mp_suzuki10
   logical  :: MP_doautoconversion = .true.  ! apply collision process ?
   logical  :: MP_couple_aerosol   = .false. ! apply CCN effect?
 
-
   !--- Indeces for determining species of cloud particle
-  integer, parameter :: il = 1               !--- index for liquid  water
-  integer, parameter :: ic = 2               !--- index for columnar ice
-  integer, parameter :: ip = 3               !--- index for plate ice
-  integer, parameter :: id = 4               !--- index for dendrite ice
-  integer, parameter :: iss= 5               !--- index for snow
-  integer, parameter :: ig = 6               !--- index for graupel
-  integer, parameter :: ih = 7               !--- index for hail
+  integer, parameter :: il  = ATMOS_PHY_MP_suzuki10_il   !--- (obsolute) index for liquid  water
+  integer, parameter :: ic  = ATMOS_PHY_MP_suzuki10_ic   !--- (obsolute) index for columnar ice
+  integer, parameter :: ip  = ATMOS_PHY_MP_suzuki10_ip   !--- (obsolute) index for plate ice
+  integer, parameter :: id  = ATMOS_PHY_MP_suzuki10_id   !--- (obsolute) index for dendrite ice
+  integer, parameter :: iss = ATMOS_PHY_MP_suzuki10_iss  !--- (obsolute) index for snow
+  integer, parameter :: ig  = ATMOS_PHY_MP_suzuki10_ig   !--- (obsolute) index for graupel
+  integer, parameter :: ih  = ATMOS_PHY_MP_suzuki10_ih   !--- (obsolute) index for hail
 
   !--- bin information of hydrometeors
   real(RP) :: dxmic                          !--- d( log(m) ) of hydrometeor bin
@@ -202,10 +201,10 @@ module scale_atmos_phy_mp_suzuki10
   real(RP) :: xasta                          !--- exponential of mass of aerosol for smallest aerosol bin
   real(RP) :: xaend                          !--- exponential of mass of aerosol for largest aerosol bin
 
-  real(RP), allocatable, save :: vterm( :,:,:,: ) !--- terminal velocity
+  real(RP) :: flg_thermodyn                  !--- flg for lhv and lhs (0 -> SIMPLE, 1 -> EXACT )
+  real(RP) :: RTEM00                         !--- 1/CONST_TEM00
 
-  real(RP)       :: flg_thermodyn              !--- flg for lhv and lhs (0 -> SIMPLE, 1 -> EXACT )
-  real(RP)       :: RTEM00                     !--- 1/CONST_TEM00
+  real(RP), allocatable, save :: vterm( :,:,:,: ) !--- terminal velocity
 
   !--- constant for bin
   real(RP), parameter :: cldmin       = 1.0E-10_RP      !--- threshould for cloud is regarded existing
@@ -1169,7 +1168,7 @@ contains
        KA, KS, KE,     &
        IA, IS, IE,     &
        JA, JS, JE,     &
-       QTRC,           &
+       QTRC0,          &
        mask_criterion, &
        cldfrac         )
     implicit none
@@ -1178,7 +1177,7 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
+    real(RP), intent(in)  :: QTRC0  (KA,IA,JA,QA)
     real(RP), intent(in)  :: mask_criterion
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
 
@@ -1193,7 +1192,7 @@ contains
          qhydro = 0.0_RP
          do ihydro = 1, nspc
           do iq = QS+nbin*(ihydro-1)+1, QS+nbin*ihydro
-            qhydro = qhydro + QTRC(k,i,j,iq)
+            qhydro = qhydro + QTRC0(k,i,j,iq)
           enddo
          enddo
          cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
@@ -1207,7 +1206,7 @@ contains
          qhydro = 0.0_RP
          do ihydro = 1, I_mp_QC
           do iq = QS+nbin*(ihydro-1)+1, QS+nbin*ihydro
-            qhydro = qhydro + QTRC(k,i,j,iq)
+            qhydro = qhydro + QTRC0(k,i,j,iq)
           enddo
          enddo
          cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
