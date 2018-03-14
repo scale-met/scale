@@ -736,29 +736,29 @@ contains
           enddo
 
 !OCL XFILL
-          !!$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-          !!$omp shared(JSB,JEB,ISB,IEB,KS,KE,DENS_t_MP,DENS1,DENS,MOMZ_t_MP,MOMZ1,MOMZ,MOMX_t_MP,MOMX1) &
-          !!$omp shared(MOMX,MOMY_t_MP,MOMY1,MOMY,RHOT_t_MP,RHOT1,RHOT,dt_MP)
-          !do j = JSB, JEB
-          !do i = ISB, IEB
-          !do k = KS, KE
-          !   RHOT_t_MP(k,i,j) = ( RHOT1(k,i,j) - RHOT(k,i,j) ) / dt_MP
-          !enddo
-          !enddo
-          !enddo
-!OCL XFILL!
-          !do iq = QS_MP, QE_MP
-          !!$omp parallel do default(none) &
-          !!$omp shared(JSB,JEB,ISB,IEB,KS,KE,RHOQ_t_MP,iq,QTRC1,QTRC,DENS1,DENS,dt_MP) &
-          !!$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          !do j = JSB, JEB
-          !do i = ISB, IEB
-          !do k = KS, KE
-          !   RHOQ_t_MP(k,i,j,iq) = ( QTRC1(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_MP
-          !enddo
-          !enddo
-          !enddo
-          !enddo
+          !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JSB,JEB,ISB,IEB,KS,KE,DENS_t_MP,DENS1,DENS,MOMZ_t_MP,MOMZ1,MOMZ,MOMX_t_MP,MOMX1) &
+          !$omp shared(MOMX,MOMY_t_MP,MOMY1,MOMY,RHOT_t_MP,RHOT1,RHOT,dt_MP)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             RHOT_t_MP(k,i,j) = ( RHOT1(k,i,j) - RHOT(k,i,j) ) / dt_MP
+          enddo
+          enddo
+          enddo
+!OCL XFILL
+          do iq = QS_MP, QE_MP
+          !$omp parallel do default(none) &
+          !$omp shared(JSB,JEB,ISB,IEB,KS,KE,RHOQ_t_MP,iq,QTRC1,QTRC,DENS1,DENS,dt_MP) &
+          !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             RHOQ_t_MP(k,i,j,iq) = ( QTRC1(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_MP
+          enddo
+          enddo
+          enddo
+          enddo
 
           integ_precip = .false.
 
