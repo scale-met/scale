@@ -49,14 +49,26 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_CP_driver_setup
-    use scale_atmos_phy_cp, only: &
-         ATMOS_PHY_CP_setup
+    use scale_process, only: &
+       PRC_abort
     use scale_atmos_phy_cp_common, only: &
-         ATMOS_PHY_CP_common_setup
+       ATMOS_PHY_CP_common_setup
+    use scale_atmos_phy_cp_kf, only: &
+       ATMOS_PHY_CP_kf_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_CP_TYPE, &
        ATMOS_sw_phy_cp
+    use scale_time , only :&
+       TIME_DTSEC,             &
+       TIME_DTSEC_ATMOS_PHY_CP
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_CZ, &
+       ATMOS_GRID_CARTESC_REAL_AREA
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_ice_phase
     implicit none
+
+    logical :: warmrain
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -65,9 +77,18 @@ contains
     if ( ATMOS_sw_phy_cp ) then
 
        ! setup library component
-       call ATMOS_PHY_CP_setup( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
-                                ATMOS_PHY_CP_TYPE )
        call ATMOS_PHY_CP_common_setup
+       select case ( ATMOS_PHY_CP_TYPE )
+       case ( 'KF' )
+          warmrain = ( .not. ATMOS_HYDROMETEOR_ice_phase )
+          call ATMOS_PHY_CP_kf_setup( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                                      ATMOS_GRID_CARTESC_REAL_CZ, ATMOS_GRID_CARTESC_REAL_AREA, &
+                                      TIME_DTSEC, TIME_DTSEC_ATMOS_PHY_CP,                      &
+                                      warmrain                                                  )
+       case default
+          write(*,*) 'xxx ATMOS_PHY_CP_TYPE (', trim(ATMOS_PHY_CP_TYPE), ') is invalid. Check!'
+          call PRC_abort
+       end select
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -112,10 +133,15 @@ contains
        ATMOS_GRID_CARTESC_REAL_TOTVOLZXV
     use scale_file_history, only: &
        FILE_HISTORY_in
+    use scale_time , only :&
+       TIME_DTSEC, &
+       TIME_DTSEC_ATMOS_PHY_CP
+    use scale_atmos_grid_cartesC_real, only: &
+       FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_diagnose_number_concentration
-    use scale_atmos_phy_cp, only: &
-       ATMOS_PHY_CP
+    use scale_atmos_phy_cp_kf, only: &
+       ATMOS_PHY_CP_kf_tendency
     use scale_atmos_phy_cp_common, only: &
        ATMOS_PHY_CP_common_wmean
     use scale_atmos_phy_mp, only: &
@@ -123,7 +149,7 @@ contains
        QS_MP, &
        QE_MP
     use mod_atmos_admin, only: &
-       ATMOS_PHY_MP_TYPE
+       ATMOS_PHY_CP_TYPE
     use mod_atmos_vars, only: &
        DENS   => DENS_av, &
        MOMZ   => MOMZ_av, &
@@ -140,9 +166,11 @@ contains
        U,                 &
        V,                 &
        W,                 &
-!      TEMP,              &
-!      PRES,              &
-       QDRY
+       TEMP,              &
+       PRES,              &
+       QDRY,              &
+       Rtot,              &
+       CPtot
     use mod_atmos_phy_cp_vars, only: &
        DENS_t_CP      => ATMOS_PHY_CP_DENS_t,         &
        MOMZ_t_CP      => ATMOS_PHY_CP_MOMZ_t,         &
@@ -168,30 +196,35 @@ contains
 
     ! temporal running mean of vertical velocity
     call ATMOS_PHY_CP_common_wmean( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
-                                    W(:,:,:),      & ! [IN]
-                                    w0mean(:,:,:)  ) ! [INOUT]
+                                    W(:,:,:),                            & ! [IN]
+                                    TIME_DTSEC, TIME_DTSEC_ATMOS_PHY_CP, & ! [IN]
+                                    w0mean(:,:,:)                        ) ! [INOUT]
     call FILE_HISTORY_in( w0mean(:,:,:), 'w0mean', 'running mean vertical wind velocity', 'kg/m2/s', fill_halo=.true. )
 
     if ( update_flag ) then ! update
-       call ATMOS_PHY_CP( KA, KS, KE, IA, 1, IA, JA, 1, JA, QA_MP, QS_MP, QE_MP, &
-                          DENS(:,:,:),                  & ! [IN]
-                          U(:,:,:),                     & ! [IN]
-                          V(:,:,:),                     & ! [IN]
-                          RHOT(:,:,:),                  & ! [IN]
-!                         TEMP(:,:,:),                  & ! [IN]
-!                         PRES(:,:,:),                  & ! [IN]
-                          QDRY(:,:,:),                  & ! [IN]
-                          QTRC(:,:,:,QS_MP:QE_MP),      & ! [IN]
-                          w0mean(:,:,:),                & ! [IN]
-                          DENS_t_CP(:,:,:),             & ! [INOUT]
-                          RHOT_t_CP(:,:,:),             & ! [INOUT]
-                          RHOQ_t_CP(:,:,:,QS_MP:QE_MP), & ! [INOUT]
-                          SFLX_rain(:,:),               & ! [OUT]
-                          cloudtop(:,:),                & ! [OUT]
-                          cloudbase(:,:),               & ! [OUT]
-                          cldfrac_dp(:,:,:),            & ! [OUT]
-                          cldfrac_sh(:,:,:),            & ! [OUT]
-                          kf_nca(:,:)                   ) ! [OUT]
+       select case ( ATMOS_PHY_CP_TYPE )
+       case ( 'KF' )
+          call ATMOS_PHY_CP_kf_tendency( KA, KS, KE, IA, 1, IA, JA, 1, JA, QA_MP, QS_MP, QE_MP, &
+                                         DENS(:,:,:),                  & ! [IN]
+                                         U(:,:,:), V(:,:,:),           & ! [IN]
+                                         RHOT(:,:,:),                  & ! [IN]
+                                         TEMP(:,:,:), PRES(:,:,:),     & ! [IN]
+                                         QDRY(:,:,:),                  & ! [IN]
+                                         QTRC(:,:,:,QS_MP:QE_MP),      & ! [IN]
+                                         Rtot(:,:,:), CPtot(:,:,:),    & ! [IN]
+                                         w0mean(:,:,:),                & ! [IN]
+                                         FZ,                           & ! [IN]
+                                         TIME_DTSEC_ATMOS_PHY_CP,      & ! [IN]
+                                         DENS_t_CP(:,:,:),             & ! [INOUT]
+                                         RHOT_t_CP(:,:,:),             & ! [INOUT]
+                                         RHOQ_t_CP(:,:,:,QS_MP:QE_MP), & ! [INOUT]
+                                         SFLX_rain(:,:),               & ! [OUT]
+                                         cloudtop(:,:),                & ! [OUT]
+                                         cloudbase(:,:),               & ! [OUT]
+                                         cldfrac_dp(:,:,:),            & ! [OUT]
+                                         cldfrac_sh(:,:,:),            & ! [OUT]
+                                         kf_nca(:,:)                   ) ! [OUT]
+       end select
 
        ! tentative reset
 !OCL XFILL

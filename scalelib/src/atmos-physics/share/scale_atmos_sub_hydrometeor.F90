@@ -81,6 +81,9 @@ module scale_atmos_hydrometeor
   !
   !++ Public parameters & variables
   !
+  logical, public            :: ATMOS_HYDROMETEOR_ice_phase
+
+
   integer, public            :: I_QV = -1
 
   integer, public, parameter :: N_HYD = 6
@@ -331,6 +334,8 @@ contains
        QIA = NI
        QIE = QIS + NI - 1
     endif
+
+    ATMOS_HYDROMETEOR_ice_phase = QIA > 0
 
     return
   end subroutine ATMOS_HYDROMETEOR_regist

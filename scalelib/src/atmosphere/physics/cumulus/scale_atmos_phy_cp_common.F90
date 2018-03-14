@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Physics / Cumulus Parameterization / Common
+!> module atmosphere / physics / cumulus / Common
 !!
 !! @par Description
 !!          Common module for Cumulus convection parameterization
@@ -18,7 +18,6 @@ module scale_atmos_phy_cp_common
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -49,9 +48,9 @@ module scale_atmos_phy_cp_common
 contains
   !------------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_PHY_CP_common_setup ()
+  subroutine ATMOS_PHY_CP_common_setup
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
 
     NAMELIST / PARAM_ATMOS_PHY_CP_COMMON / &
@@ -72,7 +71,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_CP_COMMON. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_CP_COMMON)
 
@@ -97,21 +96,20 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_CP_common_wmean( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       W,       &
-       W0_mean  )
-    use scale_time , only :&
-       TIME_DTSEC,             &
-       CP_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
+       W,                    &
+       TIME_DTSEC, CP_DTSEC, &
+       W0_mean               )
     implicit none
     integer,  intent(in)    :: KA, KS, KE
     integer,  intent(in)    :: IA, IS, IE
     integer,  intent(in)    :: JA, JS, JE
 
     real(RP), intent(in)    :: W(KA,IA,JA)
-!    real(RP), intent(in)    :: MOMZ   (KA,IA,JA)
+    real(DP), intent(in)    :: TIME_DTSEC
+    real(DP), intent(in)    :: CP_DTSEC
+
     real(RP), intent(inout) :: W0_mean(KA,IA,JA)
 
-!    real(RP) :: W0
     real(RP) :: fact_W0_mean, fact_W0
 
     integer :: k, i, j
@@ -128,8 +126,6 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-!       W0 = 0.5_RP * ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) / DENS(k,i,j)
-
        W0_mean(k,i,j) = ( W0_mean(k,i,j) * fact_W0_mean &
                         + W(k,i,j)       * fact_W0      ) / ( fact_W0_mean + fact_W0 )
     enddo

@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Physics / Cumulus Parameterization / Kain-Fritsch
+!> module atmosphere / physics / cumulus / Kain-Fritsch
 !!
 !! @par Description
 !!          Main module of Kain-Fritsch Cumulus Convection Parameterization
@@ -53,7 +53,6 @@ module scale_atmos_phy_cp_kf
   use scale_const, only: &
        TEM00 => CONST_TEM00
 
-!  use scale_tracer, only: QA
   !------------------------------------------------------------------------------
   implicit none
   private
@@ -63,7 +62,7 @@ module scale_atmos_phy_cp_kf
   !++ Public procedure
   !
   public :: ATMOS_PHY_CP_kf_setup
-  public :: ATMOS_PHY_CP_kf
+  public :: ATMOS_PHY_CP_kf_tendency
 
   !-----------------------------------------------------------------------------
   !
@@ -103,12 +102,12 @@ module scale_atmos_phy_cp_kf
   !++ Private parameters & variables
   !
   ! KF subroutine look up tables VV
-  integer,  private, PARAMETER   :: KFNT=250,KFNP=220
-  real(RP), private, SAVE        :: TTAB(KFNT,KFNP),QSTAB(KFNT,KFNP)
-  real(RP), private, SAVE        :: THE0K(KFNP)
-  real(RP), private, SAVE        :: ALU(200)
-  real(RP), private, SAVE        :: RDPR,RDTHK,PLUTOP
-  real(RP), private, SAVE        :: GdCP                       !< GRAV/CP_dry
+  integer,  private, parameter :: KFNT=250,KFNP=220
+  real(RP), private            :: TTAB(KFNT,KFNP),QSTAB(KFNT,KFNP)
+  real(RP), private            :: THE0K(KFNP)
+  real(RP), private            :: ALU(200)
+  real(RP), private            :: RDPR,RDTHK,PLUTOP
+  real(RP), private            :: GdCP                       !< GRAV/CP_dry
   !
   !< ALIQ saturrate watervapor (SVP1*1000; SVP1=0.6112)
   !< BLIQ is WRF SVP2 = 17.67
@@ -122,20 +121,20 @@ module scale_atmos_phy_cp_kf
   real(RP), private, parameter   :: KF_EPS =  1.E-12_RP        !< epsiron in KF module
   !< Naming list tuning parameters
   !< RATE is used subroutine CP_kf_precipitation_OC1973
-  real(RP),private, save         :: RATE            = 0.03_RP  !< ratio of cloud water and precipitation
-                                                               !< (Ogura and Cho 1973)
-  integer , private, save        :: TRIGGER         = 3        !< triger select will be modifid
-  logical , private, save        :: FLAG_QS         = .true.   !< FLAG_OS:  qs is allowed or not
-  logical , private, save        :: FLAG_QI         = .true.   !< FLAG_QI:  qi is allowe or not
-  real(RP), private, save        :: DELCAPE         = 0.1_RP   !< cape decleace rate
-  real(RP), private, save        :: DEEPLIFETIME    = 1800._RP !< minimum lifetimescale of deep convection
-  real(RP), private, save        :: SHALLOWLIFETIME = 2400._RP !< shallow convection liftime
-  real(RP), private, save        :: DEPTH_USL       = 300._RP  !< depth of updraft source layer  [hPa]!!
-  logical , private, save        :: WARMRAIN        = .false.  !< I_QI<1
-  logical , private, save        :: KF_LOG          = .false.  !< KF infomation output to log file(not ERROR messeage)
-  real(RP), private, save        :: kf_threshold    = 1.e-3_RP !< kessler type autoconversion rate
-  integer , private, save        :: stepkf                     !< triger select will be modifid
-  integer , private, save        :: KF_prec         = 1        !< precipitation select 1. Ogura and Cho (1973), 2. Kessler
+  real(RP), private              :: RATE            = 0.03_RP  !< ratio of cloud water and precipitation
+                                                         !< (Ogura and Cho 1973)
+  integer , private              :: TRIGGER         = 3        !< triger select will be modifid
+  logical , private              :: FLAG_QS         = .true.   !< FLAG_OS:  qs is allowed or not
+  logical , private              :: FLAG_QI         = .true.   !< FLAG_QI:  qi is allowe or not
+  real(RP), private              :: DELCAPE         = 0.1_RP   !< cape decleace rate
+  real(RP), private              :: DEEPLIFETIME    = 1800._RP !< minimum lifetimescale of deep convection
+  real(RP), private              :: SHALLOWLIFETIME = 2400._RP !< shallow convection liftime
+  real(RP), private              :: DEPTH_USL       = 300._RP  !< depth of updraft source layer  [hPa]!!
+  logical , private              :: WARMRAIN        = .false.  !< I_QI<1
+  logical , private              :: KF_LOG          = .false.  !< KF infomation output to log file(not ERROR messeage)
+  real(RP), private              :: kf_threshold    = 1.e-3_RP !< kessler type autoconversion rate
+  integer , private              :: stepkf                     !< triger select will be modifid
+  integer , private              :: KF_prec         = 1        !< precipitation select 1. Ogura and Cho (1973), 2. Kessler
   procedure(kf_precipitation), pointer,private :: CP_kf_precipitation => NULL()
 
   real(RP), private, allocatable :: lifetime  (:,:)            !< convectime lifetime [s]
@@ -152,18 +151,12 @@ contains
   !! initial setup for Kain-Fritsch Cumulus Parameterization
   !<
   subroutine ATMOS_PHY_CP_kf_setup ( &
-      KA, KS, KE,   &
-      IA, IS, IE,   &
-      JA, JS, JE,   &
-      CP_TYPE       )
+      KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+      CZ, AREA,             &
+      TIME_DTSEC, KF_DTSEC, &
+      WARMRAIN_in           )
     use scale_process, only: &
-       PRC_MPIstop
-    use scale_time , only :&
-       TIME_DTSEC,             &
-       KF_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
-    use scale_atmos_grid_cartesC_real, only: &
-       CZ   => ATMOS_GRID_CARTESC_REAL_CZ, &
-       AREA => ATMOS_GRID_CARTESC_REAL_AREA
+       PRC_abort
     use scale_atmos_hydrometeor, only: &
        I_QV, &
        I_QC, &
@@ -175,7 +168,11 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    character(len=*), intent(in) :: CP_TYPE
+    real(RP),         intent(in) :: CZ(KA,IA,JA)
+    real(RP),         intent(in) :: AREA(IA,JA)
+    real(DP),         intent(in) :: TIME_DTSEC
+    real(DP),         intent(in) :: KF_DTSEC
+    logical,          intent(in) :: WARMRAIN_in
 
     !< tunning parameters, original parameter set is from KF2004 and NO2007
     integer  :: PARAM_ATMOS_PHY_CP_kf_trigger   = 1         !< trigger function type 1:KF2004 3:NO2007
@@ -208,31 +205,24 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CUMULUS] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Kain-Fritsch scheme'
 
-    if ( CP_TYPE /= 'KF' ) then
-       write(*,*) 'xxx ATMOS_PHY_CP_TYPE is not KF. Check!'
-       call PRC_MPIstop
-    endif
-
     if ( I_QV < 1 ) then
        write(*,*) 'xxx QV is not registered'
-       call PRC_MPIstop
+       call PRC_abort
     end if
     if ( I_QC < 1 ) then
        write(*,*) 'xxx QC is not registered'
-       call PRC_MPIstop
+       call PRC_abort
     end if
     if ( I_QR < 1 ) then
        write(*,*) 'xxx QR is not registered'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
-    if ( I_QI < 1 ) then
-       WARMRAIN = .true.
-    else
-       WARMRAIN = .false.
+    WARMRAIN = WARMRAIN_in
+    if ( .not. WARMRAIN ) then
        if ( I_QS < 1 ) then
           write(*,*) 'xxx QI is registerd, but QS is not registered'
-          call PRC_MPIstop
+          call PRC_abort
        end if
     endif
 
@@ -243,7 +233,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_CP_KF. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_CP_KF)
 
@@ -318,7 +308,7 @@ contains
        KF_LOG_in,          &
        TRIGGER_in          )
     use scale_process, only: &
-         PRC_MPIstop
+         PRC_abort
     implicit none
     integer,  intent(in)    :: KF_prec_in          !< precipitation type 1:Ogura-Cho(1973) 2:Kessler
     real(RP), intent(in)    :: RATE_in             !< ratio of cloud water and precipitation (Ogura and Cho 1973)
@@ -352,7 +342,7 @@ contains
     else
        write(*,*) 'xxx ERROR at KF namelist'
        write(*,*) 'KF_prec must be 1 or 2'
-       call PRC_MPIstop
+       call PRC_abort
     end if
     return
   end subroutine CP_kf_param
@@ -361,20 +351,20 @@ contains
   !> ATMOS_PHY_CP_kf
   !! calculate Kain-Fritsch Cumulus Parameterization
   !<
-  subroutine ATMOS_PHY_CP_kf( &
+  subroutine ATMOS_PHY_CP_kf_tendency( &
        KA, KS, KE,     &
        IA, IS, IE,     &
        JA, JS, JE,     &
        QA_MP, QS_MP, QE_MP, &
        DENS,           &
-       U,              &
-       V,              &
+       U, V,           &
        RHOT,           &
-!      TEMP,           &
-!      PRES,           &
-       QDRY,           &
-       QTRC_in,        &
+       TEMP, PRES,     &
+       QDRY, QTRC_in,  &
+       Rtot, CPtot,    &
        w0avg,          &
+       FZ,             &
+       KF_DTSEC,       &
        DENS_t_CP,      &
        RHOT_t_CP,      &
        RHOQ_t_CP,      &
@@ -386,21 +376,20 @@ contains
        nca             )
     use scale_file_history, only: &
        FILE_HISTORY_in
-    use scale_precision
-    use scale_tracer
     use scale_const, only: &
-       GRAV => CONST_GRAV, &
-       R    => CONST_Rdry
+       GRAV  => CONST_GRAV, &
+       R     => CONST_Rdry, &
+       Rvap  => CONST_Rvap, &
+       PRE00 => CONST_PRE00
     use scale_atmos_hydrometeor, only: &
+       CP_VAPOR, &
+       CP_WATER, &
+       CP_ICE,   &
        I_QV, &
        I_QC, &
        I_QR, &
        I_QI, &
        I_QS
-    use scale_time , only :&
-       KF_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
-    use scale_atmos_grid_cartesC_real, only: &
-       FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres   => ATMOS_THERMODYN_temp_pres,   &
        THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,        &
@@ -417,14 +406,20 @@ contains
     real(RP), intent(in)    :: U             (KA,IA,JA)       !< velocity u [m/s]
     real(RP), intent(in)    :: V             (KA,IA,JA)       !< velocity v [m/s]
     real(RP), intent(in)    :: RHOT          (KA,IA,JA)       !< DENS * POTT [K*kg/m3]
-!   real(RP), intent(in)    :: TEMP          (KA,IA,JA)       !< temperature [K]
-!   real(RP), intent(in)    :: PRES          (KA,IA,JA)       !< pressure of dry air [Pa]
+    real(RP), intent(in)    :: TEMP          (KA,IA,JA)       !< temperature [K]
+    real(RP), intent(in)    :: PRES          (KA,IA,JA)       !< pressure of dry air [Pa]
     real(RP), intent(in)    :: QDRY          (KA,IA,JA)       !< dry air [1]
     real(RP), intent(in)    :: QTRC_in       (KA,IA,JA,QA_MP) !< ratio of mass of tracer to total mass[kg/kg]
+    real(RP), intent(in)    :: Rtot          (KA,IA,JA)       !< gass constant
+    real(RP), intent(in)    :: CPtot         (KA,IA,JA)       !< specific heat
     real(RP), intent(in)    :: w0avg         (KA,IA,JA)       !< running mean of vertical velocity [m/s]
+    real(RP), intent(in)    :: FZ            (0:KA,IA,JA)
+    real(DP), intent(in)    :: KF_DTSEC
+
     real(RP), intent(inout) :: DENS_t_CP     (KA,IA,JA)       !< tendency DENS [kg/m3/s]
     real(RP), intent(inout) :: RHOT_t_CP     (KA,IA,JA)       !< tendency RHOT [K*kg/m3/s]
     real(RP), intent(inout) :: RHOQ_t_CP     (KA,IA,JA,QA_MP) !< tendency rho*QTRC [kg/kg/s]
+
     real(RP), intent(out)   :: SFLX_convrain (IA,JA)          !< convective rain rate [kg/m2/s]
     real(RP), intent(out)   :: cloudtop      (IA,JA)          !< cloud top height  [m]
     real(RP), intent(out)   :: cloudbase     (IA,JA)          !< cloud base height [m]
@@ -440,8 +435,6 @@ contains
     integer  :: k_lc,k_let,k_pbl                           !< indices
     integer  :: k_lfs                                      !< LFS layer index
 
-    real(RP) :: temp  (KA)                                 !< temperature [K]
-    real(RP) :: pres  (KA)                                 !< pressure of dry air [Pa]
     real(RP) :: qv    (KA)                                 !< water vapor mixing ratio[kg/kg] original in KF scheme
     real(RP) :: PSAT  (KA)                                 !< saturation vaper pressure
     real(RP) :: QSAT  (KA)                                 !< saturate water vaper mixing ratio [kg/kg]
@@ -496,11 +489,18 @@ contains
     real(RP) :: qi_nw(KA)                                  !< new cloud ice  mixing ratio  [kg/kg]
     real(RP) :: qr_nw(KA)                                  !< new rain water mixing ratio  [kg/kg]
     real(RP) :: qs_nw(KA)                                  !< new snow water mixing ratio  [kg/kg]
+
+    real(RP) :: dQV, dQC, dQI, dQR, dQS
+
+    real(RP) :: Rtot_nw(KA)                                !< new gass constant
+    real(RP) :: CPtot_nw(KA)                               !< new specific heat
+
     ! update variables
     real(RP) :: qtrc_nw(KA,QA_MP)                          !< qv,qc,qr,qi,qs (qg not change)
     real(RP) :: pott_nw(KA)                                !< new PT
     real(RP) :: RHOD(KA)                                   !< dry density
     real(RP) :: QV_resd(KA)                                !< residual vapor
+
     ! ------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cumulus Parameterization(KF)'
@@ -520,15 +520,6 @@ contains
 
        do k = KS, KE
           ! preparing a NON Hydriometeor condition to fit assumption in KF scheme
-          call THERMODYN_temp_pres( TEMP(k),          & ! [OUT]
-                                    PRES(k),          & ! [OUT]
-                                    DENS(k,i,j),      & ! [IN]
-                                    RHOT(k,i,j),      & ! [IN]
-                                    QTRC_in(k,i,j,:), & ! [IN]
-                                    TRACER_CV(:),     & ! [IN]
-                                    TRACER_R(:),      & ! [IN]
-                                    TRACER_MASS(:)    ) ! [IN]
-
           RHOD(k) = DENS(k,i,j) * QDRY(k,i,j)
        enddo
 
@@ -576,10 +567,10 @@ contains
 
        do k = KS, KE
           ! temporary: WRF TYPE equations are used to maintain consistency with kf_main
-          !call SATURATION_psat_liq( PSAT(k), TEMP(k) )
-          !QSAT(k) = 0.622_RP * PSAT(k) / ( PRES(k) - ( 1.0_RP-0.622_RP ) * PSAT(k) )
-          PSAT(k) = ALIQ*EXP((BLIQ*TEMP(K)-CLIQ)/(TEMP(K)-DLIQ))
-          QSAT(K) = 0.622_RP * PSAT(k) / ( PRES(K) - PSAT(k) )
+          !call SATURATION_psat_liq( PSAT(k), TEMP(k,i,j) )
+          !QSAT(k) = 0.622_RP * PSAT(k) / ( PRES(k,i,j) - ( 1.0_RP-0.622_RP ) * PSAT(k) )
+          PSAT(k) = ALIQ*EXP((BLIQ*TEMP(k,i,j)-CLIQ)/(TEMP(k,i,j)-DLIQ))
+          QSAT(K) = 0.622_RP * PSAT(k) / ( PRES(k,i,j) - PSAT(k) )
 
           ! calculate water vaper and relative humidity
           !QV  (k) = max( 0.000001_RP, min( QSAT(k), QV(k) ) ) ! conpare QSAT and QV, guess lower limit
@@ -603,9 +594,9 @@ contains
             KA, KS, KE,                   & ! [IN]
             deltaz(:,i,j), Z(:,i,j),      & ! [IN]
             qv(:), QSAT(:),               & ! [IN]
-            pres(:),                      & ! [IN]
+            pres(:,i,j),                  & ! [IN]
             deltap(:), deltax(i,j),       & ! [IN]
-            temp(:),                      & ! [IN]
+            temp(:,i,j),                  & ! [IN]
             w0avg(:,i,j),                 & ! [IN]
             I_convflag(i,j),              & ! [INOUT]
             cloudtop(i,j),                & ! [INOUT]
@@ -637,45 +628,50 @@ contains
        end if
 
        call CP_kf_downdraft ( &
-            KA, KS, KE,                                & ! [IN]
-            I_convflag(i,j),                           & ! [IN]
-            k_lcl, k_ml, k_top, k_pbl, k_let, k_lc,    & ! [IN]
-            deltaz(:,i,j), Z(:,i,j), cloudbase(i,j),   & ! [IN]
-            u(:,i,j), v(:,i,j), rh(:), qv(:), pres(:), & ! [IN]
-            deltap(:), deltax(i,j),                    & ! [IN]
-            ems(:), emsd(:),                           & ! [IN]
-            theta_ee(:),                               & ! [IN]
-            umf(:),                                    & ! [IN]
-            totalprcp, flux_qs(:), tempv(:),           & ! [IN]
-            wspd(:), dmf(:), downent(:), downdet(:),   & ! [OUT]
-            theta_d(:), qv_d(:), prcp_flux, k_lfs,     & ! [OUT]
-            CPR,                                       & ! [OUT]
-            tder                                       ) ! [OUT]
+            KA, KS, KE,                                    & ! [IN]
+            I_convflag(i,j),                               & ! [IN]
+            k_lcl, k_ml, k_top, k_pbl, k_let, k_lc,        & ! [IN]
+            deltaz(:,i,j), Z(:,i,j), cloudbase(i,j),       & ! [IN]
+            u(:,i,j), v(:,i,j), rh(:), qv(:), pres(:,i,j), & ! [IN]
+            deltap(:), deltax(i,j),                        & ! [IN]
+            ems(:), emsd(:),                               & ! [IN]
+            theta_ee(:),                                   & ! [IN]
+            umf(:),                                        & ! [IN]
+            totalprcp, flux_qs(:), tempv(:),               & ! [IN]
+            wspd(:), dmf(:), downent(:), downdet(:),       & ! [OUT]
+            theta_d(:), qv_d(:), prcp_flux, k_lfs,         & ! [OUT]
+            CPR,                                           & ! [OUT]
+            tder                                           ) ! [OUT]
 
        call CP_kf_compensational ( &
-            KA, KS, KE,                                                  & ! [IN]
-            k_top, k_lc, k_pbl, k_ml, k_lfs,                             & ! [IN]
-            deltaz(:,i,j), Z(:,i,j), pres(:), deltap(:), deltax(i,j),    & ! [IN]
-            temp(:), qv(:), ems(:), emsd(:),                             & ! [IN]
-            presmix, zmix, dpthmx,                                       & ! [IN]
-            cape,                                                        & ! [IN]
-            temp_u(:), qvdet(:), umflcl,                                 & ! [IN]
-            qc(:), qi(:), flux_qr(:), flux_qs(:),                        & ! [IN]
-            umfnewdold(:),                                               & ! [IN]
-            wspd(:),                                                     & ! [IN]
-            qv_d(:), theta_d(:),                                         & ! [IN]
-            cpr,                                                         & ! [IN]
-            I_convflag(i,j), k_lcl,                                      & ! [INOUT]
-            umf(:), upent(:), updet(:),                                  & ! [INOUT]
-            qcdet(:), qidet(:), dmf(:), downent(:), downdet(:),          & ! [INOUT]
-            prcp_flux, tder,                                             & ! [INOUT]
-            nic,                                                         & ! [OUT]
-            temp_g(:), qv_nw(:), qc_nw(:), qi_nw(:), qr_nw(:), qs_nw(:), & ! [OUT]
-            SFLX_convrain(i,j), cldfrac_KF,                              & ! [OUT]
-            lifetime(i,j), time_advec                                    ) ! [OUT]
+            KA, KS, KE,                                                   & ! [IN]
+            k_top, k_lc, k_pbl, k_ml, k_lfs,                              & ! [IN]
+            deltaz(:,i,j), Z(:,i,j), pres(:,i,j), deltap(:), deltax(i,j), & ! [IN]
+            temp(:,i,j), qv(:), ems(:), emsd(:),                          & ! [IN]
+            presmix, zmix, dpthmx,                                        & ! [IN]
+            cape,                                                         & ! [IN]
+            temp_u(:), qvdet(:), umflcl,                                  & ! [IN]
+            qc(:), qi(:), flux_qr(:), flux_qs(:),                         & ! [IN]
+            umfnewdold(:),                                                & ! [IN]
+            wspd(:),                                                      & ! [IN]
+            qv_d(:), theta_d(:),                                          & ! [IN]
+            cpr,                                                          & ! [IN]
+            I_convflag(i,j), k_lcl,                                       & ! [INOUT]
+            umf(:), upent(:), updet(:),                                   & ! [INOUT]
+            qcdet(:), qidet(:), dmf(:), downent(:), downdet(:),           & ! [INOUT]
+            prcp_flux, tder,                                              & ! [INOUT]
+            nic,                                                          & ! [OUT]
+            temp_g(:), qv_nw(:), qc_nw(:), qi_nw(:), qr_nw(:), qs_nw(:),  & ! [OUT]
+            SFLX_convrain(i,j), cldfrac_KF,                               & ! [OUT]
+            lifetime(i,j), time_advec                                     ) ! [OUT]
 
        ! compute tendencys
        !------------------------------------------------------------------------
+       do k = KS, KE
+          Rtot_nw (k) = Rtot (k,i,j)
+          CPtot_nw(k) = CPtot(k,i,j)
+       end do
+
        if(I_convflag(i,j) == 2) then ! no convection
           SFLX_convrain(i,j)  = 0.0_RP
           cldfrac_KF(KS:KE,:) = 0.0_RP
@@ -706,18 +702,34 @@ contains
 
           RHOQ_t_CP(:,i,j,:) = 0.0_RP
           do k=KS, k_top
-             RHOQ_t_CP(k,i,j,I_QV) = ( RHOD(k) * ( qv_nw(k) - QV(k) ) ) / lifetime(i,j)
-             RHOQ_t_CP(k,i,j,I_QC) = qc_nw(k) * RHOD(k) / lifetime(i,j)
-             RHOQ_t_CP(k,i,j,I_QR) = qr_nw(k) * RHOD(k) / lifetime(i,j)
+             ! vapor
+             dQV = RHOD(k) * ( qv_nw(k) - QV(k) )
+             RHOQ_t_CP(k,i,j,I_QV) = dQV / lifetime(i,j)
+             Rtot_nw(k)  = Rtot_nw(k)  + dQV * Rvap
+             CPtot_nw(k) = CPtot_nw(k) + dQV * CP_VAPOR
+             ! liquid water
+             dQC = qc_nw(k) * RHOD(k)
+             dQR = qr_nw(k) * RHOD(k)
+             RHOQ_t_CP(k,i,j,I_QC) = dQC / lifetime(i,j)
+             RHOQ_t_CP(k,i,j,I_QR) = dQR / lifetime(i,j)
              DENS_t_CP(k,i,j) = RHOQ_t_CP(k,i,j,I_QV) + RHOQ_t_CP(k,i,j,I_QC) + RHOQ_t_CP(k,i,j,I_QR)
+             CPtot_nw(k) = CPtot_nw(k) + ( dQC + dQR ) * CP_WATER
+             ! ice water
              if ( I_QI>0 ) then
-                RHOQ_t_CP(k,i,j,I_QI) = qi_nw(k) * RHOD(k) / lifetime(i,j)
-                DENS_t_CP(k,i,j) = DENS_t_CP(k,i,j) + RHOQ_t_CP(k,i,j,I_QI)
+                dQI = qi_nw(k) * RHOD(k)
+             else
+                dQI = 0.0_RP
              end if
              if ( I_QS>0 ) then
-                RHOQ_t_CP(k,i,j,I_QS) = qs_nw(k) * RHOD(k) / lifetime(i,j)
-                DENS_t_CP(k,i,j) = DENS_t_CP(k,i,j) + RHOQ_t_CP(k,i,j,I_QS)
+                dQS = qs_nw(k) * RHOD(k)
+             else
+                dQS = 0.0_RP
              end if
+             RHOQ_t_CP(k,i,j,I_QI) = dQI / lifetime(i,j)
+             DENS_t_CP(k,i,j) = DENS_t_CP(k,i,j) + RHOQ_t_CP(k,i,j,I_QI)
+             RHOQ_t_CP(k,i,j,I_QS) = dQS / lifetime(i,j)
+             DENS_t_CP(k,i,j) = DENS_t_CP(k,i,j) + RHOQ_t_CP(k,i,j,I_QS)
+             CPtot_nw(k) = CPtot_nw(k) + ( dQI + dQS ) * CP_ICE
 
              dens_nw(k) = dens(k,i,j) + DENS_t_CP(k,i,j) * lifetime(i,j)
 
@@ -735,10 +747,9 @@ contains
           enddo
 
           ! calc new potential temperature
-          call THERMODYN_pott(&
-               pott_nw(:), &
-               temp_g(:), pres(:), qtrc_nw(:,:), &
-               TRACER_CV(:), TRACER_R(:), TRACER_MASS(:) )
+          do k = KS, k_top
+             pott_nw(k) = temp_g(k) * ( PRE00 / pres(k,i,j) )**( Rtot_nw(k) / CPtot_nw(k) )
+          end do
           ! update rhot
           do k = KS, k_top
              RHOT_t_CP(k,i,j) = ( dens_nw(k)*pott_nw(k) - RHOT(k,i,j) ) / lifetime(i,j)
@@ -767,7 +778,7 @@ contains
     call FILE_HISTORY_in( real(I_convflag(:,:),RP), 'KF_CONVFLAG', 'CONVECTION FLAG',       ''  )
 
     return
-  end subroutine ATMOS_PHY_CP_kf
+  end subroutine ATMOS_PHY_CP_kf_tendency
 
   !------------------------------------------------------------------------------
   !> CP_kf_trigger
@@ -805,7 +816,7 @@ contains
          TEM00 => CONST_TEM00, &
          GRAV  => CONST_GRAV
     use scale_process, only: &
-         PRC_MPIstop
+         PRC_abort
     implicit none
     integer,  intent(in) :: KA, KS, KE            !< index
     real(RP), intent(in) :: dz_kf(KA),z_kf(KA)    !< delta z and height [m]
@@ -1185,7 +1196,7 @@ contains
     end do ! usl
     if ( itr .ge. itr_max ) then
        write(*,*) 'xxx iteration max count was reached in the USL loop in the KF scheme'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
 
@@ -1695,7 +1706,7 @@ contains
     use scale_atmos_saturation ,only :&
          ATMOS_SATURATION_psat_liq
     use scale_process, only: &
-         PRC_MPIstop
+         PRC_abort
     implicit none
     integer,  intent(in) :: KA, KS, KE          !< index
     integer,  intent(in) :: I_convflag          !< index of convection
@@ -2087,7 +2098,7 @@ contains
     use scale_time , only :&
          KF_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
     use scale_process, only: &
-         PRC_MPIstop
+         PRC_abort
     implicit none
     integer,  intent(in)    :: KA, KS, KE         !< index
     integer,  intent(in)    :: k_top              !< index at cloud top
@@ -2378,7 +2389,7 @@ contains
              if(kk == KS) then
                 write(*,*) "error qv<0 @ Kain-Fritsch cumulus parameterization"
                 write(*,*) "@sub scale_atmos_phy_cp_kf",__FILE__,__LINE__
-                call PRC_MPIstop
+                call PRC_abort
              end if
              kkp1 = kk + 1
              if(kk == k_top) then
@@ -2404,7 +2415,7 @@ contains
           istop = 1
           write(*,*) "xxxERROR@KF omega is not consistent",ncount
           write(*,*) "omega error",abs(topomg - omg(k_top)),k_top,topomg,omg(k_top)
-          call PRC_MPIstop
+          call PRC_abort
        end if
        ! convert theta to T
        do kk = KS,k_top
@@ -2677,7 +2688,7 @@ contains
        write (*,'(" *** conserv qhyd + qv   : ",F20.12)') qhydr + qpfnl
        write (*,'(" *** conserv total       : ",F20.12)') qfinl-qinit
        write (*,*) "--------------------------------------"
-       call PRC_MPIstop
+       call PRC_abort
     end if
     !> feed back to resolvable scale tendencies
     !! if the advective time period(time_advec) is less than specified minimum
