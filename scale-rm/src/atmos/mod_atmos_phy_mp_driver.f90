@@ -877,6 +877,63 @@ contains
                                                  TRACER_CV(:),          & ! [IN]
                                                  MP_DTSEC_SEDIMENTATION ) ! [IN]
 
+                !do j = JSB, JEB
+                !do i = ISB, IEB
+                !   FDZ(KS-1) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j)
+                !   RFDZ(KS-1) = 1.0_RP / FDZ(KS-1)
+                !   do k = KS, KE
+                !      FDZ(k) = REAL_CZ(k+1,i,j) - REAL_CZ(k  ,i,j)
+                !      RFDZ(k) = 1.0_RP / FDZ(k)
+                !      RCDZ(k) = 1.0_RP / ( REAL_FZ(k  ,i,j) - REAL_FZ(k-1,i,j) )
+                !   enddo
+
+                !   do k = KS, KE
+                !      DENS2(k)  = DENS(k,i,j)
+                !      TEMP2(k)  = TEMP(k,i,j)
+                !      CPtot2(k) = CPtot(k,i,j)
+                !      CVtot2(k) = CVtot(k,i,j)
+                !      RHOE(k)   = TEMP(k,i,j) * CVtot(k,i,j) * DENS2(k)
+                !      RHOE2(k)  = RHOE(k)
+                !   end do
+                !   do iq = QS_MP+1, QE_MP
+                !   do k = KS, KE
+                !      RHOQ2(k,iq) = DENS2(k) * QTRC(k,i,j,iq)
+                !   end do
+                !   end do
+
+                !   FLX_hydro(:) = 0.0_RP
+
+                !   call ATMOS_PHY_MP_precipitation( &
+                !        KA, KS, KE, QHA, QLA, QIA, &
+                !        TEMP2(:), vterm(:,:),   & ! [IN]
+                !        FDZ(:), RCDZ(:),        & ! [IN]
+                !        MP_DTSEC_SEDIMENTATION, & ! [IN]
+                !        i, j,                   & ! [IN]
+                !        DENS2(:), RHOQ2(:,:),   & ! [INOUT]
+                !        CPtot2(:), CVtot2(:),   & ! [INOUT]
+                !        RHOE2(:),               & ! [INOUT]
+                !        mflux(:), sflux(:)      ) ! [OUT]
+
+                !   do k = KS, KE
+                !      TEMP2(k) = RHOE2(k) / ( DENS2(k) * CVtot2(k) )
+                !   end do
+
+                !   do k = KS-1, KE-1
+                !      FLX_hydro(k) = FLX_hydro(k) + mflux(k) * MP_RNSTEP_SEDIMENTATION
+                !   enddo
+
+                !   SFLX_rain(i,j) = SFLX_rain(i,j) - sflux(1) * MP_RNSTEP_SEDIMENTATION
+                !   SFLX_snow(i,j) = SFLX_snow(i,j) - sflux(2) * MP_RNSTEP_SEDIMENTATION
+
+                !   call ATMOS_PHY_MP_precipitation_momentum( &
+                !           KA, KS, KE, &
+                !           DENS(:,i,j), MOMZ(:,i,j), U(:,i,j), V(:,i,j),        & ! [IN]
+                !           FLX_hydro(:),                                        & ! [IN]
+                !           RCDZ(:), RFDZ(:),                                    & ! [IN]
+                !           MOMZ_t_MP(:,i,j), RHOU_t_MP(:,i,j), RHOV_t_MP(:,i,j) ) ! [OUT]
+                !enddo
+                !enddo
+
                 do iq = 1, QA-1
                 do j  = JS, JE
                 do i  = IS, IE
@@ -939,7 +996,7 @@ contains
                 enddo
              endif
 
-          endif
+          else
 
           ! prepare for history output
           hist_vterm_idx(:) = -1
@@ -1102,6 +1159,8 @@ contains
                 call FILE_HISTORY_put( hist_vterm_id(iq), vterm_hist(:,:,:,hist_vterm_idx(iq)) )
           end do
           if ( allocated( vterm_hist ) ) deallocate( vterm_hist )
+
+          end if
 
           call PROF_rapend  ('MP_Precipitation', 2)
 
