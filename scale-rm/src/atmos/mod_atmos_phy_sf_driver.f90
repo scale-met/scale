@@ -257,13 +257,10 @@ contains
     if ( update_flag ) then
 
        ! update surface density, surface pressure
-       call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
-                             PRES     (:,:,:), & ! [IN]
-                             CZ       (:,:,:), & ! [IN]
-                             TOPO_Zsfc(:,:),   & ! [IN]
-                             Z1       (:,:),   & ! [IN]
-                             SFC_DENS (:,:),   & ! [OUT]
-                             SFC_PRES (:,:)    ) ! [OUT]
+       call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                             DENS(:,:,:), PRES(:,:,:),           & ! [IN]
+                             CZ(:,:,:), TOPO_Zsfc(:,:), Z1(:,:), & ! [IN]
+                             SFC_DENS(:,:), SFC_PRES(:,:)        ) ! [OUT]
 
        if ( .NOT. CPL_sw ) then
 

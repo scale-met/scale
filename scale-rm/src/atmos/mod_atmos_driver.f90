@@ -638,8 +638,8 @@ contains
   !> Set surface boundary condition
   subroutine ATMOS_SURFACE_SET( countup )
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_CZ, &
-       ATMOS_GRID_CARTESC_REAL_Z1
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
     use scale_topography, only: &
        TOPO_Zsfc
     use scale_atmos_bottom, only: &
@@ -692,13 +692,10 @@ contains
        enddo
 
        ! planetary boundary layer
-       call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
-                             PRES     (:,:,:), & ! [IN]
-                             ATMOS_GRID_CARTESC_REAL_CZ  (:,:,:), & ! [IN]
-                             TOPO_Zsfc(:,:),   & ! [IN]
-                             ATMOS_GRID_CARTESC_REAL_Z1  (:,:),   & ! [IN]
-                             SFC_DENS (:,:),   & ! [OUT]
-                             SFC_PRES (:,:)    ) ! [OUT]
+       call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                             DENS(:,:,:), PRES(:,:,:),                     & ! [IN]
+                             REAL_CZ(:,:,:), TOPO_Zsfc(:,:), REAL_Z1(:,:), & ! [IN]
+                             SFC_DENS(:,:), SFC_PRES(:,:)                  ) ! [OUT]
 
        call CPL_putATM( TEMP       (KS,:,:),   & ! [IN]
                         PRES       (KS,:,:),   & ! [IN]

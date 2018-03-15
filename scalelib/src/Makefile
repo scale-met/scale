@@ -152,7 +152,7 @@ OBJS_NAME = \
 	scale_atmos_phy_cp_common.o	\
 	$(OBJS_CP)	\
 	\
-	scale_atmos_sub_bottom.o	\
+	scale_atmos_bottom.o	\
 	scale_atmos_sub_boundary.o	\
 	scale_atmos_sub_hydrostatic.o	\
 	scale_atmos_sub_profile.o	\

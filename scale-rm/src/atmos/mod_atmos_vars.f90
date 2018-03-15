@@ -1092,13 +1092,10 @@ contains
     real(RP) :: SFC_PRES(IA,JA)
     !---------------------------------------------------------------------------
 
-    call BOTTOM_estimate( DENS_av  (:,:,:), & ! [IN]
-                          PRES     (:,:,:), & ! [IN]
-                          REAL_CZ  (:,:,:), & ! [IN]
-                          TOPO_Zsfc(:,:),   & ! [IN]
-                          REAL_Z1  (:,:),   & ! [IN]
-                          SFC_DENS (:,:),   & ! [OUT]
-                          SFC_PRES (:,:)    ) ! [OUT]
+    call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                          DENS_av(:,:,:), PRES(:,:,:),                  & ! [IN]
+                          REAL_CZ(:,:,:), TOPO_Zsfc(:,:), REAL_Z1(:,:), & ! [IN]
+                          SFC_DENS(:,:), SFC_PRES(:,:)                  ) ! [OUT]
 
     call FILE_HISTORY_CARTESC_set_pres( PHYD    (:,:,:), & ! [IN]
                                         PHYDH   (:,:,:), & ! [IN]
