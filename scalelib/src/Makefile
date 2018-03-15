@@ -23,6 +23,7 @@ VPATH = common:                          \
         atmosphere/grid:                 \
         atmosphere/physics/pbl:          \
         atmosphere/physics/microphysics: \
+        atmosphere/physics/cumulus:      \
         atmosphere/physics/radiation:    \
         atmosphere/physics/surface:      \
         atmosphere/physics/aerosol:      \
@@ -32,7 +33,6 @@ VPATH = common:                          \
         atmos-physics/microphysics:      \
         atmos-physics/surfaceflux:       \
         atmos-physics/turbulence:        \
-        atmos-physics/cumulus:           \
         atmos-rm:                        \
         atmos-rm/communication:          \
         atmos-rm/grid:                   \
@@ -150,7 +150,6 @@ OBJS_NAME = \
         \
 	$(OBJS_BL)	\
 	\
-	scale_atmos_phy_cp.o	\
 	scale_atmos_phy_cp_common.o	\
 	$(OBJS_CP)	\
 	\
