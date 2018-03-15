@@ -115,6 +115,13 @@ contains
        ATMOS_PHY_BL_driver_setup
     use mod_atmos_phy_cp_driver, only: &
        ATMOS_PHY_CP_driver_setup
+    use scale_atmos_grid_cartesC, only: &
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       FZ => ATMOS_GRID_CARTESC_FZ
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ, &
+       REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI
     implicit none
     !---------------------------------------------------------------------------
 
@@ -128,7 +135,9 @@ contains
     call ATMOS_SOLARINS_setup( TIME_NOWDATE(1) )
 
     call PROF_rapstart('ATM_Refstate', 2)
-    call ATMOS_REFSTATE_setup
+    call ATMOS_REFSTATE_setup( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
+
     call PROF_rapend  ('ATM_Refstate', 2)
 
     call PROF_rapstart('ATM_Boundary', 2)
@@ -165,6 +174,9 @@ contains
        RHOT,                       &
        QTRC,                       &
        QV,                         &
+       POTT,                       &
+       TEMP,                       &
+       PRES,                       &
        DENS_tp,                    &
        MOMZ_tp,                    &
        RHOU_tp,                    &
@@ -189,6 +201,17 @@ contains
        ATMOS_PHY_AE_driver_resume
     use mod_atmos_phy_rd_driver, only: &
        ATMOS_PHY_RD_driver_resume
+    use scale_atmos_grid_cartesC, only: &
+       CZ   => ATMOS_GRID_CARTESC_CZ,  &
+       FZ   => ATMOS_GRID_CARTESC_FZ,  &
+       FDZ  => ATMOS_GRID_CARTESC_FDZ, &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ, &
+       REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI
+    use scale_time, only: &
+       TIME_NOWSEC
     implicit none
     !---------------------------------------------------------------------------
 
@@ -239,7 +262,12 @@ contains
 
     !########## Set reference state ##########
     call PROF_rapstart('ATM_Refstate', 2)
-    call ATMOS_REFSTATE_resume( DENS, RHOT, QTRC, QV )
+    call ATMOS_REFSTATE_resume( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), &
+                                CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 &
+                                REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:),               &
+                                TIME_NOWSEC                                                    )
+
     call PROF_rapend  ('ATM_Refstate', 2)
 
     !########## Set Surface Boundary Condition ##########
@@ -345,9 +373,9 @@ contains
        RHOT,                       &
        QTRC,                       &
        QV,                         &
-       Rtot,                       &
-       CVtot,                      &
-       CPtot,                      &
+       PRES,                       &
+       POTT,                       &
+       TEMP,                       &
        DENS_tp,                    &
        MOMZ_tp,                    &
        RHOU_tp,                    &
@@ -377,6 +405,17 @@ contains
        ATMOS_PHY_BL_driver_calc_tendency
     use mod_atmos_phy_cp_driver, only: &
        ATMOS_PHY_CP_driver
+    use scale_atmos_grid_cartesC, only: &
+       CZ   => ATMOS_GRID_CARTESC_CZ,  &
+       FZ   => ATMOS_GRID_CARTESC_FZ,  &
+       FDZ  => ATMOS_GRID_CARTESC_FDZ, &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ, &
+       REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI
+    use scale_time, only: &
+       TIME_NOWSEC
     implicit none
     !---------------------------------------------------------------------------
 
@@ -402,12 +441,6 @@ contains
     !########## Calculate diagnostic variables ##########
     call ATMOS_vars_calc_diagnostics
 
-    !########## Reference State ###########
-    if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
-       call PROF_rapstart('ATM_Refstate', 2)
-       call ATMOS_REFSTATE_update( DENS, RHOT, QV, Rtot, CVtot, CPtot ) ! [IN]
-       call PROF_rapend  ('ATM_Refstate', 2)
-    endif
 
     !########## Adjustment ##########
     ! Microphysics
@@ -428,7 +461,11 @@ contains
     !########## Reference State ###########
     if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
        call PROF_rapstart('ATM_Refstate', 2)
-       call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! [IN]
+       call ATMOS_REFSTATE_update( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                   DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
+                                   CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
+                                   REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:),               & ! [IN]
+                                   TIME_NOWSEC                                                    ) ! [IN]
        call PROF_rapend  ('ATM_Refstate', 2)
     endif
 

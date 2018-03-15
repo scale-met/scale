@@ -1,15 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Reference state
+!> module atmosphere / reference state
 !!
 !! @par Description
 !!          Reference state of Atmosphere
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2011-12-11 (H.Yashiro)  [new]
-!! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
-!! @li      2013-02-25 (H.Yashiro)  [mod] Separate ISA profile to scale_atmos_sub_profile
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -21,8 +16,6 @@ module scale_atmos_refstate
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_atmos_grid_cartesC_index
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -85,12 +78,23 @@ module scale_atmos_refstate
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_REFSTATE_setup
+  subroutine ATMOS_REFSTATE_setup( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       CZ, FZ, REAL_CZ, REAL_FZ, REAL_PHI )
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: CZ      (  KA)
+    real(RP), intent(in) :: FZ      (0:KA)
+    real(RP), intent(in) :: REAL_CZ (  KA,IA,JA)
+    real(RP), intent(in) :: REAL_FZ (0:KA,IA,JA)
+    real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
 
     NAMELIST / PARAM_ATMOS_REFSTATE / &
        ATMOS_REFSTATE_IN_BASENAME,  &
@@ -139,7 +143,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_REFSTATE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_REFSTATE)
 
@@ -152,27 +156,31 @@ contains
 
     ! input or generate reference profile
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
-       call ATMOS_REFSTATE_read
+       call ATMOS_REFSTATE_read( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
+
     else
        if ( ATMOS_REFSTATE_TYPE == 'ISA' ) then
 
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type                : ISA'
           if( IO_L ) write(IO_FID_LOG,*) '*** Surface temperature      [K]  : ', ATMOS_REFSTATE_TEMP_SFC
           if( IO_L ) write(IO_FID_LOG,*) '*** Surface & environment RH [%]  : ', ATMOS_REFSTATE_RH
-          call ATMOS_REFSTATE_generate_isa
+          call ATMOS_REFSTATE_generate_isa( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                            CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
           ATMOS_REFSTATE_UPDATE_FLAG = .false.
 
        elseif ( ATMOS_REFSTATE_TYPE == 'UNIFORM' ) then
 
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type                : UNIFORM POTT'
           if( IO_L ) write(IO_FID_LOG,*) '*** Potential temperature         : ', ATMOS_REFSTATE_POTT_UNIFORM
-          call ATMOS_REFSTATE_generate_uniform
+          call ATMOS_REFSTATE_generate_uniform( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                                CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
           ATMOS_REFSTATE_UPDATE_FLAG = .false.
 
        elseif ( ATMOS_REFSTATE_TYPE == 'ZERO' ) then
 
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type                : ZERO'
-          call ATMOS_REFSTATE_generate_zero
+          call ATMOS_REFSTATE_generate_zero( KA, IA, JA )
           ATMOS_REFSTATE_UPDATE_FLAG = .false.
 
        elseif ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
@@ -183,7 +191,7 @@ contains
 
        else
           write(*,*) 'xxx ATMOS_REFSTATE_TYPE must be "ISA" or "UNIFORM". Check! : ', trim(ATMOS_REFSTATE_TYPE)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
     endif
@@ -194,17 +202,28 @@ contains
   !-----------------------------------------------------------------------------
   !> Resume
   subroutine ATMOS_REFSTATE_resume( &
-       DENS, RHOT, QTRC, QV )
-    use scale_process, only: &
-       PRC_MPIstop
-    use scale_atmos_grid_cartesC, only: &
-       CZ => ATMOS_GRID_CARTESC_CZ
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       DENS, POTT, TEMP, PRES, QV,                    &
+       CZ, FZ, FDZ, RCDZ, REAL_CZ, REAL_FZ, REAL_PHI, &
+       TIME_NOWSEC                                    )
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
     real(RP), intent(in) :: DENS(KA,IA,JA)
-    real(RP), intent(in) :: RHOT(KA,IA,JA)
-    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in) :: POTT(KA,IA,JA)
+    real(RP), intent(in) :: TEMP(KA,IA,JA)
+    real(RP), intent(in) :: PRES(KA,IA,JA)
     real(RP), intent(in) :: QV  (KA,IA,JA)
+    real(RP), intent(in) :: CZ      (  KA)
+    real(RP), intent(in) :: FZ      (0:KA)
+    real(RP), intent(in) :: FDZ     (  KA-1)
+    real(RP), intent(in) :: RCDZ    (  KA)
+    real(RP), intent(in) :: REAL_CZ (  KA,IA,JA)
+    real(RP), intent(in) :: REAL_FZ (0:KA,IA,JA)
+    real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
+    real(DP), intent(in) :: TIME_NOWSEC
 
     integer :: k
 
@@ -216,8 +235,12 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type               : make from initial data'
           if( IO_L ) write(IO_FID_LOG,*) '*** Update state?                : ', ATMOS_REFSTATE_UPDATE_FLAG
           if( IO_L ) write(IO_FID_LOG,*) '*** Update interval [sec]        : ', ATMOS_REFSTATE_UPDATE_DT
-          call ATMOS_REFSTATE_generate_frominit( DENS, RHOT, QTRC, QV ) ! (in)
 
+          call ATMOS_REFSTATE_generate_frominit( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                                 DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
+                                                 CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
+                                                 REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:),               & ! [IN]
+                                                 TIME_NOWSEC                                                    ) ! [IN]
        endif
 
        if( IO_L ) write(IO_FID_LOG,*)
@@ -248,15 +271,26 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Read reference state profile
-  subroutine ATMOS_REFSTATE_read
+  subroutine ATMOS_REFSTATE_read( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       CZ, FZ, REAL_CZ, REAL_FZ, REAL_PHI )
     use scale_file_cartesC, only: &
        FILE_CARTESC_open, &
        FILE_CARTESC_check_coordinates, &
        FILE_CARTESC_read, &
        FILE_CARTESC_close
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: CZ      (  KA)
+    real(RP), intent(in) :: FZ      (0:KA)
+    real(RP), intent(in) :: REAL_CZ (  KA,IA,JA)
+    real(RP), intent(in) :: REAL_FZ (0:KA,IA,JA)
+    real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
 
     integer :: fid
     !---------------------------------------------------------------------------
@@ -288,11 +322,11 @@ contains
 
     else
        write(*,*) 'xxx [ATMOS_REFSTATE_read] refstate file is not specified.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
-    call ATMOS_REFSTATE_calc3D
-
+    call ATMOS_REFSTATE_calc3D( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
 
     return
   end subroutine ATMOS_REFSTATE_read
@@ -341,14 +375,12 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Generate reference state profile (International Standard Atmosphere)
-  subroutine ATMOS_REFSTATE_generate_isa
+  subroutine ATMOS_REFSTATE_generate_isa( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       CZ, FZ, REAL_CZ, REAL_FZ, REAL_PHI )
     use scale_const, only: &
        EPSvap => CONST_EPSvap, &
        Pstd => CONST_Pstd
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_CZ
-    use scale_comm, only: &
-       COMM_horizontal_mean
     use scale_atmos_profile, only: &
        PROFILE_isa => ATMOS_PROFILE_isa
     use scale_atmos_hydrostatic, only: &
@@ -356,12 +388,16 @@ contains
     use scale_atmos_saturation, only: &
        SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
        SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all
-    use scale_atmos_grid_cartesC, only: &
-       CZ => ATMOS_GRID_CARTESC_CZ, &
-       FZ => ATMOS_GRID_CARTESC_FZ
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
-    real(RP) :: z(KA)
+    real(RP), intent(in) :: CZ      (  KA)
+    real(RP), intent(in) :: FZ      (0:KA)
+    real(RP), intent(in) :: REAL_CZ (  KA,IA,JA)
+    real(RP), intent(in) :: REAL_FZ (0:KA,IA,JA)
+    real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
 
     real(RP) :: temp(KA)
     real(RP) :: pres(KA)
@@ -385,13 +421,10 @@ contains
     pott_sfc = ATMOS_REFSTATE_TEMP_SFC
     pres_sfc = Pstd
 
-    call COMM_horizontal_mean( z(:), ATMOS_GRID_CARTESC_REAL_CZ(:,:,:) )
-
     call PROFILE_isa( KA, KS, KE, & ! [IN]
-                      pott_sfc,   & ! [IN]
-                      pres_sfc,   & ! [IN]
-                      z   (:),    & ! [IN]
-                      pott(:)     ) ! [OUT]
+                      pott_sfc, pres_sfc, & ! [IN]
+                      CZ(:),              & ! [IN]
+                      pott(:)             ) ! [OUT]
 
     qv(:)  = 0.0_RP
     qc(:)  = 0.0_RP
@@ -446,14 +479,17 @@ contains
     ATMOS_REFSTATE1D_pott(:) = pott(:)
     ATMOS_REFSTATE1D_qv  (:) = qv(:)
 
-    call ATMOS_REFSTATE_calc3D
+    call ATMOS_REFSTATE_calc3D( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
 
     return
   end subroutine ATMOS_REFSTATE_generate_isa
 
   !-----------------------------------------------------------------------------
   !> Generate reference state profile (Uniform Potential Temperature)
-  subroutine ATMOS_REFSTATE_generate_uniform
+  subroutine ATMOS_REFSTATE_generate_uniform( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       CZ, FZ, REAL_CZ, REAL_FZ, REAL_PHI )
     use scale_const, only: &
        EPSvap => CONST_EPSvap, &
        Pstd   => CONST_Pstd
@@ -462,10 +498,16 @@ contains
     use scale_atmos_saturation, only: &
        SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
        SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all
-    use scale_atmos_grid_cartesC, only: &
-       CZ => ATMOS_GRID_CARTESC_CZ, &
-       FZ => ATMOS_GRID_CARTESC_FZ
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: CZ      (  KA)
+    real(RP), intent(in) :: FZ      (0:KA)
+    real(RP), intent(in) :: REAL_CZ (  KA,IA,JA)
+    real(RP), intent(in) :: REAL_FZ (0:KA,IA,JA)
+    real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
 
     real(RP) :: temp(KA)
     real(RP) :: pres(KA)
@@ -545,22 +587,32 @@ contains
     ATMOS_REFSTATE1D_pott(:) = pott(:)
     ATMOS_REFSTATE1D_qv  (:) = qv(:)
 
-    call ATMOS_REFSTATE_calc3D
+    call ATMOS_REFSTATE_calc3D( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
 
     return
   end subroutine ATMOS_REFSTATE_generate_uniform
 
   !-----------------------------------------------------------------------------
   !> Generate reference state profile (None reference state)
-  subroutine ATMOS_REFSTATE_generate_zero
+  subroutine ATMOS_REFSTATE_generate_zero( KA, IA, JA )
     implicit none
+    integer, intent(in) :: KA, IA, JA
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
     do k = 1, KA
-    do i = 1, IA
+       ATMOS_REFSTATE1D_pres(k) = 0.0_RP
+       ATMOS_REFSTATE1D_temp(k) = 0.0_RP
+       ATMOS_REFSTATE1D_dens(k) = 0.0_RP
+       ATMOS_REFSTATE1D_pott(k) = 0.0_RP
+       ATMOS_REFSTATE1D_qv  (k) = 0.0_RP
+    end do
+
     do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
        ATMOS_REFSTATE_dens(k,i,j) = 0.0_RP
        ATMOS_REFSTATE_temp(k,i,j) = 0.0_RP
        ATMOS_REFSTATE_pres(k,i,j) = 0.0_RP
@@ -576,17 +628,28 @@ contains
   !-----------------------------------------------------------------------------
   !> Generate reference state profile (Horizontal average from initial data)
   subroutine ATMOS_REFSTATE_generate_frominit( &
-       DENS, RHOT, QTRC, QV )
-    use scale_time, only: &
-       TIME_NOWSEC
-    use scale_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_specific_heat
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       DENS, POTT, TEMP, PRES, QV,                    &
+       CZ, FZ, FDZ, RCDZ, REAL_CZ, REAL_FZ, REAL_PHI, &
+       TIME_NOWSEC )
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
     real(RP), intent(in) :: DENS(KA,IA,JA)
-    real(RP), intent(in) :: RHOT(KA,IA,JA)
-    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in) :: POTT(KA,IA,JA)
+    real(RP), intent(in) :: TEMP(KA,IA,JA)
+    real(RP), intent(in) :: PRES(KA,IA,JA)
     real(RP), intent(in) :: QV  (KA,IA,JA)
+    real(RP), intent(in) :: CZ      (  KA)
+    real(RP), intent(in) :: FZ      (0:KA)
+    real(RP), intent(in) :: FDZ     (  KA-1)
+    real(RP), intent(in) :: RCDZ    (  KA)
+    real(RP), intent(in) :: REAL_CZ (  KA,IA,JA)
+    real(RP), intent(in) :: REAL_FZ (0:KA,IA,JA)
+    real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
+    real(DP), intent(in) :: TIME_NOWSEC
 
     real(RP) :: Qdry (KA,IA,JA)
     real(RP) :: Rtot (KA,IA,JA)
@@ -594,12 +657,13 @@ contains
     real(RP) :: CPtot(KA,IA,JA)
     !---------------------------------------------------------------------------
 
-    last_updated = TIME_NOWSEC - ATMOS_REFSTATE_UPDATE_DT
+    last_updated = TIME_NOWSEC - ATMOS_REFSTATE_UPDATE_DT ! to force update
 
-    call ATMOS_THERMODYN_specific_heat( KA, KS, KE, IA, IS, IE, JA, JS, JE, QA, &
-                                        QTRC(:,:,:,:), TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
-                                        Qdry(:,:,:), Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:)                    ) ! [OUT]
-    call ATMOS_REFSTATE_update( DENS(:,:,:), RHOT(:,:,:), QV(:,:,:), Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:) ) ! (in)
+    call ATMOS_REFSTATE_update( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
+                                CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
+                                REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:),               & ! [IN]
+                                TIME_NOWSEC                                                    ) ! [IN]
 
     return
   end subroutine ATMOS_REFSTATE_generate_frominit
@@ -607,100 +671,65 @@ contains
   !-----------------------------------------------------------------------------
   !> Update reference state profile (Horizontal average)
   subroutine ATMOS_REFSTATE_update( &
-       DENS, RHOT, QV, Rtot, CVtot, CPtot )
-    use scale_atmos_grid_cartesC, only: &
-       ATMOS_GRID_CARTESC_CZ
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_CZ
-    use scale_time, only: &
-       TIME_NOWSEC
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       DENS, POTT, TEMP, PRES, QV,                    &
+       CZ, FZ, FDZ, RCDZ, REAL_CZ, REAL_FZ, REAL_PHI, &
+       TIME_NOWSEC                                    )
     use scale_comm, only: &
        COMM_horizontal_mean
     use scale_interp_vert, only: &
        INTERP_VERT_xi2z
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_rhot2temp_pres => ATMOS_THERMODYN_rhot2temp_pres
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
     real(RP), intent(in) :: DENS (KA,IA,JA)
-    real(RP), intent(in) :: RHOT (KA,IA,JA)
+    real(RP), intent(in) :: POTT (KA,IA,JA)
+    real(RP), intent(in) :: TEMP (KA,IA,JA)
+    real(RP), intent(in) :: PRES (KA,IA,JA)
     real(RP), intent(in) :: QV   (KA,IA,JA)
-    real(RP), intent(in) :: Rtot (KA,IA,JA)
-    real(RP), intent(in) :: CVtot(KA,IA,JA)
-    real(RP), intent(in) :: CPtot(KA,IA,JA)
+    real(RP), intent(in) :: CZ      (  KA)
+    real(RP), intent(in) :: FZ      (0:KA)
+    real(RP), intent(in) :: FDZ     (  KA-1)
+    real(RP), intent(in) :: RCDZ    (  KA)
+    real(RP), intent(in) :: REAL_CZ (  KA,IA,JA)
+    real(RP), intent(in) :: REAL_FZ (0:KA,IA,JA)
+    real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
+    real(DP), intent(in) :: TIME_NOWSEC
 
-    real(RP) :: temp(KA,IA,JA)
-    real(RP) :: pres(KA,IA,JA)
-    real(RP) :: pott(KA,IA,JA)
     real(RP) :: work(KA,IA,JA)
 
-    integer  :: k, i, j
+    integer  :: k
     !---------------------------------------------------------------------------
 
     if ( TIME_NOWSEC - last_updated >= ATMOS_REFSTATE_UPDATE_DT ) then
 
        if( IO_L ) write(IO_FID_LOG,*) '*** [REFSTATE] update reference state'
 
-       call THERMODYN_rhot2temp_pres( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                                      dens(:,:,:), rhot(:,:,:), Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:), & ! [IN]
-                                      temp(:,:,:), pres(:,:,:)                                           ) ! [OUT]
-
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS, KE
-          pott(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-
-       call INTERP_VERT_xi2z( KA, KS, KE,     & ! [IN]
-                              IA, ISB, IEB,   & ! [IN]
-                              JA, JSB, JEB,   & ! [IN]
-                              ATMOS_GRID_CARTESC_CZ(:),     & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
-                              temp   (:,:,:), & ! [IN]
-                              work   (:,:,:)  ) ! [OUT]
-
+       call INTERP_VERT_xi2z( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              CZ(:), REAL_CZ(:,:,:), TEMP(:,:,:), & ! [IN]
+                              work(:,:,:)                         ) ! [OUT]
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_temp(:), work(:,:,:) )
 
-       call INTERP_VERT_xi2z( KA, KS, KE,     & ! [IN]
-                              IA, ISB, IEB,   & ! [IN]
-                              JA, JSB, JEB,   & ! [IN]
-                              ATMOS_GRID_CARTESC_CZ(:),     & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
-                              pres   (:,:,:), & ! [IN]
-                              work   (:,:,:)  ) ! [OUT]
-
+       call INTERP_VERT_xi2z( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              CZ(:), REAL_CZ(:,:,:), PRES(:,:,:), & ! [IN]
+                              work(:,:,:)                         ) ! [OUT]
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_pres(:), work(:,:,:) )
 
-       call INTERP_VERT_xi2z( KA, KS, KE,     & ! [IN]
-                              IA, ISB, IEB,   & ! [IN]
-                              JA, JSB, JEB,   & ! [IN]
-                              ATMOS_GRID_CARTESC_CZ(:),     & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
-                              DENS   (:,:,:), & ! [IN]
-                              work   (:,:,:)  ) ! [OUT]
-
+       call INTERP_VERT_xi2z( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              CZ(:), REAL_CZ(:,:,:), DENS(:,:,:), & ! [IN]
+                              work(:,:,:)                         ) ! [OUT]
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_dens(:), work(:,:,:) )
 
-       call INTERP_VERT_xi2z( KA, KS, KE,     & ! [IN]
-                              IA, ISB, IEB,   & ! [IN]
-                              JA, JSB, JEB,   & ! [IN]
-                              ATMOS_GRID_CARTESC_CZ(:),     & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
-                              pott   (:,:,:), & ! [IN]
-                              work   (:,:,:)  ) ! [OUT]
-
+       call INTERP_VERT_xi2z( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              CZ(:), REAL_CZ(:,:,:), POTT(:,:,:), & ! [IN]
+                              work(:,:,:)                         ) ! [OUT]
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_pott(:), work(:,:,:) )
 
-       call INTERP_VERT_xi2z( KA, KS, KE,          & ! [IN]
-                              IA, ISB, IEB,        & ! [IN]
-                              JA, JSB, JEB,        & ! [IN]
-                              ATMOS_GRID_CARTESC_CZ(:),          & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_CZ(:,:,:),      & ! [IN]
-                              QV  (:,:,:),      & ! [IN]
-                              work(:,:,:)       ) ! [OUT]
-
+       call INTERP_VERT_xi2z( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              CZ(:), REAL_CZ(:,:,:), QV(:,:,:), & ! [IN]
+                              work(:,:,:)                       ) ! [OUT]
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_qv(:), work(:,:,:) )
 
        do k = KE-1, KS, -1 ! fill undefined value
@@ -710,10 +739,12 @@ contains
           if( ATMOS_REFSTATE1D_pott(k) <= 0.0_RP ) ATMOS_REFSTATE1D_pott(k) = ATMOS_REFSTATE1D_pott(k+1)
           if( ATMOS_REFSTATE1D_qv  (k) <= 0.0_RP ) ATMOS_REFSTATE1D_qv  (k) = ATMOS_REFSTATE1D_qv  (k+1)
        enddo
-       call smoothing( ATMOS_REFSTATE1D_pott(:) )
-       call smoothing( ATMOS_REFSTATE1D_qv(:) )
 
-       call ATMOS_REFSTATE_calc3D
+       call smoothing( KA, KS, KE, FDZ(:), RCDZ(:), ATMOS_REFSTATE1D_pott(:) )
+       call smoothing( KA, KS, KE, FDZ(:), RCDZ(:), ATMOS_REFSTATE1D_qv(:) )
+
+       call ATMOS_REFSTATE_calc3D( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                   CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
 
        last_updated = TIME_NOWSEC
 
@@ -724,7 +755,9 @@ contains
 
   !-----------------------------------------------------------------------------
   !> apply 1D reference to 3D (terrain-following) with re-calc hydrostatic balance
-  subroutine ATMOS_REFSTATE_calc3D
+  subroutine ATMOS_REFSTATE_calc3D( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       CZ, FZ, REAL_CZ, REAL_FZ, REAL_PHI )
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        Rdry  => CONST_Rdry,  &
@@ -733,13 +766,6 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_atmos_grid_cartesC, only: &
-       CZ => ATMOS_GRID_CARTESC_CZ, &
-       FZ => ATMOS_GRID_CARTESC_FZ
-    use scale_atmos_grid_cartesC_real, only: &
-       REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI, &
-       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ,  &
-       REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_interp_vert, only: &
        INTERP_VERT_z2xi
     use scale_atmos_hydrostatic, only: &
@@ -747,7 +773,15 @@ contains
        HYDROSTATIC_buildrho_atmos_rev_2D => ATMOS_HYDROSTATIC_buildrho_atmos_rev_2D, &
        HYDROSTATIC_buildrho_atmos_rev_3D => ATMOS_HYDROSTATIC_buildrho_atmos_rev_3D
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
+    real(RP), intent(in) :: CZ      (  KA)
+    real(RP), intent(in) :: FZ      (0:KA)
+    real(RP), intent(in) :: REAL_CZ (  KA,IA,JA)
+    real(RP), intent(in) :: REAL_FZ (0:KA,IA,JA)
+    real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
 
     real(RP) :: dens(KA,IA,JA)
     real(RP) :: temp(KA,IA,JA)
@@ -771,35 +805,28 @@ contains
     RovCP = Rdry / CPdry
 
     !--- potential temperature
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        work(:,i,j) = ATMOS_REFSTATE1D_pott(:)
     enddo
     enddo
 
-    call INTERP_VERT_z2xi( KA, KS, KE,     & ! [IN]
-                           IA, ISB, IEB,   & ! [IN]
-                           JA, JSB, JEB,   & ! [IN]
-                           REAL_CZ(:,:,:), & ! [IN]
-                           CZ(:),          & ! [IN]
-                           work   (:,:,:), & ! [IN]
-                           pott   (:,:,:)  ) ! [OUT]
+    call INTERP_VERT_z2xi( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
+                           REAL_CZ(:,:,:), CZ(:), & ! [IN]
+                           work(:,:,:),           & ! [IN]
+                           pott(:,:,:)            ) ! [OUT]
 
     !--- water vapor
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        work(:,i,j) = ATMOS_REFSTATE1D_qv(:)
     enddo
     enddo
 
-    call INTERP_VERT_z2xi( KA, KS, KE,     & ! [IN]
-                           IA, ISB, IEB,   & ! [IN]
-                           JA, JSB, JEB,   & ! [IN]
-                           REAL_CZ(:,:,:), & ! [IN]
-                           CZ(:),          & ! [IN]
-                           work   (:,:,:), & ! [IN]
-                           qv     (:,:,:)  ) ! [OUT]
-
+    call INTERP_VERT_z2xi( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
+                           REAL_CZ(:,:,:), CZ(:), & ! [IN]
+                           work(:,:,:),           & ! [IN]
+                           qv(:,:,:)              ) ! [OUT]
 
 
     !--- build up density to TOA (1D)
@@ -820,8 +847,8 @@ contains
                                         KE+1                       ) ! [IN]
 
     ! build down density from TOA (3D)
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        dz(KS,i,j) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ! distance from surface to cell center
        do k = KS+1, KE
           dz(k,i,j) = REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j) ! distance from cell center to cell center
@@ -830,8 +857,8 @@ contains
     enddo
     enddo
 
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        dens(KE+1,i,j) = dens_toa_1D
        temp(KE+1,i,j) = temp_toa_1D
        pres(KE+1,i,j) = pres_toa_1D
@@ -840,8 +867,8 @@ contains
     enddo
     enddo
 
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        pott(KS-1,i,j) = pott(KS,i,j)
        qv  (KS-1,i,j) = qv  (KS,i,j)
     enddo
@@ -882,8 +909,8 @@ contains
 !                                            qc  (KS  ,:,:), & ! [IN]
 !                                            dz  (KS  ,:,:), & ! [IN]
 !                                            KS              ) ! [IN]
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE
        ATMOS_REFSTATE_dens(k,i,j) = dens(k,i,j)
        ATMOS_REFSTATE_temp(k,i,j) = temp(k,i,j)
@@ -895,30 +922,30 @@ contains
     enddo
 
     ! boundary condition
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
 
-       ATMOS_REFSTATE_temp(1:KS-1,i,j) = temp(KS,i,j)
+       ATMOS_REFSTATE_temp(1:KS-1, i,j) = temp(KS,i,j)
        ATMOS_REFSTATE_temp(KE+1:KA,i,j) = temp_toa_1D
 
-       ATMOS_REFSTATE_qv  (1:KS-1,i,j) = qv  (KS,i,j)
+       ATMOS_REFSTATE_qv  (1:KS-1, i,j) = qv  (KS,i,j)
        ATMOS_REFSTATE_qv  (KE+1:KA,i,j) = qv  (KE,i,j)
 
-       ATMOS_REFSTATE_pres(1:KS-2,i,j) = UNDEF
-       ATMOS_REFSTATE_pres(KS-1,i,j) = ATMOS_REFSTATE_pres(KS+1,i,j) &
-                                     - ATMOS_REFSTATE_dens(KS  ,i,j) * ( REAL_PHI(KS-1,i,j) - REAL_PHI(KS+1,i,j) )
-       ATMOS_REFSTATE_pres(KE+1,i,j) = ATMOS_REFSTATE_pres(KE-1,i,j) &
-                                     - ATMOS_REFSTATE_dens(KE  ,i,j) * ( REAL_PHI(KE+1,i,j) - REAL_PHI(KE-1,i,j) )
+       ATMOS_REFSTATE_pres(1:KS-2, i,j) = UNDEF
+       ATMOS_REFSTATE_pres(KS-1,   i,j) = ATMOS_REFSTATE_pres(KS+1,i,j) &
+                                        - ATMOS_REFSTATE_dens(KS  ,i,j) * ( REAL_PHI(KS-1,i,j) - REAL_PHI(KS+1,i,j) )
+       ATMOS_REFSTATE_pres(KE+1,   i,j) = ATMOS_REFSTATE_pres(KE-1,i,j) &
+                                        - ATMOS_REFSTATE_dens(KE  ,i,j) * ( REAL_PHI(KE+1,i,j) - REAL_PHI(KE-1,i,j) )
        ATMOS_REFSTATE_pres(KE+2:KA,i,j) = UNDEF
 
-       ATMOS_REFSTATE_dens(1:KS-2,i,j) = UNDEF
-       ATMOS_REFSTATE_dens(KS-1,i,j) = ATMOS_REFSTATE_pres(KS-1,i,j) / ( ATMOS_REFSTATE_temp(KS-1,i,j) * Rdry )
-       ATMOS_REFSTATE_dens(KE+1,i,j) = ATMOS_REFSTATE_pres(KE+1,i,j) / ( ATMOS_REFSTATE_temp(KE+1,i,j) * Rdry )
+       ATMOS_REFSTATE_dens(1:KS-2, i,j) = UNDEF
+       ATMOS_REFSTATE_dens(KS-1,   i,j) = ATMOS_REFSTATE_pres(KS-1,i,j) / ( ATMOS_REFSTATE_temp(KS-1,i,j) * Rdry )
+       ATMOS_REFSTATE_dens(KE+1,   i,j) = ATMOS_REFSTATE_pres(KE+1,i,j) / ( ATMOS_REFSTATE_temp(KE+1,i,j) * Rdry )
        ATMOS_REFSTATE_dens(KE+2:KA,i,j) = UNDEF
 
-       ATMOS_REFSTATE_pott(1:KS-2,i,j) = UNDEF
-       ATMOS_REFSTATE_pott(KS-1,i,j) = ATMOS_REFSTATE_temp(KS-1,i,j) * ( P00 / ATMOS_REFSTATE_pres(KS-1,i,j) )**RovCP
-       ATMOS_REFSTATE_pott(KE+1,i,j) = ATMOS_REFSTATE_temp(KE+1,i,j) * ( P00 / ATMOS_REFSTATE_pres(KE+1,i,j) )**RovCP
+       ATMOS_REFSTATE_pott(1:KS-2, i,j) = UNDEF
+       ATMOS_REFSTATE_pott(KS-1,   i,j) = ATMOS_REFSTATE_temp(KS-1,i,j) * ( P00 / ATMOS_REFSTATE_pres(KS-1,i,j) )**RovCP
+       ATMOS_REFSTATE_pott(KE+1,   i,j) = ATMOS_REFSTATE_temp(KE+1,i,j) * ( P00 / ATMOS_REFSTATE_pres(KE+1,i,j) )**RovCP
        ATMOS_REFSTATE_pott(KE+2:KA,i,j) = UNDEF
     enddo
     enddo
@@ -939,20 +966,21 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine smoothing( &
+       KA, KS, KE, &
+       FDZ, RCDZ, &
        phi )
-    use scale_process, only: &
-       PRC_MPIstop
     use scale_const, only: &
        EPS => CONST_EPS
-    use scale_atmos_grid_cartesC, only: &
-       FDZ  => ATMOS_GRID_CARTESC_FDZ,  &
-       RCDZ => ATMOS_GRID_CARTESC_RCDZ
     implicit none
+    integer, intent(in) :: KA, KS, KE
+
+    real(RP), intent(in) :: FDZ (KA-1)
+    real(RP), intent(in) :: RCDZ(KA)
 
     real(RP), intent(inout) :: phi(KA)
 
     real(RP) :: dev (KA)
-    real(RP) :: flux(KA)
+    real(RP) :: correction(KA)
     real(RP) :: fact(KA)
 
     integer, parameter :: iter_max = 100
@@ -964,8 +992,8 @@ contains
     dev(KS) = 0.0_RP
     dev(KE) = 0.0_RP
 
-    flux(KS-1:KS+1) = 0.0_RP
-    flux(KE-1:KE+1) = 0.0_RP
+    correction(KS-1:KS+1) = 0.0_RP
+    correction(KE-1:KE+1) = 0.0_RP
 
     fact(KS-1:KS+1) = 0.0_RP
     fact(KE-1:KE+1) = 0.0_RP
@@ -980,39 +1008,44 @@ contains
        do k = KS+2, KE-2
           sig0 = dev(k) * dev(k-1)
           sig1 = dev(k) * dev(k+1)
-          if( sig0 < EPS .and. sig0 > -EPS ) sig0 = 0.0_RP
-          if( sig1 < EPS .and. sig1 > -EPS ) sig1 = 0.0_RP
-          ! if (sig0>0 .OR. sig1>0) then flux(k) = 0.0
-          flux(k) = dev(k) &
-                  / ( 2.0_RP*RCDZ(k) + ( FDZ(k-1)*RCDZ(k+1) + FDZ(k)*RCDZ(k-1) ) / ( FDZ(k) + FDZ(k-1) ) ) &
-                  * ( sign(0.5_RP ,sig0) + sign(0.5_RP ,sig1)          ) &
-                  * ( sign(0.25_RP,sig0) + sign(0.25_RP,sig1) - 0.5_RP )
-          updated = updated .OR. ( sig0 < -EPS .AND. sig1 < -EPS )
+          if ( sig0 < -EPS .and. sig1 < -EPS ) then
+             correction(k) = dev(k) &
+                     / ( 2.0_RP*RCDZ(k) + ( FDZ(k-1)*RCDZ(k+1) + FDZ(k)*RCDZ(k-1) ) / ( FDZ(k) + FDZ(k-1) ) )
+             updated = .true.
+          else
+             correction(k) = 0.0_RP
+          end if
        enddo
 
        sig1 = dev(KS+1) * dev(KS+2)
-       flux(KS+1) = dev(KS+1) &
-                  / ( 2.0_RP*RCDZ(KS+1) + (FDZ(KS)*RCDZ(KS+2)+FDZ(KS+1)*RCDZ(KS))/(FDZ(KS+1)+FDZ(KS)) ) &
-                  * ( 0.5_RP - sign(0.5_RP ,sig1) )
-       updated = updated .OR. ( sig1 < -EPS )
+       if ( sig1 < -EPS ) then
+          correction(KS+1) = dev(KS+1) &
+                     / ( 2.0_RP*RCDZ(KS+1) + (FDZ(KS)*RCDZ(KS+2)+FDZ(KS+1)*RCDZ(KS))/(FDZ(KS+1)+FDZ(KS)) )
+          updated = .true.
+       else
+          correction(KS+1) = 0.0_RP
+       end if
 
        sig0 = dev(KE-1) * dev(KE-2)
-       flux(KE-1) = dev(KE-1) &
-                  / ( 2.0_RP*RCDZ(KE-1) + (FDZ(KE-2)*RCDZ(KE)+FDZ(KE-1)*RCDZ(KE-2))/(FDZ(KE-1)+FDZ(KE-2)) ) &
-                  * ( 0.5_RP - sign(0.5_RP ,sig0) )
-       updated = updated .OR. ( sig0 < -EPS )
+       if ( sig0 < -EPS ) then
+          correction(KE-1) = dev(KE-1) &
+                     / ( 2.0_RP*RCDZ(KE-1) + (FDZ(KE-2)*RCDZ(KE)+FDZ(KE-1)*RCDZ(KE-2))/(FDZ(KE-1)+FDZ(KE-2)) )
+          updated = .true.
+       else
+          correction(KE-1) = 0.0_RP
+       end if
 
        if ( .NOT. updated ) exit
 
        do k = KS+1, KE-1
-          zerosw = 0.5_RP - sign( 0.5_RP, abs(flux(k))-EPS ) ! if flux(k) == 0 then fact(k) = 0.0
-          fact(k) = flux(k) / ( flux(k) - flux(k+1) - flux(k-1) + zerosw )
+          zerosw = 0.5_RP - sign( 0.5_RP, abs(correction(k))-EPS ) ! if correction(k) == 0 then fact(k) = 0.0
+          fact(k) = correction(k) / ( correction(k) - correction(k+1) - correction(k-1) + zerosw )
        enddo
 
        do k = KS, KE
-          phi(k) = phi(k) + ( flux(k+1) * fact(k+1)          &
-                            - flux(k  ) * fact(k  ) * 2.0_RP &
-                            + flux(k-1) * fact(k-1)          ) * RCDZ(k)
+          phi(k) = phi(k) + ( correction(k+1) * fact(k+1)          &
+                            - correction(k  ) * fact(k  ) * 2.0_RP &
+                            + correction(k-1) * fact(k-1)          ) * RCDZ(k)
        enddo
 
        if ( iter == iter_max ) then
