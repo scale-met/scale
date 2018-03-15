@@ -802,8 +802,6 @@ contains
        DENS,       &
        PRES,       &
        QDRY,       &
-       QSAT_L,     &
-       QSAT_I,     &
        CCN,        &
        TEMP,       &
        QTRC,       &
@@ -813,6 +811,9 @@ contains
        CONST_TEM00
     use scale_atmos_hydrometeor, only: &
        I_QV
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_pres2qsat_liq, &
+       ATMOS_SATURATION_pres2qsat_ice
     implicit none
 
     integer, intent(in) :: KA, KS, KE
@@ -824,8 +825,6 @@ contains
     real(RP), intent(in) :: DENS  (KA,IA,JA)
     real(RP), intent(in) :: PRES  (KA,IA,JA)
     real(RP), intent(in) :: QDRY  (KA,IA,JA)
-    real(RP), intent(in) :: QSAT_L(KA,IA,JA)
-    real(RP), intent(in) :: QSAT_I(KA,IA,JA)
     real(RP), intent(in) :: CCN   (KA,IA,JA)
 
     real(RP), intent(inout) :: TEMP(KA,IA,JA)
@@ -833,6 +832,8 @@ contains
 
     real(RP), intent(out) :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
 
+    real(RP) :: QSAT_L(KA,IA,JA)
+    real(RP) :: QSAT_I(KA,IA,JA)
     real(RP) :: ssliq(KA,IA,JA)
     real(RP) :: ssice(KA,IA,JA)
 
@@ -871,6 +872,18 @@ contains
     elseif( nspc >  1 ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(SBM Mixed phase)'
     endif
+
+    call ATMOS_SATURATION_pres2qsat_liq( KA, KS, KE, & ! [IN]
+                                         IA, IS, IE, & ! [IN]
+                                         JA, JS, JE, & ! [IN]
+                                         TEMP(:,:,:), PRES(:,:,:), QDRY(:,:,:), & ! [IN]
+                                         QSAT_L(:,:,:)                          ) ! [OUT]
+
+    call ATMOS_SATURATION_pres2qsat_ice( KA, KS, KE, & ! [IN]
+                                         IA, IS, IE, & ! [IN]
+                                         JA, JS, JE, & ! [IN]
+                                         TEMP(:,:,:), PRES(:,:,:), QDRY(:,:,:), & ! [IN]
+                                         QSAT_I(:,:,:)                          ) ! [OUT]
 
     do j = JS, JE
     do i = IS, IE
