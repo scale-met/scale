@@ -807,122 +807,6 @@ contains
 
           call PROF_rapstart('MP_Precipitation', 2)
 
-          if( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
-             DENS1(:,:,:) = DENS(:,:,:) ! save
-             MOMZ1(:,:,:) = MOMZ(:,:,:) ! save
-             MOMX1(:,:,:) = MOMX(:,:,:) ! save
-             MOMY1(:,:,:) = MOMY(:,:,:) ! save
-             RHOT2(:,:,:) = RHOT(:,:,:) ! save
-             QTRC2(:,:,:,:) = QTRC(:,:,:,:) ! save
-
-             call ATMOS_PHY_MP_suzuki10_terminal_velocity( &
-                  KA,        & ! [IN]
-                  vterm(:,:) ) ! [OUT]
-
-             do j = 1, JA
-             do i = 1, IA
-                vterm_3D(:,i,j,:) = vterm(:,:)
-             enddo
-             enddo
-             FLX_hydro_3D(:,:,:,:) = 0.0_RP
-
-             call ATMOS_THERMODYN_rhoe( RHOE_3D(:,:,:), & ! [OUT]
-                                        RHOT2(:,:,:),   & ! [IN]
-                                        QTRC2(:,:,:,:), & ! [IN]
-                                        TRACER_CV(:),   & ! [IN]
-                                        TRACER_R(:),    & ! [IN]
-                                        TRACER_MASS(:)  ) ! [IN]
-
-             do step = 1, MP_NSTEP_SEDIMENTATION
-
-                call ATMOS_THERMODYN_temp_pres_E( temp(:,:,:),    & ! [OUT]
-                                                  pres(:,:,:),    & ! [OUT]
-                                                  DENS(:,:,:),    & ! [IN]
-                                                  RHOE_3D(:,:,:), & ! [IN]
-                                                  QTRC2(:,:,:,:), & ! [IN]
-                                                  TRACER_CV(:),   & ! [IN]
-                                                  TRACER_R(:),    & ! [IN]
-                                                  TRACER_MASS(:)  ) ! [IN]
-
-                call ATMOS_PHY_MP_precipitation( QA_MP,                 & ! [IN]
-                                                 QS_MP,                 & ! [IN]
-                                                 pflux    (:,:,:,:),    & ! [OUT]
-                                                 vterm_3D (:,:,:,:),    & ! [INOUT]
-                                                 DENS1     (:,:,:),     & ! [INOUT]
-                                                 MOMZ1     (:,:,:),     & ! [INOUT]
-                                                 MOMX1     (:,:,:),     & ! [INOUT]
-                                                 MOMY1     (:,:,:),     & ! [INOUT]
-                                                 RHOE_3D  (:,:,:),      & ! [INOUT]
-                                                 QTRC2    (:,:,:,:),    & ! [INOUT]
-                                                 temp     (:,:,:),      & ! [IN]
-                                                 TRACER_CV(:),          & ! [IN]
-                                                 MP_DTSEC_SEDIMENTATION ) ! [IN]
-
-
-                do iq = 1, QA-1
-                do j  = JS, JE
-                do i  = IS, IE
-                do k  = KS-1, KE-1
-                   FLX_hydro_3D(k,i,j,iq) = FLX_hydro_3D(k,i,j,iq) + pflux(k,i,j,iq) * MP_RNSTEP_SEDIMENTATION
-                enddo
-                enddo
-                enddo
-                enddo
-
-             enddo
-
-             call ATMOS_THERMODYN_rhot( RHOT2(:,:,:),   & ! [OUT]
-                                        RHOE_3D(:,:,:), & ! [IN]
-                                        QTRC2(:,:,:,:), & ! [IN]
-                                        TRACER_CV(:),   & ! [IN]
-                                        TRACER_R(:),    & ! [IN]
-                                        TRACER_MASS(:)  ) ! [IN]
-             do j = JSB, JEB
-             do i = ISB, IEB
-             do k = KS, KE
-                DENS_t_MP(k,i,j) = ( DENS1(k,i,j) - DENS(k,i,j) ) / dt_MP
-                MOMZ_t_MP(k,i,j) = ( MOMZ1(k,i,j) - MOMZ(k,i,j) ) / dt_MP
-                MOMX_t_MP(k,i,j) = ( MOMX1(k,i,j) - MOMX(k,i,j) ) / dt_MP
-                MOMY_t_MP(k,i,j) = ( MOMY1(k,i,j) - MOMY(k,i,j) ) / dt_MP
-                RHOT_t_MP(k,i,j) = ( RHOT2(k,i,j) - RHOT(k,i,j) ) / dt_MP + RHOT_t_MP(k,i,j)
-                do iq = QS_MP, QE_MP
-                   RHOQ_t_MP(k,i,j,iq) = ( QTRC2(k,i,j,iq) * DENS1(k,i,j) &
-                                         - QTRC (k,i,j,iq) * DENS (k,i,j) ) / dt_MP + RHOQ_t_MP(k,i,j,iq)
-                enddo
-             enddo
-             enddo
-             enddo
-
-             SFLX_rain(:,:) = 0.0_RP
-             SFLX_snow(:,:) = 0.0_RP
-
-             !--- lowermost flux is saved for land process
-             do n = 1, ATMOS_PHY_MP_suzuki10_nbin
-                iq = n
-
-                do j  = JS, JE
-                do i  = IS, IE
-                   SFLX_rain(i,j) = SFLX_rain(i,j) - FLX_hydro_3D(KS-1,i,j,iq)
-                enddo
-                enddo
-             enddo
-
-             if ( ATMOS_PHY_MP_suzuki10_nspc > 1 ) then
-                do m = ATMOS_PHY_MP_suzuki10_ic, ATMOS_PHY_MP_suzuki10_ih
-                do n = 1, ATMOS_PHY_MP_suzuki10_nbin
-                   iq = (m-1)*ATMOS_PHY_MP_suzuki10_nbin + n
-
-                   do j  = JS, JE
-                   do i  = IS, IE
-                      SFLX_snow(i,j) = SFLX_snow(i,j) - FLX_hydro_3D(KS-1,i,j,iq)
-                   enddo
-                   enddo
-                enddo
-                enddo
-             endif
-
-          else
-
           ! prepare for history output
           hist_vterm_idx(:) = -1
           ih = 0
@@ -1046,10 +930,10 @@ contains
              do k = KS, KE
                 CP_t = ( CPtot2(k) - CPtot(k,i,j) ) / dt_MP
                 CV_t = ( CVtot2(k) - CVtot(k,i,j) ) / dt_MP
-                RHOH_MP(k,i,j) = RHOH_MP(k,i,j) &
-                     + ( RHOE2(k) - RHOE(k) ) / dt_MP &
-                     - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
-                     * DENS(k,i,j) * TEMP(k,i,j)
+                !RHOH_MP(k,i,j) = RHOH_MP(k,i,j) &
+                !     + ( RHOE2(k) - RHOE(k) ) / dt_MP &
+                !     - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
+                !     * DENS(k,i,j) * TEMP(k,i,j)
 !                RHOT_t_MP(k,i,j) = RHOT_t_MP(k,i,j) &
 !                     + ( RHOE2(k) - RHOE(k) ) / ( dt_MP * EXNER(k,i,j) * CPtot(k,i,j) ) &
 !                     - RHOT(k,i,j) * CP_t / CPtot(k,i,j) &
@@ -1084,8 +968,6 @@ contains
                 call FILE_HISTORY_put( hist_vterm_id(iq), vterm_hist(:,:,:,hist_vterm_idx(iq)) )
           end do
           if ( allocated( vterm_hist ) ) deallocate( vterm_hist )
-
-          end if
 
           call PROF_rapend  ('MP_Precipitation', 2)
 
