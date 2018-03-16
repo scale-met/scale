@@ -84,7 +84,7 @@ contains
        PRC_masterrank, &
        PRC_myrank,     &
        PRC_LOCAL_COMM_WORLD
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y, &
        PRC_HAS_W,      &
@@ -279,7 +279,7 @@ contains
   subroutine FILE_HISTORY_CARTESC_set_dims
     use scale_process, only: &
        PRC_myrank
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank, &
        PRC_HAS_W, &
        PRC_HAS_S
@@ -816,7 +816,7 @@ contains
        D2R => CONST_D2R
     use scale_process, only: &
        PRC_myrank
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank,     &
        PRC_NUM_X,      &
        PRC_NUM_Y,      &
@@ -1599,7 +1599,7 @@ contains
        PRC_myrank
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank,     &
        PRC_NUM_X,      &
        PRC_NUM_Y,      &

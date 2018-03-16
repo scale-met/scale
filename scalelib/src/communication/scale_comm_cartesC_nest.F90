@@ -274,7 +274,7 @@ contains
        PRC_MPIstop,         &
        PRC_GLOBAL_domainID, &
        PRC_IsMaster
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_HAS_W, &
        PRC_HAS_E, &
        PRC_HAS_S, &
@@ -1035,7 +1035,7 @@ contains
        PRC_nprocs,  &
        PRC_myrank,  &
        PRC_IsMaster
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_NUM_X,   &
        PRC_NUM_Y
     use scale_time, only: &

@@ -204,7 +204,6 @@ OBJS_NAME = \
 	scale_urban_phy.o	\
 	scale_urban_phy_slc.o	\
 	scale_landuse.o	\
-	scale_rm_process.o	\
 	scale_fpm.o  \
 	scale_mapprojection.o	\
 	scale_matrix.o	\
@@ -213,6 +212,7 @@ OBJS_NAME = \
 	scale_monitor_cartesC.o	\
 	scale_precision.o	\
 	scale_process.o	\
+	scale_prc_cartesC.o	\
 	scale_prof.o	\
 	scale_random.o	\
 	scale_roughness.o	\

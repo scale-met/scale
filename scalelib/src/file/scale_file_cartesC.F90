@@ -215,7 +215,7 @@ contains
     use scale_process, only: &
        PRC_myrank, &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
@@ -785,7 +785,7 @@ contains
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE, &
        NOWMS   => TIME_NOWMS
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank,     &
        PRC_NUM_X,      &
        PRC_NUM_Y,      &
@@ -1181,7 +1181,7 @@ contains
        FILE_Read
     use scale_process, only: &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_NUM_X, &
        PRC_NUM_Y
     use mpi
@@ -1295,7 +1295,7 @@ contains
        FILE_Read
     use scale_process, only: &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_NUM_X, &
        PRC_NUM_Y
     use mpi
@@ -1368,7 +1368,7 @@ contains
        FILE_Read
     use scale_process, only: &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_NUM_X, &
        PRC_NUM_Y
     implicit none
@@ -1496,7 +1496,7 @@ contains
        FILE_Read
     use scale_process, only: &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_NUM_X, &
        PRC_NUM_Y
     implicit none
@@ -2369,7 +2369,7 @@ contains
     use scale_process, only: &
        PRC_myrank, &
        PRC_IsMaster
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_CZ,    &
@@ -2957,7 +2957,7 @@ contains
     use scale_process, only: &
        PRC_myrank,  &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank
     use scale_time, only: &
        NOWSEC => TIME_NOWDAYSEC
@@ -3041,7 +3041,7 @@ contains
     use scale_process, only: &
        PRC_myrank,     &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
@@ -3174,7 +3174,7 @@ contains
     use scale_process, only: &
        PRC_myrank,  &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank, &
        PRC_NUM_X,  &
        PRC_NUM_Y
@@ -3321,7 +3321,7 @@ contains
     use scale_process, only: &
        PRC_myrank,     &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
@@ -3492,7 +3492,7 @@ contains
     use scale_process, only: &
        PRC_myrank,     &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
@@ -3896,7 +3896,7 @@ contains
   end subroutine check_3d
 
   subroutine set_dimension_informations
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y, &
        PRC_NUM_X,      &
@@ -4114,7 +4114,7 @@ contains
   !> construct MPI derived datatypes for read buffers
   subroutine Construct_Derived_Datatype
     use mpi
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_NUM_X,  &
        PRC_NUM_Y
     implicit none

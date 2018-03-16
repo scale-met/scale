@@ -34,7 +34,7 @@ module scale_comm
 
   use scale_process, only: &
      PRC_MPIstop
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
      PRC_next, &
      PRC_W,    &
      PRC_N,    &

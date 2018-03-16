@@ -125,7 +125,7 @@ contains
        none                          )
     use scale_process, only: &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_HAS_E, &
        PRC_HAS_W, &
        PRC_HAS_N, &

@@ -1592,7 +1592,7 @@ contains
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_HAS_W,   &
        PRC_HAS_E,   &
        PRC_HAS_S,   &

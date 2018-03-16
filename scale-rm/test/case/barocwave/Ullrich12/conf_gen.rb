@@ -105,19 +105,19 @@ def gen_init_conf( conf_name,
  IO_LOG_BASENAME = 'init_LOG',
 /
 
-&PARAM_PRC
+&PARAM_PRC_CARTESC
  PRC_NUM_X       = #{nprocx},  
  PRC_NUM_Y       = #{nprocy},
  PRC_PERIODIC_Y  = .false.,
 /
 
-&PARAM_INDEX
+&PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = #{kmax}, 
  IMAX = #{imax}, IHALO = 3, 
  JMAX = #{jmax}, JHALO = 3,
 /
 
-&PARAM_GRID
+&PARAM_ATMOS_GRID_CARTESC
  DZ =  #{dz}, 
  DX =  #{dx},  
  DY =  #{dy}, 

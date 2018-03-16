@@ -3998,7 +3998,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( sea breeze )
   subroutine MKINIT_seabreeze
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_NUM_X
     use scale_landuse, only: &
        LANDUSE_calc_fact, &
@@ -4058,7 +4058,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( heat island )
   subroutine MKINIT_heatisland
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_NUM_X
     use scale_landuse, only: &
        LANDUSE_calc_fact, &

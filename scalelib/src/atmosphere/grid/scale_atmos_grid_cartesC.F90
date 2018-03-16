@@ -346,7 +346,7 @@ contains
     use scale_process, only: &
        PRC_abort, &
        PRC_myrank
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank,  &
        PRC_NUM_X,   &
        PRC_NUM_Y

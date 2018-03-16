@@ -126,7 +126,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop, &
        PRC_myrank
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank
     use scale_const, only: &
        EPS => CONST_EPS

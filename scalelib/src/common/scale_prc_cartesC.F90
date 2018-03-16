@@ -1,13 +1,13 @@
 !-------------------------------------------------------------------------------
-!> module RM PROCESS
+!> module process / cartesC
 !!
 !! @par Description
-!!          MPI process management module for regional model
+!!          MPI process management module for Cartesian-C grid
 !!
 !! @author Team SCALE
 !!
 !<
-module scale_rm_process
+module scale_prc_cartesC
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -22,7 +22,7 @@ module scale_rm_process
   !
   !++ Public procedure
   !
-  public :: PRC_setup
+  public :: PRC_CARTESC_setup
 
   !-----------------------------------------------------------------------------
   !
@@ -64,7 +64,7 @@ module scale_rm_process
 contains
   !-----------------------------------------------------------------------------
   !> Setup Processor topology
-  subroutine PRC_setup
+  subroutine PRC_CARTESC_setup
     use scale_process, only: &
        PRC_MPIstop,              &
        PRC_masterrank,           &
@@ -86,7 +86,7 @@ contains
 
     logical :: PRC_CART_REORDER = .false. !< flag for rank reordering over the cartesian map
 
-    namelist / PARAM_PRC / &
+    namelist / PARAM_PRC_CARTESC / &
        PRC_NUM_X,      &
        PRC_NUM_Y,      &
        PRC_PERIODIC_X, &
@@ -108,7 +108,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROCESS] / Categ[ATMOS-RM COMM] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROCESS CartesC] / Origin[SCALElib]'
 
     if ( IO_L ) then
        write(IO_FID_LOG,*)            '++++++ Start MPI'
@@ -132,14 +132,14 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_PRC,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_PRC_CARTESC,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_PRC. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_PRC_CARTESC. Check!'
        call PRC_MPIstop
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_PRC)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_PRC_CARTESC)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Process allocation ***'
@@ -240,6 +240,6 @@ contains
       ' - SE(',next(PRC_SE),',',PRC_2Drank(next(PRC_SE),1),',',PRC_2Drank(next(PRC_SE),2),')'
 
     return
-  end subroutine PRC_setup
+  end subroutine PRC_CARTESC_setup
 
-end module scale_rm_process
+end module scale_prc_cartesC

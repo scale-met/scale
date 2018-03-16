@@ -72,12 +72,22 @@ params.each do |param|
     next
   end
 
-  param_name  = param[0]
+  param_name  = param[0].strip
   param_items = param[1]
+
+  # PRC_CARTESC
+  if "&PARAM_PRC" == param_name
+    print "&PARAM_PRC_CARTESC\n"
+    param_items.each do |item|
+      print item, "\n"
+    end
+    print "/\n"
+    next
+  end
 
   # HISTORY
   ## scale_file_history (old: gtool_history)
-  if /&PARAM_HISTORY/ =~ param_name
+  if "&PARAM_HISTORY" == param_name
     print "&PARAM_FILE_HISTORY\n"
     param_items.each do |item|
       print item.sub(/^(\s*)HISTORY_/, '\1FILE_HISTORY_'), "\n"
@@ -85,11 +95,11 @@ params.each do |param|
     print "/\n"
     next
   end
-  if /&HISTITEM(.*\s+)item=(.+)$/ =~ param_name
+  if /&HISTITEM(.*\s+)item=(.+)$/ == param_name
     print "&HISTORY_ITEM#{$1}name=#{$2}\n"
     next
   end
-  if /&PARAM_HIST\s*$/ =~ param_name
+  if "&PARAM_HIST" == param_name
     print "&PARAM_FILE_HISTORY_CARTESC\n"
     param_items.each do |item|
       item.sub!("HIST_BND", "FILE_HISTORY_CARTESC_BOUNDARY")
@@ -101,19 +111,27 @@ params.each do |param|
 
   # GRID
   ## scale_atmos_grid_cartesC_index (old: scale_grid_index)
-  param_name.sub!("&PARAM_INDEX", "&PARAM_ATMOS_GRID_CARTESC_INDEX")
+  if "&PARAM_INDEX" == param_name
+    param_name = "&PARAM_ATMOS_GRID_CARTESC_INDEX"
+  end
   ## scale_atmos_grid_cartesC (old: scale_grid_cartesian)
-  param_name.sub!("&PARAM_GRID", "&PARAM_ATMOS_GRID_CARTESC")
+  if "&PARAM_GRID" == param_name
+    param_name = "&PARAM_ATMOS_GRID_CARTESC"
+  end
   ["OCEAN", "LAND", "URBAN"].each do |model|
     ## scale_(model)_grid_cartesC_index (old: scale_(model)_grid_index)
-    param_name.sub!("&PARAM_#{model}_INDEX", "&PARAM_#{model}_GRID_CARTESC_INDEX")
+    if "&PARAM_#{model}_INDEX" == param_name
+      param_name = "&PARAM_#{model}_GRID_CARTESC_INDEX"
+    end
     ## scale_(model)_grid_cartesC (old: scale_(model)_grid_cartesian)
-    param_name.sub!("&PARAM_#{model}_GRID", "&PARAM_#{model}_GRID_CARTESC")
+    if "&PARAM_#{model}_GRID" == param_name
+      param_name = "&PARAM_#{model}_GRID_CARTESC"
+    end
   end
 
   # MAP Projection
   ## scale_mapprojection (old: scale_mapproj)
-  if /&PARAM_MAPPROJ/ =~ param_name
+  if "&PARAM_MAPPROJ" == param_name
     print "&PARAM_MAPPROJECTION\n"
     param_items.each do |item|
       print item.sub(/^(\s*)MPRJ_/, '\1MAPPROJECTION_'), "\n"
@@ -123,7 +141,7 @@ params.each do |param|
   end
 
   # Metrics
-  if /&PARAM_GTRANS/ =~ param_name
+  if "&PARAM_GTRANS" == param_name
     print "&PARAM_ATMOS_GRID_CARTESC_METRIC\n"
     param_items.each do |item|
       print item.sub(/^(\s*)GTRANS_/, '\1ATMOS_GRID_CARTESC_METRIC_'), "\n"
@@ -134,7 +152,7 @@ params.each do |param|
 
   # Dynamics
   ## mod_atmos_dyn
-  if /&PARAM_ATMOS_DYN/ =~ param_name
+  if "&PARAM_ATMOS_DYN" == param_name
     print param_name, "\n"
     param_items.each do |item|
       if /^(\s*)ATMOS_DYN_enable_coriolis\s*=\s*([^,\s]+)/i =~ item && $2 == ".true."
@@ -148,7 +166,7 @@ params.each do |param|
   end
 
   # Boundary-Layer scheme
-  if /&PARAM_ATMOS\s*$/ =~ param_name
+  if "&PARAM_ATMOS" == param_name
     print param_name, "\n"
     param_items.each do |item|
       if /^(\s*)ATMOS_PHY_TB_TYPE\s*=\s*/ =~ item
@@ -161,7 +179,7 @@ params.each do |param|
     print "/\n"
     next
   end
-  if /&PARAM_TIME/ =~ param_name
+  if "&PARAM_TIME" == param_name
     print param_name, "\n"
     param_items.each do |item|
       if /^(\s*)TIME_DT_ATMOS_PHY_TB(\s*=.+)$/ =~ item
@@ -177,12 +195,12 @@ params.each do |param|
     print "/\n"
     next
   end
-  if /&PARAM_ATMOS_PHY_TB_HYBRID/ =~ param_name
+  if "&PARAM_ATMOS_PHY_TB_HYBRID" == param_name
     next
   end
 
   # Nesting
-  if /&PARAM_NEST/ =~ param_name
+  if "&PARAM_NEST" == param_name
     print "&PARAM_COMM_CARTESC_NEST\n"
     param_items.each do |item|
       if /^(\s*)USE_NESTING\s*=/ !~ item && /^(\s*)OFFLINE\s*=/ !~ item
