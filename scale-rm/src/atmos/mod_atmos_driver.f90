@@ -119,6 +119,8 @@ contains
        CZ => ATMOS_GRID_CARTESC_CZ, &
        FZ => ATMOS_GRID_CARTESC_FZ
     use scale_atmos_grid_cartesC_real, only: &
+       BASE_LON => ATMOS_GRID_CARTESC_REAL_BASEPOINT_LON, &
+       BASE_LAT => ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT, &
        REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ, &
        REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ, &
        REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI
@@ -132,7 +134,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Setup each atmospheric components ...'
 
     !--- setup solar insolation
-    call ATMOS_SOLARINS_setup( TIME_NOWDATE(1) )
+    call ATMOS_SOLARINS_setup( BASE_LON, BASE_LAT, TIME_NOWDATE(1) )
 
     call PROF_rapstart('ATM_Refstate', 2)
     call ATMOS_REFSTATE_setup( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &

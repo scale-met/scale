@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module SOLARINS
+!> module atmosphere / SOLARINS
 !!
 !! @par Description
 !!          calculate solar insolation
@@ -8,11 +8,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-01-29 (H.Yashiro)  [new]
-!!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_solarins
   !-----------------------------------------------------------------------------
   !
@@ -553,17 +551,16 @@ contains
   !> setup solar incidence module
   !-----------------------------------------------------------------------------
   subroutine ATMOS_SOLARINS_setup( &
-       iyear )
+       basepoint_lon, basepoint_lat, &
+       iyear                         )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        CONST_D2R
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_BASEPOINT_LON, &
-       ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT
     implicit none
-
-    integer, intent(in) :: iyear ! year at setup
+    integer,  intent(in) :: iyear ! year at setup
+    real(RP), intent(in) :: basepoint_lon
+    real(RP), intent(in) :: basepoint_lat
 
     namelist / PARAM_ATMOS_SOLARINS / &
        ATMOS_SOLARINS_constant,     &
@@ -587,8 +584,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SOLARINS] / Categ[ATMOS SHARE] / Origin[SCALElib]'
 
-    ATMOS_SOLARINS_lon     = ATMOS_GRID_CARTESC_REAL_BASEPOINT_LON
-    ATMOS_SOLARINS_lat     = ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT
+    ATMOS_SOLARINS_lon     = basepoint_lon
+    ATMOS_SOLARINS_lat     = basepoint_lat
     ATMOS_SOLARINS_date(:) = -1
 
     !--- read namelist
@@ -598,7 +595,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_SOLARINS. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_SOLARINS)
 
@@ -882,22 +879,19 @@ contains
   !-----------------------------------------------------------------------------
   !> calc factor of Earths solar insolation
   subroutine ATMOS_SOLARINS_insolation_0D( &
-       solins,     &
-       cosSZA,     &
-       real_lon,   &
-       real_lat,   &
-       now_date,   &
-       offset_year )
+       real_lon, real_lat,    &
+       now_date, offset_year, &
+       solins, cosSZA         )
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
-
-    real(RP), intent(out) :: solins      ! solar insolation
-    real(RP), intent(out) :: cosSZA      ! cos(Solar Zenith Angle)
     real(RP), intent(in)  :: real_lon    ! longitude
     real(RP), intent(in)  :: real_lat    ! latitude
     integer,  intent(in)  :: now_date(6) ! date(yyyy,mm,dd,hh,mm,ss)
     integer,  intent(in)  :: offset_year ! year offset
+
+    real(RP), intent(out) :: solins      ! solar insolation
+    real(RP), intent(out) :: cosSZA      ! cos(Solar Zenith Angle)
 
     real(RP) :: Re_factor      ! factor of the distance of Earth from the sun (1/rho2)
     real(RP) :: sinDEC, cosDEC ! sin/cos(solar declination)
@@ -931,23 +925,23 @@ contains
   !-----------------------------------------------------------------------------
   !> calc factor of Earths solar insolation
   subroutine ATMOS_SOLARINS_insolation_2D( &
-       solins,     &
-       cosSZA,     &
-       real_lon,   &
-       real_lat,   &
-       now_date,   &
-       offset_year )
-    use scale_atmos_grid_cartesC_index
+       IA, IS, IE, JA, JS, JE, &
+       real_lon, real_lat,    &
+       now_date, offset_year, &
+       solins, cosSZA         )
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(out) :: solins  (IA,JA) ! solar insolation
-    real(RP), intent(out) :: cosSZA  (IA,JA) ! cos(Solar Zenith Angle)
     real(RP), intent(in)  :: real_lon(IA,JA) ! longitude [rad]
     real(RP), intent(in)  :: real_lat(IA,JA) ! latitude  [rad]
     integer,  intent(in)  :: now_date(6)     ! date(yyyy,mm,dd,hh,mm,ss)
     integer,  intent(in)  :: offset_year     ! year offset
+
+    real(RP), intent(out) :: solins  (IA,JA) ! solar insolation
+    real(RP), intent(out) :: cosSZA  (IA,JA) ! cos(Solar Zenith Angle)
 
     real(RP) :: Re_factor      ! factor of the distance of Earth from the sun (1/rho2)
     real(RP) :: sinDEC, cosDEC ! sin/cos(solar declination)
@@ -967,6 +961,7 @@ contains
                                             offset_year  ) ! [IN]
 
     if ( ATMOS_SOLARINS_fixedlatlon ) then
+       !$omp parallel do OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
           lon(i,j) = ATMOS_SOLARINS_lon
@@ -974,6 +969,7 @@ contains
        enddo
        enddo
     else
+       !$omp parallel do OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
           lon(i,j) = real_lon(i,j)
@@ -982,6 +978,7 @@ contains
        enddo
     endif
 
+    !$omp parallel do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        cosSZA(i,j) = sin(lat(i,j))*sinDEC - cos(lat(i,j))*cosDEC*cos(lon(i,j)+hourangle)

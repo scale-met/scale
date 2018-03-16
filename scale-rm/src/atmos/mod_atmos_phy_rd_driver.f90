@@ -245,12 +245,10 @@ contains
 
     if ( update_flag ) then
 
-       call SOLARINS_insolation( solins  (:,:),   & ! [OUT]
-                                 cosSZA  (:,:),   & ! [OUT]
-                                 REAL_LON(:,:),   & ! [IN]
-                                 REAL_LAT(:,:),   & ! [IN]
-                                 TIME_NOWDATE(:), & ! [IN]
-                                 TIME_OFFSET_YEAR ) ! [IN]
+       call SOLARINS_insolation( IA, IS, IE, JA, JS, JE, &
+                                 REAL_LON(:,:), REAL_LAT(:,:),      & ! [IN]
+                                 TIME_NOWDATE(:), TIME_OFFSET_YEAR, & ! [IN]
+                                 solins(:,:), cosSZA  (:,:)         ) ! [OUT]
 
        call ATMOS_PHY_MP_vars_get_diagnostic( &
             DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
