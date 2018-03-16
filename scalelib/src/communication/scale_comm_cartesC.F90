@@ -83,6 +83,11 @@ module scale_comm
      module procedure COMM_wait_3D
   end interface COMM_WAIT
 
+  interface COMM_horizontal_mean
+     module procedure COMM_horizontal_mean_2D
+     module procedure COMM_horizontal_mean_3D
+  end interface COMM_horizontal_mean
+
   interface COMM_horizontal_max
      module procedure COMM_horizontal_max_2D
      module procedure COMM_horizontal_max_3D
@@ -476,8 +481,67 @@ contains
   end subroutine COMM_wait_2D
 
   !-----------------------------------------------------------------------------
-  !> calculate horizontal mean (global total with communication)
-  subroutine COMM_horizontal_mean( varmean, var )
+  !> calculate horizontal mean (global total with communication) 2D
+  subroutine COMM_horizontal_mean_2D( varmean, var )
+    use scale_const, only: &
+       CONST_UNDEF
+    implicit none
+
+    real(RP), intent(out) :: varmean        !< horizontal mean
+    real(RP), intent(in)  :: var    (IA,JA) !< 2D value
+
+    real(RP) :: statval
+    real(RP) :: statcnt
+    real(RP) :: allstatval
+    real(RP) :: allstatcnt
+    real(RP) :: zerosw
+
+    integer :: ierr
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    statval = 0.0_RP
+    statcnt = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+       if ( abs(var(i,j)) < abs(CONST_UNDEF) ) then
+          statval = statval + var(i,j)
+          statcnt = statcnt + 1.0_RP
+       endif
+    enddo
+    enddo
+
+    ! [NOTE] always communicate globally
+    call PROF_rapstart('COMM_Allreduce', 2)
+    ! All reduce
+    call MPI_Allreduce( statval,       &
+                        allstatval,    &
+                        1,             &
+                        COMM_datatype, &
+                        MPI_SUM,       &
+                        COMM_world,    &
+                        ierr           )
+    ! All reduce
+    call MPI_Allreduce( statcnt,       &
+                        allstatcnt,    &
+                        1,             &
+                        COMM_datatype, &
+                        MPI_SUM,       &
+                        COMM_world,    &
+                        ierr           )
+
+    call PROF_rapend  ('COMM_Allreduce', 2)
+
+    zerosw = 0.5_RP - sign(0.5_RP, allstatcnt - 1.E-12_RP )
+    varmean = allstatval / ( allstatcnt + zerosw ) * ( 1.0_RP - zerosw )
+    !if( IO_L ) write(IO_FID_LOG,*) varmean, allstatval, allstatcnt
+
+    return
+  end subroutine COMM_horizontal_mean_2D
+
+  !-----------------------------------------------------------------------------
+  !> calculate horizontal mean (global total with communication) 3D
+  subroutine COMM_horizontal_mean_3D( varmean, var )
     use scale_const, only: &
        CONST_UNDEF
     implicit none
@@ -536,7 +600,7 @@ contains
     enddo
 
     return
-  end subroutine COMM_horizontal_mean
+  end subroutine COMM_horizontal_mean_3D
 
   !-----------------------------------------------------------------------------
   !> Get maximum value in horizontal area

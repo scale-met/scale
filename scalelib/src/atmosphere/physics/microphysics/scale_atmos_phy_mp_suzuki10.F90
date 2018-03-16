@@ -41,7 +41,8 @@ module scale_atmos_phy_mp_suzuki10
   public :: ATMOS_PHY_MP_suzuki10_terminal_velocity
   public :: ATMOS_PHY_MP_suzuki10_cloud_fraction
   public :: ATMOS_PHY_MP_suzuki10_effective_radius
-  public :: ATMOS_PHY_MP_suzuki10_mass_ratio
+  public :: ATMOS_PHY_MP_suzuki10_qtrc2qhyd
+  public :: ATMOS_PHY_MP_suzuki10_qhyd2qtrc
 
   !-----------------------------------------------------------------------------
   !
@@ -188,9 +189,6 @@ module scale_atmos_phy_mp_suzuki10
   real(RP) :: xasta                          !--- exponential of mass of aerosol for smallest aerosol bin
   real(RP) :: xaend                          !--- exponential of mass of aerosol for largest aerosol bin
 
-  real(RP) :: flg_thermodyn                  !--- flg for lhv and lhs (0 -> SIMPLE, 1 -> EXACT )
-  real(RP) :: RTEM00                         !--- 1/CONST_TEM00
-
   real(RP), allocatable, save :: vterm(:)    !--- terminal velocity
 
   !--- constant for bin
@@ -277,6 +275,8 @@ module scale_atmos_phy_mp_suzuki10
   real(DP) :: ywhl( ndat,ndat ), ywhi( ndat,ndat,icemax ), ywhs( ndat,ndat )
   real(DP) :: ywhg( ndat,ndat ), ywhh( ndat,ndat )
 
+  ! for qhyd2qtrc
+  real(RP) :: sigma_sdf(5), r0_sdf(5), n0_sdf(5), rho_sdf(5)
   !----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -296,8 +296,9 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Suzuki (2010) Spectral BIN model'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers setup for Suzuki (2010) Spectral BIN model'
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ READ BIN NUMBER'
 
@@ -376,10 +377,8 @@ contains
        PRC_IsMaster
     use scale_const, only: &
        PI => CONST_PI,       &
-       CONST_DWATR,          &
-       CONST_DICE,           &
-       CONST_TEM00,          &
-       CONST_THERMODYN_TYPE
+       DWATR => CONST_DWATR, &
+       DICE => CONST_DICE
     use scale_comm, only: &
        COMM_world,    &
        COMM_datatype
@@ -758,15 +757,51 @@ contains
     allocate( kindx(nbin,nbin) )
     call getrule( ifrsl,kindx )
 
-    if ( CONST_THERMODYN_TYPE == 'EXACT' ) then
-      flg_thermodyn = 1.0_RP
-    elseif( CONST_THERMODYN_TYPE == 'SIMPLE' ) then
-      flg_thermodyn = 0.0_RP
-    endif
-    RTEM00 = 1.0_RP / CONST_TEM00
+    !--- determine the parameters for interpolating SDF from qxx, Nxx of parent domain
+    sigma_sdf(1) = 0.2_RP
+    sigma_sdf(2) = 0.35_RP
+    sigma_sdf(3) = 0.35_RP
+    sigma_sdf(4) = 0.35_RP
+    sigma_sdf(5) = 0.35_RP
+    r0_sdf(1)    = 5.E-6_RP
+    r0_sdf(2)    = 2.61E-6_RP
+    r0_sdf(3)    = 5.E-6_RP
+    r0_sdf(4)    = 2.61E-6_RP
+    r0_sdf(5)    = 2.61E-6_RP ! to be corrected
+    n0_sdf(1)    = 8.0E+6_RP
+    n0_sdf(2)    = 0.0_RP
+    n0_sdf(3)    = 3.0E+6_RP
+    n0_sdf(4)    = 4.0E+6_RP
+    n0_sdf(5)    = 4.0E+6_RP ! to be corrected
+    rho_sdf(1)   = DWATR
+    rho_sdf(2)   = DICE
+    rho_sdf(3)   = 100.0_RP
+    rho_sdf(4)   = 400.0_RP
+    rho_sdf(5)   = 400.0_RP ! to be corrected
+
+    !--- determine the parameters for interpolating SDF from qxx, Nxx of parent domain
+    sigma_sdf(1) = 0.2_RP
+    sigma_sdf(2) = 0.35_RP
+    sigma_sdf(3) = 0.35_RP
+    sigma_sdf(4) = 0.35_RP
+    sigma_sdf(5) = 0.35_RP
+    r0_sdf(1)    = 5.E-6_RP
+    r0_sdf(2)    = 2.61E-6_RP
+    r0_sdf(3)    = 5.E-6_RP
+    r0_sdf(4)    = 2.61E-6_RP
+    r0_sdf(5)    = 2.61E-6_RP ! to be corrected
+    n0_sdf(1)    = 8.0E+6_RP
+    n0_sdf(2)    = 0.0_RP
+    n0_sdf(3)    = 3.0E+6_RP
+    n0_sdf(4)    = 4.0E+6_RP
+    n0_sdf(5)    = 4.0E+6_RP ! to be corrected
+    rho_sdf(1)   = DWATR
+    rho_sdf(2)   = DICE
+    rho_sdf(3)   = 100.0_RP
+    rho_sdf(4)   = 400.0_RP
+    rho_sdf(5)   = 400.0_RP ! to be corrected
 
     return
-
   end subroutine ATMOS_PHY_MP_suzuki10_setup
 
   !-----------------------------------------------------------------------------
@@ -783,8 +818,7 @@ contains
        CPtot_t, CVtot_t, &
        EVAPORATE         )
     use scale_const, only: &
-       EPS => CONST_EPS, &
-       CONST_TEM00
+       TEM00 => CONST_TEM00
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_pres2qsat_liq, &
        ATMOS_SATURATION_pres2qsat_ice
@@ -960,7 +994,7 @@ contains
              countbin = countbin + 1
           enddo
 
-          if ( TEMP(k,i,j) < CONST_TEM00 .AND. nspc > 1 ) then ! cold
+          if ( TEMP(k,i,j) < TEM00 .AND. nspc > 1 ) then ! cold
             ijkcount_cold = ijkcount_cold + 1
             index_cold(ijkcount_cold) = ijkcount
           else ! warm
@@ -1356,7 +1390,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Calculate mass ratio of each category
-  subroutine ATMOS_PHY_MP_suzuki10_mass_ratio( &
+  subroutine ATMOS_PHY_MP_suzuki10_qtrc2qhyd( &
        KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
@@ -1469,7 +1503,204 @@ contains
     endif
 
     return
-  end subroutine ATMOS_PHY_MP_suzuki10_mass_ratio
+  end subroutine ATMOS_PHY_MP_suzuki10_qtrc2qhyd
+
+  !-----------------------------------------------------------------------------
+  !> get mass ratio of each category
+  subroutine ATMOS_PHY_MP_suzuki10_qhyd2qtrc( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       Qe,   &
+       QTRC, &
+       QNUM  )
+    use scale_const, only: &
+       PI => CONST_PI, &
+       EPS => CONST_EPS
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC, &
+       I_HR, &
+       I_HI, &
+       I_HS, &
+       I_HG, &
+       I_HH
+    use scale_specfunc, only: &
+       SF_gamma
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: Qe(KA,IA,JA,N_HYD) ! mass ratio of each cateory [kg/kg]
+
+    real(RP), intent(out)  :: QTRC(KA,IA,JA,QA-1)
+
+    real(RP), intent(in), optional :: QNUM(KA,IA,JA,N_HYD) ! number concentratio
+
+    real(RP) :: coef0, coef1, coef2
+    real(RP) :: dummy(nbin)
+    real(RP) :: tmp_hyd, num_hyd, lambda_hyd
+
+    integer :: k, i, j, iq
+
+    if ( present(QNUM) ) then
+       write(*,*) '*** [WARN] At this moment, number concentratio is ignored'
+    end if
+
+    !--- define coefficients
+    coef0 = 4.0_RP/3.0_RP*PI
+    coef1 = 4.0_RP/3.0_RP*sqrt(PI/2.0_RP)
+
+    if( nspc == 1 ) then !--- put all hydrometeors to liquid (warm bin)
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+
+          tmp_hyd = 0.0_RP
+          do iq = 1, nbin
+             dummy(iq) = coef1 / sigma_sdf(1) * rho_sdf(1) * radc( iq )**3 &
+                  * exp (  &
+                  - ( log( radc(iq) )-log( r0_sdf(1) ) )**2*0.5_RP &
+                  / sigma_sdf(1) / sigma_sdf(1) &
+                  )
+             tmp_hyd = tmp_hyd + dummy(iq)
+          enddo
+
+          coef2 = ( Qe(k,i,j,I_HC) + Qe(k,i,j,I_HR) &
+                  + Qe(k,i,j,I_HI) + Qe(k,i,j,I_HS) + Qe(k,i,j,I_HG) ) &
+                / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
+
+          do iq = 1, nbin
+             QTRC(k+2,i,j,(il-1)*nbin+iq) = coef2 * dummy(iq)
+          enddo
+
+       enddo
+       enddo
+       enddo
+
+    elseif( nspc > 1 ) then  !--- put each hydrometeor to each category (ice bin)
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+
+          !--- Rain and Cloud put into liquid bin (log-normal)
+          tmp_hyd = 0.0_RP
+          do iq = 1, nbin
+             dummy(iq) = coef1 / sigma_sdf(1) * rho_sdf(1) * radc( iq )**3 &
+                  * exp (  &
+                  - ( log( radc(iq) )-log( r0_sdf(1) ) )**2*0.5_RP &
+                  / sigma_sdf(1) / sigma_sdf(1) &
+                  )
+             tmp_hyd = tmp_hyd + dummy(iq)
+          enddo
+
+          coef2 = ( Qe(k,i,j,I_HC) + Qe(k,i,j,I_HR) ) &
+                / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
+
+          do iq = 1, nbin
+             QTRC(k,i,j,(il-1)*nbin+iq) = coef2 * dummy(iq)
+          enddo
+
+          !--- Ice put into plate bin (log-normal)
+          tmp_hyd = 0.0_RP
+          do iq = 1, nbin
+             dummy(iq) = coef1 / sigma_sdf(2) * rho_sdf(2) * radc( iq )**3 &
+                  * exp (  &
+                  - ( log( radc(iq) )-log( r0_sdf(2) ) )**2*0.5_RP &
+                  / sigma_sdf(2) / sigma_sdf(2) &
+                  )
+             tmp_hyd = tmp_hyd + dummy(iq)
+          enddo
+
+          coef2 = ( Qe(k,i,j,I_HI) ) &
+                / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
+
+          do iq = 1, nbin
+             QTRC(k,i,j,(ip-1)*nbin+iq) = coef2 * dummy(iq)
+          enddo
+
+          !--- Snow put into snow bin (gamma)
+          num_hyd = coef0 * n0_sdf(3) * rho_sdf(3)
+          lambda_hyd = ( PI * rho_sdf(3) / 6.0_RP *n0_sdf(3) * SF_gamma(4.0_RP) &
+               / ( Qe(k,i,j,I_HS) &
+               + (0.50_RP-sign(0.50_RP,Qe(k,i,j,I_HS)-EPS)) &
+               ) )**(0.25_RP)
+
+          tmp_hyd = 0.0_RP
+          do iq = 1, nbin
+             dummy(iq) = num_hyd * radc( iq )**3 &
+                  * exp( -lambda_hyd * 0.5_RP * radc( iq ) )
+             tmp_hyd = tmp_hyd + dummy(iq)
+          enddo
+
+          coef2 = ( Qe(k,i,j,I_HS) ) &
+                / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
+
+          do iq = 1, nbin
+             QTRC(k,i,j,(iss-1)*nbin+iq) = coef2 * dummy(iq)
+          enddo
+
+          !--- Graupel put into Graupel bin (gamma)
+          num_hyd = coef0 * n0_sdf(4) * rho_sdf(4)
+          lambda_hyd = ( PI * rho_sdf(4) / 6.0_RP *n0_sdf(4) * SF_gamma(4.0_RP) &
+               / ( Qe(k,i,j,I_HG) &
+               + (0.50_RP-sign(0.50_RP,Qe(k,i,j,I_HG)-EPS)) &
+               ) )**(0.25_RP)
+
+          tmp_hyd = 0.0_RP
+          do iq = 1, nbin
+             dummy(iq) = num_hyd * radc( iq )**3 &
+                  * exp( -lambda_hyd * 0.5_RP * radc( iq ) )
+             tmp_hyd = tmp_hyd + dummy(iq)
+          enddo
+
+          coef2 = ( Qe(k,i,j,I_HG) ) &
+                / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
+
+          do iq = 1, nbin
+             QTRC(k,i,j,(ig-1)*nbin+iq) = coef2 * dummy(iq)
+          enddo
+
+          !--- Hail put into Hail bin (gamma)
+          num_hyd = coef0 * n0_sdf(5) * rho_sdf(5)
+          lambda_hyd = ( PI * rho_sdf(5) / 6.0_RP *n0_sdf(5) * SF_gamma(4.0_RP) &
+               / ( Qe(k,i,j,I_HH) &
+               + (0.50_RP-sign(0.50_RP,Qe(k,i,j,I_HH)-EPS)) &
+               ) )**(0.25_RP)
+
+          tmp_hyd = 0.0_RP
+          do iq = 1, nbin
+             dummy(iq) = num_hyd * radc( iq )**3 &
+                  * exp( -lambda_hyd * 0.5_RP * radc( iq ) )
+             tmp_hyd = tmp_hyd + dummy(iq)
+          enddo
+
+          coef2 = ( Qe(k,i,j,I_HH) ) &
+                / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
+
+          do iq = 1, nbin
+             QTRC(k,i,j,(ih-1)*nbin+iq) = coef2 * dummy(iq)
+          enddo
+
+       enddo
+       enddo
+       enddo
+
+    endif
+
+    do iq = nbin*nspc+1, QA-1
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,iq) = 0.0_RP
+    end do
+    end do
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_PHY_MP_suzuki10_qhyd2qtrc
 
   !-----------------------------------------------------------------------------
   subroutine MP_suzuki10( &
@@ -2161,9 +2392,8 @@ contains
        EPS   => CONST_EPS,   &
        ESAT0 => CONST_PSAT0, &
        Rvap  => CONST_Rvap,  &
-       RHOW  => CONST_DWATR, &
        TMLT  => CONST_TMELT, &
-       TEMP0 => CONST_TEM00
+       TEM00 => CONST_TEM00
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_LHV, &
        CP_VAPOR, &
@@ -2264,7 +2494,7 @@ contains
        cefd = emu/dens(ijk)
        cefk = fct*emu
 
-       festl = esat0*exp( qlevp(ijk)/rvap*( 1.0_RP/temp0 - 1.0_RP/temp(ijk) ) )
+       festl = esat0*exp( qlevp(ijk)/rvap*( 1.0_RP/TEM00 - 1.0_RP/temp(ijk) ) )
        f1 = rvap*temp(ijk)/festl/cefd
        f2 = qlevp(ijk)/cefk/temp(ijk)*( qlevp(ijk)/rvap/temp(ijk) - 1.0_RP )
        gtliq(ijk) = 4.0_RP*pi/( f1+f2 )  !--- G of eq. (A.17) of Suzuki (2004)
@@ -2298,7 +2528,7 @@ contains
           emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
           cefd = emu/dens(ijk)
           cefk = fct*emu
-          festl = esat0*exp( qlevp(ijk)/rvap*( 1.0_RP/temp0 - 1.0_RP/temp(ijk) ) )
+          festl = esat0*exp( qlevp(ijk)/rvap*( 1.0_RP/TEM00 - 1.0_RP/temp(ijk) ) )
           f1 = rvap*temp(ijk)/festl/cefd
           f2 = qlevp(ijk)/cefk/temp(ijk)*( qlevp(ijk)/rvap/temp(ijk) - 1.0_RP )
           gtliq(ijk) = 4.0_RP*pi/( f1+f2 ) !--- G of eq. (A.17) of Suzuki (2004)
@@ -2549,9 +2779,9 @@ contains
        PI    => CONST_PI,    &
        EPS   => CONST_EPS,   &
        ESAT0 => CONST_PSAT0, &
+       TEM00 => CONST_TEM00, &
        Rvap  => CONST_Rvap,  &
-       TMLT  => CONST_TMELT, &
-       TEMP0 => CONST_TEM00
+       TMLT  => CONST_TMELT
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_LHS, &
        CP_VAPOR, &
@@ -2662,7 +2892,7 @@ contains
        emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
        cefd = emu/dens(ijk)
        cefk = fct*emu
-       festi = esat0*exp( qlsbl(ijk)/rvap*( 1.0_RP/temp0 - 1.0_RP/temp(ijk) ) )
+       festi = esat0*exp( qlsbl(ijk)/rvap*( 1.0_RP/TEM00 - 1.0_RP/temp(ijk) ) )
        f1 = rvap*temp(ijk)/festi/cefd
        f2 = qlsbl(ijk)/cefk/temp(ijk)*( qlsbl(ijk)/rvap/temp(ijk) - 1.0_RP )
        gtice(ijk) = 4.0_RP*pi/( f1+f2 )
@@ -2699,7 +2929,7 @@ contains
           emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
           cefd = emu/dens(ijk)
           cefk = fct*emu
-          festi = esat0*exp( qlsbl(ijk)/rvap*( 1.0_RP/temp0 - 1.0_RP/temp(ijk) ) )
+          festi = esat0*exp( qlsbl(ijk)/rvap*( 1.0_RP/TEM00 - 1.0_RP/temp(ijk) ) )
           f1 = rvap*temp(ijk)/festi/cefd
           f2 = qlsbl(ijk)/cefk/temp(ijk)*( qlsbl(ijk)/rvap/temp(ijk) - 1.0_RP )
           gtice(ijk) = 4.0_RP*pi/( f1+f2 )   ! G of (A.17) of Suzuki (2004)
@@ -2933,9 +3163,9 @@ contains
        PI    => CONST_PI,    &
        EPS   => CONST_EPS,   &
        ESAT0 => CONST_PSAT0, &
+       TEM00 => CONST_TEM00, &
        Rvap  => CONST_Rvap,  &
-       TMLT  => CONST_TMELT, &
-       TEMP0 => CONST_TEM00
+       TMLT  => CONST_TMELT
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_LHV, &
        ATMOS_HYDROMETEOR_LHS, &
@@ -3062,12 +3292,12 @@ contains
        cefd = emu/dens(ijk)
        cefk = fct*emu
 
-       festl = esat0*exp( qlevp(ijk)/rvap*( 1.0_RP/temp0 - 1.0_RP/temp(ijk) ) )
+       festl = esat0*exp( qlevp(ijk)/rvap*( 1.0_RP/TEM00 - 1.0_RP/temp(ijk) ) )
        f1 = rvap*temp(ijk)/festl/cefd
        f2 = qlevp(ijk)/cefk/temp(ijk)*( qlevp(ijk)/rvap/temp(ijk) - 1.0_RP )
        gtliq(ijk) = 4.0_RP*pi/( f1+f2 )
 
-       festi = esat0*exp( qlsbl(ijk)/rvap*( 1.0_RP/temp0 - 1.0_RP/temp(ijk) ) )
+       festi = esat0*exp( qlsbl(ijk)/rvap*( 1.0_RP/TEM00 - 1.0_RP/temp(ijk) ) )
        f1 = rvap*temp(ijk)/festi/cefd
        f2 = qlsbl(ijk)/cefk/temp(ijk)*( qlsbl(ijk)/rvap/temp(ijk) - 1.0_RP )
        gtice(ijk) = 4.0_RP*pi/( f1+f2 )
@@ -3111,11 +3341,11 @@ contains
           emu = afmyu*( bfmyu/( temp(ijk)+cfmyu ) )*( temp(ijk)/tmlt )**1.50_RP
           cefd = emu/dens(ijk)
           cefk = fct*emu
-          festl = esat0*exp( qlevp(ijk)/rvap*( 1.0_RP/temp0 - 1.0_RP/temp(ijk) ) )
+          festl = esat0*exp( qlevp(ijk)/rvap*( 1.0_RP/TEM00 - 1.0_RP/temp(ijk) ) )
           f1 = rvap*temp(ijk)/festl/cefd
           f2 = qlevp(ijk)/cefk/temp(ijk)*( qlevp(ijk)/rvap/temp(ijk) - 1.0_RP )
           gtliq(ijk) = 4.0_RP*pi/( f1+f2 )
-          festi = esat0*exp( qlsbl(ijk)/rvap*( 1.0_RP/temp0 - 1.0_RP/temp(ijk) ) )
+          festi = esat0*exp( qlsbl(ijk)/rvap*( 1.0_RP/TEM00 - 1.0_RP/temp(ijk) ) )
           f1 = rvap*temp(ijk)/festi/cefd
           f2 = qlsbl(ijk)/cefk/temp(ijk)*( qlsbl(ijk)/rvap/temp(ijk) - 1.0_RP )
           gtice(ijk) = 4.0_RP*pi/( f1+f2 )
@@ -3391,8 +3621,6 @@ contains
        cv,         &
        dtime       )
     use scale_const, only: &
-       PI    => CONST_PI,    &
-       Rvap  => CONST_Rvap,  &
        QLMLT => CONST_EMELT
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_pres2qsat_ice

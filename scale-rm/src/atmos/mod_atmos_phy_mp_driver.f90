@@ -155,12 +155,12 @@ contains
           QA_MP = ATMOS_PHY_MP_TOMITA08_ntracers
        case( 'SN14' )
           call ATMOS_HYDROMETEOR_regist( &
-               QS_MP,                                       & ! [OUT]
                ATMOS_PHY_MP_SN14_nwaters,                   & ! [IN]
                ATMOS_PHY_MP_SN14_nices,                     & ! [IN]
                ATMOS_PHY_MP_SN14_tracer_names(1:6),         & ! [IN]
                ATMOS_PHY_MP_SN14_tracer_descriptions(1:6),  & ! [IN]
-               ATMOS_PHY_MP_SN14_tracer_units(1:6)          ) ! [IN]
+               ATMOS_PHY_MP_SN14_tracer_units(1:6),         & ! [IN]
+               QS_MP                                        ) ! [OUT]
           call TRACER_regist( QS2,                          & ! [OUT]
                5,                                           & ! [IN]
                ATMOS_PHY_MP_SN14_tracer_names(7:11),        & ! [IN]
@@ -170,12 +170,12 @@ contains
        case ( 'SUZUKI10' )
           call ATMOS_PHY_MP_suzuki10_tracer_setup
           call ATMOS_HYDROMETEOR_regist( &
-               QS_MP,                                        & ! [OUT]
                ATMOS_PHY_MP_suzuki10_nwaters,                & ! [IN]
                ATMOS_PHY_MP_suzuki10_nices,                  & ! [IN]
                ATMOS_PHY_MP_suzuki10_tracer_names(:),        & ! [IN]
                ATMOS_PHY_MP_suzuki10_tracer_descriptions(:), & ! [IN]
-               ATMOS_PHY_MP_suzuki10_tracer_units(:)         ) ! [IN]
+               ATMOS_PHY_MP_suzuki10_tracer_units(:),        & ! [IN]
+               QS_MP                                         ) ! [OUT]
           if( ATMOS_PHY_MP_suzuki10_nccn > 0 ) then
              call TRACER_regist( QS2,                                                                     & ! [OUT]
                                  ATMOS_PHY_MP_suzuki10_nccn,                                              & ! [IN]
@@ -299,9 +299,6 @@ contains
        case ( 'SUZUKI10' )
           call ATMOS_PHY_MP_suzuki10_setup( &
                KA, IA, JA )
-       case default
-          ! setup library component
-          call ATMOS_PHY_MP_setup
        end select
 
     else
@@ -979,8 +976,8 @@ contains
        end if
     case ( "KESSLER" )
        !$omp parallel do OMP_SCHEDULE_
-       do j = JSB, JEB
-       do i = ISB, IEB
+       do j = JS, JE
+       do i = IS, IE
        do k = KS, KE
           QTRC(k,i,j,1) = QV(k,i,j)
        end do

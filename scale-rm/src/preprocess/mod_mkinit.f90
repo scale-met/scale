@@ -188,13 +188,13 @@ module mod_mkinit
   real(RP), private, allocatable         :: velx    (:,:,:) ! velocity u [m/s]
   real(RP), private, allocatable         :: vely    (:,:,:) ! velocity v [m/s]
 
-  real(RP), private, allocatable         :: pres_sfc(:,:,:) ! surface pressure [Pa]
-  real(RP), private, allocatable         :: temp_sfc(:,:,:) ! surface temperature [K]
-  real(RP), private, allocatable         :: pott_sfc(:,:,:) ! surface potential temperature [K]
-  real(RP), private, allocatable         :: psat_sfc(:,:,:) ! surface satulated water pressure [Pa]
-  real(RP), private, allocatable         :: qsat_sfc(:,:,:) ! surface satulated water vapor [kg/kg]
-  real(RP), private, allocatable         :: qv_sfc  (:,:,:) ! surface water vapor [kg/kg]
-  real(RP), private, allocatable         :: qc_sfc  (:,:,:) ! surface cloud water [kg/kg]
+  real(RP), private, allocatable         :: pres_sfc(:,:) ! surface pressure [Pa]
+  real(RP), private, allocatable         :: temp_sfc(:,:) ! surface temperature [K]
+  real(RP), private, allocatable         :: pott_sfc(:,:) ! surface potential temperature [K]
+  real(RP), private, allocatable         :: psat_sfc(:,:) ! surface satulated water pressure [Pa]
+  real(RP), private, allocatable         :: qsat_sfc(:,:) ! surface satulated water vapor [kg/kg]
+  real(RP), private, allocatable         :: qv_sfc  (:,:) ! surface water vapor [kg/kg]
+  real(RP), private, allocatable         :: qc_sfc  (:,:) ! surface cloud water [kg/kg]
 
   real(RP), private, allocatable         :: rndm    (:,:,:) ! random    number (0-1)
   real(RP), private, allocatable, target :: bubble  (:,:,:) ! bubble    factor (0-1)
@@ -241,13 +241,13 @@ contains
     allocate( velx(KA,IA,JA) )
     allocate( vely(KA,IA,JA) )
 
-    allocate( pres_sfc(1,IA,JA) )
-    allocate( temp_sfc(1,IA,JA) )
-    allocate( pott_sfc(1,IA,JA) )
-    allocate( psat_sfc(1,IA,JA) )
-    allocate( qsat_sfc(1,IA,JA) )
-    allocate( qv_sfc  (1,IA,JA) )
-    allocate( qc_sfc  (1,IA,JA) )
+    allocate( pres_sfc(IA,JA) )
+    allocate( temp_sfc(IA,JA) )
+    allocate( pott_sfc(IA,JA) )
+    allocate( psat_sfc(IA,JA) )
+    allocate( qsat_sfc(IA,JA) )
+    allocate( qv_sfc  (IA,JA) )
+    allocate( qc_sfc  (IA,JA) )
 
     allocate( rndm  (KA,IA,JA) )
     allocate( bubble(KA,IA,JA) )
@@ -372,8 +372,6 @@ contains
     real(RP) :: QNUM(KA,IA,JA,N_HYD)
 
     logical :: convert_qtrc
-
-    integer :: iq
     !---------------------------------------------------------------------------
 
     if ( MKINIT_TYPE == I_IGNORE ) then
@@ -393,17 +391,17 @@ contains
 
       rndm  (:,:,:) = CONST_UNDEF8
 
-      pres_sfc(:,:,:) = CONST_UNDEF8
-      temp_sfc(:,:,:) = CONST_UNDEF8
-      pott_sfc(:,:,:) = CONST_UNDEF8
-      psat_sfc(:,:,:) = CONST_UNDEF8
-      qsat_sfc(:,:,:) = CONST_UNDEF8
+      pres_sfc(:,:) = CONST_UNDEF8
+      temp_sfc(:,:) = CONST_UNDEF8
+      pott_sfc(:,:) = CONST_UNDEF8
+      psat_sfc(:,:) = CONST_UNDEF8
+      qsat_sfc(:,:) = CONST_UNDEF8
 
       qv    (:,:,:) = 0.0_RP
       qc    (:,:,:) = 0.0_RP
       nc    (:,:,:) = 0.0_RP
-      qv_sfc(:,:,:) = 0.0_RP
-      qc_sfc(:,:,:) = 0.0_RP
+      qv_sfc(:,:) = 0.0_RP
+      qc_sfc(:,:) = 0.0_RP
 
 !OCL XFILL
       QTRC(:,:,:,:) = 0.0_RP
@@ -818,64 +816,12 @@ contains
 
     logical, intent(inout) :: convert_qtrc
 
-    real(RP) :: xasta, xaend, dxaer
     real(RP), allocatable :: xabnd( : ), xactr( : )
 
-    real(RP) :: F0_AERO      = 1.E+7_RP
-    real(RP) :: R0_AERO      = 1.E-7_RP
-    real(RP) :: R_MAX        = 1.E-06_RP
-    real(RP) :: R_MIN        = 1.E-08_RP
-    real(RP) :: A_ALPHA      = 3.0_RP
-    real(RP) :: RHO_AERO     = 2.25E+03_RP
-
-    NAMELIST / PARAM_SBMAERO / &
-       F0_AERO,      &
-       R0_AERO,      &
-       R_MAX,        &
-       R_MIN,        &
-       A_ALPHA,      &
-       RHO_AERO
-
-    integer :: ierr
     integer :: iq, i, j, k
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_MP_TYPE /= 'SUZUKI10' ) return
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[mkinit aerobin] / Categ[preprocess] / Origin[SCALE-RM]'
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_SBMAERO,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. default value used'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist SBMAERO. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_SBMAERO)
-
-    if( nccn /= 0 ) then
-      allocate( gan( nccn ) )
-      allocate( xactr(nccn) )
-      allocate( xabnd(nccn+1) )
-
-      xasta = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
-      xaend = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
-      dxaer = ( xaend-xasta )/nccn
-      do iq = 1, nccn+1
-        xabnd( iq ) = xasta + dxaer*( iq-1 )
-      enddo
-      do iq = 1, nccn
-        xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5_RP
-      enddo
-      do iq = 1, nccn
-        gan( iq ) = faero( F0_AERO,R0_AERO,xactr( iq ), A_ALPHA, RHO_AERO )*exp( xactr(iq) )
-      enddo
-    endif
-
 
     !--- Super saturated air at initial
     do j = JSB, JEB
@@ -1360,10 +1306,10 @@ contains
     enddo
 
     ! calc in dry condition
-    pres_sfc = SFC_PRES * 1.E2_RP ! [hPa]->[Pa]
-    pott_sfc = SFC_THETA
+    pres_sfc(:,:) = SFC_PRES * 1.E2_RP ! [hPa]->[Pa]
+    pott_sfc(:,:) = SFC_THETA
     if ( .not. ATMOS_HYDROMETEOR_dry ) then
-       qv_sfc   = SFC_QV * 1.E-3_RP ! [g/kg]->[kg/kg]
+       qv_sfc(:,:)   = SFC_QV * 1.E-3_RP ! [g/kg]->[kg/kg]
     end if
 
     !--- linear interpolate to model grid
@@ -1389,18 +1335,11 @@ contains
     if ( ATMOS_HYDROMETEOR_dry ) qv(:) = 0.0_RP
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS(:),         & ! [OUT]
-                               temp(:),         & ! [OUT]
-                               pres(:),         & ! [OUT]
-                               pott(:),         & ! [IN]
-                               qv  (:),         & ! [IN]
-                               qc  (:),         & ! [IN]
-                               CZ(:), FZ(:),    & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1) ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, &
+                               pott(:), qv(:), qc(:),                                  & ! [IN]
+                               pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
+                               CZ(:), FZ(:),                                           & ! [IN]
+                               DENS(:), temp(:), pres(:), temp_sfc(1,1)                ) ! [OUT]
 
     return
   end subroutine read_sounding
@@ -1443,7 +1382,7 @@ contains
        RANDOM_RH
 
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -1468,8 +1407,8 @@ contains
     ! calc in dry condition
     do j = JSB, JEB
     do i = ISB, IEB
-       pott_sfc(1,i,j) = SFC_THETA
-       pres_sfc(1,i,j) = SFC_PRES
+       pott_sfc(i,j) = SFC_THETA
+       pres_sfc(i,j) = SFC_PRES
     enddo
     enddo
 
@@ -1478,8 +1417,8 @@ contains
        call PROFILE_isa( KA, KS, KE,      & ! [IN]
                          IA, ISB, IEB,    & ! [IN]
                          JA, JSB, JEB,    & ! [IN]
-                         pott_sfc(1,:,:), & ! [IN]
-                         pres_sfc(1,:,:), & ! [IN]
+                         pott_sfc(:,:), & ! [IN]
+                         pres_sfc(:,:), & ! [IN]
                          REAL_CZ (:,:,:), & ! [IN]
                          pott    (:,:,:)  ) ! [OUT]
 
@@ -1496,23 +1435,17 @@ contains
     endif
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     if ( .not. ATMOS_HYDROMETEOR_dry ) then
        ! calc QV from RH
        call SATURATION_psat_all( IA, ISB, IEB, JA, JSB, JEB, &
-                                 temp_sfc(1,:,:), & ! [IN]
-                                 psat_sfc(1,:,:)  ) ! [OUT]
+                                 temp_sfc(:,:), & ! [IN]
+                                 psat_sfc(:,:)  ) ! [OUT]
        qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
        call SATURATION_pres2qsat_all( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                       temp(:,:,:), pres(:,:,:), qdry(:,:,:), & ! [IN]
@@ -1521,8 +1454,8 @@ contains
        call RANDOM_get(rndm) ! make random
        do j = JSB, JEB
        do i = ISB, IEB
-          qsat_sfc(1,i,j) = EPSvap * psat_sfc(1,i,j) / ( pres_sfc(1,i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(1,i,j) )
-          qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,i,j)
+          qsat_sfc(i,j) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
+          qv_sfc(i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(i,j)
 
           do k = KS, KE
              qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat(k,i,j)
@@ -1534,7 +1467,7 @@ contains
     call RANDOM_get(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
-       pott_sfc(1,i,j) = pott_sfc(1,i,j) + rndm(KS-1,i,j) * RANDOM_THETA
+       pott_sfc(i,j) = pott_sfc(i,j) + rndm(KS-1,i,j) * RANDOM_THETA
 
        do k = KS, KE
           pott(k,i,j) = pott(k,i,j) + rndm(k,i,j) * RANDOM_THETA
@@ -1543,17 +1476,11 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
@@ -1622,7 +1549,7 @@ contains
 
     real(RP), pointer :: shapeFac(:,:,:) => null()
 
-    integer :: k, i, j, iq
+    integer :: k, i, j
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -1646,26 +1573,19 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_TRACERBUBBLE)
 
     ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA
+    pres_sfc(1,1) = SFC_PRES
+    pott_sfc(1,1) = SFC_THETA
 
     do k = KS, KE
        pott(k,1,1) = ENV_THETA
     enddo
 
     ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               CZ(:), FZ(:),    & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, &
+                               pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
+                               pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
+                               CZ(:), FZ(:),                                           & ! [IN]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB
@@ -1735,7 +1655,7 @@ contains
     real(RP) :: RovCP
 
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -1760,26 +1680,19 @@ contains
     RovCP = Rdry / CPdry
 
     ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA
+    pres_sfc(1,1) = SFC_PRES
+    pott_sfc(1,1) = SFC_THETA
 
     do k = KS, KE
        pott(k,1,1) = ENV_THETA
     enddo
 
     ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               CZ(:), FZ(:),    & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, &
+                               pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
+                               pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
+                               CZ(:), FZ(:),                                           & ! [IN]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
 
     do j = 1, JA
     do i = 1, IA
@@ -1823,7 +1736,7 @@ contains
     real(RP) :: RovCP
 
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -1889,7 +1802,7 @@ contains
        BBL_THETA
 
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -1911,26 +1824,19 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_GRAVITYWAVE)
 
     ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA
+    pres_sfc(1,1) = SFC_PRES
+    pott_sfc(1,1) = SFC_THETA
 
     do k = KS, KE
        pott(k,1,1) = SFC_THETA * exp( ENV_BVF*ENV_BVF / GRAV * CZ(k) )
     enddo
 
     ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               CZ(:), FZ(:),    & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, &
+                               pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
+                               pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
+                               CZ(:), FZ(:),                                           & ! [IN]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB
@@ -1982,7 +1888,7 @@ contains
     real(RP) :: fact
 
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -2004,8 +1910,8 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_KHWAVE)
 
     ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA
+    pres_sfc(1,1) = SFC_PRES
+    pott_sfc(1,1) = SFC_THETA
 
     do k = KS, KE
        fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
@@ -2016,18 +1922,11 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               CZ(:), FZ(:),    & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, &
+                               pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
+                               pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
+                               CZ(:), FZ(:),                                           & ! [IN]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB
@@ -2096,7 +1995,7 @@ contains
        RANDOM_RH
 
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -2119,31 +2018,24 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_TURBULENCE)
 
     ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA
+    pres_sfc(1,1) = SFC_PRES
+    pott_sfc(1,1) = SFC_THETA
 
     do k = KS, KE
        pott(k,1,1) = ENV_THETA + ENV_TLAPS * CZ(k)
     enddo
 
     ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               CZ(:), FZ(:),    & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, &
+                               pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
+                               pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
+                               CZ(:), FZ(:),                                           & ! [IN]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
 
     if ( .not. ATMOS_HYDROMETEOR_dry ) then
        ! calc QV from RH
-       call SATURATION_psat_all( temp_sfc(1,1,1), & ! [IN]
-                                 psat_sfc(1,1,1)  ) ! [OUT]
+       call SATURATION_psat_all( temp_sfc(1,1), & ! [IN]
+                                 psat_sfc(1,1)  ) ! [OUT]
        qdry(:,1,1) = 1.0_RP - qv(:,1,1) - qc(:,1,1)
        call SATURATION_pres2qsat_all( KA, KS, KE, &
                                       temp(:,1,1), pres(:,1,1), qdry(:,1,1), & ! [IN]
@@ -2152,8 +2044,8 @@ contains
        call RANDOM_get(rndm) ! make random
        do j = JSB, JEB
        do i = ISB, IEB
-          qsat_sfc(1,1,1) = EPSvap * psat_sfc(1,i,j) / ( pres_sfc(1,i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(1,i,j) )
-          qv_sfc(1,i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,1,1)
+          qsat_sfc(1,1) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
+          qv_sfc(i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,1)
 
           do k = KS, KE
              qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat(k,1,1)
@@ -2165,8 +2057,8 @@ contains
     call RANDOM_get(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
-       pres_sfc(1,i,j) = SFC_PRES
-       pott_sfc(1,i,j) = SFC_THETA + rndm(KS-1,i,j) * RANDOM_THETA
+       pres_sfc(i,j) = SFC_PRES
+       pott_sfc(i,j) = SFC_THETA + rndm(KS-1,i,j) * RANDOM_THETA
 
        do k = KS, KE
           pott(k,i,j) = ENV_THETA + ENV_TLAPS * CZ(k) + rndm(k,i,j) * RANDOM_THETA
@@ -2175,17 +2067,11 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
@@ -2342,8 +2228,8 @@ contains
     ! calc in dry condition
     do j = JSB, JEB
     do i = ISB, IEB
-       pres_sfc(1,i,j) = SFC_PRES
-       pott_sfc(1,i,j) = SFC_THETA
+       pres_sfc(i,j) = SFC_PRES
+       pott_sfc(i,j) = SFC_THETA
     enddo
     enddo
 
@@ -2359,17 +2245,11 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB
@@ -2507,8 +2387,8 @@ contains
             )
 
        ! Set surface pressure and temperature
-       pres_sfc(1,i,j) = REF_PRES
-       pott_sfc(1,i,j) = REF_TEMP - geopot_hvari/Rdry
+       pres_sfc(i,j) = REF_PRES
+       pott_sfc(i,j) = REF_TEMP - geopot_hvari/Rdry
 
        do k = KS, KE
           del_eta = 1.0_RP
@@ -2548,19 +2428,11 @@ contains
 
        ! Make density & pressure profile in dry condition using the profile of
        ! potential temperature calculated above.
-       call HYDROSTATIC_buildrho( DENS    (:,i,j), & ! [OUT]
-                                  temp    (:,i,j), & ! [OUT]
-                                  pres    (:,i,j), & ! [OUT]
-                                  pott    (:,i,j), & ! [IN]
-                                  qv      (:,i,j), & ! [IN]
-                                  qc      (:,i,j), & ! [IN]
-                                  REAL_CZ (:,i,j), & ! [IN]
-                                  REAL_FZ (:,i,j), & ! [IN]
-                                  temp_sfc(1,i,j), & ! [OUT]
-                                  pres_sfc(1,i,j), & ! [IN]
-                                  pott_sfc(1,i,j), & ! [IN]
-                                  qv_sfc  (1,i,j), & ! [IN]
-                                  qc_sfc  (1,i,j)  ) ! [IN]
+       call HYDROSTATIC_buildrho( KA, KS, KE, &
+                                  pott(:,i,j), qv(:,i,j), qc(:,i,j),                      & ! [IN]
+                                  pres_sfc(i,j), pott_sfc(i,j), qv_sfc(i,j), qc_sfc(i,j), & ! [IN]
+                                  REAL_CZ(:,i,j), REAL_FZ(:,i,j),                         & ! [IN]
+                                  DENS(:,i,j), temp(:,i,j), pres(:,i,j), temp_sfc(i,j)    ) ! [OUT]
     enddo
     enddo
 
@@ -2658,8 +2530,8 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WARMBUBBLE)
 
     ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA
+    pres_sfc(1,1) = SFC_PRES
+    pott_sfc(1,1) = SFC_THETA
 
     do k = KS, KE
        if    ( CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
@@ -2672,24 +2544,17 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               CZ(:), FZ(:),    & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, &
+                               pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
+                               pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
+                               CZ(:), FZ(:),                                           & ! [IN]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
 
     ! calc QV from RH
-    call SATURATION_psat_all( temp_sfc(1,1,1), & ! [IN]
-                              psat_sfc(1,1,1)  ) ! [OUT]
-    qsat_sfc(1,1,1) = EPSvap * psat_sfc(1,1,1) / ( pres_sfc(1,1,1) - ( 1.0_RP-EPSvap ) * psat_sfc(1,1,1) )
-    qv_sfc(1,1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
+    call SATURATION_psat_all( temp_sfc(1,1), & ! [IN]
+                              psat_sfc(1,1)  ) ! [OUT]
+    qsat_sfc(1,1) = EPSvap * psat_sfc(1,1) / ( pres_sfc(1,1) - ( 1.0_RP-EPSvap ) * psat_sfc(1,1) )
+    qv_sfc(1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1)
     qdry(:,1,1) = 1.0_RP - qv(:,1,1) - qc(:,1,1)
     call SATURATION_pres2qsat_all( KA, KS, KE, &
                                    temp(:,1,1), pres(:,1,1), qdry(:,1,1), & ! [IN]
@@ -2705,18 +2570,11 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               CZ(:), FZ(:),    & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, &
+                               pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
+                               pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
+                               CZ(:), FZ(:),                                           & ! [IN]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB
@@ -2904,10 +2762,10 @@ contains
        BBL_THETA
 
     real(RP) :: rh    (KA,IA,JA)
-    real(RP) :: rh_sfc(1 ,IA,JA)
+    real(RP) :: rh_sfc(   IA,JA)
 
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -2933,13 +2791,13 @@ contains
     ! calc in dry condition
     do j = JSB, JEB
     do i = ISB, IEB
-       pres_sfc(1,i,j) = SFC_PRES
-       pott_sfc(1,i,j) = SFC_THETA
+       pres_sfc(i,j) = SFC_PRES
+       pott_sfc(i,j) = SFC_THETA
 
        do k = KS, KE
           if ( REAL_CZ(k,i,j) <= TR_Z ) then ! below initial cloud top
-             pott(k,i,j) = pott_sfc(1,i,j) &
-                         + ( TR_THETA - pott_sfc(1,i,j) ) * ( REAL_CZ(k,i,j) / TR_Z )**1.25_RP
+             pott(k,i,j) = pott_sfc(i,j) &
+                         + ( TR_THETA - pott_sfc(i,j) ) * ( REAL_CZ(k,i,j) / TR_Z )**1.25_RP
           else
              pott(k,i,j) = TR_THETA * exp( GRAV * ( REAL_CZ(k,i,j) - TR_Z ) / CPdry / TR_TEMP )
           endif
@@ -2948,22 +2806,16 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     ! calc QV from RH
     do j = JSB, JEB
     do i = ISB, IEB
-       rh_sfc(1,i,j) = 1.0_RP - 0.75_RP * ( REAL_FZ(KS-1,i,j) / TR_Z )**1.25_RP
+       rh_sfc(i,j) = 1.0_RP - 0.75_RP * ( REAL_FZ(KS-1,i,j) / TR_Z )**1.25_RP
 
        do k = KS, KE
           if ( REAL_CZ(k,i,j) <= TR_Z ) then ! below initial cloud top
@@ -2976,8 +2828,8 @@ contains
     enddo
 
     call SATURATION_psat_all( IA, ISB, IEB, JA, JSB, JEB, &
-                              temp_sfc(1,:,:), & ! [IN]
-                              psat_sfc(1,:,:)  ) ! [OUT]
+                              temp_sfc(:,:), & ! [IN]
+                              psat_sfc(:,:)  ) ! [OUT]
     qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
     call SATURATION_pres2qsat_all( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                    temp(:,:,:), pres(:,:,:), qdry(:,:,:), & ! [IN]
@@ -2985,8 +2837,8 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-       qsat_sfc(1,i,j) = EPSvap * psat_sfc(1,i,j) / ( pres_sfc(1,i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(1,i,j) )
-       qv_sfc(1,i,j) = rh_sfc(1,i,j) * qsat_sfc(1,i,j)
+       qsat_sfc(i,j) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
+       qv_sfc(i,j) = rh_sfc(i,j) * qsat_sfc(i,j)
        do k = KS, KE
           qv(k,i,j) = rh(k,i,j) * qsat(k,i,j)
        enddo
@@ -2994,17 +2846,11 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     do k = KS, KE
        if( IO_L ) write(IO_FID_LOG,*) k, REAL_CZ(k,IS,JS), pres(k,IS,JS), pott(k,IS,JS), rh(k,IS,JS), qv(k,IS,JS)*1000
@@ -3071,7 +2917,7 @@ contains
     real(RP) :: GEOP_sw ! switch for geopotential energy correction
 
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     pi2 = atan(1.0_RP) * 2.0_RP ! pi/2
@@ -3105,8 +2951,8 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
 
-       pres_sfc(1,i,j) = 1017.8E2_RP ! [Pa]
-       pott_sfc(1,i,j) = 289.0_RP    ! [K]
+       pres_sfc(i,j) = 1017.8E2_RP ! [Pa]
+       pott_sfc(i,j) = 289.0_RP    ! [K]
 
        do k = KS, KE
           velx(k,i,j) =   7.0_RP
@@ -3128,22 +2974,16 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               potl    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               potl(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     ! calc in moist condition
     do j = JSB, JEB
     do i = ISB, IEB
-       qv_sfc  (1,i,j) = 9.0E-3_RP   ! [kg/kg]
+       qv_sfc  (i,j) = 9.0E-3_RP   ! [kg/kg]
 
        do k = KS, KE
           if    ( CZ(k) <   820.0_RP ) then ! below initial cloud top
@@ -3189,17 +3029,11 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho_bytemp( DENS    (:,:,:), & ! [OUT]
-                                      pott    (:,:,:), & ! [OUT]
-                                      pres    (:,:,:), & ! [OUT]
-                                      temp    (:,:,:), & ! [IN]
-                                      qv      (:,:,:), & ! [IN]
-                                      qc      (:,:,:), & ! [IN]
-                                      pott_sfc(:,:,:), & ! [OUT]
-                                      pres_sfc(:,:,:), & ! [IN]
-                                      temp_sfc(:,:,:), & ! [IN]
-                                      qv_sfc  (:,:,:), & ! [IN]
-                                      qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB
@@ -3309,7 +3143,7 @@ contains
     real(RP) :: sint
 
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     pi2 = atan(1.0_RP) * 2.0_RP  ! pi/2
@@ -3336,8 +3170,8 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
 
-       pres_sfc(1,i,j) = 1017.8E2_RP   ! [Pa]
-       pott_sfc(1,i,j) = 288.3_RP      ! [K]
+       pres_sfc(i,j) = 1017.8E2_RP   ! [Pa]
+       pott_sfc(i,j) = 288.3_RP      ! [K]
 
        do k = KS, KE
           velx(k,i,j) =  3.0_RP + 4.3 * CZ(k)*1.E-3_RP
@@ -3358,22 +3192,16 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               potl    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               potl(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     ! calc in moist condition
     do j = JSB, JEB
     do i = ISB, IEB
-       qv_sfc  (1,i,j) = 9.45E-3_RP
+       qv_sfc(i,j) = 9.45E-3_RP
 
        do k = KS, KE
           if ( CZ(k) < 775.0_RP ) then ! below initial cloud top
@@ -3416,17 +3244,11 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho_bytemp( DENS    (:,:,:), & ! [OUT]
-                                      pott    (:,:,:), & ! [OUT]
-                                      pres    (:,:,:), & ! [OUT]
-                                      temp    (:,:,:), & ! [IN]
-                                      qv      (:,:,:), & ! [IN]
-                                      qc      (:,:,:), & ! [IN]
-                                      pott_sfc(:,:,:), & ! [OUT]
-                                      pres_sfc(:,:,:), & ! [IN]
-                                      temp_sfc(:,:,:), & ! [IN]
-                                      qv_sfc  (:,:,:), & ! [IN]
-                                      qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB
@@ -3542,7 +3364,7 @@ contains
     real(RP) :: RovCP
 
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     pi2 = atan(1.0_RP) * 2.0_RP  ! pi/2
@@ -3570,9 +3392,9 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
 
-       pres_sfc(1,i,j) = PRES_ZB
-!      pott_sfc(1,i,j) = 288.3_RP      ! [K]
-!      qv_sfc  (1,i,j) = 9.45E-3_RP
+       pres_sfc(i,j) = PRES_ZB
+!      pott_sfc(i,j) = 288.3_RP      ! [K]
+!      qv_sfc  (i,j) = 9.45E-3_RP
 
        do k = KS, KE
 
@@ -3612,22 +3434,16 @@ contains
 
 !write(*,*)'chk3',ks,ke
     ! extrapolation (temtative)
-    pott_sfc(1,:,:) = potl(ks,:,:)-0.5*(potl(ks+1,:,:)-potl(ks,:,:))
-    qv_sfc  (1,:,:) = qv  (ks,:,:)-0.5*(qv  (ks+1,:,:)-qv  (ks,:,:))
-    qc_sfc  (1,:,:) = qc  (ks,:,:)-0.5*(qc  (ks+1,:,:)-qc  (ks,:,:))
+    pott_sfc(:,:) = potl(ks,:,:)-0.5*(potl(ks+1,:,:)-potl(ks,:,:))
+    qv_sfc  (:,:) = qv  (ks,:,:)-0.5*(qv  (ks+1,:,:)-qv  (ks,:,:))
+    qc_sfc  (:,:) = qc  (ks,:,:)-0.5*(qc  (ks+1,:,:)-qc  (ks,:,:))
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               potl    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               potl(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     call HYDROMETEOR_LHV( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                           temp(:,:,:), LHV(:,:,:) )
@@ -3642,17 +3458,11 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB
@@ -3757,7 +3567,7 @@ contains
     real(RP) :: fact
 
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -3782,8 +3592,8 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
 
-       pres_sfc(1,i,j) = 1015.4E2_RP ! [Pa]
-       pott_sfc(1,i,j) = 297.9_RP
+       pres_sfc(i,j) = 1015.4E2_RP ! [Pa]
+       pott_sfc(i,j) = 297.9_RP
 
        do k = KS, KE
           !--- potential temperature
@@ -3809,22 +3619,16 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               potl    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               potl(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
 
     do j = JSB, JEB
     do i = ISB, IEB
-       qv_sfc  (1,i,j) = 16.0E-3_RP   ! [kg/kg]
+       qv_sfc  (i,j) = 16.0E-3_RP   ! [kg/kg]
 
        do k = KS, KE
           !--- mixing ratio of vapor
@@ -3859,17 +3663,11 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho_bytemp( DENS    (:,:,:), & ! [OUT]
-                                      pott    (:,:,:), & ! [OUT]
-                                      pres    (:,:,:), & ! [OUT]
-                                      temp    (:,:,:), & ! [IN]
-                                      qv      (:,:,:), & ! [IN]
-                                      qc      (:,:,:), & ! [IN]
-                                      pott_sfc(:,:,:), & ! [OUT]
-                                      pres_sfc(:,:,:), & ! [IN]
-                                      temp_sfc(:,:,:), & ! [IN]
-                                      qv_sfc  (:,:,:), & ! [IN]
-                                      qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
 
     do j = JSB, JEB
@@ -3941,6 +3739,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for BOMEX inter comparison
   subroutine MKINIT_BOMEX
+    use scale_const, only: &
+       Rdry  => CONST_Rdry,  &
+       Rvap  => CONST_Rvap,  &
+       CPdry => CONST_CPdry, &
+       CPvap => CONST_CPvap, &
+       CL    => CONST_CL
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry
     implicit none
@@ -3958,8 +3762,10 @@ contains
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
 
+    real(RP) :: qdry, Rtot, CPtot
+
     integer :: ierr
-    integer :: k, i, j, iq
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -3984,8 +3790,8 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
 
-       pres_sfc(1,i,j) = 1015.E2_RP ! [Pa]
-       pott_sfc(1,i,j) = 299.1_RP
+       pres_sfc(i,j) = 1015.E2_RP ! [Pa]
+       pott_sfc(i,j) = 299.1_RP
 
        do k = KS, KE
           !--- potential temperature
@@ -4017,22 +3823,16 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               potl    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               potl(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
 
     do j = JSB, JEB
     do i = ISB, IEB
-       qv_sfc  (1,i,j) = 22.45E-3_RP   ! [kg/kg]
+       qv_sfc(i,j) = 22.45E-3_RP   ! [kg/kg]
 
        do k = KS, KE
           !--- mixing ratio of vapor
@@ -4062,23 +3862,20 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
+       qdry = 1.0_RP - qv(k,i,j) - qc(k,i,j)
+       Rtot = Rdry * qdry + Rvap * qv(k,i,j)
+       CPtot = CPdry * qdry + CPvap * qv(k,i,j) + CL * qc(k,i,j)
+       pott(k,i,j) = ( temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j) ) * ( P00 / pres(k,i,j) )**(Rtot/CPtot)
     enddo
     enddo
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho_bytemp( DENS    (:,:,:), & ! [OUT]
-                                      pott    (:,:,:), & ! [OUT]
-                                      pres    (:,:,:), & ! [OUT]
-                                      temp    (:,:,:), & ! [IN]
-                                      qv      (:,:,:), & ! [IN]
-                                      qc      (:,:,:), & ! [IN]
-                                      pott_sfc(:,:,:), & ! [OUT]
-                                      pres_sfc(:,:,:), & ! [IN]
-                                      temp_sfc(:,:,:), & ! [IN]
-                                      qv_sfc  (:,:,:), & ! [IN]
-                                      qc_sfc  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
 
     do j = JSB, JEB
@@ -4593,8 +4390,8 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WARMBUBBLE)
 
     ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES
-    pott_sfc(1,1,1) = SFC_THETA
+    pres_sfc(1,1) = SFC_PRES
+    pott_sfc(1,1) = SFC_THETA
 
     do k = KS, KE
        if    ( CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
@@ -4607,28 +4404,21 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               CZ(:), FZ(:),    & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, &
+                               pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
+                               pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
+                               CZ(:), FZ(:),                                           & ! [IN]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
 
     ! calc QV from RH
-    call SATURATION_psat_all( temp_sfc(1,1,1), psat_sfc(1,1,1) ) ! [IN], [OUT]
-    qsat_sfc(1,1,1) = EPSvap * psat_sfc(1,1,1) / ( pres_sfc(1,1,1) - ( 1.0_RP-EPSvap ) * psat_sfc(1,1,1) )
+    call SATURATION_psat_all( temp_sfc(1,1), psat_sfc(1,1) ) ! [IN], [OUT]
+    qsat_sfc(1,1) = EPSvap * psat_sfc(1,1) / ( pres_sfc(1,1) - ( 1.0_RP-EPSvap ) * psat_sfc(1,1) )
 
     qdry(:,1,1) = 1.0_RP - qv(:,1,1) - qc(:,1,1)
     call SATURATION_pres2qsat_all( KA, KS, KE, &
                                    temp(:,1,1), pres(:,1,1), qdry(:,1,1), & ! [IN]
                                    qsat(:,1,1)                            ) ! [OUT]
-    qv_sfc(1,1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
+    qv_sfc(1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1)
     do k = KS, KE
        if    ( CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
           qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
@@ -4640,18 +4430,11 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               CZ(:), FZ(:),    & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, &
+                               pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
+                               pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
+                               CZ(:), FZ(:),                                           & ! [IN]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB

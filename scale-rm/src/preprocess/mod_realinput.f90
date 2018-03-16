@@ -491,10 +491,7 @@ contains
     character(len=H_LONG) :: FILETYPE_OCEAN
     character(len=H_LONG) :: BASENAME_LAND
     character(len=H_LONG) :: BASENAME_OCEAN
-    character(len=H_LONG) :: BASENAME_WITHNUM  = ''
     character(len=5)      :: NUM               = ''
-    logical               :: SERIAL_PROC_READ_land
-    logical               :: SERIAL_PROC_READ_ocean
 
     ! land
     real(RP), allocatable :: LAND_TEMP_org      (:,:,:,:)
@@ -537,7 +534,6 @@ contains
     integer :: totaltimesteps = 1
     integer :: timelen
     integer :: skip_steps
-    integer :: lfn
     integer :: ierr
 
     character(len=H_LONG) :: basename_out_mod
@@ -1081,6 +1077,8 @@ contains
        QE_MP
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_qhyd2qtrc
+    use scale_atmos_grid_cartesC_real, only: &
+       CZ => ATMOS_GRID_CARTESC_REAL_CZ
     implicit none
 
     character(len=*), intent(in)  :: inputtype
@@ -1115,7 +1113,6 @@ contains
     logical :: same_mptype_ = .false.
 
     integer :: k, i, j, iq
-    integer :: n, nn
     !---------------------------------------------------------------------------
 
     if ( read_by_myproc_atmos ) then
@@ -1187,7 +1184,7 @@ contains
        end select
 
        if ( .not. same_mptype_ ) then
-          call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 1, dims(1)+1, dims(2), 1, dims(2), dims(3), 1, dims(3), &
+          call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 1, dims(1)+2, dims(2), 1, dims(2), dims(3), 1, dims(3), &
                                               QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
                                               QTRC_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
                                               QNUM=QNUM_org(:,:,:,:)            ) ! [IN]
@@ -1281,7 +1278,7 @@ contains
                          hfact   (    :,:,:),         & ! [IN]
                          kgrd    (:,:,:,:,:),         & ! [IN]
                          vfact   (:,:,:,:,:),         & ! [IN]
-                         W_org   (:,:,:),             & ! [INOUT]
+                         W_org   (:,:,:),             & ! [IN]
                          W       (:,:,:)              ) ! [OUT]
 
     call INTRP_interp3d( itp_nh,                      & ! [IN]
@@ -1293,7 +1290,7 @@ contains
                          hfact   (    :,:,:),         & ! [IN]
                          kgrd    (:,:,:,:,:),         & ! [IN]
                          vfact   (:,:,:,:,:),         & ! [IN]
-                         U_org   (:,:,:),             & ! [INOUT]
+                         U_org   (:,:,:),             & ! [IN]
                          U       (:,:,:)              ) ! [OUT]
 
     call INTRP_interp3d( itp_nh,                      & ! [IN]
@@ -1305,7 +1302,7 @@ contains
                          hfact   (    :,:,:),         & ! [IN]
                          kgrd    (:,:,:,:,:),         & ! [IN]
                          vfact   (:,:,:,:,:),         & ! [IN]
-                         V_org   (:,:,:),             & ! [INOUT]
+                         V_org   (:,:,:),             & ! [IN]
                          V       (:,:,:)              ) ! [OUT]
 
     if ( apply_rotate_uv ) then ! rotation from latlon field to map-projected field
@@ -1388,7 +1385,7 @@ contains
                          hfact   (    :,:,:),         & ! [IN]
                          kgrd    (:,:,:,:,:),         & ! [IN]
                          vfact   (:,:,:,:,:),         & ! [IN]
-                         POTT_org(:,:,:),             & ! [INOUT]
+                         POTT_org(:,:,:),             & ! [IN]
                          POTT    (:,:,:)              ) ! [OUT]
 
     do j = 1, JA
@@ -1408,9 +1405,8 @@ contains
                             hfact   (    :,:,:),         & ! [IN]
                             kgrd    (:,:,:,:,:),         & ! [IN]
                             vfact   (:,:,:,:,:),         & ! [IN]
-                            QTRC_org(:,:,:,iq),          & ! [INOUT]
+                            QTRC_org(:,:,:,iq),          & ! [IN]
                             QTRC    (:,:,:,iq)           ) ! [OUT]
-
 
        do j = 1, JA
        do i = 1, IA
@@ -1430,7 +1426,7 @@ contains
                             hfact   (    :,:,:),         & ! [IN]
                             kgrd    (:,:,:,:,:),         & ! [IN]
                             vfact   (:,:,:,:,:),         & ! [IN]
-                            DENS_org(:,:,:),             & ! [INOUT]
+                            DENS_org(:,:,:),             & ! [IN]
                             DENS    (:,:,:),             & ! [OUT]
                             logwgt = .true.              ) ! [IN]
     else
@@ -1443,7 +1439,7 @@ contains
                             hfact   (    :,:,:),         & ! [IN]
                             kgrd    (:,:,:,:,:),         & ! [IN]
                             vfact   (:,:,:,:,:),         & ! [IN]
-                            PRES_org(:,:,:),             & ! [INOUT]
+                            PRES_org(:,:,:),             & ! [IN]
                             PRES    (:,:,:),             & ! [OUT]
                             logwgt = .true.              ) ! [IN]
 
@@ -1458,12 +1454,11 @@ contains
        end if
 
        ! make density & pressure profile in moist condition
-       call HYDROSTATIC_buildrho_real( DENS(:,:,:), & ! [OUT]
-                                       TEMP(:,:,:), & ! [OUT]
-                                       PRES(:,:,:), & ! [INOUT]
-                                       POTT(:,:,:), & ! [IN]
-                                       QV  (:,:,:), & ! [IN]
-                                       QC  (:,:,:)  ) ! [IN]
+       call HYDROSTATIC_buildrho_real( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                                       POTT(:,:,:), QV(:,:,:), QC(:,:,:), & ! [IN]
+                                       CZ(:,:,:),                         & ! [IN]
+                                       PRES(:,:,:),                       & ! [INOUT]
+                                       DENS(:,:,:), TEMP(:,:,:)           ) ! [OUT]
 
        call COMM_vars8( DENS(:,:,:), 1 )
        call COMM_wait ( DENS(:,:,:), 1 )
@@ -2863,7 +2858,7 @@ contains
                          hfact (    :,:,:),            & ! [IN]
                          kgrdl (:,:,:,:,:),            & ! [IN]
                          vfactl(:,:,:,:,:),            & ! [IN]
-                         tg_org(:,:,:),                & ! [INOUT]
+                         tg_org(:,:,:),                & ! [IN]
                          tg    (:,:,:)                 ) ! [OUT]
 
     do j = 1, JA
@@ -2936,7 +2931,7 @@ contains
                                hfact   (    :,:,:),          & ! [IN]
                                kgrdl   (:,:,:,:,:),          & ! [IN]
                                vfactl  (:,:,:,:,:),          & ! [IN]
-                               smds_org(:,:,:),              & ! [INOUT]
+                               smds_org(:,:,:),              & ! [IN]
                                smds    (:,:,:)               ) ! [OUT]
 
           do k = 1, LKMAX-1
@@ -2971,7 +2966,7 @@ contains
                                hfact   (    :,:,:),          & ! [IN]
                                kgrdl   (:,:,:,:,:),          & ! [IN]
                                vfactl  (:,:,:,:,:),          & ! [IN]
-                               strg_org(:,:,:),              & ! [INOUT]
+                               strg_org(:,:,:),              & ! [IN]
                                strg    (:,:,:)               ) ! [OUT]
        end if
 

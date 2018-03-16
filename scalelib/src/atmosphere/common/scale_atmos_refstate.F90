@@ -432,19 +432,12 @@ contains
     qc_sfc = 0.0_RP
 
     ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( dens(:),  & ! [OUT]
-                               temp(:),  & ! [OUT]
-                               pres(:),  & ! [OUT]
-                               pott(:),  & ! [IN]
-                               qv  (:),  & ! [IN]
-                               qc  (:),  & ! [IN]
-                               CZ  (:),  & ! [IN]
-                               FZ  (:),  & ! [IN]
-                               temp_sfc, & ! [OUT]
-                               pres_sfc, & ! [IN]
-                               pott_sfc, & ! [IN]
-                               qv_sfc,   & ! [IN]
-                               qc_sfc    ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, &
+                               pott(:), qv(:), qc(:),              & ! [IN]
+                               pres_sfc, pott_sfc, qv_sfc, qc_sfc, & ! [IN]
+                               CZ(:), FZ(:),                       & ! [IN]
+                               dens(:), temp(:), pres(:),          & ! [OUT]
+                               temp_sfc                            ) ! [OUT]
 
     ! calc QV from RH
     call SATURATION_psat_all( temp_sfc, psat_sfc )
@@ -459,19 +452,12 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( dens(:),  & ! [OUT]
-                               temp(:),  & ! [OUT]
-                               pres(:),  & ! [OUT]
-                               pott(:),  & ! [IN]
-                               qv  (:),  & ! [IN]
-                               qc  (:),  & ! [IN]
-                               CZ  (:),  & ! [IN]
-                               FZ  (:),  & ! [IN]
-                               temp_sfc, & ! [OUT]
-                               pres_sfc, & ! [IN]
-                               pott_sfc, & ! [IN]
-                               qv_sfc,   & ! [IN]
-                               qc_sfc    ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, &
+                               pott(:), qv(:), qc(:),              & ! [IN]
+                               pres_sfc, pott_sfc, qv_sfc, qc_sfc, & ! [IN]
+                               CZ(:), FZ(:),                       & ! [IN]
+                               dens(:), temp(:), pres(:),          & ! [OUT]
+                               temp_sfc                            ) ! [OUT]
 
     ATMOS_REFSTATE1D_pres(:) = pres(:)
     ATMOS_REFSTATE1D_temp(:) = temp(:)
@@ -540,19 +526,12 @@ contains
     enddo
 
     ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( dens(:),  & ! [OUT]
-                               temp(:),  & ! [OUT]
-                               pres(:),  & ! [OUT]
-                               pott(:),  & ! [IN]
-                               qv  (:),  & ! [IN]
-                               qc  (:),  & ! [IN]
-                               CZ  (:),  & ! [IN]
-                               FZ  (:),  & ! [IN]
-                               temp_sfc, & ! [OUT]
-                               pres_sfc, & ! [IN]
-                               pott_sfc, & ! [IN]
-                               qv_sfc,   & ! [IN]
-                               qc_sfc    ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, &
+                               pott(:), qv(:), qc(:),              & ! [IN]
+                               pres_sfc, pott_sfc, qv_sfc, qc_sfc, & ! [IN]
+                               CZ(:), FZ(:),                       & ! [IN]
+                               dens(:), temp(:), pres(:),          & ! [OUT]
+                               temp_sfc                            ) ! [OUT]
 
     ! calc QV from RH
     call SATURATION_psat_all( temp_sfc, psat_sfc )
@@ -567,19 +546,12 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( dens(:),  & ! [OUT]
-                               temp(:),  & ! [OUT]
-                               pres(:),  & ! [OUT]
-                               pott(:),  & ! [IN]
-                               qv  (:),  & ! [IN]
-                               qc  (:),  & ! [IN]
-                               CZ  (:),  & ! [IN]
-                               FZ  (:),  & ! [IN]
-                               temp_sfc, & ! [OUT]
-                               pres_sfc, & ! [IN]
-                               pott_sfc, & ! [IN]
-                               qv_sfc,   & ! [IN]
-                               qc_sfc    ) ! [IN]
+    call HYDROSTATIC_buildrho( KA, KS, KE, &
+                               pott(:), qv(:), qc(:),              & ! [IN]
+                               pres_sfc, pott_sfc, qv_sfc, qc_sfc, & ! [IN]
+                               CZ(:), FZ(:),                       & ! [IN]
+                               dens(:), temp(:), pres(:),          & ! [OUT]
+                               temp_sfc                            ) ! [OUT]
 
     ATMOS_REFSTATE1D_pres(:) = pres(:)
     ATMOS_REFSTATE1D_temp(:) = temp(:)
@@ -769,9 +741,8 @@ contains
     use scale_interp_vert, only: &
        INTERP_VERT_z2xi
     use scale_atmos_hydrostatic, only: &
-       HYDROSTATIC_buildrho_atmos_0D     => ATMOS_HYDROSTATIC_buildrho_atmos_0D,     &
-       HYDROSTATIC_buildrho_atmos_rev_2D => ATMOS_HYDROSTATIC_buildrho_atmos_rev_2D, &
-       HYDROSTATIC_buildrho_atmos_rev_3D => ATMOS_HYDROSTATIC_buildrho_atmos_rev_3D
+       HYDROSTATIC_buildrho_atmos     => ATMOS_HYDROSTATIC_buildrho_atmos,     &
+       HYDROSTATIC_buildrho_atmos_rev => ATMOS_HYDROSTATIC_buildrho_atmos_rev
     implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
@@ -833,27 +804,27 @@ contains
     qc_1D = 0.0_RP
     dz_1D = FZ(KE) - CZ(KE)
 
-    call HYDROSTATIC_buildrho_atmos_0D( dens_toa_1D,               & ! [OUT]
-                                        temp_toa_1D,               & ! [OUT]
-                                        pres_toa_1D,               & ! [OUT]
-                                        ATMOS_REFSTATE1D_pott(KE), & ! [IN]
-                                        ATMOS_REFSTATE1D_qv  (KE), & ! [IN]
-                                        qc_1D,                     & ! [IN]
-                                        ATMOS_REFSTATE1D_dens(KE), & ! [IN]
-                                        ATMOS_REFSTATE1D_pott(KE), & ! [IN]
-                                        ATMOS_REFSTATE1D_qv  (KE), & ! [IN]
-                                        qc_1D,                     & ! [IN]
-                                        dz_1D,                     & ! [IN]
-                                        KE+1                       ) ! [IN]
+    call HYDROSTATIC_buildrho_atmos( ATMOS_REFSTATE1D_pott(KE), & ! [IN]
+                                     ATMOS_REFSTATE1D_qv  (KE), & ! [IN]
+                                     qc_1D,                     & ! [IN]
+                                     ATMOS_REFSTATE1D_dens(KE), & ! [IN]
+                                     ATMOS_REFSTATE1D_pott(KE), & ! [IN]
+                                     ATMOS_REFSTATE1D_qv  (KE), & ! [IN]
+                                     qc_1D,                     & ! [IN]
+                                     dz_1D,                     & ! [IN]
+                                     KE+1,                      & ! [IN]
+                                     dens_toa_1D,               & ! [OUT]
+                                     temp_toa_1D,               & ! [OUT]
+                                     pres_toa_1D                ) ! [OUT]
 
     ! build down density from TOA (3D)
     do j = JS, JE
     do i = IS, IE
-       dz(KS,i,j) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ! distance from surface to cell center
-       do k = KS+1, KE
-          dz(k,i,j) = REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j) ! distance from cell center to cell center
+       dz(KS-1,i,j) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ! distance from surface to cell center
+       do k = KS, KE-1
+          dz(k,i,j) = REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) ! distance from cell center to cell center
        enddo
-       dz(KE+1,i,j) = REAL_FZ(KE,i,j) - REAL_CZ(KE,i,j) ! distance from cell center to TOA
+       dz(KE,i,j) = REAL_FZ(KE,i,j) - REAL_CZ(KE,i,j) ! distance from cell center to TOA
     enddo
     enddo
 
@@ -876,39 +847,18 @@ contains
 
     qc(:,:,:) = 0.0_RP
 
-    call HYDROSTATIC_buildrho_atmos_rev_2D( dens(KE  ,:,:), & ! [OUT]
-                                            temp(KE  ,:,:), & ! [OUT]
-                                            pres(KE  ,:,:), & ! [OUT]
-                                            pott(KE  ,:,:), & ! [IN]
-                                            qv  (KE  ,:,:), & ! [IN]
-                                            qc  (KE  ,:,:), & ! [IN]
-                                            dens(KE+1,:,:), & ! [IN]
-                                            pott(KE+1,:,:), & ! [IN]
-                                            qv  (KE+1,:,:), & ! [IN]
-                                            qc  (KE+1,:,:), & ! [IN]
-                                            dz  (KE+1,:,:), & ! [IN]
-                                            KE+1            ) ! [IN]
+    call HYDROSTATIC_buildrho_atmos_rev( IA, IS, IE, JA, JS, JE, &
+                                         pott(KE,:,:), qv(KE,:,:), qc(KE,:,:),                       & ! [IN]
+                                         dens(KE+1,:,:), pott(KE+1,:,:), qv(KE+1,:,:), qc(KE+1,:,:), & ! [IN]
+                                         dz(KE,:,:), KE+1,                                           & ! [IN]
+                                         dens(KE  ,:,:), temp(KE  ,:,:), pres(KE  ,:,:)              ) ! [OUT]
 
-    call HYDROSTATIC_buildrho_atmos_rev_3D( dens(:,:,:), & ! [INOUT]
-                                            temp(:,:,:), & ! [OUT]
-                                            pres(:,:,:), & ! [OUT]
-                                            pott(:,:,:), & ! [IN]
-                                            qv  (:,:,:), & ! [IN]
-                                            qc  (:,:,:), & ! [IN]
-                                            dz  (:,:,:)  ) ! [IN]
+    call HYDROSTATIC_buildrho_atmos_rev( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                         pott(:,:,:), qv(:,:,:), qc(:,:,:), & ! [IN]
+                                         dz  (:,:,:),                       & ! [IN]
+                                         dens(:,:,:),                       & ! [INOUT]
+                                         temp(:,:,:), pres(:,:,:)           ) ! [OUT]
 
-!    call HYDROSTATIC_buildrho_atmos_rev_2D( dens(KS-1,:,:), & ! [OUT]
-!                                            temp(KS-1,:,:), & ! [OUT]
-!                                            pres(KS-1,:,:), & ! [OUT]
-!                                            pott(KS-1,:,:), & ! [IN]
-!                                            qv  (KS-1,:,:), & ! [IN]
-!                                            qc  (KS-1,:,:), & ! [IN]
-!                                            dens(KS  ,:,:), & ! [IN]
-!                                            pott(KS  ,:,:), & ! [IN]
-!                                            qv  (KS  ,:,:), & ! [IN]
-!                                            qc  (KS  ,:,:), & ! [IN]
-!                                            dz  (KS  ,:,:), & ! [IN]
-!                                            KS              ) ! [IN]
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE

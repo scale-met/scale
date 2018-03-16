@@ -556,7 +556,7 @@ contains
        ATMOS_PHY_MP_SN14_effective_radius, &
        ATMOS_PHY_MP_SN14_cloud_fraction
     use scale_atmos_phy_mp_suzuki10, only: &
-       ATMOS_PHY_MP_suzuki10_mass_ratio, &
+       ATMOS_PHY_MP_suzuki10_qtrc2qhyd, &
        ATMOS_PHY_MP_suzuki10_effective_radius, &
        ATMOS_PHY_MP_suzuki10_cloud_fraction
     use mod_atmos_admin, only: &
@@ -670,7 +670,7 @@ contains
                   QTRC(:,:,:,QHS:QHE),     & ! [IN]
                   ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]
           case ( 'SUZUKI10' )
-             call ATMOS_PHY_MP_suzuki10_mass_ratio( &
+             call ATMOS_PHY_MP_suzuki10_qtrc2qhyd( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   QTRC(:,:,:,QHS:QHE),     & ! [IN]
                   ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]

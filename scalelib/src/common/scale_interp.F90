@@ -11,6 +11,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_interp
   !-----------------------------------------------------------------------------
   !
@@ -239,6 +240,8 @@ contains
 
     hfact(:,:,:) = 0.0_RP
 
+    !$omp parallel do OMP_SCHEDULE_ collapse(2), &
+    !$omp private(IS,IE,JS,JE)
     do j = 1, JA
     do i = 1, IA
        ! nearest block search
@@ -329,6 +332,8 @@ contains
     hfact(:,:,:)     = 0.0_RP
     vfact(:,:,:,:,:) = 0.0_RP
 
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(ii,jj,IS,IE,JS,JE)
     do j = 1, JA
     do i = 1, IA
        ! nearest block search
@@ -407,6 +412,8 @@ contains
 
     call PROF_rapstart('INTRP_interp',3)
 
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(sw)
 !OCL PREFETCH
     do j = 1, JA
     do i = 1, IA
@@ -419,7 +426,8 @@ contains
 
 !OCL SERIAL
     do n = 2, npoints
-!OCL PARALLEL,PREFETCH
+    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+!OCL PREFETCH
     do j = 1, JA
     do i = 1, IA
        val(i,j) = val(i,j) &
@@ -453,24 +461,29 @@ contains
        logwgt      )
     implicit none
 
-    integer,  intent(in)    :: npoints                       ! number of interpolation point for horizontal
-    integer,  intent(in)    :: KA_ref                        ! number of x-direction    (reference)
-    integer,  intent(in)    :: IA_ref                        ! number of x-direction    (reference)
-    integer,  intent(in)    :: JA_ref                        ! number of y-direction    (reference)
-    integer,  intent(in)    :: KA, KS, KE                    ! number of z-direction    (target)
-    integer,  intent(in)    :: IA                            ! number of x-direction    (target)
-    integer,  intent(in)    :: JA                            ! number of y-direction    (target)
-    integer,  intent(in)    :: idx_i  (IA,JA,npoints)        ! i-index in reference     (target)
-    integer,  intent(in)    :: idx_j  (IA,JA,npoints)        ! j-index in reference     (target)
-    real(RP), intent(in)    :: hfact  (IA,JA,npoints)        ! horizontal interp factor (target)
-    integer,  intent(in)    :: idx_k  (KA,2,IA,JA,npoints)   ! k-index in reference     (target)
-    real(RP), intent(in)    :: vfact  (KA,2,IA,JA,npoints)   ! vertical interp factor   (target)
-    real(RP), intent(inout) :: val_ref(KA_ref,IA_ref,JA_ref) ! value                    (reference)
-    real(RP), intent(out)   :: val    (KA,IA,JA)             ! value                    (target)
+    integer,  intent(in) :: npoints                       ! number of interpolation point for horizontal
+    integer,  intent(in) :: KA_ref                        ! number of x-direction    (reference)
+    integer,  intent(in) :: IA_ref                        ! number of x-direction    (reference)
+    integer,  intent(in) :: JA_ref                        ! number of y-direction    (reference)
+    integer,  intent(in) :: KA, KS, KE                    ! number of z-direction    (target)
+    integer,  intent(in) :: IA                            ! number of x-direction    (target)
+    integer,  intent(in) :: JA                            ! number of y-direction    (target)
+    integer,  intent(in) :: idx_i  (IA,JA,npoints)        ! i-index in reference     (target)
+    integer,  intent(in) :: idx_j  (IA,JA,npoints)        ! j-index in reference     (target)
+    real(RP), intent(in) :: hfact  (IA,JA,npoints)        ! horizontal interp factor (target)
+    integer,  intent(in) :: idx_k  (KA,2,IA,JA,npoints)   ! k-index in reference     (target)
+    real(RP), intent(in) :: vfact  (KA,2,IA,JA,npoints)   ! vertical interp factor   (target)
+
+    real(RP), intent(in), target :: val_ref(KA_ref,IA_ref,JA_ref) ! value (reference)
+
+    real(RP), intent(out)        :: val    (KA,IA,JA)             ! value (target)
 
     logical,  intent(in), optional:: logwgt                  ! use logarithmic weighted interpolation?
 
     logical :: logwgt_
+
+    real(RP), pointer :: work(:,:,:)
+
     integer :: k, i, j, n
     !---------------------------------------------------------------------------
 
@@ -482,46 +495,54 @@ contains
     endif
 
     if ( logwgt_ ) then
+       allocate( work(KA_ref,IA_ref,JA_ref) )
+       !$omp parallel do OMP_SCHEDULE_ collapse(2)
        do j = 1, JA_ref
        do i = 1, IA_ref
        do k = 1, KA_ref
-          val_ref(k,i,j) = log( val_ref(k,i,j) )
+          work(k,i,j) = log( val_ref(k,i,j) )
        enddo
        enddo
        enddo
+    else
+       work => val_ref
     endif
 
+    !$omp parallel do OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       val(k,i,j) = hfact(i,j,1) * vfact(k,1,i,j,1) * val_ref(idx_k(k,1,i,j,1),idx_i(i,j,1),idx_j(i,j,1)) &
-                  + hfact(i,j,1) * vfact(k,2,i,j,1) * val_ref(idx_k(k,2,i,j,1),idx_i(i,j,1),idx_j(i,j,1))
+       val(k,i,j) = hfact(i,j,1) * vfact(k,1,i,j,1) * work(idx_k(k,1,i,j,1),idx_i(i,j,1),idx_j(i,j,1)) &
+                  + hfact(i,j,1) * vfact(k,2,i,j,1) * work(idx_k(k,2,i,j,1),idx_i(i,j,1),idx_j(i,j,1))
     enddo
     enddo
     enddo
 
 !OCL SERIAL
     do n = 2, npoints
-!OCL PARALLEL,PREFETCH
+    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+!OCL PREFETCH
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
        val(k,i,j) = val(k,i,j) &
-                  + hfact(i,j,n) * vfact(k,1,i,j,n) * val_ref(idx_k(k,1,i,j,n),idx_i(i,j,n),idx_j(i,j,n)) &
-                  + hfact(i,j,n) * vfact(k,2,i,j,n) * val_ref(idx_k(k,2,i,j,n),idx_i(i,j,n),idx_j(i,j,n))
+                  + hfact(i,j,n) * vfact(k,1,i,j,n) * work(idx_k(k,1,i,j,n),idx_i(i,j,n),idx_j(i,j,n)) &
+                  + hfact(i,j,n) * vfact(k,2,i,j,n) * work(idx_k(k,2,i,j,n),idx_i(i,j,n),idx_j(i,j,n))
     enddo
     enddo
     enddo
     enddo
 
     if ( logwgt_ ) then
+       deallocate( work )
+       !$omp parallel do OMP_SCHEDULE_ collapse(2)
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
           val(k,i,j) = exp( val(k,i,j) )
-       enddo
-       enddo
-       enddo
+       end do
+       end do
+       end do
     endif
 
     call PROF_rapend  ('INTRP_interp',3)
@@ -531,6 +552,7 @@ contains
 
   !-----------------------------------------------------------------------------
   ! search of nearest region for speed up of interpolation
+!OCL SERIAL
   subroutine INTRP_search_nearest_block( &
        IA_ref,  &
        JA_ref,  &
@@ -644,6 +666,8 @@ contains
     idx_i(:) = -1
     idx_j(:) = -1
 
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(distance)
     do j = JS, JE
     do i = IS, IE
        distance = haversine( lon, lat, lon_ref(i,j), lat_ref(i,j), CONST_RADIUS )
@@ -697,6 +721,7 @@ contains
 
   !-----------------------------------------------------------------------------
   ! vertical search of interpolation points for two-points
+!OCL SERIAL
   subroutine INTRP_search_vert( &
        KA_ref, KS_ref, KE_ref, &
        KA, KS, KE,             &
@@ -763,6 +788,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> bubble sort
+!OCL SERIAL
   subroutine sort( &
       npoints, &
       idx_i,   &

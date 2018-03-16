@@ -225,7 +225,6 @@ contains
     character(len=H_MID) :: varname_V
 
     integer :: fid
-    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputWRF]'
@@ -509,8 +508,8 @@ contains
 
 
 #ifdef DEBUG
-     !k=1 ; i=int(dims(2)/2) ; j=int(dims(3)/2) ; iq = 1
-     k=2 ; i=3 ; j=3 ; iq = 1
+     !k=1 ; i=int(dims(2)/2) ; j=int(dims(3)/2)
+     k=2 ; i=3 ; j=3
      write(*,*) "read 3D wrf data",i,j,k
      write(*,*) "lon_org    ",lon_org   (i,j)/D2R
      write(*,*) "lat_org    ",lat_org   (i,j)/D2R
@@ -520,7 +519,7 @@ contains
      write(*,*) "vely_org   ",llvely_org(k,i,j)
      write(*,*) "velz_org   ",velz_org  (k,i,j)
      write(*,*) "temp_org   ",temp_org  (k,i,j)
-     write(*,*) "qtrc_org   ",qtrc_org  (k,i,j,iq)
+     write(*,*) "qv_org     ",qv_org    (k,i,j)
      k=3 ; i=3 ; j=3 ; iq = 1
      write(*,*) "read 3D wrf data",i,j,k
      write(*,*) "lon_org    ",lon_org   (i,j)/D2R
@@ -531,7 +530,7 @@ contains
      write(*,*) "vely_org   ",llvely_org(k,i,j)
      write(*,*) "velz_org   ",velz_org  (k,i,j)
      write(*,*) "temp_org   ",temp_org  (k,i,j)
-     write(*,*) "qtrc_org   ",qtrc_org  (k,i,j,iq)
+     write(*,*) "qv_org     ",qv_org     (k,i,j)
 #endif
 
     return
@@ -556,7 +555,6 @@ contains
          WRF_FILE_TYPE
 
     integer :: fid
-    integer :: timelen
     integer :: ierr
     !---------------------------------------------------------------------------
 

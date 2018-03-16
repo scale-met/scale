@@ -346,7 +346,9 @@ contains
        end do
        end do
 
-       call barometric_law_mslp( MSLP(:,:), SFC_PRES(:,:), T2(:,:), TOPO_Zsfc(:,:) )
+       call barometric_law_mslp( IA, ISB, IEB, JA, JSB, JEB, &
+                                 SFC_PRES(:,:), T2(:,:), TOPO_Zsfc(:,:), & ! [IN]
+                                 MSLP(:,:)                               ) ! [OUT]
 
        call FILE_HISTORY_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3'   )
        call FILE_HISTORY_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa'      )
