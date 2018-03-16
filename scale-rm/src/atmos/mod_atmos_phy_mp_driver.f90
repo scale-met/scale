@@ -417,12 +417,8 @@ contains
        QLA,   &
        QIA
     use scale_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_qd,         &
-       ATMOS_THERMODYN_rhoe,       &
-       ATMOS_THERMODYN_rhot,       &
-       ATMOS_THERMODYN_pott,       &
-       ATMOS_THERMODYN_temp_pres,  &
-       ATMOS_THERMODYN_temp_pres_E
+ATMOS_THERMODYN_pott,       &
+       ATMOS_THERMODYN_specific_heat
     use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP
     use scale_atmos_phy_mp_common, only: &
@@ -470,6 +466,7 @@ contains
        RHOH   => RHOH_p, &
        TEMP, &
        PRES, &
+       Qdry, &
        CVtot, &
        CPtot, &
        EXNER, &
@@ -503,12 +500,11 @@ contains
     real(RP) :: RHOE_t(KA,IA,JA)
     real(RP) :: TEMP1 (KA,IA,JA)
     real(RP) :: PRES1 (KA,IA,JA)
+    real(RP) :: QDRY1 (KA,IA,JA)
+    real(RP) :: Rtot1 (KA,IA,JA)
     real(RP) :: CPtot1(KA,IA,JA)
     real(RP) :: CVtot1(KA,IA,JA)
     real(RP) :: CCN   (KA,IA,JA)
-    real(RP) :: QDRY  (KA,IA,JA)
-    real(RP) :: QSAT_L(KA,IA,JA)
-    real(RP) :: QSAT_I(KA,IA,JA)
     real(RP) :: QHYD  (KA,IA,JA,6)
     real(RP) :: vterm (KA,QS_MP+1:QE_MP)
 !    real(RP), target :: QTRC1(KA,IA,JA,QS_MP:QA_MP)
@@ -519,7 +515,6 @@ contains
     real(RP) :: MOMX1(KA,IA,JA)
     real(RP) :: MOMY1(KA,IA,JA)
     real(RP) :: RHOT1(KA,IA,JA)
-    real(RP) :: POTT1(KA,IA,JA)
     real(RP), target :: QTRC1(KA,IA,JA,QA)
     logical :: integ_precip = .true.
 
@@ -550,15 +545,7 @@ contains
 
     integer :: k, i, j, iq
     integer :: step
-
-    ! tentative for suzuki10
-    real(RP) :: FLX_hydro_3D(KA,IA,JA,QA-1)
-    real(RP) :: pflux       (KA,IA,JA,QA-1)
-    real(RP) :: RHOE_3D     (KA,IA,JA)
-    real(RP) :: RHOT2       (KA,IA,JA)
-    real(RP) :: QTRC2       (KA,IA,JA,QA)
-    real(RP) :: vterm_3D    (KA,IA,JA,QS_MP+1:QE_MP)
-    integer  :: m, n
+real(RP) :: POTT1(KA,IA,JA)
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
@@ -673,21 +660,10 @@ contains
           enddo
 
        case ( 'SUZUKI10' )
-
 !OCL XFILL
-          QTRC1(:,:,:,:) = QTRC(:,:,:,:) ! save
-
-          call ATMOS_THERMODYN_qd( QDRY(:,:,:),                   & ! [OUT]
-                                   QTRC1(:,:,:,:), TRACER_MASS(:) ) ! [IN]
-
-          call ATMOS_THERMODYN_temp_pres( TEMP1(:,:,:),  & ! [OUT]
-                                          PRES1(:,:,:),  & ! [OUT]
-                                          DENS(:,:,:),   & ! [IN]
-                                          RHOT(:,:,:),   & ! [IN]
-                                          QTRC1(:,:,:,:),& ! [IN]
-                                          TRACER_CV(:),  & ! [IN]
-                                          TRACER_R(:),   & ! [IN]
-                                          TRACER_MASS(:) ) ! [IN]
+          TEMP1(:,:,:) = TEMP(:,:,:)
+!OCL XFILL
+          QTRC1(:,:,:,:) = QTRC(:,:,:,:)
 
           call ATMOS_PHY_MP_suzuki10_adjustment( KA, KS,  KE,        & ! [IN]
                                                  IA, ISB, IEB,       & ! [IN]
@@ -695,45 +671,51 @@ contains
                                                  KIJMAX,             & ! [IN]
                                                  dt_MP,              & ! [IN]
                                                  DENS     (:,:,:),   & ! [IN]
-                                                 PRES1    (:,:,:),   & ! [IN]
+                                                 PRES     (:,:,:),   & ! [IN]
                                                  QDRY     (:,:,:),   & ! [IN]
                                                  CCN      (:,:,:),   & ! [IN] 
                                                  TEMP1    (:,:,:),   & ! [INOUT]
                                                  QTRC1    (:,:,:,:), & ! [INOUT]
                                                  EVAPORATE(:,:,:)    ) ! [OUT]
 
+          call ATMOS_THERMODYN_specific_heat( &
+               KA, KS, KE,     & ! [IN]
+               IA, IS, IE,     & ! [IN]
+               JA, JS, JE,     & ! [IN]
+               QA,             & ! [IN]
+               QTRC1(:,:,:,:), & ! [IN]
+               TRACER_MASS(:), & ! [IN]
+               TRACER_R   (:), & ! [IN]
+               TRACER_CV  (:), & ! [IN]
+               TRACER_CP  (:), & ! [IN]
+               QDRY1 (:,:,:),  & ! [OUT]
+               Rtot1 (:,:,:),  & ! [OUT]
+               CVtot1(:,:,:),  & ! [OUT]
+               CPtot1(:,:,:)   ) ! [OUT]
+
           call ATMOS_THERMODYN_pott( POTT1(:,:,:),   & ! [OUT]
                                      TEMP1(:,:,:),   & ! [IN]
-                                     PRES1(:,:,:),   & ! [IN]
+                                     PRES (:,:,:),   & ! [IN]
                                      QTRC1(:,:,:,:), & ! [IN]
                                      TRACER_CV(:),   & ! [IN]
                                      TRACER_R(:),    & ! [IN]
                                      TRACER_MASS(:)  ) ! [IN]
 
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             RHOT1(k,i,j) = POTT1(k,i,j) * DENS(k,i,j)
-          enddo
-          enddo
-          enddo
-
-!OCL XFILL
-          !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-          !$omp shared(JSB,JEB,ISB,IEB,KS,KE,DENS_t_MP,DENS1,DENS,MOMZ_t_MP,MOMZ1,MOMZ,MOMX_t_MP,MOMX1) &
-          !$omp shared(MOMX,MOMY_t_MP,MOMY1,MOMY,RHOT_t_MP,RHOT1,RHOT,dt_MP)
           do j = JSB, JEB
           do i = ISB, IEB
           do k = KS, KE
-             RHOT_t_MP(k,i,j) = ( RHOT1(k,i,j) - RHOT(k,i,j) ) / dt_MP
-          enddo
-          enddo
-          enddo
-!OCL XFILL
+             RHOT_t_MP(k,i,j) = ( POTT1(k,i,j) * DENS(k,i,j) - RHOT(k,i,j) ) / dt_MP
+             !CP_t = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
+             !CV_t = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
+             !RHOE_t (k,i,j) = ( TEMP1(k,i,j) * CVtot1(k,i,j) - TEMP(k,i,j) * CVtot(k,i,j) ) * DENS(k,i,j) / dt_MP
+             !RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
+             !     - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
+             !     * DENS(k,i,j) * TEMP(k,i,j)
+          end do
+          end do
+          end do
+
           do iq = QS_MP, QE_MP
-          !$omp parallel do default(none) &
-          !$omp shared(JSB,JEB,ISB,IEB,KS,KE,RHOQ_t_MP,iq,QTRC1,QTRC,DENS1,DENS,dt_MP) &
-          !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JSB, JEB
           do i = ISB, IEB
           do k = KS, KE

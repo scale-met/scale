@@ -132,7 +132,7 @@ module scale_atmos_phy_mp_suzuki10
   !++ Private parameters
   !
   integer :: QA
-  integer, parameter :: QS = 1
+  integer, parameter :: I_QV = 1
 
   character(len=3)  :: namspc (8) = (/ 'Qcl', &
                                        'Qic', &
@@ -162,6 +162,12 @@ module scale_atmos_phy_mp_suzuki10
 
   logical  :: MP_doautoconversion = .true.  ! apply collision process ?
   logical  :: MP_couple_aerosol   = .false. ! apply CCN effect?
+
+  !--- array definition
+  integer :: num_start_waters
+  integer :: num_end_waters
+  integer :: num_start_ices
+  integer :: num_end_ices
 
   !--- Indeces for determining species of cloud particle
   integer, parameter :: il  = ATMOS_PHY_MP_suzuki10_il   !--- (obsolute) index for liquid  water
@@ -305,7 +311,6 @@ contains
        ICEFLG, &
        kphase
 
-    integer :: QS2
     integer :: m, n, ierr
     !---------------------------------------------------------------------------
 
@@ -345,6 +350,11 @@ contains
     ATMOS_PHY_MP_suzuki10_ntracers = 1 + nbin*nspc + nccn  ! number of total tracers
     ATMOS_PHY_MP_suzuki10_nwaters  = nbin                  ! number of liquid water
     ATMOS_PHY_MP_suzuki10_nices    = nbin * ( nspc - 1 )   ! number of ice water
+
+    num_start_waters = I_QV + 1
+    num_end_waters   = I_QV + ATMOS_PHY_MP_suzuki10_nwaters
+    num_start_ices   = num_end_waters + 1
+    num_end_ices     = num_end_waters + ATMOS_PHY_MP_suzuki10_nices
 
     QA = ATMOS_PHY_MP_suzuki10_ntracers
 
@@ -809,8 +819,6 @@ contains
     use scale_const, only: &
        EPS => CONST_EPS, &
        CONST_TEM00
-    use scale_atmos_hydrometeor, only: &
-       I_QV
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_pres2qsat_liq, &
        ATMOS_SATURATION_pres2qsat_ice
@@ -822,13 +830,13 @@ contains
     integer, intent(in) :: KIJMAX
 
     real(DP), intent(in) :: dt
-    real(RP), intent(in) :: DENS  (KA,IA,JA)
-    real(RP), intent(in) :: PRES  (KA,IA,JA)
-    real(RP), intent(in) :: QDRY  (KA,IA,JA)
-    real(RP), intent(in) :: CCN   (KA,IA,JA)
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: PRES(KA,IA,JA)
+    real(RP), intent(in) :: QDRY(KA,IA,JA)
+    real(RP), intent(in) :: CCN (KA,IA,JA)
 
-    real(RP), intent(inout) :: TEMP(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(inout) :: TEMP (KA,IA,JA)
+    real(RP), intent(inout) :: QTRC (KA,IA,JA,QA)
 
     real(RP), intent(out) :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
 
@@ -873,6 +881,8 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(SBM Mixed phase)'
     endif
 
+    EVAPORATE(:,:,:) = 0.0_RP
+
     call ATMOS_SATURATION_pres2qsat_liq( KA, KS, KE, & ! [IN]
                                          IA, IS, IE, & ! [IN]
                                          JA, JS, JE, & ! [IN]
@@ -888,7 +898,6 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       EVAPORATE(k,i,j) = 0.0_RP
        ssliq(k,i,j) = QTRC(k,i,j,I_QV) / QSAT_L(k,i,j) - 1.0_RP
        ssice(k,i,j) = QTRC(k,i,j,I_QV) / QSAT_I(k,i,j) - 1.0_RP
     enddo
@@ -947,7 +956,7 @@ contains
        ijk = ijk + 1
 
        cldsum   = 0.0_RP
-       countbin = QS + 1
+       countbin = I_QV + 1
        do m = 1, nspc
        do n = 1, nbin
          cldsum   = cldsum + QTRC(k,i,j,countbin) * DENS(k,i,j) / dxmic
@@ -970,7 +979,7 @@ contains
           CCN_ijk(ijkcount)  = CCN(k,i,j)
           Qvap_ijk(ijkcount) = QTRC(k,i,j,I_QV)
 
-          countbin = QS + 1
+          countbin = I_QV + 1
           do m = 1, nspc
           do n = 1, nbin
              Ghyd_ijk(n,m,ijkcount) = QTRC(k,i,j,countbin) * DENS(k,i,j) / dxmic
@@ -1108,7 +1117,7 @@ contains
        QTRC(k,i,j,I_QV) = Qvap_ijk(ijk)
        EVAPORATE(k,i,j) = Evaporate_ijk(ijk) / dt ! [#/m3/s]
 
-       countbin = QS + 1
+       countbin = I_QV + 1
        do m = 1, nspc
        do n = 1, nbin
           QTRC(k,i,j,countbin) = Ghyd_ijk(n,m,ijk) / DENS(k,i,j) * dxmic
@@ -1125,7 +1134,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       countbin = QS + 1
+       countbin = I_QV + 1
        do m = 1, nspc
        do n = 1, nbin
           if ( QTRC(k,i,j,countbin) < EPS ) then
@@ -1204,7 +1213,7 @@ contains
       do k  = KS, KE
          qhydro = 0.0_RP
          do ihydro = 1, nspc
-          do iq = QS+nbin*(ihydro-1)+1, QS+nbin*ihydro
+          do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
             qhydro = qhydro + QTRC0(k,i,j,iq)
           enddo
          enddo
@@ -1218,7 +1227,7 @@ contains
       do k  = KS, KE
          qhydro = 0.0_RP
          do ihydro = 1, I_mp_QC
-          do iq = QS+nbin*(ihydro-1)+1, QS+nbin*ihydro
+          do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
             qhydro = qhydro + QTRC0(k,i,j,iq)
           enddo
          enddo
@@ -1278,7 +1287,7 @@ contains
        sum3 = 0.0_RP
        sum2 = 0.0_RP
        ihydro = I_mp_QC
-       do iq = QS+1, QS+nbnd
+       do iq = I_QV+1, I_QV+nbnd
           sum3 = sum3 &
                + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
                * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
@@ -1300,7 +1309,7 @@ contains
        sum3 = 0.0_RP
        sum2 = 0.0_RP
        ihydro = I_mp_QC
-       do iq = QS+nbnd+1, QS+nbin
+       do iq = I_QV+nbnd+1, I_QV+nbin
           sum3 = sum3 &
                + ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
                * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
@@ -1331,7 +1340,7 @@ contains
              sum0(ihydro) = 0.0_RP
              sum2 = 0.0_RP
              sum3 = 0.0_RP
-             do iq = QS+nbin*(ihydro-1)+1, QS+nbin*ihydro
+             do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
                 sum0(ihydro) = sum0(ihydro) &
                      + ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) !--- [kg/kg] -> [kg/m3]
                 sum3 = sum3 &
@@ -1409,14 +1418,14 @@ contains
 
        ! HC
        sum2 = 0.0_RP
-       do iq = QS+1, QS+nbnd
+       do iq = I_QV+1, I_QV+nbnd
           sum2 = sum2 + QTRC0(k,i,j,iq)
        enddo
        Qe(k,i,j,I_HC) = sum2
 
        ! HR
        sum2 = 0.0_RP
-       do iq = QS+nbnd+1, QS+nbin
+       do iq = I_QV+nbnd+1, I_QV+nbin
           sum2 = sum2 + QTRC0(k,i,j,iq)
        enddo
        Qe(k,i,j,I_HR) = sum2
@@ -1434,7 +1443,7 @@ contains
           ! HI
           sum2 = 0.0_RP
           do ihydro = I_mp_QP, I_mp_QD
-          do iq = QS+nbin*(ihydro-1)+1, QS+nbin*ihydro
+          do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
              sum2 = sum2 + QTRC0(k,i,j,iq)
           enddo
           enddo
@@ -1443,7 +1452,7 @@ contains
           ! HS
           sum2 = 0.0_RP
           ihydro = I_mp_QS
-          do iq = QS+nbin*(ihydro-1)+1, QS+nbin*ihydro
+          do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
              sum2 = sum2 + QTRC0(k,i,j,iq)
           enddo
           Qe(k,i,j,I_HS) = sum2
@@ -1451,7 +1460,7 @@ contains
           ! HG
           sum2 = 0.0_RP
           ihydro = I_mp_QG
-          do iq = QS+nbin*(ihydro-1)+1, QS+nbin*ihydro
+          do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
              sum2 = sum2 + QTRC0(k,i,j,iq)
           enddo
           Qe(k,i,j,I_HG) = sum2
@@ -1459,7 +1468,7 @@ contains
           ! HS
           sum2 = 0.0_RP
           ihydro = I_mp_QH
-          do iq = QS+nbin*(ihydro-1)+1, QS+nbin*ihydro
+          do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
              sum2 = sum2 + QTRC0(k,i,j,iq)
           enddo
           Qe(k,i,j,I_HH) = sum2
