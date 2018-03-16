@@ -1430,10 +1430,10 @@ contains
        REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_specific_heat
-    use scale_atmos_diagnostic, only: &
-       ATMOS_DIAGNOSTIC_get_vel, &
-       ATMOS_DIAGNOSTIC_get_therm, &
-       ATMOS_DIAGNOSTIC_get_phyd
+    use scale_atmos_diagnostic_cartesC, only: &
+       ATMOS_DIAGNOSTIC_CARTESC_get_vel, &
+       ATMOS_DIAGNOSTIC_CARTESC_get_therm, &
+       ATMOS_DIAGNOSTIC_CARTESC_get_phyd
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -1454,18 +1454,18 @@ contains
          TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! (in)
          Qdry(:,:,:), Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:)     ) ! (out)
 
-    call ATMOS_DIAGNOSTIC_get_vel( &
+    call ATMOS_DIAGNOSTIC_CARTESC_get_vel( &
          KA, KS, KE, IA, 1, IA, JA, 1, JA, &
          DENS_av(:,:,:), MOMZ_av(:,:,:), MOMX_av(:,:,:), MOMY_av(:,:,:), & ! (in)
          W(:,:,:), U(:,:,:), V(:,:,:)                                    ) ! (out)
 
-    call ATMOS_DIAGNOSTIC_get_therm( &
+    call ATMOS_DIAGNOSTIC_CARTESC_get_therm( &
          KA, KS, KE, IA, 1, IA, JA, 1, JA, &
          DENS_av(:,:,:), RHOT_av(:,:,:),                     & ! (in)
          Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:),            & ! (in)
          POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), EXNER(:,:,:) ) ! (out)
 
-    call ATMOS_DIAGNOSTIC_get_phyd( &
+    call ATMOS_DIAGNOSTIC_CARTESC_get_phyd( &
          KA, KS, KE, IA, 1, IA, JA, 1, JA, &
          DENS_av(:,:,:), PRES(:,:,:),    & ! (in)
          REAL_CZ(:,:,:), REAL_FZ(:,:,:), & ! (in)
@@ -1523,10 +1523,10 @@ contains
        ATMOS_SATURATION_psat_ice, &
        ATMOS_SATURATION_tdew_liq, &
        ATMOS_SATURATION_pote
-    use scale_atmos_diagnostic, only: &
-       ATMOS_DIAGNOSTIC_get_potv, &
-       ATMOS_DIAGNOSTIC_get_teml, &
-       ATMOS_DIAGNOSTIC_get_n2
+    use scale_atmos_diagnostic_cartesC, only: &
+       ATMOS_DIAGNOSTIC_CARTESC_get_potv, &
+       ATMOS_DIAGNOSTIC_CARTESC_get_teml, &
+       ATMOS_DIAGNOSTIC_CARTESC_get_n2
     implicit none
     character(len=*), intent(in)  :: vname
     real(RP),         intent(out) :: var(:,:,:)
@@ -1608,7 +1608,7 @@ contains
     case ( 'POTV' )
        if ( .not. DV_calclated(I_POTV) ) then
           call allocate_3D( POTV )
-          call ATMOS_DIAGNOSTIC_get_potv( &
+          call ATMOS_DIAGNOSTIC_CARTESC_get_potv( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                POTT(:,:,:), Rtot(:,:,:), & ! (in)
                POTV(:,:,:)               ) ! (out)
@@ -1623,7 +1623,7 @@ contains
           call ATMOS_vars_get_diagnostic( 'LHS', WORK3D(:,:,:) )
           call ATMOS_vars_get_diagnostic( 'QLIQ', WORK3D(:,:,:) )
           call ATMOS_vars_get_diagnostic( 'QICE', WORK3D(:,:,:) )
-          call ATMOS_DIAGNOSTIC_get_teml( &
+          call ATMOS_DIAGNOSTIC_CARTESC_get_teml( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                TEMP(:,:,:), LHV(:,:,:), LHS(:,:,:), & ! (in)
                QC(:,:,:), QI(:,:,:), CPtot(:,:,:),  & ! (in)
@@ -2025,7 +2025,7 @@ contains
     case ( 'N2' )
        if ( .not. DV_calclated(I_N2) ) then
           call allocate_3D( N2 )
-          call ATMOS_DIAGNOSTIC_get_n2( &
+          call ATMOS_DIAGNOSTIC_CARTESC_get_n2( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                POTT(:,:,:), Rtot(:,:,:), & !(in)
                REAL_CZ(:,:,:),           & !(in)

@@ -163,7 +163,7 @@ OBJS_NAME = \
 	scale_atmos_aerosol.o	\
 	scale_atmos_hydrometeor.o	\
 	scale_atmos_adiabat.o	\
-	scale_atmos_sub_diagnostic.o	\
+	scale_atmos_diagnostic_cartesC.o	\
 	scale_bulkflux.o	\
 	scale_calendar.o	\
 	scale_comm_cartesC.o	\
