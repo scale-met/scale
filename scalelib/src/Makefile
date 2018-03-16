@@ -155,7 +155,7 @@ OBJS_NAME = \
 	scale_atmos_bottom.o	\
 	scale_atmos_sub_boundary.o	\
 	scale_atmos_hydrostatic.o	\
-	scale_atmos_sub_profile.o	\
+	scale_atmos_profile.o	\
 	scale_atmos_refstate.o	\
 	scale_atmos_saturation.o	\
 	scale_atmos_sub_solarins.o	\
