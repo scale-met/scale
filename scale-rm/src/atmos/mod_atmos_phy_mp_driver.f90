@@ -417,8 +417,10 @@ contains
        QLA,   &
        QIA
     use scale_atmos_thermodyn, only: &
-ATMOS_THERMODYN_pott,       &
-       ATMOS_THERMODYN_specific_heat
+       ATMOS_THERMODYN_pott, &
+       ATMOS_THERMODYN_rhoe, &
+       ATMOS_THERMODYN_cv, &
+       ATMOS_THERMODYN_cp
     use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP
     use scale_atmos_phy_mp_common, only: &
@@ -500,8 +502,6 @@ ATMOS_THERMODYN_pott,       &
     real(RP) :: RHOE_t(KA,IA,JA)
     real(RP) :: TEMP1 (KA,IA,JA)
     real(RP) :: PRES1 (KA,IA,JA)
-    real(RP) :: QDRY1 (KA,IA,JA)
-    real(RP) :: Rtot1 (KA,IA,JA)
     real(RP) :: CPtot1(KA,IA,JA)
     real(RP) :: CVtot1(KA,IA,JA)
     real(RP) :: CCN   (KA,IA,JA)
@@ -515,6 +515,9 @@ ATMOS_THERMODYN_pott,       &
     real(RP) :: MOMX1(KA,IA,JA)
     real(RP) :: MOMY1(KA,IA,JA)
     real(RP) :: RHOT1(KA,IA,JA)
+    real(RP) :: RHOE1(KA,IA,JA)
+    real(RP) :: RHOE0(KA,IA,JA)
+    real(RP) :: POTT1(KA,IA,JA)
     real(RP), target :: QTRC1(KA,IA,JA,QA)
     logical :: integ_precip = .true.
 
@@ -545,7 +548,6 @@ ATMOS_THERMODYN_pott,       &
 
     integer :: k, i, j, iq
     integer :: step
-real(RP) :: POTT1(KA,IA,JA)
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
@@ -678,20 +680,15 @@ real(RP) :: POTT1(KA,IA,JA)
                                                  QTRC1    (:,:,:,:), & ! [INOUT]
                                                  EVAPORATE(:,:,:)    ) ! [OUT]
 
-          call ATMOS_THERMODYN_specific_heat( &
-               KA, KS, KE,     & ! [IN]
-               IA, IS, IE,     & ! [IN]
-               JA, JS, JE,     & ! [IN]
-               QA,             & ! [IN]
-               QTRC1(:,:,:,:), & ! [IN]
-               TRACER_MASS(:), & ! [IN]
-               TRACER_R   (:), & ! [IN]
-               TRACER_CV  (:), & ! [IN]
-               TRACER_CP  (:), & ! [IN]
-               QDRY1 (:,:,:),  & ! [OUT]
-               Rtot1 (:,:,:),  & ! [OUT]
-               CVtot1(:,:,:),  & ! [OUT]
-               CPtot1(:,:,:)   ) ! [OUT]
+          call ATMOS_THERMODYN_cv( CVtot1(:,:,:),  & ! [OUT]
+                                   QTRC1(:,:,:,:), & ! [IN]
+                                   TRACER_CV(:),   & ! [IN]
+                                   QDRY(:,:,:)     ) ! [IN]
+
+          call ATMOS_THERMODYN_cp( CPtot1(:,:,:),  & ! [OUT]
+                                   QTRC1(:,:,:,:), & ! [IN]
+                                   TRACER_CP(:),   & ! [IN]
+                                   QDRY(:,:,:)     ) ! [IN]
 
           call ATMOS_THERMODYN_pott( POTT1(:,:,:),   & ! [OUT]
                                      TEMP1(:,:,:),   & ! [IN]
@@ -704,13 +701,34 @@ real(RP) :: POTT1(KA,IA,JA)
           do j = JSB, JEB
           do i = ISB, IEB
           do k = KS, KE
-             RHOT_t_MP(k,i,j) = ( POTT1(k,i,j) * DENS(k,i,j) - RHOT(k,i,j) ) / dt_MP
-             !CP_t = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
-             !CV_t = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
-             !RHOE_t (k,i,j) = ( TEMP1(k,i,j) * CVtot1(k,i,j) - TEMP(k,i,j) * CVtot(k,i,j) ) * DENS(k,i,j) / dt_MP
-             !RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
-             !     - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
-             !     * DENS(k,i,j) * TEMP(k,i,j)
+            RHOT1(k,i,j) = POTT1(k,i,j) * DENS(k,i,j)
+          end do
+          end do
+          end do
+
+          call ATMOS_THERMODYN_rhoe( RHOE0(:,:,:),   & ! [OUT]
+                                     RHOT (:,:,:),   & ! [IN]
+                                     QTRC (:,:,:,:), & ! [IN]
+                                     TRACER_CV(:),   & ! [IN]
+                                     TRACER_R(:),    & ! [IN]
+                                     TRACER_mass(:)  ) ! [IN]
+
+          call ATMOS_THERMODYN_rhoe( RHOE1(:,:,:),   & ! [OUT]
+                                     RHOT1(:,:,:),   & ! [IN]
+                                     QTRC1(:,:,:,:), & ! [IN]
+                                     TRACER_CV(:),   & ! [IN]
+                                     TRACER_R(:),    & ! [IN]
+                                     TRACER_mass(:)  ) ! [IN]
+
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             CP_t = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
+             CV_t = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
+             RHOE_t (k,i,j) = ( RHOE1(k,i,j) - RHOE0(k,i,j) ) / dt_MP
+             RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
+                  - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
+                  * DENS(k,i,j) * TEMP(k,i,j)
           end do
           end do
           end do
@@ -912,10 +930,10 @@ real(RP) :: POTT1(KA,IA,JA)
              do k = KS, KE
                 CP_t = ( CPtot2(k) - CPtot(k,i,j) ) / dt_MP
                 CV_t = ( CVtot2(k) - CVtot(k,i,j) ) / dt_MP
-                !RHOH_MP(k,i,j) = RHOH_MP(k,i,j) &
-                !     + ( RHOE2(k) - RHOE(k) ) / dt_MP &
-                !     - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
-                !     * DENS(k,i,j) * TEMP(k,i,j)
+                RHOH_MP(k,i,j) = RHOH_MP(k,i,j) &
+                     + ( RHOE2(k) - RHOE(k) ) / dt_MP &
+                     - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
+                     * DENS(k,i,j) * TEMP(k,i,j)
 !                RHOT_t_MP(k,i,j) = RHOT_t_MP(k,i,j) &
 !                     + ( RHOE2(k) - RHOE(k) ) / ( dt_MP * EXNER(k,i,j) * CPtot(k,i,j) ) &
 !                     - RHOT(k,i,j) * CP_t / CPtot(k,i,j) &
