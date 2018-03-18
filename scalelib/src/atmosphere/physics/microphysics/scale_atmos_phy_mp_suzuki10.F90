@@ -51,35 +51,11 @@ module scale_atmos_phy_mp_suzuki10
   integer, public :: ATMOS_PHY_MP_suzuki10_ntracers
   integer, public :: ATMOS_PHY_MP_suzuki10_nwaters
   integer, public :: ATMOS_PHY_MP_suzuki10_nices
+  integer, public :: ATMOS_PHY_MP_suzuki10_nccn
 
-  integer, public :: ATMOS_PHY_MP_suzuki10_nbin   = 33
-  integer, public :: ATMOS_PHY_MP_suzuki10_nspc   = 7
-  integer, public :: ATMOS_PHY_MP_suzuki10_nccn   = 0
-  integer, public :: ATMOS_PHY_MP_suzuki10_kphase = 0
-  integer, public :: ATMOS_PHY_MP_suzuki10_iceflg = 1
-
-  integer, public :: ATMOS_PHY_MP_suzuki10_nbnd ! boundary bin number corresponding to rbnd
-
-  !--- Indeces for determining species of cloud particle
-  integer, public, parameter :: ATMOS_PHY_MP_suzuki10_il  = 1 !--- index for liquid  water
-  integer, public, parameter :: ATMOS_PHY_MP_suzuki10_ic  = 2 !--- index for columnar ice
-  integer, public, parameter :: ATMOS_PHY_MP_suzuki10_ip  = 3 !--- index for plate ice
-  integer, public, parameter :: ATMOS_PHY_MP_suzuki10_id  = 4 !--- index for dendrite ice
-  integer, public, parameter :: ATMOS_PHY_MP_suzuki10_iss = 5 !--- index for snow
-  integer, public, parameter :: ATMOS_PHY_MP_suzuki10_ig  = 6 !--- index for graupel
-  integer, public, parameter :: ATMOS_PHY_MP_suzuki10_ih  = 7 !--- index for hail
-
-  character(len=H_SHORT), public, target, allocatable :: ATMOS_PHY_MP_suzuki10_tracer_names(:)
-  character(len=H_MID)  , public, target, allocatable :: ATMOS_PHY_MP_suzuki10_tracer_descriptions(:)
-  character(len=H_SHORT), public, target, allocatable :: ATMOS_PHY_MP_suzuki10_tracer_units(:)
-
-  !real(RP), public :: ATMOS_PHY_MP_suzuki10_DENS(N_HYD) ! hydrometeor density [kg/m3]=[g/L]
-
-  integer, public :: nbin   = 33 ! obsolute name
-  integer, public :: nspc   = 7  ! obsolute name
-  integer, public :: nccn   = 0  ! obsolute name
-  integer, public :: kphase = 0  ! obsolute name
-  integer, public :: ICEFLG = 1  ! obsolute name
+  character(len=H_SHORT), public, allocatable :: ATMOS_PHY_MP_suzuki10_tracer_names(:)
+  character(len=H_MID)  , public, allocatable :: ATMOS_PHY_MP_suzuki10_tracer_descriptions(:)
+  character(len=H_SHORT), public, allocatable :: ATMOS_PHY_MP_suzuki10_tracer_units(:)
 
 # include "kernels.h"
   !-----------------------------------------------------------------------------
@@ -151,6 +127,12 @@ module scale_atmos_phy_mp_suzuki10
                                        'Mixing ratio of hail    bin', &
                                        'Mixing ratio of aerosol bin'  /)
 
+  integer, public :: nbin   = 33 ! tentatively public
+  integer :: nspc   = 7
+  integer, public :: nccn   = 0 ! tentatively public
+  integer :: kphase = 0
+  integer :: ICEFLG = 1
+
   integer, parameter   :: I_mp_QC  = 1
   integer, parameter   :: I_mp_QP  = 2
   integer, parameter   :: I_mp_QCL = 3
@@ -169,13 +151,13 @@ module scale_atmos_phy_mp_suzuki10
   integer :: num_end_ices
 
   !--- Indeces for determining species of cloud particle
-  integer, parameter :: il  = ATMOS_PHY_MP_suzuki10_il   !--- (obsolute) index for liquid  water
-  integer, parameter :: ic  = ATMOS_PHY_MP_suzuki10_ic   !--- (obsolute) index for columnar ice
-  integer, parameter :: ip  = ATMOS_PHY_MP_suzuki10_ip   !--- (obsolute) index for plate ice
-  integer, parameter :: id  = ATMOS_PHY_MP_suzuki10_id   !--- (obsolute) index for dendrite ice
-  integer, parameter :: iss = ATMOS_PHY_MP_suzuki10_iss  !--- (obsolute) index for snow
-  integer, parameter :: ig  = ATMOS_PHY_MP_suzuki10_ig   !--- (obsolute) index for graupel
-  integer, parameter :: ih  = ATMOS_PHY_MP_suzuki10_ih   !--- (obsolute) index for hail
+  integer, parameter :: il  = 1 !--- index for liquid  water
+  integer, parameter :: ic  = 2 !--- index for columnar ice
+  integer, parameter :: ip  = 3 !--- index for plate ice
+  integer, parameter :: id  = 4 !--- index for dendrite ice
+  integer, parameter :: iss = 5 !--- index for snow
+  integer, parameter :: ig  = 6 !--- index for graupel
+  integer, parameter :: ih  = 7 !--- index for hail
 
   !--- bin information of hydrometeors
   real(RP) :: dxmic                          !--- d( log(m) ) of hydrometeor bin
@@ -340,15 +322,10 @@ contains
        call PRC_MPIstop
     endif
 
-    ATMOS_PHY_MP_suzuki10_nbin   = nbin
-    ATMOS_PHY_MP_suzuki10_nccn   = nccn
-    ATMOS_PHY_MP_suzuki10_nspc   = nspc
-    ATMOS_PHY_MP_suzuki10_kphase = kphase
-    ATMOS_PHY_MP_suzuki10_iceflg = ICEFLG
-
     ATMOS_PHY_MP_suzuki10_ntracers = 1 + nbin*nspc + nccn  ! number of total tracers
     ATMOS_PHY_MP_suzuki10_nwaters  = nbin                  ! number of liquid water
     ATMOS_PHY_MP_suzuki10_nices    = nbin * ( nspc - 1 )   ! number of ice water
+    ATMOS_PHY_MP_suzuki10_nccn     = nccn                  ! number of ccn
 
     num_start_waters = I_QV + 1
     num_end_waters   = I_QV + ATMOS_PHY_MP_suzuki10_nwaters
@@ -732,18 +709,10 @@ contains
 
     endif
 
-!    ATMOS_PHY_MP_suzuki10_DENS(I_HC) = CONST_DWATR
-!    ATMOS_PHY_MP_suzuki10_DENS(I_HR) = CONST_DICE
-!    ATMOS_PHY_MP_suzuki10_DENS(I_HI) = CONST_DICE
-!    ATMOS_PHY_MP_suzuki10_DENS(I_HS) = CONST_DICE
-!    ATMOS_PHY_MP_suzuki10_DENS(I_HG) = CONST_DICE
-!    ATMOS_PHY_MP_suzuki10_DENS(I_HH) = CONST_DICE
-
     !--- determine nbnd
     do n = 1, nbin
       if( radc( n ) > rbnd ) then
         nbnd = n
-        ATMOS_PHY_MP_suzuki10_nbnd = n
         exit
       endif
     enddo
@@ -1206,7 +1175,7 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in)  :: QTRC0  (KA,IA,JA,QA-1)
+    real(RP), intent(in)  :: QTRC0  (KA,IA,JA,nspc*nbin)
     real(RP), intent(in)  :: mask_criterion
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
 
@@ -1276,7 +1245,7 @@ contains
 
     real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
     real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! temperature               [K]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA-1)  ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,nspc*nbin) ! tracer mass concentration [kg/kg]
     real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
 
     real(RP), parameter :: um2cm = 100.0_RP
@@ -1409,8 +1378,8 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA-1)  ! tracer mass concentration [kg/kg]
-    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,nspc*nbin) ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD)     ! mixing ratio of each cateory [kg/kg]
 
     real(RP) :: sum2
     integer  :: i, j, k, iq, ihydro
