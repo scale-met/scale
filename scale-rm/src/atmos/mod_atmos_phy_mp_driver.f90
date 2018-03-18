@@ -435,16 +435,7 @@ contains
        ATMOS_PHY_MP_TOMITA08_adjustment, &
        ATMOS_PHY_MP_TOMITA08_terminal_velocity
     use scale_atmos_phy_mp_suzuki10, only: &
-       ATMOS_PHY_MP_suzuki10_nbin, &
-       ATMOS_PHY_MP_suzuki10_nbnd, &
-       ATMOS_PHY_MP_suzuki10_nspc, &
-       ATMOS_PHY_MP_suzuki10_ic,   &
-       ATMOS_PHY_MP_suzuki10_ip,   &
-       ATMOS_PHY_MP_suzuki10_id,   &
-       ATMOS_PHY_MP_suzuki10_iss,  &
-       ATMOS_PHY_MP_suzuki10_ig,   &
-       ATMOS_PHY_MP_suzuki10_ih,   &
-       ATMOS_PHY_MP_suzuki10_adjustment, &
+       ATMOS_PHY_MP_suzuki10_tendency, &
        ATMOS_PHY_MP_suzuki10_terminal_velocity
     use scale_file_history, only: &
        FILE_HISTORY_query, &
@@ -536,6 +527,7 @@ contains
     real(RP) :: RFDZ(KA)
     real(RP) :: RCDZ(KA)
 
+    real(RP) :: CPtot_t(KA,IA,JA), CVtot_t(KA,IA,JA)
     real(RP) :: CP_t, CV_t
 
     real(RP) :: precip   (IA,JA)
@@ -662,86 +654,27 @@ contains
           enddo
 
        case ( 'SUZUKI10' )
-!OCL XFILL
-          TEMP1(:,:,:) = TEMP(:,:,:)
-!OCL XFILL
-          QTRC1(:,:,:,:) = QTRC(:,:,:,:)
 
-          call ATMOS_PHY_MP_suzuki10_adjustment( KA, KS,  KE,        & ! [IN]
-                                                 IA, ISB, IEB,       & ! [IN]
-                                                 JA, JSB, JEB,       & ! [IN]
-                                                 KIJMAX,             & ! [IN]
-                                                 dt_MP,              & ! [IN]
-                                                 DENS     (:,:,:),   & ! [IN]
-                                                 PRES     (:,:,:),   & ! [IN]
-                                                 QDRY     (:,:,:),   & ! [IN]
-                                                 CCN      (:,:,:),   & ! [IN] 
-                                                 TEMP1    (:,:,:),   & ! [INOUT]
-                                                 QTRC1    (:,:,:,:), & ! [INOUT]
-                                                 EVAPORATE(:,:,:)    ) ! [OUT]
-
-          call ATMOS_THERMODYN_cv( CVtot1(:,:,:),  & ! [OUT]
-                                   QTRC1(:,:,:,:), & ! [IN]
-                                   TRACER_CV(:),   & ! [IN]
-                                   QDRY(:,:,:)     ) ! [IN]
-
-          call ATMOS_THERMODYN_cp( CPtot1(:,:,:),  & ! [OUT]
-                                   QTRC1(:,:,:,:), & ! [IN]
-                                   TRACER_CP(:),   & ! [IN]
-                                   QDRY(:,:,:)     ) ! [IN]
-
-          call ATMOS_THERMODYN_pott( POTT1(:,:,:),   & ! [OUT]
-                                     TEMP1(:,:,:),   & ! [IN]
-                                     PRES (:,:,:),   & ! [IN]
-                                     QTRC1(:,:,:,:), & ! [IN]
-                                     TRACER_CV(:),   & ! [IN]
-                                     TRACER_R(:),    & ! [IN]
-                                     TRACER_MASS(:)  ) ! [IN]
+          call ATMOS_PHY_MP_suzuki10_tendency( KA, KS,  KE, IA, ISB, IEB, JA, JSB, JEB, KIJMAX, &
+                                               dt_MP,                                  & ! [IN]
+                                               DENS(:,:,:),  PRES(:,:,:), TEMP(:,:,:), & ! [IN]
+                                               QTRC(:,:,:,QS_MP:QE_MP), QDRY(:,:,:),   & ! [IN]
+                                               CPtot(:,:,:), CVtot(:,:,:),             & ! [IN]
+                                               CCN(:,:,:),                             & ! [IN] 
+                                               RHOQ_t_MP(:,:,:,QS_MP:QE_MP),           & ! [OUT]
+                                               RHOE_t(:,:,:),                          & ! [OUT]
+                                               CPtot_t(:,:,:), CVtot_t(:,:,:),         & ! [OUT]
+                                               EVAPORATE(:,:,:)                        ) ! [OUT]
 
           do j = JSB, JEB
           do i = ISB, IEB
           do k = KS, KE
-            RHOT1(k,i,j) = POTT1(k,i,j) * DENS(k,i,j)
-          end do
-          end do
-          end do
-
-          call ATMOS_THERMODYN_rhoe( RHOE0(:,:,:),   & ! [OUT]
-                                     RHOT (:,:,:),   & ! [IN]
-                                     QTRC (:,:,:,:), & ! [IN]
-                                     TRACER_CV(:),   & ! [IN]
-                                     TRACER_R(:),    & ! [IN]
-                                     TRACER_mass(:)  ) ! [IN]
-
-          call ATMOS_THERMODYN_rhoe( RHOE1(:,:,:),   & ! [OUT]
-                                     RHOT1(:,:,:),   & ! [IN]
-                                     QTRC1(:,:,:,:), & ! [IN]
-                                     TRACER_CV(:),   & ! [IN]
-                                     TRACER_R(:),    & ! [IN]
-                                     TRACER_mass(:)  ) ! [IN]
-
-          do j = JSB, JEB
-          do i = ISB, IEB
-          do k = KS, KE
-             CP_t = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
-             CV_t = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
-             RHOE_t (k,i,j) = ( RHOE1(k,i,j) - RHOE0(k,i,j) ) / dt_MP
              RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
-                  - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CP_t - CV_t ) ) &
+                  - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CPtot_t(k,i,j) - CVtot_t(k,i,j) ) ) &
                   * DENS(k,i,j) * TEMP(k,i,j)
           end do
           end do
           end do
-
-          do iq = QS_MP, QE_MP
-          do j = JSB, JEB
-          do i = ISB, IEB
-          do k = KS, KE
-             RHOQ_t_MP(k,i,j,iq) = ( QTRC1(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_MP
-          enddo
-          enddo
-          enddo
-          enddo
 
        case default
 
@@ -970,58 +903,6 @@ contains
           if ( allocated( vterm_hist ) ) deallocate( vterm_hist )
 
           call PROF_rapend  ('MP_Precipitation', 2)
-
-       end if
-
-       ! history output for QHYD when using SUZUKI10
-       if( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
-          QHYD(:,:,:,:) = 0.0_RP
-
-          do iq = 1, ATMOS_PHY_MP_suzuki10_nbnd
-             do j = JSB, JEB
-             do i = ISB, IEB
-             do k = KS, KE
-                QHYD(k,i,j,1) = QHYD(k,i,j,1) + QTRC1(k,i,j,iq+1)
-             enddo
-             enddo
-             enddo
-          enddo
-
-          do iq = ATMOS_PHY_MP_suzuki10_nbnd+1, ATMOS_PHY_MP_suzuki10_nbin
-             do j = JSB, JEB
-             do i = ISB, IEB
-             do k = KS, KE
-                QHYD(k,i,j,2) = QHYD(k,i,j,2) + QTRC1(k,i,j,iq+1)
-             enddo
-             enddo
-             enddo
-          enddo
-
-          call FILE_HISTORY_in( QHYD(:,:,:,1), 'QC', 'Mixing ratio of QC', 'kg/kg' )
-          call FILE_HISTORY_in( QHYD(:,:,:,2), 'QR', 'Mixing ratio of QR', 'kg/kg' )
-
-          if ( ATMOS_PHY_MP_suzuki10_nspc > 1 ) then
-             do iq = 1, ATMOS_PHY_MP_suzuki10_nbin
-                do j = JSB, JEB
-                do i = ISB, IEB
-                do k = KS, KE
-                   ! columnar,plate,dendrite = ice
-                   QHYD(k,i,j,3) = QHYD(k,i,j,3) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_ic-1 )*ATMOS_PHY_MP_suzuki10_nbin+iq)
-                   QHYD(k,i,j,3) = QHYD(k,i,j,3) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_ip-1 )*ATMOS_PHY_MP_suzuki10_nbin+iq)
-                   QHYD(k,i,j,3) = QHYD(k,i,j,3) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_id-1 )*ATMOS_PHY_MP_suzuki10_nbin+iq)
-                   QHYD(k,i,j,4) = QHYD(k,i,j,4) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_iss-1)*ATMOS_PHY_MP_suzuki10_nbin+iq)
-                   QHYD(k,i,j,5) = QHYD(k,i,j,5) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_ig-1 )*ATMOS_PHY_MP_suzuki10_nbin+iq)
-                   QHYD(k,i,j,6) = QHYD(k,i,j,6) + QTRC1(k,i,j,1+(ATMOS_PHY_MP_suzuki10_ih-1 )*ATMOS_PHY_MP_suzuki10_nbin+iq)
-                enddo
-                enddo
-                enddo
-             enddo
-
-             call FILE_HISTORY_in( QHYD(:,:,:,3), 'QI', 'Mixing ratio of QI', 'kg/kg' )
-             call FILE_HISTORY_in( QHYD(:,:,:,4), 'QS', 'Mixing ratio of QS', 'kg/kg' )
-             call FILE_HISTORY_in( QHYD(:,:,:,5), 'QG', 'Mixing ratio of QG', 'kg/kg' )
-             call FILE_HISTORY_in( QHYD(:,:,:,6), 'QH', 'Mixing ratio of QH', 'kg/kg' )
-          endif
 
        end if
 

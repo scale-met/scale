@@ -62,7 +62,7 @@ do
    let i="${i} + 1"
 done
 
-var__set=(RH QC QR QI QS QG)
+var__set=(RH)
 rangeset=(auto auto auto auto auto auto)
 time_set=
 
