@@ -62,6 +62,8 @@ contains
   subroutine ATMOS_PHY_MP_driver_tracer_setup
     use scale_process, only: &
        PRC_abort
+    use scale_tracer, only: &
+       TRACER_regist
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_regist, &
        I_QC, &
@@ -83,6 +85,15 @@ contains
        ATMOS_PHY_MP_TOMITA08_tracer_names,        &
        ATMOS_PHY_MP_TOMITA08_tracer_descriptions, &
        ATMOS_PHY_MP_TOMITA08_tracer_units
+    use scale_atmos_phy_mp_suzuki10, only: &
+       ATMOS_PHY_MP_suzuki10_tracer_setup,        &
+       ATMOS_PHY_MP_suzuki10_ntracers,            &
+       ATMOS_PHY_MP_suzuki10_nwaters,             &
+       ATMOS_PHY_MP_suzuki10_nices,               &
+       ATMOS_PHY_MP_suzuki10_nccn,                &
+       ATMOS_PHY_MP_suzuki10_tracer_names,        &
+       ATMOS_PHY_MP_suzuki10_tracer_descriptions, &
+       ATMOS_PHY_MP_suzuki10_tracer_units
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE, &
        ATMOS_sw_phy_mp
@@ -97,6 +108,8 @@ contains
        QS_MP_obsolute => QS_MP, &
        QE_MP_obsolute => QE_MP
     implicit none
+
+    integer :: QS2
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -129,6 +142,32 @@ contains
           I_QI = QS_MP+3
           I_QS = QS_MP+4
           I_QG = QS_MP+5
+       case ( 'SUZUKI10' )
+          call ATMOS_PHY_MP_suzuki10_tracer_setup
+
+          call ATMOS_HYDROMETEOR_regist( &
+               QS_MP,                                        & ! [OUT]
+               ATMOS_PHY_MP_suzuki10_nwaters,                & ! [IN]
+               ATMOS_PHY_MP_suzuki10_nices,                  & ! [IN]
+               ATMOS_PHY_MP_suzuki10_tracer_names(:),        & ! [IN]
+               ATMOS_PHY_MP_suzuki10_tracer_descriptions(:), & ! [IN]
+               ATMOS_PHY_MP_suzuki10_tracer_units(:)         ) ! [IN]
+
+          if( ATMOS_PHY_MP_suzuki10_nccn > 0 ) then
+             call TRACER_regist( QS2,                                                                     & ! [OUT]
+                                 ATMOS_PHY_MP_suzuki10_nccn,                                              & ! [IN]
+                                 ATMOS_PHY_MP_suzuki10_tracer_names       ( ATMOS_PHY_MP_suzuki10_nwaters &
+                                                                          + ATMOS_PHY_MP_suzuki10_nices   &
+                                                                          + 2 : ),                        & ! [IN]
+                                 ATMOS_PHY_MP_suzuki10_tracer_descriptions( ATMOS_PHY_MP_suzuki10_nwaters &
+                                                                          + ATMOS_PHY_MP_suzuki10_nices   &
+                                                                          + 2 : ),                        & ! [IN]
+                                 ATMOS_PHY_MP_suzuki10_tracer_units       ( ATMOS_PHY_MP_suzuki10_nwaters &
+                                                                          + ATMOS_PHY_MP_suzuki10_nices   &
+                                                                          + 2 : )                         ) ! [IN]
+          end if
+
+          QA_MP = ATMOS_PHY_MP_suzuki10_ntracers
        case default
           call ATMOS_PHY_MP_config( ATMOS_PHY_MP_TYPE )
           QA_MP = QA_MP_obsolute
@@ -170,6 +209,8 @@ contains
        ATMOS_PHY_MP_KESSLER_setup
     use scale_atmos_phy_mp_tomita08, only: &
        ATMOS_PHY_MP_TOMITA08_setup
+    use scale_atmos_phy_mp_suzuki10, only: &
+       ATMOS_PHY_MP_suzuki10_setup
     use scale_file_history, only: &
        FILE_HISTORY_reg
     use mod_atmos_admin, only: &
@@ -238,6 +279,9 @@ contains
        case ( 'TOMITA08' )
           call ATMOS_PHY_MP_tomita08_setup( &
                KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB )
+       case ( 'SUZUKI10' )
+          call ATMOS_PHY_MP_suzuki10_setup( &
+               KA, IA, JA )
        case default
           ! setup library component
           call ATMOS_PHY_MP_setup
@@ -365,12 +409,18 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_hydrometeor, only: &
+       I_QV,  &
        N_HYD, &
        QHA,   &
        QHS,   &
        QHE,   &
        QLA,   &
        QIA
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_pott, &
+       ATMOS_THERMODYN_rhoe, &
+       ATMOS_THERMODYN_cv, &
+       ATMOS_THERMODYN_cp
     use scale_atmos_phy_mp, only: &
        ATMOS_PHY_MP
     use scale_atmos_phy_mp_common, only: &
@@ -384,6 +434,9 @@ contains
     use scale_atmos_phy_mp_tomita08, only: &
        ATMOS_PHY_MP_TOMITA08_adjustment, &
        ATMOS_PHY_MP_TOMITA08_terminal_velocity
+    use scale_atmos_phy_mp_suzuki10, only: &
+       ATMOS_PHY_MP_suzuki10_tendency, &
+       ATMOS_PHY_MP_suzuki10_terminal_velocity
     use scale_file_history, only: &
        FILE_HISTORY_query, &
        FILE_HISTORY_put
@@ -406,6 +459,7 @@ contains
        RHOH   => RHOH_p, &
        TEMP, &
        PRES, &
+       Qdry, &
        CVtot, &
        CPtot, &
        EXNER, &
@@ -415,6 +469,7 @@ contains
        MOMX_t => MOMX_tp, &
        MOMY_t => MOMY_tp
     use mod_atmos_phy_mp_vars, only: &
+       QA_MP, &
        QS_MP, &
        QE_MP, &
        DENS_t_MP => ATMOS_PHY_MP_DENS_t,    &
@@ -437,9 +492,11 @@ contains
 
     real(RP) :: RHOE_t(KA,IA,JA)
     real(RP) :: TEMP1 (KA,IA,JA)
+    real(RP) :: PRES1 (KA,IA,JA)
     real(RP) :: CPtot1(KA,IA,JA)
     real(RP) :: CVtot1(KA,IA,JA)
     real(RP) :: CCN   (KA,IA,JA)
+    real(RP) :: QHYD  (KA,IA,JA,6)
     real(RP) :: vterm (KA,QS_MP+1:QE_MP)
 !    real(RP), target :: QTRC1(KA,IA,JA,QS_MP:QA_MP)
 
@@ -449,6 +506,9 @@ contains
     real(RP) :: MOMX1(KA,IA,JA)
     real(RP) :: MOMY1(KA,IA,JA)
     real(RP) :: RHOT1(KA,IA,JA)
+    real(RP) :: RHOE1(KA,IA,JA)
+    real(RP) :: RHOE0(KA,IA,JA)
+    real(RP) :: POTT1(KA,IA,JA)
     real(RP), target :: QTRC1(KA,IA,JA,QA)
     logical :: integ_precip = .true.
 
@@ -467,6 +527,7 @@ contains
     real(RP) :: RFDZ(KA)
     real(RP) :: RCDZ(KA)
 
+    real(RP) :: CPtot_t(KA,IA,JA), CVtot_t(KA,IA,JA)
     real(RP) :: CP_t, CV_t
 
     real(RP) :: precip   (IA,JA)
@@ -591,6 +652,29 @@ contains
           enddo
           enddo
           enddo
+
+       case ( 'SUZUKI10' )
+
+          call ATMOS_PHY_MP_suzuki10_tendency( KA, KS,  KE, IA, ISB, IEB, JA, JSB, JEB, KIJMAX, &
+                                               dt_MP,                                  & ! [IN]
+                                               DENS(:,:,:),  PRES(:,:,:), TEMP(:,:,:), & ! [IN]
+                                               QTRC(:,:,:,QS_MP:QE_MP), QDRY(:,:,:),   & ! [IN]
+                                               CPtot(:,:,:), CVtot(:,:,:),             & ! [IN]
+                                               CCN(:,:,:),                             & ! [IN] 
+                                               RHOQ_t_MP(:,:,:,QS_MP:QE_MP),           & ! [OUT]
+                                               RHOE_t(:,:,:),                          & ! [OUT]
+                                               CPtot_t(:,:,:), CVtot_t(:,:,:),         & ! [OUT]
+                                               EVAPORATE(:,:,:)                        ) ! [OUT]
+
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
+                  - ( CP_t + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CPtot_t(k,i,j) - CVtot_t(k,i,j) ) ) &
+                  * DENS(k,i,j) * TEMP(k,i,j)
+          end do
+          end do
+          end do
 
        case default
 
@@ -729,6 +813,10 @@ contains
                         KA, KS, KE, &
                         DENS2(:), TEMP2(:), RHOQ2(:,:), & ! [IN]
                         vterm(:,:)                      ) ! [OUT]
+                case ( 'SUZUKI10' )
+                   call ATMOS_PHY_MP_suzuki10_terminal_velocity( &
+                        KA,        & ! [IN]
+                        vterm(:,:) ) ! [OUT]
                 case default
                    vterm(:,:) = 0.0_RP ! tentative
                 end select
@@ -744,7 +832,7 @@ contains
                 end do
 
                 call ATMOS_PHY_MP_precipitation( &
-                     KA, KS, KE, QHA, QLA, QIA, &
+                     KA, KS, KE, QE_MP-QS_MP, QLA, QIA, &
                      TEMP2(:), vterm(:,:),   & ! [IN]
                      FDZ(:), RCDZ(:),        & ! [IN]
                      MP_DTSEC_SEDIMENTATION, & ! [IN]
@@ -817,7 +905,6 @@ contains
           call PROF_rapend  ('MP_Precipitation', 2)
 
        end if
-
 
 !OCL XFILL
        do j = JS, JE

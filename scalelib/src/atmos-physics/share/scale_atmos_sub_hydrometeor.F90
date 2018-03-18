@@ -572,15 +572,18 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_LHS_1D( &
-       lhs, &
-       temp )
+       KA, KS, KE, &
+       temp, &
+       lhs   )
     use scale_const, only: &
        TEM00 => CONST_TEM00, &
        LHS0  => CONST_LHS0
     implicit none
+    integer, intent(in) :: KA, KS, KE
+
+    real(RP), intent(in)  :: temp(KA) !< temperature                [K]
 
     real(RP), intent(out) :: lhs (KA) !< latent heat of sublimation [J/kg]
-    real(RP), intent(in)  :: temp(KA) !< temperature                [K]
 
     integer :: k
     !---------------------------------------------------------------------------

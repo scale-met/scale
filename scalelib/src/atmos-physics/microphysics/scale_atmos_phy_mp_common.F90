@@ -696,7 +696,7 @@ contains
        CV_ICE
     implicit none
     integer,  intent(in) :: KA, KS, KE
-    integer,  intent(in) :: QHA, QLA, QIA ! QHA = QLA + QIA
+    integer,  intent(in) :: QHA, QLA, QIA
 
     real(RP), intent(in) :: TEMP (KA)
     real(RP), intent(in) :: vterm(KA,QHA) ! terminal velocity of cloud mass

@@ -156,16 +156,6 @@ contains
        ATMOS_PHY_MP_sn14_NAME, &
        ATMOS_PHY_MP_sn14_DESC, &
        ATMOS_PHY_MP_sn14_UNIT
-    use scale_atmos_phy_mp_suzuki10, only: &
-       ATMOS_PHY_MP_suzuki10_config, &
-       ATMOS_PHY_MP_suzuki10_setup, &
-       ATMOS_PHY_MP_suzuki10, &
-       ATMOS_PHY_MP_suzuki10_CloudFraction, &
-       ATMOS_PHY_MP_suzuki10_EffectiveRadius, &
-       ATMOS_PHY_MP_suzuki10_MixingRatio, &
-       ATMOS_PHY_MP_suzuki10_NAME, &
-       ATMOS_PHY_MP_suzuki10_DESC, &
-       ATMOS_PHY_MP_suzuki10_UNIT
     use scale_atmos_phy_mp_sdm, only: &
        ATMOS_PHY_MP_sdm_config, &
        ATMOS_PHY_MP_sdm_setup, &
@@ -208,18 +198,6 @@ contains
        ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_sn14_NAME
        ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_sn14_DESC
        ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_sn14_UNIT
-    case( 'SUZUKI10' )
-       call ATMOS_PHY_MP_suzuki10_config( &
-            MP_TYPE,     & ! (in)
-            QA_MP, QS_MP ) ! (out)
-       ATMOS_PHY_MP                 => ATMOS_PHY_MP_suzuki10
-       ATMOS_PHY_MP_setup           => ATMOS_PHY_MP_suzuki10_setup
-       ATMOS_PHY_MP_CloudFraction   => ATMOS_PHY_MP_suzuki10_CloudFraction
-       ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_suzuki10_EffectiveRadius
-       ATMOS_PHY_MP_MixingRatio     => ATMOS_PHY_MP_suzuki10_MixingRatio
-       ATMOS_PHY_MP_NAME            => ATMOS_PHY_MP_suzuki10_NAME
-       ATMOS_PHY_MP_DESC            => ATMOS_PHY_MP_suzuki10_DESC
-       ATMOS_PHY_MP_UNIT            => ATMOS_PHY_MP_suzuki10_UNIT
     case( 'SDM' )
        call ATMOS_PHY_MP_sdm_config( &
             MP_TYPE,     & ! (in)
