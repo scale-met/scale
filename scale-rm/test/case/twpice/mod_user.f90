@@ -119,8 +119,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_time, only: &
        TIME_DTSEC
     implicit none
@@ -166,7 +166,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
@@ -200,7 +200,7 @@ contains
     open(fid_data, file=trim(fdata_name), status='old',iostat=ierr)
     if ( ierr /= 0 ) then
        write(*,*) 'Cannot open the data file for forcing. STOP! ', trim(fdata_name)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     !--- Check if whole input data available
@@ -212,7 +212,7 @@ contains
 
           if ( ierr /= 0 ) then
              write(*,*) 'Not enough data! ',mt, k, mstep, KA, trim(fdata_name)
-             call PRC_MPIstop
+             call PRC_abort
           endif
        enddo
     enddo
@@ -258,8 +258,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Step
   subroutine USER_step
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -538,7 +538,7 @@ contains
 
     else
        write(*,*)'Not supported user_ls_flg'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return

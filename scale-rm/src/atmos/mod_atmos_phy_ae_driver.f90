@@ -60,7 +60,7 @@ contains
        ATMOS_PHY_AE_kajino13_NAME, &
        ATMOS_PHY_AE_kajino13_DESC, &
        ATMOS_PHY_AE_kajino13_UNIT
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use mod_atmos_phy_ae_vars, only: &
        QA_AE, &
@@ -107,7 +107,7 @@ contains
        ATMOS_sw_phy_ae
     use scale_atmos_phy_ae_kajino13, only: &
         ATMOS_PHY_AE_kajino13_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
     !---------------------------------------------------------------------------
@@ -185,7 +185,7 @@ contains
   subroutine ATMOS_PHY_AE_driver_calc_tendency( update_flag )
     use scale_tracer, only: &
        TRACER_NAME
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_time, only: &
        dt_AE => TIME_DTSEC_ATMOS_PHY_AE

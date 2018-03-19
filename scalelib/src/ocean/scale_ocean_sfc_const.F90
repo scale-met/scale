@@ -88,8 +88,8 @@ contains
         Z0H,    & ! [IN]
         Z0E,    & ! [IN]
         dt      ) ! [IN]
-    use scale_process, only: &
-      PRC_MPIstop
+    use scale_prc, only: &
+      PRC_abort
     use scale_const, only: &
       PRE00 => CONST_PRE00, &
       Rdry  => CONST_Rdry,  &

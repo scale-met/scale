@@ -117,8 +117,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_grid_cartesC, only : &
        FXG   => ATMOS_GRID_CARTESC_FXG
     implicit none
@@ -142,7 +142,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
@@ -192,8 +192,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Step
   subroutine USER_step
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_file_history, only: &
        FILE_HISTORY_in
 

@@ -211,7 +211,7 @@ OBJS_NAME = \
 	scale_monitor.o	\
 	scale_monitor_cartesC.o	\
 	scale_precision.o	\
-	scale_process.o	\
+	scale_prc.o	\
 	scale_prc_cartesC.o	\
 	scale_prof.o	\
 	scale_random.o	\

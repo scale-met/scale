@@ -83,7 +83,7 @@ contains
        CZ, FZ, REAL_CZ, REAL_FZ, REAL_PHI )
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
     integer, intent(in) :: KA, KS, KE
@@ -279,7 +279,7 @@ contains
        FILE_CARTESC_check_coordinates, &
        FILE_CARTESC_read, &
        FILE_CARTESC_close
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
     integer, intent(in) :: KA, KS, KE

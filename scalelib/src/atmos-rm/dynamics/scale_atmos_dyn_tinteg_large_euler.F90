@@ -61,8 +61,8 @@ contains
   !> Setup
   subroutine ATMOS_DYN_Tinteg_large_euler_setup( &
        tinteg_type )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     implicit none
@@ -74,7 +74,7 @@ contains
 
     if ( tinteg_type /= 'EULER' ) then
        write(*,*) 'xxx TINTEG_LARGE_TYPE is not EULER. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     return

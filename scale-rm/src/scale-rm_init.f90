@@ -18,10 +18,10 @@ program scalerm_launcher
   use scale_stdio
   use scale_prof
 
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_DOMAIN_nlim,     &
      PRC_MPIstart,        &
-     PRC_MPIstop,         &
+     PRC_abort,         &
      PRC_MPIfinish,       &
      PRC_MPIsplit,        &
      PRC_UNIVERSAL_setup, &
@@ -122,7 +122,7 @@ program scalerm_launcher
      ! keep default setting (no members, no nesting)
   elseif( ierr > 0 ) then !--- fatal error
      if( universal_master ) write(*,*) 'xxx Not appropriate names in namelist PARAM_LAUNCHER. Check!'
-     call PRC_MPIstop
+     call PRC_abort
   endif
 
   close(fid)
@@ -134,7 +134,7 @@ program scalerm_launcher
      if( universal_master ) write(*,*) "*** Execute model?      : ", EXECUTE_MODEL
   else
      if( universal_master ) write(*,*) 'xxx No execution. please check PARAM_LAUNCHER. STOP'
-     call PRC_MPIstop
+     call PRC_abort
   endif
 
   !--- split for bulk jobs
@@ -143,7 +143,7 @@ program scalerm_launcher
      if( universal_master ) write(*,*) 'xxx Total Num of Processes must be divisible by NUM_BULKJOB. Check!'
      if( universal_master ) write(*,*) 'xxx Total Num of Processes = ', universal_nprocs
      if( universal_master ) write(*,*) 'xxx            NUM_BULKJOB = ', NUM_BULKJOB
-     call PRC_MPIstop
+     call PRC_abort
   endif
 
   global_nprocs = universal_nprocs / NUM_BULKJOB
@@ -158,13 +158,13 @@ program scalerm_launcher
         if ( NUM_FAIL_TOLERANCE <= 0 ) then !--- fatal error
            if( universal_master ) write(*,*) 'xxx Num of Failure Processes must be positive number. Check!'
            if( universal_master ) write(*,*) 'xxx NUM_FAIL_TOLERANCE = ', NUM_FAIL_TOLERANCE
-           call PRC_MPIstop
+           call PRC_abort
         endif
 
         if ( NUM_FAIL_TOLERANCE > NUM_BULKJOB ) then !--- fatal error
            write(*,*) 'xxx NUM_FAIL_TOLERANCE is bigger than NUM_BLUKJOB number'
            write(*,*) '    set to be: NUM_FAIL_TOLERANCE <= NUM_BLUKJOB'
-           call PRC_MPIstop
+           call PRC_abort
         endif
      endif
   endif

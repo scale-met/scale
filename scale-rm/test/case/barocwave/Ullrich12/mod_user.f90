@@ -48,7 +48,7 @@ module mod_user
        RHOT, &
        PRES
 
-  use scale_process
+  use scale_prc
   
   !-----------------------------------------------------------------------------
   implicit none
@@ -92,8 +92,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist / PARAM_USER / &
@@ -114,7 +114,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
     
@@ -164,8 +164,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Step
   subroutine USER_step
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        GRAV  => CONST_GRAV
     use scale_rm_process, only: &

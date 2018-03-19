@@ -50,8 +50,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LAND_SFC_THIN_SLAB_setup( LAND_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*), intent(in) :: LAND_TYPE
@@ -76,7 +76,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_SFC_THIN_SLAB. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_SFC_THIN_SLAB)
 
@@ -121,9 +121,9 @@ contains
         Z0H,        &
         Z0E,        &
         dt          )
-    use scale_process, only: &
+    use scale_prc, only: &
       PRC_myrank,  &
-      PRC_MPIstop
+      PRC_abort
     use scale_const, only: &
       PRE00 => CONST_PRE00, &
       Rdry  => CONST_Rdry,  &
@@ -437,7 +437,7 @@ contains
              write(*,*) 'DEBUG --- modified absolute velocity         [m/s]     :', Uabs
              write(*,*) 'DEBUG --- next land surface temperature      [K]       :', LST1  (i,j)
 
-             call PRC_MPIstop
+             call PRC_abort
           endif
 
         end if

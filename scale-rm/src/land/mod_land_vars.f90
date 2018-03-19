@@ -226,8 +226,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LAND_vars_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_comm, only: &
@@ -360,7 +360,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_VARS. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_VARS)
 
@@ -698,8 +698,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for land
   subroutine LAND_param_read
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_landuse, only: &
        LANDUSE_PFT_nmax
     implicit none
@@ -745,7 +745,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_PROPERTY. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_PROPERTY)
 
@@ -761,7 +761,7 @@ contains
       if ( ierr /= 0 ) then
          write(*,*) 'xxx [LAND_param_read] Failed to open land parameter file! :', &
                     trim(LAND_PROPERTY_IN_FILENAME)
-         call PRC_MPIstop
+         call PRC_abort
       else
         if( IO_L ) write(IO_FID_LOG,*)
         if( IO_L ) write(IO_FID_LOG,*) '*** Properties for each plant functional type (PFT)'
@@ -797,7 +797,7 @@ contains
               exit
            elseif( ierr > 0 ) then !--- fatal error
               write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_DATA. Check!'
-              call PRC_MPIstop
+              call PRC_abort
            endif
 
            if( Z0H < 0.0_RP ) then

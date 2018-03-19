@@ -60,8 +60,8 @@ contains
   subroutine TOPO_setup
     use scale_file, only: &
        FILE_AGGREGATE
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist / PARAM_TOPO / &
@@ -88,7 +88,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_TOPO. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_TOPO)
 
@@ -138,8 +138,8 @@ contains
        FILE_CARTESC_flush, &
        FILE_CARTESC_check_coordinates, &
        FILE_CARTESC_close
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer :: fid

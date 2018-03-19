@@ -64,8 +64,8 @@ contains
         Z0M,        &
         Z0H,        &
         Z0E         )
-    use scale_process, only: &
-      PRC_MPIstop
+    use scale_prc, only: &
+      PRC_abort
     use scale_const, only: &
       PRE00 => CONST_PRE00, &
       Rdry  => CONST_Rdry,  &

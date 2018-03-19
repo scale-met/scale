@@ -27,7 +27,7 @@ module scale_atmos_dyn_fvm_flux
   use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
-  use scale_process
+  use scale_prc
 #ifdef DEBUG
   use scale_debug, only: &
      CHECK
@@ -207,8 +207,8 @@ contains
   !> setup
   subroutine ATMOS_DYN_FVM_flux_setup( &
        scheme, scheme_tracer )
-    use scale_process, only: &
-         PRC_MPIstop
+    use scale_prc, only: &
+         PRC_abort
 <%
   funcs = Hash.new
   order.each do |o, nh|
@@ -242,17 +242,17 @@ contains
 
       if ( IHALO < <%=nh%> ) then
          write(*,*) 'xxx IHALO must be >= ', <%=nh%>
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < <%=nh%> ) then
          write(*,*) 'xxx JHALO must be >= ', <%=nh%>
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 <% end %>
     case default
        write(*,*) 'xxx scheme is invalid: ', scheme
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     select case( scheme_tracer )
@@ -268,17 +268,17 @@ contains
 
       if ( IHALO < <%=nh%> ) then
          write(*,*) 'xxx IHALO must be >= ', <%=nh%>
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < <%=nh%> ) then
          write(*,*) 'xxx JHALO must be >= ', <%=nh%>
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 <% end %>
     case default
        write(*,*) 'xxx scheme is invalid: ', scheme_tracer
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
   end subroutine ATMOS_DYN_FVM_flux_setup

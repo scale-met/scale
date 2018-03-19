@@ -134,8 +134,8 @@ contains
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_config( MP_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_phy_mp_dry, only: &
        ATMOS_PHY_MP_dry_config, &
        ATMOS_PHY_MP_dry_setup, &

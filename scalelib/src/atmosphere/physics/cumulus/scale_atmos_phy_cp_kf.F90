@@ -155,7 +155,7 @@ contains
       CZ, AREA,             &
       TIME_DTSEC, KF_DTSEC, &
       WARMRAIN_in           )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
     integer, intent(in) :: KA, KS, KE
@@ -282,7 +282,7 @@ contains
        KF_threshold_in,    &
        KF_LOG_in,          &
        TRIGGER_in          )
-    use scale_process, only: &
+    use scale_prc, only: &
          PRC_abort
     implicit none
     integer,  intent(in)    :: KF_prec_in          !< precipitation type 1:Ogura-Cho(1973) 2:Kessler
@@ -775,7 +775,7 @@ contains
          PRE00 => CONST_PRE00,  &
          TEM00 => CONST_TEM00, &
          GRAV  => CONST_GRAV
-    use scale_process, only: &
+    use scale_prc, only: &
          PRC_abort
     implicit none
     integer,  intent(in) :: KA, KS, KE            !< index
@@ -1665,7 +1665,7 @@ contains
          R     => CONST_Rdry
     use scale_atmos_saturation ,only :&
          ATMOS_SATURATION_psat_liq
-    use scale_process, only: &
+    use scale_prc, only: &
          PRC_abort
     implicit none
     integer,  intent(in) :: KA, KS, KE          !< index
@@ -2057,7 +2057,7 @@ contains
          ATMOS_SATURATION_psat_liq
     use scale_time , only :&
          KF_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
-    use scale_process, only: &
+    use scale_prc, only: &
          PRC_abort
     implicit none
     integer,  intent(in)    :: KA, KS, KE         !< index

@@ -76,8 +76,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist / PARAM_USER / &
@@ -102,7 +102,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
@@ -191,8 +191,8 @@ contains
   !-----------------------------------------------------------------------------
   !> User step
   subroutine USER_step
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
     integer :: i, j, k, ii
     integer :: front_grid
@@ -203,7 +203,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( USER_do ) then
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     call FILE_HISTORY_in( ATMOS_BOUNDARY_var(:,:,:,I_BND_DENS), 'BND_DENS', 'boundary_dens', 'kg/m3' )

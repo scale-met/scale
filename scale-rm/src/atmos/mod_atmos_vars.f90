@@ -451,7 +451,7 @@ contains
   subroutine ATMOS_vars_setup
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file_history, only: &
        FILE_HISTORY_reg
@@ -877,7 +877,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Open restart file for reading atmospheric variables
   subroutine ATMOS_vars_restart_open
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        GRAV  => CONST_GRAV
@@ -967,7 +967,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart of atmospheric variables
   subroutine ATMOS_vars_restart_read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file, only: &
        FILE_get_AGGREGATE
@@ -1107,7 +1107,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Check and compare between last data and sample data
   subroutine ATMOS_vars_restart_check
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
     use scale_file, only: &
        FILE_get_AGGREGATE
@@ -1502,7 +1502,7 @@ contains
        Rvap  => CONST_Rvap,  &
        CPdry => CONST_CPdry, &
        CVdry => CONST_CVdry
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_grid_cartesC, only: &
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
@@ -2308,7 +2308,7 @@ contains
   recursive subroutine ATMOS_vars_get_diagnostic_2D( &
        vname, &
        var )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
@@ -2489,7 +2489,7 @@ contains
        var )
     use scale_const, only: &
        CPdry => CONST_CPdry
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_comm, only: &
        COMM_horizontal_mean
@@ -2712,7 +2712,7 @@ contains
   !-----------------------------------------------------------------------------
   !> monitor output
   subroutine ATMOS_vars_monitor
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
     use scale_const, only: &

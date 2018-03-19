@@ -91,7 +91,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Config
   subroutine USER_config
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_regist

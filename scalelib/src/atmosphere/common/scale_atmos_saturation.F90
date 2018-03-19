@@ -206,7 +206,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_SATURATION_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        CPvap => CONST_CPvap, &
@@ -1728,7 +1728,7 @@ contains
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS, TEMP, QV, &
        Tdew            )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
@@ -1865,7 +1865,7 @@ contains
        DENS, Emoist0,              &
        TEMP, QV, QC, CPtot, CVtot, &
        converged                   )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &
@@ -1968,7 +1968,7 @@ contains
        DENS, Emoist0,                  &
        TEMP, QV, QC, QI, CPtot, CVtot, &
        converged                       )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &

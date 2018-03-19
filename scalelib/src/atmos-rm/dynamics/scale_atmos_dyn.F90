@@ -123,7 +123,7 @@ contains
        CY,                           &
        lat,                          &
        none                          )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_prc_cartesC, only: &
        PRC_HAS_E, &

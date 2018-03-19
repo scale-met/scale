@@ -19,7 +19,7 @@ module scale_file_history
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_abort
   !-----------------------------------------------------------------------------
   implicit none
@@ -1718,7 +1718,7 @@ contains
   subroutine FILE_HISTORY_Create( &
        id,     &
        options )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD
     use scale_file_h, only: &
        FILE_REAL8, &
@@ -2231,7 +2231,7 @@ contains
        varname,     &
        key, val,    &
        add_variable )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file, only: &
        FILE_Set_Attribute
@@ -2298,7 +2298,7 @@ contains
        varname,     &
        key, val,    &
        add_variable )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file, only: &
        FILE_Set_Attribute
@@ -2342,7 +2342,7 @@ contains
        varname,     &
        key, val,    &
        add_variable )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file, only: &
        FILE_Set_Attribute
@@ -2386,7 +2386,7 @@ contains
        varname,     &
        key, val,    &
        add_variable )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file, only: &
        FILE_Set_Attribute
@@ -2487,7 +2487,7 @@ contains
        FILE_Flush,      &
        FILE_Write_Axis, &
        FILE_Write_AssociatedCoordinate
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
     integer, intent(in) :: id

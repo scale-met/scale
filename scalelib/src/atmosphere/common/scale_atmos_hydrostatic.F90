@@ -111,7 +111,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_HYDROSTATIC_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        CONST_EPS
@@ -157,7 +157,7 @@ contains
        cz, fz,                             &
        dens, temp, pres,                   &
        temp_sfc                            )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        CV_VAPOR, &
@@ -491,7 +491,7 @@ contains
        dens_L1, pott_L1, qv_L1, qc_L1, &
        dz, k,                          &
        dens_L2, temp_L2, pres_L2       )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        CV_VAPOR, &
@@ -592,7 +592,7 @@ contains
        dens,         &
        temp, pres,   &
        kref          )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        CV_VAPOR, &
@@ -707,7 +707,7 @@ contains
        dens,         &
        temp, pres,   &
        kref          )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        CV_VAPOR, &
@@ -992,7 +992,7 @@ contains
        pres_sfc, temp_sfc, qv_sfc, qc_sfc, &
        cz, fz,                             &
        dens, pott, pres, pott_sfc          )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        CV_VAPOR, &
@@ -1163,7 +1163,7 @@ contains
        dz,           &
        dens,         &
        pott, pres    )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        CV_VAPOR, &
@@ -1260,7 +1260,7 @@ contains
        dz,           &
        dens,         &
        pott, pres    )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        CV_VAPOR, &

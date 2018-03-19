@@ -63,8 +63,8 @@ contains
   subroutine ATMOS_PHY_TB_dns_config( &
        TYPE_TB,  &
        I_TKE_out )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*), intent(in)  :: TYPE_TB
@@ -77,7 +77,7 @@ contains
 
     if ( TYPE_TB /= 'DNS' ) then
        write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not DNS. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     I_TKE_out = -1
@@ -87,8 +87,8 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB_dns_setup( &
        CDZ, CDX, CDY, CZ )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(in) :: CDZ(KA)
@@ -114,7 +114,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB_DNS. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_TB_DNS)
 

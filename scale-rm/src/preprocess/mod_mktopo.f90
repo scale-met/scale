@@ -22,8 +22,8 @@ module mod_mktopo
   use scale_atmos_grid_cartesC_index
   use scale_tracer
 
-  use scale_process, only: &
-     PRC_MPIstop
+  use scale_prc, only: &
+     PRC_abort
   use scale_atmos_grid_cartesC, only: &
      CX => ATMOS_GRID_CARTESC_CX, &
      CY => ATMOS_GRID_CARTESC_CY
@@ -87,7 +87,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKTOPO)
 
@@ -102,7 +102,7 @@ contains
        MKTOPO_TYPE = I_SCHAER
     case default
        write(*,*) 'xxx Unsupported TYPE:', trim(MKTOPO_name)
-       call PRC_MPIstop
+       call PRC_abort
     endselect
 
     return
@@ -135,7 +135,7 @@ contains
 
        case default
           write(*,*) 'xxx Unsupported TYPE:', MKTOPO_TYPE
-          call PRC_MPIstop
+          call PRC_abort
        endselect
 
        if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING TOPOGRAPHY DATA ++++++'
@@ -172,7 +172,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO_FLAT. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKTOPO_FLAT)
 
@@ -224,7 +224,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO_BELLSHAPE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKTOPO_BELLSHAPE)
 
@@ -290,7 +290,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO_SCHAER. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKTOPO_SCHAER)
 

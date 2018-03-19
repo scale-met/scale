@@ -115,8 +115,8 @@ contains
        Z0M, &
        Z0H, &
        Z0E  )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_landuse, only: &
@@ -176,7 +176,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_URBAN_PHY_SLC. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_URBAN_PHY_SLC)
 
@@ -678,9 +678,9 @@ contains
         dt,           & ! (in)
         i, j          ) ! (in)
     use scale_urban_grid_cartesC_index
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank, &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        EPS    => CONST_EPS,     &    ! small number (machine epsilon)
        PI     => CONST_PI,      &    ! pi               [-]
@@ -896,7 +896,7 @@ contains
 
     if ( ZDC + Z0C + 2.0_RP >= ZA ) then
        write(*,*) 'xxx [URBAN_PHY_SLC] ZDC + Z0C + 2m is larger than the 1st level! STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     W    = 2.0_RP * 1.0_RP * HGT
@@ -1092,7 +1092,7 @@ contains
        if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
          write(*,*) 'xxx [URBAN_PHY_SLC/SLC_main] tendency of TR exceeded a limit! STOP.'
          write(*,*) 'xxx previous TR and updated TR(TRL(1)) is ',TR-resi1, TR
-         call PRC_MPIstop
+         call PRC_abort
        endif
        if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_PHY_SLC/SLC_main] tendency of TR exceeded a limit'
        if( IO_L ) write(IO_FID_LOG,*) '*** previous TR and updated TR(TRL(1)) is ', TR-resi1, TR
@@ -1339,7 +1339,7 @@ contains
         if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
            write(*,*) 'xxx [URBAN_PHY_SLC/SLC_main] tendency of TB exceeded a limit! STOP.'
            write(*,*) 'xxx previous TB and updated TB(TBL(1)) is ', TB-resi1,TB
-           call PRC_MPIstop
+           call PRC_abort
         endif
         if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_PHY_SLC/SLC_main] tendency of TB exceeded a limit'
         if( IO_L ) write(IO_FID_LOG,*) '*** previous TB and updated TB(TBL(1)) is ', TB-resi1, TB
@@ -1349,7 +1349,7 @@ contains
         if ( abs(resi2) > DTS_MAX_onestep*10.0_RP ) then
            write(*,*) 'xxx [URBAN_PHY_SLC/SLC_main] tendency of TG exceeded a limit! STOP.'
            write(*,*) 'xxx previous TG and updated TG(TGL(1)) is ', TG-resi2, TG, resi2
-           call PRC_MPIstop
+           call PRC_abort
         endif
         if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_PHY_SLC/SLC_main] tendency of TG exceeded a limit'
         if( IO_L ) write(IO_FID_LOG,*) '*** previous TG and updated TG(TGL(1)) is ', TG-resi2, TG

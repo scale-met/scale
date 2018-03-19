@@ -25,9 +25,9 @@ module mod_realinput
   use scale_index
   use scale_tracer
 
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_IsMaster, &
-     PRC_MPIstop
+     PRC_abort
   use scale_comm, only: &
      COMM_bcast
   use scale_atmos_grid_cartesC_real, only: &
@@ -226,13 +226,13 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_ATMOS. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_ATMOS)
 
     if ( BOUNDARY_UPDATE_DT <= 0.0_DP ) then
        write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( FILETYPE_ORG == 'GrADS' ) then
@@ -557,7 +557,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_LAND. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_LAND)
 
@@ -583,7 +583,7 @@ contains
        SOILWATER_DS2VC_flag = .false.
     case default
       write(*,*) 'xxx Unsupported SOILWATER_DS2CV TYPE:', trim(SOILWATER_DS2VC)
-      call PRC_MPIstop
+      call PRC_abort
     end select
 
     serial_land = SERIAL_PROC_READ
@@ -595,7 +595,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_OCEAN. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_OCEAN)
 
@@ -627,7 +627,7 @@ contains
        write(*,*) 'xxx Error: The following LAND/OCEAN parameters must be consistent due to technical problem:'
        write(*,*) '           NUMBER_OF_FILES, NUMBER_OF_TSTEPS, NUMBER_OF_SKIP_TSTEPS,'
        write(*,*) '           BASENAME_BOUNDARY, BOUNDARY_POSTFIX_TIMELABEL, BOUNDARY_TITLE, BOUNDARY_UPDATE_DT.'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     call ParentSurfaceSetup( ldims, odims,           & ![OUT]
@@ -804,7 +804,7 @@ contains
        if ( totaltimesteps > 1 ) then
           if ( BOUNDARY_UPDATE_DT <= 0.0_DP ) then
              write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
-             call PRC_MPIstop
+             call PRC_abort
           endif
 
           if ( BOUNDARY_POSTFIX_TIMELABEL ) then
@@ -939,7 +939,7 @@ contains
     case default
 
        write(*,*) 'xxx Unsupported type of input data : ', trim(inputtype)
-       call PRC_MPIstop
+       call PRC_abort
 
     end select
 
@@ -1728,7 +1728,7 @@ contains
     if( LKMAX < 4 )then
        write(*,*) 'xxx LKMAX less than 4: ', LKMAX
        write(*,*) 'xxx in Real Case, LKMAX should be set more than 4'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if( serial_land ) then
@@ -1775,7 +1775,7 @@ contains
     case default
 
        write(*,*) 'xxx Unsupported FILE TYPE:', trim(filetype_land)
-       call PRC_MPIstop
+       call PRC_abort
 
     endselect
 
@@ -1794,7 +1794,7 @@ contains
        i_intrp_land_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_LAND_TEMP is invalid. ', INTRP_LAND_TEMP
-       call PRC_MPIstop
+       call PRC_abort
     end select
     select case( INTRP_LAND_SFC_TEMP )
     case( 'off' )
@@ -1805,7 +1805,7 @@ contains
        i_intrp_land_sfc_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_LAND_SFC_TEMP is invalid. ', INTRP_LAND_SFC_TEMP
-       call PRC_MPIstop
+       call PRC_abort
     end select
     select case( INTRP_LAND_WATER )
     case( 'off' )
@@ -1816,7 +1816,7 @@ contains
        i_intrp_land_water = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_LAND_WATER is invalid. ', INTRP_LAND_WATER
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     select case( lmdlid )
@@ -1874,7 +1874,7 @@ contains
     case default
 
        write(*,*) 'xxx Unsupported FILE TYPE:', trim(filetype_ocean)
-       call PRC_MPIstop
+       call PRC_abort
 
     endselect
 
@@ -1893,7 +1893,7 @@ contains
        i_intrp_ocean_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_OCEAN_TEMP is invalid. ', INTRP_OCEAN_TEMP
-       call PRC_MPIstop
+       call PRC_abort
     end select
     select case( INTRP_OCEAN_SFC_TEMP )
     case( 'off' )
@@ -1904,7 +1904,7 @@ contains
        i_intrp_ocean_sfc_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_OCEAN_SFC_TEMP is invalid. ', INTRP_OCEAN_SFC_TEMP
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     select case( omdlid )
@@ -2628,8 +2628,8 @@ contains
        soilwater_ds2vc_flag, &
        elevation_collection, &
        intrp_iter_max        )
-    use scale_process, only: &
-         PRC_MPIstop
+    use scale_prc, only: &
+         PRC_abort
     use scale_const, only: &
          UNDEF => CONST_UNDEF, &
          I_SW => CONST_I_SW, &
@@ -2710,7 +2710,7 @@ contains
           call make_mask( lmask, lst_org, ldims(2), ldims(3), landdata=.true.)
        case default
           write(*,*) 'xxx INTRP_LAND_SFC_TEMP is invalid.'
-          call PRC_MPIstop
+          call PRC_abort
        end select
        call interp_OceanLand_data(lst_org, lmask, ldims(2), ldims(3), .true., intrp_iter_max)
     end if
@@ -2724,7 +2724,7 @@ contains
     !      call make_mask( lmask, ust_org, ldims(2), ldims(3), landdata=.true.)
     !   case default
     !      write(*,*) 'xxx INTRP_URB_SFC_TEMP is invalid.'
-    !      call PRC_MPIstop
+    !      call PRC_abort
     !   end select
     !   call interp_OceanLand_data(ust_org, lmask, ldims(2), ldims(3), .true., intrp_iter_max)
     !end if
@@ -3193,7 +3193,7 @@ contains
           if( abs(maskval(i,j) - UNDEF) < sqrt(EPS) )then
              write(*,*) "xxx data for mask of "//trim(elem)//"(",i,",",j,") includes missing value."
              write(*,*) "xxx Please check input data of SKINTEMP or SST. "
-             call PRC_MPIstop
+             call PRC_abort
           else
              data(i,j) = maskval(i,j)
           endif

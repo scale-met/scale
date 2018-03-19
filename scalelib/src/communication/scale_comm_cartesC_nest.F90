@@ -270,8 +270,8 @@ contains
        FILE_get_shape
     use scale_const, only: &
        D2R => CONST_D2R
-    use scale_process, only: &
-       PRC_MPIstop,         &
+    use scale_prc, only: &
+       PRC_abort,         &
        PRC_GLOBAL_domainID, &
        PRC_IsMaster
     use scale_prc_cartesC, only: &
@@ -368,7 +368,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_COMM_CARTESC_NEST. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_COMM_CARTESC_NEST)
 
@@ -465,7 +465,7 @@ contains
 
        if ( OFFLINE ) then
           write(*,*) 'xxx OFFLINE and ONLINE cannot be use at the same time'
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        USE_NESTING = .true.
@@ -523,7 +523,7 @@ contains
 
          if ( ierr /= 0 ) then
             write(*,*) 'xxx [NEST_setup] cannot open latlon-catalogue file!'
-            call PRC_MPIstop
+            call PRC_abort
          endif
 
          do i = 1, PARENT_PRC_nprocs(HANDLING_NUM)
@@ -534,7 +534,7 @@ contains
                                                  latlon_catalog(i,I_SW,I_LAT), latlon_catalog(i,I_SE,I_LAT)    ! LAT: SW, SE
             if ( i /= parent_id ) then
                write(*,*) 'xxx [NEST_setup] internal error: parent mpi id'
-               call PRC_MPIstop
+               call PRC_abort
             endif
             if ( ierr /= 0 ) exit
          enddo
@@ -550,7 +550,7 @@ contains
 !            write(*,*) 'xxx Internal Error:'
 !            write(*,*) 'xxx The flag_parent and flag_child are needed.'
 !            write(*,*) '    domain: ', ONLINE_DOMAIN_NUM
-!            call PRC_MPIstop
+!            call PRC_abort
 !         endif
 
          if( ONLINE_BOUNDARY_USE_QHYD ) then
@@ -569,7 +569,7 @@ contains
             if ( .NOT. ONLINE_IAM_PARENT ) then
                write(*,*) 'xxx [NEST_setup] Parent Flag from launcher is not consistent with namelist!'
                write(*,*) 'xxx PARENT - domain : ', ONLINE_DOMAIN_NUM
-               call PRC_MPIstop
+               call PRC_abort
             endif
 
             HANDLING_NUM = 1 !HANDLING_NUM + 1
@@ -638,7 +638,7 @@ contains
             if ( .NOT. ONLINE_IAM_DAUGHTER ) then
                write(*,*) 'xxx [NEST_setup] Child Flag from launcher is not consistent with namelist!'
                write(*,*) 'xxx DAUGHTER - domain : ', ONLINE_DOMAIN_NUM
-               call PRC_MPIstop
+               call PRC_abort
             endif
 
             HANDLING_NUM = 2 !HANDLING_NUM + 1
@@ -830,7 +830,7 @@ contains
          !if( IO_L ) write(IO_FID_LOG,'(1x,A,I2)') '*** Number of Related Domains :', HANDLING_NUM
          !if ( HANDLING_NUM > 2 ) then
          !   f( IO_L ) write(*,*) 'xxx Too much handing domains (up to 2)'
-         !   call PRC_MPIstop
+         !   call PRC_abort
          !endif
 
       endif !--- OFFLINE or NOT
@@ -844,9 +844,9 @@ contains
   !> Solve relationship between ParentDomain & Daughter Domain
   subroutine COMM_CARTESC_NEST_domain_relate( &
        HANDLE )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank,   &
-       PRC_MPIstop
+       PRC_abort
     implicit none
 
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
@@ -906,7 +906,7 @@ contains
           if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LAT=', &
                      latlon_catalog(i,I_SW,I_LAT) ,latlon_catalog(i,I_NE,I_LAT)
        enddo
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     !--- NE search
@@ -942,7 +942,7 @@ contains
           if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LAT=', &
                      latlon_catalog(i,I_SW,I_LAT) ,latlon_catalog(i,I_NE,I_LAT)
        enddo
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     COMM_CARTESC_NEST_TILE_NUM_X = pd_tile_num(pd_ne_tile,1) - pd_tile_num(pd_sw_tile,1) + 1
@@ -1030,8 +1030,8 @@ contains
   !> Get parent domain size
   subroutine COMM_CARTESC_NEST_parentsize( &
        HANDLE )
-    use scale_process, only: &
-       PRC_MPIstop, &
+    use scale_prc, only: &
+       PRC_abort, &
        PRC_nprocs,  &
        PRC_myrank,  &
        PRC_IsMaster
@@ -1200,7 +1200,7 @@ contains
        DAUGHTER_DTSEC     (HANDLE) = buffer
     else
        write(*,*) 'xxx [COMM_CARTESC_NEST_parentsize] internal error'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( ONLINE_BOUNDARY_DIAGQNUM ) then
@@ -1212,7 +1212,7 @@ contains
           write(*,*) 'xxx [COMM_CARTESC_NEST_parentsize] NUMBER of QA are not matched!'
           write(*,*) 'xxx check a flag of ONLINE_BOUNDARY_USE_QHYD.'
           write(*,*) 'xxx Number of QA (remote,local) = ', QA_OTHERSIDE, COMM_CARTESC_NEST_BND_QA
-          call PRC_MPIstop
+          call PRC_abort
        endif
     endif
 
@@ -1223,8 +1223,8 @@ contains
   !> Get parent latlon catalogue
   subroutine COMM_CARTESC_NEST_catalogue( &
        HANDLE  )
-    use scale_process, only: &
-       PRC_MPIstop, &
+    use scale_prc, only: &
+       PRC_abort, &
        PRC_nprocs,  &
        PRC_myrank,  &
        PRC_IsMaster
@@ -1271,7 +1271,7 @@ contains
 
     else
        write(*,*) 'xxx [COMM_CARTESC_NEST_catalogue] internal error'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -1281,8 +1281,8 @@ contains
   !> Check Communication Inter-domains
   subroutine COMM_CARTESC_NEST_ping( &
        HANDLE )
-    use scale_process, only: &
-       PRC_MPIstop, &
+    use scale_prc, only: &
+       PRC_abort, &
        PRC_myrank,  &
        PRC_IsMaster
     use scale_comm, only: &
@@ -1341,12 +1341,12 @@ contains
 
     else
        write(*,*) 'xxx [COMM_CARTESC_NEST_ping] internal error'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( ping_error ) then
        write(*,*) 'xxx [COMM_CARTESC_NEST_ping] ping destination error'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -1356,8 +1356,8 @@ contains
   !> Inter-domain communication setup for nestdown
   subroutine COMM_CARTESC_NEST_setup_nestdown( &
        HANDLE )
-    use scale_process, only: &
-       PRC_MPIstop, &
+    use scale_prc, only: &
+       PRC_abort, &
        PRC_myrank,  &
        PRC_IsMaster
     use scale_comm, only: &
@@ -1434,7 +1434,7 @@ contains
           write(*,*) 'xxx [COMM_CARTESC_NEST_setup_nestdown] Flag of NO_ROTATE is not consistent with the child domain'
           if( IO_L ) write(IO_FID_LOG,*) 'xxx ONLINE_NO_ROTATE = ', ONLINE_NO_ROTATE
           if( IO_L ) write(IO_FID_LOG,*) 'xxx ONLINE_DAUGHTER_NO_ROTATE =', ONLINE_DAUGHTER_NO_ROTATE
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if( IO_L ) write(IO_FID_LOG,'(1x,A,L2)') '*** NEST: ONLINE_DAUGHTER_NO_ROTATE =', ONLINE_DAUGHTER_NO_ROTATE
 
@@ -1527,7 +1527,7 @@ contains
        call MPI_BARRIER(INTERCOMM_PARENT, ierr)
     else
        write(*,*) 'xxx [COMM_CARTESC_NEST_setup_nestdown] internal error'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if( NUM_YP * 16 > max_rq .OR. COMM_CARTESC_NEST_TILE_ALL * 16 > max_rq ) then ! 16 = dyn:5 + qtrc:11
@@ -1535,7 +1535,7 @@ contains
        write(*,*) 'xxx NUM_YP x 16        = ', NUM_YP * 16
        write(*,*) 'xxx COMM_CARTESC_NEST_TILE_ALL x 16 = ', COMM_CARTESC_NEST_TILE_ALL * 16
        write(*,*) 'xxx max_rq             = ', max_rq
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -1545,9 +1545,9 @@ contains
   !> Grid Data transfer from parent to daughter: nestdown
   subroutine COMM_CARTESC_NEST_importgrid_nestdown( &
        HANDLE )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank,  &
-       PRC_MPIstop
+       PRC_abort
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_LON,   &
        ATMOS_GRID_CARTESC_REAL_LAT,   &
@@ -1723,12 +1723,12 @@ contains
           write(*,*) 'xxx -- VERTICAL direction over the limit'
           write(*,*) 'xxx -- reference max: ', max_ref
           write(*,*) 'xxx --     local max: ', max_loc
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
     else
        write(*,*) 'xxx [COMM_CARTESC_NEST_importgrid_nestdown] internal error'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -1751,8 +1751,8 @@ contains
        VELY_recv, &
        POTT_recv, &
        QTRC_recv  )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -1795,10 +1795,10 @@ contains
 
     if ( BND_QA > I_BNDQA ) then
        write(*,*) 'xxx [COMM_CARTESC_NEST_nestdown] internal error: BND_QA is larger than I_BNDQA'
-       call PRC_MPIstop
+       call PRC_abort
     elseif( BND_QA > max_bndqa ) then
        write(*,*) 'xxx [COMM_CARTESC_NEST_nestdown] internal error: BND_QA is larger than max_bndqa'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     tagcomm = INTERCOMM_ID(HANDLE) * order_tag_comm
@@ -2179,7 +2179,7 @@ contains
 
     else
        write(*,*) 'xxx [COMM_CARTESC_NEST_nestdown] internal error'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -2190,8 +2190,8 @@ contains
   subroutine COMM_CARTESC_NEST_recvwait_issue( &
        HANDLE, &
        BND_QA  )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
@@ -2207,7 +2207,7 @@ contains
 
     if ( BND_QA > I_BNDQA ) then
        write(*,*) 'xxx [COMM_CARTESC_NEST_recvwait_issue] internal error: about BND_QA'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     tagcomm = INTERCOMM_ID(HANDLE) * order_tag_comm
@@ -2285,7 +2285,7 @@ contains
 
     else
        write(*,*) 'xxx [COMM_CARTESC_NEST_recvwait_issue] internal error'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -2295,8 +2295,8 @@ contains
   !> Sub-command for data transfer from parent to daughter: nestdown
   subroutine COMM_CARTESC_NEST_recv_cancel( &
        HANDLE )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
@@ -2335,7 +2335,7 @@ contains
 
     else
        write(*,*) 'xxx [COMM_CARTESC_NEST_recv_cancel] internal error'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -2352,8 +2352,8 @@ contains
        isu_tag,  &
        isu_tagf, &
        flag_dens )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_comm, only: &
        COMM_datatype
     use scale_interp, only: &
@@ -2479,7 +2479,7 @@ contains
              write(*,*) 'xxx [COMM_CARTESC_NEST_intercomm_nestdown_3D] Exceeded maximum issue'
              write(*,*) 'xxx isu_tag  = ', isu_tag
              write(*,*) 'xxx isu_tagf = ', isu_tagf
-             call PRC_MPIstop
+             call PRC_abort
           endif
 
        enddo
@@ -2533,7 +2533,7 @@ contains
 
     else
        write(*,*) 'xxx [COMM_CARTESC_NEST_intercomm_nestdown_3D] internal error'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -2547,9 +2547,9 @@ contains
        HANDLE,  &
        isu_tag, &
        isu_tagf )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank,  &
-       PRC_MPIstop
+       PRC_abort
     use scale_comm, only: &
        COMM_datatype
     implicit none
@@ -2639,14 +2639,14 @@ contains
           write(*,*) 'xxx [COMM_CARTESC_NEST_issuer_of_receive_3D] Exceeded maximum issue'
           write(*,*) 'xxx isu_tag  = ', isu_tag
           write(*,*) 'xxx isu_tagf = ', isu_tagf
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        rq_ctl_d = rq
 
     else
        write(*,*) 'xxx [COMM_CARTESC_NEST_issuer_of_receive_3D] internal error'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -2656,8 +2656,8 @@ contains
   !> [substance of issuer] Inter-communication from parent to daughter: nestdown
   subroutine COMM_CARTESC_NEST_issuer_of_wait_3D( &
        HANDLE )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer, intent(in) :: HANDLE  !< id number of nesting relation in this process target
@@ -2677,7 +2677,7 @@ contains
 
     else
        write(*,*) 'xxx [COMM_CARTESC_NEST_issuer_of_wait_3D] internal error'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -2688,8 +2688,8 @@ contains
   subroutine COMM_CARTESC_NEST_waitall( &
        req_count, &
        ireq       )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer, intent(in)    :: req_count
@@ -2724,7 +2724,7 @@ contains
 !       if ( num > ONLINE_WAIT_LIMIT ) then
 !          if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
 !          write(*,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
-!          call PRC_MPIstop
+!          call PRC_abort
 !       endif
 !    enddo
 
@@ -2735,8 +2735,8 @@ contains
   !> [check communication status] Inter-communication
   subroutine COMM_CARTESC_NEST_test( &
        HANDLE )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
@@ -2766,7 +2766,7 @@ contains
 
     else
        write(*,*) 'xxx [COMM_CARTESC_NEST_test] error'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -2775,7 +2775,7 @@ contains
   !-----------------------------------------------------------------------------
   !> [finalize: disconnect] Inter-communication
   subroutine COMM_CARTESC_NEST_disconnect
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_GLOBAL_COMM_WORLD
     implicit none
 

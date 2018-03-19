@@ -79,8 +79,8 @@ contains
   subroutine ATMOS_PHY_TB_d1980_config( &
        TYPE_TB,  &
        I_TKE_out )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_tracer, only: &
        TRACER_regist
     implicit none
@@ -95,7 +95,7 @@ contains
 
     if ( TYPE_TB /= 'D1980' ) then
        write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not D1980. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     call TRACER_regist( I_TKE,                                    & ! [OUT]
@@ -113,8 +113,8 @@ contains
   !> Setup
   subroutine ATMOS_PHY_TB_d1980_setup( &
        CDZ, CDX, CDY, CZ )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(in) :: CDZ(KA)
@@ -141,7 +141,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB_D1980. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_TB_D1980)
 

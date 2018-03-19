@@ -111,7 +111,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CONST_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
 

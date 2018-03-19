@@ -55,8 +55,8 @@ contains
   subroutine CHECK( &
        current_line, &
        v             )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        CONST_UNDEF
     implicit none
@@ -86,8 +86,8 @@ contains
        varname,      &
        current_file, &
        current_line  )
-    use scale_process, only: &
-       PRC_MPIstop, &
+    use scale_prc, only: &
+       PRC_abort, &
        PRC_myrank
     implicit none
 
@@ -122,7 +122,7 @@ contains
                   '(', PRC_myrank, ',', k, ')=', var(k)
        write(*,*) 'xxx in file   : ', trim(current_file), ', at line : ', current_line
        write(*,*) 'xxx in domain : ', DEBUG_DOMAIN_NUM
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     call PROF_rapend  ('Debug', 1)
@@ -139,8 +139,8 @@ contains
        varname,      &
        current_file, &
        current_line  )
-    use scale_process, only: &
-       PRC_MPIstop, &
+    use scale_prc, only: &
+       PRC_abort, &
        PRC_myrank
     implicit none
 
@@ -181,7 +181,7 @@ contains
                   '(', PRC_myrank, ',', k, ',', i, ')=', var(k,i)
        write(*,*) 'xxx in file   : ', trim(current_file), ', at line : ', current_line
        write(*,*) 'xxx in domain : ', DEBUG_DOMAIN_NUM
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     call PROF_rapend  ('Debug', 1)
@@ -198,8 +198,8 @@ contains
        varname,      &
        current_file, &
        current_line  )
-    use scale_process, only: &
-       PRC_MPIstop, &
+    use scale_prc, only: &
+       PRC_abort, &
        PRC_myrank
     implicit none
 
@@ -246,7 +246,7 @@ contains
                   '(', PRC_myrank, ',', k, ',', i, ',', j, ')=', var(k,i,j)
        write(*,*) 'xxx in file   : ', trim(current_file), ', at line : ', current_line
        write(*,*) 'xxx in domain : ', DEBUG_DOMAIN_NUM
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     call PROF_rapend  ('Debug', 1)

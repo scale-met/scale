@@ -90,8 +90,8 @@ contains
     use scale_precision
     use scale_atmos_grid_cartesC_index
     use scale_index
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_dyn_tinteg_tracer_euler, only: &
        ATMOS_DYN_Tinteg_tracer_euler_setup, &
        ATMOS_DYN_Tinteg_tracer_euler
@@ -115,7 +115,7 @@ contains
        ! do nothing
     case default
        write(*,*) 'xxx ATMOS_DYN_TINTEG_TRACER_TYPE is invalid: ', ATMOS_DYN_Tinteg_tracer_TYPE
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     return

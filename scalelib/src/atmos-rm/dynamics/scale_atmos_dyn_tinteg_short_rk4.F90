@@ -100,8 +100,8 @@ contains
   !> Setup
   subroutine ATMOS_DYN_Tinteg_short_rk4_setup( &
        tinteg_type )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_comm, only: &
@@ -115,7 +115,7 @@ contains
 
     if ( tinteg_type /= 'RK4' ) then
        write(*,*) 'xxx TINTEG_TYPE is not RK4. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     allocate( DENS_RK1(KA,IA,JA) )

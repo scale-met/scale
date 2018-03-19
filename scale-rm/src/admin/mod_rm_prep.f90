@@ -62,7 +62,7 @@ contains
        cnf_fname         )
     use scale_file, only: &
        FILE_Close_All
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_LOCAL_setup
     use scale_prc_cartesC, only: &
        PRC_CARTESC_setup

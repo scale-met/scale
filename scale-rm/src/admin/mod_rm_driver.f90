@@ -59,8 +59,8 @@ contains
        cnf_fname         )
     use scale_file, only: &
        FILE_Close_All
-    use scale_process, only: &
-       PRC_MPIstop,  &
+    use scale_prc, only: &
+       PRC_abort,  &
        PRC_LOCAL_setup
     use scale_fpm, only: &
        FPM_alive,       &
@@ -402,7 +402,7 @@ contains
             call FPM_Polling( .true., sign_exit )
             if ( sign_exit ) then
                if( IO_L ) write(IO_FID_LOG,*) 'xxx receive stop signal'
-               call PRC_MPIstop
+               call PRC_abort
             endif
             fpm_counter = 0
          endif

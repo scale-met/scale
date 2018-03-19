@@ -166,8 +166,8 @@ contains
   subroutine USER_setup
     use scale_stdio, only:  &
        IO_FID_CONF
-    use scale_process, only:&
-       PRC_MPIstop,         &
+    use scale_prc, only:&
+       PRC_abort,         &
        PRC_MPIfinish
     use scale_atmos_grid_cartesC, only:   &
        CZ => ATMOS_GRID_CARTESC_CZ
@@ -254,7 +254,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
@@ -285,7 +285,7 @@ contains
     if(ierr /= 0) then
       write(*,*) 'Msg : Sub[mod_user_setup]/Mod[uset_setup]'
       write(*,*) 'Cannot open the data file for forcing. STOP!', trim(fdata_name_sst)
-      call PRC_MPIstop
+      call PRC_abort
     endif
 
     if( IO_L ) write(io_fid_log,*) 'Reading external sst'
@@ -303,7 +303,7 @@ contains
       if(ierr /= 0) then
         write(*,*) 'Msg : Sub[SF_GRAYZONE_setup]/Mod[sf_grayzone]'
         write(*,*) 'Cannot open the data file for forcing. STOP!', trim(fdata_name_sf)
-        call PRC_MPIstop
+        call PRC_abort
       endif
       read(fid_data_sf,*)
       do t=1, mstep
@@ -349,8 +349,8 @@ contains
      IO_get_available_fid, &
      IO_FID_LOG,  &
      IO_L
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -502,7 +502,7 @@ contains
       if(ierr /= 0) then
         write(*,*) 'Msg : Sub[mod_user_setup]/Mod[user_setup]'
         write(*,*) 'Cannot open the data file for forcing. STOP!', trim(fdata_name_atm)
-        call PRC_MPIstop
+        call PRC_abort
       endif
       !
       do iv=1, 3
@@ -561,7 +561,7 @@ contains
                    /(time_atm_in(t+1)-time_atm_in(t))
             if(abs(momz_ls_t(k))>100.)then
               write(*,*) 'error',k,t,momz_ls_t(k),time_atm_in(t+1),time_nowsec,var(t,k),time_nowsec,time_atm_in(t),var(t+1,k)
-              call PRC_MPIstop
+              call PRC_abort
             endif
 !write(*,'(a,2i5,10f11.3)')'chkls',t,k,momz_ls_t(k),time_atm_in(t+1),time_atm_in(t),var(t,k),var(t+1,k)
           enddo
@@ -575,7 +575,7 @@ contains
       enddo
       if( time_nowsec>time_atm_in(mstep_atm) )then
         write(*,*) 'Integration time exceeds the maximum forcing data length',time_nowsec,time_atm_in(mstep_atm)
-        call PRC_MPIstop
+        call PRC_abort
       endif
 
 !return ! ok
@@ -593,7 +593,7 @@ contains
 
       if( time_nowsec>time_sst_in(mstep_sst) )then
         write(*,*) 'Integration time exceeds the maximum forcing data length',time_nowsec,time_sst_in(mstep_sst)
-        call PRC_MPIstop
+        call PRC_abort
       endif
 
        MOMZ_LS(:,1)=MOMZ_LS_T(:)
@@ -672,7 +672,7 @@ contains
 !do i=1,ia
 !if(momz_tp(k,i,j)>1.0.or.momz_tp(k,i,j)<-1.0)then
 !write(*,*)'chkchk2',time_nowstep,i,j,k,momz_tp(k,i,j),momz(k,i,j),dens(k+1,i,j),dens(k,i,j),momz_ls(k,2)
-!        call PRC_MPIstop
+!        call PRC_abort
 !endif
 !enddo
 !enddo
@@ -858,7 +858,7 @@ contains
 
     else
        write(*,*)'Not supported user_ls_flg'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     endif
 
@@ -882,7 +882,7 @@ contains
 !      if( time_nowsec>time_sst_in(mstep_sst) )then
 !        write(*,*) 'Integration time exceeds the maximum forcing data
 !        length',time_nowsec,time_sst_in(mstep_sst)
-!        call PRC_MPIstop
+!        call PRC_abort
 !      endif
 
        ! rho*theta -> potential temperature at cell centor
@@ -1047,7 +1047,7 @@ contains
         enddo
         if( time_nowsec>time_in(mstep) )then
           write(*,*) 'Integration time exceeds the maximum forcing data length',time_nowsec,time_in(mstep)
-          call PRC_MPIstop
+          call PRC_abort
         endif
       endif
 

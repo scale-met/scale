@@ -80,8 +80,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LAND_PHY_setup( LAND_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_land_phy_const, only: &
        LAND_PHY_CONST_setup, &
        LAND_PHY_CONST
@@ -111,7 +111,7 @@ contains
        LAND_PHY => LAND_PHY_MATSIRO
     case default
        write(*,*) 'xxx invalid Land type(', trim(LAND_TYPE), '). CHECK!'
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     return

@@ -23,7 +23,7 @@ module scale_atmos_dyn_fvm_flux
   use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
-  use scale_process
+  use scale_prc
 #ifdef DEBUG
   use scale_debug, only: &
      CHECK
@@ -277,8 +277,8 @@ contains
   !> setup
   subroutine ATMOS_DYN_FVM_flux_setup( &
        scheme, scheme_tracer )
-    use scale_process, only: &
-         PRC_MPIstop
+    use scale_prc, only: &
+         PRC_abort
 
    use scale_atmos_dyn_fvm_flux_ud1, only: &
       ATMOS_DYN_FVM_flux_valueW_Z_ud1, &
@@ -478,11 +478,11 @@ contains
 
       if ( IHALO < 1 ) then
          write(*,*) 'xxx IHALO must be >= ', 1
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < 1 ) then
          write(*,*) 'xxx JHALO must be >= ', 1
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 
@@ -531,11 +531,11 @@ contains
 
       if ( IHALO < 1 ) then
          write(*,*) 'xxx IHALO must be >= ', 1
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < 1 ) then
          write(*,*) 'xxx JHALO must be >= ', 1
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 
@@ -584,11 +584,11 @@ contains
 
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < 2 ) then
          write(*,*) 'xxx JHALO must be >= ', 2
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 
@@ -637,11 +637,11 @@ contains
 
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < 2 ) then
          write(*,*) 'xxx JHALO must be >= ', 2
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 
@@ -690,11 +690,11 @@ contains
 
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < 2 ) then
          write(*,*) 'xxx JHALO must be >= ', 2
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 
@@ -743,11 +743,11 @@ contains
 
       if ( IHALO < 3 ) then
          write(*,*) 'xxx IHALO must be >= ', 3
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < 3 ) then
          write(*,*) 'xxx JHALO must be >= ', 3
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 
@@ -796,17 +796,17 @@ contains
 
       if ( IHALO < 3 ) then
          write(*,*) 'xxx IHALO must be >= ', 3
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < 3 ) then
          write(*,*) 'xxx JHALO must be >= ', 3
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 
     case default
        write(*,*) 'xxx scheme is invalid: ', scheme
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     select case( scheme_tracer )
@@ -854,11 +854,11 @@ contains
 
       if ( IHALO < 1 ) then
          write(*,*) 'xxx IHALO must be >= ', 1
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < 1 ) then
          write(*,*) 'xxx JHALO must be >= ', 1
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 
@@ -905,11 +905,11 @@ contains
 
       if ( IHALO < 1 ) then
          write(*,*) 'xxx IHALO must be >= ', 1
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < 1 ) then
          write(*,*) 'xxx JHALO must be >= ', 1
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 
@@ -956,11 +956,11 @@ contains
 
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < 2 ) then
          write(*,*) 'xxx JHALO must be >= ', 2
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 
@@ -1007,11 +1007,11 @@ contains
 
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < 2 ) then
          write(*,*) 'xxx JHALO must be >= ', 2
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 
@@ -1058,11 +1058,11 @@ contains
 
       if ( IHALO < 2 ) then
          write(*,*) 'xxx IHALO must be >= ', 2
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < 2 ) then
          write(*,*) 'xxx JHALO must be >= ', 2
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 
@@ -1109,11 +1109,11 @@ contains
 
       if ( IHALO < 3 ) then
          write(*,*) 'xxx IHALO must be >= ', 3
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < 3 ) then
          write(*,*) 'xxx JHALO must be >= ', 3
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 
@@ -1160,17 +1160,17 @@ contains
 
       if ( IHALO < 3 ) then
          write(*,*) 'xxx IHALO must be >= ', 3
-         call PRC_MPIstop
+         call PRC_abort
       end if
       if ( JHALO < 3 ) then
          write(*,*) 'xxx JHALO must be >= ', 3
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
 
     case default
        write(*,*) 'xxx scheme is invalid: ', scheme_tracer
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
   end subroutine ATMOS_DYN_FVM_flux_setup

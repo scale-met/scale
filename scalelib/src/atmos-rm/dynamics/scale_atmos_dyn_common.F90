@@ -94,8 +94,8 @@ contains
   subroutine ATMOS_DYN_filter_setup( &
        num_diff, num_diff_q,        &
        CDZ, CDX, CDY, FDZ, FDX, FDY )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_comm, only: &
        COMM_vars8_init
     implicit none
@@ -113,7 +113,7 @@ contains
 
     if ( IHALO < 2 .or. JHALO < 2 .or. KHALO < 2 ) then
        write(*,*) 'xxx number of HALO must be at least 2 for numrical filter'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     ! allocation

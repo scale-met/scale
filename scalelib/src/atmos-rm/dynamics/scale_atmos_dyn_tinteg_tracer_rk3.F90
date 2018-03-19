@@ -65,8 +65,8 @@ contains
   !> Setup
   subroutine ATMOS_DYN_Tinteg_tracer_rk3_setup( &
        tinteg_type )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_comm, only: &
        COMM_vars8_init
     implicit none
@@ -78,7 +78,7 @@ contains
 
     if ( tinteg_type /= 'RK3WS2002' ) then
        write(*,*) 'xxx TINTEG_LARGE_TYPE is not RK3WS2002. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     allocate( QTRC_RK1(KA,IA,JA) )

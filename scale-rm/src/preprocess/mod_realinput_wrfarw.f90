@@ -18,9 +18,9 @@ module mod_realinput_wrfarw
   use scale_precision
   use scale_stdio
   use scale_tracer
-  use scale_process, only: &
+  use scale_prc, only: &
      myrank => PRC_myrank,  &
-     PRC_MPIstop
+     PRC_abort
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -107,7 +107,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_WRFARW,iostat=ierr)
     if( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
 
@@ -565,7 +565,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_WRFARW,iostat=ierr)
     if( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
 
@@ -751,7 +751,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_WRFARW,iostat=ierr)
     if( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
 

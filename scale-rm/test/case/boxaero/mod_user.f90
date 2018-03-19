@@ -86,7 +86,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup before setup of other components
   subroutine USER_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
 

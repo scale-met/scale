@@ -53,7 +53,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_SF_driver_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_phy_sf_bulk, only: &
        ATMOS_PHY_SF_bulk_setup

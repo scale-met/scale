@@ -19,8 +19,8 @@ module mod_mkinit
   use scale_atmos_grid_cartesC_index
   use scale_tracer
 
-  use scale_process, only: &
-     PRC_MPIstop
+  use scale_prc, only: &
+     PRC_abort
   use scale_const, only: &
      PI     => CONST_PI,     &
      GRAV   => CONST_GRAV,   &
@@ -226,7 +226,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT)
 
@@ -330,7 +330,7 @@ contains
        MKINIT_TYPE = I_BAROCWAVE
     case default
        write(*,*) 'xxx Unsupported TYPE:', trim(MKINIT_initname)
-       call PRC_MPIstop
+       call PRC_abort
     endselect
 
     return
@@ -491,7 +491,7 @@ contains
          call MKINIT_barocwave
       case default
          write(*,*) 'xxx Unsupported TYPE:', MKINIT_TYPE
-         call PRC_MPIstop
+         call PRC_abort
       endselect
 
       call tke_setup
@@ -586,7 +586,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_BUBBLE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_BUBBLE)
 
@@ -678,10 +678,10 @@ contains
     read(IO_FID_CONF,nml=PARAM_RECT,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        write(*,*) 'xxx Not found namelist. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_RECT. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_RECT)
 
@@ -773,7 +773,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used!'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_AERO. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_AERO)
 
@@ -912,7 +912,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_FLUX. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_FLUX)
 
@@ -978,7 +978,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_LAND. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_LAND)
 
@@ -1038,7 +1038,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_OCEAN. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_OCEAN)
 
@@ -1135,7 +1135,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_URBAN. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_URBAN)
 
@@ -1191,7 +1191,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_TKE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_TKE)
 
@@ -1257,7 +1257,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SOUNDING. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SOUNDING)
 
@@ -1400,7 +1400,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_PLANESTATE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_PLANESTATE)
 
@@ -1568,7 +1568,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_TRACERBUBBLE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_TRACERBUBBLE)
 
@@ -1609,7 +1609,7 @@ contains
        shapeFac => rect
     case default
        write(*,*) 'xxx SHAPE_NC=', trim(SHAPE_NC), ' cannot be used on advect. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     do j = JSB, JEB
@@ -1673,7 +1673,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_COLDBUBBLE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_COLDBUBBLE)
 
@@ -1752,7 +1752,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_LAMBWAVE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_LAMBWAVE)
 
@@ -1819,7 +1819,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_GRAVITYWAVE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_GRAVITYWAVE)
 
@@ -1905,7 +1905,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_KHWAVE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_KHWAVE)
 
@@ -2013,7 +2013,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_TURBULENCE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_TURBULENCE)
 
@@ -2145,7 +2145,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_CAVITYFLOW. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_CAVITYFLOW)
 
@@ -2221,7 +2221,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_MOUNTAINWAVE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_MOUNTAINWAVE)
 
@@ -2287,7 +2287,7 @@ contains
       OHM => CONST_OHM,        &
       RPlanet => CONST_RADIUS, &
       GRAV    => CONST_GRAV
-    use scale_process
+    use scale_prc
     use scale_atmos_grid_cartesC, only: &
          y0  => ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
          FYG => ATMOS_GRID_CARTESC_FYG
@@ -2358,7 +2358,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_BAROCWAVE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BAROCWAVE)
 
@@ -2416,7 +2416,7 @@ contains
                 write(*,*) "* (X,Y,Z)=", CX(i), CY(j), CZ(k)
                 write(*,*) "Fail the convergence of iteration. Check!"
                 write(*,*) "itr=", itr, "del_eta=", del_eta, "eta=", eta(k,i,j), "temp=", temp(k,i,j)
-                call PRC_MPIstop
+                call PRC_abort
              end if
           enddo !- End of loop for iteration ----------------------------
 
@@ -2511,7 +2511,7 @@ contains
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        write(*,*) 'xxx QV is not registered'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     SFC_THETA = THETAstd
@@ -2525,7 +2525,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_WARMBUBBLE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WARMBUBBLE)
 
@@ -2625,7 +2625,7 @@ contains
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        write(*,*) 'xxx QV is not registered'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     !--- read namelist
@@ -2636,7 +2636,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SUPERCELL. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SUPERCELL)
 
@@ -2694,7 +2694,7 @@ contains
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        write(*,*) 'xxx QV is not registered'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     !--- read namelist
@@ -2705,7 +2705,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SQUALLLINE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SQUALLLINE)
 
@@ -2773,7 +2773,7 @@ contains
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        write(*,*) 'xxx QV is not registered'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     SFC_PRES  = Pstd
@@ -2784,7 +2784,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_WK1982. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WK1982)
 
@@ -2929,7 +2929,7 @@ contains
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        write(*,*) 'xxx QV is not registered'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     read(IO_FID_CONF,nml=PARAM_MKINIT_RF01,iostat=ierr)
@@ -2937,7 +2937,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RF01. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RF01)
 
@@ -3152,7 +3152,7 @@ contains
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        write(*,*) 'xxx QV is not registered'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     rewind(IO_FID_CONF)
@@ -3161,7 +3161,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RF02. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RF02)
 
@@ -3374,7 +3374,7 @@ contains
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        write(*,*) 'xxx QV is not registered'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     rewind(IO_FID_CONF)
@@ -3383,7 +3383,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RF02_DNS. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RF02_DNS)
 
@@ -3575,7 +3575,7 @@ contains
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        write(*,*) 'xxx QV is not registered'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     rewind(IO_FID_CONF)
@@ -3584,7 +3584,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_RICO. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RICO)
 
@@ -3773,7 +3773,7 @@ contains
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        write(*,*) 'xxx QV is not registered'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     rewind(IO_FID_CONF)
@@ -3782,7 +3782,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_BOMEX. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BOMEX)
 
@@ -4029,7 +4029,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SEABREEZE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SEABREEZE)
 
@@ -4135,7 +4135,7 @@ contains
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        write(*,*) 'xxx QV is not registered'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     !--- read namelist
@@ -4146,7 +4146,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_GRAYZONE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_GRAYZONE)
 
@@ -4274,12 +4274,12 @@ contains
     if ( ATMOS_PHY_AE_TYPE /= 'KAJINO13' ) then
        if( IO_L ) write(IO_FID_LOG,*) '+++ For [Box model of aerosol],'
        if( IO_L ) write(IO_FID_LOG,*) '+++ ATMOS_PHY_AE_TYPE should be KAJINO13. Stop!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        write(*,*) 'xxx QV is not registered'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -4292,7 +4292,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_BOXAERO. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BOXAERO)
 
@@ -4370,7 +4370,7 @@ contains
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        write(*,*) 'xxx QV is not registerd'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
 
@@ -4385,7 +4385,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_WARMBUBBLE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WARMBUBBLE)
 

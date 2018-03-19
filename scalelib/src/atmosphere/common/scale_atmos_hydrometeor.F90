@@ -165,7 +165,7 @@ contains
        DWATR          => CONST_DWATR, &
        DICE           => CONST_DICE,  &
        THERMODYN_TYPE => CONST_THERMODYN_TYPE
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
     !---------------------------------------------------------------------------
@@ -233,7 +233,7 @@ contains
        UNIT, &
        Q0,   &
        ADVC  )
-    use scale_process, only: &
+    use scale_prc, only: &
       PRC_abort
     use scale_tracer, only: &
       TRACER_regist

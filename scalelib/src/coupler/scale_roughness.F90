@@ -102,8 +102,8 @@ module scale_roughness
 contains
   !-----------------------------------------------------------------------------
   subroutine ROUGHNESS_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     NAMELIST / PARAM_ROUGHNESS / &
@@ -127,7 +127,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ROUGHNESS. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ROUGHNESS)
 
@@ -148,7 +148,7 @@ contains
        call ROUGHNESS_const_setup
     case default
        write(*,*) 'xxx Unsupported ROUGHNESS_type. STOP'
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     return
@@ -156,8 +156,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ROUGHNESS_miller92_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     NAMELIST / PARAM_ROUGHNESS_MILLER92 / &
@@ -182,7 +182,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ROUGHNESS_MILLER92. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ROUGHNESS_MILLER92)
 
@@ -191,8 +191,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ROUGHNESS_moon07_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     NAMELIST / PARAM_ROUGHNESS_MOON07 / &
@@ -208,7 +208,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ROUGHNESS_MOON07. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ROUGHNESS_MOON07)
 

@@ -172,8 +172,8 @@ contains
   subroutine CPL_vars_setup
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_landuse, only: &
        LANDUSE_fact_ocean, &
        LANDUSE_fact_land,  &
@@ -200,7 +200,7 @@ contains
     if ( .NOT. OCEAN_sw .AND. checkfact > 0.0_RP ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
        write(*,*)                     'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! Check consistency of LAND_sw and LANDUSE_fact_land
@@ -208,7 +208,7 @@ contains
     if ( .NOT. LAND_sw .AND. checkfact > 0.0_RP ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
        write(*,*)                     'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! Check consistency of URBAN_sw and LANDUSE_fact_urban
@@ -216,7 +216,7 @@ contains
     if ( .NOT. URBAN_sw .AND. checkfact > 0.0_RP ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
        write(*,*)                     'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
 

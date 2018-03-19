@@ -162,7 +162,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine FILE_EXTERNAL_INPUT_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
@@ -263,7 +263,7 @@ contains
        FILE_Open,             &
        FILE_Get_All_DataInfo, &
        FILE_Read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
     use scale_calendar, only: &
@@ -660,7 +660,7 @@ contains
        error         )
     use scale_file, only: &
        FILE_Read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
     character(len=*), intent(in)  :: varname      ! item name
@@ -935,7 +935,7 @@ contains
     use scale_file, only: &
        FILE_Open,           &
        FILE_Get_All_DataInfo
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
     use scale_calendar, only: &

@@ -49,7 +49,7 @@ contains
   !------------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_CP_common_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
 

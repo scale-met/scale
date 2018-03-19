@@ -95,8 +95,8 @@ contains
   subroutine ATMOS_DYN_Tstep_large_fvm_heve_setup( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG, &
        mflx_hi )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_prc_cartesC, only: &
        PRC_HAS_E, &
        PRC_HAS_W, &

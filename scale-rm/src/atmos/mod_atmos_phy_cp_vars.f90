@@ -145,7 +145,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_CP_vars_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF

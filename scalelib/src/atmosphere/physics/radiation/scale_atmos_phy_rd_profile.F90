@@ -131,7 +131,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_RD_PROFILE_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
 
@@ -197,7 +197,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup CIRA86 climatological data (temperature, pressure)
   subroutine PROFILE_setup_CIRA86
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        CONST_D2R
@@ -368,7 +368,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup MIPAS2001 climatological data (gas)
   subroutine PROFILE_setup_MIPAS2001
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        CONST_D2R
@@ -1218,7 +1218,7 @@ contains
        temph,        &
        gas,          &
        cfc           )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        Mdry => CONST_Mdry, &

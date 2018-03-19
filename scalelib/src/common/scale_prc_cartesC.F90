@@ -65,8 +65,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup Processor topology
   subroutine PRC_CARTESC_setup
-    use scale_process, only: &
-       PRC_MPIstop,              &
+    use scale_prc, only: &
+       PRC_abort,              &
        PRC_masterrank,           &
        PRC_mpi_alive,            &
        PRC_ABORT_COMM_WORLD,     &
@@ -137,7 +137,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_PRC_CARTESC. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_PRC_CARTESC)
 
@@ -147,12 +147,12 @@ contains
 
     if ( PRC_NUM_X*PRC_NUM_Y /= PRC_nprocs ) then
        write(*,*) 'xxx total number of node does not match that requested. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( mod(PRC_nprocs,PRC_NUM_X) /= 0 ) then
        write(*,*) 'xxx number of requested node cannot devide to 2D. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! set communication topology

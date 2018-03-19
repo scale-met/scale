@@ -202,8 +202,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_BOUNDARY_setup( QA_MP_in, QS_MP_in, QE_MP_in )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        CONST_UNDEF
     use scale_time, only: &
@@ -278,7 +278,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_BOUNDARY. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_BOUNDARY)
 
@@ -360,7 +360,7 @@ contains
           get_boundary => get_boundary_lerp_midpoint
        case default
           write(*,*) 'xxx Wrong parameter in ATMOS_BOUNDARY_interp_TYPE. Check!'
-          call PRC_MPIstop
+          call PRC_abort
        end select
 
        allocate( ATMOS_BOUNDARY_ref_DENS(KA,IA,JA,ref_size) )
@@ -384,7 +384,7 @@ contains
              call ATMOS_BOUNDARY_initialize_file
           else
              write(*,*) 'xxx You need specify ATMOS_BOUNDARY_IN_BASENAME'
-             call PRC_MPIstop
+             call PRC_abort
           endif
        endif
 
@@ -416,14 +416,14 @@ contains
           call ATMOS_BOUNDARY_read
        else
           write(*,*) 'xxx You need specify ATMOS_BOUNDARY_IN_BASENAME'
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        ATMOS_BOUNDARY_UPDATE_FLAG = .false.
 
     else
        write(*,*) 'xxx unsupported ATMOS_BOUNDARY_TYPE. Check!', trim(ATMOS_BOUNDARY_TYPE)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( USE_NESTING ) ATMOS_BOUNDARY_UPDATE_FLAG = .true.
@@ -1008,8 +1008,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Read boundary data
   subroutine ATMOS_BOUNDARY_read
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_file_cartesC, only: &
        FILE_CARTESC_open, &
        FILE_CARTESC_check_coordinates, &
@@ -1266,8 +1266,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Resume boundary value for real case experiment
   subroutine ATMOS_BOUNDARY_resume_file
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_time, only: &
        TIME_NOWDATE,      &
        TIME_DTSEC
@@ -1299,12 +1299,12 @@ contains
 
     if ( ATMOS_BOUNDARY_UPDATE_DT <= 0.0_DP ) then
        write(*,*) 'xxx You need specify ATMOS_BOUNDARY_UPDATE_DT as larger than 0.0'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     UPDATE_NSTEP = nint( ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC )
     if ( abs(UPDATE_NSTEP * TIME_DTSEC - ATMOS_BOUNDARY_UPDATE_DT) > 1E-10_DP ) then
        write(*,*) 'xxx ATMOS_BOUNDARY_UPDATE_DT is not multiple of DT'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     !--- recalculate time of the run [no offset]
@@ -1411,8 +1411,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Initialize boundary value for real case experiment [online daughter]
   subroutine ATMOS_BOUNDARY_initialize_online
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_comm_cartesC_nest, only: &
        COMM_CARTESC_NEST_recvwait_issue, &
        ONLINE_USE_VELZ,          &
@@ -1429,7 +1429,7 @@ contains
        write(*,*) 'xxx ERROR: NEST_BND_QA exceeds BND_QA [initialize/ATMOS_BOUNDARY]'
        write(*,*) 'xxx check consistency between'
        write(*,*) '    ONLINE_BOUNDARY_USE_QHYD and ATMOS_BOUNDARY_USE_QHYD.'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     call COMM_CARTESC_NEST_recvwait_issue( handle, NESTQA )
@@ -1440,8 +1440,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Resume boundary value for real case experiment [online daughter]
   subroutine ATMOS_BOUNDARY_resume_online
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_time, only: &
        TIME_DTSEC,        &
        TIME_NSTEP
@@ -1519,7 +1519,7 @@ contains
     UPDATE_NSTEP = nint( ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC )
     if ( UPDATE_NSTEP * PARENT_NSTEP(handle) /= TIME_NSTEP ) then
        write(*,*) 'xxx NSTEP is not multiple of PARENT_NSTEP'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     now_step = 0 ! should be set as zero in initialize process
@@ -1590,8 +1590,8 @@ contains
   !> Update boundary value with a constant time boundary
   subroutine ATMOS_BOUNDARY_update( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_prc_cartesC, only: &
        PRC_HAS_W,   &
        PRC_HAS_E,   &
@@ -1943,7 +1943,7 @@ contains
        ! do nothing
     else
        write(*,*) 'xxx [BUG] invalid path'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     call history_bnd( ATMOS_BOUNDARY_DENS, &
@@ -2123,7 +2123,7 @@ contains
        PARENT_IA,                &
        PARENT_JA,                &
        NESTQA => COMM_CARTESC_NEST_BND_QA
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
 

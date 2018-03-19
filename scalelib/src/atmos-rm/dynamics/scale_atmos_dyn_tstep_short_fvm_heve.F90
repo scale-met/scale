@@ -23,7 +23,7 @@ module scale_atmos_dyn_tstep_short_fvm_heve
   use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
-  use scale_process
+  use scale_prc
 #if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
@@ -72,8 +72,8 @@ contains
        VAR_NAME,       &
        VAR_DESC,       &
        VAR_UNIT        )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
@@ -85,7 +85,7 @@ contains
 
     if ( ATMOS_DYN_TYPE /= 'FVM-HEVE' .AND. ATMOS_DYN_TYPE /= 'HEVE' ) then
        write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HEVE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     VA_out      = VA_FVM_HEVE

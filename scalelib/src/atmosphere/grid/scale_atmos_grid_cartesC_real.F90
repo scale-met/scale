@@ -103,7 +103,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_GRID_CARTESC_REAL_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_nprocs,  &
        PRC_abort
     use scale_atmos_grid_cartesC, only: &
@@ -234,8 +234,8 @@ contains
   subroutine ATMOS_GRID_CARTESC_REAL_calc_latlon( &
        catalogue_fname, &
        catalogue_output )
-    use scale_process, only: &
-       PRC_MPIstop, &
+    use scale_prc, only: &
+       PRC_abort, &
        PRC_nprocs,  &
        PRC_IsMaster
     use scale_const, only: &
@@ -316,7 +316,7 @@ contains
           write(*,*) 'xxx Invalid grid distance in lat-lon! i,j=', i,j
           write(*,*) 'xxx Lon(i-1),Lon(i),dlon=', ATMOS_GRID_CARTESC_REAL_LONUY(i-1,j)/D2R,ATMOS_GRID_CARTESC_REAL_LONUY(i,j)/D2R,ATMOS_GRID_CARTESC_REAL_DLON(i,j)/D2R
           write(*,*) 'xxx Lat(j-1),Lat(j),dlat=', ATMOS_GRID_CARTESC_REAL_LATXV(i,j-1)/D2R,ATMOS_GRID_CARTESC_REAL_LATXV(i,j)/D2R,ATMOS_GRID_CARTESC_REAL_DLAT(i,j)/D2R
-          call PRC_MPIstop
+          call PRC_abort
        endif
     enddo
     enddo
@@ -356,7 +356,7 @@ contains
 
           if ( ierr /= 0 ) then
              write(*,*) 'xxx [ATMOS_GRID_CARTESC_REAL_calc_latlon] cannot create latlon-catalogue file!'
-             call PRC_MPIstop
+             call PRC_abort
           endif
 
           do i = 1, PRC_nprocs ! for offline nesting

@@ -59,14 +59,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_Tstep_tracer_fvm_heve_setup( type )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
     character(len=*), intent(in) :: type
 
     if ( type /= 'FVM-HEVE' ) then
        write(*,*) 'xxx Tstep_tracer_type is not "FVM-HEVE"!'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     return

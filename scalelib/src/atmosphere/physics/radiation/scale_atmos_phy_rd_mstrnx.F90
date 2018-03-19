@@ -227,7 +227,7 @@ contains
   subroutine ATMOS_PHY_RD_mstrnx_setup( &
        KA, KS, KE, &
        CZ, FZ )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_time, only: &
        TIME_NOWDATE
@@ -1157,8 +1157,8 @@ contains
        rflux_sfc_dn, &
        tauCLD_067u,  &
        emisCLD_105u  )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        GRAV => CONST_GRAV, &
        Pstd => CONST_Pstd, &
@@ -1385,7 +1385,7 @@ contains
 !             write operation prevents optimization (auto parallelization)
 !             if ( indexR(k,i,j,iaero) == -1 ) then
 !                write(*,*) 'xxx invalid index', k,i,j, iaero, aerosol_radi(k,i,j,iaero)
-!                call PRC_MPIstop
+!                call PRC_abort
 !             end if
           endif
        enddo

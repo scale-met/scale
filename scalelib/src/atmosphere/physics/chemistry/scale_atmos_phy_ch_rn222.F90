@@ -62,7 +62,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_CH_rn222_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        CONST_UNDEF

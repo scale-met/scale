@@ -12,7 +12,8 @@ module scale
   !
   use scale_precision
   use scale_stdio
-  use scale_process
+  use scale_prc, only: &
+     PRC_abort
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -57,7 +58,7 @@ contains
   !> Initialization
   subroutine SCALE_init( &
        app_name )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_MPIstart, &
        PRC_SINGLECOM_setup, &
        PRC_ERRHANDLER_setup
@@ -117,7 +118,7 @@ contains
   subroutine SCALE_finalize
     use scale_file, only: &
        FILE_Close_All
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_MPIfinish
     use scale_prof, only: &
        PROF_rapend, &

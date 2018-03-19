@@ -104,8 +104,8 @@ contains
        skip_x,  &
        skip_y,  &
        skip_z   )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        D2R => CONST_D2R
     implicit none
@@ -155,7 +155,7 @@ contains
           write(*,*) 'xxx -- VERTICAL direction over the limit'
           write(*,*) 'xxx -- reference max: ', max_ref
           write(*,*) 'xxx --     local max: ', max_loc
-          call PRC_MPIstop
+          call PRC_abort
        endif
     endif
 
@@ -174,7 +174,7 @@ contains
           write(*,*) 'xxx -- reference min: ', min_ref
           write(*,*) 'xxx --     local max: ', max_loc
           write(*,*) 'xxx --     local min: ', min_loc
-          call PRC_MPIstop
+          call PRC_abort
        endif
     endif
 
@@ -191,7 +191,7 @@ contains
           write(*,*) 'xxx -- reference min: ', min_ref
           write(*,*) 'xxx --     local max: ', max_loc
           write(*,*) 'xxx --     local min: ', min_loc
-          call PRC_MPIstop
+          call PRC_abort
        endif
     endif
 
@@ -213,8 +213,8 @@ contains
        idx_i,   &
        idx_j,   &
        hfact    )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer,  intent(in)  :: npoints                ! number of interpolation point for horizontal
@@ -298,8 +298,8 @@ contains
        hfact,   &
        idx_k,   &
        vfact    )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer,  intent(in)  :: npoints                       ! number of interpolation point for horizontal
@@ -729,8 +729,8 @@ contains
        hgt,                    &
        idx_k,                  &
        vfact                   )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer,  intent(in)    :: KA_ref, KS_ref, KE_ref        ! number of z-direction    (reference)
@@ -778,7 +778,7 @@ contains
        if ( idx_k(k,1) < 0 ) then
           write(*,*) 'xxx [INTRP_search_vert] data for interpolation was not found.'
           write(*,*) 'xxx k=', k, ', hgt(k)=', hgt(k), ', hgt_ref(:)=', hgt_ref(:)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
     enddo ! k-loop

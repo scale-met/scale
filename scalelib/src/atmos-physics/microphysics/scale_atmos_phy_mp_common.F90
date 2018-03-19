@@ -63,7 +63,7 @@ contains
        KA, KS, KE, IA, IS, IE, JA, JS, JE, QHA, &
        limit_negative, &
        DENS, QV, QTRC )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
     implicit none
@@ -162,9 +162,9 @@ contains
        QTRC,          &
        I_QV,          &
        limit_negative )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank, &
-       PRC_MPIstop
+       PRC_abort
     use scale_atmos_hydrometeor, only: &
        QHS, &
        QHE
@@ -244,7 +244,7 @@ contains
        enddo
        if( IO_L ) write(IO_FID_LOG,*) 'xxx criteria: total negative hydrometeor < ', abs(limit_negative)
 
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     call PROF_rapend('MP_filter', 3)
@@ -263,7 +263,7 @@ contains
          QV, QC, QI,   &
          CPtot, CVtot, &
          RHOE_d        )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &

@@ -179,7 +179,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Tracer setup
   subroutine ATMOS_PHY_AE_kajino13_tracer_setup( QA_AE )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
 
     integer, intent(out) :: QA_AE
@@ -353,7 +353,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_AE_kajino13_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
 

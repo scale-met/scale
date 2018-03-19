@@ -92,8 +92,8 @@ contains
         Z0H,        &
         Z0E,        &
         dt_DP       )
-    use scale_process, only: &
-      PRC_MPIstop
+    use scale_prc, only: &
+      PRC_abort
     use scale_const, only: &
       PRE00 => CONST_PRE00, &
       Rdry  => CONST_Rdry,  &

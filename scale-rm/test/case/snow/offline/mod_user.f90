@@ -75,8 +75,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_atmos_admin, only: &
        ATMOS_do,        &
        ATMOS_sw_dyn,    &
@@ -110,7 +110,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
@@ -136,12 +136,12 @@ contains
 
     if ( INPUT_UPDATE_DT <= 0.0_DP ) then
        write(*,*) 'xxx You need specify value larger than 0.0 to INPUT_UPDATE_DT'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     INPUT_UPDATE_NSTEP = nint( INPUT_UPDATE_DT / dt_LND )
     if ( abs(INPUT_UPDATE_NSTEP * dt_LND - INPUT_UPDATE_DT) > 1E-10_DP ) then
        write(*,*) 'xxx INPUT_UPDATE_DT is not multiple of LAND DT'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     return
@@ -170,8 +170,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Step
   subroutine USER_step
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        I_LW  => CONST_I_LW,  &
        I_SW  => CONST_I_SW,  &
@@ -243,7 +243,7 @@ contains
        endif
        if( max(stepnum1,stepnum2) > data_length )then
           write(*,*) "xxx Number of input data is not enough: ",data_length,"<",max(stepnum1,stepnum2)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        TMPA(:,:)         = ( (1.0_RP-fact) * TAIN(stepnum1)  &

@@ -18,9 +18,9 @@ module mod_realinput_grads
   use scale_precision
   use scale_stdio
   use scale_tracer
-  use scale_process, only: &
+  use scale_prc, only: &
      myrank => PRC_myrank,  &
-     PRC_MPIstop
+     PRC_abort
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -213,14 +213,14 @@ contains
 
     if( ierr > 0 ) then
        write(*,*) 'xxx [realinput_grads] Not appropriate names in namelist PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS)
 
 
     if ( len_trim(basename) == 0 ) then
        write(*,*) 'xxx [realinput_grads] "BASENAME_ORG" is not specified in "PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_ATMOS"!', trim(basename)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     !--- read namelist
@@ -233,13 +233,13 @@ contains
          iostat = ierr            )
     if ( ierr /= 0 ) then
        write(*,*) 'xxx [realinput_grads] Input file is not found! ', trim(basename)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     read(io_fid_grads_nml,nml=nml_grads_grid,iostat=ierr)
     if( ierr /= 0 ) then !--- missing or fatal error
        write(*,*) 'xxx [realinput_grads] Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=nml_grads_grid)
 
@@ -290,7 +290,7 @@ contains
           if (.not. data_available(Ia_qv,1)) then
              if (.not.data_available(Ia_rh,1)) then
                 write(*,*) 'xxx [realinput_grads] Not found in grads namelist! : QV and RH'
-                call PRC_MPIstop
+                call PRC_abort
              else ! will read RH
                 cycle
              endif
@@ -300,13 +300,13 @@ contains
              if(data_available(Ia_rh,1)) then
                 if ((.not. data_available(Ia_t,1)).or.(.not. data_available(Ia_p,1))) then
                    write(*,*) 'xxx [realinput_grads] Temperature and pressure are required to convert from RH to QV ! '
-                   call PRC_MPIstop
+                   call PRC_abort
                 else
                    cycle ! read RH and estimate QV
                 endif
              else
                 write(*,*) 'xxx [realinput_grads] Not found in grads namelist! : QV and RH'
-                call PRC_MPIstop
+                call PRC_abort
              endif
           endif
        case('RH2')
@@ -328,7 +328,7 @@ contains
        case default ! lon, lat, plev, U, V, T, HGT
           if ( .not. data_available(ielem,1) ) then
              write(*,*) 'xxx [realinput_grads] Not found in grads namelist! : ',trim(item_list_atom(ielem))
-             call PRC_MPIstop
+             call PRC_abort
           endif
        end select
 
@@ -438,7 +438,7 @@ contains
 
        if ( dims(1) < grads_knum(ielem,1) ) then
           write(*,*) 'xxx "knum" must be less than or equal to outer_nz. knum:',knum,'> outer_nz:',dims(1),trim(item)
-          call PRC_MPIstop
+          call PRC_abort
        else if ( grads_knum(ielem,1) > 0 )then
           knum = grads_knum(ielem,1)  ! not missing
        else
@@ -452,19 +452,19 @@ contains
           if( (abs(swpoint-large_number_one)<EPS).or.(abs(dd-large_number_one)<EPS) )then
              write(*,*) 'xxx "swpoint" is required in grads namelist! ',swpoint
              write(*,*) 'xxx "dd"      is required in grads namelist! ',dd
-             call PRC_MPIstop
+             call PRC_abort
           endif
        case("levels")
           if ( lnum < 0 )then
              write(*,*) 'xxx "lnum" is required in grads namelist for levels data! '
-             call PRC_MPIstop
+             call PRC_abort
           endif
           do k=1, lnum
              lvars(k)=grads_lvars(k,ielem,1)
           enddo
           if(abs(lvars(1)-large_number_one)<EPS)then
              write(*,*) 'xxx "lvars" must be specified in grads namelist for levels data! '
-             call PRC_MPIstop
+             call PRC_abort
           endif
        case("map")
           startrec = grads_startrec(ielem,1)
@@ -474,7 +474,7 @@ contains
           if( (startrec<0).or.(totalrec<0) )then
              write(*,*) 'xxx "startrec" is required in grads namelist! ',startrec
              write(*,*) 'xxx "totalrec" is required in grads namelist! ',totalrec
-             call PRC_MPIstop
+             call PRC_abort
           endif
           ! get file_id
           if(io_fid_grads_data < 0)then
@@ -483,7 +483,7 @@ contains
           gfile=trim(fname)//trim(basename_num)//'.grd'
           if( len_trim(fname)==0 )then
              write(*,*) 'xxx "fname" is required in grads namelist for map data! ',trim(fname)
-             call PRC_MPIstop
+             call PRC_abort
           endif
        end select
 
@@ -514,13 +514,13 @@ contains
        case("plev")
           if(dims(1)/=knum)then
              write(*,*) 'xxx "knum" must be equal to outer_nz for plev. knum:',knum,'> outer_nz:',dims(1)
-             call PRC_MPIstop
+             call PRC_abort
           endif
           if ( trim(dtype) == "levels" ) then
              pressure_coordinates = .true. ! use pressure coordinate in the input data
              if(dims(1)/=lnum)then
                 write(*,*) 'xxx lnum must be same as the outer_nz for plev! ',dims(1),lnum
-                call PRC_MPIstop
+                call PRC_abort
              endif
              do j = 1, dims(3)
              do i = 1, dims(2)
@@ -640,12 +640,12 @@ contains
        case('HGT')
           if(dims(1)/=knum)then
              write(*,*) 'xxx The number of levels for HGT must be same as plevs! knum:',knum,'> outer_nz:',dims(1)
-             call PRC_MPIstop
+             call PRC_abort
           endif
           if ( trim(dtype) == "levels" ) then
              if(dims(1)/=lnum)then
                 write(*,*) 'xxx lnum must be same as the outer_nz for HGT! ',dims(1),lnum
-                call PRC_MPIstop
+                call PRC_abort
              endif
              do j = 1, dims(3)
              do i = 1, dims(2)
@@ -699,7 +699,7 @@ contains
                    ! do nothing
                 case default
                    write(*,*) 'xxx upper_qv_type in PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS is invalid! ', upper_qv_type
-                   call PRC_MPIstop
+                   call PRC_abort
                 end select
              endif
           endif
@@ -824,7 +824,7 @@ contains
                    ! do nothing
                 case default
                    write(*,*) 'xxx upper_qv_type in PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS is invalid! ', upper_qv_type
-                   call PRC_MPIstop
+                   call PRC_abort
                 end select
              endif
           endif
@@ -1128,7 +1128,7 @@ contains
 
     if ( len_trim(basename) == 0 ) then
        write(*,*) 'xxx [realinput_grads] "BASEMAAME" is not specified in "PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_ATOMS"!', trim(basename)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     !--- read namelist
@@ -1141,13 +1141,13 @@ contains
          iostat = ierr            )
     if ( ierr /= 0 ) then
        write(*,*) 'xxx [realinput_grads] Input file is not found! ', trim(basename)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     read(io_fid_grads_nml,nml=nml_grads_grid,iostat=ierr)
     if( ierr /= 0 ) then !--- missing or fatal error
        write(*,*) 'xxx [realinput_grads] Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=nml_grads_grid)
 
@@ -1206,7 +1206,7 @@ contains
           if ( use_file_landwater ) then
              if (.not. data_available(Il_smoisvc,2) .and. .not. data_available(Il_smoisds,2)) then
                 write(*,*) 'xxx [realinput_grads] Not found in grads namelist! : ',trim(item_list_land(ielem))
-                call PRC_MPIstop
+                call PRC_abort
              end if
              use_waterratio =  data_available(Il_smoisds,2)
           else
@@ -1215,7 +1215,7 @@ contains
        case default ! llev, SKINT, STEMP
           if ( .not. data_available(ielem,2) ) then
              write(*,*) 'xxx [realinput_grads] Not found in grads namelist! : ',trim(item_list_land(ielem))
-             call PRC_MPIstop
+             call PRC_abort
           endif
        end select
 
@@ -1296,19 +1296,19 @@ contains
           if( (abs(swpoint-large_number_one)<EPS).or.(abs(dd-large_number_one)<EPS) )then
              write(*,*) 'xxx "swpoint" is required in grads namelist! ',swpoint
              write(*,*) 'xxx "dd"      is required in grads namelist! ',dd
-             call PRC_MPIstop
+             call PRC_abort
           endif
        case("levels")
           if ( lnum < 0 )then
              write(*,*) 'xxx "lnum" in grads namelist is required for levels data! '
-             call PRC_MPIstop
+             call PRC_abort
           endif
           do k=1, lnum
              lvars(k)=grads_lvars(k,ielem,2)
           enddo
           if(abs(lvars(1)-large_number_one)<EPS)then
              write(*,*) 'xxx "lvars" must be specified in grads namelist for levels data!',(lvars(k),k=1,lnum)
-             call PRC_MPIstop
+             call PRC_abort
           endif
        case("map")
           startrec = grads_startrec(ielem,2)
@@ -1318,7 +1318,7 @@ contains
           if( (startrec<0).or.(totalrec<0) )then
              write(*,*) 'xxx "startrec" is required in grads namelist! ',startrec
              write(*,*) 'xxx "totalrec" is required in grads namelist! ',totalrec
-             call PRC_MPIstop
+             call PRC_abort
           endif
           ! get file_io
           if(io_fid_grads_data < 0)then
@@ -1327,7 +1327,7 @@ contains
           gfile=trim(fname)//trim(basename_num)//'.grd'
           if( len_trim(fname)==0 )then
              write(*,*) 'xxx "fname" is required in grads namelist for map data! ',trim(fname)
-             call PRC_MPIstop
+             call PRC_abort
           endif
        end select
 
@@ -1348,7 +1348,7 @@ contains
                 write(*,*) 'xxx namelist of "lon_sfc" is not found in grads namelist!'
                 write(*,*) 'xxx dimension is different: outer_nx and outer_nx_sfc! ', outer_nx, ldims(2)
                 write(*,*) '                          : outer_ny and outer_ny_sfc! ', outer_ny, ldims(3)
-                call PRC_MPIstop
+                call PRC_abort
              end if
              if ( trim(dtype) == "linear" ) then
                 do j = 1, ldims(3)
@@ -1379,7 +1379,7 @@ contains
                 write(*,*) 'xxx namelist of "lat_sfc" is not found in grads namelist!'
                 write(*,*) 'xxx dimension is different: outer_nx and outer_nx_sfc! ', outer_nx, ldims(2)
                 write(*,*) '                          : outer_ny and outer_ny_sfc! ', outer_nx, ldims(3)
-                call PRC_MPIstop
+                call PRC_abort
              end if
              if ( trim(dtype) == "linear" ) then
                 do j = 1, ldims(3)
@@ -1407,12 +1407,12 @@ contains
        case("llev")
           if(ldims(1)/=knum)then
              write(*,*) 'xxx "knum" must be equal to outer_nl for llev. knum:',knum,'> outer_nl:',ldims(1)
-             call PRC_MPIstop
+             call PRC_abort
           endif
           if ( trim(dtype) == "levels" ) then
              if(ldims(1)/=lnum)then
                 write(*,*) 'xxx lnum must be same as the outer_nl for llev! ',ldims(1),lnum
-                call PRC_MPIstop
+                call PRC_abort
              endif
              do k = 1, ldims(1)
                 lz_org(k) = real(lvars(k), kind=RP)
@@ -1430,7 +1430,7 @@ contains
        case('STEMP')
           if(ldims(1)/=knum)then
              write(*,*) 'xxx The number of levels for STEMP must be same as llevs! ',ldims(1),knum
-             call PRC_MPIstop
+             call PRC_abort
           endif
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,ldims(2),ldims(3),ldims(1),nt,item,startrec,totalrec,yrev,gland3D)
@@ -1450,7 +1450,7 @@ contains
           if ( use_file_landwater ) then
              if(ldims(1)/=knum)then
                 write(*,*) 'xxx The number of levels for SMOISVC must be same as llevs! ',ldims(1),knum
-                call PRC_MPIstop
+                call PRC_abort
              endif
              if ( trim(dtype) == "map" ) then
                 call read_grads_file_3d(io_fid_grads_data,gfile,ldims(2),ldims(3),ldims(1),nt,item,startrec,totalrec,yrev,gland3D)
@@ -1471,7 +1471,7 @@ contains
           if ( use_file_landwater ) then
              if(ldims(1)/=knum)then
                 write(*,*) 'xxx The number of levels for SMOISDS must be same as llevs! ',ldims(1),knum
-                call PRC_MPIstop
+                call PRC_abort
              endif
              if ( trim(dtype) == "map" ) then
                 call read_grads_file_3d(io_fid_grads_data,gfile,ldims(2),ldims(3),ldims(1),nt,item,startrec,totalrec,yrev,gland3D)
@@ -1594,13 +1594,13 @@ contains
          iostat = ierr                           )
     if ( ierr /= 0 ) then
        write(*,*) 'xxx [realinput_grads] Input file is not found! ', trim(grads_ctl)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     read(io_fid_grads_nml,nml=nml_grads_grid,iostat=ierr)
     if( ierr /= 0 ) then !--- missing or fatal error
        write(*,*) 'xxx [realinput_grads] Not appropriate names in nml_grads_grid in ', trim(grads_ctl),'. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=nml_grads_grid)
 
@@ -1665,7 +1665,7 @@ contains
        case('SST')
           if (.not. data_available(Io_sst,3) .and. .not. data_available(Io_skint,3) ) then
              write(*,*) 'xxx [realinput_grads] SST and SKINT are found in grads namelist!'
-             call PRC_MPIstop
+             call PRC_abort
           endif
           if (.not. data_available(Io_sst,3)) then
              if( IO_L ) write(IO_FID_LOG,*) 'warning: SST is found in grads namelist. SKINT is used in place of SST.'
@@ -1677,7 +1677,7 @@ contains
           if ( .not. data_available(ielem,3) ) then
              write(*,*) 'xxx [realinput_grads/ParentOceanSetupGrADS] Not found in grads namelist! : ', &
                         trim(item_list_ocean(ielem))
-             call PRC_MPIstop
+             call PRC_abort
           endif
        end select
 
@@ -1752,11 +1752,11 @@ contains
           if( (abs(swpoint-large_number_one)<EPS).or.(abs(dd-large_number_one)<EPS) )then
              write(*,*) 'xxx "swpoint" is required in grads namelist! ',swpoint
              write(*,*) 'xxx "dd"      is required in grads namelist! ',dd
-             call PRC_MPIstop
+             call PRC_abort
           endif
        case("levels")
           write(*,*) 'xxx "lnum" in grads namelist is invalid for ocean data'
-          call PRC_MPIstop
+          call PRC_abort
        case("map")
           startrec = grads_startrec(ielem,3)
           totalrec = grads_totalrec(ielem,3)
@@ -1765,7 +1765,7 @@ contains
           if( (startrec<0).or.(totalrec<0) )then
              write(*,*) 'xxx "startrec" is required in grads namelist! ',startrec
              write(*,*) 'xxx "totalrec" is required in grads namelist! ',totalrec
-             call PRC_MPIstop
+             call PRC_abort
           endif
           ! get file_io
           if(io_fid_grads_data < 0)then
@@ -1774,7 +1774,7 @@ contains
           gfile=trim(fname)//trim(basename_num)//'.grd'
           if( len_trim(fname)==0 )then
              write(*,*) 'xxx "fname" is required in grads namelist for map data! ',trim(fname)
-             call PRC_MPIstop
+             call PRC_abort
           endif
        end select
 
@@ -1806,7 +1806,7 @@ contains
                 write(*,*) 'xxx namelist of "lon_sst" is not found in grads namelist!'
                 write(*,*) 'xxx dimension is different: outer_nx and outer_nx_sst! ', outer_nx, odims(1)
                 write(*,*) '                          : outer_ny and outer_ny_sst! ', outer_ny, odims(2)
-                call PRC_MPIstop
+                call PRC_abort
              end if
              if ( trim(dtype) == "linear" ) then
                 do j = 1, odims(2)
@@ -1825,7 +1825,7 @@ contains
                 write(*,*) 'xxx namelist of "lon_sst" is not found in grads namelist!'
                 write(*,*) 'xxx dimension is different: outer_nx_sfc and outer_nx_sst! ', outer_nx_sfc, odims(1)
                 write(*,*) '                          : outer_ny_sfc and outer_ny_sst! ', outer_ny_sfc, odims(2)
-                call PRC_MPIstop
+                call PRC_abort
              end if
              if ( trim(dtype) == "linear" ) then
                 do j = 1, odims(2)
@@ -1856,7 +1856,7 @@ contains
                 write(*,*) 'xxx namelist of "lat_sst" is not found in grads namelist!'
                 write(*,*) 'xxx dimension is different: outer_nx and outer_nx_sst! ', outer_nx, odims(1)
                 write(*,*) '                          : outer_ny and outer_ny_sst! ', outer_ny, odims(2)
-                call PRC_MPIstop
+                call PRC_abort
              end if
              if ( trim(dtype) == "linear" ) then
                 do j = 1, odims(2)
@@ -1875,7 +1875,7 @@ contains
                 write(*,*) 'xxx namelist of "lat_sst" is not found in grads namelist!'
                 write(*,*) 'xxx dimension is different: outer_nx_sfc and outer_nx_sst! ', outer_nx_sfc, odims(1)
                 write(*,*) '                          : outer_ny_sfc and outer_ny_sst! ', outer_ny_sfc, odims(2)
-                call PRC_MPIstop
+                call PRC_abort
              end if
              if ( trim(dtype) == "linear" ) then
                 do j = 1, odims(2)
@@ -1905,7 +1905,7 @@ contains
              if ( odims(1).ne.outer_nx_sfc .or. odims(2).ne.outer_ny_sfc ) then
                 write(*,*) 'xxx dimsntion is different: outer_nx_sst/outer_nx_sfc and outer_nx_sst! ', odims(1), outer_nx_sfc
                 write(*,*) '                          : outer_ny_sst/outer_ny_sfc and outer_ny_sst! ', odims(2), outer_ny_sfc
-                call PRC_MPIstop
+                call PRC_abort
              end if
              if ( trim(dtype) == "map" ) then
                 call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,nt,item,startrec,totalrec,yrev,gsst2D)
@@ -2021,7 +2021,7 @@ contains
           if( ierr > 0 )then
              write(*,*) 'xxx [realinput_grads/read_namelist] Not appropriate names in grdvar in ', &
                         trim(basename),'. Check!'
-             call PRC_MPIstop
+             call PRC_abort
           else if( ierr < 0 )then
              exit
           endif
@@ -2029,13 +2029,13 @@ contains
        enddo
     else
        write(*,*) 'xxx [realinput_grads/read_namelist] namelist file is not open! ', trim(basename)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( grads_vars_nmax > grads_vars_limit ) then
        write(*,*) 'xxx [realinput_grads/read_namelist] The number of grads vars exceeds grads_vars_limit! ', &
                   grads_vars_nmax, ' > ', grads_vars_limit
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! check data availability
@@ -2110,7 +2110,7 @@ contains
          iostat = ierr             )
     if ( ierr /= 0 ) then
        write(*,*) 'xxx grads file does not found! ', trim(filename)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -2150,7 +2150,7 @@ contains
     if ( ierr /= 0 ) then
        write(*,*) 'xxx grads data is not found! ',trim(item),it
        write(*,*) 'xxx namelist or grads data might be wrong.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if( trim(yrev) == "on" )then
@@ -2201,7 +2201,7 @@ contains
        read(io_fid, rec=irec, iostat=ierr) gdata(:,:,k)
        if ( ierr /= 0 ) then
           write(*,*) 'xxx grads data does not found! ',trim(item),', k=',k,', it=',it,' in ', trim(gfile)
-          call PRC_MPIstop
+          call PRC_abort
        endif
     enddo
 
@@ -2232,7 +2232,7 @@ contains
     close(io_fid, iostat=ierr)
     if ( ierr /= 0 ) then
        write(*,*) 'xxx grads file was not closed peacefully! ',trim(filename)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return

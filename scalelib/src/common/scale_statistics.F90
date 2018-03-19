@@ -17,7 +17,7 @@ module scale_statistics
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_LOCAL_COMM_WORLD
   !-----------------------------------------------------------------------------
   implicit none
@@ -60,7 +60,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine STATISTICS_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
 
@@ -105,7 +105,7 @@ contains
        area, total,  &
        log_suppress, &
        mean, sum     )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
     use scale_comm, only: &
@@ -196,7 +196,7 @@ contains
        vol, total,   &
        log_suppress, &
        mean, sum     )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
     use scale_comm, only: &
@@ -288,7 +288,7 @@ contains
        KA, KS, KE, IA, IS, IE, JA, JS, JE, VA, &
        varname, var, &
        local         )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_nprocs,   &
        PRC_myrank
     use scale_const, only: &
@@ -427,7 +427,7 @@ contains
        IA, IS, IE, JA, JS, JE, VA, &
        varname, var, &
        local         )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_nprocs,   &
        PRC_myrank
     use scale_const, only: &

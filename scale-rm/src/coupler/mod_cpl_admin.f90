@@ -44,8 +44,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CPL_ADMIN_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_atmos_admin, only: &
        ATMOS_PHY_SF_TYPE, &
        ATMOS_sw_phy_sf
@@ -88,7 +88,7 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '*** Surface Flux : ', trim(ATMOS_PHY_SF_TYPE)
           if( IO_L ) write(IO_FID_LOG,*) 'xxx Setting conflicts between coupler and surface flux! STOP.'
           write(*,*)                     'xxx Setting conflicts between coupler and surface flux! STOP.'
-          call PRC_MPIstop
+          call PRC_abort
        endif
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Coupler : OFF'

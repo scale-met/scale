@@ -181,8 +181,8 @@ contains
        Z0M, &
        Z0H, &
        Z0E  )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_urban_phy_slc, only: &
        URBAN_PHY_SLC_setup, &
        URBAN_PHY_SLC
@@ -201,7 +201,7 @@ contains
        URBAN_PHY      => URBAN_PHY_SLC
     case default
        write(*,*) 'xxx invalid Urban type(', trim(URBAN_TYPE), '). CHECK!'
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     return

@@ -48,7 +48,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Config
   subroutine ATMOS_PHY_BL_driver_tracer_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_tracer, only: &
        TRACER_regist

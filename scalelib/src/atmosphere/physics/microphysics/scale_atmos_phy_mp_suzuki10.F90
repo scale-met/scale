@@ -282,8 +282,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Config
   subroutine ATMOS_PHY_MP_suzuki10_tracer_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     NAMELIST / PARAM_BIN / &
@@ -308,8 +308,8 @@ contains
     if( ierr < 0 ) then !--- missing
       if( IO_L ) write(IO_FID_LOG,*)  '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-      write(*,*) 'xxx Not appropriate names in namelist PARAM_BIN, Check!'
-      call PRC_MPIstop
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_BIN, Check!'
+       call PRC_abort
     end if
 
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_BIN)
@@ -319,8 +319,8 @@ contains
     elseif( ICEFLG == 1 ) then
        nspc = 7
     else
-       write(*,*) "ICEFLG should be 0 (warm rain) or 1 (mixed rain). Check !!"
-       call PRC_MPIstop
+       write(*,*) "ICEFLG should be 0 (warm rain) or 1 (mixed rain) check!!"
+       call PRC_abort
     endif
 
     ATMOS_PHY_MP_suzuki10_ntracers = 1 + nbin*nspc + nccn  ! number of total tracers
@@ -371,8 +371,8 @@ contains
   !> Setup
   subroutine ATMOS_PHY_MP_suzuki10_setup( &
        KA, IA, JA )
-    use scale_process, only: &
-       PRC_MPIstop,    &
+    use scale_prc, only: &
+       PRC_abort,    &
        PRC_masterrank, &
        PRC_IsMaster
     use scale_const, only: &
@@ -485,13 +485,13 @@ contains
      if( IO_L ) write(IO_FID_LOG,*)  '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
      write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SUZUKI10, Check!'
-     call PRC_MPIstop
+     call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_SUZUKI10)
 
     if ( nspc /= 1 .AND. nspc /= 7 ) then
-       write(*,*) 'xxx nspc should be set as 1 (warm rain) or 7 (mixed phase). Check !!'
-       call PRC_MPIstop
+       write(*,*) 'xxx nspc should be set as 1 (warm rain) or 7 (mixed phase) check!'
+       call PRC_abort
     endif
 
     rhoa = RHO_AERO
@@ -520,8 +520,8 @@ contains
         read( fid_micpara,* ) nnspc, nnbin
 
         if ( nnbin /= nbin ) then
-           write(*,*) 'xxx nbin in inc_tracer and nbin in micpara.dat is different. check!'
-           call PRC_MPIstop
+           write(*,*) 'xxx nbin in namelist and nbin in micpara.dat is different check!'
+           call PRC_abort
         endif
 
         ! grid parameter
@@ -590,7 +590,7 @@ contains
 
         if ( nnbin /= nbin ) then
            write(*,*) 'xxx nbin in inc_tracer and nbin in micpara.dat is different check!'
-           call PRC_MPIstop
+           call PRC_abort
         endif
 
         ! grid parameter
@@ -680,7 +680,7 @@ contains
 
     if ( flg_sf_aero ) then
       write(*,*) "flg_sf_aero=true is not supported stop!! "
-      call PRC_MPIstop
+      call PRC_abort
 !     if ( CZ(KS) >= 10.0_RP ) then
 !          R10M1 = 10.0_RP / CZ(KS) * 0.50_RP ! scale with height
 !          R10M2 = 10.0_RP / CZ(KS) * 0.50_RP ! scale with height
@@ -724,7 +724,7 @@ contains
 
     if ( MP_couple_aerosol .AND. nccn /=0 ) then
       write(*,*) 'xxx nccn should be 0 when MP_couple_aerosol = .true. !! stop'
-      call PRC_MPIstop
+      call PRC_abort
     endif
 
     if ( nccn /= 0 ) then
@@ -4271,9 +4271,9 @@ contains
   ! + Reference Sato et al. (2009) JGR, doi:10.1029/2008JD011247
   subroutine random_setup( mset ) !--- in
     use scale_random, only: &
-         RANDOM_get
-    use scale_process, only: &
-         PRC_MPIstop
+       RANDOM_get
+    use scale_prc, only: &
+       PRC_abort
 
     integer, intent(in) :: mset
 
@@ -4302,7 +4302,7 @@ contains
     a = real( nbin )*real( nbin-1 )*0.50_RP
     if ( a < mbin ) then
        write(*,*) "mbin should be smaller than {nbin}_C_{2}"
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     wgtbin = a/real( mbin )

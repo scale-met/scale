@@ -101,8 +101,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_driver_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_grid_cartesC, only: &
        DOMAIN_CENTER_Y => ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
        CY  => ATMOS_GRID_CARTESC_CY,  &
@@ -175,7 +175,7 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
        elseif( ierr > 0 ) then !--- fatal error
           write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_DYN. Check!'
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_DYN)
 
@@ -183,7 +183,7 @@ contains
 
        if ( ATMOS_DYN_wdamp_layer > KMAX ) then
           write(*,*) 'xxx ATMOS_DYN_wdamp_layer should be less than total number of vertical layer(KA). Check!'
-          call PRC_MPIstop
+          call PRC_abort
        elseif( ATMOS_DYN_wdamp_layer > 0 ) then
           ATMOS_DYN_wdamp_height = FZ(ATMOS_DYN_wdamp_layer+KS-1)
        endif
@@ -192,7 +192,7 @@ contains
           ATMOS_DYN_wdamp_tau = DT * 10.0_RP
        elseif ( ATMOS_DYN_wdamp_tau < DT ) then
           write(*,*) 'xxx ATMOS_DYN_wdamp_tau should be larger than TIME_DT_ATMOS_DYN. Check!'
-          call PRC_MPIstop
+          call PRC_abort
        end if
 
        if ( ATMOS_sw_dyn ) then

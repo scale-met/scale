@@ -82,7 +82,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Config
   subroutine ATMOS_PHY_MP_driver_tracer_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_tracer, only: &
        TRACER_regist
@@ -209,7 +209,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_MP_driver_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_grid_cartesC, only: &
        CDZ => ATMOS_GRID_CARTESC_CDZ
@@ -937,7 +937,7 @@ contains
        QV, QHYD, &
        QTRC,     &
        QNUM      )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        N_HYD

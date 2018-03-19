@@ -523,8 +523,8 @@ contains
   !<
   subroutine ATMOS_PHY_MP_sn14_setup( &
     & KA, IA, JA )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer, intent(in) :: KA
@@ -550,7 +550,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SN14. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_SN14)
 
@@ -1075,8 +1075,8 @@ contains
   ! private
   !-----------------------------------------------------------------------------
   subroutine mp_sn14_init
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_specfunc, only: &
         gammafunc => SF_gamma
     implicit none
@@ -1183,7 +1183,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_init. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_init)
 
@@ -1282,7 +1282,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_particles. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_particles)
 
@@ -2553,7 +2553,7 @@ contains
       rho,      &
       pre,      &
       qv        )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
     implicit none
 
@@ -2598,8 +2598,8 @@ contains
        CCN,                 & ! in
        dt,                  & ! in
        PQ                   )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_saturation, only: &
        moist_psat_liq       => ATMOS_SATURATION_psat_liq, &
        moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
@@ -2725,7 +2725,7 @@ contains
 
        if ( MP_couple_aerosol .AND. nucl_twomey ) then
           write(*,*) "xxx [mp_sn14/nucleation] nucl_twomey should be false when MP_couple_aerosol is true, stop"
-          call PRC_MPIstop
+          call PRC_abort
        endif
     endif
     !

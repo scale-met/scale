@@ -49,7 +49,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_RD_driver_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_phy_rd_mstrnx, only: &
        ATMOS_PHY_RD_mstrnx_setup

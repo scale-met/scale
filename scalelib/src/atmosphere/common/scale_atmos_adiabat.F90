@@ -201,7 +201,7 @@ contains
        CZ, FZ,                      &
        CAPE, CIN, LCL, LFC, LNB,    &
        DENS_p, TEMP_p, BUOY_p, QV_p )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file_history, only: &
        FILE_HISTORY_in
@@ -408,7 +408,7 @@ contains
        QDRY, Rtot, CPtot,          &
        DENS_p3D, TEMP_p3D, QV_p3D, &
        kLCL, converged             )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_entr => ATMOS_HYDROMETEOR_entr, &

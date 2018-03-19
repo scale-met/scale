@@ -99,8 +99,8 @@ module scale_prof
 contains
   !-----------------------------------------------------------------------------
   subroutine PROF_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist / PARAM_PROF / &
@@ -119,7 +119,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_PROF. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_PROF)
 
@@ -153,7 +153,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Start raptime
   subroutine PROF_rapstart( rapname_base, level )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_MPIbarrier, &
        PRC_MPItime
     implicit none
@@ -207,7 +207,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Save raptime
   subroutine PROF_rapend( rapname_base, level )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_MPIbarrier, &
        PRC_MPItime
     implicit none
@@ -255,7 +255,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Report raptime
   subroutine PROF_rapreport
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_MPItimestat, &
        PRC_IsMaster
     implicit none
@@ -357,7 +357,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Report flop
   subroutine PROF_PAPI_rapreport
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_MPItimestat, &
        PRC_nprocs,      &
        PRC_IsMaster

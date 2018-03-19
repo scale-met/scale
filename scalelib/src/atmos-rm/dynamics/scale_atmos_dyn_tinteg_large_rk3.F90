@@ -61,8 +61,8 @@ contains
   !> Setup
   subroutine ATMOS_DYN_Tinteg_large_rk3_setup( &
        tinteg_type )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*) :: tinteg_type
@@ -72,7 +72,7 @@ contains
 
     if ( tinteg_type /= 'RK3' ) then
        write(*,*) 'xxx TINTEG_LARGE_TYPE is not RK3. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     return

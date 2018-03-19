@@ -62,8 +62,8 @@ contains
   !> Setup and Main
   subroutine COPYTOPO( &
        TOPO_child )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(inout) :: TOPO_child(:,:) !< topography of child domain
@@ -98,7 +98,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_COPYTOPO. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_COPYTOPO)
 
@@ -123,8 +123,8 @@ contains
   subroutine COPYTOPO_transgrid( &
        CTRX, &
        CTRY  )
-    use scale_process, only: &
-       PRC_MPIstop, &
+    use scale_prc, only: &
+       PRC_abort, &
        PRC_myrank
     use scale_prc_cartesC, only: &
        PRC_2Drank
@@ -189,7 +189,7 @@ contains
        write(*,*) 'xxx Not appropriate transition width for global domain(X).', COPYTOPO_TRANSITION_DX
        write(*,*) 'xxx # of buffer   region (one side) = ', ibuff
        write(*,*) 'xxx # of transion region (one side) = ', itrans
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! calc transition factor (global domaim)
@@ -255,7 +255,7 @@ contains
        write(*,*) 'xxx Not appropriate transition width for global domain(Y).', COPYTOPO_TRANSITION_DY
        write(*,*) 'xxx # of buffer   region (one side)', jbuff
        write(*,*) 'xxx # of transion region (one side)', jtrans
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! calc transition factor (global domaim)

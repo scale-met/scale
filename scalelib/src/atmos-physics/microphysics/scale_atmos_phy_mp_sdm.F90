@@ -77,8 +77,8 @@ contains
   subroutine ATMOS_PHY_MP_sdm_config( &
        MP_TYPE, &
        QA, QS   )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*), intent(in)  :: MP_TYPE
@@ -88,7 +88,7 @@ contains
 
     write(*,*) '*** SDM not supported.'
     write(*,*) '*** Please contact SCALE developers'
-    call PRC_MPIstop
+    call PRC_abort
 
     QA = 0
     QS = 0
@@ -100,8 +100,8 @@ contains
   !> Setup Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_sdm_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     implicit none
@@ -109,7 +109,7 @@ contains
 
     write(*,*) '*** SDM not supported.'
     write(*,*) '*** Please contact SCALE developers'
-    call PRC_MPIstop
+    call PRC_abort
 
     ATMOS_PHY_MP_sdm_DENS(:) = UNDEF
 
@@ -135,8 +135,8 @@ contains
        UNDEF => CONST_UNDEF
     use scale_tracer, only: &
        QA
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -153,7 +153,7 @@ contains
 
     write(*,*) '*** SDM not supported.'
     write(*,*) '*** Please contact SCALE developers'
-    call PRC_MPIstop
+    call PRC_abort
 
     EVAPORATE = UNDEF
     SFLX_rain = UNDEF

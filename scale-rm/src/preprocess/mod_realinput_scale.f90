@@ -18,9 +18,9 @@ module mod_realinput_scale
   use scale_precision
   use scale_stdio
   use scale_tracer
-  use scale_process, only: &
+  use scale_prc, only: &
        myrank => PRC_myrank,  &
-       PRC_MPIstop
+       PRC_abort
   use scale_comm_cartesC_nest, only: &
        PARENT_KMAX,     &
        PARENT_IMAX,     &

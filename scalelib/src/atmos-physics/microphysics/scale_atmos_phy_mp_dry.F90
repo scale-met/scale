@@ -65,8 +65,8 @@ contains
   subroutine ATMOS_PHY_MP_dry_config( &
        MP_TYPE, &
        QA, QS   )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*), intent(in)  :: MP_TYPE
@@ -80,7 +80,7 @@ contains
 
     if ( MP_TYPE /= 'DRY' ) then
        write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not DRY. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     QS = -1

@@ -345,7 +345,7 @@ contains
   !<
   subroutine ATMOS_PHY_MP_tomita08_setup( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        UNDEF  => CONST_UNDEF, &

@@ -553,7 +553,7 @@ contains
   subroutine ATMOS_SOLARINS_setup( &
        basepoint_lon, basepoint_lat, &
        iyear                         )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        CONST_D2R
