@@ -214,7 +214,7 @@ params.each do |param|
   # Land
   if "&PARAM_LAND" == param_name
     print param_name, "\n"
-    param_item.each do |item|
+    param_items.each do |item|
       next if /LAND_do/ =~ item
       if /LAND_TYPE\s*=\s*["'](THIN-)?SLAB['"]/ =~ item
         print " LAND_DYN_TYPE = \"BUCKET\",\n"
@@ -225,53 +225,94 @@ params.each do |param|
       elsif /LAND_TYPE\s*=\s*["']CONST['"]/ =~ item
         print " LAND_DYN_TYPE = \"CONST\",\n"
         print " LAND_SFC_TYPE = \"COPY\",\n"
+      else
+        print item, "\n"
       end
     end
+    print "/\n"
+    next
   end
   if "&PARAM_LAND_PHY_SLAB" == param_name
     print "&PARAM_LAND_DYN_BUCKET\n"
-    param_item.each do |item|
+    param_items.each do |item|
       print item.sub("PHY_SLAB", "DYN_BUCKET").sub("PHY_update", "DYN_BUCKET_update"), "\n"
     end
+    print "/\n"
+    next
   end
   if "&PARAM_LAND_SFC_THIN_SLAB" == param_name
     print "&PARAM_LAND_SFC_SKIN\n"
-    pram_item.each do |item|
+    param_items.each do |item|
       print item.sub("THIN_SLAB", "SKIN"), "\n"
     end
+    print "/\n"
+    next
   end
   if "&PARAM_LAND_SFC_THICK_SLAB" == param_name
     print "&PARAM_LAND_SFC_FIXED_TEMP\n"
-    pram_item.each do |item|
+    param_items.each do |item|
       print item.sub("THICK_SLAB", "FIXED_TEMP"), "\n"
     end
+    print "/\n"
+    next
   end
 
   # Ocean
   if "&PARAM_OCEAN" == param_name
     print param_name, "\n"
-    param_item.each do |item|
+    param_items.each do |item|
       next if /OCEAN_do/ =~ item
       print item.sub("OCEAN_TYPE", "OCEAN_DYN_TYPE"), "\n"
     end
+    print "/\n"
+    next
   end
   if "&PARAM_ROUGHNESS" == param_name
     print "&PARAM_OCEAN_ROUGHNESS\n"
-    param_item.each do |item|
+    param_items.each do |item|
       print item.sub("ROUGHNESS_TYPE", "OCEAN_RGN_TYPE"), "\n"
     end
+    print "/\n"
+    next
   end
   if "&PARAM_ROUGHNESS_MILLER92" == param_name
     print "&PARAM_OCEAN_PHY_ROUGHNESS_MILLER92\n"
-    param_item.each do |item|
+    param_items.each do |item|
       print item.sub("ROUGHNESS", "OCEAN_PHY_ROUGHNESS"), "\n"
     end
+    print "/\n"
+    next
   end
   if "&PARAM_ROUGHNESS_MOON07" == param_name
     print "&PARAM_OCEAN_PHY_ROUGHNESS_MOON07\n"
-    param_item.each do |item|
+    param_items.each do |item|
       print item.sub("ROUGHNESS", "OCEAN_PHY_ROUGHNESS"), "\n"
     end
+    print "/\n"
+    next
+  end
+
+  # Urban
+  if "&PARAM_URBAN" == param_name
+    print param_name, "\n"
+    param_items.each do |item|
+      next if /URBAN_do/ =~ item
+      if /URBAN_TYPE\s*=\s*["']SLC['"]/ =~ item
+        print " URBAN_DYN_TYPE = \"KUSAKA01\",\n"
+      else
+        print item, "\n"
+      end
+    end
+    print "/\n"
+    next
+  end
+  if "&PARAM_URBAN_PHY_SLC" == param_name
+    print "&PARAM_URBAN_DYN_KUSAKA01\n"
+    param_items.each do |item|
+      print item, "\n"
+    end
+    print "/\n"
+    next
   end
 
 

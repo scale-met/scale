@@ -32,7 +32,7 @@ cat << EOF > param.admin.conf
 /
 
 &PARAM_URBAN
- URBAN_TYPE = "${URBAN_TYPE[$D]}",
+ URBAN_DYN_TYPE = "${URBAN_DYN_TYPE[$D]}",
 /
 EOF
 
