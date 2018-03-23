@@ -211,6 +211,42 @@ params.each do |param|
     next
   end
 
+  # Land
+  if "&PARAM_LAND" == param_name
+    print param_name, "\n"
+    param_item.each do |item|
+      next if /LAND_do/ =~ item
+      if /LAND_TYPE\s*=\s*["'](THIN-)?SLAB['"]/ =~ item
+        print " LAND_DYN_TYPE = \"BUCKET\",\n"
+        print " LAND_SFC_TYPE = \"SKIN\",\n"
+      elsif /LAND_TYPE\s*=\s*["']THICK-SLAB['"]/ =~ item
+        print " LAND_DYN_TYPE = \"BUCKET\",\n"
+        print " LAND_SFC_TYPE = \"COPY\",\n"
+      elsif /LAND_TYPE\s*=\s*["']CONST['"]/ =~ item
+        print " LAND_DYN_TYPE = \"CONST\",\n"
+        print " LAND_SFC_TYPE = \"COPY\",\n"
+      end
+    end
+  end
+  if "&PARAM_LAND_PHY_SLAB" == param_name
+    print "&PARAM_LAND_DYN_BUCKET\n"
+    param_item.each do |item|
+      print item.sub("PHY_SLAB", "DYN_BUCKET").sub("PHY_update", "DYN_BUCKET_update"), "\n"
+    end
+  end
+  if "&PARAM_LAND_SFC_THIN_SLAB" == param_name
+    print "&PARAM_LAND_SFC_SKIN\n"
+    pram_item.each do |item|
+      print item.sub("THIN_SLAB", "SKIN"), "\n"
+    end
+  end
+  if "&PARAM_LAND_SFC_THICK_SLAB" == param_name
+    print "&PARAM_LAND_SFC_COPY\n"
+    pram_item.each do |item|
+      print item.sub("THICK_SLAB", "COPY"), "\n"
+    end
+  end
+
 
   # Others
   print param_name, "\n"

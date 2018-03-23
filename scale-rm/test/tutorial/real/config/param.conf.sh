@@ -27,7 +27,8 @@ cat << EOF > param.admin.conf
 /
 
 &PARAM_LAND
- LAND_TYPE = "${LAND_TYPE[$D]}",
+ LAND_DYN_TYPE = "${LAND_DYN_TYPE[$D]}",
+ LAND_SFC_TYPE = "${LAND_SFC_TYPE[$D]}",
 /
 
 &PARAM_URBAN
@@ -189,9 +190,9 @@ cat <<EOF >> param.physics.conf
  LAND_VARS_CHECKRANGE = .true.,
 /
 
-&PARAM_LAND_PHY_SLAB
- LAND_PHY_UPDATE_BOTTOM_TEMP  = .false.,
- LAND_PHY_UPDATE_BOTTOM_WATER = .true.,
+&PARAM_LAND_DYN_BUCKET
+ LAND_DYN_BUCKET_UPDATE_BOTTOM_TEMP  = .false.,
+ LAND_DYN_BUCKET_UPDATE_BOTTOM_WATER = .true.,
 /
 
 #################################################
