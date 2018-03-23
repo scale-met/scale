@@ -241,9 +241,36 @@ params.each do |param|
     end
   end
   if "&PARAM_LAND_SFC_THICK_SLAB" == param_name
-    print "&PARAM_LAND_SFC_COPY\n"
+    print "&PARAM_LAND_SFC_FIXED_TEMP\n"
     pram_item.each do |item|
-      print item.sub("THICK_SLAB", "COPY"), "\n"
+      print item.sub("THICK_SLAB", "FIXED_TEMP"), "\n"
+    end
+  end
+
+  # Ocean
+  if "&PARAM_OCEAN" == param_name
+    print param_name, "\n"
+    param_item.each do |item|
+      next if /OCEAN_do/ =~ item
+      print item.sub("OCEAN_TYPE", "OCEAN_DYN_TYPE"), "\n"
+    end
+  end
+  if "&PARAM_ROUGHNESS" == param_name
+    print "&PARAM_OCEAN_ROUGHNESS\n"
+    param_item.each do |item|
+      print item.sub("ROUGHNESS_TYPE", "OCEAN_RGN_TYPE"), "\n"
+    end
+  end
+  if "&PARAM_ROUGHNESS_MILLER92" == param_name
+    print "&PARAM_OCEAN_PHY_ROUGHNESS_MILLER92\n"
+    param_item.each do |item|
+      print item.sub("ROUGHNESS", "OCEAN_PHY_ROUGHNESS"), "\n"
+    end
+  end
+  if "&PARAM_ROUGHNESS_MOON07" == param_name
+    print "&PARAM_OCEAN_PHY_ROUGHNESS_MOON07\n"
+    param_item.each do |item|
+      print item.sub("ROUGHNESS", "OCEAN_PHY_ROUGHNESS"), "\n"
     end
   end
 

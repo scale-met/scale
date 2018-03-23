@@ -23,7 +23,7 @@ cat << EOF > param.admin.conf
 /
 
 &PARAM_OCEAN
- OCEAN_TYPE = "${OCEAN_TYPE[$D]}",
+ OCEAN_DYN_TYPE = "${OCEAN_DYN_TYPE[$D]}",
 /
 
 &PARAM_LAND

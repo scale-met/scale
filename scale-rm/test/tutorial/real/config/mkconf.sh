@@ -82,7 +82,7 @@ if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_RD_TYPE[*]} ]; then echo "Error: Wrong array
 if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_SF_TYPE[*]} ]; then echo "Error: Wrong array size (ATMOS_PHY_SF_TYPE)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_TB_TYPE[*]} ]; then echo "Error: Wrong array size (ATMOS_PHY_TB_TYPE)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_BL_TYPE[*]} ]; then echo "Error: Wrong array size (ATMOS_PHY_BL_TYPE)."; exit 1; fi
-if [ ${NUM_DOMAIN} -ne ${#OCEAN_TYPE[*]} ];        then echo "Error: Wrong array size (OCEAN_TYPE).";        exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#OCEAN_DYN_TYPE[*]} ];    then echo "Error: Wrong array size (OCEAN_DYN_TYPE).";    exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#LAND_DYN_TYPE[*]} ];     then echo "Error: Wrong array size (LAND_DYN_TYPE).";     exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#LAND_SFC_TYPE[*]} ];     then echo "Error: Wrong array size (LAND_SFC_TYPE).";     exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#URBAN_TYPE[*]} ];        then echo "Error: Wrong array size (URBAN_TYPE).";        exit 1; fi

@@ -113,10 +113,10 @@ ATMOS_PHY_SF_TYPE=( "COUPLE"      ) # required parameters for each domain
 ATMOS_PHY_TB_TYPE=( "SMAGORINSKY" ) # required parameters for each domain
 ATMOS_PHY_BL_TYPE=( "MYNN"        ) # required parameters for each domain
 
-OCEAN_TYPE=(    "CONST"  ) # required parameters for each domain
-LAND_DYN_TYPE=( "BUCKET" ) # required parameters for each domain
-LAND_SFC_TYPE=( "SKIN"   ) # required parameters for each domain
-URBAN_TYPE=(    "SLC"    ) # required parameters for each domain
+OCEAN_DYN_TYPE=( "CONST"  ) # required parameters for each domain
+LAND_DYN_TYPE=(  "BUCKET" ) # required parameters for each domain
+LAND_SFC_TYPE=(  "SKIN"   ) # required parameters for each domain
+URBAN_TYPE=(     "SLC"    ) # required parameters for each domain
 
 #################################################
 #
