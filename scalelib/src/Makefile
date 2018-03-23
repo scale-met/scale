@@ -15,7 +15,6 @@ LIBNAME = libscale.a
 DEPENDLIB =
 
 VPATH = common:                          \
-        coupler:                         \
         io:                              \
 	file:                            \
 	grid:                            \
@@ -40,10 +39,15 @@ VPATH = common:                          \
         atmos-rm/forcing:                \
         land:                            \
         land/grid:                       \
+        land/dynamics:                   \
+        land/physics:                    \
         ocean:                           \
         ocean/grid:                      \
         urban:                           \
-        urban/grid:
+        urban/grid:                      \
+        urban/dynamics:                  \
+        coupler:                         \
+        coupler/physics/surface:
 
 LIBVERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(LIBVERSION),)
@@ -184,16 +188,12 @@ OBJS_NAME = \
 	scale_land_grid_cartesC_index.o	\
 	scale_land_grid_cartesC.o	\
 	scale_land_grid_cartesC_real.o	\
-	scale_land_phy.o	\
-	scale_land_phy_const.o	\
-	scale_land_phy_slab.o	\
+	scale_land_dyn_bucket.o		\
 	scale_land_phy_matsiro.o	\
 	scale_land_phy_snow_ky90.o	\
 	scale_land_phy_snow_diagnos.o	\
-	scale_land_sfc.o	\
-	scale_land_sfc_const.o	\
-	scale_land_sfc_thin-slab.o	\
-	scale_land_sfc_thick-slab.o	\
+	scale_cpl_phy_sfc_skin.o	\
+	scale_cpl_phy_sfc_fixed_temp.o	\
 	scale_urban_grid_cartesC_index.o	\
 	scale_urban_grid_cartesC.o	\
 	scale_urban_grid_cartesC_real.o	\

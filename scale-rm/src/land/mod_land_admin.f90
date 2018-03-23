@@ -23,18 +23,16 @@ module mod_land_admin
   !++ Public procedure
   !
   public :: LAND_ADMIN_setup
-  public :: LAND_ADMIN_getscheme
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  logical,                public :: LAND_do   = .true. ! main switch for the model
+  character(len=H_SHORT), public :: LAND_DYN_TYPE = 'NONE'
+  character(len=H_SHORT), public :: LAND_SFC_TYPE = 'SKIN'
+  character(len=H_SHORT), public :: SNOW_TYPE     = 'NONE'
 
-  character(len=H_SHORT), public :: LAND_TYPE = 'NONE'
-  character(len=H_SHORT), public :: SNOW_TYPE = 'NONE'
-
-  logical,                public :: LAND_sw
+  logical,                public :: LAND_do
   logical,                public :: SNOW_sw
 
   !-----------------------------------------------------------------------------
@@ -55,8 +53,8 @@ contains
     implicit none
 
     NAMELIST / PARAM_LAND / &
-       LAND_do,  &
-       LAND_TYPE, &
+       LAND_DYN_TYPE, &
+       LAND_SFC_TYPE, &
        SNOW_TYPE
 
     integer :: ierr
@@ -81,49 +79,29 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Land model components ***'
 
-    if ( LAND_TYPE == 'OFF' .OR. LAND_TYPE == 'NONE' ) then
-       LAND_do = .false. ! force off
+    if ( LAND_DYN_TYPE /= 'OFF' .AND. LAND_DYN_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Land model : ON, ', trim(LAND_DYN_TYPE)
+       LAND_do = .true.
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Land model : OFF'
+       LAND_do = .false.
     endif
 
     if ( LAND_do ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Land  model     : ON'
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Land  model     : OFF'
-    endif
 
-    if ( LAND_TYPE /= 'OFF' .AND. LAND_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Land  physics : ON, ', trim(LAND_TYPE)
-       LAND_sw = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Land  physics : OFF'
-       LAND_sw = .false.
-    endif
+       if ( SNOW_TYPE /= 'OFF' .AND. SNOW_TYPE /= 'NONE' ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** + Snow  physics : ON, ', trim(SNOW_TYPE)
+          SNOW_sw = .true.
+       else
+          if( IO_L ) write(IO_FID_LOG,*) '*** + Snow  physics : OFF'
+          SNOW_sw = .false.
+       endif
 
-    if ( SNOW_TYPE /= 'OFF' .AND. SNOW_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Snow  physics : ON, ', trim(SNOW_TYPE)
-       SNOW_sw = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Snow  physics : OFF'
-       SNOW_sw = .false.
-    endif
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Land surface model : ', trim(LAND_SFC_TYPE)
+
+    end if
 
     return
   end subroutine LAND_ADMIN_setup
-
-  !-----------------------------------------------------------------------------
-  !> Get name of scheme for each component
-  subroutine LAND_ADMIN_getscheme( &
-       scheme_name     )
-    use scale_prc, only: &
-       PRC_abort
-    implicit none
-
-    character(len=H_SHORT), intent(out) :: scheme_name
-    !---------------------------------------------------------------------------
-
-    scheme_name = LAND_TYPE
-
-    return
-  end subroutine LAND_ADMIN_getscheme
 
 end module mod_land_admin

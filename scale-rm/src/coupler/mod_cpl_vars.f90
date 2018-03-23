@@ -181,11 +181,11 @@ contains
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry
     use mod_ocean_admin, only: &
-       OCEAN_sw
+       OCEAN_do
     use mod_land_admin, only: &
-       LAND_sw
+       LAND_do
     use mod_urban_admin, only: &
-       URBAN_sw
+       URBAN_do
     implicit none
 
     real(RP) :: checkfact
@@ -195,25 +195,25 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[CPL] / Origin[SCALE-RM]'
     if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 
-    ! Check consistency of OCEAN_sw and LANDUSE_fact_ocean
+    ! Check consistency of OCEAN_do and LANDUSE_fact_ocean
     checkfact = maxval( LANDUSE_fact_ocean(:,:) )
-    if ( .NOT. OCEAN_sw .AND. checkfact > 0.0_RP ) then
+    if ( .NOT. OCEAN_do .AND. checkfact > 0.0_RP ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
        write(*,*)                     'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
        call PRC_abort
     endif
 
-    ! Check consistency of LAND_sw and LANDUSE_fact_land
+    ! Check consistency of LAND_do and LANDUSE_fact_land
     checkfact = maxval( LANDUSE_fact_land(:,:) )
-    if ( .NOT. LAND_sw .AND. checkfact > 0.0_RP ) then
+    if ( .NOT. LAND_do .AND. checkfact > 0.0_RP ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
        write(*,*)                     'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
        call PRC_abort
     endif
 
-    ! Check consistency of URBAN_sw and LANDUSE_fact_urban
+    ! Check consistency of URBAN_do and LANDUSE_fact_urban
     checkfact = maxval( LANDUSE_fact_urban(:,:) )
-    if ( .NOT. URBAN_sw .AND. checkfact > 0.0_RP ) then
+    if ( .NOT. URBAN_do .AND. checkfact > 0.0_RP ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
        write(*,*)                     'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
        call PRC_abort
@@ -1034,7 +1034,7 @@ contains
                             + fact_urban(i,j) * URB_SFLX_LH   (i,j)
 
        SFLX_GH   (i,j)      = fact_ocean(i,j) * OCN_SFLX_WH   (i,j) &
-                            + fact_land (i,j) * LND_SFLX_GH   (i,j) &
+                            - fact_land (i,j) * LND_SFLX_GH   (i,j) & ! positive for donward
                             + fact_urban(i,j) * URB_SFLX_GH   (i,j)
 
        if ( .not. ATMOS_HYDROMETEOR_dry ) &

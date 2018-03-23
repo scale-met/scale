@@ -51,15 +51,36 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LAND_driver_setup
+    use scale_prc, only: &
+       PRC_abort
     use mod_land_phy_driver, only: &
        LAND_PHY_driver_setup
+    use mod_land_admin, only: &
+       LAND_do, &
+       LAND_DYN_TYPE
+    use scale_land_dyn_bucket, only: &
+       LAND_DYN_BUCKET_setup
     implicit none
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[LAND] / Origin[SCALE-RM]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER Setup] / Categ[LAND] / Origin[SCALE-RM]'
 
-    call LAND_PHY_driver_setup
+    if ( LAND_do ) then
+
+       select case ( LAND_DYN_TYPE )
+       case ( 'BUCKET' )
+          call LAND_DYN_BUCKET_setup
+       case ( 'CONST' )
+          ! do nothing
+       case default
+          write(*,*) 'xxx LAND_DYN_TYPE is invalid: ', trim(LAND_DYN_TYPE)
+          call PRC_abort
+       end select
+
+       call LAND_PHY_driver_setup
+
+    end if
 
     return
   end subroutine LAND_driver_setup
@@ -70,10 +91,14 @@ contains
     use mod_land_phy_driver, only: &
        LAND_PHY_driver_resume
     use mod_land_vars, only: &
-       LAND_vars_history
-    use mod_land_admin, only: &
-       LAND_sw
+       LAND_vars_history, &
+       LAND_TEMP_t,     &
+       LAND_WATER_t,    &
+       LAND_SFC_TEMP_t, &
+       LAND_SFC_albedo_t
     implicit none
+
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -82,17 +107,36 @@ contains
     !########## Get Surface Boundary from coupler ##########
     call LAND_SURFACE_GET
 
+    !########## initilize tendency ##########
+!OCL XFILL
+    do j = LJS, LJE
+    do i = LIS, LIE
+    do k = LKS, LKE
+       LAND_TEMP_t (k,i,j) = 0.0_RP
+       LAND_WATER_t(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+!OCL XFILL
+    do j = LJS, LJE
+    do i = LIS, LIE
+       LAND_SFC_TEMP_t  (i,j)      = 0.0_RP
+       LAND_SFC_albedo_t(i,j,I_LW) = 0.0_RP
+       LAND_SFC_albedo_t(i,j,I_SW) = 0.0_RP
+    enddo
+    enddo
+
+    ! resume each component
     call LAND_PHY_driver_resume
 
     !########## Set Surface Boundary to coupler ##########
     call LAND_SURFACE_SET( countup=.true. )
 
     !########## History & Monitor ##########
-    if ( LAND_sw ) then
-       call PROF_rapstart('LND_History', 1)
-       call LAND_vars_history
-       call PROF_rapend  ('LND_History', 1)
-    endif
+    call PROF_rapstart('LND_History', 1)
+    call LAND_vars_history
+    call PROF_rapend  ('LND_History', 1)
 
     return
   end subroutine LAND_driver_resume
@@ -102,11 +146,17 @@ contains
   subroutine LAND_driver
     use scale_time, only: &
        dt => TIME_DTSEC_LAND
-    use mod_land_admin, only: &
-       LAND_sw
     use mod_land_vars, only: &
+       LAND_PROPERTY,     &
+       I_WaterLimit,      &
+       I_ThermalCond,     &
+       I_HeatCapacity,    &
+       I_WaterDiff,       &
        LAND_TEMP,         &
        LAND_WATER,        &
+       LAND_SFLX_GH,      &
+       LAND_SFLX_water,   &
+       LAND_SFLX_ice,     &
        LAND_SFC_TEMP,     &
        LAND_SFC_albedo,   &
        LAND_TEMP_t,       &
@@ -117,7 +167,21 @@ contains
        LAND_vars_history
     use mod_land_phy_driver, only: &
        LAND_PHY_driver
+    use scale_land_grid_cartesC, only: &
+       LCDZ => LAND_GRID_CARTESC_CDZ
+    use scale_land_dyn_bucket, only: &
+       LAND_DYN_bucket
+    use scale_landuse, only: &
+       LANDUSE_fact_land
+    use scale_time, only: &
+       NOWDAYSEC => TIME_NOWDAYSEC
+    use scale_file_history, only: &
+       FILE_HISTORY_in
+    use mod_land_admin, only: &
+       LAND_DYN_TYPE
     implicit none
+
+    real(RP) :: RUNOFF(LIA,LJA)
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -127,22 +191,26 @@ contains
     call LAND_SURFACE_GET
     call PROF_rapend  ('LND_SfcExch', 2)
 
-    !########## Physics ##########
-    if ( LAND_sw ) then
-       call PROF_rapstart('LND_Physics', 1)
-       call LAND_PHY_driver( update_flag = .true. )
-       call PROF_rapend  ('LND_Physics', 1)
-    endif
+    !########## Dynamics / Update variables ##########
+    select case ( LAND_DYN_TYPE )
+    case ( 'CONST' )
+       ! do nothing
+    case ( 'BUCKET' )
+       call LAND_DYN_bucket( LKMAX, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE, &
+                             LAND_TEMP_t(:,:,:), LAND_WATER_t(:,:,:),   & ! [IN]
+                             LAND_PROPERTY(:,:,I_WaterLimit),           & ! [IN]
+                             LAND_PROPERTY(:,:,I_ThermalCond),          & ! [IN]
+                             LAND_PROPERTY(:,:,I_HeatCapacity),         & ! [IN]
+                             LAND_PROPERTY(:,:,I_WaterDiff),            & ! [IN]
+                             LAND_SFLX_GH(:,:),                         & ! [IN]
+                             LAND_SFLX_water(:,:), LAND_SFLX_ice(:,:),  & ! [IN]
+                             LANDUSE_fact_land(:,:), LCDZ(:),           & ! [IN]
+                             dt, NOWDAYSEC,                             & ! [IN]
+                             LAND_TEMP(:,:,:), LAND_WATER(:,:,:),       & ! [INOUT]
+                             RUNOFF(:,:)                                ) ! [OUT]
+       call FILE_HISTORY_in( RUNOFF(:,:), 'RUNOFF', 'runoff water', 'kg', dim_type='XY' )
+    end select
 
-    !########## Update ##########
-    do j = LJS, LJE
-    do i = LIS, LIE
-    do k = LKS, LKE
-       LAND_TEMP (k,i,j) = LAND_TEMP (k,i,j) + LAND_TEMP_t (k,i,j) * dt
-       LAND_WATER(k,i,j) = LAND_WATER(k,i,j) + LAND_WATER_t(k,i,j) * dt
-    enddo
-    enddo
-    enddo
     do j = LJS, LJE
     do i = LIS, LIE
        LAND_SFC_TEMP  (i,j)      = LAND_SFC_TEMP  (i,j)      + LAND_SFC_TEMP_t  (i,j)      * dt
@@ -187,6 +255,11 @@ contains
     enddo
     enddo
 
+    !########## Physics ##########
+    call PROF_rapstart('LND_Physics', 1)
+    call LAND_PHY_driver( update_flag = .true. )
+    call PROF_rapend  ('LND_Physics', 1)
+
     !########## History & Monitor ##########
     call PROF_rapstart('LND_History', 1)
     call LAND_vars_history
@@ -199,7 +272,7 @@ contains
   !> Get surface boundary from other model
   subroutine LAND_SURFACE_GET
     use mod_land_admin, only: &
-       LAND_sw
+       LAND_do
     use mod_land_vars, only: &
        ATMOS_TEMP,      &
        ATMOS_PRES,      &
@@ -226,7 +299,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if ( LAND_sw ) then
+    if ( LAND_do ) then
        call CPL_getATM_LND( ATMOS_TEMP       (:,:),     & ! [OUT]
                             ATMOS_PRES       (:,:),     & ! [OUT]
                             ATMOS_W          (:,:),     & ! [OUT]
@@ -260,7 +333,7 @@ contains
   !> Put surface boundary to other model
   subroutine LAND_SURFACE_SET( countup )
     use mod_land_admin, only: &
-       LAND_sw
+       LAND_do
     use mod_land_vars, only: &
        LAND_PROPERTY,   &
        I_Z0M,           &
@@ -287,7 +360,7 @@ contains
     logical, intent(in) :: countup
     !---------------------------------------------------------------------------
 
-    if ( LAND_sw ) then
+    if ( LAND_do ) then
        call CPL_putLND( LAND_SFC_TEMP  (:,:),       & ! [IN]
                         LAND_SFC_albedo(:,:,:),     & ! [IN]
                         LAND_PROPERTY  (:,:,I_Z0M), & ! [IN]
