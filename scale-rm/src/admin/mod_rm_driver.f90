@@ -144,8 +144,6 @@ contains
        ATMOS_SATURATION_setup
     use scale_bulkflux, only: &
        BULKFLUX_setup
-    use scale_roughness, only: &
-       ROUGHNESS_setup
     use mod_atmos_driver, only: &
        ATMOS_driver_config
     use mod_admin_restart, only: &
@@ -320,7 +318,6 @@ contains
     call ATMOS_SATURATION_setup
 
     call BULKFLUX_setup( sqrt(DX**2+DY**2) )
-    call ROUGHNESS_setup
 
     ! setup variable container
     call ATMOS_vars_setup

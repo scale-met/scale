@@ -43,6 +43,8 @@ VPATH = common:                          \
         land/physics:                    \
         ocean:                           \
         ocean/grid:                      \
+	ocean/dynamics:			 \
+	ocean/physics:			 \
         urban:                           \
         urban/grid:                      \
         urban/dynamics:                  \
@@ -176,15 +178,11 @@ OBJS_NAME = \
 	scale_ocean_grid_cartesC_index.o	\
 	scale_ocean_grid_cartesC.o	\
 	scale_ocean_grid_cartesC_real.o	\
-	scale_ocean_phy.o	\
-	scale_ocean_phy_const.o	\
-	scale_ocean_phy_slab.o	\
-	scale_ocean_sfc.o	\
-	scale_ocean_sfc_const.o	\
-	scale_ocean_sfc_slab.o	\
-	scale_ocean_sfc.o	\
-	scale_ocean_sfc_const.o	\
-	scale_ocean_sfc_slab.o	\
+	scale_ocean_dyn_slab.o	\
+	scale_ocean_phy_albedo_nakajima00.o	\
+	scale_ocean_phy_roughness.o	\
+	scale_ocean_phy_roughness_miller92.o	\
+	scale_ocean_phy_roughness_moon07.o	\
 	scale_land_grid_cartesC_index.o	\
 	scale_land_grid_cartesC.o	\
 	scale_land_grid_cartesC_real.o	\
@@ -211,7 +209,6 @@ OBJS_NAME = \
 	scale_prc_cartesC.o	\
 	scale_prof.o	\
 	scale_random.o	\
-	scale_roughness.o	\
 	scale_sigvars.o \
 	scale_specfunc.o	\
 	scale_stdio.o	\

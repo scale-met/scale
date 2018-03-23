@@ -50,16 +50,36 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine OCEAN_driver_setup
+    use scale_prc, only: &
+       PRC_abort
     use mod_ocean_phy_driver, only: &
        OCEAN_PHY_driver_setup
+    use mod_ocean_admin, only: &
+       OCEAN_do, &
+       OCEAN_DYN_TYPE
+    use scale_ocean_dyn_slab, only: &
+       OCEAN_DYN_SLAB_setup
     implicit none
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[OCEAN] / Origin[SCALE-RM]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER Setup] / Categ[OCEAN] / Origin[SCALE-RM]'
 
-    call OCEAN_PHY_driver_setup
+    if ( OCEAN_do ) then
 
+       select case ( OCEAN_DYN_TYPE )
+       case ( 'SLAB' )
+          call OCEAN_DYN_SLAB_setup
+       case ( 'CONST' )
+          ! do nothing
+       case default
+          write(*,*) 'xxx OCEAN_DYN_TYPE is invalid: ', trim(OCEAN_DYN_TYPE)
+          call PRC_abort
+       end select
+
+       call OCEAN_PHY_driver_setup
+
+    end if
 
     return
   end subroutine OCEAN_driver_setup
@@ -80,8 +100,6 @@ contains
        OCEAN_SFC_Z0M_t,    &
        OCEAN_SFC_Z0H_t,    &
        OCEAN_SFC_Z0E_t
-    use mod_ocean_admin, only: &
-       OCEAN_sw
     implicit none
     !---------------------------------------------------------------------------
 
@@ -111,19 +129,16 @@ contains
 !OCL XFILL
     OCEAN_VVEL_t      (:,:,:) = 0.0_RP
 
-    ! setup each components
+    ! resume each components
     call OCEAN_PHY_driver_resume
-!    if( OCEAN_FRC_sw ) call OCEAN_FRC_driver_resume
 
     !########## Set Surface Boundary to coupler ##########
     call OCEAN_SURFACE_SET( countup=.true. )
 
     !########## History & Monitor ##########
-    if ( OCEAN_sw ) then
-       call PROF_rapstart('OCN_History', 1)
-       call OCEAN_vars_history
-       call PROF_rapend  ('OCN_History', 1)
-    endif
+    call PROF_rapstart('OCN_History', 1)
+    call OCEAN_vars_history
+    call PROF_rapend  ('OCN_History', 1)
 
     return
   end subroutine OCEAN_driver_resume
@@ -133,8 +148,6 @@ contains
   subroutine OCEAN_driver
     use scale_time, only: &
        dt => TIME_DTSEC_OCEAN
-    use mod_ocean_admin, only: &
-       OCEAN_sw
     use mod_ocean_vars, only: &
        OCEAN_TEMP,         &
        OCEAN_SALT,         &
@@ -145,6 +158,9 @@ contains
        OCEAN_SFC_Z0M,      &
        OCEAN_SFC_Z0H,      &
        OCEAN_SFC_Z0E,      &
+       OCEAN_SFLX_WH,      &
+       OCEAN_SFLX_water,   &
+       OCEAN_SFLX_ice,     &
        OCEAN_TEMP_t,       &
        OCEAN_SALT_t,       &
        OCEAN_UVEL_t,       &
@@ -158,8 +174,18 @@ contains
        OCEAN_vars_history
     use mod_ocean_phy_driver, only: &
        OCEAN_PHY_driver
-!    use mod_ocean_forcing, only: &
-!       OCEAN_forcing
+    use scale_ocean_dyn_slab, only: &
+       OCEAN_DYN_slab
+    use scale_landuse, only: &
+       LANDUSE_fact_ocean
+    use scale_time, only: &
+       NOWDAYSEC => TIME_NOWDAYSEC
+    use scale_file_history, only: &
+       FILE_HISTORY_in
+    use mod_ocean_admin, only: &
+       OCEAN_DYN_TYPE
+    use scale_landuse, only: &
+       LANDUSE_fact_ocean
     implicit none
 
     integer :: k, i, j
@@ -170,21 +196,20 @@ contains
     call OCEAN_SURFACE_GET
     call PROF_rapend  ('OCN_SfcExch', 2)
 
-    !########## Physics ##########
-    if ( OCEAN_sw ) then
-       call PROF_rapstart('OCN_Physics', 1)
-       call OCEAN_PHY_driver( update_flag = .true. )
-       call PROF_rapend  ('OCN_Physics', 1)
-    endif
+    !########## Dynamics / Update ##########
+    select case ( OCEAN_DYN_TYPE )
+    case ( 'SLAB' )
+       call OCEAN_DYN_slab( OKMAX, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE, &
+                            OCEAN_TEMP_t(:,:,:),                        & ! [IN]
+                            OCEAN_SFLX_WH(:,:),                         & ! [IN]
+                            OCEAN_SFLX_water(:,:), OCEAN_SFLX_ice(:,:), & ! [IN]
+                            LANDUSE_fact_ocean(:,:),                    & ! [IN]
+                            dt, NOWDAYSEC,                              & ! [IN]
+                            OCEAN_TEMP(:,:,:)                           ) ! [INOUT]
+    case ( 'CONST' )
+       ! do nothing
+    end select
 
-    !########## Forcing ##########
-!    if ( OCEAN_FORCE_sw ) then
-!       call PROF_rapstart('OCN_Forcing', 1)
-!       call OCEAN_forcing
-!       call PROF_rapend  ('OCN_Forcing', 1)
-!    endif
-
-    !########## Update ##########
     do j = OJS, OJE
     do i = OIS, OIE
        OCEAN_SFC_TEMP  (i,j)      = OCEAN_SFC_TEMP  (i,j)      + OCEAN_SFC_TEMP_t  (i,j)      * dt
@@ -196,23 +221,9 @@ contains
     enddo
     enddo
 
-    do j = OJS, OJE
-    do i = OIS, OIE
-    do k = OKS, OKE
-       OCEAN_TEMP(k,i,j) = OCEAN_TEMP(k,i,j) + OCEAN_TEMP_t(k,i,j) * dt
-       OCEAN_SALT(k,i,j) = OCEAN_SALT(k,i,j) + OCEAN_SALT_t(k,i,j) * dt
-       OCEAN_UVEL(k,i,j) = OCEAN_UVEL(k,i,j) + OCEAN_UVEL_t(k,i,j) * dt
-       OCEAN_VVEL(k,i,j) = OCEAN_VVEL(k,i,j) + OCEAN_VVEL_t(k,i,j) * dt
-    enddo
-    enddo
-    enddo
 
     call OCEAN_vars_total
 
-    !########## Set Surface Boundary to coupler ##########
-    call PROF_rapstart('OCN_SfcExch', 2)
-    call OCEAN_SURFACE_SET( countup=.true. )
-    call PROF_rapend  ('OCN_SfcExch', 2)
 
     !########## reset tendencies ##########
 !OCL XFILL
@@ -238,6 +249,16 @@ contains
     enddo
     enddo
 
+    !########## Physics ##########
+    call PROF_rapstart('OCN_Physics', 1)
+    call OCEAN_PHY_driver( update_flag = .true. )
+    call PROF_rapend  ('OCN_Physics', 1)
+
+    !########## Set Surface Boundary to coupler ##########
+    call PROF_rapstart('OCN_SfcExch', 2)
+    call OCEAN_SURFACE_SET( countup=.true. )
+    call PROF_rapend  ('OCN_SfcExch', 2)
+
     !########## History & Monitor ##########
     call PROF_rapstart('OCN_History', 1)
     call OCEAN_vars_history
@@ -250,34 +271,33 @@ contains
   !> Get surface boundary from other model
   subroutine OCEAN_SURFACE_GET
     use mod_ocean_admin, only: &
-       OCEAN_sw
+       OCEAN_do
     use mod_ocean_vars, only: &
-       ATMOS_TEMP,     &
-       ATMOS_PRES,     &
-       ATMOS_W,        &
-       ATMOS_U,        &
-       ATMOS_V,        &
-       ATMOS_DENS,     &
-       ATMOS_QV,       &
-       ATMOS_PBL,      &
-       ATMOS_SFC_DENS, &
-       ATMOS_SFC_PRES, &
-       ATMOS_SFLX_LW,  &
-       ATMOS_SFLX_SW,  &
-       ATMOS_cosSZA,   &
-       ATMOS_SFLX_prec
+       ATMOS_TEMP,      &
+       ATMOS_PRES,      &
+       ATMOS_W,         &
+       ATMOS_U,         &
+       ATMOS_V,         &
+       ATMOS_DENS,      &
+       ATMOS_QV,        &
+       ATMOS_PBL,       &
+       ATMOS_SFC_DENS,  &
+       ATMOS_SFC_PRES,  &
+       ATMOS_SFLX_LW,   &
+       ATMOS_SFLX_SW,   &
+       ATMOS_cosSZA,    &
+       ATMOS_SFLX_rain, &
+       ATMOS_SFLX_snow
     use mod_cpl_vars, only: &
        CPL_getATM_OCN
     implicit none
 
     real(RP) :: ATMOS_SFLX_rad_dn(OIA,OJA,2,2)
-    real(RP) :: ATMOS_SFLX_rain  (OIA,OJA)
-    real(RP) :: ATMOS_SFLX_snow  (OIA,OJA)
 
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if ( OCEAN_sw ) then
+    if ( OCEAN_do ) then
        call CPL_getATM_OCN( ATMOS_TEMP       (:,:),     & ! [OUT]
                             ATMOS_PRES       (:,:),     & ! [OUT]
                             ATMOS_W          (:,:),     & ! [OUT]
@@ -299,8 +319,6 @@ contains
     do i = OIS, OIE
        ATMOS_SFLX_SW  (i,j) = ATMOS_SFLX_rad_dn(i,j,I_SW,1) + ATMOS_SFLX_rad_dn(i,j,I_SW,2) ! direct+diffuse
        ATMOS_SFLX_LW  (i,j) = ATMOS_SFLX_rad_dn(i,j,I_LW,1) + ATMOS_SFLX_rad_dn(i,j,I_LW,2) ! direct+diffuse
-
-       ATMOS_SFLX_prec(i,j) = ATMOS_SFLX_rain(i,j) + ATMOS_SFLX_snow(i,j) ! liquid+ice
     enddo
     enddo
 
@@ -311,7 +329,7 @@ contains
   !> Put surface boundary to other model
   subroutine OCEAN_SURFACE_SET( countup )
     use mod_ocean_admin, only: &
-       OCEAN_sw
+       OCEAN_do
     use mod_ocean_vars, only: &
        OCEAN_SFC_TEMP,      &
        OCEAN_SFC_albedo,    &
@@ -337,7 +355,7 @@ contains
     logical, intent(in) :: countup
     !---------------------------------------------------------------------------
 
-    if ( OCEAN_sw ) then
+    if ( OCEAN_do ) then
        call CPL_putOCN( OCEAN_SFC_TEMP  (:,:),   & ! [IN]
                         OCEAN_SFC_albedo(:,:,:), & ! [IN]
                         OCEAN_SFC_Z0M   (:,:),   & ! [IN]

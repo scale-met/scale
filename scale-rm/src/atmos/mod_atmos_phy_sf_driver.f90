@@ -167,8 +167,6 @@ contains
        ATMOS_PHY_SF_bulk_flux
     use scale_atmos_phy_sf_const, only: &
        ATMOS_PHY_SF_const_flux
-    use scale_roughness, only: &
-       ROUGHNESS
     use mod_atmos_vars, only: &
        DENS   => DENS_av, &
        RHOT   => RHOT_av, &
@@ -307,24 +305,6 @@ contains
           if ( .not. ATMOS_HYDROMETEOR_dry ) then
              SFLX_QTRC(:,:,I_QV) = SFLX_QV(:,:)
           end if
-
-
-          ! albedo
-          call ROUGHNESS( &
-               IA, ISB, IEB, JA, JSB, JEB, &
-               SFC_Z0M(:,:), SFC_Z0H(:,:), SFC_Z0E(:,:), & ! [IN]
-               ATM_U(:,:), ATM_V(:,:), Z1(:,:),          & ! [IN]
-               dt_SF,                                    & ! [IN]
-               Z0M_t(:,:), Z0H_t(:,:), Z0E_t(:,:)        ) ! [OUT]
-
-          !omp parallel do
-          do j = JSB, JEB
-          do i = ISB, IEB
-             SFC_Z0M(i,j) = SFC_Z0M(i,j) + Z0M_t(i,j) * dt_SF
-             SFC_Z0H(i,j) = SFC_Z0H(i,j) + Z0H_t(i,j) * dt_SF
-             SFC_Z0E(i,j) = SFC_Z0E(i,j) + Z0E_t(i,j) * dt_SF
-          end do
-          end do
 
        endif
 
