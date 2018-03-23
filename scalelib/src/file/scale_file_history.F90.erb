@@ -250,7 +250,6 @@ module scale_file_history
 
   integer                    :: FILE_HISTORY_nitems = 0     !> number of registered item
   type(var_out), allocatable :: FILE_HISTORY_vars(:)
-  logical,       allocatable :: FILE_HISTORY_axis_written(:) !> Axis for this file is already written?
 
   integer                    :: FILE_HISTORY_nvar_inputs
   type(var_in),  allocatable :: FILE_HISTORY_var_inputs(:)
@@ -586,7 +585,6 @@ contains
 
     FILE_HISTORY_nitems = 0
     allocate( FILE_HISTORY_vars        (FILE_HISTORY_nreqs) )
-    allocate( FILE_HISTORY_axis_written(FILE_HISTORY_nreqs) )
 
     FILE_HISTORY_nvar_inputs = 0
     allocate( FILE_HISTORY_var_inputs(FILE_HISTORY_nreqs) )
@@ -1096,31 +1094,15 @@ contains
     use scale_file, only: &
        FILE_EndDef, &
        FILE_Flush
-    use scale_time, only: &
-       TIME_time2label
     implicit none
 
     integer :: fid, prev_fid
     integer :: id
-    character(len=H_MID) :: timelabel
     !---------------------------------------------------------------------------
 
     if ( FILE_HISTORY_disabled ) return
 
     call PROF_rapstart('FILE_HISTORY_OUT', 2)
-
-    ! Note this subroutine must be called after all FILE_HISTORY_reg calls are completed
-    ! Write registered history axes to history file
-    call TIME_time2label( FILE_HISTORY_NOWDATE, FILE_HISTORY_NOWMS, & ! [IN]
-                          timelabel ) ! [OUT]
-
-    do id = 1, FILE_HISTORY_nitems
-       call FILE_HISTORY_Create( id,                              & ! [IN]
-                                 FILE_HISTORY_NOWSTEP, timelabel, & ! [IN]
-                                 options=FILE_HISTORY_options     )
-    end do
-
-    call FILE_HISTORY_Write_Axes
 
     ! Write registered history variables to history file
     do id = 1, FILE_HISTORY_nitems
@@ -1144,7 +1126,7 @@ contains
 
        call FILE_HISTORY_Close
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** FILE_HISTORY_ file is switched.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** FILE_HISTORY file is switched.'
 
        do id = 1, FILE_HISTORY_nitems
           FILE_HISTORY_vars(id)%fid = -1 ! reset
@@ -1373,11 +1355,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Create( &
-       id,        &
-       now_step,  &
-       timelabel, &
-       options,   &
-       existed    )
+       id,     &
+       options )
     use scale_process, only: &
        PRC_LOCAL_COMM_WORLD
     use scale_file_h, only: &
@@ -1392,14 +1371,13 @@ contains
        FILE_Attach_Buffer,            &
        FILE_Add_Variable,             &
        FILE_Set_Attribute
+    use scale_time, only: &
+       TIME_time2label
     implicit none
 
     integer,           intent(in)  :: id
-    integer,           intent(in)  :: now_step
-    character(len=*),  intent(in)  :: timelabel
 
-    character(len=*),  intent(in),  optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
-    logical,           intent(out), optional :: existed
+    character(len=*),  intent(in) :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
 
     integer                :: fid
     character(len=H_MID)   :: tunits
@@ -1414,235 +1392,216 @@ contains
     character(len=H_SHORT) :: dims(3)
     real(DP)               :: dtsec
 
+    character(len=H_MID)   :: timelabel
+
     integer :: ic, ie, is, lo
     integer :: m
     !---------------------------------------------------------------------------
 
     fid = FILE_HISTORY_vars(id)%fid
 
-    if ( fid >= 0 ) then ! file already exists
-       fileexisted = .true.
+    if ( fid >= 0 ) return ! file already exists
+
+    if ( FILE_HISTORY_TIME_SINCE == '' ) then
+       tunits = trim(FILE_HISTORY_TIME_UNITS)
     else
-
-       if ( FILE_HISTORY_TIME_SINCE == '' ) then
-          tunits = trim(FILE_HISTORY_TIME_UNITS)
-       else
-          tunits = trim(FILE_HISTORY_TIME_UNITS)//' since '//trim(FILE_HISTORY_TIME_SINCE)
-       endif
-
-       if ( FILE_HISTORY_vars(id)%postfix_timelabel ) then
-          basename_mod = trim(FILE_HISTORY_vars(id)%basename)//'_'//trim(timelabel)
-       else
-          basename_mod = trim(FILE_HISTORY_vars(id)%basename)
-       endif
-
-       call FILE_Create( basename_mod,                       & ! [IN]
-                         FILE_HISTORY_TITLE,                 & ! [IN]
-                         FILE_HISTORY_SOURCE,                & ! [IN]
-                         FILE_HISTORY_INSTITUTION,           & ! [IN]
-                         fid, fileexisted,                   & ! [OUT]
-                         rankid = FILE_HISTORY_myrank,       & ! [IN]
-                         aggregate = FILE_HISTORY_AGGREGATE, & ! [IN]
-                         time_units = tunits,                & ! [IN]
-                         calendar = FILE_HISTORY_CALENDAR    ) ! [IN]
-
-       FILE_HISTORY_vars(id)%fid = fid
-
-       if ( .NOT. fileexisted ) then ! new file
-
-          ! write options
-          if ( present(options) ) then
-             ic = -1 ! index of ':'
-             ie = -1 ! index of '='
-             is =  1 ! start index
-             lo = len_trim(options)
-             if ( lo > 0 ) then
-                do m = 1, lo+1
-                   if ( m == lo+1 .OR. options(m:m) == '&' ) then
-                      if ( ic == -1 .OR. ie == -1 ) then
-                         write(*,*)'xxx option is invalid: ', trim(options)
-                         call PRC_abort
-                      endif
-                      call FILE_Set_Option( fid,                & ! [IN]
-                                            options(is  :ic-1), & ! [IN]
-                                            options(ic+1:ie-1), & ! [IN]
-                                            options(ie+1:m -1)  ) ! [IN]
-                      ic = -1
-                      ie = -1
-                      is = m+1
-                   elseif( options(m:m) == ':' ) then
-                      ic = m
-                   elseif( options(m:m) == '=' ) then
-                      ie = m
-                   endif
-                enddo
-             end if
-          endif
-
-          if ( RP == DP ) then
-             dtype = FILE_REAL8
-          else
-             dtype = FILE_REAL4
-          end if
-
-          ! define registered history axis variables in the newly created file
-          ! actual writing axis variables are deferred to FILE_HISTORY_WriteAxes
-          do m = 1, FILE_HISTORY_naxes
-             if ( FILE_HISTORY_AGGREGATE ) then ! for shared-file I/O, define axis in its global size
-                dim_size = FILE_HISTORY_axes(m)%gdim_size ! axis global size
-                if ( dim_size < 1 ) then
-                   write(*,*) 'xxx gsize is not set by FILE_HISTORY_Set_Axis'
-                   write(*,*) 'It is necessary for aggregate file'
-                   call PRC_abort
-                end if
-             else
-                dim_size = FILE_HISTORY_axes(m)%dim_size
-             endif
-
-             call FILE_Def_Axis( fid,                                           & ! [IN]
-                                 FILE_HISTORY_axes(m)%name,                     & ! [IN]
-                                 FILE_HISTORY_axes(m)%desc,                     & ! [IN]
-                                 FILE_HISTORY_axes(m)%units,                    & ! [IN]
-                                 FILE_HISTORY_axes(m)%dim,                      & ! [IN]
-                                 dtype, dim_size,                               & ! [IN]
-                                 bounds=associated(FILE_HISTORY_axes(m)%bounds) ) ! [IN]
-
-             if ( FILE_HISTORY_axes(m)%down ) then
-                call FILE_Set_Attribute( fid, FILE_HISTORY_axes(m)%name, 'positive', 'down' ) ! [IN]
-             endif
-          enddo
-
-          ! define registered history associated coordinate variables in the newly created file
-          ! actual writing coordinate variables are deferred to FILE_HISTORY_WriteAxes
-          do m = 1, FILE_HISTORY_nassocs
-             ndims = FILE_HISTORY_assocs(m)%ndims
-
-             call FILE_Def_AssociatedCoordinate( fid,                                  & ! [IN]
-                                                 FILE_HISTORY_assocs(m)%name,          & ! [IN]
-                                                 FILE_HISTORY_assocs(m)%desc,          & ! [IN]
-                                                 FILE_HISTORY_assocs(m)%units,         & ! [IN]
-                                                 FILE_HISTORY_assocs(m)%dims(1:ndims), & ! [IN]
-                                                 FILE_HISTORY_assocs(m)%dtype          ) ! [IN]
-          enddo
-
-
-          ! attributes
-          do m = 1, FILE_HISTORY_nattrs
-
-             if ( FILE_HISTORY_attrs(m)%add_variable ) then
-                ! associated variable
-                call FILE_Add_AssociatedVariable( fid, FILE_HISTORY_attrs(m)%varname )
-             end if
-
-             select case ( FILE_HISTORY_attrs(m)%type )
-             case ( I_TEXT )
-                call FILE_Set_Attribute( fid,                           & ! [IN]
-                                         FILE_HISTORY_attrs(m)%varname, & ! [IN]
-                                         FILE_HISTORY_attrs(m)%key,     & ! [IN]
-                                         FILE_HISTORY_attrs(m)%text     ) ! [IN]
-             case ( I_INT )
-                call FILE_Set_Attribute( fid,                           & ! [IN]
-                                         FILE_HISTORY_attrs(m)%varname, & ! [IN]
-                                         FILE_HISTORY_attrs(m)%key,     & ! [IN]
-                                         FILE_HISTORY_attrs(m)%int(:)   ) ! [IN]
-             case ( I_FLOAT )
-                call FILE_Set_Attribute( fid,                           & ! [IN]
-                                         FILE_HISTORY_attrs(m)%varname, & ! [IN]
-                                         FILE_HISTORY_attrs(m)%key,     & ! [IN]
-                                         FILE_HISTORY_attrs(m)%float(:) ) ! [IN]
-             case ( I_DOUBLE )
-                call FILE_Set_Attribute( fid,                            & ! [IN]
-                                         FILE_HISTORY_attrs(m)%varname,  & ! [IN]
-                                         FILE_HISTORY_attrs(m)%key,      & ! [IN]
-                                         FILE_HISTORY_attrs(m)%double(:) ) ! [IN]
-             end select
-
-          end do
-
-          ! allows PnetCDF to allocate an internal buffer of size io_buffer_size
-          ! to aggregate write requests for history variables
-          if ( FILE_HISTORY_io_buffer_size == 0 ) then
-             array_size = 0
-             do m = 1, FILE_HISTORY_nitems
-                array_size = array_size + FILE_HISTORY_vars(m)%size
-             end do
-             FILE_HISTORY_io_buffer_size = array_size * DP
-          end if
-          call FILE_Attach_Buffer( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_io_buffer_size ) ! [IN]
-
-
-          FILE_HISTORY_axis_written(FILE_HISTORY_vars(id)%fid) = .false.
-
-          if ( present(existed) ) existed = .false.
-
-       endif ! new file?
-
+       tunits = trim(FILE_HISTORY_TIME_UNITS)//' since '//trim(FILE_HISTORY_TIME_SINCE)
     endif
 
-    if ( FILE_HISTORY_vars(id)%vid < 0 ) then ! the variable is not defined
-       ! Add new variable
-       dtsec = real(FILE_HISTORY_vars(id)%dstep,kind=DP) * FILE_HISTORY_DTSEC
+    if ( FILE_HISTORY_vars(id)%postfix_timelabel ) then
+       call TIME_time2label( FILE_HISTORY_NOWDATE, FILE_HISTORY_NOWMS, & ! [IN]
+                             timelabel ) ! [OUT]
+       basename_mod = trim(FILE_HISTORY_vars(id)%basename)//'_'//trim(timelabel)
+    else
+       basename_mod = trim(FILE_HISTORY_vars(id)%basename)
+    endif
 
-       dimid = FILE_HISTORY_vars(id)%dimid
-       zid   = FILE_HISTORY_vars(id)%zid
-       ndims = FILE_HISTORY_dims(dimid)%ndims
-       dims(1:ndims) = FILE_HISTORY_dims(dimid)%dims(1:ndims,zid)
+    call FILE_Create( basename_mod,                       & ! [IN]
+                      FILE_HISTORY_TITLE,                 & ! [IN]
+                      FILE_HISTORY_SOURCE,                & ! [IN]
+                      FILE_HISTORY_INSTITUTION,           & ! [IN]
+                      fid, fileexisted,                   & ! [OUT]
+                      rankid = FILE_HISTORY_myrank,       & ! [IN]
+                      aggregate = FILE_HISTORY_AGGREGATE, & ! [IN]
+                      time_units = tunits,                & ! [IN]
+                      calendar = FILE_HISTORY_CALENDAR    ) ! [IN]
 
-       call FILE_Add_Variable( FILE_HISTORY_vars(id)%fid,              & ! [IN]
-                               FILE_HISTORY_vars(id)%outname,          & ! [IN]
-                               FILE_HISTORY_vars(id)%desc,             & ! [IN]
-                               FILE_HISTORY_vars(id)%units,            & ! [IN]
-                               FILE_HISTORY_vars(id)%standard_name,    & ! [IN]
-                               dims(1:ndims),                          & ! [IN]
-                               FILE_HISTORY_vars(id)%dtype,            & ! [IN]
-                               dtsec,                                  & ! [IN]
-                               FILE_HISTORY_vars(id)%vid,              & ! [OUT]
-                               time_avg=FILE_HISTORY_vars(id)%taverage ) ! [IN]
+    FILE_HISTORY_vars(id)%fid = fid
 
+    ! write options
+    ic = -1 ! index of ':'
+    ie = -1 ! index of '='
+    is =  1 ! start index
+    lo = len_trim(options)
+    if ( lo > 0 ) then
+       do m = 1, lo+1
+          if ( m == lo+1 .OR. options(m:m) == '&' ) then
+             if ( ic == -1 .OR. ie == -1 ) then
+                write(*,*)'xxx option is invalid: ', trim(options)
+                call PRC_abort
+             endif
+             call FILE_Set_Option( fid, options(is:ic-1), options(ic+1:ie-1), options(ie+1:m -1)  ) ! [IN]
+             ic = -1
+             ie = -1
+             is = m+1
+          elseif( options(m:m) == ':' ) then
+             ic = m
+          elseif( options(m:m) == '=' ) then
+             ie = m
+          endif
+       enddo
+    endif
 
-       if (       FILE_HISTORY_dims(dimid)%mapping /= "" ) then
-          call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname, & ! [IN]
-                                   'grid_mapping', FILE_HISTORY_dims(dimid)%mapping          ) ! [IN]
+    if ( RP == DP ) then
+       dtype = FILE_REAL8
+    else
+       dtype = FILE_REAL4
+    end if
+
+    ! define registered history axis variables in the newly created file
+    ! actual writing axis variables are deferred to FILE_HISTORY_WriteAxes
+    do m = 1, FILE_HISTORY_naxes
+       if ( FILE_HISTORY_AGGREGATE ) then ! for shared-file I/O, define axis in its global size
+          dim_size = FILE_HISTORY_axes(m)%gdim_size ! axis global size
+          if ( dim_size < 1 ) then
+             write(*,*) 'xxx gsize is not set by FILE_HISTORY_Set_Axis'
+             write(*,*) 'It is necessary for aggregate file'
+             call PRC_abort
+          end if
+       else
+          dim_size = FILE_HISTORY_axes(m)%dim_size
        endif
+       call FILE_Def_Axis( fid,                                           & ! [IN]
+                           FILE_HISTORY_axes(m)%name,                     & ! [IN]
+                           FILE_HISTORY_axes(m)%desc,                     & ! [IN]
+                           FILE_HISTORY_axes(m)%units,                    & ! [IN]
+                           FILE_HISTORY_axes(m)%dim,                      & ! [IN]
+                           dtype, dim_size,                               & ! [IN]
+                           bounds=associated(FILE_HISTORY_axes(m)%bounds) ) ! [IN]
+       if ( FILE_HISTORY_axes(m)%down ) then
+          call FILE_Set_Attribute( fid, FILE_HISTORY_axes(m)%name, 'positive', 'down' ) ! [IN]
+       endif
+    enddo
 
-       select case( FILE_HISTORY_vars(id)%cell_measures )
-       case ( "area", "area_z" )
-          if ( FILE_HISTORY_dims(dimid)%area /= "" ) then
-             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname,      & ! [IN]
-                                      'cell_measures', "area: "//trim(FILE_HISTORY_dims(dimid)%area) ) ! [IN]
-          end if
-       case ( "area_x" )
-          if ( FILE_HISTORY_dims(dimid)%area_x /= "" ) then
-             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname,        & ! [IN]
-                                      'cell_measures', "area: "//trim(FILE_HISTORY_dims(dimid)%area_x) ) ! [IN]
-          end if
-       case ( "area_y" )
-          if ( FILE_HISTORY_dims(dimid)%area_x /= "" ) then
-             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname,        & ! [IN]
-                                      'cell_measures', "area: "//trim(FILE_HISTORY_dims(dimid)%area_y) ) ! [IN]
-          end if
-       case ( "volume" )
-          if ( FILE_HISTORY_dims(dimid)%area_x /= "" ) then
-             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname,        & ! [IN]
-                                      'cell_measures', "volume: "//trim(FILE_HISTORY_dims(dimid)%volume) ) ! [IN]
-          end if
+    ! define registered history associated coordinate variables in the newly created file
+    ! actual writing coordinate variables are deferred to FILE_HISTORY_WriteAxes
+    do m = 1, FILE_HISTORY_nassocs
+       ndims = FILE_HISTORY_assocs(m)%ndims
+       call FILE_Def_AssociatedCoordinate( fid,                                  & ! [IN]
+                                           FILE_HISTORY_assocs(m)%name,          & ! [IN]
+                                           FILE_HISTORY_assocs(m)%desc,          & ! [IN]
+                                           FILE_HISTORY_assocs(m)%units,         & ! [IN]
+                                           FILE_HISTORY_assocs(m)%dims(1:ndims), & ! [IN]
+                                           FILE_HISTORY_assocs(m)%dtype          ) ! [IN]
+    enddo
+
+    ! attributes
+    do m = 1, FILE_HISTORY_nattrs
+
+       if ( FILE_HISTORY_attrs(m)%add_variable ) then
+          ! associated variable
+          call FILE_Add_AssociatedVariable( fid, FILE_HISTORY_attrs(m)%varname )
+       end if
+
+       select case ( FILE_HISTORY_attrs(m)%type )
+       case ( I_TEXT )
+          call FILE_Set_Attribute( fid,                           & ! [IN]
+                                   FILE_HISTORY_attrs(m)%varname, & ! [IN]
+                                   FILE_HISTORY_attrs(m)%key,     & ! [IN]
+                                   FILE_HISTORY_attrs(m)%text     ) ! [IN]
+       case ( I_INT )
+          call FILE_Set_Attribute( fid,                           & ! [IN]
+                                   FILE_HISTORY_attrs(m)%varname, & ! [IN]
+                                   FILE_HISTORY_attrs(m)%key,     & ! [IN]
+                                   FILE_HISTORY_attrs(m)%int(:)   ) ! [IN]
+       case ( I_FLOAT )
+          call FILE_Set_Attribute( fid,                           & ! [IN]
+                                   FILE_HISTORY_attrs(m)%varname, & ! [IN]
+                                   FILE_HISTORY_attrs(m)%key,     & ! [IN]
+                                   FILE_HISTORY_attrs(m)%float(:) ) ! [IN]
+       case ( I_DOUBLE )
+          call FILE_Set_Attribute( fid,                            & ! [IN]
+                                   FILE_HISTORY_attrs(m)%varname,  & ! [IN]
+                                   FILE_HISTORY_attrs(m)%key,      & ! [IN]
+                                   FILE_HISTORY_attrs(m)%double(:) ) ! [IN]
        end select
 
-       if ( FILE_HISTORY_dims(dimid)%location /= "" ) then
-          if ( FILE_HISTORY_vars(id)%zcoord == "model" ) then
-             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname, & ! [IN]
-                                     'grid', FILE_HISTORY_dims(dimid)%grid                     ) ! [IN]
-          else
-             call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname, & ! [IN]
-                                     'grid', trim(FILE_HISTORY_dims(dimid)%grid)//'_'//trim(FILE_HISTORY_vars(id)%zcoord) ) ! [IN]
+    end do
+
+    ! allows PnetCDF to allocate an internal buffer of size io_buffer_size
+    ! to aggregate write requests for history variables
+    if ( FILE_HISTORY_io_buffer_size == 0 ) then
+       array_size = 0
+       do m = 1, FILE_HISTORY_nitems
+          array_size = array_size + FILE_HISTORY_vars(m)%size
+       end do
+       FILE_HISTORY_io_buffer_size = array_size * DP
+    end if
+    call FILE_Attach_Buffer( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_io_buffer_size ) ! [IN]
+
+
+    do m = 1, FILE_HISTORY_nitems
+       if ( FILE_HISTORY_vars(id)%basename == FILE_HISTORY_vars(m)%basename ) then
+          ! Add new variable
+          FILE_HISTORY_vars(m)%fid = fid
+          dtsec = real(FILE_HISTORY_vars(m)%dstep,kind=DP) * FILE_HISTORY_DTSEC
+          dimid = FILE_HISTORY_vars(m)%dimid
+          zid   = FILE_HISTORY_vars(m)%zid
+          ndims = FILE_HISTORY_dims(dimid)%ndims
+          dims(1:ndims) = FILE_HISTORY_dims(dimid)%dims(1:ndims,zid)
+          call FILE_Add_Variable( FILE_HISTORY_vars(m)%fid,              & ! [IN]
+                                  FILE_HISTORY_vars(m)%outname,          & ! [IN]
+                                  FILE_HISTORY_vars(m)%desc,             & ! [IN]
+                                  FILE_HISTORY_vars(m)%units,            & ! [IN]
+                                  FILE_HISTORY_vars(m)%standard_name,    & ! [IN]
+                                  dims(1:ndims),                         & ! [IN]
+                                  FILE_HISTORY_vars(m)%dtype,            & ! [IN]
+                                  dtsec,                                 & ! [IN]
+                                  FILE_HISTORY_vars(m)%vid,              & ! [OUT]
+                                  time_avg=FILE_HISTORY_vars(m)%taverage ) ! [IN]
+          if (       FILE_HISTORY_dims(dimid)%mapping /= "" ) then
+             call FILE_Set_Attribute( FILE_HISTORY_vars(m)%fid, FILE_HISTORY_vars(m)%outname, & ! [IN]
+                                      'grid_mapping', FILE_HISTORY_dims(dimid)%mapping         ) ! [IN]
+          endif
+
+          select case( FILE_HISTORY_vars(m)%cell_measures )
+          case ( "area", "area_z" )
+             if ( FILE_HISTORY_dims(dimid)%area /= "" ) then
+                call FILE_Set_Attribute( FILE_HISTORY_vars(m)%fid, FILE_HISTORY_vars(m)%outname,        & ! [IN]
+                                         'cell_measures', "area: "//trim(FILE_HISTORY_dims(dimid)%area) ) ! [IN]
+             end if
+          case ( "area_x" )
+             if ( FILE_HISTORY_dims(dimid)%area_x /= "" ) then
+                call FILE_Set_Attribute( FILE_HISTORY_vars(m)%fid, FILE_HISTORY_vars(m)%outname,          & ! [IN]
+                                         'cell_measures', "area: "//trim(FILE_HISTORY_dims(dimid)%area_x) ) ! [IN]
+             end if
+          case ( "area_y" )
+             if ( FILE_HISTORY_dims(dimid)%area_x /= "" ) then
+                call FILE_Set_Attribute( FILE_HISTORY_vars(m)%fid, FILE_HISTORY_vars(m)%outname,          & ! [IN]
+                                         'cell_measures', "area: "//trim(FILE_HISTORY_dims(dimid)%area_y) ) ! [IN]
+             end if
+          case ( "volume" )
+             if ( FILE_HISTORY_dims(dimid)%area_x /= "" ) then
+                call FILE_Set_Attribute( FILE_HISTORY_vars(m)%fid, FILE_HISTORY_vars(m)%outname,          & ! [IN]
+                                         'cell_measures', "volume: "//trim(FILE_HISTORY_dims(dimid)%volume) ) ! [IN]
+             end if
+          end select
+
+          if ( FILE_HISTORY_dims(dimid)%location /= "" ) then
+             if ( FILE_HISTORY_vars(m)%zcoord == "model" ) then
+                call FILE_Set_Attribute( FILE_HISTORY_vars(m)%fid, FILE_HISTORY_vars(m)%outname, & ! [IN]
+                                         'grid', FILE_HISTORY_dims(dimid)%grid                   ) ! [IN]
+             else
+                call FILE_Set_Attribute( FILE_HISTORY_vars(m)%fid, FILE_HISTORY_vars(m)%outname,                              & ! [IN]
+                                         'grid', trim(FILE_HISTORY_dims(dimid)%grid)//'_'//trim(FILE_HISTORY_vars(id)%zcoord) ) ! [IN]
+             end if
+             call FILE_Set_Attribute( FILE_HISTORY_vars(m)%fid, FILE_HISTORY_vars(m)%outname, & ! [IN]
+                                      'location', FILE_HISTORY_dims(dimid)%location           ) ! [IN]
           end if
-          call FILE_Set_Attribute( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_vars(id)%outname, & ! [IN]
-                                   'location', FILE_HISTORY_dims(dimid)%location             ) ! [IN]
-       endif
+       end if
+    end do
 
-    endif
-
-    if ( present(existed) ) existed = fileexisted
+    call FILE_HISTORY_Write_Axes(id) ! [IN]
 
     return
   end subroutine FILE_HISTORY_Create
@@ -1660,6 +1619,7 @@ contains
     prev_fid = -1
     do id = 1, FILE_HISTORY_nitems
        fid = FILE_HISTORY_vars(id)%fid
+       FILE_HISTORY_vars(id)%fid = -1
        if ( fid > 0 .AND. fid /= prev_fid ) then
           call FILE_Detach_Buffer( fid ) ! Release the internal buffer previously allowed to be used by PnetCDF
           call FILE_Close( fid )
@@ -1966,64 +1926,57 @@ contains
   end subroutine FILE_HISTORY_Query_Name
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_HISTORY_Write_Axes
+  subroutine FILE_HISTORY_Write_Axes(id)
     use scale_file, only: &
        FILE_EndDef,     &
        FILE_Flush,      &
        FILE_Write_Axis, &
        FILE_Write_AssociatedCoordinate
+    use scale_process, only: &
+       PRC_abort
     implicit none
+    integer, intent(in) :: id
 
     integer :: start(1)
-    integer :: m, id, fid
+    integer :: m, fid
     !---------------------------------------------------------------------------
 
-    if( FILE_HISTORY_nreqs == 0 ) return
-    if( FILE_HISTORY_naxes == 0 ) return
+    if ( id < 0 ) return
 
-    do id = 1, FILE_HISTORY_nitems
+    fid = FILE_HISTORY_vars(id)%fid
+    call FILE_EndDef( fid )
 
-       fid = FILE_HISTORY_vars(id)%fid
-       if ( fid < 0 ) cycle
-       if ( FILE_HISTORY_axis_written(fid) ) cycle
+    ! write registered history variables to file
+    do m = 1, FILE_HISTORY_naxes
+       if ( FILE_HISTORY_axes(m)%start > 0 ) then
+          start(1) = FILE_HISTORY_axes(m)%start
 
-       call FILE_EndDef( fid )
+          call FILE_Write_Axis( fid,                       & ! [IN]
+                                FILE_HISTORY_axes(m)%name, & ! [IN]
+                                FILE_HISTORY_axes(m)%var,  & ! [IN]
+                                start                      ) ! [IN]
 
-       ! write registered history variables to file
-       do m = 1, FILE_HISTORY_naxes
-          if ( FILE_HISTORY_axes(m)%start > 0 ) then
-             start(1) = FILE_HISTORY_axes(m)%start
+          if ( associated(FILE_HISTORY_axes(m)%bounds) ) then
+             call FILE_Write_AssociatedCoordinate( fid,                                      & ! [IN]
+                                                   trim(FILE_HISTORY_axes(m)%name)//'_bnds', & ! [IN]
+                                                   FILE_HISTORY_axes(m)%bounds(:,:),         & ! [IN]
+                                                   (/ 1, start(1) /)                         ) ! [IN]
+          end if
 
-             call FILE_Write_Axis( fid,                         & ! [IN]
-                                   FILE_HISTORY_axes(m)%name,   & ! [IN]
-                                   FILE_HISTORY_axes(m)%var(:), & ! [IN]
-                                   start(:)                     ) ! [IN]
-             if ( associated(FILE_HISTORY_axes(m)%bounds) ) then
-                call FILE_Write_AssociatedCoordinate( fid,                                      & ! [IN]
-                                                      trim(FILE_HISTORY_axes(m)%name)//'_bnds', & ! [IN]
-                                                      FILE_HISTORY_axes(m)%bounds(:,:),         & ! [IN]
-                                                      (/ 1, start(1) /)                         ) ! [IN]
-             end if
+       end if
+    end do
 
-          endif
-       enddo
-
-       do m = 1, FILE_HISTORY_nassocs
-          call FILE_Write_AssociatedCoordinate( fid,                          & ! [IN]
-                                                FILE_HISTORY_assocs(m)%name,  & ! [IN]
-                                                FILE_HISTORY_assocs(m)%var,   & ! [IN]
-                                                FILE_HISTORY_assocs(m)%start, & ! [IN]
-                                                FILE_HISTORY_assocs(m)%count, & ! [IN]
-                                                FILE_HISTORY_assocs(m)%ndims  ) ! [IN]
-       enddo
-
-       ! for PnetCDF I/O, flush all pending nonblocking write requests
-       call FILE_Flush( fid )
-
-       ! mark the axes have been written
-       FILE_HISTORY_axis_written(fid) = .true.
-
+    do m = 1, FILE_HISTORY_nassocs
+       call FILE_Write_AssociatedCoordinate( fid,                          & ! [IN]
+                                             FILE_HISTORY_assocs(m)%name,  & ! [IN]
+                                             FILE_HISTORY_assocs(m)%var,   & ! [IN]
+                                             FILE_HISTORY_assocs(m)%start, & ! [IN]
+                                             FILE_HISTORY_assocs(m)%count, & ! [IN]
+                                             FILE_HISTORY_assocs(m)%ndims  ) ! [IN]
     enddo
+
+    ! for PnetCDF I/O, flush all pending nonblocking write requests
+    call FILE_Flush( fid )
 
     return
   end subroutine FILE_HISTORY_Write_Axes
@@ -2083,6 +2036,10 @@ contains
        if ( laststep_write < step_now ) then ! log only once in this step
           if( IO_L ) write(IO_FID_LOG,*) '*** Output HISTORY'
        endif
+
+       ! Note this subroutine must be called after all FILE_HISTORY_reg calls are completed
+       ! Write registered history axes to history file
+       call FILE_HISTORY_Create( id, options = FILE_HISTORY_options ) ! [IN]
 
        sec_str = FILE_HISTORY_STARTDAYSEC + real(FILE_HISTORY_vars(id)%laststep_write-1,kind=DP) * FILE_HISTORY_DTSEC
        sec_end = FILE_HISTORY_STARTDAYSEC + real(step_now                       -1,kind=DP) * FILE_HISTORY_DTSEC
