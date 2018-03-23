@@ -119,11 +119,10 @@ $(OBJ_DIR)/scale_stdio.o: ./io/scale_stdio.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_fil
 $(OBJ_DIR)/scale_time.o: ./common/scale_time.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_topography.o: ./common/scale_topography.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_comm_cartesC.o $(OBJ_DIR)/scale_file.o $(OBJ_DIR)/scale_file_cartesC.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_tracer.o: ./common/scale_tracer.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
+$(OBJ_DIR)/scale_urban_dyn_kusaka01.o: ./urban/dynamics/scale_urban_dyn_kusaka01.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_sub_hydrometeor.o $(OBJ_DIR)/scale_atmos_sub_saturation.o $(OBJ_DIR)/scale_bulkflux.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file_history.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_urban_grid_cartesC.o: ./urban/grid/scale_urban_grid_cartesC.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_file.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_urban_grid_cartesC_index.o
 $(OBJ_DIR)/scale_urban_grid_cartesC_index.o: ./urban/grid/scale_urban_grid_cartesC_index.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_urban_grid_cartesC_real.o: ./urban/grid/scale_urban_grid_cartesC_real.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_grid_cartesC_real.o $(OBJ_DIR)/scale_file_cartesC.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_urban_grid_cartesC.o $(OBJ_DIR)/scale_urban_grid_cartesC_index.o
-$(OBJ_DIR)/scale_urban_phy.o: ./urban/scale_urban_phy.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_urban_grid_cartesC_index.o $(OBJ_DIR)/scale_urban_phy_slc.o
-$(OBJ_DIR)/scale_urban_phy_slc.o: ./urban/scale_urban_phy_slc.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_sub_hydrometeor.o $(OBJ_DIR)/scale_atmos_sub_saturation.o $(OBJ_DIR)/scale_bulkflux.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file_history.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_urban_grid_cartesC_index.o
 $(OBJ_DIR)/scale_vector.o: ./common/scale_vector.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
 
 MODS =	\
@@ -238,9 +237,8 @@ MODS =	\
 	$(OBJ_DIR)/scale_time.mod	\
 	$(OBJ_DIR)/scale_topography.mod	\
 	$(OBJ_DIR)/scale_tracer.mod	\
+	$(OBJ_DIR)/scale_urban_dyn_kusaka01.mod	\
 	$(OBJ_DIR)/scale_urban_grid_cartesc.mod	\
 	$(OBJ_DIR)/scale_urban_grid_cartesc_index.mod	\
 	$(OBJ_DIR)/scale_urban_grid_cartesc_real.mod	\
-	$(OBJ_DIR)/scale_urban_phy.mod	\
-	$(OBJ_DIR)/scale_urban_phy_slc.mod	\
 	$(OBJ_DIR)/scale_vector.mod

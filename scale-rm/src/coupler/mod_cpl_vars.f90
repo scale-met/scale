@@ -1036,7 +1036,7 @@ contains
        ! SFLX_GH is positive for upward, while OCN_SFLX_WH, LND_SFLX_GH, and URB_SFLX_GH is positive for downward
        SFLX_GH   (i,j)      = - fact_ocean(i,j) * OCN_SFLX_WH   (i,j) &
                               - fact_land (i,j) * LND_SFLX_GH   (i,j) &
-                              + fact_urban(i,j) * URB_SFLX_GH   (i,j)
+                              - fact_urban(i,j) * URB_SFLX_GH   (i,j)
 
        if ( .not. ATMOS_HYDROMETEOR_dry ) &
        SFLX_QTRC (i,j,I_QV) = fact_ocean(i,j) * OCN_SFLX_evap (i,j) &

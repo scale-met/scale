@@ -48,28 +48,17 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine URBAN_PHY_driver_setup
-    use scale_urban_phy, only: &
-       URBAN_PHY_setup
     use mod_urban_admin, only: &
-       URBAN_TYPE, &
-       URBAN_sw
-    use mod_urban_vars, only: &
-       URBAN_Z0M, &
-       URBAN_Z0H, &
-       URBAN_Z0E
+       URBAN_do
     implicit none
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[URBAN PHY] / Origin[SCALE-RM]'
 
-    if ( URBAN_sw ) then
+    if ( URBAN_do ) then
 
-       ! setup library component
-       call URBAN_PHY_setup( URBAN_TYPE,     & ! [IN]
-                             URBAN_Z0M(:,:), & ! [OUT]
-                             URBAN_Z0H(:,:), & ! [OUT]
-                             URBAN_Z0E(:,:)  ) ! [OUT]
+       ! no scheme currentry
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -84,10 +73,10 @@ contains
     use mod_admin_restart, only: &
        RESTART_RUN
     use mod_urban_admin, only: &
-       URBAN_sw
+       URBAN_do
     implicit none
 
-    if ( URBAN_sw ) then
+    if ( URBAN_do ) then
 
        if ( .NOT. RESTART_RUN ) then ! tentative
           ! run once (only for the diagnostic value)
@@ -103,11 +92,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine URBAN_PHY_driver( update_flag )
-    use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
-    use scale_time, only: &
-       NOWDATE => TIME_NOWDATE,     &
-       dt      => TIME_DTSEC_URBAN
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STATISTICS_total
@@ -118,13 +102,6 @@ contains
        URBAN_GRID_CARTESC_REAL_TOTAREA
     use scale_file_history, only: &
        FILE_HISTORY_in
-    use scale_mapprojection, only: &
-       BASE_LON => MAPPROJECTION_basepoint_lon, &
-       BASE_LAT => MAPPROJECTION_basepoint_lat
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_Z1
-    use scale_urban_phy, only: &
-       URBAN_PHY
     use mod_urban_vars, only: &
        URBAN_TR,         &
        URBAN_TB,         &
@@ -180,7 +157,8 @@ contains
        ATMOS_SFC_PRES,   &
        ATMOS_SFLX_LW,    &
        ATMOS_SFLX_SW,    &
-       ATMOS_SFLX_prec
+       ATMOS_SFLX_rain,  &
+       ATMOS_SFLX_snow
     implicit none
 
     ! arguments
@@ -194,151 +172,80 @@ contains
 
     if ( update_flag ) then
 
-       call URBAN_PHY( URBAN_TR_t      (:,:),      & ! [OUT]
-                       URBAN_TB_t      (:,:),      & ! [OUT]
-                       URBAN_TG_t      (:,:),      & ! [OUT]
-                       URBAN_TC_t      (:,:),      & ! [OUT]
-                       URBAN_QC_t      (:,:),      & ! [OUT]
-                       URBAN_UC_t      (:,:),      & ! [OUT]
-                       URBAN_TRL_t     (:,:,:),    & ! [OUT]
-                       URBAN_TBL_t     (:,:,:),    & ! [OUT]
-                       URBAN_TGL_t     (:,:,:),    & ! [OUT]
-                       URBAN_RAINR_t   (:,:),      & ! [OUT]
-                       URBAN_RAINB_t   (:,:),      & ! [OUT]
-                       URBAN_RAING_t   (:,:),      & ! [OUT]
-                       URBAN_ROFF_t    (:,:),      & ! [OUT]
-                       URBAN_SFC_TEMP  (:,:),      & ! [OUT]
-                       URBAN_SFC_albedo(:,:,I_LW), & ! [OUT]
-                       URBAN_SFC_albedo(:,:,I_SW), & ! [OUT]
-                       URBAN_SFLX_MW   (:,:),      & ! [OUT]
-                       URBAN_SFLX_MU   (:,:),      & ! [OUT]
-                       URBAN_SFLX_MV   (:,:),      & ! [OUT]
-                       URBAN_SFLX_SH   (:,:),      & ! [OUT]
-                       URBAN_SFLX_LH   (:,:),      & ! [OUT]
-                       URBAN_SFLX_GH   (:,:),      & ! [OUT]
-                       URBAN_Z0M       (:,:),      & ! [OUT]
-                       URBAN_Z0H       (:,:),      & ! [OUT]
-                       URBAN_Z0E       (:,:),      & ! [OUT]
-                       URBAN_U10       (:,:),      & ! [OUT]
-                       URBAN_V10       (:,:),      & ! [OUT]
-                       URBAN_T2        (:,:),      & ! [OUT]
-                       URBAN_Q2        (:,:),      & ! [OUT]
-                       ATMOS_TEMP      (:,:),      & ! [IN]
-                       ATMOS_PRES      (:,:),      & ! [IN]
-                       ATMOS_W         (:,:),      & ! [IN]
-                       ATMOS_U         (:,:),      & ! [IN]
-                       ATMOS_V         (:,:),      & ! [IN]
-                       ATMOS_DENS      (:,:),      & ! [IN]
-                       ATMOS_QV        (:,:),      & ! [IN]
-                       ATMOS_GRID_CARTESC_REAL_Z1         (:,:),      & ! [IN]
-                       ATMOS_PBL       (:,:),      & ! [IN]
-                       ATMOS_SFC_DENS  (:,:),      & ! [IN]
-                       ATMOS_SFC_PRES  (:,:),      & ! [IN]
-                       ATMOS_SFLX_LW   (:,:,:),    & ! [IN]
-                       ATMOS_SFLX_SW   (:,:,:),    & ! [IN]
-                       ATMOS_SFLX_prec (:,:),      & ! [IN]
-                       URBAN_TR        (:,:),      & ! [IN]
-                       URBAN_TB        (:,:),      & ! [IN]
-                       URBAN_TG        (:,:),      & ! [IN]
-                       URBAN_TC        (:,:),      & ! [IN]
-                       URBAN_QC        (:,:),      & ! [IN]
-                       URBAN_UC        (:,:),      & ! [IN]
-                       URBAN_TRL       (:,:,:),    & ! [IN]
-                       URBAN_TBL       (:,:,:),    & ! [IN]
-                       URBAN_TGL       (:,:,:),    & ! [IN]
-                       URBAN_RAINR     (:,:),      & ! [IN]
-                       URBAN_RAINB     (:,:),      & ! [IN]
-                       URBAN_RAING     (:,:),      & ! [IN]
-                       URBAN_ROFF      (:,:),      & ! [IN]
-                       BASE_LON,                   & ! [IN]
-                       BASE_LAT,                   & ! [IN]
-                       NOWDATE         (:),        & ! [IN]
-                       dt                          ) ! [IN]
-
-       call HYDROMETEOR_LHV( UIA, UIS, UIE, UJA, UJS, UJE, &
-                             ATMOS_TEMP(:,:), LHV(:,:) )
-
-!OCL XFILL
-       do j = UJS, UJE
-       do i = UIS, UIE
-          URBAN_SFLX_evap(i,j) = URBAN_SFLX_LH(i,j) / LHV(i,j)
-       end do
-       end do
-
-       call FILE_HISTORY_in( URBAN_TR_t(:,:), 'URBAN_TR_t', 'tendency of URBAN_TR', 'K',     dim_type='XY' )
-       call FILE_HISTORY_in( URBAN_TB_t(:,:), 'URBAN_TB_t', 'tendency of URBAN_TB', 'K',     dim_type='XY' )
-       call FILE_HISTORY_in( URBAN_TG_t(:,:), 'URBAN_TG_t', 'tendency of URBAN_TG', 'K',     dim_type='XY' )
-       call FILE_HISTORY_in( URBAN_TC_t(:,:), 'URBAN_TC_t', 'tendency of URBAN_TC', 'K',     dim_type='XY' )
-       call FILE_HISTORY_in( URBAN_QC_t(:,:), 'URBAN_QC_t', 'tendency of URBAN_QC', 'kg/kg', dim_type='XY' )
-       call FILE_HISTORY_in( URBAN_UC_t(:,:), 'URBAN_UC_t', 'tendency of URBAN_UC', 'm/s',   dim_type='XY' )
-
-       call FILE_HISTORY_in( URBAN_TRL_t(:,:,:), 'URBAN_TRL_t', 'tendency of URBAN_TRL', 'K', dim_type='UXY' )
-       call FILE_HISTORY_in( URBAN_TBL_t(:,:,:), 'URBAN_TBL_t', 'tendency of URBAN_TBL', 'K', dim_type='UXY' )
-       call FILE_HISTORY_in( URBAN_TGL_t(:,:,:), 'URBAN_TGL_t', 'tendency of URBAN_TGL', 'K', dim_type='UXY' )
-
-       call FILE_HISTORY_in( URBAN_RAINR_t(:,:), 'URBAN_RAINR_t', 'tendency of URBAN_RAINR', 'K', dim_type='XY' )
-       call FILE_HISTORY_in( URBAN_RAINB_t(:,:), 'URBAN_RAINB_t', 'tendency of URBAN_RAINB', 'K', dim_type='XY' )
-       call FILE_HISTORY_in( URBAN_RAING_t(:,:), 'URBAN_RAING_t', 'tendency of URBAN_RAING', 'K', dim_type='XY' )
-       call FILE_HISTORY_in( URBAN_ROFF_t (:,:), 'URBAN_ROFF_t',  'tendency of URBAN_ROFF',  'K', dim_type='XY' )
+!!$       call FILE_HISTORY_in( URBAN_TR_t(:,:), 'URBAN_TR_t', 'tendency of URBAN_TR', 'K',     dim_type='XY' )
+!!$       call FILE_HISTORY_in( URBAN_TB_t(:,:), 'URBAN_TB_t', 'tendency of URBAN_TB', 'K',     dim_type='XY' )
+!!$       call FILE_HISTORY_in( URBAN_TG_t(:,:), 'URBAN_TG_t', 'tendency of URBAN_TG', 'K',     dim_type='XY' )
+!!$       call FILE_HISTORY_in( URBAN_TC_t(:,:), 'URBAN_TC_t', 'tendency of URBAN_TC', 'K',     dim_type='XY' )
+!!$       call FILE_HISTORY_in( URBAN_QC_t(:,:), 'URBAN_QC_t', 'tendency of URBAN_QC', 'kg/kg', dim_type='XY' )
+!!$       call FILE_HISTORY_in( URBAN_UC_t(:,:), 'URBAN_UC_t', 'tendency of URBAN_UC', 'm/s',   dim_type='XY' )
+!!$
+!!$       call FILE_HISTORY_in( URBAN_TRL_t(:,:,:), 'URBAN_TRL_t', 'tendency of URBAN_TRL', 'K', dim_type='UXY' )
+!!$       call FILE_HISTORY_in( URBAN_TBL_t(:,:,:), 'URBAN_TBL_t', 'tendency of URBAN_TBL', 'K', dim_type='UXY' )
+!!$       call FILE_HISTORY_in( URBAN_TGL_t(:,:,:), 'URBAN_TGL_t', 'tendency of URBAN_TGL', 'K', dim_type='UXY' )
+!!$
+!!$       call FILE_HISTORY_in( URBAN_RAINR_t(:,:), 'URBAN_RAINR_t', 'tendency of URBAN_RAINR', 'K', dim_type='XY' )
+!!$       call FILE_HISTORY_in( URBAN_RAINB_t(:,:), 'URBAN_RAINB_t', 'tendency of URBAN_RAINB', 'K', dim_type='XY' )
+!!$       call FILE_HISTORY_in( URBAN_RAING_t(:,:), 'URBAN_RAING_t', 'tendency of URBAN_RAING', 'K', dim_type='XY' )
+!!$       call FILE_HISTORY_in( URBAN_ROFF_t (:,:), 'URBAN_ROFF_t',  'tendency of URBAN_ROFF',  'K', dim_type='XY' )
 
     endif
 
     if ( STATISTICS_checktotal ) then
 
-       call STATISTICS_total( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_TRL_t (:,:,:), 'URBAN_TRL_t', &
-                              URBAN_GRID_CARTESC_REAL_VOL(:,:,:), &
-                              URBAN_GRID_CARTESC_REAL_TOTVOL      )
-       call STATISTICS_total( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_TBL_t (:,:,:), 'URBAN_TBL_t', &
-                              URBAN_GRID_CARTESC_REAL_VOL(:,:,:), &
-                              URBAN_GRID_CARTESC_REAL_TOTVOL      )
-       call STATISTICS_total( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_TGL_t (:,:,:), 'URBAN_TGL_t', &
-                              URBAN_GRID_CARTESC_REAL_VOL(:,:,:), &
-                              URBAN_GRID_CARTESC_REAL_TOTVOL      )
-
-       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_TR_t(:,:), 'URBAN_TR_t',     &
-                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
-                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
-       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_TB_t(:,:), 'URBAN_TB_t',     &
-                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
-                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
-       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_TG_t(:,:), 'URBAN_TG_t',     &
-                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
-                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
-       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_TC_t(:,:), 'URBAN_TC_t',     &
-                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
-                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
-       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_QC_t(:,:), 'URBAN_QC_t',     &
-                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
-                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
-       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_UC_t(:,:), 'URBAN_UC_t',     &
-                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
-                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
-
-       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_RAINR_t(:,:), 'URBAN_RAINR_t', &
-                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   &
-                              URBAN_GRID_CARTESC_REAL_TOTAREA      )
-       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_RAINB_t(:,:), 'URBAN_RAINB_t', &
-                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   &
-                              URBAN_GRID_CARTESC_REAL_TOTAREA      )
-       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_RAING_t(:,:), 'URBAN_RAING_t', &
-                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   &
-                              URBAN_GRID_CARTESC_REAL_TOTAREA      )
-       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_ROFF_t (:,:), 'URBAN_ROFF_t',  &
-                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   &
-                              URBAN_GRID_CARTESC_REAL_TOTAREA      )
+!!$       call STATISTICS_total( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+!!$                              URBAN_TRL_t (:,:,:), 'URBAN_TRL_t', &
+!!$                              URBAN_GRID_CARTESC_REAL_VOL(:,:,:), &
+!!$                              URBAN_GRID_CARTESC_REAL_TOTVOL      )
+!!$       call STATISTICS_total( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+!!$                              URBAN_TBL_t (:,:,:), 'URBAN_TBL_t', &
+!!$                              URBAN_GRID_CARTESC_REAL_VOL(:,:,:), &
+!!$                              URBAN_GRID_CARTESC_REAL_TOTVOL      )
+!!$       call STATISTICS_total( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+!!$                              URBAN_TGL_t (:,:,:), 'URBAN_TGL_t', &
+!!$                              URBAN_GRID_CARTESC_REAL_VOL(:,:,:), &
+!!$                              URBAN_GRID_CARTESC_REAL_TOTVOL      )
+!!$
+!!$       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+!!$                              URBAN_TR_t(:,:), 'URBAN_TR_t',     &
+!!$                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
+!!$                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
+!!$       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+!!$                              URBAN_TB_t(:,:), 'URBAN_TB_t',     &
+!!$                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
+!!$                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
+!!$       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+!!$                              URBAN_TG_t(:,:), 'URBAN_TG_t',     &
+!!$                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
+!!$                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
+!!$       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+!!$                              URBAN_TC_t(:,:), 'URBAN_TC_t',     &
+!!$                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
+!!$                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
+!!$       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+!!$                              URBAN_QC_t(:,:), 'URBAN_QC_t',     &
+!!$                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
+!!$                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
+!!$       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+!!$                              URBAN_UC_t(:,:), 'URBAN_UC_t',     &
+!!$                              URBAN_GRID_CARTESC_REAL_AREA(:,:), &
+!!$                              URBAN_GRID_CARTESC_REAL_TOTAREA    )
+!!$
+!!$       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+!!$                              URBAN_RAINR_t(:,:), 'URBAN_RAINR_t', &
+!!$                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   &
+!!$                              URBAN_GRID_CARTESC_REAL_TOTAREA      )
+!!$       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+!!$                              URBAN_RAINB_t(:,:), 'URBAN_RAINB_t', &
+!!$                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   &
+!!$                              URBAN_GRID_CARTESC_REAL_TOTAREA      )
+!!$       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+!!$                              URBAN_RAING_t(:,:), 'URBAN_RAING_t', &
+!!$                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   &
+!!$                              URBAN_GRID_CARTESC_REAL_TOTAREA      )
+!!$       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+!!$                              URBAN_ROFF_t (:,:), 'URBAN_ROFF_t',  &
+!!$                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   &
+!!$                              URBAN_GRID_CARTESC_REAL_TOTAREA      )
     endif
 
     return

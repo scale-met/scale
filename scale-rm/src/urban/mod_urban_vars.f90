@@ -121,7 +121,8 @@ module mod_urban_vars
   real(RP), public, allocatable :: ATMOS_SFLX_LW  (:,:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_SW  (:,:,:)
   real(RP), public, allocatable :: ATMOS_cosSZA   (:,:)
-  real(RP), public, allocatable :: ATMOS_SFLX_prec(:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_rain(:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_snow(:,:)
 
   !-----------------------------------------------------------------------------
   !
@@ -370,7 +371,8 @@ contains
     allocate( ATMOS_SFLX_LW  (UIA,UJA,2) )
     allocate( ATMOS_SFLX_SW  (UIA,UJA,2) )
     allocate( ATMOS_cosSZA   (UIA,UJA)   )
-    allocate( ATMOS_SFLX_prec(UIA,UJA)   )
+    allocate( ATMOS_SFLX_rain(UIA,UJA)   )
+    allocate( ATMOS_SFLX_snow(UIA,UJA)   )
     ATMOS_TEMP     (:,:)   = UNDEF
     ATMOS_PRES     (:,:)   = UNDEF
     ATMOS_W        (:,:)   = UNDEF
@@ -384,7 +386,8 @@ contains
     ATMOS_SFLX_LW  (:,:,:) = UNDEF
     ATMOS_SFLX_SW  (:,:,:) = UNDEF
     ATMOS_cosSZA   (:,:)   = UNDEF
-    ATMOS_SFLX_prec(:,:)   = UNDEF
+    ATMOS_SFLX_rain(:,:)   = UNDEF
+    ATMOS_SFLX_snow(:,:)   = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -435,7 +438,7 @@ contains
        FILE_CARTESC_open, &
        FILE_CARTESC_check_coordinates
     use mod_urban_admin, only: &
-       URBAN_sw
+       URBAN_do
     implicit none
 
     character(len=19)     :: timelabel
@@ -445,7 +448,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Open restart file (URBAN) ***'
 
-    if ( URBAN_sw .and. URBAN_RESTART_IN_BASENAME /= '' ) then
+    if ( URBAN_do .and. URBAN_RESTART_IN_BASENAME /= '' ) then
 
        if ( URBAN_RESTART_IN_POSTFIX_TIMELABEL ) then
           call TIME_gettimelabel( timelabel )
@@ -807,14 +810,14 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_create
     use mod_urban_admin, only: &
-       URBAN_sw
+       URBAN_do
     implicit none
 
     character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    if ( URBAN_sw .and. URBAN_RESTART_OUT_BASENAME /= '' ) then
+    if ( URBAN_do .and. URBAN_RESTART_OUT_BASENAME /= '' ) then
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Create restart file (URBAN) ***'

@@ -195,8 +195,7 @@ OBJS_NAME = \
 	scale_urban_grid_cartesC_index.o	\
 	scale_urban_grid_cartesC.o	\
 	scale_urban_grid_cartesC_real.o	\
-	scale_urban_phy.o	\
-	scale_urban_phy_slc.o	\
+	scale_urban_dyn_kusaka01.o	\
 	scale_landuse.o	\
 	scale_fpm.o  \
 	scale_mapprojection.o	\
@@ -260,10 +259,10 @@ makedir:
 	mkdir -p $(MODDIR)
 	mkdir -p $(LIBDIR)
 
-$(LIBNAME): $(LIBDIR)/$(LIBNAME)
+$(LIBDIR)/$(LIBNAME): $(LIBNAME)
 	install $< $@
 
-$(LIBDIR)/$(LIBNAME): $(OBJS)
+$(LIBNAME): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
@@ -311,6 +310,7 @@ ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) allcleansdm
 endif
 	rm -f $(LIBDIR)/$(LIBNAME)
+	rm -f $(MODDIR)/*mod
 
 distclean: clean
 	rm -f $(LIBNAME)
