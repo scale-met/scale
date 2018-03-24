@@ -381,12 +381,6 @@ contains
        call PROF_rapend  ('ATM_Dynamics', 1)
     endif
 
-    !########## Reference State ###########
-    if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
-       call PROF_rapstart('ATM_Refstate', 2)
-       call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! [IN]
-       call PROF_rapend  ('ATM_Refstate', 2)
-    endif
 
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
@@ -415,6 +409,14 @@ contains
        call PROF_rapend  ('ATM_Aerosol', 1)
        call ATMOS_vars_calc_diagnostics
     endif
+
+    !########## Reference State ###########
+    if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
+       call PROF_rapstart('ATM_Refstate', 2)
+       call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! [IN]
+       call PROF_rapend  ('ATM_Refstate', 2)
+    endif
+
 
     !########## Set hydrostatic pressure coordinate ##########
     call PROF_rapstart('ATM_History', 1)
