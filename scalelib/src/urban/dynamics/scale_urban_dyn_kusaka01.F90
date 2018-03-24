@@ -215,27 +215,6 @@ contains
     call FILE_HISTORY_reg( 'URBAN_RNG',   'urban net radiation on road',         'W/m2', I_RNG  , ndims=2 )
     call FILE_HISTORY_reg( 'URBAN_RNgrd', 'urban grid average of net radiation', 'W/m2', I_RNgrd, ndims=2 )
 
-
-!!$    SHR(:,:) = 0.0_RP
-!!$    SHB(:,:) = 0.0_RP
-!!$    SHG(:,:) = 0.0_RP
-!!$    LHR(:,:) = 0.0_RP
-!!$    LHB(:,:) = 0.0_RP
-!!$    LHG(:,:) = 0.0_RP
-!!$    GHR(:,:) = 0.0_RP
-!!$    GHB(:,:) = 0.0_RP
-!!$    GHG(:,:) = 0.0_RP
-!!$    RNR(:,:) = 0.0_RP
-!!$    RNB(:,:) = 0.0_RP
-!!$    RNG(:,:) = 0.0_RP
-!!$    RNgrd(:,:) = 0.0_RP
-!!$    call put_history( UIA, UJA, &
-!!$                      SHR(:,:), SHB(:,:), SHG(:,:), &
-!!$                      LHR(:,:), LHB(:,:), LHG(:,:), &
-!!$                      GHR(:,:), GHB(:,:), GHG(:,:), &
-!!$                      RNR(:,:), RNB(:,:), RNG(:,:), &
-!!$                      RNgrd(:,:)                    )
-
     return
   end subroutine URBAN_DYN_kusaka01_setup
 
@@ -251,14 +230,14 @@ contains
        RHOS, PRSS,                      &
        LWD, SWD,                        &
        RAIN, SNOW,                      &
-       TR_URB, TB_URB, TG_URB,          &
-       TC_URB, QC_URB, UC_URB,          &
-       TRL_URB, TBL_URB, TGL_URB,       &
-       RAINR_URB, RAINB_URB, RAING_URB, &
-       ROFF_URB,                        &
        CDZ,                             &
        fact_urban,                      &
        tloc, dsec, dt,                  &
+       TRL_URB, TBL_URB, TGL_URB,       &
+       TR_URB, TB_URB, TG_URB,          &
+       TC_URB, QC_URB, UC_URB,          &
+       RAINR_URB, RAINB_URB, RAING_URB, &
+       ROFF_URB,                        &
        SFC_TEMP,                        &
        ALBD_LW, ALBD_SW,                &
        MWFLX, MUFLX, MVFLX,             &
@@ -293,6 +272,11 @@ contains
     real(RP), intent(in) :: SWD (UIA,UJA,2)
     real(RP), intent(in) :: RAIN(UIA,UJA)
     real(RP), intent(in) :: SNOW(UIA,UJA)
+    real(RP), intent(in) :: CDZ(UKA)
+    real(RP), intent(in) :: fact_urban(UIA,UJA)
+    integer,  intent(in) :: tloc
+    real(RP), intent(in) :: dsec
+    real(DP), intent(in) :: dt
 
     real(RP), intent(inout) :: TR_URB   (UIA,UJA)
     real(RP), intent(inout) :: TB_URB   (UIA,UJA)
@@ -307,12 +291,6 @@ contains
     real(RP), intent(inout) :: RAINB_URB(UIA,UJA)
     real(RP), intent(inout) :: RAING_URB(UIA,UJA)
     real(RP), intent(inout) :: ROFF_URB (UIA,UJA)
-
-    real(RP), intent(in) :: CDZ(UKA)
-    real(RP), intent(in) :: fact_urban(UIA,UJA)
-    integer,  intent(in) :: tloc
-    real(RP), intent(in) :: dsec
-    real(DP), intent(in) :: dt
 
     real(RP), intent(out) :: SFC_TEMP(UIA,UJA)
     real(RP), intent(out) :: ALBD_LW (UIA,UJA)
@@ -424,15 +402,15 @@ contains
        ROFF  = ROFF_URB (i,j)
 
        call SLC_main( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+                      TRL     (:),        & ! [INOUT]
+                      TBL     (:),        & ! [INOUT]
+                      TGL     (:),        & ! [INOUT]
                       TR,                 & ! [INOUT]
                       TB,                 & ! [INOUT]
                       TG,                 & ! [INOUT]
                       TC,                 & ! [INOUT]
                       QC,                 & ! [INOUT]
                       UC,                 & ! [INOUT]
-                      TRL     (:),        & ! [INOUT]
-                      TBL     (:),        & ! [INOUT]
-                      TGL     (:),        & ! [INOUT]
                       RAINR,              & ! [INOUT]
                       RAINB,              & ! [INOUT]
                       RAING,              & ! [INOUT]
@@ -580,15 +558,15 @@ contains
   !-----------------------------------------------------------------------------
   subroutine SLC_main( &
        UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+        TRL,          & ! (inout)
+        TBL,          & ! (inout)
+        TGL,          & ! (inout)
         TR,           & ! (inout)
         TB,           & ! (inout)
         TG,           & ! (inout)
         TC,           & ! (inout)
         QC,           & ! (inout)
         UC,           & ! (inout)
-        TRL,          & ! (inout)
-        TBL,          & ! (inout)
-        TGL,          & ! (inout)
         RAINR,        & ! (inout)
         RAINB,        & ! (inout)
         RAING,        & ! (inout)
@@ -684,15 +662,15 @@ contains
     real(DP), intent(in)    :: dt
 
     !-- In/Out variables from/to Coupler to/from Urban
+    real(RP), intent(inout) :: TRL(UKS:UKE)  ! layer temperature [K]
+    real(RP), intent(inout) :: TBL(UKS:UKE)  ! layer temperature [K]
+    real(RP), intent(inout) :: TGL(UKS:UKE)  ! layer temperature [K]
     real(RP), intent(inout) :: TR   ! roof temperature              [K]
     real(RP), intent(inout) :: TB   ! building wall temperature     [K]
     real(RP), intent(inout) :: TG   ! road temperature              [K]
     real(RP), intent(inout) :: TC   ! urban-canopy air temperature  [K]
     real(RP), intent(inout) :: QC   ! urban-canopy air specific humidity [kg/kg]
     real(RP), intent(inout) :: UC   ! diagnostic canopy wind        [m/s]
-    real(RP), intent(inout) :: TRL(UKS:UKE)  ! layer temperature [K]
-    real(RP), intent(inout) :: TBL(UKS:UKE)  ! layer temperature [K]
-    real(RP), intent(inout) :: TGL(UKS:UKE)  ! layer temperature [K]
     real(RP), intent(inout) :: RAINR ! rain amount in storage on roof     [kg/m2]
     real(RP), intent(inout) :: RAINB ! rain amount in storage on building [kg/m2]
     real(RP), intent(inout) :: RAING ! rain amount in storage on road     [kg/m2]

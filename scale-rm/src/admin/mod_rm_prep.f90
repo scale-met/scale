@@ -121,7 +121,7 @@ contains
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_setup
     use mod_atmos_driver, only: &
-       ATMOS_driver_config
+       ATMOS_driver_tracer_setup
     use mod_admin_restart, only: &
        ADMIN_restart_setup
     use mod_admin_time, only: &
@@ -156,7 +156,7 @@ contains
        MKINIT_setup, &
        MKINIT
     use mod_user, only: &
-       USER_config
+       USER_tracer_setup
     implicit none
 
     integer,          intent(in) :: comm_world
@@ -224,8 +224,8 @@ contains
 
     ! setup tracer index
     call ATMOS_HYDROMETEOR_setup
-    call ATMOS_driver_config
-    call USER_config
+    call ATMOS_driver_tracer_setup
+    call USER_tracer_setup
 
     ! setup file I/O
     call FILE_CARTESC_setup

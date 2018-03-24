@@ -37,7 +37,7 @@ module scale_atmos_boundary
   !++ Public procedure
   !
   public :: ATMOS_BOUNDARY_setup
-  public :: ATMOS_BOUNDARY_resume
+  public :: ATMOS_BOUNDARY_set
   public :: ATMOS_BOUNDARY_firstsend
   public :: ATMOS_BOUNDARY_finalize
   public :: ATMOS_BOUNDARY_update
@@ -473,8 +473,8 @@ contains
   end subroutine ATMOS_BOUNDARY_setup
 
   !-----------------------------------------------------------------------------
-  !> Resume
-  subroutine ATMOS_BOUNDARY_resume( &
+  !> set
+  subroutine ATMOS_BOUNDARY_set( &
        DENS, &
        MOMZ, &
        MOMX, &
@@ -498,10 +498,10 @@ contains
 
        ! initialize boundary value (reading file or waiting parent domain)
        if ( do_daughter_process ) then
-          call ATMOS_BOUNDARY_resume_online
+          call ATMOS_BOUNDARY_set_online
        else
           if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
-             call ATMOS_BOUNDARY_resume_file
+             call ATMOS_BOUNDARY_set_file
           endif
        endif
 
@@ -531,7 +531,7 @@ contains
     end if
 
     return
-  end subroutine ATMOS_BOUNDARY_resume
+  end subroutine ATMOS_BOUNDARY_set
 
   !-----------------------------------------------------------------------------
   !> HALO Communication
@@ -1264,8 +1264,8 @@ contains
   end subroutine ATMOS_BOUNDARY_initialize_file
 
   !-----------------------------------------------------------------------------
-  !> Resume boundary value for real case experiment
-  subroutine ATMOS_BOUNDARY_resume_file
+  !> Set boundary value for real case experiment
+  subroutine ATMOS_BOUNDARY_set_file
     use scale_prc, only: &
        PRC_abort
     use scale_time, only: &
@@ -1406,7 +1406,7 @@ contains
     end do
 
     return
-  end subroutine ATMOS_BOUNDARY_resume_file
+  end subroutine ATMOS_BOUNDARY_set_file
 
   !-----------------------------------------------------------------------------
   !> Initialize boundary value for real case experiment [online daughter]
@@ -1438,8 +1438,8 @@ contains
   end subroutine ATMOS_BOUNDARY_initialize_online
 
   !-----------------------------------------------------------------------------
-  !> Resume boundary value for real case experiment [online daughter]
-  subroutine ATMOS_BOUNDARY_resume_online
+  !> Set boundary value for real case experiment [online daughter]
+  subroutine ATMOS_BOUNDARY_set_online
     use scale_prc, only: &
        PRC_abort
     use scale_time, only: &
@@ -1525,7 +1525,7 @@ contains
     now_step = 0 ! should be set as zero in initialize process
 
     return
-  end subroutine ATMOS_BOUNDARY_resume_online
+  end subroutine ATMOS_BOUNDARY_set_online
 
   !-----------------------------------------------------------------------------
   !> First send boundary value

@@ -868,6 +868,11 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do default(none)  OMP_SCHEDULE_ &
+    !$omp shared(JSB,JEB,ISB,IEB,I_LW,I_SW, &
+    !$omp        URB_SFC_TEMP,URB_SFC_albedo,URB_SFC_Z0M,URB_SFC_Z0H,URB_SFC_Z0E, &
+    !$omp        URB_SFLX_MW,URB_SFLX_MU,URB_SFLX_MV,URB_SFLX_SH,URB_SFLX_LH,URB_SFLX_GH,URB_SFLX_evap,URB_U10,URB_V10,URB_T2,URB_Q2,CNT_putURB, &
+    !$omp        SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_GH,SFLX_evap,U10,V10,T2,Q2)
     do j = JSB, JEB
     do i = ISB, IEB
        URB_SFC_TEMP  (i,j)      = URB_SFC_TEMP  (i,j)      * CNT_putURB + SFC_TEMP  (i,j)
@@ -887,16 +892,7 @@ contains
        URB_V10       (i,j)      = URB_V10       (i,j)      * CNT_putURB + V10       (i,j)
        URB_T2        (i,j)      = URB_T2        (i,j)      * CNT_putURB + T2        (i,j)
        URB_Q2        (i,j)      = URB_Q2        (i,j)      * CNT_putURB + Q2        (i,j)
-    enddo
-    enddo
 
-    !$omp parallel do default(none) &
-    !$omp shared(JSB,JEB,ISB,IEB,URB_SFC_TEMP,URB_SFC_albedo,URB_SFC_Z0M,URB_SFC_Z0H,URB_SFC_Z0E) &
-    !$omp shared(URB_SFLX_MW,URB_SFLX_MU,URB_SFLX_MV,URB_SFLX_SH,URB_SFLX_LH,URB_SFLX_GH,URB_SFLX_evap,URB_U10,URB_V10) &
-    !$omp shared(URB_T2,URB_Q2,CNT_putURB,I_LW,I_SW) &
-    !$omp private(i,j) OMP_SCHEDULE_
-    do j = JSB, JEB
-    do i = ISB, IEB
        URB_SFC_TEMP  (i,j)      = URB_SFC_TEMP  (i,j)      / ( CNT_putURB + 1.0_RP )
        URB_SFC_albedo(i,j,I_LW) = URB_SFC_albedo(i,j,I_LW) / ( CNT_putURB + 1.0_RP )
        URB_SFC_albedo(i,j,I_SW) = URB_SFC_albedo(i,j,I_SW) / ( CNT_putURB + 1.0_RP )

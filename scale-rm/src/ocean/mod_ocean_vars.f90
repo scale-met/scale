@@ -74,12 +74,6 @@ module mod_ocean_vars
   real(RP), public, allocatable :: OCEAN_UVEL_t      (:,:,:) !< tendency of ocean zonal velocity [m/s2]
   real(RP), public, allocatable :: OCEAN_VVEL_t      (:,:,:) !< tendency of ocean meridional velocity [m/s2]
 
-  real(RP), public, allocatable :: OCEAN_SFC_TEMP_t  (:,:)   !< tendency of OCEAN_SFC_TEMP
-  real(RP), public, allocatable :: OCEAN_SFC_albedo_t(:,:,:) !< tendency of OCEAN_SFC_alebdo
-  real(RP), public, allocatable :: OCEAN_SFC_Z0M_t   (:,:)   !< tendency of OCEAN_SFC_Z0M
-  real(RP), public, allocatable :: OCEAN_SFC_Z0H_t   (:,:)   !< tendency of OCEAN_SFC_Z0H
-  real(RP), public, allocatable :: OCEAN_SFC_Z0E_t   (:,:)   !< tendency of OCEAN_SFC_Z0E
-
   ! surface variables for restart
   real(RP), public, allocatable :: OCEAN_SFLX_MW   (:,:) !< ocean surface w-momentum flux    [kg/m2/s]
   real(RP), public, allocatable :: OCEAN_SFLX_MU   (:,:) !< ocean surface u-momentum flux    [kg/m2/s]
@@ -291,17 +285,6 @@ contains
     OCEAN_UVEL_t(:,:,:) = UNDEF
     OCEAN_VVEL_t(:,:,:) = UNDEF
 
-    allocate( OCEAN_SFC_TEMP_t  (OIA,OJA)   )
-    allocate( OCEAN_SFC_albedo_t(OIA,OJA,2) )
-    allocate( OCEAN_SFC_Z0M_t   (OIA,OJA)   )
-    allocate( OCEAN_SFC_Z0H_t   (OIA,OJA)   )
-    allocate( OCEAN_SFC_Z0E_t   (OIA,OJA)   )
-    OCEAN_SFC_TEMP_t  (:,:)   = UNDEF
-    OCEAN_SFC_albedo_t(:,:,:) = UNDEF
-    OCEAN_SFC_Z0M_t   (:,:)   = UNDEF
-    OCEAN_SFC_Z0H_t   (:,:)   = UNDEF
-    OCEAN_SFC_Z0E_t   (:,:)   = UNDEF
-
     allocate( OCEAN_SFLX_MW   (OIA,OJA) )
     allocate( OCEAN_SFLX_MU   (OIA,OJA) )
     allocate( OCEAN_SFLX_MV   (OIA,OJA) )
@@ -483,25 +466,6 @@ contains
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_Z0E),    'XY', & ! [IN]
                                OCEAN_SFC_Z0E(:,:)                         ) ! [OUT]
 
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MW),    'XY', & ! [IN]
-                               OCEAN_SFLX_MW(:,:)                         ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MU),    'XY', & ! [IN]
-                               OCEAN_SFLX_MU(:,:)                         ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MV),    'XY', & ! [IN]
-                               OCEAN_SFLX_MV(:,:)                         ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_SH),    'XY', & ! [IN]
-                               OCEAN_SFLX_SH(:,:)                         ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_LH),    'XY', & ! [IN]
-                               OCEAN_SFLX_LH(:,:)                         ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_evap),  'XY', & ! [IN]
-                               OCEAN_SFLX_evap(:,:)                       ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_WH),    'XY', & ! [IN]
-                               OCEAN_SFLX_WH(:,:)                         ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_water), 'XY', & ! [IN]
-                               OCEAN_SFLX_water(:,:)                      ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_ice),   'XY', & ! [IN]
-                               OCEAN_SFLX_ice(:,:)                        ) ! [OUT]
-            
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
 
        call OCEAN_vars_total
@@ -519,6 +483,8 @@ contains
        FILE_HISTORY_in
     implicit none
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('OCN_History', 1)
 
     if ( OCEAN_VARS_CHECKRANGE ) then
        call VALCHECK( OCEAN_TEMP      (OKS:OKE,OIS:OIE,OJS:OJE), 0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP), &
@@ -565,6 +531,8 @@ contains
     call FILE_HISTORY_in( OCEAN_SFLX_WH  (:,:),  VAR_NAME(I_SFLX_WH),    VAR_DESC(I_SFLX_WH),    VAR_UNIT(I_SFLX_WH),    standard_name=VAR_STDN(I_SFLX_WH) )
     call FILE_HISTORY_in( OCEAN_SFLX_water(:,:), VAR_NAME(I_SFLX_water), VAR_DESC(I_SFLX_water), VAR_UNIT(I_SFLX_water), standard_name=VAR_STDN(I_SFLX_water) )
     call FILE_HISTORY_in( OCEAN_SFLX_ice  (:,:), VAR_NAME(I_SFLX_ice),   VAR_DESC(I_SFLX_ice),   VAR_UNIT(I_SFLX_ice),   standard_name=VAR_STDN(I_SFLX_ice) )
+
+    call PROF_rapend  ('OCN_History', 1)
 
     return
   end subroutine OCEAN_vars_history
@@ -830,34 +798,6 @@ contains
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFC_Z0E),   VAR_DESC(I_SFC_Z0E),   VAR_UNIT(I_SFC_Z0E),   'XY', OCEAN_RESTART_OUT_DTYPE, &
                                   VAR_ID(I_SFC_Z0E), &
                                   standard_name=VAR_STDN(I_SFC_Z0E) )
-       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   VAR_UNIT(I_SFLX_MW),   'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_MW), &
-                                  standard_name=VAR_STDN(I_SFLX_MW) )
-       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   VAR_UNIT(I_SFLX_MU),  'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_MU), &
-                                  standard_name=VAR_STDN(I_SFLX_MU) )
-       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_MV),   VAR_DESC(I_SFLX_MV),   VAR_UNIT(I_SFLX_MV),   'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_MV), &
-                                  standard_name=VAR_STDN(I_SFLX_MV) )
-       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   VAR_UNIT(I_SFLX_SH),   'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_SH), &
-                                  standard_name=VAR_STDN(I_SFLX_SH) )
-       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH),   'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_LH), &
-                                  standard_name=VAR_STDN(I_SFLX_LH) )
-       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap), 'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_evap), &
-                                  standard_name=VAR_STDN(I_SFLX_evap) )
-       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_WH),   VAR_DESC(I_SFLX_WH),   VAR_UNIT(I_SFLX_WH),   'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_WH), &
-                                  standard_name=VAR_STDN(I_SFLX_WH) )
-       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_water), VAR_DESC(I_SFLX_water), VAR_UNIT(I_SFLX_water), 'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_water), &
-                                  standard_name=VAR_STDN(I_SFLX_water) )
-       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(I_SFLX_ice), VAR_DESC(I_SFLX_ice), VAR_UNIT(I_SFLX_ice), 'XY', OCEAN_RESTART_OUT_DTYPE, &
-                                  VAR_ID(I_SFLX_ice), &
-                                  standard_name=VAR_STDN(I_SFLX_ice) )
-
     endif
 
     return
@@ -896,25 +836,6 @@ contains
                               VAR_NAME(I_SFC_Z0H),   'XY', fill_halo=.true.                 ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_Z0E), OCEAN_SFC_Z0E(:,:),        & ! [IN]
                               VAR_NAME(I_SFC_Z0E),   'XY', fill_halo=.true.                 ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_MW), OCEAN_SFLX_MW(:,:),        & ! [IN]
-                              VAR_NAME(I_SFLX_MW),   'XY', fill_halo=.true.                 ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_MU), OCEAN_SFLX_MU(:,:),        & ! [IN]
-                              VAR_NAME(I_SFLX_MU),   'XY', fill_halo=.true.                 ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_MV), OCEAN_SFLX_MV(:,:),        & ! [IN]
-                              VAR_NAME(I_SFLX_MV),   'XY', fill_halo=.true.                 ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_SH), OCEAN_SFLX_SH(:,:),        & ! [IN]
-                              VAR_NAME(I_SFLX_SH),   'XY', fill_halo=.true.                 ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_LH), OCEAN_SFLX_LH(:,:),        & ! [IN]
-                              VAR_NAME(I_SFLX_LH),   'XY', fill_halo=.true.                 ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_evap), OCEAN_SFLX_evap(:,:),    & ! [IN]
-                              VAR_NAME(I_SFLX_evap), 'XY', fill_halo=.true.                 ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_WH), OCEAN_SFLX_WH(:,:),        & ! [IN]
-                              VAR_NAME(I_SFLX_WH),   'XY', fill_halo=.true.                 ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_water), OCEAN_SFLX_water(:,:),  & ! [IN]
-                              VAR_NAME(I_SFLX_water), 'XY', fill_halo=.true.                ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_ice), OCEAN_SFLX_ice(:,:),      & ! [IN]
-                              VAR_NAME(I_SFLX_ice), 'XY', fill_halo=.true.                  ) ! [IN]
-
     endif
 
     return

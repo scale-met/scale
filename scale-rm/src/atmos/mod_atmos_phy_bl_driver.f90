@@ -28,7 +28,6 @@ module mod_atmos_phy_bl_driver
   !
   public :: ATMOS_PHY_BL_driver_tracer_setup
   public :: ATMOS_PHY_BL_driver_setup
-  public :: ATMOS_PHY_BL_driver_resume
   public :: ATMOS_PHY_BL_driver_calc_tendency
 
   !-----------------------------------------------------------------------------
@@ -121,26 +120,6 @@ contains
 
     return
   end subroutine ATMOS_PHY_BL_driver_setup
-
-  !-----------------------------------------------------------------------------
-  !> Resume
-  subroutine ATMOS_PHY_BL_driver_resume
-    use mod_atmos_admin, only: &
-       ATMOS_PHY_BL_TYPE, &
-       ATMOS_sw_phy_bl
-    implicit none
-
-    if ( ATMOS_sw_phy_bl ) then
-
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM_Turbulence', 1)
-       call ATMOS_PHY_BL_driver_calc_tendency( update_flag = .true. )
-       call PROF_rapend  ('ATM_Turbulence', 1)
-
-    end if
-
-    return
-  end subroutine ATMOS_PHY_BL_driver_resume
 
   !-----------------------------------------------------------------------------
   !> calculate tendency

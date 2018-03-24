@@ -75,11 +75,8 @@ SUB_OBJS =	\
 	mod_atmos_phy_bl_driver.o \
 	mod_atmos_phy_cp_driver.o \
 	mod_atmos_driver.o        \
-	mod_ocean_phy_driver.o    \
 	mod_ocean_driver.o        \
-	mod_land_phy_driver.o     \
 	mod_land_driver.o         \
-	mod_urban_phy_driver.o    \
 	mod_urban_driver.o        \
 	mod_cpl_driver.o          \
 	\

@@ -1257,6 +1257,8 @@ contains
     integer :: iq, iv
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('ATM_History', 1)
+
     ! value check for prognostic variables
     if ( ATMOS_VARS_CHECKRANGE ) then
        call VALCHECK( DENS(:,:,:),    0.0_RP,    2.0_RP, PV_info(I_DENS)%NAME, __FILE__, __LINE__ )
@@ -1319,6 +1321,8 @@ contains
 !       call ATMOS_vars_get_diagnostic( "RH", WORK3D(:,:,:) )
 !       call ATMOS_PHY_AE_vars_history( QTRC_av(:,:,:,:), WORK3D(:,:,:) )
 !    end if
+
+    call PROF_rapend  ('ATM_History', 1)
 
     return
   end subroutine ATMOS_vars_history

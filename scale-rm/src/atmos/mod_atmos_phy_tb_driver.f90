@@ -28,10 +28,9 @@ module mod_atmos_phy_tb_driver
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_TB_driver_config
+  public :: ATMOS_PHY_TB_driver_tracer_setup
   public :: ATMOS_PHY_TB_driver_setup
-  public :: ATMOS_PHY_TB_driver_resume
-  public :: ATMOS_PHY_TB_driver
+  public :: ATMOS_PHY_TB_driver_calc_tendency
 
   !-----------------------------------------------------------------------------
   !
@@ -48,8 +47,8 @@ module mod_atmos_phy_tb_driver
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Config
-  subroutine ATMOS_PHY_TB_driver_config
+  !> Tracer setup
+  subroutine ATMOS_PHY_TB_driver_tracer_setup
     use scale_atmos_phy_tb, only: &
        ATMOS_PHY_TB_config
     use mod_atmos_admin, only: &
@@ -59,14 +58,14 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CONFIG] / Categ[ATMOS PHY_TB] / Origin[SCALE-RM]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TRACER SETUP] / Categ[ATMOS PHY_TB] / Origin[SCALE-RM]'
 
     if ( ATMOS_sw_phy_tb ) then
        call ATMOS_PHY_TB_config( ATMOS_PHY_TB_TYPE )
     end if
 
     return
-  end subroutine ATMOS_PHY_TB_driver_config
+  end subroutine ATMOS_PHY_TB_driver_tracer_setup
 
   !-----------------------------------------------------------------------------
   !> Setup
@@ -110,27 +109,8 @@ contains
   end subroutine ATMOS_PHY_TB_driver_setup
 
   !-----------------------------------------------------------------------------
-  !> Resume
-  subroutine ATMOS_PHY_TB_driver_resume
-    use mod_atmos_admin, only: &
-       ATMOS_sw_phy_tb
-    implicit none
-
-    if ( ATMOS_sw_phy_tb ) then
-
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM_Turbulence', 1)
-       call ATMOS_PHY_TB_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM_Turbulence', 1)
-
-    end if
-
-    return
-  end subroutine ATMOS_PHY_TB_driver_resume
-
-  !-----------------------------------------------------------------------------
-  !> Driver
-  subroutine ATMOS_PHY_TB_driver( update_flag )
+  !> calclate tendency
+  subroutine ATMOS_PHY_TB_driver_calc_tendency( update_flag )
     use scale_atmos_grid_cartesC_metric, only: &
        GSQRT => ATMOS_GRID_CARTESC_METRIC_GSQRT, &
        J13G  => ATMOS_GRID_CARTESC_METRIC_J13G,  &
@@ -416,6 +396,6 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_PHY_TB_driver
+  end subroutine ATMOS_PHY_TB_driver_calc_tendency
 
 end module mod_atmos_phy_tb_driver

@@ -33,8 +33,7 @@ module mod_atmos_phy_sf_driver
   !++ Public procedure
   !
   public :: ATMOS_PHY_SF_driver_setup
-  public :: ATMOS_PHY_SF_driver_resume
-  public :: ATMOS_PHY_SF_driver
+  public :: ATMOS_PHY_SF_driver_calc_tendency
 
   !-----------------------------------------------------------------------------
   !
@@ -116,27 +115,8 @@ contains
   end subroutine ATMOS_PHY_SF_driver_setup
 
   !-----------------------------------------------------------------------------
-  !> Resume
-  subroutine ATMOS_PHY_SF_driver_resume
-    use mod_atmos_admin, only: &
-       ATMOS_sw_phy_sf
-    implicit none
-
-    if ( ATMOS_sw_phy_sf ) then
-
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM_SurfaceFlux', 1)
-       call ATMOS_PHY_SF_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM_SurfaceFlux', 1)
-
-    end if
-
-    return
-  end subroutine ATMOS_PHY_SF_driver_resume
-
-  !-----------------------------------------------------------------------------
-  !> Driver
-  subroutine ATMOS_PHY_SF_driver( update_flag )
+  !> calculation tendency
+  subroutine ATMOS_PHY_SF_driver_calc_tendency( update_flag )
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
        KARMAN => CONST_KARMAN, &
@@ -154,12 +134,8 @@ contains
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STATISTICS_total
-    use scale_file_history, only: &
-       FILE_HISTORY_in
     use scale_atmos_bottom, only: &
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
-    use scale_atmos_hydrostatic, only: &
-       barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry, &
        I_QV
@@ -237,9 +213,6 @@ contains
     real(RP) :: Z0H_t(IA,JA)
     real(RP) :: Z0E_t(IA,JA)
 
-    real(RP) :: Uabs10(IA,JA) ! 10m absolute wind [m/s]
-    real(RP) :: MSLP  (IA,JA) ! mean sea-level pressure [Pa]
-
     real(RP) :: q(QA)
     real(RP) :: qdry
     real(RP) :: Rtot
@@ -308,14 +281,8 @@ contains
 
        endif
 
-!OCL XFILL
-       do j = JSB, JEB
-       do i = ISB, IEB
-          Uabs10(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
-       end do
-       end do
-
        ! temtative
+       !$omp parallel do
        do j = JSB, JEB
        do i = ISB, IEB
           us = max( 1.E-6_RP, &
@@ -326,30 +293,7 @@ contains
        end do
        end do
 
-       call barometric_law_mslp( IA, ISB, IEB, JA, JSB, JEB, &
-                                 SFC_PRES(:,:), T2(:,:), TOPO_Zsfc(:,:), & ! [IN]
-                                 MSLP(:,:)                               ) ! [OUT]
-
-       call FILE_HISTORY_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3'   )
-       call FILE_HISTORY_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa'      )
-       call FILE_HISTORY_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K'       )
-       call FILE_HISTORY_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave,merged)',  '1'       , fill_halo=.true. )
-       call FILE_HISTORY_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '1'       , fill_halo=.true. )
-       call FILE_HISTORY_in( SFC_Z0M   (:,:),      'SFC_Z0M',    'roughness length (momentum)',       'm'       , fill_halo=.true. )
-       call FILE_HISTORY_in( SFC_Z0H   (:,:),      'SFC_Z0H',    'roughness length (heat)',           'm'       , fill_halo=.true. )
-       call FILE_HISTORY_in( SFC_Z0E   (:,:),      'SFC_Z0E',    'roughness length (vapor)',          'm'       , fill_halo=.true. )
-       call FILE_HISTORY_in( SFLX_MW   (:,:),      'MWFLX',      'w-momentum flux (merged)',          'kg/m/s2' )
-       call FILE_HISTORY_in( SFLX_MU   (:,:),      'MUFLX',      'u-momentum flux (merged)',          'kg/m/s2' )
-       call FILE_HISTORY_in( SFLX_MV   (:,:),      'MVFLX',      'v-momentum flux (merged)',          'kg/m/s2' )
-       call FILE_HISTORY_in( SFLX_SH   (:,:),      'SHFLX',      'sensible heat flux (merged)',       'W/m2'    , fill_halo=.true. )
-       call FILE_HISTORY_in( SFLX_LH   (:,:),      'LHFLX',      'latent heat flux (merged)',         'W/m2'    , fill_halo=.true. )
-       call FILE_HISTORY_in( SFLX_GH   (:,:),      'GHFLX',      'ground heat flux (merged)',         'W/m2'    , fill_halo=.true. )
-       call FILE_HISTORY_in( Uabs10    (:,:),      'Uabs10',     '10m absolute wind',                 'm/s'     , fill_halo=.true. )
-       call FILE_HISTORY_in( U10       (:,:),      'U10',        '10m x-wind',                        'm/s'     , fill_halo=.true. )
-       call FILE_HISTORY_in( V10       (:,:),      'V10',        '10m y-wind',                        'm/s'     , fill_halo=.true. )
-       call FILE_HISTORY_in( T2        (:,:),      'T2 ',        '2m air temperature',                'K'       , fill_halo=.true. )
-       call FILE_HISTORY_in( Q2        (:,:),      'Q2 ',        '2m specific humidity',              'kg/kg'   , fill_halo=.true. )
-       call FILE_HISTORY_in( MSLP      (:,:),      'MSLP',       'mean sea-level pressure',           'Pa'      )
+       call history_output
 
        !omp parallel do
 !OCL XFILL
@@ -432,6 +376,76 @@ contains
     endif
 
     return
-  end subroutine ATMOS_PHY_SF_driver
+  end subroutine ATMOS_PHY_SF_driver_calc_tendency
+
+  subroutine history_output
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    use scale_file_history, only: &
+       FILE_HISTORY_in
+    use scale_atmos_hydrostatic, only: &
+       barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
+    use scale_topography, only: &
+       TOPO_Zsfc
+    use mod_atmos_phy_sf_vars, only: &
+       SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
+       SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
+       SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,   &
+       SFC_albedo => ATMOS_PHY_SF_SFC_albedo, &
+       SFC_Z0M    => ATMOS_PHY_SF_SFC_Z0M,    &
+       SFC_Z0H    => ATMOS_PHY_SF_SFC_Z0H,    &
+       SFC_Z0E    => ATMOS_PHY_SF_SFC_Z0E,    &
+       SFLX_MW    => ATMOS_PHY_SF_SFLX_MW,    &
+       SFLX_MU    => ATMOS_PHY_SF_SFLX_MU,    &
+       SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
+       SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
+       SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
+       SFLX_GH    => ATMOS_PHY_SF_SFLX_GH,    &
+       U10        => ATMOS_PHY_SF_U10,        &
+       V10        => ATMOS_PHY_SF_V10,        &
+       T2         => ATMOS_PHY_SF_T2,         &
+       Q2         => ATMOS_PHY_SF_Q2
+    real(RP) :: MSLP  (IA,JA) ! mean sea-level pressure [Pa]
+
+    real(RP) :: Uabs10(IA,JA) ! 10m absolute wind [m/s]
+
+    integer :: i, j
+
+!OCL XFILL
+    !$omp parallel do
+    do j = JSB, JEB
+    do i = ISB, IEB
+       Uabs10(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
+    end do
+    end do
+
+    
+    call barometric_law_mslp( IA, IS, IE, JA, JS, JE, &
+                              SFC_PRES(:,:), T2(:,:), TOPO_Zsfc(:,:), & ! [IN]
+                              MSLP(:,:)                               ) ! [OUT]
+
+    call FILE_HISTORY_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3'   )
+    call FILE_HISTORY_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa'      )
+    call FILE_HISTORY_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K'       )
+    call FILE_HISTORY_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave,merged)',  '1'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '1'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_Z0M   (:,:),      'SFC_Z0M',    'roughness length (momentum)',       'm'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_Z0H   (:,:),      'SFC_Z0H',    'roughness length (heat)',           'm'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_Z0E   (:,:),      'SFC_Z0E',    'roughness length (vapor)',          'm'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFLX_MW   (:,:),      'MWFLX',      'w-momentum flux (merged)',          'kg/m/s2' )
+    call FILE_HISTORY_in( SFLX_MU   (:,:),      'MUFLX',      'u-momentum flux (merged)',          'kg/m/s2' )
+    call FILE_HISTORY_in( SFLX_MV   (:,:),      'MVFLX',      'v-momentum flux (merged)',          'kg/m/s2' )
+    call FILE_HISTORY_in( SFLX_SH   (:,:),      'SHFLX',      'sensible heat flux (merged)',       'W/m2'    , fill_halo=.true. )
+    call FILE_HISTORY_in( SFLX_LH   (:,:),      'LHFLX',      'latent heat flux (merged)',         'W/m2'    , fill_halo=.true. )
+    call FILE_HISTORY_in( SFLX_GH   (:,:),      'GHFLX',      'ground heat flux (merged)',         'W/m2'    , fill_halo=.true. )
+    call FILE_HISTORY_in( Uabs10    (:,:),      'Uabs10',     '10m absolute wind',                 'm/s'     , fill_halo=.true. )
+    call FILE_HISTORY_in( U10       (:,:),      'U10',        '10m x-wind',                        'm/s'     , fill_halo=.true. )
+    call FILE_HISTORY_in( V10       (:,:),      'V10',        '10m y-wind',                        'm/s'     , fill_halo=.true. )
+    call FILE_HISTORY_in( T2        (:,:),      'T2 ',        '2m air temperature',                'K'       , fill_halo=.true. )
+    call FILE_HISTORY_in( Q2        (:,:),      'Q2 ',        '2m specific humidity',              'kg/kg'   , fill_halo=.true. )
+    call FILE_HISTORY_in( MSLP      (:,:),      'MSLP',       'mean sea-level pressure',           'Pa'      )
+
+    return
+  end subroutine history_output
 
 end module mod_atmos_phy_sf_driver

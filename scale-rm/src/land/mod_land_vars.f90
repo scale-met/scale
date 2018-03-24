@@ -76,8 +76,6 @@ module mod_land_vars
   ! tendency variables
   real(RP), public, allocatable :: LAND_TEMP_t      (:,:,:) !< tendency of LAND_TEMP
   real(RP), public, allocatable :: LAND_WATER_t     (:,:,:) !< tendency of LAND_WATER
-  real(RP), public, allocatable :: LAND_SFC_TEMP_t  (:,:)   !< tendency of LAND_SFC_TEMP
-  real(RP), public, allocatable :: LAND_SFC_albedo_t(:,:,:) !< tendency of LAND_SFC_albedo
 
   ! surface variables for restart
   real(RP), public, allocatable :: LAND_SFLX_MW   (:,:) !< land surface w-momentum flux    [kg/m2/s]
@@ -294,12 +292,8 @@ contains
 
     allocate( LAND_TEMP_t      (LKMAX,LIA,LJA) )
     allocate( LAND_WATER_t     (LKMAX,LIA,LJA) )
-    allocate( LAND_SFC_TEMP_t  (LIA,LJA)       )
-    allocate( LAND_SFC_albedo_t(LIA,LJA,2)     )
     LAND_TEMP_t      (:,:,:) = UNDEF
     LAND_WATER_t     (:,:,:) = UNDEF
-    LAND_SFC_TEMP_t  (:,:)   = UNDEF
-    LAND_SFC_albedo_t(:,:,:) = UNDEF
 
     allocate( LAND_SFLX_MW   (LIA,LJA) )
     allocate( LAND_SFLX_MU   (LIA,LJA) )
@@ -502,24 +496,6 @@ contains
                                LAND_SFC_albedo(:,:,I_LW)                   ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ALB_SW),     'XY',  & ! [IN]
                                LAND_SFC_albedo(:,:,I_SW)                   ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MW),    'XY',  & ! [IN]
-                               LAND_SFLX_MW(:,:)                           ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MU),    'XY',  & ! [IN]
-                               LAND_SFLX_MU(:,:)                           ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MV),    'XY',  & ! [IN]
-                               LAND_SFLX_MV(:,:)                           ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_SH),    'XY',  & ! [IN]
-                               LAND_SFLX_SH(:,:)                           ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_LH),    'XY',  & ! [IN]
-                               LAND_SFLX_LH(:,:)                           ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_evap),  'XY',  & ! [IN]
-                               LAND_SFLX_evap(:,:)                         ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_GH),    'XY',  & ! [IN]
-                               LAND_SFLX_GH(:,:)                           ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_water), 'XY',  & ! [IN]
-                               LAND_SFLX_water(:,:)                        ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_ice)  , 'XY',  & ! [IN]
-                               LAND_SFLX_ice(:,:)                          ) ! [OUT]
 
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
 
@@ -560,6 +536,9 @@ contains
     real(RP) :: LAND_WATERDS(LKMAX,LIA,LJA)
     integer :: k, i, j
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('LND_History', 1)
+
 
     if ( LAND_VARS_CHECKRANGE ) then
        call VALCHECK( LAND_TEMP      (:,LIS:LIE,LJS:LJE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),       &
@@ -615,6 +594,8 @@ contains
     call FILE_HISTORY_in( SNOW_Depth    (:,:), 'SNOW_Depth',     'Snow depth',                  'm'      )
     call FILE_HISTORY_in( SNOW_Dzero    (:,:), 'SNOW_Dzero',     'Snow depth at melting point', 'm'      )
     call FILE_HISTORY_in( SNOW_nosnowsec(:,:), 'SNOW_nosnowsec', 'Time duration without snow',  's'      )
+
+    call PROF_rapend  ('LND_History', 1)
 
     return
   end subroutine LAND_vars_history
@@ -983,7 +964,7 @@ contains
                VAR_ID(i),                             & ! [OUT]
                standard_name=VAR_STDN(i)              ) ! [IN]
        end do
-       do i = I_SFC_TEMP, VMAX
+       do i = I_SFC_TEMP, I_ALB_SW
           call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
                VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
                'XY', LAND_RESTART_OUT_DTYPE,          & ! [IN]
@@ -1029,24 +1010,6 @@ contains
                                     VAR_NAME(I_ALB_LW),     'XY',   fill_halo=.true.             ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_ALB_SW),    LAND_SFC_albedo(:,:,I_SW), & ! [IN]
                                     VAR_NAME(I_ALB_SW),     'XY',   fill_halo=.true.             ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_MW),   LAND_SFLX_MW(:,:),         & ! [IN]
-                                    VAR_NAME(I_SFLX_MW),    'XY',   fill_halo=.true.             ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_MU),   LAND_SFLX_MU(:,:),         & ! [IN]
-                                    VAR_NAME(I_SFLX_MU),    'XY',   fill_halo=.true.             ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_MV),   LAND_SFLX_MV(:,:),         & ! [IN]
-                                    VAR_NAME(I_SFLX_MV),    'XY',   fill_halo=.true.             ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_SH),   LAND_SFLX_SH(:,:),         & ! [IN]
-                                    VAR_NAME(I_SFLX_SH),    'XY',   fill_halo=.true.             ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_LH),   LAND_SFLX_LH(:,:),         & ! [IN]
-                                    VAR_NAME(I_SFLX_LH),    'XY',   fill_halo=.true.             ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_evap), LAND_SFLX_evap(:,:),       & ! [IN]
-                                    VAR_NAME(I_SFLX_evap),  'XY',   fill_halo=.true.             ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_GH),   LAND_SFLX_GH(:,:),         & ! [IN]
-                                    VAR_NAME(I_SFLX_GH),    'XY',   fill_halo=.true.             ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_water), LAND_SFLX_water(:,:),     & ! [IN]
-                                    VAR_NAME(I_SFLX_water), 'XY',   fill_halo=.true.             ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_ice), LAND_SFLX_ice(:,:),         & ! [IN]
-                                    VAR_NAME(I_SFLX_ice),   'XY',   fill_halo=.true.             ) ! [IN]
 
        !call FILE_CARTESC_write_var( restart_fid, VMAX+1, SNOW_SFC_TEMP(:,:),                    &
        !                           'SNOW_SFC_TEMP',       'XY',   fill_halo=.true.               )
