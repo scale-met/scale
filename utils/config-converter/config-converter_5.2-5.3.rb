@@ -315,6 +315,17 @@ params.each do |param|
     next
   end
 
+  # Restart
+  if "&PARAM_RESTART" == param_name
+    print param_name, "\n"
+    param_items.each do |item|
+      next if /RESTART_RUN/ ~= item
+      print item, "\n"
+    end
+    print "/\n"
+    next
+  end
+
 
   # Others
   print param_name, "\n"

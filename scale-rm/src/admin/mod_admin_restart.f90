@@ -38,7 +38,6 @@ module mod_admin_restart
   !
   !++ Private parameters & variables
   !
-  logical,                public :: RESTART_RUN                   = .false.   !< Is this run restart?
   logical,                public :: RESTART_OUTPUT                = .false.   !< Output restart file?
 
   character(len=H_LONG),  public :: RESTART_IN_BASENAME           = ''        !< Basename of the input  file
@@ -182,7 +181,6 @@ contains
     implicit none
 
     NAMELIST / PARAM_RESTART / &
-       RESTART_RUN,                   &
        RESTART_OUTPUT,                &
        RESTART_IN_BASENAME,           &
        RESTART_IN_AGGREGATE,          &
