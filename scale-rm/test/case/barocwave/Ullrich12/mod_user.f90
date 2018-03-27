@@ -54,11 +54,11 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_config
+  public :: USER_tracer_setup
   public :: USER_setup
-  public :: USER_resume0
-  public :: USER_resume
-  public :: USER_step
+  public :: USER_mkinit
+  public :: USER_calc_tendency
+  public :: USER_update
 
   !-----------------------------------------------------------------------------
   !
@@ -80,11 +80,11 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Config
-  subroutine USER_config
+  !> Tracer setup
+  subroutine USER_tracer_setup
 
     return
-  end subroutine USER_config
+  end subroutine USER_tracer_setup
 
   !-----------------------------------------------------------------------------
   !> Setup
@@ -119,16 +119,6 @@ contains
     allocate( RHOT_bc(KA,IA,2) )
     allocate( DENS_bc(KA,IA,2) )
 
-    return
-  end subroutine USER_setup
-
-  !-----------------------------------------------------------------------------
-  !> Resuming operation, before calculating tendency
-  subroutine USER_resume0
-
-    implicit none
-    !---------------------------------------------------------------------------
-    integer :: j
 
     ! Save some information of inital fields to set boundary conditions. 
     ! 
@@ -138,31 +128,31 @@ contains
     DENS_bc(:,:,1) = DENS(:,:,JS) - 0.5_RP*(DENS(:,:,JS+1) - DENS(:,:,JS))
     DENS_bc(:,:,2) = DENS(:,:,JE-1) + 1.5_RP*(DENS(:,:,JE) - DENS(:,:,JE-1))
 
-    call USER_step
+
     return
-  end subroutine USER_resume0
+  end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation
-  subroutine USER_resume
-
-    use scale_comm, only: &
-         COMM_vars8, COMM_wait
-    
+  !> Make initial state
+  subroutine USER_mkinit
     implicit none
     !---------------------------------------------------------------------------
 
-    ! calculate diagnostic value and input to history buffer
-    !call USER_step
+    return
+  end subroutine USER_mkinit
+
+  !-----------------------------------------------------------------------------
+  !> Calculate tendency
+  subroutine USER_calc_tendency
+    implicit none
+    !---------------------------------------------------------------------------
     
     return
-  end subroutine USER_resume
+  end subroutine USER_calc_tendency
 
   !-----------------------------------------------------------------------------
   !> Step
-  subroutine USER_step
-    use scale_prc, only: &
-       PRC_abort
+  subroutine USER_update
     use scale_const, only: &
        GRAV  => CONST_GRAV
     use scale_prc_cartesC, only: &
@@ -209,6 +199,6 @@ contains
     end if
     
     return
-  end subroutine USER_step
+  end subroutine USER_update
 
 end module mod_user

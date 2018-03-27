@@ -6,9 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-xx-xx (A.Noda)   [new]
-!!
 !<
 !-------------------------------------------------------------------------------
 module mod_user
@@ -28,11 +25,11 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_config
+  public :: USER_tracer_setup
   public :: USER_setup
-  public :: USER_resume0
-  public :: USER_resume
-  public :: USER_step
+  public :: USER_mkinit
+  public :: USER_calc_tendency
+  public :: USER_update
 
   !-----------------------------------------------------------------------------
   !
@@ -110,16 +107,16 @@ module mod_user
   integer, parameter :: I_MOMX = 2
   integer, parameter :: I_MOMY = 3
   integer, parameter :: I_RHOT = 4
-  integer, parameter :: I_QTRC = 4
+  integer, parameter :: I_QTRC = 5
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Config
-  subroutine USER_config
+  !> Tracer setup
+  subroutine USER_tracer_setup
 
     return
-  end subroutine USER_config
+  end subroutine USER_tracer_setup
 
   !-----------------------------------------------------------------------------
   !> Setup
@@ -239,30 +236,21 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation, before calculating tendency
-  subroutine USER_resume0
-    use mod_ocean_vars, only: &
-       SST => OCEAN_SFC_TEMP
+  !> Make initial state
+  subroutine USER_mkinit
+    use mod_atmos_phy_sf_vars, only: &
+       SST => ATMOS_PHY_SF_SFC_TEMP
     implicit none
     !---------------------------------------------------------------------------
 
     SST(:,:) = CNST_SST
 
     return
-  end subroutine USER_resume0
+  end subroutine USER_mkinit
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation
-  subroutine USER_resume
-    implicit none
-    !---------------------------------------------------------------------------
-
-    return
-  end subroutine USER_resume
-
-  !-----------------------------------------------------------------------------
-  !> Step
-  subroutine USER_step
+  !> Calculate tendency
+  subroutine USER_calc_tendency
     use scale_prc, only: &
        PRC_abort
     use scale_comm, only: &
@@ -271,6 +259,8 @@ contains
     use scale_atmos_grid_cartesC, only: &
          RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
          RFDZ => ATMOS_GRID_CARTESC_RFDZ
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     use mod_atmos_vars, only: &
        DENS,    &
        MOMZ,    &
@@ -284,10 +274,8 @@ contains
        MOMY_tp, &
        RHOT_tp, &
        RHOQ_tp
-    use mod_ocean_vars, only: &
-       SST => OCEAN_SFC_TEMP
-    use scale_atmos_hydrometeor, only: &
-       I_QV
+    use mod_atmos_phy_sf_vars, only: &
+       SST => ATMOS_PHY_SF_SFC_TEMP
     implicit none
 
     real(RP) :: WORK(KA,IA,JA)
@@ -516,7 +504,7 @@ contains
                 do j = JJS, JJE
                 do i = IIS, IIE
                    RHOQ_tp(KE,i,j,iq) = RHOQ_tp(KE,i,j,iq) &
-                        - MOMZ_LS(KE,1) * ( QTRC(KE,i,j,iq) - QTRC(KE-1,i,j,iq) ) * RFDZ(KE-1) * DENS(k,i,j)
+                        - MOMZ_LS(KE,1) * ( QTRC(KE,i,j,iq) - QTRC(KE-1,i,j,iq) ) * RFDZ(KE-1) * DENS(KE,i,j)
                 enddo
                 enddo
              enddo
@@ -541,7 +529,16 @@ contains
     endif
 
     return
-  end subroutine USER_step
+  end subroutine USER_calc_tendency
+
+  !-----------------------------------------------------------------------------
+  !> Step
+  subroutine USER_update
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_update
 
   !---------------------------------------------------------------------------------
   subroutine update_var

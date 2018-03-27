@@ -6,9 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-06-20 (S.Nishizawa)   [new] split from dynamical core
-!!
 !<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
@@ -30,11 +27,11 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_config
+  public :: USER_tracer_setup
   public :: USER_setup
-  public :: USER_resume0
-  public :: USER_resume
-  public :: USER_step
+  public :: USER_mkinit
+  public :: USER_calc_tendency
+  public :: USER_update
 
   !-----------------------------------------------------------------------------
   !
@@ -94,13 +91,13 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Config
-  subroutine USER_config
+  !> Tracer setup
+  subroutine USER_tracer_setup
     implicit none
     !---------------------------------------------------------------------------
 
     return
-  end subroutine USER_config
+  end subroutine USER_tracer_setup
 
   !-----------------------------------------------------------------------------
   !> Setup
@@ -380,28 +377,17 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation, before calculating tendency
-  subroutine USER_resume0
-    implicit none
-    !---------------------------------------------------------------------------
-
-    call USER_step
-
-    return
-  end subroutine USER_resume0
-
-  !-----------------------------------------------------------------------------
-  !> Resuming operation
-  subroutine USER_resume
+  !> Make initial state
+  subroutine USER_mkinit
     implicit none
     !---------------------------------------------------------------------------
 
     return
-  end subroutine USER_resume
+  end subroutine USER_mkinit
 
   !-----------------------------------------------------------------------------
-  !> User step
-  subroutine USER_step
+  !> Calculate tendency
+  subroutine USER_calc_tendency
     use scale_const, only: &
        CPdry => CONST_CPdry, &
        CVdry => CONST_CVdry, &
@@ -794,7 +780,7 @@ contains
              Ce = Ce_const
 
              !--- saturation at surface
-             call moist_pres2qsat_liq( FIXED_SST, pres_sfc, qdry(KS,i,j), qv_evap )
+             call moist_pres2qsat_liq( FIXED_SST, pres_sfc, QDRY(KS,i,j), qv_evap )
 
              ! flux
              SFLX_MOMZ(i,j) = 0.0_RP
@@ -846,10 +832,6 @@ contains
 
              ! at cell center
 
-             !--- saturation at surface
-             call moist_pres2qsat_liq( FIXED_SST, pres_sfc, QDRY(KS,i,j), &
-                                       qv_evap )
-
              ! flux
              SFLX_MOMZ(i,j) = 0.0_RP
              SFLX_POTT(i,j) = 8.0E-3_RP
@@ -898,6 +880,15 @@ contains
     endif
 
     return
-  end subroutine USER_step
+  end subroutine USER_calc_tendency
+
+  !-----------------------------------------------------------------------------
+  !> User step
+  subroutine USER_update
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_update
 
 end module mod_user

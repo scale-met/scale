@@ -338,35 +338,21 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Driver
-  subroutine MKINIT
+  subroutine MKINIT( output )
     use scale_const, only: &
        CONST_UNDEF8
-    use scale_landuse, only: &
-       LANDUSE_write
-    use mod_atmos_driver, only: &
-       ATMOS_SURFACE_GET
-    use mod_ocean_driver, only: &
-       OCEAN_SURFACE_SET
-    use mod_land_driver, only: &
-       LAND_SURFACE_SET
-    use mod_urban_driver, only: &
-       URBAN_SURFACE_SET
-    use mod_admin_restart, only: &
-       ADMIN_restart_write
-    use mod_admin_time, only: &
-       TIME_DOATMOS_restart,  &
-       TIME_DOLAND_restart,   &
-       TIME_DOURBAN_restart,  &
-       TIME_DOOCEAN_restart
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_HC
     use mod_atmos_phy_mp_vars, only: &
        QS_MP, &
        QE_MP
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_qhyd2qtrc
     implicit none
+    logical, intent(out) :: output
 
     real(RP) :: QHYD(KA,IA,JA,N_HYD)
     real(RP) :: QNUM(KA,IA,JA,N_HYD)
@@ -377,6 +363,7 @@ contains
     if ( MKINIT_TYPE == I_IGNORE ) then
       if( IO_L ) write(IO_FID_LOG,*)
       if( IO_L ) write(IO_FID_LOG,*) '++++++ SKIP  MAKING INITIAL DATA ++++++'
+      output = .false.
     else
       if( IO_L ) write(IO_FID_LOG,*)
       if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING INITIAL DATA ++++++'
@@ -515,25 +502,7 @@ contains
 
       if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL  DATA ++++++'
 
-      call PROF_rapstart('_MkInit_restart',3)
-
-      ! setup surface condition
-      call OCEAN_SURFACE_SET( countup = .false. )
-      call LAND_SURFACE_SET ( countup = .false. )
-      call URBAN_SURFACE_SET( countup = .false. )
-      call ATMOS_SURFACE_GET
-
-      ! output boundary file
-      call LANDUSE_write
-
-      ! output restart file
-      TIME_DOOCEAN_restart = .TRUE.
-      TIME_DOLAND_restart  = .TRUE.
-      TIME_DOURBAN_restart = .TRUE.
-      TIME_DOATMOS_restart = .TRUE.
-      call ADMIN_restart_write
-
-      call PROF_rapend  ('_MkInit_restart',3)
+      output = .true.
 
     endif
 

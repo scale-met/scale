@@ -6,9 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-09-05 (H.Yashiro)   [new]
-!!
 !<
 !-------------------------------------------------------------------------------
 module mod_user
@@ -46,7 +43,6 @@ module mod_user
        DENS, &
        RHOT, &
        QTRC
-
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -54,11 +50,11 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_config
+  public :: USER_tracer_setup
   public :: USER_setup
-  public :: USER_resume0
-  public :: USER_resume
-  public :: USER_step
+  public :: USER_mkinit
+  public :: USER_calc_tendency
+  public :: USER_update
 
   !-----------------------------------------------------------------------------
   !
@@ -82,12 +78,12 @@ module mod_user
   character(len=H_SHORT), private, save :: InitShape
   real(RP),               private, save :: Lx
 
-  integer :: I_NC
+  integer,                private :: I_NC
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Config
-  subroutine USER_config
+  !> Tracer setup
+  subroutine USER_tracer_setup
     use scale_tracer, only: &
          TRACER_regist
     use mod_atmos_phy_mp_vars, only: &
@@ -112,7 +108,7 @@ contains
     ATMOS_PHY_MP_USER_qhyd2qtrc => USER_qhyd2qtrc
 
     return
-  end subroutine USER_config
+  end subroutine USER_tracer_setup
 
   !-----------------------------------------------------------------------------
   !> Setup
@@ -126,7 +122,6 @@ contains
     namelist / PARAM_USER / &
        USER_do,             &
        InitShape
-
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -152,48 +147,42 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation, before calculating tendency
-  subroutine USER_resume0
-    implicit none
-    !---------------------------------------------------------------------------
-
-    return
-  end subroutine USER_resume0
-
-  !-----------------------------------------------------------------------------
-  !> Resuming operation
-  subroutine USER_resume
-
+  !> Make initial state
+  subroutine USER_mkinit
     implicit none
 
     integer :: k, i, j
-
     !---------------------------------------------------------------------------
 
-    if ( NOWTSEC == 0.0_RP ) then
-       select case(InitShape)
-       case('COS')
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             QTRC(k,i,j,I_NC) = cos( WaveNumCOS * 2.0_RP * PI / Lx *  CX(i) )
-          enddo
-          enddo
-          enddo
-       end select
-    end if
-
-    ! calculate diagnostic value and input to history buffer
-    call USER_step
+    select case(InitShape)
+    case('COS')
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_NC) = cos( WaveNumCOS * 2.0_RP * PI / Lx *  CX(i) )
+       enddo
+       enddo
+       enddo
+    end select
 
     return
-  end subroutine USER_resume
+  end subroutine USER_mkinit
+
+  !-----------------------------------------------------------------------------
+  !> Calc tendency
+  subroutine USER_calc_tendency
+
+    implicit none
+
+    !---------------------------------------------------------------------------
+    ! calculate diagnostic value and input to history buffer
+
+    return
+  end subroutine USER_calc_tendency
 
   !-----------------------------------------------------------------------------
   !> Step
-  subroutine USER_step
-    use scale_prc, only: &
-       PRC_abort
+  subroutine USER_update
     use scale_file_history, only: &
        FILE_HISTORY_in
 
@@ -252,7 +241,7 @@ contains
     endif
 
     return
-  end subroutine USER_step
+  end subroutine USER_update
 
   subroutine USER_qhyd2qtrc( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &

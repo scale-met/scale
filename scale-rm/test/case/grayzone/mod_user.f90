@@ -38,11 +38,11 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_config
+  public :: USER_tracer_setup
   public :: USER_setup
-  public :: USER_resume0
-  public :: USER_resume
-  public :: USER_step
+  public :: USER_mkinit
+  public :: USER_calc_tendency
+  public :: USER_update
 
   !-----------------------------------------------------------------------------
   !
@@ -150,11 +150,11 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Config
-  subroutine USER_config
+  !> Tracer Setup
+  subroutine USER_tracer_setup
 
     return
-  end subroutine USER_config
+  end subroutine USER_tracer_setup
 
   !-----------------------------------------------------------------------------
   !> Setup
@@ -320,26 +320,19 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
+  !> Make initial state
+  subroutine USER_mkinit
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_mkinit
+
+  !-----------------------------------------------------------------------------
   !> Resuming operation, before calculating tendency
-  subroutine USER_resume0
-    implicit none
-    !---------------------------------------------------------------------------
-
-    return
-  end subroutine USER_resume0
-
   !-----------------------------------------------------------------------------
-  !> Resuming operation
-  subroutine USER_resume
-    implicit none
-    !---------------------------------------------------------------------------
-
-    return
-  end subroutine USER_resume
-
-  !-----------------------------------------------------------------------------
-  !> Step
-  subroutine USER_step
+  !> Calculate tendency
+  subroutine USER_calc_tendency
     use scale_stdio, only: &
      IO_get_available_fid, &
      IO_FID_LOG,  &
@@ -1061,7 +1054,16 @@ contains
 !write(*,*)'chkusr4',maxval(momz_tp(:,:,:)),minval(momz_tp(:,:,:))
 
     return
-  end subroutine USER_step
+  end subroutine USER_calc_tendency
+
+  !-----------------------------------------------------------------------------
+  !> Step
+  subroutine USER_update
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_update
   !---------------------------------------------------------------------------------
   subroutine get_RiB( &
        RiB, Fm, Fh, Psih,    &

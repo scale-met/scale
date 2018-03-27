@@ -207,8 +207,8 @@ contains
     use mod_cpl_vars, only: &
        CPL_vars_setup
     use mod_user, only: &
-       USER_tracer_setup, &
-       USER_setup, &
+       USER_tracer_setup,  &
+       USER_setup,         &
        USER_calc_tendency, &
        USER_update
     implicit none

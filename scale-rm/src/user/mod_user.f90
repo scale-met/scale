@@ -6,9 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2012-12-26 (H.Yashiro)   [new]
-!!
 !<
 !-------------------------------------------------------------------------------
 module mod_user
@@ -30,6 +27,7 @@ module mod_user
   !
   public :: USER_tracer_setup
   public :: USER_setup
+  public :: USER_mkinit
   public :: USER_calc_tendency
   public :: USER_update
 
@@ -112,7 +110,16 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Calc tendency
+  !> Make initial state
+  subroutine USER_mkinit
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_mkinit
+
+  !-----------------------------------------------------------------------------
+  !> Calculation tendency
   subroutine USER_calc_tendency
     implicit none
     !---------------------------------------------------------------------------

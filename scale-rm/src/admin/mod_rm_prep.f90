@@ -156,7 +156,25 @@ contains
        MKINIT_setup, &
        MKINIT
     use mod_user, only: &
-       USER_tracer_setup
+       USER_tracer_setup, &
+       USER_mkinit
+    use mod_atmos_driver, only: &
+       ATMOS_SURFACE_GET
+    use mod_ocean_driver, only: &
+       OCEAN_SURFACE_SET
+    use mod_land_driver, only: &
+       LAND_SURFACE_SET
+    use mod_urban_driver, only: &
+       URBAN_SURFACE_SET
+    use mod_admin_restart, only: &
+       ADMIN_restart_write
+    use scale_landuse, only: &
+       LANDUSE_write
+    use mod_admin_time, only: &
+       TIME_DOATMOS_restart,  &
+       TIME_DOLAND_restart,   &
+       TIME_DOURBAN_restart,  &
+       TIME_DOOCEAN_restart
     implicit none
 
     integer,          intent(in) :: comm_world
@@ -166,6 +184,8 @@ contains
 
     integer :: myrank
     logical :: ismaster
+
+    logical :: output
     !---------------------------------------------------------------------------
 
     !########## Initial setup ##########
@@ -301,8 +321,32 @@ contains
 
     ! execute mkinit
     call PROF_rapstart('MkInit',1)
-    call MKINIT
+    call MKINIT( output )
+    call USER_mkinit
     call PROF_rapend  ('MkInit',1)
+
+    if ( output ) then
+      call PROF_rapstart('MkInit_restart',1)
+
+      ! setup surface condition
+      call OCEAN_SURFACE_SET( countup = .false. )
+      call LAND_SURFACE_SET ( countup = .false. )
+      call URBAN_SURFACE_SET( countup = .false. )
+      call ATMOS_SURFACE_GET
+
+      ! output boundary file
+      call LANDUSE_write
+
+      ! output restart file
+      TIME_DOOCEAN_restart = .TRUE.
+      TIME_DOLAND_restart  = .TRUE.
+      TIME_DOURBAN_restart = .TRUE.
+      TIME_DOATMOS_restart = .TRUE.
+      call ADMIN_restart_write
+
+      call PROF_rapend  ('MkInit_restart',1)
+
+   end if
 
     call PROF_rapend('Main_prep',0)
 

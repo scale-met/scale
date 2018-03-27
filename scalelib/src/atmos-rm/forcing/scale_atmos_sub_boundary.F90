@@ -398,8 +398,6 @@ contains
 
     elseif ( ATMOS_BOUNDARY_TYPE == 'CONST' ) then
 
-       call ATMOS_BOUNDARY_generate
-
        call ATMOS_BOUNDARY_setalpha
 
        ATMOS_BOUNDARY_UPDATE_FLAG = .false.
@@ -504,6 +502,10 @@ contains
              call ATMOS_BOUNDARY_set_file
           endif
        endif
+
+    elseif ( ATMOS_BOUNDARY_TYPE == 'CONST' ) then
+
+       call ATMOS_BOUNDARY_generate
 
     elseif ( ATMOS_BOUNDARY_TYPE == 'INIT' ) then
 

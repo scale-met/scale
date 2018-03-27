@@ -24,11 +24,11 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_config
+  public :: USER_tracer_setup
   public :: USER_setup
-  public :: USER_resume0
-  public :: USER_resume
-  public :: USER_step
+  public :: USER_mkinit
+  public :: USER_calc_tendency
+  public :: USER_update
 
   !-----------------------------------------------------------------------------
   !
@@ -49,8 +49,8 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Config
-  subroutine USER_config
+  !> Tracer setup
+  subroutine USER_tracer_setup
     use scale_prc, only: &
        PRC_abort
     implicit none
@@ -78,7 +78,7 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
     return
-  end subroutine USER_config
+  end subroutine USER_tracer_setup
 
   !-----------------------------------------------------------------------------
   !> Setup
@@ -89,25 +89,17 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation, before calculating tendency
-  subroutine USER_resume0
-    implicit none
-
-    return
-  end subroutine USER_resume0
-
-  !-----------------------------------------------------------------------------
-  !> Resuming operation
-  subroutine USER_resume
+  !> Make initial state
+  subroutine USER_mkinit
     implicit none
     !---------------------------------------------------------------------------
 
     return
-  end subroutine USER_resume
+  end subroutine USER_mkinit
 
   !-----------------------------------------------------------------------------
-  !> User step
-  subroutine USER_step
+  !> Calculate tendency
+  subroutine USER_calc_tendency
     use scale_atmos_dyn, only: &
        CORIOLIS
     use mod_atmos_vars, only: &
@@ -132,6 +124,15 @@ contains
     end do
 
     return
-  end subroutine USER_step
+  end subroutine USER_calc_tendency
+
+  !-----------------------------------------------------------------------------
+  !> User step
+  subroutine USER_update
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_update
 
 end module mod_user
