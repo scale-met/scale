@@ -62,7 +62,6 @@
 #define PROFILE_STOP(name)
 #endif
 
-#include "macro_thermodyn.h"
 module scale_atmos_phy_mp_sn14
   !-----------------------------------------------------------------------------
   !

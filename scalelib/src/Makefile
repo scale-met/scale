@@ -30,9 +30,6 @@ VPATH = common:                          \
         atmosphere/physics/aerosol:      \
         atmosphere/physics/chemistry:    \
         atmos-physics:                   \
-        atmos-physics/share:             \
-        atmos-physics/microphysics:      \
-        atmos-physics/surfaceflux:       \
         atmos-physics/turbulence:        \
         atmos-rm:                        \
         atmos-rm/communication:          \
@@ -83,12 +80,11 @@ OBJS_DYN = scale_atmos_dyn_fvm_flux_cd2.o	\
            scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
            scale_atmos_dyn_tstep_tracer.o
 
-OBJS_MP = scale_atmos_phy_mp_dry.o	\
+OBJS_MP = \
           scale_atmos_phy_mp_kessler.o	\
-          scale_atmos_phy_mp_sdm.o	\
-          scale_atmos_phy_mp_tomita08.o
-#          scale_atmos_phy_mp_suzuki10.o	\
-#          scale_atmos_phy_mp_sn14.o	\
+          scale_atmos_phy_mp_tomita08.o	\
+          scale_atmos_phy_mp_sn14.o	\
+          scale_atmos_phy_mp_suzuki10.o
 
 OBJS_AE = scale_atmos_phy_ae_kajino13.o
 
@@ -224,8 +220,6 @@ OBJS_NAME = \
 	scale_topography.o	\
 	scale_tracer.o	\
 	scale_vector.o
-#	scale_atmos_phy_mp_convert.o	\
-#	scale_atmos_phy_cp.o	\
 
 OBJS = $(patsubst %,$(OBJ_DIR)/%,$(OBJS_NAME))
 
@@ -300,15 +294,9 @@ endif
 
 overridesdm:
 	@echo;echo "Copy SDM-related file from $(SDMDIR)"
-	rsync -th $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
-	rsync -th $(SDMDIR)/scale_tracer_sdm.F90       $(SCALELIBDIR)/src/common/tracer/
+	rsync -th $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmosphere/physics/microphysics/
 	@echo
 
-restoresdm:
-	@echo;echo "Restore SDM-related file"
-	rsync -th $(SDMDIR)/scale_atmos_phy_mp_sdm_dummy.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/scale_atmos_phy_mp_sdm.F90
-	rsync -th $(SDMDIR)/scale_tracer_sdm_dummy.F90       $(SCALELIBDIR)/src/common/tracer/scale_tracer_sdm.F90
-	@echo
 
 allcleansdm:
 	$(MAKE) -C $(MTDIR)      allclean
@@ -323,7 +311,6 @@ cleansdm:
 allclean: distclean
 ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) checksdm
-	$(MAKE) restoresdm
 	$(MAKE) allcleansdm
 endif
 	rm -f $(LIBDIR)/$(LIBNAME)
@@ -334,7 +321,6 @@ distclean: clean
 clean:
 ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) checksdm
-	$(MAKE) restoresdm
 	$(MAKE) cleansdm
 endif
 	rm -rf .libs

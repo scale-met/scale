@@ -11,7 +11,7 @@ $(BUILD_DIR)/mod_atmos_phy_bl_vars.o: atmos/mod_atmos_phy_bl_vars.f90 $(DEPENDLI
 $(BUILD_DIR)/mod_atmos_phy_ch_driver.o: atmos/mod_atmos_phy_ch_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_atmos_phy_ch_vars.o $(BUILD_DIR)/mod_atmos_vars.o
 $(BUILD_DIR)/mod_atmos_phy_ch_vars.o: atmos/mod_atmos_phy_ch_vars.f90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_atmos_phy_cp_driver.o: atmos/mod_atmos_phy_cp_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_atmos_phy_cp_vars.o $(BUILD_DIR)/mod_atmos_phy_mp_driver.o $(BUILD_DIR)/mod_atmos_phy_mp_vars.o $(BUILD_DIR)/mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_phy_cp_vars.o: atmos/mod_atmos_phy_cp_vars.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_phy_mp_vars.o
+$(BUILD_DIR)/mod_atmos_phy_cp_vars.o: atmos/mod_atmos_phy_cp_vars.f90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_atmos_phy_mp_driver.o: atmos/mod_atmos_phy_mp_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_atmos_phy_ae_vars.o $(BUILD_DIR)/mod_atmos_phy_mp_vars.o $(BUILD_DIR)/mod_atmos_vars.o
 $(BUILD_DIR)/mod_atmos_phy_mp_vars.o: atmos/mod_atmos_phy_mp_vars.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o
 $(BUILD_DIR)/mod_atmos_phy_rd_driver.o: atmos/mod_atmos_phy_rd_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_atmos_phy_ae_vars.o $(BUILD_DIR)/mod_atmos_phy_mp_vars.o $(BUILD_DIR)/mod_atmos_phy_rd_vars.o $(BUILD_DIR)/mod_atmos_phy_sf_vars.o $(BUILD_DIR)/mod_atmos_vars.o
