@@ -2,8 +2,8 @@ program unit
   use scale
   use scale_atmos_grid_cartesC_index
   use scale_tracer
-  use scale_rm_process, only: &
-     PRC_setup
+  use scale_prc_cartesC, only: &
+     PRC_CARTESC_setup
   use scale_comm, only: &
      COMM_setup
   use scale_atmos_grid_cartesC, only: &
@@ -25,11 +25,13 @@ program unit
   call SCALE_init( APPNAME )
 
   ! setup process
-  call PRC_setup
+  call PRC_CARTESC_setup
 
   call ATMOS_GRID_CARTESC_INDEX_setup( KMAX=10, IMAX=10, JMAX=2, IBLOCK=5, JBLOCK=1 )
 
-  call ATMOS_HYDROMETEOR_regist(q0, 1, 1, 0, (/'QV','QC'/), (/'QV','QC'/), (/"kg/kg","kg/kg"/) )
+  call ATMOS_HYDROMETEOR_regist( 1, 0, &
+                                 (/'QV','QC'/), (/'QV','QC'/), (/"kg/kg","kg/kg"/), &
+                                 q0 )
 
   ! setup horizontal/veritical grid system
   call ATMOS_GRID_CARTESC_allocate

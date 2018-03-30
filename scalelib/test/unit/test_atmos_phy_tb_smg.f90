@@ -7,7 +7,7 @@ module test_atmos_phy_tb_smg
   use dc_test, only: &
      AssertEqual, &
      AssertLessThan
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_MPIbarrier
   !-----------------------------------------------------------------------------
   implicit none
@@ -77,7 +77,7 @@ contains
      CDY  => ATMOS_GRID_CARTESC_CDX, &
      CZ   => ATMOS_GRID_CARTESC_CZ,  &
      CBFZ => ATMOS_GRID_CARTESC_CBFZ
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_myrank
   !-----------------------------------------------------------------------------
   implicit none

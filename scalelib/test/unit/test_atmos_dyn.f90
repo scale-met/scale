@@ -33,6 +33,8 @@ module test_atmos_dyn
      RFDZ            => ATMOS_GRID_CARTESC_RFDZ,            &
      RFDX            => ATMOS_GRID_CARTESC_RFDX,            &
      RFDY            => ATMOS_GRID_CARTESC_RFDY
+  use scale_atmos_hydrometeor, only: &
+     I_QV
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -358,6 +360,7 @@ subroutine test_undef
           flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
           flag_fct_along_stream,                       & ! (in)
           .false.,                                     & ! (in)
+          I_QV,                                        & ! (in)
           1.0_DP, 1.0_DP                               ) ! (in)
 
   end do
@@ -413,6 +416,7 @@ subroutine test_const
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
+       I_QV,                                        & ! (in)
        1.0_DP, 1.0_DP                               ) ! (in)
 
   do k = KS, KE
@@ -514,6 +518,7 @@ subroutine test_conserve
          flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
          flag_fct_along_stream,                       & ! (in)
          .true.,                                      & ! (in)
+         I_QV,                                        & ! (in)
          1.0_DP, 1.0_DP                               ) ! (in)
 
   total_o = 0.0_RP
@@ -643,6 +648,7 @@ subroutine test_cwc
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
+       I_QV,                                        & ! (in)
        1.0_DP, 1.0_DP                               ) ! (in)
 
   answer(:,:,:) = POTT
@@ -733,6 +739,7 @@ subroutine test_fctminmax
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
+       I_QV,                                        & ! (in)
        1.0_DP, 1.0_DP                               ) ! (in)
 
   message = "iq = ??"
