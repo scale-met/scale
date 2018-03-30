@@ -530,7 +530,7 @@ contains
      write(*,*) "vely_org   ",llvely_org(k,i,j)
      write(*,*) "velz_org   ",velz_org  (k,i,j)
      write(*,*) "temp_org   ",temp_org  (k,i,j)
-     write(*,*) "qv_org     ",qv_org     (k,i,j)
+     write(*,*) "qv_org     ",qv_org    (k,i,j)
 #endif
 
     return
