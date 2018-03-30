@@ -839,7 +839,7 @@ contains
           !$omp         vterm_hist,hist_vterm_idx) &
           !$omp private(i,j,k,iq,step, &
           !$omp         FDZ,RFDZ,RCDZ, &
-          !$omp         DENS2,TEMP2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ2, &
+          !$omp         DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ2, &
           !$omp         vterm,mflux,sflux,FLX_hydro,CP_t,CV_t)
           do j = JSB, JEB
           do i = ISB, IEB
