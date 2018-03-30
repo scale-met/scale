@@ -632,10 +632,11 @@ contains
     !##### MP Main #####    
     call MP_sn14 ( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS(:,:,:), MOMZ(:,:,:), QTRC(:,:,:,:), PRES(:,:,:), TEMP(:,:,:), Qdry(:,:,:), CPtot(:,:,:), CVtot(:,:,:), CCN(:,:,:), & !(in)
-       dt, z(:), dz(:), & ! (in)
-       RHOQ_t(:,:,:,:), RHOE_t(:,:,:), CPtot_t(:,:,:), CVtot_t(:,:,:), & ! (out)
-       EVAPORATE(:,:,:) ) ! (out)
+       DENS(:,:,:), MOMZ(:,:,:), QTRC(:,:,:,:), PRES(:,:,:), TEMP(:,:,:), & ! (in)
+       Qdry(:,:,:), CPtot(:,:,:), CVtot(:,:,:), CCN(:,:,:),               & ! (in)
+       real(dt,RP), z(:), dz(:),                                          & ! (in)
+       RHOQ_t(:,:,:,:), RHOE_t(:,:,:), CPtot_t(:,:,:), CVtot_t(:,:,:),    & ! (out)
+       EVAPORATE(:,:,:)                                                   ) ! (out)
 
 #ifdef PROFILE_FIPP
     call fipp_stop()
@@ -1309,7 +1310,7 @@ contains
     real(RP), intent(in) :: CPtot0(KA, IA, JA)
     real(RP), intent(in) :: CVtot0(KA, IA, JA)    
     real(RP), intent(in) :: CCN      (KA,IA,JA)
-    real(DP), intent(in) :: dt
+    real(RP), intent(in) :: dt
     real(RP), intent(in) :: z(KA), dz(KA)
 
     real(RP),intent(out) :: RHOQ_t(KA, IA, JA, QA_MP)
@@ -2195,7 +2196,7 @@ contains
     real(RP), intent(in) ::  cpa(KA,IA,JA)      ! in  09/08/18 [Add] T.Mitsui
     real(RP), intent(in)  :: dTdt_rad(KA,IA,JA) ! 09/08/18 T.Mitsui
     real(RP), intent(in)  :: qke(KA,IA,JA)      ! 09/08/18 T.Mitsui
-    real(DP), intent(in)  :: dt
+    real(RP), intent(in)  :: dt
     real(RP), intent(in)  :: CCN(KA,IA,JA)
     !
     real(RP), intent(out) :: PQ(PQ_MAX,KA,IA,JA)
@@ -3558,7 +3559,7 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
     
-    real(DP), intent(in) :: dt
+    real(RP), intent(in) :: dt
     !
     real(RP), intent(in) :: tem(KA,IA,JA)
     !
@@ -3859,7 +3860,7 @@ contains
     integer, intent(in)    :: ntdiv               ! [Add] 10/08/03
     integer, intent(in)    :: ntmax               ! [Add] 10/08/03
     !
-    real(DP), intent(in)    :: dt                 ! time step[s]
+    real(RP), intent(in)    :: dt                 ! time step[s]
     !real(RP), intent(in)    :: gsgam2(KA,IA,JA)   ! metric
     real(RP), intent(in)    :: z(KA)              ! altitude [m]
     real(RP), intent(in)    :: dz(KA)             ! altitude [m]
