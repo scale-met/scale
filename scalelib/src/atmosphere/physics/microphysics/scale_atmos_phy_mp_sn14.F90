@@ -148,12 +148,12 @@ module scale_atmos_phy_mp_sn14
        'Snow Number Density                                        ', &
        'Graupel Number Density                                     '/)
   character(len=H_SHORT), parameter, public :: ATMOS_PHY_MP_SN14_tracer_units(QA_MP) = (/ &
-       'kg/kg',  &
-       'kg/kg',  &
-       'kg/kg',  &
-       'kg/kg',  &
-       'kg/kg',  &
-       'kg/kg',  &
+       'kg/kg ', &
+       'kg/kg ', &
+       'kg/kg ', &
+       'kg/kg ', &
+       'kg/kg ', &
+       'kg/kg ', &
        'num/kg', &
        'num/kg', &
        'num/kg', &
