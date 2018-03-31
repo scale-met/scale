@@ -6,13 +6,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2014-05-01 (A.Noda)   [new]
-!! @li      2014-08-24 (A.Noda)   [mod] bug fix
-!! @li      2015-01-15 (Y.Sato)   [mod] bug fix
-!!
 !<
 !-------------------------------------------------------------------------------
+#include 'inc_openmp.h'
 module mod_user
   !-----------------------------------------------------------------------------
   !
@@ -22,7 +18,6 @@ module mod_user
   use scale_stdio
   use scale_prof
   use scale_atmos_grid_cartesC_index
-  use scale_land_grid_index
   use scale_index
 
   use scale_atmos_grid_cartesC, only: &
@@ -361,6 +356,8 @@ contains
          MOMY,    &
          RHOT,    &
          QTRC,    &
+         TEMP,    &
+         PRES,    &
          DENS_tp, &
          MOMZ_tp, &
          MOMX_tp, &
@@ -385,26 +382,23 @@ contains
         EPSvap => CONST_EPSvap, &
         PSAT0  => CONST_PSAT0
     use mod_admin_time, only: &
-       do_phy_sf => TIME_DOATMOS_PHY_SF,     &
-       dtdyn     => TIME_DTSEC_ATMOS_DYN,    &
-       dtmp      => TIME_DTSEC_ATMOS_PHY_MP, &
-       dtrd      => TIME_DTSEC_ATMOS_PHY_RD, &
-       dtsf      => TIME_DTSEC_ATMOS_PHY_SF, &
-       dttb      => TIME_DTSEC_ATMOS_PHY_TB
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
-       CPw => AQ_CP, &
-       ATMOS_THERMODYN_templhv
+       do_phy_sf => TIME_DOATMOS_PHY_SF
+    use scale_time, only: &
+       dtdyn => TIME_DTSEC_ATMOS_DYN,    &
+       dtmp  => TIME_DTSEC_ATMOS_PHY_MP, &
+       dtrd  => TIME_DTSEC_ATMOS_PHY_RD, &
+       dtsf  => TIME_DTSEC_ATMOS_PHY_SF, &
+       dttb  => TIME_DTSEC_ATMOS_PHY_TB
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_lhv, &
+       I_QV
     use scale_file_history, only: &
-         FILE_HISTORY_in
-    use mod_atmos_phy_tb_vars, only: &
-       TKE       => ATMOS_PHY_TB_TKE,    &
-       NU        => ATMOS_PHY_TB_NU
+       FILE_HISTORY_in
+    use scale_tracer, only: &
+       QA
     implicit none
 
     real(RP) :: WORK(KA,IA,JA)
-    real(RP) :: PRES(KA,IA,JA)
-    real(RP) :: TEMP(KA,IA,JA)
     real(RP) :: VELX(KA,IA,JA), VELY(KA,IA,JA)
     integer :: k, i, j, iq, ierr, t, kk, iv
     integer :: IIS, IIE, JJS, JJE
@@ -456,7 +450,6 @@ contains
     real(RP) :: a2
     real(RP) :: Fm, Fh, Psih
     real(RP) :: RiB
-    real(RP) :: qdry, Rtot, RovCP, CPovCV, pres_1d, temp_1d
     real(RP) :: pres_evap ! partial pressure of water vapor at surface [Pa]
     real(RP) :: qv_evap   ! saturation water vapor mixing ratio at surface[kg/kg]
     integer :: iw
@@ -465,8 +458,6 @@ contains
 
     !---------------------------------------------------------------------------
 !return ! tmp05
-    RovCP  = Rdry  / CPdry
-    CPovCV = CPdry / CVdry
 
     if ( .not.USER_do ) then
       return
@@ -803,11 +794,6 @@ contains
 
           if( CNST_RAD )then
             !--- add constant cooling (-2K/dy)
-            call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
-                                      PRES(:,:,:),  & ! [OUT]
-                                      DENS(:,:,:),  & ! [IN]
-                                      RHOT(:,:,:),  & ! [IN]
-                                      QTRC(:,:,:,:) ) ! [IN]
             !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
             do j = JJS, JJE
             do i = IIS, IIE
@@ -929,22 +915,13 @@ contains
           Ch = a2 * Fh / ( FR * ( log( Z0/Zt ) / Psih + 1.0_RP ) )
           Ce = a2 * Fh / ( FR * ( log( Z0/Ze ) / Psih + 1.0_RP ) )
 
-          ! Gas constant
-          qdry = 1.0_RP
-          do iw = QQS, QQE
-             qdry = qdry - QTRC(KS,i,j,iw)
-          enddo
-          Rtot = Rdry*qdry + Rvap*QTRC(KS,i,j,I_QV)
-
           !--- saturation at surface
-          pres_1d   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
-          temp_1d   = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres_1d )**RovCP
-          call ATMOS_THERMODYN_templhv( lhv_t_1d, temp_1d )
+          call ATMOS_HYDROMETEOR_lhv( temp(KS,i,j), lhv_t_1d )
           pres_evap = PSAT0 * exp( lhv_t_1d/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(i,j) ) )
 !          pres_evap = PSAT0 * exp( LHV/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(i,j) ) )
 !          pres_evap = PSAT0 * exp( LHV/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST_loc(i,j) )
 !          )
-!          qv_evap   = EPSvap * pres_evap / ( pres_1d - pres_evap )
+!          qv_evap   = EPSvap * pres_evap / ( pres(KS,i,j) - pres_evap )
           qv_evap   = EPSvap * pres_evap / P00
 
           ! flux
@@ -1020,17 +997,8 @@ contains
 
       do j = JS, JE
       do i = IS, IE
-          ! Gas constant
-          qdry = 1.0_RP
-          do iw = QQS, QQE
-             qdry = qdry - QTRC(KS,i,j,iw)
-          enddo
-          Rtot = Rdry*qdry + Rvap*QTRC(KS,i,j,I_QV)
-
           !--- saturation at surface
-          pres_1d   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
-          temp_1d   = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres_1d )**RovCP
-          call ATMOS_THERMODYN_templhv( lhv_t(i,j), temp_1d )
+          call ATMOS_HYDROMETEOR_lhv( temp(KS,i,j), lhv_t(i,j) )
       enddo
       enddo
 

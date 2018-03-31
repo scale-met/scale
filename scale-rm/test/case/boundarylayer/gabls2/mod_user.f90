@@ -233,19 +233,11 @@ contains
        end if
        QC(:) = 0.0_RP
 
-       call buildrho( RHO (:),   & ! (out)
-                      TEMP(:),   & ! (out)
-                      PRES(:),   & ! (out)
-                      PT  (:),   & ! (in)
-                      QV  (:),   & ! (in)
-                      QC  (:),   & ! (in)
-                      CZ  (:),   & ! (in)
-                      FZ  (:),   & ! (in)
-                      Ts,        & ! (out)
-                      Ps,        & ! (in)
-                      pt_ini(1), & ! (in)
-                      QVs,       & ! (in)
-                      0.0_RP     ) ! (in)
+       call buildrho( KA, KS, KE, &
+                      PT(:), QV(:), QC(:),         & ! (in)
+                      Ps, pt_ini(1), QVs, 0.0_RP,  & ! (in)
+                      CZ(:), FZ(:),                & ! (in)
+                      RHO(:), TEMP(:), PRES(:), Ts ) ! (out)
 
        do j = 1, JA
        do i = 1, IA

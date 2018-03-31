@@ -6,9 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-06-26 (Y.Kawai)   [new]
-!!
 !<
 !-------------------------------------------------------------------------------
 module mod_user
@@ -168,7 +165,7 @@ contains
        PRC_abort
     use scale_const, only: &
        GRAV  => CONST_GRAV
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_HAS_N, &
        PRC_HAS_S
     use scale_atmos_grid_cartesC, only : &
