@@ -536,7 +536,11 @@ void file_put_associatedcoordinate_c_( const int32_t *fid,          // (in)
     _dim_names[i] = (char*) malloc(sizeof(char)*(File_HSHORT+1));
     fstr2cstr(_dim_names[i], dim_names+i*dim_name_len, len);
   }
+
   *error = file_put_associatedcoordinate_c( *fid, _name, _desc, _units, (const char**)_dim_names, *ndims, *dtype, val, *precision );
+
+  for ( i=0; i<*ndims; i++ ) free(_dim_names[i]);
+  free(_dim_names);
 }
 
 void file_def_associatedcoordinate_c_( const int32_t *fid,          // (in)
@@ -574,7 +578,11 @@ void file_def_associatedcoordinate_c_( const int32_t *fid,          // (in)
     _dim_names[i] = (char*) malloc(sizeof(char)*(File_HSHORT+1));
     fstr2cstr(_dim_names[i], dim_names+i*dim_name_len, len);
   }
+
   *error = file_def_associatedcoordinate_c( *fid, _name, _desc, _units, (const char**)_dim_names, *ndims, *dtype );
+
+  for ( i=0; i<*ndims; i++ ) free(_dim_names[i]);
+  free(_dim_names);
 }
 
 void file_write_associatedcoordinate_c_( const int32_t *fid,          // (in)
@@ -649,8 +657,7 @@ void file_add_variable_c_( const int32_t  *fid,           // (in)
 
   *error = file_add_variable_c( *fid, _varname, _desc, _units, _stdname, (const char**)_dims, *ndims, *dtype, *tint, *tavg, vid );
 
-  for ( i=0; i<*ndims; i++ )
-    free( _dims[i] );
+  for ( i=0; i<*ndims; i++ ) free( _dims[i] );
   free( _dims );
 }
 
