@@ -217,6 +217,9 @@ contains
     !$omp         QVsat,dQVsat,Ustar,dUstar,Tstar,dTstar,Qstar,dQstar,Uabs,dUabs,Ra,dRa, &
     !$omp         FracU10,FracT2,FracQ2) &
     !$omp shared(IS,IE,JS,JE,Rdry,CPdry,PRC_myrank,IO_FID_LOG,IO_L,model_name, &
+#ifdef __GFORTRAN__
+    !$omp        bulkflux, &
+#endif
     !$omp        CPL_PHY_SFC_SKIN_itr_max,CPL_PHY_SFC_SKIN_dTS_max,CPL_PHY_SFC_SKIN_dreslim,CPL_PHY_SFC_SKIN_err_min, CPL_PHY_SFC_SKIN_res_min, &
     !$omp        fact_area,DZG,dt,QVA,TMPA,PRSA,RHOA,WA,UA,VA,LHV,Z1,PBL, &
     !$omp        TG,PRSS,RHOS,TMPS1,QVEF,Z0M,Z0H,Z0E,Rb,TCS,ALB_SW,ALB_LW,SWD,LWD, &
