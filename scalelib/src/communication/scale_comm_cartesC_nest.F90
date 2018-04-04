@@ -384,7 +384,7 @@ contains
                           fid,                     & ! (out)
                           aggregate = .false.      ) ! (in)
 
-          call FILE_get_attribute( fid, "global", "scale_atmos_grid_cartesC_imaxg", &
+          call FILE_get_attribute( fid, "global", "scale_atmos_grid_cartesC_index_imaxg", &
                                    imaxg(:), existed=existed                        )
           if ( existed ) then
              call FILE_get_attribute( fid, "global", "scale_cartesC_prc_num_x", &
@@ -398,7 +398,7 @@ contains
              OFFLINE_PARENT_IMAX = dims(1)-IHALO*2
           end if
 
-          call FILE_get_attribute( fid, "global", "scale_atmos_grid_cartesC_jmaxg", &
+          call FILE_get_attribute( fid, "global", "scale_atmos_grid_cartesC_index_jmaxg", &
                                    jmaxg(:), existed=existed                        )
           if ( existed ) then
              call FILE_get_attribute( fid, "global", "scale_cartesC_prc_num_y", &
@@ -412,7 +412,7 @@ contains
              OFFLINE_PARENT_JMAX = dims(1)-JHALO*2
           end if
 
-          call FILE_get_attribute( fid, "global", "scale_atmos_grid_cartesC_kmax", &
+          call FILE_get_attribute( fid, "global", "scale_atmos_grid_cartesC_index_kmax", &
                                    dims(:), existed=existed                        )
           if ( existed ) then
              OFFLINE_PARENT_KMAX = dims(1)
@@ -425,7 +425,7 @@ contains
              endif
           end if
 
-          call FILE_get_attribute( fid, "global", "scale_ocean_grid_cartesC_kmax", &
+          call FILE_get_attribute( fid, "global", "scale_ocean_grid_cartesC_index_kmax", &
                                    dims(:), existed=existed                        )
           if ( existed ) then
              OFFLINE_PARENT_OKMAX = dims(1)
@@ -439,7 +439,7 @@ contains
              endif
           end if
 
-          call FILE_get_attribute( fid, "global", "scale_land_grid_cartesC_kmax", &
+          call FILE_get_attribute( fid, "global", "scale_land_grid_cartesC_index_kmax", &
                                    dims(:), existed=existed                       )
           if ( existed ) then
              OFFLINE_PARENT_LKMAX = dims(1)
