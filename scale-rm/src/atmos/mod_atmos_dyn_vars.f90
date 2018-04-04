@@ -78,8 +78,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_vars_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use mod_atmos_admin, only: &
@@ -113,7 +113,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_DYN_VARS. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_DYN_VARS)
 
@@ -127,7 +127,7 @@ contains
 
        if ( VA > VMAX ) then
           write(*,*) 'xxx number of the prognostic variables is exceed the limit', VA, ' > ', VMAX
-          call PRC_MPIstop
+          call PRC_abort
        endif
        allocate( PROG(KA,IA,JA,VA) )
        PROG(:,:,:,:) = UNDEF

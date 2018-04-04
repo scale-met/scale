@@ -123,9 +123,9 @@ contains
        CY,                           &
        lat,                          &
        none                          )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_HAS_E, &
        PRC_HAS_W, &
        PRC_HAS_N, &
@@ -300,6 +300,7 @@ contains
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
        USE_AVERAGE,                                          &
+       I_QV,                                                 &
        DTSEC, DTSEC_DYN                                      )
     use scale_comm, only: &
        COMM_vars8, &
@@ -390,6 +391,8 @@ contains
     logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
 
     logical,  intent(in)    :: USE_AVERAGE
+
+    integer,  intent(in)    :: I_QV
 
     real(DP), intent(in)    :: DTSEC
     real(DP), intent(in)    :: DTSEC_DYN
@@ -525,6 +528,7 @@ contains
                                  FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       & ! [IN]
                                  FLAG_FCT_ALONG_STREAM,                                & ! [IN]
                                  USE_AVERAGE,                                          & ! [IN]
+                                 I_QV,                                                 & ! [IN]
                                  DTSEC, DTSEC_DYN                                      ) ! [IN]
 
     call PROF_rapend  ("DYN_Tinteg", 2)

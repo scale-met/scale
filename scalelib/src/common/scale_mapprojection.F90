@@ -141,8 +141,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine MAPPROJECTION_setup( DOMAIN_CENTER_X, DOMAIN_CENTER_Y )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF     => CONST_UNDEF,  &
        PI_RP     => CONST_PI,     &
@@ -191,7 +191,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MAPPROJECTION. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MAPPROJECTION)
 
@@ -228,7 +228,7 @@ contains
        call MAPPROJECTION_EquidistantCylindrical_setup
     case default
        write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
-       call PRC_MPIstop
+       call PRC_abort
     endselect
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') '*** Basepoint(x)    = ', MAPPROJECTION_basepoint_x
@@ -244,8 +244,8 @@ contains
        y,   &
        lon, &
        lat  )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(in)  :: x
@@ -267,7 +267,7 @@ contains
        call MAPPROJECTION_EquidistantCylindrical_xy2lonlat( x, y, lon, lat )
     case default
        write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
-       call PRC_MPIstop
+       call PRC_abort
     endselect
 
     return
@@ -280,8 +280,8 @@ contains
        lat, &
        x,   &
        y    )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(in)  :: lon ! [rad]
@@ -303,7 +303,7 @@ contains
        call MAPPROJECTION_EquidistantCylindrical_lonlat2xy( lon, lat, x, y )
     case default
        write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
-       call PRC_MPIstop
+       call PRC_abort
     endselect
 
     return
@@ -315,8 +315,8 @@ contains
        lat, &
        m1,  &
        m2   )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(in)  :: lat(IA,JA) ! [rad]
@@ -337,7 +337,7 @@ contains
        call MAPPROJECTION_EquidistantCylindrical_mapfactor( lat, m1, m2 )
     case default
        write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
-       call PRC_MPIstop
+       call PRC_abort
     endselect
 
     return
@@ -350,8 +350,8 @@ contains
        rotc, &
        lon,  &
        lat   )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(out) :: rotc(2) !< rotc(:,:,1)->cos, rotc(:,:,2)->sin
@@ -372,7 +372,7 @@ contains
        call MAPPROJECTION_EquidistantCylindrical_rotcoef_0D( rotc )
     case default
        write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
-       call PRC_MPIstop
+       call PRC_abort
     endselect
 
     return
@@ -385,8 +385,8 @@ contains
        rotc, &
        lon,  &
        lat   )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(out) :: rotc(IA,JA,2) !< rotc(:,:,1)->cos, rotc(:,:,2)->sin
@@ -407,7 +407,7 @@ contains
        call MAPPROJECTION_EquidistantCylindrical_rotcoef_2D( rotc )
     case default
        write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
-       call PRC_MPIstop
+       call PRC_abort
     endselect
 
     return
@@ -519,8 +519,8 @@ contains
        lat, &
        x,   &
        y    )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(in)  :: lon ! [rad]
@@ -606,8 +606,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Lambert Conformal projection
   subroutine MAPPROJECTION_LambertConformal_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(DP) :: lat1rot, lat2rot
@@ -616,7 +616,7 @@ contains
 
     if ( MAPPROJECTION_LC_lat1 >= MAPPROJECTION_LC_lat2 ) then
        write(*,*) 'xxx Please set MAPPROJECTION_LC_lat1 < MAPPROJECTION_LC_lat2 in degree. STOP'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! check hemisphere: 1=north, -1=south
@@ -1000,8 +1000,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Mercator projection
   subroutine MAPPROJECTION_Mercator_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(DP) :: lat0
@@ -1015,7 +1015,7 @@ contains
 
     if ( MAPPROJECTION_M_fact == 0.0_DP ) then
        write(*,*) 'xxx MAPPROJECTION_M_lat cannot be set to pole point! value=', MAPPROJECTION_M_lat
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! calc (x,y) at (lon,lat) = (base,0)
@@ -1152,8 +1152,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Equidistant Cylindrical projection
   subroutine MAPPROJECTION_EquidistantCylindrical_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(DP) :: lat0
@@ -1166,7 +1166,7 @@ contains
 
     if ( MAPPROJECTION_EC_fact == 0.0_DP ) then
        write(*,*) 'xxx MAPPROJECTION_EC_lat cannot be set to pole point! value=', MAPPROJECTION_EC_lat
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     MAPPROJECTION_eq_x = MAPPROJECTION_basepoint_x
@@ -1194,8 +1194,8 @@ contains
        y,   &
        lon, &
        lat  )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(in)  :: x
@@ -1215,7 +1215,7 @@ contains
 
     if ( abs(lat) >  0.5_DP*PI ) then
        write(*,*) 'xxx Invalid latitude range! value=', lat
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return

@@ -64,8 +64,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine OCEAN_PHY_setup( OCEAN_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_ocean_phy_const, only: &
        OCEAN_PHY_CONST_setup, &
        OCEAN_PHY_CONST
@@ -86,7 +86,7 @@ contains
        OCEAN_PHY => OCEAN_PHY_SLAB
     case default
        write(*,*) 'xxx invalid Ocean type(', trim(OCEAN_TYPE), '). CHECK!'
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     return

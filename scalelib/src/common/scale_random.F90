@@ -50,8 +50,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine RANDOM_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist / PARAM_RANDOM / &
@@ -70,7 +70,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_RANDOM. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_RANDOM)
 
@@ -91,7 +91,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Reset random seed
   subroutine RANDOM_reset
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
     implicit none
 

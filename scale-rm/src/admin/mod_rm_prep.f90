@@ -62,10 +62,10 @@ contains
        cnf_fname         )
     use scale_file, only: &
        FILE_Close_All
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_LOCAL_setup
-    use scale_rm_process, only: &
-       PRC_setup
+    use scale_prc_cartesC, only: &
+       PRC_CARTESC_setup
     use scale_const, only: &
        CONST_setup
     use scale_calendar, only: &
@@ -182,7 +182,7 @@ contains
     call IO_LOG_setup( myrank, ismaster )
 
     ! setup process
-    call PRC_setup
+    call PRC_CARTESC_setup
 
     ! setup PROF
     call PROF_setup

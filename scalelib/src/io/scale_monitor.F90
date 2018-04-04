@@ -100,7 +100,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine MONITOR_setup( dt ) 
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
 
@@ -233,7 +233,7 @@ contains
        itemid,           &
        ndims, dim_type,  &
        isflux            )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
 
@@ -535,7 +535,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Open file and write header at the first time
   subroutine MONITOR_writeheader
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort, &
        PRC_myrank, &
        PRC_IsMaster
@@ -598,7 +598,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Close file
   subroutine MONITOR_finalize
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
     implicit none
 

@@ -1,18 +1,15 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Diagnostic
+!> module atmosphere / diagnostic / CartesianC
 !!
 !! @par Description
-!!          Calculate diagnostic variables
+!!          Calculate diagnostic variables for Cartesian-C grid
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2017-02-24 (S.Nishizawa)   [new]
 !!
 !<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
-module scale_atmos_diagnostic
+module scale_atmos_diagnostic_cartesC
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -20,8 +17,6 @@ module scale_atmos_diagnostic
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_atmos_grid_cartesC_index
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -29,12 +24,12 @@ module scale_atmos_diagnostic
   !
   !++ Public procedure
   !
-  public :: ATMOS_DIAGNOSTIC_get_vel
-  public :: ATMOS_DIAGNOSTIC_get_therm
-  public :: ATMOS_DIAGNOSTIC_get_phyd
-  public :: ATMOS_DIAGNOSTIC_get_potv
-  public :: ATMOS_DIAGNOSTIC_get_teml
-  public :: ATMOS_DIAGNOSTIC_get_n2
+  public :: ATMOS_DIAGNOSTIC_CARTESC_get_vel
+  public :: ATMOS_DIAGNOSTIC_CARTESC_get_therm
+  public :: ATMOS_DIAGNOSTIC_CARTESC_get_phyd
+  public :: ATMOS_DIAGNOSTIC_CARTESC_get_potv
+  public :: ATMOS_DIAGNOSTIC_CARTESC_get_teml
+  public :: ATMOS_DIAGNOSTIC_CARTESC_get_n2
 
   !-----------------------------------------------------------------------------
   !
@@ -51,10 +46,10 @@ module scale_atmos_diagnostic
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> ATMOS_DIAGNOSTIC_get_vel
+  !> ATMOS_DIAGNOSTIC_CARTESC_get_vel
   !! W, U, V
   !<
-  subroutine ATMOS_DIAGNOSTIC_get_vel( &
+  subroutine ATMOS_DIAGNOSTIC_CARTESC_get_vel( &
        KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
@@ -68,13 +63,13 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_atmos_grid_cartesC_real, only: &
-       CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
-       FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_grid_cartesC_metric, only: &
        GSQRT => ATMOS_GRID_CARTESC_METRIC_GSQRT, &
        J13G  => ATMOS_GRID_CARTESC_METRIC_J13G,  &
        J23G  => ATMOS_GRID_CARTESC_METRIC_J23G
+    use scale_atmos_grid_cartesC_index, only: &
+       I_XYZ, &
+       I_XYW
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
@@ -184,13 +179,13 @@ contains
     call COMM_wait ( V(:,:,:), 3, .false. )
 
     return
-  end subroutine ATMOS_DIAGNOSTIC_get_vel
+  end subroutine ATMOS_DIAGNOSTIC_CARTESC_get_vel
 
   !-----------------------------------------------------------------------------
-  !> ATMOS_DIAGNOSTIC_get_therm
+  !> ATMOS_DIAGNOSTIC_CARTESC_get_therm
   !! potential temperature, temperature, pressure
   !<
-  subroutine ATMOS_DIAGNOSTIC_get_therm( &
+  subroutine ATMOS_DIAGNOSTIC_CARTESC_get_therm( &
        KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
@@ -198,7 +193,7 @@ contains
        Rtot, CVtot, CPtot,     &
        POTT, TEMP, PRES, EXNER )
     use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+       THERMODYN_rhot2temp_pres => ATMOS_THERMODYN_rhot2temp_pres
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
@@ -217,10 +212,10 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call THERMODYN_temp_pres( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                              DENS(:,:,:), RHOT(:,:,:),                & ! (in)
-                              Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:), & ! (in)
-                              TEMP(:,:,:), PRES(:,:,:)                 ) ! (out)
+    call THERMODYN_rhot2temp_pres( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                   DENS(:,:,:), RHOT(:,:,:),                & ! (in)
+                                   Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:), & ! (in)
+                                   TEMP(:,:,:), PRES(:,:,:)                 ) ! (out)
 
 
 !OCL XFILL
@@ -238,13 +233,13 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_DIAGNOSTIC_get_therm
+  end subroutine ATMOS_DIAGNOSTIC_CARTESC_get_therm
 
   !-----------------------------------------------------------------------------
-  !> ATMOS_DIAGNOSTIC_get_phyd
+  !> ATMOS_DIAGNOSTIC_CARTESC_get_phyd
   !! hydrostatic pressure
   !<
-  subroutine ATMOS_DIAGNOSTIC_get_phyd( &
+  subroutine ATMOS_DIAGNOSTIC_CARTESC_get_phyd( &
        KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
@@ -285,13 +280,13 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_DIAGNOSTIC_get_phyd
+  end subroutine ATMOS_DIAGNOSTIC_CARTESC_get_phyd
 
   !-----------------------------------------------------------------------------
-  !> ATMOS_DIAGNOSTIC_get_n2
+  !> ATMOS_DIAGNOSTIC_CARTESC_get_n2
   !! N^2
   !<
-  subroutine ATMOS_DIAGNOSTIC_get_n2( &
+  subroutine ATMOS_DIAGNOSTIC_CARTESC_get_n2( &
        KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
@@ -337,13 +332,13 @@ contains
     end do
 
     return
-  end subroutine ATMOS_DIAGNOSTIC_get_n2
+  end subroutine ATMOS_DIAGNOSTIC_CARTESC_get_n2
 
   !-----------------------------------------------------------------------------
-  !> ATMOS_DIAGNOSTIC_get_potv
+  !> ATMOS_DIAGNOSTIC_CARTESC_get_potv
   !! virtual potential temperature
   !<
-  subroutine ATMOS_DIAGNOSTIC_get_potv( &
+  subroutine ATMOS_DIAGNOSTIC_CARTESC_get_potv( &
        KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
@@ -378,13 +373,13 @@ contains
     end do
 
     return
-  end subroutine ATMOS_DIAGNOSTIC_get_potv
+  end subroutine ATMOS_DIAGNOSTIC_CARTESC_get_potv
 
   !-----------------------------------------------------------------------------
-  !> ATMOS_DIAGNOSTIC_get_teml
+  !> ATMOS_DIAGNOSTIC_CARTESC_get_teml
   !! liqued water temperature
   !<
-  subroutine ATMOS_DIAGNOSTIC_get_teml( &
+  subroutine ATMOS_DIAGNOSTIC_CARTESC_get_teml( &
        KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
@@ -393,8 +388,6 @@ contains
        QC, QI,   &
        CPtot,    &
        TEML      )
-    use scale_const, only: &
-       Rdry => CONST_Rdry
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
@@ -426,6 +419,6 @@ contains
     end do
 
     return
-  end subroutine ATMOS_DIAGNOSTIC_get_teml
+  end subroutine ATMOS_DIAGNOSTIC_CARTESC_get_teml
 
-end module scale_atmos_diagnostic
+end module scale_atmos_diagnostic_cartesC

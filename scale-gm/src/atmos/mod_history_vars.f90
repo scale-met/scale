@@ -696,7 +696,7 @@ contains
        do l = 1, ADM_lall
           do k = 1, ADM_kall
           do g = 1, ADM_gall
-             call HYDROMETEOR_LHV( LHV, tem(g,k,l) )
+             call HYDROMETEOR_LHV( tem(g,k,l), LHV )
 
              mse(g,k,l) = CPdry * tem(g,k,l)      &
                         + GRAV  * ( GRD_vz(g,k,l,GRD_Z) - GRD_zs (g,K0,l,GRD_ZSFC) ) &

@@ -92,8 +92,8 @@ contains
         Z0H,        &
         Z0E,        &
         dt_DP       )
-    use scale_process, only: &
-      PRC_MPIstop
+    use scale_prc, only: &
+      PRC_abort
     use scale_const, only: &
       PRE00 => CONST_PRE00, &
       Rdry  => CONST_Rdry,  &
@@ -175,7 +175,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land surface step: Const'
 
-    call HYDROMETEOR_LHV( LHV(:,:), TMPA(:,:) )
+    call HYDROMETEOR_LHV( IA, IS, IE, JA, JS, JE, &
+                          TMPA(:,:), LHV(:,:) )
 
     ! not update temperature
     do j = JS, JE

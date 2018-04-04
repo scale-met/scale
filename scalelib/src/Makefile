@@ -20,6 +20,7 @@ VPATH = common:                          \
 	file:                            \
 	grid:                            \
 	communication:                   \
+        atmosphere/common:               \
         atmosphere/grid:                 \
         atmosphere/physics/pbl:          \
         atmosphere/physics/microphysics: \
@@ -29,9 +30,6 @@ VPATH = common:                          \
         atmosphere/physics/aerosol:      \
         atmosphere/physics/chemistry:    \
         atmos-physics:                   \
-        atmos-physics/share:             \
-        atmos-physics/microphysics:      \
-        atmos-physics/surfaceflux:       \
         atmos-physics/turbulence:        \
         atmos-rm:                        \
         atmos-rm/communication:          \
@@ -82,12 +80,11 @@ OBJS_DYN = scale_atmos_dyn_fvm_flux_cd2.o	\
            scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
            scale_atmos_dyn_tstep_tracer.o
 
-OBJS_MP = scale_atmos_phy_mp_dry.o	\
+OBJS_MP = \
           scale_atmos_phy_mp_kessler.o	\
+          scale_atmos_phy_mp_tomita08.o	\
           scale_atmos_phy_mp_sn14.o	\
-          scale_atmos_phy_mp_sdm.o	\
-          scale_atmos_phy_mp_suzuki10.o	\
-          scale_atmos_phy_mp_tomita08.o
+          scale_atmos_phy_mp_suzuki10.o
 
 OBJS_AE = scale_atmos_phy_ae_kajino13.o
 
@@ -130,9 +127,7 @@ OBJS_NAME = \
 	$(OBJS_DYN)	\
 	$(OBJS_NUMERIC_FDM)	\
 	\
-	scale_atmos_phy_mp.o	\
 	scale_atmos_phy_mp_common.o	\
-	scale_atmos_phy_mp_convert.o	\
 	$(OBJS_MP)	\
 	\
 	$(OBJS_AE)	\
@@ -153,18 +148,18 @@ OBJS_NAME = \
 	scale_atmos_phy_cp_common.o	\
 	$(OBJS_CP)	\
 	\
-	scale_atmos_sub_bottom.o	\
+	scale_atmos_bottom.o	\
 	scale_atmos_sub_boundary.o	\
-	scale_atmos_sub_hydrostatic.o	\
-	scale_atmos_sub_profile.o	\
-	scale_atmos_sub_refstate.o	\
-	scale_atmos_sub_saturation.o	\
-	scale_atmos_sub_solarins.o	\
-	scale_atmos_sub_thermodyn.o	\
-	scale_atmos_sub_aerosol.o	\
-	scale_atmos_sub_hydrometeor.o	\
-	scale_atmos_sub_adiabat.o	\
-	scale_atmos_sub_diagnostic.o	\
+	scale_atmos_hydrostatic.o	\
+	scale_atmos_profile.o	\
+	scale_atmos_refstate.o	\
+	scale_atmos_saturation.o	\
+	scale_atmos_solarins.o	\
+	scale_atmos_thermodyn.o		\
+	scale_atmos_aerosol.o	\
+	scale_atmos_hydrometeor.o	\
+	scale_atmos_adiabat.o	\
+	scale_atmos_diagnostic_cartesC.o	\
 	scale_bulkflux.o	\
 	scale_calendar.o	\
 	scale_comm_cartesC.o	\
@@ -205,7 +200,6 @@ OBJS_NAME = \
 	scale_urban_phy.o	\
 	scale_urban_phy_slc.o	\
 	scale_landuse.o	\
-	scale_rm_process.o	\
 	scale_fpm.o  \
 	scale_mapprojection.o	\
 	scale_matrix.o	\
@@ -213,7 +207,8 @@ OBJS_NAME = \
 	scale_monitor.o	\
 	scale_monitor_cartesC.o	\
 	scale_precision.o	\
-	scale_process.o	\
+	scale_prc.o	\
+	scale_prc_cartesC.o	\
 	scale_prof.o	\
 	scale_random.o	\
 	scale_roughness.o	\
@@ -299,15 +294,9 @@ endif
 
 overridesdm:
 	@echo;echo "Copy SDM-related file from $(SDMDIR)"
-	rsync -th $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
-	rsync -th $(SDMDIR)/scale_tracer_sdm.F90       $(SCALELIBDIR)/src/common/tracer/
+	rsync -th $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmosphere/physics/microphysics/
 	@echo
 
-restoresdm:
-	@echo;echo "Restore SDM-related file"
-	rsync -th $(SDMDIR)/scale_atmos_phy_mp_sdm_dummy.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/scale_atmos_phy_mp_sdm.F90
-	rsync -th $(SDMDIR)/scale_tracer_sdm_dummy.F90       $(SCALELIBDIR)/src/common/tracer/scale_tracer_sdm.F90
-	@echo
 
 allcleansdm:
 	$(MAKE) -C $(MTDIR)      allclean
@@ -322,7 +311,6 @@ cleansdm:
 allclean: distclean
 ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) checksdm
-	$(MAKE) restoresdm
 	$(MAKE) allcleansdm
 endif
 	rm -f $(LIBDIR)/$(LIBNAME)
@@ -333,7 +321,6 @@ distclean: clean
 clean:
 ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) checksdm
-	$(MAKE) restoresdm
 	$(MAKE) cleansdm
 endif
 	rm -rf .libs

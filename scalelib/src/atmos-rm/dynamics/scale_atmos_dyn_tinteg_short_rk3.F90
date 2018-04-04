@@ -91,8 +91,8 @@ contains
   !> Setup
   subroutine ATMOS_DYN_Tinteg_short_rk3_setup( &
        tinteg_type )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_comm, only: &
@@ -129,7 +129,7 @@ contains
        fact_dt2 = 1.0_RP / 2.0_RP
     case default
        write(*,*) 'xxx TINTEG_TYPE is not RK3. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     allocate( DENS_RK1(KA,IA,JA) )

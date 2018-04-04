@@ -115,9 +115,9 @@ contains
        setup_TimeIntegration )
     use scale_file, only: &
        FILE_Get_Attribute
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank,  &
-       PRC_MPIstop, &
+       PRC_abort, &
        PRC_MPItime
     use scale_const, only: &
        UNDEF8 => CONST_UNDEF8
@@ -293,7 +293,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_TIME. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_TIME)
 
@@ -305,11 +305,11 @@ contains
 
        if ( TIME_DT == UNDEF8 ) then
           write(*,*) 'xxx Not found TIME_DT. STOP.'
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( TIME_DURATION == UNDEF8 ) then
           write(*,*) 'xxx Not found TIME_DURATION. STOP.'
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        ! DYN
@@ -660,92 +660,92 @@ contains
                - real(TIME_DSTEP_ATMOS_DYN,kind=DP)*TIME_DTSEC            ) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_DYN) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_DYN, real(TIME_DSTEP_ATMOS_DYN,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_ATMOS_PHY_CP-real(TIME_DSTEP_ATMOS_PHY_CP,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_CP) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_CP, real(TIME_DSTEP_ATMOS_PHY_CP,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_ATMOS_PHY_MP-real(TIME_DSTEP_ATMOS_PHY_MP,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_MP) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_MP, real(TIME_DSTEP_ATMOS_PHY_MP,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_ATMOS_PHY_RD-real(TIME_DSTEP_ATMOS_PHY_RD,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_RD) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_RD, real(TIME_DSTEP_ATMOS_PHY_RD,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_ATMOS_PHY_SF-real(TIME_DSTEP_ATMOS_PHY_SF,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_SF) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_SF, real(TIME_DSTEP_ATMOS_PHY_SF,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_ATMOS_PHY_TB-real(TIME_DSTEP_ATMOS_PHY_TB,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_TB) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_TB, real(TIME_DSTEP_ATMOS_PHY_TB,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_ATMOS_PHY_BL-real(TIME_DSTEP_ATMOS_PHY_BL,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_BL) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_BL, real(TIME_DSTEP_ATMOS_PHY_BL,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_ATMOS_PHY_CH-real(TIME_DSTEP_ATMOS_PHY_CH,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_CH) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_CH, real(TIME_DSTEP_ATMOS_PHY_CH,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_ATMOS_PHY_AE-real(TIME_DSTEP_ATMOS_PHY_AE,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_AE) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_AE, real(TIME_DSTEP_ATMOS_PHY_AE,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_OCEAN-real(TIME_DSTEP_OCEAN,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(OCEAN) must be a multiple of delta t ', &
                      TIME_DTSEC_OCEAN, real(TIME_DSTEP_OCEAN,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_LAND-real(TIME_DSTEP_LAND,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(LAND) must be a multiple of delta t ', &
                      TIME_DTSEC_LAND, real(TIME_DSTEP_LAND,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_URBAN-real(TIME_DSTEP_URBAN,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(URBAN) must be a multiple of delta t ', &
                      TIME_DTSEC_URBAN, real(TIME_DSTEP_URBAN,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_ATMOS_RESTART-real(TIME_DSTEP_ATMOS_RESTART,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_RESTART) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_RESTART, real(TIME_DSTEP_ATMOS_RESTART,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_OCEAN_RESTART-real(TIME_DSTEP_OCEAN_RESTART,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(OCEAN_RESTART) must be a multiple of delta t ', &
                      TIME_DTSEC_OCEAN_RESTART, real(TIME_DSTEP_OCEAN_RESTART,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_LAND_RESTART-real(TIME_DSTEP_LAND_RESTART,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(LAND_RESTART) must be a multiple of delta t ', &
                      TIME_DTSEC_LAND_RESTART, real(TIME_DSTEP_LAND_RESTART,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_URBAN_RESTART-real(TIME_DSTEP_URBAN_RESTART,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(URBAN_RESTART) must be a multiple of delta t ', &
                      TIME_DTSEC_URBAN_RESTART, real(TIME_DSTEP_URBAN_RESTART,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_URBAN_RESTART-real(TIME_DSTEP_URBAN_RESTART,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(URBAN_RESTART) must be a multiple of delta t ', &
                      TIME_DTSEC_URBAN_RESTART, real(TIME_DSTEP_URBAN_RESTART,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
        if ( abs(TIME_DTSEC_RESUME-real(TIME_DSTEP_RESUME,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(RESUME) must be a multiple of delta t ', &
                      TIME_DTSEC_RESUME, real(TIME_DSTEP_RESUME,kind=DP)*TIME_DTSEC
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        if( IO_L ) write(IO_FID_LOG,*)
@@ -844,7 +844,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Evaluate component execution
   subroutine ADMIN_TIME_checkstate
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_UNIVERSAL_IsMaster, &
        PRC_MPItime
     use scale_calendar, only: &
@@ -998,7 +998,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Advance the time & evaluate restart & stop
   subroutine ADMIN_TIME_advance
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_IsMaster, &
        PRC_MPItime
     use scale_calendar, only: &

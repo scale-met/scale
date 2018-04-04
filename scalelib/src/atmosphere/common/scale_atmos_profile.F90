@@ -1,13 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Typical vertical profile
+!> module atmosphere / vertical profile
 !!
 !! @par Description
 !!          Generate typical vertical profile of atmosphere
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2013-02-25 (H.Yashiro)   [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -19,7 +16,6 @@ module scale_atmos_profile
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_atmos_grid_cartesC_index
 
   use scale_const, only: &
      GRAV  => CONST_GRAV,  &

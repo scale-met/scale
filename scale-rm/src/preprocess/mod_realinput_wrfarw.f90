@@ -18,9 +18,9 @@ module mod_realinput_wrfarw
   use scale_precision
   use scale_stdio
   use scale_tracer
-  use scale_process, only: &
+  use scale_prc, only: &
      myrank => PRC_myrank,  &
-     PRC_MPIstop
+     PRC_abort
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -107,7 +107,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_WRFARW,iostat=ierr)
     if( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
 
@@ -160,12 +160,13 @@ contains
        llvely_org,    &
        pres_org,      &
        temp_org,      &
-       qtrc_org,      &
+       qv_org,        &
+       qhyd_org,      &
+       qnum_org,      &
        lon_org,       &
        lat_org,       &
        cz_org,        &
        basename,      &
-       mptype_parent, &
        dims,          &
        it             ) ! (in)
     use scale_const, only: &
@@ -176,22 +177,13 @@ contains
     use scale_file, only: &
        FILE_open, &
        FILE_read
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_pott => ATMOS_THERMODYN_pott
     use scale_atmos_hydrometeor, only: &
-       QHS, &
-       QHE, &
-       I_QV, &
-       I_QC, &
-       I_QR, &
-       I_QI, &
-       I_QS, &
-       I_QG, &
-       I_NC, &
-       I_NR, &
-       I_NI, &
-       I_NS, &
-       I_NG
+       N_HYD, &
+       I_HC, &
+       I_HR, &
+       I_HI, &
+       I_HS, &
+       I_HG
     implicit none
 
     real(RP),         intent(out) :: velz_org(:,:,:)
@@ -199,12 +191,13 @@ contains
     real(RP),         intent(out) :: llvely_org(:,:,:)
     real(RP),         intent(out) :: pres_org(:,:,:)
     real(RP),         intent(out) :: temp_org(:,:,:)
-    real(RP),         intent(out) :: qtrc_org(:,:,:,:)
+    real(RP),         intent(out) :: qv_org(:,:,:)
+    real(RP),         intent(out) :: qhyd_org(:,:,:,:)
+    real(RP),         intent(out) :: qnum_org(:,:,:,:)
     real(RP),         intent(out) :: lon_org(:,:)
     real(RP),         intent(out) :: lat_org(:,:)
     real(RP),         intent(out) :: cz_org(:,:,:)
     character(len=*), intent(in)  :: basename
-    integer,          intent(in)  :: mptype_parent
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: it
 
@@ -232,7 +225,6 @@ contains
     character(len=H_MID) :: varname_V
 
     integer :: fid
-    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputWRF]'
@@ -323,13 +315,13 @@ contains
                                  BASENAME,               & ! (in)
                                  dims(1)+2, dims(2), dims(3) ) ! (in)
 
-    qtrc_org(:,:,:,:) = 0.0_RP
+    qhyd_org(:,:,:,:) = 0.0_RP
 
     call FILE_read( fid, "Q2", read_xy(:,:), step=it )
     do j = 1, dims(3)
     do i = 1, dims(2)
-       qtrc_org(1,i,j,I_QV) = read_xy(i,j)
-       qtrc_org(2,i,j,I_QV) = read_xy(i,j)
+       qv_org(1,i,j) = read_xy(i,j)
+       qv_org(2,i,j) = read_xy(i,j)
     end do
     end do
 
@@ -337,144 +329,125 @@ contains
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
-       qtrc_org(k+2,i,j,I_QV) = read_xyz(i,j,k)
+       qv_org(k+2,i,j) = read_xyz(i,j,k)
     end do
     end do
     end do
 
 
-    if ( I_QC > 0 ) then
-       call FILE_read( fid, "QCLOUD", read_xyz(:,:,:), step=it, allow_missing=.true. )
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-       do k = 1, dims(1)
-          qtrc_org(k+2,i,j,I_QC) = read_xyz(i,j,k)
-       end do
-       end do
-       end do
-    end if
+    call FILE_read( fid, "QCLOUD", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       qhyd_org(k+2,i,j,I_HC) = read_xyz(i,j,k)
+    end do
+    end do
+    end do
 
-    if ( I_QR > 0 ) then
-       call FILE_read( fid, "QRAIN", read_xyz(:,:,:), step=it, allow_missing=.true. )
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-       do k = 1, dims(1)
-          qtrc_org(k+2,i,j,I_QC) = read_xyz(i,j,k)
-       end do
-       end do
-       end do
-    end if
+    call FILE_read( fid, "QRAIN", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       qhyd_org(k+2,i,j,I_HC) = read_xyz(i,j,k)
+    end do
+    end do
+    end do
 
-    if ( I_QI > 0 ) then
-       call FILE_read( fid, "QICE", read_xyz(:,:,:), step=it, allow_missing=.true. )
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-       do k = 1, dims(1)
-          qtrc_org(k+2,i,j,I_QI) = read_xyz(i,j,k)
-       end do
-       end do
-       end do
-    end if
+    call FILE_read( fid, "QICE", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       qhyd_org(k+2,i,j,I_HI) = read_xyz(i,j,k)
+    end do
+    end do
+    end do
 
-    if ( I_QS > 0 ) then
-       call FILE_read( fid, "QSNOW", read_xyz(:,:,:), step=it, allow_missing=.true. )
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-       do k = 1, dims(1)
-          qtrc_org(k+2,i,j,I_QS) = read_xyz(i,j,k)
-       end do
-       end do
-       end do
-    end if
+    call FILE_read( fid, "QSNOW", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       qhyd_org(k+2,i,j,I_HS) = read_xyz(i,j,k)
+    end do
+    end do
+    end do
 
-    if ( I_QG > 0 ) then
-       call FILE_read( fid, "QGRAUP", read_xyz(:,:,:), step=it, allow_missing=.true. )
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-       do k = 1, dims(1)
-          qtrc_org(k+2,i,j,I_QG) = read_xyz(i,j,k)
-       end do
-       end do
-       end do
-    end if
+    call FILE_read( fid, "QGRAUP", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       qhyd_org(k+2,i,j,I_HG) = read_xyz(i,j,k)
+    end do
+    end do
+    end do
 
 
     ! convert mixing ratio to specific ratio
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)+2
-       qtot = qtrc_org(k,i,j,I_QV)
-       do iq = QHS, QHE
-          qtot = qtot + qtrc_org(k,i,j,iq)
+       qtot = qv_org(k,i,j)
+       do iq = 1, N_HYD
+          qtot = qtot + qhyd_org(k,i,j,iq)
        end do
-       qtrc_org(k,i,j,I_QV) = qtrc_org(k,i,j,I_QV) / ( 1.0_RP + qtot )
-       do iq = QHS, QHE
-          qtrc_org(k,i,j,iq) = qtrc_org(k,i,j,iq) / ( 1.0_RP + qtot )
+       qv_org(k,i,j) = qv_org(k,i,j) / ( 1.0_RP + qtot )
+       do iq = 1, N_HYD
+          qhyd_org(k,i,j,iq) = qhyd_org(k,i,j,iq) / ( 1.0_RP + qtot )
        end do
     end do
     end do
     end do
 
-    if ( I_NC > 0 ) then
-       call FILE_read( fid, "NC", read_xyz(:,:,:), step=it, allow_missing=.true. )
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-       do k = 1, dims(1)
-          qtrc_org(k+2,i,j,I_NC) = read_xyz(i,j,k)
-       end do
-       end do
-       end do
-    end if
+    call FILE_read( fid, "NC", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       qnum_org(k+2,i,j,I_HC) = read_xyz(i,j,k)
+    end do
+    end do
+    end do
 
-    if ( I_NR > 0 ) then
-       call FILE_read( fid, "NR", read_xyz(:,:,:), step=it, allow_missing=.true. )
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-       do k = 1, dims(1)
-          qtrc_org(k+2,i,j,I_NR) = read_xyz(i,j,k)
-       end do
-       end do
-       end do
-    end if
+    call FILE_read( fid, "NR", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       qnum_org(k+2,i,j,I_HR) = read_xyz(i,j,k)
+    end do
+    end do
+    end do
 
-    if ( I_NI > 0 ) then
-       call FILE_read( fid, "NI", read_xyz(:,:,:), step=it, allow_missing=.true. )
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-       do k = 1, dims(1)
-          qtrc_org(k+2,i,j,I_NI) = read_xyz(i,j,k)
-       end do
-       end do
-       end do
-    end if
+    call FILE_read( fid, "NI", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       qnum_org(k+2,i,j,I_HI) = read_xyz(i,j,k)
+    end do
+    end do
+    end do
 
-    if ( I_NS > 0 ) then
-       call FILE_read( fid, "NS", read_xyz(:,:,:), step=it, allow_missing=.true. )
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-       do k = 1, dims(1)
-          qtrc_org(k+2,i,j,I_NS) = read_xyz(i,j,k)
-       end do
-       end do
-       end do
-    end if
+    call FILE_read( fid, "NS", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       qnum_org(k+2,i,j,I_HS) = read_xyz(i,j,k)
+    end do
+    end do
+    end do
 
-    if ( I_NG > 0 ) then
-       call FILE_read( fid, "NG", read_xyz(:,:,:), step=it, allow_missing=.true. )
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-       do k = 1, dims(1)
-          qtrc_org(k+2,i,j,I_NG) = read_xyz(i,j,k)
-       end do
-       end do
-       end do
-    end if
+    call FILE_read( fid, "NG", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)
+       qnum_org(k+2,i,j,I_HG) = read_xyz(i,j,k)
+    end do
+    end do
+    end do
 
-    do iq = 1, QA
+    do iq = 1, N_HYD
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)+2
-       qtrc_org(k,i,j,iq) = max( qtrc_org(k,i,j,iq), 0.0_RP )
+       qhyd_org(k,i,j,iq) = max( qhyd_org(k,i,j,iq), 0.0_RP )
+       qnum_org(k,i,j,iq) = max( qnum_org(k,i,j,iq), 0.0_RP )
     end do
     end do
     end do
@@ -535,8 +508,8 @@ contains
 
 
 #ifdef DEBUG
-     !k=1 ; i=int(dims(2)/2) ; j=int(dims(3)/2) ; iq = 1
-     k=2 ; i=3 ; j=3 ; iq = 1
+     !k=1 ; i=int(dims(2)/2) ; j=int(dims(3)/2)
+     k=2 ; i=3 ; j=3
      write(*,*) "read 3D wrf data",i,j,k
      write(*,*) "lon_org    ",lon_org   (i,j)/D2R
      write(*,*) "lat_org    ",lat_org   (i,j)/D2R
@@ -546,7 +519,7 @@ contains
      write(*,*) "vely_org   ",llvely_org(k,i,j)
      write(*,*) "velz_org   ",velz_org  (k,i,j)
      write(*,*) "temp_org   ",temp_org  (k,i,j)
-     write(*,*) "qtrc_org   ",qtrc_org  (k,i,j,iq)
+     write(*,*) "qv_org     ",qv_org    (k,i,j)
      k=3 ; i=3 ; j=3 ; iq = 1
      write(*,*) "read 3D wrf data",i,j,k
      write(*,*) "lon_org    ",lon_org   (i,j)/D2R
@@ -557,7 +530,7 @@ contains
      write(*,*) "vely_org   ",llvely_org(k,i,j)
      write(*,*) "velz_org   ",velz_org  (k,i,j)
      write(*,*) "temp_org   ",temp_org  (k,i,j)
-     write(*,*) "qtrc_org   ",qtrc_org  (k,i,j,iq)
+     write(*,*) "qv_org     ",qv_org     (k,i,j)
 #endif
 
     return
@@ -582,7 +555,6 @@ contains
          WRF_FILE_TYPE
 
     integer :: fid
-    integer :: timelen
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -593,7 +565,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_WRFARW,iostat=ierr)
     if( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
 
@@ -779,7 +751,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_WRFARW,iostat=ierr)
     if( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
 

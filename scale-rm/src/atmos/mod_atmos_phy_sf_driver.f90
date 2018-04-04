@@ -53,7 +53,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_SF_driver_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_phy_sf_bulk, only: &
        ATMOS_PHY_SF_bulk_setup
@@ -161,6 +161,7 @@ contains
     use scale_atmos_hydrostatic, only: &
        barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
     use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_dry, &
        I_QV
     use scale_atmos_phy_sf_bulk, only: &
        ATMOS_PHY_SF_bulk_flux
@@ -256,13 +257,10 @@ contains
     if ( update_flag ) then
 
        ! update surface density, surface pressure
-       call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
-                             PRES     (:,:,:), & ! [IN]
-                             CZ       (:,:,:), & ! [IN]
-                             TOPO_Zsfc(:,:),   & ! [IN]
-                             Z1       (:,:),   & ! [IN]
-                             SFC_DENS (:,:),   & ! [OUT]
-                             SFC_PRES (:,:)    ) ! [OUT]
+       call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                             DENS(:,:,:), PRES(:,:,:),           & ! [IN]
+                             CZ(:,:,:), TOPO_Zsfc(:,:), Z1(:,:), & ! [IN]
+                             SFC_DENS(:,:), SFC_PRES(:,:)        ) ! [OUT]
 
        if ( .NOT. CPL_sw ) then
 
@@ -306,7 +304,7 @@ contains
 
           end select
 
-          if ( I_QV > 0 ) then
+          if ( .not. ATMOS_HYDROMETEOR_dry ) then
              SFLX_QTRC(:,:,I_QV) = SFLX_QV(:,:)
           end if
 
@@ -348,7 +346,9 @@ contains
        end do
        end do
 
-       call barometric_law_mslp( MSLP(:,:), SFC_PRES(:,:), T2(:,:), TOPO_Zsfc(:,:) )
+       call barometric_law_mslp( IA, ISB, IEB, JA, JSB, JEB, &
+                                 SFC_PRES(:,:), T2(:,:), TOPO_Zsfc(:,:), & ! [IN]
+                                 MSLP(:,:)                               ) ! [OUT]
 
        call FILE_HISTORY_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3'   )
        call FILE_HISTORY_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa'      )
@@ -382,7 +382,7 @@ contains
        enddo
        enddo
 
-       if ( I_QV > 0 ) then
+       if ( .not. ATMOS_HYDROMETEOR_dry ) then
           !omp parallel do
           do j = JSB, JEB
           do i = ISB, IEB
@@ -406,7 +406,7 @@ contains
     enddo
     enddo
 
-    if ( I_QV > 0 ) then
+    if ( .not. ATMOS_HYDROMETEOR_dry ) then
        !omp parallel do
        do j  = JS, JE
        do i  = IS, IE
@@ -439,7 +439,7 @@ contains
                               ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
                               ATMOS_GRID_CARTESC_REAL_TOTAREA    )
 
-       if ( I_QV > 0 ) then
+       if ( .not. ATMOS_HYDROMETEOR_dry ) then
           call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
                                  RHOT_t_SF(:,:)     , 'RHOT_t_SF',                      &
                                  ATMOS_GRID_CARTESC_REAL_AREA(:,:),                     &

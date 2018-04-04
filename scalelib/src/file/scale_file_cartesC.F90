@@ -212,10 +212,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine FILE_CARTESC_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
@@ -735,7 +735,7 @@ contains
     use scale_file, only: &
        FILE_AGGREGATE, &
        FILE_Open
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
     implicit none
     character(len=*), intent(in)  :: basename !< basename of the file
@@ -778,14 +778,14 @@ contains
        FILE_get_CFtunits
     use scale_calendar, only: &
        CALENDAR_get_name
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_Ismaster, &
        PRC_myrank,   &
        PRC_abort
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE, &
        NOWMS   => TIME_NOWMS
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank,     &
        PRC_NUM_X,      &
        PRC_NUM_Y,      &
@@ -930,7 +930,7 @@ contains
        FILE_EndDef,    &
        FILE_Flush,     &
        FILE_Attach_Buffer
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
     implicit none
 
@@ -1179,9 +1179,9 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_Read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_NUM_X, &
        PRC_NUM_Y
     use mpi
@@ -1293,9 +1293,9 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_Read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_NUM_X, &
        PRC_NUM_Y
     use mpi
@@ -1366,9 +1366,9 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_Read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_NUM_X, &
        PRC_NUM_Y
     implicit none
@@ -1494,9 +1494,9 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_Read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_NUM_X, &
        PRC_NUM_Y
     implicit none
@@ -2366,10 +2366,10 @@ contains
        FILE_get_AGGREGATE, &
        FILE_Write_Axis,                 &
        FILE_Write_AssociatedCoordinate
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank, &
        PRC_IsMaster
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_CZ,    &
@@ -2791,7 +2791,7 @@ contains
     use scale_file, only: &
        FILE_Def_Variable, &
        FILE_Set_Attribute
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_mapprojection, only: &
        MAPPROJECTION_get_attributes
@@ -2954,10 +2954,10 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_Write
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank,  &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank
     use scale_time, only: &
        NOWSEC => TIME_NOWDAYSEC
@@ -3038,10 +3038,10 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_Write
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank,     &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
@@ -3171,10 +3171,10 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_Write
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank,  &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank, &
        PRC_NUM_X,  &
        PRC_NUM_Y
@@ -3318,10 +3318,10 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_Write
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank,     &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
@@ -3489,10 +3489,10 @@ contains
        FILE_get_AGGREGATE, &
        FILE_Write, &
        FILE_Flush
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank,     &
        PRC_abort
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
@@ -3718,7 +3718,7 @@ contains
   subroutine check_1d( &
        expected, buffer, &
        name              )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        EPS => CONST_EPS
@@ -3761,7 +3761,7 @@ contains
   subroutine check_2d( &
        expected, buffer, &
        name              )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        EPS => CONST_EPS
@@ -3813,7 +3813,7 @@ contains
        expected, buffer, &
        name,             &
        transpose         )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        EPS => CONST_EPS
@@ -3896,7 +3896,7 @@ contains
   end subroutine check_3d
 
   subroutine set_dimension_informations
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y, &
        PRC_NUM_X,      &
@@ -4031,7 +4031,7 @@ contains
   end subroutine set_dimension_informations
 
   subroutine set_dimension( name, ndims, dims, size, mapping, area, area_x, area_y, volume, location, grid )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     character(len=*), intent(in) :: name
     integer,          intent(in) :: ndims
@@ -4114,7 +4114,7 @@ contains
   !> construct MPI derived datatypes for read buffers
   subroutine Construct_Derived_Datatype
     use mpi
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_NUM_X,  &
        PRC_NUM_Y
     implicit none

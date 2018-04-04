@@ -52,8 +52,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine OCEAN_PHY_SLAB_setup( OCEAN_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        DWATR => CONST_DWATR, &
@@ -109,7 +109,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN_PHY_SLAB. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN_PHY_SLAB)
 
@@ -132,7 +132,7 @@ contains
 
        if ( OCEAN_PHY_SLAB_nudging_basename(1) == '' ) then
           write(*,*) 'xxx OCEAN_PHY_SLAB_nudging_basename is necessary !!'
-          call PRC_MPIstop
+          call PRC_abort
        endif
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Use nudging for OCEAN physics : OFF'
@@ -164,8 +164,8 @@ contains
        OCEAN_SFLX_prec, &
        OCEAN_SFLX_evap, &
        dt               )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_time, only: &
        NOWDAYSEC => TIME_NOWDAYSEC
     use scale_file_external_input, only: &
@@ -197,7 +197,7 @@ contains
 
        if ( error ) then
           write(*,*) 'xxx Requested data is not found!'
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        ! if OCEAN_PHY_SLAB_nudging_tau < dt, Nudging acts as quasi-prescribed boundary

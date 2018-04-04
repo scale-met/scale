@@ -46,8 +46,6 @@ module mod_user
        DENS, &
        RHOT, &
        QTRC
-  use scale_atmos_hydrometeor, only: &
-       I_NC
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -84,6 +82,7 @@ module mod_user
   character(len=H_SHORT), private, save :: InitShape
   real(RP),               private, save :: Lx
 
+  integer :: I_NC
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -91,16 +90,26 @@ contains
   subroutine USER_config
     use scale_tracer, only: &
          TRACER_regist
-    use scale_atmos_hydrometeor, only: &
-       I_NC
+    use mod_atmos_phy_mp_vars, only: &
+         QA_MP, &
+         QS_MP, &
+         QE_MP
+    use mod_atmos_phy_mp_driver, only: &
+         ATMOS_PHY_MP_USER_qhyd2qtrc
     implicit none
     !---------------------------------------------------------------------------
 
-    call TRACER_REGIST( I_NC,                 & ! [OUT]
+    call TRACER_REGIST( QS_MP,                & ! [OUT]
                         1,                    & ! [IN]
                         (/'NC'/),             & ! [IN]
                         (/'Passive tracer'/), & ! [IN]
                         (/'1'/)               ) ! [IN]
+
+    QA_MP = 1
+    QE_MP = QS_MP
+    I_NC = QA_MP
+
+    ATMOS_PHY_MP_USER_qhyd2qtrc => USER_qhyd2qtrc
 
     return
   end subroutine USER_config
@@ -108,8 +117,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_grid_cartesC, only : &
        FXG   => ATMOS_GRID_CARTESC_FXG
     implicit none
@@ -133,7 +142,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
@@ -183,8 +192,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Step
   subroutine USER_step
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_file_history, only: &
        FILE_HISTORY_in
 
@@ -244,6 +253,32 @@ contains
 
     return
   end subroutine USER_step
+
+  subroutine USER_qhyd2qtrc( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       QV, QHYD, &
+       QTRC, &
+       QNUM  )
+    use scale_atmos_hydrometeor, only: &
+         N_HYD, &
+         I_HC
+    use mod_atmos_phy_mp_vars, only: &
+         QA_MP
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: QV   (KA,IA,JA)
+    real(RP), intent(in) :: QHYD(KA,IA,JA,N_HYD)
+
+    real(RP), intent(out) :: QTRC(KA,IA,JA,QA_MP)
+
+    real(RP), intent(in), optional :: QNUM(KA,IA,JA,N_HYD)
+
+    QTRC(:,:,:,1) = QNUM(:,:,:,I_HC)
+
+    return
+  end subroutine USER_qhyd2qtrc
 
   subroutine ConvCheck()
     use mod_atmos_dyn_vars, only: &

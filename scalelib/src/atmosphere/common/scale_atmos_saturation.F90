@@ -1,14 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Saturation adjustment
+!> module atmosphere / saturation
 !!
 !! @par Description
-!!          Saturation adjustment module
+!!          Saturation module
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2011-10-24 (T.Seiki)   [new] Import from NICAM
-!! @li      2012-02-10 (H.Yashiro) [mod] Reconstruction
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -190,27 +186,27 @@ module scale_atmos_saturation
   !
   real(RP), private, parameter :: TEM_MIN = 10.0_RP !> calculation of dew point is ommited under this temperature
 
-  real(RP), private,      save :: ATMOS_SATURATION_ULIMIT_TEMP = 273.15_RP !< upper limit temperature
-  real(RP), private,      save :: ATMOS_SATURATION_LLIMIT_TEMP = 233.15_RP !< lower limit temperature
+  real(RP), private :: ATMOS_SATURATION_ULIMIT_TEMP = 273.15_RP !< upper limit temperature
+  real(RP), private :: ATMOS_SATURATION_LLIMIT_TEMP = 233.15_RP !< lower limit temperature
 
-  real(RP), private,      save :: RTEM00         !> inverse of TEM00
-  real(RP), private,      save :: dalphadT_const !> d(alfa)/dt
-  real(RP), private,      save :: psat_min_liq   !> psat_liq for TEM_MIN
-  real(RP), private,      save :: psat_min_ice   !> psat_ice for TEM_MIN
+  real(RP), private :: RTEM00         !> inverse of TEM00
+  real(RP), private :: dalphadT_const !> d(alfa)/dt
+  real(RP), private :: psat_min_liq   !> psat_liq for TEM_MIN
+  real(RP), private :: psat_min_ice   !> psat_ice for TEM_MIN
 
-  real(RP), private,      save :: CPovR_liq
-  real(RP), private,      save :: CPovR_ice
-  real(RP), private,      save :: CVovR_liq
-  real(RP), private,      save :: CVovR_ice
-  real(RP), private,      save :: LovR_liq
-  real(RP), private,      save :: LovR_ice
+  real(RP), private :: CPovR_liq
+  real(RP), private :: CPovR_ice
+  real(RP), private :: CVovR_liq
+  real(RP), private :: CVovR_ice
+  real(RP), private :: LovR_liq
+  real(RP), private :: LovR_ice
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_SATURATION_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        CPvap => CONST_CPvap, &
@@ -234,7 +230,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SATURATION] / Categ[ATMOS SHARE] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SATURATION] / Categ[ATMOS] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -394,9 +390,8 @@ contains
     implicit none
     integer,  intent(in)  :: KA, KS, KE
 
-    real(RP), intent(out) :: psat(KA) !< saturation vapor pressure [Pa]
-
     real(RP), intent(in)  :: temp(KA) !< temperature               [K]
+    real(RP), intent(out) :: psat(KA) !< saturation vapor pressure [Pa]
 
     integer  :: k
     !---------------------------------------------------------------------------
@@ -455,7 +450,6 @@ contains
     integer,  intent(in)  :: JA, JS, JE
 
     real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature               [K]
-
     real(RP), intent(out) :: psat(KA,IA,JA) !< saturation vapor pressure [Pa]
 
     real(RP) :: alpha, psatl, psati
@@ -532,7 +526,6 @@ contains
     integer,  intent(in)  :: JA, JS, JE
 
     real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature               [K]
-
     real(RP), intent(out) :: psat(KA,IA,JA) !< saturation vapor pressure [Pa]
 
     integer  :: k, i, j
@@ -608,7 +601,6 @@ contains
     integer,  intent(in)  :: JA, JS, JE
 
     real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature               [K]
-
     real(RP), intent(out) :: psat(KA,IA,JA) !< saturation vapor pressure [Pa]
 
     integer  :: k, i, j
@@ -1285,7 +1277,7 @@ contains
     real(RP) :: psat
     !---------------------------------------------------------------------------
 
-    call HYDROMETEOR_LHV( LHV, temp )
+    call HYDROMETEOR_LHV( temp, LHV )
     call ATMOS_SATURATION_psat_liq( temp, psat ) ! [IN], [OUT]
 
     dqsdtem = psat / ( dens* Rvap * temp**2 ) &
@@ -1350,7 +1342,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    call HYDROMETEOR_LHS( LHS, temp )
+    call HYDROMETEOR_LHS( temp, LHS ) ! [IN], [OUT]
     call ATMOS_SATURATION_psat_ice( temp, psat ) ! [IN], [OUT]
 
     dqsdtem = psat / ( dens * Rvap * temp**2 ) &
@@ -1402,8 +1394,6 @@ contains
        dqsat_dT,                 &
        qsat, qsat_liq, qsat_ice, &
        alpha                     )
-    use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHS => ATMOS_HYDROMETEOR_LHS
     implicit none
 
     real(RP), intent(in)  :: temp
@@ -1465,7 +1455,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    call HYDROMETEOR_LHV( LHV, temp )
+    call HYDROMETEOR_LHV( temp, LHV )
     call ATMOS_SATURATION_psat_liq( temp, psat_ ) ! [IN], [OUT]
 
     den1 = ( pres - (1.0_RP-EPSvap) * psat_ )**2
@@ -1542,7 +1532,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    call HYDROMETEOR_LHS( LHS, temp )
+    call HYDROMETEOR_LHS( temp, LHS ) ! [IN], [OUT]
     call ATMOS_SATURATION_psat_ice( temp, psat ) ! [IN], [OUT]
 
     den1 = ( pres - (1.0_RP-EPSvap) * psat )**2
@@ -1600,8 +1590,6 @@ contains
        dqsat_dT, dqsat_dP,       &
        qsat, qsat_liq, qsat_ice, &
        alpha                     )
-    use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHS => ATMOS_HYDROMETEOR_LHS
     implicit none
 
     real(RP), intent(in)  :: temp
@@ -1692,7 +1680,7 @@ contains
     do ite = 1, itelim
 
        call ATMOS_SATURATION_psat_liq( Tdew, psat ) ! [IN], [OUT]
-       call ATMOS_HYDROMETEOR_LHV( lhv, Tdew )
+       call ATMOS_HYDROMETEOR_LHV( Tdew, lhv )
 
        dpsat_dT = psat * lhv / ( Rvap * Tdew**2 )
        dTdew = ( psat - pvap ) / dpsat_dT
@@ -1740,7 +1728,7 @@ contains
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS, TEMP, QV, &
        Tdew            )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
@@ -1806,7 +1794,7 @@ contains
 
     Pv = DENS * QV * Rvap * TEMP
     TL = 55.0_RP + 2840.0_RP / ( CPdry / Rdry * log(TEMP) - log(Pv) - 4.805_RP )
-    call ATMOS_HYDROMETEOR_LHV( LHV, TEMP ) ! [OUT], [IN]
+    call ATMOS_HYDROMETEOR_LHV( TEMP, LHV ) ! [IN], [OUT]
 
     POTE = POTT * exp( LHV * QV / ( CPdry * TEMP ) &
                      * 1.0784_RP * ( 1.0_RP + 0.810_RP * QV ) )
@@ -1877,7 +1865,7 @@ contains
        DENS, Emoist0,              &
        TEMP, QV, QC, CPtot, CVtot, &
        converged                   )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &
@@ -1980,7 +1968,7 @@ contains
        DENS, Emoist0,                  &
        TEMP, QV, QC, QI, CPtot, CVtot, &
        converged                       )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &

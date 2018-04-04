@@ -172,14 +172,14 @@ contains
   subroutine CPL_vars_setup
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_landuse, only: &
        LANDUSE_fact_ocean, &
        LANDUSE_fact_land,  &
        LANDUSE_fact_urban
     use scale_atmos_hydrometeor, only: &
-       I_QV
+       ATMOS_HYDROMETEOR_dry
     use mod_ocean_admin, only: &
        OCEAN_sw
     use mod_land_admin, only: &
@@ -200,7 +200,7 @@ contains
     if ( .NOT. OCEAN_sw .AND. checkfact > 0.0_RP ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
        write(*,*)                     'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! Check consistency of LAND_sw and LANDUSE_fact_land
@@ -208,7 +208,7 @@ contains
     if ( .NOT. LAND_sw .AND. checkfact > 0.0_RP ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
        write(*,*)                     'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! Check consistency of URBAN_sw and LANDUSE_fact_urban
@@ -216,7 +216,7 @@ contains
     if ( .NOT. URBAN_sw .AND. checkfact > 0.0_RP ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
        write(*,*)                     'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
 
@@ -414,7 +414,7 @@ contains
     CNT_putLND     = 0.0_RP
     CNT_putURB     = 0.0_RP
 
-    if ( I_QV < 0 ) then
+    if ( ATMOS_HYDROMETEOR_dry ) then
        OCN_ATM_QV = 0.0_RP
        LND_ATM_QV = 0.0_RP
        URB_ATM_QV = 0.0_RP
@@ -431,7 +431,7 @@ contains
        U,           &
        V,           &
        DENS,        &
-       QTRC,        &
+       QV,          &
        PBL,         &
        SFC_DENS,    &
        SFC_PRES,    &
@@ -441,7 +441,7 @@ contains
        SFLX_snow,   &
        countup      )
     use scale_atmos_hydrometeor, only: &
-       I_QV
+       ATMOS_HYDROMETEOR_dry
     implicit none
 
     ! arguments
@@ -451,7 +451,7 @@ contains
     real(RP), intent(in) :: U          (IA,JA)
     real(RP), intent(in) :: V          (IA,JA)
     real(RP), intent(in) :: DENS       (IA,JA)
-    real(RP), intent(in) :: QTRC       (IA,JA,QA)
+    real(RP), intent(in) :: QV         (IA,JA)
     real(RP), intent(in) :: PBL        (IA,JA)
     real(RP), intent(in) :: SFC_DENS   (IA,JA)
     real(RP), intent(in) :: SFC_PRES   (IA,JA)
@@ -469,8 +469,8 @@ contains
     !$omp parallel do default(none) private(i,j) shared(I_LW,I_SW) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JSB,JEB,ISB,IEB,OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U) &
     !$omp shared(OCN_ATM_V,OCN_ATM_DENS,CNT_putATM_OCN,TEMP,PRES,W,U,V,DENS) &
-    !$omp shared(I_QV,OCN_ATM_QV,OCN_ATM_PBL,OCN_ATM_SFC_DENS,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn) &
-    !$omp shared(OCN_ATM_cosSZA,OCN_ATM_SFLX_rain,OCN_ATM_SFLX_snow,QTRC,PBL,SFC_DENS,SFC_PRES) &
+    !$omp shared(ATMOS_HYDROMETEOR_dry,OCN_ATM_QV,OCN_ATM_PBL,OCN_ATM_SFC_DENS,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn) &
+    !$omp shared(OCN_ATM_cosSZA,OCN_ATM_SFLX_rain,OCN_ATM_SFLX_snow,QV,PBL,SFC_DENS,SFC_PRES) &
     !$omp shared(SFLX_rad_dn,cosSZA,SFLX_rain,SFLX_snow) &
     !$omp shared(LND_ATM_TEMP,LND_ATM_PRES,LND_ATM_W,LND_ATM_U,LND_ATM_V,LND_ATM_DENS) &
     !$omp shared(LND_ATM_QV,LND_ATM_PBL,LND_ATM_SFC_DENS,LND_ATM_SFC_PRES,LND_ATM_SFLX_rad_dn,LND_ATM_cosSZA) &
@@ -487,8 +487,8 @@ contains
        OCN_ATM_U          (i,j)     = OCN_ATM_U          (i,j)     * CNT_putATM_OCN + U          (i,j)
        OCN_ATM_V          (i,j)     = OCN_ATM_V          (i,j)     * CNT_putATM_OCN + V          (i,j)
        OCN_ATM_DENS       (i,j)     = OCN_ATM_DENS       (i,j)     * CNT_putATM_OCN + DENS       (i,j)
-       if ( I_QV > 0 ) &
-       OCN_ATM_QV         (i,j)     = OCN_ATM_QV         (i,j)     * CNT_putATM_OCN + QTRC       (i,j,I_QV)
+       if ( .not. ATMOS_HYDROMETEOR_dry ) &
+       OCN_ATM_QV         (i,j)     = OCN_ATM_QV         (i,j)     * CNT_putATM_OCN + QV         (i,j)
        OCN_ATM_PBL        (i,j)     = OCN_ATM_PBL        (i,j)     * CNT_putATM_OCN + PBL        (i,j)
        OCN_ATM_SFC_DENS   (i,j)     = OCN_ATM_SFC_DENS   (i,j)     * CNT_putATM_OCN + SFC_DENS   (i,j)
        OCN_ATM_SFC_PRES   (i,j)     = OCN_ATM_SFC_PRES   (i,j)     * CNT_putATM_OCN + SFC_PRES   (i,j)
@@ -506,8 +506,8 @@ contains
        LND_ATM_U          (i,j)     = LND_ATM_U          (i,j)     * CNT_putATM_LND + U          (i,j)
        LND_ATM_V          (i,j)     = LND_ATM_V          (i,j)     * CNT_putATM_LND + V          (i,j)
        LND_ATM_DENS       (i,j)     = LND_ATM_DENS       (i,j)     * CNT_putATM_LND + DENS       (i,j)
-       if ( I_QV > 0 ) &
-       LND_ATM_QV         (i,j)     = LND_ATM_QV         (i,j)     * CNT_putATM_LND + QTRC       (i,j,I_QV)
+       if ( .not. ATMOS_HYDROMETEOR_dry ) &
+       LND_ATM_QV         (i,j)     = LND_ATM_QV         (i,j)     * CNT_putATM_LND + QV         (i,j)
        LND_ATM_PBL        (i,j)     = LND_ATM_PBL        (i,j)     * CNT_putATM_LND + PBL        (i,j)
        LND_ATM_SFC_DENS   (i,j)     = LND_ATM_SFC_DENS   (i,j)     * CNT_putATM_LND + SFC_DENS   (i,j)
        LND_ATM_SFC_PRES   (i,j)     = LND_ATM_SFC_PRES   (i,j)     * CNT_putATM_LND + SFC_PRES   (i,j)
@@ -525,8 +525,8 @@ contains
        URB_ATM_U          (i,j)     = URB_ATM_U          (i,j)     * CNT_putATM_URB + U          (i,j)
        URB_ATM_V          (i,j)     = URB_ATM_V          (i,j)     * CNT_putATM_URB + V          (i,j)
        URB_ATM_DENS       (i,j)     = URB_ATM_DENS       (i,j)     * CNT_putATM_URB + DENS       (i,j)
-       if ( I_QV > 0 ) &
-       URB_ATM_QV         (i,j)     = URB_ATM_QV         (i,j)     * CNT_putATM_URB + QTRC       (i,j,I_QV)
+       if ( .not. ATMOS_HYDROMETEOR_dry ) &
+       URB_ATM_QV         (i,j)     = URB_ATM_QV         (i,j)     * CNT_putATM_URB + QV         (i,j)
        URB_ATM_PBL        (i,j)     = URB_ATM_PBL        (i,j)     * CNT_putATM_URB + PBL        (i,j)
        URB_ATM_SFC_DENS   (i,j)     = URB_ATM_SFC_DENS   (i,j)     * CNT_putATM_URB + SFC_DENS   (i,j)
        URB_ATM_SFC_PRES   (i,j)     = URB_ATM_SFC_PRES   (i,j)     * CNT_putATM_URB + SFC_PRES   (i,j)
@@ -943,6 +943,7 @@ contains
        T2,         &
        Q2          )
     use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_dry, &
        I_QV
     use scale_landuse, only: &
        fact_ocean => LANDUSE_fact_ocean, &
@@ -972,7 +973,8 @@ contains
 
     !$omp parallel do default(none) &
     !$omp shared(JSB,JEB,ISB,IEB,QA,SFLX_QTRC,SFC_TEMP,SFC_albedo,I_LW,I_SW,SFC_Z0M,SFC_Z0H,SFC_Z0E) &
-    !$omp shared(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_GH,I_QV,U10,V10,T2,Q2) &
+    !$omp shared(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_GH,U10,V10,T2,Q2) &
+    !$omp shared(ATMOS_HYDROMETEOR_dry,I_QV) &
     !$omp shared(fact_ocean,fact_land,fact_urban,OCN_SFC_TEMP,LND_SFC_TEMP,URB_SFC_TEMP,OCN_SFC_albedo) &
     !$omp shared(LND_SFC_albedo,URB_SFC_albedo,OCN_SFC_Z0M,LND_SFC_Z0M,URB_SFC_Z0M) &
     !$omp shared(OCN_SFC_Z0H,LND_SFC_Z0H,URB_SFC_Z0H,OCN_SFC_Z0E,LND_SFC_Z0E,URB_SFC_Z0E,OCN_SFLX_MW) &
@@ -1035,11 +1037,10 @@ contains
                             + fact_land (i,j) * LND_SFLX_GH   (i,j) &
                             + fact_urban(i,j) * URB_SFLX_GH   (i,j)
 
-       if ( I_QV > 0 ) then
+       if ( .not. ATMOS_HYDROMETEOR_dry ) &
        SFLX_QTRC (i,j,I_QV) = fact_ocean(i,j) * OCN_SFLX_evap (i,j) &
                             + fact_land (i,j) * LND_SFLX_evap (i,j) &
                             + fact_urban(i,j) * URB_SFLX_evap (i,j)
-       end if
 
        U10       (i,j)      = fact_ocean(i,j) * OCN_U10       (i,j) &
                             + fact_land (i,j) * LND_U10       (i,j) &

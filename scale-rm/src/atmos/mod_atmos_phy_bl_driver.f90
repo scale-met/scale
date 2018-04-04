@@ -48,7 +48,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Config
   subroutine ATMOS_PHY_BL_driver_tracer_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_tracer, only: &
        TRACER_regist
@@ -155,8 +155,6 @@ contains
     use scale_atmos_phy_bl_mynn, only: &
        ATMOS_PHY_BL_MYNN_tendency, &
        ATMOS_PHY_BL_MYNN_tendency_tracer
-    use scale_atmos_hydrometeor, only: &
-       I_QV
     use scale_atmos_grid_cartesC_real, only: &
        CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        FZ => ATMOS_GRID_CARTESC_REAL_FZ, &

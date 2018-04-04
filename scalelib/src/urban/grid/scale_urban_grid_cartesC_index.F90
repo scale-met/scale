@@ -55,7 +55,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine URBAN_GRID_CARTESC_INDEX_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_grid_cartesC_index, only: &
          IMAX, &

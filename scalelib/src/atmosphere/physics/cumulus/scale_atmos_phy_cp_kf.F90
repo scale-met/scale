@@ -155,14 +155,8 @@ contains
       CZ, AREA,             &
       TIME_DTSEC, KF_DTSEC, &
       WARMRAIN_in           )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
-    use scale_atmos_hydrometeor, only: &
-       I_QV, &
-       I_QC, &
-       I_QR, &
-       I_QI, &
-       I_QS
     implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
@@ -205,26 +199,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CUMULUS] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Kain-Fritsch scheme'
 
-    if ( I_QV < 1 ) then
-       write(*,*) 'xxx QV is not registered'
-       call PRC_abort
-    end if
-    if ( I_QC < 1 ) then
-       write(*,*) 'xxx QC is not registered'
-       call PRC_abort
-    end if
-    if ( I_QR < 1 ) then
-       write(*,*) 'xxx QR is not registered'
-       call PRC_abort
-    end if
-
     WARMRAIN = WARMRAIN_in
-    if ( .not. WARMRAIN ) then
-       if ( I_QS < 1 ) then
-          write(*,*) 'xxx QI is registerd, but QS is not registered'
-          call PRC_abort
-       end if
-    endif
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -307,7 +282,7 @@ contains
        KF_threshold_in,    &
        KF_LOG_in,          &
        TRIGGER_in          )
-    use scale_process, only: &
+    use scale_prc, only: &
          PRC_abort
     implicit none
     integer,  intent(in)    :: KF_prec_in          !< precipitation type 1:Ogura-Cho(1973) 2:Kessler
@@ -355,18 +330,18 @@ contains
        KA, KS, KE,     &
        IA, IS, IE,     &
        JA, JS, JE,     &
-       QA_MP, QS_MP, QE_MP, &
        DENS,           &
        U, V,           &
        RHOT,           &
        TEMP, PRES,     &
-       QDRY, QTRC_in,  &
+       QDRY, QV_in,    &
        Rtot, CPtot,    &
        w0avg,          &
        FZ,             &
        KF_DTSEC,       &
        DENS_t_CP,      &
        RHOT_t_CP,      &
+       RHOQV_t_CP,     &
        RHOQ_t_CP,      &
        SFLX_convrain,  &
        cloudtop,       &
@@ -385,47 +360,43 @@ contains
        CP_VAPOR, &
        CP_WATER, &
        CP_ICE,   &
-       I_QV, &
-       I_QC, &
-       I_QR, &
-       I_QI, &
-       I_QS
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres   => ATMOS_THERMODYN_temp_pres,   &
-       THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,        &
-       THERMODYN_pott        => ATMOS_THERMODYN_pott
+       N_HYD, &
+       I_HC, &
+       I_HR, &
+       I_HI, &
+       I_HS
     use scale_atmos_saturation ,only :&
        SATURATION_psat_liq => ATMOS_SATURATION_psat_liq
     implicit none
     integer,  intent(in)    :: KA, KS, KE
     integer,  intent(in)    :: IA, IS, IE
     integer,  intent(in)    :: JA, JS, JE
-    integer,  intent(in)    :: QA_MP, QS_MP, QE_MP
 
-    real(RP), intent(in)    :: DENS          (KA,IA,JA)       !< Density [kg/m3]
-    real(RP), intent(in)    :: U             (KA,IA,JA)       !< velocity u [m/s]
-    real(RP), intent(in)    :: V             (KA,IA,JA)       !< velocity v [m/s]
-    real(RP), intent(in)    :: RHOT          (KA,IA,JA)       !< DENS * POTT [K*kg/m3]
-    real(RP), intent(in)    :: TEMP          (KA,IA,JA)       !< temperature [K]
-    real(RP), intent(in)    :: PRES          (KA,IA,JA)       !< pressure of dry air [Pa]
-    real(RP), intent(in)    :: QDRY          (KA,IA,JA)       !< dry air [1]
-    real(RP), intent(in)    :: QTRC_in       (KA,IA,JA,QA_MP) !< ratio of mass of tracer to total mass[kg/kg]
-    real(RP), intent(in)    :: Rtot          (KA,IA,JA)       !< gass constant
-    real(RP), intent(in)    :: CPtot         (KA,IA,JA)       !< specific heat
-    real(RP), intent(in)    :: w0avg         (KA,IA,JA)       !< running mean of vertical velocity [m/s]
-    real(RP), intent(in)    :: FZ            (0:KA,IA,JA)
+    real(RP), intent(in)    :: DENS (KA,IA,JA)   !< Density [kg/m3]
+    real(RP), intent(in)    :: U    (KA,IA,JA)   !< velocity u [m/s]
+    real(RP), intent(in)    :: V    (KA,IA,JA)   !< velocity v [m/s]
+    real(RP), intent(in)    :: RHOT (KA,IA,JA)   !< DENS * POTT [K*kg/m3]
+    real(RP), intent(in)    :: TEMP (KA,IA,JA)   !< temperature [K]
+    real(RP), intent(in)    :: PRES (KA,IA,JA)   !< pressure of dry air [Pa]
+    real(RP), intent(in)    :: QDRY (KA,IA,JA)   !< dry air [1]
+    real(RP), intent(in)    :: QV_in(KA,IA,JA)   !< specific humidity [kg/kg]
+    real(RP), intent(in)    :: Rtot (KA,IA,JA)   !< gass constant
+    real(RP), intent(in)    :: CPtot(KA,IA,JA)   !< specific heat
+    real(RP), intent(in)    :: w0avg(KA,IA,JA)   !< running mean of vertical velocity [m/s]
+    real(RP), intent(in)    :: FZ   (0:KA,IA,JA)
     real(DP), intent(in)    :: KF_DTSEC
 
-    real(RP), intent(inout) :: DENS_t_CP     (KA,IA,JA)       !< tendency DENS [kg/m3/s]
-    real(RP), intent(inout) :: RHOT_t_CP     (KA,IA,JA)       !< tendency RHOT [K*kg/m3/s]
-    real(RP), intent(inout) :: RHOQ_t_CP     (KA,IA,JA,QA_MP) !< tendency rho*QTRC [kg/kg/s]
+    real(RP), intent(inout) :: DENS_t_CP    (KA,IA,JA)       !< tendency DENS [kg/m3/s]
+    real(RP), intent(inout) :: RHOT_t_CP    (KA,IA,JA)       !< tendency RHOT [K*kg/m3/s]
+    real(RP), intent(inout) :: RHOQV_t_CP   (KA,IA,JA)       !< tendency rho*QV [kg/kg/s]
+    real(RP), intent(inout) :: RHOQ_t_CP    (KA,IA,JA,N_HYD) !< tendency rho*QTRC [kg/kg/s]
 
-    real(RP), intent(out)   :: SFLX_convrain (IA,JA)          !< convective rain rate [kg/m2/s]
-    real(RP), intent(out)   :: cloudtop      (IA,JA)          !< cloud top height  [m]
-    real(RP), intent(out)   :: cloudbase     (IA,JA)          !< cloud base height [m]
-    real(RP), intent(out)   :: cldfrac_dp    (KA,IA,JA)       !< cloud fraction (deep convection)
-    real(RP), intent(out)   :: cldfrac_sh    (KA,IA,JA)       !< cloud fraction (shallow convection)
-    real(RP), intent(out)   :: nca           (IA,JA)          !< convection active time [sec]
+    real(RP), intent(out) :: SFLX_convrain(IA,JA)          !< convective rain rate [kg/m2/s]
+    real(RP), intent(out) :: cloudtop     (IA,JA)          !< cloud top height  [m]
+    real(RP), intent(out) :: cloudbase    (IA,JA)          !< cloud base height [m]
+    real(RP), intent(out) :: cldfrac_dp   (KA,IA,JA)       !< cloud fraction (deep convection)
+    real(RP), intent(out) :: cldfrac_sh   (KA,IA,JA)       !< cloud fraction (shallow convection)
+    real(RP), intent(out) :: nca          (IA,JA)          !< convection active time [sec]
 
     integer  :: k, i, j, iq, iqa, ii                       !< loop index
     integer  :: nic                                        !< rate of timestep (time_advec/KF_DTSEC)
@@ -442,7 +413,6 @@ contains
     real(RP) :: deltap(KA)                                 !< delta Pressure [Pa]
 
     real(RP) :: cldfrac_KF(KA,2)                           !< cloud fraction (1 shallow , 2 deep)
-    real(RP) :: q_hyd(KA,QA_MP-1)                          !< water mixing ratio [kg/kg]
     real(RP) :: dens_nw(KA)                                !< density [kg/m**3]
     real(RP) :: time_advec                                 !< advection timescale
     real(RP) :: umf(KA)                                    !< Updraft Mass Flux
@@ -496,7 +466,6 @@ contains
     real(RP) :: CPtot_nw(KA)                               !< new specific heat
 
     ! update variables
-    real(RP) :: qtrc_nw(KA,QA_MP)                          !< qv,qc,qr,qi,qs (qg not change)
     real(RP) :: pott_nw(KA)                                !< new PT
     real(RP) :: RHOD(KA)                                   !< dry density
     real(RP) :: QV_resd(KA)                                !< residual vapor
@@ -573,8 +542,8 @@ contains
           QSAT(K) = 0.622_RP * PSAT(k) / ( PRES(k,i,j) - PSAT(k) )
 
           ! calculate water vaper and relative humidity
-          !QV  (k) = max( 0.000001_RP, min( QSAT(k), QV(k) ) ) ! conpare QSAT and QV, guess lower limit
-          QV(k) = max( KF_EPS, min( QSAT(k), QTRC_in(k,i,j,I_QV) / QDRY(k,i,j) ) ) ! conpare QSAT and QV, guess lower limit
+          !QV  (k) = max( 0.000001_RP, min( QSAT(k), QV_in(k,i,j) ) ) ! conpare QSAT and QV, guess lower limit
+          QV(k) = max( KF_EPS, min( QSAT(k), QV_in(k,i,j) / QDRY(k,i,j) ) ) ! conpare QSAT and QV, guess lower limit
           rh(k) = QV(k) / QSAT(k)
        enddo
 
@@ -682,7 +651,8 @@ contains
 
           DENS_t_CP(KS:KE,i,j) = 0.0_RP
           RHOT_t_CP(KS:KE,i,j) = 0.0_RP
-          do iq = 1, QA_MP
+          RHOQV_t_CP(KS:KE,i,j) = 0.0_RP
+          do iq = 1, N_HYD
              RHOQ_t_CP(KS:KE,i,j,iq) = 0.0_RP
           end do
 
@@ -700,51 +670,40 @@ contains
              nca   (i,j) = KF_DTSEC ! convection feed back act this time span
           end if
 
-          RHOQ_t_CP(:,i,j,:) = 0.0_RP
           do k=KS, k_top
              ! vapor
              dQV = RHOD(k) * ( qv_nw(k) - QV(k) )
-             RHOQ_t_CP(k,i,j,I_QV) = dQV / lifetime(i,j)
+             RHOQV_t_CP(k,i,j) = dQV / lifetime(i,j)
              Rtot_nw(k)  = Rtot_nw(k)  + dQV * Rvap
              CPtot_nw(k) = CPtot_nw(k) + dQV * CP_VAPOR
              ! liquid water
              dQC = qc_nw(k) * RHOD(k)
              dQR = qr_nw(k) * RHOD(k)
-             RHOQ_t_CP(k,i,j,I_QC) = dQC / lifetime(i,j)
-             RHOQ_t_CP(k,i,j,I_QR) = dQR / lifetime(i,j)
-             DENS_t_CP(k,i,j) = RHOQ_t_CP(k,i,j,I_QV) + RHOQ_t_CP(k,i,j,I_QC) + RHOQ_t_CP(k,i,j,I_QR)
+             RHOQ_t_CP(k,i,j,I_HC) = dQC / lifetime(i,j)
+             RHOQ_t_CP(k,i,j,I_HR) = dQR / lifetime(i,j)
              CPtot_nw(k) = CPtot_nw(k) + ( dQC + dQR ) * CP_WATER
              ! ice water
-             if ( I_QI>0 ) then
+             if ( .not. WARMRAIN ) then
                 dQI = qi_nw(k) * RHOD(k)
-             else
-                dQI = 0.0_RP
-             end if
-             if ( I_QS>0 ) then
                 dQS = qs_nw(k) * RHOD(k)
              else
+                dQI = 0.0_RP
                 dQS = 0.0_RP
              end if
-             RHOQ_t_CP(k,i,j,I_QI) = dQI / lifetime(i,j)
-             DENS_t_CP(k,i,j) = DENS_t_CP(k,i,j) + RHOQ_t_CP(k,i,j,I_QI)
-             RHOQ_t_CP(k,i,j,I_QS) = dQS / lifetime(i,j)
-             DENS_t_CP(k,i,j) = DENS_t_CP(k,i,j) + RHOQ_t_CP(k,i,j,I_QS)
+             RHOQ_t_CP(k,i,j,I_HI) = dQI / lifetime(i,j)
+             RHOQ_t_CP(k,i,j,I_HS) = dQS / lifetime(i,j)
              CPtot_nw(k) = CPtot_nw(k) + ( dQI + dQS ) * CP_ICE
 
-             dens_nw(k) = dens(k,i,j) + DENS_t_CP(k,i,j) * lifetime(i,j)
-
-             do iq = 1, QA_MP
-                qtrc_nw(k,iq) = ( qtrc_in(k,i,j,iq) * DENS(k,i,j) + RHOQ_t_CP(k,i,j,iq) * lifetime(i,j) ) / dens_nw(k)
-             end do
+             DENS_t_CP(k,i,j) = RHOQV_t_CP(k,i,j) &
+                              + RHOQ_t_CP(k,i,j,I_HC) + RHOQ_t_CP(k,i,j,I_HR) &
+                              + RHOQ_t_CP(k,i,j,I_HI) + RHOQ_t_CP(k,i,j,I_HS)
+             dens_nw(k) = dens(k,i,j) + dQV + dQC + dQR + dQI + dQS
           end do
-
-          ! treatment for not evaluated layers
-          do k=k_top+1, KE
-             do iq = 1, QA_MP
-                qtrc_nw(k,iq) = QTRC_in(k,i,j,iq)
-             end do
-             dens_nw(k) = DENS(k,i,j)
-          enddo
+          do iq = I_HS+1, N_HYD
+          do k = KS, k_top
+             RHOQ_t_CP(k,i,j,iq) = 0.0_RP
+          end do
+          end do
 
           ! calc new potential temperature
           do k = KS, k_top
@@ -758,7 +717,8 @@ contains
           do k=k_top+1, KE
              DENS_t_CP(k,i,j) = 0.0_RP
              RHOT_t_CP(k,i,j) = 0.0_RP
-             do iq = 1, QA_MP
+             RHOQV_t_CP(k,i,j) = 0.0_RP
+             do iq = 1, N_HYD
                 RHOQ_t_CP(k,i,j,iq) = 0.0_RP
              end do
           end do
@@ -815,7 +775,7 @@ contains
          PRE00 => CONST_PRE00,  &
          TEM00 => CONST_TEM00, &
          GRAV  => CONST_GRAV
-    use scale_process, only: &
+    use scale_prc, only: &
          PRC_abort
     implicit none
     integer,  intent(in) :: KA, KS, KE            !< index
@@ -1705,7 +1665,7 @@ contains
          R     => CONST_Rdry
     use scale_atmos_saturation ,only :&
          ATMOS_SATURATION_psat_liq
-    use scale_process, only: &
+    use scale_prc, only: &
          PRC_abort
     implicit none
     integer,  intent(in) :: KA, KS, KE          !< index
@@ -2097,7 +2057,7 @@ contains
          ATMOS_SATURATION_psat_liq
     use scale_time , only :&
          KF_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
-    use scale_process, only: &
+    use scale_prc, only: &
          PRC_abort
     implicit none
     integer,  intent(in)    :: KA, KS, KE         !< index

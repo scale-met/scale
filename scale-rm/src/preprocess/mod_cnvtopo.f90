@@ -74,8 +74,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CNVTOPO_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        D2R  => CONST_D2R, &
        HUGE => CONST_HUGE
@@ -133,7 +133,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CNVTOPO. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVTOPO)
 
@@ -165,7 +165,7 @@ contains
        CNVTOPO_UseUSERFILE  = .true.
     case default
        write(*,*) 'xxx Unsupported TYPE:', trim(CNVTOPO_name)
-       call PRC_MPIstop
+       call PRC_abort
     endselect
 
     CNVTOPO_DoNothing = .true.
@@ -264,8 +264,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine CNVTOPO
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_topography, only: &
        TOPO_fillhalo, &
        TOPO_Zsfc, &
@@ -315,8 +315,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Convert from GTOPO30
   subroutine CNVTOPO_GTOPO30
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        RADIUS => CONST_RADIUS, &
        PI     => CONST_PI,     &
@@ -395,7 +395,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CNVTOPO_GTOPO30. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVTOPO_GTOPO30)
 
@@ -462,7 +462,7 @@ contains
 
        if ( ierr /= 0 ) then
           write(*,*) 'xxx catalogue file not found!', trim(fname)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        do t = 1, TILE_nlim
@@ -541,7 +541,7 @@ contains
 
              if ( ierr /= 0 ) then
                 write(*,*) 'xxx data file not found!'
-                call PRC_MPIstop
+                call PRC_abort
              endif
 
              read(fid,rec=1) TILE_HEIGHT_orig(:,:)
@@ -698,8 +698,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Convert from DEM 50m mesh
   subroutine CNVTOPO_DEM50M
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        RADIUS => CONST_RADIUS, &
        PI     => CONST_PI,     &
@@ -778,7 +778,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CNVTOPO_DEM50M. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVTOPO_DEM50M)
 
@@ -845,7 +845,7 @@ contains
 
        if ( ierr /= 0 ) then
           write(*,*) 'xxx catalogue file not found!', trim(fname)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        do t = 1, TILE_nlim
@@ -924,7 +924,7 @@ contains
 
              if ( ierr /= 0 ) then
                 write(*,*) 'xxx data file not found!'
-                call PRC_MPIstop
+                call PRC_abort
              endif
 
              read(fid,rec=1) TILE_HEIGHT_orig(:,:)
@@ -1075,8 +1075,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Convert from User-defined file
   subroutine CNVTOPO_USERFILE
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        RADIUS => CONST_RADIUS, &
        PI     => CONST_PI,     &
@@ -1176,34 +1176,34 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CNVTOPO_USERFILE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVTOPO_USERFILE)
 
     if ( USERFILE_NLAT <= 0 ) then
        write(*,*) 'xxx USERFILE_NLAT (number of latitude tile)  should be positive. Check!', USERFILE_NLAT
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( USERFILE_NLON <= 0 ) then
        write(*,*) 'xxx USERFILE_NLON (number of longitude tile) should be positive. Check!', USERFILE_NLON
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( USERFILE_DLAT <= 0.0_RP ) then
        write(*,*) 'xxx USERFILE_DLAT (width (deg.) of latitude tile) should be positive. Check!', USERFILE_DLAT
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( USERFILE_DLON <= 0.0_RP ) then
        write(*,*) 'xxx USERFILE_DLON (width (deg.) of longitude tile) should be positive. Check!', USERFILE_DLON
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if (       USERFILE_IN_CATALOGUE == '' &
          .AND. USERFILE_IN_FILENAME  == '' ) then
        write(*,*) 'xxx Neither catalogue file nor single file do not specified. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if    ( USERFILE_IN_DATATYPE == 'REAL8' ) then
@@ -1227,7 +1227,7 @@ contains
     else
        write(*,*) 'xxx Not appropriate type for USERFILE_IN_DATATYPE. Check!'
        write(*,*) 'xxx REAL8, REAL4, INT2 are available. requested:', trim(USERFILE_IN_DATATYPE)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if    ( USERFILE_LATORDER_N2S ) then
@@ -1301,7 +1301,7 @@ contains
 
           if ( ierr /= 0 ) then
              write(*,*) 'xxx catalogue file not found!', trim(fname)
-             call PRC_MPIstop
+             call PRC_abort
           endif
 
           do t = 1, TILE_nlim
@@ -1394,7 +1394,7 @@ contains
 
                 if ( ierr /= 0 ) then
                    write(*,*) 'xxx data file not found!'
-                   call PRC_MPIstop
+                   call PRC_abort
                 endif
 
                 read(fid,rec=1) TILE_HEIGHT_orig_DP(:,:)
@@ -1427,7 +1427,7 @@ contains
 
                 if ( ierr /= 0 ) then
                    write(*,*) 'xxx data file not found!'
-                   call PRC_MPIstop
+                   call PRC_abort
                 endif
 
                 read(fid,rec=1) TILE_HEIGHT_orig_SP(:,:)
@@ -1460,7 +1460,7 @@ contains
 
                 if ( ierr /= 0 ) then
                    write(*,*) 'xxx data file not found!'
-                   call PRC_MPIstop
+                   call PRC_abort
                 endif
 
                 read(fid,rec=1) TILE_HEIGHT_orig_I2(:,:)
@@ -1630,8 +1630,8 @@ contains
        Zsfc )
     use scale_const, only: &
        D2R => CONST_D2R
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_grid_cartesC, only: &
        FDX => ATMOS_GRID_CARTESC_FDX, &
        FDY => ATMOS_GRID_CARTESC_FDY
@@ -1800,14 +1800,14 @@ contains
 
        case default
           write(*,*) 'xxx Invalid smoothing type'
-          call PRC_MPIstop
+          call PRC_abort
        end select
 
     enddo
 
     if ( ite  > CNVTOPO_smooth_itelim ) then
        write(*,*) 'xxx not converged'
-       call PRC_MPIstop
+       call PRC_abort
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** smoothing complete.'
     endif

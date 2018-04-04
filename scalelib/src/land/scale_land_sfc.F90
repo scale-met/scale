@@ -126,8 +126,8 @@ module scale_land_sfc
 contains
 
   subroutine LAND_SFC_setup( LAND_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_land_sfc_const, only: &
        LAND_SFC_CONST_setup, &
        LAND_SFC_CONST

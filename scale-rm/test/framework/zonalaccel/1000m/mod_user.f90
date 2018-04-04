@@ -19,16 +19,17 @@ module mod_user
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_grid
   use scale_atmos_grid_cartesC_index
-  use scale_index
-  use scale_tracer
 
   use scale_time, only: &
      TIME_DTSEC
   use scale_atmos_boundary, only: &
-     ATMOS_BOUNDARY_alpha, &
-     ATMOS_BOUNDARY_var
+     ATMOS_BOUNDARY_alpha_DENS, &
+     ATMOS_BOUNDARY_alpha_VELX, &
+     ATMOS_BOUNDARY_alpha_POTT, &
+     ATMOS_BOUNDARY_DENS, &
+     ATMOS_BOUNDARY_VELX, &
+     ATMOS_BOUNDARY_POTT
   use mod_atmos_vars
   use scale_file_history, only: &
      FILE_HISTORY_in
@@ -39,6 +40,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_config
   public :: USER_setup
   public :: USER_resume0
   public :: USER_resume
@@ -74,10 +76,18 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
+  !> Config before setup of other components
+  subroutine USER_config
+    implicit none
+
+    return
+  end subroutine USER_config
+
+  !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist / PARAM_USER / &
@@ -102,7 +112,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
@@ -134,9 +144,9 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
-       ATMOS_BOUNDARY_var(k,i,j,I_BND_DENS) = DENS_INIT(k)
-       ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = UINIT
-       ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = POTT_INIT(k)
+       ATMOS_BOUNDARY_DENS(k,i,j) = DENS_INIT(k)
+       ATMOS_BOUNDARY_VELX(k,i,j) = UINIT
+       ATMOS_BOUNDARY_POTT(k,i,j) = POTT_INIT(k)
     enddo
     enddo
     enddo
@@ -144,9 +154,9 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = 2, KA
-      ATMOS_BOUNDARY_alpha(k,i,j,I_BND_DENS) = ATMOS_BOUNDARY_alpha(1,i,j,I_BND_DENS)
-      ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELX) = ATMOS_BOUNDARY_alpha(1,i,j,I_BND_VELX)
-      ATMOS_BOUNDARY_alpha(k,i,j,I_BND_POTT) = ATMOS_BOUNDARY_alpha(1,i,j,I_BND_POTT)
+      ATMOS_BOUNDARY_alpha_DENS(k,i,j) = ATMOS_BOUNDARY_alpha_DENS(1,i,j)
+      ATMOS_BOUNDARY_alpha_VELX(k,i,j) = ATMOS_BOUNDARY_alpha_VELX(1,i,j)
+      ATMOS_BOUNDARY_alpha_POTT(k,i,j) = ATMOS_BOUNDARY_alpha_POTT(1,i,j)
     enddo
     enddo
     enddo
@@ -191,8 +201,11 @@ contains
   !-----------------------------------------------------------------------------
   !> User step
   subroutine USER_step
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_FX, &
+       ATMOS_GRID_CARTESC_FDX
     implicit none
     integer :: i, j, k, ii
     integer :: front_grid
@@ -203,11 +216,11 @@ contains
     !---------------------------------------------------------------------------
 
     if ( USER_do ) then
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
-    call FILE_HISTORY_in( ATMOS_BOUNDARY_var(:,:,:,I_BND_DENS), 'BND_DENS', 'boundary_dens', 'kg/m3' )
-    call FILE_HISTORY_in( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX), 'BND_VELX', 'boundary_velx', 'm/s'   )
+    call FILE_HISTORY_in( ATMOS_BOUNDARY_DENS(:,:,:), 'BND_DENS', 'boundary_dens', 'kg/m3' )
+    call FILE_HISTORY_in( ATMOS_BOUNDARY_VELX(:,:,:), 'BND_VELX', 'boundary_velx', 'm/s'   )
 
     front_posi = front_posi + UEND * TIME_DTSEC
     if( IO_L ) write(IO_FID_LOG,*) '*** front position', front_posi
@@ -232,9 +245,9 @@ contains
        do i = 1, NUM_RELAX_GRIDS
        do k = 1, KA
        do j = 1, JA
-          ATMOS_BOUNDARY_var(k,ii,j,I_BND_DENS) = DENS_INIT(k) + (DENS_tend(k,i-1)*fact_A + DENS_tend(k,i)*fact_B)
-          ATMOS_BOUNDARY_var(k,ii,j,I_BND_POTT) = POTT_INIT(k)
-          ATMOS_BOUNDARY_var(k,ii,j,I_BND_VELX) = UINIT + (U_tend(i-1)*fact_A + U_tend(i)*fact_B)
+          ATMOS_BOUNDARY_DENS(k,ii,j) = DENS_INIT(k) + (DENS_tend(k,i-1)*fact_A + DENS_tend(k,i)*fact_B)
+          ATMOS_BOUNDARY_POTT(k,ii,j) = POTT_INIT(k)
+          ATMOS_BOUNDARY_VELX(k,ii,j) = UINIT + (U_tend(i-1)*fact_A + U_tend(i)*fact_B)
        enddo
        enddo
        ii = ii - 1
@@ -245,9 +258,9 @@ contains
           do j = 1, JA
           do i = ii, 1, -1
           do k = 1, KA
-             ATMOS_BOUNDARY_var(k,i,j,I_BND_DENS) = DENS_INIT(k) + DENS_tend(k,NUM_RELAX_GRIDS)
-             ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = POTT_INIT(k)
-             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = UINIT + U_tend(NUM_RELAX_GRIDS)
+             ATMOS_BOUNDARY_DENS(k,i,j) = DENS_INIT(k) + DENS_tend(k,NUM_RELAX_GRIDS)
+             ATMOS_BOUNDARY_POTT(k,i,j) = POTT_INIT(k)
+             ATMOS_BOUNDARY_VELX(k,i,j) = UINIT + U_tend(NUM_RELAX_GRIDS)
           enddo
           enddo
           enddo
@@ -257,9 +270,9 @@ contains
           do j = 1, JA
           do i = 1, IA
           do k = 1, KA
-             ATMOS_BOUNDARY_var(k,i,j,I_BND_DENS) = DENS_INIT(k) + DENS_tend(k,NUM_RELAX_GRIDS)
-             ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = POTT_INIT(k)
-             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = UEND
+             ATMOS_BOUNDARY_DENS(k,i,j) = DENS_INIT(k) + DENS_tend(k,NUM_RELAX_GRIDS)
+             ATMOS_BOUNDARY_POTT(k,i,j) = POTT_INIT(k)
+             ATMOS_BOUNDARY_VELX(k,i,j) = UEND
           enddo
           enddo
           enddo

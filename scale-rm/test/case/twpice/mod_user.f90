@@ -105,7 +105,12 @@ module mod_user
   real(RP), private, allocatable :: QV_LS(:,:)
   real(RP), private, allocatable :: U_GEOS(:)
   real(RP), private, allocatable :: V_GEOS(:)
-  logical,  private, save        :: MOMZ_LS_FLG(6)
+  logical,  private, save        :: MOMZ_LS_FLG(5)
+  integer, parameter :: I_MOMZ = 1
+  integer, parameter :: I_MOMX = 2
+  integer, parameter :: I_MOMY = 3
+  integer, parameter :: I_RHOT = 4
+  integer, parameter :: I_QTRC = 4
 
   !-----------------------------------------------------------------------------
 contains
@@ -119,8 +124,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_time, only: &
        TIME_DTSEC
     implicit none
@@ -166,7 +171,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
@@ -200,7 +205,7 @@ contains
     open(fid_data, file=trim(fdata_name), status='old',iostat=ierr)
     if ( ierr /= 0 ) then
        write(*,*) 'Cannot open the data file for forcing. STOP! ', trim(fdata_name)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     !--- Check if whole input data available
@@ -212,7 +217,7 @@ contains
 
           if ( ierr /= 0 ) then
              write(*,*) 'Not enough data! ',mt, k, mstep, KA, trim(fdata_name)
-             call PRC_MPIstop
+             call PRC_abort
           endif
        enddo
     enddo
@@ -236,8 +241,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Resuming operation, before calculating tendency
   subroutine USER_resume0
-    use mod_cpl_vars, only: &
-       SST
+    use mod_ocean_vars, only: &
+       SST => OCEAN_SFC_TEMP
     implicit none
     !---------------------------------------------------------------------------
 
@@ -258,16 +263,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Step
   subroutine USER_step
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_grid_cartesC, only: &
          RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
          RFDZ => ATMOS_GRID_CARTESC_RFDZ
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_atmos_vars, only: &
        DENS,    &
        MOMZ,    &
@@ -275,18 +278,19 @@ contains
        MOMY,    &
        RHOT,    &
        QTRC,    &
+       PRES,    &
        MOMZ_tp, &
        MOMX_tp, &
        MOMY_tp, &
        RHOT_tp, &
-       QTRC_tp
-    use mod_cpl_vars, only: &
-       SST
+       RHOQ_tp
+    use mod_ocean_vars, only: &
+       SST => OCEAN_SFC_TEMP
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     real(RP) :: WORK(KA,IA,JA)
-    real(RP) :: PRES(KA,IA,JA)
-    real(RP) :: TEMP(KA,IA,JA)
     real(RP) :: VELX(KA,IA,JA)
     real(RP) :: VELY(KA,IA,JA)
 
@@ -484,11 +488,6 @@ contains
 
              if ( CNST_RAD ) then
                !--- add constant cooling (-2K/dy)
-               call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
-                                         PRES(:,:,:),  & ! [OUT]
-                                         DENS(:,:,:),  & ! [IN]
-                                         RHOT(:,:,:),  & ! [IN]
-                                         QTRC(:,:,:,:) ) ! [IN]
                !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
                do j = JJS, JJE
                do i = IIS, IIE
@@ -508,16 +507,16 @@ contains
                 do j = JJS, JJE
                 do i = IIS, IIE
                 do k = KS, KE-1
-                   QTRC_tp(k,i,j,iq) = QTRC_tp(k,i,j,iq) &
-                        - MOMZ_LS(k,1) * ( QTRC(k+1,i,j,iq) - QTRC(k,i,j,iq) ) * RFDZ(k)
+                   RHOQ_tp(k,i,j,iq) = RHOQ_tp(k,i,j,iq) &
+                        - MOMZ_LS(k,1) * ( QTRC(k+1,i,j,iq) - QTRC(k,i,j,iq) ) * RFDZ(k) * DENS(k,i,j)
                 enddo
                 enddo
                 enddo
                 !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
                 do j = JJS, JJE
                 do i = IIS, IIE
-                   QTRC_tp(KE,i,j,iq) = QTRC_tp(KE,i,j,iq) &
-                        - MOMZ_LS(KE,1) * ( QTRC(KE,i,j,iq) - QTRC(KE-1,i,j,iq) ) * RFDZ(KE-1)
+                   RHOQ_tp(KE,i,j,iq) = RHOQ_tp(KE,i,j,iq) &
+                        - MOMZ_LS(KE,1) * ( QTRC(KE,i,j,iq) - QTRC(KE-1,i,j,iq) ) * RFDZ(KE-1) * DENS(k,i,j)
                 enddo
                 enddo
              enddo
@@ -526,7 +525,7 @@ contains
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS, KE-1
-                QTRC_tp(k,i,j,I_QV) = QTRC_tp(k,i,j,I_QV) + QV_LS(k,1)
+                RHOQ_tp(k,i,j,I_QV) = RHOQ_tp(k,i,j,I_QV) + QV_LS(k,1) * DENS(k,i,j)
              enddo
              enddo
              enddo
@@ -538,7 +537,7 @@ contains
 
     else
        write(*,*)'Not supported user_ls_flg'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return

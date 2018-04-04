@@ -105,8 +105,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        PI => CONST_PI
     use scale_atmos_grid_cartesC, only: &
@@ -136,7 +136,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
@@ -373,7 +373,7 @@ contains
 
     else
        write(*,*) 'xxx Not appropriate type for USER_LS_TYPE. STOP.', trim(USER_LS_TYPE)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -418,10 +418,6 @@ contains
        CDZ  => ATMOS_GRID_CARTESC_CDZ,  &
        CZ   => ATMOS_GRID_CARTESC_CZ,   &
        FZ   => ATMOS_GRID_CARTESC_FZ
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd => ATMOS_THERMODYN_qd, &
-       THERMODYN_cp => ATMOS_THERMODYN_cp, &
-       THERMODYN_r  => ATMOS_THERMODYN_r
     use scale_atmos_saturation, only : &
        moist_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
     use scale_file_history, only: &
@@ -436,6 +432,9 @@ contains
        MOMY,    &
        RHOT,    &
        QTRC,    &
+       QV,      &
+       QDRY,    &
+       EXNER,   &
        DENS_tp, &
        MOMZ_tp, &
        MOMX_tp, &
@@ -465,19 +464,14 @@ contains
     real(RP) :: SFLX_POTT(IA,JA)
     real(RP) :: SFLX_QV  (IA,JA)
     real(RP) :: drhot, LWPT, LWPT_a
-    real(RP) :: QHYD, PRES
+    real(RP) :: QHYD
     real(RP) :: qv_evap
     real(RP) :: Uabs  ! absolute velocity at the lowermost atmos. layer [m/s]
     real(RP) :: Cm, Ch, Ce
 
-    real(RP) :: q(QA)
-    real(RP) :: qdry
     real(RP) :: qtot
-    real(RP) :: Rtot
-    real(RP) :: CPtot
     real(RP) :: RovCP
     real(RP) :: RovCV
-    real(RP) :: CPovCV
 
     integer  :: k, i, j, iq, k2
     !---------------------------------------------------------------------------
@@ -748,24 +742,14 @@ contains
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
-             do iq = 1, QA
-                q(iq) = QTRC(KS,i,j,iq)
-             enddo
-             call THERMODYN_qd( qdry,  q, TRACER_MASS )
-             call THERMODYN_cp( CPtot, q, TRACER_CP, qdry )
-             call THERMODYN_r ( Rtot,  q, TRACER_R,  qdry )
-             CPovCV = CPTOT / ( CPTOT - RTOT )
-             RovCP  = RTOT / CPTOT
-
              QHYD = 0.0_RP
              do iq = QHS, QHE
                 QHYD = QHYD + QTRC(k,i,j,iq)
              enddo
 
-             PRES   = P00 * ( RHOT(k,i,j) * RTOT / P00 )**CPovCV
-             LWPT   = RHOT(k,i,j) / DENS(k,i,j) - ( LHV / CPdry * QHYD ) * ( P00 / PRES )**RovCP
+             LWPT   = RHOT(k,i,j) / DENS(k,i,j) - ( LHV / CPdry * QHYD ) / EXNER(k,i,j)
              LWPT_a = LWPT - 2.5_RP / 86400.0_RP
-             drhot  = ( LWPT_a + ( LHV / CPdry * QHYD ) * ( P00 / PRES )**RovCP ) * DENS(k,i,j) - RHOT(k,i,j)
+             drhot  = ( LWPT_a + ( LHV / CPdry * QHYD ) / EXNER(k,i,j) ) * DENS(k,i,j) - RHOT(k,i,j)
 
              RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + drhot
           enddo
@@ -810,26 +794,12 @@ contains
              Ce = Ce_const
 
              !--- saturation at surface
-             qtot = 0.0_RP
-             do iq = 1, QA
-                q(iq) = QTRC(KS,i,j,iq)
-                qtot  = QTRC(KS,i,j,iq) * TRACER_MASS(iq)
-             enddo
-
-             call THERMODYN_qd( qdry,  q, TRACER_MASS )
-             call THERMODYN_cp( CPtot, q, TRACER_CP, qdry )
-             call THERMODYN_r ( Rtot,  q, TRACER_R,  qdry )
-
-             CPovCV = CPtot / ( CPtot - Rtot )
-             pres   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
-             qdry = 1.0_RP - qtot
-
-             call moist_pres2qsat_liq( FIXED_SST, pres_sfc, qdry, qv_evap )
+             call moist_pres2qsat_liq( FIXED_SST, pres_sfc, qdry(KS,i,j), qv_evap )
 
              ! flux
              SFLX_MOMZ(i,j) = 0.0_RP
              SFLX_POTT(i,j) = Ch * min(max(Uabs,U_minH),U_maxH) * ( FIXED_PTSST * DENS(KS,i,j) - RHOT(KS,i,j) )
-             SFLX_QV  (i,j) = Ce * min(max(Uabs,U_minE),U_maxE) * DENS(KS,i,j) * ( qv_evap - qtot )
+             SFLX_QV  (i,j) = Ce * min(max(Uabs,U_minE),U_maxE) * DENS(KS,i,j) * ( qv_evap - QV(KS,i,j) )
 
              ! at (u, y, layer)
              Uabs = sqrt( &
@@ -877,20 +847,7 @@ contains
              ! at cell center
 
              !--- saturation at surface
-             qtot = 0.0_RP
-             do iq = 1, QA
-                q(iq) = QTRC(KS,i,j,iq)
-                qtot  = QTRC(KS,i,j,iq) * TRACER_MASS(iq)
-             enddo
-
-             call THERMODYN_qd( qdry,  q, TRACER_MASS )
-             call THERMODYN_cp( CPtot, q, TRACER_CP, qdry )
-             call THERMODYN_r ( Rtot,  q, TRACER_R,  qdry )
-
-             CPovCV = CPtot / ( CPtot - Rtot )
-             pres   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
-
-             call moist_pres2qsat_liq( FIXED_SST, pres_sfc, qdry, &
+             call moist_pres2qsat_liq( FIXED_SST, pres_sfc, QDRY(KS,i,j), &
                                        qv_evap )
 
              ! flux

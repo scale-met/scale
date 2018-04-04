@@ -136,10 +136,10 @@ contains
        IMAX_in, JMAX_in,             &
        KHALO_in, IHALO_in, JHALO_in, &
        IBLOCK_in, JBLOCK_in          )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort, &
        PRC_myrank
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y, &
        PRC_2Drank,  &

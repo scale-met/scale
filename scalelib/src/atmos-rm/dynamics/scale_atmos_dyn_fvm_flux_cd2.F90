@@ -27,7 +27,7 @@ module scale_atmos_dyn_fvm_flux_cd2
   use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
-  use scale_process
+  use scale_prc
 #ifdef DEBUG
   use scale_debug, only: &
      CHECK

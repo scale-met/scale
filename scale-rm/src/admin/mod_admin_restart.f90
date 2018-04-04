@@ -55,8 +55,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ADMIN_restart_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_file, only: &
        FILE_AGGREGATE
     use mod_atmos_vars, only: &
@@ -209,7 +209,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_RESTART. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_RESTART)
 

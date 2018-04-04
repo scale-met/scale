@@ -178,7 +178,7 @@ program netcdf2grads_h
   !namelist  /PARAM_TIME/       &
   !  TIME_STARTDATE
 
-  namelist  /PARAM_PRC/        &
+  namelist  /PARAM_PRC_CARTESC/        &
     PRC_NUM_X,                 &
     PRC_NUM_Y,                 &
     PRC_PERIODIC_X,            & ! not required
@@ -813,8 +813,8 @@ contains
     !if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_TIME )
 
     rewind( FID_RCNF )
-    read  ( FID_RCNF, nml=PARAM_PRC, iostat=ierr )
-    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_PRC )
+    read  ( FID_RCNF, nml=PARAM_PRC_CARTESC, iostat=ierr )
+    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_PRC_CARTESC )
 
     rewind( FID_RCNF )
     read  ( FID_RCNF, nml=PARAM_FILE_HISTORY_CARTESC, iostat=ierr )

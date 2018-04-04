@@ -46,6 +46,8 @@ module mod_user
   !
   !++ Private parameters & variables
   !
+  integer :: I_NC
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -53,16 +55,25 @@ contains
   subroutine USER_config
     use scale_tracer, only: &
        TRACER_regist
-    use scale_atmos_hydrometeor, only: &
-       I_NC
+    use mod_atmos_phy_mp_vars, only: &
+         QA_MP, &
+         QS_MP, &
+         QE_MP
+    use mod_atmos_phy_mp_driver, only: &
+         ATMOS_PHY_MP_USER_qhyd2qtrc
     implicit none
     !---------------------------------------------------------------------------
 
-    call TRACER_REGIST( I_NC,                 & ! [OUT]
+    call TRACER_REGIST( QS_MP,                & ! [OUT]
                         1,                    & ! [IN]
                         (/'NC'/),             & ! [IN]
                         (/'Passive tracer'/), & ! [IN]
                         (/'1'/)               ) ! [IN]
+
+    QA_MP = 1
+    QE_MP = QS_MP
+
+    ATMOS_PHY_MP_USER_qhyd2qtrc => USER_qhyd2qtrc
 
     return
   end subroutine USER_config
@@ -102,5 +113,31 @@ contains
 
     return
   end subroutine USER_step
+
+  subroutine USER_qhyd2qtrc( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       QV, QHYD, &
+       QTRC, &
+       QNUM  )
+    use scale_atmos_hydrometeor, only: &
+         N_HYD, &
+         I_HC
+    use mod_atmos_phy_mp_vars, only: &
+         QA_MP
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: QV   (KA,IA,JA)
+    real(RP), intent(in) :: QHYD(KA,IA,JA,N_HYD)
+
+    real(RP), intent(out) :: QTRC(KA,IA,JA,QA_MP)
+
+    real(RP), intent(in), optional :: QNUM(KA,IA,JA,N_HYD)
+
+    QTRC(:,:,:,1) = QNUM(:,:,:,I_HC)
+
+    return
+  end subroutine USER_qhyd2qtrc
 
 end module mod_user

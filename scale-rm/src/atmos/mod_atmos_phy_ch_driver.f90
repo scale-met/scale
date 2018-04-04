@@ -63,7 +63,7 @@ contains
        QA_CH, &
        QS_CH, &
        QE_CH
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
     !---------------------------------------------------------------------------
@@ -179,7 +179,7 @@ contains
     use scale_atmos_grid_cartesC_index
     use scale_atmos_phy_ch_rn222, only: &
        ATMOS_PHY_CH_rn222_tendency
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
 

@@ -61,14 +61,24 @@ contains
   !> Config before setup of other components
   subroutine USER_config
     use scale_atmos_hydrometeor, only: &
-       ATMOS_HYDROMETEOR_regist, &
-       I_QV
+       ATMOS_HYDROMETEOR_regist
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP, &
+       QS_MP, &
+       QE_MP
+    use mod_atmos_phy_mp_driver, only: &
+       ATMOS_PHY_MP_USER_qhyd2qtrc
     implicit none
+
     !---------------------------------------------------------------------------
 
-    call ATMOS_HYDROMETEOR_regist( I_QV,               & ! (out)
-                                   1, 0, 0,            & ! (in)
-                                   QNAME, QDESC, QUNIT ) ! (in)
+    call ATMOS_HYDROMETEOR_regist( 0, 0,                & ! (in)
+                                   QNAME, QDESC, QUNIT, & ! (in)
+                                   QS_MP                ) ! (out)
+    QA_MP = 1
+    QE_MP = QS_MP
+
+    ATMOS_PHY_MP_USER_qhyd2qtrc => USER_qhyd2qtrc
 
     return
   end subroutine USER_config
@@ -76,7 +86,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup before setup of other components
   subroutine USER_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
 
@@ -138,5 +148,30 @@ contains
 
     return
   end subroutine USER_step
+
+  subroutine USER_qhyd2qtrc( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       QV, QHYD, &
+       QTRC, &
+       QNUM  )
+    use scale_atmos_hydrometeor, only: &
+         N_HYD
+    use mod_atmos_phy_mp_vars, only: &
+         QA_MP
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: QV   (KA,IA,JA)
+    real(RP), intent(in) :: QHYD(KA,IA,JA,N_HYD)
+
+    real(RP), intent(out) :: QTRC(KA,IA,JA,QA_MP)
+
+    real(RP), intent(in), optional :: QNUM(KA,IA,JA,N_HYD)
+
+    QTRC(:,:,:,1) = QV(:,:,:)
+
+    return
+  end subroutine USER_qhyd2qtrc
 
 end module mod_user

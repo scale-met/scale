@@ -32,9 +32,9 @@ module scale_comm
   use scale_atmos_grid_cartesC_index
   use scale_tracer
 
-  use scale_process, only: &
-     PRC_MPIstop
-  use scale_rm_process, only: &
+  use scale_prc, only: &
+     PRC_abort
+  use scale_prc_cartesC, only: &
      PRC_next, &
      PRC_W,    &
      PRC_N,    &
@@ -82,6 +82,11 @@ module scale_comm
      module procedure COMM_wait_2D
      module procedure COMM_wait_3D
   end interface COMM_WAIT
+
+  interface COMM_horizontal_mean
+     module procedure COMM_horizontal_mean_2D
+     module procedure COMM_horizontal_mean_3D
+  end interface COMM_horizontal_mean
 
   interface COMM_horizontal_max
      module procedure COMM_horizontal_max_2D
@@ -163,7 +168,7 @@ contains
   subroutine COMM_setup
     use scale_stdio, only: &
        IO_FID_CONF
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD
     implicit none
 
@@ -190,7 +195,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_COMM. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_COMM)
 
@@ -244,7 +249,7 @@ contains
        COMM_datatype = MPI_REAL
     else
        write(*,*) 'xxx precision is not supportd'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     COMM_world = PRC_LOCAL_COMM_WORLD
@@ -278,7 +283,7 @@ contains
 
     if ( vid > COMM_vsize_max ) then
        write(*,*) 'xxx vid exceeds max', vid, COMM_vsize_max
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     if ( COMM_USE_MPI_PC ) then
@@ -286,7 +291,7 @@ contains
        COMM_vars_id = COMM_vars_id + 1
        if ( COMM_vars_id > COMM_vsize_max_pc ) then
           write(*,*) 'xxx number of variable for MPI PC exceeds max', COMM_vars_id, COMM_vsize_max_pc
-          call PRC_MPIstop
+          call PRC_abort
        end if
 
        call PROF_rapstart('COMM_init_pers', 2)
@@ -318,7 +323,7 @@ contains
 
     if ( vid > COMM_vsize_max ) then
        write(*,*) 'xxx vid exceeds max', vid, COMM_vsize_max
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     if ( COMM_USE_MPI_PC ) then
@@ -326,7 +331,7 @@ contains
        COMM_vars_id = COMM_vars_id + 1
        if ( COMM_vars_id > COMM_vsize_max_pc ) then
           write(*,*) 'xxx number of variable for MPI PC exceeds max', COMM_vars_id, COMM_vsize_max_pc
-          call PRC_MPIstop
+          call PRC_abort
        end if
 
        call PROF_rapstart('COMM_init_pers', 2)
@@ -476,8 +481,67 @@ contains
   end subroutine COMM_wait_2D
 
   !-----------------------------------------------------------------------------
-  !> calculate horizontal mean (global total with communication)
-  subroutine COMM_horizontal_mean( varmean, var )
+  !> calculate horizontal mean (global total with communication) 2D
+  subroutine COMM_horizontal_mean_2D( varmean, var )
+    use scale_const, only: &
+       CONST_UNDEF
+    implicit none
+
+    real(RP), intent(out) :: varmean        !< horizontal mean
+    real(RP), intent(in)  :: var    (IA,JA) !< 2D value
+
+    real(RP) :: statval
+    real(RP) :: statcnt
+    real(RP) :: allstatval
+    real(RP) :: allstatcnt
+    real(RP) :: zerosw
+
+    integer :: ierr
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    statval = 0.0_RP
+    statcnt = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+       if ( abs(var(i,j)) < abs(CONST_UNDEF) ) then
+          statval = statval + var(i,j)
+          statcnt = statcnt + 1.0_RP
+       endif
+    enddo
+    enddo
+
+    ! [NOTE] always communicate globally
+    call PROF_rapstart('COMM_Allreduce', 2)
+    ! All reduce
+    call MPI_Allreduce( statval,       &
+                        allstatval,    &
+                        1,             &
+                        COMM_datatype, &
+                        MPI_SUM,       &
+                        COMM_world,    &
+                        ierr           )
+    ! All reduce
+    call MPI_Allreduce( statcnt,       &
+                        allstatcnt,    &
+                        1,             &
+                        COMM_datatype, &
+                        MPI_SUM,       &
+                        COMM_world,    &
+                        ierr           )
+
+    call PROF_rapend  ('COMM_Allreduce', 2)
+
+    zerosw = 0.5_RP - sign(0.5_RP, allstatcnt - 1.E-12_RP )
+    varmean = allstatval / ( allstatcnt + zerosw ) * ( 1.0_RP - zerosw )
+    !if( IO_L ) write(IO_FID_LOG,*) varmean, allstatval, allstatcnt
+
+    return
+  end subroutine COMM_horizontal_mean_2D
+
+  !-----------------------------------------------------------------------------
+  !> calculate horizontal mean (global total with communication) 3D
+  subroutine COMM_horizontal_mean_3D( varmean, var )
     use scale_const, only: &
        CONST_UNDEF
     implicit none
@@ -536,7 +600,7 @@ contains
     enddo
 
     return
-  end subroutine COMM_horizontal_mean
+  end subroutine COMM_horizontal_mean_3D
 
   !-----------------------------------------------------------------------------
   !> Get maximum value in horizontal area
@@ -697,7 +761,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Get data from whole process value in 2D field
   subroutine COMM_gather_2D( recv, send, gIA, gJA )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank
     implicit none
 
@@ -729,7 +793,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Get data from whole process value in 3D field
   subroutine COMM_gather_3D( recv, send, gIA, gJA, gKA )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank
     implicit none
 
@@ -762,7 +826,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Broadcast data for whole process value in scalar field
   subroutine COMM_bcast_SCR( var )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank
     implicit none
 
@@ -791,7 +855,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Broadcast data for whole process value in 1D field
   subroutine COMM_bcast_1D( var, gIA )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank
     implicit none
 
@@ -821,7 +885,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Broadcast data for whole process value in 2D field
   subroutine COMM_bcast_2D( var, gIA, gJA )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank
     implicit none
 
@@ -852,7 +916,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Broadcast data for whole process value in 3D field
   subroutine COMM_bcast_3D( var, gIA, gJA, gKA )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank
     implicit none
 
@@ -884,7 +948,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Broadcast data for whole process value in 4D field
   subroutine COMM_bcast_4D( var, gIA, gJA, gKA, gTime )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank
     implicit none
 
@@ -904,7 +968,7 @@ contains
     if ( gIA>0 .AND. gJA>0 .AND. gKA>0 .AND. gTime>0 .AND. &
          counts < 0 ) then
        write(*,*) 'xxx counts overflow'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     call MPI_BCAST( var(:,:,:,:),   &
@@ -922,7 +986,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Broadcast data for whole process value in scalar (integer)
   subroutine COMM_bcast_INT_SCR( var )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank
     implicit none
 
@@ -951,7 +1015,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Broadcast data for whole process value in 1D field (integer)
   subroutine COMM_bcast_INT_1D( var, gIA )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank
     implicit none
 
@@ -981,7 +1045,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Broadcast data for whole process value in 2D field (integer)
   subroutine COMM_bcast_INT_2D( var, gIA, gJA )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank
     implicit none
 
@@ -1012,7 +1076,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Broadcast data for whole process value in scalar (logical)
   subroutine COMM_bcast_LOGICAL_SCR( var )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank
     implicit none
 
@@ -1558,8 +1622,8 @@ contains
   end subroutine vars8_init_mpi_pc
 
   subroutine vars_3D_mpi(var, vid)
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:) !< atmospheric 3D variable to communication
@@ -1580,7 +1644,7 @@ contains
 #ifdef DEBUG
     if ( use_packbuf(vid) ) then
        write(*,*) 'packing buffer is already used', vid
-       call PRC_MPIstop
+       call PRC_abort
     end if
     use_packbuf(vid) = .true.
 #endif
@@ -1689,8 +1753,8 @@ contains
   end subroutine vars_3D_mpi
 
   subroutine vars8_3D_mpi(var, vid)
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:)
@@ -1712,7 +1776,7 @@ contains
 #ifdef DEBUG
     if ( use_packbuf(vid) ) then
        write(*,*) 'packing buffer is already used', vid
-       call PRC_MPIstop
+       call PRC_abort
     end if
     use_packbuf(vid) = .true.
 #endif
@@ -2134,8 +2198,8 @@ contains
   end subroutine vars8_3D_mpi
 
   subroutine vars_2D_mpi(var, vid)
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(inout) :: var(:,:)
@@ -2151,7 +2215,7 @@ contains
 #ifdef DEBUG
     if ( use_packbuf(vid) ) then
        write(*,*) 'packing buffer is already used', vid
-       call PRC_MPIstop
+       call PRC_abort
     end if
     use_packbuf(vid) = .true.
 #endif
@@ -2286,8 +2350,8 @@ contains
   end subroutine vars_2D_mpi
 
   subroutine vars8_2D_mpi(var, vid)
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(inout) :: var(:,:)
@@ -2305,7 +2369,7 @@ contains
 #ifdef DEBUG
     if ( use_packbuf(vid) ) then
        write(*,*) 'packing buffer is already used', vid
-       call PRC_MPIstop
+       call PRC_abort
     end if
     use_packbuf(vid) = .true.
 #endif
@@ -2784,8 +2848,8 @@ contains
   end subroutine vars8_2D_mpi
 
   subroutine vars_3D_mpi_pc(var, vid)
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:)
@@ -2796,7 +2860,7 @@ contains
 #ifdef DEBUG
     if ( use_packbuf(pseqid(vid)) ) then
        write(*,*) 'packing buffer is already used', vid, pseqid(vid)
-       call PRC_MPIstop
+       call PRC_abort
     end if
     use_packbuf(pseqid(vid)) = .true.
 #endif

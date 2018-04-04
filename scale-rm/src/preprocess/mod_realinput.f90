@@ -25,9 +25,9 @@ module mod_realinput
   use scale_index
   use scale_tracer
 
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_IsMaster, &
-     PRC_MPIstop
+     PRC_abort
   use scale_comm, only: &
      COMM_bcast
   use scale_atmos_grid_cartesC_real, only: &
@@ -72,7 +72,7 @@ module mod_realinput
   !
   integer, public, parameter :: iSCALE  = 1
   integer, public, parameter :: iWRFARW = 2
-  integer, public, parameter :: iNICAM  = 3
+!  integer, public, parameter :: iNICAM  = 3
   integer, public, parameter :: iGrADS  = 4
 
   real(RP), private, allocatable :: LON_org (:,:)
@@ -87,6 +87,9 @@ module mod_realinput
   real(RP), private, allocatable :: TEMP_org(:,:,:)
   real(RP), private, allocatable :: PRES_org(:,:,:)
   real(RP), private, allocatable :: QTRC_org(:,:,:,:)
+  real(RP), private, allocatable :: QV_org  (:,:,:)
+  real(RP), private, allocatable :: QHYD_org(:,:,:,:)
+  real(RP), private, allocatable :: QNUM_org(:,:,:,:)
 
   integer,  private, allocatable :: igrd (:,:,:)
   integer,  private, allocatable :: jgrd (:,:,:)
@@ -150,19 +153,15 @@ module mod_realinput
   real(DP),               private :: BOUNDARY_UPDATE_DT         = 0.0_DP  ! inteval time of boudary data update [s]
 
   logical,                private :: USE_FILE_DENSITY           = .false. ! use density data from files
-  integer,                private :: PARENT_MP_TYPE             = 6       ! microphysics type of the parent model (number of classes)
-                                                                          ! 0: dry, 3:3-class, 5:5-class, 6:6-class, >6:double moment
+  logical,                private :: SAME_MP_TYPE               = .false. ! microphysics type of the parent model is same as it in this model
 
   logical, private :: first = .true.
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  subroutine REALINPUT_atmos( &
-       flg_bin_intrp )
+  subroutine REALINPUT_atmos
     use scale_time, only: &
        TIME_gettimelabel
-    use scale_atmos_phy_mp, only: &
-       QA_MP
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -173,8 +172,6 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE
     implicit none
-
-    logical, intent(in)  :: flg_bin_intrp ! flag for interpolation of SBM(S10) from outer bulk-MP model
 
     NAMELIST / PARAM_MKINIT_REAL_ATMOS / &
        NUMBER_OF_FILES,            &
@@ -190,9 +187,7 @@ contains
        BOUNDARY_DTYPE,             &
        BOUNDARY_UPDATE_DT,         &
        USE_FILE_DENSITY,           &
-       PARENT_MP_TYPE
-
-    logical  :: flg_bin ! flag for SBM(S10) is used or not 0-> not used, 1-> used
+       SAME_MP_TYPE
 
     character(len=H_LONG) :: basename_mod
     character(len=H_LONG) :: basename_out_mod
@@ -231,19 +226,13 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_ATMOS. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_ATMOS)
 
     if ( BOUNDARY_UPDATE_DT <= 0.0_DP ) then
        write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
-       call PRC_MPIstop
-    endif
-
-    if( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
-       flg_bin = .true.
-    else
-       flg_bin = .false.
+       call PRC_abort
     endif
 
     if ( FILETYPE_ORG == 'GrADS' ) then
@@ -312,10 +301,7 @@ contains
                                     basename_mod,     & ! [IN]
                                     dims(:),          & ! [IN]
                                     istep,            & ! [IN]
-                                    PARENT_MP_TYPE,   & ! [IN]
-                                    QA_MP,            & ! [IN]
-                                    flg_bin,          & ! [IN]
-                                    flg_bin_intrp,    & ! [IN]
+                                    SAME_MP_TYPE,     & ! [IN]
                                     DENS_in(:,:,:),   & ! [OUT]
                                     MOMZ_in(:,:,:),   & ! [OUT]
                                     MOMX_in(:,:,:),   & ! [OUT]
@@ -505,10 +491,7 @@ contains
     character(len=H_LONG) :: FILETYPE_OCEAN
     character(len=H_LONG) :: BASENAME_LAND
     character(len=H_LONG) :: BASENAME_OCEAN
-    character(len=H_LONG) :: BASENAME_WITHNUM  = ''
     character(len=5)      :: NUM               = ''
-    logical               :: SERIAL_PROC_READ_land
-    logical               :: SERIAL_PROC_READ_ocean
 
     ! land
     real(RP), allocatable :: LAND_TEMP_org      (:,:,:,:)
@@ -551,7 +534,6 @@ contains
     integer :: totaltimesteps = 1
     integer :: timelen
     integer :: skip_steps
-    integer :: lfn
     integer :: ierr
 
     character(len=H_LONG) :: basename_out_mod
@@ -575,7 +557,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_LAND. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_LAND)
 
@@ -601,7 +583,7 @@ contains
        SOILWATER_DS2VC_flag = .false.
     case default
       write(*,*) 'xxx Unsupported SOILWATER_DS2CV TYPE:', trim(SOILWATER_DS2VC)
-      call PRC_MPIstop
+      call PRC_abort
     end select
 
     serial_land = SERIAL_PROC_READ
@@ -613,7 +595,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_OCEAN. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_OCEAN)
 
@@ -645,7 +627,7 @@ contains
        write(*,*) 'xxx Error: The following LAND/OCEAN parameters must be consistent due to technical problem:'
        write(*,*) '           NUMBER_OF_FILES, NUMBER_OF_TSTEPS, NUMBER_OF_SKIP_TSTEPS,'
        write(*,*) '           BASENAME_BOUNDARY, BOUNDARY_POSTFIX_TIMELABEL, BOUNDARY_TITLE, BOUNDARY_UPDATE_DT.'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     call ParentSurfaceSetup( ldims, odims,           & ![OUT]
@@ -822,7 +804,7 @@ contains
        if ( totaltimesteps > 1 ) then
           if ( BOUNDARY_UPDATE_DT <= 0.0_DP ) then
              write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
-             call PRC_MPIstop
+             call PRC_abort
           endif
 
           if ( BOUNDARY_POSTFIX_TIMELABEL ) then
@@ -874,10 +856,12 @@ contains
        ParentAtmosSetupSCALE
     use mod_realinput_wrfarw, only: &
        ParentAtmosSetupWRFARW
-    use mod_realinput_nicam, only: &
-       ParentAtmosSetupNICAM
+!!$    use mod_realinput_nicam, only: &
+!!$       ParentAtmosSetupNICAM
     use mod_realinput_grads, only: &
        ParentAtmosSetupGrADS
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
 
     character(len=*), intent(in)  :: inputtype
@@ -939,23 +923,23 @@ contains
        update_coord     = .true.
        apply_rotate_uv  = .true.
 
-    case('NICAM-NETCDF')
-
-       if ( read_by_myproc_atmos ) then
-          call ParentAtmosSetupNICAM ( dims(:), & ! [OUT]
-                                       timelen, & ! [OUT]
-                                       basename ) ! [IN]
-       endif
-
-       use_file_density = .false.
-       temp2pott        = .true.
-       update_coord     = .false.
-       apply_rotate_uv  = .true.
-
+!!$    case('NICAM-NETCDF')
+!!$
+!!$       if ( read_by_myproc_atmos ) then
+!!$          call ParentAtmosSetupNICAM ( dims(:), & ! [OUT]
+!!$                                       timelen, & ! [OUT]
+!!$                                       basename ) ! [IN]
+!!$       endif
+!!$
+!!$       use_file_density = .false.
+!!$       temp2pott        = .true.
+!!$       update_coord     = .false.
+!!$       apply_rotate_uv  = .true.
+!!$
     case default
 
        write(*,*) 'xxx Unsupported type of input data : ', trim(inputtype)
-       call PRC_MPIstop
+       call PRC_abort
 
     end select
 
@@ -976,6 +960,10 @@ contains
     allocate( PRES_org( dims(1)+2, dims(2), dims(3)     ) )
     allocate( DENS_org( dims(1)+2, dims(2), dims(3)     ) )
     allocate( QTRC_org( dims(1)+2, dims(2), dims(3), QA ) )
+
+    allocate( QV_org  ( dims(1)+2, dims(2), dims(3)        ) )
+    allocate( QHYD_org( dims(1)+2, dims(2), dims(3), N_HYD ) )
+    allocate( QNUM_org( dims(1)+2, dims(2), dims(3), N_HYD ) )
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Horizontal Interpolation Level: ', COMM_CARTESC_NEST_INTERP_LEVEL
     itp_nh = COMM_CARTESC_NEST_INTERP_LEVEL
@@ -1000,8 +988,8 @@ contains
        ParentAtmosOpenSCALE
     use mod_realinput_wrfarw, only: &
        ParentAtmosOpenWRFARW
-    use mod_realinput_nicam, only: &
-       ParentAtmosOpenNICAM
+!!$    use mod_realinput_nicam, only: &
+!!$       ParentAtmosOpenNICAM
     use mod_realinput_grads, only: &
        ParentAtmosOpenGrADS
     implicit none
@@ -1044,10 +1032,7 @@ contains
        basename,      &
        dims,          &
        istep,         &
-       mptype_org,    &
-       mptype,        &
-       flg_bin,       &
-       flg_bin_intrp, &
+       same_mptype,   &
        DENS,          &
        MOMZ,          &
        MOMX,          &
@@ -1064,13 +1049,15 @@ contains
     use scale_atmos_grid_cartesC_metric, only: &
        ROTC => ATMOS_GRID_CARTESC_METRIC_ROTC
     use scale_atmos_hydrometeor, only: &
-       ATMOS_HYDROMETEOR_diagnose_number_concentration, &
-       QLS,  &
-       QLE,  &
+       ATMOS_HYDROMETEOR_dry, &
        I_QV, &
-       I_QC
+       QLS, &
+       QLE
     use scale_atmos_thermodyn, only: &
-       THERMODYN_POTT => ATMOS_THERMODYN_POTT
+       THERMODYN_qdry           => ATMOS_THERMODYN_qdry, &
+       THERMODYN_r              => ATMOS_THERMODYN_r,    &
+       THERMODYN_cp             => ATMOS_THERMODYN_cp,   &
+       THERMODYN_temp_pres2pott => ATMOS_THERMODYN_temp_pres2pott
     use scale_atmos_hydrostatic, only: &
        HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_interp, only: &
@@ -1081,20 +1068,24 @@ contains
        ParentAtmosInputSCALE
     use mod_realinput_wrfarw, only: &
        ParentAtmosInputWRFARW
-    use mod_realinput_nicam, only: &
-       ParentAtmosInputNICAM
+!!$    use mod_realinput_nicam, only: &
+!!$       ParentAtmosInputNICAM
     use mod_realinput_grads, only: &
        ParentAtmosInputGrADS
+    use mod_atmos_phy_mp_vars, only: &
+       QS_MP, &
+       QE_MP
+    use mod_atmos_phy_mp_driver, only: &
+       ATMOS_PHY_MP_driver_qhyd2qtrc
+    use scale_atmos_grid_cartesC_real, only: &
+       CZ => ATMOS_GRID_CARTESC_REAL_CZ
     implicit none
 
     character(len=*), intent(in)  :: inputtype
     character(len=*), intent(in)  :: basename
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: istep
-    integer,          intent(in)  :: mptype_org    ! microphysics type (number of classes) in the input data
-    integer,          intent(in)  :: mptype        ! microphysics type (number of classes)
-    logical,          intent(in)  :: flg_bin       ! flag for SBM(S10) is used or not 0-> not used, 1-> used
-    logical,          intent(in)  :: flg_bin_intrp ! flag for interpolation of SBM(S10) from outer bulk-MP model
+    logical,          intent(in)  :: same_mptype   ! Is microphysics type same between outer and inner model
     real(RP),         intent(out) :: DENS(KA,IA,JA)
     real(RP),         intent(out) :: MOMZ(KA,IA,JA)
     real(RP),         intent(out) :: MOMX(KA,IA,JA)
@@ -1111,13 +1102,17 @@ contains
     real(RP) :: W    (KA,IA,JA)
     real(RP) :: U    (KA,IA,JA)
     real(RP) :: V    (KA,IA,JA)
+    real(RP) :: QV   (KA,IA,JA)
     real(RP) :: QC   (KA,IA,JA)
     real(RP) :: u_on_map, v_on_map
 
+    real(RP) :: qdry, Rtot, CPtot
+
     logical, save :: first = .true.
 
+    logical :: same_mptype_ = .false.
+
     integer :: k, i, j, iq
-    integer :: n, nn
     !---------------------------------------------------------------------------
 
     if ( read_by_myproc_atmos ) then
@@ -1131,14 +1126,16 @@ contains
                                        PRES_org(:,:,:),   & ! [OUT]
                                        DENS_org(:,:,:),   & ! [OUT]
                                        POTT_org(:,:,:),   & ! [OUT]
+                                       QV_org  (:,:,:),   & ! [OUT]
+                                       QHYD_org(:,:,:,:), & ! [OUT]
+                                       QNUM_org(:,:,:,:), & ! [OUT]
                                        QTRC_org(:,:,:,:), & ! [OUT]
                                        CZ_org  (:,:,:),   & ! [IN]
-                                       flg_bin,           & ! [IN]
-                                       flg_bin_intrp,     & ! [IN]
                                        basename,          & ! [IN]
-                                       mptype_org,        & ! [IN]
+                                       same_mptype,       & ! [IN]
                                        dims(:),           & ! [IN]
                                        istep              ) ! [IN]
+          same_mptype_ = same_mptype
        case('GrADS')
           call ParentAtmosInputGrADS ( W_org   (:,:,:),   & ! [OUT]
                                        U_org   (:,:,:),   & ! [OUT]
@@ -1146,52 +1143,62 @@ contains
                                        PRES_org(:,:,:),   & ! [OUT]
                                        DENS_org(:,:,:),   & ! [OUT]
                                        TEMP_org(:,:,:),   & ! [OUT]
-                                       QTRC_org(:,:,:,:), & ! [OUT]
+                                       QV_org  (:,:,:),   & ! [OUT]
+                                       QHYD_org(:,:,:,:), & ! [OUT]
                                        LON_org (:,:),     & ! [OUT]
                                        LAT_org (:,:),     & ! [OUT]
                                        CZ_org  (:,:,:),   & ! [OUT]
                                        basename,          & ! [IN]
                                        dims(:),           & ! [IN]
                                        istep              ) ! [IN]
+          same_mptype_ = .false.
+          QNUM_org(:,:,:,:) = 0.0_RP
        case('WRF-ARW')
           call ParentAtmosInputWRFARW( W_org   (:,:,:),   & ! [OUT]
                                        U_org   (:,:,:),   & ! [OUT]
                                        V_org   (:,:,:),   & ! [OUT]
                                        PRES_org(:,:,:),   & ! [OUT]
                                        TEMP_org(:,:,:),   & ! [OUT]
-                                       QTRC_org(:,:,:,:), & ! [OUT]
+                                       QV_org  (:,:,:),   & ! [OUT]
+                                       QHYD_org(:,:,:,:), & ! [OUT]
+                                       QNUM_org(:,:,:,:), & ! [OUT]
                                        LON_org (:,:),     & ! [OUT]
                                        LAT_org (:,:),     & ! [OUT]
                                        CZ_org  (:,:,:),   & ! [OUT]
                                        basename,          & ! [IN]
-                                       mptype_org,        & ! [IN]
                                        dims(:),           & ! [IN]
                                        istep              ) ! [IN]
+          same_mptype_ = .false.
           DENS_org(:,:,:) = 0.0_RP
-       case('NETCDF')
-          call ParentAtmosInputNICAM ( W_org   (:,:,:),   & ! [OUT]
-                                       U_org   (:,:,:),   & ! [OUT]
-                                       V_org   (:,:,:),   & ! [OUT]
-                                       PRES_org(:,:,:),   & ! [OUT]
-                                       TEMP_org(:,:,:),   & ! [OUT]
-                                       QTRC_org(:,:,:,:), & ! [OUT]
-                                       basename,          & ! [IN]
-                                       dims(:),           & ! [IN]
-                                       istep              ) ! [IN]
-          DENS_org(:,:,:) = 0.0_RP
+!!$       case('NETCDF')
+!!$          call ParentAtmosInputNICAM ( W_org   (:,:,:),   & ! [OUT]
+!!$                                       U_org   (:,:,:),   & ! [OUT]
+!!$                                       V_org   (:,:,:),   & ! [OUT]
+!!$                                       PRES_org(:,:,:),   & ! [OUT]
+!!$                                       TEMP_org(:,:,:),   & ! [OUT]
+!!$                                       QTRC_org(:,:,:,:), & ! [OUT]
+!!$                                       basename,          & ! [IN]
+!!$                                       dims(:),           & ! [IN]
+!!$                                       istep              ) ! [IN]
+!!$          DENS_org(:,:,:) = 0.0_RP
        end select
+
+       if ( .not. same_mptype_ ) then
+          call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 1, dims(1)+2, dims(2), 1, dims(2), dims(3), 1, dims(3), &
+                                              QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
+                                              QTRC_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
+                                              QNUM=QNUM_org(:,:,:,:)            ) ! [IN]
+       end if
 
        if ( temp2pott ) then
           do j = 1, dims(3)
           do i = 1, dims(2)
           do k = 1, dims(1)+2
-             call THERMODYN_POTT( POTT_org   (k,i,j),   & ! [OUT]
-                                  TEMP_org   (k,i,j),   & ! [IN]
-                                  PRES_org   (k,i,j),   & ! [IN]
-                                  QTRC_org   (k,i,j,:), & ! [IN]
-                                  TRACER_CV  (:),       & ! [IN]
-                                  TRACER_R   (:),       & ! [IN]
-                                  TRACER_MASS(:)        ) ! [IN]
+             call THERMODYN_qdry( QA, QTRC_org(k,i,j,:), TRACER_MASS(:), qdry )
+             call THERMODYN_r   ( QA, QTRC_org(k,i,j,:), TRACER_R(:), qdry, Rtot )
+             call THERMODYN_cp  ( QA, QTRC_org(k,i,j,:), TRACER_CP(:), qdry, CPtot )
+             call THERMODYN_temp_pres2pott( TEMP_org(k,i,j), PRES_org(k,i,j), CPtot, Rtot, & ! [IN]
+                                            POTT_org(k,i,j)                                ) ! [OUT]
           enddo
           enddo
           enddo
@@ -1218,11 +1225,6 @@ contains
        call COMM_bcast( QTRC_org, dims(1)+2, dims(2), dims(3), QA )
 
        call PROF_rapend  ('___AtmosBcast',3)
-    endif
-
-    if ( mptype == 11 .AND. mptype_org <= 6 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '--- Diagnose Number Concentration from Mixing Ratio'
-       call ATMOS_HYDROMETEOR_diagnose_number_concentration( QTRC_org(:,:,:,:) ) ! [inout]
     endif
 
     do iq = 1, QA
@@ -1276,7 +1278,7 @@ contains
                          hfact   (    :,:,:),         & ! [IN]
                          kgrd    (:,:,:,:,:),         & ! [IN]
                          vfact   (:,:,:,:,:),         & ! [IN]
-                         W_org   (:,:,:),             & ! [INOUT]
+                         W_org   (:,:,:),             & ! [IN]
                          W       (:,:,:)              ) ! [OUT]
 
     call INTRP_interp3d( itp_nh,                      & ! [IN]
@@ -1288,7 +1290,7 @@ contains
                          hfact   (    :,:,:),         & ! [IN]
                          kgrd    (:,:,:,:,:),         & ! [IN]
                          vfact   (:,:,:,:,:),         & ! [IN]
-                         U_org   (:,:,:),             & ! [INOUT]
+                         U_org   (:,:,:),             & ! [IN]
                          U       (:,:,:)              ) ! [OUT]
 
     call INTRP_interp3d( itp_nh,                      & ! [IN]
@@ -1300,7 +1302,7 @@ contains
                          hfact   (    :,:,:),         & ! [IN]
                          kgrd    (:,:,:,:,:),         & ! [IN]
                          vfact   (:,:,:,:,:),         & ! [IN]
-                         V_org   (:,:,:),             & ! [INOUT]
+                         V_org   (:,:,:),             & ! [IN]
                          V       (:,:,:)              ) ! [OUT]
 
     if ( apply_rotate_uv ) then ! rotation from latlon field to map-projected field
@@ -1383,7 +1385,7 @@ contains
                          hfact   (    :,:,:),         & ! [IN]
                          kgrd    (:,:,:,:,:),         & ! [IN]
                          vfact   (:,:,:,:,:),         & ! [IN]
-                         POTT_org(:,:,:),             & ! [INOUT]
+                         POTT_org(:,:,:),             & ! [IN]
                          POTT    (:,:,:)              ) ! [OUT]
 
     do j = 1, JA
@@ -1403,9 +1405,8 @@ contains
                             hfact   (    :,:,:),         & ! [IN]
                             kgrd    (:,:,:,:,:),         & ! [IN]
                             vfact   (:,:,:,:,:),         & ! [IN]
-                            QTRC_org(:,:,:,iq),          & ! [INOUT]
+                            QTRC_org(:,:,:,iq),          & ! [IN]
                             QTRC    (:,:,:,iq)           ) ! [OUT]
-
 
        do j = 1, JA
        do i = 1, IA
@@ -1425,7 +1426,7 @@ contains
                             hfact   (    :,:,:),         & ! [IN]
                             kgrd    (:,:,:,:,:),         & ! [IN]
                             vfact   (:,:,:,:,:),         & ! [IN]
-                            DENS_org(:,:,:),             & ! [INOUT]
+                            DENS_org(:,:,:),             & ! [IN]
                             DENS    (:,:,:),             & ! [OUT]
                             logwgt = .true.              ) ! [IN]
     else
@@ -1438,25 +1439,26 @@ contains
                             hfact   (    :,:,:),         & ! [IN]
                             kgrd    (:,:,:,:,:),         & ! [IN]
                             vfact   (:,:,:,:,:),         & ! [IN]
-                            PRES_org(:,:,:),             & ! [INOUT]
+                            PRES_org(:,:,:),             & ! [IN]
                             PRES    (:,:,:),             & ! [OUT]
                             logwgt = .true.              ) ! [IN]
 
        QC(:,:,:) = 0.0_RP
-#ifndef DRY
-       if ( I_QC > 0 ) then
+       if ( ATMOS_HYDROMETEOR_dry ) then
+          QV(:,:,:) = 0.0_RP
+       else
+          QV(:,:,:) = QTRC(:,:,:,I_QV)
           do iq = QLS, QLE
              QC(:,:,:) = QC(:,:,:) + QTRC(:,:,:,iq)
           enddo
-       endif
-#endif
+       end if
+
        ! make density & pressure profile in moist condition
-       call HYDROSTATIC_buildrho_real( DENS(:,:,:),      & ! [OUT]
-                                       TEMP(:,:,:),      & ! [OUT]
-                                       PRES(:,:,:),      & ! [INOUT]
-                                       POTT(:,:,:),      & ! [IN]
-                                       QTRC(:,:,:,I_QV), & ! [IN]
-                                       QC  (:,:,:)       ) ! [IN]
+       call HYDROSTATIC_buildrho_real( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                                       POTT(:,:,:), QV(:,:,:), QC(:,:,:), & ! [IN]
+                                       CZ(:,:,:),                         & ! [IN]
+                                       PRES(:,:,:),                       & ! [INOUT]
+                                       DENS(:,:,:), TEMP(:,:,:)           ) ! [OUT]
 
        call COMM_vars8( DENS(:,:,:), 1 )
        call COMM_wait ( DENS(:,:,:), 1 )
@@ -1553,7 +1555,7 @@ contains
        FILE_CARTESC_enddef
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE
-    use scale_atmos_phy_mp, only: &
+    use mod_atmos_phy_mp_vars, only: &
        QS_MP, &
        QE_MP
     implicit none
@@ -1619,8 +1621,7 @@ contains
        istep     )
     use scale_file_cartesC, only: &
        FILE_CARTESC_write_var
-    use scale_atmos_phy_mp, only: &
-       QA_MP, &
+    use mod_atmos_phy_mp_vars, only: &
        QS_MP, &
        QE_MP
     implicit none
@@ -1694,9 +1695,9 @@ contains
     use mod_realinput_wrfarw, only: &
          ParentLandSetupWRFARW, &
          ParentOceanSetupWRFARW
-    use mod_realinput_nicam, only: &
-         ParentLandSetupNICAM, &
-         ParentOceanSetupNICAM
+!!$    use mod_realinput_nicam, only: &
+!!$         ParentLandSetupNICAM, &
+!!$         ParentOceanSetupNICAM
     use mod_realinput_grads, only: &
          ParentLandSetupGrADS, &
          ParentOceanSetupGrADS
@@ -1727,7 +1728,7 @@ contains
     if( LKMAX < 4 )then
        write(*,*) 'xxx LKMAX less than 4: ', LKMAX
        write(*,*) 'xxx in Real Case, LKMAX should be set more than 4'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if( serial_land ) then
@@ -1756,13 +1757,13 @@ contains
                                                        basename_land ) ! (in)
        use_waterratio = .false.
 
-    case('NICAM-NETCDF')
-
-       lmdlid = iNICAM
-       if ( do_read_land ) call ParentLandSetupNICAM( ldims,        & ! (out)
-                                                      basename_land ) ! (in)
-       use_waterratio = .false.
-
+!!$    case('NICAM-NETCDF')
+!!$
+!!$       lmdlid = iNICAM
+!!$       if ( do_read_land ) call ParentLandSetupNICAM( ldims,        & ! (out)
+!!$                                                      basename_land ) ! (in)
+!!$       use_waterratio = .false.
+!!$
     case('GrADS')
 
        lmdlid = iGrADS
@@ -1774,7 +1775,7 @@ contains
     case default
 
        write(*,*) 'xxx Unsupported FILE TYPE:', trim(filetype_land)
-       call PRC_MPIstop
+       call PRC_abort
 
     endselect
 
@@ -1793,7 +1794,7 @@ contains
        i_intrp_land_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_LAND_TEMP is invalid. ', INTRP_LAND_TEMP
-       call PRC_MPIstop
+       call PRC_abort
     end select
     select case( INTRP_LAND_SFC_TEMP )
     case( 'off' )
@@ -1804,7 +1805,7 @@ contains
        i_intrp_land_sfc_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_LAND_SFC_TEMP is invalid. ', INTRP_LAND_SFC_TEMP
-       call PRC_MPIstop
+       call PRC_abort
     end select
     select case( INTRP_LAND_WATER )
     case( 'off' )
@@ -1815,11 +1816,12 @@ contains
        i_intrp_land_water = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_LAND_WATER is invalid. ', INTRP_LAND_WATER
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     select case( lmdlid )
-    case( iSCALE, iWRFARW, iNICAM )
+!    case( iSCALE, iWRFARW, iNICAM )
+    case( iSCALE, iWRFARW )
        i_intrp_land_temp      = i_intrp_mask
        i_intrp_land_sfc_temp  = i_intrp_mask
        i_intrp_land_water     = i_intrp_mask
@@ -1855,13 +1857,13 @@ contains
                                                          basename_ocean  ) ! (in)
        update_coord = .true.
 
-    case('NICAM-NETCDF')
-
-       omdlid = iNICAM
-       if ( do_read_ocean ) call ParentOceanSetupNICAM( odims, timelen, & ! (out)
-                                                        basename_ocean  ) ! (in)
-       update_coord = .false.
-
+!!$    case('NICAM-NETCDF')
+!!$
+!!$       omdlid = iNICAM
+!!$       if ( do_read_ocean ) call ParentOceanSetupNICAM( odims, timelen, & ! (out)
+!!$                                                        basename_ocean  ) ! (in)
+!!$       update_coord = .false.
+!!$
     case('GrADS')
 
        omdlid = iGrADS
@@ -1872,7 +1874,7 @@ contains
     case default
 
        write(*,*) 'xxx Unsupported FILE TYPE:', trim(filetype_ocean)
-       call PRC_MPIstop
+       call PRC_abort
 
     endselect
 
@@ -1891,7 +1893,7 @@ contains
        i_intrp_ocean_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_OCEAN_TEMP is invalid. ', INTRP_OCEAN_TEMP
-       call PRC_MPIstop
+       call PRC_abort
     end select
     select case( INTRP_OCEAN_SFC_TEMP )
     case( 'off' )
@@ -1902,11 +1904,12 @@ contains
        i_intrp_ocean_sfc_temp = i_intrp_fill
     case default
        write(*,*) 'xxx INTRP_OCEAN_SFC_TEMP is invalid. ', INTRP_OCEAN_SFC_TEMP
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     select case( omdlid )
-    case( iSCALE, iWRFARW, iNICAM )
+!    case( iSCALE, iWRFARW, iNICAM )
+    case( iSCALE, iWRFARW )
        i_intrp_ocean_temp     = i_intrp_mask
        i_intrp_ocean_sfc_temp = i_intrp_mask
     end select
@@ -1972,7 +1975,8 @@ contains
     use scale_land_grid_cartesC, only: &
          LCZ => LAND_GRID_CARTESC_CZ
     use scale_atmos_thermodyn, only: &
-         THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+         THERMODYN_specific_heat  => ATMOS_THERMODYN_specific_heat, &
+         THERMODYN_rhot2temp_pres => ATMOS_THERMODYN_rhot2temp_pres
     use scale_atmos_hydrometeor, only: &
          I_QV
     use scale_landuse, only: &
@@ -1985,10 +1989,10 @@ contains
          ParentOceanOpenWRFARW, &
          ParentOceanInputWRFARW, &
          ParentLandInputWRFARW
-    use mod_realinput_nicam, only: &
-         ParentOceanOpenNICAM, &
-         ParentOceanInputNICAM, &
-         ParentLandInputNICAM
+!!$    use mod_realinput_nicam, only: &
+!!$         ParentOceanOpenNICAM, &
+!!$         ParentOceanInputNICAM, &
+!!$         ParentLandInputNICAM
     use mod_realinput_grads, only: &
          ParentOceanOpenGrADS, &
          ParentOceanInputGrADS, &
@@ -2057,8 +2061,8 @@ contains
     integer  :: igrd_o (odims(1),odims(2),itp_nh)
     integer  :: jgrd_o (odims(1),odims(2),itp_nh)
 
-    real(RP) :: temp
-    real(RP) :: pres
+    real(RP) :: Qdry, Rtot, CVtot, CPtot
+    real(RP) :: temp, pres
 
     integer :: i, j
     integer :: n, nn
@@ -2075,14 +2079,12 @@ contains
 
        do j = 1, JA
        do i = 1, IA
-          call THERMODYN_temp_pres( temp,           & ! [OUT]
-                                    pres,           & ! [OUT] not used
-                                    dens(KS,i,j),   & ! [IN]
-                                    rhot(KS,i,j),   & ! [IN]
-                                    qtrc(KS,i,j,:), & ! [IN]
-                                    TRACER_CV(:),   & ! [IN]
-                                    TRACER_R(:),    & ! [IN]
-                                    TRACER_MASS(:)  ) ! [IN]
+          call THERMODYN_specific_heat( QA, &
+                                        qtrc(KS,i,j,:), &
+                                        TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+                                        Qdry, Rtot, CVtot, CPtot                                 ) ! [OUT]
+          call THERMODYN_rhot2temp_pres( dens(KS,i,j), rhot(KS,i,j), Rtot, CVtot, CPtot, &
+                                         temp, pres                                      )
 
           tc_urb(i,j) = temp
 #ifdef DRY
@@ -2133,13 +2135,13 @@ contains
 
           call ParentOceanOpenWRFARW
 
-       case( iNICAM ) ! TYPE: NICAM-NETCDF
-
-          call ParentOceanOpenNICAM( olon_org, olat_org, & ! (out)
-                                     omask_org,          & ! (out)
-                                     basename_ocean,     & ! (in)
-                                     odims               ) ! (in)
-
+!!$       case( iNICAM ) ! TYPE: NICAM-NETCDF
+!!$
+!!$          call ParentOceanOpenNICAM( olon_org, olat_org, & ! (out)
+!!$                                     omask_org,          & ! (out)
+!!$                                     basename_ocean,     & ! (in)
+!!$                                     odims               ) ! (in)
+!!$
        case( iGrADS ) ! TYPE: GrADS format
 
           call ParentOceanOpenGrADS
@@ -2177,18 +2179,18 @@ contains
                   basename_land, ldims,       & ! (in)
                   use_file_landwater, n       ) ! (in)
 
-          case( iNICAM ) ! TYPE: NICAM-NETCDF
-
-             call ParentLandInputNICAM( &
-                  tg_org, strg_org,           & ! (out)
-                  lst_org,                    & ! (out)
-                  llon_org, llat_org, lz_org, & ! (out)
-                  topo_org, lmask_org,        & ! (out)
-                  basename_land, ldims,       & ! (in)
-                  use_file_landwater, n       ) ! (in)
-             ust_org = UNDEF
-             albg_org = UNDEF
-
+!!$          case( iNICAM ) ! TYPE: NICAM-NETCDF
+!!$
+!!$             call ParentLandInputNICAM( &
+!!$                  tg_org, strg_org,           & ! (out)
+!!$                  lst_org,                    & ! (out)
+!!$                  llon_org, llat_org, lz_org, & ! (out)
+!!$                  topo_org, lmask_org,        & ! (out)
+!!$                  basename_land, ldims,       & ! (in)
+!!$                  use_file_landwater, n       ) ! (in)
+!!$             ust_org = UNDEF
+!!$             albg_org = UNDEF
+!!$
           case( iGrADS ) ! TYPE: GrADS format
 
              call ParentLandInputGrADS( &
@@ -2249,16 +2251,16 @@ contains
                   basename_ocean, odims, & ! (in)
                   n                      ) ! (in)
 
-          case( iNICAM ) ! TYPE: NICAM-NETCDF
-
-             call ParentOceanInputNICAM( &
-                  tw_org, sst_org,       & ! (out)
-                  basename_ocean, odims, & ! (in)
-                  omask_org,             & ! (in)
-                  n                      ) ! (in)
-             albw_org = UNDEF
-             z0w_org = UNDEF
-
+!!$          case( iNICAM ) ! TYPE: NICAM-NETCDF
+!!$
+!!$             call ParentOceanInputNICAM( &
+!!$                  tw_org, sst_org,       & ! (out)
+!!$                  basename_ocean, odims, & ! (in)
+!!$                  omask_org,             & ! (in)
+!!$                  n                      ) ! (in)
+!!$             albw_org = UNDEF
+!!$             z0w_org = UNDEF
+!!$
           case( iGrADS ) ! TYPE: GrADS format
 
              call ParentOceanInputGrADS( &
@@ -2626,8 +2628,8 @@ contains
        soilwater_ds2vc_flag, &
        elevation_collection, &
        intrp_iter_max        )
-    use scale_process, only: &
-         PRC_MPIstop
+    use scale_prc, only: &
+         PRC_abort
     use scale_const, only: &
          UNDEF => CONST_UNDEF, &
          I_SW => CONST_I_SW, &
@@ -2708,7 +2710,7 @@ contains
           call make_mask( lmask, lst_org, ldims(2), ldims(3), landdata=.true.)
        case default
           write(*,*) 'xxx INTRP_LAND_SFC_TEMP is invalid.'
-          call PRC_MPIstop
+          call PRC_abort
        end select
        call interp_OceanLand_data(lst_org, lmask, ldims(2), ldims(3), .true., intrp_iter_max)
     end if
@@ -2722,7 +2724,7 @@ contains
     !      call make_mask( lmask, ust_org, ldims(2), ldims(3), landdata=.true.)
     !   case default
     !      write(*,*) 'xxx INTRP_URB_SFC_TEMP is invalid.'
-    !      call PRC_MPIstop
+    !      call PRC_abort
     !   end select
     !   call interp_OceanLand_data(ust_org, lmask, ldims(2), ldims(3), .true., intrp_iter_max)
     !end if
@@ -2856,7 +2858,7 @@ contains
                          hfact (    :,:,:),            & ! [IN]
                          kgrdl (:,:,:,:,:),            & ! [IN]
                          vfactl(:,:,:,:,:),            & ! [IN]
-                         tg_org(:,:,:),                & ! [INOUT]
+                         tg_org(:,:,:),                & ! [IN]
                          tg    (:,:,:)                 ) ! [OUT]
 
     do j = 1, JA
@@ -2929,7 +2931,7 @@ contains
                                hfact   (    :,:,:),          & ! [IN]
                                kgrdl   (:,:,:,:,:),          & ! [IN]
                                vfactl  (:,:,:,:,:),          & ! [IN]
-                               smds_org(:,:,:),              & ! [INOUT]
+                               smds_org(:,:,:),              & ! [IN]
                                smds    (:,:,:)               ) ! [OUT]
 
           do k = 1, LKMAX-1
@@ -2964,7 +2966,7 @@ contains
                                hfact   (    :,:,:),          & ! [IN]
                                kgrdl   (:,:,:,:,:),          & ! [IN]
                                vfactl  (:,:,:,:,:),          & ! [IN]
-                               strg_org(:,:,:),              & ! [INOUT]
+                               strg_org(:,:,:),              & ! [IN]
                                strg    (:,:,:)               ) ! [OUT]
        end if
 
@@ -3191,7 +3193,7 @@ contains
           if( abs(maskval(i,j) - UNDEF) < sqrt(EPS) )then
              write(*,*) "xxx data for mask of "//trim(elem)//"(",i,",",j,") includes missing value."
              write(*,*) "xxx Please check input data of SKINTEMP or SST. "
-             call PRC_MPIstop
+             call PRC_abort
           else
              data(i,j) = maskval(i,j)
           endif

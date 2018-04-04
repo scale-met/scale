@@ -56,8 +56,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CNVLANDUSE_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_comm, only: &
@@ -92,7 +92,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CNVLANDUSE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVLANDUSE)
 
@@ -113,7 +113,7 @@ contains
        CNVLANDUSE_UseJIBIS  = .true.
     case default
        write(*,*) 'xxx Unsupported TYPE:', trim(CNVLANDUSE_name)
-       call PRC_MPIstop
+       call PRC_abort
     endselect
 
     CNVLANDUSE_DoNothing = .true.
@@ -160,8 +160,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine CNVLANDUSE
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_landuse, only: &
        LANDUSE_calc_fact,  &
        LANDUSE_fillhalo,   &
@@ -204,8 +204,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Convert from GLCCv2
   subroutine CNVLANDUSE_GLCCv2
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        RADIUS => CONST_RADIUS, &
        PI     => CONST_PI,     &
@@ -322,7 +322,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CNVLANDUSE_GLCCv2. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVLANDUSE_GLCCv2)
 
@@ -388,7 +388,7 @@ contains
 
        if ( ierr /= 0 ) then
           write(*,*) 'xxx catalogue file not found!', trim(fname)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        do t = 1, TILE_nlim
@@ -467,7 +467,7 @@ contains
 
              if ( ierr /= 0 ) then
                 write(*,*) 'xxx data file not found!'
-                call PRC_MPIstop
+                call PRC_abort
              endif
 
              read(fid,rec=1) TILE_LANDUSE_orig(:,:)
@@ -684,8 +684,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Convert from KSJ landuse 100m mesh
   subroutine CNVLANDUSE_LU100M
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        RADIUS => CONST_RADIUS, &
        PI     => CONST_PI,     &
@@ -795,7 +795,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CNVLANDUSE_LU100M. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVLANDUSE_LU100M)
 
@@ -861,7 +861,7 @@ contains
 
        if ( ierr /= 0 ) then
           write(*,*) 'xxx catalogue file not found!', trim(fname)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        do t = 1, TILE_nlim
@@ -940,7 +940,7 @@ contains
 
              if ( ierr /= 0 ) then
                 write(*,*) 'xxx data file not found!'
-                call PRC_MPIstop
+                call PRC_abort
              endif
 
              read(fid,rec=1) TILE_LANDUSE_orig(:,:)

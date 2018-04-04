@@ -109,7 +109,7 @@ contains
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        CZ, &
        TKE_MIN, PBL_MAX )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        PI => CONST_PI
@@ -207,7 +207,7 @@ contains
        CPdry   => CONST_CPdry, &
        CPvap   => CONST_CPvap, &
        EPSTvap => CONST_EPSTvap
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: & !! TODO
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &

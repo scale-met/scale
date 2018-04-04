@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Adiabatic process
+!> module atmosphere / adiabat
 !!
 !! @par Description
 !!          Moist adiabatic process for calculation of CAPE, CIN
@@ -16,8 +16,6 @@ module scale_atmos_adiabat
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_atmos_grid_cartesC_index
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -203,7 +201,7 @@ contains
        CZ, FZ,                      &
        CAPE, CIN, LCL, LFC, LNB,    &
        DENS_p, TEMP_p, BUOY_p, QV_p )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file_history, only: &
        FILE_HISTORY_in
@@ -410,7 +408,7 @@ contains
        QDRY, Rtot, CPtot,          &
        DENS_p3D, TEMP_p3D, QV_p3D, &
        kLCL, converged             )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_entr => ATMOS_HYDROMETEOR_entr, &

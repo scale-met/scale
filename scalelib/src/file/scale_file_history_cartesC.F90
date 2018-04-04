@@ -20,7 +20,7 @@ module scale_file_history_cartesC
   use scale_ocean_grid_cartesC_index
   use scale_land_grid_cartesC_index
   use scale_urban_grid_cartesC_index
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_abort
   !-----------------------------------------------------------------------------
   implicit none
@@ -80,11 +80,11 @@ contains
        FILE_HISTORY_truncate_1D, &
        FILE_HISTORY_truncate_2D, &
        FILE_HISTORY_truncate_3D
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank, &
        PRC_myrank,     &
        PRC_LOCAL_COMM_WORLD
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y, &
        PRC_HAS_W,      &
@@ -277,9 +277,9 @@ contains
   !> set dimension information
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_CARTESC_set_dims
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank, &
        PRC_HAS_W, &
        PRC_HAS_S
@@ -814,9 +814,9 @@ contains
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        D2R => CONST_D2R
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank,     &
        PRC_NUM_X,      &
        PRC_NUM_Y,      &
@@ -1595,11 +1595,11 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_AGGREGATE, &
        FILE_HISTORY_Set_Attribute
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank,     &
        PRC_NUM_X,      &
        PRC_NUM_Y,      &

@@ -70,8 +70,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist / PARAM_USER / &
@@ -93,7 +93,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
@@ -123,22 +123,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Step
   subroutine USER_step
-    use scale_process, only: &
-       PRC_MPIstop
-    use scale_atmos_grid_cartesC, only : &
-       RCDX => ATMOS_GRID_CARTESC_RCDX, &
-       RCDY => ATMOS_GRID_CARTESC_RCDY, &
-       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
-       RFDX => ATMOS_GRID_CARTESC_RFDX, &
-       RFDY => ATMOS_GRID_CARTESC_RFDY, &
-       RFDZ => ATMOS_GRID_CARTESC_RFDZ
+    use scale_prc, only: &
+       PRC_abort
     use mod_atmos_vars, only: &
        DENS, &
        MOMX, &
        MOMY, &
        MOMZ, &
        RHOT
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_HAS_N, &
        PRC_HAS_E, &
        PRC_HAS_S, &
@@ -273,8 +266,13 @@ contains
   subroutine append_EddyDiff_zxy( RHOPHI,   & ! (inout)
        DENS                                 & ! (in)
        )
-    use scale_process
-
+    use scale_atmos_grid_cartesC, only : &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY, &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ
     use scale_time, only: &
        DTSEC => TIME_DTSEC
 
@@ -342,8 +340,13 @@ contains
   subroutine append_EddyDiff_zuy( RHOPHI,   & ! (inout)
        DENS                                 & ! (in)
        )
-
-    use scale_process
+    use scale_atmos_grid_cartesC, only : &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY, &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ
     use scale_time, only: &
        DTSEC => TIME_DTSEC
 
@@ -412,8 +415,13 @@ contains
   subroutine append_EddyDiff_zxv( RHOPHI,   & ! (inout)
        DENS                                 & ! (in)
        )
-
-
+    use scale_atmos_grid_cartesC, only : &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY, &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ
     use scale_time, only: &
        DTSEC => TIME_DTSEC
 
@@ -481,8 +489,13 @@ contains
   subroutine append_EddyDiff_wxy( RHOPHI,   & ! (inout)
        DENS                                 & ! (in)
        )
-
-
+    use scale_atmos_grid_cartesC, only : &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY, &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ
     use scale_time, only: &
        DTSEC => TIME_DTSEC
 

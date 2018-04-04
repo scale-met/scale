@@ -61,7 +61,7 @@ module mod_atmos_vars
   !
   !++ Public parameters & variables
   !
-  logical,               public :: ATMOS_RESTART_OUTPUT                 = .false.         !< Output restart file?
+  logical,                public :: ATMOS_RESTART_OUTPUT                = .false.         !< Output restart file?
 
   character(len=H_LONG),  public :: ATMOS_RESTART_IN_BASENAME           = ''              !< Basename of the input  file
   logical,                public :: ATMOS_RESTART_IN_AGGREGATE                            !< Switch to use aggregate file
@@ -72,9 +72,9 @@ module mod_atmos_vars
   character(len=H_MID),   public :: ATMOS_RESTART_OUT_TITLE             = 'ATMOS restart' !< Title    of the output file
   character(len=H_SHORT), public :: ATMOS_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
 
-  logical,               public :: ATMOS_RESTART_CHECK                 = .false.         !< Check value consistency?
-  character(len=H_LONG), public :: ATMOS_RESTART_CHECK_BASENAME        = 'restart_check'
-  real(RP),              public :: ATMOS_RESTART_CHECK_CRITERION       = 1.E-6_RP
+  logical,                public :: ATMOS_RESTART_CHECK                 = .false.         !< Check value consistency?
+  character(len=H_LONG),  public :: ATMOS_RESTART_CHECK_BASENAME        = 'restart_check'
+  real(RP),               public :: ATMOS_RESTART_CHECK_CRITERION       = 1.E-6_RP
 
   ! prognostic variables
   real(RP), public, target, allocatable :: DENS(:,:,:)   ! Density     [kg/m3]
@@ -98,6 +98,7 @@ module mod_atmos_vars
   real(RP), public, pointer             :: RHOT_av(:,:,:)
   real(RP), public, pointer             :: QTRC_av(:,:,:,:)
 
+  integer,  public                      :: I_QV
   real(RP), public, pointer             :: QV(:,:,:)
   real(RP), public, pointer             :: QC(:,:,:)
   real(RP), public, pointer             :: QR(:,:,:)
@@ -450,13 +451,14 @@ contains
   subroutine ATMOS_vars_setup
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file_history, only: &
        FILE_HISTORY_reg
     use scale_monitor, only: &
        MONITOR_reg
     use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_dry, &
        N_HYD, &
        I_QV, &
        I_HC, &
@@ -667,21 +669,7 @@ contains
 
 
     ! water content
-    if ( I_QV > 0 ) then
-       allocate( Qe(KA,IA,JA,N_HYD) )
-!OCL XFILL
-       Qe(:,:,:,:) = UNDEF
-
-       QV => QTRC_av(:,:,:,I_QV)
-       QC => Qe(:,:,:,I_HC)
-       QR => Qe(:,:,:,I_HR)
-       QI => Qe(:,:,:,I_HI)
-       QS => Qe(:,:,:,I_HS)
-       QG => Qe(:,:,:,I_HG)
-       QH => Qe(:,:,:,I_HH)
-
-       moist = .true.
-    else
+    if ( ATMOS_HYDROMETEOR_dry ) then
        allocate( ZERO(KA,IA,JA) )
 !OCL XFILL
        ZERO(:,:,:) = 0.0_RP
@@ -695,6 +683,20 @@ contains
        QH => ZERO
 
        moist = .false.
+    else
+       allocate( Qe(KA,IA,JA,N_HYD) )
+!OCL XFILL
+       Qe(:,:,:,:) = UNDEF
+
+       QV => QTRC_av(:,:,:,I_QV)
+       QC => Qe(:,:,:,I_HC)
+       QR => Qe(:,:,:,I_HR)
+       QI => Qe(:,:,:,I_HI)
+       QS => Qe(:,:,:,I_HS)
+       QG => Qe(:,:,:,I_HG)
+       QH => Qe(:,:,:,I_HH)
+
+       moist = .true.
     end if
 
 
@@ -875,7 +877,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Open restart file for reading atmospheric variables
   subroutine ATMOS_vars_restart_open
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        GRAV  => CONST_GRAV
@@ -965,7 +967,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart of atmospheric variables
   subroutine ATMOS_vars_restart_read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file, only: &
        FILE_get_AGGREGATE
@@ -1090,13 +1092,10 @@ contains
     real(RP) :: SFC_PRES(IA,JA)
     !---------------------------------------------------------------------------
 
-    call BOTTOM_estimate( DENS_av  (:,:,:), & ! [IN]
-                          PRES     (:,:,:), & ! [IN]
-                          REAL_CZ  (:,:,:), & ! [IN]
-                          TOPO_Zsfc(:,:),   & ! [IN]
-                          REAL_Z1  (:,:),   & ! [IN]
-                          SFC_DENS (:,:),   & ! [OUT]
-                          SFC_PRES (:,:)    ) ! [OUT]
+    call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                          DENS_av(:,:,:), PRES(:,:,:),                  & ! [IN]
+                          REAL_CZ(:,:,:), TOPO_Zsfc(:,:), REAL_Z1(:,:), & ! [IN]
+                          SFC_DENS(:,:), SFC_PRES(:,:)                  ) ! [OUT]
 
     call FILE_HISTORY_CARTESC_set_pres( PHYD    (:,:,:), & ! [IN]
                                         PHYDH   (:,:,:), & ! [IN]
@@ -1108,7 +1107,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Check and compare between last data and sample data
   subroutine ATMOS_vars_restart_check
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
     use scale_file, only: &
        FILE_get_AGGREGATE
@@ -1342,9 +1341,6 @@ contains
        ATMOS_GRID_CARTESC_REAL_TOTVOLZUY, &
        ATMOS_GRID_CARTESC_REAL_VOLZXV,    &
        ATMOS_GRID_CARTESC_REAL_TOTVOLZXV
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     implicit none
 
     real(RP) :: RHOQ(KA,IA,JA)
@@ -1434,12 +1430,10 @@ contains
        REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_specific_heat
-    use scale_atmos_diagnostic, only: &
-       ATMOS_DIAGNOSTIC_get_vel, &
-       ATMOS_DIAGNOSTIC_get_therm, &
-       ATMOS_DIAGNOSTIC_get_phyd
-    use scale_atmos_phy_mp, only: &
-       ATMOS_PHY_MP_mixingratio
+    use scale_atmos_diagnostic_cartesC, only: &
+       ATMOS_DIAGNOSTIC_CARTESC_get_vel, &
+       ATMOS_DIAGNOSTIC_CARTESC_get_therm, &
+       ATMOS_DIAGNOSTIC_CARTESC_get_phyd
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -1460,18 +1454,18 @@ contains
          TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! (in)
          Qdry(:,:,:), Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:)     ) ! (out)
 
-    call ATMOS_DIAGNOSTIC_get_vel( &
+    call ATMOS_DIAGNOSTIC_CARTESC_get_vel( &
          KA, KS, KE, IA, 1, IA, JA, 1, JA, &
          DENS_av(:,:,:), MOMZ_av(:,:,:), MOMX_av(:,:,:), MOMY_av(:,:,:), & ! (in)
          W(:,:,:), U(:,:,:), V(:,:,:)                                    ) ! (out)
 
-    call ATMOS_DIAGNOSTIC_get_therm( &
+    call ATMOS_DIAGNOSTIC_CARTESC_get_therm( &
          KA, KS, KE, IA, 1, IA, JA, 1, JA, &
          DENS_av(:,:,:), RHOT_av(:,:,:),                     & ! (in)
          Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:),            & ! (in)
          POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), EXNER(:,:,:) ) ! (out)
 
-    call ATMOS_DIAGNOSTIC_get_phyd( &
+    call ATMOS_DIAGNOSTIC_CARTESC_get_phyd( &
          KA, KS, KE, IA, 1, IA, JA, 1, JA, &
          DENS_av(:,:,:), PRES(:,:,:),    & ! (in)
          REAL_CZ(:,:,:), REAL_FZ(:,:,:), & ! (in)
@@ -1508,7 +1502,7 @@ contains
        Rvap  => CONST_Rvap,  &
        CPdry => CONST_CPdry, &
        CVdry => CONST_CVdry
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_grid_cartesC, only: &
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
@@ -1529,10 +1523,10 @@ contains
        ATMOS_SATURATION_psat_ice, &
        ATMOS_SATURATION_tdew_liq, &
        ATMOS_SATURATION_pote
-    use scale_atmos_diagnostic, only: &
-       ATMOS_DIAGNOSTIC_get_potv, &
-       ATMOS_DIAGNOSTIC_get_teml, &
-       ATMOS_DIAGNOSTIC_get_n2
+    use scale_atmos_diagnostic_cartesC, only: &
+       ATMOS_DIAGNOSTIC_CARTESC_get_potv, &
+       ATMOS_DIAGNOSTIC_CARTESC_get_teml, &
+       ATMOS_DIAGNOSTIC_CARTESC_get_n2
     implicit none
     character(len=*), intent(in)  :: vname
     real(RP),         intent(out) :: var(:,:,:)
@@ -1614,7 +1608,7 @@ contains
     case ( 'POTV' )
        if ( .not. DV_calclated(I_POTV) ) then
           call allocate_3D( POTV )
-          call ATMOS_DIAGNOSTIC_get_potv( &
+          call ATMOS_DIAGNOSTIC_CARTESC_get_potv( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                POTT(:,:,:), Rtot(:,:,:), & ! (in)
                POTV(:,:,:)               ) ! (out)
@@ -1629,7 +1623,7 @@ contains
           call ATMOS_vars_get_diagnostic( 'LHS', WORK3D(:,:,:) )
           call ATMOS_vars_get_diagnostic( 'QLIQ', WORK3D(:,:,:) )
           call ATMOS_vars_get_diagnostic( 'QICE', WORK3D(:,:,:) )
-          call ATMOS_DIAGNOSTIC_get_teml( &
+          call ATMOS_DIAGNOSTIC_CARTESC_get_teml( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                TEMP(:,:,:), LHV(:,:,:), LHS(:,:,:), & ! (in)
                QC(:,:,:), QI(:,:,:), CPtot(:,:,:),  & ! (in)
@@ -2031,7 +2025,7 @@ contains
     case ( 'N2' )
        if ( .not. DV_calclated(I_N2) ) then
           call allocate_3D( N2 )
-          call ATMOS_DIAGNOSTIC_get_n2( &
+          call ATMOS_DIAGNOSTIC_CARTESC_get_n2( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                POTT(:,:,:), Rtot(:,:,:), & !(in)
                REAL_CZ(:,:,:),           & !(in)
@@ -2314,7 +2308,7 @@ contains
   recursive subroutine ATMOS_vars_get_diagnostic_2D( &
        vname, &
        var )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
@@ -2495,7 +2489,7 @@ contains
        var )
     use scale_const, only: &
        CPdry => CONST_CPdry
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_comm, only: &
        COMM_horizontal_mean
@@ -2718,7 +2712,7 @@ contains
   !-----------------------------------------------------------------------------
   !> monitor output
   subroutine ATMOS_vars_monitor
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
     use scale_const, only: &
@@ -2828,10 +2822,7 @@ contains
     end if
 
     ! total evapolation
-    if ( moist ) then
-       call MONITOR_put( DV_MONIT_id(IM_EVAP), SFLX_QTRC(:,:,I_QV) )
-
-    endif
+    if ( moist ) call MONITOR_put( DV_MONIT_id(IM_EVAP), SFLX_QTRC(:,:,I_QV) )
 
     ! total precipitation
     if ( DV_MONIT_id(IM_PREC) > 0 ) then

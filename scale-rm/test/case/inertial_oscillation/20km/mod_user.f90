@@ -51,7 +51,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Config
   subroutine USER_config
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
 

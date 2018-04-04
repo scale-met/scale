@@ -227,7 +227,7 @@ contains
   subroutine ATMOS_PHY_RD_mstrnx_setup( &
        KA, KS, KE, &
        CZ, FZ )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_time, only: &
        TIME_NOWDATE
@@ -391,13 +391,8 @@ contains
        TIME_NOWDATE
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
-    use scale_atmos_saturation, only: &
-       SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
-       I_QV, &
        I_HC, &
        I_HI, &
        HYD_DENS
@@ -1162,8 +1157,8 @@ contains
        rflux_sfc_dn, &
        tauCLD_067u,  &
        emisCLD_105u  )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        GRAV => CONST_GRAV, &
        Pstd => CONST_Pstd, &
@@ -1390,7 +1385,7 @@ contains
 !             write operation prevents optimization (auto parallelization)
 !             if ( indexR(k,i,j,iaero) == -1 ) then
 !                write(*,*) 'xxx invalid index', k,i,j, iaero, aerosol_radi(k,i,j,iaero)
-!                call PRC_MPIstop
+!                call PRC_abort
 !             end if
           endif
        enddo

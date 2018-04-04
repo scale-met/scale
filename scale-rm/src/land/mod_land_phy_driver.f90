@@ -424,7 +424,8 @@ contains
                       LAND_PROPERTY  (:,:,I_Z0E),           & ! [IN]
                       dt                                    ) ! [IN]
 
-       call HYDROMETEOR_LHV( LHV(:,:), ATMOS_TEMP(:,:) )
+       call HYDROMETEOR_LHV( LIA, LIS, LIE, LJA, LJS, LJE, &
+                             ATMOS_TEMP(:,:), LHV(:,:) )
 
 !OCL XFILL
        do j = LJS, LJE

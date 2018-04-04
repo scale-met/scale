@@ -18,9 +18,9 @@ module mod_realinput_scale
   use scale_precision
   use scale_stdio
   use scale_tracer
-  use scale_process, only: &
+  use scale_prc, only: &
        myrank => PRC_myrank,  &
-       PRC_MPIstop
+       PRC_abort
   use scale_comm_cartesC_nest, only: &
        PARENT_KMAX,     &
        PARENT_IMAX,     &
@@ -165,12 +165,13 @@ contains
        pres_org,      &
        dens_org,      &
        pott_org,      &
+       qv_org,        &
+       qhyd_org,      &
+       qnum_org,      &
        qtrc_org,      &
        cz_org,        &
-       flg_bin,       &
-       flg_intrp,     &
        basename_org,  &
-       mptype_parent, &
+       same_mptype,   &
        dims,          &
        it             ) ! (in)
     use scale_const, only: &
@@ -188,16 +189,19 @@ contains
     use scale_atmos_hydrostatic, only: &
        HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
-       THERMODYN_pott      => ATMOS_THERMODYN_pott
-    use scale_atmos_phy_mp, only: &
-       QS_MP
+       THERMODYN_specific_heat  => ATMOS_THERMODYN_specific_heat, &
+       THERMODYN_rhot2temp_pres => ATMOS_THERMODYN_rhot2temp_pres
+    use mod_atmos_phy_mp_vars, only: &
+       QS_MP, &
+       QE_MP
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       HYD_NAME, &
+       NUM_NAME
     use scale_atmos_grid_cartesC_metric, only: &
        rotc => ATMOS_GRID_CARTESC_METRIC_ROTC
     use scale_topography, only: &
        topo => TOPO_Zsfc
-    use scale_atmos_phy_mp_convert, only: &
-       ATMOS_PHY_MP_bulk2bin
     implicit none
 
     real(RP),         intent(out) :: velz_org(:,:,:)
@@ -206,12 +210,13 @@ contains
     real(RP),         intent(out) :: pres_org(:,:,:)
     real(RP),         intent(out) :: dens_org(:,:,:)
     real(RP),         intent(out) :: pott_org(:,:,:)
+    real(RP),         intent(out) :: qv_org  (:,:,:)
+    real(RP),         intent(out) :: qhyd_org(:,:,:,:)
+    real(RP),         intent(out) :: qnum_org(:,:,:,:)
     real(RP),         intent(out) :: qtrc_org(:,:,:,:)
     real(RP),         intent(in)  :: cz_org(:,:,:)
-    logical,          intent(in)  :: flg_bin            ! flag for SBM(S10)
-    logical,          intent(in)  :: flg_intrp          ! flag for interpolation of SBM
     character(len=*), intent(in)  :: basename_org
-    integer,          intent(in)  :: mptype_parent
+    logical,          intent(in)  :: same_mptype
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: it
 
@@ -222,6 +227,7 @@ contains
     real(RP) :: momy_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: rhot_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: tsfc_org(          dims(2),dims(3))
+    real(RP) :: Qdry, Rtot, CVtot, CPtot
     real(RP) :: temp_org
     real(RP) :: dz
 
@@ -231,7 +237,7 @@ contains
     integer :: rank
 
     integer :: fid
-    integer :: k, i, j, iq, iqa
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     do i = 1, size( NEST_TILE_ID(:) )
@@ -289,47 +295,63 @@ contains
        end do
 
 !OCL XFILL
-       do iq = 1, QA
-          qtrc_org(:,xs:xe,ys:ye,iq) = 0.0_RP
+       do iq = 1, N_HYD
+          qhyd_org(:,xs:xe,ys:ye,iq) = 0.0_RP
+          qnum_org(:,xs:xe,ys:ye,iq) = 0.0_RP
        end do
 
-       if( flg_bin .and. flg_intrp ) then  !--- tracers created from parent domain by interpolation
+       if( same_mptype ) then
 
-          if( IO_L ) write(IO_FID_LOG,*) '+++ SDF of SBM(S10) is interpolated from Qxx and Nxx'
-          if( IO_L ) write(IO_FID_LOG,*) '+++ of outer bulk MP model'
-
-          call ATMOS_PHY_MP_bulk2bin( xs, xe,       & ! [IN]
-                                      ys, ye,       & ! [IN]
-                                      dims,         & ! [IN]
-                                      it,           & ! [IN]
-                                      rank,         & ! [IN]
-                                      handle,       & ! [IN]
-                                      BASENAME_ORG, & ! [IN]
-                                      dens_org,     & ! [IN]
-                                      qtrc_org      ) ! [INOUT]
-          do iq = 1, QA
-             qtrc_org(2,xs:xe,ys:ye,iq) = qtrc_org(3,xs:xe,ys:ye,iq)
-          enddo
-
-       else !--- tracers of paremt domain directly used
-
-          do iq = 1, mptype_parent
-             iqa = QS_MP + iq - 1
+          do iq = QS_MP, QE_MP
              call FILE_read( fid, TRACER_NAME(iq), read3D(:,:,:), step=it )
-!OCL XFILL
              do k = 1, dims(1)
-                qtrc_org(k+2,xs:xe,ys:ye,iqa) = read3D(:,:,k)
+                qtrc_org(k+2,xs:xe,ys:ye,iq) = read3D(:,:,k)
              end do
 !OCL XFILL
-             qtrc_org(2,xs:xe,ys:ye,iqa) = qtrc_org(3,xs:xe,ys:ye,iqa)
+             qtrc_org(2,xs:xe,ys:ye,iq) = qtrc_org(3,xs:xe,ys:ye,iq)
 !OCL XFILL
-             qtrc_org(1,xs:xe,ys:ye,iqa) = qtrc_org(3,xs:xe,ys:ye,iqa)
+             qtrc_org(1,xs:xe,ys:ye,iq) = qtrc_org(3,xs:xe,ys:ye,iq)
+          enddo
+
+       else 
+
+          call FILE_read( fid, "QV", read3D(:,:,:), step=it, allow_missing=.true. )
+!OCL XFILL
+          do k = 1, dims(1)
+             qv_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
+          end do
+!OCL XFILL
+          qv_org(2,xs:xe,ys:ye) = qv_org(3,xs:xe,ys:ye)
+!OCL XFILL
+          qv_org(1,xs:xe,ys:ye) = qv_org(3,xs:xe,ys:ye)
+
+          do iq = 1, N_HYD
+             call FILE_read( fid, HYD_NAME(iq), read3D(:,:,:), step=it, allow_missing=.true. )
+!OCL XFILL
+             do k = 1, dims(1)
+                qhyd_org(k+2,xs:xe,ys:ye,iq) = read3D(:,:,k)
+             end do
+!OCL XFILL
+             qhyd_org(2,xs:xe,ys:ye,iq) = qhyd_org(3,xs:xe,ys:ye,iq)
+!OCL XFILL
+             qhyd_org(1,xs:xe,ys:ye,iq) = qhyd_org(3,xs:xe,ys:ye,iq)
+
+             ! number density
+             call FILE_read( fid, NUM_NAME(iq), read3D(:,:,:), step=it, allow_missing=.true. )
+!OCL XFILL
+             do k = 1, dims(1)
+                qnum_org(k+2,xs:xe,ys:ye,iq) = read3D(:,:,k)
+             end do
+!OCL XFILL
+             qnum_org(2,xs:xe,ys:ye,iq) = qnum_org(3,xs:xe,ys:ye,iq)
+!OCL XFILL
+             qnum_org(1,xs:xe,ys:ye,iq) = qnum_org(3,xs:xe,ys:ye,iq)
           end do
 
        endif
 
 !       call FILE_read( fid, "Q2", read2D(:,:), step=it )
-!       qtrc_org(2,xs:xe,ys:ye,I_QV) = read2D(:,:)
+!       qv_org(2,xs:xe,ys:ye) = read2D(:,:)
 
     end do
 
@@ -394,14 +416,12 @@ contains
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 3, dims(1)+2
-       call THERMODYN_temp_pres( temp_org,          & ! [OUT]
-                                 pres_org(k,i,j),   & ! [OUT]
-                                 dens_org(k,i,j),   & ! [IN]
-                                 rhot_org(k,i,j),   & ! [IN]
-                                 qtrc_org(k,i,j,:), & ! [IN]
-                                 TRACER_CV(:),      & ! [IN]
-                                 TRACER_R(:),       & ! [IN]
-                                 TRACER_MASS(:)     ) ! [IN]
+       call THERMODYN_specific_heat( QA, &
+                                     qtrc_org(k,i,j,:), &
+                                     TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+                                     Qdry, Rtot, CVtot, CPtot                                 ) ! [OUT]
+       call THERMODYN_rhot2temp_pres( dens_org(k,i,j), rhot_org(k,i,j), Rtot, CVtot, CPtot, &
+                                      temp_org, pres_org(k,i,j)                             )
     end do
     end do
     end do

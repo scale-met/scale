@@ -19,7 +19,7 @@ module scale_file
   use scale_stdio
   use scale_precision
   use scale_file_h
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_abort
   !-----------------------------------------------------------------------------
   implicit none
@@ -201,7 +201,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine FILE_setup( &
        myrank )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_set_file_closer
     implicit none
 
@@ -4265,7 +4265,7 @@ contains
       existed,   &
       aggregate, &
       postfix    )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD, &
        PRC_COMM_NULL
     implicit none

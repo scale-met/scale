@@ -67,8 +67,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CNV2D_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        D2R  => CONST_D2R
     use scale_comm, only: &
@@ -106,7 +106,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CNV2D. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNV2D)
 
@@ -125,7 +125,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Interpolation type : nearest neighbor'
     else
        write(*,*) 'xxx Not appropriate interpolation type. Check!', trim(CNV2D_interpolation_type)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( CNV2D_DoNothing ) then
@@ -173,8 +173,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine CNV2D_GrADS
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        PI    => CONST_PI,    &
@@ -262,34 +262,34 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CNV2D_GrADS. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNV2D_GrADS)
 
     if ( GrADS_NLAT <= 0 ) then
        write(*,*) 'xxx GrADS_NLAT (number of latitude tile)  should be positive. Check!', GrADS_NLAT
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( GrADS_NLON <= 0 ) then
        write(*,*) 'xxx GrADS_NLON (number of longitude tile) should be positive. Check!', GrADS_NLON
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( GrADS_DLAT <= 0.0_RP ) then
        write(*,*) 'xxx GrADS_DLAT (width (deg.) of latitude tile) should be positive. Check!', GrADS_DLAT
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( GrADS_DLON <= 0.0_RP ) then
        write(*,*) 'xxx GrADS_DLON (width (deg.) of longitude tile) should be positive. Check!', GrADS_DLON
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if (       GrADS_IN_CATALOGUE == '' &
          .AND. GrADS_IN_FILENAME  == '' ) then
        write(*,*) 'xxx Neither catalogue file nor single file do not specified. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if    ( GrADS_IN_DATATYPE == 'REAL8' ) then
@@ -301,7 +301,7 @@ contains
     else
        write(*,*) 'xxx Not appropriate type for GrADS_IN_DATATYPE. Check!'
        write(*,*) 'xxx REAL8, REAL4, INT2 are available. requested:', trim(GrADS_IN_DATATYPE)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if    ( GrADS_LATORDER_N2S ) then
@@ -366,7 +366,7 @@ contains
 
           if ( ierr /= 0 ) then
              write(*,*) 'xxx catalogue file not found!', trim(fname)
-             call PRC_MPIstop
+             call PRC_abort
           endif
 
           do t = 1, TILE_nlim
@@ -490,8 +490,8 @@ contains
        TILE_MISSINGVAL,   &
        nowstep,           &
        VAR2D              )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        RADIUS => CONST_RADIUS, &
        PI     => CONST_PI,     &
@@ -614,7 +614,7 @@ contains
 
                 if ( ierr /= 0 ) then
                    write(*,*) 'xxx data file not found!'
-                   call PRC_MPIstop
+                   call PRC_abort
                 endif
 
                 read(fid,rec=nowstep) TILE_VALUE_DP(:,:)
@@ -647,7 +647,7 @@ contains
 
                 if ( ierr /= 0 ) then
                    write(*,*) 'xxx data file not found!'
-                   call PRC_MPIstop
+                   call PRC_abort
                 endif
 
                 read(fid,rec=nowstep) TILE_VALUE_SP(:,:)
@@ -680,7 +680,7 @@ contains
 
                 if ( ierr /= 0 ) then
                    write(*,*) 'xxx data file not found!'
-                   call PRC_MPIstop
+                   call PRC_abort
                 endif
 
                 read(fid,rec=nowstep) TILE_VALUE_I2(:,:)
@@ -852,8 +852,8 @@ contains
        TILE_MISSINGVAL,   &
        nowstep,           &
        VAR2D              )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        RADIUS => CONST_RADIUS, &
        PI     => CONST_PI,     &
@@ -974,7 +974,7 @@ contains
 
                 if ( ierr /= 0 ) then
                    write(*,*) 'xxx data file not found!'
-                   call PRC_MPIstop
+                   call PRC_abort
                 endif
 
                 read(fid,rec=nowstep) TILE_VALUE_DP(:,:)
@@ -1007,7 +1007,7 @@ contains
 
                 if ( ierr /= 0 ) then
                    write(*,*) 'xxx data file not found!'
-                   call PRC_MPIstop
+                   call PRC_abort
                 endif
 
                 read(fid,rec=nowstep) TILE_VALUE_SP(:,:)
@@ -1040,7 +1040,7 @@ contains
 
                 if ( ierr /= 0 ) then
                    write(*,*) 'xxx data file not found!'
-                   call PRC_MPIstop
+                   call PRC_abort
                 endif
 
                 read(fid,rec=nowstep) TILE_VALUE_I2(:,:)

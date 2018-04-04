@@ -121,8 +121,8 @@ module scale_ocean_sfc
 contains
 
   subroutine OCEAN_SFC_setup( OCEAN_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_ocean_sfc_const, only: &
        OCEAN_SFC_CONST_setup, &
        OCEAN_SFC_CONST

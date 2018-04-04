@@ -58,6 +58,7 @@ module scale_atmos_dyn_tinteg_large
           FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
           FLAG_FCT_ALONG_STREAM,                                &
           USE_AVERAGE,                                          &
+          I_QV,                                                 &
           DTL, DTS                                              )
        use scale_precision
        use scale_atmos_grid_cartesC_index
@@ -157,6 +158,8 @@ module scale_atmos_dyn_tinteg_large
        logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
        logical,  intent(in)    :: USE_AVERAGE
 
+       integer,  intent(in)    :: I_QV
+
        real(DP), intent(in)    :: DTL
        real(DP), intent(in)    :: DTS
      end subroutine large
@@ -185,8 +188,8 @@ contains
     use scale_precision
     use scale_atmos_grid_cartesC_index
     use scale_index
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_dyn_tinteg_large_euler, only: &
        ATMOS_DYN_Tinteg_large_euler_setup, &
        ATMOS_DYN_Tinteg_large_euler
@@ -211,7 +214,7 @@ contains
        ! do nothing
     case default
        write(*,*) 'xxx ATMOS_DYN_TINTEG_LARGE_TYPE is invalid: ', ATMOS_DYN_Tinteg_large_TYPE
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     return

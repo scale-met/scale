@@ -98,7 +98,9 @@ contains
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_setup
     use mod_atmos_phy_mp_vars, only: &
-       QA_MP
+       QA_MP, &
+       QS_MP, &
+       QE_MP
     use mod_atmos_phy_ch_driver, only: &
        ATMOS_PHY_CH_driver_setup
     use mod_atmos_phy_ae_driver, only: &
@@ -113,6 +115,15 @@ contains
        ATMOS_PHY_BL_driver_setup
     use mod_atmos_phy_cp_driver, only: &
        ATMOS_PHY_CP_driver_setup
+    use scale_atmos_grid_cartesC, only: &
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       FZ => ATMOS_GRID_CARTESC_FZ
+    use scale_atmos_grid_cartesC_real, only: &
+       BASE_LON => ATMOS_GRID_CARTESC_REAL_BASEPOINT_LON, &
+       BASE_LAT => ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT, &
+       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ, &
+       REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI
     implicit none
     !---------------------------------------------------------------------------
 
@@ -123,14 +134,16 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Setup each atmospheric components ...'
 
     !--- setup solar insolation
-    call ATMOS_SOLARINS_setup( TIME_NOWDATE(1) )
+    call ATMOS_SOLARINS_setup( BASE_LON, BASE_LAT, TIME_NOWDATE(1) )
 
     call PROF_rapstart('ATM_Refstate', 2)
-    call ATMOS_REFSTATE_setup
+    call ATMOS_REFSTATE_setup( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                               CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
+
     call PROF_rapend  ('ATM_Refstate', 2)
 
     call PROF_rapstart('ATM_Boundary', 2)
-    call ATMOS_BOUNDARY_setup( QA_MP )
+    call ATMOS_BOUNDARY_setup( QA_MP, QS_MP, QE_MP )
     call PROF_rapend  ('ATM_Boundary', 2)
 
     ! setup each components
@@ -162,6 +175,10 @@ contains
        MOMY,                       &
        RHOT,                       &
        QTRC,                       &
+       QV,                         &
+       POTT,                       &
+       TEMP,                       &
+       PRES,                       &
        DENS_tp,                    &
        MOMZ_tp,                    &
        RHOU_tp,                    &
@@ -171,6 +188,9 @@ contains
        RHOQ_tp,                    &
        MOMX_tp,                    &
        MOMY_tp
+    use mod_atmos_phy_mp_vars, only: &
+       QS_MP, &
+       QE_MP
     use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_resume
     use scale_atmos_boundary, only: &
@@ -183,6 +203,17 @@ contains
        ATMOS_PHY_AE_driver_resume
     use mod_atmos_phy_rd_driver, only: &
        ATMOS_PHY_RD_driver_resume
+    use scale_atmos_grid_cartesC, only: &
+       CZ   => ATMOS_GRID_CARTESC_CZ,  &
+       FZ   => ATMOS_GRID_CARTESC_FZ,  &
+       FDZ  => ATMOS_GRID_CARTESC_FDZ, &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ, &
+       REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI
+    use scale_time, only: &
+       TIME_NOWSEC
     implicit none
     !---------------------------------------------------------------------------
 
@@ -192,12 +223,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Resume each atmospheric components 1 ...'
 
-    call PROF_rapstart('ATM_Refstate', 2)
-    call ATMOS_REFSTATE_resume( DENS, RHOT, QTRC )
-    call PROF_rapend  ('ATM_Refstate', 2)
-
     call PROF_rapstart('ATM_Boundary', 2)
-    call ATMOS_BOUNDARY_resume( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+    call ATMOS_BOUNDARY_resume( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC(:,:,:,QS_MP:QE_MP) )
     call PROF_rapend  ('ATM_Boundary', 2)
 
     !########## Get Surface Boundary Condition ##########
@@ -234,6 +261,16 @@ contains
     !########## Calculate diagnostic variables ##########
     call ATMOS_vars_calc_diagnostics
     call ATMOS_vars_history_setpres
+
+    !########## Set reference state ##########
+    call PROF_rapstart('ATM_Refstate', 2)
+    call ATMOS_REFSTATE_resume( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), &
+                                CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 &
+                                REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:),               &
+                                TIME_NOWSEC                                                    )
+
+    call PROF_rapend  ('ATM_Refstate', 2)
 
     !########## Set Surface Boundary Condition ##########
     call PROF_rapstart('ATM_SfcExch', 2)
@@ -328,7 +365,7 @@ contains
        ATMOS_sw_phy_cp
     use mod_atmos_vars, only: &
        ATMOS_vars_history,         &
-       ATMOS_vars_calc_diagnostics,     &
+       ATMOS_vars_calc_diagnostics,&
        ATMOS_vars_history_setpres, &
        ATMOS_vars_monitor,         &
        DENS,                       &
@@ -337,6 +374,10 @@ contains
        MOMY,                       &
        RHOT,                       &
        QTRC,                       &
+       QV,                         &
+       PRES,                       &
+       POTT,                       &
+       TEMP,                       &
        DENS_tp,                    &
        MOMZ_tp,                    &
        RHOU_tp,                    &
@@ -366,6 +407,17 @@ contains
        ATMOS_PHY_BL_driver_calc_tendency
     use mod_atmos_phy_cp_driver, only: &
        ATMOS_PHY_CP_driver
+    use scale_atmos_grid_cartesC, only: &
+       CZ   => ATMOS_GRID_CARTESC_CZ,  &
+       FZ   => ATMOS_GRID_CARTESC_FZ,  &
+       FDZ  => ATMOS_GRID_CARTESC_FDZ, &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ, &
+       REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI
+    use scale_time, only: &
+       TIME_NOWSEC
     implicit none
     !---------------------------------------------------------------------------
 
@@ -381,14 +433,12 @@ contains
        call PROF_rapend  ('ATM_Dynamics', 1)
     endif
 
-
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
        call PROF_rapstart('ATM_Boundary', 2)
        call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! [INOUT]
        call PROF_rapend  ('ATM_Boundary', 2)
     endif
-
 
     !########## Calculate diagnostic variables ##########
     call ATMOS_vars_calc_diagnostics
@@ -413,7 +463,11 @@ contains
     !########## Reference State ###########
     if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
        call PROF_rapstart('ATM_Refstate', 2)
-       call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! [IN]
+       call ATMOS_REFSTATE_update( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                   DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
+                                   CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
+                                   REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:),               & ! [IN]
+                                   TIME_NOWSEC                                                    ) ! [IN]
        call PROF_rapend  ('ATM_Refstate', 2)
     endif
 
@@ -586,8 +640,8 @@ contains
   !> Set surface boundary condition
   subroutine ATMOS_SURFACE_SET( countup )
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_CZ, &
-       ATMOS_GRID_CARTESC_REAL_Z1
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
     use scale_topography, only: &
        TOPO_Zsfc
     use scale_atmos_bottom, only: &
@@ -640,13 +694,10 @@ contains
        enddo
 
        ! planetary boundary layer
-       call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
-                             PRES     (:,:,:), & ! [IN]
-                             ATMOS_GRID_CARTESC_REAL_CZ  (:,:,:), & ! [IN]
-                             TOPO_Zsfc(:,:),   & ! [IN]
-                             ATMOS_GRID_CARTESC_REAL_Z1  (:,:),   & ! [IN]
-                             SFC_DENS (:,:),   & ! [OUT]
-                             SFC_PRES (:,:)    ) ! [OUT]
+       call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                             DENS(:,:,:), PRES(:,:,:),                     & ! [IN]
+                             REAL_CZ(:,:,:), TOPO_Zsfc(:,:), REAL_Z1(:,:), & ! [IN]
+                             SFC_DENS(:,:), SFC_PRES(:,:)                  ) ! [OUT]
 
        call CPL_putATM( TEMP       (KS,:,:),   & ! [IN]
                         PRES       (KS,:,:),   & ! [IN]
@@ -668,4 +719,7 @@ contains
     return
   end subroutine ATMOS_SURFACE_SET
 
+  subroutine ATMOS_driver_boundary_update
+
+  end subroutine ATMOS_driver_boundary_update
 end module mod_atmos_driver

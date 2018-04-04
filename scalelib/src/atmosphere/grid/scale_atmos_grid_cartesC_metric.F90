@@ -68,8 +68,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_GRID_CARTESC_METRIC_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist / PARAM_ATMOS_GRID_CARTESC_METRIC / &
@@ -92,7 +92,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_GRID_CARTESC_METRIC. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_GRID_CARTESC_METRIC)
 
@@ -138,7 +138,7 @@ contains
       call ATMOS_GRID_CARTESC_METRIC_thin_wall
     case default
        write(*,*) 'xxx Unsupported ATMOS_GRID_CARTESC_METRIC_TOPO_type. STOP'
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     ! output metrics (for debug)
@@ -340,8 +340,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_GRID_CARTESC_METRIC_thin_wall
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_CZ, &
        ATMOS_GRID_CARTESC_CX, &
@@ -541,7 +541,7 @@ contains
          if ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(k,i,j,n) > 1.D0 ) then
             write(*,*) 'xxx Facter miss! Check!'
             write(*,*) k,i,j,n,ATMOS_GRID_CARTESC_METRIC_LIMYZ(k,i,j,n)
-            call PRC_MPIstop
+            call PRC_abort
          endif
        enddo
        enddo

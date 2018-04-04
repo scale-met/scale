@@ -114,8 +114,8 @@ contains
   !-----------------------------------------------------------------------------
   !> register
   subroutine ATMOS_PHY_TB_config( TB_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_phy_tb_smg, only: &
        ATMOS_PHY_TB_smg_config, &
        ATMOS_PHY_TB_smg_setup, &
@@ -167,7 +167,7 @@ contains
     case default
 
        write(*,*) 'xxx ATMOS_PHY_TB_TYPE is invalid: ', TB_TYPE
-       call PRC_MPIstop
+       call PRC_abort
 
     end select
 

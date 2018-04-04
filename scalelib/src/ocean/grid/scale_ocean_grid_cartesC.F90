@@ -57,7 +57,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine OCEAN_GRID_CARTESC_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file, only: &
        FILE_AGGREGATE
@@ -143,7 +143,7 @@ contains
     use scale_file, only: &
        FILE_open, &
        FILE_read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
     implicit none
 

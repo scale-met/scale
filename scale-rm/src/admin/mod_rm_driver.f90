@@ -59,15 +59,15 @@ contains
        cnf_fname         )
     use scale_file, only: &
        FILE_Close_All
-    use scale_process, only: &
-       PRC_MPIstop,  &
+    use scale_prc, only: &
+       PRC_abort,  &
        PRC_LOCAL_setup
     use scale_fpm, only: &
        FPM_alive,       &
        FPM_Polling,     &
        FPM_POLLING_FREQ
-    use scale_rm_process, only: &
-       PRC_setup
+    use scale_prc_cartesC, only: &
+       PRC_CARTESC_setup
     use scale_const, only: &
        CONST_setup
     use scale_calendar, only: &
@@ -172,6 +172,8 @@ contains
        ATMOS_driver_setup,    &
        ATMOS_driver,           &
        ATMOS_driver_finalize
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP
     use mod_ocean_admin, only: &
        OCEAN_admin_setup, &
        OCEAN_do
@@ -231,7 +233,7 @@ contains
     call IO_LOG_setup( myrank, ismaster )
 
     ! setup process
-    call PRC_setup
+    call PRC_CARTESC_setup
 
     ! setup PROF
     call PROF_setup
@@ -310,7 +312,7 @@ contains
     call FILE_EXTERNAL_INPUT_CARTESC_setup
 
     ! setup nesting grid
-    call COMM_CARTESC_NEST_setup ( intercomm_parent, intercomm_child )
+    call COMM_CARTESC_NEST_setup ( QA_MP, intercomm_parent, intercomm_child )
 
     ! setup common tools
     call ATMOS_HYDROSTATIC_setup
@@ -400,7 +402,7 @@ contains
             call FPM_Polling( .true., sign_exit )
             if ( sign_exit ) then
                if( IO_L ) write(IO_FID_LOG,*) 'xxx receive stop signal'
-               call PRC_MPIstop
+               call PRC_abort
             endif
             fpm_counter = 0
          endif

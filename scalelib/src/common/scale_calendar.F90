@@ -88,8 +88,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CALENDAR_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist / PARAM_CALENDAR / &
@@ -110,7 +110,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_CALENDAR. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_CALENDAR)
 
@@ -423,8 +423,8 @@ contains
        second, &
        value,  &
        unit    )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(DP),         intent(out) :: second !< second
@@ -445,7 +445,7 @@ contains
        second = value * CALENDAR_SEC * CALENDAR_MIN * CALENDAR_HOUR
     case default
        write(*,*) 'xxx Unsupported UNIT: ', trim(unit), ', ', value
-       call PRC_MPIstop
+       call PRC_abort
     endselect
 
     return
@@ -457,8 +457,8 @@ contains
      value,  &
      second, &
      unit    )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(DP),         intent(out) :: value
@@ -479,7 +479,7 @@ contains
        value = second / (CALENDAR_SEC * CALENDAR_MIN * CALENDAR_HOUR)
     case default
        write(*,*) 'xxx Unsupported UNIT: ', trim(unit), ', ', value
-       call PRC_MPIstop
+       call PRC_abort
     endselect
 
   end subroutine CALENDAR_sec2unit
@@ -487,8 +487,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Convert time in units of the CF convention to second
   function CALENDAR_CFunits2sec( cftime, cfunits, offset_year, startdaysec ) result( sec )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(DP),         intent(in) :: cftime
@@ -519,7 +519,7 @@ contains
           write(*,*) 'xxx units for time is invalid (year)'
           write(*,*) 'xxx ', trim(cfunits)
           write(*,*) 'xxx ', trim(buf)
-          call PRC_MPIstop
+          call PRC_abort
        end if
        read(buf(1:4),*) date(1) ! year
        buf = buf(6:)
@@ -529,7 +529,7 @@ contains
           write(*,*) 'xxx units for time is invalid (month)'
           write(*,*) 'xxx ', trim(cfunits)
           write(*,*) 'xxx ', trim(buf)
-          call PRC_MPIstop
+          call PRC_abort
        end if
        read(buf(1:2),*) date(2) ! month
        buf = buf(4:)
@@ -539,7 +539,7 @@ contains
           write(*,*) 'xxx units for time is invalid (day)'
           write(*,*) 'xxx ', trim(cfunits)
           write(*,*) 'xxx ', trim(buf)
-          call PRC_MPIstop
+          call PRC_abort
        end if
        read(buf(1:2),*) date(3) ! day
        buf = buf(4:)
@@ -549,7 +549,7 @@ contains
           write(*,*) 'xxx units for time is invalid (hour)'
           write(*,*) 'xxx ', trim(cfunits)
           write(*,*) 'xxx ', trim(buf)
-          call PRC_MPIstop
+          call PRC_abort
        end if
        read(buf(1:2),*) date(4) ! hour
        buf = buf(4:)
@@ -559,7 +559,7 @@ contains
           write(*,*) 'xxx units for time is invalid (min)'
           write(*,*) 'xxx ', trim(cfunits)
           write(*,*) 'xxx ', trim(buf)
-          call PRC_MPIstop
+          call PRC_abort
        end if
        read(buf(1:2),*) date(5) ! min
        buf = buf(4:)
@@ -569,7 +569,7 @@ contains
           write(*,*) 'xxx ', trim(cfunits)
           write(*,*) 'xxx ', trim(buf)
           write(*,*) 'xxx ', len_trim(buf)
-          call PRC_MPIstop
+          call PRC_abort
        end if
        read(buf(1:2),*) date(6) ! sec
 

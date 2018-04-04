@@ -87,8 +87,8 @@ contains
        VAR_NAME,       &
        VAR_DESC,       &
        VAR_UNIT        )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
@@ -100,7 +100,7 @@ contains
 
     if ( ATMOS_DYN_TYPE /= 'FVM-HEVI' .AND. ATMOS_DYN_TYPE /= 'HEVI' ) then
        write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HEVI. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     VA_out      = VA_FVM_HEVI
@@ -1095,8 +1095,8 @@ contains
        C,         & ! (inout)
        F1, F2, F3 ) ! (in)
 
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
     real(RP), intent(inout) :: C(KMAX-1)
     real(RP), intent(in)    :: F1(KA)
@@ -1141,8 +1141,8 @@ contains
     use scale_const, only: &
          EPS => CONST_EPS, &
          GRAV => CONST_GRAV
-    use scale_process, only: &
-         PRC_MPIstop
+    use scale_prc, only: &
+         PRC_abort
     use scale_atmos_grid_cartesC, only: &
          RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
          RFDZ => ATMOS_GRID_CARTESC_RFDZ
@@ -1231,7 +1231,7 @@ contains
        if ( abs(error) > small ) then
           write(*,*)"HEVI: DENS error", k, i, j, error, lhs, rhs
           write(*,*)eps
-          call PRC_MPIstop
+          call PRC_abort
        endif
     enddo
 
@@ -1251,7 +1251,7 @@ contains
           write(*,*) - J33G * ( DPRES(k+1) - DPRES(k) ) * RFDZ(k) / G(k,I_XYW) &
              - GRAV * ( DENS(k+1) -REF_dens(k+1) + DENS(k) -REF_dens(k) ) * 0.5_RP &
              + Sw(k)
-          call PRC_MPIstop
+          call PRC_abort
        endif
     enddo
 
@@ -1265,7 +1265,7 @@ contains
        endif
        if ( abs(error) > small ) then
           write(*,*)"HEVI: RHOT error", k, i, j, error, lhs, rhs
-          call PRC_MPIstop
+          call PRC_abort
        endif
     enddo
 

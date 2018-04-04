@@ -61,8 +61,8 @@ contains
   !> Setup
   subroutine ATMOS_DYN_Tinteg_large_euler_setup( &
        tinteg_type )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     implicit none
@@ -74,7 +74,7 @@ contains
 
     if ( tinteg_type /= 'EULER' ) then
        write(*,*) 'xxx TINTEG_LARGE_TYPE is not EULER. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     return
@@ -107,6 +107,7 @@ contains
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
        USE_AVERAGE,                                          &
+       I_QV,                                                 &
        DTL, DTS                                              )
     use scale_const, only: &
        Rdry   => CONST_Rdry, &
@@ -234,6 +235,8 @@ contains
 
     logical,  intent(in)    :: USE_AVERAGE
 
+    integer,  intent(in)    :: I_QV
+
     real(DP), intent(in)    :: DTL
     real(DP), intent(in)    :: DTS
 
@@ -263,6 +266,7 @@ contains
          FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       & ! (in)
          FLAG_FCT_ALONG_STREAM,                                & ! (in)
          USE_AVERAGE,                                          & ! (in)
+         I_QV,                                                 & ! (in)
          DTL, DTS, .true.                                      ) ! (in)
 
     return

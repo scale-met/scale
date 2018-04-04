@@ -63,8 +63,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LAND_PHY_SLAB_setup( LAND_TYPE )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        DWATR => CONST_DWATR, &
        CL    => CONST_CL
@@ -106,14 +106,14 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_PHY_SLAB. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_PHY_SLAB)
 
     if ( LAND_PHY_SLAB_nudging ) then
        if ( LAND_PHY_SLAB_nudging_basename(1) == '' ) then
           write(*,*) 'xxx LAND_PHY_SLAB_nudging_basename is necessary !!'
-          call PRC_MPIstop
+          call PRC_abort
        end if
 
        call FILE_EXTERNAL_INPUT_regist( LAND_PHY_SLAB_nudging_basename(:),           & ! [IN]
@@ -174,8 +174,8 @@ contains
        DWATR => CONST_DWATR
     use scale_time, only: &
        NOWDAYSEC => TIME_NOWDAYSEC
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_file_external_input, only: &
        FILE_EXTERNAL_INPUT_update
     use scale_landuse, only: &
@@ -234,7 +234,7 @@ contains
                           error        ) ! (out)
       if ( error ) then
          write(*,*) 'xxx Requested data is not found!'
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
       call FILE_EXTERNAL_INPUT_update( &
@@ -244,7 +244,7 @@ contains
                          error         ) ! (out)
       if ( error ) then
          write(*,*) 'xxx Requested data is not found!'
-         call PRC_MPIstop
+         call PRC_abort
       end if
 
       if( LAND_PHY_SLAB_nudging_tau > 0.0_RP ) then

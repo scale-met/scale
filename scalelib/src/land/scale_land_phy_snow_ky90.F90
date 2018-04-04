@@ -79,8 +79,8 @@ contains
   !----------------------------------------------------------------------------------------------!
   !> Setup
   subroutine LAND_PHY_SNOW_KY90_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
 
     implicit none
     real(RP)                  :: snow_conductivity     = 0.42_RP
@@ -113,7 +113,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_PHY_SNOW_KY90. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_PHY_SNOW_KY90)
 
@@ -158,8 +158,8 @@ contains
              SFLX_SW_dn,             & ! [IN]
              SFLX_LW_dn,             & ! [IN]
              dt                      ) ! [IN]
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_saturation, only:  &
@@ -787,7 +787,7 @@ subroutine calculationMO(GFLUX, CSRHOS, ZN1, TS1, ZN2, TS2, &
                          MELT, QCC, QFUSION, time)
   use scale_const, only:   &
        T0    => CONST_TEM00
-  use scale_process, only: &
+  use scale_prc, only: &
        PRC_abort
   implicit none
   real(RP), intent(in)  :: GFLUX, CSRHOS, ZN1, TS1, TS2, ZN2

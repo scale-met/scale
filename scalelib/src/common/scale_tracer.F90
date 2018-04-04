@@ -61,8 +61,8 @@ contains
        QS,                   &
        NQ, NAME, DESC, UNIT, &
        CV, CP, R, ADVC, MASS )
-    use scale_process, only: &
-      PRC_MPIstop
+    use scale_prc, only: &
+      PRC_abort
     implicit none
 
     integer,          intent(out)          :: QS
@@ -89,7 +89,7 @@ contains
 
     if ( QA + NQ > QA_MAX ) then
        write(*,*) 'xxx total number of tracer must be less or equal to ', QA_MAX
-       call PRC_MPIstop
+       call PRC_abort
     end if
 
     if ( present(CV) ) then

@@ -104,7 +104,7 @@ contains
   subroutine ATMOS_GRID_CARTESC_setup( &
        basename, &
        aggregate )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file, only: &
        FILE_AGGREGATE
@@ -267,7 +267,7 @@ contains
     use scale_file, only: &
        FILE_open, &
        FILE_read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
     implicit none
 
@@ -343,10 +343,10 @@ contains
        BUFFER_NZ, BUFFER_NX, BUFFER_NY,   &
        BUFFFACT,                          &
        BUFFFACT_Z, BUFFFACT_X, BUFFFACT_Y )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort, &
        PRC_myrank
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank,  &
        PRC_NUM_X,   &
        PRC_NUM_Y

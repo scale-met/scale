@@ -76,8 +76,8 @@ contains
        VAR_NAME,       &
        VAR_DESC,       &
        VAR_UNIT        )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
@@ -89,7 +89,7 @@ contains
 
     if ( ATMOS_DYN_TYPE /= 'FVM-HIVI' .AND. ATMOS_DYN_TYPE /= 'HIVI' ) then
        write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HIVI. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     VA_out      = VA_FVM_HIVI
@@ -109,8 +109,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_Tstep_short_fvm_hivi_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist / PARAM_ATMOS_DYN_TSTEP_FVM_HIVI / &
@@ -126,7 +126,7 @@ contains
 #else
     if( IO_L ) write(IO_FID_LOG,*) '*** USING Multi-Grid'
     write(*,*) 'xxx Not Implemented yet'
-    call PRC_MPIstop
+    call PRC_abort
 #endif
 
     ! currently, vertical difference scheme for potential temperature is the CD4
@@ -141,7 +141,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_DYN_TSTEP_FVM_HIVI. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_DYN_TSTEP_FVM_HIVI)
 
@@ -151,7 +151,7 @@ contains
        mtype = MPI_REAL
     else
        write(*,*) 'xxx Unsupported precision'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -1462,8 +1462,8 @@ contains
        DPRES_N, &
        DPRES, &
        M, B )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_comm, only: &
        COMM_world, &
        COMM_vars8, &
@@ -1774,7 +1774,7 @@ contains
     if ( iter >= ITMAX ) then
        write(*,*) 'xxx [atmos_dyn_hivi] Bi-CGSTAB'
        write(*,*) 'xxx not converged', error, norm
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return

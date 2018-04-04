@@ -43,7 +43,7 @@ cat << EOF > param.region.conf
 #
 #################################################
 
-&PARAM_PRC
+&PARAM_PRC_CARTESC
  PRC_NUM_X      = ${PRC_NUM_X[$D]},
  PRC_NUM_Y      = ${PRC_NUM_Y[$D]},
  PRC_PERIODIC_X = .false.,

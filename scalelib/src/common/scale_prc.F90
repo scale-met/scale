@@ -6,12 +6,8 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2011-10-11 (R.Yoshida)  [new]
-!! @li      2011-11-11 (H.Yashiro)  [mod] Integrate to SCALE-LES ver.3
-!!
 !<
-module scale_process
+module scale_prc
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -37,7 +33,6 @@ module scale_process
   public :: PRC_LOCAL_setup
   public :: PRC_SINGLECOM_setup
   public :: PRC_abort
-  public :: PRC_MPIstop ! obsolute
   public :: PRC_MPIfinish
   public :: PRC_MPIsplit
   public :: PRC_MPIsplit_letkf
@@ -54,10 +49,6 @@ module scale_process
      subroutine closer
      end subroutine closer
   end interface
-
-  interface PRC_MPIstop
-     procedure PRC_abort
-  end interface PRC_MPIstop
 
   !-----------------------------------------------------------------------------
   !
@@ -358,7 +349,7 @@ contains
        if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "ERROR: MPI HANDLER is INCONSISTENT"
        if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "PRC_UNIVERSAL_handler = ", PRC_UNIVERSAL_handler
        if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "PRC_ABORT_handler     = ", PRC_ABORT_handler
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( use_fpm ) then
@@ -511,7 +502,7 @@ contains
           if( PRC_UNIVERSAL_IsMaster ) write(*,*) ""
           if( PRC_UNIVERSAL_IsMaster ) write(*,*) "ERROR: MPI PROCESS NUMBER is INCONSISTENT"
           if( PRC_UNIVERSAL_IsMaster ) write(*,*) "REQUESTED NPROCS = ", total_nmax, "  LAUNCHED NPROCS = ", ORG_nmax
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        reordering = color_reorder
@@ -595,7 +586,7 @@ contains
        if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "*** a single comunicator"
     else
        if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "ERROR: REQUESTED DOMAIN NUMBER IS NOT ACCEPTABLE"
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -1016,7 +1007,7 @@ contains
           write(*,*) ''
        endif
 
-       if    ( errcode == PRC_ABORT_code ) then ! called from PRC_MPIstop
+       if    ( errcode == PRC_ABORT_code ) then ! called from PRC_abort
           ! do nothing
        elseif( errcode <= MPI_ERR_LASTCODE ) then
           call MPI_ERROR_STRING(errcode, msg, len, ierr)
@@ -1060,4 +1051,4 @@ contains
     return
   end subroutine PRC_set_file_closer
 
-end module scale_process
+end module scale_prc

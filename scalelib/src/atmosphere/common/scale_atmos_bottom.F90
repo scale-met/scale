@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE / Bottom boundary treatment
+!> module atmosphere / bottom boundary extrapolation
 !!
 !! @par Description
 !!          Bottom boundary treatment of model domain
@@ -8,6 +8,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "inc_openmp.h"
 module scale_atmos_bottom
   !-----------------------------------------------------------------------------
   !
@@ -16,8 +17,6 @@ module scale_atmos_bottom
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_atmos_grid_cartesC_index
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -44,16 +43,16 @@ contains
   !-----------------------------------------------------------------------------
   !> Calc bottom boundary of atmosphere (just above surface)
   subroutine ATMOS_BOTTOM_estimate( &
-       DENS,     &
-       PRES,     &
-       CZ,       &
-       Zsfc,     &
-       Z1,       &
-       SFC_DENS, &
-       SFC_PRES  )
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       DENS, PRES,        &
+       CZ, Zsfc, Z1,      &
+       SFC_DENS, SFC_PRES )
     use scale_const, only: &
        GRAV  => CONST_GRAV
     implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: PRES    (KA,IA,JA)
@@ -67,8 +66,9 @@ contains
     !---------------------------------------------------------------------------
 
     ! estimate surface density (extrapolation)
-    do j = JSB, JEB
-    do i = ISB, IEB
+    !$omp parallel do OMP_SCHEDULE_
+    do j = JS, JE
+    do i = IS, IE
        SFC_DENS(i,j) = lagrange_interp( Zsfc(i,j),         & ! [IN]
                                         CZ  (KS:KS+2,i,j), & ! [IN]
                                         DENS(KS:KS+2,i,j)  ) ! [IN]
@@ -76,8 +76,9 @@ contains
     enddo
 
     ! estimate surface pressure (hydrostatic balance)
-    do j = JSB, JEB
-    do i = ISB, IEB
+    !$omp parallel do OMP_SCHEDULE_
+    do j = JS, JE
+    do i = IS, IE
        SFC_PRES(i,j) = PRES(KS,i,j) &
                      + 0.5_RP * ( SFC_DENS(i,j) + DENS(KS,i,j) ) * GRAV * Z1(i,j)
     enddo

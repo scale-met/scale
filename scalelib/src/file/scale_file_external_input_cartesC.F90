@@ -74,7 +74,7 @@ contains
        dim1_E,   &
        varname,  &
        axistype  )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
     integer,          intent(out) :: dim1_max
@@ -118,7 +118,7 @@ contains
        transpose, &
        varname,   &
        axistype   )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
     integer,          intent(out) :: dim1_max
@@ -177,7 +177,7 @@ contains
        transpose, &
        varname,   &
        axistype   )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
     integer,          intent(out) :: dim1_max

@@ -255,7 +255,8 @@ contains
                        NOWDATE         (:),        & ! [IN]
                        dt                          ) ! [IN]
 
-       call HYDROMETEOR_LHV( LHV(:,:), ATMOS_TEMP(:,:) )
+       call HYDROMETEOR_LHV( UIA, UIS, UIE, UJA, UJS, UJE, &
+                             ATMOS_TEMP(:,:), LHV(:,:) )
 
 !OCL XFILL
        do j = UJS, UJE

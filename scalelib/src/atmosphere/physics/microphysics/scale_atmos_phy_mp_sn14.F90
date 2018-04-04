@@ -62,7 +62,6 @@
 #define PROFILE_STOP(name)
 #endif
 
-#include "macro_thermodyn.h"
 module scale_atmos_phy_mp_sn14
   !-----------------------------------------------------------------------------
   !
@@ -110,9 +109,10 @@ module scale_atmos_phy_mp_sn14
   public :: ATMOS_PHY_MP_sn14_setup
   public :: ATMOS_PHY_MP_sn14_tendency
   public :: ATMOS_PHY_MP_sn14_terminal_velocity
-  public :: ATMOS_PHY_MP_sn14_mass_ratio
   public :: ATMOS_PHY_MP_sn14_effective_radius
   public :: ATMOS_PHY_MP_sn14_cloud_fraction
+  public :: ATMOS_PHY_MP_sn14_qtrc2qhyd
+  public :: ATMOS_PHY_MP_sn14_qhyd2qtrc
   
   !-----------------------------------------------------------------------------
   !
@@ -185,12 +185,6 @@ module scale_atmos_phy_mp_sn14
 
   integer, private, parameter :: HYDRO_MAX = 5
 
-  integer,  private, parameter   :: I_hyd_QC =  1
-  integer,  private, parameter   :: I_hyd_QR =  2
-  integer,  private, parameter   :: I_hyd_QI =  3
-  integer,  private, parameter   :: I_hyd_QS =  4
-  integer,  private, parameter   :: I_hyd_QG =  5
-  
   integer, private, parameter :: I_mp_QC = 1
   integer, private, parameter :: I_mp_QR = 2
   integer, private, parameter :: I_mp_QI = 3
@@ -528,8 +522,8 @@ contains
   !<
   subroutine ATMOS_PHY_MP_sn14_setup( &
     & KA, IA, JA )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer, intent(in) :: KA
@@ -555,7 +549,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SN14. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_SN14)
 
@@ -646,9 +640,442 @@ contains
   end subroutine ATMOS_PHY_MP_sn14_tendency
   
   !-----------------------------------------------------------------------------
+  !> ATMOS_PHY_MP_sn14_cloud_fraction
+  !! Calculate Cloud Fraction
+  !<    
+  subroutine ATMOS_PHY_MP_sn14_cloud_fraction( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       QTRC,           &
+       mask_criterion, &
+       cldfrac         )
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA_MP-1)
+    real(RP), intent(in)  :: mask_criterion
+
+    real(RP), intent(out) :: cldfrac(KA,IA,JA)
+    
+    real(RP) :: qhydro
+    integer  :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+       qhydro = 0.0_RP
+       do iq = 1, QA_MP-1
+          qhydro = qhydro + QTRC(k,i,j,iq)
+       enddo
+       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_sn14_cloud_fraction
+  !-----------------------------------------------------------------------------
+  !> ATMOS_PHY_MP_sn14_effective_radius
+  !! Calculate Effective Radius
+  !<  
+  subroutine ATMOS_PHY_MP_sn14_effective_radius( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       DENS0, TEMP0, QTRC0, &
+       Re                   )
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC,  &
+       I_HR,  &
+       I_HI,  &
+       I_HS,  &
+       I_HG
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! density                   [kg/m3]
+    real(RP), intent(in)  :: TEMP0(KA,IA,JA)        ! temperature               [K]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,I_QC:I_NG)     ! tracer mass concentration [kg/kg]
+    
+    real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
+
+    ! mass concentration[kg/m3] and mean particle mass[kg]
+    real(RP) :: xc(KA,IA,JA)
+    real(RP) :: xr(KA,IA,JA)
+    real(RP) :: xi(KA,IA,JA)
+    real(RP) :: xs(KA,IA,JA)
+    real(RP) :: xg(KA,IA,JA)
+    ! diameter of average mass[kg/m3]
+    real(RP) :: dc_ave(KA,IA,JA)
+    real(RP) :: dr_ave(KA,IA,JA)
+    ! radius of average mass
+    real(RP) :: rc, rr
+    ! 2nd. and 3rd. order moment of DSD
+    real(RP) :: ri2m(KA,IA,JA), ri3m(KA,IA,JA)
+    real(RP) :: rs2m(KA,IA,JA), rs3m(KA,IA,JA)
+    real(RP) :: rg2m(KA,IA,JA), rg3m(KA,IA,JA)
+
+    real(RP) :: coef_Fuetal1998
+    ! r2m_min is minimum value(moment of 1 particle with 1 micron)
+    real(RP), parameter :: r2m_min=1.E-12_RP
+    real(RP), parameter :: um2cm = 100.0_RP
+
+    real(RP) :: limitsw, zerosw
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    ! mean particle mass[kg]
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+       xc(k,i,j) = min( xc_max, max( xc_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QC)/(QTRC0(k,i,j,I_NC)+nc_min) ) )
+       xr(k,i,j) = min( xr_max, max( xr_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QR)/(QTRC0(k,i,j,I_NR)+nr_min) ) )
+       xi(k,i,j) = min( xi_max, max( xi_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QI)/(QTRC0(k,i,j,I_NI)+ni_min) ) )
+       xs(k,i,j) = min( xs_max, max( xs_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QS)/(QTRC0(k,i,j,I_NS)+ns_min) ) )
+       xg(k,i,j) = min( xg_max, max( xg_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QG)/(QTRC0(k,i,j,I_NG)+ng_min) ) )
+    enddo
+    enddo
+    enddo
+
+    ! diameter of average mass : SB06 eq.(32)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       dc_ave(k,i,j) = a_m(I_mp_QC) * xc(k,i,j)**b_m(I_mp_QC)
+       dr_ave(k,i,j) = a_m(I_mp_QR) * xr(k,i,j)**b_m(I_mp_QR)
+    enddo
+    enddo
+    enddo
+
+    ! cloud effective radius
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       rc = 0.5_RP * dc_ave(k,i,j)
+       limitsw = 0.5_RP + sign(0.5_RP, rc-rmin_re )
+       Re(k,i,j,I_HC) = coef_re(I_mp_QC) * rc * limitsw * um2cm
+    enddo
+    enddo
+    enddo
+
+    ! rain effective radius
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       rr = 0.5_RP * dr_ave(k,i,j)
+       limitsw = 0.5_RP + sign(0.5_RP, rr-rmin_re )
+       Re(k,i,j,I_HR) = coef_re(I_mp_QR) * rr * limitsw * um2cm
+    enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       ri2m(k,i,j) = PI * coef_rea2(I_mp_QI) * QTRC0(k,i,j,I_NI) * a_rea2(I_mp_QI) * xi(k,i,j)**b_rea2(I_mp_QI)
+       rs2m(k,i,j) = PI * coef_rea2(I_mp_QS) * QTRC0(k,i,j,I_NS) * a_rea2(I_mp_QS) * xs(k,i,j)**b_rea2(I_mp_QS)
+       rg2m(k,i,j) = PI * coef_rea2(I_mp_QG) * QTRC0(k,i,j,I_NG) * a_rea2(I_mp_QG) * xg(k,i,j)**b_rea2(I_mp_QG)
+    enddo
+    enddo
+    enddo
+
+    ! Fu(1996), eq.(3.11) or Fu et al.(1998), eq.(2.5)
+    coef_Fuetal1998 = 3.0_RP / (4.0_RP*rhoi)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       ri3m(k,i,j) = coef_Fuetal1998 * QTRC0(k,i,j,I_NI) * xi(k,i,j)
+       rs3m(k,i,j) = coef_Fuetal1998 * QTRC0(k,i,j,I_NS) * xs(k,i,j)
+       rg3m(k,i,j) = coef_Fuetal1998 * QTRC0(k,i,j,I_NG) * xg(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    ! ice effective radius
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       zerosw = 0.5_RP - sign(0.5_RP, ri2m(k,i,j) - r2m_min )
+       Re(k,i,j,I_HI) = ri3m(k,i,j) / ( ri2m(k,i,j) + zerosw ) * ( 1.0_RP - zerosw ) * um2cm
+    enddo
+    enddo
+    enddo
+
+    ! snow effective radius
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       zerosw = 0.5_RP - sign(0.5_RP, rs2m(k,i,j) - r2m_min )
+       Re(k,i,j,I_HS) = rs3m(k,i,j) / ( rs2m(k,i,j) + zerosw ) * ( 1.0_RP - zerosw ) * um2cm
+    enddo
+    enddo
+    enddo
+
+    ! graupel effective radius
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       zerosw = 0.5_RP - sign(0.5_RP, rg2m(k,i,j) - r2m_min )
+       Re(k,i,j,I_HG) = rg3m(k,i,j) / ( rg2m(k,i,j) + zerosw ) * ( 1.0_RP - zerosw ) * um2cm
+    enddo
+    enddo
+    enddo
+
+    Re(:,:,:,I_HG+1:) = 0.0_RP
+
+    return
+  end subroutine ATMOS_PHY_MP_sn14_effective_radius
+  !-----------------------------------------------------------------------------
+  !> ATMOS_PHY_MP_sn14_qtrc2qhyd
+  !! Calculate mass ratio of each category
+  !<
+  subroutine ATMOS_PHY_MP_sn14_qtrc2qhyd( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       QTRC0, &
+       Qe     )
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC,  &
+       I_HR,  &
+       I_HI,  &
+       I_HS,  &
+       I_HG
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA_MP-1)     ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
+    !---------------------------------------------------------------------------
+
+!OCL XFILL
+    Qe(:,:,:,I_HC) = QTRC0(:,:,:,I_mp_QC)
+!OCL XFILL
+    Qe(:,:,:,I_HR) = QTRC0(:,:,:,I_mp_QR)
+!OCL XFILL
+    Qe(:,:,:,I_HI) = QTRC0(:,:,:,I_mp_QI)
+!OCL XFILL
+    Qe(:,:,:,I_HS) = QTRC0(:,:,:,I_mp_QS)
+!OCL XFILL
+    Qe(:,:,:,I_HG) = QTRC0(:,:,:,I_mp_QG)
+!OCL XFILL
+    Qe(:,:,:,I_HG+1:) = 0.0_RP
+
+    return
+  end subroutine ATMOS_PHY_MP_sn14_qtrc2qhyd
+  
+  subroutine ATMOS_PHY_MP_sn14_qhyd2qtrc( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       Qe, &
+       QTRC,     &
+       QNUM      )
+    use scale_const, only: &
+       PI => CONST_PI
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC,  &
+       I_HR,  &
+       I_HI,  &
+       I_HS,  &
+       I_HG,  &
+       I_HH
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: Qe(KA,IA,JA,N_HYD) ! mass ratio of each cateory [kg/kg]
+
+    real(RP), intent(out) :: QTRC(KA,IA,JA,QA_MP-1) ! tracer mass concentration [kg/kg]
+
+    real(RP), intent(in), optional :: QNUM(KA,IA,JA,N_HYD)
+
+    real(RP), parameter :: Dc   =  20.E-6_RP ! typical particle diameter for cloud  [m]
+    real(RP), parameter :: Dr   = 200.E-6_RP ! typical particle diameter for rain   [m]
+    real(RP), parameter :: Di   =  80.E-6_RP ! typical particle diameter for ice    [m]
+    real(RP), parameter :: Ds   =  80.E-6_RP ! typical particle diameter for snow   [m]
+    real(RP), parameter :: Dg   = 200.E-6_RP ! typical particle diameter for grapel [m]
+    real(RP), parameter :: RHOw =  1000.0_RP ! typical density for warm particles   [kg/m3]
+    real(RP), parameter :: RHOf =   100.0_RP ! typical density for frozen particles [kg/m3]
+    real(RP), parameter :: RHOg =   400.0_RP ! typical density for grapel particles [kg/m3]
+    real(RP), parameter :: b    =     3.0_RP ! assume spherical form
+
+    real(RP) :: piov6
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+
+!OCL XFILL
+    !$omp parallel do
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_mp_QC) = Qe(k,i,j,I_HC)
+    end do
+    end do
+    end do
+
+!OCL XFILL
+    !$omp parallel do
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_mp_QR) = Qe(k,i,j,I_HR)
+    end do
+    end do
+    end do
+
+!OCL XFILL
+    !$omp parallel do
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_mp_QI) = Qe(k,i,j,I_HI)
+    end do
+    end do
+    end do
+
+!OCL XFILL
+    !$omp parallel do
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_mp_QS) = Qe(k,i,j,I_HS)
+    end do
+    end do
+    end do
+
+!OCL XFILL
+    !$omp parallel do
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_mp_QG) = Qe(k,i,j,I_HG) + Qe(k,i,j,I_HH)
+    end do
+    end do
+    end do
+
+    if ( present(QNUM) ) then
+
+!OCL XFILL
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_mp_NC) = QNUM(k,i,j,I_HC)
+       end do
+       end do
+       end do
+
+!OCL XFILL
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_mp_NR) = QNUM(k,i,j,I_HR)
+       end do
+       end do
+       end do
+
+!OCL XFILL
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_mp_NI) = QNUM(k,i,j,I_HI)
+       end do
+       end do
+       end do
+
+!OCL XFILL
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_mp_NS) = QNUM(k,i,j,I_HS)
+       end do
+       end do
+       end do
+
+!OCL XFILL
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_mp_NG) = QNUM(k,i,j,I_HG) + QNUM(k,i,j,I_HH)
+       end do
+       end do
+       end do
+
+    else
+       piov6 = PI / 6.0_RP
+
+!OCL XFILL
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_mp_NC) = QTRC(k,i,j,I_mp_QC) / ( (piov6*RHOw) * Dc**b )
+       end do
+       end do
+       end do
+
+!OCL XFILL
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_mp_NR) = QTRC(k,i,j,I_mp_QR) / ( (piov6*RHOw) * Dr**b )
+       end do
+       end do
+       end do
+
+!OCL XFILL
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_mp_NI) = QTRC(k,i,j,I_mp_QI) / ( (piov6*RHOf) * Di**b )
+       end do
+       end do
+       end do
+
+!OCL XFILL
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_mp_NS) = QTRC(k,i,j,I_mp_QS) / ( (piov6*RHOf) * Ds**b )
+       end do
+       end do
+       end do
+
+!OCL XFILL
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,I_mp_NG) = QTRC(k,i,j,I_mp_QG) / ( (piov6*RHOg) * Dg**b )
+       end do
+       end do
+       end do
+
+    end if
+
+    return
+  end subroutine ATMOS_PHY_MP_sn14_qhyd2qtrc
+
+
+  ! private
+  !-----------------------------------------------------------------------------
   subroutine mp_sn14_init
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_specfunc, only: &
         gammafunc => SF_gamma
     implicit none
@@ -755,7 +1182,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_init. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_init)
 
@@ -854,7 +1281,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_particles. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_particles)
 
@@ -2125,7 +2552,7 @@ contains
       rho,      &
       pre,      &
       qv        )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
     implicit none
 
@@ -2170,8 +2597,8 @@ contains
        CCN,                 & ! in
        dt,                  & ! in
        PQ                   )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_saturation, only: &
        moist_psat_liq       => ATMOS_SATURATION_psat_liq, &
        moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
@@ -2297,7 +2724,7 @@ contains
 
        if ( MP_couple_aerosol .AND. nucl_twomey ) then
           write(*,*) "xxx [mp_sn14/nucleation] nucl_twomey should be false when MP_couple_aerosol is true, stop"
-          call PRC_MPIstop
+          call PRC_abort
        endif
     endif
     !
@@ -4371,233 +4798,5 @@ contains
 
     return
   end subroutine update_by_phase_change_kij
-  !-----------------------------------------------------------------------------
-  !> ATMOS_PHY_MP_sn14_cloud_fraction
-  !! Calculate Cloud Fraction
-  !<    
-  subroutine ATMOS_PHY_MP_sn14_cloud_fraction( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       QTRC,           &
-       mask_criterion, &
-       cldfrac         )
-    implicit none
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA_MP-1)
-    real(RP), intent(in)  :: mask_criterion
-
-    real(RP), intent(out) :: cldfrac(KA,IA,JA)
-    
-    real(RP) :: qhydro
-    integer  :: k, i, j, iq
-    !---------------------------------------------------------------------------
-
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-       qhydro = 0.0_RP
-       do iq = 1, QA_MP-1
-          qhydro = qhydro + QTRC(k,i,j,iq)
-       enddo
-       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
-    enddo
-    enddo
-    enddo
-
-    return
-  end subroutine ATMOS_PHY_MP_sn14_cloud_fraction
-  !-----------------------------------------------------------------------------
-  !> ATMOS_PHY_MP_sn14_effective_radius
-  !! Calculate Effective Radius
-  !<  
-  subroutine ATMOS_PHY_MP_sn14_effective_radius( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS0, TEMP0, QTRC0, &
-       Re                   )
-    use scale_atmos_hydrometeor, only: &
-       N_HYD, &
-       I_HC,  &
-       I_HR,  &
-       I_HI,  &
-       I_HS,  &
-       I_HG
-    implicit none
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
-
-    real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! density                   [kg/m3]
-    real(RP), intent(in)  :: TEMP0(KA,IA,JA)        ! temperature               [K]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,I_QC:I_NG)     ! tracer mass concentration [kg/kg]
-    
-    real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
-
-    ! mass concentration[kg/m3] and mean particle mass[kg]
-    real(RP) :: xc(KA,IA,JA)
-    real(RP) :: xr(KA,IA,JA)
-    real(RP) :: xi(KA,IA,JA)
-    real(RP) :: xs(KA,IA,JA)
-    real(RP) :: xg(KA,IA,JA)
-    ! diameter of average mass[kg/m3]
-    real(RP) :: dc_ave(KA,IA,JA)
-    real(RP) :: dr_ave(KA,IA,JA)
-    ! radius of average mass
-    real(RP) :: rc, rr
-    ! 2nd. and 3rd. order moment of DSD
-    real(RP) :: ri2m(KA,IA,JA), ri3m(KA,IA,JA)
-    real(RP) :: rs2m(KA,IA,JA), rs3m(KA,IA,JA)
-    real(RP) :: rg2m(KA,IA,JA), rg3m(KA,IA,JA)
-
-    real(RP) :: coef_Fuetal1998
-    ! r2m_min is minimum value(moment of 1 particle with 1 micron)
-    real(RP), parameter :: r2m_min=1.E-12_RP
-    real(RP), parameter :: um2cm = 100.0_RP
-
-    real(RP) :: limitsw, zerosw
-    integer :: k, i, j
-    !---------------------------------------------------------------------------
-
-    ! mean particle mass[kg]
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-       xc(k,i,j) = min( xc_max, max( xc_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QC)/(QTRC0(k,i,j,I_NC)+nc_min) ) )
-       xr(k,i,j) = min( xr_max, max( xr_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QR)/(QTRC0(k,i,j,I_NR)+nr_min) ) )
-       xi(k,i,j) = min( xi_max, max( xi_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QI)/(QTRC0(k,i,j,I_NI)+ni_min) ) )
-       xs(k,i,j) = min( xs_max, max( xs_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QS)/(QTRC0(k,i,j,I_NS)+ns_min) ) )
-       xg(k,i,j) = min( xg_max, max( xg_min, DENS0(k,i,j)*QTRC0(k,i,j,I_QG)/(QTRC0(k,i,j,I_NG)+ng_min) ) )
-    enddo
-    enddo
-    enddo
-
-    ! diameter of average mass : SB06 eq.(32)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       dc_ave(k,i,j) = a_m(I_mp_QC) * xc(k,i,j)**b_m(I_mp_QC)
-       dr_ave(k,i,j) = a_m(I_mp_QR) * xr(k,i,j)**b_m(I_mp_QR)
-    enddo
-    enddo
-    enddo
-
-    ! cloud effective radius
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       rc = 0.5_RP * dc_ave(k,i,j)
-       limitsw = 0.5_RP + sign(0.5_RP, rc-rmin_re )
-       Re(k,i,j,I_HC) = coef_re(I_mp_QC) * rc * limitsw * um2cm
-    enddo
-    enddo
-    enddo
-
-    ! rain effective radius
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       rr = 0.5_RP * dr_ave(k,i,j)
-       limitsw = 0.5_RP + sign(0.5_RP, rr-rmin_re )
-       Re(k,i,j,I_HR) = coef_re(I_mp_QR) * rr * limitsw * um2cm
-    enddo
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       ri2m(k,i,j) = PI * coef_rea2(I_mp_QI) * QTRC0(k,i,j,I_NI) * a_rea2(I_mp_QI) * xi(k,i,j)**b_rea2(I_mp_QI)
-       rs2m(k,i,j) = PI * coef_rea2(I_mp_QS) * QTRC0(k,i,j,I_NS) * a_rea2(I_mp_QS) * xs(k,i,j)**b_rea2(I_mp_QS)
-       rg2m(k,i,j) = PI * coef_rea2(I_mp_QG) * QTRC0(k,i,j,I_NG) * a_rea2(I_mp_QG) * xg(k,i,j)**b_rea2(I_mp_QG)
-    enddo
-    enddo
-    enddo
-
-    ! Fu(1996), eq.(3.11) or Fu et al.(1998), eq.(2.5)
-    coef_Fuetal1998 = 3.0_RP / (4.0_RP*rhoi)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       ri3m(k,i,j) = coef_Fuetal1998 * QTRC0(k,i,j,I_NI) * xi(k,i,j)
-       rs3m(k,i,j) = coef_Fuetal1998 * QTRC0(k,i,j,I_NS) * xs(k,i,j)
-       rg3m(k,i,j) = coef_Fuetal1998 * QTRC0(k,i,j,I_NG) * xg(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    ! ice effective radius
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       zerosw = 0.5_RP - sign(0.5_RP, ri2m(k,i,j) - r2m_min )
-       Re(k,i,j,I_HI) = ri3m(k,i,j) / ( ri2m(k,i,j) + zerosw ) * ( 1.0_RP - zerosw ) * um2cm
-    enddo
-    enddo
-    enddo
-
-    ! snow effective radius
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       zerosw = 0.5_RP - sign(0.5_RP, rs2m(k,i,j) - r2m_min )
-       Re(k,i,j,I_HS) = rs3m(k,i,j) / ( rs2m(k,i,j) + zerosw ) * ( 1.0_RP - zerosw ) * um2cm
-    enddo
-    enddo
-    enddo
-
-    ! graupel effective radius
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       zerosw = 0.5_RP - sign(0.5_RP, rg2m(k,i,j) - r2m_min )
-       Re(k,i,j,I_HG) = rg3m(k,i,j) / ( rg2m(k,i,j) + zerosw ) * ( 1.0_RP - zerosw ) * um2cm
-    enddo
-    enddo
-    enddo
-
-    Re(:,:,:,I_HG+1:) = 0.0_RP
-
-    return
-  end subroutine ATMOS_PHY_MP_sn14_effective_radius
-  !-----------------------------------------------------------------------------
-  !> ATMOS_PHY_MP_sn14_mass_ratio
-  !! Calculate mass ratio of each category
-  !<
-  subroutine ATMOS_PHY_MP_sn14_mass_ratio( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       QTRC0, &
-       Qe     )
-    use scale_atmos_hydrometeor, only: &
-       N_HYD, &
-       I_HC,  &
-       I_HR,  &
-       I_HI,  &
-       I_HS,  &
-       I_HG    
-    implicit none
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
-
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA_MP-1)     ! tracer mass concentration [kg/kg]
-    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
-    !---------------------------------------------------------------------------
-
-!OCL XFILL
-    Qe(:,:,:,I_HC) = QTRC0(:,:,:,I_hyd_QC)
-!OCL XFILL
-    Qe(:,:,:,I_HR) = QTRC0(:,:,:,I_hyd_QR)
-!OCL XFILL
-    Qe(:,:,:,I_HI) = QTRC0(:,:,:,I_hyd_QI)
-!OCL XFILL
-    Qe(:,:,:,I_HS) = QTRC0(:,:,:,I_hyd_QS)
-!OCL XFILL
-    Qe(:,:,:,I_HG) = QTRC0(:,:,:,I_hyd_QG)
-!OCL XFILL
-    Qe(:,:,:,I_HG+1:) = 0.0_RP
-
-    return
-  end subroutine ATMOS_PHY_MP_sn14_mass_ratio
-  
 end module scale_atmos_phy_mp_sn14

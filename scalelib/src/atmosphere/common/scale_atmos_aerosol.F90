@@ -1,13 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module Aerosol
+!> module atmosphere / aerosol
 !!
 !! @par Description
 !!          Aerosol module
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2016-08-09 (S.Nishizawa)   [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -18,7 +15,6 @@ module scale_atmos_aerosol
   !
   use scale_precision
   use scale_stdio
-  use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private

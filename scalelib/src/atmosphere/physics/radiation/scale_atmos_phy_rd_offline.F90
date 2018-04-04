@@ -53,7 +53,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_RD_offline_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file_external_input, only: &
        FILE_EXTERNAL_INPUT_file_limit, &
@@ -177,7 +177,7 @@ contains
        time_now,              &
        flux_rad,              &
        SFLX_rad_dn            )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file_external_input, only: &
        FILE_EXTERNAL_INPUT_update
