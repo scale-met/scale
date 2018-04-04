@@ -1334,6 +1334,8 @@ contains
     enddo
     if ( ATMOS_HYDROMETEOR_dry ) qv(:) = 0.0_RP
 
+    qc(:) = 0.0_RP
+
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( KA, KS, KE, &
                                pott(:), qv(:), qc(:),                                  & ! [IN]

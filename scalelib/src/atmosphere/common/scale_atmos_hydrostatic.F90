@@ -615,9 +615,9 @@ contains
     integer, intent(in), optional :: kref
 
     real(RP) :: Rtot  (KA)
-    real(RP) :: CVtot (KA)
-    real(RP) :: CPtot (KA)
     real(RP) :: CPovCV(KA)
+    real(RP) :: CVtot
+    real(RP) :: CPtot
 
     real(RP) :: dens_s, dhyd, dgrd
     integer  :: ite
@@ -636,13 +636,13 @@ contains
     do k = kref_, KE
        Rtot  (k) = Rdry  * ( 1.0_RP - qv(k) - qc(k) ) &
                  + Rvap  * qv(k)
-       CVtot (k) = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
+       CVtot     = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
                  + CV_VAPOR * qv(k)                   &
                  + CV_WATER * qc(k)
-       CPtot (k) = CPdry * ( 1.0_RP - qv(k) - qc(k) ) &
+       CPtot     = CPdry * ( 1.0_RP - qv(k) - qc(k) ) &
                  + CP_VAPOR * qv(k)                   &
                  + CP_WATER * qc(k)
-       CPovCV(k) = CPtot(k) / CVtot(k)
+       CPovCV(k) = CPtot / CVtot
     enddo
 
     pres(kref_) = P00 * ( dens(kref_) * Rtot(kref_) * pott(kref_) / P00 )**CPovCV(kref_)
@@ -730,9 +730,9 @@ contains
     integer, intent(in), optional :: kref
 
     real(RP) :: Rtot  (KA)
-    real(RP) :: CVtot (KA)
-    real(RP) :: CPtot (KA)
     real(RP) :: CPovCV(KA)
+    real(RP) :: CVtot
+    real(RP) :: CPtot
 
     real(RP) :: dens_s, dhyd, dgrd
     integer  :: ite
@@ -751,13 +751,13 @@ contains
     do k = KS, kref_
        Rtot  (k) = Rdry  * ( 1.0_RP - qv(k) - qc(k) ) &
                  + Rvap  * qv(k)
-       CVtot (k) = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
+       CVtot     = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
                  + CV_VAPOR * qv(k)                   &
                  + CV_WATER * qc(k)
-       CPtot (k) = CPdry * ( 1.0_RP - qv(k) - qc(k) ) &
+       CPtot     = CPdry * ( 1.0_RP - qv(k) - qc(k) ) &
                  + CP_VAPOR * qv(k)                   &
                  + CP_WATER * qc(k)
-       CPovCV(k) = CPtot(k) / CVtot(k)
+       CPovCV(k) = CPtot / CVtot
     enddo
 
     pres(kref_) = P00 * ( dens(kref_) * Rtot(kref_) * pott(kref_) / P00 )**CPovCV(kref_)
