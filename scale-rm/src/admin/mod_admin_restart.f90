@@ -24,6 +24,7 @@ module mod_admin_restart
   !
   public :: ADMIN_restart_setup
   public :: ADMIN_restart_write
+  public :: ADMIN_restart_write_additional
   public :: ADMIN_restart_read
 
   !-----------------------------------------------------------------------------
@@ -366,6 +367,80 @@ contains
        ATMOS_vars_restart_def_var,   &
        ATMOS_vars_restart_enddef,    &
        ATMOS_vars_restart_write,     &
+       ATMOS_vars_restart_close
+    use mod_ocean_vars, only: &
+       OCEAN_RESTART_OUTPUT,         &
+       OCEAN_vars_restart_create,    &
+       OCEAN_vars_restart_def_var,   &
+       OCEAN_vars_restart_enddef,    &
+       OCEAN_vars_restart_write,     &
+       OCEAN_vars_restart_close
+    use mod_land_vars, only: &
+       LAND_RESTART_OUTPUT,         &
+       LAND_vars_restart_create,    &
+       LAND_vars_restart_def_var,   &
+       LAND_vars_restart_enddef,    &
+       LAND_vars_restart_write,     &
+       LAND_vars_restart_close
+    use mod_urban_vars, only: &
+       URBAN_RESTART_OUTPUT,         &
+       URBAN_vars_restart_create,    &
+       URBAN_vars_restart_def_var,   &
+       URBAN_vars_restart_enddef,    &
+       URBAN_vars_restart_write,     &
+       URBAN_vars_restart_close
+    implicit none
+    !---------------------------------------------------------------------------
+
+    ! restart files can be different for different models
+
+    ! cread restart netCDF file(s)
+    if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_create
+    if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_create
+    if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_create
+    if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_create
+
+    ! define metadata (dimensions, variables, attributes) in netCDF file
+    if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_def_var
+    if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_def_var
+    if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_def_var
+    if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_def_var
+
+    ! exit define mode
+    if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_enddef
+    if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_enddef
+    if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_enddef
+    if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_enddef
+
+    ! write variabes to netCDF file
+    if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
+    if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_write
+    if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_write
+    if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
+
+    ! clode the restart file
+    if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_close
+    if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_close
+    if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_close
+    if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_close
+
+    return
+  end subroutine ADMIN_restart_write
+
+  !-----------------------------------------------------------------------------
+  !> Write data to additional restart files
+  subroutine ADMIN_restart_write_additional
+    use mod_admin_time, only: &
+       TIME_DOATMOS_restart,  &
+       TIME_DOLAND_restart,   &
+       TIME_DOURBAN_restart,  &
+       TIME_DOOCEAN_restart
+    use mod_atmos_vars, only: &
+       ATMOS_RESTART_OUTPUT,         &
+       ATMOS_vars_restart_create,    &
+       ATMOS_vars_restart_def_var,   &
+       ATMOS_vars_restart_enddef,    &
+       ATMOS_vars_restart_write,     &
        ATMOS_vars_restart_close,     &
        ATMOS_RESTART_OUT_BASENAME
     use mod_ocean_vars, only: &
@@ -412,58 +487,48 @@ contains
     !---------------------------------------------------------------------------
 
     character(len=H_LONG) :: RESTART_OUT_BASENAME_ORIG
+    character(len=H_LONG) :: ATMOS_RESTART_OUT_BASENAME_ORIG
+    character(len=H_LONG) :: ATMOS_DYN_RESTART_OUT_BASENAME_ORIG
+    character(len=H_LONG) :: ATMOS_PHY_CP_RESTART_OUT_BASENAME_ORIG
+    character(len=H_LONG) :: ATMOS_PHY_MP_RESTART_OUT_BASENAME_ORIG
+    character(len=H_LONG) :: ATMOS_PHY_RD_RESTART_OUT_BASENAME_ORIG
+    character(len=H_LONG) :: ATMOS_PHY_SF_RESTART_OUT_BASENAME_ORIG
+    character(len=H_LONG) :: ATMOS_PHY_TB_RESTART_OUT_BASENAME_ORIG
+    character(len=H_LONG) :: ATMOS_PHY_CH_RESTART_OUT_BASENAME_ORIG
+    character(len=H_LONG) :: ATMOS_PHY_AE_RESTART_OUT_BASENAME_ORIG
+    character(len=H_LONG) :: OCEAN_RESTART_OUT_BASENAME_ORIG
+    character(len=H_LONG) :: LAND_RESTART_OUT_BASENAME_ORIG
+    character(len=H_LONG) :: URBAN_RESTART_OUT_BASENAME_ORIG
     integer :: irst
 
-    ! restart files can be different for different models
-
-    ! cread restart netCDF file(s)
-    if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_create
-    if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_create
-    if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_create
-    if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_create
-
-    ! define metadata (dimensions, variables, attributes) in netCDF file
-    if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_def_var
-    if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_def_var
-    if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_def_var
-    if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_def_var
-
-    ! exit define mode
-    if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_enddef
-    if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_enddef
-    if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_enddef
-    if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_enddef
-
-    ! write variabes to netCDF file
-    if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
-    if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_write
-    if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_write
-    if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
-
-    ! clode the restart file
-    if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_close
-    if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_close
-    if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_close
-    if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_close
-
-    ! additional restart files
-
-    RESTART_OUT_BASENAME_ORIG = RESTART_OUT_BASENAME
+    RESTART_OUT_BASENAME_ORIG              = RESTART_OUT_BASENAME
+    ATMOS_RESTART_OUT_BASENAME_ORIG        = ATMOS_RESTART_OUT_BASENAME
+    ATMOS_DYN_RESTART_OUT_BASENAME_ORIG    = ATMOS_DYN_RESTART_OUT_BASENAME
+    ATMOS_PHY_CP_RESTART_OUT_BASENAME_ORIG = ATMOS_PHY_CP_RESTART_OUT_BASENAME
+    ATMOS_PHY_MP_RESTART_OUT_BASENAME_ORIG = ATMOS_PHY_MP_RESTART_OUT_BASENAME
+    ATMOS_PHY_RD_RESTART_OUT_BASENAME_ORIG = ATMOS_PHY_RD_RESTART_OUT_BASENAME
+    ATMOS_PHY_SF_RESTART_OUT_BASENAME_ORIG = ATMOS_PHY_SF_RESTART_OUT_BASENAME
+    ATMOS_PHY_TB_RESTART_OUT_BASENAME_ORIG = ATMOS_PHY_TB_RESTART_OUT_BASENAME
+    ATMOS_PHY_CH_RESTART_OUT_BASENAME_ORIG = ATMOS_PHY_CH_RESTART_OUT_BASENAME
+    ATMOS_PHY_AE_RESTART_OUT_BASENAME_ORIG = ATMOS_PHY_AE_RESTART_OUT_BASENAME
+    OCEAN_RESTART_OUT_BASENAME_ORIG        = OCEAN_RESTART_OUT_BASENAME
+    LAND_RESTART_OUT_BASENAME_ORIG         = LAND_RESTART_OUT_BASENAME
+    URBAN_RESTART_OUT_BASENAME_ORIG        = URBAN_RESTART_OUT_BASENAME
 
     do irst = 1, min(RESTART_OUT_ADDITIONAL_COPIES, RESTART_OUT_ADDITIONAL_COPIES_MAX)
-       RESTART_OUT_BASENAME = RESTART_OUT_ADDITIONAL_BASENAME(irst)
-       ATMOS_RESTART_OUT_BASENAME        = RESTART_OUT_BASENAME
-       ATMOS_DYN_RESTART_OUT_BASENAME    = RESTART_OUT_BASENAME
-       ATMOS_PHY_CP_RESTART_OUT_BASENAME = RESTART_OUT_BASENAME
-       ATMOS_PHY_MP_RESTART_OUT_BASENAME = RESTART_OUT_BASENAME
-       ATMOS_PHY_RD_RESTART_OUT_BASENAME = RESTART_OUT_BASENAME
-       ATMOS_PHY_SF_RESTART_OUT_BASENAME = RESTART_OUT_BASENAME
-       ATMOS_PHY_TB_RESTART_OUT_BASENAME = RESTART_OUT_BASENAME
-       ATMOS_PHY_CH_RESTART_OUT_BASENAME = RESTART_OUT_BASENAME
-       ATMOS_PHY_AE_RESTART_OUT_BASENAME = RESTART_OUT_BASENAME
-       OCEAN_RESTART_OUT_BASENAME        = RESTART_OUT_BASENAME
-       LAND_RESTART_OUT_BASENAME         = RESTART_OUT_BASENAME
-       URBAN_RESTART_OUT_BASENAME        = RESTART_OUT_BASENAME
+       RESTART_OUT_BASENAME              = RESTART_OUT_ADDITIONAL_BASENAME(irst)
+       ATMOS_RESTART_OUT_BASENAME        = RESTART_OUT_ADDITIONAL_BASENAME(irst)
+       ATMOS_DYN_RESTART_OUT_BASENAME    = RESTART_OUT_ADDITIONAL_BASENAME(irst)
+       ATMOS_PHY_CP_RESTART_OUT_BASENAME = RESTART_OUT_ADDITIONAL_BASENAME(irst)
+       ATMOS_PHY_MP_RESTART_OUT_BASENAME = RESTART_OUT_ADDITIONAL_BASENAME(irst)
+       ATMOS_PHY_RD_RESTART_OUT_BASENAME = RESTART_OUT_ADDITIONAL_BASENAME(irst)
+       ATMOS_PHY_SF_RESTART_OUT_BASENAME = RESTART_OUT_ADDITIONAL_BASENAME(irst)
+       ATMOS_PHY_TB_RESTART_OUT_BASENAME = RESTART_OUT_ADDITIONAL_BASENAME(irst)
+       ATMOS_PHY_CH_RESTART_OUT_BASENAME = RESTART_OUT_ADDITIONAL_BASENAME(irst)
+       ATMOS_PHY_AE_RESTART_OUT_BASENAME = RESTART_OUT_ADDITIONAL_BASENAME(irst)
+       OCEAN_RESTART_OUT_BASENAME        = RESTART_OUT_ADDITIONAL_BASENAME(irst)
+       LAND_RESTART_OUT_BASENAME         = RESTART_OUT_ADDITIONAL_BASENAME(irst)
+       URBAN_RESTART_OUT_BASENAME        = RESTART_OUT_ADDITIONAL_BASENAME(irst)
 
        ! cread restart netCDF file(s)
        if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_create
@@ -496,22 +561,22 @@ contains
        if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_close
     enddo
 
-    RESTART_OUT_BASENAME = RESTART_OUT_BASENAME_ORIG
-    ATMOS_RESTART_OUT_BASENAME        = RESTART_OUT_BASENAME
-    ATMOS_DYN_RESTART_OUT_BASENAME    = RESTART_OUT_BASENAME
-    ATMOS_PHY_CP_RESTART_OUT_BASENAME = RESTART_OUT_BASENAME
-    ATMOS_PHY_MP_RESTART_OUT_BASENAME = RESTART_OUT_BASENAME
-    ATMOS_PHY_RD_RESTART_OUT_BASENAME = RESTART_OUT_BASENAME
-    ATMOS_PHY_SF_RESTART_OUT_BASENAME = RESTART_OUT_BASENAME
-    ATMOS_PHY_TB_RESTART_OUT_BASENAME = RESTART_OUT_BASENAME
-    ATMOS_PHY_CH_RESTART_OUT_BASENAME = RESTART_OUT_BASENAME
-    ATMOS_PHY_AE_RESTART_OUT_BASENAME = RESTART_OUT_BASENAME
-    OCEAN_RESTART_OUT_BASENAME        = RESTART_OUT_BASENAME
-    LAND_RESTART_OUT_BASENAME         = RESTART_OUT_BASENAME
-    URBAN_RESTART_OUT_BASENAME        = RESTART_OUT_BASENAME
+    RESTART_OUT_BASENAME              = RESTART_OUT_BASENAME_ORIG
+    ATMOS_RESTART_OUT_BASENAME        = ATMOS_RESTART_OUT_BASENAME_ORIG
+    ATMOS_DYN_RESTART_OUT_BASENAME    = ATMOS_DYN_RESTART_OUT_BASENAME_ORIG
+    ATMOS_PHY_CP_RESTART_OUT_BASENAME = ATMOS_PHY_CP_RESTART_OUT_BASENAME_ORIG
+    ATMOS_PHY_MP_RESTART_OUT_BASENAME = ATMOS_PHY_MP_RESTART_OUT_BASENAME_ORIG
+    ATMOS_PHY_RD_RESTART_OUT_BASENAME = ATMOS_PHY_RD_RESTART_OUT_BASENAME_ORIG
+    ATMOS_PHY_SF_RESTART_OUT_BASENAME = ATMOS_PHY_SF_RESTART_OUT_BASENAME_ORIG
+    ATMOS_PHY_TB_RESTART_OUT_BASENAME = ATMOS_PHY_TB_RESTART_OUT_BASENAME_ORIG
+    ATMOS_PHY_CH_RESTART_OUT_BASENAME = ATMOS_PHY_CH_RESTART_OUT_BASENAME_ORIG
+    ATMOS_PHY_AE_RESTART_OUT_BASENAME = ATMOS_PHY_AE_RESTART_OUT_BASENAME_ORIG
+    OCEAN_RESTART_OUT_BASENAME        = OCEAN_RESTART_OUT_BASENAME_ORIG
+    LAND_RESTART_OUT_BASENAME         = LAND_RESTART_OUT_BASENAME_ORIG
+    URBAN_RESTART_OUT_BASENAME        = URBAN_RESTART_OUT_BASENAME_ORIG
 
     return
-  end subroutine ADMIN_restart_write
+  end subroutine ADMIN_restart_write_additional
 
   !-----------------------------------------------------------------------------
   !> Read from restart files
