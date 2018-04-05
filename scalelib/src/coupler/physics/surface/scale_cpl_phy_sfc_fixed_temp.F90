@@ -8,6 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_cpl_phy_sfc_fixed_temp
   !-----------------------------------------------------------------------------
   !
@@ -50,8 +51,8 @@ contains
 
     if ( initialized ) return
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[FIXED_TEMP] / Categ[CPL SFC] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[FIXED_TEMP] / Categ[CPL SFC] / Origin[SCALElib]'
 
     initialized = .true.
 
@@ -145,7 +146,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** surface step: FIXED-TEMP'
+    LOG_PROGRESS(*) 'coupler / physics / surface / FIXED-TEMP'
 
     ! calculate surface flux
     !$omp parallel do default(none) &

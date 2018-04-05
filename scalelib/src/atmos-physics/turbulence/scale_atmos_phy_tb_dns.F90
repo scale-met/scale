@@ -6,11 +6,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2014-03-30 (A.Noda)       [new] produced based on scale_atmos_phy_tb_smg.F90
-!!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_atmos_phy_tb_dns
   !-----------------------------------------------------------------------------
   !
@@ -71,12 +69,12 @@ contains
     integer,          intent(out) :: I_TKE_out
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Deardorff (1980) 1.5th TKE Model'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[Turbulence Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_TB_dns_config",*) 'Tracers for Deardorff (1980) 1.5th TKE Model'
 
     if ( TYPE_TB /= 'DNS' ) then
-       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not DNS. Check!'
+       LOG_ERROR("ATMOS_PHY_TB_dns_config",*) 'ATMOS_PHY_TB_TYPE is not DNS. Check!'
        call PRC_abort
     endif
 
@@ -103,17 +101,17 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Eddy Viscocity Model for DNS'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[Turbulence] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_TB_dns_setup",*) 'Eddy Viscocity Model for DNS'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_TB_DNS,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_TB_dns_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB_DNS. Check!'
+       LOG_ERROR("ATMOS_PHY_TB_dns_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_TB_DNS. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_TB_DNS)
@@ -183,6 +181,8 @@ contains
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
+
+    LOG_PROGRESS(*) 'atmosphere / physics / turbulence / DNS'
 
 #ifdef DEBUG
     qflx_sgs_MOMZ(:,:,:,:)   = UNDEF

@@ -8,7 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_saturation
   !-----------------------------------------------------------------------------
   !
@@ -229,16 +229,16 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SATURATION] / Categ[ATMOS] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[SATURATION] / Categ[ATMOS] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_SATURATION,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_SATURATION_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_SATURATION. Check!'
+       LOG_ERROR("ATMOS_SATURATION_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_SATURATION. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_SATURATION)
@@ -269,8 +269,8 @@ contains
 
     dalphadT_const = 1.0_RP / ( ATMOS_SATURATION_ULIMIT_TEMP - ATMOS_SATURATION_LLIMIT_TEMP )
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F7.2,A,F7.2)') '*** Temperature range for liquid/ice mixture : ', &
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_SATURATION_setup",'(1x,A,F7.2,A,F7.2)') 'Temperature range for liquid/ice mixture : ', &
                                                       ATMOS_SATURATION_LLIMIT_TEMP, ' - ', &
                                                       ATMOS_SATURATION_ULIMIT_TEMP
 
@@ -1692,7 +1692,7 @@ contains
        Tdew = Tdew - dTdew
     end do
     if( .not. converged ) then
-       write(*,*)DENS, TEMP, QV, pvap, Tdew, dTdew, dpsat_dT
+       LOG_WARN("ATMOS_SATURATION_tdew_liq_0D",*) DENS, TEMP, QV, pvap, Tdew, dTdew, dpsat_dT
     endif
 
     return
@@ -1753,7 +1753,7 @@ contains
        call ATMOS_SATURATION_tdew_liq_0D( DENS(k,i,j), TEMP(k,i,j), QV(k,i,j), & ! [IN]
                                           Tdew(k,i,j), converged               ) ! [OUT]
        if ( .not. converged ) then
-          write(*,*) 'xxx [tdew_liq] not converged! ', k,i,j
+          LOG_ERROR("ATMOS_SATURATION_tdew_liq_3D",*) 'not converged! ', k,i,j
           error = .true.
           exit
        end if

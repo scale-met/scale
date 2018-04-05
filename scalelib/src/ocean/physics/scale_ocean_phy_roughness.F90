@@ -6,10 +6,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_ocean_phy_roughness
   !-----------------------------------------------------------------------------
   !
@@ -63,16 +62,16 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[ROUGHNESS] / Categ[OCEAN PHY] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[ROUGHNESS] / Categ[OCEAN PHY] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_OCEAN_PHY_ROUGHNESS,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("OCEAN_PHY_ROUGHNESS_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN_PHY_ROUGHNESS. Check!'
+       LOG_ERROR("OCEAN_PHY_ROUGHNESS_setup",*) 'Not appropriate names in namelist PARAM_OCEAN_PHY_ROUGHNESS. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN_PHY_ROUGHNESS)

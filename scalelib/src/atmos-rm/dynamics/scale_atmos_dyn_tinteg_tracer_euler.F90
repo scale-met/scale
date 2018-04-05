@@ -7,12 +7,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-05-17 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tinteg_tracer_euler
   !-----------------------------------------------------------------------------
   !
@@ -71,7 +68,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( tinteg_type /= 'EULER' ) then
-       write(*,*) 'xxx TINTEG_LARGE_TYPE is not EULER. Check!'
+       LOG_ERROR("ATMOS_DYN_Tinteg_tracer_euler_setup",*) 'TINTEG_LARGE_TYPE is not EULER. Check!'
        call PRC_abort
     end if
 

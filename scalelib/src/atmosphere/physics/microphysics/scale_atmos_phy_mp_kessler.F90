@@ -10,7 +10,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_mp_kessler
   !-----------------------------------------------------------------------------
   !
@@ -93,12 +93,12 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics Kessler] / Categ[atmosphere physics] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** KESSLER-type 1-moment bulk 3 category'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[Cloud Microphysics Kessler] / Categ[atmosphere physics] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_MP_kessler_setup",*) 'KESSLER-type 1-moment bulk 3 category'
 
     if( couple_aerosol ) then
-       write(*,*) 'xxx MP_aerosol_couple should be .false. for KESSLER type MP!'
+       LOG_ERROR("ATMOS_PHY_MP_kessler_setup",*) 'MP_aerosol_couple should be .false. for KESSLER type MP!'
        call PRC_abort
     endif
 
@@ -149,7 +149,7 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmosphere / physics / microphysics / Kessler'
+    LOG_PROGRESS(*) 'atmosphere / physics / microphysics / Kessler'
 
     !##### MP Main #####
     call MP_kessler( &

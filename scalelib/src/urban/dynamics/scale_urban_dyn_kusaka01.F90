@@ -6,9 +6,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_urban_dyn_kusaka01
   !-----------------------------------------------------------------------------
   !
@@ -171,16 +171,16 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLC] / Categ[URBAN PHY] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[Kusaka01] / Categ[URBAN DYN] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_URBAN_DYN_kusaka01,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("URBAN_DYN_kusaka01_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_URBAN_DYN_kusaka01. Check!'
+       LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Not appropriate names in namelist PARAM_URBAN_DYN_kusaka01. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_URBAN_DYN_kusaka01)
@@ -366,7 +366,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Urban surface physics step: Single Layer Canopy'
+    LOG_PROGRESS(*) 'urban / dynamics / Kusaka01'
 
     DZR(:) = CDZ(:)
     DZB(:) = CDZ(:)
@@ -822,7 +822,7 @@ contains
     DTS_MAX_onestep = DTS_MAX * dt
 
     if ( ZDC + Z0C + 2.0_RP >= ZA ) then
-       write(*,*) 'xxx [URBAN_DYN_kusaka01] ZDC + Z0C + 2m is larger than the 1st level! STOP.'
+       LOG_ERROR("[URBAN_DYN_kusaka01_SLC_main",*) 'ZDC + Z0C + 2m is larger than the 1st level! STOP.'
        call PRC_abort
     endif
 
@@ -939,7 +939,7 @@ contains
       call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND)
       resi1 = TRL(1) - TR
 
-     ! write(*,'(a3,i5,f8.3,6f15.5)') "TR,",iteration,TR,G0R,SR,RR,HR,ELER,resi1
+     ! LOG_INFO("URBAN_DYN_kusaka01_SLC_main",'(a3,i5,f8.3,6f15.5)') "TR,",iteration,TR,G0R,SR,RR,HR,ELER,resi1
 
       if( abs(resi1) < sqrt(EPS) ) then
         TR = TRL(1)
@@ -959,42 +959,42 @@ contains
      enddo
 
 !    if( .NOT. (resi1 < sqrt(EPS)) ) then
-!       write(*,*) 'xxx Warning not converged for TR in URBAN SLC', &
+!       LOG_WARN("URBAN_DYN_kusaka01_SLC_main",*) 'Warning not converged for TR in URBAN SLC', &
 !            PRC_myrank, i,j, &
 !            resi1, G0R
 !    end if
 
      ! output for debug
      if ( iteration > 100 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: [URBAN_DYN_kusaka01/SLC_main] iteration for TR was not converged',PRC_myrank,i,j
-       if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                          [K] :', resi1
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TRP : Initial TR                                  [K] :', TRP
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TRLP: Initial TRL                                 [K] :', TRLP
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SX  : Shortwave radiation                      [W/m2] :', SX
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RX  : Longwave radiation                       [W/m2] :', RX
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- PRSS: Surface pressure                           [Pa] :', PRSS
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer                 [m] :', PRSA
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RHOO: Air density                             [kg/m3] :', RHOO
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                   [m] :', ZA
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer              [K] :', TA
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer             [m/s] :', UA
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer    [kg/kg] :', QA
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- DZR : Depth of surface layer                      [m] :', DZR
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- R, W, RW : Normalized height and road width       [-] :', R, W,RW
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SVF : Sky View Factors                            [-] :', SVF
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- BETR: Evaporation efficiency                      [-] :', BETR
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- EPSR: Surface emissivity of roof                  [-] :', EPSR
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- CAPR: Heat capacity of roof                 [J m-3 K] :', CAPR
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- AKSR: Thermal conductivity of roof          [W m-1 K] :', AKSR
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QS0R: Surface specific humidity               [kg/kg] :', QS0R
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- ZDC : Desplacement height of canopy               [m] :', ZDC
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Z0R : Momentum roughness length of roof           [m] :', Z0R
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Z0HR: Thermal roughness length of roof            [m] :', Z0HR
-       if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
+       LOG_WARN("URBAN_DYN_kusaka01_SLC_main",*) 'iteration for TR was not converged',PRC_myrank,i,j
+       LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
+       LOG_INFO_CONT(*) 'DEBUG Message --- Residual                                          [K] :', resi1
+       LOG_NEWLINE
+       LOG_INFO_CONT(*) 'DEBUG Message --- TRP : Initial TR                                  [K] :', TRP
+       LOG_INFO_CONT(*) 'DEBUG Message --- TRLP: Initial TRL                                 [K] :', TRLP
+       LOG_NEWLINE
+       LOG_INFO_CONT(*) 'DEBUG Message --- SX  : Shortwave radiation                      [W/m2] :', SX
+       LOG_INFO_CONT(*) 'DEBUG Message --- RX  : Longwave radiation                       [W/m2] :', RX
+       LOG_INFO_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                           [Pa] :', PRSS
+       LOG_INFO_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer                 [m] :', PRSA
+       LOG_INFO_CONT(*) 'DEBUG Message --- RHOO: Air density                             [kg/m3] :', RHOO
+       LOG_INFO_CONT(*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                   [m] :', ZA
+       LOG_INFO_CONT(*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer              [K] :', TA
+       LOG_INFO_CONT(*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer             [m/s] :', UA
+       LOG_INFO_CONT(*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer    [kg/kg] :', QA
+       LOG_INFO_CONT(*) 'DEBUG Message --- DZR : Depth of surface layer                      [m] :', DZR
+       LOG_NEWLINE
+       LOG_INFO_CONT(*) 'DEBUG Message --- R, W, RW : Normalized height and road width       [-] :', R, W,RW
+       LOG_INFO_CONT(*) 'DEBUG Message --- SVF : Sky View Factors                            [-] :', SVF
+       LOG_INFO_CONT(*) 'DEBUG Message --- BETR: Evaporation efficiency                      [-] :', BETR
+       LOG_INFO_CONT(*) 'DEBUG Message --- EPSR: Surface emissivity of roof                  [-] :', EPSR
+       LOG_INFO_CONT(*) 'DEBUG Message --- CAPR: Heat capacity of roof                 [J m-3 K] :', CAPR
+       LOG_INFO_CONT(*) 'DEBUG Message --- AKSR: Thermal conductivity of roof          [W m-1 K] :', AKSR
+       LOG_INFO_CONT(*) 'DEBUG Message --- QS0R: Surface specific humidity               [kg/kg] :', QS0R
+       LOG_INFO_CONT(*) 'DEBUG Message --- ZDC : Desplacement height of canopy               [m] :', ZDC
+       LOG_INFO_CONT(*) 'DEBUG Message --- Z0R : Momentum roughness length of roof           [m] :', Z0R
+       LOG_INFO_CONT(*) 'DEBUG Message --- Z0HR: Thermal roughness length of roof            [m] :', Z0HR
+       LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
      endif
 
     !--- update only fluxes ----
@@ -1017,12 +1017,12 @@ contains
 
      if ( abs(resi1) > DTS_MAX_onestep ) then
        if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
-         write(*,*) 'xxx [URBAN_DYN_kusaka01/SLC_main] tendency of TR exceeded a limit! STOP.'
-         write(*,*) 'xxx previous TR and updated TR(TRL(1)) is ',TR-resi1, TR
+         LOG_ERROR("URBAN_DYN_Kusaka01_main",*) 'tendency of TR exceeded a limit! STOP.'
+         LOG_ERROR_CONT(*) 'previous TR and updated TR(TRL(1)) is ',TR-resi1, TR
          call PRC_abort
        endif
-       if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_DYN_kusaka01/SLC_main] tendency of TR exceeded a limit'
-       if( IO_L ) write(IO_FID_LOG,*) '*** previous TR and updated TR(TRL(1)) is ', TR-resi1, TR
+       LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'tendency of TR exceeded a limit'
+       LOG_INFO_CONT(*) 'previous TR and updated TR(TRL(1)) is ', TR-resi1, TR
      endif
 
     !--------------------------------------------------
@@ -1112,9 +1112,9 @@ contains
       !print *,ELEB ,RHOO , LHV , CHB , UC , BETB , QS0B , QC
       !print *,ELEG ,RHOO , LHV , CHG , UC , BETG , QS0G , QC
 
-      !write(*,'(a3,i5,f8.3,6f15.5)') "TB,",iteration,TB,G0B,SB,RB,HB,ELEB,resi1
-      !write(*,'(a3,i5,f8.3,6f15.5)') "TG,",iteration,TG,G0G,SG,RG,HG,ELEG,resi2
-      !write(*,'(a3,i5,f8.3,3f15.5)') "TC,",iteration,TC,QC,QS0B,QS0G
+      !LOG_INFO("SLC_main",'(a3,i5,f8.3,6f15.5)') "TB,",iteration,TB,G0B,SB,RB,HB,ELEB,resi1
+      !LOG_INFO("SLC_main",'(a3,i5,f8.3,6f15.5)') "TG,",iteration,TG,G0G,SG,RG,HG,ELEG,resi2
+      !LOG_INFO("SLC_main",'(a3,i5,f8.3,3f15.5)') "TC,",iteration,TC,QC,QS0B,QS0G
       !--------
       !resi1  =  abs(G0B - G0BP)
       !resi2  =  abs(G0G - G0GP)
@@ -1165,57 +1165,57 @@ contains
     enddo
 
 !    if( .NOT. (resi1 < sqrt(EPS) .AND. resi2 < sqrt(EPS) ) ) then
-!       write(*,*) 'xxx Warning not converged for TG, TB in URBAN SLC', &
+!       LOG_INFO("SLC_main",*) 'Warning not converged for TG, TB in URBAN SLC', &
 !            PRC_myrank, i,j, &
 !            resi1, resi2, TB, TG, TC, G0BP, G0GP, RB, HB, RG, HG, QC, &
 !            CHC, CDC, BHC, ALPHAC
-!       write(*,*) TBP, TGP, TCP, &
+!       LOG_INFO_CONT(*) TBP, TGP, TCP, &
 !                  PRSS, THA, UA, QA, RHOO, UC, QCP, &
 !                  ZA, ZDC, Z0C, Z0HC, &
 !                  CHG, CHB, &
 !                  W, RW, ALPHAG, ALPHAB, BETG, BETB, &
 !                  RX, VFGS, VFGW, VFWG, VFWW, VFWS, STB, &
 !                  SB, SG, LHV, TBLP, TGLP
-!       write(*,*) "6",VFGS, VFGW, VFWG, VFWW, VFWS
+!       LOG_INFO_CONT(*) "6",VFGS, VFGW, VFWG, VFWW, VFWS
 !    end if
 
      ! output for debug
      if ( iteration > 200 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: [URBAN_DYN_kusaka01/SLC_main] iteration for TB/TG was not converged',PRC_myrank,i,j
-       if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                       [K] :', resi1,resi2
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TBP : Initial TB                               [K] :', TBP
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TBLP: Initial TBL                              [K] :', TBLP
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TGP : Initial TG                               [K] :', TGP
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TGLP: Initial TGL                              [K] :', TGLP
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TCP : Initial TC                               [K] :', TCP
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QCP : Initial QC                               [K] :', QCP
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- UC  : Canopy wind                            [m/s] :', UC
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SX  : Shortwave radiation                   [W/m2] :', SX
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RX  : Longwave radiation                    [W/m2] :', RX
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- PRSS: Surface pressure                        [Pa] :', PRSS
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer              [m] :', PRSA
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RHOO: Air density                          [kg/m3] :', RHOO
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                [m] :', ZA
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer           [K] :', TA
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer          [m/s] :', UA
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer [kg/kg] :', QA
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- DZB : Depth of surface layer                   [m] :', DZB
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- DZG : Depth of surface layer                   [m] :', DZG
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- R, W, RW  : Normalized height and road width    [-] :', R, W,RW
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SVF       : Sky View Factors                    [-] :', SVF
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- BETB,BETG : Evaporation efficiency              [-] :', BETB,BETG
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- EPSB,EPSG : Surface emissivity                  [-] :', EPSB,EPSG
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- CAPB,CAPG : Heat capacity                 [J m-3 K] :', CAPB,CAPG
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- AKSB,AKSG : Thermal conductivity          [W m-1 K] :', AKSB,AKSB
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QS0B,QS0G : Surface specific humidity       [kg/kg] :', QS0B,QS0G
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- ZDC       : Desplacement height of canopy       [m] :', ZDC
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Z0C       : Momentum roughness length of canopy [m] :', Z0C
-       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Z0HC      : Thermal roughness length of canopy  [m] :', Z0HC
-       if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
+       LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'iteration for TB/TG was not converged',PRC_myrank,i,j
+       LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
+       LOG_INFO_CONT(*) 'DEBUG Message --- Residual                                       [K] :', resi1,resi2
+       LOG_NEWLINE
+       LOG_INFO_CONT(*) 'DEBUG Message --- TBP : Initial TB                               [K] :', TBP
+       LOG_INFO_CONT(*) 'DEBUG Message --- TBLP: Initial TBL                              [K] :', TBLP
+       LOG_INFO_CONT(*) 'DEBUG Message --- TGP : Initial TG                               [K] :', TGP
+       LOG_INFO_CONT(*) 'DEBUG Message --- TGLP: Initial TGL                              [K] :', TGLP
+       LOG_INFO_CONT(*) 'DEBUG Message --- TCP : Initial TC                               [K] :', TCP
+       LOG_INFO_CONT(*) 'DEBUG Message --- QCP : Initial QC                               [K] :', QCP
+       LOG_NEWLINE
+       LOG_INFO_CONT(*) 'DEBUG Message --- UC  : Canopy wind                            [m/s] :', UC
+       LOG_INFO_CONT(*) 'DEBUG Message --- SX  : Shortwave radiation                   [W/m2] :', SX
+       LOG_INFO_CONT(*) 'DEBUG Message --- RX  : Longwave radiation                    [W/m2] :', RX
+       LOG_INFO_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                        [Pa] :', PRSS
+       LOG_INFO_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer              [m] :', PRSA
+       LOG_INFO_CONT(*) 'DEBUG Message --- RHOO: Air density                          [kg/m3] :', RHOO
+       LOG_INFO_CONT(*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                [m] :', ZA
+       LOG_INFO_CONT(*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer           [K] :', TA
+       LOG_INFO_CONT(*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer          [m/s] :', UA
+       LOG_INFO_CONT(*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer [kg/kg] :', QA
+       LOG_INFO_CONT(*) 'DEBUG Message --- DZB : Depth of surface layer                   [m] :', DZB
+       LOG_INFO_CONT(*) 'DEBUG Message --- DZG : Depth of surface layer                   [m] :', DZG
+       LOG_NEWLINE
+       LOG_INFO_CONT(*) 'DEBUG Message --- R, W, RW  : Normalized height and road width    [-] :', R, W,RW
+       LOG_INFO_CONT(*) 'DEBUG Message --- SVF       : Sky View Factors                    [-] :', SVF
+       LOG_INFO_CONT(*) 'DEBUG Message --- BETB,BETG : Evaporation efficiency              [-] :', BETB,BETG
+       LOG_INFO_CONT(*) 'DEBUG Message --- EPSB,EPSG : Surface emissivity                  [-] :', EPSB,EPSG
+       LOG_INFO_CONT(*) 'DEBUG Message --- CAPB,CAPG : Heat capacity                 [J m-3 K] :', CAPB,CAPG
+       LOG_INFO_CONT(*) 'DEBUG Message --- AKSB,AKSG : Thermal conductivity          [W m-1 K] :', AKSB,AKSB
+       LOG_INFO_CONT(*) 'DEBUG Message --- QS0B,QS0G : Surface specific humidity       [kg/kg] :', QS0B,QS0G
+       LOG_INFO_CONT(*) 'DEBUG Message --- ZDC       : Desplacement height of canopy       [m] :', ZDC
+       LOG_INFO_CONT(*) 'DEBUG Message --- Z0C       : Momentum roughness length of canopy [m] :', Z0C
+       LOG_INFO_CONT(*) 'DEBUG Message --- Z0HC      : Thermal roughness length of canopy  [m] :', Z0HC
+       LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
      endif
 
 
@@ -1264,22 +1264,22 @@ contains
 
      if ( abs(resi1) > DTS_MAX_onestep ) then
         if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
-           write(*,*) 'xxx [URBAN_DYN_kusaka01/SLC_main] tendency of TB exceeded a limit! STOP.'
-           write(*,*) 'xxx previous TB and updated TB(TBL(1)) is ', TB-resi1,TB
+           LOG_ERROR("URBAN_DYN_Kusaka01_main",*) 'tendency of TB exceeded a limit! STOP.'
+           LOG_ERROR_CONT(*) 'previous TB and updated TB(TBL(1)) is ', TB-resi1,TB
            call PRC_abort
         endif
-        if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_DYN_kusaka01/SLC_main] tendency of TB exceeded a limit'
-        if( IO_L ) write(IO_FID_LOG,*) '*** previous TB and updated TB(TBL(1)) is ', TB-resi1, TB
+        LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'tendency of TB exceeded a limit'
+        LOG_INFO_CONT(*) 'previous TB and updated TB(TBL(1)) is ', TB-resi1, TB
      endif
 
      if ( abs(resi2) > DTS_MAX_onestep ) then
         if ( abs(resi2) > DTS_MAX_onestep*10.0_RP ) then
-           write(*,*) 'xxx [URBAN_DYN_kusaka01/SLC_main] tendency of TG exceeded a limit! STOP.'
-           write(*,*) 'xxx previous TG and updated TG(TGL(1)) is ', TG-resi2, TG, resi2
+           LOG_ERROR("URBAN_DYN_Kusaka01_main",*) 'tendency of TG exceeded a limit! STOP.'
+           LOG_ERROR_CONT(*) 'previous TG and updated TG(TGL(1)) is ', TG-resi2, TG, resi2
            call PRC_abort
         endif
-        if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_DYN_kusaka01/SLC_main] tendency of TG exceeded a limit'
-        if( IO_L ) write(IO_FID_LOG,*) '*** previous TG and updated TG(TGL(1)) is ', TG-resi2, TG
+        LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'tendency of TG exceeded a limit'
+        LOG_INFO_CONT(*) 'previous TG and updated TG(TGL(1)) is ', TG-resi2, TG
      endif
 
     !-----------------------------------------------------------

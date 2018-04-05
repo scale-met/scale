@@ -8,6 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_comm_cartesC_nest
   !-----------------------------------------------------------------------------
   !
@@ -339,8 +340,8 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_NEST] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[GRID_NEST] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
 
     if ( present(inter_parent) ) then
        if( inter_parent /= MPI_COMM_NULL ) flag_child  = .true. ! exist parent, so work as a child
@@ -365,9 +366,9 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_COMM_CARTESC_NEST,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("COMM_CARTESC_NEST_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_COMM_CARTESC_NEST. Check!'
+       LOG_ERROR("COMM_CARTESC_NEST_setup",*) 'Not appropriate names in namelist PARAM_COMM_CARTESC_NEST. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_COMM_CARTESC_NEST)
@@ -464,7 +465,7 @@ contains
     if ( ONLINE_IAM_DAUGHTER .or. ONLINE_IAM_PARENT ) then
 
        if ( OFFLINE ) then
-          write(*,*) 'xxx OFFLINE and ONLINE cannot be use at the same time'
+          LOG_ERROR("COMM_CARTESC_NEST_setup",*) 'OFFLINE and ONLINE cannot be use at the same time'
           call PRC_abort
        endif
 
@@ -522,7 +523,7 @@ contains
                iostat = ierr                           )
 
          if ( ierr /= 0 ) then
-            write(*,*) 'xxx [NEST_setup] cannot open latlon-catalogue file!'
+            LOG_ERROR("COMM_CARTESC_NEST_setup",*) '[NEST_setup] cannot open latlon-catalogue file!'
             call PRC_abort
          endif
 
@@ -533,7 +534,7 @@ contains
                                                  latlon_catalog(i,I_NW,I_LAT), latlon_catalog(i,I_NE,I_LAT), & ! LAT: NW, NE
                                                  latlon_catalog(i,I_SW,I_LAT), latlon_catalog(i,I_SE,I_LAT)    ! LAT: SW, SE
             if ( i /= parent_id ) then
-               write(*,*) 'xxx [NEST_setup] internal error: parent mpi id'
+               LOG_ERROR("COMM_CARTESC_NEST_setup",*) '[NEST_setup] internal error: parent mpi id'
                call PRC_abort
             endif
             if ( ierr /= 0 ) exit
@@ -544,12 +545,12 @@ contains
 
       else ! ONLINE RELATIONSHIP
 !         if ( present(flag_parent) .AND. present(flag_child) ) then
-!            if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
+!            LOG_INFO("COMM_CARTESC_NEST_setup",'(1x,A)') &
 !                       '*** Setup Online Nesting Inter-Domain Communicator (IDC)'
 !         else
-!            write(*,*) 'xxx Internal Error:'
-!            write(*,*) 'xxx The flag_parent and flag_child are needed.'
-!            write(*,*) '    domain: ', ONLINE_DOMAIN_NUM
+!            LOG_ERROR("COMM_CARTESC_NEST_setup",*) 'Internal Error:'
+!            LOG_ERROR_CONT(*) 'The flag_parent and flag_child are needed.'
+!            LOG_WARN("COMM_CARTESC_NEST_setup",*) '    domain: ', ONLINE_DOMAIN_NUM
 !            call PRC_abort
 !         endif
 
@@ -561,14 +562,14 @@ contains
             COMM_CARTESC_NEST_BND_QA = 1
          endif
 
-         if( IO_L ) write(IO_FID_LOG,*) "flag_parent", flag_parent, "flag_child", flag_child
-         if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_IAM_DAUGHTER", ONLINE_IAM_DAUGHTER
+         LOG_INFO("COMM_CARTESC_NEST_setup",*) "flag_parent", flag_parent, "flag_child", flag_child
+         LOG_INFO("COMM_CARTESC_NEST_setup",*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_IAM_DAUGHTER", ONLINE_IAM_DAUGHTER
 
          if( flag_parent ) then ! must do first before daughter processes
          !-------------------------------------------------
             if ( .NOT. ONLINE_IAM_PARENT ) then
-               write(*,*) 'xxx [NEST_setup] Parent Flag from launcher is not consistent with namelist!'
-               write(*,*) 'xxx PARENT - domain : ', ONLINE_DOMAIN_NUM
+               LOG_ERROR("COMM_CARTESC_NEST_setup",*) '[NEST_setup] Parent Flag from launcher is not consistent with namelist!'
+               LOG_ERROR_CONT(*) 'PARENT - domain : ', ONLINE_DOMAIN_NUM
                call PRC_abort
             endif
 
@@ -577,9 +578,9 @@ contains
             COMM_CARTESC_NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = 1
 
             INTERCOMM_DAUGHTER = inter_child
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Online Nesting - PARENT [INTERCOMM_ID:', &
+            LOG_INFO("COMM_CARTESC_NEST_setup",'(1x,A,I2,A)') 'Online Nesting - PARENT [INTERCOMM_ID:', &
                                                         INTERCOMM_ID(HANDLING_NUM), ' ]'
-            if( IO_L ) write(IO_FID_LOG,*) '*** Online Nesting - INTERCOMM :', INTERCOMM_DAUGHTER
+            LOG_INFO("COMM_CARTESC_NEST_setup",*) 'Online Nesting - INTERCOMM :', INTERCOMM_DAUGHTER
 
             call COMM_CARTESC_NEST_ping( HANDLING_NUM )
 
@@ -598,25 +599,25 @@ contains
             TILEAL_IA(HANDLING_NUM)   = 0
             TILEAL_JA(HANDLING_NUM)   = 0
 
-            if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Parent Domain [me]'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_nprocs   :', PARENT_PRC_nprocs(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_X    :', PARENT_PRC_NUM_X(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_Y    :', PARENT_PRC_NUM_Y(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_KMAX         :', PARENT_KMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_IMAX         :', PARENT_IMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_JMAX         :', PARENT_JMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- PARENT_DTSEC        :', PARENT_DTSEC(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  --- PARENT_NSTEP        :', PARENT_NSTEP(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Daughter Domain'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_nprocs :', DAUGHTER_PRC_nprocs(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_X  :', DAUGHTER_PRC_NUM_X(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_Y  :', DAUGHTER_PRC_NUM_Y(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_KMAX       :', DAUGHTER_KMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_IMAX       :', DAUGHTER_IMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_JMAX       :', DAUGHTER_JMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC      :', DAUGHTER_DTSEC(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  --- DAUGHTER_NSTEP      :', DAUGHTER_NSTEP(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  Limit Num. NCOMM req.   :', max_rq
+            LOG_INFO("COMM_CARTESC_NEST_setup",'(1x,A)'     ) 'Informations of Parent Domain [me]'
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- PARENT_PRC_nprocs   :', PARENT_PRC_nprocs(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- PARENT_PRC_NUM_X    :', PARENT_PRC_NUM_X(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- PARENT_PRC_NUM_Y    :', PARENT_PRC_NUM_Y(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- PARENT_KMAX         :', PARENT_KMAX(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- PARENT_IMAX         :', PARENT_IMAX(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- PARENT_JMAX         :', PARENT_JMAX(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,F9.3)') '--- PARENT_DTSEC        :', PARENT_DTSEC(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)  ') '--- PARENT_NSTEP        :', PARENT_NSTEP(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A)'     ) 'Informations of Daughter Domain'
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- DAUGHTER_PRC_nprocs :', DAUGHTER_PRC_nprocs(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- DAUGHTER_PRC_NUM_X  :', DAUGHTER_PRC_NUM_X(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- DAUGHTER_PRC_NUM_Y  :', DAUGHTER_PRC_NUM_Y(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- DAUGHTER_KMAX       :', DAUGHTER_KMAX(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- DAUGHTER_IMAX       :', DAUGHTER_IMAX(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- DAUGHTER_JMAX       :', DAUGHTER_JMAX(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,F9.3)') '--- DAUGHTER_DTSEC      :', DAUGHTER_DTSEC(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)  ') '--- DAUGHTER_NSTEP      :', DAUGHTER_NSTEP(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)  ') 'Limit Num. NCOMM req.   :', max_rq
 
             allocate( org_DENS(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
             allocate( org_MOMZ(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
@@ -636,8 +637,8 @@ contains
          if( flag_child ) then
          !-------------------------------------------------
             if ( .NOT. ONLINE_IAM_DAUGHTER ) then
-               write(*,*) 'xxx [NEST_setup] Child Flag from launcher is not consistent with namelist!'
-               write(*,*) 'xxx DAUGHTER - domain : ', ONLINE_DOMAIN_NUM
+               LOG_ERROR("COMM_CARTESC_NEST_setup",*) '[NEST_setup] Child Flag from launcher is not consistent with namelist!'
+               LOG_ERROR_CONT(*) 'DAUGHTER - domain : ', ONLINE_DOMAIN_NUM
                call PRC_abort
             endif
 
@@ -646,9 +647,9 @@ contains
             COMM_CARTESC_NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = -1
 
             INTERCOMM_PARENT = inter_parent
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Online Nesting - DAUGHTER [INTERCOMM_ID:', &
+            LOG_INFO("COMM_CARTESC_NEST_setup",'(1x,A,I2,A)') 'Online Nesting - DAUGHTER [INTERCOMM_ID:', &
                                                         INTERCOMM_ID(HANDLING_NUM), ' ]'
-            if( IO_L ) write(IO_FID_LOG,*) '*** Online Nesting - INTERCOMM :', INTERCOMM_PARENT
+            LOG_INFO("COMM_CARTESC_NEST_setup",*) 'Online Nesting - INTERCOMM :', INTERCOMM_PARENT
 
             call COMM_CARTESC_NEST_ping( HANDLING_NUM )
 
@@ -670,29 +671,29 @@ contains
             TILEAL_IA  (HANDLING_NUM) = PARENT_IMAX  (HANDLING_NUM) * COMM_CARTESC_NEST_TILE_NUM_X
             TILEAL_JA  (HANDLING_NUM) = PARENT_JMAX  (HANDLING_NUM) * COMM_CARTESC_NEST_TILE_NUM_Y
 
-            if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Parent Domain'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_nprocs   :', PARENT_PRC_nprocs(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_X    :', PARENT_PRC_NUM_X(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_Y    :', PARENT_PRC_NUM_Y(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_KMAX         :', PARENT_KMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_IMAX         :', PARENT_IMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_JMAX         :', PARENT_JMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- PARENT_DTSEC        :', PARENT_DTSEC(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_NSTEP        :', PARENT_NSTEP(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Daughter Domain [me]'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_nprocs :', DAUGHTER_PRC_nprocs(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_X  :', DAUGHTER_PRC_NUM_X(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_Y  :', DAUGHTER_PRC_NUM_Y(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_KMAX       :', DAUGHTER_KMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_IMAX       :', DAUGHTER_IMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_JMAX       :', DAUGHTER_JMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC      :', DAUGHTER_DTSEC(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_NSTEP      :', DAUGHTER_NSTEP(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Target Tiles'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_KA      :', TILEAL_KA(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_IA      :', TILEAL_IA(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_JA      :', TILEAL_JA(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  Limit Num. NCOMM req. :', max_rq
+            LOG_INFO("COMM_CARTESC_NEST_setup",'(1x,A)'     ) 'Informations of Parent Domain'
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- PARENT_PRC_nprocs   :', PARENT_PRC_nprocs(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- PARENT_PRC_NUM_X    :', PARENT_PRC_NUM_X(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- PARENT_PRC_NUM_Y    :', PARENT_PRC_NUM_Y(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- PARENT_KMAX         :', PARENT_KMAX(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- PARENT_IMAX         :', PARENT_IMAX(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- PARENT_JMAX         :', PARENT_JMAX(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,F9.3)') '--- PARENT_DTSEC        :', PARENT_DTSEC(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- PARENT_NSTEP        :', PARENT_NSTEP(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A)'     ) 'Informations of Daughter Domain [me]'
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- DAUGHTER_PRC_nprocs :', DAUGHTER_PRC_nprocs(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- DAUGHTER_PRC_NUM_X  :', DAUGHTER_PRC_NUM_X(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- DAUGHTER_PRC_NUM_Y  :', DAUGHTER_PRC_NUM_Y(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- DAUGHTER_KMAX       :', DAUGHTER_KMAX(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- DAUGHTER_IMAX       :', DAUGHTER_IMAX(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- DAUGHTER_JMAX       :', DAUGHTER_JMAX(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,F9.3)') '--- DAUGHTER_DTSEC      :', DAUGHTER_DTSEC(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- DAUGHTER_NSTEP      :', DAUGHTER_NSTEP(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A)'     ) 'Informations of Target Tiles'
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- TILEALL_KA      :', TILEAL_KA(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- TILEALL_IA      :', TILEAL_IA(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)'  ) '--- TILEALL_JA      :', TILEAL_JA(HANDLING_NUM)
+            LOG_INFO_CONT('(1x,A,I6)  ') 'Limit Num. NCOMM req. :', max_rq
 
             allocate( buffer_2D  (                            PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM) ) )
             allocate( buffer_3D  (   PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM) ) )
@@ -827,9 +828,9 @@ contains
             ONLINE_USE_VELZ = .false.
          endif
 
-         !if( IO_L ) write(IO_FID_LOG,'(1x,A,I2)') '*** Number of Related Domains :', HANDLING_NUM
+         !LOG_INFO("COMM_CARTESC_NEST_setup",'(1x,A,I2)') 'Number of Related Domains :', HANDLING_NUM
          !if ( HANDLING_NUM > 2 ) then
-         !   f( IO_L ) write(*,*) 'xxx Too much handing domains (up to 2)'
+         !   f( IO_L ) LOG_ERROR("COMM_CARTESC_NEST_setup",*) 'Too much handing domains (up to 2)'
          !   call PRC_abort
          !endif
 
@@ -892,18 +893,18 @@ contains
        endif
     enddo
     if ( .NOT. hit ) then
-       write(*,*) 'xxx [NEST_domain_relate] region of daughter domain is larger than that of parent: SW search'
-       write(*,*) '                                  at rank:', PRC_myrank, ' of domain:', ONLINE_DOMAIN_NUM
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') 'xxx region of daughter domain is larger than that of parent: SW search'
-       if( IO_L ) write(IO_FID_LOG,*) ' grid width: half width in lat:', wid_lat, ' half width in lon:', wid_lon
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6)') '    daughter local (me): LON=',corner_loc(I_SW,I_LON)
+       LOG_ERROR("COMM_CARTESC_NEST_domain_relate",*) 'region of daughter domain is larger than that of parent: SW search'
+       LOG_ERROR_CONT(*)              '                                  at rank:', PRC_myrank, ' of domain:', ONLINE_DOMAIN_NUM
+       LOG_ERROR_CONT('(1x,A)')       ' region of daughter domain is larger than that of parent: SW search'
+       LOG_ERROR_CONT(*)              ' grid width: half width in lat:', wid_lat, ' half width in lon:', wid_lon
+       LOG_ERROR_CONT('(1x,A,F12.6)') '    daughter local (me): LON=',corner_loc(I_SW,I_LON)
        do i = 1, PARENT_PRC_nprocs(HANDLE)
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LON=', &
+          LOG_ERROR_CONT('(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LON=', &
                      latlon_catalog(i,I_SW,I_LON) ,latlon_catalog(i,I_NE,I_LON)
        enddo
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6)') '    daughter local (me): LAT=',corner_loc(I_SW,I_LAT)
+       LOG_ERROR_CONT('(1x,A,F12.6)') '    daughter local (me): LAT=',corner_loc(I_SW,I_LAT)
        do i = 1, PARENT_PRC_nprocs(HANDLE)
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LAT=', &
+          LOG_ERROR_CONT('(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LAT=', &
                      latlon_catalog(i,I_SW,I_LAT) ,latlon_catalog(i,I_NE,I_LAT)
        enddo
        call PRC_abort
@@ -928,18 +929,18 @@ contains
        endif
     enddo
     if ( .NOT. hit ) then
-       write(*,*) 'xxx [NEST_domain_relate] region of daughter domain is larger than that of parent: NE search'
-       write(*,*) '                                  at rank:', PRC_myrank, ' of domain:', ONLINE_DOMAIN_NUM
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') 'xxx region of daughter domain is larger than that of parent: NE search'
-       if( IO_L ) write(IO_FID_LOG,*) ' grid width: half width in lat:', wid_lat, ' half width in lon:', wid_lon
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6)') '    daughter local (me): LON=',corner_loc(I_NE,I_LON)
+       LOG_ERROR("COMM_CARTESC_NEST_domain_relate",*) 'region of daughter domain is larger than that of parent: NE search'
+       LOG_ERROR_CONT(*)              '                                  at rank:', PRC_myrank, ' of domain:', ONLINE_DOMAIN_NUM
+       LOG_ERROR_CONT('(1x,A)')       ' region of daughter domain is larger than that of parent: NE search'
+       LOG_ERROR_CONT(*)              ' grid width: half width in lat:', wid_lat, ' half width in lon:', wid_lon
+       LOG_ERROR_CONT('(1x,A,F12.6)') '    daughter local (me): LON=',corner_loc(I_NE,I_LON)
        do i = 1, PARENT_PRC_nprocs(HANDLE)
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LON=', &
+          LOG_ERROR_CONT('(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LON=', &
                      latlon_catalog(i,I_SW,I_LON) ,latlon_catalog(i,I_NE,I_LON)
        enddo
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6)') '    daughter local (me): LAT=',corner_loc(I_NE,I_LAT)
+       LOG_ERROR_CONT('(1x,A,F12.6)') '    daughter local (me): LAT=',corner_loc(I_NE,I_LAT)
        do i = 1, PARENT_PRC_nprocs(HANDLE)
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LAT=', &
+          LOG_ERROR_CONT('(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LAT=', &
                      latlon_catalog(i,I_SW,I_LAT) ,latlon_catalog(i,I_NE,I_LAT)
        enddo
        call PRC_abort
@@ -950,12 +951,12 @@ contains
 
     allocate( COMM_CARTESC_NEST_TILE_ID( COMM_CARTESC_NEST_TILE_NUM_X*COMM_CARTESC_NEST_TILE_NUM_Y ) )
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** NEST: target process tile in parent domain'
+    LOG_INFO("COMM_CARTESC_NEST_domain_relate",'(1x,A)') 'NEST: target process tile in parent domain'
     k = 1
     do j = 1, COMM_CARTESC_NEST_TILE_NUM_Y
     do i = 1, COMM_CARTESC_NEST_TILE_NUM_X
        COMM_CARTESC_NEST_TILE_ID(k) = pd_sw_tile + (i-1) + PARENT_PRC_NUM_X(HANDLE)*(j-1)
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,A,I6)') '    (', k, ') target mpi-process:', COMM_CARTESC_NEST_TILE_ID(k)
+       LOG_INFO_CONT('(1x,A,I4,A,I6)') '    (', k, ') target mpi-process:', COMM_CARTESC_NEST_TILE_ID(k)
        k = k + 1
     enddo
     enddo
@@ -1199,19 +1200,19 @@ contains
        DAUGHTER_NSTEP     (HANDLE) = datapack(13)
        DAUGHTER_DTSEC     (HANDLE) = buffer
     else
-       write(*,*) 'xxx [COMM_CARTESC_NEST_parentsize] internal error'
+       LOG_ERROR("COMM_CARTESC_NEST_parentsize",*) '[COMM_CARTESC_NEST_parentsize] internal error'
        call PRC_abort
     endif
 
     if ( ONLINE_BOUNDARY_DIAGQNUM ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Number concentration of hydrometeor will be diagnosed'
-       if( IO_L ) write(IO_FID_LOG,*) '*** Number of QA (remote,local) = ', QA_OTHERSIDE, COMM_CARTESC_NEST_BND_QA
+       LOG_INFO("COMM_CARTESC_NEST_parentsize",*) 'Number concentration of hydrometeor will be diagnosed'
+       LOG_INFO("COMM_CARTESC_NEST_parentsize",*) 'Number of QA (remote,local) = ', QA_OTHERSIDE, COMM_CARTESC_NEST_BND_QA
        COMM_CARTESC_NEST_BND_QA = min(QA_OTHERSIDE, COMM_CARTESC_NEST_BND_QA)
     else
        if ( QA_OTHERSIDE /= COMM_CARTESC_NEST_BND_QA ) then
-          write(*,*) 'xxx [COMM_CARTESC_NEST_parentsize] NUMBER of QA are not matched!'
-          write(*,*) 'xxx check a flag of ONLINE_BOUNDARY_USE_QHYD.'
-          write(*,*) 'xxx Number of QA (remote,local) = ', QA_OTHERSIDE, COMM_CARTESC_NEST_BND_QA
+          LOG_ERROR("COMM_CARTESC_NEST_parentsize",*) 'NUMBER of QA are not matched!'
+          LOG_ERROR_CONT(*) 'check a flag of ONLINE_BOUNDARY_USE_QHYD.'
+          LOG_ERROR_CONT(*) 'Number of QA (remote,local) = ', QA_OTHERSIDE, COMM_CARTESC_NEST_BND_QA
           call PRC_abort
        endif
     endif
@@ -1270,7 +1271,7 @@ contains
        call COMM_bcast( latlon_catalog, PARENT_PRC_nprocs(HANDLE), 4, 2 )
 
     else
-       write(*,*) 'xxx [COMM_CARTESC_NEST_catalogue] internal error'
+       LOG_ERROR("COMM_CARTESC_NEST_catalogue",*) 'internal error'
        call PRC_abort
     endif
 
@@ -1340,12 +1341,12 @@ contains
        if ( pong /= INTERCOMM_ID(HANDLE) ) ping_error = .true.
 
     else
-       write(*,*) 'xxx [COMM_CARTESC_NEST_ping] internal error'
+       LOG_ERROR("COMM_CARTESC_NEST_ping",*) 'internal error'
        call PRC_abort
     endif
 
     if ( ping_error ) then
-       write(*,*) 'xxx [COMM_CARTESC_NEST_ping] ping destination error'
+       LOG_ERROR("COMM_CARTESC_NEST_ping",*) 'ping destination error'
        call PRC_abort
     endif
 
@@ -1414,7 +1415,7 @@ contains
        enddo
        NUM_YP = k
 
-       if( IO_L ) write(IO_FID_LOG,'(A,I5,A,I5)') "[P]   Num YP =",NUM_YP,"  Num TILE(MAX) =",COMM_CARTESC_NEST_TILE_ALLMAX_p
+       LOG_INFO("COMM_CARTESC_NEST_setup_nestdown",'(A,I5,A,I5)') "[P]   Num YP =",NUM_YP,"  Num TILE(MAX) =",COMM_CARTESC_NEST_TILE_ALLMAX_p
 
        if ( PRC_IsMaster ) then
           call MPI_IRECV(ONLINE_DAUGHTER_USE_VELZ, 1, MPI_LOGICAL, PRC_myrank, tag+3, INTERCOMM_DAUGHTER, ireq, ierr)
@@ -1422,7 +1423,7 @@ contains
        endif
        call COMM_bcast(ONLINE_DAUGHTER_USE_VELZ)
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,L2)') '*** NEST: ONLINE_DAUGHTER_USE_VELZ =', ONLINE_DAUGHTER_USE_VELZ
+       LOG_INFO("COMM_CARTESC_NEST_setup_nestdown",'(1x,A,L2)') 'NEST: ONLINE_DAUGHTER_USE_VELZ =', ONLINE_DAUGHTER_USE_VELZ
 
        if ( PRC_IsMaster ) then
           call MPI_IRECV(ONLINE_DAUGHTER_NO_ROTATE, 1, MPI_LOGICAL, PRC_myrank, tag+4, INTERCOMM_DAUGHTER, ireq, ierr)
@@ -1431,12 +1432,12 @@ contains
        call COMM_bcast(ONLINE_DAUGHTER_NO_ROTATE)
 
        if( ONLINE_NO_ROTATE .neqv. ONLINE_DAUGHTER_NO_ROTATE ) then
-          write(*,*) 'xxx [COMM_CARTESC_NEST_setup_nestdown] Flag of NO_ROTATE is not consistent with the child domain'
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx ONLINE_NO_ROTATE = ', ONLINE_NO_ROTATE
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx ONLINE_DAUGHTER_NO_ROTATE =', ONLINE_DAUGHTER_NO_ROTATE
+          LOG_ERROR("COMM_CARTESC_NEST_setup_nestdown",*) 'Flag of NO_ROTATE is not consistent with the child domain'
+          LOG_ERROR_CONT(*) 'ONLINE_NO_ROTATE = ', ONLINE_NO_ROTATE
+          LOG_ERROR_CONT(*) 'ONLINE_DAUGHTER_NO_ROTATE =', ONLINE_DAUGHTER_NO_ROTATE
           call PRC_abort
        endif
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,L2)') '*** NEST: ONLINE_DAUGHTER_NO_ROTATE =', ONLINE_DAUGHTER_NO_ROTATE
+       LOG_INFO("COMM_CARTESC_NEST_setup_nestdown",'(1x,A,L2)') 'NEST: ONLINE_DAUGHTER_NO_ROTATE =', ONLINE_DAUGHTER_NO_ROTATE
 
        call COMM_CARTESC_NEST_importgrid_nestdown( HANDLE )
 
@@ -1460,7 +1461,7 @@ contains
                            MPI_MAX,            &
                            COMM_world,         &
                            ierr                )
-       if( IO_L ) write(IO_FID_LOG,'(A,I5,A,I5)') "[D]   Num YP =",COMM_CARTESC_NEST_TILE_ALL,"  Num TILE(MAX) =",COMM_CARTESC_NEST_TILE_ALLMAX_d
+       LOG_INFO("COMM_CARTESC_NEST_setup_nestdown",'(A,I5,A,I5)') "[D]   Num YP =",COMM_CARTESC_NEST_TILE_ALL,"  Num TILE(MAX) =",COMM_CARTESC_NEST_TILE_ALLMAX_d
 
        if ( PRC_IsMaster ) then
           call MPI_ISEND(COMM_CARTESC_NEST_TILE_ALLMAX_d, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq, ierr)
@@ -1526,15 +1527,15 @@ contains
 
        call MPI_BARRIER(INTERCOMM_PARENT, ierr)
     else
-       write(*,*) 'xxx [COMM_CARTESC_NEST_setup_nestdown] internal error'
+       LOG_ERROR("COMM_CARTESC_NEST_setup_nestdown",*) 'internal error'
        call PRC_abort
     endif
 
     if( NUM_YP * 16 > max_rq .OR. COMM_CARTESC_NEST_TILE_ALL * 16 > max_rq ) then ! 16 = dyn:5 + qtrc:11
-       write(*,*) 'xxx [COMM_CARTESC_NEST_setup_nestdown] internal error (overflow number of ireq)'
-       write(*,*) 'xxx NUM_YP x 16        = ', NUM_YP * 16
-       write(*,*) 'xxx COMM_CARTESC_NEST_TILE_ALL x 16 = ', COMM_CARTESC_NEST_TILE_ALL * 16
-       write(*,*) 'xxx max_rq             = ', max_rq
+       LOG_ERROR("COMM_CARTESC_NEST_setup_nestdown",*) 'internal error (overflow number of ireq)'
+       LOG_ERROR_CONT(*) 'NUM_YP x 16        = ', NUM_YP * 16
+       LOG_ERROR_CONT(*) 'COMM_CARTESC_NEST_TILE_ALL x 16 = ', COMM_CARTESC_NEST_TILE_ALL * 16
+       LOG_ERROR_CONT(*) 'max_rq             = ', max_rq
        call PRC_abort
     endif
 
@@ -1719,15 +1720,15 @@ contains
        max_ref = maxval( buffer_ref_FZ(:,:,:) )
        max_loc = maxval( ATMOS_GRID_CARTESC_REAL_FZ(KS-1:KE,:,:) ) ! HALO + 1
        if ( max_ref < max_loc ) then
-          write(*,*) 'xxx [COMM_CARTESC_NEST_importgrid_nestdown] REQUESTED DOMAIN IS TOO MUCH BROAD'
-          write(*,*) 'xxx -- VERTICAL direction over the limit'
-          write(*,*) 'xxx -- reference max: ', max_ref
-          write(*,*) 'xxx --     local max: ', max_loc
+          LOG_ERROR("COMM_CARTESC_NEST_importgrid_nestdown",*) 'REQUESTED DOMAIN IS TOO MUCH BROAD'
+          LOG_ERROR_CONT(*) '-- VERTICAL direction over the limit'
+          LOG_ERROR_CONT(*) '-- reference max: ', max_ref
+          LOG_ERROR_CONT(*) '--     local max: ', max_loc
           call PRC_abort
        endif
 
     else
-       write(*,*) 'xxx [COMM_CARTESC_NEST_importgrid_nestdown] internal error'
+       LOG_ERROR("COMM_CARTESC_NEST_importgrid_nestdown",*) 'internal error'
        call PRC_abort
     endif
 
@@ -1794,10 +1795,10 @@ contains
     if( .NOT. USE_NESTING ) return
 
     if ( BND_QA > I_BNDQA ) then
-       write(*,*) 'xxx [COMM_CARTESC_NEST_nestdown] internal error: BND_QA is larger than I_BNDQA'
+       LOG_ERROR("COMM_CARTESC_NEST_nestdown",*) 'internal error: BND_QA is larger than I_BNDQA'
        call PRC_abort
     elseif( BND_QA > max_bndqa ) then
-       write(*,*) 'xxx [COMM_CARTESC_NEST_nestdown] internal error: BND_QA is larger than max_bndqa'
+       LOG_ERROR("COMM_CARTESC_NEST_nestdown",*) 'internal error: BND_QA is larger than max_bndqa'
        call PRC_abort
     endif
 
@@ -1811,7 +1812,7 @@ contains
        call PROF_rapstart('NEST_pack_P', 2)
 
        nsend = nsend + 1
-       if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** CONeP[P] send( ", nsend, " )"
+       LOG_INFO("COMM_CARTESC_NEST_nestdown",'(1X,A,I5,A)') "CONeP[P] send( ", nsend, " )"
 
        ! to keep values at that time by finish of sending process
 !OCL XFILL
@@ -1953,7 +1954,7 @@ contains
        call PROF_rapstart('NEST_wait_C', 2)
 
        nwait_d = nwait_d + 1
-       !if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [C]: que wait ( ", nwait_d, " )"
+       !LOG_INFO("COMM_CARTESC_NEST_nestdown",'(1X,A,I5,A)') "NestIDC [C]: que wait ( ", nwait_d, " )"
 
        !*** reset issue tag and request control
        !--- do not change the calling order below;
@@ -2178,7 +2179,7 @@ contains
        call PROF_rapend  ('NEST_total_C', 2)
 
     else
-       write(*,*) 'xxx [COMM_CARTESC_NEST_nestdown] internal error'
+       LOG_ERROR("COMM_CARTESC_NEST_nestdown",*) 'internal error'
        call PRC_abort
     endif
 
@@ -2206,7 +2207,7 @@ contains
     if( .NOT. USE_NESTING ) return
 
     if ( BND_QA > I_BNDQA ) then
-       write(*,*) 'xxx [COMM_CARTESC_NEST_recvwait_issue] internal error: about BND_QA'
+       LOG_ERROR("COMM_CARTESC_NEST_recvwait_issue",*) 'internal error: about BND_QA'
        call PRC_abort
     endif
 
@@ -2220,7 +2221,7 @@ contains
        call PROF_rapstart('NEST_wait_P', 2)
 
        nwait_p = nwait_p + 1
-       !if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [P]: que wait ( ", nwait_p, " )"
+       !LOG_INFO("COMM_CARTESC_NEST_recvwait_issue",'(1X,A,I5,A)') "NestIDC [P]: que wait ( ", nwait_p, " )"
 
        call COMM_CARTESC_NEST_issuer_of_wait( HANDLE )
 
@@ -2240,7 +2241,7 @@ contains
        call PROF_rapstart('NEST_total_C', 2)
 
        nrecv = nrecv + 1
-       if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [C]: que recv ( ", nrecv, " )"
+       LOG_INFO("COMM_CARTESC_NEST_recvwait_issue",'(1X,A,I5,A)') "NestIDC [C]: que recv ( ", nrecv, " )"
 
        !*** reset issue tag and request control
        !--- do not change the calling order below;
@@ -2284,7 +2285,7 @@ contains
        call PROF_rapend('NEST_total_C', 2)
 
     else
-       write(*,*) 'xxx [COMM_CARTESC_NEST_recvwait_issue] internal error'
+       LOG_ERROR("COMM_CARTESC_NEST_recvwait_issue",*) 'internal error'
        call PRC_abort
     endif
 
@@ -2319,7 +2320,7 @@ contains
 
        !##### child #####
 
-       if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [C]: CANCEL recv ( ", nrecv, " )"
+       LOG_INFO("COMM_CARTESC_NEST_recv_cancel",'(1X,A,I5,A)') "NestIDC [C]: CANCEL recv ( ", nrecv, " )"
 
        do rq = 1, rq_tot_d
           if ( ireq_d(rq) /= MPI_REQUEST_NULL ) then
@@ -2328,13 +2329,13 @@ contains
 
 !              call MPI_TEST_CANCELLED(istatus, flag, ierr)
 !              if ( .NOT. flag ) then
-!                 write(*,*) 'xxx receive actions do not cancelled, req = ', rq
+!                 LOG_ERROR("COMM_CARTESC_NEST_recv_cancel",*) 'receive actions do not cancelled, req = ', rq
 !              endif
           endif
        enddo
 
     else
-       write(*,*) 'xxx [COMM_CARTESC_NEST_recv_cancel] internal error'
+       LOG_ERROR_CONT(*) 'internal error'
        call PRC_abort
     endif
 
@@ -2476,9 +2477,9 @@ contains
           endif
 
           if ( isu_tag > max_isu .OR. isu_tagf > max_isuf ) then
-             write(*,*) 'xxx [COMM_CARTESC_NEST_intercomm_nestdown_3D] Exceeded maximum issue'
-             write(*,*) 'xxx isu_tag  = ', isu_tag
-             write(*,*) 'xxx isu_tagf = ', isu_tagf
+             LOG_ERROR("COMM_CARTESC_NEST_intercomm_nestdown_3D",*) 'Exceeded maximum issue'
+             LOG_ERROR_CONT(*) 'isu_tag  = ', isu_tag
+             LOG_ERROR_CONT(*) 'isu_tagf = ', isu_tagf
              call PRC_abort
           endif
 
@@ -2532,7 +2533,7 @@ contains
        enddo
 
     else
-       write(*,*) 'xxx [COMM_CARTESC_NEST_intercomm_nestdown_3D] internal error'
+       LOG_ERROR("COMM_CARTESC_NEST_intercomm_nestdown_3D",*) 'internal error'
        call PRC_abort
     endif
 
@@ -2636,16 +2637,16 @@ contains
        enddo
 
        if ( isu_tag > max_isu .OR. isu_tagf > max_isuf ) then
-          write(*,*) 'xxx [COMM_CARTESC_NEST_issuer_of_receive_3D] Exceeded maximum issue'
-          write(*,*) 'xxx isu_tag  = ', isu_tag
-          write(*,*) 'xxx isu_tagf = ', isu_tagf
+          LOG_ERROR("COMM_CARTESC_NEST_issuer_of_receive_3D",*) 'Exceeded maximum issue'
+          LOG_ERROR_CONT(*) 'isu_tag  = ', isu_tag
+          LOG_ERROR_CONT(*) 'isu_tagf = ', isu_tagf
           call PRC_abort
        endif
 
        rq_ctl_d = rq
 
     else
-       write(*,*) 'xxx [COMM_CARTESC_NEST_issuer_of_receive_3D] internal error'
+       LOG_ERROR("COMM_CARTESC_NEST_issuer_of_receive_3D",*) 'internal error'
        call PRC_abort
     endif
 
@@ -2676,7 +2677,7 @@ contains
        ! nothing to do
 
     else
-       write(*,*) 'xxx [COMM_CARTESC_NEST_issuer_of_wait_3D] internal error'
+       LOG_ERROR("COMM_CARTESC_NEST_issuer_of_wait_3D",*) 'internal error'
        call PRC_abort
     endif
 
@@ -2722,8 +2723,8 @@ contains
 !       call MPI_TESTALL( req_count, ireq, flag, istatus, ierr )
 !
 !       if ( num > ONLINE_WAIT_LIMIT ) then
-!          if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
-!          write(*,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
+!          LOG_ERROR("COMM_CARTESC_NEST_waitall",'(1x,A)') 'over the limit of waiting time [NESTCOM]'
+!          LOG_ERROR_CONT('(1x,A)') 'over the limit of waiting time [NESTCOM]'
 !          call PRC_abort
 !       endif
 !    enddo
@@ -2765,7 +2766,7 @@ contains
        call PROF_rapend('NEST_test_C', 2)
 
     else
-       write(*,*) 'xxx [COMM_CARTESC_NEST_test] error'
+       LOG_ERROR("COMM_CARTESC_NEST_test",*) 'error'
        call PRC_abort
     endif
 
@@ -2784,21 +2785,21 @@ contains
 
     if( .NOT. USE_NESTING ) return
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes'
+    LOG_INFO("COMM_CARTESC_NEST_disconnect",'(1x,A)') 'Waiting finish of whole processes'
     call MPI_BARRIER(PRC_GLOBAL_COMM_WORLD, ierr)
 
     if ( ONLINE_IAM_PARENT ) then
-       !if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes as a parent'
+       !LOG_INFO("COMM_CARTESC_NEST_disconnect",'(1x,A)') 'Waiting finish of whole processes as a parent'
        !call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
        call MPI_COMM_FREE(INTERCOMM_DAUGHTER, ierr)
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Disconnected communication with child'
+       LOG_INFO("COMM_CARTESC_NEST_disconnect",'(1x,A)') 'Disconnected communication with child'
     endif
 
     if ( ONLINE_IAM_DAUGHTER ) then
-       !if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes as a child'
+       !LOG_INFO("COMM_CARTESC_NEST_disconnect",'(1x,A)') 'Waiting finish of whole processes as a child'
        !call MPI_BARRIER(INTERCOMM_PARENT, ierr)
        call MPI_COMM_FREE(INTERCOMM_PARENT, ierr)
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Disconnected communication with parent'
+       LOG_INFO("COMM_CARTESC_NEST_disconnect",'(1x,A)') 'Disconnected communication with parent'
     endif
 
     return

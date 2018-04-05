@@ -25,7 +25,8 @@ module scale_stdio
   !
   !++ included parameters
   !
-#include "scalelib.h"
+  character(len=*), parameter :: LIBVERSION = VERSION_MACRO
+
   !-----------------------------------------------------------------------------
   !
   !++ Public procedure

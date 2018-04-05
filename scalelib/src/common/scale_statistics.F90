@@ -7,7 +7,7 @@
 !! @author Team SCALE
 !!
 !<
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_statistics
   !-----------------------------------------------------------------------------
   !
@@ -71,27 +71,27 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[STATISTICS] / Categ[ATMOS-RM COMM] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[STATISTICS] / Categ[ATMOS-RM COMM] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_STATISTICS,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("STATISTICS_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_STATISTICS. Check!'
+       LOG_ERROR("STATISTICS_setup",*) 'Not appropriate names in namelist PARAM_STATISTICS. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_STATISTICS)
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Caluculate statistics?                     : ', STATISTICS_checktotal
-    if( IO_L ) write(IO_FID_LOG,*) '*** Allow global communication for statistics? : ', STATISTICS_use_globalcomm
+    LOG_NEWLINE
+    LOG_INFO("STATISTICS_setup",*) 'Caluculate statistics?                     : ', STATISTICS_checktotal
+    LOG_INFO("STATISTICS_setup",*) 'Allow global communication for statistics? : ', STATISTICS_use_globalcomm
     if ( STATISTICS_use_globalcomm ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** => Global total is calculated using MPI_ALLreduce.'
+       LOG_INFO_CONT(*) '=> Global total is calculated using MPI_ALLreduce.'
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** => Local total is calculated in each process.'
+       LOG_INFO_CONT(*) '=> Local total is calculated in each process.'
     endif
 
     return
@@ -145,7 +145,7 @@ contains
     end if
 
     if ( .NOT. ( statval > -1.0_RP .OR. statval < 1.0_RP ) ) then ! must be NaN
-       write(*,*) 'xxx [STATISTICS_total] NaN is detected for ', trim(varname), ' in rank ', PRC_myrank
+       LOG_ERROR("STATISTICS_total_2D",*) 'NaN is detected for ', trim(varname), ' in rank ', PRC_myrank
        call PRC_abort
     endif
 
@@ -172,7 +172,7 @@ contains
        mean_ = recvbuf(1) / recvbuf(2)
        ! statistics over the all node
        if ( .not. suppress_ ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,ES24.17)') &
+          LOG_INFO("STATISTICS_total_2D",'(1x,A,A24,A,ES24.17)') &
                      '[', trim(varname), '] MEAN(global) = ', mean_
        endif
     else
@@ -181,7 +181,7 @@ contains
 
        ! statistics on each node
        if ( .not. suppress_ ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,ES24.17)') &
+          LOG_INFO("STATISTICS_total_2D",'(1x,A,A24,A,ES24.17)') &
                      '[', trim(varname), '] MEAN(local)  = ', mean_
        endif
     endif
@@ -243,7 +243,7 @@ contains
     end if
 
     if ( .NOT. ( statval > -1.0_RP .OR. statval < 1.0_RP ) ) then ! must be NaN
-       write(*,*) 'xxx [STATISTICS_total] NaN is detected for ', trim(varname), ' in rank ', PRC_myrank
+       LOG_ERROR("STATISTICS_total_3D",*) 'NaN is detected for ', trim(varname), ' in rank ', PRC_myrank
        call PRC_abort
     endif
 
@@ -270,7 +270,7 @@ contains
        mean_ = recvbuf(1) / recvbuf(2)
        ! statistics over the all node
        if ( .not. suppress_ ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,ES24.17)') &
+          LOG_INFO("STATISTICS_total_3D",'(1x,A,A24,A,ES24.17)') &
                      '[', trim(varname), '] MEAN(global) = ', mean_
        endif
     else
@@ -279,7 +279,7 @@ contains
 
        ! statistics on each node
        if ( .not. suppress_ ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,ES24.17)') &
+          LOG_INFO("STATISTICS_total_3D",'(1x,A,A24,A,ES24.17)') &
                      '[', trim(varname), '] MEAN(local)  = ', mean_
        endif
     endif
@@ -331,8 +331,8 @@ contains
     do_globalcomm = STATISTICS_use_globalcomm
     if ( present(local) ) do_globalcomm = ( .not. local )
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Variable Statistics ***'
+    LOG_NEWLINE
+    LOG_INFO("STATISTICS_detail_3D",*) 'Variable Statistics '
     do v = 1, VA
        statval_l(  v,:) = var(KS,IS,JS,v)
        statidx_l(1,v,:) = KS
@@ -395,14 +395,14 @@ contains
                 allstatidx(v,2) = p
              end if
           end do
-          if( IO_L ) write(IO_FID_LOG,*) '[', trim(varname(v)), ']'
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,4(I5,A))') '  MAX =', &
+          LOG_INFO("STATISTICS_detail_3D",*) '[', trim(varname(v)), ']'
+          LOG_INFO_CONT('(1x,A,ES17.10,A,4(I5,A))') '  MAX =', &
                                                        allstatval(v,1), ' (rank=', &
                                                        allstatidx(v,1), '; ', &
                                          statidx(1,v,1,allstatidx(v,1)),',', &
                                          statidx(2,v,1,allstatidx(v,1)),',', &
                                          statidx(3,v,1,allstatidx(v,1)),')'
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,4(I5,A))') '  MIN =', &
+          LOG_INFO_CONT('(1x,A,ES17.10,A,4(I5,A))') '  MIN =', &
                                                        allstatval(v,2), ' (rank=', &
                                                        allstatidx(v,2), '; ', &
                                          statidx(1,v,2,allstatidx(v,2)),',', &
@@ -412,13 +412,13 @@ contains
     else
        ! statistics on each node
        do v = 1, VA
-          if( IO_L ) write(IO_FID_LOG,*) '*** [', trim(varname(v)), ']'
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,3(I5,A))') '*** MAX = ', &
+          LOG_INFO("STATISTICS_detail_3D",*) '[', trim(varname(v)), ']'
+          LOG_INFO_CONT('(1x,A,ES17.10,A,3(I5,A))') 'MAX = ', &
                                                 statval_l(  v,1),' (', &
                                                 statidx_l(1,v,1),',', &
                                                 statidx_l(2,v,1),',', &
                                                 statidx_l(3,v,1),')'
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,3(I5,A))') '*** MIN = ', &
+          LOG_INFO_CONT('(1x,A,ES17.10,A,3(I5,A))') 'MIN = ', &
                                                 statval_l(  v,2),' (', &
                                                 statidx_l(1,v,2),',', &
                                                 statidx_l(2,v,2),',', &
@@ -426,7 +426,7 @@ contains
        enddo
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    LOG_NEWLINE
 
     return
   end subroutine STATISTICS_detail_3D
@@ -469,8 +469,8 @@ contains
     do_globalcomm = STATISTICS_use_globalcomm
     if ( present(local) ) do_globalcomm = ( .not. local )
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Variable Statistics ***'
+    LOG_NEWLINE
+    LOG_INFO("STATISTICS_detail_2D",*) 'Variable Statistics '
     do v = 1, VA
        statval_l(  v,:) = var(IS,JS,v)
        statidx_l(1,v,:) = IS
@@ -528,13 +528,13 @@ contains
                 allstatidx(v,2) = p
              end if
           end do
-          if( IO_L ) write(IO_FID_LOG,*) '[', trim(varname(v)), ']'
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,3(I5,A))') '  MAX =', &
+          LOG_INFO("STATISTICS_detail_2D",*) '[', trim(varname(v)), ']'
+          LOG_INFO_CONT('(1x,A,ES17.10,A,3(I5,A))') '  MAX =', &
                                                        allstatval(v,1), ' (rank=', &
                                                        allstatidx(v,1), '; ', &
                                          statidx(1,v,1,allstatidx(v,1)),',', &
                                          statidx(2,v,1,allstatidx(v,1)),')'
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,3(I5,A))') '  MIN =', &
+          LOG_INFO_CONT('(1x,A,ES17.10,A,3(I5,A))') '  MIN =', &
                                                        allstatval(v,2), ' (rank=', &
                                                        allstatidx(v,2), '; ', &
                                          statidx(1,v,2,allstatidx(v,2)),',', &
@@ -543,19 +543,19 @@ contains
     else
        ! statistics on each node
        do v = 1, VA
-          if( IO_L ) write(IO_FID_LOG,*) '*** [', trim(varname(v)), ']'
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,2(I5,A))') '*** MAX = ', &
+          LOG_INFO("STATISTICS_detail_2D",*) '[', trim(varname(v)), ']'
+          LOG_INFO_CONT('(1x,A,ES17.10,A,2(I5,A))') 'MAX = ', &
                                                 statval_l(  v,1),' (', &
                                                 statidx_l(1,v,1),',', &
                                                 statidx_l(2,v,1),')'
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,2(I5,A))') '*** MIN = ', &
+          LOG_INFO_CONT('(1x,A,ES17.10,A,2(I5,A))') 'MIN = ', &
                                                 statval_l(  v,2),' (', &
                                                 statidx_l(1,v,2),',', &
                                                 statidx_l(2,v,2),')'
        enddo
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    LOG_NEWLINE
 
     return
   end subroutine STATISTICS_detail_2D

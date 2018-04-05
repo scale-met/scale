@@ -8,6 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_atmos_phy_ae_kajino13
   !-----------------------------------------------------------------------------
   !
@@ -198,13 +199,13 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Aerosol] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[Aerosol] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
 
     ! note: tentatively, aerosol module should be called at all time. we need dummy subprogram.
     !if ( ATMOS_sw_phy_ae ) then
 
-    write(*,*) '### Kajino13 scheme is still experimental'
+    LOG_WARN("ATMOS_PHY_AE_kajino13_tracer_setup",*) '### Kajino13 scheme is still experimental'
 
     ncat_max = max( IC_MIX, IC_SEA, IC_DUS )
    
@@ -215,16 +216,16 @@ contains
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_AE_KAJINO13_TRACER,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*)  '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_AE_kajino13_tracer_setup",*)  'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_AE_KAJINO13_TRACER, Check!'
+       LOG_ERROR("ATMOS_PHY_AE_kajino13_tracer_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_AE_KAJINO13_TRACER, Check!'
        call PRC_abort
     end if
    
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_AE_KAJINO13_TRACER)
    
     if( AE_CTG > ncat_max ) then
-       write(*,*) 'xxx AE_CTG should be smaller than', ncat_max+1, 'stop'
+       LOG_ERROR("ATMOS_PHY_AE_kajino13_tracer_setup",*) 'AE_CTG should be smaller than', ncat_max+1, 'stop'
        call PRC_abort
     endif
    
@@ -235,7 +236,7 @@ contains
     NSIZ(1:AE_CTG) = NASIZ(1:AE_CTG)
 
     if( maxval( NKAP ) /= 1 .OR. minval( NKAP ) /= 1 ) then
-       write(*,*) 'xxx NKAP(:) /= 1 is not supported now, Stop!'
+       LOG_ERROR("ATMOS_PHY_AE_kajino13_tracer_setup",*) 'NKAP(:) /= 1 is not supported now, Stop!'
        call PRC_abort
     end if
    
@@ -392,9 +393,9 @@ contains
     integer :: it, ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Aerosol] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Kajino(2013) scheme'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[Aerosol] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_AE_kajino13_setup",*) 'Kajino(2013) scheme'
 
     !--- setup parameter
     pi6   = pi / 6._RP              ! pi/6
@@ -438,9 +439,9 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_AE_KAJINO13,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_AE_kajino13_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_AE_KAJINO13. Check!'
+       LOG_ERROR("ATMOS_PHY_AE_kajino13_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_AE_KAJINO13. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_AE_KAJINO13)
@@ -660,7 +661,7 @@ contains
     real(RP) :: conc_gas(GAS_CTG)    !concentration [ug/m3]
     integer :: i, j, k, iq, it
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Aerosol(kajino13)'
+    LOG_PROGRESS(*) 'atmosphere / physics / aerosol / kajino13'
 
     aerosol_procs(:,:,:,:) = 0.0_RP
     aerosol_activ(:,:,:,:) = 0.0_RP
@@ -1058,7 +1059,7 @@ contains
        m0t = cleannumber
        dgt = 0.1E-6_RP
        sgt = 1.3_RP
-       if( IO_L ) write(IO_FID_LOG,*) '*** WARNING! Initial aerosol number is set as ', cleannumber, '[#/m3]'
+       LOG_WARN("ATMOS_PHY_AE_kajino13_mkinit",*) 'Initial aerosol number is set as ', cleannumber, '[#/m3]'
     endif
 
     m2t = m0t*dgt**(2.d0) *dexp(2.0d0 *(dlog(real(sgt,kind=DP))**2.d0)) !total M2 [m2/m3]

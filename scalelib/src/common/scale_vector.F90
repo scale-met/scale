@@ -7,6 +7,7 @@
 !! @author NICAM developers, Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_vector
   !-----------------------------------------------------------------------------
   !
@@ -237,19 +238,19 @@ contains
     call VECTR_dot  ( ip, o, cdab, o, a )
 
     p(:) = cdab(:) / sign(length,ip)
-!   if( IO_L ) write(IO_FID_LOG,*), "p:", p(:)
+!   LOG_INFO("VECTR_intersec",*), "p:", p(:)
 
     call VECTR_angle( angle_aop, a, o, p )
     call VECTR_angle( angle_pob, p, o, b )
     call VECTR_angle( angle_aob, a, o, b )
-!   if( IO_L )  write(IO_FID_LOG,*), "angle a-p-b:", angle_aop, angle_pob, angle_aob
+!   LOG_INFO("VECTR_intersec",*), "angle a-p-b:", angle_aop, angle_pob, angle_aob
 
     call VECTR_angle( angle_cop, c, o, p )
     call VECTR_angle( angle_pod, p, o, d )
     call VECTR_angle( angle_cod, c, o, d )
-!   if( IO_L )  write(IO_FID_LOG,*), "angle c-p-d:", angle_cop, angle_pod, angle_cod
+!   LOG_INFO("VECTR_intersec",*), "angle c-p-d:", angle_cop, angle_pod, angle_cod
 
-!   if( IO_L )  write(IO_FID_LOG,*), "judge:", angle_aob-(angle_aop+angle_pob), angle_cod-(angle_cop+angle_pod)
+!   LOG_INFO("VECTR_intersec",*), "judge:", angle_aob-(angle_aop+angle_pob), angle_cod-(angle_cop+angle_pod)
 
     ! --- judge intersection
     if (       abs(angle_aob-(angle_aop+angle_pob)) < EPS &
@@ -296,7 +297,7 @@ contains
        call VECTR_dot  ( ip, o(:), v1(:), o(:), xp(:) )
 
        if ( ip < -EPS ) then ! right hand : exchange
-!         if( IO_L )  write(IO_FID_LOG,*) 'exchange by ip', i, '<->',j
+!         LOG_INFO("VECTR_anticlockwise",*) 'exchange by ip', i, '<->',j
           vertex(i,:) = v2(:)
           vertex(j,:) = v3(:)
        endif
@@ -312,11 +313,11 @@ contains
     call VECTR_dot  ( ip, o(:), v1(:), o(:), xp(:) )
     call VECTR_angle( angle1, v1(:), o, v2(:) )
     call VECTR_angle( angle2, v1(:), o, v3(:) )
-!   if( IO_L )  write(IO_FID_LOG,*) ip, angle1, angle2, abs(angle1)-abs(angle2)
+!   LOG_INFO("VECTR_anticlockwise",*) ip, angle1, angle2, abs(angle1)-abs(angle2)
 
     if (       abs(ip)                 < EPS  &      ! on the same line
          .AND. abs(angle2)-abs(angle1) < 0.0_RP ) then ! which is far?
-!      if( IO_L )  write(IO_FID_LOG,*) 'exchange by angle', 2, '<->', 3
+!      LOG_INFO("VECTR_anticlockwise",*) 'exchange by angle', 2, '<->', 3
        vertex(2,:) = v3(:)
        vertex(3,:) = v2(:)
     endif
@@ -328,11 +329,11 @@ contains
     call VECTR_dot  ( ip, o(:), v1(:), o(:), xp(:) )
     call VECTR_angle( angle1, v1(:), o, v2(:) )
     call VECTR_angle( angle2, v1(:), o, v3(:) )
-!   if( IO_L )  write(IO_FID_LOG,*) ip, angle1, angle2, abs(angle1)-abs(angle2)
+!   LOG_INFO("VECTR_anticlockwise",*) ip, angle1, angle2, abs(angle1)-abs(angle2)
 
     if (       abs(ip)                 < EPS  &      ! on the same line
          .AND. abs(angle2)-abs(angle1) < 0.0_RP ) then ! which is far?
-!      if( IO_L )  write(IO_FID_LOG,*) 'exchange by angle', nvert, '<->', nvert-1
+!      LOG_INFO("VECTR_anticlockwise",*) 'exchange by angle', nvert, '<->', nvert-1
        vertex(nvert,  :) = v3(:)
        vertex(nvert-1,:) = v2(:)
     endif
@@ -400,7 +401,7 @@ contains
        call VECTR_abs( acac, oaoc(:) )
 
        if ( abab < EPS .OR. acac < EPS ) then
-          !write(*,'(A,3(ES20.10))') "zero length abab or acac:", abab, acac
+          !LOG_WARN("VECTR_triangle",'(A,3(ES20.10))') "zero length abab or acac:", abab, acac
           return
        endif
 
@@ -413,7 +414,7 @@ contains
        baba = abab
 
        if ( bcbc < EPS .OR. baba < EPS ) then
-          !write(*,'(A,3(ES20.10))') "zero length bcbc or baba:", bcbc, baba
+          !LOG_WARN("VECTR_triangle",'(A,3(ES20.10))') "zero length bcbc or baba:", bcbc, baba
           return
        endif
 
@@ -426,7 +427,7 @@ contains
        cbcb = bcbc
 
        if ( caca < EPS .OR. cbcb < EPS ) then
-          !write(*,'(A,3(ES20.10))') "zero length caca or cbcb:", caca, cbcb
+          !LOG_WARN("VECTR_triangle",'(A,3(ES20.10))') "zero length caca or cbcb:", caca, cbcb
           return
        endif
 

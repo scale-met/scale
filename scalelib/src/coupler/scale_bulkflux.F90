@@ -6,9 +6,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_bulkflux
   !-----------------------------------------------------------------------------
   !
@@ -134,8 +134,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[BULKFLUX] / Categ[COUPLER] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[BULKFLUX] / Categ[COUPLER] / Origin[SCALElib]'
 
     ! WSCF = 1.2 for dx > 1 km (Beljaars 1994)
     ! lim_{dx->0} WSCF = 0  for LES (Fig. 6 Kitamura and Ito 2016 BLM)
@@ -147,24 +147,24 @@ contains
     read(IO_FID_CONF,nml=PARAM_BULKFLUX,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("BULKFLUX_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_BULKFLUX. Check!'
+       LOG_ERROR("BULKFLUX_setup",*) 'Not appropriate names in namelist PARAM_BULKFLUX. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_BULKFLUX)
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for surface bulk flux : ', trim(BULKFLUX_type)
+    LOG_NEWLINE
+    LOG_INFO("BULKFLUX_setup",*) 'Scheme for surface bulk flux : ', trim(BULKFLUX_type)
     select case(BULKFLUX_type)
     case('U95')
-       if( IO_L ) write(IO_FID_LOG,*) '*** => Uno et al.(1995)'
+       LOG_INFO_CONT(*) '=> Uno et al.(1995)'
        BULKFLUX => BULKFLUX_U95
     case('B91W01')
-       if( IO_L ) write(IO_FID_LOG,*) '*** => Beljaars (1991) and Wilson (2001)'
+       LOG_INFO_CONT(*) '=> Beljaars (1991) and Wilson (2001)'
        BULKFLUX => BULKFLUX_B91W01
     case default
-       write(*,*) 'xxx Unsupported BULKFLUX_type. STOP'
+       LOG_ERROR("BULKFLUX_setup",*) 'Unsupported BULKFLUX_type. STOP'
        call PRC_abort
     end select
 

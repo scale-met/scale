@@ -12,7 +12,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_mp_common
   !-----------------------------------------------------------------------------
   !
@@ -132,21 +132,19 @@ contains
 
     if (       abs(limit_negative) > 0.0_RP         &
          .AND. abs(limit_negative) < abs(diffq_min) ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx [MP_negative_fixer] large negative is found.'
-       write(*,*)                     'xxx [MP_negative_fixer] large negative is found. rank = ', PRC_myrank
+       LOG_ERROR("ATMOS_PHY_MP_negative_fixer",*) 'large negative is found. rank = ', PRC_myrank
 
        do j = JS, JE
        do i = IS, IE
        do k = KS,  KE
           if (     abs(limit_negative) < abs(diffq_check(k,i,j)) &
               .OR. abs(QV(k,i,j)     ) < abs(diffq_check(k,i,j)) ) then
-             if( IO_L ) write(IO_FID_LOG,*) &
-                        'xxx k,i,j,value(QHYD,QV) = ', k, i, j, diffq_check(k,i,j), QV(k,i,j)
+             LOG_ERROR_CONT(*) 'k,i,j,value(QHYD,QV) = ', k, i, j, diffq_check(k,i,j), QV(k,i,j)
           endif
        enddo
        enddo
        enddo
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx criteria: total negative hydrometeor < ', abs(limit_negative)
+       LOG_ERROR_CONT(*) 'total negative hydrometeor < ', abs(limit_negative)
 
        call PRC_abort
     endif
@@ -228,21 +226,19 @@ contains
 
     if (       abs(limit_negative) > 0.0_RP         &
          .AND. abs(limit_negative) < abs(diffq_min) ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx [MP_negative_fixer] large negative is found.'
-       write(*,*)                     'xxx [MP_negative_fixer] large negative is found. rank = ', PRC_myrank
+       LOG_ERROR("ATMOS_PHY_MP_negative_fixer_obsolute",*) 'large negative is found. rank = ', PRC_myrank
 
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS,  KE
           if (     abs(limit_negative)   < abs(diffq_check(k,i,j)) &
               .OR. abs(QTRC(k,i,j,I_QV)) < abs(diffq_check(k,i,j)) ) then
-             if( IO_L ) write(IO_FID_LOG,*) &
-                        'xxx k,i,j,value(QHYD,QV) = ', k, i, j, diffq_check(k,i,j), QTRC(k,i,j,I_QV)
+             LOG_ERROR_CONT(*) 'k,i,j,value(QHYD,QV) = ', k, i, j, diffq_check(k,i,j), QTRC(k,i,j,I_QV)
           endif
        enddo
        enddo
        enddo
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx criteria: total negative hydrometeor < ', abs(limit_negative)
+       LOG_ERROR_CONT(*) 'total negative hydrometeor < ', abs(limit_negative)
 
        call PRC_abort
     endif
@@ -335,7 +331,7 @@ contains
                                                            converged                   ) ! [OUT]
 
           if ( .NOT. converged ) then
-             write(*,*) 'xxx [moist_conversion] not converged! ', k,i,j
+             LOG_ERROR("ATMOS_PHY_MP_saturation_adjustment_3D",*) 'moist_conversion not converged! ', k,i,j
              error = .true.
              exit
           endif
@@ -376,7 +372,7 @@ contains
                                                            converged                   ) ! [OUT]
 
           if ( .NOT. converged ) then
-             write(*,*) 'xxx [moist_conversion] not converged! ', k,i,j
+             LOG_ERROR("ATMOS_PHY_MP_saturation_adjustment_3D",*) 'moist_conversion not converged! ', k,i,j
              error = .true.
              exit
           endif

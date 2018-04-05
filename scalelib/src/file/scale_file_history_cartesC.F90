@@ -8,6 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_file_history_cartesC
   !-----------------------------------------------------------------------------
   !
@@ -118,8 +119,8 @@ contains
     integer  :: k
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[FILE_HISTORY_CARTESC] / Categ[ATMOS-RM IO] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[HISTORY_CARTESC] / Categ[FILE] / Origin[SCALElib]'
 
     FILE_HISTORY_CARTESC_PRES(:) = 0.0_RP
 
@@ -127,9 +128,9 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_FILE_HISTORY_CARTESC,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("FILE_HISTORY_CARTESC_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_FILE_HISTORY_CARTESC. Check!'
+       LOG_ERROR("FILE_HISTORY_CARTESC_setup",*) 'Not appropriate names in namelist PARAM_FILE_HISTORY_CARTESC. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_FILE_HISTORY_CARTESC)
@@ -138,17 +139,17 @@ contains
     ! check pressure coordinate
     if ( FILE_HISTORY_CARTESC_PRES_nlayer > 0 ) then
        if ( FILE_HISTORY_CARTESC_PRES_nlayer > nlayer_max ) then
-          write(*,'(a,i3)') 'xxx FILE_HISTORY_CARTESC_PRES_nlayer must be <= ', nlayer_max
+          LOG_ERROR("FILE_HISTORY_CARTESC_setup",'(a,i3)') 'FILE_HISTORY_CARTESC_PRES_nlayer must be <= ', nlayer_max
           call PRC_abort
        end if
        allocate( FILE_HISTORY_CARTESC_PRES_val(FILE_HISTORY_CARTESC_PRES_nlayer) )
 
        do k = 1, FILE_HISTORY_CARTESC_PRES_nlayer
           if ( FILE_HISTORY_CARTESC_PRES(k) <= 0.0_RP ) then
-             write(*,'(a,i3,f7.1)') 'xxx Invalid value found in pressure coordinate! (k,value)=', k, FILE_HISTORY_CARTESC_PRES(k)
+             LOG_ERROR("FILE_HISTORY_CARTESC_setup",'(a,i3,f7.1)') 'Invalid value found in pressure coordinate! (k,value)=', k, FILE_HISTORY_CARTESC_PRES(k)
              call PRC_abort
           elseif ( FILE_HISTORY_CARTESC_PRES(k+1) >= FILE_HISTORY_CARTESC_PRES(k) ) then
-             write(*,'(a,i3,2f7.1)') 'xxx The value of pressure coordinate must be descending order! ', &
+             LOG_ERROR("FILE_HISTORY_CARTESC_setup",'(a,i3,2f7.1)') 'The value of pressure coordinate must be descending order! ', &
                   '(k,value[k],value[k+1])=', k, FILE_HISTORY_CARTESC_PRES(k), FILE_HISTORY_CARTESC_PRES(k+1)
              call PRC_abort
           endif
@@ -157,8 +158,8 @@ contains
 
        call INTERP_VERT_alloc_pres( FILE_HISTORY_CARTESC_PRES_nlayer, IA, JA ) ! [IN]
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** FILE_HISTORY_CARTESC_PRES_nlayer is not set.'
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output with pressure coordinate is disabled'
+       LOG_INFO("FILE_HISTORY_CARTESC_setup",*) 'FILE_HISTORY_CARTESC_PRES_nlayer is not set.'
+       LOG_INFO("FILE_HISTORY_CARTESC_setup",*) 'Output with pressure coordinate is disabled'
     endif
 
 
@@ -492,7 +493,7 @@ contains
        ksize  = UKMAX+1
        kstart = UKS-1
     case default
-       write(*,*) 'xxx [FILE_HISTORY_CARTESC_truncate_1D] dim_type is invalid: ', trim(dim_type)
+       LOG_ERROR("FILE_HISTORY_CARTESC_truncate_1D",*) 'dim_type is invalid: ', trim(dim_type)
        call PRC_abort
     end select
 
@@ -534,7 +535,7 @@ contains
        isize  = imh
        istart = imsh
     case default
-       write(*,*) 'xxx [FILE_HISTORY_CARTESC_truncate_2D] dim_type is invalid: ', trim(dim_type)
+       LOG_ERROR("FILE_HISTORY_CARTESC_truncate_2D",*) 'dim_type is invalid: ', trim(dim_type)
        call PRC_abort
     end select
 
@@ -546,7 +547,7 @@ contains
        jsize  = jmh
        jstart = jmsh
     case default
-       write(*,*) 'xxx [FILE_HISTORY_CARTESC_truncate_2D] dim_type is invalid: ', trim(dim_type)
+       LOG_ERROR("FILE_HISTORY_CARTESC_truncate_2D",*) 'dim_type is invalid: ', trim(dim_type)
        call PRC_abort
     end select
 
@@ -655,7 +656,7 @@ contains
        ksize  = UKMAX
        kstart = UKS
     case default
-       write(*,*) 'xxx [FILE_HISTORY_CARTESC_truncate_3D] dim_type is invalid: ', trim(dim_type)
+       LOG_ERROR("FILE_HISTORY_CARTESC_truncate_3D",*) 'dim_type is invalid: ', trim(dim_type)
        call PRC_abort
     end select
     if ( dim_type(2:2) == 'H' ) then
@@ -706,7 +707,7 @@ contains
     elseif( ksize == KMAX .and. zcoord == "pressure" ) then ! z*->p interpolation (full level)
        ksize = FILE_HISTORY_CARTESC_PRES_nlayer
        if ( ksize == 0 ) then
-          write(*,*) 'xxx FILE_HISTORY_CARTESC_PRES_nlayer must be set to output variable with the pressure coordinate'
+          LOG_ERROR("FILE_HISTORY_CARTESC_truncate_3D",*) 'FILE_HISTORY_CARTESC_PRES_nlayer must be set to output variable with the pressure coordinate'
           call PRC_abort
        end if
 
@@ -731,7 +732,7 @@ contains
     elseif( ksize == KMAX+1 .and. zcoord == "pressure" ) then ! z*->p interpolation (half level)
        ksize = FILE_HISTORY_CARTESC_PRES_nlayer
        if ( ksize == 0 ) then
-          write(*,*) 'xxx FILE_HISTORY_CARTESC_PRES_nlayer must be set to output variable with the pressure coordinate'
+          LOG_ERROR("FILE_HISTORY_CARTESC_truncate_3D",*) 'FILE_HISTORY_CARTESC_PRES_nlayer must be set to output variable with the pressure coordinate'
           call PRC_abort
        end if
 

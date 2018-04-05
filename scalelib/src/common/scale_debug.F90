@@ -6,10 +6,8 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2014-01-15 (H.Yashiro) Merge scale_debug & scale_misc(valcheck)
-!!
 !<
+#include "scalelib.h"
 module scale_debug
   !-----------------------------------------------------------------------------
   !
@@ -68,7 +66,7 @@ contains
     call PROF_rapstart('Debug', 1)
 
     if ( .NOT. ( abs(v) < abs(CONST_UNDEF) ) ) then
-       write(*,*) 'xxx uninitialized value at line:', current_line
+       LOG_ERROR("CHECK",*) 'uninitialized value at line:', current_line
        call abort
     end if
 
@@ -118,10 +116,10 @@ contains
     enddo
 
     if ( invalid_value ) then
-       write(*,*) 'xxx [VALCHECK_1D] invalid value:', trim(varname), &
+       LOG_ERROR("VALCHECK_1D",*) '[VALCHECK_1D] invalid value:', trim(varname), &
                   '(', PRC_myrank, ',', k, ')=', var(k)
-       write(*,*) 'xxx in file   : ', trim(current_file), ', at line : ', current_line
-       write(*,*) 'xxx in domain : ', DEBUG_DOMAIN_NUM
+       LOG_ERROR_CONT(*) 'in file   : ', trim(current_file), ', at line : ', current_line
+       LOG_ERROR_CONT(*) 'in domain : ', DEBUG_DOMAIN_NUM
        call PRC_abort
     endif
 
@@ -177,10 +175,10 @@ contains
           enddo outer
 
     if ( invalid_value ) then
-       write(*,*) 'xxx [VALCHECK_2D] invalid value:', trim(varname), &
+       LOG_ERROR("VALCHECK_2D",*) '[VALCHECK_2D] invalid value:', trim(varname), &
                   '(', PRC_myrank, ',', k, ',', i, ')=', var(k,i)
-       write(*,*) 'xxx in file   : ', trim(current_file), ', at line : ', current_line
-       write(*,*) 'xxx in domain : ', DEBUG_DOMAIN_NUM
+       LOG_ERROR_CONT(*) 'in file   : ', trim(current_file), ', at line : ', current_line
+       LOG_ERROR_CONT(*) 'in domain : ', DEBUG_DOMAIN_NUM
        call PRC_abort
     endif
 
@@ -242,10 +240,10 @@ contains
           enddo outer
 
     if ( invalid_value ) then
-       write(*,*) 'xxx [VALCHECK_3D] Invalid value:', trim(varname), &
+       LOG_ERROR("VALCHECK_3D",*) '[VALCHECK_3D] Invalid value:', trim(varname), &
                   '(', PRC_myrank, ',', k, ',', i, ',', j, ')=', var(k,i,j)
-       write(*,*) 'xxx in file   : ', trim(current_file), ', at line : ', current_line
-       write(*,*) 'xxx in domain : ', DEBUG_DOMAIN_NUM
+       LOG_ERROR_CONT(*) 'in file   : ', trim(current_file), ', at line : ', current_line
+       LOG_ERROR_CONT(*) 'in domain : ', DEBUG_DOMAIN_NUM
        call PRC_abort
     endif
 

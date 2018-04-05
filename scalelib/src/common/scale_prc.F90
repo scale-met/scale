@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !!
 !<
+#include "scalelib.h"
 module scale_prc
   !-----------------------------------------------------------------------------
   !
@@ -409,10 +410,8 @@ contains
 
     ! Stop MPI
     if ( PRC_mpi_alive ) then
-       if ( IO_L ) then
-          write(IO_FID_LOG,*)
-          write(IO_FID_LOG,*) '++++++ Finalize MPI...'
-       endif
+       LOG_NEWLINE
+       LOG_INFO("PRC_MPIfinish",*) '++++++ Finalize MPI...'
 
        ! free splitted communicator
        if ( PRC_LOCAL_COMM_WORLD  /= PRC_GLOBAL_COMM_WORLD ) then
@@ -422,7 +421,7 @@ contains
        call MPI_Barrier(PRC_UNIVERSAL_COMM_WORLD,ierr)
 
        call MPI_Finalize(ierr)
-       if( IO_L ) write(IO_FID_LOG,*) '++++++ MPI is peacefully finalized'
+       LOG_INFO("PRC_MPIfinish",*) '++++++ MPI is peacefully finalized'
     endif
 
     ! Close logfile, configfile
@@ -499,9 +498,10 @@ contains
           total_nmax = total_nmax + PRC_DOMAINS(i)
        enddo
        if ( total_nmax /= ORG_nmax ) then
-          if( PRC_UNIVERSAL_IsMaster ) write(*,*) ""
-          if( PRC_UNIVERSAL_IsMaster ) write(*,*) "ERROR: MPI PROCESS NUMBER is INCONSISTENT"
-          if( PRC_UNIVERSAL_IsMaster ) write(*,*) "REQUESTED NPROCS = ", total_nmax, "  LAUNCHED NPROCS = ", ORG_nmax
+          if( PRC_UNIVERSAL_IsMaster ) then
+             LOG_ERROR("PRC_MPIsplit",*) "MPI PROCESS NUMBER is INCONSISTENT"
+             LOG_ERROR_CONT(*) " REQUESTED NPROCS = ", total_nmax, "  LAUNCHED NPROCS = ", ORG_nmax
+          end if
           call PRC_abort
        endif
 
@@ -585,7 +585,9 @@ contains
     elseif ( NUM_DOMAIN == 1 ) then ! single domain run
        if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "*** a single comunicator"
     else
-       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "ERROR: REQUESTED DOMAIN NUMBER IS NOT ACCEPTABLE"
+       if ( PRC_UNIVERSAL_IsMaster ) then
+          LOG_ERROR("RPC_MPIsplit",*) "REQUESTED DOMAIN NUMBER IS NOT ACCEPTABLE"
+       end if
        call PRC_abort
     endif
 

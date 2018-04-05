@@ -8,6 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_file_external_input_cartesC
   !-----------------------------------------------------------------------------
   !
@@ -101,7 +102,7 @@ contains
        dim1_S   = OKS
        dim1_E   = OKE
     case default
-       write(*,*) 'xxx [FILE_EXTERNAL_INPUT_CARTESC_get_dims1D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
+       LOG_ERROR("FILE_EXTERNAL_INPUT_CARTESC_get_dims1D",*) 'unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_abort
     end select
 
@@ -157,7 +158,7 @@ contains
        dim2_E   = KE
        transpose = .true.
     case default
-       write(*,*) 'xxx [FILE_EXTERNAL_INPUT_CARTESC_get_dims2D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
+       LOG_ERROR("FILE_EXTERNAL_INPUT_CARTESC_get_dims2D",*) 'unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_abort
     end select
 
@@ -283,7 +284,7 @@ contains
        dim3_E   = UKE
        transpose = .true.
     case default
-       write(*,*) 'xxx [FILE_EXTERNAL_INPUT_CARTESC_get_dims3D] unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
+       LOG_ERROR("FILE_EXTERNAL_INPUT_CARTESC_get_dims3D",*) 'unsupported axis type. Check! axistype:', trim(axistype), ', item:',trim(varname)
        call PRC_abort
     end select
 

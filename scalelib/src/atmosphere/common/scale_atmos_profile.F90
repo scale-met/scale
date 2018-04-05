@@ -8,6 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_atmos_profile
   !-----------------------------------------------------------------------------
   !
@@ -112,13 +113,13 @@ contains
        endif
     enddo
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '###### ICAO International Standard Atmosphere ######'
-    if( IO_L ) write(IO_FID_LOG,*) '      height:  lapse rate:    pressure: temperature'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PROFILE_isa_1D",*) '###### ICAO International Standard Atmosphere ######'
+    LOG_INFO_CONT(*) '      height:  lapse rate:    pressure: temperature'
     do n = 1, nref
-       if( IO_L ) write(IO_FID_LOG,'(4F13.5)') z_isa(n), GAMMA(n), pres_isa(n), temp_isa(n)
+       LOG_INFO_CONT('(4F13.5)') z_isa(n), GAMMA(n), pres_isa(n), temp_isa(n)
     enddo
-    if( IO_L ) write(IO_FID_LOG,*) '####################################################'
+    LOG_INFO_CONT(*) '####################################################'
 
     !--- make reference state
     do k = KS, KE
@@ -183,8 +184,8 @@ contains
     integer  :: k, i, j, n
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROFILE] / Categ[ATMOS SHARE] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[PROFILE] / Categ[ATMOS] / Origin[SCALElib]'
 
     gmr   = GRAV / Rdry
     RovCP = Rdry / CPdry
@@ -211,13 +212,13 @@ contains
     enddo
     enddo
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '###### ICAO International Standard Atmosphere ######'
-    if( IO_L ) write(IO_FID_LOG,*) '      height:  lapse rate:    pressure: temperature'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PROFILE_isa_3D",*) '###### ICAO International Standard Atmosphere ######'
+    LOG_INFO_CONT(*) '      height:  lapse rate:    pressure: temperature'
     do n = 1, nref
-       if( IO_L ) write(IO_FID_LOG,'(4F13.5)') z_isa(n), GAMMA(n), pres_isa(n,IS,JS), temp_isa(n,IS,JS)
+       LOG_INFO_CONT('(4F13.5)') z_isa(n), GAMMA(n), pres_isa(n,IS,JS), temp_isa(n,IS,JS)
     enddo
-    if( IO_L ) write(IO_FID_LOG,*) '####################################################'
+    LOG_INFO_CONT(*) '####################################################'
 
     !--- make reference state
     do j = JS, JE

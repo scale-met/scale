@@ -11,7 +11,7 @@
 !! @author Team SCALE
 !!
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_rd_profile
   !-----------------------------------------------------------------------------
   !
@@ -157,8 +157,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[RADIATION PROFILE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[RADIATION PROFILE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
 
     ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = PROFILE_CIRA86_fname
     ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = PROFILE_MIPAS2001_dir
@@ -169,9 +169,9 @@ contains
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD_PROFILE,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_RD_PROFILE_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_RD_PROFILE. Check!'
+       LOG_ERROR("ATMOS_PHY_RD_PROFILE_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_RD_PROFILE. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_RD_PROFILE)
@@ -180,8 +180,8 @@ contains
     PROFILE_MIPAS2001_dir   = ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
     PROFILE_USER_fname      = ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Climatological profile for radiation'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_RD_PROFILE_setup",*) 'Climatological profile for radiation'
 
     if ( ATMOS_PHY_RD_PROFILE_use_climatology ) then
 
@@ -226,12 +226,12 @@ contains
     integer  :: n, m, t
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Read CIRA86 climatology, filename : ', trim(PROFILE_CIRA86_fname)
+    LOG_NEWLINE
+    LOG_INFO("PROFILE_setup_CIRA86",*) 'Read CIRA86 climatology, filename : ', trim(PROFILE_CIRA86_fname)
 
     inquire( file=trim(PROFILE_CIRA86_fname), exist=exist )
     if ( .NOT. exist ) then !--- missing
-       write(*,*) '*** [PROFILE_setup_CIRA86] File not found. check!'
+       LOG_ERROR("PROFILE_setup_CIRA86",*) 'File not found. check!'
        call PRC_abort
     endif
 
@@ -391,8 +391,8 @@ contains
     integer  :: t, l, rgn
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Read MIPAS2001 climatology ***'
+    LOG_NEWLINE
+    LOG_INFO("PROFILE_setup_MIPAS2001",*) 'Read MIPAS2001 climatology '
 
     MIPAS_date(:, 0) = (/ 2000, 12, 22, 12, 0, 0 /)
     MIPAS_date(:, 1) = (/ 2001,  6, 21, 12, 0, 0 /)
@@ -415,7 +415,7 @@ contains
 
     do rgn = I_tropic, I_polarwin
        fname = trim(PROFILE_MIPAS2001_dir)//'/'//MIPAS_fname(rgn)
-       if( IO_L ) write(IO_FID_LOG,*) '*** filename : ', trim(fname)
+       LOG_INFO("PROFILE_setup_MIPAS2001",*) 'filename : ', trim(fname)
 
        fid = IO_get_available_fid()
        open( unit   = fid,         &
@@ -425,7 +425,7 @@ contains
              iostat = ierr         )
 
           if ( ierr /= 0 ) then !--- missing
-             write(*,*) '*** [PROFILE_setup_MIPAS2001] File not found. check!'
+             LOG_ERROR("PROFILE_setup_MIPAS2001",*) 'File not found. check!'
              call PRC_abort
           endif
 
@@ -490,12 +490,12 @@ contains
     !---------------------------------------------------------------------------
 
     read(fid,*) dummy
-    !if( IO_L ) write(IO_FID_LOG,*) dummy
+    !LOG_INFO("readfile_MIPAS2001",*) dummy
 
     nstr = MIPAS_kmax
     do l = 1, 24
        read(fid,*) tmp5(:)
-       !if( IO_L ) write(IO_FID_LOG,*) l, tmp5(:)
+       !LOG_INFO("readfile_MIPAS2001",*) l, tmp5(:)
        var(nstr  ) = tmp5(1)
        var(nstr-1) = tmp5(2)
        var(nstr-2) = tmp5(3)
@@ -639,49 +639,33 @@ contains
     if ( debug .AND. report_firsttime ) then
        report_firsttime = .false.
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|===============      Vertical  Coordinate      =================|'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|            -GRID CENTER-             -GRID INTERFACE-          |'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|    k       z      pres    temp       zh      pres    temp    k |'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|         [km]     [hPa]     [K]     [km]     [hPa]     [K]      |'
+       LOG_NEWLINE
+       LOG_INFO("ATMOS_PHY_RD_PROFILE_read",'(1x,A)') 'Vertical  Coordinate'
+       LOG_INFO_CONT('(1x,A)') '|            -GRID CENTER-             -GRID INTERFACE-          |'
+       LOG_INFO_CONT('(1x,A)') '|    k       z      pres    temp       zh      pres    temp    k |'
+       LOG_INFO_CONT('(1x,A)') '|         [km]     [hPa]     [K]     [km]     [hPa]     [K]      |'
        k = 1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,F10.4,F8.2,I5,A)') &
-       '|                                ',zh(k),presh(k),temph(k),k, ' | TOA'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F8.3,F10.4,F8.2,A)') &
-       '|',k,z(k),pres(k),temp(k),    '                                 | '
+       LOG_INFO_CONT('(1x,A,F8.3,F10.4,F8.2,I5,A)') '|                                ',zh(k),presh(k),temph(k),k, ' | TOA'
+       LOG_INFO_CONT('(1x,A,I5,F8.3,F10.4,F8.2,A)') '|',k,z(k),pres(k),temp(k),    '                                 | '
        do k = 2, kmax-1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,F10.4,F8.2,I5,A)') &
-       '|                                ',zh(k),presh(k),temph(k),k, ' | '
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F8.3,F10.4,F8.2,A)') &
-       '|',k,z(k),pres(k),temp(k),    '                                 | '
+       LOG_INFO_CONT('(1x,A,F8.3,F10.4,F8.2,I5,A)') '|                                ',zh(k),presh(k),temph(k),k, ' | '
+       LOG_INFO_CONT('(1x,A,I5,F8.3,F10.4,F8.2,A)') '|',k,z(k),pres(k),temp(k),    '                                 | '
        enddo
        k = kmax
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,F10.4,F8.2,I5,A)') &
-       '|                                ',zh(k),presh(k),temph(k),k, ' | '
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F8.3,F10.4,F8.2,A)') &
-       '|',k,z(k),pres(k),temp(k),    '                                 | '
+       LOG_INFO_CONT('(1x,A,F8.3,F10.4,F8.2,I5,A)') '|                                ',zh(k),presh(k),temph(k),k, ' | '
+       LOG_INFO_CONT('(1x,A,I5,F8.3,F10.4,F8.2,A)') '|',k,z(k),pres(k),temp(k),    '                                 | '
        k = kmax+1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,F10.4,F8.2,I5,A)') &
-       '|                                ',zh(k),presh(k),temph(k),k, ' | Ground'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|================================================================|'
+       LOG_INFO_CONT('(1x,A,F8.3,F10.4,F8.2,I5,A)') '|                                ',zh(k),presh(k),temph(k),k, ' | Ground'
+       LOG_INFO_CONT('(1x,A)') '|================================================================|'
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|=====================================================================================|'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|                                         -Gas concetrations [ppmv]-                  |'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|    k        z       H2O       CO2        O3       N2O        CO       CH4        O2 |'
+       LOG_NEWLINE
+       LOG_INFO_CONT('(1x,A)') '|=====================================================================================|'
+       LOG_INFO_CONT('(1x,A)') '|                                         -Gas concetrations [ppmv]-                  |'
+       LOG_INFO_CONT('(1x,A)') '|    k        z       H2O       CO2        O3       N2O        CO       CH4        O2 |'
        do k = 1, kmax
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,1F9.3,7ES10.3,A)') '|',k,z(k),gas(k,:),' | '
+       LOG_INFO_CONT('(1x,A,I5,1F9.3,7ES10.3,A)') '|',k,z(k),gas(k,:),' | '
        enddo
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|=====================================================================================|'
+       LOG_INFO_CONT('(1x,A)') '|=====================================================================================|'
 
     endif
 
@@ -723,7 +707,7 @@ contains
     real(RP), intent(out) :: cfc  (kmax,ncfc) !< CFCs          volume mixing ratio [ppmv]
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Update climatological profile for radiation'
+    LOG_INFO("PROFILE_read_climatology",*) 'Update climatological profile for radiation'
 
     call PROFILE_read_CIRA86( kmax,        & ! [IN]
                               lat,         & ! [IN]
@@ -1140,63 +1124,44 @@ contains
     !----- report data -----
     if ( debug ) then
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|===============  Vertical Coordinate  ===============|'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|      -GRID CENTER-            -GRID INTERFACE-      |'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '| RD_k       z    k CZ      FZ         k      zh RD_k |'
+       LOG_NEWLINE
+       LOG_INFO("ATMOS_PHY_RD_PROFILE_setup_zgrid",'(1x,A)') 'Vertical Coordinate'
+       LOG_INFO_CONT('(1x,A)')                   '|      -GRID CENTER-            -GRID INTERFACE-      |'
+       LOG_INFO_CONT('(1x,A)')                   '| RD_k       z    k CZ      FZ         k      zh RD_k |'
        if ( kadd > 0 ) then
        RD_k = 1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,I5,A)') &
-       '|                                       ',zh(RD_k),RD_k,    ' | TOA'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F8.3,A)') &
-       '|',RD_k,z(RD_k),     '                                        | '
+       LOG_INFO_CONT('(1x,A,F8.3,I5,A)')         '|                                       ',zh(RD_k),RD_k,    ' | TOA'
+       LOG_INFO_CONT('(1x,A,I5,F8.3,A)')         '|',RD_k,z(RD_k),     '                                        | '
        do RD_k = 2, kadd-1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,I5,A)') &
-       '|                                       ',zh(RD_k),RD_k,    ' | '
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F8.3,A)') &
-       '|',RD_k,z(RD_k),     '                                        | '
+       LOG_INFO_CONT('(1x,A,F8.3,I5,A)')         '|                                       ',zh(RD_k),RD_k,    ' | '
+       LOG_INFO_CONT('(1x,A,I5,F8.3,A)')         '|',RD_k,z(RD_k),     '                                        | '
        enddo
        RD_k = kadd
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,I5,A)') &
-       '|                                       ',zh(RD_k),RD_k,    ' | '
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F8.3,A)') &
-       '|',RD_k,z(RD_k),     '                                        | KADD'
+       LOG_INFO_CONT('(1x,A,F8.3,I5,A)')         '|                                       ',zh(RD_k),RD_k,    ' | '
+       LOG_INFO_CONT('(1x,A,I5,F8.3,A)')         '|',RD_k,z(RD_k),     '                                        | KADD'
        RD_k = kadd+1
        k    = kmax - RD_k + KS
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,I5,F8.3,I5,A)') &
-       '|                          ',FZ(k)*1.E-3_RP,k,zh(RD_k),RD_k,' | '
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F8.3,I5,F8.3,A)') &
-       '|',RD_k,z(RD_k),k,CZ(k)*1.E-3_RP, '                           | KADD+1=KE'
+       LOG_INFO_CONT('(1x,A,F8.3,I5,F8.3,I5,A)') '|                          ',FZ(k)*1.E-3_RP,k,zh(RD_k),RD_k,' | '
+       LOG_INFO_CONT('(1x,A,I5,F8.3,I5,F8.3,A)') '|',RD_k,z(RD_k),k,CZ(k)*1.E-3_RP, '                           | KADD+1=KE'
        else
        RD_k = 1
        k    = kmax - RD_k + KS
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,I5,F8.3,I5,A)') &
-       '|                          ',FZ(k)*1.E-3_RP,k,zh(RD_k),RD_k,' | TOA=KE'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F8.3,I5,F8.3,A)') &
-       '|',RD_k,z(RD_k),k,CZ(k)*1.E-3_RP, '                           | '
+       LOG_INFO_CONT('(1x,A,F8.3,I5,F8.3,I5,A)') '|                          ',FZ(k)*1.E-3_RP,k,zh(RD_k),RD_k,' | TOA=KE'
+       LOG_INFO_CONT('(1x,A,I5,F8.3,I5,F8.3,A)') '|',RD_k,z(RD_k),k,CZ(k)*1.E-3_RP, '                           | '
        endif
        do RD_k = kadd+2, kmax-1
        k    = kmax - RD_k + KS
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,I5,F8.3,I5,A)') &
-       '|                          ',FZ(k)*1.E-3_RP,k,zh(RD_k),RD_k,' | '
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F8.3,I5,F8.3,A)') &
-       '|',RD_k,z(RD_k),k,CZ(k)*1.E-3_RP, '                           | '
+       LOG_INFO_CONT('(1x,A,F8.3,I5,F8.3,I5,A)') '|                          ',FZ(k)*1.E-3_RP,k,zh(RD_k),RD_k,' | '
+       LOG_INFO_CONT('(1x,A,I5,F8.3,I5,F8.3,A)') '|',RD_k,z(RD_k),k,CZ(k)*1.E-3_RP, '                           | '
        enddo
        RD_k = kmax
        k    = kmax - RD_k + KS
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,I5,F8.3,I5,A)') &
-       '|                          ',FZ(k),k,zh(RD_k),RD_k, ' | '
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F8.3,I5,F8.3,A)') &
-       '|',RD_k,z(RD_k),k,CZ(k)*1.E-3_RP, '                           | RD_KMAX=KS'
+       LOG_INFO_CONT('(1x,A,F8.3,I5,F8.3,I5,A)') '|                          ',FZ(k),k,zh(RD_k),RD_k, ' | '
+       LOG_INFO_CONT('(1x,A,I5,F8.3,I5,F8.3,A)') '|',RD_k,z(RD_k),k,CZ(k)*1.E-3_RP, '                           | RD_KMAX=KS'
        RD_k = kmax+1
        k    = kmax - RD_k + KS
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,I5,F8.3,I5,A)') &
-       '|                          ',FZ(k)*1.E-3_RP,k,zh(RD_k),RD_k,' | Ground'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)')                   &
-       '|=====================================================|'
+       LOG_INFO_CONT('(1x,A,F8.3,I5,F8.3,I5,A)') '|                          ',FZ(k)*1.E-3_RP,k,zh(RD_k),RD_k,' | Ground'
+       LOG_INFO_CONT('(1x,A)')                   '|=====================================================|'
 
     endif
 
@@ -1259,12 +1224,12 @@ contains
     integer  :: k
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** [RD_PROFILE] user-defined profile'
+    LOG_INFO("PROFILE_read_user",*) 'user-defined profile'
 
     gas(:,:) = 0.0_RP
     cfc(:,:) = 0.0_RP
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** FILENAME:', trim(PROFILE_USER_fname)
+    LOG_INFO("PROFILE_read_user",*) 'FILENAME:', trim(PROFILE_USER_fname)
 
     fid = IO_get_available_fid()
     open( unit   = fid,                      &
@@ -1274,7 +1239,7 @@ contains
           iostat = ierr                      )
 
        if ( ierr /= 0 ) then !--- missing
-          write(*,*) '*** [PROFILE_read_user] File not found. check!'
+          LOG_ERROR("PROFILE_read_user",*) 'File not found. check!'
           call PRC_abort
        endif
 

@@ -6,12 +6,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2014-12-13 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_tb_common
   !-----------------------------------------------------------------------------
   !
@@ -1830,4 +1827,3 @@ contains
   end subroutine ATMOS_PHY_TB_calc_tend_phi
 
 end module scale_atmos_phy_tb_common
-

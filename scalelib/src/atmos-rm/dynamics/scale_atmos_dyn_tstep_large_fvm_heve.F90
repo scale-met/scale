@@ -6,12 +6,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-04-22 (S.Nishizawa) [new] split from scale_atmos_dyn.F90
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tstep_large_fvm_heve
   !-----------------------------------------------------------------------------
   !
@@ -384,8 +381,8 @@ contains
     dts   = dtl / nstep                    ! dts is divisor of dtl and smaller or equal to dtss
 
 #ifdef DEBUG
-    if( IO_L ) write(IO_FID_LOG,*)                         '*** Dynamics large time step'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F0.2,A,F0.2,A,I0)') &
+    LOG_INFO("ATMOS_DYN_Tstep_large_fvm_heve",*)                         'Dynamics large time step'
+    LOG_INFO_CONT('(1x,A,F0.2,A,F0.2,A,I0)') &
     '*** -> DT_large, DT_small, DT_large/DT_small : ', dtl, ', ', dts, ', ', nstep
 
     DENS00  (:,:,:) = UNDEF
@@ -1252,7 +1249,7 @@ contains
                         COMM_world,           &
                         ierr                  )
 
-    if( IO_L ) write(IO_FID_LOG,'(A,1x,I1,1x,ES24.17)') 'total mflx_lb:', step, allmflx_lb_total
+    LOG_INFO("check_mass",'(A,1x,I1,1x,ES24.17)') 'total mflx_lb:', step, allmflx_lb_total
 
     call MPI_Allreduce( mass_total,           &
                         allmass_total,        &
@@ -1262,7 +1259,7 @@ contains
                         COMM_world,           &
                         ierr                  )
 
-    if( IO_L ) write(IO_FID_LOG,'(A,1x,I1,1x,ES24.17)') 'total mass   :', step, allmass_total
+    LOG_INFO("check_mass",'(A,1x,I1,1x,ES24.17)') 'total mass   :', step, allmass_total
 
     call MPI_Allreduce( mass_total2,          &
                         allmass_total2,       &
@@ -1272,7 +1269,7 @@ contains
                         COMM_world,           &
                         ierr                  )
 
-    if( IO_L ) write(IO_FID_LOG,'(A,1x,I1,1x,ES24.17)') 'total mass2  :', step, allmass_total2
+    LOG_INFO("check_mass",'(A,1x,I1,1x,ES24.17)') 'total mass2  :', step, allmass_total2
 
     call MPI_Allreduce( mflx_lb_horizontal(KS:KE),    &
                         allmflx_lb_horizontal(KS:KE), &

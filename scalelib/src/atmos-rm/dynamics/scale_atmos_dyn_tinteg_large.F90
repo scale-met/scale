@@ -6,12 +6,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-04-18 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tinteg_large
   !-----------------------------------------------------------------------------
   !
@@ -213,7 +210,7 @@ contains
     case( 'OFF', 'NONE' )
        ! do nothing
     case default
-       write(*,*) 'xxx ATMOS_DYN_TINTEG_LARGE_TYPE is invalid: ', ATMOS_DYN_Tinteg_large_TYPE
+       LOG_ERROR("ATMOS_DYN_Tinteg_large_setup",*) 'ATMOS_DYN_TINTEG_LARGE_TYPE is invalid: ', ATMOS_DYN_Tinteg_large_TYPE
        call PRC_abort
     end select
 

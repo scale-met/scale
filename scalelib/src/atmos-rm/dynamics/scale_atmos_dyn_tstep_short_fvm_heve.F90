@@ -6,12 +6,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-06-18 (S.Nishizawa) [new] splited from dynamical core
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tstep_short_fvm_heve
   !-----------------------------------------------------------------------------
   !
@@ -84,7 +81,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( ATMOS_DYN_TYPE /= 'FVM-HEVE' .AND. ATMOS_DYN_TYPE /= 'HEVE' ) then
-       write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HEVE. Check!'
+       LOG_ERROR("ATMOS_DYN_Tstep_short_fvm_heve_regist",*) 'ATMOS_DYN_TYPE is not FVM-HEVE. Check!'
        call PRC_abort
     endif
 
@@ -93,10 +90,10 @@ contains
     VAR_DESC(:) = ""
     VAR_UNIT(:) = ""
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Register additional prognostic variables (HEVE)'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_DYN_Tstep_short_fvm_heve_regist",*) 'Register additional prognostic variables (HEVE)'
     if ( VA_out < 1 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** => nothing.'
+       LOG_INFO_CONT(*) '=> nothing.'
     endif
 
     return

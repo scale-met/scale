@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_urban_grid_cartesC_index
   !-----------------------------------------------------------------------------
   !
@@ -70,16 +71,16 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_CARTESC_INDEX] / Categ[URBAN GRID] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[GRID_CARTESC_INDEX] / Categ[URBAN GRID] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_URBAN_GRID_CARTESC_INDEX,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("URBAN_GRID_CARTESC_INDEX_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_URBAN_GRID_CARTESC_INDEX. Check!'
+       LOG_ERROR("URBAN_GRID_CARTESC_INDEX_setup",*) 'Not appropriate names in namelist PARAM_URBAN_GRID_CARTESC_INDEX. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_URBAN_GRID_CARTESC_INDEX)
@@ -88,9 +89,9 @@ contains
     UKS  = 1
     UKE  = UKMAX
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Urban grid index information ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6,A,I6)') '*** z-axis levels :', UKMAX
+    LOG_NEWLINE
+    LOG_INFO("URBAN_GRID_CARTESC_INDEX_setup",*) 'Urban grid index information '
+    LOG_INFO_CONT('(1x,A,I6,A,I6,A,I6)') 'z-axis levels :', UKMAX
 
     ! at this moment horizontal grid is same as that in atmosphere
     UIMAX = IMAX

@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_land_dyn_bucket
   !-----------------------------------------------------------------------------
   !
@@ -91,8 +92,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLAB] / Categ[LAND PHY] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[SLAB] / Categ[LAND PHY] / Origin[SCALElib]'
 
     LAND_DYN_BUCKET_nudging_defval = UNDEF
 
@@ -100,16 +101,16 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_LAND_DYN_BUCKET,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_DYN_BUCKET. Check!'
+       LOG_ERROR("LAND_DYN_BUCKET_setup",*) 'Not appropriate names in namelist PARAM_LAND_DYN_BUCKET. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_DYN_BUCKET)
 
     if ( LAND_DYN_BUCKET_nudging ) then
        if ( LAND_DYN_BUCKET_nudging_basename(1) == '' ) then
-          write(*,*) 'xxx LAND_DYN_BUCKET_nudging_basename is necessary !!'
+          LOG_ERROR("LAND_DYN_BUCKET_setup",*) 'LAND_DYN_BUCKET_nudging_basename is necessary !!'
           call PRC_abort
        end if
 
@@ -137,16 +138,16 @@ contains
                                         LAND_DYN_BUCKET_nudging_check_coordinates,     & ! [IN]
                                         LAND_DYN_BUCKET_nudging_step_limit             ) ! [IN]
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** Use nudging for Land physics: ON'
+       LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Use nudging for Land physics: ON'
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Use nudging for Land physics: OFF'
+       LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Use nudging for Land physics: OFF'
     end if
 
     WATER_DENSCS = DWATR * CL
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Update soil temperature of bottom layer? : ', LAND_DYN_BUCKET_update_bottom_temp
-    if( IO_L ) write(IO_FID_LOG,*) '*** Update soil moisture    of bottom layer? : ', LAND_DYN_BUCKET_update_bottom_water
+    LOG_NEWLINE
+    LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Update soil temperature of bottom layer? : ', LAND_DYN_BUCKET_update_bottom_temp
+    LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Update soil moisture    of bottom layer? : ', LAND_DYN_BUCKET_update_bottom_water
 
     return
   end subroutine LAND_DYN_BUCKET_setup
@@ -220,7 +221,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Land physics step: Slab'
+    LOG_PROGRESS(*) 'land / dynamics / bucket'
 
     if( LAND_DYN_BUCKET_nudging ) then
 
@@ -230,7 +231,7 @@ contains
                           TEMP1,       & ! (out)
                           error        ) ! (out)
       if ( error ) then
-         write(*,*) 'xxx Requested data is not found!'
+         LOG_ERROR("LAND_DYN_BUCKET",*) 'Requested data is not found!'
          call PRC_abort
       end if
 
@@ -240,7 +241,7 @@ contains
                          WATER1,       & ! (out)
                          error         ) ! (out)
       if ( error ) then
-         write(*,*) 'xxx Requested data is not found!'
+         LOG_ERROR("LAND_DYN_BUCKET",*) 'Requested data is not found!'
          call PRC_abort
       end if
 

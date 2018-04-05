@@ -44,10 +44,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2011-10-24 (T.Seiki)    [new] import from NICAM(11/08/30 ver.)
-!! @li      2015-09-08 (Y.Sato)     [add] Add evaporated cloud number concentration
-!!
 !<
 !-------------------------------------------------------------------------------
 
@@ -62,6 +58,7 @@
 #define PROFILE_STOP(name)
 #endif
 
+#include "scalelib.h"
 module scale_atmos_phy_mp_sn14
   !-----------------------------------------------------------------------------
   !
@@ -538,17 +535,17 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Seiki and Nakajima (2014) 2-moment bulk 6 category'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_MP_sn14_setup",*) 'Seiki and Nakajima (2014) 2-moment bulk 6 category'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_SN14,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_MP_sn14_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SN14. Check!'
+       LOG_ERROR("ATMOS_PHY_MP_sn14_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SN14. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_SN14)
@@ -617,7 +614,7 @@ contains
     
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(SN14)'
+    LOG_PROGRESS(*) 'atmosphere / physics / microphysics / SN14'
 
 #ifdef PROFILE_FIPP
     call fipp_start()
@@ -1179,9 +1176,9 @@ contains
     read(IO_FID_CONF,nml=nm_mp_sn14_init,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_MP_sn14_init",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_init. Check!'
+       LOG_ERROR("ATMOS_PHY_MP_sn14_init",*) 'Not appropriate names in namelist nm_mp_sn14_init. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_init)
@@ -1278,9 +1275,9 @@ contains
     read(IO_FID_CONF,nml=nm_mp_sn14_particles,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_MP_sn14_init",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_particles. Check!'
+       LOG_ERROR("ATMOS_PHY_MP_sn14_init",*) 'Not appropriate names in namelist nm_mp_sn14_particles. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_particles)
@@ -1630,63 +1627,63 @@ contains
        end do
     end do
 
-    if( IO_L ) write(IO_FID_LOG,'(100a16)')      "LABEL       ",WLABEL(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "capacity    ",cap(:) ! [Add] 11/08/30 T.Mitsui
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_m2     ",coef_m2(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d      ",coef_d(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(100a16)')      "LABEL       ",WLABEL(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "capacity    ",cap(:) ! [Add] 11/08/30 T.Mitsui
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_m2     ",coef_m2(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_d      ",coef_d(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d3     ",coef_d3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d6     ",coef_d6(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d2v    ",coef_d2v(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_md2v   ",coef_md2v(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_d2vt      ",a_d2vt(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_d2vt      ",b_d2vt(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_d3     ",coef_d3(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_d6     ",coef_d6(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_d2v    ",coef_d2v(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_md2v   ",coef_md2v(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "a_d2vt      ",a_d2vt(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "b_d2vt      ",b_d2vt(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_r2     ",coef_r2(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_r3     ",coef_r3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_re     ",coef_re(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_r2     ",coef_r2(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_r3     ",coef_r3(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_re     ",coef_re(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_area      ",a_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_area      ",b_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ax_area     ",ax_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bx_area     ",bx_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_rea       ",a_rea(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_rea       ",b_rea(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_rea3      ",a_rea3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_rea3      ",b_rea3(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "a_area      ",a_area(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "b_area      ",b_area(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "ax_area     ",ax_area(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "bx_area     ",bx_area(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "a_rea       ",a_rea(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "b_rea       ",b_rea(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "a_rea3      ",a_rea3(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "b_rea3      ",b_rea3(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_rea2   ",coef_rea2(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_rea3   ",coef_rea3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_vt0    ",coef_vt0(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_vt1    ",coef_vt1(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_A      ",coef_A(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_lambda ",coef_lambda(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_rea2   ",coef_rea2(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_rea3   ",coef_rea3(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_vt0    ",coef_vt0(:,1)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_vt1    ",coef_vt1(:,1)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_A      ",coef_A(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_lambda ",coef_lambda(:)
 
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent0 sml",ah_vent0(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent0 lrg",ah_vent0(:,2)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent1 sml",ah_vent1(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent1 lrg",ah_vent1(:,2)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent0 sml",bh_vent0(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent0 lrg",bh_vent0(:,2)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent1 sml",bh_vent1(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent1 lrg",bh_vent1(:,2)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "ah_vent0 sml",ah_vent0(:,1)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "ah_vent0 lrg",ah_vent0(:,2)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "ah_vent1 sml",ah_vent1(:,1)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "ah_vent1 lrg",ah_vent1(:,2)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "bh_vent0 sml",bh_vent0(:,1)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "bh_vent0 lrg",bh_vent0(:,2)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "bh_vent1 sml",bh_vent1(:,1)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "bh_vent1 lrg",bh_vent1(:,2)
 
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "delta_b0    ",delta_b0(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "delta_b1    ",delta_b1(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "theta_b0    ",theta_b0(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "theta_b1    ",theta_b1(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "delta_b0    ",delta_b0(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "delta_b1    ",delta_b1(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "theta_b0    ",theta_b0(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "theta_b1    ",theta_b1(:)
 
     do ia=1, HYDRO_MAX
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "delta0(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab0(ia,ib),ib=1,HYDRO_MAX)
+       LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,a10,a,100ES16.6)') "delta0(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab0(ia,ib),ib=1,HYDRO_MAX)
     enddo
     do ia=1, HYDRO_MAX
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "delta1(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab1(ia,ib),ib=1,HYDRO_MAX)
+       LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,a10,a,100ES16.6)') "delta1(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab1(ia,ib),ib=1,HYDRO_MAX)
     enddo
     do ia=1, HYDRO_MAX
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "theta0(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab0(ia,ib),ib=1,HYDRO_MAX)
+       LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,a10,a,100ES16.6)') "theta0(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab0(ia,ib),ib=1,HYDRO_MAX)
     enddo
     do ia=1, HYDRO_MAX
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "theta1(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab1(ia,ib),ib=1,HYDRO_MAX)
+       LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,a10,a,100ES16.6)') "theta1(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab1(ia,ib),ib=1,HYDRO_MAX)
     enddo
 
     return
@@ -2576,7 +2573,7 @@ contains
             .OR. rho(k,i,j) < rho_min &
             .OR. pre(k,i,j) < 1.0_RP    ) then
 
-          if( IO_L ) write(IO_FID_LOG,'(A,I3,A,4(F16.5),3(I6))') &
+          LOG_INFO("ATMOS_PHY_MP_SN14_debug_tem_kij",'(A,I3,A,4(F16.5),3(I6))') &
           "*** point: ", point, " low tem,rho,pre:", tem(k,i,j), rho(k,i,j), pre(k,i,j), qv(k,i,j), k, i, j, PRC_myrank
        endif
     enddo
@@ -2723,7 +2720,7 @@ contains
        flag_first=.false.
 
        if ( MP_couple_aerosol .AND. nucl_twomey ) then
-          write(*,*) "xxx [mp_sn14/nucleation] nucl_twomey should be false when MP_couple_aerosol is true, stop"
+          LOG_ERROR("ATMOS_PHY_MP_SN14_nucleation_kij",*) "nucl_twomey should be false when MP_couple_aerosol is true, stop"
           call PRC_abort
        endif
     endif
@@ -4447,7 +4444,7 @@ contains
        end do
        end do
        end do
-       if( IO_L ) write(IO_FID_LOG,*) "taucnd:fac_cndc_wrk=",fac_cndc_wrk
+       LOG_INFO("ATMOS_PHY_MP_SN14_update_by_phase_change_kij",*) "taucnd:fac_cndc_wrk=",fac_cndc_wrk
     end if
 
 !OCL XFILL

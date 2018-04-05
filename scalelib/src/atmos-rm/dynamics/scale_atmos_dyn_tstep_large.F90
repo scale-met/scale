@@ -6,12 +6,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-04-18 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tstep_large
   !-----------------------------------------------------------------------------
   !
@@ -227,7 +224,7 @@ contains
             mflx_hi )
        ATMOS_DYN_Tstep_large => ATMOS_DYN_Tstep_large_fvm_heve
     case default
-       write(*,*) 'xxx ATMOS_DYN_Tstep_large_type is invalid: ', Tstep_large_type
+       LOG_ERROR("ATMOS_DYN_Tstep_large_setup",*) 'ATMOS_DYN_Tstep_large_type is invalid: ', Tstep_large_type
        call PRC_abort
     end select
 

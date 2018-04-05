@@ -41,7 +41,7 @@
 !! WRF® is a registered trademark of the University Corporation for Atmospheric Research (UCAR).
 !!
 !<
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_cp_kf
   !------------------------------------------------------------------------------
   !
@@ -195,9 +195,9 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CUMULUS] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Kain-Fritsch scheme'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[CUMULUS] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) 'Kain-Fritsch scheme'
 
     WARMRAIN = WARMRAIN_in
 
@@ -205,9 +205,9 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_CP_KF,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_CP_kf_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_CP_KF. Check!'
+       LOG_ERROR("ATMOS_PHY_CP_kf_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_CP_KF. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_CP_KF)
@@ -225,17 +225,17 @@ contains
                       PARAM_ATMOS_PHY_CP_kf_trigger    ) ! [INOUT]
 
     ! output parameter lists
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) "*** Ogura-Cho condense material convert rate        : ", PARAM_ATMOS_PHY_CP_kf_rate
-    if( IO_L ) write(IO_FID_LOG,*) "*** Trigger function type, 1:KF2004 3:NO2007        : ", PARAM_ATMOS_PHY_CP_kf_trigger
-    if( IO_L ) write(IO_FID_LOG,*) "*** CAPE decrease rate                              : ", PARAM_ATMOS_PHY_CP_kf_dlcape
-    if( IO_L ) write(IO_FID_LOG,*) "*** Minimum lifetime scale of deep convection [sec] : ", PARAM_ATMOS_PHY_CP_kf_dlifetime
-    if( IO_L ) write(IO_FID_LOG,*) "*** Lifetime of shallow convection            [sec] : ", PARAM_ATMOS_PHY_CP_kf_slifetime
-    if( IO_L ) write(IO_FID_LOG,*) "*** Updraft souce layer depth                 [hPa] : ", PARAM_ATMOS_PHY_CP_kf_DEPTH_USL
-    if( IO_L ) write(IO_FID_LOG,*) "*** Precipitation type 1:Ogura-Cho(1973) 2:Kessler  : ", PARAM_ATMOS_PHY_CP_kf_prec
-    if( IO_L ) write(IO_FID_LOG,*) "*** Kessler type precipitation's threshold          : ", PARAM_ATMOS_PHY_CP_kf_thres
-    if( IO_L ) write(IO_FID_LOG,*) "*** Warm rain?                                      : ", WARMRAIN
-    if( IO_L ) write(IO_FID_LOG,*) "*** Output log?                                     : ", PARAM_ATMOS_PHY_CP_kf_LOG
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Ogura-Cho condense material convert rate        : ", PARAM_ATMOS_PHY_CP_kf_rate
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Trigger function type, 1:KF2004 3:NO2007        : ", PARAM_ATMOS_PHY_CP_kf_trigger
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "CAPE decrease rate                              : ", PARAM_ATMOS_PHY_CP_kf_dlcape
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Minimum lifetime scale of deep convection [sec] : ", PARAM_ATMOS_PHY_CP_kf_dlifetime
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Lifetime of shallow convection            [sec] : ", PARAM_ATMOS_PHY_CP_kf_slifetime
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Updraft souce layer depth                 [hPa] : ", PARAM_ATMOS_PHY_CP_kf_DEPTH_USL
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Precipitation type 1:Ogura-Cho(1973) 2:Kessler  : ", PARAM_ATMOS_PHY_CP_kf_prec
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Kessler type precipitation's threshold          : ", PARAM_ATMOS_PHY_CP_kf_thres
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Warm rain?                                      : ", WARMRAIN
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Output log?                                     : ", PARAM_ATMOS_PHY_CP_kf_LOG
 
     ! output variables
     allocate( lifetime  (IA,JA) )
@@ -298,8 +298,8 @@ contains
     RATE            = RATE_in
     ! TRIGGER must be 1 or 3
     if (TRIGGER_in /= 1 .and. TRIGGER_in /=3) then
-       if( IO_L ) write(IO_FID_LOG,*) "TRIGGER must be 1 or 3 but now :",TRIGGER_in
-       if( IO_L ) write(IO_FID_LOG,*) "CHAGNGE ",TRIGGER_in," to 3"
+       LOG_INFO("CP_kf_param",*) "TRIGGER must be 1 or 3 but now :",TRIGGER_in
+       LOG_INFO("CP_kf_param",*) "CHAGNGE ",TRIGGER_in," to 3"
        TRIGGER_in = 3
     end if
     TRIGGER         = TRIGGER_in
@@ -315,8 +315,8 @@ contains
     elseif( KF_prec == 2) then
        CP_kf_precipitation => CP_kf_precipitation_Kessler ! Kessler type
     else
-       write(*,*) 'xxx ERROR at KF namelist'
-       write(*,*) 'KF_prec must be 1 or 2'
+       LOG_ERROR("CP_kf_param",*) 'KF namelist'
+       LOG_ERROR_CONT(*) 'KF_prec must be 1 or 2'
        call PRC_abort
     end if
     return
@@ -472,8 +472,8 @@ contains
 
     ! ------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cumulus Parameterization(KF)'
-    if( IO_L ) write(IO_FID_LOG,*) '*** KF Convection Check '
+    LOG_PROGRESS(*) 'atmosphere / physics / cumulus / KF'
+    LOG_INFO("ATMOS_PHY_CP_kf_tendency",*) 'KF Convection Check '
 
     call PROF_rapstart('CP_kf', 3)
 
@@ -941,14 +941,14 @@ contains
        ! usl layer depth is nessesary 50mb or more
        if ( nk + 1 < KS ) then !< check k_lc -1 is not surface or bottom of ground
           if(KF_LOG) then
-             if( IO_L ) write(IO_FID_LOG,*) 'would go off bottom: cu_kf',pres(KS),k_lc,nk+1,n_uslcheck !,nk i,j
+             LOG_INFO("CP_kf_trigger",*) 'would go off bottom: cu_kf',pres(KS),k_lc,nk+1,n_uslcheck !,nk i,j
           end if
        else
           do ! serach USL layer index. USL layer is nessesally more 50hPa
              nk = nk +1
              if ( nk > KE ) then !< check k_lc is not index of top layer
                 if(KF_LOG) then
-                   if( IO_L ) write(IO_FID_LOG,*) 'would go off top: cu_kf'!,nk i,j
+                   LOG_INFO("CP_kf_trigger",*) 'would go off top: cu_kf'!,nk i,j
                 end if
                 exit
              end if
@@ -1155,7 +1155,7 @@ contains
        end if ! triggeer
     end do ! usl
     if ( itr .ge. itr_max ) then
-       write(*,*) 'xxx iteration max count was reached in the USL loop in the KF scheme'
+       LOG_ERROR("CP_kf_trigger",*) 'iteration max count was reached in the USL loop in the KF scheme'
        call PRC_abort
     end if
 
@@ -2347,8 +2347,7 @@ contains
        do kk = KS,k_top
           if(qv_g(kk) < 0._RP ) then ! negative moisture
              if(kk == KS) then
-                write(*,*) "error qv<0 @ Kain-Fritsch cumulus parameterization"
-                write(*,*) "@sub scale_atmos_phy_cp_kf",__FILE__,__LINE__
+                LOG_ERROR("CP_kf_compensational",*) "error qv<0 @ Kain-Fritsch cumulus parameterization"
                 call PRC_abort
              end if
              kkp1 = kk + 1
@@ -2373,8 +2372,8 @@ contains
        topomg = (updet(k_top) - upent(k_top))*deltap(k_top)*emsd(k_top)
        if( abs(topomg - omg(k_top)) > 1.e-3_RP) then ! not same omega velocity error
           istop = 1
-          write(*,*) "xxxERROR@KF omega is not consistent",ncount
-          write(*,*) "omega error",abs(topomg - omg(k_top)),k_top,topomg,omg(k_top)
+          LOG_ERROR("CP_kf_compensational",*) "KF omega is not consistent",ncount
+          LOG_ERROR_CONT(*) "omega error",abs(topomg - omg(k_top)),k_top,topomg,omg(k_top)
           call PRC_abort
        end if
        ! convert theta to T
@@ -2640,7 +2639,7 @@ contains
        ! write error message
        ! moisture budget error
        istop = 1
-       write(*,*) "XXXX ERROR@KF,MOISTURE"
+       LOG_ERROR("CP_kf_compensational",*) "@KF,MOISTURE"
        write (*,*) "--------------------------------------"
        write (*,'(" *** vert accum rho*qhyd : ",F20.12)') qhydr
        write (*,'(" *** vert accum rho*qv   : ",F20.12)') qvfnl-qinit
@@ -2872,7 +2871,7 @@ contains
     !      IF(IPTB.GE.220 .OR. IPTB.LE.1 .OR. ITHTB.GE.250 .OR. ITHTB.LE.1)THEN
     IF(IPTB.GE.kfnp .OR. IPTB.LE.1 .OR. ITHTB.GE.250 .OR. ITHTB.LE.1)THEN
        ! modify
-       write(*,*)   '**** OUT OF BOUNDS *********',IPTB,ITHTB,P,THES
+       LOG_WARN("CP_kf_tpmix2",*)   '* OUT OF BOUNDS *********',IPTB,ITHTB,P,THES
        !        flush(98)
     ENDIF
 
