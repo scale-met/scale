@@ -151,9 +151,7 @@ contains
     !$omp parallel do default(none) &
     !$omp private(qdry,Rtot,QVsat,QVS,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2,res) &
     !$omp shared(IS,IE,JS,JE,Rdry,CPdry, &
-#ifdef __GFORTRAN__
     !$omp       bulkflux, &
-#endif
     !$omp       fact_area,TMPA,QVA,LHV,UA,VA,WA,Z1,PBL,PRSA,TMPS,PRSS,RHOS,QVEF,Z0M,Z0H,Z0E,ALB_SW,ALB_LW,SWD,LWD,Rb, &
     !$omp       SHFLX,LHFLX,GHFLX,ZMFLX,XMFLX,YMFLX,U10,V10,T2,Q2)
     do j = JS, JE
