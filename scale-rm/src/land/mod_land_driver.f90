@@ -515,7 +515,7 @@ contains
                                + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_Q2        (i,j)
        enddo
        enddo
-             
+
     end if
 
     !########## Set Surface Boundary to coupler ##########
@@ -635,7 +635,6 @@ contains
        ATMOS_SFLX_LW,   &
        ATMOS_SFLX_SW,   &
        ATMOS_cosSZA,    &
-       ATMOS_SFLX_prec, &
        ATMOS_SFLX_rain, &
        ATMOS_SFLX_snow
     use mod_cpl_vars, only: &
@@ -672,8 +671,6 @@ contains
     do i = LIS, LIE
        ATMOS_SFLX_SW  (i,j) = ATMOS_SFLX_rad_dn(i,j,I_SW,1) + ATMOS_SFLX_rad_dn(i,j,I_SW,2) ! direct+diffuse
        ATMOS_SFLX_LW  (i,j) = ATMOS_SFLX_rad_dn(i,j,I_LW,1) + ATMOS_SFLX_rad_dn(i,j,I_LW,2) ! direct+diffuse
-
-       ATMOS_SFLX_prec(i,j) = ATMOS_SFLX_rain(i,j) + ATMOS_SFLX_snow(i,j) ! liquid+ice
     enddo
     enddo
 

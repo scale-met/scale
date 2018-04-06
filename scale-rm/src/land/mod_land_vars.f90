@@ -108,7 +108,6 @@ module mod_land_vars
   real(RP), public, allocatable :: ATMOS_SFLX_LW  (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_SW  (:,:)
   real(RP), public, allocatable :: ATMOS_cosSZA   (:,:)
-  real(RP), public, allocatable :: ATMOS_SFLX_prec(:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_rain(:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_snow(:,:)
 
@@ -336,7 +335,6 @@ contains
     allocate( ATMOS_SFLX_LW  (LIA,LJA) )
     allocate( ATMOS_SFLX_SW  (LIA,LJA) )
     allocate( ATMOS_cosSZA   (LIA,LJA) )
-    allocate( ATMOS_SFLX_prec(LIA,LJA) )
     allocate( ATMOS_SFLX_rain(LIA,LJA) )
     allocate( ATMOS_SFLX_snow(LIA,LJA) )
     ATMOS_TEMP     (:,:) = UNDEF
@@ -352,7 +350,6 @@ contains
     ATMOS_SFLX_LW  (:,:) = UNDEF
     ATMOS_SFLX_SW  (:,:) = UNDEF
     ATMOS_cosSZA   (:,:) = UNDEF
-    ATMOS_SFLX_prec(:,:) = UNDEF
     ATMOS_SFLX_rain(:,:) = UNDEF
     ATMOS_SFLX_snow(:,:) = UNDEF
 
