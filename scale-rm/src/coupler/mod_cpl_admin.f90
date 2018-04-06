@@ -50,11 +50,11 @@ contains
        ATMOS_PHY_SF_TYPE, &
        ATMOS_sw_phy_sf
     use mod_ocean_admin, only: &
-       OCEAN_sw
+       OCEAN_do
     use mod_land_admin, only: &
-       LAND_sw
+       LAND_do
     use mod_urban_admin, only: &
-       URBAN_sw
+       URBAN_do
     implicit none
     !---------------------------------------------------------------------------
 
@@ -67,7 +67,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler components ***'
 
     ! Atmos-Ocean/Land/Urban Switch
-    if ( OCEAN_sw .OR. LAND_sw .OR. URBAN_sw ) then
+    if ( OCEAN_do .OR. LAND_do .OR. URBAN_do ) then
        CPL_sw = .true.
     else
        CPL_sw = .false.

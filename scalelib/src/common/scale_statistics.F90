@@ -108,6 +108,8 @@ contains
     use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_comm, only: &
        COMM_datatype
     implicit none
@@ -133,12 +135,14 @@ contains
     !---------------------------------------------------------------------------
 
     statval = 0.0_RP
-    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
-    do j = JS, JE
-    do i = IS, IE
-       statval = statval + var(i,j) * area(i,j)
-    enddo
-    end do
+    if ( var(IS,JS) /= UNDEF ) then
+       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
+       do j = JS, JE
+       do i = IS, IE
+          statval = statval + var(i,j) * area(i,j)
+       end do
+       end do
+    end if
 
     if ( .NOT. ( statval > -1.0_RP .OR. statval < 1.0_RP ) ) then ! must be NaN
        write(*,*) 'xxx [STATISTICS_total] NaN is detected for ', trim(varname), ' in rank ', PRC_myrank
@@ -199,6 +203,8 @@ contains
     use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_comm, only: &
        COMM_datatype
     implicit none
@@ -225,14 +231,16 @@ contains
     !---------------------------------------------------------------------------
 
     statval = 0.0_RP
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       statval = statval + var(k,i,j) * vol(k,i,j)
-    enddo
-    enddo
-    enddo
+    if ( var(KS,IS,JS) /= UNDEF ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          statval = statval + var(k,i,j) * vol(k,i,j)
+       enddo
+       enddo
+       enddo
+    end if
 
     if ( .NOT. ( statval > -1.0_RP .OR. statval < 1.0_RP ) ) then ! must be NaN
        write(*,*) 'xxx [STATISTICS_total] NaN is detected for ', trim(varname), ' in rank ', PRC_myrank

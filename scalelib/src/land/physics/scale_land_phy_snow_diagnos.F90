@@ -14,7 +14,6 @@ module scale_land_phy_snow_diagnos
   !
   use scale_precision
   use scale_stdio
-  use scale_land_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -40,56 +39,31 @@ module scale_land_phy_snow_diagnos
 contains
   !-----------------------------------------------------------------------------
   subroutine LAND_PHY_SNOW_DIAGS( &
-        ZMFLX,      &
-        XMFLX,      &
-        YMFLX,      &
-        U10,        &
-        V10,        &
-        T2,         &
-        Q2,         &
-        SNOW_frac,  &
-        TMPA,       &
-        PRSA,       &
-        WA,         &
-        UA,         &
-        VA,         &
-        RHOA,       &
-        QVA,        &
-        Z1,         &
-        PBL,        &
-        RHOS,       &
-        PRSS,       &
-        LST1,       &
-        QVEF,       &
-        Z0M,        &
-        Z0H,        &
-        Z0E         )
-    use scale_prc, only: &
-      PRC_abort
+       LIA, LIS, LIE, LJA, LJS, LJE, &
+       SNOW_frac,           &
+       TMPA, PRSA,          &
+       WA, UA, VA,          &
+       RHOA, QVA,           &
+       Z1, PBL,             &
+       RHOS, PRSS, LST1,    &
+       QVEF,                &
+       Z0M, Z0H, Z0E,       &
+       ZMFLX, XMFLX, YMFLX, &
+       U10, V10,            &
+       T2, Q2               )
     use scale_const, only: &
       PRE00 => CONST_PRE00, &
       Rdry  => CONST_Rdry,  &
       CPdry => CONST_CPdry, &
       Rvap  => CONST_Rvap,  &
       STB   => CONST_STB
-    use scale_landuse, only: &
-      LANDUSE_fact_land
-    !use scale_atmos_hydrometeor, only: &
-    !  HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_atmos_saturation, only: &
       qsat => ATMOS_SATURATION_pres2qsat_all
     use scale_bulkflux, only: &
       BULKFLUX
     implicit none
-
-    ! arguments
-    real(RP), intent(out) :: ZMFLX(LIA,LJA) ! z-momentum flux at the surface [kg/m/s2]
-    real(RP), intent(out) :: XMFLX(LIA,LJA) ! x-momentum flux at the surface [kg/m/s2]
-    real(RP), intent(out) :: YMFLX(LIA,LJA) ! y-momentum flux at the surface [kg/m/s2]
-    real(RP), intent(out) :: U10  (LIA,LJA) ! velocity u at 10m [m/s]
-    real(RP), intent(out) :: V10  (LIA,LJA) ! velocity v at 10m [m/s]
-    real(RP), intent(out) :: T2   (LIA,LJA) ! temperature at 2m [K]
-    real(RP), intent(out) :: Q2   (LIA,LJA) ! water vapor at 2m [kg/kg]
+    integer, intent(in) :: LIA, LIS, LIE
+    integer, intent(in) :: LJA, LJS, LJE
 
     real(RP), intent(in) :: SNOW_frac(LIA,LJA) ! snow fraction
     real(RP), intent(in) :: TMPA(LIA,LJA) ! temperature at the lowest atmospheric layer [K]
@@ -110,6 +84,15 @@ contains
     real(RP), intent(in) :: Z0M   (LIA,LJA) ! roughness length for momemtum [m]
     real(RP), intent(in) :: Z0H   (LIA,LJA) ! roughness length for heat [m]
     real(RP), intent(in) :: Z0E   (LIA,LJA) ! roughness length for vapor [m]
+
+    real(RP), intent(out) :: ZMFLX(LIA,LJA) ! z-momentum flux at the surface [kg/m/s2]
+    real(RP), intent(out) :: XMFLX(LIA,LJA) ! x-momentum flux at the surface [kg/m/s2]
+    real(RP), intent(out) :: YMFLX(LIA,LJA) ! y-momentum flux at the surface [kg/m/s2]
+    real(RP), intent(out) :: U10  (LIA,LJA) ! velocity u at 10m [m/s]
+    real(RP), intent(out) :: V10  (LIA,LJA) ! velocity v at 10m [m/s]
+    real(RP), intent(out) :: T2   (LIA,LJA) ! temperature at 2m [K]
+    real(RP), intent(out) :: Q2   (LIA,LJA) ! water vapor at 2m [kg/kg]
+
 
     ! works
     real(RP) :: Ustar  ! friction velocity [m]

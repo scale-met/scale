@@ -7,9 +7,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2012-12-26 (H.Yashiro)   [new]
-!!
 !<
 !-------------------------------------------------------------------------------
 module mod_user
@@ -29,11 +26,11 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_config
+  public :: USER_tracer_setup
   public :: USER_setup
-  public :: USER_resume0
-  public :: USER_resume
-  public :: USER_step
+  public :: USER_mkinit
+  public :: USER_calc_tendency
+  public :: USER_update
 
   !-----------------------------------------------------------------------------
   !
@@ -69,11 +66,11 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Config
-  subroutine USER_config
+  !> Tracer setup
+  subroutine USER_tracer_setup
 
     return
-  end subroutine USER_config
+  end subroutine USER_tracer_setup
 
   !-----------------------------------------------------------------------------
   !> Setup
@@ -138,41 +135,29 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation, before calculating tendency
-  subroutine USER_resume0
+  !> Make initial state
+  subroutine USER_mkinit
     implicit none
     !---------------------------------------------------------------------------
 
     return
-  end subroutine USER_resume0
+  end subroutine USER_mkinit
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation
-  subroutine USER_resume
-    implicit none
-    !---------------------------------------------------------------------------
-
-    return
-  end subroutine USER_resume
-
-  !-----------------------------------------------------------------------------
-  !> Step
-  subroutine USER_step
-    use scale_prc, only: &
-       PRC_abort
+  !> Calc tendency
+  subroutine USER_calc_tendency
     use scale_time, only: &
        NOWSEC => TIME_NOWSEC, &
        DTSEC  => TIME_DTSEC
     use mod_atmos_vars, only: &
        DENS, &
-       RHOT, &
-       QTRC
+       QTRC, &
+       DENS_tp, &
+       RHOT_tp, &
+       RHOQ_tp
     use scale_atmos_grid_cartesC, only: &
        CX => ATMOS_GRID_CARTESC_CX, &
        CY => ATMOS_GRID_CARTESC_CY
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     use scale_atmos_hydrometeor, only: &
        I_QV
     implicit none
@@ -208,28 +193,30 @@ contains
              enddo
 
              do k = KS, Ktop
-                RHOT(k,i,j)      = RHOT(k,i,j)      + dt * DTSEC * DENS(k,i,j)
+                RHOT_tp(k,i,j)      = RHOT_tp(k,i,j)      + dt * DENS(k,i,j)
 
                 dq = max( dq, -QTRC(k,i,j,I_QV)/DTSEC )
-                QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + dq * DTSEC
-                DENS(k,i,j)      = DENS(k,i,j)      + dq * DTSEC * DENS(k,i,j)
+                RHOQ_tp(k,i,j,I_QV) = RHOQ_tp(k,i,j,I_QV) + dq * DENS(k,i,j)
+                DENS_tp(k,i,j)      = DENS_tp(k,i,j)      + dq * DENS(k,i,j)
              enddo
 
           enddo
           enddo
 
-          call COMM_vars8( DENS(:,:,:),      1)
-          call COMM_vars8( RHOT(:,:,:),      2)
-          call COMM_vars8( QTRC(:,:,:,I_QV), 3)
-
-          call COMM_wait ( DENS(:,:,:),      1)
-          call COMM_wait ( RHOT(:,:,:),      2)
-          call COMM_wait ( QTRC(:,:,:,I_QV), 3)
        endif
 
     endif
 
     return
-  end subroutine USER_step
+  end subroutine USER_calc_tendency
+
+  !-----------------------------------------------------------------------------
+  !> Step
+  subroutine USER_update
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_update
 
 end module mod_user

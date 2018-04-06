@@ -29,8 +29,7 @@ module mod_atmos_phy_rd_driver
   !++ Public procedure
   !
   public :: ATMOS_PHY_RD_driver_setup
-  public :: ATMOS_PHY_RD_driver_resume
-  public :: ATMOS_PHY_RD_driver
+  public :: ATMOS_PHY_RD_driver_calc_tendency
 
   !-----------------------------------------------------------------------------
   !
@@ -113,27 +112,8 @@ contains
   end subroutine ATMOS_PHY_RD_driver_setup
 
   !-----------------------------------------------------------------------------
-  !> Resume
-  subroutine ATMOS_PHY_RD_driver_resume
-    use mod_atmos_admin, only: &
-       ATMOS_sw_phy_rd
-    implicit none
-
-    if ( ATMOS_sw_phy_rd ) then
-
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM_Radiation', 1)
-       call ATMOS_PHY_RD_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM_Radiation', 1)
-
-    end if
-
-    return
-  end subroutine ATMOS_PHY_RD_driver_resume
-
-  !-----------------------------------------------------------------------------
   !> Driver
-  subroutine ATMOS_PHY_RD_driver( update_flag )
+  subroutine ATMOS_PHY_RD_driver_calc_tendency( update_flag )
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ,  &
        REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ,  &
@@ -237,8 +217,6 @@ contains
     real(RP) :: AE_Qe  (KA,IA,JA,N_AE)
 
     real(RP) :: RH(KA,IA,JA)
-
-    real(RP) :: total ! dummy
 
     integer  :: k, i, j
     !---------------------------------------------------------------------------
@@ -436,6 +414,6 @@ contains
     endif
 
     return
-  end subroutine ATMOS_PHY_RD_driver
+  end subroutine ATMOS_PHY_RD_driver_calc_tendency
 
 end module mod_atmos_phy_rd_driver

@@ -1,21 +1,20 @@
 !-------------------------------------------------------------------------------
-!> module LAND / Surface fluxes with thin-slab land model
+!> module coupler / physics / surface skin
 !!
 !! @par Description
-!!          Surface flux with thin-slab land model
+!!          Skin surface model
 !!
 !! @author Team SCALE
 !!
 !<
 !-------------------------------------------------------------------------------
-module scale_land_sfc_thin_slab
+module scale_cpl_phy_sfc_skin
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
   use scale_stdio
-  use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -23,8 +22,8 @@ module scale_land_sfc_thin_slab
   !
   !++ Public procedure
   !
-  public :: LAND_SFC_THIN_SLAB_setup
-  public :: LAND_SFC_THIN_SLAB
+  public :: CPL_PHY_SFC_skin_setup
+  public :: CPL_PHY_SFC_skin
 
   !-----------------------------------------------------------------------------
   !
@@ -39,88 +38,74 @@ module scale_land_sfc_thin_slab
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-  integer,  private :: LAND_SFC_THIN_SLAB_itr_max = 100 ! maximum iteration number
+  integer,  private :: CPL_PHY_SFC_SKIN_itr_max = 100 ! maximum iteration number
 
-  real(RP), private :: LAND_SFC_THIN_SLAB_dTS_max = 5.0E-2_RP ! maximum delta surface temperature [K/s]
-  real(RP), private :: LAND_SFC_THIN_SLAB_res_min = 1.0E+0_RP ! minimum value of residual
-  real(RP), private :: LAND_SFC_THIN_SLAB_err_min = 1.0E-2_RP ! minimum value of error
-  real(RP), private :: LAND_SFC_THIN_SLAB_dreslim = 1.0E+2_RP ! limiter of d(residual)
+  real(RP), private :: CPL_PHY_SFC_SKIN_dTS_max = 5.0E-2_RP ! maximum delta surface temperature [K/s]
+  real(RP), private :: CPL_PHY_SFC_SKIN_res_min = 1.0E+0_RP ! minimum value of residual
+  real(RP), private :: CPL_PHY_SFC_SKIN_err_min = 1.0E-2_RP ! minimum value of error
+  real(RP), private :: CPL_PHY_SFC_SKIN_dreslim = 1.0E+2_RP ! limiter of d(residual)
+
+  logical, private :: initialized = .false.
 
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine LAND_SFC_THIN_SLAB_setup( LAND_TYPE )
+  subroutine CPL_PHY_SFC_SKIN_setup
     use scale_prc, only: &
        PRC_abort
     implicit none
 
-    character(len=*), intent(in) :: LAND_TYPE
-
-    NAMELIST / PARAM_LAND_SFC_THIN_SLAB / &
-       LAND_SFC_THIN_SLAB_itr_max, &
-       LAND_SFC_THIN_SLAB_dTS_max, &
-       LAND_SFC_THIN_SLAB_res_min, &
-       LAND_SFC_THIN_SLAB_err_min, &
-       LAND_SFC_THIN_SLAB_dreslim
+    NAMELIST / PARAM_CPL_PHY_SFC_SKIN / &
+       CPL_PHY_SFC_SKIN_itr_max, &
+       CPL_PHY_SFC_SKIN_dTS_max, &
+       CPL_PHY_SFC_SKIN_res_min, &
+       CPL_PHY_SFC_SKIN_err_min, &
+       CPL_PHY_SFC_SKIN_dreslim
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    if ( initialized ) return
+
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[THIN-SLAB] / Categ[LAND SFC] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SFC SKIN] / Categ[CPL PHY] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_LAND_SFC_THIN_SLAB,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_CPL_PHY_SFC_SKIN,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_SFC_THIN_SLAB. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_PHY_SFC_SKIN. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_SFC_THIN_SLAB)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CPL_PHY_SFC_SKIN)
+
+    initialized = .true.
 
     return
-  end subroutine LAND_SFC_THIN_SLAB_setup
+  end subroutine CPL_PHY_SFC_SKIN_setup
 
   !-----------------------------------------------------------------------------
-  subroutine LAND_SFC_THIN_SLAB( &
-        LST_t,      &
-        ZMFLX,      &
-        XMFLX,      &
-        YMFLX,      &
-        SHFLX,      &
-        LHFLX,      &
-        GHFLX,      &
-        U10,        &
-        V10,        &
-        T2,         &
-        Q2,         &
-        TMPA,       &
-        PRSA,       &
-        WA,         &
-        UA,         &
-        VA,         &
-        RHOA,       &
-        QVA,        &
-        Z1,         &
-        PBL,        &
-        RHOS,       &
-        PRSS,       &
-        LWD,        &
-        SWD,        &
-        TG,         &
-        LST,        &
-        QVEF,       &
-        ALB_LW,     &
-        ALB_SW,     &
-        DZG,        &
-        Rb,         &
-        TCS,        &
-        Z0M,        &
-        Z0H,        &
-        Z0E,        &
-        dt          )
+  subroutine CPL_PHY_SFC_skin( &
+       IA, IS, IE, JA, JS, JE, &
+       TMPA, PRSA,          &
+       WA, UA, VA,          &
+       RHOA, QVA, LHV,      &
+       Z1, PBL,             &
+       RHOS, PRSS,          &
+       LWD, SWD,            &
+       TG, QVEF,            &
+       ALB_LW, ALB_SW,      &
+       DZG,                 &
+       Rb, TCS,             &
+       Z0M, Z0H, Z0E,       &
+       fact_area, dt,       &
+       model_name,          &
+       TMPS,                &
+       ZMFLX, XMFLX, YMFLX, &
+       SHFLX, LHFLX, GHFLX, &
+       U10, V10, T2, Q2     )
     use scale_prc, only: &
       PRC_myrank,  &
       PRC_abort
@@ -130,26 +115,46 @@ contains
       CPdry => CONST_CPdry, &
       Rvap  => CONST_Rvap,  &
       STB   => CONST_STB
-    use scale_landuse, only: &
-      LANDUSE_fact_land
-    use scale_atmos_hydrometeor, only: &
-      HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_atmos_saturation, only: &
       qsat => ATMOS_SATURATION_pres2qsat_all
     use scale_bulkflux, only: &
       BULKFLUX
     implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
 
-    ! parameters
-    real(RP), parameter :: dTS0     = 1.0E-4_RP ! delta surface temp.
+    real(RP), intent(in) :: TMPA(IA,JA) ! temperature at the lowest atmospheric layer [K]
+    real(RP), intent(in) :: PRSA(IA,JA) ! pressure at the lowest atmospheric layer [Pa]
+    real(RP), intent(in) :: WA  (IA,JA) ! velocity w at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: UA  (IA,JA) ! velocity u at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: VA  (IA,JA) ! velocity v at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: RHOA(IA,JA) ! density at the lowest atmospheric layer [kg/m3]
+    real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in) :: LHV (IA,JA) ! latent heat of vaporization [J/kg]
+    real(RP), intent(in) :: Z1  (IA,JA) ! cell center height at the lowest atmospheric layer [m]
+    real(RP), intent(in) :: PBL (IA,JA) ! the top of atmospheric mixing layer [m]
+    real(RP), intent(in) :: RHOS(IA,JA) ! density  at the surface [kg/m3]
+    real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
+    real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface [J/m2/s]
+    real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface [J/m2/s]
 
-    real(RP), parameter :: redf_min = 1.0E-2_RP ! minimum reduced factor
-    real(RP), parameter :: redf_max = 1.0E+0_RP ! maximum reduced factor
-    real(RP), parameter :: TFa      = 0.5E+0_RP ! factor a in Tomita (2009)
-    real(RP), parameter :: TFb      = 1.1E+0_RP ! factor b in Tomita (2009)
+    real(RP), intent(in) :: TG    (IA,JA) ! soil temperature [K]
+    real(RP), intent(in) :: QVEF  (IA,JA) ! efficiency of evaporation (0-1)
+    real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW (0-1)
+    real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW (0-1)
+    real(RP), intent(in) :: DZG   (IA,JA) ! soil depth [m]
+    real(RP), intent(in) :: Rb    (IA,JA) ! stomata resistance [1/s]
+    real(RP), intent(in) :: TCS   (IA,JA) ! thermal conductivity for soil [J/m/K/s]
+    real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
+    real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
+    real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
+    real(RP), intent(in) :: fact_area(IA,JA)
+    real(DP), intent(in) :: dt            ! delta time
 
-    ! arguments
-    real(RP), intent(out) :: LST_t(IA,JA) ! tendency of LST
+    character(len=*), intent(in) :: model_name
+
+    real(RP), intent(inout) :: TMPS(IA,JA) ! surface temperature [K]
+
     real(RP), intent(out) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m/s2]
     real(RP), intent(out) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m/s2]
     real(RP), intent(out) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m/s2]
@@ -161,38 +166,20 @@ contains
     real(RP), intent(out) :: T2   (IA,JA) ! temperature at 2m [K]
     real(RP), intent(out) :: Q2   (IA,JA) ! water vapor at 2m [kg/kg]
 
-    real(RP), intent(in) :: TMPA(IA,JA) ! temperature at the lowest atmospheric layer [K]
-    real(RP), intent(in) :: PRSA(IA,JA) ! pressure at the lowest atmospheric layer [Pa]
-    real(RP), intent(in) :: WA  (IA,JA) ! velocity w at the lowest atmospheric layer [m/s]
-    real(RP), intent(in) :: UA  (IA,JA) ! velocity u at the lowest atmospheric layer [m/s]
-    real(RP), intent(in) :: VA  (IA,JA) ! velocity v at the lowest atmospheric layer [m/s]
-    real(RP), intent(in) :: RHOA(IA,JA) ! density at the lowest atmospheric layer [kg/m3]
-    real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
-    real(RP), intent(in) :: Z1  (IA,JA) ! cell center height at the lowest atmospheric layer [m]
-    real(RP), intent(in) :: PBL (IA,JA) ! the top of atmospheric mixing layer [m]
-    real(RP), intent(in) :: RHOS(IA,JA) ! density  at the surface [kg/m3]
-    real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
-    real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface [J/m2/s]
-    real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface [J/m2/s]
 
-    real(RP), intent(in) :: TG    (IA,JA) ! soil temperature [K]
-    real(RP), intent(in) :: LST   (IA,JA) ! land surface temperature [K]
-    real(RP), intent(in) :: QVEF  (IA,JA) ! efficiency of evaporation (0-1)
-    real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW (0-1)
-    real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW (0-1)
-    real(RP), intent(in) :: DZG   (IA,JA) ! soil depth [m]
-    real(RP), intent(in) :: Rb    (IA,JA) ! stomata resistance [1/s]
-    real(RP), intent(in) :: TCS   (IA,JA) ! thermal conductivity for soil [J/m/K/s]
-    real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
-    real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
-    real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
-    real(DP), intent(in) :: dt            ! delta time
+    ! parameters
+    real(RP), parameter :: dTS0     = 1.0E-4_RP ! delta surface temp.
+
+    real(RP), parameter :: redf_min = 1.0E-2_RP ! minimum reduced factor
+    real(RP), parameter :: redf_max = 1.0E+0_RP ! maximum reduced factor
+    real(RP), parameter :: TFa      = 0.5E+0_RP ! factor a in Tomita (2009)
+    real(RP), parameter :: TFb      = 1.1E+0_RP ! factor b in Tomita (2009)
 
     ! works
-    real(RP) :: LST1(IA,JA)
+    real(RP) :: TMPS1(IA,JA)
 
     real(RP) :: res    ! residual
-    real(RP) :: dres   ! d(residual)/dLST
+    real(RP) :: dres   ! d(residual)/dTMPS
     real(RP) :: oldres ! residual in previous step
     real(RP) :: redf   ! reduced factor
 
@@ -211,28 +198,34 @@ contains
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
     real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
 
-    real(RP) :: LHV(IA,JA)    ! latent heat of vaporization [J/kg]
-
     integer  :: i, j, n
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Land surface step: Thin-Slab'
+    if( IO_L ) write(IO_FID_LOG,*) '*** surface step: SKIN'
 
-    call HYDROMETEOR_LHV( IA, IS, IE, JA, JS, JE, &
-                          TMPA(:,:), LHV(:,:) )
-
-    ! copy land surfce temperature for iteration
+    ! copy surfce temperature for iteration
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
-      LST1(i,j) = LST(i,j)
+      TMPS1(i,j) = TMPS(i,j)
     end do
     end do
 
     ! update surface temperature
+    !$omp parallel do default(none) &
+    !$omp private(qdry,Rtot,redf,res,dres,oldres,QVS,dQVS, &
+    !$omp         QVsat,dQVsat,Ustar,dUstar,Tstar,dTstar,Qstar,dQstar,Uabs,dUabs,Ra,dRa, &
+    !$omp         FracU10,FracT2,FracQ2) &
+    !$omp shared(IS,IE,JS,JE,Rdry,CPdry,PRC_myrank,IO_FID_LOG,IO_L,model_name, &
+    !$omp        bulkflux, &
+    !$omp        CPL_PHY_SFC_SKIN_itr_max,CPL_PHY_SFC_SKIN_dTS_max,CPL_PHY_SFC_SKIN_dreslim,CPL_PHY_SFC_SKIN_err_min, CPL_PHY_SFC_SKIN_res_min, &
+    !$omp        fact_area,DZG,dt,QVA,TMPA,PRSA,RHOA,WA,UA,VA,LHV,Z1,PBL, &
+    !$omp        TG,PRSS,RHOS,TMPS1,QVEF,Z0M,Z0H,Z0E,Rb,TCS,ALB_SW,ALB_LW,SWD,LWD, &
+    !$omp        TMPS,ZMFLX,XMFLX,YMFLX,SHFLX,LHFLX,GHFLX,U10,V10,T2,Q2)
     do j = JS, JE
     do i = IS, IE
 
-      if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
+      if( fact_area(i,j) > 0.0_RP ) then
 
         qdry = 1.0_RP - QVA(i,j)
         Rtot = qdry * Rdry + QVA(i,j) * Rvap
@@ -241,12 +234,12 @@ contains
         oldres = huge(0.0_RP)
 
         ! modified Newton-Raphson method (Tomita 2009)
-        do n = 1, LAND_SFC_THIN_SLAB_itr_max
+        do n = 1, CPL_PHY_SFC_SKIN_itr_max
 
-          call qsat( LST1(i,j),      PRSS(i,j), qdry, & ! [IN]
-                     QVsat                            ) ! [OUT]
-          call qsat( LST1(i,j)+dTS0, PRSS(i,j), qdry, & ! [IN]
-                     dQVsat                           ) ! [OUT]
+          call qsat( TMPS1(i,j),      PRSS(i,j), qdry, & ! [IN]
+                     QVsat                             ) ! [OUT]
+          call qsat( TMPS1(i,j)+dTS0, PRSS(i,j), qdry, & ! [IN]
+                     dQVsat                            ) ! [OUT]
 
           QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
           dQVS = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * dQVsat
@@ -261,7 +254,7 @@ contains
               FracT2,    & ! [OUT] ! not used
               FracQ2,    & ! [OUT] ! not used
               TMPA(i,j), & ! [IN]
-              LST1(i,j), & ! [IN]
+              TMPS1(i,j), & ! [IN]
               PRSA(i,j), & ! [IN]
               PRSS(i,j), & ! [IN]
               QVA (i,j), & ! [IN]
@@ -284,7 +277,7 @@ contains
               FracT2,         & ! [OUT] ! not used
               FracQ2,         & ! [OUT] ! not used
               TMPA(i,j),      & ! [IN]
-              LST1(i,j)+dTS0, & ! [IN]
+              TMPS1(i,j)+dTS0, & ! [IN]
               PRSA(i,j),      & ! [IN]
               PRSS(i,j),      & ! [IN]
               QVA (i,j),      & ! [IN]
@@ -299,26 +292,26 @@ contains
 
           ! calculation for residual
           res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
-              + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST1(i,j)**4 ) &
+              + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * TMPS1(i,j)**4 ) &
               + CPdry    * RHOS(i,j) * Ustar * Tstar &
               + LHV(i,j) * RHOS(i,j) * Ustar * Qstar * Ra / ( Ra + Rb(i,j) ) &
-              - 2.0_RP * TCS(i,j) * ( LST1(i,j) - TG(i,j) ) / DZG(i,j)
+              - 2.0_RP * TCS(i,j) * ( TMPS1(i,j) - TG(i,j) ) / DZG(i,j)
 
-          ! calculation for d(residual)/dLST
-          dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST1(i,j)**3 &
+          ! calculation for d(residual)/dTMPS
+          dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * TMPS1(i,j)**3 &
                + CPdry    * RHOS(i,j) * ( (dUstar-Ustar)/dTS0 * Tstar + Ustar * (dTstar-Tstar)/dTS0 ) &
                + LHV(i,j) * RHOS(i,j) * ( (dUstar-Ustar)/dTS0 * Qstar + Ustar * (dQstar-Qstar)/dTS0 ) &
                * Ra / ( Ra + Rb(i,j) ) &
                - 2.0_RP * TCS(i,j) / DZG(i,j)
 
           ! convergence test with residual and error levels
-          if( abs( res      ) < LAND_SFC_THIN_SLAB_res_min .or. &
-              abs( res/dres ) < LAND_SFC_THIN_SLAB_err_min      ) then
+          if( abs( res      ) < CPL_PHY_SFC_SKIN_res_min .or. &
+              abs( res/dres ) < CPL_PHY_SFC_SKIN_err_min      ) then
             exit
           end if
 
           ! stop iteration to prevent numerical error
-          if( abs(dres) * LAND_SFC_THIN_SLAB_dreslim < abs(res) ) then
+          if( abs(dres) * CPL_PHY_SFC_SKIN_dreslim < abs(res) ) then
             exit
           end if
 
@@ -334,21 +327,21 @@ contains
           end if
 
           ! estimate next surface temperature
-          LST1(i,j) = LST1(i,j) - redf * res / dres
+          TMPS1(i,j) = TMPS1(i,j) - redf * res / dres
 
           ! save residual in this step
           oldres = res
 
         end do
 
-        ! update land surface temperature with limitation
-        LST1(i,j) = min( max( LST1(i,j), &
-                              LST (i,j) - LAND_SFC_THIN_SLAB_dTS_max * real( dt, kind=RP ) ), &
-                              LST (i,j) + LAND_SFC_THIN_SLAB_dTS_max * real( dt, kind=RP ) )
+        ! update surface temperature with limitation
+        TMPS1(i,j) = min( max( TMPS1(i,j), &
+                               TMPS(i,j) - CPL_PHY_SFC_SKIN_dTS_max * real( dt, kind=RP ) ), &
+                               TMPS(i,j) + CPL_PHY_SFC_SKIN_dTS_max * real( dt, kind=RP ) )
 
-        if( n > LAND_SFC_THIN_SLAB_itr_max ) then
-          ! land surface temperature was not converged
-          if( IO_L ) write(IO_FID_LOG,'(A)'       ) 'Warning: land surface tempearture was not converged.'
+        if( n > CPL_PHY_SFC_SKIN_itr_max ) then
+          ! surface temperature was not converged
+          if( IO_L ) write(IO_FID_LOG,'(A)'       ) 'Warning: surface tempearture was not converged. ', trim(model_name)
           if( IO_L ) write(IO_FID_LOG,'(A)'       ) ''
           if( IO_L ) write(IO_FID_LOG,'(A,I32)'   ) 'DEBUG --- PRC_myrank                         [no unit] :', PRC_myrank
           if( IO_L ) write(IO_FID_LOG,'(A,I32)'   ) 'DEBUG --- number of i                        [no unit] :', i
@@ -372,7 +365,7 @@ contains
           if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- downward short-wave radiation      [J/m2/s]  :', SWD   (i,j)
           if( IO_L ) write(IO_FID_LOG,'(A)'       ) ''
           if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- soil temperature                   [K]       :', TG    (i,j)
-          if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- land surface temperature           [K]       :', LST   (i,j)
+          if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- surface temperature                [K]       :', TMPS  (i,j)
           if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- efficiency of evaporation          [1]       :', QVEF  (i,j)
           if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- surface albedo for LW              [1]       :', ALB_LW(i,j)
           if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- surface albedo for SW              [1]       :', ALB_SW(i,j)
@@ -390,11 +383,11 @@ contains
           if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- d(friction potential temperature)  [K]       :', dTstar
           if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- d(friction water vapor mass ratio) [kg/kg]   :', dQstar
           if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- modified absolute velocity         [m/s]     :', Uabs
-          if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- next land surface temperature      [K]       :', LST1  (i,j)
+          if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- next surface temperature           [K]       :', TMPS1(i,j)
 
           ! check NaN
           if ( .NOT. ( res > -1.0_RP .OR. res < 1.0_RP ) ) then ! must be NaN
-             write(*,*) 'xxx NaN is detected for land surface temperature.'
+             write(*,*) 'xxx NaN is detected for surface temperature. ', trim(model_name)
              write(*,*) ''
              write(*,*) 'DEBUG --- PRC_myrank                                   :', PRC_myrank
              write(*,*) 'DEBUG --- number of i                                  :', i
@@ -417,7 +410,7 @@ contains
              write(*,*) 'DEBUG --- downward short-wave radiation      [J/m2/s]  :', SWD   (i,j)
              write(*,*) ''
              write(*,*) 'DEBUG --- soil temperature                   [K]       :', TG    (i,j)
-             write(*,*) 'DEBUG --- land surface temperature           [K]       :', LST   (i,j)
+             write(*,*) 'DEBUG --- surface temperature                [K]       :', TMPS  (i,j)
              write(*,*) 'DEBUG --- efficiency of evaporation          [1]       :', QVEF  (i,j)
              write(*,*) 'DEBUG --- surface albedo for LW              [1]       :', ALB_LW(i,j)
              write(*,*) 'DEBUG --- surface albedo for SW              [1]       :', ALB_SW(i,j)
@@ -435,32 +428,21 @@ contains
              write(*,*) 'DEBUG --- d(friction potential temperature)  [K]       :', dTstar
              write(*,*) 'DEBUG --- d(friction water vapor mass ratio) [kg/kg]   :', dQstar
              write(*,*) 'DEBUG --- modified absolute velocity         [m/s]     :', Uabs
-             write(*,*) 'DEBUG --- next land surface temperature      [K]       :', LST1  (i,j)
+             write(*,*) 'DEBUG --- next surface temperature           [K]       :', TMPS1 (i,j)
 
              call PRC_abort
           endif
 
         end if
 
-      end if
 
-      ! calculate tendency
-      LST_t(i,j) = ( LST1(i,j) - LST(i,j) ) / dt
-
-    end do
-    end do
-
-    ! calculate surface flux
-    do j = JS, JE
-    do i = IS, IE
-
-      if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
+        ! calculate surface flux
 
         qdry = 1.0_RP - QVA(i,j)
         Rtot = qdry * Rdry + QVA(i,j) * Rvap
 
-        call qsat( LST1(i,j), PRSS(i,j), qdry, & ! [IN]
-                   QVsat                       ) ! [OUT]
+        call qsat( TMPS1(i,j), PRSS(i,j), qdry, & ! [IN]
+                   QVsat                        ) ! [OUT]
 
         QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
 
@@ -474,7 +456,7 @@ contains
             FracT2,    & ! [OUT]
             FracQ2,    & ! [OUT]
             TMPA(i,j), & ! [IN]
-            LST1(i,j), & ! [IN]
+            TMPS1(i,j), & ! [IN]
             PRSA(i,j), & ! [IN]
             PRSS(i,j), & ! [IN]
             QVA (i,j), & ! [IN]
@@ -493,11 +475,11 @@ contains
         SHFLX(i,j) = -RHOS(i,j) * Ustar * Tstar * CPdry
         LHFLX(i,j) = -RHOS(i,j) * Ustar * Qstar * LHV(i,j) * Ra / ( Ra + Rb(i,j) )
 
-        GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( LST1(i,j) - TG(i,j) ) / DZG(i,j)
+        GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( TMPS1(i,j) - TG(i,j) ) / DZG(i,j)
 
         ! calculation for residual
         res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
-            + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST1(i,j)**4 ) &
+            + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * TMPS1(i,j)**4 ) &
             - SHFLX(i,j) - LHFLX(i,j) + GHFLX(i,j)
 
         ! put residual in ground heat flux
@@ -506,16 +488,18 @@ contains
         ! diagnostic variables considering unstable/stable state
         !U10(i,j) = FracU10 * UA(i,j)
         !V10(i,j) = FracU10 * VA(i,j)
-        !T2 (i,j) = ( 1.0_RP - FracT2 ) * LST1(i,j) + FracT2 * TMPA(i,j)
-        !Q2 (i,j) = ( 1.0_RP - FracQ2 ) * QVS       + FracQ2 * QVA (i,j)
+        !T2 (i,j) = ( 1.0_RP - FracT2 ) * TMPS1(i,j) + FracT2 * TMPA(i,j)
+        !Q2 (i,j) = ( 1.0_RP - FracQ2 ) * QVS        + FracQ2 * QVA (i,j)
 
         ! diagnostic variables for neutral state
-        U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        V10(i,j) = VA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        T2 (i,j) = LST1(i,j) + ( TMPA(i,j) - LST1(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
-                                                         / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
+        U10(i,j) = UA   (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        V10(i,j) = VA   (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        T2 (i,j) = TMPS1(i,j) + ( TMPA(i,j) - TMPS1(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
+                                                           / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
         Q2 (i,j) = QVS       + (  QVA(i,j) - QVS       ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
                                                          / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
+
+        TMPS(i,j) = TMPS1(i,j)
 
       else
 
@@ -537,6 +521,6 @@ contains
     end do
 
     return
-  end subroutine LAND_SFC_THIN_SLAB
+  end subroutine CPL_PHY_SFC_skin
 
-end module scale_land_sfc_thin_slab
+end module scale_cpl_phy_sfc_skin

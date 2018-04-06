@@ -15,9 +15,6 @@ module mod_cpl_driver
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_debug
-  use scale_atmos_grid_cartesC_index
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private

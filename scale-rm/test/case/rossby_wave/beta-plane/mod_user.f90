@@ -24,11 +24,11 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_config
+  public :: USER_tracer_setup
   public :: USER_setup
-  public :: USER_resume0
-  public :: USER_resume
-  public :: USER_step
+  public :: USER_mkinit
+  public :: USER_calc_tendency
+  public :: USER_update
 
   !-----------------------------------------------------------------------------
   !
@@ -51,8 +51,15 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Config
-  subroutine USER_config
+  !> Tracer setup
+  subroutine USER_tracer_setup
+
+    return
+  end subroutine USER_tracer_setup
+
+  !-----------------------------------------------------------------------------
+  !> Setup
+  subroutine USER_setup
     use scale_prc, only: &
        PRC_abort
     implicit none
@@ -81,20 +88,13 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
-    return
-  end subroutine USER_config
-
-  !-----------------------------------------------------------------------------
-  !> Setup
-  subroutine USER_setup
-    implicit none
 
     return
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation, before calculating tendency
-  subroutine USER_resume0
+  !> Make initial state
+  subroutine USER_mkinit
     use scale_const, only: &
        PI   => CONST_PI, &
        GRAV => CONST_GRAV, &
@@ -122,6 +122,7 @@ contains
        MOMY, &
        RHOT
     use mod_atmos_dyn_driver, only: &
+       ATMOS_DYN_driver_setup, &
        ATMOS_DYN_coriolis_beta
     implicit none
 
@@ -132,10 +133,19 @@ contains
     real(RP) :: c          !> phase speed
     integer :: k, i, j
 
+    !---------------------------------------------------------------------------
+
+    call ATMOS_DYN_driver_setup
+
+    call COMM_vars8( DENS(:,:,:), 1 )
+    call COMM_vars8( RHOT(:,:,:), 2 )
+    call COMM_wait ( DENS(:,:,:), 1 )
+    call COMM_wait ( RHOT(:,:,:), 2 )
+
     RovCP = R / CP
 
     ! pressure at TOA
-    pres_toa = P00 * ( R * RHOT(KE,1,1) / P00 )**( CP/CV ) & ! at k=KE
+    pres_toa = P00 * ( R * RHOT(KE,ISB,JSB) / P00 )**( CP/CV ) & ! at k=KE
              - GRAV * DENS(KE,1,1) * ( FZ(KE) - CZ(KE) )
 
     ! wave numbers
@@ -145,6 +155,8 @@ contains
     c = ATMOS_DYN_coriolis_beta / ( wn_k**2 + wn_l**2 )
 
     if( IO_L ) then
+       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*) '+++ Rossby wave experiment on a beta-plane'
        write(IO_FID_LOG,*) '+++ Wave number [x-direction]: ', wn_k
        write(IO_FID_LOG,*) '+++ Wave number [y-direction]: ', wn_l
        write(IO_FID_LOG,*) '+++ Phase speed [x-direction]: ', c
@@ -191,30 +203,30 @@ contains
     end do
     end do
 
-    call COMM_vars8(MOMX, 1)
-    call COMM_vars8(MOMY, 2)
-    call COMM_wait (MOMX, 1)
-    call COMM_wait (MOMY, 2)
+    call COMM_vars8( MOMX(:,:,:), 1 )
+    call COMM_vars8( MOMY(:,:,:), 2 )
+    call COMM_wait ( MOMX(:,:,:), 1 )
+    call COMM_wait ( MOMY(:,:,:), 2 )
 
     return
-  end subroutine USER_resume0
+  end subroutine USER_mkinit
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation
-  subroutine USER_resume
+  !> Calculate tendency
+  subroutine USER_calc_tendency
     implicit none
     !---------------------------------------------------------------------------
 
     return
-  end subroutine USER_resume
+  end subroutine USER_calc_tendency
 
   !-----------------------------------------------------------------------------
   !> User step
-  subroutine USER_step
+  subroutine USER_update
     implicit none
     !---------------------------------------------------------------------------
 
     return
-  end subroutine USER_step
+  end subroutine USER_update
 
 end module mod_user

@@ -144,10 +144,8 @@ contains
        ATMOS_SATURATION_setup
     use scale_bulkflux, only: &
        BULKFLUX_setup
-    use scale_roughness, only: &
-       ROUGHNESS_setup
     use mod_atmos_driver, only: &
-       ATMOS_driver_config
+       ATMOS_driver_tracer_setup
     use mod_admin_restart, only: &
        ADMIN_restart_setup, &
        ADMIN_restart_write
@@ -169,8 +167,10 @@ contains
        ATMOS_sw_check => ATMOS_RESTART_CHECK,    &
        ATMOS_vars_restart_check
     use mod_atmos_driver, only: &
-       ATMOS_driver_setup,    &
-       ATMOS_driver,           &
+       ATMOS_driver_setup,         &
+       ATMOS_driver_calc_tendency, &
+       ATMOS_driver_calc_tendency_from_sflux, &
+       ATMOS_driver_update,        &
        ATMOS_driver_finalize
     use mod_atmos_phy_mp_vars, only: &
        QA_MP
@@ -180,32 +180,37 @@ contains
     use mod_ocean_vars, only: &
        OCEAN_vars_setup
     use mod_ocean_driver, only: &
-       OCEAN_driver_setup, &
-       OCEAN_driver
+       OCEAN_driver_setup,         &
+       OCEAN_driver_calc_tendency, &
+       OCEAN_driver_update
     use mod_land_admin, only: &
        LAND_admin_setup, &
        LAND_do
     use mod_land_vars, only: &
        LAND_vars_setup
     use mod_land_driver, only: &
-       LAND_driver_setup, &
-       LAND_driver
+       LAND_driver_setup,         &
+       LAND_driver_calc_tendency, &
+       LAND_driver_update
     use mod_urban_admin, only: &
        URBAN_admin_setup, &
        URBAN_do
     use mod_urban_vars, only: &
        URBAN_vars_setup
     use mod_urban_driver, only: &
-       URBAN_driver_setup, &
-       URBAN_driver
+       URBAN_driver_setup,         &
+       URBAN_driver_calc_tendency, &
+       URBAN_driver_update
     use mod_cpl_admin, only: &
-       CPL_admin_setup
+       CPL_admin_setup, &
+       CPL_sw
     use mod_cpl_vars, only: &
        CPL_vars_setup
     use mod_user, only: &
-       USER_config, &
-       USER_setup, &
-       USER_step
+       USER_tracer_setup,  &
+       USER_setup,         &
+       USER_calc_tendency, &
+       USER_update
     implicit none
 
     integer,          intent(in) :: comm_world
@@ -275,8 +280,8 @@ contains
 
     ! setup tracer index
     call ATMOS_HYDROMETEOR_setup
-    call ATMOS_driver_config
-    call USER_config
+    call ATMOS_driver_tracer_setup
+    call USER_tracer_setup
 
     ! setup file I/O
     call FILE_CARTESC_setup
@@ -320,7 +325,6 @@ contains
     call ATMOS_SATURATION_setup
 
     call BULKFLUX_setup( sqrt(DX**2+DY**2) )
-    call ROUGHNESS_setup
 
     ! setup variable container
     call ATMOS_vars_setup
@@ -329,7 +333,7 @@ contains
     call URBAN_vars_setup
     call CPL_vars_setup
 
-    ! setup submodel driver
+    ! setup driver
     call ATMOS_driver_setup
     call OCEAN_driver_setup
     call LAND_driver_setup
@@ -361,8 +365,8 @@ contains
       call ADMIN_TIME_checkstate
 
       if ( TIME_DOresume ) then
-         ! resume state from restart files
-         call resume_state
+         ! set state from restart files
+         call restart_read
 
          ! history&monitor file output
          call MONITOR_write('MAIN', TIME_NOWSTEP)
@@ -374,21 +378,28 @@ contains
       call ADMIN_TIME_advance
       call FILE_HISTORY_set_nowdate( TIME_NOWDATE, TIME_NOWMS, TIME_NOWSTEP )
 
-      ! user-defined procedure
-      call USER_step
-
       ! change to next state
-      if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver
-      if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver
-      if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver
-      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver
+      if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver_update
+      if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver_update
+      if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver_update
+      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_update
+                                             call USER_update
+
+      ! restart output
+      call ADMIN_restart_write
+
+
+      ! calc tendencies and diagnostices
+      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_calc_tendency( force = .false. )
+      if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver_calc_tendency( force = .false. )
+      if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver_calc_tendency( force = .false. )
+      if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver_calc_tendency( force = .false. )
+      if( CPL_sw   .AND. TIME_DOATMOS_step ) call ATMOS_driver_calc_tendency_from_sflux( force = .false. )
+                                             call USER_calc_tendency
 
       ! history&monitor file output
       call MONITOR_write('MAIN', TIME_NOWSTEP)
       call FILE_HISTORY_write
-
-      ! restart output
-      call ADMIN_restart_write
 
       if( TIME_DOend ) exit
 
@@ -461,33 +472,38 @@ contains
   end subroutine scalerm
 
   !-----------------------------------------------------------------------------
-  subroutine resume_state
+  subroutine restart_read
+    use scale_atmos_grid_cartesC_index
     use mod_atmos_driver, only: &
-       ATMOS_driver_resume1, &
-       ATMOS_driver_resume2, &
+       ATMOS_driver_calc_tendency, &
+       ATMOS_driver_calc_tendency_from_sflux, &
        ATMOS_SURFACE_SET
     use mod_ocean_driver, only: &
-       OCEAN_driver_resume, &
+       OCEAN_driver_calc_tendency, &
        OCEAN_SURFACE_SET
     use mod_land_driver, only: &
-       LAND_driver_resume, &
+       LAND_driver_calc_tendency, &
        LAND_SURFACE_SET
     use mod_urban_driver, only: &
-       URBAN_driver_resume, &
+       URBAN_driver_calc_tendency, &
        URBAN_SURFACE_SET
     use mod_atmos_vars, only: &
        ATMOS_vars_calc_diagnostics, &
        ATMOS_vars_history_setpres, &
-       ATMOS_vars_restart_read
+       ATMOS_vars_history, &
+       ATMOS_vars_monitor
     use mod_ocean_vars, only: &
-       OCEAN_vars_restart_read
+       OCEAN_vars_history
     use mod_land_vars, only: &
-       LAND_vars_restart_read
+       LAND_vars_history
     use mod_urban_vars, only: &
-       URBAN_vars_restart_read
+       URBAN_vars_history
+    use scale_atmos_boundary, only: &
+       ATMOS_BOUNDARY_set
+    use scale_atmos_refstate, only: &
+       ATMOS_REFSTATE_UPDATE
     use mod_user, only: &
-       USER_resume0, &
-       USER_resume
+       USER_calc_tendency
     use mod_atmos_admin, only: &
        ATMOS_do
     use mod_ocean_admin, only: &
@@ -496,20 +512,48 @@ contains
        LAND_do
     use mod_urban_admin, only: &
        URBAN_do
+    use mod_cpl_admin, only: &
+       CPL_sw
     use mod_admin_restart, only: &
        ADMIN_restart_read
+    use mod_atmos_vars, only: &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC, &
+       TEMP, &
+       PRES, &
+       POTT, &
+       QV
+    use scale_atmos_grid_cartesC, only: &
+       CZ   => ATMOS_GRID_CARTESC_CZ,  &
+       FZ   => ATMOS_GRID_CARTESC_FZ,  &
+       FDZ  => ATMOS_GRID_CARTESC_FDZ,  &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ, &
+       REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI
+    use scale_time, only: &
+       TIME_NOWSEC
     implicit none
     !---------------------------------------------------------------------------
 
     ! read restart data
     call ADMIN_restart_read
 
-    ! setup user-defined procedure before setup of other components
-    call USER_resume0
-
     if ( ATMOS_do ) then
        ! calc diagnostics
        call ATMOS_vars_calc_diagnostics
+       call ATMOS_REFSTATE_update( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                   DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
+                                   CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
+                                   REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:),               & ! [IN]
+                                   TIME_NOWSEC,                                                   & ! [IN]
+                                   force = .true.                                                 )
+       call ATMOS_BOUNDARY_set( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
        call ATMOS_vars_history_setpres
     endif
 
@@ -519,17 +563,24 @@ contains
     if( LAND_do  ) call LAND_SURFACE_SET ( countup=.false. )
     if( URBAN_do ) call URBAN_SURFACE_SET( countup=.false. )
 
-    ! setup submodel driver
-    if( ATMOS_do ) call ATMOS_driver_resume1
-    if( OCEAN_do ) call OCEAN_driver_resume
-    if( LAND_do  ) call LAND_driver_resume
-    if( URBAN_do ) call URBAN_driver_resume
-    if( ATMOS_do ) call ATMOS_driver_resume2
+    ! calc tendencies
+    if( ATMOS_do ) call ATMOS_driver_calc_tendency( force = .true. )
+    if( OCEAN_do ) call OCEAN_driver_calc_tendency( force = .true. )
+    if( LAND_do  ) call LAND_driver_calc_tendency( force = .true. )
+    if( URBAN_do ) call URBAN_driver_calc_tendency( force = .true. )
+    if( CPL_sw   ) call ATMOS_driver_calc_tendency_from_sflux( force = .true. )
+                   call USER_calc_tendency
 
-    ! setup user-defined procedure
-    call USER_resume
+
+    !########## History & Monitor ##########
+    call OCEAN_vars_history
+    call LAND_vars_history
+    call URBAN_vars_history
+    call ATMOS_vars_history
+
+    call ATMOS_vars_monitor
 
     return
-  end subroutine resume_state
+  end subroutine restart_read
 
 end module mod_rm_driver

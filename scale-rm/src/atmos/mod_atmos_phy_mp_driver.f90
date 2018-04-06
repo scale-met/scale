@@ -28,7 +28,6 @@ module mod_atmos_phy_mp_driver
   !
   public :: ATMOS_PHY_MP_driver_tracer_setup
   public :: ATMOS_PHY_MP_driver_setup
-  public :: ATMOS_PHY_MP_driver_resume
   public :: ATMOS_PHY_MP_driver_calc_tendency
   public :: ATMOS_PHY_MP_driver_adjustment
   public :: ATMOS_PHY_MP_driver_qhyd2qtrc
@@ -322,26 +321,6 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_driver_setup
-
-  !-----------------------------------------------------------------------------
-  !> resume
-  subroutine ATMOS_PHY_MP_driver_resume
-    use mod_atmos_admin, only: &
-       ATMOS_sw_phy_mp
-    implicit none
-
-    if ( ATMOS_sw_phy_mp ) then
-
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM_Microphysics', 1)
-       call ATMOS_PHY_MP_driver_calc_tendency( update_flag = .true. )
-       call PROF_rapend  ('ATM_Microphysics', 1)
-
-    end if
-
-    return
-  end subroutine ATMOS_PHY_MP_driver_resume
-
 
   !-----------------------------------------------------------------------------
   !> adjustment

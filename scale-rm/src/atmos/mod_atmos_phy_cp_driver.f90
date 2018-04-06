@@ -29,8 +29,7 @@ module mod_atmos_phy_cp_driver
   !++ Public procedure
   !
   public :: ATMOS_PHY_CP_driver_setup
-  public :: ATMOS_PHY_CP_driver_resume
-  public :: ATMOS_PHY_CP_driver
+  public :: ATMOS_PHY_CP_driver_calc_tendency
 
   !-----------------------------------------------------------------------------
   !
@@ -98,27 +97,8 @@ contains
   end subroutine ATMOS_PHY_CP_driver_setup
 
   !-----------------------------------------------------------------------------
-  !> Redume
-  subroutine ATMOS_PHY_CP_driver_resume
-    use mod_atmos_admin, only: &
-       ATMOS_sw_phy_cp
-    implicit none
-
-    if ( ATMOS_sw_phy_cp ) then
-
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM_Cumulus', 1)
-       call ATMOS_PHY_CP_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM_Cumulus', 1)
-
-    endif
-
-    return
-  end subroutine ATMOS_PHY_CP_driver_resume
-
-  !-----------------------------------------------------------------------------
   !> Driver
-  subroutine ATMOS_PHY_CP_driver( update_flag )
+  subroutine ATMOS_PHY_CP_driver_calc_tendency( update_flag )
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STATISTICS_total
@@ -298,6 +278,6 @@ contains
     endif
 
     return
-  end subroutine ATMOS_PHY_CP_driver
+  end subroutine ATMOS_PHY_CP_driver_calc_tendency
 
 end module mod_atmos_phy_cp_driver

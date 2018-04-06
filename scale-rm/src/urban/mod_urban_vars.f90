@@ -121,7 +121,8 @@ module mod_urban_vars
   real(RP), public, allocatable :: ATMOS_SFLX_LW  (:,:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_SW  (:,:,:)
   real(RP), public, allocatable :: ATMOS_cosSZA   (:,:)
-  real(RP), public, allocatable :: ATMOS_SFLX_prec(:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_rain(:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_snow(:,:)
 
   !-----------------------------------------------------------------------------
   !
@@ -370,7 +371,8 @@ contains
     allocate( ATMOS_SFLX_LW  (UIA,UJA,2) )
     allocate( ATMOS_SFLX_SW  (UIA,UJA,2) )
     allocate( ATMOS_cosSZA   (UIA,UJA)   )
-    allocate( ATMOS_SFLX_prec(UIA,UJA)   )
+    allocate( ATMOS_SFLX_rain(UIA,UJA)   )
+    allocate( ATMOS_SFLX_snow(UIA,UJA)   )
     ATMOS_TEMP     (:,:)   = UNDEF
     ATMOS_PRES     (:,:)   = UNDEF
     ATMOS_W        (:,:)   = UNDEF
@@ -384,7 +386,8 @@ contains
     ATMOS_SFLX_LW  (:,:,:) = UNDEF
     ATMOS_SFLX_SW  (:,:,:) = UNDEF
     ATMOS_cosSZA   (:,:)   = UNDEF
-    ATMOS_SFLX_prec(:,:)   = UNDEF
+    ATMOS_SFLX_rain(:,:)   = UNDEF
+    ATMOS_SFLX_snow(:,:)   = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -435,7 +438,7 @@ contains
        FILE_CARTESC_open, &
        FILE_CARTESC_check_coordinates
     use mod_urban_admin, only: &
-       URBAN_sw
+       URBAN_do
     implicit none
 
     character(len=19)     :: timelabel
@@ -445,7 +448,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Open restart file (URBAN) ***'
 
-    if ( URBAN_sw .and. URBAN_RESTART_IN_BASENAME /= '' ) then
+    if ( URBAN_do .and. URBAN_RESTART_IN_BASENAME /= '' ) then
 
        if ( URBAN_RESTART_IN_POSTFIX_TIMELABEL ) then
           call TIME_gettimelabel( timelabel )
@@ -520,21 +523,6 @@ contains
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ALB_SW),   'XY', & ! [IN]
                                URBAN_SFC_albedo(:,:,I_SW)               ) ! [OUT]
 
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MW),   'XY', & ! [IN]
-                               URBAN_SFLX_MW(:,:)                        ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MU),   'XY', & ! [IN]
-                               URBAN_SFLX_MU(:,:)                        ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_MV),   'XY', & ! [IN]
-                               URBAN_SFLX_MV(:,:)                        ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_SH),   'XY', & ! [IN]
-                               URBAN_SFLX_SH(:,:)                        ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_LH),   'XY', & ! [IN]
-                               URBAN_SFLX_LH(:,:)                        ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_GH),   'XY', & ! [IN]
-                               URBAN_SFLX_GH(:,:)                        ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_evap), 'XY', & ! [IN]
-                               URBAN_SFLX_evap(:,:)                      ) ! [OUT]
-
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
 
        call URBAN_vars_total
@@ -552,6 +540,8 @@ contains
        FILE_HISTORY_in
     implicit none
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('URB_History', 1)
 
     if ( URBAN_VARS_CHECKRANGE ) then
        call VALCHECK( URBAN_TR        (UIS:UIE,UJS:UJE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TR),        &
@@ -615,6 +605,8 @@ contains
     call FILE_HISTORY_in( URBAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH)   )
     call FILE_HISTORY_in( URBAN_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH),   VAR_DESC(I_SFLX_GH),   VAR_UNIT(I_SFLX_GH)   )
     call FILE_HISTORY_in( URBAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap) )
+
+    call PROF_rapend  ('URB_History', 1)
 
     return
   end subroutine URBAN_vars_history
@@ -807,14 +799,14 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_create
     use mod_urban_admin, only: &
-       URBAN_sw
+       URBAN_do
     implicit none
 
     character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    if ( URBAN_sw .and. URBAN_RESTART_OUT_BASENAME /= '' ) then
+    if ( URBAN_do .and. URBAN_RESTART_OUT_BASENAME /= '' ) then
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Create restart file (URBAN) ***'
@@ -883,7 +875,7 @@ contains
 
     if ( restart_fid /= -1 ) then
 
-       do i = 1, VMAX
+       do i = 1, I_ALB_SW
           if ( i==I_TRL .or. i==I_TBL .or. i==I_TGL ) then ! 3D
              call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
                   VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
@@ -949,21 +941,6 @@ contains
                               VAR_NAME(I_ALB_LW), 'XY', fill_halo=.true.                    ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_ALB_SW), URBAN_SFC_albedo(:,:,I_SW), & ! [IN]
                               VAR_NAME(I_ALB_SW), 'XY', fill_halo=.true.                    ) ! [IN]
-
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_MW), URBAN_SFLX_MW(:,:),        & ! [IN]
-                              VAR_NAME(I_SFLX_MW), 'XY', fill_halo=.true.                   ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_MU), URBAN_SFLX_MU(:,:),        & ! [IN]
-                              VAR_NAME(I_SFLX_MU), 'XY', fill_halo=.true.                   ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_MV), URBAN_SFLX_MV(:,:),        & ! [IN]
-                              VAR_NAME(I_SFLX_MV), 'XY', fill_halo=.true.                   ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_SH), URBAN_SFLX_SH(:,:),        & ! [IN]
-                              VAR_NAME(I_SFLX_SH), 'XY', fill_halo=.true.                   ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_LH), URBAN_SFLX_LH(:,:),        & ! [IN]
-                              VAR_NAME(I_SFLX_LH), 'XY', fill_halo=.true.                   ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_GH), URBAN_SFLX_GH(:,:),        & ! [IN]
-                              VAR_NAME(I_SFLX_GH), 'XY', fill_halo=.true.                   ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_evap), URBAN_SFLX_evap(:,:),    & ! [IN]
-                              VAR_NAME(I_SFLX_evap), 'XY', fill_halo=.true.                 ) ! [IN]
 
     endif
 

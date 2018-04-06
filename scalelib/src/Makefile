@@ -15,7 +15,6 @@ LIBNAME = libscale.a
 DEPENDLIB =
 
 VPATH = common:                          \
-        coupler:                         \
         io:                              \
 	file:                            \
 	grid:                            \
@@ -40,10 +39,17 @@ VPATH = common:                          \
         atmos-rm/forcing:                \
         land:                            \
         land/grid:                       \
+        land/dynamics:                   \
+        land/physics:                    \
         ocean:                           \
         ocean/grid:                      \
+	ocean/dynamics:			 \
+	ocean/physics:			 \
         urban:                           \
-        urban/grid:
+        urban/grid:                      \
+        urban/dynamics:                  \
+        coupler:                         \
+        coupler/physics/surface:
 
 LIBVERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(LIBVERSION),)
@@ -172,33 +178,24 @@ OBJS_NAME = \
 	scale_ocean_grid_cartesC_index.o	\
 	scale_ocean_grid_cartesC.o	\
 	scale_ocean_grid_cartesC_real.o	\
-	scale_ocean_phy.o	\
-	scale_ocean_phy_const.o	\
-	scale_ocean_phy_slab.o	\
-	scale_ocean_sfc.o	\
-	scale_ocean_sfc_const.o	\
-	scale_ocean_sfc_slab.o	\
-	scale_ocean_sfc.o	\
-	scale_ocean_sfc_const.o	\
-	scale_ocean_sfc_slab.o	\
+	scale_ocean_dyn_slab.o	\
+	scale_ocean_phy_albedo_nakajima00.o	\
+	scale_ocean_phy_roughness.o	\
+	scale_ocean_phy_roughness_miller92.o	\
+	scale_ocean_phy_roughness_moon07.o	\
 	scale_land_grid_cartesC_index.o	\
 	scale_land_grid_cartesC.o	\
 	scale_land_grid_cartesC_real.o	\
-	scale_land_phy.o	\
-	scale_land_phy_const.o	\
-	scale_land_phy_slab.o	\
+	scale_land_dyn_bucket.o		\
 	scale_land_phy_matsiro.o	\
 	scale_land_phy_snow_ky90.o	\
 	scale_land_phy_snow_diagnos.o	\
-	scale_land_sfc.o	\
-	scale_land_sfc_const.o	\
-	scale_land_sfc_thin-slab.o	\
-	scale_land_sfc_thick-slab.o	\
+	scale_cpl_phy_sfc_skin.o	\
+	scale_cpl_phy_sfc_fixed_temp.o	\
 	scale_urban_grid_cartesC_index.o	\
 	scale_urban_grid_cartesC.o	\
 	scale_urban_grid_cartesC_real.o	\
-	scale_urban_phy.o	\
-	scale_urban_phy_slc.o	\
+	scale_urban_dyn_kusaka01.o	\
 	scale_landuse.o	\
 	scale_fpm.o  \
 	scale_mapprojection.o	\
@@ -211,7 +208,6 @@ OBJS_NAME = \
 	scale_prc_cartesC.o	\
 	scale_prof.o	\
 	scale_random.o	\
-	scale_roughness.o	\
 	scale_sigvars.o \
 	scale_specfunc.o	\
 	scale_stdio.o	\
@@ -263,10 +259,10 @@ makedir:
 	mkdir -p $(MODDIR)
 	mkdir -p $(LIBDIR)
 
-$(LIBNAME): $(LIBDIR)/$(LIBNAME)
+$(LIBDIR)/$(LIBNAME): $(LIBNAME)
 	install $< $@
 
-$(LIBDIR)/$(LIBNAME): $(OBJS)
+$(LIBNAME): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
@@ -314,6 +310,7 @@ ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) allcleansdm
 endif
 	rm -f $(LIBDIR)/$(LIBNAME)
+	rm -f $(MODDIR)/*mod
 
 distclean: clean
 	rm -f $(LIBNAME)

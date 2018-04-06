@@ -23,15 +23,16 @@ cat << EOF > param.admin.conf
 /
 
 &PARAM_OCEAN
- OCEAN_TYPE = "${OCEAN_TYPE[$D]}",
+ OCEAN_DYN_TYPE = "${OCEAN_DYN_TYPE[$D]}",
 /
 
 &PARAM_LAND
- LAND_TYPE = "${LAND_TYPE[$D]}",
+ LAND_DYN_TYPE = "${LAND_DYN_TYPE[$D]}",
+ LAND_SFC_TYPE = "${LAND_SFC_TYPE[$D]}",
 /
 
 &PARAM_URBAN
- URBAN_TYPE = "${URBAN_TYPE[$D]}",
+ URBAN_DYN_TYPE = "${URBAN_DYN_TYPE[$D]}",
 /
 EOF
 
@@ -189,9 +190,9 @@ cat <<EOF >> param.physics.conf
  LAND_VARS_CHECKRANGE = .true.,
 /
 
-&PARAM_LAND_PHY_SLAB
- LAND_PHY_UPDATE_BOTTOM_TEMP  = .false.,
- LAND_PHY_UPDATE_BOTTOM_WATER = .true.,
+&PARAM_LAND_DYN_BUCKET
+ LAND_DYN_BUCKET_UPDATE_BOTTOM_TEMP  = .false.,
+ LAND_DYN_BUCKET_UPDATE_BOTTOM_WATER = .true.,
 /
 
 #################################################

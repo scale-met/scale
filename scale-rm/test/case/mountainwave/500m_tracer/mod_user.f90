@@ -6,9 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2012-12-26 (H.Yashiro)   [new]
-!!
 !<
 !-------------------------------------------------------------------------------
 module mod_user
@@ -28,11 +25,11 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_config
+  public :: USER_tracer_setup
   public :: USER_setup
-  public :: USER_resume0
-  public :: USER_resume
-  public :: USER_step
+  public :: USER_mkinit
+  public :: USER_calc_tendency
+  public :: USER_update
 
   !-----------------------------------------------------------------------------
   !
@@ -47,12 +44,11 @@ module mod_user
   !++ Private parameters & variables
   !
   integer :: I_NC
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Config
-  subroutine USER_config
+  !> Tracer Setup
+  subroutine USER_tracer_setup
     use scale_tracer, only: &
        TRACER_regist
     use mod_atmos_phy_mp_vars, only: &
@@ -76,7 +72,7 @@ contains
     ATMOS_PHY_MP_USER_qhyd2qtrc => USER_qhyd2qtrc
 
     return
-  end subroutine USER_config
+  end subroutine USER_tracer_setup
 
   !-----------------------------------------------------------------------------
   !> Setup before setup of other components
@@ -88,31 +84,31 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation, before calculating tendency
-  subroutine USER_resume0
+  !> Make initial state
+  subroutine USER_mkinit
     implicit none
     !---------------------------------------------------------------------------
 
     return
-  end subroutine USER_resume0
+  end subroutine USER_mkinit
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation
-  subroutine USER_resume
+  !> Caclulate tendency
+  subroutine USER_calc_tendency
     implicit none
     !---------------------------------------------------------------------------
 
     return
-  end subroutine USER_resume
+  end subroutine USER_calc_tendency
 
   !-----------------------------------------------------------------------------
   !> User step
-  subroutine USER_step
+  subroutine USER_update
     implicit none
     !---------------------------------------------------------------------------
 
     return
-  end subroutine USER_step
+  end subroutine USER_update
 
   subroutine USER_qhyd2qtrc( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &

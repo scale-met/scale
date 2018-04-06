@@ -15,7 +15,6 @@ module mod_urban_admin
   use scale_precision
   use scale_stdio
   use scale_prof
-  use scale_debug
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -24,7 +23,6 @@ module mod_urban_admin
   !++ Public procedure
   !
   public :: URBAN_ADMIN_setup
-  public :: URBAN_ADMIN_getscheme
 
   !-----------------------------------------------------------------------------
   !
@@ -32,9 +30,8 @@ module mod_urban_admin
   !
   logical,                public :: URBAN_do   = .true. ! main switch for the model
 
-  character(len=H_SHORT), public :: URBAN_TYPE = 'NONE'
-
-  logical,                public :: URBAN_sw
+  character(len=H_SHORT), public :: URBAN_DYN_TYPE = 'NONE'
+  character(len=H_SHORT), public :: URBAN_SFC_TYPE = 'NONE'
 
   !-----------------------------------------------------------------------------
   !
@@ -54,8 +51,7 @@ contains
     implicit none
 
     NAMELIST / PARAM_URBAN / &
-       URBAN_do,  &
-       URBAN_TYPE
+       URBAN_DYN_TYPE
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -78,41 +74,15 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Urban model components ***'
 
-    if ( URBAN_TYPE == 'OFF' .OR. URBAN_TYPE == 'NONE' ) then
-       URBAN_do = .false. ! force off
-    endif
-
-    if ( URBAN_do ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Urban model     : ON'
+    if ( URBAN_DYN_TYPE /= 'OFF' .AND. URBAN_DYN_TYPE /= 'NONE' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Urban model     : ON, ', trim(URBAN_DYN_TYPE)
+       URBAN_do = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Urban model     : OFF'
-    endif
-
-    if ( URBAN_TYPE /= 'OFF' .AND. URBAN_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Urban physics : ON, ', trim(URBAN_TYPE)
-       URBAN_sw = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Urban physics : OFF'
-       URBAN_sw = .false.
+       if( IO_L ) write(IO_FID_LOG,*) '*** + Urban model     : OFF'
+       URBAN_do = .false.
     endif
 
     return
   end subroutine URBAN_ADMIN_setup
-
-  !-----------------------------------------------------------------------------
-  !> Get name of scheme for each component
-  subroutine URBAN_ADMIN_getscheme( &
-       scheme_name     )
-    use scale_prc, only: &
-       PRC_abort
-    implicit none
-
-    character(len=H_SHORT), intent(out) :: scheme_name
-    !---------------------------------------------------------------------------
-
-    scheme_name = URBAN_TYPE
-
-    return
-  end subroutine URBAN_ADMIN_getscheme
 
 end module mod_urban_admin

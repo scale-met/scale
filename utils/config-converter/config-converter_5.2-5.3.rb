@@ -21,7 +21,7 @@ inflag = false
 File.foreach(fname) do |line|
   line.chomp!
 
-  if /^\s*&PARAM_(.+)$/ =~ line
+  if /^\s*&PARAM_(.+)$/i =~ line
     params.push [line,[]]
     inflag = $1.strip.upcase
   elsif /^\s*&.+\/\s*$/ =~ line
@@ -48,12 +48,12 @@ File.foreach(fname) do |line|
   end
 
   if hybrid
-    if /ATMOS_PHY_TB_HYBRID_SGS_TYPE\s*=\s*["'](.+)['"]/ =~ line
+    if /ATMOS_PHY_TB_HYBRID_SGS_TYPE\s*=\s*["'](.+)['"]/i =~ line
       tb = $1
     else
       tb = "SMAGORINSKY"
     end
-    if /ATMOS_PHY_TB_HYBRID_PBL_TYPE\s*=\s*["'](.+)['"]/ =~ line
+    if /ATMOS_PHY_TB_HYBRID_PBL_TYPE\s*=\s*["'](.+)['"]/i =~ line
       bl = $1
     else
       bl = "MYNN"
@@ -76,7 +76,7 @@ params.each do |param|
   param_items = param[1]
 
   # PRC_CARTESC
-  if "&PARAM_PRC" == param_name
+  if /^&PARAM_PRC$/i =~ param_name
     print "&PARAM_PRC_CARTESC\n"
     param_items.each do |item|
       print item, "\n"
@@ -87,23 +87,23 @@ params.each do |param|
 
   # HISTORY
   ## scale_file_history (old: gtool_history)
-  if "&PARAM_HISTORY" == param_name
+  if /^&PARAM_HISTORY$/i =~ param_name
     print "&PARAM_FILE_HISTORY\n"
     param_items.each do |item|
-      print item.sub(/^(\s*)HISTORY_/, '\1FILE_HISTORY_'), "\n"
+      print item.sub(/^(\s*)HISTORY_/i, '\1FILE_HISTORY_'), "\n"
     end
     print "/\n"
     next
   end
-  if /&HISTITEM(.*\s+)item=(.+)$/ == param_name
+  if /&HISTITEM(.*\s+)ITEM=(.+)$/i =~ param_name
     print "&HISTORY_ITEM#{$1}name=#{$2}\n"
     next
   end
-  if "&PARAM_HIST" == param_name
+  if /^&PARAM_HIST$/i =~ param_name
     print "&PARAM_FILE_HISTORY_CARTESC\n"
     param_items.each do |item|
-      item.sub!("HIST_BND", "FILE_HISTORY_CARTESC_BOUNDARY")
-      print item.sub("HIST_", "FILE_HISTORY_CARTESC_"), "\n"
+      item.sub!(/HIST_BND/i, "FILE_HISTORY_CARTESC_BOUNDARY")
+      print item.sub(/HIST_/i, "FILE_HISTORY_CARTESC_"), "\n"
     end
     print "/\n"
     next
@@ -111,40 +111,40 @@ params.each do |param|
 
   # GRID
   ## scale_atmos_grid_cartesC_index (old: scale_grid_index)
-  if "&PARAM_INDEX" == param_name
+  if /^&PARAM_INDEX$/i =~ param_name
     param_name = "&PARAM_ATMOS_GRID_CARTESC_INDEX"
   end
   ## scale_atmos_grid_cartesC (old: scale_grid_cartesian)
-  if "&PARAM_GRID" == param_name
+  if /^&PARAM_GRID$/i =~ param_name
     param_name = "&PARAM_ATMOS_GRID_CARTESC"
   end
   ["OCEAN", "LAND", "URBAN"].each do |model|
     ## scale_(model)_grid_cartesC_index (old: scale_(model)_grid_index)
-    if "&PARAM_#{model}_INDEX" == param_name
+    if /^&PARAM_#{model}_INDEX$/i =~ param_name
       param_name = "&PARAM_#{model}_GRID_CARTESC_INDEX"
     end
     ## scale_(model)_grid_cartesC (old: scale_(model)_grid_cartesian)
-    if "&PARAM_#{model}_GRID" == param_name
+    if /^&PARAM_#{model}_GRID$/i =~ param_name
       param_name = "&PARAM_#{model}_GRID_CARTESC"
     end
   end
 
   # MAP Projection
   ## scale_mapprojection (old: scale_mapproj)
-  if "&PARAM_MAPPROJ" == param_name
+  if /^&PARAM_MAPPROJ$/i =~ param_name
     print "&PARAM_MAPPROJECTION\n"
     param_items.each do |item|
-      print item.sub(/^(\s*)MPRJ_/, '\1MAPPROJECTION_'), "\n"
+      print item.sub(/^(\s*)MPRJ_/i, '\1MAPPROJECTION_'), "\n"
     end
     print "/\n"
     next
   end
 
   # Metrics
-  if "&PARAM_GTRANS" == param_name
+  if /^&PARAM_GTRANS$/i =~ param_name
     print "&PARAM_ATMOS_GRID_CARTESC_METRIC\n"
     param_items.each do |item|
-      print item.sub(/^(\s*)GTRANS_/, '\1ATMOS_GRID_CARTESC_METRIC_'), "\n"
+      print item.sub(/^(\s*)GTRANS_/i, '\1ATMOS_GRID_CARTESC_METRIC_'), "\n"
     end
     print "/\n"
     next
@@ -152,11 +152,11 @@ params.each do |param|
 
   # Dynamics
   ## mod_atmos_dyn
-  if "&PARAM_ATMOS_DYN" == param_name
+  if /^&PARAM_ATMOS_DYN$/i =~ param_name
     print param_name, "\n"
     param_items.each do |item|
-      if /^(\s*)ATMOS_DYN_enable_coriolis\s*=\s*([^,\s]+)/i =~ item && $2 == ".true."
-        print "#{$1}ATMOS_DYN_coriolis_type = \"SPHERE\",\n"
+      if /^(\s*)ATMOS_DYN_ENABLE_CORIOLIS\s*=\s*([^,\s]+)/i =~ item && /\.true\./i =~ $2
+        print "#{$1}ATMOS_DYN_CORIOLIS_TYPE = \"SPHERE\",\n"
       else
         print item, "\n"
       end
@@ -166,10 +166,10 @@ params.each do |param|
   end
 
   # Boundary-Layer scheme
-  if "&PARAM_ATMOS" == param_name
+  if /^&PARAM_ATMOS$/i =~ param_name
     print param_name, "\n"
     param_items.each do |item|
-      if /^(\s*)ATMOS_PHY_TB_TYPE\s*=\s*/ =~ item
+      if /^(\s*)ATMOS_PHY_TB_TYPE\s*=\s*/i =~ item
         print "#{$1}ATMOS_PHY_TB_TYPE = \"#{tb}\",\n" if tb
         print "#{$1}ATMOS_PHY_BL_TYPE = \"#{bl}\",\n" if bl
       else
@@ -179,7 +179,7 @@ params.each do |param|
     print "/\n"
     next
   end
-  if "&PARAM_TIME" == param_name
+  if /^&PARAM_TIME$/i =~ param_name
     print param_name, "\n"
     param_items.each do |item|
       if /^(\s*)TIME_DT_ATMOS_PHY_TB(\s*=.+)$/ =~ item
@@ -195,17 +195,132 @@ params.each do |param|
     print "/\n"
     next
   end
-  if "&PARAM_ATMOS_PHY_TB_HYBRID" == param_name
+  if /^&PARAM_ATMOS_PHY_TB_HYBRID$/i =~ param_name
     next
   end
 
   # Nesting
-  if "&PARAM_NEST" == param_name
+  if /^&PARAM_NEST$/i =~ param_name
     print "&PARAM_COMM_CARTESC_NEST\n"
     param_items.each do |item|
-      if /^(\s*)USE_NESTING\s*=/ !~ item && /^(\s*)OFFLINE\s*=/ !~ item
+      if /^(\s*)USE_NESTING\s*=/i !~ item && /^(\s*)OFFLINE\s*=/i !~ item
         print item, "\n"
       end
+    end
+    print "/\n"
+    next
+  end
+
+  # Land
+  if /^&PARAM_LAND$/i =~ param_name
+    print param_name, "\n"
+    param_items.each do |item|
+      next if /LAND_DO/i =~ item
+      if /LAND_TYPE\s*=\s*["'](THIN-)?SLAB['"]/i =~ item
+        print " LAND_DYN_TYPE = \"BUCKET\",\n"
+        print " LAND_SFC_TYPE = \"SKIN\",\n"
+      elsif /LAND_TYPE\s*=\s*["']THICK-SLAB['"]/i =~ item
+        print " LAND_DYN_TYPE = \"BUCKET\",\n"
+        print " LAND_SFC_TYPE = \"COPY\",\n"
+      elsif /LAND_TYPE\s*=\s*["']CONST['"]/i =~ item
+        print " LAND_DYN_TYPE = \"CONST\",\n"
+        print " LAND_SFC_TYPE = \"COPY\",\n"
+      else
+        print item, "\n"
+      end
+    end
+    print "/\n"
+    next
+  end
+  if /^&PARAM_LAND_PHY_SLAB$/i =~ param_name
+    print "&PARAM_LAND_DYN_BUCKET\n"
+    param_items.each do |item|
+      print item.sub(/PHY_SLAB/i, "DYN_BUCKET").sub(/PHY_UPDATE/i, "DYN_BUCKET_UPDATE"), "\n"
+    end
+    print "/\n"
+    next
+  end
+  if /^&PARAM_LAND_SFC_THIN_SLAB$/i =~ param_name
+    print "&PARAM_LAND_SFC_SKIN\n"
+    param_items.each do |item|
+      print item.sub(/THIN_SLAB/i, "SKIN"), "\n"
+    end
+    print "/\n"
+    next
+  end
+  if /&PARAM_LAND_SFC_THICK_SLAB$/i =~ param_name
+    print "&PARAM_LAND_SFC_FIXED_TEMP\n"
+    param_items.each do |item|
+      print item.sub(/THICK_SLAB/i, "FIXED_TEMP"), "\n"
+    end
+    print "/\n"
+    next
+  end
+
+  # Ocean
+  if /^&PARAM_OCEAN$/i =~ param_name
+    print param_name, "\n"
+    param_items.each do |item|
+      next if /OCEAN_DO/i =~ item
+      print item.sub(/OCEAN_TYPE/i, "OCEAN_DYN_TYPE"), "\n"
+    end
+    print "/\n"
+    next
+  end
+  if /^&PARAM_ROUGHNESS$/i =~ param_name
+    print "&PARAM_OCEAN_ROUGHNESS\n"
+    param_items.each do |item|
+      print item.sub(/ROUGHNESS_TYPE/i, "OCEAN_RGN_TYPE"), "\n"
+    end
+    print "/\n"
+    next
+  end
+  if /^&PARAM_ROUGHNESS_MILLER92$/i =~ param_name
+    print "&PARAM_OCEAN_PHY_ROUGHNESS_MILLER92\n"
+    param_items.each do |item|
+      print item.sub(/ROUGHNESS/i, "OCEAN_PHY_ROUGHNESS"), "\n"
+    end
+    print "/\n"
+    next
+  end
+  if /^&PARAM_ROUGHNESS_MOON07$/i =~ param_name
+    print "&PARAM_OCEAN_PHY_ROUGHNESS_MOON07\n"
+    param_items.each do |item|
+      print item.sub(/ROUGHNESS/i, "OCEAN_PHY_ROUGHNESS"), "\n"
+    end
+    print "/\n"
+    next
+  end
+
+  # Urban
+  if /^&PARAM_URBAN$/i =~ param_name
+    print param_name, "\n"
+    param_items.each do |item|
+      next if /URBAN_DO/i =~ item
+      if /URBAN_TYPE\s*=\s*["']SLC['"]/i =~ item
+        print " URBAN_DYN_TYPE = \"KUSAKA01\",\n"
+      else
+        print item, "\n"
+      end
+    end
+    print "/\n"
+    next
+  end
+  if /^&PARAM_URBAN_PHY_SLC$/i =~ param_name
+    print "&PARAM_URBAN_DYN_KUSAKA01\n"
+    param_items.each do |item|
+      print item, "\n"
+    end
+    print "/\n"
+    next
+  end
+
+  # Restart
+  if /^&PARAM_RESTART$/i =~ param_name
+    print param_name, "\n"
+    param_items.each do |item|
+      next if /RESTART_RUN/i =~ item
+      print item, "\n"
     end
     print "/\n"
     next

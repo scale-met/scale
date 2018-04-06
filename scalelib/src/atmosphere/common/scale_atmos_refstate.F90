@@ -24,7 +24,6 @@ module scale_atmos_refstate
   !++ Public procedure
   !
   public :: ATMOS_REFSTATE_setup
-  public :: ATMOS_REFSTATE_resume
   public :: ATMOS_REFSTATE_read
   public :: ATMOS_REFSTATE_write
   public :: ATMOS_REFSTATE_update
@@ -48,7 +47,6 @@ module scale_atmos_refstate
   private :: ATMOS_REFSTATE_generate_isa
   private :: ATMOS_REFSTATE_generate_uniform
   private :: ATMOS_REFSTATE_generate_zero
-  private :: ATMOS_REFSTATE_generate_frominit
 
   !-----------------------------------------------------------------------------
   !
@@ -154,6 +152,13 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Input file of reference state : Nothing, generate internally'
     endif
 
+    if ( ATMOS_REFSTATE_OUT_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Reference state output? : ', trim(ATMOS_REFSTATE_OUT_BASENAME)
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Reference state output? : NO'
+    endif
+
+
     ! input or generate reference profile
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
        call ATMOS_REFSTATE_read( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -198,76 +203,6 @@ contains
 
     return
   end subroutine ATMOS_REFSTATE_setup
-
-  !-----------------------------------------------------------------------------
-  !> Resume
-  subroutine ATMOS_REFSTATE_resume( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS, POTT, TEMP, PRES, QV,                    &
-       CZ, FZ, FDZ, RCDZ, REAL_CZ, REAL_FZ, REAL_PHI, &
-       TIME_NOWSEC                                    )
-    implicit none
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
-
-    real(RP), intent(in) :: DENS(KA,IA,JA)
-    real(RP), intent(in) :: POTT(KA,IA,JA)
-    real(RP), intent(in) :: TEMP(KA,IA,JA)
-    real(RP), intent(in) :: PRES(KA,IA,JA)
-    real(RP), intent(in) :: QV  (KA,IA,JA)
-    real(RP), intent(in) :: CZ      (  KA)
-    real(RP), intent(in) :: FZ      (0:KA)
-    real(RP), intent(in) :: FDZ     (  KA-1)
-    real(RP), intent(in) :: RCDZ    (  KA)
-    real(RP), intent(in) :: REAL_CZ (  KA,IA,JA)
-    real(RP), intent(in) :: REAL_FZ (0:KA,IA,JA)
-    real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
-    real(DP), intent(in) :: TIME_NOWSEC
-
-    integer :: k
-
-    ! input or generate reference profile
-    if ( ATMOS_REFSTATE_IN_BASENAME == '' ) then
-
-       if ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
-
-          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type               : make from initial data'
-          if( IO_L ) write(IO_FID_LOG,*) '*** Update state?                : ', ATMOS_REFSTATE_UPDATE_FLAG
-          if( IO_L ) write(IO_FID_LOG,*) '*** Update interval [sec]        : ', ATMOS_REFSTATE_UPDATE_DT
-
-          call ATMOS_REFSTATE_generate_frominit( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                                 DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
-                                                 CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
-                                                 REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:),               & ! [IN]
-                                                 TIME_NOWSEC                                                    ) ! [IN]
-       endif
-
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
-       if( IO_L ) write(IO_FID_LOG,*) '   z*-coord.:    pressure: temperature:     density:   pot.temp.: water vapor'
-       do k = KS, KE
-          if( IO_L ) write(IO_FID_LOG,'(6F13.5)')   CZ(k),                    &
-                                                    ATMOS_REFSTATE1D_pres(k), &
-                                                    ATMOS_REFSTATE1D_temp(k), &
-                                                    ATMOS_REFSTATE1D_dens(k), &
-                                                    ATMOS_REFSTATE1D_pott(k), &
-                                                    ATMOS_REFSTATE1D_qv  (k)
-       enddo
-       if( IO_L ) write(IO_FID_LOG,*) '####################################################'
-    endif
-
-    if ( ATMOS_REFSTATE_OUT_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Reference state output? : ', trim(ATMOS_REFSTATE_OUT_BASENAME)
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Reference state output? : NO'
-    endif
-
-    ! output reference profile
-    call ATMOS_REFSTATE_write
-
-    return
-  end subroutine ATMOS_REFSTATE_resume
 
   !-----------------------------------------------------------------------------
   !> Read reference state profile
@@ -337,7 +272,12 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_write
     implicit none
+
+    logical, save :: first = .true.
     !---------------------------------------------------------------------------
+
+    if ( .not. first ) return
+    first = .false.
 
     if ( ATMOS_REFSTATE_OUT_BASENAME /= '' ) then
 
@@ -598,55 +538,13 @@ contains
   end subroutine ATMOS_REFSTATE_generate_zero
 
   !-----------------------------------------------------------------------------
-  !> Generate reference state profile (Horizontal average from initial data)
-  subroutine ATMOS_REFSTATE_generate_frominit( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS, POTT, TEMP, PRES, QV,                    &
-       CZ, FZ, FDZ, RCDZ, REAL_CZ, REAL_FZ, REAL_PHI, &
-       TIME_NOWSEC )
-    implicit none
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
-
-    real(RP), intent(in) :: DENS(KA,IA,JA)
-    real(RP), intent(in) :: POTT(KA,IA,JA)
-    real(RP), intent(in) :: TEMP(KA,IA,JA)
-    real(RP), intent(in) :: PRES(KA,IA,JA)
-    real(RP), intent(in) :: QV  (KA,IA,JA)
-    real(RP), intent(in) :: CZ      (  KA)
-    real(RP), intent(in) :: FZ      (0:KA)
-    real(RP), intent(in) :: FDZ     (  KA-1)
-    real(RP), intent(in) :: RCDZ    (  KA)
-    real(RP), intent(in) :: REAL_CZ (  KA,IA,JA)
-    real(RP), intent(in) :: REAL_FZ (0:KA,IA,JA)
-    real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
-    real(DP), intent(in) :: TIME_NOWSEC
-
-    real(RP) :: Qdry (KA,IA,JA)
-    real(RP) :: Rtot (KA,IA,JA)
-    real(RP) :: CVtot(KA,IA,JA)
-    real(RP) :: CPtot(KA,IA,JA)
-    !---------------------------------------------------------------------------
-
-    last_updated = TIME_NOWSEC - ATMOS_REFSTATE_UPDATE_DT ! to force update
-
-    call ATMOS_REFSTATE_update( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
-                                CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
-                                REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:),               & ! [IN]
-                                TIME_NOWSEC                                                    ) ! [IN]
-
-    return
-  end subroutine ATMOS_REFSTATE_generate_frominit
-
-  !-----------------------------------------------------------------------------
   !> Update reference state profile (Horizontal average)
   subroutine ATMOS_REFSTATE_update( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS, POTT, TEMP, PRES, QV,                    &
        CZ, FZ, FDZ, RCDZ, REAL_CZ, REAL_FZ, REAL_PHI, &
-       TIME_NOWSEC                                    )
+       nowsec,                                        &
+       force                                          )
     use scale_comm, only: &
        COMM_horizontal_mean
     use scale_interp_vert, only: &
@@ -668,14 +566,23 @@ contains
     real(RP), intent(in) :: REAL_CZ (  KA,IA,JA)
     real(RP), intent(in) :: REAL_FZ (0:KA,IA,JA)
     real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
-    real(DP), intent(in) :: TIME_NOWSEC
+    real(DP), intent(in) :: nowsec
+
+    logical, intent(in), optional :: force
 
     real(RP) :: work(KA,IA,JA)
 
-    integer  :: k
+    logical :: force_
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    if ( TIME_NOWSEC - last_updated >= ATMOS_REFSTATE_UPDATE_DT ) then
+    if ( present(force) ) then
+       force_ = force
+    else
+       force_ = .false.
+    end if
+
+    if ( force_ .or. ( nowsec - last_updated >= ATMOS_REFSTATE_UPDATE_DT ) ) then
 
        if( IO_L ) write(IO_FID_LOG,*) '*** [REFSTATE] update reference state'
 
@@ -718,7 +625,24 @@ contains
        call ATMOS_REFSTATE_calc3D( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                    CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
 
-       last_updated = TIME_NOWSEC
+       last_updated = nowsec
+
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
+       if( IO_L ) write(IO_FID_LOG,*) '   z*-coord.:    pressure: temperature:     density:   pot.temp.: water vapor'
+       do k = KS, KE
+          if( IO_L ) write(IO_FID_LOG,'(6F13.5)')   CZ(k),                    &
+                                                    ATMOS_REFSTATE1D_pres(k), &
+                                                    ATMOS_REFSTATE1D_temp(k), &
+                                                    ATMOS_REFSTATE1D_dens(k), &
+                                                    ATMOS_REFSTATE1D_pott(k), &
+                                                    ATMOS_REFSTATE1D_qv  (k)
+       enddo
+       if( IO_L ) write(IO_FID_LOG,*) '####################################################'
+
+       ! output reference profile
+       call ATMOS_REFSTATE_write
 
     endif
 

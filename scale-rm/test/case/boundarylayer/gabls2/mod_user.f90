@@ -24,11 +24,11 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_config
+  public :: USER_tracer_setup
   public :: USER_setup
-  public :: USER_resume0
-  public :: USER_resume
-  public :: USER_step
+  public :: USER_mkinit
+  public :: USER_calc_tendency
+  public :: USER_update
 
   !-----------------------------------------------------------------------------
   !
@@ -60,9 +60,10 @@ module mod_user
   real(RP), private :: Vg   = -9.0_RP
   real(RP), private :: Z0M  = 0.03_RP
   real(RP), private :: Z0H  = 0.003_RP
+  real(RP), private :: ALB_SW = 0.20_RP
+  real(RP), private :: ALB_LW = 0.01_RP
   real(RP), private :: LSD  = -0.005_RP ! Large-scale synoptic divergence
   logical,  private :: dry     = .false.
-  logical,  private :: restart = .false.
 
   real(RP), private, allocatable :: fluxf(:) ! large scale sinking (full level)
   real(RP), private, allocatable :: fluxh(:) ! large scale sinking (half level)
@@ -89,8 +90,8 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Config
-  subroutine USER_config
+  !> Tracer Setup
+  subroutine USER_tracer_setup
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
@@ -108,10 +109,8 @@ contains
          Ug, &
          Vg, &
          LSD, &
-         dry, &
-         restart
+         dry
 
-    integer :: QS
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -142,7 +141,7 @@ contains
     ATMOS_PHY_MP_USER_qhyd2qtrc => USER_qhyd2qtrc
 
     return
-  end subroutine USER_config
+  end subroutine USER_tracer_setup
 
   !-----------------------------------------------------------------------------
   !> Setup
@@ -154,7 +153,8 @@ contains
        RFDZ => ATMOS_GRID_CARTESC_RFDZ
     implicit none
 
-    integer :: k
+    integer  :: k
+    !---------------------------------------------------------------------------
 
     allocate( fluxf(KA), fluxh(KA) )
     allocate( divf(KA), divh(KA) )
@@ -184,17 +184,17 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation, before calculating tendency
-  subroutine USER_resume0
+  !> Make initial state
+  subroutine USER_mkinit
+    use scale_const, only: &
+       I_SW => CONST_I_SW, &
+       I_LW => CONST_I_LW
     use scale_atmos_hydrometeor, only: &
        I_QV
     use scale_time, only: &
        NOWSEC => TIME_NOWSEC
     use scale_atmos_hydrostatic, only: &
        buildrho => ATMOS_HYDROSTATIC_buildrho
-    use scale_atmos_grid_cartesC, only: &
-       CZ => ATMOS_GRID_CARTESC_CZ, &
-       FZ => ATMOS_GRID_CARTESC_FZ
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -204,9 +204,13 @@ contains
        QTRC
     use mod_atmos_phy_sf_vars, only: &
        ATMOS_PHY_SF_SFC_TEMP, &
+       ATMOS_PHY_SF_SFC_albedo, &
        ATMOS_PHY_SF_SFC_Z0M, &
        ATMOS_PHY_SF_SFC_Z0H, &
        ATMOS_PHY_SF_SFC_Z0E
+    use scale_atmos_grid_cartesC, only: &
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       FZ => ATMOS_GRID_CARTESC_FZ
     implicit none
 
     real(RP) :: RHO (KA)
@@ -221,72 +225,63 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    if ( .not. restart ) then
+    call interporate( PT(:), pt_ini )
+    if ( dry ) then
+       QV(:) = 0.0_RP
+       QVs = 0.0_RP
+    else
+       call interporate( QV(:), qv_ini )
+       QVs = qv_ini(1)
+    end if
+    QC(:) = 0.0_RP
 
-       call interporate( PT(:), pt_ini )
-       if ( dry ) then
-          QV(:) = 0.0_RP
-          QVs = 0.0_RP
-       else
-          call interporate( QV(:), qv_ini )
-          QVs = qv_ini(1)
-       end if
-       QC(:) = 0.0_RP
+    call buildrho( KA, KS, KE, &
+                   PT(:), QV(:), QC(:),         & ! (in)
+                   Ps, pt_ini(1), QVs, 0.0_RP,  & ! (in)
+                   CZ(:), FZ(:),                & ! (in)
+                   RHO(:), TEMP(:), PRES(:), Ts ) ! (out)
 
-       call buildrho( KA, KS, KE, &
-                      PT(:), QV(:), QC(:),         & ! (in)
-                      Ps, pt_ini(1), QVs, 0.0_RP,  & ! (in)
-                      CZ(:), FZ(:),                & ! (in)
-                      RHO(:), TEMP(:), PRES(:), Ts ) ! (out)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       DENS(k,i,j) = RHO(k)
+       MOMZ(k,i,j) = 0.0_RP
+       MOMX(k,i,j) = RHO(k) * Ug
+       MOMY(k,i,j) = RHO(k) * Vg
+       RHOT(k,i,j) = RHO(k) * PT(k)
+    end do
+    end do
+    end do
 
+    QTRC(:,:,:,:) = 0.0_RP
+    if ( .not. dry ) then
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
-          DENS(k,i,j) = RHO(k)
-          MOMZ(k,i,j) = 0.0_RP
-          MOMX(k,i,j) = RHO(k) * Ug
-          MOMY(k,i,j) = RHO(k) * Vg
-          RHOT(k,i,j) = RHO(k) * PT(k)
+          QTRC(k,i,j,I_QV) = QV(k)
        end do
        end do
        end do
-
-       QTRC(:,:,:,:) = 0.0_RP
-       if ( .not. dry ) then
-          do j = 1, JA
-          do i = 1, IA
-          do k = 1, KA
-             QTRC(k,i,j,I_QV) = QV(k)
-          end do
-          end do
-          end do
-       end if
-
     end if
 
     call set_tg( NOWSEC, Ts )
 
     ATMOS_PHY_SF_SFC_TEMP(:,:) = Ts
 
+    ATMOS_PHY_SF_SFC_albedo(:,:,I_LW) = ALB_LW
+    ATMOS_PHY_SF_SFC_albedo(:,:,I_SW) = ALB_SW
+
     ATMOS_PHY_SF_SFC_Z0M (:,:) = Z0M
     ATMOS_PHY_SF_SFC_Z0H (:,:) = Z0H
     ATMOS_PHY_SF_SFC_Z0E (:,:) = Z0H
 
-    return
-  end subroutine USER_resume0
-
-  !-----------------------------------------------------------------------------
-  !> Resuming operation
-  subroutine USER_resume
-    implicit none
-    !---------------------------------------------------------------------------
 
     return
-  end subroutine USER_resume
+  end subroutine USER_mkinit
 
   !-----------------------------------------------------------------------------
-  !> User step
-  subroutine USER_step
+  !> Calculate tendency
+  subroutine USER_calc_tendency
     use scale_time, only: &
        NOWSEC => TIME_NOWSEC, &
        dt     => TIME_DTSEC
@@ -387,7 +382,6 @@ contains
           end do
        end do
 
-
        ! geostrophic forcing
        do k = KS, KE
           RHOU_tp(k,i,j) = RHOU_tp(k,i,j) - CORIOLIS(i,j) * Vg * DENS(k,i,j)
@@ -403,7 +397,16 @@ contains
     ATMOS_PHY_SF_SFC_TEMP(:,:) = Ts
 
     return
-  end subroutine USER_step
+  end subroutine USER_calc_tendency
+
+  !-----------------------------------------------------------------------------
+  !> User step
+  subroutine USER_update
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_update
 
   subroutine USER_qhyd2qtrc( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &

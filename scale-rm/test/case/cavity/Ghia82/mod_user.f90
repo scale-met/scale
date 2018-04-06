@@ -6,10 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-09-31 (Y.Kawai)   [add comments]
-!! @li      2016-08-03 (Y.Kawai)   [new]
-!!
 !<
 !-------------------------------------------------------------------------------
 module mod_user
@@ -29,11 +25,11 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_config
+  public :: USER_tracer_setup
   public :: USER_setup
-  public :: USER_resume0
-  public :: USER_resume
-  public :: USER_step
+  public :: USER_mkinit
+  public :: USER_calc_tendency
+  public :: USER_update
 
   !-----------------------------------------------------------------------------
   !
@@ -61,11 +57,11 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Config
-  subroutine USER_config
+  !> Tracer setup
+  subroutine USER_tracer_setup
 
     return
-  end subroutine USER_config
+  end subroutine USER_tracer_setup
 
   !-----------------------------------------------------------------------------
   !> Setup
@@ -101,30 +97,26 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation, before calculating tendency
-  subroutine USER_resume0
+  !> Make initial state
+  subroutine USER_mkinit
     implicit none
     !---------------------------------------------------------------------------
 
-    call USER_step
-
     return
-  end subroutine USER_resume0
+  end subroutine USER_mkinit
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation
-  subroutine USER_resume
+  !> Calculate tendency
+  subroutine USER_calc_tendency
     implicit none
     !---------------------------------------------------------------------------
 
     return
-  end subroutine USER_resume
+  end subroutine USER_calc_tendency
 
   !-----------------------------------------------------------------------------
   !> Step
-  subroutine USER_step
-    use scale_prc, only: &
-       PRC_abort
+  subroutine USER_update
     use mod_atmos_vars, only: &
        DENS, &
        MOMX, &
@@ -258,14 +250,13 @@ contains
     end if
 
     return
-  end subroutine USER_step
+  end subroutine USER_update
 
 
   !---------------------------------------------------------------------
 
-  subroutine append_EddyDiff_zxy( RHOPHI,   & ! (inout)
-       DENS                                 & ! (in)
-       )
+  subroutine append_EddyDiff_zxy( RHOPHI, &
+       DENS                               )
     use scale_atmos_grid_cartesC, only : &
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
        RCDY => ATMOS_GRID_CARTESC_RCDY, &
@@ -337,9 +328,8 @@ contains
 
   end subroutine append_EddyDiff_zxy
 
-  subroutine append_EddyDiff_zuy( RHOPHI,   & ! (inout)
-       DENS                                 & ! (in)
-       )
+  subroutine append_EddyDiff_zuy( RHOPHI, &
+       DENS                               )
     use scale_atmos_grid_cartesC, only : &
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
        RCDY => ATMOS_GRID_CARTESC_RCDY, &
@@ -412,9 +402,8 @@ contains
 
   end subroutine append_EddyDiff_zuy
 
-  subroutine append_EddyDiff_zxv( RHOPHI,   & ! (inout)
-       DENS                                 & ! (in)
-       )
+  subroutine append_EddyDiff_zxv( RHOPHI, &
+       DENS                               )
     use scale_atmos_grid_cartesC, only : &
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
        RCDY => ATMOS_GRID_CARTESC_RCDY, &
@@ -486,9 +475,8 @@ contains
 
   end subroutine append_EddyDiff_zxv
 
-  subroutine append_EddyDiff_wxy( RHOPHI,   & ! (inout)
-       DENS                                 & ! (in)
-       )
+  subroutine append_EddyDiff_wxy( RHOPHI, &
+       DENS                               )
     use scale_atmos_grid_cartesC, only : &
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
        RCDY => ATMOS_GRID_CARTESC_RCDY, &

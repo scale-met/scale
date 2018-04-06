@@ -6,9 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-09-05 (H.Yashiro)   [new]
-!!
 !<
 !-------------------------------------------------------------------------------
 module mod_user
@@ -28,11 +25,11 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_config
+  public :: USER_tracer_setup
   public :: USER_setup
-  public :: USER_resume0
-  public :: USER_resume
-  public :: USER_step
+  public :: USER_mkinit
+  public :: USER_calc_tendency
+  public :: USER_update
 
   !-----------------------------------------------------------------------------
   !
@@ -54,13 +51,13 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Config
-  subroutine USER_config
+  !> Tracer setup
+  subroutine USER_tracer_setup
     implicit none
     !---------------------------------------------------------------------------
 
     return
-  end subroutine USER_config
+  end subroutine USER_tracer_setup
 
   !-----------------------------------------------------------------------------
   !> Setup
@@ -95,28 +92,17 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation, before calculating tendency
-  subroutine USER_resume0
+  !> Make initial state
+  subroutine USER_mkinit
     implicit none
     !---------------------------------------------------------------------------
 
     return
-  end subroutine USER_resume0
+  end subroutine USER_mkinit
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation
-  subroutine USER_resume
-    implicit none
-    !---------------------------------------------------------------------------
-
-    call USER_step
-
-    return
-  end subroutine USER_resume
-
-  !-----------------------------------------------------------------------------
-  !> Step
-  subroutine USER_step
+  !> Calculate tendency
+  subroutine USER_calc_tendency
     use scale_const, only: &
        GRAV  => CONST_GRAV
     use scale_atmos_grid_cartesC, only : &
@@ -146,6 +132,15 @@ contains
     endif
 
     return
-  end subroutine USER_step
+  end subroutine USER_calc_tendency
+
+  !-----------------------------------------------------------------------------
+  !> Step
+  subroutine USER_update
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_update
 
 end module mod_user

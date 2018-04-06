@@ -1367,10 +1367,11 @@ int32_t file_def_associatedcoordinate_c( const int32_t fid,        // (in)
 					 const int32_t ndims,      // (in)
 					 const int32_t dtype)      // (in)
 {
-  int ncid, *dimids, varid;
+  int ncid, varid;
   nc_type xtype = -1;
   int i;
   int32_t ret;
+  int dimids[ndims];
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
@@ -1386,7 +1387,6 @@ int32_t file_def_associatedcoordinate_c( const int32_t fid,        // (in)
   ret = file_redef(fid, ncid);
   if ( ret != SUCCESS_CODE ) return ret;
 
-  dimids = malloc(sizeof(int)*ndims);
   TYPE2NCTYPE(dtype, xtype);
 
   if ( files[fid]->shared_mode ) {
@@ -1398,7 +1398,6 @@ int32_t file_def_associatedcoordinate_c( const int32_t fid,        // (in)
     if ( strlen(units)>0 ) CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, varid, "units", strlen(units), units) )
   }
   else {
-    dimids = malloc(sizeof(int)*ndims);
     for (i=0; i<ndims; i++)
       CHECK_ERROR( nc_inq_dimid(ncid, dim_names[i], dimids+ndims-i-1) )
 
@@ -1406,8 +1405,6 @@ int32_t file_def_associatedcoordinate_c( const int32_t fid,        // (in)
     if ( strlen(desc) >0 ) CHECK_ERROR( nc_put_att_text(ncid, varid, "long_name", strlen(desc), desc) )
     if ( strlen(units)>0 ) CHECK_ERROR( nc_put_att_text(ncid, varid, "units", strlen(units), units) )
   }
-
-  free(dimids);
 
   return SUCCESS_CODE;
 }

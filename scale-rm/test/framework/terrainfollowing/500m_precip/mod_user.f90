@@ -6,9 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-09-05 (H.Yashiro)   [new]
-!!
 !<
 !-------------------------------------------------------------------------------
 module mod_user
@@ -28,10 +25,11 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_tracer_setup
   public :: USER_setup
-  public :: USER_resume0
-  public :: USER_resume
-  public :: USER_step
+  public :: USER_mkinit
+  public :: USER_calc_tendency
+  public :: USER_update
 
   !-----------------------------------------------------------------------------
   !
@@ -49,6 +47,13 @@ module mod_user
 
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Tracer setup
+  subroutine USER_tracer_setup
+
+    return
+  end subroutine USER_tracer_setup
+
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
@@ -80,30 +85,26 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation, before calculating tendency
-  subroutine USER_resume0
+  !> Make initial state
+  subroutine USER_mkinit
     implicit none
     !---------------------------------------------------------------------------
 
-    call USER_step
-
     return
-  end subroutine USER_resume0
+  end subroutine USER_mkinit
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation
-  subroutine USER_resume
+  !> Calculate tendency
+  subroutine USER_calc_tendency
     implicit none
     !---------------------------------------------------------------------------
 
     return
-  end subroutine USER_resume
+  end subroutine USER_calc_tendency
 
   !-----------------------------------------------------------------------------
   !> Step
-  subroutine USER_step
-    use scale_prc, only: &
-       PRC_abort
+  subroutine USER_update
     use scale_atmos_grid_cartesC_real, only : &
        CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        FZ => ATMOS_GRID_CARTESC_REAL_FZ
@@ -141,6 +142,6 @@ contains
     endif
 
     return
-  end subroutine USER_step
+  end subroutine USER_update
 
 end module mod_user

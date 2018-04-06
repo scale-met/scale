@@ -15,9 +15,6 @@ module scale_land_phy_snow_ky90
   !
   use scale_precision
   use scale_stdio
-  !use scale_prof
-  !use scale_debug
-  use scale_land_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -81,14 +78,13 @@ contains
   subroutine LAND_PHY_SNOW_KY90_setup
     use scale_prc, only: &
        PRC_abort
-
     implicit none
-    real(RP)                  :: snow_conductivity     = 0.42_RP
-    real(RP)                  :: water_content         = 0.1_RP
-    real(RP)                  :: snow_heat_capacityRHO = 8.4e+05_RP
-    real(RP)                  :: snow_rho              = 400.0_RP
-    real(RP)                  :: snowDepth_initial     = 0.0_RP
-    real(RP)                  :: albedo_value          = 0.686_RP
+    real(RP) :: snow_conductivity     = 0.42_RP
+    real(RP) :: water_content         = 0.1_RP
+    real(RP) :: snow_heat_capacityRHO = 8.4e+05_RP
+    real(RP) :: snow_rho              = 400.0_RP
+    real(RP) :: snowDepth_initial     = 0.0_RP
+    real(RP) :: albedo_value          = 0.686_RP
 
     namelist / PARAM_LAND_PHY_SNOW_KY90 /  &
          ALBEDO_const,          &
@@ -131,66 +127,36 @@ contains
   !-----------------------------------------------------------------------------
   !> Main routine for land submodel
 
-  subroutine LAND_PHY_SNOW_KY90(     &
-             TSNOW,                  & ! [INOUT]
-             SWE,                    & ! [INOUT]
-             SDepth,                 & ! [INOUT]
-             SDzero,                 & ! [INOUT]
-             nosnowsec,              & ! [INOUT]
-             Salbedo,                & ! [OUT]
-             TSNOW_t,                & ! [OUT]
-             SFLX_SH,                & ! [OUT]
-             SFLX_LH,                & ! [OUT]
-             SFLX_GH,                & ! [OUT]
-             SFLX_evap,              & ! [OUT]
-             SNOW_LAND_GH,           & ! [OUT]
-             SNOW_LAND_Water,        & ! [OUT]
-             SNOW_frac,              & ! [OUT]
-             SFLX_rain,              & ! [IN]
-             SFLX_snow,              & ! [IN]
-             PRSA,                   & ! [IN]
-             TA,                     & ! [IN]
-             WA,                     & ! [IN]
-             UA,                     & ! [IN]
-             VA,                     & ! [IN]
-             QA,                     & ! [IN]
-             DENS,                   & ! [IN]
-             SFLX_SW_dn,             & ! [IN]
-             SFLX_LW_dn,             & ! [IN]
-             dt                      ) ! [IN]
+  subroutine LAND_PHY_SNOW_KY90( &
+       LIA, LIS, LIE, LJA, LJS, LJE, &
+       SFLX_rain, SFLX_snow,   & ! [IN]
+       PRSA, TA, QA,           & ! [IN]
+       WA, UA, VA,             & ! [IN]
+       DENS,                   & ! [IN]
+       SFLX_SW_dn, SFLX_LW_dn, & ! [IN]
+       LANDUSE_fact_land, dt,  & ! [IN]
+       TSNOW, SWE,             & ! [INOUT]
+       SDepth, SDzero,         & ! [INOUT]
+       nosnowsec,              & ! [INOUT]
+       Salbedo,                & ! [OUT]
+       SFLX_SH, SFLX_LH,       & ! [OUT]
+       SFLX_GH, SNOW_LAND_GH,  & ! [OUT]
+       SNOW_LAND_Water,        & ! [OUT]
+       SNOW_frac               ) ! [OUT]
     use scale_prc, only: &
        PRC_abort
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_saturation, only:  &
-       !qsatf => ATMOS_SATURATION_pres2qsat_all  ! better to  change name from qsatf to qsat
-       !qsatf => ATMOS_SATURATION_dens2qsat_all
-        qsatf => ATMOS_SATURATION_psat_all
-    use scale_landuse, only: &
-       LANDUSE_fact_land
+       qsatf => ATMOS_SATURATION_psat_all  ! better to  change name from qsatf to qsat
     use scale_const, only:   &
        T0    => CONST_TEM00, &
        I_SW  => CONST_I_SW,  &
        I_LW  => CONST_I_LW,  &
        EPSvap => CONST_EPSvap
     implicit none
-    ! prognostic variables
-    real(RP), intent(inout)   :: TSNOW          (LIA,LJA)   ! snow temperature        [K]
-    real(RP), intent(inout)   :: SWE            (LIA,LJA)   ! equivalent water        [kg/m2]
-    real(RP), intent(inout)   :: SDepth         (LIA,LJA)   ! depth of melting point  [m]
-    real(RP), intent(inout)   :: SDzero         (LIA,LJA)   ! total snow depth        [m]
-    real(RP), intent(inout)   :: nosnowsec      (LIA,LJA)   ! elapsed time of no snow condition [s]
-
-    ! updated variables
-    real(RP), intent(out)     :: Salbedo        (LIA,LJA,2) ! snow albedo             [-]
-    real(RP), intent(out)     :: TSNOW_t        (LIA,LJA) ! updated tendency of snow temperature [K]
-    real(RP), intent(out)     :: SFLX_SH        (LIA,LJA) ! sensible heat flux between atmos and snow [W/m2]
-    real(RP), intent(out)     :: SFLX_LH        (LIA,LJA) ! latente  heat flux between atmos and snow [W/m2]
-    real(RP), intent(out)     :: SFLX_GH        (LIA,LJA) ! whole snowpack Ground flux   [W/m2]
-    real(RP), intent(out)     :: SFLX_evap      (LIA,LJA) ! evaporation due to LH        [kg/m2/s]
-    real(RP), intent(out)     :: SNOW_LAND_GH   (LIA,LJA) ! heat flux from snow to land  [W/m2]
-    real(RP), intent(out)     :: SNOW_LAND_Water(LIA,LJA) ! water flux from snow to land [W/m2]
-    real(RP), intent(out)     :: SNOW_frac      (LIA,LJA) ! snow fraction, defined by time direction [-]
+    integer, intent(in) :: LIA, LIS, LIE
+    integer, intent(in) :: LJA, LJS, LJE
 
     ! input data
     real(RP), intent(in)      :: SFLX_rain (LIA,LJA)
@@ -205,11 +171,29 @@ contains
     real(RP), intent(in)      :: SFLX_SW_dn(LIA,LJA)
     real(RP), intent(in)      :: SFLX_LW_dn(LIA,LJA)
     real(DP), intent(in)      :: dt                     ! dt of land
+    real(RP), intent(in)      :: LANDUSE_fact_land(LIA,LJA)
+
+    ! prognostic variables
+    real(RP), intent(inout)   :: TSNOW          (LIA,LJA)   ! snow temperature        [K]
+    real(RP), intent(inout)   :: SWE            (LIA,LJA)   ! equivalent water        [kg/m2]
+    real(RP), intent(inout)   :: SDepth         (LIA,LJA)   ! depth of melting point  [m]
+    real(RP), intent(inout)   :: SDzero         (LIA,LJA)   ! total snow depth        [m]
+    real(RP), intent(inout)   :: nosnowsec      (LIA,LJA)   ! elapsed time of no snow condition [s]
+
+    ! updated variables
+    real(RP), intent(out)     :: Salbedo        (LIA,LJA,2) ! snow albedo             [-]
+    real(RP), intent(out)     :: SFLX_SH        (LIA,LJA) ! sensible heat flux between atmos and snow [W/m2]
+    real(RP), intent(out)     :: SFLX_LH        (LIA,LJA) ! latente  heat flux between atmos and snow [W/m2]
+    real(RP), intent(out)     :: SFLX_GH        (LIA,LJA) ! whole snowpack Ground flux   [W/m2]
+    real(RP), intent(out)     :: SNOW_LAND_GH   (LIA,LJA) ! heat flux from snow to land  [W/m2]
+    real(RP), intent(out)     :: SNOW_LAND_water(LIA,LJA) ! water flux from snow to land [W/m2]
+    real(RP), intent(out)     :: SNOW_frac      (LIA,LJA) ! snow fraction, defined by time direction [-]
 
     real(RP)                  :: QCC       (LIA,LJA)
     real(RP)                  :: QFUSION   (LIA,LJA)
     real(RP)                  :: MELT      (LIA,LJA)
     real(RP)                  :: SWEMELT   (LIA,LJA)
+    real(RP)                  :: SFLX_evap      (LIA,LJA) ! evaporation due to LH        [kg/m2/s]
 
     ! works
     real(RP)                  :: TSNOW1           ! updated snow surface temperature [K]
@@ -284,7 +268,6 @@ contains
           SNOW_frac      (i,j) = 1.0_RP
        endif
 
-       TSNOW_t (i,j) = ( TSNOW1 - TSNOW (i,j) ) / dt
        TSNOW   (i,j) = TSNOW1
        SWE     (i,j) = SWE1
        SDepth  (i,j) = DEPTH1
@@ -297,7 +280,6 @@ contains
        SNOW_LAND_Water(i,j)   = SFLX_rain(i,j)
        SNOW_frac      (i,j)   = 0.0_RP
 
-       TSNOW_t (i,j)          = 0.0_RP
        TSNOW          (i,j)   = T0     !!!
        SWE            (i,j)   = 0.0_RP !!!
        SDepth         (i,j)   = 0.0_RP !!!
@@ -315,7 +297,6 @@ contains
 
     endif
 
-    call FILE_HISTORY_in( TSNOW_t (:,:), 'SNOW_SFC_TEMP_t', 'tendency of snow surface temperature',       'K',     dim_type='XY' )
     call FILE_HISTORY_in( QCC     (:,:), 'SNOW_QCC',        'Heat used for changing temperature profile', 'J/m2',  dim_type='XY' )
     call FILE_HISTORY_in( QFUSION (:,:), 'SNOW_QFUSION',    'Heat used for phase change of snow',         'J/m2',  dim_type='XY' )
     call FILE_HISTORY_in( MELT    (:,:), 'SNOW_MELT',       'Heat used for snow melt',                    'J/m2',  dim_type='XY' )

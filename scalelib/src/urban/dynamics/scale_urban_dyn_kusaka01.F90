@@ -1,23 +1,21 @@
 !-------------------------------------------------------------------------------
-!> module URBAN / Surface fluxes with Single-layer Canpoy Model
+!> module urban / dynamics / Kusaka01
 !!
 !! @par Description
-!!          Surface fluxes between atmosphere and urban
-!!          based on Single-layer Urban Canopy Model (Kusaka et al. 2001, BLM)
+!!          Single-layer Urban Canopy Model (Kusaka et al. 2001, BLM)
 !!
 !! @author Team SCALE
 !!
 !! @par History
 !<
 !-------------------------------------------------------------------------------
-module scale_urban_phy_slc
+module scale_urban_dyn_kusaka01
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
   use scale_stdio
-  use scale_urban_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -25,8 +23,8 @@ module scale_urban_phy_slc
   !
   !++ Public procedure
   !
-  public :: URBAN_PHY_SLC_setup
-  public :: URBAN_PHY_SLC
+  public :: URBAN_DYN_kusaka01_setup
+  public :: URBAN_DYN_kusaka01
 
   !-----------------------------------------------------------------------------
   !
@@ -50,7 +48,6 @@ module scale_urban_phy_slc
   !
   !-----------------------------------------------------------------------------
   !
-  logical, allocatable, private :: is_URB(:,:) ! urban tile or not.
   ! from namelist
   real(RP), private :: DTS_MAX    =    0.1_RP ! maximum dT during one minute [K/sec]
                                               ! 0.1 [K/sec] = 6.0 [K/min]
@@ -100,35 +97,37 @@ module scale_urban_phy_slc
   real(RP), private :: ZDC                     ! Displacement height [m]
   real(RP), private :: SVF                     ! Sky view factor [-]
 
-  real(RP), private, allocatable :: DZR(:)     ! thickness of each roof layer [m]
-  real(RP), private, allocatable :: DZB(:)     ! thickness of each building layer [m]
-  real(RP), private, allocatable :: DZG(:)     ! thickness of each road layer [m]
-
   real(RP), private :: XXXR    = 0.0_RP        ! Monin-Obkhov length for roof [-]
   real(RP), private :: XXXC    = 0.0_RP        ! Monin-Obkhov length for canopy [-]
+
+  ! history
+  integer, private :: I_SHR, I_SHB, I_SHG
+  integer, private :: I_LHR, I_LHB, I_LHG
+  integer, private :: I_GHR, I_GHB, I_GHG
+  integer, private :: I_RNR, I_RNB, I_RNG, I_RNgrd
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine URBAN_PHY_SLC_setup( &
-       URBAN_TYPE, &
-       Z0M, &
-       Z0H, &
-       Z0E  )
+  subroutine URBAN_DYN_kusaka01_setup( &
+       UIA, UIS, UIE, UJA, UJS, UJE, &
+       Z0M, Z0H, Z0E  )
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_landuse, only: &
-       LANDUSE_fact_urban
+    use scale_file_history, only: &
+       FILE_HISTORY_reg
     implicit none
+    integer, intent(in) :: UIA, UIS, UIE
+    integer, intent(in) :: UJA, UJS, UJE
 
-    character(len=*), intent(in)  :: URBAN_TYPE
-    real(RP)        , intent(out) :: Z0M(UIA,UJA)
-    real(RP)        , intent(out) :: Z0H(UIA,UJA)
-    real(RP)        , intent(out) :: Z0E(UIA,UJA)
+    real(RP), intent(out) :: Z0M(UIA,UJA)
+    real(RP), intent(out) :: Z0H(UIA,UJA)
+    real(RP), intent(out) :: Z0E(UIA,UJA)
 
-    NAMELIST / PARAM_URBAN_PHY_SLC / &
+    NAMELIST / PARAM_URBAN_DYN_kusaka01 / &
        DTS_MAX,    &
        ZR,         &
        roof_width, &
@@ -162,6 +161,12 @@ contains
        TGLEND,     &
        BOUND
 
+    real(RP) :: SHR(UIA,UJA), SHB(UIA,UJA), SHG(UIA,UJA)
+    real(RP) :: LHR(UIA,UJA), LHB(UIA,UJA), LHG(UIA,UJA)
+    real(RP) :: GHR(UIA,UJA), GHB(UIA,UJA), GHG(UIA,UJA)
+    real(RP) :: RNR(UIA,UJA), RNB(UIA,UJA), RNG(UIA,UJA)
+    real(RP) :: RNgrd(UIA,UJA)
+
     integer :: i, j
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -171,21 +176,14 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_URBAN_PHY_SLC,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_URBAN_DYN_kusaka01,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_URBAN_PHY_SLC. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_URBAN_DYN_kusaka01. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_URBAN_PHY_SLC)
-
-    allocate( DZR(UKS:UKE) )
-    allocate( DZB(UKS:UKE) )
-    allocate( DZG(UKS:UKE) )
-    DZR(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
-    DZB(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
-    DZG(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_URBAN_DYN_kusaka01)
 
     ahdiurnal(:) = (/ 0.356, 0.274, 0.232, 0.251, 0.375, 0.647, 0.919, 1.135, 1.249, 1.328, &
                       1.365, 1.363, 1.375, 1.404, 1.457, 1.526, 1.557, 1.521, 1.372, 1.206, &
@@ -195,129 +193,104 @@ contains
     call urban_param_setup
 
     ! judge to run slab land model
-    allocate( is_URB(UIA,UJA) )
-
     do j = UJS, UJE
     do i = UIS, UIE
-       if ( LANDUSE_fact_urban(i,j) > 0.0_RP ) then
-          is_URB(i,j) = .true.
-       else
-          is_URB(i,j) = .false.
-       endif
+       Z0M(i,j) = Z0C
+       Z0H(i,j) = Z0HC
+       Z0E(i,j) = Z0HC
     enddo
     enddo
 
-    Z0M(:,:) = UNDEF
-    Z0H(:,:) = UNDEF
-    Z0E(:,:) = UNDEF
-    do j = UJS, UJE
-    do i = UIS, UIE
-       if ( is_URB(i,j) ) then
-          Z0M(i,j) = Z0C
-          Z0H(i,j) = Z0HC
-          Z0E(i,j) = Z0HC
-       endif
-    enddo
-    enddo
+    call FILE_HISTORY_reg( 'URBAN_SHR',   'urban sensible heat flux on roof',    'W/m2', I_SHR  , ndims=2 )
+    call FILE_HISTORY_reg( 'URBAN_SHB',   'urban sensible heat flux on wall',    'W/m2', I_SHB  , ndims=2 )
+    call FILE_HISTORY_reg( 'URBAN_SHG',   'urban sensible heat flux on road',    'W/m2', I_SHG  , ndims=2 )
+    call FILE_HISTORY_reg( 'URBAN_LHR',   'urban latent heat flux on roof',      'W/m2', I_LHR  , ndims=2 )
+    call FILE_HISTORY_reg( 'URBAN_LHB',   'urban latent heat flux on wall',      'W/m2', I_LHB  , ndims=2 )
+    call FILE_HISTORY_reg( 'URBAN_LHG',   'urban latent heat flux on road',      'W/m2', I_LHG  , ndims=2 )
+    call FILE_HISTORY_reg( 'URBAN_GHR',   'urban ground heat flux on roof',      'W/m2', I_GHR  , ndims=2 )
+    call FILE_HISTORY_reg( 'URBAN_GHB',   'urban ground heat flux on wall',      'W/m2', I_GHB  , ndims=2 )
+    call FILE_HISTORY_reg( 'URBAN_GHG',   'urban ground heat flux on road',      'W/m2', I_GHG  , ndims=2 )
+    call FILE_HISTORY_reg( 'URBAN_RNR',   'urban net radiation on roof',         'W/m2', I_RNR  , ndims=2 )
+    call FILE_HISTORY_reg( 'URBAN_RNB',   'urban net radiation on wall',         'W/m2', I_RNB  , ndims=2 )
+    call FILE_HISTORY_reg( 'URBAN_RNG',   'urban net radiation on road',         'W/m2', I_RNG  , ndims=2 )
+    call FILE_HISTORY_reg( 'URBAN_RNgrd', 'urban grid average of net radiation', 'W/m2', I_RNgrd, ndims=2 )
 
     return
-  end subroutine URBAN_PHY_SLC_setup
+  end subroutine URBAN_DYN_kusaka01_setup
 
   !-----------------------------------------------------------------------------
   !> Main routine for land submodel
 
-  subroutine URBAN_PHY_SLC( &
-        TR_URB_t,    &
-        TB_URB_t,    &
-        TG_URB_t,    &
-        TC_URB_t,    &
-        QC_URB_t,    &
-        UC_URB_t,    &
-        TRL_URB_t,   &
-        TBL_URB_t,   &
-        TGL_URB_t,   &
-        RAINR_URB_t, &
-        RAINB_URB_t, &
-        RAING_URB_t, &
-        ROFF_URB_t,  &
-        SFC_TEMP,    &
-        ALBD_LW,     &
-        ALBD_SW,     &
-        MWFLX,       &
-        MUFLX,       &
-        MVFLX,       &
-        SHFLX,       &
-        LHFLX,       &
-        GHFLX,       &
-        Z0M,         &
-        Z0H,         &
-        Z0E,         &
-        U10,         &
-        V10,         &
-        T2,          &
-        Q2,          &
-        TMPA,        &
-        PRSA,        &
-        W1,          &
-        U1,          &
-        V1,          &
-        DENS,        &
-        QA,          &
-        Z1,          &
-        PBL,         &
-        RHOS,        &
-        PRSS,        &
-        LWD,         &
-        SWD,         &
-        PREC,        &
-        TR_URB,      &
-        TB_URB,      &
-        TG_URB,      &
-        TC_URB,      &
-        QC_URB,      &
-        UC_URB,      &
-        TRL_URB,     &
-        TBL_URB,     &
-        TGL_URB,     &
-        RAINR_URB,   &
-        RAINB_URB,   &
-        RAING_URB,   &
-        ROFF_URB,    &
-        LON,         &
-        LAT,         &
-        NOWDATE,     &
-        dt           )
-    use scale_urban_grid_cartesC_index
+  subroutine URBAN_DYN_kusaka01( &
+       UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+       TMPA, PRSA,                      &
+       W1, U1, V1,                      &
+       DENS, QA, LHV,                   &
+       Z1, PBL,                         &
+       RHOS, PRSS,                      &
+       LWD, SWD,                        &
+       RAIN, SNOW,                      &
+       CDZ,                             &
+       fact_urban,                      &
+       tloc, dsec, dt,                  &
+       TRL_URB, TBL_URB, TGL_URB,       &
+       TR_URB, TB_URB, TG_URB,          &
+       TC_URB, QC_URB, UC_URB,          &
+       RAINR_URB, RAINB_URB, RAING_URB, &
+       ROFF_URB,                        &
+       SFC_TEMP,                        &
+       ALBD_LW, ALBD_SW,                &
+       MWFLX, MUFLX, MVFLX,             &
+       SHFLX, LHFLX, GHFLX,             &
+       Z0M, Z0H, Z0E,                   &
+       U10, V10, T2, Q2                 )
     use scale_const, only: &
        Rdry => CONST_Rdry, &
        Rvap => CONST_Rvap
-    use scale_file_history, only: &
-       FILE_HISTORY_in
     use scale_atmos_saturation, only: &
        qsat => ATMOS_SATURATION_pres2qsat_all
     use scale_bulkflux, only: &
        BULKFLUX
     implicit none
+    integer, intent(in) :: UKA, UKS, UKE
+    integer, intent(in) :: UIA, UIS, UIE
+    integer, intent(in) :: UJA, UJS, UJE
 
-    ! parameter
-    logical,  parameter :: LSOLAR = .false. ! [true=both, false=SSG only]
+    real(RP), intent(in) :: TMPA(UIA,UJA)
+    real(RP), intent(in) :: PRSA(UIA,UJA)
+    real(RP), intent(in) :: W1  (UIA,UJA)
+    real(RP), intent(in) :: U1  (UIA,UJA)
+    real(RP), intent(in) :: V1  (UIA,UJA)
+    real(RP), intent(in) :: DENS(UIA,UJA)
+    real(RP), intent(in) :: QA  (UIA,UJA)
+    real(RP), intent(in) :: LHV (UIA,UJA)
+    real(RP), intent(in) :: Z1  (UIA,UJA)
+    real(RP), intent(in) :: PBL (UIA,UJA)
+    real(RP), intent(in) :: RHOS(UIA,UJA) ! density  at the surface [kg/m3]
+    real(RP), intent(in) :: PRSS(UIA,UJA)
+    real(RP), intent(in) :: LWD (UIA,UJA,2)
+    real(RP), intent(in) :: SWD (UIA,UJA,2)
+    real(RP), intent(in) :: RAIN(UIA,UJA)
+    real(RP), intent(in) :: SNOW(UIA,UJA)
+    real(RP), intent(in) :: CDZ(UKA)
+    real(RP), intent(in) :: fact_urban(UIA,UJA)
+    integer,  intent(in) :: tloc
+    real(RP), intent(in) :: dsec
+    real(DP), intent(in) :: dt
 
-    real(RP), parameter :: Uabs_min = 0.1_RP
-
-    ! arguments
-    real(RP), intent(out) :: TR_URB_t   (UIA,UJA)
-    real(RP), intent(out) :: TB_URB_t   (UIA,UJA)
-    real(RP), intent(out) :: TG_URB_t   (UIA,UJA)
-    real(RP), intent(out) :: TC_URB_t   (UIA,UJA)
-    real(RP), intent(out) :: QC_URB_t   (UIA,UJA)
-    real(RP), intent(out) :: UC_URB_t   (UIA,UJA)
-    real(RP), intent(out) :: TRL_URB_t  (UKS:UKE,UIA,UJA)
-    real(RP), intent(out) :: TBL_URB_t  (UKS:UKE,UIA,UJA)
-    real(RP), intent(out) :: TGL_URB_t  (UKS:UKE,UIA,UJA)
-    real(RP), intent(out) :: RAINR_URB_t(UIA,UJA)
-    real(RP), intent(out) :: RAINB_URB_t(UIA,UJA)
-    real(RP), intent(out) :: RAING_URB_t(UIA,UJA)
-    real(RP), intent(out) :: ROFF_URB_t (UIA,UJA)
+    real(RP), intent(inout) :: TR_URB   (UIA,UJA)
+    real(RP), intent(inout) :: TB_URB   (UIA,UJA)
+    real(RP), intent(inout) :: TG_URB   (UIA,UJA)
+    real(RP), intent(inout) :: TC_URB   (UIA,UJA)
+    real(RP), intent(inout) :: QC_URB   (UIA,UJA)
+    real(RP), intent(inout) :: UC_URB   (UIA,UJA)
+    real(RP), intent(inout) :: TRL_URB  (UKS:UKE,UIA,UJA)
+    real(RP), intent(inout) :: TBL_URB  (UKS:UKE,UIA,UJA)
+    real(RP), intent(inout) :: TGL_URB  (UKS:UKE,UIA,UJA)
+    real(RP), intent(inout) :: RAINR_URB(UIA,UJA)
+    real(RP), intent(inout) :: RAINB_URB(UIA,UJA)
+    real(RP), intent(inout) :: RAING_URB(UIA,UJA)
+    real(RP), intent(inout) :: ROFF_URB (UIA,UJA)
 
     real(RP), intent(out) :: SFC_TEMP(UIA,UJA)
     real(RP), intent(out) :: ALBD_LW (UIA,UJA)
@@ -336,39 +309,11 @@ contains
     real(RP), intent(out) :: T2      (UIA,UJA)
     real(RP), intent(out) :: Q2      (UIA,UJA)
 
-    real(RP), intent(in) :: TMPA  (UIA,UJA)
-    real(RP), intent(in) :: PRSA  (UIA,UJA)
-    real(RP), intent(in) :: W1    (UIA,UJA)
-    real(RP), intent(in) :: U1    (UIA,UJA)
-    real(RP), intent(in) :: V1    (UIA,UJA)
-    real(RP), intent(in) :: DENS  (UIA,UJA)
-    real(RP), intent(in) :: QA    (UIA,UJA)
-    real(RP), intent(in) :: Z1    (UIA,UJA)
-    real(RP), intent(in) :: PBL   (UIA,UJA)
-    real(RP), intent(in) :: RHOS  (UIA,UJA) ! density  at the surface [kg/m3]
-    real(RP), intent(in) :: PRSS  (UIA,UJA)
-    real(RP), intent(in) :: LWD   (UIA,UJA,2)
-    real(RP), intent(in) :: SWD   (UIA,UJA,2)
-    real(RP), intent(in) :: PREC  (UIA,UJA)
 
-    real(RP), intent(in) :: TR_URB   (UIA,UJA)
-    real(RP), intent(in) :: TB_URB   (UIA,UJA)
-    real(RP), intent(in) :: TG_URB   (UIA,UJA)
-    real(RP), intent(in) :: TC_URB   (UIA,UJA)
-    real(RP), intent(in) :: QC_URB   (UIA,UJA)
-    real(RP), intent(in) :: UC_URB   (UIA,UJA)
-    real(RP), intent(in) :: TRL_URB  (UKS:UKE,UIA,UJA)
-    real(RP), intent(in) :: TBL_URB  (UKS:UKE,UIA,UJA)
-    real(RP), intent(in) :: TGL_URB  (UKS:UKE,UIA,UJA)
-    real(RP), intent(in) :: RAINR_URB(UIA,UJA)
-    real(RP), intent(in) :: RAINB_URB(UIA,UJA)
-    real(RP), intent(in) :: RAING_URB(UIA,UJA)
-    real(RP), intent(in) :: ROFF_URB (UIA,UJA)
+    ! parameter
+    logical,  parameter :: LSOLAR = .false. ! [true=both, false=SSG only]
 
-    real(RP), intent(in) :: LON
-    real(RP), intent(in) :: LAT
-    integer,  intent(in) :: NOWDATE(6)
-    real(DP), intent(in) :: dt
+    real(RP), parameter :: Uabs_min = 0.1_RP
 
     ! work
     real(RP) :: TR
@@ -399,6 +344,11 @@ contains
     real(RP) :: RNG  (UIA,UJA)
     real(RP) :: RNgrd(UIA,UJA)
 
+    real(RP) :: DZR(UKA)     ! thickness of each roof layer [m]
+    real(RP) :: DZB(UKA)     ! thickness of each building layer [m]
+    real(RP) :: DZG(UKA)     ! thickness of each road layer [m]
+
+
     real(RP) :: Ustar ! friction velocity [m]
     real(RP) :: Tstar ! friction temperature [K]
     real(RP) :: Qstar ! friction mixing rate [kg/kg]
@@ -418,10 +368,14 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Urban surface physics step: Single Layer Canopy'
 
+    DZR(:) = CDZ(:)
+    DZB(:) = CDZ(:)
+    DZG(:) = CDZ(:)
+
     do j = UJS, UJE
     do i = UIS, UIE
 
-    if( is_URB(i,j) ) then
+    if( fact_urban(i,j) > 0.0_RP ) then
 
        qdry = 1.0_RP - QA(i,j)
        Rtot = qdry * Rdry + QA(i,j) * Rvap 
@@ -447,15 +401,16 @@ contains
        RAING = RAING_URB(i,j)
        ROFF  = ROFF_URB (i,j)
 
-       call SLC_main( TR,                 & ! [INOUT]
+       call SLC_main( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+                      TRL     (:),        & ! [INOUT]
+                      TBL     (:),        & ! [INOUT]
+                      TGL     (:),        & ! [INOUT]
+                      TR,                 & ! [INOUT]
                       TB,                 & ! [INOUT]
                       TG,                 & ! [INOUT]
                       TC,                 & ! [INOUT]
                       QC,                 & ! [INOUT]
                       UC,                 & ! [INOUT]
-                      TRL     (:),        & ! [INOUT]
-                      TBL     (:),        & ! [INOUT]
-                      TGL     (:),        & ! [INOUT]
                       RAINR,              & ! [INOUT]
                       RAINB,              & ! [INOUT]
                       RAING,              & ! [INOUT]
@@ -491,34 +446,34 @@ contains
                       Uabs,               & ! [IN]
                       U1      (i,j),      & ! [IN]
                       V1      (i,j),      & ! [IN]
+                      LHV     (i,j),      & ! [IN]
                       Z1      (i,j),      & ! [IN]
                       SWD     (i,j,:),    & ! [IN]
                       LWD     (i,j,:),    & ! [IN]
-                      PREC    (i,j),      & ! [IN]
+                      RAIN    (i,j),      & ! [IN]
+                      SNOW    (i,j),      & ! [IN]
                       DENS    (i,j),      & ! [IN]
-                      LON,                & ! [IN]
-                      LAT,                & ! [IN]
-                      NOWDATE (:),        & ! [IN]
-                      dt, i, j            ) ! [IN]
+                      DZR(:), DZG(:), DZB(:), & ! [IN]
+                      tloc, dsec, dt,     & ! (in)
+                      i, j                ) ! [IN]
 
-       ! calculate tendency
-       TR_URB_t(i,j) = ( TR - TR_URB(i,j) ) / dt
-       TB_URB_t(i,j) = ( TB - TB_URB(i,j) ) / dt
-       TG_URB_t(i,j) = ( TG - TG_URB(i,j) ) / dt
-       TC_URB_t(i,j) = ( TC - TC_URB(i,j) ) / dt
-       QC_URB_t(i,j) = ( QC - QC_URB(i,j) ) / dt
-       UC_URB_t(i,j) = ( UC - UC_URB(i,j) ) / dt
 
+       ! update
+       TR_URB(i,j) = TR
+       TB_URB(i,j) = TB
+       TG_URB(i,j) = TG
+       TC_URB(i,j) = TC
+       QC_URB(i,j) = QC
+       UC_URB(i,j) = UC
        do k = UKS, UKE
-          TRL_URB_t(k,i,j) = ( TRL(k) - TRL_URB(k,i,j) ) / dt
-          TBL_URB_t(k,i,j) = ( TBL(k) - TBL_URB(k,i,j) ) / dt
-          TGL_URB_t(k,i,j) = ( TGL(k) - TGL_URB(k,i,j) ) / dt
+          TRL_URB(k,i,j) = TRL(k)
+          TBL_URB(k,i,j) = TBL(k)
+          TGL_URB(k,i,j) = TGL(k)
        end do
-
-       RAINR_URB_t(i,j) = ( RAINR - RAINR_URB(i,j) ) / dt
-       RAINB_URB_t(i,j) = ( RAINB - RAINB_URB(i,j) ) / dt
-       RAING_URB_t(i,j) = ( RAING - RAING_URB(i,j) ) / dt
-       ROFF_URB_t (i,j) = ( ROFF  - ROFF_URB (i,j) ) / dt
+       RAINR_URB(i,j) = RAINR
+       RAINB_URB(i,j) = RAINB
+       RAING_URB(i,j) = RAING
+       ROFF_URB(i,j) = ROFF
 
        ! saturation at the surface
        call qsat( SFC_TEMP(i,j), PRSS(i,j), qdry, & ! [IN]
@@ -555,20 +510,6 @@ contains
        Z0E(i,j) = Z0HC
 
     else
-       ! not calculate urban module
-       TR_URB_t   (i,j)   = 0.0_RP
-       TB_URB_t   (i,j)   = 0.0_RP
-       TG_URB_t   (i,j)   = 0.0_RP
-       TC_URB_t   (i,j)   = 0.0_RP
-       QC_URB_t   (i,j)   = 0.0_RP
-       UC_URB_t   (i,j)   = 0.0_RP
-       TRL_URB_t  (:,i,j) = 0.0_RP
-       TBL_URB_t  (:,i,j) = 0.0_RP
-       TGL_URB_t  (:,i,j) = 0.0_RP
-       RAINR_URB_t(i,j)   = 0.0_RP
-       RAINB_URB_t(i,j)   = 0.0_RP
-       RAING_URB_t(i,j)   = 0.0_RP
-       ROFF_URB_t (i,j)   = 0.0_RP
        SFC_TEMP   (i,j)   = 300.0_RP ! constant value
        ALBD_LW    (i,j)   = 0.0_RP
        ALBD_SW    (i,j)   = 0.0_RP
@@ -604,34 +545,28 @@ contains
     end do
     end do
 
-    call FILE_HISTORY_in( SHR  (:,:), 'URBAN_SHR',   'urban sensible heat flux on roof',    'W/m2' )
-    call FILE_HISTORY_in( SHB  (:,:), 'URBAN_SHB',   'urban sensible heat flux on wall',    'W/m2' )
-    call FILE_HISTORY_in( SHG  (:,:), 'URBAN_SHG',   'urban sensible heat flux on road',    'W/m2' )
-    call FILE_HISTORY_in( LHR  (:,:), 'URBAN_LHR',   'urban latent heat flux on roof',      'W/m2' )
-    call FILE_HISTORY_in( LHB  (:,:), 'URBAN_LHB',   'urban latent heat flux on wall',      'W/m2' )
-    call FILE_HISTORY_in( LHG  (:,:), 'URBAN_LHG',   'urban latent heat flux on road',      'W/m2' )
-    call FILE_HISTORY_in( GHR  (:,:), 'URBAN_GHR',   'urban ground heat flux on roof',      'W/m2' )
-    call FILE_HISTORY_in( GHB  (:,:), 'URBAN_GHB',   'urban ground heat flux on wall',      'W/m2' )
-    call FILE_HISTORY_in( GHG  (:,:), 'URBAN_GHG',   'urban ground heat flux on road',      'W/m2' )
-    call FILE_HISTORY_in( RNR  (:,:), 'URBAN_RNR',   'urban net radiation on roof',         'W/m2' )
-    call FILE_HISTORY_in( RNB  (:,:), 'URBAN_RNB',   'urban net radiation on wall',         'W/m2' )
-    call FILE_HISTORY_in( RNG  (:,:), 'URBAN_RNG',   'urban net radiation on road',         'W/m2' )
-    call FILE_HISTORY_in( RNgrd(:,:), 'URBAN_RNgrd', 'urban grid average of net radiation', 'W/m2' )
+    call put_history( UIA, UJA, &
+                      SHR(:,:), SHB(:,:), SHG(:,:), &
+                      LHR(:,:), LHB(:,:), LHG(:,:), &
+                      GHR(:,:), GHB(:,:), GHG(:,:), &
+                      RNR(:,:), RNB(:,:), RNG(:,:), &
+                      RNgrd(:,:)                    )
 
     return
-  end subroutine URBAN_PHY_SLC
+  end subroutine URBAN_DYN_kusaka01
 
   !-----------------------------------------------------------------------------
   subroutine SLC_main( &
+       UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+        TRL,          & ! (inout)
+        TBL,          & ! (inout)
+        TGL,          & ! (inout)
         TR,           & ! (inout)
         TB,           & ! (inout)
         TG,           & ! (inout)
         TC,           & ! (inout)
         QC,           & ! (inout)
         UC,           & ! (inout)
-        TRL,          & ! (inout)
-        TBL,          & ! (inout)
-        TGL,          & ! (inout)
         RAINR,        & ! (inout)
         RAINB,        & ! (inout)
         RAING,        & ! (inout)
@@ -667,24 +602,23 @@ contains
         UA,           & ! (in)
         U1,           & ! (in)
         V1,           & ! (in)
+        LHV,          & ! (in)
         ZA,           & ! (in)
         SSG,          & ! (in)
         LLG,          & ! (in)
         RAIN,         & ! (in)
+        SNOW,         & ! (in)
         RHOO,         & ! (in)
-        XLON,         & ! (in)
-        XLAT,         & ! (in)
-        NOWDATE,      & ! (in)
+        DZR, DZB, DZG, & ! (in)
+        tloc, dsec,   & ! (in)
         dt,           & ! (in)
         i, j          ) ! (in)
-    use scale_urban_grid_cartesC_index
     use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
     use scale_const, only: &
        EPS    => CONST_EPS,     &    ! small number (machine epsilon)
        PI     => CONST_PI,      &    ! pi               [-]
-       D2R    => CONST_D2R,     &    ! degree to radian
        KARMAN => CONST_KARMAN,  &    ! Kalman constant  [-]
        CPdry  => CONST_CPdry,   &    ! Heat capacity of dry air [J/K/kg]
        GRAV   => CONST_GRAV,    &    ! gravitational constant [m/s2]
@@ -698,6 +632,9 @@ contains
     use scale_atmos_saturation, only: &
        qsat => ATMOS_SATURATION_pres2qsat_all
     implicit none
+    integer, intent(in) :: UKA, UKS, UKE
+    integer, intent(in) :: UIA, UIS, UIE
+    integer, intent(in) :: UJA, UJS, UJE
 
     !-- configuration variables
     logical , intent(in)    :: LSOLAR ! logical   [true=both, false=SSG only]
@@ -710,26 +647,30 @@ contains
     real(RP), intent(in)    :: UA   ! wind speed at 1st atmospheric level    [m/s]
     real(RP), intent(in)    :: U1   ! u at 1st atmospheric level             [m/s]
     real(RP), intent(in)    :: V1   ! v at 1st atmospheric level             [m/s]
+    real(RP), intent(in)    :: LHV  ! latent heat of vaporization [J/kg]
     real(RP), intent(in)    :: ZA   ! height of 1st atmospheric level        [m]
-    real(RP), intent(in)    :: SSG(2) ! downward total short wave radiation    [W/m/m]
-    real(RP), intent(in)    :: LLG(2) ! downward long wave radiation           [W/m/m]
-    real(RP), intent(in)    :: RAIN ! precipitation flux                     [kg/m2/s]
+    real(RP), intent(in)    :: SSG(2) ! downward total short wave radiation  [W/m/m]
+    real(RP), intent(in)    :: LLG(2) ! downward long wave radiation         [W/m/m]
+    real(RP), intent(in)    :: RAIN ! liquid water flux                      [kg/m2/s]
+    real(RP), intent(in)    :: SNOW ! ice water flux                         [kg/m2/s]
     real(RP), intent(in)    :: RHOO ! air density                            [kg/m^3]
-    real(RP), intent(in)    :: XLAT ! latitude                               [rad,-pi,pi]
-    real(RP), intent(in)    :: XLON ! longitude                              [rad,0-2pi]
-    integer,  intent(in)    :: NOWDATE(6)
+    real(RP), intent(in)    :: DZR(UKA)
+    real(RP), intent(in)    :: DZB(UKA)
+    real(RP), intent(in)    :: DZG(UKA)
+    integer,  intent(in)    :: tloc
+    real(RP), intent(in)    :: dsec
     real(DP), intent(in)    :: dt
 
     !-- In/Out variables from/to Coupler to/from Urban
+    real(RP), intent(inout) :: TRL(UKS:UKE)  ! layer temperature [K]
+    real(RP), intent(inout) :: TBL(UKS:UKE)  ! layer temperature [K]
+    real(RP), intent(inout) :: TGL(UKS:UKE)  ! layer temperature [K]
     real(RP), intent(inout) :: TR   ! roof temperature              [K]
     real(RP), intent(inout) :: TB   ! building wall temperature     [K]
     real(RP), intent(inout) :: TG   ! road temperature              [K]
     real(RP), intent(inout) :: TC   ! urban-canopy air temperature  [K]
     real(RP), intent(inout) :: QC   ! urban-canopy air specific humidity [kg/kg]
     real(RP), intent(inout) :: UC   ! diagnostic canopy wind        [m/s]
-    real(RP), intent(inout) :: TRL(UKS:UKE)  ! layer temperature [K]
-    real(RP), intent(inout) :: TBL(UKS:UKE)  ! layer temperature [K]
-    real(RP), intent(inout) :: TGL(UKS:UKE)  ! layer temperature [K]
     real(RP), intent(inout) :: RAINR ! rain amount in storage on roof     [kg/m2]
     real(RP), intent(inout) :: RAINB ! rain amount in storage on building [kg/m2]
     real(RP), intent(inout) :: RAING ! rain amount in storage on road     [kg/m2]
@@ -767,11 +708,6 @@ contains
            !  true  = consider svf and shadow effects,
            !  false = consider svf effect only
 
-    real(RP) :: LON,LAT  ! longitude [deg], latitude [deg]
-    integer  :: tloc     ! local time (1-24h)
-    real(RP) :: dsec     ! second [s]
-    real(RP) :: TIME     ! absorute part of current time
-    real(RP) :: tahdiurnal ! temporal AH diurnal profile
     real(RP) :: AH_t     ! Sensible Anthropogenic heat [W/m^2]
     real(RP) :: ALH_t    ! Latent Anthropogenic heat   [W/m^2]
 
@@ -838,19 +774,18 @@ contains
     real(RP) :: G0RP,G0BP,G0GP
 
     real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
-    real(RP) :: LHV                              ! latent heat of vaporization [J/kg]
     real(RP) :: THA,THC,THS,THS1,THS2
     real(RP) :: RovCP
     real(RP) :: EXN  ! exner function at the surface
     real(RP) :: qdry
+
+    real(RP) :: tahdiurnal
 
     integer  :: iteration
 
     !-----------------------------------------------------------
     ! Set parameters
     !-----------------------------------------------------------
-
-    call HYDROMETEOR_LHV( TA, LHV )
 
     RovCP = Rdry / CPdry
     THA   = TA * ( PRE00 / PRSA )**RovCP
@@ -871,23 +806,15 @@ contains
     RAINBP = RAINB
     RAINGP = RAING
 
-    !--- local time
-    LAT = XLAT / D2R
-    LON = XLON / D2R
-
-    TIME = real( NOWDATE(4)*3600.0_RP + NOWDATE(5)*60.0_RP + NOWDATE(6), kind=RP )
-    tloc = mod((NOWDATE(4) + int(LON/15.0_RP)),24 )
-    dsec = real( NOWDATE(5)*60.0_RP + NOWDATE(6), kind=RP ) / 3600.0_RP
-    if( tloc == 0 ) tloc = 24
-
     !--- Calculate AH data at LST
     if ( tloc == 24 ) then
-      tahdiurnal = ( 1.0_RP-dsec ) * ahdiurnal(tloc  ) &
-                 + (        dsec ) * ahdiurnal(1     )
+       tahdiurnal = ( 1.0_RP-dsec ) * ahdiurnal(tloc  ) &
+                  + (        dsec ) * ahdiurnal(1     )
     else
-      tahdiurnal = ( 1.0_RP-dsec ) * ahdiurnal(tloc  ) &
-                 + (        dsec ) * ahdiurnal(tloc+1)
+       tahdiurnal = ( 1.0_RP-dsec ) * ahdiurnal(tloc  ) &
+                  + (        dsec ) * ahdiurnal(tloc+1) 
     endif
+
     AH_t  = AH  * tahdiurnal
     ALH_t = ALH * tahdiurnal
 
@@ -895,7 +822,7 @@ contains
     DTS_MAX_onestep = DTS_MAX * dt
 
     if ( ZDC + Z0C + 2.0_RP >= ZA ) then
-       write(*,*) 'xxx [URBAN_PHY_SLC] ZDC + Z0C + 2m is larger than the 1st level! STOP.'
+       write(*,*) 'xxx [URBAN_DYN_kusaka01] ZDC + Z0C + 2m is larger than the 1st level! STOP.'
        call PRC_abort
     endif
 
@@ -921,13 +848,13 @@ contains
     !-----------------------------------------------------------
 
     !!--- calculate evaporation efficiency
-    RAINT = 1.0_RP * ( RAIN * dt )            ! [kg/m2/s -> kg/m2]
+    RAINT = 1.0_RP * ( ( RAIN + SNOW ) * dt )            ! [kg/m2/s -> kg/m2]
     call cal_beta(BETR, RAINT, RAINR, STRGR, ROFFR)
 
-    RAINT = 0.1_RP * ( RAIN * dt )
+    RAINT = 0.1_RP * ( ( RAIN + SNOW ) * dt )
     call cal_beta(BETB, RAINT, RAINB, STRGB, ROFFB)
 
-    RAINT = 0.9_RP * ( RAIN * dt )
+    RAINT = 0.9_RP * ( ( RAIN + SNOW ) * dt )
     call cal_beta(BETG, RAINT, RAING, STRGG, ROFFG)
 
     ROFF = ROFF +  R * ROFFR  + RW * ( ROFFB + ROFFG )
@@ -1039,7 +966,7 @@ contains
 
      ! output for debug
      if ( iteration > 100 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: [URBAN_PHY_SLC/SLC_main] iteration for TR was not converged',PRC_myrank,i,j
+       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: [URBAN_DYN_kusaka01/SLC_main] iteration for TR was not converged',PRC_myrank,i,j
        if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                          [K] :', resi1
        if( IO_L ) write(IO_FID_LOG,*)
@@ -1090,11 +1017,11 @@ contains
 
      if ( abs(resi1) > DTS_MAX_onestep ) then
        if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
-         write(*,*) 'xxx [URBAN_PHY_SLC/SLC_main] tendency of TR exceeded a limit! STOP.'
+         write(*,*) 'xxx [URBAN_DYN_kusaka01/SLC_main] tendency of TR exceeded a limit! STOP.'
          write(*,*) 'xxx previous TR and updated TR(TRL(1)) is ',TR-resi1, TR
          call PRC_abort
        endif
-       if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_PHY_SLC/SLC_main] tendency of TR exceeded a limit'
+       if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_DYN_kusaka01/SLC_main] tendency of TR exceeded a limit'
        if( IO_L ) write(IO_FID_LOG,*) '*** previous TR and updated TR(TRL(1)) is ', TR-resi1, TR
      endif
 
@@ -1254,7 +1181,7 @@ contains
 
      ! output for debug
      if ( iteration > 200 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: [URBAN_PHY_SLC/SLC_main] iteration for TB/TG was not converged',PRC_myrank,i,j
+       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: [URBAN_DYN_kusaka01/SLC_main] iteration for TB/TG was not converged',PRC_myrank,i,j
        if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
        if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                       [K] :', resi1,resi2
        if( IO_L ) write(IO_FID_LOG,*)
@@ -1337,21 +1264,21 @@ contains
 
      if ( abs(resi1) > DTS_MAX_onestep ) then
         if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
-           write(*,*) 'xxx [URBAN_PHY_SLC/SLC_main] tendency of TB exceeded a limit! STOP.'
+           write(*,*) 'xxx [URBAN_DYN_kusaka01/SLC_main] tendency of TB exceeded a limit! STOP.'
            write(*,*) 'xxx previous TB and updated TB(TBL(1)) is ', TB-resi1,TB
            call PRC_abort
         endif
-        if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_PHY_SLC/SLC_main] tendency of TB exceeded a limit'
+        if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_DYN_kusaka01/SLC_main] tendency of TB exceeded a limit'
         if( IO_L ) write(IO_FID_LOG,*) '*** previous TB and updated TB(TBL(1)) is ', TB-resi1, TB
      endif
 
      if ( abs(resi2) > DTS_MAX_onestep ) then
         if ( abs(resi2) > DTS_MAX_onestep*10.0_RP ) then
-           write(*,*) 'xxx [URBAN_PHY_SLC/SLC_main] tendency of TG exceeded a limit! STOP.'
+           write(*,*) 'xxx [URBAN_DYN_kusaka01/SLC_main] tendency of TG exceeded a limit! STOP.'
            write(*,*) 'xxx previous TG and updated TG(TGL(1)) is ', TG-resi2, TG, resi2
            call PRC_abort
         endif
-        if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_PHY_SLC/SLC_main] tendency of TG exceeded a limit'
+        if( IO_L ) write(IO_FID_LOG,*) '*** [URBAN_DYN_kusaka01/SLC_main] tendency of TG exceeded a limit'
         if( IO_L ) write(IO_FID_LOG,*) '*** previous TG and updated TG(TGL(1)) is ', TG-resi2, TG
      endif
 
@@ -1362,7 +1289,7 @@ contains
     FLXUV = ( R*CDR + RW*CDC ) * UA * UA
     SH    = ( R*HR   + W*HB   + RW*HG )              ! Sensible heat flux   [W/m/m]
     LH    = ( R*ELER + W*ELEB + RW*ELEG )            ! Latent heat flux     [W/m/m]
-    GHFLX = -1.0_RP * ( R*G0R + W*G0B + RW*G0G )
+    GHFLX = R*G0R + W*G0B + RW*G0G
     LNET  = R*RR + W*RB + RW*RG
 
     !-----------------------------------------------------------
@@ -1406,9 +1333,9 @@ contains
     LHR = ELER           ! Latent heat flux on road [W/m/m]
     LHB = ELEB           ! Latent heat flux on wall [W/m/m]
     LHG = ELEG           ! Latent heat flux on road [W/m/m]
-    GHR = -1.0_RP * G0R  ! Ground heat flux on roof [W/m/m]
-    GHB = -1.0_RP * G0B  ! Ground heat flux on wall [W/m/m]
-    GHG = -1.0_RP * G0G  ! Ground heat flux on road [W/m/m]
+    GHR = G0R            ! Ground heat flux on roof [W/m/m]
+    GHB = G0B            ! Ground heat flux on wall [W/m/m]
+    GHG = G0G            ! Ground heat flux on road [W/m/m]
     RNR = SR + RR        ! Net radiation on roof [W/m/m]
     RNB = SB + RB        ! Net radiation on building [W/m/m]
     RNG = SG + RG        ! Net radiation on ground [W/m/m]
@@ -1643,7 +1570,7 @@ contains
     real(RP), intent(in)    :: G0
     real(RP), intent(in)    :: CAP
     real(RP), intent(in)    :: AKS
-    real(DP), intent(in)    :: DELT      ! Time step [ s ]
+    real(DP), intent(in)    :: DELT      ! Tim setep [ s ]
     real(RP), intent(in)    :: TSLEND
     integer,  intent(in)    :: KM
     integer,  intent(in)    :: BOUND
@@ -1824,4 +1751,37 @@ contains
     return
   end subroutine urban_param_setup
 
-end module scale_urban_phy_slc
+  subroutine put_history( &
+       UIA, UJA, &
+       SHR, SHB, SHG, &
+       LHR, LHB, LHG, &
+       GHR, GHB, GHG, &
+       RNR, RNB, RNG, &
+       RNgrd          )
+    use scale_file_history, only: &
+       FILE_HISTORY_put
+    integer, intent(in) :: UIA, UJA
+    real(RP), intent(in) :: SHR(UIA,UJA), SHB(UIA,UJA), SHG(UIA,UJA)
+    real(RP), intent(in) :: LHR(UIA,UJA), LHB(UIA,UJA), LHG(UIA,UJA)
+    real(RP), intent(in) :: GHR(UIA,UJA), GHB(UIA,UJA), GHG(UIA,UJA)
+    real(RP), intent(in) :: RNR(UIA,UJA), RNB(UIA,UJA), RNG(UIA,UJA)
+    real(RP), intent(in) :: RNgrd(UIA,UJA)
+
+    call FILE_HISTORY_put( I_SHR,   SHR  (:,:) )
+    call FILE_HISTORY_put( I_SHB,   SHB  (:,:) )
+    call FILE_HISTORY_put( I_SHG,   SHG  (:,:) )
+    call FILE_HISTORY_put( I_LHR,   LHR  (:,:) )
+    call FILE_HISTORY_put( I_LHB,   LHB  (:,:) )
+    call FILE_HISTORY_put( I_LHG,   LHG  (:,:) )
+    call FILE_HISTORY_put( I_GHR,   GHR  (:,:) )
+    call FILE_HISTORY_put( I_GHB,   GHB  (:,:) )
+    call FILE_HISTORY_put( I_GHG,   GHG  (:,:) )
+    call FILE_HISTORY_put( I_RNR,   RNR  (:,:) )
+    call FILE_HISTORY_put( I_RNB,   RNB  (:,:) )
+    call FILE_HISTORY_put( I_RNG,   RNG  (:,:) )
+    call FILE_HISTORY_put( I_RNgrd, RNgrd(:,:) )
+
+    return
+  end subroutine put_history
+
+end module scale_urban_dyn_kusaka01

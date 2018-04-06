@@ -29,7 +29,6 @@ module mod_atmos_phy_ae_driver
   !
   public :: ATMOS_PHY_AE_driver_tracer_setup
   public :: ATMOS_PHY_AE_driver_setup
-  public :: ATMOS_PHY_AE_driver_resume
   public :: ATMOS_PHY_AE_driver_adjustment
   public :: ATMOS_PHY_AE_driver_calc_tendency
 
@@ -129,26 +128,6 @@ contains
 
     return
   end subroutine ATMOS_PHY_AE_driver_setup
-
-
-  !-----------------------------------------------------------------------------
-  !> Resume
-  subroutine ATMOS_PHY_AE_driver_resume
-     use mod_atmos_admin, only: &
-        ATMOS_sw_phy_ae
-    implicit none
-
-    if ( ATMOS_sw_phy_ae ) then
-
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM_Aerosol', 1)
-       call ATMOS_PHY_AE_driver_calc_tendency( update_flag = .true. )
-       call PROF_rapend  ('ATM_Aerosol', 1)
-
-    endif
-
-    return
-  end subroutine ATMOS_PHY_AE_driver_resume
 
   !-----------------------------------------------------------------------------
   !> adjustment

@@ -82,9 +82,10 @@ if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_RD_TYPE[*]} ]; then echo "Error: Wrong array
 if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_SF_TYPE[*]} ]; then echo "Error: Wrong array size (ATMOS_PHY_SF_TYPE)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_TB_TYPE[*]} ]; then echo "Error: Wrong array size (ATMOS_PHY_TB_TYPE)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_BL_TYPE[*]} ]; then echo "Error: Wrong array size (ATMOS_PHY_BL_TYPE)."; exit 1; fi
-if [ ${NUM_DOMAIN} -ne ${#OCEAN_TYPE[*]} ];        then echo "Error: Wrong array size (OCEAN_TYPE).";        exit 1; fi
-if [ ${NUM_DOMAIN} -ne ${#LAND_TYPE[*]} ];         then echo "Error: Wrong array size (LAND_TYPE).";         exit 1; fi
-if [ ${NUM_DOMAIN} -ne ${#URBAN_TYPE[*]} ];        then echo "Error: Wrong array size (URBAN_TYPE).";        exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#OCEAN_DYN_TYPE[*]} ];    then echo "Error: Wrong array size (OCEAN_DYN_TYPE).";    exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#LAND_DYN_TYPE[*]} ];     then echo "Error: Wrong array size (LAND_DYN_TYPE).";     exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#LAND_SFC_TYPE[*]} ];     then echo "Error: Wrong array size (LAND_SFC_TYPE).";     exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#URBAN_DYN_TYPE[*]} ];    then echo "Error: Wrong array size (URBAN_DYN_TYPE).";    exit 1; fi
 
 if [ ${NUM_DOMAIN} -ne ${#TOPOTYPE[*]} ];    then echo "Error: Wrong array size (TOPOTYPE).";     exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#LANDUSETYPE[*]} ]; then echo "Error: Wrong array size (LANDUSETYPE).";  exit 1; fi
@@ -147,13 +148,6 @@ HISTORY_2D_INTERVAL=`echo ${TIME_DT_HISTORY_2D%%.*}`
 HISTORY_3D_INTERVAL=`echo ${TIME_DT_HISTORY_3D%%.*}`
 MAXSTEP_2D=`expr ${INT_DURATION} / ${HISTORY_2D_INTERVAL} + 1`
 MAXSTEP_3D=`expr ${INT_DURATION} / ${HISTORY_3D_INTERVAL} + 1`
-
-# set restart switch
-if [ ${INIT_BASENAME} = "init" ]; then
-  RESTART_RUN=".false."
-else
-  RESTART_RUN=".true."
-fi
 
 INPUT_CONFIGDIR="config"
 
