@@ -165,7 +165,7 @@ contains
        ! You can use GTOPO30, GMTED2010, DEM50M and combine User-defined file as you like
        CNVTOPO_UseUSERFILE  = .true.
     case default
-       LOG_ERROR("CNVTOPO_setup",*) 'Unsupported TYPE:', trim(CNVTOPO_name)
+       LOG_ERROR("CNVTOPO_setup",*) 'Unsupported TYPE: ', trim(CNVTOPO_name)
        call PRC_abort
     endselect
 
@@ -462,7 +462,7 @@ contains
           iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          LOG_ERROR("CNVTOPO_GTOPO30",*) 'catalogue file not found!', trim(fname)
+          LOG_ERROR("CNVTOPO_GTOPO30",*) 'catalogue file not found! ', trim(fname)
           call PRC_abort
        endif
 
@@ -845,7 +845,7 @@ contains
           iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          LOG_ERROR("CNVTOPO_DEM50M",*) 'catalogue file not found!', trim(fname)
+          LOG_ERROR("CNVTOPO_DEM50M",*) 'catalogue file not found! ', trim(fname)
           call PRC_abort
        endif
 
@@ -1182,22 +1182,22 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVTOPO_USERFILE)
 
     if ( USERFILE_NLAT <= 0 ) then
-       LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_NLAT (number of latitude tile)  should be positive. Check!', USERFILE_NLAT
+       LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_NLAT (number of latitude tile)  should be positive. Check! ', USERFILE_NLAT
        call PRC_abort
     endif
 
     if ( USERFILE_NLON <= 0 ) then
-       LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_NLON (number of longitude tile) should be positive. Check!', USERFILE_NLON
+       LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_NLON (number of longitude tile) should be positive. Check! ', USERFILE_NLON
        call PRC_abort
     endif
 
     if ( USERFILE_DLAT <= 0.0_RP ) then
-       LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_DLAT (width (deg.) of latitude tile) should be positive. Check!', USERFILE_DLAT
+       LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_DLAT (width (deg.) of latitude tile) should be positive. Check! ', USERFILE_DLAT
        call PRC_abort
     endif
 
     if ( USERFILE_DLON <= 0.0_RP ) then
-       LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_DLON (width (deg.) of longitude tile) should be positive. Check!', USERFILE_DLON
+       LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_DLON (width (deg.) of longitude tile) should be positive. Check! ', USERFILE_DLON
        call PRC_abort
     endif
 
@@ -1227,7 +1227,7 @@ contains
 
     else
        LOG_ERROR("CNVTOPO_USERFILE",*) 'Not appropriate type for USERFILE_IN_DATATYPE. Check!'
-       LOG_ERROR_CONT(*) 'REAL8, REAL4, INT2 are available. requested:', trim(USERFILE_IN_DATATYPE)
+       LOG_ERROR_CONT(*) 'REAL8, REAL4, INT2 are available. requested: ', trim(USERFILE_IN_DATATYPE)
        call PRC_abort
     endif
 
@@ -1301,7 +1301,7 @@ contains
              iostat = ierr         )
 
           if ( ierr /= 0 ) then
-             LOG_ERROR("CNVTOPO_USERFILE",*) 'catalogue file not found!', trim(fname)
+             LOG_ERROR("CNVTOPO_USERFILE",*) 'catalogue file not found! ', trim(fname)
              call PRC_abort
           endif
 
@@ -1685,7 +1685,7 @@ contains
     ! digital filter
     do ite = 1, CNVTOPO_smooth_itelim+1
        LOG_NEWLINE
-       LOG_INFO_CONT(*) 'Smoothing itelation : ', ite
+       LOG_INFO("CNVTOPO_smooth",*) 'Smoothing itelation : ', ite
 
        call TOPO_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
 

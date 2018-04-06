@@ -240,8 +240,8 @@ contains
 
     call PROF_rapstart('LND_CalcTend', 1)
 
-    LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER CALC TEND] / Categ[LAND] / Origin[SCALE-RM]'
+!!$    LOG_NEWLINE
+!!$    LOG_PROGRESS(*) 'Module[DRIVER CALC TEND] / Categ[LAND] / Origin[SCALE-RM]'
 
     !########## Get Surface Boundary from coupler ##########
     call LAND_SURFACE_GET
@@ -571,8 +571,8 @@ contains
 
     call PROF_rapstart('LND_Update', 2)
 
-    LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER UPDATE] / Categ[LAND] / Origin[SCALE-RM]'
+!!$    LOG_NEWLINE
+!!$    LOG_PROGRESS(*) 'Module[DRIVER UPDATE] / Categ[LAND] / Origin[SCALE-RM]'
 
     !########## Get Surface Boundary from coupler ##########
     call LAND_SURFACE_GET

@@ -1673,17 +1673,17 @@ contains
 
           if ( debug ) then
              LOG_INFO("FILE_HISTORY_Add_Variable",*) '[HISTORY] Item registration No.= ', id
-             LOG_INFO_CONT(*) '] Item name                      : ', trim(FILE_HISTORY_vars(id)%name)
-             LOG_INFO_CONT(*) '] Output name                    : ', trim(FILE_HISTORY_vars(id)%outname)
-             LOG_INFO_CONT(*) '] Description                    : ', trim(FILE_HISTORY_vars(id)%desc)
-             LOG_INFO_CONT(*) '] Unit                           : ', trim(FILE_HISTORY_vars(id)%units)
-             LOG_INFO_CONT(*) '] Basename of output file        : ', trim(FILE_HISTORY_vars(id)%basename)
-             LOG_INFO_CONT(*) '] Add timelabel to the filename? : ', FILE_HISTORY_vars(id)%postfix_timelabel
-             LOG_INFO_CONT(*) '] Zcoord                         : ', trim(FILE_HISTORY_vars(id)%zcoord)
-             LOG_INFO_CONT(*) '] Interval [step]                : ', FILE_HISTORY_vars(id)%dstep
-             LOG_INFO_CONT(*) '] Time Average?                  : ', FILE_HISTORY_vars(id)%taverage
-             LOG_INFO_CONT(*) '] Datatype                       : ', trim(FILE_dtypelist(FILE_HISTORY_vars(id)%dtype))
-             LOG_INFO_CONT(*) '] axis name                      : ', ( trim(FILE_HISTORY_dims(dimid)%dims(n,zid))//" ", n=1, FILE_HISTORY_dims(dimid)%ndims )
+             LOG_INFO_CONT(*) 'Item name                      : ', trim(FILE_HISTORY_vars(id)%name)
+             LOG_INFO_CONT(*) 'Output name                    : ', trim(FILE_HISTORY_vars(id)%outname)
+             LOG_INFO_CONT(*) 'Description                    : ', trim(FILE_HISTORY_vars(id)%desc)
+             LOG_INFO_CONT(*) 'Unit                           : ', trim(FILE_HISTORY_vars(id)%units)
+             LOG_INFO_CONT(*) 'Basename of output file        : ', trim(FILE_HISTORY_vars(id)%basename)
+             LOG_INFO_CONT(*) 'Add timelabel to the filename? : ', FILE_HISTORY_vars(id)%postfix_timelabel
+             LOG_INFO_CONT(*) 'Zcoord                         : ', trim(FILE_HISTORY_vars(id)%zcoord)
+             LOG_INFO_CONT(*) 'Interval [step]                : ', FILE_HISTORY_vars(id)%dstep
+             LOG_INFO_CONT(*) 'Time Average?                  : ', FILE_HISTORY_vars(id)%taverage
+             LOG_INFO_CONT(*) 'Datatype                       : ', trim(FILE_dtypelist(FILE_HISTORY_vars(id)%dtype))
+             LOG_INFO_CONT(*) 'axis name                      : ', ( trim(FILE_HISTORY_dims(dimid)%dims(n,zid))//" ", n=1, FILE_HISTORY_dims(dimid)%ndims )
           endif
 
           existed = .false.

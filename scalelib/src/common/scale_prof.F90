@@ -278,8 +278,7 @@ contains
     enddo
 
     LOG_NEWLINE
-    LOG_INFO("PROF_rapreport",*) 'Computational Time Report'
-    LOG_INFO_CONT(*) 'Rap level is ', PROF_rap_level
+    LOG_INFO("PROF_rapreport",'(A,i2,A)') 'Computational Time Report (Rap level = ', PROF_rap_level, ')'
 
     if ( IO_LOG_ALLNODE ) then ! report for each node
 
@@ -317,7 +316,7 @@ contains
              if (       PROF_raplevel(id) <= PROF_rap_level &
                   .AND. PROF_grpid   (id) == gid            &
                   .AND. fid > 0                             ) then
-                LOG_INFO("PROF_rapreport",'(1x,A,I3.3,3A,F10.3,A,F10.3,A,I5,2A,F10.3,A,I5,2A,I9)') &
+                LOG_INFO_CONT('(1x,A,I3.3,3A,F10.3,A,F10.3,A,I5,2A,F10.3,A,I5,2A,I9)') &
                            '*** ID=',id,' : ',PROF_rapname(id), &
                            ' T(avg)=',avgvar(id), &
                            ', T(max)=',maxvar(id),'[',maxidx(id),']', &

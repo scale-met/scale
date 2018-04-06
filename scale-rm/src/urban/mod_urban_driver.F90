@@ -211,8 +211,8 @@ contains
 
     call PROF_rapstart('URB_CalcTend', 1)
 
-    LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER CALC TEND] / Categ[URBAN] / Origin[SCALE-RM]'
+!!$    LOG_NEWLINE
+!!$    LOG_PROGRESS(*) 'Module[DRIVER CALC TEND] / Categ[URBAN] / Origin[SCALE-RM]'
 
     !########## Get Surface Boundary from coupler ##########
     call URBAN_SURFACE_GET
@@ -503,8 +503,8 @@ contains
 
     call PROF_rapstart('URB_Update', 1)
 
-    LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER CALC TEND] / Categ[URBAN] / Origin[SCALE-RM]'
+!!$    LOG_NEWLINE
+!!$    LOG_PROGRESS(*) 'Module[DRIVER CALC TEND] / Categ[URBAN] / Origin[SCALE-RM]'
 
 
     !########## Get Surface Boundary from coupler ##########

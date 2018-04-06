@@ -113,7 +113,7 @@ contains
        CNVLANDUSE_UseLU100M = .true.
        CNVLANDUSE_UseJIBIS  = .true.
     case default
-       LOG_ERROR("CNVLANDUSE_setup",*) 'Unsupported TYPE:', trim(CNVLANDUSE_name)
+       LOG_ERROR("CNVLANDUSE_setup",*) 'Unsupported TYPE: ', trim(CNVLANDUSE_name)
        call PRC_abort
     endselect
 
@@ -388,7 +388,7 @@ contains
           iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          LOG_ERROR("CNVLANDUSE_GLCCv2",*) 'catalogue file not found!', trim(fname)
+          LOG_ERROR("CNVLANDUSE_GLCCv2",*) 'catalogue file not found! ', trim(fname)
           call PRC_abort
        endif
 
@@ -861,7 +861,7 @@ contains
           iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          LOG_ERROR("CNVLANDUSE_LU100M",*) 'catalogue file not found!', trim(fname)
+          LOG_ERROR("CNVLANDUSE_LU100M",*) 'catalogue file not found! ', trim(fname)
           call PRC_abort
        endif
 

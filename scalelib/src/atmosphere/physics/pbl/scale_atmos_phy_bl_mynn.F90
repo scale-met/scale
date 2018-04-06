@@ -308,7 +308,7 @@ contains
     !---------------------------------------------------------------------------
 
 
-    if( IO_L ) write(IO_FID_LOG, *) "*** atmosphere / physics / pbl / MYNN"
+    LOG_PROGRESS(*) "atmosphere / physics / pbl / MYNN"
 
     mynn_level = ATMOS_PHY_BL_MYNN_LEVEL
     if ( mynn_level .ne. 2.5_RP ) then

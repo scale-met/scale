@@ -65,7 +65,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[TRACER SETUP] / Categ[ATMOS] / Origin[SCALE-RM]'
+    LOG_PROGRESS(*) 'Module[TRACER TRACER SETUP] / Categ[ATMOS] / Origin[SCALE-RM]'
 
     call ATMOS_PHY_MP_driver_tracer_setup
     call ATMOS_PHY_AE_driver_tracer_setup
@@ -122,7 +122,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER] / Categ[ATMOS] / Origin[SCALE-RM]'
+    LOG_PROGRESS(*) 'Module[DRIVER SETUP] / Categ[ATMOS] / Origin[SCALE-RM]'
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_driver_setup",*) 'Setup each atmospheric components ...'
@@ -210,8 +210,8 @@ contains
     logical, intent(in) :: force
     !---------------------------------------------------------------------------
 
-    LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[CALC TEND] / Categ[ATMOS DRIVER] / Origin[SCALE-RM]'
+!!$    LOG_NEWLINE
+!!$    LOG_PROGRESS(*) 'Module[CALC TEND] / Categ[ATMOS DRIVER] / Origin[SCALE-RM]'
 
     !########## Get Surface Boundary from coupler ##########
     call ATMOS_SURFACE_GET
@@ -313,8 +313,8 @@ contains
     logical, intent(in) :: force
     !---------------------------------------------------------------------------
 
-    LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[CALC TEND from SFLUX] / Categ[ATMOS DRIVER] / Origin[SCALE-RM]'
+!!$    LOG_NEWLINE
+!!$    LOG_PROGRESS(*) 'Module[CALC TEND from SFLUX] / Categ[ATMOS DRIVER] / Origin[SCALE-RM]'
 
     if ( CPL_sw ) then
 

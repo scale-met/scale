@@ -977,6 +977,7 @@ contains
 
     WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
 
+    LOG_NEWLINE
     if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then
        LOG_PROGRESS('(1x,2A,2(A,I7),2(A,F10.1))') 'TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
                                                                  ' WCLOCK:', WALLCLOCK_elapse, '/', TIME_WALLCLOCK_safelim

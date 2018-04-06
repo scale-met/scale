@@ -4130,9 +4130,9 @@ contains
 
     if ( error == FILE_SUCCESS_CODE ) then
 
-       LOG_NEWLINE
-       LOG_INFO("FILE_flush",'(A,I3.3,2A)') &
-            '###### FILE flush                 : No.', fid, ', name = ', trim(FILE_files(fid)%name)
+!!$       LOG_NEWLINE
+!!$       LOG_INFO("FILE_flush",'(A,I3.3,2A)') &
+!!$            '###### FILE flush                 : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     else
        LOG_ERROR("FILE_flush",*) 'failed to flush PnetCDF pending requests'

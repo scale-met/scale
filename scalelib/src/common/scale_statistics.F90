@@ -395,7 +395,7 @@ contains
                 allstatidx(v,2) = p
              end if
           end do
-          LOG_INFO("STATISTICS_detail_3D",*) '[', trim(varname(v)), ']'
+          LOG_INFO_CONT(*) '[', trim(varname(v)), ']'
           LOG_INFO_CONT('(1x,A,ES17.10,A,4(I5,A))') '  MAX =', &
                                                        allstatval(v,1), ' (rank=', &
                                                        allstatidx(v,1), '; ', &
@@ -412,7 +412,7 @@ contains
     else
        ! statistics on each node
        do v = 1, VA
-          LOG_INFO("STATISTICS_detail_3D",*) '[', trim(varname(v)), ']'
+          LOG_INFO_CONT(*) '[', trim(varname(v)), ']'
           LOG_INFO_CONT('(1x,A,ES17.10,A,3(I5,A))') 'MAX = ', &
                                                 statval_l(  v,1),' (', &
                                                 statidx_l(1,v,1),',', &
@@ -528,7 +528,7 @@ contains
                 allstatidx(v,2) = p
              end if
           end do
-          LOG_INFO("STATISTICS_detail_2D",*) '[', trim(varname(v)), ']'
+          LOG_INFO_CONT(*) '[', trim(varname(v)), ']'
           LOG_INFO_CONT('(1x,A,ES17.10,A,3(I5,A))') '  MAX =', &
                                                        allstatval(v,1), ' (rank=', &
                                                        allstatidx(v,1), '; ', &
@@ -543,7 +543,7 @@ contains
     else
        ! statistics on each node
        do v = 1, VA
-          LOG_INFO("STATISTICS_detail_2D",*) '[', trim(varname(v)), ']'
+          LOG_INFO_CONT(*) '[', trim(varname(v)), ']'
           LOG_INFO_CONT('(1x,A,ES17.10,A,2(I5,A))') 'MAX = ', &
                                                 statval_l(  v,1),' (', &
                                                 statidx_l(1,v,1),',', &
