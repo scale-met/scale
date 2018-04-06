@@ -1,0 +1,125 @@
+
+%###############################################################################
+
+\section{Preparation}
+%-------------------------------------------------------------------------------
+Please see the Chapter 2.1 and 2.2 of ``SCALE USERS GUIDE''
+as to the details of required system environment, library, and settings of environmental parameters.
+Required libraries for SCALE-GM is same as SCALE-RM; HDF5, NetCDF, and MPI.
+
+\section{Compile}
+%-------------------------------------------------------------------------------
+Please refer the Chapter 2.3.1 of ``SCALE USERS GUIDE'' for how to get the source code
+and the Chapter 2.3.2 for the system environmental parameters.
+Change directly to test case directly, for example,
+Makedef file for SCALE-GM shares the same file with SCALE-RM.
+Note that configure the settings for Makedef file before compiling programs.
+
+
+\noindent To compile SCALE-GM, move to src directory of SCALE-GM.
+
+\begin{verbatim}
+  > cd scale-{\version}/scale-gm/src
+\end{verbatim}
+
+\noindent Compile the program using make command.
+\begin{verbatim}
+  > make -j 4
+\end{verbatim}
+When the compile is finished correctly,
+a "\verb|scale-gm|" and below binary files are created in the directly of \texttt{scale-{\version}/bin}.
+ \begin{itemize}
+   \item \verb|scale-gm| (executable binary of SCALE-GM.)
+   \item　\verb|gm_fio_cat| (cat commant tool for fio format)
+   \item　\verb|gm_fio_dump| (dump tool for fio format file)
+   \item　\verb|gm_fio_ico2ll| (convert tool from icosahedral grid data with fio format to LatLon grid data)
+   \item　\verb|gm_fio_sel| (sel command tool for fio format)
+   \item　\verb|gm_mkhgrid| (generation tool of icosahedral horizontal grid applied to spring grid)
+   \item　\verb|gm_mkllmap| (generation tool of LatLon horizontal grid)
+   \item　\verb|gm_mkmnginfo| (tool for creating management file of MPI process)
+   \item　\verb|gm_mkrawgrid| (generation tool of icosahedral horizontal grid)
+   \item　\verb|gm_mkvlayer| (generation tool of vertical grid)
+ \end{itemize}
+
+
+\begin{itemize}
+  \item[*] The number of -j option is a number of parallel compile processes.
+   To reduce elapsed time of compile, you can specify the number
+   as more than two. We recommend 2 $\sim$ 8 for the -j option.
+\end{itemize}
+
+\section{Run experiments}
+%-------------------------------------------------------------------------------
+\subsection{Test cases}
+
+\noindent Inside the \texttt{scale-{\version}/scale-gm/test/case} directory, you will find various test cases.
+For example, the cases based on DCMIP2016 are shown in Table 1.
+
+ \begin{table}[b]
+ \begin{center}
+ \caption{Corresponding test cases}
+ \begin{tabularx}{150mm}{|l|X|} \hline
+ \rowcolor[gray]{0.9} test case name in NICAM & test case type \\ \hline
+  DCMIP2016-11 & moist baroclinic wave test (161)       \\ \hline
+  DCMIP2016-12 & idealized tropical cyclone test (162)  \\ \hline
+  DCMIP2016-13 & supercell test (163)                   \\ \hline
+ \end{tabularx}
+ \end{center}
+ \end{table}
+
+
+\subsection{How to run}
+
+The script for job execution depends on the system.
+SCALE-GM has a function, which produces scripts in consideration
+of the difference of system environment.
+Move to a directory of test case and then type
+to create a job script and a script for post-processing;
+
+ \begin{verbatim}
+   > make jobshell
+ \end{verbatim}
+
+By above command, scripts of ``\verb|run.sh|'' and ``\verb|ico2ll_netcdf.sh|'' are created.
+To run the model, type following command;
+
+ \begin{verbatim}
+   > make run
+ \end{verbatim}
+
+The test experiment will be started.
+In DCMIP2016 test experiment, scale-gm generates initial data at the outset of calculation.
+The generation process of initial data is not necessary before execution of scale-gm.
+
+
+
+\section{Post process}
+%-------------------------------------------------------------------------------
+ After finish of test run, create the lat-lon grid data from
+ the original icosahedral grid data.
+ Before submit a job of post process, edit \verb|ico2ll_netcdf.sh|
+ following your experimental settings.
+ \begin{verbatim}
+   > vi ico2ll_netcdf.sh
+
+   [at Line 22]
+   # User Settings
+   # ---------------------------------------------------------------------
+
+   glev=5          # g-level of original grid
+   case=161        # test case number
+   out_intev='day' # output interval (format: "1hr", "6hr", "day", "100s")
+ \end{verbatim}
+
+ \noindent If the job script is OK, submit a job to the machine.
+ \begin{verbatim}
+   sh ico2ll_netcdf.sh
+ \end{verbatim}
+
+% \begin{verbatim}
+%   > bsub < ico2ll_netcdf.sh
+% \end{verbatim}
+
+ \noindent The netcdf format data such as "\verb|nicam.161.200.L30.interp_latlon.nc|"
+ is created by an "ico2ll" post-process program.
+

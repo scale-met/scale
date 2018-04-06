@@ -1,7 +1,7 @@
-\section{Setting the physical process} \label{sec:basic_usel_physics}
+%\section{Setting the physical process} \label{sec:basic_usel_physics}
 %------------------------------------------------------
 
-\subsection{Cloud micro-physics} \label{subsec:basic_usel_microphys}
+\section{Cloud micro-physics} \label{sec:basic_usel_microphys}
 %------------------------------------------------------
 The cloud micro-physics scheme is configured in \nmitem{ATMOS_PHY_MP_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|, respectively.
 {\color{blue} Note that it is necessary to specify the same scheme for \nmitem{ATMOS_PHY_MP_TYPE} in both \texttt{init.conf} and \texttt{run.conf}}.
@@ -57,7 +57,90 @@ In this case, {\color{blue}{\namelist{PARAM_BIN} in \texttt{init.conf} must also
 To avoid this error, it is necessary to delete the old \verb|micpara.dat| beforehand and regenerate it. The regeneration is automatically done at the execution of \scalerm with \verb|SUZUKI10|.
 
 
-\subsection{Turbulence scheme} \label{subsec:basic_usel_turbulence}
+
+
+
+
+\section{Cumulus parameterization} \label{sec:basic_usel_cumulus}
+
+The cumulus parameterization is specified in \nmitem{ATMOS_PHY_CP_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|. The timing of the calling of the cumulus parameterization is specified in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing.
+
+\editboxtwo{
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_CP_TYPE = "KF", | & ; Select the scheme shown in Table \ref{tab:nml_atm_cp}\\
+\verb|/             | & \\
+}
+\begin{table}[h]
+\begin{center}
+  \caption{Choices of cumulus parameterization}
+  \label{tab:nml_atm_cp}
+  \begin{tabularx}{150mm}{lXX} \hline
+    \rowcolor[gray]{0.9}  Value & Description of scheme & Reference\\ \hline
+      \verb|OFF|  & No use of the cumulus parameterization &  \\
+      \verb|KF|   & Kain-Fritsch convective parameterization & \citet{kain_1990,kain_2004} \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+In this version of \scalerm, only \verb|KF| is supported for cumulus parameterization. \verb|KF| is a mass flux conservation type of cumulus parameterization scheme, representing one convection in the sub-grid scale.
+The cumulus paramterization is recommended to be used when grid spacing is more than about 5 km to avoid calculation of unnatual strong deep convections.
+The cumulus parameterization and cloud micro-physics individually output 
+precipitation named \verb|RAIN_CP| and \verb|RAIN_MP|, respectively. 
+\verb|RAIN| and \verb|PREC| are the sum of precipitation 
+from cumulus parameterization and cloud micro-physics schemes 
+(i.e., \verb|RAIN| = \verb|RAIN_CP| + \verb|RAIN_MP|
+and \verb|PREC| = \verb|RAIN_CP| + \verb|RAIN_MP|).
+%%%
+Note that \verb|KF| calculates changes in the water vapor and
+hydrometeors such as cloud water and cloud ice in the atmosphere.
+The changes in hydrometeors is calculated futher in micro physics schemes.
+The number concentration of cloud water, ice, and so on
+is not considered in \verb|KF|.
+Therefore, 
+the changes in the number concentration 
+associated with the changes in hydrometeors in \verb|KF|
+is estimated by a prescribed fuction
+and then
+provided to double-moment micro-physics schemes.
+
+
+
+\subsubsection{Configuration for \texttt{Kain-Fritsch}}
+
+Following tuning parameters are available in \verb|KF|:
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_CP_KF  | & \\
+\verb| PARAM_ATMOS_PHY_CP_kf_trigger   = 1,|     & ; Trigger function type: 1=Kain, 3=Narita-Ohmori\\
+\verb| PARAM_ATMOS_PHY_CP_kf_dlcape    = 0.1,|   & ; Cape decleace rate\\
+\verb| PARAM_ATMOS_PHY_CP_kf_dlifetime = 1800,|  & ; Lifetime scale of deep convection [sec]\\
+\verb| PARAM_ATMOS_PHY_CP_kf_slifetime = 2400,|  & ; Lifetime scale of shallow convection [sec]\\
+\verb| PARAM_ATMOS_PHY_CP_kf_DEPTH_USL =  300,|  & ; Depth of updraft source layer [hPa]\\
+\verb| PARAM_ATMOS_PHY_CP_kf_prec      = 1,|     & ; Precipitation type: 1=Ogura-Cho, 2=Kessler\\
+\verb| PARAM_ATMOS_PHY_CP_kf_rate      = 0.03, | & ; Ratio of cloud water and precipitation for Ogura-Cho precipitation fuction\\
+\verb| PARAM_ATMOS_PHY_CP_kf_thres     = 1.E-3,| & ; Autoconversion rate for Kessler precipitation fuction\\
+\verb|/             | & \\
+}\\
+Users can select trigger fuction from two options:
+\begin{enumerate}
+\item Kain Type \citet{kain_2004} \\
+  Default trigger fuction in SCALE-RM.
+\item Narita and Ohmori Type \citet{narita_2007} \\
+  A trigger fuction for KF cumulus parameterization for Japan area. 
+\end{enumerate}
+Users can select precipitation fuction from two options:
+\begin{enumerate}
+\item Ogura-Cho Type \citet{ogura_1973} \\
+  Default precipitation fuction in SCALE-RM. For this type, additional tuning parameter of \nmitem{PARAM_ATMOS_PHY_CP_kf_rate} is available.
+\item Kessler Type \citet{kessler_1969} \\
+  Kessler type simple precipitation fuction. For this type, additional tuning parameter of \nmitem{PARAM_ATMOS_PHY_CP_kf_thres} is available.
+\end{enumerate}
+
+The time interval of calling KF specified by \nmitem{TIME_DT_ATMOS_PHY_CP} in \namelist{PARAM_TIME} is also a tuning parameter, which is effective to the precipitation amount. As the first setting of \nmitem{TIME_DT_ATMOS_PHY_CP}, 300s is recommended.
+
+
+
+\section{Turbulence scheme} \label{sec:basic_usel_turbulence}
 %------------------------------------------------------
 
 The turbulence scheme is specified in \nmitem{ATMOS_PHY_TB_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|. The timing of the calling of the turbulence scheme is specified in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing.
@@ -104,7 +187,7 @@ In order to use the \verb|HYBRID| scheme for the horizontal eddy viscosity in RA
 }
 
 
-\subsection{Radiation scheme} \label{subsec:basic_usel_radiation}
+\section{Radiation scheme} \label{sec:basic_usel_radiation}
 %-------------------------------------------------------------------------------
 The radiation scheme is specified in \nmitem{ATMOS_PHY_RD_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|. The timing of the calling of the radiation scheme is specified in \namelist{PARAM_TIME}.  Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
 
@@ -331,7 +414,7 @@ The number of layers and their heights in this user-defined file can be given in
 
 
 
-\subsection{Surface flux at the bottom of atmospheric boundary } \label{subsec:basic_usel_surface}
+\section{Surface flux at the bottom of atmospheric boundary } \label{sec:basic_usel_surface}
 %------------------------------------------------------
 The flux scheme at the bottom atmospheric boundary is configured in \nmitem{ATMOS_PHY_SF_TYPE} in \namelist{PARAM_ATMOS} as follows:
 
@@ -424,7 +507,7 @@ The scheme for the bulk coefficient is configured in \nmitem{BULKFLUX_TYPE} in \
 \end{center}
 \end{table}
 
-\subsection{Ocean model} \label{subsecp:basic_usel_ocean}
+\section{Ocean model} \label{sec:basic_usel_ocean}
 %-------------------------------------------------------------------------------
 The ocean process consists of two main parts, i.e., update of sea surface state and flux calculation at the interface of atmosphere and ocean. The timing of calling these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing.
 
@@ -481,10 +564,10 @@ is calculated by using only the solar zenith angle.
 
 \subsubsection{Flux in atmosphere and ocean}
 %-------------------------------------------------------------------------------
-Once a sea surface scheme except for \verb|NONE| or \verb|OFF| is specified, flux is exchanged at the interface of atmosphere and ocean. The fluxes between the atmosphere and the ocean are calculated by some kind of bulk schemes contained in \scalerm. The scheme for the length of the roughness on the sea surface is also selected from several schemes prepared. The scheme of roughness is specified in \nmitem{ROUGHNESS_TYPE} in \namelist{PARAM_ROUGHNESS} in file \verb|run.conf|. The scheme for the bulk transfer coefficient is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{subsec:basic_usel_surface} for more details.
+Once a sea surface scheme except for \verb|NONE| or \verb|OFF| is specified, flux is exchanged at the interface of atmosphere and ocean. The fluxes between the atmosphere and the ocean are calculated by some kind of bulk schemes contained in \scalerm. The scheme for the length of the roughness on the sea surface is also selected from several schemes prepared. The scheme of roughness is specified in \nmitem{ROUGHNESS_TYPE} in \namelist{PARAM_ROUGHNESS} in file \verb|run.conf|. The scheme for the bulk transfer coefficient is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{sec:basic_usel_surface} for more details.
 
 
-\subsection{Land model} \label{subsec:basic_usel_land}
+\section{Land model} \label{sec:basic_usel_land}
 %-------------------------------------------------------------------------------
 Similar to the ocean model, the land model consists of two main parts, i.e., an update of the state of the land surface, and calculation of flux at the interface of atmosphere and land. The timing of the calling of these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
 
@@ -524,9 +607,9 @@ in the file \verb|scale-rm/test/data/land/param.bucket.conf|.\\
 
 \subsubsection{Flux in atmosphere and on land}
 %-------------------------------------------------------------------------------
-Once any land surface scheme except \verb|NONE| or \verb|OFF| is specified, flux is exchanged at the interface of the atmosphere and land. The flux between atmosphere and land is calculated by some kind of land scheme contained in \scalerm. If \nmitem{LAND_TYPE} $=$ \verb|"SLAB"| or \nmitem{LAND_TYPE} $=$ \verb|"CONST"|, the bulk scheme is the same as that for ocean or ideal land surface. This is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{subsec:basic_usel_surface} for details.
+Once any land surface scheme except \verb|NONE| or \verb|OFF| is specified, flux is exchanged at the interface of the atmosphere and land. The flux between atmosphere and land is calculated by some kind of land scheme contained in \scalerm. If \nmitem{LAND_TYPE} $=$ \verb|"SLAB"| or \nmitem{LAND_TYPE} $=$ \verb|"CONST"|, the bulk scheme is the same as that for ocean or ideal land surface. This is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{sec:basic_usel_surface} for details.
 
-\subsection{Urban model} \label{subsec:basic_usel_urban}
+\section{Urban model} \label{sec:basic_usel_urban}
 %------------------------------------------------------
 The urban process consists of two main parts, i.e., updating the urban state and flux calculation at the interface of the atmosphere and the urban environment. The timing of calling these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
 
