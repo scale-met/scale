@@ -158,6 +158,9 @@ module scale_file_cartesC
   real(RP), private, allocatable :: AXIS_LATXV(:,:)   ! [deg]
   real(RP), private, allocatable :: AXIS_LATUV(:,:)   ! [deg]
 
+  real(RP), private, allocatable :: AXIS_TOPO  (:,:)
+  real(RP), private, allocatable :: AXIS_LSMASK(:,:)
+
   real(RP), private, allocatable :: AXIS_AREA     (:,:)
   real(RP), private, allocatable :: AXIS_AREAZUY_X(:,:,:)
   real(RP), private, allocatable :: AXIS_AREAZXV_Y(:,:,:)
@@ -289,6 +292,9 @@ contains
     allocate( AXIS_LATXV(IM,JM) )
     allocate( AXIS_LATUV(IM,JM) )
 
+    allocate( AXIS_TOPO  (IM,JM) )
+    allocate( AXIS_LSMASK(IM,JM) )
+
     allocate( AXIS_AREA     (       IM,JM) )
     allocate( AXIS_AREAZUY_X(KMAX,  IM,JM) )
     allocate( AXIS_AREAZXV_Y(KMAX,  IM,JM) )
@@ -334,6 +340,9 @@ contains
     deallocate( AXIS_LATUY )
     deallocate( AXIS_LATXV )
     deallocate( AXIS_LATUV )
+
+    deallocate( AXIS_TOPO   )
+    deallocate( AXIS_LSMASK )
 
     deallocate( AXIS_AREA      )
     deallocate( AXIS_AREAZUY_X )
@@ -456,6 +465,7 @@ contains
        CZ, FZ,                       &
        LON, LONUY, LONXV, LONUV,     &
        LAT, LATUY, LATXV, LATUV,     &
+       TOPO, LSMASK,                 &
        AREA,   AREAZUY_X, AREAZXV_Y, &
                AREAWUY_X, AREAWXV_Y, &
        AREAUY, AREAZXY_X, AREAZUV_Y, &
@@ -476,6 +486,8 @@ contains
     real(RP), intent(in) :: LATUY(0:IA,  JA)
     real(RP), intent(in) :: LATXV(  IA,0:JA)
     real(RP), intent(in) :: LATUV(0:IA,0:JA)
+    real(RP), intent(in) :: TOPO  (  IA,  JA)
+    real(RP), intent(in) :: LSMASK(  IA,  JA)
     real(RP), intent(in) :: AREA     (     IA,JA)
     real(RP), intent(in) :: AREAZUY_X(  KA,IA,JA)
     real(RP), intent(in) :: AREAZXV_Y(  KA,IA,JA)
@@ -504,6 +516,9 @@ contains
     AXIS_LATUY(:,:) = LATUY(ISB2:IEB2,JSB2:JEB2) / D2R
     AXIS_LATXV(:,:) = LATXV(ISB2:IEB2,JSB2:JEB2) / D2R
     AXIS_LATUV(:,:) = LATUV(ISB2:IEB2,JSB2:JEB2) / D2R
+
+    AXIS_TOPO  (:,:) = TOPO  (ISB2:IEB2,JSB2:JEB2)
+    AXIS_LSMASK(:,:) = LSMASK(ISB2:IEB2,JSB2:JEB2)
 
     AXIS_AREA     (:,:)   = AREA     (        ISB2:IEB2,JSB2:JEB2)
     AXIS_AREAZUY_X(:,:,:) = AREAZUY_X(KS  :KE,ISB2:IEB2,JSB2:JEB2)
@@ -2266,6 +2281,11 @@ contains
     call FILE_Def_AssociatedCoordinate( fid, 'lat_uv', 'latitude (half level uv)',  'degrees_north', axisname(1:2), dtype )
 
     axisname(1:2) = (/'x ','y '/)
+    call FILE_Def_AssociatedCoordinate( fid, 'topo' ,  'topography',                 'm',            axisname(1:2), dtype )
+    axisname(1:2) = (/'x ','y '/)
+    call FILE_Def_AssociatedCoordinate( fid, 'lsmask', 'fraction for land-sea mask', '1',            axisname(1:2), dtype )
+
+    axisname(1:2) = (/'x ','y '/)
     call FILE_Def_AssociatedCoordinate( fid, 'cell_area',    'area of grid cell',                  'm2', axisname(1:2), dtype )
     axisname(1:2) = (/'xh','y '/)
     call FILE_Def_AssociatedCoordinate( fid, 'cell_area_uy', 'area of grid cell (half level uy)',  'm2', axisname(1:2), dtype )
@@ -2899,6 +2919,9 @@ contains
        call FILE_Write_AssociatedCoordinate( fid, 'lat_xv', AXIS_LATXV(:,:), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'lat_uv', AXIS_LATUV(:,:), start(2:3) )
 
+       call FILE_Write_AssociatedCoordinate( fid, 'topo',   AXIS_TOPO  (:,:), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lsmask', AXIS_LSMASK(:,:), start(2:3) )
+
        call FILE_Write_AssociatedCoordinate( fid, 'cell_area',    AXIS_AREA  (:,:), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'cell_area_uy', AXIS_AREAUY(:,:), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'cell_area_xv', AXIS_AREAXV(:,:), start(2:3) )
@@ -2939,6 +2962,9 @@ contains
        call FILE_Write_AssociatedCoordinate( fid, 'lat_uy', AXIS_LATUY(XSB:XEB,YSB:YEB), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'lat_xv', AXIS_LATXV(XSB:XEB,YSB:YEB), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'lat_uv', AXIS_LATUV(XSB:XEB,YSB:YEB), start(2:3) )
+
+       call FILE_Write_AssociatedCoordinate( fid, 'topo',   AXIS_TOPO  (XSB:XEB,YSB:YEB), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lsmask', AXIS_LSMASK(XSB:XEB,YSB:YEB), start(2:3) )
 
        call FILE_Write_AssociatedCoordinate( fid, 'cell_area',    AXIS_AREA  (XSB:XEB,YSB:YEB), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'cell_area_uy', AXIS_AREAUY(XSB:XEB,YSB:YEB), start(2:3) )

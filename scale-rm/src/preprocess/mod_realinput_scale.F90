@@ -145,12 +145,7 @@ contains
        cz_org(3:dims(1)+2,xs:xe,ys:ye) = read3D(:,:,:)
 
        call FILE_CARTESC_read( fid, "topo", read2D(:,:), existed=existed )
-       if ( existed ) then
-          cz_org(2,xs:xe,ys:ye) = read2D(:,:)
-       else
-          call FILE_CARTESC_read( fid, "height_wxy", read3D(:,:,:) )
-          cz_org(2,xs:xe,ys:ye) = read3D(1,:,:)
-       end if
+       cz_org(2,xs:xe,ys:ye) = read2D(:,:)
 
     end do
 
@@ -523,8 +518,6 @@ contains
       use_file_landwater, &
       it                  )
     use scale_file, only: &
-         FILE_get_shape
-    use scale_file, only: &
          FILE_open, &
          FILE_read
     use scale_file_CARTESC, only: &
@@ -556,7 +549,6 @@ contains
     integer :: xloc, yloc
     integer :: xs, xe
     integer :: ys, ye
-    logical :: existed
 
     integer :: k, i, j, n
     !---------------------------------------------------------------------------
@@ -603,17 +595,8 @@ contains
        call FILE_CARTESC_read( fid, "LAND_ALB_SW", read2D(:,:), step=it )
        albg_org(xs:xe,ys:ye,2) = read2D(:,:)
 
-       call FILE_CARTESC_read( fid, "topo", read2D(:,:), existed=existed )
-       if ( existed ) then
-          topo_org(xs:xe,ys:ye) = read2D(:,:)
-       else
-          if ( .not. allocated(read3D) ) then
-             call FILE_get_shape( fid, "height_wxy", dims(:) )
-             allocate( read3D(dims(1),dims(2),dims(3)) )
-          end if
-          call FILE_CARTESC_read( fid, "height_wxy", read3D(:,:,:) )
-          topo_org(xs:xe,ys:ye) = read3D(1,:,:)
-       end if
+       call FILE_CARTESC_read( fid, "topo", read2D(:,:) )
+       topo_org(xs:xe,ys:ye) = read2D(:,:)
 
        call FILE_CARTESC_read( fid, "lsmask", read2D(:,:) )
        lmask_org(xs:xe,ys:ye) = read2D(:,:)
