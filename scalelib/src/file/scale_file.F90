@@ -1984,7 +1984,7 @@ contains
           error = .true.
           return
        else
-          LOG_ERROR("FILE_get_shape_fid",*) 'failed to get data information :'//trim(varname)
+          LOG_ERROR("FILE_get_shape_fid",*) 'failed to get data information : ', trim(varname)
           call PRC_abort
        end if
     end if

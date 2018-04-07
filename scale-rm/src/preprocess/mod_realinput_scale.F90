@@ -61,6 +61,7 @@ module mod_realinput_scale
   real(RP), allocatable :: read2D(:,:)
   real(RP), allocatable :: read3D(:,:,:)
   real(RP), allocatable :: read3DL(:,:,:)
+  real(RP), allocatable :: read3DO(:,:,:)
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -623,6 +624,7 @@ contains
     odims(1) = PARENT_IMAX(handle) * NEST_TILE_NUM_X
     odims(2) = PARENT_JMAX(handle) * NEST_TILE_NUM_Y
 
+    allocate( read3DO ( 1, PARENT_IMAX(handle), PARENT_JMAX(handle) ) )
     if ( .not. allocated(read2D) ) then
        allocate( read2D ( PARENT_IMAX(handle), PARENT_JMAX(handle) ) )
     end if
@@ -698,7 +700,8 @@ contains
       odims,          &
       it              )
     use scale_file, only: &
-         FILE_open
+         FILE_open, &
+         FILE_get_dataInfo
     use scale_file_CARTESC, only: &
          FILE_CARTESC_read
     implicit none
@@ -716,7 +719,8 @@ contains
     integer :: rank
 
     integer :: fid
-    integer :: i, j, n
+    integer :: ndim
+    integer :: i
     integer :: xloc, yloc
     integer :: xs, xe
     integer :: ys, ye
@@ -738,8 +742,15 @@ contains
                        fid,                           & ! (out)
                        aggregate=.false., rankid=rank ) ! (in)
 
-       call FILE_CARTESC_read( fid, "OCEAN_TEMP", read2D(:,:), step=it )
-       tw_org(xs:xe,ys:ye) = read2D(:,:)
+       call FILE_get_dataInfo( fid, "OCEAN_TEMP", dim_rank=ndim )
+       select case (ndim)
+       case ( 2 ) ! for old file
+          call FILE_CARTESC_read( fid, "OCEAN_TEMP", read2D(:,:), step=it )
+          tw_org(xs:xe,ys:ye) = read2D(:,:)
+       case ( 3 )
+          call FILE_CARTESC_read( fid, "OCEAN_TEMP", read3DO(:,:,:), step=it )
+          tw_org(xs:xe,ys:ye) = read3DO(1,:,:)
+       end select
 
        call FILE_CARTESC_read( fid, "OCEAN_SFC_TEMP", read2D(:,:), step=it )
        sst_org(xs:xe,ys:ye) = read2D(:,:)
