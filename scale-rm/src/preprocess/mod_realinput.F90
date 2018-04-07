@@ -1130,15 +1130,13 @@ contains
                                        DENS_org(:,:,:),   & ! [OUT]
                                        POTT_org(:,:,:),   & ! [OUT]
                                        QV_org  (:,:,:),   & ! [OUT]
-                                       QHYD_org(:,:,:,:), & ! [OUT]
-                                       QNUM_org(:,:,:,:), & ! [OUT]
                                        QTRC_org(:,:,:,:), & ! [OUT]
                                        CZ_org  (:,:,:),   & ! [IN]
                                        basename,          & ! [IN]
                                        same_mptype,       & ! [IN]
                                        dims(:),           & ! [IN]
                                        istep              ) ! [IN]
-          same_mptype_ = same_mptype
+          same_mptype_ = .true.
        case('GrADS')
           call ParentAtmosInputGrADS ( W_org   (:,:,:),   & ! [OUT]
                                        U_org   (:,:,:),   & ! [OUT]

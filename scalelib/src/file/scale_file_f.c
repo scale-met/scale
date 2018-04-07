@@ -129,6 +129,8 @@ void file_get_datainfo_c_(       datainfo_t *dinfo,       // (out)
 
   *error = file_get_datainfo_c( dinfo, *fid, _varname, *step, *suppress );
 
+  if ( *error != SUCCESS_CODE ) return;
+
   cstr2fstr(dinfo->varname,      dinfo->varname,      File_HSHORT);
   cstr2fstr(dinfo->description,  dinfo->description,  File_HMID);
   cstr2fstr(dinfo->units,        dinfo->units,        File_HSHORT);
@@ -205,6 +207,8 @@ void file_get_attribute_text_c_( const int32_t *fid,        // (in)
   fstr2cstr(_key, key, l);
 
   *error = file_get_attribute_text_c( *fid, _vname, _key, *suppress, _value, value_len );
+
+  if ( *error != SUCCESS_CODE ) return;
 
   l = value_len > File_HLONG ? File_HLONG : value_len;
   cstr2fstr(value, _value, l);

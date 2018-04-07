@@ -61,18 +61,17 @@ module mod_realinput_scale
   real(RP), allocatable :: read2D(:,:)
   real(RP), allocatable :: read3D(:,:,:)
   real(RP), allocatable :: read3DL(:,:,:)
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Atmos Setup
   subroutine ParentAtmosSetupSCALE( &
        dims )
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer,          intent(out) :: dims(6)
-
-    integer :: i
     !---------------------------------------------------------------------------
 
     LOG_INFO("ParentAtmosSetupSCALE",*) 'Real Case/Atmos Input File Type: SCALE-RM'
@@ -85,8 +84,8 @@ contains
     dims(5) = dims(2)
     dims(6) = dims(3)
 
-    allocate( read2D ( PARENT_IMAX(handle), PARENT_JMAX(handle) ) )
-    allocate( read3D ( PARENT_IMAX(handle), PARENT_JMAX(handle), dims(1) ) )
+    allocate( read2D( PARENT_IMAX(handle), PARENT_JMAX(handle) ) )
+    allocate( read3D( dims(1), PARENT_IMAX(handle), PARENT_JMAX(handle) ) )
 
     return
   end subroutine ParentAtmosSetupSCALE
@@ -101,8 +100,9 @@ contains
     use scale_const, only: &
          D2R => CONST_D2R
     use scale_file, only: &
-         FILE_open, &
-         FILE_read
+         FILE_open
+    use scale_file_CARTESC, only: &
+         FILE_CARTESC_read
     implicit none
     real(RP), intent(out) :: lon_org(:,:)
     real(RP), intent(out) :: lat_org(:,:)
@@ -113,6 +113,8 @@ contains
     integer :: rank
     integer :: xloc, yloc
     integer :: xs, xe, ys, ye
+
+    logical :: existed
 
     integer :: fid
     integer :: i, k
@@ -133,23 +135,27 @@ contains
                        fid,                           & ! (out)
                        aggregate=.false., rankid=rank ) ! (in)
 
-       call FILE_read( fid, "lon", read2D(:,:) )
-       lon_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
+       call FILE_CARTESC_read( fid, "lon", read2D(:,:) )
+       lon_org(xs:xe,ys:ye) = read2D(:,:) * D2R
 
-       call FILE_read( fid, "lat", read2D(:,:) )
-       lat_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
+       call FILE_CARTESC_read( fid, "lat", read2D(:,:) )
+       lat_org(xs:xe,ys:ye) = read2D(:,:) * D2R
 
-       call FILE_read( fid, "height", read3D(:,:,:) )
-       do k = 1, dims(1)
-          cz_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
-       end do
+       call FILE_CARTESC_read( fid, "height", read3D(:,:,:) )
+       cz_org(3:dims(1)+2,xs:xe,ys:ye) = read3D(:,:,:)
 
-       call FILE_read( fid, "topo", read2D(:,:) )
-       cz_org(2,xs:xe,ys:ye)  = read2D(:,:)
+       call FILE_CARTESC_read( fid, "topo", read2D(:,:), existed=existed )
+       if ( existed ) then
+          cz_org(2,xs:xe,ys:ye) = read2D(:,:)
+       else
+          call FILE_CARTESC_read( fid, "height_wxy", read3D(:,:,:) )
+          cz_org(2,xs:xe,ys:ye) = read3D(1,:,:)
+       end if
 
     end do
 
     cz_org(1,:,:)  = 0.0_RP
+
     return
   end subroutine ParentAtmosOpenSCALE
 
@@ -162,8 +168,6 @@ contains
        dens_org,      &
        pott_org,      &
        qv_org,        &
-       qhyd_org,      &
-       qnum_org,      &
        qtrc_org,      &
        cz_org,        &
        basename_org,  &
@@ -176,12 +180,15 @@ contains
        Rdry => CONST_Rdry, &
        GRAV => CONST_GRAV, &
        LAPS => CONST_LAPS
+    use scale_prc, only: &
+       PRC_abort
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_file, only: &
-       FILE_open, &
-       FILE_read
+       FILE_open
+    use scale_file_CARTESC, only: &
+       FILE_CARTESC_read
     use scale_atmos_hydrostatic, only: &
        HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_atmos_thermodyn, only: &
@@ -196,8 +203,8 @@ contains
        NUM_NAME
     use scale_atmos_grid_cartesC_metric, only: &
        rotc => ATMOS_GRID_CARTESC_METRIC_ROTC
-    use scale_topography, only: &
-       topo => TOPO_Zsfc
+    use mod_atmos_phy_mp_driver, only: &
+       ATMOS_PHY_MP_driver_qhyd2qtrc
     implicit none
 
     real(RP),         intent(out) :: velz_org(:,:,:)
@@ -207,8 +214,6 @@ contains
     real(RP),         intent(out) :: dens_org(:,:,:)
     real(RP),         intent(out) :: pott_org(:,:,:)
     real(RP),         intent(out) :: qv_org  (:,:,:)
-    real(RP),         intent(out) :: qhyd_org(:,:,:,:)
-    real(RP),         intent(out) :: qnum_org(:,:,:,:)
     real(RP),         intent(out) :: qtrc_org(:,:,:,:)
     real(RP),         intent(in)  :: cz_org(:,:,:)
     character(len=*), intent(in)  :: basename_org
@@ -223,16 +228,25 @@ contains
     real(RP) :: momy_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: rhot_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: tsfc_org(          dims(2),dims(3))
-    real(RP) :: Qdry, Rtot, CVtot, CPtot
-    real(RP) :: temp_org
+    real(RP) :: qhyd_org(dims(1)+2,dims(2),dims(3),N_HYD)
+    real(RP) :: qnum_org(dims(1)+2,dims(2),dims(3),N_HYD)
+    real(RP) :: qdry (dims(1)+2)
+    real(RP) :: Rtot (dims(1)+2)
+    real(RP) :: CVtot(dims(1)+2)
+    real(RP) :: CPtot(dims(1)+2)
+    real(RP) :: temp_org(dims(1)+2)
     real(RP) :: dz
+
+    integer :: dims2(3)
 
     integer :: xs, xe
     integer :: ys, ye
+    integer :: nx, ny
     integer :: xloc, yloc
     integer :: rank
 
     integer :: fid
+    logical :: existed, existed_t2, existed_mslp
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
@@ -248,47 +262,41 @@ contains
        ys = PARENT_JMAX(handle) * (yloc-1) + 1
        ye = PARENT_JMAX(handle) * yloc
 
+       nx = xe - xs + 1
+       ny = ye - ys + 1
+
        call FILE_open( BASENAME_ORG,                  & ! (in)
                        fid,                           & ! (out)
                        aggregate=.false., rankid=rank ) ! (in)
 
-       call FILE_read( fid, "T2", read2D(:,:), step=it )
+       call FILE_CARTESC_read( fid, "T2", read2D(:,:), step=it, existed=existed_t2 )
 !OCL XFILL
-       tsfc_org(xs:xe,ys:ye) = read2D(:,:)
+       if ( existed_t2 ) tsfc_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_read( fid, "MSLP", read2D(:,:), step=it )
+       call FILE_CARTESC_read( fid, "MSLP", read2D(:,:), step=it, existed=existed_mslp )
 !OCL XFILL
-       pres_org(1,xs:xe,ys:ye) = read2D(:,:)
+       if ( existed_mslp ) pres_org(1,xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_read( fid, "DENS", read3D(:,:,:), step=it )
+       call FILE_CARTESC_read( fid, "DENS", read3D(:,:,:), step=it )
 !OCL XFILL
-       do k = 1, dims(1)
-          dens_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
-       end do
+       dens_org(3:dims(1)+2,xs:xe,ys:ye) = read3D(:,:,:)
 
-       call FILE_read( fid, "MOMZ", read3D(:,:,:), step=it )
+       call FILE_CARTESC_read( fid, "MOMZ", read3D(:,:,:), step=it )
 !OCL XFILL
-       do k = 1, dims(1)
-          momz_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
-       end do
+       momz_org(3:dims(1)+2,xs:xe,ys:ye) = read3D(:,:,:)
 
-       call FILE_read( fid, "MOMX", read3D(:,:,:), step=it )
+       call FILE_CARTESC_read( fid, "MOMX", read3D(:,:,:), step=it )
 !OCL XFILL
-       do k = 1, dims(1)
-          momx_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
-       end do
+       momx_org(3:dims(1)+2,xs:xe,ys:ye) = read3D(:,:,:)
 
-       call FILE_read( fid, "MOMY", read3D(:,:,:), step=it )
+       call FILE_CARTESC_read( fid, "MOMY", read3D(:,:,:), step=it )
 !OCL XFILL
-       do k = 1, dims(1)
-          momy_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
-       end do
+       momy_org(3:dims(1)+2,xs:xe,ys:ye) = read3D(:,:,:)
 
-       call FILE_read( fid, "RHOT", read3D(:,:,:), step=it )
+
+       call FILE_CARTESC_read( fid, "RHOT", read3D(:,:,:), step=it )
 !OCL XFILL
-       do k = 1, dims(1)
-          rhot_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
-       end do
+       rhot_org(3:dims(1)+2,xs:xe,ys:ye) = read3D(:,:,:)
 
 !OCL XFILL
        do iq = 1, N_HYD
@@ -296,13 +304,12 @@ contains
           qnum_org(:,xs:xe,ys:ye,iq) = 0.0_RP
        end do
 
-       if( same_mptype ) then
+       if ( same_mptype ) then
 
           do iq = QS_MP, QE_MP
-             call FILE_read( fid, TRACER_NAME(iq), read3D(:,:,:), step=it )
-             do k = 1, dims(1)
-                qtrc_org(k+2,xs:xe,ys:ye,iq) = read3D(:,:,k)
-             end do
+             call FILE_CARTESC_read( fid, TRACER_NAME(iq), read3D(:,:,:), step=it )
+!OCL XFILL
+             qtrc_org(3:dims(1)+2,xs:xe,ys:ye,iq) = read3D(:,:,:)
 !OCL XFILL
              qtrc_org(2,xs:xe,ys:ye,iq) = qtrc_org(3,xs:xe,ys:ye,iq)
 !OCL XFILL
@@ -311,42 +318,51 @@ contains
 
        else
 
-          call FILE_read( fid, "QV", read3D(:,:,:), step=it, allow_missing=.true. )
+          call FILE_CARTESC_read( fid, "QV", read3D(:,:,:), step=it, existed=existed )
+          if ( existed ) then
 !OCL XFILL
-          do k = 1, dims(1)
-             qv_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
-          end do
+             qv_org(3:dims(1)+2,xs:xe,ys:ye) = read3D(:,:,:)
 !OCL XFILL
-          qv_org(2,xs:xe,ys:ye) = qv_org(3,xs:xe,ys:ye)
+             qv_org(2,xs:xe,ys:ye) = qv_org(3,xs:xe,ys:ye)
 !OCL XFILL
-          qv_org(1,xs:xe,ys:ye) = qv_org(3,xs:xe,ys:ye)
+             qv_org(1,xs:xe,ys:ye) = qv_org(3,xs:xe,ys:ye)
+          else
+!OCL XFILL
+             qv_org(:,:,:) = 0.0_RP
+          end if
 
           do iq = 1, N_HYD
-             call FILE_read( fid, HYD_NAME(iq), read3D(:,:,:), step=it, allow_missing=.true. )
+             call FILE_CARTESC_read( fid, HYD_NAME(iq), read3D(:,:,:), step=it, existed=existed )
+             if ( existed ) then
 !OCL XFILL
-             do k = 1, dims(1)
-                qhyd_org(k+2,xs:xe,ys:ye,iq) = read3D(:,:,k)
-             end do
+                qhyd_org(3:dims(1)+2,xs:xe,ys:ye,iq) = read3D(:,:,:)
 !OCL XFILL
-             qhyd_org(2,xs:xe,ys:ye,iq) = qhyd_org(3,xs:xe,ys:ye,iq)
+                qhyd_org(2,xs:xe,ys:ye,iq) = qhyd_org(3,xs:xe,ys:ye,iq)
 !OCL XFILL
-             qhyd_org(1,xs:xe,ys:ye,iq) = qhyd_org(3,xs:xe,ys:ye,iq)
+                qhyd_org(1,xs:xe,ys:ye,iq) = qhyd_org(3,xs:xe,ys:ye,iq)
+             else
+!OCL XFILL
+                qhyd_org(:,:,:,iq) = 0.0_RP
+             end if
 
              ! number density
-             call FILE_read( fid, NUM_NAME(iq), read3D(:,:,:), step=it, allow_missing=.true. )
+             call FILE_CARTESC_read( fid, NUM_NAME(iq), read3D(:,:,:), step=it, existed=existed )
+             if ( existed ) then
 !OCL XFILL
-             do k = 1, dims(1)
-                qnum_org(k+2,xs:xe,ys:ye,iq) = read3D(:,:,k)
-             end do
+                qnum_org(3:dims(1)+2,xs:xe,ys:ye,iq) = read3D(:,:,:)
 !OCL XFILL
-             qnum_org(2,xs:xe,ys:ye,iq) = qnum_org(3,xs:xe,ys:ye,iq)
+                qnum_org(2,xs:xe,ys:ye,iq) = qnum_org(3,xs:xe,ys:ye,iq)
 !OCL XFILL
-             qnum_org(1,xs:xe,ys:ye,iq) = qnum_org(3,xs:xe,ys:ye,iq)
+                qnum_org(1,xs:xe,ys:ye,iq) = qnum_org(3,xs:xe,ys:ye,iq)
+             else
+!OCL XFILL
+                qnum_org(:,:,:,iq) = 0.0_RP
+             end if
           end do
 
        endif
 
-!       call FILE_read( fid, "Q2", read2D(:,:), step=it )
+!       call FILE_CARTESC_read( fid, "Q2", read2D(:,:), step=it )
 !       qv_org(2,xs:xe,ys:ye) = read2D(:,:)
 
     end do
@@ -408,40 +424,60 @@ contains
     !!! must be rotate !!!
 
 
-    ! diagnose temp and pres
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-    do k = 3, dims(1)+2
-       call THERMODYN_specific_heat( QA, &
-                                     qtrc_org(k,i,j,:), &
-                                     TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
-                                     Qdry, Rtot, CVtot, CPtot                                 ) ! [OUT]
-       call THERMODYN_rhot2temp_pres( dens_org(k,i,j), rhot_org(k,i,j), Rtot, CVtot, CPtot, &
-                                      temp_org, pres_org(k,i,j)                             )
-    end do
-    end do
-    end do
-!OCL XFILL
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-    do k = 3, dims(1)+2
-       pott_org(k,i,j) = rhot_org(k,i,j) / dens_org(k,i,j)
-    end do
-    end do
-    end do
+    if ( .not. same_mptype ) then
+       call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 1, dims(1)+2, dims(2), 1, dims(2), dims(3), 1, dims(3), &
+                                           qv_org(:,:,:), qhyd_org(:,:,:,:), & ! [IN]
+                                           qtrc_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
+                                           QNUM=qnum_org(:,:,:,:)            ) ! [IN]
+    end if
 
+    !$omp parallel do default(none) &
+    !$omp private(dz,temp_org,qdry,rtot,cvtot,cptot) &
+    !$omp shared(dims,QA,LAPS,P00,Rdry,CPdry,GRAV,TRACER_MASS,TRACER_R,TRACER_CV,TRACER_CP, &
+    !$omp        dens_org,rhot_org,qtrc_org,pres_org,pott_org,tsfc_org,cz_org, &
+    !$omp        existed_t2,existed_mslp)
     do j = 1, dims(3)
     do i = 1, dims(2)
+
+       ! diagnose temp and pres
+       do k = 3, dims(1)+2
+          call THERMODYN_specific_heat( dims(1)+2, 3, dims(1)+2, QA, &
+                                        qtrc_org(:,i,j,:), &
+                                        TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+                                        qdry(:), Rtot(:), CVtot(:), CPtot(:)                     ) ! [OUT]
+          call THERMODYN_rhot2temp_pres( dims(1)+2, 3, dims(1)+2, &
+                                         dens_org(:,i,j), rhot_org(:,i,j), Rtot, CVtot, CPtot, & ! [IN]
+                                         temp_org(:), pres_org(:,i,j)                          ) ! [OUT]
+       end do
+
+!OCL XFILL
+       do k = 3, dims(1)+2
+          pott_org(k,i,j) = rhot_org(k,i,j) / dens_org(k,i,j)
+       end do
+
+       ! at the surface
        dz = cz_org(3,i,j) - cz_org(2,i,j)
 
+       if ( .not. existed_t2 ) then
+          tsfc_org(i,j) = temp_org(3) + LAPS * dz
+       end if
        dens_org(2,i,j) = ( pres_org(3,i,j) + GRAV * dens_org(3,i,j) * dz * 0.5_RP ) &
                        / ( Rdry * tsfc_org(i,j) - GRAV * dz * 0.5_RP )
        pres_org(2,i,j) = dens_org(2,i,j) * Rdry * tsfc_org(i,j)
        pott_org(2,i,j) = tsfc_org(i,j) * ( P00 / pres_org(2,i,j) )**(Rdry/CPdry)
 
-       temp_org = tsfc_org(i,j) + LAPS * cz_org(2,i,j)
-       pott_org(1,i,j) = temp_org * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
-       dens_org(1,i,j) = pres_org(1,i,j) / ( Rdry * temp_org )
+       ! at the sea-level
+       temp_org(1) = tsfc_org(i,j) + LAPS * cz_org(2,i,j)
+       if ( .not. existed_mslp ) then
+          dens_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens_org(2,i,j) * cz_org(2,i,j) * 0.5_RP ) &
+                          / ( Rdry * temp_org(1) - GRAV * cz_org(2,i,j) * 0.5_RP )
+          pres_org(1,i,j) = dens_org(1,i,j) * Rdry * temp_org(1)
+          pott_org(1,i,j) = temp_org(1) * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
+       else
+          pott_org(1,i,j) = temp_org(1) * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
+          dens_org(1,i,j) = pres_org(1,i,j) / ( Rdry * temp_org(1) )
+       end if
+
     end do
     end do
 
@@ -455,8 +491,6 @@ contains
     implicit none
 
     integer, intent(out) :: ldims(3)
-
-    integer :: i
     !---------------------------------------------------------------------------
 
     LOG_INFO("ParentLandSetupSCALE",*) 'Real Case/Land Input File Type: SCALE-RM'
@@ -467,7 +501,7 @@ contains
     if ( .not. allocated(read2D) ) then
        allocate( read2D ( PARENT_IMAX(handle), PARENT_JMAX(handle) ) )
     end if
-    allocate( read3DL( PARENT_IMAX(handle), PARENT_JMAX(handle), ldims(1) ) )
+    allocate( read3DL( ldims(1), PARENT_IMAX(handle), PARENT_JMAX(handle) ) )
 
     return
   end subroutine ParentLandSetupSCALE
@@ -489,8 +523,12 @@ contains
       use_file_landwater, &
       it                  )
     use scale_file, only: &
+         FILE_get_shape
+    use scale_file, only: &
          FILE_open, &
          FILE_read
+    use scale_file_CARTESC, only: &
+         FILE_CARTESC_read
     use scale_const, only: &
          D2R => CONST_D2R
     implicit none
@@ -512,12 +550,15 @@ contains
     integer,          intent(in) :: it
 
     integer :: rank
+    integer :: dims(3)
 
     integer :: fid
-    integer :: k, i, j, n
     integer :: xloc, yloc
     integer :: xs, xe
     integer :: ys, ye
+    logical :: existed
+
+    integer :: k, i, j, n
     !---------------------------------------------------------------------------
 
     do i = 1, size( NEST_TILE_ID(:) )
@@ -536,40 +577,45 @@ contains
                        fid,                           & ! (out)
                        aggregate=.false., rankid=rank ) ! (in)
 
-       call FILE_read( fid, "LAND_TEMP",  read3DL(:,:,:), step=it )
-       do k = 1, ldims(1)
-         tg_org(k,xs:xe,ys:ye) = read3DL(:,:,k)
-       end do
+       call FILE_CARTESC_read( fid, "LAND_TEMP",  read3DL(:,:,:), step=it )
+       tg_org(1:ldims(1),xs:xe,ys:ye) = read3DL(:,:,:)
 
        if( use_file_landwater )then
-          call FILE_read( fid, "LAND_WATER", read3DL(:,:,:), step=it )
-          do k = 1, ldims(1)
-             strg_org(k,xs:xe,ys:ye) = read3DL(:,:,k)
-          end do
+          call FILE_CARTESC_read( fid, "LAND_WATER", read3DL(:,:,:), step=it )
+          strg_org(1:ldims(1),xs:xe,ys:ye) = read3DL(:,:,:)
        endif
 
-       call FILE_read( fid, "lon", read2D(:,:) )
+       call FILE_CARTESC_read( fid, "lon", read2D(:,:) )
        llon_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
 
-       call FILE_read( fid, "lat", read2D(:,:) )
+       call FILE_CARTESC_read( fid, "lat", read2D(:,:) )
        llat_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
 
-       call FILE_read( fid, "LAND_SFC_TEMP", read2D(:,:), step=it )
+       call FILE_CARTESC_read( fid, "LAND_SFC_TEMP", read2D(:,:), step=it )
        lst_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_read( fid, "URBAN_SFC_TEMP", read2D(:,:), step=it )
+       call FILE_CARTESC_read( fid, "URBAN_SFC_TEMP", read2D(:,:), step=it )
        ust_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_read( fid, "LAND_ALB_LW", read2D(:,:), step=it )
+       call FILE_CARTESC_read( fid, "LAND_ALB_LW", read2D(:,:), step=it )
        albg_org(xs:xe,ys:ye,1) = read2D(:,:)
 
-       call FILE_read( fid, "LAND_ALB_SW", read2D(:,:), step=it )
+       call FILE_CARTESC_read( fid, "LAND_ALB_SW", read2D(:,:), step=it )
        albg_org(xs:xe,ys:ye,2) = read2D(:,:)
 
-       call FILE_read( fid, "topo", read2D(:,:) )
-       topo_org(xs:xe,ys:ye) = read2D(:,:)
+       call FILE_CARTESC_read( fid, "topo", read2D(:,:), existed=existed )
+       if ( existed ) then
+          topo_org(xs:xe,ys:ye) = read2D(:,:)
+       else
+          if ( .not. allocated(read3D) ) then
+             call FILE_get_shape( fid, "height_wxy", dims(:) )
+             allocate( read3D(dims(1),dims(2),dims(3)) )
+          end if
+          call FILE_CARTESC_read( fid, "height_wxy", read3D(:,:,:) )
+          topo_org(xs:xe,ys:ye) = read3D(1,:,:)
+       end if
 
-       call FILE_read( fid, "lsmask", read2D(:,:) )
+       call FILE_CARTESC_read( fid, "lsmask", read2D(:,:) )
        lmask_org(xs:xe,ys:ye) = read2D(:,:)
 
     end do
@@ -611,8 +657,9 @@ contains
     use scale_const, only: &
          D2R => CONST_D2R
     use scale_file, only: &
-         FILE_open, &
-         FILE_read
+         FILE_open
+    use scale_file_CARTESC, only: &
+         FILE_CARTESC_read
     implicit none
     real(RP), intent(out) :: olon_org (:,:)
     real(RP), intent(out) :: olat_org (:,:)
@@ -643,13 +690,13 @@ contains
                        fid,                           & ! (out)
                        aggregate=.false., rankid=rank ) ! (in)
 
-       call FILE_read( fid, "lon", read2D(:,:) )
+       call FILE_CARTESC_read( fid, "lon", read2D(:,:) )
        olon_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
 
-       call FILE_read( fid, "lat", read2D(:,:) )
+       call FILE_CARTESC_read( fid, "lat", read2D(:,:) )
        olat_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
 
-       call FILE_read( fid, "lsmask", read2D(:,:) )
+       call FILE_CARTESC_read( fid, "lsmask", read2D(:,:) )
        omask_org(xs:xe,ys:ye)  = read2D(:,:)
 
     end do
@@ -668,8 +715,9 @@ contains
       odims,          &
       it              )
     use scale_file, only: &
-         FILE_open, &
-         FILE_read
+         FILE_open
+    use scale_file_CARTESC, only: &
+         FILE_CARTESC_read
     implicit none
 
     real(RP), intent(out) :: tw_org(:,:)
@@ -707,22 +755,22 @@ contains
                        fid,                           & ! (out)
                        aggregate=.false., rankid=rank ) ! (in)
 
-       call FILE_read( fid, "OCEAN_TEMP", read2D(:,:), step=it )
+       call FILE_CARTESC_read( fid, "OCEAN_TEMP", read2D(:,:), step=it )
        tw_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_read( fid, "OCEAN_SFC_TEMP", read2D(:,:), step=it )
+       call FILE_CARTESC_read( fid, "OCEAN_SFC_TEMP", read2D(:,:), step=it )
        sst_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_read( fid, "OCEAN_ALB_LW", read2D(:,:), step=it )
+       call FILE_CARTESC_read( fid, "OCEAN_ALB_LW", read2D(:,:), step=it )
        albw_org(xs:xe,ys:ye,1) = read2D(:,:)
 
-       call FILE_read( fid, "OCEAN_ALB_SW", read2D(:,:), step=it )
+       call FILE_CARTESC_read( fid, "OCEAN_ALB_SW", read2D(:,:), step=it )
        albw_org(xs:xe,ys:ye,2) = read2D(:,:)
 
-       call FILE_read( fid, "OCEAN_SFC_Z0M", read2D(:,:), step=it )
+       call FILE_CARTESC_read( fid, "OCEAN_SFC_Z0M", read2D(:,:), step=it )
        z0w_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_read( fid, "lsmask", read2D(:,:) )
+       call FILE_CARTESC_read( fid, "lsmask", read2D(:,:) )
        omask_org(xs:xe,ys:ye) = read2D(:,:)
 
     end do
