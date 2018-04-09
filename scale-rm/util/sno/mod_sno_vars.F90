@@ -9,6 +9,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module mod_sno_vars
   !-----------------------------------------------------------------------------
   !
@@ -64,7 +65,7 @@ contains
        FILE_open, &
        FILE_Get_All_Datainfo, &
        FILE_Get_Attribute
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD, &
        PRC_abort
@@ -103,7 +104,7 @@ contains
     integer :: i
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_vars_getinfo] Read information of variables'
+    LOG_INFO("SNO_vars_getinfo",*) '[SNO_vars_getinfo] Read information of variables'
 
     if ( ismaster ) then
        nowrank = 0 ! first file
@@ -152,7 +153,7 @@ contains
              case ( FILE_REAL8 )
                 call FILE_get_attribute( fid, varname(v), dinfo(v)%att_name(i), dinfo(v)%atts(i)%double(:) )
              case default
-                write(*,*) 'xxx attribute type is not supported'
+                LOG_ERROR("SNO_vars_getinfo",*) 'attribute type is not supported'
                 call PRC_abort
              end select
           end do
@@ -188,24 +189,24 @@ contains
        call MPI_BCAST( dinfo(v)%calendar     , H_SHORT          , MPI_CHARACTER       , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
        if ( debug ) then
-          if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*** Var No.', v
-          if( IO_L ) write(IO_FID_LOG,*) '*** varname       : ', trim(dinfo(v)%varname)
-          if( IO_L ) write(IO_FID_LOG,*) '*** description   : ', trim(dinfo(v)%description)
-          if( IO_L ) write(IO_FID_LOG,*) '*** units         : ', trim(dinfo(v)%units)
-          if( IO_L ) write(IO_FID_LOG,*) '*** standard_name : ', trim(dinfo(v)%standard_name)
-          if( IO_L ) write(IO_FID_LOG,*) '*** datatype      : ', trim(FILE_dtypelist(dinfo(v)%datatype))
-          if( IO_L ) write(IO_FID_LOG,*) '*** dim_rank      : ', dinfo(v)%dim_rank
+          LOG_NEWLINE
+          LOG_INFO("SNO_vars_getinfo",*) 'Var No.', v
+          LOG_INFO("SNO_vars_getinfo",*) 'varname       : ', trim(dinfo(v)%varname)
+          LOG_INFO("SNO_vars_getinfo",*) 'description   : ', trim(dinfo(v)%description)
+          LOG_INFO("SNO_vars_getinfo",*) 'units         : ', trim(dinfo(v)%units)
+          LOG_INFO("SNO_vars_getinfo",*) 'standard_name : ', trim(dinfo(v)%standard_name)
+          LOG_INFO("SNO_vars_getinfo",*) 'datatype      : ', trim(FILE_dtypelist(dinfo(v)%datatype))
+          LOG_INFO("SNO_vars_getinfo",*) 'dim_rank      : ', dinfo(v)%dim_rank
           do d = 1, dinfo(v)%dim_rank
-             if( IO_L ) write(IO_FID_LOG,*) '*** dim No.', d
-             if( IO_L ) write(IO_FID_LOG,*) '*** + dim_name  : ', trim(dinfo(v)%dim_name(d))
-             if( IO_L ) write(IO_FID_LOG,*) '*** + dim_size  : ', dinfo(v)%dim_size(d)
+             LOG_INFO("SNO_vars_getinfo",*) 'dim No.', d
+             LOG_INFO("SNO_vars_getinfo",*) '+ dim_name  : ', trim(dinfo(v)%dim_name(d))
+             LOG_INFO("SNO_vars_getinfo",*) '+ dim_size  : ', dinfo(v)%dim_size(d)
           enddo
-          if( IO_L ) write(IO_FID_LOG,*) '*** transpose   : ', dinfo(v)%transpose
+          LOG_INFO("SNO_vars_getinfo",*) 'transpose   : ', dinfo(v)%transpose
 
-          if( IO_L ) write(IO_FID_LOG,*) '*** time_units  : ', trim(dinfo(v)%time_units)
-          if( IO_L ) write(IO_FID_LOG,*) '*** calendar    : ', trim(dinfo(v)%calendar)
-          if( IO_L ) write(IO_FID_LOG,*) '*** step_nmax   : ', dinfo(v)%step_nmax
+          LOG_INFO("SNO_vars_getinfo",*) 'time_units  : ', trim(dinfo(v)%time_units)
+          LOG_INFO("SNO_vars_getinfo",*) 'calendar    : ', trim(dinfo(v)%calendar)
+          LOG_INFO("SNO_vars_getinfo",*) 'step_nmax   : ', dinfo(v)%step_nmax
 
           if ( dinfo(v)%time_units /= "" ) then
              start_day = 0
@@ -224,7 +225,7 @@ contains
                 call CALENDAR_date2char    ( now_chardate,    & ! [OUT]
                                              now_date, now_ms ) ! [IN]
 
-                if( IO_L ) write(IO_FID_LOG,*) '*** + ', now_chardate
+                LOG_INFO("SNO_vars_getinfo",*) '+ ', now_chardate
              enddo
           end if
 
@@ -257,14 +258,14 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_vars_alloc] Allocate variable array'
+       LOG_INFO("SNO_vars_alloc",*) '[SNO_vars_alloc] Allocate variable array'
     endif
 
     if ( dinfo%dim_rank == 1 ) then
 
        gout1 = dinfo%dim_size(1)
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,3A,I6)') '+ [',trim(dinfo%dim_name(1)),'] = ', gout1
+       LOG_INFO("SNO_vars_alloc",'(1x,3A,I6)') '+ [',trim(dinfo%dim_name(1)),'] = ', gout1
 
        allocate( dinfo%VAR_1d(gout1) )
        dinfo%VAR_1d(:) = 0.0_RP
@@ -287,7 +288,7 @@ contains
           gout2 = dinfo%dim_size(2)
        endif
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,5A,2I6)') '+ [',trim(dinfo%dim_name(1)),',',&
+       LOG_INFO("SNO_vars_alloc",'(1x,5A,2I6)') '+ [',trim(dinfo%dim_name(1)),',',&
                                                         trim(dinfo%dim_name(2)),'] = ', gout1, gout2
 
        allocate( dinfo%VAR_2d(gout1,gout2) )
@@ -314,7 +315,7 @@ contains
              gout3 = dinfo%dim_size(2)
           endif
 
-          if( IO_L ) write(IO_FID_LOG,'(1x,7A,3I6)') '+ [',trim(dinfo%dim_name(3)),',',&
+          LOG_INFO("SNO_vars_alloc",'(1x,7A,3I6)') '+ [',trim(dinfo%dim_name(3)),',',&
                                                            trim(dinfo%dim_name(1)),',',&
                                                            trim(dinfo%dim_name(2)),'] = ', gout1, gout2, gout3
        else
@@ -336,7 +337,7 @@ contains
              gout3 = dinfo%dim_size(3)
           endif
 
-          if( IO_L ) write(IO_FID_LOG,'(1x,7A,3I6)') '+ [',trim(dinfo%dim_name(1)),',',&
+          LOG_INFO("SNO_vars_alloc",'(1x,7A,3I6)') '+ [',trim(dinfo%dim_name(1)),',',&
                                                            trim(dinfo%dim_name(2)),',',&
                                                            trim(dinfo%dim_name(3)),'] = ', gout1, gout2, gout3
        endif
@@ -362,7 +363,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_vars_dealloc] Deallocate variable array'
+       LOG_INFO("SNO_vars_dealloc",*) '[SNO_vars_dealloc] Deallocate variable array'
     endif
 
     if( allocated(dinfo%VAR_1d) ) deallocate( dinfo%VAR_1d )
@@ -841,17 +842,17 @@ contains
     enddo ! py
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Varname : ', trim(dinfo%varname)
+       LOG_NEWLINE
+       LOG_INFO("SNO_vars_read",*) 'Varname : ', trim(dinfo%varname)
 
        if ( allocated(dinfo%VAR_1d) ) then
-          if( IO_L ) write(IO_FID_LOG,*) dinfo%VAR_1d(:)
+          LOG_INFO("SNO_vars_read",*) dinfo%VAR_1d(:)
        endif
        if ( allocated(dinfo%VAR_2d) ) then
-          if( IO_L ) write(IO_FID_LOG,*) dinfo%VAR_2d(:,:)
+          LOG_INFO("SNO_vars_read",*) dinfo%VAR_2d(:,:)
        endif
        if ( allocated(dinfo%VAR_3d) ) then
-          if( IO_L ) write(IO_FID_LOG,*) dinfo%VAR_3d(:,:,:)
+          LOG_INFO("SNO_vars_read",*) dinfo%VAR_3d(:,:,:)
        endif
     endif
 

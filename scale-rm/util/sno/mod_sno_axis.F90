@@ -9,6 +9,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module mod_sno_axis
   !-----------------------------------------------------------------------------
   !
@@ -59,7 +60,7 @@ contains
        FILE_dtypelist
     use scale_file, only: &
        FILE_Get_Datainfo
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD, &
        PRC_abort
@@ -84,7 +85,7 @@ contains
     integer :: n, m, d
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_axis_getinfo] Read information of axis'
+    LOG_INFO("SNO_axis_getinfo",*) '[SNO_axis_getinfo] Read information of axis'
 
     if ( ismaster ) then
        nowrank = 0 ! first file
@@ -92,7 +93,7 @@ contains
 
        do n = 1, naxis
           if ( debug ) then
-             if( IO_L ) write(IO_FID_LOG,*) '*** read info : ', trim(axisname(n))
+             LOG_INFO("SNO_axis_getinfo",*) 'read info : ', trim(axisname(n))
           endif
 
           call FILE_Get_Datainfo( basename,                           & ! [IN]
@@ -146,7 +147,7 @@ contains
                 end if
              end do
              if ( .not. ainfo(n)%is_bounds ) then
-                write(*,*) 'original axis is not found for ', trim(ainfo(m)%varname)
+                LOG_WARN("SNO_axis_getinfo",*) 'original axis is not found for ', trim(ainfo(m)%varname)
                 call PRC_abort
              end if
           else
@@ -169,20 +170,20 @@ contains
        call MPI_BCAST( ainfo(n)%is_bounds  , 1                , MPI_LOGICAL  , PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
        if ( debug ) then
-          if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*** Axis No.', n
-          if( IO_L ) write(IO_FID_LOG,*) '*** varname     : ', trim(ainfo(n)%varname)
-          if( IO_L ) write(IO_FID_LOG,*) '*** description : ', trim(ainfo(n)%description)
-          if( IO_L ) write(IO_FID_LOG,*) '*** units       : ', trim(ainfo(n)%units)
-          if( IO_L ) write(IO_FID_LOG,*) '*** datatype    : ', trim(FILE_dtypelist(ainfo(n)%datatype))
-          if( IO_L ) write(IO_FID_LOG,*) '*** dim_rank    : ', ainfo(n)%dim_rank
+          LOG_NEWLINE
+          LOG_INFO("SNO_axis_getinfo",*) 'Axis No.', n
+          LOG_INFO("SNO_axis_getinfo",*) 'varname     : ', trim(ainfo(n)%varname)
+          LOG_INFO("SNO_axis_getinfo",*) 'description : ', trim(ainfo(n)%description)
+          LOG_INFO("SNO_axis_getinfo",*) 'units       : ', trim(ainfo(n)%units)
+          LOG_INFO("SNO_axis_getinfo",*) 'datatype    : ', trim(FILE_dtypelist(ainfo(n)%datatype))
+          LOG_INFO("SNO_axis_getinfo",*) 'dim_rank    : ', ainfo(n)%dim_rank
           do d = 1, ainfo(n)%dim_rank
-             if( IO_L ) write(IO_FID_LOG,*) '*** dim No.', d
-             if( IO_L ) write(IO_FID_LOG,*) '*** + dim_name  : ', trim(ainfo(n)%dim_name(d))
-             if( IO_L ) write(IO_FID_LOG,*) '*** + dim_size  : ', ainfo(n)%dim_size(d)
+             LOG_INFO("SNO_axis_getinfo",*) 'dim No.', d
+             LOG_INFO("SNO_axis_getinfo",*) '+ dim_name  : ', trim(ainfo(n)%dim_name(d))
+             LOG_INFO("SNO_axis_getinfo",*) '+ dim_size  : ', ainfo(n)%dim_size(d)
           enddo
-          if( IO_L ) write(IO_FID_LOG,*) '*** transpose   : ', ainfo(n)%transpose
-          if( IO_L ) write(IO_FID_LOG,*) '*** regrid      : ', ainfo(n)%regrid
+          LOG_INFO("SNO_axis_getinfo",*) 'transpose   : ', ainfo(n)%transpose
+          LOG_INFO("SNO_axis_getinfo",*) 'regrid      : ', ainfo(n)%regrid
        endif
 
        if ( .NOT. ainfo(n)%regrid ) then
@@ -199,7 +200,7 @@ contains
                                      ainfo(n)%AXIS_1d(:)   ) ! [OUT]
 
              if ( debug ) then
-                if( IO_L ) write(IO_FID_LOG,*) '*** value : ', ainfo(n)%AXIS_1d(:)
+                LOG_INFO("SNO_axis_getinfo",*) 'value : ', ainfo(n)%AXIS_1d(:)
              endif
           case ( 2 )
 
@@ -214,7 +215,7 @@ contains
                                      ainfo(n)%AXIS_2d(:,:) ) ! [OUT]
 
           case default
-             write(*,*) 'xxx axis without regried for rank > 2 is not supported'
+             LOG_ERROR("SNO_axis_getinfo",*) 'axis without regried for rank > 2 is not supported'
              call PRC_abort
           end select
 
@@ -258,7 +259,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_axis_alloc] Allocate axis array'
+       LOG_INFO("SNO_axis_alloc",*) '[SNO_axis_alloc] Allocate axis array'
     endif
 
     IA_out = ( hinfo%gridsize(2) ) / nprocs_x_out + 2 * hinfo%halosize(2)
@@ -389,7 +390,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_axis_dealloc] Deallocate axis array'
+       LOG_INFO("SNO_axis_dealloc",*) '[SNO_axis_dealloc] Deallocate axis array'
     endif
 
     do n = 1, naxis
@@ -413,7 +414,7 @@ contains
        naxis,         &
        ainfo,         &
        debug          )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use mod_sno_h, only: &
        commoninfo, &
@@ -439,7 +440,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_axis_copy] Copy axis array (local)'
+       LOG_INFO("SNO_axis_copy",*) '[SNO_axis_copy] Copy axis array (local)'
     endif
 
     IMAX_out = ( hinfo%gridsize(2) ) / nprocs_x_out
@@ -464,7 +465,7 @@ contains
           enddo
 
           if ( .NOT. exist ) then
-             write(*,*) 'xxx [SNO_axis_read] AXIS CXG not found! : necessary for CX'
+             LOG_ERROR("SNO_axis_copy",*) '[SNO_axis_read] AXIS CXG not found! : necessary for CX'
              call PRC_abort
           endif
 
@@ -481,7 +482,7 @@ contains
           enddo
 
           if ( .NOT. exist ) then
-             write(*,*) 'xxx [SNO_axis_read] AXIS CYG not found! : necessary for CY'
+             LOG_ERROR("SNO_axis_copy",*) '[SNO_axis_read] AXIS CYG not found! : necessary for CY'
              call PRC_abort
           endif
 
@@ -498,7 +499,7 @@ contains
           enddo
 
           if ( .NOT. exist ) then
-             write(*,*) 'xxx [SNO_axis_read] AXIS FXG not found! : necessary for FX'
+             LOG_ERROR("SNO_axis_copy",*) '[SNO_axis_read] AXIS FXG not found! : necessary for FX'
              call PRC_abort
           endif
 
@@ -515,7 +516,7 @@ contains
           enddo
 
           if ( .NOT. exist ) then
-             write(*,*) 'xxx [SNO_axis_read] AXIS FYG not found! : necessary for FY'
+             LOG_ERROR("SNO_axis_copy",*) '[SNO_axis_read] AXIS FYG not found! : necessary for FY'
              call PRC_abort
           endif
 
@@ -532,7 +533,7 @@ contains
           enddo
 
           if ( .NOT. exist ) then
-             write(*,*) 'xxx [SNO_axis_read] AXIS CDXG not found! : necessary for CDX'
+             LOG_ERROR("SNO_axis_copy",*) '[SNO_axis_read] AXIS CDXG not found! : necessary for CDX'
              call PRC_abort
           endif
 
@@ -549,7 +550,7 @@ contains
           enddo
 
           if ( .NOT. exist ) then
-             write(*,*) 'xxx [SNO_axis_read] AXIS CDYG not found! : necessary for CDY'
+             LOG_ERROR("SNO_axis_copy",*) '[SNO_axis_read] AXIS CDYG not found! : necessary for CDY'
              call PRC_abort
           endif
 
@@ -566,7 +567,7 @@ contains
           enddo
 
           if ( .NOT. exist ) then
-             write(*,*) 'xxx [SNO_axis_read] AXIS FDXG not found! : necessary for FDX'
+             LOG_ERROR("SNO_axis_copy",*) '[SNO_axis_read] AXIS FDXG not found! : necessary for FDX'
              call PRC_abort
           endif
 
@@ -583,7 +584,7 @@ contains
           enddo
 
           if ( .NOT. exist ) then
-             write(*,*) 'xxx [SNO_axis_read] AXIS FDYG not found! : necessary for FDY'
+             LOG_ERROR("SNO_axis_copy",*) '[SNO_axis_read] AXIS FDYG not found! : necessary for FDY'
              call PRC_abort
           endif
 
@@ -600,7 +601,7 @@ contains
           enddo
 
           if ( .NOT. exist ) then
-             write(*,*) 'xxx [SNO_axis_read] AXIS CBFXG not found! : necessary for CBFX'
+             LOG_ERROR("SNO_axis_copy",*) '[SNO_axis_read] AXIS CBFXG not found! : necessary for CBFX'
              call PRC_abort
           endif
 
@@ -617,7 +618,7 @@ contains
           enddo
 
           if ( .NOT. exist ) then
-             write(*,*) 'xxx [SNO_axis_read] AXIS CBFYG not found! : necessary for CBFY'
+             LOG_ERROR("SNO_axis_copy",*) '[SNO_axis_read] AXIS CBFYG not found! : necessary for CBFY'
              call PRC_abort
           endif
 
@@ -634,7 +635,7 @@ contains
           enddo
 
           if ( .NOT. exist ) then
-             write(*,*) 'xxx [SNO_axis_read] AXIS FBFXG not found! : necessary for FBFX'
+             LOG_ERROR("SNO_axis_copy",*) '[SNO_axis_read] AXIS FBFXG not found! : necessary for FBFX'
              call PRC_abort
           endif
 
@@ -651,7 +652,7 @@ contains
           enddo
 
           if ( .NOT. exist ) then
-             write(*,*) 'xxx [SNO_axis_read] AXIS FBFYG not found! : necessary for FBFY'
+             LOG_ERROR("SNO_axis_copy",*) '[SNO_axis_read] AXIS FBFYG not found! : necessary for FBFY'
              call PRC_abort
           endif
 
@@ -735,7 +736,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_axis_read] Read axis array (local)'
+       LOG_INFO("SNO_axis_read",*) '[SNO_axis_read] Read axis array (local)'
     endif
 
     do py = 1, nprocs_y_in
@@ -879,34 +880,34 @@ contains
 
                       if ( readflag_1d ) then
 !                          if ( debug ) then
-!                             if( IO_L ) write(IO_FID_LOG,*)
-!                             if( IO_L ) write(IO_FID_LOG,*) '*** Axis No.', n, ' : ', trim(ainfo(n)%varname)
-!                             if( IO_L ) write(IO_FID_LOG,*) '*** staggered_x_in  = ', staggered_x_in
-!                             if( IO_L ) write(IO_FID_LOG,*) '*** staggered_y_in  = ', staggered_y_in
-!                             if( IO_L ) write(IO_FID_LOG,*) '*** staggered_x_out = ', staggered_x_out
-!                             if( IO_L ) write(IO_FID_LOG,*) '*** staggered_y_out = ', staggered_y_out
-!                             if( IO_L ) write(IO_FID_LOG,*) '*** stgin1          = ', stgin1
-!                             if( IO_L ) write(IO_FID_LOG,*) '*** stgout1         = ', stgout1
+!                             LOG_NEWLINE
+!                             LOG_INFO("SNO_axis_read",*) 'Axis No.', n, ' : ', trim(ainfo(n)%varname)
+!                             LOG_INFO("SNO_axis_read",*) 'staggered_x_in  = ', staggered_x_in
+!                             LOG_INFO("SNO_axis_read",*) 'staggered_y_in  = ', staggered_y_in
+!                             LOG_INFO("SNO_axis_read",*) 'staggered_x_out = ', staggered_x_out
+!                             LOG_INFO("SNO_axis_read",*) 'staggered_y_out = ', staggered_y_out
+!                             LOG_INFO("SNO_axis_read",*) 'stgin1          = ', stgin1
+!                             LOG_INFO("SNO_axis_read",*) 'stgout1         = ', stgout1
 !
-!                             if( IO_L ) write(IO_FID_LOG,*) 'localmap(rank)'
+!                             LOG_INFO("SNO_axis_read",*) 'localmap(rank)'
 !                             do i = 1, gout1
 !                                if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
 !                             enddo
-!                             if( IO_L ) write(IO_FID_LOG,*)
+!                             LOG_NEWLINE
 !                             do i = 1, gout1
 !                                if( IO_L ) write(IO_FID_LOG,'(1x,I3)',advance='no') localmap_1d(i,I_map_p)
 !                             enddo
-!                             if( IO_L ) write(IO_FID_LOG,*)
+!                             LOG_NEWLINE
 !
-!                             if( IO_L ) write(IO_FID_LOG,*) 'localmap(i-index)'
+!                             LOG_INFO("SNO_axis_read",*) 'localmap(i-index)'
 !                             do i = 1, gout1
 !                                if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
 !                             enddo
-!                             if( IO_L ) write(IO_FID_LOG,*)
+!                             LOG_NEWLINE
 !                             do i = 1, gout1
 !                                if( IO_L ) write(IO_FID_LOG,'(1x,I3)',advance='no') localmap_1d(i,I_map_i)
 !                             enddo
-!                             if( IO_L ) write(IO_FID_LOG,*)
+!                             LOG_NEWLINE
 !                          endif
 
                          call SNO_read_map_1d( basename, p, 1,        & ! [IN]
@@ -918,9 +919,9 @@ contains
                                                ainfo(n)%AXIS_1d(:)    ) ! [INOUT]
 
 !                          if ( debug ) then
-!                             if( IO_L ) write(IO_FID_LOG,*) 'AXIS_1d'
+!                             LOG_INFO("SNO_axis_read",*) 'AXIS_1d'
 !                             do i = 1, gout1
-!                                if( IO_L ) write(IO_FID_LOG,'(1x,I3.3,F10.1)') i, ainfo(n)%AXIS_1d(i)
+!                                LOG_INFO("SNO_axis_read",'(1x,I3.3,F10.1)') i, ainfo(n)%AXIS_1d(i)
 !                             enddo
 !                          endif
 
@@ -1148,57 +1149,57 @@ contains
                       endif ! bounds or not?
 
 !                       if ( debug ) then
-!                          if( IO_L ) write(IO_FID_LOG,*)
-!                          if( IO_L ) write(IO_FID_LOG,*) '*** Axis No.', n, ' : ', trim(ainfo(n)%varname)
-!                          if( IO_L ) write(IO_FID_LOG,*) '*** staggered_x_in  = ', staggered_x_in
-!                          if( IO_L ) write(IO_FID_LOG,*) '*** staggered_y_in  = ', staggered_y_in
-!                          if( IO_L ) write(IO_FID_LOG,*) '*** staggered_x_out = ', staggered_x_out
-!                          if( IO_L ) write(IO_FID_LOG,*) '*** staggered_y_out = ', staggered_y_out
-!                          if( IO_L ) write(IO_FID_LOG,*) '*** stgin1          = ', stgin1
-!                          if( IO_L ) write(IO_FID_LOG,*) '*** stgout1         = ', stgout1
-!                          if( IO_L ) write(IO_FID_LOG,*) '*** stgin2          = ', stgin2
-!                          if( IO_L ) write(IO_FID_LOG,*) '*** stgout2         = ', stgout2
+!                          LOG_NEWLINE
+!                          LOG_INFO("SNO_axis_read",*) 'Axis No.', n, ' : ', trim(ainfo(n)%varname)
+!                          LOG_INFO("SNO_axis_read",*) 'staggered_x_in  = ', staggered_x_in
+!                          LOG_INFO("SNO_axis_read",*) 'staggered_y_in  = ', staggered_y_in
+!                          LOG_INFO("SNO_axis_read",*) 'staggered_x_out = ', staggered_x_out
+!                          LOG_INFO("SNO_axis_read",*) 'staggered_y_out = ', staggered_y_out
+!                          LOG_INFO("SNO_axis_read",*) 'stgin1          = ', stgin1
+!                          LOG_INFO("SNO_axis_read",*) 'stgout1         = ', stgout1
+!                          LOG_INFO("SNO_axis_read",*) 'stgin2          = ', stgin2
+!                          LOG_INFO("SNO_axis_read",*) 'stgout2         = ', stgout2
 !
-!                          if( IO_L ) write(IO_FID_LOG,*) 'localmap(rank)'
+!                          LOG_INFO("SNO_axis_read",*) 'localmap(rank)'
 !                          if( IO_L ) write(IO_FID_LOG,'(1x,A3)',advance='no') "###"
 !                          do i = 1, gout1
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
 !                          enddo
-!                          if( IO_L ) write(IO_FID_LOG,*)
+!                          LOG_NEWLINE
 !                          do j = 1, gout2
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') j
 !                             do i = 1, gout1
 !                                if( IO_L ) write(IO_FID_LOG,'(1x,I3)',advance='no') localmap_2d(i,j,I_map_p)
 !                             enddo
-!                             if( IO_L ) write(IO_FID_LOG,*)
+!                             LOG_NEWLINE
 !                          enddo
 !
-!                          if( IO_L ) write(IO_FID_LOG,*) 'localmap(i-index)'
+!                          LOG_INFO("SNO_axis_read",*) 'localmap(i-index)'
 !                          if( IO_L ) write(IO_FID_LOG,'(1x,A3)',advance='no') "###"
 !                          do i = 1, gout1
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
 !                          enddo
-!                          if( IO_L ) write(IO_FID_LOG,*)
+!                          LOG_NEWLINE
 !                          do j = 1, gout2
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') j
 !                             do i = 1, gout1
 !                                if( IO_L ) write(IO_FID_LOG,'(1x,I3)',advance='no') localmap_2d(i,j,I_map_i)
 !                             enddo
-!                             if( IO_L ) write(IO_FID_LOG,*)
+!                             LOG_NEWLINE
 !                          enddo
 !
-!                          if( IO_L ) write(IO_FID_LOG,*) 'localmap(j-index)'
+!                          LOG_INFO("SNO_axis_read",*) 'localmap(j-index)'
 !                          if( IO_L ) write(IO_FID_LOG,'(1x,A3)',advance='no') "###"
 !                          do i = 1, gout1
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
 !                          enddo
-!                          if( IO_L ) write(IO_FID_LOG,*)
+!                          LOG_NEWLINE
 !                          do j = 1, gout2
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') j
 !                             do i = 1, gout1
 !                                if( IO_L ) write(IO_FID_LOG,'(1x,I3)',advance='no') localmap_2d(i,j,I_map_j)
 !                             enddo
-!                             if( IO_L ) write(IO_FID_LOG,*)
+!                             LOG_NEWLINE
 !                          enddo
 !                       endif
 
@@ -1211,18 +1212,18 @@ contains
                                             ainfo(n)%AXIS_2d(:,:)    ) ! [INOUT]
 
 !                       if ( debug ) then
-!                          if( IO_L ) write(IO_FID_LOG,*) 'AXIS_2d'
+!                          LOG_INFO("SNO_axis_read",*) 'AXIS_2d'
 !                          if( IO_L ) write(IO_FID_LOG,'(1x,A3)',advance='no') "###"
 !                          do i = 1, gout1
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
 !                          enddo
-!                          if( IO_L ) write(IO_FID_LOG,*)
+!                          LOG_NEWLINE
 !                          do j = 1, gout2
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') j
 !                             do i = 1, gout1
 !                                if( IO_L ) write(IO_FID_LOG,'(1x,F8.3)',advance='no') ainfo(n)%AXIS_2d(i,j)
 !                             enddo
-!                             if( IO_L ) write(IO_FID_LOG,*)
+!                             LOG_NEWLINE
 !                          enddo
 !                       endif
 
@@ -1386,63 +1387,63 @@ contains
                                             ainfo(n)%AXIS_3d(:,:,:)  ) ! [INOUT]
 
 !                       if ( debug ) then
-!                          if( IO_L ) write(IO_FID_LOG,*)
-!                          if( IO_L ) write(IO_FID_LOG,*) '*** Axis No.', n, ' : ', trim(ainfo(n)%varname)
+!                          LOG_NEWLINE
+!                          LOG_INFO("SNO_axis_read",*) 'Axis No.', n, ' : ', trim(ainfo(n)%varname)
 !
-!                          if( IO_L ) write(IO_FID_LOG,*) 'AXIS_3d'
+!                          LOG_INFO("SNO_axis_read",*) 'AXIS_3d'
 !                          if( IO_L ) write(IO_FID_LOG,'(1x,A3)',advance='no') "###"
 !                          do i = 1, gout2
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
 !                          enddo
-!                          if( IO_L ) write(IO_FID_LOG,*)
+!                          LOG_NEWLINE
 !                          do j = 1, gout3
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') j
 !                             do i = 1, gout2
 !                                if( IO_L ) write(IO_FID_LOG,'(1x,F8.3)',advance='no') ainfo(n)%AXIS_3d(1,i,j)
 !                             enddo
-!                             if( IO_L ) write(IO_FID_LOG,*)
+!                             LOG_NEWLINE
 !                          enddo
 !
-!                          if( IO_L ) write(IO_FID_LOG,*) 'localmap(rank)'
+!                          LOG_INFO("SNO_axis_read",*) 'localmap(rank)'
 !                          if( IO_L ) write(IO_FID_LOG,'(1x,A3)',advance='no') "###"
 !                          do i = 1, gout2
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
 !                          enddo
-!                          if( IO_L ) write(IO_FID_LOG,*)
+!                          LOG_NEWLINE
 !                          do j = 1, gout3
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') j
 !                             do i = 1, gout2
 !                                if( IO_L ) write(IO_FID_LOG,'(1x,I3)',advance='no') localmap_2d(i,j,I_map_p)
 !                             enddo
-!                             if( IO_L ) write(IO_FID_LOG,*)
+!                             LOG_NEWLINE
 !                          enddo
 !
-!                          if( IO_L ) write(IO_FID_LOG,*) 'localmap(i-index)'
+!                          LOG_INFO("SNO_axis_read",*) 'localmap(i-index)'
 !                          if( IO_L ) write(IO_FID_LOG,'(1x,A3)',advance='no') "###"
 !                          do i = 1, gout2
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
 !                          enddo
-!                          if( IO_L ) write(IO_FID_LOG,*)
+!                          LOG_NEWLINE
 !                          do j = 1, gout3
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') j
 !                             do i = 1, gout2
 !                                if( IO_L ) write(IO_FID_LOG,'(1x,I3)',advance='no') localmap_2d(i,j,I_map_i)
 !                             enddo
-!                             if( IO_L ) write(IO_FID_LOG,*)
+!                             LOG_NEWLINE
 !                          enddo
 !
-!                          if( IO_L ) write(IO_FID_LOG,*) 'localmap(j-index)'
+!                          LOG_INFO("SNO_axis_read",*) 'localmap(j-index)'
 !                          if( IO_L ) write(IO_FID_LOG,'(1x,A3)',advance='no') "###"
 !                          do i = 1, gout2
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
 !                          enddo
-!                          if( IO_L ) write(IO_FID_LOG,*)
+!                          LOG_NEWLINE
 !                          do j = 1, gout3
 !                             if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') j
 !                             do i = 1, gout2
 !                                if( IO_L ) write(IO_FID_LOG,'(1x,I3)',advance='no') localmap_2d(i,j,I_map_j)
 !                             enddo
-!                             if( IO_L ) write(IO_FID_LOG,*)
+!                             LOG_NEWLINE
 !                          enddo
 !                       endif
 
@@ -1485,7 +1486,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_axis_define] define axis'
+       LOG_INFO("SNO_axis_define",*) '[SNO_axis_define] define axis'
     endif
 
     do n = 1, naxis
@@ -1563,7 +1564,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_axis_write] write axis'
+       LOG_INFO("SNO_axis_write",*) '[SNO_axis_write] write axis'
     endif
 
     do n = 1, naxis

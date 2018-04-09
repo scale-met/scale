@@ -9,6 +9,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 program sno
   !-----------------------------------------------------------------------------
   !
@@ -21,9 +22,9 @@ program sno
   use scale_stdio
   use scale_prof
 
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_MPIstart,       &
-     PRC_MPIstop,        &
+     PRC_abort,        &
      PRC_MPIfinish,      &
      PRC_SINGLECOM_setup
   use scale_const, only: &
@@ -177,19 +178,19 @@ program sno
   ! setup calendar
   call CALENDAR_setup
 
-  if( IO_L ) write(IO_FID_LOG,*)
-  if( IO_L ) write(IO_FID_LOG,*) '++++++ Program[SNO] / Categ[Utility] / Origin[SCALE-RM]'
+  LOG_NEWLINE
+  LOG_INFO("sno",*) 'Program[SNO] / Categ[Utility] / Origin[SCALE-RM]'
 
   !--- read namelist
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_SNO,iostat=ierr)
   if ( ierr < 0 ) then !--- missing
-     if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+     LOG_INFO("sno",*) 'Not found namelist. Default used.'
   elseif( ierr > 0 ) then !--- fatal error
-     write(*,*) 'xxx Not appropriate names in namelist PARAM_SNO. Check!'
-     call PRC_MPIstop
+     LOG_ERROR("sno",*) 'Not appropriate names in namelist PARAM_SNO. Check!'
+     call PRC_abort
   endif
-  if( IO_NML ) write(IO_FID_NML,nml=PARAM_SNO)
+  LOG_NML(PARAM_SNO)
 
   do_output = .true.
 
@@ -282,8 +283,8 @@ program sno
                                  ngrids_xh_out, ngrids_yh_out ) ! [OUT]
 
         if ( p >= pstr .AND. p <= pend ) then
-           if( IO_L ) write(IO_FID_LOG,*)
-           if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)') '*** now processing rank = ', p
+           LOG_NEWLINE
+           LOG_INFO("sno",'(A,I6)') 'now processing rank = ', p
 
            ! in->out mapping table (for one file)
            allocate( localmap(ngrids_x_out,ngrids_y_out,3) )
@@ -336,8 +337,8 @@ program sno
            !####################################################################
 
            do v = 1, nvars
-              if( IO_L ) write(IO_FID_LOG,*)
-              if( IO_L ) write(IO_FID_LOG,*) '+ variable : ', trim(dinfo(v)%varname)
+              LOG_NEWLINE
+              LOG_INFO("sno",*) '+ variable : ', trim(dinfo(v)%varname)
 
               ! output array allocation
 
@@ -357,7 +358,7 @@ program sno
               !#################################################################
 
               do t = 1, dinfo(v)%step_nmax
-                 if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)') '++ t = ', t
+                 LOG_INFO("sno",'(A,I6)') '++ t = ', t
 
                  call SNO_vars_read( basename_in,                  & ! [IN]    from namelist
                                      t,                            & ! [IN]

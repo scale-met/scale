@@ -10,6 +10,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module mod_sno_map
   !-----------------------------------------------------------------------------
   !
@@ -75,8 +76,8 @@ contains
     integer :: p, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_map_settable_global] Calc relation map for grids and procs (global)'
+    LOG_NEWLINE
+    LOG_INFO("SNO_map_settable_global",*) '[SNO_map_settable_global] Calc relation map for grids and procs (global)'
 
     jpos = 0
     do py = 1, nprocs_y_in
@@ -107,46 +108,46 @@ contains
     enddo
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'globalmap(rank)'
+       LOG_INFO("SNO_map_settable_global",*) 'globalmap(rank)'
        if( IO_L ) write(IO_FID_LOG,'(1x,A3)',advance='no') "###"
        do i = 1, ngrids_x
           if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
        enddo
-       if( IO_L ) write(IO_FID_LOG,*)
+       LOG_NEWLINE
        do j = 1, ngrids_y
           if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') j
           do i = 1, ngrids_x
              if( IO_L ) write(IO_FID_LOG,'(1x,I3)',advance='no') globalmap(i,j,I_map_p)
           enddo
-          if( IO_L ) write(IO_FID_LOG,*)
+          LOG_NEWLINE
        enddo
 
-       if( IO_L ) write(IO_FID_LOG,*) 'globalmap(i-index)'
+       LOG_INFO("SNO_map_settable_global",*) 'globalmap(i-index)'
        if( IO_L ) write(IO_FID_LOG,'(1x,A3)',advance='no') "###"
        do i = 1, ngrids_x
           if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
        enddo
-       if( IO_L ) write(IO_FID_LOG,*)
+       LOG_NEWLINE
        do j = 1, ngrids_y
           if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') j
           do i = 1, ngrids_x
              if( IO_L ) write(IO_FID_LOG,'(1x,I3)',advance='no') globalmap(i,j,I_map_i)
           enddo
-          if( IO_L ) write(IO_FID_LOG,*)
+          LOG_NEWLINE
        enddo
 
-       if( IO_L ) write(IO_FID_LOG,*) 'globalmap(j-index)'
+       LOG_INFO("SNO_map_settable_global",*) 'globalmap(j-index)'
        if( IO_L ) write(IO_FID_LOG,'(1x,A3)',advance='no') "###"
        do i = 1, ngrids_x
           if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
        enddo
-       if( IO_L ) write(IO_FID_LOG,*)
+       LOG_NEWLINE
        do j = 1, ngrids_y
           if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') j
           do i = 1, ngrids_x
              if( IO_L ) write(IO_FID_LOG,'(1x,I3)',advance='no') globalmap(i,j,I_map_j)
           enddo
-          if( IO_L ) write(IO_FID_LOG,*)
+          LOG_NEWLINE
        enddo
     endif
 
@@ -190,8 +191,8 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_map_settable_local] Calc relation map for grids and procs (local)'
+    LOG_NEWLINE
+    LOG_INFO("SNO_map_settable_local",*) '[SNO_map_settable_local] Calc relation map for grids and procs (local)'
 
     do j = 1, ngrids_y_out
     do i = 1, ngrids_x_out
@@ -216,54 +217,54 @@ contains
     enddo
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'localmap(rank)'
+       LOG_INFO("SNO_map_settable_local",*) 'localmap(rank)'
        if( IO_L ) write(IO_FID_LOG,'(1x,A3)',advance='no') "###"
        do i = 1, ngrids_x_out
           if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
        enddo
-       if( IO_L ) write(IO_FID_LOG,*)
+       LOG_NEWLINE
        do j = 1, ngrids_y_out
           if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') j
           do i = 1, ngrids_x_out
              if( IO_L ) write(IO_FID_LOG,'(1x,I3)',advance='no') localmap(i,j,I_map_p)
           enddo
-          if( IO_L ) write(IO_FID_LOG,*)
+          LOG_NEWLINE
        enddo
 
-       if( IO_L ) write(IO_FID_LOG,*) 'localmap(i-index)'
+       LOG_INFO("SNO_map_settable_local",*) 'localmap(i-index)'
        if( IO_L ) write(IO_FID_LOG,'(1x,A3)',advance='no') "###"
        do i = 1, ngrids_x_out
           if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
        enddo
-       if( IO_L ) write(IO_FID_LOG,*)
+       LOG_NEWLINE
        do j = 1, ngrids_y_out
           if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') j
           do i = 1, ngrids_x_out
              if( IO_L ) write(IO_FID_LOG,'(1x,I3)',advance='no') localmap(i,j,I_map_i)
           enddo
-          if( IO_L ) write(IO_FID_LOG,*)
+          LOG_NEWLINE
        enddo
 
-       if( IO_L ) write(IO_FID_LOG,*) 'localmap(j-index)'
+       LOG_INFO("SNO_map_settable_local",*) 'localmap(j-index)'
        if( IO_L ) write(IO_FID_LOG,'(1x,A3)',advance='no') "###"
        do i = 1, ngrids_x_out
           if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') i
        enddo
-       if( IO_L ) write(IO_FID_LOG,*)
+       LOG_NEWLINE
        do j = 1, ngrids_y_out
           if( IO_L ) write(IO_FID_LOG,'(1x,I3.3)',advance='no') j
           do i = 1, ngrids_x_out
              if( IO_L ) write(IO_FID_LOG,'(1x,I3)',advance='no') localmap(i,j,I_map_j)
           enddo
-          if( IO_L ) write(IO_FID_LOG,*)
+          LOG_NEWLINE
        enddo
 
-       if( IO_L ) write(IO_FID_LOG,*) 'readflag'
+       LOG_INFO("SNO_map_settable_local",*) 'readflag'
        do py = 1, nprocs_y_in
           do px = 1, nprocs_x_in
              if( IO_L ) write(IO_FID_LOG,'(1x,L2)',advance='no') readflag(px,py)
           enddo
-          if( IO_L ) write(IO_FID_LOG,*)
+          LOG_NEWLINE
        enddo
     endif
 

@@ -9,6 +9,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module mod_sno_grads
   !-----------------------------------------------------------------------------
   !
@@ -55,8 +56,8 @@ contains
        nprocs_y_out,   &
        output_grads,   &
        output_gradsctl )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer, intent(in)  :: nprocs_x_out             ! x length of 2D processor topology (output)
@@ -66,12 +67,12 @@ contains
     !---------------------------------------------------------------------------
 
     if ( output_grads .OR. output_gradsctl ) then
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_grads] Output file as GrADS format, instead of NeCDF'
+       LOG_NEWLINE
+       LOG_INFO("SNO_grads_setup",*) '[SNO_grads] Output file as GrADS format, instead of NeCDF'
 
        if ( nprocs_x_out * nprocs_y_out /= 1 ) then
-          write(*,*) 'xxx [SNO_grads_setup] To output file as GrADS format, the number of output file must be 1.'
-          call PRC_MPIstop
+          LOG_ERROR("SNO_grads_setup",*) 'To output file as GrADS format, the number of output file must be 1.'
+          call PRC_abort
        endif
     endif
 
@@ -88,8 +89,8 @@ contains
        ainfo,    &
        dinfo,    &
        debug     )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_sno_h, only: &
        commoninfo, &
        axisinfo,   &
@@ -132,7 +133,7 @@ contains
 
        recsize = int(imax,kind=8) * int(jmax,kind=8) * int(kmax,kind=8) * 4_8
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_grads_write] filename : ', trim(grdname)
+       LOG_INFO("SNO_grads_write",*) '[SNO_grads_write] filename : ', trim(grdname)
 
        GRADS_grd_fid = IO_get_available_fid()
        open( unit   = GRADS_grd_fid, &
@@ -192,8 +193,8 @@ contains
        ainfo,   &
        dinfo,   &
        debug    )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        CONST_UNDEF, &
        CONST_D2R,   &
@@ -277,7 +278,7 @@ contains
 
     !##### write control file #####
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_grads_write_ctl] filename : ', trim(ctlname)
+    LOG_INFO("SNO_grads_write_ctl",*) '[SNO_grads_write_ctl] filename : ', trim(ctlname)
 
     fid = IO_get_available_fid()
     open( unit   = fid,                    &
@@ -311,8 +312,8 @@ contains
        enddo
 
        if ( .NOT. written ) then
-          write(*,*) 'xxx [SNO_grads_write_ctl] AXIS data for XDEF not found. ', trim(idim)
-          call PRC_MPIstop
+          LOG_ERROR("SNO_grads_write_ctl",*) 'AXIS data for XDEF not found. ', trim(idim)
+          call PRC_abort
        endif
 
        !--- YDEF
@@ -338,8 +339,8 @@ contains
        enddo
 
        if ( .NOT. written ) then
-          write(*,*) 'xxx [SNO_grads_write_ctl] AXIS data for YDEF not found. ', trim(idim)
-          call PRC_MPIstop
+          LOG_ERROR("SNO_grads_write_ctl",*) 'AXIS data for YDEF not found. ', trim(idim)
+          call PRC_abort
        endif
 
        !--- ZDEF
@@ -419,8 +420,8 @@ contains
        nvars,    &
        dinfo,    &
        debug     )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        CONST_UNDEF, &
        CONST_D2R,   &
@@ -542,8 +543,8 @@ contains
        enddo
 
        if ( .NOT. written ) then
-          write(*,*) 'xxx [SNO_grads_write_ctl] AXIS data for XDEF not found. ', trim(idim)
-          call PRC_MPIstop
+          LOG_ERROR("SNO_grads_netcdfctl",*) '[SNO_grads_write_ctl] AXIS data for XDEF not found. ', trim(idim)
+          call PRC_abort
        endif
 
        !--- YDEF
@@ -560,8 +561,8 @@ contains
        enddo
 
        if ( .NOT. written ) then
-          write(*,*) 'xxx [SNO_grads_write_ctl] AXIS data for YDEF not found. ', trim(idim)
-          call PRC_MPIstop
+          LOG_ERROR("SNO_grads_netcdfctl",*) '[SNO_grads_write_ctl] AXIS data for YDEF not found. ', trim(idim)
+          call PRC_abort
        endif
 
        !--- ZDEF

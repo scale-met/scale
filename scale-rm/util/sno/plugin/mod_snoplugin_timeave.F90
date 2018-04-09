@@ -9,6 +9,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module mod_snoplugin_timeave
   !-----------------------------------------------------------------------------
   !
@@ -72,8 +73,8 @@ contains
   subroutine SNOPLGIN_timeave_setup( &
        enable_plugin, &
        do_output      )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     logical, intent(out)   :: enable_plugin
@@ -87,62 +88,62 @@ contains
     integer  :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Plugin[timeave] / Categ[data handling]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Plugin[timeave] / Categ[data handling]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_SNOPLGIN_TIMEAVE,iostat=ierr)
     if ( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("SNOPLGIN_timeave_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_SNOPLGIN_TIMEAVE. Check!'
-       call PRC_MPIstop
+       LOG_ERROR("SNOPLGIN_timeave_setup",*) 'Not appropriate names in namelist PARAM_SNOPLGIN_TIMEAVE. Check!'
+       call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_SNOPLGIN_TIMEAVE)
+    LOG_NML(PARAM_SNOPLGIN_TIMEAVE)
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    LOG_NEWLINE
     select case(SNOPLGIN_timeave_type)
     case('OFF')
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** SNOPLGIN_timeave_type     : OFF'
+       LOG_INFO("SNOPLGIN_timeave_setup",*) 'SNOPLGIN_timeave_type     : OFF'
        enable_plugin = .false.
 
     case('NUMBER')
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** SNOPLGIN_timeave_type     : by number'
+       LOG_INFO("SNOPLGIN_timeave_setup",*) 'SNOPLGIN_timeave_type     : by number'
        enable_plugin = .true.
 
        if ( SNOPLGIN_timeave_interval < 1 ) then
-          write(*,*) 'xxx Please set positive number for SNOPLGIN_timeave_interval : ', SNOPLGIN_timeave_interval
-          call PRC_MPIstop
+          LOG_ERROR("SNOPLGIN_timeave_setup",*) 'Please set positive number for SNOPLGIN_timeave_interval : ', SNOPLGIN_timeave_interval
+          call PRC_abort
        else
-          if( IO_L ) write(IO_FID_LOG,*) '*** SNOPLGIN_timeave_interval : ', SNOPLGIN_timeave_interval
+          LOG_INFO("SNOPLGIN_timeave_setup",*) 'SNOPLGIN_timeave_interval : ', SNOPLGIN_timeave_interval
        endif
 
     case('DAILY')
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** SNOPLGIN_timeave_type     : Daily mean'
+       LOG_INFO("SNOPLGIN_timeave_setup",*) 'SNOPLGIN_timeave_type     : Daily mean'
        enable_plugin = .true.
 
     case('MONTHLY')
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** SNOPLGIN_timeave_type     : Monthly mean'
+       LOG_INFO("SNOPLGIN_timeave_setup",*) 'SNOPLGIN_timeave_type     : Monthly mean'
        enable_plugin = .true.
 
     case('ANNUAL')
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** SNOPLGIN_timeave_type     : Annual mean'
+       LOG_INFO("SNOPLGIN_timeave_setup",*) 'SNOPLGIN_timeave_type     : Annual mean'
        enable_plugin = .true.
 
     case default
-       write(*,*) 'xxx the name of SNOPLGIN_timeave_type is not appropriate : ', trim(SNOPLGIN_timeave_type)
-       write(*,*) 'xxx you can choose OFF,NUMBER,DAILY,MONTHLY,ANNUAL'
-       call PRC_MPIstop
+       LOG_ERROR("SNOPLGIN_timeave_setup",*) 'the name of SNOPLGIN_timeave_type is not appropriate : ', trim(SNOPLGIN_timeave_type)
+       LOG_ERROR_CONT(*) 'you can choose OFF,NUMBER,DAILY,MONTHLY,ANNUAL'
+       call PRC_abort
     end select
 
     if ( enable_plugin ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** output original (non-averaged) data? : ', SNOPLGIN_timeave_outorigdata
+       LOG_INFO("SNOPLGIN_timeave_setup",*) 'output original (non-averaged) data? : ', SNOPLGIN_timeave_outorigdata
        do_output = SNOPLGIN_timeave_outorigdata
     endif
 
@@ -175,7 +176,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** [SNOPLGIN_timeave_alloc] allocate temporal array'
+       LOG_INFO("SNOPLGIN_timeave_alloc",*) '[SNOPLGIN_timeave_alloc] allocate temporal array'
     endif
 
     if ( dinfo%dim_rank == 1 ) then
@@ -269,7 +270,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** [SNOPLGIN_timeave_dealloc] deallocate temporal array'
+       LOG_INFO("SNOPLGIN_timeave_dealloc",*) '[SNOPLGIN_timeave_dealloc] deallocate temporal array'
     endif
 
     if( allocated(avgdinfo%VAR_1d) ) deallocate( avgdinfo%VAR_1d )
@@ -596,7 +597,7 @@ contains
 
        endif
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)') '++ output tave = ', avgdinfo%step_nmax
+       LOG_INFO("SNOPLGIN_timeave_store",'(1x,A,I6)') '++ output tave = ', avgdinfo%step_nmax
 
        finalize    = ( nowstep == dinfo%step_nmax )
        add_rm_attr = .true.

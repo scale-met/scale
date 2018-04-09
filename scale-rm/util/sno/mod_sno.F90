@@ -9,6 +9,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module mod_sno
   !-----------------------------------------------------------------------------
   !
@@ -57,8 +58,8 @@ contains
        nprocs_y_out, &
        pstr,         &
        pend          )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer, intent(in)  :: nprocs       ! number of processes               (execution)
@@ -80,18 +81,18 @@ contains
     pend        = min( pend, nprocs_out-1 )
 
     if ( nprocs > nprocs_out ) then
-       write(*,*) 'xxx [SNO_proc_alloc] # of using PEs should be less than # of files for output. Check'
-       call PRC_MPIstop
+       LOG_ERROR("SNO_proc_alloc",*) '# of using PEs should be less than # of files for output. Check'
+       call PRC_abort
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_proc_alloc] Process management'
-    if( IO_L ) write(IO_FID_LOG,*) '*** # of PEs (this execution)     : ', nprocs
-    if( IO_L ) write(IO_FID_LOG,*) '*** Rank     (this execution)     : ', myrank
-    if( IO_L ) write(IO_FID_LOG,*) '*** Master?  (this execution)     : ', ismaster
-    if( IO_L ) write(IO_FID_LOG,*) '*** # of PEs (output file)        : ', nprocs_out, '(', nprocs_x_out, 'x', nprocs_y_out, ')'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Start PE managed by this rank : ', pstr
-    if( IO_L ) write(IO_FID_LOG,*) '*** End   PE managed by this rank : ', pend
+    LOG_NEWLINE
+    LOG_INFO("SNO_proc_alloc",*) '[SNO_proc_alloc] Process management'
+    LOG_INFO("SNO_proc_alloc",*) '# of PEs (this execution)     : ', nprocs
+    LOG_INFO("SNO_proc_alloc",*) 'Rank     (this execution)     : ', myrank
+    LOG_INFO("SNO_proc_alloc",*) 'Master?  (this execution)     : ', ismaster
+    LOG_INFO("SNO_proc_alloc",*) '# of PEs (output file)        : ', nprocs_out, '(', nprocs_x_out, 'x', nprocs_y_out, ')'
+    LOG_INFO("SNO_proc_alloc",*) 'Start PE managed by this rank : ', pstr
+    LOG_INFO("SNO_proc_alloc",*) 'End   PE managed by this rank : ', pend
 
     return
   end subroutine SNO_proc_alloc
@@ -116,8 +117,6 @@ contains
        varname,      &
        debug         )
     use mpi
-    use scale_process, only: &
-       PRC_abort
     use scale_file_h, only: &
        FILE_FREAD
     use scale_file, only: &
@@ -128,10 +127,10 @@ contains
        FILE_CARTESC_get_size
     use scale_atmos_grid_cartesc, only: &
        ATMOS_GRID_CARTESC_NAME
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD, &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        CONST_UNDEF
     use mod_sno_h, only: &
@@ -184,8 +183,8 @@ contains
 
     !---  read info from global file
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [SNO_file_getinfo] Get process & horizontal grid info from input file'
+    LOG_NEWLINE
+    LOG_INFO("SNO_file_getinfo",*) '[SNO_file_getinfo] Get process & horizontal grid info from input file'
 
     if ( ismaster ) then
        nowrank = 0 ! first file
@@ -232,7 +231,7 @@ contains
           call FILE_Get_Attribute( fid, 'y', 'size_global', hinfo%yatt_size_global(:) )
           call FILE_Get_Attribute( fid, 'y', 'halo_global', hinfo%yatt_halo_global(:) )
        case default
-          write(*,*) 'xxx currently only ', trim(ATMOS_GRID_CARTESC_NAME), ' is supported as grid_name'
+          LOG_ERROR("SNO_file_getinfo",*) 'currently only ', trim(ATMOS_GRID_CARTESC_NAME), ' is supported as grid_name'
           call PRC_abort
        end select
 
@@ -258,18 +257,18 @@ contains
     call MPI_BCAST( varname_file(1), H_SHORT*item_limit, MPI_CHARACTER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) "hinfo%title           ", trim(hinfo%title)
-       if( IO_L ) write(IO_FID_LOG,*) "hinfo%source          ", trim(hinfo%source)
-       if( IO_L ) write(IO_FID_LOG,*) "hinfo%institute       ", trim(hinfo%institute)
-       if( IO_L ) write(IO_FID_LOG,*) "hinfo%grid_name       ", trim(hinfo%grid_name)
-       if( IO_L ) write(IO_FID_LOG,*) "hinfo%periodic        ", hinfo%periodic        (:)
-       if( IO_L ) write(IO_FID_LOG,*) "hinfo%gridsize        ", hinfo%gridsize        (:)
-       if( IO_L ) write(IO_FID_LOG,*) "hinfo%halosize        ", hinfo%halosize        (:)
-       if( IO_L ) write(IO_FID_LOG,*) "procsize              ", procsize              (:)
-       if( IO_L ) write(IO_FID_LOG,*) "hinfo%xatt_size_global", hinfo%xatt_size_global(:)
-       if( IO_L ) write(IO_FID_LOG,*) "hinfo%xatt_halo_global", hinfo%xatt_halo_global(:)
-       if( IO_L ) write(IO_FID_LOG,*) "hinfo%yatt_size_global", hinfo%yatt_size_global(:)
-       if( IO_L ) write(IO_FID_LOG,*) "hinfo%yatt_halo_global", hinfo%yatt_halo_global(:)
+       LOG_INFO("SNO_file_getinfo",*) "hinfo%title           ", trim(hinfo%title)
+       LOG_INFO("SNO_file_getinfo",*) "hinfo%source          ", trim(hinfo%source)
+       LOG_INFO("SNO_file_getinfo",*) "hinfo%institute       ", trim(hinfo%institute)
+       LOG_INFO("SNO_file_getinfo",*) "hinfo%grid_name       ", trim(hinfo%grid_name)
+       LOG_INFO("SNO_file_getinfo",*) "hinfo%periodic        ", hinfo%periodic        (:)
+       LOG_INFO("SNO_file_getinfo",*) "hinfo%gridsize        ", hinfo%gridsize        (:)
+       LOG_INFO("SNO_file_getinfo",*) "hinfo%halosize        ", hinfo%halosize        (:)
+       LOG_INFO("SNO_file_getinfo",*) "procsize              ", procsize              (:)
+       LOG_INFO("SNO_file_getinfo",*) "hinfo%xatt_size_global", hinfo%xatt_size_global(:)
+       LOG_INFO("SNO_file_getinfo",*) "hinfo%xatt_halo_global", hinfo%xatt_halo_global(:)
+       LOG_INFO("SNO_file_getinfo",*) "hinfo%yatt_size_global", hinfo%yatt_size_global(:)
+       LOG_INFO("SNO_file_getinfo",*) "hinfo%yatt_halo_global", hinfo%yatt_halo_global(:)
     endif
 
     !--- process management
@@ -278,9 +277,9 @@ contains
     nprocs_y_in = procsize(2)
     nprocs_in   = nprocs_x_in * nprocs_y_in
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Process info ***'
-    if( IO_L ) write(IO_FID_LOG,*) '*** # of PEs (input  file)        : ', nprocs_in, '(', nprocs_x_in, 'x', nprocs_y_in, ')'
+    LOG_NEWLINE
+    LOG_INFO("SNO_file_getinfo",*) 'Process info '
+    LOG_INFO("SNO_file_getinfo",*) '# of PEs (input  file)        : ', nprocs_in, '(', nprocs_x_in, 'x', nprocs_y_in, ')'
 
     !--- horizontal grid management
 
@@ -302,25 +301,25 @@ contains
     ngrids_in       = ngrids_x_in     * ngrids_y_in
     ngrids_out      = ngrids_x_out    * ngrids_y_out
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Grid info (horizontal) ***'
-    if( IO_L ) write(IO_FID_LOG,*) '*** # of total grids           without halo : ', &
+    LOG_NEWLINE
+    LOG_INFO("SNO_file_getinfo",*) 'Grid info (horizontal) '
+    LOG_INFO("SNO_file_getinfo",*) '# of total grids           without halo : ', &
                                    ngrids    , '(', ngrids_x_nohalo, 'x', ngrids_y_nohalo, ')'
-    if( IO_L ) write(IO_FID_LOG,*) '*** # of grids per input  file without halo : ', &
+    LOG_INFO("SNO_file_getinfo",*) '# of grids per input  file without halo : ', &
                                    ngrids_in , '(', ngrids_x_in    , 'x', ngrids_y_in    , ')'
-    if( IO_L ) write(IO_FID_LOG,*) '*** # of grids per output file without halo : ', &
+    LOG_INFO("SNO_file_getinfo",*) '# of grids per output file without halo : ', &
                                    ngrids_out, '(', ngrids_x_out   , 'x', ngrids_y_out   , ')'
-    if( IO_L ) write(IO_FID_LOG,*) '*** # of halo grids (x-axis,one side)       : ', nhalos_x
-    if( IO_L ) write(IO_FID_LOG,*) '*** # of halo grids (y-axis,one side)       : ', nhalos_y
+    LOG_INFO("SNO_file_getinfo",*) '# of halo grids (x-axis,one side)       : ', nhalos_x
+    LOG_INFO("SNO_file_getinfo",*) '# of halo grids (y-axis,one side)       : ', nhalos_y
 
     if ( mod(ngrids_x_nohalo,nprocs_x_out) /= 0 ) then
-       write(*,*) 'xxx [SNO_file_getinfo] The allowable case is that # of the total x-grids is divisible with # of the x-PEs for the output. Stop'
-       call PRC_MPIstop
+       LOG_ERROR("SNO_file_getinfo",*) 'The allowable case is that # of the total x-grids is divisible with # of the x-PEs for the output. Stop'
+       call PRC_abort
     endif
 
     if ( mod(ngrids_y_nohalo,nprocs_y_out) /= 0 ) then
-       write(*,*) 'xxx [SNO_file_getinfo] The allowable case is that # of the total y-grids is divisible with # of the y-PEs for the output. Stop'
-       call PRC_MPIstop
+       LOG_ERROR("SNO_file_getinfo",*) 'The allowable case is that # of the total y-grids is divisible with # of the y-PEs for the output. Stop'
+       call PRC_abort
     endif
 
     exist(:) = .false.
@@ -330,13 +329,13 @@ contains
     nvars_req = nn - 1
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) "*** nvars_req = ", nvars_req
+       LOG_NEWLINE
+       LOG_INFO("SNO_file_getinfo",*) "nvars_req = ", nvars_req
        do nn = 1, nvars_req
-          if( IO_L ) write(IO_FID_LOG,*) "*** ", nn, trim(vars(nn))
+          LOG_INFO("SNO_file_getinfo",*) nn, trim(vars(nn))
        enddo
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) "*** nvars_file = ", nvars_file
+       LOG_NEWLINE
+       LOG_INFO("SNO_file_getinfo",*) "nvars_file = ", nvars_file
     endif
 
     hinfo%minfo_mapping_name                             = ''
@@ -353,7 +352,7 @@ contains
     do n = 1, nvars_file
 
        if ( debug ) then
-          if( IO_L ) write(IO_FID_LOG,*) "*** ", n, trim(varname_file(n))
+          LOG_INFO("SNO_file_getinfo",*) n, trim(varname_file(n))
        endif
 
        select case(varname_file(n))
@@ -438,9 +437,9 @@ contains
              do nn = 1, nvars_req
                 if ( varname_file(n) == vars(nn) ) then
                    if ( exist(nn) ) then
-                      if( IO_L ) write(IO_FID_LOG,*) 'xxx [SNO_file_getinfo] variable ', trim(vars(nn)), &
+                      LOG_INFO("SNO_file_getinfo",*) 'xxx [SNO_file_getinfo] variable ', trim(vars(nn)), &
                                                      ' is requested two times. check namelist!'
-                      call PRC_MPIstop
+                      call PRC_abort
                    endif
 
                    nvars          = nvars + 1
@@ -454,13 +453,13 @@ contains
     enddo
 
     if ( nvars_req > 0 .AND. nvars /= nvars_req ) then
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx [SNO_file_getinfo] some requested variables are missing.', nvars, nvars_req
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx nvars = ', nvars, ', nvars_req = ', nvars_req
+       LOG_NEWLINE
+       LOG_INFO("SNO_file_getinfo",*) 'xxx [SNO_file_getinfo] some requested variables are missing.', nvars, nvars_req
+       LOG_INFO("SNO_file_getinfo",*) 'xxx nvars = ', nvars, ', nvars_req = ', nvars_req
        do nn = 1, nvars_req
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx check:', exist(nn), ', name: ', trim(vars(nn))
+          LOG_INFO("SNO_file_getinfo",*) 'xxx check:', exist(nn), ', name: ', trim(vars(nn))
        enddo
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     call MPI_BCAST( hinfo%minfo_mapping_name                            , H_SHORT, MPI_CHARACTER,        PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -472,16 +471,16 @@ contains
     call MPI_BCAST( hinfo%minfo_straight_vertical_longitude_from_pole(1), 1      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
     call MPI_BCAST( hinfo%minfo_standard_parallel                    (1), 2      , MPI_DOUBLE_PRECISION, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Axis list'
+    LOG_NEWLINE
+    LOG_INFO("SNO_file_getinfo",*) 'Axis list'
     do n = 1, naxis
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A20)') '*** No.', n, ', name: ', trim(axisname(n))
+       LOG_INFO("SNO_file_getinfo",'(1x,A,I3.3,A,A20)') 'No.', n, ', name: ', trim(axisname(n))
     enddo
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Variable list'
+    LOG_NEWLINE
+    LOG_INFO("SNO_file_getinfo",*) 'Variable list'
     do n = 1, nvars
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A20)') '*** No.', n, ', name: ', trim(varname(n))
+       LOG_INFO("SNO_file_getinfo",'(1x,A,I3.3,A,A20)') 'No.', n, ', name: ', trim(varname(n))
     enddo
 
     return
@@ -557,10 +556,10 @@ contains
        FILE_dtypelist
     use scale_file, only: &
        FILE_Read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD, &
-       PRC_MPIstop
+       PRC_abort
     implicit none
 
     logical,          intent(in)  :: ismaster
@@ -611,8 +610,8 @@ contains
        endif
 
     else
-       write(*,*) 'xxx [read_bcast_1d] Unsupported datatype : ', trim(FILE_dtypelist(datatype))
-       call PRC_MPIstop
+       LOG_ERROR("SNO_read_bcast_1d",*) '[read_bcast_1d] Unsupported datatype : ', trim(FILE_dtypelist(datatype))
+       call PRC_abort
     endif
 
     call MPI_BCAST( var(:), varsize, datatype_mpi, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -637,8 +636,8 @@ contains
        FILE_dtypelist
     use scale_file, only: &
        FILE_Read
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_sno_h, only: &
        I_map_p, &
        I_map_i
@@ -685,8 +684,8 @@ contains
        enddo
 
     else
-       write(*,*) 'xxx [read_map_1d] Unsupported datatype : ', trim(FILE_dtypelist(datatype))
-       call PRC_MPIstop
+       LOG_ERROR("SNO_read_map_1d",*) '[read_map_1d] Unsupported datatype : ', trim(FILE_dtypelist(datatype))
+       call PRC_abort
     endif
 
     return
@@ -708,10 +707,10 @@ contains
        FILE_dtypelist
     use scale_file, only: &
        FILE_Read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD, &
-       PRC_MPIstop
+       PRC_abort
     implicit none
 
     logical,          intent(in)  :: ismaster
@@ -763,8 +762,8 @@ contains
        endif
 
     else
-       write(*,*) 'xxx [read_bcast_2d] Unsupported datatype : ', trim(FILE_dtypelist(datatype))
-       call PRC_MPIstop
+       LOG_ERROR("SNO_read_bcast_2d",*) '[read_bcast_2d] Unsupported datatype : ', trim(FILE_dtypelist(datatype))
+       call PRC_abort
     endif
 
     call MPI_BCAST( var(:,:), varsize1*varsize2, datatype_mpi, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -791,8 +790,8 @@ contains
        FILE_dtypelist
     use scale_file, only: &
        FILE_Read
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_sno_h, only: &
        I_map_p, &
        I_map_i, &
@@ -848,8 +847,8 @@ contains
        enddo
 
     else
-       write(*,*) 'xxx [read_map_2d] Unsupported datatype : ', trim(FILE_dtypelist(datatype))
-       call PRC_MPIstop
+       LOG_ERROR("SNO_read_map_2d",*) '[read_map_2d] Unsupported datatype : ', trim(FILE_dtypelist(datatype))
+       call PRC_abort
     endif
 
     return
@@ -877,8 +876,8 @@ contains
        FILE_dtypelist
     use scale_file, only: &
        FILE_Read
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_sno_h, only: &
        I_map_p, &
        I_map_i, &
@@ -987,8 +986,8 @@ contains
        deallocate( tmp_DP )
 
     else
-       write(*,*) 'xxx [read_map_3d] Unsupported datatype : ', trim(FILE_dtypelist(datatype))
-       call PRC_MPIstop
+       LOG_ERROR("SNO_read_map_3d",*) '[read_map_3d] Unsupported datatype : ', trim(FILE_dtypelist(datatype))
+       call PRC_abort
     endif
 
     return
@@ -1005,7 +1004,7 @@ contains
        hinfo,        &
        dinfo,        &
        debug         )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file, only: &
        FILE_Set_Attribute,         &
@@ -1057,7 +1056,7 @@ contains
                                                hinfo%time_start(1), hinfo%time_units, hinfo%calendar    )
 
     case default
-       write(*,*) 'invalud grid_name: ', trim(hinfo%grid_name)
+       LOG_WARN("SNO_attributes_write",*) 'invalud grid_name: ', trim(hinfo%grid_name)
        call PRC_abort
     end select
 

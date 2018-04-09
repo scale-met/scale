@@ -9,6 +9,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module mod_snoplugin_hgridope
   !-----------------------------------------------------------------------------
   !
@@ -84,8 +85,8 @@ contains
        output_gradsctl, &
        enable_plugin,   &
        do_output        )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer, intent(in)    :: nprocs_x_out             ! x length of 2D processor topology (output)
@@ -110,85 +111,85 @@ contains
     integer  :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Plugin[hgridope] / Categ[data handling]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Plugin[hgridope] / Categ[data handling]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_SNOPLGIN_HGRIDOPE,iostat=ierr)
     if ( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("SNOPLGIN_hgridope_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_SNOPLGIN_HGRIDOPE. Check!'
-       call PRC_MPIstop
+       LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'Not appropriate names in namelist PARAM_SNOPLGIN_HGRIDOPE. Check!'
+       call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_SNOPLGIN_HGRIDOPE)
+    LOG_NML(PARAM_SNOPLGIN_HGRIDOPE)
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    LOG_NEWLINE
     select case(SNOPLGIN_hgridope_type)
     case('OFF')
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** SNOPLGIN_hgridope_type     : OFF'
+       LOG_INFO("SNOPLGIN_hgridope_setup",*) 'SNOPLGIN_hgridope_type     : OFF'
        enable_plugin = .false.
 
     case('LATLON')
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** SNOPLGIN_hgridope_type     : remap to lat-lon'
+       LOG_INFO("SNOPLGIN_hgridope_setup",*) 'SNOPLGIN_hgridope_type     : remap to lat-lon'
        enable_plugin = .true.
 
        if (      SNOPLGIN_hgridope_lat_start < -90.0_RP &
             .OR. SNOPLGIN_hgridope_lat_start >  90.0_RP &
             .OR. SNOPLGIN_hgridope_lat_end   < -90.0_RP &
             .OR. SNOPLGIN_hgridope_lat_end   >  90.0_RP ) then
-          write(*,*) 'xxx latitude should be within the range between -90 [deg] anf 90 [deg].'
-          call PRC_MPIstop
+          LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'latitude should be within the range between -90 [deg] anf 90 [deg].'
+          call PRC_abort
        endif
 
        if ( SNOPLGIN_hgridope_lat_start > SNOPLGIN_hgridope_lat_end ) then
-          write(*,*) 'xxx SNOPLGIN_hgridope_lat_start should be smaller than SNOPLGIN_hgridope_lat_end.'
-          call PRC_MPIstop
+          LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'SNOPLGIN_hgridope_lat_start should be smaller than SNOPLGIN_hgridope_lat_end.'
+          call PRC_abort
        endif
 
        if (      SNOPLGIN_hgridope_lon_start < -180.0_RP &
             .OR. SNOPLGIN_hgridope_lon_start >  180.0_RP &
             .OR. SNOPLGIN_hgridope_lon_end   < -180.0_RP &
             .OR. SNOPLGIN_hgridope_lon_end   >  180.0_RP ) then
-          write(*,*) 'xxx Longitude should be within the range between -180 [deg] anf 180 [deg].'
-          call PRC_MPIstop
+          LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'Longitude should be within the range between -180 [deg] anf 180 [deg].'
+          call PRC_abort
        endif
 
        if ( SNOPLGIN_hgridope_lon_start > SNOPLGIN_hgridope_lon_end ) then
-          write(*,*) 'xxx SNOPLGIN_hgridope_lon_start should be smaller than SNOPLGIN_hgridope_lon_end.'
-          call PRC_MPIstop
+          LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'SNOPLGIN_hgridope_lon_start should be smaller than SNOPLGIN_hgridope_lon_end.'
+          call PRC_abort
        endif
 
        if (      SNOPLGIN_hgridope_dlat <= 0.0_RP &
             .OR. SNOPLGIN_hgridope_dlon <= 0.0_RP ) then
-          write(*,*) 'xxx delta(latitude) and delat(longitude) should be positive.'
-          call PRC_MPIstop
+          LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'delta(latitude) and delat(longitude) should be positive.'
+          call PRC_abort
        endif
 
     case default
-       write(*,*) 'xxx the name of SNOPLGIN_hgridope_type is not appropriate : ', trim(SNOPLGIN_hgridope_type)
-       write(*,*) 'xxx you can choose OFF,NUMBER,DAILY,MONTHLY,ANNUAL'
-       call PRC_MPIstop
+       LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'the name of SNOPLGIN_hgridope_type is not appropriate : ', trim(SNOPLGIN_hgridope_type)
+       LOG_ERROR_CONT(*) 'you can choose OFF,NUMBER,DAILY,MONTHLY,ANNUAL'
+       call PRC_abort
     end select
 
     if ( enable_plugin ) then
        if    ( output_grads ) then
-          write(*,*) 'xxx [SNOPLGIN_hgridope_setup] This plugin only supports NetCDF format output.'
-          call PRC_MPIstop
+          LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'This plugin only supports NetCDF format output.'
+          call PRC_abort
        elseif( output_gradsctl ) then
-          write(*,*) 'xxx [SNOPLGIN_hgridope_setup] This plugin ignores control file. please turn off output_gradsctl.'
-          call PRC_MPIstop
+          LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'This plugin ignores control file. please turn off output_gradsctl.'
+          call PRC_abort
        else
           if ( nprocs_x_out * nprocs_y_out /= 1 ) then
-             write(*,*) 'xxx [SNOPLGIN_hgridope_setup] To use this plugin, the number of output file must be 1.'
-             call PRC_MPIstop
+             LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'To use this plugin, the number of output file must be 1.'
+             call PRC_abort
           endif
        endif
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** output original (non-averaged) data? : ', SNOPLGIN_hgridope_outorigdata
+       LOG_INFO("SNOPLGIN_hgridope_setup",*) 'output original (non-averaged) data? : ', SNOPLGIN_hgridope_outorigdata
        do_output = SNOPLGIN_hgridope_outorigdata
     endif
 
@@ -231,8 +232,8 @@ contains
     integer  :: i, j, n
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [SNOPLGIN_hgridope_setcoef] setup remapping coefficient'
+    LOG_NEWLINE
+    LOG_INFO("SNOPLGIN_hgridope_setcoef",*) '[SNOPLGIN_hgridope_setcoef] setup remapping coefficient'
 
     ! set new axis set
 
@@ -365,7 +366,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** [SNOPLGIN_hgridope_alloc] allocate temporal array'
+       LOG_INFO("SNOPLGIN_hgridope_alloc",*) '[SNOPLGIN_hgridope_alloc] allocate temporal array'
     endif
 
     if ( dinfo%dim_rank == 1 ) then
@@ -400,7 +401,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** [SNOPLGIN_hgridope_dealloc] deallocate temporal array'
+       LOG_INFO("SNOPLGIN_hgridope_dealloc",*) '[SNOPLGIN_hgridope_dealloc] deallocate temporal array'
     endif
 
     if( allocated(dinfo_ll%VAR_1d) ) deallocate( dinfo_ll%VAR_1d )
