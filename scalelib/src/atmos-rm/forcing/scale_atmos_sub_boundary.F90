@@ -271,6 +271,8 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_BOUNDARY)
 
+    call IO_filename_replace( ATMOS_BOUNDARY_IN_BASENAME, 'ATMOS_BOUNDARY_IN_BASENAME' )
+
     ! setting switches
     if( .NOT. USE_NESTING ) then
        ATMOS_BOUNDARY_ONLINE = .false.

@@ -118,6 +118,8 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MONITOR)
 
+    call IO_filename_replace( MONITOR_OUT_BASENAME, 'MONITOR_OUT_BASENAME' )
+
     ! listup monitor request
     rewind(IO_FID_CONF)
     do n = 1, MONIT_req_limit

@@ -235,6 +235,9 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_ATMOS)
 
+    call IO_filename_replace( BASENAME_ORG, 'BASENAME_ORG(PARAM_MKINIT_REAL_ATMOS)' )
+    call IO_filename_replace( BASENAME_BOUNDARY, 'BASENAME_BOUNDARY(PARAM_MKINIT_REAL_ATMOS)' )
+
     if ( BOUNDARY_UPDATE_DT <= 0.0_DP ) then
        write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
        call PRC_MPIstop
@@ -579,6 +582,9 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_LAND)
 
+    call IO_filename_replace( BASENAME_ORG, 'BASENAME_ORG(PARAM_MKINIT_REAL_LAND)' )
+    call IO_filename_replace( BASENAME_BOUNDARY, 'BASENAME_BOUNDARY(PARAM_MKINIT_REAL_LAND)' )
+
     NUMBER_OF_FILES_LAND            = NUMBER_OF_FILES
     NUMBER_OF_TSTEPS_LAND           = NUMBER_OF_TSTEPS
     NUMBER_OF_SKIP_TSTEPS_LAND      = NUMBER_OF_SKIP_TSTEPS
@@ -616,6 +622,9 @@ contains
        call PRC_MPIstop
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_OCEAN)
+
+    call IO_filename_replace( BASENAME_ORG, 'BASENAME_ORG(PARAM_MKINIT_REAL_OCEAN)' )
+    call IO_filename_replace( BASENAME_BOUNDARY, 'BASENAME_BOUNDARY(PARAM_MKINIT_REAL_OCEAN)' )
 
     NUMBER_OF_FILES_OCEAN            = NUMBER_OF_FILES
     NUMBER_OF_TSTEPS_OCEAN           = NUMBER_OF_TSTEPS

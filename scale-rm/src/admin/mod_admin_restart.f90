@@ -220,6 +220,9 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_RESTART)
 
+    call IO_filename_replace( RESTART_IN_BASENAME, 'RESTART_IN_BASENAME' )
+    call IO_filename_replace( RESTART_OUT_BASENAME, 'RESTART_OUT_BASENAME' )
+
     !--- set default output switch
     ATMOS_RESTART_OUTPUT        = RESTART_OUTPUT
     ATMOS_DYN_RESTART_OUTPUT    = RESTART_OUTPUT

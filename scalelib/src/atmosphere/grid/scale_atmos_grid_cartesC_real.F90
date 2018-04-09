@@ -77,7 +77,8 @@ module scale_atmos_grid_cartesC_real
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_GRID_CARTESC_REAL_setup
+  subroutine ATMOS_GRID_CARTESC_REAL_setup( &
+       catalogue_output )
     use scale_process, only: &
        PRC_nprocs,  &
        PRC_MPIstop
@@ -95,6 +96,8 @@ contains
     use scale_interp_vert, only: &
        INTERP_VERT_setcoef
     implicit none
+
+    logical, intent(in), optional :: catalogue_output
 
     character(len=H_LONG) :: DOMAIN_CATALOGUE_FNAME  = 'latlon_domain_catalogue.txt' !< metadata files for lat-lon domain for all processes
     logical               :: DOMAIN_CATALOGUE_OUTPUT = .false.
@@ -119,6 +122,13 @@ contains
        call PRC_MPIstop
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_DOMAIN_CATALOGUE)
+
+    if ( present(catalogue_output) ) then
+       if ( (.not. catalogue_output) .and. DOMAIN_CATALOGUE_OUTPUT ) then
+          DOMAIN_CATALOGUE_OUTPUT = .false.
+          if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Force setting DOMAIN_CATALOGUE_OUTPUT = .false.'
+       endif
+    endif
 
     allocate( ATMOS_GRID_CARTESC_REAL_LON  (  IA,  JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_LAT  (  IA,  JA) )

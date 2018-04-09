@@ -368,6 +368,8 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_COMM_CARTESC_NEST)
 
+    call IO_filename_replace( OFFLINE_PARENT_BASENAME, 'OFFLINE_PARENT_BASENAME' )
+
     PRC_GLOBAL_domainID = ONLINE_DOMAIN_NUM
 
     if ( OFFLINE_PARENT_BASENAME /= "" ) then

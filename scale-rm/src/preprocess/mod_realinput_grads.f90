@@ -2060,6 +2060,8 @@ contains
              if( ierr /= 0 ) exit
           endif
 
+          call IO_filename_replace( fname, 'fname(GrADS boundary)' )
+
           if(item == item_list(ielem))then
              grads_item    (ielem) = item
              grads_fname   (ielem) = fname

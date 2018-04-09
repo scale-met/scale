@@ -164,6 +164,8 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
 
+    call IO_filename_replace( LAND_RESTART_IN_BASENAME, 'LAND_RESTART_IN_BASENAME' )
+    call IO_filename_replace( OCEAN_RESTART_IN_BASENAME, 'OCEAN_RESTART_IN_BASENAME' )
 
     if ( LAND_sw .and. LAND_RESTART_IN_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(LAND_RESTART_IN_BASENAME)

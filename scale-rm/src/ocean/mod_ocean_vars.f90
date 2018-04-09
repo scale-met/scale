@@ -336,6 +336,8 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN_VARS)
 
+    call IO_filename_replace( OCEAN_RESTART_IN_BASENAME, 'OCEAN_RESTART_IN_BASENAME' )
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (OCEAN) ***'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,A48,A,A12,A)') &

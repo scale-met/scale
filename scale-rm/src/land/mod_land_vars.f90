@@ -350,6 +350,8 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_VARS)
 
+    call IO_filename_replace( LAND_RESTART_IN_BASENAME, 'LAND_RESTART_IN_BASENAME' )
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (LAND) ***'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A24,A,A48,A,A12,A)') &

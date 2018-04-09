@@ -36,6 +36,8 @@ module scale_stdio
   public :: IO_make_idstr
   public :: IO_ARG_getfname
   public :: IO_CNF_open
+  public :: IO_filename_replace_setup
+  public :: IO_filename_replace
 
   !-----------------------------------------------------------------------------
   !
@@ -70,12 +72,19 @@ module scale_stdio
   !
   !++ Private procedure
   !
+  private :: IO_str_replace
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
   integer, private, parameter :: IO_MINFID    = 10 !< minimum available fid
   integer, private, parameter :: IO_MAXFID    = 99 !< maximum available fid
+
+  integer, private              :: IO_FILENAME_KEYWORD_NUM    = 0                       !< actual number of keywords for filename replacement
+  integer, private, parameter   :: IO_FILENAME_KEYWORD_MAXNUM = 10                      !< maximum number of keywords for filename replacement
+  character(len=H_MID), private :: IO_FILENAME_KEYWORD(IO_FILENAME_KEYWORD_MAXNUM) = '' !< array of keywords for filename replacement
+  character(len=H_MID), private :: IO_FILENAME_VALUE(IO_FILENAME_KEYWORD_MAXNUM)   = '' !< array or values for filename replacement
 
   !-----------------------------------------------------------------------------
 contains
@@ -131,6 +140,8 @@ contains
           stop
        endif
     end if
+
+    call IO_filename_replace( IO_LOG_BASENAME, 'IO_LOG_BASENAME' )
 
     return
   end subroutine IO_setup
@@ -410,5 +421,125 @@ contains
     endif
 
   end function IO_CNF_open
+
+  !-----------------------------------------------------------------------------
+  !> Replace the first occurrence of 'oldsub' in 'str' with 'newsub';
+  !> note that 'str' will be left-adjusted no matter whether 'oldsub' is found
+  subroutine IO_str_replace( &
+       str,    &
+       oldsub, &
+       newsub, &
+       pos     )
+    implicit none
+
+    character(len=*), intent(inout) :: str !< input string; output string with substring replaced
+    character(len=*), intent(in) :: oldsub !< old substring to be replaced
+    character(len=*), intent(in) :: newsub !< new substring
+    integer, intent(out) :: pos            !< the start position of the replaced substring; if not found, return 0
+
+    integer :: str_lent, oldsub_len, newsub_len, shift
+    !---------------------------------------------------------------------------
+
+    str = adjustl(str)
+    str_lent = len_trim(str)
+    oldsub_len = len(oldsub)
+    newsub_len = len(newsub)
+
+    pos = index(str, oldsub)
+    if ( pos >= 1 ) then
+       shift = newsub_len - oldsub_len
+       if ( shift > 0 ) then
+          if ( str_lent+shift > len(str) ) then
+             write(*,*) "xxx The length of 'str' string is not enough for substitution."
+             write(*,*) 'xxx str : ', trim(str)
+             stop 1
+          endif
+          str(pos+oldsub_len:str_lent+shift) = adjustr(str(pos+oldsub_len:str_lent+shift))
+       elseif (shift < 0) then
+          str(pos+newsub_len:pos+oldsub_len-1) = repeat(' ', 0-shift)
+          str(pos+newsub_len:str_lent) = adjustl(str(pos+newsub_len:str_lent))
+       endif
+       str(pos:pos+newsub_len-1) = newsub
+    endif
+
+    return
+  end subroutine IO_str_replace
+
+  !-----------------------------------------------------------------------------
+  !> Setup keywords and values for filename replacement
+  subroutine IO_filename_replace_setup( &
+       keyword, &
+       value    )
+    implicit none
+
+    character(len=*), intent(in) :: keyword !< key word to be replaced
+    character(len=*), intent(in) :: value   !< new value
+
+    integer :: i
+    logical :: found_keyword
+    !---------------------------------------------------------------------------
+
+    found_keyword = .false.
+    do i = 1, IO_FILENAME_KEYWORD_NUM
+       if ( trim(keyword) == trim(IO_FILENAME_KEYWORD(i)) ) then
+          found_keyword = .true.
+          IO_FILENAME_VALUE(i) = trim(value)
+          if( IO_L ) write(IO_FID_LOG,'(1x,4A)') '*** Filename replacement setup: ', trim(keyword), ' = ', trim(value)
+          exit
+       endif
+    enddo
+
+    if ( .not. found_keyword ) then
+       if ( IO_FILENAME_KEYWORD_NUM >= IO_FILENAME_KEYWORD_MAXNUM ) then
+          write(*,*) 'xxx The number of keywords for filename replacement reached maximum.'
+          stop 1
+       endif
+       IO_FILENAME_KEYWORD_NUM = IO_FILENAME_KEYWORD_NUM + 1
+       IO_FILENAME_KEYWORD(IO_FILENAME_KEYWORD_NUM) = trim(keyword)
+       IO_FILENAME_VALUE(IO_FILENAME_KEYWORD_NUM) = trim(value)
+       if( IO_L ) write(IO_FID_LOG,'(1x,4A)') '*** Filename replacement setup: ', trim(keyword), ' = ', trim(value)
+    endif
+
+    return
+  end subroutine IO_filename_replace_setup
+
+  !-----------------------------------------------------------------------------
+  !> Filename replacement
+  subroutine IO_filename_replace( &
+       str,    &
+       varname )
+    implicit none
+
+    character(len=*), intent(inout)        :: str     !< input/output filename string
+    character(len=*), intent(in), optional :: varname !< variable name for printing message
+
+    character(len=H_LONG) :: str_orig
+    integer :: i, pos
+    !---------------------------------------------------------------------------
+
+    if ( IO_FILENAME_KEYWORD_NUM > 0 ) then
+       str_orig = trim(str)
+       if ( present(varname) ) then
+          if( IO_L ) write(IO_FID_LOG,'(1x,3A)') '*** Filename replacement for ', trim(varname), '...'
+       else
+          if( IO_L ) write(IO_FID_LOG,'(1x,1A)') '*** Filename replacement...'
+       endif
+
+       do i = 1, IO_FILENAME_KEYWORD_NUM
+          call IO_str_replace(str, trim(IO_FILENAME_KEYWORD(i)), trim(IO_FILENAME_VALUE(i)), pos)
+          if ( pos == 0 ) then
+             if( IO_L ) write(IO_FID_LOG,'(1x,5A)') "***   Keyword '", trim(IO_FILENAME_KEYWORD(i)), &
+                        "' is not found in '", trim(str_orig), "'."
+          endif
+       enddo
+
+       if ( trim(str) /= trim(str_orig) ) then
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '***   Original value : ', trim(str_orig)
+          if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '***   New      value : ', trim(str)
+       endif
+    endif
+
+    return
+  end subroutine IO_filename_replace
 
 end module scale_stdio
