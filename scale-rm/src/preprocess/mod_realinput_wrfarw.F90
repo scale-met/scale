@@ -107,7 +107,7 @@ contains
        LOG_ERROR("ParentAtmosSetupWRFARW",*) 'Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
+    LOG_NML(PARAM_MKINIT_REAL_WRFARW)
 
     call FILE_open( basename_org, fid, rankid=myrank, single=.true., postfix="" )
 
@@ -566,7 +566,7 @@ contains
        LOG_ERROR("ParentLandSetupWRFARW",*) 'Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
+    LOG_NML(PARAM_MKINIT_REAL_WRFARW)
 
 
     call FILE_open( basename_land, fid, rankid=myrank, single=.true., postfix="" )
@@ -752,7 +752,7 @@ contains
        LOG_ERROR("ParentOceanSetupWRFARW",*) 'Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_WRFARW)
+    LOG_NML(PARAM_MKINIT_REAL_WRFARW)
 
 
     call FILE_open( basename_org, fid, rankid=myrank, single=.true., postfix="" )

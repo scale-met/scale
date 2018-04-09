@@ -251,7 +251,7 @@ contains
        LOG_ERROR("FILE_CARTESC_setup",*) 'Not appropriate names in namelist PARAM_FILE_CARTESC. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_FILE_CARTESC)
+    LOG_NML(PARAM_FILE_CARTESC)
 
     LOG_NEWLINE
     LOG_INFO("FILE_CARTESC_setup",*) 'NetCDF header information '

@@ -140,7 +140,7 @@ contains
        LOG_ERROR("USER_setup",*) 'Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
+    LOG_NML(PARAM_USER)
 
     Lx = FXG(IAG-IHALO) - FXG(IHALO)
 

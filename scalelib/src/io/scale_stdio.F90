@@ -5,10 +5,8 @@
 !!          Standard, common I/O module
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2011-11-11 (H.Yashiro)  [new]
 !<
+#include "scalelib.h"
 module scale_stdio
   !-----------------------------------------------------------------------------
   !
@@ -128,7 +126,7 @@ contains
        rewind(IO_FID_CONF)
        read(IO_FID_CONF,nml=PARAM_IO,iostat=ierr)
        if ( ierr > 0 ) then !--- fatal error
-          write(*,*) 'xxx Not appropriate names in namelist PARAM_IO . Check!'
+          LOG_ERROR('IO_setup',*) 'Not appropriate names in namelist PARAM_IO . Check!'
           stop
        endif
     end if
@@ -189,7 +187,7 @@ contains
                 form   = 'formatted', &
                 iostat = ierr         )
           if ( ierr /= 0 ) then
-             write(*,*) 'xxx File open error! :', trim(fname)
+             LOG_ERROR('IO_LOG_setup',*) 'File open error! :', trim(fname)
              stop
           endif
        endif
@@ -250,13 +248,16 @@ contains
           write(IO_FID_LOG,*) ''
           write(IO_FID_LOG,*) trim(H_LIBNAME)
           write(IO_FID_LOG,*) trim(H_APPNAME)
-          write(IO_FID_LOG,*) ''
-          write(IO_FID_LOG,*) '++++++ Module[STDIO] / Categ[IO] / Origin[SCALElib]'
-          write(IO_FID_LOG,*) ''
-          write(IO_FID_LOG,'(1x,A,I3)') '*** Open config file, FID = ', IO_FID_CONF
-          write(IO_FID_LOG,'(1x,A,I3)') '*** Open log    file, FID = ', IO_FID_LOG
-          write(IO_FID_LOG,'(1x,2A)')   '*** basename of log file  = ', trim(IO_LOG_BASENAME)
-          write(IO_FID_LOG,*) ''
+
+
+          LOG_NEWLINE
+          LOG_PROGRESS(*) '++++++ Module[STDIO] / Categ[IO] / Origin[SCALElib]'
+          LOG_NEWLINE
+
+          LOG_INFO('IO_LOG_setup','(1x,A,I3)') 'Open config file, FID = ', IO_FID_CONF
+          LOG_INFO('IO_LOG_setup','(1x,A,I3)') 'Open log    file, FID = ', IO_FID_LOG
+          LOG_INFO('IO_LOG_setup','(1x,2A)')   'basename of log file  = ', trim(IO_LOG_BASENAME)
+          LOG_NEWLINE
        end if
 
     else
@@ -264,8 +265,8 @@ contains
     endif
 
     if ( IO_NML_FILENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*)         '*** The used config is output to the file.'
-       if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** filename of used config file   = ', trim(IO_NML_FILENAME)
+       LOG_INFO("IO_LOG_setup",*) 'The used configurations are output to the file.'
+       LOG_INFO_CONT('(2A)') 'filename of used config file   = ', trim(IO_NML_FILENAME)
 
        if ( is_master ) then ! write from master node only
           IO_NML     = .true. ! force on
@@ -275,31 +276,31 @@ contains
                 form   = 'formatted',           &
                 iostat = ierr                   )
           if ( ierr /= 0 ) then
-             write(*,*) 'xxx File open error! :', trim(IO_NML_FILENAME)
+             LOG_ERROR('IO_LOG_setup',*) 'File open error! :', trim(IO_NML_FILENAME)
              stop 1
           endif
 
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,I3)') '*** Open file to output used config, FID = ', IO_FID_NML
+          LOG_INFO("IO_LOG_setup",'(1x,A,I3)') 'Open file to output used config, FID = ', IO_FID_NML
 
           write(IO_FID_NML,'(A)')  '################################################################################'
           write(IO_FID_NML,'(A)')  '#! configulation'
           write(IO_FID_NML,'(2A)') '#! ', trim(H_LIBNAME)
           write(IO_FID_NML,'(2A)') '#! ', trim(H_APPNAME)
           write(IO_FID_NML,'(A)')  '################################################################################'
-          write(IO_FID_NML,nml=PARAM_IO)
+          LOG_NML(PARAM_IO)
        else
           IO_NML     = .false. ! force off
           IO_FID_NML = -1
 
-          if( IO_L ) write(IO_FID_LOG,*) '*** The file for used config is open by the master rank'
+          LOG_INFO("IO_LOG_setup",*) 'The file for used config is open by the master rank'
        endif
     else
        if ( IO_NML ) then
           IO_FID_NML = IO_FID_LOG
 
-          if( IO_L ) write(IO_FID_LOG,*) '*** The used config is output to the log.'
+          LOG_INFO("IO_LOG_setup",*) 'The used config is output to the log.'
        else
-          if( IO_L ) write(IO_FID_LOG,*) '*** The used config is not output.'
+          LOG_INFO("IO_LOG_setup",*) 'The used config is not output.'
        endif
     endif
 
@@ -369,7 +370,9 @@ contains
        allow_noconf_ = .false.
        if ( present(allow_noconf) ) allow_noconf_ = allow_noconf
        if ( .not. allow_noconf_ ) then
-          if(is_master) write(*,*) 'xxx Program needs config file from argument! STOP.'
+          if(is_master) then
+             LOG_ERROR("IO_ARG_getfname",*) 'Program needs config file from argument! STOP.'
+          end if
           stop
        else
           fname = IO_NULLFILE
@@ -405,8 +408,10 @@ contains
           iostat = ierr         )
 
     if ( ierr /= 0 ) then
-       if(is_master) write(*,*) 'xxx Failed to open config file! STOP.'
-       if(is_master) write(*,*) 'xxx filename : ', trim(fname)
+       if(is_master) then
+          LOG_ERROR("IO_CNF_open",*) 'Failed to open config file! STOP.'
+          LOG_ERROR("IO_CNF_open",*) 'filename : ', trim(fname)
+       end if
        stop 1
     endif
 

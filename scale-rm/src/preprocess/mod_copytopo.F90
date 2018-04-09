@@ -101,7 +101,7 @@ contains
        LOG_ERROR("COPYTOPO",*) 'Not appropriate names in namelist PARAM_COPYTOPO. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_COPYTOPO)
+    LOG_NML(PARAM_COPYTOPO)
 
     ! copy topography from parent domain to transition region
 

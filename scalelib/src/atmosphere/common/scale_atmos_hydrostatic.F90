@@ -136,7 +136,7 @@ contains
        LOG_ERROR("ATMOS_HYDROSTATIC_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_HYDROSTATIC. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_HYDROSTATIC)
+    LOG_NML(PARAM_ATMOS_HYDROSTATIC)
 
     criteria = sqrt( CONST_EPS )
 

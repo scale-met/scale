@@ -548,7 +548,7 @@ contains
        LOG_ERROR("ATMOS_PHY_MP_sn14_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SN14. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_SN14)
+    LOG_NML(PARAM_ATMOS_PHY_MP_SN14)
 
     WLABEL(1) = "CLOUD"
     WLABEL(2) = "RAIN"
@@ -1181,7 +1181,7 @@ contains
        LOG_ERROR("ATMOS_PHY_MP_sn14_init",*) 'Not appropriate names in namelist nm_mp_sn14_init. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_init)
+    LOG_NML(nm_mp_sn14_init)
 
     !
     ! default setting
@@ -1280,7 +1280,7 @@ contains
        LOG_ERROR("ATMOS_PHY_MP_sn14_init",*) 'Not appropriate names in namelist nm_mp_sn14_particles. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_particles)
+    LOG_NML(nm_mp_sn14_particles)
 
     ! [Add] 10/08/03 T.Mitsui
     ! particles shapes are
@@ -2716,7 +2716,7 @@ contains
     if( flag_first )then
        rewind(IO_FID_CONF)
        read(IO_FID_CONF, nml=nm_mp_sn14_nucleation, end=100)
-100    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_nucleation)
+100    LOG_NML(nm_mp_sn14_nucleation)
        flag_first=.false.
 
        if ( MP_couple_aerosol .AND. nucl_twomey ) then
@@ -3283,7 +3283,7 @@ contains
     if( flag_first )then
        rewind( IO_FID_CONF )
        read( IO_FID_CONF, nml=nm_mp_sn14_collection, end=100 )
-100    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_collection)
+100    LOG_NML(nm_mp_sn14_collection)
        flag_first = .false.
     end if
     !
@@ -4424,7 +4424,7 @@ contains
        flag_first = .false.
        rewind(IO_FID_CONF)
        read  (IO_FID_CONF,nml=nm_mp_sn14_condensation, end=100)
-100    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_condensation)
+100    LOG_NML(nm_mp_sn14_condensation)
     end if
     !
 !    dt_dyn     = dt*ntmax

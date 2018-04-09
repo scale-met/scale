@@ -273,7 +273,7 @@ contains
        LOG_ERROR("ATMOS_BOUNDARY_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_BOUNDARY. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_BOUNDARY)
+    LOG_NML(PARAM_ATMOS_BOUNDARY)
 
     ! setting switches
     if( .NOT. USE_NESTING ) then

@@ -80,7 +80,7 @@ contains
        LOG_ERROR("CPL_PHY_SFC_SKIN_setup",*) 'Not appropriate names in namelist PARAM_CPL_PHY_SFC_SKIN. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CPL_PHY_SFC_SKIN)
+    LOG_NML(PARAM_CPL_PHY_SFC_SKIN)
 
     initialized = .true.
 

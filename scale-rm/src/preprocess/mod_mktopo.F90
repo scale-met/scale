@@ -87,7 +87,7 @@ contains
        LOG_ERROR("MKTOPO_setup",*) 'Not appropriate names in namelist PARAM_MKTOPO. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKTOPO)
+    LOG_NML(PARAM_MKTOPO)
 
     select case(MKTOPO_name)
     case('NONE')
@@ -172,7 +172,7 @@ contains
        LOG_ERROR("MKTOPO_flat",*) 'Not appropriate names in namelist PARAM_MKTOPO_FLAT. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKTOPO_FLAT)
+    LOG_NML(PARAM_MKTOPO_FLAT)
 
     do j = 1, JA
     do i = 1, IA
@@ -224,7 +224,7 @@ contains
        LOG_ERROR("MKTOPO_bellshape",*) 'Not appropriate names in namelist PARAM_MKTOPO_BELLSHAPE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKTOPO_BELLSHAPE)
+    LOG_NML(PARAM_MKTOPO_BELLSHAPE)
 
     if ( BELL_eachnode ) then
        CX_offset = CX(IS)
@@ -290,7 +290,7 @@ contains
        LOG_ERROR("MKTOPO_schaer",*) 'Not appropriate names in namelist PARAM_MKTOPO_SCHAER. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKTOPO_SCHAER)
+    LOG_NML(PARAM_MKTOPO_SCHAER)
 
     ! make bell-shaped mountain
     if ( .NOT. SCHAER_SWAPXY ) then

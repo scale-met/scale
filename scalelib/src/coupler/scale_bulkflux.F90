@@ -152,7 +152,7 @@ contains
        LOG_ERROR("BULKFLUX_setup",*) 'Not appropriate names in namelist PARAM_BULKFLUX. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_BULKFLUX)
+    LOG_NML(PARAM_BULKFLUX)
 
     LOG_NEWLINE
     LOG_INFO("BULKFLUX_setup",*) 'Scheme for surface bulk flux : ', trim(BULKFLUX_type)

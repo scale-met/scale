@@ -112,7 +112,7 @@ contains
        LOG_ERROR("LAND_PHY_SNOW_KY90_setup",*) 'Not appropriate names in namelist PARAM_LAND_PHY_SNOW_KY90. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_PHY_SNOW_KY90)
+    LOG_NML(PARAM_LAND_PHY_SNOW_KY90)
 
     LAMBDAS       = snow_conductivity
     W0            = water_content

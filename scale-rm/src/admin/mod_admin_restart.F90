@@ -210,7 +210,7 @@ contains
        LOG_ERROR("ADMIN_restart_setup",*) 'Not appropriate names in namelist PARAM_RESTART. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_RESTART)
+    LOG_NML(PARAM_RESTART)
 
     !--- set default output switch
     ATMOS_RESTART_OUTPUT        = RESTART_OUTPUT

@@ -87,7 +87,7 @@ contains
        LOG_ERROR("LAND_GRID_CARTESC_setup",*) 'Not appropriate names in namelist PARAM_LAND_GRID_CARTESC. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_GRID_CARTESC)
+    LOG_NML(PARAM_LAND_GRID_CARTESC)
 
     allocate( LAND_GRID_CARTESC_CZ (LKS  :LKE) )
     allocate( LAND_GRID_CARTESC_FZ (LKS-1:LKE) )

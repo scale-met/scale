@@ -74,7 +74,7 @@ contains
        LOG_ERROR("OCEAN_PHY_ROUGHNESS_setup",*) 'Not appropriate names in namelist PARAM_OCEAN_PHY_ROUGHNESS. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN_PHY_ROUGHNESS)
+    LOG_NML(PARAM_OCEAN_PHY_ROUGHNESS)
 
     return
   end subroutine OCEAN_PHY_ROUGHNESS_setup

@@ -79,7 +79,7 @@ contains
        LOG_ERROR("CONVERT_setup",*) 'Not appropriate names in namelist PARAM_CONVERT. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CONVERT)
+    LOG_NML(PARAM_CONVERT)
 
     ! set up TOPO
     if( CONVERT_TOPO ) then

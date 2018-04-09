@@ -73,7 +73,7 @@ contains
        LOG_ERROR("ATMOS_PHY_CP_common_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_CP_COMMON. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_CP_COMMON)
+    LOG_NML(PARAM_ATMOS_PHY_CP_COMMON)
 
     ! output parameter lists
     LOG_NEWLINE

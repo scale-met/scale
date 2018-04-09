@@ -229,7 +229,7 @@ contains
        LOG_ERROR("MKINIT_setup",*) 'Not appropriate names in namelist PARAM_MKINIT. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT)
+    LOG_NML(PARAM_MKINIT)
 
     allocate( pres(KA,IA,JA) )
     allocate( temp(KA,IA,JA) )
@@ -558,7 +558,7 @@ contains
        LOG_ERROR("BUBBLE_setup",*) 'Not appropriate names in namelist PARAM_BUBBLE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_BUBBLE)
+    LOG_NML(PARAM_BUBBLE)
 
     if ( abs(BBL_RZ*BBL_RX*BBL_RY) <= 0.0_RP ) then
        LOG_INFO("BUBBLE_setup",*) 'no bubble'
@@ -653,7 +653,7 @@ contains
        LOG_ERROR("RECT_setup",*) 'Not appropriate names in namelist PARAM_RECT. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_RECT)
+    LOG_NML(PARAM_RECT)
 
     rect(:,:,:) = CONST_UNDEF8
 
@@ -745,7 +745,7 @@ contains
        LOG_ERROR("AEROSOL_setup",*) 'Not appropriate names in namelist PARAM_AERO. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_AERO)
+    LOG_NML(PARAM_AERO)
 
     qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
     call ATMOS_PHY_AE_kajino13_mkinit( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! (in)
@@ -884,7 +884,7 @@ contains
        LOG_ERROR("flux_setup",*) 'Not appropriate names in namelist PARAM_MKINIT_FLUX. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_FLUX)
+    LOG_NML(PARAM_MKINIT_FLUX)
 
     do j = JSB, JEB
     do i = ISB, IEB
@@ -950,7 +950,7 @@ contains
        LOG_ERROR("land_setup",*) 'Not appropriate names in namelist PARAM_MKINIT_LAND. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_LAND)
+    LOG_NML(PARAM_MKINIT_LAND)
 
     do j = JS, JE
     do i = IS, IE
@@ -1010,7 +1010,7 @@ contains
        LOG_ERROR("ocean_setup",*) 'Not appropriate names in namelist PARAM_MKINIT_OCEAN. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_OCEAN)
+    LOG_NML(PARAM_MKINIT_OCEAN)
 
 
     do j = JSB, JEB
@@ -1107,7 +1107,7 @@ contains
        LOG_ERROR("urban_setup",*) 'Not appropriate names in namelist PARAM_MKINIT_URBAN. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_URBAN)
+    LOG_NML(PARAM_MKINIT_URBAN)
 
 
     do j = JSB, JEB
@@ -1163,7 +1163,7 @@ contains
        LOG_ERROR("tke_setup",*) 'Not appropriate names in namelist PARAM_MKINIT_TKE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_TKE)
+    LOG_NML(PARAM_MKINIT_TKE)
 
     if ( I_TKE > 0 ) then
        do j = 1, JA
@@ -1229,7 +1229,7 @@ contains
        LOG_ERROR("read_sounding",*) 'Not appropriate names in namelist PARAM_MKINIT_SOUNDING. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SOUNDING)
+    LOG_NML(PARAM_MKINIT_SOUNDING)
 
     !--- prepare sounding profile
     LOG_INFO("read_sounding",*) 'Input sounding file:', trim(ENV_IN_SOUNDING_file)
@@ -1374,7 +1374,7 @@ contains
        LOG_ERROR_CONT(*) 'Not appropriate names in namelist PARAM_MKINIT_PLANESTATE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_PLANESTATE)
+    LOG_NML(PARAM_MKINIT_PLANESTATE)
 
     ! calc in dry condition
     do j = JSB, JEB
@@ -1542,7 +1542,7 @@ contains
        LOG_ERROR("MKINIT_tracerbubble",*) 'Not appropriate names in namelist PARAM_MKINIT_TRACERBUBBLE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_TRACERBUBBLE)
+    LOG_NML(PARAM_MKINIT_TRACERBUBBLE)
 
     ! calc in dry condition
     pres_sfc(1,1) = SFC_PRES
@@ -1647,7 +1647,7 @@ contains
        LOG_ERROR("MKINIT_coldbubble",*) 'Not appropriate names in namelist PARAM_MKINIT_COLDBUBBLE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_COLDBUBBLE)
+    LOG_NML(PARAM_MKINIT_COLDBUBBLE)
 
     RovCP = Rdry / CPdry
 
@@ -1726,7 +1726,7 @@ contains
        LOG_ERROR("MKINIT_lambwave",*) 'Not appropriate names in namelist PARAM_MKINIT_LAMBWAVE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_LAMBWAVE)
+    LOG_NML(PARAM_MKINIT_LAMBWAVE)
 
     RovCP = Rdry / CPdry
 
@@ -1793,7 +1793,7 @@ contains
        LOG_ERROR("MKINIT_gravitywave",*) 'Not appropriate names in namelist PARAM_MKINIT_GRAVITYWAVE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_GRAVITYWAVE)
+    LOG_NML(PARAM_MKINIT_GRAVITYWAVE)
 
     ! calc in dry condition
     pres_sfc(1,1) = SFC_PRES
@@ -1879,7 +1879,7 @@ contains
        LOG_ERROR("MKINIT_khwave",*) 'Not appropriate names in namelist PARAM_MKINIT_KHWAVE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_KHWAVE)
+    LOG_NML(PARAM_MKINIT_KHWAVE)
 
     ! calc in dry condition
     pres_sfc(1,1) = SFC_PRES
@@ -1987,7 +1987,7 @@ contains
        LOG_ERROR("MKINIT_turbulence",*) 'Not appropriate names in namelist PARAM_MKINIT_TURBULENCE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_TURBULENCE)
+    LOG_NML(PARAM_MKINIT_TURBULENCE)
 
     ! calc in dry condition
     pres_sfc(1,1) = SFC_PRES
@@ -2119,7 +2119,7 @@ contains
        LOG_ERROR("MKINIT_cavityflow",*) 'Not appropriate names in namelist PARAM_MKINIT_CAVITYFLOW. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_CAVITYFLOW)
+    LOG_NML(PARAM_MKINIT_CAVITYFLOW)
 
     Gam   = CPdry / ( CPdry - Rdry )
     Cs2   = ( Ulid / MACH_NUM )**2
@@ -2195,7 +2195,7 @@ contains
        LOG_ERROR("MKINIT_mountainwave",*) 'Not appropriate names in namelist PARAM_MKINIT_MOUNTAINWAVE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_MOUNTAINWAVE)
+    LOG_NML(PARAM_MKINIT_MOUNTAINWAVE)
 
     ! calc in dry condition
     do j = JSB, JEB
@@ -2332,7 +2332,7 @@ contains
        LOG_ERROR("MKINIT_barocwave",*) 'Not appropriate names in namelist PARAM_MKINIT_BAROCWAVE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BAROCWAVE)
+    LOG_NML(PARAM_MKINIT_BAROCWAVE)
 
     Ly = FYG(JAG-JHALO) - FYG(JHALO)
 
@@ -2499,7 +2499,7 @@ contains
        LOG_ERROR("MKINIT_warmbubble",*) 'Not appropriate names in namelist PARAM_MKINIT_WARMBUBBLE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WARMBUBBLE)
+    LOG_NML(PARAM_MKINIT_WARMBUBBLE)
 
     ! calc in dry condition
     pres_sfc(1,1) = SFC_PRES
@@ -2610,7 +2610,7 @@ contains
        LOG_ERROR("MKINIT_supercell",*) 'Not appropriate names in namelist PARAM_MKINIT_SUPERCELL. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SUPERCELL)
+    LOG_NML(PARAM_MKINIT_SUPERCELL)
 
     call read_sounding( RHO, VELX, VELY, POTT, QV1D ) ! (out)
 
@@ -2679,7 +2679,7 @@ contains
        LOG_ERROR("MKINIT_squallline",*) 'Not appropriate names in namelist PARAM_MKINIT_SQUALLLINE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SQUALLLINE)
+    LOG_NML(PARAM_MKINIT_SQUALLLINE)
 
     call read_sounding( RHO, VELX, VELY, POTT, QV1D ) ! (out)
 
@@ -2758,7 +2758,7 @@ contains
        LOG_ERROR("MKINIT_wk1982",*) 'Not appropriate names in namelist PARAM_MKINIT_WK1982. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WK1982)
+    LOG_NML(PARAM_MKINIT_WK1982)
 
     ! calc in dry condition
     do j = JSB, JEB
@@ -2911,7 +2911,7 @@ contains
        LOG_ERROR("MKINIT_DYCOMS2_RF01",*) 'Not appropriate names in namelist PARAM_MKINIT_RF01. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RF01)
+    LOG_NML(PARAM_MKINIT_RF01)
 
     if ( USE_LWSET ) then
        GEOP_sw = 1.0_RP
@@ -3135,7 +3135,7 @@ contains
        LOG_ERROR("MKINIT_DYCOMS2_RF02",*) 'Not appropriate names in namelist PARAM_MKINIT_RF02. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RF02)
+    LOG_NML(PARAM_MKINIT_RF02)
 
     ! calc in dry condition
     call RANDOM_get(rndm) ! make random
@@ -3357,7 +3357,7 @@ contains
        LOG_ERROR("MKINIT_DYCOMS2_RF02_DNS",*) 'Not appropriate names in namelist PARAM_MKINIT_RF02_DNS. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RF02_DNS)
+    LOG_NML(PARAM_MKINIT_RF02_DNS)
 
     ! calc in dry condition
     call RANDOM_get(rndm) ! make random
@@ -3558,7 +3558,7 @@ contains
        LOG_ERROR("MKINIT_RICO",*) 'Not appropriate names in namelist PARAM_MKINIT_RICO. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_RICO)
+    LOG_NML(PARAM_MKINIT_RICO)
 
     ! calc in moist condition
     do j = JSB, JEB
@@ -3756,7 +3756,7 @@ contains
        LOG_ERROR("MKINIT_BOMEX",*) 'Not appropriate names in namelist PARAM_MKINIT_BOMEX. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BOMEX)
+    LOG_NML(PARAM_MKINIT_BOMEX)
 
     ! calc in moist condition
     do j = JSB, JEB
@@ -4003,7 +4003,7 @@ contains
        LOG_ERROR("MKINIT_seabreeze",*) 'Not appropriate names in namelist PARAM_MKINIT_SEABREEZE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_SEABREEZE)
+    LOG_NML(PARAM_MKINIT_SEABREEZE)
 
     call flux_setup
 
@@ -4120,7 +4120,7 @@ contains
        LOG_ERROR("MKINIT_grayzone",*) 'Not appropriate names in namelist PARAM_MKINIT_GRAYZONE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_GRAYZONE)
+    LOG_NML(PARAM_MKINIT_GRAYZONE)
 
     call read_sounding( RHO, VELX, VELY, POTT, QV1D ) ! (out)
 
@@ -4266,7 +4266,7 @@ contains
        LOG_ERROR("MKINIT_boxaero",*) 'Not appropriate names in namelist PARAM_MKINIT_BOXAERO. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_BOXAERO)
+    LOG_NML(PARAM_MKINIT_BOXAERO)
 
     call SATURATION_psat_all( init_temp, psat )
     qsat = EPSvap * psat / ( init_pres - ( 1.0_RP-EPSvap ) * psat )
@@ -4359,7 +4359,7 @@ contains
        LOG_ERROR("MKINIT_warmbubbleaero",*) 'Not appropriate names in namelist PARAM_MKINIT_WARMBUBBLE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WARMBUBBLE)
+    LOG_NML(PARAM_MKINIT_WARMBUBBLE)
 
     ! calc in dry condition
     pres_sfc(1,1) = SFC_PRES

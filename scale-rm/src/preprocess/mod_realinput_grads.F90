@@ -213,7 +213,7 @@ contains
        LOG_ERROR("ParentAtmosSetupGrADS",*) 'Not appropriate names in namelist PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS)
+    LOG_NML(PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS)
 
 
     if ( len_trim(basename) == 0 ) then
@@ -239,7 +239,7 @@ contains
        LOG_ERROR("ParentAtmosSetupGrADS",*) 'Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=nml_grads_grid)
+    LOG_NML(nml_grads_grid)
 
     ! full level
     dims(1) = outer_nz ! bottom_top
@@ -1147,7 +1147,7 @@ contains
        LOG_ERROR("ParentLandSetupGrADS",*) 'Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=nml_grads_grid)
+    LOG_NML(nml_grads_grid)
 
     ! land
     ldims(1) = outer_nl ! soil_layers_stag
@@ -1600,7 +1600,7 @@ contains
        LOG_ERROR("ParentOceanSetupGrADS",*) 'Not appropriate names in nml_grads_grid in ', trim(grads_ctl),'. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=nml_grads_grid)
+    LOG_NML(nml_grads_grid)
 
     timelen = 0        ! will be replaced later
 

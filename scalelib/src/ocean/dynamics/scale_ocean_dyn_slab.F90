@@ -109,7 +109,7 @@ contains
        LOG_ERROR("OCEAN_DYN_SLAB_setup",*) 'Not appropriate names in namelist PARAM_OCEAN_DYN_SLAB. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN_DYN_SLAB)
+    LOG_NML(PARAM_OCEAN_DYN_SLAB)
 
     OCEAN_DYN_SLAB_HeatCapacity = DWATR * CL * OCEAN_DYN_SLAB_DEPTH
 

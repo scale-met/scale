@@ -355,7 +355,7 @@ contains
        wdamp_coef(KE+1:KA  ) = wdamp_coef(KE)
 
        LOG_NEWLINE
-       LOG_INFO("ATMOS_DYN_wdamp_setup",*)                          ' *** Setup Rayleigh damping coefficient ***'
+       LOG_INFO("ATMOS_DYN_wdamp_setup",*)                          'Setup Rayleigh damping coefficient'
        LOG_INFO_CONT('(1x,A)')                   '|=== Rayleigh Damping Coef ===|'
        LOG_INFO_CONT('(1x,A)')                   '|     k     zh[m]    coef[/s] |'
        do k = KA, KE+1, -1

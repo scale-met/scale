@@ -209,7 +209,7 @@ contains
        LOG_ERROR("FILE_setup",*) 'Not appropriate names in namelist PARAM_FILE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_FILE)
+    LOG_NML(PARAM_FILE)
 
     mpi_myrank = myrank
 

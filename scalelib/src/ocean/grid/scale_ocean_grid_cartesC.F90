@@ -89,7 +89,7 @@ contains
        LOG_ERROR("OCEAN_GRID_CARTESC_setup",*) 'Not appropriate names in namelist PARAM_OCEAN_GRID_CARTESC. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN_GRID_CARTESC)
+    LOG_NML(PARAM_OCEAN_GRID_CARTESC)
 
     allocate( OCEAN_GRID_CARTESC_CZ (OKS  :OKE) )
     allocate( OCEAN_GRID_CARTESC_FZ (OKS-1:OKE) )

@@ -6,10 +6,8 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2015-05-24 (S.Nishizawa)   [new] split from mod_realinput.f90
-!!
 !<
+#include "scalelib.h"
 module mod_realinput_nicam
   !-----------------------------------------------------------------------------
   !
@@ -83,7 +81,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atmos Input File Type: NICAM-NETCDF'
+    LOG_PROGRESS(*) 'Real Case/Atmos Input File Type: NICAM-NETCDF'
     basename = "ms_pres"//trim(basename_org)
     call FILE_Get_Shape( basename, "ms_pres", & ! (in)
                          dims_ncm(:),         & ! (out)
@@ -133,7 +131,7 @@ contains
     integer :: fid
     integer :: k, i, j
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosOpenNICAM]'
+    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[AtmosOpenNICAM]'
 
     basename = "ms_pres"//trim(basename_num)
     call FILE_open( basename, fid, single=.true., postfix="" )
@@ -222,7 +220,7 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtmosInputNICAM]'
+    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[AtmosInputNICAM]'
 
     basename = "ms_u"//trim(basename_num)
     call FILE_read( basename, "ms_u", read3D(:,:,:), step=it, rankid=myrank, single=.true., postfix="" )
@@ -343,7 +341,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Land Input File Type: NICAM-NETCDF'
+    LOG_PROGRESS(*) 'Real Case/Land Input File Type: NICAM-NETCDF'
     basename = "la_tg"//trim(basename_org)
     call FILE_Get_Shape( basename, "la_tg", & ! (in)
                          dims_ncm(:),       & ! (out)
@@ -405,7 +403,7 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[LandInputNICAM]'
+    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[LandInputNICAM]'
 
     basename = "la_tg"//trim(basename_num)
     call FILE_Read( basename, "lev", lz_org(:), single=.true., postfix="" )
@@ -482,7 +480,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Ocean Input File Type: NICAM-NETCDF'
+    LOG_PROGRESS(*) 'Real Case/Ocean Input File Type: NICAM-NETCDF'
 
     basename = "oa_sst"//trim(basename_org)
     call FILE_Get_Shape( basename, "oa_sst", &
@@ -525,7 +523,7 @@ contains
 
     integer :: k, i, j
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[OceanOpenNICAM]'
+    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[OceanOpenNICAM]'
 
     basename = "oa_sst"//trim(basename_num)
     call FILE_read( basename, "lon", read1DX(:), single=.true., postfix="" )
@@ -574,7 +572,7 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[OceanInputNICAM]'
+    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[OceanInputNICAM]'
 
 
     basename = "oa_sst"//trim(basename_num)

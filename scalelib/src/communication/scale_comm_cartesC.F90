@@ -185,7 +185,7 @@ contains
        LOG_ERROR("COMM_setup",*) 'Not appropriate names in namelist PARAM_COMM. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_COMM)
+    LOG_NML(PARAM_COMM)
 
     nreq_NS  = 2 * JHALO !--- send x JHALO, recv x JHALO
     nreq_WE  = 2         !--- send x 1    , recv x 1

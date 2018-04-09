@@ -144,7 +144,7 @@ contains
        LOG_ERROR("ATMOS_REFSTATE_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_REFSTATE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_REFSTATE)
+    LOG_NML(PARAM_ATMOS_REFSTATE)
 
     LOG_NEWLINE
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then

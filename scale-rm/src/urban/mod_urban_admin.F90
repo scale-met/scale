@@ -68,7 +68,7 @@ contains
        LOG_ERROR("URBAN_ADMIN_setup",*) 'Not appropriate names in namelist PARAM_URBAN. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_URBAN)
+    LOG_NML(PARAM_URBAN)
 
     !-----< module component check >-----
 

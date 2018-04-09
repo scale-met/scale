@@ -113,7 +113,7 @@ contains
        LOG_ERROR("LANDUSE_setup",*) 'Not appropriate names in namelist PARAM_LANDUSE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LANDUSE)
+    LOG_NML(PARAM_LANDUSE)
 
     allocate( LANDUSE_frac_land (IA,JA) )
     allocate( LANDUSE_frac_lake (IA,JA) )

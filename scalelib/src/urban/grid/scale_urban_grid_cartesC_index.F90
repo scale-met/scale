@@ -83,7 +83,7 @@ contains
        LOG_ERROR("URBAN_GRID_CARTESC_INDEX_setup",*) 'Not appropriate names in namelist PARAM_URBAN_GRID_CARTESC_INDEX. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_URBAN_GRID_CARTESC_INDEX)
+    LOG_NML(PARAM_URBAN_GRID_CARTESC_INDEX)
 
     UKA  = UKMAX
     UKS  = 1

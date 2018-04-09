@@ -135,7 +135,7 @@ contains
        LOG_ERROR("USER_setup",*) 'Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
+    LOG_NML(PARAM_USER)
 
     allocate( MOMZ_LS   (KA,2)        )
     allocate( MOMZ_LS_DZ(KA,2)        )

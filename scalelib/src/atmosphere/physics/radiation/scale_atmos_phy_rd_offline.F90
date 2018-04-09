@@ -112,7 +112,7 @@ contains
        LOG_ERROR("ATMOS_PHY_RD_offline_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_RD_OFFLINE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_RD_OFFLINE)
+    LOG_NML(PARAM_ATMOS_PHY_RD_OFFLINE)
 
     if ( ATMOS_PHY_RD_offline_basename(1) == '' ) then
        LOG_ERROR("ATMOS_PHY_RD_offline_setup",*) 'ATMOS_PHY_RD_offline_basename is necessary'

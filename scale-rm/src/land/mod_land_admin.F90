@@ -73,7 +73,7 @@ contains
        LOG_ERROR("LAND_ADMIN_setup",*) 'Not appropriate names in namelist PARAM_LAND. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND)
+    LOG_NML(PARAM_LAND)
 
     !-----< module component check >-----
 

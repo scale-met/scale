@@ -313,7 +313,7 @@ contains
        call PRC_abort
     end if
 
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_BIN)
+    LOG_NML(PARAM_BIN)
 
     if( ICEFLG == 0 ) then
        nspc = 1
@@ -488,7 +488,7 @@ contains
      LOG_ERROR("ATMOS_PHY_MP_suzuki10_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SUZUKI10, Check!'
      call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_SUZUKI10)
+    LOG_NML(PARAM_ATMOS_PHY_MP_SUZUKI10)
 
     if ( nspc /= 1 .AND. nspc /= 7 ) then
        LOG_ERROR("ATMOS_PHY_MP_suzuki10_setup",*) 'nspc should be set as 1 (warm rain) or 7 (mixed phase) check!'

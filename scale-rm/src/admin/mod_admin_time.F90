@@ -296,7 +296,7 @@ contains
        LOG_ERROR("ADMIN_TIME_setup",*) 'Not appropriate names in namelist PARAM_TIME. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_TIME)
+    LOG_NML(PARAM_TIME)
 
     ! check time setting
     if ( setup_TimeIntegration ) then
@@ -947,15 +947,15 @@ contains
        LOG_PROGRESS('(1x,2A,2(A,I7),2(A,F10.1))') 'TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
                                                                  ' WCLOCK:', WALLCLOCK_elapse, '/', TIME_WALLCLOCK_safelim
        if ( PRC_UNIVERSAL_IsMaster .AND. TO_STDOUT ) then ! universal master node
-          if( IO_L ) write(*,'(1x,2A,2(A,I7),2(A,F10.1))') 'TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
-                                                           ' WCLOCK:', WALLCLOCK_elapse, '/', TIME_WALLCLOCK_safelim
+          write(*,'(1x,2A,2(A,I7),2(A,F10.1))') 'TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
+                                                ' WCLOCK:', WALLCLOCK_elapse, '/', TIME_WALLCLOCK_safelim
        endif
     else
        LOG_PROGRESS('(1x,2A,2(A,I7),A,F10.1)') 'TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
                                                               ' WCLOCK:', WALLCLOCK_elapse
        if ( PRC_UNIVERSAL_IsMaster .AND. TO_STDOUT ) then ! universal master node
-          if( IO_L ) write(*,'(1x,2A,2(A,I7),A,F10.1)') 'TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
-                                                        ' WCLOCK:', WALLCLOCK_elapse
+          write(*,'(1x,2A,2(A,I7),A,F10.1)') 'TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
+                                             ' WCLOCK:', WALLCLOCK_elapse
        endif
     endif
 

@@ -369,7 +369,7 @@ contains
        LOG_ERROR("LAND_vars_setup",*) 'Not appropriate names in namelist PARAM_LAND_VARS. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_VARS)
+    LOG_NML(PARAM_LAND_VARS)
 
     LOG_NEWLINE
     LOG_INFO("LAND_vars_setup",*) 'List of prognostic variables (LAND) '
@@ -750,7 +750,7 @@ contains
        LOG_ERROR("LAND_param_read",*) 'Not appropriate names in namelist PARAM_LAND_PROPERTY. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_PROPERTY)
+    LOG_NML(PARAM_LAND_PROPERTY)
 
     if( LAND_PROPERTY_IN_FILENAME /= '' ) then
       !--- Open land parameter file

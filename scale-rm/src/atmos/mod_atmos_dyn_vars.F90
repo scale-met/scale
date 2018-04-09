@@ -101,7 +101,8 @@ contains
     integer :: iv
     !---------------------------------------------------------------------------
 
-    LOG_FILENAME
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[VARS] / Categ[ATMOS DYN] / Origin[SCALE-RM]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -112,7 +113,7 @@ contains
        LOG_ERROR("ATMOS_DYN_vars_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_DYN_VARS. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_DYN_VARS)
+    LOG_NML(PARAM_ATMOS_DYN_VARS)
 
     call ATMOS_DYN_Tstep_short_regist( ATMOS_DYN_TYPE, & ! [IN]
                                        VA,             & ! [OUT]

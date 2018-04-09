@@ -74,7 +74,7 @@ contains
        LOG_ERROR("OCEAN_ADMIN_setup",*) 'Not appropriate names in namelist PARAM_OCEAN. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN)
+    LOG_NML(PARAM_OCEAN)
 
     !-----< module component check >-----
 

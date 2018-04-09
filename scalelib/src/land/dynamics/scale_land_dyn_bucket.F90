@@ -106,7 +106,7 @@ contains
        LOG_ERROR("LAND_DYN_BUCKET_setup",*) 'Not appropriate names in namelist PARAM_LAND_DYN_BUCKET. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_DYN_BUCKET)
+    LOG_NML(PARAM_LAND_DYN_BUCKET)
 
     if ( LAND_DYN_BUCKET_nudging ) then
        if ( LAND_DYN_BUCKET_nudging_basename(1) == '' ) then

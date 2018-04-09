@@ -71,7 +71,7 @@ contains
        LOG_ERROR("LAND_PHY_MATSIRO_setup",*) 'Not appropriate names in namelist PARAM_LAND_MATSIRO. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_MATSIRO)
+    LOG_NML(PARAM_LAND_MATSIRO)
 
     LOG_ERROR("LAND_PHY_MATSIRO", *) "This scheme is under development"
     call PRC_abort

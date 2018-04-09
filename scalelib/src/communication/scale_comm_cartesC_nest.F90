@@ -371,7 +371,7 @@ contains
        LOG_ERROR("COMM_CARTESC_NEST_setup",*) 'Not appropriate names in namelist PARAM_COMM_CARTESC_NEST. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_COMM_CARTESC_NEST)
+    LOG_NML(PARAM_COMM_CARTESC_NEST)
 
     PRC_GLOBAL_domainID = ONLINE_DOMAIN_NUM
 

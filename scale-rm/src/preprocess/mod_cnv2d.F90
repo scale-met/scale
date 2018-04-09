@@ -109,7 +109,7 @@ contains
        LOG_ERROR("CNV2D_setup",*) 'Not appropriate names in namelist PARAM_CNV2D. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNV2D)
+    LOG_NML(PARAM_CNV2D)
 
     CNV2D_DoNothing = .true.
 
@@ -265,7 +265,7 @@ contains
        LOG_ERROR("CNV2D_GrADS",*) 'Not appropriate names in namelist PARAM_CNV2D_GrADS. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNV2D_GrADS)
+    LOG_NML(PARAM_CNV2D_GrADS)
 
     if ( GrADS_NLAT <= 0 ) then
        LOG_ERROR("CNV2D_GrADS",*) 'GrADS_NLAT (number of latitude tile)  should be positive. Check!', GrADS_NLAT

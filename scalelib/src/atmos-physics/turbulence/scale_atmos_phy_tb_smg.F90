@@ -170,7 +170,7 @@ contains
        LOG_ERROR("ATMOS_PHY_TB_smg_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_TB_SMG. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_TB_SMG)
+    LOG_NML(PARAM_ATMOS_PHY_TB_SMG)
 
     Cs = ATMOS_PHY_TB_SMG_Cs
 

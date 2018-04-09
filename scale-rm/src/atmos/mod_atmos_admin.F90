@@ -99,7 +99,7 @@ contains
        LOG_ERROR("ATMOS_ADMIN_setup",*) 'Not appropriate names in namelist PARAM_ATMOS. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS)
+    LOG_NML(PARAM_ATMOS)
 
     !-----< module component check >-----
 

@@ -114,7 +114,7 @@ contains
        LOG_ERROR("ATMOS_PHY_TB_dns_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_TB_DNS. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_TB_DNS)
+    LOG_NML(PARAM_ATMOS_PHY_TB_DNS)
 
     return
   end subroutine ATMOS_PHY_TB_dns_setup

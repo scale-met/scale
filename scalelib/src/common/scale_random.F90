@@ -73,7 +73,7 @@ contains
        LOG_ERROR("RANDOM_setup",*) 'Not appropriate names in namelist PARAM_RANDOM. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_RANDOM)
+    LOG_NML(PARAM_RANDOM)
 
     call random_seed
     call random_seed(size=nseeds)

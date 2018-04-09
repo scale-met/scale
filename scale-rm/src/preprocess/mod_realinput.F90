@@ -226,7 +226,7 @@ contains
        LOG_ERROR("REALINPUT_atmos",*) 'Not appropriate names in namelist PARAM_MKINIT_REAL_ATMOS. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_ATMOS)
+    LOG_NML(PARAM_MKINIT_REAL_ATMOS)
 
     if ( BOUNDARY_UPDATE_DT <= 0.0_DP ) then
        LOG_ERROR("REALINPUT_atmos",*) 'BOUNDARY_UPDATE_DT is necessary in real case preprocess'
@@ -557,7 +557,7 @@ contains
        LOG_ERROR("REALINPUT_surface",*) 'Not appropriate names in namelist PARAM_MKINIT_REAL_LAND. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_LAND)
+    LOG_NML(PARAM_MKINIT_REAL_LAND)
 
     NUMBER_OF_FILES_LAND            = NUMBER_OF_FILES
     NUMBER_OF_TSTEPS_LAND           = NUMBER_OF_TSTEPS
@@ -595,7 +595,7 @@ contains
        LOG_ERROR("REALINPUT_surface",*) 'Not appropriate names in namelist PARAM_MKINIT_REAL_OCEAN. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_REAL_OCEAN)
+    LOG_NML(PARAM_MKINIT_REAL_OCEAN)
 
     NUMBER_OF_FILES_OCEAN            = NUMBER_OF_FILES
     NUMBER_OF_TSTEPS_OCEAN           = NUMBER_OF_TSTEPS

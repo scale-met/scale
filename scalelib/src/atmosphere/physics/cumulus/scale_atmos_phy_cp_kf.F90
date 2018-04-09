@@ -210,7 +210,7 @@ contains
        LOG_ERROR("ATMOS_PHY_CP_kf_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_CP_KF. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_CP_KF)
+    LOG_NML(PARAM_ATMOS_PHY_CP_KF)
 
     call CP_kf_lutab ! set up of KF look-up table
 
@@ -2640,13 +2640,13 @@ contains
        ! moisture budget error
        istop = 1
        LOG_ERROR("CP_kf_compensational",*) "@KF,MOISTURE"
-       write (*,*) "--------------------------------------"
-       write (*,'(" *** vert accum rho*qhyd : ",F20.12)') qhydr
-       write (*,'(" *** vert accum rho*qv   : ",F20.12)') qvfnl-qinit
-       write (*,'(" *** precipitation rate  : ",F20.12)') qpfnl
-       write (*,'(" *** conserv qhyd + qv   : ",F20.12)') qhydr + qpfnl
-       write (*,'(" *** conserv total       : ",F20.12)') qfinl-qinit
-       write (*,*) "--------------------------------------"
+       LOG_ERROR_CONT(*) "--------------------------------------"
+       LOG_ERROR_CONT('("vert accum rho*qhyd : ",F20.12)') qhydr
+       LOG_ERROR_CONT('("vert accum rho*qv   : ",F20.12)') qvfnl-qinit
+       LOG_ERROR_CONT('("precipitation rate  : ",F20.12)') qpfnl
+       LOG_ERROR_CONT('("conserv qhyd + qv   : ",F20.12)') qhydr + qpfnl
+       LOG_ERROR_CONT('("conserv total       : ",F20.12)') qfinl-qinit
+       LOG_ERROR_CONT(*) "--------------------------------------"
        call PRC_abort
     end if
     !> feed back to resolvable scale tendencies
@@ -2871,7 +2871,7 @@ contains
     !      IF(IPTB.GE.220 .OR. IPTB.LE.1 .OR. ITHTB.GE.250 .OR. ITHTB.LE.1)THEN
     IF(IPTB.GE.kfnp .OR. IPTB.LE.1 .OR. ITHTB.GE.250 .OR. ITHTB.LE.1)THEN
        ! modify
-       LOG_WARN("CP_kf_tpmix2",*)   '* OUT OF BOUNDS *********',IPTB,ITHTB,P,THES
+       LOG_WARN("CP_kf_tpmix2",*)   'OUT OF BOUNDS',IPTB,ITHTB,P,THES
        !        flush(98)
     ENDIF
 

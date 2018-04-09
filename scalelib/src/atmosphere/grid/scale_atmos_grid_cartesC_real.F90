@@ -142,7 +142,7 @@ contains
        LOG_ERROR("ATMOS_GRID_CARTESC_REAL_setup",*) 'Not appropriate names in namelist PARAM_DOMAIN_CATALOGUE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_DOMAIN_CATALOGUE)
+    LOG_NML(PARAM_DOMAIN_CATALOGUE)
 
     allocate( ATMOS_GRID_CARTESC_REAL_LON  (  IA,  JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_LAT  (  IA,  JA) )

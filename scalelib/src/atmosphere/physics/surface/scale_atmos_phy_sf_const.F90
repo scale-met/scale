@@ -93,7 +93,7 @@ contains
        LOG_ERROR("ATMOS_PHY_SF_const_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_SF_CONST. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_SF_CONST)
+    LOG_NML(PARAM_ATMOS_PHY_SF_CONST)
 
     return
   end subroutine ATMOS_PHY_SF_const_setup

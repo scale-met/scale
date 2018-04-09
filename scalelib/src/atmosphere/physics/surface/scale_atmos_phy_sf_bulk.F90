@@ -70,7 +70,7 @@ contains
        LOG_ERROR("ATMOS_PHY_SF_bulk_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_SF_BULK. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_SF_BULK)
+    LOG_NML(PARAM_ATMOS_PHY_SF_BULK)
 
     return
   end subroutine ATMOS_PHY_SF_bulk_setup

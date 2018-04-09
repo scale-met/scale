@@ -141,7 +141,7 @@ contains
        LOG_ERROR("ATMOS_PHY_TB_d1980_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_TB_D1980. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_TB_D1980)
+    LOG_NML(PARAM_ATMOS_PHY_TB_D1980)
 
     allocate( delta(KA,IA,JA) )
 

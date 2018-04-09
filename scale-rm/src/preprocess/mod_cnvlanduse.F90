@@ -95,7 +95,7 @@ contains
        LOG_ERROR("CNVLANDUSE_setup",*) 'Not appropriate names in namelist PARAM_CNVLANDUSE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVLANDUSE)
+    LOG_NML(PARAM_CNVLANDUSE)
 
     select case(CNVLANDUSE_name)
     case('NONE')
@@ -325,7 +325,7 @@ contains
        LOG_ERROR("CNVLANDUSE_GLCCv2",*) 'Not appropriate names in namelist PARAM_CNVLANDUSE_GLCCv2. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVLANDUSE_GLCCv2)
+    LOG_NML(PARAM_CNVLANDUSE_GLCCv2)
 
     do p = -2, LANDUSE_PFT_nmax
     do j = 1, JA
@@ -798,7 +798,7 @@ contains
        LOG_ERROR("CNVLANDUSE_LU100M",*) 'Not appropriate names in namelist PARAM_CNVLANDUSE_LU100M. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVLANDUSE_LU100M)
+    LOG_NML(PARAM_CNVLANDUSE_LU100M)
 
     do p = -2, LANDUSE_PFT_nmax
     do j = 1, JA

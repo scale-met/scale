@@ -93,18 +93,18 @@ contains
        LOG_ERROR("ATMOS_PHY_CH_rn222_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_CH_RN222. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_CH_RN222)
+    LOG_NML(PARAM_ATMOS_PHY_CH_RN222)
 
     ATMOS_PHY_CH_Rn222_decay_ratio = log(2.0_RP) / ATMOS_PHY_CH_Rn222_half_life
 
     LOG_NEWLINE
-    LOG_INFO("ATMOS_PHY_CH_rn222_setup",'(A)')           ' *** Characteristics of Rn222'
-    LOG_INFO("ATMOS_PHY_CH_rn222_setup",'(A,E16.6)')     ' *** Half life   [s]      : ', ATMOS_PHY_CH_rn222_half_life
-    LOG_INFO("ATMOS_PHY_CH_rn222_setup",'(A,E16.6)')     ' *** Decay ratio [1/s]    : ', ATMOS_PHY_CH_Rn222_decay_ratio
-    LOG_INFO("ATMOS_PHY_CH_rn222_setup",*)               ' *** Type of emission     : ', trim(ATMOS_PHY_CH_RN222_emission_type)
+    LOG_INFO("ATMOS_PHY_CH_rn222_setup",'(A)')           'Characteristics of Rn222'
+    LOG_INFO("ATMOS_PHY_CH_rn222_setup",'(A,E16.6)')     'Half life   [s]      : ', ATMOS_PHY_CH_rn222_half_life
+    LOG_INFO("ATMOS_PHY_CH_rn222_setup",'(A,E16.6)')     'Decay ratio [1/s]    : ', ATMOS_PHY_CH_Rn222_decay_ratio
+    LOG_INFO("ATMOS_PHY_CH_rn222_setup",*)               'Type of emission     : ', trim(ATMOS_PHY_CH_RN222_emission_type)
     if ( ATMOS_PHY_CH_Rn222_emission_type == 'CONST' ) then
-       LOG_INFO("ATMOS_PHY_CH_rn222_setup",'(A,ES16.6)') ' *** From land  [Bq/m2/s] : ', ATMOS_PHY_CH_Rn222_const_emission_land
-       LOG_INFO("ATMOS_PHY_CH_rn222_setup",'(A,ES16.6)') ' *** From ocean [Bq/m2/s] : ', ATMOS_PHY_CH_Rn222_const_emission_ocean
+       LOG_INFO("ATMOS_PHY_CH_rn222_setup",'(A,ES16.6)') 'From land  [Bq/m2/s] : ', ATMOS_PHY_CH_Rn222_const_emission_land
+       LOG_INFO("ATMOS_PHY_CH_rn222_setup",'(A,ES16.6)') 'From ocean [Bq/m2/s] : ', ATMOS_PHY_CH_Rn222_const_emission_ocean
     else
        LOG_ERROR("ATMOS_PHY_CH_rn222_setup",*) 'Not supported type of Rn222 emission! Stop.'
        call PRC_abort

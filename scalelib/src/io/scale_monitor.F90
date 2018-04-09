@@ -8,6 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_monitor
   !-----------------------------------------------------------------------------
   !
@@ -120,19 +121,19 @@ contains
     integer :: n
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[MONITOR] / Categ[IO] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) '++++++ Module[MONITOR] / Categ[IO] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MONITOR,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO('MONITOR_setup',*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MONITOR. Check!'
+       LOG_ERROR('MONITOR_setup',*) 'Not appropriate names in namelist PARAM_MONITOR. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MONITOR)
+    LOG_NML(PARAM_MONITOR)
 
     ! listup monitor request
     rewind(IO_FID_CONF)
@@ -142,16 +143,16 @@ contains
     enddo
     MONITOR_nreqs = n - 1
 
-    if( IO_L ) write(IO_FID_LOG,*)
     if    ( MONITOR_nreqs > MONITOR_req_max ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** request of monitor file is exceed! n >', MONITOR_req_max
+       LOG_ERROR('MONITOR_setup',*) 'request of monitor file is exceed! n >', MONITOR_req_max
+       call PRC_abort
     elseif( MONITOR_nreqs == 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** No monitor file specified.'
+       LOG_INFO('MONITOR_setup',*) 'No monitor file specified.'
        return
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Number of requested monitor item: ', MONITOR_nreqs
-       if( IO_L ) write(IO_FID_LOG,*) '*** Monitor output interval [step]  : ', MONITOR_STEP_INTERVAL
-       if( IO_L ) write(IO_FID_LOG,*) '*** Use deviation from first step?  : ', MONITOR_USEDEVATION
+       LOG_INFO('MONITOR_setup',*) 'Number of requested monitor item: ', MONITOR_nreqs
+       LOG_INFO('MONITOR_setup',*) 'Monitor output interval [step]  : ', MONITOR_STEP_INTERVAL
+       LOG_INFO('MONITOR_setup',*) 'Use deviation from first step?  : ', MONITOR_USEDEVATION
     endif
 
     allocate( MONITOR_items(MONITOR_nreqs) )
@@ -164,7 +165,9 @@ contains
        read(IO_FID_CONF,nml=MONITOR_ITEM,iostat=ierr)
        if( ierr /= 0 ) exit
 
-       if( IO_NML .AND. IO_FID_NML /= IO_FID_LOG ) write(IO_FID_NML,nml=MONITOR_ITEM)
+       if ( IO_FID_NML /= IO_FID_LOG ) then
+          LOG_NML(MONITOR_ITEM)
+       end if
 
        MONITOR_reqs(n) = NAME
     enddo
@@ -274,7 +277,7 @@ contains
                 end if
              end do
              if ( dimid < 0 ) then
-                write(*,*) 'xxx [MONITOR_reg] dim_type (', trim(dim_type), ') must be registerd by MONITOR_set_dim'
+                LOG_ERROR('MONITOR_reg',*) 'dim_type (', trim(dim_type), ') must be registerd by MONITOR_set_dim'
                 call PRC_abort
              end if
           else if ( present(ndims) ) then
@@ -285,7 +288,7 @@ contains
                 end if
              end do
              if ( dimid == -1 ) then
-                write(*,'(a,i1,a)') 'xxx [MONITOR_reg] dim_type of ', ndims, 'D must be registerd with MONITOR_set_dim'
+                LOG_ERROR('MONITOR_reg','(a,i1,a)') 'dim_type of ', ndims, 'D must be registerd with MONITOR_set_dim'
                 call PRC_abort
              end if
           else
@@ -297,7 +300,7 @@ contains
                 end if
              end do
              if ( dimid == -1 ) then
-                write(*,*) 'xxx [MONITOR_reg] dim_type or ndims must be specified'
+                LOG_ERROR('MONITOR_reg',*) 'dim_type or ndims must be specified'
                 call PRC_abort
              end if
           end if
@@ -313,13 +316,13 @@ contains
              MONITOR_items(itemid)%flux  = .false.
           end if
 
-          if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,I3)') ' *** [MONIT] Item registration No.= ', itemid
-          if( IO_L ) write(IO_FID_LOG,*) ' ] Name            : ', trim(MONITOR_items(itemid)%name)
-          if( IO_L ) write(IO_FID_LOG,*) ' ] Description     : ', trim(MONITOR_items(itemid)%desc)
-          if( IO_L ) write(IO_FID_LOG,*) ' ] Unit            : ', trim(MONITOR_items(itemid)%unit)
-          if( IO_L ) write(IO_FID_LOG,*) ' ] Dimension type  : ', trim(MONITOR_dims(MONITOR_items(itemid)%dimid)%name)
-          if( IO_L ) write(IO_FID_LOG,*) ' ] Integ. with dt? : ', MONITOR_items(itemid)%flux
+          LOG_NEWLINE
+          LOG_INFO('MONOTOR_reg','(A,I3)') ' Item registration No.= ', itemid
+          LOG_INFO_CONT(*) 'Name            : ', trim(MONITOR_items(itemid)%name)
+          LOG_INFO_CONT(*) 'Description     : ', trim(MONITOR_items(itemid)%desc)
+          LOG_INFO_CONT(*) 'Unit            : ', trim(MONITOR_items(itemid)%unit)
+          LOG_INFO_CONT(*) 'Dimension type  : ', trim(MONITOR_dims(MONITOR_items(itemid)%dimid)%name)
+          LOG_INFO_CONT(*) 'Integ. with dt? : ', MONITOR_items(itemid)%flux
 
           return
        end if
@@ -516,7 +519,7 @@ contains
     if ( MONITOR_FID > 0 ) then
 
        if ( mod(NOWSTEP-1,MONITOR_STEP_INTERVAL) == 0 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Output Monitor'
+          LOG_PROGRESS(*) 'Output Monitor'
 
           write(MONITOR_FID,'(A,i7,A,A4,A)',advance='no') 'STEP=',NOWSTEP,' (',memo,')'
           do n = 1, MONITOR_nitems
@@ -548,18 +551,18 @@ contains
     integer :: n
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [MONITOR] Output item list '
-    if( IO_L ) write(IO_FID_LOG,*) '*** Number of monitor item :', MONITOR_nreqs
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') 'NAME                   :description                                    ', &
-                                           ':UNIT           :dimension_type'
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '=======================================================================', &
-                                           '=========================='
+    LOG_NEWLINE
+    LOG_INFO('MONITOR_writeheader',*) 'Output item list '
+    LOG_INFO_CONT(*) 'Number of monitor item :', MONITOR_nreqs
+    LOG_INFO_CONT('(2A)') 'NAME                   :description                                    ', &
+                          ':UNIT           :dimension_type'
+    LOG_INFO_CONT('(2A)') '=======================================================================', &
+                          '==============================='
     do n = 1, MONITOR_nitems
-       if( IO_L ) write(IO_FID_LOG,'(1x,A24,A48,A16,A16)') MONITOR_items(n)%name, MONITOR_items(n)%desc, MONITOR_items(n)%unit, MONITOR_dims(MONITOR_items(n)%dimid)%name
+       LOG_INFO_CONT('(A24,A48,A16,A16)') MONITOR_items(n)%name, MONITOR_items(n)%desc, MONITOR_items(n)%unit, MONITOR_dims(MONITOR_items(n)%dimid)%name
     enddo
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '=======================================================================', &
-                                           '=========================='
+    LOG_INFO_CONT('(2A)') '=======================================================================', &
+                          '==============================='
 
     if ( PRC_IsMaster ) then ! master node
        MONITOR_L = .true.
@@ -577,12 +580,12 @@ contains
              form   = 'formatted',  &
              iostat = ierr          )
        if ( ierr /= 0 ) then
-          write(*,*) 'xxx File open error! :', trim(fname)
+          LOG_ERROR('MONITOR_writeheader',*) 'File open error! :', trim(fname)
           call PRC_abort
        endif
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Open ASCII file for monitor, name : ', trim(fname)
+       LOG_NEWLINE
+       LOG_INFO('MONITOR_writeheader',*) 'Open ASCII file for monitor, name : ', trim(fname)
 
        write(MONITOR_FID,'(A)',advance='no') '                   '
        do n = 1, MONITOR_nitems
@@ -610,8 +613,8 @@ contains
     if ( MONITOR_FID > 0 ) then
        call IO_make_idstr(fname,trim(MONITOR_OUT_BASENAME),'pe',PRC_myrank)
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Close ASCII file for monitor, name : ', trim(fname)
+       LOG_NEWLINE
+       LOG_INFO('MONITOR_finalize',*) 'Close ASCII file for monitor, name : ', trim(fname)
 
        close(MONITOR_FID)
     endif

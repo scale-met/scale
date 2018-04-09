@@ -597,7 +597,7 @@ contains
        LOG_ERROR("ATMOS_SOLARINS_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_SOLARINS. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_SOLARINS)
+    LOG_NML(PARAM_ATMOS_SOLARINS)
 
     if ( ATMOS_SOLARINS_set_ve ) then
        if ( .NOT. ATMOS_SOLARINS_set_ideal ) then

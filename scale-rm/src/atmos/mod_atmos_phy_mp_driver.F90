@@ -268,7 +268,7 @@ contains
           LOG_ERROR("ATMOS_PHY_MP_driver_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_MP. Check!'
           call PRC_abort
        endif
-       if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP)
+       LOG_NML(PARAM_ATMOS_PHY_MP)
 
        nstep_max = ceiling( ( TIME_DTSEC_ATMOS_PHY_MP * MP_max_term_vel ) / minval( CDZ(:) ) )
        MP_ntmax_sedimentation = max( MP_ntmax_sedimentation, nstep_max )

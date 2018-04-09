@@ -178,7 +178,7 @@ contains
        LOG_ERROR("ATMOS_GRID_CARTESC_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_GRID_CARTESC. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_GRID_CARTESC)
+    LOG_NML(PARAM_ATMOS_GRID_CARTESC)
 
 
     call ATMOS_GRID_CARTESC_allocate

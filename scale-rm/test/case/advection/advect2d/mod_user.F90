@@ -146,7 +146,7 @@ contains
        LOG_ERROR("USER_setup",*) 'Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
+    LOG_NML(PARAM_USER)
 
     Lx = ATMOS_GRID_CARTESC_FXG(IAG-IHALO) - ATMOS_GRID_CARTESC_FXG(IHALO)
     Ly = ATMOS_GRID_CARTESC_FYG(JAG-JHALO) - ATMOS_GRID_CARTESC_FYG(JHALO)

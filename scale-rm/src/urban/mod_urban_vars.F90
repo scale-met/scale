@@ -399,7 +399,7 @@ contains
        LOG_ERROR("URBAN_vars_setup",*) 'Not appropriate names in namelist PARAM_URBAN_VARS. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_URBAN_VARS)
+    LOG_NML(PARAM_URBAN_VARS)
 
     LOG_NEWLINE
     LOG_INFO("URBAN_vars_setup",*) 'List of prognostic variables (URBAN) '

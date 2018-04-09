@@ -84,7 +84,7 @@ contains
        LOG_ERROR("LAND_GRID_CARTESC_INDEX_setup",*) 'Not appropriate names in namelist PARAM_LAND_GRID_CARTESC_INDEX. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_GRID_CARTESC_INDEX)
+    LOG_NML(PARAM_LAND_GRID_CARTESC_INDEX)
 
     LKS  = 1
     LKE  = LKMAX

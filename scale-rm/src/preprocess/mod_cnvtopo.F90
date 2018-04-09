@@ -136,7 +136,7 @@ contains
        LOG_ERROR("CNVTOPO_setup",*) 'Not appropriate names in namelist PARAM_CNVTOPO. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVTOPO)
+    LOG_NML(PARAM_CNVTOPO)
 
     select case(CNVTOPO_name)
     case('NONE')
@@ -398,7 +398,7 @@ contains
        LOG_ERROR("CNVTOPO_GTOPO30",*) 'Not appropriate names in namelist PARAM_CNVTOPO_GTOPO30. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVTOPO_GTOPO30)
+    LOG_NML(PARAM_CNVTOPO_GTOPO30)
 
     do j = 1, JA
     do i = 1, IA
@@ -781,7 +781,7 @@ contains
        LOG_ERROR("CNVTOPO_DEM50M",*) 'Not appropriate names in namelist PARAM_CNVTOPO_DEM50M. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVTOPO_DEM50M)
+    LOG_NML(PARAM_CNVTOPO_DEM50M)
 
     do j = 1, JA
     do i = 1, IA
@@ -1179,7 +1179,7 @@ contains
        LOG_ERROR("CNVTOPO_USERFILE",*) 'Not appropriate names in namelist PARAM_CNVTOPO_USERFILE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CNVTOPO_USERFILE)
+    LOG_NML(PARAM_CNVTOPO_USERFILE)
 
     if ( USERFILE_NLAT <= 0 ) then
        LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_NLAT (number of latitude tile)  should be positive. Check! ', USERFILE_NLAT

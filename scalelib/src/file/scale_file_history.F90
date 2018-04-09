@@ -480,7 +480,7 @@ contains
        LOG_ERROR("FILE_HISTORY_Setup",*) 'Not appropriate names in namelist PARAM_FILE_HISTORY. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_FILE_HISTORY)
+    LOG_NML(PARAM_FILE_HISTORY)
 
 
 
@@ -545,7 +545,7 @@ contains
        if( ierr /= 0 ) exit
        if( BASENAME == '' .OR. NAME == '' .OR. OUTNAME == '' ) cycle ! invalid HISTORY_ITEM
 
-       if( IO_NML ) write(IO_FID_NML,nml=HISTORY_ITEM)
+       LOG_NML(HISTORY_ITEM)
 
        ! check duplicated request
        if ( OUTNAME == 'undefined' ) OUTNAME = NAME ! set default name

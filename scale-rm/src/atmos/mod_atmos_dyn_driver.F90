@@ -160,7 +160,8 @@ contains
     integer  :: ierr
     !---------------------------------------------------------------------------
 
-    LOG_FILENAME
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Module[DRIVER] / Categ[ATMOS DYN] / Origin[SCALE-RM]'
 
     if ( ATMOS_sw_dyn ) then
 
@@ -174,7 +175,7 @@ contains
           LOG_ERROR("ATMOS_DYN_driver_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_DYN. Check!'
           call PRC_abort
        endif
-       if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_DYN)
+       LOG_NML(PARAM_ATMOS_DYN)
 
        DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
 

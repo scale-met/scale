@@ -87,7 +87,7 @@ contains
        LOG_ERROR("OCEAN_PHY_ROUGHNESS_miller92_setup",*) 'Not appropriate names in namelist PARAM_OCEAN_PHY_ROUGHNESS_MILLER92. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN_PHY_ROUGHNESS_MILLER92)
+    LOG_NML(PARAM_OCEAN_PHY_ROUGHNESS_MILLER92)
 
     return
   end subroutine OCEAN_PHY_ROUGHNESS_miller92_setup

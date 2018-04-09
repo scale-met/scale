@@ -222,7 +222,7 @@ contains
        LOG_ERROR("FILE_setup",*) 'Not appropriate names in namelist PARAM_FILE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_FILE)
+    LOG_NML(PARAM_FILE)
 
     mpi_myrank = myrank
 
@@ -1343,8 +1343,8 @@ contains
        FILE_vars(vid)%vid  = cvid
        FILE_vars(vid)%fid  = fid
 
-       LOG_INFO("FILE_add_variable_with_time",'(A,I3.3,A,I4.4,2A)') &
-       '###### FILE variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
+       LOG_INFO("FILE_add_variable_with_time",'(1x,A,I3.3,A,I4.4,2A)') &
+       'Variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
     endif
 
     return
@@ -1421,8 +1421,8 @@ contains
        FILE_vars(vid)%vid  = cvid
        FILE_vars(vid)%fid  = fid
 
-       LOG_INFO("FILE_def_variable",'(A,I3.3,A,I4.4,2A)') &
-       '###### FILE variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
+       LOG_INFO("FILE_def_variable",'(1x,A,I3.3,A,I4.4,2A)') &
+       'Variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
 
        if ( present(existed) ) existed = .false.
     else
@@ -4040,8 +4040,8 @@ contains
     if ( error == FILE_SUCCESS_CODE ) then
 
        LOG_NEWLINE
-       LOG_INFO("FILE_enddef",'(A,I3.3,2A)') &
-            '###### FILE end define mode       : No.', fid, ', name = ', trim(FILE_files(fid)%name)
+       LOG_INFO("FILE_enddef",'(1x,A,I3.3,2A)') &
+            'End define mode : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     else
        LOG_ERROR("FILE_enddef",*) 'failed to exit define mode'
@@ -4071,8 +4071,8 @@ contains
     if ( error == FILE_SUCCESS_CODE ) then
 
        LOG_NEWLINE
-       LOG_INFO("FILE_attach_buffer",'(A,I3.3,3A,I10)') &
-            '###### FILE attach buffer         : No.', fid, ', name = ', trim(FILE_files(fid)%name), &
+       LOG_INFO("FILE_attach_buffer",'(1x,A,I3.3,3A,I10)') &
+            'Attach buffer : No.', fid, ', name = ', trim(FILE_files(fid)%name), &
             ', size = ', buf_amount
     else
        LOG_ERROR("FILE_attach_buffer",*) 'failed to attach buffer in PnetCDF'
@@ -4101,8 +4101,8 @@ contains
     if ( error == FILE_SUCCESS_CODE ) then
 
        LOG_NEWLINE
-       LOG_INFO("FILE_detach_buffer",'(A,I3.3,2A)') &
-            '###### FILE detach buffer         : No.', fid, ', name = ', trim(FILE_files(fid)%name)
+       LOG_INFO("FILE_detach_buffer",'(1x,A,I3.3,2A)') &
+            'Detach buffer : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     else
        LOG_ERROR("FILE_detach_buffer",*) 'failed to detach buffer in PnetCDF'
@@ -4131,8 +4131,8 @@ contains
     if ( error == FILE_SUCCESS_CODE ) then
 
 !!$       LOG_NEWLINE
-!!$       LOG_INFO("FILE_flush",'(A,I3.3,2A)') &
-!!$            '###### FILE flush                 : No.', fid, ', name = ', trim(FILE_files(fid)%name)
+!!$       LOG_INFO("FILE_flush",'(1xA,I3.3,2A)') &
+!!$            'Flush : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     else
        LOG_ERROR("FILE_flush",*) 'failed to flush PnetCDF pending requests'
@@ -4161,8 +4161,8 @@ contains
     if ( error == FILE_SUCCESS_CODE ) then
 
        LOG_NEWLINE
-       LOG_INFO("FILE_close",'(A,I3.3,2A)') &
-            '###### FILE close                 : No.', fid, ', name = ', trim(FILE_files(fid)%name)
+       LOG_INFO("FILE_close",'(1x,A,I3.3,2A)') &
+            'Close : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     elseif( error /= FILE_ALREADY_CLOSED_CODE ) then
        LOG_ERROR("FILE_close",*) 'failed to close file'
@@ -4350,8 +4350,8 @@ contains
     FILE_files(fid)%aggregate = aggregate_
 
     LOG_NEWLINE
-    LOG_INFO("FILE_get_fid",'(A,A6,A,I3.3,2A)') &
-    '###### FILE registration (', trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
+    LOG_INFO("FILE_get_fid",'(1x,A,A6,A,I3.3,2A)') &
+    'Registration (', trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
 
     existed = .false.
 

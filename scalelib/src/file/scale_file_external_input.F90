@@ -225,7 +225,7 @@ contains
           LOG_ERROR("FILE_EXTERNAL_INPUT_setup",*) 'Not appropriate names in namelist EXTERNAL_ITEM. Check!', count
           call PRC_abort
        endif
-       if( IO_NML .AND. IO_FID_NML /= IO_FID_LOG ) write(IO_FID_NML,nml=EXTERNAL_ITEM)
+       LOG_NML(EXTERNAL_ITEM)
 
        call FILE_EXTERNAL_INPUT_regist( basename(:),           & ! [IN]
                           varname,               & ! [IN]

@@ -122,7 +122,7 @@ contains
        LOG_ERROR("PROF_setup",*) 'Not appropriate names in namelist PARAM_PROF. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_PROF)
+    LOG_NML(PARAM_PROF)
 
     LOG_NEWLINE
     LOG_INFO("PROF_setup",*) 'Rap output level              = ', PROF_rap_level
@@ -305,7 +305,7 @@ contains
        if ( IO_LOG_SUPPRESS ) then ! report to STDOUT
           if ( PRC_IsMaster ) then
              write(*,*) '*** Computational Time Report'
-             fid = 6 ! master node
+             fid = IO_STDOUT ! master node
           endif
        else
           if ( IO_L ) fid = IO_FID_LOG
@@ -316,7 +316,7 @@ contains
              if (       PROF_raplevel(id) <= PROF_rap_level &
                   .AND. PROF_grpid   (id) == gid            &
                   .AND. fid > 0                             ) then
-                LOG_INFO_CONT('(1x,A,I3.3,3A,F10.3,A,F10.3,A,I5,2A,F10.3,A,I5,2A,I9)') &
+                write(fid,'(1x,A,I3.3,3A,F10.3,A,F10.3,A,I5,2A,F10.3,A,I5,2A,I9)') &
                            'ID=',id,' : ',PROF_rapname(id), &
                            ' T(avg)=',avgvar(id), &
                            ', T(max)=',maxvar(id),'[',maxidx(id),']', &

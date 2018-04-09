@@ -251,7 +251,7 @@ contains
        LOG_ERROR("USER_setup",*) 'Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_USER)
+    LOG_NML(PARAM_USER)
 
     U_minM = USER_SF_U_minM
     U_minH = USER_SF_U_minH
@@ -283,11 +283,11 @@ contains
       call PRC_abort
     endif
 
-    if( IO_L ) write(io_fid_log,*) 'Reading external sst'
+    LOG_INFO('USER_setup',*) 'Reading external sst'
     read(fid_data,*)
     do t=1, mstep_sst
       read(fid_data,*) time_sst_in(t), sst_in(t)
-      if( IO_L ) write(io_fid_log,*) t,time_nowsec,time_sst_in(t),sst_in(t)
+      LOG_INFO('USER_setup',*) t,time_nowsec,time_sst_in(t),sst_in(t)
     enddo
     close(fid_data)
 

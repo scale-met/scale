@@ -243,7 +243,7 @@ contains
        LOG_ERROR("ATMOS_PHY_SF_vars_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_SF_VARS. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_SF_VARS)
+    LOG_NML(PARAM_ATMOS_PHY_SF_VARS)
 
     ! [add] 2014/08/28 A.Noda
     ATMOS_PHY_SF_SFC_TEMP  (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_TEMP

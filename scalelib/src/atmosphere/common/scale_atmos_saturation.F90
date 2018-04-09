@@ -241,7 +241,7 @@ contains
        LOG_ERROR("ATMOS_SATURATION_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_SATURATION. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_SATURATION)
+    LOG_NML(PARAM_ATMOS_SATURATION)
 
     RTEM00 = 1.0_RP / TEM00
 

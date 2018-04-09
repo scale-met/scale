@@ -155,7 +155,7 @@ contains
        LOG_ERROR("ATMOS_PHY_BL_MYNN_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_BL_MYNN. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_BL_MYNN)
+    LOG_NML(PARAM_ATMOS_PHY_BL_MYNN)
 
     A1        = B1 * (1.0_RP - 3.0_RP * G1) / 6.0_RP
     A2        = 1.0_RP / (3.0_RP * G1 * B1**(1.0_RP/3.0_RP) * PrN )

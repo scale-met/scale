@@ -354,7 +354,7 @@ contains
        LOG_ERROR("OCEAN_vars_setup",*) 'Not appropriate names in namelist PARAM_OCEAN_VARS. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN_VARS)
+    LOG_NML(PARAM_OCEAN_VARS)
 
     LOG_NEWLINE
     LOG_INFO("OCEAN_vars_setup",*) 'List of prognostic variables (OCEAN) '

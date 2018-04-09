@@ -83,7 +83,7 @@ contains
        LOG_ERROR("STATISTICS_setup",*) 'Not appropriate names in namelist PARAM_STATISTICS. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_STATISTICS)
+    LOG_NML(PARAM_STATISTICS)
 
     LOG_NEWLINE
     LOG_INFO("STATISTICS_setup",*) 'Caluculate statistics?                     : ', STATISTICS_checktotal

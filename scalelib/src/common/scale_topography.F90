@@ -91,7 +91,7 @@ contains
        LOG_ERROR("TOPO_setup",*) 'Not appropriate names in namelist PARAM_TOPO. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_TOPO)
+    LOG_NML(PARAM_TOPO)
 
     allocate( TOPO_Zsfc(IA,JA) )
     TOPO_Zsfc(:,:) = 0.0_RP

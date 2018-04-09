@@ -222,7 +222,7 @@ contains
        call PRC_abort
     end if
    
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_AE_KAJINO13_TRACER)
+    LOG_NML(PARAM_ATMOS_PHY_AE_KAJINO13_TRACER)
    
     if( AE_CTG > ncat_max ) then
        LOG_ERROR("ATMOS_PHY_AE_kajino13_tracer_setup",*) 'AE_CTG should be smaller than', ncat_max+1, 'stop'
@@ -444,7 +444,7 @@ contains
        LOG_ERROR("ATMOS_PHY_AE_kajino13_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_AE_KAJINO13. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_AE_KAJINO13)
+    LOG_NML(PARAM_ATMOS_PHY_AE_KAJINO13)
 
     !--- now only the default setting is supported
 !    n_siz(1:n_ctg) = NSIZ(1:n_ctg)       ! number of size bins

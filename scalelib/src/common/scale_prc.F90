@@ -348,8 +348,8 @@ contains
     if( PRC_UNIVERSAL_handler /= PRC_ABORT_handler )then
        if ( PRC_UNIVERSAL_IsMaster ) write (*,*) ""
        if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "ERROR: MPI HANDLER is INCONSISTENT"
-       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "PRC_UNIVERSAL_handler = ", PRC_UNIVERSAL_handler
-       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "PRC_ABORT_handler     = ", PRC_ABORT_handler
+       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "     PRC_UNIVERSAL_handler = ", PRC_UNIVERSAL_handler
+       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "     PRC_ABORT_handler     = ", PRC_ABORT_handler
        call PRC_abort
     endif
 
@@ -548,10 +548,10 @@ contains
        do_create_c(:) = .false.
        if ( .NOT. bulk_split ) then
           if ( PRC_UNIVERSAL_IsMaster ) write(*,*)
-          if ( PRC_UNIVERSAL_IsMaster ) write(*,*) "*** Inter-domain relationship information ***"
+          if ( PRC_UNIVERSAL_IsMaster ) write(*,*) "INFO [PRC_MPIsplit] Inter-domain relationship information ***"
           do i = 1, NUM_DOMAIN-1
-             if ( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,I2.2)')  "*** Relationship No. ", i
-             if ( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,2(A,I2))') "*** Parent color = ", PARENT_COL(i), &
+             if ( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I2.2)')  "Relationship No. ", i
+             if ( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,2(A,I2))') "Parent color = ", PARENT_COL(i), &
                                                                    " <=> child color = ", CHILD_COL (i)
              if ( COLOR_LIST(ORG_myrank) == PARENT_COL(i) ) then
                 do_create_p(i) = .true.
@@ -583,10 +583,10 @@ contains
        deallocate( COLOR_LIST, KEY_LIST )
 
     elseif ( NUM_DOMAIN == 1 ) then ! single domain run
-       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "*** a single comunicator"
+       ! if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "INFO [PRC_MPIsplit] a single communicator"
     else
        if ( PRC_UNIVERSAL_IsMaster ) then
-          LOG_ERROR("RPC_MPIsplit",*) "REQUESTED DOMAIN NUMBER IS NOT ACCEPTABLE"
+          write(*,*)"ERROR [RPC_MPIsplit] REQUESTED DOMAIN NUMBER IS NOT ACCEPTABLE"
        end if
        call PRC_abort
     endif
@@ -758,23 +758,23 @@ contains
        enddo
 
        if( PRC_UNIVERSAL_IsMaster ) write(*,*)
-       if( PRC_UNIVERSAL_IsMaster ) write(*,*) '*** Domain information (with reordering) ***'
+       if( PRC_UNIVERSAL_IsMaster ) write(*,*) 'INFO [PRC_MPIcoloring] Domain information (with reordering) ***'
        do i = 1, NUM_DOMAIN
           if( PRC_UNIVERSAL_IsMaster ) write(*,*)
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,2(A,I2.2))') "*** Order No. ",i," -> Domain No. ", ORDER2DOM(i)
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,I5)')      "*** ] Number of process      = ", RO_PRC_DOMAINS(i)
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,I5)')      "*** ] Color of this   domain = ", RO_DOM2COL(ORDER2DOM(i))
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,2(A,I2.2))') "Order No. ",i," -> Domain No. ", ORDER2DOM(i)
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I5)')      "Number of process      = ", RO_PRC_DOMAINS(i)
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I5)')      "Color of this   domain = ", RO_DOM2COL(ORDER2DOM(i))
           if ( RO_PARENT_COL(i) >= 0 ) then
-             if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,I5)')   "*** ] Color of parent domain = ", RO_PARENT_COL(i)
+             if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I5)')   "Color of parent domain = ", RO_PARENT_COL(i)
           else
-             if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A)'   )   "*** ] Color of parent domain = no parent"
+             if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A)'   )   "Color of parent domain = no parent"
           endif
           if ( RO_CHILD_COL(i) >= 0 ) then
-             if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,I5)')   "*** ] Color of child  domain = ", RO_CHILD_COL(i)
+             if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I5)')   "Color of child  domain = ", RO_CHILD_COL(i)
           else
-             if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A)'   )   "*** ] Color of child  domain = no child"
+             if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A)'   )   "Color of child  domain = no child"
           endif
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,A)')       "*** ] Name of config file    = ", trim(RO_CONF_FILES(i))
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,A)')       "Name of config file    = ", trim(RO_CONF_FILES(i))
        enddo
 
        do i = 1, NUM_DOMAIN
@@ -826,7 +826,7 @@ contains
        endif
 
        if ( LOG_SPLIT .AND. PRC_UNIVERSAL_IsMaster ) then
-          write(*,'(1x,4(A,I5))') &
+          write(*,'(5x,4(A,I5))') &
           "PE:", i, " COLOR:", COLOR_LIST(i+1), " KEY:", KEY_LIST(i+1), " PRC_ROOT:", PRC_ROOT(COLOR_LIST(i+1))
        endif
 
@@ -1000,7 +1000,7 @@ contains
           write(IO_FID_LOG,*) ''
        endif
 
-       if ( IO_L ) then
+       if ( PRC_IsMaster ) then
           write(*,*) '++++++ BULK   ID       : ', PRC_UNIVERSAL_jobID
           write(*,*) '++++++ DOMAIN ID       : ', PRC_GLOBAL_domainID
           write(*,*) '++++++ MASTER LOCATION : ', PRC_UNIVERSAL_myrank,'/',PRC_UNIVERSAL_nprocs
