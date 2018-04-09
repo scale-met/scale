@@ -93,7 +93,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[SLAB] / Categ[LAND PHY] / Origin[SCALElib]'
+    LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Setup'
 
     LAND_DYN_BUCKET_nudging_defval = UNDEF
 

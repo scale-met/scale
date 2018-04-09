@@ -102,7 +102,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Turbulence] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_TB_dns_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_TB_dns_setup",*) 'Eddy Viscocity Model for DNS'
 
     !--- read namelist

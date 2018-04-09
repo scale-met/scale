@@ -60,7 +60,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[MATSIRO] / Categ[LAND PHY] / Origin[SCALElib]'
+    LOG_INFO("LAND_PHY_MATSIRO_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

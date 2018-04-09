@@ -192,7 +192,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[VARS] / Categ[CPL] / Origin[SCALE-RM]'
+    LOG_INFO("CPL_vars_setup",*) 'Setup'
     LOG_INFO("CPL_vars_setup",*) 'No namelists.'
 
     ! Check consistency of OCEAN_do and LANDUSE_fact_ocean

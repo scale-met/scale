@@ -69,7 +69,7 @@ contains
     if ( initialized ) return
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[SFC SKIN] / Categ[CPL PHY] / Origin[SCALElib]'
+    LOG_INFO("CPL_PHY_SFC_SKIN_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

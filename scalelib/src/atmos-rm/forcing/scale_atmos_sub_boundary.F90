@@ -252,7 +252,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[BOUNDARY] / Categ[ATMOS-RM] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_BOUNDARY_setup",*) 'Setup'
 
 
     QA_MP = QA_MP_in

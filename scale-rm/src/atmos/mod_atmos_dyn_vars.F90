@@ -102,7 +102,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[VARS] / Categ[ATMOS DYN] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_DYN_vars_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

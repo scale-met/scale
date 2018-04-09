@@ -98,7 +98,7 @@ contains
     logical :: error
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'Real Case/Atmos Input File Type: WRF-ARW'
+    LOG_INFO("ParentAtmosSetupWRFARW",*) 'Real Case/Atmos Input File Type: WRF-ARW'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -557,7 +557,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'Real Case/Atmos Input File Type: WRF-ARW'
+    LOG_INFO("ParentLandSetupWRFARW",*) 'Real Case/Atmos Input File Type: WRF-ARW'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -743,7 +743,7 @@ contains
     logical :: error
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'Real Case/Ocean Input File Type: WRF-ARW'
+    LOG_INFO("ParentOceanSetupWRFARW",*) 'Real Case/Ocean Input File Type: WRF-ARW'
 
     !--- read namelist
     rewind(IO_FID_CONF)

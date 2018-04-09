@@ -158,7 +158,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[CartesC] / Categ[ATMOSPHER GRID] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_GRID_CARTESC_setup",*) 'Setup'
 
     FZ(:) = -1.0_RP
 

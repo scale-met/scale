@@ -265,7 +265,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[VARS] / Categ[LAND] / Origin[SCALE-RM]'
+    LOG_INFO("LAND_vars_setup",*) 'Setup'
 
     allocate( LAND_TEMP       (LKMAX,LIA,LJA) )
     allocate( LAND_WATER      (LKMAX,LIA,LJA) )

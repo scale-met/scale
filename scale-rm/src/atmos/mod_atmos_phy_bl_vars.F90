@@ -62,7 +62,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[VARS] / Categ[ATMOS PHY_BL] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_PHY_BL_vars_setup",*) 'Setup'
 
     allocate( ATMOS_PHY_BL_RHOU_t(KA,IA,JA)    )
     allocate( ATMOS_PHY_BL_RHOV_t(KA,IA,JA)    )

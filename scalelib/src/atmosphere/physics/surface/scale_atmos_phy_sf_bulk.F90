@@ -58,7 +58,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[surface bulk] / Categ[atmosphere physics] / Origin[SCALE lib]'
+    LOG_INFO("ATMOS_PHY_SF_bulk_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_SF_bulk_setup",*) 'Bulk scheme'
 
     !--- read namelist

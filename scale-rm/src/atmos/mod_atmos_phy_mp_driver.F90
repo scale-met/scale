@@ -130,7 +130,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Tracer Setup] / Categ[ATMOS PHY_MP] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_PHY_MP_driver_tracer_setup",*) 'Setup'
 
     if ( ATMOS_sw_phy_mp ) then
        select case ( ATMOS_PHY_MP_TYPE )
@@ -253,7 +253,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER] / Categ[ATMOS PHY_MP] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_PHY_MP_driver_setup",*) 'Setup'
 
     if ( ATMOS_sw_phy_mp ) then
 

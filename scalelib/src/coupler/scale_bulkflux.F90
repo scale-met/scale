@@ -135,7 +135,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[BULKFLUX] / Categ[COUPLER] / Origin[SCALElib]'
+    LOG_INFO("BULKFLUX_setup",*) 'Setup'
 
     ! WSCF = 1.2 for dx > 1 km (Beljaars 1994)
     ! lim_{dx->0} WSCF = 0  for LES (Fig. 6 Kitamura and Ito 2016 BLM)

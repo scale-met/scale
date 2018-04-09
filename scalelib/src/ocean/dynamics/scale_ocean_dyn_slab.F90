@@ -96,7 +96,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[SLAB] / Categ[OCEAN DYN] / Origin[SCALElib]'
+    LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Setup'
 
     OCEAN_DYN_SLAB_nudging_defval = UNDEF
 

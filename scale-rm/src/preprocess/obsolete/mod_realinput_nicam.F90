@@ -81,7 +81,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'Real Case/Atmos Input File Type: NICAM-NETCDF'
+    LOG_INFO("ParentAtmosSetupNICAM",*) 'Real Case/Atmos Input File Type: NICAM-NETCDF'
     basename = "ms_pres"//trim(basename_org)
     call FILE_Get_Shape( basename, "ms_pres", & ! (in)
                          dims_ncm(:),         & ! (out)
@@ -341,7 +341,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'Real Case/Land Input File Type: NICAM-NETCDF'
+    LOG_INFO("ParentLandSetupNICAM",*) 'Real Case/Land Input File Type: NICAM-NETCDF'
     basename = "la_tg"//trim(basename_org)
     call FILE_Get_Shape( basename, "la_tg", & ! (in)
                          dims_ncm(:),       & ! (out)
@@ -480,7 +480,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'Real Case/Ocean Input File Type: NICAM-NETCDF'
+    LOG_INFO("ParentOceanSetupNICAM",*) 'Real Case/Ocean Input File Type: NICAM-NETCDF'
 
     basename = "oa_sst"//trim(basename_org)
     call FILE_Get_Shape( basename, "oa_sst", &

@@ -99,7 +99,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[CALENDAR] / Categ[COMMON] / Origin[SCALElib]'
+    LOG_INFO("CALENDAR_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

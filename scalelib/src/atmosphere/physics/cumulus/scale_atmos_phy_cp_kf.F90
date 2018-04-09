@@ -196,7 +196,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[CUMULUS] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_CP_kf_setup",*) 'Kain-Fritsch scheme'
 
     WARMRAIN = WARMRAIN_in

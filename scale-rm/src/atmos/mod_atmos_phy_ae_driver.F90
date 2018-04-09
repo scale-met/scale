@@ -66,7 +66,7 @@ contains
     implicit none
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Tracer Setup] / Categ[ATMOS PHY_AE] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_PHY_AE_driver_tracer_setup",*) 'Setup'
 
     if ( ATMOS_sw_phy_ae ) then
        select case ( ATMOS_PHY_AE_TYPE )
@@ -110,7 +110,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER] / Categ[ATMOS PHY_AE] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_PHY_AE_driver_setup",*) 'Setup'
 
     if ( ATMOS_sw_phy_ae ) then
 

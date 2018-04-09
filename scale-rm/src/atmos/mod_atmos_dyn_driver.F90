@@ -161,7 +161,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER] / Categ[ATMOS DYN] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_DYN_driver_setup",*) 'Setup'
 
     if ( ATMOS_sw_dyn ) then
 

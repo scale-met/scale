@@ -71,7 +71,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER Setup] / Categ[LAND] / Origin[SCALE-RM]'
+    LOG_INFO("LAND_driver_setup",*) 'Setup'
 
     snow_flag = .false.
 

@@ -1119,7 +1119,7 @@ contains
     integer             :: ierr
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'Real Case/Land Input File Type: GrADS format'
+    LOG_INFO("ParentLandSetupGrADS",*) 'Real Case/Land Input File Type: GrADS format'
 
     !--- initialization
     use_waterratio = .false.
@@ -1572,7 +1572,7 @@ contains
     integer             :: ierr
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'Real Case/Ocean Input File Type: GrADS format'
+    LOG_INFO("ParentOceanSetupGrADS",*) 'Real Case/Ocean Input File Type: GrADS format'
 
     !--- read namelist
 

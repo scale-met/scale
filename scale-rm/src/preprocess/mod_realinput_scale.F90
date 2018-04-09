@@ -75,7 +75,7 @@ contains
     integer :: i
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'Real Case/Atmos Input File Type: SCALE-RM'
+    LOG_INFO("ParentAtmosSetupSCALE",*) 'Real Case/Atmos Input File Type: SCALE-RM'
     ! full level
     dims(1) = PARENT_KMAX(handle)
     dims(2) = PARENT_IMAX(handle) * NEST_TILE_NUM_X
@@ -461,7 +461,7 @@ contains
     integer :: i
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'Real Case/Land Input File Type: SCALE-RM'
+    LOG_INFO("ParentLandSetupSCALE",*) 'Real Case/Land Input File Type: SCALE-RM'
     ldims(1) = PARENT_LKMAX(handle)
     ldims(2) = PARENT_IMAX(handle) * NEST_TILE_NUM_X
     ldims(3) = PARENT_JMAX(handle) * NEST_TILE_NUM_Y
@@ -594,7 +594,7 @@ contains
     integer :: i
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'Real Case/Ocean Input File Type: SCALE-RM'
+    LOG_INFO("ParentOceanSetupSCALE",*) 'Real Case/Ocean Input File Type: SCALE-RM'
     odims(1) = PARENT_IMAX(handle) * NEST_TILE_NUM_X
     odims(2) = PARENT_JMAX(handle) * NEST_TILE_NUM_Y
 

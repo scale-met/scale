@@ -156,7 +156,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Turbulence] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_TB_smg_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_TB_smg_setup",*) 'Smagorinsky-type Eddy Viscocity Model'
 
     ATMOS_PHY_TB_SMG_Cs = Cs

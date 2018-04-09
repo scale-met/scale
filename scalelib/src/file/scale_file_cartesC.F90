@@ -238,7 +238,7 @@ contains
 
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[FIELIO] / Categ[ATMOS-RM IO] / Origin[SCALElib]'
+    LOG_INFO("FILE_CARTESC_setup",*) 'Setup'
 
     FILE_CARTESC_datacheck_criteria = EPS * 10.0_RP
 

@@ -77,7 +77,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[TOPOGRAPHY] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
+    LOG_INFO("TOPO_setup",*) 'Setup'
 
     TOPO_IN_AGGREGATE  = FILE_AGGREGATE
     TOPO_OUT_AGGREGATE = FILE_AGGREGATE

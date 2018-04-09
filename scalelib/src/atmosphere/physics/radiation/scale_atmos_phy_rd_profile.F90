@@ -158,7 +158,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[RADIATION PROFILE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_RD_PROFILE_setup",*) 'Setup'
 
     ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = PROFILE_CIRA86_fname
     ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = PROFILE_MIPAS2001_dir

@@ -270,7 +270,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Radiation mstrnX] / Categ[atmosphere physics] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_RD_mstrnx_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_RD_mstrnx_setup",*) 'Sekiguchi and Nakajima (2008) mstrnX radiation process'
 
     !--- read namelist

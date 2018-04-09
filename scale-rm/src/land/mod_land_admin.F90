@@ -62,7 +62,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[ADMIN] / Categ[LAND] / Origin[SCALE-RM]'
+    LOG_INFO("LAND_ADMIN_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

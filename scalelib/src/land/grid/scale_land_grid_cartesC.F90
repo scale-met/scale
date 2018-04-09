@@ -72,7 +72,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[CartesC] / Categ[LAND GRID] / Origin[SCALElib]'
+    LOG_INFO("LAND_GRID_CARTESC_setup",*) 'Setup'
 
     LDZ(:) = 0.0_RP
 

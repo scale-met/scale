@@ -63,7 +63,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[ROUGHNESS] / Categ[OCEAN PHY] / Origin[SCALElib]'
+    LOG_INFO("OCEAN_PHY_ROUGHNESS_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

@@ -75,7 +75,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[GRID_CARTESC_INDEX] / Categ[OCEAN GRID] / Origin[SCALElib]'
+    LOG_INFO("OCEAN_GRID_CARTESC_INDEX_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

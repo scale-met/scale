@@ -138,7 +138,7 @@ contains
     initialized = .true.
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[CONST] / Categ[COMMON] / Origin[SCALElib]'
+    LOG_INFO("CONST_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

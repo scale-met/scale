@@ -122,7 +122,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[convert topo] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("CNVTOPO_setup",*) 'Setup'
 
     DXL(:) = FDX(:)
     DYL(:) = FDY(:)

@@ -61,7 +61,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[CUMULUS] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_CP_common_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_CP_common_setup",*) 'CP-COMMON'
 
     !--- read namelist

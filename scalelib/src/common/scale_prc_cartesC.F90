@@ -109,7 +109,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[PROCESS CartesC] / Origin[SCALElib]'
+    LOG_INFO("PRC_CARTESC_setup",*) 'Setup'
 
     if ( IO_L ) then
        LOG_PROGRESS(*) 'Start MPI'

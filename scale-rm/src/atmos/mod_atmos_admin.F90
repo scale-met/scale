@@ -88,7 +88,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[ADMIN] / Categ[ATMOS] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_ADMIN_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

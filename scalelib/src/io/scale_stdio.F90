@@ -251,8 +251,7 @@ contains
 
 
           LOG_NEWLINE
-          LOG_PROGRESS(*) '++++++ Module[STDIO] / Categ[IO] / Origin[SCALElib]'
-          LOG_NEWLINE
+          LOG_INFO("IO_LOG_setup",*) 'Setup'
 
           LOG_INFO('IO_LOG_setup','(1x,A,I3)') 'Open config file, FID = ', IO_FID_CONF
           LOG_INFO('IO_LOG_setup','(1x,A,I3)') 'Open log    file, FID = ', IO_FID_LOG

@@ -283,7 +283,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[TIME] / Categ[ADMIN] / Origin[SCALE-RM]'
+    LOG_INFO("ADMIN_TIME_setup",*) 'Setup'
 
     TIME_NSTEP_ATMOS_DYN = -1
 

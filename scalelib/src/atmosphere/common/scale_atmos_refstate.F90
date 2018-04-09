@@ -111,7 +111,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[REFSTATE] / Categ[ATMOS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_REFSTATE_setup",*) 'Setup'
 
     allocate( ATMOS_REFSTATE_pres(KA,IA,JA) )
     allocate( ATMOS_REFSTATE_temp(KA,IA,JA) )

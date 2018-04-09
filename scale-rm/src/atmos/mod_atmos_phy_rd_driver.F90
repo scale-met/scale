@@ -74,7 +74,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER] / Categ[ATMOS PHY_RD] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_PHY_RD_driver_setup",*) 'Setup'
 
     if ( ATMOS_sw_phy_rd ) then
 

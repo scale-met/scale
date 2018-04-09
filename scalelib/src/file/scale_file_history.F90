@@ -424,7 +424,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[history] / Category[FILE] / Origin[SCALElib]'
+    LOG_INFO("FILE_HISTORY_Setup",*) 'Setup'
 
     ! setup
     FILE_HISTORY_myrank      = myrank

@@ -98,7 +98,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[convert 2d data] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("CNV2D_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

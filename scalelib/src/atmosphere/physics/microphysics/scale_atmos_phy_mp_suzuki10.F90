@@ -297,7 +297,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_MP_suzuki10_tracer_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_MP_suzuki10_tracer_setup",*) 'Tracers setup for Suzuki (2010) Spectral BIN model'
 
     LOG_NEWLINE
@@ -436,7 +436,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",*) 'Suzuki (2010) Spectral BIN model'
 
     !--- allocation

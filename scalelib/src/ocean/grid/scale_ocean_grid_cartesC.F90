@@ -74,7 +74,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[CartesC] / Categ[OCEAN GRID] / Origin[SCALElib]'
+    LOG_INFO("OCEAN_GRID_CARTESC_setup",*) 'Setup'
 
     FZ(:) = 0.0_RP
 

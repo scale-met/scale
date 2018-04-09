@@ -52,7 +52,7 @@ contains
     if ( initialized ) return
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[FIXED_TEMP] / Categ[CPL SFC] / Origin[SCALElib]'
+    LOG_INFO("CPL_PHY_SFC_FIXED_TEMP_setup",*) 'Setup'
 
     initialized = .true.
 

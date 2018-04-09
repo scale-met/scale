@@ -199,7 +199,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[EXTERNAL_INPUT] / Categ[FILE] / Origin[SCALElib]'
+    LOG_INFO("FILE_EXTERNAL_INPUT_setup",*) 'Setup'
 
     ! count external data from namelist
     rewind(IO_FID_CONF)

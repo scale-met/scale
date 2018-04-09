@@ -99,7 +99,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[LANDUSE] / Categ[COUPLER] / Origin[SCALElib]'
+    LOG_INFO("LANDUSE_setup",*) 'Setup'
 
     LANDUSE_IN_AGGREGATE  = FILE_AGGREGATE
     LANDUSE_OUT_AGGREGATE = FILE_AGGREGATE

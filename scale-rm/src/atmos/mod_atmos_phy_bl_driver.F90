@@ -65,7 +65,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Tracer Setup] / Categ[ATMOS PHY_BL] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_PHY_BL_driver_tracer_setup",*) 'Setup'
 
     if ( ATMOS_sw_phy_bl ) then
        select case ( ATMOS_PHY_BL_TYPE )
@@ -105,7 +105,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER] / Categ[ATMOS PHY_BL] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_PHY_BL_driver_setup",*) 'Setup'
 
     if ( ATMOS_sw_phy_bl ) then
        select case ( ATMOS_PHY_BL_TYPE )

@@ -73,7 +73,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[CartesC INDEX] / Categ[LAND GRID] / Origin[SCALElib]'
+    LOG_INFO("LAND_GRID_CARTESC_INDEX_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

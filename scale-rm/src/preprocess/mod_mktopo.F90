@@ -76,7 +76,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[make topo] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKTOPO_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

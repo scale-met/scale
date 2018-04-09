@@ -79,7 +79,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[INTERP] / Categ[COMMON] / Origin[SCALElib]'
+    LOG_INFO("INTRP_setup",*) 'Setup'
 
     INTRP_divnum       = divnum
     INTRP_weight_order = weight_order

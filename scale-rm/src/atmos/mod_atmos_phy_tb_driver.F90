@@ -56,7 +56,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[TRACER SETUP] / Categ[ATMOS PHY_TB] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_PHY_TB_driver_tracer_setup",*) 'Setup'
 
     if ( ATMOS_sw_phy_tb ) then
        call ATMOS_PHY_TB_config( ATMOS_PHY_TB_TYPE )
@@ -86,7 +86,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER] / Categ[ATMOS PHY_TB] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_PHY_TB_driver_setup",*) 'Setup'
 
     ! initialize
     do j = JS, JE

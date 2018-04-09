@@ -183,7 +183,7 @@ contains
     if ( present(JBLOCK_in) ) JBLOCK = JBLOCK_in
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[CartesC INDEX] / Categ[ATMOSPHER GRID] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_GRID_CARTESC_index_setup_main",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

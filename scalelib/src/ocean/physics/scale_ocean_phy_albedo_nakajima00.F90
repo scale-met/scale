@@ -47,7 +47,7 @@ contains
   subroutine OCEAN_PHY_albedo_nakajima00_setup
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Albedo hogeXXX] / Categ[OCEAN PHY] / Origin[SCALElib]'
+    LOG_INFO("OCEAN_PHY_albedo_nakajima00_setup",*) 'Setup'
 
     return
   end subroutine OCEAN_PHY_albedo_nakajima00_setup

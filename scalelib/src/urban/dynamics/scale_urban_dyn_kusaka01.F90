@@ -172,7 +172,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Kusaka01] / Categ[URBAN DYN] / Origin[SCALElib]'
+    LOG_INFO("URBAN_DYN_kusaka01_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

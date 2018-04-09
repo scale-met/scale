@@ -1719,7 +1719,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'ScaleLib/IO[RealinputSurface]/Categ[Setup]'
+    LOG_INFO("ParentSurfaceSetup",*) 'Setup'
 
     ! Land
 

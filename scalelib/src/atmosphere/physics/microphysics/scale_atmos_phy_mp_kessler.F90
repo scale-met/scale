@@ -94,7 +94,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Cloud Microphysics Kessler] / Categ[atmosphere physics] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_MP_kessler_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_MP_kessler_setup",*) 'KESSLER-type 1-moment bulk 3 category'
 
     if( couple_aerosol ) then

@@ -122,7 +122,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) '++++++ Module[MONITOR] / Categ[IO] / Origin[SCALElib]'
+    LOG_INFO("MONITOR_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

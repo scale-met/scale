@@ -81,7 +81,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[surface const] / Categ[atmosphere physics] / Origin[SCALE lib]'
+    LOG_INFO("ATMOS_PHY_SF_const_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_SF_const_setup",*) 'Constant flux'
 
     !--- read namelist

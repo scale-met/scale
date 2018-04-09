@@ -255,7 +255,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[VARS] / Categ[OCEAN] / Origin[SCALE-RM]'
+    LOG_INFO("OCEAN_vars_setup",*) 'Setup'
 
     allocate( OCEAN_TEMP(OKMAX,OIA,OJA) )
     allocate( OCEAN_SALT(OKMAX,OIA,OJA) )

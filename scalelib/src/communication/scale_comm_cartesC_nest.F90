@@ -341,7 +341,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[GRID_NEST] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
+    LOG_INFO("COMM_CARTESC_NEST_setup",*) 'Setup'
 
     if ( present(inter_parent) ) then
        if( inter_parent /= MPI_COMM_NULL ) flag_child  = .true. ! exist parent, so work as a child

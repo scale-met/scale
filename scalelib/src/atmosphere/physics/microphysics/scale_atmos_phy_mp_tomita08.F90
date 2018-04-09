@@ -415,7 +415,7 @@ contains
 
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Cloud Microphysics Tomita08] / Categ[atmosphere physics] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Tomita (2008) 1-moment bulk 6 category'
 
     allocate( w3d(KA,IA,JA,w_nmax) )

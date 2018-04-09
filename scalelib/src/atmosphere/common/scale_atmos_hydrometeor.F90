@@ -176,7 +176,7 @@ contains
     call CONST_setup
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[HYDEROMETER] / Categ[ATMOS SHARE] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_HYDROMETEOR_setup",*) 'Setup'
 
     if ( THERMODYN_TYPE == 'EXACT' ) then
 

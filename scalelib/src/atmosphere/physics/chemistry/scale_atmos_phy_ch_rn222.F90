@@ -81,7 +81,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Chemistry] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_CH_rn222_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_CH_rn222_setup",*) 'rn222 process'
 
     !--- read namelist

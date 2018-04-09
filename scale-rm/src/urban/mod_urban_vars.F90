@@ -269,7 +269,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[VARS] / Categ[URBAN] / Origin[SCALE-RM]'
+    LOG_INFO("URBAN_vars_setup",*) 'Setup'
 
     allocate( URBAN_TR   (UIA,UJA)         )
     allocate( URBAN_TB   (UIA,UJA)         )

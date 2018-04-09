@@ -140,7 +140,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[pbl mynn] / Categ[atmosphere physics] / Origin[SCALE lib]'
+    LOG_INFO("ATMOS_PHY_BL_MYNN_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_BL_MYNN_setup",*) 'Mellor-Yamada Nakanishi-Niino scheme'
 
     if ( present(TKE_MIN) ) ATMOS_PHY_BL_MYNN_TKE_MIN = TKE_MIN

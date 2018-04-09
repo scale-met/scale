@@ -68,7 +68,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[convert] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("CONVERT_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

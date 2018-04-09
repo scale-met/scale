@@ -72,7 +72,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[STATISTICS] / Categ[ATMOS-RM COMM] / Origin[SCALElib]'
+    LOG_INFO("STATISTICS_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

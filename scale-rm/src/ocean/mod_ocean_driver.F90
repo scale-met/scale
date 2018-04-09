@@ -75,7 +75,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER Setup] / Categ[OCEAN] / Origin[SCALE-RM]'
+    LOG_INFO("OCEAN_driver_setup",*) 'Setup'
 
     if ( OCEAN_do ) then
 

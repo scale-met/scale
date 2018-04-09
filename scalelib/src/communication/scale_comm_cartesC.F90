@@ -171,7 +171,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[COMM] / Categ[ATMOS-RM COMM] / Origin[SCALElib]'
+    LOG_INFO("COMM_setup",*) 'Setup'
 
     COMM_vsize_max = max( 10 + QA*2, 25 )
     COMM_vsize_max_pc = 50 + QA*2

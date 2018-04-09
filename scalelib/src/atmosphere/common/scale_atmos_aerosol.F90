@@ -74,7 +74,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[AEROSOL] / Categ[ATMOS SHARE] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_AEROSOL_setup",*) 'Setup'
 
     return
   end subroutine ATMOS_AEROSOL_setup

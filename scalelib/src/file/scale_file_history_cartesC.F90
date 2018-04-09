@@ -120,7 +120,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[HISTORY_CARTESC] / Categ[FILE] / Origin[SCALElib]'
+    LOG_INFO("FILE_HISTORY_CARTESC_setup",*) 'Setup'
 
     FILE_HISTORY_CARTESC_PRES(:) = 0.0_RP
 

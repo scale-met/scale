@@ -218,7 +218,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[make init] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -547,7 +547,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit bubble] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("BUBBLE_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -641,7 +641,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit rectangle] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("RECT_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -734,7 +734,7 @@ contains
     if ( ATMOS_PHY_AE_TYPE /= 'KAJINO13' ) return
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit aerosol] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("AEROSOL_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

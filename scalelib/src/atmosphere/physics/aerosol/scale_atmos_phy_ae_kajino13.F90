@@ -200,7 +200,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Aerosol] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_AE_kajino13_tracer_setup",*) 'Setup'
 
     ! note: tentatively, aerosol module should be called at all time. we need dummy subprogram.
     !if ( ATMOS_sw_phy_ae ) then
@@ -394,7 +394,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Aerosol] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_AE_kajino13_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_AE_kajino13_setup",*) 'Kajino(2013) scheme'
 
     !--- setup parameter

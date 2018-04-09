@@ -125,7 +125,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[HYDROSTATIC] / Categ[ATMOS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_HYDROSTATIC_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

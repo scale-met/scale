@@ -129,7 +129,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Turbulence] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_TB_d1980_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_TB_d1980_setup",*) 'Deardorff (1980) 1.5th TKE Model'
 
     !--- read namelist

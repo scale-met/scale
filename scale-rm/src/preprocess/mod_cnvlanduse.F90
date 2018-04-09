@@ -85,7 +85,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[convert landuseindex] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("CNVLANDUSE_setup",*) 'Setup'
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_CNVLANDUSE,iostat=ierr)

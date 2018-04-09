@@ -67,7 +67,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER Setup] / Categ[URBAN] / Origin[SCALE-RM]'
+    LOG_INFO("URBAN_driver_setup",*) 'Setup'
 
     if ( URBAN_do ) then
 

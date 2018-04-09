@@ -136,7 +136,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[THERMODYN] / Categ[ATMOS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_THERMODYN_setup",*) 'Setup'
     LOG_INFO("ATMOS_THERMODYN_setup",*) 'No namelists.'
 
     return

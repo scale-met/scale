@@ -60,7 +60,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[ADMIN] / Categ[CPL] / Origin[SCALE-RM]'
+    LOG_INFO("CPL_ADMIN_setup",*) 'Setup'
 
     !-----< module component check >-----
 

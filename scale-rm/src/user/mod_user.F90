@@ -91,7 +91,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER] / Categ[USER] / Origin[SCALE-RM]'
+    LOG_INFO("USER_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

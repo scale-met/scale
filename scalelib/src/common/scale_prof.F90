@@ -111,7 +111,7 @@ contains
     integer :: ierr
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[PROF] / Categ[COMMON] / Origin[SCALElib]'
+    LOG_INFO("PRF_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

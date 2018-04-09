@@ -582,7 +582,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[SOLARINS] / Categ[ATMOS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_SOLARINS_setup",*) 'Setup'
 
     ATMOS_SOLARINS_lon     = basepoint_lon
     ATMOS_SOLARINS_lat     = basepoint_lat

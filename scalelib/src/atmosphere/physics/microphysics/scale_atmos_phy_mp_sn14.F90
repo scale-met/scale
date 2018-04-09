@@ -536,7 +536,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_MP_sn14_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_MP_sn14_setup",*) 'Seiki and Nakajima (2014) 2-moment bulk 6 category'
 
     !--- read namelist

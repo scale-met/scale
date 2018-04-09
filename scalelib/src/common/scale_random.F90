@@ -62,7 +62,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[RANDOM] / Categ[COMMON] / Origin[SCALElib]'
+    LOG_INFO("RANDOM_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

@@ -131,7 +131,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[CartesC REAL] / Categ[ATMOSPHERE GRID] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_GRID_CARTESC_REAL_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

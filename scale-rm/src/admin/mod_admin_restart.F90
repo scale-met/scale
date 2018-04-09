@@ -196,7 +196,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[RESTART] / Categ[ADMIN] / Origin[SCALE-RM]'
+    LOG_INFO("ADMIN_restart_setup",*) 'Setup'
 
     RESTART_IN_AGGREGATE  = FILE_AGGREGATE
     RESTART_OUT_AGGREGATE = FILE_AGGREGATE

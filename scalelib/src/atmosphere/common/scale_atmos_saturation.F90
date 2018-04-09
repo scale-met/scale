@@ -230,7 +230,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[SATURATION] / Categ[ATMOS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_SATURATION_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

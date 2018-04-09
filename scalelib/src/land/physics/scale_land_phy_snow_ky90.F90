@@ -101,7 +101,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[SNOW_KY90] / Categ[LAND PHY] / Origin[SCALElib]'
+    LOG_INFO("LAND_PHY_SNOW_KY90_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

@@ -131,7 +131,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[VARS] / Categ[ATMOS PHY_AE] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_PHY_AE_vars_setup",*) 'Setup'
 
     allocate( ATMOS_PHY_AE_RHOQ_t(KA,IA,JA,QS_AE:QE_AE) )
     ATMOS_PHY_AE_RHOQ_t(:,:,:, :) = UNDEF

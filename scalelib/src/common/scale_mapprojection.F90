@@ -171,7 +171,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[MAPPROJ] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
+    LOG_INFO("MAPPROJECTION_setup",*) 'Setup'
 
     PI     = real(PI_RP,     kind=DP)
     D2R    = real(D2R_RP,    kind=DP)

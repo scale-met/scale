@@ -65,7 +65,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[TRACER TRACER SETUP] / Categ[ATMOS] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_driver_tracer_setup",*) 'Setup'
 
     call ATMOS_PHY_MP_driver_tracer_setup
     call ATMOS_PHY_AE_driver_tracer_setup
@@ -122,7 +122,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER SETUP] / Categ[ATMOS] / Origin[SCALE-RM]'
+    LOG_INFO("ATMOS_driver_setup",*) 'Setup'
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_driver_setup",*) 'Setup each atmospheric components ...'

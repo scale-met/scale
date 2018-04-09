@@ -98,7 +98,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[RADIATION] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_RD_offline_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_RD_offline_setup",*) 'Offline radiation process'
 
     ATMOS_PHY_RD_offline_defval = UNDEF
