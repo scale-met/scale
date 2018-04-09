@@ -49,7 +49,7 @@ module scale_land_grid_cartesC
   real(RP), private :: LDZ(100)
 
   character(len=H_LONG) :: LAND_GRID_CARTESC_IN_BASENAME  = ''
-  logical               :: LAND_GRID_CARTESC_IN_AGGREGATE 
+  logical               :: LAND_GRID_CARTESC_IN_AGGREGATE
 
   !-----------------------------------------------------------------------------
 contains
@@ -148,7 +148,7 @@ contains
     call FILE_read( fid, 'LCZ',  LAND_GRID_CARTESC_CZ (:) )
     call FILE_read( fid, 'LCDZ', LAND_GRID_CARTESC_CDZ(:) )
     call FILE_read( fid, 'LFZ',  LAND_GRID_CARTESC_FZ (:) )
-                                                 
+
     return
   end subroutine LAND_GRID_CARTESC_read
 

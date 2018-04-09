@@ -210,9 +210,6 @@ contains
     logical, intent(in) :: force
     !---------------------------------------------------------------------------
 
-!!$    LOG_NEWLINE
-!!$    LOG_PROGRESS(*) 'Module[CALC TEND] / Categ[ATMOS DRIVER] / Origin[SCALE-RM]'
-
     !########## Get Surface Boundary from coupler ##########
     call ATMOS_SURFACE_GET
 
@@ -312,9 +309,6 @@ contains
     implicit none
     logical, intent(in) :: force
     !---------------------------------------------------------------------------
-
-!!$    LOG_NEWLINE
-!!$    LOG_PROGRESS(*) 'Module[CALC TEND from SFLUX] / Categ[ATMOS DRIVER] / Origin[SCALE-RM]'
 
     if ( CPL_sw ) then
 

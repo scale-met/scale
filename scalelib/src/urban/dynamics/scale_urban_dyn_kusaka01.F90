@@ -378,7 +378,7 @@ contains
     if( fact_urban(i,j) > 0.0_RP ) then
 
        qdry = 1.0_RP - QA(i,j)
-       Rtot = qdry * Rdry + QA(i,j) * Rvap 
+       Rtot = qdry * Rdry + QA(i,j) * Rvap
 
        Uabs = max( sqrt( U1(i,j)**2 + V1(i,j)**2 + W1(i,j)**2 ), Uabs_min )
 
@@ -812,7 +812,7 @@ contains
                   + (        dsec ) * ahdiurnal(1     )
     else
        tahdiurnal = ( 1.0_RP-dsec ) * ahdiurnal(tloc  ) &
-                  + (        dsec ) * ahdiurnal(tloc+1) 
+                  + (        dsec ) * ahdiurnal(tloc+1)
     endif
 
     AH_t  = AH  * tahdiurnal

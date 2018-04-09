@@ -2035,7 +2035,7 @@ contains
 
     if ( step_now > FILE_HISTORY_vars(id)%waitstep ) then
        if ( laststep_write < step_now ) then ! log only once in this step
-          LOG_INFO("FILE_HISTORY_Write_OneVar",*) 'Output HISTORY'
+          LOG_PROGRESS(*) 'output history'
        endif
 
        ! Note this subroutine must be called after all FILE_HISTORY_reg calls are completed
@@ -2068,7 +2068,7 @@ contains
        end if
     else
        if ( laststep_write < step_now ) then
-          LOG_INFO("FILE_HISTORY_Write_OneVar",*) 'Output HISTORY: Suppressed.'
+          LOG_PROGRESS(*) 'history output is suppressed'
        endif
     endif
 

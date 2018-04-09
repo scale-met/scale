@@ -101,8 +101,7 @@ contains
     integer :: iv
     !---------------------------------------------------------------------------
 
-    LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[VARS] / Categ[ATMOS DYN] / Origin[SCALE-RM]'
+    LOG_FILENAME
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -133,11 +132,11 @@ contains
        LOG_NEWLINE
        LOG_INFO("ATMOS_DYN_vars_setup",*) '[ATMOS_DYN] prognostic/diagnostic variables'
        LOG_INFO_CONT('(1x,A,A24,A,A48,A,A12,A)') &
-                  '***       |', 'VARNAME                 ','|', &
+                  '      |', 'VARNAME                 ','|', &
                   'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
        do iv = 1, VA
           LOG_INFO_CONT('(1x,A,I3,A,A24,A,A48,A,A12,A)') &
-                     '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
+                     'NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
        enddo
 
        LOG_NEWLINE
@@ -259,7 +258,6 @@ contains
        do iv = 1, VA
           call FILE_CARTESC_read( restart_fid, VAR_NAME(iv), 'ZXY', & ! [IN]
                                   PROG(:,:,:,iv)                    ) ! [OUT]
-                            
        enddo
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then

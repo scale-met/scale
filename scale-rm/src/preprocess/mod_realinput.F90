@@ -285,14 +285,14 @@ contains
 
           if ( t <= 0 ) then
              LOG_INFO_CONT('(1x,A,I4,A,I5,A,I6,A)') &
-                        '*** [file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
+                        '[file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
              cycle
           endif
 
           if ( t == 1 .OR. BASENAME_BOUNDARY /= '' ) then
 
              LOG_INFO_CONT('(1x,A,I4,A,I5,A,I6,A)') &
-                        '*** [file,step,cons.] = [', ifile, ',', istep, ',', tall, ']'
+                        '[file,step,cons.] = [', ifile, ',', istep, ',', tall, ']'
 
              ! read prepared data
              call ParentAtmosInput( FILETYPE_ORG,     & ! [IN]
@@ -312,7 +312,7 @@ contains
                                     POTT_in(:,:,:)    ) ! [OUT]
           else
              LOG_INFO_CONT('(1x,A,I4,A,I5,A,I6,A)') &
-                        '*** [file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
+                        '[file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
           endif
 
           !--- store prognostic variables as initial

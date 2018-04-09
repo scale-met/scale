@@ -359,11 +359,11 @@ contains
     LOG_NEWLINE
     LOG_INFO("OCEAN_vars_setup",*) 'List of prognostic variables (OCEAN) '
     LOG_INFO_CONT('(1x,A,A24,A,A48,A,A12,A)') &
-               '***       |', 'VARNAME                 ','|', &
+               '      |', 'VARNAME                 ','|', &
                'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
     do iv = 1, VMAX
        LOG_INFO_CONT('(1x,A,I3,A,A24,A,A48,A,A12,A)') &
-                  '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
+                  'NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
 
     enddo
 
@@ -454,10 +454,8 @@ contains
 !                               OCEAN_UVEL(:,:,:)                          ) ! [OUT]
 !       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_VVEL),      'OXY', & ! [IN]
 !                               OCEAN_VVEL(:,:,:)                          ) ! [OUT]
-!                         
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_TEMP),   'XY', & ! [IN]
                                OCEAN_SFC_TEMP(:,:)                        ) ! [OUT]
-            
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ALB_LW),     'XY', & ! [IN]
                                OCEAN_SFC_albedo(:,:,I_LW)                 ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ALB_SW),     'XY', & ! [IN]
@@ -603,7 +601,7 @@ contains
                               OCEAN_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
 
        call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &
-                              OCEAN_SFLX_MW   (:,:), VAR_NAME(I_SFLX_MW),    & ! (in) 
+                              OCEAN_SFLX_MW   (:,:), VAR_NAME(I_SFLX_MW),    & ! (in)
                               OCEAN_GRID_CARTESC_REAL_AREA(:,:),             & ! (in)
                               OCEAN_GRID_CARTESC_REAL_TOTAREA                ) ! (in)
        call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE, &

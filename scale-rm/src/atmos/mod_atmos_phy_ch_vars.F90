@@ -130,11 +130,11 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_CH_vars_setup",*) '[ATMOS_PHY_CH] prognostic/diagnostic variables'
     LOG_INFO_CONT('(1x,A,A24,A,A48,A,A12,A)') &
-               '***       |', 'VARNAME                 ','|', &
+               '      |', 'VARNAME                 ','|', &
                'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
     do iv = 1, VMAX
        LOG_INFO_CONT('(1x,A,I3,A,A24,A,A48,A,A12,A)') &
-                  '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
+                  'NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
     LOG_NEWLINE
@@ -240,7 +240,6 @@ contains
 
        call FILE_CARTESC_read( restart_fid, VAR_NAME(1), 'ZXY', & ! [IN]
                                ATMOS_PHY_CH_O3(:,:,:)           ) ! [OUT]
-            
 
        if ( FILE_get_aggregate( restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file

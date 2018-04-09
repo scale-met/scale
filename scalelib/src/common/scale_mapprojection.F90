@@ -197,8 +197,10 @@ contains
     LOG_NML(PARAM_MAPPROJECTION)
 
     LOG_NEWLINE
-    LOG_INFO("MAPPROJECTION_setup",*) 'Map projection type : ', trim(MAPPROJECTION_type)
-
+    LOG_INFO("MAPPROJECTION_setup",*) 'Map projection information'
+    LOG_INFO_CONT('(1x,A,F15.3)') 'Basepoint(x)       : ', MAPPROJECTION_basepoint_x
+    LOG_INFO_CONT('(1x,A,F15.3)') 'Basepoint(y)       : ', MAPPROJECTION_basepoint_y
+    LOG_INFO_CONT(*)              'Map projection type: ', trim(MAPPROJECTION_type)
 
     MAPPROJECTION_mapping = ""
     MAPPROJECTION_false_easting = UNDEF
@@ -231,9 +233,6 @@ contains
        LOG_ERROR("MAPPROJECTION_setup",*) 'Unsupported MAPPROJECTION_type. STOP'
        call PRC_abort
     endselect
-
-    LOG_INFO("MAPPROJECTION_setup",'(1x,A,F15.3)') '*** Basepoint(x)    = ', MAPPROJECTION_basepoint_x
-    LOG_INFO("MAPPROJECTION_setup",'(1x,A,F15.3)') '*** Basepoint(y)    = ', MAPPROJECTION_basepoint_y
 
     return
   end subroutine MAPPROJECTION_setup

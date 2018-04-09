@@ -316,179 +316,147 @@ contains
        ! DYN
        if ( TIME_DT_ATMOS_DYN == UNDEF8 ) then
           if ( TIME_NSTEP_ATMOS_DYN < 0 ) then
-             LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_DYN.            ', &
-                                                    'TIME_DT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_DYN.          TIME_DT is used.'
              TIME_DT_ATMOS_DYN = TIME_DT
           endif
        endif
        if ( TIME_DT_ATMOS_DYN_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_DYN_UNIT.       ', &
-                                                 'TIME_DT_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_DYN_UNIT.     TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_DYN_UNIT = TIME_DT_UNIT
        endif
        ! PHY_CP
        if ( TIME_DT_ATMOS_PHY_CP == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_CP.         ', &
-                                                 'TIME_DT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_CP.       TIME_DT is used.'
           TIME_DT_ATMOS_PHY_CP = TIME_DT
        endif
        if ( TIME_DT_ATMOS_PHY_CP_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_CP_UNIT.    ', &
-                                                 'TIME_DT_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_CP_UNIT.  TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_CP_UNIT = TIME_DT_UNIT
        endif
        ! PHY_MP
        if ( TIME_DT_ATMOS_PHY_MP == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_MP.         ', &
-                                                 'TIME_DT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_MP.       TIME_DT is used.'
           TIME_DT_ATMOS_PHY_MP = TIME_DT
        endif
        if ( TIME_DT_ATMOS_PHY_MP_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_MP_UNIT.    ', &
-                                                 'TIME_DT_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_MP_UNIT.  TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_MP_UNIT = TIME_DT_UNIT
        endif
        ! PHY_RD
        if ( TIME_DT_ATMOS_PHY_RD == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_RD.         ', &
-                                                 'TIME_DT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_RD.       TIME_DT is used.'
           TIME_DT_ATMOS_PHY_RD = TIME_DT
        endif
        if ( TIME_DT_ATMOS_PHY_RD_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_RD_UNIT.    ', &
-                                                 'TIME_DT_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_RD_UNIT.  TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_RD_UNIT = TIME_DT_UNIT
        endif
        ! PHY_SF
        if ( TIME_DT_ATMOS_PHY_SF == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_SF.         ', &
-                                                 'TIME_DT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_SF.       TIME_DT is used.'
           TIME_DT_ATMOS_PHY_SF = TIME_DT
        endif
        if ( TIME_DT_ATMOS_PHY_SF_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_SF_UNIT.    ', &
-                                                 'TIME_DT_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_SF_UNIT.  TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_SF_UNIT = TIME_DT_UNIT
        endif
        ! PHY_TB
        if ( TIME_DT_ATMOS_PHY_TB == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_TB.         ', &
-                                                 'TIME_DT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_TB.       TIME_DT is used.'
           TIME_DT_ATMOS_PHY_TB = TIME_DT
        endif
        if ( TIME_DT_ATMOS_PHY_TB_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_TB_UNIT.    ', &
-                                                 'TIME_DT_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_TB_UNIT.  TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_TB_UNIT = TIME_DT_UNIT
        endif
        ! PHY_BL
        if ( TIME_DT_ATMOS_PHY_BL == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_BL.         ', &
-                                                 'TIME_DT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_BL.       TIME_DT is used.'
           TIME_DT_ATMOS_PHY_BL = TIME_DT
        endif
        if ( TIME_DT_ATMOS_PHY_BL_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_BL_UNIT.    ', &
-                                                 'TIME_DT_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_BL_UNIT.  TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_BL_UNIT = TIME_DT_UNIT
        endif
        ! PHY_CH
        if ( TIME_DT_ATMOS_PHY_CH == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_CH.         ', &
-                                                 'TIME_DT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_CH.       TIME_DT is used.'
           TIME_DT_ATMOS_PHY_CH = TIME_DT
        endif
        if ( TIME_DT_ATMOS_PHY_CH_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_CH_UNIT.    ', &
-                                                 'TIME_DT_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_CH_UNIT.  TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_CH_UNIT = TIME_DT_UNIT
        endif
        ! PHY_AE
        if ( TIME_DT_ATMOS_PHY_AE == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_AE.         ', &
-                                                 'TIME_DT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_AE.       TIME_DT is used.'
           TIME_DT_ATMOS_PHY_AE = TIME_DT
        endif
        if ( TIME_DT_ATMOS_PHY_AE_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_PHY_AE_UNIT.    ', &
-                                                 'TIME_DT_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_AE_UNIT.  TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_AE_UNIT = TIME_DT_UNIT
        endif
        ! ATMOS RESTART
        if ( TIME_DT_ATMOS_RESTART == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_RESTART.        ', &
-                                                 'TIME_DURATION is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_RESTART.      TIME_DURATION is used.'
           TIME_DT_ATMOS_RESTART = TIME_DURATION
        endif
        if ( TIME_DT_ATMOS_RESTART_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_ATMOS_RESTART_UNIT.   ', &
-                                                 'TIME_DURATION_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_RESTART_UNIT. TIME_DURATION_UNIT is used.'
           TIME_DT_ATMOS_RESTART_UNIT = TIME_DURATION_UNIT
        endif
        ! OCEAN
        if ( TIME_DT_OCEAN == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_OCEAN.                ', &
-                                                 'TIME_DT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_OCEAN.              TIME_DT is used.'
           TIME_DT_OCEAN = TIME_DT
        endif
        if ( TIME_DT_OCEAN_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_OCEAN_UNIT.           ', &
-                                                 'TIME_DT_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_OCEAN_UNIT.         TIME_DT_UNIT is used.'
           TIME_DT_OCEAN_UNIT = TIME_DT_UNIT
        endif
        ! OCEAN RESTART
        if ( TIME_DT_OCEAN_RESTART == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_OCEAN_RESTART.        ', &
-                                                 'TIME_DURATION is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_OCEAN_RESTART.      TIME_DURATION is used.'
           TIME_DT_OCEAN_RESTART = TIME_DURATION
        endif
        if ( TIME_DT_OCEAN_RESTART_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_OCEAN_RESTART_UNIT.   ', &
-                                                 'TIME_DURATION_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_OCEAN_RESTART_UNIT. TIME_DURATION_UNIT is used.'
           TIME_DT_OCEAN_RESTART_UNIT = TIME_DURATION_UNIT
        endif
        ! LAND
        if ( TIME_DT_LAND == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_LAND.                 ', &
-                                                 'TIME_DT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_LAND.               TIME_DT is used.'
           TIME_DT_LAND = TIME_DT
        endif
        if ( TIME_DT_LAND_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_LAND_UNIT.            ', &
-                                                 'TIME_DT_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_LAND_UNIT.          TIME_DT_UNIT is used.'
           TIME_DT_LAND_UNIT = TIME_DT_UNIT
        endif
        ! LAND RESTART
        if ( TIME_DT_LAND_RESTART == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_LAND_RESTART.         ', &
-                                                 'TIME_DURATION is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_LAND_RESTART.       TIME_DURATION is used.'
           TIME_DT_LAND_RESTART = TIME_DURATION
        endif
        if ( TIME_DT_LAND_RESTART_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_LAND_RESTART_UNIT.    ', &
-                                                 'TIME_DURATION_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_LAND_RESTART_UNIT.  TIME_DURATION_UNIT is used.'
           TIME_DT_LAND_RESTART_UNIT = TIME_DURATION_UNIT
        endif
        ! URBAN
        if ( TIME_DT_URBAN == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_URBAN.                ', &
-                                                 'TIME_DT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_URBAN.              TIME_DT is used.'
           TIME_DT_URBAN = TIME_DT
        endif
        if ( TIME_DT_URBAN_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_URBAN_UNIT.           ', &
-                                                 'TIME_DT_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_URBAN_UNIT.         TIME_DT_UNIT is used.'
           TIME_DT_URBAN_UNIT = TIME_DT_UNIT
        endif
        ! URBAN RESTART
        if ( TIME_DT_URBAN_RESTART == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_URBAN_RESTART.        ', &
-                                                 'TIME_DURATION is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_URBAN_RESTART.      TIME_DURATION is used.'
           TIME_DT_URBAN_RESTART = TIME_DURATION
        endif
        if ( TIME_DT_URBAN_RESTART_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_URBAN_RESTART_UNIT.   ', &
-                                                 'TIME_DURATION_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_URBAN_RESTART_UNIT. TIME_DURATION_UNIT is used.'
           TIME_DT_URBAN_RESTART_UNIT = TIME_DURATION_UNIT
        endif
        ! Resume
@@ -496,8 +464,7 @@ contains
           TIME_DT_RESUME = TIME_DURATION
        endif
        if ( TIME_DT_RESUME_UNIT == '' ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_RESUME_UNIT.          ', &
-                                                 'TIME_DURATION_UNIT is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_RESUME_UNIT.        TIME_DURATION_UNIT is used.'
           TIME_DT_RESUME_UNIT = TIME_DURATION_UNIT
        endif
     endif
@@ -801,8 +768,7 @@ contains
        LOG_INFO("ADMIN_TIME_setup",*) 'Wall clock time limit of execution is specified.'
 
        if ( TIME_DT_WALLCLOCK_CHECK == UNDEF8 ) then
-          LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_WALLCLOCK_CHECK.      ', &
-                                                 ' largest time step interval is used.'
+          LOG_INFO_CONT(*) 'Not found TIME_DT_WALLCLOCK_CHECK. largest time step interval is used.'
           TIME_DTSEC_WALLCLOCK_CHECK = max( TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN, &
                                             TIME_DTSEC_ATMOS_PHY_CP,                   &
                                             TIME_DTSEC_ATMOS_PHY_MP,                   &
@@ -817,8 +783,7 @@ contains
                                             TIME_DTSEC_URBAN                           )
        else
           if ( TIME_DT_WALLCLOCK_CHECK_UNIT == '' ) then
-             LOG_INFO("ADMIN_TIME_setup",'(1x,2A)') 'Not found TIME_DT_WALLCLOCK_CHECK_UNIT. ', &
-                                                    'TIME_DURATION_UNIT is used.'
+             LOG_INFO_CONT(*) 'Not found TIME_DT_WALLCLOCK_CHECK_UNIT. TIME_DURATION_UNIT is used.'
              TIME_DT_WALLCLOCK_CHECK_UNIT = TIME_DURATION_UNIT
           endif
           call CALENDAR_unit2sec( TIME_DTSEC_WALLCLOCK_CHECK, TIME_DT_WALLCLOCK_CHECK, TIME_DT_WALLCLOCK_CHECK_UNIT )
@@ -830,9 +795,9 @@ contains
        TIME_WALLCLOCK_SAFE    = max( min( TIME_WALLCLOCK_SAFE, 1.0_DP ), 0.0_DP )
        TIME_WALLCLOCK_safelim = TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE
 
-       LOG_INFO("ADMIN_TIME_setup",'(1x,A,F10.1,A)')      'This job stops after ', TIME_WALLCLOCK_safelim, ' seconds.'
-       LOG_INFO("ADMIN_TIME_setup",'(1x,A,F10.3,A,I8,A)') 'Time interval for check     : ', TIME_DTSEC_WALLCLOCK_CHECK, &
-                                                          ' (step interval=', TIME_DSTEP_WALLCLOCK_CHECK, ')'
+       LOG_INFO_CONT('(1x,A,F10.1,A)')      'This job stops after ', TIME_WALLCLOCK_safelim, ' seconds.'
+       LOG_INFO_CONT('(1x,A,F10.3,A,I8,A)') 'Time interval for check     : ', TIME_DTSEC_WALLCLOCK_CHECK, &
+                                            ' (step interval=', TIME_DSTEP_WALLCLOCK_CHECK, ')'
     endif
 
     if ( debug ) then

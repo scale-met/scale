@@ -82,10 +82,10 @@ contains
     LOG_INFO("OCEAN_ADMIN_setup",*) 'Ocean model components '
 
     if ( OCEAN_DYN_TYPE /= 'OFF' .AND. OCEAN_DYN_TYPE /= 'NONE' ) then
-       LOG_INFO("OCEAN_ADMIN_setup",*) 'Ocean model     : ON, ', trim(OCEAN_DYN_TYPE)
+       LOG_INFO_CONT(*) 'Ocean model     : ON, ', trim(OCEAN_DYN_TYPE)
        OCEAN_do = .true.
     else
-       LOG_INFO("OCEAN_ADMIN_setup",*) 'Ocean model     : OFF'
+       LOG_INFO_CONT(*) 'Ocean model     : OFF'
        OCEAN_do = .false.
     endif
 

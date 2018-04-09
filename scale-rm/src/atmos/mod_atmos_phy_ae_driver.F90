@@ -144,7 +144,6 @@ contains
     implicit none
 
     if ( ATMOS_sw_phy_ae ) then
-       
        select case ( ATMOS_PHY_AE_TYPE )
        case ( 'KAJINO13' )
           call ATMOS_PHY_AE_kajino13_negative_fixer( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, QA_AE, &

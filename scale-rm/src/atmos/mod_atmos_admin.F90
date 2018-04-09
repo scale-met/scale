@@ -197,9 +197,9 @@ contains
     endif
 
     if ( ATMOS_USE_AVERAGE ) then
-       LOG_INFO("ATMOS_ADMIN_setup",*) '+ Use time-averaging value for physics? : YES'
+       LOG_INFO_CONT(*) '+ Use time-averaging value for physics? : YES'
     else
-       LOG_INFO("ATMOS_ADMIN_setup",*) '+ Use time-averaging value for physics? : NO'
+       LOG_INFO_CONT(*) '+ Use time-averaging value for physics? : NO'
     endif
 
     return

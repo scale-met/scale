@@ -383,7 +383,7 @@ contains
 #ifdef DEBUG
     LOG_INFO("ATMOS_DYN_Tstep_large_fvm_heve",*)                         'Dynamics large time step'
     LOG_INFO_CONT('(1x,A,F0.2,A,F0.2,A,I0)') &
-    '*** -> DT_large, DT_small, DT_large/DT_small : ', dtl, ', ', dts, ', ', nstep
+    '-> DT_large, DT_small, DT_large/DT_small : ', dtl, ', ', dts, ', ', nstep
 
     DENS00  (:,:,:) = UNDEF
 

@@ -273,7 +273,7 @@ contains
 
     do id = 1, PROF_rapnmax
        if ( PROF_rapnstr(id) /= PROF_rapnend(id) ) then
-           LOG_WARN("PROF_rapreport",*) '*** Mismatch Report',id,PROF_rapname(id),PROF_rapnstr(id),PROF_rapnend(id)
+           LOG_WARN("PROF_rapreport",*) 'Mismatch Report',id,PROF_rapname(id),PROF_rapnstr(id),PROF_rapnend(id)
        endif
     enddo
 
@@ -287,7 +287,7 @@ contains
              if (       PROF_raplevel(id) <= PROF_rap_level &
                   .AND. PROF_grpid   (id) == gid            ) then
                 LOG_INFO_CONT('(1x,A,I3.3,A,A,A,F10.3,A,I9)') &
-                           '*** ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
+                           'ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
              endif
           enddo
        enddo
@@ -317,7 +317,7 @@ contains
                   .AND. PROF_grpid   (id) == gid            &
                   .AND. fid > 0                             ) then
                 LOG_INFO_CONT('(1x,A,I3.3,3A,F10.3,A,F10.3,A,I5,2A,F10.3,A,I5,2A,I9)') &
-                           '*** ID=',id,' : ',PROF_rapname(id), &
+                           'ID=',id,' : ',PROF_rapname(id), &
                            ' T(avg)=',avgvar(id), &
                            ', T(max)=',maxvar(id),'[',maxidx(id),']', &
                            ', T(min)=',minvar(id),'[',minidx(id),']', &
@@ -403,21 +403,21 @@ contains
        LOG_NEWLINE
        LOG_INFO("PROF_PAPI_rapreport",*) 'PAPI Report'
        LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
-                  '*** Real time [sec]',' T(avg)=',avgvar(1), &
+                  'Real time [sec]',' T(avg)=',avgvar(1), &
                   ', T(max)=',maxvar(1),'[',maxidx(1),']',', T(min)=',minvar(1),'[',minidx(1),']'
        LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
-                  '*** CPU  time [sec]',' T(avg)=',avgvar(2), &
+                  'CPU  time [sec]',' T(avg)=',avgvar(2), &
                   ', T(max)=',maxvar(2),'[',maxidx(2),']',', T(min)=',minvar(2),'[',minidx(2),']'
        LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
-                  '*** FLOP    [GFLOP]',' N(avg)=',avgvar(3), &
+                  'FLOP    [GFLOP]',' N(avg)=',avgvar(3), &
                   ', N(max)=',maxvar(3),'[',maxidx(3),']',', N(min)=',minvar(3),'[',minidx(3),']'
        LOG_NEWLINE
        LOG_INFO("PROF_PAPI_rapreport",'(1x,A,F15.3,A,I6,A)') &
-                  '*** TOTAL FLOP    [GFLOP] : ', avgvar(3)*PRC_nprocs, '(',PRC_nprocs,' PEs)'
+                  'TOTAL FLOP    [GFLOP] : ', avgvar(3)*PRC_nprocs, '(',PRC_nprocs,' PEs)'
        LOG_INFO("PROF_PAPI_rapreport",'(1x,A,F15.3)') &
-                  '*** FLOPS        [GFLOPS] : ', avgvar(3)*PRC_nprocs * ( 1.0_DP-zerosw ) / ( maxvar(2)+zerosw )
+                  'FLOPS        [GFLOPS] : ', avgvar(3)*PRC_nprocs * ( 1.0_DP-zerosw ) / ( maxvar(2)+zerosw )
        LOG_INFO("PROF_PAPI_rapreport",'(1x,A,F15.3)') &
-                  '*** FLOPS per PE [GFLOPS] : ', avgvar(3)            * ( 1.0_DP-zerosw ) / ( maxvar(2)+zerosw )
+                  'FLOPS per PE [GFLOPS] : ', avgvar(3)            * ( 1.0_DP-zerosw ) / ( maxvar(2)+zerosw )
        LOG_NEWLINE
 
        if ( IO_LOG_SUPPRESS ) then ! report to STDOUT

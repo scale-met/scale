@@ -630,7 +630,8 @@ contains
 
 
        LOG_NEWLINE
-       LOG_INFO("ATMOS_REFSTATE_update",*) '###### Generated Reference State of Atmosphere ######'
+       LOG_INFO("ATMOS_REFSTATE_update",*) 'Generated reference state of atmosphere:'
+       LOG_INFO_CONT(*) '============================================================================='
        LOG_INFO_CONT(*) '   z*-coord.:    pressure: temperature:     density:   pot.temp.: water vapor'
        do k = KS, KE
           LOG_INFO_CONT('(6F13.5)')   CZ(k),                    &
@@ -640,7 +641,7 @@ contains
                                                     ATMOS_REFSTATE1D_pott(k), &
                                                     ATMOS_REFSTATE1D_qv  (k)
        enddo
-       LOG_INFO_CONT(*) '####################################################'
+       LOG_INFO_CONT(*) '============================================================================='
 
        ! output reference profile
        call ATMOS_REFSTATE_write

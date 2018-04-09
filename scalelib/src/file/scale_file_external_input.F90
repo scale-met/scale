@@ -532,7 +532,7 @@ contains
 
        ! read prev
        LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A,A,I4,A)') &
-                  '*** Read 1D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+                  'Read 1D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_prev, ')'
 
        call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
@@ -541,7 +541,7 @@ contains
                        step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev  ) ! [IN]
        ! read next
        LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A,A,I4,A)') &
-                  '*** Read 1D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+                  'Read 1D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ')'
 
        call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
@@ -573,7 +573,7 @@ contains
 
        ! read prev
        LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A,A,I4,A)') &
-                  '*** Read 2D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+                  'Read 2D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_prev, ')'
 
        call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
@@ -582,7 +582,7 @@ contains
                        step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev  ) ! [IN]
        ! read next
        LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A,A,I4,A)') &
-                  '*** Read 2D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+                  'Read 2D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ')'
 
        call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
@@ -618,7 +618,7 @@ contains
 
        ! read prev
        LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A,A,I4,A)') &
-                  '*** Read 3D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+                  'Read 3D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_prev, ')'
 
        call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
@@ -628,7 +628,7 @@ contains
 
        ! read next
        LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A,A,I4,A)') &
-                  '*** Read 3D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+                  'Read 3D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ')'
 
        call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
@@ -688,7 +688,7 @@ contains
     enddo
 
     if ( nid == 0 ) then
-       LOG_INFO("FILE_EXTERNAL_INPUT_update_1D",*) 'xxx Variable was not registered: ', trim(varname)
+       LOG_INFO("FILE_EXTERNAL_INPUT_update_1D",*) 'Variable was not registered: ', trim(varname)
        return
     endif
 
@@ -706,7 +706,7 @@ contains
        step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next - FILE_EXTERNAL_INPUT_item(nid)%data_step_offset
 
        LOG_INFO("FILE_EXTERNAL_INPUT_update_1D",'(1x,A,A,A,I4,A,I4,A)') &
-                  '*** Read 1D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+                  'Read 1D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ', file step=', step_next, ')'
 
        ! next -> prev
@@ -766,7 +766,7 @@ contains
     enddo
 
     if ( nid == 0 ) then
-       LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",*) 'xxx variable was not registered: ', trim(varname)
+       LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",*) 'Variable was not registered: ', trim(varname)
        return
     endif
 
@@ -780,7 +780,7 @@ contains
        step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next - FILE_EXTERNAL_INPUT_item(nid)%data_step_offset
 
        LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",'(1x,A,A,A,I4,A,I4,A)') &
-                  '*** Read 2D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+                  'Read 2D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ', file step=', step_next, ')'
 
        ! next -> prev
@@ -858,7 +858,7 @@ contains
     enddo
 
     if ( nid == 0 ) then
-       LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'xxx variable was not registered: ', trim(varname)
+       LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'Variable was not registered: ', trim(varname)
        return
     endif
 
@@ -872,7 +872,7 @@ contains
        step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next - FILE_EXTERNAL_INPUT_item(nid)%data_step_offset
 
        LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",'(1x,A,A,A,I4,A,I4,A)') &
-                  '*** Read 3D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+                  'Read 3D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ', file step=', step_next, ')'
 
        ! next -> prev

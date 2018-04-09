@@ -243,15 +243,12 @@ contains
     COMM_world = PRC_LOCAL_COMM_WORLD
 
     LOG_NEWLINE
-    LOG_INFO("COMM_setup",*) 'Maximum number of vars for one communication: ', &
-                                   COMM_vsize_max
-    LOG_INFO("COMM_setup",*) 'Data size of var (3D,including halo) [byte] : ', &
-                                   RP*KA*IA*JA
-    LOG_INFO("COMM_setup",*) 'Data size of halo                    [byte] : ', &
-                                   RP*KA*(2*IA*JHALO+2*JMAX*IHALO)
-    LOG_INFO("COMM_setup",*) 'Ratio of halo against the whole 3D grid     : ', &
-                                   real(2*IA*JHALO+2*JMAX*IHALO) / real(IA*JA)
-    LOG_INFO("COMM_setup",*) 'All side is periodic?                       : ', COMM_IsAllPeriodic
+    LOG_INFO("COMM_setup",*) 'Communication information'
+    LOG_INFO_CONT(*)         'Maximum number of vars for one communication: ', COMM_vsize_max
+    LOG_INFO_CONT(*)         'Data size of var (3D,including halo) [byte] : ', RP*KA*IA*JA
+    LOG_INFO_CONT(*)         'Data size of halo                    [byte] : ', RP*KA*(2*IA*JHALO+2*JMAX*IHALO)
+    LOG_INFO_CONT(*)         'Ratio of halo against the whole 3D grid     : ', real(2*IA*JHALO+2*JMAX*IHALO) / real(IA*JA)
+    LOG_INFO_CONT(*)         'All side is periodic?                       : ', COMM_IsAllPeriodic
 
     return
   end subroutine COMM_setup

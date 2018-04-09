@@ -325,14 +325,13 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_GRID_CARTESC_REAL_calc_latlon",*) 'Position on the earth (Local)'
     LOG_INFO_CONT('(1x,A,F10.5,A,F9.5,A,A,F10.5,A,F9.5,A)') &
-                                '*** NW(',ATMOS_GRID_CARTESC_REAL_LON(IS,JE)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IS,JE)/D2R,')', &
-                                 ' - NE(',ATMOS_GRID_CARTESC_REAL_LON(IE,JE)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IE,JE)/D2R,')'
+                               'NW(',ATMOS_GRID_CARTESC_REAL_LON(IS,JE)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IS,JE)/D2R,')', &
+                            ' - NE(',ATMOS_GRID_CARTESC_REAL_LON(IE,JE)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IE,JE)/D2R,')'
 
-    LOG_INFO_CONT('(1x,A)') &
-                                '***              |                          |'
+    LOG_INFO_CONT('(1x,A)') '             |                          |'
     LOG_INFO_CONT('(1x,A,F10.5,A,F9.5,A,A,F10.5,A,F9.5,A)') &
-                                '*** SW(',ATMOS_GRID_CARTESC_REAL_LON(IS,JS)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IS,JS)/D2R,')', &
-                                 ' - SE(',ATMOS_GRID_CARTESC_REAL_LON(IE,JS)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IE,JS)/D2R,')'
+                               'SW(',ATMOS_GRID_CARTESC_REAL_LON(IS,JS)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IS,JS)/D2R,')', &
+                            ' - SE(',ATMOS_GRID_CARTESC_REAL_LON(IE,JS)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IE,JS)/D2R,')'
 
     mine(I_NW,I_LON) = ATMOS_GRID_CARTESC_REAL_LONUV(IS-1,JE  )/D2R
     mine(I_NE,I_LON) = ATMOS_GRID_CARTESC_REAL_LONUV(IE  ,JE  )/D2R

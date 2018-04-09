@@ -255,11 +255,11 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_SF_vars_setup",*) '[ATMOS_PHY_SF] prognostic/diagnostic variables'
     LOG_INFO_CONT('(1x,A,A24,A,A48,A,A12,A)') &
-               '***       |', 'VARNAME                 ','|', &
+               '      |', 'VARNAME                 ','|', &
                'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
     do iv = 1, VMAX
        LOG_INFO_CONT('(1x,A,I3,A,A24,A,A48,A,A12,A)') &
-                  '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
+                  'NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
     LOG_NEWLINE

@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module Atmospher Grid CartesianC metirc
+!> module Atmosphere Grid CartesianC metirc
 !!
 !! @par Description
 !!          Map projection and Terrain-following metrics for the CaresianC grid

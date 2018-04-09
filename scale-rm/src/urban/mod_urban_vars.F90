@@ -404,11 +404,11 @@ contains
     LOG_NEWLINE
     LOG_INFO("URBAN_vars_setup",*) 'List of prognostic variables (URBAN) '
     LOG_INFO_CONT('(1x,A,A24,A,A48,A,A12,A)') &
-               '***       |', 'VARNAME                 ','|', &
+               '      |', 'VARNAME                 ','|', &
                'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
     do iv = 1, VMAX
        LOG_INFO_CONT('(1x,A,I3,A,A24,A,A48,A,A12,A)') &
-                  '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
+                  'NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
     LOG_NEWLINE

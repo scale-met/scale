@@ -236,17 +236,17 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_CP_vars_setup",*) '[ATMOS_PHY_CP] prognostic/diagnostic variables'
     LOG_INFO_CONT('(1x,A,A24,A,A48,A,A12,A)') &
-               '***       |', 'VARNAME                 ','|', &
+               '      |', 'VARNAME                 ','|', &
                'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
     do iv = 1, VMAX
        LOG_INFO_CONT('(1x,A,I3,A,A24,A,A48,A,A12,A)') &
-                  '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
+                  'NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
     ! tendency
     do iv = 1, VMAX_t
        LOG_INFO_CONT('(1x,A,I3,A,A24,A,A48,A,A12,A)') &
-                  '*** NO.',iv+VMAX,'|',VAR_t_NAME(iv),'|',VAR_t_DESC(iv),'[',VAR_t_UNIT(iv),']'
+                  'NO.',iv+VMAX,'|',VAR_t_NAME(iv),'|',VAR_t_DESC(iv),'[',VAR_t_UNIT(iv),']'
     enddo
 
     LOG_NEWLINE

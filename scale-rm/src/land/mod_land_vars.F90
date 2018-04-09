@@ -374,11 +374,11 @@ contains
     LOG_NEWLINE
     LOG_INFO("LAND_vars_setup",*) 'List of prognostic variables (LAND) '
     LOG_INFO_CONT('(1x,A,A24,A,A48,A,A12,A)') &
-               '***       |', 'VARNAME                 ','|', &
+               '      |', 'VARNAME                 ','|', &
                'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
     do iv = 1, VMAX
        LOG_INFO_CONT('(1x,A,I3,A,A24,A,A48,A,A12,A)') &
-                  '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
+                  'NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
     LOG_NEWLINE
@@ -821,7 +821,7 @@ contains
            LAND_PROPERTY_table(index,I_Z0E          ) = Z0E
 
            LOG_INFO_CONT('(1x,A10,I3.3,1x,A32,4(1x,F6.3),2(1x,ES8.1),3(1x,F6.3))') &
-                                         '*** IDX = ', index, &
+                                         'IDX = ', index, &
                                          trim(description), &
                                          STRGMAX, &
                                          STRGCRT, &

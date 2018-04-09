@@ -203,7 +203,6 @@ contains
 
     return
   end subroutine ATMOS_GRID_CARTESC_setup
-  
 
   !-----------------------------------------------------------------------------
   ! private
@@ -934,6 +933,7 @@ contains
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_GRID_CARTESC_output_info",'(1x,A)') 'Vertical Coordinate'
+    LOG_INFO_CONT('(1x,A)') '|===============================================|'
     LOG_INFO_CONT('(1x,A)') '|    k        z       zh       dz   buffer    k |'
     LOG_INFO_CONT('(1x,A)') '|           [m]      [m]      [m]   factor      |'
 

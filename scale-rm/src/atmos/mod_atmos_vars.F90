@@ -603,15 +603,15 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_vars_setup",*) 'List of prognostic variables (ATMOS) '
     LOG_INFO_CONT('(1x,A,A24,A,A48,A,A12,A)') &
-               '***       |', 'VARNAME                 ','|', &
+               '      |', 'VARNAME                 ','|', &
                'DESCRIPTION                                     ', '[', 'UNIT        ', ']'
     do iv = 1, PV_nmax
        LOG_INFO_CONT('(1x,A,I3,A,A24,A,A48,A,A12,A)') &
-                  '*** NO.',iv,'|',PV_info(iv)%NAME,'|', PV_info(iv)%DESC,'[', PV_info(iv)%UNIT,']'
+                  'NO.',iv,'|',PV_info(iv)%NAME,'|', PV_info(iv)%DESC,'[', PV_info(iv)%UNIT,']'
     enddo
     do iq = 1, QA
        LOG_INFO_CONT('(1x,A,I3,A,A24,A,A48,A,A12,A)') &
-                  '*** NO.',5+iq,'|',TRACER_NAME(iq),'|', TRACER_DESC(iq),'[', TRACER_UNIT(iq),']'
+                  'NO.',5+iq,'|',TRACER_NAME(iq),'|', TRACER_DESC(iq),'[', TRACER_UNIT(iq),']'
     enddo
 
     LOG_NEWLINE

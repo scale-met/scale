@@ -160,8 +160,7 @@ contains
     integer  :: ierr
     !---------------------------------------------------------------------------
 
-    LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[DRIVER] / Categ[ATMOS DYN] / Origin[SCALE-RM]'
+    LOG_FILENAME
 
     if ( ATMOS_sw_dyn ) then
 
@@ -320,7 +319,6 @@ contains
        do iq = 1, QA
           call COMM_vars8( RHOQ_tp(:,:,:,iq), 4+iq)
        end do
-       
 
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(k,i,j) &
