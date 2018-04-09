@@ -51,15 +51,17 @@ module mod_admin_restart
   character(len=H_MID),   public :: RESTART_OUT_TITLE             = ''        !< Title    of the output file
   character(len=H_SHORT), public :: RESTART_OUT_DTYPE             = 'DEFAULT' !< REAL4 or REAL8
 
-  integer, parameter,     public :: RESTART_OUT_ADDITIONAL_COPIES_MAX = 10                                  !< maximum number of additional copies of the outout file
-  integer,                public :: RESTART_OUT_ADDITIONAL_COPIES = 0                                       !< number of additional copies of the outout file
-  character(len=H_LONG),  public :: RESTART_OUT_ADDITIONAL_BASENAME(RESTART_OUT_ADDITIONAL_COPIES_MAX) = '' !< basename of the additional output file
+  integer, parameter,     public :: RESTART_OUT_ADDITIONAL_COPIES_MAX = 20                                   !< maximum number of additional restart outout files
+  integer,                public :: RESTART_OUT_ADDITIONAL_COPIES = 0                                        !< number of additional restart outout files
+  character(len=H_LONG),  public :: RESTART_OUT_ADDITIONAL_BASENAME(RESTART_OUT_ADDITIONAL_COPIES_MAX) = ''  !< basename of the additional restart output files
+  integer,                public :: RESTART_OUT_ADDITIONAL_EFF_MEMBER(RESTART_OUT_ADDITIONAL_COPIES_MAX) = 0 !< effective member for the additional output file (0: all members)
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ADMIN_restart_setup
+  subroutine ADMIN_restart_setup( &
+      member )
     use scale_process, only: &
        PRC_MPIstop
     use scale_file, only: &
@@ -198,8 +200,12 @@ contains
        RESTART_OUT_TITLE,             &
        RESTART_OUT_DTYPE,             &
        RESTART_OUT_ADDITIONAL_COPIES, &
-       RESTART_OUT_ADDITIONAL_BASENAME
+       RESTART_OUT_ADDITIONAL_BASENAME, &
+       RESTART_OUT_ADDITIONAL_EFF_MEMBER
 
+    integer, intent(in), optional :: member !< member number
+
+    integer :: irst, irst_eff
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -222,6 +228,26 @@ contains
 
     call IO_filename_replace( RESTART_IN_BASENAME, 'RESTART_IN_BASENAME' )
     call IO_filename_replace( RESTART_OUT_BASENAME, 'RESTART_OUT_BASENAME' )
+
+    if ( present(member) ) then
+       if ( member >= 1 ) then
+          if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Reset additional restart output files for THIS member:'
+          irst_eff = 0
+          do irst = 1, min(RESTART_OUT_ADDITIONAL_COPIES, RESTART_OUT_ADDITIONAL_COPIES_MAX)
+             if ( RESTART_OUT_ADDITIONAL_EFF_MEMBER(irst) == 0 .or. member == RESTART_OUT_ADDITIONAL_EFF_MEMBER(irst) ) then
+                irst_eff = irst_eff + 1
+                RESTART_OUT_ADDITIONAL_BASENAME(irst_eff) = RESTART_OUT_ADDITIONAL_BASENAME(irst)
+                if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,2x,A)') '***   No.', irst_eff, trim(RESTART_OUT_ADDITIONAL_BASENAME(irst_eff))
+             endif
+          enddo
+          RESTART_OUT_ADDITIONAL_COPIES = irst_eff
+          RESTART_OUT_ADDITIONAL_EFF_MEMBER(:) = 0
+       endif
+    endif
+
+    do irst = 1, min(RESTART_OUT_ADDITIONAL_COPIES, RESTART_OUT_ADDITIONAL_COPIES_MAX)
+       call IO_filename_replace( RESTART_OUT_ADDITIONAL_BASENAME(irst), 'RESTART_OUT_ADDITIONAL_BASENAME' )
+    enddo
 
     !--- set default output switch
     ATMOS_RESTART_OUTPUT        = RESTART_OUTPUT
