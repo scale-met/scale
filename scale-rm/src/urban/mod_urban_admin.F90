@@ -76,10 +76,10 @@ contains
     LOG_INFO("URBAN_ADMIN_setup",*) 'Urban model components '
 
     if ( URBAN_DYN_TYPE /= 'OFF' .AND. URBAN_DYN_TYPE /= 'NONE' ) then
-       LOG_INFO_CONT(*) '+ Urban model     : ON, ', trim(URBAN_DYN_TYPE)
+       LOG_INFO_CONT(*) 'Urban model : ON, ', trim(URBAN_DYN_TYPE)
        URBAN_do = .true.
     else
-       LOG_INFO_CONT(*) '+ Urban model     : OFF'
+       LOG_INFO_CONT(*) 'Urban model : OFF'
        URBAN_do = .false.
     endif
 

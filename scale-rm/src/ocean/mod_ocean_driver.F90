@@ -218,9 +218,6 @@ contains
 
     call PROF_rapstart('OCN_CalcTend', 1)
 
-!!$    LOG_NEWLINE
-!!$    LOG_PROGRESS(*) 'Module[DRIVER CALC TEND] / Categ[OCEAN] / Origin[SCALE-RM]'
-
     !########## Get Surface Boundary from coupler ##########
     call OCEAN_SURFACE_GET
 
@@ -383,10 +380,6 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('OCN_Update', 2)
-
-
-!!$    LOG_NEWLINE
-!!$    LOG_PROGRESS(*) 'Module[DRIVER UPDATE] / Categ[OCEAN] / Origin[SCALE-RM]'
 
     !########## Get Surface Boundary from coupler ##########
     call OCEAN_SURFACE_GET

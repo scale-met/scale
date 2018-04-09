@@ -115,7 +115,7 @@ contains
 
     if ( CONVERT_TOPO .OR. CONVERT_LANDUSE .OR. CONVERT_2D ) then
        LOG_NEWLINE
-       LOG_INFO("CONVERT",*) 'START CONVERT BOUNDARY DATA ++++++'
+       LOG_PROGRESS(*) 'start convert boundary data'
 
        if( CONVERT_TOPO ) then
           call CNVTOPO
@@ -129,10 +129,10 @@ contains
           call CNV2D
        end if
 
-       LOG_INFO("CONVERT",*) 'END   CONVERT BOUNDARY DATA ++++++'
+       LOG_PROGRESS(*) 'end   convert boundary data'
     else
        LOG_NEWLINE
-       LOG_INFO("CONVERT",*) 'SKIP  CONVERT BOUNDARY DATA ++++++'
+       LOG_PROGRESS(*) 'skip  convert boundary data'
     endif
 
     return

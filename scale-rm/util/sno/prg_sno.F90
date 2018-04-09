@@ -179,15 +179,15 @@ program sno
   call CALENDAR_setup
 
   LOG_NEWLINE
-  LOG_INFO("sno",*) 'Program[SNO] / Categ[Utility] / Origin[SCALE-RM]'
+  LOG_INFO("SNO",*) 'Setup'
 
   !--- read namelist
   rewind(IO_FID_CONF)
   read(IO_FID_CONF,nml=PARAM_SNO,iostat=ierr)
   if ( ierr < 0 ) then !--- missing
-     LOG_INFO("sno",*) 'Not found namelist. Default used.'
+     LOG_INFO("SNO",*) 'Not found namelist. Default used.'
   elseif( ierr > 0 ) then !--- fatal error
-     LOG_ERROR("sno",*) 'Not appropriate names in namelist PARAM_SNO. Check!'
+     LOG_ERROR("SNO",*) 'Not appropriate names in namelist PARAM_SNO. Check!'
      call PRC_abort
   endif
   LOG_NML(PARAM_SNO)
@@ -284,7 +284,7 @@ program sno
 
         if ( p >= pstr .AND. p <= pend ) then
            LOG_NEWLINE
-           LOG_INFO("sno",'(A,I6)') 'now processing rank = ', p
+           LOG_INFO("SNO",'(A,I6)') 'now processing rank = ', p
 
            ! in->out mapping table (for one file)
            allocate( localmap(ngrids_x_out,ngrids_y_out,3) )
@@ -338,7 +338,7 @@ program sno
 
            do v = 1, nvars
               LOG_NEWLINE
-              LOG_INFO("sno",*) '+ variable : ', trim(dinfo(v)%varname)
+              LOG_INFO("SNO",*) '+ variable : ', trim(dinfo(v)%varname)
 
               ! output array allocation
 
@@ -358,7 +358,7 @@ program sno
               !#################################################################
 
               do t = 1, dinfo(v)%step_nmax
-                 LOG_INFO("sno",'(A,I6)') '++ t = ', t
+                 LOG_INFO("SNO",'(A,I6)') '++ t = ', t
 
                  call SNO_vars_read( basename_in,                  & ! [IN]    from namelist
                                      t,                            & ! [IN]

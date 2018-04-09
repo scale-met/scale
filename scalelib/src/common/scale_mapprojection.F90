@@ -198,9 +198,9 @@ contains
 
     LOG_NEWLINE
     LOG_INFO("MAPPROJECTION_setup",*) 'Map projection information'
-    LOG_INFO_CONT('(1x,A,F15.3)') 'Basepoint(x)       : ', MAPPROJECTION_basepoint_x
-    LOG_INFO_CONT('(1x,A,F15.3)') 'Basepoint(y)       : ', MAPPROJECTION_basepoint_y
-    LOG_INFO_CONT(*)              'Map projection type: ', trim(MAPPROJECTION_type)
+    LOG_INFO_CONT('(1x,A,F15.3)') 'Basepoint(x)    [m] : ', MAPPROJECTION_basepoint_x
+    LOG_INFO_CONT('(1x,A,F15.3)') 'Basepoint(y)    [m] : ', MAPPROJECTION_basepoint_y
+    LOG_INFO_CONT(*)              'Map projection type : ', trim(MAPPROJECTION_type)
 
     MAPPROJECTION_mapping = ""
     MAPPROJECTION_false_easting = UNDEF

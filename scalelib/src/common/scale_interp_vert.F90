@@ -93,14 +93,13 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[INTERPOLATION] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
+    LOG_INFO("INTERP_VERT_setcoef",*) 'Setup'
     LOG_INFO("INTERP_VERT_setcoef",*) 'No namelists.'
 
     INTERP_available = TOPO_exist
 
     LOG_NEWLINE
     LOG_INFO("INTERP_VERT_setcoef",*) 'Topography exists & interpolation has meaning? : ', INTERP_available
-
 
     ! full level
 

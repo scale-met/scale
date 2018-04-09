@@ -64,8 +64,8 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("USER_tracer_setup",*) '+++ Module[USER]/Categ[MAIN]'
-    LOG_INFO("USER_tracer_setup",*) '+++ Inertial oscillation experiment'
+    LOG_INFO("USER_tracer_setup",*) 'Setup'
+    LOG_INFO("USER_tracer_setup",*) 'Inertial oscillation experiment'
 
     !--- read namelist
     rewind(IO_FID_CONF)

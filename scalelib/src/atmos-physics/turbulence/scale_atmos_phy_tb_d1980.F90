@@ -88,7 +88,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Turbulence Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_TB_d1980_config",*) 'Setup'
     LOG_INFO("ATMOS_PHY_TB_d1980_config",*) 'Tracers for Deardorff (1980) 1.5th TKE Model'
 
     if ( TYPE_TB /= 'D1980' ) then

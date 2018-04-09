@@ -100,7 +100,7 @@ module scale_monitor
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine MONITOR_setup( dt ) 
+  subroutine MONITOR_setup( dt )
     use scale_prc, only: &
        PRC_abort
     implicit none
@@ -150,9 +150,9 @@ contains
        LOG_INFO('MONITOR_setup',*) 'No monitor file specified.'
        return
     else
-       LOG_INFO('MONITOR_setup',*) 'Number of requested monitor item: ', MONITOR_nreqs
-       LOG_INFO('MONITOR_setup',*) 'Monitor output interval [step]  : ', MONITOR_STEP_INTERVAL
-       LOG_INFO('MONITOR_setup',*) 'Use deviation from first step?  : ', MONITOR_USEDEVATION
+       LOG_INFO('MONITOR_setup',*) 'Number of requested monitor item : ', MONITOR_nreqs
+       LOG_INFO('MONITOR_setup',*) 'Monitor output interval   [step] : ', MONITOR_STEP_INTERVAL
+       LOG_INFO('MONITOR_setup',*) 'Use deviation from first step?   : ', MONITOR_USEDEVATION
     endif
 
     allocate( MONITOR_items(MONITOR_nreqs) )
@@ -519,7 +519,7 @@ contains
     if ( MONITOR_FID > 0 ) then
 
        if ( mod(NOWSTEP-1,MONITOR_STEP_INTERVAL) == 0 ) then
-          LOG_PROGRESS(*) 'Output Monitor'
+          LOG_PROGRESS(*) 'output monitor'
 
           write(MONITOR_FID,'(A,i7,A,A4,A)',advance='no') 'STEP=',NOWSTEP,' (',memo,')'
           do n = 1, MONITOR_nitems

@@ -106,7 +106,8 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("USER_setup",*) '+++ Module[USER]/Categ[MAIN]'
+    LOG_INFO("USER_setup",*) 'Setup'
+    LOG_INFO("USER_setup",*) 'User procedure in test/case/warmbubble/500m_aero_advection'
 
     !--- read namelist
     rewind(IO_FID_CONF)

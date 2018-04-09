@@ -112,7 +112,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Plugin[hgridope] / Categ[data handling]'
+    LOG_INFO("SNOPLGIN_hgridope_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

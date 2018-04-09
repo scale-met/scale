@@ -278,10 +278,10 @@ contains
 
     if ( CNVTOPO_DoNothing ) then
        LOG_NEWLINE
-       LOG_INFO("CNVTOPO",*) 'SKIP  CONVERT TOPOGRAPHY DATA ++++++'
+       LOG_PROGRESS(*) 'skip  convert topography data'
     else
        LOG_NEWLINE
-       LOG_INFO("CNVTOPO",*) 'START CONVERT TOPOGRAPHY DATA ++++++'
+       LOG_PROGRESS(*) 'start convert topography data'
 
        if ( CNVTOPO_UseGTOPO30 ) then
           call CNVTOPO_GTOPO30
@@ -304,7 +304,7 @@ contains
 
        if( CNVTOPO_copy_parent ) call COPYTOPO( TOPO_Zsfc )
 
-       LOG_INFO("CNVTOPO",*) 'END   CONVERT TOPOGRAPHY DATA ++++++'
+       LOG_PROGRESS(*) 'end   convert topography data'
 
        ! output topography file
        call TOPO_write
@@ -387,7 +387,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[convert GTOPO30] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("CNVTOPO_GTOPO30",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -433,18 +433,18 @@ contains
     allocate( TILE_LATH  (0:jsize)     )
     allocate( TILE_LONH  (0:isize)     )
 
-    LOG_INFO("CNVTOPO_GTOPO30",*) 'Oversampling (j) orig = ', jsize_orig, ', use = ', jsize
-    LOG_INFO("CNVTOPO_GTOPO30",*) 'Oversampling (i) orig = ', isize_orig, ', use = ', isize
+    LOG_INFO_CONT(*) 'Oversampling (j) orig = ', jsize_orig, ', use = ', jsize
+    LOG_INFO_CONT(*) 'Oversampling (i) orig = ', isize_orig, ', use = ', isize
 
     TILE_DLAT_orig = GTOPO30_DLAT * D2R
     TILE_DLON_orig = GTOPO30_DLON * D2R
-    LOG_INFO("CNVTOPO_GTOPO30",*) 'TILE_DLAT       :', TILE_DLAT_orig/D2R
-    LOG_INFO("CNVTOPO_GTOPO30",*) 'TILE_DLON       :', TILE_DLON_orig/D2R
+    LOG_INFO_CONT(*) 'TILE_DLAT       :', TILE_DLAT_orig/D2R
+    LOG_INFO_CONT(*) 'TILE_DLON       :', TILE_DLON_orig/D2R
 
     TILE_DLAT = TILE_DLAT_orig / jos
     TILE_DLON = TILE_DLON_orig / ios
-    LOG_INFO("CNVTOPO_GTOPO30",*) 'TILE_DLAT (OS)  :', TILE_DLAT/D2R
-    LOG_INFO("CNVTOPO_GTOPO30",*) 'TILE_DLON (OS)  :', TILE_DLON/D2R
+    LOG_INFO_CONT(*) 'TILE_DLAT (OS)  :', TILE_DLAT/D2R
+    LOG_INFO_CONT(*) 'TILE_DLON (OS)  :', TILE_DLON/D2R
 
     !---< READ from external files >---
 
@@ -452,7 +452,7 @@ contains
     fname = trim(GTOPO30_IN_DIR)//'/'//trim(GTOPO30_IN_CATALOGUE)
 
     LOG_NEWLINE
-    LOG_INFO("CNVTOPO_GTOPO30",*) '+ Input catalogue file:', trim(fname)
+    LOG_INFO("CNVTOPO_GTOPO30",*) 'Input catalogue file:', trim(fname)
 
     fid = IO_get_available_fid()
     open( fid,                  &
@@ -522,7 +522,7 @@ contains
           fname = trim(GTOPO30_IN_DIR)//'/'//trim(TILE_fname(t))
 
           LOG_NEWLINE
-          LOG_INFO("CNVTOPO_GTOPO30",*) '+ Input data file :', trim(fname)
+          LOG_INFO("CNVTOPO_GTOPO30",*) 'Input data file :', trim(fname)
           LOG_INFO_CONT(*) 'Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
           LOG_INFO_CONT(*) '       (LON)    :', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
           if ( check_IDL ) then
@@ -770,7 +770,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[convert DEM50M] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("CNVTOPO_DEM50M",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -816,18 +816,18 @@ contains
     allocate( TILE_LATH  (0:jsize)     )
     allocate( TILE_LONH  (0:isize)     )
 
-    LOG_INFO("CNVTOPO_DEM50M",*) 'Oversampling (j) orig = ', jsize_orig, ', use = ', jsize
-    LOG_INFO("CNVTOPO_DEM50M",*) 'Oversampling (i) orig = ', isize_orig, ', use = ', isize
+    LOG_INFO_CONT(*) 'Oversampling (j) orig = ', jsize_orig, ', use = ', jsize
+    LOG_INFO_CONT(*) 'Oversampling (i) orig = ', isize_orig, ', use = ', isize
 
     TILE_DLAT_orig = DEM50M_DLAT * D2R
     TILE_DLON_orig = DEM50M_DLON * D2R
-    LOG_INFO("CNVTOPO_DEM50M",*) 'TILE_DLAT       :', TILE_DLAT_orig/D2R
-    LOG_INFO("CNVTOPO_DEM50M",*) 'TILE_DLON       :', TILE_DLON_orig/D2R
+    LOG_INFO_CONT(*) 'TILE_DLAT       :', TILE_DLAT_orig/D2R
+    LOG_INFO_CONT(*) 'TILE_DLON       :', TILE_DLON_orig/D2R
 
     TILE_DLAT = TILE_DLAT_orig / jos
     TILE_DLON = TILE_DLON_orig / ios
-    LOG_INFO("CNVTOPO_DEM50M",*) 'TILE_DLAT (OS)  :', TILE_DLAT/D2R
-    LOG_INFO("CNVTOPO_DEM50M",*) 'TILE_DLON (OS)  :', TILE_DLON/D2R
+    LOG_INFO_CONT(*) 'TILE_DLAT (OS)  :', TILE_DLAT/D2R
+    LOG_INFO_CONT(*) 'TILE_DLON (OS)  :', TILE_DLON/D2R
 
     !---< READ from external files >---
 
@@ -835,7 +835,7 @@ contains
     fname = trim(DEM50M_IN_DIR)//'/'//trim(DEM50M_IN_CATALOGUE)
 
     LOG_NEWLINE
-    LOG_INFO("CNVTOPO_DEM50M",*) '+ Input catalogue file:', trim(fname)
+    LOG_INFO("CNVTOPO_DEM50M",*) 'Input catalogue file:', trim(fname)
 
     fid = IO_get_available_fid()
     open( fid,                  &
@@ -905,7 +905,7 @@ contains
           fname = trim(DEM50M_IN_DIR)//'/'//trim(TILE_fname(t))
 
           LOG_NEWLINE
-          LOG_INFO("CNVTOPO_DEM50M",*) '+ Input data file :', trim(fname)
+          LOG_INFO("CNVTOPO_DEM50M",*) 'Input data file :', trim(fname)
           LOG_INFO_CONT(*) 'Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
           LOG_INFO_CONT(*) '       (LON)    :', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
           if ( check_IDL ) then
@@ -1168,7 +1168,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[convert USERFILE] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("CNVTOPO_USERFILE",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -1270,18 +1270,18 @@ contains
     allocate( TILE_LATH  (0:jsize)     )
     allocate( TILE_LONH  (0:isize)     )
 
-    LOG_INFO("CNVTOPO_USERFILE",*) 'Oversampling (j) orig = ', USERFILE_NLAT, ', use = ', jsize
-    LOG_INFO("CNVTOPO_USERFILE",*) 'Oversampling (i) orig = ', USERFILE_NLON, ', use = ', isize
+    LOG_INFO_CONT(*) 'Oversampling (j) orig = ', USERFILE_NLAT, ', use = ', jsize
+    LOG_INFO_CONT(*) 'Oversampling (i) orig = ', USERFILE_NLON, ', use = ', isize
 
     TILE_DLAT_orig = USERFILE_DLAT * D2R
     TILE_DLON_orig = USERFILE_DLON * D2R
-    LOG_INFO("CNVTOPO_USERFILE",*) 'TILE_DLAT       :', TILE_DLAT_orig/D2R
-    LOG_INFO("CNVTOPO_USERFILE",*) 'TILE_DLON       :', TILE_DLON_orig/D2R
+    LOG_INFO_CONT(*) 'TILE_DLAT       :', TILE_DLAT_orig/D2R
+    LOG_INFO_CONT(*) 'TILE_DLON       :', TILE_DLON_orig/D2R
 
     TILE_DLAT = TILE_DLAT_orig / jos
     TILE_DLON = TILE_DLON_orig / ios
-    LOG_INFO("CNVTOPO_USERFILE",*) 'TILE_DLAT (OS)  :', TILE_DLAT/D2R
-    LOG_INFO("CNVTOPO_USERFILE",*) 'TILE_DLON (OS)  :', TILE_DLON/D2R
+    LOG_INFO_CONT(*) 'TILE_DLAT (OS)  :', TILE_DLAT/D2R
+    LOG_INFO_CONT(*) 'TILE_DLON (OS)  :', TILE_DLON/D2R
 
     !---< READ from external files >---
 
@@ -1291,7 +1291,7 @@ contains
        fname = trim(USERFILE_IN_DIR)//'/'//trim(USERFILE_IN_CATALOGUE)
 
        LOG_NEWLINE
-       LOG_INFO("CNVTOPO_USERFILE",*) '+ Input catalogue file:', trim(fname)
+       LOG_INFO("CNVTOPO_USERFILE",*) 'Input catalogue file:', trim(fname)
 
        fid = IO_get_available_fid()
        open( fid,                  &
@@ -1373,7 +1373,7 @@ contains
           fname = trim(USERFILE_IN_DIR)//'/'//trim(TILE_fname(t))
 
           LOG_NEWLINE
-          LOG_INFO("CNVTOPO_USERFILE",*) '+ Input data file :', trim(fname)
+          LOG_INFO("CNVTOPO_USERFILE",*) 'Input data file :', trim(fname)
           LOG_INFO_CONT(*) 'Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
           LOG_INFO_CONT(*) '       (LON)    :', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
           if ( check_IDL ) then
@@ -1672,9 +1672,11 @@ contains
        return
     else
        LOG_NEWLINE
-       LOG_INFO("CNVTOPO_smooth",*) 'Apply smoothing. Slope limit       = ', CNVTOPO_smooth_maxslope_limit
-       LOG_INFO("CNVTOPO_smooth",*) 'Smoothing type    = ', CNVTOPO_smooth_type
-       LOG_INFO("CNVTOPO_smooth",*) 'Smoothing locally = ', CNVTOPO_smooth_local
+       LOG_INFO("CNVTOPO_smooth",*) 'Apply smoothing.'
+       LOG_INFO_CONT(*) 'Slope limit       = ', CNVTOPO_smooth_maxslope_limit
+       LOG_INFO_CONT(*) 'Smoothing type    = ', CNVTOPO_smooth_type
+       LOG_INFO_CONT(*) 'Smoothing locally = ', CNVTOPO_smooth_local
+       LOG_NEWLINE
     endif
 
     DXL(:) = FDX(:)
@@ -1684,8 +1686,7 @@ contains
 
     ! digital filter
     do ite = 1, CNVTOPO_smooth_itelim+1
-       LOG_NEWLINE
-       LOG_INFO("CNVTOPO_smooth",*) 'Smoothing itelation : ', ite
+       LOG_PROGRESS(*) 'smoothing itelation : ', ite
 
        call TOPO_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
 
@@ -1705,7 +1706,7 @@ contains
        slope(:,:) = max( abs(DZsfc_DXY(:,:,1)), abs(DZsfc_DXY(:,:,2)) )
        call COMM_horizontal_max( maxslope, slope(:,:) )
 
-       LOG_INFO_CONT(*) '  maximum slope [deg] : ', maxslope
+       LOG_PROGRESS(*) 'maximum slope [deg] : ', maxslope
 
        if( maxslope < CNVTOPO_smooth_maxslope_limit ) exit
 
@@ -1810,6 +1811,7 @@ contains
        LOG_ERROR("CNVTOPO_smooth",*) 'not converged'
        call PRC_abort
     else
+       LOG_NEWLINE
        LOG_INFO("CNVTOPO_smooth",*) 'smoothing complete.'
     endif
 

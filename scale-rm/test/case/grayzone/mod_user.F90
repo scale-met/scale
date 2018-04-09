@@ -218,7 +218,8 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("USER_setup",*) '+++ Module[USER]/Categ[MAIN]'
+    LOG_INFO("USER_setup",*) 'Setup'
+    LOG_INFO("USER_setup",*) 'User procedure in test/case/grayzone'
 
     allocate( time_sst_in(mstep_sst) )
     allocate( sst_in     (mstep_sst) )

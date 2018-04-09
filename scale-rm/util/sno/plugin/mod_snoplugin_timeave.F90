@@ -89,7 +89,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Plugin[timeave] / Categ[data handling]'
+    LOG_INFO("SNOPLGIN_timeave_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

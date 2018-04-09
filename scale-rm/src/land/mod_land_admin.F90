@@ -81,20 +81,20 @@ contains
     LOG_INFO("LAND_ADMIN_setup",*) 'Land model components '
 
     if ( LAND_DYN_TYPE /= 'OFF' .AND. LAND_DYN_TYPE /= 'NONE' ) then
-       LOG_INFO_CONT(*) '+ Land model : ON, ', trim(LAND_DYN_TYPE)
+       LOG_INFO_CONT(*) 'Land model           : ON, ', trim(LAND_DYN_TYPE)
        LAND_do = .true.
     else
-       LOG_INFO_CONT(*) '+ Land model : OFF'
+       LOG_INFO_CONT(*) 'Land model           : OFF'
        LAND_do = .false.
     endif
 
     if ( LAND_do ) then
 
        if ( SNOW_TYPE /= 'OFF' .AND. SNOW_TYPE /= 'NONE' ) then
-          LOG_INFO_CONT(*) '+ Snow  physics : ON, ', trim(SNOW_TYPE)
+          LOG_INFO_CONT(*) '+ Snow  physics      : ON, ', trim(SNOW_TYPE)
           SNOW_sw = .true.
        else
-          LOG_INFO_CONT(*) '+ Snow  physics : OFF'
+          LOG_INFO_CONT(*) '+ Snow  physics      : OFF'
           SNOW_sw = .false.
        endif
 

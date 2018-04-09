@@ -99,7 +99,8 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("USER_setup",*) '+++ Module[USER]/Categ[MAIN]'
+    LOG_INFO("USER_setup",*) 'Setup'
+    LOG_INFO("USER_setup",*) 'This module is accelerate zonal-wind.'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -112,8 +113,6 @@ contains
        call PRC_abort
     endif
     LOG_NML(PARAM_USER)
-
-    LOG_INFO("USER_setup",*) 'This module is accelerate zonal-wind.'
 
     allocate( DENS_INIT(KA                  ) )
     allocate( POTT_INIT(KA                  ) )

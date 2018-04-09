@@ -70,7 +70,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Turbulence Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_TB_dns_config",*) 'Setup'
     LOG_INFO("ATMOS_PHY_TB_dns_config",*) 'Tracers for Deardorff (1980) 1.5th TKE Model'
 
     if ( TYPE_TB /= 'DNS' ) then

@@ -278,7 +278,7 @@ contains
     enddo
 
     LOG_NEWLINE
-    LOG_INFO("PROF_rapreport",'(A,i2,A)') 'Computational Time Report (Rap level = ', PROF_rap_level, ')'
+    LOG_INFO("PROF_rapreport",'(1x,A,I2,A)') 'Computational Time Report (Rap level = ', PROF_rap_level, ')'
 
     if ( IO_LOG_ALLNODE ) then ! report for each node
 
@@ -287,7 +287,7 @@ contains
              if (       PROF_raplevel(id) <= PROF_rap_level &
                   .AND. PROF_grpid   (id) == gid            ) then
                 LOG_INFO_CONT('(1x,A,I3.3,A,A,A,F10.3,A,I9)') &
-                           'ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
+                              'ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
              endif
           enddo
        enddo
@@ -304,8 +304,8 @@ contains
        fid = -1
        if ( IO_LOG_SUPPRESS ) then ! report to STDOUT
           if ( PRC_IsMaster ) then
-             write(*,*) '*** Computational Time Report'
-             fid = IO_STDOUT ! master node
+             write(*,*) 'INFO  [PROF_rapreport] Computational Time Report'
+             fid = IO_FID_STDOUT ! master node
           endif
        else
           if ( IO_L ) fid = IO_FID_LOG
@@ -316,12 +316,12 @@ contains
              if (       PROF_raplevel(id) <= PROF_rap_level &
                   .AND. PROF_grpid   (id) == gid            &
                   .AND. fid > 0                             ) then
-                write(fid,'(1x,A,I3.3,3A,F10.3,A,F10.3,A,I5,2A,F10.3,A,I5,2A,I9)') &
-                           'ID=',id,' : ',PROF_rapname(id), &
-                           ' T(avg)=',avgvar(id), &
-                           ', T(max)=',maxvar(id),'[',maxidx(id),']', &
-                           ', T(min)=',minvar(id),'[',minidx(id),']', &
-                           ' N=',PROF_rapnstr(id)
+                write(fid,'(6x,A,I3.3,3A,F10.3,A,F10.3,A,I5,2A,F10.3,A,I5,2A,I9)') &
+                          'ID=',id,' : ',PROF_rapname(id), &
+                          ' T(avg)=',avgvar(id), &
+                          ', T(max)=',maxvar(id),'[',maxidx(id),']', &
+                          ', T(min)=',minvar(id),'[',minidx(id),']', &
+                          ', N=',PROF_rapnstr(id)
              endif
           enddo
        enddo

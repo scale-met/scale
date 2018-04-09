@@ -102,7 +102,8 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("USER_setup",*) '+++ Module[USER]/Categ[MAIN]'
+    LOG_INFO("USER_setup",*) 'Setup'
+    LOG_INFO("USER_setup",*) 'User procedure in test/case/snow/offline'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -310,7 +311,7 @@ contains
 
     return
   end subroutine USER_update
-  
+
 !----------------------------------------------------------
   subroutine read_input_atm_data(timestep)
     implicit none

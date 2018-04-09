@@ -98,7 +98,8 @@ contains
     logical :: error
     !---------------------------------------------------------------------------
 
-    LOG_INFO("ParentAtmosSetupWRFARW",*) 'Real Case/Atmos Input File Type: WRF-ARW'
+    LOG_NEWLINE
+    LOG_INFO("ParentAtmosSetupWRFARW",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -146,8 +147,6 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ParentAtmosOpenWRFARW
     implicit none
-
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[AtmosOpenWRFARW]'
 
     return
   end subroutine ParentAtmosOpenWRFARW
@@ -225,8 +224,6 @@ contains
 
     integer :: fid
     !---------------------------------------------------------------------------
-
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[InputWRF]'
 
     if ( wrfout ) then
        varname_T = "T"
@@ -637,8 +634,6 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[LandInputWRF]'
-
     call FILE_open( basename, fid, rankid=myrank, single=.true., postfix="" )
 
     call FILE_read( fid, "XLAT", llat_org(:,:), step=it )
@@ -784,8 +779,6 @@ contains
   subroutine ParentOceanOpenWRFARW
     implicit none
 
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[OceanOpenWRFARW]'
-
     return
   end subroutine ParentOceanOpenWRFARW
 
@@ -824,8 +817,6 @@ contains
     integer :: fid
     integer :: i, j
     !---------------------------------------------------------------------------
-
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[OceanInputWRF]'
 
     call FILE_open( basename, fid, rankid=myrank, single=.true., postfix="" )
 

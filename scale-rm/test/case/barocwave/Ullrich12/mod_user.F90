@@ -29,7 +29,7 @@ module mod_user
        OHM => CONST_OHM,   &
        RPlanet => CONST_RADIUS, &
        Rdry => CONST_Rdry
-  
+
   use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_pres, &
        ATMOS_REFSTATE_temp, &
@@ -37,7 +37,7 @@ module mod_user
        ATMOS_REFSTATE_pott, &
        ATMOS_REFSTATE_qv,   &
        ATMOS_REFSTATE_write
-  
+
   use mod_atmos_vars, only: &
        DENS, &
        MOMX, &
@@ -47,7 +47,7 @@ module mod_user
        PRES
 
   use scale_prc
-  
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -77,7 +77,7 @@ module mod_user
 
   real(RP), private, allocatable :: RHOT_bc(:,:,:)
   real(RP), private, allocatable :: DENS_bc(:,:,:)
-  
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -96,13 +96,14 @@ contains
 
     namelist / PARAM_USER / &
        USER_do
-    
+
     integer :: ierr
     integer :: i, j
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("USER_setup",*) '+++ Module[USER]/Categ[MAIN]'
+    LOG_INFO("USER_setup",*) 'Setup'
+    LOG_INFO("USER_setup",*) 'User procedure in test/case/barocwave/Ullrich12'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -115,14 +116,14 @@ contains
        call PRC_abort
     endif
     LOG_NML(PARAM_USER)
-    
+
     !
     allocate( RHOT_bc(KA,IA,2) )
     allocate( DENS_bc(KA,IA,2) )
 
 
-    ! Save some information of inital fields to set boundary conditions. 
-    ! 
+    ! Save some information of inital fields to set boundary conditions.
+    !
     RHOT_bc(:,:,1) = RHOT(:,:,JS) - 0.5_RP*(RHOT(:,:,JS+1) - RHOT(:,:,JS))
     RHOT_bc(:,:,2) = RHOT(:,:,JE-1) + 1.5_RP*(RHOT(:,:,JE) - RHOT(:,:,JE-1))
 
@@ -147,7 +148,7 @@ contains
   subroutine USER_calc_tendency
     implicit none
     !---------------------------------------------------------------------------
-    
+
     return
   end subroutine USER_calc_tendency
 
@@ -170,35 +171,35 @@ contains
 
 
     integer :: k, i, j
-    
+
     !---------------------------------------------------------------------------
 
     if ( .not. USER_do ) return
-    
+
     ! Apply the boundary condition at y=+Ly and y=-Ly
 
-    if ( .NOT. PRC_HAS_N ) then     
+    if ( .NOT. PRC_HAS_N ) then
        MOMY(:,:,JE)   = 0.0_RP
        do j = 1, JHALO
           MOMY(:,:,JE+j  ) = - MOMY(:,:,JE-j  )
           DENS(:,:,JE+j) =  2.0_RP*DENS_bc(:,:,2) - DENS(:,:,JE-j+1)
-          MOMX(:,:,JE+j) = - MOMX(:,:,JE-j+1)          
+          MOMX(:,:,JE+j) = - MOMX(:,:,JE-j+1)
           MOMZ(:,:,JE+j) = - MOMZ(:,:,JE-j+1)
           RHOT(:,:,JE+j) = 2.0_RP*RHOT_bc(:,:,2) - RHOT(:,:,JE-j+1)
        enddo
     end if
 
-    if ( .NOT. PRC_HAS_S ) then     
+    if ( .NOT. PRC_HAS_S ) then
        MOMY(:,:,JS-1) = 0.0_RP
        do j = 1, JHALO
           if ( j < JHALO ) MOMY(:,:,JS-j-1) = - MOMY(:,:,JS+j-1)
           DENS(:,:,JS-j) = 2.0_RP*DENS_bc(:,:,1) - DENS(:,:,JS+j-1)
-          MOMX(:,:,JS-j) = - MOMX(:,:,JS+j-1)          
+          MOMX(:,:,JS-j) = - MOMX(:,:,JS+j-1)
           MOMZ(:,:,JS-j) = - MOMZ(:,:,JS+j-1)
           RHOT(:,:,JS-j) = 2.0_RP*RHOT_bc(:,:,1) - RHOT(:,:,JS+j-1)
        enddo
     end if
-    
+
     return
   end subroutine USER_update
 

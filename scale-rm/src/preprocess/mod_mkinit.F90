@@ -363,11 +363,11 @@ contains
 
     if ( MKINIT_TYPE == I_IGNORE ) then
       LOG_NEWLINE
-      LOG_INFO("MKINIT",*) 'SKIP  MAKING INITIAL DATA ++++++'
+      LOG_PROGRESS(*) 'skip  making initial data'
       output = .false.
     else
       LOG_NEWLINE
-      LOG_INFO("MKINI",*) 'START MAKING INITIAL DATA ++++++'
+      LOG_PROGRESS(*) 'start making initial data'
 
       !--- Initialize variables
       pres(:,:,:) = CONST_UNDEF8
@@ -501,7 +501,7 @@ contains
 
       call PROF_rapend  ('_MkInit_main',3)
 
-      LOG_INFO("MKINI",*) 'END   MAKING INITIAL  DATA ++++++'
+      LOG_PROGRESS(*) 'end   making initial data'
 
       output = .true.
 
@@ -1358,7 +1358,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit Horiz_UNIFORM] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_planestate",*) 'Setup initial state'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -1526,7 +1526,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit TRACERBUBBLE] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_tracerbubble",*) 'Setup initial state'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -1631,7 +1631,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit COLDBUBBLE] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_coldbubble",*) 'Setup initial state'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -1712,7 +1712,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit LAMBWAVE] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_lambwave",*) 'Setup initial state'
 
     SFC_PRES  = Pstd
 
@@ -1778,7 +1778,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit GRAVITYWAVE] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_gravitywave",*) 'Setup initial state'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -1864,7 +1864,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit KHWAVE] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_khwave",*) 'Setup initial state'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -1971,7 +1971,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit TURBULENCE] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_turbulence",*) 'Setup initial state'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -2107,7 +2107,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit CAVITYFLOW] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_cavityflow",*) 'Setup initial state'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -2180,7 +2180,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit MOUNTAINWAVE] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_mountainwave",*) 'Setup initial state'
 
     SFC_THETA = THETAstd
     SFC_PRES  = Pstd
@@ -2319,8 +2319,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit BAROCWAVE] / Categ[preprocess] / Origin[SCALE-RM]'
-
+    LOG_INFO("MKINIT_barocwave",*) 'Setup initial state'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -2479,7 +2478,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit WARMBUBBLE] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_warmbubble",*) 'Setup initial state'
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        LOG_ERROR("MKINIT_warmbubble",*) 'QV is not registered'
@@ -2593,7 +2592,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit SUPERCELL] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_supercell",*) 'Setup initial state'
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        LOG_ERROR("MKINIT_supercell",*) 'QV is not registered'
@@ -2662,7 +2661,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit SQUALLLINE] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_squallline",*) 'Setup initial state'
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        LOG_ERROR("MKINIT_squallline",*) 'QV is not registered'
@@ -2741,7 +2740,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit WK1982] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_wk1982",*) 'Setup initial state'
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        LOG_ERROR("MKINIT_wk1982",*) 'QV is not registered'
@@ -2895,7 +2894,7 @@ contains
     pi2 = atan(1.0_RP) * 2.0_RP ! pi/2
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit DYCOMS2RF01] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_DYCOMS2_RF01",*) 'Setup initial state'
 
     rewind(IO_FID_CONF)
 
@@ -3120,7 +3119,7 @@ contains
 
     pi2 = atan(1.0_RP) * 2.0_RP  ! pi/2
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit DYCOMS2RF02] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_DYCOMS2_RF02",*) 'Setup initial state'
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        LOG_ERROR("MKINIT_DYCOMS2_RF02",*) 'QV is not registered'
@@ -3342,7 +3341,7 @@ contains
     pi2 = atan(1.0_RP) * 2.0_RP  ! pi/2
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit DYCOMS2RF02_DNS] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_DYCOMS2_RF02_DNS",*) 'Setup initial state'
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        LOG_ERROR("MKINIT_DYCOMS2_RF02_DNS",*) 'QV is not registered'
@@ -3543,7 +3542,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit RICO] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_RICO",*) 'Setup initial state'
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        LOG_ERROR("MKINIT_RICO",*) 'QV is not registered'
@@ -3741,7 +3740,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit BOMEX] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_BOMEX",*) 'Setup initial state'
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        LOG_ERROR("MKINIT_BOMEX",*) 'QV is not registered'
@@ -3928,7 +3927,7 @@ contains
     implicit none
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit OceanCouple] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_oceancouple",*) 'Setup initial state'
 
     call flux_setup
 
@@ -3943,7 +3942,7 @@ contains
     implicit none
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit LandCouple] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_landcouple",*) 'Setup initial state'
 
     call flux_setup
 
@@ -3958,7 +3957,7 @@ contains
     implicit none
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit UrbanCouple] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_urbancouple",*) 'Setup initial state'
 
     call flux_setup
 
@@ -3989,7 +3988,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit SEABREEZE] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_seabreeze",*) 'Setup initial state'
 
     LAND_SIZE = 0.0_RP
 
@@ -4044,7 +4043,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit HEATISLAND] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_heatisland",*) 'Setup initial state'
 
     call flux_setup
 
@@ -4103,7 +4102,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit GRAYZONE] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_grayzone",*) 'Setup initial state'
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        LOG_ERROR("MKINIT_grayzone",*) 'QV is not registered'
@@ -4244,8 +4243,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_AE_TYPE /= 'KAJINO13' ) then
-       LOG_INFO("MKINIT_boxaero",*) '+++ For [Box model of aerosol],'
-       LOG_INFO("MKINIT_boxaero",*) '+++ ATMOS_PHY_AE_TYPE should be KAJINO13. Stop!'
+       LOG_INFO("MKINIT_boxaero",*) 'For [Box model of aerosol],'
+       LOG_INFO("MKINIT_boxaero",*) 'ATMOS_PHY_AE_TYPE should be KAJINO13. Stop! ', trim(ATMOS_PHY_AE_TYPE)
        call PRC_abort
     endif
 
@@ -4255,7 +4254,7 @@ contains
     end if
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit Box model of aerosol] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_boxaero",*) 'Setup initial state'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -4338,7 +4337,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mkinit WARMBUBBLEAERO] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKINIT_warmbubbleaero",*) 'Setup initial state'
 
     if ( ATMOS_HYDROMETEOR_dry ) then
        LOG_ERROR("MKINIT_warmbubbleaero",*) 'QV is not registerd'

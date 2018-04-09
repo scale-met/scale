@@ -291,8 +291,8 @@ contains
        call LANDUSE_fillhalo( FILL_BND=.false. )
 
     else
-       LOG_INFO("LANDUSE_read",*) 'landuse file is not specified.'
-       LOG_INFO("LANDUSE_read",*) 'Assume all grids are ocean'
+       LOG_INFO_CONT(*) 'landuse file is not specified.'
+       LOG_INFO_CONT(*) 'Assume all grids are ocean'
     endif
 
     return

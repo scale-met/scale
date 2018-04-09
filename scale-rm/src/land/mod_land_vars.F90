@@ -768,17 +768,16 @@ contains
       else
         LOG_NEWLINE
         LOG_INFO("LAND_param_read",*) 'Properties for each plant functional type (PFT)'
-        LOG_INFO_CONT('(12(1x,A))') '', &
-                                                  '                     description', &
-                                                  'Max Stg.', &
-                                                  'CRT Stg.', &
-                                                  'Stm.Res.', &
-                                                  'T condu.', &
-                                                  'H capac.', &
-                                                  'DFC Wat.', &
-                                                  '   Z0(m)', &
-                                                  '   Z0(h)', &
-                                                  '   Z0(e)'
+        LOG_INFO_CONT('(10(1x,A))') '                         PFT DESCRIPTION', &
+                                    'Max Stg', &
+                                    'CRT Stg', &
+                                    'Stm.Res', &
+                                    'T condu', &
+                                    'H capac', &
+                                    'DFC Wat', &
+                                    ' Z0(m)',   &
+                                    ' Z0(h)',   &
+                                    ' Z0(e)'
 
         !--- read namelist
         rewind(IO_FID_LAND_PROPERTY)
@@ -820,8 +819,8 @@ contains
            LAND_PROPERTY_table(index,I_Z0H          ) = Z0H
            LAND_PROPERTY_table(index,I_Z0E          ) = Z0E
 
-           LOG_INFO_CONT('(1x,A10,I3.3,1x,A32,4(1x,F6.3),2(1x,ES8.1),3(1x,F6.3))') &
-                                         'IDX = ', index, &
+           LOG_INFO_CONT('(1x,A4,I3.3,1x,A32,4(1x,F7.3),2(1x,ES7.1),3(1x,F6.3))') &
+                                         'IDX=', index, &
                                          trim(description), &
                                          STRGMAX, &
                                          STRGCRT, &

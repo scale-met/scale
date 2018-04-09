@@ -116,7 +116,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("USER_tracer_setup",*) '+++ Module[USER]/Categ[MAIN]'
+    LOG_INFO("USER_tracer_setup",*) 'Setup'
     LOG_INFO("USER_tracer_setup",*) '+++ GABLS2 SCM experiment'
 
     !--- read namelist

@@ -172,10 +172,10 @@ contains
 
     if ( CNVLANDUSE_DoNothing ) then
        LOG_NEWLINE
-       LOG_INFO("CNVLANDUSE",*) 'SKIP  CONVERT LANDUSE DATA ++++++'
+       LOG_PROGRESS(*) 'skip  convert landuse data'
     else
        LOG_NEWLINE
-       LOG_INFO("CNVLANDUSE",*) 'START CONVERT LANDUSE DATA ++++++'
+       LOG_PROGRESS(*) 'start convert landuse data'
 
        if ( CNVLANDUSE_UseGLCCv2 ) then
           call CNVLANDUSE_GLCCv2
@@ -193,7 +193,7 @@ contains
        call LANDUSE_calc_fact
        call LANDUSE_fillhalo( FILL_BND=.true. )
 
-       LOG_INFO("CNVLANDUSE",*) 'END   CONVERT LANDUSE DATA ++++++'
+       LOG_PROGRESS(*) 'end   convert landuse data'
 
        ! output landuse file
        call LANDUSE_write
@@ -314,7 +314,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("CNVLANDUSE_GLCCv2",*) '+++ Module[GLCCv2]/Categ[CNVLANDUSE]'
+    LOG_INFO("CNVLANDUSE_GLCCv2",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -360,17 +360,17 @@ contains
     allocate( TILE_LATH   (0:isize)     )
     allocate( TILE_LONH   (0:isize)     )
 
-    LOG_INFO("CNVLANDUSE_GLCCv2",*) 'Oversampling orig = ', isize_orig, ', use = ', isize
+    LOG_INFO_CONT(*) 'Oversampling orig = ', isize_orig, ', use = ', isize
 
     TILE_DLAT_orig = 30.0_RP / 60.0_RP / 60.0_RP * D2R
     TILE_DLON_orig = 30.0_RP / 60.0_RP / 60.0_RP * D2R
-    LOG_INFO("CNVLANDUSE_GLCCv2",*) 'TILE_DLAT       :', TILE_DLAT_orig/D2R
-    LOG_INFO("CNVLANDUSE_GLCCv2",*) 'TILE_DLON       :', TILE_DLON_orig/D2R
+    LOG_INFO_CONT(*) 'TILE_DLAT       :', TILE_DLAT_orig/D2R
+    LOG_INFO_CONT(*) 'TILE_DLON       :', TILE_DLON_orig/D2R
 
     TILE_DLAT = TILE_DLAT_orig / ios
     TILE_DLON = TILE_DLON_orig / ios
-    LOG_INFO("CNVLANDUSE_GLCCv2",*) 'TILE_DLAT (OS)  :', TILE_DLAT/D2R
-    LOG_INFO("CNVLANDUSE_GLCCv2",*) 'TILE_DLON (OS)  :', TILE_DLON/D2R
+    LOG_INFO_CONT(*) 'TILE_DLAT (OS)  :', TILE_DLAT/D2R
+    LOG_INFO_CONT(*) 'TILE_DLON (OS)  :', TILE_DLON/D2R
 
     !---< READ from external files >---
 
@@ -378,7 +378,7 @@ contains
     fname = trim(GLCCv2_IN_DIR)//'/'//trim(GLCCv2_IN_CATALOGUE)
 
     LOG_NEWLINE
-    LOG_INFO("CNVLANDUSE_GLCCv2",*) '+ Input catalogue file:', trim(fname)
+    LOG_INFO("CNVLANDUSE_GLCCv2",*) 'Input catalogue file:', trim(fname)
 
     fid = IO_get_available_fid()
     open( fid,                  &
@@ -448,7 +448,7 @@ contains
           fname = trim(GLCCv2_IN_DIR)//'/'//trim(TILE_fname(t))
 
           LOG_NEWLINE
-          LOG_INFO("CNVLANDUSE_GLCCv2",*) '+ Input data file :', trim(fname)
+          LOG_INFO("CNVLANDUSE_GLCCv2",*) 'Input data file :', trim(fname)
           LOG_INFO_CONT(*) 'Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
           LOG_INFO_CONT(*) '       (LON)    :', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
           if ( check_IDL ) then
@@ -787,7 +787,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("CNVLANDUSE_LU100M",*) '+++ Module[LU100M]/Categ[CNVLANDUSE]'
+    LOG_INFO("CNVLANDUSE_LU100M",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -833,17 +833,17 @@ contains
     allocate( TILE_LATH   (0:isize)     )
     allocate( TILE_LONH   (0:isize)     )
 
-    LOG_INFO("CNVLANDUSE_LU100M",*) 'Oversampling orig = ', isize_orig, ', use = ', isize
+    LOG_INFO_CONT(*) 'Oversampling orig = ', isize_orig, ', use = ', isize
 
     TILE_DLAT_orig = 5.0_RP / 60.0_RP / 100.0_RP * D2R
     TILE_DLON_orig = 7.5_RP / 60.0_RP / 100.0_RP * D2R
-    LOG_INFO("CNVLANDUSE_LU100M",*) 'TILE_DLAT       :', TILE_DLAT_orig/D2R
-    LOG_INFO("CNVLANDUSE_LU100M",*) 'TILE_DLON       :', TILE_DLON_orig/D2R
+    LOG_INFO_CONT(*) 'TILE_DLAT       :', TILE_DLAT_orig/D2R
+    LOG_INFO_CONT(*) 'TILE_DLON       :', TILE_DLON_orig/D2R
 
     TILE_DLAT = TILE_DLAT_orig / ios
     TILE_DLON = TILE_DLON_orig / ios
-    LOG_INFO("CNVLANDUSE_LU100M",*) 'TILE_DLAT (OS)  :', TILE_DLAT/D2R
-    LOG_INFO("CNVLANDUSE_LU100M",*) 'TILE_DLON (OS)  :', TILE_DLON/D2R
+    LOG_INFO_CONT(*) 'TILE_DLAT (OS)  :', TILE_DLAT/D2R
+    LOG_INFO_CONT(*) 'TILE_DLON (OS)  :', TILE_DLON/D2R
 
     !---< READ from external files >---
 
@@ -851,7 +851,7 @@ contains
     fname = trim(LU100M_IN_DIR)//'/'//trim(LU100M_IN_CATALOGUE)
 
     LOG_NEWLINE
-    LOG_INFO("CNVLANDUSE_LU100M",*) '+ Input catalogue file:', trim(fname)
+    LOG_INFO("CNVLANDUSE_LU100M",*) 'Input catalogue file:', trim(fname)
 
     fid = IO_get_available_fid()
     open( fid,                  &
@@ -921,7 +921,7 @@ contains
           fname = trim(LU100M_IN_DIR)//'/'//trim(TILE_fname(t))
 
           LOG_NEWLINE
-          LOG_INFO("CNVLANDUSE_LU100M",*) '+++ Input data file :', trim(fname)
+          LOG_INFO("CNVLANDUSE_LU100M",*) 'Input data file :', trim(fname)
           LOG_INFO_CONT(*) 'Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
           LOG_INFO_CONT(*) '       (LON)    :', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
           if ( check_IDL ) then

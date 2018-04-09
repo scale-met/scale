@@ -437,7 +437,7 @@ contains
              do nn = 1, nvars_req
                 if ( varname_file(n) == vars(nn) ) then
                    if ( exist(nn) ) then
-                      LOG_INFO("SNO_file_getinfo",*) 'xxx [SNO_file_getinfo] variable ', trim(vars(nn)), &
+                      LOG_ERROR("SNO_file_getinfo",*) 'variable ', trim(vars(nn)), &
                                                      ' is requested two times. check namelist!'
                       call PRC_abort
                    endif
@@ -454,10 +454,10 @@ contains
 
     if ( nvars_req > 0 .AND. nvars /= nvars_req ) then
        LOG_NEWLINE
-       LOG_INFO("SNO_file_getinfo",*) 'xxx [SNO_file_getinfo] some requested variables are missing.', nvars, nvars_req
-       LOG_INFO("SNO_file_getinfo",*) 'xxx nvars = ', nvars, ', nvars_req = ', nvars_req
+       LOG_ERROR("SNO_file_getinfo",*) 'some requested variables are missing.', nvars, nvars_req
+       LOG_ERROR_CONT("SNO_file_getinfo",*) 'nvars = ', nvars, ', nvars_req = ', nvars_req
        do nn = 1, nvars_req
-          LOG_INFO("SNO_file_getinfo",*) 'xxx check:', exist(nn), ', name: ', trim(vars(nn))
+          LOG_ERROR_CONT("SNO_file_getinfo",*) 'check:', exist(nn), ', name: ', trim(vars(nn))
        enddo
        call PRC_abort
     endif

@@ -161,7 +161,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mktopo FLAT] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKTOPO_flat",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -213,7 +213,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mktopo BELLSHAPE] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKTOPO_bellshape",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -279,7 +279,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[mktopo SCHEAR] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("MKTOPO_schaer",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

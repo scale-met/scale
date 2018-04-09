@@ -75,8 +75,8 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("USER_setup",*) '+++ Module[USER]/Categ[MAIN]'
-    LOG_INFO("USER_setup",*) '+++ Rosby wave experiment'
+    LOG_INFO("USER_setup",*) 'Setup'
+    LOG_INFO("USER_setup",*) 'Rosby wave experiment'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -157,10 +157,10 @@ contains
 
     if( IO_L ) then
        LOG_NEWLINE
-       LOG_INFO("USER_mkinit",*) '+++ Rossby wave experiment on a beta-plane'
-       LOG_INFO("USER_mkinit",*) '+++ Wave number [x-direction]: ', wn_k
-       LOG_INFO("USER_mkinit",*) '+++ Wave number [y-direction]: ', wn_l
-       LOG_INFO("USER_mkinit",*) '+++ Phase speed [x-direction]: ', c
+       LOG_INFO("USER_mkinit",*) 'Rossby wave experiment on a beta-plane'
+       LOG_INFO("USER_mkinit",*) 'Wave number [x-direction]: ', wn_k
+       LOG_INFO("USER_mkinit",*) 'Wave number [y-direction]: ', wn_l
+       LOG_INFO("USER_mkinit",*) 'Phase speed [x-direction]: ', c
     end if
 
     ! initial profile

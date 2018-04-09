@@ -117,8 +117,6 @@ contains
     integer :: fid
     integer :: i, k
 
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[AtmosOpenSCALE]'
-
     do i = 1, size( NEST_TILE_ID(:) )
        ! read data from split files
        rank = NEST_TILE_ID(i)
@@ -311,7 +309,7 @@ contains
              qtrc_org(1,xs:xe,ys:ye,iq) = qtrc_org(3,xs:xe,ys:ye,iq)
           enddo
 
-       else 
+       else
 
           call FILE_read( fid, "QV", read3D(:,:,:), step=it, allow_missing=.true. )
 !OCL XFILL
@@ -522,8 +520,6 @@ contains
     integer :: ys, ye
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[LandInputSCALE]'
-
     do i = 1, size( NEST_TILE_ID(:) )
        ! read data from split files
        rank = NEST_TILE_ID(i)
@@ -631,8 +627,6 @@ contains
     integer :: fid
     integer :: i, k
 
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[OceanOpenSCALE]'
-
     do i = 1, size( NEST_TILE_ID(:) )
        ! read data from split files
        rank = NEST_TILE_ID(i)
@@ -696,8 +690,6 @@ contains
     integer :: xs, xe
     integer :: ys, ye
     !---------------------------------------------------------------------------
-
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[OceanInputSCALE]'
 
     do i = 1, size( NEST_TILE_ID(:) )
        ! read data from split files

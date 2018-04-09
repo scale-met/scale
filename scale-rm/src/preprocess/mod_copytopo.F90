@@ -90,7 +90,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[COPYTOPO]/Categ[COPYTOPO]'
+    LOG_INFO("COPYTOPO",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)

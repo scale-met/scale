@@ -47,7 +47,7 @@ module scale_stdio
   character(len=H_MID),  public            :: H_APPNAME                     !< name of the application
   character(len=H_MID),  public            :: H_LIBNAME                     !< name and version of the library
   character(len=H_MID),  public            :: H_SOURCE                      !< for file header
-  character(len=H_MID),  public            :: H_INSTITUTE = 'AICS/RIKEN'    !< for file header
+  character(len=H_MID),  public            :: H_INSTITUTE = 'RIKEN'         !< for file header
 
   character(len=9),      public, parameter :: IO_NULLFILE   = "/dev/null"
   character(len=6),      public, parameter :: IO_STDOUT     = "STDOUT"
@@ -265,7 +265,7 @@ contains
 
     if ( IO_NML_FILENAME /= '' ) then
        LOG_INFO("IO_LOG_setup",*) 'The used configurations are output to the file.'
-       LOG_INFO_CONT('(2A)') 'filename of used config file   = ', trim(IO_NML_FILENAME)
+       LOG_INFO("IO_LOG_setup",*) 'filename of used config file   = ', trim(IO_NML_FILENAME)
 
        if ( is_master ) then ! write from master node only
           IO_NML     = .true. ! force on

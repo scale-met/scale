@@ -301,7 +301,7 @@ contains
     LOG_INFO("ATMOS_PHY_MP_suzuki10_tracer_setup",*) 'Tracers setup for Suzuki (2010) Spectral BIN model'
 
     LOG_NEWLINE
-    LOG_INFO("ATMOS_PHY_MP_suzuki10_tracer_setup",*) '+++ READ BIN NUMBER'
+    LOG_INFO("ATMOS_PHY_MP_suzuki10_tracer_setup",*) 'READ BIN NUMBER'
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_BIN,iostat=ierr)

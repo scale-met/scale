@@ -81,7 +81,8 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("USER_setup",*) '+++ Module[USER]/Categ[MAIN]'
+    LOG_INFO("USER_setup",*) 'Setup'
+    LOG_INFO("USER_setup",*) 'User procedure in test/case/cavity/Ghia82'
 
     !--- read namelist
     rewind(IO_FID_CONF)

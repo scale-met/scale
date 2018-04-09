@@ -411,7 +411,7 @@ contains
     ! Stop MPI
     if ( PRC_mpi_alive ) then
        LOG_NEWLINE
-       LOG_INFO("PRC_MPIfinish",*) '++++++ Finalize MPI...'
+       LOG_PROGRESS(*) 'finalize MPI...'
 
        ! free splitted communicator
        if ( PRC_LOCAL_COMM_WORLD  /= PRC_GLOBAL_COMM_WORLD ) then
@@ -421,7 +421,7 @@ contains
        call MPI_Barrier(PRC_UNIVERSAL_COMM_WORLD,ierr)
 
        call MPI_Finalize(ierr)
-       LOG_INFO("PRC_MPIfinish",*) '++++++ MPI is peacefully finalized'
+       LOG_PROGRESS(*) 'MPI is peacefully finalized'
     endif
 
     ! Close logfile, configfile
@@ -548,7 +548,7 @@ contains
        do_create_c(:) = .false.
        if ( .NOT. bulk_split ) then
           if ( PRC_UNIVERSAL_IsMaster ) write(*,*)
-          if ( PRC_UNIVERSAL_IsMaster ) write(*,*) "INFO [PRC_MPIsplit] Inter-domain relationship information ***"
+          if ( PRC_UNIVERSAL_IsMaster ) write(*,*) "INFO [PRC_MPIsplit] Inter-domain relationship information"
           do i = 1, NUM_DOMAIN-1
              if ( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I2.2)')  "Relationship No. ", i
              if ( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,2(A,I2))') "Parent color = ", PARENT_COL(i), &
@@ -758,7 +758,7 @@ contains
        enddo
 
        if( PRC_UNIVERSAL_IsMaster ) write(*,*)
-       if( PRC_UNIVERSAL_IsMaster ) write(*,*) 'INFO [PRC_MPIcoloring] Domain information (with reordering) ***'
+       if( PRC_UNIVERSAL_IsMaster ) write(*,*) 'INFO [PRC_MPIcoloring] Domain information (with reordering)'
        do i = 1, NUM_DOMAIN
           if( PRC_UNIVERSAL_IsMaster ) write(*,*)
           if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,2(A,I2.2))') "Order No. ",i," -> Domain No. ", ORDER2DOM(i)
@@ -995,17 +995,16 @@ contains
     if ( PRC_mpi_alive ) then
           ! flush 1kbyte
        if ( IO_L ) then
-          write(IO_FID_LOG,'(32A32)') '                                '
-          write(IO_FID_LOG,*) '++++++ Abort MPI'
-          write(IO_FID_LOG,*) ''
+          LOG_PROGRESS(*) 'abort MPI'
+          flush(IO_FID_LOG)
        endif
 
        if ( PRC_IsMaster ) then
-          write(*,*) '++++++ BULK   ID       : ', PRC_UNIVERSAL_jobID
-          write(*,*) '++++++ DOMAIN ID       : ', PRC_GLOBAL_domainID
-          write(*,*) '++++++ MASTER LOCATION : ', PRC_UNIVERSAL_myrank,'/',PRC_UNIVERSAL_nprocs
-          write(*,*) '++++++ GLOBAL LOCATION : ', PRC_GLOBAL_myrank,'/',PRC_GLOBAL_nprocs
-          write(*,*) '++++++ LOCAL  LOCATION : ', PRC_myrank,'/',PRC_nprocs
+          write(*,*) '+++++ BULK   ID       : ', PRC_UNIVERSAL_jobID
+          write(*,*) '+++++ DOMAIN ID       : ', PRC_GLOBAL_domainID
+          write(*,*) '+++++ MASTER LOCATION : ', PRC_UNIVERSAL_myrank,'/',PRC_UNIVERSAL_nprocs
+          write(*,*) '+++++ GLOBAL LOCATION : ', PRC_GLOBAL_myrank,'/',PRC_GLOBAL_nprocs
+          write(*,*) '+++++ LOCAL  LOCATION : ', PRC_myrank,'/',PRC_nprocs
           write(*,*) ''
        endif
 
@@ -1013,16 +1012,16 @@ contains
           ! do nothing
        elseif( errcode <= MPI_ERR_LASTCODE ) then
           call MPI_ERROR_STRING(errcode, msg, len, ierr)
-          if( IO_L ) write(IO_FID_LOG,*) '++++++ ', errcode, trim(msg)
-          write(*,*)                     '++++++ ', errcode, trim(msg)
+          if( IO_L ) write(IO_FID_LOG,*) '+++++ ', errcode, trim(msg)
+          write(*,*)                     '+++++ ', errcode, trim(msg)
        else
-          if( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected error code', errcode
-          write(*,*)                     '++++++ Unexpected error code', errcode
+          if( IO_L ) write(IO_FID_LOG,*) '+++++ Unexpected error code', errcode
+          write(*,*)                     '+++++ Unexpected error code', errcode
        endif
 
        if ( comm /= PRC_ABORT_COMM_WORLD ) then
-          if( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected communicator'
-          write(*,*)                     '++++++ Unexpected communicator'
+          if( IO_L ) write(IO_FID_LOG,*) '+++++ Unexpected communicator'
+          write(*,*)                     '+++++ Unexpected communicator'
        endif
        if( IO_L ) write(IO_FID_LOG,*) ''
        write(*,*)                     ''

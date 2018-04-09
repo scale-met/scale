@@ -156,16 +156,16 @@ contains
 
     if ( CNV2D_DoNothing ) then
        LOG_NEWLINE
-       LOG_INFO("CNV2D",*) 'SKIP  CONVERT TOPOGRAPHY DATA ++++++'
+       LOG_PROGRESS(*) 'skip  convert topography data'
     else
        LOG_NEWLINE
-       LOG_INFO("CNV2D",*) 'START CONVERT TOPOGRAPHY DATA ++++++'
+       LOG_PROGRESS(*) 'start convert topography data'
 
        if ( CNV2D_UseGrADS ) then
           call CNV2D_GrADS
        endif
 
-       LOG_INFO("CNV2D",*) 'END   CONVERT TOPOGRAPHY DATA ++++++'
+       LOG_PROGRESS(*) 'end   convert topography data'
     endif
 
     return
@@ -252,7 +252,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[convert 2D GrADS] / Categ[preprocess] / Origin[SCALE-RM]'
+    LOG_INFO("CNV2D_GrADS",*) 'Setup'
 
     GrADS_MISSINGVAL = UNDEF
 

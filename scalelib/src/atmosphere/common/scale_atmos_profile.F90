@@ -184,9 +184,6 @@ contains
     integer  :: k, i, j, n
     !---------------------------------------------------------------------------
 
-    LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[PROFILE] / Categ[ATMOS] / Origin[SCALElib]'
-
     gmr   = GRAV / Rdry
     RovCP = Rdry / CPdry
 
@@ -213,7 +210,8 @@ contains
     enddo
 
     LOG_NEWLINE
-    LOG_INFO("ATMOS_PROFILE_isa_3D",*) '###### ICAO International Standard Atmosphere ######'
+    LOG_INFO("ATMOS_PROFILE_isa_3D",*) 'ICAO International Standard Atmosphere'
+    LOG_INFO_CONT(*) '####################################################'
     LOG_INFO_CONT(*) '      height:  lapse rate:    pressure: temperature'
     do n = 1, nref
        LOG_INFO_CONT('(4F13.5)') z_isa(n), GAMMA(n), pres_isa(n,IS,JS), temp_isa(n,IS,JS)

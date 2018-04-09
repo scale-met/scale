@@ -131,8 +131,6 @@ contains
     integer :: fid
     integer :: k, i, j
 
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[AtmosOpenNICAM]'
-
     basename = "ms_pres"//trim(basename_num)
     call FILE_open( basename, fid, single=.true., postfix="" )
 
@@ -219,8 +217,6 @@ contains
 
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
-
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[AtmosInputNICAM]'
 
     basename = "ms_u"//trim(basename_num)
     call FILE_read( basename, "ms_u", read3D(:,:,:), step=it, rankid=myrank, single=.true., postfix="" )
@@ -403,8 +399,6 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[LandInputNICAM]'
-
     basename = "la_tg"//trim(basename_num)
     call FILE_Read( basename, "lev", lz_org(:), single=.true., postfix="" )
 
@@ -523,8 +517,6 @@ contains
 
     integer :: k, i, j
 
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[OceanOpenNICAM]'
-
     basename = "oa_sst"//trim(basename_num)
     call FILE_read( basename, "lon", read1DX(:), single=.true., postfix="" )
     do j = 1, odims(2)
@@ -571,9 +563,6 @@ contains
 
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
-
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[OceanInputNICAM]'
-
 
     basename = "oa_sst"//trim(basename_num)
     call FILE_read( basename, "oa_sst", sst_org(:,:), step=1, rankid=myrank, single=.true., postfix="" )

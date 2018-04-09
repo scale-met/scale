@@ -68,8 +68,8 @@ module mod_realinput_grads
   integer,  parameter   :: Ia_dens   = 4
   integer,  parameter   :: Ia_u      = 5
   integer,  parameter   :: Ia_v      = 6
-  integer,  parameter   :: Ia_w      = 7 
-  integer,  parameter   :: Ia_t      = 8 
+  integer,  parameter   :: Ia_w      = 7
+  integer,  parameter   :: Ia_t      = 8
   integer,  parameter   :: Ia_hgt    = 9  ! Geopotential height (m)
   integer,  parameter   :: Ia_qv     = 10
   integer,  parameter   :: Ia_qc     = 11
@@ -203,7 +203,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    LOG_INFO("ParentAtmosSetupGrADS",*) '+++ Real Case/Atmos Input File Type: GrADS format'
+    LOG_NEWLINE
+    LOG_INFO("ParentAtmosSetupGrADS",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -339,8 +340,6 @@ contains
   subroutine ParentAtmosOpenGrADS
     implicit none
 
-    LOG_INFO("ParentAtmosOpenGrADS",*) '+++ ScaleLib/IO[realinput]/Categ[AtmosOpenGrADS]'
-
     return
   end subroutine ParentAtmosOpenGrADS
 
@@ -415,8 +414,6 @@ contains
 
     logical  :: pressure_coordinates
     !---------------------------------------------------------------------------
-
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[AtmosInputGrADS]'
 
     dens_org(:,:,:)   = UNDEF ! read data or set data by build-rho-3D
     velz_org(:,:,:)   = 0.0_RP
@@ -971,7 +968,7 @@ contains
              k = lm_layer(i,j)
              dz = cz_org(k,i,j) - cz_org(2,i,j)
              dens_org(2,i,j) = ( pres_org(k,i,j) - pres_org(2,i,j) ) * 2.0_RP / ( GRAV * dz ) &
-                             - dens_org(k,i,j) 
+                             - dens_org(k,i,j)
              temp_org(2,i,j) = pres_org(2,i,j) / ( Rdry * dens_org(2,i,j) )
           end do
           end do
@@ -1268,9 +1265,6 @@ contains
     integer :: ierr
 
     !---------------------------------------------------------------------------
-
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[LandInputGrADS]'
-
 
     loop_InputLandGrADS : do ielem = 1, num_item_list_land
 
@@ -1688,8 +1682,6 @@ contains
   subroutine ParentOceanOpenGrADS
     implicit none
 
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[OceanOpenGrADS]'
-
     return
   end subroutine ParentOceanOpenGrADS
 
@@ -1730,9 +1722,6 @@ contains
     integer :: ierr
 
     !---------------------------------------------------------------------------
-
-    LOG_PROGRESS(*) 'ScaleLib/IO[realinput]/Categ[OceanInputGrADS]'
-
 
     loop_InputOceanGrADS : do ielem = 1, num_item_list_ocean
 

@@ -215,7 +215,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[RealCaseAtmos]/Categ[MKINIT]'
+    LOG_INFO('REALINPUT_atmos',*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -254,6 +254,7 @@ contains
        NUMBER_OF_TSTEPS = timelen ! read from file
     endif
 
+    LOG_NEWLINE
     LOG_INFO("REALINPUT_atmos",*) 'Number of temporal data in each file : ', NUMBER_OF_TSTEPS
 
     do ifile = 1, NUMBER_OF_FILES
@@ -272,6 +273,7 @@ contains
           endif
        endif
 
+       LOG_NEWLINE
        LOG_INFO("REALINPUT_atmos",*) 'read external data from : ', trim(basename_mod)
 
        call ParentAtmosOpen( FILETYPE_ORG, & ![IN]
@@ -284,15 +286,15 @@ contains
           t    = tall - NUMBER_OF_SKIP_TSTEPS         ! time step (output)
 
           if ( t <= 0 ) then
-             LOG_INFO_CONT('(1x,A,I4,A,I5,A,I6,A)') &
-                        '[file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
+             LOG_PROGRESS('(1x,A,I4,A,I5,A,I6,A)') &
+                          '[file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
              cycle
           endif
 
           if ( t == 1 .OR. BASENAME_BOUNDARY /= '' ) then
 
-             LOG_INFO_CONT('(1x,A,I4,A,I5,A,I6,A)') &
-                        '[file,step,cons.] = [', ifile, ',', istep, ',', tall, ']'
+             LOG_PROGRESS('(1x,A,I4,A,I5,A,I6,A)') &
+                          '[file,step,cons.] = [', ifile, ',', istep, ',', tall, ']'
 
              ! read prepared data
              call ParentAtmosInput( FILETYPE_ORG,     & ! [IN]
@@ -311,12 +313,13 @@ contains
                                     VELY_in(:,:,:),   & ! [OUT]
                                     POTT_in(:,:,:)    ) ! [OUT]
           else
-             LOG_INFO_CONT('(1x,A,I4,A,I5,A,I6,A)') &
-                        '[file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
+             LOG_PROGRESS('(1x,A,I4,A,I5,A,I6,A)') &
+                          '[file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
           endif
 
           !--- store prognostic variables as initial
           if ( t == 1 ) then
+             LOG_NEWLINE
              LOG_INFO("REALINPUT_atmos",*) 'store initial state.'
 
              do j = 1, JA
@@ -543,8 +546,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[RealCaseSurface]/Categ[MKINIT]'
-
+    LOG_INFO('REALINPUT_surface',*) 'Setup LAND'
 
     ! LAND/URBAN
 
@@ -585,6 +587,9 @@ contains
     end select
 
     serial_land = SERIAL_PROC_READ
+
+    LOG_NEWLINE
+    LOG_INFO('REALINPUT_surface',*) 'Setup OCEAN'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -680,9 +685,9 @@ contains
        endif
 
        LOG_NEWLINE
-       LOG_INFO("REALINPUT_surface",*) '+++ Target File Name (Land) : ', trim(BASENAME_LAND)
-       LOG_INFO("REALINPUT_surface",*) '+++ Target File Name (Ocean): ', trim(BASENAME_OCEAN)
-       LOG_INFO("REALINPUT_surface",*) '    Time Steps in One File  : ', NUMBER_OF_TSTEPS
+       LOG_INFO("REALINPUT_surface",*) 'Target File Name (Land) : ', trim(BASENAME_LAND)
+       LOG_INFO("REALINPUT_surface",*) 'Target File Name (Ocean): ', trim(BASENAME_OCEAN)
+       LOG_INFO("REALINPUT_surface",*) 'Time Steps in One File  : ', NUMBER_OF_TSTEPS
 
        ns = NUMBER_OF_TSTEPS * (n - 1) + 1
        ne = ns + (NUMBER_OF_TSTEPS - 1)
@@ -2066,9 +2071,6 @@ contains
     integer :: n, nn
     !---------------------------------------------------------------------------
 
-    LOG_NEWLINE
-    LOG_PROGRESS(*) 'ScaleLib/IO[RealinputSurface]/Categ[Input]'
-
     first = .true.
 
     if ( first ) then ! read data only once
@@ -2513,9 +2515,6 @@ contains
 
     ts = 1
     te = numsteps
-
-    LOG_NEWLINE
-    LOG_PROGRESS(*) 'ScaleLib/IO[RealinputSurface]/Categ[Boundary]'
 
     nowdate = TIME_NOWDATE
     nowdate(1) = nowdate(1)
@@ -3070,7 +3069,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) '[interp_OceanLand_data]/Categ[realinit]'
+    LOG_INFO("interp_OceanLand_data",*) 'Interpolation'
 
     if ( landdata ) then
        LOG_INFO("interp_OceanLand_data",*) 'target mask : LAND'
@@ -3091,8 +3090,8 @@ contains
     enddo
     enddo
 
-    LOG_INFO("interp_OceanLand_data",'(1x,A,I3.3,A,3I8,A,I8)') 'ite = ', 0, &
-               ', (land,ocean,replaced) = ', num_land, num_ocean, 0, ' / ', nx*ny
+    LOG_PROGRESS('(1x,A,I3.3,A,3I8,A,I8)') 'ite=', 0, &
+                                           ', (land,ocean,replaced) = ', num_land, num_ocean, 0, ' / ', nx*ny
 
     ! start interpolation
     do ite = 1, iter_max
@@ -3140,8 +3139,8 @@ contains
           num_land  = num_land  - num_replaced
           num_ocean = num_ocean + num_replaced
        endif
-       LOG_INFO("interp_OceanLand_data",'(1x,A,I3.3,A,3I8,A,I8)') 'ite = ', ite, &
-                  ', (land,ocean,replaced) = ', num_land, num_ocean, num_replaced, ' / ', nx*ny
+       LOG_PROGRESS('(1x,A,I3.3,A,3I8,A,I8)') 'ite=', ite, &
+                                              ', (land,ocean,replaced) = ', num_land, num_ocean, num_replaced, ' / ', nx*ny
 
        if( num_replaced == 0 ) exit
 

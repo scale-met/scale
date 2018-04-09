@@ -2,7 +2,7 @@
 !> module User
 !!
 !! @par Description
-!!          Calculate the perturbations from background fields in mountain wave test case.  
+!!          Calculate the perturbations from background fields in mountain wave test case.
 !!
 !! @author Team SCALE
 !!
@@ -24,7 +24,7 @@ module mod_user
        DENS, &
        MOMX, &
        RHOT
-  
+
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -55,7 +55,7 @@ module mod_user
 
   real(RP), private, allocatable :: init_U(:,:,:)
   real(RP), private, allocatable :: init_PT(:,:,:)
-  
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -80,7 +80,8 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("USER_setup",*) '+++ Module[USER]/Categ[MAIN]'
+    LOG_INFO("USER_setup",*) 'Setup'
+    LOG_INFO("USER_setup",*) 'User procedure in test/case/mountainwave/Schaer02'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -113,7 +114,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    
+
     ! calculate diagnostic value and input to history buffer
 
     return
@@ -147,14 +148,14 @@ contains
           allocate( init_PT(KA,IA,JA) )
           do j = JS, JE
           do i = IS, IE
-          do k = KS, KE    
+          do k = KS, KE
              init_U(k,i,j) = MOMX(k,i,j) * 2.0_RP / (DENS(k,i,j) + DENS(k,i+1,j))
              init_PT(k,i,j) = RHOT(k,i,j)/DENS(k,i,j)
           enddo
           enddo
           enddo
        end if
-       
+
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE

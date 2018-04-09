@@ -105,7 +105,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_PROGRESS(*) 'Module[Turbulence Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
+    LOG_INFO("ATMOS_PHY_TB_smg_config",*) 'Setup'
     LOG_INFO("ATMOS_PHY_TB_smg_config",*) 'Tracers for Smagorinsky-type Eddy Viscocity Model'
 
     if ( TYPE_TB /= 'SMAGORINSKY' ) then
