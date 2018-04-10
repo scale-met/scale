@@ -94,8 +94,8 @@ If the job finishes normally, the following files are generated:
 \end{verbatim}
 The file \verb|init_LOG_d01.pe000000| is a log file.  The following message is output at the end of the file \verb|init_LOG_d01.pe000000|:
 \msgbox{
- ++++++ Finalize MPI...\\
- ++++++ MPI is peacefully finalized\\
+ +++++ finalize MPI...\\
+ +++++ MPI is peacefully finalized\\
 }
 The file sizes of the boundary and initial data, \verb|boundary_d01.pe######.nc| and \\
 \verb|init_d01_20070714-180000.000.pe######.nc|, are approximately 5.8 MB and 3.5 MB, respectively,  where \verb|######| represents the MPI process number.
@@ -113,7 +113,7 @@ If the same figure as Fig. \ref{fig:init} is found, it is successfully concluded
 \begin{figure}[h]
 \begin{center}
   \includegraphics[width=0.9\hsize]{./figure/real_init_qv-momxy.eps}\\
-  \caption{Initial field at z=1500m for the tutorial experiment. 
+  \caption{Initial field at z=1500m for the tutorial experiment.
     The color indicates relative humidity and the vector horizontal momentum flux.}
   \label{fig:init}
 \end{center}
