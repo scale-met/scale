@@ -31,6 +31,7 @@ TIME_DT_HISTORY_3D="3600.0" # unit: SEC only
 
 TIME_DT=(               "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_DYN=(     "45.0"  "15.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_CP=(  "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_MP=(  "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_RD=( "900.0" "300.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_SF=(  "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
@@ -115,7 +116,7 @@ MAPPROJECTION_LC_LAT2="40.0"
 #################################################
 
 ATMOS_DYN_TYPE=(    "HEVI"        "HEVI"        ) # required parameters for each domain
-ATMOS_PHY_CP_TYPE=( "NONE"        "NONE"        ) # required parameters for each domain
+ATMOS_PHY_CP_TYPE=( "KF"          "KF"          ) # required parameters for each domain
 ATMOS_PHY_MP_TYPE=( "TOMITA08"    "TOMITA08"    ) # required parameters for each domain
 ATMOS_PHY_RD_TYPE=( "MSTRNX"      "MSTRNX"      ) # required parameters for each domain
 ATMOS_PHY_SF_TYPE=( "COUPLE"      "COUPLE"      ) # required parameters for each domain
