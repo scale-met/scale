@@ -26,7 +26,7 @@ module scale_atmos_phy_mp_suzuki10
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
 
   !-----------------------------------------------------------------------------
@@ -380,7 +380,7 @@ contains
        PI => CONST_PI,       &
        DWATR => CONST_DWATR, &
        DICE => CONST_DICE
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_world,    &
        COMM_datatype
     use scale_atmos_hydrometeor, only: &

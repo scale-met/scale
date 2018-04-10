@@ -21,7 +21,7 @@ module scale_atmos_phy_tb_d1980
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer

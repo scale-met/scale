@@ -120,7 +120,7 @@ contains
 
 
   subroutine test_vars
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
          COMM_vars_init, &
          COMM_vars, &
          COMM_wait
@@ -150,7 +150,7 @@ contains
   subroutine test_vars8
     use scale_prc, only: &
          PRC_myrank
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
          COMM_vars8_init, &
          COMM_vars8, &
          COMM_wait

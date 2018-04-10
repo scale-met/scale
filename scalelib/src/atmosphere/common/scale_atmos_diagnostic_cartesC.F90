@@ -15,7 +15,7 @@ module scale_atmos_diagnostic_cartesC
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
@@ -60,7 +60,7 @@ contains
        W,    &
        U,    &
        V     )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_grid_cartesC_metric, only: &

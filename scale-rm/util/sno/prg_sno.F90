@@ -19,7 +19,7 @@ program sno
   use scale_file, only: &
      FILE_Close_All
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
 
   use scale_prc, only: &

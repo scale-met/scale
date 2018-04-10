@@ -4,7 +4,7 @@ program unit
   use scale_tracer
   use scale_prc_cartesC, only: &
      PRC_CARTESC_setup
-  use scale_comm, only: &
+  use scale_comm_cartesC, only: &
      COMM_setup
   use scale_atmos_grid_cartesC, only: &
      ATMOS_GRID_CARTESC_allocate, &

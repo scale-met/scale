@@ -15,7 +15,7 @@ module mod_user
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
@@ -114,7 +114,7 @@ contains
        RCDY => ATMOS_GRID_CARTESC_RCDY
     use scale_atmos_dyn, only: &
        CORIOLIS
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use mod_atmos_vars, only: &

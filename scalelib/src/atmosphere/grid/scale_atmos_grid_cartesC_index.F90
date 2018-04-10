@@ -15,7 +15,7 @@ module scale_atmos_grid_cartesC_index
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   !-----------------------------------------------------------------------------
   implicit none
   private

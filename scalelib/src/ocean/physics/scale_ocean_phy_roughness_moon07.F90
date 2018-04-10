@@ -18,7 +18,7 @@ module scale_ocean_phy_roughness_moon07
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none

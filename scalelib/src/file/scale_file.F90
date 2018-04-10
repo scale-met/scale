@@ -17,8 +17,9 @@ module scale_file
   !
   !++ Used modules
   !
-  use scale_stdio
   use scale_precision
+  use scale_io
+  use scale_prof
   use scale_file_h
   use scale_prc, only: &
      PRC_abort

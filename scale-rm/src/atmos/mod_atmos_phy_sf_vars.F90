@@ -15,7 +15,7 @@ module mod_atmos_phy_sf_vars
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
@@ -287,7 +287,7 @@ contains
     use scale_const, only: &
        I_SW => CONST_I_SW, &
        I_LW => CONST_I_LW
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none

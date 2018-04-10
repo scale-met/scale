@@ -14,7 +14,7 @@ module mod_copytopo
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
@@ -314,7 +314,7 @@ contains
        alpha )
     use scale_const, only: &
        EPS => CONST_EPS
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -401,7 +401,7 @@ contains
        INTRP_domain_compatibility, &
        INTRP_factor2d,             &
        INTRP_interp2d
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_grid_cartesC_real, only: &

@@ -15,7 +15,7 @@ module mod_user
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
@@ -31,7 +31,7 @@ module mod_user
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
        RCDY => ATMOS_GRID_CARTESC_RCDY
   use mpi
-  use scale_comm, only: &
+  use scale_comm_cartesC, only: &
        COMM_datatype, &
        COMM_world
   use scale_atmos_dyn_fvm_flux, only: &

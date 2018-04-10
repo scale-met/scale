@@ -16,7 +16,7 @@ module scale_calendar
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   !-----------------------------------------------------------------------------
   implicit none
   private

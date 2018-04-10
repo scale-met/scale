@@ -16,7 +16,7 @@ module scale_atmos_dyn_tinteg_large_rk3
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
@@ -109,7 +109,7 @@ contains
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
        CVdry  => CONST_CVdry
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_dyn_common, only: &

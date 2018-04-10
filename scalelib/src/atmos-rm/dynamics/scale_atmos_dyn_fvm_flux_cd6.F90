@@ -19,7 +19,7 @@ module scale_atmos_dyn_fvm_flux_cd6
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index

@@ -15,7 +15,7 @@ module mod_user
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
@@ -255,7 +255,7 @@ contains
   subroutine USER_calc_tendency
     use scale_prc, only: &
        PRC_abort
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_grid_cartesC, only: &

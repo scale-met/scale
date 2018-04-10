@@ -15,7 +15,7 @@ module scale_atmos_dyn_tstep_large_fvm_heve
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
@@ -102,7 +102,7 @@ contains
     use scale_const, only: &
        OHM => CONST_OHM, &
        UNDEF => CONST_UNDEF
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8_init
     implicit none
 
@@ -202,7 +202,7 @@ contains
        Rdry   => CONST_Rdry, &
        CVdry  => CONST_CVdry, &
        CPdry  => CONST_CPdry
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_dyn_common, only: &
@@ -1135,7 +1135,7 @@ contains
     use mpi
     use scale_atmos_grid_cartesC_real, only: &
        vol => ATMOS_GRID_CARTESC_REAL_VOL
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_datatype, &
        COMM_world
     use scale_file_history, only: &

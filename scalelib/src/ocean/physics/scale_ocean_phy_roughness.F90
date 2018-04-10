@@ -15,7 +15,7 @@ module scale_ocean_phy_roughness
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none

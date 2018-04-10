@@ -14,7 +14,7 @@ module scale_land_dyn_bucket
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_debug
   use scale_file_external_input, only: &

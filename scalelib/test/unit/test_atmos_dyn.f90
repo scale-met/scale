@@ -11,9 +11,9 @@ module test_atmos_dyn
      AssertEqual, &
      AssertGreaterThan, &
      AssertLessThan
-  use scale_stdio, only: &
+  use scale_io, only: &
      H_SHORT
-  use scale_comm, only: &
+  use scale_comm_cartesC, only: &
      COMM_vars8, &
      COMM_wait
   use scale_atmos_grid_cartesC, only: &

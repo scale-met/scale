@@ -14,7 +14,7 @@ module scale_atmos_grid_cartesC_real
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
@@ -247,7 +247,7 @@ contains
        ATMOS_GRID_CARTESC_CY, &
        ATMOS_GRID_CARTESC_FX, &
        ATMOS_GRID_CARTESC_FY
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_gather,  &
        COMM_bcast
     use scale_mapprojection, only: &
@@ -573,7 +573,7 @@ contains
        ATMOS_GRID_CARTESC_FDX, &
        ATMOS_GRID_CARTESC_CDY, &
        ATMOS_GRID_CARTESC_FDY
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_file_cartesC, only: &

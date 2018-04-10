@@ -15,7 +15,7 @@ module mod_mkinit
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
@@ -34,7 +34,7 @@ module mod_mkinit
      I_LW   => CONST_I_LW
   use scale_random, only: &
      RANDOM_get
-  use scale_comm, only: &
+  use scale_comm_cartesC, only: &
      COMM_vars8, &
      COMM_wait
   use scale_atmos_grid_cartesC, only: &

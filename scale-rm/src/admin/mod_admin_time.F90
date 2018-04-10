@@ -14,7 +14,7 @@ module mod_admin_time
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
@@ -972,7 +972,7 @@ contains
        CALENDAR_daysec2date,   &
        CALENDAR_adjust_daysec, &
        CALENDAR_combine_daysec
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_bcast
     use scale_time, only: &
        TIME_DTSEC,                &

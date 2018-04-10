@@ -16,7 +16,7 @@ module scale_sigvars
   !++ used modules
   !
   use iso_c_binding
-  use scale_stdio
+  use scale_io
   !-----------------------------------------------------------------------------
   implicit none
   private

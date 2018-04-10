@@ -9,7 +9,7 @@ program moist_adiabat
      CPvap => CP_VAPOR, &
      CL    => CP_WATER, &
      CI    => CP_ICE
-  use scale_stdio, only: &
+  use scale_io, only: &
      IO_get_available_fid
   use scale_atmos_saturation, only: &
      ATMOS_SATURATION_setup, &

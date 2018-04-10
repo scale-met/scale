@@ -15,7 +15,7 @@ module scale_prc_cartesC
   !
   use mpi
   use scale_precision
-  use scale_stdio
+  use scale_io
   !-----------------------------------------------------------------------------
   implicit none
   private

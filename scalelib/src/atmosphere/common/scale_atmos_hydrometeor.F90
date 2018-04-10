@@ -15,7 +15,8 @@ module scale_atmos_hydrometeor
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -375,7 +376,7 @@ contains
 
     return
   end subroutine ATMOS_HYDROMETEOR_LHV_1D
-  
+
   !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_LHV_2D( &
        IA, IS, IE, JA, JS, JE, &

@@ -15,7 +15,7 @@ module scale_atmos_phy_ae_kajino13
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_const, only: &
       mwair => CONST_Mdry, &              ! molecular weight for dry air

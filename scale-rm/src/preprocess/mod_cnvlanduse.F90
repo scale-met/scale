@@ -14,7 +14,7 @@ module mod_cnvlanduse
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
@@ -61,7 +61,7 @@ contains
        PRC_abort
     use scale_const, only: &
        D2R => CONST_D2R
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_horizontal_min
     use scale_atmos_grid_cartesC_real, only: &
        REAL_DLAT => ATMOS_GRID_CARTESC_REAL_DLAT, &

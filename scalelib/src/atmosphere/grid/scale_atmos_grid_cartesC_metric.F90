@@ -15,7 +15,7 @@ module scale_atmos_grid_cartesC_metric
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
@@ -209,7 +209,7 @@ contains
        ATMOS_GRID_CARTESC_REAL_FZUY, &
        ATMOS_GRID_CARTESC_REAL_FZXV, &
        ATMOS_GRID_CARTESC_REAL_FZUV
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -352,7 +352,7 @@ contains
        ATMOS_GRID_CARTESC_FY
     use scale_topography, only : &
        TOPO_Zsfc
-    use scale_comm, only : &
+    use scale_comm_cartesC, only : &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -599,7 +599,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_GRID_CARTESC_METRIC_step_mountain
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none

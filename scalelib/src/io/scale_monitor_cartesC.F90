@@ -15,7 +15,7 @@ module scale_monitor_cartesc
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_ocean_grid_cartesC_index

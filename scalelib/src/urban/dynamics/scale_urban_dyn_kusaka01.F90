@@ -15,7 +15,8 @@ module scale_urban_dyn_kusaka01
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
   private

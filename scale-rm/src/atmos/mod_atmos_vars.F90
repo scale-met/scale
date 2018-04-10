@@ -15,7 +15,7 @@ module mod_atmos_vars
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_debug
   use scale_atmos_grid_cartesC_index
@@ -808,7 +808,7 @@ contains
   !> HALO Communication
   subroutine ATMOS_vars_fillhalo( &
        FILL_BND )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -1436,7 +1436,7 @@ contains
        ATMOS_DIAGNOSTIC_CARTESC_get_vel, &
        ATMOS_DIAGNOSTIC_CARTESC_get_therm, &
        ATMOS_DIAGNOSTIC_CARTESC_get_phyd
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_hydrometeor, only: &
@@ -2493,7 +2493,7 @@ contains
        CPdry => CONST_CPdry
     use scale_prc, only: &
        PRC_abort
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_horizontal_mean
     implicit none
     character(len=*), intent(in)  :: vname

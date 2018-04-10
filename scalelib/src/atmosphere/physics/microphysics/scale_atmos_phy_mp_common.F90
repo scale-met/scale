@@ -19,7 +19,7 @@ module scale_atmos_phy_mp_common
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
@@ -595,7 +595,7 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none

@@ -16,7 +16,7 @@ module scale_atmos_dyn_tinteg_short_rk4
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
@@ -101,7 +101,7 @@ contains
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8_init
     implicit none
 
@@ -210,7 +210,7 @@ contains
        REF_pres, REF_dens,                      &
        BND_W, BND_E, BND_S, BND_N,              &
        dt                                       )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_dyn_tstep_short, only: &
