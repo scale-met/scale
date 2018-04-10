@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module Atmospher Grid CartesianC metirc
+!> module Atmosphere Grid CartesianC metirc
 !!
 !! @par Description
 !!          Map projection and Terrain-following metrics for the CaresianC grid
@@ -8,6 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_atmos_grid_cartesC_metric
   !-----------------------------------------------------------------------------
   !
@@ -82,19 +83,19 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRIDTRANS] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_CARTESC_METRIC_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_GRID_CARTESC_METRIC,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_GRID_CARTESC_METRIC_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_GRID_CARTESC_METRIC. Check!'
+       LOG_ERROR("ATMOS_GRID_CARTESC_METRIC_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_GRID_CARTESC_METRIC. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_GRID_CARTESC_METRIC)
+    LOG_NML(PARAM_ATMOS_GRID_CARTESC_METRIC)
 
     allocate( ATMOS_GRID_CARTESC_METRIC_MAPF (IA,JA,2,4) )
 
@@ -123,21 +124,21 @@ contains
     call ATMOS_GRID_CARTESC_METRIC_rotcoef
 
     ! calc metrics for terrain-following,step-mountain,thin-wall coordinate
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Terrain coordinate type : ', trim(ATMOS_GRID_CARTESC_METRIC_TOPO_type)
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_CARTESC_METRIC_setup",*) 'Terrain coordinate type : ', trim(ATMOS_GRID_CARTESC_METRIC_TOPO_type)
     select case(ATMOS_GRID_CARTESC_METRIC_TOPO_type)
     case('TERRAINFOLLOWING')
-      if( IO_L ) write(IO_FID_LOG,*) '*** => Terrain-following method'
+      LOG_INFO_CONT(*) '=> Terrain-following method'
       call ATMOS_GRID_CARTESC_METRIC_terrainfollowing
     case('STEPMOUNTAIN')
-      if( IO_L ) write(IO_FID_LOG,*) '*** => Step-mountain method'
+      LOG_INFO_CONT(*) '=> Step-mountain method'
       call ATMOS_GRID_CARTESC_METRIC_thin_wall
       call ATMOS_GRID_CARTESC_METRIC_step_mountain
     case('THINWALL')
-      if( IO_L ) write(IO_FID_LOG,*) '*** => Thin-wall approximation method'
+      LOG_INFO_CONT(*) '=> Thin-wall approximation method'
       call ATMOS_GRID_CARTESC_METRIC_thin_wall
     case default
-       write(*,*) 'xxx Unsupported ATMOS_GRID_CARTESC_METRIC_TOPO_type. STOP'
+       LOG_ERROR("ATMOS_GRID_CARTESC_METRIC_setup",*) 'Unsupported ATMOS_GRID_CARTESC_METRIC_TOPO_type. STOP'
        call PRC_abort
     end select
 
@@ -539,8 +540,8 @@ contains
                                            + ATMOS_GRID_CARTESC_METRIC_QLIM(kk  ,ii,jj,I_FXY) + ATMOS_GRID_CARTESC_METRIC_QLIM(kk  ,ii+1,jj  ,I_FXY) )
 
          if ( ATMOS_GRID_CARTESC_METRIC_LIMYZ(k,i,j,n) > 1.D0 ) then
-            write(*,*) 'xxx Facter miss! Check!'
-            write(*,*) k,i,j,n,ATMOS_GRID_CARTESC_METRIC_LIMYZ(k,i,j,n)
+            LOG_ERROR("ATMOS_GRID_CARTESC_METRIC_thin_wall",*) 'Facter miss! Check!'
+            LOG_ERROR_CONT(*) k,i,j,n,ATMOS_GRID_CARTESC_METRIC_LIMYZ(k,i,j,n)
             call PRC_abort
          endif
        enddo
@@ -702,8 +703,8 @@ contains
 
     if ( ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME /= '' ) then
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output metrics file ***'
+       LOG_NEWLINE
+       LOG_INFO("ATMOS_GRID_CARTESC_METRIC_write",*) 'Output metrics file '
 
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XY),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                           'MAPF_X_XY', 'Map factor x-dir at XY', 'NIL', 'XY', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]

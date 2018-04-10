@@ -9,7 +9,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_sf_const
   !-----------------------------------------------------------------------------
   !
@@ -80,20 +80,20 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[surface const] / Categ[atmosphere physics] / Origin[SCALE lib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Constant flux'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_SF_const_setup",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_SF_const_setup",*) 'Constant flux'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF_CONST,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_SF_const_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF_CONST. Check!'
+       LOG_ERROR("ATMOS_PHY_SF_const_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_SF_CONST. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_SF_CONST)
+    LOG_NML(PARAM_ATMOS_PHY_SF_CONST)
 
     return
   end subroutine ATMOS_PHY_SF_const_setup
@@ -144,7 +144,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Surface flux(const)'
+    LOG_PROGRESS(*) 'atmosphere / physics / surface flux / const'
 
     !omp parallel do
     do j = JS, JE

@@ -84,7 +84,7 @@ include $(TOPDIR)/Mkinclude
 all: build
 
 
-$(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
+$(BUILD_DIR)/%.F90: $(CODE_DIR)/%.F90
 	mkdir -p $(BUILD_DIR)
 	cp -f $< $@
 

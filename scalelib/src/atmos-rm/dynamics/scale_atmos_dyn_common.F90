@@ -6,12 +6,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-06-18 (S.Nishizawa) [new] splited from dynamical core
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_common
   !-----------------------------------------------------------------------------
   !
@@ -112,7 +109,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( IHALO < 2 .or. JHALO < 2 .or. KHALO < 2 ) then
-       write(*,*) 'xxx number of HALO must be at least 2 for numrical filter'
+       LOG_ERROR("ATMOS_DYN_filter_setup",*) 'number of HALO must be at least 2 for numrical filter'
        call PRC_abort
     end if
 
@@ -357,26 +354,26 @@ contains
        wdamp_coef(   1:KS-1) = wdamp_coef(KS)
        wdamp_coef(KE+1:KA  ) = wdamp_coef(KE)
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*)                          ' *** Setup Rayleigh damping coefficient ***'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)')                   '|=== Rayleigh Damping Coef ===|'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)')                   '|     k     zh[m]    coef[/s] |'
+       LOG_NEWLINE
+       LOG_INFO("ATMOS_DYN_wdamp_setup",*)                          'Setup Rayleigh damping coefficient'
+       LOG_INFO_CONT('(1x,A)')                   '|=== Rayleigh Damping Coef ===|'
+       LOG_INFO_CONT('(1x,A)')                   '|     k     zh[m]    coef[/s] |'
        do k = KA, KE+1, -1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
+       LOG_INFO_CONT('(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
        enddo
        k = KE
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' | KE = TOA'
+       LOG_INFO_CONT('(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' | KE = TOA'
        do k = KE-1, KS, -1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
+       LOG_INFO_CONT('(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
        enddo
        k = KS-1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' | KS-1 = surface'
+       LOG_INFO_CONT('(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' | KS-1 = surface'
        do k = KS-2, 1, -1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
+       LOG_INFO_CONT('(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
        enddo
        k = 0
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,12x,A)')    '| ',k, FZ(k),               ' |'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)')                   '|=============================|'
+       LOG_INFO_CONT('(1x,A,I5,F10.2,12x,A)')    '| ',k, FZ(k),               ' |'
+       LOG_INFO_CONT('(1x,A)')                   '|=============================|'
     endif
 
     return

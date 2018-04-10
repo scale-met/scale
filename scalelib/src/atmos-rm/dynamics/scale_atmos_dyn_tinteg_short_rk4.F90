@@ -7,12 +7,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-04-30 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tinteg_short_rk4
   !-----------------------------------------------------------------------------
   !
@@ -114,7 +111,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( tinteg_type /= 'RK4' ) then
-       write(*,*) 'xxx TINTEG_TYPE is not RK4. Check!'
+       LOG_ERROR("ATMOS_DYN_Tinteg_short_rk4_setup",*) 'TINTEG_TYPE is not RK4. Check!'
        call PRC_abort
     end if
 

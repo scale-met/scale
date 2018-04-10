@@ -6,12 +6,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-05-17 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tinteg_tracer
   !-----------------------------------------------------------------------------
   !
@@ -114,7 +111,7 @@ contains
     case( 'OFF', 'NONE' )
        ! do nothing
     case default
-       write(*,*) 'xxx ATMOS_DYN_TINTEG_TRACER_TYPE is invalid: ', ATMOS_DYN_Tinteg_tracer_TYPE
+       LOG_ERROR("ATMOS_DYN_Tinteg_tracer_setup",*) 'ATMOS_DYN_TINTEG_TRACER_TYPE is invalid: ', ATMOS_DYN_Tinteg_tracer_TYPE
        call PRC_abort
     end select
 

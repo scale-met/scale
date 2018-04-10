@@ -44,10 +44,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2011-10-24 (T.Seiki)    [new] import from NICAM(11/08/30 ver.)
-!! @li      2015-09-08 (Y.Sato)     [add] Add evaporated cloud number concentration
-!!
 !<
 !-------------------------------------------------------------------------------
 
@@ -62,6 +58,7 @@
 #define PROFILE_STOP(name)
 #endif
 
+#include "scalelib.h"
 module scale_atmos_phy_mp_sn14
   !-----------------------------------------------------------------------------
   !
@@ -95,7 +92,7 @@ module scale_atmos_phy_mp_sn14
      PSAT0  => CONST_PSAT0,  &
      EMELT  => CONST_EMELT,  &
      DWATR  => CONST_DWATR
-  
+
   use scale_atmos_hydrometeor, only: &
      N_HYD
 
@@ -113,7 +110,7 @@ module scale_atmos_phy_mp_sn14
   public :: ATMOS_PHY_MP_sn14_cloud_fraction
   public :: ATMOS_PHY_MP_sn14_qtrc2qhyd
   public :: ATMOS_PHY_MP_sn14_qhyd2qtrc
-  
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -529,7 +526,7 @@ contains
     integer, intent(in) :: KA
     integer, intent(in) :: IA
     integer, intent(in) :: JA
-    
+
     NAMELIST / PARAM_ATMOS_PHY_MP_SN14 / &
        MP_doautoconversion, &
        MP_ssw_lim,          &
@@ -538,20 +535,20 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Seiki and Nakajima (2014) 2-moment bulk 6 category'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_MP_sn14_setup",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_MP_sn14_setup",*) 'Seiki and Nakajima (2014) 2-moment bulk 6 category'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_SN14,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_MP_sn14_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SN14. Check!'
+       LOG_ERROR("ATMOS_PHY_MP_sn14_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SN14. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_SN14)
+    LOG_NML(PARAM_ATMOS_PHY_MP_SN14)
 
     WLABEL(1) = "CLOUD"
     WLABEL(2) = "RAIN"
@@ -577,7 +574,7 @@ contains
        MOMZ,      &
        QTRC, &
        PRES, &
-       TEMP, &       
+       TEMP, &
        Qdry, &
        CPtot, &
        CVtot, &
@@ -595,7 +592,7 @@ contains
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
-    
+
     real(RP), intent(in) :: DENS     (KA,IA,JA)
     real(RP), intent(in) :: MOMZ     (KA,IA,JA)
     real(RP), intent(in) :: QTRC     (KA,IA,JA,QA_MP)
@@ -608,22 +605,22 @@ contains
     real(DP), intent(in) :: dt
     real(RP), intent(in) :: z(KA)
     real(RP), intent(in) :: dz(KA)
-    
-    real(RP), intent(out) :: RHOQ_t   (KA,IA,JA,QA_MP)    
+
+    real(RP), intent(out) :: RHOQ_t   (KA,IA,JA,QA_MP)
     real(RP), intent(out) :: RHOE_t   (KA,IA,JA)
     real(RP), intent(out) :: CPtot_t(KA,IA,JA)
-    real(RP), intent(out) :: CVtot_t(KA,IA,JA)    
+    real(RP), intent(out) :: CVtot_t(KA,IA,JA)
     real(RP), intent(out) :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
-    
+
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(SN14)'
+    LOG_PROGRESS(*) 'atmosphere / physics / microphysics / SN14'
 
 #ifdef PROFILE_FIPP
     call fipp_start()
 #endif
 
-    !##### MP Main #####    
+    !##### MP Main #####
     call MP_sn14 ( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS(:,:,:), MOMZ(:,:,:), QTRC(:,:,:,:), PRES(:,:,:), TEMP(:,:,:), & ! (in)
@@ -638,11 +635,11 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_sn14_tendency
-  
+
   !-----------------------------------------------------------------------------
   !> ATMOS_PHY_MP_sn14_cloud_fraction
   !! Calculate Cloud Fraction
-  !<    
+  !<
   subroutine ATMOS_PHY_MP_sn14_cloud_fraction( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        QTRC,           &
@@ -657,7 +654,7 @@ contains
     real(RP), intent(in)  :: mask_criterion
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
-    
+
     real(RP) :: qhydro
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -679,7 +676,7 @@ contains
   !-----------------------------------------------------------------------------
   !> ATMOS_PHY_MP_sn14_effective_radius
   !! Calculate Effective Radius
-  !<  
+  !<
   subroutine ATMOS_PHY_MP_sn14_effective_radius( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS0, TEMP0, QTRC0, &
@@ -699,7 +696,7 @@ contains
     real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! density                   [kg/m3]
     real(RP), intent(in)  :: TEMP0(KA,IA,JA)        ! temperature               [K]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,I_QC:I_NG)     ! tracer mass concentration [kg/kg]
-    
+
     real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
 
     ! mass concentration[kg/m3] and mean particle mass[kg]
@@ -867,7 +864,7 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_sn14_qtrc2qhyd
-  
+
   subroutine ATMOS_PHY_MP_sn14_qhyd2qtrc( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        Qe, &
@@ -1179,12 +1176,12 @@ contains
     read(IO_FID_CONF,nml=nm_mp_sn14_init,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_MP_sn14_init",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_init. Check!'
+       LOG_ERROR("ATMOS_PHY_MP_sn14_init",*) 'Not appropriate names in namelist nm_mp_sn14_init. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_init)
+    LOG_NML(nm_mp_sn14_init)
 
     !
     ! default setting
@@ -1278,12 +1275,12 @@ contains
     read(IO_FID_CONF,nml=nm_mp_sn14_particles,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_MP_sn14_init",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist nm_mp_sn14_particles. Check!'
+       LOG_ERROR("ATMOS_PHY_MP_sn14_init",*) 'Not appropriate names in namelist nm_mp_sn14_particles. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_particles)
+    LOG_NML(nm_mp_sn14_particles)
 
     ! [Add] 10/08/03 T.Mitsui
     ! particles shapes are
@@ -1630,63 +1627,63 @@ contains
        end do
     end do
 
-    if( IO_L ) write(IO_FID_LOG,'(100a16)')      "LABEL       ",WLABEL(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "capacity    ",cap(:) ! [Add] 11/08/30 T.Mitsui
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_m2     ",coef_m2(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d      ",coef_d(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(100a16)')      "LABEL       ",WLABEL(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "capacity    ",cap(:) ! [Add] 11/08/30 T.Mitsui
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_m2     ",coef_m2(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_d      ",coef_d(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d3     ",coef_d3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d6     ",coef_d6(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d2v    ",coef_d2v(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_md2v   ",coef_md2v(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_d2vt      ",a_d2vt(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_d2vt      ",b_d2vt(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_d3     ",coef_d3(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_d6     ",coef_d6(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_d2v    ",coef_d2v(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_md2v   ",coef_md2v(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "a_d2vt      ",a_d2vt(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "b_d2vt      ",b_d2vt(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_r2     ",coef_r2(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_r3     ",coef_r3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_re     ",coef_re(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_r2     ",coef_r2(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_r3     ",coef_r3(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_re     ",coef_re(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_area      ",a_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_area      ",b_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ax_area     ",ax_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bx_area     ",bx_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_rea       ",a_rea(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_rea       ",b_rea(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_rea3      ",a_rea3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_rea3      ",b_rea3(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "a_area      ",a_area(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "b_area      ",b_area(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "ax_area     ",ax_area(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "bx_area     ",bx_area(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "a_rea       ",a_rea(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "b_rea       ",b_rea(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "a_rea3      ",a_rea3(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "b_rea3      ",b_rea3(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_rea2   ",coef_rea2(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_rea3   ",coef_rea3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_vt0    ",coef_vt0(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_vt1    ",coef_vt1(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_A      ",coef_A(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_lambda ",coef_lambda(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_rea2   ",coef_rea2(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_rea3   ",coef_rea3(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_vt0    ",coef_vt0(:,1)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_vt1    ",coef_vt1(:,1)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_A      ",coef_A(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "coef_lambda ",coef_lambda(:)
 
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent0 sml",ah_vent0(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent0 lrg",ah_vent0(:,2)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent1 sml",ah_vent1(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent1 lrg",ah_vent1(:,2)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent0 sml",bh_vent0(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent0 lrg",bh_vent0(:,2)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent1 sml",bh_vent1(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent1 lrg",bh_vent1(:,2)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "ah_vent0 sml",ah_vent0(:,1)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "ah_vent0 lrg",ah_vent0(:,2)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "ah_vent1 sml",ah_vent1(:,1)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "ah_vent1 lrg",ah_vent1(:,2)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "bh_vent0 sml",bh_vent0(:,1)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "bh_vent0 lrg",bh_vent0(:,2)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "bh_vent1 sml",bh_vent1(:,1)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "bh_vent1 lrg",bh_vent1(:,2)
 
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "delta_b0    ",delta_b0(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "delta_b1    ",delta_b1(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "theta_b0    ",theta_b0(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "theta_b1    ",theta_b1(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "delta_b0    ",delta_b0(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "delta_b1    ",delta_b1(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "theta_b0    ",theta_b0(:)
+    LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,100ES16.6)') "theta_b1    ",theta_b1(:)
 
     do ia=1, HYDRO_MAX
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "delta0(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab0(ia,ib),ib=1,HYDRO_MAX)
+       LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,a10,a,100ES16.6)') "delta0(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab0(ia,ib),ib=1,HYDRO_MAX)
     enddo
     do ia=1, HYDRO_MAX
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "delta1(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab1(ia,ib),ib=1,HYDRO_MAX)
+       LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,a10,a,100ES16.6)') "delta1(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab1(ia,ib),ib=1,HYDRO_MAX)
     enddo
     do ia=1, HYDRO_MAX
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "theta0(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab0(ia,ib),ib=1,HYDRO_MAX)
+       LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,a10,a,100ES16.6)') "theta0(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab0(ia,ib),ib=1,HYDRO_MAX)
     enddo
     do ia=1, HYDRO_MAX
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "theta1(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab1(ia,ib),ib=1,HYDRO_MAX)
+       LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,a10,a,100ES16.6)') "theta1(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab1(ia,ib),ib=1,HYDRO_MAX)
     enddo
 
     return
@@ -1701,7 +1698,7 @@ contains
        TEMP0, &
        Qdry, &
        CPtot0,  &
-       CVtot0,  &       
+       CVtot0,  &
        CCN,       &
        dt,   &
        z,    &
@@ -1711,7 +1708,7 @@ contains
        CPtot_t, &
        CVtot_t, &
        EVAPORATE )
-    
+
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &
        CP_WATER, &
@@ -1727,15 +1724,15 @@ contains
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
-    
-    real(RP), intent(in) :: DENS     (KA,IA,JA)    
+
+    real(RP), intent(in) :: DENS     (KA,IA,JA)
     real(RP), intent(in) :: MOMZ     (KA,IA,JA)
     real(RP), intent(in) :: QTRC     (KA,IA,JA,QA_MP)
-    real(RP), intent(in) :: PRES0(KA,IA,JA)    
+    real(RP), intent(in) :: PRES0(KA,IA,JA)
     real(RP), intent(in) :: TEMP0(KA,IA,JA)
     real(RP), intent(in) :: Qdry(KA,IA,JA)
     real(RP), intent(in) :: CPtot0(KA, IA, JA)
-    real(RP), intent(in) :: CVtot0(KA, IA, JA)    
+    real(RP), intent(in) :: CVtot0(KA, IA, JA)
     real(RP), intent(in) :: CCN      (KA,IA,JA)
     real(RP), intent(in) :: dt
     real(RP), intent(in) :: z(KA), dz(KA)
@@ -1744,7 +1741,7 @@ contains
     real(RP),intent(out) :: RHOE_t(KA, IA, JA)
     real(RP),intent(out) :: CPtot_t(KA, IA, JA)
     real(RP),intent(out) :: CVtot_t(KA, IA, JA)
-    
+
     real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   ! number of evaporated cloud [/m3/s]
 
     real(RP) :: pres(KA,IA,JA)
@@ -1851,7 +1848,7 @@ contains
     integer  :: k, i, j, iq
 
     real(RP) :: dqv, dqc, dqr, dqi, dqs, dqg, dcv, dcp
-    
+
     !---------------------------------------------------------------------------
 
     ! total tendency
@@ -1859,13 +1856,13 @@ contains
     RHOE_t(:,:,:)   = 0.0_RP
     CPtot_t(:,:,:)  = 0.0_RP
     CVtot_t(:,:,:)  = 0.0_RP
-    
+
     ! intermidiate variable
     cpa(:,:,:)  = CPtot0(:,:,:)
     cva(:,:,:)  = CVtot0(:,:,:)
     pres(:,:,:) = PRES0(:,:,:)
     temp(:,:,:) = TEMP0(:,:,:)
-    
+
     ! half point w
     do j = JS, JE
     do i = IS, IE
@@ -1876,7 +1873,7 @@ contains
        velz(KE,i,j) = 0.0_RP
     end do
     end do
-    
+
     !============================================================================
     !
     !--  Each process is integrated sequentially.
@@ -1994,7 +1991,7 @@ contains
        dqv = drhogqv * rrho(k,i,j)
        dqc = drhogqc*fac1 * rrho(k,i,j)
        dqi = drhogqi*fac1 * rrho(k,i,j)
-       
+
        dcv = CV_VAPOR * dqv + CV_WATER * dqc + CV_ICE * dqi
        dcp = CP_VAPOR * dqv + CP_WATER * dqc + CP_ICE * dqi
 
@@ -2005,7 +2002,7 @@ contains
        RHOQ0_t(k,i,j,I_NI) = drhogni / dt
 
        RHOE0_t(k,i,j) = - LHV * drhogqv / dt + LHF * drhogqi*fac1 / dt
-       
+
        CVtot0_t(k,i,j) = dcv/dt
        CPtot0_t(k,i,j) = dcp/dt
 
@@ -2025,7 +2022,7 @@ contains
     enddo
     enddo
     enddo
-  
+
     ! update intermidiate variable
     do j = JS, JE
     do i = IS, IE
@@ -2039,18 +2036,18 @@ contains
 
       ! cloud number concentration filter
       rhoq(I_NC,k,i,j) = min( rhoq(I_NC,k,i,j), nc_uplim_d(1,i,j) )
-      
-      rhoe(k,i,j) = rhoe(k,i,j) + RHOE0_t(k,i,j)*dt      
+
+      rhoe(k,i,j) = rhoe(k,i,j) + RHOE0_t(k,i,j)*dt
       cva(k,i,j) = cva(k,i,j) + CVtot0_t(k,i,j)*dt
       cpa(k,i,j) = cpa(k,i,j) + CPtot0_t(k,i,j)*dt
-       
+
       temp(k,i,j) = rhoe(k,i,j) / ( DENS(k,i,j) * cva(k,i,j) )
       pres(k,i,j) = DENS(k,i,j) * (cpa(k,i,j)-cva(k,i,j)) * temp(k,i,j)
       wtemp(k,i,j) = max( temp(k,i,j), tem_min )
     enddo
     enddo
     enddo
-    
+
 !    if( opt_debug )     call debugreport_nucleation
     if( opt_debug_tem ) call debug_tem_kij( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
       2, temp(:,:,:), DENS(:,:,:), pres(:,:,:), QTRC(:,:,:,I_QV) )
@@ -2123,14 +2120,14 @@ contains
 
     call freezing_water_kij( &
       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-      dt,    & ! (in)         
+      dt,    & ! (in)
       rhoq2(:,:,:,:), & ! (in)
       xq(:,:,:,:),    & ! (in)
       temp(:,:,:),    & ! (in)
       PQ(:,:,:,:)     ) ! (inout)
 
     call dep_vapor_melt_ice_kij( &
-      KA, KS, KE, IA, IS, IE, JA, JS, JE, &         
+      KA, KS, KE, IA, IS, IE, JA, JS, JE, &
       DENS(:,:,:),      & ! (in)
       wtemp(:,:,:),     & ! (in)
       pres(:,:,:),      & ! (in)
@@ -2159,7 +2156,7 @@ contains
       qdry(:,:,:),         & ! (in)
       esw(:,:,:),          & ! (in)
       esi(:,:,:),          & ! (in)
-      rhoq2(:,:,:,:),      & ! (in)      
+      rhoq2(:,:,:,:),      & ! (in)
       pres(:,:,:),         & ! (in)
       temp(:,:,:),         & ! (in)
       cpa(:,:,:),          & ! (in)
@@ -2186,7 +2183,7 @@ contains
     enddo
     enddo
     enddo
-    
+
     ! update intermidiate variable
     do j = JS, JE
     do i = IS, IE
@@ -2197,9 +2194,9 @@ contains
 
     enddo
     enddo
-    enddo      
     enddo
-          
+    enddo
+
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2213,7 +2210,7 @@ contains
     enddo
     enddo
     enddo
-    
+
 !    if( opt_debug )     call debugreport_phasechange
     if( opt_debug_tem ) call debug_tem_kij( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
       3, temp(:,:,:), DENS(:,:,:), pres(:,:,:), QTRC(:,:,:,I_QV) )
@@ -2275,7 +2272,7 @@ contains
     ! [Mod] T.Seiki
     if ( MP_doautoconversion ) then
       call aut_acc_slc_brk_kij(  &
-        KA, KS, KE, IA, IS, IE, JA, JS, JE, &            
+        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
         rhoq2(:,:,:,:), & ! (in)
         xq(:,:,:,:),    & ! (in)
         dq_xa(:,:,:,:), & ! (in)
@@ -2306,10 +2303,10 @@ contains
       rhoq2(:,:,:,:),   & ! (in)
       xq(:,:,:,:),      & ! (in)
       dq_xa(:,:,:,:),   & ! (in)
-      vt_xa(:,:,:,:,:), & ! (in)   
+      vt_xa(:,:,:,:,:), & ! (in)
       PQ(:,:,:,:),      & ! (inout)
       Pac(:,:,:,:)      ) ! (out)
-      
+
     call ice_multiplication_kij( &
          KA, KS, KE, IA, IS, IE, JA, JS, JE, &
          Pac(:,:,:,:),   & ! (in)
@@ -2485,7 +2482,7 @@ contains
 
        CVtot0_t(k,i,j) = dcv/dt
        CPtot0_t(k,i,j) = dcp/dt
-       
+
     enddo
     enddo
     enddo
@@ -2499,24 +2496,24 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-    
+
       RHOE_t(k,i,j) = RHOE_t(k,i,j) + RHOE0_t(k,i,j)
       CVtot_t(k,i,j) = CVtot_t(k,i,j) + CVtot0_t(k,i,j)
       CPtot_t(k,i,j) = CPtot_t(k,i,j) + CPtot0_t(k,i,j)
 
     enddo
     enddo
-    enddo   
-    
+    enddo
+
     !--- update
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
     do iq = I_QC, I_NG
-        
+
         rhoq(iq,k,i,j) = max(0.0_RP, rhoq(iq,k,i,j) + RHOQ0_t(k,i,j,iq)*dt )
-        
+
     enddo
     enddo
     enddo
@@ -2529,12 +2526,12 @@ contains
     do k = KS, KE
 
       RHOQ_t(k,i,j,iq) = ( rhoq(iq,k,i,j) - DENS(k,i,j)*QTRC(k,i,j,iq) )/dt
-      
+
     enddo
     enddo
     enddo
     enddo
-    
+
 !    if( opt_debug )     call debugreport_collection
     if( opt_debug_tem ) call debug_tem_kij( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
       4, temp(:,:,:), DENS(:,:,:), pres(:,:,:), QTRC(:,:,:,I_QV) )
@@ -2559,7 +2556,7 @@ contains
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
-    
+
     integer, intent(in) :: point
     real(RP), intent(in) :: tem(KA,IA,JA)
     real(RP), intent(in) :: rho(KA,IA,JA)
@@ -2576,8 +2573,8 @@ contains
             .OR. rho(k,i,j) < rho_min &
             .OR. pre(k,i,j) < 1.0_RP    ) then
 
-          if( IO_L ) write(IO_FID_LOG,'(A,I3,A,4(F16.5),3(I6))') &
-          "*** point: ", point, " low tem,rho,pre:", tem(k,i,j), rho(k,i,j), pre(k,i,j), qv(k,i,j), k, i, j, PRC_myrank
+          LOG_INFO("ATMOS_PHY_MP_SN14_debug_tem_kij",'(A,I3,A,4(F16.5),3(I6))') &
+          "point: ", point, " low tem,rho,pre:", tem(k,i,j), rho(k,i,j), pre(k,i,j), qv(k,i,j), k, i, j, PRC_myrank
        endif
     enddo
     enddo
@@ -2610,7 +2607,7 @@ contains
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
-    
+
     real(RP), intent(in)  :: z(KA)      !
     real(RP), intent(in)  :: velz(KA,IA,JA)   ! w of half point
     real(RP), intent(in)  :: rho(KA,IA,JA)    ! [Add] 09/08/18 T.Mitsui
@@ -2719,11 +2716,11 @@ contains
     if( flag_first )then
        rewind(IO_FID_CONF)
        read(IO_FID_CONF, nml=nm_mp_sn14_nucleation, end=100)
-100    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_nucleation)
+100    LOG_NML(nm_mp_sn14_nucleation)
        flag_first=.false.
 
        if ( MP_couple_aerosol .AND. nucl_twomey ) then
-          write(*,*) "xxx [mp_sn14/nucleation] nucl_twomey should be false when MP_couple_aerosol is true, stop"
+          LOG_ERROR("ATMOS_PHY_MP_SN14_nucleation_kij",*) "nucl_twomey should be false when MP_couple_aerosol is true, stop"
           call PRC_abort
        endif
     endif
@@ -3005,7 +3002,7 @@ contains
 
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE    
+    integer, intent(in) :: JA, JS, JE
     !
     real(RP), intent(in) :: Pac(Pac_MAX,KA,IA,JA)
     real(RP), intent(in) :: tem(KA,IA,JA)
@@ -3146,7 +3143,7 @@ contains
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
-    
+
     !--- mixed-phase collection process
     !                  And all we set all production term as a negative sign to avoid confusion.
     !
@@ -3164,7 +3161,7 @@ contains
     !--- partial conversion
     real(RP), intent(inout):: PQ(PQ_MAX,KA,IA,JA)
     !
-    real(RP), intent(out):: Pac(Pac_MAX,KA,IA,JA)    
+    real(RP), intent(out):: Pac(Pac_MAX,KA,IA,JA)
     !
     ! namelist variables
     !=== for collection
@@ -3286,7 +3283,7 @@ contains
     if( flag_first )then
        rewind( IO_FID_CONF )
        read( IO_FID_CONF, nml=nm_mp_sn14_collection, end=100 )
-100    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_collection)
+100    LOG_NML(nm_mp_sn14_collection)
        flag_first = .false.
     end if
     !
@@ -3636,7 +3633,7 @@ contains
 
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE    
+    integer, intent(in) :: JA, JS, JE
     !
     real(RP), intent(in)  :: rhoq(I_QV:I_NG,KA,IA,JA)
     real(RP), intent(in)  :: xq(HYDRO_MAX,KA,IA,JA)
@@ -3742,7 +3739,7 @@ contains
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
-    
+
     ! Diffusion growth or Evaporation, Sublimation
     real(RP), intent(inout) :: PQ(PQ_MAX,KA,IA,JA)  ! mass change   for cloud, [Add]  09/08/18 T.Mitsui
 
@@ -3985,7 +3982,7 @@ contains
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
-    
+
     real(RP), intent(in) :: dt
     !
     real(RP), intent(in) :: tem(KA,IA,JA)
@@ -4076,12 +4073,12 @@ contains
   !-----------------------------------------------------------------------------
   !> ATMOS_PHY_MP_sn14_terminal_velocity
   !! Calculate terminal velocity
-  !<    
+  !<
   subroutine ATMOS_PHY_MP_sn14_terminal_velocity( &
     KA, KS, KE, &
       DENS, &
       TEMP, &
-      RHOQ, &            
+      RHOQ, &
       PRES, &
       vterm )
     use scale_const, only: &
@@ -4089,14 +4086,14 @@ contains
     implicit none
 
     integer, intent(in) :: KA, KS, KE
-    
+
     real(RP), intent(in)  :: RHOQ(KA,I_QC:I_NG) ! rho * q
     real(RP), intent(in)  :: DENS(KA)    ! rho
     real(RP), intent(in)  :: TEMP(KA)    ! temperature
     real(RP), intent(in)  :: PRES(KA)    ! pressure
 
     real(RP), intent(out) :: vterm(KA,QA_MP-1) ! terminal velocity of cloud mass
-    
+
     real(RP) :: xq       ! average mass of 1 particle( mass/number )
 
     real(RP) :: rhofac   ! density factor for terminal velocity( air friction )
@@ -4260,17 +4257,17 @@ contains
        sl_PLRdep, sl_PNRdep, & ! inout
        RHOQ_t,               & ! out
        RHOE_t,               & ! out
-       CPtot_t,              & ! out       
+       CPtot_t,              & ! out
        CVtot_t,              & ! out
        qc_evaporate          ) ! out
-       
+
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &
        CP_WATER, &
        CP_ICE,   &
        CV_VAPOR, &
        CV_WATER, &
-       CV_ICE    
+       CV_ICE
     use scale_atmos_saturation, only: &
        moist_pres2qsat_liq  => ATMOS_SATURATION_pres2qsat_liq,  &
        moist_pres2qsat_ice  => ATMOS_SATURATION_pres2qsat_ice,  &
@@ -4283,7 +4280,7 @@ contains
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
-    
+
     integer, intent(in)    :: ntdiv               ! [Add] 10/08/03
     integer, intent(in)    :: ntmax               ! [Add] 10/08/03
     !
@@ -4314,7 +4311,7 @@ contains
     real(RP),intent(out) :: RHOE_t(KA, IA, JA)
     real(RP),intent(out) :: CPtot_t(KA,IA,JA)
     real(RP),intent(out) :: CVtot_t(KA,IA,JA)
-    
+
     !+++ tendency[kg/m3/s]
     real(RP), intent(out)   :: qc_evaporate(KA,IA,JA)
 
@@ -4427,7 +4424,7 @@ contains
        flag_first = .false.
        rewind(IO_FID_CONF)
        read  (IO_FID_CONF,nml=nm_mp_sn14_condensation, end=100)
-100    if( IO_NML ) write(IO_FID_NML,nml=nm_mp_sn14_condensation)
+100    LOG_NML(nm_mp_sn14_condensation)
     end if
     !
 !    dt_dyn     = dt*ntmax
@@ -4447,7 +4444,7 @@ contains
        end do
        end do
        end do
-       if( IO_L ) write(IO_FID_LOG,*) "taucnd:fac_cndc_wrk=",fac_cndc_wrk
+       LOG_INFO("ATMOS_PHY_MP_SN14_update_by_phase_change_kij",*) "taucnd:fac_cndc_wrk=",fac_cndc_wrk
     end if
 
 !OCL XFILL
@@ -4773,7 +4770,7 @@ contains
        RHOQ_t(k,i,j,I_NG) = drhong / dt
 
        RHOE_t(k,i,j) = ( - LHV * drhoqv + LHF * ( drhoqi+ drhoqs + drhoqg ) ) / dt
-       
+
        rrho = 1.0_RP/rho(k,i,j)
        dqv = drhoqv * rrho
        dqc = drhoqc * rrho
@@ -4781,12 +4778,12 @@ contains
        dqi = drhoqi * rrho
        dqs = drhoqs * rrho
        dqg = drhoqg * rrho
-       
+
        dcv = CV_VAPOR * dqv + CV_WATER * ( dqc + dqr ) + CV_ICE * ( dqi + dqs + dqg )
        dcp = CP_VAPOR * dqv + CP_WATER * ( dqc + dqr ) + CP_ICE * ( dqi + dqs + dqg )
 
        CVtot_t(k,i,j) = dcv/dt
-       CPtot_t(k,i,j) = dcp/dt       
+       CPtot_t(k,i,j) = dcp/dt
 
        sl_PLCdep(i,j) = sl_PLCdep(i,j) + dep_dqc*Dz(k)
        sl_PLRdep(i,j) = sl_PLRdep(i,j) + dep_dqr*Dz(k)

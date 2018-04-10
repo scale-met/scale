@@ -7,7 +7,7 @@
 !! @author Team SCALE
 !!
 !<
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_interp_vert
   !-----------------------------------------------------------------------------
   !
@@ -92,15 +92,14 @@ contains
     integer :: k, i, j, kk, kp
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[INTERPOLATION] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
+    LOG_NEWLINE
+    LOG_INFO("INTERP_VERT_setcoef",*) 'Setup'
+    LOG_INFO("INTERP_VERT_setcoef",*) 'No namelists.'
 
     INTERP_available = TOPO_exist
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Topography exists & interpolation has meaning? : ', INTERP_available
-
+    LOG_NEWLINE
+    LOG_INFO("INTERP_VERT_setcoef",*) 'Topography exists & interpolation has meaning? : ', INTERP_available
 
     ! full level
 

@@ -8,6 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_atmos_aerosol
   !-----------------------------------------------------------------------------
   !
@@ -72,8 +73,8 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[AEROSOL] / Categ[ATMOS SHARE] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_AEROSOL_setup",*) 'Setup'
 
     return
   end subroutine ATMOS_AEROSOL_setup

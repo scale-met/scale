@@ -12,6 +12,7 @@
 !! @li      2014-05-02 (S.Adachi)   [add] variables for urban
 !!
 !<
+#include "scalelib.h"
 module scale_time
   !-----------------------------------------------------------------------------
   !

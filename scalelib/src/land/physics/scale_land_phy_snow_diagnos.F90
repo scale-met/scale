@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_land_phy_snow_diagnos
   !-----------------------------------------------------------------------------
   !
@@ -113,7 +114,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Snow surface step: SNOW DIAGS'
+    LOG_INFO("LAND_PHY_SNOW_DIAGS",*) 'Snow surface diagnostic'
 
     ! calculate surface flux
     do j = LJS, LJE

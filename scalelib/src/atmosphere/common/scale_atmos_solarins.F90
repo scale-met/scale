@@ -10,7 +10,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_solarins
   !-----------------------------------------------------------------------------
   !
@@ -581,8 +581,8 @@ contains
     integer  :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SOLARINS] / Categ[ATMOS SHARE] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_SOLARINS_setup",*) 'Setup'
 
     ATMOS_SOLARINS_lon     = basepoint_lon
     ATMOS_SOLARINS_lat     = basepoint_lat
@@ -592,12 +592,12 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_SOLARINS,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_SOLARINS_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_SOLARINS. Check!'
+       LOG_ERROR("ATMOS_SOLARINS_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_SOLARINS. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_SOLARINS)
+    LOG_NML(PARAM_ATMOS_SOLARINS)
 
     if ( ATMOS_SOLARINS_set_ve ) then
        if ( .NOT. ATMOS_SOLARINS_set_ideal ) then
@@ -635,30 +635,30 @@ contains
     dyear = real( year-year_ref, kind=RP )
 
     !----- report data -----
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)')       '*** Solar insolation parameters ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I7)')    '*** Reference year                        : ', year_ref
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I7)')    '*** Current   year                        : ', year
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I7)')    '*** Difference from ref.                  : ', int(dyear)
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Solar constant                 [W/m2] : ', ATMOS_SOLARINS_constant
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Obliquity                       [deg] : ', obliquity / CONST_D2R
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Eccentricity                          : ', E
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Longitude of perihelion         [deg] : ', omega     / CONST_D2R
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Longitude at the vernal equinox [deg] : ', lambda_m0 / CONST_D2R
-    if( IO_L ) write(IO_FID_LOG,*)
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_SOLARINS_setup",'(1x,A)')       'Solar insolation parameters '
+    LOG_INFO("ATMOS_SOLARINS_setup",'(1x,A,I7)')    'Reference year                        : ', year_ref
+    LOG_INFO("ATMOS_SOLARINS_setup",'(1x,A,I7)')    'Current   year                        : ', year
+    LOG_INFO("ATMOS_SOLARINS_setup",'(1x,A,I7)')    'Difference from ref.                  : ', int(dyear)
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_SOLARINS_setup",'(1x,A,F12.7)') 'Solar constant                 [W/m2] : ', ATMOS_SOLARINS_constant
+    LOG_INFO("ATMOS_SOLARINS_setup",'(1x,A,F12.7)') 'Obliquity                       [deg] : ', obliquity / CONST_D2R
+    LOG_INFO("ATMOS_SOLARINS_setup",'(1x,A,F12.7)') 'Eccentricity                          : ', E
+    LOG_INFO("ATMOS_SOLARINS_setup",'(1x,A,F12.7)') 'Longitude of perihelion         [deg] : ', omega     / CONST_D2R
+    LOG_INFO("ATMOS_SOLARINS_setup",'(1x,A,F12.7)') 'Longitude at the vernal equinox [deg] : ', lambda_m0 / CONST_D2R
+    LOG_NEWLINE
 
-    if( IO_L ) write(IO_FID_LOG,*)              '*** Latitude/Longitude is fixed?          : ', ATMOS_SOLARINS_fixedlatlon
+    LOG_INFO("ATMOS_SOLARINS_setup",*)              'Latitude/Longitude is fixed?          : ', ATMOS_SOLARINS_fixedlatlon
     if ( ATMOS_SOLARINS_fixedlatlon ) then
-       if( IO_L ) write(IO_FID_LOG,*)           '*** Longitude                       [deg] : ', ATMOS_SOLARINS_lon
-       if( IO_L ) write(IO_FID_LOG,*)           '*** Latitude                        [deg] : ', ATMOS_SOLARINS_lat
+       LOG_INFO("ATMOS_SOLARINS_setup",*)           'Longitude                       [deg] : ', ATMOS_SOLARINS_lon
+       LOG_INFO("ATMOS_SOLARINS_setup",*)           'Latitude                        [deg] : ', ATMOS_SOLARINS_lat
        ATMOS_SOLARINS_lon = ATMOS_SOLARINS_lon * CONST_D2R
        ATMOS_SOLARINS_lat = ATMOS_SOLARINS_lat * CONST_D2R
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*)              '*** Date is fixed?                        : ', ATMOS_SOLARINS_fixeddate
+    LOG_INFO("ATMOS_SOLARINS_setup",*)              'Date is fixed?                        : ', ATMOS_SOLARINS_fixeddate
     if ( ATMOS_SOLARINS_fixeddate ) then
-       if( IO_L ) write(IO_FID_LOG,*)           '*** Date                                  : ', ATMOS_SOLARINS_date
+       LOG_INFO("ATMOS_SOLARINS_setup",*)           'Date                                  : ', ATMOS_SOLARINS_date
     endif
 
     return
@@ -870,7 +870,7 @@ contains
     hourangle = 2.0_RP * PI * abssec / (24.0_RP*60.0_RP*60.0_RP)
 
     if ( debug ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_SOLARINS_insolation] : ', lambda_m, nu, lambda
+       LOG_INFO("ATMOS_SOLARINS_ecliptic_longitude",*) lambda_m, nu, lambda
     endif
 
     return

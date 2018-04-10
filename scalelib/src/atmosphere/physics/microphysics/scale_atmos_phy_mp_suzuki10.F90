@@ -19,6 +19,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_atmos_phy_mp_suzuki10
   !-----------------------------------------------------------------------------
   !
@@ -295,31 +296,31 @@ contains
     integer :: m, n, ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers setup for Suzuki (2010) Spectral BIN model'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_MP_suzuki10_tracer_setup",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_MP_suzuki10_tracer_setup",*) 'Tracers setup for Suzuki (2010) Spectral BIN model'
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ READ BIN NUMBER'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_MP_suzuki10_tracer_setup",*) 'READ BIN NUMBER'
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_BIN,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-      if( IO_L ) write(IO_FID_LOG,*)  '*** Not found namelist. Default used.'
+      LOG_INFO("ATMOS_PHY_MP_suzuki10_tracer_setup",*)  'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_BIN, Check!'
+       LOG_ERROR("ATMOS_PHY_MP_suzuki10_tracer_setup",*) 'Not appropriate names in namelist PARAM_BIN, Check!'
        call PRC_abort
     end if
 
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_BIN)
+    LOG_NML(PARAM_BIN)
 
     if( ICEFLG == 0 ) then
        nspc = 1
     elseif( ICEFLG == 1 ) then
        nspc = 7
     else
-       write(*,*) "ICEFLG should be 0 (warm rain) or 1 (mixed rain) check!!"
+       LOG_ERROR("ATMOS_PHY_MP_suzuki10_tracer_setup",*) "ICEFLG should be 0 (warm rain) or 1 (mixed rain) check!!"
        call PRC_abort
     endif
 
@@ -434,9 +435,9 @@ contains
     integer :: myu, nyu, i, j, k, n, ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Suzuki (2010) Spectral BIN model'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",*) 'Suzuki (2010) Spectral BIN model'
 
     !--- allocation
     allocate( xctr( nbin ) )
@@ -482,15 +483,15 @@ contains
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_SUZUKI10,iostat=ierr)
 
     if ( ierr < 0 ) then !--- missing
-     if( IO_L ) write(IO_FID_LOG,*)  '*** Not found namelist. Default used.'
+     LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",*)  'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-     write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SUZUKI10, Check!'
+     LOG_ERROR("ATMOS_PHY_MP_suzuki10_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SUZUKI10, Check!'
      call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_SUZUKI10)
+    LOG_NML(PARAM_ATMOS_PHY_MP_SUZUKI10)
 
     if ( nspc /= 1 .AND. nspc /= 7 ) then
-       write(*,*) 'xxx nspc should be set as 1 (warm rain) or 7 (mixed phase) check!'
+       LOG_ERROR("ATMOS_PHY_MP_suzuki10_setup",*) 'nspc should be set as 1 (warm rain) or 7 (mixed phase) check!'
        call PRC_abort
     endif
 
@@ -520,22 +521,22 @@ contains
         read( fid_micpara,* ) nnspc, nnbin
 
         if ( nnbin /= nbin ) then
-           write(*,*) 'xxx nbin in namelist and nbin in micpara.dat is different check!'
+           LOG_ERROR("ATMOS_PHY_MP_suzuki10_setup",*) 'nbin in namelist and nbin in micpara.dat is different check!'
            call PRC_abort
         endif
 
         ! grid parameter
-        if( IO_L ) write(IO_FID_LOG,*)  '*** Radius of cloud ****'
+        LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",*)  'Radius of cloud *'
         do n = 1, nbin
           read( fid_micpara,* ) nn, xctr( n ), radc( n )
-          if( IO_L ) write(IO_FID_LOG,'(A,1x,I3,1x,A,1x,ES15.7,1x,A)') &
+          LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",'(A,1x,I3,1x,A,1x,ES15.7,1x,A)') &
                     "Radius of ", n, "th cloud bin (bin center)= ", radc( n ) , "[m]"
         enddo
         do n = 1, nbin+1
           read( fid_micpara,* ) nn, xbnd( n )
         enddo
         read( fid_micpara,* ) dxmic
-        if( IO_L ) write(IO_FID_LOG,*)  '*** Width of Cloud SDF= ', dxmic
+        LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",*)  'Width of Cloud SDF= ', dxmic
 
         ! capacity
         do myu = 1, nspc_mk
@@ -579,7 +580,7 @@ contains
       !--- micpara.dat does not exist
       else
 
-        if( IO_L ) write(IO_FID_LOG,*) 'micpara.dat is created'
+        LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",*) 'micpara.dat is created'
         call mkpara
 
         fid_micpara = IO_get_available_fid()
@@ -589,22 +590,22 @@ contains
         read( fid_micpara,* ) nnspc, nnbin
 
         if ( nnbin /= nbin ) then
-           write(*,*) 'xxx nbin in inc_tracer and nbin in micpara.dat is different check!'
+           LOG_ERROR("ATMOS_PHY_MP_suzuki10_setup",*) 'nbin in inc_tracer and nbin in micpara.dat is different check!'
            call PRC_abort
         endif
 
         ! grid parameter
-        if( IO_L ) write(IO_FID_LOG,*)  '*** Radius of cloud ****'
+        LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",*)  'Radius of cloud *'
         do n = 1, nbin
           read( fid_micpara,* ) nn, xctr( n ), radc( n )
-          if( IO_L ) write(IO_FID_LOG,'(A,1x,I3,1x,A,1x,ES15.7,1x,A)') &
+          LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",'(A,1x,I3,1x,A,1x,ES15.7,1x,A)') &
                     "Radius of ", n, "th cloud bin (bin center)= ", radc( n ) , "[m]"
         enddo
         do n = 1, nbin+1
           read( fid_micpara,* ) nn, xbnd( n )
         enddo
         read( fid_micpara,* ) dxmic
-        if( IO_L ) write(IO_FID_LOG,*)  '*** Width of Cloud SDF= ', dxmic
+        LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",*)  'Width of Cloud SDF= ', dxmic
 
         ! capacity
         do myu = 1, nspc_mk
@@ -674,12 +675,12 @@ contains
     do n = 1, nccn
      xactr( n ) = ( xabnd( n )+xabnd( n+1 ) )*0.50_RP
      rada( n )  = ( exp( xactr( n ) )*ThirdovForth/pi/rhoa )**( OneovThird )
-     if( IO_L ) write(IO_FID_LOG,'(A,1x,I3,1x,A,1x,ES15.7,1x,A)') &
+     LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",'(A,1x,I3,1x,A,1x,ES15.7,1x,A)') &
           "Radius of ", n, "th aerosol bin (bin center)= ", rada( n ) , "[m]"
     enddo
 
     if ( flg_sf_aero ) then
-      write(*,*) "flg_sf_aero=true is not supported stop!! "
+      LOG_ERROR("ATMOS_PHY_MP_suzuki10_setup",*) "flg_sf_aero=true is not supported stop!! "
       call PRC_abort
 !     if ( CZ(KS) >= 10.0_RP ) then
 !          R10M1 = 10.0_RP / CZ(KS) * 0.50_RP ! scale with height
@@ -715,7 +716,7 @@ contains
         exit
       endif
     enddo
-    if( IO_L ) write(IO_FID_LOG,'(A,ES15.7,A)')  '*** Radius between cloud and rain is ', radc(nbnd), '[m]'
+    LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",'(A,ES15.7,A)')  'Radius between cloud and rain is ', radc(nbnd), '[m]'
 
     !--- random number setup for stochastic method
     if ( rndm_flgp > 0 ) then
@@ -723,7 +724,7 @@ contains
     endif
 
     if ( MP_couple_aerosol .AND. nccn /=0 ) then
-      write(*,*) 'xxx nccn should be 0 when MP_couple_aerosol = .true. !! stop'
+      LOG_ERROR("ATMOS_PHY_MP_suzuki10_setup",*) 'nccn should be 0 when MP_couple_aerosol = .true. !! stop'
       call PRC_abort
     endif
 
@@ -877,9 +878,9 @@ contains
     !---------------------------------------------------------------------------
 
     if    ( nspc == 1 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(SBM Liquid water only)'
+       LOG_PROGRESS(*) 'atmosphere / physics / microphysics / SBM (Liquid water only)'
     elseif( nspc >  1 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Cloud microphysics(SBM Mixed phase)'
+       LOG_PROGRESS(*) 'atmosphere / physics / microphysics / SBM (Mixed phase)'
     endif
 
     call ATMOS_SATURATION_pres2qsat_liq( KA, KS, KE, & ! [IN]
@@ -1543,7 +1544,7 @@ contains
     integer :: k, i, j, iq
 
     if ( present(QNUM) ) then
-       write(*,*) '*** [WARN] At this moment, number concentratio is ignored'
+       LOG_WARN("ATMOS_PHY_MP_suzuki10_qhyd2qtrc",*) 'At this moment, number concentratio is ignored'
     end if
 
     !--- define coefficients
@@ -4301,7 +4302,7 @@ contains
 
     a = real( nbin )*real( nbin-1 )*0.50_RP
     if ( a < mbin ) then
-       write(*,*) "mbin should be smaller than {nbin}_C_{2}"
+       LOG_ERROR("ATMOS_PHY_MP_SUZUKI10_random_setup",*) "mbin should be smaller than {nbin}_C_{2}"
        call PRC_abort
     endif
 
@@ -5009,18 +5010,18 @@ contains
 
   integer :: myu, nyu, i, j
 
-  if( IO_L ) write(IO_FID_LOG,*) 'Create micpara.dat'
+  LOG_INFO("ATMOS_PHY_MP_SUZUKI10_getck",*) 'Create micpara.dat'
   if( kphase == 0 ) then
-   if( IO_L ) write(IO_FID_LOG,*) 'Hydro-dynamic kernel'
+   LOG_INFO("ATMOS_PHY_MP_SUZUKI10_getck",*) 'Hydro-dynamic kernel'
   else if( kphase == 1 ) then
-   if( IO_L ) write(IO_FID_LOG,*) 'Long Kernel'
+   LOG_INFO("ATMOS_PHY_MP_SUZUKI10_getck",*) 'Long Kernel'
   else if( kphase == 2 ) then
-   if( IO_L ) write(IO_FID_LOG,*) 'Golovin Kernel'
+   LOG_INFO("ATMOS_PHY_MP_SUZUKI10_getck",*) 'Golovin Kernel'
   endif
 
   do myu = 1, nspc_mk
   do nyu = 1, nspc_mk
-  if( IO_L ) write(IO_FID_LOG,*) ' myu, nyu :', myu, nyu
+  LOG_INFO("ATMOS_PHY_MP_SUZUKI10_getck",*) ' myu, nyu :', myu, nyu
   do i = 1, nbin
   do j = 1, nbin
     ck_mk( myu,nyu,i,j ) = fckrn( myu,nyu,xctr_mk( i ),xctr_mk( j ) )

@@ -6,13 +6,8 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-06-18 (S.Nishizawa) [new] newly impremented
-!! @li      2014-04-04 (S.Nishizawa) [mod] support terrain-following coordinate
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
 
 #ifdef PROFILE_FAPP
 #define PROFILE_START(name) call fapp_start(name, 1, 1)
@@ -25,6 +20,7 @@
 #define PROFILE_STOP(name)
 #endif
 
+#include "scalelib.h"
 module scale_atmos_dyn_tstep_short_fvm_hevi
   !-----------------------------------------------------------------------------
   !
@@ -99,7 +95,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( ATMOS_DYN_TYPE /= 'FVM-HEVI' .AND. ATMOS_DYN_TYPE /= 'HEVI' ) then
-       write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HEVI. Check!'
+       LOG_ERROR("ATMOS_DYN_Tstep_short_fvm_hevi_regist",*) 'ATMOS_DYN_TYPE is not FVM-HEVI. Check!'
        call PRC_abort
     endif
 
@@ -108,10 +104,10 @@ contains
     VAR_DESC(:) = ""
     VAR_UNIT(:) = ""
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Register additional prognostic variables (HEVI)'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_DYN_Tstep_short_fvm_hevi_regist",*) 'Register additional prognostic variables (HEVI)'
     if ( VA_out < 1 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** => nothing.'
+       LOG_INFO_CONT(*) '=> nothing.'
     endif
 
     return
@@ -123,7 +119,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** HEVI Setup'
+    LOG_INFO("ATMOS_DYN_Tstep_short_fvm_hevi_setup",*) 'HEVI Setup'
 
     return
   end subroutine ATMOS_DYN_Tstep_short_fvm_hevi_setup
@@ -1229,8 +1225,8 @@ contains
           error = ( lhs - rhs ) / lhs
        endif
        if ( abs(error) > small ) then
-          write(*,*)"HEVI: DENS error", k, i, j, error, lhs, rhs
-          write(*,*)eps
+          LOG_ERROR("check_equation",*)"DENS error", k, i, j, error, lhs, rhs
+          LOG_ERROR_CONT(*)eps
           call PRC_abort
        endif
     enddo
@@ -1246,9 +1242,9 @@ contains
           error = ( lhs - rhs ) / lhs
        endif
        if ( abs(error) > small ) then
-          write(*,*)"HEVI: MOMZ error", k, i, j, error, lhs, rhs
-          write(*,*) MOMZ_N(k), MOMZ(k), dt
-          write(*,*) - J33G * ( DPRES(k+1) - DPRES(k) ) * RFDZ(k) / G(k,I_XYW) &
+          LOG_ERROR("check_equation",*)"MOMZ error", k, i, j, error, lhs, rhs
+          LOG_ERROR_CONT(*) MOMZ_N(k), MOMZ(k), dt
+          LOG_ERROR_CONT(*) - J33G * ( DPRES(k+1) - DPRES(k) ) * RFDZ(k) / G(k,I_XYW) &
              - GRAV * ( DENS(k+1) -REF_dens(k+1) + DENS(k) -REF_dens(k) ) * 0.5_RP &
              + Sw(k)
           call PRC_abort
@@ -1264,7 +1260,7 @@ contains
           error = ( lhs - rhs ) / lhs
        endif
        if ( abs(error) > small ) then
-          write(*,*)"HEVI: RHOT error", k, i, j, error, lhs, rhs
+          LOG_ERROR("check_equation",*)"RHOT error", k, i, j, error, lhs, rhs
           call PRC_abort
        endif
     enddo

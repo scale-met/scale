@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !!
 !<
+#include "scalelib.h"
 module scale_file_h
   use scale_precision, only: &
      DP

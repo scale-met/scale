@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_topography
   !-----------------------------------------------------------------------------
   !
@@ -75,8 +76,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TOPOGRAPHY] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("TOPO_setup",*) 'Setup'
 
     TOPO_IN_AGGREGATE  = FILE_AGGREGATE
     TOPO_OUT_AGGREGATE = FILE_AGGREGATE
@@ -85,12 +86,12 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_TOPO,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("TOPO_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_TOPO. Check!'
+       LOG_ERROR("TOPO_setup",*) 'Not appropriate names in namelist PARAM_TOPO. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_TOPO)
+    LOG_NML(PARAM_TOPO)
 
     allocate( TOPO_Zsfc(IA,JA) )
     TOPO_Zsfc(:,:) = 0.0_RP
@@ -145,14 +146,14 @@ contains
     integer :: fid
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input topography file ***'
+    LOG_NEWLINE
+    LOG_INFO("TOPO_read",*) 'Input topography file '
 
     if ( TOPO_IN_BASENAME /= '' ) then
 
        call FILE_CARTESC_open( TOPO_IN_BASENAME, fid, aggregate=TOPO_IN_AGGREGATE )
        call FILE_CARTESC_read( fid, 'TOPO', 'XY', TOPO_Zsfc(:,:) )
-                               
+
        call FILE_CARTESC_flush( fid )
 
        if ( TOPO_IN_CHECK_COORDINATES ) then
@@ -166,7 +167,7 @@ contains
        TOPO_exist = .true.
 
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** topography file is not specified.'
+       LOG_INFO_CONT(*) 'topography file is not specified.'
 
        TOPO_exist = .false.
     endif
@@ -184,8 +185,8 @@ contains
 
     if ( TOPO_OUT_BASENAME /= '' ) then
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output topography file ***'
+       LOG_NEWLINE
+       LOG_INFO("TOPO_write",*) 'Output topography file '
 
        call TOPO_fillhalo( FILL_BND=.false. )
 

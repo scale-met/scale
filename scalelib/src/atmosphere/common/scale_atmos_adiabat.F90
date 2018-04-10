@@ -7,7 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_adiabat
   !-----------------------------------------------------------------------------
   !
@@ -282,7 +282,7 @@ contains
                                    converged                              ) ! [OUT]
 
        if ( .not. converged ) then
-       write(*,*) 'xxx [liftparcel] not converged! ', i, j
+       LOG_ERROR("ATMOS_ADIABAT_cape_3D",*) '[liftparcel] not converged! ', i, j
           error = .true.
        end if
 
@@ -456,7 +456,7 @@ contains
                                          DENS_p3D(:,i,j), TEMP_p3D(:,i,j), QV_p3D(:,i,j), & ! [OUT]
                                          kLCL(i,j), converged                             ) ! [OUT]
        if ( .not. converged ) then
-          write(*,*) 'xxx [liftparcel] not converged! ', i, j
+          LOG_ERROR("ATMOS_ADIABAT_liftparcel_3D",*) '[liftparcel] not converged! ', i, j
           error = .true.
        end if
 

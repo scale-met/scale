@@ -7,7 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_thermodyn
   !-----------------------------------------------------------------------------
   !
@@ -135,9 +135,9 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[THERMODYN] / Categ[ATMOS COMMON] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_THERMODYN_setup",*) 'Setup'
+    LOG_INFO("ATMOS_THERMODYN_setup",*) 'No namelists.'
 
     return
   end subroutine ATMOS_THERMODYN_setup

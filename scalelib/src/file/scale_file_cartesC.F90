@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !!
 !<
+#include "scalelib.h"
 module scale_file_cartesC
   !-----------------------------------------------------------------------------
   !
@@ -236,8 +237,8 @@ contains
     call FILE_setup( PRC_myrank )
 
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[FIELIO] / Categ[ATMOS-RM IO] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("FILE_CARTESC_setup",*) 'Setup'
 
     FILE_CARTESC_datacheck_criteria = EPS * 10.0_RP
 
@@ -245,19 +246,20 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_FILE_CARTESC,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("FILE_CARTESC_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_FILE_CARTESC. Check!'
+       LOG_ERROR("FILE_CARTESC_setup",*) 'Not appropriate names in namelist PARAM_FILE_CARTESC. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_FILE_CARTESC)
+    LOG_NML(PARAM_FILE_CARTESC)
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** NetCDF header information ***'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Data source : ', trim(H_SOURCE)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Institute   : ', trim(H_INSTITUTE)
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Data consistency criteria : ', &
+    LOG_NEWLINE
+    LOG_INFO("FILE_CARTESC_setup",*) 'NetCDF header information '
+    LOG_INFO_CONT(*) 'Data source : ', trim(H_SOURCE)
+    LOG_INFO_CONT(*) 'Institute   : ', trim(H_INSTITUTE)
+
+    LOG_NEWLINE
+    LOG_INFO("FILE_CARTESC_setup",*) 'Data consistency criteria : ', &
                                    '(file-internal)/internal = ', FILE_CARTESC_datacheck_criteria
 
     ! construct indices independent from PRC_PERIODIC_X/Y
@@ -654,8 +656,8 @@ contains
     integer :: XSB, XEB, YSB, YEB
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Check consistency of axis ***'
+    LOG_NEWLINE
+    LOG_INFO("FILE_CARTESC_check_coordinates_id",*) 'Check consistency of axis '
 
     atmos_ = .false.
     ocean_ = .false.
@@ -829,7 +831,7 @@ contains
        elseif( RP == 4 ) then
           dtype = FILE_REAL4
        else
-          write(*,*) 'xxx unsupported data type. Check!', trim(datatype)
+          LOG_ERROR("FILE_CARTESC_create",*) 'unsupported data type. Check!', trim(datatype)
           call PRC_abort
        endif
     endif
@@ -1201,7 +1203,7 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (1D), name : ', trim(varname)
+    LOG_INFO("FILE_CARTESC_read_var_1D",'(1x,2A)') 'Read from file (1D), name : ', trim(varname)
 
     if ( FILE_get_aggregate(fid) ) then
        ! read data and halos into the local buffer
@@ -1242,7 +1244,7 @@ contains
                var(:),                                                     & ! (out)
                step=step, ntypes=JA, dtype=etype, start=start, count=count ) ! (in)
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_1D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          LOG_ERROR("FILE_CARTESC_read_var_1D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
     else
@@ -1271,7 +1273,7 @@ contains
           dim1_S   = 1
           dim1_E   = JA
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_1D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          LOG_ERROR("FILE_CARTESC_read_var_1D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
@@ -1314,7 +1316,7 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (2D), name : ', trim(varname)
+    LOG_INFO("FILE_CARTESC_read_var_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
 
     if ( FILE_get_AGGREGATE(fid) ) then
        ! read data and halos into the local buffer
@@ -1329,7 +1331,7 @@ contains
                var(:,:),                                                             & ! (out)
                step=step, ntypes=1, dtype=centerTypeZX, start=startZX, count=countZX ) ! (in)
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_2D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          LOG_ERROR("FILE_CARTESC_read_var_2D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
     else
@@ -1344,7 +1346,7 @@ contains
           dim2_S   = ISB
           dim2_E   = IEB
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_2D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          LOG_ERROR("FILE_CARTESC_read_var_2D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
@@ -1387,7 +1389,7 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (3D), name : ', trim(varname)
+    LOG_INFO("FILE_CARTESC_read_var_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
 
     if ( FILE_get_AGGREGATE(fid) ) then
        ! read data and halos into the local buffer
@@ -1422,7 +1424,7 @@ contains
                var(:,:,:),                                                                    & ! (out)
                step=step, ntypes=1, dtype=centerTypeURBAN, start=startURBAN, count=countURBAN ) ! (in)
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_3D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
     else
@@ -1471,7 +1473,7 @@ contains
           dim3_S   = JSB
           dim3_E   = JEB
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_3D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
@@ -1516,7 +1518,7 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Read from file (4D), name : ', trim(varname)
+    LOG_INFO("FILE_CARTESC_read_var_4D",'(1x,2A)') 'Read from file (4D), name : ', trim(varname)
 
     if ( FILE_get_AGGREGATE(fid) ) then
        ! read data and halos into the local buffer
@@ -1535,7 +1537,7 @@ contains
                var(:,:,:,:),                                                                  & ! (out)
                step=step, ntypes=step, dtype=centerTypeZHXY, start=startZHXY, count=countZHXY ) ! (in)
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_4D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          LOG_ERROR("FILE_CARTESC_read_var_4D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
     else
@@ -1569,7 +1571,7 @@ contains
           dim4_S   = 1
           dim4_E   = step
        else
-          write(*,*) 'xxx [FILE_CARTESC_read_var_4D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          LOG_ERROR("FILE_CARTESC_read_var_4D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
@@ -1619,7 +1621,7 @@ contains
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (1D), name : ', trim(varname)
+    LOG_INFO("FILE_CARTESC_write_1D",'(1x,2A)') 'Write to file (1D), name : ', trim(varname)
 
     call FILE_CARTESC_create( basename, title, datatype,         & ! [IN]
                               fid,                               & ! [OUT]
@@ -1673,7 +1675,7 @@ contains
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (2D), name : ', trim(varname)
+    LOG_INFO("FILE_CARTESC_write_2D",'(1x,2A)') 'Write to file (2D), name : ', trim(varname)
 
     call FILE_CARTESC_create( basename, title, datatype,         & ! [IN]
                               fid,                               & ! [OUT]
@@ -1727,7 +1729,7 @@ contains
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (3D), name : ', trim(varname)
+    LOG_INFO("FILE_CARTESC_write_3D",'(1x,2A)') 'Write to file (3D), name : ', trim(varname)
 
     call FILE_CARTESC_create( basename, title, datatype,         & ! [IN]
                               fid,                               & ! [OUT]
@@ -1786,7 +1788,7 @@ contains
     intrinsic :: size
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,3A)') '*** Write to file (3D), name : ', trim(varname), 'with time dimension'
+    LOG_INFO("FILE_CARTESC_write_3D_t",'(1x,3A)') 'Write to file (3D), name : ', trim(varname), 'with time dimension'
 
     call FILE_CARTESC_create( basename, title, datatype,         & ! [IN]
                               fid,                               & ! [OUT]
@@ -1852,7 +1854,7 @@ contains
     intrinsic :: size
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,2A)') '*** Write to file (4D), name : ', trim(varname)
+    LOG_INFO("FILE_CARTESC_write_4D",'(1x,2A)') 'Write to file (4D), name : ', trim(varname)
 
     call FILE_CARTESC_create( basename, title, datatype,         & ! [IN]
                               fid,                               & ! [OUT]
@@ -2834,7 +2836,7 @@ contains
           dtype = FILE_REAL4
           elm_size = 4
        else
-          write(*,*) 'xxx unsupported data type. Check!', trim(datatype), ' item:',trim(varname)
+          LOG_ERROR("FILE_CARTESC_def_var",*) 'unsupported data type. Check!', trim(datatype), ' item:',trim(varname)
           call PRC_abort
        endif
     endif
@@ -2847,7 +2849,7 @@ contains
        end if
     end do
     if ( dimid < -1 ) then
-       write(*,*) 'xxx dim_type is not supported: ', trim(dim_type)
+       LOG_ERROR("FILE_CARTESC_def_var",*) 'dim_type is not supported: ', trim(dim_type)
        call PRC_abort
     end if
 
@@ -2881,31 +2883,31 @@ contains
        select case ( cell_measures )
        case ( "area" )
           if ( FILE_CARTESC_dims(dimid)%area == "" ) then
-             write(*,*) 'xxx area is not supported for ', trim(dim_type), ' as cell_measures'
+             LOG_ERROR("FILE_CARTESC_def_var",*) 'area is not supported for ', trim(dim_type), ' as cell_measures'
              call PRC_abort
           end if
        case ( "area_z" )
           if ( FILE_CARTESC_dims(dimid)%area == "" ) then
-             write(*,*) 'xxx area_z is not supported for ', trim(dim_type), ' as cell_measures'
+             LOG_ERROR("FILE_CARTESC_def_var",*) 'area_z is not supported for ', trim(dim_type), ' as cell_measures'
              call PRC_abort
           end if
        case ( "area_x" )
           if ( FILE_CARTESC_dims(dimid)%area_x == "" ) then
-             write(*,*) 'xxx area_x is not supported for ', trim(dim_type), ' as cell_measures'
+             LOG_ERROR("FILE_CARTESC_def_var",*) 'area_x is not supported for ', trim(dim_type), ' as cell_measures'
              call PRC_abort
           end if
        case ( "area_y" )
           if ( FILE_CARTESC_dims(dimid)%area_y == "" ) then
-             write(*,*) 'xxx area_y is not supported for ', trim(dim_type), ' as cell_measures'
+             LOG_ERROR("FILE_CARTESC_def_var",*) 'area_y is not supported for ', trim(dim_type), ' as cell_measures'
              call PRC_abort
           end if
        case ( "volume" )
           if ( FILE_CARTESC_dims(dimid)%volume == "" ) then
-             write(*,*) 'xxx volume is not supported for ', trim(dim_type), ' as cell_measures'
+             LOG_ERROR("FILE_CARTESC_def_var",*) 'volume is not supported for ', trim(dim_type), ' as cell_measures'
              call PRC_abort
           end if
        case default
-          write(*,*) 'xxx cell_measures must be "area" or "volume"'
+          LOG_ERROR("FILE_CARTESC_def_var",*) 'cell_measures must be "area" or "volume"'
           call PRC_abort
        end select
     else if ( ndims == 2 ) then
@@ -3012,7 +3014,7 @@ contains
        end if
        start(1) = JSGA
     else
-       write(*,*) 'xxx [FILE_CARTESC_write_var_1D] unsupported dimenstion type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+       LOG_ERROR("FILE_CARTESC_write_var_1D",*) 'unsupported dimenstion type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
        call PRC_abort
     endif
 
@@ -3110,7 +3112,7 @@ contains
           dim2_E = IEB
        endif
     else
-       write(*,*) 'xxx [FILE_CARTESC_write_var_2D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+       LOG_ERROR("FILE_CARTESC_write_var_2D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
        call PRC_abort
     endif
 
@@ -3237,7 +3239,7 @@ contains
        dim1_S   = UKS
        dim1_E   = UKE
     else
-       write(*,*) 'xxx [FILE_CARTESC_write_var_3D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+       LOG_ERROR("FILE_CARTESC_write_var_3D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
        call PRC_abort
     endif
 
@@ -3380,7 +3382,7 @@ contains
           dim2_E   = JEB
        end if
     else
-       write(*,*) 'xxx [FILE_CARTESC_write_var_3D_t] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+       LOG_ERROR("FILE_CARTESC_write_var_3D_t",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
        call PRC_abort
     endif
 
@@ -3591,7 +3593,7 @@ contains
        dim1_S   = UKS-1
        dim1_E   = UKE
     else
-       write(*,*) 'xxx [FILE_CARTESC_write_var_4D] unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+       LOG_ERROR("FILE_CARTESC_write_var_4D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
        call PRC_abort
     endif
 
@@ -3736,7 +3738,7 @@ contains
 
     nmax = size(expected)
     if ( size(buffer) /= nmax ) then
-       write(*,*) 'xxx size of coordinate ('//trim(name)//') is different:', nmax, size(buffer)
+       LOG_ERROR("check_1d",*) 'size of coordinate ('//trim(name)//') is different:', nmax, size(buffer)
        call PRC_abort
     endif
 
@@ -3748,7 +3750,7 @@ contains
        endif
 
        if ( check > FILE_CARTESC_datacheck_criteria ) then
-          write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', n, ' is different:', &
+          LOG_ERROR("check_1d",*) 'value of coordinate ('//trim(name)//') at ', n, ' is different:', &
                      expected(n), buffer(n), check
           call PRC_abort
        endif
@@ -3781,11 +3783,11 @@ contains
     imax = size(expected,1)
     jmax = size(expected,2)
     if ( size(buffer,1) /= imax ) then
-       write(*,*) 'xxx the first size of coordinate ('//trim(name)//') is different:', imax, size(buffer,1)
+       LOG_ERROR("check_2d",*) 'the first size of coordinate ('//trim(name)//') is different:', imax, size(buffer,1)
        call PRC_abort
     endif
     if ( size(buffer,2) /= jmax ) then
-       write(*,*) 'xxx the second size of coordinate ('//trim(name)//') is different:', jmax, size(buffer,2)
+       LOG_ERROR("check_2d",*) 'the second size of coordinate ('//trim(name)//') is different:', jmax, size(buffer,2)
        call PRC_abort
     endif
 
@@ -3798,7 +3800,7 @@ contains
        endif
 
        if ( check > FILE_CARTESC_datacheck_criteria ) then
-          write(*,*) 'xxx value of coordinate ('//trim(name)//') at (', i, ',', j, ') is different:', &
+          LOG_ERROR("check_2d",*) 'value of coordinate ('//trim(name)//') at (', i, ',', j, ') is different:', &
                      expected(i,j), buffer(i,j), check
           call PRC_abort
        endif
@@ -3841,15 +3843,15 @@ contains
        jmax = size(expected,3)
     endif
     if ( size(buffer,1) /= kmax ) then
-       write(*,*) 'xxx the first size of coordinate ('//trim(name)//') is different:', kmax, size(buffer,1)
+       LOG_ERROR("check_3d",*) 'the first size of coordinate ('//trim(name)//') is different:', kmax, size(buffer,1)
        call PRC_abort
     endif
     if ( size(buffer,2) /= imax ) then
-       write(*,*) 'xxx the second size of coordinate ('//trim(name)//') is different:', imax, size(buffer,2)
+       LOG_ERROR("check_3d",*) 'the second size of coordinate ('//trim(name)//') is different:', imax, size(buffer,2)
        call PRC_abort
     endif
     if ( size(buffer,3) /= jmax ) then
-       write(*,*) 'xxx the third size of coordinate ('//trim(name)//') is different:', jmax, size(buffer,3)
+       LOG_ERROR("check_3d",*) 'the third size of coordinate ('//trim(name)//') is different:', jmax, size(buffer,3)
        call PRC_abort
     endif
 
@@ -3865,7 +3867,7 @@ contains
           endif
 
           if ( check > FILE_CARTESC_datacheck_criteria ) then
-             write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', i, ',', j, ',', k, ' is different:', &
+             LOG_ERROR("check_3d",*) 'value of coordinate ('//trim(name)//') at ', i, ',', j, ',', k, ' is different:', &
                         expected(k,i,j), buffer(i,j,k), check
              call PRC_abort
           endif
@@ -3883,7 +3885,7 @@ contains
           endif
 
           if ( check > FILE_CARTESC_datacheck_criteria ) then
-             write(*,*) 'xxx value of coordinate ('//trim(name)//') at ', k, ',', i, ',', j, ' is different:', &
+             LOG_ERROR("check_3d",*) 'value of coordinate ('//trim(name)//') at ', k, ',', i, ',', j, ' is different:', &
                         expected(k,i,j), buffer(k,i,j), check
              call PRC_abort
           endif
@@ -4052,7 +4054,7 @@ contains
     do n = 1, 2
        dimid = dimid + 1
        if ( dimid > FILE_CARTESC_ndims ) then
-          write(*,*) 'xxx number of dimensions exceeds the limit'
+          LOG_ERROR("set_dimension",*) 'number of dimensions exceeds the limit'
           call PRC_abort
        end if
 

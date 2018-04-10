@@ -9,7 +9,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_cp_common
   !-----------------------------------------------------------------------------
   !
@@ -60,25 +60,25 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CUMULUS] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** CP-COMMON'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_CP_common_setup",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_CP_common_setup",*) 'CP-COMMON'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_CP_COMMON,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_CP_common_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_CP_COMMON. Check!'
+       LOG_ERROR("ATMOS_PHY_CP_common_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_CP_COMMON. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_CP_COMMON)
+    LOG_NML(PARAM_ATMOS_PHY_CP_COMMON)
 
     ! output parameter lists
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) "*** Use running mean of w in adaptive timestep?     : ", PARAM_ATMOS_PHY_CP_wadapt
-    if( IO_L ) write(IO_FID_LOG,*) "*** Fixed time scale for running mean of w          : ", PARAM_ATMOS_PHY_CP_w_time
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_CP_common_setup",*) "Use running mean of w in adaptive timestep?     : ", PARAM_ATMOS_PHY_CP_wadapt
+    LOG_INFO("ATMOS_PHY_CP_common_setup",*) "Fixed time scale for running mean of w          : ", PARAM_ATMOS_PHY_CP_w_time
 
     return
   end subroutine ATMOS_PHY_CP_common_setup

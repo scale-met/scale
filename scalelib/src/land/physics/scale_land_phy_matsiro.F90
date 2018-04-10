@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_land_phy_matsiro
   !-----------------------------------------------------------------------------
   !
@@ -58,19 +59,22 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[MATSIRO] / Categ[LAND PHY] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("LAND_PHY_MATSIRO_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_LAND_MATSIRO,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("LAND_PHY_MATSIRO_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_MATSIRO. Check!'
+       LOG_ERROR("LAND_PHY_MATSIRO_setup",*) 'Not appropriate names in namelist PARAM_LAND_MATSIRO. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_MATSIRO)
+    LOG_NML(PARAM_LAND_MATSIRO)
+
+    LOG_ERROR("LAND_PHY_MATSIRO", *) "This scheme is under development"
+    call PRC_abort
 
     return
   end subroutine LAND_PHY_MATSIRO_setup
@@ -111,7 +115,7 @@ contains
     real(DP), intent(in)  :: dt
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Land  physics step: Matsiro'
+    LOG_PROGRESS(*) 'land / physics / Matsiro'
 
     LAND_TEMP_t (:,:,:) = 0.0_RP
     LAND_WATER_t(:,:,:) = 0.0_RP

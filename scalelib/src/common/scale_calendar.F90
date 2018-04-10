@@ -7,11 +7,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-01-29 (H.Yashiro)  [new]
-!!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_calendar
   !-----------------------------------------------------------------------------
   !
@@ -100,19 +98,19 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CALENDAR] / Categ[COMMON] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("CALENDAR_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_CALENDAR,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("CALENDAR_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_CALENDAR. Check!'
+       LOG_ERROR("CALENDAR_setup",*) 'Not appropriate names in namelist PARAM_CALENDAR. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_CALENDAR)
+    LOG_NML(PARAM_CALENDAR)
 
     if    ( CALENDAR_360DAYS ) then
        CALENDAR_DOI = 360.0_DP
@@ -120,14 +118,14 @@ contains
        CALENDAR_DOI = 365.0_DP
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Calendar settings ***'
+    LOG_NEWLINE
+    LOG_INFO("CALENDAR_setup",*) 'Calendar settings'
     if    ( CALENDAR_360DAYS ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** DayOfYear = 360 : ideal setting'
+       LOG_INFO_CONT(*) 'DayOfYear = 360 : ideal setting'
     elseif( CALENDAR_365DAYS ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** DayOfYear = 365 : ideal setting'
+       LOG_INFO_CONT(*) 'DayOfYear = 365 : ideal setting'
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** DayOfYear = 365 or 366 : Gregorian calendar'
+       LOG_INFO_CONT(*) 'DayOfYear = 365 or 366 : Gregorian calendar'
     endif
 
     return
@@ -444,7 +442,7 @@ contains
     case('DAY')
        second = value * CALENDAR_SEC * CALENDAR_MIN * CALENDAR_HOUR
     case default
-       write(*,*) 'xxx Unsupported UNIT: ', trim(unit), ', ', value
+       LOG_ERROR("CALENDAR_unit2sec",*) 'Unsupported UNIT: ', trim(unit), ', ', value
        call PRC_abort
     endselect
 
@@ -478,7 +476,7 @@ contains
     case('DAY', 'days', 'day')
        value = second / (CALENDAR_SEC * CALENDAR_MIN * CALENDAR_HOUR)
     case default
-       write(*,*) 'xxx Unsupported UNIT: ', trim(unit), ', ', value
+       LOG_ERROR("CALENDAR_sec2unit",*) 'Unsupported UNIT: ', trim(unit), ', ', value
        call PRC_abort
     endselect
 
@@ -516,9 +514,9 @@ contains
 
        l = index(buf,"-")
        if ( l /= 5 ) then
-          write(*,*) 'xxx units for time is invalid (year)'
-          write(*,*) 'xxx ', trim(cfunits)
-          write(*,*) 'xxx ', trim(buf)
+          LOG_ERROR("CALENDAR_CFunits2sec",*) 'units for time is invalid (year)'
+          LOG_ERROR_CONT(*) trim(cfunits)
+          LOG_ERROR_CONT(*) trim(buf)
           call PRC_abort
        end if
        read(buf(1:4),*) date(1) ! year
@@ -526,9 +524,9 @@ contains
 
        l = index(buf,"-")
        if ( l /= 3 ) then
-          write(*,*) 'xxx units for time is invalid (month)'
-          write(*,*) 'xxx ', trim(cfunits)
-          write(*,*) 'xxx ', trim(buf)
+          LOG_ERROR("CALENDAR_CFunits2sec",*) 'units for time is invalid (month)'
+          LOG_ERROR_CONT(*) trim(cfunits)
+          LOG_ERROR_CONT(*) trim(buf)
           call PRC_abort
        end if
        read(buf(1:2),*) date(2) ! month
@@ -536,9 +534,9 @@ contains
 
        l = index(buf," ")
        if ( l /= 3 ) then
-          write(*,*) 'xxx units for time is invalid (day)'
-          write(*,*) 'xxx ', trim(cfunits)
-          write(*,*) 'xxx ', trim(buf)
+          LOG_ERROR("CALENDAR_CFunits2sec",*) 'units for time is invalid (day)'
+          LOG_ERROR_CONT(*) trim(cfunits)
+          LOG_ERROR_CONT(*) trim(buf)
           call PRC_abort
        end if
        read(buf(1:2),*) date(3) ! day
@@ -546,9 +544,9 @@ contains
 
        l = index(buf,":")
        if ( l /= 3 ) then
-          write(*,*) 'xxx units for time is invalid (hour)'
-          write(*,*) 'xxx ', trim(cfunits)
-          write(*,*) 'xxx ', trim(buf)
+          LOG_ERROR("CALENDAR_CFunits2sec",*) 'units for time is invalid (hour)'
+          LOG_ERROR_CONT(*) trim(cfunits)
+          LOG_ERROR_CONT(*) trim(buf)
           call PRC_abort
        end if
        read(buf(1:2),*) date(4) ! hour
@@ -556,19 +554,19 @@ contains
 
        l = index(buf,":")
        if ( l /= 3 ) then
-          write(*,*) 'xxx units for time is invalid (min)'
-          write(*,*) 'xxx ', trim(cfunits)
-          write(*,*) 'xxx ', trim(buf)
+          LOG_ERROR("CALENDAR_CFunits2sec",*) 'units for time is invalid (min)'
+          LOG_ERROR_CONT(*) trim(cfunits)
+          LOG_ERROR_CONT(*) trim(buf)
           call PRC_abort
        end if
        read(buf(1:2),*) date(5) ! min
        buf = buf(4:)
 
        if ( len_trim(buf) /= 2 ) then
-          write(*,*) 'xxx units for time is invalid (sec)'
-          write(*,*) 'xxx ', trim(cfunits)
-          write(*,*) 'xxx ', trim(buf)
-          write(*,*) 'xxx ', len_trim(buf)
+          LOG_ERROR("CALENDAR_CFunits2sec",*) 'units for time is invalid (sec)'
+          LOG_ERROR_CONT(*) trim(cfunits)
+          LOG_ERROR_CONT(*) trim(buf)
+          LOG_ERROR_CONT(*) len_trim(buf)
           call PRC_abort
        end if
        read(buf(1:2),*) date(6) ! sec

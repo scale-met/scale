@@ -8,6 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_ocean_dyn_slab
   !-----------------------------------------------------------------------------
   !
@@ -94,8 +95,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLAB] / Categ[OCEAN DYN] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Setup'
 
     OCEAN_DYN_SLAB_nudging_defval = UNDEF
 
@@ -103,36 +104,36 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_OCEAN_DYN_SLAB,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN_DYN_SLAB. Check!'
+       LOG_ERROR("OCEAN_DYN_SLAB_setup",*) 'Not appropriate names in namelist PARAM_OCEAN_DYN_SLAB. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN_DYN_SLAB)
+    LOG_NML(PARAM_OCEAN_DYN_SLAB)
 
     OCEAN_DYN_SLAB_HeatCapacity = DWATR * CL * OCEAN_DYN_SLAB_DEPTH
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Slab ocean depth [m]          : ', OCEAN_DYN_SLAB_DEPTH
-    if( IO_L ) write(IO_FID_LOG,*) '*** Ocean heat capacity [J/K/m2]  : ', OCEAN_DYN_SLAB_HeatCapacity
+    LOG_NEWLINE
+    LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Slab ocean depth [m]          : ', OCEAN_DYN_SLAB_DEPTH
+    LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Ocean heat capacity [J/K/m2]  : ', OCEAN_DYN_SLAB_HeatCapacity
 
     if ( OCEAN_DYN_SLAB_nudging ) then
        call CALENDAR_unit2sec( OCEAN_DYN_SLAB_nudging_tausec, OCEAN_DYN_SLAB_nudging_tau, OCEAN_DYN_SLAB_nudging_tau_unit )
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** Use nudging for OCEAN physics : ON'
-       if( IO_L ) write(IO_FID_LOG,*) '*** Relaxation time Tau [sec]     : ', OCEAN_DYN_SLAB_nudging_tausec
+       LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Use nudging for OCEAN physics : ON'
+       LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Relaxation time Tau [sec]     : ', OCEAN_DYN_SLAB_nudging_tausec
 
        if ( OCEAN_DYN_SLAB_nudging_tausec == 0.0_RP ) then
           OCEAN_DYN_SLAB_offline_mode = .true.
-          if( IO_L ) write(IO_FID_LOG,*) '*** Tau=0 means that SST is completely replaced by the external data.'
+          LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Tau=0 means that SST is completely replaced by the external data.'
        endif
 
        if ( OCEAN_DYN_SLAB_nudging_basename(1) == '' ) then
-          write(*,*) 'xxx OCEAN_DYN_SLAB_nudging_basename is necessary !!'
+          LOG_ERROR("OCEAN_DYN_SLAB_setup",*) 'OCEAN_DYN_SLAB_nudging_basename is necessary !!'
           call PRC_abort
        endif
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Use nudging for OCEAN physics : OFF'
+       LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Use nudging for OCEAN physics : OFF'
     endif
 
     if ( OCEAN_DYN_SLAB_nudging ) then
@@ -192,14 +193,14 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Ocean physics step: Slab'
+    LOG_PROGRESS(*) 'ocean / dynamics / Slab'
 
     if ( OCEAN_DYN_SLAB_nudging ) then
 
        call FILE_EXTERNAL_INPUT_update( 'OCEAN_TEMP', NOWDAYSEC, OCEAN_TEMP_ref(:,:,:), error )
 
        if ( error ) then
-          write(*,*) 'xxx Requested data is not found!'
+          LOG_ERROR("OCEAN_DYN_SLAB",*) 'Requested data is not found!'
           call PRC_abort
        endif
 

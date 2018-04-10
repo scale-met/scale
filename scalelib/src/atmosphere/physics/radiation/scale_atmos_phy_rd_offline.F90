@@ -9,7 +9,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_rd_offline
   !-----------------------------------------------------------------------------
   !
@@ -97,9 +97,9 @@ contains
     integer :: n, ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[RADIATION] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Offline radiation process'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_RD_offline_setup",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_RD_offline_setup",*) 'Offline radiation process'
 
     ATMOS_PHY_RD_offline_defval = UNDEF
 
@@ -107,15 +107,15 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD_OFFLINE,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_RD_offline_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_RD_OFFLINE. Check!'
+       LOG_ERROR("ATMOS_PHY_RD_offline_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_RD_OFFLINE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_RD_OFFLINE)
+    LOG_NML(PARAM_ATMOS_PHY_RD_OFFLINE)
 
     if ( ATMOS_PHY_RD_offline_basename(1) == '' ) then
-       write(*,*) 'xxx ATMOS_PHY_RD_offline_basename is necessary'
+       LOG_ERROR("ATMOS_PHY_RD_offline_setup",*) 'ATMOS_PHY_RD_offline_basename is necessary'
        call PRC_abort
     end if
 
@@ -161,9 +161,9 @@ contains
                                         ATMOS_PHY_RD_offline_step_limit,            & ! [IN]
                                         exist = vars_2d_exist(n)                    ) ! [OUT]
        if ( vars_2d_exist(n) ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** ', trim(vars_2d_op(n)), ' found.'
+          LOG_INFO("ATMOS_PHY_RD_offline_setup",*) '', trim(vars_2d_op(n)), ' found.'
        else
-          if( IO_L ) write(IO_FID_LOG,*) '*** ', trim(vars_2d_op(n)), ' not found.'
+          LOG_INFO("ATMOS_PHY_RD_offline_setup",*) '', trim(vars_2d_op(n)), ' not found.'
        end if
     end do
 
@@ -203,7 +203,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Radiation(offline)'
+    LOG_PROGRESS(*) 'atmosphere / physics / radiation / offline'
 
     ! [note] external data input is now support only SCALE-RM
 
@@ -325,7 +325,7 @@ contains
     end if
 
     if ( error_sum ) then
-       write(*,*) 'xxx Requested data is not found!'
+       LOG_ERROR("ATMOS_PHY_RD_offline_flux",*) 'Requested data is not found!'
        call PRC_abort
     endif
 

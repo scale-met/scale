@@ -6,12 +6,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-05-17 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tstep_tracer_fvm_heve
   !-----------------------------------------------------------------------------
   !
@@ -65,7 +62,7 @@ contains
     character(len=*), intent(in) :: type
 
     if ( type /= 'FVM-HEVE' ) then
-       write(*,*) 'xxx Tstep_tracer_type is not "FVM-HEVE"!'
+       LOG_ERROR("ATMOS_DYN_Tstep_tracer_fvm_heve_setup",*) 'Tstep_tracer_type is not "FVM-HEVE"!'
        call PRC_abort
     end if
 

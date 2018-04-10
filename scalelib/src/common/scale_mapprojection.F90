@@ -11,6 +11,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_mapprojection
   !-----------------------------------------------------------------------------
   !
@@ -169,8 +170,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[MAPPROJ] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("MAPPROJECTION_setup",*) 'Setup'
 
     PI     = real(PI_RP,     kind=DP)
     D2R    = real(D2R_RP,    kind=DP)
@@ -188,16 +189,18 @@ contains
     read(IO_FID_CONF,nml=PARAM_MAPPROJECTION,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("MAPPROJECTION_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MAPPROJECTION. Check!'
+       LOG_ERROR("MAPPROJECTION_setup",*) 'Not appropriate names in namelist PARAM_MAPPROJECTION. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MAPPROJECTION)
+    LOG_NML(PARAM_MAPPROJECTION)
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Map projection type : ', trim(MAPPROJECTION_type)
-
+    LOG_NEWLINE
+    LOG_INFO("MAPPROJECTION_setup",*) 'Map projection information'
+    LOG_INFO_CONT('(1x,A,F15.3)') 'Basepoint(x)    [m] : ', MAPPROJECTION_basepoint_x
+    LOG_INFO_CONT('(1x,A,F15.3)') 'Basepoint(y)    [m] : ', MAPPROJECTION_basepoint_y
+    LOG_INFO_CONT(*)              'Map projection type : ', trim(MAPPROJECTION_type)
 
     MAPPROJECTION_mapping = ""
     MAPPROJECTION_false_easting = UNDEF
@@ -212,27 +215,24 @@ contains
 
     select case(trim(MAPPROJECTION_type))
     case('NONE')
-       if( IO_L ) write(IO_FID_LOG,*) '*** => NO map projection'
+       LOG_INFO_CONT(*) '=> NO map projection'
        call MAPPROJECTION_None_setup
     case('LC')
-       if( IO_L ) write(IO_FID_LOG,*) '*** => Lambert Conformal projection'
+       LOG_INFO_CONT(*) '=> Lambert Conformal projection'
        call MAPPROJECTION_LambertConformal_setup
     case('PS')
-       if( IO_L ) write(IO_FID_LOG,*) '*** => Polar Stereographic projection'
+       LOG_INFO_CONT(*) '=> Polar Stereographic projection'
        call MAPPROJECTION_PolarStereographic_setup
     case('MER')
-       if( IO_L ) write(IO_FID_LOG,*) '*** => Mercator projection'
+       LOG_INFO_CONT(*) '=> Mercator projection'
        call MAPPROJECTION_Mercator_setup
     case('EC')
-       if( IO_L ) write(IO_FID_LOG,*) '*** => Equidistant Cylindrical projection'
+       LOG_INFO_CONT(*) '=> Equidistant Cylindrical projection'
        call MAPPROJECTION_EquidistantCylindrical_setup
     case default
-       write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
+       LOG_ERROR("MAPPROJECTION_setup",*) 'Unsupported MAPPROJECTION_type. STOP'
        call PRC_abort
     endselect
-
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') '*** Basepoint(x)    = ', MAPPROJECTION_basepoint_x
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') '*** Basepoint(y)    = ', MAPPROJECTION_basepoint_y
 
     return
   end subroutine MAPPROJECTION_setup
@@ -266,7 +266,7 @@ contains
     case('EC')
        call MAPPROJECTION_EquidistantCylindrical_xy2lonlat( x, y, lon, lat )
     case default
-       write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
+       LOG_ERROR("MAPPROJECTION_xy2lonlat",*) 'Unsupported MAPPROJECTION_type. STOP'
        call PRC_abort
     endselect
 
@@ -302,7 +302,7 @@ contains
     case('EC')
        call MAPPROJECTION_EquidistantCylindrical_lonlat2xy( lon, lat, x, y )
     case default
-       write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
+       LOG_ERROR("MAPPROJECTION_lonlat2xy",*) 'Unsupported MAPPROJECTION_type. STOP'
        call PRC_abort
     endselect
 
@@ -336,7 +336,7 @@ contains
     case('EC')
        call MAPPROJECTION_EquidistantCylindrical_mapfactor( lat, m1, m2 )
     case default
-       write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
+       LOG_ERROR("MAPPROJECTION_mapfactor",*) 'Unsupported MAPPROJECTION_type. STOP'
        call PRC_abort
     endselect
 
@@ -371,7 +371,7 @@ contains
     case('EC')
        call MAPPROJECTION_EquidistantCylindrical_rotcoef_0D( rotc )
     case default
-       write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
+       LOG_ERROR("MAPPROJECTION_rotcoef_0D",*) 'Unsupported MAPPROJECTION_type. STOP'
        call PRC_abort
     endselect
 
@@ -406,7 +406,7 @@ contains
     case('EC')
        call MAPPROJECTION_EquidistantCylindrical_rotcoef_2D( rotc )
     case default
-       write(*,*) 'xxx Unsupported MAPPROJECTION_type. STOP'
+       LOG_ERROR("MAPPROJECTION_rotcoef_2D",*) 'Unsupported MAPPROJECTION_type. STOP'
        call PRC_abort
     endselect
 
@@ -464,8 +464,8 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_rotation   = ', MAPPROJECTION_rotation
+    LOG_NEWLINE
+    LOG_INFO("MAPPROJECTION_None_setup",*) 'MAPPROJECTION_rotation   = ', MAPPROJECTION_rotation
 
     MAPPROJECTION_mapping = ""
 
@@ -615,7 +615,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( MAPPROJECTION_LC_lat1 >= MAPPROJECTION_LC_lat2 ) then
-       write(*,*) 'xxx Please set MAPPROJECTION_LC_lat1 < MAPPROJECTION_LC_lat2 in degree. STOP'
+       LOG_ERROR("MAPPROJECTION_LambertConformal_setup",*) 'Please set MAPPROJECTION_LC_lat1 < MAPPROJECTION_LC_lat2 in degree. STOP'
        call PRC_abort
     endif
 
@@ -642,14 +642,14 @@ contains
     MAPPROJECTION_pole_x = MAPPROJECTION_basepoint_x -                   dist * sin(MAPPROJECTION_LC_c*dlon)
     MAPPROJECTION_pole_y = MAPPROJECTION_basepoint_y + MAPPROJECTION_hemisphere * dist * cos(MAPPROJECTION_LC_c*dlon)
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_LC_lat1    = ', MAPPROJECTION_LC_lat1
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_LC_lat2    = ', MAPPROJECTION_LC_lat2
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_hemisphere = ', MAPPROJECTION_hemisphere
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_LC_c       = ', MAPPROJECTION_LC_c
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_LC_fact    = ', MAPPROJECTION_LC_fact
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_pole_x     = ', MAPPROJECTION_pole_x
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_pole_y     = ', MAPPROJECTION_pole_y
+    LOG_NEWLINE
+    LOG_INFO("MAPPROJECTION_LambertConformal_setup",*) 'MAPPROJECTION_LC_lat1    = ', MAPPROJECTION_LC_lat1
+    LOG_INFO("MAPPROJECTION_LambertConformal_setup",*) 'MAPPROJECTION_LC_lat2    = ', MAPPROJECTION_LC_lat2
+    LOG_INFO("MAPPROJECTION_LambertConformal_setup",*) 'MAPPROJECTION_hemisphere = ', MAPPROJECTION_hemisphere
+    LOG_INFO("MAPPROJECTION_LambertConformal_setup",*) 'MAPPROJECTION_LC_c       = ', MAPPROJECTION_LC_c
+    LOG_INFO("MAPPROJECTION_LambertConformal_setup",*) 'MAPPROJECTION_LC_fact    = ', MAPPROJECTION_LC_fact
+    LOG_INFO("MAPPROJECTION_LambertConformal_setup",*) 'MAPPROJECTION_pole_x     = ', MAPPROJECTION_pole_x
+    LOG_INFO("MAPPROJECTION_LambertConformal_setup",*) 'MAPPROJECTION_pole_y     = ', MAPPROJECTION_pole_y
 
     MAPPROJECTION_mapping = "lambert_conformal_conic"
     MAPPROJECTION_standard_parallel(:) = (/ MAPPROJECTION_LC_lat1, MAPPROJECTION_LC_lat2 /)
@@ -837,12 +837,12 @@ contains
     MAPPROJECTION_pole_x = MAPPROJECTION_basepoint_x -                   dist * sin(dlon)
     MAPPROJECTION_pole_y = MAPPROJECTION_basepoint_y + MAPPROJECTION_hemisphere * dist * cos(dlon)
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_PS_lat1    = ', MAPPROJECTION_PS_lat
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_hemisphere = ', MAPPROJECTION_hemisphere
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_PS_fact    = ', MAPPROJECTION_PS_fact
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_pole_x     = ', MAPPROJECTION_pole_x
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_pole_y     = ', MAPPROJECTION_pole_y
+    LOG_NEWLINE
+    LOG_INFO("MAPPROJECTION_PolarStereographic_setup",*) 'MAPPROJECTION_PS_lat1    = ', MAPPROJECTION_PS_lat
+    LOG_INFO("MAPPROJECTION_PolarStereographic_setup",*) 'MAPPROJECTION_hemisphere = ', MAPPROJECTION_hemisphere
+    LOG_INFO("MAPPROJECTION_PolarStereographic_setup",*) 'MAPPROJECTION_PS_fact    = ', MAPPROJECTION_PS_fact
+    LOG_INFO("MAPPROJECTION_PolarStereographic_setup",*) 'MAPPROJECTION_pole_x     = ', MAPPROJECTION_pole_x
+    LOG_INFO("MAPPROJECTION_PolarStereographic_setup",*) 'MAPPROJECTION_pole_y     = ', MAPPROJECTION_pole_y
 
     MAPPROJECTION_mapping = "polar_stereographic"
     MAPPROJECTION_straight_vertical_longitude_from_pole = MAPPROJECTION_basepoint_lon
@@ -1014,7 +1014,7 @@ contains
     MAPPROJECTION_M_fact = cos(lat0)
 
     if ( MAPPROJECTION_M_fact == 0.0_DP ) then
-       write(*,*) 'xxx MAPPROJECTION_M_lat cannot be set to pole point! value=', MAPPROJECTION_M_lat
+       LOG_ERROR("MAPPROJECTION_Mercator_setup",*) 'MAPPROJECTION_M_lat cannot be set to pole point! value=', MAPPROJECTION_M_lat
        call PRC_abort
     endif
 
@@ -1026,11 +1026,11 @@ contains
     MAPPROJECTION_eq_x = MAPPROJECTION_basepoint_x
     MAPPROJECTION_eq_y = MAPPROJECTION_basepoint_y - RADIUS * MAPPROJECTION_M_fact * log(dist)
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_M_lat      = ', MAPPROJECTION_M_lat
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_M_fact     = ', MAPPROJECTION_M_fact
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_eq_x       = ', MAPPROJECTION_eq_x
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_eq_y       = ', MAPPROJECTION_eq_y
+    LOG_NEWLINE
+    LOG_INFO("MAPPROJECTION_Mercator_setup",*) 'MAPPROJECTION_M_lat      = ', MAPPROJECTION_M_lat
+    LOG_INFO("MAPPROJECTION_Mercator_setup",*) 'MAPPROJECTION_M_fact     = ', MAPPROJECTION_M_fact
+    LOG_INFO("MAPPROJECTION_Mercator_setup",*) 'MAPPROJECTION_eq_x       = ', MAPPROJECTION_eq_x
+    LOG_INFO("MAPPROJECTION_Mercator_setup",*) 'MAPPROJECTION_eq_y       = ', MAPPROJECTION_eq_y
 
     MAPPROJECTION_mapping = "mercator"
     MAPPROJECTION_longitude_of_projection_origin = MAPPROJECTION_basepoint_lon
@@ -1165,18 +1165,18 @@ contains
     MAPPROJECTION_EC_fact = cos(lat0)
 
     if ( MAPPROJECTION_EC_fact == 0.0_DP ) then
-       write(*,*) 'xxx MAPPROJECTION_EC_lat cannot be set to pole point! value=', MAPPROJECTION_EC_lat
+       LOG_ERROR("MAPPROJECTION_EquidistantCylindrical_setup",*) 'MAPPROJECTION_EC_lat cannot be set to pole point! value=', MAPPROJECTION_EC_lat
        call PRC_abort
     endif
 
     MAPPROJECTION_eq_x = MAPPROJECTION_basepoint_x
     MAPPROJECTION_eq_y = MAPPROJECTION_basepoint_y - RADIUS * MAPPROJECTION_basepoint_lat * D2R
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_EC_lat     = ', MAPPROJECTION_EC_lat
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_EC_fact    = ', MAPPROJECTION_EC_fact
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_eq_x       = ', MAPPROJECTION_eq_x
-    if( IO_L ) write(IO_FID_LOG,*) '*** MAPPROJECTION_eq_y       = ', MAPPROJECTION_eq_y
+    LOG_NEWLINE
+    LOG_INFO("MAPPROJECTION_EquidistantCylindrical_setup",*) 'MAPPROJECTION_EC_lat     = ', MAPPROJECTION_EC_lat
+    LOG_INFO("MAPPROJECTION_EquidistantCylindrical_setup",*) 'MAPPROJECTION_EC_fact    = ', MAPPROJECTION_EC_fact
+    LOG_INFO("MAPPROJECTION_EquidistantCylindrical_setup",*) 'MAPPROJECTION_eq_x       = ', MAPPROJECTION_eq_x
+    LOG_INFO("MAPPROJECTION_EquidistantCylindrical_setup",*) 'MAPPROJECTION_eq_y       = ', MAPPROJECTION_eq_y
 
     MAPPROJECTION_mapping = "equirectangular"
     MAPPROJECTION_standard_parallel(1) = MAPPROJECTION_EC_lat
@@ -1214,7 +1214,7 @@ contains
     lat = yy
 
     if ( abs(lat) >  0.5_DP*PI ) then
-       write(*,*) 'xxx Invalid latitude range! value=', lat
+       LOG_ERROR("MAPPROJECTION_EquidistantCylindrical_xy2lonlat",*) 'Invalid latitude range! value=', lat
        call PRC_abort
     endif
 

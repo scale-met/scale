@@ -8,7 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_hydrometeor
   !-----------------------------------------------------------------------------
   !
@@ -175,8 +175,8 @@ contains
 
     call CONST_setup
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[HYDEROMETER] / Categ[ATMOS SHARE] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_HYDROMETEOR_setup",*) 'Setup'
 
     if ( THERMODYN_TYPE == 'EXACT' ) then
 
@@ -207,7 +207,7 @@ contains
        THERMODYN_EMASK = 0.0_RP
 
     else
-       write(*,*) 'xxx Not appropriate ATMOS_THERMODYN_ENERGY_TYPE. Check!', trim(THERMODYN_TYPE)
+       LOG_ERROR("ATMOS_HYDROMETEOR_setup",*) 'Not appropriate ATMOS_THERMODYN_ENERGY_TYPE. Check!', trim(THERMODYN_TYPE)
        call PRC_abort
     endif
 
@@ -261,7 +261,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. ATMOS_HYDROMETEOR_dry ) then
-       write(*,*) 'xxx tracer for hydrometeor is already registerd'
+       LOG_ERROR("ATMOS_HYDROMETEOR_regist",*) 'tracer for hydrometeor is already registerd'
        call PRC_abort
     endif
 

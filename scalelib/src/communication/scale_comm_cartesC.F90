@@ -6,20 +6,8 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2011-10-11 (R.Yoshida)   [new]
-!! @li      2011-11-11 (H.Yashiro)   [mod] Integrate to SCALE-LES ver.3
-!! @li      2012-01-10 (Y.Ohno)      [mod] Nonblocking communication (MPI)
-!! @li      2012-01-23 (Y.Ohno)      [mod] Self unpacking (MPI)
-!! @li      2012-03-12 (H.Yashiro)   [mod] REAL4(MPI)
-!! @li      2012-03-12 (Y.Ohno)      [mod] RDMA communication
-!! @li      2012-03-23 (H.Yashiro)   [mod] Explicit index parameter inclusion
-!! @li      2012-03-27 (H.Yashiro)   [mod] Area/volume weighted total value report
-!! @li      2014-06-13 (R.Yoshida)   [mod] gather data from whole processes
-!! @li      2014-11-26 (S.Nishizawa) [mod] MPI persistent communication (MPI PC)
-!!
 !<
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_comm
   !-----------------------------------------------------------------------------
   !
@@ -182,8 +170,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[COMM] / Categ[ATMOS-RM COMM] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("COMM_setup",*) 'Setup'
 
     COMM_vsize_max = max( 10 + QA*2, 25 )
     COMM_vsize_max_pc = 50 + QA*2
@@ -192,12 +180,12 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_COMM,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("COMM_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_COMM. Check!'
+       LOG_ERROR("COMM_setup",*) 'Not appropriate names in namelist PARAM_COMM. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_COMM)
+    LOG_NML(PARAM_COMM)
 
     nreq_NS  = 2 * JHALO !--- send x JHALO, recv x JHALO
     nreq_WE  = 2         !--- send x 1    , recv x 1
@@ -248,22 +236,19 @@ contains
     elseif( RP == kind(0.0) ) then
        COMM_datatype = MPI_REAL
     else
-       write(*,*) 'xxx precision is not supportd'
+       LOG_ERROR("COMM_setup",*) 'precision is not supportd'
        call PRC_abort
     endif
 
     COMM_world = PRC_LOCAL_COMM_WORLD
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Maximum number of vars for one communication: ', &
-                                   COMM_vsize_max
-    if( IO_L ) write(IO_FID_LOG,*) '*** Data size of var (3D,including halo) [byte] : ', &
-                                   RP*KA*IA*JA
-    if( IO_L ) write(IO_FID_LOG,*) '*** Data size of halo                    [byte] : ', &
-                                   RP*KA*(2*IA*JHALO+2*JMAX*IHALO)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Ratio of halo against the whole 3D grid     : ', &
-                                   real(2*IA*JHALO+2*JMAX*IHALO) / real(IA*JA)
-    if( IO_L ) write(IO_FID_LOG,*) '*** All side is periodic?                       : ', COMM_IsAllPeriodic
+    LOG_NEWLINE
+    LOG_INFO("COMM_setup",*) 'Communication information'
+    LOG_INFO_CONT(*)         'Maximum number of vars for one communication: ', COMM_vsize_max
+    LOG_INFO_CONT(*)         'Data size of var (3D,including halo) [byte] : ', RP*KA*IA*JA
+    LOG_INFO_CONT(*)         'Data size of halo                    [byte] : ', RP*KA*(2*IA*JHALO+2*JMAX*IHALO)
+    LOG_INFO_CONT(*)         'Ratio of halo against the whole 3D grid     : ', real(2*IA*JHALO+2*JMAX*IHALO) / real(IA*JA)
+    LOG_INFO_CONT(*)         'All side is periodic?                       : ', COMM_IsAllPeriodic
 
     return
   end subroutine COMM_setup
@@ -282,7 +267,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( vid > COMM_vsize_max ) then
-       write(*,*) 'xxx vid exceeds max', vid, COMM_vsize_max
+       LOG_ERROR("COMM_vars_init",*) 'vid exceeds max', vid, COMM_vsize_max
        call PRC_abort
     end if
 
@@ -290,7 +275,7 @@ contains
 
        COMM_vars_id = COMM_vars_id + 1
        if ( COMM_vars_id > COMM_vsize_max_pc ) then
-          write(*,*) 'xxx number of variable for MPI PC exceeds max', COMM_vars_id, COMM_vsize_max_pc
+          LOG_ERROR("COMM_vars_init",*) 'number of variable for MPI PC exceeds max', COMM_vars_id, COMM_vsize_max_pc
           call PRC_abort
        end if
 
@@ -300,7 +285,7 @@ contains
 
        vid = COMM_vars_id + COMM_vsize_max
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,2A)') '*** [Pers.COMM] Initialize variable : ID = ', vid, &
+       LOG_INFO("COMM_vars_init",'(1x,A,I3.3,2A)') 'Initialize variable : ID = ', vid, &
                                                                                        ', name = ', trim(varname)
 
     end if
@@ -322,7 +307,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( vid > COMM_vsize_max ) then
-       write(*,*) 'xxx vid exceeds max', vid, COMM_vsize_max
+       LOG_ERROR("COMM_vars8_init",*) 'vid exceeds max', vid, COMM_vsize_max
        call PRC_abort
     end if
 
@@ -330,7 +315,7 @@ contains
 
        COMM_vars_id = COMM_vars_id + 1
        if ( COMM_vars_id > COMM_vsize_max_pc ) then
-          write(*,*) 'xxx number of variable for MPI PC exceeds max', COMM_vars_id, COMM_vsize_max_pc
+          LOG_ERROR("COMM_vars8_init",*) 'number of variable for MPI PC exceeds max', COMM_vars_id, COMM_vsize_max_pc
           call PRC_abort
        end if
 
@@ -340,7 +325,7 @@ contains
 
        vid = COMM_vars_id + COMM_vsize_max
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,2A)') '*** [Pers.COMM] Initialize variable : ID = ', vid, &
+       LOG_INFO("COMM_vars8_init",'(1x,A,I3.3,2A)') 'Initialize variable : ID = ', vid, &
                                                                                        ', name = ', trim(varname)
 
     end if
@@ -534,7 +519,7 @@ contains
 
     zerosw = 0.5_RP - sign(0.5_RP, allstatcnt - 1.E-12_RP )
     varmean = allstatval / ( allstatcnt + zerosw ) * ( 1.0_RP - zerosw )
-    !if( IO_L ) write(IO_FID_LOG,*) varmean, allstatval, allstatcnt
+    !LOG_INFO("COMM_horizontal_mean_2D",*) varmean, allstatval, allstatcnt
 
     return
   end subroutine COMM_horizontal_mean_2D
@@ -596,7 +581,7 @@ contains
     do k = 1, KA
        zerosw = 0.5_RP - sign(0.5_RP, allstatcnt(k) - 1.E-12_RP )
        varmean(k) = allstatval(k) / ( allstatcnt(k) + zerosw ) * ( 1.0_RP - zerosw )
-       !if( IO_L ) write(IO_FID_LOG,*) k, varmean(k), allstatval(k), allstatcnt(k)
+       !LOG_INFO("COMM_horizontal_mean_3D",*) k, varmean(k), allstatval(k), allstatcnt(k)
     enddo
 
     return
@@ -967,7 +952,7 @@ contains
     counts = gIA * gJA * gKA * gTime
     if ( gIA>0 .AND. gJA>0 .AND. gKA>0 .AND. gTime>0 .AND. &
          counts < 0 ) then
-       write(*,*) 'xxx counts overflow'
+       LOG_ERROR("COMM_bcast_4D",*) 'counts overflow'
        call PRC_abort
     end if
 
@@ -1643,7 +1628,7 @@ contains
 
 #ifdef DEBUG
     if ( use_packbuf(vid) ) then
-       write(*,*) 'packing buffer is already used', vid
+       LOG_ERROR("vars_3D_mpi",*) 'packing buffer is already used', vid
        call PRC_abort
     end if
     use_packbuf(vid) = .true.
@@ -1775,7 +1760,7 @@ contains
 
 #ifdef DEBUG
     if ( use_packbuf(vid) ) then
-       write(*,*) 'packing buffer is already used', vid
+       LOG_ERROR("vars8_3D_mpi",*) 'packing buffer is already used', vid
        call PRC_abort
     end if
     use_packbuf(vid) = .true.
@@ -2214,7 +2199,7 @@ contains
 
 #ifdef DEBUG
     if ( use_packbuf(vid) ) then
-       write(*,*) 'packing buffer is already used', vid
+       LOG_ERROR("vars_2D_mpi",*) 'packing buffer is already used', vid
        call PRC_abort
     end if
     use_packbuf(vid) = .true.
@@ -2368,7 +2353,7 @@ contains
 
 #ifdef DEBUG
     if ( use_packbuf(vid) ) then
-       write(*,*) 'packing buffer is already used', vid
+       LOG_ERROR("vars8_2D_mpi",*) 'packing buffer is already used', vid
        call PRC_abort
     end if
     use_packbuf(vid) = .true.
@@ -2859,7 +2844,7 @@ contains
 
 #ifdef DEBUG
     if ( use_packbuf(pseqid(vid)) ) then
-       write(*,*) 'packing buffer is already used', vid, pseqid(vid)
+       LOG_ERROR("vars_3D_mpi_pc",*) 'packing buffer is already used', vid, pseqid(vid)
        call PRC_abort
     end if
     use_packbuf(pseqid(vid)) = .true.

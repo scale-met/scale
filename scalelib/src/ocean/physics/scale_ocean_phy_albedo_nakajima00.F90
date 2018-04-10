@@ -11,6 +11,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_ocean_phy_albedo_nakajima00
   !-----------------------------------------------------------------------------
   !
@@ -45,8 +46,8 @@ contains
 
   subroutine OCEAN_PHY_albedo_nakajima00_setup
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Albedo hogeXXX] / Categ[OCEAN PHY] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("OCEAN_PHY_albedo_nakajima00_setup",*) 'Setup'
 
     return
   end subroutine OCEAN_PHY_albedo_nakajima00_setup

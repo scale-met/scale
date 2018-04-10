@@ -9,13 +9,9 @@
 !!               Sekiguchi and Nakajima(2008)
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2013-02-06 (H.Yashiro)   [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_rd_mstrnx
   !-----------------------------------------------------------------------------
   !
@@ -273,9 +269,9 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Radiation mstrnX] / Categ[atmosphere physics] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Sekiguchi and Nakajima (2008) mstrnX radiation process'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_RD_mstrnx_setup",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_RD_mstrnx_setup",*) 'Sekiguchi and Nakajima (2008) mstrnX radiation process'
 
     !--- read namelist
     ATMOS_PHY_RD_MSTRN_TOA                   = RD_TOA
@@ -290,12 +286,12 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD_MSTRN,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_RD_mstrnx_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_RD_MSTRN. Check!'
+       LOG_ERROR("ATMOS_PHY_RD_mstrnx_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_RD_MSTRN. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_RD_MSTRN)
+    LOG_NML(PARAM_ATMOS_PHY_RD_MSTRN)
 
     RD_TOA                    = ATMOS_PHY_RD_MSTRN_TOA
     RD_KADD                   = ATMOS_PHY_RD_MSTRN_KADD
@@ -459,7 +455,7 @@ contains
     integer :: RD_k, k, i, j, v, ic
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmosphere / physics / radiation / mstrnX'
+    LOG_PROGRESS(*) 'atmosphere / physics / radiation / mstrnX'
 
     call PROF_rapstart('RD_Profile', 3)
 
@@ -826,6 +822,8 @@ contains
   subroutine RD_MSTRN_setup( &
        ngas, &
        ncfc  )
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        GRAV  => CONST_GRAV, &
        Rdry  => CONST_Rdry, &
@@ -873,36 +871,36 @@ contains
           iostat = ierr                           )
 
        if ( ierr /= 0 ) then
-          write(*,*) 'xxx Input data file does not found! ', trim(MSTRN_GASPARA_INPUTFILE)
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Input data file does not found! ', trim(MSTRN_GASPARA_INPUTFILE)
+          call PRC_abort
        endif
 
        ! read gas parameters for check
        read(fid,*) nband, nstream, nfitP, nfitT, nflag, ncfc
 
        if ( nband /= MSTRN_nband ) then
-          write(*,*) 'xxx Inconsistent parameter value! nband(given,file)=', MSTRN_nband, nband
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! nband(given,file)=', MSTRN_nband, nband
+          call PRC_abort
        endif
        if ( nstream /= MSTRN_nstream ) then
-          write(*,*) 'xxx Inconsistent parameter value! nstream(given,file)=', MSTRN_nstream, nstream
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! nstream(given,file)=', MSTRN_nstream, nstream
+          call PRC_abort
        endif
        if ( nfitP /= MSTRN_nfitP ) then
-          write(*,*) 'xxx Inconsistent parameter value! nfitP(given,file)=', MSTRN_nfitP, nfitP
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! nfitP(given,file)=', MSTRN_nfitP, nfitP
+          call PRC_abort
        endif
        if ( nfitT /= MSTRN_nfitT ) then
-          write(*,*) 'xxx Inconsistent parameter value! nfitT(given,file)=', MSTRN_nfitT, nfitT
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! nfitT(given,file)=', MSTRN_nfitT, nfitT
+          call PRC_abort
        endif
        if ( nflag /= MSTRN_nflag ) then
-          write(*,*) 'xxx Inconsistent parameter value! nflag(given,file)=', MSTRN_nflag, nflag
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! nflag(given,file)=', MSTRN_nflag, nflag
+          call PRC_abort
        endif
        if ( ncfc /= MSTRN_ncfc ) then
-          write(*,*) 'xxx Inconsistent parameter value! ncfc(given,file)=', MSTRN_ncfc, ncfc
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! ncfc(given,file)=', MSTRN_ncfc, ncfc
+          call PRC_abort
        endif
 
        ! wave band boundaries
@@ -985,36 +983,36 @@ contains
           iostat = ierr                            )
 
        if ( ierr /= 0 ) then
-          write(*,*) 'xxx Input data file does not found! ', trim(MSTRN_AEROPARA_INPUTFILE)
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Input data file does not found! ', trim(MSTRN_AEROPARA_INPUTFILE)
+          call PRC_abort
        endif
 
        ! read aerosol/surface parameters for check
        read(fid,*) nband, nsfc, nptype, nstream, nplkord, nfitPLK
 
        if ( nband /= MSTRN_nband ) then
-          write(*,*) 'xxx Inconsistent parameter value! nband(given,file)=', MSTRN_nband, nband
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! nband(given,file)=', MSTRN_nband, nband
+          call PRC_abort
        endif
        if ( nsfc /= MSTRN_nsfc ) then
-          write(*,*) 'xxx Inconsistent parameter value! nsfc(given,file)=', MSTRN_nsfc, nsfc
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! nsfc(given,file)=', MSTRN_nsfc, nsfc
+          call PRC_abort
        endif
        if ( nptype /= MSTRN_nptype ) then
-          write(*,*) 'xxx Inconsistent parameter value! nptype(given,file)=', MSTRN_nptype, nptype
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! nptype(given,file)=', MSTRN_nptype, nptype
+          call PRC_abort
        endif
        if ( nstream /= MSTRN_nstream ) then
-          write(*,*) 'xxx Inconsistent parameter value! nstream(given,file)=', MSTRN_nstream, nstream
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! nstream(given,file)=', MSTRN_nstream, nstream
+          call PRC_abort
        endif
        if ( nplkord /= MSTRN_nplkord ) then
-          write(*,*) 'xxx Inconsistent parameter value! nplkord(given,file)=', MSTRN_nplkord, nplkord
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! nplkord(given,file)=', MSTRN_nplkord, nplkord
+          call PRC_abort
        endif
        if ( nfitPLK /= MSTRN_nfitPLK ) then
-          write(*,*) 'xxx Inconsistent parameter value! nfitPLK(given,file)=', MSTRN_nfitPLK, nfitPLK
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! nfitPLK(given,file)=', MSTRN_nfitPLK, nfitPLK
+          call PRC_abort
        endif
 
        ! wave band boundaries
@@ -1070,15 +1068,15 @@ contains
           iostat = ierr                             )
 
        if ( ierr /= 0 ) then
-          write(*,*) 'xxx Input data file does not found! ', trim(MSTRN_HYGROPARA_INPUTFILE)
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Input data file does not found! ', trim(MSTRN_HYGROPARA_INPUTFILE)
+          call PRC_abort
        endif
 
        read(fid,*) nptype
 
        if ( nptype /= MSTRN_nptype ) then
-          write(*,*) 'xxx Inconsistent parameter value! nptype(given,file)=', MSTRN_nptype, nptype
-          stop
+          LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! nptype(given,file)=', MSTRN_nptype, nptype
+          call PRC_abort
        endif
 
        do iptype = 1, nptype
@@ -1086,8 +1084,8 @@ contains
           read(fid,*) hygro_flag(iptype), nradius
 
           if ( nradius /= MSTRN_nradius ) then
-             write(*,*) 'xxx Inconsistent parameter value! nradius(given,file)=', MSTRN_nradius, nradius
-             stop
+             LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! nradius(given,file)=', MSTRN_nradius, nradius
+             call PRC_abort
           endif
 
           read(fid,*) radmode(iptype,:)
@@ -1096,8 +1094,8 @@ contains
     close(fid)
 
     !----- report data -----
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Baseline of total solar insolation : ', fsol_tot
+    LOG_NEWLINE
+    LOG_INFO("RD_MSTRN_setup",'(1x,A,F12.7)') 'Baseline of total solar insolation : ', fsol_tot
 
     !---< constant parameter for main scheme >---
     RHO_std = Pstd / ( Rdry * TEM00 ) ! [kg/m3]
@@ -1384,7 +1382,7 @@ contains
              ! indexR == -1 if some variables have NaN value.
 !             write operation prevents optimization (auto parallelization)
 !             if ( indexR(k,i,j,iaero) == -1 ) then
-!                write(*,*) 'xxx invalid index', k,i,j, iaero, aerosol_radi(k,i,j,iaero)
+!                LOG_ERROR("RD_MSTRN_DTRN3",*) 'invalid index', k,i,j, iaero, aerosol_radi(k,i,j,iaero)
 !                call PRC_abort
 !             end if
           endif
@@ -1906,12 +1904,12 @@ contains
 
           endif ! solar/IR switch
 
-          !if( IO_L ) write(IO_FID_LOG,*) "tau sum", iw, ich, sum   (tau(:,IS:IE,JS:JE,1)), sum   (tau(:,IS:IE,JS:JE,2))
-          !if( IO_L ) write(IO_FID_LOG,*) "tau max", iw, ich, maxval(tau(:,IS:IE,JS:JE,1)), maxval(tau(:,IS:IE,JS:JE,2))
-          !if( IO_L ) write(IO_FID_LOG,*) "tau min", iw, ich, minval(tau(:,IS:IE,JS:JE,1)), minval(tau(:,IS:IE,JS:JE,2))
-          !if( IO_L ) write(IO_FID_LOG,*) "omg sum", iw, ich, sum   (omg(:,IS:IE,JS:JE,1)), sum   (omg(:,IS:IE,JS:JE,2))
-          !if( IO_L ) write(IO_FID_LOG,*) "omg max", iw, ich, maxval(omg(:,IS:IE,JS:JE,1)), maxval(omg(:,IS:IE,JS:JE,2))
-          !if( IO_L ) write(IO_FID_LOG,*) "omg min", iw, ich, minval(omg(:,IS:IE,JS:JE,1)), minval(omg(:,IS:IE,JS:JE,2))
+          !LOG_INFO("RD_MSTRN_DTRN3",*) "tau sum", iw, ich, sum   (tau(:,IS:IE,JS:JE,1)), sum   (tau(:,IS:IE,JS:JE,2))
+          !LOG_INFO("RD_MSTRN_DTRN3",*) "tau max", iw, ich, maxval(tau(:,IS:IE,JS:JE,1)), maxval(tau(:,IS:IE,JS:JE,2))
+          !LOG_INFO("RD_MSTRN_DTRN3",*) "tau min", iw, ich, minval(tau(:,IS:IE,JS:JE,1)), minval(tau(:,IS:IE,JS:JE,2))
+          !LOG_INFO("RD_MSTRN_DTRN3",*) "omg sum", iw, ich, sum   (omg(:,IS:IE,JS:JE,1)), sum   (omg(:,IS:IE,JS:JE,2))
+          !LOG_INFO("RD_MSTRN_DTRN3",*) "omg max", iw, ich, maxval(omg(:,IS:IE,JS:JE,1)), maxval(omg(:,IS:IE,JS:JE,2))
+          !LOG_INFO("RD_MSTRN_DTRN3",*) "omg min", iw, ich, minval(omg(:,IS:IE,JS:JE,1)), minval(omg(:,IS:IE,JS:JE,2))
 
           ! two-stream transfer
           call PROF_rapstart('RD_MSTRN_twst', 3)
@@ -1961,11 +1959,11 @@ contains
           enddo
           enddo
 
-          !if( IO_L ) write(IO_FID_LOG,*) "flux sum", iw, ich, sum   (flux(:,IS:IE,JS:JE,1)), sum   (flux(:,IS:IE,JS:JE,2))
-          !if( IO_L ) write(IO_FID_LOG,*) "flux max", iw, ich, maxval(flux(:,IS:IE,JS:JE,1)), maxval(flux(:,IS:IE,JS:JE,2))
-          !if( IO_L ) write(IO_FID_LOG,*) "flux min", iw, ich, minval(flux(:,IS:IE,JS:JE,1)), minval(flux(:,IS:IE,JS:JE,2))
-          !if( IO_L ) write(IO_FID_LOG,*) "flux mal", iw, ich, maxloc(flux(:,IS:IE,JS:JE,1)), maxloc(flux(:,IS:IE,JS:JE,2))
-          !if( IO_L ) write(IO_FID_LOG,*) "flux mil", iw, ich, minloc(flux(:,IS:IE,JS:JE,1)), minloc(flux(:,IS:IE,JS:JE,2))
+          !LOG_INFO("RD_MSTRN_DTRN3",*) "flux sum", iw, ich, sum   (flux(:,IS:IE,JS:JE,1)), sum   (flux(:,IS:IE,JS:JE,2))
+          !LOG_INFO("RD_MSTRN_DTRN3",*) "flux max", iw, ich, maxval(flux(:,IS:IE,JS:JE,1)), maxval(flux(:,IS:IE,JS:JE,2))
+          !LOG_INFO("RD_MSTRN_DTRN3",*) "flux min", iw, ich, minval(flux(:,IS:IE,JS:JE,1)), minval(flux(:,IS:IE,JS:JE,2))
+          !LOG_INFO("RD_MSTRN_DTRN3",*) "flux mal", iw, ich, maxloc(flux(:,IS:IE,JS:JE,1)), maxloc(flux(:,IS:IE,JS:JE,2))
+          !LOG_INFO("RD_MSTRN_DTRN3",*) "flux mil", iw, ich, minloc(flux(:,IS:IE,JS:JE,1)), minloc(flux(:,IS:IE,JS:JE,2))
 
           if ( waveh(iw) <= 952.0_RP .AND. 952.0_RP < waveh(iw+1) ) then ! 10.5 micron
              do j = JS, JE

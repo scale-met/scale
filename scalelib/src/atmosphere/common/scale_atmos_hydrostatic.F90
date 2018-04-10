@@ -8,7 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_hydrostatic
   !-----------------------------------------------------------------------------
   !
@@ -124,25 +124,25 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[HYDROSTATIC] / Categ[ATMOS SHARE] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_HYDROSTATIC_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_HYDROSTATIC,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_HYDROSTATIC_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_HYDROSTATIC. Check!'
+       LOG_ERROR("ATMOS_HYDROSTATIC_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_HYDROSTATIC. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_HYDROSTATIC)
+    LOG_NML(PARAM_ATMOS_HYDROSTATIC)
 
     criteria = sqrt( CONST_EPS )
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Use lapse rate for estimation of surface temperature? : ', HYDROSTATIC_uselapserate
-    if( IO_L ) write(IO_FID_LOG,*) '*** Buildrho conversion criteria                          : ', criteria
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_HYDROSTATIC_setup",*) 'Use lapse rate for estimation of surface temperature? : ', HYDROSTATIC_uselapserate
+    LOG_INFO("ATMOS_HYDROSTATIC_setup",*) 'Buildrho conversion criteria                          : ', criteria
 
     return
   end subroutine ATMOS_HYDROSTATIC_setup
@@ -571,7 +571,7 @@ contains
     enddo
 
     if ( .NOT. converged ) then
-       write(*,*) 'xxx [buildrho 0D atmos] iteration not converged!', &
+       LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_atmos_0D",*) 'iteration not converged!', &
                   k,dens_L2,ite,dens_s,dhyd,dgrd
        call PRC_abort
     endif
@@ -674,7 +674,7 @@ contains
        enddo
 
        if ( .NOT. converged ) then
-          write(*,*) 'xxx [buildrho 1D atmos] iteration not converged!', &
+          LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_atmos_1D",*) 'iteration not converged!', &
                      k,dens(k),ite,dens_s,dhyd,dgrd
           call PRC_abort
        endif
@@ -789,7 +789,7 @@ contains
        enddo
 
        if ( .NOT. converged ) then
-          write(*,*) 'xxx [buildrho 1D atmos rev] iteration not converged!', &
+          LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D",*) 'iteration not converged!', &
                      k,dens(k),ite,dens_s,dhyd,dgrd
           call PRC_abort
        endif
@@ -1091,7 +1091,7 @@ contains
     enddo
 
     if ( .NOT. converged ) then
-       write(*,*) 'xxx [buildrho bytemp 1D sfc] iteration not converged!', &
+       LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_bytemp_1D",*) 'iteration not converged!', &
                   dens(KS),ite,dens_s,dhyd,dgrd
        call PRC_abort
     endif
@@ -1234,7 +1234,7 @@ contains
        enddo
 
        if ( .NOT. converged ) then
-          write(*,*) 'xxx [buildrho bytemp 1D atmos] iteration not converged!', &
+          LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_1D",*) 'iteration not converged!', &
                      k,dens(k),ite,dens_s,dhyd,dgrd
           call PRC_abort
        endif
@@ -1331,7 +1331,7 @@ contains
        enddo
 
        if ( .NOT. converged ) then
-          write(*,*) 'xxx [buildrho bytemp 1D atmos rev] iteration not converged!', &
+          LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_rev_1D",*) 'iteration not converged!', &
                      k,dens(k),ite,dens_s,dhyd,dgrd
           call PRC_abort
        endif

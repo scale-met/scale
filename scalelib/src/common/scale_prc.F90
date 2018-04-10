@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !!
 !<
+#include "scalelib.h"
 module scale_prc
   !-----------------------------------------------------------------------------
   !
@@ -347,8 +348,8 @@ contains
     if( PRC_UNIVERSAL_handler /= PRC_ABORT_handler )then
        if ( PRC_UNIVERSAL_IsMaster ) write (*,*) ""
        if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "ERROR: MPI HANDLER is INCONSISTENT"
-       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "PRC_UNIVERSAL_handler = ", PRC_UNIVERSAL_handler
-       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "PRC_ABORT_handler     = ", PRC_ABORT_handler
+       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "     PRC_UNIVERSAL_handler = ", PRC_UNIVERSAL_handler
+       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "     PRC_ABORT_handler     = ", PRC_ABORT_handler
        call PRC_abort
     endif
 
@@ -409,10 +410,8 @@ contains
 
     ! Stop MPI
     if ( PRC_mpi_alive ) then
-       if ( IO_L ) then
-          write(IO_FID_LOG,*)
-          write(IO_FID_LOG,*) '++++++ Finalize MPI...'
-       endif
+       LOG_NEWLINE
+       LOG_PROGRESS(*) 'finalize MPI...'
 
        ! free splitted communicator
        if ( PRC_LOCAL_COMM_WORLD  /= PRC_GLOBAL_COMM_WORLD ) then
@@ -422,7 +421,7 @@ contains
        call MPI_Barrier(PRC_UNIVERSAL_COMM_WORLD,ierr)
 
        call MPI_Finalize(ierr)
-       if( IO_L ) write(IO_FID_LOG,*) '++++++ MPI is peacefully finalized'
+       LOG_PROGRESS(*) 'MPI is peacefully finalized'
     endif
 
     ! Close logfile, configfile
@@ -499,9 +498,10 @@ contains
           total_nmax = total_nmax + PRC_DOMAINS(i)
        enddo
        if ( total_nmax /= ORG_nmax ) then
-          if( PRC_UNIVERSAL_IsMaster ) write(*,*) ""
-          if( PRC_UNIVERSAL_IsMaster ) write(*,*) "ERROR: MPI PROCESS NUMBER is INCONSISTENT"
-          if( PRC_UNIVERSAL_IsMaster ) write(*,*) "REQUESTED NPROCS = ", total_nmax, "  LAUNCHED NPROCS = ", ORG_nmax
+          if( PRC_UNIVERSAL_IsMaster ) then
+             LOG_ERROR("PRC_MPIsplit",*) "MPI PROCESS NUMBER is INCONSISTENT"
+             LOG_ERROR_CONT(*) " REQUESTED NPROCS = ", total_nmax, "  LAUNCHED NPROCS = ", ORG_nmax
+          end if
           call PRC_abort
        endif
 
@@ -548,10 +548,10 @@ contains
        do_create_c(:) = .false.
        if ( .NOT. bulk_split ) then
           if ( PRC_UNIVERSAL_IsMaster ) write(*,*)
-          if ( PRC_UNIVERSAL_IsMaster ) write(*,*) "*** Inter-domain relationship information ***"
+          if ( PRC_UNIVERSAL_IsMaster ) write(*,*) "INFO [PRC_MPIsplit] Inter-domain relationship information"
           do i = 1, NUM_DOMAIN-1
-             if ( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,I2.2)')  "*** Relationship No. ", i
-             if ( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,2(A,I2))') "*** Parent color = ", PARENT_COL(i), &
+             if ( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I2.2)')  "Relationship No. ", i
+             if ( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,2(A,I2))') "Parent color = ", PARENT_COL(i), &
                                                                    " <=> child color = ", CHILD_COL (i)
              if ( COLOR_LIST(ORG_myrank) == PARENT_COL(i) ) then
                 do_create_p(i) = .true.
@@ -583,9 +583,11 @@ contains
        deallocate( COLOR_LIST, KEY_LIST )
 
     elseif ( NUM_DOMAIN == 1 ) then ! single domain run
-       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "*** a single comunicator"
+       ! if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "INFO [PRC_MPIsplit] a single communicator"
     else
-       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "ERROR: REQUESTED DOMAIN NUMBER IS NOT ACCEPTABLE"
+       if ( PRC_UNIVERSAL_IsMaster ) then
+          write(*,*)"ERROR [RPC_MPIsplit] REQUESTED DOMAIN NUMBER IS NOT ACCEPTABLE"
+       end if
        call PRC_abort
     endif
 
@@ -756,23 +758,23 @@ contains
        enddo
 
        if( PRC_UNIVERSAL_IsMaster ) write(*,*)
-       if( PRC_UNIVERSAL_IsMaster ) write(*,*) '*** Domain information (with reordering) ***'
+       if( PRC_UNIVERSAL_IsMaster ) write(*,*) 'INFO [PRC_MPIcoloring] Domain information (with reordering)'
        do i = 1, NUM_DOMAIN
           if( PRC_UNIVERSAL_IsMaster ) write(*,*)
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,2(A,I2.2))') "*** Order No. ",i," -> Domain No. ", ORDER2DOM(i)
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,I5)')      "*** ] Number of process      = ", RO_PRC_DOMAINS(i)
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,I5)')      "*** ] Color of this   domain = ", RO_DOM2COL(ORDER2DOM(i))
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,2(A,I2.2))') "Order No. ",i," -> Domain No. ", ORDER2DOM(i)
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I5)')      "Number of process      = ", RO_PRC_DOMAINS(i)
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I5)')      "Color of this   domain = ", RO_DOM2COL(ORDER2DOM(i))
           if ( RO_PARENT_COL(i) >= 0 ) then
-             if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,I5)')   "*** ] Color of parent domain = ", RO_PARENT_COL(i)
+             if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I5)')   "Color of parent domain = ", RO_PARENT_COL(i)
           else
-             if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A)'   )   "*** ] Color of parent domain = no parent"
+             if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A)'   )   "Color of parent domain = no parent"
           endif
           if ( RO_CHILD_COL(i) >= 0 ) then
-             if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,I5)')   "*** ] Color of child  domain = ", RO_CHILD_COL(i)
+             if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I5)')   "Color of child  domain = ", RO_CHILD_COL(i)
           else
-             if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A)'   )   "*** ] Color of child  domain = no child"
+             if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A)'   )   "Color of child  domain = no child"
           endif
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(1x,A,A)')       "*** ] Name of config file    = ", trim(RO_CONF_FILES(i))
+          if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,A)')       "Name of config file    = ", trim(RO_CONF_FILES(i))
        enddo
 
        do i = 1, NUM_DOMAIN
@@ -824,7 +826,7 @@ contains
        endif
 
        if ( LOG_SPLIT .AND. PRC_UNIVERSAL_IsMaster ) then
-          write(*,'(1x,4(A,I5))') &
+          write(*,'(5x,4(A,I5))') &
           "PE:", i, " COLOR:", COLOR_LIST(i+1), " KEY:", KEY_LIST(i+1), " PRC_ROOT:", PRC_ROOT(COLOR_LIST(i+1))
        endif
 
@@ -993,17 +995,16 @@ contains
     if ( PRC_mpi_alive ) then
           ! flush 1kbyte
        if ( IO_L ) then
-          write(IO_FID_LOG,'(32A32)') '                                '
-          write(IO_FID_LOG,*) '++++++ Abort MPI'
-          write(IO_FID_LOG,*) ''
+          LOG_PROGRESS(*) 'abort MPI'
+          flush(IO_FID_LOG)
        endif
 
-       if ( IO_L ) then
-          write(*,*) '++++++ BULK   ID       : ', PRC_UNIVERSAL_jobID
-          write(*,*) '++++++ DOMAIN ID       : ', PRC_GLOBAL_domainID
-          write(*,*) '++++++ MASTER LOCATION : ', PRC_UNIVERSAL_myrank,'/',PRC_UNIVERSAL_nprocs
-          write(*,*) '++++++ GLOBAL LOCATION : ', PRC_GLOBAL_myrank,'/',PRC_GLOBAL_nprocs
-          write(*,*) '++++++ LOCAL  LOCATION : ', PRC_myrank,'/',PRC_nprocs
+       if ( PRC_IsMaster ) then
+          write(*,*) '+++++ BULK   ID       : ', PRC_UNIVERSAL_jobID
+          write(*,*) '+++++ DOMAIN ID       : ', PRC_GLOBAL_domainID
+          write(*,*) '+++++ MASTER LOCATION : ', PRC_UNIVERSAL_myrank,'/',PRC_UNIVERSAL_nprocs
+          write(*,*) '+++++ GLOBAL LOCATION : ', PRC_GLOBAL_myrank,'/',PRC_GLOBAL_nprocs
+          write(*,*) '+++++ LOCAL  LOCATION : ', PRC_myrank,'/',PRC_nprocs
           write(*,*) ''
        endif
 
@@ -1011,16 +1012,16 @@ contains
           ! do nothing
        elseif( errcode <= MPI_ERR_LASTCODE ) then
           call MPI_ERROR_STRING(errcode, msg, len, ierr)
-          if( IO_L ) write(IO_FID_LOG,*) '++++++ ', errcode, trim(msg)
-          write(*,*)                     '++++++ ', errcode, trim(msg)
+          if( IO_L ) write(IO_FID_LOG,*) '+++++ ', errcode, trim(msg)
+          write(*,*)                     '+++++ ', errcode, trim(msg)
        else
-          if( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected error code', errcode
-          write(*,*)                     '++++++ Unexpected error code', errcode
+          if( IO_L ) write(IO_FID_LOG,*) '+++++ Unexpected error code', errcode
+          write(*,*)                     '+++++ Unexpected error code', errcode
        endif
 
        if ( comm /= PRC_ABORT_COMM_WORLD ) then
-          if( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected communicator'
-          write(*,*)                     '++++++ Unexpected communicator'
+          if( IO_L ) write(IO_FID_LOG,*) '+++++ Unexpected communicator'
+          write(*,*)                     '+++++ Unexpected communicator'
        endif
        if( IO_L ) write(IO_FID_LOG,*) ''
        write(*,*)                     ''

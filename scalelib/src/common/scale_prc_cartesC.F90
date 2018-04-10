@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !!
 !<
+#include "scalelib.h"
 module scale_prc_cartesC
   !-----------------------------------------------------------------------------
   !
@@ -107,51 +108,52 @@ contains
     integer :: p
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROCESS CartesC] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("PRC_CARTESC_setup",*) 'Setup'
 
     if ( IO_L ) then
-       write(IO_FID_LOG,*)            '++++++ Start MPI'
-       write(IO_FID_LOG,*)
-       write(IO_FID_LOG,*)            '*** Process information ***'
-       write(IO_FID_LOG,'(1x,A,I12)') '*** UNIVERSAL_COMM_WORLD        : ', PRC_UNIVERSAL_COMM_WORLD
-       write(IO_FID_LOG,'(1x,A,I12)') '*** total process [UNIVERSAL]   : ', PRC_UNIVERSAL_nprocs
-       write(IO_FID_LOG,'(1x,A,I12)') '*** my process ID [UNIVERSAL]   : ', PRC_UNIVERSAL_myrank
-       write(IO_FID_LOG,'(1x,A,L12)') '*** master rank?  [UNIVERSAL]   : ', PRC_UNIVERSAL_IsMaster
-       write(IO_FID_LOG,'(1x,A,I12)') '*** GLOBAL_COMM_WORLD           : ', PRC_GLOBAL_COMM_WORLD
-       write(IO_FID_LOG,'(1x,A,I12)') '*** total process [GLOBAL]      : ', PRC_GLOBAL_nprocs
-       write(IO_FID_LOG,'(1x,A,I12)') '*** my process ID [GLOBAL]      : ', PRC_GLOBAL_myrank
-       write(IO_FID_LOG,'(1x,A,L12)') '*** master rank?  [GLOBAL]      : ', PRC_GLOBAL_IsMaster
-       write(IO_FID_LOG,'(1x,A,I12)') '*** LOCAL_COMM_WORLD            : ', PRC_LOCAL_COMM_WORLD
-       write(IO_FID_LOG,'(1x,A,I12)') '*** total process [LOCAL]       : ', PRC_nprocs
-       write(IO_FID_LOG,'(1x,A,I12)') '*** my process ID [LOCAL]       : ', PRC_myrank
-       write(IO_FID_LOG,'(1x,A,L12)') '*** master rank?  [LOCAL]       : ', PRC_IsMaster
-       write(IO_FID_LOG,'(1x,A,I12)') '*** ABORT_COMM_WORLD            : ', PRC_ABORT_COMM_WORLD
-       write(IO_FID_LOG,'(1x,A,I12)') '*** master rank ID [each world] : ', PRC_masterrank
+       LOG_NEWLINE
+       LOG_PROGRESS(*) 'start MPI'
+       LOG_NEWLINE
+       LOG_INFO("PRC_CARTESC_setup",*)            'Process information '
+       LOG_INFO_CONT('(1x,A,I12)') 'UNIVERSAL_COMM_WORLD        : ', PRC_UNIVERSAL_COMM_WORLD
+       LOG_INFO_CONT('(1x,A,I12)') 'total process [UNIVERSAL]   : ', PRC_UNIVERSAL_nprocs
+       LOG_INFO_CONT('(1x,A,I12)') 'my process ID [UNIVERSAL]   : ', PRC_UNIVERSAL_myrank
+       LOG_INFO_CONT('(1x,A,L12)') 'master rank?  [UNIVERSAL]   : ', PRC_UNIVERSAL_IsMaster
+       LOG_INFO_CONT('(1x,A,I12)') 'GLOBAL_COMM_WORLD           : ', PRC_GLOBAL_COMM_WORLD
+       LOG_INFO_CONT('(1x,A,I12)') 'total process [GLOBAL]      : ', PRC_GLOBAL_nprocs
+       LOG_INFO_CONT('(1x,A,I12)') 'my process ID [GLOBAL]      : ', PRC_GLOBAL_myrank
+       LOG_INFO_CONT('(1x,A,L12)') 'master rank?  [GLOBAL]      : ', PRC_GLOBAL_IsMaster
+       LOG_INFO_CONT('(1x,A,I12)') 'LOCAL_COMM_WORLD            : ', PRC_LOCAL_COMM_WORLD
+       LOG_INFO_CONT('(1x,A,I12)') 'total process [LOCAL]       : ', PRC_nprocs
+       LOG_INFO_CONT('(1x,A,I12)') 'my process ID [LOCAL]       : ', PRC_myrank
+       LOG_INFO_CONT('(1x,A,L12)') 'master rank?  [LOCAL]       : ', PRC_IsMaster
+       LOG_INFO_CONT('(1x,A,I12)') 'ABORT_COMM_WORLD            : ', PRC_ABORT_COMM_WORLD
+       LOG_INFO_CONT('(1x,A,I12)') 'master rank ID [each world] : ', PRC_masterrank
     endif
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_PRC_CARTESC,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("PRC_CARTESC_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_PRC_CARTESC. Check!'
+       LOG_ERROR("PRC_CARTESC_setup",*) 'Not appropriate names in namelist PARAM_PRC_CARTESC. Check!'
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_PRC_CARTESC)
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Process allocation ***'
-    if( IO_L ) write(IO_FID_LOG,*) '*** No. of Node   :', PRC_NUM_X," x ",PRC_NUM_Y
+    LOG_NEWLINE
+    LOG_INFO("PRC_CARTESC_setup",*) 'Process allocation '
+    LOG_INFO_CONT(*) 'No. of Node   :', PRC_NUM_X," x ",PRC_NUM_Y
 
     if ( PRC_NUM_X*PRC_NUM_Y /= PRC_nprocs ) then
-       write(*,*) 'xxx total number of node does not match that requested. Check!'
+       LOG_ERROR("PRC_CARTESC_setup",*) 'total number of node does not match that requested. Check!'
        call PRC_abort
     endif
 
     if ( mod(PRC_nprocs,PRC_NUM_X) /= 0 ) then
-       write(*,*) 'xxx number of requested node cannot devide to 2D. Check!'
+       LOG_ERROR("PRC_CARTESC_setup",*) 'number of requested node cannot devide to 2D. Check!'
        call PRC_abort
     endif
 
@@ -223,21 +225,21 @@ contains
 
     next(:) = max(PRC_next(:),-1) ! avoid if MPI_PROC_NULL < -1
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Node topology :'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A)') &
-    '***  NW(',next(PRC_NW),',',PRC_2Drank(next(PRC_NW),1),',',PRC_2Drank(next(PRC_NW),2),')', &
-      ' -  N(',next(PRC_N) ,',',PRC_2Drank(next(PRC_N) ,1),',',PRC_2Drank(next(PRC_N) ,2),')', &
-      ' - NE(',next(PRC_NE),',',PRC_2Drank(next(PRC_NE),1),',',PRC_2Drank(next(PRC_NE),2),')'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)') '***               |                       |                       |'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A)') &
-    '***   W(',next(PRC_W),',',PRC_2Drank(next(PRC_W),1),',',PRC_2Drank(next(PRC_W),2),')', &
-      ' -  P(',PRC_myrank ,',',PRC_2Drank(PRC_myrank, 1),',',PRC_2Drank(PRC_myrank, 2),')', &
-      ' -  E(',next(PRC_E),',',PRC_2Drank(next(PRC_E),1),',',PRC_2Drank(next(PRC_E),2),')'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)') '***               |                       |                       |'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A)') &
-    '***  SW(',next(PRC_SW),',',PRC_2Drank(next(PRC_SW),1),',',PRC_2Drank(next(PRC_SW),2),')', &
-      ' -  S(',next(PRC_S) ,',',PRC_2Drank(next(PRC_S) ,1),',',PRC_2Drank(next(PRC_S) ,2),')', &
-      ' - SE(',next(PRC_SE),',',PRC_2Drank(next(PRC_SE),1),',',PRC_2Drank(next(PRC_SE),2),')'
+    LOG_INFO("PRC_CARTESC_setup",*) 'Node topology :'
+    LOG_INFO_CONT('(1x,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A)') &
+       'NW(',next(PRC_NW),',',PRC_2Drank(next(PRC_NW),1),',',PRC_2Drank(next(PRC_NW),2),')', &
+    ' -  N(',next(PRC_N) ,',',PRC_2Drank(next(PRC_N) ,1),',',PRC_2Drank(next(PRC_N) ,2),')', &
+    ' - NE(',next(PRC_NE),',',PRC_2Drank(next(PRC_NE),1),',',PRC_2Drank(next(PRC_NE),2),')'
+    LOG_INFO_CONT('(1x,A)') '             |                       |                       |'
+    LOG_INFO_CONT('(1x,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A)') &
+       ' W(',next(PRC_W),',',PRC_2Drank(next(PRC_W),1),',',PRC_2Drank(next(PRC_W),2),')', &
+    ' -  P(',PRC_myrank ,',',PRC_2Drank(PRC_myrank, 1),',',PRC_2Drank(PRC_myrank, 2),')', &
+    ' -  E(',next(PRC_E),',',PRC_2Drank(next(PRC_E),1),',',PRC_2Drank(next(PRC_E),2),')'
+    LOG_INFO_CONT('(1x,A)') '             |                       |                       |'
+    LOG_INFO_CONT('(1x,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A,A,I5,A,I5,A,I5,A)') &
+       'SW(',next(PRC_SW),',',PRC_2Drank(next(PRC_SW),1),',',PRC_2Drank(next(PRC_SW),2),')', &
+    ' -  S(',next(PRC_S) ,',',PRC_2Drank(next(PRC_S) ,1),',',PRC_2Drank(next(PRC_S) ,2),')', &
+    ' - SE(',next(PRC_SE),',',PRC_2Drank(next(PRC_SE),1),',',PRC_2Drank(next(PRC_SE),2),')'
 
     return
   end subroutine PRC_CARTESC_setup

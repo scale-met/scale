@@ -7,12 +7,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-04-18 (S.Nishizawa) [mod] split from scale_atmos_dyn.F90
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tinteg_short_rk3
   !-----------------------------------------------------------------------------
   !
@@ -106,7 +103,7 @@ contains
 
     select case( tinteg_type )
     case( 'RK3' )
-       if( IO_L ) write(IO_FID_LOG,*) "*** RK3: Heun's method is used"
+       LOG_INFO("ATMOS_DYN_Tinteg_short_rk3_setup",*) "RK3: Heun's method is used"
        ! Heun's method
        ! k1 = f(\phi_n); r1 = \phi_n + k1 * dt / 3
        ! k2 = f(r1);     r2 = \phi_n + k2 * dt * 2 / 3
@@ -118,7 +115,7 @@ contains
        fact_dt1 = 1.0_RP / 3.0_RP
        fact_dt2 = 2.0_RP / 3.0_RP
     case( 'RK3WS2002' )
-       if( IO_L ) write(IO_FID_LOG,*) "*** RK3: Wichere and Skamarock (2002) is used"
+       LOG_INFO("ATMOS_DYN_Tinteg_short_rk3_setup",*) "RK3: Wichere and Skamarock (2002) is used"
        ! Wicher and Skamarock (2002) RK3 scheme
        ! k1 = f(\phi_n); r1 = \phi_n + k1 * dt / 3
        ! k2 = f(r1);     r2 = \phi_n + k2 * dt / 2
@@ -128,7 +125,7 @@ contains
        fact_dt1 = 1.0_RP / 3.0_RP
        fact_dt2 = 1.0_RP / 2.0_RP
     case default
-       write(*,*) 'xxx TINTEG_TYPE is not RK3. Check!'
+       LOG_ERROR("ATMOS_DYN_Tinteg_short_rk3_setup",*) 'TINTEG_TYPE is not RK3. Check!'
        call PRC_abort
     end select
 

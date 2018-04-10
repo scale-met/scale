@@ -5,13 +5,9 @@
 !!          Temporal integration scheme selecter for dynamical short time step
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2016-04-18 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tinteg_short
   !-----------------------------------------------------------------------------
   !
@@ -159,7 +155,7 @@ contains
     case( 'OFF', 'NONE' )
        ! do nothing
     case default
-       write(*,*) 'xxx ATMOS_DYN_TINTEG_SHORT_TYPE is invalid: ', ATMOS_DYN_Tinteg_short_TYPE
+       LOG_ERROR("ATMOS_DYN_Tinteg_short_setup",*) 'ATMOS_DYN_TINTEG_SHORT_TYPE is invalid: ', ATMOS_DYN_Tinteg_short_TYPE
        call PRC_abort
     end select
 

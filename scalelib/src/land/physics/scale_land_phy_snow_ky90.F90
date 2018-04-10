@@ -8,6 +8,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_land_phy_snow_ky90
   !-----------------------------------------------------------------------------
   !
@@ -99,26 +100,26 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SNOW_KY90] / Categ[LAND PHY] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("LAND_PHY_SNOW_KY90_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_LAND_PHY_SNOW_KY90,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("LAND_PHY_SNOW_KY90_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_PHY_SNOW_KY90. Check!'
+       LOG_ERROR("LAND_PHY_SNOW_KY90_setup",*) 'Not appropriate names in namelist PARAM_LAND_PHY_SNOW_KY90. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_PHY_SNOW_KY90)
+    LOG_NML(PARAM_LAND_PHY_SNOW_KY90)
 
     LAMBDAS       = snow_conductivity
     W0            = water_content
     CSRHOS        = snow_heat_capacityRHO ! [J/m3/K]
     RHOSNOW       = snow_rho
     CS            = CSRHOS/RHOSNOW        ! [J/kg/K]
-    !write(*,*)   "Specific heat capacity of snow [J/kg/K]: ",CS
+    !LOG_WARN("LAND_PHY_SNOW_KY90_setup",*)   "Specific heat capacity of snow [J/kg/K]: ",CS
     ALBEDO        = albedo_value
 
     return
@@ -209,7 +210,7 @@ contains
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
-    if( IO_L ) write(IO_FID_LOG,*) '*** Snow surface physics step: SNOW KY90'
+    LOG_PROGRESS(*) 'Land / physics / snow / KY90'
 
     do j = LJS, LJE
     do i = LIS, LIE
@@ -226,7 +227,9 @@ contains
        call qsatf(  TA(i,j), psat )
        QAsat = EPSvap * psat / ( PRSA(i,j) - ( 1.0_RP-EPSvap ) * psat )
        RH  = QA(i,j) / QAsat
-       if ( debug ) write(*,*) "RH,  ",RH," DENS (1.289 org) ",DENS(i,j)
+       if ( debug ) then
+          LOG_INFO("LAND_PHY_SNOW_KY90",*) "RH,  ",RH," DENS (1.289 org) ",DENS(i,j)
+       end if
 
        TSNOW1  = TSNOW (i,j)
        SWE1    = SWE   (i,j)
@@ -273,7 +276,9 @@ contains
        SDepth  (i,j) = DEPTH1
        SDzero  (i,j) = ZNSNOW1
 
-       if ( debug ) write(*,*) "SNOW_frac, SWE, TSNOW", SNOW_frac(i,j), SWE(i,j), TSNOW(i,j)
+       if ( debug ) then
+          LOG_INFO("LAND_PHY_SNOW_KY90",*) "SNOW_frac, SWE, TSNOW", SNOW_frac(i,j), SWE(i,j), TSNOW(i,j)
+       end if
 
     else
 
@@ -418,10 +423,10 @@ contains
     ZNSNOW0 = ZNSNOW0 + (SNOW /RHOSNOW)
 
     if ( debug ) then
-       write(*,*) "UA, SNOW,SFLX_SNOW,time : ", UA, SNOW, SFLX_SNOW, time
-       write(*,*) "SWE , TSNOW, and TA :     ", SWE0, TSNOW0, TA
-       write(*,*) "DEPTH is:                 ", DEPTH0
-       write(*,*) "ZN beginning:             ", ZNSNOW0
+       LOG_INFO("SNOW_ky90_main",*) "UA, SNOW,SFLX_SNOW,time : ", UA, SNOW, SFLX_SNOW, time
+       LOG_INFO("SNOW_ky90_main",*) "SWE , TSNOW, and TA :     ", SWE0, TSNOW0, TA
+       LOG_INFO("SNOW_ky90_main",*) "DEPTH is:                 ", DEPTH0
+       LOG_INFO("SNOW_ky90_main",*) "ZN beginning:             ", ZNSNOW0
     end if
 
 !----- Calculating albedo -------------------------------------------!
@@ -437,7 +442,9 @@ contains
 
     ALBEDO_out = ALBEDO
     Emiss      = 1.0_RP - epsilon
-    if ( debug ) write(*,*) "Albedo                    ",ALBEDO
+    if ( debug ) then
+       LOG_INFO("SNOW_ky90_main",*) "Albedo                    ",ALBEDO
+    end if
 
 !----- Energy balance at snow surface -------------------------------!
 
@@ -457,7 +464,7 @@ contains
 
    call check_allSnowMelt   (GFLUX, TSNOW0, ZNSNOW0, DEPTH0, sflag, time)
    if(sflag .eq. 1)then
-      if( IO_L ) write(IO_FID_LOG,*) '*** LAND/snow: All snow melt'
+      LOG_INFO("SNOW_ky90_main",*) 'LAND/snow: All snow melt'
       QCC        = 0.5_RP*CSRHOS*ZNSNOW0*(T0-TSNOW0)
       QFUSION    = W0*RHOSNOW*LF*ZNSNOW0
       MELT       = (1.0_RP-W0)*RHOSNOW*LF*DEPTH0  ! [J/m2]
@@ -476,7 +483,7 @@ contains
       ! check whether the model has solution
       call check_applicability (GFLUX, TSNOW0, ZNSNOW0, TA, UA, RH, DENS, LW, Gres, beta, time)
       if ((Gres >= 0.0_RP).and.(beta >= 0.0_RP)) then
-         if( IO_L ) write(IO_FID_LOG,*) '*** LAND/snow model is not appropriate',Gres,beta
+         LOG_INFO("SNOW_ky90_main",*) 'LAND/snow model is not appropriate',Gres,beta
          QCC             = 0.5_RP*CSRHOS*ZNSNOW0*(T0-TSNOW0)
          QFUSION         = W0*RHOSNOW*LF*ZNSNOW0
          MELT            = Gres
@@ -490,21 +497,29 @@ contains
 
          call snowdepth ( GFLUX, ZNSNOW0, ZNSNOW, time)
 
-         if ( debug ) write(*,*) "ZN is: ", ZNSNOW
+         if ( debug ) then
+            LOG_INFO("SNOW_ky90_main",*) "ZN is: ", ZNSNOW
+         end if
          IF(ZNSNOW < ZMIN) THEN
             ZN_flag = 1
-            if ( debug ) write(*,*) "ZN is replaced to: ", ZNSNOW ," to ", ZMIN
+            if ( debug ) then
+               LOG_INFO("SNOW_ky90_main",*) "ZN is replaced to: ", ZNSNOW ," to ", ZMIN
+            end if
             ZNSNOW = ZMIN
          ELSE IF(ZNSNOW > DEPTH0) THEN
             ZN_flag = 2
-            if ( debug ) write(*,*) "ZN is replaced to: ", ZNSNOW ," to ", DEPTH0
+            if ( debug ) then
+               LOG_INFO("SNOW_ky90_main",*) "ZN is replaced to: ", ZNSNOW ," to ", DEPTH0
+            end if
             ZNSNOW = DEPTH0
          END IF
 
          ! This equation is to calculate TSN
          call  equation415(LAMBDAS, C2, ZNSNOW, RH, QSAT, TSNOW0, ZNSNOW0, GFLUX, TA, UA, DENS, LW, TSNOW, time)
 
-         if ( debug ) write(*,*) 'TSNOW is:       ', TSNOW
+         if ( debug ) then
+            LOG_INFO("SNOW_ky90_main",*) 'TSNOW is:       ', TSNOW
+         end if
 
          if (TSNOW > T0) then
             TS_flag = 1
@@ -513,19 +528,23 @@ contains
             call check_res(ZNSNOW0, ZNSNOW, TSNOW0, TSNOW, GFLUX, TA, UA, RH, DENS, LW, "1", time)
             IF (ZNSNOW < ZMIN) THEN
                ZN_flag = 4
-               if ( debug ) write(*,*) "ZN is updated/replaced to: ", ZNSNOW ," to ", ZMIN
+               if ( debug ) then
+                  LOG_INFO("SNOW_ky90_main",*) "ZN is updated/replaced to: ", ZNSNOW ," to ", ZMIN
+               end if
                ZNSNOW = ZMIN
             ELSE IF(ZNSNOW > DEPTH0) THEN
                ZN_flag = 5
-               if ( debug ) write(*,*) "ZN is updated/replaced to: ", ZNSNOW ," to ", DEPTH0
+               if ( debug ) then
+                  LOG_INFO("SNOW_ky90_main",*) "ZN is updated/replaced to: ", ZNSNOW ," to ", DEPTH0
+               end if
                ZNSNOW = DEPTH0
             ELSE
                ZN_flag = 3
             END IF
 
             if ( debug ) then
-               write(*,*) 'TSNOW  is updated:  ', TSNOW
-               write(*,*) 'ZNSNOW is updated:  ', ZNSNOW
+               LOG_INFO("SNOW_ky90_main",*) 'TSNOW  is updated:  ', TSNOW
+               LOG_INFO("SNOW_ky90_main",*) 'ZNSNOW is updated:  ', ZNSNOW
             end if
          else
             call check_res( ZNSNOW0, ZNSNOW, TSNOW0, TSNOW, GFLUX, TA, UA, RH, DENS, LW, "0", time)
@@ -544,8 +563,10 @@ contains
       endif ! Gres & beta
 
       Gflux2land = GFLUX*time - (QCC + QFUSION + MELT)
-      if( IO_L ) write(IO_FID_LOG,*) "### ZN_flag = ", ZN_flag, "TS_flag = ", TS_flag
-      if( IO_L ) write(IO_FID_LOG,*) '### Heat flux from snowpack to land surface: ', Gflux2land
+      if ( debug ) then
+         LOG_INFO("SNOW_ky90_main",*) "### ZN_flag = ", ZN_flag, "TS_flag = ", TS_flag
+         LOG_INFO("SNOW_ky90_main",*) '### Heat flux from snowpack to land surface: ', Gflux2land
+      end if
 
       DELTADEPTH             = MELT / ((1.0_RP-W0)*LF*RHOSNOW)
       SWEMELT                = RHOSNOW*DELTADEPTH
@@ -553,16 +574,18 @@ contains
       DEPTH                  = DEPTH0      - DELTADEPTH
       if (DEPTH < ZNSNOW) then
          ! NOTICE: energy budget has not been considered thought this process yet.
-         if ( debug ) write(*,*) "replace ZNSNOW <= DEPTH"
+         if ( debug ) then
+            LOG_INFO("SNOW_ky90_main",*) "replace ZNSNOW <= DEPTH"
+         end if
          ZNSNOW               = DEPTH
       endif
 
       if ( debug ) then
-         write(*,*) 'MELT in water equivalent is: ', SWEMELT
-         write(*,*) 'SWE0 is:                     ', SWE
-         write(*,*) 'DELTADEPTH is:               ', DELTADEPTH
-         write(*,*) 'DEPTH0 is:                   ', DEPTH
-         write(*,*) 'ZNSNOW0 is:                  ', ZNSNOW
+         LOG_INFO("SNOW_ky90_main",*) 'MELT in water equivalent is: ', SWEMELT
+         LOG_INFO("SNOW_ky90_main",*) 'SWE0 is:                     ', SWE
+         LOG_INFO("SNOW_ky90_main",*) 'DELTADEPTH is:               ', DELTADEPTH
+         LOG_INFO("SNOW_ky90_main",*) 'DEPTH0 is:                   ', DEPTH
+         LOG_INFO("SNOW_ky90_main",*) 'ZNSNOW0 is:                  ', ZNSNOW
       end if
 
    endif
@@ -595,14 +618,14 @@ subroutine groundflux (TS, TA, UA, RH, rhoair, ALPHA, SW, LW, &
   GFLUX              = (SFLUX + RFLUX - HFLUX - LATENTFLUX)
 
   if ( debug ) then
-     write(*,*) "-------------- groundflux --------------"
-     write(*,*) "GFLUX is:    ", GFLUX
-     write(*,*) "SFLUX:       ", SFLUX
-     write(*,*) "RFLUX:       ", RFLUX, LINFLUX+LOUTFLUX
-     write(*,*) " (LONG in:   ", LINFLUX,")"
-     write(*,*) " (LONG out:  ", LOUTFLUX,")"
-     write(*,*) "HFLUX is:    ", HFLUX
-     write(*,*) "LATENT FLUX: ", LATENTFLUX
+     LOG_INFO("LAND_PHY_SNOW_KY90_groundflux",*) "-------------- groundflux --------------"
+     LOG_INFO_CONT(*) "GFLUX is:    ", GFLUX
+     LOG_INFO_CONT(*) "SFLUX:       ", SFLUX
+     LOG_INFO_CONT(*) "RFLUX:       ", RFLUX, LINFLUX+LOUTFLUX
+     LOG_INFO_CONT(*) " (LONG in:   ", LINFLUX,")"
+     LOG_INFO_CONT(*) " (LONG out:  ", LOUTFLUX,")"
+     LOG_INFO_CONT(*) "HFLUX is:    ", HFLUX
+     LOG_INFO_CONT(*) "LATENT FLUX: ", LATENTFLUX
   end if
 
 return
@@ -633,8 +656,8 @@ subroutine check_allSnowMelt (GFLUX, TS1, ZN1, D, sflag, time)
   endif
 
   if ( debug ) then
-     write(*,*) "Energy in  =",energy_in
-     write(*,*) "Energy use =",energy_use
+     LOG_INFO("LAND_PHY_SNOW_KY90_check_allSnowMelt",*) "Energy in  =",energy_in
+     LOG_INFO("LAND_PHY_SNOW_KY90_check_allSnowMelt",*) "Energy use =",energy_use
   end if
 
   return
@@ -661,13 +684,13 @@ subroutine cal_param (ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
             - C2*C3
 
   if ( debug ) then
-     write(*,*) "-------------- snowdepth --------------"
-     write(*,*) "C1",C1
-     write(*,*) "C2",C2,(4.0_RP*epsilon*sigma*(TA**3)),(cp*rhoair*CH*UA), (LV*rhoair*CE*UA*DELTAQSAT)
-     write(*,*) "C3",C3
-     write(*,*) "A0",A0
-     write(*,*) "A1",A1
-     write(*,*) "A2",A2
+     LOG_INFO("LAND_PHY_SNOW_KY90_cal_param",*) "-------------- snowdepth --------------"
+     LOG_INFO_CONT(*) "C1",C1
+     LOG_INFO_CONT(*) "C2",C2,(4.0_RP*epsilon*sigma*(TA**3)),(cp*rhoair*CH*UA), (LV*rhoair*CE*UA*DELTAQSAT)
+     LOG_INFO_CONT(*) "C3",C3
+     LOG_INFO_CONT(*) "A0",A0
+     LOG_INFO_CONT(*) "A1",A1
+     LOG_INFO_CONT(*) "A2",A2
   end if
 
 end subroutine
@@ -715,7 +738,9 @@ subroutine snowdepth (GFLUX, ZN1, ZN2, time)
 
    ZN2  = ((-1.0_RP*A1) - ((A1**2.0_RP - 4.0_RP*A2*A0)**0.5_RP)) / (2.0_RP*A2)
 
-   if ( debug ) write(*,*) "ZN old = ",ZN1, "ZN new = ",ZN2
+   if ( debug ) then
+      LOG_INFO("LAND_PHY_SNOW_KY90_snowdepth",*) "ZN old = ",ZN1, "ZN new = ",ZN2
+   end if
 
 return
 end subroutine snowdepth
@@ -735,11 +760,11 @@ subroutine equation415(LAMBDAS, C2, ZN2, RH, QSAT, TS1, ZN1, GFLUX, TA, UA, rhoa
            + ZN2*epsilon*(LW - (sigma*(TA**4))))/ (LAMBDAS + (C2*ZN2))
 
   if ( debug ) then
-     write(*,*) "-------------- equation415 --------------"
+     LOG_INFO("LAND_PHY_SNOW_KY90_equation415",*) "-------------- equation415 --------------"
 
      TS_check = GFLUX*time/(0.5*CSRHOS*ZN2) + T0 - ZN1*(T0-TS1)/ZN2 - W0*RHOSNOW*LF*(ZN1-ZN2)/(0.5*CSRHOS*ZN2)
 
-     write(*,*) "compare ",TS2, TS_check, TS2-TS_check
+     LOG_INFO_CONT(*) "compare ",TS2, TS_check, TS2-TS_check
      ! When ZN2 is replaced, TS2 does not equal to TS_check.
   end if
 
@@ -758,7 +783,9 @@ subroutine recalculateZ(ZN1, TS, GFLUX, ZN2, time)
 
   ZN2 = ZN1 + ((C1*ZN1*(T0-TS) - GFLUX*time) / C3)
 
-  if ( debug ) write(*,*) "-------------- recalculate Z --------------"
+  if ( debug ) then
+     LOG_INFO("LAND_PHY_SNOW_KY90_recalculateZ",*) "-------------- recalculate Z --------------"
+  end if
 
  return
 end subroutine recalculateZ
@@ -780,18 +807,18 @@ subroutine calculationMO(GFLUX, CSRHOS, ZN1, TS1, ZN2, TS2, &
   MELT            = ( GFLUX*time - QCC - QFUSION )
 
   if ( debug ) then
-     write(*,*) "--------------------------MELT----------------"
-     write(*,*) "GFLUX*time is: ", GFLUX*time
-     write(*,*) "QCC is       : ", QCC
-     write(*,*) "QFUSION is   : ", QFUSION
-     write(*,*) "QMELT is     : ", MELT
+     LOG_INFO("LAND_PHY_SNOW_KY90_calculationMO",*) "--------------------------MELT----------------"
+     LOG_INFO_CONT(*) "GFLUX*time is: ", GFLUX*time
+     LOG_INFO_CONT(*) "QCC is       : ", QCC
+     LOG_INFO_CONT(*) "QFUSION is   : ", QFUSION
+     LOG_INFO_CONT(*) "QMELT is     : ", MELT
 
-     write(*,*) QCC+QFUSION+MELT
-     write(*,*) "diff= ", QCC + QFUSION + MELT - (GFLUX*time)
+     LOG_INFO_CONT(*) QCC+QFUSION+MELT
+     LOG_INFO_CONT(*) "diff= ", QCC + QFUSION + MELT - (GFLUX*time)
   end if
 
   if ( ABS(QCC+QFUSION+MELT - (GFLUX*time)) > 10.) then
-     write(*,*) "Calculation is fault. Model would include bugs. Please check! Melt"
+     LOG_ERROR("LAND_PHY_SNOW_KY90_calculationMO",*) "Calculation is fault. Model would include bugs. Please check! Melt"
      call PRC_abort
   endif
 
@@ -814,18 +841,18 @@ subroutine calculationNoMO(GFLUX, CSRHOS, ZN1, TS1, ZN2, TS2, &
   MELT            = 0.0_RP
 
   if ( debug ) then
-     write(*,*) "--------------------------NOMELT----------------"
-     write(*,*) "GFLUX*time is: ", GFLUX*time
-     write(*,*) "QCC is       : ", QCC
-     write(*,*) "QFUSION is   : ", QFUSION
-     write(*,*) "QMELT is     : ", MELT
+     LOG_INFO("LAND_PHY_SNOW_KY90_calculationNoMO",*) "--------------------------NOMELT----------------"
+     LOG_INFO_CONT(*) "GFLUX*time is: ", GFLUX*time
+     LOG_INFO_CONT(*) "QCC is       : ", QCC
+     LOG_INFO_CONT(*) "QFUSION is   : ", QFUSION
+     LOG_INFO_CONT(*) "QMELT is     : ", MELT
 
-     write(*,*) QCC+QFUSION+MELT
-     write(*,*) "diff= ", QCC +QFUSION - (GFLUX*time)
+     LOG_INFO_CONT(*) QCC+QFUSION+MELT
+     LOG_INFO_CONT(*) "diff= ", QCC +QFUSION - (GFLUX*time)
   end if
 
   !if ( ABS(QCC+QFUSION - (GFLUX*time)) > 10.) then
-  !  write(*,*) "Calculation is fault. Model would include bugs. Please check! No Melt"
+  !  LOG_ERROR("LAND_PHY_SNOW_KY90_calculationNoMO",*) "Calculation is fault. Model would include bugs. Please check! No Melt"
   !  call PRC_abort
   !endif
 
@@ -854,11 +881,11 @@ subroutine check_res(ZN1, ZN2, TS1, TS2, GFLUX, TA, UA, RH, rhoair, LW, flag, ti
 
 
   if ( debug ) then
-     write(*,*) "R1 is         : ", R1, "flag = ", flag
-     write(*,*) "R2 is         : ", R2, R3,"flag = ", flag
+     LOG_INFO("LAND_PHY_SNOW_KY90_check_res",*) "R1 is         : ", R1, "flag = ", flag
+     LOG_INFO("LAND_PHY_SNOW_KY90_check_res",*) "R2 is         : ", R2, R3,"flag = ", flag
 
      if(abs(R1)>10000)then
-        write(*,*) C1 * (ZN1*(T0-TS1) - ZN2*(T0-TS2)), C3*(ZN1-ZN2), -GFLUX*time
+        LOG_INFO("LAND_PHY_SNOW_KY90_check_res",*) C1 * (ZN1*(T0-TS1) - ZN2*(T0-TS2)), C3*(ZN1-ZN2), -GFLUX*time
      endif
   end if
 
@@ -952,7 +979,7 @@ subroutine cal_R1R2(ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
      close(70)
   end if
 
-  !write(*,*) "aa",(LINFLUX-epsilon*sigma*(TA**4) + (C2*TA) - (LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT))/C2
+  !LOG_INFO("cal_R1R2",*) "aa",(LINFLUX-epsilon*sigma*(TA**4) + (C2*TA) - (LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT))/C2
   return
 end subroutine cal_R1R2
 

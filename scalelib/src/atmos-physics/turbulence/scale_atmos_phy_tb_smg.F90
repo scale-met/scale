@@ -7,17 +7,7 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2011-11-29 (S.Iga)       [new]
-!! @li      2011-12-11 (H.Yashiro)   [mod] integrate to SCALE-LES ver.3
-!! @li      2012-03-23 (H.Yashiro)   [mod] Explicit index parameter inclusion
-!! @li      2012-03-27 (H.Yashiro)   [mod] reconstruction
-!! @li      2012-07-02 (S.Nishizawa) [mod] reconstruction with Brown et al. (1994)
-!! @li      2012-10-26 (S.Nishizawa) [mod] remove surface flux
-!! @li      2013-06-13 (S.Nishizawa) [mod] change mixing length by Brown et al. (1994) and Scotti et al. (1993)
-!! @li      2014-04-02 (S.Nishizawa) [mod] modified for terrrain-following
-!!
-!! - Reference
+!! @par Reference
 !!  - Brown et al., 1994:
 !!    Large-eddy simulaition of stable atmospheric boundary layers with a revised stochastic subgrid model.
 !!    Roy. Meteor. Soc., 120, 1485-1512
@@ -30,7 +20,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_tb_smg
   !-----------------------------------------------------------------------------
   !
@@ -114,12 +104,12 @@ contains
     integer,          intent(out) :: I_TKE_out
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Smagorinsky-type Eddy Viscocity Model'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_TB_smg_config",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_TB_smg_config",*) 'Tracers for Smagorinsky-type Eddy Viscocity Model'
 
     if ( TYPE_TB /= 'SMAGORINSKY' ) then
-       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not SMAGORINSKY. Check!'
+       LOG_ERROR("ATMOS_PHY_TB_smg_config",*) 'ATMOS_PHY_TB_TYPE is not SMAGORINSKY. Check!'
        call PRC_abort
     endif
 
@@ -165,9 +155,9 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Smagorinsky-type Eddy Viscocity Model'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_TB_smg_setup",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_TB_smg_setup",*) 'Smagorinsky-type Eddy Viscocity Model'
 
     ATMOS_PHY_TB_SMG_Cs = Cs
 
@@ -175,12 +165,12 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_TB_SMG,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_TB_smg_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB_SMG. Check!'
+       LOG_ERROR("ATMOS_PHY_TB_smg_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_TB_SMG. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_TB_SMG)
+    LOG_NML(PARAM_ATMOS_PHY_TB_SMG)
 
     Cs = ATMOS_PHY_TB_SMG_Cs
 
@@ -321,7 +311,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Turbulence(smagorinsky)'
+    LOG_PROGRESS(*) 'atmosphere / physics / turbulence / Smagorinsky'
 
 #ifdef DEBUG
     qflx_sgs_momz(:,:,:,:)   = UNDEF

@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_land_grid_cartesC_index
   !-----------------------------------------------------------------------------
   !
@@ -71,27 +72,27 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CartesC INDEX] / Categ[LAND GRID] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("LAND_GRID_CARTESC_INDEX_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_LAND_GRID_CARTESC_INDEX,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("LAND_GRID_CARTESC_INDEX_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_GRID_CARTESC_INDEX. Check!'
+       LOG_ERROR("LAND_GRID_CARTESC_INDEX_setup",*) 'Not appropriate names in namelist PARAM_LAND_GRID_CARTESC_INDEX. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_GRID_CARTESC_INDEX)
+    LOG_NML(PARAM_LAND_GRID_CARTESC_INDEX)
 
     LKS  = 1
     LKE  = LKMAX
     LKA  = LKMAX
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Land grid index information ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6,A,I6)') '*** z-axis levels :', LKMAX
+    LOG_NEWLINE
+    LOG_INFO("LAND_GRID_CARTESC_INDEX_setup",*) 'Land grid index information '
+    LOG_INFO_CONT('(1x,A,I6,A,I6,A,I6)') 'z-axis levels :', LKMAX
 
     ! at this moment horizontal grid is same as that in atmosphere
     LIMAX = IMAX

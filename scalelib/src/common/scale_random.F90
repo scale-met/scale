@@ -10,6 +10,7 @@
 !! @li      2012-03-28 (H.Yashiro)  [new]
 !!
 !<
+#include "scalelib.h"
 module scale_random
   !-----------------------------------------------------------------------------
   !
@@ -60,29 +61,29 @@ contains
     integer :: nseeds, ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[RANDOM] / Categ[COMMON] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("RANDOM_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_RANDOM,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("RANDOM_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_RANDOM. Check!'
+       LOG_ERROR("RANDOM_setup",*) 'Not appropriate names in namelist PARAM_RANDOM. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_RANDOM)
+    LOG_NML(PARAM_RANDOM)
 
     call random_seed
     call random_seed(size=nseeds)
 
     allocate( RANDOM_seedvar(nseeds))
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Array size for random seed:', nseeds
+    LOG_NEWLINE
+    LOG_INFO("RANDOM_setup",*) 'Array size for random seed:', nseeds
     if ( RANDOM_FIX ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** random seed is fixed.'
+       LOG_INFO("RANDOM_setup",*) 'random seed is fixed.'
     endif
 
     return

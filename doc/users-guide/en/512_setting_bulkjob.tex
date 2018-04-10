@@ -78,14 +78,14 @@ As shown in Fig. \ref{fig_bulkjob}, job directories exist in the same hierarchy 
 %% LOGファイルを開くと、最初の「SCALEロゴ」のあとに下記のようなメッセージが出力される。
 %% 下記、ドメイン1のプロセス0からの出力例である。\\
 
-At the execution of bulk jobs, the total number of MPI processes is specified as 
+At the execution of bulk jobs, the total number of MPI processes is specified as
 
 \begin{verbatim}
  $ mpirun  -n  135  ./scale-rm  launch.conf
 \end{verbatim}
 In this example, the number of processes per sub-job is 45 ($=9 + 36$) and the total number of processes used for three sub-jobs is 135. The message providing information regarding the division of MPI processes is written to the LOG files after the \scalelib logo. The following example is the log output for process 0 of Domain 1:
 \msgboxtwo{
-\verb| ++++++ Start MPI|  & \\
+\verb| +++++ start MPI|  & \\
 \verb| *** UNIVERSAL_COMM_WORLD        :        0| &; different by execution environment\\
 \verb| *** total process [UNIVERSAL]   :      135| &\\
 \verb| *** my process ID [UNIVERSAL]   :       36| &\\
@@ -104,7 +104,7 @@ In this example, the number of processes per sub-job is 45 ($=9 + 36$) and the t
 }
 The items belonging to \verb|[LOCAL]|, \verb|[GLOBAL]|, and \verb|[UNIVERSAL]| are the descriptions, respectively, of the process group in the domain, the nesting group, and the job group. The \verb|UNIVERSAL| group includes the \verb|GLOBAL| group and the \verb|GLOBAL| group includes the \verb|LOCAL| group. \verb|total process| represents the total number  of processes in each group and \verb|my process ID| the ID of the process in the group.
 
-It can be confirmed in this case that 1) since \verb|total process [UNIVERSAL]| is 135, all these processes are completed executed; 2) since \verb|total process [GLOBAL]| is 45, these 45 processes are used in a sub-job; 3) since this example is the log file for Domain 1,  \verb|total process [LOCAL]| is correctly described as 9. If you see the log message for Domain 2,  it is 39. \verb|my process ID [UNIVERSAL]|  is the process number  corresponding to the LOG and history files. Since this notation is the same as in the abnormal completion of execution, you can immediately recognize the processes in which errors occur during the execution of the sub-jobs. \textcolor{blue}{Note that in the current version, all jobs are forcibly terminated if a job is abnormally finished.} 
+It can be confirmed in this case that 1) since \verb|total process [UNIVERSAL]| is 135, all these processes are completed executed; 2) since \verb|total process [GLOBAL]| is 45, these 45 processes are used in a sub-job; 3) since this example is the log file for Domain 1,  \verb|total process [LOCAL]| is correctly described as 9. If you see the log message for Domain 2,  it is 39. \verb|my process ID [UNIVERSAL]|  is the process number  corresponding to the LOG and history files. Since this notation is the same as in the abnormal completion of execution, you can immediately recognize the processes in which errors occur during the execution of the sub-jobs. \textcolor{blue}{Note that in the current version, all jobs are forcibly terminated if a job is abnormally finished.}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

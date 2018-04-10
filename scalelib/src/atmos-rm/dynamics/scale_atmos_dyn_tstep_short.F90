@@ -6,12 +6,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-04-18 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tstep_short
   !-----------------------------------------------------------------------------
   !
@@ -204,7 +201,7 @@ contains
 
     case( 'FVM-HIVI', 'HIVI' )
 
-       write(*,*) 'xxx HIVI is tentatively disabled'
+       LOG_ERROR("ATMOS_DYN_Tstep_short_regist",*) 'HIVI is tentatively disabled'
        call PRC_abort
 
        call ATMOS_DYN_Tstep_short_fvm_hivi_regist( ATMOS_DYN_TYPE,              & ! [IN]
@@ -222,7 +219,7 @@ contains
        VAR_UNIT(:) = ""
 
     case default
-       write(*,*) 'xxx ATMOS_DYN_TYPE is invalid: ', ATMOS_DYN_TYPE
+       LOG_ERROR("ATMOS_DYN_Tstep_short_regist",*) 'ATMOS_DYN_TYPE is invalid: ', ATMOS_DYN_TYPE
        call PRC_abort
     end select
 

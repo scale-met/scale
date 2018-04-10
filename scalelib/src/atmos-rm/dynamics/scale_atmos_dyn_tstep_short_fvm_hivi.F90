@@ -11,8 +11,8 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
 #define HIVI_BICGSTAB 1
+#include "scalelib.h"
 module scale_atmos_dyn_tstep_short_fvm_hivi
   !-----------------------------------------------------------------------------
   !
@@ -88,7 +88,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( ATMOS_DYN_TYPE /= 'FVM-HIVI' .AND. ATMOS_DYN_TYPE /= 'HIVI' ) then
-       write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HIVI. Check!'
+       LOG_ERROR("ATMOS_DYN_Tstep_short_fvm_hivi_regist",*) 'ATMOS_DYN_TYPE is not FVM-HIVI. Check!'
        call PRC_abort
     endif
 
@@ -97,10 +97,10 @@ contains
     VAR_DESC(:) = ""
     VAR_UNIT(:) = ""
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Register additional prognostic variables (HIVI)'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_DYN_Tstep_short_fvm_hivi_regist",*) 'Register additional prognostic variables (HIVI)'
     if ( VA_out < 1 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** => nothing.'
+       LOG_INFO_CONT(*) '=> nothing.'
     endif
 
     return
@@ -120,12 +120,12 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** HIVI Setup'
+    LOG_INFO("ATMOS_DYN_Tstep_short_fvm_hivi_setup",*) 'HIVI Setup'
 #ifdef HIVI_BICGSTAB
-    if( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
+    LOG_INFO("ATMOS_DYN_Tstep_short_fvm_hivi_setup",*) 'USING Bi-CGSTAB'
 #else
-    if( IO_L ) write(IO_FID_LOG,*) '*** USING Multi-Grid'
-    write(*,*) 'xxx Not Implemented yet'
+    LOG_INFO("ATMOS_DYN_Tstep_short_fvm_hivi_setup",*) 'USING Multi-Grid'
+    LOG_ERROR("ATMOS_DYN_Tstep_short_fvm_hivi_setup",*) 'Not Implemented yet'
     call PRC_abort
 #endif
 
@@ -138,19 +138,19 @@ contains
     read(IO_FID_CONF,nml=PARAM_ATMOS_DYN_TSTEP_FVM_HIVI,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_DYN_Tstep_short_fvm_hivi_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_DYN_TSTEP_FVM_HIVI. Check!'
+       LOG_ERROR("ATMOS_DYN_Tstep_short_fvm_hivi_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_DYN_TSTEP_FVM_HIVI. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_DYN_TSTEP_FVM_HIVI)
+    LOG_NML(PARAM_ATMOS_DYN_TSTEP_FVM_HIVI)
 
     if ( RP == DP ) then
        mtype = MPI_DOUBLE_PRECISION
     elseif( RP == SP ) then
        mtype = MPI_REAL
     else
-       write(*,*) 'xxx Unsupported precision'
+       LOG_ERROR("ATMOS_DYN_Tstep_short_fvm_hivi_setup",*) 'Unsupported precision'
        call PRC_abort
     endif
 
@@ -1616,11 +1616,11 @@ contains
        error = buf(1)
 
 #ifdef DEBUG
-       if( IO_L ) write(*,*) iter, error/norm
+       LOG_INFO("solve_bicgstab",*) iter, error/norm
 #endif
        if ( sqrt(error/norm) < epsilon .OR. error > error2 ) then
 #ifdef DEBUG
-         if( IO_L ) write(*,*) "Bi-CGSTAB converged:", iter
+         LOG_INFO("solve_bicgstab",*) "Bi-CGSTAB converged:", iter
 #endif
           exit
        endif
@@ -1772,8 +1772,7 @@ contains
     enddo
 
     if ( iter >= ITMAX ) then
-       write(*,*) 'xxx [atmos_dyn_hivi] Bi-CGSTAB'
-       write(*,*) 'xxx not converged', error, norm
+       LOG_ERROR("solve_bicgstab",*) 'not converged', error, norm
        call PRC_abort
     endif
 
@@ -2216,6 +2215,8 @@ contains
 #ifdef DEBUG
   subroutine check_solver( &
        DPRES, M, B )
+    use scale_prc, only: &
+       PRC_abort
     real(RP), intent(in) :: DPRES(KA,IA,JA)
     real(RP), intent(in) :: M(7,KA,IA,JA)
     real(RP), intent(in) :: B(KA,IA,JA)
@@ -2231,8 +2232,8 @@ contains
     do k = KS, KE
        err = abs( B2(k,i,j) - B(k,i,j) )
        if ( err > 1.e-5_RP .and. abs( err / B(k,i,j) ) > 1.e-5_RP ) then
-          write(*,*) "solver error is too large: ", k,i,j, B(k,i,j), B2(k,i,j)
-          call abort
+          LOG_ERROR("check_solver",*) "solver error is too large: ", k,i,j, B(k,i,j), B2(k,i,j)
+          call PRC_abort
        endif
     enddo
     enddo
@@ -2246,6 +2247,8 @@ contains
        DENS_RK, DENS, &
        B, &
        RT2P )
+    use scale_prc, only: &
+       PRC_abort
     real(RP), intent(in) :: DPRES_N(KA,IA,JA)
     real(RP), intent(in) :: DPRES(KA,IA,JA)
     real(RP), intent(in) :: RHOT_RK(KA,IA,JA)
@@ -2264,10 +2267,9 @@ contains
        lhs = DPRES_N(k,i,j) - DPRES(k,i,j)
        rhs = RT2P(k,i,j) * ( RHOT_RK(k,i,j) - RHOT(k,i,j) )
        if ( abs( (lhs - rhs) / lhs ) > 1e-15 ) then
-!          write(*,*) "error is too large: ", k,i,j, lhs, rhs
-          write(*,*) "error is too large: ", k,i,j, lhs, rhs, &
+          LOG_ERROR("check_pres",*) "error is too large: ", k,i,j, lhs, rhs, &
                dpres_n(k,i,j),dpres(k,i,j),rhot_rk(k,i,j),rhot(k,i,j),dens_rk(k,i,j),dens(k,i,j),B(k,i,j)
-          call abort
+          call PRC_abort
        endif
     enddo
     enddo

@@ -27,7 +27,7 @@ Table \ref{tab:setting_ideal} shows the experimental settings.
  6-class single-moment bulk model \citep{tomita_2008} \\ \hline
  Initial vertical profile & GCSS Case1 squall line \citep{Redelsperger2000}&
  The wind profile based on \citet{Ooyama_2001} is given as the vertical shear. \\ \hline
- Initial disturbance & Warm bubble & Horizontal radius of 4 km and 
+ Initial disturbance & Warm bubble & Horizontal radius of 4 km and
  vertical radius of 3km with  maximum intensity of 3K.\\ \hline
 \end{tabularx}
 \label{tab:setting_ideal}
@@ -68,7 +68,7 @@ the configuration file \verb|init_R20kmDX500m.conf| is used to conduct \verb|sca
 \begin{verbatim}
   $ mpirun  -n  2  ./scale-rm_init  init_R20kmDX500m.conf
 \end{verbatim}
-\noindent 
+\noindent
 If it is successfully completed, the following message is output in the command line:
 
 \msgbox{
@@ -95,8 +95,8 @@ only the log file of the 0th process (master rank) is output as default.
 If the execution is normally concluded, the statements below are output at the end of this LOG file:
 
 \msgbox{
- ++++++ Finalize MPI...\\
- ++++++ MPI is peacefully finalized\\
+ +++++ finalize MPI...\\
+ +++++ MPI is peacefully finalized\\
 }
 
 The two files
@@ -126,7 +126,7 @@ The following three files are then generated under the given directory:
 When the execution concludes normally,
 the following message is output at the end of this LOG file:
 \msgbox{
- ++++++ Finalize MPI...\\
- ++++++ MPI is peacefully finalized\\
+ +++++ finalize MPI...\\
+ +++++ MPI is peacefully finalized\\
 }
-The two files \verb|history.pe000000.nc| and \verb|history.pe000001.nc| are history files containing the results of the calculation. They are formatted by \netcdf, and each file is approximately 1.4 MB. 
+The two files \verb|history.pe000000.nc| and \verb|history.pe000001.nc| are history files containing the results of the calculation. They are formatted by \netcdf, and each file is approximately 1.4 MB.

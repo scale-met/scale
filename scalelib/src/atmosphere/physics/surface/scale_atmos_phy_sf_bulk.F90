@@ -9,7 +9,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_sf_bulk
   !-----------------------------------------------------------------------------
   !
@@ -57,20 +57,20 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[surface bulk] / Categ[atmosphere physics] / Origin[SCALE lib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Bulk scheme'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_SF_bulk_setup",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_SF_bulk_setup",*) 'Bulk scheme'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF_BULK,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_SF_bulk_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF_BULK. Check!'
+       LOG_ERROR("ATMOS_PHY_SF_bulk_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_SF_BULK. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_SF_BULK)
+    LOG_NML(PARAM_ATMOS_PHY_SF_BULK)
 
     return
   end subroutine ATMOS_PHY_SF_bulk_setup
@@ -146,7 +146,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Surface flux(bulk)'
+    LOG_PROGRESS(*) 'atmosphere / physics / surface flux / bulk'
 
     ! ToDo consider ATM_TEMP is appropriate
     call HYDROMETEOR_LHV( IA, IS, IE, JA, JS, JE, &

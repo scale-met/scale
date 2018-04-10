@@ -8,6 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_atmos_phy_tb
   !-----------------------------------------------------------------------------
   !
@@ -133,7 +134,7 @@ contains
     character(len=*), intent(in) :: TB_TYPE
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** => ', trim(TB_TYPE), ' is selected.'
+    LOG_INFO("ATMOS_PHY_TB_config",*) '=> ', trim(TB_TYPE), ' is selected.'
 
     select case( TB_TYPE )
     case( 'SMAGORINSKY' )
@@ -166,7 +167,7 @@ contains
 
     case default
 
-       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is invalid: ', TB_TYPE
+       LOG_ERROR("ATMOS_PHY_TB_config",*) 'ATMOS_PHY_TB_TYPE is invalid: ', TB_TYPE
        call PRC_abort
 
     end select

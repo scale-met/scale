@@ -11,7 +11,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_interp
   !-----------------------------------------------------------------------------
   !
@@ -78,8 +78,8 @@ contains
     real(RP), intent(in), optional :: search_limit
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[INTERP] / Categ[COMMON] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("INTRP_setup",*) 'Setup'
 
     INTRP_divnum       = divnum
     INTRP_weight_order = weight_order
@@ -87,7 +87,7 @@ contains
     INTRP_search_limit = large_number
     if ( present(search_limit) ) then
        INTRP_search_limit = search_limit
-       if( IO_L ) write(IO_FID_LOG,*) '*** search limit [m] : ', INTRP_search_limit
+       LOG_INFO("INTRP_setup",*) 'search limit [m] : ', INTRP_search_limit
     endif
 
     return
@@ -151,10 +151,10 @@ contains
        max_loc = maxval( lev_loc(:,:,:) ) ! HALO + 1
 
        if ( max_ref < max_loc ) then
-          write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
-          write(*,*) 'xxx -- VERTICAL direction over the limit'
-          write(*,*) 'xxx -- reference max: ', max_ref
-          write(*,*) 'xxx --     local max: ', max_loc
+          LOG_ERROR("INTRP_domain_compatibility",*) 'REQUESTED DOMAIN IS TOO MUCH BROAD'
+          LOG_ERROR_CONT(*) '-- VERTICAL direction over the limit'
+          LOG_ERROR_CONT(*) '-- reference max: ', max_ref
+          LOG_ERROR_CONT(*) '--     local max: ', max_loc
           call PRC_abort
        endif
     endif
@@ -168,12 +168,12 @@ contains
        if    ( (min_ref+360.0_RP-max_ref) < 360.0_RP / size(lon_org,1) * 2.0_RP ) then
           ! cyclic OK
        elseif( max_ref < max_loc .OR. min_ref > min_loc ) then
-          write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
-          write(*,*) 'xxx -- LONGITUDINAL direction over the limit'
-          write(*,*) 'xxx -- reference max: ', max_ref
-          write(*,*) 'xxx -- reference min: ', min_ref
-          write(*,*) 'xxx --     local max: ', max_loc
-          write(*,*) 'xxx --     local min: ', min_loc
+          LOG_ERROR("INTRP_domain_compatibility",*) 'REQUESTED DOMAIN IS TOO MUCH BROAD'
+          LOG_ERROR_CONT(*) '-- LONGITUDINAL direction over the limit'
+          LOG_ERROR_CONT(*) '-- reference max: ', max_ref
+          LOG_ERROR_CONT(*) '-- reference min: ', min_ref
+          LOG_ERROR_CONT(*) '--     local max: ', max_loc
+          LOG_ERROR_CONT(*) '--     local min: ', min_loc
           call PRC_abort
        endif
     endif
@@ -185,12 +185,12 @@ contains
        min_loc = minval( lat_loc(:,:) / D2R )
 
        if ( max_ref < max_loc .OR. min_ref > min_loc ) then
-          write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
-          write(*,*) 'xxx -- LATITUDINAL direction over the limit'
-          write(*,*) 'xxx -- reference max: ', max_ref
-          write(*,*) 'xxx -- reference min: ', min_ref
-          write(*,*) 'xxx --     local max: ', max_loc
-          write(*,*) 'xxx --     local min: ', min_loc
+          LOG_ERROR("INTRP_domain_compatibility",*) 'REQUESTED DOMAIN IS TOO MUCH BROAD'
+          LOG_ERROR_CONT(*) '-- LATITUDINAL direction over the limit'
+          LOG_ERROR_CONT(*) '-- reference max: ', max_ref
+          LOG_ERROR_CONT(*) '-- reference min: ', min_ref
+          LOG_ERROR_CONT(*) '--     local max: ', max_loc
+          LOG_ERROR_CONT(*) '--     local min: ', min_loc
           call PRC_abort
        endif
     endif
@@ -776,8 +776,8 @@ contains
        endif
 
        if ( idx_k(k,1) < 0 ) then
-          write(*,*) 'xxx [INTRP_search_vert] data for interpolation was not found.'
-          write(*,*) 'xxx k=', k, ', hgt(k)=', hgt(k), ', hgt_ref(:)=', hgt_ref(:)
+          LOG_ERROR("INTRP_search_vert",*) 'data for interpolation was not found.'
+          LOG_ERROR_CONT(*) 'k=', k, ', hgt(k)=', hgt(k), ', hgt_ref(:)=', hgt_ref(:)
           call PRC_abort
        endif
 

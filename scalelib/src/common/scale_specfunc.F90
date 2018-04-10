@@ -10,6 +10,7 @@
 !! @li      2013-02-06 (S.Nishizawa) [new] SF_gamma
 !!
 !<
+#include "scalelib.h"
 module scale_specfunc
   !-----------------------------------------------------------------------------
   !

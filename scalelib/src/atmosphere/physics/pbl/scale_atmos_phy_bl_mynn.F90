@@ -14,7 +14,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_bl_mynn
   !-----------------------------------------------------------------------------
   !
@@ -139,9 +139,9 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[pbl mynn] / Categ[atmosphere physics] / Origin[SCALE lib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Mellor-Yamada Nakanishi-Niino scheme'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_BL_MYNN_setup",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_BL_MYNN_setup",*) 'Mellor-Yamada Nakanishi-Niino scheme'
 
     if ( present(TKE_MIN) ) ATMOS_PHY_BL_MYNN_TKE_MIN = TKE_MIN
     if ( present(PBL_MAX) ) ATMOS_PHY_BL_MYNN_PBL_MAX = PBL_MAX
@@ -150,12 +150,12 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_BL_MYNN,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_BL_MYNN_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_BL_MYNN. Check!'
+       LOG_ERROR("ATMOS_PHY_BL_MYNN_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_BL_MYNN. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_BL_MYNN)
+    LOG_NML(PARAM_ATMOS_PHY_BL_MYNN)
 
     A1        = B1 * (1.0_RP - 3.0_RP * G1) / 6.0_RP
     A2        = 1.0_RP / (3.0_RP * G1 * B1**(1.0_RP/3.0_RP) * PrN )
@@ -308,11 +308,11 @@ contains
     !---------------------------------------------------------------------------
 
 
-    if( IO_L ) write(IO_FID_LOG, *) "*** atmosphere / physics / pbl / MYNN"
+    LOG_PROGRESS(*) "atmosphere / physics / pbl / MYNN"
 
     mynn_level = ATMOS_PHY_BL_MYNN_LEVEL
     if ( mynn_level .ne. 2.5_RP ) then
-       write(*,*) 'xxx only level 2.5 is supported at this moment'
+       LOG_ERROR("ATMOS_PHY_BL_MYNN_tendency",*) 'only level 2.5 is supported at this moment'
        call PRC_abort
     end if
 

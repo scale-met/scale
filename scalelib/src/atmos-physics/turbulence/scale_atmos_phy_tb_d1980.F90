@@ -7,16 +7,14 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2015-10-29 (S.Nishizawa) [new]
-!!
-!! - Reference
+!! @par Reference
 !!  - Deardorff, 1980:
 !!    Stratocumulus-capped mixed layers derived from a three-dimensional model.
 !!    Bound.-Layer Meteor., 18, 495-527
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_atmos_phy_tb_d1980
   !-----------------------------------------------------------------------------
   !
@@ -89,12 +87,12 @@ contains
     integer,          intent(out) :: I_TKE_out
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence Tracer] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Tracers for Deardorff (1980) 1.5th TKE Model'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_TB_d1980_config",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_TB_d1980_config",*) 'Tracers for Deardorff (1980) 1.5th TKE Model'
 
     if ( TYPE_TB /= 'D1980' ) then
-       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not D1980. Check!'
+       LOG_ERROR("ATMOS_PHY_TB_d1980_config",*) 'ATMOS_PHY_TB_TYPE is not D1980. Check!'
        call PRC_abort
     endif
 
@@ -130,20 +128,20 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Turbulence] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Deardorff (1980) 1.5th TKE Model'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_TB_d1980_setup",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_TB_d1980_setup",*) 'Deardorff (1980) 1.5th TKE Model'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_TB_D1980,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_TB_d1980_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_TB_D1980. Check!'
+       LOG_ERROR("ATMOS_PHY_TB_d1980_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_TB_D1980. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_TB_D1980)
+    LOG_NML(PARAM_ATMOS_PHY_TB_D1980)
 
     allocate( delta(KA,IA,JA) )
 
@@ -260,7 +258,7 @@ contains
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Turbulence(D1980)'
+    LOG_PROGRESS(*) 'atmosphere / physics / turbulence / D1980'
 
 #ifdef DEBUG
     qflx_sgs_momz(:,:,:,:)   = UNDEF

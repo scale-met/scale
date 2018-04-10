@@ -7,32 +7,9 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2011-11-11 (H.Yashiro)   [new] Imported from SCALE-LES ver.2
-!! @li      2011-11-11 (H.Yashiro)   [mod] Merged with Y.Miyamoto's
-!! @li      2011-12-11 (H.Yashiro)   [mod] Use reference state
-!! @li      2011-12-26 (Y.Miyamoto)  [mod] Add numerical diffusion into mass flux calc
-!! @li      2012-01-04 (H.Yashiro)   [mod] Nonblocking communication (Y.Ohno)
-!! @li      2012-01-25 (H.Yashiro)   [fix] Bugfix (Y.Miyamoto)
-!! @li      2011-01-25 (H.Yashiro)   [mod] sprit as "full" FCT (Y.Miyamoto)
-!! @li      2012-02-14 (H.Yashiro)   [mod] Cache tiling
-!! @li      2012-03-14 (H.Yashiro)   [mod] Bugfix (Y.Miyamoto)
-!! @li      2012-03-23 (H.Yashiro)   [mod] Explicit index parameter inclusion
-!! @li      2012-04-09 (H.Yashiro)   [mod] Integrate RDMA communication
-!! @li      2012-06-10 (Y.Miyamoto)  [mod] large-scale divergence (from H.Yashiro's)
-!! @li      2012-07-13 (H.Yashiro)   [mod] prevent conditional branching in FCT
-!! @li      2012-07-27 (Y.Miyamoto)  [mod] divegence damping option
-!! @li      2012-08-16 (S.Nishizawa) [mod] use FCT for momentum and temperature
-!! @li      2012-09-21 (Y.Sato)      [mod] merge DYCOMS-II experimental set
-!! @li      2013-03-26 (Y.Sato)      [mod] modify Large scale forcing and coriolis forcing
-!! @li      2013-04-04 (Y.Sato)      [mod] modify Large scale forcing
-!! @li      2013-06-14 (S.Nishizawa) [mod] enable to change order of numerical diffusion
-!! @li      2013-06-18 (S.Nishizawa) [mod] split part of RK to other files
-!! @li      2013-06-20 (S.Nishizawa) [mod] split large scale sining to other file
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn
   !-----------------------------------------------------------------------------
   !
@@ -249,8 +226,8 @@ contains
        case ( 'SPHERE' )
           CORIOLIS(:,:) = 2.0_RP * OHM * sin( lat(:,:) )
        case default
-          write(*,*) 'xxx Coriolis type is invalid: ', trim(coriolis_type)
-          write(*,*) 'xxx The type must be PLANE or SPHERE'
+          LOG_ERROR("ATMOS_DYN_setup",*) 'Coriolis type is invalid: ', trim(coriolis_type)
+          LOG_ERROR_CONT(*) 'The type must be PLANE or SPHERE'
           call PRC_abort
        end select
 
@@ -407,7 +384,7 @@ contains
     integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos dynamics step'
+    LOG_PROGRESS(*) 'atmosphere / dynamics'
 
     dt = real(DTSEC, kind=RP)
 
@@ -671,7 +648,7 @@ contains
                         COMM_world,       &
                         ierr              )
 
-    if( IO_L ) write(IO_FID_LOG,'(A,1x,ES24.17)') 'total mflx_lb:', allmflx_lb_total
+    LOG_INFO("check_mass",'(A,1x,ES24.17)') 'total mflx_lb:', allmflx_lb_total
 
     call MPI_Allreduce( mass_total,    &
                         allmass_total, &
@@ -681,7 +658,7 @@ contains
                         COMM_world,    &
                         ierr           )
 
-    if( IO_L ) write(IO_FID_LOG,'(A,1x,ES24.17)') 'total mass   :', allmass_total
+    LOG_INFO("check_mass",'(A,1x,ES24.17)') 'total mass   :', allmass_total
 
     call MPI_Allreduce( mass_total2,    &
                         allmass_total2, &
@@ -691,7 +668,7 @@ contains
                         COMM_world,     &
                         ierr            )
 
-    if( IO_L ) write(IO_FID_LOG,'(A,1x,ES24.17)') 'total mass2  :', allmass_total2
+    LOG_INFO("check_mass",'(A,1x,ES24.17)') 'total mass2  :', allmass_total2
 
     call MPI_Allreduce( mflx_lb_horizontal(KS:KE),    &
                         allmflx_lb_horizontal(KS:KE), &

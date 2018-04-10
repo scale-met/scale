@@ -9,7 +9,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_mp_tomita08
   !-----------------------------------------------------------------------------
   !
@@ -414,9 +414,9 @@ contains
     !---------------------------------------------------------------------------
 
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics Tomita08] / Categ[atmosphere physics] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Tomita (2008) 1-moment bulk 6 category'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Tomita (2008) 1-moment bulk 6 category'
 
     allocate( w3d(KA,IA,JA,w_nmax) )
     w3d(:,:,:,:) = 0.0_RP
@@ -428,31 +428,31 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_TOMITA08,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_TOMITA08. Check!'
+       LOG_ERROR("ATMOS_PHY_MP_tomita08_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_MP_TOMITA08. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_TOMITA08)
+    LOG_NML(PARAM_ATMOS_PHY_MP_TOMITA08)
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** density of the snow    [kg/m3] : ', dens_s
-    if( IO_L ) write(IO_FID_LOG,*) '*** density of the graupel [kg/m3] : ', dens_g
-    if( IO_L ) write(IO_FID_LOG,*) '*** Nc for auto-conversion [num/m3]: ', autoconv_nc
-    if( IO_L ) write(IO_FID_LOG,*) '*** Use k-k  scheme?               : ', enable_KK2000
-    if( IO_L ) write(IO_FID_LOG,*) '*** Use Roh  scheme?               : ', enable_RS2014
-    if( IO_L ) write(IO_FID_LOG,*) '*** Use WDXZ scheme?               : ', enable_WDXZ2014
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Use effective radius of ice for snow and graupel,'
-    if( IO_L ) write(IO_FID_LOG,*) '    and set rain transparent?          : ', fixed_re
-    if( IO_L ) write(IO_FID_LOG,*) '*** Density of the ice is used for the calculation of '
-    if( IO_L ) write(IO_FID_LOG,*) '    optically effective volume of snow and graupel.'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Surpress sedimentation of rain?    : ', nofall_qr
-    if( IO_L ) write(IO_FID_LOG,*) '*** Surpress sedimentation of ice?     : ', nofall_qi
-    if( IO_L ) write(IO_FID_LOG,*) '*** Surpress sedimentation of snow?    : ', nofall_qs
-    if( IO_L ) write(IO_FID_LOG,*) '*** Surpress sedimentation of graupel? : ', nofall_qg
-    if( IO_L ) write(IO_FID_LOG,*) '*** Enable explicit ice generation?    : ', do_explicit_icegen
-    if( IO_L ) write(IO_FID_LOG,*)
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'density of the snow    [kg/m3] : ', dens_s
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'density of the graupel [kg/m3] : ', dens_g
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Nc for auto-conversion [num/m3]: ', autoconv_nc
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Use k-k  scheme?               : ', enable_KK2000
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Use Roh  scheme?               : ', enable_RS2014
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Use WDXZ scheme?               : ', enable_WDXZ2014
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Use effective radius of ice for snow and graupel,'
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) '    and set rain transparent?          : ', fixed_re
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Density of the ice is used for the calculation of '
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) '    optically effective volume of snow and graupel.'
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Surpress sedimentation of rain?    : ', nofall_qr
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Surpress sedimentation of ice?     : ', nofall_qi
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Surpress sedimentation of snow?    : ', nofall_qs
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Surpress sedimentation of graupel? : ', nofall_qg
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Enable explicit ice generation?    : ', do_explicit_icegen
+    LOG_NEWLINE
 
     do j = JS, JE
     do i = IS, IE
@@ -573,7 +573,7 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmosphere / physics / microphysics / Tomita08'
+    LOG_PROGRESS(*) 'atmosphere / physics / microphysics / Tomita08'
 
     !##### MP Main #####
     call MP_tomita08( &

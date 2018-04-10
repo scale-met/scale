@@ -210,7 +210,7 @@ OBJS_NAME = \
 	scale_random.o	\
 	scale_sigvars.o \
 	scale_specfunc.o	\
-	scale_stdio.o	\
+	scale_io.o	\
 	scale_sys_sigvars.o  \
 	scale_time.o	\
 	scale_topography.o	\
@@ -226,12 +226,12 @@ OBJS_FOR_DYN = $(OBJ_DIR)/scale_atmos_dyn.o	\
 OBJS_FOR_SDM = $(OBJ_DIR)/scale_precision.o	\
 	$(OBJ_DIR)/scale_prof.o	\
 	$(OBJ_DIR)/scale_comm.o	\
-	$(OBJ_DIR)/scale_atmos_sub_thermodyn.o	\
-	$(OBJ_DIR)/scale_atmos_sub_saturation.o	\
+	$(OBJ_DIR)/scale_atmos_thermodyn.o	\
+	$(OBJ_DIR)/scale_atmos_saturation.o	\
 	$(OBJ_DIR)/scale_atmos_phy_mp_common.o	\
 	$(OBJ_DIR)/scale_tracer.o	\
 	$(OBJ_DIR)/scale_tracer_sdm.o	\
-	$(OBJ_DIR)/scale_stdio.o	\
+	$(OBJ_DIR)/scale_io.o	\
 	$(OBJ_DIR)/scale_history.o	\
 	$(OBJ_DIR)/scale_const.o	\
 	$(OBJ_DIR)/scale_time.o	\

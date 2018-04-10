@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_atmos_grid_cartesC_real
   !-----------------------------------------------------------------------------
   !
@@ -129,19 +130,19 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_REAL] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_CARTESC_REAL_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_DOMAIN_CATALOGUE,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_GRID_CARTESC_REAL_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_DOMAIN_CATALOGUE. Check!'
+       LOG_ERROR("ATMOS_GRID_CARTESC_REAL_setup",*) 'Not appropriate names in namelist PARAM_DOMAIN_CATALOGUE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_DOMAIN_CATALOGUE)
+    LOG_NML(PARAM_DOMAIN_CATALOGUE)
 
     allocate( ATMOS_GRID_CARTESC_REAL_LON  (  IA,  JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_LAT  (  IA,  JA) )
@@ -275,9 +276,9 @@ contains
     ATMOS_GRID_CARTESC_REAL_BASEPOINT_LON = MAPPROJECTION_basepoint_lon * D2R
     ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT = MAPPROJECTION_basepoint_lat * D2R
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Base position in the global domain (lat,lon)'
-    if( IO_L ) write(IO_FID_LOG,*) '*** ->(',ATMOS_GRID_CARTESC_REAL_BASEPOINT_LON/D2R,',',ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT/D2R,')'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_CARTESC_REAL_calc_latlon",*) 'Base position in the global domain (lat,lon)'
+    LOG_INFO_CONT(*) '-> (',ATMOS_GRID_CARTESC_REAL_BASEPOINT_LON/D2R,',',ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT/D2R,')'
 
     do j = 1, JA
     do i = 1, IA
@@ -313,25 +314,24 @@ contains
 
        if (      ATMOS_GRID_CARTESC_REAL_DLON(i,j) == 0.0_RP &
             .OR. ATMOS_GRID_CARTESC_REAL_DLAT(i,j) == 0.0_RP ) then
-          write(*,*) 'xxx Invalid grid distance in lat-lon! i,j=', i,j
-          write(*,*) 'xxx Lon(i-1),Lon(i),dlon=', ATMOS_GRID_CARTESC_REAL_LONUY(i-1,j)/D2R,ATMOS_GRID_CARTESC_REAL_LONUY(i,j)/D2R,ATMOS_GRID_CARTESC_REAL_DLON(i,j)/D2R
-          write(*,*) 'xxx Lat(j-1),Lat(j),dlat=', ATMOS_GRID_CARTESC_REAL_LATXV(i,j-1)/D2R,ATMOS_GRID_CARTESC_REAL_LATXV(i,j)/D2R,ATMOS_GRID_CARTESC_REAL_DLAT(i,j)/D2R
+          LOG_ERROR("ATMOS_GRID_CARTESC_REAL_calc_latlon",*) 'Invalid grid distance in lat-lon! i,j=', i,j
+          LOG_ERROR_CONT(*) 'Lon(i-1),Lon(i),dlon=', ATMOS_GRID_CARTESC_REAL_LONUY(i-1,j)/D2R,ATMOS_GRID_CARTESC_REAL_LONUY(i,j)/D2R,ATMOS_GRID_CARTESC_REAL_DLON(i,j)/D2R
+          LOG_ERROR_CONT(*) 'Lat(j-1),Lat(j),dlat=', ATMOS_GRID_CARTESC_REAL_LATXV(i,j-1)/D2R,ATMOS_GRID_CARTESC_REAL_LATXV(i,j)/D2R,ATMOS_GRID_CARTESC_REAL_DLAT(i,j)/D2R
           call PRC_abort
        endif
     enddo
     enddo
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Position on the earth (Local)'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.5,A,F9.5,A,A,F10.5,A,F9.5,A)') &
-                                '*** NW(',ATMOS_GRID_CARTESC_REAL_LON(IS,JE)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IS,JE)/D2R,')', &
-                                 ' - NE(',ATMOS_GRID_CARTESC_REAL_LON(IE,JE)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IE,JE)/D2R,')'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_CARTESC_REAL_calc_latlon",*) 'Position on the earth (Local)'
+    LOG_INFO_CONT('(1x,A,F10.5,A,F9.5,A,A,F10.5,A,F9.5,A)') &
+                               'NW(',ATMOS_GRID_CARTESC_REAL_LON(IS,JE)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IS,JE)/D2R,')', &
+                            ' - NE(',ATMOS_GRID_CARTESC_REAL_LON(IE,JE)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IE,JE)/D2R,')'
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-                                '***              |                          |'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.5,A,F9.5,A,A,F10.5,A,F9.5,A)') &
-                                '*** SW(',ATMOS_GRID_CARTESC_REAL_LON(IS,JS)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IS,JS)/D2R,')', &
-                                 ' - SE(',ATMOS_GRID_CARTESC_REAL_LON(IE,JS)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IE,JS)/D2R,')'
+    LOG_INFO_CONT('(1x,A)') '             |                          |'
+    LOG_INFO_CONT('(1x,A,F10.5,A,F9.5,A,A,F10.5,A,F9.5,A)') &
+                               'SW(',ATMOS_GRID_CARTESC_REAL_LON(IS,JS)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IS,JS)/D2R,')', &
+                            ' - SE(',ATMOS_GRID_CARTESC_REAL_LON(IE,JS)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IE,JS)/D2R,')'
 
     mine(I_NW,I_LON) = ATMOS_GRID_CARTESC_REAL_LONUV(IS-1,JE  )/D2R
     mine(I_NE,I_LON) = ATMOS_GRID_CARTESC_REAL_LONUV(IE  ,JE  )/D2R
@@ -355,7 +355,7 @@ contains
                 iostat = ierr                   )
 
           if ( ierr /= 0 ) then
-             write(*,*) 'xxx [ATMOS_GRID_CARTESC_REAL_calc_latlon] cannot create latlon-catalogue file!'
+             LOG_ERROR("ATMOS_GRID_CARTESC_REAL_calc_latlon",*) 'cannot create latlon-catalogue file!'
              call PRC_abort
           endif
 
@@ -557,9 +557,9 @@ contains
     enddo
     enddo
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Minimum & maximum aspect ratio'
-    if( IO_L ) write(IO_FID_LOG,*) '*** ->(',ATMOS_GRID_CARTESC_REAL_ASPECT_MIN,',',ATMOS_GRID_CARTESC_REAL_ASPECT_MAX,')'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_CARTESC_REAL_calc_Z",*) 'Minimum & maximum aspect ratio'
+    LOG_INFO_CONT(*) '-> (',ATMOS_GRID_CARTESC_REAL_ASPECT_MIN,',',ATMOS_GRID_CARTESC_REAL_ASPECT_MAX,')'
 
     return
   end subroutine ATMOS_GRID_CARTESC_REAL_calc_Z

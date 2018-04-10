@@ -8,6 +8,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_landuse
   !-----------------------------------------------------------------------------
   !
@@ -97,8 +98,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[LANDUSE] / Categ[COUPLER] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("LANDUSE_setup",*) 'Setup'
 
     LANDUSE_IN_AGGREGATE  = FILE_AGGREGATE
     LANDUSE_OUT_AGGREGATE = FILE_AGGREGATE
@@ -107,12 +108,12 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_LANDUSE,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("LANDUSE_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_LANDUSE. Check!'
+       LOG_ERROR("LANDUSE_setup",*) 'Not appropriate names in namelist PARAM_LANDUSE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LANDUSE)
+    LOG_NML(PARAM_LANDUSE)
 
     allocate( LANDUSE_frac_land (IA,JA) )
     allocate( LANDUSE_frac_lake (IA,JA) )
@@ -136,20 +137,20 @@ contains
 
 
     if    ( LANDUSE_AllOcean ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are ocean'
+       LOG_INFO("LANDUSE_setup",*) 'Assume all grids are ocean'
        call LANDUSE_calc_fact
     elseif( LANDUSE_AllLand ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are land'
+       LOG_INFO("LANDUSE_setup",*) 'Assume all grids are land'
        LANDUSE_frac_land (:,:) = 1.0_RP
        call LANDUSE_calc_fact
     elseif( LANDUSE_AllUrban ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are land'
+       LOG_INFO("LANDUSE_setup",*) 'Assume all grids are land'
        LANDUSE_frac_land (:,:) = 1.0_RP
-       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all lands are urban'
+       LOG_INFO("LANDUSE_setup",*) 'Assume all lands are urban'
        LANDUSE_frac_urban(:,:) = 1.0_RP
        call LANDUSE_calc_fact
     elseif( LANDUSE_MosaicWorld ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids have ocean, land, and urban'
+       LOG_INFO("LANDUSE_setup",*) 'Assume all grids have ocean, land, and urban'
        LANDUSE_frac_land (:,:) = 0.5_RP
        LANDUSE_frac_urban(:,:) = 0.5_RP
        call LANDUSE_calc_fact
@@ -166,8 +167,8 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ calculate landuse factor'
+    LOG_NEWLINE
+    LOG_INFO("LANDUSE_calc_fact",*) 'calculate landuse factor'
 
     ! tentative treatment: The area of the lake is treated as the ocean
     LANDUSE_frac_land (:,:) = LANDUSE_frac_land(:,:) * ( 1.0_RP - LANDUSE_frac_lake(:,:) )
@@ -247,8 +248,8 @@ contains
     integer  :: p, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input landuse file ***'
+    LOG_NEWLINE
+    LOG_INFO("LANDUSE_read",*) 'Input landuse file '
 
     if ( LANDUSE_IN_BASENAME /= '' ) then
 
@@ -290,8 +291,8 @@ contains
        call LANDUSE_fillhalo( FILL_BND=.false. )
 
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** landuse file is not specified.'
-       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are ocean'
+       LOG_INFO_CONT(*) 'landuse file is not specified.'
+       LOG_INFO_CONT(*) 'Assume all grids are ocean'
     endif
 
     return
@@ -319,8 +320,8 @@ contains
 
     if ( LANDUSE_OUT_BASENAME /= '' ) then
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output landuse file ***'
+       LOG_NEWLINE
+       LOG_INFO("LANDUSE_write",*) 'Output landuse file '
 
        call LANDUSE_fillhalo( FILL_BND=.false. )
 

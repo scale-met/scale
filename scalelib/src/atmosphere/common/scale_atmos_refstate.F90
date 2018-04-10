@@ -8,6 +8,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_atmos_refstate
   !-----------------------------------------------------------------------------
   !
@@ -109,8 +110,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[REFSTATE] / Categ[ATMOS SHARE] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_REFSTATE_setup",*) 'Setup'
 
     allocate( ATMOS_REFSTATE_pres(KA,IA,JA) )
     allocate( ATMOS_REFSTATE_temp(KA,IA,JA) )
@@ -138,24 +139,24 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_REFSTATE,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_REFSTATE_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_REFSTATE. Check!'
+       LOG_ERROR("ATMOS_REFSTATE_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_REFSTATE. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_REFSTATE)
+    LOG_NML(PARAM_ATMOS_REFSTATE)
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    LOG_NEWLINE
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Input file of reference state : ', trim(ATMOS_REFSTATE_IN_BASENAME)
+       LOG_INFO("ATMOS_REFSTATE_setup",*) 'Input file of reference state : ', trim(ATMOS_REFSTATE_IN_BASENAME)
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Input file of reference state : Nothing, generate internally'
+       LOG_INFO("ATMOS_REFSTATE_setup",*) 'Input file of reference state : Nothing, generate internally'
     endif
 
     if ( ATMOS_REFSTATE_OUT_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Reference state output? : ', trim(ATMOS_REFSTATE_OUT_BASENAME)
+       LOG_INFO("ATMOS_REFSTATE_setup",*) 'Reference state output? : ', trim(ATMOS_REFSTATE_OUT_BASENAME)
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Reference state output? : NO'
+       LOG_INFO("ATMOS_REFSTATE_setup",*) 'Reference state output? : NO'
     endif
 
 
@@ -167,35 +168,35 @@ contains
     else
        if ( ATMOS_REFSTATE_TYPE == 'ISA' ) then
 
-          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type                : ISA'
-          if( IO_L ) write(IO_FID_LOG,*) '*** Surface temperature      [K]  : ', ATMOS_REFSTATE_TEMP_SFC
-          if( IO_L ) write(IO_FID_LOG,*) '*** Surface & environment RH [%]  : ', ATMOS_REFSTATE_RH
+          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Reference type                : ISA'
+          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Surface temperature      [K]  : ', ATMOS_REFSTATE_TEMP_SFC
+          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Surface & environment RH [%]  : ', ATMOS_REFSTATE_RH
           call ATMOS_REFSTATE_generate_isa( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                             CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
           ATMOS_REFSTATE_UPDATE_FLAG = .false.
 
        elseif ( ATMOS_REFSTATE_TYPE == 'UNIFORM' ) then
 
-          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type                : UNIFORM POTT'
-          if( IO_L ) write(IO_FID_LOG,*) '*** Potential temperature         : ', ATMOS_REFSTATE_POTT_UNIFORM
+          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Reference type                : UNIFORM POTT'
+          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Potential temperature         : ', ATMOS_REFSTATE_POTT_UNIFORM
           call ATMOS_REFSTATE_generate_uniform( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                                 CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
           ATMOS_REFSTATE_UPDATE_FLAG = .false.
 
        elseif ( ATMOS_REFSTATE_TYPE == 'ZERO' ) then
 
-          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type                : ZERO'
+          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Reference type                : ZERO'
           call ATMOS_REFSTATE_generate_zero( KA, IA, JA )
           ATMOS_REFSTATE_UPDATE_FLAG = .false.
 
        elseif ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
 
-          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type                : Generate from initial data'
-          if( IO_L ) write(IO_FID_LOG,*) '*** Update state?                 : ', ATMOS_REFSTATE_UPDATE_FLAG
-          if( IO_L ) write(IO_FID_LOG,*) '*** Update interval [sec]         : ', ATMOS_REFSTATE_UPDATE_DT
+          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Reference type                : Generate from initial data'
+          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Update state?                 : ', ATMOS_REFSTATE_UPDATE_FLAG
+          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Update interval [sec]         : ', ATMOS_REFSTATE_UPDATE_DT
 
        else
-          write(*,*) 'xxx ATMOS_REFSTATE_TYPE must be "ISA" or "UNIFORM". Check! : ', trim(ATMOS_REFSTATE_TYPE)
+          LOG_ERROR("ATMOS_REFSTATE_setup",*) 'ATMOS_REFSTATE_TYPE must be "ISA" or "UNIFORM". Check! : ', trim(ATMOS_REFSTATE_TYPE)
           call PRC_abort
        endif
 
@@ -230,8 +231,8 @@ contains
     integer :: fid
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input reference state profile ***'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_REFSTATE_read",*) 'Input reference state profile '
 
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
 
@@ -256,7 +257,7 @@ contains
        call FILE_CARTESC_read( fid, 'QV_ref3D',   'ZXY', ATMOS_REFSTATE_qv  (:,:,:) )
 
     else
-       write(*,*) 'xxx [ATMOS_REFSTATE_read] refstate file is not specified.'
+       LOG_ERROR("ATMOS_REFSTATE_read",*) 'refstate file is not specified.'
        call PRC_abort
     endif
 
@@ -281,8 +282,8 @@ contains
 
     if ( ATMOS_REFSTATE_OUT_BASENAME /= '' ) then
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output reference state profile ***'
+       LOG_NEWLINE
+       LOG_INFO("ATMOS_REFSTATE_write",*) 'Output reference state profile '
 
        ! 1D
        call FILE_CARTESC_write( ATMOS_REFSTATE1D_pres(:), ATMOS_REFSTATE_OUT_BASENAME, ATMOS_REFSTATE_OUT_TITLE, & ! [IN]
@@ -584,7 +585,7 @@ contains
 
     if ( force_ .or. ( nowsec - last_updated >= ATMOS_REFSTATE_UPDATE_DT ) ) then
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** [REFSTATE] update reference state'
+       LOG_INFO("ATMOS_REFSTATE_update",*) 'update reference state'
 
        call INTERP_VERT_xi2z( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               CZ(:), REAL_CZ(:,:,:), TEMP(:,:,:), & ! [IN]
@@ -619,8 +620,8 @@ contains
           if( ATMOS_REFSTATE1D_qv  (k) <= 0.0_RP ) ATMOS_REFSTATE1D_qv  (k) = ATMOS_REFSTATE1D_qv  (k+1)
        enddo
 
-       call smoothing( KA, KS, KE, FDZ(:), RCDZ(:), ATMOS_REFSTATE1D_pott(:) )
-       call smoothing( KA, KS, KE, FDZ(:), RCDZ(:), ATMOS_REFSTATE1D_qv(:) )
+       call ATMOS_REFSTATE_smoothing( KA, KS, KE, FDZ(:), RCDZ(:), ATMOS_REFSTATE1D_pott(:) )
+       call ATMOS_REFSTATE_smoothing( KA, KS, KE, FDZ(:), RCDZ(:), ATMOS_REFSTATE1D_qv(:) )
 
        call ATMOS_REFSTATE_calc3D( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                    CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
@@ -628,18 +629,19 @@ contains
        last_updated = nowsec
 
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
-       if( IO_L ) write(IO_FID_LOG,*) '   z*-coord.:    pressure: temperature:     density:   pot.temp.: water vapor'
+       LOG_NEWLINE
+       LOG_INFO("ATMOS_REFSTATE_update",*) 'Generated reference state of atmosphere:'
+       LOG_INFO_CONT(*) '============================================================================='
+       LOG_INFO_CONT(*) '   z*-coord.:    pressure: temperature:     density:   pot.temp.: water vapor'
        do k = KS, KE
-          if( IO_L ) write(IO_FID_LOG,'(6F13.5)')   CZ(k),                    &
+          LOG_INFO_CONT('(6F13.5)')   CZ(k),                    &
                                                     ATMOS_REFSTATE1D_pres(k), &
                                                     ATMOS_REFSTATE1D_temp(k), &
                                                     ATMOS_REFSTATE1D_dens(k), &
                                                     ATMOS_REFSTATE1D_pott(k), &
                                                     ATMOS_REFSTATE1D_qv  (k)
        enddo
-       if( IO_L ) write(IO_FID_LOG,*) '####################################################'
+       LOG_INFO_CONT(*) '============================================================================='
 
        ! output reference profile
        call ATMOS_REFSTATE_write
@@ -839,7 +841,7 @@ contains
   end subroutine ATMOS_REFSTATE_calc3D
 
   !-----------------------------------------------------------------------------
-  subroutine smoothing( &
+  subroutine ATMOS_REFSTATE_smoothing( &
        KA, KS, KE, &
        FDZ, RCDZ, &
        phi )
@@ -923,11 +925,11 @@ contains
        enddo
 
        if ( iter == iter_max ) then
-          if( IO_L ) write(IO_FID_LOG,*) "*** [scale_atmos_refstate/smoothing] iteration not converged!", phi
+          LOG_INFO("ATMOS_REFSTATE_smoothing",*) "iteration not converged!", phi
        endif
     enddo
 
     return
-  end subroutine smoothing
+  end subroutine ATMOS_REFSTATE_smoothing
 
 end module scale_atmos_refstate
