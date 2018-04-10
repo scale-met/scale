@@ -48,13 +48,12 @@ $(OBJ_DIR)/scale_atmos_phy_mp_sn14.o: ./atmosphere/physics/microphysics/scale_at
 $(OBJ_DIR)/scale_atmos_phy_mp_suzuki10.o: ./atmosphere/physics/microphysics/scale_atmos_phy_mp_suzuki10.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_hydrometeor.o $(OBJ_DIR)/scale_atmos_saturation.o $(OBJ_DIR)/scale_comm_cartesC.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_random.o $(OBJ_DIR)/scale_specfunc.o
 $(OBJ_DIR)/scale_atmos_phy_mp_tomita08.o: ./atmosphere/physics/microphysics/scale_atmos_phy_mp_tomita08.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_hydrometeor.o $(OBJ_DIR)/scale_atmos_phy_mp_common.o $(OBJ_DIR)/scale_atmos_saturation.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file_history.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_specfunc.o
 $(OBJ_DIR)/scale_atmos_phy_rd_common.o: ./atmosphere/physics/radiation/scale_atmos_phy_rd_common.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
-$(OBJ_DIR)/scale_atmos_phy_rd_mm5sw.o: ./atmosphere/physics/radiation/obsolete/scale_atmos_phy_rd_mm5sw.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_phy_rd_common.o $(OBJ_DIR)/scale_atmos_solarins.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_time.o $(OBJ_DIR)/scale_tracer.o
 $(OBJ_DIR)/scale_atmos_phy_rd_mstrnx.o: ./atmosphere/physics/radiation/scale_atmos_phy_rd_mstrnx.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_aerosol.o $(OBJ_DIR)/scale_atmos_grid_cartesC_real.o $(OBJ_DIR)/scale_atmos_hydrometeor.o $(OBJ_DIR)/scale_atmos_phy_rd_common.o $(OBJ_DIR)/scale_atmos_phy_rd_profile.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_time.o
 $(OBJ_DIR)/scale_atmos_phy_rd_offline.o: ./atmosphere/physics/radiation/scale_atmos_phy_rd_offline.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_phy_rd_common.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file_external_input.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_atmos_phy_rd_profile.o: ./atmosphere/physics/radiation/scale_atmos_phy_rd_profile.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_solarins.o $(OBJ_DIR)/scale_calendar.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_atmos_phy_sf_bulk.o: ./atmosphere/physics/surface/scale_atmos_phy_sf_bulk.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_hydrometeor.o $(OBJ_DIR)/scale_atmos_saturation.o $(OBJ_DIR)/scale_bulkflux.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_atmos_phy_sf_const.o: ./atmosphere/physics/surface/scale_atmos_phy_sf_const.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_hydrometeor.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_time.o
-$(OBJ_DIR)/scale_atmos_phy_tb.o: ./atmos-physics/turbulence/scale_atmos_phy_tb.F90 $(DEPENDLIB) $(patsubst %,$(OBJ_DIR)/%,$(OBJS_TB)) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_tracer.o
+$(OBJ_DIR)/scale_atmos_phy_tb.o: ./atmos-physics/turbulence/scale_atmos_phy_tb.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_phy_tb_d1980.o $(OBJ_DIR)/scale_atmos_phy_tb_dns.o $(OBJ_DIR)/scale_atmos_phy_tb_smg.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_tracer.o
 $(OBJ_DIR)/scale_atmos_phy_tb_common.o: ./atmos-physics/turbulence/scale_atmos_phy_tb_common.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC.o $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_debug.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_tracer.o
 $(OBJ_DIR)/scale_atmos_phy_tb_d1980.o: ./atmos-physics/turbulence/scale_atmos_phy_tb_d1980.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC.o $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_phy_tb_common.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_debug.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_tracer.o
 $(OBJ_DIR)/scale_atmos_phy_tb_dns.o: ./atmos-physics/turbulence/scale_atmos_phy_tb_dns.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC.o $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_debug.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_tracer.o
@@ -122,10 +121,6 @@ $(OBJ_DIR)/scale_urban_grid_cartesC_real.o: ./urban/grid/scale_urban_grid_cartes
 $(OBJ_DIR)/scale_vector.o: ./common/scale_vector.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 
 MODS =	\
-	$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_MP))	\
-	$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_TB))	\
-	$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_BL))	\
-	$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_RD))	\
 	$(OBJ_DIR)/scale.mod	\
 	$(OBJ_DIR)/scale_atmos_adiabat.mod	\
 	$(OBJ_DIR)/scale_atmos_aerosol.mod	\
@@ -166,15 +161,26 @@ MODS =	\
 	$(OBJ_DIR)/scale_atmos_hydrometeor.mod	\
 	$(OBJ_DIR)/scale_atmos_hydrostatic.mod	\
 	$(OBJ_DIR)/scale_atmos_phy_ae_kajino13.mod	\
+	$(OBJ_DIR)/scale_atmos_phy_bl_mynn.mod	\
 	$(OBJ_DIR)/scale_atmos_phy_ch_rn222.mod	\
 	$(OBJ_DIR)/scale_atmos_phy_cp_common.mod	\
 	$(OBJ_DIR)/scale_atmos_phy_cp_kf.mod	\
 	$(OBJ_DIR)/scale_atmos_phy_mp_common.mod	\
+	$(OBJ_DIR)/scale_atmos_phy_mp_kessler.mod	\
+	$(OBJ_DIR)/scale_atmos_phy_mp_sn14.mod	\
+	$(OBJ_DIR)/scale_atmos_phy_mp_suzuki10.mod	\
+	$(OBJ_DIR)/scale_atmos_phy_mp_tomita08.mod	\
 	$(OBJ_DIR)/scale_atmos_phy_rd_common.mod	\
+	$(OBJ_DIR)/scale_atmos_phy_rd_mstrnx.mod	\
+	$(OBJ_DIR)/scale_atmos_phy_rd_offline.mod	\
+	$(OBJ_DIR)/scale_atmos_phy_rd_profile.mod	\
 	$(OBJ_DIR)/scale_atmos_phy_sf_bulk.mod	\
 	$(OBJ_DIR)/scale_atmos_phy_sf_const.mod	\
 	$(OBJ_DIR)/scale_atmos_phy_tb.mod	\
 	$(OBJ_DIR)/scale_atmos_phy_tb_common.mod	\
+	$(OBJ_DIR)/scale_atmos_phy_tb_d1980.mod	\
+	$(OBJ_DIR)/scale_atmos_phy_tb_dns.mod	\
+	$(OBJ_DIR)/scale_atmos_phy_tb_smg.mod	\
 	$(OBJ_DIR)/scale_atmos_profile.mod	\
 	$(OBJ_DIR)/scale_atmos_refstate.mod	\
 	$(OBJ_DIR)/scale_atmos_saturation.mod	\
