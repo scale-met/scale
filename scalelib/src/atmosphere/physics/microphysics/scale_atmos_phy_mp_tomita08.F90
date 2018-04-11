@@ -1137,10 +1137,9 @@ contains
           Kd    = ( Dw0 + dDw_dT * temc(k) ) * PRE00 / PRES0(k,i,j)
           NU(k) = ( mu0 + dmu_dT * temc(k) ) * Rdens(k)
 
-          ! temp is correct? (TO BE CHECK)
           Glv(k) = 1.0_RP / ( LHV0/(Da*temp(k)) * ( LHV0/(Rvap*temp(k)) - 1.0_RP ) + 1.0_RP/(Kd*dens(k)*QSATL(k)) )
           Giv(k) = 1.0_RP / ( LHS0/(Da*temp(k)) * ( LHS0/(Rvap*temp(k)) - 1.0_RP ) + 1.0_RP/(Kd*dens(k)*QSATI(k)) )
-          Gil(k) = 1.0_RP / ( LHF0/(Da*temc(k)) )
+          Gil(k) = ( Da * temc(k) ) / LHF0
        end do
 
        ! [Prevp] evaporation rate of rain
