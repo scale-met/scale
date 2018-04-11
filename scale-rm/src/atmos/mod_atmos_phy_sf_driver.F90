@@ -281,8 +281,8 @@ contains
 
        ! temtative
        !$omp parallel do
-       do j = JSB, JEB
-       do i = ISB, IEB
+       do j = JS, JE
+       do i = IS, IE
           us = max( 1.E-6_RP, &
                     sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) / DENS(KS,i,j) ) ) ! frictional velocity
           SFLX_PT = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) ) &
@@ -295,8 +295,8 @@ contains
 
        !omp parallel do
 !OCL XFILL
-       do j = JSB, JEB
-       do i = ISB, IEB
+       do j = JS, JE
+       do i = IS, IE
           MOMZ_t_SF(i,j) = SFLX_MW(i,j) / ( CZ(KS+1,i,j) - CZ(KS,i,j) )
           RHOU_t_SF(i,j) = SFLX_MU(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
           RHOV_t_SF(i,j) = SFLX_MV(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
@@ -306,8 +306,8 @@ contains
 
        if ( .not. ATMOS_HYDROMETEOR_dry ) then
           !omp parallel do
-          do j = JSB, JEB
-          do i = ISB, IEB
+          do j = JS, JE
+          do i = IS, IE
              work = SFLX_QTRC(i,j,I_QV) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
              DENS_t_SF(i,j)      = work
              RHOQ_t_SF(i,j,I_QV) = work
@@ -319,8 +319,8 @@ contains
     endif
 
     !omp parallel do
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        MOMZ_t(KS,i,j) = MOMZ_t(KS,i,j) + MOMZ_t_SF(i,j)
        RHOU_t(KS,i,j) = RHOU_t(KS,i,j) + RHOU_t_SF(i,j)
        RHOV_t(KS,i,j) = RHOV_t(KS,i,j) + RHOV_t_SF(i,j)
@@ -411,8 +411,8 @@ contains
 
 !OCL XFILL
     !$omp parallel do
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        Uabs10(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
     end do
     end do
