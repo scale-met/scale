@@ -131,7 +131,7 @@ contains
   !
   !++ used modules
   !
-  use scale_stdio
+  use scale_io
   use scale_atmos_dyn, only: &
      ATMOS_DYN_setup
   use scale_atmos_dyn_Tstep_short, only: &
