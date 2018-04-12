@@ -14,7 +14,7 @@ module mod_realinput_scale
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_tracer
   use scale_prc, only: &
        myrank => PRC_myrank,  &
@@ -176,7 +176,7 @@ contains
        Rdry => CONST_Rdry, &
        GRAV => CONST_GRAV, &
        LAPS => CONST_LAPS
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_file, only: &

@@ -14,7 +14,7 @@ module scale_land_grid_cartesC_index
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none

@@ -15,7 +15,7 @@ module mod_user
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
@@ -159,7 +159,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
-    use scale_stdio, only:  &
+    use scale_io, only:  &
        IO_FID_CONF
     use scale_prc, only:&
        PRC_abort,         &
@@ -334,13 +334,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate tendency
   subroutine USER_calc_tendency
-    use scale_stdio, only: &
+    use scale_io, only: &
      IO_get_available_fid, &
      IO_FID_LOG,  &
      IO_L
     use scale_prc, only: &
        PRC_abort
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use mod_atmos_vars, only: &

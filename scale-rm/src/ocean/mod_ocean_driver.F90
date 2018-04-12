@@ -14,7 +14,7 @@ module mod_ocean_driver
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_ocean_grid_cartesC_index
 

@@ -15,7 +15,7 @@ module scale_atmos_dyn_common
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
@@ -93,7 +93,7 @@ contains
        CDZ, CDX, CDY, FDZ, FDX, FDY )
     use scale_prc, only: &
        PRC_abort
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8_init
     implicit none
     real(RP), intent(inout) :: num_diff(KA,IA,JA,5,3)
@@ -387,7 +387,7 @@ contains
        CDZ, CDX, CDY, FDZ, FDX, FDY, DT,       &
        REF_dens, REF_pott,                     &
        ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -991,7 +991,7 @@ contains
        CDZ, CDX, CDY, dt,                      &
        REF_qv, iq,                             &
        ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -1204,7 +1204,7 @@ contains
        phi, &
        rdz, rdx, rdy, &
        KO, IO, JO )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -1453,7 +1453,7 @@ contains
        data, &
        nd_order, &
        KO, IO, JO, KEE )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -1864,7 +1864,7 @@ contains
        UNDEF => CONST_UNDEF, &
        IUNDEF => CONST_UNDEF2, &
        EPSILON => CONST_EPS
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none

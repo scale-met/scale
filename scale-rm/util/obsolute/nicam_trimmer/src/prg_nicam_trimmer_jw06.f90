@@ -10,7 +10,7 @@ program nicam_trimmer
   use dc_log, only: &
      LogInit
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_const, only: &
      CONST_setup,             &
      r_in_m => CONST_RADIUS,  &

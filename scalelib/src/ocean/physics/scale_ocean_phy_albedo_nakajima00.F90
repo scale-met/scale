@@ -18,7 +18,8 @@ module scale_ocean_phy_albedo_nakajima00
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
   private

@@ -15,7 +15,7 @@ module mod_urban_vars
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_debug
   use scale_urban_grid_cartesC_index

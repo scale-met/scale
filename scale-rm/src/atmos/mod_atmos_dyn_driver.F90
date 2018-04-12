@@ -18,7 +18,7 @@ module mod_atmos_dyn_driver
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
@@ -302,7 +302,7 @@ contains
        ATMOS_BOUNDARY_alpha_QTRC
     use scale_atmos_dyn, only: &
        ATMOS_DYN
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none

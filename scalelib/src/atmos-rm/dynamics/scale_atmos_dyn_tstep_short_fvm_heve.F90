@@ -15,7 +15,7 @@ module scale_atmos_dyn_tstep_short_fvm_heve
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
@@ -129,7 +129,7 @@ contains
        EPS    => CONST_EPS,   &
        GRAV   => CONST_GRAV,  &
        P00    => CONST_PRE00
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_dyn_common, only: &

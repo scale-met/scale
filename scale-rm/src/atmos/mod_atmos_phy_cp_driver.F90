@@ -15,7 +15,7 @@ module mod_atmos_phy_cp_driver
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer

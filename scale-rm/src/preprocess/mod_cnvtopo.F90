@@ -14,7 +14,7 @@ module mod_cnvtopo
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
@@ -80,7 +80,7 @@ contains
     use scale_const, only: &
        D2R  => CONST_D2R, &
        HUGE => CONST_HUGE
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_horizontal_min
     use scale_atmos_grid_cartesC, only: &
        CDZ => ATMOS_GRID_CARTESC_CDZ, &
@@ -1636,7 +1636,7 @@ contains
     use scale_atmos_grid_cartesC, only: &
        FDX => ATMOS_GRID_CARTESC_FDX, &
        FDY => ATMOS_GRID_CARTESC_FDY
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_horizontal_max
     use scale_statistics, only: &
        STATISTICS_detail

@@ -16,7 +16,7 @@ module mod_snoplugin_timeave
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
 
   use mod_sno_h, only: &

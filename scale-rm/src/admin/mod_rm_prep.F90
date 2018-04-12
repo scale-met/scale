@@ -17,7 +17,7 @@ module mod_rm_prep
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
@@ -95,7 +95,7 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_setup, &
        FILE_CARTESC_cleanup
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_setup
     use scale_topography, only: &
        TOPO_setup

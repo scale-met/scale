@@ -16,7 +16,7 @@ module scale_atmos_phy_rd_offline
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none

@@ -18,7 +18,7 @@ module scale_atmos_phy_ch_rn222
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none

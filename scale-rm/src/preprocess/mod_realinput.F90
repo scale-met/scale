@@ -14,7 +14,7 @@ module mod_realinput
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_ocean_grid_cartesC_index
@@ -26,7 +26,7 @@ module mod_realinput
   use scale_prc, only: &
      PRC_IsMaster, &
      PRC_abort
-  use scale_comm, only: &
+  use scale_comm_cartesC, only: &
      COMM_bcast
   use scale_atmos_grid_cartesC_real, only: &
      LON => ATMOS_GRID_CARTESC_REAL_LON, &
@@ -1046,7 +1046,7 @@ contains
        VELX,          &
        VELY,          &
        POTT           )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_grid_cartesC_metric, only: &
@@ -1963,7 +1963,7 @@ contains
        boundary_flag,        &
        timelen,          &
        skiplen )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
          COMM_bcast, &
          COMM_vars8, &
          COMM_wait

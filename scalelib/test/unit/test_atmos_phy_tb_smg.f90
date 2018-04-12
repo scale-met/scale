@@ -66,7 +66,7 @@ contains
   !
   !++ used modules
   !
-  use scale_stdio, only: &
+  use scale_io, only: &
      H_SHORT
   use scale_atmos_phy_tb, only: &
      ATMOS_PHY_TB_config, &

@@ -15,7 +15,7 @@ module scale_prc
   !
   use mpi
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_fpm, only: &
      FPM_alive,  &
      FPM_Polling

@@ -7,7 +7,7 @@
 !! @author Team SCALE
 !<
 #include "scalelib.h"
-module scale_stdio
+module scale_io
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -416,4 +416,4 @@ contains
 
   end function IO_CNF_open
 
-end module scale_stdio
+end module scale_io

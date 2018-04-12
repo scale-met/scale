@@ -15,7 +15,7 @@ module scale_statistics
   !
   use mpi
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_prc, only: &
      PRC_LOCAL_COMM_WORLD
@@ -110,7 +110,7 @@ contains
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_datatype
     implicit none
     integer, intent(in) :: IA, IS, IE
@@ -205,7 +205,7 @@ contains
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_datatype
     implicit none
     integer, intent(in) :: KA, KS, KE
@@ -302,7 +302,7 @@ contains
     use scale_const, only: &
        CONST_UNDEF, &
        CONST_UNDEF2
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_datatype
     implicit none
     integer, intent(in) :: KA, KS, KE
@@ -441,7 +441,7 @@ contains
     use scale_const, only: &
        CONST_UNDEF, &
        CONST_UNDEF2
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_datatype
     implicit none
     integer, intent(in) :: IA, IS, IE

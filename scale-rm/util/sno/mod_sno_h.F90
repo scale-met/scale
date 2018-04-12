@@ -16,7 +16,7 @@ module mod_sno_h
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   !-----------------------------------------------------------------------------
   implicit none
   private

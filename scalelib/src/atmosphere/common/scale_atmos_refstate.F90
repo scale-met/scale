@@ -15,7 +15,7 @@ module scale_atmos_refstate
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
@@ -546,7 +546,7 @@ contains
        CZ, FZ, FDZ, RCDZ, REAL_CZ, REAL_FZ, REAL_PHI, &
        nowsec,                                        &
        force                                          )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_horizontal_mean
     use scale_interp_vert, only: &
        INTERP_VERT_xi2z
@@ -661,7 +661,7 @@ contains
        Rdry  => CONST_Rdry,  &
        CPdry => CONST_CPdry, &
        P00   => CONST_PRE00
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_interp_vert, only: &

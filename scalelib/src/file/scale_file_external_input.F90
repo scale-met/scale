@@ -15,7 +15,7 @@ module scale_file_external_input
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none

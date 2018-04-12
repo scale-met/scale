@@ -5,10 +5,6 @@
 !!          Index module
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2014-07-09 (S.Nishizawa)   [new]
-!!
 !<
 !-------------------------------------------------------------------------------
 #include "scalelib.h"
@@ -17,8 +13,8 @@ module scale_index
   !
   !++ used modules
   !
+  use scale_io
   !-----------------------------------------------------------------------------
-  use scale_stdio
   implicit none
   private
   !-----------------------------------------------------------------------------
@@ -37,4 +33,5 @@ module scale_index
   integer, public, parameter :: I_QTRC = 6
 
   integer, public            :: VA ! number of the additional prognostic variables
+
 end module scale_index

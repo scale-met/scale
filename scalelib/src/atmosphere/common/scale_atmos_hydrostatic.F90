@@ -15,7 +15,7 @@ module scale_atmos_hydrostatic
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_const, only: &
      GRAV    => CONST_GRAV,    &
@@ -272,7 +272,7 @@ contains
        cz, fz,             &
        dens, temp, pres,   &
        temp_sfc            )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_horizontal_mean
     use scale_atmos_hydrometeor, only: &
        CV_VAPOR, &

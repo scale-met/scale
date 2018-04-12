@@ -8,14 +8,14 @@
 !!
 !<
 #include "scalelib.h"
-module scale_comm
+module scale_comm_cartesC
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use mpi
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
@@ -154,8 +154,6 @@ contains
   !> Setup
   !-----------------------------------------------------------------------------
   subroutine COMM_setup
-    use scale_stdio, only: &
-       IO_FID_CONF
     use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD
     implicit none
@@ -3544,4 +3542,4 @@ contains
     end if
   end subroutine COMM_cleanup
 
-end module scale_comm
+end module scale_comm_cartesC

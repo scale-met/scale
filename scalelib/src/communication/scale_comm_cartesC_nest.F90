@@ -16,7 +16,7 @@ module scale_comm_cartesC_nest
   !
   use mpi
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_debug
   use scale_atmos_grid_cartesC_index
@@ -283,7 +283,7 @@ contains
     use scale_interp, only: &
        INTRP_setup,   &
        INTRP_factor3d
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_Bcast
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_LON,   &
@@ -1042,7 +1042,7 @@ contains
     use scale_time, only: &
        TIME_NSTEP, &
        TIME_DTSEC
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_bcast
     implicit none
 
@@ -1229,7 +1229,7 @@ contains
        PRC_nprocs,  &
        PRC_myrank,  &
        PRC_IsMaster
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_datatype,  &
        COMM_bcast
     use scale_atmos_grid_cartesC_real, only: &
@@ -1286,7 +1286,7 @@ contains
        PRC_abort, &
        PRC_myrank,  &
        PRC_IsMaster
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_bcast
     implicit none
 
@@ -1361,7 +1361,7 @@ contains
        PRC_abort, &
        PRC_myrank,  &
        PRC_IsMaster
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_world, &
        COMM_bcast
     implicit none
@@ -1558,7 +1558,7 @@ contains
        ATMOS_GRID_CARTESC_REAL_LATXV, &
        ATMOS_GRID_CARTESC_REAL_CZ,    &
        ATMOS_GRID_CARTESC_REAL_FZ
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_datatype
     implicit none
 
@@ -1754,7 +1754,7 @@ contains
        QTRC_recv  )
     use scale_prc, only: &
        PRC_abort
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_grid_cartesC_metric, only: &
@@ -2355,7 +2355,7 @@ contains
        flag_dens )
     use scale_prc, only: &
        PRC_abort
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_datatype
     use scale_interp, only: &
        INTRP_interp3d
@@ -2551,7 +2551,7 @@ contains
     use scale_prc, only: &
        PRC_myrank,  &
        PRC_abort
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_datatype
     implicit none
 
