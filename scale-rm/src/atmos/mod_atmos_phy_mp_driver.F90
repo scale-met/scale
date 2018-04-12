@@ -291,7 +291,7 @@ contains
           call ATMOS_PHY_MP_kessler_setup
        case ( 'TOMITA08' )
           call ATMOS_PHY_MP_tomita08_setup( &
-               KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB )
+               KA, KS, KE, IA, IS, IE, JA, JS, JE )
        case ( 'SN14' )
           call ATMOS_PHY_MP_sn14_setup( &
                KA, IA, JA )
@@ -534,14 +534,14 @@ contains
           CPtot1(:,:,:) = CPtot(:,:,:)
 
           call ATMOS_PHY_MP_kessler_adjustment( &
-               KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+               KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                DENS(:,:,:), PRES(:,:,:), dt_MP,                                      & ! [IN]
                TEMP1(:,:,:), QTRC1(:,:,:,QS_MP:QE_MP), CPtot1(:,:,:), CVtot1(:,:,:), & ! [INOUT]
                RHOE_t(:,:,:), EVAPORATE(:,:,:)                                       ) ! [OUT]
 
           do iq = QS_MP, QE_MP
-          do j = JSB, JEB
-          do i = ISB, IEB
+          do j = JS, JE
+          do i = IS, IE
           do k = KS, KE
              RHOQ_t_MP(k,i,j,iq) = ( QTRC1(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_MP
           enddo
@@ -549,8 +549,8 @@ contains
           enddo
           enddo
 
-          do j = JSB, JEB
-          do i = ISB, IEB
+          do j = JS, JE
+          do i = IS, IE
           do k = KS, KE
              CPtot_t(k,i,j) = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
              CVtot_t(k,i,j) = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
@@ -560,8 +560,8 @@ contains
 
        case ( 'TOMITA08' )
 !OCL XFILL
-          do j = JSB, JEB
-          do i = ISB, IEB
+          do j = JS, JE
+          do i = IS, IE
           do k = KS, KE
              TEMP1(k,i,j) = TEMP(k,i,j)
           end do
@@ -569,8 +569,8 @@ contains
           end do
 !OCL XFILL
           do iq = QS_MP, QE_MP
-          do j = JSB, JEB
-          do i = ISB, IEB
+          do j = JS, JE
+          do i = IS, IE
           do k = KS, KE
              QTRC1(k,i,j,iq) = QTRC(k,i,j,iq)
           end do
@@ -578,16 +578,16 @@ contains
           end do
           end do
 !OCL XFILL
-          do j = JSB, JEB
-          do i = ISB, IEB
+          do j = JS, JE
+          do i = IS, IE
           do k = KS, KE
              CVtot1(k,i,j) = CVtot(k,i,j)
           end do
           end do
           end do
 !OCL XFILL
-          do j = JSB, JEB
-          do i = ISB, IEB
+          do j = JS, JE
+          do i = IS, IE
           do k = KS, KE
              CPtot1(k,i,j) = CPtot(k,i,j)
           end do
@@ -595,14 +595,14 @@ contains
           end do
 
           call ATMOS_PHY_MP_tomita08_adjustment( &
-               KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+               KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                DENS(:,:,:), PRES(:,:,:), CCN(:,:,:), dt_MP,                          & ! [IN]
                TEMP1(:,:,:), QTRC1(:,:,:,QS_MP:QE_MP), CPtot1(:,:,:), CVtot1(:,:,:), & ! [INOUT]
                RHOE_t(:,:,:), EVAPORATE(:,:,:)                                       ) ! [OUT]
 
           do iq = QS_MP, QE_MP
-          do j = JSB, JEB
-          do i = ISB, IEB
+          do j = JS, JE
+          do i = IS, IE
           do k = KS, KE
              RHOQ_t_MP(k,i,j,iq) = ( QTRC1(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_MP
           enddo
@@ -610,8 +610,8 @@ contains
           enddo
           enddo
 
-          do j = JSB, JEB
-          do i = ISB, IEB
+          do j = JS, JE
+          do i = IS, IE
           do k = KS, KE
              CPtot_t(k,i,j) = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
              CVtot_t(k,i,j) = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
@@ -629,7 +629,7 @@ contains
 
        case ( 'SUZUKI10' )
 
-          call ATMOS_PHY_MP_suzuki10_tendency( KA, KS,  KE, IA, ISB, IEB, JA, JSB, JEB, KIJMAX, &
+          call ATMOS_PHY_MP_suzuki10_tendency( KA, KS,  KE, IA, IS, IE, JA, JS, JE, KIJMAX, &
                                                dt_MP,                                  & ! [IN]
                                                DENS(:,:,:),  PRES(:,:,:), TEMP(:,:,:), & ! [IN]
                                                QTRC(:,:,:,QS_MP:QE_MP), QDRY(:,:,:),   & ! [IN]
@@ -643,8 +643,8 @@ contains
        end select
 
 
-       do j = JSB, JEB
-       do i = ISB, IEB
+       do j = JS, JE
+       do i = IS, IE
        do k = KS, KE
           RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
                   - ( CPtot_t(k,i,j) + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CPtot_t(k,i,j) - CVtot_t(k,i,j) ) ) &
@@ -677,7 +677,7 @@ contains
           end if
 
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-          !$omp shared (KA,KS,KE,ISB,IEB,JSB,JEB,QS_MP,QE_MP,QHA,QLA,QIA, &
+          !$omp shared (KA,KS,KE,IS,IE,JS,JE,QS_MP,QE_MP,QHA,QLA,QIA, &
           !$omp         PRE00, &
           !$omp         ATMOS_PHY_MP_TYPE, &
           !$omp         dt_MP,MP_NSTEP_SEDIMENTATION,MP_DTSEC_SEDIMENTATION,MP_RNSTEP_SEDIMENTATION, &
@@ -691,8 +691,8 @@ contains
           !$omp         FDZ,RFDZ,RCDZ, &
           !$omp         DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ2, &
           !$omp         vterm,mflux,sflux,FLX_hydro,CP_t,CV_t)
-          do j = JSB, JEB
-          do i = ISB, IEB
+          do j = JS, JE
+          do i = IS, IE
 
              FDZ(KS-1) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j)
              RFDZ(KS-1) = 1.0_RP / FDZ(KS-1)
@@ -854,11 +854,11 @@ contains
     endif
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(KS,KE,ISB,IEB,JSB,JEB, &
+    !$omp shared(KS,KE,IS,IE,JS,JE, &
     !$omp        DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOH_MP, &
     !$omp        DENS_t,MOMZ_t,RHOU_t,RHOV_t,RHOH)
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE
        DENS_t(k,i,j) = DENS_t(k,i,j) + DENS_t_MP(k,i,j)
        MOMZ_t(k,i,j) = MOMZ_t(k,i,j) + MOMZ_t_MP(k,i,j)
@@ -872,9 +872,9 @@ contains
 
     do iq = QS_MP, QE_MP
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ &
-    !$omp shared(JSB,JEB,ISB,IEB,KS,KE,RHOQ_t,iq,RHOQ_t_MP)
-    do j = JSB, JEB
-    do i = ISB, IEB
+    !$omp shared(JS,JE,IS,IE,KS,KE,RHOQ_t,iq,RHOQ_t_MP)
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE
        RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_MP(k,i,j,iq)
     enddo

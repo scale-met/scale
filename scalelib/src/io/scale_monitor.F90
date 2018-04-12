@@ -72,8 +72,8 @@ module scale_monitor
      character(len=H_SHORT) :: name   !< name
      character(len=H_MID)   :: desc   !< description
      character(len=H_SHORT) :: unit   !< unit
-     real(RP)               :: var    !< value
-     real(RP)               :: var0   !< value at first time
+     real(DP)               :: var    !< value
+     real(DP)               :: var0   !< value at first time
      logical                :: first  !< first time?
      logical                :: flux   !< integrate value?
      integer                :: dimid  !< dimension type
@@ -307,8 +307,8 @@ contains
 
           MONITOR_items(itemid)%dimid = dimid
 
-          MONITOR_items(itemid)%var   = 0.0_RP
-          MONITOR_items(itemid)%var0  = 0.0_RP
+          MONITOR_items(itemid)%var   = 0.0_DP
+          MONITOR_items(itemid)%var0  = 0.0_DP
           MONITOR_items(itemid)%first = .true.
           if ( present(isflux) ) then
              MONITOR_items(itemid)%flux  = isflux
@@ -344,7 +344,7 @@ contains
     real(RP), intent(in) :: var(:,:)   !< value
 
     integer :: dimid
-    real(RP) :: total
+    real(DP) :: total
     !---------------------------------------------------------------------------
 
     if( itemid <= 0 ) return
@@ -395,7 +395,7 @@ contains
 
     integer :: dimid
 
-    real(RP) :: total
+    real(DP) :: total
     !---------------------------------------------------------------------------
 
     if( itemid <= 0 ) return

@@ -123,11 +123,11 @@ contains
 
     logical,  intent(in),  optional :: log_suppress !< suppress log output
     real(RP), intent(out), optional :: mean !< area-weighted mean
-    real(RP), intent(out), optional :: sum  !< domain sum
+    real(DP), intent(out), optional :: sum  !< domain sum
 
-    real(RP) :: statval
-    real(RP) :: sendbuf(2), recvbuf(2)
-    real(RP) :: sum_, mean_
+    real(DP) :: statval
+    real(DP) :: sendbuf(2), recvbuf(2)
+    real(DP) :: sum_, mean_
 
     logical :: suppress_
     integer :: ierr
@@ -162,7 +162,7 @@ contains
        ! All reduce
        call MPI_Allreduce( sendbuf(:), recvbuf(:), &
                            2,                      &
-                           COMM_datatype,          &
+                           MPI_DOUBLE_PRECISION,   &
                            MPI_SUM,                &
                            PRC_LOCAL_COMM_WORLD,   &
                            ierr                    )
@@ -219,11 +219,11 @@ contains
 
     logical,  intent(in),  optional :: log_suppress !< suppress log output
     real(RP), intent(out), optional :: mean !< volume/area-weighted total
-    real(RP), intent(out), optional :: sum  !< domain sum
+    real(DP), intent(out), optional :: sum  !< domain sum
 
-    real(RP) :: statval
-    real(RP) :: sendbuf(2), recvbuf(2)
-    real(RP) :: mean_, sum_
+    real(DP) :: statval
+    real(DP) :: sendbuf(2), recvbuf(2)
+    real(DP) :: mean_, sum_
 
     logical :: suppress_
     integer :: ierr
@@ -260,7 +260,7 @@ contains
        ! All reduce
        call MPI_Allreduce( sendbuf(:), recvbuf(:), &
                            2,                      &
-                           COMM_datatype,          &
+                           MPI_DOUBLE_PRECISION,   &
                            MPI_SUM,                &
                            PRC_LOCAL_COMM_WORLD,   &
                            ierr                    )

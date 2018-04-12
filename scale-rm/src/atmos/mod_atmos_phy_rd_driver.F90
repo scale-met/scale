@@ -241,7 +241,7 @@ contains
        case ( "MSTRNX" )
 
           call ATMOS_PHY_RD_MSTRNX_flux( &
-               KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+               KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                DENS(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                REAL_CZ(:,:,:), REAL_FZ(:,:,:),                   & ! [IN]
                fact_ocean(:,:), fact_land(:,:), fact_urban(:,:), & ! [IN]
@@ -324,7 +324,7 @@ contains
 
        ! apply radiative flux convergence -> heating rate
        call ATMOS_PHY_RD_calc_heating( &
-            KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+            KA, KS, KE, IA, IS, IE, JA, JS, JE, &
             flux_rad(:,:,:,:,:,2),     & ! [IN]
             DENS(:,:,:), TEMP(:,:,:),  & ! [IN]
             CVtot(:,:,:),              & ! [IN]

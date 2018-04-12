@@ -1426,10 +1426,10 @@ contains
                                                 AREA(ims:ime,jms:jme),   start=start(:,1)                                   )
     AXIS_name(1:2) = (/'xh','y '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_uy', 'area of grid cell (half level uy)',  'm2', AXIS_name(1:2), &
-                                                AREAUY(ims:ime,jms:jme), start=start(:,2)                                   )
+                                                AREAUY(imsh:ime,jms:jme), start=start(:,2)                                  )
     AXIS_name(1:2) = (/'x ','yh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_xv', 'area of grid cell (half level xv)',  'm2', AXIS_name(1:2), &
-                                                AREAXV(ims:ime,jms:jme), start=start(:,3)                                   )
+                                                AREAXV(ims:ime,jmsh:jme), start=start(:,3)                                  )
 
     do k = 1, KMAX
     do j = 1, jm
