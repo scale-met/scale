@@ -16,18 +16,6 @@ module mod_realinput_scale
   use scale_precision
   use scale_io
   use scale_tracer
-  use scale_prc, only: &
-       myrank => PRC_myrank,  &
-       PRC_abort
-  use scale_comm_cartesC_nest, only: &
-       PARENT_KMAX,     &
-       PARENT_IMAX,     &
-       PARENT_JMAX,     &
-       PARENT_LKMAX,    &
-       NEST_TILE_NUM_X => COMM_CARTESC_NEST_TILE_NUM_X, &
-       NEST_TILE_NUM_Y => COMM_CARTESC_NEST_TILE_NUM_Y, &
-       NEST_TILE_ID    => COMM_CARTESC_NEST_TILE_ID
-
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -56,26 +44,32 @@ module mod_realinput_scale
   !
   !++ Private parameters & variables
   !
-  integer, parameter    :: handle = 1
+  integer,  private, parameter   :: handle = 1
 
-  real(RP), allocatable :: read2D(:,:)
-  real(RP), allocatable :: read3D(:,:,:)
-  real(RP), allocatable :: read3DL(:,:,:)
-  real(RP), allocatable :: read3DO(:,:,:)
+  real(RP), private, allocatable :: read2D (:,:)
+  real(RP), private, allocatable :: read3D (:,:,:)
+  real(RP), private, allocatable :: read3DL(:,:,:)
+  real(RP), private, allocatable :: read3DO(:,:,:)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Atmos Setup
   subroutine ParentAtmosSetupSCALE( &
        dims )
-    use scale_prc, only: &
-       PRC_abort
+    use scale_comm_cartesC_nest, only: &
+       PARENT_KMAX,                                     &
+       PARENT_IMAX,                                     &
+       PARENT_JMAX,                                     &
+       NEST_TILE_NUM_X => COMM_CARTESC_NEST_TILE_NUM_X, &
+       NEST_TILE_NUM_Y => COMM_CARTESC_NEST_TILE_NUM_Y
     implicit none
 
-    integer,          intent(out) :: dims(6)
+    integer, intent(out) :: dims(6)
     !---------------------------------------------------------------------------
 
     LOG_INFO("ParentAtmosSetupSCALE",*) 'Real Case/Atmos Input File Type: SCALE-RM'
+
     ! full level
     dims(1) = PARENT_KMAX(handle)
     dims(2) = PARENT_IMAX(handle) * NEST_TILE_NUM_X
@@ -85,8 +79,8 @@ contains
     dims(5) = dims(2)
     dims(6) = dims(3)
 
-    allocate( read2D( PARENT_IMAX(handle), PARENT_JMAX(handle) ) )
-    allocate( read3D( dims(1), PARENT_IMAX(handle), PARENT_JMAX(handle) ) )
+    allocate( read2D(        PARENT_IMAX(handle),PARENT_JMAX(handle)) )
+    allocate( read3D(dims(1),PARENT_IMAX(handle),PARENT_JMAX(handle)) )
 
     return
   end subroutine ParentAtmosSetupSCALE
@@ -99,17 +93,23 @@ contains
        basename_org, &
        dims          )
     use scale_const, only: &
-         D2R => CONST_D2R
+       D2R => CONST_D2R
+    use scale_comm_cartesC_nest, only: &
+       PARENT_IMAX,                                     &
+       PARENT_JMAX,                                     &
+       NEST_TILE_NUM_X => COMM_CARTESC_NEST_TILE_NUM_X, &
+       NEST_TILE_ID    => COMM_CARTESC_NEST_TILE_ID
     use scale_file, only: &
-         FILE_open
+       FILE_open
     use scale_file_CARTESC, only: &
-         FILE_CARTESC_read
+       FILE_CARTESC_read
     implicit none
-    real(RP), intent(out) :: lon_org(:,:)
-    real(RP), intent(out) :: lat_org(:,:)
-    real(RP), intent(out) :: cz_org (:,:,:)
+
+    real(RP),         intent(out) :: lon_org(:,:)
+    real(RP),         intent(out) :: lat_org(:,:)
+    real(RP),         intent(out) :: cz_org (:,:,:)
     character(len=*), intent(in)  :: basename_org
-    integer,  intent(in)  :: dims(6)
+    integer,          intent(in)  :: dims(6)
 
     integer :: rank
     integer :: xloc, yloc
@@ -119,6 +119,7 @@ contains
 
     integer :: fid
     integer :: i, k
+    !---------------------------------------------------------------------------
 
     do i = 1, size( NEST_TILE_ID(:) )
        ! read data from split files
@@ -150,57 +151,61 @@ contains
 
     end do
 
-    cz_org(1,:,:)  = 0.0_RP
+    cz_org(1,:,:) = 0.0_RP
 
     return
   end subroutine ParentAtmosOpenSCALE
 
   !-----------------------------------------------------------------------------
   subroutine ParentAtmosInputSCALE( &
-       velz_org,      &
-       velx_org,      &
-       vely_org,      &
-       pres_org,      &
-       dens_org,      &
-       pott_org,      &
-       qv_org,        &
-       qtrc_org,      &
-       cz_org,        &
-       basename_org,  &
-       same_mptype,   &
-       dims,          &
-       it             ) ! (in)
+       velz_org,     &
+       velx_org,     &
+       vely_org,     &
+       pres_org,     &
+       dens_org,     &
+       pott_org,     &
+       qv_org,       &
+       qtrc_org,     &
+       cz_org,       &
+       basename_org, &
+       same_mptype,  &
+       dims,         &
+       it            )
     use scale_const, only: &
-       P00 => CONST_PRE00, &
+       P00   => CONST_PRE00, &
        CPdry => CONST_CPdry, &
-       Rdry => CONST_Rdry, &
-       GRAV => CONST_GRAV, &
-       LAPS => CONST_LAPS
-    use scale_prc, only: &
-       PRC_abort
+       Rdry  => CONST_Rdry,  &
+       GRAV  => CONST_GRAV,  &
+       LAPS  => CONST_LAPS
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
+    use scale_comm_cartesC_nest, only: &
+       PARENT_IMAX,                                     &
+       PARENT_JMAX,                                     &
+       NEST_TILE_NUM_X => COMM_CARTESC_NEST_TILE_NUM_X, &
+       NEST_TILE_ID    => COMM_CARTESC_NEST_TILE_ID
     use scale_file, only: &
        FILE_open
     use scale_file_CARTESC, only: &
        FILE_CARTESC_read
-    use scale_atmos_hydrostatic, only: &
-       HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
+    use scale_atmos_grid_cartesC_metric, only: &
+       rotc => ATMOS_GRID_CARTESC_METRIC_ROTC
     use scale_atmos_thermodyn, only: &
        THERMODYN_specific_heat  => ATMOS_THERMODYN_specific_heat, &
        THERMODYN_rhot2temp_pres => ATMOS_THERMODYN_rhot2temp_pres
-    use mod_atmos_phy_mp_vars, only: &
-       QS_MP, &
-       QE_MP
+    use scale_atmos_hydrostatic, only: &
+       HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_atmos_hydrometeor, only: &
-       N_HYD, &
+       N_HYD,    &
        HYD_NAME, &
        NUM_NAME
-    use scale_atmos_grid_cartesC_metric, only: &
-       rotc => ATMOS_GRID_CARTESC_METRIC_ROTC
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_qhyd2qtrc
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP, &
+       QS_MP, &
+       QE_MP
     implicit none
 
     real(RP),         intent(out) :: velz_org(:,:,:)
@@ -211,13 +216,11 @@ contains
     real(RP),         intent(out) :: pott_org(:,:,:)
     real(RP),         intent(out) :: qv_org  (:,:,:)
     real(RP),         intent(out) :: qtrc_org(:,:,:,:)
-    real(RP),         intent(in)  :: cz_org(:,:,:)
+    real(RP),         intent(in)  :: cz_org  (:,:,:)
     character(len=*), intent(in)  :: basename_org
     logical,          intent(in)  :: same_mptype
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: it
-
-    ! work
 
     real(RP) :: momz_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: momx_org(dims(1)+2,dims(2),dims(3))
@@ -226,24 +229,24 @@ contains
     real(RP) :: tsfc_org(          dims(2),dims(3))
     real(RP) :: qhyd_org(dims(1)+2,dims(2),dims(3),N_HYD)
     real(RP) :: qnum_org(dims(1)+2,dims(2),dims(3),N_HYD)
-    real(RP) :: qdry (dims(1)+2)
-    real(RP) :: Rtot (dims(1)+2)
-    real(RP) :: CVtot(dims(1)+2)
-    real(RP) :: CPtot(dims(1)+2)
+    real(RP) :: qdry    (dims(1)+2)
+    real(RP) :: Rtot    (dims(1)+2)
+    real(RP) :: CVtot   (dims(1)+2)
+    real(RP) :: CPtot   (dims(1)+2)
     real(RP) :: temp_org(dims(1)+2)
     real(RP) :: dz
 
-    integer :: dims2(3)
+    integer  :: dims2(3)
 
-    integer :: xs, xe
-    integer :: ys, ye
-    integer :: nx, ny
-    integer :: xloc, yloc
-    integer :: rank
+    integer  :: xs, xe
+    integer  :: ys, ye
+    integer  :: nx, ny
+    integer  :: xloc, yloc
+    integer  :: rank
 
-    integer :: fid
-    logical :: existed, existed_t2, existed_mslp
-    integer :: k, i, j, iq
+    integer  :: fid
+    logical  :: existed, existed_t2, existed_mslp
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     do i = 1, size( NEST_TILE_ID(:) )
@@ -437,13 +440,16 @@ contains
 
        ! diagnose temp and pres
        do k = 3, dims(1)+2
-          call THERMODYN_specific_heat( dims(1)+2, 3, dims(1)+2, QA, &
-                                        qtrc_org(:,i,j,:), &
+
+          call THERMODYN_specific_heat( dims(1)+2, 3, dims(1)+2, QA,                             & ! [IN]
+                                        qtrc_org(:,i,j,:),                                       & ! [IN]
                                         TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
                                         qdry(:), Rtot(:), CVtot(:), CPtot(:)                     ) ! [OUT]
-          call THERMODYN_rhot2temp_pres( dims(1)+2, 3, dims(1)+2, &
+
+          call THERMODYN_rhot2temp_pres( dims(1)+2, 3, dims(1)+2,                              & ! [IN]
                                          dens_org(:,i,j), rhot_org(:,i,j), Rtot, CVtot, CPtot, & ! [IN]
                                          temp_org(:), pres_org(:,i,j)                          ) ! [OUT]
+
        end do
 
 !OCL XFILL
@@ -484,20 +490,28 @@ contains
   !> Land Setup
   subroutine ParentLandSetupSCALE( &
        ldims )
+    use scale_comm_cartesC_nest, only: &
+       PARENT_IMAX,                                     &
+       PARENT_JMAX,                                     &
+       PARENT_LKMAX,                                    &
+       NEST_TILE_NUM_X => COMM_CARTESC_NEST_TILE_NUM_X, &
+       NEST_TILE_NUM_Y => COMM_CARTESC_NEST_TILE_NUM_Y
     implicit none
 
     integer, intent(out) :: ldims(3)
     !---------------------------------------------------------------------------
 
     LOG_INFO("ParentLandSetupSCALE",*) 'Real Case/Land Input File Type: SCALE-RM'
-    ldims(1) = PARENT_LKMAX(handle)
-    ldims(2) = PARENT_IMAX(handle) * NEST_TILE_NUM_X
-    ldims(3) = PARENT_JMAX(handle) * NEST_TILE_NUM_Y
 
-    if ( .not. allocated(read2D) ) then
-       allocate( read2D ( PARENT_IMAX(handle), PARENT_JMAX(handle) ) )
-    end if
-    allocate( read3DL( ldims(1), PARENT_IMAX(handle), PARENT_JMAX(handle) ) )
+    ldims(1) = PARENT_LKMAX(handle)
+    ldims(2) = PARENT_IMAX (handle) * NEST_TILE_NUM_X
+    ldims(3) = PARENT_JMAX (handle) * NEST_TILE_NUM_Y
+
+    if ( .NOT. allocated(read2D) ) then
+       allocate( read2D(PARENT_IMAX(handle),PARENT_JMAX(handle)) )
+    endif
+
+    allocate( read3DL(ldims(1),PARENT_IMAX(handle),PARENT_JMAX(handle)) )
 
     return
   end subroutine ParentLandSetupSCALE
@@ -518,30 +532,34 @@ contains
       ldims,              &
       use_file_landwater, &
       it                  )
-    use scale_file, only: &
-         FILE_open, &
-         FILE_read
-    use scale_file_CARTESC, only: &
-         FILE_CARTESC_read
     use scale_const, only: &
-         D2R => CONST_D2R
+       D2R => CONST_D2R
+    use scale_comm_cartesC_nest, only: &
+       PARENT_IMAX,                                     &
+       PARENT_JMAX,                                     &
+       NEST_TILE_NUM_X => COMM_CARTESC_NEST_TILE_NUM_X, &
+       NEST_TILE_ID    => COMM_CARTESC_NEST_TILE_ID
+    use scale_file, only: &
+       FILE_open, &
+       FILE_read
+    use scale_file_CARTESC, only: &
+       FILE_CARTESC_read
     implicit none
 
-    real(RP), intent(out) :: tg_org(:,:,:)
-    real(RP), intent(out) :: strg_org(:,:,:)
-    real(RP), intent(out) :: lst_org(:,:)
-    real(RP), intent(out) :: ust_org(:,:)
-    real(RP), intent(out) :: albg_org(:,:,:)
-    real(RP), intent(out) :: topo_org(:,:)
-    real(RP), intent(out) :: lmask_org(:,:)
-    real(RP), intent(out) :: llon_org(:,:)
-    real(RP), intent(out) :: llat_org(:,:)
-    real(RP), intent(out) :: lz_org(:)
-
-    character(len=*), intent(in) :: basename_land
-    integer,          intent(in) :: ldims(3)
-    logical,          intent(in) :: use_file_landwater   ! use land water data from files
-    integer,          intent(in) :: it
+    real(RP),         intent(out) :: tg_org   (:,:,:)
+    real(RP),         intent(out) :: strg_org (:,:,:)
+    real(RP),         intent(out) :: lst_org  (:,:)
+    real(RP),         intent(out) :: ust_org  (:,:)
+    real(RP),         intent(out) :: albg_org (:,:,:)
+    real(RP),         intent(out) :: topo_org (:,:)
+    real(RP),         intent(out) :: lmask_org(:,:)
+    real(RP),         intent(out) :: llon_org (:,:)
+    real(RP),         intent(out) :: llat_org (:,:)
+    real(RP),         intent(out) :: lz_org   (:)
+    character(len=*), intent(in)  :: basename_land
+    integer,          intent(in)  :: ldims(3)
+    logical,          intent(in)  :: use_file_landwater ! use land water data from files
+    integer,          intent(in)  :: it
 
     integer :: rank
     integer :: dims(3)
@@ -613,44 +631,57 @@ contains
   !> Ocean Setup
   subroutine ParentOceanSetupSCALE( &
        odims )
+    use scale_comm_cartesC_nest, only: &
+       PARENT_IMAX,                                     &
+       PARENT_JMAX,                                     &
+       NEST_TILE_NUM_X => COMM_CARTESC_NEST_TILE_NUM_X, &
+       NEST_TILE_NUM_Y => COMM_CARTESC_NEST_TILE_NUM_Y
     implicit none
 
-    integer,          intent(out) :: odims(2)
+    integer, intent(out) :: odims(2)
 
     integer :: i
     !---------------------------------------------------------------------------
 
     LOG_INFO("ParentOceanSetupSCALE",*) 'Real Case/Ocean Input File Type: SCALE-RM'
+
     odims(1) = PARENT_IMAX(handle) * NEST_TILE_NUM_X
     odims(2) = PARENT_JMAX(handle) * NEST_TILE_NUM_Y
 
-    allocate( read3DO ( 1, PARENT_IMAX(handle), PARENT_JMAX(handle) ) )
-    if ( .not. allocated(read2D) ) then
-       allocate( read2D ( PARENT_IMAX(handle), PARENT_JMAX(handle) ) )
+    if ( .NOT. allocated(read2D) ) then
+       allocate( read2D(PARENT_IMAX(handle),PARENT_JMAX(handle)) )
     end if
+
+    allocate( read3DO(1,PARENT_IMAX(handle),PARENT_JMAX(handle)) )
 
     return
   end subroutine ParentOceanSetupSCALE
 
   !-----------------------------------------------------------------------------
   subroutine ParentOceanOpenSCALE( &
-       olon_org,      &
-       olat_org,      &
-       omask_org, &
+       olon_org,       &
+       olat_org,       &
+       omask_org,      &
        basename_ocean, &
-       odims          )
+       odims           )
     use scale_const, only: &
-         D2R => CONST_D2R
+       D2R => CONST_D2R
+    use scale_comm_cartesC_nest, only: &
+       PARENT_IMAX,                                     &
+       PARENT_JMAX,                                     &
+       NEST_TILE_NUM_X => COMM_CARTESC_NEST_TILE_NUM_X, &
+       NEST_TILE_ID    => COMM_CARTESC_NEST_TILE_ID
     use scale_file, only: &
-         FILE_open
+       FILE_open
     use scale_file_CARTESC, only: &
-         FILE_CARTESC_read
+       FILE_CARTESC_read
     implicit none
-    real(RP), intent(out) :: olon_org (:,:)
-    real(RP), intent(out) :: olat_org (:,:)
-    real(RP), intent(out) :: omask_org(:,:)
+
+    real(RP),         intent(out) :: olon_org (:,:)
+    real(RP),         intent(out) :: olat_org (:,:)
+    real(RP),         intent(out) :: omask_org(:,:)
     character(len=*), intent(in)  :: basename_ocean
-    integer,  intent(in)  :: odims(2)
+    integer,          intent(in)  :: odims(2)
 
     integer :: rank
     integer :: xloc, yloc
@@ -658,6 +689,7 @@ contains
 
     integer :: fid
     integer :: i, k
+    !---------------------------------------------------------------------------
 
     do i = 1, size( NEST_TILE_ID(:) )
        ! read data from split files
@@ -676,13 +708,13 @@ contains
                        aggregate=.false., rankid=rank ) ! (in)
 
        call FILE_CARTESC_read( fid, "lon", read2D(:,:) )
-       olon_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
+       olon_org (xs:xe,ys:ye) = read2D(:,:) * D2R
 
        call FILE_CARTESC_read( fid, "lat", read2D(:,:) )
-       olat_org (xs:xe,ys:ye)  = read2D(:,:) * D2R
+       olat_org (xs:xe,ys:ye) = read2D(:,:) * D2R
 
        call FILE_CARTESC_read( fid, "lsmask", read2D(:,:) )
-       omask_org(xs:xe,ys:ye)  = read2D(:,:)
+       omask_org(xs:xe,ys:ye) = read2D(:,:)
 
     end do
 
@@ -691,30 +723,34 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ParentOceanInputSCALE( &
-      tw_org,         &
-      sst_org,        &
-      albw_org,       &
-      z0w_org,        &
-      omask_org,      &
-      basename_ocean, &
-      odims,          &
-      it              )
+       tw_org,         &
+       sst_org,        &
+       albw_org,       &
+       z0w_org,        &
+       omask_org,      &
+       basename_ocean, &
+       odims,          &
+       it              )
+    use scale_comm_cartesC_nest, only: &
+       PARENT_IMAX,                                     &
+       PARENT_JMAX,                                     &
+       NEST_TILE_NUM_X => COMM_CARTESC_NEST_TILE_NUM_X, &
+       NEST_TILE_ID    => COMM_CARTESC_NEST_TILE_ID
     use scale_file, only: &
-         FILE_open, &
-         FILE_get_dataInfo
+       FILE_open, &
+       FILE_get_dataInfo
     use scale_file_CARTESC, only: &
-         FILE_CARTESC_read
+       FILE_CARTESC_read
     implicit none
 
-    real(RP), intent(out) :: tw_org(:,:)
-    real(RP), intent(out) :: sst_org(:,:)
-    real(RP), intent(out) :: albw_org(:,:,:)
-    real(RP), intent(out) :: z0w_org(:,:)
-    real(RP), intent(out) :: omask_org(:,:)
-
-    character(len=*), intent(in) :: basename_ocean
-    integer,          intent(in) :: odims(2)
-    integer,          intent(in) :: it
+    real(RP),         intent(out) :: tw_org   (:,:)
+    real(RP),         intent(out) :: sst_org  (:,:)
+    real(RP),         intent(out) :: albw_org (:,:,:)
+    real(RP),         intent(out) :: z0w_org  (:,:)
+    real(RP),         intent(out) :: omask_org(:,:)
+    character(len=*), intent(in)  :: basename_ocean
+    integer,          intent(in)  :: odims(2)
+    integer,          intent(in)  :: it
 
     integer :: rank
 
