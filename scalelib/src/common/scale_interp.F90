@@ -1,13 +1,10 @@
 !-------------------------------------------------------------------------------
-!> module INTERPOLATION (nesting system)
+!> module INTERPOLATION
 !!
 !! @par Description
 !!          INTERPOLATION module for nesting system
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2015-02-10 (R.Yoshida)  [new] rearranged sub-routines
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -31,12 +28,12 @@ module scale_interp
   !
   !++ Public procedure
   !
-  public :: INTRP_setup
-  public :: INTRP_domain_compatibility
-  public :: INTRP_factor2d
-  public :: INTRP_factor3d
-  public :: INTRP_interp2d
-  public :: INTRP_interp3d
+  public :: INTERP_setup
+  public :: INTERP_domain_compatibility
+  public :: INTERP_factor2d
+  public :: INTERP_factor3d
+  public :: INTERP_interp2d
+  public :: INTERP_interp3d
 
   !-----------------------------------------------------------------------------
   !
@@ -46,11 +43,10 @@ module scale_interp
   !
   !++ Private procedure
   !
-  private :: INTRP_search_nearest_block
-  private :: INTRP_search_horiz
-  private :: INTRP_search_vert
+  private :: INTERP_search_nearest_block
+  private :: INTERP_search_horiz
+  private :: INTERP_search_vert
 
-  private :: sort
   private :: haversine
 
   !-----------------------------------------------------------------------------
@@ -59,15 +55,15 @@ module scale_interp
   !
   real(RP), private, parameter :: large_number = 9.999E+15_RP
 
-  integer,  private :: INTRP_divnum       = 10
-  integer,  private :: INTRP_weight_order = 2
-  real(RP), private :: INTRP_search_limit
+  integer,  private :: INTERP_divnum       = 10
+  integer,  private :: INTERP_weight_order = 2
+  real(RP), private :: INTERP_search_limit
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine INTRP_setup( &
+  subroutine INTERP_setup( &
        divnum,       &
        weight_order, &
        search_limit  )
@@ -79,22 +75,22 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("INTRP_setup",*) 'Setup'
+    LOG_INFO("INTERP_setup",*) 'Setup'
 
-    INTRP_divnum       = divnum
-    INTRP_weight_order = weight_order
+    INTERP_divnum       = divnum
+    INTERP_weight_order = weight_order
 
-    INTRP_search_limit = large_number
+    INTERP_search_limit = large_number
     if ( present(search_limit) ) then
-       INTRP_search_limit = search_limit
-       LOG_INFO("INTRP_setup",*) 'search limit [m] : ', INTRP_search_limit
+       INTERP_search_limit = search_limit
+       LOG_INFO("INTERP_setup",*) 'search limit [m] : ', INTERP_search_limit
     endif
 
     return
-  end subroutine INTRP_setup
+  end subroutine INTERP_setup
 
   !-----------------------------------------------------------------------------
-  subroutine INTRP_domain_compatibility( &
+  subroutine INTERP_domain_compatibility( &
        lon_org, &
        lat_org, &
        lev_org, &
@@ -151,7 +147,7 @@ contains
        max_loc = maxval( lev_loc(:,:,:) ) ! HALO + 1
 
        if ( max_ref < max_loc ) then
-          LOG_ERROR("INTRP_domain_compatibility",*) 'REQUESTED DOMAIN IS TOO MUCH BROAD'
+          LOG_ERROR("INTERP_domain_compatibility",*) 'REQUESTED DOMAIN IS TOO MUCH BROAD'
           LOG_ERROR_CONT(*) '-- VERTICAL direction over the limit'
           LOG_ERROR_CONT(*) '-- reference max: ', max_ref
           LOG_ERROR_CONT(*) '--     local max: ', max_loc
@@ -168,7 +164,7 @@ contains
        if    ( (min_ref+360.0_RP-max_ref) < 360.0_RP / size(lon_org,1) * 2.0_RP ) then
           ! cyclic OK
        elseif( max_ref < max_loc .OR. min_ref > min_loc ) then
-          LOG_ERROR("INTRP_domain_compatibility",*) 'REQUESTED DOMAIN IS TOO MUCH BROAD'
+          LOG_ERROR("INTERP_domain_compatibility",*) 'REQUESTED DOMAIN IS TOO MUCH BROAD'
           LOG_ERROR_CONT(*) '-- LONGITUDINAL direction over the limit'
           LOG_ERROR_CONT(*) '-- reference max: ', max_ref
           LOG_ERROR_CONT(*) '-- reference min: ', min_ref
@@ -185,7 +181,7 @@ contains
        min_loc = minval( lat_loc(:,:) / D2R )
 
        if ( max_ref < max_loc .OR. min_ref > min_loc ) then
-          LOG_ERROR("INTRP_domain_compatibility",*) 'REQUESTED DOMAIN IS TOO MUCH BROAD'
+          LOG_ERROR("INTERP_domain_compatibility",*) 'REQUESTED DOMAIN IS TOO MUCH BROAD'
           LOG_ERROR_CONT(*) '-- LATITUDINAL direction over the limit'
           LOG_ERROR_CONT(*) '-- reference max: ', max_ref
           LOG_ERROR_CONT(*) '-- reference min: ', min_ref
@@ -196,11 +192,11 @@ contains
     endif
 
     return
-  end subroutine INTRP_domain_compatibility
+  end subroutine INTERP_domain_compatibility
 
   !-----------------------------------------------------------------------------
   ! make interpolation factor using Lat-Lon
-  subroutine INTRP_factor2d( &
+  subroutine INTERP_factor2d( &
        npoints, &
        IA_ref,  &
        JA_ref,  &
@@ -212,7 +208,8 @@ contains
        lat,     &
        idx_i,   &
        idx_j,   &
-       hfact    )
+       hfact,   &
+       divnum   )
     use scale_prc, only: &
        PRC_abort
     implicit none
@@ -229,6 +226,7 @@ contains
     integer,  intent(out) :: idx_i(IA,JA,npoints)   ! i-index in reference     (target)
     integer,  intent(out) :: idx_j(IA,JA,npoints)   ! j-index in reference     (target)
     real(RP), intent(out) :: hfact(IA,JA,npoints)   ! horizontal interp factor (target)
+    integer,  intent(in), optional :: divnum
 
     integer  :: IS, IE ! [start,end] index for x-direction
     integer  :: JS, JE ! [start,end] index for y-direction
@@ -236,7 +234,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('INTRP_fact',3)
+    call PROF_rapstart('INTERP_fact',3)
 
     hfact(:,:,:) = 0.0_RP
 
@@ -245,37 +243,38 @@ contains
     do j = 1, JA
     do i = 1, IA
        ! nearest block search
-       call INTRP_search_nearest_block( IA_ref, JA_ref, & ! [IN]
-                                        lon_ref(:,:),   & ! [IN]
-                                        lat_ref(:,:),   & ! [IN]
-                                        lon    (i,j),   & ! [IN]
-                                        lat    (i,j),   & ! [IN]
-                                        IS, IE,         & ! [OUT]
-                                        JS, JE          ) ! [OUT]
+       call INTERP_search_nearest_block( IA_ref, JA_ref, & ! [IN]
+                                         lon_ref(:,:),   & ! [IN]
+                                         lat_ref(:,:),   & ! [IN]
+                                         lon    (i,j),   & ! [IN]
+                                         lat    (i,j),   & ! [IN]
+                                         IS, IE,         & ! [OUT]
+                                         JS, JE,         & ! [OUT]
+                                         divnum = divnum ) ! [IN]
 
        ! main search
-       call INTRP_search_horiz( npoints,        & ! [IN]
-                                IA_ref, JA_ref, & ! [IN]
-                                IS, IE,         & ! [IN]
-                                JS, JE,         & ! [IN]
-                                lon_ref(:,:),   & ! [IN]
-                                lat_ref(:,:),   & ! [IN]
-                                lon    (i,j),   & ! [IN]
-                                lat    (i,j),   & ! [IN]
-                                idx_i  (i,j,:), & ! [OUT]
-                                idx_j  (i,j,:), & ! [OUT]
-                                hfact  (i,j,:)  ) ! [OUT]
+       call INTERP_search_horiz( npoints,        & ! [IN]
+                                 IA_ref, JA_ref, & ! [IN]
+                                 IS, IE,         & ! [IN]
+                                 JS, JE,         & ! [IN]
+                                 lon_ref(:,:),   & ! [IN]
+                                 lat_ref(:,:),   & ! [IN]
+                                 lon    (i,j),   & ! [IN]
+                                 lat    (i,j),   & ! [IN]
+                                 idx_i  (i,j,:), & ! [OUT]
+                                 idx_j  (i,j,:), & ! [OUT]
+                                 hfact  (i,j,:)  ) ! [OUT]
     enddo
     enddo
 
-    call PROF_rapend  ('INTRP_fact',3)
+    call PROF_rapend  ('INTERP_fact',3)
 
     return
-  end subroutine INTRP_factor2d
+  end subroutine INTERP_factor2d
 
   !-----------------------------------------------------------------------------
   ! make interpolation factor using Lat-Lon and Z-Height information
-  subroutine INTRP_factor3d( &
+  subroutine INTERP_factor3d( &
        npoints, &
        KA_ref,  &
        KS_ref,  &
@@ -297,7 +296,8 @@ contains
        idx_j,   &
        hfact,   &
        idx_k,   &
-       vfact    )
+       vfact,   &
+       divnum   )
     use scale_prc, only: &
        PRC_abort
     implicit none
@@ -320,6 +320,7 @@ contains
     real(RP), intent(out) :: hfact(IA,JA,npoints)          ! horizontal interp factor (target)
     integer,  intent(out) :: idx_k(KA,2,IA,JA,npoints)     ! i-index in reference     (target)
     real(RP), intent(out) :: vfact(KA,2,IA,JA,npoints)     ! horizontal interp factor (target)
+    integer,  intent(in), optional :: divnum
 
     integer  :: IS, IE ! [start,end] index for x-direction
     integer  :: JS, JE ! [start,end] index for y-direction
@@ -327,7 +328,7 @@ contains
     integer  :: k, i, j, ii, jj, n
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('INTRP_fact',3)
+    call PROF_rapstart('INTERP_fact',3)
 
     hfact(:,:,:)     = 0.0_RP
     vfact(:,:,:,:,:) = 0.0_RP
@@ -337,49 +338,50 @@ contains
     do j = 1, JA
     do i = 1, IA
        ! nearest block search
-       call INTRP_search_nearest_block( IA_ref, JA_ref, & ! [IN]
-                                        lon_ref(:,:),   & ! [IN]
-                                        lat_ref(:,:),   & ! [IN]
-                                        lon    (i,j),   & ! [IN]
-                                        lat    (i,j),   & ! [IN]
-                                        IS, IE,         & ! [OUT]
-                                        JS, JE          ) ! [OUT]
+       call INTERP_search_nearest_block( IA_ref, JA_ref, & ! [IN]
+                                         lon_ref(:,:),   & ! [IN]
+                                         lat_ref(:,:),   & ! [IN]
+                                         lon    (i,j),   & ! [IN]
+                                         lat    (i,j),   & ! [IN]
+                                         IS, IE,         & ! [OUT]
+                                         JS, JE,         & ! [OUT]
+                                         divnum = divnum ) ! [IN]
 
        ! main search
-       call INTRP_search_horiz( npoints,        & ! [IN]
-                                IA_ref, JA_ref, & ! [IN]
-                                IS, IE,         & ! [IN]
-                                JS, JE,         & ! [IN]
-                                lon_ref(:,:),   & ! [IN]
-                                lat_ref(:,:),   & ! [IN]
-                                lon    (i,j),   & ! [IN]
-                                lat    (i,j),   & ! [IN]
-                                idx_i  (i,j,:), & ! [OUT]
-                                idx_j  (i,j,:), & ! [OUT]
-                                hfact  (i,j,:)  ) ! [OUT]
+       call INTERP_search_horiz( npoints,        & ! [IN]
+                                 IA_ref, JA_ref, & ! [IN]
+                                 IS, IE,         & ! [IN]
+                                 JS, JE,         & ! [IN]
+                                 lon_ref(:,:),   & ! [IN]
+                                 lat_ref(:,:),   & ! [IN]
+                                 lon    (i,j),   & ! [IN]
+                                 lat    (i,j),   & ! [IN]
+                                 idx_i  (i,j,:), & ! [OUT]
+                                 idx_j  (i,j,:), & ! [OUT]
+                                 hfact  (i,j,:)  ) ! [OUT]
 
        do n = 1, npoints
           ii = idx_i(i,j,n)
           jj = idx_j(i,j,n)
 
-          call INTRP_search_vert( KA_ref, KS_ref, KE_ref, & ! [IN]
-                                  KA,     KS,     KE,     & ! [IN]
-                                  hgt_ref(:,ii,jj),       & ! [IN]
-                                  hgt    (:,i,j),         & ! [IN]
-                                  idx_k  (:,:,i,j,n),     & ! [OUT]
-                                  vfact  (:,:,i,j,n)      ) ! [OUT]
+          call INTERP_search_vert( KA_ref, KS_ref, KE_ref, & ! [IN]
+                                   KA,     KS,     KE,     & ! [IN]
+                                   hgt_ref(:,ii,jj),       & ! [IN]
+                                   hgt    (:,i,j),         & ! [IN]
+                                   idx_k  (:,:,i,j,n),     & ! [OUT]
+                                   vfact  (:,:,i,j,n)      ) ! [OUT]
        enddo
     enddo
     enddo
 
-    call PROF_rapend  ('INTRP_fact',3)
+    call PROF_rapend  ('INTERP_fact',3)
 
     return
-  end subroutine INTRP_factor3d
+  end subroutine INTERP_factor3d
 
   !-----------------------------------------------------------------------------
   ! interpolation using one-points for 2D data (nearest-neighbor)
-  subroutine INTRP_interp2d( &
+  subroutine INTERP_interp2d( &
        npoints, &
        IA_ref,  &
        JA_ref,  &
@@ -410,7 +412,7 @@ contains
     integer  :: i, j, n
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('INTRP_interp',3)
+    call PROF_rapstart('INTERP_interp',3)
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(sw)
@@ -436,14 +438,14 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ('INTRP_interp',3)
+    call PROF_rapend  ('INTERP_interp',3)
 
     return
-  end subroutine INTRP_interp2d
+  end subroutine INTERP_interp2d
 
   !-----------------------------------------------------------------------------
   ! interpolation using one-points for 3D data (nearest-neighbor)
-  subroutine INTRP_interp3d( &
+  subroutine INTERP_interp3d( &
        npoints,    &
        KA_ref,     &
        IA_ref,     &
@@ -487,7 +489,7 @@ contains
     integer :: k, i, j, n
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('INTRP_interp',3)
+    call PROF_rapstart('INTERP_interp',3)
 
     logwgt_ = .false.
     if ( present(logwgt) ) then
@@ -545,15 +547,15 @@ contains
        end do
     endif
 
-    call PROF_rapend  ('INTRP_interp',3)
+    call PROF_rapend  ('INTERP_interp',3)
 
     return
-  end subroutine INTRP_interp3d
+  end subroutine INTERP_interp3d
 
   !-----------------------------------------------------------------------------
   ! search of nearest region for speed up of interpolation
 !OCL SERIAL
-  subroutine INTRP_search_nearest_block( &
+  subroutine INTERP_search_nearest_block( &
        IA_ref,  &
        JA_ref,  &
        lon_ref, &
@@ -563,7 +565,8 @@ contains
        IS,      &
        IE,      &
        JS,      &
-       JE       )
+       JE,      &
+       divnum   )
     use scale_const, only: &
        CONST_RADIUS
     implicit none
@@ -578,16 +581,24 @@ contains
     integer,  intent(out) :: IE                     ! end   index for x-direction
     integer,  intent(out) :: JS                     ! start index for y-direction
     integer,  intent(out) :: JE                     ! end   index for y-direction
+    integer,  intent(in), optional :: divnum
 
     real(RP) :: distance, dist
     integer  :: iskip, jskip
     integer  :: i_bulk, j_bulk
+    integer  :: divnum_
 
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    iskip = max( (IA_ref+1) / INTRP_divnum, 1 )
-    jskip = max( (JA_ref+1) / INTRP_divnum, 1 )
+    if ( present(divnum) ) then
+       divnum_ = divnum
+    else
+       divnum_ = INTERP_divnum
+    end if
+
+    iskip = max( (IA_ref+1) / divnum_, 1 )
+    jskip = max( (JA_ref+1) / divnum_, 1 )
 
     dist  = large_number
 
@@ -616,11 +627,11 @@ contains
     JE = min( j_bulk + (jskip/2) + 3, JA_ref )
 
     return
-  end subroutine INTRP_search_nearest_block
+  end subroutine INTERP_search_nearest_block
 
   !-----------------------------------------------------------------------------
   ! horizontal search of interpolation points for three-points
-  subroutine INTRP_search_horiz( &
+  subroutine INTERP_search_horiz( &
        npoints, &
        IA_ref,  &
        JA_ref,  &
@@ -638,6 +649,8 @@ contains
     use scale_const, only: &
        CONST_RADIUS, &
        CONST_EPS
+    use scale_sort, only: &
+       SORT_exec
     implicit none
 
     integer,  intent(in)  :: npoints                ! number of interpolation point for horizontal
@@ -679,10 +692,9 @@ contains
           idx_j(npoints) = j
 
           ! sort by ascending order
-          call sort( npoints,  & ! [IN]
-                     idx_i(:), & ! [INOUT]
-                     idx_j(:), & ! [INOUT]
-                     dist (:)  ) ! [INOUT]
+          call SORT_exec( npoints,           & ! [IN]
+                          dist (:),          & ! [INOUT]
+                          idx_i(:), idx_j(:) ) ! [INOUT]
        endif
     enddo
     enddo
@@ -693,12 +705,12 @@ contains
     else
        ! factor = 1 / distance
        do n = 1, npoints
-          hfact(n) = 1.0_RP / dist(n)**INTRP_weight_order
+          hfact(n) = 1.0_RP / dist(n)**INTERP_weight_order
        enddo
 
        ! ignore far point
        do n = 1, npoints
-          if ( dist(n) >= INTRP_search_limit ) then
+          if ( dist(n) >= INTERP_search_limit ) then
              hfact(n) = 0.0_RP
           endif
        enddo
@@ -717,12 +729,12 @@ contains
     endif
 
     return
-  end subroutine INTRP_search_horiz
+  end subroutine INTERP_search_horiz
 
   !-----------------------------------------------------------------------------
   ! vertical search of interpolation points for two-points
 !OCL SERIAL
-  subroutine INTRP_search_vert( &
+  subroutine INTERP_search_vert( &
        KA_ref, KS_ref, KE_ref, &
        KA, KS, KE,             &
        hgt_ref,                &
@@ -776,7 +788,7 @@ contains
        endif
 
        if ( idx_k(k,1) < 0 ) then
-          LOG_ERROR("INTRP_search_vert",*) 'data for interpolation was not found.'
+          LOG_ERROR("INTERP_search_vert",*) 'data for interpolation was not found.'
           LOG_ERROR_CONT(*) 'k=', k, ', hgt(k)=', hgt(k), ', hgt_ref(:)=', hgt_ref(:)
           call PRC_abort
        endif
@@ -784,50 +796,7 @@ contains
     enddo ! k-loop
 
     return
-  end subroutine INTRP_search_vert
-
-  !-----------------------------------------------------------------------------
-  !> bubble sort
-!OCL SERIAL
-  subroutine sort( &
-      npoints, &
-      idx_i,   &
-      idx_j,   &
-      val      )
-    implicit none
-
-    integer,  intent(in)    :: npoints                ! number of interpolation points
-    integer,  intent(inout) :: idx_i(npoints)         ! i-index
-    integer,  intent(inout) :: idx_j(npoints)         ! j-index
-    real(RP), intent(inout) :: val  (npoints)         ! value to sort
-
-    integer  :: itmp
-    integer  :: jtmp
-    real(RP) :: vtmp
-
-    integer  :: n1, n2
-    !---------------------------------------------------------------------------
-
-    do n1 = 1, npoints-1
-    do n2 = n1+1, npoints
-       if ( val(n1) > val(n2) ) then
-          itmp      = idx_i(n1)
-          jtmp      = idx_j(n1)
-          vtmp      = val  (n1)
-
-          idx_i(n1) = idx_i(n2)
-          idx_j(n1) = idx_j(n2)
-          val  (n1) = val  (n2)
-
-          idx_i(n2) = itmp
-          idx_j(n2) = jtmp
-          val  (n2) = vtmp
-       endif
-    enddo
-    enddo
-
-    return
-  end subroutine sort
+  end subroutine INTERP_search_vert
 
   !-----------------------------------------------------------------------------
   ! Haversine Formula (from R.W. Sinnott, "Virtues of the Haversine",

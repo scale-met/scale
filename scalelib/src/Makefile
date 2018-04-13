@@ -70,6 +70,7 @@ OBJS = \
 	$(OBJ_DIR)/scale_interp_vert.o	\
 	$(OBJ_DIR)/scale_mapprojection.o	\
 	$(OBJ_DIR)/scale_matrix.o	\
+	$(OBJ_DIR)/scale_sort.o	\
 	$(OBJ_DIR)/scale_prc.o	\
 	$(OBJ_DIR)/scale_prc_cartesC.o	\
 	$(OBJ_DIR)/scale_precision.o	\
