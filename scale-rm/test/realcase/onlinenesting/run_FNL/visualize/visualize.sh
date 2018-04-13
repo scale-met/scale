@@ -40,8 +40,8 @@ rm -f dcl.pdf
 for domain in d01 d02
 do
 
-var__set=(PRES T    U    V    W    QV   QHYD)
-rangeset=(auto auto auto auto auto auto auto)
+var__set=(PRES T    U    V    W    RH   QHYD PT  )
+rangeset=(auto auto auto auto auto auto auto auto)
 
 i=0
 for var in ${var__set[@]}
@@ -60,8 +60,8 @@ do
    let i="${i} + 1"
 done
 
-var__set=(U10  V10  T2   Q2   SFC_PRES SFC_TEMP PREC LHFLX SHFLX GHFLX SFLX_LW_dn SFLX_SW_dn)
-rangeset=(auto auto auto auto auto     auto     auto auto  auto  auto  auto       auto      )
+var__set=(PREC SFC_PRES SFC_TEMP U10  V10  T2_1h Q2   LHFLX SHFLX GHFLX SFLX_LW_dn SFLX_SW_dn OSR  OLR )
+rangeset=(auto auto     auto     auto auto auto  auto auto  auto  auto  auto       auto       auto auto)
 
 i=0
 for var in ${var__set[@]}
