@@ -94,6 +94,7 @@ module scale_atmos_thermodyn
 
   interface ATMOS_THERMODYN_rhot2temp_pres
      module procedure ATMOS_THERMODYN_rhot2temp_pres_0D
+     module procedure ATMOS_THERMODYN_rhot2temp_pres_1D
      module procedure ATMOS_THERMODYN_rhot2temp_pres_3D
   end interface ATMOS_THERMODYN_rhot2temp_pres
 
@@ -704,6 +705,35 @@ contains
 
     return
   end subroutine ATMOS_THERMODYN_rhot2temp_pres_0D
+
+  !-----------------------------------------------------------------------------
+  !> calc rho * pott -> temp & pres (1D)
+!OCL SERIAL
+  subroutine ATMOS_THERMODYN_rhot2temp_pres_1D( &
+       KA, KS, KE, &
+       dens, rhot, Rtot, CVtot, CPtot, &
+       temp, pres                      )
+    integer,  intent(in)  :: KA, KS, KE
+
+    real(RP), intent(in)  :: dens (KA) !< density              [kg/m3]
+    real(RP), intent(in)  :: rhot (KA) !< density * pot. temp. [kg/m3*K]
+    real(RP), intent(in)  :: Rtot (KA) !< mass concentration   [kg/kg]
+    real(RP), intent(in)  :: CVtot(KA) !< specific heat        [J/kg/K]
+    real(RP), intent(in)  :: CPtot(KA) !< specific heat        [J/kg/K]
+
+    real(RP), intent(out) :: temp(KA)  !< temperature          [K]
+    real(RP), intent(out) :: pres(KA)  !< pressure             [Pa]
+
+    integer  :: k
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+       call ATMOS_THERMODYN_rhot2temp_pres( dens(k), rhot(k), Rtot(k), CVtot(k), CPtot(k), &
+                                            temp(k), pres(k)                               )
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_rhot2temp_pres_1D
 
   !-----------------------------------------------------------------------------
   !> calc rho * pott -> temp & pres (3D)

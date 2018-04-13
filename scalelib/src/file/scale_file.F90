@@ -1984,13 +1984,13 @@ contains
           error = .true.
           return
        else
-          LOG_ERROR("FILE_get_shape_fid",*) 'failed to get data information :'//trim(varname)
+          LOG_ERROR("FILE_get_shape_fid",*) 'failed to get data information : ', trim(varname)
           call PRC_abort
        end if
     end if
 
     if ( dinfo%rank /= size(dims) ) then
-       LOG_ERROR("FILE_get_shape_fid",*) 'rank is different, ', size(dims), dinfo%rank
+       LOG_ERROR("FILE_get_shape_fid",*) 'rank is different, ', trim(varname), size(dims), dinfo%rank
        call PRC_abort
     end if
     do n = 1, size(dims)
@@ -2083,6 +2083,7 @@ contains
   subroutine FILE_get_dataInfo_fname( &
        basename, varname,                  &
        rankid, istep, single,              &
+       existed,                            &
        description, units, standard_name,  &
        datatype,                           &
        dim_rank, dim_name, dim_size,       &
@@ -2097,6 +2098,7 @@ contains
     integer,                    intent(in),  optional :: rankid
     integer,                    intent(in),  optional :: istep
     logical,                    intent(in),  optional :: single
+    logical,                    intent(out), optional :: existed
     character(len=FILE_HMID),   intent(out), optional :: description
     character(len=FILE_HSHORT), intent(out), optional :: units
     character(len=FILE_HMID),   intent(out), optional :: standard_name
@@ -2130,6 +2132,7 @@ contains
 
     call FILE_get_dataInfo_fid( fid, varname,                              & ! [IN]
                                 istep,                                     & ! [IN] , optional
+                                existed,                                   & ! [OUT], optional
                                 description, units, standard_name,         & ! [OUT], optional
                                 datatype,                                  & ! [OUT], optional
                                 dim_rank, dim_name, dim_size,              & ! [OUT], optional
@@ -2142,6 +2145,7 @@ contains
   subroutine FILE_get_dataInfo_fid( &
        fid, varname,                       &
        istep,                              &
+       existed,                            &
        description, units, standard_name,  &
        datatype,                           &
        dim_rank, dim_name, dim_size,       &
@@ -2154,6 +2158,7 @@ contains
     character(len=*), intent(in)  :: varname
 
     integer,                    intent(in),  optional :: istep
+    logical,                    intent(out), optional :: existed
     character(len=FILE_HMID),   intent(out), optional :: description
     character(len=FILE_HSHORT), intent(out), optional :: units
     character(len=FILE_HMID),   intent(out), optional :: standard_name
@@ -2176,7 +2181,9 @@ contains
     real(DP) :: time(1)
     integer  :: i
     integer  :: error
-    logical  :: existed
+
+    logical :: suppress
+    logical :: existed2
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -2187,26 +2194,38 @@ contains
        istep_ = 1
     end if
 
+    if ( present(existed) ) then
+       suppress = .true.
+    else
+       suppress = .false.
+    end if
 
     !--- get data information
     call file_get_datainfo_c( dinfo,               & ! [OUT]
                               FILE_files(fid)%fid, & ! [IN]
                               varname,             & ! [IN]
                               istep_,              & ! [IN]
-                              .false.,             & ! [IN]
+                              suppress,            & ! [IN]
                               error                ) ! [OUT]
 
     !--- verify and exit
     if ( error /= FILE_SUCCESS_CODE ) then
-       LOG_ERROR("FILE_get_dataInfo_fid",*) 'data info not found'
-       call PRC_abort
+       if ( present( existed ) ) then
+          existed = .false.
+          return
+       else
+          LOG_ERROR("FILE_get_dataInfo_fid",*) 'data info not found'
+          call PRC_abort
+       end if
     endif
 
-    if( present(description)   ) description   = dinfo%description
-    if( present(units)         ) units         = dinfo%units
-    if( present(standard_name) ) standard_name = dinfo%standard_name
-    if( present(datatype)      ) datatype      = dinfo%datatype
-    if( present(dim_rank)      ) dim_rank      = dinfo%rank
+    if ( present(existed) ) existed = .true.
+
+    if ( present(description)   ) description   = dinfo%description
+    if ( present(units)         ) units         = dinfo%units
+    if ( present(standard_name) ) standard_name = dinfo%standard_name
+    if ( present(datatype)      ) datatype      = dinfo%datatype
+    if ( present(dim_rank)      ) dim_rank      = dinfo%rank
 
     if ( present(dim_name) ) then
        do i = 1, min( dinfo%rank, size(dim_name) ) ! limit dimension rank
@@ -2247,8 +2266,8 @@ contains
 
     if ( present(calendar) ) then
        if ( dinfo%time_units == "" ) then
-          call FILE_get_attribute( fid, "global", "calendar", calendar, existed )
-          if ( .not. existed ) calendar = ""
+          call FILE_get_attribute( fid, "global", "calendar", calendar, existed2 )
+          if ( .not. existed2 ) calendar = ""
        else
           calendar = dinfo%calendar
        end if
@@ -2763,6 +2782,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    logical :: allow_missing_
     real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -2784,6 +2804,12 @@ contains
        step_ = 1
     end if
 
+    if ( present(allow_missing) ) then
+       allow_missing_ = allow_missing
+    else
+       allow_missing_ = .false.
+    end if
+
     if ( present(missing_value) ) then
        missing_value_ = missing_value
     else
@@ -2791,23 +2817,18 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                   & ! (out)
-         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
-         error                                         ) ! (out)
+    call file_get_datainfo_c( dinfo,                          & ! (out)
+         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
+         error                                                ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             LOG_INFO("FILE_read_var_realSP_1D",*) '[INPUT]/[FILE] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step_
-             LOG_INFO("FILE_read_var_realSP_1D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
-             var(:) = missing_value_
-             return
-          else
-             LOG_ERROR("FILE_read_var_realSP_1D",*) 'failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
+       if ( allow_missing_ ) then
+          LOG_INFO("FILE_read_var_realSP_1D",*) '[INPUT]/[FILE] data not found! : ', &
+               'varname= ',trim(varname),', step=',step_
+          LOG_INFO("FILE_read_var_realSP_1D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
+          var(:) = missing_value_
+          return
        else
           LOG_ERROR("FILE_read_var_realSP_1D",*) 'failed to get data information :'//trim(varname)
           call PRC_abort
@@ -2822,9 +2843,9 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:),             & ! (out)
+       call file_read_data_c( var(:),                   & ! (out)
             dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                        ) ! (out)
+            error                                              ) ! (out)
     else if ( present(start) .and. present(count) ) then
        call file_read_data_c( var(:),          & ! (out)
             dinfo, SP, 0, 0, start(:), count(:), & ! (in)
@@ -2870,6 +2891,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    logical :: allow_missing_
     real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -2891,6 +2913,12 @@ contains
        step_ = 1
     end if
 
+    if ( present(allow_missing) ) then
+       allow_missing_ = allow_missing
+    else
+       allow_missing_ = .false.
+    end if
+
     if ( present(missing_value) ) then
        missing_value_ = missing_value
     else
@@ -2898,23 +2926,18 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                   & ! (out)
-         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
-         error                                         ) ! (out)
+    call file_get_datainfo_c( dinfo,                          & ! (out)
+         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
+         error                                                ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             LOG_INFO("FILE_read_var_realDP_1D",*) '[INPUT]/[FILE] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step_
-             LOG_INFO("FILE_read_var_realDP_1D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
-             var(:) = missing_value_
-             return
-          else
-             LOG_ERROR("FILE_read_var_realDP_1D",*) 'failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
+       if ( allow_missing_ ) then
+          LOG_INFO("FILE_read_var_realDP_1D",*) '[INPUT]/[FILE] data not found! : ', &
+               'varname= ',trim(varname),', step=',step_
+          LOG_INFO("FILE_read_var_realDP_1D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
+          var(:) = missing_value_
+          return
        else
           LOG_ERROR("FILE_read_var_realDP_1D",*) 'failed to get data information :'//trim(varname)
           call PRC_abort
@@ -2929,9 +2952,9 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:),             & ! (out)
+       call file_read_data_c( var(:),                   & ! (out)
             dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                        ) ! (out)
+            error                                              ) ! (out)
     else if ( present(start) .and. present(count) ) then
        call file_read_data_c( var(:),          & ! (out)
             dinfo, DP, 0, 0, start(:), count(:), & ! (in)
@@ -2977,6 +3000,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    logical :: allow_missing_
     real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -2998,6 +3022,12 @@ contains
        step_ = 1
     end if
 
+    if ( present(allow_missing) ) then
+       allow_missing_ = allow_missing
+    else
+       allow_missing_ = .false.
+    end if
+
     if ( present(missing_value) ) then
        missing_value_ = missing_value
     else
@@ -3005,23 +3035,18 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                   & ! (out)
-         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
-         error                                         ) ! (out)
+    call file_get_datainfo_c( dinfo,                          & ! (out)
+         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
+         error                                                ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             LOG_INFO("FILE_read_var_realSP_2D",*) '[INPUT]/[FILE] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step_
-             LOG_INFO("FILE_read_var_realSP_2D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
-             var(:,:) = missing_value_
-             return
-          else
-             LOG_ERROR("FILE_read_var_realSP_2D",*) 'failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
+       if ( allow_missing_ ) then
+          LOG_INFO("FILE_read_var_realSP_2D",*) '[INPUT]/[FILE] data not found! : ', &
+               'varname= ',trim(varname),', step=',step_
+          LOG_INFO("FILE_read_var_realSP_2D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
+          var(:,:) = missing_value_
+          return
        else
           LOG_ERROR("FILE_read_var_realSP_2D",*) 'failed to get data information :'//trim(varname)
           call PRC_abort
@@ -3036,9 +3061,9 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:),             & ! (out)
+       call file_read_data_c( var(:,:),                   & ! (out)
             dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                        ) ! (out)
+            error                                              ) ! (out)
     else if ( present(start) .and. present(count) ) then
        call file_read_data_c( var(:,:),          & ! (out)
             dinfo, SP, 0, 0, start(:), count(:), & ! (in)
@@ -3084,6 +3109,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    logical :: allow_missing_
     real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -3105,6 +3131,12 @@ contains
        step_ = 1
     end if
 
+    if ( present(allow_missing) ) then
+       allow_missing_ = allow_missing
+    else
+       allow_missing_ = .false.
+    end if
+
     if ( present(missing_value) ) then
        missing_value_ = missing_value
     else
@@ -3112,23 +3144,18 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                   & ! (out)
-         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
-         error                                         ) ! (out)
+    call file_get_datainfo_c( dinfo,                          & ! (out)
+         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
+         error                                                ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             LOG_INFO("FILE_read_var_realDP_2D",*) '[INPUT]/[FILE] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step_
-             LOG_INFO("FILE_read_var_realDP_2D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
-             var(:,:) = missing_value_
-             return
-          else
-             LOG_ERROR("FILE_read_var_realDP_2D",*) 'failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
+       if ( allow_missing_ ) then
+          LOG_INFO("FILE_read_var_realDP_2D",*) '[INPUT]/[FILE] data not found! : ', &
+               'varname= ',trim(varname),', step=',step_
+          LOG_INFO("FILE_read_var_realDP_2D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
+          var(:,:) = missing_value_
+          return
        else
           LOG_ERROR("FILE_read_var_realDP_2D",*) 'failed to get data information :'//trim(varname)
           call PRC_abort
@@ -3143,9 +3170,9 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:),             & ! (out)
+       call file_read_data_c( var(:,:),                   & ! (out)
             dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                        ) ! (out)
+            error                                              ) ! (out)
     else if ( present(start) .and. present(count) ) then
        call file_read_data_c( var(:,:),          & ! (out)
             dinfo, DP, 0, 0, start(:), count(:), & ! (in)
@@ -3191,6 +3218,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    logical :: allow_missing_
     real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -3212,6 +3240,12 @@ contains
        step_ = 1
     end if
 
+    if ( present(allow_missing) ) then
+       allow_missing_ = allow_missing
+    else
+       allow_missing_ = .false.
+    end if
+
     if ( present(missing_value) ) then
        missing_value_ = missing_value
     else
@@ -3219,23 +3253,18 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                   & ! (out)
-         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
-         error                                         ) ! (out)
+    call file_get_datainfo_c( dinfo,                          & ! (out)
+         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
+         error                                                ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             LOG_INFO("FILE_read_var_realSP_3D",*) '[INPUT]/[FILE] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step_
-             LOG_INFO("FILE_read_var_realSP_3D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
-             var(:,:,:) = missing_value_
-             return
-          else
-             LOG_ERROR("FILE_read_var_realSP_3D",*) 'failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
+       if ( allow_missing_ ) then
+          LOG_INFO("FILE_read_var_realSP_3D",*) '[INPUT]/[FILE] data not found! : ', &
+               'varname= ',trim(varname),', step=',step_
+          LOG_INFO("FILE_read_var_realSP_3D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
+          var(:,:,:) = missing_value_
+          return
        else
           LOG_ERROR("FILE_read_var_realSP_3D",*) 'failed to get data information :'//trim(varname)
           call PRC_abort
@@ -3250,9 +3279,9 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:,:),             & ! (out)
+       call file_read_data_c( var(:,:,:),                   & ! (out)
             dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                        ) ! (out)
+            error                                              ) ! (out)
     else if ( present(start) .and. present(count) ) then
        call file_read_data_c( var(:,:,:),          & ! (out)
             dinfo, SP, 0, 0, start(:), count(:), & ! (in)
@@ -3298,6 +3327,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    logical :: allow_missing_
     real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -3319,6 +3349,12 @@ contains
        step_ = 1
     end if
 
+    if ( present(allow_missing) ) then
+       allow_missing_ = allow_missing
+    else
+       allow_missing_ = .false.
+    end if
+
     if ( present(missing_value) ) then
        missing_value_ = missing_value
     else
@@ -3326,23 +3362,18 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                   & ! (out)
-         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
-         error                                         ) ! (out)
+    call file_get_datainfo_c( dinfo,                          & ! (out)
+         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
+         error                                                ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             LOG_INFO("FILE_read_var_realDP_3D",*) '[INPUT]/[FILE] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step_
-             LOG_INFO("FILE_read_var_realDP_3D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
-             var(:,:,:) = missing_value_
-             return
-          else
-             LOG_ERROR("FILE_read_var_realDP_3D",*) 'failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
+       if ( allow_missing_ ) then
+          LOG_INFO("FILE_read_var_realDP_3D",*) '[INPUT]/[FILE] data not found! : ', &
+               'varname= ',trim(varname),', step=',step_
+          LOG_INFO("FILE_read_var_realDP_3D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
+          var(:,:,:) = missing_value_
+          return
        else
           LOG_ERROR("FILE_read_var_realDP_3D",*) 'failed to get data information :'//trim(varname)
           call PRC_abort
@@ -3357,9 +3388,9 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:,:),             & ! (out)
+       call file_read_data_c( var(:,:,:),                   & ! (out)
             dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                        ) ! (out)
+            error                                              ) ! (out)
     else if ( present(start) .and. present(count) ) then
        call file_read_data_c( var(:,:,:),          & ! (out)
             dinfo, DP, 0, 0, start(:), count(:), & ! (in)
@@ -3405,6 +3436,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    logical :: allow_missing_
     real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -3426,6 +3458,12 @@ contains
        step_ = 1
     end if
 
+    if ( present(allow_missing) ) then
+       allow_missing_ = allow_missing
+    else
+       allow_missing_ = .false.
+    end if
+
     if ( present(missing_value) ) then
        missing_value_ = missing_value
     else
@@ -3433,23 +3471,18 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                   & ! (out)
-         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
-         error                                         ) ! (out)
+    call file_get_datainfo_c( dinfo,                          & ! (out)
+         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
+         error                                                ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             LOG_INFO("FILE_read_var_realSP_4D",*) '[INPUT]/[FILE] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step_
-             LOG_INFO("FILE_read_var_realSP_4D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
-             var(:,:,:,:) = missing_value_
-             return
-          else
-             LOG_ERROR("FILE_read_var_realSP_4D",*) 'failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
+       if ( allow_missing_ ) then
+          LOG_INFO("FILE_read_var_realSP_4D",*) '[INPUT]/[FILE] data not found! : ', &
+               'varname= ',trim(varname),', step=',step_
+          LOG_INFO("FILE_read_var_realSP_4D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
+          var(:,:,:,:) = missing_value_
+          return
        else
           LOG_ERROR("FILE_read_var_realSP_4D",*) 'failed to get data information :'//trim(varname)
           call PRC_abort
@@ -3464,9 +3497,9 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:,:,:),             & ! (out)
+       call file_read_data_c( var(:,:,:,:),                   & ! (out)
             dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                        ) ! (out)
+            error                                              ) ! (out)
     else if ( present(start) .and. present(count) ) then
        call file_read_data_c( var(:,:,:,:),          & ! (out)
             dinfo, SP, 0, 0, start(:), count(:), & ! (in)
@@ -3512,6 +3545,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
+    logical :: allow_missing_
     real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -3533,6 +3567,12 @@ contains
        step_ = 1
     end if
 
+    if ( present(allow_missing) ) then
+       allow_missing_ = allow_missing
+    else
+       allow_missing_ = .false.
+    end if
+
     if ( present(missing_value) ) then
        missing_value_ = missing_value
     else
@@ -3540,23 +3580,18 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                   & ! (out)
-         FILE_files(fid)%fid, varname, step_, .false., & ! (in)
-         error                                         ) ! (out)
+    call file_get_datainfo_c( dinfo,                          & ! (out)
+         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
+         error                                                ) ! (out)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
-       if ( present(allow_missing) ) then
-          if ( allow_missing ) then
-             LOG_INFO("FILE_read_var_realDP_4D",*) '[INPUT]/[FILE] data not found! : ', &
-                  'varname= ',trim(varname),', step=',step_
-             LOG_INFO("FILE_read_var_realDP_4D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
-             var(:,:,:,:) = missing_value_
-             return
-          else
-             LOG_ERROR("FILE_read_var_realDP_4D",*) 'failed to get data information :'//trim(varname)
-             call PRC_abort
-          end if
+       if ( allow_missing_ ) then
+          LOG_INFO("FILE_read_var_realDP_4D",*) '[INPUT]/[FILE] data not found! : ', &
+               'varname= ',trim(varname),', step=',step_
+          LOG_INFO("FILE_read_var_realDP_4D",*) '[INPUT]/[FILE] Value is set to ', missing_value_
+          var(:,:,:,:) = missing_value_
+          return
        else
           LOG_ERROR("FILE_read_var_realDP_4D",*) 'failed to get data information :'//trim(varname)
           call PRC_abort
@@ -3571,9 +3606,9 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:,:,:),             & ! (out)
+       call file_read_data_c( var(:,:,:,:),                   & ! (out)
             dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                        ) ! (out)
+            error                                              ) ! (out)
     else if ( present(start) .and. present(count) ) then
        call file_read_data_c( var(:,:,:,:),          & ! (out)
             dinfo, DP, 0, 0, start(:), count(:), & ! (in)

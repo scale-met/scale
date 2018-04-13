@@ -68,6 +68,8 @@ module scale_file_cartesC
      module procedure FILE_CARTESC_read_var_2D
      module procedure FILE_CARTESC_read_var_3D
      module procedure FILE_CARTESC_read_var_4D
+     module procedure FILE_CARTESC_read_all_2D
+     module procedure FILE_CARTESC_read_all_3D
   end interface FILE_CARTESC_read
 
   interface FILE_CARTESC_write
@@ -155,6 +157,9 @@ module scale_file_cartesC
   real(RP), private, allocatable :: AXIS_LATUY(:,:)   ! [deg]
   real(RP), private, allocatable :: AXIS_LATXV(:,:)   ! [deg]
   real(RP), private, allocatable :: AXIS_LATUV(:,:)   ! [deg]
+
+  real(RP), private, allocatable :: AXIS_TOPO  (:,:)
+  real(RP), private, allocatable :: AXIS_LSMASK(:,:)
 
   real(RP), private, allocatable :: AXIS_AREA     (:,:)
   real(RP), private, allocatable :: AXIS_AREAZUY_X(:,:,:)
@@ -287,6 +292,9 @@ contains
     allocate( AXIS_LATXV(IM,JM) )
     allocate( AXIS_LATUV(IM,JM) )
 
+    allocate( AXIS_TOPO  (IM,JM) )
+    allocate( AXIS_LSMASK(IM,JM) )
+
     allocate( AXIS_AREA     (       IM,JM) )
     allocate( AXIS_AREAZUY_X(KMAX,  IM,JM) )
     allocate( AXIS_AREAZXV_Y(KMAX,  IM,JM) )
@@ -332,6 +340,9 @@ contains
     deallocate( AXIS_LATUY )
     deallocate( AXIS_LATXV )
     deallocate( AXIS_LATUV )
+
+    deallocate( AXIS_TOPO   )
+    deallocate( AXIS_LSMASK )
 
     deallocate( AXIS_AREA      )
     deallocate( AXIS_AREAZUY_X )
@@ -454,6 +465,7 @@ contains
        CZ, FZ,                       &
        LON, LONUY, LONXV, LONUV,     &
        LAT, LATUY, LATXV, LATUV,     &
+       TOPO, LSMASK,                 &
        AREA,   AREAZUY_X, AREAZXV_Y, &
                AREAWUY_X, AREAWXV_Y, &
        AREAUY, AREAZXY_X, AREAZUV_Y, &
@@ -474,6 +486,8 @@ contains
     real(RP), intent(in) :: LATUY(0:IA,  JA)
     real(RP), intent(in) :: LATXV(  IA,0:JA)
     real(RP), intent(in) :: LATUV(0:IA,0:JA)
+    real(RP), intent(in) :: TOPO  (  IA,  JA)
+    real(RP), intent(in) :: LSMASK(  IA,  JA)
     real(RP), intent(in) :: AREA     (     IA,JA)
     real(RP), intent(in) :: AREAZUY_X(  KA,IA,JA)
     real(RP), intent(in) :: AREAZXV_Y(  KA,IA,JA)
@@ -502,6 +516,9 @@ contains
     AXIS_LATUY(:,:) = LATUY(ISB2:IEB2,JSB2:JEB2) / D2R
     AXIS_LATXV(:,:) = LATXV(ISB2:IEB2,JSB2:JEB2) / D2R
     AXIS_LATUV(:,:) = LATUV(ISB2:IEB2,JSB2:JEB2) / D2R
+
+    AXIS_TOPO  (:,:) = TOPO  (ISB2:IEB2,JSB2:JEB2)
+    AXIS_LSMASK(:,:) = LSMASK(ISB2:IEB2,JSB2:JEB2)
 
     AXIS_AREA     (:,:)   = AREA     (        ISB2:IEB2,JSB2:JEB2)
     AXIS_AREAZUY_X(:,:,:) = AREAZUY_X(KS  :KE,ISB2:IEB2,JSB2:JEB2)
@@ -1297,10 +1314,6 @@ contains
        FILE_Read
     use scale_prc, only: &
        PRC_abort
-    use scale_prc_cartesC, only: &
-       PRC_NUM_X, &
-       PRC_NUM_Y
-    use mpi
     implicit none
     integer,          intent(in)  :: fid      !< file ID
     character(len=*), intent(in)  :: varname  !< name of the variable
@@ -1584,6 +1597,202 @@ contains
 
     return
   end subroutine FILE_CARTESC_read_var_4D
+
+  !-----------------------------------------------------------------------------
+  !> Read 2D data from file
+  subroutine FILE_CARTESC_read_all_2D( &
+       fid, varname, &
+       var,          &
+       step, existed )
+    use scale_file, only: &
+       FILE_get_shape, &
+       FILE_get_dataInfo, &
+       FILE_get_attribute, &
+       FILE_read
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+    integer,          intent(in)  :: fid      !< file ID
+    character(len=*), intent(in)  :: varname  !< name of the variable
+
+    real(RP),         intent(out) :: var(:,:) !< value of the variable
+
+    integer, intent(in), optional :: step     !< step number
+
+    logical, intent(out), optional :: existed
+
+    integer :: dims(2)
+    integer :: halos(2)
+    integer :: start(2)
+    integer :: count(2)
+    character(len=H_SHORT) :: dnames(2)
+
+    integer :: nx, ny
+    integer :: n
+
+    logical :: existed2
+
+    intrinsic size
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_I_NetCDF', 2)
+
+    LOG_INFO("FILE_CARTESC_read_all_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
+
+    call FILE_get_dataInfo( fid, varname, dim_name=dnames(:), existed=existed2 )
+
+    if ( present( existed ) ) then
+       existed = existed2
+       if ( .not. existed2 ) return
+    end if
+
+    if ( .not. existed2 ) then
+       LOG_ERROR("FILE_CARTESC_read_all_2D",*) 'variable not found: ', trim(varname)
+       call PRC_abort
+    end if
+
+    call FILE_get_shape( fid, varname, dims(:) )
+    nx = size(var,1)
+    ny = size(var,2)
+
+    if ( nx==dims(1) .and. ny==dims(2) ) then
+       start(:) = (/1,1/)
+    else
+       do n = 1, 2
+          call FILE_get_attribute( fid, dnames(n), "halo_local", halos(:), existed=existed2 )
+          if ( existed2 ) then
+             start(n) = halos(1) + 1
+          else
+             start(n) = 1
+          end if
+       end do
+    end if
+    count(:) = (/nx,ny/)
+
+    call FILE_read( fid, varname, var(:,:), step=step, start=start(:), count=count(:) )
+
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
+
+    return
+  end subroutine FILE_CARTESC_read_all_2D
+
+  !-----------------------------------------------------------------------------
+  !> Read 3D data from file
+  subroutine FILE_CARTESC_read_all_3D( &
+       fid, varname, &
+       var,          &
+       step, existed )
+    use scale_file, only: &
+       FILE_get_shape, &
+       FILE_get_dataInfo, &
+       FILE_get_attribute, &
+       FILE_read
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+    integer,          intent(in)  :: fid        !< file ID
+    character(len=*), intent(in)  :: varname    !< name of the variable
+
+    real(RP),         intent(out) :: var(:,:,:) !< value of the variable
+
+    integer, intent(in), optional :: step       !< step number
+
+    logical, intent(out), optional :: existed
+
+    integer :: dims(3)
+    integer :: halos(3)
+    integer :: start(3)
+    integer :: count(3)
+    character(len=H_SHORT) :: dnames(3)
+
+    logical :: existed2
+
+    real(RP), allocatable :: buf(:,:,:)
+    integer :: nx, ny, nz
+    integer :: n
+    integer :: k, i, j
+
+    intrinsic size
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_I_NetCDF', 2)
+
+    LOG_INFO("FILE_CARTESC_read_all_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
+
+    call FILE_get_dataInfo( fid, varname, dim_name=dnames(:), existed=existed2 )
+
+    if ( present(existed) ) then
+       existed = existed2
+       if ( .not. existed2 ) return
+    end if
+
+    if ( .not. existed2 ) then
+       LOG_ERROR("FILE_CARTESC_read_all_3D",*) 'variable not found: ', trim(varname)
+       call PRC_abort
+    end if
+
+    call FILE_get_shape( fid, varname, dims(:) )
+    nz = size(var,1)
+    nx = size(var,2)
+    ny = size(var,3)
+
+    if      ( ( dnames(1)(1:1)=="z" .or. dnames(1)(2:2)=="z" ) .and. dnames(2)(1:1)=="x" .and. dnames(3)(1:1)=="y" ) then
+       if ( nz==dims(1) .and. nx==dims(2) .and. ny==dims(3) ) then
+          start(:) = (/1,1,1/)
+       else if ( dnames(1)=="zh" .and. nz+1==dims(1) .and. nx==dims(2) .and. ny==dims(3) ) then
+          start(:) = (/2,1,1/)
+       else
+          do n = 1, 3
+             call FILE_get_attribute( fid, dnames(n), "halo_local", halos(:), existed=existed2 )
+             if ( existed2 ) then
+                start(n) = halos(1) + 1
+             else if ( dnames(n)=="zh" ) then
+                start(n) = 2
+             else
+                start(n) = 1
+             end if
+          end do
+       end if
+       count(:) = (/nz,nx,ny/)
+       call FILE_read( fid, varname, var(:,:,:), step=step, start=start(:), count=count(:) )
+    else if ( dnames(1)(1:1)=="x" .and. dnames(2)(1:1)=="y" .and. ( dnames(3)(1:1)=="z" .or. dnames(3)(2:2)=="z" ) ) then
+       allocate( buf(nx,ny,nz) )
+       if ( nx==dims(1) .and. ny==dims(2) .and. nz==dims(3) ) then
+          start(:) = (/1,1,1/)
+       else if ( nx==dims(1) .and. ny==dims(2) .and. nz+1==dims(3) .and. dnames(3)=="zh" ) then
+          start(:) = (/1,1,2/)
+       else
+          do n = 1, 3
+             call FILE_get_attribute( fid, dnames(n), "halo_local", halos(:), existed=existed2 )
+             if ( existed2 ) then
+                start(n) = halos(1) + 1
+             else if ( dnames(n)=="zh" ) then
+                start(n) = 2
+             else
+                start(n) = 1
+             end if
+          end do
+       end if
+       count(:) = (/nx,ny,nz/)
+       call FILE_read( fid, varname, buf(:,:,:), step=step, start=start(:), count=count(:) )
+       !$omp parallel do
+       do j = 1, ny
+       do i = 1, nx
+       do k = 1, nz
+          var(k,i,j) = buf(i,j,k)
+       end do
+       end do
+       end do
+       deallocate(buf)
+    else
+       LOG_ERROR("FILE_CARTESC_read_all_3D",*) 'invalid dimension'
+       call PRC_abort
+    end if
+
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
+
+    return
+  end subroutine FILE_CARTESC_read_all_3D
 
   !-----------------------------------------------------------------------------
   !> interface FILE_CARTESC_write
@@ -2070,6 +2279,11 @@ contains
     call FILE_Def_AssociatedCoordinate( fid, 'lat_xv', 'latitude (half level xv)',  'degrees_north', axisname(1:2), dtype )
     axisname(1:2) = (/'xh','yh'/)
     call FILE_Def_AssociatedCoordinate( fid, 'lat_uv', 'latitude (half level uv)',  'degrees_north', axisname(1:2), dtype )
+
+    axisname(1:2) = (/'x ','y '/)
+    call FILE_Def_AssociatedCoordinate( fid, 'topo' ,  'topography',                 'm',            axisname(1:2), dtype )
+    axisname(1:2) = (/'x ','y '/)
+    call FILE_Def_AssociatedCoordinate( fid, 'lsmask', 'fraction for land-sea mask', '1',            axisname(1:2), dtype )
 
     axisname(1:2) = (/'x ','y '/)
     call FILE_Def_AssociatedCoordinate( fid, 'cell_area',    'area of grid cell',                  'm2', axisname(1:2), dtype )
@@ -2705,6 +2919,9 @@ contains
        call FILE_Write_AssociatedCoordinate( fid, 'lat_xv', AXIS_LATXV(:,:), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'lat_uv', AXIS_LATUV(:,:), start(2:3) )
 
+       call FILE_Write_AssociatedCoordinate( fid, 'topo',   AXIS_TOPO  (:,:), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lsmask', AXIS_LSMASK(:,:), start(2:3) )
+
        call FILE_Write_AssociatedCoordinate( fid, 'cell_area',    AXIS_AREA  (:,:), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'cell_area_uy', AXIS_AREAUY(:,:), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'cell_area_xv', AXIS_AREAXV(:,:), start(2:3) )
@@ -2745,6 +2962,9 @@ contains
        call FILE_Write_AssociatedCoordinate( fid, 'lat_uy', AXIS_LATUY(XSB:XEB,YSB:YEB), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'lat_xv', AXIS_LATXV(XSB:XEB,YSB:YEB), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'lat_uv', AXIS_LATUV(XSB:XEB,YSB:YEB), start(2:3) )
+
+       call FILE_Write_AssociatedCoordinate( fid, 'topo',   AXIS_TOPO  (XSB:XEB,YSB:YEB), start(2:3) )
+       call FILE_Write_AssociatedCoordinate( fid, 'lsmask', AXIS_LSMASK(XSB:XEB,YSB:YEB), start(2:3) )
 
        call FILE_Write_AssociatedCoordinate( fid, 'cell_area',    AXIS_AREA  (XSB:XEB,YSB:YEB), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'cell_area_uy', AXIS_AREAUY(XSB:XEB,YSB:YEB), start(2:3) )
