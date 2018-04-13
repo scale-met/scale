@@ -116,7 +116,7 @@ contains
     enddo
 
     if ( invalid_value ) then
-       LOG_ERROR("VALCHECK_1D",*) '[VALCHECK_1D] invalid value:', trim(varname), &
+       LOG_ERROR("VALCHECK_1D",*) 'invalid value:', trim(varname), &
                   '(', PRC_myrank, ',', k, ')=', var(k)
        LOG_ERROR_CONT(*) 'in file   : ', trim(current_file), ', at line : ', current_line
        LOG_ERROR_CONT(*) 'in domain : ', DEBUG_DOMAIN_NUM
@@ -175,7 +175,7 @@ contains
           enddo outer
 
     if ( invalid_value ) then
-       LOG_ERROR("VALCHECK_2D",*) '[VALCHECK_2D] invalid value:', trim(varname), &
+       LOG_ERROR("VALCHECK_2D",*) 'invalid value:', trim(varname), &
                   '(', PRC_myrank, ',', k, ',', i, ')=', var(k,i)
        LOG_ERROR_CONT(*) 'in file   : ', trim(current_file), ', at line : ', current_line
        LOG_ERROR_CONT(*) 'in domain : ', DEBUG_DOMAIN_NUM
@@ -240,7 +240,7 @@ contains
           enddo outer
 
     if ( invalid_value ) then
-       LOG_ERROR("VALCHECK_3D",*) '[VALCHECK_3D] Invalid value:', trim(varname), &
+       LOG_ERROR("VALCHECK_3D",*) 'Invalid value:', trim(varname), &
                   '(', PRC_myrank, ',', k, ',', i, ',', j, ')=', var(k,i,j)
        LOG_ERROR_CONT(*) 'in file   : ', trim(current_file), ', at line : ', current_line
        LOG_ERROR_CONT(*) 'in domain : ', DEBUG_DOMAIN_NUM
