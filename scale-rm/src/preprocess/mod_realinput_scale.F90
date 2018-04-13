@@ -420,7 +420,7 @@ contains
     !!! must be rotate !!!
 
 
-    if ( .not. same_mptype ) then
+    if ( QA_MP > 0 .AND. .NOT. same_mptype ) then
        call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 1, dims(1)+2, dims(2), 1, dims(2), dims(3), 1, dims(3), &
                                            qv_org(:,:,:), qhyd_org(:,:,:,:), & ! [IN]
                                            qtrc_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
