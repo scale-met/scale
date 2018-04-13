@@ -287,7 +287,7 @@ contains
        PRC_abort
     implicit none
 
-    namelist / PARAM_BIN / &
+    namelist / PARAM_ATMOS_PHY_MP_SUZUKI10_bin / &
        nbin, &
        nccn, &
        ICEFLG, &
@@ -304,16 +304,16 @@ contains
     LOG_INFO("ATMOS_PHY_MP_suzuki10_tracer_setup",*) 'READ BIN NUMBER'
 
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_BIN,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_SUZUKI10_bin,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
       LOG_INFO("ATMOS_PHY_MP_suzuki10_tracer_setup",*)  'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       LOG_ERROR("ATMOS_PHY_MP_suzuki10_tracer_setup",*) 'Not appropriate names in namelist PARAM_BIN, Check!'
+       LOG_ERROR("ATMOS_PHY_MP_suzuki10_tracer_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SUZUKI10_bin, Check!'
        call PRC_abort
     end if
 
-    LOG_NML(PARAM_BIN)
+    LOG_NML(PARAM_ATMOS_PHY_MP_SUZUKI10_bin)
 
     if( ICEFLG == 0 ) then
        nspc = 1

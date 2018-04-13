@@ -1095,7 +1095,7 @@ contains
     integer :: iw, ia, ib
     integer :: n
     !
-    namelist / nm_mp_sn14_init /       &
+    namelist / PARAM_ATMOS_PHY_MP_SN14_init / &
          opt_debug,                  &
          opt_debug_tem,              &
          opt_debug_inc,              &
@@ -1105,7 +1105,7 @@ contains
          ntmax_phase_change,         &
          ntmax_collection
     !
-    namelist / nm_mp_sn14_particles / &
+    namelist / PARAM_ATMOS_PHY_MP_SN14_particles / &
          a_m, b_m, alpha_v, beta_v, gamma_v, &
          alpha_vn, beta_vn,    &
          a_area, b_area, cap,  &
@@ -1173,15 +1173,15 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=nm_mp_sn14_init,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_SN14_init,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
        LOG_INFO("ATMOS_PHY_MP_sn14_init",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       LOG_ERROR("ATMOS_PHY_MP_sn14_init",*) 'Not appropriate names in namelist nm_mp_sn14_init. Check!'
+       LOG_ERROR("ATMOS_PHY_MP_sn14_init",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SN14_init. Check!'
        call PRC_abort
     endif
-    LOG_NML(nm_mp_sn14_init)
+    LOG_NML(PARAM_ATMOS_PHY_MP_SN14_init)
 
     !
     ! default setting
@@ -1272,15 +1272,15 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=nm_mp_sn14_particles,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_SN14_particles,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
        LOG_INFO("ATMOS_PHY_MP_sn14_init",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       LOG_ERROR("ATMOS_PHY_MP_sn14_init",*) 'Not appropriate names in namelist nm_mp_sn14_particles. Check!'
+       LOG_ERROR("ATMOS_PHY_MP_sn14_init",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SN14_particles. Check!'
        call PRC_abort
     endif
-    LOG_NML(nm_mp_sn14_particles)
+    LOG_NML(PARAM_ATMOS_PHY_MP_SN14_particles)
 
     ! [Add] 10/08/03 T.Mitsui
     ! particles shapes are
@@ -2652,7 +2652,7 @@ contains
     logical, save :: nucl_twomey = .false.
     logical, save :: inucl_w     = .false.
     !
-    namelist / nm_mp_sn14_nucleation / &
+    namelist / PARAM_ATMOS_PHY_MP_SN14_nucleation / &
          in_max,                     & !
          c_ccn, kappa,               & ! cloud nucleation
          nm_M92, am_M92, bm_M92,     & ! ice nucleation
@@ -2715,8 +2715,8 @@ contains
     !
     if( flag_first )then
        rewind(IO_FID_CONF)
-       read(IO_FID_CONF, nml=nm_mp_sn14_nucleation, end=100)
-100    LOG_NML(nm_mp_sn14_nucleation)
+       read(IO_FID_CONF, nml=PARAM_ATMOS_PHY_MP_SN14_nucleation, end=100)
+100    LOG_NML(PARAM_ATMOS_PHY_MP_SN14_nucleation)
        flag_first=.false.
 
        if ( MP_couple_aerosol .AND. nucl_twomey ) then
@@ -3211,7 +3211,7 @@ contains
     real(RP), parameter :: d_dec = 4.5185E-5_RP
     !
     logical, save :: flag_first = .true.
-    namelist / nm_mp_sn14_collection / &
+    namelist / PARAM_ATMOS_PHY_MP_SN14_collection / &
          dc0, dc1, di0, ds0, dg0,    &
          sigma_c, sigma_r, sigma_i, sigma_s, sigma_g, &
          opt_stick_KS96,   &
@@ -3282,8 +3282,8 @@ contains
     !
     if( flag_first )then
        rewind( IO_FID_CONF )
-       read( IO_FID_CONF, nml=nm_mp_sn14_collection, end=100 )
-100    LOG_NML(nm_mp_sn14_collection)
+       read( IO_FID_CONF, nml=PARAM_ATMOS_PHY_MP_SN14_collection, end=100 )
+100    LOG_NML(PARAM_ATMOS_PHY_MP_SN14_collection)
        flag_first = .false.
     end if
     !
@@ -4405,7 +4405,7 @@ contains
     logical, save :: opt_fix_taucnd_c=.false.
     logical, save :: flag_first      =.true.
     !
-    namelist / nm_mp_sn14_condensation / &
+    namelist / PARAM_ATMOS_PHY_MP_SN14_condensation / &
          opt_fix_taucnd_c, fac_cndc
 
     real(RP) :: fac_cndc_wrk
@@ -4423,8 +4423,8 @@ contains
     if( flag_first )then
        flag_first = .false.
        rewind(IO_FID_CONF)
-       read  (IO_FID_CONF,nml=nm_mp_sn14_condensation, end=100)
-100    LOG_NML(nm_mp_sn14_condensation)
+       read  (IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_SN14_condensation, end=100)
+100    LOG_NML(PARAM_ATMOS_PHY_MP_SN14_condensation)
     end if
     !
 !    dt_dyn     = dt*ntmax

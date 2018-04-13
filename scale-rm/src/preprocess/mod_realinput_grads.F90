@@ -194,7 +194,7 @@ contains
     character(len=*), intent(in)  :: basename
 
 
-    namelist / PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS / &
+    namelist / PARAM_MKINIT_REAL_GrADS / &
         upper_qv_type
 
     integer :: ielem
@@ -208,13 +208,13 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_GrADS,iostat=ierr)
 
     if( ierr > 0 ) then
-       LOG_ERROR("ParentAtmosSetupGrADS",*) 'Not appropriate names in namelist PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS. Check!'
+       LOG_ERROR("ParentAtmosSetupGrADS",*) 'Not appropriate names in namelist PARAM_MKINIT_REAL_GrADS. Check!'
        call PRC_abort
     endif
-    LOG_NML(PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS)
+    LOG_NML(PARAM_MKINIT_REAL_GrADS)
 
 
     if ( len_trim(basename) == 0 ) then
@@ -693,7 +693,7 @@ contains
                 case("ZERO")
                    ! do nothing
                 case default
-                   LOG_ERROR("ParentAtmosInputGrADS",*) 'upper_qv_type in PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS is invalid! ', upper_qv_type
+                   LOG_ERROR("ParentAtmosInputGrADS",*) 'upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
                    call PRC_abort
                 end select
              endif
@@ -818,7 +818,7 @@ contains
                 case("ZERO")
                    ! do nothing
                 case default
-                   LOG_ERROR("ParentAtmosInputGrADS",*) 'upper_qv_type in PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS is invalid! ', upper_qv_type
+                   LOG_ERROR("ParentAtmosInputGrADS",*) 'upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
                    call PRC_abort
                 end select
              endif

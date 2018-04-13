@@ -40,7 +40,7 @@ module scale_atmos_phy_sf_bulk
   !
   !++ Private parameters & variables
   !
-  real(RP), private            :: ATMOS_PHY_SF_beta   =   1.0_RP ! evaporation efficiency (0-1)
+  real(RP), private :: ATMOS_PHY_SF_BULK_beta = 1.0_RP ! evaporation efficiency (0-1)
 
   !-----------------------------------------------------------------------------
 contains
@@ -52,7 +52,7 @@ contains
     implicit none
 
     namelist / PARAM_ATMOS_PHY_SF_BULK / &
-       ATMOS_PHY_SF_beta
+       ATMOS_PHY_SF_BULK_beta
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -159,7 +159,7 @@ contains
 
     !omp parallel do default(none) &
     !omp private(SFC_QSAT,SFC_QV,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2) &
-    !omp shared (IS,IE,JS,JE,EPSvap,ATMOS_PHY_SF_beta, &
+    !omp shared (IS,IE,JS,JE,EPSvap,ATMOS_PHY_SF_BULK_beta, &
     !omp         ATM_TEMP,ATM_PRES,ATM_QV,ATM_U,ATM_V,ATM_Z1, &
     !omp         SFC_TEMP,SFC_PRES,SFC_PSAT,SFC_Z0M,SFC_Z0H,SFC_Z0E,PBL, &
     !omp         SFLX_MW,SFLX_MU,SFLX_MW,SFLX_QV,U10,V10,T2,Q2)
@@ -168,7 +168,7 @@ contains
        ! qdry = 1 - psat
        SFC_QSAT = EPSvap * SFC_PSAT(i,j) / ( SFC_PRES(i,j) - ( 1.0_RP-EPSvap ) * SFC_PSAT(i,j) )
 
-       SFC_QV = ( 1.0_RP - ATMOS_PHY_SF_beta ) * ATM_QV(i,j) + ATMOS_PHY_SF_beta * SFC_QSAT
+       SFC_QV = ( 1.0_RP - ATMOS_PHY_SF_BULK_beta ) * ATM_QV(i,j) + ATMOS_PHY_SF_BULK_beta * SFC_QSAT
 
        call BULKFLUX( Ustar,         & ! [OUT]
                       Tstar,         & ! [OUT]
