@@ -31,8 +31,6 @@ DATDISTS    = " [4 $(PREPDIR)/topo_d01    topo_d01   ] \
 
 
 
-export SCALE_USE_MASSCHECK = T
-
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.common
 
