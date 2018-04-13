@@ -171,7 +171,7 @@ contains
        ATMOS_PHY_MP_TYPE
     implicit none
 
-    NAMELIST / PARAM_MKINIT_REAL_ATMOS / &
+    namelist / PARAM_MKINIT_REAL_ATMOS / &
        NUMBER_OF_FILES,            &
        NUMBER_OF_TSTEPS,           &
        NUMBER_OF_SKIP_TSTEPS,      &
@@ -448,7 +448,7 @@ contains
     logical                  :: soilwater_DS2VC_flag           ! true: 'critical', false: 'limit'
     logical                  :: elevation_collection = .true.
 
-    NAMELIST / PARAM_MKINIT_REAL_LAND / &
+    namelist / PARAM_MKINIT_REAL_LAND / &
        NUMBER_OF_FILES,            &
        NUMBER_OF_TSTEPS,           &
        NUMBER_OF_SKIP_TSTEPS,      &
@@ -469,7 +469,7 @@ contains
        ELEVATION_COLLECTION,       &
        SERIAL_PROC_READ
 
-    NAMELIST / PARAM_MKINIT_REAL_OCEAN / &
+    namelist / PARAM_MKINIT_REAL_OCEAN / &
        NUMBER_OF_FILES,            &
        NUMBER_OF_TSTEPS,           &
        NUMBER_OF_SKIP_TSTEPS,      &

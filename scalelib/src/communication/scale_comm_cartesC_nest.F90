@@ -320,7 +320,7 @@ contains
     integer :: dims(1)
     logical :: error, existed
 
-    namelist / PARAM_COMM_CARTESC_NEST /      &
+    namelist / PARAM_COMM_CARTESC_NEST / &
        LATLON_CATALOGUE_FNAME,   &
        OFFLINE_PARENT_BASENAME,  &
        OFFLINE_PARENT_PRC_NUM_X, &

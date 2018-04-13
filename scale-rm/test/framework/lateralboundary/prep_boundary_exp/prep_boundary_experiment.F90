@@ -133,13 +133,13 @@ program init_boundary_experiment
   integer :: i ,j ,k, l
   !=============================================================================
 
-  NAMELIST / PARAM_DIMENSION / &
+  namelist / PARAM_DIMENSION / &
      IA,             &
      JA,             &
      KA,             &
      NSTEP
 
-  NAMELIST / PARAM_BOUNDARY_EXP / &
+  namelist / PARAM_BOUNDARY_EXP / &
      lat0,           &
      lon0,           &
      dx,             &

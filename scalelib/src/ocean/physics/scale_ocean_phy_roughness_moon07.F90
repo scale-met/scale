@@ -54,7 +54,7 @@ contains
        OCEAN_PHY_ROUGHNESS_setup
     implicit none
 
-    NAMELIST / PARAM_OCEAN_PHY_ROUGHNESS_MOON07 / &
+    namelist / PARAM_OCEAN_PHY_ROUGHNESS_MOON07 / &
        OCEAN_PHY_ROUGHNESS_moon07_itelim
 
     integer :: ierr

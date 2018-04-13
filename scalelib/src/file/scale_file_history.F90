@@ -366,7 +366,7 @@ contains
     real(DP)               :: FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL   !> Time interval to switch output file
     character(len=H_SHORT) :: FILE_HISTORY_OUTPUT_SWITCH_TUNIT       !> Time unit
 
-    NAMELIST / PARAM_FILE_HISTORY / &
+    namelist / PARAM_FILE_HISTORY / &
        FILE_HISTORY_TITLE,                     &
        FILE_HISTORY_SOURCE,                    &
        FILE_HISTORY_INSTITUTION,               &
@@ -398,7 +398,7 @@ contains
     logical                :: TAVERAGE          !> apply time average?
     character(len=H_SHORT) :: DATATYPE          !> data type
 
-    NAMELIST / HISTORY_ITEM / &
+    namelist / HISTORY_ITEM / &
        NAME,              &
        OUTNAME,           &
        BASENAME,          &

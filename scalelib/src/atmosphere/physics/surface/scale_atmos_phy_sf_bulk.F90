@@ -51,7 +51,7 @@ contains
        PRC_abort
     implicit none
 
-    NAMELIST / PARAM_ATMOS_PHY_SF_BULK / &
+    namelist / PARAM_ATMOS_PHY_SF_BULK / &
        ATMOS_PHY_SF_beta
 
     integer :: ierr

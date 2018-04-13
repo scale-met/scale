@@ -158,7 +158,7 @@ contains
        PRC_LOCAL_COMM_WORLD
     implicit none
 
-    NAMELIST / PARAM_COMM / &
+    namelist / PARAM_COMM / &
        COMM_vsize_max, &
        COMM_vsize_max_pc, &
        COMM_USE_MPI_PC
@@ -3510,10 +3510,6 @@ contains
   subroutine COMM_cleanup
     use mpi
     implicit none
-
-    NAMELIST / PARAM_COMM / &
-       COMM_vsize_max_pc, &
-       COMM_USE_MPI_PC
 
     integer :: i, j, ierr
     !---------------------------------------------------------------------------

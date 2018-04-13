@@ -237,7 +237,7 @@ contains
        UNDEF => CONST_UNDEF
     implicit none
 
-    NAMELIST / PARAM_OCEAN_VARS /  &
+    namelist / PARAM_OCEAN_VARS / &
        OCEAN_RESTART_IN_BASENAME,           &
        OCEAN_RESTART_IN_AGGREGATE,          &
        OCEAN_RESTART_IN_POSTFIX_TIMELABEL,  &

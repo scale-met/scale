@@ -81,7 +81,7 @@ contains
     logical                :: ATMOS_PHY_RD_offline_check_coordinates                        = .true.
     integer                :: ATMOS_PHY_RD_offline_step_limit                               = 0
 
-    NAMELIST / PARAM_ATMOS_PHY_RD_OFFLINE / &
+    namelist / PARAM_ATMOS_PHY_RD_OFFLINE / &
        ATMOS_PHY_RD_offline_basename,              &
        ATMOS_PHY_RD_offline_axistype,              &
        ATMOS_PHY_RD_offline_enable_periodic_year,  &

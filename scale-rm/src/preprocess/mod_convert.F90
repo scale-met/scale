@@ -59,7 +59,7 @@ contains
        CNV2D_setup
     implicit none
 
-    NAMELIST / PARAM_CONVERT / &
+    namelist / PARAM_CONVERT / &
        CONVERT_TOPO,    &
        CONVERT_LANDUSE, &
        CONVERT_2D

@@ -209,7 +209,7 @@ contains
     implicit none
     integer, intent(in) :: QA_MP_in, QS_MP_in, QE_MP_in
 
-    NAMELIST / PARAM_ATMOS_BOUNDARY / &
+    namelist / PARAM_ATMOS_BOUNDARY / &
        ATMOS_BOUNDARY_TYPE,           &
        ATMOS_BOUNDARY_IN_BASENAME,    &
        ATMOS_BOUNDARY_IN_CHECK_COORDINATES, &

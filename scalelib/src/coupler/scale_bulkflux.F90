@@ -123,7 +123,7 @@ contains
     implicit none
     real(RP), intent(in) :: dx
 
-    NAMELIST / PARAM_BULKFLUX / &
+    namelist / PARAM_BULKFLUX / &
        BULKFLUX_type,       &
        BULKFLUX_itr_sa_max, &
        BULKFLUX_itr_nr_max, &

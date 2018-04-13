@@ -69,7 +69,7 @@ contains
 
     character(len=H_SHORT) :: MKTOPO_name = 'NONE'
 
-    NAMELIST / PARAM_MKTOPO / &
+    namelist / PARAM_MKTOPO / &
        MKTOPO_name
 
     integer :: ierr
@@ -153,7 +153,7 @@ contains
     ! flat mountain parameter
     real(RP) :: FLAT_HEIGHT   =  100.0_RP ! height of mountain [m]
 
-    NAMELIST / PARAM_MKTOPO_FLAT / &
+    namelist / PARAM_MKTOPO_FLAT / &
        FLAT_HEIGHT
 
     integer :: ierr
@@ -196,7 +196,7 @@ contains
     real(RP) :: BELL_RY       =   2.E3_RP ! bubble radius   [m]: y
     real(RP) :: BELL_HEIGHT   =  100.0_RP ! height of mountain [m]
 
-    NAMELIST / PARAM_MKTOPO_BELLSHAPE / &
+    namelist / PARAM_MKTOPO_BELLSHAPE / &
        BELL_eachnode, &
        BELL_CX,       &
        BELL_CY,       &
@@ -265,7 +265,7 @@ contains
     real(RP) :: SCHAER_HEIGHT   =  250.0_RP ! height of mountain [m]
     logical  :: SCHAER_SWAPXY   =  .false.
 
-    NAMELIST / PARAM_MKTOPO_SCHAER / &
+    namelist / PARAM_MKTOPO_SCHAER / &
        SCHAER_CX,     &
        SCHAER_RX,     &
        SCHAER_LAMBDA, &

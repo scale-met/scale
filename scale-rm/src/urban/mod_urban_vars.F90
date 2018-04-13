@@ -251,7 +251,7 @@ contains
        UNDEF => CONST_UNDEF
     implicit none
 
-    NAMELIST / PARAM_URBAN_VARS /  &
+    namelist / PARAM_URBAN_VARS / &
        URBAN_RESTART_IN_BASENAME,           &
        URBAN_RESTART_IN_AGGREGATE,          &
        URBAN_RESTART_IN_POSTFIX_TIMELABEL,  &

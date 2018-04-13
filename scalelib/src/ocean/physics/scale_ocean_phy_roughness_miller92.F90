@@ -60,7 +60,7 @@ contains
        OCEAN_PHY_ROUGHNESS_setup
     implicit none
 
-    NAMELIST / PARAM_OCEAN_PHY_ROUGHNESS_MILLER92 / &
+    namelist / PARAM_OCEAN_PHY_ROUGHNESS_MILLER92 / &
        OCEAN_PHY_ROUGHNESS_miller92_CM0,    &
        OCEAN_PHY_ROUGHNESS_miller92_Z0MI,   &
        OCEAN_PHY_ROUGHNESS_miller92_Z0MR,   &

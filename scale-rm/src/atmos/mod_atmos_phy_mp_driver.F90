@@ -238,7 +238,7 @@ contains
        QE_MP
     implicit none
     
-    NAMELIST / PARAM_ATMOS_PHY_MP / &
+    namelist / PARAM_ATMOS_PHY_MP / &
        MP_do_precipitation,     &
        MP_do_negative_fixer,    &
        MP_limit_negative,       &

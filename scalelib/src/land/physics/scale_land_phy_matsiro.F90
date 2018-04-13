@@ -53,7 +53,7 @@ contains
 
     logical :: dummy
 
-    NAMELIST / PARAM_LAND_MATSIRO / &
+    namelist / PARAM_LAND_MATSIRO / &
        dummy
 
     integer :: ierr

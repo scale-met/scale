@@ -95,7 +95,7 @@ contains
     real(RP), intent(in) :: REAL_FZ (0:KA,IA,JA)
     real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
 
-    NAMELIST / PARAM_ATMOS_REFSTATE / &
+    namelist / PARAM_ATMOS_REFSTATE / &
        ATMOS_REFSTATE_IN_BASENAME,  &
        ATMOS_REFSTATE_OUT_BASENAME, &
        ATMOS_REFSTATE_OUT_TITLE,    &

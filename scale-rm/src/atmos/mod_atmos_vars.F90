@@ -484,7 +484,7 @@ contains
        ATMOS_PHY_CP_vars_setup
     implicit none
 
-    NAMELIST / PARAM_ATMOS_VARS / &
+    namelist / PARAM_ATMOS_VARS / &
        ATMOS_RESTART_IN_BASENAME,           &
        ATMOS_RESTART_IN_AGGREGATE,          &
        ATMOS_RESTART_IN_POSTFIX_TIMELABEL,  &

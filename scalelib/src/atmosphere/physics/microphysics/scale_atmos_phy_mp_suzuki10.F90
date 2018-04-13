@@ -287,7 +287,7 @@ contains
        PRC_abort
     implicit none
 
-    NAMELIST / PARAM_BIN / &
+    namelist / PARAM_BIN / &
        nbin, &
        nccn, &
        ICEFLG, &
@@ -410,7 +410,7 @@ contains
     integer :: S10_RNDM_MSPC
     integer :: S10_RNDM_MBIN
 
-    NAMELIST / PARAM_ATMOS_PHY_MP_SUZUKI10 / &
+    namelist / PARAM_ATMOS_PHY_MP_SUZUKI10 / &
        MP_doautoconversion,    &
        MP_couple_aerosol,      &
        RHO_AERO,  &

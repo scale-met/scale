@@ -70,7 +70,7 @@ contains
 
     character(len=H_SHORT) :: CNVLANDUSE_name = 'NONE' ! keep backward compatibility
 
-    NAMELIST / PARAM_CNVLANDUSE / &
+    namelist / PARAM_CNVLANDUSE / &
        CNVLANDUSE_name,                &
        CNVLANDUSE_UseGLCCv2,           &
        CNVLANDUSE_UseLU100M,           &
@@ -229,7 +229,7 @@ contains
     character(len=H_LONG) :: GLCCv2_IN_CATALOGUE  = ''     !< metadata files for GLCCv2
     real(RP)              :: limit_urban_fraction = 1.0_RP !< fraction limiter for urban area
 
-    NAMELIST / PARAM_CNVLANDUSE_GLCCv2 / &
+    namelist / PARAM_CNVLANDUSE_GLCCv2 / &
        GLCCv2_IN_DIR,       &
        GLCCv2_IN_CATALOGUE, &
        limit_urban_fraction
@@ -709,7 +709,7 @@ contains
     character(len=H_LONG) :: LU100M_IN_CATALOGUE = ''      !< metadata files for LU100M
     real(RP)              :: limit_urban_fraction = 1.0_RP !< fraction limiter for urban area
 
-    NAMELIST / PARAM_CNVLANDUSE_LU100M / &
+    namelist / PARAM_CNVLANDUSE_LU100M / &
        LU100M_IN_DIR,       &
        LU100M_IN_CATALOGUE, &
        limit_urban_fraction

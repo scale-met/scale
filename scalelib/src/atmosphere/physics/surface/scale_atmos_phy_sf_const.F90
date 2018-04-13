@@ -66,7 +66,7 @@ contains
        PRC_abort
     implicit none
 
-    NAMELIST / PARAM_ATMOS_PHY_SF_CONST / &
+    namelist / PARAM_ATMOS_PHY_SF_CONST / &
        ATMOS_PHY_SF_FLG_MOM_FLUX,   &
        ATMOS_PHY_SF_U_minM,         &
        ATMOS_PHY_SF_CM_min,         &

@@ -52,7 +52,7 @@ contains
        PRC_abort
     implicit none
 
-    NAMELIST / PARAM_OCEAN_PHY_ROUGHNESS / &
+    namelist / PARAM_OCEAN_PHY_ROUGHNESS / &
        OCEAN_PHY_ROUGHNESS_visck,     &
        OCEAN_PHY_ROUGHNESS_Ustar_min, &
        OCEAN_PHY_ROUGHNESS_Z0M_min,   &

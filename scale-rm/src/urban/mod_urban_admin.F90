@@ -51,7 +51,7 @@ contains
        PRC_abort
     implicit none
 
-    NAMELIST / PARAM_URBAN / &
+    namelist / PARAM_URBAN / &
        URBAN_DYN_TYPE
     integer :: ierr
     !---------------------------------------------------------------------------

@@ -41,7 +41,7 @@ program moist_adiabat
   real(RP) :: x, y
   integer  :: nstep
 
-  NAMELIST / PARAM_MOIST_ADIABAT / &
+  namelist / PARAM_MOIST_ADIABAT / &
        basename_in, &
        rankid, &
        filename_out, &

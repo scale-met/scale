@@ -222,7 +222,7 @@ contains
        ATMOS_HYDROMETEOR_setup
     implicit none
 
-    NAMELIST / PARAM_ATMOS_SATURATION / &
+    namelist / PARAM_ATMOS_SATURATION / &
        ATMOS_SATURATION_ULIMIT_TEMP, &
        ATMOS_SATURATION_LLIMIT_TEMP
 

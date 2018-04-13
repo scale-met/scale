@@ -527,7 +527,7 @@ contains
     integer, intent(in) :: IA
     integer, intent(in) :: JA
 
-    NAMELIST / PARAM_ATMOS_PHY_MP_SN14 / &
+    namelist / PARAM_ATMOS_PHY_MP_SN14 / &
        MP_doautoconversion, &
        MP_ssw_lim,          &
        MP_couple_aerosol
@@ -1095,7 +1095,7 @@ contains
     integer :: iw, ia, ib
     integer :: n
     !
-    namelist /nm_mp_sn14_init/       &
+    namelist / nm_mp_sn14_init /       &
          opt_debug,                  &
          opt_debug_tem,              &
          opt_debug_inc,              &
@@ -1105,7 +1105,7 @@ contains
          ntmax_phase_change,         &
          ntmax_collection
     !
-    namelist /nm_mp_sn14_particles/ &
+    namelist / nm_mp_sn14_particles / &
          a_m, b_m, alpha_v, beta_v, gamma_v, &
          alpha_vn, beta_vn,    &
          a_area, b_area, cap,  &
@@ -2652,7 +2652,7 @@ contains
     logical, save :: nucl_twomey = .false.
     logical, save :: inucl_w     = .false.
     !
-    namelist /nm_mp_sn14_nucleation/ &
+    namelist / nm_mp_sn14_nucleation / &
          in_max,                     & !
          c_ccn, kappa,               & ! cloud nucleation
          nm_M92, am_M92, bm_M92,     & ! ice nucleation
@@ -3211,7 +3211,7 @@ contains
     real(RP), parameter :: d_dec = 4.5185E-5_RP
     !
     logical, save :: flag_first = .true.
-    namelist /nm_mp_sn14_collection/ &
+    namelist / nm_mp_sn14_collection / &
          dc0, dc1, di0, ds0, dg0,    &
          sigma_c, sigma_r, sigma_i, sigma_s, sigma_g, &
          opt_stick_KS96,   &
@@ -4405,7 +4405,7 @@ contains
     logical, save :: opt_fix_taucnd_c=.false.
     logical, save :: flag_first      =.true.
     !
-    namelist /nm_mp_sn14_condensation/ &
+    namelist / nm_mp_sn14_condensation / &
          opt_fix_taucnd_c, fac_cndc
 
     real(RP) :: fac_cndc_wrk

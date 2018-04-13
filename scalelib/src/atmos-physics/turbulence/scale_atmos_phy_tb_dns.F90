@@ -94,7 +94,7 @@ contains
     real(RP), intent(in) :: CDY(JA)
     real(RP), intent(in) :: CZ (KA,IA,JA)
 
-    NAMELIST / PARAM_ATMOS_PHY_TB_DNS / &
+    namelist / PARAM_ATMOS_PHY_TB_DNS / &
        ATMOS_PHY_TB_DNS_NU, &
        ATMOS_PHY_TB_DNS_MU
 

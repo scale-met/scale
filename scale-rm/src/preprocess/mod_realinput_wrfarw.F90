@@ -90,7 +90,7 @@ contains
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
 
-    NAMELIST / PARAM_MKINIT_REAL_WRFARW / &
+    namelist / PARAM_MKINIT_REAL_WRFARW / &
          WRF_FILE_TYPE
 
     integer :: fid
@@ -547,7 +547,7 @@ contains
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
 
-    NAMELIST / PARAM_MKINIT_REAL_WRFARW / &
+    namelist / PARAM_MKINIT_REAL_WRFARW / &
          WRF_FILE_TYPE
 
     integer :: fid
@@ -730,7 +730,7 @@ contains
 
     logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
 
-    NAMELIST / PARAM_MKINIT_REAL_WRFARW / &
+    namelist / PARAM_MKINIT_REAL_WRFARW / &
          WRF_FILE_TYPE
 
     integer :: fid

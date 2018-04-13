@@ -53,7 +53,7 @@ contains
        PRC_abort
     implicit none
 
-    NAMELIST / PARAM_LAND / &
+    namelist / PARAM_LAND / &
        LAND_DYN_TYPE, &
        LAND_SFC_TYPE, &
        SNOW_TYPE

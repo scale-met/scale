@@ -95,7 +95,7 @@ contains
        TEM00 => CONST_TEM00
     implicit none
 
-    NAMELIST / SATURATIONPARAM / &
+    namelist / SATURATIONPARAM / &
        SATURATION_ULIMIT_TEMP, &
        SATURATION_LLIMIT_TEMP
 

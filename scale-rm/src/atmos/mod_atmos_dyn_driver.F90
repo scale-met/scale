@@ -131,7 +131,7 @@ contains
        ATMOS_DYN_setup
     implicit none
 
-    NAMELIST / PARAM_ATMOS_DYN / &
+    namelist / PARAM_ATMOS_DYN / &
        ATMOS_DYN_TINTEG_SHORT_TYPE,           &
        ATMOS_DYN_TINTEG_TRACER_TYPE,          &
        ATMOS_DYN_TINTEG_LARGE_TYPE,           &

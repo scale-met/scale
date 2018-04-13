@@ -247,7 +247,7 @@ contains
        LANDUSE_PFT_nmax
     implicit none
 
-    NAMELIST / PARAM_LAND_VARS /  &
+    namelist / PARAM_LAND_VARS / &
        LAND_RESTART_IN_BASENAME,           &
        LAND_RESTART_IN_AGGREGATE,          &
        LAND_RESTART_IN_POSTFIX_TIMELABEL,  &
@@ -719,10 +719,10 @@ contains
     real(RP)             :: Z0H
     real(RP)             :: Z0E
 
-    NAMELIST / PARAM_LAND_PROPERTY /  &
+    namelist / PARAM_LAND_PROPERTY / &
        LAND_PROPERTY_IN_FILENAME
 
-    NAMELIST / PARAM_LAND_DATA / &
+    namelist / PARAM_LAND_DATA / &
        index,       &
        description, &
        STRGMAX,     &

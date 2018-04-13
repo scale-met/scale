@@ -156,7 +156,7 @@ module mod_realinput_grads
   integer :: outer_nx_sst = -1
   integer :: outer_ny_sst = -1
 
-  NAMELIST / nml_grads_grid / &
+  namelist / nml_grads_grid / &
        outer_nx,     &
        outer_ny,     &
        outer_nz,     &
@@ -194,7 +194,7 @@ contains
     character(len=*), intent(in)  :: basename
 
 
-    NAMELIST / PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS / &
+    namelist / PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_GrADS / &
         upper_qv_type
 
     integer :: ielem
@@ -1962,6 +1962,7 @@ contains
        basename,        &
        io_fid_grads_nml )
     implicit none
+
     character(len=H_SHORT), intent(out) :: grads_item    (:)
     character(len=H_LONG),  intent(out) :: grads_fname   (:)
     character(len=H_LONG),  intent(out) :: grads_dtype   (:)
@@ -1984,20 +1985,20 @@ contains
     integer :: grads_vars_nmax
     integer :: k, n, ielem, ierr
 
-    namelist /grdvar/ &
-         item,      &  ! necessary
-         dtype,     &  ! necessary
-         fname,     &  ! necessary except for linear data
-         swpoint,   &  ! for linear data
-         dd,        &  ! for linear data
-         lnum,      &  ! for levels data
-         lvars,     &  ! for levels data
-         startrec,  &  ! for map data
-         totalrec,  &  ! for map data
-         missval,   &  ! option
-         knum,      &  ! option
-         yrev,      &  ! option
-         fendian       ! option
+    namelist / grdvar / &
+       item,     & ! necessary
+       dtype,    & ! necessary
+       fname,    & ! necessary except for linear data
+       swpoint,  & ! for linear data
+       dd,       & ! for linear data
+       lnum,     & ! for levels data
+       lvars,    & ! for levels data
+       startrec, & ! for map data
+       totalrec, & ! for map data
+       missval,  & ! option
+       knum,     & ! option
+       yrev,     & ! option
+       fendian     ! option
 
     ! listup variables
     if ( io_fid_grads_nml > 0 ) then

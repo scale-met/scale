@@ -91,11 +91,11 @@ contains
        PRC_abort
     implicit none
 
+    namelist / PARAM_USER / &
+       t_npf
+
     integer :: ierr
     !---------------------------------------------------------------------------
-
-    NAMELIST /PARAM_USER/ &
-         t_npf
 
     !--- read namelist
     rewind(IO_FID_CONF)

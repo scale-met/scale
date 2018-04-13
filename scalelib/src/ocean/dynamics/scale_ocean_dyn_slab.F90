@@ -77,7 +77,7 @@ contains
     logical                :: OCEAN_DYN_SLAB_nudging_check_coordinates                        = .true.
     integer                :: OCEAN_DYN_SLAB_nudging_step_limit                               = 0
 
-    NAMELIST / PARAM_OCEAN_DYN_SLAB / &
+    namelist / PARAM_OCEAN_DYN_SLAB / &
        OCEAN_DYN_SLAB_DEPTH,                         &
        OCEAN_DYN_SLAB_nudging,                       &
        OCEAN_DYN_SLAB_nudging_tau,                   &

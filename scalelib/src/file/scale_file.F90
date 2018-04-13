@@ -209,7 +209,7 @@ contains
 
     integer, intent(in) :: myrank
 
-    NAMELIST / PARAM_FILE / &
+    namelist / PARAM_FILE / &
          FILE_AGGREGATE
 
     integer :: ierr
