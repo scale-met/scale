@@ -65,7 +65,7 @@ module mod_cnvtopo
 
   real(RP),               private :: CNVTOPO_unittile_ddeg         =  0.0_RP ! dx for unit tile [deg]
   real(RP),               private :: CNVTOPO_oversampling_factor   =  2.0_RP ! factor of min. dx against the unit tile
-  real(RP),               private :: CNVTOPO_smooth_maxslope_ratio =  1.0_RP ! ratio of DZDX, DZDY
+  real(RP),               private :: CNVTOPO_smooth_maxslope_ratio = 10.0_RP ! ratio of DZDX, DZDY
   real(RP),               private :: CNVTOPO_smooth_maxslope       = -1.0_RP ! [deg]
 
   real(RP),               private :: CNVTOPO_smooth_maxslope_limit
