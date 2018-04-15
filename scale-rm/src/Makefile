@@ -42,6 +42,7 @@ else
 endif
 
 SUB_OBJS =	\
+	mod_admin_versioncheck.o  \
 	mod_admin_time.o          \
 	mod_atmos_admin.o         \
 	mod_ocean_admin.o         \
