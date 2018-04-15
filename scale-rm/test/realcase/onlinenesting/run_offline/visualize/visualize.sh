@@ -40,8 +40,8 @@ rm -f dcl.pdf
 for domain in d02
 do
 
-var__set=(PRES T    U    V    W    RH   QHYD PT  )
-rangeset=(auto auto auto auto auto auto auto auto)
+var__set=(T    U    V    W    RH   QHYD PT  )
+rangeset=(auto auto auto auto auto auto auto)
 
 i=0
 for var in ${var__set[@]}
@@ -53,7 +53,7 @@ do
    fi
 
    # average
-   gpview history_${domain}.pe\*.nc@${var},z=0 --nocont --aspect 1 --mean time --wsn 2 || exit
+   gpview history_${domain}.pe\*.nc@${var},pressure=925 --nocont --aspect 1 --mean time --wsn 2 || exit
    convert -density 150 -rotate 90 +antialias dcl.pdf hist.${var}_${domain}.png
    rm -f dcl.pdf
 
