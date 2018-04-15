@@ -162,10 +162,14 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call MAPPROJECTION_mapfactor( ATMOS_GRID_CARTESC_REAL_LAT  (1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XY), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_XY))
-    call MAPPROJECTION_mapfactor( ATMOS_GRID_CARTESC_REAL_LATUY(1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UY), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_UY))
-    call MAPPROJECTION_mapfactor( ATMOS_GRID_CARTESC_REAL_LATXV(1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_XV))
-    call MAPPROJECTION_mapfactor( ATMOS_GRID_CARTESC_REAL_LATUV(1:IA,1:JA), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_UV))
+    call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA,   &
+         ATMOS_GRID_CARTESC_REAL_LAT  ( :, :), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XY), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_XY))
+    call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA,   &
+         ATMOS_GRID_CARTESC_REAL_LATUY( :,1:), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UY), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_UY))
+    call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA, &
+         ATMOS_GRID_CARTESC_REAL_LATXV(1:, :), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_XV))
+    call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA, &
+         ATMOS_GRID_CARTESC_REAL_LATUV(1:,1:), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_UV))
 
     call ATMOS_GRID_CARTESC_REAL_calc_areavol( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,:,:) )
 
@@ -183,9 +187,10 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call MAPPROJECTION_rotcoef( ATMOS_GRID_CARTESC_METRIC_ROTC(:,:,:), & ! [OUT]
-                       ATMOS_GRID_CARTESC_REAL_LON   (:,:),   & ! [IN]
-                       ATMOS_GRID_CARTESC_REAL_LAT   (:,:)    ) ! [IN]
+    call MAPPROJECTION_rotcoef( IA, 1, IA, JA, 1, JA, &
+         ATMOS_GRID_CARTESC_REAL_LON   (:,:),  & ! [IN]
+         ATMOS_GRID_CARTESC_REAL_LAT   (:,:),  & ! [IN]
+         ATMOS_GRID_CARTESC_METRIC_ROTC(:,:,:) ) ! [OUT]
 
     return
   end subroutine ATMOS_GRID_CARTESC_METRIC_rotcoef
