@@ -55,7 +55,6 @@ module scale_interp
   !
   real(RP), private, parameter :: large_number = 9.999E+15_RP
 
-  integer,  private :: INTERP_divnum       = 10
   integer,  private :: INTERP_weight_order = 2
   real(RP), private :: INTERP_search_limit
 
@@ -64,12 +63,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine INTERP_setup( &
-       divnum,       &
        weight_order, &
        search_limit  )
     implicit none
 
-    integer,  intent(in) :: divnum
     integer,  intent(in) :: weight_order
     real(RP), intent(in), optional :: search_limit
     !---------------------------------------------------------------------------
@@ -77,7 +74,6 @@ contains
     LOG_NEWLINE
     LOG_INFO("INTERP_setup",*) 'Setup'
 
-    INTERP_divnum       = divnum
     INTERP_weight_order = weight_order
 
     INTERP_search_limit = large_number
@@ -197,19 +193,14 @@ contains
   !-----------------------------------------------------------------------------
   ! make interpolation factor using Lat-Lon
   subroutine INTERP_factor2d( &
-       npoints, &
-       IA_ref,  &
-       JA_ref,  &
-       lon_ref, &
-       lat_ref, &
-       IA,      &
-       JA,      &
-       lon,     &
-       lat,     &
-       idx_i,   &
-       idx_j,   &
-       hfact,   &
-       divnum   )
+       npoints,             &
+       IA_ref, JA_ref,      &
+       lon_ref,lat_ref,     &
+       IA, JA,              &
+       lon, lat,            &
+       idx_i, idx_j, hfact, &
+       search_limit,        &
+       weight_order         )
     use scale_prc, only: &
        PRC_abort
     implicit none
@@ -226,7 +217,9 @@ contains
     integer,  intent(out) :: idx_i(IA,JA,npoints)   ! i-index in reference     (target)
     integer,  intent(out) :: idx_j(IA,JA,npoints)   ! j-index in reference     (target)
     real(RP), intent(out) :: hfact(IA,JA,npoints)   ! horizontal interp factor (target)
-    integer,  intent(in), optional :: divnum
+
+    real(RP), intent(in), optional :: search_limit
+    integer,  intent(in), optional :: weight_order
 
     integer  :: IS, IE ! [start,end] index for x-direction
     integer  :: JS, JE ! [start,end] index for y-direction
@@ -248,22 +241,18 @@ contains
                                          lat_ref(:,:),   & ! [IN]
                                          lon    (i,j),   & ! [IN]
                                          lat    (i,j),   & ! [IN]
-                                         IS, IE,         & ! [OUT]
-                                         JS, JE,         & ! [OUT]
-                                         divnum = divnum ) ! [IN]
+                                         IS, IE, JS, JE  ) ! [OUT]
 
        ! main search
-       call INTERP_search_horiz( npoints,        & ! [IN]
-                                 IA_ref, JA_ref, & ! [IN]
-                                 IS, IE,         & ! [IN]
-                                 JS, JE,         & ! [IN]
-                                 lon_ref(:,:),   & ! [IN]
-                                 lat_ref(:,:),   & ! [IN]
-                                 lon    (i,j),   & ! [IN]
-                                 lat    (i,j),   & ! [IN]
-                                 idx_i  (i,j,:), & ! [OUT]
-                                 idx_j  (i,j,:), & ! [OUT]
-                                 hfact  (i,j,:)  ) ! [OUT]
+       call INTERP_search_horiz( npoints,                     & ! [IN]
+                                 IA_ref, JA_ref,              & ! [IN]
+                                 IS, IE, JS, JE,              & ! [IN]
+                                 lon_ref(:,:), lat_ref(:,:),  & ! [IN]
+                                 lon(i,j), lat(i,j),          & ! [IN]
+                                 idx_i(i,j,:), idx_j(i,j,:),  & ! [OUT]
+                                 hfact(i,j,:),                & ! [OUT]
+                                 search_limit = search_limit, & ! [IN]
+                                 weight_order = weight_order  ) ! [IN]
     enddo
     enddo
 
@@ -296,8 +285,7 @@ contains
        idx_j,   &
        hfact,   &
        idx_k,   &
-       vfact,   &
-       divnum   )
+       vfact    )
     use scale_prc, only: &
        PRC_abort
     implicit none
@@ -320,7 +308,6 @@ contains
     real(RP), intent(out) :: hfact(IA,JA,npoints)          ! horizontal interp factor (target)
     integer,  intent(out) :: idx_k(KA,2,IA,JA,npoints)     ! i-index in reference     (target)
     real(RP), intent(out) :: vfact(KA,2,IA,JA,npoints)     ! horizontal interp factor (target)
-    integer,  intent(in), optional :: divnum
 
     integer  :: IS, IE ! [start,end] index for x-direction
     integer  :: JS, JE ! [start,end] index for y-direction
@@ -343,9 +330,7 @@ contains
                                          lat_ref(:,:),   & ! [IN]
                                          lon    (i,j),   & ! [IN]
                                          lat    (i,j),   & ! [IN]
-                                         IS, IE,         & ! [OUT]
-                                         JS, JE,         & ! [OUT]
-                                         divnum = divnum ) ! [IN]
+                                         IS, IE, JS, JE  ) ! [OUT]
 
        ! main search
        call INTERP_search_horiz( npoints,        & ! [IN]
@@ -408,33 +393,28 @@ contains
     real(RP), intent(in)  :: val_ref(IA_ref,JA_ref) ! value                    (reference)
     real(RP), intent(out) :: val    (IA,JA)         ! value                    (target)
 
-    real(RP) :: sw
     integer  :: i, j, n
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('INTERP_interp',3)
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
-    !$omp private(sw)
-!OCL PREFETCH
-    do j = 1, JA
-    do i = 1, IA
-       sw = 0.5_RP + sign(0.5_RP,hfact(i,j,1)-EPS)
-
-       val(i,j) = (        sw ) * hfact(i,j,1) * val_ref(idx_i(i,j,1),idx_j(i,j,1)) &
-                + ( 1.0_RP-sw ) * UNDEF
-    enddo
-    enddo
-
-!OCL SERIAL
-    do n = 2, npoints
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
 !OCL PREFETCH
     do j = 1, JA
     do i = 1, IA
-       val(i,j) = val(i,j) &
-                + hfact(i,j,n) * val_ref(idx_i(i,j,n),idx_j(i,j,n))
-    enddo
+       if ( hfact(i,j,1) < EPS .or. val_ref(idx_i(i,j,1),idx_j(i,j,1)) == UNDEF ) then
+          val(i,j) = UNDEF
+       else
+          val(i,j) = hfact(i,j,1) * val_ref(idx_i(i,j,1),idx_j(i,j,1))
+          do n = 2, npoints
+             if ( val_ref(idx_i(i,j,n),idx_j(i,j,n)) == UNDEF ) then
+                val(i,j) = val(i,j) / sum( hfact(i,j,1:n-1) )
+                exit
+             end if
+             val(i,j) = val(i,j) &
+                      + hfact(i,j,n) * val_ref(idx_i(i,j,n),idx_j(i,j,n))
+          end do
+       end if
     enddo
     enddo
 
@@ -562,11 +542,8 @@ contains
        lat_ref, &
        lon,     &
        lat,     &
-       IS,      &
-       IE,      &
-       JS,      &
-       JE,      &
-       divnum   )
+       IS, IE,  &
+       JS, JE   )
     use scale_const, only: &
        CONST_RADIUS
     implicit none
@@ -581,31 +558,23 @@ contains
     integer,  intent(out) :: IE                     ! end   index for x-direction
     integer,  intent(out) :: JS                     ! start index for y-direction
     integer,  intent(out) :: JE                     ! end   index for y-direction
-    integer,  intent(in), optional :: divnum
 
     real(RP) :: distance, dist
     integer  :: iskip, jskip
     integer  :: i_bulk, j_bulk
-    integer  :: divnum_
 
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if ( present(divnum) ) then
-       divnum_ = divnum
-    else
-       divnum_ = INTERP_divnum
-    end if
+    iskip = max( nint(sqrt(1.0_RP*IA_ref)), 3 )
+    jskip = max( nint(sqrt(1.0_RP*JA_ref)), 3 )
 
-    iskip = max( (IA_ref+1) / divnum_, 1 )
-    jskip = max( (JA_ref+1) / divnum_, 1 )
+    dist   = large_number
+    i_bulk = IA_ref / 2
+    j_bulk = JA_ref / 2
 
-    dist  = large_number
-
-    j = 1 + (jskip/2)
-    do while (j <= JA_ref)
-       i = 1 + (iskip/2)
-       do while (i <= IA_ref)
+    do j = 1 + (jskip/2), JA_ref, jskip
+    do i = 1 + (iskip/2), IA_ref, iskip
 
           distance = haversine( lon, lat, lon_ref(i,j), lat_ref(i,j), CONST_RADIUS )
 
@@ -615,10 +584,8 @@ contains
              j_bulk = j
           endif
 
-          i = i + iskip
-       enddo
-       j = j + jskip
-    enddo
+    end do
+    end do
 
     ! +- 3 is buffer for 12 points
     IS = max( i_bulk - (iskip/2) - 3, 1      )
@@ -631,21 +598,16 @@ contains
 
   !-----------------------------------------------------------------------------
   ! horizontal search of interpolation points for three-points
+!OCL SERIAL
   subroutine INTERP_search_horiz( &
-       npoints, &
-       IA_ref,  &
-       JA_ref,  &
-       IS,      &
-       IE,      &
-       JS,      &
-       JE,      &
-       lon_ref, &
-       lat_ref, &
-       lon,     &
-       lat,     &
-       idx_i,   &
-       idx_j,   &
-       hfact    )
+       npoints,          &
+       IA_ref, JA_ref,   &
+       IS, IE, JS, JE,   &
+       lon_ref, lat_ref, &
+       lon, lat,         &
+       idx_i, idx_j,     &
+       hfact,            &
+       search_limit      )
     use scale_const, only: &
        CONST_RADIUS, &
        CONST_EPS
@@ -668,19 +630,26 @@ contains
     integer,  intent(out) :: idx_j(npoints)         ! j-index in reference     (target)
     real(RP), intent(out) :: hfact(npoints)         ! horizontal interp factor (target)
 
+    real(RP), intent(in), optional :: search_limit
+
     real(RP) :: distance
     real(RP) :: dist(npoints)
     real(RP) :: sum
+    real(RP) :: search_limit_
 
     integer  :: i, j, n
     !---------------------------------------------------------------------------
+
+    if ( present(search_limit) ) then
+       search_limit_ = search_limit
+    else
+       search_limit_ = INTERP_search_limit
+    end if
 
     dist (:) = large_number
     idx_i(:) = -1
     idx_j(:) = -1
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
-    !$omp private(distance)
     do j = JS, JE
     do i = IS, IE
        distance = haversine( lon, lat, lon_ref(i,j), lat_ref(i,j), CONST_RADIUS )
@@ -702,15 +671,23 @@ contains
     if ( abs(dist(1)) < CONST_EPS ) then
        hfact(:) = 0.0_RP
        hfact(1) = 1.0_RP
+    else if ( dist(1) > search_limit_ ) then
+       hfact(:) = 0.0_RP
     else
        ! factor = 1 / distance
-       do n = 1, npoints
-          hfact(n) = 1.0_RP / dist(n)**INTERP_weight_order
-       enddo
+       if ( weight_order_ < 0 ) then
+          do n = 1, npoints
+             hfact(n) = 1.0_RP / dist(n)**(1.0_RP/-weight_order_)
+          enddo
+       else
+          do n = 1, npoints
+             hfact(n) = 1.0_RP / dist(n)**weight_order_
+          enddo
+       end if
 
        ! ignore far point
        do n = 1, npoints
-          if ( dist(n) >= INTERP_search_limit ) then
+          if ( dist(n) >= search_limit_ ) then
              hfact(n) = 0.0_RP
           endif
        enddo

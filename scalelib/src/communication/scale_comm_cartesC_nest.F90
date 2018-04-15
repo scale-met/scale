@@ -472,8 +472,7 @@ contains
        USE_NESTING = .true.
     endif
 
-    call INTERP_setup( interp_search_divnum,    & ! [IN]
-                       COMM_CARTESC_NEST_INTERP_WEIGHT_ORDER ) ! [IN]
+    call INTERP_setup( COMM_CARTESC_NEST_INTERP_WEIGHT_ORDER ) ! [IN]
 
     itp_nh = COMM_CARTESC_NEST_INTERP_LEVEL
     itp_nv = 2

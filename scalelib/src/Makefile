@@ -95,6 +95,7 @@ OBJS = \
 	$(OBJ_DIR)/scale_file_h.o	\
 	$(OBJ_DIR)/scale_file_history.o	\
 	$(OBJ_DIR)/scale_file_history_cartesC.o	\
+	$(OBJ_DIR)/scale_file_tiledata.o	\
 	\
 	$(OBJ_DIR)/scale_atmos_adiabat.o	\
 	$(OBJ_DIR)/scale_atmos_aerosol.o	\
