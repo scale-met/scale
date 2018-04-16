@@ -5,7 +5,7 @@
 echo "+visualize by gnuplot"
 rm -f energy.dat energy_flx.dat mass.dat mass_q.dat
 
-for domain in d01 d02
+for domain in d02
 do
 
 while read -a line
@@ -37,10 +37,10 @@ done
 echo "+visualize by gpview"
 rm -f dcl.pdf
 
-for domain in d01 d02
+for domain in d02
 do
 
-var__set=(PRES T    U    V    W    QV   QHYD)
+var__set=(T    U    V    W    RH   QHYD PT  )
 rangeset=(auto auto auto auto auto auto auto)
 
 i=0
@@ -53,15 +53,15 @@ do
    fi
 
    # average
-   gpview history_${domain}.pe\*.nc@${var},z=0 --nocont --aspect 1 --mean time --wsn 2 || exit
+   gpview history_${domain}.pe\*.nc@${var},pressure=925 --nocont --aspect 1 --mean time --wsn 2 || exit
    convert -density 150 -rotate 90 +antialias dcl.pdf hist.${var}_${domain}.png
    rm -f dcl.pdf
 
    let i="${i} + 1"
 done
 
-var__set=(U10  V10  T2   Q2   SFC_PRES SFC_TEMP PREC LHFLX SHFLX GHFLX SFLX_LW_dn SFLX_SW_dn)
-rangeset=(auto auto auto auto auto     auto     auto auto  auto  auto  auto       auto      )
+var__set=(PREC SFC_PRES SFC_TEMP U10  V10  T2_1h Q2   LHFLX SHFLX GHFLX SFLX_LW_dn SFLX_SW_dn OSR  OLR )
+rangeset=(auto auto     auto     auto auto auto  auto auto  auto  auto  auto       auto       auto auto)
 
 i=0
 for var in ${var__set[@]}

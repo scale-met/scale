@@ -22,7 +22,7 @@ ORG_SRCS    =
 
 # parameters for run
 RUNCONF     = run_launch.conf
-TPROC       = 8
+TPROC       = 9
 
 # required data (parameters,distributed files)
 DATPARAM    = " [${TESTDIR}/data/rad/PARAG.29           PARAG.29         ] \
@@ -34,18 +34,16 @@ DATPARAM    = " [${TESTDIR}/data/rad/PARAG.29           PARAG.29         ] \
                 [${TESTDIR}/data/rad/MIPAS/sum.atm      sum.atm          ] \
                 [${TESTDIR}/data/rad/MIPAS/win.atm      win.atm          ] \
                 [${TESTDIR}/data/land/param.bucket.conf param.bucket.conf] "
-DATDISTS    = " [4 $(PREPDIR)/topo_d01    topo_d01   ] \
-                [4 $(PREPDIR)/topo_d02    topo_d02   ] \
-                [4 $(PREPDIR)/landuse_d01 landuse_d01] \
-                [4 $(PREPDIR)/landuse_d02 landuse_d02] \
-                [4 $(INITDIR)/boundary_d01 boundary_d01] \
-                [4 $(INITDIR)/boundary_d02 boundary_d02] \
-                [4 $(INITDIR)/init_d01_20100501-000000.000 init_d01_20100501-000000.000] \
-                [4 $(INITDIR)/init_d02_20100501-000000.000 init_d02_20100501-000000.000] "
+DATDISTS    = " [3 $(PREPDIR)/topo_d01    topo_d01   ] \
+                [6 $(PREPDIR)/topo_d02    topo_d02   ] \
+                [3 $(PREPDIR)/landuse_d01 landuse_d01] \
+                [6 $(PREPDIR)/landuse_d02 landuse_d02] \
+                [3 $(INITDIR)/boundary_d01 boundary_d01] \
+                [6 $(INITDIR)/boundary_d02 boundary_d02] \
+                [3 $(INITDIR)/init_d01_20100501-000000.000 init_d01_20100501-000000.000] \
+                [6 $(INITDIR)/init_d02_20100501-000000.000 init_d02_20100501-000000.000] "
 
 
-
-export SCALE_USE_MASSCHECK = T
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.common

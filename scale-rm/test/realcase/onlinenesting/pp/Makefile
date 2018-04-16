@@ -16,7 +16,7 @@ ORG_SRCS    =
 # parameters for run
 PPCONF      = pp_d01.conf,pp_d02.conf
 
-TPROC       = 4,4
+TPROC       = 3,6
 
 # required data (parameters,distributed files)
 DATPARAM    = " [$(SCALE_DB)/topo/GTOPO30/Products   input_topo   ] \
@@ -24,8 +24,6 @@ DATPARAM    = " [$(SCALE_DB)/topo/GTOPO30/Products   input_topo   ] \
 DATDISTS    =
 
 
-
-export SCALE_USE_MASSCHECK = T
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.common
