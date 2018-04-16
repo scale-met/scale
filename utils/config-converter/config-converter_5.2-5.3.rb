@@ -16,6 +16,7 @@ fname = ARGV.shift
 hybrid = false
 tb = nil
 bl = nil
+urban_limit = nil
 params = Array.new
 inflag = false
 File.foreach(fname) do |line|
@@ -61,6 +62,10 @@ File.foreach(fname) do |line|
     else
       bl = "MYNN"
     end
+  end
+
+  if /limit_urban_fraction\s*=\s*(.+),?\s*$/i =~ line
+    urban_limit = $1
   end
 
 end
@@ -232,7 +237,6 @@ params.each do |param|
   end
 
   # Surface flux scheme
-
   if /^&PARAM_ATMOS_PHY_SF$/i =~ param_name
     print "&PARAM_ATMOS_PHY_SF_BULK\n"
     param_items.each do |item|
@@ -426,6 +430,27 @@ params.each do |param|
     next
   end
   if /^&PARAM_MKINIT_INTERPORATION$/i =~ param_name
+    next
+  end
+
+  # CNVLANDUSE
+  if /^&PARAM_CNVLANDUSE$/i =~ param_name
+    print param_name, "\n"
+    param_items.each do |item|
+      print item, "\n"
+    end
+    if urban_limit
+      print " CNVLANDUSE_limit_urban_fraction = #{urban_limit},\n"
+    end
+    print "/\n"
+    next
+  end
+  if /^&PARAM_CNVLANDUSE_/i =~ param_name
+    print param_name, "\n"
+    param_items.each do |item|
+      print item, "\n" unless /limit_urban_fraction/ =~ item
+    end
+    print "/\n"
     next
   end
 

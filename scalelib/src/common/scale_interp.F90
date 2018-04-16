@@ -607,7 +607,8 @@ contains
        lon, lat,         &
        idx_i, idx_j,     &
        hfact,            &
-       search_limit      )
+       search_limit,     &
+       weight_order      )
     use scale_const, only: &
        CONST_RADIUS, &
        CONST_EPS
@@ -631,11 +632,13 @@ contains
     real(RP), intent(out) :: hfact(npoints)         ! horizontal interp factor (target)
 
     real(RP), intent(in), optional :: search_limit
+    integer,  intent(in), optional :: weight_order
 
     real(RP) :: distance
     real(RP) :: dist(npoints)
     real(RP) :: sum
     real(RP) :: search_limit_
+    integer  :: weight_order_
 
     integer  :: i, j, n
     !---------------------------------------------------------------------------
@@ -644,6 +647,12 @@ contains
        search_limit_ = search_limit
     else
        search_limit_ = INTERP_search_limit
+    end if
+
+    if ( present(weight_order) ) then
+       weight_order_ = weight_order
+    else
+       weight_order_ = INTERP_weight_order
     end if
 
     dist (:) = large_number

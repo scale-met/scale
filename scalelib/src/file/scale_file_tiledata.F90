@@ -25,6 +25,12 @@ module scale_file_tiledata
   !
   public FILE_TILEDATA_get_info
   public FILE_TILEDATA_get_data
+
+  interface FILE_TILEDATA_get_data
+     module procedure FILE_TILEDATA_get_data_real
+     module procedure FILE_TILEDATA_get_data_int8
+  end interface FILE_TILEDATA_get_data
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -143,7 +149,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> get tile data
-  subroutine FILE_TILEDATA_get_data( &
+  subroutine FILE_TILEDATA_get_data_real( &
        nLATH, nLONH,         &
        dirname,              &
        GLOBAL_IA,            &
@@ -154,7 +160,7 @@ contains
        TILE_IS, TILE_IE,     &
        jsh, jeh, ish, ieh,   &
        data_type,            &
-       HEIGHT, LATH, LONH,   &
+       DATA, LATH, LONH,     &
        min_value,            &
        yrevers               )
     use scale_const, only: &
@@ -181,23 +187,23 @@ contains
     integer,          intent(in)  :: ish
     integer,          intent(in)  :: ieh
     character(len=*), intent(in)  :: data_type
-    real(RP),         intent(out) :: HEIGHT(nLONH,nLATH)
-    real(RP),         intent(out) :: LATH  (nLONH,nLATH)
-    real(RP),         intent(out) :: LONH  (nLONH,nLATH)
+    real(RP),         intent(out) :: DATA(nLONH,nLATH)
+    real(RP),         intent(out) :: LATH(nLONH,nLATH)
+    real(RP),         intent(out) :: LONH(nLONH,nLATH)
     real(RP),         intent(in), optional :: min_value
     logical,          intent(in), optional :: yrevers
 
     abstract interface
        subroutine rd( &
             jsize, isize, &
-            fname, &
-            TILE_HEIGHT, &
-            yrevers      )
+            fname,        &
+            TILE_DATA,    &
+            yrevers       )
          use scale_precision
          integer,          intent(in)  :: jsize
          integer,          intent(in)  :: isize
          character(len=*), intent(in)  :: fname
-         real(RP),         intent(out) :: TILE_HEIGHT(isize,jsize)
+         real(RP),         intent(out) :: TILE_DATA(isize,jsize)
          logical, intent(in), optional :: yrevers
        end subroutine rd
     end interface
@@ -207,7 +213,7 @@ contains
     real(RP) :: min_value_
 
     character(len=H_LONG) :: fname
-    real(RP), allocatable :: TILE_HEIGHT(:,:)
+    real(RP), allocatable :: TILE_DATA(:,:)
     integer :: jsize, isize
     integer :: i, j, ii, jj, t
 
@@ -219,15 +225,15 @@ contains
 
     select case( data_type )
     case ( "int16", "INT16" )
-       read_data => FILE_TILEDATA_read_data_int16
+       read_data => FILE_TILEDATA_read_data_int16_real
     case ( "int32", "INT32" )
-       read_data => FILE_TILEDATA_read_data_int32
+       read_data => FILE_TILEDATA_read_data_int32_real
     case ( "real32", "REAL32" )
-       read_data => FILE_TILEDATA_read_data_real32
+       read_data => FILE_TILEDATA_read_data_real32_real
     case ( "real64", "REAL64" )
-       read_data => FILE_TILEDATA_read_data_real64
+       read_data => FILE_TILEDATA_read_data_real64_real
     case default
-       LOG_ERROR("FILE_TILEDATA_get_data",*) 'data_type is invalid: ', trim(data_type)
+       LOG_ERROR("FILE_TILEDATA_get_data_real",*) 'data_type is invalid: ', trim(data_type)
        call PRC_abort
     end select
 
@@ -235,7 +241,7 @@ contains
 !OCL XFILL
     do j = 1, nLATH
     do i = 1, nLONH
-       HEIGHT(i,j) = UNDEF
+       DATA(i,j) = UNDEF
     end do
     end do
 
@@ -245,18 +251,18 @@ contains
        fname = trim(dirname) // '/' // trim(TILE_fname(t))
 
        LOG_NEWLINE
-       LOG_INFO("FILE_TILEDATA_get_data",*) 'Input data file :', trim(fname)
+       LOG_INFO("FILE_TILEDATA_get_data_real",*) 'Input data file :', trim(fname)
        LOG_INFO_CONT(*) 'Tile   (LAT)    :', TILE_JS(t)*TILE_DLAT/D2R, (TILE_JE(t)+1)*TILE_DLAT/D2R
        LOG_INFO_CONT(*) '       (LON)    :', TILE_IS(t)*TILE_DLON/D2R, (TILE_IE(t)+1)*TILE_DLON/D2R
 
        isize = TILE_IE(t) - TILE_IS(t) + 1
        jsize = TILE_JE(t) - TILE_JS(t) + 1
 
-       allocate( TILE_HEIGHT(isize,jsize) )
+       allocate( TILE_DATA(isize,jsize) )
 
        call read_data( jsize, isize,     & ! [IN]
                        fname,            & ! [IN]
-                       TILE_HEIGHT(:,:), & ! [OUT]
+                       TILE_DATA(:,:),   & ! [OUT]
                        yrevers = yrevers ) ! [IN]
 
        !$omp parallel do &
@@ -267,20 +273,20 @@ contains
           j = TILE_JS(t) + jj - 1
           if ( jsh <= j .and. j <= jeh ) then
              if ( ish <= i .and. i <= ieh ) then
-                if ( TILE_HEIGHT(ii,jj) < min_value_ ) then
-                   HEIGHT(i-ish+1,j-jsh+1) = UNDEF
+                if ( TILE_DATA(ii,jj) < min_value_ ) then
+                   DATA(i-ish+1,j-jsh+1) = UNDEF
                 else
-                   HEIGHT(i-ish+1,j-jsh+1) = TILE_HEIGHT(ii,jj)
+                   DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
                 end if
                 LATH  (i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
                 LONH  (i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP )
              end if
              i = i - GLOBAL_IA
              if ( ish <= i .and. i <= ieh ) then
-                if ( TILE_HEIGHT(ii,jj) < min_value_ ) then
-                   HEIGHT(i-ish+1,j-jsh+1) = UNDEF
+                if ( TILE_DATA(ii,jj) < min_value_ ) then
+                   DATA(i-ish+1,j-jsh+1) = UNDEF
                 else
-                   HEIGHT(i-ish+1,j-jsh+1) = TILE_HEIGHT(ii,jj)
+                   DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
                 end if
                 LATH  (i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
                 LONH  (i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP ) - 2.0 * PI
@@ -289,12 +295,166 @@ contains
        end do
        end do
 
-       deallocate( TILE_HEIGHT )
+       deallocate( TILE_DATA )
 
     enddo ! tile loop
 
     return
-  end subroutine FILE_TILEDATA_get_data
+  end subroutine FILE_TILEDATA_get_data_real
+
+  subroutine FILE_TILEDATA_get_data_int8( &
+       nLATH, nLONH,         &
+       dirname,              &
+       GLOBAL_IA,            &
+       TILE_nmax,            &
+       TILE_DLAT, TILE_DLON, &
+       TILE_fname, TILE_hit, &
+       TILE_JS, TILE_JE,     &
+       TILE_IS, TILE_IE,     &
+       jsh, jeh, ish, ieh,   &
+       data_type,            &
+       DATA, LATH, LONH,     &
+       min_value,            &
+       yrevers               )
+    use scale_const, only: &
+       UNDEF2 => CONST_UNDEF2, &
+       PI    => CONST_PI, &
+       D2R   => CONST_D2R
+    use scale_prc, only: &
+       PRC_abort
+    integer,          intent(in)  :: nLATH
+    integer,          intent(in)  :: nLONH
+    character(len=*), intent(in)  :: dirname
+    integer,          intent(in)  :: GLOBAL_IA
+    integer,          intent(in)  :: TILE_nmax
+    real(RP),         intent(in)  :: TILE_DLAT
+    real(RP),         intent(in)  :: TILE_DLON
+    character(len=*), intent(in)  :: TILE_fname(:)
+    logical,          intent(in)  :: TILE_hit(:)
+    integer,          intent(in)  :: TILE_JS(:)
+    integer,          intent(in)  :: TILE_JE(:)
+    integer,          intent(in)  :: TILE_IS(:)
+    integer,          intent(in)  :: TILE_IE(:)
+    integer,          intent(in)  :: jsh
+    integer,          intent(in)  :: jeh
+    integer,          intent(in)  :: ish
+    integer,          intent(in)  :: ieh
+    character(len=*), intent(in)  :: data_type
+    integer,          intent(out) :: DATA(nLONH,nLATH)
+    real(RP),         intent(out) :: LATH(nLONH,nLATH)
+    real(RP),         intent(out) :: LONH(nLONH,nLATH)
+
+    integer,          intent(in), optional :: min_value
+    logical,          intent(in), optional :: yrevers
+
+    abstract interface
+       subroutine rd( &
+            jsize, isize, &
+            fname, &
+            TILE_DATA, &
+            yrevers      )
+         use scale_precision
+         integer,          intent(in)  :: jsize
+         integer,          intent(in)  :: isize
+         character(len=*), intent(in)  :: fname
+         integer,          intent(out) :: TILE_DATA(isize,jsize)
+         logical, intent(in), optional :: yrevers
+       end subroutine rd
+    end interface
+
+    integer :: min_value_
+
+    procedure(rd), pointer :: read_data
+
+    character(len=H_LONG) :: fname
+    integer, allocatable  :: TILE_DATA(:,:)
+    integer :: jsize, isize
+    integer :: i, j, ii, jj, t
+
+    if ( present(min_value) ) then
+       min_value_ = min_value
+    else
+       min_value_ = - abs(UNDEF2)
+    end if
+
+    select case( data_type )
+    case ( "int8", "INT8" )
+       read_data => FILE_TILEDATA_read_data_int8_int
+    case ( "int16", "INT16" )
+       read_data => FILE_TILEDATA_read_data_int16_int
+    case ( "int32", "INT32" )
+       read_data => FILE_TILEDATA_read_data_int32_int
+    case ( "real32", "REAL32" )
+       read_data => FILE_TILEDATA_read_data_real32_int
+    case default
+       LOG_ERROR("FILE_TILEDATA_get_data_int8",*) 'data_type is invalid: ', trim(data_type)
+       call PRC_abort
+    end select
+
+    !$omp parallel do
+!OCL XFILL
+    do j = 1, nLATH
+    do i = 1, nLONH
+       DATA(i,j) = - 1
+    end do
+    end do
+
+    do t = 1, TILE_nmax
+       if ( .not. TILE_hit(t) ) cycle
+
+       fname = trim(dirname) // '/' // trim(TILE_fname(t))
+
+       LOG_NEWLINE
+       LOG_INFO("FILE_TILEDATA_get_data_int8",*) 'Input data file :', trim(fname)
+       LOG_INFO_CONT(*) 'Tile   (LAT)    :', TILE_JS(t)*TILE_DLAT/D2R, (TILE_JE(t)+1)*TILE_DLAT/D2R
+       LOG_INFO_CONT(*) '       (LON)    :', TILE_IS(t)*TILE_DLON/D2R, (TILE_IE(t)+1)*TILE_DLON/D2R
+
+       isize = TILE_IE(t) - TILE_IS(t) + 1
+       jsize = TILE_JE(t) - TILE_JS(t) + 1
+
+       allocate( TILE_DATA(isize,jsize) )
+
+       call read_data( jsize, isize,     & ! [IN]
+                       fname,            & ! [IN]
+                       TILE_DATA(:,:), & ! [OUT]
+                       yrevers = yrevers ) ! [IN]
+
+       !$omp parallel do &
+       !$omp private(i,j)
+       do jj = 1, jsize
+       do ii = 1, isize
+          i = TILE_IS(t) + ii - 1
+          j = TILE_JS(t) + jj - 1
+          if ( jsh <= j .and. j <= jeh ) then
+             if ( ish <= i .and. i <= ieh ) then
+                if ( TILE_DATA(ii,jj) < min_value_ ) then
+                   DATA(i-ish+1,j-jsh+1) = UNDEF2
+                else
+                   DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
+                end if
+                LATH  (i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
+                LONH  (i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP )
+             end if
+             i = i - GLOBAL_IA
+             if ( ish <= i .and. i <= ieh ) then
+                if ( TILE_DATA(ii,jj) < min_value_ ) then
+                   DATA(i-ish+1,j-jsh+1) = UNDEF2
+                else
+                   DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
+                end if
+                LATH  (i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
+                LONH  (i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP ) - 2.0 * PI
+             end if
+          end if
+       end do
+       end do
+
+       deallocate( TILE_DATA )
+
+    enddo ! tile loop
+
+    return
+  end subroutine FILE_TILEDATA_get_data_int8
 
 
   ! private
@@ -348,10 +508,14 @@ contains
        read(fid,*,iostat=ierr) index, TILE_LATS(t), TILE_LATE(t), & ! South->North
                                       TILE_LONS(t), TILE_LONE(t), & ! WEST->EAST
                                       TILE_fname(t)
+
        TILE_LATS(t) = TILE_LATS(t) * D2R
        TILE_LATE(t) = TILE_LATE(t) * D2R
+
+       if ( TILE_LONS(t) > TILE_LONE(t) ) TILE_LONE(t) = TILE_LONE(t) + 360.0_RP
        TILE_LONS(t) = TILE_LONS(t) * D2R
        TILE_LONE(t) = TILE_LONE(t) * D2R
+
 
        if ( ierr /= 0 ) exit
     end do
@@ -418,12 +582,15 @@ contains
     integer,  intent(out) :: nLATH, nLONH
 
     logical :: hit_lat, hit_lon
+    integer :: nhalo
     integer :: t
 
-    jsh = max( DOMAIN_JS - 2, -floor( 0.5_RP * PI / TILE_DLAT ) )
-    jeh = min( DOMAIN_JE + 2,  floor( 0.5_RP * PI / TILE_DLAT ) )
-    ish = DOMAIN_IS - 2
-    ieh = DOMAIN_IE + 2
+    nhalo = 2
+
+    jsh = max( DOMAIN_JS - nhalo, -floor( 0.5_RP * PI / TILE_DLAT ) )
+    jeh = min( DOMAIN_JE + nhalo,  floor( 0.5_RP * PI / TILE_DLAT ) )
+    ish = DOMAIN_IS - nhalo
+    ieh = DOMAIN_IE + nhalo
 
     nLONH = ieh - ish + 1
     nLATH = jeh - jsh + 1
@@ -470,17 +637,17 @@ contains
     return
   end subroutine FILE_TILEDATA_get_tile_info
 
-  subroutine FILE_TILEDATA_read_data_int16( &
+  subroutine FILE_TILEDATA_read_data_int16_real( &
        jsize, isize, &
        fname, &
-       TILE_HEIGHT, &
+       TILE_DATA, &
        yrevers      )
     use scale_prc, only: &
        PRC_abort
     integer,          intent(in)  :: jsize
     integer,          intent(in)  :: isize
     character(len=*), intent(in)  :: fname
-    real(RP),         intent(out) :: TILE_HEIGHT(isize,jsize)
+    real(RP),         intent(out) :: TILE_DATA(isize,jsize)
 
     logical, intent(in), optional :: yrevers
 
@@ -506,7 +673,7 @@ contains
           iostat = ierr            )
 
     if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_int16",*) 'data file not found!: ', trim(fname)
+       LOG_ERROR("FILE_TILEDATA_read_data_int16_real",*) 'data file not found!: ', trim(fname)
        call PRC_abort
     endif
 
@@ -518,7 +685,7 @@ contains
 !OCL XFILL
        do j = 1, jsize
        do i = 1, isize
-          TILE_HEIGHT(i,j) = buf(i,jsize-j+1)
+          TILE_DATA(i,j) = buf(i,jsize-j+1)
        end do
        end do
     else
@@ -526,25 +693,25 @@ contains
 !OCL XFILL
        do j = 1, jsize
        do i = 1, isize
-          TILE_HEIGHT(i,j) = buf(i,j)
+          TILE_DATA(i,j) = buf(i,j)
        end do
        end do
     end if
 
     return
-  end subroutine FILE_TILEDATA_read_data_int16
+  end subroutine FILE_TILEDATA_read_data_int16_real
 
-  subroutine FILE_TILEDATA_read_data_int32( &
+  subroutine FILE_TILEDATA_read_data_int32_real( &
        jsize, isize, &
        fname, &
-       TILE_HEIGHT, &
+       TILE_DATA, &
        yrevers      )
     use scale_prc, only: &
        PRC_abort
     integer,          intent(in)  :: jsize
     integer,          intent(in)  :: isize
     character(len=*), intent(in)  :: fname
-    real(RP),         intent(out) :: TILE_HEIGHT(isize,jsize)
+    real(RP),         intent(out) :: TILE_DATA(isize,jsize)
 
     logical, intent(in), optional :: yrevers
 
@@ -570,7 +737,7 @@ contains
           iostat = ierr            )
 
     if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_int32",*) 'data file not found!: ', trim(fname)
+       LOG_ERROR("FILE_TILEDATA_read_data_int32_real",*) 'data file not found!: ', trim(fname)
        call PRC_abort
     endif
 
@@ -582,7 +749,7 @@ contains
 !OCL XFILL
        do j = 1, jsize
        do i = 1, isize
-          TILE_HEIGHT(i,j) = buf(i,jsize-j+1)
+          TILE_DATA(i,j) = buf(i,jsize-j+1)
        end do
        end do
     else
@@ -590,25 +757,25 @@ contains
 !OCL XFILL
        do j = 1, jsize
        do i = 1, isize
-          TILE_HEIGHT(i,j) = buf(i,j)
+          TILE_DATA(i,j) = buf(i,j)
        end do
        end do
     end if
 
     return
-  end subroutine FILE_TILEDATA_read_data_int32
+  end subroutine FILE_TILEDATA_read_data_int32_real
 
-  subroutine FILE_TILEDATA_read_data_real32( &
+  subroutine FILE_TILEDATA_read_data_real32_real( &
        jsize, isize, &
        fname, &
-       TILE_HEIGHT, &
+       TILE_DATA, &
        yrevers      )
     use scale_prc, only: &
        PRC_abort
     integer,          intent(in)  :: jsize
     integer,          intent(in)  :: isize
     character(len=*), intent(in)  :: fname
-    real(RP),         intent(out) :: TILE_HEIGHT(isize,jsize)
+    real(RP),         intent(out) :: TILE_DATA(isize,jsize)
 
     logical, intent(in), optional :: yrevers
 
@@ -634,7 +801,7 @@ contains
           iostat = ierr            )
 
     if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_real32",*) 'data file not found!: ', trim(fname)
+       LOG_ERROR("FILE_TILEDATA_read_data_real32_real",*) 'data file not found!: ', trim(fname)
        call PRC_abort
     endif
 
@@ -646,7 +813,7 @@ contains
 !OCL XFILL
        do j = 1, jsize
        do i = 1, isize
-          TILE_HEIGHT(i,j) = buf(i,jsize-j+1)
+          TILE_DATA(i,j) = buf(i,jsize-j+1)
        end do
        end do
     else
@@ -654,25 +821,25 @@ contains
 !OCL XFILL
        do j = 1, jsize
        do i = 1, isize
-          TILE_HEIGHT(i,j) = buf(i,j)
+          TILE_DATA(i,j) = buf(i,j)
        end do
        end do
     end if
 
     return
-  end subroutine FILE_TILEDATA_read_data_real32
+  end subroutine FILE_TILEDATA_read_data_real32_real
 
-  subroutine FILE_TILEDATA_read_data_real64( &
+  subroutine FILE_TILEDATA_read_data_real64_real( &
        jsize, isize, &
        fname, &
-       TILE_HEIGHT, &
+       TILE_DATA, &
        yrevers      )
     use scale_prc, only: &
        PRC_abort
     integer,          intent(in)  :: jsize
     integer,          intent(in)  :: isize
     character(len=*), intent(in)  :: fname
-    real(RP),         intent(out) :: TILE_HEIGHT(isize,jsize)
+    real(RP),         intent(out) :: TILE_DATA(isize,jsize)
 
     logical, intent(in), optional :: yrevers
 
@@ -698,7 +865,7 @@ contains
           iostat = ierr            )
 
     if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_real64",*) 'data file not found!: ', trim(fname)
+       LOG_ERROR("FILE_TILEDATA_read_data_real64_real",*) 'data file not found!: ', trim(fname)
        call PRC_abort
     endif
 
@@ -710,7 +877,7 @@ contains
 !OCL XFILL
        do j = 1, jsize
        do i = 1, isize
-          TILE_HEIGHT(i,j) = buf(i,jsize-j+1)
+          TILE_DATA(i,j) = buf(i,jsize-j+1)
        end do
        end do
     else
@@ -718,12 +885,268 @@ contains
 !OCL XFILL
        do j = 1, jsize
        do i = 1, isize
-          TILE_HEIGHT(i,j) = buf(i,j)
+          TILE_DATA(i,j) = buf(i,j)
        end do
        end do
     end if
 
     return
-  end subroutine FILE_TILEDATA_read_data_real64
+  end subroutine FILE_TILEDATA_read_data_real64_real
+
+  subroutine FILE_TILEDATA_read_data_int8_int( &
+       jsize, isize, &
+       fname, &
+       TILE_DATA, &
+       yrevers      )
+    use scale_prc, only: &
+       PRC_abort
+    integer,          intent(in)  :: jsize
+    integer,          intent(in)  :: isize
+    character(len=*), intent(in)  :: fname
+    integer,          intent(out) :: TILE_DATA(isize,jsize)
+
+    logical, intent(in), optional :: yrevers
+
+    integer(1) :: buf(isize,jsize)
+
+    integer :: fid, ierr
+    logical :: yrevers_
+    integer :: i, j
+
+    if ( present(yrevers) ) then
+       yrevers_ = yrevers
+    else
+       yrevers_ = .false.
+    end if
+
+    fid = IO_get_available_fid()
+    open( fid,                    &
+          file   = fname,         &
+          form   = 'unformatted', &
+          access = 'direct',      &
+          status = 'old',         &
+          recl   = isize*jsize*1, &
+          iostat = ierr            )
+
+    if ( ierr /= 0 ) then
+       LOG_ERROR("FILE_TILEDATA_read_data_int8_int",*) 'data file not found!: ', trim(fname)
+       call PRC_abort
+    endif
+
+    read(fid,rec=1) buf(:,:)
+    close(fid)
+
+    if ( yrevers_ ) then
+       !$omp parallel do
+!OCL XFILL
+       do j = 1, jsize
+       do i = 1, isize
+          TILE_DATA(i,j) = buf(i,jsize-j+1)
+       end do
+       end do
+    else
+       !$omp parallel do
+!OCL XFILL
+       do j = 1, jsize
+       do i = 1, isize
+          TILE_DATA(i,j) = buf(i,j)
+       end do
+       end do
+    end if
+
+    return
+  end subroutine FILE_TILEDATA_read_data_int8_int
+
+  subroutine FILE_TILEDATA_read_data_int16_int( &
+       jsize, isize, &
+       fname, &
+       TILE_DATA, &
+       yrevers      )
+    use scale_prc, only: &
+       PRC_abort
+    integer,          intent(in)  :: jsize
+    integer,          intent(in)  :: isize
+    character(len=*), intent(in)  :: fname
+    integer,          intent(out) :: TILE_DATA(isize,jsize)
+
+    logical, intent(in), optional :: yrevers
+
+    integer(2) :: buf(isize,jsize)
+
+    integer :: fid, ierr
+    logical :: yrevers_
+    integer :: i, j
+
+    if ( present(yrevers) ) then
+       yrevers_ = yrevers
+    else
+       yrevers_ = .false.
+    end if
+
+    fid = IO_get_available_fid()
+    open( fid,                    &
+          file   = fname,         &
+          form   = 'unformatted', &
+          access = 'direct',      &
+          status = 'old',         &
+          recl   = isize*jsize*2, &
+          iostat = ierr            )
+
+    if ( ierr /= 0 ) then
+       LOG_ERROR("FILE_TILEDATA_read_data_int16_int",*) 'data file not found!: ', trim(fname)
+       call PRC_abort
+    endif
+
+    read(fid,rec=1) buf(:,:)
+    close(fid)
+
+    if ( yrevers_ ) then
+       !$omp parallel do
+!OCL XFILL
+       do j = 1, jsize
+       do i = 1, isize
+          TILE_DATA(i,j) = buf(i,jsize-j+1)
+       end do
+       end do
+    else
+       !$omp parallel do
+!OCL XFILL
+       do j = 1, jsize
+       do i = 1, isize
+          TILE_DATA(i,j) = buf(i,j)
+       end do
+       end do
+    end if
+
+    return
+  end subroutine FILE_TILEDATA_read_data_int16_int
+
+  subroutine FILE_TILEDATA_read_data_int32_int( &
+       jsize, isize, &
+       fname, &
+       TILE_DATA, &
+       yrevers      )
+    use scale_prc, only: &
+       PRC_abort
+    integer,          intent(in)  :: jsize
+    integer,          intent(in)  :: isize
+    character(len=*), intent(in)  :: fname
+    integer,          intent(out) :: TILE_DATA(isize,jsize)
+
+    logical, intent(in), optional :: yrevers
+
+    integer(4) :: buf(isize,jsize)
+
+    integer :: fid, ierr
+    logical :: yrevers_
+    integer :: i, j
+
+    if ( present(yrevers) ) then
+       yrevers_ = yrevers
+    else
+       yrevers_ = .false.
+    end if
+
+    fid = IO_get_available_fid()
+    open( fid,                    &
+          file   = fname,         &
+          form   = 'unformatted', &
+          access = 'direct',      &
+          status = 'old',         &
+          recl   = isize*jsize*4, &
+          iostat = ierr            )
+
+    if ( ierr /= 0 ) then
+       LOG_ERROR("FILE_TILEDATA_read_data_int32_int",*) 'data file not found!: ', trim(fname)
+       call PRC_abort
+    endif
+
+    read(fid,rec=1) buf(:,:)
+    close(fid)
+
+    if ( yrevers_ ) then
+       !$omp parallel do
+!OCL XFILL
+       do j = 1, jsize
+       do i = 1, isize
+          TILE_DATA(i,j) = buf(i,jsize-j+1)
+       end do
+       end do
+    else
+       !$omp parallel do
+!OCL XFILL
+       do j = 1, jsize
+       do i = 1, isize
+          TILE_DATA(i,j) = buf(i,j)
+       end do
+       end do
+    end if
+
+    return
+  end subroutine FILE_TILEDATA_read_data_int32_int
+
+  subroutine FILE_TILEDATA_read_data_real32_int( &
+       jsize, isize, &
+       fname, &
+       TILE_DATA, &
+       yrevers      )
+    use scale_prc, only: &
+       PRC_abort
+    integer,          intent(in)  :: jsize
+    integer,          intent(in)  :: isize
+    character(len=*), intent(in)  :: fname
+    integer,          intent(out) :: TILE_DATA(isize,jsize)
+
+    logical, intent(in), optional :: yrevers
+
+    real(4) :: buf(isize,jsize)
+
+    integer :: fid, ierr
+    logical :: yrevers_
+    integer :: i, j
+
+    if ( present(yrevers) ) then
+       yrevers_ = yrevers
+    else
+       yrevers_ = .false.
+    end if
+
+    fid = IO_get_available_fid()
+    open( fid,                    &
+          file   = fname,         &
+          form   = 'unformatted', &
+          access = 'direct',      &
+          status = 'old',         &
+          recl   = isize*jsize*4, &
+          iostat = ierr            )
+
+    if ( ierr /= 0 ) then
+       LOG_ERROR("FILE_TILEDATA_read_data_real32_int",*) 'data file not found!: ', trim(fname)
+       call PRC_abort
+    endif
+
+    read(fid,rec=1) buf(:,:)
+    close(fid)
+
+    if ( yrevers_ ) then
+       !$omp parallel do
+!OCL XFILL
+       do j = 1, jsize
+       do i = 1, isize
+          TILE_DATA(i,j) = buf(i,jsize-j+1)
+       end do
+       end do
+    else
+       !$omp parallel do
+!OCL XFILL
+       do j = 1, jsize
+       do i = 1, isize
+          TILE_DATA(i,j) = buf(i,j)
+       end do
+       end do
+    end if
+
+    return
+  end subroutine FILE_TILEDATA_read_data_real32_int
 
 end module scale_file_tiledata

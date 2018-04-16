@@ -26,6 +26,7 @@ module scale_sort
 
   interface SORT_exec
      module procedure SORT_exec_without_idx
+     module procedure SORT_exec_with_idxs
      module procedure SORT_exec_with_idx
   end interface SORT_exec
 
@@ -46,7 +47,7 @@ contains
   !-----------------------------------------------------------------------------
   !> bubble sort
 !OCL SERIAL
-  subroutine SORT_exec_with_idx( &
+  subroutine SORT_exec_with_idxs( &
       npoints,     &
       val,         &
       idx_i, idx_j )
@@ -83,8 +84,47 @@ contains
     enddo
 
     return
+  end subroutine SORT_exec_with_idxs
+
+!OCL SERIAL
+  subroutine SORT_exec_with_idx( &
+      npoints, &
+      val, index )
+    implicit none
+
+    integer,  intent(in)    :: npoints                ! number of interpolation points
+    real(RP), intent(inout) :: val  (npoints)         ! value to sort
+    integer,  intent(out)   :: index(npoints)         ! index
+
+    integer  :: itmp
+    real(RP) :: vtmp
+
+    integer  :: n1, n2
+    !---------------------------------------------------------------------------
+
+    do n1 = 1, npoints
+       index(n1) = n1
+    end do
+
+    do n1 = 1, npoints-1
+    do n2 = n1+1, npoints
+       if ( val(n1) > val(n2) ) then
+          itmp    = index(n1)
+          vtmp    = val  (n1)
+
+          index(n1) = index(n2)
+          val  (n1) = val  (n2)
+
+          index(n2) = itmp
+          val  (n2) = vtmp
+       endif
+    enddo
+    enddo
+
+    return
   end subroutine SORT_exec_with_idx
 
+!OCL SERIAL
   subroutine SORT_exec_without_idx( &
       npoints, &
       val      )
