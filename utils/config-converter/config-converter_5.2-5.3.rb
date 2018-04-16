@@ -37,7 +37,7 @@ File.foreach(fname) do |line|
     params.push line
   end
 
-  if /ATMOS_PHY_TB_TYPE\s*=\s*[""](\w+)[""]/i =~ line
+  if /ATMOS_PHY_TB_TYPE\s*=\s*["'](\w+)['"]/i =~ line
     case $1.upcase
     when "HYBRID"
       hybrid = true
@@ -51,12 +51,12 @@ File.foreach(fname) do |line|
   end
 
   if hybrid
-    if /ATMOS_PHY_TB_HYBRID_SGS_TYPE\s*=\s*[""](.+)[""]/i =~ line
+    if /ATMOS_PHY_TB_HYBRID_SGS_TYPE\s*=\s*["'](.+)['"]/i =~ line
       tb = $1
     else
       tb = "SMAGORINSKY"
     end
-    if /ATMOS_PHY_TB_HYBRID_PBL_TYPE\s*=\s*[""](.+)[""]/i =~ line
+    if /ATMOS_PHY_TB_HYBRID_PBL_TYPE\s*=\s*["'](.+)['"]/i =~ line
       bl = $1
     else
       bl = "MYNN"
@@ -287,13 +287,13 @@ params.each do |param|
     print param_name, "\n"
     param_items.each do |item|
       next if /LAND_DO/i =~ item
-      if /LAND_TYPE\s*=\s*[""](THIN-)?SLAB[""]/i =~ item
+      if /LAND_TYPE\s*=\s*["'](THIN-)?SLAB["']/i =~ item
         print " LAND_DYN_TYPE = \"BUCKET\",\n"
         print " LAND_SFC_TYPE = \"SKIN\",\n"
-      elsif /LAND_TYPE\s*=\s*[""]THICK-SLAB[""]/i =~ item
+      elsif /LAND_TYPE\s*=\s*["']THICK-SLAB["']/i =~ item
         print " LAND_DYN_TYPE = \"BUCKET\",\n"
         print " LAND_SFC_TYPE = \"COPY\",\n"
-      elsif /LAND_TYPE\s*=\s*[""]CONST[""]/i =~ item
+      elsif /LAND_TYPE\s*=\s*["']CONST["']/i =~ item
         print " LAND_DYN_TYPE = \"CONST\",\n"
         print " LAND_SFC_TYPE = \"COPY\",\n"
       else
@@ -392,7 +392,7 @@ params.each do |param|
     print param_name, "\n"
     param_items.each do |item|
       next if /URBAN_DO/i =~ item
-      if /URBAN_TYPE\s*=\s*[""]SLC[""]/i =~ item
+      if /URBAN_TYPE\s*=\s*["']SLC['"]/i =~ item
         print " URBAN_DYN_TYPE = \"KUSAKA01\",\n"
       else
         print item, "\n"
