@@ -30,7 +30,6 @@ module mod_atmos_phy_rd_vars
   public :: ATMOS_PHY_RD_vars_fillhalo
   public :: ATMOS_PHY_RD_vars_restart_read
   public :: ATMOS_PHY_RD_vars_restart_write
-  public :: ATMOS_PHY_RD_vars_external_in
 
   public :: ATMOS_PHY_RD_vars_restart_create
   public :: ATMOS_PHY_RD_vars_restart_open
@@ -383,31 +382,6 @@ contains
 
     return
   end subroutine ATMOS_PHY_RD_vars_restart_read
-
-  !-----------------------------------------------------------------------------
-  !> Input from External I/O
-  subroutine ATMOS_PHY_RD_vars_external_in( &
-      init_value_in  )
-    implicit none
-
-    real(RP), intent(in) :: init_value_in
-    !---------------------------------------------------------------------------
-
-    LOG_NEWLINE
-    LOG_INFO("ATMOS_PHY_RD_vars_external_in",*) 'External Input (PHY_RD) '
-
-    ATMOS_PHY_RD_SFLX_LW_up  (:,:)     = init_value_in
-    ATMOS_PHY_RD_SFLX_LW_dn  (:,:)     = init_value_in
-    ATMOS_PHY_RD_SFLX_SW_up  (:,:)     = init_value_in
-    ATMOS_PHY_RD_SFLX_SW_dn  (:,:)     = init_value_in
-    ATMOS_PHY_RD_TOAFLX_LW_up(:,:)     = init_value_in
-    ATMOS_PHY_RD_TOAFLX_LW_dn(:,:)     = init_value_in
-    ATMOS_PHY_RD_TOAFLX_SW_up(:,:)     = init_value_in
-    ATMOS_PHY_RD_TOAFLX_SW_dn(:,:)     = init_value_in
-    ATMOS_PHY_RD_SFLX_downall(:,:,:,:) = init_value_in
-
-    return
-  end subroutine ATMOS_PHY_RD_vars_external_in
 
   !-----------------------------------------------------------------------------
   !> Create restart file

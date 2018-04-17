@@ -35,7 +35,6 @@ module mod_urban_vars
   public :: URBAN_vars_restart_write
   public :: URBAN_vars_history
   public :: URBAN_vars_total
-  public :: URBAN_vars_external_in
 
   public :: URBAN_vars_restart_create
   public :: URBAN_vars_restart_open
@@ -734,66 +733,6 @@ contains
 
     return
   end subroutine URBAN_vars_total
-
-  !-----------------------------------------------------------------------------
-  !> Input from External I/O
-  subroutine URBAN_vars_external_in( &
-       URBAN_TC_in,        &
-       URBAN_QC_in,        &
-       URBAN_UC_in,        &
-       URBAN_SFC_TEMP_in,  &
-       URBAN_SFC_albedo_in )
-    implicit none
-
-    real(RP), intent(in) :: URBAN_TC_in        (UIA,UJA)
-    real(RP), intent(in) :: URBAN_QC_in        (UIA,UJA)
-    real(RP), intent(in) :: URBAN_UC_in        (UIA,UJA)
-    real(RP), intent(in) :: URBAN_SFC_TEMP_in  (UIA,UJA)
-    real(RP), intent(in) :: URBAN_SFC_albedo_in(UIA,UJA,2)
-
-    integer :: k
-    !---------------------------------------------------------------------------
-
-    LOG_NEWLINE
-    LOG_INFO("URBAN_vars_external_in",*) 'External Input (coupler) '
-
-    URBAN_TR(:,:) = URBAN_SFC_TEMP_in(:,:)
-    URBAN_TB(:,:) = URBAN_SFC_TEMP_in(:,:)
-    URBAN_TG(:,:) = URBAN_SFC_TEMP_in(:,:)
-
-    URBAN_TC(:,:) = URBAN_TC_in(:,:)
-    URBAN_QC(:,:) = URBAN_QC_in(:,:)
-    URBAN_UC(:,:) = URBAN_UC_in(:,:)
-
-    do k = UKS, UKE
-       URBAN_TRL(k,:,:) = URBAN_SFC_TEMP_in(:,:)
-       URBAN_TBL(k,:,:) = URBAN_SFC_TEMP_in(:,:)
-       URBAN_TGL(k,:,:) = URBAN_SFC_TEMP_in(:,:)
-    end do
-
-    URBAN_RAINR(:,:) = 0.0_RP
-    URBAN_RAINB(:,:) = 0.0_RP
-    URBAN_RAING(:,:) = 0.0_RP
-    URBAN_ROFF (:,:) = 0.0_RP
-
-    URBAN_SFC_TEMP  (:,:)   = URBAN_SFC_TEMP_in  (:,:)
-    URBAN_SFC_albedo(:,:,:) = URBAN_SFC_albedo_in(:,:,:)
-
-    URBAN_Z0M      (:,:) = 2.0_RP ! tentative, will be replace in urban scheme
-    URBAN_Z0H      (:,:) = 0.2_RP ! tentative, will be replace in urban scheme
-    URBAN_Z0E      (:,:) = 0.2_RP ! tentative, will be replace in urban scheme
-    URBAN_SFLX_MW  (:,:) = 0.0_RP
-    URBAN_SFLX_MU  (:,:) = 0.0_RP
-    URBAN_SFLX_MV  (:,:) = 0.0_RP
-    URBAN_SFLX_SH  (:,:) = 0.0_RP
-    URBAN_SFLX_LH  (:,:) = 0.0_RP
-    URBAN_SFLX_GH  (:,:) = 0.0_RP
-    URBAN_SFLX_evap(:,:) = 0.0_RP
-
-    call URBAN_vars_total
-
-    return
-  end subroutine URBAN_vars_external_in
 
   !-----------------------------------------------------------------------------
   !> Create urban restart file

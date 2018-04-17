@@ -34,7 +34,6 @@ module mod_land_vars
   public :: LAND_vars_restart_write
   public :: LAND_vars_history
   public :: LAND_vars_total
-  public :: LAND_vars_external_in
 
   public :: LAND_vars_restart_create
   public :: LAND_vars_restart_open
@@ -661,42 +660,6 @@ contains
 
     return
   end subroutine LAND_vars_total
-
-  !-----------------------------------------------------------------------------
-  !> Input from External I/O
-  subroutine LAND_vars_external_in( &
-      LAND_TEMP_in,      &
-      LAND_WATER_in,     &
-      LAND_SFC_TEMP_in,  &
-      LAND_SFC_albedo_in )
-    implicit none
-
-    real(RP), intent(in) :: LAND_TEMP_in (:,:,:)
-    real(RP), intent(in) :: LAND_WATER_in(:,:,:)
-    real(RP), intent(in) :: LAND_SFC_TEMP_in  (LIA,LJA)
-    real(RP), intent(in) :: LAND_SFC_albedo_in(LIA,LJA,2)
-    !---------------------------------------------------------------------------
-
-    LOG_NEWLINE
-    LOG_INFO("LAND_vars_external_in",*) 'External Input (land) '
-
-    LAND_TEMP      (:,:,:) = LAND_TEMP_in      (:,:,:)
-    LAND_WATER     (:,:,:) = LAND_WATER_in     (:,:,:)
-    LAND_SFC_TEMP  (:,:)   = LAND_SFC_TEMP_in  (:,:)
-    LAND_SFC_albedo(:,:,:) = LAND_SFC_albedo_in(:,:,:)
-
-    LAND_SFLX_MW  (:,:) = 0.0_RP
-    LAND_SFLX_MU  (:,:) = 0.0_RP
-    LAND_SFLX_MV  (:,:) = 0.0_RP
-    LAND_SFLX_SH  (:,:) = 0.0_RP
-    LAND_SFLX_LH  (:,:) = 0.0_RP
-    LAND_SFLX_GH  (:,:) = 0.0_RP
-    LAND_SFLX_evap(:,:) = 0.0_RP
-
-    call LAND_vars_total
-
-    return
-  end subroutine LAND_vars_external_in
 
   !-----------------------------------------------------------------------------
   !> Budget monitor for land

@@ -643,51 +643,6 @@ contains
   end subroutine OCEAN_vars_total
 
   !-----------------------------------------------------------------------------
-  !> Input from External I/O
-  subroutine OCEAN_vars_external_in( &
-       OCEAN_TEMP_in,       &
-       OCEAN_SFC_TEMP_in,   &
-       OCEAN_SFC_albedo_in, &
-       OCEAN_SFC_Z0M_in,    &
-       OCEAN_SFC_Z0H_in,    &
-       OCEAN_SFC_Z0E_in     )
-    implicit none
-
-    real(RP), intent(in) :: OCEAN_TEMP_in      (OKMAX,OIA,OJA)
-    real(RP), intent(in) :: OCEAN_SFC_TEMP_in  (OIA,OJA)
-    real(RP), intent(in) :: OCEAN_SFC_albedo_in(OIA,OJA,2)
-    real(RP), intent(in) :: OCEAN_SFC_Z0M_in   (OIA,OJA)
-    real(RP), intent(in) :: OCEAN_SFC_Z0H_in   (OIA,OJA)
-    real(RP), intent(in) :: OCEAN_SFC_Z0E_in   (OIA,OJA)
-    !---------------------------------------------------------------------------
-
-    LOG_NEWLINE
-    LOG_INFO("OCEAN_vars_external_in",*) 'External Input file (ocean) '
-
-    OCEAN_TEMP      (:,:,:) = OCEAN_TEMP_in      (:,:,:)
-
-    OCEAN_SFC_TEMP  (:,:)   = OCEAN_SFC_TEMP_in  (:,:)
-    OCEAN_SFC_albedo(:,:,:) = OCEAN_SFC_albedo_in(:,:,:)
-    OCEAN_SFC_Z0M   (:,:)   = OCEAN_SFC_Z0M_in   (:,:)
-    OCEAN_SFC_Z0H   (:,:)   = OCEAN_SFC_Z0H_in   (:,:)
-    OCEAN_SFC_Z0E   (:,:)   = OCEAN_SFC_Z0E_in   (:,:)
-
-    OCEAN_SFLX_MW   (:,:) = 0.0_RP
-    OCEAN_SFLX_MU   (:,:) = 0.0_RP
-    OCEAN_SFLX_MV   (:,:) = 0.0_RP
-    OCEAN_SFLX_SH   (:,:) = 0.0_RP
-    OCEAN_SFLX_LH   (:,:) = 0.0_RP
-    OCEAN_SFLX_evap (:,:) = 0.0_RP
-    OCEAN_SFLX_WH   (:,:) = 0.0_RP
-    OCEAN_SFLX_water(:,:) = 0.0_RP
-    OCEAN_SFLX_ice  (:,:) = 0.0_RP
-
-    call OCEAN_vars_total
-
-    return
-  end subroutine OCEAN_vars_external_in
-
-  !-----------------------------------------------------------------------------
   !> Create ocean restart file
   subroutine OCEAN_vars_restart_create
     use scale_time, only: &

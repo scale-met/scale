@@ -30,7 +30,6 @@ module mod_atmos_phy_sf_vars
   public :: ATMOS_PHY_SF_vars_fillhalo
   public :: ATMOS_PHY_SF_vars_restart_read
   public :: ATMOS_PHY_SF_vars_restart_write
-  public :: ATMOS_PHY_SF_vars_external_in
 
   public :: ATMOS_PHY_SF_vars_restart_create
   public :: ATMOS_PHY_SF_vars_restart_open
@@ -396,43 +395,6 @@ contains
 
     return
   end subroutine ATMOS_PHY_SF_vars_restart_read
-
-  !-----------------------------------------------------------------------------
-  !> Input from External I/O
-  subroutine ATMOS_PHY_SF_vars_external_in( &
-      sfc_temp_in,   &
-      albedo_lw_in,  &
-      albedo_sw_in,  &
-      sfc_z0m_in,    &
-      sfc_z0h_in,    &
-      sfc_z0e_in     )
-    use scale_const, only: &
-       I_SW => CONST_I_SW, &
-       I_LW => CONST_I_LW
-    implicit none
-
-    real(RP), intent(in) :: sfc_temp_in (:,:)
-    real(RP), intent(in) :: albedo_lw_in(:,:)
-    real(RP), intent(in) :: albedo_sw_in(:,:)
-    real(RP), intent(in) :: sfc_z0m_in  (:,:)
-    real(RP), intent(in) :: sfc_z0h_in  (:,:)
-    real(RP), intent(in) :: sfc_z0e_in  (:,:)
-    !---------------------------------------------------------------------------
-
-    LOG_NEWLINE
-    LOG_INFO("ATMOS_PHY_SF_vars_external_in",*) 'External Input (PHY_SF) '
-
-    ATMOS_PHY_SF_SFC_TEMP   (:,:)      = sfc_temp_in (:,:)
-    ATMOS_PHY_SF_SFC_albedo (:,:,I_LW) = albedo_lw_in(:,:)
-    ATMOS_PHY_SF_SFC_albedo (:,:,I_SW) = albedo_sw_in(:,:)
-    ATMOS_PHY_SF_SFC_Z0M    (:,:)      = sfc_z0m_in  (:,:)
-    ATMOS_PHY_SF_SFC_Z0H    (:,:)      = sfc_z0h_in  (:,:)
-    ATMOS_PHY_SF_SFC_Z0E    (:,:)      = sfc_z0e_in  (:,:)
-
-    call ATMOS_PHY_SF_vars_fillhalo
-
-    return
-  end subroutine ATMOS_PHY_SF_vars_external_in
 
   !-----------------------------------------------------------------------------
   !> Create restart file
