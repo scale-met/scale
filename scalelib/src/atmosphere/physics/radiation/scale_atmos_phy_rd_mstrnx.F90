@@ -20,6 +20,7 @@ module scale_atmos_phy_rd_mstrnx
   use scale_precision
   use scale_io
   use scale_prof
+  use scale_cpl_sfc_index
 
   use scale_atmos_phy_rd_common, only: &
      I_SW, &
@@ -52,7 +53,6 @@ module scale_atmos_phy_rd_mstrnx
   private :: RD_MSTRN_setup
   private :: RD_MSTRN_DTRN3
   private :: RD_MSTRN_two_stream
-  private :: RD_albedo_ocean
 
   !-----------------------------------------------------------------------------
   !
@@ -210,12 +210,6 @@ module scale_atmos_phy_rd_mstrnx
   real(RP), private :: Wmns(2), Wpls(2) ! W-, W+
   real(RP), private :: Wbar(2), Wscale(2)
 
-  ! for ocean albedo
-  real(RP), private :: c_ocean_albedo(5,3)
-  data c_ocean_albedo / -2.8108_RP   , -1.3651_RP,  2.9210E1_RP, -4.3907E1_RP,  1.8125E1_RP, &
-                         6.5626E-1_RP, -8.7253_RP, -2.7749E1_RP,  4.9486E1_RP, -1.8345E1_RP, &
-                        -6.5423E-1_RP,  9.9967_RP,  2.7769_RP  , -1.7620E1_RP,  7.0838_RP    /
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -368,7 +362,7 @@ contains
        fact_ocean,            &
        fact_land,             &
        fact_urban,            &
-       temp_sfc, albedo_land, &
+       temp_sfc, albedo_sfc,  &
        solins, cosSZA,        &
        CLDFRAC, MP_Re, MP_Qe, &
 !       AE_Re, AE_Qe,          &
@@ -412,7 +406,7 @@ contains
     real(RP), intent(in)  :: fact_land      (IA,JA)
     real(RP), intent(in)  :: fact_urban     (IA,JA)
     real(RP), intent(in)  :: temp_sfc       (IA,JA)
-    real(RP), intent(in)  :: albedo_land    (IA,JA,2)
+    real(RP), intent(in)  :: albedo_sfc     (IA,JA,N_RAD_DIR,N_RAD_RGN)
     real(RP), intent(in)  :: solins         (IA,JA)
     real(RP), intent(in)  :: cosSZA         (IA,JA)
     real(RP), intent(in)  :: cldfrac        (KA,IA,JA)
@@ -422,7 +416,7 @@ contains
 !    real(RP), intent(in)  :: AE_Qe          (KA,IA,JA,N_AE)
     real(RP), intent(out) :: flux_rad       (KA,IA,JA,2,2,2)
     real(RP), intent(out) :: flux_rad_top   (IA,JA,2,2,2)
-    real(RP), intent(out) :: flux_rad_sfc_dn(IA,JA,2,2)
+    real(RP), intent(out) :: flux_rad_sfc_dn(IA,JA,N_RAD_DIR,N_RAD_RGN)
 
     real(RP), intent(out), optional :: dtau_s(KA,IA,JA) ! 0.67 micron cloud optical depth
     real(RP), intent(out), optional :: dem_s (KA,IA,JA) ! 10.5 micron cloud emissivity
@@ -737,7 +731,7 @@ contains
          aerosol_conc_merge(:,:,:,:), aerosol_radi_merge(:,:,:,:), & ! [IN]
          I_MPAE2RD(:),                                             & ! [IN]
          cldfrac_merge(:,:,:),                                     & ! [IN]
-         albedo_land(:,:,:),                                       & ! [IN]
+         albedo_sfc(:,:,:,:),                                      & ! [IN]
          fact_ocean(:,:), fact_land(:,:), fact_urban(:,:),         & ! [IN]
          flux_rad_merge(:,:,:,:,:,:), flux_rad_sfc_dn(:,:,:,:),    & ! [OUT]
          tauCLD_067u(:,:,:), emisCLD_105u(:,:,:)                   ) ! [OUT]
@@ -1117,7 +1111,6 @@ contains
     !$acc& pcopyin(radmode, ngasabs, igasabs) &
     !$acc& pcopyin(fsol, q, qmol, rayleigh, acfc, nch, AKD, SKD) &
     !$acc& pcopyin(Wmns, Wpls, Wscale, W, M) &
-    !$acc& pcopyin(c_ocean_albedo)
 
     return
   end subroutine RD_MSTRN_setup
@@ -1147,7 +1140,7 @@ contains
        aerosol_radi, &
        aero2ptype,   &
        cldfrac,      &
-       albedo_land,  &
+       albedo_sfc,   &
        fact_ocean,   &
        fact_land,    &
        fact_urban,   &
@@ -1187,12 +1180,12 @@ contains
     real(RP), intent(in)  :: aerosol_radi(rd_kmax,IA,JA,naero)
     integer,  intent(in)  :: aero2ptype  (naero)
     real(RP), intent(in)  :: cldfrac     (rd_kmax,IA,JA)
-    real(RP), intent(in)  :: albedo_land (IA,JA,2)
+    real(RP), intent(in)  :: albedo_sfc  (IA,JA,N_RAD_DIR,N_RAD_RGN)
     real(RP), intent(in)  :: fact_ocean  (IA,JA)
     real(RP), intent(in)  :: fact_land   (IA,JA)
     real(RP), intent(in)  :: fact_urban  (IA,JA)
     real(RP), intent(out) :: rflux       (rd_kmax+1,IA,JA,2,2,MSTRN_ncloud)
-    real(RP), intent(out) :: rflux_sfc_dn(IA,JA,2,2)                        ! surface downward radiation flux (LW/SW,direct/diffuse)
+    real(RP), intent(out) :: rflux_sfc_dn(IA,JA,N_RAD_DIR,N_RAD_RGN)        ! surface downward radiation flux (direct/diffuse,IR/NIR/VIS)
     real(RP), intent(out) :: tauCLD_067u (rd_kmax,IA,JA)                    ! 0.67 micron cloud optical depth
     real(RP), intent(out) :: emisCLD_105u(rd_kmax,IA,JA)                    ! 10.5 micron cloud emissivity
 
@@ -1218,11 +1211,6 @@ contains
     real(RP) :: omgPR   (rd_kmax,IA,JA,MSTRN_ncloud)               ! single scattering albedo by Rayleigh/cloud/aerosol
     real(RP) :: optparam(rd_kmax,IA,JA,MSTRN_nmoment,MSTRN_ncloud) ! optical parameters
     real(RP) :: q_fit, dp_P
-
-    ! for albedo
-    real(RP) :: albedo_sfc  (IA,JA,MSTRN_ncloud) ! surface albedo
-!     real(RP) :: albedo_ocean(IA,JA,2, MSTRN_ncloud) ! surface albedo
-!     real(RP) :: tau_column  (IA,JA, MSTRN_ncloud)
 
     ! for planck functions
     real(RP) :: bbar (rd_kmax  ,IA,JA) ! planck functions for thermal source at the interface
@@ -1250,7 +1238,7 @@ contains
     real(RP) :: zerosw
     real(RP) :: valsum
     integer  :: chmax
-    integer  :: ip, ir, irgn
+    integer  :: ip, ir, irgn, irgn_alb
     integer  :: igas, icfc, iaero, iptype
     integer  :: iw, ich, iplk, icloud, im
     integer  :: k, i, j
@@ -1258,9 +1246,9 @@ contains
 
     !$acc data pcopy(rflux) &
     !$acc& pcopyin(solins, cosSZA, rhodz, pres, temp, temph, temp_sfc, gas, cfc) &
-    !$acc& pcopyin(aerosol_conc, aerosol_radi, aero2ptype, cldfrac, albedo_land, fact_ocean, fact_land, fact_urban) &
+    !$acc& pcopyin(aerosol_conc, aerosol_radi, aero2ptype, cldfrac, albedo_sfc, fact_ocean, fact_land, fact_urban) &
     !$acc& create(dz_std, logP, logT, indexP, factP, factT32, factT21, indexR, factR) &
-    !$acc& create(tauGAS, tauPR, omgPR, optparam, albedo_sfc) &
+    !$acc& create(tauGAS, tauPR, omgPR, optparam) &
     !$acc& create(bbar, bbarh, b_sfc) &
     !$acc& create(tau, omg, g, b, fsol_rgn, flux, flux_direct)
 
@@ -1401,7 +1389,22 @@ contains
     !$acc wait
 
     do iw = 1, MSTRN_nband
-       irgn = iflgb(I_SWLW,iw) + 1
+       if ( iflgb(I_SWLW,iw) == 0 ) then ! Long wave region
+
+          irgn     = I_LW
+          irgn_alb = I_R_IR ! IR
+
+       else ! Short wave region
+
+          irgn = I_SW
+          if ( waveh(iw) >= 10000.0_RP / 0.7_RP ) then
+             irgn_alb = I_R_VIS ! Visible
+          else
+             irgn_alb = I_R_NIR ! Near-IR
+          endif
+
+       endif
+
        chmax = nch(iw)
 
        !---< interpolation of gas parameters (P-T fitting) >---
@@ -1665,50 +1668,6 @@ contains
           !$acc end kernels
        enddo
 
-       !--- Albedo
-       ! [NOTE] mstrn has look-up table for albedo.
-       !        Original scheme calculates albedo by using land-use index (and surface wetness).
-       !        In the atmospheric model, albedo is calculated by surface model.
-!OCL SERIAL
-       do icloud = 1, MSTRN_ncloud
-!           !$acc kernels pcopy(tau_column) pcopyin(tauPR) async(0)
-!           !$acc loop gang
-!!OCL PARALLEL
-!           do j = JS, JE
-!           !$acc loop gang private(valsum)
-!           do i = IS, IE
-!              valsum = 0.0_RP
-!              !$acc loop gang vector(32) reduction(+:valsum)
-!              do k = 1, rd_kmax
-!                 valsum = valsum + tauPR(k,i,j,icloud) ! layer-total(for ocean albedo)
-!              enddo
-!              tau_column(i,j,icloud) = valsum
-!           enddo
-!           enddo
-!           !$acc end kernels
-
-!          call RD_albedo_ocean( &
-!               IA, IS, IE, JA, JS, JE, &
-!               cosSZA      (:,:),          & ! [IN]
-!               tau_column  (:,:,icloud),   & ! [IN]
-!               albedo_ocean(:,:,:,icloud) )  ! [OUT]
-
-!          !$acc kernels pcopy(albedo_sfc) pcopyin(fact_ocean, fact_land, fact_urban, albedo_ocean, albedo_land) async(0)
-          !$acc kernels pcopy(albedo_sfc) pcopyin(albedo_land) async(0)
-          !$acc loop gang vector(4)
-!OCL PARALLEL
-          do j = JS, JE
-          !$acc loop gang vector(32)
-          do i = IS, IE
-             albedo_sfc(i,j,icloud) = albedo_land(i,j,irgn)
-!             albedo_sfc(i,j,icloud) = fact_ocean(i,j) * albedo_ocean(i,j,irgn,icloud) &
-!                                    + fact_land (i,j) * albedo_land (i,j,irgn) &
-!                                    + fact_urban(i,j) * albedo_land (i,j,irgn) ! tentative
-          enddo
-          enddo
-          !$acc end kernels
-       enddo
-
        if ( waveh(iw) <= 1.493E+4_RP .AND. 1.493E+4_RP < waveh(iw+1) ) then ! 0.67 micron
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k) &
@@ -1913,22 +1872,22 @@ contains
 
           ! two-stream transfer
           call PROF_rapstart('RD_MSTRN_twst', 3)
-          call RD_MSTRN_two_stream( &
-               RD_KMAX, IA, IS, IE, JA, JS, JE, &
-               iw, ich,                & ! [IN]
-               cosSZA     (:,:),       & ! [IN]
-               fsol_rgn   (:,:),       & ! [IN]
-               irgn,                   & ! [IN]
-               tau        (:,:,:,:),   & ! [IN]
-               omg        (:,:,:,:),   & ! [IN]
-               g          (:,:,:,:,:), & ! [IN]
-               b          (:,:,:,:,:), & ! [IN]
-               b_sfc      (:,:),       & ! [IN]
-               albedo_sfc (:,:,:),     & ! [IN]
-               cldfrac    (:,:,:),     & ! [IN]
-               flux       (:,:,:,:,:), & ! [OUT]
-               flux_direct(:,:,:,:),   & ! [OUT]
-               emisCLD    (:,:,:)      ) ! [OUT]
+          call RD_MSTRN_two_stream( RD_KMAX,                     & ! [IN]
+                                    IA, IS, IE, JA, JS, JE,      & ! [IN]
+                                    iw, ich,                     & ! [IN]
+                                    cosSZA     (:,:),            & ! [IN]
+                                    fsol_rgn   (:,:),            & ! [IN]
+                                    irgn,                        & ! [IN]
+                                    tau        (:,:,:,:),        & ! [IN]
+                                    omg        (:,:,:,:),        & ! [IN]
+                                    g          (:,:,:,:,:),      & ! [IN]
+                                    b          (:,:,:,:,:),      & ! [IN]
+                                    b_sfc      (:,:),            & ! [IN]
+                                    albedo_sfc (:,:,:,irgn_alb), & ! [IN]
+                                    cldfrac    (:,:,:),          & ! [IN]
+                                    flux       (:,:,:,:,:),      & ! [OUT]
+                                    flux_direct(:,:,:,:),        & ! [OUT]
+                                    emisCLD    (:,:,:)           ) ! [OUT]
           call PROF_rapend  ('RD_MSTRN_twst', 3)
 
 !OCL SERIAL
@@ -1953,9 +1912,10 @@ contains
 
           do j = JS, JE
           do i = IS, IE
-             rflux_sfc_dn(i,j,irgn,1) = rflux_sfc_dn(i,j,irgn,1) + flux_direct(rd_kmax+1,i,j,I_Cloud) * wgtch(ich,iw)
-             rflux_sfc_dn(i,j,irgn,2) = rflux_sfc_dn(i,j,irgn,2) &
-                                      + ( flux(rd_kmax+1,i,j,I_dn,I_Cloud) - flux_direct(rd_kmax+1,i,j,I_Cloud) ) * wgtch(ich,iw)
+             rflux_sfc_dn(i,j,I_R_direct ,irgn_alb) = rflux_sfc_dn(i,j,I_R_direct ,irgn_alb) &
+                                                    + (                                    flux_direct(rd_kmax+1,i,j,I_Cloud) ) * wgtch(ich,iw)
+             rflux_sfc_dn(i,j,I_R_diffuse,irgn_alb) = rflux_sfc_dn(i,j,I_R_diffuse,irgn_alb) &
+                                                    + ( flux(rd_kmax+1,i,j,I_dn,I_Cloud) - flux_direct(rd_kmax+1,i,j,I_Cloud) ) * wgtch(ich,iw)
           enddo
           enddo
 
@@ -1988,30 +1948,32 @@ contains
   !-----------------------------------------------------------------------------
   !> Two stream calculation CORE
   subroutine RD_MSTRN_two_stream( &
-       RD_KMAX, IA, IS, IE, JA, JS, JE, &
-       iw, ich,      &
-       cosSZA0,      &
-       fsol,         &
-       irgn,         &
-       tau,          &
-       omg,          &
-       g,            &
-       b,            &
-       b_sfc,        &
-       albedo_sfc,   &
-       cldfrac,      &
-       flux,         &
-       flux_direct,  &
-       emisCLD       )
+       RD_KMAX,     &
+       IA, IS, IE,  &
+       JA, JS, JE,  &
+       iw, ich,     &
+       cosSZA0,     &
+       fsol,        &
+       irgn,        &
+       tau,         &
+       omg,         &
+       g,           &
+       b,           &
+       b_sfc,       &
+       albedo_sfc,  &
+       cldfrac,     &
+       flux,        &
+       flux_direct, &
+       emisCLD      )
     use scale_const, only: &
        PI   => CONST_PI,   &
        EPS  => CONST_EPS,  &
        EPS1 => CONST_EPS1
     implicit none
-    integer, intent(in) :: RD_KMAX
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
 
+    integer,  intent(in)  :: RD_KMAX
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
     integer,  intent(in)  :: iw, ich
     real(RP), intent(in)  :: cosSZA0    (IA,JA)                          ! cos(SZA) = mu0
     real(RP), intent(in)  :: fsol       (IA,JA)                          ! solar radiation intensity
@@ -2021,9 +1983,8 @@ contains
     real(RP), intent(in)  :: g          (rd_kmax,IA,JA,0:2,MSTRN_ncloud) ! two-stream approximation factors (clear-sky/cloud)
     real(RP), intent(in)  :: b          (rd_kmax,IA,JA,0:2,MSTRN_ncloud) ! planck expansion coefficients    (clear-sky/cloud)
     real(RP), intent(in)  :: b_sfc      (IA,JA)                          ! planck function at surface
-    real(RP), intent(in)  :: albedo_sfc (IA,JA,MSTRN_ncloud)             ! surface albedo                   (clear-sky/cloud)
+    real(RP), intent(in)  :: albedo_sfc (IA,JA,N_RAD_DIR)                ! surface albedo (DIRECT/DIFFUSE)
     real(RP), intent(in)  :: cldfrac    (rd_kmax,IA,JA)                  ! cloud fraction
-
     real(RP), intent(out) :: flux       (rd_kmax+1,IA,JA,2,MSTRN_ncloud) ! upward(sfc->TOA)/downward(TOA->sfc) flux (clear-sky/cloud)
     real(RP), intent(out) :: flux_direct(rd_kmax+1,IA,JA,  MSTRN_ncloud) ! downward(TOA->sfc) flux, solar direct    (clear-sky/cloud)
     real(RP), intent(out) :: emisCLD    (rd_kmax  ,IA,JA)                ! cloud emissivity factor (cloud)
@@ -2312,16 +2273,16 @@ contains
        !$acc loop gang vector(32) private(Em0)
        do i = IS, IE
           ! at lambert surface
-          R(rd_kmax+1,i,j) = (        cf(rd_kmax,i,j) ) * albedo_sfc(i,j,I_Cloud   ) &
-                           + ( 1.0_RP-cf(rd_kmax,i,j) ) * albedo_sfc(i,j,I_ClearSky)
+          R(rd_kmax+1,i,j) = (        cf(rd_kmax,i,j) ) * albedo_sfc(i,j,I_R_diffuse) &
+                           + ( 1.0_RP-cf(rd_kmax,i,j) ) * albedo_sfc(i,j,I_R_diffuse)
           T(rd_kmax+1,i,j) = 0.0_RP
 
           flux_direct(rd_kmax+1,i,j,icloud) = cosSZA(i,j) * tau_bar_sol(rd_kmax+1,i,j)
 
-          Em0(I_Cloud   ) = Wpls_irgn * ( flux_direct(rd_kmax+1,i,j,icloud) * albedo_sfc(i,j,I_Cloud   ) / (W_irgn*M_irgn) &
-                          + 2.0_RP * PI * ( 1.0_RP-albedo_sfc(i,j,I_Cloud   ) ) * b_sfc(i,j) )
-          Em0(I_ClearSky) = Wpls_irgn * ( flux_direct(rd_kmax+1,i,j,icloud) * albedo_sfc(i,j,I_ClearSky) / (W_irgn*M_irgn) &
-                          + 2.0_RP * PI * ( 1.0_RP-albedo_sfc(i,j,I_ClearSky) ) * b_sfc(i,j) )
+          Em0(I_Cloud   ) = Wpls_irgn * ( flux_direct(rd_kmax+1,i,j,icloud) * albedo_sfc(i,j,I_R_direct) / (W_irgn*M_irgn) &
+                          + 2.0_RP * PI * ( 1.0_RP-albedo_sfc(i,j,I_R_diffuse) ) * b_sfc(i,j) )
+          Em0(I_ClearSky) = Wpls_irgn * ( flux_direct(rd_kmax+1,i,j,icloud) * albedo_sfc(i,j,I_R_direct) / (W_irgn*M_irgn) &
+                          + 2.0_RP * PI * ( 1.0_RP-albedo_sfc(i,j,I_R_diffuse) ) * b_sfc(i,j) )
 
           Em(rd_kmax+1,i,j) = (        cf(rd_kmax,i,j) ) * Em0(I_Cloud   ) &
                             + ( 1.0_RP-cf(rd_kmax,i,j) ) * Em0(I_ClearSky)
@@ -2464,56 +2425,5 @@ contains
 
     return
   end subroutine RD_MSTRN_two_stream
-
-  !-----------------------------------------------------------------------------
-  ! Sea surface reflectance by Payne
-  subroutine RD_albedo_ocean( &
-       IA, IS, IE, JA, JS, JE, &
-       cosSZA,       &
-       tau,          &
-       albedo_ocean )
-    implicit none
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
-
-    real(RP), intent(in)  :: cosSZA      (IA,JA)
-    real(RP), intent(in)  :: tau         (IA,JA)
-    real(RP), intent(out) :: albedo_ocean(IA,JA,2)
-
-    real(RP) :: am1, tr1, s
-    real(RP) :: sw
-
-    integer  :: i, j, n
-    !---------------------------------------------------------------------------
-
-    !$acc kernels pcopy(albedo_ocean) pcopyin(cosSZA, tau, c_ocean_albedo) async(0)
-    !$acc loop gang vector(4)
-    do j = JS, JE
-    !$acc loop gang vector(32)
-    do i = IS, IE
-       am1 = max( min( cosSZA(i,j), 0.961_RP ), 0.0349_RP )
-
-       sw = 0.5_RP + sign(0.5_RP,tau(i,j))
-
-       tr1 = max( min( am1 / ( 4.0_RP * tau(i,j) ), 1.0_RP ), 0.05_RP )
-
-       s = 0.0_RP
-       !$acc loop seq
-       do n = 1, 5
-          s = s + c_ocean_albedo(n,1) * tr1**(n-1)           &
-                + c_ocean_albedo(n,2) * tr1**(n-1) * am1     &
-                + c_ocean_albedo(n,3) * tr1**(n-1) * am1*am1
-       enddo
-
-       albedo_ocean(i,j,I_SW) = ( 1.0_RP-sw ) * 0.05_RP &
-                              + (        sw ) * exp(s)
-
-       albedo_ocean(i,j,I_LW) = 0.05_RP
-    enddo
-    enddo
-    !$acc end kernels
-
-    return
-  end subroutine RD_albedo_ocean
 
 end module scale_atmos_phy_rd_mstrnx

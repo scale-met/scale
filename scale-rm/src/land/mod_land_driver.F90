@@ -17,10 +17,11 @@ module mod_land_driver
   use scale_io
   use scale_prof
   use scale_land_grid_cartesC_index
+  use scale_cpl_sfc_index
 
   use scale_const, only: &
-     I_SW  => CONST_I_SW, &
-     I_LW  => CONST_I_LW
+     I_LW => CONST_I_LW, &
+     I_SW => CONST_I_SW
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -186,8 +187,7 @@ contains
        ATMOS_PBL,         &
        ATMOS_SFC_DENS,    &
        ATMOS_SFC_PRES,    &
-       ATMOS_SFLX_LW,     &
-       ATMOS_SFLX_SW,     &
+       ATMOS_SFLX_rad_dn, &
        ATMOS_SFLX_rain,   &
        ATMOS_SFLX_snow
     use scale_landuse, only: &
@@ -207,7 +207,6 @@ contains
 
     ! for snow
     real(RP) :: SNOW_albedo         (LIA,LJA,2)
-    real(RP) :: SNOW_albedo_t       (LIA,LJA,2)
     real(RP) :: SNOW_ATMOS_SFLX_SH  (LIA,LJA)
     real(RP) :: SNOW_ATMOS_SFLX_LH  (LIA,LJA)
     real(RP) :: SNOW_ATMOS_SFLX_GH  (LIA,LJA)
@@ -236,7 +235,7 @@ contains
     !real(RP) :: MONIT_LAND_heat     (LIA,LJA)
     !real(RP) :: MONIT_LAND_water    (LIA,LJA)
 
-    integer :: k, i, j
+    integer :: k, i, j, idir
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('LND_CalcTend', 1)
@@ -291,7 +290,7 @@ contains
                                    ATMOS_PRES(:,:), ATMOS_TEMP(:,:), ATMOS_QV(:,:),  & ! [IN]
                                    ATMOS_W(:,:), ATMOS_U(:,:), ATMOS_V(:,:),         & ! [IN]
                                    ATMOS_SFC_DENS(:,:),                              & ! [IN]
-                                   ATMOS_SFLX_SW(:,:), ATMOS_SFLX_LW(:,:),           & ! [IN]
+                                   ATMOS_SFLX_rad_dn(:,:,:,:),                       & ! [IN]
                                    LANDUSE_fact_land(:,:), dt,                       & ! [IN]
                                    SNOW_SFC_TEMP(:,:), SNOW_SWE(:,:),                & ! [INOUT]
                                    SNOW_Depth(:,:), SNOW_Dzero(:,:),                 & ! [INOUT]
@@ -307,11 +306,8 @@ contains
           do j = LJS, LJE
           do i = LIS, LIE
              SNOW_LAND_SFLX_ice(i,j) = 0.0_RP
-             SNOW_albedo_t(i,j,I_SW) = ( SNOW_albedo(i,j,I_SW) - LAND_SFC_albedo(i,j,I_SW) ) / dt
-             SNOW_albedo_t(i,j,I_LW) = ( SNOW_albedo(i,j,I_LW) - LAND_SFC_albedo(i,j,I_LW) ) / dt
           enddo
           enddo
-
        end select
 
 !OCL XFILL
@@ -360,16 +356,15 @@ contains
                                  SNOW_U10(:,:), SNOW_V10(:,:),                                  & ! [OUT]
                                  SNOW_T2(:,:), SNOW_Q2(:,:)                                     ) ! [OUT]
 
-
-       call FILE_HISTORY_in( SNOW_albedo         (:,:,I_SW), 'SNOW_ALB_SW',          'Snow surface albedo (short wave)',         '0-1',    dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_albedo         (:,:,I_LW), 'SNOW_ALB_LW',          'Snow surface albedo (long wave)',          '0-1',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_albedo         (:,:,I_SW), 'SNOW_ALB_SW',          'Snow surface albedo (short wave)',         '1',      dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_albedo         (:,:,I_LW), 'SNOW_ALB_LW',          'Snow surface albedo (long wave)',          '1',      dim_type='XY' )
        call FILE_HISTORY_in( SNOW_ATMOS_SFLX_SH  (:,:),      'SNOW_ATMOS_SFLX_SH',   'Snow surface sensible heat flux',          'J/m2/s', dim_type='XY' )
        call FILE_HISTORY_in( SNOW_ATMOS_SFLX_LH  (:,:),      'SNOW_ATMOS_SFLX_LH',   'Snow surface latent heat flux',            'J/m2/s', dim_type='XY' )
        call FILE_HISTORY_in( SNOW_ATMOS_SFLX_GH  (:,:),      'SNOW_ATMOS_SFLX_GH',   'Snowpack received heat flux',              'J/m2/s', dim_type='XY' )
        call FILE_HISTORY_in( SNOW_LAND_SFLX_GH   (:,:),      'SNOW_LAND_SFLX_GH',    'land surface ground heat flux under snow', 'J/m2/s', dim_type='XY' )
        call FILE_HISTORY_in( SNOW_LAND_SFLX_water(:,:),      'SNOW_LAND_SFLX_water', 'land surface liquid water flux under snow', 'kg/m2/s',dim_type='XY' )
        call FILE_HISTORY_in( SNOW_LAND_SFLX_water(:,:),      'SNOW_LAND_SFLX_ice',   'land surface ice water flux under snow',    'kg/m2/s',dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_frac           (:,:),      'SNOW_frac',            'Snow fraction on land subgrid',            '0-1',    dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_frac           (:,:),      'SNOW_frac',            'Snow fraction on land subgrid',            '1',      dim_type='XY' )
        call FILE_HISTORY_in( SNOW_ATMOS_SFLX_MW  (:,:),      'SNOW_ATMOS_SFLX_MW',   'Snow surface w-momentum flux',             'J/m2/s', dim_type='XY' )
        call FILE_HISTORY_in( SNOW_ATMOS_SFLX_MU  (:,:),      'SNOW_ATMOS_SFLX_MU',   'Snow surface u-momentum flux',             'J/m2/s', dim_type='XY' )
        call FILE_HISTORY_in( SNOW_ATMOS_SFLX_MV  (:,:),      'SNOW_ATMOS_SFLX_MV',   'Snow surface v-momentum flux',             'J/m2/s', dim_type='XY' )
@@ -377,7 +372,6 @@ contains
        call FILE_HISTORY_in( SNOW_V10            (:,:),      'SNOW_V10',             'Wind velocity v at 10 m on snow surface',  'm/s',    dim_type='XY' )
        call FILE_HISTORY_in( SNOW_T2             (:,:),      'SNOW_T2',              'Air temperature at 2m on snow surface',    'K',      dim_type='XY' )
        call FILE_HISTORY_in( SNOW_Q2             (:,:),      'SNOW_Q2',              'Specific humidity at 2m on snow surface',  'kg/kg',  dim_type='XY' )
-
     endif
 
 
@@ -403,6 +397,18 @@ contains
 
     select case ( LAND_SFC_TYPE )
     case ( 'SKIN' )
+!OCL XFILL
+       !$omp parallel do
+       do j = LJS, LJE
+       do i = LIS, LIE
+          LAND_SFC_albedo(i,j,I_R_direct ,I_R_IR ) = LAND_PROPERTY(i,j,I_ALBLW)
+          LAND_SFC_albedo(i,j,I_R_diffuse,I_R_IR ) = LAND_PROPERTY(i,j,I_ALBLW)
+          LAND_SFC_albedo(i,j,I_R_direct ,I_R_NIR) = LAND_PROPERTY(i,j,I_ALBSW)
+          LAND_SFC_albedo(i,j,I_R_diffuse,I_R_NIR) = LAND_PROPERTY(i,j,I_ALBSW)
+          LAND_SFC_albedo(i,j,I_R_direct ,I_R_VIS) = LAND_PROPERTY(i,j,I_ALBSW)
+          LAND_SFC_albedo(i,j,I_R_diffuse,I_R_VIS) = LAND_PROPERTY(i,j,I_ALBSW)
+       end do
+       end do
 
        call CPL_PHY_SFC_skin( LIA, LIS, LIE, LJA, LJS, LJE, &
                               ATMOS_TEMP(:,:), ATMOS_PRES(:,:),                        & ! [IN]
@@ -410,9 +416,9 @@ contains
                               ATMOS_DENS(:,:), ATMOS_QV(:,:), LHV(:,:),                & ! [IN]
                               REAL_Z1(:,:), ATMOS_PBL(:,:),                            & ! [IN]
                               ATMOS_SFC_DENS(:,:), ATMOS_SFC_PRES(:,:),                & ! [IN]
-                              ATMOS_SFLX_LW(:,:), ATMOS_SFLX_SW(:,:),                  & ! [IN]
+                              ATMOS_SFLX_rad_dn(:,:,:,:),                              & ! [IN]
                               LAND_TEMP(LKS,:,:), LAND_QVEF(:,:),                      & ! [IN]
-                              LAND_PROPERTY(:,:,I_ALBLW), LAND_PROPERTY(:,:,I_ALBSW),  & ! [IN]
+                              LAND_SFC_albedo(:,:,:,:),                                & ! [IN]
                               LAND_DZ1(:,:),                                           & ! [IN]
                               LAND_PROPERTY(:,:,I_StomataResist),                      & ! [IN]
                               LAND_PROPERTY(:,:,I_ThermalCond),                        & ! [IN]
@@ -426,21 +432,24 @@ contains
                               LAND_SFLX_SH(:,:), LAND_SFLX_LH(:,:), SFLX_GH(:,:),      & ! [OUT]
                               LAND_U10(:,:), LAND_V10(:,:), LAND_T2(:,:), LAND_Q2(:,:) ) ! [OUT]
 
+    case ( 'FIXED-TEMP' )
 !OCL XFILL
        !$omp parallel do
        do j = LJS, LJE
        do i = LIS, LIE
-          LAND_SFC_albedo(i,j,I_LW) = LAND_PROPERTY(i,j,I_ALBLW)
-          LAND_SFC_albedo(i,j,I_SW) = LAND_PROPERTY(i,j,I_ALBSW)
+          LAND_SFC_TEMP(i,j) = LAND_TEMP(LKS,i,j)
        end do
        end do
-
-    case ( 'FIXED-TEMP' )
-
+!OCL XFILL
        !$omp parallel do
        do j = LJS, LJE
        do i = LIS, LIE
-          LAND_SFC_TEMP(i,j) = LAND_TEMP(LKS,i,j)
+          LAND_SFC_albedo(i,j,I_R_direct ,I_R_IR ) = LAND_PROPERTY(i,j,I_ALBLW)
+          LAND_SFC_albedo(i,j,I_R_diffuse,I_R_IR ) = LAND_PROPERTY(i,j,I_ALBLW)
+          LAND_SFC_albedo(i,j,I_R_direct ,I_R_NIR) = LAND_PROPERTY(i,j,I_ALBSW)
+          LAND_SFC_albedo(i,j,I_R_diffuse,I_R_NIR) = LAND_PROPERTY(i,j,I_ALBSW)
+          LAND_SFC_albedo(i,j,I_R_direct ,I_R_VIS) = LAND_PROPERTY(i,j,I_ALBSW)
+          LAND_SFC_albedo(i,j,I_R_diffuse,I_R_VIS) = LAND_PROPERTY(i,j,I_ALBSW)
        end do
        end do
 
@@ -450,9 +459,9 @@ contains
                                     ATMOS_DENS(:,:), ATMOS_QV(:,:), LHV(:,:),                & ! [IN]
                                     REAL_Z1(:,:), ATMOS_PBL(:,:),                            & ! [IN]
                                     ATMOS_SFC_DENS(:,:), ATMOS_SFC_PRES(:,:),                & ! [IN]
-                                    ATMOS_SFLX_LW(:,:), ATMOS_SFLX_SW(:,:),                  & ! [IN]
+                                    ATMOS_SFLX_rad_dn(:,:,:,:),                              & ! [IN]
                                     LAND_SFC_TEMP(:,:), LAND_QVEF(:,:),                      & ! [IN]
-                                    LAND_PROPERTY(:,:,I_ALBLW), LAND_PROPERTY(:,:,I_ALBSW),  & ! [IN]
+                                    LAND_SFC_albedo(:,:,:,:),                                & ! [IN]
                                     LAND_PROPERTY(:,:,I_StomataResist),                      & ! [IN]
                                     LAND_PROPERTY(:,:,I_Z0M),                                & ! [IN]
                                     LAND_PROPERTY(:,:,I_Z0H),                                & ! [IN]
@@ -462,15 +471,6 @@ contains
                                     LAND_SFLX_SH(:,:), LAND_SFLX_LH(:,:), SFLX_GH(:,:),      & ! [OUT]
                                     LAND_U10(:,:), LAND_V10(:,:),                            & ! [OUT]
                                     LAND_T2(:,:), LAND_Q2(:,:)                               ) ! [OUT]
-
-!OCL XFILL
-       !$omp parallel do
-       do j = LJS, LJE
-       do i = LIS, LIE
-          LAND_SFC_albedo(i,j,I_LW) = LAND_PROPERTY(i,j,I_ALBLW)
-          LAND_SFC_albedo(i,j,I_SW) = LAND_PROPERTY(i,j,I_ALBSW)
-       end do
-       end do
 
     end select
 
@@ -494,34 +494,39 @@ contains
        !$omp parallel do
        do j = LJS, LJE
        do i = LIS, LIE
-          LAND_SFC_TEMP(i,j) =          SNOW_frac(i,j)   * SNOW_SFC_TEMP(i,j) &
+          LAND_SFC_TEMP(i,j) = (        SNOW_frac(i,j) ) * SNOW_SFC_TEMP(i,j) &
                              + ( 1.0_RP-SNOW_frac(i,j) ) * LAND_SFC_TEMP(i,j)
-          LAND_SFC_albedo(i,j,I_LW) =   SNOW_frac(i,j)   * SNOW_albedo    (i,j,I_LW) &
-                             + ( 1.0_RP-SNOW_frac(i,j) ) * LAND_SFC_albedo(i,j,I_LW)
-          LAND_SFC_albedo(i,j,I_SW) =   SNOW_frac(i,j)   * SNOW_albedo    (i,j,I_SW) &
-                             + ( 1.0_RP-SNOW_frac(i,j) ) * LAND_SFC_albedo(i,j,I_SW)
+
+          do idir = I_R_direct, I_R_diffuse
+             LAND_SFC_albedo(i,j,idir,I_R_IR ) = (        SNOW_frac(i,j) ) * SNOW_albedo    (i,j,I_LW)         &
+                                               + ( 1.0_RP-SNOW_frac(i,j) ) * LAND_SFC_albedo(i,j,idir,I_R_IR)
+             LAND_SFC_albedo(i,j,idir,I_R_NIR) = (        SNOW_frac(i,j) ) * SNOW_albedo    (i,j,I_SW)         &
+                                               + ( 1.0_RP-SNOW_frac(i,j) ) * LAND_SFC_albedo(i,j,idir,I_R_NIR)
+             LAND_SFC_albedo(i,j,idir,I_R_VIS) = (        SNOW_frac(i,j) ) * SNOW_albedo    (i,j,I_SW)         &
+                                               + ( 1.0_RP-SNOW_frac(i,j) ) * LAND_SFC_albedo(i,j,idir,I_R_VIS)
+          enddo
 
           ! flux to the soil
-          LAND_SFLX_GH   (i,j) =          SNOW_frac(i,j)   * SNOW_LAND_SFLX_GH   (i,j) &
+          LAND_SFLX_GH   (i,j) = (        SNOW_frac(i,j) ) * SNOW_LAND_SFLX_GH   (i,j) &
                                + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_SFLX_GH   (i,j)
-          LAND_SFLX_water(i,j) =          SNOW_frac(i,j)   * SNOW_LAND_SFLX_water(i,j) &
+          LAND_SFLX_water(i,j) = (        SNOW_frac(i,j) ) * SNOW_LAND_SFLX_water(i,j) &
                                + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_SFLX_water(i,j)
-          LAND_SFLX_ice  (i,j) =          SNOW_frac(i,j)   * SNOW_LAND_SFLX_ice  (i,j) &
+          LAND_SFLX_ice  (i,j) = (        SNOW_frac(i,j) ) * SNOW_LAND_SFLX_ice  (i,j) &
                                + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_SFLX_ice  (i,j)
           ! flux to the atmosphere
-          LAND_SFLX_SH   (i,j) =          SNOW_frac(i,j)   * SNOW_ATMOS_SFLX_SH  (i,j) &
+          LAND_SFLX_SH   (i,j) = (        SNOW_frac(i,j) ) * SNOW_ATMOS_SFLX_SH  (i,j) &
                                + ( 1.0_RP-SNOW_frac(i,j) ) *       LAND_SFLX_SH  (i,j)
-          LAND_SFLX_LH   (i,j) =          SNOW_frac(i,j)   * SNOW_ATMOS_SFLX_LH  (i,j) &
+          LAND_SFLX_LH   (i,j) = (        SNOW_frac(i,j) ) * SNOW_ATMOS_SFLX_LH  (i,j) &
                                + ( 1.0_RP-SNOW_frac(i,j) ) *       LAND_SFLX_LH  (i,j)
           LAND_SFLX_evap (i,j) =  LAND_SFLX_LH(i,j) / LHV(i,j)
           ! diagnostics
-          LAND_U10       (i,j) =          SNOW_frac(i,j)   *      SNOW_U10       (i,j) &
+          LAND_U10       (i,j) = (        SNOW_frac(i,j) ) *      SNOW_U10       (i,j) &
                                + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_U10       (i,j)
-          LAND_V10       (i,j) =          SNOW_frac(i,j)   *      SNOW_V10       (i,j) &
+          LAND_V10       (i,j) = (        SNOW_frac(i,j) ) *      SNOW_V10       (i,j) &
                                + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_V10       (i,j)
-          LAND_T2        (i,j) =          SNOW_frac(i,j)   *      SNOW_T2        (i,j) &
+          LAND_T2        (i,j) = (        SNOW_frac(i,j) ) *      SNOW_T2        (i,j) &
                                + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_T2        (i,j)
-          LAND_Q2        (i,j) =          SNOW_frac(i,j)   *      SNOW_Q2        (i,j) &
+          LAND_Q2        (i,j) = (        SNOW_frac(i,j) ) *      SNOW_Q2        (i,j) &
                                + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_Q2        (i,j)
        enddo
        enddo
@@ -553,7 +558,6 @@ contains
        LAND_SFLX_water,   &
        LAND_SFLX_ice,     &
        LAND_SFC_TEMP,     &
-       LAND_SFC_albedo,   &
        LAND_TEMP_t,       &
        LAND_WATER_t,      &
        LAND_vars_total,   &
@@ -629,26 +633,23 @@ contains
     use mod_land_admin, only: &
        LAND_do
     use mod_land_vars, only: &
-       ATMOS_TEMP,      &
-       ATMOS_PRES,      &
-       ATMOS_W,         &
-       ATMOS_U,         &
-       ATMOS_V,         &
-       ATMOS_DENS,      &
-       ATMOS_QV,        &
-       ATMOS_PBL,       &
-       ATMOS_SFC_DENS,  &
-       ATMOS_SFC_PRES,  &
-       ATMOS_SFLX_LW,   &
-       ATMOS_SFLX_SW,   &
-       ATMOS_cosSZA,    &
-       ATMOS_SFLX_rain, &
+       ATMOS_TEMP,        &
+       ATMOS_PRES,        &
+       ATMOS_W,           &
+       ATMOS_U,           &
+       ATMOS_V,           &
+       ATMOS_DENS,        &
+       ATMOS_QV,          &
+       ATMOS_PBL,         &
+       ATMOS_SFC_DENS,    &
+       ATMOS_SFC_PRES,    &
+       ATMOS_SFLX_rad_dn, &
+       ATMOS_cosSZA,      &
+       ATMOS_SFLX_rain,   &
        ATMOS_SFLX_snow
     use mod_cpl_vars, only: &
        CPL_getATM_LND
     implicit none
-
-    real(RP) :: ATMOS_SFLX_rad_dn(LIA,LJA,2,2)
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -671,15 +672,6 @@ contains
                             ATMOS_SFLX_rain  (:,:),     & ! [OUT]
                             ATMOS_SFLX_snow  (:,:)      ) ! [OUT]
     endif
-
-!OCL XFILL
-    !$omp parallel do
-    do j = LJS, LJE
-    do i = LIS, LIE
-       ATMOS_SFLX_SW  (i,j) = ATMOS_SFLX_rad_dn(i,j,I_SW,1) + ATMOS_SFLX_rad_dn(i,j,I_SW,2) ! direct+diffuse
-       ATMOS_SFLX_LW  (i,j) = ATMOS_SFLX_rad_dn(i,j,I_LW,1) + ATMOS_SFLX_rad_dn(i,j,I_LW,2) ! direct+diffuse
-    enddo
-    enddo
 
     call PROF_rapend  ('LND_SfcExch', 2)
 
@@ -721,7 +713,7 @@ contains
 
     if ( LAND_do ) then
        call CPL_putLND( LAND_SFC_TEMP  (:,:),       & ! [IN]
-                        LAND_SFC_albedo(:,:,:),     & ! [IN]
+                        LAND_SFC_albedo(:,:,:,:),   & ! [IN]
                         LAND_PROPERTY  (:,:,I_Z0M), & ! [IN]
                         LAND_PROPERTY  (:,:,I_Z0H), & ! [IN]
                         LAND_PROPERTY  (:,:,I_Z0E), & ! [IN]

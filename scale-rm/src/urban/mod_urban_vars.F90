@@ -19,10 +19,7 @@ module mod_urban_vars
   use scale_prof
   use scale_debug
   use scale_urban_grid_cartesC_index
-
-  use scale_const, only: &
-     I_SW  => CONST_I_SW, &
-     I_LW  => CONST_I_LW
+  use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -88,15 +85,15 @@ module mod_urban_vars
   real(RP), public, allocatable :: URBAN_ROFF_t (:,:)   ! tendency of URBAN_ROFF
 
   ! for restart
-  real(RP), public, allocatable :: URBAN_SFC_TEMP  (:,:)   ! urban grid average of surface temperature [K]
-  real(RP), public, allocatable :: URBAN_SFC_albedo(:,:,:) ! urban grid average of albedo (0-1)
-  real(RP), public, allocatable :: URBAN_SFLX_MW   (:,:)   ! urban grid average of w-momentum flux [kg/m2/s]
-  real(RP), public, allocatable :: URBAN_SFLX_MU   (:,:)   ! urban grid average of u-momentum flux [kg/m2/s]
-  real(RP), public, allocatable :: URBAN_SFLX_MV   (:,:)   ! urban grid average of v-momentum flux [kg/m2/s]
-  real(RP), public, allocatable :: URBAN_SFLX_SH   (:,:)   ! urban grid average of sensible heat flux [W/m2]
-  real(RP), public, allocatable :: URBAN_SFLX_LH   (:,:)   ! urban grid average of latent heat flux [W/m2]
-  real(RP), public, allocatable :: URBAN_SFLX_GH   (:,:)   ! urban grid average of ground heat flux [W/m2]
-  real(RP), public, allocatable :: URBAN_SFLX_evap (:,:)   ! urban grid average of water vapor flux [kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFC_TEMP  (:,:)     ! urban grid average of surface temperature [K]
+  real(RP), public, allocatable :: URBAN_SFC_albedo(:,:,:,:) ! urban grid average of albedo (direct/diffuse,IR/near-IR/VIS) (0-1)
+  real(RP), public, allocatable :: URBAN_SFLX_MW   (:,:)     ! urban grid average of w-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFLX_MU   (:,:)     ! urban grid average of u-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFLX_MV   (:,:)     ! urban grid average of v-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFLX_SH   (:,:)     ! urban grid average of sensible heat flux [W/m2]
+  real(RP), public, allocatable :: URBAN_SFLX_LH   (:,:)     ! urban grid average of latent heat flux [W/m2]
+  real(RP), public, allocatable :: URBAN_SFLX_GH   (:,:)     ! urban grid average of ground heat flux [W/m2]
+  real(RP), public, allocatable :: URBAN_SFLX_evap (:,:)     ! urban grid average of water vapor flux [kg/m2/s]
 
   ! diagnostic variables
   real(RP), public, allocatable :: URBAN_Z0M(:,:) ! urban grid average of rougness length (momentum) [m]
@@ -134,86 +131,125 @@ module mod_urban_vars
   !
   logical,                private :: URBAN_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX        = 23
-  integer,                private, parameter :: I_TR        = 1
-  integer,                private, parameter :: I_TB        = 2
-  integer,                private, parameter :: I_TG        = 3
-  integer,                private, parameter :: I_TC        = 4
-  integer,                private, parameter :: I_QC        = 5
-  integer,                private, parameter :: I_UC        = 6
-  integer,                private, parameter :: I_TRL       = 7
-  integer,                private, parameter :: I_TBL       = 8
-  integer,                private, parameter :: I_TGL       = 9
-  integer,                private, parameter :: I_RAINR     = 10
-  integer,                private, parameter :: I_RAINB     = 11
-  integer,                private, parameter :: I_RAING     = 12
-  integer,                private, parameter :: I_ROFF      = 13
-  integer,                private, parameter :: I_SFC_TEMP  = 14
-  integer,                private, parameter :: I_ALB_LW    = 15
-  integer,                private, parameter :: I_ALB_SW    = 16
-  integer,                private, parameter :: I_SFLX_MW   = 17
-  integer,                private, parameter :: I_SFLX_MU   = 18
-  integer,                private, parameter :: I_SFLX_MV   = 19
-  integer,                private, parameter :: I_SFLX_SH   = 20
-  integer,                private, parameter :: I_SFLX_LH   = 21
-  integer,                private, parameter :: I_SFLX_GH   = 22
-  integer,                private, parameter :: I_SFLX_evap = 23
+  integer,                private, parameter :: VMAX              = 27
+  integer,                private, parameter :: I_TR              =  1
+  integer,                private, parameter :: I_TB              =  2
+  integer,                private, parameter :: I_TG              =  3
+  integer,                private, parameter :: I_TC              =  4
+  integer,                private, parameter :: I_QC              =  5
+  integer,                private, parameter :: I_UC              =  6
+  integer,                private, parameter :: I_TRL             =  7
+  integer,                private, parameter :: I_TBL             =  8
+  integer,                private, parameter :: I_TGL             =  9
+  integer,                private, parameter :: I_RAINR           = 10
+  integer,                private, parameter :: I_RAINB           = 11
+  integer,                private, parameter :: I_RAING           = 12
+  integer,                private, parameter :: I_ROFF            = 13
+  integer,                private, parameter :: I_SFC_TEMP        = 14
+  integer,                private, parameter :: I_SFC_ALB_IR_dir  = 15
+  integer,                private, parameter :: I_SFC_ALB_IR_dif  = 16
+  integer,                private, parameter :: I_SFC_ALB_NIR_dir = 17
+  integer,                private, parameter :: I_SFC_ALB_NIR_dif = 18
+  integer,                private, parameter :: I_SFC_ALB_VIS_dir = 19
+  integer,                private, parameter :: I_SFC_ALB_VIS_dif = 20
+  integer,                private, parameter :: I_SFLX_MW         = 21
+  integer,                private, parameter :: I_SFLX_MU         = 22
+  integer,                private, parameter :: I_SFLX_MV         = 23
+  integer,                private, parameter :: I_SFLX_SH         = 24
+  integer,                private, parameter :: I_SFLX_LH         = 25
+  integer,                private, parameter :: I_SFLX_GH         = 26
+  integer,                private, parameter :: I_SFLX_evap       = 27
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the urban variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the urban variables
+  character(len=H_MID),   private            :: VAR_STDN(VMAX) !< standard name of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the urban variables
   integer,                private            :: VAR_ID(VMAX)   !< ID    of the urban variables
   integer,                private            :: restart_fid = -1  ! file ID
 
-  logical,                private            :: URBAN_RESTART_IN_CHECK_COORDINATES = .true.
+  data VAR_NAME / 'URBAN_TR',              &
+                  'URBAN_TB',              &
+                  'URBAN_TG',              &
+                  'URBAN_TC',              &
+                  'URBAN_QC',              &
+                  'URBAN_UC',              &
+                  'URBAN_TRL',             &
+                  'URBAN_TBL',             &
+                  'URBAN_TGL',             &
+                  'URBAN_RAINR',           &
+                  'URBAN_RAINB',           &
+                  'URBAN_RAING',           &
+                  'URBAN_ROFF',            &
+                  'URBAN_SFC_TEMP',        &
+                  'URBAN_SFC_ALB_IR_dir',  &
+                  'URBAN_SFC_ALB_IR_dif',  &
+                  'URBAN_SFC_ALB_NIR_dir', &
+                  'URBAN_SFC_ALB_NIR_dif', &
+                  'URBAN_SFC_ALB_VIS_dir', &
+                  'URBAN_SFC_ALB_VIS_dif', &
+                  'URBAN_SFLX_MW',         &
+                  'URBAN_SFLX_MU',         &
+                  'URBAN_SFLX_MV',         &
+                  'URBAN_SFLX_SH',         &
+                  'URBAN_SFLX_LH',         &
+                  'URBAN_SFLX_GH',         &
+                  'URBAN_SFLX_evap'        /
 
-  data VAR_NAME / 'URBAN_TR' ,       &
-                  'URBAN_TB' ,       &
-                  'URBAN_TG' ,       &
-                  'URBAN_TC' ,       &
-                  'URBAN_QC' ,       &
-                  'URBAN_UC' ,       &
-                  'URBAN_TRL' ,      &
-                  'URBAN_TBL' ,      &
-                  'URBAN_TGL' ,      &
-                  'URBAN_RAINR' ,    &
-                  'URBAN_RAINB' ,    &
-                  'URBAN_RAING' ,    &
-                  'URBAN_ROFF',      &
-                  'URBAN_SFC_TEMP',  &
-                  'URBAN_ALB_LW',    &
-                  'URBAN_ALB_SW',    &
-                  'URBAN_SFLX_MW',   &
-                  'URBAN_SFLX_MU',   &
-                  'URBAN_SFLX_MV',   &
-                  'URBAN_SFLX_SH',   &
-                  'URBAN_SFLX_LH',   &
-                  'URBAN_SFLX_GH',   &
-                  'URBAN_SFLX_evap'  /
+  data VAR_DESC / 'urban surface temperature of roof',                     &
+                  'urban surface temperature of wall',                     &
+                  'urban surface temperature of road',                     &
+                  'urban canopy air temperature',                          &
+                  'urban canopy humidity',                                 &
+                  'urban canopy wind',                                     &
+                  'urban temperature in layer of roof',                    &
+                  'urban temperature in layer of wall',                    &
+                  'urban temperature in layer of road',                    &
+                  'urban rain strage on roof',                             &
+                  'urban rain strage on wall',                             &
+                  'urban rain strage on road',                             &
+                  'urban runoff ',                                         &
+                  'urban grid average of temperature',                     &
+                  'urban grid average of albedo for IR,  direct ',         &
+                  'urban grid average of albedo for IR,  diffuse',         &
+                  'urban grid average of albedo for NIR, direct ',         &
+                  'urban grid average of albedo for NIR, diffuse',         &
+                  'urban grid average of albedo for VIS, direct ',         &
+                  'urban grid average of albedo for VIS, diffuse',         &
+                  'urban grid average of w-momentum flux',                 &
+                  'urban grid average of u-momentum flux',                 &
+                  'urban grid average of v-momentum flux',                 &
+                  'urban grid average of sensible heat flux (upward)',     &
+                  'urban grid average of latent heat flux (upward)',       &
+                  'urban grid average of subsurface heat flux (downward)', &
+                  'urban grid average of water vapor flux (upward)'        /
 
-  data VAR_DESC / 'urban surface temperature of roof',                &
-                  'urban surface temperature of wall',                &
-                  'urban surface temperature of road',                &
-                  'urban canopy air temperature',                     &
-                  'urban canopy humidity',                            &
-                  'urban canopy wind',                                &
-                  'urban temperature in layer of roof',               &
-                  'urban temperature in layer of wall',               &
-                  'urban temperature in layer of road',               &
-                  'urban rain strage on roof',                        &
-                  'urban rain strage on wall',                        &
-                  'urban rain strage on road',                        &
-                  'urban runoff ',                                    &
-                  'urban grid average of temperature',                &
-                  'urban grid average of albedo LW',                  &
-                  'urban grid average of albedo SW',                  &
-                  'urban grid average of w-momentum flux',            &
-                  'urban grid average of u-momentum flux',            &
-                  'urban grid average of v-momentum flux',            &
-                  'urban grid average of sensible heat flux',         &
-                  'urban grid average of latent heat flux',           &
-                  'urban grid average of ground heat flux',           &
-                  'urban grid average of water vapor flux'            /
+  data VAR_STDN / '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  '', &
+                  ''  /
 
   data VAR_UNIT / 'K',       &
                   'K',       &
@@ -231,6 +267,10 @@ module mod_urban_vars
                   'K',       &
                   '1',       &
                   '1',       &
+                  '1',       &
+                  '1',       &
+                  '1',       &
+                  '1',       &
                   'kg/m2/s', &
                   'kg/m2/s', &
                   'kg/m2/s', &
@@ -238,6 +278,9 @@ module mod_urban_vars
                   'W/m2',    &
                   'W/m2',    &
                   'kg/m2/s'  /
+
+
+  logical, private :: URBAN_RESTART_IN_CHECK_COORDINATES = .true.
 
   !-----------------------------------------------------------------------------
 contains
@@ -324,24 +367,24 @@ contains
     URBAN_RAING_t(:,:)   = UNDEF
     URBAN_ROFF_t (:,:)   = UNDEF
 
-    allocate( URBAN_SFC_TEMP  (UIA,UJA)   )
-    allocate( URBAN_SFC_albedo(UIA,UJA,2) )
-    allocate( URBAN_SFLX_MW   (UIA,UJA)   )
-    allocate( URBAN_SFLX_MU   (UIA,UJA)   )
-    allocate( URBAN_SFLX_MV   (UIA,UJA)   )
-    allocate( URBAN_SFLX_SH   (UIA,UJA)   )
-    allocate( URBAN_SFLX_LH   (UIA,UJA)   )
-    allocate( URBAN_SFLX_GH   (UIA,UJA)   )
-    allocate( URBAN_SFLX_evap (UIA,UJA)   )
-    URBAN_SFC_TEMP  (:,:)   = UNDEF
-    URBAN_SFC_albedo(:,:,:) = UNDEF
-    URBAN_SFLX_MW   (:,:)   = UNDEF
-    URBAN_SFLX_MU   (:,:)   = UNDEF
-    URBAN_SFLX_MV   (:,:)   = UNDEF
-    URBAN_SFLX_SH   (:,:)   = UNDEF
-    URBAN_SFLX_LH   (:,:)   = UNDEF
-    URBAN_SFLX_GH   (:,:)   = UNDEF
-    URBAN_SFLX_evap (:,:)   = UNDEF
+    allocate( URBAN_SFC_TEMP  (UIA,UJA)                     )
+    allocate( URBAN_SFC_albedo(UIA,UJA,N_RAD_DIR,N_RAD_RGN) )
+    allocate( URBAN_SFLX_MW   (UIA,UJA)                     )
+    allocate( URBAN_SFLX_MU   (UIA,UJA)                     )
+    allocate( URBAN_SFLX_MV   (UIA,UJA)                     )
+    allocate( URBAN_SFLX_SH   (UIA,UJA)                     )
+    allocate( URBAN_SFLX_LH   (UIA,UJA)                     )
+    allocate( URBAN_SFLX_GH   (UIA,UJA)                     )
+    allocate( URBAN_SFLX_evap (UIA,UJA)                     )
+    URBAN_SFC_TEMP  (:,:)     = UNDEF
+    URBAN_SFC_albedo(:,:,:,:) = UNDEF
+    URBAN_SFLX_MW   (:,:)     = UNDEF
+    URBAN_SFLX_MU   (:,:)     = UNDEF
+    URBAN_SFLX_MV   (:,:)     = UNDEF
+    URBAN_SFLX_SH   (:,:)     = UNDEF
+    URBAN_SFLX_LH   (:,:)     = UNDEF
+    URBAN_SFLX_GH   (:,:)     = UNDEF
+    URBAN_SFLX_evap (:,:)     = UNDEF
 
     allocate( URBAN_Z0M(UIA,UJA) )
     allocate( URBAN_Z0H(UIA,UJA) )
@@ -518,12 +561,20 @@ contains
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ROFF),  'XY', & ! [IN]
                                URBAN_ROFF(:,:)                       ) ! [OUT]
 
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_TEMP), 'XY', & ! [IN]
-                               URBAN_SFC_TEMP(:,:)                      ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ALB_LW),   'XY', & ! [IN]
-                               URBAN_SFC_albedo(:,:,I_LW)               ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ALB_SW),   'XY', & ! [IN]
-                               URBAN_SFC_albedo(:,:,I_SW)               ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_TEMP),        'XY',  & ! [IN]
+                               URBAN_SFC_TEMP(:,:)                              ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_ALB_IR_dir),  'XY',  & ! [IN]
+                               URBAN_SFC_albedo(:,:,I_R_direct ,I_R_IR )        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_ALB_IR_dif),  'XY',  & ! [IN]
+                               URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_IR )        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_ALB_NIR_dir), 'XY',  & ! [IN]
+                               URBAN_SFC_albedo(:,:,I_R_direct ,I_R_NIR)        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_ALB_NIR_dif), 'XY',  & ! [IN]
+                               URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_NIR)        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_ALB_VIS_dir), 'XY',  & ! [IN]
+                               URBAN_SFC_albedo(:,:,I_R_direct ,I_R_VIS)        ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_ALB_VIS_dif), 'XY',  & ! [IN]
+                               URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_VIS)        ) ! [OUT]
 
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
 
@@ -573,12 +624,20 @@ contains
                      __FILE__, __LINE__ )
        call VALCHECK( URBAN_ROFF      (UIS:UIE,UJS:UJE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_ROFF),      &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFC_TEMP  (UIS:UIE,UJS:UJE),          0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),  &
-                     __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_LW),     0.0_RP,    2.0_RP, VAR_NAME(I_ALB_LW),    &
-                     __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_SW),     0.0_RP,    2.0_RP, VAR_NAME(I_ALB_SW),    &
-                     __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFC_TEMP  (UIS:UIE,UJS:UJE),                     0.0_RP, 1000.0_RP, &
+                      VAR_NAME(I_SFC_TEMP),                                  __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_R_direct ,I_R_IR ), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_IR_dir ),                           __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_R_diffuse,I_R_IR ), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_IR_dif ),                           __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_R_direct ,I_R_NIR), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_NIR_dir),                           __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_R_diffuse,I_R_NIR), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_NIR_dif),                           __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_R_direct ,I_R_VIS), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_VIS_dir),                           __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_R_diffuse,I_R_VIS), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_VIS_dif),                           __FILE__, __LINE__ )
     endif
 
     call FILE_HISTORY_in( URBAN_TR(:,:), VAR_NAME(I_TR), VAR_DESC(I_TR), VAR_UNIT(I_TR) )
@@ -597,9 +656,20 @@ contains
     call FILE_HISTORY_in( URBAN_RAING(:,:), VAR_NAME(I_RAING), VAR_DESC(I_RAING), VAR_UNIT(I_RAING) )
     call FILE_HISTORY_in( URBAN_ROFF (:,:), VAR_NAME(I_ROFF),  VAR_DESC(I_ROFF),  VAR_UNIT(I_ROFF)  )
 
-    call FILE_HISTORY_in( URBAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP), VAR_DESC(I_SFC_TEMP), VAR_UNIT(I_SFC_TEMP) )
-    call FILE_HISTORY_in( URBAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW),   VAR_DESC(I_ALB_LW),   VAR_UNIT(I_ALB_LW)   )
-    call FILE_HISTORY_in( URBAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW),   VAR_DESC(I_ALB_SW),   VAR_UNIT(I_ALB_SW)   )
+    call FILE_HISTORY_in( URBAN_SFC_TEMP  (:,:),                     VAR_NAME(I_SFC_TEMP),                                    &
+                          VAR_DESC(I_SFC_TEMP),        VAR_UNIT(I_SFC_TEMP),        standard_name=VAR_STDN(I_SFC_TEMP)        )
+    call FILE_HISTORY_in( URBAN_SFC_albedo(:,:,I_R_direct ,I_R_IR ), VAR_NAME(I_SFC_ALB_IR_dir),                              &
+                          VAR_DESC(I_SFC_ALB_IR_dir),  VAR_UNIT(I_SFC_ALB_IR_dir),  standard_name=VAR_STDN(I_SFC_ALB_IR_dir)  )
+    call FILE_HISTORY_in( URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_IR ), VAR_NAME(I_SFC_ALB_IR_dif),                              &
+                          VAR_DESC(I_SFC_ALB_IR_dif),  VAR_UNIT(I_SFC_ALB_IR_dif),  standard_name=VAR_STDN(I_SFC_ALB_IR_dif)  )
+    call FILE_HISTORY_in( URBAN_SFC_albedo(:,:,I_R_direct ,I_R_NIR), VAR_NAME(I_SFC_ALB_NIR_dir),                             &
+                          VAR_DESC(I_SFC_ALB_NIR_dir), VAR_UNIT(I_SFC_ALB_NIR_dir), standard_name=VAR_STDN(I_SFC_ALB_NIR_dir) )
+    call FILE_HISTORY_in( URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_NIR), VAR_NAME(I_SFC_ALB_NIR_dif),                             &
+                          VAR_DESC(I_SFC_ALB_NIR_dif), VAR_UNIT(I_SFC_ALB_NIR_dif), standard_name=VAR_STDN(I_SFC_ALB_NIR_dif) )
+    call FILE_HISTORY_in( URBAN_SFC_albedo(:,:,I_R_direct ,I_R_VIS), VAR_NAME(I_SFC_ALB_VIS_dir),                             &
+                          VAR_DESC(I_SFC_ALB_VIS_dir), VAR_UNIT(I_SFC_ALB_VIS_dir), standard_name=VAR_STDN(I_SFC_ALB_VIS_dir) )
+    call FILE_HISTORY_in( URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), VAR_NAME(I_SFC_ALB_VIS_dif),                             &
+                          VAR_DESC(I_SFC_ALB_VIS_dif), VAR_UNIT(I_SFC_ALB_VIS_dif), standard_name=VAR_STDN(I_SFC_ALB_VIS_dif) )
 
     call FILE_HISTORY_in( URBAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   VAR_UNIT(I_SFLX_MW)   )
     call FILE_HISTORY_in( URBAN_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   VAR_UNIT(I_SFLX_MU)   )
@@ -688,18 +758,34 @@ contains
                               URBAN_GRID_CARTESC_REAL_AREA(:,:),   & ! (in)
                               URBAN_GRID_CARTESC_REAL_TOTAREA      ) ! (in)
 
-       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP), & ! (in)
-                              URBAN_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
-                              URBAN_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
-       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW),   & ! (in)
-                              URBAN_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
-                              URBAN_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
-       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW),   & ! (in)
-                              URBAN_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
-                              URBAN_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE,                                           & ! [IN]
+                              URBAN_SFC_TEMP  (:,:),                     VAR_NAME(I_SFC_TEMP),        & ! [IN]
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),                                      & ! [IN]
+                              URBAN_GRID_CARTESC_REAL_TOTAREA                                         ) ! [IN]
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE,                                           & ! [IN]
+                              URBAN_SFC_albedo(:,:,I_R_direct ,I_R_IR ), VAR_NAME(I_SFC_ALB_IR_dir),  & ! [IN]
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),                                      & ! [IN]
+                              URBAN_GRID_CARTESC_REAL_TOTAREA                                         ) ! [IN]
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE,                                           & ! [IN]
+                              URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_IR ), VAR_NAME(I_SFC_ALB_IR_dif),  & ! [IN]
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),                                      & ! [IN]
+                              URBAN_GRID_CARTESC_REAL_TOTAREA                                         ) ! [IN]
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE,                                           & ! [IN]
+                              URBAN_SFC_albedo(:,:,I_R_direct ,I_R_NIR), VAR_NAME(I_SFC_ALB_NIR_dir), & ! [IN]
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),                                      & ! [IN]
+                              URBAN_GRID_CARTESC_REAL_TOTAREA                                         ) ! [IN]
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE,                                           & ! [IN]
+                              URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_NIR), VAR_NAME(I_SFC_ALB_NIR_dif), & ! [IN]
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),                                      & ! [IN]
+                              URBAN_GRID_CARTESC_REAL_TOTAREA                                         ) ! [IN]
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE,                                           & ! [IN]
+                              URBAN_SFC_albedo(:,:,I_R_direct ,I_R_VIS), VAR_NAME(I_SFC_ALB_VIS_dir), & ! [IN]
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),                                      & ! [IN]
+                              URBAN_GRID_CARTESC_REAL_TOTAREA                                         ) ! [IN]
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE,                                           & ! [IN]
+                              URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), VAR_NAME(I_SFC_ALB_VIS_dif), & ! [IN]
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),                                      & ! [IN]
+                              URBAN_GRID_CARTESC_REAL_TOTAREA                                         ) ! [IN]
 
        call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
                               URBAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW),   & ! (in)
@@ -813,12 +899,13 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_def_var
     implicit none
+
     integer :: i
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
 
-       do i = 1, I_ALB_SW
+       do i = I_TR, I_SFC_ALB_VIS_dif
           if ( i==I_TRL .or. i==I_TBL .or. i==I_TGL ) then ! 3D
              call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
                   VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
@@ -878,12 +965,27 @@ contains
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_ROFF), URBAN_ROFF(:,:),              & ! [IN]
                               VAR_NAME(I_ROFF),  'XY', fill_halo=.true.                     ) ! [IN]
 
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_TEMP), URBAN_SFC_TEMP(:,:),      & ! [IN]
-                              VAR_NAME(I_SFC_TEMP), 'XY', fill_halo=.true.                  ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_ALB_LW), URBAN_SFC_albedo(:,:,I_LW), & ! [IN]
-                              VAR_NAME(I_ALB_LW), 'XY', fill_halo=.true.                    ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_ALB_SW), URBAN_SFC_albedo(:,:,I_SW), & ! [IN]
-                              VAR_NAME(I_ALB_SW), 'XY', fill_halo=.true.                    ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_TEMP),                     & ! [IN]
+                                    URBAN_SFC_TEMP(:,:),                                 & ! [IN]
+                                    VAR_NAME(I_SFC_TEMP),        'XY', fill_halo=.true.  ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_ALB_IR_dir),               & ! [IN]
+                                    URBAN_SFC_albedo(:,:,I_R_direct ,I_R_IR ),           & ! [IN]
+                                    VAR_NAME(I_SFC_ALB_IR_dir),  'XY',  fill_halo=.true. ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_ALB_IR_dif),               & ! [IN]
+                                    URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_IR ),           & ! [IN]
+                                    VAR_NAME(I_SFC_ALB_IR_dif),  'XY',  fill_halo=.true. ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_ALB_NIR_dir),              & ! [IN]
+                                    URBAN_SFC_albedo(:,:,I_R_direct ,I_R_NIR),           & ! [IN]
+                                    VAR_NAME(I_SFC_ALB_NIR_dir), 'XY',  fill_halo=.true. ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_ALB_NIR_dif),              & ! [IN]
+                                    URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_NIR),           & ! [IN]
+                                    VAR_NAME(I_SFC_ALB_NIR_dif), 'XY',  fill_halo=.true. ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_ALB_VIS_dir),              & ! [IN]
+                                    URBAN_SFC_albedo(:,:,I_R_direct ,I_R_VIS),           & ! [IN]
+                                    VAR_NAME(I_SFC_ALB_VIS_dir), 'XY',  fill_halo=.true. ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_ALB_VIS_dif),              & ! [IN]
+                                    URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_VIS),           & ! [IN]
+                                    VAR_NAME(I_SFC_ALB_VIS_dif), 'XY',  fill_halo=.true. ) ! [IN]
 
     endif
 

@@ -19,6 +19,7 @@ module mod_mkinit
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
+  use scale_cpl_sfc_index
 
   use scale_prc, only: &
      PRC_abort
@@ -29,9 +30,7 @@ module mod_mkinit
      Rdry   => CONST_Rdry,   &
      CPdry  => CONST_CPdry,  &
      P00    => CONST_PRE00,  &
-     EPSvap => CONST_EPSvap, &
-     I_SW   => CONST_I_SW,   &
-     I_LW   => CONST_I_LW
+     EPSvap => CONST_EPSvap
   use scale_random, only: &
      RANDOM_get
   use scale_comm_cartesC, only: &
@@ -857,20 +856,22 @@ contains
        TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
        TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
        TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
-       SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_downall
+       SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_down
     implicit none
 
     ! Flux from Atmosphere
-    real(RP) :: FLX_rain      = 0.0_RP ! surface rain flux                         [kg/m2/s]
-    real(RP) :: FLX_snow      = 0.0_RP ! surface snow flux                         [kg/m2/s]
-    real(RP) :: FLX_LW_dn     = 0.0_RP ! surface downwad long-wave  radiation flux [J/m2/s]
-    real(RP) :: FLX_SW_dn     = 0.0_RP ! surface downwad short-wave radiation flux [J/m2/s]
+    real(RP) :: FLX_rain   = 0.0_RP ! surface rain flux              [kg/m2/s]
+    real(RP) :: FLX_snow   = 0.0_RP ! surface snow flux              [kg/m2/s]
+    real(RP) :: FLX_IR_dn  = 0.0_RP ! surface downwad radiation flux [J/m2/s]
+    real(RP) :: FLX_NIR_dn = 0.0_RP ! surface downwad radiation flux [J/m2/s]
+    real(RP) :: FLX_VIS_dn = 0.0_RP ! surface downwad radiation flux [J/m2/s]
 
     namelist / PARAM_MKINIT_FLUX / &
-       FLX_rain,      &
-       FLX_snow,      &
-       FLX_LW_dn,     &
-       FLX_SW_dn
+       FLX_rain,   &
+       FLX_snow,   &
+       FLX_IR_dn,  &
+       FLX_NIR_dn, &
+       FLX_VIS_dn
 
     integer :: i, j
     integer :: ierr
@@ -893,19 +894,21 @@ contains
        SFLX_snow   (i,j) = FLX_snow
 
        SFLX_LW_up  (i,j) = 0.0_RP
-       SFLX_LW_dn  (i,j) = FLX_LW_dn
+       SFLX_LW_dn  (i,j) = FLX_IR_dn
        SFLX_SW_up  (i,j) = 0.0_RP
-       SFLX_SW_dn  (i,j) = FLX_SW_dn
+       SFLX_SW_dn  (i,j) = FLX_NIR_dn + FLX_VIS_dn
 
        TOAFLX_LW_up(i,j) = 0.0_RP
        TOAFLX_LW_dn(i,j) = 0.0_RP
        TOAFLX_SW_up(i,j) = 0.0_RP
        TOAFLX_SW_dn(i,j) = 0.0_RP
 
-       SFLX_rad_dn (i,j,1,1) = FLX_SW_dn
-       SFLX_rad_dn (i,j,1,2) = 0.0_RP
-       SFLX_rad_dn (i,j,2,1) = FLX_LW_dn
-       SFLX_rad_dn (i,j,2,2) = 0.0_RP
+       SFLX_rad_dn (i,j,I_R_direct ,I_R_IR)  = 0.0_RP
+       SFLX_rad_dn (i,j,I_R_diffuse,I_R_IR)  = FLX_IR_dn
+       SFLX_rad_dn (i,j,I_R_direct ,I_R_NIR) = FLX_NIR_dn
+       SFLX_rad_dn (i,j,I_R_diffuse,I_R_NIR) = 0.0_RP
+       SFLX_rad_dn (i,j,I_R_direct ,I_R_VIS) = FLX_VIS_dn
+       SFLX_rad_dn (i,j,I_R_diffuse,I_R_VIS) = 0.0_RP
     enddo
     enddo
 
@@ -952,11 +955,13 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_LAND)
 
-    LAND_TEMP      (:,:,:)      = LND_TEMP
-    LAND_WATER     (:,:,:)      = LND_WATER
-    LAND_SFC_TEMP  (  :,:)      = SFC_TEMP
-    LAND_SFC_albedo(  :,:,I_LW) = SFC_albedo_LW
-    LAND_SFC_albedo(  :,:,I_SW) = SFC_albedo_SW
+    LAND_TEMP      (:,:,:)         = LND_TEMP
+    LAND_WATER     (:,:,:)         = LND_WATER
+
+    LAND_SFC_TEMP  (:,:)           = SFC_TEMP
+    LAND_SFC_albedo(:,:,:,I_R_IR)  = SFC_albedo_LW
+    LAND_SFC_albedo(:,:,:,I_R_NIR) = SFC_albedo_SW
+    LAND_SFC_albedo(:,:,:,I_R_VIS) = SFC_albedo_SW
 
     return
   end subroutine land_setup
@@ -1020,12 +1025,14 @@ contains
     OCEAN_SALT      (:,:,:)      = OCN_SALT
     OCEAN_UVEL      (:,:,:)      = OCN_UVEL
     OCEAN_VVEL      (:,:,:)      = OCN_VVEL
-    OCEAN_SFC_TEMP  (  :,:)      = SFC_TEMP
-    OCEAN_SFC_albedo(  :,:,I_LW) = SFC_albedo_LW
-    OCEAN_SFC_albedo(  :,:,I_SW) = SFC_albedo_SW
-    OCEAN_SFC_Z0M   (  :,:)      = SFC_Z0M
-    OCEAN_SFC_Z0H   (  :,:)      = SFC_Z0H
-    OCEAN_SFC_Z0E   (  :,:)      = SFC_Z0E
+
+    OCEAN_SFC_TEMP  (:,:)           = SFC_TEMP
+    OCEAN_SFC_albedo(:,:,:,I_R_IR)  = SFC_albedo_LW
+    OCEAN_SFC_albedo(:,:,:,I_R_NIR) = SFC_albedo_SW
+    OCEAN_SFC_albedo(:,:,:,I_R_VIS) = SFC_albedo_SW
+    OCEAN_SFC_Z0M   (:,:)           = SFC_Z0M
+    OCEAN_SFC_Z0H   (:,:)           = SFC_Z0H
+    OCEAN_SFC_Z0E   (:,:)           = SFC_Z0E
 
     return
   end subroutine ocean_setup
@@ -1109,22 +1116,24 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_URBAN)
 
-    URBAN_TR        (  :,:)      = URB_ROOF_TEMP
-    URBAN_TB        (  :,:)      = URB_BLDG_TEMP
-    URBAN_TG        (  :,:)      = URB_GRND_TEMP
-    URBAN_TC        (  :,:)      = URB_CNPY_TEMP
-    URBAN_QC        (  :,:)      = URB_CNPY_HMDT
-    URBAN_UC        (  :,:)      = URB_CNPY_WIND
-    URBAN_TRL       (:,:,:)      = URB_ROOF_LAYER_TEMP
-    URBAN_TBL       (:,:,:)      = URB_BLDG_LAYER_TEMP
-    URBAN_TGL       (:,:,:)      = URB_GRND_LAYER_TEMP
-    URBAN_RAINR     (  :,:)      = URB_ROOF_RAIN
-    URBAN_RAINB     (  :,:)      = URB_BLDG_RAIN
-    URBAN_RAING     (  :,:)      = URB_GRND_RAIN
-    URBAN_ROFF      (  :,:)      = URB_RUNOFF
-    URBAN_SFC_TEMP  (  :,:)      = URB_SFC_TEMP
-    URBAN_SFC_albedo(  :,:,I_LW) = URB_ALB_LW
-    URBAN_SFC_albedo(  :,:,I_SW) = URB_ALB_SW
+    URBAN_TRL       (:,:,:)         = URB_ROOF_LAYER_TEMP
+    URBAN_TBL       (:,:,:)         = URB_BLDG_LAYER_TEMP
+    URBAN_TGL       (:,:,:)         = URB_GRND_LAYER_TEMP
+
+    URBAN_TR        (:,:)           = URB_ROOF_TEMP
+    URBAN_TB        (:,:)           = URB_BLDG_TEMP
+    URBAN_TG        (:,:)           = URB_GRND_TEMP
+    URBAN_TC        (:,:)           = URB_CNPY_TEMP
+    URBAN_QC        (:,:)           = URB_CNPY_HMDT
+    URBAN_UC        (:,:)           = URB_CNPY_WIND
+    URBAN_RAINR     (:,:)           = URB_ROOF_RAIN
+    URBAN_RAINB     (:,:)           = URB_BLDG_RAIN
+    URBAN_RAING     (:,:)           = URB_GRND_RAIN
+    URBAN_ROFF      (:,:)           = URB_RUNOFF
+    URBAN_SFC_TEMP  (:,:)           = URB_SFC_TEMP
+    URBAN_SFC_albedo(:,:,:,I_R_IR)  = URB_ALB_LW
+    URBAN_SFC_albedo(:,:,:,I_R_NIR) = URB_ALB_SW
+    URBAN_SFC_albedo(:,:,:,I_R_VIS) = URB_ALB_SW
 
     return
   end subroutine urban_setup

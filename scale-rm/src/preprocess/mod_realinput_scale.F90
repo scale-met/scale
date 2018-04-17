@@ -16,6 +16,7 @@ module mod_realinput_scale
   use scale_precision
   use scale_io
   use scale_tracer
+  use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -550,7 +551,7 @@ contains
     real(RP),         intent(out) :: strg_org (:,:,:)
     real(RP),         intent(out) :: lst_org  (:,:)
     real(RP),         intent(out) :: ust_org  (:,:)
-    real(RP),         intent(out) :: albg_org (:,:,:)
+    real(RP),         intent(out) :: albg_org (:,:,:,:)
     real(RP),         intent(out) :: topo_org (:,:)
     real(RP),         intent(out) :: lmask_org(:,:)
     real(RP),         intent(out) :: llon_org (:,:)
@@ -608,11 +609,23 @@ contains
        call FILE_CARTESC_read( fid, "URBAN_SFC_TEMP", read2D(:,:), step=it )
        ust_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_CARTESC_read( fid, "LAND_ALB_LW", read2D(:,:), step=it )
-       albg_org(xs:xe,ys:ye,1) = read2D(:,:)
+       call FILE_CARTESC_read( fid, "LAND_SFC_ALB_IR_dir", read2D(:,:), step=it )
+       albg_org(xs:xe,ys:ye,I_R_direct ,I_R_IR ) = read2D(:,:)
 
-       call FILE_CARTESC_read( fid, "LAND_ALB_SW", read2D(:,:), step=it )
-       albg_org(xs:xe,ys:ye,2) = read2D(:,:)
+       call FILE_CARTESC_read( fid, "LAND_SFC_ALB_IR_dif", read2D(:,:), step=it )
+       albg_org(xs:xe,ys:ye,I_R_diffuse,I_R_IR ) = read2D(:,:)
+
+       call FILE_CARTESC_read( fid, "LAND_SFC_ALB_NNIR_dir", read2D(:,:), step=it )
+       albg_org(xs:xe,ys:ye,I_R_direct ,I_R_NIR) = read2D(:,:)
+
+       call FILE_CARTESC_read( fid, "LAND_SFC_ALB_NIR_dif", read2D(:,:), step=it )
+       albg_org(xs:xe,ys:ye,I_R_diffuse,I_R_NIR) = read2D(:,:)
+
+       call FILE_CARTESC_read( fid, "LAND_SFC_ALB_VIS_dir", read2D(:,:), step=it )
+       albg_org(xs:xe,ys:ye,I_R_direct ,I_R_VIS) = read2D(:,:)
+
+       call FILE_CARTESC_read( fid, "LAND_SFC_ALB_VIS_dif", read2D(:,:), step=it )
+       albg_org(xs:xe,ys:ye,I_R_diffuse,I_R_VIS) = read2D(:,:)
 
        call FILE_CARTESC_read( fid, "topo", read2D(:,:) )
        topo_org(xs:xe,ys:ye) = read2D(:,:)
@@ -745,7 +758,7 @@ contains
 
     real(RP),         intent(out) :: tw_org   (:,:)
     real(RP),         intent(out) :: sst_org  (:,:)
-    real(RP),         intent(out) :: albw_org (:,:,:)
+    real(RP),         intent(out) :: albw_org (:,:,:,:)
     real(RP),         intent(out) :: z0w_org  (:,:)
     real(RP),         intent(out) :: omask_org(:,:)
     character(len=*), intent(in)  :: basename_ocean
@@ -791,11 +804,23 @@ contains
        call FILE_CARTESC_read( fid, "OCEAN_SFC_TEMP", read2D(:,:), step=it )
        sst_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_CARTESC_read( fid, "OCEAN_ALB_LW", read2D(:,:), step=it )
-       albw_org(xs:xe,ys:ye,1) = read2D(:,:)
+       call FILE_CARTESC_read( fid, "OCEAN_SFC_ALB_IR_dir", read2D(:,:), step=it )
+       albw_org(xs:xe,ys:ye,I_R_direct ,I_R_IR ) = read2D(:,:)
 
-       call FILE_CARTESC_read( fid, "OCEAN_ALB_SW", read2D(:,:), step=it )
-       albw_org(xs:xe,ys:ye,2) = read2D(:,:)
+       call FILE_CARTESC_read( fid, "OCEAN_SFC_ALB_IR_dif", read2D(:,:), step=it )
+       albw_org(xs:xe,ys:ye,I_R_diffuse,I_R_IR ) = read2D(:,:)
+
+       call FILE_CARTESC_read( fid, "OCEAN_SFC_ALB_NNIR_dir", read2D(:,:), step=it )
+       albw_org(xs:xe,ys:ye,I_R_direct ,I_R_NIR) = read2D(:,:)
+
+       call FILE_CARTESC_read( fid, "OCEAN_SFC_ALB_NIR_dif", read2D(:,:), step=it )
+       albw_org(xs:xe,ys:ye,I_R_diffuse,I_R_NIR) = read2D(:,:)
+
+       call FILE_CARTESC_read( fid, "OCEAN_SFC_ALB_VIS_dir", read2D(:,:), step=it )
+       albw_org(xs:xe,ys:ye,I_R_direct ,I_R_VIS) = read2D(:,:)
+
+       call FILE_CARTESC_read( fid, "OCEAN_SFC_ALB_VIS_dif", read2D(:,:), step=it )
+       albw_org(xs:xe,ys:ye,I_R_diffuse,I_R_VIS) = read2D(:,:)
 
        call FILE_CARTESC_read( fid, "OCEAN_SFC_Z0M", read2D(:,:), step=it )
        z0w_org(xs:xe,ys:ye) = read2D(:,:)

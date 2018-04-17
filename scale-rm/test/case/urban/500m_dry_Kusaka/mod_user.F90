@@ -19,6 +19,7 @@ module mod_user
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
+  use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -135,8 +136,6 @@ contains
   !> Step
   subroutine USER_update
     use scale_const, only: &
-       I_LW  => CONST_I_LW,  &
-       I_SW  => CONST_I_SW,  &
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00, &
        PRE00 => CONST_PRE00, &
@@ -271,8 +270,8 @@ contains
        WA  (:,:)        =      0.0_RP
        RHOA(:,:)        =     1.13_RP
        PBL (:,:)        =    100.0_RP
-       RWD (:,:,I_LW,1) =      0.0_RP ! direct
-       RWD (:,:,I_LW,2) =    400.0_RP ! diffuse
+       RWD (:,:,I_R_direct ,I_R_IR) =   0.0_RP ! direct
+       RWD (:,:,I_R_diffuse,I_R_IR) = 400.0_RP ! diffuse
        PRSA(:,:)        = 100000.0_RP
        PRSS(:,:)        = 100120.0_RP
        QVA (:,:)        =    0.015_RP
@@ -291,8 +290,10 @@ contains
           SWtot = ( ( 1.0_RP-dsec ) * SW(tloc  ) &
                   + (        dsec ) * SW(tloc+1) )
 
-          RWD (i,j,I_SW,1) = (        SRATIO ) * SWtot ! direct
-          RWD (i,j,I_SW,2) = ( 1.0_RP-SRATIO ) * SWtot ! diffuse
+          RWD (i,j,I_R_direct ,I_R_NIR) = 0.0_RP
+          RWD (i,j,I_R_diffuse,I_R_NIR) = 0.0_RP
+          RWD (i,j,I_R_direct ,I_R_VIS) = (        SRATIO ) * SWtot ! direct
+          RWD (i,j,I_R_diffuse,I_R_VIS) = ( 1.0_RP-SRATIO ) * SWtot ! diffuse
 
           PTA (i,j) = ( ( 1.0_RP-dsec ) * PT(tloc  ) &
                       + (        dsec ) * PT(tloc+1) ) + TEM00
@@ -303,8 +304,8 @@ contains
           UA  (i,j) = ( ( 1.0_RP-dsec ) * Wind(tloc  ) &
                       + (        dsec ) * Wind(tloc+1) )
 
-          LWD (i,j) = RWD(i,j,I_LW,1) + RWD(i,j,I_LW,2)
-          SWD (i,j) = RWD(i,j,I_SW,1) + RWD(i,j,I_SW,2)
+          LWD (i,j) = RWD(i,j,I_R_direct ,I_R_IR) + RWD(i,j,I_R_direct ,I_R_VIS)
+          SWD (i,j) = RWD(i,j,I_R_diffuse,I_R_IR) + RWD(i,j,I_R_diffuse,I_R_VIS)
 
        enddo
        enddo

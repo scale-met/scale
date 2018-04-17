@@ -17,6 +17,7 @@ module scale_land_phy_snow_ky90
   use scale_precision
   use scale_io
   use scale_prof
+  use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -135,7 +136,7 @@ contains
        PRSA, TA, QA,           & ! [IN]
        WA, UA, VA,             & ! [IN]
        DENS,                   & ! [IN]
-       SFLX_SW_dn, SFLX_LW_dn, & ! [IN]
+       SFLX_RAD_dn,            & ! [IN]
        LANDUSE_fact_land, dt,  & ! [IN]
        TSNOW, SWE,             & ! [INOUT]
        SDepth, SDzero,         & ! [INOUT]
@@ -170,8 +171,7 @@ contains
     real(RP), intent(in)      :: VA        (LIA,LJA)
     real(RP), intent(in)      :: QA        (LIA,LJA)      ! specific humidity [kg/kg]
     real(RP), intent(in)      :: DENS      (LIA,LJA)
-    real(RP), intent(in)      :: SFLX_SW_dn(LIA,LJA)
-    real(RP), intent(in)      :: SFLX_LW_dn(LIA,LJA)
+    real(RP), intent(in)      :: SFLX_RAD_dn(LIA,LJA,N_RAD_DIR,N_RAD_RGN)
     real(DP), intent(in)      :: dt                     ! dt of land
     real(RP), intent(in)      :: LANDUSE_fact_land(LIA,LJA)
 
@@ -208,6 +208,7 @@ contains
     real(RP)                  :: QAsat
     real(RP)                  :: RH
     real(RP)                  :: qdry, psat
+    real(RP)                  :: SFLX_SW_dn, SFLX_LW_dn
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -231,6 +232,12 @@ contains
        if ( debug ) then
           LOG_INFO("LAND_PHY_SNOW_KY90",*) "RH,  ",RH," DENS (1.289 org) ",DENS(i,j)
        end if
+
+       SFLX_LW_dn = SFLX_RAD_dn(i,j,I_R_diffuse,I_R_IR )
+       SFLX_SW_dn = SFLX_RAD_dn(i,j,I_R_direct ,I_R_NIR) &
+                  + SFLX_RAD_dn(i,j,I_R_diffuse,I_R_NIR) &
+                  + SFLX_RAD_dn(i,j,I_R_direct ,I_R_VIS) &
+                  + SFLX_RAD_dn(i,j,I_R_diffuse,I_R_VIS)
 
        TSNOW1  = TSNOW (i,j)
        SWE1    = SWE   (i,j)
@@ -258,8 +265,8 @@ contains
                             Uabs,                   & ! [IN]
                             RH,                     & ! [IN]
                             DENS        (i,j),      & ! [IN]
-                            SFLX_SW_dn  (i,j),      & ! [IN]
-                            SFLX_LW_dn  (i,j),      & ! [IN]
+                            SFLX_SW_dn,             & ! [IN]
+                            SFLX_LW_dn,             & ! [IN]
                             dt                      )
 
 

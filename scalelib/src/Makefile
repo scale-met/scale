@@ -184,6 +184,7 @@ OBJS = \
 	$(OBJ_DIR)/scale_urban_dyn_kusaka01.o	\
 	$(OBJ_DIR)/scale_bulkflux.o	\
 	$(OBJ_DIR)/scale_landuse.o	\
+	$(OBJ_DIR)/scale_cpl_sfc_index.o	\
 	$(OBJ_DIR)/scale_cpl_phy_sfc_fixed_temp.o	\
 	$(OBJ_DIR)/scale_cpl_phy_sfc_skin.o
 

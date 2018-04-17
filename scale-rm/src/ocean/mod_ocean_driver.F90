@@ -17,10 +17,7 @@ module mod_ocean_driver
   use scale_io
   use scale_prof
   use scale_ocean_grid_cartesC_index
-
-  use scale_const, only: &
-     I_SW  => CONST_I_SW, &
-     I_LW  => CONST_I_LW
+  use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -201,8 +198,7 @@ contains
        ATMOS_cosSZA,       &
        ATMOS_SFC_DENS,     &
        ATMOS_SFC_PRES,     &
-       ATMOS_SFLX_LW,      &
-       ATMOS_SFLX_SW,      &
+       ATMOS_SFLX_rad_dn,  &
        ATMOS_SFLX_rain,    &
        ATMOS_SFLX_snow
     use scale_landuse, only: &
@@ -266,9 +262,15 @@ contains
     case ( 'CONST' )
        ! do nothing
     case ( 'NAKAJIMA00' )
-       call OCEAN_PHY_albedo_nakajima00( OIA, OIS, OIE, OJA, OJS, OJE, &
-                                         ATMOS_cosSZA(:,:),         & ! [IN]
-                                         OCEAN_SFC_albedo(:,:,I_SW) ) ! [OUT]
+       call OCEAN_PHY_albedo_nakajima00( OIA, OIS, OIE, OJA, OJS, OJE,            & ! [IN]
+                                         ATMOS_cosSZA    (:,:),                   & ! [IN]
+                                         OCEAN_SFC_albedo(:,:,I_R_direct,I_R_VIS) ) ! [OUT]
+
+
+       OCEAN_SFC_albedo(:,:,I_R_direct ,I_R_NIR) = OCEAN_SFC_albedo(:,:,I_R_direct ,I_R_VIS)
+
+       OCEAN_SFC_albedo(:,:,I_R_diffuse,I_R_NIR) = 0.06_RP
+       OCEAN_SFC_albedo(:,:,I_R_diffuse,I_R_VIS) = 0.06_RP
     end select
 
 
@@ -292,9 +294,9 @@ contains
                                     ATMOS_DENS(:,:), ATMOS_QV(:,:), LHV(:,:),                   & ! [IN]
                                     REAL_Z1(:,:), ATMOS_PBL(:,:),                               & ! [IN]
                                     ATMOS_SFC_DENS(:,:), ATMOS_SFC_PRES(:,:),                   & ! [IN]
-                                    ATMOS_SFLX_LW(:,:), ATMOS_SFLX_SW(:,:),                     & ! [IN]
+                                    ATMOS_SFLX_rad_dn(:,:,:,:),                                 & ! [IN]
                                     OCEAN_SFC_TEMP(:,:), QVEF(:,:),                             & ! [IN]
-                                    OCEAN_SFC_albedo(:,:,I_LW), OCEAN_SFC_albedo(:,:,I_SW),     & ! [IN]
+                                    OCEAN_SFC_albedo(:,:,:,:),                                  & ! [IN]
                                     SR(:,:),                                                    & ! [IN]
                                     OCEAN_SFC_Z0M(:,:), OCEAN_SFC_Z0H(:,:), OCEAN_SFC_Z0E(:,:), & ! [IN]
                                     LANDUSE_fact_ocean, dt,                                     & ! [IN]
@@ -349,7 +351,6 @@ contains
 !!$       OCEAN_UVEL,         &
 !!$       OCEAN_VVEL,         &
        OCEAN_SFC_TEMP,     &
-       OCEAN_SFC_albedo,   &
        OCEAN_SFC_Z0M,      &
        OCEAN_SFC_Z0H,      &
        OCEAN_SFC_Z0E,      &
@@ -415,26 +416,23 @@ contains
     use mod_ocean_admin, only: &
        OCEAN_do
     use mod_ocean_vars, only: &
-       ATMOS_TEMP,      &
-       ATMOS_PRES,      &
-       ATMOS_W,         &
-       ATMOS_U,         &
-       ATMOS_V,         &
-       ATMOS_DENS,      &
-       ATMOS_QV,        &
-       ATMOS_PBL,       &
-       ATMOS_SFC_DENS,  &
-       ATMOS_SFC_PRES,  &
-       ATMOS_SFLX_LW,   &
-       ATMOS_SFLX_SW,   &
-       ATMOS_cosSZA,    &
-       ATMOS_SFLX_rain, &
+       ATMOS_TEMP,        &
+       ATMOS_PRES,        &
+       ATMOS_W,           &
+       ATMOS_U,           &
+       ATMOS_V,           &
+       ATMOS_DENS,        &
+       ATMOS_QV,          &
+       ATMOS_PBL,         &
+       ATMOS_SFC_DENS,    &
+       ATMOS_SFC_PRES,    &
+       ATMOS_SFLX_rad_dn, &
+       ATMOS_cosSZA,      &
+       ATMOS_SFLX_rain,   &
        ATMOS_SFLX_snow
     use mod_cpl_vars, only: &
        CPL_getATM_OCN
     implicit none
-
-    real(RP) :: ATMOS_SFLX_rad_dn(OIA,OJA,2,2)
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -457,14 +455,6 @@ contains
                             ATMOS_SFLX_rain  (:,:),     & ! [OUT]
                             ATMOS_SFLX_snow  (:,:)      ) ! [OUT]
     endif
-
-!OCL XFILL
-    do j = OJS, OJE
-    do i = OIS, OIE
-       ATMOS_SFLX_SW  (i,j) = ATMOS_SFLX_rad_dn(i,j,I_SW,1) + ATMOS_SFLX_rad_dn(i,j,I_SW,2) ! direct+diffuse
-       ATMOS_SFLX_LW  (i,j) = ATMOS_SFLX_rad_dn(i,j,I_LW,1) + ATMOS_SFLX_rad_dn(i,j,I_LW,2) ! direct+diffuse
-    enddo
-    enddo
 
     call PROF_rapend  ('OCN_SfcExch', 2)
 
@@ -504,23 +494,23 @@ contains
     call PROF_rapstart('OCN_SfcExch', 2)
 
     if ( OCEAN_do ) then
-       call CPL_putOCN( OCEAN_SFC_TEMP  (:,:),   & ! [IN]
-                        OCEAN_SFC_albedo(:,:,:), & ! [IN]
-                        OCEAN_SFC_Z0M   (:,:),   & ! [IN]
-                        OCEAN_SFC_Z0H   (:,:),   & ! [IN]
-                        OCEAN_SFC_Z0E   (:,:),   & ! [IN]
-                        OCEAN_SFLX_MW   (:,:),   & ! [IN]
-                        OCEAN_SFLX_MU   (:,:),   & ! [IN]
-                        OCEAN_SFLX_MV   (:,:),   & ! [IN]
-                        OCEAN_SFLX_SH   (:,:),   & ! [IN]
-                        OCEAN_SFLX_LH   (:,:),   & ! [IN]
-                        OCEAN_SFLX_WH   (:,:),   & ! [IN]
-                        OCEAN_SFLX_evap (:,:),   & ! [IN]
-                        OCEAN_U10       (:,:),   & ! [IN]
-                        OCEAN_V10       (:,:),   & ! [IN]
-                        OCEAN_T2        (:,:),   & ! [IN]
-                        OCEAN_Q2        (:,:),   & ! [IN]
-                        countup                  ) ! [IN]
+       call CPL_putOCN( OCEAN_SFC_TEMP  (:,:),     & ! [IN]
+                        OCEAN_SFC_albedo(:,:,:,:), & ! [IN]
+                        OCEAN_SFC_Z0M   (:,:),     & ! [IN]
+                        OCEAN_SFC_Z0H   (:,:),     & ! [IN]
+                        OCEAN_SFC_Z0E   (:,:),     & ! [IN]
+                        OCEAN_SFLX_MW   (:,:),     & ! [IN]
+                        OCEAN_SFLX_MU   (:,:),     & ! [IN]
+                        OCEAN_SFLX_MV   (:,:),     & ! [IN]
+                        OCEAN_SFLX_SH   (:,:),     & ! [IN]
+                        OCEAN_SFLX_LH   (:,:),     & ! [IN]
+                        OCEAN_SFLX_WH   (:,:),     & ! [IN]
+                        OCEAN_SFLX_evap (:,:),     & ! [IN]
+                        OCEAN_U10       (:,:),     & ! [IN]
+                        OCEAN_V10       (:,:),     & ! [IN]
+                        OCEAN_T2        (:,:),     & ! [IN]
+                        OCEAN_Q2        (:,:),     & ! [IN]
+                        countup                    ) ! [IN]
     endif
 
     call PROF_rapend  ('OCN_SfcExch', 2)

@@ -16,10 +16,11 @@ module mod_realinput_wrfarw
   use scale_precision
   use scale_io
   use scale_tracer
+  use scale_cpl_sfc_index
+
   use scale_prc, only: &
      myrank => PRC_myrank,  &
      PRC_abort
-
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -608,9 +609,7 @@ contains
       it                  )
     use scale_const, only: &
        D2R => CONST_D2R, &
-       UNDEF => CONST_UNDEF, &
-       I_LW => CONST_I_LW, &
-       I_SW => CONST_I_SW
+       UNDEF => CONST_UNDEF
     use scale_file, only: &
        FILE_open, &
        FILE_read
@@ -619,7 +618,7 @@ contains
     real(RP),         intent(out)  :: sh2o_org(:,:,:)
     real(RP),         intent(out)  :: lst_org(:,:)
     real(RP),         intent(out)  :: ust_org(:,:)
-    real(RP),         intent(out)  :: albg_org(:,:,:)
+    real(RP),         intent(out)  :: albg_org(:,:,:,:)
     real(RP),         intent(out)  :: topo_org(:,:)
     real(RP),         intent(out)  :: lmask_org(:,:)
     real(RP),         intent(out)  :: llon_org(:,:)
@@ -688,16 +687,19 @@ contains
     ust_org(:,:) = lst_org(:,:)
 
     ! ALBEDO [-]
-    call FILE_read( fid, "ALBEDO", albg_org(:,:,I_SW), step=it )
+    call FILE_read( fid, "ALBEDO", albg_org(:,:,I_R_direct ,I_R_VIS), step=it )
+    albg_org(:,:,I_R_direct ,I_R_NIR) = albg_org(:,:,I_R_direct ,I_R_VIS)
+    albg_org(:,:,I_R_diffuse,I_R_NIR) = albg_org(:,:,I_R_direct ,I_R_VIS)
+    albg_org(:,:,I_R_diffuse,I_R_VIS) = albg_org(:,:,I_R_direct ,I_R_VIS)
 
     ! SURFACE EMISSIVITY [-]
     call FILE_read( fid, "EMISS", read_xy(:,:), step=it )
     do j = 1, ldims(3)
     do i = 1, ldims(2)
-       albg_org(i,j,I_LW) = 1.0_RP - read_xy(i,j)
+       albg_org(i,j,I_R_diffuse,I_R_IR) = 1.0_RP - read_xy(i,j)
     end do
     end do
-
+    albg_org(:,:,I_R_direct,I_R_IR) = albg_org(:,:,I_R_diffuse,I_R_IR)
 
 !    ! SNOW WATER EQUIVALENT [kg m-2] (no wrfout-default)
 !    call FILE_read( fid, "SNOW", snowq_org(:,:), step=it, allow_missing=.true., missing_value=UNDEF )
@@ -796,16 +798,14 @@ contains
       it                  )
     use scale_const, only: &
        D2R => CONST_D2R, &
-       UNDEF => CONST_UNDEF, &
-       I_LW => CONST_I_LW, &
-       I_SW => CONST_I_SW
+       UNDEF => CONST_UNDEF
     use scale_file, only: &
        FILE_open, &
        FILE_read
     implicit none
     real(RP),         intent(out)  :: tw_org(:,:)
     real(RP),         intent(out)  :: sst_org(:,:)
-    real(RP),         intent(out)  :: albw_org(:,:,:)
+    real(RP),         intent(out)  :: albw_org(:,:,:,:)
     real(RP),         intent(out)  :: z0w_org(:,:)
     real(RP),         intent(out)  :: omask_org(:,:)
     real(RP),         intent(out)  :: olon_org(:,:)
@@ -836,15 +836,19 @@ contains
     tw_org(:,:) = sst_org(:,:)
 
     ! ALBEDO [-]
-    call FILE_read( fid, "ALBEDO", albw_org(:,:,I_SW), step=it )
+    call FILE_read( fid, "ALBEDO", albw_org(:,:,I_R_direct ,I_R_VIS), step=it )
+    albw_org(:,:,I_R_direct ,I_R_NIR) = albw_org(:,:,I_R_direct ,I_R_VIS)
+    albw_org(:,:,I_R_diffuse,I_R_NIR) = albw_org(:,:,I_R_direct ,I_R_VIS)
+    albw_org(:,:,I_R_diffuse,I_R_VIS) = albw_org(:,:,I_R_direct ,I_R_VIS)
 
     ! SURFACE EMISSIVITY [-]
     call FILE_read( fid, "EMISS", read_xy(:,:), step=it )
     do j = 1, odims(2)
     do i = 1, odims(1)
-       albw_org(i,j,I_LW) = 1.0_RP - read_xy(i,j)
+       albw_org(i,j,I_R_diffuse,I_R_IR) = 1.0_RP - read_xy(i,j)
     enddo
     enddo
+    albw_org(:,:,I_R_direct,I_R_IR) = albw_org(:,:,I_R_diffuse,I_R_IR)
 
     ! TIME-VARYING ROUGHNESS LENGTH [m] (no wrfout-default)
     call FILE_read( fid, "ZNT", z0w_org(:,:), step=it, allow_missing=.true., missing_value=UNDEF )

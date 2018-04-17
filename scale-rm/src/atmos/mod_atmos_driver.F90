@@ -499,22 +499,22 @@ contains
     call PROF_rapstart('ATM_SfcExch', 2)
 
     if ( CPL_sw ) then
-       call CPL_getSFC_ATM( SFC_TEMP  (:,:),   & ! [OUT]
-                            SFC_albedo(:,:,:), & ! [OUT]
-                            SFC_Z0M   (:,:),   & ! [OUT]
-                            SFC_Z0H   (:,:),   & ! [OUT]
-                            SFC_Z0E   (:,:),   & ! [OUT]
-                            SFLX_MW   (:,:),   & ! [OUT]
-                            SFLX_MU   (:,:),   & ! [OUT]
-                            SFLX_MV   (:,:),   & ! [OUT]
-                            SFLX_SH   (:,:),   & ! [OUT]
-                            SFLX_LH   (:,:),   & ! [OUT]
-                            SFLX_GH   (:,:),   & ! [OUT]
-                            SFLX_QTRC (:,:,:), & ! [OUT]
-                            U10       (:,:),   & ! [OUT]
-                            V10       (:,:),   & ! [OUT]
-                            T2        (:,:),   & ! [OUT]
-                            Q2        (:,:)    ) ! [OUT]
+       call CPL_getSFC_ATM( SFC_TEMP  (:,:),     & ! [OUT]
+                            SFC_albedo(:,:,:,:), & ! [OUT]
+                            SFC_Z0M   (:,:),     & ! [OUT]
+                            SFC_Z0H   (:,:),     & ! [OUT]
+                            SFC_Z0E   (:,:),     & ! [OUT]
+                            SFLX_MW   (:,:),     & ! [OUT]
+                            SFLX_MU   (:,:),     & ! [OUT]
+                            SFLX_MV   (:,:),     & ! [OUT]
+                            SFLX_SH   (:,:),     & ! [OUT]
+                            SFLX_LH   (:,:),     & ! [OUT]
+                            SFLX_GH   (:,:),     & ! [OUT]
+                            SFLX_QTRC (:,:,:),   & ! [OUT]
+                            U10       (:,:),     & ! [OUT]
+                            V10       (:,:),     & ! [OUT]
+                            T2        (:,:),     & ! [OUT]
+                            Q2        (:,:)      ) ! [OUT]
     endif
 
     call PROF_rapend  ('ATM_SfcExch', 2)
@@ -546,7 +546,7 @@ contains
     use mod_atmos_phy_cp_vars, only: &
        SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain
     use mod_atmos_phy_rd_vars, only: &
-       SFLX_rad_dn => ATMOS_PHY_RD_SFLX_downall, &
+       SFLX_rad_dn => ATMOS_PHY_RD_SFLX_down, &
        cosSZA      => ATMOS_PHY_RD_cosSZA
     use mod_atmos_phy_bl_vars, only: &
        ATM_PBL => ATMOS_PHY_BL_Zi
