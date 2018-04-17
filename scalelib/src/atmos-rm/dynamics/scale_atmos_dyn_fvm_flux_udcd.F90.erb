@@ -679,7 +679,8 @@ contains
     do k = KS<%=[nh,2].max%>, KE<%=-[nh,1].max%>
        vel = <%= interp("mom", uv, "XYZ") %> &
            / DENS(k,i,j)
-       flux(k-1,i,j) = <%=dir%>G(k,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
+       vel = vel * <%=dir%>G(k,i,j)
+       flux(k-1,i,j) = vel / MAPF(i,j,<%=i*2+j%>) &
                    * ( <%= flux("vel", order, 0, "k-1") %> )
     enddo
     enddo
@@ -700,18 +701,21 @@ contains
              + <%= interp("mom", uv, "XYZ", "KS"  ) %> / DENS(KS  ,i,j) ) * 0.5_RP
 !       vel = <%= interp("mom", uv, "XYZ", "KS+1") %> &
 !           / DENS(KS+1,i,j)
-       flux(KS,i,j) = <%=dir%>G(KS+1,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
+       vel = vel * <%=dir%>G(KS+1,i,j)
+       flux(KS,i,j) =  vel / MAPF(i,j,<%=i*2+j%>) &
                    * ( <%= flux("vel", [[order-nh*2,[order,2].min].max,[order-(nh-1)*2,[order,2].min].max], 0, "KS") %> ) ! k = KS+1
 <%   for k in 1...(nh-1) %>
        vel = <%= interp("mom", uv, "XYZ", "KS"+(k+1)) %> &
            / DENS(KS<%=k+1%>,i,j)
-       flux(KS<%=k%>,i,j) = <%=dir%>G(KS<%k+1%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
+       vel = vel * <%=dir%>G(KS<%k+1%>,i,j)
+       flux(KS<%=k%>,i,j) = vel / MAPF(i,j,<%=i*2+j%>) &
                    * ( <%= flux("vel", [[order-(nh-k)*2,[order,2].min].max,[order-(nh-k-1)*2,[order,2].min].max], 0, "KS"+k) %> ) ! k = KS<%=k+1%>
 <%   end %>
 <%   (nh-1).times do |k| %>
        vel = <%= interp("mom", uv, "XYZ", "KE"-(k+1)) %> &
            / DENS(KE<%=-k-1%>,i,j)
-       flux(KE<%=-k-2%>,i,j) = <%=dir%>G(KE<%=-k-1%>,i,j) / MAPF(i,j,<%=i*2+j%>) * vel &
+       vel = vel * <%=dir%>G(KE<%=-k-1%>,i,j)
+       flux(KE<%=-k-2%>,i,j) = vel / MAPF(i,j,<%=i*2+j%>) &
                    * ( <%= flux("vel", [[order-(nh-k-1)*2,[order,2].min].max,[order-(nh-k)*2,[order,2].min].max], 0, "KE"-(k+2)) %> ) ! k = KE<%=-k-3%>
 <%   end %>
        flux(KE-1,i,j) = 0.0_RP
@@ -924,7 +928,8 @@ contains
     do k = KS<%=nh%>, KE<%=-nh-1%>
        vel = <%= interp("mom", xyz, uv+"W") %> &
            / <%= interp("DENS", "XYZ", uv+"W") %>
-       flux(k,i,j) = <%=dir%>G(k,i,j) / MAPF(i,j,<%=im%>) * vel &
+       vel = vel * <%=dir%>G(k,i,j)
+       flux(k,i,j) = vel / MAPF(i,j,<%=im%>) &
                    * ( <%= flux("vel", order, 0) %> )
     enddo
     enddo
@@ -943,12 +948,14 @@ contains
 <% nh.times do |k| %>
        vel = <%= interp("mom", xyz, uv+"W", "KS"+k) %> &
            / <%= interp("DENS", "XYZ", uv+"W", "KS"+k) %>
-       flux(KS<%=k%>,i,j) = <%=dir%>G(KS<%=k%>,i,j) / MAPF(i,j,<%=im%>) * vel &
+       vel = vel * <%=dir%>G(KS<%=k%>,i,j)
+       flux(KS<%=k%>,i,j) = vel / MAPF(i,j,<%=im%>) &
                    * ( <%= flux("vel", [[order-(nh-k)*2,[order,2].min].max,[order-(nh-k-1)*2,[order,2].min].max], 0, "KS"+k) %> )
 
        vel = <%= interp("mom", xyz, uv+"W", "KE"-(k+1)) %> &
            / <%= interp("DENS", "XYZ", uv+"W", "KE"-(k+1)) %>
-       flux(KE<%=-k-1%>,i,j) = <%=dir%>G(KE<%=-k-1%>,i,j) / MAPF(i,j,<%=im%>) * vel &
+       vel = vel * <%=dir%>G(KE<%=-k-1%>,i,j)
+       flux(KE<%=-k-1%>,i,j) = vel / MAPF(i,j,<%=im%>) &
                    * ( <%= flux("vel", [[order-(nh-k-1)*2,[order,2].min].max,[order-(nh-k)*2,[order,2].min].max], 0, "KE"-(k+1)) %> )
 <% end %>
        flux(KE  ,i,j) = 0.0_RP

@@ -179,7 +179,7 @@ LANDUSETYPE=(  "GLCCv2"  "GLCCv2"  ) # required parameters for each domain
 COPYTOPO=(     ".false." ".true."  ) # required parameters for each domain
 SMOOTH_LOCAL=( ".true."  ".true."  ) # required parameters for each domain
 
-MAXSLOPE_RATIO="1.0"
+MAXSLOPE_RATIO="10.0"
 LIMIT_URBAN_FRACTION="0.3"
 
 #################################################
