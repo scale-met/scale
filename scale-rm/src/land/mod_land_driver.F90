@@ -155,8 +155,8 @@ contains
        LAND_SFC_TEMP,     &
        LAND_SFC_albedo,   &
        LAND_type_albedo,  &
-       LAND_TEMP_t,     &
-       LAND_WATER_t,    &
+       LAND_TEMP_t,       &
+       LAND_WATER_t,      &
        LAND_SFLX_MW,      &
        LAND_SFLX_MU,      &
        LAND_SFLX_MV,      &

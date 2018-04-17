@@ -922,15 +922,11 @@ contains
        LAND_SFC_albedo
     implicit none
 
-    ! Land state
-    real(RP) :: LND_TEMP                ! soil temperature           [K]
-    real(RP) :: LND_WATER     = 0.15_RP ! soil moisture              [m3/m3]
+    real(RP) :: LND_TEMP                ! land soil temperature      [K]
+    real(RP) :: LND_WATER     = 0.15_RP ! land soil moisture         [m3/m3]
     real(RP) :: SFC_TEMP                ! land skin temperature      [K]
     real(RP) :: SFC_albedo_LW = 0.01_RP ! land surface albedo for LW (0-1)
     real(RP) :: SFC_albedo_SW = 0.20_RP ! land surface albedo for SW (0-1)
-
-    integer :: i, j
-    integer :: ierr
 
     namelist / PARAM_MKINIT_LAND / &
        LND_TEMP,      &
@@ -938,6 +934,9 @@ contains
        SFC_TEMP,      &
        SFC_albedo_LW, &
        SFC_albedo_SW
+
+    integer  :: ierr
+    !---------------------------------------------------------------------------
 
     LND_TEMP = THETAstd
     SFC_TEMP = THETAstd
@@ -953,15 +952,11 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_LAND)
 
-    do j = JS, JE
-    do i = IS, IE
-       LAND_TEMP      (:,i,j)    = LND_TEMP
-       LAND_WATER     (:,i,j)    = LND_WATER
-       LAND_SFC_TEMP  (i,j)      = SFC_TEMP
-       LAND_SFC_albedo(i,j,I_LW) = SFC_albedo_LW
-       LAND_SFC_albedo(i,j,I_SW) = SFC_albedo_SW
-    end do
-    end do
+    LAND_TEMP      (:,:,:)      = LND_TEMP
+    LAND_WATER     (:,:,:)      = LND_WATER
+    LAND_SFC_TEMP  (  :,:)      = SFC_TEMP
+    LAND_SFC_albedo(  :,:,I_LW) = SFC_albedo_LW
+    LAND_SFC_albedo(  :,:,I_SW) = SFC_albedo_SW
 
     return
   end subroutine land_setup
@@ -971,6 +966,9 @@ contains
   subroutine ocean_setup
     use mod_ocean_vars, only: &
        OCEAN_TEMP,       &
+       OCEAN_SALT,       &
+       OCEAN_UVEL,       &
+       OCEAN_VVEL,       &
        OCEAN_SFC_TEMP,   &
        OCEAN_SFC_albedo, &
        OCEAN_SFC_Z0M,    &
@@ -978,26 +976,31 @@ contains
        OCEAN_SFC_Z0E
     implicit none
 
-    ! Ocean state
-    real(RP) :: OCN_TEMP                  ! ocean temperature           [K]
-    real(RP) :: SFC_TEMP                  ! ocean skin temperature      [K]
-    real(RP) :: SFC_albedo_LW = 0.04_RP   ! ocean surface albedo for LW (0-1)
-    real(RP) :: SFC_albedo_SW = 0.05_RP   ! ocean surface albedo for SW (0-1)
-    real(RP) :: SFC_Z0M       = 1.0e-4_RP ! ocean surface roughness length (momentum) [m]
-    real(RP) :: SFC_Z0H       = 1.0e-4_RP ! ocean surface roughness length (heat) [m]
-    real(RP) :: SFC_Z0E       = 1.0e-4_RP ! ocean surface roughness length (vapor) [m]
-
-    integer :: i, j
-    integer :: ierr
+    real(RP) :: OCN_TEMP                 ! ocean temperature                         [K]
+    real(RP) :: OCN_SALT      = 0.0_RP   ! ocean salinity                            [psu]
+    real(RP) :: OCN_UVEL      = 0.0_RP   ! ocean u-velocity                          [m/s]
+    real(RP) :: OCN_VVEL      = 0.0_RP   ! ocean v-velocity                          [m/s]
+    real(RP) :: SFC_TEMP                 ! ocean skin temperature                    [K]
+    real(RP) :: SFC_albedo_LW = 0.04_RP  ! ocean surface albedo for LW               (0-1)
+    real(RP) :: SFC_albedo_SW = 0.05_RP  ! ocean surface albedo for SW               (0-1)
+    real(RP) :: SFC_Z0M       = 1.E-4_RP ! ocean surface roughness length (momentum) [m]
+    real(RP) :: SFC_Z0H       = 1.E-4_RP ! ocean surface roughness length (heat)     [m]
+    real(RP) :: SFC_Z0E       = 1.E-4_RP ! ocean surface roughness length (vapor)    [m]
 
     namelist / PARAM_MKINIT_OCEAN / &
        OCN_TEMP,      &
+       OCN_SALT,      &
+       OCN_UVEL,      &
+       OCN_VVEL,      &
        SFC_TEMP,      &
        SFC_albedo_LW, &
        SFC_albedo_SW, &
        SFC_Z0M,       &
        SFC_Z0H,       &
        SFC_Z0E
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
 
     OCN_TEMP = THETAstd
     SFC_TEMP = THETAstd
@@ -1013,18 +1016,16 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_OCEAN)
 
-
-    do j = JSB, JEB
-    do i = ISB, IEB
-       OCEAN_TEMP      (:,i,j)    = OCN_TEMP
-       OCEAN_SFC_TEMP  (i,j)      = SFC_TEMP
-       OCEAN_SFC_albedo(i,j,I_LW) = SFC_albedo_LW
-       OCEAN_SFC_albedo(i,j,I_SW) = SFC_albedo_SW
-       OCEAN_SFC_Z0M   (i,j)      = SFC_Z0M
-       OCEAN_SFC_Z0H   (i,j)      = SFC_Z0H
-       OCEAN_SFC_Z0E   (i,j)      = SFC_Z0E
-    end do
-    end do
+    OCEAN_TEMP      (:,:,:)      = OCN_TEMP
+    OCEAN_SALT      (:,:,:)      = OCN_SALT
+    OCEAN_UVEL      (:,:,:)      = OCN_UVEL
+    OCEAN_VVEL      (:,:,:)      = OCN_VVEL
+    OCEAN_SFC_TEMP  (  :,:)      = SFC_TEMP
+    OCEAN_SFC_albedo(  :,:,I_LW) = SFC_albedo_LW
+    OCEAN_SFC_albedo(  :,:,I_SW) = SFC_albedo_SW
+    OCEAN_SFC_Z0M   (  :,:)      = SFC_Z0M
+    OCEAN_SFC_Z0H   (  :,:)      = SFC_Z0H
+    OCEAN_SFC_Z0E   (  :,:)      = SFC_Z0E
 
     return
   end subroutine ocean_setup
@@ -1050,26 +1051,22 @@ contains
        URBAN_SFC_albedo
     implicit none
 
-    ! urban state
-    real(RP) :: URB_ROOF_TEMP          ! Surface temperature of roof [K]
-    real(RP) :: URB_BLDG_TEMP          ! Surface temperature of building [K
-    real(RP) :: URB_GRND_TEMP          ! Surface temperature of ground [K]
-    real(RP) :: URB_CNPY_TEMP          ! Diagnostic canopy air temperature
-    real(RP) :: URB_CNPY_HMDT = 0.0_RP ! Diagnostic canopy humidity [-]
-    real(RP) :: URB_CNPY_WIND = 0.0_RP ! Diagnostic canopy wind [m/s]
-    real(RP) :: URB_ROOF_LAYER_TEMP    ! temperature in layer of roof [K]
-    real(RP) :: URB_BLDG_LAYER_TEMP    ! temperature in layer of building [
-    real(RP) :: URB_GRND_LAYER_TEMP    ! temperature in layer of ground [K]
-    real(RP) :: URB_ROOF_RAIN = 0.0_RP ! temperature in layer of roof [K]
-    real(RP) :: URB_BLDG_RAIN = 0.0_RP ! temperature in layer of building [
-    real(RP) :: URB_GRND_RAIN = 0.0_RP ! temperature in layer of ground [K]
-    real(RP) :: URB_RUNOFF    = 0.0_RP ! temperature in layer of ground [K]
-    real(RP) :: URB_SFC_TEMP           ! Grid average of surface temperature [K]
-    real(RP) :: URB_ALB_LW    = 0.0_RP ! Grid average of surface albedo for LW (0-1)
-    real(RP) :: URB_ALB_SW    = 0.0_RP ! Grid average of surface albedo for SW (0-1)
-
-    integer :: i, j
-    integer :: ierr
+    real(RP) :: URB_ROOF_TEMP                 ! Surface temperature of roof           [K]
+    real(RP) :: URB_BLDG_TEMP                 ! Surface temperature of building       [K]
+    real(RP) :: URB_GRND_TEMP                 ! Surface temperature of ground         [K]
+    real(RP) :: URB_CNPY_TEMP                 ! Diagnostic canopy air temperature     [K]
+    real(RP) :: URB_CNPY_HMDT       = 0.0_RP  ! Diagnostic canopy humidity            [kg/kg]
+    real(RP) :: URB_CNPY_WIND       = 0.0_RP  ! Diagnostic canopy wind                [m/s]
+    real(RP) :: URB_ROOF_LAYER_TEMP           ! temperature in layer of roof          [K]
+    real(RP) :: URB_BLDG_LAYER_TEMP           ! temperature in layer of building      [K]
+    real(RP) :: URB_GRND_LAYER_TEMP           ! temperature in layer of ground        [K]
+    real(RP) :: URB_ROOF_RAIN       = 0.0_RP  ! temperature in layer of roof          [K]
+    real(RP) :: URB_BLDG_RAIN       = 0.0_RP  ! temperature in layer of building      [K]
+    real(RP) :: URB_GRND_RAIN       = 0.0_RP  ! temperature in layer of ground        [K]
+    real(RP) :: URB_RUNOFF          = 0.0_RP  ! temperature in layer of ground        [K]
+    real(RP) :: URB_SFC_TEMP                  ! Grid average of surface temperature   [K]
+    real(RP) :: URB_ALB_LW          = 0.0_RP  ! Grid average of surface albedo for LW (0-1)
+    real(RP) :: URB_ALB_SW          = 0.0_RP  ! Grid average of surface albedo for SW (0-1)
 
     namelist / PARAM_MKINIT_URBAN / &
        URB_ROOF_TEMP,       &
@@ -1089,6 +1086,9 @@ contains
        URB_ALB_LW,          &
        URB_ALB_SW
 
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
     URB_ROOF_TEMP       = THETAstd
     URB_BLDG_TEMP       = THETAstd
     URB_GRND_TEMP       = THETAstd
@@ -1096,7 +1096,6 @@ contains
     URB_ROOF_LAYER_TEMP = THETAstd
     URB_BLDG_LAYER_TEMP = THETAstd
     URB_GRND_LAYER_TEMP = THETAstd
-
     URB_SFC_TEMP        = THETAstd
 
     !--- read namelist
@@ -1110,27 +1109,22 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_URBAN)
 
-
-    do j = JSB, JEB
-    do i = ISB, IEB
-       URBAN_TR   (i,j)   = URB_ROOF_TEMP
-       URBAN_TB   (i,j)   = URB_BLDG_TEMP
-       URBAN_TG   (i,j)   = URB_GRND_TEMP
-       URBAN_TC   (i,j)   = URB_CNPY_TEMP
-       URBAN_QC   (i,j)   = URB_CNPY_HMDT
-       URBAN_UC   (i,j)   = URB_CNPY_WIND
-       URBAN_TRL  (:,i,j) = URB_ROOF_LAYER_TEMP
-       URBAN_TBL  (:,i,j) = URB_BLDG_LAYER_TEMP
-       URBAN_TGL  (:,i,j) = URB_GRND_LAYER_TEMP
-       URBAN_RAINR(i,j)   = URB_ROOF_RAIN
-       URBAN_RAINB(i,j)   = URB_BLDG_RAIN
-       URBAN_RAING(i,j)   = URB_GRND_RAIN
-       URBAN_ROFF (i,j)   = URB_RUNOFF
-       URBAN_SFC_TEMP  (i,j)      = URB_SFC_TEMP
-       URBAN_SFC_albedo(i,j,I_LW) = URB_ALB_LW
-       URBAN_SFC_albedo(i,j,I_SW) = URB_ALB_SW
-    end do
-    end do
+    URBAN_TR        (  :,:)      = URB_ROOF_TEMP
+    URBAN_TB        (  :,:)      = URB_BLDG_TEMP
+    URBAN_TG        (  :,:)      = URB_GRND_TEMP
+    URBAN_TC        (  :,:)      = URB_CNPY_TEMP
+    URBAN_QC        (  :,:)      = URB_CNPY_HMDT
+    URBAN_UC        (  :,:)      = URB_CNPY_WIND
+    URBAN_TRL       (:,:,:)      = URB_ROOF_LAYER_TEMP
+    URBAN_TBL       (:,:,:)      = URB_BLDG_LAYER_TEMP
+    URBAN_TGL       (:,:,:)      = URB_GRND_LAYER_TEMP
+    URBAN_RAINR     (  :,:)      = URB_ROOF_RAIN
+    URBAN_RAINB     (  :,:)      = URB_BLDG_RAIN
+    URBAN_RAING     (  :,:)      = URB_GRND_RAIN
+    URBAN_ROFF      (  :,:)      = URB_RUNOFF
+    URBAN_SFC_TEMP  (  :,:)      = URB_SFC_TEMP
+    URBAN_SFC_albedo(  :,:,I_LW) = URB_ALB_LW
+    URBAN_SFC_albedo(  :,:,I_SW) = URB_ALB_SW
 
     return
   end subroutine urban_setup
