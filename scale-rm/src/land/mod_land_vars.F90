@@ -70,7 +70,6 @@ module mod_land_vars
   real(RP), public, allocatable :: SNOW_Depth     (:,:)    !< snow depth                   [m]
   real(RP), public, allocatable :: SNOW_Dzero     (:,:)    !< snow depth at melting point  [m]
   real(RP), public, allocatable :: SNOW_nosnowsec (:,:)    !< sec while no snow            [s]
-  real(RP), public, allocatable :: LAND_type_albedo(:,:,:) !< land surface albedo (Initial) (0-1)
 
   ! tendency variables
   real(RP), public, allocatable :: LAND_TEMP_t      (:,:,:) !< tendency of LAND_TEMP
@@ -114,16 +113,18 @@ module mod_land_vars
 
   character(len=H_LONG), public :: LAND_PROPERTY_IN_FILENAME  = '' !< the file of land parameter table
 
-  integer,  public, parameter   :: LAND_PROPERTY_nmax = 9
-  integer,  public, parameter   :: I_WaterLimit       = 1 ! maximum  soil moisture           [m3/m3]
-  integer,  public, parameter   :: I_WaterCritical    = 2 ! critical soil moisture           [m3/m3]
-  integer,  public, parameter   :: I_StomataResist    = 3 ! stomata resistance               [1/s]
-  integer,  public, parameter   :: I_ThermalCond      = 4 ! thermal conductivity for soil    [W/K/m]
-  integer,  public, parameter   :: I_HeatCapacity     = 5 ! heat capacity for soil           [J/K/m3]
-  integer,  public, parameter   :: I_WaterDiff        = 6 ! moisture diffusivity in the soil [m2/s]
-  integer,  public, parameter   :: I_Z0M              = 7 ! roughness length for momemtum    [m]
-  integer,  public, parameter   :: I_Z0H              = 8 ! roughness length for heat        [m]
-  integer,  public, parameter   :: I_Z0E              = 9 ! roughness length for vapor       [m]
+  integer,  public, parameter   :: LAND_PROPERTY_nmax = 11
+  integer,  public, parameter   :: I_WaterLimit       =  1 ! maximum  soil moisture           [m3/m3]
+  integer,  public, parameter   :: I_WaterCritical    =  2 ! critical soil moisture           [m3/m3]
+  integer,  public, parameter   :: I_StomataResist    =  3 ! stomata resistance               [1/s]
+  integer,  public, parameter   :: I_ThermalCond      =  4 ! thermal conductivity for soil    [W/K/m]
+  integer,  public, parameter   :: I_HeatCapacity     =  5 ! heat capacity for soil           [J/K/m3]
+  integer,  public, parameter   :: I_WaterDiff        =  6 ! moisture diffusivity in the soil [m2/s]
+  integer,  public, parameter   :: I_ALBLW            =  7 ! surface albedo for long  wave    [1]
+  integer,  public, parameter   :: I_ALBSW            =  8 ! surface albedo for short wave    [1]
+  integer,  public, parameter   :: I_Z0M              =  9 ! roughness length for momemtum    [m]
+  integer,  public, parameter   :: I_Z0H              = 10 ! roughness length for heat        [m]
+  integer,  public, parameter   :: I_Z0E              = 11 ! roughness length for vapor       [m]
 
   !-----------------------------------------------------------------------------
   !
@@ -270,12 +271,10 @@ contains
     allocate( LAND_WATER      (LKMAX,LIA,LJA) )
     allocate( LAND_SFC_TEMP   (LIA,LJA)       )
     allocate( LAND_SFC_albedo (LIA,LJA,2)     )
-    allocate( LAND_type_albedo(LIA,LJA,2)     )
     LAND_TEMP      (:,:,:) = UNDEF
     LAND_WATER     (:,:,:) = UNDEF
     LAND_SFC_TEMP  (:,:)   = UNDEF
     LAND_SFC_albedo(:,:,:) = UNDEF
-    LAND_type_albedo(:,:,:) = UNDEF
 
     allocate( SNOW_SFC_TEMP  (LIA,LJA)       )
     allocate( SNOW_SWE       (LIA,LJA)       )
@@ -495,8 +494,6 @@ contains
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ALB_SW),     'XY',  & ! [IN]
                                LAND_SFC_albedo(:,:,I_SW)                   ) ! [OUT]
 
-       if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
-
        !call FILE_CARTESC_read( restart_fid, 'SNOW_SFC_TEMP',      'XY',  & ! [OUT]
        !                        SNOW_SFC_TEMP(:,:)                        ) ! [IN]
        !call FILE_CARTESC_read( restart_fid, 'SNOW_SWE',           'XY',  & ! [OUT]
@@ -509,12 +506,13 @@ contains
        !                        SNOW_nosnowsec(:,:)                       ) ! [IN]
 
        !!!!! Tentative for snow model !!!!!
-       LAND_type_albedo = LAND_SFC_albedo
        SNOW_SFC_TEMP    = 273.15_RP
        SNOW_SWE         = 0.0_RP
        SNOW_Depth       = 0.0_RP
        SNOW_Dzero       = 0.0_RP
        SNOW_nosnowsec   = 0.0_RP
+
+       if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
 
        call LAND_vars_total
     else
@@ -678,6 +676,8 @@ contains
     real(RP)             :: TCS
     real(RP)             :: HCS
     real(RP)             :: DFW
+    real(RP)             :: ALBLW
+    real(RP)             :: ALBSW
     real(RP)             :: Z0M
     real(RP)             :: Z0H
     real(RP)             :: Z0E
@@ -694,6 +694,8 @@ contains
        TCS,         &
        HCS,         &
        DFW,         &
+       ALBLW,       &
+       ALBSW,       &
        Z0M,         &
        Z0H,         &
        Z0E
@@ -731,15 +733,17 @@ contains
       else
         LOG_NEWLINE
         LOG_INFO("LAND_param_read",*) 'Properties for each plant functional type (PFT)'
-        LOG_INFO_CONT('(10(1x,A))') '                         PFT DESCRIPTION', &
+        LOG_INFO_CONT('(12(1x,A))') '                         PFT DESCRIPTION', &
                                     'Max Stg', &
                                     'CRT Stg', &
                                     'Stm.Res', &
                                     'T condu', &
                                     'H capac', &
                                     'DFC Wat', &
-                                    ' Z0(m)',   &
-                                    ' Z0(h)',   &
+                                    'LW ALB',  &
+                                    'SW ALB',  &
+                                    ' Z0(m)',  &
+                                    ' Z0(h)',  &
                                     ' Z0(e)'
 
         !--- read namelist
@@ -747,12 +751,15 @@ contains
 
         do n = 1, LANDUSE_PFT_nmax
            ! default value
+           ALBSW   =  0.2_RP
            STRGMAX =  0.2_RP
            STRGCRT =  0.1_RP
            RSTOMA  = 50.0_RP
            TCS     =  1.0_RP
            HCS     =  2.E+6_RP
            DFW     =  1.E-6_RP
+           ALBLW   =  0.04_RP
+           ALBSW   =  0.22_RP
            Z0M     =  0.1_RP
            Z0H     = -1.0_RP
            Z0E     = -1.0_RP
@@ -778,11 +785,13 @@ contains
            LAND_PROPERTY_table(index,I_ThermalCond  ) = TCS
            LAND_PROPERTY_table(index,I_HeatCapacity ) = HCS
            LAND_PROPERTY_table(index,I_WaterDiff    ) = DFW
+           LAND_PROPERTY_table(index,I_ALBLW        ) = ALBLW
+           LAND_PROPERTY_table(index,I_ALBSW        ) = ALBSW
            LAND_PROPERTY_table(index,I_Z0M          ) = Z0M
            LAND_PROPERTY_table(index,I_Z0H          ) = Z0H
            LAND_PROPERTY_table(index,I_Z0E          ) = Z0E
 
-           LOG_INFO_CONT('(1x,A4,I3.3,1x,A32,4(1x,F7.3),2(1x,ES7.1),3(1x,F6.3))') &
+           LOG_INFO_CONT('(1x,A4,I3.3,1x,A32,4(1x,F7.3),2(1x,ES7.1),5(1x,F6.3))') &
                                          'IDX=', index, &
                                          trim(description), &
                                          STRGMAX, &
@@ -791,6 +800,8 @@ contains
                                          TCS,     &
                                          HCS,     &
                                          DFW,     &
+                                         ALBLW,   &
+                                         ALBSW,   &
                                          Z0M,     &
                                          Z0H,     &
                                          Z0E

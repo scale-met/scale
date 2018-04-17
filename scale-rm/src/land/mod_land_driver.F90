@@ -146,6 +146,8 @@ contains
        I_ThermalCond,     &
        I_HeatCapacity,    &
        I_WaterDiff,       &
+       I_ALBLW,          &
+       I_ALBSW,          &
        I_Z0M,             &
        I_Z0H,             &
        I_Z0E,             &
@@ -154,7 +156,6 @@ contains
        LAND_WATER,        &
        LAND_SFC_TEMP,     &
        LAND_SFC_albedo,   &
-       LAND_type_albedo,  &
        LAND_TEMP_t,       &
        LAND_WATER_t,      &
        LAND_SFLX_MW,      &
@@ -411,7 +412,7 @@ contains
                               ATMOS_SFC_DENS(:,:), ATMOS_SFC_PRES(:,:),                & ! [IN]
                               ATMOS_SFLX_LW(:,:), ATMOS_SFLX_SW(:,:),                  & ! [IN]
                               LAND_TEMP(LKS,:,:), LAND_QVEF(:,:),                      & ! [IN]
-                              LAND_type_albedo(:,:,I_LW), LAND_type_albedo(:,:,I_SW),  & ! [IN]
+                              LAND_PROPERTY(:,:,I_ALBLW), LAND_PROPERTY(:,:,I_ALBSW),  & ! [IN]
                               LAND_DZ1(:,:),                                           & ! [IN]
                               LAND_PROPERTY(:,:,I_StomataResist),                      & ! [IN]
                               LAND_PROPERTY(:,:,I_ThermalCond),                        & ! [IN]
@@ -429,8 +430,8 @@ contains
        !$omp parallel do
        do j = LJS, LJE
        do i = LIS, LIE
-          LAND_SFC_albedo(i,j,I_LW) = LAND_type_albedo(i,j,I_LW)
-          LAND_SFC_albedo(i,j,I_SW) = LAND_type_albedo(i,j,I_SW)
+          LAND_SFC_albedo(i,j,I_LW) = LAND_PROPERTY(i,j,I_ALBLW)
+          LAND_SFC_albedo(i,j,I_SW) = LAND_PROPERTY(i,j,I_ALBSW)
        end do
        end do
 
@@ -451,7 +452,7 @@ contains
                                     ATMOS_SFC_DENS(:,:), ATMOS_SFC_PRES(:,:),                & ! [IN]
                                     ATMOS_SFLX_LW(:,:), ATMOS_SFLX_SW(:,:),                  & ! [IN]
                                     LAND_SFC_TEMP(:,:), LAND_QVEF(:,:),                      & ! [IN]
-                                    LAND_type_albedo(:,:,I_LW), LAND_type_albedo(:,:,I_SW),  & ! [IN]
+                                    LAND_PROPERTY(:,:,I_ALBLW), LAND_PROPERTY(:,:,I_ALBSW),  & ! [IN]
                                     LAND_PROPERTY(:,:,I_StomataResist),                      & ! [IN]
                                     LAND_PROPERTY(:,:,I_Z0M),                                & ! [IN]
                                     LAND_PROPERTY(:,:,I_Z0H),                                & ! [IN]
@@ -461,6 +462,16 @@ contains
                                     LAND_SFLX_SH(:,:), LAND_SFLX_LH(:,:), SFLX_GH(:,:),      & ! [OUT]
                                     LAND_U10(:,:), LAND_V10(:,:),                            & ! [OUT]
                                     LAND_T2(:,:), LAND_Q2(:,:)                               ) ! [OUT]
+
+!OCL XFILL
+       !$omp parallel do
+       do j = LJS, LJE
+       do i = LIS, LIE
+          LAND_SFC_albedo(i,j,I_LW) = LAND_PROPERTY(i,j,I_ALBLW)
+          LAND_SFC_albedo(i,j,I_SW) = LAND_PROPERTY(i,j,I_ALBSW)
+       end do
+       end do
+
     end select
 
     ! LAND_SFLX_* are positive for downward
