@@ -1065,8 +1065,8 @@ contains
     real(RP) :: URB_GRND_RAIN       = 0.0_RP  ! temperature in layer of ground        [K]
     real(RP) :: URB_RUNOFF          = 0.0_RP  ! temperature in layer of ground        [K]
     real(RP) :: URB_SFC_TEMP                  ! Grid average of surface temperature   [K]
-    real(RP) :: URB_ALB_LW          = 0.0_RP  ! Grid average of surface albedo for LW (0-1)
-    real(RP) :: URB_ALB_SW          = 0.0_RP  ! Grid average of surface albedo for SW (0-1)
+    real(RP) :: URB_ALB_LW          = 0.10_RP ! Grid average of surface albedo for LW (0-1)
+    real(RP) :: URB_ALB_SW          = 0.20_RP ! Grid average of surface albedo for SW (0-1)
 
     namelist / PARAM_MKINIT_URBAN / &
        URB_ROOF_TEMP,       &
