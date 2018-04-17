@@ -748,10 +748,10 @@ contains
        PRC_masterrank
     implicit none
 
-    real(RP), intent(out) :: recv(:,:) !< receive buffer (gIA,gJA)
-    real(RP), intent(in)  :: send(:,:) !< send buffer (gIA,gJA)
-    integer,  intent(in)  :: gIA       !< dimension size of x
-    integer,  intent(in)  :: gJA       !< dimension size of y
+    real(RP), intent(out) :: recv(:,:,:) !< receive buffer (gIA,gJA,nprcs)
+    real(RP), intent(in)  :: send(:,:)   !< send buffer (gIA,gJA)
+    integer,  intent(in)  :: gIA         !< dimension size of x
+    integer,  intent(in)  :: gJA         !< dimension size of y
 
     integer :: sendcounts, recvcounts
     integer :: ierr
@@ -763,7 +763,7 @@ contains
     call MPI_GATHER( send(:,:),      &
                      sendcounts,     &
                      COMM_datatype,  &
-                     recv(:,:),      &
+                     recv(:,:,:),    &
                      recvcounts,     &
                      COMM_datatype,  &
                      PRC_masterrank, &
@@ -780,11 +780,11 @@ contains
        PRC_masterrank
     implicit none
 
-    real(RP), intent(out) :: recv(:,:,:) !< receive buffer(gIA,gJA,gKA)
-    real(RP), intent(in)  :: send(:,:,:) !< send buffer   (gIA,gJA,gKA)
-    integer,  intent(in)  :: gIA         !< dimension size of x
-    integer,  intent(in)  :: gJA         !< dimension size of y
-    integer,  intent(in)  :: gKA         !< dimension size of z
+    real(RP), intent(out) :: recv(:,:,:,:) !< receive buffer(gIA,gJA,gKA,nprcs)
+    real(RP), intent(in)  :: send(:,:,:)   !< send buffer   (gIA,gJA,gKA)
+    integer,  intent(in)  :: gIA           !< dimension size of x
+    integer,  intent(in)  :: gJA           !< dimension size of y
+    integer,  intent(in)  :: gKA           !< dimension size of z
 
     integer :: sendcounts, recvcounts
     integer :: ierr
@@ -796,7 +796,7 @@ contains
     call MPI_GATHER( send(:,:,:),    &
                      sendcounts,     &
                      COMM_datatype,  &
-                     recv(:,:,:),    &
+                     recv(:,:,:,:),  &
                      recvcounts,     &
                      COMM_datatype,  &
                      PRC_masterrank, &

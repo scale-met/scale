@@ -135,7 +135,7 @@ module scale_comm_cartesC_nest
   !++ Private parameters & variables
   !
   real(RP), private, allocatable :: latlon_catalog(:,:,:)    !< parent latlon catalog [rad]
-  real(RP), private              :: corner_loc(4,2)          !< local corner location [rad]
+  real(RP), private              :: latlon_local  (4,2)       !< local latlon info [rad]
 
   integer,  private              :: PARENT_PRC_NUM_X(2)      !< MPI processes in x-direction in parent
   integer,  private              :: PARENT_PRC_NUM_Y(2)      !< MPI processes in y-direction in parent
@@ -169,10 +169,8 @@ module scale_comm_cartesC_nest
   integer,  parameter :: I_LON    = 1
   integer,  parameter :: I_LAT    = 2
 
-  integer,  parameter :: I_NW     = 1
-  integer,  parameter :: I_NE     = 2
-  integer,  parameter :: I_SW     = 3
-  integer,  parameter :: I_SE     = 4
+  integer,  parameter :: I_MIN = 1
+  integer,  parameter :: I_MAX = 2
   integer,  parameter :: I_BNDQA  = 20                      !< tentative approach (prefixed allocate size)
 
   integer,  parameter :: I_SCLR   = 1                       !< interpolation kinds of grid point (scalar)
@@ -489,14 +487,10 @@ contains
     if ( USE_NESTING ) then
 
        if ( OFFLINE .OR. ONLINE_IAM_DAUGHTER ) then
-          corner_loc(I_NW,I_LON) = ATMOS_GRID_CARTESC_REAL_LONUV( 0,JA) / D2R
-          corner_loc(I_NE,I_LON) = ATMOS_GRID_CARTESC_REAL_LONUV(IA,JA) / D2R
-          corner_loc(I_SW,I_LON) = ATMOS_GRID_CARTESC_REAL_LONUV( 0, 0) / D2R
-          corner_loc(I_SE,I_LON) = ATMOS_GRID_CARTESC_REAL_LONUV(IA, 0) / D2R
-          corner_loc(I_NW,I_LAT) = ATMOS_GRID_CARTESC_REAL_LATUV( 0,JA) / D2R
-          corner_loc(I_NE,I_LAT) = ATMOS_GRID_CARTESC_REAL_LATUV(IA,JA) / D2R
-          corner_loc(I_SW,I_LAT) = ATMOS_GRID_CARTESC_REAL_LATUV( 0, 0) / D2R
-          corner_loc(I_SE,I_LAT) = ATMOS_GRID_CARTESC_REAL_LATUV(IA, 0) / D2R
+          latlon_local(I_MIN,I_LON) = minval(ATMOS_GRID_CARTESC_REAL_LONUV(:,:)) / D2R
+          latlon_local(I_MAX,I_LON) = maxval(ATMOS_GRID_CARTESC_REAL_LONUV(:,:)) / D2R
+          latlon_local(I_MIN,I_LAT) = minval(ATMOS_GRID_CARTESC_REAL_LATUV(:,:)) / D2R
+          latlon_local(I_MAX,I_LAT) = maxval(ATMOS_GRID_CARTESC_REAL_LATUV(:,:)) / D2R
        endif
 
        if ( OFFLINE ) then
@@ -511,7 +505,7 @@ contains
          PARENT_LKMAX(HANDLING_NUM)     = OFFLINE_PARENT_LKMAX
 
          PARENT_PRC_nprocs(HANDLING_NUM) = PARENT_PRC_NUM_X(HANDLING_NUM) * PARENT_PRC_NUM_Y(HANDLING_NUM)
-         allocate( latlon_catalog(PARENT_PRC_nprocs(HANDLING_NUM),4,2) )
+         allocate( latlon_catalog(PARENT_PRC_nprocs(HANDLING_NUM),2,2) )
 
          !--- read latlon catalogue
          fid = IO_get_available_fid()
@@ -522,18 +516,16 @@ contains
                iostat = ierr                           )
 
          if ( ierr /= 0 ) then
-            LOG_ERROR("COMM_CARTESC_NEST_setup",*) '[NEST_setup] cannot open latlon-catalogue file!'
+            LOG_ERROR("COMM_CARTESC_NEST_setup",*) 'cannot open latlon-catalogue file!'
             call PRC_abort
          endif
 
          do i = 1, PARENT_PRC_nprocs(HANDLING_NUM)
-            read(fid,'(i8,8f32.24)',iostat=ierr) parent_id, &
-                                                 latlon_catalog(i,I_NW,I_LON), latlon_catalog(i,I_NE,I_LON), & ! LON: NW, NE
-                                                 latlon_catalog(i,I_SW,I_LON), latlon_catalog(i,I_SE,I_LON), & ! LON: SW, SE
-                                                 latlon_catalog(i,I_NW,I_LAT), latlon_catalog(i,I_NE,I_LAT), & ! LAT: NW, NE
-                                                 latlon_catalog(i,I_SW,I_LAT), latlon_catalog(i,I_SE,I_LAT)    ! LAT: SW, SE
+            read(fid,'(i8,4f32.24)',iostat=ierr) parent_id, &
+                                                 latlon_catalog(i,I_MIN,I_LON), latlon_catalog(i,I_MAX,I_LON), & ! LON: MIN, MAX
+                                                 latlon_catalog(i,I_MIN,I_LAT), latlon_catalog(i,I_MAX,I_LAT)    ! LAT: MIN, MAX
             if ( i /= parent_id ) then
-               LOG_ERROR("COMM_CARTESC_NEST_setup",*) '[NEST_setup] internal error: parent mpi id'
+               LOG_ERROR("COMM_CARTESC_NEST_setup",*) 'internal error: parent mpi id'
                call PRC_abort
             endif
             if ( ierr /= 0 ) exit
@@ -654,7 +646,7 @@ contains
 
             call COMM_CARTESC_NEST_parentsize( HANDLING_NUM )
 
-            allocate( latlon_catalog(PARENT_PRC_nprocs(HANDLING_NUM),4,2) )
+            allocate( latlon_catalog(PARENT_PRC_nprocs(HANDLING_NUM),2,2) )
             call COMM_CARTESC_NEST_catalogue( HANDLING_NUM )
             call MPI_BARRIER(INTERCOMM_PARENT, ierr)
 
@@ -851,112 +843,82 @@ contains
 
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
 
-    logical              :: hit = .false.
-    integer, allocatable :: pd_tile_num(:,:)
-
-    real(RP) :: wid_lon, wid_lat
-    integer  :: pd_sw_tile
-    integer  :: pd_ne_tile
-    integer  :: i, j, k
+    integer :: x_min, x_max
+    integer :: y_min, y_max
+    logical :: hit(2,2)
+    integer :: p, i, j
     !---------------------------------------------------------------------------
 
     if( .NOT. USE_NESTING ) return
 
-    allocate( pd_tile_num(0:PARENT_PRC_nprocs(HANDLE)-1,2) )
+    x_min = PARENT_PRC_NUM_X(HANDLE)
+    x_max = -1
+    y_min = PARENT_PRC_NUM_Y(HANDLE)
+    y_max = -1
+    hit(:,:) = .false.
+    do p = 1, PARENT_PRC_nprocs(HANDLE)
+       if ( ( (     latlon_local(I_MIN,I_LON) >= latlon_catalog(p,I_MIN,I_LON) &
+              .AND. latlon_local(I_MIN,I_LON) <= latlon_catalog(p,I_MAX,I_LON) ) .OR. &
+              (     latlon_local(I_MAX,I_LON) >= latlon_catalog(p,I_MIN,I_LON) &
+              .AND. latlon_local(I_MAX,I_LON) <= latlon_catalog(p,I_MAX,I_LON) ) .OR. &
+              (     latlon_catalog(p,I_MIN,I_LON) >= latlon_local(I_MIN,I_LON) &
+              .AND. latlon_catalog(p,I_MIN,I_LON) <= latlon_local(I_MAX,I_LON) ) .OR. &
+              (     latlon_catalog(p,I_MAX,I_LON) >= latlon_local(I_MIN,I_LON) &
+              .AND. latlon_catalog(p,I_MAX,I_LON) <= latlon_local(I_MAX,I_LON) ) ) .AND. &
+            ( (     latlon_local(I_MIN,I_LAT) >= latlon_catalog(p,I_MIN,I_LAT) &
+              .AND. latlon_local(I_MIN,I_LAT) <= latlon_catalog(p,I_MAX,I_LAT) ) .OR. &
+              (     latlon_local(I_MAX,I_LAT) >= latlon_catalog(p,I_MIN,I_LAT) &
+              .AND. latlon_local(I_MAX,I_LAT) <= latlon_catalog(p,I_MAX,I_LAT) ) .OR. &
+              (     latlon_catalog(p,I_MIN,I_LAT) >= latlon_local(I_MIN,I_LAT) &
+              .AND. latlon_catalog(p,I_MIN,I_LAT) <= latlon_local(I_MAX,I_LAT) ) .OR. &
+              (     latlon_catalog(p,I_MAX,I_LAT) >= latlon_local(I_MIN,I_LAT) &
+              .AND. latlon_catalog(p,I_MAX,I_LAT) <= latlon_local(I_MAX,I_LAT) ) ) ) then
+          if ( latlon_catalog(p,I_MIN,I_LON) <= latlon_local(I_MIN,I_LON) ) hit(I_MIN,I_LON) = .true.
+          if ( latlon_catalog(p,I_MAX,I_LON) >= latlon_local(I_MAX,I_LON) ) hit(I_MAX,I_LON) = .true.
+          if ( latlon_catalog(p,I_MIN,I_LAT) <= latlon_local(I_MIN,I_LAT) ) hit(I_MIN,I_LAT) = .true.
+          if ( latlon_catalog(p,I_MAX,I_LAT) >= latlon_local(I_MAX,I_LAT) ) hit(I_MAX,I_LAT) = .true.
+          i = mod(p-1, PARENT_PRC_NUM_X(HANDLE))
+          j = (p-1) / PARENT_PRC_NUM_X(HANDLE)
+          if ( i < x_min ) x_min = i
+          if ( i > x_max ) x_max = i
+          if ( j < y_min ) y_min = j
+          if ( j > y_max ) y_max = j
+       end if
+    end do
 
-    k = 0 ! MPI process number starts from zero
-    do j = 1, PARENT_PRC_NUM_Y(HANDLE)
-    do i = 1, PARENT_PRC_NUM_X(HANDLE)
-       pd_tile_num(k,1) = i
-       pd_tile_num(k,2) = j
-       k = k + 1
-    enddo
-    enddo
-
-    !--- SW search
-    hit = .false.
-    do i = 1, PARENT_PRC_nprocs(HANDLE)
-       wid_lon = abs((latlon_catalog(i,I_SW,I_LON) - latlon_catalog(i,I_SE,I_LON)) &
-                      / real( PARENT_IMAX(HANDLE)-1, kind=RP )) * 0.8_RP
-       wid_lat = abs((latlon_catalog(i,I_SW,I_LAT) - latlon_catalog(i,I_NW,I_LAT)) &
-                      / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.8_RP
-
-       if ( corner_loc(I_SW,I_LON) >= min(latlon_catalog(i,I_SW,I_LON),latlon_catalog(i,I_NW,I_LON))-wid_lon .AND. &
-            corner_loc(I_SW,I_LAT) >= min(latlon_catalog(i,I_SW,I_LAT),latlon_catalog(i,I_SE,I_LAT))-wid_lat .AND. &
-            corner_loc(I_SW,I_LON) <= max(latlon_catalog(i,I_NE,I_LON),latlon_catalog(i,I_SE,I_LON))+wid_lon .AND. &
-            corner_loc(I_SW,I_LAT) <= max(latlon_catalog(i,I_NE,I_LAT),latlon_catalog(i,I_NW,I_LAT))+wid_lat ) then
-
-          pd_sw_tile = i-1 ! MPI process number starts from zero
-          hit = .true.
-          exit ! exit loop
-       endif
-    enddo
-    if ( .NOT. hit ) then
-       LOG_ERROR("COMM_CARTESC_NEST_domain_relate",*) 'region of daughter domain is larger than that of parent: SW search'
+    if ( .not. ( hit(I_MIN,I_LON) .and. hit(I_MAX,I_LON) .and. hit(I_MIN,I_LAT) .and. hit(I_MAX,I_LAT) ) ) then
+       LOG_ERROR("COMM_CARTESC_NEST_domain_relate",*) 'region of daughter domain is larger than that of parent'
        LOG_ERROR_CONT(*)              '                                  at rank:', PRC_myrank, ' of domain:', ONLINE_DOMAIN_NUM
-       LOG_ERROR_CONT('(1x,A)')       ' region of daughter domain is larger than that of parent: SW search'
-       LOG_ERROR_CONT(*)              ' grid width: half width in lat:', wid_lat, ' half width in lon:', wid_lon
-       LOG_ERROR_CONT('(1x,A,F12.6)') '    daughter local (me): LON=',corner_loc(I_SW,I_LON)
-       do i = 1, PARENT_PRC_nprocs(HANDLE)
-          LOG_ERROR_CONT('(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LON=', &
-                     latlon_catalog(i,I_SW,I_LON) ,latlon_catalog(i,I_NE,I_LON)
+       LOG_ERROR_CONT(*) 'LON MIN: ',hit(I_MIN,I_LON), ', LON MAX: ',hit(I_MAX,I_LON), ', LAT MIN: ',hit(I_MIN,I_LAT), ', LAT MAX: ',hit(I_MAX,I_LAT)
+       LOG_ERROR_CONT('(A,F12.6,1x,F12.6)') 'daughter local (me) MIN-MAX: LON=', &
+            latlon_local(I_MIN,I_LON), latlon_local(I_MAX,I_LON)
+       do p = 1, PARENT_PRC_nprocs(HANDLE)
+          LOG_ERROR_CONT('(A,I5,A,F12.6,1x,F12.6)') '     parent (', p,') MIN-MAX: LON=', &
+                     latlon_catalog(p,I_MIN,I_LON) ,latlon_catalog(p,I_MAX,I_LON)
        enddo
-       LOG_ERROR_CONT('(1x,A,F12.6)') '    daughter local (me): LAT=',corner_loc(I_SW,I_LAT)
-       do i = 1, PARENT_PRC_nprocs(HANDLE)
-          LOG_ERROR_CONT('(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LAT=', &
-                     latlon_catalog(i,I_SW,I_LAT) ,latlon_catalog(i,I_NE,I_LAT)
+       LOG_ERROR_CONT('(A,F12.6,1x,F12.6)') 'daughter local (me): MIN-MAX LAT=', &
+            latlon_local(I_MIN,I_LAT), latlon_local(I_MAX,I_LAT)
+       do p = 1, PARENT_PRC_nprocs(HANDLE)
+          LOG_ERROR_CONT('(A,I5,A,F12.6,1x,F12.6)') '     parent (', p,') MIN-MAX: LAT=', &
+                     latlon_catalog(p,I_MIN,I_LAT) ,latlon_catalog(p,I_MAX,I_LAT)
        enddo
        call PRC_abort
-    endif
+    end if
 
-    !--- NE search
-    hit = .false.
-    do i = PARENT_PRC_nprocs(HANDLE), 1, -1
-       wid_lon = abs((latlon_catalog(i,I_NW,I_LON) - latlon_catalog(i,I_NE,I_LON)) &
-                      / real( PARENT_IMAX(HANDLE)-1, kind=RP )) * 0.8_RP
-       wid_lat = abs((latlon_catalog(i,I_SE,I_LAT) - latlon_catalog(i,I_NE,I_LAT)) &
-                      / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.8_RP
 
-       if ( corner_loc(I_NE,I_LON) >= min(latlon_catalog(i,I_SW,I_LON),latlon_catalog(i,I_NW,I_LON))-wid_lon .AND. &
-            corner_loc(I_NE,I_LAT) >= min(latlon_catalog(i,I_SW,I_LAT),latlon_catalog(i,I_SE,I_LAT))-wid_lat .AND. &
-            corner_loc(I_NE,I_LON) <= max(latlon_catalog(i,I_NE,I_LON),latlon_catalog(i,I_SE,I_LON))+wid_lon .AND. &
-            corner_loc(I_NE,I_LAT) <= max(latlon_catalog(i,I_NE,I_LAT),latlon_catalog(i,I_NW,I_LAT))+wid_lat ) then
 
-          pd_ne_tile = i-1 ! MPI process number starts from zero
-          hit = .true.
-          exit ! exit loop
-       endif
-    enddo
-    if ( .NOT. hit ) then
-       LOG_ERROR("COMM_CARTESC_NEST_domain_relate",*) 'region of daughter domain is larger than that of parent: NE search'
-       LOG_ERROR_CONT(*)              '                                  at rank:', PRC_myrank, ' of domain:', ONLINE_DOMAIN_NUM
-       LOG_ERROR_CONT('(1x,A)')       ' region of daughter domain is larger than that of parent: NE search'
-       LOG_ERROR_CONT(*)              ' grid width: half width in lat:', wid_lat, ' half width in lon:', wid_lon
-       LOG_ERROR_CONT('(1x,A,F12.6)') '    daughter local (me): LON=',corner_loc(I_NE,I_LON)
-       do i = 1, PARENT_PRC_nprocs(HANDLE)
-          LOG_ERROR_CONT('(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LON=', &
-                     latlon_catalog(i,I_SW,I_LON) ,latlon_catalog(i,I_NE,I_LON)
-       enddo
-       LOG_ERROR_CONT('(1x,A,F12.6)') '    daughter local (me): LAT=',corner_loc(I_NE,I_LAT)
-       do i = 1, PARENT_PRC_nprocs(HANDLE)
-          LOG_ERROR_CONT('(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LAT=', &
-                     latlon_catalog(i,I_SW,I_LAT) ,latlon_catalog(i,I_NE,I_LAT)
-       enddo
-       call PRC_abort
-    endif
+    COMM_CARTESC_NEST_TILE_NUM_X = x_max - x_min + 1
+    COMM_CARTESC_NEST_TILE_NUM_Y = y_max - y_min + 1
 
-    COMM_CARTESC_NEST_TILE_NUM_X = pd_tile_num(pd_ne_tile,1) - pd_tile_num(pd_sw_tile,1) + 1
-    COMM_CARTESC_NEST_TILE_NUM_Y = pd_tile_num(pd_ne_tile,2) - pd_tile_num(pd_sw_tile,2) + 1
-
-    allocate( COMM_CARTESC_NEST_TILE_ID( COMM_CARTESC_NEST_TILE_NUM_X*COMM_CARTESC_NEST_TILE_NUM_Y ) )
+    allocate( COMM_CARTESC_NEST_TILE_ID( COMM_CARTESC_NEST_TILE_NUM_X * COMM_CARTESC_NEST_TILE_NUM_Y ) )
 
     LOG_INFO("COMM_CARTESC_NEST_domain_relate",'(1x,A)') 'NEST: target process tile in parent domain'
-    k = 1
+    p = 1
     do j = 1, COMM_CARTESC_NEST_TILE_NUM_Y
     do i = 1, COMM_CARTESC_NEST_TILE_NUM_X
-       COMM_CARTESC_NEST_TILE_ID(k) = pd_sw_tile + (i-1) + PARENT_PRC_NUM_X(HANDLE)*(j-1)
-       LOG_INFO_CONT('(1x,A,I4,A,I6)') '    (', k, ') target mpi-process:', COMM_CARTESC_NEST_TILE_ID(k)
-       k = k + 1
+       COMM_CARTESC_NEST_TILE_ID(p) = x_min + i - 1 + (y_min + j - 1) * PARENT_PRC_NUM_X(HANDLE)
+       LOG_INFO_CONT('(1x,A,I4,A,I6)') '(', p, ') target mpi-process:', COMM_CARTESC_NEST_TILE_ID(p)
+       p = p + 1
     enddo
     enddo
 
@@ -1250,7 +1212,7 @@ contains
 
        !##### parent ####
 
-       ileng = PRC_nprocs * 4 * 2
+       ileng = PRC_nprocs * 2 * 2
 
        if ( PRC_IsMaster ) then
           call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE, ileng, COMM_datatype, PRC_myrank, tag, INTERCOMM_DAUGHTER, ireq, ierr)
@@ -1261,13 +1223,13 @@ contains
 
        !##### child ####
 
-       ileng = PARENT_PRC_nprocs(HANDLE) * 4 * 2
+       ileng = PARENT_PRC_nprocs(HANDLE) * 2 * 2
 
        if ( PRC_IsMaster ) then
           call MPI_IRECV(latlon_catalog, ileng, COMM_datatype, PRC_myrank, tag, INTERCOMM_PARENT, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
-       call COMM_bcast( latlon_catalog, PARENT_PRC_nprocs(HANDLE), 4, 2 )
+       call COMM_bcast( latlon_catalog, PARENT_PRC_nprocs(HANDLE), 2, 2 )
 
     else
        LOG_ERROR("COMM_CARTESC_NEST_catalogue",*) 'internal error'

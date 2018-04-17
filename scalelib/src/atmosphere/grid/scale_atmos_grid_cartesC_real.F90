@@ -183,7 +183,7 @@ contains
     allocate( ATMOS_GRID_CARTESC_REAL_VOLZUY(  KA,IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_VOLZXV(  KA,IA,JA) )
 
-    allocate( ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(PRC_nprocs,4,2) )
+    allocate( ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(PRC_nprocs,2,2) )
 
     ! setup map projection
     call MAPPROJECTION_setup( ATMOS_GRID_CARTESC_DOMAIN_CENTER_X, ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y )
@@ -264,15 +264,13 @@ contains
     character(len=*), intent(in) :: catalogue_fname  !< metadata files for lat-lon domain for all processes
     logical,          intent(in) :: catalogue_output
 
+    integer, parameter :: I_MIN  = 1
+    integer, parameter :: I_MAX  = 2
     integer, parameter :: I_LON  = 1
     integer, parameter :: I_LAT  = 2
-    integer, parameter :: I_NW   = 1
-    integer, parameter :: I_NE   = 2
-    integer, parameter :: I_SW   = 3
-    integer, parameter :: I_SE   = 4
 
-    real(RP) :: mine (4,2)            !< send    buffer of lon-lat [deg]
-    real(RP) :: whole(4,2*PRC_nprocs) !< recieve buffer of lon-lat [deg]
+    real(RP) :: mine (2,2)            !< send    buffer of lon-lat [deg]
+    real(RP) :: whole(2,2,PRC_nprocs) !< recieve buffer of lon-lat [deg]
 
     integer  :: i, j
     integer  :: fid, ierr
@@ -343,16 +341,12 @@ contains
                                'SW(',ATMOS_GRID_CARTESC_REAL_LON(IS,JS)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IS,JS)/D2R,')', &
                             ' - SE(',ATMOS_GRID_CARTESC_REAL_LON(IE,JS)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IE,JS)/D2R,')'
 
-    mine(I_NW,I_LON) = ATMOS_GRID_CARTESC_REAL_LONUV(IS-1,JE  )/D2R
-    mine(I_NE,I_LON) = ATMOS_GRID_CARTESC_REAL_LONUV(IE  ,JE  )/D2R
-    mine(I_SW,I_LON) = ATMOS_GRID_CARTESC_REAL_LONUV(IS-1,JS-1)/D2R
-    mine(I_SE,I_LON) = ATMOS_GRID_CARTESC_REAL_LONUV(IE  ,JS-1)/D2R
-    mine(I_NW,I_LAT) = ATMOS_GRID_CARTESC_REAL_LATUV(IS-1,JE  )/D2R
-    mine(I_NE,I_LAT) = ATMOS_GRID_CARTESC_REAL_LATUV(IE  ,JE  )/D2R
-    mine(I_SW,I_LAT) = ATMOS_GRID_CARTESC_REAL_LATUV(IS-1,JS-1)/D2R
-    mine(I_SE,I_LAT) = ATMOS_GRID_CARTESC_REAL_LATUV(IE  ,JS-1)/D2R
+    mine(I_MIN,I_LON) = minval(ATMOS_GRID_CARTESC_REAL_LONUV(:,:)) / D2R
+    mine(I_MAX,I_LON) = maxval(ATMOS_GRID_CARTESC_REAL_LONUV(:,:)) / D2R
+    mine(I_MIN,I_LAT) = minval(ATMOS_GRID_CARTESC_REAL_LATUV(:,:)) / D2R
+    mine(I_MAX,I_LAT) = maxval(ATMOS_GRID_CARTESC_REAL_LATUV(:,:)) / D2R
 
-    call COMM_gather( whole(:,:), mine(:,:), 4, 2 ) ! everytime do for online nesting
+    call COMM_gather( whole(:,:,:), mine(:,:), 2, 2 ) ! everytime do for online nesting
 
     if ( PRC_IsMaster ) then
        if ( catalogue_output ) then
@@ -370,10 +364,8 @@ contains
           endif
 
           do i = 1, PRC_nprocs ! for offline nesting
-             write(fid,'(I8,8F32.24)',iostat=ierr) i, whole(I_NW,I_LON+2*(i-1)), whole(I_NE,I_LON+2*(i-1)), & ! LON: NW, NE
-                                                      whole(I_SW,I_LON+2*(i-1)), whole(I_SE,I_LON+2*(i-1)), & ! LON: SW, SE
-                                                      whole(I_NW,I_LAT+2*(i-1)), whole(I_NE,I_LAT+2*(i-1)), & ! LAT: NW, NE
-                                                      whole(I_SW,I_LAT+2*(i-1)), whole(I_SE,I_LAT+2*(i-1))    ! LAT: SW, SE
+             write(fid,'(I8,8F32.24)',iostat=ierr) i, whole(I_MIN,I_LON,i), whole(I_MAX,I_LON,i), & ! LON: MIN, MAX
+                                                      whole(I_MIN,I_LAT,i), whole(I_MAX,I_LAT,i)    ! LAT: MIN, MAX
              if ( ierr /= 0 ) exit
           enddo
 
@@ -382,18 +374,14 @@ contains
        endif
 
        do i = 1, PRC_nprocs ! for online nesting
-          ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(i,I_NW,I_LON) = whole(I_NW,I_LON+2*(i-1)) ! LON: NW
-          ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(i,I_NE,I_LON) = whole(I_NE,I_LON+2*(i-1)) ! LON: NE
-          ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(i,I_SW,I_LON) = whole(I_SW,I_LON+2*(i-1)) ! LON: SW
-          ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(i,I_SE,I_LON) = whole(I_SE,I_LON+2*(i-1)) ! LON: SE
-          ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(i,I_NW,I_LAT) = whole(I_NW,I_LAT+2*(i-1)) ! LAT: NW
-          ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(i,I_NE,I_LAT) = whole(I_NE,I_LAT+2*(i-1)) ! LAT: NE
-          ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(i,I_SW,I_LAT) = whole(I_SW,I_LAT+2*(i-1)) ! LAT: SW
-          ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(i,I_SE,I_LAT) = whole(I_SE,I_LAT+2*(i-1)) ! LAT: SE
+          ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(i,I_MIN,I_LON) = whole(I_MIN,I_LON,i)
+          ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(i,I_MAX,I_LON) = whole(I_MAX,I_LON,i)
+          ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(i,I_MIN,I_LAT) = whole(I_MIN,I_LAT,i)
+          ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(i,I_MAX,I_LAT) = whole(I_MAX,I_LAT,i)
        enddo
     endif
 
-    call COMM_bcast( ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(:,:,:), PRC_nprocs, 4, 2 )
+    call COMM_bcast( ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(:,:,:), PRC_nprocs, 2, 2 )
 
     return
   end subroutine ATMOS_GRID_CARTESC_REAL_calc_latlon
