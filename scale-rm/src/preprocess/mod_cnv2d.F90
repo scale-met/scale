@@ -79,7 +79,7 @@ contains
        REAL_DLON => ATMOS_GRID_CARTESC_REAL_DLON
     implicit none
 
-    NAMELIST / PARAM_CNV2D / &
+    namelist / PARAM_CNV2D / &
        CNV2D_UseGrADS,            &
        CNV2D_interpolation_type,  &
        CNV2D_unittile_ddeg,       &
@@ -205,7 +205,7 @@ contains
     real(DP)               :: GrADS_DT           =    0.0_DP ! time interval
     character(len=H_SHORT) :: GrADS_DT_UNIT      = "SEC"     ! time unit for GrADS_DT
 
-    NAMELIST / PARAM_CNV2D_GrADS / &
+    namelist / PARAM_CNV2D_GrADS / &
        GrADS_NLAT,         &
        GrADS_NLON,         &
        GrADS_DLAT,         &

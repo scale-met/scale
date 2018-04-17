@@ -74,7 +74,7 @@ contains
     real(RP) :: alpha      (IA,JA) !< dumping coefficient (0-1)
     real(RP) :: TOPO_parent(IA,JA) !< topography of parent domain
 
-    NAMELIST / PARAM_COPYTOPO / &
+    namelist / PARAM_COPYTOPO / &
        COPYTOPO_IN_BASENAME,    &
        COPYTOPO_TRANSITION_DX,  &
        COPYTOPO_TRANSITION_DY,  &

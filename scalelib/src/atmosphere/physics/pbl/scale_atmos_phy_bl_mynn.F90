@@ -125,7 +125,7 @@ contains
 
     real(RP) :: ATMOS_PHY_BL_MYNN_PBL_MAX = 1.E+10_RP !> maximum height of the PBL
 
-    NAMELIST / PARAM_ATMOS_PHY_BL_MYNN / &
+    namelist / PARAM_ATMOS_PHY_BL_MYNN / &
        ATMOS_PHY_BL_MYNN_PBL_MAX,  &
        ATMOS_PHY_BL_MYNN_N2_MAX,   &
        ATMOS_PHY_BL_MYNN_NU_MIN,   &

@@ -74,7 +74,7 @@ contains
        UNDEF => CONST_UNDEF
     implicit none
 
-    NAMELIST / PARAM_LAND_DYN_BUCKET / &
+    namelist / PARAM_LAND_DYN_BUCKET / &
        LAND_DYN_BUCKET_nudging,                       &
        LAND_DYN_BUCKET_nudging_tau,                   &
        LAND_DYN_BUCKET_nudging_basename,              &

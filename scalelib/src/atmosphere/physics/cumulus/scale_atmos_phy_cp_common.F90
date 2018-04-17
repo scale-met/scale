@@ -53,7 +53,7 @@ contains
        PRC_abort
     implicit none
 
-    NAMELIST / PARAM_ATMOS_PHY_CP_COMMON / &
+    namelist / PARAM_ATMOS_PHY_CP_COMMON / &
        PARAM_ATMOS_PHY_CP_wadapt, &
        PARAM_ATMOS_PHY_CP_w_time
 

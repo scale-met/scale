@@ -181,7 +181,7 @@ contains
     real(RP)               :: defval
     logical                :: check_coordinates
 
-    namelist /EXTERNAL_ITEM/ &
+    namelist / EXTERNAL_ITEM / &
        basename,              &
        varname,               &
        axistype,              &

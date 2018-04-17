@@ -147,6 +147,8 @@ contains
     use mod_admin_restart, only: &
        ADMIN_restart_setup, &
        ADMIN_restart_write
+    use mod_admin_versioncheck, only: &
+       ADMIN_versioncheck
     use mod_admin_time, only: &
        ADMIN_TIME_setup,      &
        ADMIN_TIME_checkstate, &
@@ -234,6 +236,9 @@ contains
 
     ! setup Log
     call IO_LOG_setup( myrank, ismaster )
+
+    ! namelist compatibility check
+    call ADMIN_versioncheck
 
     ! setup process
     call PRC_CARTESC_setup

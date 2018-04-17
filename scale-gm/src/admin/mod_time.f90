@@ -124,7 +124,7 @@ contains
     real(DP)               :: TIME_DT_WALLCLOCK_CHECK      = UNDEF8
     character(len=H_SHORT) :: TIME_DT_WALLCLOCK_CHECK_UNIT = ""
 
-    NAMELIST / TIMEPARAM / &
+    namelist / TIMEPARAM / &
        integ_type,                   &
        split,                        &
        dtl,                          &

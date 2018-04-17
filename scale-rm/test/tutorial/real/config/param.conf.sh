@@ -176,7 +176,7 @@ cat <<EOF >> param.physics.conf
  OCEAN_VARS_CHECKRANGE = .true.,
 /
 
-&PARAM_OCEAN_PHY_SLAB
+&PARAM_OCEAN_DYN_SLAB
  OCEAN_PHY_SLAB_DEPTH = 10.0,
 /
 
@@ -205,7 +205,7 @@ cat <<EOF >> param.physics.conf
 ! URBAN_VARS_CHECKRANGE = .true.,
 /
 
-&PARAM_URBAN_PHY_SLC
+&PARAM_URBAN_DYN_KUSAKA01
  STRGR = 0.0,
  STRGB = 0.0,
  STRGG = 0.0,

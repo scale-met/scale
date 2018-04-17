@@ -105,7 +105,7 @@ contains
     integer, parameter :: nlayer_max = 300
     real(RP)           :: FILE_HISTORY_CARTESC_PRES(nlayer_max) !> pressure level to output [hPa]
 
-    NAMELIST / PARAM_FILE_HISTORY_CARTESC / &
+    namelist / PARAM_FILE_HISTORY_CARTESC / &
        FILE_HISTORY_CARTESC_PRES_nlayer, &
        FILE_HISTORY_CARTESC_PRES,        &
        FILE_HISTORY_CARTESC_BOUNDARY

@@ -179,7 +179,7 @@ contains
     real(RP) :: PARAM_ATMOS_PHY_CP_kf_thres     = 1.E-3_RP  !< autoconversion rate for Kessler
     logical  :: PARAM_ATMOS_PHY_CP_kf_LOG       = .false.   !< output log?
 
-    NAMELIST / PARAM_ATMOS_PHY_CP_KF / &
+    namelist / PARAM_ATMOS_PHY_CP_KF / &
        PARAM_ATMOS_PHY_CP_kf_rate,      &
        PARAM_ATMOS_PHY_CP_kf_trigger,   &
        PARAM_ATMOS_PHY_CP_kf_dlcape,    &

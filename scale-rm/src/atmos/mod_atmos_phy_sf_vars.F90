@@ -156,7 +156,7 @@ contains
        UNDEF => CONST_UNDEF
     implicit none
 
-    NAMELIST / PARAM_ATMOS_PHY_SF_VARS / &
+    namelist / PARAM_ATMOS_PHY_SF_VARS / &
        ATMOS_PHY_SF_RESTART_IN_BASENAME,           &
        ATMOS_PHY_SF_RESTART_IN_AGGREGATE,          &
        ATMOS_PHY_SF_RESTART_IN_POSTFIX_TIMELABEL,  &

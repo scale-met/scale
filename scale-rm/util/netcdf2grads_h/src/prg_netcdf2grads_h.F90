@@ -185,7 +185,7 @@ program netcdf2grads_h
     PRC_PERIODIC_Y,            & ! not required
     PRC_CART_REORDER             ! not required
 
-  NAMELIST / PARAM_MAPPROJECTION / &
+  namelist / PARAM_MAPPROJECTION / &
      MAPPROJECTION_basepoint_lon, &
      MAPPROJECTION_basepoint_lat, &
      MAPPROJECTION_basepoint_x,   & ! not required
@@ -198,7 +198,7 @@ program netcdf2grads_h
      MAPPROJECTION_M_lat,         & ! not required
      MAPPROJECTION_EC_lat           ! not required
 
-  NAMELIST / PARAM_FILE_HISTORY / &
+  namelist / PARAM_FILE_HISTORY / &
      FILE_HISTORY_TITLE,                     & ! not required
      FILE_HISTORY_SOURCE,                    & ! not required
      FILE_HISTORY_INSTITUTION,               & ! not required
@@ -221,7 +221,7 @@ program netcdf2grads_h
      debug,                                  & ! not required
      FILE_HISTORY_DEFAULT_ZDIM                 ! added?
 
-  NAMELIST / PARAM_FILE_HISTORY_CARTESC / &
+  namelist / PARAM_FILE_HISTORY_CARTESC / &
      FILE_HISTORY_CARTESC_PRES_nlayer, & ! not required
      FILE_HISTORY_CARTESC_PRES,        & ! not required
      FILE_HISTORY_CARTESC_BOUNDARY

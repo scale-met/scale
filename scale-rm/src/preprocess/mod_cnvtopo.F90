@@ -93,7 +93,7 @@ contains
 
     character(len=H_SHORT) :: CNVTOPO_name = 'NONE' ! keep backward compatibility
 
-    NAMELIST / PARAM_CNVTOPO / &
+    namelist / PARAM_CNVTOPO / &
        CNVTOPO_name,                  &
        CNVTOPO_UseGTOPO30,            &
        CNVTOPO_UseGMTED2010,          &
@@ -333,7 +333,7 @@ contains
     character(len=H_LONG) :: GTOPO30_IN_DIR       = '.' !< directory contains GTOPO30 files (GrADS format)
     character(len=H_LONG) :: GTOPO30_IN_CATALOGUE = ''  !< metadata files for GTOPO30
 
-    NAMELIST / PARAM_CNVTOPO_GTOPO30 / &
+    namelist / PARAM_CNVTOPO_GTOPO30 / &
        GTOPO30_IN_DIR,       &
        GTOPO30_IN_CATALOGUE
 
@@ -716,7 +716,7 @@ contains
     character(len=H_LONG) :: DEM50M_IN_DIR       = '.' !< directory contains DEM50M files (GrADS format)
     character(len=H_LONG) :: DEM50M_IN_CATALOGUE = ''  !< metadata files for DEM50M
 
-    NAMELIST / PARAM_CNVTOPO_DEM50M / &
+    namelist / PARAM_CNVTOPO_DEM50M / &
        DEM50M_IN_DIR,      &
        DEM50M_IN_CATALOGUE
 
@@ -1104,7 +1104,7 @@ contains
     real(RP)              :: USERFILE_LON_START    =   0.0_RP ! (for single file) start longitude of domain in input data
     real(RP)              :: USERFILE_LON_END      = 360.0_RP ! (for single file) end   longitude of domain in input data
 
-    NAMELIST / PARAM_CNVTOPO_USERFILE / &
+    namelist / PARAM_CNVTOPO_USERFILE / &
        USERFILE_NLAT,         &
        USERFILE_NLON,         &
        USERFILE_DLAT,         &

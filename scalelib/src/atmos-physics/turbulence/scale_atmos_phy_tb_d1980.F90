@@ -120,7 +120,7 @@ contains
     real(RP), intent(in) :: CDY(JA)
     real(RP), intent(in) :: CZ (KA,IA,JA)
 
-    NAMELIST / PARAM_ATMOS_PHY_TB_D1980 / &
+    namelist / PARAM_ATMOS_PHY_TB_D1980 / &
        ATMOS_PHY_TB_D1980_Km_MAX,   &
        ATMOS_PHY_TB_D1980_implicit
 

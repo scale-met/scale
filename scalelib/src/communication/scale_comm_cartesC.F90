@@ -158,7 +158,7 @@ contains
        PRC_LOCAL_COMM_WORLD
     implicit none
 
-    NAMELIST / PARAM_COMM / &
+    namelist / PARAM_COMM_CARTESC / &
        COMM_vsize_max, &
        COMM_vsize_max_pc, &
        COMM_USE_MPI_PC
@@ -176,14 +176,14 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_COMM,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_COMM_CARTESC,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        LOG_INFO("COMM_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       LOG_ERROR("COMM_setup",*) 'Not appropriate names in namelist PARAM_COMM. Check!'
+       LOG_ERROR("COMM_setup",*) 'Not appropriate names in namelist PARAM_COMM_CARTESC. Check!'
        call PRC_abort
     endif
-    LOG_NML(PARAM_COMM)
+    LOG_NML(PARAM_COMM_CARTESC)
 
     nreq_NS  = 2 * JHALO !--- send x JHALO, recv x JHALO
     nreq_WE  = 2         !--- send x 1    , recv x 1
@@ -3510,10 +3510,6 @@ contains
   subroutine COMM_cleanup
     use mpi
     implicit none
-
-    NAMELIST / PARAM_COMM / &
-       COMM_vsize_max_pc, &
-       COMM_USE_MPI_PC
 
     integer :: i, j, ierr
     !---------------------------------------------------------------------------

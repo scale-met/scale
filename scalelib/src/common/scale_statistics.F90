@@ -64,7 +64,7 @@ contains
        PRC_abort
     implicit none
 
-    NAMELIST / PARAM_STATISTICS / &
+    namelist / PARAM_STATISTICS / &
        STATISTICS_checktotal, &
        STATISTICS_use_globalcomm
 

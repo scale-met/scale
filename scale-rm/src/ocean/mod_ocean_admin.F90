@@ -53,7 +53,7 @@ contains
        PRC_abort
     implicit none
 
-    NAMELIST / PARAM_OCEAN / &
+    namelist / PARAM_OCEAN / &
        OCEAN_DYN_TYPE, &
        OCEAN_SFC_TYPE, &
        OCEAN_ALB_TYPE, &

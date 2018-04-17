@@ -71,7 +71,7 @@ contains
        PRC_abort
     implicit none
 
-    NAMELIST / PARAM_ATMOS / &
+    namelist / PARAM_ATMOS / &
        ATMOS_do,          &
        ATMOS_DYN_TYPE,    &
        ATMOS_PHY_MP_TYPE, &

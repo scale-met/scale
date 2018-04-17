@@ -107,14 +107,14 @@ contains
 
     real(DP), intent(in) :: dt
 
-    NAMELIST / PARAM_MONITOR / &
+    namelist / PARAM_MONITOR / &
        MONITOR_OUT_BASENAME, &
        MONITOR_USEDEVATION,  &
        MONITOR_STEP_INTERVAL
 
     character(len=H_SHORT) :: NAME  !> name of monitor item
 
-    NAMELIST / MONITOR_ITEM / &
+    namelist / MONITOR_ITEM / &
        NAME
 
     integer :: ierr

@@ -128,7 +128,7 @@ contains
     real(RP), intent(out) :: Z0H(UIA,UJA)
     real(RP), intent(out) :: Z0E(UIA,UJA)
 
-    NAMELIST / PARAM_URBAN_DYN_kusaka01 / &
+    namelist / PARAM_URBAN_DYN_KUSAKA01 / &
        DTS_MAX,    &
        ZR,         &
        roof_width, &
@@ -177,14 +177,14 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_URBAN_DYN_kusaka01,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_URBAN_DYN_KUSAKA01,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        LOG_INFO("URBAN_DYN_kusaka01_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Not appropriate names in namelist PARAM_URBAN_DYN_kusaka01. Check!'
+       LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Not appropriate names in namelist PARAM_URBAN_DYN_KUSAKA01. Check!'
        call PRC_abort
     endif
-    LOG_NML(PARAM_URBAN_DYN_kusaka01)
+    LOG_NML(PARAM_URBAN_DYN_KUSAKA01)
 
     ahdiurnal(:) = (/ 0.356, 0.274, 0.232, 0.251, 0.375, 0.647, 0.919, 1.135, 1.249, 1.328, &
                       1.365, 1.363, 1.375, 1.404, 1.457, 1.526, 1.557, 1.521, 1.372, 1.206, &

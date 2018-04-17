@@ -365,7 +365,7 @@ contains
 
     real(RP) :: autoconv_nc     = Nc_ocn  !< number concentration of cloud water [1/cc]
 
-    NAMELIST / PARAM_ATMOS_PHY_MP_TOMITA08 / &
+    namelist / PARAM_ATMOS_PHY_MP_TOMITA08 / &
        do_explicit_icegen, &
        autoconv_nc,     &
        enable_KK2000,   &

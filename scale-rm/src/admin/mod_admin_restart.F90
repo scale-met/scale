@@ -181,7 +181,7 @@ contains
        URBAN_RESTART_OUT_DTYPE
     implicit none
 
-    NAMELIST / PARAM_RESTART / &
+    namelist / PARAM_RESTART / &
        RESTART_OUTPUT,                &
        RESTART_IN_BASENAME,           &
        RESTART_IN_AGGREGATE,          &

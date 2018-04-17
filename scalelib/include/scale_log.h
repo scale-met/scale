@@ -10,8 +10,10 @@
 
 
 #define LOG_WARN(subroutine_name,format) \
-  if (IO_L) write(IO_FID_LOG,*); \
   if (IO_L) write(IO_FID_LOG,'(3A)',advance='no') "WARN  [",subroutine_name,"]"; \
+  if (IO_L) write(IO_FID_LOG,format)
+#define LOG_WARN_CONT(format) \
+  if (IO_L) write(IO_FID_LOG,'(5x)',advance='no'); \
   if (IO_L) write(IO_FID_LOG,format)
 
 
@@ -21,6 +23,7 @@
 #define LOG_INFO_CONT(format) \
   if (IO_L) write(IO_FID_LOG,'(5x)',advance='no'); \
   if (IO_L) write(IO_FID_LOG,format)
+
 
 #define LOG_NEWLINE \
   if (IO_L) write(IO_FID_LOG,*)

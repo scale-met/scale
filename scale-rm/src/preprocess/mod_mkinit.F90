@@ -211,7 +211,7 @@ contains
 
     character(len=H_SHORT) :: MKINIT_initname = 'NONE'
 
-    NAMELIST / PARAM_MKINIT / &
+    namelist / PARAM_MKINIT / &
        MKINIT_initname
 
     integer :: ierr
@@ -527,7 +527,7 @@ contains
     real(RP) :: BBL_RX       =  0.0_RP  ! bubble radius   [m]: x
     real(RP) :: BBL_RY       =  0.0_RP  ! bubble radius   [m]: y
 
-    NAMELIST / PARAM_BUBBLE / &
+    namelist / PARAM_BUBBLE / &
        BBL_eachnode, &
        BBL_CZ,       &
        BBL_CX,       &
@@ -623,7 +623,7 @@ contains
     real(RP) :: RCT_RX       =  2.E3_RP ! rectangle x width   [m]: x
     real(RP) :: RCT_RY       =  2.E3_RP ! rectangle y width   [m]: y
 
-    NAMELIST / PARAM_RECT / &
+    namelist / PARAM_RECT / &
        RCT_eachnode, &
        RCT_CZ,       &
        RCT_CX,       &
@@ -719,7 +719,7 @@ contains
     real(RP) :: k_max_inp(3) = k_max_def
     integer  :: n_kap_inp(3) = n_kap_def
 
-    NAMELIST / PARAM_AERO / &
+    namelist / PARAM_AERO / &
        m0_init,   &
        dg_init,   &
        sg_init,   &
@@ -866,7 +866,7 @@ contains
     real(RP) :: FLX_LW_dn     = 0.0_RP ! surface downwad long-wave  radiation flux [J/m2/s]
     real(RP) :: FLX_SW_dn     = 0.0_RP ! surface downwad short-wave radiation flux [J/m2/s]
 
-    NAMELIST / PARAM_MKINIT_FLUX / &
+    namelist / PARAM_MKINIT_FLUX / &
        FLX_rain,      &
        FLX_snow,      &
        FLX_LW_dn,     &
@@ -932,7 +932,7 @@ contains
     integer :: i, j
     integer :: ierr
 
-    NAMELIST /PARAM_MKINIT_LAND/ &
+    namelist / PARAM_MKINIT_LAND / &
        LND_TEMP,      &
        LND_WATER,     &
        SFC_TEMP,      &
@@ -990,7 +990,7 @@ contains
     integer :: i, j
     integer :: ierr
 
-    NAMELIST /PARAM_MKINIT_OCEAN/ &
+    namelist / PARAM_MKINIT_OCEAN / &
        OCN_TEMP,      &
        SFC_TEMP,      &
        SFC_albedo_LW, &
@@ -1071,7 +1071,7 @@ contains
     integer :: i, j
     integer :: ierr
 
-    NAMELIST /PARAM_MKINIT_URBAN/ &
+    namelist / PARAM_MKINIT_URBAN / &
        URB_ROOF_TEMP,       &
        URB_BLDG_TEMP,       &
        URB_GRND_TEMP,       &
@@ -1146,7 +1146,7 @@ contains
 
     real(RP) :: TKE_CONST
 
-    NAMELIST / PARAM_MKINIT_TKE / &
+    namelist / PARAM_MKINIT_TKE / &
        TKE_CONST
 
     integer :: k, i, j
@@ -1217,8 +1217,8 @@ contains
     integer :: fid
     integer :: ierr
 
-    NAMELIST /PARAM_MKINIT_SOUNDING/ &
-         ENV_IN_SOUNDING_file
+    namelist / PARAM_MKINIT_SOUNDING / &
+       ENV_IN_SOUNDING_file
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -1340,7 +1340,7 @@ contains
     real(RP) :: RANDOM_V     =   0.0_RP ! amplitude of random disturbance v
     real(RP) :: RANDOM_RH    =   0.0_RP ! amplitude of random disturbance RH
 
-    NAMELIST / PARAM_MKINIT_PLANESTATE / &
+    namelist / PARAM_MKINIT_PLANESTATE / &
        SFC_THETA,    &
        SFC_PRES,     &
        SFC_RH,       &
@@ -1511,7 +1511,7 @@ contains
     character(len=H_SHORT) :: SHAPE_NC  = 'BUBBLE' ! BUBBLE or RECT
     real(RP)               :: BBL_NC    =   1.0_RP ! extremum of NC in bubble [kg/kg]
 
-    NAMELIST / PARAM_MKINIT_TRACERBUBBLE / &
+    namelist / PARAM_MKINIT_TRACERBUBBLE / &
        SFC_THETA, &
        SFC_PRES,  &
        ENV_THETA, &
@@ -1619,7 +1619,7 @@ contains
     ! Bubble
     real(RP) :: BBL_TEMP     = -15.0_RP ! extremum of temperature in bubble [K]
 
-    NAMELIST / PARAM_MKINIT_COLDBUBBLE / &
+    namelist / PARAM_MKINIT_COLDBUBBLE / &
        SFC_THETA, &
        SFC_PRES,  &
        ENV_THETA, &
@@ -1699,7 +1699,7 @@ contains
     ! Bubble
     real(RP) :: BBL_PRES     =  100._RP ! extremum of pressure in bubble [Pa]
 
-    NAMELIST / PARAM_MKINIT_LAMBWAVE / &
+    namelist / PARAM_MKINIT_LAMBWAVE / &
        SFC_PRES,  &
        ENV_U,     &
        ENV_V,     &
@@ -1766,7 +1766,7 @@ contains
     ! Bubble
     real(RP) :: BBL_THETA    =  0.01_RP ! extremum of potential temperature in bubble [K]
 
-    NAMELIST / PARAM_MKINIT_GRAVITYWAVE / &
+    namelist / PARAM_MKINIT_GRAVITYWAVE / &
        SFC_THETA, &
        SFC_PRES,  &
        ENV_U,     &
@@ -1847,7 +1847,7 @@ contains
     ! Disturbance
     real(RP) :: RANDOM_U       =    0.0_RP ! amplitude of random disturbance u
 
-    NAMELIST / PARAM_MKINIT_KHWAVE / &
+    namelist / PARAM_MKINIT_KHWAVE / &
        SFC_THETA,      &
        SFC_PRES,       &
        ENV_L1_ZTOP,    &
@@ -1953,7 +1953,7 @@ contains
     real(RP) :: RANDOM_V     =   0.0_RP ! amplitude of random disturbance v
     real(RP) :: RANDOM_RH    =   0.0_RP ! amplitude of random disturbance RH
 
-    NAMELIST / PARAM_MKINIT_TURBULENCE / &
+    namelist / PARAM_MKINIT_TURBULENCE / &
        SFC_THETA,    &
        SFC_PRES,     &
        SFC_RH,       &
@@ -2092,7 +2092,7 @@ contains
     real(RP) :: Ulid         = 1.D01
     real(RP) :: PRES0        = 1.D05
 
-    NAMELIST / PARAM_MKINIT_CAVITYFLOW / &
+    namelist / PARAM_MKINIT_CAVITYFLOW / &
          Ulid        , &
          PRES0       , &
          REYNOLDS_NUM, &
@@ -2166,7 +2166,7 @@ contains
     real(RP) :: SCORER = 2.E-3_RP ! Scorer parameter (~=N/U) [1/m]
     real(RP) :: BBL_NC =   0.0_RP ! extremum of NC in bubble [kg/kg]
 
-    NAMELIST / PARAM_MKINIT_MOUNTAINWAVE / &
+    namelist / PARAM_MKINIT_MOUNTAINWAVE / &
        SFC_THETA, &
        SFC_PRES,  &
        ENV_U,     &
@@ -2291,7 +2291,7 @@ contains
     real(RP) :: Xc  = 2000.E3_RP      ! The center point (x) of inital perturbation
     real(RP) :: Yc  = 2500.E3_RP      ! The center point (y) of inital perturbation
 
-    NAMELIST / PARAM_MKINIT_BAROCWAVE / &
+    namelist / PARAM_MKINIT_BAROCWAVE / &
        REF_TEMP, REF_PRES, LAPSE_RATE, &
        phi0Deg,                        &
        U0, b,                          &
@@ -2462,7 +2462,7 @@ contains
     ! Bubble
     real(RP) :: BBL_THETA    =   1.0_RP ! extremum of temperature in bubble [K]
 
-    NAMELIST / PARAM_MKINIT_WARMBUBBLE / &
+    namelist / PARAM_MKINIT_WARMBUBBLE / &
        SFC_THETA,    &
        SFC_PRES,     &
        ENV_U,        &
@@ -2585,7 +2585,7 @@ contains
     ! Bubble
     real(RP) :: BBL_THETA = 3.D0 ! extremum of temperature in bubble [K]
 
-    NAMELIST / PARAM_MKINIT_SUPERCELL / &
+    namelist / PARAM_MKINIT_SUPERCELL / &
        BBL_THETA
 
     integer :: ierr
@@ -2652,7 +2652,7 @@ contains
     real(RP) :: OFFSET_velx  = 12.0_RP
     real(RP) :: OFFSET_vely  = -2.0_RP
 
-    NAMELIST / PARAM_MKINIT_SQUALLLINE / &
+    namelist / PARAM_MKINIT_SQUALLLINE / &
        RANDOM_THETA,         &
        OFFSET_velx,          &
        OFFSET_vely
@@ -2723,7 +2723,7 @@ contains
     ! Bubble
     real(RP) :: BBL_THETA = 3.D0 ! extremum of temperature in bubble [K]
 
-    NAMELIST / PARAM_MKINIT_WK1982 / &
+    namelist / PARAM_MKINIT_WK1982 / &
        SFC_THETA, &
        SFC_PRES,  &
        TR_Z,      &
@@ -2873,7 +2873,7 @@ contains
                                        ! 2 -> perturbation for u, v, w
     logical  :: USE_LWSET    = .false. ! use liq. water. static energy temp.?
 
-    NAMELIST / PARAM_MKINIT_RF01 / &
+    namelist / PARAM_MKINIT_RF01 / &
        PERTURB_AMP,     &
        RANDOM_LIMIT,    &
        RANDOM_FLAG,     &
@@ -3101,7 +3101,7 @@ contains
                                  ! 1 -> perturbation for PT
                                  ! 2 -> perturbation for u,v,w
 
-    NAMELIST / PARAM_MKINIT_RF02 / &
+    namelist / PARAM_MKINIT_RF02 / &
        PERTURB_AMP,     &
        RANDOM_LIMIT,    &
        RANDOM_FLAG
@@ -3321,7 +3321,7 @@ contains
                                  ! 1 -> perturbation for PT
                                  ! 2 -> perturbation for u,v,w
 
-    NAMELIST / PARAM_MKINIT_RF02_DNS / &
+    namelist / PARAM_MKINIT_RF02_DNS / &
        ZB, CONST_U, CONST_V,PRES_ZB,&
        PERTURB_AMP,     &
        RANDOM_LIMIT,    &
@@ -3529,7 +3529,7 @@ contains
     real(RP):: PERTURB_AMP_PT = 0.1_RP
     real(RP):: PERTURB_AMP_QV = 2.5E-5_RP
 
-    NAMELIST / PARAM_MKINIT_RICO / &
+    namelist / PARAM_MKINIT_RICO / &
        PERTURB_AMP_PT, &
        PERTURB_AMP_QV
 
@@ -3725,7 +3725,7 @@ contains
     real(RP):: PERTURB_AMP_PT = 0.1_RP
     real(RP):: PERTURB_AMP_QV = 2.5E-5_RP
 
-    NAMELIST / PARAM_MKINIT_BOMEX / &
+    namelist / PARAM_MKINIT_BOMEX / &
        PERTURB_AMP_PT, &
        PERTURB_AMP_QV
 
@@ -3981,7 +3981,7 @@ contains
 
     real(RP) :: LAND_SIZE
 
-    NAMELIST / PARAM_MKINIT_SEABREEZE / &
+    namelist / PARAM_MKINIT_SEABREEZE / &
        LAND_SIZE
 
     integer :: ierr
@@ -4093,7 +4093,7 @@ contains
                                        ! 1 -> petrurbation for pt
                                        ! 2 -> perturbation for u, v, w
 
-    NAMELIST / PARAM_MKINIT_GRAYZONE / &
+    namelist / PARAM_MKINIT_GRAYZONE / &
        PERTURB_AMP,     &
        RANDOM_LIMIT,    &
        RANDOM_FLAG
@@ -4229,7 +4229,7 @@ contains
     real(RP) :: init_pres  = 1.E+5_RP  ![Pa]
     real(RP) :: init_ssliq = 0.01_RP   ![%]
 
-    NAMELIST / PARAM_MKINIT_BOXAERO / &
+    namelist / PARAM_MKINIT_BOXAERO / &
        init_dens, &
        init_temp, &
        init_pres, &
@@ -4321,7 +4321,7 @@ contains
     ! Bubble
     real(RP) :: BBL_THETA    =   1.0_RP ! extremum of temperature in bubble [K]
 
-    NAMELIST / PARAM_MKINIT_WARMBUBBLE / &
+    namelist / PARAM_MKINIT_WARMBUBBLE / &
        SFC_THETA,    &
        SFC_PRES,     &
        ENV_U,        &

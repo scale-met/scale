@@ -142,7 +142,7 @@ contains
     real(RP) :: ATMOS_PHY_TB_SMG_filter_fact    = 2.0_RP
     logical  :: ATMOS_PHY_TB_SMG_consistent_tke = .true.
 
-    NAMELIST / PARAM_ATMOS_PHY_TB_SMG / &
+    namelist / PARAM_ATMOS_PHY_TB_SMG / &
        ATMOS_PHY_TB_SMG_Cs,             &
        ATMOS_PHY_TB_SMG_NU_MAX,         &
        ATMOS_PHY_TB_SMG_filter_fact,    &

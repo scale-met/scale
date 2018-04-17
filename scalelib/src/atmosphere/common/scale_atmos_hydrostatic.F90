@@ -117,7 +117,7 @@ contains
        CONST_EPS
     implicit none
 
-    NAMELIST / PARAM_ATMOS_HYDROSTATIC / &
+    namelist / PARAM_ATMOS_HYDROSTATIC / &
        HYDROSTATIC_uselapserate, &
        HYDROSTATIC_buildrho_real_kref
 

@@ -86,7 +86,7 @@ contains
        ATMOS_DYN_Tstep_short_regist
     implicit none
 
-    NAMELIST / PARAM_ATMOS_DYN_VARS / &
+    namelist / PARAM_ATMOS_DYN_VARS / &
        ATMOS_DYN_RESTART_IN_BASENAME,           &
        ATMOS_DYN_RESTART_IN_AGGREGATE,          &
        ATMOS_DYN_RESTART_IN_POSTFIX_TIMELABEL,  &

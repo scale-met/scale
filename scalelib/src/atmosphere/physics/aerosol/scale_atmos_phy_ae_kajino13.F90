@@ -190,7 +190,7 @@ contains
     integer :: NASIZ(3), NAKAP(3)
     character(len=H_SHORT) :: attribute, catego, aunit
 
-    NAMELIST / PARAM_ATMOS_PHY_AE_KAJINO13_TRACER / &
+    namelist / PARAM_ATMOS_PHY_AE_KAJINO13_TRACER / &
        AE_CTG, &
        NASIZ,  &
        NAKAP
@@ -370,7 +370,7 @@ contains
     real(RP), parameter :: k_min_def = 0.E0_RP  ! lower bound of 1st kappa bin
     real(RP), parameter :: k_max_def = 1.E0_RP  ! upper bound of last kappa bin
 
-    NAMELIST / PARAM_ATMOS_PHY_AE_KAJINO13 / &
+    namelist / PARAM_ATMOS_PHY_AE_KAJINO13 / &
        ATMOS_PHY_AE_KAJINO13_h2so4dt, &
        ATMOS_PHY_AE_KAJINO13_ocgasdt, &
 !       ATMOS_PHY_AE_KAJINO13_c_ratio, &

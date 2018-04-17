@@ -45,12 +45,12 @@ The degrees of sophistication increases from 1 to 4, as does computational cost.
 
 If \verb|SUZUKI10| is selected, in addition to the specification of \nmitem{ATMOS_PHY_MP_TYPE}, the following configuration needs to be added to both files of \verb|init.conf| and \verb|run.conf|:
 \editboxtwo{
-\verb|&PARAM_BIN|   &  \\
+\verb|&PARAM_ATMOS_PHY_MP_SUZUKI10_bin|   &  \\
 \verb| nbin   = 33, & : The number of bins| \\
 \verb| ICEFLG =  1, & : Option for consideration of ice cloud: 0(not considered), 1(considered)| \\
 \verb|/|            & \\
 }
-In this case, {\color{blue}{\namelist{PARAM_BIN} in \texttt{init.conf} must also be same as in \texttt{run.conf}}}. A necessary file \verb|micpara.dat| is automatically generated. If file \verb|micpara.dat| already exists, it is used for the calculation. When changing \verb|nbin| as described in the first line, this file is regenerated. If \verb|nbin| in file \verb|run.conf| is different from that in file \verb|micpara.dat|, the following error message is output and the simulation program is terminated instantaneously without calculation:
+In this case, {\color{blue}{\namelist{PARAM_ATMOS_PHY_MP_SUZUKI10_bin} in \texttt{init.conf} must also be same as in \texttt{run.conf}}}. A necessary file \verb|micpara.dat| is automatically generated. If file \verb|micpara.dat| already exists, it is used for the calculation. When changing \verb|nbin| as described in the first line, this file is regenerated. If \verb|nbin| in file \verb|run.conf| is different from that in file \verb|micpara.dat|, the following error message is output and the simulation program is terminated instantaneously without calculation:
 \msgbox{
 \verb|xxx nbin in inc_tracer and nbin in micpara.dat is different check!| \\
 }

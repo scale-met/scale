@@ -57,7 +57,7 @@ contains
        PRC_abort
     implicit none
 
-    NAMELIST / PARAM_CPL_PHY_SFC_SKIN / &
+    namelist / PARAM_CPL_PHY_SFC_SKIN / &
        CPL_PHY_SFC_SKIN_itr_max, &
        CPL_PHY_SFC_SKIN_dTS_max, &
        CPL_PHY_SFC_SKIN_res_min, &

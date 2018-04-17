@@ -88,15 +88,15 @@ contains
     real(RP) :: snowDepth_initial     = 0.0_RP
     real(RP) :: albedo_value          = 0.686_RP
 
-    namelist / PARAM_LAND_PHY_SNOW_KY90 /  &
-         ALBEDO_const,          &
-         snow_conductivity,     &
-         water_content,         &
-         snow_heat_capacityRHO, &
-         snow_rho,              &
-         snowDepth_initial,     &
-         albedo_value,          &
-         debug
+    namelist / PARAM_LAND_PHY_SNOW_KY90 / &
+       ALBEDO_const,          &
+       snow_conductivity,     &
+       water_content,         &
+       snow_heat_capacityRHO, &
+       snow_rho,              &
+       snowDepth_initial,     &
+       albedo_value,          &
+       debug
 
     integer :: ierr
     !---------------------------------------------------------------------------

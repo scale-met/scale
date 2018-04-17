@@ -231,7 +231,7 @@ contains
        FILE_setup
     implicit none
 
-    NAMELIST / PARAM_FILE_CARTESC / &
+    namelist / PARAM_FILE_CARTESC / &
        FILE_CARTESC_datacheck_criteria
 
     integer :: IM, JM

@@ -222,7 +222,7 @@ contains
     real(DP)               :: TIME_DT_WALLCLOCK_CHECK      = UNDEF8
     character(len=H_SHORT) :: TIME_DT_WALLCLOCK_CHECK_UNIT = ""
 
-    NAMELIST / PARAM_TIME / &
+    namelist / PARAM_TIME / &
        TIME_STARTDATE,               &
        TIME_STARTMS,                 &
        TIME_DURATION,                &
