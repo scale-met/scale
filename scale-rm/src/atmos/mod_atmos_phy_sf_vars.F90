@@ -140,9 +140,10 @@ module mod_atmos_phy_sf_vars
                   'm', &
                   'm'  /
 
-  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_TEMP   = 300.0_RP
-  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo = 0.4_RP
-  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_Z0     = 1E-4_RP
+  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_TEMP      = 300.0_RP
+  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo_LW = 0.04_RP
+  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW = 0.10_RP
+  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_Z0        = 1E-4_RP
 
   !-----------------------------------------------------------------------------
 contains
@@ -166,7 +167,8 @@ contains
        ATMOS_PHY_SF_RESTART_OUT_TITLE,             &
        ATMOS_PHY_SF_RESTART_OUT_DTYPE,             &
        ATMOS_PHY_SF_DEFAULT_SFC_TEMP,              &
-       ATMOS_PHY_SF_DEFAULT_SFC_albedo,            &
+       ATMOS_PHY_SF_DEFAULT_SFC_albedo_LW,         &
+       ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW,         &
        ATMOS_PHY_SF_DEFAULT_SFC_Z0
 
     integer :: ierr
@@ -244,13 +246,6 @@ contains
     endif
     LOG_NML(PARAM_ATMOS_PHY_SF_VARS)
 
-    ! [add] 2014/08/28 A.Noda
-    ATMOS_PHY_SF_SFC_TEMP  (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_TEMP
-    ATMOS_PHY_SF_SFC_albedo(:,:,:) = ATMOS_PHY_SF_DEFAULT_SFC_albedo
-    ATMOS_PHY_SF_SFC_Z0M   (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_Z0
-    ATMOS_PHY_SF_SFC_Z0H   (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_Z0
-    ATMOS_PHY_SF_SFC_Z0E   (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_Z0
-
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_SF_vars_setup",*) '[ATMOS_PHY_SF] prognostic/diagnostic variables'
     LOG_INFO_CONT('(1x,A,A24,A,A48,A,A12,A)') &
@@ -312,6 +307,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Open restart file for read
   subroutine ATMOS_PHY_SF_vars_restart_open
+    use scale_const, only: &
+       I_SW => CONST_I_SW, &
+       I_LW => CONST_I_LW
     use scale_time, only: &
        TIME_gettimelabel
     use scale_file_cartesC, only: &
@@ -340,11 +338,12 @@ contains
 
     else
        LOG_INFO("ATMOS_PHY_SF_vars_restart_open",*) 'restart file for ATMOS_PHY_SF is not specified.'
-       ATMOS_PHY_SF_SFC_TEMP  (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_TEMP
-       ATMOS_PHY_SF_SFC_albedo(:,:,:) = ATMOS_PHY_SF_DEFAULT_SFC_albedo
-       ATMOS_PHY_SF_SFC_Z0M   (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_Z0
-       ATMOS_PHY_SF_SFC_Z0H   (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_Z0
-       ATMOS_PHY_SF_SFC_Z0E   (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_Z0
+       ATMOS_PHY_SF_SFC_TEMP  (:,:)      = ATMOS_PHY_SF_DEFAULT_SFC_TEMP
+       ATMOS_PHY_SF_SFC_albedo(:,:,I_LW) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_LW
+       ATMOS_PHY_SF_SFC_albedo(:,:,I_SW) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW
+       ATMOS_PHY_SF_SFC_Z0M   (:,:)      = ATMOS_PHY_SF_DEFAULT_SFC_Z0
+       ATMOS_PHY_SF_SFC_Z0H   (:,:)      = ATMOS_PHY_SF_DEFAULT_SFC_Z0
+       ATMOS_PHY_SF_SFC_Z0E   (:,:)      = ATMOS_PHY_SF_DEFAULT_SFC_Z0
     endif
 
     return
