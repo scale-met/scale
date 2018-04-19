@@ -66,8 +66,6 @@ contains
        PRC_abort
     use scale_const, only: &
        D2R => CONST_D2R
-    use scale_comm_cartesC, only: &
-       COMM_horizontal_min
     use scale_atmos_grid_cartesC_real, only: &
        REAL_DLAT => ATMOS_GRID_CARTESC_REAL_DLAT, &
        REAL_DLON => ATMOS_GRID_CARTESC_REAL_DLON

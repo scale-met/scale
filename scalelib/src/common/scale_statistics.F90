@@ -13,7 +13,7 @@ module scale_statistics
   !
   !++ used modules
   !
-  use mpi
+  use mpi ! TODO: to replace functions in scale_comm module
   use scale_precision
   use scale_io
   use scale_prof
@@ -29,6 +29,9 @@ module scale_statistics
   public :: STATISTICS_setup
   public :: STATISTICS_total
   public :: STATISTICS_detail
+  public :: STATISTICS_horizontal_mean
+  public :: STATISTICS_horizontal_min
+  public :: STATISTICS_horizontal_max
 
   interface STATISTICS_total
      module procedure STATISTICS_total_2D
@@ -39,6 +42,21 @@ module scale_statistics
      module procedure STATISTICS_detail_2D
      module procedure STATISTICS_detail_3D
   end interface STATISTICS_detail
+
+  interface STATISTICS_horizontal_mean
+     module procedure STATISTICS_horizontal_mean_2D
+     module procedure STATISTICS_horizontal_mean_3D
+  end interface STATISTICS_horizontal_mean
+
+  interface STATISTICS_horizontal_max
+     module procedure STATISTICS_horizontal_max_2D
+     module procedure STATISTICS_horizontal_max_3D
+  end interface STATISTICS_horizontal_max
+
+  interface STATISTICS_horizontal_min
+     module procedure STATISTICS_horizontal_min_2D
+     module procedure STATISTICS_horizontal_min_3D
+  end interface STATISTICS_horizontal_min
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -62,6 +80,8 @@ contains
   subroutine STATISTICS_setup
     use scale_prc, only: &
        PRC_abort
+    use scale_comm_cartesC, only: &
+       COMM_setup
     implicit none
 
     namelist / PARAM_STATISTICS / &
@@ -70,6 +90,8 @@ contains
 
     integer :: ierr
     !---------------------------------------------------------------------------
+
+    call COMM_setup
 
     LOG_NEWLINE
     LOG_INFO("STATISTICS_setup",*) 'Setup'
@@ -86,12 +108,11 @@ contains
     LOG_NML(PARAM_STATISTICS)
 
     LOG_NEWLINE
-    LOG_INFO("STATISTICS_setup",*) 'Caluculate statistics?                     : ', STATISTICS_checktotal
-    LOG_INFO("STATISTICS_setup",*) 'Allow global communication for statistics? : ', STATISTICS_use_globalcomm
+    LOG_INFO("STATISTICS_setup",*) 'Caluculate total statistics for monitoring? : ', STATISTICS_checktotal
     if ( STATISTICS_use_globalcomm ) then
-       LOG_INFO_CONT(*) '=> Global total is calculated using MPI_ALLreduce.'
+       LOG_INFO_CONT(*) '=> The total is calculated for the global domain.'
     else
-       LOG_INFO_CONT(*) '=> Local total is calculated in each process.'
+       LOG_INFO_CONT(*) '=> The total is calculated for the local domain.'
     endif
 
     return
@@ -134,7 +155,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    statval = 0.0_RP
+    statval = 0.0_DP
     if ( var(IS,JS) /= UNDEF ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
        do j = JS, JE
@@ -144,7 +165,7 @@ contains
        end do
     end if
 
-    if ( .NOT. ( statval > -1.0_RP .OR. statval < 1.0_RP ) ) then ! must be NaN
+    if ( .NOT. ( statval > -1.0_DP .OR. statval < 1.0_DP ) ) then ! must be NaN
        LOG_ERROR("STATISTICS_total_2D",*) 'NaN is detected for ', trim(varname), ' in rank ', PRC_myrank
        call PRC_abort
     endif
@@ -230,7 +251,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    statval = 0.0_RP
+    statval = 0.0_DP
     if ( var(KS,IS,JS) /= UNDEF ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
        do j = JS, JE
@@ -242,7 +263,7 @@ contains
        enddo
     end if
 
-    if ( .NOT. ( statval > -1.0_RP .OR. statval < 1.0_RP ) ) then ! must be NaN
+    if ( .NOT. ( statval > -1.0_DP .OR. statval < 1.0_DP ) ) then ! must be NaN
        LOG_ERROR("STATISTICS_total_3D",*) 'NaN is detected for ', trim(varname), ' in rank ', PRC_myrank
        call PRC_abort
     endif
@@ -289,6 +310,348 @@ contains
 
     return
   end subroutine STATISTICS_total_3D
+
+  !-----------------------------------------------------------------------------
+  !> Calc horizontal mean value
+  subroutine STATISTICS_horizontal_mean_2D( &
+       IA, IS, IE, JA, JS, JE, &
+       var, area, &
+       varmean    )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    real(RP), intent(in)  :: var (IA,JA)
+    real(RP), intent(in)  :: area(IA,JA)
+    real(RP), intent(out) :: varmean
+
+    real(DP) :: statval   (2)
+    real(DP) :: allstatval(2)
+
+    integer :: ierr
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    statval(:) = 0.0_DP
+    do j = JS, JE
+    do i = IS, IE
+       if ( var(i,j) /= UNDEF ) then
+          statval(1) = statval(1) + area(i,j) * var(i,j)
+          statval(2) = statval(2) + area(i,j)
+       endif
+    enddo
+    enddo
+
+    call PROF_rapstart('COMM_Allreduce', 2)
+    ! All reduce
+    call MPI_Allreduce( statval(:),           &
+                        allstatval(:),        &
+                        2,                    &
+                        MPI_DOUBLE_PRECISION, &
+                        MPI_SUM,              &
+                        PRC_LOCAL_COMM_WORLD, &
+                        ierr                  )
+    call PROF_rapend  ('COMM_Allreduce', 2)
+
+    if ( allstatval(2) > 0.0_DP ) then
+       varmean = allstatval(1) / allstatval(2)
+    else
+       varmean = UNDEF
+    end if
+
+    return
+  end subroutine STATISTICS_horizontal_mean_2D
+
+  subroutine STATISTICS_horizontal_mean_3D( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       var, area, &
+       varmean    )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: var (KA,IA,JA)
+    real(RP), intent(in)  :: area(   IA,JA)
+    real(RP), intent(out) :: varmean(KA)
+
+    real(DP) :: statval   (2,KA)
+    real(DP) :: allstatval(2,KA)
+
+    integer :: ierr
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    statval(:,:) = 0.0_DP
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       if ( var(k,i,j) /= UNDEF ) then
+          statval(1,k) = statval(1,k) + area(i,j) * var(k,i,j)
+          statval(2,k) = statval(2,k) + area(i,j)
+       endif
+    enddo
+    enddo
+    enddo
+
+    call PROF_rapstart('COMM_Allreduce', 2)
+    ! All reduce
+    call MPI_Allreduce( statval   (:,KS:KE),  &
+                        allstatval(:,KS:KE),  &
+                        (KE-KS+1)*2,          &
+                        MPI_DOUBLE_PRECISION, &
+                        MPI_SUM,              &
+                        PRC_LOCAL_COMM_WORLD, &
+                        ierr                  )
+    call PROF_rapend  ('COMM_Allreduce', 2)
+
+    do k = KS, KE
+       if ( allstatval(2,k) > 0.0_DP ) then
+          varmean(k) = allstatval(1,k) / allstatval(2,k)
+       else
+          varmean(k) = UNDEF
+       end if
+    enddo
+    do k = 1, KS-1
+       varmean(k) = UNDEF
+    end do
+    do k = KE+1, KA
+       varmean(k) = UNDEF
+    end do
+
+    return
+  end subroutine STATISTICS_horizontal_mean_3D
+
+  !-----------------------------------------------------------------------------
+  !> Calc horizontal minimum value
+  subroutine STATISTICS_horizontal_min_2D( &
+       IA, IS, IE, JA, JS, JE, &
+       var, &
+       varmin )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF, &
+       HUGE  => CONST_HUGE
+    use scale_comm_cartesC, only: &
+       COMM_datatype
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: var(IA,JA)
+    real(RP), intent(out) :: varmin
+
+    real(RP) :: statval
+    real(RP) :: allstatval
+
+    integer :: ierr
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    statval = HUGE
+    do j = JS, JE
+    do i = IS, IE
+       if ( var(i,j) /= UNDEF .and. var(i,j) < statval ) then
+          statval = var(i,j)
+       endif
+    enddo
+    enddo
+
+    call PROF_rapstart('COMM_Allreduce', 2)
+    ! All reduce
+    call MPI_Allreduce( statval,              &
+                        allstatval,           &
+                        1,                    &
+                        COMM_datatype,        &
+                        MPI_MIN,              &
+                        PRC_LOCAL_COMM_WORLD, &
+                        ierr                  )
+    call PROF_rapend  ('COMM_Allreduce', 2)
+
+    if ( allstatval < HUGE ) then
+       varmin = allstatval
+    else
+       varmin = UNDEF
+    end if
+
+    return
+  end subroutine STATISTICS_horizontal_min_2D
+
+  subroutine STATISTICS_horizontal_min_3D( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       var, &
+       varmin )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF, &
+       HUGE  => CONST_HUGE
+    use scale_comm_cartesC, only: &
+       COMM_datatype
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: var(KA,IA,JA)
+    real(RP), intent(out) :: varmin(KA)
+
+    real(RP) :: statval   (KA)
+    real(RP) :: allstatval(KA)
+
+    integer :: ierr
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    statval(:) = HUGE
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       if ( var(k,i,j) /= UNDEF .and. var(k,i,j) < statval(k) ) then
+          statval(k) = var(k,i,j)
+       endif
+    enddo
+    enddo
+    enddo
+
+    call PROF_rapstart('COMM_Allreduce', 2)
+    ! All reduce
+    call MPI_Allreduce( statval   (KS:KE),    &
+                        allstatval(KS:KE),    &
+                        KE-KS+1,              &
+                        COMM_datatype,        &
+                        MPI_MIN,              &
+                        PRC_LOCAL_COMM_WORLD, &
+                        ierr                  )
+    call PROF_rapend  ('COMM_Allreduce', 2)
+
+    do k = KS, KE
+       if ( allstatval(k) < HUGE ) then
+          varmin(k) = allstatval(k)
+       else
+          varmin(k) = UNDEF
+       end if
+    enddo
+    do k = 1, KS-1
+       varmin(k) = UNDEF
+    end do
+    do k = KE+1, KA
+       varmin(k) = UNDEF
+    end do
+
+    return
+  end subroutine STATISTICS_horizontal_min_3D
+
+  !-----------------------------------------------------------------------------
+  !> Calc horizontal maximum value
+  subroutine STATISTICS_horizontal_max_2D( &
+       IA, IS, IE, JA, JS, JE, &
+       var, &
+       varmax )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF, &
+       HUGE  => CONST_HUGE
+    use scale_comm_cartesC, only: &
+       COMM_datatype
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: var(IA,JA)
+    real(RP), intent(out) :: varmax
+
+    real(RP) :: statval
+    real(RP) :: allstatval
+
+    integer :: ierr
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    statval = - HUGE
+    do j = JS, JE
+    do i = IS, IE
+       if ( var(i,j) /= UNDEF .and. var(i,j) > statval ) then
+          statval = var(i,j)
+       endif
+    enddo
+    enddo
+
+    call PROF_rapstart('COMM_Allreduce', 2)
+    ! All reduce
+    call MPI_Allreduce( statval,              &
+                        allstatval,           &
+                        1,                    &
+                        COMM_datatype,        &
+                        MPI_MAX,              &
+                        PRC_LOCAL_COMM_WORLD, &
+                        ierr                  )
+    call PROF_rapend  ('COMM_Allreduce', 2)
+
+    if ( allstatval > - HUGE ) then
+       varmax = allstatval
+    else
+       varmax = UNDEF
+    end if
+
+    return
+  end subroutine STATISTICS_horizontal_max_2D
+
+  subroutine STATISTICS_horizontal_max_3D( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       var, &
+       varmax )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF, &
+       HUGE  => CONST_HUGE
+    use scale_comm_cartesC, only: &
+       COMM_datatype
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: var(KA,IA,JA)
+    real(RP), intent(out) :: varmax(KA)
+
+    real(RP) :: statval   (KA)
+    real(RP) :: allstatval(KA)
+
+    integer :: ierr
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    statval(:) = - HUGE
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       if ( var(k,i,j) /= UNDEF .and. var(k,i,j) > statval(k) ) then
+          statval(k) = var(k,i,j)
+       endif
+    enddo
+    enddo
+    enddo
+
+    call PROF_rapstart('COMM_Allreduce', 2)
+    ! All reduce
+    call MPI_Allreduce( statval   (KS:KE),    &
+                        allstatval(KS:KE),    &
+                        KE-KS+1,              &
+                        COMM_datatype,        &
+                        MPI_MAX,              &
+                        PRC_LOCAL_COMM_WORLD, &
+                        ierr                  )
+    call PROF_rapend  ('COMM_Allreduce', 2)
+
+    do k = KS, KE
+       if ( allstatval(k) > - HUGE ) then
+          varmax(k) = allstatval(k)
+       else
+          varmax(k) = UNDEF
+       end if
+    enddo
+    do k = 1, KS-1
+       varmax(k) = UNDEF
+    end do
+    do k = KE+1, KA
+       varmax(k) = UNDEF
+    end do
+
+    return
+  end subroutine STATISTICS_horizontal_max_3D
 
   !-----------------------------------------------------------------------------
   !> Search global maximum & minimum value

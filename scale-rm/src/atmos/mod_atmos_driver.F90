@@ -382,7 +382,8 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ, &
        REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ, &
-       REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI
+       REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI, &
+       AREA     => ATMOS_GRID_CARTESC_REAL_AREA
     use scale_time, only: &
        TIME_NOWSEC
     implicit none
@@ -429,7 +430,7 @@ contains
        call ATMOS_REFSTATE_update( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                    DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                                    CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
-                                   REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:),               & ! [IN]
+                                   REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:), AREA(:,:),    & ! [IN]
                                    TIME_NOWSEC                                                    ) ! [IN]
        call PROF_rapend  ('ATM_Refstate', 2)
     endif

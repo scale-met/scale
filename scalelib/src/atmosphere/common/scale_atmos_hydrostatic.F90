@@ -269,11 +269,11 @@ contains
        pott, qv, qc,       &
        pres_sfc, pott_sfc, &
        qv_sfc, qc_sfc,     &
-       cz, fz,             &
+       cz, fz, area,       &
        dens, temp, pres,   &
        temp_sfc            )
-    use scale_comm_cartesC, only: &
-       COMM_horizontal_mean
+    use scale_statistics, only: &
+       STATISTICS_horizontal_mean
     use scale_atmos_hydrometeor, only: &
        CV_VAPOR, &
        CV_WATER, &
@@ -293,6 +293,7 @@ contains
     real(RP), intent(in)  :: qc_sfc  (IA,JA) !< surface liquid water          [kg/kg]
     real(RP), intent(in)  :: cz(  KA,IA,JA)
     real(RP), intent(in)  :: fz(0:KA,IA,JA)
+    real(RP), intent(in)  :: area(IA,JA)
 
     real(RP), intent(out) :: dens(KA,IA,JA)  !< density               [kg/m3]
     real(RP), intent(out) :: temp(KA,IA,JA)  !< temperature           [K]
@@ -348,7 +349,10 @@ contains
                                               dz_top(:,:), KE+1,                                  & ! [IN]
                                               dens_toa(:,:), temp_toa(:,:), pres_toa(:,:)         ) ! [OUT]
 
-    call COMM_horizontal_mean( dens_mean, dens_toa(:,:) )
+    call STATISTICS_horizontal_mean( IA, IS, IE, JA, JS, JE, &
+                                     dens_toa(:,:), area(:,:), & ! [IN]
+                                     dens_mean                 ) ! [OUT]
+
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE

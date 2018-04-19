@@ -2493,8 +2493,10 @@ contains
        CPdry => CONST_CPdry
     use scale_prc, only: &
        PRC_abort
-    use scale_comm_cartesC, only: &
-       COMM_horizontal_mean
+    use scale_statistics, only: &
+       STATISTICS_horizontal_mean
+    use scale_atmos_grid_cartesC_real, only: &
+       AREA => ATMOS_GRID_CARTESC_REAL_AREA
     implicit none
     character(len=*), intent(in)  :: vname
     real(RP),         intent(out) :: var(:)
@@ -2507,7 +2509,8 @@ contains
     case ( 'DENS_MEAN' )
        if ( .not. DV_calclated(I_DENS_MEAN) ) then
           call allocate_1D( DENS_MEAN )
-          call COMM_horizontal_mean( DENS_MEAN(:), DENS(:,:,:) )
+          call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                           DENS(:,:,:), AREA(:,:), DENS_MEAN(:) )
           DV_calclated(I_DENS_MEAN) = .true.
        end if
        var(:) = DENS_MEAN(:)
@@ -2525,7 +2528,8 @@ contains
           enddo
           enddo
           enddo
-          call COMM_horizontal_mean( W_MEAN(:), WORK(:,:,:) )
+          call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                           WORK(:,:,:), AREA(:,:), W_MEAN(:) )
           do k = KS, KE
              W_MEAN(k) = W_MEAN(k) / DENS_MEAN(k)
           enddo
@@ -2546,7 +2550,8 @@ contains
           enddo
           enddo
           enddo
-          call COMM_horizontal_mean( U_MEAN(:), WORK(:,:,:) )
+          call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                           WORK(:,:,:), AREA(:,:), U_MEAN(:) )
           do k = KS, KE
              U_MEAN(k) = U_MEAN(k) / DENS_MEAN(k)
           enddo
@@ -2567,7 +2572,8 @@ contains
           enddo
           enddo
           enddo
-          call COMM_horizontal_mean( V_MEAN(:), WORK(:,:,:) )
+          call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                           WORK(:,:,:), AREA(:,:), V_MEAN(:) )
           do k = KS, KE
              V_MEAN(k) = V_MEAN(k) / DENS_MEAN(k)
           enddo
@@ -2579,7 +2585,8 @@ contains
        if ( .not. DV_calclated(I_PT_MEAN) ) then
           call allocate_1D( PT_MEAN )
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
-          call COMM_horizontal_mean( PT_MEAN(:), RHOT(:,:,:) )
+          call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                           RHOT(:,:,:), AREA(:,:), PT_MEAN(:) )
           do k = KS, KE
              PT_MEAN(k) = PT_MEAN(k) / DENS_MEAN(k)
           enddo
@@ -2600,7 +2607,8 @@ contains
           enddo
           enddo
           enddo
-          call COMM_horizontal_mean( T_MEAN(:), WORK(:,:,:) )
+          call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                           WORK(:,:,:), AREA(:,:), T_MEAN(:) )
           do k = KS, KE
              T_MEAN(k) = T_MEAN(k) / DENS_MEAN(k)
           enddo
@@ -2622,7 +2630,8 @@ contains
              enddo
              enddo
              enddo
-             call COMM_horizontal_mean( QV_MEAN(:), WORK(:,:,:) )
+             call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                              WORK(:,:,:), AREA(:,:), QV_MEAN(:) )
              do k = KS, KE
                 QV_MEAN(k) = QV_MEAN(k) / DENS_MEAN(k)
              enddo
@@ -2650,7 +2659,8 @@ contains
           enddo
           enddo
           enddo
-          call COMM_horizontal_mean( QHYD_MEAN(:), WORK(:,:,:) )
+          call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                           WORK(:,:,:), AREA(:,:), QHYD_MEAN(:) )
           do k = KS, KE
              QHYD_MEAN(k) = QHYD_MEAN(k) / DENS_MEAN(k)
           enddo
@@ -2672,7 +2682,8 @@ contains
           enddo
           enddo
           enddo
-          call COMM_horizontal_mean( QLIQ_MEAN(:), WORK(:,:,:) )
+          call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                           WORK(:,:,:), AREA(:,:), QLIQ_MEAN(:) )
           do k = KS, KE
              QLIQ_MEAN(k) = QLIQ_MEAN(k) / DENS_MEAN(k)
           enddo
@@ -2694,7 +2705,8 @@ contains
           enddo
           enddo
           enddo
-          call COMM_horizontal_mean( QICE_MEAN(:), WORK(:,:,:) )
+          call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                           WORK(:,:,:), AREA(:,:), QICE_MEAN(:) )
           do k = KS, KE
              QICE_MEAN(k) = QICE_MEAN(k) / DENS_MEAN(k)
           enddo

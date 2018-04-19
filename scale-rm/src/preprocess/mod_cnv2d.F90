@@ -72,8 +72,8 @@ contains
        PRC_abort
     use scale_const, only: &
        D2R  => CONST_D2R
-    use scale_comm_cartesC, only: &
-       COMM_horizontal_min
+    use scale_statistics, only: &
+       STATISTICS_horizontal_min
     use scale_atmos_grid_cartesC_real, only: &
        REAL_DLAT => ATMOS_GRID_CARTESC_REAL_DLAT, &
        REAL_DLON => ATMOS_GRID_CARTESC_REAL_DLON
@@ -133,7 +133,8 @@ contains
        LOG_INFO("CNV2D_setup",*) 'Do nothing for 2D data conversion'
     else
        drad(:,:) = min( REAL_DLAT(:,:), REAL_DLON(:,:) )
-       call COMM_horizontal_min( drad_min, drad(:,:) )
+       call STATISTICS_horizontal_min( IA, IS, IE, JA, JS, JE, &
+                                       drad(:,:), drad_min )
 
        if ( CNV2D_unittile_ddeg > 0.0_RP ) then
           CNV2D_oversampling_factor = ( drad_min / D2R ) / CNV2D_unittile_ddeg

@@ -48,7 +48,8 @@ module mod_mkinit
      FYG => ATMOS_GRID_CARTESC_FYG
   use scale_atmos_grid_cartesC_real, only: &
      REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
-     REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
+     REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
+     AREA    => ATMOS_GRID_CARTESC_REAL_AREA
   use scale_atmos_profile, only: &
      PROFILE_isa => ATMOS_PROFILE_isa
   use scale_atmos_hydrometeor, only: &
@@ -1414,7 +1415,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     if ( .not. ATMOS_HYDROMETEOR_dry ) then
@@ -1455,7 +1456,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     call COMM_vars8( DENS(:,:,:), 1 )
@@ -2046,7 +2047,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     call COMM_vars8( DENS(:,:,:), 1 )
@@ -2224,7 +2225,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     do j = JSB, JEB
@@ -2784,7 +2785,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     ! calc QV from RH
@@ -2824,7 +2825,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     do k = KS, KE
@@ -2952,7 +2953,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                potl(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     ! calc in moist condition
@@ -3007,7 +3008,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     do j = JSB, JEB
@@ -3170,7 +3171,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                potl(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     ! calc in moist condition
@@ -3222,7 +3223,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     do j = JSB, JEB
@@ -3417,7 +3418,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                potl(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     call HYDROMETEOR_LHV( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -3436,7 +3437,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     do j = JSB, JEB
@@ -3597,7 +3598,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                potl(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
 
@@ -3641,7 +3642,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
 
@@ -3801,7 +3802,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                potl(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
 
@@ -3849,7 +3850,7 @@ contains
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:),                         & ! [IN]
+                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
 

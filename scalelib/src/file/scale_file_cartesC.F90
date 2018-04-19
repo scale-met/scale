@@ -68,8 +68,8 @@ module scale_file_cartesC
      module procedure FILE_CARTESC_read_var_2D
      module procedure FILE_CARTESC_read_var_3D
      module procedure FILE_CARTESC_read_var_4D
-     module procedure FILE_CARTESC_read_all_2D
-     module procedure FILE_CARTESC_read_all_3D
+     module procedure FILE_CARTESC_read_auto_2D
+     module procedure FILE_CARTESC_read_auto_3D
   end interface FILE_CARTESC_read
 
   interface FILE_CARTESC_write
@@ -1600,7 +1600,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Read 2D data from file
-  subroutine FILE_CARTESC_read_all_2D( &
+  subroutine FILE_CARTESC_read_auto_2D( &
        fid, varname, &
        var,          &
        step, existed )
@@ -1637,7 +1637,7 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    LOG_INFO("FILE_CARTESC_read_all_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
+    LOG_INFO("FILE_CARTESC_read_auto_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
 
     call FILE_get_dataInfo( fid, varname, dim_name=dnames(:), existed=existed2 )
 
@@ -1647,7 +1647,7 @@ contains
     end if
 
     if ( .not. existed2 ) then
-       LOG_ERROR("FILE_CARTESC_read_all_2D",*) 'variable not found: ', trim(varname)
+       LOG_ERROR("FILE_CARTESC_read_auto_2D",*) 'variable not found: ', trim(varname)
        call PRC_abort
     end if
 
@@ -1674,11 +1674,11 @@ contains
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
     return
-  end subroutine FILE_CARTESC_read_all_2D
+  end subroutine FILE_CARTESC_read_auto_2D
 
   !-----------------------------------------------------------------------------
   !> Read 3D data from file
-  subroutine FILE_CARTESC_read_all_3D( &
+  subroutine FILE_CARTESC_read_auto_3D( &
        fid, varname, &
        var,          &
        step, existed )
@@ -1717,7 +1717,7 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    LOG_INFO("FILE_CARTESC_read_all_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
+    LOG_INFO("FILE_CARTESC_read_auto_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
 
     call FILE_get_dataInfo( fid, varname, dim_name=dnames(:), existed=existed2 )
 
@@ -1727,7 +1727,7 @@ contains
     end if
 
     if ( .not. existed2 ) then
-       LOG_ERROR("FILE_CARTESC_read_all_3D",*) 'variable not found: ', trim(varname)
+       LOG_ERROR("FILE_CARTESC_read_auto_3D",*) 'variable not found: ', trim(varname)
        call PRC_abort
     end if
 
@@ -1785,14 +1785,14 @@ contains
        end do
        deallocate(buf)
     else
-       LOG_ERROR("FILE_CARTESC_read_all_3D",*) 'invalid dimension'
+       LOG_ERROR("FILE_CARTESC_read_auto_3D",*) 'invalid dimension'
        call PRC_abort
     end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
     return
-  end subroutine FILE_CARTESC_read_all_3D
+  end subroutine FILE_CARTESC_read_auto_3D
 
   !-----------------------------------------------------------------------------
   !> interface FILE_CARTESC_write
