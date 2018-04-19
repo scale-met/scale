@@ -46,7 +46,8 @@ module scale_prc
   public :: PRC_ERRHANDLER_setup
 
   abstract interface
-     subroutine closer
+     subroutine closer( skip_abort )
+       logical, intent(in), optional :: skip_abort
      end subroutine closer
   end interface
 
@@ -984,7 +985,7 @@ contains
        write(*,*)                     ''
     endif
 
-    if ( associated( PRC_FILE_CLOSER ) ) call PRC_FILE_Closer
+    if ( associated( PRC_FILE_CLOSER ) ) call PRC_FILE_Closer( .true. )
 
     ! Close logfile, configfile
     if ( IO_L ) then
