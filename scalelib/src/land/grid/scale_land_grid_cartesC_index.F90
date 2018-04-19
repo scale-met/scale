@@ -29,9 +29,9 @@ module scale_land_grid_cartesC_index
   !
   !++ Public parameters & variables
   !
-  integer, public :: LKMAX = 1 ! # of computational cells: z for land
-  integer, public :: LIMAX = 1 ! # of computational cells: x for land
-  integer, public :: LJMAX = 1 ! # of computational cells: y for land
+  integer, public :: LKMAX = -1 ! # of computational cells: z for land
+  integer, public :: LIMAX = -1 ! # of computational cells: x for land
+  integer, public :: LJMAX = -1 ! # of computational cells: y for land
 
   integer, public :: LKA       ! # of total grids: z for land, local
   integer, public :: LIA       ! # of total grids: x for land, local

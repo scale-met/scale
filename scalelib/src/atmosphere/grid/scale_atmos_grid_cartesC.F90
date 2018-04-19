@@ -160,6 +160,11 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_GRID_CARTESC_setup",*) 'Setup'
 
+    if ( KMAX < 1 ) then
+       LOG_INFO("ATMOS_GRID_CARTESC_setup",*) 'Skip because KMAX < 1'
+       return
+    end if
+
     FZ(:) = -1.0_RP
 
     if ( present(basename)  ) ATMOS_GRID_CARTESC_IN_BASENAME = basename

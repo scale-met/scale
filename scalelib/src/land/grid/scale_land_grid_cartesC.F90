@@ -74,6 +74,11 @@ contains
     LOG_NEWLINE
     LOG_INFO("LAND_GRID_CARTESC_setup",*) 'Setup'
 
+    if ( LKMAX < 1 ) then
+       LOG_INFO("LAND_GRID_CARTESC_setup",*) 'Skip because LKMAX < 1'
+       return
+    end if
+
     LDZ(:) = 0.0_RP
 
     LAND_GRID_CARTESC_IN_AGGREGATE = FILE_AGGREGATE

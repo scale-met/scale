@@ -49,6 +49,8 @@ contains
   subroutine URBAN_ADMIN_setup
     use scale_prc, only: &
        PRC_abort
+    use scale_urban_grid_cartesC_index, only: &
+       UKMAX
     implicit none
 
     namelist / PARAM_URBAN / &
@@ -76,6 +78,10 @@ contains
     LOG_INFO("URBAN_ADMIN_setup",*) 'Urban model components '
 
     if ( URBAN_DYN_TYPE /= 'OFF' .AND. URBAN_DYN_TYPE /= 'NONE' ) then
+       if ( UKMAX < 0 ) then
+          LOG_ERROR("URBAN_ADMIN_setup",*) 'URBAN_DYN_TYPE is set but UKMAX < 0'
+          call PRC_abort
+       end if
        LOG_INFO_CONT(*) 'Urban model : ON, ', trim(URBAN_DYN_TYPE)
        URBAN_do = .true.
     else

@@ -76,6 +76,11 @@ contains
     LOG_NEWLINE
     LOG_INFO("OCEAN_GRID_CARTESC_setup",*) 'Setup'
 
+    if ( OKMAX < 1 ) then
+       LOG_INFO("OCEAN_GRID_CARTESC_setup",*) 'Skip because OKMAX < 1'
+       return
+    end if
+
     FZ(:) = 0.0_RP
 
     OCEAN_GRID_CARTESC_IN_AGGREGATE = FILE_AGGREGATE

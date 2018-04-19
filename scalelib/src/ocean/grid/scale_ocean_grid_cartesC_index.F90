@@ -29,10 +29,9 @@ module scale_ocean_grid_cartesC_index
   !
   !++ Public parameters & variables
   !
-  integer, public :: OKMAX = 1 ! # of computational cells: z for ocean
-  integer, public :: OIMAX = 1 ! # of computational cells: x for ocean
-  integer, public :: OJMAX = 1 ! # of computational cells: y for ocean
-
+  integer, public :: OKMAX = -1 ! # of computational cells: z for ocean
+  integer, public :: OIMAX = -1 ! # of computational cells: x for ocean
+  integer, public :: OJMAX = -1 ! # of computational cells: y for ocean
 
   integer, public :: OKA       ! # of total grids: z for ocean, local
   integer, public :: OKS       ! start point of inner domain: z for ocean, local
