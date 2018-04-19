@@ -184,7 +184,7 @@ module scale_file_cartesC
 
   logical,    private :: File_axes_written(0:FILE_FILE_MAX-1)          ! whether axes have been written
   !                                                                    ! fid starts from zero so index should start from zero
-  logical,    private :: File_closed      (0:FILE_FILE_MAX-1) = .true. ! whether file has been closed
+  logical,    private :: File_closed     (-1:FILE_FILE_MAX-1) = .true. ! whether file has been closed
   logical,    private :: File_haszcoord   (0:FILE_FILE_MAX-1)          ! z-coordinates exist?
   integer(8), private :: write_buf_amount (0:FILE_FILE_MAX-1)          ! sum of write buffer amounts
 
@@ -787,7 +787,7 @@ contains
        fid,                       &
        date, subsec,              &
        haszcoord,                 &
-       append, aggregate          )
+       append, aggregate, single  )
     use scale_file_h, only: &
        FILE_REAL8, &
        FILE_REAL4
@@ -822,6 +822,7 @@ contains
     logical,          intent(in), optional :: append    !< switch whether append existing file or not (default=false)
     logical,          intent(in), optional :: haszcoord !< switch whether include zcoordinate or not (default=true)
     logical,          intent(in), optional :: aggregate
+    logical,          intent(in), optional :: single
 
     integer                :: dtype
     logical                :: append_sw
@@ -833,9 +834,16 @@ contains
     integer                :: comm
     logical                :: fileexisted
     logical                :: aggregate_
+    logical                :: single_
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    end if
 
     ! dtype is used to define the data type of axis variables in file
     if    ( datatype == 'REAL8' ) then
@@ -885,15 +893,21 @@ contains
                       fid,                     & ! [OUT]
                       fileexisted,             & ! [OUT]
                       rankid     = PRC_myrank, & ! [IN]
+                      single     = single_,    & ! [IN]
                       aggregate  = aggregate_, & ! [IN]
                       time_units = tunits,     & ! [IN]
                       calendar   = calendar,   & ! [IN]
                       append     = append_sw   ) ! [IN]
 
 
+    if ( PRC_myrank /= 0 .and. single_ ) then
+       fid = -1
+    else if ( .not. fileexisted ) then ! do below only once when file is created
 
-
-    if ( .NOT. fileexisted ) then ! do below only once when file is created
+       File_axes_written(fid) = .false.  ! indicating axes have not been written yet
+       if ( PRC_myrank==0 .or. (.not. single_) ) then
+          File_closed(fid) = .false.
+       end if
 
        if ( present( haszcoord ) ) then
           File_haszcoord(fid) = haszcoord
@@ -932,9 +946,7 @@ contains
                                    dtype,              & ! [IN]
                                    File_haszcoord(fid) ) ! [IN]
 
-       File_axes_written(fid) = .false.  ! indicating axes have not been written yet
-       File_closed      (fid) = .false.
-    endif
+    end if
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -959,6 +971,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
     call FILE_EndDef( fid ) ! [IN]
 
@@ -1006,9 +1023,14 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
+
     if ( FILE_get_AGGREGATE(fid) ) then
        call FILE_Flush( fid ) ! flush all pending read/write requests
-    endif
+    end if
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -1031,21 +1053,22 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( .NOT. File_closed(fid) ) then
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
-       if ( FILE_get_AGGREGATE(fid) ) then
-          call FILE_Flush( fid )        ! flush all pending read/write requests
-          if ( write_buf_amount(fid) > 0 ) then
-             call FILE_Detach_Buffer( fid ) ! detach PnetCDF aggregation buffer
-             write_buf_amount(fid) = 0      ! reset write request amount
-          endif
+    if ( FILE_get_AGGREGATE(fid) ) then
+       call FILE_Flush( fid )        ! flush all pending read/write requests
+       if ( write_buf_amount(fid) > 0 ) then
+          call FILE_Detach_Buffer( fid ) ! detach PnetCDF aggregation buffer
+          write_buf_amount(fid) = 0      ! reset write request amount
        endif
-
-       call FILE_Close( fid ) ! [IN]
-
-       File_closed(fid) = .true.
-
     endif
+
+    call FILE_Close( fid ) ! [IN]
+
+    File_closed(fid) = .true.
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -1220,6 +1243,11 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_I_NetCDF', 2)
+       return
+    end if
+
     LOG_INFO("FILE_CARTESC_read_var_1D",'(1x,2A)') 'Read from file (1D), name : ', trim(varname)
 
     if ( FILE_get_aggregate(fid) ) then
@@ -1329,6 +1357,11 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_I_NetCDF', 2)
+       return
+    end if
+
     LOG_INFO("FILE_CARTESC_read_var_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
 
     if ( FILE_get_AGGREGATE(fid) ) then
@@ -1401,6 +1434,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_I_NetCDF', 2)
+       return
+    end if
 
     LOG_INFO("FILE_CARTESC_read_var_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
 
@@ -1531,6 +1569,11 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_I_NetCDF', 2)
+       return
+    end if
+
     LOG_INFO("FILE_CARTESC_read_var_4D",'(1x,2A)') 'Read from file (4D), name : ', trim(varname)
 
     if ( FILE_get_AGGREGATE(fid) ) then
@@ -1637,6 +1680,11 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_I_NetCDF', 2)
+       return
+    end if
+
     LOG_INFO("FILE_CARTESC_read_auto_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
 
     call FILE_get_dataInfo( fid, varname, dim_name=dnames(:), existed=existed2 )
@@ -1716,6 +1764,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_I_NetCDF', 2)
+       return
+    end if
 
     LOG_INFO("FILE_CARTESC_read_auto_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
 
@@ -1809,6 +1862,8 @@ contains
        append, aggregate,   &
        standard_name,       &
        cell_measures        )
+    use scale_prc, only: &
+       PRC_myrank
     implicit none
 
     real(RP),         intent(in) :: var(:)   !< value of the variable
@@ -1832,10 +1887,10 @@ contains
 
     LOG_INFO("FILE_CARTESC_write_1D",'(1x,2A)') 'Write to file (1D), name : ', trim(varname)
 
-    call FILE_CARTESC_create( basename, title, datatype,         & ! [IN]
-                              fid,                               & ! [OUT]
-                              date=date, subsec=subsec,          & ! [IN]
-                              append=append, aggregate=aggregate ) ! [IN]
+    call FILE_CARTESC_create( basename, title, datatype,                        & ! [IN]
+                              fid,                                              & ! [OUT]
+                              date=date, subsec=subsec,                         & ! [IN]
+                              append=append, aggregate=aggregate, single=.true. ) ! [IN]
 
     call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
                                vid,                                          & ! [OUT]
@@ -1953,6 +2008,7 @@ contains
     call FILE_CARTESC_enddef( fid )
 
     call FILE_CARTESC_write_var_3D( fid, vid, var, varname, dim_type, fill_halo )
+
 
     return
   end subroutine FILE_CARTESC_write_3D
@@ -2116,6 +2172,13 @@ contains
     character(len=*), intent(in) :: tunits
     character(len=*), intent(in) :: calendar
 
+    call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
+
     call FILE_Set_Attribute( fid, "global", "Conventions", "CF-1.6" ) ! [IN]
 
     call FILE_Set_Attribute( fid, "global", "grid_name", ATMOS_GRID_CARTESC_NAME ) ! [IN]
@@ -2145,6 +2208,8 @@ contains
     if ( calendar /= "" ) call FILE_Set_Attribute( fid, "global", "calendar", calendar )
     call FILE_Set_Attribute( fid, "global", "time_units", tunits )
     call FILE_Set_Attribute( fid, "global", "time_start", (/time/) )
+
+    call PROF_rapend('FILE_O_NetCDF', 2)
 
     return
   end subroutine FILE_CARTESC_put_globalAttributes
@@ -2178,6 +2243,13 @@ contains
 
     logical, save :: set_dim = .false.
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
     if ( .not. set_dim ) then
        call set_dimension_informations
@@ -2308,63 +2380,63 @@ contains
     if ( hasZ ) then
        axisname = (/'z ', 'x ', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'height',     'height above ground level', &
-                                          'm', axisname(1:3), dtype                        )
+                                           'm', axisname(1:3), dtype                        )
        axisname = (/'zh', 'x ', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'height_wxy', 'height above ground level (half level wxy)', &
-                                          'm', axisname(1:3), dtype                                         )
+                                           'm', axisname(1:3), dtype                                         )
 
        axisname = (/'z ', 'xh', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_zuy_x', 'area of grid cell face (half level zuy, normal x)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
        axisname = (/'z ', 'x ', 'yh'/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_zxv_y', 'area of grid cell face (half level zxv, normal y)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
        axisname = (/'zh', 'xh', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_wuy_x', 'area of grid cell face (half level wuy, normal x)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
        axisname = (/'zh', 'x ', 'yh'/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_wxv_y', 'area of grid cell face (half level wxv, normal y)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
        axisname = (/'z ', 'x ', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_zxy_x', 'area of grid cell face (half level zxy, normal x)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
        axisname = (/'z ', 'xh', 'yh'/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_zuv_y', 'area of grid cell face (half level zuv, normal y)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
        axisname = (/'z ', 'xh', 'yh'/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_zuv_x', 'area of grid cell face (half level zuv, normal x)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
        axisname = (/'z ', 'x ', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_zxy_y', 'area of grid cell face (half level zxy, normal y)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
 
        axisname = (/'z ', 'x ', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_volume',     'volume of grid cell', &
-                                          'm3', axisname(1:3), dtype                       )
+                                           'm3', axisname(1:3), dtype                       )
        axisname = (/'zh', 'x ', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_volume_wxy', 'volume of grid cell (half level wxy)', &
-                                          'm3', axisname(1:3), dtype                                       )
+                                           'm3', axisname(1:3), dtype                                       )
        axisname = (/'z ', 'xh', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_volume_zuy', 'volume of grid cell (half level zuy)', &
-                                          'm3', axisname(1:3), dtype                                       )
+                                           'm3', axisname(1:3), dtype                                       )
        axisname = (/'z ', 'x ', 'yh'/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_volume_zxv', 'volume of grid cell (half level zxv)', &
-                                          'm3', axisname(1:3), dtype                                       )
+                                           'm3', axisname(1:3), dtype                                       )
 
        if ( OKMAX > 0 ) then
           axisname = (/'oz', 'x ', 'y '/)
           call FILE_Def_AssociatedCoordinate( fid, 'cell_volume_oxy', 'volume of grid cell', &
-                                             'm3', axisname(1:3), dtype                      )
+                                              'm3', axisname(1:3), dtype                      )
        end if
        if ( LKMAX > 0 ) then
           axisname = (/'lz', 'x ', 'y '/)
           call FILE_Def_AssociatedCoordinate( fid, 'cell_volume_lxy', 'volume of grid cell', &
-                                             'm3', axisname(1:3), dtype                      )
+                                              'm3', axisname(1:3), dtype                      )
        end if
        if ( UKMAX > 0 ) then
           axisname = (/'uz', 'x ', 'y '/)
           call FILE_Def_AssociatedCoordinate( fid, 'cell_volume_uxy', 'volume of grid cell', &
-                                             'm3', axisname(1:3), dtype                      )
+                                              'm3', axisname(1:3), dtype                      )
        end if
     endif
 
@@ -2609,6 +2681,8 @@ contains
     call FILE_Set_Attribute( fid, "grid_model_global", "face_dimensions",     "CXG: FYG (padding: none) CYG: FYG (padding: none)" )
     call FILE_Set_Attribute( fid, "grid_model_global", "vertical_dimensions", "CZ: FZ (padding: none)" )
 
+    call PROF_rapend('FILE_O_NetCDF', 2)
+
     return
   end subroutine FILE_CARTESC_def_axes
 
@@ -2692,6 +2766,13 @@ contains
     real(RP) :: FDX(0:IA), FDY(0:JA)
     integer :: k, i, j
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
     if ( FILE_get_AGGREGATE(fid) ) then
        ! For parallel I/O, not all variables are written by all processes.
@@ -3060,6 +3141,8 @@ contains
        end if
     end if
 
+    call PROF_rapend('FILE_O_NetCDF', 2)
+
     return
   end subroutine FILE_CARTESC_write_axes
 
@@ -3107,6 +3190,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
     if    ( datatype == 'REAL8' ) then
        dtype = FILE_REAL8
@@ -3265,6 +3353,11 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
+
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
@@ -3357,6 +3450,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -3491,6 +3589,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
     fill_halo_ = .false.
     if( present(fill_halo) ) fill_halo_ = fill_halo
@@ -3642,6 +3745,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
     fill_halo_ = .false.
     if( present(fill_halo) ) fill_halo_ = fill_halo
@@ -3814,6 +3922,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
     fill_halo_ = .false.
     if( present(fill_halo) ) fill_halo_ = fill_halo
