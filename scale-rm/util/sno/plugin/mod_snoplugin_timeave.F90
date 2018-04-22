@@ -176,7 +176,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       LOG_INFO("SNOPLGIN_timeave_alloc",*) '[SNOPLGIN_timeave_alloc] allocate temporal array'
+       LOG_INFO("SNOPLGIN_timeave_alloc",*) 'Allocate temporal array'
     endif
 
     if ( dinfo%dim_rank == 1 ) then
@@ -270,7 +270,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       LOG_INFO("SNOPLGIN_timeave_dealloc",*) '[SNOPLGIN_timeave_dealloc] deallocate temporal array'
+       LOG_INFO("SNOPLGIN_timeave_dealloc",*) 'Deallocate temporal array'
     endif
 
     if( allocated(avgdinfo%VAR_1d) ) deallocate( avgdinfo%VAR_1d )

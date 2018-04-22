@@ -233,7 +233,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("SNOPLGIN_hgridope_setcoef",*) '[SNOPLGIN_hgridope_setcoef] setup remapping coefficient'
+    LOG_INFO("SNOPLGIN_hgridope_setcoef",*) 'Setup remapping coefficient'
 
     ! set new axis set
 
@@ -366,7 +366,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       LOG_INFO("SNOPLGIN_hgridope_alloc",*) '[SNOPLGIN_hgridope_alloc] allocate temporal array'
+       LOG_INFO("SNOPLGIN_hgridope_alloc",*) 'Allocate temporal array'
     endif
 
     if ( dinfo%dim_rank == 1 ) then
@@ -401,7 +401,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       LOG_INFO("SNOPLGIN_hgridope_dealloc",*) '[SNOPLGIN_hgridope_dealloc] deallocate temporal array'
+       LOG_INFO("SNOPLGIN_hgridope_dealloc",*) 'Deallocate temporal array'
     endif
 
     if( allocated(dinfo_ll%VAR_1d) ) deallocate( dinfo_ll%VAR_1d )

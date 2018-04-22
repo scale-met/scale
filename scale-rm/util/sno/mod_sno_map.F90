@@ -77,7 +77,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("SNO_map_settable_global",*) '[SNO_map_settable_global] Calc relation map for grids and procs (global)'
+    LOG_INFO("SNO_map_settable_global",*) 'Calc relation map for grids and procs (global)'
 
     jpos = 0
     do py = 1, nprocs_y_in
@@ -192,7 +192,7 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("SNO_map_settable_local",*) '[SNO_map_settable_local] Calc relation map for grids and procs (local)'
+    LOG_INFO("SNO_map_settable_local",*) 'Calc relation map for grids and procs (local)'
 
     do j = 1, ngrids_y_out
     do i = 1, ngrids_x_out

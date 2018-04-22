@@ -68,7 +68,7 @@ contains
 
     if ( output_grads .OR. output_gradsctl ) then
        LOG_NEWLINE
-       LOG_INFO("SNO_grads_setup",*) '[SNO_grads] Output file as GrADS format, instead of NeCDF'
+       LOG_INFO("SNO_grads_setup",*) 'Output file as GrADS format, instead of NeCDF'
 
        if ( nprocs_x_out * nprocs_y_out /= 1 ) then
           LOG_ERROR("SNO_grads_setup",*) 'To output file as GrADS format, the number of output file must be 1.'
@@ -133,7 +133,7 @@ contains
 
        recsize = int(imax,kind=8) * int(jmax,kind=8) * int(kmax,kind=8) * 4_8
 
-       LOG_INFO("SNO_grads_write",*) '[SNO_grads_write] filename : ', trim(grdname)
+       LOG_INFO("SNO_grads_write",*) 'filename : ', trim(grdname)
 
        GRADS_grd_fid = IO_get_available_fid()
        open( unit   = GRADS_grd_fid, &
@@ -278,7 +278,7 @@ contains
 
     !##### write control file #####
 
-    LOG_INFO("SNO_grads_write_ctl",*) '[SNO_grads_write_ctl] filename : ', trim(ctlname)
+    LOG_INFO("SNO_grads_write_ctl",*) 'filename : ', trim(ctlname)
 
     fid = IO_get_available_fid()
     open( unit   = fid,                    &
