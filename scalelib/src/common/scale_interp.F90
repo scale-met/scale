@@ -686,7 +686,7 @@ contains
        ! factor = 1 / distance
        if ( weight_order_ < 0 ) then
           do n = 1, npoints
-             hfact(n) = 1.0_RP / dist(n)**(1.0_RP/-weight_order_)
+             hfact(n) = 1.0_RP / dist(n)**(-1.0_RP/weight_order_)
           enddo
        else
           do n = 1, npoints
