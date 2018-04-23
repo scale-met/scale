@@ -398,9 +398,9 @@ contains
        FILE_read, &
        FILE_close
     use scale_interp, only: &
-       INTRP_domain_compatibility, &
-       INTRP_factor2d,             &
-       INTRP_interp2d
+       INTERP_domain_compatibility, &
+       INTERP_factor2d,             &
+       INTERP_interp2d
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
@@ -475,29 +475,29 @@ contains
 
     enddo
 
-    call INTRP_domain_compatibility( LON_org(:,:), LAT_org(:,:), dummy(:,:,:), &
-                                     LON(:,:),     LAT(:,:),     dummy(:,:,:), &
+    call INTERP_domain_compatibility( LON_org(:,:), LAT_org(:,:), dummy(:,:,:), &
+                                      LON(:,:),     LAT(:,:),     dummy(:,:,:), &
                                      skip_z=.true.                             )
 
-    call INTRP_factor2d( NEST_INTERP_LEVEL, & ! [IN]
-                         IA_org, JA_org,    & ! [IN]
-                         LON_org(:,:),      & ! [IN]
-                         LAT_org(:,:),      & ! [IN]
-                         IA, JA,            & ! [IN]
-                         LON    (:,:),      & ! [IN]
-                         LAT    (:,:),      & ! [IN]
-                         idx_i  (:,:,:),    & ! [OUT]
-                         idx_j  (:,:,:),    & ! [OUT]
-                         hfact  (:,:,:)     ) ! [OUT]
+    call INTERP_factor2d( NEST_INTERP_LEVEL, & ! [IN]
+                          IA_org, JA_org,    & ! [IN]
+                          LON_org(:,:),      & ! [IN]
+                          LAT_org(:,:),      & ! [IN]
+                          IA, JA,            & ! [IN]
+                          LON    (:,:),      & ! [IN]
+                          LAT    (:,:),      & ! [IN]
+                          idx_i  (:,:,:),    & ! [OUT]
+                          idx_j  (:,:,:),    & ! [OUT]
+                          hfact  (:,:,:)     ) ! [OUT]
 
-    call INTRP_interp2d( NEST_INTERP_LEVEL,  & ! [IN]
-                         IA_org, JA_org,     & ! [IN]
-                         IA, JA,             & ! [IN]
-                         idx_i      (:,:,:), & ! [IN]
-                         idx_j      (:,:,:), & ! [IN]
-                         hfact      (:,:,:), & ! [IN]
-                         TOPO_org   (:,:),   & ! [IN]
-                         TOPO_parent(:,:)    ) ! [OUT]
+    call INTERP_interp2d( NEST_INTERP_LEVEL,  & ! [IN]
+                          IA_org, JA_org,     & ! [IN]
+                          IA, JA,             & ! [IN]
+                          idx_i      (:,:,:), & ! [IN]
+                          idx_j      (:,:,:), & ! [IN]
+                          hfact      (:,:,:), & ! [IN]
+                          TOPO_org   (:,:),   & ! [IN]
+                          TOPO_parent(:,:)    ) ! [OUT]
 
     call COMM_vars8( TOPO_parent(:,:), 1 )
     call COMM_wait ( TOPO_parent(:,:), 1 )

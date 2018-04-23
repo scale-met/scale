@@ -48,12 +48,12 @@ cat << EOF > base.pp.conf
 
 &PARAM_CNVLANDUSE
  CNVLANDUSE_name = "${LANDUSETYPE[$D]}",
+ CNVLANDUSE_limit_urban_fraction = ${LIMIT_URBAN_FRACTION},
 /
 
 &PARAM_CNVLANDUSE_${LANDUSETYPE[$D]}
  ${LANDUSETYPE[$D]}_IN_DIR        = "${LANDUSE_IN_DIR}",
  ${LANDUSETYPE[$D]}_IN_CATALOGUE  = "${LANDUSE_IN_CATALOGUE}",
- limit_urban_fraction = ${LIMIT_URBAN_FRACTION},
 /
 
 &PARAM_IO

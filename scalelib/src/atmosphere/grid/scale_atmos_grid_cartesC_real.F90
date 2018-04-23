@@ -285,24 +285,28 @@ contains
     LOG_INFO("ATMOS_GRID_CARTESC_REAL_calc_latlon",*) 'Base position in the global domain (lat,lon)'
     LOG_INFO_CONT(*) '-> (',ATMOS_GRID_CARTESC_REAL_BASEPOINT_LON/D2R,',',ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT/D2R,')'
 
+    !$omp parallel do collapse(2)
     do j = 1, JA
     do i = 1, IA
        call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_CX(i), ATMOS_GRID_CARTESC_CY(j), ATMOS_GRID_CARTESC_REAL_LON  (i,j), ATMOS_GRID_CARTESC_REAL_LAT  (i,j) )
     enddo
     enddo
 
+    !$omp parallel do collapse(2)
     do j = 1, JA
     do i = 0, IA
        call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_FX(i), ATMOS_GRID_CARTESC_CY(j), ATMOS_GRID_CARTESC_REAL_LONUY(i,j), ATMOS_GRID_CARTESC_REAL_LATUY(i,j) )
     enddo
     enddo
 
+    !$omp parallel do collapse(2)
     do j = 0, JA
     do i = 1, IA
        call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_CX(i), ATMOS_GRID_CARTESC_FY(j), ATMOS_GRID_CARTESC_REAL_LONXV(i,j), ATMOS_GRID_CARTESC_REAL_LATXV(i,j) )
     enddo
     enddo
 
+    !$omp parallel do collapse(2)
     do j = 0, JA
     do i = 0, IA
        call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_FX(i), ATMOS_GRID_CARTESC_FY(j), ATMOS_GRID_CARTESC_REAL_LONUV(i,j), ATMOS_GRID_CARTESC_REAL_LATUV(i,j) )
@@ -311,11 +315,12 @@ contains
 
     ATMOS_GRID_CARTESC_REAL_DLON(:,:) = 0.0_RP
     ATMOS_GRID_CARTESC_REAL_DLAT(:,:) = 0.0_RP
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
-       ATMOS_GRID_CARTESC_REAL_DLON(i,j) = ATMOS_GRID_CARTESC_REAL_LONUY(i,j) - ATMOS_GRID_CARTESC_REAL_LONUY(i-1,j)
-       ATMOS_GRID_CARTESC_REAL_DLAT(i,j) = ATMOS_GRID_CARTESC_REAL_LATXV(i,j) - ATMOS_GRID_CARTESC_REAL_LATXV(i,j-1)
-       if( ATMOS_GRID_CARTESC_REAL_DLON(i,j) < 0.0_RP ) ATMOS_GRID_CARTESC_REAL_DLON(i,j) = ATMOS_GRID_CARTESC_REAL_DLON(i,j) + 2.0_RP*PI
+       ATMOS_GRID_CARTESC_REAL_DLON(i,j) = abs( ATMOS_GRID_CARTESC_REAL_LONUY(i,j) - ATMOS_GRID_CARTESC_REAL_LONUY(i-1,j) )
+       ATMOS_GRID_CARTESC_REAL_DLAT(i,j) = abs( ATMOS_GRID_CARTESC_REAL_LATXV(i,j) - ATMOS_GRID_CARTESC_REAL_LATXV(i,j-1) )
+       if( ATMOS_GRID_CARTESC_REAL_DLON(i,j) > 2.0_RP*PI - ATMOS_GRID_CARTESC_REAL_DLON(i,j)  ) ATMOS_GRID_CARTESC_REAL_DLON(i,j) = 2.0_RP*PI - ATMOS_GRID_CARTESC_REAL_DLON(i,j)
 
        if (      ATMOS_GRID_CARTESC_REAL_DLON(i,j) == 0.0_RP &
             .OR. ATMOS_GRID_CARTESC_REAL_DLAT(i,j) == 0.0_RP ) then

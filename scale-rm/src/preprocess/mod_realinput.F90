@@ -1064,9 +1064,9 @@ contains
     use scale_atmos_hydrostatic, only: &
        HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_interp, only: &
-       INTRP_domain_compatibility, &
-       INTRP_factor3d,             &
-       INTRP_interp3d
+       INTERP_domain_compatibility, &
+       INTERP_factor3d,             &
+       INTERP_interp3d
     use mod_realinput_scale, only: &
        ParentAtmosInputSCALE
     use mod_realinput_wrfarw, only: &
@@ -1244,67 +1244,67 @@ contains
     if ( first .OR. update_coord ) then
        first = .false.
 
-       call INTRP_domain_compatibility( LON_org(:,:),      & ! [IN]
-                                        LAT_org(:,:),      & ! [IN]
-                                        CZ_org (:,:,:),    & ! [IN]
-                                        LON    (:,:),      & ! [IN]
-                                        LAT    (:,:),      & ! [IN]
-                                        CZ     (KS:KE,:,:) ) ! [IN]
+       call INTERP_domain_compatibility( LON_org(:,:),      & ! [IN]
+                                         LAT_org(:,:),      & ! [IN]
+                                         CZ_org (:,:,:),    & ! [IN]
+                                         LON    (:,:),      & ! [IN]
+                                         LAT    (:,:),      & ! [IN]
+                                         CZ     (KS:KE,:,:) ) ! [IN]
 
        ! full level
-       call INTRP_factor3d( itp_nh,                  & ! [IN]
-                            dims(1)+2, 1, dims(1)+2, & ! [IN]
-                            dims(2), dims(3),        & ! [IN]
-                            LON_org(:,:),            & ! [IN]
-                            LAT_org(:,:),            & ! [IN]
-                            CZ_org (:,:,:),          & ! [IN]
-                            KA, KS, KE,              & ! [IN]
-                            IA, JA,                  & ! [IN]
-                            LON    (:,:),            & ! [IN]
-                            LAT    (:,:),            & ! [IN]
-                            CZ     (:,:,:),          & ! [IN]
-                            igrd   (    :,:,:),      & ! [OUT]
-                            jgrd   (    :,:,:),      & ! [OUT]
-                            hfact  (    :,:,:),      & ! [OUT]
-                            kgrd   (:,:,:,:,:),      & ! [OUT]
-                            vfact  (:,:,:,:,:)       ) ! [OUT]
+       call INTERP_factor3d( itp_nh,                  & ! [IN]
+                             dims(1)+2, 1, dims(1)+2, & ! [IN]
+                             dims(2), dims(3),        & ! [IN]
+                             LON_org(:,:),            & ! [IN]
+                             LAT_org(:,:),            & ! [IN]
+                             CZ_org (:,:,:),          & ! [IN]
+                             KA, KS, KE,              & ! [IN]
+                             IA, JA,                  & ! [IN]
+                             LON    (:,:),            & ! [IN]
+                             LAT    (:,:),            & ! [IN]
+                             CZ     (:,:,:),          & ! [IN]
+                             igrd   (    :,:,:),      & ! [OUT]
+                             jgrd   (    :,:,:),      & ! [OUT]
+                             hfact  (    :,:,:),      & ! [OUT]
+                             kgrd   (:,:,:,:,:),      & ! [OUT]
+                             vfact  (:,:,:,:,:)       ) ! [OUT]
     endif
 
-    call INTRP_interp3d( itp_nh,                      & ! [IN]
-                         dims(1)+2, dims(2), dims(3), & ! [IN]
-                         KA, KS, KE,                  & ! [IN]
-                         IA, JA,                      & ! [IN]
-                         igrd    (    :,:,:),         & ! [IN]
-                         jgrd    (    :,:,:),         & ! [IN]
-                         hfact   (    :,:,:),         & ! [IN]
-                         kgrd    (:,:,:,:,:),         & ! [IN]
-                         vfact   (:,:,:,:,:),         & ! [IN]
-                         W_org   (:,:,:),             & ! [IN]
-                         W       (:,:,:)              ) ! [OUT]
+    call INTERP_interp3d( itp_nh,                      & ! [IN]
+                          dims(1)+2, dims(2), dims(3), & ! [IN]
+                          KA, KS, KE,                  & ! [IN]
+                          IA, JA,                      & ! [IN]
+                          igrd    (    :,:,:),         & ! [IN]
+                          jgrd    (    :,:,:),         & ! [IN]
+                          hfact   (    :,:,:),         & ! [IN]
+                          kgrd    (:,:,:,:,:),         & ! [IN]
+                          vfact   (:,:,:,:,:),         & ! [IN]
+                          W_org   (:,:,:),             & ! [IN]
+                          W       (:,:,:)              ) ! [OUT]
 
-    call INTRP_interp3d( itp_nh,                      & ! [IN]
-                         dims(1)+2, dims(2), dims(3), & ! [IN]
-                         KA, KS, KE,                  & ! [IN]
-                         IA, JA,                      & ! [IN]
-                         igrd    (    :,:,:),         & ! [IN]
-                         jgrd    (    :,:,:),         & ! [IN]
-                         hfact   (    :,:,:),         & ! [IN]
-                         kgrd    (:,:,:,:,:),         & ! [IN]
-                         vfact   (:,:,:,:,:),         & ! [IN]
-                         U_org   (:,:,:),             & ! [IN]
-                         U       (:,:,:)              ) ! [OUT]
+    call INTERP_interp3d( itp_nh,                      & ! [IN]
+                          dims(1)+2, dims(2), dims(3), & ! [IN]
+                          KA, KS, KE,                  & ! [IN]
+                          IA, JA,                      & ! [IN]
+                          igrd    (    :,:,:),         & ! [IN]
+                          jgrd    (    :,:,:),         & ! [IN]
+                          hfact   (    :,:,:),         & ! [IN]
+                          kgrd    (:,:,:,:,:),         & ! [IN]
+                          vfact   (:,:,:,:,:),         & ! [IN]
+                          U_org   (:,:,:),             & ! [IN]
+                          U       (:,:,:)              ) ! [OUT]
 
-    call INTRP_interp3d( itp_nh,                      & ! [IN]
-                         dims(1)+2, dims(2), dims(3), & ! [IN]
-                         KA, KS, KE,                  & ! [IN]
-                         IA, JA,                      & ! [IN]
-                         igrd    (    :,:,:),         & ! [IN]
-                         jgrd    (    :,:,:),         & ! [IN]
-                         hfact   (    :,:,:),         & ! [IN]
-                         kgrd    (:,:,:,:,:),         & ! [IN]
-                         vfact   (:,:,:,:,:),         & ! [IN]
-                         V_org   (:,:,:),             & ! [IN]
-                         V       (:,:,:)              ) ! [OUT]
+    call INTERP_interp3d( itp_nh,                      & ! [IN]
+                          dims(1)+2, dims(2), dims(3), & ! [IN]
+                          KA, KS, KE,                  & ! [IN]
+                          IA, JA,                      & ! [IN]
+                          igrd    (    :,:,:),         & ! [IN]
+                          jgrd    (    :,:,:),         & ! [IN]
+                          hfact   (    :,:,:),         & ! [IN]
+                          kgrd    (:,:,:,:,:),         & ! [IN]
+                          vfact   (:,:,:,:,:),         & ! [IN]
+                          V_org   (:,:,:),             & ! [IN]
+                          V       (:,:,:)              ) ! [OUT]
 
     if ( apply_rotate_uv ) then ! rotation from latlon field to map-projected field
        do j = 1, JA
@@ -1377,17 +1377,17 @@ contains
     call COMM_wait ( VELX(:,:,:), 2, .false. )
     call COMM_wait ( VELY(:,:,:), 3, .false. )
 
-    call INTRP_interp3d( itp_nh,                      & ! [IN]
-                         dims(1)+2, dims(2), dims(3), & ! [IN]
-                         KA, KS, KE,                  & ! [IN]
-                         IA, JA,                      & ! [IN]
-                         igrd    (    :,:,:),         & ! [IN]
-                         jgrd    (    :,:,:),         & ! [IN]
-                         hfact   (    :,:,:),         & ! [IN]
-                         kgrd    (:,:,:,:,:),         & ! [IN]
-                         vfact   (:,:,:,:,:),         & ! [IN]
-                         POTT_org(:,:,:),             & ! [IN]
-                         POTT    (:,:,:)              ) ! [OUT]
+    call INTERP_interp3d( itp_nh,                      & ! [IN]
+                          dims(1)+2, dims(2), dims(3), & ! [IN]
+                          KA, KS, KE,                  & ! [IN]
+                          IA, JA,                      & ! [IN]
+                          igrd    (    :,:,:),         & ! [IN]
+                          jgrd    (    :,:,:),         & ! [IN]
+                          hfact   (    :,:,:),         & ! [IN]
+                          kgrd    (:,:,:,:,:),         & ! [IN]
+                          vfact   (:,:,:,:,:),         & ! [IN]
+                          POTT_org(:,:,:),             & ! [IN]
+                          POTT    (:,:,:)              ) ! [OUT]
 
     do j = 1, JA
     do i = 1, IA
@@ -1397,17 +1397,17 @@ contains
     enddo
 
     do iq = 1, QA
-       call INTRP_interp3d( itp_nh,                      & ! [IN]
-                            dims(1)+2, dims(2), dims(3), & ! [IN]
-                            KA, KS, KE,                  & ! [IN]
-                            IA, JA,                      & ! [IN]
-                            igrd    (    :,:,:),         & ! [IN]
-                            jgrd    (    :,:,:),         & ! [IN]
-                            hfact   (    :,:,:),         & ! [IN]
-                            kgrd    (:,:,:,:,:),         & ! [IN]
-                            vfact   (:,:,:,:,:),         & ! [IN]
-                            QTRC_org(:,:,:,iq),          & ! [IN]
-                            QTRC    (:,:,:,iq)           ) ! [OUT]
+       call INTERP_interp3d( itp_nh,                      & ! [IN]
+                             dims(1)+2, dims(2), dims(3), & ! [IN]
+                             KA, KS, KE,                  & ! [IN]
+                             IA, JA,                      & ! [IN]
+                             igrd    (    :,:,:),         & ! [IN]
+                             jgrd    (    :,:,:),         & ! [IN]
+                             hfact   (    :,:,:),         & ! [IN]
+                             kgrd    (:,:,:,:,:),         & ! [IN]
+                             vfact   (:,:,:,:,:),         & ! [IN]
+                             QTRC_org(:,:,:,iq),          & ! [IN]
+                             QTRC    (:,:,:,iq)           ) ! [OUT]
 
        do j = 1, JA
        do i = 1, IA
@@ -1418,31 +1418,31 @@ contains
     enddo
 
     if ( use_file_density ) then
-       call INTRP_interp3d( itp_nh,                      & ! [IN]
-                            dims(1)+2, dims(2), dims(3), & ! [IN]
-                            KA, KS, KE,                  & ! [IN]
-                            IA, JA,                      & ! [IN]
-                            igrd    (    :,:,:),         & ! [IN]
-                            jgrd    (    :,:,:),         & ! [IN]
-                            hfact   (    :,:,:),         & ! [IN]
-                            kgrd    (:,:,:,:,:),         & ! [IN]
-                            vfact   (:,:,:,:,:),         & ! [IN]
-                            DENS_org(:,:,:),             & ! [IN]
-                            DENS    (:,:,:),             & ! [OUT]
-                            logwgt = .true.              ) ! [IN]
+       call INTERP_interp3d( itp_nh,                      & ! [IN]
+                             dims(1)+2, dims(2), dims(3), & ! [IN]
+                             KA, KS, KE,                  & ! [IN]
+                             IA, JA,                      & ! [IN]
+                             igrd    (    :,:,:),         & ! [IN]
+                             jgrd    (    :,:,:),         & ! [IN]
+                             hfact   (    :,:,:),         & ! [IN]
+                             kgrd    (:,:,:,:,:),         & ! [IN]
+                             vfact   (:,:,:,:,:),         & ! [IN]
+                             DENS_org(:,:,:),             & ! [IN]
+                             DENS    (:,:,:),             & ! [OUT]
+                             logwgt = .true.              ) ! [IN]
     else
-       call INTRP_interp3d( itp_nh,                      & ! [IN]
-                            dims(1)+2, dims(2), dims(3), & ! [IN]
-                            KA, KS, KE,                  & ! [IN]
-                            IA, JA,                      & ! [IN]
-                            igrd    (    :,:,:),         & ! [IN]
-                            jgrd    (    :,:,:),         & ! [IN]
-                            hfact   (    :,:,:),         & ! [IN]
-                            kgrd    (:,:,:,:,:),         & ! [IN]
-                            vfact   (:,:,:,:,:),         & ! [IN]
-                            PRES_org(:,:,:),             & ! [IN]
-                            PRES    (:,:,:),             & ! [OUT]
-                            logwgt = .true.              ) ! [IN]
+       call INTERP_interp3d( itp_nh,                      & ! [IN]
+                             dims(1)+2, dims(2), dims(3), & ! [IN]
+                             KA, KS, KE,                  & ! [IN]
+                             IA, JA,                      & ! [IN]
+                             igrd    (    :,:,:),         & ! [IN]
+                             jgrd    (    :,:,:),         & ! [IN]
+                             hfact   (    :,:,:),         & ! [IN]
+                             kgrd    (:,:,:,:,:),         & ! [IN]
+                             vfact   (:,:,:,:,:),         & ! [IN]
+                             PRES_org(:,:,:),             & ! [IN]
+                             PRES    (:,:,:),             & ! [OUT]
+                             logwgt = .true.              ) ! [IN]
 
        QC(:,:,:) = 0.0_RP
        if ( ATMOS_HYDROMETEOR_dry ) then
@@ -1971,8 +1971,8 @@ contains
          I_SW => CONST_I_SW, &
          I_LW => CONST_I_LW
     use scale_interp, only: &
-         INTRP_factor2d, &
-         INTRP_interp2d
+         INTERP_factor2d, &
+         INTERP_interp2d
     use scale_land_grid_cartesC, only: &
          LCZ => LAND_GRID_CARTESC_CZ
     use scale_atmos_thermodyn, only: &
@@ -2295,16 +2295,16 @@ contains
 
        if ( first .or. update_coord ) then
           ! interpolation factor between outer ocean grid and land grid
-          call INTRP_factor2d( itp_nh,             & ! [IN]
-                               ldims(2), ldims(3), & ! [IN]
-                               llon_org(:,:),      & ! [IN]
-                               llat_org(:,:),      & ! [IN]
-                               odims(1), odims(2), & ! [IN]
-                               olon_org(:,:),      & ! [IN]
-                               olat_org(:,:),      & ! [IN]
-                               igrd_o  (:,:,:),    & ! [OUT]
-                               jgrd_o  (:,:,:),    & ! [OUT]
-                               hfact_o (:,:,:)     ) ! [OUT]
+          call INTERP_factor2d( itp_nh,             & ! [IN]
+                                ldims(2), ldims(3), & ! [IN]
+                                llon_org(:,:),      & ! [IN]
+                                llat_org(:,:),      & ! [IN]
+                                odims(1), odims(2), & ! [IN]
+                                olon_org(:,:),      & ! [IN]
+                                olat_org(:,:),      & ! [IN]
+                                igrd_o  (:,:,:),    & ! [OUT]
+                                jgrd_o  (:,:,:),    & ! [OUT]
+                                hfact_o (:,:,:)     ) ! [OUT]
        end if
 
        ! Ocean temp: interpolate over the land
@@ -2357,14 +2357,14 @@ contains
 
        if ( first .or. update_coord ) then
           ! land surface temperature at ocean grid
-          call INTRP_interp2d( itp_nh,             & ! [IN]
-                               ldims(2), ldims(3), & ! [IN]
-                               odims(1), odims(2), & ! [IN]
-                               igrd_o   (:,:,:),   & ! [IN]
-                               jgrd_o   (:,:,:),   & ! [IN]
-                               hfact_o  (:,:,:),   & ! [IN]
-                               lst_org  (:,:),     & ! [IN]
-                               lst_ocean(:,:)      ) ! [OUT]
+          call INTERP_interp2d( itp_nh,             & ! [IN]
+                                ldims(2), ldims(3), & ! [IN]
+                                odims(1), odims(2), & ! [IN]
+                                igrd_o   (:,:,:),   & ! [IN]
+                                jgrd_o   (:,:,:),   & ! [IN]
+                                hfact_o  (:,:,:),   & ! [IN]
+                                lst_org  (:,:),     & ! [IN]
+                                lst_ocean(:,:)      ) ! [OUT]
        end if
 
        call replace_misval_map( sst_org, lst_ocean, odims(1), odims(2), "SST")
@@ -2381,62 +2381,62 @@ contains
 
        if ( first .or. update_coord ) then
           ! interporation for ocean variables
-          call INTRP_factor2d( itp_nh,             & ! [IN]
-                               odims(1), odims(2), & ! [IN]
-                               olon_org(:,:),      & ! [IN]
-                               olat_org(:,:),      & ! [IN]
-                               IA, JA,             & ! [IN]
-                               lon     (:,:),      & ! [IN]
-                               lat     (:,:),      & ! [IN]
-                               igrd    (:,:,:),    & ! [OUT]
-                               jgrd    (:,:,:),    & ! [OUT]
-                               hfact   (:,:,:)     ) ! [OUT]
+          call INTERP_factor2d( itp_nh,             & ! [IN]
+                                odims(1), odims(2), & ! [IN]
+                                olon_org(:,:),      & ! [IN]
+                                olat_org(:,:),      & ! [IN]
+                                IA, JA,             & ! [IN]
+                                lon     (:,:),      & ! [IN]
+                                lat     (:,:),      & ! [IN]
+                                igrd    (:,:,:),    & ! [OUT]
+                                jgrd    (:,:,:),    & ! [OUT]
+                                hfact   (:,:,:)     ) ! [OUT]
        end if
 
-       call INTRP_interp2d( itp_nh,               & ! [IN]
-                            odims(1), odims(2),   & ! [IN]
-                            IA, JA,               & ! [IN]
-                            igrd    (:,:,:),      & ! [IN]
-                            jgrd    (:,:,:),      & ! [IN]
-                            hfact   (:,:,:),      & ! [IN]
-                            tw_org  (:,:),        & ! [IN]
-                            tw      (:,:,nn)      ) ! [OUT]
+       call INTERP_interp2d( itp_nh,               & ! [IN]
+                             odims(1), odims(2),   & ! [IN]
+                             IA, JA,               & ! [IN]
+                             igrd    (:,:,:),      & ! [IN]
+                             jgrd    (:,:,:),      & ! [IN]
+                             hfact   (:,:,:),      & ! [IN]
+                             tw_org  (:,:),        & ! [IN]
+                             tw      (:,:,nn)      ) ! [OUT]
 
-       call INTRP_interp2d( itp_nh,               & ! [IN]
-                            odims(1), odims(2),   & ! [IN]
-                            IA, JA,               & ! [IN]
-                            igrd    (:,:,:),      & ! [IN]
-                            jgrd    (:,:,:),      & ! [IN]
-                            hfact   (:,:,:),      & ! [IN]
-                            sst_org (:,:),        & ! [IN]
-                            sst     (:,:,nn)      ) ! [OUT]
+       call INTERP_interp2d( itp_nh,               & ! [IN]
+                             odims(1), odims(2),   & ! [IN]
+                             IA, JA,               & ! [IN]
+                             igrd    (:,:,:),      & ! [IN]
+                             jgrd    (:,:,:),      & ! [IN]
+                             hfact   (:,:,:),      & ! [IN]
+                             sst_org (:,:),        & ! [IN]
+                             sst     (:,:,nn)      ) ! [OUT]
 
-       call INTRP_interp2d( itp_nh,               & ! [IN]
-                            odims(1), odims(2),   & ! [IN]
-                            IA, JA,               & ! [IN]
-                            igrd    (:,:,:),      & ! [IN]
-                            jgrd    (:,:,:),      & ! [IN]
-                            hfact   (:,:,:),      & ! [IN]
-                            albw_org(:,:,I_LW),   & ! [IN]
-                            albw    (:,:,I_LW,nn) ) ! [OUT]
+       call INTERP_interp2d( itp_nh,               & ! [IN]
+                             odims(1), odims(2),   & ! [IN]
+                             IA, JA,               & ! [IN]
+                             igrd    (:,:,:),      & ! [IN]
+                             jgrd    (:,:,:),      & ! [IN]
+                             hfact   (:,:,:),      & ! [IN]
+                             albw_org(:,:,I_LW),   & ! [IN]
+                             albw    (:,:,I_LW,nn) ) ! [OUT]
 
-       call INTRP_interp2d( itp_nh,               & ! [IN]
-                            odims(1), odims(2),   & ! [IN]
-                            IA, JA,               & ! [IN]
-                            igrd    (:,:,:),      & ! [IN]
-                            jgrd    (:,:,:),      & ! [IN]
-                            hfact   (:,:,:),      & ! [IN]
-                            albw_org(:,:,I_SW),   & ! [IN]
-                            albw    (:,:,I_SW,nn) ) ! [OUT]
+       call INTERP_interp2d( itp_nh,               & ! [IN]
+                             odims(1), odims(2),   & ! [IN]
+                             IA, JA,               & ! [IN]
+                             igrd    (:,:,:),      & ! [IN]
+                             jgrd    (:,:,:),      & ! [IN]
+                             hfact   (:,:,:),      & ! [IN]
+                             albw_org(:,:,I_SW),   & ! [IN]
+                             albw    (:,:,I_SW,nn) ) ! [OUT]
 
-       call INTRP_interp2d( itp_nh,               & ! [IN]
-                            odims(1), odims(2),   & ! [IN]
-                            IA, JA,               & ! [IN]
-                            igrd    (:,:,:),      & ! [IN]
-                            jgrd    (:,:,:),      & ! [IN]
-                            hfact   (:,:,:),      & ! [IN]
-                            z0w_org (:,:),        & ! [IN]
-                            z0w     (:,:,nn)      ) ! [OUT]
+       call INTERP_interp2d( itp_nh,               & ! [IN]
+                             odims(1), odims(2),   & ! [IN]
+                             IA, JA,               & ! [IN]
+                             igrd    (:,:,:),      & ! [IN]
+                             jgrd    (:,:,:),      & ! [IN]
+                             hfact   (:,:,:),      & ! [IN]
+                             z0w_org (:,:),        & ! [IN]
+                             z0w     (:,:,nn)      ) ! [OUT]
 
        if ( first ) then
 
@@ -2631,10 +2631,10 @@ contains
          I_LW => CONST_I_LW, &
          LAPS => CONST_LAPS
     use scale_interp, only: &
-         INTRP_factor2d, &
-         INTRP_factor3d, &
-         INTRP_interp2d, &
-         INTRP_interp3d
+         INTERP_factor2d, &
+         INTERP_factor3d, &
+         INTERP_interp2d, &
+         INTERP_interp3d
     use scale_topography, only: &
          TOPO_Zsfc
     use mod_land_vars, only: &
@@ -2725,26 +2725,26 @@ contains
     !end if
 
     ! interpolation facter between outer land grid and ocean grid
-    call INTRP_factor2d( itp_nh,             & ! [IN]
-                         odims(1), odims(2), & ! [IN]
-                         olon_org(:,:),      & ! [IN]
-                         olat_org(:,:),      & ! [IN]
-                         ldims(2), ldims(3), & ! [IN]
-                         llon_org(:,:),      & ! [IN]
-                         llat_org(:,:),      & ! [IN]
-                         igrd_l  (:,:,:),    & ! [OUT]
-                         jgrd_l  (:,:,:),    & ! [OUT]
-                         hfact_l (:,:,:)     ) ! [OUT]
+    call INTERP_factor2d( itp_nh,             & ! [IN]
+                          odims(1), odims(2), & ! [IN]
+                          olon_org(:,:),      & ! [IN]
+                          olat_org(:,:),      & ! [IN]
+                          ldims(2), ldims(3), & ! [IN]
+                          llon_org(:,:),      & ! [IN]
+                          llat_org(:,:),      & ! [IN]
+                          igrd_l  (:,:,:),    & ! [OUT]
+                          jgrd_l  (:,:,:),    & ! [OUT]
+                          hfact_l (:,:,:)     ) ! [OUT]
 
     ! sst on land grid
-    call INTRP_interp2d( itp_nh,             & ! [IN]
-                         odims(1), odims(2), & ! [IN]
-                         ldims(2), ldims(3), & ! [IN]
-                         igrd_l   (:,:,:),   & ! [IN]
-                         jgrd_l   (:,:,:),   & ! [IN]
-                         hfact_l  (:,:,:),   & ! [IN]
-                         sst_org  (:,:),     & ! [IN]
-                         sst_land (:,:)      ) ! [OUT]
+    call INTERP_interp2d( itp_nh,             & ! [IN]
+                          odims(1), odims(2), & ! [IN]
+                          ldims(2), ldims(3), & ! [IN]
+                          igrd_l   (:,:,:),   & ! [IN]
+                          jgrd_l   (:,:,:),   & ! [IN]
+                          hfact_l  (:,:,:),   & ! [IN]
+                          sst_org  (:,:),     & ! [IN]
+                          sst_land (:,:)      ) ! [OUT]
 
     call replace_misval_map( lst_org, sst_land, ldims(2), ldims(3), "SKINT")
 
@@ -2791,70 +2791,70 @@ contains
     enddo
     enddo
 
-    call INTRP_factor3d( itp_nh,                & ! [IN]
-                         ldims(1), 1, ldims(1), & ! [IN]
-                         ldims(2), ldims(3),    & ! [IN]
-                         llon_org(:,:),         & ! [IN]
-                         llat_org(:,:),         & ! [IN]
-                         lz3d_org(:,:,:),       & ! [IN]
-                         LKMAX, LKS, LKE,       & ! [IN]
-                         IA, JA,                & ! [IN]
-                         lon     (:,:),         & ! [IN]
-                         lat     (:,:),         & ! [IN]
-                         lcz_3D  (:,:,:),       & ! [IN]
-                         igrd    (    :,:,:),   & ! [OUT]
-                         jgrd    (    :,:,:),   & ! [OUT]
-                         hfact   (    :,:,:),   & ! [OUT]
-                         kgrdl   (:,:,:,:,:),   & ! [OUT]
-                         vfactl  (:,:,:,:,:)    ) ! [OUT]
+    call INTERP_factor3d( itp_nh,                & ! [IN]
+                          ldims(1), 1, ldims(1), & ! [IN]
+                          ldims(2), ldims(3),    & ! [IN]
+                          llon_org(:,:),         & ! [IN]
+                          llat_org(:,:),         & ! [IN]
+                          lz3d_org(:,:,:),       & ! [IN]
+                          LKMAX, LKS, LKE,       & ! [IN]
+                          IA, JA,                & ! [IN]
+                          lon     (:,:),         & ! [IN]
+                          lat     (:,:),         & ! [IN]
+                          lcz_3D  (:,:,:),       & ! [IN]
+                          igrd    (    :,:,:),   & ! [OUT]
+                          jgrd    (    :,:,:),   & ! [OUT]
+                          hfact   (    :,:,:),   & ! [OUT]
+                          kgrdl   (:,:,:,:,:),   & ! [OUT]
+                          vfactl  (:,:,:,:,:)    ) ! [OUT]
 
-    call INTRP_interp2d( itp_nh,             & ! [IN]
-                         ldims(2), ldims(3), & ! [IN]
-                         IA, JA,             & ! [IN]
-                         igrd    (:,:,:),    & ! [IN]
-                         jgrd    (:,:,:),    & ! [IN]
-                         hfact   (:,:,:),    & ! [IN]
-                         lst_org (:,:),      & ! [IN]
-                         lst     (:,:)       ) ! [OUT]
+    call INTERP_interp2d( itp_nh,             & ! [IN]
+                          ldims(2), ldims(3), & ! [IN]
+                          IA, JA,             & ! [IN]
+                          igrd    (:,:,:),    & ! [IN]
+                          jgrd    (:,:,:),    & ! [IN]
+                          hfact   (:,:,:),    & ! [IN]
+                          lst_org (:,:),      & ! [IN]
+                          lst     (:,:)       ) ! [OUT]
 
-    call INTRP_interp2d( itp_nh,             & ! [IN]
-                         ldims(2), ldims(3), & ! [IN]
-                         IA, JA,             & ! [IN]
-                         igrd    (:,:,:),    & ! [IN]
-                         jgrd    (:,:,:),    & ! [IN]
-                         hfact   (:,:,:),    & ! [IN]
-                         ust_org (:,:),      & ! [IN]
-                         ust     (:,:)       ) ! [OUT]
+    call INTERP_interp2d( itp_nh,             & ! [IN]
+                          ldims(2), ldims(3), & ! [IN]
+                          IA, JA,             & ! [IN]
+                          igrd    (:,:,:),    & ! [IN]
+                          jgrd    (:,:,:),    & ! [IN]
+                          hfact   (:,:,:),    & ! [IN]
+                          ust_org (:,:),      & ! [IN]
+                          ust     (:,:)       ) ! [OUT]
 
-    call INTRP_interp2d( itp_nh,             & ! [IN]
-                         ldims(2), ldims(3), & ! [IN]
-                         IA, JA,             & ! [IN]
-                         igrd    (:,:,:),    & ! [IN]
-                         jgrd    (:,:,:),    & ! [IN]
-                         hfact   (:,:,:),    & ! [IN]
-                         albg_org(:,:,I_LW), & ! [IN]
-                         albg    (:,:,I_LW)  ) ! [OUT]
+    call INTERP_interp2d( itp_nh,             & ! [IN]
+                          ldims(2), ldims(3), & ! [IN]
+                          IA, JA,             & ! [IN]
+                          igrd    (:,:,:),    & ! [IN]
+                          jgrd    (:,:,:),    & ! [IN]
+                          hfact   (:,:,:),    & ! [IN]
+                          albg_org(:,:,I_LW), & ! [IN]
+                          albg    (:,:,I_LW)  ) ! [OUT]
 
-    call INTRP_interp2d( itp_nh,             & ! [IN]
-                         ldims(2), ldims(3), & ! [IN]
-                         IA, JA,             & ! [IN]
-                         igrd    (:,:,:),    & ! [IN]
-                         jgrd    (:,:,:),    & ! [IN]
-                         hfact   (:,:,:),    & ! [IN]
-                         albg_org(:,:,I_SW), & ! [IN]
-                         albg    (:,:,I_SW)  ) ! [OUT]
+    call INTERP_interp2d( itp_nh,             & ! [IN]
+                          ldims(2), ldims(3), & ! [IN]
+                          IA, JA,             & ! [IN]
+                          igrd    (:,:,:),    & ! [IN]
+                          jgrd    (:,:,:),    & ! [IN]
+                          hfact   (:,:,:),    & ! [IN]
+                          albg_org(:,:,I_SW), & ! [IN]
+                          albg    (:,:,I_SW)  ) ! [OUT]
 
-    call INTRP_interp3d( itp_nh,                       & ! [IN]
-                         ldims(1), ldims(2), ldims(3), & ! [IN]
-                         LKMAX, LKS, LKE,              & ! [IN]
-                         IA, JA,                       & ! [IN]
-                         igrd  (    :,:,:),            & ! [IN]
-                         jgrd  (    :,:,:),            & ! [IN]
-                         hfact (    :,:,:),            & ! [IN]
-                         kgrdl (:,:,:,:,:),            & ! [IN]
-                         vfactl(:,:,:,:,:),            & ! [IN]
-                         tg_org(:,:,:),                & ! [IN]
-                         tg    (:,:,:)                 ) ! [OUT]
+    call INTERP_interp3d( itp_nh,                       & ! [IN]
+                          ldims(1), ldims(2), ldims(3), & ! [IN]
+                          LKMAX, LKS, LKE,              & ! [IN]
+                          IA, JA,                       & ! [IN]
+                          igrd  (    :,:,:),            & ! [IN]
+                          jgrd  (    :,:,:),            & ! [IN]
+                          hfact (    :,:,:),            & ! [IN]
+                          kgrdl (:,:,:,:,:),            & ! [IN]
+                          vfactl(:,:,:,:,:),            & ! [IN]
+                          tg_org(:,:,:),                & ! [IN]
+                          tg    (:,:,:)                 ) ! [OUT]
 
     do j = 1, JA
     do i = 1, IA
@@ -2870,14 +2870,14 @@ contains
 
     ! elevation collection
     if ( elevation_collection ) then
-       call INTRP_interp2d( itp_nh,             & ! [IN]
-                            ldims(2), ldims(3), & ! [IN]
-                            IA, JA,             & ! [IN]
-                            igrd    (:,:,:),    & ! [IN]
-                            jgrd    (:,:,:),    & ! [IN]
-                            hfact   (:,:,:),    & ! [IN]
-                            topo_org(:,:),      & ! [IN]
-                            topo    (:,:)       ) ! [OUT]
+       call INTERP_interp2d( itp_nh,             & ! [IN]
+                             ldims(2), ldims(3), & ! [IN]
+                             IA, JA,             & ! [IN]
+                             igrd    (:,:,:),    & ! [IN]
+                             jgrd    (:,:,:),    & ! [IN]
+                             hfact   (:,:,:),    & ! [IN]
+                             topo_org(:,:),      & ! [IN]
+                             topo    (:,:)       ) ! [OUT]
 
        do j = 1, JA
        do i = 1, IA
@@ -2917,17 +2917,17 @@ contains
              enddo
           end if
 
-          call INTRP_interp3d( itp_nh,                       & ! [IN]
-                               ldims(1), ldims(2), ldims(3), & ! [IN]
-                               LKMAX, LKS, LKE,              & ! [IN]
-                               IA, JA,                       & ! [IN]
-                               igrd    (    :,:,:),          & ! [IN]
-                               jgrd    (    :,:,:),          & ! [IN]
-                               hfact   (    :,:,:),          & ! [IN]
-                               kgrdl   (:,:,:,:,:),          & ! [IN]
-                               vfactl  (:,:,:,:,:),          & ! [IN]
-                               smds_org(:,:,:),              & ! [IN]
-                               smds    (:,:,:)               ) ! [OUT]
+          call INTERP_interp3d( itp_nh,                       & ! [IN]
+                                ldims(1), ldims(2), ldims(3), & ! [IN]
+                                LKMAX, LKS, LKE,              & ! [IN]
+                                IA, JA,                       & ! [IN]
+                                igrd    (    :,:,:),          & ! [IN]
+                                jgrd    (    :,:,:),          & ! [IN]
+                                hfact   (    :,:,:),          & ! [IN]
+                                kgrdl   (:,:,:,:,:),          & ! [IN]
+                                vfactl  (:,:,:,:,:),          & ! [IN]
+                                smds_org(:,:,:),              & ! [IN]
+                                smds    (:,:,:)               ) ! [OUT]
 
           do k = 1, LKMAX-1
              strg(k,:,:) = convert_WS2VWC( smds(k,:,:), critical=soilwater_DS2VC_flag )
@@ -2952,17 +2952,17 @@ contains
              enddo
           end if
 
-          call INTRP_interp3d( itp_nh,                       & ! [IN]
-                               ldims(1), ldims(2), ldims(3), & ! [IN]
-                               LKMAX, LKS, LKE,              & ! [IN]
-                               IA, JA,                       & ! [IN]
-                               igrd    (    :,:,:),          & ! [IN]
-                               jgrd    (    :,:,:),          & ! [IN]
-                               hfact   (    :,:,:),          & ! [IN]
-                               kgrdl   (:,:,:,:,:),          & ! [IN]
-                               vfactl  (:,:,:,:,:),          & ! [IN]
-                               strg_org(:,:,:),              & ! [IN]
-                               strg    (:,:,:)               ) ! [OUT]
+          call INTERP_interp3d( itp_nh,                       & ! [IN]
+                                ldims(1), ldims(2), ldims(3), & ! [IN]
+                                LKMAX, LKS, LKE,              & ! [IN]
+                                IA, JA,                       & ! [IN]
+                                igrd    (    :,:,:),          & ! [IN]
+                                jgrd    (    :,:,:),          & ! [IN]
+                                hfact   (    :,:,:),          & ! [IN]
+                                kgrdl   (:,:,:,:,:),          & ! [IN]
+                                vfactl  (:,:,:,:,:),          & ! [IN]
+                                strg_org(:,:,:),              & ! [IN]
+                                strg    (:,:,:)               ) ! [OUT]
        end if
 
        ! replace values over the ocean
