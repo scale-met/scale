@@ -128,7 +128,7 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
     use scale_land_grid_cartesC, only: &
-       LCDZ => LAND_GRID_CARTESC_CDZ
+       LCZ => LAND_GRID_CARTESC_CZ
     use scale_land_phy_snow_ky90, only: &
        LAND_PHY_SNOW_KY90
     use scale_land_phy_snow_diagnos, only: &
@@ -199,11 +199,11 @@ contains
     real(RP), parameter :: BETA_MAX = 1.0_RP
 
     ! works
-    real(RP) :: SNOW_QVEF(LIA,LJA)
-    real(RP) :: LAND_QVEF(LIA,LJA)
-    real(RP) :: LAND_DZ1 (LIA,LJA)
-    real(RP) :: SFLX_GH  (LIA,LJA)
-    real(RP) :: LHV      (LIA,LJA) ! latent heat of vaporization [J/kg]
+    real(RP) :: SNOW_QVEF (LIA,LJA)
+    real(RP) :: LAND_QVEF (LIA,LJA)
+    real(RP) :: LAND_TC_dZ(LIA,LJA)
+    real(RP) :: SFLX_GH   (LIA,LJA)
+    real(RP) :: LHV       (LIA,LJA) ! latent heat of vaporization [J/kg]
 
     ! for snow
     real(RP) :: SNOW_albedo         (LIA,LJA,2)
@@ -386,7 +386,7 @@ contains
        !LAND_QVEF(i,j) = (        sw ) * 1.0_RP &
        !               + ( 1.0_RP-sw ) * sqrt( 0.5_RP - 0.5_RP * cos( PI * LAND_WATER(LKS,i,j) / LAND_PROPERTY(i,j,I_WaterCritical) ) )
 
-       LAND_DZ1(i,j) = LCDZ(LKS)
+       LAND_TC_dZ(i,j) = LAND_PROPERTY(i,j,I_ThermalCond) / LCZ(LKS)
     end do
     end do
 
@@ -419,9 +419,8 @@ contains
                               ATMOS_SFLX_rad_dn(:,:,:,:),                              & ! [IN]
                               LAND_TEMP(LKS,:,:), LAND_QVEF(:,:),                      & ! [IN]
                               LAND_SFC_albedo(:,:,:,:),                                & ! [IN]
-                              LAND_DZ1(:,:),                                           & ! [IN]
                               LAND_PROPERTY(:,:,I_StomataResist),                      & ! [IN]
-                              LAND_PROPERTY(:,:,I_ThermalCond),                        & ! [IN]
+                              LAND_TC_dZ(:,:),                                         & ! [IN]
                               LAND_PROPERTY(:,:,I_Z0M),                                & ! [IN]
                               LAND_PROPERTY(:,:,I_Z0H),                                & ! [IN]
                               LAND_PROPERTY(:,:,I_Z0E),                                & ! [IN]
