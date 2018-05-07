@@ -428,7 +428,7 @@ contains
                               'LAND',                                                  & ! [IN]
                               LAND_SFC_TEMP(:,:),                                      & ! [INOUT]
                               LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
-                              LAND_SFLX_SH(:,:), LAND_SFLX_LH(:,:), SFLX_GH(:,:),      & ! [OUT]
+                              LAND_SFLX_SH(:,:), LAND_SFLX_evap(:,:), SFLX_GH(:,:),    & ! [OUT]
                               LAND_U10(:,:), LAND_V10(:,:), LAND_T2(:,:), LAND_Q2(:,:) ) ! [OUT]
 
     case ( 'FIXED-TEMP' )
@@ -467,7 +467,7 @@ contains
                                     LAND_PROPERTY(:,:,I_Z0E),                                & ! [IN]
                                     LANDUSE_fact_land, dt,                                   & ! [IN]
                                     LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
-                                    LAND_SFLX_SH(:,:), LAND_SFLX_LH(:,:), SFLX_GH(:,:),      & ! [OUT]
+                                    LAND_SFLX_SH(:,:), LAND_SFLX_evap(:,:), SFLX_GH(:,:),    & ! [OUT]
                                     LAND_U10(:,:), LAND_V10(:,:),                            & ! [OUT]
                                     LAND_T2(:,:), LAND_Q2(:,:)                               ) ! [OUT]
 
@@ -479,7 +479,7 @@ contains
     do j = LJS, LJE
     do i = LIS, LIE
        LAND_SFLX_GH   (i,j) = - SFLX_GH(i,j) ! inverse sign ( positive for upward to downward )
-       LAND_SFLX_evap (i,j) = LAND_SFLX_LH(i,j) / LHV(i,j)
+       LAND_SFLX_LH   (i,j) = LAND_SFLX_evap(i,j) * LHV(i,j) ! always LHV
        LAND_SFLX_water(i,j) = ATMOS_SFLX_rain(i,j) - LAND_SFLX_evap(i,j)
        LAND_SFLX_ice  (i,j) = ATMOS_SFLX_snow(i,j)
     end do

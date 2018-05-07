@@ -301,7 +301,7 @@ contains
                                     OCEAN_SFC_Z0M(:,:), OCEAN_SFC_Z0H(:,:), OCEAN_SFC_Z0E(:,:), & ! [IN]
                                     LANDUSE_fact_ocean, dt,                                     & ! [IN]
                                     OCEAN_SFLX_MW(:,:), OCEAN_SFLX_MU(:,:), OCEAN_SFLX_MV(:,:), & ! [OUT]
-                                    OCEAN_SFLX_SH(:,:), OCEAN_SFLX_LH(:,:), OCEAN_SFLX_WH(:,:), & ! [OUT]
+                                    OCEAN_SFLX_SH(:,:), OCEAN_SFLX_evap(:,:), OCEAN_SFLX_WH(:,:), & ! [OUT]
                                     OCEAN_U10(:,:), OCEAN_V10(:,:),                             & ! [OUT]
                                     OCEAN_T2(:,:), OCEAN_Q2(:,:)                                ) ! [OUT]
 !OCL XFILL
@@ -317,7 +317,7 @@ contains
     !$omp parallel do
     do j = OJS, OJE
     do i = OIS, OIE
-       OCEAN_SFLX_evap (i,j) = OCEAN_SFLX_LH(i,j) / LHV(i,j)
+       OCEAN_SFLX_LH   (i,j) = OCEAN_SFLX_evap(i,j) * LHV(i,j)
        OCEAN_SFLX_water(i,j) = ATMOS_SFLX_rain(i,j) - OCEAN_SFLX_evap(i,j)
        OCEAN_SFLX_ice  (i,j) = ATMOS_SFLX_snow(i,j)
     end do

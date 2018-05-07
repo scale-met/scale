@@ -95,7 +95,7 @@ contains
        JA, JS, JE,          &
        TMPA, PRSA,          &
        WA, UA, VA,          &
-       RHOA, QVA, LHV,      &
+       RHOA, QVA, LH,       &
        Z1, PBL,             &
        RHOS, PRSS,          &
        RFLXD,               &
@@ -107,7 +107,7 @@ contains
        model_name,          &
        TMPS,                &
        ZMFLX, XMFLX, YMFLX, &
-       SHFLX, LHFLX, GFLX,  &
+       SHFLX, QVFLX, GFLX,  &
        U10, V10, T2, Q2     )
     use scale_prc, only: &
        PRC_myrank, &
@@ -133,7 +133,7 @@ contains
     real(RP),         intent(in)    :: VA       (IA,JA)                     ! velocity v  at the lowest atmospheric layer [m/s]
     real(RP),         intent(in)    :: RHOA     (IA,JA)                     ! density     at the lowest atmospheric layer [kg/m3]
     real(RP),         intent(in)    :: QVA      (IA,JA)                     ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
-    real(RP),         intent(in)    :: LHV      (IA,JA)                     ! latent heat of vaporization [J/kg]
+    real(RP),         intent(in)    :: LH       (IA,JA)                     ! latent heat at the lowest atmospheric layer [J/kg]
     real(RP),         intent(in)    :: Z1       (IA,JA)                     ! cell center height at the lowest atmospheric layer [m]
     real(RP),         intent(in)    :: PBL      (IA,JA)                     ! the top of atmospheric mixing layer [m]
     real(RP),         intent(in)    :: RHOS     (IA,JA)                     ! density  at the surface [kg/m3]
@@ -155,7 +155,7 @@ contains
     real(RP),         intent(out)   :: XMFLX    (IA,JA)                     ! x-momentum      flux at the surface [kg/m/s2]
     real(RP),         intent(out)   :: YMFLX    (IA,JA)                     ! y-momentum      flux at the surface [kg/m/s2]
     real(RP),         intent(out)   :: SHFLX    (IA,JA)                     ! sensible heat   flux at the surface [J/m2/s]
-    real(RP),         intent(out)   :: LHFLX    (IA,JA)                     ! latent heat     flux at the surface [J/m2/s]
+    real(RP),         intent(out)   :: QVFLX    (IA,JA)                     ! water vapor     flux at the surface [kg/m2/s]
     real(RP),         intent(out)   :: GFLX     (IA,JA)                     ! subsurface heat flux at the surface [J/m2/s]
     real(RP),         intent(out)   :: U10      (IA,JA)                     ! velocity u  at 10m [m/s]
     real(RP),         intent(out)   :: V10      (IA,JA)                     ! velocity v  at 10m [m/s]
@@ -215,9 +215,9 @@ contains
     !$omp         QVsat,dQVsat,Ustar,dUstar,Tstar,dTstar,Qstar,dQstar,Uabs,dUabs,Ra,dRa,FracU10,FracT2,FracQ2) &
     !$omp shared(IS,IE,JS,JE,Rdry,CPdry,PRC_myrank,IO_FID_LOG,IO_L,model_name,bulkflux, &
     !$omp        CPL_PHY_SFC_SKIN_itr_max,CPL_PHY_SFC_SKIN_dTS_max,CPL_PHY_SFC_SKIN_dreslim,CPL_PHY_SFC_SKIN_err_min, CPL_PHY_SFC_SKIN_res_min, &
-    !$omp        fact_area,dt,QVA,TMPA,PRSA,RHOA,WA,UA,VA,LHV,Z1,PBL, &
+    !$omp        fact_area,dt,QVA,TMPA,PRSA,RHOA,WA,UA,VA,LH,Z1,PBL, &
     !$omp        TG,PRSS,RHOS,TMPS1,QVEF,Z0M,Z0H,Z0E,Rb,TC_dZ,ALBEDO,RFLXD, &
-    !$omp        TMPS,ZMFLX,XMFLX,YMFLX,SHFLX,LHFLX,GFLX,U10,V10,T2,Q2)
+    !$omp        TMPS,ZMFLX,XMFLX,YMFLX,SHFLX,QVFLX,GFLX,U10,V10,T2,Q2)
     do j = JS, JE
     do i = IS, IE
        if ( fact_area(i,j) > 0.0_RP ) then
@@ -297,16 +297,15 @@ contains
                   + RFLXD(i,j,I_R_diffuse,I_R_VIS) * ALBEDO(i,j,I_R_diffuse,I_R_VIS)
 
              ! calculation for residual
-             res = SWD - SWU + LWD - LWU                                      &
-                 + CPdry    * RHOS(i,j) * Ustar * Tstar                       &
-                 + LHV(i,j) * RHOS(i,j) * Ustar * Qstar * Ra / ( Ra+Rb(i,j) ) &
+             res = SWD - SWU + LWD - LWU                                     &
+                 + CPdry   * RHOS(i,j) * Ustar * Tstar                       &
+                 + LH(i,j) * RHOS(i,j) * Ustar * Qstar * Ra / ( Ra+Rb(i,j) ) &
                  - TC_dZ(i,j) * ( TMPS1(i,j) - TG(i,j) )
 
              ! calculation for d(residual)/dTMPS
-             dres = -4.0_RP * emis / TMPS1(i,j)                                                          &
-                  + CPdry    * RHOS(i,j) * ( Ustar * (dTstar-Tstar)/dTS0 + Tstar * (dUstar-Ustar)/dTS0 ) &
-                  + LHV(i,j) * RHOS(i,j) * ( Ustar * (dQstar-Qstar)/dTS0 + Qstar * (dUstar-Ustar)/dTS0 ) &
-                  * Ra / ( Ra + Rb(i,j) ) &
+             dres = -4.0_RP * emis / TMPS1(i,j)                                                                           &
+                  + CPdry   * RHOS(i,j) * ( Ustar*(dTstar-Tstar)/dTS0 + Tstar*(dUstar-Ustar)/dTS0 )                       &
+                  + LH(i,j) * RHOS(i,j) * ( Ustar*(dQstar-Qstar)/dTS0 + Qstar*(dUstar-Ustar)/dTS0 ) * Ra / ( Ra+Rb(i,j) ) &
                   - TC_dZ(i,j)
 
              ! convergence test with residual and error levels
@@ -386,7 +385,7 @@ contains
              LOG_INFO_CONT('(A,F32.16)') 'roughness length for heat          [m]        :', Z0H   (i,j)
              LOG_INFO_CONT('(A,F32.16)') 'roughness length for vapor         [m]        :', Z0E   (i,j)
              LOG_NEWLINE
-             LOG_INFO_CONT('(A,F32.16)') 'latent heat                        [J/kg]     :', LHV   (i,j)
+             LOG_INFO_CONT('(A,F32.16)') 'latent heat                        [J/kg]     :', LH   (i,j)
              LOG_INFO_CONT('(A,F32.16)') 'friction velocity                  [m]        :', Ustar
              LOG_INFO_CONT('(A,F32.16)') 'friction potential temperature     [K]        :', Tstar
              LOG_INFO_CONT('(A,F32.16)') 'friction water vapor mass ratio    [kg/kg]    :', Qstar
@@ -440,7 +439,7 @@ contains
           XMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * UA(i,j)
           YMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * VA(i,j)
           SHFLX(i,j) = -RHOS(i,j) * Ustar * Tstar * CPdry
-          LHFLX(i,j) = -RHOS(i,j) * Ustar * Qstar * LHV(i,j) * Ra / ( Ra+Rb(i,j) )
+          QVFLX(i,j) = -RHOS(i,j) * Ustar * Qstar * Ra / ( Ra+Rb(i,j) )
 
           emis = ( 1.0_RP-ALBEDO(i,j,I_R_diffuse,I_R_IR) ) * STB * TMPS(i,j)**4
 
@@ -458,7 +457,7 @@ contains
           GFLX(i,j) = -TC_dZ(i,j) * ( TMPS1(i,j) - TG(i,j) )
 
           ! calculation for residual
-          res = SWD - SWU + LWD - LWU - SHFLX(i,j) - LHFLX(i,j) + GFLX(i,j)
+          res = SWD - SWU + LWD - LWU - SHFLX(i,j) - QVFLX(i,j) * LH(i,j) + GFLX(i,j)
 
           ! put residual in ground heat flux
           GFLX(i,j) = GFLX(i,j) - res
@@ -482,7 +481,7 @@ contains
           XMFLX(i,j) = 0.0_RP
           YMFLX(i,j) = 0.0_RP
           SHFLX(i,j) = 0.0_RP
-          LHFLX(i,j) = 0.0_RP
+          QVFLX(i,j) = 0.0_RP
           GFLX (i,j) = 0.0_RP
           U10  (i,j) = 0.0_RP
           V10  (i,j) = 0.0_RP

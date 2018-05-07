@@ -68,7 +68,7 @@ contains
        JA, JS, JE,          &
        TMPA, PRSA,          &
        WA, UA, VA,          &
-       RHOA, QVA, LHV,      &
+       RHOA, QVA, LH,       &
        Z1, PBL,             &
        RHOS, PRSS,          &
        RFLXD,               &
@@ -77,7 +77,7 @@ contains
        Rb, Z0M, Z0H, Z0E,   &
        fact_area, dt,       &
        ZMFLX, XMFLX, YMFLX, &
-       SHFLX, LHFLX, GFLX,  &
+       SHFLX, QVFLX, GFLX,  &
        U10, V10, T2, Q2     )
     use scale_const, only: &
        PRE00 => CONST_PRE00, &
@@ -100,7 +100,7 @@ contains
     real(RP), intent(in)  :: VA       (IA,JA)                     ! velocity v  at the lowest atmospheric layer [m/s]
     real(RP), intent(in)  :: RHOA     (IA,JA)                     ! density     at the lowest atmospheric layer [kg/m3]
     real(RP), intent(in)  :: QVA      (IA,JA)                     ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
-    real(RP), intent(in)  :: LHV      (IA,JA)                     ! latent heat of vaporization [J/kg]
+    real(RP), intent(in)  :: LH       (IA,JA)                     ! latent heat at the lowest atmospheric layer [J/kg]
     real(RP), intent(in)  :: Z1       (IA,JA)                     ! cell center height at the lowest atmospheric layer [m]
     real(RP), intent(in)  :: PBL      (IA,JA)                     ! the top of atmospheric mixing layer [m]
     real(RP), intent(in)  :: RHOS     (IA,JA)                     ! density  at the surface [kg/m3]
@@ -119,7 +119,7 @@ contains
     real(RP), intent(out) :: XMFLX    (IA,JA)                     ! x-momentum      flux at the surface [kg/m/s2]
     real(RP), intent(out) :: YMFLX    (IA,JA)                     ! y-momentum      flux at the surface [kg/m/s2]
     real(RP), intent(out) :: SHFLX    (IA,JA)                     ! sensible heat   flux at the surface [J/m2/s]
-    real(RP), intent(out) :: LHFLX    (IA,JA)                     ! latent heat     flux at the surface [J/m2/s]
+    real(RP), intent(out) :: QVFLX    (IA,JA)                     ! water vapor     flux at the surface [kg/m2/s]
     real(RP), intent(out) :: GFLX     (IA,JA)                     ! subsurface heat flux at the surface [J/m2/s]
     real(RP), intent(out) :: U10      (IA,JA)                     ! velocity u  at 10m [m/s]
     real(RP), intent(out) :: V10      (IA,JA)                     ! velocity v  at 10m [m/s]
@@ -157,8 +157,8 @@ contains
     !$omp parallel do default(none) &
     !$omp private(qdry,Rtot,QVsat,QVS,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2,res,emis,LWD,LWU,SWD,SWU) &
     !$omp shared(IS,IE,JS,JE,Rdry,CPdry,bulkflux, &
-    !$omp        fact_area,TMPA,QVA,LHV,UA,VA,WA,Z1,PBL,PRSA,TMPS,PRSS,RHOS,QVEF,Z0M,Z0H,Z0E,ALBEDO,RFLXD,Rb, &
-    !$omp        SHFLX,LHFLX,GFLX,ZMFLX,XMFLX,YMFLX,U10,V10,T2,Q2)
+    !$omp        fact_area,TMPA,QVA,LH,UA,VA,WA,Z1,PBL,PRSA,TMPS,PRSS,RHOS,QVEF,Z0M,Z0H,Z0E,ALBEDO,RFLXD,Rb, &
+    !$omp        SHFLX,QVFLX,GFLX,ZMFLX,XMFLX,YMFLX,U10,V10,T2,Q2)
     do j = JS, JE
     do i = IS, IE
        if ( fact_area(i,j) > 0.0_RP ) then
@@ -197,7 +197,7 @@ contains
           XMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * UA(i,j)
           YMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * VA(i,j)
           SHFLX(i,j) = -RHOS(i,j) * Ustar * Tstar * CPdry
-          LHFLX(i,j) = -RHOS(i,j) * Ustar * Qstar * LHV(i,j) * Ra / ( Ra+Rb(i,j) )
+          QVFLX(i,j) = -RHOS(i,j) * Ustar * Qstar * Ra / ( Ra+Rb(i,j) )
 
           emis = ( 1.0_RP-ALBEDO(i,j,I_R_diffuse,I_R_IR) ) * STB * TMPS(i,j)**4
 
@@ -213,7 +213,7 @@ contains
                + RFLXD(i,j,I_R_diffuse,I_R_VIS) * ALBEDO(i,j,I_R_diffuse,I_R_VIS)
 
           ! calculation for residual
-          res = SWD - SWU + LWD - LWU - SHFLX(i,j) - LHFLX(i,j)
+          res = SWD - SWU + LWD - LWU - SHFLX(i,j) - QVFLX(i,j) * LH(i,j)
 
           ! put residual in ground heat flux
           GFLX(i,j) = -res
@@ -237,7 +237,7 @@ contains
           XMFLX(i,j) = 0.0_RP
           YMFLX(i,j) = 0.0_RP
           SHFLX(i,j) = 0.0_RP
-          LHFLX(i,j) = 0.0_RP
+          QVFLX(i,j) = 0.0_RP
           GFLX (i,j) = 0.0_RP
           U10  (i,j) = 0.0_RP
           V10  (i,j) = 0.0_RP
