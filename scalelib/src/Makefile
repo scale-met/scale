@@ -166,10 +166,13 @@ OBJS = \
 	$(OBJ_DIR)/scale_ocean_grid_cartesC_index.o	\
 	$(OBJ_DIR)/scale_ocean_grid_cartesC_real.o	\
 	$(OBJ_DIR)/scale_ocean_dyn_slab.o	\
+	$(OBJ_DIR)/scale_ocean_phy_common.o	\
+	$(OBJ_DIR)/scale_ocean_phy_albedo.o	\
 	$(OBJ_DIR)/scale_ocean_phy_albedo_nakajima00.o	\
 	$(OBJ_DIR)/scale_ocean_phy_roughness.o	\
 	$(OBJ_DIR)/scale_ocean_phy_roughness_miller92.o	\
 	$(OBJ_DIR)/scale_ocean_phy_roughness_moon07.o	\
+	$(OBJ_DIR)/scale_ocean_phy_tc.o	\
 	$(OBJ_DIR)/scale_land_grid_cartesC.o	\
 	$(OBJ_DIR)/scale_land_grid_cartesC_index.o	\
 	$(OBJ_DIR)/scale_land_grid_cartesC_real.o	\

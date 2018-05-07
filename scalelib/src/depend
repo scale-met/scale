@@ -100,10 +100,13 @@ $(OBJ_DIR)/scale_ocean_dyn_slab.o: ./ocean/dynamics/scale_ocean_dyn_slab.F90 $(D
 $(OBJ_DIR)/scale_ocean_grid_cartesC.o: ./ocean/grid/scale_ocean_grid_cartesC.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_file.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_ocean_grid_cartesC_index.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_ocean_grid_cartesC_index.o: ./ocean/grid/scale_ocean_grid_cartesC_index.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_ocean_grid_cartesC_real.o: ./ocean/grid/scale_ocean_grid_cartesC_real.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_grid_cartesC_real.o $(OBJ_DIR)/scale_file_cartesC.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_ocean_grid_cartesC.o $(OBJ_DIR)/scale_ocean_grid_cartesC_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
+$(OBJ_DIR)/scale_ocean_phy_albedo.o: ./ocean/physics/scale_ocean_phy_albedo.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_cpl_sfc_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_ocean_phy_albedo_nakajima00.o: ./ocean/physics/scale_ocean_phy_albedo_nakajima00.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
+$(OBJ_DIR)/scale_ocean_phy_common.o: ./ocean/physics/scale_ocean_phy_common.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_ocean_phy_roughness.o: ./ocean/physics/scale_ocean_phy_roughness.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_ocean_phy_roughness_miller92.o: ./ocean/physics/scale_ocean_phy_roughness_miller92.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_ocean_phy_roughness.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_ocean_phy_roughness_moon07.o: ./ocean/physics/scale_ocean_phy_roughness_moon07.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_ocean_phy_roughness.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
+$(OBJ_DIR)/scale_ocean_phy_tc.o: ./ocean/physics/scale_ocean_phy_tc.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_ocean_phy_common.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_prc.o: ./common/scale_prc.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_fpm.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_sigvars.o
 $(OBJ_DIR)/scale_prc_cartesC.o: ./common/scale_prc_cartesC.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o
 $(OBJ_DIR)/scale_precision.o: ./common/scale_precision.F90 $(DEPENDLIB)
@@ -225,10 +228,13 @@ MODS =	\
 	$(OBJ_DIR)/scale_ocean_grid_cartesc.mod	\
 	$(OBJ_DIR)/scale_ocean_grid_cartesc_index.mod	\
 	$(OBJ_DIR)/scale_ocean_grid_cartesc_real.mod	\
+	$(OBJ_DIR)/scale_ocean_phy_albedo.mod	\
 	$(OBJ_DIR)/scale_ocean_phy_albedo_nakajima00.mod	\
+	$(OBJ_DIR)/scale_ocean_phy_common.mod	\
 	$(OBJ_DIR)/scale_ocean_phy_roughness.mod	\
 	$(OBJ_DIR)/scale_ocean_phy_roughness_miller92.mod	\
 	$(OBJ_DIR)/scale_ocean_phy_roughness_moon07.mod	\
+	$(OBJ_DIR)/scale_ocean_phy_tc.mod	\
 	$(OBJ_DIR)/scale_prc.mod	\
 	$(OBJ_DIR)/scale_prc_cartesc.mod	\
 	$(OBJ_DIR)/scale_precision.mod	\
