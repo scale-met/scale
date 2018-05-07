@@ -75,7 +75,7 @@ contains
        TMPS, QVEF,          &
        ALBEDO,              &
        Rb, Z0M, Z0H, Z0E,   &
-       fact_area, dt,       &
+       calc_flag, dt,       &
        ZMFLX, XMFLX, YMFLX, &
        SHFLX, QVFLX, GFLX,  &
        U10, V10, T2, Q2     )
@@ -113,7 +113,7 @@ contains
     real(RP), intent(in)  :: Z0M      (IA,JA)                     ! roughness length for momemtum [m]
     real(RP), intent(in)  :: Z0H      (IA,JA)                     ! roughness length for heat     [m]
     real(RP), intent(in)  :: Z0E      (IA,JA)                     ! roughness length for vapor    [m]
-    real(RP), intent(in)  :: fact_area(IA,JA)                     ! to decide calculate or not
+    logical,  intent(in)  :: calc_flag(IA,JA)                     ! to decide calculate or not
     real(DP), intent(in)  :: dt                                   ! delta time
     real(RP), intent(out) :: ZMFLX    (IA,JA)                     ! z-momentum      flux at the surface [kg/m/s2]
     real(RP), intent(out) :: XMFLX    (IA,JA)                     ! x-momentum      flux at the surface [kg/m/s2]
@@ -157,11 +157,11 @@ contains
     !$omp parallel do default(none) &
     !$omp private(qdry,Rtot,QVsat,QVS,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2,res,emis,LWD,LWU,SWD,SWU) &
     !$omp shared(IS,IE,JS,JE,Rdry,CPdry,bulkflux, &
-    !$omp        fact_area,TMPA,QVA,LH,UA,VA,WA,Z1,PBL,PRSA,TMPS,PRSS,RHOS,QVEF,Z0M,Z0H,Z0E,ALBEDO,RFLXD,Rb, &
+    !$omp        calc_flag,TMPA,QVA,LH,UA,VA,WA,Z1,PBL,PRSA,TMPS,PRSS,RHOS,QVEF,Z0M,Z0H,Z0E,ALBEDO,RFLXD,Rb, &
     !$omp        SHFLX,QVFLX,GFLX,ZMFLX,XMFLX,YMFLX,U10,V10,T2,Q2)
     do j = JS, JE
     do i = IS, IE
-       if ( fact_area(i,j) > 0.0_RP ) then
+       if ( calc_flag(i,j) ) then
 
           qdry = 1.0_RP - QVA(i,j)
           Rtot = qdry * Rdry + QVA(i,j) * Rvap

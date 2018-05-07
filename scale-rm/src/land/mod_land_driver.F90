@@ -191,8 +191,10 @@ contains
        ATMOS_SFLX_rain,   &
        ATMOS_SFLX_snow
     use scale_landuse, only: &
-       LANDUSE_fact_land
+       LANDUSE_fact_land, &
+       LANDUSE_exists_land
     implicit none
+
     logical, intent(in) :: force
 
     ! parameters
@@ -424,7 +426,7 @@ contains
                               LAND_PROPERTY(:,:,I_Z0M),                                & ! [IN]
                               LAND_PROPERTY(:,:,I_Z0H),                                & ! [IN]
                               LAND_PROPERTY(:,:,I_Z0E),                                & ! [IN]
-                              LANDUSE_fact_land, dt,                                   & ! [IN]
+                              LANDUSE_exists_land(:,:), dt,                            & ! [IN]
                               'LAND',                                                  & ! [IN]
                               LAND_SFC_TEMP(:,:),                                      & ! [INOUT]
                               LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
@@ -465,7 +467,7 @@ contains
                                     LAND_PROPERTY(:,:,I_Z0M),                                & ! [IN]
                                     LAND_PROPERTY(:,:,I_Z0H),                                & ! [IN]
                                     LAND_PROPERTY(:,:,I_Z0E),                                & ! [IN]
-                                    LANDUSE_fact_land, dt,                                   & ! [IN]
+                                    LANDUSE_exists_land(:,:), dt,                            & ! [IN]
                                     LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
                                     LAND_SFLX_SH(:,:), LAND_SFLX_evap(:,:), SFLX_GH(:,:),    & ! [OUT]
                                     LAND_U10(:,:), LAND_V10(:,:),                            & ! [OUT]

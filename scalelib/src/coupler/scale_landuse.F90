@@ -39,6 +39,10 @@ module scale_landuse
   real(RP), public, allocatable :: LANDUSE_fact_urban(:,:) !< urban factor
   real(RP), public, allocatable :: LANDUSE_fact_lake (:,:) !< lake  factor
 
+  logical,  public, allocatable :: LANDUSE_exists_ocean(:,:) !< ocean calculation flag
+  logical,  public, allocatable :: LANDUSE_exists_land (:,:) !< land  calculation flag
+  logical,  public, allocatable :: LANDUSE_exists_urban(:,:) !< urban calculation flag
+
   real(RP), public, allocatable :: LANDUSE_frac_land (:,:) !< land  fraction
   real(RP), public, allocatable :: LANDUSE_frac_urban(:,:) !< urban fraction
   real(RP), public, allocatable :: LANDUSE_frac_lake (:,:) !< lake  fraction
@@ -149,6 +153,13 @@ contains
     LANDUSE_fact_urban(:,:) = 0.0_RP
     LANDUSE_fact_lake (:,:) = 0.0_RP
 
+    allocate( LANDUSE_exists_ocean(IA,JA) )
+    allocate( LANDUSE_exists_land (IA,JA) )
+    allocate( LANDUSE_exists_urban(IA,JA) )
+    LANDUSE_exists_ocean(:,:) = .false.
+    LANDUSE_exists_land (:,:) = .false.
+    LANDUSE_exists_urban(:,:) = .false.
+
 
     if    ( LANDUSE_AllOcean ) then
        LOG_INFO("LANDUSE_setup",*) 'Assume all grids are ocean'
@@ -194,6 +205,8 @@ contains
   !-----------------------------------------------------------------------------
   subroutine LANDUSE_calc_fact
     implicit none
+
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
@@ -206,6 +219,14 @@ contains
     LANDUSE_fact_lake (:,:) = (          LANDUSE_frac_land(:,:) ) * (          LANDUSE_frac_lake (:,:) )
 
     call LANDUSE_write
+
+    do j = 1, JA
+    do i = 1, IA
+       if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) LANDUSE_exists_ocean(i,j) = .true.
+       if( LANDUSE_fact_land (i,j) > 0.0_RP ) LANDUSE_exists_land (i,j) = .true.
+       if( LANDUSE_fact_urban(i,j) > 0.0_RP ) LANDUSE_exists_urban(i,j) = .true.
+    enddo
+    enddo
 
     return
   end subroutine LANDUSE_calc_fact

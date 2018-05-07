@@ -103,7 +103,7 @@ contains
        ALBEDO,              &
        Rb, TC_dZ,           &
        Z0M, Z0H, Z0E,       &
-       fact_area, dt,       &
+       calc_flag, dt,       &
        model_name,          &
        TMPS,                &
        ZMFLX, XMFLX, YMFLX, &
@@ -147,7 +147,7 @@ contains
     real(RP),         intent(in)    :: Z0M      (IA,JA)                     ! roughness length for momemtum [m]
     real(RP),         intent(in)    :: Z0H      (IA,JA)                     ! roughness length for heat     [m]
     real(RP),         intent(in)    :: Z0E      (IA,JA)                     ! roughness length for vapor    [m]
-    real(RP),         intent(in)    :: fact_area(IA,JA)                     ! to decide calculate or not
+    logical,          intent(in)    :: calc_flag(IA,JA)                     ! to decide calculate or not
     real(DP),         intent(in)    :: dt                                   ! delta time
     character(len=*), intent(in)    :: model_name
     real(RP),         intent(inout) :: TMPS     (IA,JA)                     ! surface temperature [K]
@@ -215,12 +215,12 @@ contains
     !$omp         QVsat,dQVsat,Ustar,dUstar,Tstar,dTstar,Qstar,dQstar,Uabs,dUabs,Ra,dRa,FracU10,FracT2,FracQ2) &
     !$omp shared(IS,IE,JS,JE,Rdry,CPdry,PRC_myrank,IO_FID_LOG,IO_L,model_name,bulkflux, &
     !$omp        CPL_PHY_SFC_SKIN_itr_max,CPL_PHY_SFC_SKIN_dTS_max,CPL_PHY_SFC_SKIN_dreslim,CPL_PHY_SFC_SKIN_err_min, CPL_PHY_SFC_SKIN_res_min, &
-    !$omp        fact_area,dt,QVA,TMPA,PRSA,RHOA,WA,UA,VA,LH,Z1,PBL, &
+    !$omp        calc_flag,dt,QVA,TMPA,PRSA,RHOA,WA,UA,VA,LH,Z1,PBL, &
     !$omp        TG,PRSS,RHOS,TMPS1,QVEF,Z0M,Z0H,Z0E,Rb,TC_dZ,ALBEDO,RFLXD, &
     !$omp        TMPS,ZMFLX,XMFLX,YMFLX,SHFLX,QVFLX,GFLX,U10,V10,T2,Q2)
     do j = JS, JE
     do i = IS, IE
-       if ( fact_area(i,j) > 0.0_RP ) then
+       if ( calc_flag(i,j) ) then
 
           qdry = 1.0_RP - QVA(i,j)
           Rtot = qdry * Rdry + QVA(i,j) * Rvap

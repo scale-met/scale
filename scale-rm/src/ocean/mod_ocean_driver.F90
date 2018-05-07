@@ -202,8 +202,9 @@ contains
        ATMOS_SFLX_rain,    &
        ATMOS_SFLX_snow
     use scale_landuse, only: &
-       LANDUSE_fact_ocean
+       LANDUSE_exists_ocean
     implicit none
+
     logical, intent(in) :: force
 
     real(RP) :: LHV(OIA,OJA) ! latent heat of vaporization [J/kg]
@@ -299,7 +300,7 @@ contains
                                     OCEAN_SFC_albedo(:,:,:,:),                                  & ! [IN]
                                     SR(:,:),                                                    & ! [IN]
                                     OCEAN_SFC_Z0M(:,:), OCEAN_SFC_Z0H(:,:), OCEAN_SFC_Z0E(:,:), & ! [IN]
-                                    LANDUSE_fact_ocean, dt,                                     & ! [IN]
+                                    LANDUSE_exists_ocean(:,:), dt,                              & ! [IN]
                                     OCEAN_SFLX_MW(:,:), OCEAN_SFLX_MU(:,:), OCEAN_SFLX_MV(:,:), & ! [OUT]
                                     OCEAN_SFLX_SH(:,:), OCEAN_SFLX_evap(:,:), OCEAN_SFLX_WH(:,:), & ! [OUT]
                                     OCEAN_U10(:,:), OCEAN_V10(:,:),                             & ! [OUT]
