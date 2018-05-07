@@ -27,8 +27,8 @@ module scale_ocean_phy_albedo_nakajima00
   !
   !++ Public procedure
   !
-  public :: OCEAN_PHY_albedo_nakajima00_setup
-  public :: OCEAN_PHY_albedo_nakajima00
+  public :: OCEAN_PHY_ALBEDO_nakajima00_setup
+  public :: OCEAN_PHY_ALBEDO_nakajima00
 
   !-----------------------------------------------------------------------------
   !
@@ -45,16 +45,16 @@ module scale_ocean_phy_albedo_nakajima00
   !-----------------------------------------------------------------------------
 contains
 
-  subroutine OCEAN_PHY_albedo_nakajima00_setup
+  subroutine OCEAN_PHY_ALBEDO_nakajima00_setup
 
     LOG_NEWLINE
-    LOG_INFO("OCEAN_PHY_albedo_nakajima00_setup",*) 'Setup'
+    LOG_INFO("OCEAN_PHY_ALBEDO_nakajima00_setup",*) 'Setup'
 
     return
-  end subroutine OCEAN_PHY_albedo_nakajima00_setup
+  end subroutine OCEAN_PHY_ALBEDO_nakajima00_setup
 
   !-----------------------------------------------------------------------------
-  subroutine OCEAN_PHY_albedo_nakajima00( &
+  subroutine OCEAN_PHY_ALBEDO_nakajima00( &
        OIA, OIS, OIE, OJA, OJS, OJE, &
        cosSZA,    &
 !       tau,       &
@@ -106,6 +106,6 @@ contains
     enddo
 
     return
-  end subroutine OCEAN_PHY_albedo_nakajima00
+  end subroutine OCEAN_PHY_ALBEDO_nakajima00
 
 end module scale_ocean_phy_albedo_nakajima00

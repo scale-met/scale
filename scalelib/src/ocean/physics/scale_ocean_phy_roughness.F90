@@ -38,11 +38,11 @@ module scale_ocean_phy_roughness
   !
   !++ Private parameters & variables
   !
-  real(RP), public :: OCEAN_PHY_ROUGHNESS_visck     = 1.5E-5_RP ! kinematic viscosity
-  real(RP), public :: OCEAN_PHY_ROUGHNESS_Ustar_min = 1.0E-3_RP ! minimum fiction velocity
-  real(RP), public :: OCEAN_PHY_ROUGHNESS_Z0M_min   = 1.0E-5_RP ! minimum roughness length for momentum [m]
-  real(RP), public :: OCEAN_PHY_ROUGHNESS_Z0H_min   = 1.0E-5_RP ! minimum roughness length for heat     [m]
-  real(RP), public :: OCEAN_PHY_ROUGHNESS_Z0E_min   = 1.0E-5_RP ! minimum roughness length for moisture [m]
+  real(RP), public :: OCEAN_PHY_ROUGHNESS_visck      = 1.5E-5_RP ! kinematic viscosity
+  real(RP), public :: OCEAN_PHY_ROUGHNESS_Ustar_min  = 1.0E-3_RP ! minimum fiction velocity
+  real(RP), public :: OCEAN_PHY_ROUGHNESS_Z0M_min    = 1.0E-5_RP ! minimum roughness length for momentum [m]
+  real(RP), public :: OCEAN_PHY_ROUGHNESS_Z0H_min    = 1.0E-5_RP ! minimum roughness length for heat     [m]
+  real(RP), public :: OCEAN_PHY_ROUGHNESS_Z0E_min    = 1.0E-5_RP ! minimum roughness length for moisture [m]
 
   !-----------------------------------------------------------------------------
 contains
