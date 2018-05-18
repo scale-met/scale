@@ -364,6 +364,7 @@ contains
        D2R => CONST_D2R,   &
        EPS => CONST_EPS,   &
        EPSvap => CONST_EPSvap, &
+       EPSTvap => CONST_EPSTvap, &
        GRAV => CONST_GRAV, &
        LAPS => CONST_LAPS, &
        P00 => CONST_PRE00, &
@@ -963,11 +964,19 @@ contains
        end do
     else if ( data_available(Ia_ps,1) ) then
        if ( data_available(Ia_topo,1) ) then
+          if ( .not. data_available(Ia_dens,1) ) then
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                k = lm_layer(i,j)
+                dens_org(k,i,j) = pres_org(k,i,j) / ( Rdry * ( 1.0_RP + EPSTvap * qv_org(k,i,j) ) * temp_org(k,i,j) )
+             end do
+             end do
+          end if
           do j = 1, dims(3)
           do i = 1, dims(2)
              k = lm_layer(i,j)
              dz = cz_org(k,i,j) - cz_org(2,i,j)
-             dens_org(2,i,j) = ( pres_org(k,i,j) - pres_org(2,i,j) ) * 2.0_RP / ( GRAV * dz ) &
+             dens_org(2,i,j) = - ( pres_org(k,i,j) - pres_org(2,i,j) ) * 2.0_RP / ( GRAV * dz ) &
                              - dens_org(k,i,j)
              temp_org(2,i,j) = pres_org(2,i,j) / ( Rdry * dens_org(2,i,j) )
           end do
@@ -976,7 +985,6 @@ contains
           do j = 1, dims(3)
           do i = 1, dims(2)
              k = lm_layer(i,j)
-             dz = cz_org(k,i,j) - cz_org(2,i,j)
              temp_org(2,i,j) = temp_org(k,i,j)
              dens_org(2,i,j) = pres_org(2,i,j) / ( Rdry * temp_org(2,i,j) )
           end do
@@ -989,6 +997,14 @@ contains
              k = lm_layer(i,j)
              dz = cz_org(k,i,j) - cz_org(2,i,j)
              temp_org(2,i,j) = temp_org(k,i,j) + LAPS * dz
+          end do
+          end do
+       end if
+       if ( .not. data_available(Ia_dens,1) ) then
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             k = lm_layer(i,j)
+             dens_org(k,i,j) = pres_org(k,i,j) / ( Rdry * ( 1.0_RP + EPSTvap * qv_org(k,i,j) ) * temp_org(k,i,j) )
           end do
           end do
        end if
@@ -1022,14 +1038,15 @@ contains
           if ( pres_org(2,i,j) < pres_org(1,i,j) ) then
              lp2 = log( pres_org(2,i,j) / pres_org(1,i,j) )
           else
-             lp2 = 1.0_RP
+             lp2 = -1.0_RP
           end if
           if ( pres_org(k,i,j) < pres_org(1,i,j) ) then
              lp3 = log( pres_org(k,i,j) / pres_org(1,i,j) )
           else
-             lp3 = 1.0_RP
+             lp3 = -1.0_RP
           end if
-          cz_org(2,i,j) = max( 0.0_RP, cz_org(k,i,j) * lp2 / lp3 )
+          cz_org(2,i,j) = cz_org(k,i,j) * lp2 / lp3
+          if ( cz_org(2,i,j) < 0.0_RP ) cz_org(2,i,j) = cz_org(k,i,j)
        end do
        end do
     end if
