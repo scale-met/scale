@@ -89,7 +89,7 @@ module scale_atmos_phy_mp_tomita08
   integer,  private, parameter   :: I_hyd_QS =  4
   integer,  private, parameter   :: I_hyd_QG =  5
 
-  logical,  private              :: couple_aerosol      ! apply CCN effect?
+  logical,  private              :: do_couple_aerosol   ! apply CCN effect?
   logical,  private              :: do_explicit_icegen  ! apply explicit ice generation?
 
   logical,  private              :: fixed_re  = .false. ! use ice's effective radius for snow and graupel, and set rain transparent?
@@ -366,6 +366,7 @@ contains
     real(RP) :: autoconv_nc     = Nc_ocn  !< number concentration of cloud water [1/cc]
 
     namelist / PARAM_ATMOS_PHY_MP_TOMITA08 / &
+       do_couple_aerosol, &
        do_explicit_icegen, &
        autoconv_nc,     &
        enable_KK2000,   &
@@ -779,7 +780,7 @@ contains
     !$omp        DENS0,TEMP0,PRES0,QTRC0,CCN,CPtot0,CVtot0,dt, &
     !$omp        RHOE_t, &
     !$omp        UNDEF,EPS,PI,PRE00,LHV,LHF,LHF0,CP_VAPOR,CP_WATER,CP_ICE,CV_VAPOR,CV_WATER,CV_ICE,ln10, &
-    !$omp        couple_aerosol,sw_expice,enable_WDXZ2014,enable_RS2014,enable_KK2000, &
+    !$omp        do_couple_aerosol,sw_expice,enable_WDXZ2014,enable_RS2014,enable_KK2000, &
     !$omp        Nc_def,N0r_def,N0s_def,N0g_def, &
     !$omp        Cr,Cs,Cg,Erw,Eri,Eiw,Esw,Esr,Esi,Egw,Egr,Egi,Egs,Ar,As,Ag, &
     !$omp        gamma_sacr,gamma_gacs,gamma_saut,gamma_gaut,beta_saut,beta_gaut,qicrt_saut,qscrt_gaut,mi, &
@@ -802,7 +803,7 @@ contains
     do j = JS, JE
     do i = IS, IE
 
-       if ( couple_aerosol ) then
+       if ( do_couple_aerosol ) then
           do k = KS, KE
              Nc(k) = max( CCN(k,i,j)*1.E-6_RP, Nc_def(i,j) ) ! [#/m3]->[#/cc]
           end do
@@ -1914,7 +1915,7 @@ contains
        !$omp private(Nc)
        do j = JS, JE
        do i = IS, IE
-          if ( couple_aerosol ) then
+          if ( do_couple_aerosol ) then
              do k = KS, KE
                 ! Nc(k) = max( CCN(k,i,j), Nc_def(i,j)*1.E+6_RP ) ! [#/m3] tentatively off the CCN effect
                 Nc(k) = Nc_def(i,j) * 1.E+6_RP ! [#/m3]
