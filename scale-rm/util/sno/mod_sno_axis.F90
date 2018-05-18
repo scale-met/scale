@@ -85,7 +85,7 @@ contains
     integer :: n, m, d
     !---------------------------------------------------------------------------
 
-    LOG_INFO("SNO_axis_getinfo",*) '[SNO_axis_getinfo] Read information of axis'
+    LOG_INFO("SNO_axis_getinfo",*) 'Read information of axis'
 
     if ( ismaster ) then
        nowrank = 0 ! first file
@@ -259,7 +259,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       LOG_INFO("SNO_axis_alloc",*) '[SNO_axis_alloc] Allocate axis array'
+       LOG_INFO("SNO_axis_alloc",*) 'Allocate axis array'
     endif
 
     IA_out = ( hinfo%gridsize(2) ) / nprocs_x_out + 2 * hinfo%halosize(2)
@@ -390,7 +390,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       LOG_INFO("SNO_axis_dealloc",*) '[SNO_axis_dealloc] Deallocate axis array'
+       LOG_INFO("SNO_axis_dealloc",*) 'Deallocate axis array'
     endif
 
     do n = 1, naxis
@@ -440,7 +440,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       LOG_INFO("SNO_axis_copy",*) '[SNO_axis_copy] Copy axis array (local)'
+       LOG_INFO("SNO_axis_copy",*) 'Copy axis array (local)'
     endif
 
     IMAX_out = ( hinfo%gridsize(2) ) / nprocs_x_out
@@ -465,7 +465,7 @@ contains
           enddo
 
           if ( .NOT. exist ) then
-             LOG_ERROR("SNO_axis_copy",*) '[SNO_axis_read] AXIS CXG not found! : necessary for CX'
+             LOG_ERROR("SNO_axis_copy",*) 'AXIS CXG not found! : necessary for CX'
              call PRC_abort
           endif
 
@@ -736,7 +736,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       LOG_INFO("SNO_axis_read",*) '[SNO_axis_read] Read axis array (local)'
+       LOG_INFO("SNO_axis_read",*) 'Read axis array (local)'
     endif
 
     do py = 1, nprocs_y_in
@@ -1486,7 +1486,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       LOG_INFO("SNO_axis_define",*) '[SNO_axis_define] define axis'
+       LOG_INFO("SNO_axis_define",*) 'Define axis'
     endif
 
     do n = 1, naxis
@@ -1564,7 +1564,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       LOG_INFO("SNO_axis_write",*) '[SNO_axis_write] write axis'
+       LOG_INFO("SNO_axis_write",*) 'Write axis'
     endif
 
     do n = 1, naxis

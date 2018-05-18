@@ -22,6 +22,7 @@ module mod_realinput
   use scale_urban_grid_cartesC_index
   use scale_index
   use scale_tracer
+  use scale_cpl_sfc_index
 
   use scale_prc, only: &
      PRC_IsMaster, &
@@ -97,7 +98,7 @@ module mod_realinput
 
   real(RP), private, allocatable :: tw_org   (:,:)
   real(RP), private, allocatable :: sst_org  (:,:)
-  real(RP), private, allocatable :: albw_org (:,:,:)
+  real(RP), private, allocatable :: albw_org (:,:,:,:)
   real(RP), private, allocatable :: olon_org (:,:)
   real(RP), private, allocatable :: olat_org (:,:)
   real(RP), private, allocatable :: omask_org(:,:)
@@ -385,9 +386,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine REALINPUT_surface
-    use scale_const, only: &
-         I_SW => CONST_I_SW, &
-         I_LW => CONST_I_LW
     use scale_time, only: &
        TIME_gettimelabel
     use mod_land_vars, only: &
@@ -498,19 +496,19 @@ contains
     real(RP), allocatable :: LAND_TEMP_org      (:,:,:,:)
     real(RP), allocatable :: LAND_WATER_org     (:,:,:,:)
     real(RP), allocatable :: LAND_SFC_TEMP_org  (:,:,:)
-    real(RP), allocatable :: LAND_SFC_albedo_org(:,:,:,:)
+    real(RP), allocatable :: LAND_SFC_albedo_org(:,:,:,:,:)
 
     ! urban
     real(RP) :: URBAN_TC_ORG(IA,JA)
     real(RP) :: URBAN_QC_ORG(IA,JA)
     real(RP) :: URBAN_UC_ORG(IA,JA)
     real(RP) :: URBAN_SFC_TEMP_ORG(IA,JA)
-    real(RP) :: URBAN_SFC_albedo_ORG(IA,JA,2)
+    real(RP) :: URBAN_SFC_albedo_ORG(IA,JA,N_RAD_DIR,N_RAD_RGN)
 
     ! ocean
     real(RP), allocatable :: OCEAN_TEMP_org      (:,:,:,:)
     real(RP), allocatable :: OCEAN_SFC_TEMP_org  (:,:,:)
-    real(RP), allocatable :: OCEAN_SFC_albedo_org(:,:,:,:)
+    real(RP), allocatable :: OCEAN_SFC_albedo_org(:,:,:,:,:)
     real(RP), allocatable :: OCEAN_SFC_Z0_org    (:,:,:)
 
     integer :: NUMBER_OF_FILES_LAND        = 1
@@ -542,7 +540,7 @@ contains
 
     logical :: boundary_flag = .false.
 
-    integer :: k, i, j, n, ns, ne
+    integer :: k, i, j, n, ns, ne, idir, irgn
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
@@ -654,15 +652,15 @@ contains
 
     totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
 
-    allocate( LAND_TEMP_ORG      (LKMAX,IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-    allocate( LAND_WATER_ORG     (LKMAX,IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-    allocate( LAND_SFC_TEMP_ORG  (      IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-    allocate( LAND_SFC_albedo_ORG(      IA,JA,2,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( LAND_TEMP_ORG       (LKMAX,IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( LAND_WATER_ORG      (LKMAX,IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( LAND_SFC_TEMP_ORG   (      IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( LAND_SFC_albedo_ORG (      IA,JA,N_RAD_DIR,N_RAD_RGN,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
 
-    allocate( OCEAN_TEMP_ORG      (OKMAX,IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-    allocate( OCEAN_SFC_TEMP_ORG  (      IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-    allocate( OCEAN_SFC_albedo_ORG(      IA,JA,2,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-    allocate( OCEAN_SFC_Z0_ORG    (      IA,JA,  1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( OCEAN_TEMP_ORG      (OKMAX,IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( OCEAN_SFC_TEMP_ORG  (      IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( OCEAN_SFC_albedo_ORG(      IA,JA,N_RAD_DIR,N_RAD_RGN,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( OCEAN_SFC_Z0_ORG    (      IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
 
     if ( mdlid_ocean == iGrADS ) then
        BASENAME_ORG = ""
@@ -701,19 +699,19 @@ contains
        ns = max(ns, NUMBER_OF_SKIP_TSTEPS+1)
 
        ! read all prepared data
-       call ParentSurfaceInput( LAND_TEMP_org       (:,:,:,ns:ne), &
-                                LAND_WATER_org      (:,:,:,ns:ne), &
-                                LAND_SFC_TEMP_org   (:,:,  ns:ne), &
-                                LAND_SFC_albedo_org (:,:,:,ns:ne), &
+       call ParentSurfaceInput( LAND_TEMP_org       (:,:,:,  ns:ne), &
+                                LAND_WATER_org      (:,:,:,  ns:ne), &
+                                LAND_SFC_TEMP_org   (:,:,    ns:ne), &
+                                LAND_SFC_albedo_org (:,:,:,:,ns:ne), &
                                 URBAN_TC_org,         &
                                 URBAN_QC_org,         &
                                 URBAN_UC_org,         &
                                 URBAN_SFC_TEMP_org,   &
                                 URBAN_SFC_albedo_org, &
-                                OCEAN_TEMP_org      (OKS,:,:,  ns:ne), &
-                                OCEAN_SFC_TEMP_org  (    :,:,  ns:ne), &
-                                OCEAN_SFC_albedo_org(    :,:,:,ns:ne), &
-                                OCEAN_SFC_Z0_org    (    :,:,  ns:ne), &
+                                OCEAN_TEMP_org      (OKS,:,:,    ns:ne), &
+                                OCEAN_SFC_TEMP_org  (    :,:,    ns:ne), &
+                                OCEAN_SFC_albedo_org(    :,:,:,:,ns:ne), &
+                                OCEAN_SFC_Z0_org    (    :,:,    ns:ne), &
                                 BASENAME_LAND,           &
                                 BASENAME_OCEAN,          &
                                 mdlid_land, mdlid_ocean, &
@@ -742,16 +740,22 @@ contains
     do j = 1, JA
     do i = 1, IA
        LAND_SFC_TEMP  (i,j)      = LAND_SFC_TEMP_org  (i,j,     ns)
-       LAND_SFC_albedo(i,j,I_LW) = LAND_SFC_albedo_org(i,j,I_LW,ns)
-       LAND_SFC_albedo(i,j,I_SW) = LAND_SFC_albedo_org(i,j,I_SW,ns)
+       do irgn = I_R_IR, I_R_VIS
+       do idir = I_R_direct, I_R_diffuse
+          LAND_SFC_albedo(i,j,idir,irgn) = LAND_SFC_albedo_org(i,j,idir,irgn,ns)
+       enddo
+       enddo
        do k = 1, LKMAX
           LAND_TEMP (k,i,j) = LAND_TEMP_org (k,i,j,ns)
           LAND_WATER(k,i,j) = LAND_WATER_org(k,i,j,ns)
        enddo
 
        URBAN_SFC_TEMP  (i,j)      = URBAN_SFC_TEMP_org  (i,j)
-       URBAN_SFC_albedo(i,j,I_LW) = URBAN_SFC_albedo_org(i,j,I_LW)
-       URBAN_SFC_albedo(i,j,I_SW) = URBAN_SFC_albedo_org(i,j,I_SW)
+       do irgn = I_R_IR, I_R_VIS
+       do idir = I_R_direct, I_R_diffuse
+          URBAN_SFC_albedo(i,j,idir,irgn) = URBAN_SFC_albedo_org(i,j,idir,irgn)
+       enddo
+       enddo
        do k = UKS, UKE
           URBAN_TRL(k,i,j) = URBAN_SFC_TEMP_org(i,j)
           URBAN_TBL(k,i,j) = URBAN_SFC_TEMP_org(i,j)
@@ -774,29 +778,33 @@ contains
           OCEAN_UVEL(k,i,j) = 0.0_RP
           OCEAN_VVEL(k,i,j) = 0.0_RP
        enddo
-       OCEAN_SFC_TEMP  (i,j)      = OCEAN_SFC_TEMP_ORG  (i,j,     ns)
-       OCEAN_SFC_albedo(i,j,I_LW) = OCEAN_SFC_albedo_ORG(i,j,I_LW,ns)
-       OCEAN_SFC_albedo(i,j,I_SW) = OCEAN_SFC_albedo_ORG(i,j,I_SW,ns)
-       OCEAN_SFC_Z0M   (i,j)      = OCEAN_SFC_Z0_ORG    (i,j,     ns)
-       OCEAN_SFC_Z0H   (i,j)      = OCEAN_SFC_Z0_ORG    (i,j,     ns)
-       OCEAN_SFC_Z0E   (i,j)      = OCEAN_SFC_Z0_ORG    (i,j,     ns)
+       OCEAN_SFC_TEMP(i,j) = OCEAN_SFC_TEMP_ORG(i,j,ns)
+       OCEAN_SFC_Z0M (i,j) = OCEAN_SFC_Z0_ORG  (i,j,ns)
+       OCEAN_SFC_Z0H (i,j) = OCEAN_SFC_Z0_ORG  (i,j,ns)
+       OCEAN_SFC_Z0E (i,j) = OCEAN_SFC_Z0_ORG  (i,j,ns)
+       do irgn = I_R_IR, I_R_VIS
+       do idir = I_R_direct, I_R_diffuse
+          OCEAN_SFC_albedo(i,j,idir,irgn) = OCEAN_SFC_albedo_ORG(i,j,idir,irgn,ns)
+       enddo
+       enddo
     enddo
     enddo
 
     do j = 1, JA
     do i = 1, IA
-       ATMOS_PHY_SF_SFC_TEMP  (i,j)      = fact_ocean(i,j) * OCEAN_SFC_TEMP  (i,j) &
-                                         + fact_land (i,j) * LAND_SFC_TEMP   (i,j) &
-                                         + fact_urban(i,j) * URBAN_SFC_TEMP  (i,j)
-       ATMOS_PHY_SF_SFC_albedo(i,j,I_LW) = fact_ocean(i,j) * OCEAN_SFC_albedo(i,j,I_LW) &
-                                         + fact_land (i,j) * LAND_SFC_albedo (i,j,I_LW) &
-                                         + fact_urban(i,j) * URBAN_SFC_albedo(i,j,I_LW)
-       ATMOS_PHY_SF_SFC_albedo(i,j,I_SW) = fact_ocean(i,j) * OCEAN_SFC_albedo(i,j,I_SW) &
-                                         + fact_land (i,j) * LAND_SFC_albedo (i,j,I_SW) &
-                                         + fact_urban(i,j) * URBAN_SFC_albedo(i,j,I_SW)
-       ATMOS_PHY_SF_SFC_Z0M   (i,j)      = OCEAN_SFC_Z0M(i,j)
-       ATMOS_PHY_SF_SFC_Z0H   (i,j)      = OCEAN_SFC_Z0H(i,j)
-       ATMOS_PHY_SF_SFC_Z0E   (i,j)      = OCEAN_SFC_Z0E(i,j)
+       ATMOS_PHY_SF_SFC_TEMP(i,j) = fact_ocean(i,j) * OCEAN_SFC_TEMP(i,j) &
+                                  + fact_land (i,j) * LAND_SFC_TEMP (i,j) &
+                                  + fact_urban(i,j) * URBAN_SFC_TEMP(i,j)
+       ATMOS_PHY_SF_SFC_Z0M (i,j) = OCEAN_SFC_Z0M(i,j)
+       ATMOS_PHY_SF_SFC_Z0H (i,j) = OCEAN_SFC_Z0H(i,j)
+       ATMOS_PHY_SF_SFC_Z0E (i,j) = OCEAN_SFC_Z0E(i,j)
+       do irgn = I_R_IR, I_R_VIS
+       do idir = I_R_direct, I_R_diffuse
+          ATMOS_PHY_SF_SFC_albedo(i,j,idir,irgn) = fact_ocean(i,j) * OCEAN_SFC_albedo(i,j,idir,irgn) &
+                                                 + fact_land (i,j) * LAND_SFC_albedo (i,j,idir,irgn) &
+                                                 + fact_urban(i,j) * URBAN_SFC_albedo(i,j,idir,irgn)
+       enddo
+       enddo
     enddo
     enddo
 
@@ -817,18 +825,16 @@ contains
              basename_out_mod = trim(BASENAME_BOUNDARY)
           endif
 
-          call ParentSurfaceBoundary( LAND_TEMP_org       (:,:,:,  ns:ne), &
-                                      LAND_WATER_org      (:,:,:,  ns:ne), &
-                                      LAND_SFC_TEMP_org   (  :,:,  ns:ne), &
-                                      LAND_SFC_albedo_org (  :,:,:,ns:ne), &
-                                      OCEAN_TEMP_org      (:,:,:,  ns:ne), &
-                                      OCEAN_SFC_TEMP_org  (  :,:,  ns:ne), &
-                                      OCEAN_SFC_albedo_org(  :,:,:,ns:ne), &
-                                      OCEAN_SFC_Z0_org    (  :,:,  ns:ne), &
-                                      totaltimesteps,                    &
-                                      BOUNDARY_UPDATE_DT,                &
-                                      basename_out_mod,                  &
-                                      BOUNDARY_TITLE                     )
+          call ParentSurfaceBoundary( LAND_TEMP_org     (:,:,:,ns:ne), &
+                                      LAND_WATER_org    (:,:,:,ns:ne), &
+                                      LAND_SFC_TEMP_org (  :,:,ns:ne), &
+                                      OCEAN_TEMP_org    (:,:,:,ns:ne), &
+                                      OCEAN_SFC_TEMP_org(  :,:,ns:ne), &
+                                      OCEAN_SFC_Z0_org  (  :,:,ns:ne), &
+                                      totaltimesteps,                  &
+                                      BOUNDARY_UPDATE_DT,              &
+                                      basename_out_mod,                &
+                                      BOUNDARY_TITLE                   )
 
        endif
     endif
@@ -1916,12 +1922,12 @@ contains
     end select
 
 
-    allocate( tw_org   ( odims(1), odims(2) ) )
-    allocate( sst_org  ( odims(1), odims(2) ) )
-    allocate( albw_org ( odims(1), odims(2), 2 ) )
-    allocate( olon_org ( odims(1), odims(2) ) )
-    allocate( olat_org ( odims(1), odims(2) ) )
-    allocate( omask_org( odims(1), odims(2) ) )
+    allocate( tw_org   (odims(1),odims(2)) )
+    allocate( sst_org  (odims(1),odims(2)) )
+    allocate( albw_org (odims(1),odims(2),N_RAD_DIR,N_RAD_RGN) )
+    allocate( olon_org (odims(1),odims(2)) )
+    allocate( olat_org (odims(1),odims(2)) )
+    allocate( omask_org(odims(1),odims(2)) )
 
     first = .true.
 
@@ -1967,9 +1973,7 @@ contains
          COMM_wait
     use scale_const, only: &
          EPS => CONST_EPS, &
-         UNDEF => CONST_UNDEF, &
-         I_SW => CONST_I_SW, &
-         I_LW => CONST_I_LW
+         UNDEF => CONST_UNDEF
     use scale_interp, only: &
          INTERP_factor2d, &
          INTERP_interp2d
@@ -2010,15 +2014,15 @@ contains
     real(RP),         intent(out) :: tg  (:,:,:,:)
     real(RP),         intent(out) :: strg(:,:,:,:)
     real(RP),         intent(out) :: lst (:,:,:)
-    real(RP),         intent(out) :: albg(:,:,:,:)
+    real(RP),         intent(out) :: albg(:,:,:,:,:)
     real(RP),         intent(inout) :: tc_urb(IA,JA)
     real(RP),         intent(inout) :: qc_urb(IA,JA)
     real(RP),         intent(inout) :: uc_urb(IA,JA)
     real(RP),         intent(inout) :: ust   (IA,JA)
-    real(RP),         intent(inout) :: albu  (IA,JA,2)
+    real(RP),         intent(inout) :: albu  (IA,JA,N_RAD_DIR,N_RAD_RGN)
     real(RP),         intent(out) :: tw  (:,:,:)
     real(RP),         intent(out) :: sst (:,:,:)
-    real(RP),         intent(out) :: albw(:,:,:,:)
+    real(RP),         intent(out) :: albw(:,:,:,:,:)
     real(RP),         intent(out) :: z0w (:,:,:)
     character(len=*), intent(in)  :: basename_land
     character(len=*), intent(in)  :: basename_ocean
@@ -2046,7 +2050,7 @@ contains
 !    real(RP) :: skint_org(         ldims(2),ldims(3))
     real(RP) :: lst_org  (         ldims(2),ldims(3))
     real(RP) :: ust_org  (         ldims(2),ldims(3))
-    real(RP) :: albg_org (         ldims(2),ldims(3),2)
+    real(RP) :: albg_org (         ldims(2),ldims(3),N_RAD_DIR,N_RAD_RGN)
     real(RP) :: topo_org (         ldims(2),ldims(3))
     real(RP) :: lmask_org(         ldims(2),ldims(3))
     real(RP) :: lz_org   (ldims(1)                  )
@@ -2216,8 +2220,12 @@ contains
           end if
           call COMM_bcast( lst_org, ldims(2), ldims(3) )
           call COMM_bcast( ust_org, ldims(2), ldims(3) )
-          call COMM_bcast( albg_org(:,:,I_LW), ldims(2), ldims(3) )
-          call COMM_bcast( albg_org(:,:,I_SW), ldims(2), ldims(3) )
+          call COMM_bcast( albg_org(:,:,I_R_direct ,I_R_IR ), ldims(2), ldims(3) )
+          call COMM_bcast( albg_org(:,:,I_R_diffuse,I_R_IR ), ldims(2), ldims(3) )
+          call COMM_bcast( albg_org(:,:,I_R_direct ,I_R_NIR), ldims(2), ldims(3) )
+          call COMM_bcast( albg_org(:,:,I_R_diffuse,I_R_NIR), ldims(2), ldims(3) )
+          call COMM_bcast( albg_org(:,:,I_R_direct ,I_R_VIS), ldims(2), ldims(3) )
+          call COMM_bcast( albg_org(:,:,I_R_diffuse,I_R_VIS), ldims(2), ldims(3) )
           call COMM_bcast( topo_org, ldims(2), ldims(3) )
           call COMM_bcast( lmask_org, ldims(2), ldims(3) )
           call COMM_bcast( llon_org, ldims(2), ldims(3) )
@@ -2280,8 +2288,12 @@ contains
           call PROF_rapstart('___SurfaceBcast',3)
           call COMM_bcast( tw_org, odims(1), odims(2) )
           call COMM_bcast( sst_org, odims(1), odims(2) )
-          call COMM_bcast( albw_org(:,:,I_LW), odims(1), odims(2) )
-          call COMM_bcast( albw_org(:,:,I_SW), odims(1), odims(2) )
+          call COMM_bcast( albw_org(:,:,I_R_direct ,I_R_IR ), odims(1), odims(2) )
+          call COMM_bcast( albw_org(:,:,I_R_diffuse,I_R_IR ), odims(1), odims(2) )
+          call COMM_bcast( albw_org(:,:,I_R_direct ,I_R_NIR), odims(1), odims(2) )
+          call COMM_bcast( albw_org(:,:,I_R_diffuse,I_R_NIR), odims(1), odims(2) )
+          call COMM_bcast( albw_org(:,:,I_R_direct ,I_R_VIS), odims(1), odims(2) )
+          call COMM_bcast( albw_org(:,:,I_R_diffuse,I_R_VIS), odims(1), odims(2) )
           call COMM_bcast( z0w_org, odims(1), odims(2) )
           call COMM_bcast( omask_org, odims(1), odims(2) )
           if ( first .or. update_coord ) then
@@ -2333,7 +2345,7 @@ contains
 
           call land_interporation( &
                tg(:,:,:,nn), strg(:,:,:,nn), & ! (out)
-               lst(:,:,nn), albg(:,:,:,nn),  & ! (out)
+               lst(:,:,nn), albg(:,:,:,:,nn),  & ! (out)
                ust, albu,                    & ! (out)
                tg_org, strg_org, smds_org,   & ! (inout)
                lst_org, albg_org,            & ! (inout)
@@ -2372,8 +2384,12 @@ contains
 
        do j = 1, odims(2)
        do i = 1, odims(1)
-          if ( albw_org(i,j,I_LW) == UNDEF ) albw_org(i,j,I_LW) = init_ocean_alb_lw
-          if ( albw_org(i,j,I_SW) == UNDEF ) albw_org(i,j,I_SW) = init_ocean_alb_sw
+          if ( albw_org(i,j,I_R_direct ,I_R_IR ) == UNDEF ) albw_org(i,j,I_R_direct ,I_R_IR ) = init_ocean_alb_lw
+          if ( albw_org(i,j,I_R_diffuse,I_R_IR ) == UNDEF ) albw_org(i,j,I_R_diffuse,I_R_IR ) = init_ocean_alb_lw
+          if ( albw_org(i,j,I_R_direct ,I_R_NIR) == UNDEF ) albw_org(i,j,I_R_direct ,I_R_NIR) = init_ocean_alb_sw
+          if ( albw_org(i,j,I_R_diffuse,I_R_NIR) == UNDEF ) albw_org(i,j,I_R_diffuse,I_R_NIR) = init_ocean_alb_sw
+          if ( albw_org(i,j,I_R_direct ,I_R_VIS) == UNDEF ) albw_org(i,j,I_R_direct ,I_R_VIS) = init_ocean_alb_sw
+          if ( albw_org(i,j,I_R_diffuse,I_R_VIS) == UNDEF ) albw_org(i,j,I_R_diffuse,I_R_VIS) = init_ocean_alb_sw
           if ( z0w_org(i,j) == UNDEF ) z0w_org(i,j) = init_ocean_z0w
        end do
        end do
@@ -2411,23 +2427,59 @@ contains
                              sst_org (:,:),        & ! [IN]
                              sst     (:,:,nn)      ) ! [OUT]
 
-       call INTERP_interp2d( itp_nh,               & ! [IN]
-                             odims(1), odims(2),   & ! [IN]
-                             IA, JA,               & ! [IN]
-                             igrd    (:,:,:),      & ! [IN]
-                             jgrd    (:,:,:),      & ! [IN]
-                             hfact   (:,:,:),      & ! [IN]
-                             albw_org(:,:,I_LW),   & ! [IN]
-                             albw    (:,:,I_LW,nn) ) ! [OUT]
+       call INTERP_interp2d( itp_nh,                              & ! [IN]
+                             odims(1), odims(2),                  & ! [IN]
+                             IA, JA,                              & ! [IN]
+                             igrd    (:,:,:),                     & ! [IN]
+                             jgrd    (:,:,:),                     & ! [IN]
+                             hfact   (:,:,:),                     & ! [IN]
+                             albw_org(:,:,I_R_direct ,I_R_IR ),   & ! [IN]
+                             albw    (:,:,I_R_direct ,I_R_IR ,nn) ) ! [OUT]
 
-       call INTERP_interp2d( itp_nh,               & ! [IN]
-                             odims(1), odims(2),   & ! [IN]
-                             IA, JA,               & ! [IN]
-                             igrd    (:,:,:),      & ! [IN]
-                             jgrd    (:,:,:),      & ! [IN]
-                             hfact   (:,:,:),      & ! [IN]
-                             albw_org(:,:,I_SW),   & ! [IN]
-                             albw    (:,:,I_SW,nn) ) ! [OUT]
+       call INTERP_interp2d( itp_nh,                              & ! [IN]
+                             odims(1), odims(2),                  & ! [IN]
+                             IA, JA,                              & ! [IN]
+                             igrd    (:,:,:),                     & ! [IN]
+                             jgrd    (:,:,:),                     & ! [IN]
+                             hfact   (:,:,:),                     & ! [IN]
+                             albw_org(:,:,I_R_diffuse,I_R_IR ),   & ! [IN]
+                             albw    (:,:,I_R_diffuse,I_R_IR ,nn) ) ! [OUT]
+
+       call INTERP_interp2d( itp_nh,                              & ! [IN]
+                             odims(1), odims(2),                  & ! [IN]
+                             IA, JA,                              & ! [IN]
+                             igrd    (:,:,:),                     & ! [IN]
+                             jgrd    (:,:,:),                     & ! [IN]
+                             hfact   (:,:,:),                     & ! [IN]
+                             albw_org(:,:,I_R_direct ,I_R_NIR),   & ! [IN]
+                             albw    (:,:,I_R_direct ,I_R_NIR,nn) ) ! [OUT]
+
+       call INTERP_interp2d( itp_nh,                              & ! [IN]
+                             odims(1), odims(2),                  & ! [IN]
+                             IA, JA,                              & ! [IN]
+                             igrd    (:,:,:),                     & ! [IN]
+                             jgrd    (:,:,:),                     & ! [IN]
+                             hfact   (:,:,:),                     & ! [IN]
+                             albw_org(:,:,I_R_diffuse,I_R_NIR),   & ! [IN]
+                             albw    (:,:,I_R_diffuse,I_R_NIR,nn) ) ! [OUT]
+
+       call INTERP_interp2d( itp_nh,                              & ! [IN]
+                             odims(1), odims(2),                  & ! [IN]
+                             IA, JA,                              & ! [IN]
+                             igrd    (:,:,:),                     & ! [IN]
+                             jgrd    (:,:,:),                     & ! [IN]
+                             hfact   (:,:,:),                     & ! [IN]
+                             albw_org(:,:,I_R_direct ,I_R_VIS),   & ! [IN]
+                             albw    (:,:,I_R_direct ,I_R_VIS,nn) ) ! [OUT]
+
+       call INTERP_interp2d( itp_nh,                              & ! [IN]
+                             odims(1), odims(2),                  & ! [IN]
+                             IA, JA,                              & ! [IN]
+                             igrd    (:,:,:),                     & ! [IN]
+                             jgrd    (:,:,:),                     & ! [IN]
+                             hfact   (:,:,:),                     & ! [IN]
+                             albw_org(:,:,I_R_diffuse,I_R_VIS),   & ! [IN]
+                             albw    (:,:,I_R_diffuse,I_R_VIS,nn) ) ! [OUT]
 
        call INTERP_interp2d( itp_nh,               & ! [IN]
                              odims(1), odims(2),   & ! [IN]
@@ -2469,10 +2521,8 @@ contains
        tg, &
        strg, &
        lst, &
-       albg, &
        tw, &
        sst, &
-       albw, &
        z0, &
        numsteps,  &
        update_dt, &
@@ -2493,10 +2543,8 @@ contains
     real(RP),         intent(in)   :: tg(:,:,:,:)
     real(RP),         intent(in)   :: strg(:,:,:,:)
     real(RP),         intent(in)   :: lst(:,:,:)
-    real(RP),         intent(in)   :: albg(:,:,:,:)
     real(RP),         intent(in)   :: tw(:,:,:,:)
     real(RP),         intent(in)   :: sst(:,:,:)
-    real(RP),         intent(in)   :: albw(:,:,:,:)
     real(RP),         intent(in)   :: z0(:,:,:)
     real(DP),         intent(in)   :: update_dt
     character(len=*), intent(in)   :: basename
@@ -2534,16 +2582,6 @@ contains
           'XYT', boundary_out_dtype,                                 & ! [IN]
          vid(3),                                                     & ! [OUT]
          timeintv=update_dt, nsteps=numsteps                         ) ! [IN]
-    call FILE_CARTESC_def_var( fid,                                     & ! [IN]
-         'LAND_ALB_LW', 'Reference Land Surface Albedo Long-wave', '1', & ! [IN]
-          'XYT', boundary_out_dtype,                                    & ! [IN]
-         vid(4),                                                        & ! [OUT]
-         timeintv=update_dt, nsteps=numsteps                            ) ! [IN]
-    call FILE_CARTESC_def_var( fid,                                      & ! [IN]
-         'LAND_ALB_SW', 'Reference Land Surface Albedo Short-wave', '1', & ! [IN]
-          'XYT', boundary_out_dtype,                                     & ! [IN]
-         vid(5),                                                         & ! [OUT]
-         timeintv=update_dt, nsteps=numsteps                             ) ! [IN]
     call FILE_CARTESC_def_var( fid,                        & ! [IN]
          'OCEAN_TEMP', 'Reference Ocean Temperature', 'K', & ! [IN]
           'OXYT', boundary_out_dtype,                      & ! [IN]
@@ -2554,16 +2592,6 @@ contains
           'XYT', boundary_out_dtype,                                   & ! [IN]
          vid(7),                                                       & ! [OUT]
          timeintv=update_dt, nsteps=numsteps                           ) ! [IN]
-    call FILE_CARTESC_def_var( fid,                                       & ! [IN]
-         'OCEAN_ALB_LW', 'Reference Ocean Surface Albedo Long-wave', '1', & ! [IN]
-          'XYT', boundary_out_dtype,                                      & ! [IN]
-         vid(8),                                                          & ! [OUT]
-         timeintv=update_dt, nsteps=numsteps                              ) ! [IN]
-    call FILE_CARTESC_def_var( fid,                                        & ! [IN]
-         'OCEAN_ALB_SW', 'Reference Ocean Surface Albedo Short-wave', '1', & ! [IN]
-          'XYT', boundary_out_dtype,                                       & ! [IN]
-         vid(9),                                                           & ! [OUT]
-         timeintv=update_dt, nsteps=numsteps                               ) ! [IN]
     call FILE_CARTESC_def_var( fid,                         & ! [IN]
          'OCEAN_SFC_Z0', 'Reference Ocean Surface Z0', 'm', & ! [IN]
           'XYT', boundary_out_dtype,                        & ! [IN]
@@ -2572,16 +2600,12 @@ contains
 
     call FILE_CARTESC_enddef( fid )
 
-    call FILE_CARTESC_write_var( fid, vid(1),  tg  (:,:,:,     ts:te), 'LAND_TEMP',      'LXYT', update_dt )
-    call FILE_CARTESC_write_var( fid, vid(2),  strg(:,:,:,     ts:te), 'LAND_WATER',     'LXYT', update_dt )
-    call FILE_CARTESC_write_var( fid, vid(3),  lst (  :,:,     ts:te), 'LAND_SFC_TEMP',  'XYT',  update_dt )
-    call FILE_CARTESC_write_var( fid, vid(4),  albg(  :,:,I_LW,ts:te), 'LAND_ALB_LW',    'XYT',  update_dt )
-    call FILE_CARTESC_write_var( fid, vid(5),  albg(  :,:,I_SW,ts:te), 'LAND_ALB_SW',    'XYT',  update_dt )
-    call FILE_CARTESC_write_var( fid, vid(6),  tw  (:,:,:,     ts:te), 'OCEAN_TEMP',     'OXYT', update_dt )
-    call FILE_CARTESC_write_var( fid, vid(7),  sst (  :,:,     ts:te), 'OCEAN_SFC_TEMP', 'XYT',  update_dt )
-    call FILE_CARTESC_write_var( fid, vid(8),  albw(  :,:,I_LW,ts:te), 'OCEAN_ALB_LW',   'XYT',  update_dt )
-    call FILE_CARTESC_write_var( fid, vid(9),  albw(  :,:,I_SW,ts:te), 'OCEAN_ALB_SW',   'XYT',  update_dt )
-    call FILE_CARTESC_write_var( fid, vid(10), z0  (  :,:,     ts:te), 'OCEAN_SFC_Z0',   'XYT',  update_dt )
+    call FILE_CARTESC_write_var( fid, vid(1),  tg  (:,:,:,ts:te), 'LAND_TEMP',      'LXYT', update_dt )
+    call FILE_CARTESC_write_var( fid, vid(2),  strg(:,:,:,ts:te), 'LAND_WATER',     'LXYT', update_dt )
+    call FILE_CARTESC_write_var( fid, vid(3),  lst (  :,:,ts:te), 'LAND_SFC_TEMP',  'XYT',  update_dt )
+    call FILE_CARTESC_write_var( fid, vid(6),  tw  (:,:,:,ts:te), 'OCEAN_TEMP',     'OXYT', update_dt )
+    call FILE_CARTESC_write_var( fid, vid(7),  sst (  :,:,ts:te), 'OCEAN_SFC_TEMP', 'XYT',  update_dt )
+    call FILE_CARTESC_write_var( fid, vid(10), z0  (  :,:,ts:te), 'OCEAN_SFC_Z0',   'XYT',  update_dt )
 
     call PROF_rapend  ('___SurfaceOutput',3)
 
@@ -2643,14 +2667,14 @@ contains
     real(RP), intent(out)   :: tg(LKMAX,IA,JA)
     real(RP), intent(out)   :: strg(LKMAX,IA,JA)
     real(RP), intent(out)   :: lst(IA,JA)
-    real(RP), intent(out)   :: albg(IA,JA,2)
+    real(RP), intent(out)   :: albg(IA,JA,N_RAD_DIR,N_RAD_RGN)
     real(RP), intent(out)   :: ust(IA,JA)
-    real(RP), intent(out)   :: albu(IA,JA,2)
+    real(RP), intent(out)   :: albu(IA,JA,N_RAD_DIR,N_RAD_RGN)
     real(RP), intent(inout) :: tg_org(:,:,:)
     real(RP), intent(inout) :: strg_org(:,:,:)
     real(RP), intent(inout) :: smds_org(:,:,:)
     real(RP), intent(inout) :: lst_org(:,:)
-    real(RP), intent(inout) :: albg_org(:,:,:)
+    real(RP), intent(inout) :: albg_org(:,:,:,:)
     real(RP), intent(inout) :: ust_org(:,:)
     real(RP), intent(inout) :: sst_org(:,:)
     real(RP), intent(in)    :: lmask_org(:,:)
@@ -2755,8 +2779,12 @@ contains
 !       if ( skinw_org(i,j) == UNDEF ) skinw_org(i,j) = 0.0_RP
 !       if ( snowq_org(i,j) == UNDEF ) snowq_org(i,j) = 0.0_RP
 !       if ( snowt_org(i,j) == UNDEF ) snowt_org(i,j) = TEM00
-       if ( albg_org(i,j,I_LW) == UNDEF ) albg_org(i,j,I_LW) = 0.03_RP  ! emissivity of general ground surface : 0.95-0.98
-       if ( albg_org(i,j,I_SW) == UNDEF ) albg_org(i,j,I_SW) = 0.22_RP
+       if( albg_org(i,j,I_R_direct ,I_R_IR ) == UNDEF ) albg_org(i,j,I_R_direct ,I_R_IR ) = 0.03_RP
+       if( albg_org(i,j,I_R_diffuse,I_R_IR ) == UNDEF ) albg_org(i,j,I_R_diffuse,I_R_IR ) = 0.03_RP  ! emissivity of general ground surface : 0.95-0.98
+       if( albg_org(i,j,I_R_direct ,I_R_NIR) == UNDEF ) albg_org(i,j,I_R_direct ,I_R_NIR) = 0.22_RP
+       if( albg_org(i,j,I_R_diffuse,I_R_NIR) == UNDEF ) albg_org(i,j,I_R_diffuse,I_R_NIR) = 0.22_RP
+       if( albg_org(i,j,I_R_direct ,I_R_VIS) == UNDEF ) albg_org(i,j,I_R_direct ,I_R_VIS) = 0.22_RP
+       if( albg_org(i,j,I_R_diffuse,I_R_VIS) == UNDEF ) albg_org(i,j,I_R_diffuse,I_R_VIS) = 0.22_RP
     end do
     end do
 
@@ -2826,23 +2854,59 @@ contains
                           ust_org (:,:),      & ! [IN]
                           ust     (:,:)       ) ! [OUT]
 
-    call INTERP_interp2d( itp_nh,             & ! [IN]
-                          ldims(2), ldims(3), & ! [IN]
-                          IA, JA,             & ! [IN]
-                          igrd    (:,:,:),    & ! [IN]
-                          jgrd    (:,:,:),    & ! [IN]
-                          hfact   (:,:,:),    & ! [IN]
-                          albg_org(:,:,I_LW), & ! [IN]
-                          albg    (:,:,I_LW)  ) ! [OUT]
+    call INTERP_interp2d( itp_nh,                            & ! [IN]
+                          ldims(2), ldims(3),                & ! [IN]
+                          IA, JA,                            & ! [IN]
+                          igrd    (:,:,:),                   & ! [IN]
+                          jgrd    (:,:,:),                   & ! [IN]
+                          hfact   (:,:,:),                   & ! [IN]
+                          albg_org(:,:,I_R_direct ,I_R_IR ), & ! [IN]
+                          albg    (:,:,I_R_direct ,I_R_IR )  ) ! [OUT]
 
-    call INTERP_interp2d( itp_nh,             & ! [IN]
-                          ldims(2), ldims(3), & ! [IN]
-                          IA, JA,             & ! [IN]
-                          igrd    (:,:,:),    & ! [IN]
-                          jgrd    (:,:,:),    & ! [IN]
-                          hfact   (:,:,:),    & ! [IN]
-                          albg_org(:,:,I_SW), & ! [IN]
-                          albg    (:,:,I_SW)  ) ! [OUT]
+    call INTERP_interp2d( itp_nh,                            & ! [IN]
+                          ldims(2), ldims(3),                & ! [IN]
+                          IA, JA,                            & ! [IN]
+                          igrd    (:,:,:),                   & ! [IN]
+                          jgrd    (:,:,:),                   & ! [IN]
+                          hfact   (:,:,:),                   & ! [IN]
+                          albg_org(:,:,I_R_diffuse,I_R_IR ), & ! [IN]
+                          albg    (:,:,I_R_diffuse,I_R_IR )  ) ! [OUT]
+
+    call INTERP_interp2d( itp_nh,                            & ! [IN]
+                          ldims(2), ldims(3),                & ! [IN]
+                          IA, JA,                            & ! [IN]
+                          igrd    (:,:,:),                   & ! [IN]
+                          jgrd    (:,:,:),                   & ! [IN]
+                          hfact   (:,:,:),                   & ! [IN]
+                          albg_org(:,:,I_R_direct ,I_R_NIR), & ! [IN]
+                          albg    (:,:,I_R_direct ,I_R_NIR)  ) ! [OUT]
+
+    call INTERP_interp2d( itp_nh,                            & ! [IN]
+                          ldims(2), ldims(3),                & ! [IN]
+                          IA, JA,                            & ! [IN]
+                          igrd    (:,:,:),                   & ! [IN]
+                          jgrd    (:,:,:),                   & ! [IN]
+                          hfact   (:,:,:),                   & ! [IN]
+                          albg_org(:,:,I_R_diffuse,I_R_NIR), & ! [IN]
+                          albg    (:,:,I_R_diffuse,I_R_NIR)  ) ! [OUT]
+
+    call INTERP_interp2d( itp_nh,                            & ! [IN]
+                          ldims(2), ldims(3),                & ! [IN]
+                          IA, JA,                            & ! [IN]
+                          igrd    (:,:,:),                   & ! [IN]
+                          jgrd    (:,:,:),                   & ! [IN]
+                          hfact   (:,:,:),                   & ! [IN]
+                          albg_org(:,:,I_R_direct ,I_R_VIS), & ! [IN]
+                          albg    (:,:,I_R_direct ,I_R_VIS)  ) ! [OUT]
+
+    call INTERP_interp2d( itp_nh,                            & ! [IN]
+                          ldims(2), ldims(3),                & ! [IN]
+                          IA, JA,                            & ! [IN]
+                          igrd    (:,:,:),                   & ! [IN]
+                          jgrd    (:,:,:),                   & ! [IN]
+                          hfact   (:,:,:),                   & ! [IN]
+                          albg_org(:,:,I_R_diffuse,I_R_VIS), & ! [IN]
+                          albg    (:,:,I_R_diffuse,I_R_VIS)  ) ! [OUT]
 
     call INTERP_interp3d( itp_nh,                       & ! [IN]
                           ldims(1), ldims(2), ldims(3), & ! [IN]
@@ -2990,7 +3054,7 @@ contains
     ! copy albedo of land to urban
     do j = 1, JA
     do i = 1, IA
-       albu(i,j,:) = albg(i,j,:)
+       albu(i,j,:,:) = albg(i,j,:,:)
     enddo
     enddo
 

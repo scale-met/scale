@@ -104,7 +104,7 @@ contains
     integer :: i
     !---------------------------------------------------------------------------
 
-    LOG_INFO("SNO_vars_getinfo",*) '[SNO_vars_getinfo] Read information of variables'
+    LOG_INFO("SNO_vars_getinfo",*) 'Read information of variables'
 
     if ( ismaster ) then
        nowrank = 0 ! first file
@@ -258,7 +258,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       LOG_INFO("SNO_vars_alloc",*) '[SNO_vars_alloc] Allocate variable array'
+       LOG_INFO("SNO_vars_alloc",*) 'Allocate variable array'
     endif
 
     if ( dinfo%dim_rank == 1 ) then
@@ -363,7 +363,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( debug ) then
-       LOG_INFO("SNO_vars_dealloc",*) '[SNO_vars_dealloc] Deallocate variable array'
+       LOG_INFO("SNO_vars_dealloc",*) 'Deallocate variable array'
     endif
 
     if( allocated(dinfo%VAR_1d) ) deallocate( dinfo%VAR_1d )

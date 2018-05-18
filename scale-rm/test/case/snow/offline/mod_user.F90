@@ -19,6 +19,7 @@ module mod_user
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
+  use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -175,8 +176,6 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
-       I_LW  => CONST_I_LW,  &
-       I_SW  => CONST_I_SW,  &
        D2R   => CONST_D2R,   &
        PRE00 => CONST_PRE00, &
        Rdry  => CONST_Rdry,  &    ! specific gas constant (dry air)
@@ -260,12 +259,17 @@ contains
        RH                = ( (1.0_RP-fact) * RHIN(stepnum1) &
                            +         fact  * RHIN(stepnum2) )
        PBL (:,:)         = 100.0_RP
-       RWD (:,:,I_SW,1)  = ( (1.0_RP-fact) * SHORTIN(stepnum1) &
-                           +         fact  * SHORTIN(stepnum2) ) ! direct
-       RWD (:,:,I_SW,2)  = 0.0_RP                                 ! duffusion
-       RWD (:,:,I_LW,1)  = 0.0_RP
-       RWD (:,:,I_LW,2)  = ( (1.0_RP-fact) * LONGIN(stepnum1) &
-                           +         fact  * LONGIN(stepnum2) )
+
+       RWD (:,:,I_R_direct ,I_R_IR ) = 0.0_RP
+       RWD (:,:,I_R_diffuse,I_R_IR ) = ( 1.0_RP-fact ) * LONGIN(stepnum1) &
+                                     + (        fact ) * LONGIN(stepnum2)
+       RWD (:,:,I_R_direct ,I_R_NIR) = 0.0_RP
+       RWD (:,:,I_R_diffuse,I_R_NIR) = 0.0_RP
+       RWD (:,:,I_R_direct ,I_R_VIS) = ( 1.0_RP-fact ) * SHORTIN(stepnum1) &
+                                     + (        fact ) * SHORTIN(stepnum2)
+       RWD (:,:,I_R_diffuse,I_R_VIS) = 0.0_RP
+
+
        SNOW(:,:)         = ( (1.0_RP-fact) * SNOWIN(stepnum1) &
                            +         fact  * SNOWIN(stepnum2) )
        RAIN(:,:)         = 0.0_RP
@@ -279,8 +283,8 @@ contains
           !dsec = mod(NOWSEC,3600.0_RP) / 3600.0_RP
 
           RHOS(i,j) = PRSS(i,j) / ( Rdry * TMPA(i,j) )
-          LWD (i,j) = RWD(i,j,I_LW,1) + RWD(i,j,I_LW,2)
-          SWD (i,j) = RWD(i,j,I_SW,1) + RWD(i,j,I_SW,2)
+          LWD (i,j) = RWD(i,j,I_R_direct ,I_R_IR) + RWD(i,j,I_R_direct ,I_R_VIS)
+          SWD (i,j) = RWD(i,j,I_R_diffuse,I_R_IR) + RWD(i,j,I_R_diffuse,I_R_VIS)
 
           !qdry = 1.0_RP - QA(i,j)
           !call qsatf( TMPA(i,j), PRSA(i,j), qdry,    & ! [IN]

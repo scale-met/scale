@@ -22,13 +22,6 @@ module scale_atmos_phy_rd_mm5sw
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
-
-  use scale_atmos_phy_rd_common, only: &
-     I_SW, &
-     I_LW, &
-     I_dn, &
-     I_up
-
   !-----------------------------------------------------------------------------
   implicit none
   private

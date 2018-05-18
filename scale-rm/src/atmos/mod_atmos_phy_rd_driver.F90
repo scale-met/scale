@@ -19,6 +19,7 @@ module mod_atmos_phy_rd_driver
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
+  use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -67,7 +68,7 @@ contains
        TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
        TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
        TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
-       SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_downall, &
+       SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_down,    &
        solins       => ATMOS_PHY_RD_solins,       &
        cosSZA       => ATMOS_PHY_RD_cosSZA
     implicit none
@@ -146,12 +147,10 @@ contains
        ATMOS_PHY_RD_OFFLINE_flux
     use scale_atmos_phy_rd_common, only: &
        ATMOS_PHY_RD_calc_heating, &
-       I_SW,     &
-       I_LW,     &
-       I_dn,     &
-       I_up,     &
-       I_direct, &
-       I_diffuse
+       I_SW, &
+       I_LW, &
+       I_dn, &
+       I_up
     use mod_atmos_vars, only: &
        TEMP,              &
        PRES,              &
@@ -173,7 +172,7 @@ contains
        TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
        TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
        TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
-       SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_downall, &
+       SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_down,    &
        solins       => ATMOS_PHY_RD_solins,       &
        cosSZA       => ATMOS_PHY_RD_cosSZA
     use mod_atmos_vars, only: &
@@ -245,7 +244,7 @@ contains
                DENS(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                REAL_CZ(:,:,:), REAL_FZ(:,:,:),                   & ! [IN]
                fact_ocean(:,:), fact_land(:,:), fact_urban(:,:), & ! [IN]
-               SFC_TEMP(:,:), SFC_albedo(:,:,:),                 & ! [IN]
+               SFC_TEMP(:,:), SFC_albedo(:,:,:,:),               & ! [IN]
                solins(:,:), cosSZA(:,:),                         & ! [IN]
                CLDFRAC(:,:,:), MP_Re(:,:,:,:), MP_Qe(:,:,:,:),   & ! [IN]
                AE_Re(:,:,:,:),                                   & ! [IN]
@@ -375,10 +374,12 @@ contains
        call FILE_HISTORY_in( flux_dn     (:,:,:,I_SW), 'RADFLUX_SWDN', 'downward shortwave radiation flux', 'W/m2', fill_halo=.true. )
        call FILE_HISTORY_in( flux_net    (:,:,:,I_SW), 'RADFLUX_SW',   'net      shortwave radiation flux', 'W/m2', fill_halo=.true. )
 
-       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_LW,I_direct ), 'SFLX_LW_dn_dir', 'SFC downward longwave  flux (direct )', 'W/m2', fill_halo=.true. )
-       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_LW,I_diffuse), 'SFLX_LW_dn_dif', 'SFC downward longwave  flux (diffuse)', 'W/m2', fill_halo=.true. )
-       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_SW,I_direct ), 'SFLX_SW_dn_dir', 'SFC downward shortwave flux (direct )', 'W/m2', fill_halo=.true. )
-       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_SW,I_diffuse), 'SFLX_SW_dn_dif', 'SFC downward shortwave flux (diffuse)', 'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_direct ,I_R_IR ), 'SFLX_IR_dn_dir',  'SFC downward radiation flux (direct ,IR )', 'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_diffuse,I_R_IR ), 'SFLX_IR_dn_dif',  'SFC downward radiation flux (diffuse,IR )', 'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_direct ,I_R_NIR), 'SFLX_NIR_dn_dir', 'SFC downward radiation flux (direct ,NIR)', 'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_diffuse,I_R_NIR), 'SFLX_NIR_dn_dif', 'SFC downward radiation flux (diffuse,NIR)', 'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_direct ,I_R_VIS), 'SFLX_VIS_dn_dir', 'SFC downward radiation flux (direct ,VIS)', 'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_diffuse,I_R_VIS), 'SFLX_VIS_dn_dif', 'SFC downward radiation flux (diffuse,VIS)', 'W/m2', fill_halo=.true. )
 
        call FILE_HISTORY_in( TEMP_t   (:,:,:,I_LW), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)',  'K/day',     fill_halo=.true. )
        call FILE_HISTORY_in( TEMP_t   (:,:,:,I_SW), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)',  'K/day',     fill_halo=.true. )

@@ -19,6 +19,7 @@ module mod_atmos_phy_rd_vars
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
+  use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -30,7 +31,6 @@ module mod_atmos_phy_rd_vars
   public :: ATMOS_PHY_RD_vars_fillhalo
   public :: ATMOS_PHY_RD_vars_restart_read
   public :: ATMOS_PHY_RD_vars_restart_write
-  public :: ATMOS_PHY_RD_vars_external_in
 
   public :: ATMOS_PHY_RD_vars_restart_create
   public :: ATMOS_PHY_RD_vars_restart_open
@@ -65,7 +65,7 @@ module mod_atmos_phy_rd_vars
   real(RP), public, allocatable :: ATMOS_PHY_RD_TOAFLX_SW_up(:,:) ! TOA upward   shortwave flux [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_RD_TOAFLX_SW_dn(:,:) ! TOA downward shortwave flux [J/m2/s]
 
-  real(RP), public, allocatable :: ATMOS_PHY_RD_SFLX_downall(:,:,:,:) ! surface downward flux (LW/SW,direct/diffuse) [J/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_RD_SFLX_down   (:,:,:,:) ! surface downward flux (LW/SW,direct/diffuse) [J/m2/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_RD_solins      (:,:) ! solar insolation flux   [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_RD_cosSZA      (:,:) ! cos(solar zenith angle) (0-1)
@@ -78,19 +78,21 @@ module mod_atmos_phy_rd_vars
   !
   !++ Private parameters & variables
   !
-  integer,                private, parameter :: VMAX = 12      !< number of the variables
-  integer,                private, parameter :: I_SFLX_LW_up   =  1
-  integer,                private, parameter :: I_SFLX_LW_dn   =  2
-  integer,                private, parameter :: I_SFLX_SW_up   =  3
-  integer,                private, parameter :: I_SFLX_SW_dn   =  4
-  integer,                private, parameter :: I_TOAFLX_LW_up =  5
-  integer,                private, parameter :: I_TOAFLX_LW_dn =  6
-  integer,                private, parameter :: I_TOAFLX_SW_up =  7
-  integer,                private, parameter :: I_TOAFLX_SW_dn =  8
-  integer,                private, parameter :: I_SFLX_LW_dir  =  9
-  integer,                private, parameter :: I_SFLX_LW_dif  = 10
-  integer,                private, parameter :: I_SFLX_SW_dir  = 11
-  integer,                private, parameter :: I_SFLX_SW_dif  = 12
+  integer,                private, parameter :: VMAX              = 14 !< number of the variables
+  integer,                private, parameter :: I_SFLX_LW_up      =  1
+  integer,                private, parameter :: I_SFLX_LW_dn      =  2
+  integer,                private, parameter :: I_SFLX_SW_up      =  3
+  integer,                private, parameter :: I_SFLX_SW_dn      =  4
+  integer,                private, parameter :: I_TOAFLX_LW_up    =  5
+  integer,                private, parameter :: I_TOAFLX_LW_dn    =  6
+  integer,                private, parameter :: I_TOAFLX_SW_up    =  7
+  integer,                private, parameter :: I_TOAFLX_SW_dn    =  8
+  integer,                private, parameter :: I_SFLX_IR_dn_dir  =  9
+  integer,                private, parameter :: I_SFLX_IR_dn_dif  = 10
+  integer,                private, parameter :: I_SFLX_NIR_dn_dir = 11
+  integer,                private, parameter :: I_SFLX_NIR_dn_dif = 12
+  integer,                private, parameter :: I_SFLX_VIS_dn_dir = 13
+  integer,                private, parameter :: I_SFLX_VIS_dn_dif = 14
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
@@ -99,30 +101,34 @@ module mod_atmos_phy_rd_vars
   integer,                private            :: VAR_ID(VMAX)   !< ID    of the variables
   integer,                private            :: restart_fid = -1  ! file ID
 
-  data VAR_NAME / 'SFLX_LW_up',   &
-                  'SFLX_LW_dn',   &
-                  'SFLX_SW_up',   &
-                  'SFLX_SW_dn',   &
-                  'TOAFLX_LW_up', &
-                  'TOAFLX_LW_dn', &
-                  'TOAFLX_SW_up', &
-                  'TOAFLX_SW_dn', &
-                  'SFLX_LW_dir',  &
-                  'SFLX_LW_dif',  &
-                  'SFLX_SW_dir',  &
-                  'SFLX_SW_dif'   /
-  data VAR_DESC / 'surface upward   longwave  flux',   &
-                  'surface downward longwave  flux',   &
-                  'surface upward   shortwave flux',   &
-                  'surface downward shortwave flux',   &
-                  'TOA upward   longwave  flux',       &
-                  'TOA downward longwave  flux',       &
-                  'TOA upward   shortwave flux',       &
-                  'TOA downward shortwave flux',       &
-                  'sfc. down. longwave  flux direct',  &
-                  'sfc. down. longwave  flux diffuse', &
-                  'sfc. down. shortwave flux direct',  &
-                  'sfc. down. shortwave flux diffuse'  /
+  data VAR_NAME / 'SFLX_LW_up',      &
+                  'SFLX_LW_dn',      &
+                  'SFLX_SW_up',      &
+                  'SFLX_SW_dn',      &
+                  'TOAFLX_LW_up',    &
+                  'TOAFLX_LW_dn',    &
+                  'TOAFLX_SW_up',    &
+                  'TOAFLX_SW_dn',    &
+                  'SFLX_IR_dn_dir',  &
+                  'SFLX_IR_dn_dif',  &
+                  'SFLX_NIR_dn_dir', &
+                  'SFLX_NIR_dn_dif', &
+                  'SFLX_VIS_dn_dir', &
+                  'SFLX_VIS_dn_dif'  /
+  data VAR_DESC / 'surface upward   longwave  flux', &
+                  'surface downward longwave  flux', &
+                  'surface upward   shortwave flux', &
+                  'surface downward shortwave flux', &
+                  'TOA upward   longwave  flux',     &
+                  'TOA downward longwave  flux',     &
+                  'TOA upward   shortwave flux',     &
+                  'TOA downward shortwave flux',     &
+                  'sfc. down. flux direct  IR',      &
+                  'sfc. down. flux diffuse IR',      &
+                  'sfc. down. flux direct  NIR',     &
+                  'sfc. down. flux diffuse NIR',     &
+                  'sfc. down. flux direct  VIS',     &
+                  'sfc. down. flux diffuse VIS'      /
   data VAR_STDN / 'surface_upwelling_longwave_flux_in_air',    &
                   'surface_downwelling_longwave_flux_in_air',  &
                   'surface_upwelling_shortwave_flux_in_air',   &
@@ -134,8 +140,12 @@ module mod_atmos_phy_rd_vars
                   '', &
                   '', &
                   '', &
+                  '', &
+                  '', &
                   '' /
   data VAR_UNIT / 'W/m2', &
+                  'W/m2', &
+                  'W/m2', &
                   'W/m2', &
                   'W/m2', &
                   'W/m2', &
@@ -197,8 +207,8 @@ contains
     ATMOS_PHY_RD_TOAFLX_SW_up(:,:) = UNDEF
     ATMOS_PHY_RD_TOAFLX_SW_dn(:,:) = UNDEF
 
-    allocate( ATMOS_PHY_RD_SFLX_downall(IA,JA,2,2) )
-    ATMOS_PHY_RD_SFLX_downall(:,:,:,:) = UNDEF
+    allocate( ATMOS_PHY_RD_SFLX_down(IA,JA,N_RAD_DIR,N_RAD_RGN) )
+    ATMOS_PHY_RD_SFLX_down(:,:,:,:) = UNDEF
 
     allocate( ATMOS_PHY_RD_solins(IA,JA) )
     allocate( ATMOS_PHY_RD_cosSZA(IA,JA) )
@@ -253,7 +263,7 @@ contains
        COMM_wait
     implicit none
 
-    integer :: n ,iw, id
+    integer :: n ,idir, irgn
     !---------------------------------------------------------------------------
 
     call COMM_vars8( ATMOS_PHY_RD_SFLX_LW_up  (:,:),  1 )
@@ -266,10 +276,10 @@ contains
     call COMM_vars8( ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),  8 )
 
     n = 8
-    do id = 1, 2 ! direct/diffuse
-    do iw = 1, 2 ! SW/LW
+    do irgn = I_R_IR, I_R_VIS
+    do idir = I_R_direct, I_R_diffuse
        n = n + 1
-       call COMM_vars8( ATMOS_PHY_RD_SFLX_downall(:,:,iw,id), n )
+       call COMM_vars8( ATMOS_PHY_RD_SFLX_down(:,:,idir,irgn), n )
     enddo
     enddo
 
@@ -283,10 +293,10 @@ contains
     call COMM_wait ( ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),  8 )
 
     n = 8
-    do id = 1, 2 ! direct/diffuse
-    do iw = 1, 2 ! SW/LW
+    do irgn = I_R_IR, I_R_VIS
+    do idir = I_R_direct, I_R_diffuse
        n = n + 1
-       call COMM_wait ( ATMOS_PHY_RD_SFLX_downall(:,:,iw,id), n )
+       call COMM_wait ( ATMOS_PHY_RD_SFLX_down(:,:,idir,irgn), n )
     enddo
     enddo
 
@@ -328,7 +338,6 @@ contains
     return
   end subroutine ATMOS_PHY_RD_vars_restart_open
 
-
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_RD_vars_restart_read
@@ -344,30 +353,34 @@ contains
        LOG_NEWLINE
        LOG_INFO("ATMOS_PHY_RD_vars_restart_read",*) 'Read from restart file (ATMOS_PHY_RD) '
 
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(1) , 'XY', & ! [IN]
-                               ATMOS_PHY_RD_SFLX_LW_up(:,:)     ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(2) , 'XY', & ! [IN]
-                               ATMOS_PHY_RD_SFLX_LW_dn(:,:)     ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(3) , 'XY', & ! [IN]
-                               ATMOS_PHY_RD_SFLX_SW_up(:,:)     ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(4) , 'XY', & ! [IN]
-                               ATMOS_PHY_RD_SFLX_SW_dn(:,:)     ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(5) , 'XY', & ! [IN]
-                               ATMOS_PHY_RD_TOAFLX_LW_up(:,:)   ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(6) , 'XY', & ! [IN]
-                               ATMOS_PHY_RD_TOAFLX_LW_dn(:,:)   ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(7) , 'XY', & ! [IN]
-                               ATMOS_PHY_RD_TOAFLX_SW_up(:,:)   ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(8) , 'XY', & ! [IN]
-                               ATMOS_PHY_RD_TOAFLX_SW_dn(:,:)   ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(9) , 'XY',   & ! [IN]
-                               ATMOS_PHY_RD_SFLX_downall(:,:,1,1) ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(10), 'XY',   & ! [IN]
-                               ATMOS_PHY_RD_SFLX_downall(:,:,1,2) ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(11), 'XY',   & ! [IN]
-                               ATMOS_PHY_RD_SFLX_downall(:,:,2,1) ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(12), 'XY',   & ! [IN]
-                               ATMOS_PHY_RD_SFLX_downall(:,:,2,2) ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_LW_up),      'XY', & ! [IN]
+                               ATMOS_PHY_RD_SFLX_LW_up(:,:)                    ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_LW_dn),      'XY', & ! [IN]
+                               ATMOS_PHY_RD_SFLX_LW_dn(:,:)                    ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_SW_up),      'XY', & ! [IN]
+                               ATMOS_PHY_RD_SFLX_SW_up(:,:)                    ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_SW_dn),      'XY', & ! [IN]
+                               ATMOS_PHY_RD_SFLX_SW_dn(:,:)                    ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_TOAFLX_LW_up),    'XY', & ! [IN]
+                               ATMOS_PHY_RD_TOAFLX_LW_up(:,:)                  ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_TOAFLX_LW_dn),    'XY', & ! [IN]
+                               ATMOS_PHY_RD_TOAFLX_LW_dn(:,:)                  ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_TOAFLX_SW_up),    'XY', & ! [IN]
+                               ATMOS_PHY_RD_TOAFLX_SW_up(:,:)                  ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_TOAFLX_SW_dn),    'XY', & ! [IN]
+                               ATMOS_PHY_RD_TOAFLX_SW_dn(:,:)                  ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_IR_dn_dir),  'XY', & ! [IN]
+                               ATMOS_PHY_RD_SFLX_down(:,:,I_R_direct ,I_R_IR ) ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_IR_dn_dif),  'XY', & ! [IN]
+                               ATMOS_PHY_RD_SFLX_down(:,:,I_R_diffuse,I_R_IR ) ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_NIR_dn_dir), 'XY', & ! [IN]
+                               ATMOS_PHY_RD_SFLX_down(:,:,I_R_direct ,I_R_NIR) ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_NIR_dn_dif), 'XY', & ! [IN]
+                               ATMOS_PHY_RD_SFLX_down(:,:,I_R_diffuse,I_R_NIR) ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_VIS_dn_dir), 'XY', & ! [IN]
+                               ATMOS_PHY_RD_SFLX_down(:,:,I_R_direct ,I_R_VIS) ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFLX_VIS_dn_dif), 'XY', & ! [IN]
+                               ATMOS_PHY_RD_SFLX_down(:,:,I_R_diffuse,I_R_VIS) ) ! [OUT]
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
@@ -383,31 +396,6 @@ contains
 
     return
   end subroutine ATMOS_PHY_RD_vars_restart_read
-
-  !-----------------------------------------------------------------------------
-  !> Input from External I/O
-  subroutine ATMOS_PHY_RD_vars_external_in( &
-      init_value_in  )
-    implicit none
-
-    real(RP), intent(in) :: init_value_in
-    !---------------------------------------------------------------------------
-
-    LOG_NEWLINE
-    LOG_INFO("ATMOS_PHY_RD_vars_external_in",*) 'External Input (PHY_RD) '
-
-    ATMOS_PHY_RD_SFLX_LW_up  (:,:)     = init_value_in
-    ATMOS_PHY_RD_SFLX_LW_dn  (:,:)     = init_value_in
-    ATMOS_PHY_RD_SFLX_SW_up  (:,:)     = init_value_in
-    ATMOS_PHY_RD_SFLX_SW_dn  (:,:)     = init_value_in
-    ATMOS_PHY_RD_TOAFLX_LW_up(:,:)     = init_value_in
-    ATMOS_PHY_RD_TOAFLX_LW_dn(:,:)     = init_value_in
-    ATMOS_PHY_RD_TOAFLX_SW_up(:,:)     = init_value_in
-    ATMOS_PHY_RD_TOAFLX_SW_dn(:,:)     = init_value_in
-    ATMOS_PHY_RD_SFLX_downall(:,:,:,:) = init_value_in
-
-    return
-  end subroutine ATMOS_PHY_RD_vars_external_in
 
   !-----------------------------------------------------------------------------
   !> Create restart file
@@ -492,12 +480,12 @@ contains
 
     if ( restart_fid /= -1 ) then
 
-       do i = 1, 12
-          call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
-               VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
-               'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE,  & ! [IN]
-               VAR_ID(i),                             & ! [OUT]
-               standard_name=VAR_STDN(i)              ) ! [IN]
+       do i = I_SFLX_LW_up, I_SFLX_VIS_dn_dif
+          call FILE_CARTESC_def_var( restart_fid,                           & ! [IN]
+                                     VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
+                                     'XY', ATMOS_PHY_RD_RESTART_OUT_DTYPE,  & ! [IN]
+                                     VAR_ID(i),                             & ! [OUT]
+                                     standard_name=VAR_STDN(i)              ) ! [IN]
        end do
     endif
 
@@ -510,7 +498,6 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_write_var
     implicit none
-
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
@@ -519,95 +506,136 @@ contains
 
        call ATMOS_PHY_RD_vars_checktotal
 
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_RD_SFLX_LW_up(:,:), &
-                              VAR_NAME(1) , 'XY'  ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(2), ATMOS_PHY_RD_SFLX_LW_dn(:,:), &
-                              VAR_NAME(2) , 'XY'  ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(3), ATMOS_PHY_RD_SFLX_SW_up(:,:), &
-                              VAR_NAME(3) , 'XY'  ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(4), ATMOS_PHY_RD_SFLX_SW_dn(:,:), &
-                              VAR_NAME(4) , 'XY'  ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(5), ATMOS_PHY_RD_TOAFLX_LW_up(:,:), &
-                              VAR_NAME(5) , 'XY'  ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(6), ATMOS_PHY_RD_TOAFLX_LW_dn(:,:), &
-                              VAR_NAME(6) , 'XY'  ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(7), ATMOS_PHY_RD_TOAFLX_SW_up(:,:), &
-                              VAR_NAME(7) , 'XY'  ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(8), ATMOS_PHY_RD_TOAFLX_SW_dn(:,:), &
-                              VAR_NAME(8) , 'XY'  ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(9), ATMOS_PHY_RD_SFLX_downall(:,:,1,1), &
-                              VAR_NAME(9) , 'XY'  ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(10), ATMOS_PHY_RD_SFLX_downall(:,:,1,2), &
-                              VAR_NAME(10), 'XY'  ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(11), ATMOS_PHY_RD_SFLX_downall(:,:,2,1), &
-                              VAR_NAME(11), 'XY'  ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(12), ATMOS_PHY_RD_SFLX_downall(:,:,2,2), &
-                              VAR_NAME(12), 'XY'  ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_LW_up),               & ! [IN]
+                                    ATMOS_PHY_RD_SFLX_LW_up(:,:),                    & ! [IN]
+                                    VAR_NAME(I_SFLX_LW_up),      'XY'                ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_LW_dn),               & ! [IN]
+                                    ATMOS_PHY_RD_SFLX_LW_dn(:,:),                    & ! [IN]
+                                    VAR_NAME(I_SFLX_LW_dn),      'XY'                ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_SW_up),               & ! [IN]
+                                    ATMOS_PHY_RD_SFLX_SW_up(:,:),                    & ! [IN]
+                                    VAR_NAME(I_SFLX_SW_up),      'XY'                ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_SW_dn),               & ! [IN]
+                                    ATMOS_PHY_RD_SFLX_SW_dn(:,:),                    & ! [IN]
+                                    VAR_NAME(I_SFLX_SW_dn),      'XY'                ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_TOAFLX_LW_up),             & ! [IN]
+                                    ATMOS_PHY_RD_TOAFLX_LW_up(:,:),                  & ! [IN]
+                                    VAR_NAME(I_TOAFLX_LW_up),    'XY'                ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_TOAFLX_LW_dn),             & ! [IN]
+                                    ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),                  & ! [IN]
+                                    VAR_NAME(I_TOAFLX_LW_dn),    'XY'                ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_TOAFLX_SW_up),             & ! [IN]
+                                    ATMOS_PHY_RD_TOAFLX_SW_up(:,:),                  & ! [IN]
+                                    VAR_NAME(I_TOAFLX_SW_up),    'XY'                ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_TOAFLX_SW_dn),             & ! [IN]
+                                    ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),                  & ! [IN]
+                                    VAR_NAME(I_TOAFLX_SW_dn),    'XY'                ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_IR_dn_dir),           & ! [IN]
+                                    ATMOS_PHY_RD_SFLX_down(:,:,I_R_direct ,I_R_IR ), & ! [IN]
+                                    VAR_NAME(I_SFLX_IR_dn_dir),  'XY'                ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_IR_dn_dif),           & ! [IN]
+                                    ATMOS_PHY_RD_SFLX_down(:,:,I_R_diffuse,I_R_IR ), & ! [IN]
+                                    VAR_NAME(I_SFLX_IR_dn_dif),  'XY'                ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_NIR_dn_dir),          & ! [IN]
+                                    ATMOS_PHY_RD_SFLX_down(:,:,I_R_direct ,I_R_NIR), & ! [IN]
+                                    VAR_NAME(I_SFLX_NIR_dn_dir), 'XY'                ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_NIR_dn_dif),          & ! [IN]
+                                    ATMOS_PHY_RD_SFLX_down(:,:,I_R_diffuse,I_R_NIR), & ! [IN]
+                                    VAR_NAME(I_SFLX_NIR_dn_dif), 'XY'                ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_VIS_dn_dir),          & ! [IN]
+                                    ATMOS_PHY_RD_SFLX_down(:,:,I_R_direct ,I_R_VIS), & ! [IN]
+                                    VAR_NAME(I_SFLX_VIS_dn_dir), 'XY'                ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_VIS_dn_dif),          & ! [IN]
+                                    ATMOS_PHY_RD_SFLX_down(:,:,I_R_diffuse,I_R_VIS), & ! [IN]
+                                    VAR_NAME(I_SFLX_VIS_dn_dif), 'XY'                ) ! [IN]
 
     endif
 
     return
   end subroutine ATMOS_PHY_RD_vars_restart_write
 
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_RD_vars_checktotal
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STATISTICS_total
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_AREA, &
+       ATMOS_GRID_CARTESC_REAL_AREA,   &
        ATMOS_GRID_CARTESC_REAL_TOTAREA
-
+    implicit none
     !---------------------------------------------------------------------------
 
     if ( STATISTICS_checktotal ) then
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_RD_SFLX_LW_up  (:,:),     VAR_NAME(1),  & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_RD_SFLX_LW_dn  (:,:),     VAR_NAME(2),  & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_RD_SFLX_SW_up  (:,:),     VAR_NAME(3),  & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_RD_SFLX_SW_dn  (:,:),     VAR_NAME(4),  & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_RD_TOAFLX_LW_up(:,:),     VAR_NAME(5),  & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),     VAR_NAME(6),  & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_RD_TOAFLX_SW_up(:,:),     VAR_NAME(7),  & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),     VAR_NAME(8),  & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_RD_SFLX_downall(:,:,1,1), VAR_NAME(9),  & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_RD_SFLX_downall(:,:,1,2), VAR_NAME(10), & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_RD_SFLX_downall(:,:,2,1), VAR_NAME(11), & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_RD_SFLX_downall(:,:,2,2), VAR_NAME(12), & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                              ATMOS_PHY_RD_SFLX_LW_up(:,:),                    & ! [IN]
+                              VAR_NAME(I_SFLX_LW_up),                          & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                              ATMOS_PHY_RD_SFLX_LW_dn(:,:),                    & ! [IN]
+                              VAR_NAME(I_SFLX_LW_dn),                          & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                              ATMOS_PHY_RD_SFLX_SW_up(:,:),                    & ! [IN]
+                              VAR_NAME(I_SFLX_SW_up),                          & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                              ATMOS_PHY_RD_SFLX_SW_dn(:,:),                    & ! [IN]
+                              VAR_NAME(I_SFLX_SW_dn),                          & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                              ATMOS_PHY_RD_TOAFLX_LW_up(:,:),                  & ! [IN]
+                              VAR_NAME(I_TOAFLX_LW_up),                        & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                              ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),                  & ! [IN]
+                              VAR_NAME(I_TOAFLX_LW_dn),                        & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                              ATMOS_PHY_RD_TOAFLX_SW_up(:,:),                  & ! [IN]
+                              VAR_NAME(I_TOAFLX_SW_up),                        & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                              ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),                  & ! [IN]
+                              VAR_NAME(I_TOAFLX_SW_dn),                        & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                              ATMOS_PHY_RD_SFLX_down(:,:,I_R_direct ,I_R_IR ), & ! [IN]
+                              VAR_NAME(I_SFLX_IR_dn_dir),                      & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                              ATMOS_PHY_RD_SFLX_down(:,:,I_R_diffuse,I_R_IR ), & ! [IN]
+                              VAR_NAME(I_SFLX_IR_dn_dif),                      & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                              ATMOS_PHY_RD_SFLX_down(:,:,I_R_direct ,I_R_NIR), & ! [IN]
+                              VAR_NAME(I_SFLX_NIR_dn_dir),                     & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                              ATMOS_PHY_RD_SFLX_down(:,:,I_R_diffuse,I_R_NIR), & ! [IN]
+                              VAR_NAME(I_SFLX_NIR_dn_dif),                     & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                              ATMOS_PHY_RD_SFLX_down(:,:,I_R_direct ,I_R_VIS), & ! [IN]
+                              VAR_NAME(I_SFLX_VIS_dn_dir),                     & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                              ATMOS_PHY_RD_SFLX_down(:,:,I_R_diffuse,I_R_VIS), & ! [IN]
+                              VAR_NAME(I_SFLX_VIS_dn_dif),                     & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
     end if
 
     return

@@ -86,13 +86,13 @@ contains
     endif
 
     LOG_NEWLINE
-    LOG_INFO("SNO_proc_alloc",*) '[SNO_proc_alloc] Process management'
-    LOG_INFO("SNO_proc_alloc",*) '# of PEs (this execution)     : ', nprocs
-    LOG_INFO("SNO_proc_alloc",*) 'Rank     (this execution)     : ', myrank
-    LOG_INFO("SNO_proc_alloc",*) 'Master?  (this execution)     : ', ismaster
-    LOG_INFO("SNO_proc_alloc",*) '# of PEs (output file)        : ', nprocs_out, '(', nprocs_x_out, 'x', nprocs_y_out, ')'
-    LOG_INFO("SNO_proc_alloc",*) 'Start PE managed by this rank : ', pstr
-    LOG_INFO("SNO_proc_alloc",*) 'End   PE managed by this rank : ', pend
+    LOG_INFO("SNO_proc_alloc",*) 'Process management'
+    LOG_INFO_CONT(*)             '# of PEs (this execution)     : ', nprocs
+    LOG_INFO_CONT(*)             'Rank     (this execution)     : ', myrank
+    LOG_INFO_CONT(*)             'Master?  (this execution)     : ', ismaster
+    LOG_INFO_CONT(*)             '# of PEs (output file)        : ', nprocs_out, '(', nprocs_x_out, 'x', nprocs_y_out, ')'
+    LOG_INFO_CONT(*)             'Start PE managed by this rank : ', pstr
+    LOG_INFO_CONT(*)             'End   PE managed by this rank : ', pend
 
     return
   end subroutine SNO_proc_alloc
@@ -184,7 +184,7 @@ contains
     !---  read info from global file
 
     LOG_NEWLINE
-    LOG_INFO("SNO_file_getinfo",*) '[SNO_file_getinfo] Get process & horizontal grid info from input file'
+    LOG_INFO("SNO_file_getinfo",*) 'Get process & horizontal grid info from input file'
 
     if ( ismaster ) then
        nowrank = 0 ! first file
@@ -279,7 +279,7 @@ contains
 
     LOG_NEWLINE
     LOG_INFO("SNO_file_getinfo",*) 'Process info '
-    LOG_INFO("SNO_file_getinfo",*) '# of PEs (input  file)        : ', nprocs_in, '(', nprocs_x_in, 'x', nprocs_y_in, ')'
+    LOG_INFO_CONT(*)               '# of PEs (input  file)        : ', nprocs_in, '(', nprocs_x_in, 'x', nprocs_y_in, ')'
 
     !--- horizontal grid management
 
@@ -303,14 +303,11 @@ contains
 
     LOG_NEWLINE
     LOG_INFO("SNO_file_getinfo",*) 'Grid info (horizontal) '
-    LOG_INFO("SNO_file_getinfo",*) '# of total grids           without halo : ', &
-                                   ngrids    , '(', ngrids_x_nohalo, 'x', ngrids_y_nohalo, ')'
-    LOG_INFO("SNO_file_getinfo",*) '# of grids per input  file without halo : ', &
-                                   ngrids_in , '(', ngrids_x_in    , 'x', ngrids_y_in    , ')'
-    LOG_INFO("SNO_file_getinfo",*) '# of grids per output file without halo : ', &
-                                   ngrids_out, '(', ngrids_x_out   , 'x', ngrids_y_out   , ')'
-    LOG_INFO("SNO_file_getinfo",*) '# of halo grids (x-axis,one side)       : ', nhalos_x
-    LOG_INFO("SNO_file_getinfo",*) '# of halo grids (y-axis,one side)       : ', nhalos_y
+    LOG_INFO_CONT(*)               '# of total grids           without halo : ', ngrids    , '(', ngrids_x_nohalo, 'x', ngrids_y_nohalo, ')'
+    LOG_INFO_CONT(*)               '# of grids per input  file without halo : ', ngrids_in , '(', ngrids_x_in    , 'x', ngrids_y_in    , ')'
+    LOG_INFO_CONT(*)               '# of grids per output file without halo : ', ngrids_out, '(', ngrids_x_out   , 'x', ngrids_y_out   , ')'
+    LOG_INFO_CONT(*)               '# of halo grids (x-axis,one side)       : ', nhalos_x
+    LOG_INFO_CONT(*)               '# of halo grids (y-axis,one side)       : ', nhalos_y
 
     if ( mod(ngrids_x_nohalo,nprocs_x_out) /= 0 ) then
        LOG_ERROR("SNO_file_getinfo",*) 'The allowable case is that # of the total x-grids is divisible with # of the x-PEs for the output. Stop'
@@ -455,9 +452,9 @@ contains
     if ( nvars_req > 0 .AND. nvars /= nvars_req ) then
        LOG_NEWLINE
        LOG_ERROR("SNO_file_getinfo",*) 'some requested variables are missing.', nvars, nvars_req
-       LOG_ERROR_CONT("SNO_file_getinfo",*) 'nvars = ', nvars, ', nvars_req = ', nvars_req
+       LOG_ERROR_CONT(*) 'nvars = ', nvars, ', nvars_req = ', nvars_req
        do nn = 1, nvars_req
-          LOG_ERROR_CONT("SNO_file_getinfo",*) 'check:', exist(nn), ', name: ', trim(vars(nn))
+          LOG_ERROR_CONT(*) 'check:', exist(nn), ', name: ', trim(vars(nn))
        enddo
        call PRC_abort
     endif
@@ -474,13 +471,13 @@ contains
     LOG_NEWLINE
     LOG_INFO("SNO_file_getinfo",*) 'Axis list'
     do n = 1, naxis
-       LOG_INFO("SNO_file_getinfo",'(1x,A,I3.3,A,A20)') 'No.', n, ', name: ', trim(axisname(n))
+       LOG_INFO_CONT('(1x,A,I3.3,A,A20)') 'No.', n, ', name: ', trim(axisname(n))
     enddo
 
     LOG_NEWLINE
     LOG_INFO("SNO_file_getinfo",*) 'Variable list'
     do n = 1, nvars
-       LOG_INFO("SNO_file_getinfo",'(1x,A,I3.3,A,A20)') 'No.', n, ', name: ', trim(varname(n))
+       LOG_INFO_CONT('(1x,A,I3.3,A,A20)') 'No.', n, ', name: ', trim(varname(n))
     enddo
 
     return

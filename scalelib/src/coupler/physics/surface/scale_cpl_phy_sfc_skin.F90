@@ -17,6 +17,7 @@ module scale_cpl_phy_sfc_skin
   use scale_precision
   use scale_io
   use scale_prof
+  use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -96,9 +97,9 @@ contains
        RHOA, QVA, LHV,      &
        Z1, PBL,             &
        RHOS, PRSS,          &
-       LWD, SWD,            &
+       RFLXD,               &
        TG, QVEF,            &
-       ALB_LW, ALB_SW,      &
+       ALBEDO,              &
        DZG,                 &
        Rb, TCS,             &
        Z0M, Z0H, Z0E,       &
@@ -137,13 +138,11 @@ contains
     real(RP), intent(in) :: PBL (IA,JA) ! the top of atmospheric mixing layer [m]
     real(RP), intent(in) :: RHOS(IA,JA) ! density  at the surface [kg/m3]
     real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
-    real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface [J/m2/s]
-    real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface [J/m2/s]
+    real(RP), intent(in) :: RFLXD (IA,JA,N_RAD_DIR,N_RAD_RGN) ! downward radiation flux at the surface (direct/diffuse,IR/near-IR/VIS) [J/m2/s]
 
     real(RP), intent(in) :: TG    (IA,JA) ! soil temperature [K]
     real(RP), intent(in) :: QVEF  (IA,JA) ! efficiency of evaporation (0-1)
-    real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW (0-1)
-    real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW (0-1)
+    real(RP), intent(in) :: ALBEDO(IA,JA,N_RAD_DIR,N_RAD_RGN) ! surface albedo (direct/diffuse,IR/near-IR/VIS) (0-1)
     real(RP), intent(in) :: DZG   (IA,JA) ! soil depth [m]
     real(RP), intent(in) :: Rb    (IA,JA) ! stomata resistance [1/s]
     real(RP), intent(in) :: TCS   (IA,JA) ! thermal conductivity for soil [J/m/K/s]
@@ -180,7 +179,13 @@ contains
     ! works
     real(RP) :: TMPS1(IA,JA)
 
+    real(RP) :: emis   ! surface longwave emission                 [J/m2/s]
+    real(RP) :: LWD    ! surface downward longwave  radiation flux [J/m2/s]
+    real(RP) :: LWU    ! surface upward   longwave  radiation flux [J/m2/s]
+    real(RP) :: SWD    ! surface downward shortwave radiation flux [J/m2/s]
+    real(RP) :: SWU    ! surface upward   shortwave radiation flux [J/m2/s]
     real(RP) :: res    ! residual
+
     real(RP) :: dres   ! d(residual)/dTMPS
     real(RP) :: oldres ! residual in previous step
     real(RP) :: redf   ! reduced factor
@@ -215,14 +220,14 @@ contains
 
     ! update surface temperature
     !$omp parallel do default(none) &
-    !$omp private(qdry,Rtot,redf,res,dres,oldres,QVS,dQVS, &
+    !$omp private(qdry,Rtot,redf,res,emis,LWD,LWU,SWD,SWU,dres,oldres,QVS,dQVS, &
     !$omp         QVsat,dQVsat,Ustar,dUstar,Tstar,dTstar,Qstar,dQstar,Uabs,dUabs,Ra,dRa, &
     !$omp         FracU10,FracT2,FracQ2) &
     !$omp shared(IS,IE,JS,JE,Rdry,CPdry,PRC_myrank,IO_FID_LOG,IO_L,model_name, &
     !$omp        bulkflux, &
     !$omp        CPL_PHY_SFC_SKIN_itr_max,CPL_PHY_SFC_SKIN_dTS_max,CPL_PHY_SFC_SKIN_dreslim,CPL_PHY_SFC_SKIN_err_min, CPL_PHY_SFC_SKIN_res_min, &
     !$omp        fact_area,DZG,dt,QVA,TMPA,PRSA,RHOA,WA,UA,VA,LHV,Z1,PBL, &
-    !$omp        TG,PRSS,RHOS,TMPS1,QVEF,Z0M,Z0H,Z0E,Rb,TCS,ALB_SW,ALB_LW,SWD,LWD, &
+    !$omp        TG,PRSS,RHOS,TMPS1,QVEF,Z0M,Z0H,Z0E,Rb,TCS,ALBEDO,RFLXD, &
     !$omp        TMPS,ZMFLX,XMFLX,YMFLX,SHFLX,LHFLX,GHFLX,U10,V10,T2,Q2)
     do j = JS, JE
     do i = IS, IE
@@ -292,15 +297,27 @@ contains
               Z0H (i,j),      & ! [IN]
               Z0E (i,j)       ) ! [IN]
 
+           emis = ( 1.0_RP - ALBEDO(i,j,I_R_diffuse,I_R_IR) ) * STB * TMPS1(i,j)**4
+
+           LWD  = RFLXD(i,j,I_R_diffuse,I_R_IR)
+           LWU  = RFLXD(i,j,I_R_diffuse,I_R_IR) * ALBEDO(i,j,I_R_diffuse,I_R_IR) + emis
+           SWD  = RFLXD(i,j,I_R_direct ,I_R_NIR) &
+                + RFLXD(i,j,I_R_diffuse,I_R_NIR) &
+                + RFLXD(i,j,I_R_direct ,I_R_VIS) &
+                + RFLXD(i,j,I_R_diffuse,I_R_VIS)
+           SWU  = RFLXD(i,j,I_R_direct ,I_R_NIR) * ALBEDO(i,j,I_R_direct ,I_R_NIR) &
+                + RFLXD(i,j,I_R_diffuse,I_R_NIR) * ALBEDO(i,j,I_R_diffuse,I_R_NIR) &
+                + RFLXD(i,j,I_R_direct ,I_R_VIS) * ALBEDO(i,j,I_R_direct ,I_R_VIS) &
+                + RFLXD(i,j,I_R_diffuse,I_R_VIS) * ALBEDO(i,j,I_R_diffuse,I_R_VIS)
+
           ! calculation for residual
-          res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
-              + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * TMPS1(i,j)**4 ) &
+          res = SWD - SWU + LWD - LWU &
               + CPdry    * RHOS(i,j) * Ustar * Tstar &
               + LHV(i,j) * RHOS(i,j) * Ustar * Qstar * Ra / ( Ra + Rb(i,j) ) &
               - 2.0_RP * TCS(i,j) * ( TMPS1(i,j) - TG(i,j) ) / DZG(i,j)
 
           ! calculation for d(residual)/dTMPS
-          dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * TMPS1(i,j)**3 &
+          dres = -4.0_RP * emis / TMPS1(i,j) &
                + CPdry    * RHOS(i,j) * ( (dUstar-Ustar)/dTS0 * Tstar + Ustar * (dTstar-Tstar)/dTS0 ) &
                + LHV(i,j) * RHOS(i,j) * ( (dUstar-Ustar)/dTS0 * Qstar + Ustar * (dQstar-Qstar)/dTS0 ) &
                * Ra / ( Ra + Rb(i,j) ) &
@@ -363,14 +380,22 @@ contains
           LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- cell center height                 [m]       :', Z1    (i,j)
           LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- atmospheric mixing layer height    [m]       :', PBL   (i,j)
           LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- pressure at the surface            [Pa]      :', PRSS  (i,j)
-          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- downward long-wave radiation       [J/m2/s]  :', LWD   (i,j)
-          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- downward short-wave radiation      [J/m2/s]  :', SWD   (i,j)
+          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- downward radiation (IR, direct )   [J/m2/s]  :', RFLXD (i,j,I_R_direct ,I_R_IR )
+          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- downward radiation (IR, diffuse)   [J/m2/s]  :', RFLXD (i,j,I_R_diffuse,I_R_IR )
+          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- downward radiation (NIR,direct )   [J/m2/s]  :', RFLXD (i,j,I_R_direct ,I_R_NIR)
+          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- downward radiation (NIR,diffuse)   [J/m2/s]  :', RFLXD (i,j,I_R_diffuse,I_R_NIR)
+          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- downward radiation (VIS,direct )   [J/m2/s]  :', RFLXD (i,j,I_R_direct ,I_R_VIS)
+          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- downward radiation (VIS,diffuse)   [J/m2/s]  :', RFLXD (i,j,I_R_diffuse,I_R_VIS)
           LOG_INFO_CONT('(A)'       ) ''
           LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- soil temperature                   [K]       :', TG    (i,j)
           LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- surface temperature                [K]       :', TMPS  (i,j)
           LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- efficiency of evaporation          [1]       :', QVEF  (i,j)
-          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- surface albedo for LW              [1]       :', ALB_LW(i,j)
-          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- surface albedo for SW              [1]       :', ALB_SW(i,j)
+          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- surface albedo (IR, direct )       [1]       :', ALBEDO(i,j,I_R_direct ,I_R_IR )
+          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- surface albedo (IR, diffuse)       [1]       :', ALBEDO(i,j,I_R_diffuse,I_R_IR )
+          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- surface albedo (NIR,direct )       [1]       :', ALBEDO(i,j,I_R_direct ,I_R_NIR)
+          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- surface albedo (NIR,diffuse)       [1]       :', ALBEDO(i,j,I_R_diffuse,I_R_NIR)
+          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- surface albedo (VIS,direct )       [1]       :', ALBEDO(i,j,I_R_direct ,I_R_VIS)
+          LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- surface albedo (VIS,diffuse)       [1]       :', ALBEDO(i,j,I_R_diffuse,I_R_VIS)
           LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- soil depth                         [m]       :', DZG   (i,j)
           LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- thermal conductivity for soil      [J/m/K/s] :', TCS   (i,j)
           LOG_INFO_CONT('(A,F32.16)') 'DEBUG --- roughness length for momemtum      [m]       :', Z0M   (i,j)
@@ -408,14 +433,22 @@ contains
              LOG_ERROR_CONT(*) 'DEBUG --- cell center height                 [m]       :', Z1    (i,j)
              LOG_ERROR_CONT(*) 'DEBUG --- atmospheric mixing layer height    [m]       :', PBL   (i,j)
              LOG_ERROR_CONT(*) 'DEBUG --- pressure at the surface            [Pa]      :', PRSS  (i,j)
-             LOG_ERROR_CONT(*) 'DEBUG --- downward long-wave radiation       [J/m2/s]  :', LWD   (i,j)
-             LOG_ERROR_CONT(*) 'DEBUG --- downward short-wave radiation      [J/m2/s]  :', SWD   (i,j)
+             LOG_ERROR_CONT(*) 'DEBUG --- downward radiation (IR, direct )   [J/m2/s]  :', RFLXD (i,j,I_R_direct ,I_R_IR )
+             LOG_ERROR_CONT(*) 'DEBUG --- downward radiation (IR, diffuse)   [J/m2/s]  :', RFLXD (i,j,I_R_diffuse,I_R_IR )
+             LOG_ERROR_CONT(*) 'DEBUG --- downward radiation (NIR,direct )   [J/m2/s]  :', RFLXD (i,j,I_R_direct ,I_R_NIR)
+             LOG_ERROR_CONT(*) 'DEBUG --- downward radiation (NIR,diffuse)   [J/m2/s]  :', RFLXD (i,j,I_R_diffuse,I_R_NIR)
+             LOG_ERROR_CONT(*) 'DEBUG --- downward radiation (VIS,direct )   [J/m2/s]  :', RFLXD (i,j,I_R_direct ,I_R_VIS)
+             LOG_ERROR_CONT(*) 'DEBUG --- downward radiation (VIS,diffuse)   [J/m2/s]  :', RFLXD (i,j,I_R_diffuse,I_R_VIS)
              LOG_ERROR_CONT(*) ''
              LOG_ERROR_CONT(*) 'DEBUG --- soil temperature                   [K]       :', TG    (i,j)
              LOG_ERROR_CONT(*) 'DEBUG --- surface temperature                [K]       :', TMPS  (i,j)
              LOG_ERROR_CONT(*) 'DEBUG --- efficiency of evaporation          [1]       :', QVEF  (i,j)
-             LOG_ERROR_CONT(*) 'DEBUG --- surface albedo for LW              [1]       :', ALB_LW(i,j)
-             LOG_ERROR_CONT(*) 'DEBUG --- surface albedo for SW              [1]       :', ALB_SW(i,j)
+             LOG_ERROR_CONT(*) 'DEBUG --- surface albedo for (IR, direct )   [1]       :', ALBEDO(i,j,I_R_direct ,I_R_IR )
+             LOG_ERROR_CONT(*) 'DEBUG --- surface albedo for (IR, diffuse)   [1]       :', ALBEDO(i,j,I_R_diffuse,I_R_IR )
+             LOG_ERROR_CONT(*) 'DEBUG --- surface albedo for (NIR,direct )   [1]       :', ALBEDO(i,j,I_R_direct ,I_R_NIR)
+             LOG_ERROR_CONT(*) 'DEBUG --- surface albedo for (NIR,diffuse)   [1]       :', ALBEDO(i,j,I_R_diffuse,I_R_NIR)
+             LOG_ERROR_CONT(*) 'DEBUG --- surface albedo for (VIS,direct )   [1]       :', ALBEDO(i,j,I_R_direct ,I_R_VIS)
+             LOG_ERROR_CONT(*) 'DEBUG --- surface albedo for (VIS,diffuse)   [1]       :', ALBEDO(i,j,I_R_diffuse,I_R_VIS)
              LOG_ERROR_CONT(*) 'DEBUG --- soil depth                         [m]       :', DZG   (i,j)
              LOG_ERROR_CONT(*) 'DEBUG --- thermal conductivity for soil      [J/m/K/s] :', TCS   (i,j)
              LOG_ERROR_CONT(*) 'DEBUG --- roughness length for momemtum      [m]       :', Z0M   (i,j)
@@ -479,10 +512,21 @@ contains
 
         GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( TMPS1(i,j) - TG(i,j) ) / DZG(i,j)
 
+        emis = ( 1.0_RP - ALBEDO(i,j,I_R_diffuse,I_R_IR) ) * STB * TMPS(i,j)**4
+
+        LWD  = RFLXD(i,j,I_R_diffuse,I_R_IR)
+        LWU  = RFLXD(i,j,I_R_diffuse,I_R_IR) * ALBEDO(i,j,I_R_diffuse,I_R_IR) + emis
+        SWD  = RFLXD(i,j,I_R_direct ,I_R_NIR) &
+             + RFLXD(i,j,I_R_diffuse,I_R_NIR) &
+             + RFLXD(i,j,I_R_direct ,I_R_VIS) &
+             + RFLXD(i,j,I_R_diffuse,I_R_VIS)
+        SWU  = RFLXD(i,j,I_R_direct ,I_R_NIR) * ALBEDO(i,j,I_R_direct ,I_R_NIR) &
+             + RFLXD(i,j,I_R_diffuse,I_R_NIR) * ALBEDO(i,j,I_R_diffuse,I_R_NIR) &
+             + RFLXD(i,j,I_R_direct ,I_R_VIS) * ALBEDO(i,j,I_R_direct ,I_R_VIS) &
+             + RFLXD(i,j,I_R_diffuse,I_R_VIS) * ALBEDO(i,j,I_R_diffuse,I_R_VIS)
+
         ! calculation for residual
-        res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
-            + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * TMPS1(i,j)**4 ) &
-            - SHFLX(i,j) - LHFLX(i,j) + GHFLX(i,j)
+        res = SWD - SWU + LWD - LWU - SHFLX(i,j) - LHFLX(i,j) + GHFLX(i,j)
 
         ! put residual in ground heat flux
         GHFLX(i,j) = GHFLX(i,j) - res

@@ -17,10 +17,7 @@ module mod_urban_driver
   use scale_io
   use scale_prof
   use scale_urban_grid_cartesC_index
-
-  use scale_const, only: &
-     I_SW  => CONST_I_SW, &
-     I_LW  => CONST_I_LW
+  use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -300,7 +297,7 @@ contains
                                 TR(:,:), TB(:,:), TG(:,:), TC(:,:), QC(:,:), UC(:,:),        & ! [INOUT]
                                 RAINR(:,:), RAINB(:,:), RAING(:,:), ROFF(:,:),               & ! [INOUT]
                                 URBAN_SFC_TEMP(:,:),                                         & ! [OUT]
-                                URBAN_SFC_albedo(:,:,I_LW), URBAN_SFC_albedo(:,:,I_SW),      & ! [OUT]
+                                URBAN_SFC_albedo(:,:,:,:),                                   & ! [OUT]
                                 URBAN_SFLX_MW(:,:), URBAN_SFLX_MU(:,:), URBAN_SFLX_MV(:,:),  & ! [OUT]
                                 URBAN_SFLX_SH(:,:), URBAN_SFLX_LH(:,:), URBAN_SFLX_GH(:,:),  & ! [OUT]
                                 URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:),              & ! [OUT]
@@ -486,7 +483,6 @@ contains
        URBAN_RAING,       &
        URBAN_ROFF,        &
        URBAN_SFC_TEMP,    &
-       URBAN_SFC_albedo,  &
        URBAN_vars_total,  &
        URBAN_vars_history
     use scale_landuse, only: &
@@ -578,7 +574,7 @@ contains
        CPL_getATM_URB
     implicit none
 
-    real(RP) :: ATMOS_SFLX_rad_dn(UIA,UJA,2,2)
+    real(RP) :: ATMOS_SFLX_rad_dn(UIA,UJA,N_RAD_DIR,N_RAD_RGN)
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -605,10 +601,13 @@ contains
 !OCL XFILL
     do j = UJS, UJE
     do i = UIS, UIE
-       ATMOS_SFLX_SW  (i,j,1) = ATMOS_SFLX_rad_dn(i,j,I_SW,1) ! direct
-       ATMOS_SFLX_LW  (i,j,1) = ATMOS_SFLX_rad_dn(i,j,I_LW,1) ! direct
-       ATMOS_SFLX_SW  (i,j,2) = ATMOS_SFLX_rad_dn(i,j,I_SW,2) ! diffuse
-       ATMOS_SFLX_LW  (i,j,2) = ATMOS_SFLX_rad_dn(i,j,I_LW,2) ! diffuse
+       ATMOS_SFLX_LW(i,j,I_R_direct ) = ATMOS_SFLX_rad_dn(i,j,I_R_direct ,I_R_IR)    ! IR, direct
+       ATMOS_SFLX_LW(i,j,I_R_diffuse) = ATMOS_SFLX_rad_dn(i,j,I_R_diffuse,I_R_IR)    ! IR, diffuse
+
+       ATMOS_SFLX_SW(i,j,I_R_direct ) = ATMOS_SFLX_rad_dn(i,j,I_R_direct ,I_R_NIR) & ! NIR, direct
+                                      + ATMOS_SFLX_rad_dn(i,j,I_R_direct ,I_R_VIS)   ! VIS, direct
+       ATMOS_SFLX_SW(i,j,I_R_diffuse) = ATMOS_SFLX_rad_dn(i,j,I_R_diffuse,I_R_NIR) & ! NIR, diffuse
+                                      + ATMOS_SFLX_rad_dn(i,j,I_R_diffuse,I_R_VIS)   ! VIS, diffuse
     enddo
     enddo
 
@@ -650,23 +649,23 @@ contains
     call PROF_rapstart('URB_SfcExch', 2)
 
     if ( URBAN_do ) then
-       call CPL_putURB( URBAN_SFC_TEMP  (:,:),   & ! [IN]
-                        URBAN_SFC_albedo(:,:,:), & ! [IN]
-                        URBAN_Z0M       (:,:),   & ! [IN]
-                        URBAN_Z0H       (:,:),   & ! [IN]
-                        URBAN_Z0E       (:,:),   & ! [IN]
-                        URBAN_SFLX_MW   (:,:),   & ! [IN]
-                        URBAN_SFLX_MU   (:,:),   & ! [IN]
-                        URBAN_SFLX_MV   (:,:),   & ! [IN]
-                        URBAN_SFLX_SH   (:,:),   & ! [IN]
-                        URBAN_SFLX_LH   (:,:),   & ! [IN]
-                        URBAN_SFLX_GH   (:,:),   & ! [IN]
-                        URBAN_SFLX_evap (:,:),   & ! [IN]
-                        URBAN_U10       (:,:),   & ! [IN]
-                        URBAN_V10       (:,:),   & ! [IN]
-                        URBAN_T2        (:,:),   & ! [IN]
-                        URBAN_Q2        (:,:),   & ! [IN]
-                        countup                  ) ! [IN]
+       call CPL_putURB( URBAN_SFC_TEMP  (:,:),     & ! [IN]
+                        URBAN_SFC_albedo(:,:,:,:), & ! [IN]
+                        URBAN_Z0M       (:,:),     & ! [IN]
+                        URBAN_Z0H       (:,:),     & ! [IN]
+                        URBAN_Z0E       (:,:),     & ! [IN]
+                        URBAN_SFLX_MW   (:,:),     & ! [IN]
+                        URBAN_SFLX_MU   (:,:),     & ! [IN]
+                        URBAN_SFLX_MV   (:,:),     & ! [IN]
+                        URBAN_SFLX_SH   (:,:),     & ! [IN]
+                        URBAN_SFLX_LH   (:,:),     & ! [IN]
+                        URBAN_SFLX_GH   (:,:),     & ! [IN]
+                        URBAN_SFLX_evap (:,:),     & ! [IN]
+                        URBAN_U10       (:,:),     & ! [IN]
+                        URBAN_V10       (:,:),     & ! [IN]
+                        URBAN_T2        (:,:),     & ! [IN]
+                        URBAN_Q2        (:,:),     & ! [IN]
+                        countup                    ) ! [IN]
     endif
 
     call PROF_rapend  ('URB_SfcExch', 2)

@@ -17,6 +17,7 @@ module scale_urban_dyn_kusaka01
   use scale_precision
   use scale_io
   use scale_prof
+  use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -240,7 +241,7 @@ contains
        RAINR_URB, RAINB_URB, RAING_URB, &
        ROFF_URB,                        &
        SFC_TEMP,                        &
-       ALBD_LW, ALBD_SW,                &
+       ALBEDO,                          &
        MWFLX, MUFLX, MVFLX,             &
        SHFLX, LHFLX, GHFLX,             &
        Z0M, Z0H, Z0E,                   &
@@ -294,8 +295,7 @@ contains
     real(RP), intent(inout) :: ROFF_URB (UIA,UJA)
 
     real(RP), intent(out) :: SFC_TEMP(UIA,UJA)
-    real(RP), intent(out) :: ALBD_LW (UIA,UJA)
-    real(RP), intent(out) :: ALBD_SW (UIA,UJA)
+    real(RP), intent(out) :: ALBEDO  (UIA,UJA,N_RAD_DIR,N_RAD_RGN)
     real(RP), intent(out) :: MWFLX   (UIA,UJA)
     real(RP), intent(out) :: MUFLX   (UIA,UJA)
     real(RP), intent(out) :: MVFLX   (UIA,UJA)
@@ -330,6 +330,8 @@ contains
     real(RP) :: RAINB
     real(RP) :: RAING
     real(RP) :: ROFF
+    real(RP) :: ALBD_LW
+    real(RP) :: ALBD_SW
 
     real(RP) :: SHR  (UIA,UJA)
     real(RP) :: SHB  (UIA,UJA)
@@ -416,8 +418,8 @@ contains
                       RAINB,              & ! [INOUT]
                       RAING,              & ! [INOUT]
                       ROFF,               & ! [INOUT]
-                      ALBD_LW (i,j),      & ! [OUT]
-                      ALBD_SW (i,j),      & ! [OUT]
+                      ALBD_LW,            & ! [OUT]
+                      ALBD_SW,            & ! [OUT]
                       SHR     (i,j),      & ! [OUT]
                       SHB     (i,j),      & ! [OUT]
                       SHG     (i,j),      & ! [OUT]
@@ -476,6 +478,13 @@ contains
        RAING_URB(i,j) = RAING
        ROFF_URB(i,j) = ROFF
 
+       ALBEDO(i,j,I_R_direct ,I_R_IR ) = ALBD_LW
+       ALBEDO(i,j,I_R_diffuse,I_R_IR ) = ALBD_LW
+       ALBEDO(i,j,I_R_direct ,I_R_NIR) = ALBD_SW
+       ALBEDO(i,j,I_R_diffuse,I_R_NIR) = ALBD_SW
+       ALBEDO(i,j,I_R_direct ,I_R_VIS) = ALBD_SW
+       ALBEDO(i,j,I_R_diffuse,I_R_VIS) = ALBD_SW
+
        ! saturation at the surface
        call qsat( SFC_TEMP(i,j), PRSS(i,j), qdry, & ! [IN]
                   QVsat                           ) ! [OUT]
@@ -511,36 +520,34 @@ contains
        Z0E(i,j) = Z0HC
 
     else
-       SFC_TEMP   (i,j)   = 300.0_RP ! constant value
-       ALBD_LW    (i,j)   = 0.0_RP
-       ALBD_SW    (i,j)   = 0.0_RP
-       MWFLX      (i,j)   = 0.0_RP
-       MUFLX      (i,j)   = 0.0_RP
-       MVFLX      (i,j)   = 0.0_RP
-       SHFLX      (i,j)   = 0.0_RP
-       LHFLX      (i,j)   = 0.0_RP
-       GHFLX      (i,j)   = 0.0_RP
-       Z0M        (i,j)   = 0.0_RP
-       Z0H        (i,j)   = 0.0_RP
-       Z0E        (i,j)   = 0.0_RP
-       U10        (i,j)   = 0.0_RP
-       V10        (i,j)   = 0.0_RP
-       T2         (i,j)   = 0.0_RP
-       Q2         (i,j)   = 0.0_RP
-       !
-       SHR        (i,j)   = 0.0_RP
-       SHB        (i,j)   = 0.0_RP
-       SHG        (i,j)   = 0.0_RP
-       LHR        (i,j)   = 0.0_RP
-       LHB        (i,j)   = 0.0_RP
-       LHG        (i,j)   = 0.0_RP
-       GHR        (i,j)   = 0.0_RP
-       GHB        (i,j)   = 0.0_RP
-       GHG        (i,j)   = 0.0_RP
-       RNR        (i,j)   = 0.0_RP
-       RNB        (i,j)   = 0.0_RP
-       RNG        (i,j)   = 0.0_RP
-       RNgrd      (i,j)   = 0.0_RP
+       SFC_TEMP(i,j)     = 300.0_RP ! constant value
+       ALBEDO  (i,j,:,:) = 0.0_RP
+       MWFLX   (i,j)     = 0.0_RP
+       MUFLX   (i,j)     = 0.0_RP
+       MVFLX   (i,j)     = 0.0_RP
+       SHFLX   (i,j)     = 0.0_RP
+       LHFLX   (i,j)     = 0.0_RP
+       GHFLX   (i,j)     = 0.0_RP
+       Z0M     (i,j)     = 0.0_RP
+       Z0H     (i,j)     = 0.0_RP
+       Z0E     (i,j)     = 0.0_RP
+       U10     (i,j)     = 0.0_RP
+       V10     (i,j)     = 0.0_RP
+       T2      (i,j)     = 0.0_RP
+       Q2      (i,j)     = 0.0_RP
+       SHR     (i,j)     = 0.0_RP
+       SHB     (i,j)     = 0.0_RP
+       SHG     (i,j)     = 0.0_RP
+       LHR     (i,j)     = 0.0_RP
+       LHB     (i,j)     = 0.0_RP
+       LHG     (i,j)     = 0.0_RP
+       GHR     (i,j)     = 0.0_RP
+       GHB     (i,j)     = 0.0_RP
+       GHG     (i,j)     = 0.0_RP
+       RNR     (i,j)     = 0.0_RP
+       RNB     (i,j)     = 0.0_RP
+       RNG     (i,j)     = 0.0_RP
+       RNgrd   (i,j)     = 0.0_RP
     endif
 
     end do

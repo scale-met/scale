@@ -358,7 +358,7 @@ program sno
               !#################################################################
 
               do t = 1, dinfo(v)%step_nmax
-                 LOG_INFO("SNO",'(A,I6)') '++ t = ', t
+                 LOG_INFO_CONT('(A,I6)') '++ t = ', t
 
                  call SNO_vars_read( basename_in,                  & ! [IN]    from namelist
                                      t,                            & ! [IN]

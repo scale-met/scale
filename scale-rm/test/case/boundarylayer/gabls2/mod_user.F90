@@ -18,6 +18,7 @@ module mod_user
   use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
+  use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -187,9 +188,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state
   subroutine USER_mkinit
-    use scale_const, only: &
-       I_SW => CONST_I_SW, &
-       I_LW => CONST_I_LW
     use scale_atmos_hydrometeor, only: &
        I_QV
     use scale_time, only: &
@@ -204,10 +202,10 @@ contains
        RHOT, &
        QTRC
     use mod_atmos_phy_sf_vars, only: &
-       ATMOS_PHY_SF_SFC_TEMP, &
+       ATMOS_PHY_SF_SFC_TEMP,   &
        ATMOS_PHY_SF_SFC_albedo, &
-       ATMOS_PHY_SF_SFC_Z0M, &
-       ATMOS_PHY_SF_SFC_Z0H, &
+       ATMOS_PHY_SF_SFC_Z0M,    &
+       ATMOS_PHY_SF_SFC_Z0H,    &
        ATMOS_PHY_SF_SFC_Z0E
     use scale_atmos_grid_cartesC, only: &
        CZ => ATMOS_GRID_CARTESC_CZ, &
@@ -269,8 +267,9 @@ contains
 
     ATMOS_PHY_SF_SFC_TEMP(:,:) = Ts
 
-    ATMOS_PHY_SF_SFC_albedo(:,:,I_LW) = ALB_LW
-    ATMOS_PHY_SF_SFC_albedo(:,:,I_SW) = ALB_SW
+    ATMOS_PHY_SF_SFC_albedo(:,:,:,I_R_IR)  = ALB_LW
+    ATMOS_PHY_SF_SFC_albedo(:,:,:,I_R_NIR) = ALB_SW
+    ATMOS_PHY_SF_SFC_albedo(:,:,:,I_R_VIS) = ALB_SW
 
     ATMOS_PHY_SF_SFC_Z0M (:,:) = Z0M
     ATMOS_PHY_SF_SFC_Z0H (:,:) = Z0H

@@ -141,16 +141,19 @@ contains
        call LANDUSE_calc_fact
     elseif( LANDUSE_AllLand ) then
        LOG_INFO("LANDUSE_setup",*) 'Assume all grids are land'
+       LOG_INFO("LANDUSE_setup",*) 'Assume land PFT is 1 (bare ground)'
        LANDUSE_frac_land (:,:) = 1.0_RP
        call LANDUSE_calc_fact
     elseif( LANDUSE_AllUrban ) then
        LOG_INFO("LANDUSE_setup",*) 'Assume all grids are land'
+       LOG_INFO("LANDUSE_setup",*) 'Assume land PFT is 1 (bare ground)'
        LANDUSE_frac_land (:,:) = 1.0_RP
        LOG_INFO("LANDUSE_setup",*) 'Assume all lands are urban'
        LANDUSE_frac_urban(:,:) = 1.0_RP
        call LANDUSE_calc_fact
     elseif( LANDUSE_MosaicWorld ) then
        LOG_INFO("LANDUSE_setup",*) 'Assume all grids have ocean, land, and urban'
+       LOG_INFO("LANDUSE_setup",*) 'Assume land PFT is 1 (bare ground)'
        LANDUSE_frac_land (:,:) = 0.5_RP
        LANDUSE_frac_urban(:,:) = 0.5_RP
        call LANDUSE_calc_fact

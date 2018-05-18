@@ -29,8 +29,7 @@ module mod_user
        TIME_NOWSEC,&
        TIME_DTSEC
   use mod_atmos_phy_sf_vars, only: &
-     SFC_albedo      => ATMOS_PHY_SF_SFC_albedo,&
-     SFC_TEMP        => ATMOS_PHY_SF_SFC_TEMP
+     SFC_TEMP => ATMOS_PHY_SF_SFC_TEMP
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -1016,8 +1015,6 @@ contains
       call FILE_HISTORY_in( SST       (:,:),     'SST2',      'sst',   'K'    )
       call FILE_HISTORY_in( SFLX_POTT (:,:)*CPd, 'SHF',       'shf',   'W/m2' )
       call FILE_HISTORY_in( SFLX_QV   (:,:)*lhv_t(:,:), 'LHF',       'lhf',   'W/m2' )
-      call FILE_HISTORY_in( SFC_albedo(:,:,1),   'ALBEDO_LW', 'alblw', '-'    )
-      call FILE_HISTORY_in( SFC_albedo(:,:,2),   'ALBEDO_SW', 'albsw', '-'    )
 
       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
       do j = JS, JE

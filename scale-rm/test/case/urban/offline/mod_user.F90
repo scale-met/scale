@@ -19,6 +19,7 @@ module mod_user
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
+  use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -135,8 +136,6 @@ contains
   !> Step
   subroutine USER_update
     use scale_const, only: &
-       I_LW  => CONST_I_LW,  &
-       I_SW  => CONST_I_SW,  &
        PRE00 => CONST_PRE00, &
        Rdry  => CONST_Rdry,  &    ! specific gas constant (dry air)
        CPdry => CONST_CPdry       ! specific heat (dry air,constant pressure) [J/kg/K]
@@ -196,8 +195,8 @@ contains
        WA  (:,:)        =               0.0_RP
        RHOA(:,:)        = 1.193221659609323_RP
        PBL (:,:)        =             100.0_RP
-       RWD (:,:,I_LW,1) =               0.0_RP ! direct
-       RWD (:,:,I_LW,2) = 434.6034964144717_RP ! diffuse
+       RWD (:,:,I_R_direct ,I_R_IR) =               0.0_RP ! direct
+       RWD (:,:,I_R_diffuse,I_R_IR) = 434.6034964144717_RP ! diffuse
        PRSA(:,:)        =          100000.0_RP
        PRSS(:,:)        = 102400.6750905938_RP
        QVA (:,:)        = 1.612903266525567E-02_RP
@@ -235,16 +234,18 @@ contains
        SX = SG / ( VFGS * 0.8_RP +  VFWS * 0.8_RP * 0.2_RP / 0.8_RP * VFGW * 0.8_RP  )
        SX = SB / ( VFWS * 0.8_RP +  VFGS * 0.8_RP * 0.2_RP / 0.8_RP * VFWG * 0.8_RP  )
 
-       RWD(:,:,I_SW,1) = (        SRATIO ) * SX ! direct
-       RWD(:,:,I_SW,2) = ( 1.0_RP-SRATIO ) * SX ! diffuse
+       RWD(:,:,I_R_direct ,I_R_NIR) = 0.0_RP
+       RWD(:,:,I_R_diffuse,I_R_NIR) = 0.0_RP
+       RWD(:,:,I_R_direct ,I_R_VIS) = (        SRATIO ) * SX ! direct
+       RWD(:,:,I_R_diffuse,I_R_VIS) = ( 1.0_RP-SRATIO ) * SX ! diffuse
 
        PTA (:,:) = 293.7453140572144_RP
        TMPA(:,:) = PTA(:,:) * ( PRSA(:,:) / PRE00 )**RovCP   ! air temp, but now PRSA = 100000Pa
 
        RHOS(:,:) = PRSS(:,:) / ( Rdry * TMPA(:,:) )
 
-       LWD (:,:) = RWD(:,:,I_LW,1) + RWD(:,:,I_LW,2)
-       SWD (:,:) = RWD(:,:,I_SW,1) + RWD(:,:,I_SW,2)
+       LWD (:,:) = RWD(:,:,I_R_direct ,I_R_IR) + RWD(:,:,I_R_direct ,I_R_VIS)
+       SWD (:,:) = RWD(:,:,I_R_diffuse,I_R_IR) + RWD(:,:,I_R_diffuse,I_R_VIS)
 
        call FILE_HISTORY_in( PTA (:,:), 'PT_urb',   'Potential air temperature',    'K'     )
        call FILE_HISTORY_in( QVA (:,:), 'QA_urb',   'Specific humidity',            'kg/kg' )
