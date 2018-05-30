@@ -112,9 +112,21 @@ contains
        FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_time, only : &
        NOWSEC => TIME_NOWSEC
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HR
     use mod_atmos_vars, only: &
        QTRC
+    use mod_atmos_phy_mp_driver, only: &
+       ATMOS_PHY_MP_driver_qhyd2qtrc
+    use mod_atmos_phy_mp_vars, only: &
+       QS_MP, &
+       QE_MP
     implicit none
+
+    real(RP) :: QV  (KA,IA,JA)
+    real(RP) :: QHYD(KA,IA,JA,N_HYD)
+    real(RP) :: QNUM(KA,IA,JA,N_HYD)
 
     integer  :: modsec
     real(RP) :: dist
@@ -126,21 +138,31 @@ contains
        LOG_INFO("USER_update",*) 'Add rain.'
        USER_do = .false.
 
+       QV  (:,:,:)   = 0.0_RP
+       QHYD(:,:,:,:) = 0.0_RP
+       QNUM(:,:,:,:) = 0.0_RP
+
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          dist = ( ( CZ(k,i,j) - 3000.0_RP ) / 50.0_RP )**2
-
-          QTRC(k,i,j,I_QR) = 1.E-3 / ( 1.0_RP + dist )
-!          if (       FZ(k,  i,j) >= 3000.0_RP &
-!               .AND. FZ(k-1,i,j) <  3000.0_RP ) then
+!           dist = ( ( CZ(k,i,j) - 3000.0_RP ) / 50.0_RP )**2
 !
-!             LOG_INFO("USER_update",*) k,i,j,CZ(k,i,j),dist,1.E-3/( 1.0_RP + dist )
-!             QTRC(k,i,j,I_QR) = 1.E-3
-!          endif
+!           QHYD(k,i,j,I_HR) = 1.E-3 / ( 1.0_RP + dist )
+          if (       FZ(k,  i,j) >= 3000.0_RP &
+               .AND. FZ(k-1,i,j) <  3000.0_RP ) then
+             QHYD(k,i,j,I_HR) = 1.E-3_RP
+          endif
        enddo
        enddo
        enddo
+
+       call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE,              & ! [IN]
+                                           IA, IS, IE,              & ! [IN]
+                                           JA, JS, JE,              & ! [IN]
+                                           QV  (:,:,:),             & ! [IN]
+                                           QHYD(:,:,:,:),           & ! [IN]
+                                           QTRC(:,:,:,QS_MP:QE_MP), & ! [OUT]
+                                           QNUM=QNUM(:,:,:,:)       ) ! [IN]
     endif
 
     return
