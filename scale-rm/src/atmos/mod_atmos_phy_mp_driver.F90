@@ -107,7 +107,7 @@ contains
        ATMOS_PHY_MP_SN14_nices,               &
        ATMOS_PHY_MP_SN14_tracer_names,        &
        ATMOS_PHY_MP_SN14_tracer_descriptions, &
-       ATMOS_PHY_MP_SN14_tracer_units    
+       ATMOS_PHY_MP_SN14_tracer_units
     use scale_atmos_phy_mp_suzuki10, only: &
        ATMOS_PHY_MP_suzuki10_tracer_setup,        &
        ATMOS_PHY_MP_suzuki10_ntracers,            &
@@ -237,7 +237,7 @@ contains
        QS_MP, &
        QE_MP
     implicit none
-    
+
     namelist / PARAM_ATMOS_PHY_MP / &
        MP_do_precipitation,     &
        MP_do_negative_fixer,    &
@@ -414,7 +414,8 @@ contains
        QLA,   &
        QIA
     use scale_atmos_phy_mp_common, only: &
-       ATMOS_PHY_MP_precipitation, &
+       ATMOS_PHY_MP_precipitation,         &
+       ATMOS_PHY_MP_precipitation_semilag, &
        ATMOS_PHY_MP_precipitation_momentum
     use scale_atmos_refstate, only: &
        REFSTATE_dens => ATMOS_REFSTATE_dens
@@ -434,7 +435,8 @@ contains
        FILE_HISTORY_query, &
        FILE_HISTORY_put
     use mod_atmos_admin, only: &
-       ATMOS_PHY_MP_TYPE
+       ATMOS_PHY_MP_TYPE,    &
+       ATMOS_PHY_PRECIP_TYPE
     use mod_atmos_vars, only: &
        DENS   => DENS_av, &
        MOMZ   => MOMZ_av, &
@@ -499,6 +501,7 @@ contains
     real(RP) :: mflux    (KA)
     real(RP) :: sflux    (2)  !> 1: rain, 2: snow
 
+    real(RP) :: FZ  (KA)
     real(RP) :: FDZ (KA)
     real(RP) :: RFDZ(KA)
     real(RP) :: RCDZ(KA)
@@ -634,7 +637,7 @@ contains
                                                DENS(:,:,:),  PRES(:,:,:), TEMP(:,:,:), & ! [IN]
                                                QTRC(:,:,:,QS_MP:QE_MP), QDRY(:,:,:),   & ! [IN]
                                                CPtot(:,:,:), CVtot(:,:,:),             & ! [IN]
-                                               CCN(:,:,:),                             & ! [IN] 
+                                               CCN(:,:,:),                             & ! [IN]
                                                RHOQ_t_MP(:,:,:,QS_MP:QE_MP),           & ! [OUT]
                                                RHOE_t(:,:,:),                          & ! [OUT]
                                                CPtot_t(:,:,:), CVtot_t(:,:,:),         & ! [OUT]
@@ -679,7 +682,7 @@ contains
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp shared (KA,KS,KE,IS,IE,JS,JE,QS_MP,QE_MP,QHA,QLA,QIA, &
           !$omp         PRE00, &
-          !$omp         ATMOS_PHY_MP_TYPE, &
+          !$omp         ATMOS_PHY_MP_TYPE, ATMOS_PHY_PRECIP_TYPE, &
           !$omp         dt_MP,MP_NSTEP_SEDIMENTATION,MP_DTSEC_SEDIMENTATION,MP_RNSTEP_SEDIMENTATION, &
           !$omp         REAL_CZ,REAL_FZ, &
           !$omp         DENS,MOMZ,U,V,RHOT,TEMP,PRES,QTRC,CPtot,CVtot,EXNER, &
@@ -688,11 +691,13 @@ contains
           !$omp         REFSTATE_dens, &
           !$omp         vterm_hist,hist_vterm_idx) &
           !$omp private(i,j,k,iq,step, &
-          !$omp         FDZ,RFDZ,RCDZ, &
+          !$omp         FZ,FDZ,RFDZ,RCDZ, &
           !$omp         DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ2, &
           !$omp         vterm,mflux,sflux,FLX_hydro,CP_t,CV_t)
           do j = JS, JE
           do i = IS, IE
+
+             FZ(1:KA) = REAL_FZ(1:KA,i,j)
 
              FDZ(KS-1) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j)
              RFDZ(KS-1) = 1.0_RP / FDZ(KS-1)
@@ -757,16 +762,33 @@ contains
                    end if
                 end do
 
-                call ATMOS_PHY_MP_precipitation( &
-                     KA, KS, KE, QE_MP-QS_MP, QLA, QIA, &
-                     TEMP2(:), vterm(:,:),   & ! [IN]
-                     FDZ(:), RCDZ(:),        & ! [IN]
-                     MP_DTSEC_SEDIMENTATION, & ! [IN]
-                     i, j,                   & ! [IN]
-                     DENS2(:), RHOQ2(:,:),   & ! [INOUT]
-                     CPtot2(:), CVtot2(:),   & ! [INOUT]
-                     RHOE2(:),               & ! [INOUT]
-                     mflux(:), sflux(:)      ) ! [OUT]
+                select case ( ATMOS_PHY_PRECIP_TYPE )
+                case ( 'Upwind-Euler' )
+                   call ATMOS_PHY_MP_precipitation( &
+                        KA, KS, KE, QE_MP-QS_MP, QLA, QIA, &
+                        TEMP2(:), vterm(:,:),   & ! [IN]
+                        FDZ(:), RCDZ(:),        & ! [IN]
+                        MP_DTSEC_SEDIMENTATION, & ! [IN]
+                        i, j,                   & ! [IN]
+                        DENS2(:), RHOQ2(:,:),   & ! [INOUT]
+                        CPtot2(:), CVtot2(:),   & ! [INOUT]
+                        RHOE2(:),               & ! [INOUT]
+                        mflux(:), sflux(:)      ) ! [OUT]
+                case ( 'Semilag' )
+                   call ATMOS_PHY_MP_precipitation_semilag( &
+                        KA, KS, KE, QE_MP-QS_MP, QLA, QIA, &
+                        TEMP2(:), vterm(:,:),   & ! [IN]
+                        FZ(:), FDZ(:), RCDZ(:), & ! [IN]
+                        MP_DTSEC_SEDIMENTATION, & ! [IN]
+                        i, j,                   & ! [IN]
+                        DENS2(:), RHOQ2(:,:),   & ! [INOUT]
+                        CPtot2(:), CVtot2(:),   & ! [INOUT]
+                        RHOE2(:),               & ! [INOUT]
+                        mflux(:), sflux(:)      ) ! [OUT]
+                case default
+                   mflux(:) = 0.0_RP
+                   sflux(:) = 0.0_RP
+                end select
 
                 do k = KS, KE
                    TEMP2(k) = RHOE2(k) / ( DENS2(k) * CVtot2(k) )
