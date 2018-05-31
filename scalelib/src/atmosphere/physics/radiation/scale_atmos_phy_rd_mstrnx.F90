@@ -1110,7 +1110,7 @@ contains
     !$acc& pcopyin(wgtch, fitPLK, logfitP, logfitT, fitT) &
     !$acc& pcopyin(radmode, ngasabs, igasabs) &
     !$acc& pcopyin(fsol, q, qmol, rayleigh, acfc, nch, AKD, SKD) &
-    !$acc& pcopyin(Wmns, Wpls, Wscale, W, M) &
+    !$acc& pcopyin(Wmns, Wpls, Wscale, W, M)
 
     return
   end subroutine RD_MSTRN_setup
