@@ -414,7 +414,7 @@ contains
        QLA,   &
        QIA
     use scale_atmos_phy_mp_common, only: &
-       ATMOS_PHY_MP_precipitation,         &
+       ATMOS_PHY_MP_precipitation_upwind,  &
        ATMOS_PHY_MP_precipitation_semilag, &
        ATMOS_PHY_MP_precipitation_momentum
     use scale_atmos_refstate, only: &
@@ -764,7 +764,7 @@ contains
 
                 select case ( ATMOS_PHY_PRECIP_TYPE )
                 case ( 'Upwind-Euler' )
-                   call ATMOS_PHY_MP_precipitation( &
+                   call ATMOS_PHY_MP_precipitation_upwind( &
                         KA, KS, KE, QE_MP-QS_MP, QLA, QIA, &
                         TEMP2(:), vterm(:,:),   & ! [IN]
                         FDZ(:), RCDZ(:),        & ! [IN]

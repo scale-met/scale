@@ -32,7 +32,7 @@ module scale_atmos_phy_mp_common
   !
   public :: ATMOS_PHY_MP_negative_fixer
   public :: ATMOS_PHY_MP_saturation_adjustment
-  public :: ATMOS_PHY_MP_precipitation
+  public :: ATMOS_PHY_MP_precipitation_upwind
   public :: ATMOS_PHY_MP_precipitation_semilag
   public :: ATMOS_PHY_MP_precipitation_momentum
 
@@ -398,11 +398,8 @@ contains
   end subroutine ATMOS_PHY_MP_saturation_adjustment_3D
 
   !-----------------------------------------------------------------------------
-  !> ATMOS_PHY_MP_precipitation
-  !! precipitation transport
-  !<
 !OCL SERIAL
-  subroutine ATMOS_PHY_MP_precipitation( &
+  subroutine ATMOS_PHY_MP_precipitation_upwind( &
        KA, KS, KE, QHA, QLA, QIA, &
        TEMP, vterm, FDZ, RCDZ, dt,     &
        i, j,                           &
@@ -513,12 +510,9 @@ contains
     end do
 
     return
-  end subroutine ATMOS_PHY_MP_precipitation
+  end subroutine ATMOS_PHY_MP_precipitation_upwind
 
   !-----------------------------------------------------------------------------
-  !> ATMOS_PHY_MP_precipitation
-  !! precipitation transport
-  !<
 !OCL SERIAL
   subroutine ATMOS_PHY_MP_precipitation_semilag( &
        KA, KS, KE, QHA, QLA, QIA, &
@@ -695,10 +689,8 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_precipitation_semilag
+
   !-----------------------------------------------------------------------------
-  !> ATMOS_PHY_MP_precipitation_transfer
-  !! precipitation transport
-  !<
 !OCL SERIAL
   subroutine ATMOS_PHY_MP_precipitation_momentum( &
        KA, KS, KE, &
