@@ -830,8 +830,10 @@ contains
     DTS_MAX_onestep = DTS_MAX * dt
 
     if ( ZDC + Z0C + 2.0_RP >= ZA ) then
-       LOG_ERROR("[URBAN_DYN_kusaka01_SLC_main",*) 'ZDC + Z0C + 2m is larger than the 1st level! STOP.'
+       LOG_ERROR("URBAN_DYN_kusaka01_SLC_main",*) 'ZDC + Z0C + 2m must be less than the 1st level! STOP.'
        call PRC_abort
+       ! "2.0m" has no special meaning, but it is related with BB formulation from Inoue (1963). Please see subroutine "canopy_wind".
+       ! The canopy model is modeled under an assumption that urban canopy lies below the lowest level of atmospheric model.
     endif
 
     W    = 2.0_RP * 1.0_RP * HGT
