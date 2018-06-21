@@ -9,7 +9,7 @@ cat << EOF > base.net2g.2D.conf
 
 #################################################
 #
-# post process configuration: POPSCA
+# post process configuration: net2g
 #
 #################################################
 
@@ -44,7 +44,7 @@ cat << EOF > base.net2g.3D.conf
 
 #################################################
 #
-# post process configuration: POPSCA
+# post process configuration: net2g
 #
 #################################################
 
