@@ -286,6 +286,7 @@ program netcdf2grads_h
 #ifdef MPIUSE
   call comm_setup( mnxp, mnyp, nxgp, nygp, nmnge )
 #endif
+  ! allocation
   call netcdf_setup( mnxp, mnyp, nz_all )
 
   call set_atype( atype )
@@ -748,6 +749,14 @@ contains
        case ( "PLEV", "plev" )
           do n=1, ZCOUNT
              if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [hPa]"
+          enddo
+       case ( "original" ) ! If Z_LEV_TYPE = original, then TARGET_ZLEV is ignored.
+          Z_LEV_LIST = .false.
+          m = ZSTART
+          do n=1, ZCOUNT
+             TARGET_ZLEV(n) = m
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [grid]"
+             m = m + 1
           enddo
        case default
           do n=1, ZCOUNT
