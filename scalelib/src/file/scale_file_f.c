@@ -143,6 +143,21 @@ void file_get_datainfo_c_(       datainfo_t *dinfo,       // (out)
     cstr2fstr(dinfo->att_name+i*File_HSHORT, dinfo->att_name+i*File_HSHORT, File_HSHORT);
 }
 
+void file_get_step_size_c_( const int32_t *fid,          // (in)
+			    const char    *varname,      // (in)
+			          int32_t *len,          // (out)
+			          int32_t *error,        // (out)
+			    const int32_t  varname_len ) // (in)
+{
+  char _varname[File_HSHORT+1];
+  int32_t clen;
+
+  clen = varname_len > File_HSHORT ? File_HSHORT : varname_len;
+  fstr2cstr(_varname, varname, clen);
+
+  *error = file_get_step_size_c( *fid, _varname, len );
+}
+
 void file_read_data_c_(       void       *var,       // (out)
 			const datainfo_t *dinfo,     // (in)
 			const int32_t    *precision, // (in)

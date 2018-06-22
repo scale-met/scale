@@ -405,7 +405,7 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
       } else
 	dinfo->standard_name[0] = '\0';
 #endif
-      // dimensiont
+      // dimensions
       CHECK_PNC_ERROR( ncmpi_inq_vardimid(ncid, varid, dimids) )
 #if 1
       CHECK_PNC_ERROR( ncmpi_inq_unlimdim(ncid, uldims) )
@@ -626,6 +626,60 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
   }
 
   ERROR_SUPPRESS = 0;
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_get_step_size_c( const int32_t  fid,     // (in)
+			      const char*    varname, // (in)
+			            int32_t *len    ) // (out)
+{
+  int ncid, varid;
+
+  int dimids[RANK_MAX], uldims[NC_MAX_DIMS], tdim;
+  int n, i;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+  if ( files[fid]->shared_mode )
+    CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, varname, &varid) )
+  else
+    CHECK_ERROR( nc_inq_varid(ncid, varname, &varid) )
+
+  if ( files[fid]->shared_mode ) {
+    CHECK_PNC_ERROR( ncmpi_inq_vardimid(ncid, varid, dimids) )
+    CHECK_PNC_ERROR( ncmpi_inq_unlimdim(ncid, uldims) )
+    n = uldims[0] < 0 ? 0 : 1;
+  } else {
+    CHECK_ERROR( nc_inq_vardimid(ncid, varid, dimids) )
+#ifdef NETCDF3
+    CHECK_ERROR( nc_inq_unlimdim(ncid, uldims) )
+    n = uldims[0] < 0 ? 0 : 1;
+#else
+    CHECK_ERROR( nc_inq_unlimdims(ncid, &n, uldims) )
+#endif
+  }
+  
+  tdim = -1;
+  for ( i=0; i<n; i++ ) {
+    if ( uldims[i] == dimids[0] ) {
+      tdim = uldims[i];
+      break;
+    }
+  }
+
+  if ( tdim > 0 ) {
+    if ( files[fid]->shared_mode ) {
+      MPI_Offset l;
+      CHECK_PNC_ERROR( ncmpi_inq_dimlen(ncid, tdim, &l) )
+      *len = l;
+    } else {
+      size_t l;
+      CHECK_ERROR( nc_inq_dimlen(ncid, tdim, &l) )
+      *len = l;
+    }
+  } else
+    *len = 0;
 
   return SUCCESS_CODE;
 }

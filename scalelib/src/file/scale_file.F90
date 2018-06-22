@@ -44,6 +44,7 @@ module scale_file
   public :: FILE_add_variable
   public :: FILE_def_variable
   public :: FILE_get_shape
+  public :: FILE_get_stepSize
   public :: FILE_get_commonInfo
   public :: FILE_get_dataInfo
   public :: FILE_get_all_dataInfo
@@ -2001,6 +2002,38 @@ contains
 
     return
   end subroutine FILE_get_shape_fid
+
+  !-----------------------------------------------------------------------------
+  !> get number of steps
+  !-----------------------------------------------------------------------------
+  subroutine FILE_get_stepSize( &
+       fid, varname, &
+       len,          &
+       error         )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: varname
+
+    integer, intent(out) :: len
+
+    logical, intent(out), optional :: error
+
+    integer :: ierror
+
+    call file_get_step_size_c( FILE_files(fid)%fid, varname, & ! (in)
+                               len, ierror                   ) ! (out)
+    if ( ierror /= FILE_SUCCESS_CODE .and. ierror /= FILE_ALREADY_EXISTED_CODE ) then
+       if ( present(error) ) then
+          error = .true.
+       else
+          LOG_ERROR("FILE_get_stepSize",*) 'failed to get number of steps'
+          call PRC_abort
+       end if
+    else
+       if ( present(error) ) error = .false.
+    end if
+
+    return
+  end subroutine FILE_get_stepSize
 
   !-----------------------------------------------------------------------------
   ! FILE_get_commonInfo
