@@ -560,6 +560,7 @@ contains
     real(RP) :: rcdz2 (KA)
     real(RP) :: dist  (KA)
     real(RP) :: Z_src
+    real(RP) :: mask
     integer  :: k_src (KA)
     integer  :: k_dst
 
@@ -581,6 +582,7 @@ contains
 
     do iq = 1, QHA
        do k = KS, KE-1
+          rcdz2 (k) = 1.0_RP / ( 1.0_RP / RCDZ(k+1) + 1.0_RP / RCDZ(k) )
           vtermh(k) = 0.5_RP * ( vterm(k+1,iq) + vterm(k,iq) )
        enddo
        vtermh(KS-1) = vterm(KS,iq)
@@ -589,29 +591,25 @@ contains
           dvterm(k) = vtermh(k) - vtermh(k-1)
        enddo
 
-       do k = KS, KE-1
-          rcdz2(k) = 1.0_RP / ( 1.0_RP / RCDZ(k+1) + 1.0_RP / RCDZ(k) )
-       enddo
-
        ! Movement distance of the cell wall by the fall
        do k = KS, KE-1
           dist(k) = - vtermh(k) * dt                                                                                             &
                     + vtermh(k) * dt**2 / 2.0_RP *     ( dvterm(k+1)+dvterm(k) )*rcdz2(k)                                        &
                     - vtermh(k) * dt**3 / 6.0_RP * ( ( ( dvterm(k+1)+dvterm(k) )*rcdz2(k) )**2                                   &
                                                    + 2.0_RP * vtermh(k)*rcdz2(k) * ( dvterm(k+1)*RCDZ(k+1) - dvterm(k)*RCDZ(k) ) )
+          dist(k) = max( dist(k), 0.0_RP )
        enddo
        dist(KS-1) = - vtermh(KS-1) * dt &
                     + vtermh(KS-1) * dt**2 / 2.0_RP * dvterm(KS)*RCDZ(KS)
+       dist(KS-1) = max( dist(KS-1), 0.0_RP )
 
 !        LOG_INFO_CONT(*) "distance", iq
 !        do k = KA, 1, -1
-!           LOG_INFO_CONT('(1x,I5,2F9.3,ES15.5)') k, dist(k), vterm(k,iq), RHOQ(k,iq)
+!           LOG_INFO_CONT('(1x,I5,3F9.3,ES15.5)') k, dist(k), vtermh(k), vterm(k,iq), RHOQ(k,iq)
 !        enddo
 
        ! search number of source cell
        do k_dst = KS-1, KE-1
-          dist(k_dst) = max( dist(k_dst), 0.0_RP )
-
           Z_src = FZ(k_dst) + dist(k_dst)
 
           k_src(k_dst) = k_dst
@@ -623,27 +621,39 @@ contains
           enddo
        enddo
 
+!        LOG_INFO_CONT(*) "seek", iq
+!        do k = KA, 1, -1
+!           LOG_INFO_CONT('(1x,2I5,2F9.3)') k, k_src(k), FZ(k), FZ(k)+dist(k)
+!        enddo
+
        do k_dst = KS-1, KE-1
-          do k = k_dst, k_src(k_dst)
-             if ( k < k_src(k_dst) ) then
-                qflx(k_dst) = qflx(k_dst) - RHOQ(k+1,iq) / RCDZ(k+1) / dt ! sum column mass rhoq*dz
-                dist(k_dst) = dist(k_dst) - 1.0_RP       / RCDZ(k+1)      ! residual
-             endif
+          do k = k_dst, k_src(k_dst)-1
+             mask = 0.5_RP * ( sign(1,k_src(k_dst)-1-k) + 1.0_RP ) ! if k < k_src(k_dst), mask = 1.0
+
+             qflx(k_dst) = qflx(k_dst) - mask / RCDZ(k+1) * RHOQ(k+1,iq) / dt ! sum column mass rhoq*dz
+             dist(k_dst) = dist(k_dst) - mask / RCDZ(k+1)                     ! residual
           enddo
 
           ! residual (simple upwind)
-          qflx(k_dst) = qflx(k_dst) - RHOQ(k_src(k_dst)+1,iq) * dist(k_dst) / dt ! sum column mass rhoq*dz
+          mask = 0.5_RP * ( sign(1,k_src(k_dst)-k_dst) + 1.0_RP ) ! if k_dst <= k_src(k_dst), mask = 1.0
+
+          qflx(k_dst) = qflx(k_dst) - mask * dist(k_dst) * RHOQ(k_src(k_dst)+1,iq) / dt ! sum column mass rhoq*dz
        enddo
 
 !        LOG_INFO_CONT(*) "flux", iq
 !        do k = KA, 1, -1
-!           LOG_INFO_CONT('(1x,2I5,F9.3,2ES15.5)') k, k_src(k), dist(k), qflx(k), vterm(k+1,iq) * RHOQ(k+1,iq)
+!           LOG_INFO_CONT('(1x,2I5,F9.3,2ES15.5)') k, k_src(k), dist(k), qflx(k), vtermh(k)*RHOQ(k+1,iq)
 !        enddo
 
        !--- update falling tracer
        do k  = KS, KE
           rhoq(k,iq) = rhoq(k,iq) - dt * ( qflx(k) - qflx(k-1) ) * RCDZ(k)
        enddo ! falling (water mass & number) tracer
+
+!        LOG_INFO_CONT(*) "tendency", iq
+!        do k = KA, 1, -1
+!           LOG_INFO_CONT('(1x,I5,ES15.5)') k, - dt * ( qflx(k) - qflx(k-1) ) * RCDZ(k)
+!        enddo
 
        ! QTRC(iq; iq>QLA+QLI) is not mass tracer, such as number density
        if ( iq > QLA + QIA ) cycle

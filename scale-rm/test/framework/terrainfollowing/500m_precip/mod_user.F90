@@ -89,29 +89,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state
   subroutine USER_mkinit
-    implicit none
-    !---------------------------------------------------------------------------
-
-    return
-  end subroutine USER_mkinit
-
-  !-----------------------------------------------------------------------------
-  !> Calculate tendency
-  subroutine USER_calc_tendency
-    implicit none
-    !---------------------------------------------------------------------------
-
-    return
-  end subroutine USER_calc_tendency
-
-  !-----------------------------------------------------------------------------
-  !> Step
-  subroutine USER_update
     use scale_atmos_grid_cartesC_real, only : &
        CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        FZ => ATMOS_GRID_CARTESC_REAL_FZ
-    use scale_time, only : &
-       NOWSEC => TIME_NOWSEC
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_HR
@@ -134,36 +114,51 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    if ( USER_do ) then
-       LOG_INFO("USER_update",*) 'Add rain.'
-       USER_do = .false.
+    LOG_INFO("USER_mkinit",*) 'Add rain.'
 
-       QV  (:,:,:)   = 0.0_RP
-       QHYD(:,:,:,:) = 0.0_RP
-       QNUM(:,:,:,:) = 0.0_RP
+    QV  (:,:,:)   = 0.0_RP
+    QHYD(:,:,:,:) = 0.0_RP
+    QNUM(:,:,:,:) = 0.0_RP
 
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-!           dist = ( ( CZ(k,i,j) - 3000.0_RP ) / 50.0_RP )**2
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+!        dist = ( ( CZ(k,i,j) - 3000.0_RP ) / 50.0_RP )**2
 !
-!           QHYD(k,i,j,I_HR) = 1.E-3 / ( 1.0_RP + dist )
-          if (       FZ(k,  i,j) >= 3000.0_RP &
-               .AND. FZ(k-1,i,j) <  3000.0_RP ) then
-             QHYD(k,i,j,I_HR) = 1.E-3_RP
-          endif
-       enddo
-       enddo
-       enddo
+!        QHYD(k,i,j,I_HR) = 1.E-3 / ( 1.0_RP + dist )
+       if (       FZ(k,  i,j) >= 3000.0_RP &
+            .AND. FZ(k-1,i,j) <  3000.0_RP ) then
+          QHYD(k,i,j,I_HR) = 1.E-3_RP
+       endif
+    enddo
+    enddo
+    enddo
 
-       call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE,              & ! [IN]
-                                           IA, IS, IE,              & ! [IN]
-                                           JA, JS, JE,              & ! [IN]
-                                           QV  (:,:,:),             & ! [IN]
-                                           QHYD(:,:,:,:),           & ! [IN]
-                                           QTRC(:,:,:,QS_MP:QE_MP), & ! [OUT]
-                                           QNUM=QNUM(:,:,:,:)       ) ! [IN]
-    endif
+    call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE,              & ! [IN]
+                                        IA, IS, IE,              & ! [IN]
+                                        JA, JS, JE,              & ! [IN]
+                                        QV  (:,:,:),             & ! [IN]
+                                        QHYD(:,:,:,:),           & ! [IN]
+                                        QTRC(:,:,:,QS_MP:QE_MP), & ! [OUT]
+                                        QNUM=QNUM(:,:,:,:)       ) ! [IN]
+
+    return
+  end subroutine USER_mkinit
+
+  !-----------------------------------------------------------------------------
+  !> Calculate tendency
+  subroutine USER_calc_tendency
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_calc_tendency
+
+  !-----------------------------------------------------------------------------
+  !> Step
+  subroutine USER_update
+    implicit none
+    !---------------------------------------------------------------------------
 
     return
   end subroutine USER_update
