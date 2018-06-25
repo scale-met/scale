@@ -577,10 +577,10 @@ contains
 
 
     !########## History & Monitor ##########
-    call OCEAN_vars_history
-    call LAND_vars_history
-    call URBAN_vars_history
-    call ATMOS_vars_history
+    if( ATMOS_do ) call ATMOS_vars_history
+    if( OCEAN_do ) call OCEAN_vars_history
+    if( LAND_do  ) call LAND_vars_history
+    if( URBAN_do ) call URBAN_vars_history
 
     call ATMOS_vars_monitor
 
