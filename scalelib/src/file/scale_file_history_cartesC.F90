@@ -364,24 +364,32 @@ contains
     count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
     call FILE_HISTORY_Set_Dim( "ZHXY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area", volume="cell_volume_xyw", location="face" )
 
-    dims (3,1) = "oz"
-    count(3,1) = OKMAX
-    call FILE_HISTORY_Set_Dim( "OXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area", volume="cell_volume_xyo", location="face", grid="ocean" ) ! [IN]
-    dims (3,1) = "ozh"
-    count(3,1) = OKMAX + 1
-    call FILE_HISTORY_Set_Dim( "OHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area", location="face", grid="ocean" ) ! [IN]
-    dims (3,1) = "lz"
-    count(3,1) = LKMAX
-    call FILE_HISTORY_Set_Dim( "LXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area", volume="cell_volume_xyl", location="face", grid="land" ) ! [IN]
-    dims (3,1) = "lzh"
-    count(3,1) = LKMAX + 1
-    call FILE_HISTORY_Set_Dim( "LHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area", location="face", grid="land" ) ! [IN]
-    dims (3,1) = "uz"
-    count(3,1) = UKMAX
-    call FILE_HISTORY_Set_Dim( "UXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area", volume="cell_volume_xyu", grid="urban" ) ! [IN]
-    dims (3,1) = "uzh"
-    count(3,1) = UKMAX + 1
-    call FILE_HISTORY_Set_Dim( "UHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area", location="face", grid="urban" ) ! [IN]
+    if ( OKMAX > 0 ) then
+       dims (3,1) = "oz"
+       count(3,1) = OKMAX
+       call FILE_HISTORY_Set_Dim( "OXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area", volume="cell_volume_xyo", location="face", grid="ocean" ) ! [IN]
+       dims (3,1) = "ozh"
+       count(3,1) = OKMAX + 1
+       call FILE_HISTORY_Set_Dim( "OHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area", location="face", grid="ocean" ) ! [IN]
+    endif
+
+    if ( LKMAX > 0 ) then
+       dims (3,1) = "lz"
+       count(3,1) = LKMAX
+       call FILE_HISTORY_Set_Dim( "LXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area", volume="cell_volume_xyl", location="face", grid="land" ) ! [IN]
+       dims (3,1) = "lzh"
+       count(3,1) = LKMAX + 1
+       call FILE_HISTORY_Set_Dim( "LHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area", location="face", grid="land" ) ! [IN]
+    endif
+
+    if ( UKMAX > 0 ) then
+       dims (3,1) = "uz"
+       count(3,1) = UKMAX
+       call FILE_HISTORY_Set_Dim( "UXY",  3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area", volume="cell_volume_xyu", grid="urban" ) ! [IN]
+       dims (3,1) = "uzh"
+       count(3,1) = UKMAX + 1
+       call FILE_HISTORY_Set_Dim( "UHXY", 3, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area", location="face", grid="urban" ) ! [IN]
+    endif
 
     ! XH, Y
     dims(1,:) = 'lon_uy'
@@ -1004,7 +1012,6 @@ contains
        YAGH    = jmh
     endif
 
-
     ! bounds
     do k = KS, KE
        z_bnds(1,k) = ATMOS_GRID_CARTESC_FZ(k-1)
@@ -1015,38 +1022,44 @@ contains
        zh_bnds(2,k) = ATMOS_GRID_CARTESC_CZ(k+1)
     end do
 
-    do k = OKS, OKE
-       oz_bnds(1,k) = OCEAN_GRID_CARTESC_FZ(k-1)
-       oz_bnds(2,k) = OCEAN_GRID_CARTESC_FZ(k  )
-    end do
-    ozh_bnds(1,OKS-1) = OCEAN_GRID_CARTESC_FZ(OKS-1)
-    do k = OKS-1, OKE-1
-       ozh_bnds(2,k  ) = OCEAN_GRID_CARTESC_CZ(k+1)
-       ozh_bnds(1,k+1) = OCEAN_GRID_CARTESC_CZ(k+1)
-    end do
-    ozh_bnds(2,OKE) = OCEAN_GRID_CARTESC_FZ(OKE)
+    if ( OKA > 0 ) then
+       do k = OKS, OKE
+          oz_bnds(1,k) = OCEAN_GRID_CARTESC_FZ(k-1)
+          oz_bnds(2,k) = OCEAN_GRID_CARTESC_FZ(k  )
+       end do
+       ozh_bnds(1,OKS-1) = OCEAN_GRID_CARTESC_FZ(OKS-1)
+       do k = OKS-1, OKE-1
+          ozh_bnds(2,k  ) = OCEAN_GRID_CARTESC_CZ(k+1)
+          ozh_bnds(1,k+1) = OCEAN_GRID_CARTESC_CZ(k+1)
+       end do
+       ozh_bnds(2,OKE) = OCEAN_GRID_CARTESC_FZ(OKE)
+    end if
 
-    do k = LKS, LKE
-       lz_bnds(1,k) = LAND_GRID_CARTESC_FZ(k-1)
-       lz_bnds(2,k) = LAND_GRID_CARTESC_FZ(k  )
-    end do
-    lzh_bnds(1,LKS-1) = LAND_GRID_CARTESC_FZ(LKS-1)
-    do k = LKS-1, LKE-1
-       lzh_bnds(2,k  ) = LAND_GRID_CARTESC_CZ(k+1)
-       lzh_bnds(1,k+1) = LAND_GRID_CARTESC_CZ(k+1)
-    end do
-    lzh_bnds(2,LKE) = LAND_GRID_CARTESC_FZ(LKE)
+    if ( LKA > 0 ) then
+       do k = LKS, LKE
+          lz_bnds(1,k) = LAND_GRID_CARTESC_FZ(k-1)
+          lz_bnds(2,k) = LAND_GRID_CARTESC_FZ(k  )
+       end do
+       lzh_bnds(1,LKS-1) = LAND_GRID_CARTESC_FZ(LKS-1)
+       do k = LKS-1, LKE-1
+          lzh_bnds(2,k  ) = LAND_GRID_CARTESC_CZ(k+1)
+          lzh_bnds(1,k+1) = LAND_GRID_CARTESC_CZ(k+1)
+       end do
+       lzh_bnds(2,LKE) = LAND_GRID_CARTESC_FZ(LKE)
+    end if
 
-    do k = UKS, UKE
-       uz_bnds(1,k) = URBAN_GRID_CARTESC_FZ(k-1)
-       uz_bnds(2,k) = URBAN_GRID_CARTESC_FZ(k  )
-    end do
-    uzh_bnds(1,UKS-1) = URBAN_GRID_CARTESC_FZ(UKS-1)
-    do k = UKS-1, UKE-1
-       uzh_bnds(2,k  ) = URBAN_GRID_CARTESC_CZ(k+1)
-       uzh_bnds(1,k+1) = URBAN_GRID_CARTESC_CZ(k+1)
-    end do
-    uzh_bnds(2,UKE) = URBAN_GRID_CARTESC_FZ(UKE)
+    if ( UKA > 0 ) then
+       do k = UKS, UKE
+          uz_bnds(1,k) = URBAN_GRID_CARTESC_FZ(k-1)
+          uz_bnds(2,k) = URBAN_GRID_CARTESC_FZ(k  )
+       end do
+       uzh_bnds(1,UKS-1) = URBAN_GRID_CARTESC_FZ(UKS-1)
+       do k = UKS-1, UKE-1
+          uzh_bnds(2,k  ) = URBAN_GRID_CARTESC_CZ(k+1)
+          uzh_bnds(1,k+1) = URBAN_GRID_CARTESC_CZ(k+1)
+       end do
+       uzh_bnds(2,UKE) = URBAN_GRID_CARTESC_FZ(UKE)
+    end if
 
     do i = ims, ime
        x_bnds(1,i) = ATMOS_GRID_CARTESC_FX(i-1)
@@ -1115,20 +1128,26 @@ contains
                                     gsize=FILE_HISTORY_CARTESC_PRES_nlayer, start=startZ, down=.true.                    )
     endif
 
-    call FILE_HISTORY_Set_Axis( 'oz',  'OZ',              'm', 'oz',  OCEAN_GRID_CARTESC_CZ(OKS  :OKE), &
-                                bounds=oz_bnds (:,OKS  :OKE), gsize=OKMAX  , start=startZ, down=.true.  )
-    call FILE_HISTORY_Set_Axis( 'ozh', 'OZ (half level)', 'm', 'ozh', OCEAN_GRID_CARTESC_FZ(OKS-1:OKE), &
-                                bounds=ozh_bnds(:,OKS-1:OKE), gsize=OKMAX+1, start=startZ, down=.true.  )
+    if ( OKA > 0 ) then
+       call FILE_HISTORY_Set_Axis( 'oz',  'OZ',              'm', 'oz',  OCEAN_GRID_CARTESC_CZ(OKS  :OKE), &
+                                   bounds=oz_bnds (:,OKS  :OKE), gsize=OKMAX  , start=startZ, down=.true.  )
+       call FILE_HISTORY_Set_Axis( 'ozh', 'OZ (half level)', 'm', 'ozh', OCEAN_GRID_CARTESC_FZ(OKS-1:OKE), &
+                                   bounds=ozh_bnds(:,OKS-1:OKE), gsize=OKMAX+1, start=startZ, down=.true.  )
+    endif
 
-    call FILE_HISTORY_Set_Axis( 'lz',  'LZ',              'm', 'lz',  LAND_GRID_CARTESC_CZ(LKS  :LKE),  &
-                                bounds=lz_bnds (:,LKS  :LKE), gsize=LKMAX  , start=startZ, down=.true.  )
-    call FILE_HISTORY_Set_Axis( 'lzh', 'LZ (half level)', 'm', 'lzh', LAND_GRID_CARTESC_FZ(LKS-1:LKE),  &
-                                bounds=lzh_bnds(:,LKS-1:LKE), gsize=LKMAX+1, start=startZ, down=.true.  )
+    if ( LKA > 0 ) then
+       call FILE_HISTORY_Set_Axis( 'lz',  'LZ',              'm', 'lz',  LAND_GRID_CARTESC_CZ(LKS  :LKE),  &
+                                   bounds=lz_bnds (:,LKS  :LKE), gsize=LKMAX  , start=startZ, down=.true.  )
+       call FILE_HISTORY_Set_Axis( 'lzh', 'LZ (half level)', 'm', 'lzh', LAND_GRID_CARTESC_FZ(LKS-1:LKE),  &
+                                   bounds=lzh_bnds(:,LKS-1:LKE), gsize=LKMAX+1, start=startZ, down=.true.  )
+    endif
 
-    call FILE_HISTORY_Set_Axis( 'uz',  'UZ',              'm', 'uz',  URBAN_GRID_CARTESC_CZ(UKS  :UKE), &
-                                bounds=uz_bnds (:,UKS  :UKE), gsize=UKMAX  , start=startZ, down=.true.  )
-    call FILE_HISTORY_Set_Axis( 'uzh', 'UZ (half level)', 'm', 'uzh', URBAN_GRID_CARTESC_FZ(UKS-1:UKE), &
-                                bounds=uzh_bnds(:,UKS-1:UKE), gsize=UKMAX+1, start=startZ, down=.true.  )
+    if ( UKA > 0 ) then
+       call FILE_HISTORY_Set_Axis( 'uz',  'UZ',              'm', 'uz',  URBAN_GRID_CARTESC_CZ(UKS  :UKE), &
+                                   bounds=uz_bnds (:,UKS  :UKE), gsize=UKMAX  , start=startZ, down=.true.  )
+       call FILE_HISTORY_Set_Axis( 'uzh', 'UZ (half level)', 'm', 'uzh', URBAN_GRID_CARTESC_FZ(UKS-1:UKE), &
+                                   bounds=uzh_bnds(:,UKS-1:UKE), gsize=UKMAX+1, start=startZ, down=.true.  )
+    endif
 
     call FILE_HISTORY_Set_Axis( 'x',   'X',               'm', 'x',   ATMOS_GRID_CARTESC_CX (ims :ime), &
                                 bounds=x_bnds (:,ims :ime), gsize=XAG , start=startX                    )
@@ -1148,17 +1167,23 @@ contains
     call FILE_HISTORY_Set_Axis( 'CBFZ', 'Boundary factor Center Z',     '1', 'CZ',  ATMOS_GRID_CARTESC_CBFZ, gsize=KA,      start=startZ )
     call FILE_HISTORY_Set_Axis( 'FBFZ', 'Boundary factor Face Z',       '1', 'FZ',  ATMOS_GRID_CARTESC_FBFZ, gsize=KA+1,    start=startZ )
 
-    call FILE_HISTORY_Set_Axis( 'OCZ',  'Ocean Grid Center Position Z', 'm', 'OCZ', OCEAN_GRID_CARTESC_CZ,  gsize=OKMAX,   start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'OFZ',  'Ocean Grid Face Position Z',   'm', 'OFZ', OCEAN_GRID_CARTESC_FZ,  gsize=OKMAX+1, start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'OCDZ', 'Ocean Grid Cell length Z',     'm', 'OCZ', OCEAN_GRID_CARTESC_CDZ, gsize=OKMAX,   start=startZ              )
+    if ( OKMAX > 0 ) then
+       call FILE_HISTORY_Set_Axis( 'OCZ',  'Ocean Grid Center Position Z', 'm', 'OCZ', OCEAN_GRID_CARTESC_CZ,  gsize=OKMAX,   start=startZ, down=.true. )
+       call FILE_HISTORY_Set_Axis( 'OFZ',  'Ocean Grid Face Position Z',   'm', 'OFZ', OCEAN_GRID_CARTESC_FZ,  gsize=OKMAX+1, start=startZ, down=.true. )
+       call FILE_HISTORY_Set_Axis( 'OCDZ', 'Ocean Grid Cell length Z',     'm', 'OCZ', OCEAN_GRID_CARTESC_CDZ, gsize=OKMAX,   start=startZ              )
+    endif
 
-    call FILE_HISTORY_Set_Axis( 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', LAND_GRID_CARTESC_CZ,  gsize=LKMAX,   start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', LAND_GRID_CARTESC_FZ,  gsize=LKMAX+1, start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'LCDZ', 'Land Grid Cell length Z',      'm', 'LCZ', LAND_GRID_CARTESC_CDZ, gsize=LKMAX,   start=startZ              )
+    if ( LKMAX > 0 ) then
+       call FILE_HISTORY_Set_Axis( 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', LAND_GRID_CARTESC_CZ,  gsize=LKMAX,   start=startZ, down=.true. )
+       call FILE_HISTORY_Set_Axis( 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', LAND_GRID_CARTESC_FZ,  gsize=LKMAX+1, start=startZ, down=.true. )
+       call FILE_HISTORY_Set_Axis( 'LCDZ', 'Land Grid Cell length Z',      'm', 'LCZ', LAND_GRID_CARTESC_CDZ, gsize=LKMAX,   start=startZ              )
+    endif
 
-    call FILE_HISTORY_Set_Axis( 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', URBAN_GRID_CARTESC_CZ,  gsize=UKMAX,   start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', URBAN_GRID_CARTESC_FZ,  gsize=UKMAX+1, start=startZ, down=.true. )
-    call FILE_HISTORY_Set_Axis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', URBAN_GRID_CARTESC_CDZ, gsize=UKMAX,   start=startZ              )
+    if ( UKMAX > 0 ) then
+       call FILE_HISTORY_Set_Axis( 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', URBAN_GRID_CARTESC_CZ,  gsize=UKMAX,   start=startZ, down=.true. )
+       call FILE_HISTORY_Set_Axis( 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', URBAN_GRID_CARTESC_FZ,  gsize=UKMAX+1, start=startZ, down=.true. )
+       call FILE_HISTORY_Set_Axis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', URBAN_GRID_CARTESC_CDZ, gsize=UKMAX,   start=startZ              )
+    endif
 
     if ( FILE_HISTORY_AGGREGATE ) then
        call FILE_HISTORY_Set_Axis( 'CX',   'Atmos Grid Center Position X', 'm', 'CX', ATMOS_GRID_CARTESC_CXG,   gsize=IAG,   start=startZ )
@@ -1553,36 +1578,44 @@ contains
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_xvz', 'volume of grid cell (half level xvz)',  'm3', &
                                                 AXIS_name(1:3), AXIS(1:im,1:jmh,1:KMAX), start=start(:,3)         )
 
-    do k = 1, OKMAX
-    do j = 1, jm
-    do i = 1, im
-       AXISO(i,j,k) = VOLO(OKS+k-1,ims+i-1,jms+j-1)
-    end do
-    end do
-    end do
-    AXIS_name = (/'x ', 'y ', 'oz'/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_xyo', 'volume of grid cell', 'm3', &
-                                                AXIS_name(1:3), AXISO(:,:,:), start=start(:,1)  )
-    do k = 1, LKMAX
-    do j = 1, jm
-    do i = 1, im
-       AXISL(i,j,k) = VOLL(LKS+k-1,ims+i-1,jms+j-1)
-    end do
-    end do
-    end do
-    AXIS_name = (/'x ', 'y ', 'lz'/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_xyl', 'volume of grid cell', 'm3', &
-                                                AXIS_name(1:3), AXISL(:,:,:), start=start(:,1)  )
-    do k = 1, UKMAX
-    do j = 1, jm
-    do i = 1, im
-       AXISU(i,j,k) = VOLU(UKS+k-1,ims+i-1,jms+j-1)
-    end do
-    end do
-    end do
-    AXIS_name = (/'x ', 'y ', 'uz'/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_xyu', 'volume of grid cell', 'm3', &
-                                                AXIS_name(1:3), AXISU(:,:,:), start=start(:,1)  )
+    if ( OKMAX > 0 ) then
+       do k = 1, OKMAX
+       do j = 1, jm
+       do i = 1, im
+          AXISO(i,j,k) = VOLO(OKS+k-1,ims+i-1,jms+j-1)
+       end do
+       end do
+       end do
+       AXIS_name = (/'x ', 'y ', 'oz'/)
+       call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_xyo', 'volume of grid cell', 'm3', &
+                                                   AXIS_name(1:3), AXISO(:,:,:), start=start(:,1)  )
+    endif
+
+    if ( LKMAX > 0 ) then
+       do k = 1, LKMAX
+       do j = 1, jm
+       do i = 1, im
+          AXISL(i,j,k) = VOLL(LKS+k-1,ims+i-1,jms+j-1)
+       end do
+       end do
+       end do
+       AXIS_name = (/'x ', 'y ', 'lz'/)
+       call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_xyl', 'volume of grid cell', 'm3', &
+                                                   AXIS_name(1:3), AXISL(:,:,:), start=start(:,1)  )
+    endif
+
+    if ( UKMAX > 0 ) then
+       do k = 1, UKMAX
+       do j = 1, jm
+       do i = 1, im
+          AXISU(i,j,k) = VOLU(UKS+k-1,ims+i-1,jms+j-1)
+       end do
+       end do
+       end do
+       AXIS_name = (/'x ', 'y ', 'uz'/)
+       call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_xyu', 'volume of grid cell', 'm3', &
+                                                   AXIS_name(1:3), AXISU(:,:,:), start=start(:,1)  )
+    endif
 
     return
   end subroutine FILE_HISTORY_CARTESC_set_axes
@@ -1865,9 +1898,15 @@ contains
     call FILE_HISTORY_Set_Attribute( "cell_volume_uyz", "standard_name", "volume" ) ! [IN]
     call FILE_HISTORY_Set_Attribute( "cell_volume_xvz", "standard_name", "volume" ) ! [IN]
 
-    call FILE_HISTORY_Set_Attribute( "cell_volume_xyo", "standard_name", "volume" ) ! [IN]
-    call FILE_HISTORY_Set_Attribute( "cell_volume_xyl", "standard_name", "volume" ) ! [IN]
-    call FILE_HISTORY_Set_Attribute( "cell_volume_xyu", "standard_name", "volume" ) ! [IN]
+    if ( OKMAX > 0 ) then
+       call FILE_HISTORY_Set_Attribute( "cell_volume_xyo", "standard_name", "volume" ) ! [IN]
+    endif
+    if ( LKMAX > 0 ) then
+       call FILE_HISTORY_Set_Attribute( "cell_volume_xyl", "standard_name", "volume" ) ! [IN]
+    endif
+    if ( UKMAX > 0 ) then
+       call FILE_HISTORY_Set_Attribute( "cell_volume_xyu", "standard_name", "volume" ) ! [IN]
+    endif
 
     ! SGRID
     call FILE_HISTORY_Set_Attribute( "grid", "cf_role",             "grid_topology", add_variable=.true. )
