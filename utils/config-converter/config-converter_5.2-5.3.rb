@@ -19,6 +19,7 @@ bl = nil
 urban_limit = nil
 params = Array.new
 inflag = false
+okmax = false
 File.foreach(fname) do |line|
   line.chomp!
 
@@ -62,6 +63,10 @@ File.foreach(fname) do |line|
     else
       bl = "MYNN"
     end
+  end
+
+  if /PARAM_OCEAN_GRID_CARTESC_INDEX/i =~ line
+    okmax = true
   end
 
   if /limit_urban_fraction\s*=\s*(.+),?\s*$/i =~ line
@@ -348,6 +353,15 @@ params.each do |param|
       print item.sub(/OCEAN_TYPE/i, "OCEAN_DYN_TYPE"), "\n"
     end
     print "/\n"
+    unless okmax
+      print <<EOL
+
+&PARAM_OCEAN_CARTESC_INDEX
+ OKMAX = 1,
+/
+
+EOL
+    end
     next
   end
   if /^&PARAM_OCEAN_PHY_SLAB$/i =~ param_name

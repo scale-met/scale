@@ -44,6 +44,7 @@ module scale_file
   public :: FILE_add_variable
   public :: FILE_def_variable
   public :: FILE_get_shape
+  public :: FILE_get_stepSize
   public :: FILE_get_commonInfo
   public :: FILE_get_dataInfo
   public :: FILE_get_all_dataInfo
@@ -2001,6 +2002,38 @@ contains
 
     return
   end subroutine FILE_get_shape_fid
+
+  !-----------------------------------------------------------------------------
+  !> get number of steps
+  !-----------------------------------------------------------------------------
+  subroutine FILE_get_stepSize( &
+       fid, varname, &
+       len,          &
+       error         )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: varname
+
+    integer, intent(out) :: len
+
+    logical, intent(out), optional :: error
+
+    integer :: ierror
+
+    call file_get_step_size_c( FILE_files(fid)%fid, varname, & ! (in)
+                               len, ierror                   ) ! (out)
+    if ( ierror /= FILE_SUCCESS_CODE .and. ierror /= FILE_ALREADY_EXISTED_CODE ) then
+       if ( present(error) ) then
+          error = .true.
+       else
+          LOG_ERROR("FILE_get_stepSize",*) 'failed to get number of steps'
+          call PRC_abort
+       end if
+    else
+       if ( present(error) ) error = .false.
+    end if
+
+    return
+  end subroutine FILE_get_stepSize
 
   !-----------------------------------------------------------------------------
   ! FILE_get_commonInfo
@@ -4179,18 +4212,25 @@ contains
   end subroutine FILE_flush
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_close( fid )
+  subroutine FILE_close( fid, skip_abort )
     implicit none
-
     integer, intent(in) :: fid
+    logical, intent(in), optional :: skip_abort
 
-    integer                   :: error
-    integer                   :: n
+    logical :: skip_abort_
+    integer :: error
+    integer :: n
     !---------------------------------------------------------------------------
 
     if ( fid < 0 ) return
 
     if ( FILE_files(fid)%fid < 0 ) return  ! already closed
+
+    if ( present(skip_abort) ) then
+       skip_abort_ = skip_abort
+    else
+       skip_abort_ = .false.
+    end if
 
     call file_close_c( FILE_files(fid)%fid, error )
 
@@ -4202,7 +4242,7 @@ contains
 
     elseif( error /= FILE_ALREADY_CLOSED_CODE ) then
        LOG_ERROR("FILE_close",*) 'failed to close file'
-       call PRC_abort
+       if ( .not. skip_abort_ ) call PRC_abort
     end if
 
     FILE_files(fid)%fid = -1
@@ -4219,14 +4259,16 @@ contains
     return
   end subroutine FILE_close
   !-----------------------------------------------------------------------------
-  subroutine FILE_close_all
+  subroutine FILE_close_all( &
+       skip_abort )
     implicit none
+    logical, intent(in), optional :: skip_abort
 
     integer n
     !---------------------------------------------------------------------------
 
     do n = 1, FILE_nfiles
-       call FILE_close( n )
+       call FILE_close( n, skip_abort )
     enddo
 
     return

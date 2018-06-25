@@ -75,6 +75,11 @@ contains
     LOG_NEWLINE
     LOG_INFO("URBAN_GRID_CARTESC_setup",*) 'Setup'
 
+    if ( UKMAX < 1 ) then
+       LOG_INFO("URBAN_GRID_CARTESC_setup",*) 'Skip because UKMAX < 1'
+       return
+    end if
+
     UDZ(:) = 0.0_RP
 
     URBAN_GRID_CARTESC_IN_AGGREGATE = FILE_AGGREGATE

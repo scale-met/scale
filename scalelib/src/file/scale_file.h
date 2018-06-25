@@ -66,6 +66,10 @@ extern int32_t file_get_datainfo_c(       datainfo_t *dinfo,      // (out)
 				    const int32_t     step,       // (in)
 				    const int32_t     suppress ); // (in)
 
+extern int32_t file_get_step_size_c( const int32_t  fid,       // (in)
+				     const char*    varname,   // (in)
+				           int32_t *len     ); // (out)
+
 extern int32_t file_read_data_c(       void       *var,       // (out)
 				 const datainfo_t *dinfo,     // (in)
 				 const int32_t     precision, // (in)

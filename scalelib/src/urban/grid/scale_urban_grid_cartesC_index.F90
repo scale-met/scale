@@ -29,9 +29,9 @@ module scale_urban_grid_cartesC_index
   !
   !++ Public parameters & variables
   !
-  integer, public :: UKMAX = 1 ! # of computational cells: z for urban
-  integer, public :: UIMAX = 1 ! # of computational cells: x for urban
-  integer, public :: UJMAX = 1 ! # of computational cells: y for urban
+  integer, public :: UKMAX = -1 ! # of computational cells: z for urban
+  integer, public :: UIMAX = -1 ! # of computational cells: x for urban
+  integer, public :: UJMAX = -1 ! # of computational cells: y for urban
 
   integer, public :: UKA       ! # of total grids: z for urban, local
   integer, public :: UKS       ! start point of inner domain: z for urban, local

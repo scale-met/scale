@@ -542,12 +542,12 @@ contains
   !> Update reference state profile (Horizontal average)
   subroutine ATMOS_REFSTATE_update( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS, POTT, TEMP, PRES, QV,                    &
-       CZ, FZ, FDZ, RCDZ, REAL_CZ, REAL_FZ, REAL_PHI, &
-       nowsec,                                        &
-       force                                          )
-    use scale_comm_cartesC, only: &
-       COMM_horizontal_mean
+       DENS, POTT, TEMP, PRES, QV,                          &
+       CZ, FZ, FDZ, RCDZ, REAL_CZ, REAL_FZ, REAL_PHI, AREA, &
+       nowsec,                                              &
+       force                                                )
+    use scale_statistics, only: &
+       STATISTICS_horizontal_mean
     use scale_interp_vert, only: &
        INTERP_VERT_xi2z
     implicit none
@@ -567,6 +567,7 @@ contains
     real(RP), intent(in) :: REAL_CZ (  KA,IA,JA)
     real(RP), intent(in) :: REAL_FZ (0:KA,IA,JA)
     real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
+    real(RP), intent(in) :: AREA    (     IA,JA)
     real(DP), intent(in) :: nowsec
 
     logical, intent(in), optional :: force
@@ -590,27 +591,37 @@ contains
        call INTERP_VERT_xi2z( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               CZ(:), REAL_CZ(:,:,:), TEMP(:,:,:), & ! [IN]
                               work(:,:,:)                         ) ! [OUT]
-       call COMM_horizontal_mean( ATMOS_REFSTATE1D_temp(:), work(:,:,:) )
+       call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                        work(:,:,:), area(:,:),  & ! [IN]
+                                        ATMOS_REFSTATE1D_temp(:) ) ! [IN]
 
        call INTERP_VERT_xi2z( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               CZ(:), REAL_CZ(:,:,:), PRES(:,:,:), & ! [IN]
                               work(:,:,:)                         ) ! [OUT]
-       call COMM_horizontal_mean( ATMOS_REFSTATE1D_pres(:), work(:,:,:) )
+       call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                        work(:,:,:), area(:,:),  & ! [IN]
+                                        ATMOS_REFSTATE1D_pres(:) ) ! [OUT]
 
        call INTERP_VERT_xi2z( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               CZ(:), REAL_CZ(:,:,:), DENS(:,:,:), & ! [IN]
                               work(:,:,:)                         ) ! [OUT]
-       call COMM_horizontal_mean( ATMOS_REFSTATE1D_dens(:), work(:,:,:) )
+       call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                        work(:,:,:), area(:,:),  & ! [IN]
+                                        ATMOS_REFSTATE1D_dens(:) ) ! [OUT]
 
        call INTERP_VERT_xi2z( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               CZ(:), REAL_CZ(:,:,:), POTT(:,:,:), & ! [IN]
                               work(:,:,:)                         ) ! [OUT]
-       call COMM_horizontal_mean( ATMOS_REFSTATE1D_pott(:), work(:,:,:) )
+       call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                        work(:,:,:), area(:,:),  & ! [IN]
+                                        ATMOS_REFSTATE1D_pott(:) ) ! [OUT]
 
        call INTERP_VERT_xi2z( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               CZ(:), REAL_CZ(:,:,:), QV(:,:,:), & ! [IN]
                               work(:,:,:)                       ) ! [OUT]
-       call COMM_horizontal_mean( ATMOS_REFSTATE1D_qv(:), work(:,:,:) )
+       call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                        work(:,:,:), area(:,:), & ! [IN]
+                                        ATMOS_REFSTATE1D_qv(:)  ) ! [OUT]
 
        do k = KE-1, KS, -1 ! fill undefined value
           if( ATMOS_REFSTATE1D_dens(k) <= 0.0_RP ) ATMOS_REFSTATE1D_dens(k) = ATMOS_REFSTATE1D_dens(k+1)

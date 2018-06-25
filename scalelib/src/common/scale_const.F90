@@ -6,10 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2011-11-11 (H.Yashiro)  [new]
-!! @li      2013-08-31 (T.Yamaura)  [add] Stefan-Boltzman constant
-!!
 !<
 #include "scalelib.h"
 module scale_const

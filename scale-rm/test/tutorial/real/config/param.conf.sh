@@ -63,6 +63,10 @@ cat << EOF > param.region.conf
  JMAX = ${JMAX[$D]},
 /
 
+&PARAM_OCEAN_GRID_CARTESC_INDEX
+ OKMAX = ${OKMAX},
+/
+
 &PARAM_LAND_GRID_CARTESC_INDEX
  LKMAX = ${LKMAX},
 /

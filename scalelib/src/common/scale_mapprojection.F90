@@ -123,7 +123,7 @@ module scale_mapprojection
   real(DP), private :: D2R
   real(DP), private :: RADIUS
 
-  character(len=H_SHORT) :: MAPPROJECTION_mapping
+  character(len=H_SHORT) :: MAPPROJECTION_mapping = ""
   real(DP), private :: MAPPROJECTION_false_easting
   real(DP), private :: MAPPROJECTION_false_northing
   real(DP), private :: MAPPROJECTION_longitude_of_central_meridian

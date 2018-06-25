@@ -68,8 +68,8 @@ module scale_file_cartesC
      module procedure FILE_CARTESC_read_var_2D
      module procedure FILE_CARTESC_read_var_3D
      module procedure FILE_CARTESC_read_var_4D
-     module procedure FILE_CARTESC_read_all_2D
-     module procedure FILE_CARTESC_read_all_3D
+     module procedure FILE_CARTESC_read_auto_2D
+     module procedure FILE_CARTESC_read_auto_3D
   end interface FILE_CARTESC_read
 
   interface FILE_CARTESC_write
@@ -184,7 +184,7 @@ module scale_file_cartesC
 
   logical,    private :: File_axes_written(0:FILE_FILE_MAX-1)          ! whether axes have been written
   !                                                                    ! fid starts from zero so index should start from zero
-  logical,    private :: File_closed      (0:FILE_FILE_MAX-1) = .true. ! whether file has been closed
+  logical,    private :: File_closed     (-1:FILE_FILE_MAX-1) = .true. ! whether file has been closed
   logical,    private :: File_haszcoord   (0:FILE_FILE_MAX-1)          ! z-coordinates exist?
   integer(8), private :: write_buf_amount (0:FILE_FILE_MAX-1)          ! sum of write buffer amounts
 
@@ -787,7 +787,7 @@ contains
        fid,                       &
        date, subsec,              &
        haszcoord,                 &
-       append, aggregate          )
+       append, aggregate, single  )
     use scale_file_h, only: &
        FILE_REAL8, &
        FILE_REAL4
@@ -822,6 +822,7 @@ contains
     logical,          intent(in), optional :: append    !< switch whether append existing file or not (default=false)
     logical,          intent(in), optional :: haszcoord !< switch whether include zcoordinate or not (default=true)
     logical,          intent(in), optional :: aggregate
+    logical,          intent(in), optional :: single
 
     integer                :: dtype
     logical                :: append_sw
@@ -833,9 +834,16 @@ contains
     integer                :: comm
     logical                :: fileexisted
     logical                :: aggregate_
+    logical                :: single_
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    end if
 
     ! dtype is used to define the data type of axis variables in file
     if    ( datatype == 'REAL8' ) then
@@ -885,15 +893,21 @@ contains
                       fid,                     & ! [OUT]
                       fileexisted,             & ! [OUT]
                       rankid     = PRC_myrank, & ! [IN]
+                      single     = single_,    & ! [IN]
                       aggregate  = aggregate_, & ! [IN]
                       time_units = tunits,     & ! [IN]
                       calendar   = calendar,   & ! [IN]
                       append     = append_sw   ) ! [IN]
 
 
+    if ( PRC_myrank /= 0 .and. single_ ) then
+       fid = -1
+    else if ( .not. fileexisted ) then ! do below only once when file is created
 
-
-    if ( .NOT. fileexisted ) then ! do below only once when file is created
+       File_axes_written(fid) = .false.  ! indicating axes have not been written yet
+       if ( PRC_myrank==0 .or. (.not. single_) ) then
+          File_closed(fid) = .false.
+       end if
 
        if ( present( haszcoord ) ) then
           File_haszcoord(fid) = haszcoord
@@ -932,9 +946,7 @@ contains
                                    dtype,              & ! [IN]
                                    File_haszcoord(fid) ) ! [IN]
 
-       File_axes_written(fid) = .false.  ! indicating axes have not been written yet
-       File_closed      (fid) = .false.
-    endif
+    end if
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -959,6 +971,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
     call FILE_EndDef( fid ) ! [IN]
 
@@ -1006,9 +1023,14 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
+
     if ( FILE_get_AGGREGATE(fid) ) then
        call FILE_Flush( fid ) ! flush all pending read/write requests
-    endif
+    end if
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -1031,21 +1053,22 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( .NOT. File_closed(fid) ) then
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
-       if ( FILE_get_AGGREGATE(fid) ) then
-          call FILE_Flush( fid )        ! flush all pending read/write requests
-          if ( write_buf_amount(fid) > 0 ) then
-             call FILE_Detach_Buffer( fid ) ! detach PnetCDF aggregation buffer
-             write_buf_amount(fid) = 0      ! reset write request amount
-          endif
+    if ( FILE_get_AGGREGATE(fid) ) then
+       call FILE_Flush( fid )        ! flush all pending read/write requests
+       if ( write_buf_amount(fid) > 0 ) then
+          call FILE_Detach_Buffer( fid ) ! detach PnetCDF aggregation buffer
+          write_buf_amount(fid) = 0      ! reset write request amount
        endif
-
-       call FILE_Close( fid ) ! [IN]
-
-       File_closed(fid) = .true.
-
     endif
+
+    call FILE_Close( fid ) ! [IN]
+
+    File_closed(fid) = .true.
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -1220,6 +1243,11 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_I_NetCDF', 2)
+       return
+    end if
+
     LOG_INFO("FILE_CARTESC_read_var_1D",'(1x,2A)') 'Read from file (1D), name : ', trim(varname)
 
     if ( FILE_get_aggregate(fid) ) then
@@ -1329,6 +1357,11 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_I_NetCDF', 2)
+       return
+    end if
+
     LOG_INFO("FILE_CARTESC_read_var_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
 
     if ( FILE_get_AGGREGATE(fid) ) then
@@ -1401,6 +1434,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_I_NetCDF', 2)
+       return
+    end if
 
     LOG_INFO("FILE_CARTESC_read_var_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
 
@@ -1531,6 +1569,11 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_I_NetCDF', 2)
+       return
+    end if
+
     LOG_INFO("FILE_CARTESC_read_var_4D",'(1x,2A)') 'Read from file (4D), name : ', trim(varname)
 
     if ( FILE_get_AGGREGATE(fid) ) then
@@ -1600,7 +1643,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Read 2D data from file
-  subroutine FILE_CARTESC_read_all_2D( &
+  subroutine FILE_CARTESC_read_auto_2D( &
        fid, varname, &
        var,          &
        step, existed )
@@ -1637,7 +1680,12 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    LOG_INFO("FILE_CARTESC_read_all_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_I_NetCDF', 2)
+       return
+    end if
+
+    LOG_INFO("FILE_CARTESC_read_auto_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
 
     call FILE_get_dataInfo( fid, varname, dim_name=dnames(:), existed=existed2 )
 
@@ -1647,7 +1695,7 @@ contains
     end if
 
     if ( .not. existed2 ) then
-       LOG_ERROR("FILE_CARTESC_read_all_2D",*) 'variable not found: ', trim(varname)
+       LOG_ERROR("FILE_CARTESC_read_auto_2D",*) 'variable not found: ', trim(varname)
        call PRC_abort
     end if
 
@@ -1674,11 +1722,11 @@ contains
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
     return
-  end subroutine FILE_CARTESC_read_all_2D
+  end subroutine FILE_CARTESC_read_auto_2D
 
   !-----------------------------------------------------------------------------
   !> Read 3D data from file
-  subroutine FILE_CARTESC_read_all_3D( &
+  subroutine FILE_CARTESC_read_auto_3D( &
        fid, varname, &
        var,          &
        step, existed )
@@ -1717,7 +1765,12 @@ contains
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    LOG_INFO("FILE_CARTESC_read_all_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_I_NetCDF', 2)
+       return
+    end if
+
+    LOG_INFO("FILE_CARTESC_read_auto_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
 
     call FILE_get_dataInfo( fid, varname, dim_name=dnames(:), existed=existed2 )
 
@@ -1727,7 +1780,7 @@ contains
     end if
 
     if ( .not. existed2 ) then
-       LOG_ERROR("FILE_CARTESC_read_all_3D",*) 'variable not found: ', trim(varname)
+       LOG_ERROR("FILE_CARTESC_read_auto_3D",*) 'variable not found: ', trim(varname)
        call PRC_abort
     end if
 
@@ -1785,14 +1838,14 @@ contains
        end do
        deallocate(buf)
     else
-       LOG_ERROR("FILE_CARTESC_read_all_3D",*) 'invalid dimension'
+       LOG_ERROR("FILE_CARTESC_read_auto_3D",*) 'invalid dimension'
        call PRC_abort
     end if
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
     return
-  end subroutine FILE_CARTESC_read_all_3D
+  end subroutine FILE_CARTESC_read_auto_3D
 
   !-----------------------------------------------------------------------------
   !> interface FILE_CARTESC_write
@@ -1809,6 +1862,8 @@ contains
        append, aggregate,   &
        standard_name,       &
        cell_measures        )
+    use scale_prc, only: &
+       PRC_myrank
     implicit none
 
     real(RP),         intent(in) :: var(:)   !< value of the variable
@@ -1832,10 +1887,10 @@ contains
 
     LOG_INFO("FILE_CARTESC_write_1D",'(1x,2A)') 'Write to file (1D), name : ', trim(varname)
 
-    call FILE_CARTESC_create( basename, title, datatype,         & ! [IN]
-                              fid,                               & ! [OUT]
-                              date=date, subsec=subsec,          & ! [IN]
-                              append=append, aggregate=aggregate ) ! [IN]
+    call FILE_CARTESC_create( basename, title, datatype,                        & ! [IN]
+                              fid,                                              & ! [OUT]
+                              date=date, subsec=subsec,                         & ! [IN]
+                              append=append, aggregate=aggregate, single=.true. ) ! [IN]
 
     call FILE_CARTESC_def_var( fid, varname, desc, unit, dim_type, datatype, & ! [IN]
                                vid,                                          & ! [OUT]
@@ -1953,6 +2008,7 @@ contains
     call FILE_CARTESC_enddef( fid )
 
     call FILE_CARTESC_write_var_3D( fid, vid, var, varname, dim_type, fill_halo )
+
 
     return
   end subroutine FILE_CARTESC_write_3D
@@ -2116,6 +2172,13 @@ contains
     character(len=*), intent(in) :: tunits
     character(len=*), intent(in) :: calendar
 
+    call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
+
     call FILE_Set_Attribute( fid, "global", "Conventions", "CF-1.6" ) ! [IN]
 
     call FILE_Set_Attribute( fid, "global", "grid_name", ATMOS_GRID_CARTESC_NAME ) ! [IN]
@@ -2145,6 +2208,8 @@ contains
     if ( calendar /= "" ) call FILE_Set_Attribute( fid, "global", "calendar", calendar )
     call FILE_Set_Attribute( fid, "global", "time_units", tunits )
     call FILE_Set_Attribute( fid, "global", "time_start", (/time/) )
+
+    call PROF_rapend('FILE_O_NetCDF', 2)
 
     return
   end subroutine FILE_CARTESC_put_globalAttributes
@@ -2179,6 +2244,13 @@ contains
     logical, save :: set_dim = .false.
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
+
     if ( .not. set_dim ) then
        call set_dimension_informations
        set_dim = .true.
@@ -2200,14 +2272,20 @@ contains
        call FILE_Def_Axis( fid, 'z'  , 'Z'              , 'm', 'z'  , dtype, KMAX,   bounds=.true. )
        call FILE_Def_Axis( fid, 'zh' , 'Z (half level)' , 'm', 'zh' , dtype, KMAX+1, bounds=.true. )
 
-       call FILE_Def_Axis( fid, 'oz' , 'OZ'             , 'm', 'oz' , dtype, OKMAX,   bounds=.true. )
-       call FILE_Def_Axis( fid, 'ozh', 'OZ (half level)', 'm', 'ozh', dtype, OKMAX+1, bounds=.true. )
+       if ( OKMAX > 0 ) then
+          call FILE_Def_Axis( fid, 'oz' , 'OZ'             , 'm', 'oz' , dtype, OKMAX,   bounds=.true. )
+          call FILE_Def_Axis( fid, 'ozh', 'OZ (half level)', 'm', 'ozh', dtype, OKMAX+1, bounds=.true. )
+       end if
 
-       call FILE_Def_Axis( fid, 'lz' , 'LZ'             , 'm', 'lz' , dtype, LKMAX,   bounds=.true. )
-       call FILE_Def_Axis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, LKMAX+1, bounds=.true. )
+       if ( LKMAX > 0 ) then
+          call FILE_Def_Axis( fid, 'lz' , 'LZ'             , 'm', 'lz' , dtype, LKMAX,   bounds=.true. )
+          call FILE_Def_Axis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, LKMAX+1, bounds=.true. )
+       end if
 
-       call FILE_Def_Axis( fid, 'uz' , 'UZ'             , 'm', 'uz' , dtype, UKMAX,   bounds=.true. )
-       call FILE_Def_Axis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, UKMAX+1, bounds=.true. )
+       if ( UKMAX > 0 ) then
+          call FILE_Def_Axis( fid, 'uz' , 'UZ'             , 'm', 'uz' , dtype, UKMAX,   bounds=.true. )
+          call FILE_Def_Axis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, UKMAX+1, bounds=.true. )
+       end if
     end if
 
     call FILE_Def_Axis( fid, 'x'  , 'X'              , 'm', 'x'  , dtype, isize, bounds=.true. )
@@ -2223,17 +2301,23 @@ contains
        call FILE_Def_Axis( fid, 'CBFZ' , 'Boundary factor Center Z',          '1', 'CZ',   dtype, KA      )
        call FILE_Def_Axis( fid, 'FBFZ' , 'Boundary factor Face Z',            '1', 'FZ',   dtype, KA+1    )
 
-       call FILE_Def_Axis( fid, 'OCZ'  , 'Ocean Grid Center Position Z',      'm', 'OCZ',  dtype, OKMAX   )
-       call FILE_Def_Axis( fid, 'OFZ'  , 'Ocean Grid Face   Position Z',      'm', 'OFZ',  dtype, OKMAX+1 )
-       call FILE_Def_Axis( fid, 'OCDZ' , 'Ocean Grid Cell length Z',          'm', 'OCZ',  dtype, OKMAX   )
+       if ( OKMAX > 0 ) then
+          call FILE_Def_Axis( fid, 'OCZ'  , 'Ocean Grid Center Position Z',      'm', 'OCZ',  dtype, OKMAX   )
+          call FILE_Def_Axis( fid, 'OFZ'  , 'Ocean Grid Face   Position Z',      'm', 'OFZ',  dtype, OKMAX+1 )
+          call FILE_Def_Axis( fid, 'OCDZ' , 'Ocean Grid Cell length Z',          'm', 'OCZ',  dtype, OKMAX   )
+       end if
 
-       call FILE_Def_Axis( fid, 'LCZ'  , 'Land Grid Center Position Z',       'm', 'LCZ',  dtype, LKMAX   )
-       call FILE_Def_Axis( fid, 'LFZ'  , 'Land Grid Face   Position Z',       'm', 'LFZ',  dtype, LKMAX+1 )
-       call FILE_Def_Axis( fid, 'LCDZ' , 'Land Grid Cell length Z',           'm', 'LCZ',  dtype, LKMAX   )
+       if ( LKMAX > 0 ) then
+          call FILE_Def_Axis( fid, 'LCZ'  , 'Land Grid Center Position Z',       'm', 'LCZ',  dtype, LKMAX   )
+          call FILE_Def_Axis( fid, 'LFZ'  , 'Land Grid Face   Position Z',       'm', 'LFZ',  dtype, LKMAX+1 )
+          call FILE_Def_Axis( fid, 'LCDZ' , 'Land Grid Cell length Z',           'm', 'LCZ',  dtype, LKMAX   )
+       end if
 
-       call FILE_Def_Axis( fid, 'UCZ'  , 'Urban Grid Center Position Z',      'm', 'UCZ',  dtype, UKMAX   )
-       call FILE_Def_Axis( fid, 'UFZ'  , 'Urban Grid Face   Position Z',      'm', 'UFZ',  dtype, UKMAX+1 )
-       call FILE_Def_Axis( fid, 'UCDZ' , 'Urban Grid Cell length Z',          'm', 'UCZ',  dtype, UKMAX   )
+       if ( UKMAX > 0 ) then
+          call FILE_Def_Axis( fid, 'UCZ'  , 'Urban Grid Center Position Z',      'm', 'UCZ',  dtype, UKMAX   )
+          call FILE_Def_Axis( fid, 'UFZ'  , 'Urban Grid Face   Position Z',      'm', 'UFZ',  dtype, UKMAX+1 )
+          call FILE_Def_Axis( fid, 'UCDZ' , 'Urban Grid Cell length Z',          'm', 'UCZ',  dtype, UKMAX   )
+       end if
     end if
 
     call FILE_Def_Axis( fid, 'CX'   , 'Atmos Grid Center Position X',      'm', 'CX',  dtype, iall   )
@@ -2296,75 +2380,93 @@ contains
     if ( hasZ ) then
        axisname = (/'z ', 'x ', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'height',     'height above ground level', &
-                                          'm', axisname(1:3), dtype                        )
+                                           'm', axisname(1:3), dtype                        )
        axisname = (/'zh', 'x ', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'height_wxy', 'height above ground level (half level wxy)', &
-                                          'm', axisname(1:3), dtype                                         )
+                                           'm', axisname(1:3), dtype                                         )
 
        axisname = (/'z ', 'xh', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_zuy_x', 'area of grid cell face (half level zuy, normal x)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
        axisname = (/'z ', 'x ', 'yh'/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_zxv_y', 'area of grid cell face (half level zxv, normal y)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
        axisname = (/'zh', 'xh', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_wuy_x', 'area of grid cell face (half level wuy, normal x)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
        axisname = (/'zh', 'x ', 'yh'/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_wxv_y', 'area of grid cell face (half level wxv, normal y)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
        axisname = (/'z ', 'x ', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_zxy_x', 'area of grid cell face (half level zxy, normal x)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
        axisname = (/'z ', 'xh', 'yh'/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_zuv_y', 'area of grid cell face (half level zuv, normal y)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
        axisname = (/'z ', 'xh', 'yh'/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_zuv_x', 'area of grid cell face (half level zuv, normal x)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
        axisname = (/'z ', 'x ', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_area_zxy_y', 'area of grid cell face (half level zxy, normal y)', &
-                                          'm2', axisname(1:3), dtype                       )
+                                           'm2', axisname(1:3), dtype                       )
 
        axisname = (/'z ', 'x ', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_volume',     'volume of grid cell', &
-                                          'm3', axisname(1:3), dtype                       )
+                                           'm3', axisname(1:3), dtype                       )
        axisname = (/'zh', 'x ', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_volume_wxy', 'volume of grid cell (half level wxy)', &
-                                          'm3', axisname(1:3), dtype                                       )
+                                           'm3', axisname(1:3), dtype                                       )
        axisname = (/'z ', 'xh', 'y '/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_volume_zuy', 'volume of grid cell (half level zuy)', &
-                                          'm3', axisname(1:3), dtype                                       )
+                                           'm3', axisname(1:3), dtype                                       )
        axisname = (/'z ', 'x ', 'yh'/)
        call FILE_Def_AssociatedCoordinate( fid, 'cell_volume_zxv', 'volume of grid cell (half level zxv)', &
-                                          'm3', axisname(1:3), dtype                                       )
+                                           'm3', axisname(1:3), dtype                                       )
 
-       axisname = (/'oz', 'x ', 'y '/)
-       call FILE_Def_AssociatedCoordinate( fid, 'cell_volume_oxy', 'volume of grid cell', &
-                                          'm3', axisname(1:3), dtype                      )
-       axisname = (/'lz', 'x ', 'y '/)
-       call FILE_Def_AssociatedCoordinate( fid, 'cell_volume_lxy', 'volume of grid cell', &
-                                          'm3', axisname(1:3), dtype                      )
-       axisname = (/'uz', 'x ', 'y '/)
-       call FILE_Def_AssociatedCoordinate( fid, 'cell_volume_uxy', 'volume of grid cell', &
-                                          'm3', axisname(1:3), dtype                      )
+       if ( OKMAX > 0 ) then
+          axisname = (/'oz', 'x ', 'y '/)
+          call FILE_Def_AssociatedCoordinate( fid, 'cell_volume_oxy', 'volume of grid cell', &
+                                              'm3', axisname(1:3), dtype                      )
+       end if
+       if ( LKMAX > 0 ) then
+          axisname = (/'lz', 'x ', 'y '/)
+          call FILE_Def_AssociatedCoordinate( fid, 'cell_volume_lxy', 'volume of grid cell', &
+                                              'm3', axisname(1:3), dtype                      )
+       end if
+       if ( UKMAX > 0 ) then
+          axisname = (/'uz', 'x ', 'y '/)
+          call FILE_Def_AssociatedCoordinate( fid, 'cell_volume_uxy', 'volume of grid cell', &
+                                              'm3', axisname(1:3), dtype                      )
+       end if
     endif
 
     ! attributes
 
     if ( hasZ ) then
-       call FILE_Set_Attribute( fid, 'oz' , 'positive', 'down' )
-       call FILE_Set_Attribute( fid, 'ozh', 'positive', 'down' )
-       call FILE_Set_Attribute( fid, 'lz' , 'positive', 'down' )
-       call FILE_Set_Attribute( fid, 'lzh', 'positive', 'down' )
-       call FILE_Set_Attribute( fid, 'uz' , 'positive', 'down' )
-       call FILE_Set_Attribute( fid, 'uzh', 'positive', 'down' )
-       call FILE_Set_Attribute( fid, 'OCZ', 'positive', 'down' )
-       call FILE_Set_Attribute( fid, 'OFZ', 'positive', 'down' )
-       call FILE_Set_Attribute( fid, 'LCZ', 'positive', 'down' )
-       call FILE_Set_Attribute( fid, 'LFZ', 'positive', 'down' )
-       call FILE_Set_Attribute( fid, 'UCZ', 'positive', 'down' )
-       call FILE_Set_Attribute( fid, 'UFZ', 'positive', 'down' )
+       if ( OKMAX > 0 ) then
+          call FILE_Set_Attribute( fid, 'oz' , 'positive', 'down' )
+          call FILE_Set_Attribute( fid, 'ozh', 'positive', 'down' )
+       end if
+       if ( LKMAX > 0 ) then
+          call FILE_Set_Attribute( fid, 'lz' , 'positive', 'down' )
+          call FILE_Set_Attribute( fid, 'lzh', 'positive', 'down' )
+       end if
+       if ( UKMAX > 0 ) then
+          call FILE_Set_Attribute( fid, 'uz' , 'positive', 'down' )
+          call FILE_Set_Attribute( fid, 'uzh', 'positive', 'down' )
+       end if
+       if ( OKMAX > 0 ) then
+          call FILE_Set_Attribute( fid, 'OCZ', 'positive', 'down' )
+          call FILE_Set_Attribute( fid, 'OFZ', 'positive', 'down' )
+       end if
+       if ( LKMAX > 0 ) then
+          call FILE_Set_Attribute( fid, 'LCZ', 'positive', 'down' )
+          call FILE_Set_Attribute( fid, 'LFZ', 'positive', 'down' )
+       end if
+       if ( UKMAX > 0 ) then
+          call FILE_Set_Attribute( fid, 'UCZ', 'positive', 'down' )
+          call FILE_Set_Attribute( fid, 'UFZ', 'positive', 'down' )
+       end if
     endif
 
     if ( FILE_get_AGGREGATE(fid) ) then
@@ -2503,9 +2605,15 @@ contains
        call FILE_Set_Attribute( fid, "cell_volume_zuy", "standard_name", "volume" ) ! [IN]
        call FILE_Set_Attribute( fid, "cell_volume_zxv", "standard_name", "volume" ) ! [IN]
 
-       call FILE_Set_Attribute( fid, "cell_volume_oxy", "standard_name", "volume" ) ! [IN]
-       call FILE_Set_Attribute( fid, "cell_volume_lxy", "standard_name", "volume" ) ! [IN]
-       call FILE_Set_Attribute( fid, "cell_volume_uxy", "standard_name", "volume" ) ! [IN]
+       if ( OKMAX > 0 ) then
+          call FILE_Set_Attribute( fid, "cell_volume_oxy", "standard_name", "volume" ) ! [IN]
+       end if
+       if ( LKMAX > 0 ) then
+          call FILE_Set_Attribute( fid, "cell_volume_lxy", "standard_name", "volume" ) ! [IN]
+       end if
+       if ( UKMAX > 0 ) then
+          call FILE_Set_Attribute( fid, "cell_volume_uxy", "standard_name", "volume" ) ! [IN]
+       end if
     end if
 
     ! SGRID
@@ -2520,38 +2628,44 @@ contains
     call FILE_Set_Attribute( fid, "grid", "edge2_coordinates",   "lon_xv lat_xv" )
     call FILE_Set_Attribute( fid, "grid", "vertical_dimensions", "z: zh (padding: none)" )
 
-    call FILE_Add_AssociatedVariable( fid, "grid_ocean" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "cf_role",             "grid_topology" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "topology_dimension",  (/ 2 /) )
-    call FILE_Set_Attribute( fid, "grid_ocean", "node_dimensions",     "xh yh" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "node_coordinates",    "lon_uv lat_uv" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "face_coordinates",    "lon lat" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "edge1_coordinates",   "lon_uy lat_uy" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "edge2_coordinates",   "lon_xv lat_xv" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "vertical_dimensions", "oz: ozh (padding: none)" )
+    if ( OKMAX > 0 ) then
+       call FILE_Add_AssociatedVariable( fid, "grid_ocean" )
+       call FILE_Set_Attribute( fid, "grid_ocean", "cf_role",             "grid_topology" )
+       call FILE_Set_Attribute( fid, "grid_ocean", "topology_dimension",  (/ 2 /) )
+       call FILE_Set_Attribute( fid, "grid_ocean", "node_dimensions",     "xh yh" )
+       call FILE_Set_Attribute( fid, "grid_ocean", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+       call FILE_Set_Attribute( fid, "grid_ocean", "node_coordinates",    "lon_uv lat_uv" )
+       call FILE_Set_Attribute( fid, "grid_ocean", "face_coordinates",    "lon lat" )
+       call FILE_Set_Attribute( fid, "grid_ocean", "edge1_coordinates",   "lon_uy lat_uy" )
+       call FILE_Set_Attribute( fid, "grid_ocean", "edge2_coordinates",   "lon_xv lat_xv" )
+       call FILE_Set_Attribute( fid, "grid_ocean", "vertical_dimensions", "oz: ozh (padding: none)" )
+    end if
 
-    call FILE_Add_AssociatedVariable( fid, "grid_land" )
-    call FILE_Set_Attribute( fid, "grid_land", "cf_role",             "grid_topology" )
-    call FILE_Set_Attribute( fid, "grid_land", "topology_dimension",  (/ 2 /) )
-    call FILE_Set_Attribute( fid, "grid_land", "node_dimensions",     "xh yh" )
-    call FILE_Set_Attribute( fid, "grid_land", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
-    call FILE_Set_Attribute( fid, "grid_land", "node_coordinates",    "lon_uv lat_uv" )
-    call FILE_Set_Attribute( fid, "grid_land", "face_coordinates",    "lon lat" )
-    call FILE_Set_Attribute( fid, "grid_land", "edge1_coordinates",   "lon_uy lat_uy" )
-    call FILE_Set_Attribute( fid, "grid_land", "edge2_coordinates",   "lon_xv lat_xv" )
-    call FILE_Set_Attribute( fid, "grid_land", "vertical_dimensions", "lz: lzh (padding: none)" )
+    if ( LKMAX > 0 ) then
+       call FILE_Add_AssociatedVariable( fid, "grid_land" )
+       call FILE_Set_Attribute( fid, "grid_land", "cf_role",             "grid_topology" )
+       call FILE_Set_Attribute( fid, "grid_land", "topology_dimension",  (/ 2 /) )
+       call FILE_Set_Attribute( fid, "grid_land", "node_dimensions",     "xh yh" )
+       call FILE_Set_Attribute( fid, "grid_land", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+       call FILE_Set_Attribute( fid, "grid_land", "node_coordinates",    "lon_uv lat_uv" )
+       call FILE_Set_Attribute( fid, "grid_land", "face_coordinates",    "lon lat" )
+       call FILE_Set_Attribute( fid, "grid_land", "edge1_coordinates",   "lon_uy lat_uy" )
+       call FILE_Set_Attribute( fid, "grid_land", "edge2_coordinates",   "lon_xv lat_xv" )
+       call FILE_Set_Attribute( fid, "grid_land", "vertical_dimensions", "lz: lzh (padding: none)" )
+    end if
 
-    call FILE_Add_AssociatedVariable( fid, "grid_urban" )
-    call FILE_Set_Attribute( fid, "grid_urban", "cf_role",             "grid_topology" )
-    call FILE_Set_Attribute( fid, "grid_urban", "topology_dimension",  (/ 2 /) )
-    call FILE_Set_Attribute( fid, "grid_urban", "node_dimensions",     "xh yh" )
-    call FILE_Set_Attribute( fid, "grid_urban", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
-    call FILE_Set_Attribute( fid, "grid_urban", "node_coordinates",    "lon_uv lat_uv" )
-    call FILE_Set_Attribute( fid, "grid_urban", "face_coordinates",    "lon lat" )
-    call FILE_Set_Attribute( fid, "grid_urban", "edge1_coordinates",   "lon_uy lat_uy" )
-    call FILE_Set_Attribute( fid, "grid_urban", "edge2_coordinates",   "lon_xv lat_xv" )
-    call FILE_Set_Attribute( fid, "grid_urban", "vertical_dimensions", "uz: uzh (padding: none)" )
+    if ( UKMAX > 0 ) then
+       call FILE_Add_AssociatedVariable( fid, "grid_urban" )
+       call FILE_Set_Attribute( fid, "grid_urban", "cf_role",             "grid_topology" )
+       call FILE_Set_Attribute( fid, "grid_urban", "topology_dimension",  (/ 2 /) )
+       call FILE_Set_Attribute( fid, "grid_urban", "node_dimensions",     "xh yh" )
+       call FILE_Set_Attribute( fid, "grid_urban", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+       call FILE_Set_Attribute( fid, "grid_urban", "node_coordinates",    "lon_uv lat_uv" )
+       call FILE_Set_Attribute( fid, "grid_urban", "face_coordinates",    "lon lat" )
+       call FILE_Set_Attribute( fid, "grid_urban", "edge1_coordinates",   "lon_uy lat_uy" )
+       call FILE_Set_Attribute( fid, "grid_urban", "edge2_coordinates",   "lon_xv lat_xv" )
+       call FILE_Set_Attribute( fid, "grid_urban", "vertical_dimensions", "uz: uzh (padding: none)" )
+    end if
 
     call FILE_Add_AssociatedVariable( fid, "grid_model" )
     call FILE_Set_Attribute( fid, "grid_model", "cf_role",             "grid_topology" )
@@ -2566,6 +2680,8 @@ contains
     call FILE_Set_Attribute( fid, "grid_model_global", "node_dimensions",     "FXG FYG" )
     call FILE_Set_Attribute( fid, "grid_model_global", "face_dimensions",     "CXG: FYG (padding: none) CYG: FYG (padding: none)" )
     call FILE_Set_Attribute( fid, "grid_model_global", "vertical_dimensions", "CZ: FZ (padding: none)" )
+
+    call PROF_rapend('FILE_O_NetCDF', 2)
 
     return
   end subroutine FILE_CARTESC_def_axes
@@ -2651,6 +2767,13 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
+
     if ( FILE_get_AGGREGATE(fid) ) then
        ! For parallel I/O, not all variables are written by all processes.
        ! 1. Let PRC_myrank 0 writes all z axes
@@ -2689,55 +2812,61 @@ contains
        call FILE_Write_AssociatedCoordinate( fid, 'zh_bnds', zh_bnds(:,KS-1:KE), start(1:1) )
 
        ! ocean
-       call FILE_Write_Axis( fid, 'oz', OCEAN_GRID_CARTESC_CZ(OKS:OKE), start(1:1) )
-       do k = OKS, OKE
-          oz_bnds(1,k) = OCEAN_GRID_CARTESC_FZ(k-1)
-          oz_bnds(2,k) = OCEAN_GRID_CARTESC_FZ(k  )
-       end do
-       call FILE_Write_AssociatedCoordinate( fid, 'oz_bnds', oz_bnds(:,OKS:OKE), start(1:1) )
+       if ( OKMAX > 0 ) then
+          call FILE_Write_Axis( fid, 'oz', OCEAN_GRID_CARTESC_CZ(OKS:OKE), start(1:1) )
+          do k = OKS, OKE
+             oz_bnds(1,k) = OCEAN_GRID_CARTESC_FZ(k-1)
+             oz_bnds(2,k) = OCEAN_GRID_CARTESC_FZ(k  )
+          end do
+          call FILE_Write_AssociatedCoordinate( fid, 'oz_bnds', oz_bnds(:,OKS:OKE), start(1:1) )
 
-       call FILE_Write_Axis( fid, 'ozh', OCEAN_GRID_CARTESC_FZ(OKS-1:OKE), start(1:1) )
-       ozh_bnds(1,OKS-1) = OCEAN_GRID_CARTESC_FZ(OKS-1)
-       do k = OKS-1, OKE-1
-          ozh_bnds(2,k  ) = OCEAN_GRID_CARTESC_CZ(k+1)
-          ozh_bnds(1,k+1) = OCEAN_GRID_CARTESC_CZ(k+1)
-       end do
-       ozh_bnds(2,OKE) = OCEAN_GRID_CARTESC_FZ(OKE)
-       call FILE_Write_AssociatedCoordinate( fid, 'ozh_bnds', ozh_bnds(:,OKS-1:OKE), start(1:1) )
+          call FILE_Write_Axis( fid, 'ozh', OCEAN_GRID_CARTESC_FZ(OKS-1:OKE), start(1:1) )
+          ozh_bnds(1,OKS-1) = OCEAN_GRID_CARTESC_FZ(OKS-1)
+          do k = OKS-1, OKE-1
+             ozh_bnds(2,k  ) = OCEAN_GRID_CARTESC_CZ(k+1)
+             ozh_bnds(1,k+1) = OCEAN_GRID_CARTESC_CZ(k+1)
+          end do
+          ozh_bnds(2,OKE) = OCEAN_GRID_CARTESC_FZ(OKE)
+          call FILE_Write_AssociatedCoordinate( fid, 'ozh_bnds', ozh_bnds(:,OKS-1:OKE), start(1:1) )
+       end if
 
        ! land
-       call FILE_Write_Axis( fid, 'lz', LAND_GRID_CARTESC_CZ(LKS:LKE), start(1:1) )
-       do k = LKS, LKE
-          lz_bnds(1,k) = LAND_GRID_CARTESC_FZ(k-1)
-          lz_bnds(2,k) = LAND_GRID_CARTESC_FZ(k  )
-       end do
-       call FILE_Write_AssociatedCoordinate( fid, 'lz_bnds', lz_bnds(:,LKS:LKE), start(1:1) )
+       if ( LKMAX > 0 ) then
+          call FILE_Write_Axis( fid, 'lz', LAND_GRID_CARTESC_CZ(LKS:LKE), start(1:1) )
+          do k = LKS, LKE
+             lz_bnds(1,k) = LAND_GRID_CARTESC_FZ(k-1)
+             lz_bnds(2,k) = LAND_GRID_CARTESC_FZ(k  )
+          end do
+          call FILE_Write_AssociatedCoordinate( fid, 'lz_bnds', lz_bnds(:,LKS:LKE), start(1:1) )
 
-       call FILE_Write_Axis( fid, 'lzh', LAND_GRID_CARTESC_FZ(LKS-1:LKE), start(1:1) )
-       lzh_bnds(1,LKS-1) = LAND_GRID_CARTESC_FZ(LKS-1)
-       do k = LKS-1, LKE-1
-          lzh_bnds(2,k  ) = LAND_GRID_CARTESC_CZ(k+1)
-          lzh_bnds(1,k+1) = LAND_GRID_CARTESC_CZ(k+1)
-       end do
-       lzh_bnds(2,LKE) = LAND_GRID_CARTESC_FZ(LKE)
-       call FILE_Write_AssociatedCoordinate( fid, 'lzh_bnds', lzh_bnds(:,LKS-1:LKE), start(1:1) )
+          call FILE_Write_Axis( fid, 'lzh', LAND_GRID_CARTESC_FZ(LKS-1:LKE), start(1:1) )
+          lzh_bnds(1,LKS-1) = LAND_GRID_CARTESC_FZ(LKS-1)
+          do k = LKS-1, LKE-1
+             lzh_bnds(2,k  ) = LAND_GRID_CARTESC_CZ(k+1)
+             lzh_bnds(1,k+1) = LAND_GRID_CARTESC_CZ(k+1)
+          end do
+          lzh_bnds(2,LKE) = LAND_GRID_CARTESC_FZ(LKE)
+          call FILE_Write_AssociatedCoordinate( fid, 'lzh_bnds', lzh_bnds(:,LKS-1:LKE), start(1:1) )
+       end if
 
        ! urban
-       call FILE_Write_Axis( fid, 'uz', URBAN_GRID_CARTESC_CZ(UKS:UKE), start(1:1) )
-       do k = UKS, UKE
-          uz_bnds(1,k) = URBAN_GRID_CARTESC_FZ(k-1)
-          uz_bnds(2,k) = URBAN_GRID_CARTESC_FZ(k  )
-       end do
-       call FILE_Write_AssociatedCoordinate( fid, 'uz_bnds', uz_bnds(:,UKS:UKE), start(1:1) )
+       if ( UKMAX > 0 ) then
+          call FILE_Write_Axis( fid, 'uz', URBAN_GRID_CARTESC_CZ(UKS:UKE), start(1:1) )
+          do k = UKS, UKE
+             uz_bnds(1,k) = URBAN_GRID_CARTESC_FZ(k-1)
+             uz_bnds(2,k) = URBAN_GRID_CARTESC_FZ(k  )
+          end do
+          call FILE_Write_AssociatedCoordinate( fid, 'uz_bnds', uz_bnds(:,UKS:UKE), start(1:1) )
 
-       call FILE_Write_Axis( fid, 'uzh', URBAN_GRID_CARTESC_FZ(UKS-1:UKE), start(1:1) )
-       uzh_bnds(1,UKS-1) = URBAN_GRID_CARTESC_FZ(UKS-1)
-       do k = UKS-1, UKE-1
-          uzh_bnds(2,k  ) = URBAN_GRID_CARTESC_CZ(k+1)
-          uzh_bnds(1,k+1) = URBAN_GRID_CARTESC_CZ(k+1)
-       end do
-       uzh_bnds(2,UKE) = URBAN_GRID_CARTESC_FZ(UKE)
-       call FILE_Write_AssociatedCoordinate( fid, 'uzh_bnds', uzh_bnds(:,UKS-1:UKE), start(1:1) )
+          call FILE_Write_Axis( fid, 'uzh', URBAN_GRID_CARTESC_FZ(UKS-1:UKE), start(1:1) )
+          uzh_bnds(1,UKS-1) = URBAN_GRID_CARTESC_FZ(UKS-1)
+          do k = UKS-1, UKE-1
+             uzh_bnds(2,k  ) = URBAN_GRID_CARTESC_CZ(k+1)
+             uzh_bnds(1,k+1) = URBAN_GRID_CARTESC_CZ(k+1)
+          end do
+          uzh_bnds(2,UKE) = URBAN_GRID_CARTESC_FZ(UKE)
+          call FILE_Write_AssociatedCoordinate( fid, 'uzh_bnds', uzh_bnds(:,UKS-1:UKE), start(1:1) )
+       end if
     end if
 
     if ( put_x ) then
@@ -2851,17 +2980,23 @@ contains
        call FILE_Write_Axis( fid, 'CBFZ', ATMOS_GRID_CARTESC_CBFZ(:), start(1:1) )
        call FILE_Write_Axis( fid, 'FBFZ', ATMOS_GRID_CARTESC_FBFZ(:), start(1:1) )
 
-       call FILE_Write_Axis( fid, 'OCZ' , OCEAN_GRID_CARTESC_CZ (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'OFZ' , OCEAN_GRID_CARTESC_FZ (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'OCDZ', OCEAN_GRID_CARTESC_CDZ(:), start(1:1) )
+       if ( OKMAX > 0 ) then
+          call FILE_Write_Axis( fid, 'OCZ' , OCEAN_GRID_CARTESC_CZ (:), start(1:1) )
+          call FILE_Write_Axis( fid, 'OFZ' , OCEAN_GRID_CARTESC_FZ (:), start(1:1) )
+          call FILE_Write_Axis( fid, 'OCDZ', OCEAN_GRID_CARTESC_CDZ(:), start(1:1) )
+       end if
 
-       call FILE_Write_Axis( fid, 'LCZ' , LAND_GRID_CARTESC_CZ (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'LFZ' , LAND_GRID_CARTESC_FZ (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'LCDZ', LAND_GRID_CARTESC_CDZ(:), start(1:1) )
+       if ( LKMAX > 0 ) then
+          call FILE_Write_Axis( fid, 'LCZ' , LAND_GRID_CARTESC_CZ (:), start(1:1) )
+          call FILE_Write_Axis( fid, 'LFZ' , LAND_GRID_CARTESC_FZ (:), start(1:1) )
+          call FILE_Write_Axis( fid, 'LCDZ', LAND_GRID_CARTESC_CDZ(:), start(1:1) )
+       end if
 
-       call FILE_Write_Axis( fid, 'UCZ' , URBAN_GRID_CARTESC_CZ (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'UFZ' , URBAN_GRID_CARTESC_FZ (:), start(1:1) )
-       call FILE_Write_Axis( fid, 'UCDZ', URBAN_GRID_CARTESC_CDZ(:), start(1:1) )
+       if ( UKMAX > 0 ) then
+          call FILE_Write_Axis( fid, 'UCZ' , URBAN_GRID_CARTESC_CZ (:), start(1:1) )
+          call FILE_Write_Axis( fid, 'UFZ' , URBAN_GRID_CARTESC_FZ (:), start(1:1) )
+          call FILE_Write_Axis( fid, 'UCDZ', URBAN_GRID_CARTESC_CDZ(:), start(1:1) )
+       end if
     end if
 
     if ( FILE_get_AGGREGATE(fid) ) then
@@ -2944,9 +3079,15 @@ contains
           call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_zuy', AXIS_VOLZUY(:,:,:), start(1:3) )
           call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_zxv', AXIS_VOLZXV(:,:,:), start(1:3) )
 
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_oxy', AXIS_VOLO(:,:,:), start(1:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_lxy', AXIS_VOLL(:,:,:), start(1:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_uxy', AXIS_VOLU(:,:,:), start(1:3) )
+          if ( OKMAX > 0 ) then
+             call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_oxy', AXIS_VOLO(:,:,:), start(1:3) )
+          end if
+          if ( LKMAX > 0 ) then
+             call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_lxy', AXIS_VOLL(:,:,:), start(1:3) )
+          end if
+          if ( UKMAX > 0 ) then
+             call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_uxy', AXIS_VOLU(:,:,:), start(1:3) )
+          end if
        end if
     else
        XSB = ISB - ISB2 + 1
@@ -2988,11 +3129,19 @@ contains
           call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_zuy', AXIS_VOLZUY(:,XSB:XEB,YSB:YEB), start(1:3) )
           call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_zxv', AXIS_VOLZXV(:,XSB:XEB,YSB:YEB), start(1:3) )
 
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_oxy', AXIS_VOLO(:,XSB:XEB,YSB:YEB), start(1:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_lxy', AXIS_VOLL(:,XSB:XEB,YSB:YEB), start(1:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_uxy', AXIS_VOLU(:,XSB:XEB,YSB:YEB), start(1:3) )
+          if ( OKMAX > 0 ) then
+             call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_oxy', AXIS_VOLO(:,XSB:XEB,YSB:YEB), start(1:3) )
+          end if
+          if ( LKMAX > 0 ) then
+             call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_lxy', AXIS_VOLL(:,XSB:XEB,YSB:YEB), start(1:3) )
+          end if
+          if ( UKMAX > 0 ) then
+             call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_uxy', AXIS_VOLU(:,XSB:XEB,YSB:YEB), start(1:3) )
+          end if
        end if
     end if
+
+    call PROF_rapend('FILE_O_NetCDF', 2)
 
     return
   end subroutine FILE_CARTESC_write_axes
@@ -3041,6 +3190,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
     if    ( datatype == 'REAL8' ) then
        dtype = FILE_REAL8
@@ -3199,6 +3353,11 @@ contains
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
+
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
 
@@ -3291,6 +3450,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -3425,6 +3589,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
     fill_halo_ = .false.
     if( present(fill_halo) ) fill_halo_ = fill_halo
@@ -3576,6 +3745,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
     fill_halo_ = .false.
     if( present(fill_halo) ) fill_halo_ = fill_halo
@@ -3748,6 +3922,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
+
+    if ( FILE_closed(fid) ) then
+       call PROF_rapend('FILE_O_NetCDF', 2)
+       return
+    end if
 
     fill_halo_ = .false.
     if( present(fill_halo) ) fill_halo_ = fill_halo
@@ -4166,12 +4345,18 @@ contains
                                              area_x='cell_area_zuv_x', area_y='cell_area_zuv_y', &
                                                   location='node'                                )
 
-    call set_dimension( 'OXY',  3, (/ 'oz',  'x ',  'y '  /), OKMAX*IA*JA,     .true., area='cell_area', volume='cell_volume_oxy', location='face', grid='ocean' )
-    call set_dimension( 'OHXY', 3, (/ 'ozh', 'x  ', 'y  ' /), (OKMAX+1)*IA*JA, .true., area='cell_area', volume='cell_volume_oxy', location='face', grid='ocean' )
-    call set_dimension( 'LXY',  3, (/ 'lz',  'x ',  'y '  /), LKMAX*IA*JA,     .true., area='cell_area', volume='cell_volume_lxy', location='face', grid='land'  )
-    call set_dimension( 'LHXY', 3, (/ 'lzh', 'x  ', 'y  ' /), (LKMAX+1)*IA*JA, .true., area='cell_area', volume='cell_volume_lxy', location='face', grid='land'  )
-    call set_dimension( 'UXY',  3, (/ 'uz',  'x ',  'y '  /), UKMAX*IA*JA,     .true., area='cell_area', volume='cell_volume_uxy', location='face', grid='urban' )
-    call set_dimension( 'UHXY', 3, (/ 'uzh', 'x  ', 'y  ' /), (UKMAX+1)*IA*JA, .true., area='cell_area', volume='cell_volume_uxy', location='face', grid='urban' )
+    if ( OKMAX > 0 ) then
+       call set_dimension( 'OXY',  3, (/ 'oz',  'x ',  'y '  /), OKMAX*IA*JA,     .true., area='cell_area', volume='cell_volume_oxy', location='face', grid='ocean' )
+       call set_dimension( 'OHXY', 3, (/ 'ozh', 'x  ', 'y  ' /), (OKMAX+1)*IA*JA, .true., area='cell_area', volume='cell_volume_oxy', location='face', grid='ocean' )
+    end if
+    if ( LKMAX > 0 ) then
+       call set_dimension( 'LXY',  3, (/ 'lz',  'x ',  'y '  /), LKMAX*IA*JA,     .true., area='cell_area', volume='cell_volume_lxy', location='face', grid='land'  )
+       call set_dimension( 'LHXY', 3, (/ 'lzh', 'x  ', 'y  ' /), (LKMAX+1)*IA*JA, .true., area='cell_area', volume='cell_volume_lxy', location='face', grid='land'  )
+    end if
+    if ( UKMAX > 0 ) then
+       call set_dimension( 'UXY',  3, (/ 'uz',  'x ',  'y '  /), UKMAX*IA*JA,     .true., area='cell_area', volume='cell_volume_uxy', location='face', grid='urban' )
+       call set_dimension( 'UHXY', 3, (/ 'uzh', 'x  ', 'y  ' /), (UKMAX+1)*IA*JA, .true., area='cell_area', volume='cell_volume_uxy', location='face', grid='urban' )
+    end if
 
 
     ! Axis information
@@ -4400,41 +4585,47 @@ contains
     call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeZHXY, err)
     call MPI_Type_commit(centerTypeZHXY, err)
 
-    ! for dim_type == 'OXY'
-    startOCEAN(1)   = 1
-    startOCEAN(2:3) = startXY(1:2)
-    countOCEAN(1)   = OKMAX
-    countOCEAN(2:3) = countXY(1:2)
-    ! construct MPI subarray data type
-    sizes(1)       = OKMAX
-    subsizes(1)    = OKMAX
-    sub_off(1)     = OKS - 1 ! MPI start index starts with 0
-    call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeOCEAN, err)
-    call MPI_Type_commit(centerTypeOCEAN, err)
+    if ( OKMAX > 0 ) then
+       ! for dim_type == 'OXY'
+       startOCEAN(1)   = 1
+       startOCEAN(2:3) = startXY(1:2)
+       countOCEAN(1)   = OKMAX
+       countOCEAN(2:3) = countXY(1:2)
+       ! construct MPI subarray data type
+       sizes(1)       = OKMAX
+       subsizes(1)    = OKMAX
+       sub_off(1)     = OKS - 1 ! MPI start index starts with 0
+       call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeOCEAN, err)
+       call MPI_Type_commit(centerTypeOCEAN, err)
+    end if
 
-    ! for dim_type == 'LXY'
-    startLAND(1)   = 1
-    startLAND(2:3) = startXY(1:2)
-    countLAND(1)   = LKMAX
-    countLAND(2:3) = countXY(1:2)
-    ! construct MPI subarray data type
-    sizes(1)       = LKMAX
-    subsizes(1)    = LKMAX
-    sub_off(1)     = LKS - 1 ! MPI start index starts with 0
-    call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeLAND, err)
-    call MPI_Type_commit(centerTypeLAND, err)
+    if ( LKMAX > 0 ) then
+       ! for dim_type == 'LXY'
+       startLAND(1)   = 1
+       startLAND(2:3) = startXY(1:2)
+       countLAND(1)   = LKMAX
+       countLAND(2:3) = countXY(1:2)
+       ! construct MPI subarray data type
+       sizes(1)       = LKMAX
+       subsizes(1)    = LKMAX
+       sub_off(1)     = LKS - 1 ! MPI start index starts with 0
+       call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeLAND, err)
+       call MPI_Type_commit(centerTypeLAND, err)
+    end if
 
-    ! for dim_type == 'UXY'
-    startURBAN(1)   = 1
-    startURBAN(2:3) = startXY(1:2)
-    countURBAN(1)   = UKMAX
-    countURBAN(2:3) = countXY(1:2)
-    ! construct MPI subarray data type
-    sizes(1)        = UKMAX
-    subsizes(1)     = UKMAX
-    sub_off(1)      = UKS - 1 ! MPI start index starts with 0
-    call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeURBAN, err)
-    call MPI_Type_commit(centerTypeURBAN, err)
+    if ( UKMAX > 0 ) then
+       ! for dim_type == 'UXY'
+       startURBAN(1)   = 1
+       startURBAN(2:3) = startXY(1:2)
+       countURBAN(1)   = UKMAX
+       countURBAN(2:3) = countXY(1:2)
+       ! construct MPI subarray data type
+       sizes(1)        = UKMAX
+       subsizes(1)     = UKMAX
+       sub_off(1)      = UKS - 1 ! MPI start index starts with 0
+       call MPI_Type_create_subarray(3, sizes, subsizes, sub_off, order, etype, centerTypeURBAN, err)
+       call MPI_Type_commit(centerTypeURBAN, err)
+    end if
 
     ! for dim_type == 'ZX'
     startZX(1)  = KHALO+1

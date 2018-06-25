@@ -80,8 +80,8 @@ contains
     use scale_const, only: &
        D2R  => CONST_D2R, &
        HUGE => CONST_HUGE
-    use scale_comm_cartesC, only: &
-       COMM_horizontal_min
+    use scale_statistics, only: &
+       STATISTICS_horizontal_min
     use scale_atmos_grid_cartesC, only: &
        CDZ => ATMOS_GRID_CARTESC_CDZ, &
        FDX => ATMOS_GRID_CARTESC_FDX, &
@@ -237,7 +237,8 @@ contains
       enddo
       enddo
 
-      call COMM_horizontal_min( CNVTOPO_smooth_maxslope_limit, minslope(:,:) )
+      call STATISTICS_horizontal_min( IA, IS, IE, JA, JS, JE, &
+                                      minslope(:,:), CNVTOPO_smooth_maxslope_limit )
     end if
 
     return
@@ -834,10 +835,9 @@ contains
     use scale_atmos_grid_cartesC, only: &
        FDX => ATMOS_GRID_CARTESC_FDX, &
        FDY => ATMOS_GRID_CARTESC_FDY
-    use scale_comm_cartesC, only: &
-       COMM_horizontal_max
     use scale_statistics, only: &
-       STATISTICS_detail
+       STATISTICS_detail, &
+       STATISTICS_horizontal_max
     use scale_topography, only: &
        TOPO_fillhalo
     implicit none
@@ -902,7 +902,8 @@ contains
        DZsfc_DXY(:,JA,2) = 0.0_RP
 
        slope(:,:) = max( abs(DZsfc_DXY(:,:,1)), abs(DZsfc_DXY(:,:,2)) )
-       call COMM_horizontal_max( maxslope, slope(:,:) )
+       call STATISTICS_horizontal_max( IA, IS, IE, JA, JS, JE, &
+                                       slope(:,:), maxslope )
 
        LOG_PROGRESS(*) 'maximum slope [deg] : ', maxslope
 
@@ -1036,7 +1037,8 @@ contains
        DZsfc_DXY(:,JA,2) = 0.0_RP
 
        slope(:,:) = max( abs(DZsfc_DXY(:,:,1)), abs(DZsfc_DXY(:,:,2)) )
-       call COMM_horizontal_max( maxslope, slope(:,:) )
+       call STATISTICS_horizontal_max( IA, IS, IE, JA, JS, JE, &
+                                       slope(:,:), maxslope )
 
        LOG_INFO("CNVTOPO_smooth",*) 'maximum slope [deg] : ', maxslope
 
