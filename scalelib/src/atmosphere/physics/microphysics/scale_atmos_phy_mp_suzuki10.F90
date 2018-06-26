@@ -44,6 +44,7 @@ module scale_atmos_phy_mp_suzuki10
   public :: ATMOS_PHY_MP_suzuki10_effective_radius
   public :: ATMOS_PHY_MP_suzuki10_qtrc2qhyd
   public :: ATMOS_PHY_MP_suzuki10_qhyd2qtrc
+  public :: ATMOS_PHY_MP_suzuki10_qtrc2nhyd
 
   !-----------------------------------------------------------------------------
   !
@@ -136,8 +137,8 @@ module scale_atmos_phy_mp_suzuki10
   integer :: ICEFLG = 1
 
   integer, parameter   :: I_mp_QC  = 1
-  integer, parameter   :: I_mp_QP  = 2
-  integer, parameter   :: I_mp_QCL = 3
+  integer, parameter   :: I_mp_QCL = 2
+  integer, parameter   :: I_mp_QP  = 3
   integer, parameter   :: I_mp_QD  = 4
   integer, parameter   :: I_mp_QS  = 5
   integer, parameter   :: I_mp_QG  = 6
@@ -1372,10 +1373,10 @@ contains
              end if
           end do
 
-          Re(k,i,j,I_HI) = ( re_tmp(I_mp_QP ) * sum0(I_mp_QP ) &
-                           + re_tmp(I_mp_QCL) * sum0(I_mp_QCL) &
+          Re(k,i,j,I_HI) = ( re_tmp(I_mp_QCL) * sum0(I_mp_QCL) &
+                           + re_tmp(I_mp_QP ) * sum0(I_mp_QP ) &
                            + re_tmp(I_mp_QD ) * sum0(I_mp_QD ) ) &
-                         / ( sum0(I_mp_QP) + sum0(I_mp_QCL) + sum0(I_mp_QD) + EPS )
+                         / ( sum0(I_mp_QCL) + sum0(I_mp_QP) + sum0(I_mp_QD) + EPS )
           Re(k,i,j,I_HS) = re_tmp(I_mp_QS)
           Re(k,i,j,I_HG) = re_tmp(I_mp_QG)
           Re(k,i,j,I_HH) = re_tmp(I_mp_QH)
@@ -1397,8 +1398,6 @@ contains
        JA, JS, JE, &
        QTRC0,      &
        Qe          )
-    use scale_const, only: &
-       EPS => CONST_EPS
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_HC,  &
@@ -1409,99 +1408,52 @@ contains
        I_HH
     implicit none
 
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
-
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,nspc*nbin) ! tracer mass concentration [kg/kg]
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,nbin*nspc) ! tracer mass concentration [kg/kg]
     real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD)     ! mixing ratio of each cateory [kg/kg]
 
-    real(RP) :: sum2
-    integer  :: i, j, k, iq, ihydro
+    integer :: ihydro, ibin, iq, icateg
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
+!OCL XFILL
+    Qe(:,:,:,:) = 0.0_RP
 
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE
+    do ihydro = 1, nspc
+    do ibin   = 1, nbin
+       iq = nbin*(ihydro-1) + ibin
 
-       Qe(k,i,j,:) = 0.0_RP
+       if    ( iq > 0                 .AND. iq <= nbin*(I_mp_QC -1) ) then ! liquid
+          if    ( iq > 0    .AND. iq <= nbnd ) then ! cloud
+             icateg = I_HC
+          elseif( iq > nbnd .AND. iq <= nbin ) then ! rain
+             icateg = I_HR
+          endif
+       elseif( iq > nbin*(I_mp_QC -1) .AND. iq <= nbin*(I_mp_QCL-1) ) then ! ice (column)
+          icateg = I_HI
+       elseif( iq > nbin*(I_mp_QCL-1) .AND. iq <= nbin*(I_mp_QP -1) ) then ! ice (plate)
+          icateg = I_HI
+       elseif( iq > nbin*(I_mp_QP -1) .AND. iq <= nbin*(I_mp_QS -1) ) then ! ice (dendrite)
+          icateg = I_HI
+       elseif( iq > nbin*(I_mp_QS -1) .AND. iq <= nbin*(I_mp_QG -1) ) then ! snow
+          icateg = I_HS
+       elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QH -1) ) then ! graupel
+          icateg = I_HG
+       elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= nbin*nspc         ) then ! hail
+          icateg = I_HH
+       endif
 
-       ! HC
-       sum2 = 0.0_RP
-       do iq = 1, nbnd
-          sum2 = sum2 + QTRC0(k,i,j,iq)
-       enddo
-       Qe(k,i,j,I_HC) = sum2
-
-       ! HR
-       sum2 = 0.0_RP
-       do iq = nbnd+1, nbin
-          sum2 = sum2 + QTRC0(k,i,j,iq)
-       enddo
-       Qe(k,i,j,I_HR) = sum2
-
-    enddo
-    enddo
-    enddo
-
-    ! other hydrometeors
-    if ( nspc > 1 ) then
-
-       do k = KS, KE
        do j = JS, JE
        do i = IS, IE
-          ! HI
-          sum2 = 0.0_RP
-          do ihydro = I_mp_QP, I_mp_QD
-          do iq = nbin*(ihydro-1)+1, nbin*ihydro
-             sum2 = sum2 + QTRC0(k,i,j,iq)
-          enddo
-          enddo
-          Qe(k,i,j,I_HI) = sum2
-
-          ! HS
-          sum2 = 0.0_RP
-          ihydro = I_mp_QS
-          do iq = nbin*(ihydro-1)+1, nbin*ihydro
-             sum2 = sum2 + QTRC0(k,i,j,iq)
-          enddo
-          Qe(k,i,j,I_HS) = sum2
-
-          ! HG
-          sum2 = 0.0_RP
-          ihydro = I_mp_QG
-          do iq = nbin*(ihydro-1)+1, nbin*ihydro
-             sum2 = sum2 + QTRC0(k,i,j,iq)
-          enddo
-          Qe(k,i,j,I_HG) = sum2
-
-          ! HS
-          sum2 = 0.0_RP
-          ihydro = I_mp_QH
-          do iq = nbin*(ihydro-1)+1, nbin*ihydro
-             sum2 = sum2 + QTRC0(k,i,j,iq)
-          enddo
-          Qe(k,i,j,I_HH) = sum2
-
-       enddo
-       enddo
-       enddo
-
-    else
-
        do k = KS, KE
-       do j = JS, JE
-       do i = IS, IE
-          Qe(k,i,j,I_HI) = 0.0_RP
-          Qe(k,i,j,I_HS) = 0.0_RP
-          Qe(k,i,j,I_HG) = 0.0_RP
-          Qe(k,i,j,I_HH) = 0.0_RP
-       end do
-       end do
-       end do
-
-    endif
+          Qe(k,i,j,icateg) = Qe(k,i,j,icateg) + QTRC0(k,i,j,iq)
+       enddo
+       enddo
+       enddo
+    enddo
+    enddo
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_qtrc2qhyd
@@ -1702,6 +1654,76 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_qhyd2qtrc
+
+  !-----------------------------------------------------------------------------
+  !> Calculate number concentration of each category
+  subroutine ATMOS_PHY_MP_suzuki10_qtrc2nhyd( &
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       DENS,       &
+       QTRC0,      &
+       Ne          )
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC,  &
+       I_HR,  &
+       I_HI,  &
+       I_HS,  &
+       I_HG,  &
+       I_HH
+    implicit none
+
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+    real(RP), intent(in)  :: DENS (KA,IA,JA)           ! density [kg/m3]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,nbin*nspc) ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Ne   (KA,IA,JA,N_HYD)     ! number concentration of each cateory [1/m3]
+
+    integer :: ihydro, ibin, iq, icateg
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+!OCL XFILL
+    Ne(:,:,:,:) = 0.0_RP
+
+    do ihydro = 1, nspc
+    do ibin   = 1, nbin
+       iq = nbin*(ihydro-1) + ibin
+
+       if    ( iq > 0                 .AND. iq <= nbin*(I_mp_QC -1) ) then ! liquid
+          if    ( iq > 0    .AND. iq <= nbnd ) then ! cloud
+             icateg = I_HC
+          elseif( iq > nbnd .AND. iq <= nbin ) then ! rain
+             icateg = I_HR
+          endif
+       elseif( iq > nbin*(I_mp_QC -1) .AND. iq <= nbin*(I_mp_QCL-1) ) then ! ice (column)
+          icateg = I_HI
+       elseif( iq > nbin*(I_mp_QCL-1) .AND. iq <= nbin*(I_mp_QP -1) ) then ! ice (plate)
+          icateg = I_HI
+       elseif( iq > nbin*(I_mp_QP -1) .AND. iq <= nbin*(I_mp_QS -1) ) then ! ice (dendrite)
+          icateg = I_HI
+       elseif( iq > nbin*(I_mp_QS -1) .AND. iq <= nbin*(I_mp_QG -1) ) then ! snow
+          icateg = I_HS
+       elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QH -1) ) then ! graupel
+          icateg = I_HG
+       elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= nbin*nspc         ) then ! hail
+          icateg = I_HH
+       endif
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          Ne(k,i,j,icateg) = Ne(k,i,j,icateg) + DENS(k,i,j) * QTRC0(k,i,j,iq) * rexpxctr(ibin)
+       enddo
+       enddo
+       enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_suzuki10_qtrc2nhyd
 
   !-----------------------------------------------------------------------------
   subroutine MP_suzuki10( &

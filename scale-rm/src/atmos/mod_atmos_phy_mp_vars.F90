@@ -109,12 +109,14 @@ module mod_atmos_phy_mp_vars
   logical, private :: DIAG_Re
   logical, private :: DIAG_Qe
 
-
   ! for history
-  integer, private             :: HIST_CLDFRAC_id
-  integer, private,allocatable :: HIST_Re_id(:)
-  logical, private             :: HIST_Re
-
+  integer, private              :: HIST_CLDFRAC_id
+  logical, private              :: HIST_Re
+  logical, private              :: HIST_Qe
+  logical, private              :: HIST_Ne
+  integer, private, allocatable :: HIST_Re_id(:)
+  integer, private, allocatable :: HIST_Qe_id(:) ! for suzuki10
+  integer, private, allocatable :: HIST_Ne_id(:) ! for suzuki10
 
   !-----------------------------------------------------------------------------
 contains
@@ -126,9 +128,10 @@ contains
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_atmos_hydrometeor, only: &
-       N_HYD, &
-       QHA,  &
+       N_HYD,    &
+       QHA,      &
        HYD_NAME, &
+       NUM_NAME, &
        HYD_DESC
     use scale_file_history, only: &
        FILE_HISTORY_reg
@@ -228,14 +231,29 @@ contains
     DIAG_Qe      = .false.
 
     ! history
+    allocate( HIST_Re_id(N_HYD) )
+    allocate( HIST_Qe_id(N_HYD) )
+    allocate( HIST_Ne_id(N_HYD) )
+
     call FILE_HISTORY_reg( 'CLDFRAC', 'cloud fraction', '1', HIST_CLDFRAC_id, fill_halo=.true., dim_type='ZXY' )
 
     HIST_Re = .false.
-    allocate( HIST_Re_id(N_HYD) )
     do ih = 1, N_HYD
        call FILE_HISTORY_reg( 'Re_'//trim(HYD_NAME(ih)), 'effective radius of '//trim(HYD_DESC(ih)), 'cm', HIST_Re_id(ih), fill_halo=.true., dim_type='ZXY' )
-       if ( HIST_Re_id(ih) > 0 ) HIST_Re = .true.
-    end do
+       if( HIST_Re_id(ih) > 0 ) HIST_Re = .true.
+    enddo
+
+    HIST_Qe = .false.
+    do ih = 1, N_HYD
+       call FILE_HISTORY_reg( trim(HYD_NAME(ih))//'_blk', 'mass ratio of '//trim(HYD_DESC(ih)), 'kg/kg', HIST_Qe_id(ih), fill_halo=.true., dim_type='ZXY' )
+       if( HIST_Qe_id(ih) > 0 ) HIST_Qe = .true.
+    enddo
+
+    HIST_Ne = .false.
+    do ih = 1, N_HYD
+       call FILE_HISTORY_reg( trim(NUM_NAME(ih))//'_blk', 'number concentration of '//trim(HYD_DESC(ih)), '1/m3', HIST_Ne_id(ih), fill_halo=.true., dim_type='ZXY' )
+       if( HIST_Ne_id(ih) > 0 ) HIST_Ne = .true.
+    enddo
 
     return
   end subroutine ATMOS_PHY_MP_vars_setup
@@ -476,10 +494,17 @@ contains
   subroutine ATMOS_PHY_MP_vars_history( &
        DENS, TEMP, QTRC )
     use scale_atmos_hydrometeor, only: &
-       N_HYD
+       N_HYD, &
+       QHS,   &
+       QHE
     use scale_file_history, only: &
        FILE_HISTORY_query, &
        FILE_HISTORY_put
+    use scale_atmos_phy_mp_suzuki10, only: &
+       ATMOS_PHY_MP_suzuki10_qtrc2qhyd, &
+       ATMOS_PHY_MP_suzuki10_qtrc2nhyd
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE
     implicit none
 
     real(RP), intent(in) :: DENS(KA,IA,JA)
@@ -487,7 +512,7 @@ contains
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
     real(RP) :: WORK  (KA,IA,JA,N_HYD)
-    logical  :: do_put
+    logical  :: do_put, do_put_all
     integer  :: ih
     !---------------------------------------------------------------------------
 
@@ -524,6 +549,61 @@ contains
        end if
     end if
 
+    if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
+
+       if ( HIST_Qe ) then
+          do_put_all = .false.
+          do ih = 1, N_HYD
+             if ( HIST_Qe_id(ih) > 0 ) then
+                call FILE_HISTORY_query( HIST_Qe_id(ih), do_put )
+                do_put_all = ( do_put_all .OR. do_put )
+             endif
+          enddo
+
+          if ( do_put_all ) then
+             call ATMOS_PHY_MP_suzuki10_qtrc2qhyd( KA, KS,  KE,         & ! [IN]
+                                                   IA, ISB, IEB,        & ! [IN]
+                                                   JA, JSB, JEB,        & ! [IN]
+                                                   QTRC(:,:,:,QHS:QHE), & ! [IN]
+                                                   WORK(:,:,:,:)        ) ! [OUT]
+
+             do ih = 1, N_HYD
+                if ( HIST_Qe_id(ih) > 0 ) then
+                   call FILE_HISTORY_query( HIST_Qe_id(ih), do_put )
+                   if( do_put ) call FILE_HISTORY_put( HIST_Qe_id(ih), WORK(:,:,:,ih) )
+                endif
+             enddo
+          endif
+       endif
+
+       if ( HIST_Ne ) then
+          do_put_all = .false.
+          do ih = 1, N_HYD
+             if ( HIST_Ne_id(ih) > 0 ) then
+                call FILE_HISTORY_query( HIST_Ne_id(ih), do_put )
+                do_put_all = ( do_put_all .OR. do_put )
+             endif
+          enddo
+
+          if ( do_put_all ) then
+             call ATMOS_PHY_MP_suzuki10_qtrc2nhyd( KA, KS,  KE,         & ! [IN]
+                                                   IA, ISB, IEB,        & ! [IN]
+                                                   JA, JSB, JEB,        & ! [IN]
+                                                   DENS(:,:,:),         & ! [IN]
+                                                   QTRC(:,:,:,QHS:QHE), & ! [IN]
+                                                   WORK(:,:,:,:)        ) ! [OUT]
+
+             do ih = 1, N_HYD
+                if ( HIST_Ne_id(ih) > 0 ) then
+                   call FILE_HISTORY_query( HIST_Ne_id(ih), do_put )
+                   if( do_put ) call FILE_HISTORY_put( HIST_Ne_id(ih), WORK(:,:,:,ih) )
+                endif
+             enddo
+          endif
+       endif
+
+    endif
+
     return
   end subroutine ATMOS_PHY_MP_vars_history
 
@@ -558,6 +638,7 @@ contains
        ATMOS_PHY_MP_suzuki10_cloud_fraction
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE
+    implicit none
 
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: TEMP(KA,IA,JA)
