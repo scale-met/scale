@@ -659,7 +659,7 @@ contains
     call PROF_rapstart('FILE_HISTORY_OUT', 2)
 
     if ( len_trim(name) >= H_SHORT ) then
-       LOG_ERROR("FILE_HISTORY_reg",'(1x,A,I2,A,A)') 'Length of history name should be <= ', H_SHORT-1 ,' chars. STOP', trim(name)
+       LOG_ERROR("FILE_HISTORY_reg",'(1x,A,I2,A,A)') 'Length of history name should be <= ', H_SHORT-1 ,' chars. name=', trim(name)
        call PRC_abort
     endif
 
@@ -672,7 +672,7 @@ contains
 
     ! get dimension id
     if ( FILE_HISTORY_ndims < 1 ) then
-       LOG_ERROR("FILE_HISTORY_reg",*) 'at least one dim_type must be registerd with FILE_HISTORY_set_dim'
+       LOG_ERROR("FILE_HISTORY_reg",*) 'at least one dim_type must be registerd with FILE_HISTORY_set_dim. name=', trim(name)
        call PRC_abort
     end if
     if ( present(dim_type) ) then
@@ -684,7 +684,7 @@ contains
           end if
        end do
        if ( dimid == -1 ) then
-          LOG_ERROR("FILE_HISTORY_reg",*) 'dim_type must be registerd with FILE_HISTORY_set_dim: ', trim(dim_type)
+          LOG_ERROR("FILE_HISTORY_reg",*) 'dim_type must be registerd with FILE_HISTORY_set_dim: ', trim(dim_type) ,' name=', trim(name)
           call PRC_abort
        end if
     else if ( present(ndims) ) then
@@ -695,7 +695,7 @@ contains
           end if
        end do
        if ( dimid == -1 ) then
-          LOG_ERROR("FILE_HISTORY_reg",'(a,i1,a)') 'dim_type of ', ndims, 'D must be registerd with FILE_HISTORY_set_dim'
+          LOG_ERROR("FILE_HISTORY_reg",'(a,i1,a)') 'dim_type of ', ndims, 'D must be registerd with FILE_HISTORY_set_dim. name=', trim(name)
           call PRC_abort
        end if
     else
@@ -707,7 +707,7 @@ contains
           end if
        end do
        if ( dimid == -1 ) then
-          LOG_ERROR("FILE_HISTORY_reg",'(a,i1,a)') 'dim_type or ndims must be specified'
+          LOG_ERROR("FILE_HISTORY_reg",'(a,i1,a)') 'dim_type or ndims must be specified. name=', trim(name)
           call PRC_abort
        end if
     end if
@@ -716,31 +716,31 @@ contains
        select case ( cell_measures )
        case ( "area" )
           if ( FILE_HISTORY_dims(dimid)%area == "" ) then
-             LOG_ERROR("FILE_HISTORY_reg",*) 'area is not supported for cell_measures'
+             LOG_ERROR("FILE_HISTORY_reg",*) 'area is not supported for cell_measures. name=', trim(name)
              call PRC_abort
           end if
        case ( "area_z" )
           if ( FILE_HISTORY_dims(dimid)%area == "" ) then
-             LOG_ERROR("FILE_HISTORY_reg",*) 'area_z is not supported for cell_measures'
+             LOG_ERROR("FILE_HISTORY_reg",*) 'area_z is not supported for cell_measures. name=', trim(name)
              call PRC_abort
           end if
        case ( "area_x" )
           if ( FILE_HISTORY_dims(dimid)%area_x == "" ) then
-             LOG_ERROR("FILE_HISTORY_reg",*) 'area_x is not supported for cell_measures'
+             LOG_ERROR("FILE_HISTORY_reg",*) 'area_x is not supported for cell_measures. name=', trim(name)
              call PRC_abort
           end if
        case ( "area_y" )
           if ( FILE_HISTORY_dims(dimid)%area_y == "" ) then
-             LOG_ERROR("FILE_HISTORY_reg",*) 'area_y is not supported for cell_measures'
+             LOG_ERROR("FILE_HISTORY_reg",*) 'area_y is not supported for cell_measures. name=', trim(name)
              call PRC_abort
           end if
        case ( "volume" )
           if ( FILE_HISTORY_dims(dimid)%volume == "" ) then
-             LOG_ERROR("FILE_HISTORY_reg",*) 'volume is not supported for cell_measures'
+             LOG_ERROR("FILE_HISTORY_reg",*) 'volume is not supported for cell_measures. name=', trim(name)
              call PRC_abort
           end if
        case default
-          LOG_ERROR("FILE_HISTORY_reg",*) 'cell_measures must be "area" or "volume"'
+          LOG_ERROR("FILE_HISTORY_reg",*) 'cell_measures must be "area" or "volume". name=', trim(name)
           call PRC_abort
        end select
        cell_measures_ = cell_measures
