@@ -1007,7 +1007,14 @@ contains
     enddo
 
     if ( ite  > CNVTOPO_smooth_itelim ) then
-       LOG_ERROR("CNVTOPO_smooth",*) 'not converged'
+       LOG_ERROR("CNVTOPO_smooth",*) 'Smoothing did not converge until ', CNVTOPO_smooth_itelim,' times of iteration.'
+
+       LOG_ERROR_CONT(*) 'Please try different parameters of PARAM_CNVTOPO.'
+       LOG_ERROR_CONT(*) '- Number limit of iteration                (CNVTOPO_smooth_itelim)         = ', CNVTOPO_smooth_itelim
+       LOG_ERROR_CONT(*) '- Maximum ratio of slope dZ/dX, dZ/dY      (CNVTOPO_smooth_maxslope_ratio) = ', CNVTOPO_smooth_maxslope_ratio
+       LOG_ERROR_CONT(*) '  Or, Maximum of slope with degree         (CNVTOPO_smooth_maxslope)       = ', CNVTOPO_smooth_maxslope
+       LOG_ERROR_CONT(*) '- Smoothing type LAPLACIAN/GAUSSIAN/OFF    (CNVTOPO_smooth_type)           = ', trim(CNVTOPO_smooth_type)
+       LOG_ERROR_CONT(*) '- Number of using points for interpolation (CNVTOPO_interp_level)          = ', CNVTOPO_interp_level
        call PRC_abort
     else
        LOG_NEWLINE
