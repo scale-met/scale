@@ -429,19 +429,19 @@ contains
                                  min_value = 0.0_RP, yrevers = .true.            ) ! [IN]
 
     ! interporation
-    allocate( idx_i(IA,JA,CNVTOPO_INTERP_LEVEL) )
-    allocate( idx_j(IA,JA,CNVTOPO_INTERP_LEVEL) )
-    allocate( hfact(IA,JA,CNVTOPO_INTERP_LEVEL) )
+    allocate( idx_i(IA,JA,CNVTOPO_interp_level) )
+    allocate( idx_j(IA,JA,CNVTOPO_interp_level) )
+    allocate( hfact(IA,JA,CNVTOPO_interp_level) )
 
-    call INTERP_factor2d( CNVTOPO_INTERP_LEVEL,               & ! [IN]
-                          nLONH, nLATH,                       & ! [IN]
-                          LONH(:,:), LATH(:,:),               & ! [IN]
-                          IA, JA,                             & ! [IN]
-                          LON(:,:), LAT(:,:),                 & ! [IN]
-                          idx_i(:,:,:), idx_j(:,:,:),         & ! [OUT]
-                          hfact(:,:,:)                        ) ! [OUT]
+    call INTERP_factor2d( CNVTOPO_interp_level,       & ! [IN]
+                          nLONH, nLATH,               & ! [IN]
+                          LONH(:,:), LATH(:,:),       & ! [IN]
+                          IA, JA,                     & ! [IN]
+                          LON(:,:), LAT(:,:),         & ! [IN]
+                          idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
+                          hfact(:,:,:)                ) ! [OUT]
 
-    call INTERP_interp2d( CNVTOPO_INTERP_LEVEL,       & ! [IN]
+    call INTERP_interp2d( CNVTOPO_interp_level,       & ! [IN]
                           nLONH,nLATH,                & ! [IN]
                           IA, JA,                     & ! [IN]
                           idx_i(:,:,:), idx_j(:,:,:), & ! [IN]
@@ -582,21 +582,21 @@ contains
                                  min_value = 0.0_RP                              ) ! [IN]
 
     ! interporation
-    allocate( idx_i(IA,JA,CNVTOPO_INTERP_LEVEL) )
-    allocate( idx_j(IA,JA,CNVTOPO_INTERP_LEVEL) )
-    allocate( hfact(IA,JA,CNVTOPO_INTERP_LEVEL) )
+    allocate( idx_i(IA,JA,CNVTOPO_interp_level) )
+    allocate( idx_j(IA,JA,CNVTOPO_interp_level) )
+    allocate( hfact(IA,JA,CNVTOPO_interp_level) )
 
     search_limit = TILE_DLAT * RADIUS * 1.5_RP
-    call INTERP_factor2d( CNVTOPO_INTERP_LEVEL,             & ! [IN]
-                          nLONH, nLATH,                     & ! [IN]
-                          LONH(:,:), LATH(:,:),             & ! [IN]
-                          IA, JA,                           & ! [IN]
-                          LON(:,:), LAT(:,:),               & ! [IN]
-                          idx_i(:,:,:), idx_j(:,:,:),       & ! [OUT]
-                          hfact(:,:,:),                     & ! [OUT]
-                          search_limit = search_limit       ) ! [IN]
+    call INTERP_factor2d( CNVTOPO_interp_level,       & ! [IN]
+                          nLONH, nLATH,               & ! [IN]
+                          LONH(:,:), LATH(:,:),       & ! [IN]
+                          IA, JA,                     & ! [IN]
+                          LON(:,:), LAT(:,:),         & ! [IN]
+                          idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
+                          hfact(:,:,:),               & ! [OUT]
+                          search_limit = search_limit ) ! [IN]
 
-    call INTERP_interp2d( CNVTOPO_INTERP_LEVEL,       & ! [IN]
+    call INTERP_interp2d( CNVTOPO_interp_level,       & ! [IN]
                           nLONH,nLATH,                & ! [IN]
                           IA, JA,                     & ! [IN]
                           idx_i(:,:,:), idx_j(:,:,:), & ! [IN]
@@ -790,21 +790,21 @@ contains
                                  min_value = 0.0_RP, yrevers = yrevers           ) ! [IN]
 
     ! interporation
-    allocate( idx_i(IA,JA,CNVTOPO_INTERP_LEVEL) )
-    allocate( idx_j(IA,JA,CNVTOPO_INTERP_LEVEL) )
-    allocate( hfact(IA,JA,CNVTOPO_INTERP_LEVEL) )
+    allocate( idx_i(IA,JA,CNVTOPO_interp_level) )
+    allocate( idx_j(IA,JA,CNVTOPO_interp_level) )
+    allocate( hfact(IA,JA,CNVTOPO_interp_level) )
 
     search_limit = TILE_DLAT * RADIUS * 1.5_RP
-    call INTERP_factor2d( CNVTOPO_INTERP_LEVEL,        & ! [IN]
-                          nLONH, nLATH,                & ! [IN]
-                          LONH(:,:), LATH(:,:),        & ! [IN]
-                          IA, JA,                      & ! [IN]
-                          LON(:,:), LAT(:,:),          & ! [IN]
-                          idx_i(:,:,:), idx_j(:,:,:),  & ! [OUT]
-                          hfact(:,:,:),                & ! [OUT]
-                          search_limit = search_limit  ) ! [IN]
+    call INTERP_factor2d( CNVTOPO_interp_level,       & ! [IN]
+                          nLONH, nLATH,               & ! [IN]
+                          LONH(:,:), LATH(:,:),       & ! [IN]
+                          IA, JA,                     & ! [IN]
+                          LON(:,:), LAT(:,:),         & ! [IN]
+                          idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
+                          hfact(:,:,:),               & ! [OUT]
+                          search_limit = search_limit ) ! [IN]
 
-    call INTERP_interp2d( CNVTOPO_INTERP_LEVEL,       & ! [IN]
+    call INTERP_interp2d( CNVTOPO_interp_level,       & ! [IN]
                           nLONH,nLATH,                & ! [IN]
                           IA, JA,                     & ! [IN]
                           idx_i(:,:,:), idx_j(:,:,:), & ! [IN]
@@ -1007,7 +1007,14 @@ contains
     enddo
 
     if ( ite  > CNVTOPO_smooth_itelim ) then
-       LOG_ERROR("CNVTOPO_smooth",*) 'not converged'
+       LOG_ERROR("CNVTOPO_smooth",*) 'Smoothing did not converge until ', CNVTOPO_smooth_itelim,' times of iteration.'
+
+       LOG_ERROR_CONT(*) 'Please try different parameters of PARAM_CNVTOPO.'
+       LOG_ERROR_CONT(*) '- Number limit of iteration                (CNVTOPO_smooth_itelim)         = ', CNVTOPO_smooth_itelim
+       LOG_ERROR_CONT(*) '- Maximum ratio of slope dZ/dX, dZ/dY      (CNVTOPO_smooth_maxslope_ratio) = ', CNVTOPO_smooth_maxslope_ratio
+       LOG_ERROR_CONT(*) '  Or, Maximum of slope with degree         (CNVTOPO_smooth_maxslope)       = ', CNVTOPO_smooth_maxslope
+       LOG_ERROR_CONT(*) '- Smoothing type LAPLACIAN/GAUSSIAN/OFF    (CNVTOPO_smooth_type)           = ', trim(CNVTOPO_smooth_type)
+       LOG_ERROR_CONT(*) '- Number of using points for interpolation (CNVTOPO_interp_level)          = ', CNVTOPO_interp_level
        call PRC_abort
     else
        LOG_NEWLINE
