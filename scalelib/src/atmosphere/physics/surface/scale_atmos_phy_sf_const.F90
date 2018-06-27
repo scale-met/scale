@@ -3,7 +3,7 @@
 !!
 !! @par Description
 !!          Flux from/to bottom wall of atmosphere (surface)
-!!          Constant flux
+!!          Constant flux, domain-uniform
 !!
 !! @author Team SCALE
 !!

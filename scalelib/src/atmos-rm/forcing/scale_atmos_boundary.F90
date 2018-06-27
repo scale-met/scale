@@ -401,7 +401,7 @@ contains
 
        ATMOS_BOUNDARY_UPDATE_FLAG = .false.
 
-    elseif ( ATMOS_BOUNDARY_TYPE == 'FILE' ) then
+    elseif ( ATMOS_BOUNDARY_TYPE == 'OFFLINE' ) then
 
        if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
           call ATMOS_BOUNDARY_read

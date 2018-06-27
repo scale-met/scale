@@ -32,7 +32,10 @@ module mod_urban_admin
   logical,                public :: URBAN_do   = .true. ! main switch for the model
 
   character(len=H_SHORT), public :: URBAN_DYN_TYPE = 'NONE'
+                                                   ! 'OFF'
+                                                   ! 'KUSAKA01'
   character(len=H_SHORT), public :: URBAN_SFC_TYPE = 'NONE'
+                                                   ! 'KUSAKA01'
 
   !-----------------------------------------------------------------------------
   !
