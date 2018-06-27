@@ -386,9 +386,6 @@ contains
        PRE00 => CONST_PRE00
     use scale_time, only: &
        dt_MP => TIME_DTSEC_ATMOS_PHY_MP
-    use scale_atmos_grid_cartesC, only: &
-       Z  => ATMOS_GRID_CARTESC_CZ, &
-       DZ => ATMOS_GRID_CARTESC_CDZ
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
@@ -626,8 +623,8 @@ contains
 
           call ATMOS_PHY_MP_sn14_tendency( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               DENS(:,:,:), MOMZ(:,:,:), QTRC(:,:,:,QS_MP:QE_MP), PRES(:,:,:), TEMP(:,:,:),               & ! [IN]
-               Qdry(:,:,:), CPtot(:,:,:), CVtot(:,:,:), CCN(:,:,:), dt_MP, Z(:), DZ(:),                   & ! [IN]
+               DENS(:,:,:), W(:,:,:), QTRC(:,:,:,QS_MP:QE_MP), PRES(:,:,:), TEMP(:,:,:),                     & ! [IN]
+               Qdry(:,:,:), CPtot(:,:,:), CVtot(:,:,:), CCN(:,:,:), dt_MP, REAL_CZ(:,:,:), REAL_FZ(:,:,:),   & ! [IN]
                RHOQ_t_MP(:,:,:,QS_MP:QE_MP), RHOE_t(:,:,:), CPtot_t(:,:,:), CVtot_t(:,:,:), EVAPORATE(:,:,:) ) ! [OUT]
 
        case ( 'SUZUKI10' )

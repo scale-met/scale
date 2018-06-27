@@ -571,8 +571,8 @@ contains
   !<
   subroutine ATMOS_PHY_MP_sn14_tendency( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS,      &
-       MOMZ,      &
+       DENS, &
+       W,    &
        QTRC, &
        PRES, &
        TEMP, &
@@ -581,8 +581,8 @@ contains
        CVtot, &
        CCN, &
        dt, &
-       z, &
-       dz, &
+       cz, &
+       fz, &
        RHOQ_t, &
        RHOE_t, &
        CPtot_t, &
@@ -595,7 +595,7 @@ contains
     integer, intent(in) :: JA, JS, JE
 
     real(RP), intent(in) :: DENS     (KA,IA,JA)
-    real(RP), intent(in) :: MOMZ     (KA,IA,JA)
+    real(RP), intent(in) :: W        (KA,IA,JA)
     real(RP), intent(in) :: QTRC     (KA,IA,JA,QA_MP)
     real(RP), intent(in) :: PRES(KA,IA,JA)
     real(RP), intent(in) :: TEMP(KA,IA,JA)
@@ -604,8 +604,8 @@ contains
     real(RP), intent(in) :: CVtot(KA,IA,JA)
     real(RP), intent(in) :: CCN      (KA,IA,JA)
     real(DP), intent(in) :: dt
-    real(RP), intent(in) :: z(KA)
-    real(RP), intent(in) :: dz(KA)
+    real(RP), intent(in) :: cz(  KA,IA,JA)
+    real(RP), intent(in) :: fz(0:KA,IA,JA)
 
     real(RP), intent(out) :: RHOQ_t   (KA,IA,JA,QA_MP)
     real(RP), intent(out) :: RHOE_t   (KA,IA,JA)
@@ -624,11 +624,11 @@ contains
     !##### MP Main #####
     call MP_sn14 ( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS(:,:,:), MOMZ(:,:,:), QTRC(:,:,:,:), PRES(:,:,:), TEMP(:,:,:), & ! (in)
-       Qdry(:,:,:), CPtot(:,:,:), CVtot(:,:,:), CCN(:,:,:),               & ! (in)
-       real(dt,RP), z(:), dz(:),                                          & ! (in)
-       RHOQ_t(:,:,:,:), RHOE_t(:,:,:), CPtot_t(:,:,:), CVtot_t(:,:,:),    & ! (out)
-       EVAPORATE(:,:,:)                                                   ) ! (out)
+       DENS(:,:,:), W(:,:,:), QTRC(:,:,:,:), PRES(:,:,:), TEMP(:,:,:), & ! (in)
+       Qdry(:,:,:), CPtot(:,:,:), CVtot(:,:,:), CCN(:,:,:),            & ! (in)
+       real(dt,RP), cz(:,:,:), fz(:,:,:),                              & ! (in)
+       RHOQ_t(:,:,:,:), RHOE_t(:,:,:), CPtot_t(:,:,:), CVtot_t(:,:,:), & ! (out)
+       EVAPORATE(:,:,:)                                                ) ! (out)
 
 #ifdef PROFILE_FIPP
     call fipp_stop()
@@ -1731,18 +1731,18 @@ contains
   !-----------------------------------------------------------------------------
   subroutine mp_sn14 ( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS,      &
-       MOMZ,      &
-       QTRC, &
+       DENS,  &
+       W,     &
+       QTRC,  &
        PRES0, &
        TEMP0, &
-       Qdry, &
-       CPtot0,  &
-       CVtot0,  &
-       CCN,       &
+       Qdry,  &
+       CPtot0, &
+       CVtot0, &
+       CCN,    &
        dt,   &
-       z,    &
-       dz,   &
+       cz,   &
+       fz,   &
        RHOQ_t, &
        RHOE_t, &
        CPtot_t, &
@@ -1765,17 +1765,18 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in) :: DENS     (KA,IA,JA)
-    real(RP), intent(in) :: MOMZ     (KA,IA,JA)
-    real(RP), intent(in) :: QTRC     (KA,IA,JA,QA_MP)
-    real(RP), intent(in) :: PRES0(KA,IA,JA)
-    real(RP), intent(in) :: TEMP0(KA,IA,JA)
-    real(RP), intent(in) :: Qdry(KA,IA,JA)
+    real(RP), intent(in) :: DENS  (KA,IA,JA)
+    real(RP), intent(in) :: W     (KA,IA,JA)
+    real(RP), intent(in) :: QTRC  (KA,IA,JA,QA_MP)
+    real(RP), intent(in) :: PRES0 (KA,IA,JA)
+    real(RP), intent(in) :: TEMP0 (KA,IA,JA)
+    real(RP), intent(in) :: Qdry  (KA,IA,JA)
     real(RP), intent(in) :: CPtot0(KA, IA, JA)
     real(RP), intent(in) :: CVtot0(KA, IA, JA)
-    real(RP), intent(in) :: CCN      (KA,IA,JA)
+    real(RP), intent(in) :: CCN   (KA,IA,JA)
     real(RP), intent(in) :: dt
-    real(RP), intent(in) :: z(KA), dz(KA)
+    real(RP), intent(in) :: cz(  KA,IA,JA)
+    real(RP), intent(in) :: fz(0:KA,IA,JA)
 
     real(RP),intent(out) :: RHOQ_t(KA, IA, JA, QA_MP)
     real(RP),intent(out) :: RHOE_t(KA, IA, JA)
@@ -1795,7 +1796,6 @@ contains
     !
     ! diagnostic variables
     !
-    real(RP) :: velz(KA,IA,JA)
     real(RP) :: rhoe(KA,IA,JA)
     real(RP) :: rhoq(I_QV:I_NG,KA,IA,JA)
     real(RP) :: rhoq2(I_QV:I_NG,KA,IA,JA)
@@ -1903,17 +1903,6 @@ contains
     pres(:,:,:) = PRES0(:,:,:)
     temp(:,:,:) = TEMP0(:,:,:)
 
-    ! half point w
-    do j = JS, JE
-    do i = IS, IE
-       velz(KS-1,i,j) = 0.0_RP
-       do k = KS, KE-1
-          velz(k,i,j) = MOMZ(k,i,j) / ( DENS(k,i,j) + DENS(k+1,i,j) ) * 2.0_RP
-       enddo
-       velz(KE,i,j) = 0.0_RP
-    end do
-    end do
-
     !============================================================================
     !
     !--  Each process is integrated sequentially.
@@ -2002,8 +1991,9 @@ contains
 
     call nucleation_kij(          &
          KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-         z(:),                & ! (in)
-         velz(:,:,:),         & ! (in)
+         cz(:,:,:),           & ! (in)
+         fz(:,:,:),           & ! (in)
+         w(:,:,:),            & ! (in)
          DENS(:,:,:),         & ! (in)
          wtemp(:,:,:),        & ! (in)
          pres(:,:,:),         & ! (in)
@@ -2184,32 +2174,31 @@ contains
     !
     call update_by_phase_change_kij( &
       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-      ntdiv,               &
-      ntmax_phase_change,  & ! (in)
-      dt,                  & ! (in)
+      ntdiv,                &
+      ntmax_phase_change,   & ! (in)
+      dt,                   & ! (in)
       !gsgam2_d(:,:,:),     & ! (in)
-      z(:),                & ! (in)
-      dz(:),               & ! (in)
-      velz(:,:,:),         & ! (in)
-      dTdt_equiv_d(:,:,:), & ! (in)
-      DENS(:,:,:),         & ! (in)
-      qdry(:,:,:),         & ! (in)
-      esw(:,:,:),          & ! (in)
-      esi(:,:,:),          & ! (in)
-      rhoq2(:,:,:,:),      & ! (in)
-      pres(:,:,:),         & ! (in)
-      temp(:,:,:),         & ! (in)
-      cpa(:,:,:),          & ! (in)
-      cva(:,:,:),          & ! (in)
-      PQ(:,:,:,:),         & ! (inout)
-      sl_PLCdep(:,:),      & ! (inout)
-      sl_PLRdep(:,:),      & ! (inout)
-      sl_PNRdep(:,:),      & ! (inout)
-      RHOQ0_t(:,:,:,:),    & ! (out)
-      RHOE0_t(:,:,:),      & ! (out)
-      CPtot0_t(:,:,:),     & ! (out)
-      CVtot0_t(:,:,:),     & ! (out)
-      EVAPORATE(:,:,:)     ) ! (out)
+      cz(:,:,:), fz(:,:,:), & ! (in)
+      w(:,:,:),             & ! (in)
+      dTdt_equiv_d(:,:,:),  & ! (in)
+      DENS(:,:,:),          & ! (in)
+      qdry(:,:,:),          & ! (in)
+      esw(:,:,:),           & ! (in)
+      esi(:,:,:),           & ! (in)
+      rhoq2(:,:,:,:),       & ! (in)
+      pres(:,:,:),          & ! (in)
+      temp(:,:,:),          & ! (in)
+      cpa(:,:,:),           & ! (in)
+      cva(:,:,:),           & ! (in)
+      PQ(:,:,:,:),          & ! (inout)
+      sl_PLCdep(:,:),       & ! (inout)
+      sl_PLRdep(:,:),       & ! (inout)
+      sl_PNRdep(:,:),       & ! (inout)
+      RHOQ0_t(:,:,:,:),     & ! (out)
+      RHOE0_t(:,:,:),       & ! (out)
+      CPtot0_t(:,:,:),      & ! (out)
+      CVtot0_t(:,:,:),      & ! (out)
+      EVAPORATE(:,:,:)      ) ! (out)
 
     ! total tendency
     do j = JS, JE
@@ -2625,7 +2614,7 @@ contains
 
   subroutine nucleation_kij( &
     KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       z, velz,             &
+       cz, fz, w,           &
        rho, tem, pre, qdry, &
        rhoq,                &
        cpa,                 & ! in
@@ -2648,8 +2637,9 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in)  :: z(KA)      !
-    real(RP), intent(in)  :: velz(KA,IA,JA)   ! w of half point
+    real(RP), intent(in)  :: cz(  KA,IA,JA)   !
+    real(RP), intent(in)  :: fz(0:KA,IA,JA)   !
+    real(RP), intent(in)  :: w  (KA,IA,JA)    ! w of full level
     real(RP), intent(in)  :: rho(KA,IA,JA)    ! [Add] 09/08/18 T.Mitsui
     real(RP), intent(in)  :: tem(KA,IA,JA)    ! [Add] 09/08/18 T.Mitsui
     real(RP), intent(in)  :: pre(KA,IA,JA)    ! [Add] 09/08/18 T.Mitsui
@@ -2714,8 +2704,8 @@ contains
 !    real(RP) :: ssw_below(KA,IA,JA)! ssw(k-1)
     real(RP) :: ssi_below(KA,IA,JA)! ssi(k-1), 09/04/14 T.Mitsui
     real(RP) :: z_below(KA,IA,JA)  ! z(k-1)
-    real(RP) :: dz                   ! z(k)-z(k-1)
-    real(RP) :: pv                   ! vapor pressure
+    real(RP) :: dzh                ! z(k)-z(k-1)
+    real(RP) :: pv                 ! vapor pressure
     ! work variables for Twomey Equation.
     real(RP) :: qsw(KA,IA,JA)
     real(RP) :: qsi(KA,IA,JA)
@@ -2731,6 +2721,7 @@ contains
     real(RP) :: sigma_w(KA,IA,JA)
     real(RP) :: weff(KA,IA,JA)
     real(RP) :: weff_max(KA,IA,JA)
+    real(RP) :: velz(KA)
     !
     real(RP) :: coef_ccn(IA,JA)
     real(RP) :: slope_ccn(IA,JA)
@@ -2807,11 +2798,11 @@ contains
           ssi(k,i,j) = (pv/esi(k,i,j) - 1.00_RP)
 !          ssw_below(k+1,i,j) = ssw(k,i,j)
           ssi_below(k+1,i,j) = ssi(k,i,j)
-          z_below(k+1,i,j)   = z(k)
+          z_below(k+1,i,j)   = cz(k,i,j)
        end do
 !       ssw_below(KS,i,j) = ssw(KS,i,j)
        ssi_below(KS,i,j) = ssi(KS,i,j)
-       z_below(KS,i,j)   = z(KS-1)
+       z_below(KS,i,j)   = cz(KS-1,i,j)
 
        ! dS/dz is evaluated by first order upstream difference
        !***  Solution for Twomey Equation ***
@@ -2829,7 +2820,7 @@ contains
        sigma_w(KE+1,i,j) = sigma_w(KE,i,j)
        ! effective vertical velocity
        do k=KS, KE
-          weff(k,i,j) = 0.5_RP*(velz(k-1,i,j) + velz(k,i,j)) - cpa(k,i,j)*r_gravity*dTdt_rad(k,i,j)
+          weff(k,i,j) = w(k,i,j) - cpa(k,i,j)*r_gravity*dTdt_rad(k,i,j)
        end do
 
     end do
@@ -2995,9 +2986,13 @@ contains
     ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     do j = JS, JE
     do i = IS, IE
+    do k = KS, KE-1
+       velz(k)           = ( w(k,i,j) * ( cz(k+1,i,j) - fz(k,i,j) ) + w(k+1,i,j) * ( fz(k,i,j) - cz(k,i,j) ) ) / ( cz(k+1,i,j) - cz(k,i,j) ) ! @ half level
+    end do
+    velz(KE) = 0.0_RP
     do k = KS, KE
-       dz             = z(k) - z_below(k,i,j)
-       w_dssidz(k,i,j) = velz(k,i,j)*(ssi(k,i,j) - ssi_below(k,i,j))/dz ! 09/04/14 [Add] T.Mitsui
+       dzh            = cz(k,i,j) - z_below(k,i,j)
+       w_dssidz(k,i,j) = velz(k) * (ssi(k,i,j) - ssi_below(k,i,j))/dzh ! 09/04/14 [Add] T.Mitsui
        dssidt_rad(k,i,j) = -rhoq(I_QV,k,i,j)/(rho(k,i,j)*qsi(k,i,j)*qsi(k,i,j))*dqsidtem_rho(k,i,j)*dTdt_rad(k,i,j)
        dli_max        = (rhoq(I_QV,k,i,j) - esi(k,i,j)/(Rvap*tem(k,i,j)))*rdt
        dni_max        = min( dli_max/xi_ccn, (in_max-rhoq(I_NI,k,i,j))*rdt )
@@ -4283,9 +4278,9 @@ contains
        ntdiv, ntmax,         & ! in [Add] 10/08/03
        dt,                   & ! in
        !gsgam2,               & ! in
-       z,                    & ! in
-       dz,                   & ! in
-       velz,                 & ! in
+       cz,                   & ! in
+       fz,                   & ! in
+       w,                    & ! in
        dTdt_rad,             & ! in
        rho,                  & ! in
        qdry,                 & ! in
@@ -4326,9 +4321,9 @@ contains
     !
     real(RP), intent(in)    :: dt                 ! time step[s]
     !real(RP), intent(in)    :: gsgam2(KA,IA,JA)   ! metric
-    real(RP), intent(in)    :: z(KA)              ! altitude [m]
-    real(RP), intent(in)    :: dz(KA)             ! altitude [m]
-    real(RP), intent(in)    :: velz(KA,IA,JA)     ! vertical velocity @ half point[m/s]
+    real(RP), intent(in)    :: cz(KA,IA,JA)        ! altitude [m]
+    real(RP), intent(in)    :: fz(KA,IA,JA)       ! altitude difference [m]
+    real(RP), intent(in)    :: w(KA,IA,JA)        ! vertical velocity @ full level [m/s]
     real(RP), intent(in)    :: dTdt_rad(KA,IA,JA) ! temperture tendency by radiation[K/s]
     real(RP), intent(in)    :: rho(KA,IA,JA)      ! density[kg/m3]
     real(RP), intent(in)    :: qdry(KA,IA,JA)     ! dry air mass ratio [kg/kg]
@@ -4371,7 +4366,7 @@ contains
     real(RP) :: dqswdpre_tem(KA,IA,JA) ! (dqsw/dpre)_tem
     real(RP) :: dqsidpre_tem(KA,IA,JA) ! (dqsi/dpre)_tem
     !
-    real(RP) :: w                      ! vetical velocity[m/s]
+    real(RP) :: w2                     ! vetical velocity[m/s]
     real(RP) :: Acnd                   ! Pdynliq + Bergeron-Findeisen
     real(RP) :: Adep                   ! Pdyndep + Bergeron-Findeisen
     real(RP) :: aliqliq, asolliq
@@ -4454,6 +4449,8 @@ contains
     real(RP), parameter :: r_tau100day = 1.E-7_RP
     real(RP), parameter :: eps=1.E-30_RP
     !
+    real(RP) :: dz
+    !
     integer :: i,j,k,iqw
     real(RP) :: sw
     real(RP) :: dqv, dqc, dqr, dqi, dqs, dqg, dcv, dcp
@@ -4521,10 +4518,10 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       if( z(k) <= 25000.0_RP )then
-          w = 0.5_RP*(velz(k-1,i,j) + velz(k,i,j))
+       if( cz(k,i,j) <= 25000.0_RP )then
+          w2 = w(k,i,j)
        else
-          w = 0.0_RP
+          w2 = 0.0_RP
        end if
        if( pre(k,i,j) < esw(k,i,j)+1.E-10_RP )then
           qsw(k,i,j) = 1.0_RP
@@ -4575,8 +4572,8 @@ contains
        ! Coefficient of latent heat release for ssi change by PLIdep, PLSdep and PLGdep
        asolsol          = 1.0_RP &
                + r_cva*( LHV00 + LHF00 + (CVvap-CI)*tem(k,i,j) )*dqsidtem_rho(k,i,j)
-       Pdynliq          = w * GRAV * ( r_cpa*dqswdtem_pre(k,i,j) + rho(k,i,j)*dqswdpre_tem(k,i,j) )
-       Pdynsol          = w * GRAV * ( r_cpa*dqsidtem_pre(k,i,j) + rho(k,i,j)*dqsidpre_tem(k,i,j) )
+       Pdynliq          = w2 * GRAV * ( r_cpa*dqswdtem_pre(k,i,j) + rho(k,i,j)*dqswdpre_tem(k,i,j) )
+       Pdynsol          = w2 * GRAV * ( r_cpa*dqsidtem_pre(k,i,j) + rho(k,i,j)*dqsidpre_tem(k,i,j) )
        Pradliq          = -dTdt_rad(k,i,j)    * dqswdtem_rho(k,i,j)
        Pradsol          = -dTdt_rad(k,i,j)    * dqsidtem_rho(k,i,j)
 
@@ -4825,9 +4822,10 @@ contains
        CVtot_t(k,i,j) = dcv/dt
        CPtot_t(k,i,j) = dcp/dt
 
-       sl_PLCdep(i,j) = sl_PLCdep(i,j) + dep_dqc*Dz(k)
-       sl_PLRdep(i,j) = sl_PLRdep(i,j) + dep_dqr*Dz(k)
-       sl_PNRdep(i,j) = sl_PNRdep(i,j) + dep_dnr*Dz(k)
+       dz = fz(k,i,j) - fz(k,i,j)
+       sl_PLCdep(i,j) = sl_PLCdep(i,j) + dep_dqc*dz
+       sl_PLRdep(i,j) = sl_PLRdep(i,j) + dep_dqr*dz
+       sl_PNRdep(i,j) = sl_PNRdep(i,j) + dep_dnr*dz
     end do
     end do
     end do
