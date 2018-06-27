@@ -1086,8 +1086,8 @@ contains
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: KMAX, KADD
     real(RP), intent(in)  :: toa        !> top of atmosphere [km]
-    real(RP), intent(in)  :: CZ(KA)     !> height of cell center
-    real(RP), intent(in)  :: FZ(KA)     !> height of cell face
+    real(RP), intent(in)  :: CZ(  KA)   !> height of cell center
+    real(RP), intent(in)  :: FZ(0:KA)   !> height of cell face
     real(RP), intent(out) :: zh(KMAX+1) !> altitude at the interface [km]
     real(RP), intent(out) :: z (KMAX)   !> altitude at the center    [km]
 
