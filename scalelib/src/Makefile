@@ -100,6 +100,7 @@ OBJS = \
 	$(OBJ_DIR)/scale_atmos_adiabat.o	\
 	$(OBJ_DIR)/scale_atmos_aerosol.o	\
 	$(OBJ_DIR)/scale_atmos_bottom.o	\
+	$(OBJ_DIR)/scale_atmos_diagnostic.o	\
 	$(OBJ_DIR)/scale_atmos_diagnostic_cartesC.o	\
 	$(OBJ_DIR)/scale_atmos_hydrometeor.o	\
 	$(OBJ_DIR)/scale_atmos_hydrostatic.o	\
@@ -112,6 +113,8 @@ OBJS = \
 	$(OBJ_DIR)/scale_atmos_grid_cartesC_index.o	\
 	$(OBJ_DIR)/scale_atmos_grid_cartesC_metric.o	\
 	$(OBJ_DIR)/scale_atmos_grid_cartesC_real.o	\
+	$(OBJ_DIR)/scale_atmos_grid_icoA.o	\
+	$(OBJ_DIR)/scale_atmos_grid_icoA_index.o	\
 	$(OBJ_DIR)/scale_atmos_dyn.o	\
 	$(OBJ_DIR)/scale_atmos_dyn_common.o	\
 	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux.o	\
