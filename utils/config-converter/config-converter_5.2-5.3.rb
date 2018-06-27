@@ -205,6 +205,16 @@ params.each do |param|
     next
   end
 
+  # Boundary
+  if /^&PARAM_ATMOS_BOUNDARY$/i =~ param_name
+    print param_name, "\n"
+    param_items.each do |item|
+      print item.sub(/FILE/i, "OFFLINE"), "\n"
+    end
+    print "/\n"
+    next
+  end
+
   # Dynamics
   ## mod_atmos_dyn
   if /^&PARAM_ATMOS_DYN$/i =~ param_name
@@ -301,10 +311,10 @@ params.each do |param|
         print " LAND_SFC_TYPE = \"SKIN\",\n"
       elsif /LAND_TYPE\s*=\s*["']THICK-SLAB["']/i =~ item
         print " LAND_DYN_TYPE = \"BUCKET\",\n"
-        print " LAND_SFC_TYPE = \"COPY\",\n"
+        print " LAND_SFC_TYPE = \"FIXED-TEMP\",\n"
       elsif /LAND_TYPE\s*=\s*["']CONST["']/i =~ item
-        print " LAND_DYN_TYPE = \"CONST\",\n"
-        print " LAND_SFC_TYPE = \"COPY\",\n"
+        print " LAND_DYN_TYPE = \"INIT\",\n"
+        print " LAND_SFC_TYPE = \"FIXED-TEMP\",\n"
       else
         print item, "\n"
       end
@@ -350,7 +360,15 @@ params.each do |param|
     print param_name, "\n"
     param_items.each do |item|
       next if /OCEAN_DO/i =~ item
-      print item.sub(/OCEAN_TYPE/i, "OCEAN_DYN_TYPE"), "\n"
+      if /OCEAN_TYPE\s*=\s*["']SLAB["']/i =~ item
+        print " OCEAN_DYN_TYPE = \"SLAB\",\n"
+        print " OCEAN_SFC_TYPE = \"FIXED-TEMP\",\n"
+      elsif /OCEAN_TYPE\s*=\s*["']CONST["']/i =~ item
+        print " OCEAN_DYN_TYPE = \"INIT\",\n"
+        print " OCEAN_SFC_TYPE = \"FIXED-TEMP\",\n"
+      else
+        print item, "\n"
+      end
     end
     print "/\n"
     unless okmax
@@ -383,7 +401,7 @@ EOL
   if /^&PARAM_ROUGHNESS$/i =~ param_name
     print "&PARAM_OCEAN_ROUGHNESS\n"
     param_items.each do |item|
-      print item.sub(/ROUGHNESS_TYPE/i, "OCEAN_RGN_TYPE"), "\n"
+      print item.sub(/ROUGHNESS_TYPE/i, "OCEAN_RGN_TYPE").sub(/CONST/i, "INIT"), "\n"
     end
     print "/\n"
     next
