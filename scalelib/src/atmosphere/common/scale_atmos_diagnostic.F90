@@ -24,7 +24,8 @@ module scale_atmos_diagnostic
   !
   !++ Public procedure
   !
-  public :: ATMOS_DIAGNOSTIC_get_therm
+  public :: ATMOS_DIAGNOSTIC_get_therm_rhot
+  public :: ATMOS_DIAGNOSTIC_get_therm_rhoe
   public :: ATMOS_DIAGNOSTIC_get_phyd
   public :: ATMOS_DIAGNOSTIC_get_potv
   public :: ATMOS_DIAGNOSTIC_get_teml
@@ -45,10 +46,10 @@ module scale_atmos_diagnostic
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> ATMOS_DIAGNOSTIC_get_therm
+  !> ATMOS_DIAGNOSTIC_get_therm_rhot
   !! potential temperature, temperature, pressure
   !<
-  subroutine ATMOS_DIAGNOSTIC_get_therm( &
+  subroutine ATMOS_DIAGNOSTIC_get_therm_rhot( &
        KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
@@ -96,7 +97,50 @@ contains
     enddo
 
     return
-  end subroutine ATMOS_DIAGNOSTIC_get_therm
+  end subroutine ATMOS_DIAGNOSTIC_get_therm_rhot
+
+  !-----------------------------------------------------------------------------
+  !> ATMOS_DIAGNOSTIC_get_therm_rhoe
+  !! potential temperature, temperature, pressure
+  !<
+  subroutine ATMOS_DIAGNOSTIC_get_therm_rhoe( &
+         KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+         DENS, RHOE, Rtot, CPtot, CVtot, & ! (in)
+         TEMP, POTT, PRES, EXNER         ) ! (out)
+    use scale_const, only: &
+       PRE00 => CONST_PRE00
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: DENS (KA,IA,JA)
+    real(RP), intent(in) :: RHOE (KA,IA,JA)
+    real(RP), intent(in) :: Rtot (KA,IA,JA)
+    real(RP), intent(in) :: CPtot(KA,IA,JA)
+    real(RP), intent(in) :: CVtot(KA,IA,JA)
+
+    real(RP), intent(out) :: POTT (KA,IA,JA)
+    real(RP), intent(out) :: TEMP (KA,IA,JA)
+    real(RP), intent(out) :: PRES (KA,IA,JA)
+    real(RP), intent(out) :: EXNER(KA,IA,JA)
+
+    integer :: i, j, k
+
+    !$omp parallel do
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       TEMP (k,i,j) = RHOE(k,i,j) / ( CVtot(k,i,j) * DENS(k,i,j) )
+       PRES (k,i,j) = DENS(k,i,j) * Rtot(k,i,j) * TEMP(k,i,j)
+       EXNER(k,i,j) = ( PRES(k,i,j) / PRE00 )**( Rtot(k,i,j) / CPtot(k,i,j) )
+       POTT (k,i,j) = TEMP(k,i,j) / EXNER(k,i,j)
+    end do
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_DIAGNOSTIC_get_therm_rhoe
 
   !-----------------------------------------------------------------------------
   !> ATMOS_DIAGNOSTIC_get_phyd

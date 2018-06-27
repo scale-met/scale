@@ -1434,7 +1434,7 @@ contains
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_specific_heat
     use scale_atmos_diagnostic, only: &
-       ATMOS_DIAGNOSTIC_get_therm, &
+       ATMOS_DIAGNOSTIC_get_therm_rhot, &
        ATMOS_DIAGNOSTIC_get_phyd
     use scale_atmos_diagnostic_cartesC, only: &
        ATMOS_DIAGNOSTIC_CARTESC_get_vel
@@ -1463,7 +1463,7 @@ contains
          DENS_av(:,:,:), MOMZ_av(:,:,:), MOMX_av(:,:,:), MOMY_av(:,:,:), & ! (in)
          W(:,:,:), U(:,:,:), V(:,:,:)                                    ) ! (out)
 
-    call ATMOS_DIAGNOSTIC_get_therm( &
+    call ATMOS_DIAGNOSTIC_get_therm_rhot( &
          KA, KS, KE, IA, 1, IA, JA, 1, JA, &
          DENS_av(:,:,:), RHOT_av(:,:,:),                     & ! (in)
          Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:),            & ! (in)
