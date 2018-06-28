@@ -16,6 +16,7 @@ module mod_embudget
   use scale_io
   use scale_prof
   use scale_atmos_grid_icoA_index
+  use scale_tracer
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -173,8 +174,8 @@ contains
        prgvar_get_withdiag
     use mod_cnvvar, only: &
        cnvvar_rhogkin
-    use mod_thrmdyn, only: &
-       THRMDYN_qd
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_qdry
     implicit none
 
     real(RP) :: rhog     (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -243,7 +244,7 @@ contains
     real(RP) :: VMTR_PHI       (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: VMTR_PHI_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
-    integer :: nq
+    integer :: nq, l
     !---------------------------------------------------------------------------
 
     call VMTR_getIJ_RGSGAM2( VMTR_RGSGAM2, VMTR_RGSGAM2_pl )
@@ -265,18 +266,20 @@ contains
                               w,      w_pl,      & ! [OUT]
                               q,      q_pl       ) ! [OUT]
 
-    call THRMDYN_qd( ADM_gall,    & ! [IN]
-                     ADM_kall,    & ! [IN]
-                     ADM_lall,    & ! [IN]
-                     q (:,:,:,:), & ! [IN]
-                     qd(:,:,:)    ) ! [OUT]
+    do l = 1, ADM_lall
+       call ATMOS_THERMODYN_qdry( &
+            ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+            q(:,:,l,:), TRACER_MASS(:), & ! [IN]
+            qd(:,:,l)                   ) ! [OUT]
+    end do
 
     if ( ADM_have_pl ) then
-       call THRMDYN_qd( ADM_gall_pl,    & ! [IN]
-                        ADM_kall,       & ! [IN]
-                        ADM_lall_pl,    & ! [IN]
-                        q_pl (:,:,:,:), & ! [IN]
-                        qd_pl(:,:,:)    ) ! [OUT]
+       do l = 1, ADM_lall_pl
+          call ATMOS_THERMODYN_qdry( &
+               ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+               q_pl(:,:,l,:), TRACER_MASS(:), & ! [IN]
+               qd_pl(:,:,l)                   ) ! [OUT]
+       end do
     endif
 
     !----- Mass budget

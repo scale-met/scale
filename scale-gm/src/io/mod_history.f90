@@ -16,6 +16,7 @@ module mod_history
   use scale_io
   use scale_prof
   use scale_atmos_grid_icoA_index
+  use scale_tracer
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -980,8 +981,9 @@ contains
        VMTR_getIJ_RGSGAM2
     use mod_runconf, only: &
        TRC_VMAX
-    use mod_thrmdyn, only: &
-       THRMDYN_tempre
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_specific_heat, &
+       ATMOS_THERMODYN_rhoe2temp_pres
     use mod_prgvar, only: &
        prgvar_get
     implicit none
@@ -1006,6 +1008,12 @@ contains
     real(RP) :: q  (ADM_gall,ADM_kall,ADM_lall,TRC_VMAX)
     real(RP) :: tem(ADM_gall,ADM_kall,ADM_lall)
     real(RP) :: pre(ADM_gall,ADM_kall,ADM_lall)
+
+    real(RP) :: rhoe (ADM_gall,ADM_kall)
+    real(RP) :: Qdry (ADM_gall,ADM_kall)
+    real(RP) :: Rtot (ADM_gall,ADM_kall)
+    real(RP) :: CPtot(ADM_gall,ADM_kall)
+    real(RP) :: CVtot(ADM_gall,ADM_kall)
 
     real(RP) :: pre_sfc(ADM_gall,ADM_KNONE,ADM_lall)
 
@@ -1051,14 +1059,21 @@ contains
     enddo
     enddo
 
-    call THRMDYN_tempre( ADM_gall,     & ! [IN]
-                         ADM_kall,     & ! [IN]
-                         ADM_lall,     & ! [IN]
-                         ein(:,:,:),   & ! [IN]
-                         rho(:,:,:),   & ! [IN]
-                         q  (:,:,:,:), & ! [IN]
-                         tem(:,:,:),   & ! [OUT]
-                         pre(:,:,:)    ) ! [OUT]
+    do l = 1, ADM_lall
+
+       call ATMOS_THERMODYN_specific_heat( &
+            ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+            q(:,:,l,:),                                              & ! [IN]
+            TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+            Qdry(:,:), Rtot(:,:), CPtot(:,:), CVtot(:,:)             ) ! [OUT]
+
+       rhoe(:,:) = rho(:,:,l) * ein(:,:,l)
+       call ATMOS_THERMODYN_rhoe2temp_pres( &
+            ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+            rho(:,:,l), rhoe(:,:), CVtot(:,:), Rtot(:,:), & ! [IN]
+            tem(:,:,l), pre(:,:,l)                        ) ! [OUT]
+
+    end do
 
     call diag_pre_sfc( ADM_gall,                & ! [IN]
                        ADM_kall,                & ! [IN]

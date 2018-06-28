@@ -15,6 +15,7 @@ module mod_cnvvar
   use scale_precision
   use scale_prof
   use scale_atmos_grid_icoA_index
+  use scale_tracer
 
   use mod_runconf, only: &
      PRG_vmax0,  &
@@ -68,6 +69,9 @@ contains
        diag, diag_pl )
     use mod_adm, only: &
        ADM_have_pl
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_specific_heat, &
+       ATMOS_THERMODYN_ein2temp_pres
     use mod_vmtr, only : &
        VMTR_getIJ_RGSGAM2, &
        VMTR_getIJ_C2Wfact
@@ -75,8 +79,6 @@ contains
        PRG_vmax,  &
        DIAG_vmax, &
        TRC_vmax
-    use mod_thrmdyn, only: &
-       THRMDYN_tempre
     implicit none
 
     real(RP), intent(in)  :: prg    (ADM_gall   ,ADM_kall,ADM_lall   ,PRG_vmax )
@@ -95,6 +97,15 @@ contains
     real(RP) :: VMTR_RGSGAM2_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: VMTR_C2Wfact   (ADM_gall   ,ADM_kall,2,ADM_lall   )
     real(RP) :: VMTR_C2Wfact_pl(ADM_gall_pl,ADM_kall,2,ADM_lall_pl)
+
+    real(RP) :: Qdry    (ADM_gall,   ADM_kall)
+    real(RP) :: Rtot    (ADM_gall,   ADM_kall)
+    real(RP) :: CVtot   (ADM_gall,   ADM_kall)
+    real(RP) :: CPtot   (ADM_gall,   ADM_kall)
+    real(RP) :: Qdry_pl (ADM_gall_pl,ADM_kall)
+    real(RP) :: Rtot_pl (ADM_gall_pl,ADM_kall)
+    real(RP) :: CVtot_pl(ADM_gall_pl,ADM_kall)
+    real(RP) :: CPtot_pl(ADM_gall_pl,ADM_kall)
 
     integer :: n, k, l, iv
     !---------------------------------------------------------------------------
@@ -124,16 +135,19 @@ contains
     enddo
     enddo
 
-    call THRMDYN_tempre( ADM_gall,                  & ! [IN]
-                         ADM_kall,                  & ! [IN]
-                         ADM_lall,                  & ! [IN]
-                         ein (:,:,:),               & ! [IN]
-                         rho (:,:,:),               & ! [IN]
-                         diag(:,:,:,I_qstr:I_qend), & ! [IN]
-                         diag(:,:,:,I_tem),         & ! [OUT]
-                         diag(:,:,:,I_pre)          ) ! [OUT]
-
     do l = 1, ADM_lall
+
+       call ATMOS_THERMODYN_specific_heat( &
+            ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+            diag(:,:,l,I_qstr:I_qend),                               & ! [IN]
+            TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+            Qdry(:,:), Rtot(:,:), CVtot(:,:), CPtot(:,:)             ) ! [OUT]
+
+       call ATMOS_THERMODYN_ein2temp_pres( &
+            ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+            ein(:,:,l), rho(:,:,l), CVtot(:,:), Rtot(:,:), & ! [IN]
+            diag(:,:,l,I_tem), diag(:,:,l,I_pre)           ) ! [OUT]
+
        !------ interpolation of rhog_h
        do k = 2, ADM_kall
        do n = 1, ADM_gall
@@ -176,14 +190,20 @@ contains
        enddo
        enddo
 
-       call THRMDYN_tempre( ADM_gall_pl,                  & ! [IN]
-                            ADM_kall,                     & ! [IN]
-                            ADM_lall_pl,                  & ! [IN]
-                            ein_pl (:,:,:),               & ! [IN]
-                            rho_pl (:,:,:),               & ! [IN]
-                            diag_pl(:,:,:,I_qstr:I_qend), & ! [IN]
-                            diag_pl(:,:,:,I_tem),         & ! [OUT]
-                            diag_pl(:,:,:,I_pre)          ) ! [OUT]
+       do l = 1, ADM_lall_pl
+
+          call ATMOS_THERMODYN_specific_heat( &
+               ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+               diag_pl(:,:,l,I_qstr:I_qend),                            & ! [IN]
+               TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+               Qdry_pl(:,:), Rtot_pl(:,:), CVtot_pl(:,:), CPtot_pl(:,:) ) ! [OUT]
+
+          call ATMOS_THERMODYN_ein2temp_pres( &
+               ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, &
+               ein_pl(:,:,l), rho_pl(:,:,l), CVtot_pl(:,:), Rtot_pl(:,:), & ! [IN]
+               diag_pl(:,:,l,I_tem), diag_pl(:,:,l,I_pre)                 ) ! [OUT]
+
+       end do
 
        do l = 1, ADM_lall_pl
           !------ interpolation of rhog_h
@@ -215,6 +235,9 @@ contains
        diag, diag_pl )
     use mod_adm, only: &
        ADM_have_pl
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_specific_heat,  &
+       ATMOS_THERMODYN_temp_pres2ein
     use mod_vmtr, only: &
        VMTR_getIJ_GSGAM2, &
        VMTR_getIJ_C2Wfact
@@ -222,8 +245,6 @@ contains
        PRG_vmax,  &
        DIAG_vmax, &
        TRC_vmax
-    use mod_thrmdyn, only: &
-       THRMDYN_rhoein
     implicit none
 
     real(RP), intent(out) :: prg    (ADM_gall   ,ADM_kall,ADM_lall   ,PRG_vmax )
@@ -243,20 +264,35 @@ contains
     real(RP) :: VMTR_C2Wfact   (ADM_gall   ,ADM_kall,2,ADM_lall   )
     real(RP) :: VMTR_C2Wfact_pl(ADM_gall_pl,ADM_kall,2,ADM_lall_pl)
 
+    real(RP) :: Qdry    (ADM_gall   ,ADM_kall)
+    real(RP) :: Rtot    (ADM_gall   ,ADM_kall)
+    real(RP) :: CVtot   (ADM_gall   ,ADM_kall)
+    real(RP) :: CPtot   (ADM_gall   ,ADM_kall)
+    real(RP) :: Qdry_pl (ADM_gall_pl,ADM_kall)
+    real(RP) :: Rtot_pl (ADM_gall_pl,ADM_kall)
+    real(RP) :: CVtot_pl(ADM_gall_pl,ADM_kall)
+    real(RP) :: CPtot_pl(ADM_gall_pl,ADM_kall)
+
     integer :: n, k, l, iv
     !---------------------------------------------------------------------------
 
     call VMTR_getIJ_GSGAM2 ( VMTR_GSGAM2,  VMTR_GSGAM2_pl  )
     call VMTR_getIJ_C2Wfact( VMTR_C2Wfact, VMTR_C2Wfact_pl )
 
-    call THRMDYN_rhoein( ADM_gall,                  & ! [IN]
-                         ADM_kall,                  & ! [IN]
-                         ADM_lall,                  & ! [IN]
-                         diag(:,:,:,I_tem),         & ! [IN]
-                         diag(:,:,:,I_pre),         & ! [IN]
-                         diag(:,:,:,I_qstr:I_qend), & ! [IN]
-                         rho (:,:,:),               & ! [OUT]
-                         ein (:,:,:)                ) ! [OUT]
+    do l = 1, ADM_lall
+
+       call ATMOS_THERMODYN_specific_heat( &
+            ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+            diag(:,:,l,I_qstr:I_qend),                               & ! [IN]
+            TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+            Qdry(:,:), Rtot(:,:), CVtot(:,:), CPtot(:,:)             ) ! [OUT]
+
+       call ATMOS_THERMODYN_temp_pres2ein( &
+            ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+            diag(:,:,l,I_tem), diag(:,:,l,I_pre), CVtot(:,:), Rtot(:,:), & ! [IN]
+            rho(:,:,l), ein(:,:,l)                                       ) ! [OUT]
+
+    end do
 
     do l = 1, ADM_lall
     do k = 1, ADM_kall
@@ -301,14 +337,20 @@ contains
 
     if ( ADM_have_pl ) then
 
-       call THRMDYN_rhoein( ADM_gall_pl,                  & ! [IN]
-                            ADM_kall,                     & ! [IN]
-                            ADM_lall_pl,                  & ! [IN]
-                            diag_pl(:,:,:,I_tem),         & ! [IN]
-                            diag_pl(:,:,:,I_pre),         & ! [IN]
-                            diag_pl(:,:,:,I_qstr:I_qend), & ! [IN]
-                            rho_pl (:,:,:),               & ! [OUT]
-                            ein_pl (:,:,:)                ) ! [OUT]
+       do l = 1, ADM_lall_pl
+
+          call ATMOS_THERMODYN_specific_heat( &
+               ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+               diag_pl(:,:,l,I_qstr:I_qend),                            & ! [IN]
+               TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+               Qdry_pl(:,:), Rtot_pl(:,:), CVtot_pl(:,:), CPtot_pl(:,:) ) ! [OUT]
+
+          call ATMOS_THERMODYN_temp_pres2ein( &
+               ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, &
+               diag_pl(:,:,l,I_tem), diag_pl(:,:,l,I_pre), CVtot_pl(:,:), Rtot_pl(:,:), & ! [IN]
+               rho_pl(:,:,l), ein_pl(:,:,l)                                      ) ! [OUT]
+
+       end do
 
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall

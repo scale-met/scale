@@ -96,7 +96,6 @@ OBJS =	\
 	mod_gtl.o            \
 	mod_gm_statistics.o  \
 	mod_vintrpl.o        \
-	mod_thrmdyn.o        \
 	mod_bndcnd.o         \
 	mod_cnvvar.o         \
 	mod_src.o            \

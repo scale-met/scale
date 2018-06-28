@@ -45,9 +45,12 @@ module scale_atmos_thermodyn
   public :: ATMOS_THERMODYN_ein2temp_pres
   public :: ATMOS_THERMODYN_pott2temp_pres
   public :: ATMOS_THERMODYN_temp_pres2pott
+  public :: ATMOS_THERMODYN_temp_pres2ein
+  public :: ATMOS_THERMODYN_ein_pres2enth
 
   interface ATMOS_THERMODYN_qdry
      module procedure ATMOS_THERMODYN_qdry_0D
+     module procedure ATMOS_THERMODYN_qdry_2D
      module procedure ATMOS_THERMODYN_qdry_3D
   end interface ATMOS_THERMODYN_qdry
 
@@ -69,6 +72,7 @@ module scale_atmos_thermodyn
   interface ATMOS_THERMODYN_specific_heat
      module procedure ATMOS_THERMODYN_specific_heat_0D
      module procedure ATMOS_THERMODYN_specific_heat_1D
+     module procedure ATMOS_THERMODYN_specific_heat_2D
      module procedure ATMOS_THERMODYN_specific_heat_3D
   end interface ATMOS_THERMODYN_specific_heat
 
@@ -89,6 +93,7 @@ module scale_atmos_thermodyn
 
   interface ATMOS_THERMODYN_rhoe2temp_pres
      module procedure ATMOS_THERMODYN_rhoe2temp_pres_0D
+     module procedure ATMOS_THERMODYN_rhoe2temp_pres_2D
      module procedure ATMOS_THERMODYN_rhoe2temp_pres_3D
   end interface ATMOS_THERMODYN_rhoe2temp_pres
 
@@ -100,6 +105,7 @@ module scale_atmos_thermodyn
 
   interface ATMOS_THERMODYN_ein2temp_pres
      module procedure ATMOS_THERMODYN_ein2temp_pres_0D
+     module procedure ATMOS_THERMODYN_ein2temp_pres_2D
      module procedure ATMOS_THERMODYN_ein2temp_pres_3D
   end interface ATMOS_THERMODYN_ein2temp_pres
 
@@ -111,9 +117,23 @@ module scale_atmos_thermodyn
   interface ATMOS_THERMODYN_temp_pres2pott
      module procedure ATMOS_THERMODYN_temp_pres2pott_0D
      module procedure ATMOS_THERMODYN_temp_pres2pott_1D
+     module procedure ATMOS_THERMODYN_temp_pres2pott_2D
      module procedure ATMOS_THERMODYN_temp_pres2pott_3D
   end interface ATMOS_THERMODYN_temp_pres2pott
 
+  interface ATMOS_THERMODYN_temp_pres2ein
+     module procedure ATMOS_THERMODYN_temp_pres2ein_0D
+     module procedure ATMOS_THERMODYN_temp_pres2ein_1D
+     module procedure ATMOS_THERMODYN_temp_pres2ein_2D
+     module procedure ATMOS_THERMODYN_temp_pres2ein_3D
+  end interface ATMOS_THERMODYN_temp_pres2ein
+
+  interface ATMOS_THERMODYN_ein_pres2enth
+     module procedure ATMOS_THERMODYN_ein_pres2enth_0D
+     module procedure ATMOS_THERMODYN_ein_pres2enth_1D
+     module procedure ATMOS_THERMODYN_ein_pres2enth_2D
+     module procedure ATMOS_THERMODYN_ein_pres2enth_3D
+  end interface ATMOS_THERMODYN_ein_pres2enth
 
   !-----------------------------------------------------------------------------
   !
@@ -171,6 +191,35 @@ contains
 
     return
   end subroutine ATMOS_THERMODYN_qdry_0D
+
+  !-----------------------------------------------------------------------------
+  !> calc dry air mass (2D)
+  subroutine ATMOS_THERMODYN_qdry_2D( &
+       IA, IS, IE, JA, JS, JE, QA, &
+       q, q_mass, &
+       qdry       )
+    implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: QA
+
+    real(RP), intent(in)  :: q     (IA,JA,QA) !< mass concentration     [kg/kg]
+    real(RP), intent(in)  :: q_mass(QA)       !< mass factor 0 or 1
+    real(RP), intent(out) :: qdry  (IA,JA)    !< dry mass concentration [kg/kg]
+
+    integer :: i, j
+    !-----------------------------------------------------------------------------
+
+    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,qdry,q,q_mass,QA)
+    do j = JS, JE
+    do i = IS, IE
+       call ATMOS_THERMODYN_qdry( QA, q(i,j,:), q_mass(:), qdry(i,j) )
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_qdry_2D
 
   !-----------------------------------------------------------------------------
   !> calc dry air mass (3D)
@@ -471,6 +520,45 @@ contains
 
     return
   end subroutine ATMOS_THERMODYN_specific_heat_1D
+
+  !-----------------------------------------------------------------------------
+  !> ATMOS_THERMODYN_specific_heat_2D
+  !! calc specific heat: qdry, Rtot, CVtot, CPtot
+  !<
+  subroutine ATMOS_THERMODYN_specific_heat_2D( &
+       IA, IS, IE, JA, JS, JE, QA, &
+       q,                       &
+       Mq, Rq, CVq, CPq,        &
+       Qdry, Rtot, CVtot, CPtot )
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: QA
+
+    real(RP), intent(in)  :: q(IA,JA,QA) !< mass concentration      [kg/kg]
+    real(RP), intent(in)  :: Mq (QA)        !< mass of tracer          0 or 1
+    real(RP), intent(in)  :: Rq (QA)        !< gas constant of tracer  [J/kg/K]
+    real(RP), intent(in)  :: CVq(QA)        !< specific heat of tracer [J/kg/K]
+    real(RP), intent(in)  :: CPq(QA)        !< specific heat of tracer [J/kg/K]
+
+    real(RP), intent(out) :: Qdry (IA,JA) !> dry mass concentration [kg/kg]
+    real(RP), intent(out) :: Rtot (IA,JA) !> total gas constant     [J/kg/K]
+    real(RP), intent(out) :: CVtot(IA,JA) !> total specific heat    [J/kg/K]
+    real(RP), intent(out) :: CPtot(IA,JA) !> total specific heat    [J/kg/K]
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j)
+    do j = JS, JE
+    do i = IS, IE
+       call ATMOS_THERMODYN_specific_heat( QA, q(i,j,:), Mq(:), Rq(:), CVq(:), CPq(:),  & ! [IN]
+                                           Qdry(i,j), Rtot(i,j), CVtot(i,j), CPtot(i,j) ) ! [OUT]
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_THERMODYN_specific_heat_2D
 
   !-----------------------------------------------------------------------------
   !> ATMOS_THERMODYN_specific_heat_3D
@@ -797,6 +885,39 @@ contains
 
   !-----------------------------------------------------------------------------
   !> calc rho * ein -> temp & pres (3D)
+  subroutine ATMOS_THERMODYN_rhoe2temp_pres_2D( &
+       IA, IS, IE, JA, JS, JE, &
+       dens, rhoe, CVtot, Rtot, &
+       temp, pres                    )
+    implicit none
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+
+    real(RP), intent(in)  :: dens (IA,JA) !< density                   [kg/m3]
+    real(RP), intent(in)  :: rhoe (IA,JA) !< density * internal energy [J/m3]
+    real(RP), intent(in)  :: CVtot(IA,JA) !< specific heat             [J/kg/K]
+    real(RP), intent(in)  :: Rtot (IA,JA) !< gas constant              [J/kg/K]
+
+    real(RP), intent(out) :: temp(IA,JA)  !< temperature               [K]
+    real(RP), intent(out) :: pres(IA,JA)  !< pressure                  [Pa]
+
+    integer  :: i, j
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,&
+    !$omp        dens,rhoe,CVtot,Rtot,temp,pres)
+    do j = JS, JE
+    do i = IS, IE
+       call ATMOS_THERMODYN_rhoe2temp_pres( dens(i,j), rhoe(i,j), CVtot(i,j), Rtot(i,j), temp(i,j), pres(i,j) )
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_rhoe2temp_pres_2D
+
+  !-----------------------------------------------------------------------------
+  !> calc rho * ein -> temp & pres (3D)
   subroutine ATMOS_THERMODYN_rhoe2temp_pres_3D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        dens, rhoe, CVtot, Rtot, &
@@ -851,6 +972,37 @@ contains
 
     return
   end subroutine ATMOS_THERMODYN_ein2temp_pres_0D
+
+  !-----------------------------------------------------------------------------
+  !> calc ein -> temp & pres (2D)
+  subroutine ATMOS_THERMODYN_ein2temp_pres_2D( &
+       IA, IS, IE, JA, JS, JE, &
+       Ein,  dens, CVtot, Rtot, &
+       temp, pres                    )
+    implicit none
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+
+    real(RP), intent(in)  :: Ein  (IA,JA) ! internal energy
+    real(RP), intent(in)  :: dens (IA,JA) ! density
+    real(RP), intent(in)  :: CVtot(IA,JA) ! specific heat
+    real(RP), intent(in)  :: Rtot (IA,JA) ! gas constant
+
+    real(RP), intent(out) :: temp(IA,JA)  ! temperature
+    real(RP), intent(out) :: pres(IA,JA)  ! pressure
+
+    integer  :: i, j
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+       call ATMOS_THERMODYN_ein2temp_pres( Ein(i,j), dens(i,j), CVtot(i,j), Rtot(i,j), temp(i,j), pres(i,j) )
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_ein2temp_pres_2D
 
   !-----------------------------------------------------------------------------
   !> calc ein -> temp & pres (3D)
@@ -989,6 +1141,36 @@ contains
   end subroutine ATMOS_THERMODYN_temp_pres2pott_1D
 
   !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_temp_pres2pott_2D( &
+       IA, IS, IE, JA, JS, JE, &
+       temp, pres, CPtot, Rtot, &
+       pott              )
+    implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: temp (IA,JA) ! temperature           [K]
+    real(RP), intent(in)  :: pres (IA,JA) ! pressure              [Pa]
+    real(RP), intent(in)  :: CPtot(IA,JA) ! specific heat         [J/kg/K]
+    real(RP), intent(in)  :: Rtot (IA,JA) ! gas constant          [J/kg/K]
+
+    real(RP), intent(out) :: pott(IA,JA)  ! potential temperature [K]
+
+    integer  :: i, j
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j)
+    do j = JS, JE
+    do i = IS, IE
+       call ATMOS_THERMODYN_temp_pres2pott( temp(i,j), pres(i,j), CPtot(i,j), Rtot(i,j), pott(i,j) )
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_temp_pres2pott_2D
+
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_THERMODYN_temp_pres2pott_3D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        temp, pres, CPtot, Rtot, &
@@ -1020,5 +1202,211 @@ contains
 
     return
   end subroutine ATMOS_THERMODYN_temp_pres2pott_3D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_temp_pres2ein_0D( &
+       temp, pres, CVtot, Rtot, &
+       ein, dens                )
+    implicit none
+    real(RP), intent(in)  :: temp  ! temperature           [K]
+    real(RP), intent(in)  :: pres  ! pressure              [Pa]
+    real(RP), intent(in)  :: CVtot ! specific heat         [J/kg/K]
+    real(RP), intent(in)  :: Rtot  ! gas constant          [J/kg/K]
+
+    real(RP), intent(out) :: ein   ! internal energy
+    real(RP), intent(out) :: dens
+    !---------------------------------------------------------------------------
+
+    dens = pres / temp / Rtot
+    ein = temp * CVtot
+
+    return
+  end subroutine ATMOS_THERMODYN_temp_pres2ein_0D
+
+  !-----------------------------------------------------------------------------
+!OCL SERIAL
+  subroutine ATMOS_THERMODYN_temp_pres2ein_1D( &
+       KA, KS, KE, &
+       temp, pres, CVtot, Rtot, &
+       ein, dens                )
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+
+    real(RP), intent(in)  :: temp (KA) ! temperature           [K]
+    real(RP), intent(in)  :: pres (KA) ! pressure              [Pa]
+    real(RP), intent(in)  :: CVtot(KA) ! specific heat         [J/kg/K]
+    real(RP), intent(in)  :: Rtot (KA) ! gas constant          [J/kg/K]
+
+    real(RP), intent(out) :: ein (KA)  ! internal energy
+    real(RP), intent(out) :: dens(KA)
+    integer :: k
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+       call ATMOS_THERMODYN_temp_pres2ein_0D( temp(k), pres(k), CVtot(k), Rtot(k), & ! [IN]
+                                              ein(k), dens(k)                      ) ! [OUT]
+    end do
+
+    return
+  end subroutine ATMOS_THERMODYN_temp_pres2ein_1D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_temp_pres2ein_2D( &
+       IA, IS, IE, JA, JS, JE, &
+       temp, pres, CVtot, Rtot, &
+       ein, dens                )
+    implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: temp (IA,JA) ! temperature           [K]
+    real(RP), intent(in)  :: pres (IA,JA) ! pressure              [Pa]
+    real(RP), intent(in)  :: CVtot(IA,JA) ! specific heat         [J/kg/K]
+    real(RP), intent(in)  :: Rtot (IA,JA) ! gas constant          [J/kg/K]
+
+    real(RP), intent(out) :: ein (IA,JA)  ! internal energy
+    real(RP), intent(out) :: dens(IA,JA)
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do
+    do j = JS, JE
+    do i = IS, IE
+       call ATMOS_THERMODYN_temp_pres2ein_0D( temp(i,j), pres(i,j), CVtot(i,j), Rtot(i,j), & ! [IN]
+                                              ein(i,j), dens(i,j)                          ) ! [OUT]
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_THERMODYN_temp_pres2ein_2D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_temp_pres2ein_3D( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       temp, pres, CVtot, Rtot, &
+       ein, dens                )
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: temp (KA,IA,JA) ! temperature           [K]
+    real(RP), intent(in)  :: pres (KA,IA,JA) ! pressure              [Pa]
+    real(RP), intent(in)  :: CVtot(KA,IA,JA) ! specific heat         [J/kg/K]
+    real(RP), intent(in)  :: Rtot (KA,IA,JA) ! gas constant          [J/kg/K]
+
+    real(RP), intent(out) :: ein (KA,IA,JA)  ! internal energy
+    real(RP), intent(out) :: dens(KA,IA,JA)
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       call ATMOS_THERMODYN_temp_pres2ein_0D( temp(k,i,j), pres(k,i,j), CVtot(k,i,j), Rtot(k,i,j), & ! [IN]
+                                              ein(k,i,j), dens(k,i,j)                              ) ! [OUT]
+    end do
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_THERMODYN_temp_pres2ein_3D
+
+  !-----------------------------------------------------------------------------
+  !> internal energy and pressure to enthalpy
+  subroutine ATMOS_THERMODYN_ein_pres2enth_0D( &
+       Ein, PRES, DENS, &
+       ENTH             )
+    real(RP), intent(in) :: Ein
+    real(RP), intent(in) :: PRES
+    real(RP), intent(in) :: DENS
+
+    real(RP), intent(out) :: ENTH
+
+    ENTH = Ein + PRES / DENS
+
+    return
+  end subroutine ATMOS_THERMODYN_ein_pres2enth_0D
+
+!OCL SERIAL
+  subroutine ATMOS_THERMODYN_ein_pres2enth_1D( &
+       KA, KS, KE, &
+       Ein, PRES, DENS, &
+       ENTH             )
+    integer, intent(in) :: KA, KS, KE
+
+    real(RP), intent(in) :: Ein (KA)
+    real(RP), intent(in) :: PRES(KA)
+    real(RP), intent(in) :: DENS(KA)
+
+    real(RP), intent(out) :: ENTH(KA)
+
+    integer :: k
+
+    do k = KS, KE
+       call ATMOS_THERMODYN_ein_pres2enth_0D( Ein(k), PRES(k), DENS(k), & ! [IN]
+                                              ENTH(k)                   ) ! [OUT]
+    end do
+
+    return
+  end subroutine ATMOS_THERMODYN_ein_pres2enth_1D
+
+  subroutine ATMOS_THERMODYN_ein_pres2enth_2D( &
+       IA, IS, IE, JA, JS, JE, &
+       Ein, PRES, DENS, &
+       ENTH             )
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: Ein (IA,JA)
+    real(RP), intent(in) :: PRES(IA,JA)
+    real(RP), intent(in) :: DENS(IA,JA)
+
+    real(RP), intent(out) :: ENTH(IA,JA)
+
+    integer :: i, j
+
+    !$omp parallel do
+    do j = JS, JE
+    do i = IS, JE
+       call ATMOS_THERMODYN_ein_pres2enth_0D( Ein(i,j), PRES(i,j), DENS(i,j), & ! [IN]
+                                              ENTH(i,j)                       ) ! [OUT]
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_THERMODYN_ein_pres2enth_2D
+
+  subroutine ATMOS_THERMODYN_ein_pres2enth_3D( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       Ein, PRES, DENS, &
+       ENTH             )
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: Ein (KA,IA,JA)
+    real(RP), intent(in) :: PRES(KA,IA,JA)
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+
+    real(RP), intent(out) :: ENTH(KA,IA,JA)
+
+    integer :: k, i, j
+
+    !$omp parallel do
+    do j = JS, JE
+    do i = IS, JE
+    do k = KS, KE
+       call ATMOS_THERMODYN_ein_pres2enth_0D( Ein(k,i,j), PRES(k,i,j), DENS(k,i,j), & ! [IN]
+                                              ENTH(k,i,j)                           ) ! [OUT]
+    end do
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_THERMODYN_ein_pres2enth_3D
 
 end module scale_atmos_thermodyn

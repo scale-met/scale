@@ -15,6 +15,7 @@ module mod_history_vars
   use scale_precision
   use scale_io
   use scale_atmos_grid_icoA_index
+  use scale_tracer
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -322,6 +323,9 @@ contains
        GRAV  => CONST_GRAV,  &
        CPdry => CONST_CPdry, &
        Rvap  => CONST_Rvap
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_specific_heat, &
+       ATMOS_THERMODYN_temp_pres2pott
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use mod_adm, only: &
@@ -358,8 +362,6 @@ contains
        NCHEM_END
     use mod_prgvar, only: &
        prgvar_get_withdiag
-    use mod_thrmdyn, only: &
-       THRMDYN_th
     use scale_atmos_saturation, only: &
        SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
        SATURATION_psat_liq => ATMOS_SATURATION_psat_liq, &
@@ -430,7 +432,7 @@ contains
     real(RP) :: th       (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: th_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: th_prof  (ADM_kall)
-    real(RP) :: thv      (ADM_gall   ,ADM_kall,ADM_lall   )
+    real(RP) :: thv      (ADM_gall   ,ADM_kall)
     real(RP) :: mse      (ADM_gall   ,ADM_kall,ADM_lall   )
 
     real(RP) :: q_clw    (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -450,6 +452,15 @@ contains
     real(RP) :: VMTR_C2WfactGz_pl(ADM_gall_pl,ADM_kall,6,ADM_lall_pl)
     real(RP) :: VMTR_PHI         (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: VMTR_PHI_pl      (ADM_gall_pl,ADM_kall,ADM_lall_pl)
+
+    real(RP) :: Qdry    (ADM_gall   ,ADM_kall)
+    real(RP) :: Rtot    (ADM_gall   ,ADM_kall)
+    real(RP) :: CVtot   (ADM_gall   ,ADM_kall)
+    real(RP) :: CPtot   (ADM_gall   ,ADM_kall)
+    real(RP) :: Qdry_pl (ADM_gall_pl,ADM_kall)
+    real(RP) :: Rtot_pl (ADM_gall_pl,ADM_kall)
+    real(RP) :: CVtot_pl(ADM_gall_pl,ADM_kall)
+    real(RP) :: CPtot_pl(ADM_gall_pl,ADM_kall)
 
     real(RP) :: LHV
     real(RP) :: mxval, mnval
@@ -665,18 +676,23 @@ contains
 
     ! potential temperature
     if ( out_th ) then
-       call THRMDYN_th( ADM_gall,   & ! [IN]
-                        ADM_kall,   & ! [IN]
-                        ADM_lall,   & ! [IN]
-                        tem(:,:,:), & ! [IN]
-                        pre(:,:,:), & ! [IN]
-                        th (:,:,:)  ) ! [OUT]
-
-       thv(:,:,:) = th(:,:,:) * ( 1.D0 + 0.61D0 * q(:,:,:,I_QV) )
-
        do l = 1, ADM_lall
+
+          call ATMOS_THERMODYN_specific_heat( &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+               q(:,:,l,:),                                              & ! [IN]
+               TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+               Qdry(:,:), Rtot(:,:), CVtot(:,:), CPtot(:,:)             ) ! [OUT]
+
+          call ATMOS_THERMODYN_temp_pres2pott( &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+               tem(:,:,l), pre(:,:,l), CPtot(:,:), Rtot(:,:), & ! [IN]
+               th(:,:,l)                                      ) ! [OUT]
+
+          thv(:,:) = th(:,:,l) * ( 1.D0 + 0.61D0 * q(:,:,l,I_QV) )
+
           call history_in( 'ml_th',  th (:,:,l) )
-          call history_in( 'ml_thv', thv(:,:,l) )
+          call history_in( 'ml_thv', thv(:,:) )
        enddo
     endif
 
@@ -703,20 +719,38 @@ contains
 
        call GTL_global_sum_eachlayer( one, one_pl, area_prof )
 
-       call THRMDYN_th( ADM_gall,   & ! [IN]
-                        ADM_kall,   & ! [IN]
-                        ADM_lall,   & ! [IN]
-                        tem(:,:,:), & ! [IN]
-                        pre(:,:,:), & ! [IN]
-                        th (:,:,:)  ) ! [OUT]
+       do l = 1, ADM_lall
+
+          call ATMOS_THERMODYN_specific_heat( &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+               q(:,:,l,:),                                              & ! [IN]
+               TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+               Qdry(:,:), Rtot(:,:), CVtot(:,:), CPtot(:,:)             ) ! [OUT]
+
+          call ATMOS_THERMODYN_temp_pres2pott( &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+               tem(:,:,l), pre(:,:,l), CPtot(:,:), Rtot(:,:), & ! [IN]
+               th(:,:,l)                                      ) ! [OUT]
+
+       end do
 
        if ( ADM_have_pl ) then
-          call THRMDYN_th( ADM_gall_pl,   & ! [IN]
-                           ADM_kall,      & ! [IN]
-                           ADM_lall_pl,   & ! [IN]
-                           tem_pl(:,:,:), & ! [IN]
-                           pre_pl(:,:,:), & ! [IN]
-                           th_pl (:,:,:)  ) ! [OUT]
+
+          do l = 1, ADM_lall_pl
+
+             call ATMOS_THERMODYN_specific_heat( &
+                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+                  q_pl(:,:,l,:),                                           & ! [IN]
+                  TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+                  Qdry_pl(:,:), Rtot_pl(:,:), CVtot_pl(:,:), CPtot_pl(:,:) ) ! [OUT]
+
+             call ATMOS_THERMODYN_temp_pres2pott( &
+                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, &
+                  tem_pl(:,:,l), pre_pl(:,:,l), CPtot_pl(:,:), Rtot_pl(:,:), & ! [IN]
+                  th_pl(:,:,l)                                      ) ! [OUT]
+
+          end do
+
        endif
 
        call GTL_global_sum_eachlayer( th, th_pl, th_prof )

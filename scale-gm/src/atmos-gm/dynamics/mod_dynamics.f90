@@ -16,6 +16,7 @@ module mod_dynamics
   use scale_io
   use scale_atmos_grid_icoA_index
   use scale_prof
+  use scale_tracer
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -158,10 +159,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine dynamics_step
-    use scale_const, only: &
-       Rdry  => CONST_Rdry, &
-       Rvap  => CONST_Rvap, &
-       CVdry => CONST_CVdry
     use mod_adm, only: &
        ADM_have_pl
     use mod_comm, only: &
@@ -211,9 +208,10 @@ contains
        rho_bs_pl, &
        pre_bs,    &
        pre_bs_pl
-    use mod_thrmdyn, only: &
-       THRMDYN_th, &
-       THRMDYN_eth
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_specific_heat, &
+       ATMOS_THERMODYN_temp_pres2pott, &
+       ATMOS_THERMODYN_ein_pres2enth
     use mod_numfilter, only: &
        NUMFILTER_DOrayleigh,       &
        NUMFILTER_DOverticaldiff,   &
@@ -299,8 +297,12 @@ contains
     !--- temporary variables
     real(RP) :: qd      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: qd_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP) :: r       (ADM_gall   ,ADM_kall,ADM_lall   )
+    real(RP) :: r_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: cv      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: cv_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP) :: cp      (ADM_gall   ,ADM_kall,ADM_lall   )
+    real(RP) :: cp_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
     real(RP) :: VMTR_GSGAM2      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: VMTR_GSGAM2_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
@@ -439,24 +441,22 @@ contains
        enddo
        !$acc end kernels
 
+       do l = 1, ADM_lall
+
+          call ATMOS_THERMODYN_specific_heat( &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+               q(:,:,l,:),                                              & ! [IN]
+               TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+               qd(:,:,l), r(:,:,l), cp(:,:,l), cv(:,:,l)             ) ! [OUT]
+
+       end do
+
        !$acc kernels pcopy(cv,qd,tem,pre) pcopyin(q,ein,rho,CVW) async(0)
        do l = 1, ADM_lall
        do k = 1, ADM_kall
        do g = 1, ADM_gall
-          cv(g,k,l) = 0.0_RP
-          qd(g,k,l) = 1.0_RP
-
-          !$acc loop seq
-          do nq = NQW_STR, NQW_END
-             cv(g,k,l) = cv(g,k,l) + q(g,k,l,nq) * CVW(nq)
-             qd(g,k,l) = qd(g,k,l) - q(g,k,l,nq)
-          enddo
-          !$acc end loop
-
-          cv(g,k,l) = cv(g,k,l) + qd(g,k,l) * CVdry
-
           DIAG(g,k,l,I_tem) = ein(g,k,l) / cv(g,k,l)
-          DIAG(g,k,l,I_pre) = rho(g,k,l) * DIAG(g,k,l,I_tem) * ( qd(g,k,l)*Rdry + q(g,k,l,I_QV)*Rvap )
+          DIAG(g,k,l,I_pre) = rho(g,k,l) * DIAG(g,k,l,I_tem) * r(g,k,l)
        enddo
        enddo
        enddo
@@ -495,20 +495,20 @@ contains
                         VMTR_C2Wfact  (:,:,:,:),        & ! [IN]
                         VMTR_C2WfactGz(:,:,:,:)         ) ! [IN]
 
-       call THRMDYN_th ( ADM_gall,          & ! [IN]
-                         ADM_kall,          & ! [IN]
-                         ADM_lall,          & ! [IN]
-                         DIAG(:,:,:,I_tem), & ! [IN]
-                         DIAG(:,:,:,I_pre), & ! [IN]
-                         th  (:,:,:)        ) ! [OUT]
+       do l = 1, ADM_lall
 
-       call THRMDYN_eth( ADM_gall,          & ! [IN]
-                         ADM_kall,          & ! [IN]
-                         ADM_lall,          & ! [IN]
-                         ein (:,:,:),       & ! [IN]
-                         DIAG(:,:,:,I_pre), & ! [IN]
-                         rho (:,:,:),       & ! [IN]
-                         eth (:,:,:)        ) ! [OUT]
+          call ATMOS_THERMODYN_temp_pres2pott( &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+               DIAG(:,:,l,I_tem), DIAG(:,:,l,I_pre), cp(:,:,l), r(:,:,l), & ! [IN]
+               th(:,:,l)                                                  ) ! [OUT]
+
+          call ATMOS_THERMODYN_ein_pres2enth( &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+               ein(:,:,l), DIAG(:,:,l,I_pre), rho(:,:,l), & ! [IN]
+               eth(:,:,l)                                 ) ! [OUT]
+
+       end do
+
 
        ! perturbations ( pre, rho with metrics )
        !$acc  kernels pcopy(pregd,rhogd) pcopyin(pre,pre_bs,rho,rho_bs,VMTR_GSGAM2) async(0)
@@ -528,16 +528,18 @@ contains
              q_pl(:,:,:,nq) = PROGq_pl(:,:,:,nq) / PROG_pl(:,:,:,I_RHOG)
           enddo
 
-          cv_pl(:,:,:) = 0.0_RP
-          qd_pl(:,:,:) = 1.0_RP
-          do nq = NQW_STR, NQW_END
-             cv_pl(:,:,:) = cv_pl(:,:,:) + q_pl(:,:,:,nq) * CVW(nq)
-             qd_pl(:,:,:) = qd_pl(:,:,:) - q_pl(:,:,:,nq)
-          enddo
-          cv_pl(:,:,:) = cv_pl(:,:,:) + qd_pl(:,:,:) * CVdry
+          do l = 1, ADM_lall_pl
+
+             call ATMOS_THERMODYN_specific_heat( &
+                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+                  q_pl(:,:,l,:),                                           & ! [IN]
+                  TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+                  qd_pl(:,:,l), r_pl(:,:,l), cv_pl(:,:,l), cp_pl(:,:,l) ) ! [OUT]
+
+          end do
 
           DIAG_pl(:,:,:,I_tem) = ein_pl(:,:,:) / cv_pl(:,:,:)
-          DIAG_pl(:,:,:,I_pre) = rho_pl(:,:,:) * DIAG_pl(:,:,:,I_tem) * ( qd_pl(:,:,:)*Rdry + q_pl(:,:,:,I_QV)*Rvap )
+          DIAG_pl(:,:,:,I_pre) = rho_pl(:,:,:) * DIAG_pl(:,:,:,I_tem) * r_pl(:,:,:)
 
           do l = 1, ADM_lall_pl
           do k = ADM_kmin+1, ADM_kmax
@@ -570,20 +572,19 @@ contains
                            VMTR_C2Wfact_pl  (:,:,:,:),        & ! [IN]
                            VMTR_C2WfactGz_pl(:,:,:,:)         ) ! [IN]
 
-          call THRMDYN_th ( ADM_gall_pl,          & ! [IN]
-                            ADM_kall,             & ! [IN]
-                            ADM_lall_pl,          & ! [IN]
-                            DIAG_pl(:,:,:,I_tem), & ! [IN]
-                            DIAG_pl(:,:,:,I_pre), & ! [IN]
-                            th_pl  (:,:,:)        ) ! [OUT]
+          do l = 1, ADM_lall_pl
 
-          call THRMDYN_eth( ADM_gall_pl,          & ! [IN]
-                            ADM_kall,             & ! [IN]
-                            ADM_lall_pl,          & ! [IN]
-                            ein_pl (:,:,:),       & ! [IN]
-                            DIAG_pl(:,:,:,I_pre), & ! [IN]
-                            rho_pl (:,:,:),       & ! [IN]
-                            eth_pl (:,:,:)        ) ! [OUT]
+             call ATMOS_THERMODYN_temp_pres2pott( &
+                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, &
+                  DIAG_pl(:,:,l,I_tem), DIAG_pl(:,:,l,I_pre), cp_pl(:,:,l), r_pl(:,:,l), & ! [IN]
+                  th_pl(:,:,l)                                                           ) ! [OUT]
+
+             call ATMOS_THERMODYN_ein_pres2enth( &
+                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, &
+                  ein_pl(:,:,l), DIAG_pl(:,:,l,I_pre), rho_pl(:,:,l), & ! [IN]
+                  eth_pl(:,:,l)                                       ) ! [OUT]
+
+          end do
 
           pregd_pl(:,:,:) = ( DIAG_pl(:,:,:,I_pre) - pre_bs_pl(:,:,:) ) * VMTR_GSGAM2_pl(:,:,:)
           rhogd_pl(:,:,:) = ( rho_pl (:,:,:)       - rho_bs_pl(:,:,:) ) * VMTR_GSGAM2_pl(:,:,:)
