@@ -13,8 +13,10 @@ module mod_src
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -68,15 +70,7 @@ contains
     use scale_const, only: &
        OHM => CONST_OHM
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax,    &
-       ADM_KNONE
+       ADM_have_pl
     use mod_grd, only: &
        GRD_rscale, &
        GRD_XDIR,   &
@@ -334,14 +328,7 @@ contains
        grhogscl, grhogscl_pl, &
        fluxtype               )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_grd, only: &
        GRD_afac, &
        GRD_bfac
@@ -482,16 +469,7 @@ contains
        grhog,  grhog_pl,  &
        fluxtype           )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_iall,    &
-       ADM_jall,    &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_grd, only: &
        GRD_rdgz
     use mod_oprt, only: &
@@ -694,18 +672,7 @@ contains
        Pgradw, Pgradw_pl, &
        gradtype           )
     use mod_adm, only: &
-       ADM_nxyz,    &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_iall,    &
-       ADM_jall,    &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax,    &
-       ADM_nxyz
+       ADM_have_pl
     use mod_grd, only: &
        GRD_XDIR, &
        GRD_YDIR, &
@@ -964,16 +931,7 @@ contains
     use scale_const, only: &
        GRAV => CONST_GRAV
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_iall,    &
-       ADM_jall,    &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_vmtr, only: &
        VMTR_C2Wfact,    &
        VMTR_C2Wfact_pl

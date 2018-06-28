@@ -27,10 +27,6 @@ module mod_thrmdyn
   use scale_atmos_hydrometeor, only: &
      LHV, &
      LHF
-  use mod_adm, only: &
-     kdim => ADM_kall, &
-     kmin => ADM_kmin, &
-     kmax => ADM_kmax
   use mod_runconf, only: &
      nqmax => TRC_VMAX, &
      NQW_STR,           &

@@ -1,22 +1,23 @@
 !-------------------------------------------------------------------------------
-!> module ATMOSPHERE driver
+!> module atmosphere / grid / icoA
 !!
 !! @par Description
-!!          Atmosphere module
+!!          Atmospheric grid module for the icosapedralA coordinate
 !!
 !! @author Team SCALE
 !!
 !<
 !-------------------------------------------------------------------------------
-module mod_atmos_surface
+#include "scalelib.h"
+module scale_atmos_grid_icoA
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
   use scale_io
+  use scale_prof
   use scale_atmos_grid_icoA_index
-
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -24,13 +25,13 @@ module mod_atmos_surface
   !
   !++ Public procedure
   !
-  public :: ATMOS_SURFACE_GET
-  public :: ATMOS_SURFACE_SET
+  public :: ATMOS_GRID_ICOA_setup
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -42,17 +43,10 @@ module mod_atmos_surface
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Get surface boundary condition
-  subroutine ATMOS_SURFACE_GET
+  !> Setup
+  subroutine ATMOS_GRID_ICOA_setup
 
     return
-  end subroutine ATMOS_SURFACE_GET
+  end subroutine ATMOS_GRID_ICOA_setup
 
-  !-----------------------------------------------------------------------------
-  !> Set surface boundary condition
-  subroutine ATMOS_SURFACE_SET
-
-    return
-  end subroutine ATMOS_SURFACE_SET
-
-end module mod_atmos_surface
+end module scale_atmos_grid_icoA

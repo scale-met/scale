@@ -16,7 +16,7 @@ program fio_sel
   use mpi
   use scale_precision
   use mod_io_param
-  use scale_stdio
+  use scale_io
   use mod_fio, only: &
      headerinfo, &
      datainfo

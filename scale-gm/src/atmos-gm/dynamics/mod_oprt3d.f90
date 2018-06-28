@@ -13,8 +13,10 @@ module mod_oprt3d
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -36,6 +38,9 @@ module mod_oprt3d
   !
   !++ Private parameters & variables
   !
+  integer, parameter :: TI = ADM_TI
+  integer, parameter :: TJ = ADM_TJ
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -54,27 +59,8 @@ contains
        RGAMH,     RGAMH_pl,     &
        C2WfactGz, C2WfactGz_pl  )
     use mod_adm, only: &
-       TI  => ADM_TI,  &
-       TJ  => ADM_TJ,  &
-       ADM_nxyz,       &
        ADM_have_pl,    &
-       ADM_have_sgp,   &
-       ADM_vlink,      &
-       ADM_lall,       &
-       ADM_lall_pl,    &
-       ADM_kall,       &
-       ADM_jall,       &
-       ADM_iall,       &
-       ADM_gall_pl,    &
-       ADM_jmin,       &
-       ADM_jmax,       &
-       ADM_imin,       &
-       ADM_imax,       &
-       ADM_gslf_pl,    &
-       ADM_gmin_pl,    &
-       ADM_gmax_pl,    &
-       ADM_kmin,       &
-       ADM_kmax
+       ADM_have_sgp
     use mod_grd, only: &
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
@@ -386,8 +372,6 @@ contains
 
   !-----------------------------------------------------------------------------
   integer function suf(i,j)
-    use mod_adm, only: &
-       ADM_gall_1d
     implicit none
 
     integer :: i, j

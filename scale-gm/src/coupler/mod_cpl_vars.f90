@@ -8,17 +8,17 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module mod_cpl_vars
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_debug
-  use scale_grid_index
+  use scale_atmos_grid_icoA_index
   use scale_tracer
 
   use scale_const, only: &
@@ -169,8 +169,8 @@ contains
   subroutine CPL_vars_setup
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_landuse, only: &
        LANDUSE_fact_ocean, &
        LANDUSE_fact_land,  &
@@ -197,7 +197,7 @@ contains
     if ( .NOT. OCEAN_sw .AND. checkfact > 0.0_RP ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
        write(*,*)                     'xxx Ocean fraction exists, but ocean components never called. STOP.', checkfact
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! Check consistency of LAND_sw and LANDUSE_fact_land
@@ -205,7 +205,7 @@ contains
     if ( .NOT. LAND_sw .AND. checkfact > 0.0_RP ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
        write(*,*)                     'xxx Land  fraction exists, but land  components never called. STOP.', checkfact
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! Check consistency of URBAN_sw and LANDUSE_fact_urban
@@ -213,7 +213,7 @@ contains
     if ( .NOT. URBAN_sw .AND. checkfact > 0.0_RP ) then
        if( IO_L ) write(IO_FID_LOG,*) 'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
        write(*,*)                     'xxx URBAN fraction exists, but urban components never called. STOP.', checkfact
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
 
@@ -456,7 +456,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) private(i,j) shared(I_LW,I_SW) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JS,JE,IS,IE,OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U) &
+    !$omp shared(JE,IE,OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U) &
     !$omp shared(OCN_ATM_V,OCN_ATM_DENS,CNT_putATM_OCN,TEMP,PRES,W,U,V,DENS) &
     !$omp shared(I_QV,OCN_ATM_QV,OCN_ATM_PBL,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn) &
     !$omp shared(OCN_ATM_cosSZA,OCN_ATM_SFLX_rain,OCN_ATM_SFLX_snow,QTRC,PBL,SFC_PRES) &
@@ -527,7 +527,7 @@ contains
     enddo
 
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE) &
+    !$omp shared(JE,IE) &
     !$omp shared(OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U,OCN_ATM_V,OCN_ATM_DENS,OCN_ATM_QV) &
     !$omp shared(OCN_ATM_PBL,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn,OCN_ATM_cosSZA,OCN_ATM_SFLX_rain) &
     !$omp shared(OCN_ATM_SFLX_snow,CNT_putATM_OCN) &
@@ -671,7 +671,7 @@ contains
     enddo
 
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,OCN_SFC_TEMP,OCN_SFC_albedo,OCN_SFC_Z0M,OCN_SFC_Z0H,OCN_SFC_Z0E) &
+    !$omp shared(JE,IE,OCN_SFC_TEMP,OCN_SFC_albedo,OCN_SFC_Z0M,OCN_SFC_Z0H,OCN_SFC_Z0E) &
     !$omp shared(OCN_SFLX_MW,OCN_SFLX_MU,OCN_SFLX_MV,OCN_SFLX_SH,OCN_SFLX_LH,OCN_SFLX_WH,OCN_SFLX_evap,OCN_U10,OCN_V10) &
     !$omp shared(OCN_T2,OCN_Q2,CNT_putOCN,I_LW,I_SW) &
     !$omp private(i,j) OMP_SCHEDULE_ 
@@ -750,7 +750,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,LND_SFC_TEMP,LND_SFC_albedo,LND_SFC_Z0M,LND_SFC_Z0H,LND_SFC_Z0E) &
+    !$omp shared(JE,IE,LND_SFC_TEMP,LND_SFC_albedo,LND_SFC_Z0M,LND_SFC_Z0H,LND_SFC_Z0E) &
     !$omp shared(LND_SFLX_MW,LND_SFLX_MU,LND_SFLX_MV,LND_SFLX_SH,LND_SFLX_LH,LND_SFLX_GH,LND_SFLX_evap) &
     !$omp shared(LND_U10,LND_V10,LND_T2,LND_Q2,CNT_putLND,I_LW,I_SW,SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H) &
     !$omp shared(SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_GH,SFLX_evap,U10,V10,T2,Q2) &
@@ -874,7 +874,7 @@ contains
     enddo
 
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,URB_SFC_TEMP,URB_SFC_albedo,URB_SFC_Z0M,URB_SFC_Z0H,URB_SFC_Z0E) &
+    !$omp shared(JE,IE,URB_SFC_TEMP,URB_SFC_albedo,URB_SFC_Z0M,URB_SFC_Z0H,URB_SFC_Z0E) &
     !$omp shared(URB_SFLX_MW,URB_SFLX_MU,URB_SFLX_MV,URB_SFLX_SH,URB_SFLX_LH,URB_SFLX_GH,URB_SFLX_evap,URB_U10,URB_V10) &
     !$omp shared(URB_T2,URB_Q2,CNT_putURB,I_LW,I_SW) &
     !$omp private(i,j) OMP_SCHEDULE_ 
@@ -954,7 +954,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,QA,SFLX_QTRC,SFC_TEMP,SFC_albedo,I_LW,I_SW,SFC_Z0M,SFC_Z0H,SFC_Z0E) &
+    !$omp shared(JE,IE,QA,SFLX_QTRC,SFC_TEMP,SFC_albedo,I_LW,I_SW,SFC_Z0M,SFC_Z0H,SFC_Z0E) &
     !$omp shared(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_GH,I_QV,U10,V10,T2,Q2) &
     !$omp shared(fact_ocean,fact_land,fact_urban,OCN_SFC_TEMP,LND_SFC_TEMP,URB_SFC_TEMP,OCN_SFC_albedo) &
     !$omp shared(LND_SFC_albedo,URB_SFC_albedo,OCN_SFC_Z0M,LND_SFC_Z0M,URB_SFC_Z0M) &
@@ -1085,7 +1085,7 @@ contains
 
 !OCL XFILL
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
+    !$omp shared(JE,IE,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
     !$omp shared(SFLX_snow) &
     !$omp shared(OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U,OCN_ATM_V,OCN_ATM_DENS,OCN_ATM_QV) &
     !$omp shared(OCN_ATM_PBL,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn,OCN_ATM_cosSZA,OCN_ATM_SFLX_rain) &
@@ -1153,7 +1153,7 @@ contains
 
 !OCL XFILL
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
+    !$omp shared(JE,IE,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
     !$omp shared(SFLX_snow) &
     !$omp shared(LND_ATM_TEMP,LND_ATM_PRES,LND_ATM_W,LND_ATM_U,LND_ATM_V,LND_ATM_DENS,LND_ATM_QV) &
     !$omp shared(LND_ATM_PBL,LND_ATM_SFC_PRES,LND_ATM_SFLX_rad_dn,LND_ATM_cosSZA,LND_ATM_SFLX_rain) &
@@ -1221,7 +1221,7 @@ contains
 
 !OCL XFILL
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
+    !$omp shared(JE,IE,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
     !$omp shared(SFLX_snow) &
     !$omp shared(URB_ATM_TEMP,URB_ATM_PRES,URB_ATM_W,URB_ATM_U,URB_ATM_V,URB_ATM_DENS,URB_ATM_QV) &
     !$omp shared(URB_ATM_PBL,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA,URB_ATM_SFLX_rain) &

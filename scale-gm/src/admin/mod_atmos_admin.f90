@@ -13,7 +13,7 @@ module mod_atmos_admin
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
@@ -66,8 +66,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_ADMIN_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
 !    NAMELIST / PARAM_ATMOS / &
@@ -96,7 +96,7 @@ contains
 !       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
 !    elseif( ierr > 0 ) then !--- fatal error
 !       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS. Check!'
-!       call PRC_MPIstop
+!       call PRC_abort
 !    endif
 !    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS)
 
@@ -209,8 +209,8 @@ contains
   subroutine ATMOS_ADMIN_getscheme( &
        component_name, &
        scheme_name     )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*),       intent(in)  :: component_name
@@ -238,7 +238,7 @@ contains
        scheme_name = ATMOS_PHY_CP_TYPE
     case default
        write(*,*) 'xxx Unsupported component_name. Check!', trim(component_name)
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     return

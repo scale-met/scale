@@ -13,7 +13,7 @@ module mod_chemvar
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -46,8 +46,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CHEMVAR_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist /CHEMVARPARAM/ &
@@ -66,7 +66,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** CHEMVARPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist CHEMVARPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=CHEMVARPARAM)
 
@@ -83,8 +83,8 @@ contains
 
   !-----------------------------------------------------------------------------
   function chemvar_getid( tracername )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*), intent(in) :: tracername
@@ -107,7 +107,7 @@ contains
 
     if ( chemvar_getid <= 0 ) then
        write(*,*) 'xxx [chemvar_getid] INDEX does not exist =>', tname
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
   end function chemvar_getid

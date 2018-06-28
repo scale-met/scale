@@ -13,8 +13,10 @@ module mod_forcing_driver
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -57,8 +59,8 @@ module mod_forcing_driver
 contains
   !-----------------------------------------------------------------------------
   subroutine forcing_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_runconf, only: &
        AF_TYPE
     use mod_af_heldsuarez, only: &
@@ -83,7 +85,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** FORCING_PARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist FORCING_PARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=FORCING_PARAM)
 
@@ -97,7 +99,7 @@ contains
        call AF_dcmip_init
     case default
        write(*,*) 'xxx unsupported forcing type! STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     return
@@ -107,15 +109,6 @@ contains
   subroutine forcing_step
     use scale_const, only: &
        GRAV => CONST_GRAV
-    use mod_adm, only: &
-       ADM_KNONE,   &
-       ADM_gall_in, &
-       ADM_kall,    &
-       ADM_lall,    &
-       ADM_kmin,    &
-       ADM_kmax,    &
-       ADM_iall,    &
-       ADM_jall
     use mod_grd, only: &
        GRD_LAT,  &
        GRD_LON,  &
@@ -161,24 +154,12 @@ contains
        AF_heldsuarez
     use mod_af_dcmip, only: &
        AF_dcmip
-    use mod_af_atmos_phy, only: &
-       AF_ATMOS_phy
     use mod_grd_conversion, only: &
        grd_gm2rm
-    use scale_grid_real, only: &
-       real_cz_rmgrid=> real_cz,    &
-       real_fz_rmgrid=> real_fz,    &
-       real_Z1,                     &
-       real_lon_rmgrid => real_lon, &
-       real_lat_rmgrid => real_lat
     use mod_runconf, only: &
        ATMOS_PHY_TYPE
     use mod_grd_conversion, only: &
        grd_gm2rm
-    use scale_grid_index, only: &
-       IA,      &
-       JA,      &
-       KS
     implicit none
 
     real(RP) :: rhog  (ADM_gall_in,ADM_kall,ADM_lall)
@@ -227,13 +208,9 @@ contains
     real(RP) :: jx     (ADM_gall_in,ADM_lall)
     real(RP) :: jy     (ADM_gall_in,ADM_lall)
     real(RP) :: jz     (ADM_gall_in,ADM_lall)
-    real(RP) :: real_lon  (ADM_gall_in)
-    real(RP) :: real_lat  (ADM_gall_in)
     real(RP) :: Tsfc   (ADM_gall_in,ADM_knone,ADM_lall)
 
     real(RP) :: frhogq(ADM_gall_in,ADM_kall,ADM_lall)
-    real(RP) :: real_cz(ADM_gall_in,ADM_kall)
-    real(RP) :: real_fz(ADM_gall_in,0:ADM_kall)
     real(RP) :: z_srf_rmgrid(IA,JA)
 
     character(len=H_SHORT) :: varname
@@ -242,76 +219,6 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('__Forcing',1)
-
-    k0 = ADM_KNONE
-
-    call VMTR_getin_GSGAM2 ( gsgam2  )
-    call VMTR_getin_GSGAM2H( gsgam2h )
-    call VMTR_getin_PHI    ( phi     )
-    call GTL_clip_region(GRD_vz(:,:,:,GRD_Z) ,z      ,1,ADM_kall)
-    call GTL_clip_region(GRD_vz(:,:,:,GRD_ZH),zh     ,1,ADM_kall)
-
-    call GTL_clip_region_1layer(GRD_zs(:,k0,:,GRD_ZSFC),z_srf)
-    call GTL_clip_region_1layer(GRD_s (:,k0,:,GRD_LAT) ,lat  )
-    call GTL_clip_region_1layer(GRD_s (:,k0,:,GRD_LON) ,lon  )
-
-    call GTL_clip_region_1layer(GMTR_p(:,k0,:,GMTR_p_IX),ix)
-    call GTL_clip_region_1layer(GMTR_p(:,k0,:,GMTR_p_IY),iy)
-    call GTL_clip_region_1layer(GMTR_p(:,k0,:,GMTR_p_IZ),iz)
-    call GTL_clip_region_1layer(GMTR_p(:,k0,:,GMTR_p_JX),jx)
-    call GTL_clip_region_1layer(GMTR_p(:,k0,:,GMTR_p_JY),jy)
-    call GTL_clip_region_1layer(GMTR_p(:,k0,:,GMTR_p_JZ),jz)
-
-    call GTL_clip_region_1layer(tem_sfc(:,:) ,Tsfc  )
-
-    !--- get the prognostic and diagnostic variables
-    call prgvar_get_in_withdiag( rhog,   & ! [OUT]
-                                 rhogvx, & ! [OUT]
-                                 rhogvy, & ! [OUT]
-                                 rhogvz, & ! [OUT]
-                                 rhogw,  & ! [OUT]
-                                 rhoge,  & ! [OUT]
-                                 rhogq,  & ! [OUT]
-                                 rho,    & ! [OUT]
-                                 pre,    & ! [OUT]
-                                 tem,    & ! [OUT]
-                                 vx,     & ! [OUT]
-                                 vy,     & ! [OUT]
-                                 vz,     & ! [OUT]
-                                 w,      & ! [OUT]
-                                 q       ) ! [OUT]
-
-    ein(:,:,:) = rhoge(:,:,:) / rhog(:,:,:)
-
-    !--- boundary condition
-    do l = 1, ADM_lall
-       call BNDCND_thermo( ADM_gall_in, & ! [IN]
-                           rho(:,:,l),  & ! [INOUT]
-                           pre(:,:,l),  & ! [INOUT]
-                           tem(:,:,l),  & ! [INOUT]
-                           phi(:,:,l)   ) ! [IN]
-
-       vx(:,ADM_kmax+1,l) = vx(:,ADM_kmax,l)
-       vy(:,ADM_kmax+1,l) = vy(:,ADM_kmax,l)
-       vz(:,ADM_kmax+1,l) = vz(:,ADM_kmax,l)
-       vx(:,ADM_kmin-1,l) = vx(:,ADM_kmin,l)
-       vy(:,ADM_kmin-1,l) = vy(:,ADM_kmin,l)
-       vz(:,ADM_kmin-1,l) = vz(:,ADM_kmin,l)
-
-       q(:,ADM_kmax+1,l,:) = 0.0_RP
-       q(:,ADM_kmin-1,l,:) = 0.0_RP
-
-       !--- surface pressure ( hydrostatic balance )
-       pre_srf(:,l) = pre(:,ADM_kmin,l) &
-                    + rho(:,ADM_kmin,l) * GRAV * ( z(:,ADM_kmin,l)-z_srf(:,l) )
-    enddo
-
-    ! tentative negative fixer
-    if ( NEGATIVE_FIXER ) then
-       do nq = 1, TRC_VMAX
-          q(:,:,:,nq) = max( q(:,:,:,nq), 0.0_RP )
-       enddo
-    endif
 
     ! forcing
     if ( AF_TYPE=='HELD-SUAREZ' ) then
@@ -401,74 +308,14 @@ contains
        fe (:,:,:)   = 0.0_RP
        fq (:,:,:,:) = 0.0_RP
 
-    case default
-
-       do l = 1, ADM_lall
-          ij  = 1
-          ij2 = 1
-          real_fz(:,0)=0.0_RP
-          do j=1, ADM_jall
-          do i=1, ADM_iall
-             if( i/=1 .and. j/=1 ) then
-                real_cz(ij2,:) = GRD_vz(ij,:,l,GRD_Z)
-                REAL_LON(ij2)  = GRD_s (ij,1,l,GRD_LON)
-                REAL_LAT(ij2)  = GRD_s (ij,1,l,GRD_LAT)
-                do k=1, ADM_kall-1
-                   real_fz(ij2,k)=grd_vz(ij,k+1,l,GRD_ZH)
-                enddo
-                real_fz(ij2,ADM_kall)=real_fz(ij2,ADM_kall-1) &
-                     + ( real_fz(ij2,ADM_kall-1)-real_fz(ij2,ADM_kall-2) )
-                ij2 = ij2 + 1
-             end if
-             ij = ij + 1
-          enddo
-          enddo
-
-          call grd_gm2rm( real_cz, real_cz_rmgrid, ADM_kall )
-          call grd_gm2rm( real_fz, real_fz_rmgrid(0:ADM_kall,:,:), ADM_kall+1 )
-          call grd_gm2rm( z_srf(:,l), z_srf_rmgrid, 1 )
-          real_z1(:,:) = real_cz_rmgrid(ks,:,:) - z_srf_rmgrid(:,:)
-          call grd_gm2rm( real_lon, real_lon_rmgrid, 1 )
-          call grd_gm2rm( real_lat, real_lat_rmgrid, 1 )
-          call grd_gm2rm( Tsfc(:,k0,l), SFC_temp, 1 )
-
-          call AF_ATMOS_PHY( ADM_gall_in,      & ! [IN]
-                             lat    (:,l),     & ! [IN]
-                             lon    (:,l),     & ! [IN]
-                             z      (:,:,l),   & ! [IN]
-                             zh     (:,:,l),   & ! [IN]
-                             rho    (:,:,l),   & ! [IN]
-                             pre    (:,:,l),   & ! [IN]
-                             tem    (:,:,l),   & ! [IN]
-                             vx     (:,:,l),   & ! [IN]
-                             vy     (:,:,l),   & ! [IN]
-                             vz     (:,:,l),   & ! [IN]
-                             w      (:,:,l),   & ! [IN]
-                             q      (:,:,l,:), & ! [IN]
-                             ein    (:,:,l),   & ! [IN]
-                             pre_srf(:,l),     & ! [IN]
-                             fvx    (:,:,l),   & ! [OUT]
-                             fvy    (:,:,l),   & ! [OUT]
-                             fvz    (:,:,l),   & ! [OUT]
-                             fw     (:,:,l),   & ! [OUT]
-                             fe     (:,:,l),   & ! [OUT]
-                             fq     (:,:,l,:), & ! [OUT]
-                             frho   (:,:,l),   & ! [OUT]
-                             precip (:,k0,l),  & ! [OUT]
-                             ix     (:,l),     & ! [IN]
-                             iy     (:,l),     & ! [IN]
-                             iz     (:,l),     & ! [IN]
-                             jx     (:,l),     & ! [IN]
-                             jy     (:,l),     & ! [IN]
-                             jz     (:,l),     & ! [IN]
-                             TIME_DTL          ) ! [IN]
-       enddo
-          
     end select
 
     do l=1, ADM_lall
        call history_in( 'sl_sst', Tsfc(:,:,l) )
     enddo
+
+    call VMTR_getin_GSGAM2 ( gsgam2  )
+    call VMTR_getin_GSGAM2H( gsgam2h )
 
     rhogvx(:,:,:) = rhogvx(:,:,:) + TIME_DTL * fvx(:,:,:) * rho(:,:,:) * GSGAM2 (:,:,:)
     rhogvy(:,:,:) = rhogvy(:,:,:) + TIME_DTL * fvy(:,:,:) * rho(:,:,:) * GSGAM2 (:,:,:)
@@ -517,13 +364,7 @@ contains
   subroutine forcing_update( &
        PROG, PROG_pl )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_KNONE,   &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_kall
+       ADM_have_pl
     use mod_grd, only: &
        GRD_LAT,  &
        GRD_LON,  &

@@ -6,9 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2017-12-13 (K.Kikuchi) [new]
-!!
 !<
 ! 
 !-------------------------------------------------------------------------------
@@ -18,10 +15,10 @@ module mod_mp_vars
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
-  use scale_grid_index
-  use scale_tracer
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -61,17 +58,14 @@ contains
   !> Allocate MP variables
   !-----------------------------------------------------------------------------
   subroutine mp_vars_setup
-    use scale_grid_index, only: &
-         IA,    &
-         JA,    &
-         KA
-    use scale_tracer, only: &
-         QA
     implicit none
+
     allocate( CCN_rmgrid       (KA,IA,JA)   )
     allocate( sflx_rain_rmgrid (IA,JA)      )
     allocate( sflx_snow_rmgrid (IA,JA)      )
     allocate( Evaporate_rmgrid (KA,IA,JA)   )
+
+    return
   end subroutine mp_vars_setup
 
 end module mod_mp_vars

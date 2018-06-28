@@ -13,8 +13,9 @@ module mod_gtl
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -38,15 +39,6 @@ module mod_gtl
 contains
   !-----------------------------------------------------------------------------
   subroutine GTL_clip_region( v, v_clip, kmin, kmax )
-    use mod_adm, only: &
-       ADM_lall,    &
-       ADM_gall,    &
-       ADM_gall_in, &
-       ADM_kall,    &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_imin,    &
-       ADM_imax
     implicit none
 
     integer,  intent(in)  :: kmin
@@ -75,14 +67,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine GTL_clip_region_1layer( v, v_clip )
-    use mod_adm, only: &
-       ADM_lall,    &
-       ADM_gall,    &
-       ADM_gall_in, &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_imin,    &
-       ADM_imax
     implicit none
 
     real(RP), intent(in)  :: v     (ADM_gall   ,ADM_lall)
@@ -107,14 +91,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine GTL_clip_region_1layer_k(v,v_clip,ksize,k)
-    use mod_adm, only: &
-       ADM_lall,    &
-       ADM_gall,    &
-       ADM_gall_in, &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_imin,    &
-       ADM_imax
     implicit none
 
     integer,  intent(in)  :: ksize
@@ -141,8 +117,6 @@ contains
 
   !-----------------------------------------------------------------------------
   integer function suf(i,j)
-    use mod_adm, only: &
-       ADM_gall_1d
     implicit none
 
     integer :: i, j

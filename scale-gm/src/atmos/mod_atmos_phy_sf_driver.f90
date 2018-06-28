@@ -6,26 +6,20 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-12-05 (S.Nishizawa)  [new]
-!! @li      2017-12-20 (K.Kikuchi)    [modify]
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module mod_atmos_phy_sf_driver
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_icoA_index
   use scale_tracer
-
-  use scale_const, only: &
-     I_SW  => CONST_I_SW, &
-     I_LW  => CONST_I_LW
+  use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -34,8 +28,7 @@ module mod_atmos_phy_sf_driver
   !++ Public procedure
   !
   public :: ATMOS_PHY_SF_driver_setup
-  public :: ATMOS_PHY_SF_driver_resume
-  public :: ATMOS_PHY_SF_step
+  public :: ATMOS_PHY_SF_driver_step
 
   !-----------------------------------------------------------------------------
   !
@@ -54,10 +47,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_SF_driver_setup
-    use scale_process, only: &
-       PRC_MPIstop
-    use scale_atmos_phy_sf, only: &
-       ATMOS_PHY_SF_setup
+    use scale_prc, only: &
+       PRC_abort
+    use scale_atmos_phy_sf_bulk, only: &
+       ATMOS_PHY_SF_bulk_setup
+    use scale_atmos_phy_sf_const, only: &
+       ATMOS_PHY_SF_const_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_SF_TYPE, &
        ATMOS_sw_phy_sf
@@ -76,393 +71,254 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_SF] / Origin[SCALE-RM]'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_SF_driver_setup",*) 'Setup'
 
     if ( ATMOS_sw_phy_sf ) then
 
-       ! setup library component
-       call ATMOS_PHY_SF_setup( ATMOS_PHY_SF_TYPE )
-
-       if ( .NOT. CPL_sw ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Coupler is disabled.'
+       if ( CPL_sw ) then
+          LOG_INFO("ATMOS_PHY_SF_driver_setup",*) 'Coupler is enabled.'
+       else
+          ! setup library component
+          select case( ATMOS_PHY_SF_TYPE )
+          case ( 'BULK' )
+             call ATMOS_PHY_SF_bulk_setup
+          case ( 'CONST' )
+             call ATMOS_PHY_SF_const_setup
+          case default
+             LOG_ERROR("ATMOS_PHY_SF_driver_setup",*) 'invalid Surface flux type(', trim(ATMOS_PHY_SF_TYPE), '). CHECK!'
+             call PRC_abort
+          end select
        endif
 
     else
 
-       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
-       if( IO_L ) write(IO_FID_LOG,*) '*** surface fluxes are set to zero.'
-       SFLX_MW  (:,:)   = 0.0_RP
-       SFLX_MU  (:,:)   = 0.0_RP
-       SFLX_MV  (:,:)   = 0.0_RP
-       SFLX_SH  (:,:)   = 0.0_RP
-       SFLX_LH  (:,:)   = 0.0_RP
-       SFLX_QTRC(:,:,:) = 0.0_RP
-
-       if( IO_L ) write(IO_FID_LOG,*) '*** SFC_TEMP, SFC_albedo is set in ATMOS_PHY_SF_vars.'
+       LOG_INFO("ATMOS_PHY_SF_driver_setup",*) 'this component is never called.'
+       LOG_INFO("ATMOS_PHY_SF_driver_setup",*) 'surface fluxes are set to zero.'
+       SFLX_MW(:,:,:) = 0.0_RP
+       SFLX_MU(:,:,:) = 0.0_RP
+       SFLX_MV(:,:,:) = 0.0_RP
+       SFLX_SH(:,:,:) = 0.0_RP
+       SFLX_LH(:,:,:) = 0.0_RP
+       LOG_INFO("ATMOS_PHY_SF_driver_setup",*) 'SFC_TEMP, SFC_albedo is set in ATMOS_PHY_SF_vars.'
 
     endif
+
+    SFLX_QTRC(:,:,:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_SF_driver_setup
 
   !-----------------------------------------------------------------------------
-  !> Resume
-  subroutine ATMOS_PHY_SF_driver_resume
+  !> time step
+  subroutine ATMOS_PHY_SF_driver_step
+    use scale_const, only: &
+       EPS    => CONST_EPS,    &
+       GRAV   => CONST_GRAV,   &
+       KARMAN => CONST_KARMAN, &
+       CPdry  => CONST_CPdry,  &
+       CVvap  => CONST_CVvap
+    use scale_time, only: &
+       dt_SF => TIME_DTSEC_ATMOS_PHY_SF
+    use scale_atmos_bottom, only: &
+       BOTTOM_estimate => ATMOS_BOTTOM_estimate
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_dry, &
+       I_QV
+    use scale_atmos_phy_sf_bulk, only: &
+       ATMOS_PHY_SF_bulk_flux
+    use scale_atmos_phy_sf_const, only: &
+       ATMOS_PHY_SF_const_flux
+    use mod_atmos_vars, only: &
+       ATMOS_vars_calc_diagnostics, &
+       DENS, &
+       RHOU, &
+       RHOV, &
+       MOMZ, &
+       RHOE, &
+       RHOQ, &
+       POTT, &
+       TEMP, &
+       PRES, &
+       W,    &
+       U,    &
+       V,    &
+       QV,   &
+       CZ,   &
+       FZ,   &
+       Z1,   &
+       TOPO_Zsfc
+    use mod_atmos_phy_rd_vars, only: &
+       SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
+       SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
+    use mod_atmos_phy_bl_vars, only: &
+       PBL_Zi => ATMOS_PHY_BL_Zi
+    use mod_atmos_phy_sf_vars, only: &
+       SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
+       SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
+       SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,   &
+       SFC_Z0M    => ATMOS_PHY_SF_SFC_Z0M,    &
+       SFC_Z0H    => ATMOS_PHY_SF_SFC_Z0H,    &
+       SFC_Z0E    => ATMOS_PHY_SF_SFC_Z0E,    &
+       SFLX_MW    => ATMOS_PHY_SF_SFLX_MW,    &
+       SFLX_MU    => ATMOS_PHY_SF_SFLX_MU,    &
+       SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
+       SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
+       SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
+       SFLX_GH    => ATMOS_PHY_SF_SFLX_GH,    &
+       SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC,  &
+       U10        => ATMOS_PHY_SF_U10,        &
+       V10        => ATMOS_PHY_SF_V10,        &
+       T2         => ATMOS_PHY_SF_T2,         &
+       Q2         => ATMOS_PHY_SF_Q2,         &
+       l_mo       => ATMOS_PHY_SF_l_mo
+    use mod_cpl_admin, only: &
+       CPL_sw
     use mod_atmos_admin, only: &
-       ATMOS_sw_phy_sf
+       ATMOS_PHY_SF_TYPE
     implicit none
 
-    if ( ATMOS_sw_phy_sf ) then
-
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM_SurfaceFlux', 1)
-       call ATMOS_PHY_SF_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM_SurfaceFlux', 1)
-
-    end if
-
-    return
-  end subroutine ATMOS_PHY_SF_driver_resume
-
-  !-----------------------------------------------------------------------------
-  !> Driver
-  subroutine ATMOS_PHY_SF_driver( update_flag )
-    use scale_const, only: &
-       GRAV   => CONST_GRAV,   &
-       KARMAN => CONST_KARMAN, &
-       CPdry  => CONST_CPdry
-    use mod_grd, only: &
-        RCDZ => GRD_rdgzh, &
-        RFDZ => GRD_rdgz
-    use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_Z1
-    use mod_gm_topography, only: &
-       TOPO_Zsfc
-    use scale_time, only: &
-       dt_SF => TIME_DTSEC_ATMOS_PHY_SF
-    use scale_rm_statistics, only: &
-       STATISTICS_checktotal, &
-       STAT_total
-    use scale_history, only: &
-       HIST_in
-    use scale_atmos_bottom, only: &
-       BOTTOM_estimate => ATMOS_BOTTOM_estimate
-    use scale_atmos_hydrostatic, only: &
-       barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd => ATMOS_THERMODYN_qd, &
-       THERMODYN_cp => ATMOS_THERMODYN_cp, &
-       THERMODYN_r  => ATMOS_THERMODYN_r
-    use scale_atmos_hydrometeor, only: &
-       I_QV
-    use scale_atmos_phy_sf, only: &
-       ATMOS_PHY_SF
-    use mod_atmos_vars, only: &
-       DENS   => DENS_av, &
-       RHOT   => RHOT_av, &
-       QTRC   => QTRC_av, &
-       POTT,              &
-       TEMP,              &
-       PRES,              &
-       W,                 &
-       U,                 &
-       V,                 &
-       DENS_t => DENS_tp, &
-       MOMZ_t => MOMZ_tp, &
-       MOMX_t => MOMX_tp, &
-       MOMY_t => MOMY_tp, &
-       RHOT_t => RHOT_tp, &
-       RHOQ_t => RHOQ_tp
-    use mod_atmos_phy_rd_vars, only: &
-       SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
-       SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
-    use mod_atmos_phy_sf_vars, only: &
-       DENS_t_SF  => ATMOS_PHY_SF_DENS_t,     &
-       MOMZ_t_SF  => ATMOS_PHY_SF_MOMZ_t,     &
-       MOMX_t_SF  => ATMOS_PHY_SF_MOMX_t,     &
-       MOMY_t_SF  => ATMOS_PHY_SF_MOMY_t,     &
-       RHOT_t_SF  => ATMOS_PHY_SF_RHOT_t,     &
-       RHOQ_t_SF  => ATMOS_PHY_SF_RHOQ_t,     &
-       SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
-       SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
-       SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,   &
-       SFC_albedo => ATMOS_PHY_SF_SFC_albedo, &
-       SFC_Z0M    => ATMOS_PHY_SF_SFC_Z0M,    &
-       SFC_Z0H    => ATMOS_PHY_SF_SFC_Z0H,    &
-       SFC_Z0E    => ATMOS_PHY_SF_SFC_Z0E,    &
-       SFLX_MW    => ATMOS_PHY_SF_SFLX_MW,    &
-       SFLX_MU    => ATMOS_PHY_SF_SFLX_MU,    &
-       SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
-       SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
-       SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
-       SFLX_GH    => ATMOS_PHY_SF_SFLX_GH,    &
-       SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC,  &
-       U10        => ATMOS_PHY_SF_U10,        &
-       V10        => ATMOS_PHY_SF_V10,        &
-       T2         => ATMOS_PHY_SF_T2,         &
-       Q2         => ATMOS_PHY_SF_Q2,         &
-       l_mo       => ATMOS_PHY_SF_l_mo
-    use mod_cpl_admin, only: &
-       CPL_sw
-    implicit none
-
-    logical, intent(in) :: update_flag
-
-    real(RP) :: Uabs10(IA,JA) ! 10m absolute wind [m/s]
-    real(RP) :: MSLP  (IA,JA) ! mean sea-level pressure [Pa]
-    real(RP) :: total ! dummy
-    real(RP) :: GSQRT (IA,JA,KA,7)
-
-    real(RP) :: q(QA)
-    real(RP) :: qdry
-    real(RP) :: Rtot
-    real(RP) :: CPtot
+    real(RP) :: ATM_W   (IA,JA,ADM_lall)
+    real(RP) :: ATM_U   (IA,JA,ADM_lall)
+    real(RP) :: ATM_V   (IA,JA,ADM_lall)
+    real(RP) :: ATM_DENS(IA,JA,ADM_lall)
+    real(RP) :: ATM_TEMP(IA,JA,ADM_lall)
+    real(RP) :: ATM_PRES(IA,JA,ADM_lall)
+    real(RP) :: ATM_QV  (IA,JA,ADM_lall)
+    real(RP) :: SFLX_QV (IA,JA,ADM_lall)
 
     real(RP) :: us, SFLX_PT
 
-    real(RP) :: work
+    real(RP) :: work, dz
 
-    integer,  parameter :: I_XYZ = 1 ! at (x,y,z)
-    integer,  parameter :: I_XYW = 2 ! at (x,y,w)
-    integer,  parameter :: I_UYW = 3 ! at (u,y,w)
-    integer,  parameter :: I_XVW = 4 ! at (x,v,w)
-    integer,  parameter :: I_UYZ = 5 ! at (u,y,z)
-    integer,  parameter :: I_XVZ = 6 ! at (x,v,z)
-    integer,  parameter :: I_UVZ = 7 ! at (u,v,z)
-
-    integer :: i, j, iq
+    integer :: i, j, iq, l
     !---------------------------------------------------------------------------
 
-    GSQRT(:,:,:,:) = 1.0_RP  !!! for the time being !!!
-
-    if ( update_flag ) then
+    do l = 1, ADM_lall
 
        ! update surface density, surface pressure
-       call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
-                             PRES     (:,:,:), & ! [IN]
-                             REAL_CZ  (:,:,:), & ! [IN]
-                             TOPO_Zsfc(:,:),   & ! [IN]
-                             REAL_Z1  (:,:),   & ! [IN]
-                             SFC_DENS (:,:),   & ! [OUT]
-                             SFC_PRES (:,:)    ) ! [OUT]
+       call BOTTOM_estimate( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                             DENS(:,:,:,l), PRES(:,:,:,l),             & ! [IN]
+                             CZ(:,:,:,l), TOPO_Zsfc(:,:,l), Z1(:,:,l), & ! [IN]
+                             SFC_DENS(:,:,l), SFC_PRES(:,:,l)          ) ! [OUT]
 
-       if ( .NOT. CPL_sw ) then
-          call ATMOS_PHY_SF( TEMP      (KS,:,:),   & ! [IN]
-                             PRES      (KS,:,:),   & ! [IN]
-                             W         (KS,:,:),   & ! [IN]
-                             U         (KS,:,:),   & ! [IN]
-                             V         (KS,:,:),   & ! [IN]
-                             DENS      (KS,:,:),   & ! [IN]
-                             QTRC      (KS,:,:,:), & ! [IN]
-                             REAL_Z1   (:,:),      & ! [IN]
-                             dt_SF,                & ! [IN]
-                             SFC_DENS  (:,:),      & ! [IN]
-                             SFC_PRES  (:,:),      & ! [IN]
-                             SFLX_LW_dn(:,:),      & ! [IN]
-                             SFLX_SW_dn(:,:),      & ! [IN]
-                             SFC_TEMP  (:,:),      & ! [IN]
-                             SFC_albedo(:,:,:),    & ! [IN]
-                             SFC_Z0M   (:,:),      & ! [INOUT]
-                             SFC_Z0H   (:,:),      & ! [INOUT]
-                             SFC_Z0E   (:,:),      & ! [INOUT]
-                             SFLX_MW   (:,:),      & ! [OUT]
-                             SFLX_MU   (:,:),      & ! [OUT]
-                             SFLX_MV   (:,:),      & ! [OUT]
-                             SFLX_SH   (:,:),      & ! [OUT]
-                             SFLX_LH   (:,:),      & ! [OUT]
-                             SFLX_QTRC (:,:,:),    & ! [OUT]
-                             U10       (:,:),      & ! [OUT]
-                             V10       (:,:),      & ! [OUT]
-                             T2        (:,:),      & ! [OUT]
-                             Q2        (:,:)       ) ! [OUT]
-       endif
+    end do
 
-!OCL XFILL
+    if ( .NOT. CPL_sw ) then
+
+       !$omp parallel do
+       do l = 1, ADM_lall
        do j = JS, JE
        do i = IS, IE
-          Uabs10(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
+          ATM_W   (i,j,l) = W   (KS,i,j,l)
+          ATM_U   (i,j,l) = U   (KS,i,j,l)
+          ATM_V   (i,j,l) = V   (KS,i,j,l)
+          ATM_DENS(i,j,l) = DENS(KS,i,j,l)
+          ATM_TEMP(i,j,l) = TEMP(KS,i,j,l)
+          ATM_PRES(i,j,l) = PRES(KS,i,j,l)
+          ATM_QV  (i,j,l) = QV  (KS,i,j,l)
+       end do
        end do
        end do
 
+       select case ( ATMOS_PHY_SF_TYPE )
+       case ( 'BULK' )
+          do l = 1, ADM_lall
+             call ATMOS_PHY_SF_bulk_flux( &
+                  IA, IS, IE, JA, JS, JE, &
+                  ATM_W(:,:,l), ATM_U(:,:,l), ATM_V(:,:,l),          & ! [IN]
+                  ATM_TEMP(:,:,l), ATM_PRES(:,:,l), ATM_QV(:,:,l),   & ! [IN]
+                  SFC_DENS(:,:,l), SFC_TEMP(:,:,l), SFC_PRES(:,:,l), & ! [IN]
+                  SFC_Z0M(:,:,l), SFC_Z0H(:,:,l), SFC_Z0E(:,:,l),    & ! [IN]
+                  PBL_Zi(:,:,l), Z1(:,:,l),                          & ! [IN]
+                  SFLX_MW(:,:,l), SFLX_MU(:,:,l), SFLX_MV(:,:,l),    & ! [OUT]
+                  SFLX_SH(:,:,l), SFLX_LH(:,:,l), SFLX_QV(:,:,l),    & ! [OUT]
+                  U10(:,:,l), V10(:,:,l), T2(:,:,l), Q2(:,:,l)       ) ! [OUT]
+          end do
+
+       case ( 'CONST' )
+
+          do l = 1, ADM_lall
+             call ATMOS_PHY_SF_const_flux( &
+                  IA, IS, IE, JA, JS, JE, &
+                  ATM_W(:,:,l), ATM_U(:,:,l), ATM_V(:,:,l), ATM_TEMP(:,:,l), & ! [IN]
+                  Z1(:,:,l), SFC_DENS(:,:,l),                                & ! [IN]
+                  SFLX_MW(:,:,l), SFLX_MU(:,:,l), SFLX_MV(:,:,l),            & ! [OUT]
+                  SFLX_SH(:,:,l), SFLX_LH(:,:,l), SFLX_QV(:,:,l),            & ! [OUT]
+                  U10(:,:,l), V10(:,:,l)                                     ) ! [OUT]
+             T2(:,:,l) = ATM_TEMP(:,:,l)
+             Q2(:,:,l) = ATM_QV(:,:,l)
+
+          end do
+
+       end select
+
+       if ( .not. ATMOS_HYDROMETEOR_dry ) then
+          SFLX_QTRC(:,:,I_QV,:) = SFLX_QV(:,:,:)
+       end if
+
+    endif
+
+    do l = 1, ADM_lall
+
        ! temtative
+       !$omp parallel do private(us,sflx_pt)
        do j = JS, JE
        do i = IS, IE
           us = max( 1.E-6_RP, &
-                    sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) / DENS(KS,i,j) ) ) ! frictional velocity
-          SFLX_PT = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) ) &
-                  * POTT(KS,i,j) / TEMP(KS,i,j)
-          l_mo(i,j) = - us**3 * POTT(KS,i,j) / ( KARMAN * GRAV * SFLX_PT )
+                    sqrt( sqrt( SFLX_MU(i,j,l)**2 + SFLX_MV(i,j,l)**2 ) / DENS(KS,i,j,l) ) ) ! frictional velocity
+          SFLX_PT = SFLX_SH(i,j,l) / ( CPdry * DENS(KS,i,j,l) ) &
+                  * POTT(KS,i,j,l) / TEMP(KS,i,j,l)
+          SFLX_PT = sign( max(abs(SFLX_PT), EPS), SFLX_PT )
+          l_mo(i,j,l) = - us**3 * POTT(KS,i,j,l) / ( KARMAN * GRAV * SFLX_PT )
        end do
        end do
 
-       call barometric_law_mslp( MSLP(:,:), SFC_PRES(:,:), T2(:,:), TOPO_Zsfc(:,:) )
-
-       call HIST_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3'   )
-       call HIST_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa'      )
-       call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K'       )
-       call HIST_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave,merged)',  '1'       , nohalo=.true. )
-       call HIST_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '1'       , nohalo=.true. )
-       call HIST_in( SFC_Z0M   (:,:),      'SFC_Z0M',    'roughness length (momentum)',       'm'       , nohalo=.true. )
-       call HIST_in( SFC_Z0H   (:,:),      'SFC_Z0H',    'roughness length (heat)',           'm'       , nohalo=.true. )
-       call HIST_in( SFC_Z0E   (:,:),      'SFC_Z0E',    'roughness length (vapor)',          'm'       , nohalo=.true. )
-       call HIST_in( SFLX_MW   (:,:),      'MWFLX',      'w-momentum flux (merged)',          'kg/m/s2' )
-       call HIST_in( SFLX_MU   (:,:),      'MUFLX',      'u-momentum flux (merged)',          'kg/m/s2' )
-       call HIST_in( SFLX_MV   (:,:),      'MVFLX',      'v-momentum flux (merged)',          'kg/m/s2' )
-       call HIST_in( SFLX_SH   (:,:),      'SHFLX',      'sensible heat flux (merged)',       'W/m2'    , nohalo=.true. )
-       call HIST_in( SFLX_LH   (:,:),      'LHFLX',      'latent heat flux (merged)',         'W/m2'    , nohalo=.true. )
-       call HIST_in( SFLX_GH   (:,:),      'GHFLX',      'ground heat flux (merged)',         'W/m2'    , nohalo=.true. )
-       call HIST_in( Uabs10    (:,:),      'Uabs10',     '10m absolute wind',                 'm/s'     , nohalo=.true. )
-       call HIST_in( U10       (:,:),      'U10',        '10m x-wind',                        'm/s'     , nohalo=.true. )
-       call HIST_in( V10       (:,:),      'V10',        '10m y-wind',                        'm/s'     , nohalo=.true. )
-       call HIST_in( T2        (:,:),      'T2 ',        '2m air temperature',                'K'       , nohalo=.true. )
-       call HIST_in( Q2        (:,:),      'Q2 ',        '2m specific humidity',              'kg/kg'   , nohalo=.true. )
-       call HIST_in( MSLP      (:,:),      'MSLP',       'mean sea-level pressure',           'Pa'      )
-
+       !$omp parallel do private(dz)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
-          MOMZ_t_SF(i,j) = SFLX_MW(i,j) * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
+          dz = CZ(KS+1,i,j,l) - CZ(KS,i,j,l)
+          MOMZ(KS,i,j,l) = MOMZ(KS,i,j,l) + SFLX_MW(i,j,l) / dz * dt_SF
+
+          dz = FZ(KS,i,j,l) - FZ(KS-1,i,j,l)
+          RHOU(KS,i,j,l) = RHOU(KS,i,j,l) + SFLX_MU(i,j,l) / dz * dt_SF
+          RHOV(KS,i,j,l) = RHOV(KS,i,j,l) + SFLX_MV(i,j,l) / dz * dt_SF
+          RHOE(KS,i,j,l) = RHOE(KS,i,j,l) + SFLX_SH(i,j,l) / ( CPdry * dz ) * dt_SF
        enddo
        enddo
 
-!OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-          MOMX_t_SF(i,j) = SFLX_MU(i,j) * RCDZ(KS) / GSQRT(KS,i,j,I_UYZ)
-!          MOMX_t_SF(i,j) = 0.5_RP * ( SFLX_MU(i,j) + SFLX_MU(i+1,j) ) * RCDZ(KS) / GSQRT(KS,i,j,I_UYZ)
-       enddo
-       enddo
-
-!OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-          MOMY_t_SF(i,j) = SFLX_MV(i,j) * RCDZ(KS) / GSQRT(KS,i,j,I_XVZ)
-!          MOMY_t_SF(i,j) = 0.5_RP * ( SFLX_MV(i,j) + SFLX_MV(i,j+1) ) * RCDZ(KS) / GSQRT(KS,i,j,I_XVZ)
-       enddo
-       enddo
-
-       do j = JS, JE
-       do i = IS, IE
-          do iq = 1, QA
-             q(iq) = QTRC(KS,i,j,iq)
-          enddo
-          call THERMODYN_qd( qdry,  q, TRACER_MASS )
-          call THERMODYN_r ( Rtot,  q, TRACER_R,  qdry )
-          call THERMODYN_cp( CPtot, q, TRACER_CP, qdry )
-          RHOT_t_SF(i,j) = SFLX_SH(i,j) * RCDZ(KS) / ( CPtot * GSQRT(KS,i,j,I_XYZ) ) &
-                         * RHOT(KS,i,j) * Rtot / PRES(KS,i,j) ! = POTT/TEMP
-       enddo
-       enddo
-
-       if ( I_QV > 0 ) then
-          do j  = JS, JE
-          do i  = IS, IE
-             work = SFLX_QTRC(i,j,I_QV) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
-             DENS_t_SF(i,j)      = work
-             RHOQ_t_SF(i,j,I_QV) = work
+       if ( .not. ATMOS_HYDROMETEOR_dry ) then
+          !$omp parallel do private(work)
+          do j = JS, JE
+          do i = IS, IE
+             work = SFLX_QTRC(i,j,I_QV,l) / ( FZ(KS,i,j,l) - FZ(KS-1,i,j,l) ) * dt_SF
+             DENS(KS,i,j,l) = DENS(KS,i,j,l) + work
+             RHOE(KS,i,j,l) = RHOE(KS,i,j,l) + work * CVvap * SFC_TEMP(i,j,l)
+             RHOQ(KS,i,j,I_QV,l) = RHOQ(KS,i,j,I_QV,l) + work
           enddo
           enddo
-
-          do j  = JS, JE
-          do i  = IS, IE
-             RHOT_t_SF(i,j) = RHOT_t_SF(i,j) + DENS_t_SF(i,j) * RHOT(KS,i,j) / DENS(KS,i,j)
-          enddo
-          enddo
-
-       else
-          DENS_t_SF(:,:) = 0.0_RP
        end if
 
-    endif
+    end do
 
-    do j = JS, JE
-    do i = IS, IE
-       DENS_t(KS,i,j) = DENS_t(KS,i,j) + DENS_t_SF(i,j)
-       MOMZ_t(KS,i,j) = MOMZ_t(KS,i,j) + MOMZ_t_SF(i,j)
-       MOMX_t(KS,i,j) = MOMX_t(KS,i,j) + MOMX_t_SF(i,j)
-       MOMY_t(KS,i,j) = MOMY_t(KS,i,j) + MOMY_t_SF(i,j)
-       RHOT_t(KS,i,j) = RHOT_t(KS,i,j) + RHOT_t_SF(i,j)
-    enddo
-    enddo
+    call history_output
 
-    if ( I_QV > 0 ) then
-       do j  = JS, JE
-       do i  = IS, IE
-          RHOQ_t(KS,i,j,I_QV) = RHOQ_t(KS,i,j,I_QV) + RHOQ_t_SF(i,j,I_QV)
-       enddo
-       enddo
-    end if
 
-    if ( STATISTICS_checktotal ) then
-       call STAT_total( total, DENS_t_SF(:,:), 'DENS_t_SF' )
-       call STAT_total( total, MOMZ_t_SF(:,:), 'MOMZ_t_SF' )
-       call STAT_total( total, MOMX_t_SF(:,:), 'MOMX_t_SF' )
-       call STAT_total( total, MOMY_t_SF(:,:), 'MOMY_t_SF' )
-       call STAT_total( total, RHOT_t_SF(:,:), 'RHOT_t_SF' )
-
-       if ( I_QV > 0 ) then
-          call STAT_total( total, RHOQ_t_SF(:,:,I_QV), trim(TRACER_NAME(I_QV))//'_t_SF' )
-       end if
-    endif
+    call ATMOS_vars_calc_diagnostics
 
     return
-  end subroutine ATMOS_PHY_SF_driver
+  end subroutine ATMOS_PHY_SF_driver_step
 
-  !-----------------------------------------------------------------------------
-  !> Step 
-  subroutine ATMOS_PHY_SF_step(&
-       DENS_t_SF,  &
-       MOMZ_t_SF,  &
-       MOMX_t_SF,  &
-       MOMY_t_SF,  &
-       RHOT_t_SF,  &
-       RHOQ_t_SF )
+  subroutine history_output
     use scale_const, only: &
-       GRAV   => CONST_GRAV,   &
-       KARMAN => CONST_KARMAN, &
-       CPdry  => CONST_CPdry
-    use mod_grd, only: &
-        RCDZ => GRD_rdgzh, &
-        RFDZ => GRD_rdgz
-    use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_Z1
-    use mod_gm_topography, only: &
-       TOPO_Zsfc
-    use scale_time, only: &
-       dt_SF => TIME_DTSEC_ATMOS_PHY_SF
-    use scale_rm_statistics, only: &
-       STATISTICS_checktotal, &
-       STAT_total
-    use scale_history, only: &
-       HIST_in
-    use scale_atmos_bottom, only: &
-       BOTTOM_estimate => ATMOS_BOTTOM_estimate
+       UNDEF => CONST_UNDEF
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_atmos_hydrostatic, only: &
        barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
-    use scale_atmos_thermodyn, only: &
-       THERMODYN_qd => ATMOS_THERMODYN_qd, &
-       THERMODYN_cp => ATMOS_THERMODYN_cp, &
-       THERMODYN_r  => ATMOS_THERMODYN_r
-    use scale_atmos_hydrometeor, only: &
-       I_QV
-    use scale_atmos_phy_sf, only: &
-       ATMOS_PHY_SF
     use mod_atmos_vars, only: &
-       DENS   => DENS_av, &
-       RHOT   => RHOT_av, &
-       QTRC   => QTRC_av, &
-       POTT,              &
-       TEMP,              &
-       PRES,              &
-       W,                 &
-       U,                 &
-       V
-    use mod_atmos_phy_rd_vars, only: &
-       SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
-       SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
+       TOPO_Zsfc
     use mod_atmos_phy_sf_vars, only: &
        SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
        SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
@@ -477,206 +333,59 @@ contains
        SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
        SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
        SFLX_GH    => ATMOS_PHY_SF_SFLX_GH,    &
-       SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC,  &
        U10        => ATMOS_PHY_SF_U10,        &
        V10        => ATMOS_PHY_SF_V10,        &
        T2         => ATMOS_PHY_SF_T2,         &
-       Q2         => ATMOS_PHY_SF_Q2,         &
-       l_mo       => ATMOS_PHY_SF_l_mo
-    use mod_cpl_admin, only: &
-       CPL_sw
-    implicit none
+       Q2         => ATMOS_PHY_SF_Q2
 
-    real(RP) :: DENS_t_SF (IA,JA)
-    real(RP) :: MOMZ_t_SF (IA,JA)
-    real(RP) :: MOMX_t_SF (IA,JA)
-    real(RP) :: MOMY_t_SF (IA,JA)
-    real(RP) :: RHOT_t_SF (IA,JA)
-    real(RP) :: RHOQ_t_SF (IA,JA)
-    real(RP) :: Uabs10(IA,JA) ! 10m absolute wind [m/s]
-    real(RP) :: MSLP  (IA,JA) ! mean sea-level pressure [Pa]
-    real(RP) :: total ! dummy
-    real(RP) :: GSQRT (IA,JA,KA,7)
+    real(RP) :: MSLP  (IA,JA,ADM_lall) ! mean sea-level pressure [Pa]
 
-    real(RP) :: q(QA)
-    real(RP) :: qdry
-    real(RP) :: Rtot
-    real(RP) :: CPtot
+    real(RP) :: Uabs10(IA,JA,ADM_lall) ! 10m absolute wind [m/s]
 
-    real(RP) :: us, SFLX_PT
+    integer :: i, j, l
 
-    real(RP) :: work
-
-    integer,  parameter :: I_XYZ = 1 ! at (x,y,z)
-    integer,  parameter :: I_XYW = 2 ! at (x,y,w)
-    integer,  parameter :: I_UYW = 3 ! at (u,y,w)
-    integer,  parameter :: I_XVW = 4 ! at (x,v,w)
-    integer,  parameter :: I_UYZ = 5 ! at (u,y,z)
-    integer,  parameter :: I_XVZ = 6 ! at (x,v,z)
-    integer,  parameter :: I_UVZ = 7 ! at (u,v,z)
-
-    integer :: i, j, iq
-    character(len=H_long) :: ifile_rm
-
-    !---------------------------------------------------------------------------
-
-    DENS_t_SF = 0.0_RP
-    MOMZ_t_SF = 0.0_RP
-    MOMX_t_SF = 0.0_RP
-    MOMY_t_SF = 0.0_RP
-    RHOT_t_SF = 0.0_RP
-    RHOQ_t_SF = 0.0_RP
-
-    GSQRT(:,:,:,:) = 1.0_RP  !!! for the time being !!!
-
-       ! update surface density, surface pressure
-       call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
-                             PRES     (:,:,:), & ! [IN]
-                             REAL_CZ  (:,:,:), & ! [IN]
-                             TOPO_Zsfc(:,:),   & ! [IN]
-                             REAL_Z1  (:,:),   & ! [IN]
-                             SFC_DENS (:,:),   & ! [OUT]
-                             SFC_PRES (:,:)    ) ! [OUT]
-
-       if ( .NOT. CPL_sw ) then
-
-          call ATMOS_PHY_SF( TEMP      (KS,:,:),   & ! [IN]
-                             PRES      (KS,:,:),   & ! [IN]
-                             W         (KS,:,:),   & ! [IN]
-                             U         (KS,:,:),   & ! [IN]
-                             V         (KS,:,:),   & ! [IN]
-                             DENS      (KS,:,:),   & ! [IN]
-                             QTRC      (KS,:,:,:), & ! [IN]
-                             REAL_Z1   (:,:),      & ! [IN]
-                             dt_SF,                & ! [IN]
-                             SFC_DENS  (:,:),      & ! [IN]
-                             SFC_PRES  (:,:),      & ! [IN]
-                             SFLX_LW_dn(:,:),      & ! [IN]
-                             SFLX_SW_dn(:,:),      & ! [IN]
-                             SFC_TEMP  (:,:),      & ! [IN]
-                             SFC_albedo(:,:,:),    & ! [IN]
-                             SFC_Z0M   (:,:),      & ! [INOUT]
-                             SFC_Z0H   (:,:),      & ! [INOUT]
-                             SFC_Z0E   (:,:),      & ! [INOUT]
-                             SFLX_MW   (:,:),      & ! [OUT]
-                             SFLX_MU   (:,:),      & ! [OUT]
-                             SFLX_MV   (:,:),      & ! [OUT]
-                             SFLX_SH   (:,:),      & ! [OUT]
-                             SFLX_LH   (:,:),      & ! [OUT]
-                             SFLX_QTRC (:,:,:),    & ! [OUT]
-                             U10       (:,:),      & ! [OUT]
-                             V10       (:,:),      & ! [OUT]
-                             T2        (:,:),      & ! [OUT]
-                             Q2        (:,:)       ) ! [OUT]
-       endif
+    do l = 1, ADM_lall
 
 !OCL XFILL
+       !$omp parallel do
        do j = JS, JE
        do i = IS, IE
-          Uabs10(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
+          Uabs10(i,j,l) = sqrt( U10(i,j,l)**2 + V10(i,j,l)**2 )
        end do
        end do
 
-       ! temtative
-       do j = JS, JE
-       do i = IS, IE
-          us = max( 1.E-6_RP, &
-                    sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) / DENS(KS,i,j) ) ) ! frictional velocity
-          SFLX_PT = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) ) &
-                  * POTT(KS,i,j) / TEMP(KS,i,j)
-          l_mo(i,j) = - us**3 * POTT(KS,i,j) / ( KARMAN * GRAV * SFLX_PT )
-       end do
-       end do
+       call barometric_law_mslp( IA, IS, IE, JA, JS, JE, &
+                                 SFC_PRES(:,:,l), T2(:,:,l), TOPO_Zsfc(:,:,l), & ! [IN]
+                                 MSLP(:,:,l)                                   ) ! [OUT]
+    end do
 
-       call barometric_law_mslp( MSLP(:,:), SFC_PRES(:,:), T2(:,:), TOPO_Zsfc(:,:) )
 
-       call HIST_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3'   )
-       call HIST_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa'      )
-       call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K'       )
-       call HIST_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave,merged)',  '1'       , nohalo=.true. )
-       call HIST_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '1'       , nohalo=.true. )
-       call HIST_in( SFC_Z0M   (:,:),      'SFC_Z0M',    'roughness length (momentum)',       'm'       , nohalo=.true. )
-       call HIST_in( SFC_Z0H   (:,:),      'SFC_Z0H',    'roughness length (heat)',           'm'       , nohalo=.true. )
-       call HIST_in( SFC_Z0E   (:,:),      'SFC_Z0E',    'roughness length (vapor)',          'm'       , nohalo=.true. )
-       call HIST_in( SFLX_MW   (:,:),      'MWFLX',      'w-momentum flux (merged)',          'kg/m/s2' )
-       call HIST_in( SFLX_MU   (:,:),      'MUFLX',      'u-momentum flux (merged)',          'kg/m/s2' )
-       call HIST_in( SFLX_MV   (:,:),      'MVFLX',      'v-momentum flux (merged)',          'kg/m/s2' )
-       call HIST_in( SFLX_SH   (:,:),      'SHFLX',      'sensible heat flux (merged)',       'W/m2'    , nohalo=.true. )
-       call HIST_in( SFLX_LH   (:,:),      'LHFLX',      'latent heat flux (merged)',         'W/m2'    , nohalo=.true. )
-       call HIST_in( SFLX_GH   (:,:),      'GHFLX',      'ground heat flux (merged)',         'W/m2'    , nohalo=.true. )
-       call HIST_in( Uabs10    (:,:),      'Uabs10',     '10m absolute wind',                 'm/s'     , nohalo=.true. )
-       call HIST_in( U10       (:,:),      'U10',        '10m x-wind',                        'm/s'     , nohalo=.true. )
-       call HIST_in( V10       (:,:),      'V10',        '10m y-wind',                        'm/s'     , nohalo=.true. )
-       call HIST_in( T2        (:,:),      'T2 ',        '2m air temperature',                'K'       , nohalo=.true. )
-       call HIST_in( Q2        (:,:),      'Q2 ',        '2m specific humidity',              'kg/kg'   , nohalo=.true. )
-       call HIST_in( MSLP      (:,:),      'MSLP',       'mean sea-level pressure',           'Pa'      )
-
-!OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-          MOMZ_t_SF(i,j) = SFLX_MW(i,j) * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
-       enddo
-       enddo
-
-!OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-          MOMX_t_SF(i,j) = SFLX_MU(i,j) * RCDZ(KS) / GSQRT(KS,i,j,I_UYZ)
-       enddo
-       enddo
-
-!OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-          MOMY_t_SF(i,j) = SFLX_MV(i,j) * RCDZ(KS) / GSQRT(KS,i,j,I_XVZ)
-       enddo
-       enddo
-
-       do j = JS, JE
-       do i = IS, IE
-          do iq = 1, QA
-             q(iq) = QTRC(KS,i,j,iq)
-          enddo
-          call THERMODYN_qd( qdry,  q, TRACER_MASS )
-          call THERMODYN_r ( Rtot,  q, TRACER_R,  qdry )
-          call THERMODYN_cp( CPtot, q, TRACER_CP, qdry )
-          RHOT_t_SF(i,j) = SFLX_SH(i,j) * RCDZ(KS) / ( CPtot * GSQRT(KS,i,j,I_XYZ) ) &
-                         * RHOT(KS,i,j) * Rtot / PRES(KS,i,j) ! = POTT/TEMP
-       enddo
-       enddo
-
-       if ( I_QV > 0 ) then
-          do j  = JS, JE
-          do i  = IS, IE
-             work = SFLX_QTRC(i,j,I_QV) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
-             DENS_t_SF(i,j)      = work
-             RHOQ_t_SF(i,j) = work
-          enddo
-          enddo
-
-          do j  = JS, JE
-          do i  = IS, IE
-             RHOT_t_SF(i,j) = RHOT_t_SF(i,j) + DENS_t_SF(i,j) * RHOT(KS,i,j) / DENS(KS,i,j)
-          enddo
-          enddo
-
-       else
-          DENS_t_SF(:,:) = 0.0_RP
-       end if
-
-    if ( STATISTICS_checktotal ) then
-       call STAT_total( total, DENS_t_SF(:,:), 'DENS_t_SF' )
-       call STAT_total( total, MOMZ_t_SF(:,:), 'MOMZ_t_SF' )
-       call STAT_total( total, MOMX_t_SF(:,:), 'MOMX_t_SF' )
-       call STAT_total( total, MOMY_t_SF(:,:), 'MOMY_t_SF' )
-       call STAT_total( total, RHOT_t_SF(:,:), 'RHOT_t_SF' )
-
-       if ( I_QV > 0 ) then
-          call STAT_total( total, RHOQ_t_SF(:,:), trim(TRACER_NAME(I_QV))//'_t_SF' )
-       end if
-    endif
+    call FILE_HISTORY_in( SFC_DENS  (:,:,:),                     'SFC_DENS',        'surface atmospheric density',         'kg/m3'   )
+    call FILE_HISTORY_in( SFC_PRES  (:,:,:),                     'SFC_PRES',        'surface atmospheric pressure',        'Pa'      )
+    call FILE_HISTORY_in( SFC_TEMP  (:,:,:),                     'SFC_TEMP',        'surface skin temperature (merged)',   'K'       )
+    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_direct ,I_R_IR ,:), 'SFC_ALB_IR_dir' , 'surface albedo (IR, direct, merged)', '1'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_diffuse,I_R_IR ,:), 'SFC_ALB_IR_dif' , 'surface albedo (IR, diffuse,merged)', '1'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_direct ,I_R_NIR,:), 'SFC_ALB_NIR_dir', 'surface albedo (NIR,direct, merged)', '1'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_diffuse,I_R_NIR,:), 'SFC_ALB_NIR_dif', 'surface albedo (NIR,diffuse,merged)', '1'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_direct ,I_R_VIS,:), 'SFC_ALB_VIS_dir', 'surface albedo (VIS,direct, merged)', '1'       , fill_halo= .true. )
+    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_diffuse,I_R_VIS,:), 'SFC_ALB_VIS_dif', 'surface albedo (VIS,diffuse,merged)', '1'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_Z0M   (:,:,:),                     'SFC_Z0M',         'roughness length (momentum)',         'm'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_Z0H   (:,:,:),                     'SFC_Z0H',         'roughness length (heat)',             'm'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_Z0E   (:,:,:),                     'SFC_Z0E',         'roughness length (vapor)',            'm'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFLX_MW   (:,:,:),                     'MWFLX',           'w-momentum flux (merged)',            'kg/m/s2' )
+    call FILE_HISTORY_in( SFLX_MU   (:,:,:),                     'MUFLX',           'u-momentum flux (merged)',            'kg/m/s2' )
+    call FILE_HISTORY_in( SFLX_MV   (:,:,:),                     'MVFLX',           'v-momentum flux (merged)',            'kg/m/s2' )
+    call FILE_HISTORY_in( SFLX_SH   (:,:,:),                     'SHFLX',           'sensible heat flux (merged)',         'W/m2'    , fill_halo=.true. )
+    call FILE_HISTORY_in( SFLX_LH   (:,:,:),                     'LHFLX',           'latent heat flux (merged)',           'W/m2'    , fill_halo=.true. )
+    call FILE_HISTORY_in( SFLX_GH   (:,:,:),                     'GHFLX',           'ground heat flux (merged)',           'W/m2'    , fill_halo=.true. )
+    call FILE_HISTORY_in( Uabs10    (:,:,:),                     'Uabs10',          '10m absolute wind',                   'm/s'     , fill_halo=.true. )
+    call FILE_HISTORY_in( U10       (:,:,:),                     'U10',             '10m x-wind',                          'm/s'     , fill_halo=.true. )
+    call FILE_HISTORY_in( V10       (:,:,:),                     'V10',             '10m y-wind',                          'm/s'     , fill_halo=.true. )
+    call FILE_HISTORY_in( T2        (:,:,:),                     'T2 ',             '2m air temperature',                  'K'       , fill_halo=.true. )
+    call FILE_HISTORY_in( Q2        (:,:,:),                     'Q2 ',             '2m specific humidity',                'kg/kg'   , fill_halo=.true. )
+    call FILE_HISTORY_in( MSLP      (:,:,:),                     'MSLP',            'mean sea-level pressure',             'Pa'      )
 
     return
-  end subroutine ATMOS_PHY_SF_step
+  end subroutine history_output
 
 end module mod_atmos_phy_sf_driver

@@ -13,8 +13,10 @@ module mod_dynamics
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
   use scale_prof
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -45,8 +47,8 @@ contains
   !-----------------------------------------------------------------------------
   !> setup
   subroutine dynamics_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_time, only: &
        TIME_INTEG_TYPE, &
        TIME_SSTEP_MAX
@@ -78,7 +80,7 @@ contains
        if ( mod(TIME_SSTEP_MAX,2) /= 0 ) then
           write(*,*) 'xxx [dynamics_setup] TIME_SSTEP_MAX should be set N*2! STOP.', &
                      TIME_SSTEP_MAX
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        num_of_iteration_lstep    = 2
@@ -92,7 +94,7 @@ contains
             .OR. mod(TIME_SSTEP_MAX,3) /= 0 ) then
           write(*,*) 'xxx [dynamics_setup] TIME_SSTEP_MAX should be set N*2*3! STOP.', &
                      TIME_SSTEP_MAX
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        num_of_iteration_lstep    = 3
@@ -108,7 +110,7 @@ contains
             .OR. mod(TIME_SSTEP_MAX,4) /= 0 ) then
           write(*,*) 'xxx [dynamics_setup] TIME_SSTEP_MAX should be set N*3*4! STOP.', &
                      TIME_SSTEP_MAX
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        num_of_iteration_lstep    = 4
@@ -125,12 +127,12 @@ contains
        if ( TRC_ADV_TYPE == 'DEFAULT' ) then
           write(*,*) 'xxx [dynamics_setup] unsupported advection scheme for TRCADV test! STOP.', &
                      trim(TRC_ADV_TYPE)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
     case default
        write(*,*) 'xxx [dynamics_setup] unsupported integration type! STOP.', trim(TIME_INTEG_TYPE)
-       call PRC_MPIstop
+       call PRC_abort
     endselect
 
     !---< boundary condition module setup >---
@@ -161,14 +163,7 @@ contains
        Rvap  => CONST_Rvap, &
        CVdry => CONST_CVdry
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_kall,    &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kmax,    &
-       ADM_kmin
+       ADM_have_pl
     use mod_comm, only: &
        COMM_data_transfer
     use mod_vmtr, only: &

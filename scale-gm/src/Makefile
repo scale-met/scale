@@ -45,6 +45,7 @@ VPATH = $(BUILD_DIR):           \
         atmos-gm/communication: \
         atmos-gm/dynamics:      \
         atmos-gm/grid:          \
+        atmos-physics/		\
         atmos-physics/forcing:  \
         atmos-physics/share:    \
         common:                 \
@@ -106,20 +107,14 @@ OBJS =	\
 	mod_history_vars.o   \
 	mod_embudget.o       \
 	mod_extdata.o        \
-	mod_saturation.o     \
 	mod_af_heldsuarez.o  \
 	mod_grd_conversion.o \
 	mod_atmos_vars.o     \
-	mod_atmos_dyn_vars.o \
 	mod_atmos_phy_mp_vars.o     \
 	mod_atmos_phy_ae_vars.o     \
-	mod_atmos_phy_ch_vars.o     \
 	mod_atmos_phy_rd_vars.o     \
 	mod_atmos_phy_sf_vars.o     \
-	mod_atmos_phy_tb_vars.o     \
-	mod_atmos_phy_cp_vars.o     \
 	mod_atmos_phy_bl_vars.o     \
-	mod_atmos_phy_mp_driver.o   \
 	mod_mp_vars.o	     \
 	mod_af_trcadv.o      \
 	mod_oprt3d.o         \
@@ -128,10 +123,11 @@ OBJS =	\
 	mod_src_tracer.o     \
 	mod_nudge.o          \
 	mod_gm_topography.o  \
-	mod_atmos_phy_bl_driver.o \
-	mod_atmos_phy_sf_driver.o \
+	mod_atmos_phy_driver.o	\
+	mod_atmos_phy_mp_driver.o   \
 	mod_atmos_phy_rd_driver.o \
-	mod_atmos_phy_ae_driver.o \
+	mod_atmos_phy_sf_driver.o \
+	mod_atmos_phy_bl_driver.o \
 	mod_atmos_surface.o     \
 	mod_dynamics.o       \
 	mod_af_dcmip.o       \

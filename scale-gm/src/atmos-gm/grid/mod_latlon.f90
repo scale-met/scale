@@ -14,7 +14,9 @@ module mod_latlon
   !
   use mpi
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -93,15 +95,7 @@ contains
   !> setup lat/lon value of the ico-grid (without mod_gmtr)
   subroutine LATLON_ico_setup
     use mod_adm, only: &
-       ADM_KNONE,   &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_gmin,    &
-       ADM_gmax,    &
-       ADM_gslf_pl
+       ADM_have_pl
     use scale_vector, only: &
        VECTR_xyz2latlon
     use mod_comm, only: &
@@ -159,17 +153,16 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LATLON_setup( output_dirname )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD, &
        PRC_nprocs,           &
        PRC_IsMaster,         &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        D2R => CONST_D2R
     use mod_adm, only: &
        ADM_prc_me,  &
-       ADM_prc_tab, &
-       ADM_lall
+       ADM_prc_tab
     implicit none
 
     character(len=*), intent(in) :: output_dirname
@@ -214,7 +207,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** LATLONPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist LATLONPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=LATLONPARAM)
 
@@ -334,7 +327,7 @@ contains
     if ( globalsum /= imax*jmax ) then
        write(*,         *) 'counted llgrid does not match!'
        if( IO_L ) write(IO_FID_LOG,*) 'counted llgrid does not match!'
-!       call PRC_MPIstop
+!       call PRC_abort
     endif
 
     allocate( lon_index(nmax_llgrid) )
@@ -438,21 +431,15 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine mkrelmap_ico2ll( what_is_done )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        PI => CONST_PI
     use mod_adm, only: &
        ADM_prc_tab,       &
        ADM_prc_me,        &
        ADM_rgnid_npl_mng, &
-       ADM_rgnid_spl_mng, &
-       ADM_TI,            &
-       ADM_TJ,            &
-       ADM_KNONE,         &
-       ADM_lall,          &
-       ADM_gmax,          &
-       ADM_gmin
+       ADM_rgnid_spl_mng
     use scale_vector, only: &
        VECTR_triangle, &
        VECTR_cross,    &
@@ -661,7 +648,7 @@ contains
                             write(*         ,*) '(area1,area2,area3)=', area1,area2,area3
                             if( IO_L ) write(IO_FID_LOG,*) 'Nan! (i,j,ij,t,l)=', i,j,ij,t,l
                             if( IO_L ) write(IO_FID_LOG,*) '(area1,area2,area3)=', area1,area2,area3
-                            call PRC_MPIstop
+                            call PRC_abort
                          endif
 
                          area_total = area1 + area2 + area3
@@ -777,21 +764,13 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine LL_outputsample
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_io_param, only: &
        IO_REAL8
     use mod_adm, only: &
        ADM_prc_tab,   &
-       ADM_prc_me,    &
-       ADM_lall,      &
-       ADM_lall_pl,   &
-       ADM_gall,      &
-       ADM_gall_pl,   &
-       ADM_gall_1d,   &
-       ADM_gmax,      &
-       ADM_gmin,      &
-       ADM_KNONE
+       ADM_prc_me
     use mod_comm, only: &
        COMM_data_transfer
     use mod_fio, only: &
@@ -857,7 +836,7 @@ contains
 
     else
        if( IO_L ) write(IO_FID_LOG,*) 'Invalid io_mode!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -1003,8 +982,6 @@ contains
 
   !-----------------------------------------------------------------------------
   integer function suf(i,j)
-    use mod_adm, only: &
-       ADM_gall_1d
     implicit none
 
     integer :: i, j

@@ -14,6 +14,7 @@ module mod_cnvvar
   !
   use scale_precision
   use scale_prof
+  use scale_atmos_grid_icoA_index
 
   use mod_runconf, only: &
      PRG_vmax0,  &
@@ -66,12 +67,7 @@ contains
        prg,  prg_pl, &
        diag, diag_pl )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_kall
+       ADM_have_pl
     use mod_vmtr, only : &
        VMTR_getIJ_RGSGAM2, &
        VMTR_getIJ_C2Wfact
@@ -218,12 +214,7 @@ contains
        prg,  prg_pl, &
        diag, diag_pl )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_kall
+       ADM_have_pl
     use mod_vmtr, only: &
        VMTR_getIJ_GSGAM2, &
        VMTR_getIJ_C2Wfact
@@ -374,14 +365,7 @@ contains
        rhogw,   rhogw_pl,  &
        rhogkin, rhogkin_pl )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_kall,    &
-       ADM_kmax,    &
-       ADM_kmin
+       ADM_have_pl
     use mod_vmtr, only: &
        VMTR_getIJ_C2Wfact, &
        VMTR_getIJ_W2Cfact
@@ -499,13 +483,7 @@ contains
        vy,   vy_pl,   &
        vz,   vz_pl    )
     use mod_adm, only: &
-       ADM_KNONE,   &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall
+       ADM_have_pl
     use mod_grd, only: &
        GRD_LAT, &
        GRD_s,   &
@@ -593,13 +571,7 @@ contains
        vz, vz_pl, &
        withcos    )
     use mod_adm, only: &
-       ADM_KNONE,   &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall
+       ADM_have_pl
     use mod_grd, only: &
        GRD_LAT, &
        GRD_s,   &

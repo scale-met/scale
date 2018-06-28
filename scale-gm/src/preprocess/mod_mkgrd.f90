@@ -13,8 +13,9 @@ module mod_mkgrd
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
 
   use mod_grd, only: &
      GRD_XDIR,  &
@@ -80,19 +81,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine MKGRD_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF  => CONST_UNDEF
-    use mod_adm, only: &
-       ADM_nxyz,    &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_KNONE,   &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_TI,      &
-       ADM_TJ
     implicit none
 
     namelist / PARAM_MKGRD / &
@@ -124,11 +116,10 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** PARAM_MKGRD is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKGRD. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKGRD)
 
-#ifndef FIXEDINDEX
     allocate( GRD_x    (ADM_gall   ,ADM_KNONE,ADM_lall   ,              ADM_nxyz) )
     allocate( GRD_x_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              ADM_nxyz) )
     allocate( GRD_xt   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,ADM_nxyz) )
@@ -138,7 +129,7 @@ contains
     allocate( GRD_s_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              2) )
     allocate( GRD_st   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,2) )
     allocate( GRD_st_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              2) )
-#endif
+
     GRD_x    (:,:,:,:)   = UNDEF
     GRD_x_pl (:,:,:,:)   = UNDEF
     GRD_xt   (:,:,:,:,:) = UNDEF
@@ -157,16 +148,7 @@ contains
   subroutine MKGRD_standard
     use mod_adm, only: &
        ADM_prc_tab, &
-       ADM_prc_me,  &
-       ADM_rlevel,  &
-       ADM_glevel,  &
-       ADM_KNONE,   &
-       ADM_lall,    &
-       ADM_gmax,    &
-       ADM_gmin,    &
-       ADM_gslf_pl, &
-       ADM_NPL,     &
-       ADM_SPL
+       ADM_prc_me
     use scale_const, only: &
        PI => CONST_PI
     use mod_comm, only: &
@@ -336,16 +318,7 @@ contains
        VECTR_abs,   &
        VECTR_angle
     use mod_adm, only: &
-       ADM_nxyz,     &
-       ADM_KNONE,    &
-       ADM_have_sgp, &
-       ADM_glevel,   &
-       ADM_lall,     &
-       ADM_lall_pl,  &
-       ADM_gall,     &
-       ADM_gall_pl,  &
-       ADM_gmin,     &
-       ADM_gmax
+       ADM_have_sgp
     use mod_comm, only: &
        COMM_data_transfer
     use mod_gm_statistics, only: &
@@ -551,12 +524,7 @@ contains
        I_Yaxis,        &
        I_Zaxis
     use mod_adm, only: &
-       ADM_KNONE,   &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl
+       ADM_have_pl
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
@@ -643,12 +611,7 @@ contains
        VECTR_xyz2latlon, &
        VECTR_latlon2xyz
     use mod_adm, only: &
-       ADM_KNONE,   &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl
+       ADM_have_pl
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
@@ -728,12 +691,7 @@ contains
   !> Apply shrinkng to grid system
   subroutine MKGRD_shrink
     use mod_adm, only: &
-       ADM_KNONE,   &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl
+       ADM_have_pl
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
@@ -810,12 +768,7 @@ contains
        I_Yaxis,        &
        I_Zaxis
     use mod_adm, only: &
-       ADM_KNONE,   &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl
+       ADM_have_pl
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
@@ -912,18 +865,7 @@ contains
        VECTR_dot,   &
        VECTR_abs
     use mod_adm, only: &
-       ADM_nxyz,     &
-       ADM_TI,       &
-       ADM_TJ,       &
-       ADM_KNONE,    &
-       ADM_glevel,   &
-       ADM_have_sgp, &
-       ADM_lall,     &
-       ADM_lall_pl,  &
-       ADM_gall,     &
-       ADM_gall_pl,  &
-       ADM_gmax,     &
-       ADM_gmin
+       ADM_have_sgp
     use mod_gmtr, only: &
        GMTR_p_AREA, &
        GMTR_p,      &
@@ -1222,20 +1164,8 @@ contains
   !> Make center grid -> vertex grid
   subroutine MKGRD_center2vertex
     use mod_adm, only: &
-       ADM_nxyz,     &
-       ADM_TI,       &
-       ADM_TJ,       &
-       ADM_KNONE,    &
        ADM_have_pl,  &
-       ADM_have_sgp, &
-       ADM_lall,     &
-       ADM_lall_pl,  &
-       ADM_gall,     &
-       ADM_gmin,     &
-       ADM_gmax,     &
-       ADM_gslf_pl,  &
-       ADM_gmin_pl,  &
-       ADM_gmax_pl
+       ADM_have_sgp
     use scale_vector, only: &
        VECTR_cross, &
        VECTR_dot,   &
@@ -1355,19 +1285,8 @@ contains
     use scale_const, only: &
        EPS => CONST_EPS
     use mod_adm, only : &
-       ADM_nxyz,     &
-       ADM_TI,       &
-       ADM_TJ,       &
-       ADM_KNONE,    &
        ADM_have_pl,  &
-       ADM_have_sgp, &
-       ADM_vlink,    &
-       ADM_lall,     &
-       ADM_lall_pl,  &
-       ADM_gall,     &
-       ADM_gmin,     &
-       ADM_gmax,     &
-       ADM_gslf_pl
+       ADM_have_sgp
     use scale_vector, only: &
        VECTR_cross, &
        VECTR_dot,   &
@@ -1473,8 +1392,6 @@ contains
   !> suffix calculation
   !> @return suf
   function suf(i,j) result(suffix)
-    use mod_adm, only: &
-       ADM_gall_1d
     implicit none
 
     integer :: suffix

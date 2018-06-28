@@ -15,9 +15,9 @@ program mkrawgrid
   use dc_log, only: &
      LogInit
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_LOCAL_MPIstart, &
      PRC_MPIfinish
   use scale_const, only: &

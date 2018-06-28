@@ -14,15 +14,9 @@ program mkmnginfo
   !
   use mpi
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
-  use mod_adm, only: &
-     ADM_RID, &
-     ADM_DIR, &
-     ADM_SW,  &
-     ADM_NW,  &
-     ADM_NE,  &
-     ADM_SE
+  use scale_atmos_grid_icoA_index
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------

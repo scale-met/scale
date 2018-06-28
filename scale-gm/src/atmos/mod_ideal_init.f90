@@ -13,8 +13,9 @@ module mod_ideal_init
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
 
   use scale_const, only: &
      pi    => CONST_PI,     &
@@ -25,15 +26,6 @@ module mod_ideal_init
      Rv    => CONST_Rvap,   &
      Cp    => CONST_CPdry,  &
      PRE00 => CONST_PRE00
-  use mod_adm, only: &
-     ADM_KNONE, &
-     ADM_lall,    &
-     ADM_lall_pl, &
-     ADM_gall,    &
-     ADM_gall_pl, &
-     ADM_kall,    &
-     ADM_kmin,    &
-     ADM_kmax
   use mod_runconf, only: &
      TRC_vmax
   use dcmip_initial_conditions_test_1_2_3, only: &
@@ -126,8 +118,8 @@ contains
   !-----------------------------------------------------------------------------
   subroutine dycore_input( &
        DIAG_var )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_runconf, only: &
        I_QV,    &
        NQW_MAX
@@ -166,7 +158,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** DYCORETESTPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist DYCORETESTPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=DYCORETESTPARAM)
 
@@ -236,7 +228,7 @@ contains
     case default
 
        write(*,*) 'xxx [dycore_input] Invalid init_type. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
 
     end select
 
@@ -467,8 +459,8 @@ contains
        eps_geo2prs,  &
        nicamcore,    &
        DIAG_var      )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_grd, only: &
        GRD_LAT, &
        GRD_LON, &
@@ -570,7 +562,7 @@ contains
        if ( itr > itrmax ) then
           write(*         ,*) 'ETA ITERATION ERROR: NOT CONVERGED', n, l
           if( IO_L ) write(IO_FID_LOG,*) 'ETA ITERATION ERROR: NOT CONVERGED', n, l
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        if (psgm) then
@@ -615,8 +607,8 @@ contains
        test_case,   &
        chemtracer,  &
        DIAG_var     )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_grd, only: &
        GRD_LAT,  &
        GRD_LON,  &
@@ -724,7 +716,7 @@ contains
     case default
        if( IO_L ) write(IO_FID_LOG,*) "xxx Invalid test_case: '"//trim(test_case)//"' specified."
        if( IO_L ) write(IO_FID_LOG,*) 'STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     end select
     if( IO_L ) write(IO_FID_LOG,*) "Chemical Tracer: ", chemtracer
     if( IO_L ) write(IO_FID_LOG,*) "### DO NOT INPUT ANY TOPOGRAPHY ###"
@@ -733,7 +725,7 @@ contains
        if ( NQW_MAX < 3 ) then
           write(*         ,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
           if( IO_L ) write(IO_FID_LOG,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
-          call PRC_MPIstop
+          call PRC_abort
        endif
     endif
 
@@ -803,7 +795,7 @@ contains
           if ( NCHEM_MAX /= 2 ) then
              write(*         ,*) 'NCHEM_MAX is not enough! requires 2.', NCHEM_MAX
              if( IO_L ) write(IO_FID_LOG,*) 'NCHEM_MAX is not enough! requires 2.', NCHEM_MAX
-             call PRC_MPIstop
+             call PRC_abort
           endif
 
           call initial_value_Terminator( DP_lat*r2d, DP_lon*r2d, cl, cl2 )
@@ -835,8 +827,8 @@ contains
        test_case,   &
        prs_rebuild, &
        DIAG_var     )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_grd, only: &
        GRD_LAT, &
        GRD_LON, &
@@ -914,14 +906,14 @@ contains
     case default
        if( IO_L ) write(IO_FID_LOG,*) "xxx Invalid test_case: '"//trim(test_case)//"' specified."
        if( IO_L ) write(IO_FID_LOG,*) 'STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     end select
     if( IO_L ) write(IO_FID_LOG,*) "### DO NOT INPUT ANY TOPOGRAPHY ###"
 
     if ( NQW_MAX < 3 ) then
        write(*         ,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
        if( IO_L ) write(IO_FID_LOG,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     call supercell_init
@@ -991,8 +983,8 @@ contains
        lall,        &
        prs_rebuild, &
        DIAG_var     )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_grd, only: &
        GRD_LAT, &
        GRD_LON, &
@@ -1059,7 +1051,7 @@ contains
     if ( NQW_MAX < 3 ) then
        write(*         ,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
        if( IO_L ) write(IO_FID_LOG,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     do l = 1, lall
@@ -1123,8 +1115,8 @@ contains
        lall,       &
        test_case,  &
        DIAG_var    )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_grd, only: &
        GRD_LAT, &
        GRD_LON, &
@@ -1426,7 +1418,7 @@ contains
     case default
        write(*         ,*) "Unknown test_case: ", trim(test_case)," specified. STOP"
        if( IO_L ) write(IO_FID_LOG,*) "Unknown test_case: ", trim(test_case)," specified. STOP"
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     return
@@ -1439,8 +1431,8 @@ contains
        lall,      &
        test_case, &
        DIAG_var   )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_grd, only: &
        GRD_LAT, &
        GRD_LON, &
@@ -1699,7 +1691,7 @@ contains
     case default
        write(*         ,*) "Unknown test_case: ", trim(test_case)," specified. STOP"
        if( IO_L ) write(IO_FID_LOG,*) "Unknown test_case: ", trim(test_case)," specified. STOP"
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     return
@@ -1910,8 +1902,8 @@ contains
        kdim,    &
        lall,    &
        DIAG_var )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        Pstd   => CONST_Pstd,   &
        EPSvap => CONST_EPSvap
@@ -1987,7 +1979,7 @@ contains
     if ( NQW_MAX < 3 ) then
        write(*         ,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
        if( IO_L ) write(IO_FID_LOG,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     SFC_THETA = 300.0_RP
@@ -2001,7 +1993,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_WARMBUBBLE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WARMBUBBLE)
 
@@ -2513,8 +2505,6 @@ contains
        lall,    &
        vmax,    &
        DIAG_var )
-    use mod_adm, only: &
-       K0 => ADM_KNONE
     use scale_vector, only: &
        VECTR_xyz2latlon
     use mod_grd, only: &
@@ -2536,8 +2526,12 @@ contains
     real(RP) :: ptb_wix(kdim), ptb_wiy(kdim)
     real(RP) :: ptb_vx(kdim), ptb_vy(kdim), ptb_vz(kdim)
 
+    integer :: K0
+
     cla = clat * d2r
     clo = clon * d2r
+
+    K0 = ADM_KNONE
 
     do l = 1, lall
     do n = 1, ijdim
@@ -2750,8 +2744,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Bubble
   subroutine BUBBLE_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        CONST_UNDEF8, &
        CONST_D2R
@@ -2798,7 +2792,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_BUBBLE. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_BUBBLE)
 
@@ -2893,8 +2887,8 @@ contains
        pott_sfc, &
        qv_sfc,   &
        qc_sfc    )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        CONST_EPS,                &
        CVdry   => CONST_CVdry,   &
@@ -3022,7 +3016,7 @@ contains
        if ( .NOT. converged ) then
           write(*,*) 'xxx [buildrho 1D sfc] iteration not converged!', &
                      dens(KS),ite,dens_s,dhyd,dgrd
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
     endif
@@ -3055,8 +3049,8 @@ contains
        pott, &
        qv,   &
        qc    )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        CONST_EPS,                &
        CVdry   => CONST_CVdry,   &
@@ -3152,7 +3146,7 @@ contains
        if ( .NOT. converged ) then
           write(*,*) 'xxx [buildrho 1D atmos] iteration not converged!', &
                      k,dens(k),ite,dens_s,dhyd,dgrd
-          call PRC_MPIstop
+          call PRC_abort
        endif
     enddo
 

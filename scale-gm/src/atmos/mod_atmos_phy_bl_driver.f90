@@ -8,16 +8,16 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module mod_atmos_phy_bl_driver
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_icoA_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -28,9 +28,7 @@ module mod_atmos_phy_bl_driver
   !
   public :: ATMOS_PHY_BL_driver_tracer_setup
   public :: ATMOS_PHY_BL_driver_setup
-  public :: ATMOS_PHY_BL_driver_resume
-  public :: ATMOS_PHY_BL_driver
-  public :: ATMOS_PHY_BL_step
+  public :: ATMOS_PHY_BL_driver_step
 
   !-----------------------------------------------------------------------------
   !
@@ -49,7 +47,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Config
   subroutine ATMOS_PHY_BL_driver_tracer_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_tracer, only: &
        TRACER_regist
@@ -66,8 +64,8 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Tracer Setup] / Categ[ATMOS PHY_BL] / Origin[SCALE-GM]'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_BL_driver_tracer_setup",*) 'Setup'
 
     if ( ATMOS_sw_phy_bl ) then
        select case ( ATMOS_PHY_BL_TYPE )
@@ -78,9 +76,9 @@ contains
                ATMOS_PHY_BL_MYNN_NAME,    &
                ATMOS_PHY_BL_MYNN_DESC,    &
                ATMOS_PHY_BL_MYNN_UNITS    )
-
        case default
-          if ( IO_L ) write(IO_FID_LOG,*) '+++ ATMOS_PHY_BL_TYPE is invalid: ', trim(ATMOS_PHY_BL_TYPE)
+          LOG_ERROR("ATMOS_PHY_BL_driver_tracer_setup",*) 'ATMOS_PHY_BL_TYPE is invalid: ', trim(ATMOS_PHY_BL_TYPE)
+          call PRC_abort
        end select
     end if
 
@@ -90,12 +88,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_BL_driver_setup
-    use scale_grid, only: &
-       CDZ => GRID_CDZ, &
-       CDX => GRID_CDX, &
-       CDY => GRID_CDY
-    use scale_grid_real, only: &
-       CZ  => REAL_CZ
+    use mod_atmos_vars, only: &
+         CZ
     use scale_atmos_phy_bl_mynn, only: &
        ATMOS_PHY_BL_MYNN_setup
     use mod_atmos_admin, only: &
@@ -103,260 +97,72 @@ contains
        ATMOS_sw_phy_bl
     implicit none
 
-    integer :: i, j
+    real(RP) :: CZ2(KA,IA,JA)
+
+    integer :: k, i, j, l
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_BL] / Origin[SCALE-RM]'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_BL_driver_setup",*) 'Setup'
 
     if ( ATMOS_sw_phy_bl ) then
        select case ( ATMOS_PHY_BL_TYPE )
        case ( 'MYNN' )
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             CZ2(k,i,j) = minval( CZ(k,i,j,:) )
+          end do
+          end do
+          end do
           call ATMOS_PHY_BL_MYNN_setup( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               CZ ) ! (in)
+               CZ2(:,:,:) ) ! (in)
        end select
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
+       LOG_INFO("ATMOS_PHY_BL_driver_setup",*) 'this component is never called.'
     endif
 
     return
   end subroutine ATMOS_PHY_BL_driver_setup
 
   !-----------------------------------------------------------------------------
-  !> Resume
-  subroutine ATMOS_PHY_BL_driver_resume
-    use mod_atmos_admin, only: &
-       ATMOS_PHY_BL_TYPE, &
-       ATMOS_sw_phy_bl
-    implicit none
-
-    if ( ATMOS_sw_phy_bl ) then
-
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM_Turbulence', 1)
-       call ATMOS_PHY_BL_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM_Turbulence', 1)
-
-    end if
-
-    return
-  end subroutine ATMOS_PHY_BL_driver_resume
-
-  !-----------------------------------------------------------------------------
-  !> Driver
-  subroutine ATMOS_PHY_BL_driver( update_flag )
-    use scale_rm_statistics, only: &
-       STATISTICS_checktotal, &
-       STAT_total
-    use scale_history, only: &
-       HIST_in
+  !> time step
+  subroutine ATMOS_PHY_BL_driver_step
+    use scale_const, only: &
+       PRE00 => CONST_PRE00
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     use scale_time, only: &
        dt_BL => TIME_DTSEC_ATMOS_PHY_BL
     use scale_atmos_phy_bl_mynn, only: &
        ATMOS_PHY_BL_MYNN_tendency, &
        ATMOS_PHY_BL_MYNN_tendency_tracer
-    use scale_atmos_hydrometeor, only: &
-       I_QV
-    use scale_grid_real, only: &
-       CZ => REAL_CZ, &
-       FZ => REAL_FZ
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
     use mod_atmos_vars, only: &
-       DENS => DENS_av, &
-       QTRC => QTRC_av, &
+       ATMOS_vars_calc_diagnostics, &
+       DENS, &
+       RHOU, &
+       RHOV, &
+       RHOE, &
+       RHOQ, &
+       QTRC, &
        U,     &
        V,     &
+       TEMP,  &
        POTT,  &
        PRES,  &
        EXNER, &
        QDRY,  &
-       QV,    &
-       QC,    & 
-       QI,    &
-       RHOU_t => RHOU_tp, &
-       RHOV_t => RHOV_tp, &
-       RHOT_t => RHOT_tp, &
-       RHOQ_t => RHOQ_tp, &
-       ATMOS_vars_get_diagnostic, &
-       MOMX,  &
-       MOMY,  &
-       MOMZ
-    use mod_atmos_phy_bl_vars, only: &
-       I_TKE, &
-       RHOU_t_BL => ATMOS_PHY_BL_RHOU_t, &
-       RHOV_t_BL => ATMOS_PHY_BL_RHOV_t, &
-       RHOT_t_BL => ATMOS_PHY_BL_RHOT_t, &
-       RHOQ_t_BL => ATMOS_PHY_BL_RHOQ_t
-    use mod_atmos_phy_sf_vars, only: &
-       SFLX_MU => ATMOS_PHY_SF_SFLX_MU, &
-       SFLX_MV => ATMOS_PHY_SF_SFLX_MV, &
-       SFLX_SH => ATMOS_PHY_SF_SFLX_SH, &
-       SFLX_Q  => ATMOS_PHY_SF_SFLX_QTRC, &
-       l_mo    => ATMOS_PHY_SF_l_mo
-    implicit none
-
-    logical, intent(in) :: update_flag
-
-    real(RP) :: Nu(KA,IA,JA) !> eddy viscosity
-    real(RP) :: Kh(KA,IA,JA) !> eddy diffution
-    real(RP) :: QW(KA,IA,JA) !> total water
-
-    real(RP), pointer :: N2  (:,:,:) !> static stability
-    real(RP), pointer :: POTL(:,:,:) !> liquid water potential temperature
-    real(RP), pointer :: POTV(:,:,:) !> virtual potential temperature
-
-    real(RP) :: total ! dummy
-
-    integer  :: k, i, j, iq, orec
-    !---------------------------------------------------------------------------
-
-    if ( update_flag ) then
-
-       RHOQ_t_BL = 0.0_RP
-
-       write(6,*)atmos_phy_bl_type
-
-       select case ( ATMOS_PHY_BL_TYPE )
-       case ( 'MYNN' )
-          call ATMOS_vars_get_diagnostic( "N2",   N2   )
-          call ATMOS_vars_get_diagnostic( "POTL", POTL )
-          call ATMOS_vars_get_diagnostic( "POTV", POTV )
-          do j = JSB, JEB
-          do i = ISB, IEB
-          do k = KS, KE
-             QW(k,i,j) = QV(k,i,j) + QC(k,i,j) + QI(k,i,j)
-          end do
-          end do
-          end do
-
-          call ATMOS_PHY_BL_MYNN_tendency( &
-               KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               DENS(:,:,:), U(:,:,:), V(:,:,:),                      & ! (in)
-               POTT(:,:,:), QTRC(:,:,:,I_TKE),                       & ! (in)
-               PRES(:,:,:), EXNER(:,:,:), N2(:,:,:),                 & ! (in)
-               QDRY(:,:,:), QV(:,:,:), QW(:,:,:),                    & ! (in)
-               POTL(:,:,:), POTV(:,:,:),                             & ! (in)
-               SFLX_MU(:,:), SFLX_MV(:,:), SFLX_SH(:,:), l_mo(:,:),  & ! (in)
-               CZ(:,:,:), FZ(:,:,:), dt_BL,                          & ! (in)
-               RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:),                   & ! (out)
-               RHOT_t_BL(:,:,:), RHOQ_t_BL(:,:,:,I_TKE),             & ! (out)
-               Nu(:,:,:), Kh(:,:,:)                                  ) ! (out)
-
-          do iq = 1, QA
-             if ( ( .not. TRACER_ADVC(iq) ) .or. iq==I_TKE ) cycle
-             call ATMOS_PHY_BL_MYNN_tendency_tracer( &
-                  KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                  DENS(:,:,:), QTRC(:,:,:,iq), & ! (in)
-                  SFLX_Q(:,:,iq), Kh(:,:,:),   & ! (in)
-                  CZ(:,:,:), FZ(:,:,:), dt_BL, & ! (in)
-                  RHOQ_t_BL(:,:,:,iq)          ) ! (out)
-          end do
-       end select
-
-       call HIST_in( Nu(:,:,:),        'Nu_BL',     'eddy viscosity',     'm2/s',      nohalo=.true. )
-       call HIST_in( Kh(:,:,:),        'Ku_BL',     'eddy diffusion',     'm2/s',      nohalo=.true. )
-
-       call HIST_in( RHOU_t_BL(:,:,:), 'RHOU_t_BL', 'MOMX tendency (BL)', 'kg/m2/s2',  nohalo=.true. )
-       call HIST_in( RHOV_t_BL(:,:,:), 'RHOV_t_BL', 'MOMY tendency (BL)', 'kg/m2/s2',  nohalo=.true. )
-       call HIST_in( RHOT_t_BL(:,:,:), 'RHOT_t_BL', 'RHOT tendency (BL)', 'K.kg/m3/s', nohalo=.true. )
-
-       do iq = 1, QA
-          if ( .not. TRACER_ADVC(iq) ) cycle
-          call HIST_in( RHOQ_t_BL(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_BL',                      &
-                        'RHO*'//trim(TRACER_NAME(iq))//' tendency (BL)', 'kg/m3/s', nohalo=.true. )
-       enddo
-
-       if ( STATISTICS_checktotal ) then
-          call STAT_total( total, RHOU_t_BL(:,:,:), 'RHOU_t_BL' )
-          call STAT_total( total, RHOV_t_BL(:,:,:), 'RHOV_t_BL' )
-          call STAT_total( total, RHOT_t_BL(:,:,:), 'RHOT_t_BL' )
-          call STAT_total( total, Nu(:,:,:), 'Nu_BL' )
-          call STAT_total( total, Kh(:,:,:), 'Kh_BL' )
-
-          do iq = 1, QA
-             if ( .not. TRACER_ADVC(iq) ) cycle
-             call STAT_total( total, RHOQ_t_BL(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_BL' )
-          enddo
-       endif
-
-    endif
-
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JS,JE,IS,IE,KS,KE,RHOU_t,RHOU_t_BL,RHOV_t,RHOV_t_BL,RHOT_t,RHOT_t_BL)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       RHOU_t(k,i,j) = RHOU_t(k,i,j) + RHOU_t_BL(k,i,j)
-       RHOV_t(k,i,j) = RHOV_t(k,i,j) + RHOV_t_BL(k,i,j)
-       RHOT_t(k,i,j) = RHOT_t(k,i,j) + RHOT_t_BL(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do iq = 1,  QA
-       if ( .not. TRACER_ADVC(iq) ) cycle
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_BL(k,i,j,iq)
-       enddo
-       enddo
-       enddo
-    enddo
-
-    return
-  end subroutine ATMOS_PHY_BL_driver
-
-  !-----------------------------------------------------------------------------
-  !> Driver
-  subroutine ATMOS_PHY_BL_step( &
-       rhou_t_BL,   &
-       rhov_t_BL,   &
-       rhot_t_BL,   &
-       rhoq_t_BL  )
-    use scale_rm_statistics, only: &
-       STATISTICS_checktotal, &
-       STAT_total
-    use scale_history, only: &
-       HIST_in
-    use scale_time, only: &
-       dt_BL => TIME_DTSEC_ATMOS_PHY_BL
-    use scale_atmos_phy_bl_mynn, only: &
-       ATMOS_PHY_BL_MYNN_tendency, &
-       ATMOS_PHY_BL_MYNN_tendency_tracer
-    use scale_atmos_hydrometeor, only: &
-       I_QV,  &
-       I_QC,  &
-       I_QI
-    use scale_grid_real, only: &
-       CZ => REAL_CZ, &
-       FZ => REAL_FZ
-    use mod_atmos_admin, only: &
-       ATMOS_PHY_BL_TYPE, &
-       ATMOS_sw_phy_bl
-    use mod_atmos_vars, only: &
-       DENS => DENS_av, &
-       QTRC => QTRC_av, &
+       Rtot,  &
+       CVtot, &
+       CPtot, &
        QV,    &
        QC,    &
        QI,    &
-       POTT,  &
-       PRES,  &
-       EXNER, &
-       QDRY,  &
-       ATMOS_vars_get_diagnostic, &
-       MOMX,  &
-       MOMY,  &
-       MOMZ,  &
-       rhot,  &
-       ATMOS_vars_calc_diagnostics
-    use scale_atmos_diagnostic, only: &
-       ATMOS_diagnostic_get_therm, &
-       ATMOS_DIAGNOSTIC_get_vel
+       ATMOS_vars_get_diagnostic
     use mod_atmos_phy_bl_vars, only: &
        I_TKE
     use mod_atmos_phy_sf_vars, only: &
@@ -365,116 +171,92 @@ contains
        SFLX_SH => ATMOS_PHY_SF_SFLX_SH, &
        SFLX_Q  => ATMOS_PHY_SF_SFLX_QTRC, &
        l_mo    => ATMOS_PHY_SF_l_mo
-
+    use mod_atmos_vars, only: &
+       CZ, &
+       FZ
     implicit none
 
-    real(RP), intent(out) :: rhou_t_bl(KA,IA,JA)
-    real(RP), intent(out) :: rhov_t_bl(KA,IA,JA)
-    real(RP), intent(out) :: rhot_t_bl(KA,IA,JA)
-    real(RP), intent(out) :: rhoq_t_bl(KA,IA,JA,QA)
-    real(RP) :: Nu (KA,IA,JA) !> eddy viscosity
-    real(RP) :: Kh (KA,IA,JA) !> eddy diffution
-    real(RP) :: QW (KA,IA,JA) !> total water
-    real(RP) :: U  (KA,IA,JA)
-    real(RP) :: V  (KA,IA,JA)
-    real(RP) :: W  (KA,IA,JA)
+    real(RP) :: Nu(KA,IA,JA,ADM_lall) !> eddy viscosity
+    real(RP) :: Kh(KA,IA,JA,ADM_lall) !> eddy diffution
+    real(RP) :: QW(KA,IA,JA)          !> total water
 
-    real(RP), pointer :: N2  (:,:,:) !> static stability
-    real(RP), pointer :: POTL(:,:,:) !> liquid water potential temperature
-    real(RP), pointer :: POTV(:,:,:) !> virtual potential temperature
+    real(RP) :: N2  (KA,IA,JA,ADM_lall) !> static stability
+    real(RP) :: POTL(KA,IA,JA,ADM_lall) !> liquid water potential temperature
+    real(RP) :: POTV(KA,IA,JA,ADM_lall) !> virtual potential temperature
 
-    real(RP) :: total ! dummy
+    real(RP) :: RHOU_t(KA,IA,JA)
+    real(RP) :: RHOV_t(KA,IA,JA)
+    real(RP) :: RHOT_t(KA,IA,JA)
+    real(RP) :: RHOQ_t(KA,IA,JA)
 
-    integer  :: k, i, j, iq
+    integer  :: k, i, j, iq, l
     !---------------------------------------------------------------------------
 
-    rhou_t_BL = 0.0_RP
-    rhov_t_BL = 0.0_RP
-    rhot_t_BL = 0.0_RP
-    rhoq_t_BL = 0.0_RP
+    select case ( ATMOS_PHY_BL_TYPE )
+    case ( 'MYNN' )
+       call ATMOS_vars_get_diagnostic( "N2",   N2   )
+       call ATMOS_vars_get_diagnostic( "POTL", POTL )
+       call ATMOS_vars_get_diagnostic( "POTV", POTV )
+       do l = 1, ADM_lall
 
-       select case ( ATMOS_PHY_BL_TYPE )
-       case ( 'MYNN' )
-
-          call ATMOS_DIAGNOSTIC_get_vel( &
-               KA, KS, KE, &
-               IA, IS, IE, &
-               JA, JS, JE, &
-               DENS, &
-               MOMZ, &
-               MOMX, &
-               MOMY, &
-               W,    &
-               U,    &
-               V )
-
-          QV(:,:,:) = QTRC(:,:,:,I_QV)
-          QC(:,:,:) = QTRC(:,:,:,I_QC)
-          QI(:,:,:) = QTRC(:,:,:,I_QI)
-
-          call ATMOS_vars_get_diagnostic( "N2",   N2   )
-          call ATMOS_vars_get_diagnostic( "POTL", POTL )
-          call ATMOS_vars_get_diagnostic( "POTV", POTV )
-          QW(:,:,:) = 0.0_RP
-          do j = JSB, JEB
-          do i = ISB, IEB
+          do j = JS, JE
+          do i = IS, IE
           do k = KS, KE
-             QW(k,i,j) = QV(k,i,j) + QC(k,i,j) + QI(k,i,j)
+             QW(k,i,j) = QV(k,i,j,l) + QC(k,i,j,l) + QI(k,i,j,l)
           end do
           end do
           end do
-
           call ATMOS_PHY_BL_MYNN_tendency( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               DENS(:,:,:), U(:,:,:), V(:,:,:),                      & ! (in)
-               POTT(:,:,:), QTRC(:,:,:,I_TKE),                       & ! (in)
-               PRES(:,:,:), EXNER(:,:,:), N2(:,:,:),                 & ! (in)
-               QDRY(:,:,:), QV(:,:,:), QW(:,:,:),                    & ! (in)
-               POTL(:,:,:), POTV(:,:,:),                             & ! (in)
-               SFLX_MU(:,:), SFLX_MV(:,:), SFLX_SH(:,:), l_mo(:,:),  & ! (in)
-               CZ(:,:,:), FZ(:,:,:), dt_BL,                          & ! (in)
-               RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:),                   & ! (out)
-               RHOT_t_BL(:,:,:), RHOQ_t_BL(:,:,:,I_TKE),             & ! (out)
-               Nu(:,:,:), Kh(:,:,:)                                  ) ! (out)
+               DENS(:,:,:,l), U(:,:,:,l), V(:,:,:,l),          & ! (in)
+               POTT(:,:,:,l), QTRC(:,:,:,I_TKE,l),             & ! (in)
+               PRES(:,:,:,l), EXNER(:,:,:,l), N2(:,:,:,l),     & ! (in)
+               QDRY(:,:,:,l), QV(:,:,:,l), QW(:,:,:),          & ! (in)
+               POTL(:,:,:,l), POTV(:,:,:,l),                   & ! (in)
+               SFLX_MU(:,:,l), SFLX_MV(:,:,l), SFLX_SH(:,:,l), & ! (in)
+               l_mo(:,:,l),                                    & ! (in)
+               CZ(:,:,:,l), FZ(:,:,:,l), dt_BL,                & ! (in)
+               RHOU_t(:,:,:), RHOV_t(:,:,:),                   & ! (out)
+               RHOT_t(:,:,:), RHOQ_t(:,:,:),                   & ! (out)
+               Nu(:,:,:,l), Kh(:,:,:,l)                        ) ! (out)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             RHOU(k,i,j,l) = RHOU(k,i,j,l) + RHOU_t(k,i,j) * dt_BL
+             RHOV(k,i,j,l) = RHOV(k,i,j,l) + RHOV_t(k,i,j) * dt_BL
+             RHOE(k,i,j,l) = RHOE(k,i,j,l) + RHOT_t(k,i,j) * CPtot(k,i,j,l) * EXNER(k,i,j,l) * dt_BL
+             RHOQ(k,i,j,I_TKE,l) = RHOQ(k,i,j,I_TKE,l) + RHOQ_t(k,i,j) * dt_BL
+          end do
+          end do
+          end do
 
           do iq = 1, QA
              if ( ( .not. TRACER_ADVC(iq) ) .or. iq==I_TKE ) cycle
              call ATMOS_PHY_BL_MYNN_tendency_tracer( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                  DENS(:,:,:), QTRC(:,:,:,iq), & ! (in)
-                  SFLX_Q(:,:,iq), Kh(:,:,:),   & ! (in)
-                  CZ(:,:,:), FZ(:,:,:), dt_BL, & ! (in)
-                  RHOQ_t_BL(:,:,:,iq)          ) ! (out)
+                  DENS(:,:,:,l), QTRC(:,:,:,iq,l), & ! (in)
+                  SFLX_Q(:,:,l,iq), Kh(:,:,:,l),   & ! (in)
+                  CZ(:,:,:,l), FZ(:,:,:,l),        & ! (in)
+                  dt_BL, TRACER_NAME(iq),          & ! (in)
+                  RHOQ_t(:,:,:)                    ) ! (out)
+             do j = JS, JE
+             do i = IS, IE
+             do k = KS, KE
+                RHOQ(k,i,j,iq,l) = RHOQ(k,i,j,iq,l) + RHOQ_t(k,i,j) * dt_BL
+             end do
+             end do
+             end do
           end do
-       end select
 
-       call HIST_in( Nu(:,:,:),        'Nu_BL',     'eddy viscosity',     'm2/s',      nohalo=.true. )
-       call HIST_in( Kh(:,:,:),        'Ku_BL',     'eddy diffusion',     'm2/s',      nohalo=.true. )
+       end do
+    end select
 
-       call HIST_in( RHOU_t_BL(:,:,:), 'RHOU_t_BL', 'MOMX tendency (BL)', 'kg/m2/s2',  nohalo=.true. )
-       call HIST_in( RHOV_t_BL(:,:,:), 'RHOV_t_BL', 'MOMY tendency (BL)', 'kg/m2/s2',  nohalo=.true. )
-       call HIST_in( RHOT_t_BL(:,:,:), 'RHOT_t_BL', 'RHOT tendency (BL)', 'K.kg/m3/s', nohalo=.true. )
+    call FILE_HISTORY_in( Nu(:,:,:,:),        'Nu_BL',     'eddy viscosity',     'm2/s',      fill_halo=.true. )
+    call FILE_HISTORY_in( Kh(:,:,:,:),        'Ku_BL',     'eddy diffusion',     'm2/s',      fill_halo=.true. )
 
-       do iq = 1, QA
-          if ( .not. TRACER_ADVC(iq) ) cycle
-          call HIST_in( RHOQ_t_BL(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_BL',                      &
-                        'RHO*'//trim(TRACER_NAME(iq))//' tendency (BL)', 'kg/m3/s', nohalo=.true. )
-       enddo
-
-       if ( STATISTICS_checktotal ) then
-          call STAT_total( total, RHOU_t_BL(:,:,:), 'RHOU_t_BL' )
-          call STAT_total( total, RHOV_t_BL(:,:,:), 'RHOV_t_BL' )
-          call STAT_total( total, RHOT_t_BL(:,:,:), 'RHOT_t_BL' )
-          call STAT_total( total, Nu(:,:,:), 'Nu_BL' )
-          call STAT_total( total, Kh(:,:,:), 'Kh_BL' )
-
-          do iq = 1, QA
-             if ( .not. TRACER_ADVC(iq) ) cycle
-             call STAT_total( total, RHOQ_t_BL(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_BL' )
-          enddo
-       endif
+    call ATMOS_vars_calc_diagnostics
 
     return
-  end subroutine ATMOS_PHY_BL_step
+  end subroutine ATMOS_PHY_BL_driver_step
 
 end module mod_atmos_phy_bl_driver

@@ -19,8 +19,10 @@ module mod_gm_driver
   use scale_file, only: &
      FILE_Close_All
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -58,7 +60,7 @@ contains
        intercomm_parent, &
        intercomm_child,  &
        cnf_fname         )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_IsMaster,    &
        PRC_MPIstart,    &
        PRC_LOCAL_setup, &
@@ -70,10 +72,6 @@ contains
        PI => CONST_PI
     use scale_calendar, only: &
        CALENDAR_setup
-    use scale_time, only: &
-       TIME_NOWDATE
-    use scale_atmos_solarins, only: &
-       ATMOS_SOLARINS_setup
     use scale_random, only: &
        RANDOM_setup
     use mod_adm, only: &
@@ -107,17 +105,12 @@ contains
        ATMOS_PHY_BL_TYPE,  &
        ATMOS_PHY_SF_TYPE,  &
        atmos_sw_phy_sf
-    use mod_saturation, only: &
-       saturation_setup
     use mod_prgvar, only: &
        prgvar_setup,            &
        restart_input_basename,  &
        restart_output_basename, &
        restart_input,           &
        restart_output
-    use scale_atmos_phy_mp, only: &
-       atmos_phy_mp_config, &
-       atmos_phy_mp_setup
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_setup
     use scale_atmos_saturation, only: &
@@ -125,12 +118,9 @@ contains
     use scale_atmos_hydrometeor, only: &
        atmos_hydrometeor_setup
     use mod_atmos_phy_bl_driver, only: &
-       atmos_phy_bl_driver_tracer_setup, &
        atmos_phy_bl_driver_setup
     use scale_bulkflux, only: &
        BULKFLUX_setup
-    use scale_roughness, only: &
-       ROUGHNESS_setup
     use mod_dynamics, only: &
        dynamics_setup, &
        dynamics_step
@@ -153,10 +143,7 @@ contains
     !##### OpenACC (for data copy) #####
     use mod_adm, only: &
        ADM_prc_tab,  &
-       ADM_rgn_vnum, &
-       glevel => ADM_glevel, &
-       ADM_gall_in,  &
-       ADM_lall
+       ADM_rgn_vnum
     use mod_comm, only: &
        sendlist,     sendlist_pl,  &
        sendinfo,     sendinfo_pl,  &
@@ -230,6 +217,9 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_ADMIN_setup
+    use mod_atmos_phy_driver, only: &
+       ATMOS_phy_driver_tracer_setup, &
+       ATMOS_phy_driver_setup
     use mod_atmos_phy_sf_vars, only: &
        ATMOS_PHY_SF_vars_setup       
     use mod_atmos_phy_sf_driver, only: &
@@ -240,11 +230,6 @@ contains
        ATMOS_PHY_RD_vars_setup
     use mod_atmos_phy_rd_driver, only: &
        ATMOS_PHY_RD_driver_setup
-    use mod_atmos_phy_ae_driver, only: &
-       ATMOS_PHY_AE_driver_config,  &
-       ATMOS_PHY_AE_driver_setup
-    use mod_mp_vars, only: &
-       mp_vars_setup
     use mod_time, only: &
        TIME_RES_ATMOS_PHY_RD, &
        TIME_DOATMOS_PHY_RD
@@ -321,9 +306,6 @@ contains
     !---< time module setup >---
     call TIME_setup
 
-    !---< solar insolation setup >---
-    call atmos_solarins_setup( TIME_NOWDATE(1) )
-
     !---< external data module setup >---
     call extdata_setup
 
@@ -331,53 +313,38 @@ contains
     call runconf_setup
     call atmos_admin_setup
 
+    !---< tracer setup >---
+    call atmos_hydrometeor_setup
+    call atmos_phy_driver_tracer_setup
+
     !---< topography module setup >---
     call TOPO_setup
 
     !---< landuse module setup >---
     call landuse_setup
 
-    !---< saturation module setup >---
-    call saturation_setup
+    !---< module setup >---
+    call atmos_thermodyn_setup
+    call atmos_saturation_setup
 
     !---< prognostic variable module setup >---
     call prgvar_setup
     call restart_input( restart_input_basename )
 
-    !---< microphisics variable module setup >---
-    call atmos_hydrometeor_setup
-    call atmos_thermodyn_setup
-    call atmos_phy_mp_config( ATMOS_PHY_MP_TYPE )
-    if( ATMOS_PHY_MP_TYPE == 'TOMITA08' ) then
-       call atmos_phy_mp_setup
-       call mp_vars_setup
-    endif
-    call atmos_saturation_setup
-
     !---< scale variable module setup >---
     call atmos_vars_setup
 
-    !---< radiation module setup >---
-    call atmos_phy_ae_driver_config
-    call atmos_phy_ae_driver_setup
-
-    !---< radiation module setup >---
-    call atmos_phy_rd_driver_setup
-!    call atmos_phy_rd_vars_setup
-
-    !---< boundary layer module setup >---
-    call atmos_phy_bl_driver_setup
-    call atmos_phy_bl_driver_tracer_setup
-
     !---< surface module setup >---
     call atmos_phy_sf_driver_setup
-    dx = sqrt( 4.0_RP * PI * RADIUS**2 / real(10*4**glevel+2,kind=RP) )
+    dx = sqrt( 4.0_RP * PI * RADIUS**2 / real(10*4**ADM_glevel+2,kind=RP) )
     dy = dx
     call bulkflux_setup( sqrt(dx**2+dy**2) )
-    call roughness_setup
 
     !---< dynamics module setup >---
     call dynamics_setup
+
+    !---< physics module setup >---
+    call atmos_phy_driver_setup
 
     !---< forcing module setup >---
     call forcing_setup

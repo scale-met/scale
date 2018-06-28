@@ -13,7 +13,8 @@ module mod_saturation
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -79,8 +80,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine SATURATION_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        CONST_THERMODYN_TYPE, &
        Rvap  => CONST_Rvap,  &
@@ -111,7 +112,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** SATURATIONPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist SATURATIONPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=SATURATIONPARAM)
 

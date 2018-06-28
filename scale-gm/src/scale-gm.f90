@@ -16,15 +16,15 @@ program scalegm_launcher
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
 
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_DOMAIN_nlim,     &
      PRC_MPIstart,        &
-     PRC_MPIstop,         &
      PRC_MPIfinish,       &
      PRC_MPIsplit,        &
+     PRC_abort,         &
      PRC_UNIVERSAL_setup, &
      PRC_GLOBAL_setup
   use mod_gm_driver, only: &
@@ -105,7 +105,7 @@ program scalegm_launcher
      ! keep default setting (no members, no nesting)
   elseif( ierr > 0 ) then !--- fatal error
      if( universal_master ) write(*,*) 'xxx Not appropriate names in namelist PARAM_CONST. Check!'
-     call PRC_MPIstop
+     call PRC_abort
   endif
 
   close(fid)
@@ -116,7 +116,7 @@ program scalegm_launcher
      if( universal_master ) write(*,*) 'xxx Total Num of Processes must be divisible by NUM_BULKJOB. Check!'
      if( universal_master ) write(*,*) 'xxx Total Num of Processes = ', universal_nprocs
      if( universal_master ) write(*,*) 'xxx            NUM_BULKJOB = ', NUM_BULKJOB
-     call PRC_MPIstop
+     call PRC_abort
   endif
 
   global_nprocs = universal_nprocs / NUM_BULKJOB

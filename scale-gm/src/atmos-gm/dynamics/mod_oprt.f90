@@ -13,24 +13,10 @@ module mod_oprt
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
 
-  use mod_adm, only: &
-     ADM_nxyz,           &
-     TI    => ADM_TI,    &
-     TJ    => ADM_TJ,    &
-     AI    => ADM_AI,    &
-     AIJ   => ADM_AIJ,   &
-     AJ    => ADM_AJ,    &
-     K0    => ADM_KNONE, &
-     vlink => ADM_vlink, &
-     ADM_lall,           &
-     ADM_lall_pl,        &
-     ADM_kall,           &
-     ADM_jall,           &
-     ADM_iall,           &
-     ADM_gall_pl
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -56,32 +42,6 @@ module mod_oprt
   !
   !++ Public parameters & variables
   !
-#ifdef FIXEDINDEX
-!  real(RP), public              :: OPRT_coef_div    (ADM_nxyz,ADM_gall,0:6    ,ADM_lall   )
-!  real(RP), public              :: OPRT_coef_div_pl (ADM_nxyz,         0:vlink,ADM_lall_pl)
-!  real(RP), public              :: OPRT_coef_rot    (ADM_nxyz,ADM_gall,0:6    ,ADM_lall   )
-!  real(RP), public              :: OPRT_coef_rot_pl (ADM_nxyz,         0:vlink,ADM_lall_pl)
-!  real(RP), public              :: OPRT_coef_grad   (ADM_nxyz,ADM_gall,0:6    ,ADM_lall   )
-!  real(RP), public              :: OPRT_coef_grad_pl(ADM_nxyz,         0:vlink,ADM_lall_pl)
-!  real(RP), public              :: OPRT_coef_lap    (         ADM_gall,0:6    ,ADM_lall   )
-!  real(RP), public              :: OPRT_coef_lap_pl (                  0:vlink,ADM_lall_pl)
-!  real(RP), public              :: OPRT_coef_intp   (ADM_nxyz,ADM_gall   ,1:3,TI:TJ,ADM_lall   )
-!  real(RP), public              :: OPRT_coef_intp_pl(ADM_nxyz,ADM_gall_pl,1:3,      ADM_lall_pl)
-!  real(RP), public              :: OPRT_coef_diff   (ADM_nxyz,ADM_gall,1:6    ,ADM_lall   )
-!  real(RP), public              :: OPRT_coef_diff_pl(ADM_nxyz,         1:vlink,ADM_lall_pl)
-  real(RP), public              :: OPRT_coef_div    (ADM_iall,ADM_jall,0:6    ,ADM_nxyz,ADM_lall   )
-  real(RP), public              :: OPRT_coef_div_pl (                  0:vlink,ADM_nxyz,ADM_lall_pl)
-  real(RP), public              :: OPRT_coef_rot    (ADM_iall,ADM_jall,0:6    ,ADM_nxyz,ADM_lall   )
-  real(RP), public              :: OPRT_coef_rot_pl (                  0:vlink,ADM_nxyz,ADM_lall_pl)
-  real(RP), public              :: OPRT_coef_grad   (ADM_iall,ADM_jall,0:6    ,ADM_nxyz,ADM_lall   )
-  real(RP), public              :: OPRT_coef_grad_pl(                  0:vlink,ADM_nxyz,ADM_lall_pl)
-  real(RP), public              :: OPRT_coef_lap    (ADM_iall,ADM_jall,0:6    ,         ADM_lall   )
-  real(RP), public              :: OPRT_coef_lap_pl (                  0:vlink,         ADM_lall_pl)
-  real(RP), public              :: OPRT_coef_intp   (ADM_iall,ADM_jall,1:3    ,ADM_nxyz,TI:TJ,ADM_lall   )
-  real(RP), public              :: OPRT_coef_intp_pl(ADM_gall_pl      ,1:3    ,ADM_nxyz,      ADM_lall_pl)
-  real(RP), public              :: OPRT_coef_diff   (ADM_iall,ADM_jall,1:6    ,ADM_nxyz,ADM_lall   )
-  real(RP), public              :: OPRT_coef_diff_pl(                  1:vlink,ADM_nxyz,ADM_lall_pl)
-#else
   real(RP), public, allocatable :: OPRT_coef_div    (:,:,:,:,:)   ! coefficient for divergence operator
   real(RP), public, allocatable :: OPRT_coef_div_pl (:,:,:)
   real(RP), public, allocatable :: OPRT_coef_rot    (:,:,:,:,:)   ! coefficient for rotation operator
@@ -94,7 +54,6 @@ module mod_oprt
   real(RP), public, allocatable :: OPRT_coef_intp_pl(:,:,:,:)
   real(RP), public, allocatable :: OPRT_coef_diff   (:,:,:,:,:)
   real(RP), public, allocatable :: OPRT_coef_diff_pl(:,:,:)
-#endif
 
   !-----------------------------------------------------------------------------
   !
@@ -107,13 +66,21 @@ module mod_oprt
   character(len=H_LONG),  private :: OPRT_fname   = ''
   character(len=H_SHORT), private :: OPRT_io_mode = 'ADVANCED'
 
+  integer, parameter :: TI = ADM_TI
+  integer, parameter :: TJ = ADM_TJ
+  integer, parameter :: AI = ADM_AI
+  integer, parameter :: AIJ = ADM_AIJ
+  integer, parameter :: AJ = ADM_AJ
+  integer, parameter :: K0 = ADM_KNONE
+  integer :: vlink
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine OPRT_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_gmtr, only: &
        GMTR_p,    &
        GMTR_p_pl, &
@@ -146,11 +113,12 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** OPRTPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist OPRTPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=OPRTPARAM)
 
-#ifndef FIXEDINDEX
+     vlink = ADM_vlink
+
 !    allocate( OPRT_coef_div    (ADM_nxyz,ADM_gall,0:6    ,ADM_lall   ) )
 !    allocate( OPRT_coef_div_pl (ADM_nxyz,         0:vlink,ADM_lall_pl) )
 !    allocate( OPRT_coef_rot    (ADM_nxyz,ADM_gall,0:6    ,ADM_lall   ) )
@@ -175,7 +143,6 @@ contains
     allocate( OPRT_coef_intp_pl(ADM_gall_pl      ,1:3    ,ADM_nxyz,      ADM_lall_pl) )
     allocate( OPRT_coef_diff   (ADM_iall,ADM_jall,1:6    ,ADM_nxyz,ADM_lall   ) )
     allocate( OPRT_coef_diff_pl(                  1:vlink,ADM_nxyz,ADM_lall_pl) )
-#endif
 
     IxJ_GMTR_p = reshape(GMTR_p,shape(IxJ_GMTR_p))
     IxJ_GMTR_t = reshape(GMTR_t,shape(IxJ_GMTR_t))
@@ -222,14 +189,7 @@ contains
        coef_div, coef_div_pl )
     use mod_adm, only: &
        ADM_have_pl,  &
-       ADM_have_sgp, &
-       ADM_jmin,     &
-       ADM_jmax,     &
-       ADM_imin,     &
-       ADM_imax,     &
-       ADM_gslf_pl,  &
-       ADM_gmin_pl,  &
-       ADM_gmax_pl
+       ADM_have_sgp
     use mod_gmtr, only: &
        P_RAREA => GMTR_p_RAREA, &
        W1      => GMTR_t_W1,    &
@@ -435,14 +395,7 @@ contains
        coef_rot, coef_rot_pl )
     use mod_adm, only: &
        ADM_have_pl,  &
-       ADM_have_sgp, &
-       ADM_jmin,     &
-       ADM_jmax,     &
-       ADM_imin,     &
-       ADM_imax,     &
-       ADM_gslf_pl,  &
-       ADM_gmin_pl,  &
-       ADM_gmax_pl
+       ADM_have_sgp
     use mod_gmtr, only: &
        P_RAREA => GMTR_p_RAREA, &
        W1      => GMTR_t_W1,    &
@@ -648,14 +601,7 @@ contains
        coef_grad, coef_grad_pl )
     use mod_adm, only: &
        ADM_have_pl,  &
-       ADM_have_sgp, &
-       ADM_jmin,     &
-       ADM_jmax,     &
-       ADM_imin,     &
-       ADM_imax,     &
-       ADM_gslf_pl,  &
-       ADM_gmin_pl,  &
-       ADM_gmax_pl
+       ADM_have_sgp
     use mod_gmtr, only: &
        P_RAREA => GMTR_p_RAREA, &
        W1      => GMTR_t_W1,    &
@@ -871,14 +817,7 @@ contains
        coef_lap, coef_lap_pl )
     use mod_adm, only: &
        ADM_have_pl,  &
-       ADM_have_sgp, &
-       ADM_jmin,     &
-       ADM_jmax,     &
-       ADM_imin,     &
-       ADM_imax,     &
-       ADM_gslf_pl,  &
-       ADM_gmin_pl,  &
-       ADM_gmax_pl
+       ADM_have_sgp
     use mod_gmtr, only: &
        P_RAREA => GMTR_p_RAREA, &
        T_RAREA => GMTR_t_RAREA, &
@@ -1331,14 +1270,7 @@ contains
        coef_diff, coef_diff_pl  )
     use mod_adm, only: &
        ADM_have_pl,  &
-       ADM_have_sgp, &
-       ADM_jmin,     &
-       ADM_jmax,     &
-       ADM_imin,     &
-       ADM_imax,     &
-       ADM_gslf_pl,  &
-       ADM_gmin_pl,  &
-       ADM_gmax_pl
+       ADM_have_sgp
     use mod_gmtr, only: &
        P_RAREA => GMTR_p_RAREA, &
        T_RAREA => GMTR_t_RAREA, &
@@ -1472,13 +1404,7 @@ contains
        vz,       vz_pl,      &
        coef_div, coef_div_pl )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_imin,    &
-       ADM_imax,    &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_gslf_pl, &
-       ADM_gmax_pl
+       ADM_have_pl
     use mod_grd, only: &
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
@@ -1598,13 +1524,7 @@ contains
        vz,       vz_pl,      &
        coef_rot, coef_rot_pl )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_imin,    &
-       ADM_imax,    &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_gslf_pl, &
-       ADM_gmax_pl
+       ADM_have_pl
     use mod_grd, only: &
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
@@ -1707,13 +1627,7 @@ contains
        scl,       scl_pl,      &
        coef_grad, coef_grad_pl )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_imin,    &
-       ADM_imax,    &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_gslf_pl, &
-       ADM_gmax_pl
+       ADM_have_pl
     use mod_grd, only: &
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
@@ -1835,13 +1749,7 @@ contains
        scl,      scl_pl,     &
        coef_lap, coef_lap_pl )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_imin,    &
-       ADM_imax,    &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_gslf_pl, &
-       ADM_gmax_pl
+       ADM_have_pl
     implicit none
 
     real(RP), intent(out) :: dscl       (ADM_iall,ADM_jall,ADM_kall,ADM_lall   )
@@ -1922,14 +1830,7 @@ contains
        coef_diff, coef_diff_pl  )
     use mod_adm, only: &
        ADM_have_pl,  &
-       ADM_have_sgp, &
-       ADM_imin,     &
-       ADM_imax,     &
-       ADM_jmin,     &
-       ADM_jmax,     &
-       ADM_gslf_pl,  &
-       ADM_gmin_pl,  &
-       ADM_gmax_pl
+       ADM_have_sgp
     use mod_grd, only: &
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
@@ -2156,14 +2057,7 @@ contains
        coef_diff, coef_diff_pl  )
     use mod_adm, only: &
        ADM_have_pl,  &
-       ADM_have_sgp, &
-       ADM_imin,     &
-       ADM_imax,     &
-       ADM_jmin,     &
-       ADM_jmax,     &
-       ADM_gslf_pl,  &
-       ADM_gmin_pl,  &
-       ADM_gmax_pl
+       ADM_have_sgp
     use mod_grd, only: &
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
@@ -2360,8 +2254,7 @@ contains
        vy, vy_pl, &
        vz, vz_pl  )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall
+       ADM_have_pl
     use mod_grd, only: &
        GRD_XDIR,   &
        GRD_YDIR,   &
@@ -2500,15 +2393,13 @@ contains
   !-----------------------------------------------------------------------------
   subroutine OPRT_output_coef( &
        basename )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_io_param, only: &
        IO_REAL8, &
        IO_REAL4
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_1d
+       ADM_have_pl
     use mod_comm, only: &
        COMM_data_transfer
     use mod_fio, only: &
@@ -2770,7 +2661,7 @@ contains
 
     else
        if( IO_L ) write(IO_FID_LOG,*) 'Invalid io_mode!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return

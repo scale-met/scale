@@ -13,7 +13,9 @@ module mod_history_vars
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -67,15 +69,6 @@ module mod_history_vars
 contains
   !-----------------------------------------------------------------------------
   subroutine history_vars_setup
-    use mod_adm, only: &
-       ADM_KNONE,   &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_kmin,    &
-       ADM_kmax
     use mod_vmtr, only: &
        VMTR_getIJ_GSGAM2,    &
        VMTR_getIJ_W2Cfact,   &
@@ -323,8 +316,8 @@ contains
 
   !----------------------------------------------------------------------
   subroutine history_vars
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        CPdry => CONST_CPdry, &
@@ -332,15 +325,7 @@ contains
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use mod_adm, only: &
-       ADM_KNONE,   &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_grd, only: &
        GRD_dgz,  &
        GRD_ZSFC, &
@@ -375,10 +360,10 @@ contains
        prgvar_get_withdiag
     use mod_thrmdyn, only: &
        THRMDYN_th
-    use mod_saturation, only: &
-       SATURATION_psat_all, &
-       SATURATION_psat_liq, &
-       SATURATION_psat_ice
+    use scale_atmos_saturation, only: &
+       SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
+       SATURATION_psat_liq => ATMOS_SATURATION_psat_liq, &
+       SATURATION_psat_ice => ATMOS_SATURATION_psat_ice
     use mod_bndcnd, only: &
        BNDCND_all
     use mod_cnvvar, only: &
@@ -428,8 +413,8 @@ contains
     real(RP) :: ein      (ADM_gall   ,ADM_kall,ADM_lall   )
 
     real(RP) :: omg      (ADM_gall   ,ADM_kall,ADM_lall   )
-    real(RP) :: psat     (ADM_gall   ,ADM_kall,ADM_lall   )
-    real(RP) :: rh       (ADM_gall   ,ADM_kall,ADM_lall   )
+    real(RP) :: psat     (ADM_gall   ,ADM_kall)
+    real(RP) :: rh       (ADM_gall   ,ADM_kall)
 
     real(RP) :: u_slice  (ADM_gall   ,ADM_KNONE,ADM_lall  )
     real(RP) :: v_slice  (ADM_gall   ,ADM_KNONE,ADM_lall  )
@@ -540,7 +525,7 @@ contains
        enddo
        enddo
        enddo
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! zonal and meridonal wind
@@ -636,50 +621,45 @@ contains
     ! relative humidity (liq+ice, liq, ice)
 
     if ( out_rha ) then
-       call SATURATION_psat_all( ADM_gall,    & ! [IN]
-                                 ADM_kall,    & ! [IN]
-                                 ADM_lall,    & ! [IN]
-                                 tem (:,:,:), & ! [IN]
-                                 psat(:,:,:)  ) ! [OUT]
-
        do l = 1, ADM_lall
-          rh(:,:,l) = q(:,:,l,I_QV) * rho(:,:,l) * Rvap * tem(:,:,l) &
-                    / psat(:,:,l) &
-                    * 100.0_RP
+          call SATURATION_psat_all( ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+                                    tem (:,:,l), & ! [IN]
+                                    psat(:,:)    ) ! [OUT]
 
-          call history_in( 'ml_rha', rh(:,:,l) )
+          rh(:,:) = q(:,:,l,I_QV) * rho(:,:,l) * Rvap * tem(:,:,l) &
+                  / psat(:,:) &
+                  * 100.0_RP
+
+          call history_in( 'ml_rha', rh(:,:) )
        enddo
     endif
 
     if ( out_rh ) then
-       call SATURATION_psat_liq( ADM_gall,    & ! [IN]
-                                 ADM_kall,    & ! [IN]
-                                 ADM_lall,    & ! [IN]
-                                 tem (:,:,:), & ! [IN]
-                                 psat(:,:,:)  ) ! [OUT]
 
        do l = 1, ADM_lall
-          rh(:,:,l) = q(:,:,l,I_QV) * rho(:,:,l) * Rvap * tem(:,:,l) &
-                    / psat(:,:,l) &
-                    * 100.0_RP
+          call SATURATION_psat_liq( ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+                                    tem (:,:,l), & ! [IN]
+                                    psat(:,:)    ) ! [OUT]
 
-          call history_in( 'ml_rh', rh(:,:,l) )
+          rh(:,:) = q(:,:,l,I_QV) * rho(:,:,l) * Rvap * tem(:,:,l) &
+                  / psat(:,:) &
+                  * 100.0_RP
+
+          call history_in( 'ml_rh', rh(:,:) )
        enddo
     endif
 
     if ( out_rhi ) then
-       call SATURATION_psat_ice( ADM_gall,    & ! [IN]
-                                 ADM_kall,    & ! [IN]
-                                 ADM_lall,    & ! [IN]
-                                 tem (:,:,:), & ! [IN]
-                                 psat(:,:,:)  ) ! [OUT]
 
        do l = 1, ADM_lall
-          rh(:,:,l) = q(:,:,l,I_QV) * rho(:,:,l) * Rvap * tem(:,:,l) &
-                    / psat(:,:,l) &
-                    * 100.0_RP
+          call SATURATION_psat_ice( ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+                                    tem (:,:,l), & ! [IN]
+                                    psat(:,:)    ) ! [OUT]
+          rh(:,:) = q(:,:,l,I_QV) * rho(:,:,l) * Rvap * tem(:,:,l) &
+                  / psat(:,:) &
+                  * 100.0_RP
 
-          call history_in( 'ml_rhi', rh(:,:,l) )
+          call history_in( 'ml_rhi', rh(:,:) )
        enddo
     endif
 
@@ -956,15 +936,12 @@ contains
        pre_srf  )
     use scale_const, only: &
        GRAV => CONST_GRAV
-    use mod_adm, only: &
-       kdim => ADM_kall, &
-       kmin => ADM_kmin
     implicit none
 
     integer,  intent(in)  :: ijdim
-    real(RP), intent(in)  :: rho    (ijdim,kdim)
-    real(RP), intent(in)  :: pre    (ijdim,kdim)
-    real(RP), intent(in)  :: z      (ijdim,kdim)
+    real(RP), intent(in)  :: rho    (ijdim,ADM_kall)
+    real(RP), intent(in)  :: pre    (ijdim,ADM_kall)
+    real(RP), intent(in)  :: z      (ijdim,ADM_kall)
     real(RP), intent(in)  :: z_srf  (ijdim)
     real(RP), intent(out) :: rho_srf(ijdim)
     real(RP), intent(out) :: pre_srf(ijdim)
@@ -974,13 +951,13 @@ contains
 
     !--- surface density ( extrapolation )
     do ij = 1, ijdim
-       rho_srf(ij) = rho(ij,kmin) &
-                   - ( rho(ij,kmin+1)-rho(ij,kmin) ) * ( z(ij,kmin)-z_srf(ij) ) / ( z(ij,kmin+1)-z(ij,kmin) )
+       rho_srf(ij) = rho(ij,ADM_kmin) &
+                   - ( rho(ij,ADM_kmin+1)-rho(ij,ADM_kmin) ) * ( z(ij,ADM_kmin)-z_srf(ij) ) / ( z(ij,ADM_kmin+1)-z(ij,ADM_kmin) )
     enddo
 
     !--- surface pressure ( hydrostatic balance )
     do ij = 1, ijdim
-       pre_srf(ij) = pre(ij,kmin) + rho(ij,kmin) * GRAV * ( z(ij,kmin)-z_srf(ij) )
+       pre_srf(ij) = pre(ij,ADM_kmin) + rho(ij,ADM_kmin) * GRAV * ( z(ij,ADM_kmin)-z_srf(ij) )
     enddo
 
     return
@@ -1000,19 +977,16 @@ contains
        v_p,   &
        w_p,   &
        t_p    )
-    use scale_process, only: &
-       PRC_MPIstop
-    use mod_adm, only: &
-       kdim => ADM_kall, &
-       kmin => ADM_kmin
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer,  intent(in)  :: ijdim
-    real(RP), intent(in)  :: pre(ijdim,kdim)
-    real(RP), intent(in)  :: u_z(ijdim,kdim)
-    real(RP), intent(in)  :: v_z(ijdim,kdim)
-    real(RP), intent(in)  :: w_z(ijdim,kdim)
-    real(RP), intent(in)  :: t_z(ijdim,kdim)
+    real(RP), intent(in)  :: pre(ijdim,ADM_kall)
+    real(RP), intent(in)  :: u_z(ijdim,ADM_kall)
+    real(RP), intent(in)  :: v_z(ijdim,ADM_kall)
+    real(RP), intent(in)  :: w_z(ijdim,ADM_kall)
+    real(RP), intent(in)  :: t_z(ijdim,ADM_kall)
     real(RP), intent(in)  :: plev
     real(RP), intent(out) :: u_p(ijdim)
     real(RP), intent(out) :: v_p(ijdim)
@@ -1028,13 +1002,13 @@ contains
 
     ! search z-level
     do ij = 1, ijdim
-       do k = kmin, kdim
+       do k = ADM_kmin, ADM_kall
           if( pre(ij,k) < plev ) exit
        enddo
-       if ( k >= kdim ) then
+       if ( k >= ADM_kall ) then
           write(*,*) 'xxx internal error! [sv_plev_uvwt/mod_history_vars] STOP.', &
-                     kdim,k,plev,ij,pre(ij,:)
-          call PRC_MPIstop
+                     ADM_kall,k,plev,ij,pre(ij,:)
+          call PRC_abort
        endif
 
        ku(ij) = k

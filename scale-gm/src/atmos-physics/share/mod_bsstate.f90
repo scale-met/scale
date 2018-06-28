@@ -13,7 +13,9 @@ module mod_bsstate
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -59,21 +61,13 @@ module mod_bsstate
 contains
   !-----------------------------------------------------------------------------
   subroutine bsstate_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        Rdry  => CONST_Rdry,  &
        Rvap  => CONST_Rvap,  &
        CPdry => CONST_CPdry, &
        PRE00 => CONST_PRE00
-    use mod_adm, only: &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_kall,    &
-       ADM_gall_pl, &
-       ADM_gall,    &
-       ADM_kmax,    &
-       ADM_kmin
     implicit none
 
     namelist / BSSTATEPARAM / &
@@ -99,7 +93,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** BSSTATEPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist BSSTATEPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=BSSTATEPARAM)
 
@@ -174,8 +168,6 @@ contains
        pre_ref, &
        tem_ref, &
        qv_ref   )
-    use mod_adm, only: &
-       ADM_kall
     implicit none
 
     character(len=*), intent(in)  :: fname
@@ -216,8 +208,6 @@ contains
        pre_ref, &
        tem_ref, &
        qv_ref   )
-    use mod_adm, only: &
-       ADM_kall
     implicit none
 
     character(len=*), intent(in)  :: fname
@@ -257,12 +247,6 @@ contains
        pre_ref, &
        tem_ref, &
        qv_ref   )
-    use mod_adm, only: &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall
     use mod_gm_statistics, only: &
        GTL_global_mean_eachlayer
     use mod_runconf, only: &
@@ -341,12 +325,7 @@ contains
        Rdry => CONST_Rdry, &
        Rvap => CONST_Rvap
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall
+       ADM_have_pl
     use mod_vmtr, only : &
        VMTR_getIJ_PHI
     use mod_vintrpl, only: &

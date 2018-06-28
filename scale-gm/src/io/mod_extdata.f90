@@ -13,8 +13,10 @@ module mod_extdata
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -70,20 +72,13 @@ module mod_extdata
 contains
   !-----------------------------------------------------------------------------
   subroutine extdata_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_calendar, only: &
        CALENDAR_daysec2date,    &
        CALENDAR_date2daysec,    &
        CALENDAR_adjust_daysec,  &
        CALENDAR_combine_daysec
-    use mod_adm, only: &
-       ADM_KNONE,    &
-       ADM_kall,     &
-       ADM_gall,     &
-       ADM_lall,     &
-       ADM_gall_pl,  &
-       ADM_lall_pl
     use mod_fio, only: &
        FIO_seek
     use mod_time, only: &
@@ -156,7 +151,7 @@ contains
        if ( ierr>0 ) then
           if( IO_L ) write(IO_FID_LOG,*) 'Msg : Sub[extdata_setup]/Mod[mod_extdata]'
           if( IO_L ) write(IO_FID_LOG,*) ' *** WARNING : Not appropriate names in namelist!! CHECK!!'
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        if(ierr < 0) exit
@@ -201,7 +196,7 @@ contains
           info(np)%kall = nlayer
        else
           write(*,*) 'xxx [extdata] invlalid type of layer_type.', trim(layer_type)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        ! IO_seek verifies;
@@ -230,7 +225,7 @@ contains
 
        else
           write(*,*) 'xxx [extdata] Invalid input_io_mode!', trim(input_io_mode)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        allocate( info(np)%data_date(6,num_of_data) )
@@ -260,7 +255,7 @@ contains
        if ( opt_monthly_cnst .AND. num_of_data /= 12 ) then
           write(*,*) 'Msg : Sub[extdata_setup]/Mod[mod_extdata]'
           write(*,*) '---- ERROR! : inconsistent data num in monthly fix version!'
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        info(np)%data_date(:,1:num_of_data) = data_date(:,1:num_of_data)
@@ -305,7 +300,7 @@ contains
           if ( info(np)%data_rec(1) == 1 ) then
              write(*,*) 'xxx [extdata] data time is not consistent with the simulation time! : ', &
                         trim(info(np)%dataname )
-             call PRC_MPIstop
+             call PRC_abort
           else !--- default
              info(np)%data_rec(2) = info(np)%data_rec(1)-1
           endif
@@ -360,17 +355,13 @@ contains
        l_region, & !--- IN    : index of region
        ctime,    & !--- IN    : record number of data on current time
        eflag     )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_calendar, only: &
        CALENDAR_daysec2date,    &
        CALENDAR_date2daysec,    &
        CALENDAR_adjust_daysec,  &
        CALENDAR_combine_daysec
-    use mod_adm, only: &
-       ADM_gall_in, &
-       ADM_gmin,    &
-       ADM_gmax
     implicit none
 
     real(RP),         intent(inout) :: gdata(:,:) ! data is inout to retain initilized value.
@@ -412,7 +403,7 @@ contains
     if (      kall /= info(np)%kall &
          .OR. gall /= ADM_gall_in   ) then
        write(*,*) 'xxx Array size of gdata is not consistent!', trim(DNAME)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     !--- update external data
@@ -455,7 +446,7 @@ contains
                   .AND. ( .not. info(np)%opt_periodic_year )            ) then
 
                 write(*,*) 'xxx [extdata] Current time exceeded the time range of the input data.'
-                call PRC_MPIstop
+                call PRC_abort
 
              elseif( ( info(np)%data_rec(1) > info(np)%num_of_data ) .and. &
                      ( info(np)%opt_periodic_year ) ) then
@@ -575,8 +566,6 @@ contains
 
   !-----------------------------------------------------------------------------
   integer function suf(i,j)
-    use mod_adm, only: &
-       ADM_gall_1d
     implicit none
 
     integer :: i, j

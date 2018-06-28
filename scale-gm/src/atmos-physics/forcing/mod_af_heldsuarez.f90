@@ -13,7 +13,9 @@ module mod_af_heldsuarez
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -42,8 +44,8 @@ module mod_af_heldsuarez
   real(RP), private            :: T_eq0   = 315.0_RP ! equatorial maximum temperature [K]
   real(RP), private            :: DT_y    =  60.0_RP ! meridional Equator–pole temperature difference [K]
   real(RP), private, parameter :: Dth_z   =  10.0_RP ! [K]
-  real(RP), private, parameter :: Ka      = 1.0_RP / (40.0_RP * 86400.0_RP )
-  real(RP), private, parameter :: Ks      = 1.0_RP / ( 4.0_RP * 86400.0_RP )
+  real(RP), private, parameter :: K_a      = 1.0_RP / (40.0_RP * 86400.0_RP )
+  real(RP), private, parameter :: K_s      = 1.0_RP / ( 4.0_RP * 86400.0_RP )
 
   !-----------------------------------------------------------------------------
 contains
@@ -87,10 +89,6 @@ contains
        fvy,   &
        fvz,   &
        fe     )
-    use mod_adm, only: &
-       kdim => ADM_kall, &
-       kmin => ADM_kmin, &
-       kmax => ADM_kmax
     use scale_const, only: &
        Rdry  => CONST_Rdry,  &
        CPdry => CONST_CPdry, &
@@ -100,15 +98,15 @@ contains
 
     integer,  intent(in)  :: ijdim
     real(RP), intent(in)  :: lat(ijdim)
-    real(RP), intent(in)  :: pre(ijdim,kdim)
-    real(RP), intent(in)  :: tem(ijdim,kdim)
-    real(RP), intent(in)  :: vx (ijdim,kdim)
-    real(RP), intent(in)  :: vy (ijdim,kdim)
-    real(RP), intent(in)  :: vz (ijdim,kdim)
-    real(RP), intent(out) :: fvx(ijdim,kdim)
-    real(RP), intent(out) :: fvy(ijdim,kdim)
-    real(RP), intent(out) :: fvz(ijdim,kdim)
-    real(RP), intent(out) :: fe (ijdim,kdim)
+    real(RP), intent(in)  :: pre(ijdim,ADM_kall)
+    real(RP), intent(in)  :: tem(ijdim,ADM_kall)
+    real(RP), intent(in)  :: vx (ijdim,ADM_kall)
+    real(RP), intent(in)  :: vy (ijdim,ADM_kall)
+    real(RP), intent(in)  :: vz (ijdim,ADM_kall)
+    real(RP), intent(out) :: fvx(ijdim,ADM_kall)
+    real(RP), intent(out) :: fvy(ijdim,ADM_kall)
+    real(RP), intent(out) :: fvz(ijdim,ADM_kall)
+    real(RP), intent(out) :: fe (ijdim,ADM_kall)
 
     real(RP) :: sigma, factor
     real(RP) :: T_eq, coslat, sinlat, ap0, Kt
@@ -116,10 +114,10 @@ contains
     integer  :: ij, k
     !---------------------------------------------------------------------------
 
-    do k  = kmin, kmax
+    do k  = ADM_kmin, ADM_kmax
     do ij = 1,    ijdim
        ! Rayleigh damping of low-level winds as the boundary-layer scheme for the horizontal velocity
-       sigma  = pre(ij,k) / ( 0.5_RP * ( pre(ij,kmin) + pre(ij,kmin-1) ) )
+       sigma  = pre(ij,k) / ( 0.5_RP * ( pre(ij,ADM_kmin) + pre(ij,ADM_kmin-1) ) )
        factor = max( (sigma-sigma_b) / (1.0_RP-sigma_b), 0.0_RP )
 
        fvx(ij,k) = -Kf * factor * vx(ij,k)
@@ -131,7 +129,7 @@ contains
        coslat = abs( cos(lat(ij)) )
        ap0    = abs( pre(ij,k) / PRE00 )
 
-       Kt     = Ka + ( Ks - Ka ) * factor * coslat**4
+       Kt     = K_a + ( K_s - K_a ) * factor * coslat**4
 
        T_eq   = max( 200.0_RP , ( T_eq0 - DT_y*sinlat*sinlat - Dth_z*log(ap0)*coslat*coslat ) * ap0**(Rdry/CPdry) )
 
@@ -139,14 +137,14 @@ contains
     enddo
     enddo
 
-    fvx(:,kmin-1) = 0.0_RP
-    fvy(:,kmin-1) = 0.0_RP
-    fvz(:,kmin-1) = 0.0_RP
-    fe (:,kmin-1) = 0.0_RP
-    fvx(:,kmax+1) = 0.0_RP
-    fvy(:,kmax+1) = 0.0_RP
-    fvz(:,kmax+1) = 0.0_RP
-    fe (:,kmax+1) = 0.0_RP
+    fvx(:,ADM_kmin-1) = 0.0_RP
+    fvy(:,ADM_kmin-1) = 0.0_RP
+    fvz(:,ADM_kmin-1) = 0.0_RP
+    fe (:,ADM_kmin-1) = 0.0_RP
+    fvx(:,ADM_kmax+1) = 0.0_RP
+    fvy(:,ADM_kmax+1) = 0.0_RP
+    fvz(:,ADM_kmax+1) = 0.0_RP
+    fe (:,ADM_kmax+1) = 0.0_RP
 
     return
   end subroutine af_heldsuarez

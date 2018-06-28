@@ -13,7 +13,7 @@ module mod_ocean_admin
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_debug
   !-----------------------------------------------------------------------------
@@ -49,8 +49,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine OCEAN_ADMIN_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     NAMELIST / PARAM_OCEAN / &
@@ -70,7 +70,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN. Check!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN)
 
@@ -104,8 +104,6 @@ contains
   !> Get name of scheme for each component
   subroutine OCEAN_ADMIN_getscheme( &
        scheme_name     )
-    use scale_process, only: &
-       PRC_MPIstop
     implicit none
 
     character(len=H_SHORT), intent(out) :: scheme_name

@@ -13,8 +13,10 @@ module mod_history
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -100,8 +102,8 @@ module mod_history
 contains
   !-----------------------------------------------------------------------------
   subroutine history_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_io_param, only: &
        IO_REAL4, &
        IO_REAL8
@@ -110,14 +112,6 @@ contains
     use scale_calendar, only: &
        CALENDAR_daysec2date,   &
        CALENDAR_adjust_daysec
-    use mod_adm, only: &
-       ADM_lall,      &
-       ADM_lall_pl,   &
-       ADM_gall,      &
-       ADM_gall_pl,   &
-       ADM_kmin,      &
-       ADM_kmax,      &
-       ADM_vlayer
     use mod_grd, only: &
        GRD_gz
     use mod_time, only: &
@@ -237,7 +231,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** NMHISD is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist NMHISD. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=NMHISD)
 
@@ -256,7 +250,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** History output type:', trim(output_io_mode)
     else
        write(*,*) 'xxx Invalid output_io_mode!', trim(output_io_mode)
-       call PRC_MPIstop
+       call PRC_abort
     endif
     HIST_io_fname = trim(output_path)//trim(histall_fname)
     HIST_io_desc  = trim(RUNNAME)
@@ -267,7 +261,7 @@ contains
        HIST_dtype = IO_REAL8
     else
        write(*,*) 'output_size is not appropriate:',output_size
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
 
@@ -279,7 +273,7 @@ contains
           exit
        elseif( ierr > 0 ) then
           write(*,*) 'xxx Not appropriate names in namelist NMHIST. STOP.'
-          call PRC_MPIstop
+          call PRC_abort
       endif
     enddo
     HIST_req_nmax = n - 1
@@ -378,7 +372,7 @@ contains
 
        if ( item == '' ) then
           write(*,*) 'xxx Not appropriate names in namelist NMHIST. STOP.'
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        if( IO_NML .AND. IO_FID_NML /= IO_FID_LOG ) write(IO_FID_NML,nml=NMHIST)
@@ -518,19 +512,12 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine  history_in( item, gd, l_region )
-    use scale_process, only : &
-       PRC_MPIstop
+    use scale_prc, only : &
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use mod_adm, only: &
-       ADM_l_me,    &
-       ADM_lall,    &
-       ADM_gall,    &
-       ADM_gall_in, &
-       ADM_kall,    &
-       ADM_gmin,    &
-       ADM_gmax,    &
-       ADM_kmin
+       ADM_l_me
     use mod_time, only: &
        TIME_CSTEP, &
        TIME_DTL
@@ -560,7 +547,7 @@ contains
                                                             ', ijdim_input=', ijdim_input, &
                                                             ', ADM_gall_in=', ADM_gall_in, &
                                                             ', ADM_gall=',    ADM_gall
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( calc_pressure ) then
@@ -729,22 +716,14 @@ contains
 
   !----------------------------------------------------------------------------
   subroutine history_out
-    use scale_process, only : &
-       PRC_MPIstop
+    use scale_prc, only : &
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_calendar, only: &
        CALENDAR_daysec2date,   &
        CALENDAR_adjust_daysec, &
        CALENDAR_date2char
-    use mod_adm, only: &
-       ADM_gall,      &
-       ADM_gall_pl,   &
-       ADM_lall,      &
-       ADM_lall_pl,   &
-       ADM_kall,      &
-       ADM_kmax,      &
-       ADM_kmin
     use mod_comm, only : &
        COMM_var
     use mod_fio, only: &
@@ -883,7 +862,7 @@ contains
 
              if ( opt_wgrid_save(n) ) then
                 write(*,*) 'xxx opt_wgrid is disabled! stop.', file_save(n)
-                call PRC_MPIstop
+                call PRC_abort
              endif
 
              call VINTRPL_Xi2Z( tmp, tmp_pl, use_quad=opt_lagintrpl_save(n) )
@@ -933,8 +912,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine history_outlist
-    use scale_process, only : &
-       PRC_MPIstop
+    use scale_prc, only : &
+       PRC_abort
     implicit none
 
     character(len=H_SHORT) :: item
@@ -979,7 +958,7 @@ contains
           if ( check_flag ) then
              write(*,*) '+++ this variable is requested but not stored yet. check!', trim(item_save(n))
              write(*,*) 'xxx history check_flag is on. stop!'
-             call PRC_MPIstop
+             call PRC_abort
           endif
        endif
     enddo
@@ -992,15 +971,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine get_log_pres
-    use mod_adm, only: &
-       ADM_KNONE,   &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmax,    &
-       ADM_kmin
     use mod_grd, only: &
        GRD_zs,   &
        GRD_ZSFC, &
@@ -1139,10 +1109,8 @@ contains
        pre_sfc )
     use scale_const, only: &
        GRAV => CONST_GRAV
-    use mod_adm, only: &
-       knone => ADM_KNONE, &
-       kmin  => ADM_kmin
     implicit none
+    integer, parameter :: knone = ADM_knone
 
     integer,  intent(in)  :: ijdim
     integer,  intent(in)  :: kdim
@@ -1155,8 +1123,12 @@ contains
 
     real(RP) :: rho_sfc ! surface density [kg/m3]
 
+    integer :: kmin
+
     integer :: ij, l
     !---------------------------------------------------------------------------
+
+    kmin = ADM_kmin
 
     do l  = 1, ldim
     do ij = 1, ijdim
@@ -1179,8 +1151,6 @@ contains
 
   !-----------------------------------------------------------------------------
   integer function suf(i,j)
-    use mod_adm, only: &
-       ADM_gall_1d
     implicit none
 
     integer :: i, j

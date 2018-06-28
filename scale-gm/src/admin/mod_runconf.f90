@@ -13,7 +13,7 @@ module mod_runconf
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use mod_atmos_admin, only: &
      ATMOS_PHY_CP_TYPE, &
      ATMOS_PHY_MP_TYPE, &
@@ -163,8 +163,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine RUNCONF_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE, &
        ATMOS_PHY_AE_TYPE, &
@@ -223,7 +223,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** RUNCONFPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist RUNCONFPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=RUNCONFPARAM)
 
@@ -322,8 +322,8 @@ contains
   !-----------------------------------------------------------------------------
   !> tracer setup
   subroutine RUNCONF_tracer_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_chemvar, only: &
        CHEMVAR_setup, &
        CHEM_TRC_vmax, &
@@ -362,7 +362,7 @@ contains
        I_QG    = TRC_vmax + 6
     else
        write(*,*) 'xxx ATMOS_PHY_MP_TYPE must be set to DRY,CLOUD_PARAM,KESSLER or TOMITA08 STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     NQW_STR  = TRC_vmax + 1
     NQW_END  = TRC_vmax + NQW_MAX

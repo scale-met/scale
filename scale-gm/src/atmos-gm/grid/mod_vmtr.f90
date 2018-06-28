@@ -13,16 +13,9 @@ module mod_vmtr
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
 
-  use mod_adm, only: &
-     ADM_lall,    &
-     ADM_lall_pl, &
-     ADM_iall,    &
-     ADM_jall,    &
-     ADM_gall,    &
-     ADM_gall_pl, &
-     ADM_kall
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -147,13 +140,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine VMTR_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_adm, only: &
-       ADM_KNONE,   &
-       ADM_have_pl, &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use scale_const, only: &
        GRAV => CONST_GRAV
     use mod_comm, only: &
@@ -238,7 +228,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** VMTRPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist VMTRPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=VMTRPARAM)
 
@@ -1040,12 +1030,6 @@ contains
   !> Tentative Converter
   subroutine VMTR_getin_GSGAM2( &
        in_VMTR_GSGAM2 )
-    use mod_adm, only: &
-       ADM_gall_in, &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_imin,    &
-       ADM_imax
     implicit none
 
     real(RP), intent(out) :: in_VMTR_GSGAM2(ADM_gall_in,ADM_kall,ADM_lall)
@@ -1072,12 +1056,6 @@ contains
   !> Tentative Converter
   subroutine VMTR_getin_GSGAM2H( &
        in_VMTR_GSGAM2H )
-    use mod_adm, only: &
-       ADM_gall_in, &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_imin,    &
-       ADM_imax
     implicit none
 
     real(RP), intent(out) :: in_VMTR_GSGAM2H(ADM_gall_in,ADM_kall,ADM_lall)
@@ -1104,12 +1082,6 @@ contains
   !> Tentative Converter
   subroutine VMTR_getin_PHI( &
        in_VMTR_PHI )
-    use mod_adm, only: &
-       ADM_gall_in, &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_imin,    &
-       ADM_imax
     implicit none
 
     real(RP), intent(out) :: in_VMTR_PHI(ADM_gall_in,ADM_kall,ADM_lall)

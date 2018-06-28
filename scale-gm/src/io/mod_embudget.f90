@@ -13,8 +13,10 @@ module mod_embudget
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -61,9 +63,9 @@ module mod_embudget
 contains
   !-----------------------------------------------------------------------------
   subroutine embudget_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_IsMaster, &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        RADIUS => CONST_RADIUS, &
        PI      => CONST_PI
@@ -87,7 +89,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** EMBUDGETPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist EMBUDGETPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=EMBUDGETPARAM)
 
@@ -136,7 +138,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine diagnose_energy_mass
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_IsMaster
     use scale_const, only: &
        RADIUS => CONST_RADIUS, &
@@ -146,12 +148,7 @@ contains
        LHV, &
        LHF
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall
+       ADM_have_pl
     use mod_vmtr, only: &
        VMTR_getIJ_RGSGAM2, &
        VMTR_getIJ_PHI

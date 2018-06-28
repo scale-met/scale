@@ -17,9 +17,9 @@ program fio_ico2ll
   use mpi
   use scale_precision
   use mod_io_param
-  use scale_stdio
+  use scale_io
   use scale_prof
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_LOCAL_COMM_WORLD, &
      PRC_nprocs,           &
      PRC_mpi_alive

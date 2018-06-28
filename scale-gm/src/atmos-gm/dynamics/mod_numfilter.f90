@@ -13,8 +13,9 @@ module mod_numfilter
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
 
   use mod_runconf, only: &
      I_RHOG,   &
@@ -113,14 +114,11 @@ module mod_numfilter
 contains
   !-----------------------------------------------------------------------------
   subroutine numfilter_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        PI     => CONST_PI,    &
        RADIUS => CONST_RADIUS
-    use mod_adm, only: &
-       ADM_glevel, &
-       ADM_kall
     use mod_grd, only: &
        GRD_gz,   &
        GRD_gzh
@@ -199,7 +197,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** NUMFILTERPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist NUMFILTERPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=NUMFILTERPARAM)
 
@@ -253,7 +251,7 @@ contains
 
     if ( deep_effect ) then
        write(*,*) 'xxx [numfilter_setup] deep_effect feature is tentatively suspended. stop.'
-       call PRC_MPIstop
+       call PRC_abort
        do k = 1, ADM_kall
           Kh_deep_factor       (k) = ( (GRD_gz (k)+RADIUS) / RADIUS )**(2*lap_order_hdiff)
           Kh_deep_factor_h     (k) = ( (GRD_gzh(k)+RADIUS) / RADIUS )**(2*lap_order_hdiff)
@@ -273,10 +271,6 @@ contains
        zlimit )
     use scale_const, only: &
        EPS => CONST_EPS
-    use mod_adm, only: &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
     use mod_grd, only: &
        GRD_htop, &
        GRD_gz,   &
@@ -343,14 +337,7 @@ contains
        PI  => CONST_PI, &
        EPS => CONST_EPS
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_grd, only: &
        GRD_htop, &
        GRD_gz
@@ -633,10 +620,6 @@ contains
     use scale_const, only: &
        PI  => CONST_PI, &
        EPS => CONST_EPS
-    use mod_adm, only: &
-       ADM_kall, &
-       ADM_kmin, &
-       ADM_kmax
     use mod_grd, only: &
        GRD_gz,   &
        GRD_gzh,  &
@@ -702,14 +685,7 @@ contains
        EPS   => CONST_EPS,  &
        SOUND => CONST_SOUND
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_grd, only: &
        GRD_gz
     use mod_gmtr, only: &
@@ -866,14 +842,7 @@ contains
        EPS   => CONST_EPS,  &
        SOUND => CONST_SOUND
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_grd, only: &
        GRD_htop, &
        GRD_gz
@@ -1034,14 +1003,7 @@ contains
        frhogvz, frhogvz_pl, &
        frhogw,  frhogw_pl   )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_vmtr, only: &
        VMTR_getIJ_C2Wfact
     implicit none
@@ -1149,16 +1111,7 @@ contains
     use scale_const, only: &
        CVdry => CONST_CVdry
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_jall,    &
-       ADM_iall,    &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_comm, only: &
        COMM_data_transfer
     use mod_grd, only: &
@@ -1653,14 +1606,7 @@ contains
     use scale_const, only: &
        CVdry => CONST_CVdry
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_grd, only: &
        GRD_rdgz,  &
        GRD_rdgzh
@@ -2147,16 +2093,7 @@ contains
        gdz,    gdz_pl,    &
        gdvz,   gdvz_pl    )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_jall,    &
-       ADM_iall,    &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_comm, only: &
        COMM_data_transfer
     use mod_grd, only:  &
@@ -2354,14 +2291,7 @@ contains
        gdy,    gdy_pl,    &
        gdz,    gdz_pl     )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_jall,    &
-       ADM_iall,    &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall
+       ADM_have_pl
     use mod_comm, only: &
        COMM_data_transfer
     use mod_oprt, only: &
@@ -2481,14 +2411,7 @@ contains
   subroutine numfilter_smooth_1var( &
        s, s_pl )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_jall,    &
-       ADM_iall,    &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall
+       ADM_have_pl
     use mod_comm, only: &
        COMM_data_transfer
     use mod_gmtr, only: &

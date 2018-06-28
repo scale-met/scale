@@ -13,7 +13,8 @@ module mod_prgvar
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
 
   use mod_runconf, only: &
      PRG_vmax0,  &
@@ -85,14 +86,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine prgvar_setup
-    use scale_process, only: &
-       PRC_MPIstop
-    use mod_adm, only: &
-       ADM_gall,      &
-       ADM_gall_pl,   &
-       ADM_kall,      &
-       ADM_lall,      &
-       ADM_lall_pl
+    use scale_prc, only: &
+       PRC_abort
     use mod_runconf, only: &
        PRG_vmax,  &
        DIAG_vmax, &
@@ -126,7 +121,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** RESTARTPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist RESTARTPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=RESTARTPARAM)
 
@@ -142,7 +137,7 @@ contains
     elseif( input_io_mode == 'IDEAL_TRACER' ) then
     else
        write(*,*) 'xxx [prgvar] Invalid input_io_mode. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if( IO_L ) write(IO_FID_LOG,*) '*** io_mode for restart, output: ', trim(output_io_mode)
@@ -150,7 +145,7 @@ contains
     elseif( output_io_mode == 'ADVANCED'    ) then
     else
        write(*,*) 'xxx [prgvar] Invalid output_io_mode. STOP'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( allow_missingq ) then
@@ -177,12 +172,7 @@ contains
        rhoge,  rhoge_pl,  &
        rhogq,  rhogq_pl   )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_lall,    &
-       ADM_lall_pl
+       ADM_have_pl
     use mod_runconf, only: &
        TRC_vmax
     implicit none
@@ -276,12 +266,7 @@ contains
        w,      w_pl,      &
        q,      q_pl       )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall
+       ADM_have_pl
     use mod_vmtr, only: &
        VMTR_getIJ_RGSGAM2
     use mod_runconf, only: &
@@ -417,12 +402,7 @@ contains
        rhoge,  rhoge_pl,  &
        rhogq,  rhogq_pl   )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_lall,    &
-       ADM_lall_pl
+       ADM_have_pl
     use mod_comm, only: &
        COMM_data_transfer
     use mod_runconf, only: &
@@ -511,12 +491,6 @@ contains
        rhogw,  &
        rhoge,  &
        rhogq   )
-    use mod_adm, only: &
-       ADM_lall,    &
-       ADM_gall_in, &
-       ADM_kall,    &
-       ADM_gmin,    &
-       ADM_gmax
     use mod_runconf, only: &
        TRC_vmax
     implicit none
@@ -589,15 +563,6 @@ contains
        vz,     &
        w,      &
        q       )
-    use mod_adm, only: &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_gall_in, &
-       ADM_kall,    &
-       ADM_gmin,    &
-       ADM_gmax
     use mod_vmtr, only: &
        VMTR_getIJ_RGSGAM2
     use mod_runconf, only: &
@@ -693,12 +658,6 @@ contains
        rhogw,  &
        rhoge,  &
        rhogq   )
-    use mod_adm, only : &
-       ADM_lall,    &
-       ADM_gall_in, &
-       ADM_kall,    &
-       ADM_gmin,    &
-       ADM_gmax
     use mod_comm, only: &
        COMM_var
     use mod_runconf, only: &
@@ -762,10 +721,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine restart_input( basename )
-    use mod_adm, only: &
-       ADM_kall,    &
-       ADM_kmax,    &
-       ADM_kmin
     use mod_fio, only: &
        FIO_input
     use mod_comm, only: &
@@ -891,10 +846,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine restart_output( basename )
-    use mod_adm, only: &
-       ADM_kall,    &
-       ADM_kmax,    &
-       ADM_kmin
     use mod_io_param, only: &
        IO_REAL8
     use mod_fio, only: &
@@ -994,8 +945,6 @@ contains
 
   !-----------------------------------------------------------------------------
   integer function suf(i,j)
-    use mod_adm, only: &
-       ADM_gall_1d
     implicit none
 
     integer :: i, j

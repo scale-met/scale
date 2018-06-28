@@ -13,8 +13,10 @@ module mod_nudge
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -67,23 +69,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine NDG_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        PI    => CONST_PI,    &
        UNDEF => CONST_UNDEF, &
        Rdry  => CONST_Rdry,  &
        CVdry => CONST_CVdry
     use mod_adm, only: &
-       ADM_have_pl,   &
-       ADM_KNONE,     &
-       ADM_lall,      &
-       ADM_lall_pl,   &
-       ADM_gall,      &
-       ADM_gall_pl,   &
-       ADM_kall,      &
-       ADM_kmin,      &
-       ADM_vlayer
+       ADM_have_pl
     use mod_grd, only: &
        GRD_gz
     use mod_vmtr, only : &
@@ -153,7 +147,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** NUDGEPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist NUDGEPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=NUDGEPARAM)
 
@@ -228,7 +222,7 @@ contains
 
     if ( NDG_kmin1 > NDG_kmax0 ) then
        write(*,*) 'xxx Invalid vertical layers! STOP', NDG_kmin1, NDG_kmax0
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     NDG_kmin0 = NDG_kmin0 + ADM_kmin - 1
@@ -335,12 +329,6 @@ contains
   !-----------------------------------------------------------------------------
   subroutine NDG_update_reference( &
        ctime )
-    use mod_adm, only: &
-       ADM_lall,    &
-       ADM_gall_in, &
-       ADM_kall,    &
-       ADM_gmin,    &
-       ADM_gmax
     use mod_comm, only: &
        COMM_var
     use mod_extdata, only: &
@@ -504,14 +492,7 @@ contains
        GRAV  => CONST_GRAV, &
        CVdry => CONST_CVdry
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_oprt, only: &
        OPRT_horizontalize_vec
     use mod_vmtr, only: &
@@ -674,10 +655,6 @@ contains
        rhog,    &
        rhogq,   &
        dt       )
-    use mod_adm, only: &
-       ADM_lall,    &
-       ADM_gall_in, &
-       ADM_kall
     use mod_gtl, only: &
        GTL_clip_region
     use mod_runconf, only: &
@@ -737,12 +714,7 @@ contains
        UNDEF  => CONST_UNDEF, &
        RADIUS => CONST_RADIUS
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_KNONE
+       ADM_have_pl
     use scale_vector, only: &
        VECTR_distance
     use mod_comm, only: &
@@ -837,8 +809,6 @@ contains
 
   !-----------------------------------------------------------------------------
   integer function suf(i,j)
-    use mod_adm, only: &
-       ADM_gall_1d
     implicit none
 
     integer :: i, j

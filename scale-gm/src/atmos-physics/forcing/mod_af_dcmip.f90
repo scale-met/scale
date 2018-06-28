@@ -13,7 +13,9 @@ module mod_af_dcmip
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -44,12 +46,15 @@ module mod_af_dcmip
   logical, private :: USE_ToyChemistry    = .false.
   logical, public  :: USE_HeldSuarez      = .false.
 
+  integer :: vlayer
+  integer :: kdim
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   subroutine af_dcmip_init
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_runconf, only: &
        CHEM_TYPE, &
        NCHEM_MAX
@@ -57,10 +62,6 @@ contains
        AF_heldsuarez_init
     use mod_bndcnd, only: &
        Tsfc => tem_sfc
-    use mod_adm, only: &
-       k0 => ADM_KNONE,      &
-       ADM_lall,             &
-       ADM_gall
     use mod_grd, only: &
        GRD_LAT,  &
        GRD_s
@@ -123,7 +124,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** FORCING_DCMIP_PARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist FORCING_DCMIP_PARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=FORCING_DCMIP_PARAM)
 
@@ -246,11 +247,11 @@ contains
        if ( CHEM_TYPE == 'PASSIVE' ) then
           if ( NCHEM_MAX /= 2 ) then
              write(*,*) 'xxx Not appropriate number of passive tracer. STOP.', NCHEM_MAX
-             call PRC_MPIstop
+             call PRC_abort
           endif
        else
           write(*,*) 'xxx CHEM_TYPE must be set to PASSIVE. STOP.', trim(CHEM_TYPE)
-          call PRC_MPIstop
+          call PRC_abort
        endif
     endif
 !
@@ -258,7 +259,7 @@ contains
 ! Tsurf needs to be dependent on latitude for moist baroclinic wave test
 ! Tsurf needs to be constant for tropical cyclone test
 !
-    lat(:,:) = GRD_s(:,k0,:,GRD_LAT)
+    lat(:,:) = GRD_s(:,ADM_KNONE,:,GRD_LAT)
     latw = 2.0_RP * pi / 9.0_RP 
     etav = (1._RP-eta0) * 0.5_RP * pi
     zvir   = (rh2o/rair) - 1._RP
@@ -285,6 +286,9 @@ contains
           end if
        endif
     enddo
+
+    vlayer = ADM_vlayer
+    kdim   = ADM_kall
 
     return
   end subroutine af_dcmip_init
@@ -319,11 +323,6 @@ contains
        jy,      &
        jz,      &
        dt       )
-    use mod_adm, only: &
-       vlayer => ADM_vlayer, &
-       kdim   => ADM_kall,   &
-       kmin   => ADM_kmin,   &
-       kmax   => ADM_kmax
     use scale_const, only: &
        d2r   => CONST_D2R,   &
        Rdry  => CONST_Rdry,  &
@@ -411,8 +410,13 @@ contains
     real(RP) :: gvz(ijdim,kdim)
     real(RP) :: ge (ijdim,kdim)
 
+    integer :: kmin, kmax
+
     integer  :: ij, k, kk
     !---------------------------------------------------------------------------
+
+    kmin = ADM_kmin
+    kmax = ADM_kmax
 
     fvx(:,:)   = 0.0_RP
     fvy(:,:)   = 0.0_RP

@@ -14,8 +14,9 @@ module mod_fio
   !
   use scale_precision
   use mod_io_param
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -100,10 +101,7 @@ contains
   subroutine FIO_setup
     use mod_adm, only: &
        ADM_prc_tab, &
-       ADM_prc_me,  &
-       ADM_glevel,  &
-       ADM_rlevel,  &
-       ADM_lall
+       ADM_prc_me
     implicit none
 
     integer, allocatable :: prc_tab(:)
@@ -209,11 +207,8 @@ contains
        k_end,         &
        step,          &
        allow_missingq ) !--- optional
-    use scale_process, only: &
-       PRC_MPIstop
-    use mod_adm, only: &
-       ADM_gall, &
-       ADM_lall
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(SP),         intent(out) :: var(:,:,:) !< variable(ij,k,l)
@@ -257,18 +252,18 @@ contains
        else
           write(*,*) 'xxx [INPUT]/[FIO] data not found! : ', &
                                'varname= ',trim(varname),', step=',step
-          call PRC_MPIstop
+          call PRC_abort
        endif
     endif
 
     if ( dinfo%layername /= layername ) then
        write(*,*) 'xxx [INPUT]/[FIO] layername mismatch! ', &
                             '[',trim(dinfo%layername),':',trim(layername),']'
-       call PRC_MPIstop
+       call PRC_abort
     elseif( dinfo%num_of_layer /= k_end-k_start+1 ) then
        write(*,*) 'xxx [INPUT]/[FIO] num_of_layer mismatch! ', &
                             dinfo%num_of_layer,k_end-k_start+1
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     !--- read data
@@ -300,11 +295,8 @@ contains
        k_end,         &
        step,          &
        allow_missingq ) !--- optional
-    use scale_process, only: &
-       PRC_MPIstop
-    use mod_adm, only: &
-       ADM_gall, &
-       ADM_lall
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(DP),         intent(out) :: var(:,:,:) !< variable(ij,k,l)
@@ -348,18 +340,18 @@ contains
        else
           write(*,*) 'xxx [INPUT]/[FIO] data not found! : ', &
                                'varname= ',trim(varname),', step=',step
-          call PRC_MPIstop
+          call PRC_abort
        endif
     endif
 
     if ( dinfo%layername /= layername ) then
        write(*,*) 'xxx [INPUT]/[FIO] layername mismatch! ', &
                             '[',trim(dinfo%layername),':',trim(layername),']'
-       call PRC_MPIstop
+       call PRC_abort
     elseif( dinfo%num_of_layer /= k_end-k_start+1 ) then
        write(*,*) 'xxx [INPUT]/[FIO] num_of_layer mismatch! ', &
                             dinfo%num_of_layer,k_end-k_start+1
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     !--- read data
@@ -395,8 +387,8 @@ contains
        ctime,            &
        cdate,            &
        opt_periodic_year )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_calendar, only: &
        CALENDAR_daysec2date,    &
        CALENDAR_date2daysec,    &
@@ -446,11 +438,11 @@ contains
        if ( dinfo%layername /= layername ) then
           write(*,*) 'xxx [INPUT]/[FIO] layername mismatch! ', &
                                '[',trim(dinfo%layername),':',trim(layername),']'
-          call PRC_MPIstop
+          call PRC_abort
        elseif( dinfo%num_of_layer /= k_end-k_start+1 ) then
           write(*,*) 'xxx [INPUT]/[FIO] num_of_layer mismatch!', &
                                dinfo%num_of_layer,k_end-k_start+1
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        midtime = real( int( (dinfo%time_start+dinfo%time_end)*0.5_DP+1.0_DP, kind=DP ), kind=DP )
@@ -511,13 +503,10 @@ contains
        t_start,   &
        t_end,     &
        append     )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF4 => CONST_UNDEF4
-    use mod_adm, only: &
-       ADM_gall, &
-       ADM_lall
     implicit none
 
     real(SP),         intent(in) :: var(:,:,:)
@@ -577,7 +566,7 @@ contains
 
     else
        write(*,*) 'xxx [OUTPUT]/[FIO] Unsupported datatype!', dtype
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     call PROF_rapend('FILE_CARTESC_out',2)
@@ -604,13 +593,10 @@ contains
        t_start,   &
        t_end,     &
        append     )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF4 => CONST_UNDEF4
-    use mod_adm, only: &
-       ADM_gall, &
-       ADM_lall
     implicit none
 
     real(DP),         intent(in) :: var(:,:,:)
@@ -670,7 +656,7 @@ contains
 
     else
        write(*,*) 'xxx [OUTPUT]/[FIO] Unsupported datatype!', dtype
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     call PROF_rapend('FILE_CARTESC_out',2)

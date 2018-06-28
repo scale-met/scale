@@ -13,7 +13,7 @@ module mod_time
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
@@ -81,8 +81,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup the temporal scheme and time management
   subroutine TIME_setup
-    use scale_process, only: &
-       PRC_MPIstop, &
+    use scale_prc, only: &
+       PRC_abort, &
        PRC_MPItime
     use scale_const, only: &
        UNDEF8 => CONST_UNDEF8
@@ -183,7 +183,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** TIMEPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist TIMEPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=TIMEPARAM)
 
@@ -323,7 +323,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine TIME_report
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_MPItime
     use scale_calendar, only: &
        CALENDAR_date2char
@@ -355,7 +355,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine TIME_advance( reverse )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_IsMaster, &
        PRC_MPItime
     use scale_calendar, only: &

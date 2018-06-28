@@ -13,11 +13,9 @@ module mod_bndcnd
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
-  use mod_adm
-!  use mod_adm, only: &
-!     ADM_gall_in, &
-!     ADM_lall
+  use scale_io
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -70,13 +68,17 @@ module mod_bndcnd
   logical, private :: is_btm_rigid = .false.
   logical, private :: is_btm_free  = .false.
 
+  integer :: kdim
+  integer :: kmin
+  integer :: kmax
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine BNDCND_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist / BNDCNDPARAM / &
@@ -103,7 +105,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** BNDCNDPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist BNDCNDPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=BNDCNDPARAM)
 
@@ -115,7 +117,7 @@ contains
        is_top_epl = .true.
     else
        write(*,*) 'xxx Invalid BND_TYPE_T_TOP. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if    ( BND_TYPE_T_BOTTOM == 'TEM' ) then
@@ -126,7 +128,7 @@ contains
        is_btm_epl = .true.
     else
        write(*,*) 'xxx Invalid BND_TYPE_T_BOTTOM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if    ( BND_TYPE_M_TOP == 'RIGID' ) then
@@ -137,7 +139,7 @@ contains
        is_top_free  = .true.
     else
        write(*,*) 'xxx Invalid BND_TYPE_M_TOP. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if    ( BND_TYPE_M_BOTTOM == 'RIGID' ) then
@@ -148,10 +150,14 @@ contains
        is_btm_free  = .true.
     else
        write(*,*) 'xxx Invalid BND_TYPE_M_BOTTOM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     allocate( tem_sfc(ADM_gall,ADM_lall) )
+
+    kdim = ADM_kall
+    kmin = ADM_kmin
+    kmax = ADM_kmax
 
     return
   end subroutine BNDCND_setup
@@ -180,9 +186,6 @@ contains
        phi,        &
        c2wfact,    &
        c2wfact_Gz  )
-    use mod_adm, only: &
-       kmin => ADM_kmin, &
-       kmax => ADM_kmax
     use scale_const, only: &
        CVdry => CONST_CVdry
     implicit none
@@ -299,10 +302,6 @@ contains
        pre,   &
        tem,   &
        phi    )
-    use mod_adm, only: &
-       kdim => ADM_kall, &
-       kmin => ADM_kmin, &
-       kmax => ADM_kmax
     use scale_const, only: &
        GRAV => CONST_GRAV, &
        Rdry => CONST_Rdry
@@ -392,9 +391,6 @@ contains
        rhogvx, &
        rhogvy, &
        rhogvz  )
-    use mod_adm, only: &
-       kmin => ADM_kmin, &
-       kmax => ADM_kmax
     implicit none
 
     integer,  intent(in)    :: ijdim
@@ -452,10 +448,6 @@ contains
        rhogvz, &
        rhogw,  &
        c2wfact )
-    use mod_adm, only: &
-       kdim => ADM_kall, &
-       kmin => ADM_kmin, &
-       kmax => ADM_kmax
     implicit none
 
     integer, intent(in)    :: ijdim
