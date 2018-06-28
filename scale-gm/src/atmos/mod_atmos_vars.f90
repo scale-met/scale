@@ -1226,9 +1226,6 @@ contains
        CVdry => CONST_CVdry
     use scale_prc, only: &
        PRC_abort
-    use scale_atmos_grid_cartesC, only: &
-       RCDX => ATMOS_GRID_CARTESC_RCDX, &
-       RCDY => ATMOS_GRID_CARTESC_RCDY
     use scale_atmos_hydrometeor, only: &
        LHVc => LHV, &
        LHFc => LHF, &

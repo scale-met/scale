@@ -210,8 +210,8 @@ contains
   subroutine ATMOS_PHY_MP_driver_setup
     use scale_prc, only: &
        PRC_abort
-    use scale_atmos_grid_cartesC, only: &
-       CDZ => ATMOS_GRID_CARTESC_CDZ
+    use mod_grd, only: &
+       CDZ => GRD_dgz
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_time, only: &

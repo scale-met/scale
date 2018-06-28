@@ -131,7 +131,6 @@ OBJS =	\
 	mod_atmos_surface.o     \
 	mod_dynamics.o       \
 	mod_af_dcmip.o       \
-	mod_af_atmos_phy.o   \
 	mod_forcing_driver.o \
 	mod_gm_driver.o      \
 	orgico.o             \

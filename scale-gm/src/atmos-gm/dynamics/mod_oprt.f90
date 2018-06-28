@@ -66,14 +66,6 @@ module mod_oprt
   character(len=H_LONG),  private :: OPRT_fname   = ''
   character(len=H_SHORT), private :: OPRT_io_mode = 'ADVANCED'
 
-  integer, parameter :: TI = ADM_TI
-  integer, parameter :: TJ = ADM_TJ
-  integer, parameter :: AI = ADM_AI
-  integer, parameter :: AIJ = ADM_AIJ
-  integer, parameter :: AJ = ADM_AJ
-  integer, parameter :: K0 = ADM_KNONE
-  integer :: vlink
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -91,15 +83,24 @@ contains
        GMTR_p_nmax, &
        GMTR_t_nmax, &
        GMTR_a_nmax
+    use scale_atmos_grid_icoA_index, only: &
+       TI  => ADM_TI,  &
+       TJ  => ADM_TJ,  &
+       AI  => ADM_AI,  &
+       AIJ => ADM_AIJ, &
+       AJ  => ADM_AJ,  &
+       K0  => ADM_KNONE, &
+       vlink => ADM_vlink
+
     implicit none
 
     namelist / OPRTPARAM / &
        OPRT_io_mode, &
        OPRT_fname
 
-    real(RP) :: IxJ_GMTR_p(ADM_iall,ADM_jall,K0,ADM_lall,      GMTR_p_nmax)
-    real(RP) :: IxJ_GMTR_t(ADM_iall,ADM_jall,K0,ADM_lall,TI:TJ,GMTR_t_nmax)
-    real(RP) :: IxJ_GMTR_a(ADM_iall,ADM_jall,K0,ADM_lall,AI:AJ,GMTR_a_nmax)
+    real(RP) :: IxJ_GMTR_p(ADM_iall,ADM_jall,ADM_KNONE,ADM_lall,              GMTR_p_nmax)
+    real(RP) :: IxJ_GMTR_t(ADM_iall,ADM_jall,ADM_KNONE,ADM_lall,ADM_TI:ADM_TJ,GMTR_t_nmax)
+    real(RP) :: IxJ_GMTR_a(ADM_iall,ADM_jall,ADM_KNONE,ADM_lall,ADM_AI:ADM_AJ,GMTR_a_nmax)
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -116,8 +117,6 @@ contains
        call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=OPRTPARAM)
-
-     vlink = ADM_vlink
 
 !    allocate( OPRT_coef_div    (ADM_nxyz,ADM_gall,0:6    ,ADM_lall   ) )
 !    allocate( OPRT_coef_div_pl (ADM_nxyz,         0:vlink,ADM_lall_pl) )
@@ -200,6 +199,14 @@ contains
        GMTR_t_nmax,             &
        GMTR_a_nmax,             &
        GMTR_a_nmax_pl
+    use scale_atmos_grid_icoA_index, only: &
+       TI  => ADM_TI,  &
+       TJ  => ADM_TJ,  &
+       AI  => ADM_AI,  &
+       AIJ => ADM_AIJ, &
+       AJ  => ADM_AJ,  &
+       K0  => ADM_KNONE, &
+       vlink => ADM_vlink
     implicit none
 
     real(RP), intent(in)  :: GMTR_p     (ADM_iall,ADM_jall,K0,ADM_lall   ,      GMTR_p_nmax   )
@@ -406,6 +413,14 @@ contains
        GMTR_t_nmax,             &
        GMTR_a_nmax,             &
        GMTR_a_nmax_pl
+    use scale_atmos_grid_icoA_index, only: &
+       TI  => ADM_TI,  &
+       TJ  => ADM_TJ,  &
+       AI  => ADM_AI,  &
+       AIJ => ADM_AIJ, &
+       AJ  => ADM_AJ,  &
+       K0  => ADM_KNONE, &
+       vlink => ADM_vlink
     implicit none
 
     real(RP), intent(in)  :: GMTR_p     (ADM_iall,ADM_jall,K0,ADM_lall   ,      GMTR_p_nmax   )
@@ -612,6 +627,14 @@ contains
        GMTR_t_nmax,             &
        GMTR_a_nmax,             &
        GMTR_a_nmax_pl
+    use scale_atmos_grid_icoA_index, only: &
+       TI  => ADM_TI,  &
+       TJ  => ADM_TJ,  &
+       AI  => ADM_AI,  &
+       AIJ => ADM_AIJ, &
+       AJ  => ADM_AJ,  &
+       K0  => ADM_KNONE, &
+       vlink => ADM_vlink
     implicit none
 
     real(RP), intent(in)  :: GMTR_p      (ADM_iall,ADM_jall,K0,ADM_lall   ,      GMTR_p_nmax   )
@@ -828,6 +851,14 @@ contains
        GMTR_t_nmax,             &
        GMTR_a_nmax,             &
        GMTR_a_nmax_pl
+    use scale_atmos_grid_icoA_index, only: &
+       TI  => ADM_TI,  &
+       TJ  => ADM_TJ,  &
+       AI  => ADM_AI,  &
+       AIJ => ADM_AIJ, &
+       AJ  => ADM_AJ,  &
+       K0  => ADM_KNONE, &
+       vlink => ADM_vlink
     implicit none
 
     real(RP), intent(in)  :: GMTR_p     (ADM_iall,ADM_jall,K0,ADM_lall   ,      GMTR_p_nmax   )
@@ -1281,6 +1312,14 @@ contains
        GMTR_t_nmax,             &
        GMTR_a_nmax,             &
        GMTR_a_nmax_pl
+    use scale_atmos_grid_icoA_index, only: &
+       TI  => ADM_TI,  &
+       TJ  => ADM_TJ,  &
+       AI  => ADM_AI,  &
+       AIJ => ADM_AIJ, &
+       AJ  => ADM_AJ,  &
+       K0  => ADM_KNONE, &
+       vlink => ADM_vlink
     implicit none
 
     real(RP), intent(in)  :: GMTR_p      (ADM_iall,ADM_jall,K0,ADM_lall   ,      GMTR_p_nmax   )
@@ -1409,6 +1448,14 @@ contains
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
        ZDIR => GRD_ZDIR
+    use scale_atmos_grid_icoA_index, only: &
+       TI  => ADM_TI,  &
+       TJ  => ADM_TJ,  &
+       AI  => ADM_AI,  &
+       AIJ => ADM_AIJ, &
+       AJ  => ADM_AJ,  &
+       K0  => ADM_KNONE, &
+       vlink => ADM_vlink
     implicit none
 
     real(RP), intent(out) :: scl        (ADM_iall,ADM_jall,ADM_kall,ADM_lall   )
@@ -1529,6 +1576,14 @@ contains
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
        ZDIR => GRD_ZDIR
+    use scale_atmos_grid_icoA_index, only: &
+       TI  => ADM_TI,  &
+       TJ  => ADM_TJ,  &
+       AI  => ADM_AI,  &
+       AIJ => ADM_AIJ, &
+       AJ  => ADM_AJ,  &
+       K0  => ADM_KNONE, &
+       vlink => ADM_vlink
     implicit none
 
     real(RP), intent(out) :: scl        (ADM_iall,ADM_jall,ADM_kall,ADM_lall   )
@@ -1632,6 +1687,14 @@ contains
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
        ZDIR => GRD_ZDIR
+    use scale_atmos_grid_icoA_index, only: &
+       TI  => ADM_TI,  &
+       TJ  => ADM_TJ,  &
+       AI  => ADM_AI,  &
+       AIJ => ADM_AIJ, &
+       AJ  => ADM_AJ,  &
+       K0  => ADM_KNONE, &
+       vlink => ADM_vlink
     implicit none
 
     real(RP), intent(out) :: grad        (ADM_iall,ADM_jall,ADM_kall,ADM_lall   ,ADM_nxyz)
@@ -1750,6 +1813,14 @@ contains
        coef_lap, coef_lap_pl )
     use mod_adm, only: &
        ADM_have_pl
+    use scale_atmos_grid_icoA_index, only: &
+       TI  => ADM_TI,  &
+       TJ  => ADM_TJ,  &
+       AI  => ADM_AI,  &
+       AIJ => ADM_AIJ, &
+       AJ  => ADM_AJ,  &
+       K0  => ADM_KNONE, &
+       vlink => ADM_vlink
     implicit none
 
     real(RP), intent(out) :: dscl       (ADM_iall,ADM_jall,ADM_kall,ADM_lall   )
@@ -1835,6 +1906,14 @@ contains
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
        ZDIR => GRD_ZDIR
+    use scale_atmos_grid_icoA_index, only: &
+       TI  => ADM_TI,  &
+       TJ  => ADM_TJ,  &
+       AI  => ADM_AI,  &
+       AIJ => ADM_AIJ, &
+       AJ  => ADM_AJ,  &
+       K0  => ADM_KNONE, &
+       vlink => ADM_vlink
     implicit none
 
     real(RP), intent(out) :: dscl        (ADM_iall,ADM_jall,ADM_kall,ADM_lall   )
@@ -2062,6 +2141,14 @@ contains
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
        ZDIR => GRD_ZDIR
+    use scale_atmos_grid_icoA_index, only: &
+       TI  => ADM_TI,  &
+       TJ  => ADM_TJ,  &
+       AI  => ADM_AI,  &
+       AIJ => ADM_AIJ, &
+       AJ  => ADM_AJ,  &
+       K0  => ADM_KNONE, &
+       vlink => ADM_vlink
     implicit none
 
     real(RP), intent(out) :: ddivdx      (ADM_iall,ADM_jall,ADM_kall,ADM_lall   )
@@ -2262,6 +2349,14 @@ contains
        GRD_rscale, &
        GRD_x,      &
        GRD_x_pl
+    use scale_atmos_grid_icoA_index, only: &
+       TI  => ADM_TI,  &
+       TJ  => ADM_TJ,  &
+       AI  => ADM_AI,  &
+       AIJ => ADM_AIJ, &
+       AJ  => ADM_AJ,  &
+       K0  => ADM_KNONE, &
+       vlink => ADM_vlink
     implicit none
 
     real(RP), intent(inout) :: vx   (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -2330,6 +2425,14 @@ contains
        GRD_rscale, &
        ORIG_GRD_x => GRD_x, &
        GRD_x_pl
+    use scale_atmos_grid_icoA_index, only: &
+       TI  => ADM_TI,  &
+       TJ  => ADM_TJ,  &
+       AI  => ADM_AI,  &
+       AIJ => ADM_AIJ, &
+       AJ  => ADM_AJ,  &
+       K0  => ADM_KNONE, &
+       vlink => ADM_vlink
     implicit none
 
     real(RP), intent(inout) :: vx   (ADM_iall,ADM_jall,ADM_kall,ADM_lall   )
@@ -2404,6 +2507,14 @@ contains
        COMM_data_transfer
     use mod_fio, only: &
        FIO_output
+    use scale_atmos_grid_icoA_index, only: &
+       TI  => ADM_TI,  &
+       TJ  => ADM_TJ,  &
+       AI  => ADM_AI,  &
+       AIJ => ADM_AIJ, &
+       AJ  => ADM_AJ,  &
+       K0  => ADM_KNONE, &
+       vlink => ADM_vlink
     implicit none
 
     character(len=*), intent(in) :: basename
