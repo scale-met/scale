@@ -9,13 +9,12 @@
 !! @author NICAM developers, Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module mod_gm_driver
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
-  use dc_log, only: &
-     LogInit
   use scale_file, only: &
      FILE_Close_All
   use scale_precision
@@ -63,8 +62,13 @@ contains
     use scale_prc, only: &
        PRC_IsMaster,    &
        PRC_MPIstart,    &
+       PRC_abort,       &
        PRC_LOCAL_setup, &
        PRC_MPIfinish
+    use scale_fpm, only: &
+       FPM_alive,       &
+       FPM_Polling,     &
+       FPM_POLLING_FREQ
     use scale_const, only: &
        CONST_setup,  &
        CONST_THERMODYN_TYPE, &
@@ -243,7 +247,9 @@ contains
     real(RP) :: dx, dy
 
     integer :: myrank
+    integer :: fpm_counter
     logical :: ismaster
+    logical :: sign_exit
 
     integer :: n, l
     !---------------------------------------------------------------------------
@@ -260,9 +266,6 @@ contains
 
     ! setup Log
     call IO_LOG_setup( myrank, ismaster )
-    call LogInit( IO_FID_CONF,       &
-                  IO_FID_LOG, IO_L,  &
-                  IO_FID_NML, IO_NML )
 
     !---< admin module setup >---
     call ADM_setup
@@ -412,6 +415,8 @@ contains
     TIME_RES_ATMOS_PHY_RD = 0
     TIME_DOATMOS_PHY_RD = .true.
 
+    fpm_counter = 0
+
     do n = 1, TIME_LSTEP_MAX
 
        call TIME_report
@@ -435,6 +440,22 @@ contains
        call PROF_rapend  ('_History',1)
 
       if( IO_L ) call flush(IO_FID_LOG)
+
+      ! FPM polling
+      if ( FPM_alive ) then
+      if ( FPM_POLLING_FREQ > 0 ) then
+         if ( fpm_counter > FPM_POLLING_FREQ ) then
+            sign_exit = .false.
+            call FPM_Polling( .true., sign_exit )
+            if ( sign_exit ) then
+               LOG_ERROR("scalegm",*) 'receive stop signal'
+               call PRC_abort
+            endif
+            fpm_counter = 0
+         endif
+         fpm_counter = fpm_counter + 1
+      endif
+      endif
 
     enddo
 
