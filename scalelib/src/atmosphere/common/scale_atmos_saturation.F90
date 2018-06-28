@@ -79,11 +79,13 @@ module scale_atmos_saturation
   interface ATMOS_SATURATION_psat_liq
      module procedure ATMOS_SATURATION_psat_liq_0D
      module procedure ATMOS_SATURATION_psat_liq_1D
+     module procedure ATMOS_SATURATION_psat_liq_2D
      module procedure ATMOS_SATURATION_psat_liq_3D
   end interface ATMOS_SATURATION_psat_liq
   interface ATMOS_SATURATION_psat_ice
      module procedure ATMOS_SATURATION_psat_ice_0D
      module procedure ATMOS_SATURATION_psat_ice_1D
+     module procedure ATMOS_SATURATION_psat_ice_2D
      module procedure ATMOS_SATURATION_psat_ice_3D
   end interface ATMOS_SATURATION_psat_ice
 
@@ -512,6 +514,35 @@ contains
   end subroutine ATMOS_SATURATION_psat_liq_1D
 
   !-----------------------------------------------------------------------------
+  !> calc saturation vapor pressure from Clausius-Clapeyron equation (2D)
+  subroutine ATMOS_SATURATION_psat_liq_2D( &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       temp, &
+       psat  )
+    implicit none
+
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+
+    real(RP), intent(in)  :: temp(IA,JA) !< temperature               [K]
+    real(RP), intent(out) :: psat(IA,JA) !< saturation vapor pressure [Pa]
+
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+       call ATMOS_SATURATION_psat_liq_0D( temp(i,j), & ! [IN]
+                                          psat(i,j)  ) ! [OUT]
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_psat_liq_2D
+
+  !-----------------------------------------------------------------------------
   !> calc saturation vapor pressure from Clausius-Clapeyron equation (3D)
   subroutine ATMOS_SATURATION_psat_liq_3D( &
        KA, KS, KE, &
@@ -585,6 +616,35 @@ contains
 
     return
   end subroutine ATMOS_SATURATION_psat_ice_1D
+
+  !-----------------------------------------------------------------------------
+  !> calc saturation vapor pressure from Clausius-Clapeyron equation (2D)
+  subroutine ATMOS_SATURATION_psat_ice_2D( &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       temp, &
+       psat  )
+    implicit none
+
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+
+    real(RP), intent(in)  :: temp(IA,JA) !< temperature               [K]
+    real(RP), intent(out) :: psat(IA,JA) !< saturation vapor pressure [Pa]
+
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+       call ATMOS_SATURATION_psat_ice_0D( temp(i,j), & ! [IN]
+                                          psat(i,j)  ) ! [OUT]
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_psat_ice_2D
 
   !-----------------------------------------------------------------------------
   !> calc saturation vapor pressure from Clausius-Clapeyron equation (3D)
