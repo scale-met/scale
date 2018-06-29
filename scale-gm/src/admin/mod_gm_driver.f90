@@ -92,8 +92,6 @@ contains
        OPRT_setup
     use mod_vmtr, only: &
        VMTR_setup
-    use mod_latlon, only: &
-       LATLON_ico_setup
     use mod_time, only: &
        TIME_setup,     &
        TIME_report,    &
@@ -307,9 +305,6 @@ contains
 
     !---< vertical metrics module setup >---
     call VMTR_setup
-
-    !---< latlon module setup >---
-    call LATLON_ico_setup
 
     !---< time module setup >---
     call TIME_setup

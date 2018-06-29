@@ -442,15 +442,14 @@ contains
     use mod_atmos_phy_bl_vars, only: &
        ATMOS_PHY_BL_vars_setup
     use mod_grd, only: &
+       GRD_LON,  &
+       GRD_LAT,  &
+       GRD_s,    &
        GRD_Z,    &
        GRD_ZH,   &
+       GRD_vz,   &
        GRD_ZSFC, &
-       GRD_vz, &
        GRD_zs
-    use mod_latlon, only: &
-       GMTR_p_ll, &
-       GMTR_p_LON, &
-       GMTR_p_LAT
     implicit none
 
     namelist / PARAM_ATMOS_VARS / &
@@ -652,8 +651,8 @@ contains
     do j = 1, JA
     do i = 1, IA
        ij = i + ADM_imin - 1 + ( j - 1 ) * ADM_iall
-       LON(i,j,l) = GMTR_p_ll(ij,ADM_KNONE,l,GMTR_p_LON)
-       LAT(i,j,l) = GMTR_p_ll(ij,ADM_KNONE,l,GMTR_p_LAT)
+       LON(i,j,l) = GRD_s(ij,ADM_KNONE,l,GRD_LON)
+       LAT(i,j,l) = GRD_s(ij,ADM_KNONE,l,GRD_LAT)
     end do
     end do
     end do
