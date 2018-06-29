@@ -91,7 +91,7 @@ SUBROUTINE KESSLER(theta, qv, qc, qr, rho, pk, dt, z, nz, precl)
   !------------------------------------------------
   !   Local variables
   !------------------------------------------------
-  REAL, DIMENSION(nz) :: r, rhalf, velqr, sed, pc
+  REAL(8), DIMENSION(nz) :: r, rhalf, velqr, sed, pc
 
   REAL(8) :: f5, f2x, xk, ern, qrprod, prod, qvs, psl, rhoqr, dt_max, dt0
 

@@ -394,15 +394,16 @@ contains
     real(DP), intent(in)  :: dt
 
     ! for kessler
-    real(RP) :: theta(vlayer) ! potential temperature (K)
-    real(RP) :: qv   (vlayer) ! water vapor mixing ratio (gm/gm)
-    real(RP) :: qc   (vlayer) ! cloud water mixing ratio (gm/gm)
-    real(RP) :: qr   (vlayer) ! rain  water mixing ratio (gm/gm)
-    real(RP) :: rhod (vlayer) ! dry air density (not mean state as in KW) (kg/m^3)
-    real(RP) :: pk   (vlayer) ! Exner function (p/p0)**(R/cp)
-    real(RP) :: z    (vlayer) ! heights of thermo. levels in the grid column (m)
-    real(RP) :: qd   (vlayer)
-    real(RP) :: cv   (vlayer)
+    real(DP) :: theta(vlayer) ! potential temperature (K)
+    real(DP) :: qv   (vlayer) ! water vapor mixing ratio (gm/gm)
+    real(DP) :: qc   (vlayer) ! cloud water mixing ratio (gm/gm)
+    real(DP) :: qr   (vlayer) ! rain  water mixing ratio (gm/gm)
+    real(DP) :: rhod (vlayer) ! dry air density (not mean state as in KW) (kg/m^3)
+    real(DP) :: pk   (vlayer) ! Exner function (p/p0)**(R/cp)
+    real(DP) :: z    (vlayer) ! heights of thermo. levels in the grid column (m)
+    real(DP) :: qd   (vlayer)
+    real(DP) :: cv   (vlayer)
+    real(DP) :: precip1(ijdim)
 
     ! for simple physics
     real(DP) :: t      (ijdim,vlayer)   ! Temperature at full-model level (K)
@@ -445,6 +446,7 @@ contains
     fq (:,:,:) = 0.0_RP
 
     precip (:) = 0.0_RP
+    precip1(:) = 0.0_RP
     precip2(:) = 0.0_RP
 
     if ( USE_Kessler ) then
@@ -473,7 +475,7 @@ contains
                         dt,        & ! [IN]
                         z    (:),  & ! [IN]
                         vlayer,    & ! [IN]
-                        precip(ij) ) ! [OUT]
+                        precip1(ij) ) ! [OUT]
 
           qd(:) = 1.0_RP &
                 / ( 1.0_RP + qv(:) + qc(:) + qr(:) )
@@ -586,7 +588,7 @@ contains
           enddo
        enddo
 
-       precip(:) = precip(:) + precip2(:)
+       precip(:) = precip1(:) + precip2(:)
 
     endif
 
