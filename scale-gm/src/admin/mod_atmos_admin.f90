@@ -70,18 +70,18 @@ contains
        PRC_abort
     implicit none
 
-!    NAMELIST / PARAM_ATMOS / &
-!       ATMOS_do,          &
-!       ATMOS_DYN_TYPE,    &
-!       ATMOS_PHY_MP_TYPE, &
-!       ATMOS_PHY_AE_TYPE, &
-!       ATMOS_PHY_CH_TYPE, &
-!       ATMOS_PHY_RD_TYPE, &
-!       ATMOS_PHY_SF_TYPE, &
-!       ATMOS_PHY_TB_TYPE, &
-!       ATMOS_PHY_BL_TYPE, &
-!       ATMOS_PHY_CP_TYPE, &
-!       ATMOS_USE_AVERAGE
+    NAMELIST / PARAM_ATMOS / &
+       ATMOS_do,          &
+       ATMOS_DYN_TYPE,    &
+       ATMOS_PHY_MP_TYPE, &
+       ATMOS_PHY_AE_TYPE, &
+       ATMOS_PHY_CH_TYPE, &
+       ATMOS_PHY_RD_TYPE, &
+       ATMOS_PHY_SF_TYPE, &
+       ATMOS_PHY_TB_TYPE, &
+       ATMOS_PHY_BL_TYPE, &
+       ATMOS_PHY_CP_TYPE, &
+       ATMOS_USE_AVERAGE
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -90,15 +90,15 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[ADMIN] / Categ[ATMOS] / Origin[SCALE-RM]'
 
     !--- read namelist
-!    rewind(IO_FID_CONF)
-!    read(IO_FID_CONF,nml=PARAM_ATMOS,iostat=ierr)
-!    if( ierr < 0 ) then !--- missing
-!       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-!    elseif( ierr > 0 ) then !--- fatal error
-!       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS. Check!'
-!       call PRC_abort
-!    endif
-!    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS)
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS. Check!'
+       call PRC_abort
+    endif
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS)
 
     !-----< module component check >-----
 

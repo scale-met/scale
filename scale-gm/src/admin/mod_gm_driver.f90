@@ -317,6 +317,9 @@ contains
     !---< external data module setup >---
     call extdata_setup
 
+
+    call atmos_admin_setup
+
     !---< tracer setup >---
     call atmos_hydrometeor_setup
     call atmos_phy_driver_tracer_setup
@@ -326,7 +329,6 @@ contains
 
     !---< nhm_runconf module setup >---
     call runconf_setup
-    call atmos_admin_setup
 
     !---< topography module setup >---
     call TOPO_setup

@@ -16,12 +16,6 @@ module mod_runconf
   use scale_io
   use scale_tracer
 
-  use mod_atmos_admin, only: &
-     ATMOS_PHY_CP_TYPE, &
-     ATMOS_PHY_MP_TYPE, &
-     ATMOS_PHY_RD_TYPE, &
-     ATMOS_PHY_SF_TYPE, &
-     ATMOS_PHY_BL_TYPE
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -122,23 +116,6 @@ contains
   subroutine RUNCONF_setup
     use scale_prc, only: &
        PRC_abort
-    use mod_atmos_admin, only: &
-       ATMOS_PHY_MP_TYPE, &
-       ATMOS_PHY_AE_TYPE, &
-       ATMOS_PHY_CH_TYPE, &
-       ATMOS_PHY_RD_TYPE, &
-       ATMOS_PHY_SF_TYPE, &
-       ATMOS_PHY_TB_TYPE, &
-       ATMOS_PHY_BL_TYPE, &
-       ATMOS_PHY_CP_TYPE, &
-       ATMOS_sw_phy_mp,   &
-       ATMOS_sw_phy_ae,   &
-       ATMOS_sw_phy_ch,   &
-       ATMOS_sw_phy_rd,   &
-       ATMOS_sw_phy_sf,   &
-       ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_bl,   &
-       ATMOS_sw_phy_cp
     use mod_ocean_admin, only: &
        OCEAN_TYPE
     use mod_land_admin, only: &
@@ -156,12 +133,6 @@ contains
        FLAG_NUDGING,       &
        THUBURN_LIM,        & ! R.Yoshida 13/06/13 [add]
        ATMOS_PHY_TYPE,     & 
-       ATMOS_PHY_CP_TYPE,            &
-       ATMOS_PHY_MP_TYPE,            &
-       ATMOS_PHY_RD_TYPE,            &
-       ATMOS_PHY_SF_TYPE,            &
-       ATMOS_PHY_BL_TYPE,            &
-       ATMOS_PHY_CH_TYPE,            &
        ROUGHNESS_SEA_TYPE, &
        LAND_TYPE,          &
        OCEAN_TYPE,         &
@@ -184,71 +155,6 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=RUNCONFPARAM)
 
-
-    ! Setting up swtiching parameters 
-    if ( ATMOS_PHY_MP_TYPE /= 'OFF' .AND. ATMOS_PHY_MP_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Cloud Microphysics   : ON, ', trim(ATMOS_PHY_MP_TYPE)
-       ATMOS_sw_phy_mp = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Cloud Microphysics   : OFF'
-       ATMOS_sw_phy_mp = .false.
-    endif
-
-    if ( ATMOS_PHY_AE_TYPE /= 'OFF' .AND. ATMOS_PHY_AE_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Aerosol Microphysics : ON, ', trim(ATMOS_PHY_AE_TYPE)
-       ATMOS_sw_phy_ae = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Aerosol Microphysics : OFF'
-       ATMOS_sw_phy_ae = .false.
-    endif
-
-    if ( ATMOS_PHY_CH_TYPE /= 'OFF' .AND. ATMOS_PHY_CH_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Chemistry            : ON, ', trim(ATMOS_PHY_CH_TYPE)
-       ATMOS_sw_phy_ch = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Chemistry            : OFF'
-       ATMOS_sw_phy_ch = .false.
-    endif
-
-    if ( ATMOS_PHY_RD_TYPE /= 'OFF' .AND. ATMOS_PHY_RD_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Radiative transfer   : ON, ', trim(ATMOS_PHY_RD_TYPE)
-       ATMOS_sw_phy_rd = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Radiative transfer   : OFF'
-       ATMOS_sw_phy_rd = .false.
-    endif
-
-    if ( ATMOS_PHY_SF_TYPE /= 'OFF' .AND. ATMOS_PHY_SF_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Surface Flux         : ON, ', trim(ATMOS_PHY_SF_TYPE)
-       ATMOS_sw_phy_sf = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Surface Flux         : OFF'
-       ATMOS_sw_phy_sf = .false.
-    endif
-
-    if ( ATMOS_PHY_TB_TYPE /= 'OFF' .AND. ATMOS_PHY_TB_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Sub-grid Turbulence  : ON, ', trim(ATMOS_PHY_TB_TYPE)
-       ATMOS_sw_phy_tb = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Sub-grid Turbulence  : OFF'
-       ATMOS_sw_phy_tb = .false.
-    endif
-
-    if ( ATMOS_PHY_BL_TYPE /= 'OFF' .AND. ATMOS_PHY_BL_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** + PBL Turbulence       : ON, ', trim(ATMOS_PHY_BL_TYPE)
-       ATMOS_sw_phy_bl = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** + PBL Turbulence       : OFF'
-       ATMOS_sw_phy_bl = .false.
-    endif
-
-    if ( ATMOS_PHY_CP_TYPE /= 'OFF' .AND. ATMOS_PHY_CP_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Convection Param.    : ON, ', trim(ATMOS_PHY_CP_TYPE)
-       ATMOS_sw_phy_cp = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Convection Param.    : OFF'
-       ATMOS_sw_phy_cp = .false.
-    endif
 
     call RUNCONF_component_setup
 
