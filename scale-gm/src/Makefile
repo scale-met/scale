@@ -45,17 +45,17 @@ VPATH = $(BUILD_DIR):           \
         atmos-gm/communication: \
         atmos-gm/dynamics:      \
         atmos-gm/grid:          \
-        atmos-physics/		\
+        atmos-physics:          \
         atmos-physics/forcing:  \
         atmos-physics/share:    \
         common:                 \
-	coupler: 		\
+        coupler:                \
         io:                     \
-	land:			\
+        land:                   \
         ocean:                  \
         preprocess:             \
-        tool:			\
-	urban:
+        tool:                   \
+        urban:
 
 
 VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
@@ -142,7 +142,6 @@ OBJS =	\
 all:
 	$(MAKE) envlog
 	$(MAKE) makedir
-	$(MAKE) -C $(DCUTILSDIR)
 	$(MAKE) -C $(SCALELIBDIR)/src
 	@echo;echo "Entering scale-gm...";echo "Current version is " $(VERSION)
 	$(MAKE) makebin
@@ -153,10 +152,7 @@ makedir:
 	mkdir -p $(LIBDIR)
 	mkdir -p $(BUILD_DIR)
 
-$(LIBDIR)/libdcutils.a :
-	$(MAKE) -C $(DCUTILSDIR)
-
-$(LIBDIR)/libscale.a : $(LIBDIR)/libdcutils.a
+$(LIBDIR)/libscale.a:
 	$(MAKE) -C $(SCALELIBDIR)/src
 
 makebin: $(BINS)
@@ -196,7 +192,6 @@ $(BUILD_DIR)/prg_fio_ico2ll.o : prg_fio_ico2ll.f90 $(patsubst %,$(BUILD_DIR)/%,$
 
 
 allclean: distclean
-	$(MAKE) -C $(DCUTILSDIR)      allclean
 	$(MAKE) -C $(SCALELIBDIR)/src allclean
 	rm -f $(BINDIR)/$(BINNAME)
 	rm -f $(BINDIR)/$(PPNAME1)
@@ -236,9 +231,9 @@ dependency:
 	make $(patsubst %.f90,%.o,$<)
 
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/mod_oprt.o :
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) $(FFLAGS_TENTATIVE) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) $(FFLAGS_TENTATIVE) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALEGMDIR)/include -o $@ -c $<
