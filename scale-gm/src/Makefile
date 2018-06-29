@@ -32,7 +32,7 @@ BINS = $(BINDIR)/$(BINNAME) \
        $(BINDIR)/$(PPNAME7) \
        $(BINDIR)/$(PPNAME8) \
        $(BINDIR)/$(PPNAME9)
-LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libdcutils.a
+LIBS = $(LIBDIR)/libscale.a
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
   DEPENDLIB = $(LIBS)
