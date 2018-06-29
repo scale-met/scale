@@ -117,8 +117,8 @@ contains
 
     character(len=H_SHORT) :: integ_type !--- integration method
     logical                :: split      !--- time spliting flag
-    real(RP)               :: dtl        !--- delta t in large step
-    real(RP)               :: dtl_rd     !--- delta t in large step
+    real(DP)               :: dtl        !--- delta t in large step
+    real(DP)               :: dtl_rd     !--- delta t in large step
     integer                :: lstep_max  !--- maximum number of large steps
     integer                :: sstep_max  !--- division number in large step
 
@@ -197,7 +197,7 @@ contains
     dt_BL      = TIME_dtl
     dt_SF      = TIME_dtl
     dt_RD      = max(dtl_rd, TIME_dtl)
-    
+
     TIME_DSTEP_ATMOS_PHY_RD  = nint( dt_RD  / TIME_dtl )
     dt_RD      = TIME_DSTEP_ATMOS_PHY_RD * TIME_dtl
 

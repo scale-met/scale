@@ -117,7 +117,7 @@ contains
     real(RP) :: u0       = 35.0_RP          ! Zonal wind constant for moist baro test
     real(RP) :: eta0     = 0.252_RP         ! Center of jets (hybrid) for baro test
     real(RP) :: T00      = 288.0_RP         ! Horizontal mean T at surface for moist baro test
-    real(RP) :: zvir  ! Constant for virtual temp. calc. =(rh2o/rair) - 1 is approx. 0.608  
+    real(RP) :: zvir  ! Constant for virtual temp. calc. =(rh2o/rair) - 1 is approx. 0.608
     real(RP) :: lat    (ADM_gall,ADM_lall)
 
     integer :: ierr, ij, l
@@ -284,7 +284,7 @@ contains
 ! Tsurf needs to be constant for tropical cyclone test
 !
     lat(:,:) = GRD_s(:,ADM_KNONE,:,GRD_LAT)
-    latw = 2.0_RP * pi / 9.0_RP 
+    latw = 2.0_RP * pi / 9.0_RP
     etav = (1._RP-eta0) * 0.5_RP * pi
     zvir   = (rh2o/rair) - 1._RP
 
@@ -405,16 +405,18 @@ contains
     real(RP) :: cv   (vlayer)
 
     ! for simple physics
-    real(RP) :: t    (ijdim,vlayer)   ! Temperature at full-model level (K)
-    real(RP) :: qvv  (ijdim,vlayer)   ! Specific Humidity at full-model level (kg/kg)
-    real(RP) :: u    (ijdim,vlayer)   ! Zonal wind at full-model level (m/s)
-    real(RP) :: v    (ijdim,vlayer)   ! Meridional wind at full-model level (m/s)
-    real(RP) :: pmid (ijdim,vlayer)   ! Pressure is full-model level (Pa)
-    real(RP) :: pint (ijdim,vlayer+1) ! Pressure at model interfaces (Pa)
-    real(RP) :: pdel (ijdim,vlayer)   ! Layer thickness (Pa)
-    real(RP) :: rpdel(ijdim,vlayer)   ! Reciprocal of layer thickness (1/Pa)
-    real(RP) :: ps   (ijdim)          ! surface pressure output [dummy]
-    real(RP) :: precip2 (ijdim)
+    real(DP) :: t      (ijdim,vlayer)   ! Temperature at full-model level (K)
+    real(DP) :: qvv    (ijdim,vlayer)   ! Specific Humidity at full-model level (kg/kg)
+    real(DP) :: u      (ijdim,vlayer)   ! Zonal wind at full-model level (m/s)
+    real(DP) :: v      (ijdim,vlayer)   ! Meridional wind at full-model level (m/s)
+    real(DP) :: pmid   (ijdim,vlayer)   ! Pressure is full-model level (Pa)
+    real(DP) :: pint   (ijdim,vlayer+1) ! Pressure at model interfaces (Pa)
+    real(DP) :: pdel   (ijdim,vlayer)   ! Layer thickness (Pa)
+    real(DP) :: rpdel  (ijdim,vlayer)   ! Reciprocal of layer thickness (1/Pa)
+    real(DP) :: ps     (ijdim)          ! surface pressure output [dummy]
+    real(DP) :: ts     (ijdim)
+    real(DP) :: lat_rad(ijdim)
+    real(DP) :: precip2(ijdim)
 
     ! for toy-chemistory
     real(DP) :: lat_deg, lon_deg
@@ -520,13 +522,15 @@ contains
           rpdel(:,k) = 1.0_RP / pdel(:,k)
        enddo
 
-       ps(:) = pre_sfc(:)
+       ps     (:) = pre_sfc(:)
+       ts     (:) = real( tem_sfc(:), kind=DP )
+       lat_rad(:) = real( lat    (:), kind=DP )
 
        call simple_physics( ijdim,             & ! [IN]
                             vlayer,            & ! [IN]
                             dt,                & ! [IN]
-                            lat   (:),         & ! [IN]
-                            tem_sfc(:),        & ! [IN]
+                            lat_rad(:),        & ! [IN]
+                            ts    (:),        & ! [IN]
                             t     (:,:),       & ! [INOUT]
                             qvv   (:,:),       & ! [INOUT]
                             u     (:,:),       & ! [INOUT]
