@@ -519,15 +519,20 @@ contains
 
        if ( ADM_have_pl ) then
 
-          rho_pl (:,:,:)      = PROG_pl(:,:,:,I_RHOG)   / VMTR_GSGAM2_pl(:,:,:)
-          DIAG_pl(:,:,:,I_vx) = PROG_pl(:,:,:,I_RHOGVX) / PROG_pl(:,:,:,I_RHOG)
-          DIAG_pl(:,:,:,I_vy) = PROG_pl(:,:,:,I_RHOGVY) / PROG_pl(:,:,:,I_RHOG)
-          DIAG_pl(:,:,:,I_vz) = PROG_pl(:,:,:,I_RHOGVZ) / PROG_pl(:,:,:,I_RHOG)
-          ein_pl (:,:,:)      = PROG_pl(:,:,:,I_RHOGE)  / PROG_pl(:,:,:,I_RHOG)
-
-          do nq = 1, QA
-             q_pl(:,:,:,nq) = PROGq_pl(:,:,:,nq) / PROG_pl(:,:,:,I_RHOG)
-          enddo
+          do l = 1, ADM_lall_pl
+          do k = ADM_kmin, ADM_kmax
+          do g = 1, ADM_gall_pl
+             rho_pl (g,k,l)      = PROG_pl(g,k,l,I_RHOG)   / VMTR_GSGAM2_pl(g,k,l)
+             DIAG_pl(g,k,l,I_vx) = PROG_pl(g,k,l,I_RHOGVX) / PROG_pl(g,k,l,I_RHOG)
+             DIAG_pl(g,k,l,I_vy) = PROG_pl(g,k,l,I_RHOGVY) / PROG_pl(g,k,l,I_RHOG)
+             DIAG_pl(g,k,l,I_vz) = PROG_pl(g,k,l,I_RHOGVZ) / PROG_pl(g,k,l,I_RHOG)
+             ein_pl (g,k,l)      = PROG_pl(g,k,l,I_RHOGE)  / PROG_pl(g,k,l,I_RHOG)
+             do nq = 1, QA
+                q_pl(g,k,l,nq) = PROGq_pl(g,k,l,nq) / PROG_pl(g,k,l,I_RHOG)
+             enddo
+          end do
+          end do
+          end do
 
           do l = 1, ADM_lall_pl
 
