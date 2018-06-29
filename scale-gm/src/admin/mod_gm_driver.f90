@@ -92,6 +92,8 @@ contains
        OPRT_setup
     use mod_vmtr, only: &
        VMTR_setup
+    use mod_latlon, only: &
+       LATLON_ico_setup
     use mod_time, only: &
        TIME_setup,     &
        TIME_report,    &
@@ -306,6 +308,9 @@ contains
     !---< vertical metrics module setup >---
     call VMTR_setup
 
+    !---< latlon module setup >---
+    call LATLON_ico_setup
+
     !---< time module setup >---
     call TIME_setup
 
@@ -315,6 +320,9 @@ contains
     !---< tracer setup >---
     call atmos_hydrometeor_setup
     call atmos_phy_driver_tracer_setup
+
+    !---< forcing module setup >---
+    call forcing_setup
 
     !---< nhm_runconf module setup >---
     call runconf_setup
@@ -348,9 +356,6 @@ contains
 
     !---< physics module setup >---
     call atmos_phy_driver_setup
-
-    !---< forcing module setup >---
-    call forcing_setup
 
     !---< energy&mass budget module setup >---
     call embudget_setup

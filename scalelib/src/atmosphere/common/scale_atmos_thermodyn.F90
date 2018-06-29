@@ -1371,7 +1371,7 @@ contains
 
     !$omp parallel do
     do j = JS, JE
-    do i = IS, JE
+    do i = IS, IE
        call ATMOS_THERMODYN_ein_pres2enth_0D( Ein(i,j), PRES(i,j), DENS(i,j), & ! [IN]
                                               ENTH(i,j)                       ) ! [OUT]
     end do
@@ -1398,7 +1398,7 @@ contains
 
     !$omp parallel do
     do j = JS, JE
-    do i = IS, JE
+    do i = IS, IE
     do k = KS, KE
        call ATMOS_THERMODYN_ein_pres2enth_0D( Ein(k,i,j), PRES(k,i,j), DENS(k,i,j), & ! [IN]
                                               ENTH(k,i,j)                           ) ! [OUT]

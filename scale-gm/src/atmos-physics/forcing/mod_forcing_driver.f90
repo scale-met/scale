@@ -218,6 +218,14 @@ contains
 
     call PROF_rapstart('__Forcing',1)
 
+    call prgvar_get_in_withdiag( &
+       rhog(:,:,:),                                               & ! [OUT]
+       rhogvx(:,:,:), rhogvy(:,:,:), rhogvz(:,:,:), rhogw(:,:,:), & ! [OUT]
+       rhoge(:,:,:), rhogq(:,:,:,:),                              & ! [OUT]
+       rho(:,:,:), pre(:,:,:), tem(:,:,:),                        & ! [OUT]
+       vx(:,:,:), vy(:,:,:), vz(:,:,:), w(:,:,:),                 & ! [OUT]
+       q(:,:,:,:)                                                 ) ! [OUT]
+
     ! forcing
     if ( AF_TYPE=='HELD-SUAREZ' ) then
 

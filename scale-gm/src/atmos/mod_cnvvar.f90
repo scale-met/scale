@@ -288,7 +288,7 @@ contains
        call ATMOS_THERMODYN_temp_pres2ein( &
             ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
             diag(:,:,l,I_tem), diag(:,:,l,I_pre), CVtot(:,:), Rtot(:,:), & ! [IN]
-            rho(:,:,l), ein(:,:,l)                                       ) ! [OUT]
+            ein(:,:,l), rho(:,:,l)                                       ) ! [OUT]
 
     end do
 
@@ -346,7 +346,7 @@ contains
           call ATMOS_THERMODYN_temp_pres2ein( &
                ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, &
                diag_pl(:,:,l,I_tem), diag_pl(:,:,l,I_pre), CVtot_pl(:,:), Rtot_pl(:,:), & ! [IN]
-               rho_pl(:,:,l), ein_pl(:,:,l)                                      ) ! [OUT]
+               ein_pl(:,:,l), rho_pl(:,:,l)                                      ) ! [OUT]
 
        end do
 

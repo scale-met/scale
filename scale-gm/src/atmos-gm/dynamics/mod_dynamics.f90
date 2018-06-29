@@ -411,7 +411,7 @@ contains
        !---< Generate diagnostic values and set the boudary conditions
        !$acc kernels pcopy(rho,vx,vy,vz,ein) pcopyin(PROG,VMTR_GSGAM2) async(0)
        do l = 1, ADM_lall
-       do k = 1, ADM_kall
+       do k = ADM_kmin, ADM_kmax
        do g = 1, ADM_gall
           rho (g,k,l)      = PROG(g,k,l,I_RHOG)   / VMTR_GSGAM2(g,k,l)
           DIAG(g,k,l,I_vx) = PROG(g,k,l,I_RHOGVX) / PROG(g,k,l,I_RHOG)
@@ -425,7 +425,7 @@ contains
 
        !$acc kernels pcopy(q) pcopyin(PROGq,PROG) async(0)
        do l = 1, ADM_lall
-       do k = 1, ADM_kall
+       do k = ADM_kmin, ADM_kmax
        do g = 1, ADM_gall
           !$acc loop seq
           do nq = 1, QA
@@ -440,16 +440,16 @@ contains
        do l = 1, ADM_lall
 
           call ATMOS_THERMODYN_specific_heat( &
-               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, QA, &
+               ADM_gall, 1, ADM_gall, ADM_kall, ADM_kmin, ADM_kmax, QA, &
                q(:,:,l,:),                                              & ! [IN]
                TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
-               qd(:,:,l), r(:,:,l), cp(:,:,l), cv(:,:,l)             ) ! [OUT]
+               qd(:,:,l), r(:,:,l), cv(:,:,l), cp(:,:,l)                ) ! [OUT]
 
        end do
 
        !$acc kernels pcopy(cv,qd,tem,pre) pcopyin(q,ein,rho) async(0)
        do l = 1, ADM_lall
-       do k = 1, ADM_kall
+       do k = ADM_kmin, ADM_kmax
        do g = 1, ADM_gall
           DIAG(g,k,l,I_tem) = ein(g,k,l) / cv(g,k,l)
           DIAG(g,k,l,I_pre) = rho(g,k,l) * DIAG(g,k,l,I_tem) * r(g,k,l)
@@ -493,6 +493,11 @@ contains
 
        do l = 1, ADM_lall
 
+          cp(:,ADM_kmin-1,l) = cp(:,ADM_kmin,l)
+          r (:,ADM_kmin-1,l) = r (:,ADM_kmin,l)
+          cp(:,ADM_kmax+1,l) = cp(:,ADM_kmax,l)
+          r (:,ADM_kmax+1,l) = r (:,ADM_kmax,l)
+
           call ATMOS_THERMODYN_temp_pres2pott( &
                ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
                DIAG(:,:,l,I_tem), DIAG(:,:,l,I_pre), cp(:,:,l), r(:,:,l), & ! [IN]
@@ -527,15 +532,21 @@ contains
           do l = 1, ADM_lall_pl
 
              call ATMOS_THERMODYN_specific_heat( &
-                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, QA, &
+                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, ADM_kmin, ADM_kmax, QA, &
                   q_pl(:,:,l,:),                                           & ! [IN]
                   TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
                   qd_pl(:,:,l), r_pl(:,:,l), cv_pl(:,:,l), cp_pl(:,:,l) ) ! [OUT]
 
           end do
 
-          DIAG_pl(:,:,:,I_tem) = ein_pl(:,:,:) / cv_pl(:,:,:)
-          DIAG_pl(:,:,:,I_pre) = rho_pl(:,:,:) * DIAG_pl(:,:,:,I_tem) * r_pl(:,:,:)
+          do l = 1, ADM_lall_pl
+          do k = ADM_kmin, ADM_kmax
+          do g = 1, ADM_gall_pl
+             DIAG_pl(g,k,l,I_tem) = ein_pl(g,k,l) / cv_pl(g,k,l)
+             DIAG_pl(g,k,l,I_pre) = rho_pl(g,k,l) * DIAG_pl(g,k,l,I_tem) * r_pl(g,k,l)
+          end do
+          end do
+          end do
 
           do l = 1, ADM_lall_pl
           do k = ADM_kmin+1, ADM_kmax
@@ -569,6 +580,11 @@ contains
                            VMTR_C2WfactGz_pl(:,:,:,:)         ) ! [IN]
 
           do l = 1, ADM_lall_pl
+
+             cp_pl(:,ADM_kmin-1,l) = cp_pl(:,ADM_kmin,l)
+             r_pl (:,ADM_kmin-1,l) = r_pl (:,ADM_kmin,l)
+             cp_pl(:,ADM_kmax+1,l) = cp_pl(:,ADM_kmax,l)
+             r_pl (:,ADM_kmax+1,l) = r_pl (:,ADM_kmax,l)
 
              call ATMOS_THERMODYN_temp_pres2pott( &
                   ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, &

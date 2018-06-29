@@ -283,12 +283,23 @@ contains
        CHEMVAR_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_CH_TYPE
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_regist => ATMOS_HYDROMETEOR_regist
     implicit none
 
+    integer :: I_QV
     integer :: v, i
     !---------------------------------------------------------------------------
 
 
+    ! tentative
+    if ( QA == 0 ) then
+       call HYDROMETEOR_regist( 0, 0,                           & ! [IN]
+                                (/ "QV" /),                     & ! [IN]
+                                (/ "water vapor mass ratio" /), & ! [IN]
+                                (/ "kg/kg" /),                  & ! [IN]
+                                I_QV                            ) ! [OUT]
+    end if
 
     !--- Tracer for chemistry
     if ( ATMOS_PHY_CH_TYPE == 'PASSIVE' )then

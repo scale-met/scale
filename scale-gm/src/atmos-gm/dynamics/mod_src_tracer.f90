@@ -1249,10 +1249,10 @@ contains
           Cout     = ( 1.0_RP-inflagL ) * ( ck(n,k,l,1) ) &
                    + ( 1.0_RP-inflagU ) * ( ck(n,k,l,2) )
 
-          CQin_max = (        inflagL ) * ( ck(n,k,l,1) * Qin_maxL ) &
-                   + (        inflagU ) * ( ck(n,k,l,2) * Qin_maxU )
-          CQin_min = (        inflagL ) * ( ck(n,k,l,1) * Qin_minL ) &
-                   + (        inflagU ) * ( ck(n,k,l,2) * Qin_minU )
+          CQin_max = (        inflagL * Qin_maxL ) * ck(n,k,l,1) &
+                   + (        inflagU * Qin_maxU ) * ck(n,k,l,2)
+          CQin_min = (        inflagL * Qin_minL ) * ck(n,k,l,1) &
+                   + (        inflagU * Qin_minU ) * ck(n,k,l,2)
 
           zerosw = 0.5_RP - sign(0.5_RP,abs(Cout)-EPS) ! if Cout = 0, sw = 1
 
