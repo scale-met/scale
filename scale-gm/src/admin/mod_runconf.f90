@@ -80,10 +80,6 @@ module mod_runconf
   character(len=H_SHORT), public  :: DIAG_name(DIAG_vmax0)
   data DIAG_name / 'pre', 'tem', 'vx', 'vy', 'vz', 'w' /
 
-  character(len=H_SHORT), public, allocatable :: TRC_name(:) ! short name  of tracer
-  character(len=H_MID),   public, allocatable :: WLABEL  (:) ! description of tracer
-
-
   !--- No. of band for rad.
   integer, public, parameter :: NRBND     = 3
   integer, public, parameter :: NRBND_VIS = 1

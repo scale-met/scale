@@ -843,8 +843,7 @@ contains
        GTL_max, &
        GTL_min
     use mod_runconf, only: &
-       DIAG_name, &
-       WLABEL
+       DIAG_name
     use mod_cnvvar, only: &
        cnvvar_prg2diag
     implicit none
@@ -919,7 +918,7 @@ contains
        enddo
 
        do nq = 1, QA
-          call FIO_output( DIAG_var(:,:,:,DIAG_vmax0+nq), basename, desc, '', TRACER_name(nq), WLABEL(nq), '', WUNIT, & ! [IN]
+          call FIO_output( DIAG_var(:,:,:,DIAG_vmax0+nq), basename, desc, '', TRACER_name(nq), TRACER_desc(nq), '', WUNIT, & ! [IN]
                            IO_REAL8, layername, 1, ADM_kall, 1, TIME_CTIME, TIME_CTIME                             ) ! [IN]
        enddo
 
