@@ -312,13 +312,13 @@ contains
     !---< external data module setup >---
     call extdata_setup
 
-    !---< nhm_runconf module setup >---
-    call runconf_setup
-    call atmos_admin_setup
-
     !---< tracer setup >---
     call atmos_hydrometeor_setup
     call atmos_phy_driver_tracer_setup
+
+    !---< nhm_runconf module setup >---
+    call runconf_setup
+    call atmos_admin_setup
 
     !---< topography module setup >---
     call TOPO_setup
@@ -396,7 +396,6 @@ contains
     !$acc& pcopyin(VMTR_GAM2,VMTR_GAM2H,VMTR_GSGAM2,VMTR_GSGAM2H) &
     !$acc& pcopyin(VMTR_RGSQRTH,VMTR_RGAM,VMTR_RGAMH,VMTR_RGSGAM2,VMTR_RGSGAM2H) &
     !$acc& pcopyin(VMTR_W2Cfact,VMTR_C2Wfact,VMTR_C2WfactGz,VMTR_PHI) &
-    !$acc& pcopyin(CVW) &
     !$acc& pcopyin(rho_bs,pre_bs,tem_bs) &
     !$acc& pcopyin(divdamp_coef,Kh_coef,Kh_coef_lap1) &
     !$acc& pcopyin(Mc,Mu,Ml) &

@@ -16,6 +16,7 @@ module mod_forcing_driver
   use scale_io
   use scale_prof
   use scale_atmos_grid_icoA_index
+  use scale_tracer
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -136,10 +137,7 @@ contains
        GTL_clip_region, &
        GTL_clip_region_1layer
     use mod_runconf, only: &
-       AF_TYPE,  &
-       TRC_VMAX, &
-       NQW_STR,  &
-       NQW_END
+       AF_TYPE
     use mod_prgvar, only: &
        prgvar_get_in_withdiag, &
        prgvar_set_in
@@ -168,7 +166,7 @@ contains
     real(RP) :: rhogvz(ADM_gall_in,ADM_kall,ADM_lall)
     real(RP) :: rhogw (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP) :: rhoge (ADM_gall_in,ADM_kall,ADM_lall)
-    real(RP) :: rhogq (ADM_gall_in,ADM_kall,ADM_lall,TRC_vmax)
+    real(RP) :: rhogq (ADM_gall_in,ADM_kall,ADM_lall,QA)
     real(RP) :: rho   (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP) :: pre   (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP) :: tem   (ADM_gall_in,ADM_kall,ADM_lall)
@@ -176,7 +174,7 @@ contains
     real(RP) :: vy    (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP) :: vz    (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP) :: w     (ADM_gall_in,ADM_kall,ADM_lall)
-    real(RP) :: q     (ADM_gall_in,ADM_kall,ADM_lall,TRC_vmax)
+    real(RP) :: q     (ADM_gall_in,ADM_kall,ADM_lall,QA)
     real(RP) :: ein   (ADM_gall_in,ADM_kall,ADM_lall)
 
     real(RP) :: pre_srf(ADM_gall_in,ADM_lall)
@@ -187,7 +185,7 @@ contains
     real(RP) :: fvz(ADM_gall_in,ADM_kall,ADM_lall)
     real(RP) :: fw (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP) :: fe (ADM_gall_in,ADM_kall,ADM_lall)
-    real(RP) :: fq (ADM_gall_in,ADM_kall,ADM_lall,TRC_VMAX)
+    real(RP) :: fq (ADM_gall_in,ADM_kall,ADM_lall,QA)
     real(RP) :: frho(ADM_gall_in,ADM_kall,ADM_lall)
 
     real(RP) :: tmp (ADM_gall_in,ADM_kall,ADM_lall)
@@ -289,7 +287,7 @@ contains
           call history_in( 'ml_af_fe',  fe  (:,:,l) )
           call history_in( 'ml_af_frho',  frho(:,:,l) )
 
-          do nq = 1, TRC_VMAX
+          do nq = 1, QA
              write(varname,'(A,I2.2)') 'ml_af_fq', nq
 
              call history_in( varname, fq(:,:,l,nq) )
@@ -325,7 +323,7 @@ contains
 
     if ( UPDATE_TOT_DENS ) rhog (:,:,:) = rhog (:,:,:) + TIME_DTL * frho(:,:,:) * GSGAM2 (:,:,:)
 
-    do nq = 1, TRC_VMAX
+    do nq = 1, QA
        frhogq(:,:,:) = fq(:,:,:,nq) * rho(:,:,:) * GSGAM2(:,:,:) &
             + q(:,:,:,nq) * frho(:,:,:) * GSGAM2(:,:,:)
           
@@ -338,8 +336,7 @@ contains
        endif
 
        if ( UPDATE_TOT_DENS ) then
-          if (       nq >= NQW_STR &
-               .AND. nq <= NQW_END ) then ! update total density
+          if ( TRACER_MASS(nq) > 0.0_RP ) then ! update total density
              rhog (:,:,:) = rhog (:,:,:) + TIME_DTL * frhogq(:,:,:)
           endif
        endif

@@ -20,6 +20,7 @@ module mod_atmos_vars
   use scale_debug
   use scale_atmos_grid_icoA_index
   use scale_tracer
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -450,8 +451,6 @@ contains
        GMTR_p_ll, &
        GMTR_p_LON, &
        GMTR_p_LAT
-    use mod_runconf, only: &
-       TRC_VMAX
     implicit none
 
     namelist / PARAM_ATMOS_VARS / &
@@ -898,8 +897,6 @@ contains
     use mod_vmtr, only: &
        VMTR_getin_GSGAM2, &
        VMTR_getin_GSGAM2h
-    use mod_runconf, only: &
-       TRC_VMAX
     implicit none
 
     real(RP), intent(in) :: rhog  (ADM_gall_in,ADM_kall,ADM_lall)
@@ -908,7 +905,7 @@ contains
     real(RP), intent(in) :: rhogvz(ADM_gall_in,ADM_kall,ADM_lall)
     real(RP), intent(in) :: rhogw (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP), intent(in) :: rhoge (ADM_gall_in,ADM_kall,ADM_lall)
-    real(RP), intent(in) :: rhogq (ADM_gall_in,ADM_kall,ADM_lall,TRC_VMAX)
+    real(RP), intent(in) :: rhogq (ADM_gall_in,ADM_kall,ADM_lall,QA)
 
     real(RP) :: GSGAM2 (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP) :: GSGAM2h(ADM_gall_in,ADM_kall,ADM_lall)
@@ -953,8 +950,6 @@ contains
     use mod_vmtr, only: &
        VMTR_getin_GSGAM2, &
        VMTR_getin_GSGAM2h
-    use mod_runconf, only: &
-       TRC_VMAX
     implicit none
     real(RP), intent(out) :: rhog  (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP), intent(out) :: rhogvx(ADM_gall_in,ADM_kall,ADM_lall)
@@ -962,7 +957,7 @@ contains
     real(RP), intent(out) :: rhogvz(ADM_gall_in,ADM_kall,ADM_lall)
     real(RP), intent(out) :: rhogw (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP), intent(out) :: rhoge (ADM_gall_in,ADM_kall,ADM_lall)
-    real(RP), intent(out) :: rhogq (ADM_gall_in,ADM_kall,ADM_lall,TRC_VMAX)
+    real(RP), intent(out) :: rhogq (ADM_gall_in,ADM_kall,ADM_lall,QA)
 
     real(RP) :: GSGAM2 (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP) :: GSGAM2h(ADM_gall_in,ADM_kall,ADM_lall)
@@ -989,7 +984,7 @@ contains
           ij = i + ( j - 1 ) * ADM_imax
           rhog (ij,k,l) = DENS(k,i,j,l) * GSGAM2(ij,k,l)
           rhoge(ij,k,l) = RHOE(k,i,j,l) * GSGAM2(ij,k,l)
-          do iq = 1, TRC_VMAX
+          do iq = 1, QA
              rhogq(ij,k,l,iq) = RHOQ(k,i,j,l,iq) * GSGAM2(ij,k,l)
           end do
        end do

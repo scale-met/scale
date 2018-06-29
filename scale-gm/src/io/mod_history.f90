@@ -979,8 +979,6 @@ contains
        GRD_Z
     use mod_vmtr, only: &
        VMTR_getIJ_RGSGAM2
-    use mod_runconf, only: &
-       TRC_VMAX
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_specific_heat, &
        ATMOS_THERMODYN_rhoe2temp_pres
@@ -1000,12 +998,12 @@ contains
     real(RP) :: rhogw_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: rhoge    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhoge_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX)
-    real(RP) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: rho(ADM_gall,ADM_kall,ADM_lall)
     real(RP) :: ein(ADM_gall,ADM_kall,ADM_lall)
-    real(RP) :: q  (ADM_gall,ADM_kall,ADM_lall,TRC_VMAX)
+    real(RP) :: q  (ADM_gall,ADM_kall,ADM_lall,QA)
     real(RP) :: tem(ADM_gall,ADM_kall,ADM_lall)
     real(RP) :: pre(ADM_gall,ADM_kall,ADM_lall)
 
@@ -1049,7 +1047,7 @@ contains
     enddo
     enddo
 
-    do nq = 1, TRC_VMAX
+    do nq = 1, QA
     do l = 1, ADM_lall
     do k = 1, ADM_kall
     do g = 1, ADM_gall
@@ -1062,7 +1060,7 @@ contains
     do l = 1, ADM_lall
 
        call ATMOS_THERMODYN_specific_heat( &
-            ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+            ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, QA, &
             q(:,:,l,:),                                              & ! [IN]
             TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
             Qdry(:,:), Rtot(:,:), CPtot(:,:), CVtot(:,:)             ) ! [OUT]

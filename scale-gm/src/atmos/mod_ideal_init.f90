@@ -16,6 +16,7 @@ module mod_ideal_init
   use scale_io
   use scale_prof
   use scale_atmos_grid_icoA_index
+  use scale_tracer
 
   use scale_const, only: &
      pi    => CONST_PI,     &
@@ -26,8 +27,6 @@ module mod_ideal_init
      Rv    => CONST_Rvap,   &
      Cp    => CONST_CPdry,  &
      PRE00 => CONST_PRE00
-  use mod_runconf, only: &
-     TRC_vmax
   use dcmip_initial_conditions_test_1_2_3, only: &
      test2_steady_state_mountain, &
      test2_schaer_mountain,       &
@@ -120,12 +119,11 @@ contains
        DIAG_var )
     use scale_prc, only: &
        PRC_abort
-    use mod_runconf, only: &
-       I_QV,    &
-       NQW_MAX
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
-    real(RP), intent(out) :: DIAG_var(ADM_gall,ADM_kall,ADM_lall,6+TRC_VMAX)
+    real(RP), intent(out) :: DIAG_var(ADM_gall,ADM_kall,ADM_lall,6+QA)
 
     character(len=H_SHORT) :: init_type   = ''
     character(len=H_SHORT) :: test_case   = ''
@@ -239,11 +237,7 @@ contains
     call PROF_valcheck( 'dycore_input', 'DIAG_var(vz)  ', DIAG_var(:,:,:,5) )
     call PROF_valcheck( 'dycore_input', 'DIAG_var(w)   ', DIAG_var(:,:,:,6) )
     if ( I_QV > 0 ) then
-       call PROF_valcheck( 'dycore_input', 'DIAG_var(qv)  ', DIAG_var(:,:,:,7) )
-    endif
-    if ( NQW_MAX >= 3 ) then
-       call PROF_valcheck( 'dycore_input', 'DIAG_var(qc)  ', DIAG_var(:,:,:,8) )
-       call PROF_valcheck( 'dycore_input', 'DIAG_var(qr)  ', DIAG_var(:,:,:,9) )
+       call PROF_valcheck( 'dycore_input', 'DIAG_var(qv)  ', DIAG_var(:,:,:,I_QV) )
     endif
 
     return
@@ -262,7 +256,7 @@ contains
        GRD_s
     implicit none
 
-    real(RP), intent(out) :: TRC_var(ADM_gall,ADM_kall,ADM_lall,TRC_VMAX)
+    real(RP), intent(out) :: TRC_var(ADM_gall,ADM_kall,ADM_lall,QA)
 
     real(RP) :: random(ADM_gall,ADM_kall,ADM_lall)
     integer  :: deg
@@ -272,7 +266,7 @@ contains
 
     k0 = ADM_KNONE
 
-    do nq = 1, TRC_VMAX
+    do nq = 1, QA
        call RANDOM_get( random(:,:,:) )
 
        if ( nq == 1 ) then ! vapor (dummy for thermodynamics)
@@ -340,7 +334,7 @@ contains
     integer,  intent(in)    :: ijdim
     integer,  intent(in)    :: kdim
     integer,  intent(in)    :: lall
-    real(RP), intent(inout) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP), intent(inout) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     real(RP) :: pre(kdim), tem(kdim), dz(kdim)
     real(RP) :: pre_sfc, tem_sfc
@@ -476,7 +470,7 @@ contains
     character(len=*), intent(in)  :: test_case
     real(RP),         intent(in)  :: eps_geo2prs
     logical,          intent(in)  :: nicamcore
-    real(RP),         intent(out) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP),         intent(out) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     real(RP) :: lat, lon               ! latitude, longitude on Icosahedral grid
     real(RP) :: eta(kdim,2), geo(kdim) ! eta & geopotential in ICO-grid field
@@ -620,9 +614,10 @@ contains
        GRD_vz
     use mod_vmtr, only : &
        VMTR_getIJ_PHI
-    use mod_runconf, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV,      &
-       NQW_MAX,   &
+       QHA
+    use mod_chemvar, only: &
        NCHEM_MAX, &
        NCHEM_STR, &
        NCHEM_END
@@ -635,7 +630,7 @@ contains
     integer,          intent(in)  :: lall
     character(len=*), intent(in)  :: test_case
     logical,          intent(in)  :: chemtracer
-    real(RP),         intent(out) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP),         intent(out) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     real(DP) :: DP_lon          ! latitude, longitude on Icosahedral grid
     real(DP) :: DP_lat          ! latitude, longitude on Icosahedral grid
@@ -722,9 +717,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) "### DO NOT INPUT ANY TOPOGRAPHY ###"
 
     if ( moist == 1 ) then
-       if ( NQW_MAX < 3 ) then
-          write(*         ,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
-          if( IO_L ) write(IO_FID_LOG,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
+       if ( QHA < 2 ) then
+          write(*         ,*) 'QHA is not enough! requires >= 2.', QHA
+          if( IO_L ) write(IO_FID_LOG,*) 'QHA is not enough! requires >= 2.', QA
           call PRC_abort
        endif
     endif
@@ -835,9 +830,9 @@ contains
        GRD_s,   &
        GRD_Z,   &
        GRD_vz
-    use mod_runconf, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV,    &
-       NQW_MAX
+       QHA
     implicit none
 
     integer,          intent(in)  :: ijdim
@@ -845,7 +840,7 @@ contains
     integer,          intent(in)  :: lall
     character(len=*), intent(in)  :: test_case
     logical,          intent(in)  :: prs_rebuild
-    real(RP),         intent(out) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP),         intent(out) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     real(DP) :: DP_lon          ! latitude, longitude on Icosahedral grid
     real(DP) :: DP_lat          ! latitude, longitude on Icosahedral grid
@@ -910,9 +905,9 @@ contains
     end select
     if( IO_L ) write(IO_FID_LOG,*) "### DO NOT INPUT ANY TOPOGRAPHY ###"
 
-    if ( NQW_MAX < 3 ) then
-       write(*         ,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
-       if( IO_L ) write(IO_FID_LOG,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
+    if ( QHA < 2 ) then
+       write(*         ,*) 'QHA is not enough! requires >= 2.', QHA
+       if( IO_L ) write(IO_FID_LOG,*) 'QHA is not enough! requires >= 2.', QHA
        call PRC_abort
     endif
 
@@ -991,16 +986,16 @@ contains
        GRD_s,   &
        GRD_Z,   &
        GRD_vz
-    use mod_runconf, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV,    &
-       NQW_MAX
+       QHA
     implicit none
 
     integer,  intent(in)  :: ijdim
     integer,  intent(in)  :: kdim
     integer,  intent(in)  :: lall
     logical,  intent(in)  :: prs_rebuild
-    real(RP), intent(out) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP), intent(out) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     real(DP) :: DP_lon          ! latitude, longitude on Icosahedral grid
     real(DP) :: DP_lat          ! latitude, longitude on Icosahedral grid
@@ -1048,9 +1043,9 @@ contains
     Mvap2  = ( 1.0_RP - RdovRv ) / RdovRv
 
     if( IO_L ) write(IO_FID_LOG,*) "### DO NOT INPUT ANY TOPOGRAPHY ###"
-    if ( NQW_MAX < 3 ) then
-       write(*         ,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
-       if( IO_L ) write(IO_FID_LOG,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
+    if ( QHA < 2 ) then
+       write(*         ,*) 'QHA is not enough! requires >= 2.', QHA
+       if( IO_L ) write(IO_FID_LOG,*) 'QHA is not enough! requires >= 2.', QHA
        call PRC_abort
     endif
 
@@ -1125,7 +1120,7 @@ contains
        GRD_Z,   &
        GRD_ZH,  &
        GRD_vz
-    use mod_runconf, only: &
+    use mod_chemvar, only: &
        NCHEM_STR
     use mod_chemvar, only: &
        chemvar_getid
@@ -1139,7 +1134,7 @@ contains
     integer,          intent(in)    :: kdim
     integer,          intent(in)    :: lall
     character(len=*), intent(in)    :: test_case
-    real(RP),         intent(inout) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP),         intent(inout) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     real(RP) :: lon      ! longitude            [rad]
     real(RP) :: lat      ! latitude             [rad]
@@ -1440,9 +1435,8 @@ contains
        GRD_vz,  &
        GRD_Z,   &
        GRD_ZH
-    use mod_runconf, only: &
-       NCHEM_STR
     use mod_chemvar, only: &
+       NCHEM_STR, &
        chemvar_getid
     implicit none
 
@@ -1450,7 +1444,7 @@ contains
     integer,          intent(in)    :: kdim
     integer,          intent(in)    :: lall
     character(len=*), intent(in)    :: test_case
-    real(RP),         intent(inout) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP),         intent(inout) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     real(RP) :: lon      ! longitude            [rad]
     real(RP) :: lat      ! latitude             [rad]
@@ -1715,7 +1709,7 @@ contains
     integer, intent(in)    :: ijdim
     integer, intent(in)    :: kdim
     integer, intent(in)    :: lall
-    real(RP), intent(inout) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP), intent(inout) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     integer, parameter :: zcoords = 1
 
@@ -1834,7 +1828,7 @@ contains
     integer, intent(in)  :: ijdim
     integer, intent(in)  :: kdim
     integer, intent(in)  :: lall
-    real(RP), intent(out) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP), intent(out) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     ! work paramters
     real(RP) :: lat, lon                 ! latitude, longitude on Icosahedral grid
@@ -1913,15 +1907,15 @@ contains
        GRD_s,   &
        GRD_Z,   &
        GRD_vz
-    use mod_runconf, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV,    &
-       NQW_MAX
+       QHA
     implicit none
 
     integer,  intent(in)  :: ijdim
     integer,  intent(in)  :: kdim
     integer,  intent(in)  :: lall
-    real(RP), intent(out) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP), intent(out) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     ! Surface state
     real(RP) :: SFC_THETA               ! surface potential temperature [K]
@@ -1976,9 +1970,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) "Warmbubble Initialize"
 
-    if ( NQW_MAX < 3 ) then
-       write(*         ,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
-       if( IO_L ) write(IO_FID_LOG,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
+    if ( QHA < 2 ) then
+       write(*         ,*) 'QHA is not enough! requires >= 2.', QHA
+       if( IO_L ) write(IO_FID_LOG,*) 'QHA is not enough! requires >= 2.', QHA
        call PRC_abort
     endif
 

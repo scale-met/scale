@@ -15,6 +15,7 @@ module mod_bsstate
   use scale_precision
   use scale_io
   use scale_atmos_grid_icoA_index
+  use scale_tracer
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -249,8 +250,7 @@ contains
        qv_ref   )
     use mod_gm_statistics, only: &
        GTL_global_mean_eachlayer
-    use mod_runconf, only: &
-       TRC_vmax, &
+    use scale_atmos_hydrometeor, only: &
        I_QV
     use mod_prgvar, only: &
        prgvar_get_withdiag
@@ -272,8 +272,8 @@ contains
     real(RP) :: rhogw_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: rhoge    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhoge_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
     real(RP) :: rho      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rho_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: pre      (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -288,8 +288,8 @@ contains
     real(RP) :: vz_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: w        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: w_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: q        (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP) :: q        (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
     !---------------------------------------------------------------------------
 
     call prgvar_get_withdiag( rhog,   rhog_pl,   & ! [OUT]

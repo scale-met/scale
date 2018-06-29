@@ -28,10 +28,9 @@ module mod_chemvar
   !
   !++ Public parameters & variables
   !
-  integer,                public, parameter   :: CHEM_TRC_vlim = 100
-  integer,                public              :: CHEM_TRC_vmax = 1
-  character(len=H_SHORT), public, allocatable :: CHEM_TRC_name(:) ! short name  of tracer
-  character(len=H_MID),   public, allocatable :: CHEM_TRC_desc(:) ! description of tracer
+  integer, public :: NCHEM_MAX =  0
+  integer, public :: NCHEM_STR = -1
+  integer, public :: NCHEM_END = -1
 
   !-----------------------------------------------------------------------------
   !
@@ -41,6 +40,12 @@ module mod_chemvar
   !
   !++ Private parameters & variables
   !
+  integer                             :: CHEM_TRC_vmax = 0
+  character(len=H_SHORT), allocatable :: CHEM_TRC_name(:) ! short name  of tracer
+  character(len=H_MID),   allocatable :: CHEM_TRC_desc(:) ! description of tracer
+  character(len=H_SHORT), allocatable :: CHEM_TRC_unit(:)
+
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -48,6 +53,8 @@ contains
   subroutine CHEMVAR_setup
     use scale_prc, only: &
        PRC_abort
+    use scale_tracer, only: &
+       TRACER_regist
     implicit none
 
     namelist /CHEMVARPARAM/ &
@@ -70,13 +77,23 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=CHEMVARPARAM)
 
-    allocate( CHEM_TRC_name(CHEM_TRC_vmax) )
-    allocate( CHEM_TRC_desc(CHEM_TRC_vmax) )
+    allocate( CHEM_TRC_name(max(CHEM_TRC_vmax,1)) )
+    allocate( CHEM_TRC_desc(max(CHEM_TRC_vmax,1)) )
+    allocate( CHEM_TRC_unit(max(CHEM_TRC_vmax,1)) )
 
     do nq = 1, CHEM_TRC_vmax
        write(CHEM_TRC_name(nq),'(A,I3.3)') 'passive', nq
        write(CHEM_TRC_desc(nq),'(A,I3.3)') 'passive_tracer_no', nq
+       CHEM_TRC_unit(nq) = 'kg/kg'
     enddo
+
+    if ( CHEM_TRC_vmax > 0 ) then
+       call TRACER_regist( NCHEM_STR,                                           & ! [OUT]
+                           CHEM_TRC_vmax,                                       & ! [IN]
+                           CHEM_TRC_name(:), CHEM_TRC_desc(:), CHEM_TRC_unit(:) ) ! [IN]
+       NCHEM_END = NCHEM_STR + CHEM_TRC_vmax - 1
+       NCHEM_MAX = CHEM_TRC_vmax
+    end if
 
     return
   end subroutine CHEMVAR_setup

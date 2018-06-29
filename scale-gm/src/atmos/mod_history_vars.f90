@@ -76,9 +76,9 @@ contains
        VMTR_getIJ_C2Wfact,   &
        VMTR_getIJ_C2WfactGz, &
        VMTR_getIJ_PHI
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     use mod_runconf, only: &
-       TRC_VMAX, &
-       I_QV,     &
        AF_TYPE
     use mod_prgvar, only: &
        prgvar_get_withdiag
@@ -105,8 +105,8 @@ contains
     real(RP) :: rhogw_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: rhoge    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhoge_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
     real(RP) :: rho      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rho_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: pre      (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -121,8 +121,8 @@ contains
     real(RP) :: vz_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: w        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: w_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: q        (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP) :: q        (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: u        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: u_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
@@ -304,7 +304,7 @@ contains
           call history_in( 'ml_af_fe',  tmp3d(:,:) )
           call history_in( 'ml_af_frho',tmp3d(:,:) )
 
-          do nq = 1, TRC_VMAX
+          do nq = 1, QA
              write(varname,'(A,I2.2)') 'ml_af_fq', nq
              call history_in( varname, tmp3d(:,:) )
           enddo
@@ -327,7 +327,12 @@ contains
        ATMOS_THERMODYN_specific_heat, &
        ATMOS_THERMODYN_temp_pres2pott
     use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       I_QV, &
+       QLS, &
+       QLE, &
+       QIS, &
+       QIE
     use mod_adm, only: &
        ADM_have_pl
     use mod_grd, only: &
@@ -347,17 +352,8 @@ contains
     use mod_time, only: &
        TIME_DTL
     use mod_runconf, only: &
-       TRC_VMAX,  &
-       TRC_name,  &
-       NQW_STR,   &
-       NQW_END,   &
-       I_QV,      &
-       I_QC,      &
-       I_QR,      &
-       I_QI,      &
-       I_QS,      &
-       I_QG,      &
-       AF_TYPE,   &
+       AF_TYPE
+    use mod_chemvar, only: &
        NCHEM_STR, &
        NCHEM_END
     use mod_prgvar, only: &
@@ -386,8 +382,8 @@ contains
     real(RP) :: rhogw_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: rhoge    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhoge_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
     real(RP) :: rho      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rho_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: pre      (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -402,8 +398,8 @@ contains
     real(RP) :: vz_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: w        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: w_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: q        (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP) :: q        (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: u        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: u_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
@@ -679,7 +675,7 @@ contains
        do l = 1, ADM_lall
 
           call ATMOS_THERMODYN_specific_heat( &
-               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, QA, &
                q(:,:,l,:),                                              & ! [IN]
                TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
                Qdry(:,:), Rtot(:,:), CVtot(:,:), CPtot(:,:)             ) ! [OUT]
@@ -722,7 +718,7 @@ contains
        do l = 1, ADM_lall
 
           call ATMOS_THERMODYN_specific_heat( &
-               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, QA, &
                q(:,:,l,:),                                              & ! [IN]
                TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
                Qdry(:,:), Rtot(:,:), CVtot(:,:), CPtot(:,:)             ) ! [OUT]
@@ -739,7 +735,7 @@ contains
           do l = 1, ADM_lall_pl
 
              call ATMOS_THERMODYN_specific_heat( &
-                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, QA, &
                   q_pl(:,:,l,:),                                           & ! [IN]
                   TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
                   Qdry_pl(:,:), Rtot_pl(:,:), CVtot_pl(:,:), CPtot_pl(:,:) ) ! [OUT]
@@ -863,9 +859,9 @@ contains
     !### tracers ###
 
     ! tracers
-    do nq = 1, TRC_vmax
+    do nq = 1, QA
     do l  = 1, ADM_lall
-       call history_in( 'ml_'//TRC_name(nq), q(:,:,l,nq) )
+       call history_in( 'ml_'//TRACER_name(nq), q(:,:,l,nq) )
     enddo
     enddo
 
@@ -873,18 +869,11 @@ contains
     do l  = 1, ADM_lall
        q_clw(:,:,l) = 0.0_RP
        q_cli(:,:,l) = 0.0_RP
-       do nq = NQW_STR, NQW_END
-          if ( nq == I_QC ) then
-             q_clw(:,:,l) = q_clw(:,:,l) + q(:,:,l,nq)
-          elseif( nq == I_QR ) then
-             q_clw(:,:,l) = q_clw(:,:,l) + q(:,:,l,nq)
-          elseif( nq == I_QI ) then
-             q_cli(:,:,l) = q_cli(:,:,l) + q(:,:,l,nq)
-          elseif( nq == I_QS ) then
-             q_cli(:,:,l) = q_cli(:,:,l) + q(:,:,l,nq)
-          elseif( nq == I_QG ) then
-             q_cli(:,:,l) = q_cli(:,:,l) + q(:,:,l,nq)
-          endif
+       do nq = QLS, QLE
+          q_clw(:,:,l) = q_clw(:,:,l) + q(:,:,l,nq)
+       end do
+       do nq = QIS, QIE
+          q_cli(:,:,l) = q_cli(:,:,l) + q(:,:,l,nq)
        enddo
     enddo
 

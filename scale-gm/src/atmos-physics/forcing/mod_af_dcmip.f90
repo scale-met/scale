@@ -15,6 +15,7 @@ module mod_af_dcmip
   use scale_precision
   use scale_io
   use scale_atmos_grid_icoA_index
+  use scale_tracer
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -49,14 +50,21 @@ module mod_af_dcmip
   integer :: vlayer
   integer :: kdim
 
+  integer :: I_QV
+  integer :: I_QC
+  integer :: I_QR
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   subroutine af_dcmip_init
     use scale_prc, only: &
        PRC_abort
-    use mod_runconf, only: &
-       CHEM_TYPE, &
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_regist => ATMOS_HYDROMETEOR_regist
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_CH_TYPE
+    use mod_chemvar, only: &
        NCHEM_MAX
     use mod_af_heldsuarez, only: &
        AF_heldsuarez_init
@@ -233,6 +241,22 @@ contains
 
     endif
 
+    if ( USE_Kessler ) then
+       call HYDROMETEOR_regist( 2, 0,                            & ! [IN]
+                                (/ "QV", "QC", "QR" /),          & ! [IN]
+                                (/ "water vapor mass ratio", "cloud water mass ratio", "rain water mass ratio " /), & ! [IN]
+                                (/ "kg/kg", "kg/kg", "kg/kg" /), & ! [IN]
+                                I_QV                             ) ! [OUT]
+       I_QC = I_QV + 1
+       I_QR = I_QV + 2
+    else
+       call HYDROMETEOR_regist( 0, 0,                           & ! [IN]
+                                (/ "QV" /),                     & ! [IN]
+                                (/ "water vapor mass ratio" /), & ! [IN]
+                                (/ "kg/kg" /),                  & ! [IN]
+                                I_QV                            ) ! [OUT]
+    end if
+
     if( IO_L ) write(IO_FID_LOG,*) '*** Final Settings of FORCING_DCMIP_PARAM'
     if( IO_L ) write(IO_FID_LOG,*) '+ USE_Kessler         : ', USE_Kessler
     if( IO_L ) write(IO_FID_LOG,*) '+ USE_SimpleMicrophys : ', USE_SimpleMicrophys
@@ -244,13 +268,13 @@ contains
 
     ! initial value of the tracer is set in mod_prgvar - mod_ideal_init
     if ( USE_ToyChemistry ) then
-       if ( CHEM_TYPE == 'PASSIVE' ) then
+       if ( ATMOS_PHY_CH_TYPE == 'PASSIVE' ) then
           if ( NCHEM_MAX /= 2 ) then
              write(*,*) 'xxx Not appropriate number of passive tracer. STOP.', NCHEM_MAX
              call PRC_abort
           endif
        else
-          write(*,*) 'xxx CHEM_TYPE must be set to PASSIVE. STOP.', trim(CHEM_TYPE)
+          write(*,*) 'xxx ATMOS_PHY_CH_TYPE must be set to PASSIVE. STOP.', trim(ATMOS_PHY_CH_TYPE)
           call PRC_abort
        endif
     endif
@@ -329,15 +353,9 @@ contains
        CPdry => CONST_CPdry, &
        CVdry => CONST_CVdry, &
        PRE00 => CONST_PRE00
-    use mod_runconf, only: &
-       TRC_VMAX,  &
-       RAIN_TYPE, &
-       I_QV,      &
-       I_QC,      &
-       I_QR,      &
+    use mod_chemvar, only: &
        NCHEM_STR, &
-       NCHEM_END, &
-       CVW
+       NCHEM_END
     use mod_simple_physics, only: &
        simple_physics
     use mod_af_heldsuarez, only: &
@@ -357,7 +375,7 @@ contains
     real(RP), intent(in)  :: vx     (ijdim,kdim)
     real(RP), intent(in)  :: vy     (ijdim,kdim)
     real(RP), intent(in)  :: vz     (ijdim,kdim)
-    real(RP), intent(in)  :: q      (ijdim,kdim,TRC_VMAX)
+    real(RP), intent(in)  :: q      (ijdim,kdim,QA)
     real(RP), intent(in)  :: ein    (ijdim,kdim)
     real(RP), intent(in)  :: pre_sfc(ijdim)
     real(RP), intent(in)  :: tem_sfc(ijdim)
@@ -365,7 +383,7 @@ contains
     real(RP), intent(out) :: fvy    (ijdim,kdim)
     real(RP), intent(out) :: fvz    (ijdim,kdim)
     real(RP), intent(out) :: fe     (ijdim,kdim)
-    real(RP), intent(out) :: fq     (ijdim,kdim,TRC_VMAX)
+    real(RP), intent(out) :: fq     (ijdim,kdim,QA)
     real(RP), intent(out) :: precip (ijdim)
     real(RP), intent(in)  :: ix     (ijdim)
     real(RP), intent(in)  :: iy     (ijdim)
@@ -429,6 +447,7 @@ contains
 
     if ( USE_Kessler ) then
        do ij = 1, ijdim
+
           qd   (:) = 1.0_RP               &
                    - q(ij,kmin:kmax,I_QV) &
                    - q(ij,kmin:kmax,I_QC) &
@@ -461,9 +480,9 @@ contains
           qr(:) = qr(:) * qd(:)
 
           cv(:) = qd(:) * CVdry     &
-                + qv(:) * CVW(I_QV) &
-                + qc(:) * CVW(I_QC) &
-                + qr(:) * CVW(I_QR)
+                + qv(:) * TRACER_CV(I_QV) &
+                + qc(:) * TRACER_CV(I_QC) &
+                + qr(:) * TRACER_CV(I_QR)
 
           fq(ij,kmin:kmax,I_QV) = fq(ij,kmin:kmax,I_QV) + ( qv(:) - q(ij,kmin:kmax,I_QV) ) / dt
           fq(ij,kmin:kmax,I_QC) = fq(ij,kmin:kmax,I_QC) + ( qc(:) - q(ij,kmin:kmax,I_QC) ) / dt
@@ -534,15 +553,7 @@ contains
           kk = kmax - k + 1 ! reverse order
 
           do ij = 1, ijdim
-             if    ( RAIN_TYPE == 'DRY' ) then
-                qv(k) = qvv(ij,k)
-
-                qd(k) = 1.0_RP &
-                      - qv(k)
-
-                cv(k) = qd(k) * CVdry     &
-                      + qv(k) * CVW(I_QV)
-             elseif( RAIN_TYPE == 'WARM' ) then
+             if ( USE_Kessler ) then
                 qv(k) = qvv(ij,k)
                 qc(k) = q  (ij,kk,I_QC)
                 qr(k) = q  (ij,kk,I_QR)
@@ -553,9 +564,17 @@ contains
                       - qr(k)
 
                 cv(k) = qd(k) * CVdry     &
-                      + qv(k) * CVW(I_QV) &
-                      + qc(k) * CVW(I_QC) &
-                      + qr(k) * CVW(I_QR)
+                      + qv(k) * TRACER_CV(I_QV) &
+                      + qc(k) * TRACER_CV(I_QC) &
+                      + qr(k) * TRACER_CV(I_QR)
+             else
+                qv(k) = qvv(ij,k)
+
+                qd(k) = 1.0_RP &
+                      - qv(k)
+
+                cv(k) = qd(k) * CVdry     &
+                      + qv(k) * TRACER_CV(I_QV)
              endif
 
              fq(ij,kk,I_QV) = fq(ij,kk,I_QV) + ( qv(k) - q(ij,kk,I_QV) ) / dt

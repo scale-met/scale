@@ -146,6 +146,12 @@ contains
        PI     => CONST_PI,     &
        CVdry  => CONST_CVdry
     use scale_atmos_hydrometeor, only: &
+       I_QV, &
+       QHE, &
+       QLS, &
+       QLE, &
+       QIS, &
+       QIE, &
        LHV, &
        LHF
     use mod_adm, only: &
@@ -159,17 +165,6 @@ contains
     use mod_gm_statistics, only: &
        GTL_global_sum, &
        GTL_global_sum_srf
-    use mod_runconf, only: &
-       TRC_vmax, &
-       NQW_STR,  &
-       NQW_END,  &
-       I_QV,     &
-       I_QC,     &
-       I_QR,     &
-       I_QI,     &
-       I_QS,     &
-       I_QG,     &
-       CVW
     use mod_prgvar, only: &
        prgvar_get_withdiag
     use mod_cnvvar, only: &
@@ -190,8 +185,8 @@ contains
     real(RP) :: rhogw_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: rhoge    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhoge_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: rho      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rho_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
@@ -207,16 +202,16 @@ contains
     real(RP) :: vz_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: w        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: w_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: q        (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP) :: q        (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: qd    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: qd_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: tmp   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: tmp_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
-    real(RP) :: rhoq_sum    (TRC_vmax)
-    real(RP) :: rhoein_q_sum(TRC_vmax)
+    real(RP) :: rhoq_sum    (QA)
+    real(RP) :: rhoein_q_sum(QA)
     real(RP) :: rhoein_qd_sum
 
     real(RP) :: rhoqd_sum
@@ -268,7 +263,7 @@ contains
 
     do l = 1, ADM_lall
        call ATMOS_THERMODYN_qdry( &
-            ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+            ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, QA, &
             q(:,:,l,:), TRACER_MASS(:), & ! [IN]
             qd(:,:,l)                   ) ! [OUT]
     end do
@@ -276,7 +271,7 @@ contains
     if ( ADM_have_pl ) then
        do l = 1, ADM_lall_pl
           call ATMOS_THERMODYN_qdry( &
-               ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+               ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, QA, &
                q_pl(:,:,l,:), TRACER_MASS(:), & ! [IN]
                qd_pl(:,:,l)                   ) ! [OUT]
        end do
@@ -292,7 +287,7 @@ contains
     rhoqd_sum = GTL_global_sum( tmp, tmp_pl )
 
     !--- total mass (each water category)
-    do nq = NQW_STR, NQW_END
+    do nq = I_QV, QHE
        tmp(:,:,:) = rho(:,:,:) * q(:,:,:,nq)
        if ( ADM_have_pl ) then
           tmp_pl(:,:,:) = rho_pl(:,:,:) * q_pl(:,:,:,nq)
@@ -305,14 +300,14 @@ contains
     rhoqv_sum = 0.0_RP
     rhoql_sum = 0.0_RP
     rhoqi_sum = 0.0_RP
-    do nq = NQW_STR, NQW_END
+    do nq = I_QV, QHE
        rhoqt_sum = rhoqt_sum + rhoq_sum(nq)
 
        if    ( nq == I_QV ) then
           rhoqv_sum = rhoqv_sum + rhoq_sum(nq)
-       elseif( nq == I_QC .OR. nq == I_QR ) then
+       elseif( QLS <= nq .AND. nq <= QLE ) then
           rhoql_sum = rhoql_sum + rhoq_sum(nq)
-       elseif( nq == I_QI .OR. nq == I_QS  .OR. nq == I_QG ) then
+       elseif( QIS <= nq .AND. nq <= QIE ) then
           rhoqi_sum = rhoqi_sum + rhoq_sum(nq)
        endif
     enddo
@@ -335,20 +330,20 @@ contains
     rhoein_qd_sum = GTL_global_sum( tmp, tmp_pl )
 
     !--- internal energy (each water category)
-    do nq = NQW_STR,NQW_END
+    do nq = I_QV, QHE
 
-       tmp(:,:,:) = rho(:,:,:) * q(:,:,:,nq) * CVW(nq) * tem(:,:,:)
+       tmp(:,:,:) = rho(:,:,:) * q(:,:,:,nq) * TRACER_CV(nq) * tem(:,:,:)
        if    ( nq == I_QV ) then
           tmp(:,:,:) = tmp(:,:,:) + rho(:,:,:) * q(:,:,:,nq) * LHV ! correct latent heat
-       elseif( nq == I_QI .OR. nq == I_QS .OR. nq == I_QG ) then
+       elseif ( QIS <= nq .AND. nq <= QIE ) then
           tmp(:,:,:) = tmp(:,:,:) - rho(:,:,:) * q(:,:,:,nq) * LHF ! correct latent heat
        endif
 
        if ( ADM_have_pl ) then
-          tmp_pl(:,:,:) = rho_pl(:,:,:) * q_pl(:,:,:,nq) * CVW(nq) * tem_pl(:,:,:)
+          tmp_pl(:,:,:) = rho_pl(:,:,:) * q_pl(:,:,:,nq) * TRACER_CV(nq) * tem_pl(:,:,:)
           if    ( nq == I_QV ) then
              tmp_pl(:,:,:) = tmp_pl(:,:,:) + rho_pl(:,:,:) * q_pl(:,:,:,nq) * LHV ! correct latent heat
-          elseif( nq == I_QI .OR. nq == I_QS .OR. nq == I_QG ) then
+          elseif ( QIS <= nq .AND. nq <= QIE ) then
              tmp_pl(:,:,:) = tmp_pl(:,:,:) - rho_pl(:,:,:) * q_pl(:,:,:,nq) * LHF ! correct latent heat
           endif
        endif
@@ -358,7 +353,7 @@ contains
 
     !--- internal energy (total)
     rhoein_sum = rhoein_qd_sum
-    do nq = NQW_STR,NQW_END
+    do nq = I_QV, QHE
        rhoein_sum = rhoein_sum + rhoein_q_sum(nq)
     enddo
 

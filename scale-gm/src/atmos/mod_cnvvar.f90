@@ -77,8 +77,7 @@ contains
        VMTR_getIJ_C2Wfact
     use mod_runconf, only: &
        PRG_vmax,  &
-       DIAG_vmax, &
-       TRC_vmax
+       DIAG_vmax
     implicit none
 
     real(RP), intent(in)  :: prg    (ADM_gall   ,ADM_kall,ADM_lall   ,PRG_vmax )
@@ -125,7 +124,7 @@ contains
     enddo
     enddo
 
-    do iv = 1, TRC_vmax
+    do iv = 1, QA
     do l  = 1, ADM_lall
     do k  = 1, ADM_kall
     do n  = 1, ADM_gall
@@ -138,7 +137,7 @@ contains
     do l = 1, ADM_lall
 
        call ATMOS_THERMODYN_specific_heat( &
-            ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+            ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, QA, &
             diag(:,:,l,I_qstr:I_qend),                               & ! [IN]
             TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
             Qdry(:,:), Rtot(:,:), CVtot(:,:), CPtot(:,:)             ) ! [OUT]
@@ -180,7 +179,7 @@ contains
        enddo
        enddo
 
-       do iv = 1, TRC_vmax
+       do iv = 1, QA
        do l  = 1, ADM_lall_pl
        do k  = 1, ADM_kall
        do n  = 1, ADM_gall_pl
@@ -193,7 +192,7 @@ contains
        do l = 1, ADM_lall_pl
 
           call ATMOS_THERMODYN_specific_heat( &
-               ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+               ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, QA, &
                diag_pl(:,:,l,I_qstr:I_qend),                            & ! [IN]
                TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
                Qdry_pl(:,:), Rtot_pl(:,:), CVtot_pl(:,:), CPtot_pl(:,:) ) ! [OUT]
@@ -243,8 +242,7 @@ contains
        VMTR_getIJ_C2Wfact
     use mod_runconf, only: &
        PRG_vmax,  &
-       DIAG_vmax, &
-       TRC_vmax
+       DIAG_vmax
     implicit none
 
     real(RP), intent(out) :: prg    (ADM_gall   ,ADM_kall,ADM_lall   ,PRG_vmax )
@@ -282,7 +280,7 @@ contains
     do l = 1, ADM_lall
 
        call ATMOS_THERMODYN_specific_heat( &
-            ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+            ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, QA, &
             diag(:,:,l,I_qstr:I_qend),                               & ! [IN]
             TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
             Qdry(:,:), Rtot(:,:), CVtot(:,:), CPtot(:,:)             ) ! [OUT]
@@ -306,7 +304,7 @@ contains
     enddo
     enddo
 
-    do iv = 1, TRC_vmax
+    do iv = 1, QA
     do l  = 1, ADM_lall
     do k  = 1, ADM_kall
     do n  = 1, ADM_gall
@@ -340,7 +338,7 @@ contains
        do l = 1, ADM_lall_pl
 
           call ATMOS_THERMODYN_specific_heat( &
-               ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+               ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, QA, &
                diag_pl(:,:,l,I_qstr:I_qend),                            & ! [IN]
                TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
                Qdry_pl(:,:), Rtot_pl(:,:), CVtot_pl(:,:), CPtot_pl(:,:) ) ! [OUT]
@@ -364,7 +362,7 @@ contains
        enddo
        enddo
 
-       do iv = 1, TRC_vmax
+       do iv = 1, QA
        do l  = 1, ADM_lall_pl
        do k  = 1, ADM_kall
        do n  = 1, ADM_gall_pl

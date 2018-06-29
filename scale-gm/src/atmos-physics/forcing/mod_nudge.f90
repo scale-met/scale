@@ -16,6 +16,7 @@ module mod_nudge
   use scale_io
   use scale_prof
   use scale_atmos_grid_icoA_index
+  use scale_tracer
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -657,15 +658,14 @@ contains
        dt       )
     use mod_gtl, only: &
        GTL_clip_region
-    use mod_runconf, only: &
-       TRC_VMAX, &
+    use scale_atmos_hydrometeor, only: &
        I_QV
     use mod_history, only: &
        history_in
     implicit none
 
     real(RP), intent(inout) :: rhog (ADM_gall_in,ADM_kall,ADM_lall)
-    real(RP), intent(inout) :: rhogq(ADM_gall_in,ADM_kall,ADM_lall,TRC_VMAX)
+    real(RP), intent(inout) :: rhogq(ADM_gall_in,ADM_kall,ADM_lall,QA)
     real(RP), intent(in)    :: dt
 
     real(RP) :: NDG_ref_qv_in(ADM_gall_in,ADM_kall,ADM_lall) ! trimmed

@@ -187,17 +187,13 @@ contains
        I_vy,           &
        I_vz,           &
        I_w,            &
-       TRC_VMAX,       &
-       I_QV,           &
-       I_TKE,          &
-       NQW_STR,        &
-       NQW_END,        &
-       CVW,            &
        DYN_DIV_NUM,    &
        NDIFF_LOCATION, &
        TRC_ADV_TYPE,   &
        FLAG_NUDGING,   &
        THUBURN_LIM
+    use mod_atmos_phy_bl_vars, only: &
+       I_TKE
     use mod_prgvar, only: &
        prgvar_get, &
        prgvar_set
@@ -241,23 +237,23 @@ contains
 
     real(RP) :: PROG         (ADM_gall   ,ADM_kall,ADM_lall   ,6)        ! prognostic variables
     real(RP) :: PROG_pl      (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
-    real(RP) :: PROGq        (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX) ! tracer variables
-    real(RP) :: PROGq_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP) :: PROGq        (ADM_gall   ,ADM_kall,ADM_lall   ,QA) ! tracer variables
+    real(RP) :: PROGq_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: g_TEND       (ADM_gall   ,ADM_kall,ADM_lall   ,6)        ! tendency of prognostic variables
     real(RP) :: g_TEND_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
-    real(RP) :: g_TENDq      (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX) ! tendency of tracer variables
-    real(RP) :: g_TENDq_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP) :: g_TENDq      (ADM_gall   ,ADM_kall,ADM_lall   ,QA) ! tendency of tracer variables
+    real(RP) :: g_TENDq_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: f_TEND       (ADM_gall   ,ADM_kall,ADM_lall   ,6)        ! forcing tendency of prognostic variables
     real(RP) :: f_TEND_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
-    real(RP) :: f_TENDq      (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX) ! forcing tendency of tracer variables
-    real(RP) :: f_TENDq_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP) :: f_TENDq      (ADM_gall   ,ADM_kall,ADM_lall   ,QA) ! forcing tendency of tracer variables
+    real(RP) :: f_TENDq_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: PROG0        (ADM_gall   ,ADM_kall,ADM_lall   ,6)        ! prognostic variables (save)
     real(RP) :: PROG0_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
-    real(RP) :: PROGq0       (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX) ! tracer variables (save)
-    real(RP) :: PROGq0_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP) :: PROGq0       (ADM_gall   ,ADM_kall,ADM_lall   ,QA) ! tracer variables (save)
+    real(RP) :: PROGq0_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: PROG_split   (ADM_gall   ,ADM_kall,ADM_lall   ,6)        ! prognostic variables (split)
     real(RP) :: PROG_split_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
@@ -267,8 +263,8 @@ contains
 
     real(RP) :: DIAG         (ADM_gall   ,ADM_kall,ADM_lall   ,6)        ! diagnostic variables
     real(RP) :: DIAG_pl      (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
-    real(RP) :: q            (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX) ! tracer variables
-    real(RP) :: q_pl         (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP) :: q            (ADM_gall   ,ADM_kall,ADM_lall   ,QA) ! tracer variables
+    real(RP) :: q_pl         (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     !--- density
     real(RP) :: rho   (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -386,7 +382,7 @@ contains
        f_TEND_pl(:,:,:,:) = 0.0_RP
        !$acc end kernels
 
-       call src_tracer_advection( TRC_VMAX,                                          & ! [IN]
+       call src_tracer_advection( QA,                                          & ! [IN]
                                   PROGq (:,:,:,:),        PROGq_pl (:,:,:,:),        & ! [INOUT]
                                   PROG0 (:,:,:,I_RHOG),   PROG0_pl (:,:,:,I_RHOG),   & ! [IN]
                                   PROG  (:,:,:,I_RHOG),   PROG_pl  (:,:,:,I_RHOG),   & ! [IN]
@@ -432,7 +428,7 @@ contains
        do k = 1, ADM_kall
        do g = 1, ADM_gall
           !$acc loop seq
-          do nq = 1, TRC_VMAX
+          do nq = 1, QA
              q(g,k,l,nq) = PROGq(g,k,l,nq) / PROG(g,k,l,I_RHOG)
           enddo
           !$acc end loop
@@ -444,14 +440,14 @@ contains
        do l = 1, ADM_lall
 
           call ATMOS_THERMODYN_specific_heat( &
-               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, QA, &
                q(:,:,l,:),                                              & ! [IN]
                TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
                qd(:,:,l), r(:,:,l), cp(:,:,l), cv(:,:,l)             ) ! [OUT]
 
        end do
 
-       !$acc kernels pcopy(cv,qd,tem,pre) pcopyin(q,ein,rho,CVW) async(0)
+       !$acc kernels pcopy(cv,qd,tem,pre) pcopyin(q,ein,rho) async(0)
        do l = 1, ADM_lall
        do k = 1, ADM_kall
        do g = 1, ADM_gall
@@ -524,14 +520,14 @@ contains
           DIAG_pl(:,:,:,I_vz) = PROG_pl(:,:,:,I_RHOGVZ) / PROG_pl(:,:,:,I_RHOG)
           ein_pl (:,:,:)      = PROG_pl(:,:,:,I_RHOGE)  / PROG_pl(:,:,:,I_RHOG)
 
-          do nq = 1, TRC_VMAX
+          do nq = 1, QA
              q_pl(:,:,:,nq) = PROGq_pl(:,:,:,nq) / PROG_pl(:,:,:,I_RHOG)
           enddo
 
           do l = 1, ADM_lall_pl
 
              call ATMOS_THERMODYN_specific_heat( &
-                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, TRC_VMAX, &
+                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, QA, &
                   q_pl(:,:,l,:),                                           & ! [IN]
                   TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
                   qd_pl(:,:,l), r_pl(:,:,l), cv_pl(:,:,l), cp_pl(:,:,l) ) ! [OUT]
@@ -823,7 +819,7 @@ contains
 
           if ( nl == num_of_iteration_lstep ) then
 
-             call src_tracer_advection( TRC_VMAX,                                                & ! [IN]
+             call src_tracer_advection( QA,                                                & ! [IN]
                                         PROGq    (:,:,:,:),        PROGq_pl    (:,:,:,:),        & ! [INOUT]
                                         PROG0    (:,:,:,I_RHOG),   PROG0_pl    (:,:,:,I_RHOG),   & ! [IN]
                                         PROG_mean(:,:,:,I_RHOG),   PROG_mean_pl(:,:,:,I_RHOG),   & ! [IN]
@@ -850,7 +846,7 @@ contains
 
        elseif( TRC_ADV_TYPE == 'DEFAULT' ) then
 
-          do nq = 1, TRC_VMAX
+          do nq = 1, QA
 
              call src_advection_convergence( PROG_mean(:,:,:,I_RHOGVX), PROG_mean_pl(:,:,:,I_RHOGVX), & ! [IN]
                                              PROG_mean(:,:,:,I_RHOGVY), PROG_mean_pl(:,:,:,I_RHOGVY), & ! [IN]

@@ -16,6 +16,7 @@ module mod_numfilter
   use scale_io
   use scale_prof
   use scale_atmos_grid_icoA_index
+  use scale_tracer
 
   use mod_runconf, only: &
      I_RHOG,   &
@@ -1132,7 +1133,6 @@ contains
     use mod_time, only: &
        TIME_DTL
     use mod_runconf, only: &
-       TRC_VMAX,     &
        TRC_ADV_TYPE, &
        DYN_DIV_NUM
     use mod_bsstate, only: &
@@ -1156,12 +1156,12 @@ contains
     real(RP), intent(in)  :: w_pl         (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP), intent(in)  :: tem          (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)  :: tem_pl       (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)  :: q            (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX)
-    real(RP), intent(in)  :: q_pl         (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP), intent(in)  :: q            (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP), intent(in)  :: q_pl         (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
     real(RP), intent(out) :: tendency     (ADM_gall   ,ADM_kall,ADM_lall   ,6)
     real(RP), intent(out) :: tendency_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
-    real(RP), intent(out) :: tendency_q   (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX)
-    real(RP), intent(out) :: tendency_q_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP), intent(out) :: tendency_q   (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP), intent(out) :: tendency_q_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: KH_coef_h        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: KH_coef_h_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
@@ -1173,15 +1173,15 @@ contains
     real(RP) :: vtmp2       (ADM_gall   ,ADM_kall,ADM_lall   ,6)
     real(RP) :: vtmp2_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
 
-    real(RP) :: qtmp        (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX)
-    real(RP) :: qtmp_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
-    real(RP) :: qtmp2       (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX)
-    real(RP) :: qtmp2_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP) :: qtmp        (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: qtmp_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
+    real(RP) :: qtmp2       (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: qtmp2_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: vtmp_lap1   (ADM_gall   ,ADM_kall,ADM_lall   ,6)
     real(RP) :: vtmp_lap1_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
-    real(RP) :: qtmp_lap1   (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX)
-    real(RP) :: qtmp_lap1_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP) :: qtmp_lap1   (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: qtmp_lap1_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: wk       (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: wk_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
@@ -1200,9 +1200,9 @@ contains
     real(RP) :: IxJ_vtmp     (ADM_iall,ADM_jall,ADM_kall,ADM_lall,6)
     real(RP) :: IxJ_vtmp2    (ADM_iall,ADM_jall,ADM_kall,ADM_lall,6)
     real(RP) :: IxJ_vtmp_lap1(ADM_iall,ADM_jall,ADM_kall,ADM_lall,6)
-    real(RP) :: IxJ_qtmp     (ADM_iall,ADM_jall,ADM_kall,ADM_lall,TRC_VMAX)
-    real(RP) :: IxJ_qtmp2    (ADM_iall,ADM_jall,ADM_kall,ADM_lall,TRC_VMAX)
-    real(RP) :: IxJ_qtmp_lap1(ADM_iall,ADM_jall,ADM_kall,ADM_lall,TRC_VMAX)
+    real(RP) :: IxJ_qtmp     (ADM_iall,ADM_jall,ADM_kall,ADM_lall,QA)
+    real(RP) :: IxJ_qtmp2    (ADM_iall,ADM_jall,ADM_kall,ADM_lall,QA)
+    real(RP) :: IxJ_qtmp_lap1(ADM_iall,ADM_jall,ADM_kall,ADM_lall,QA)
     real(RP) :: IxJ_wk       (ADM_iall,ADM_jall,ADM_kall,ADM_lall)
 
     real(RP) :: VMTR_C2Wfact   (ADM_gall   ,ADM_kall,2,ADM_lall   )
@@ -1508,7 +1508,7 @@ contains
 
              IxJ_wk = reshape(wk,shape(IxJ_wk))
 
-             do nq = 1, TRC_VMAX
+             do nq = 1, QA
                 call OPRT_diffusion( IxJ_qtmp2     (:,:,:,:,nq),  qtmp2_pl         (:,:,:,nq), & ! [OUT]
                                      IxJ_qtmp      (:,:,:,:,nq),  qtmp_pl          (:,:,:,nq), & ! [IN]
                                      IxJ_wk        (:,:,:,:),     wk_pl            (:,:,:),    & ! [IN]
@@ -1516,7 +1516,7 @@ contains
                                      OPRT_coef_diff(:,:,:,:,:),   OPRT_coef_diff_pl(:,:,:)     ) ! [IN]
              enddo
           else
-             do nq = 1, TRC_VMAX
+             do nq = 1, QA
                 call OPRT_laplacian( IxJ_qtmp2    (:,:,:,:,nq), qtmp2_pl        (:,:,:,nq), & ! [OUT]
                                      IxJ_qtmp     (:,:,:,:,nq), qtmp_pl         (:,:,:,nq), & ! [IN]
                                      OPRT_coef_lap(:,:,:,:),    OPRT_coef_lap_pl(:,:)       ) ! [IN]
@@ -1542,7 +1542,7 @@ contains
 
           IxJ_wk = reshape(wk,shape(IxJ_wk))
 
-          do nq = 1, TRC_VMAX
+          do nq = 1, QA
              call OPRT_diffusion( IxJ_qtmp2     (:,:,:,:,nq),  qtmp2_pl         (:,:,:,nq), & ! [OUT]
                                   IxJ_qtmp_lap1 (:,:,:,:,nq),  qtmp_lap1_pl     (:,:,:,nq), & ! [IN]
                                   IxJ_wk        (:,:,:,:),     wk_pl            (:,:,:),    & ! [IN]
@@ -1561,7 +1561,7 @@ contains
           qtmp_lap1_pl(:,:,:,:) = 0.0_RP
        endif
 
-       do nq = 1, TRC_VMAX
+       do nq = 1, QA
        do l  = 1, ADM_lall
        do k  = ADM_kmin, ADM_kmax
           tendency_q(:,k,l,nq) = - ( qtmp(:,k,l,nq) + qtmp_lap1(:,k,l,nq) )
@@ -1570,7 +1570,7 @@ contains
        enddo
 
        if ( ADM_have_pl ) then
-          do nq = 1, TRC_VMAX
+          do nq = 1, QA
           do l  = 1, ADM_lall_pl
           do k  = ADM_kmin, ADM_kmax
              tendency_q_pl(:,k,l,nq) = - ( qtmp_pl(:,k,l,nq) + qtmp_lap1_pl(:,k,l,nq) )
@@ -1616,7 +1616,6 @@ contains
        VMTR_getIJ_GSGAM2H, &
        VMTR_getIJ_C2Wfact
     use mod_runconf, only: &
-       TRC_VMAX,     &
        TRC_ADV_TYPE
     use mod_bsstate, only: &
        rho_bs,    &
@@ -1639,12 +1638,12 @@ contains
     real(RP), intent(in)    :: w_pl         (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP), intent(in)    :: tem          (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)    :: tem_pl       (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)    :: q            (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX)
-    real(RP), intent(in)    :: q_pl         (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP), intent(in)    :: q            (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP), intent(in)    :: q_pl         (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
     real(RP), intent(inout) :: tendency     (ADM_gall   ,ADM_kall,ADM_lall   ,6)
     real(RP), intent(inout) :: tendency_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
-    real(RP), intent(inout) :: tendency_q   (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX)
-    real(RP), intent(inout) :: tendency_q_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP), intent(inout) :: tendency_q   (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP), intent(inout) :: tendency_q_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     integer, parameter :: vmax  = 6
     integer, parameter :: I_VX  = 1
@@ -1657,12 +1656,12 @@ contains
     real(RP) :: rhog_h   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhog_h_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
-    real(RP) :: flux    (ADM_gall   ,ADM_kall,ADM_lall   ,vmax+TRC_VMAX)
-    real(RP) :: flux_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,vmax+TRC_VMAX)
-    real(RP) :: vtmp0   (ADM_gall   ,ADM_kall,ADM_lall   ,vmax+TRC_VMAX)
-    real(RP) :: vtmp0_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,vmax+TRC_VMAX)
-    real(RP) :: vtmp1   (ADM_gall   ,ADM_kall,ADM_lall   ,vmax+TRC_VMAX)
-    real(RP) :: vtmp1_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,vmax+TRC_VMAX)
+    real(RP) :: flux    (ADM_gall   ,ADM_kall,ADM_lall   ,vmax+QA)
+    real(RP) :: flux_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,vmax+QA)
+    real(RP) :: vtmp0   (ADM_gall   ,ADM_kall,ADM_lall   ,vmax+QA)
+    real(RP) :: vtmp0_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,vmax+QA)
+    real(RP) :: vtmp1   (ADM_gall   ,ADM_kall,ADM_lall   ,vmax+QA)
+    real(RP) :: vtmp1_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,vmax+QA)
 
     real(RP) :: VMTR_GSGAM2H   (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: VMTR_GSGAM2H_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
@@ -1707,7 +1706,7 @@ contains
     vtmp0(:,:,:,I_W  ) = w  (:,:,:)
     vtmp0(:,:,:,I_TEM) = tem(:,:,:) - tem_bs(:,:,:)
     vtmp0(:,:,:,I_RHO) = rho(:,:,:) - rho_bs(:,:,:)
-    do nq = 1, TRC_VMAX
+    do nq = 1, QA
        vtmp0(:,:,:,vmax+nq) = rho(:,:,:) * q(:,:,:,nq)
     enddo
 
@@ -1735,7 +1734,7 @@ contains
                                 - 3.0_RP * vtmp0(:,ADM_kmax-1,:,I_RHO) &
                                 + 1.0_RP * vtmp0(:,ADM_kmax-2,:,I_RHO)
 
-    do nq = 1, TRC_VMAX
+    do nq = 1, QA
        vtmp0(:,ADM_kmin-1,:,vmax+nq) = 3.0_RP * vtmp0(:,ADM_kmin  ,:,vmax+nq) &
                                      - 3.0_RP * vtmp0(:,ADM_kmin+1,:,vmax+nq) &
                                      + 1.0_RP * vtmp0(:,ADM_kmin+2,:,vmax+nq)
@@ -1762,7 +1761,7 @@ contains
              vtmp1(:,k,l,I_RHO) = ( ( vtmp0(:,k+1,l,I_RHO) - vtmp0(:,k  ,l,I_RHO) ) * GRD_rdgzh(k+1) &
                                   - ( vtmp0(:,k  ,l,I_RHO) - vtmp0(:,k-1,l,I_RHO) ) * GRD_rdgzh(k)   &
                                   ) * GRD_rdgz(k)
-             do nq = 1, TRC_VMAX
+             do nq = 1, QA
                 vtmp1(:,k,l,vmax+nq) = ( ( vtmp0(:,k+1,l,vmax+nq) - vtmp0(:,k  ,l,vmax+nq) ) * GRD_rdgzh(k+1) &
                                        - ( vtmp0(:,k  ,l,vmax+nq) - vtmp0(:,k-1,l,vmax+nq) ) * GRD_rdgzh(k)   &
                                        )  * GRD_rdgz(k)
@@ -1792,7 +1791,7 @@ contains
              vtmp1(:,ADM_kmax+1,l,I_TEM) = vtmp1(:,ADM_kmax,l,I_TEM) * 2.0_RP - vtmp1(:,ADM_kmax-1,l,I_TEM)
              vtmp1(:,ADM_kmax+1,l,I_RHO) = vtmp1(:,ADM_kmax,l,I_RHO) * 2.0_RP - vtmp1(:,ADM_kmax-1,l,I_RHO)
 
-             do nq = 1, TRC_VMAX
+             do nq = 1, QA
                 vtmp1(:,ADM_kmin-1,l,vmax+nq) = 2.0_RP * vtmp1(:,ADM_kmin,l,vmax+nq) - vtmp1(:,ADM_kmin+1,l,vmax+nq)
                 vtmp1(:,ADM_kmax+1,l,vmax+nq) = 2.0_RP * vtmp1(:,ADM_kmax,l,vmax+nq) - vtmp1(:,ADM_kmax-1,l,vmax+nq)
              enddo
@@ -1815,7 +1814,7 @@ contains
              vtmp1(:,ADM_kmax+1,l,I_TEM) = vtmp1(:,ADM_kmax,l,I_TEM)
              vtmp1(:,ADM_kmax+1,l,I_RHO) = vtmp1(:,ADM_kmax,l,I_RHO)
 
-             do nq = 1, TRC_VMAX
+             do nq = 1, QA
                 vtmp1(:,ADM_kmin-1,l,vmax+nq) = vtmp1(:,ADM_kmin,l,vmax+nq)
                 vtmp1(:,ADM_kmax+1,l,vmax+nq) = vtmp1(:,ADM_kmax,l,vmax+nq)
              enddo
@@ -1858,7 +1857,7 @@ contains
        enddo
 
        if ( TRC_ADV_TYPE /= 'MIURA2004' ) then
-          do nq = 1, TRC_VMAX
+          do nq = 1, QA
           do k = ADM_kmin, ADM_kmax+1
           do g = 1, ADM_gall
              flux(g,k,l,vmax+nq) = Kv_coef_h(k) * ( vtmp0(g,k,l,vmax+nq) - vtmp0(g,k-1,l,vmax+nq) ) * GRD_rdgzh(k)
@@ -1866,7 +1865,7 @@ contains
           enddo
           enddo
 
-          do nq = 1, TRC_VMAX
+          do nq = 1, QA
           do k = ADM_kmin, ADM_kmax
           do g = 1, ADM_gall
              tendency_q(g,k,l,nq) = tendency_q(g,k,l,nq) + ( flux(g,k+1,l,vmax+nq) - flux(g,k,l,vmax+nq) ) * GRD_rdgz(k)
@@ -1885,7 +1884,7 @@ contains
        vtmp0_pl(:,:,:,I_TEM) = tem_pl(:,:,:) - tem_bs_pl(:,:,:)
        vtmp0_pl(:,:,:,I_RHO) = rho_pl(:,:,:) - rho_bs_pl(:,:,:)
 
-       do nq = 1, TRC_VMAX
+       do nq = 1, QA
           vtmp0_pl(:,:,:,vmax+nq) = rho_pl(:,:,:) * q_pl(:,:,:,nq)
        enddo
 
@@ -1913,7 +1912,7 @@ contains
                                       - 3.0_RP * vtmp0_pl(:,ADM_kmax-1,:,I_RHO) &
                                       + 1.0_RP * vtmp0_pl(:,ADM_kmax-2,:,I_RHO)
 
-       do nq = 1, TRC_VMAX
+       do nq = 1, QA
           vtmp0_pl(:,ADM_kmin-1,:,vmax+nq) = 3.0_RP * vtmp0_pl(:,ADM_kmin  ,:,vmax+nq) &
                                            - 3.0_RP * vtmp0_pl(:,ADM_kmin+1,:,vmax+nq) &
                                            + 1.0_RP * vtmp0_pl(:,ADM_kmin+2,:,vmax+nq)
@@ -1941,7 +1940,7 @@ contains
                                         - ( vtmp0_pl(:,k  ,l,I_RHO)-vtmp0_pl(:,k-1,l,I_RHO) ) * GRD_rdgzh(k  ) &
                                         ) * GRD_rdgz(k)
 
-                do nq = 1, TRC_VMAX
+                do nq = 1, QA
                    vtmp1_pl(:,k,l,vmax+nq) = ( ( vtmp0_pl(:,k+1,l,vmax+nq)-vtmp0_pl(:,k  ,l,vmax+nq) ) * GRD_rdgzh(k+1) &
                                              - ( vtmp0_pl(:,k  ,l,vmax+nq)-vtmp0_pl(:,k-1,l,vmax+nq) ) * GRD_rdgzh(k  ) &
                                              )  * GRD_rdgz(k)
@@ -1972,7 +1971,7 @@ contains
                 vtmp1_pl(:,ADM_kmax+1,l,I_TEM) = vtmp1_pl(:,ADM_kmax,l,I_TEM) * 2.0_RP - vtmp1_pl(:,ADM_kmax-1,l,I_TEM)
                 vtmp1_pl(:,ADM_kmax+1,l,I_RHO) = vtmp1_pl(:,ADM_kmax,l,I_RHO) * 2.0_RP - vtmp1_pl(:,ADM_kmax-1,l,I_RHO)
 
-                do nq = 1, TRC_VMAX
+                do nq = 1, QA
                    vtmp1_pl(:,ADM_kmin-1,l,vmax+nq) = 2.0_RP * vtmp1_pl(:,ADM_kmin  ,l,vmax+nq) &
                                                     - 1.0_RP * vtmp1_pl(:,ADM_kmin+1,l,vmax+nq)
                    vtmp1_pl(:,ADM_kmax+1,l,vmax+nq) = 2.0_RP * vtmp1_pl(:,ADM_kmax  ,l,vmax+nq) &
@@ -1995,7 +1994,7 @@ contains
                 vtmp1_pl(:,ADM_kmax+1,l,I_TEM) = vtmp1_pl(:,ADM_kmax,l,I_TEM)
                 vtmp1_pl(:,ADM_kmax+1,l,I_RHO) = vtmp1_pl(:,ADM_kmax,l,I_RHO)
 
-                do nq = 1, TRC_VMAX
+                do nq = 1, QA
                    vtmp1_pl(:,ADM_kmin-1,l,vmax+nq) = vtmp1_pl(:,ADM_kmin,l,vmax+nq)
                    vtmp1_pl(:,ADM_kmax+1,l,vmax+nq) = vtmp1_pl(:,ADM_kmax,l,vmax+nq)
                 enddo
@@ -2050,7 +2049,7 @@ contains
           enddo
 
           if ( TRC_ADV_TYPE /= 'MIURA2004' ) then
-             do nq = 1, TRC_VMAX
+             do nq = 1, QA
              do k = ADM_kmin, ADM_kmax+1
              do g = 1, ADM_gall
                 flux_pl(g,k,l,vmax+nq) = Kv_coef_h(k) * ( vtmp0_pl(g,k,l,vmax+nq)-vtmp0_pl(g,k-1,l,vmax+nq) ) &
@@ -2059,7 +2058,7 @@ contains
              enddo
              enddo
 
-             do nq = 1, TRC_VMAX
+             do nq = 1, QA
              do k = ADM_kmin, ADM_kmax
              do g = 1, ADM_gall
                 tendency_q_pl(g,k,l,nq) = tendency_q_pl(g,k,l,nq) &

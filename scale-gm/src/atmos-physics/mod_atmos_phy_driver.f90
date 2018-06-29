@@ -16,6 +16,7 @@ module mod_atmos_phy_driver
   use scale_precision
   use scale_io
   use scale_atmos_grid_icoA_index
+  use scale_tracer
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -124,8 +125,6 @@ contains
     use mod_prgvar, only: &
        prgvar_get_in, &
        prgvar_set_in
-    use mod_runconf, only: &
-       TRC_vmax
     implicit none
 
     real(RP) :: rhog  (ADM_gall_in,ADM_kall,ADM_lall)
@@ -134,7 +133,7 @@ contains
     real(RP) :: rhogvz(ADM_gall_in,ADM_kall,ADM_lall)
     real(RP) :: rhogw (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP) :: rhoge (ADM_gall_in,ADM_kall,ADM_lall)
-    real(RP) :: rhogq (ADM_gall_in,ADM_kall,ADM_lall,TRC_vmax)
+    real(RP) :: rhogq (ADM_gall_in,ADM_kall,ADM_lall,QA)
 
     !---------------------------------------------------------------------------
 
