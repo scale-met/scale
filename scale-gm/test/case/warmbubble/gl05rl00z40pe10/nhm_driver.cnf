@@ -30,8 +30,11 @@
     RUNNAME        = 'DCMIP2016-13',
     NDIFF_LOCATION = 'IN_LARGE_STEP2',
     THUBURN_LIM    = .true.,
-    RAIN_TYPE      = "WARM",
     AF_TYPE        = 'DCMIP',
+/
+
+&PARAM_ATMOS
+    ATMOS_PHY_MP_TYPE = 'SN14',
 /
 
 &BSSTATEPARAM
@@ -130,9 +133,9 @@
 &NMHIST item='ml_af_fq02', file='forcing_qc',  ktype='3D' /
 &NMHIST item='ml_af_fq03', file='forcing_qr',  ktype='3D' /
 
-&NMHIST item='ml_qv',      file='qv',   ktype='3D' /
-&NMHIST item='ml_qc',      file='qc',   ktype='3D' /
-&NMHIST item='ml_qr',      file='qr',   ktype='3D' /
+&NMHIST item='ml_QV',      file='qv',   ktype='3D' /
+&NMHIST item='ml_QC',      file='qc',   ktype='3D' /
+&NMHIST item='ml_QR',      file='qr',   ktype='3D' /
 
 &NMHIST item='sl_af_prcp', file='prcp', ktype='2D', output_type='AVERAGE' /
 
