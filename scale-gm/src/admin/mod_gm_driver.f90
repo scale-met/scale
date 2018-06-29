@@ -208,7 +208,7 @@ contains
        cnvpre_fac1, &
        cnvpre_fac2
     use scale_landuse, only: &
-       landuse_setup 
+       landuse_setup
     use mod_atmos_surface, only: &
        atmos_surface_get
     use mod_atmos_vars, only: &
@@ -225,7 +225,7 @@ contains
        ATMOS_phy_driver_tracer_setup, &
        ATMOS_phy_driver_setup
     use mod_atmos_phy_sf_vars, only: &
-       ATMOS_PHY_SF_vars_setup       
+       ATMOS_PHY_SF_vars_setup
     use mod_atmos_phy_sf_driver, only: &
        ATMOS_PHY_SF_driver_setup
     use mod_gm_topography, only: &
@@ -394,7 +394,6 @@ contains
     !$acc& pcopyin(ncmax_r2r,ncmax_sgp,ncmax_r2p,ncmax_p2r) &
     !$acc& pcopyin(GRD_rdgz,GRD_rdgzh,GRD_x,GRD_xt,GRD_vz,GRD_zs) &
     !$acc& pcopyin(GMTR_p,GMTR_t,GMTR_a) &
-    !$acc& pcopyin(cdiv,cgrad,clap,cinterp_TN,cinterp_HN,cinterp_TRA,cinterp_PRA) &
     !$acc& pcopyin(VMTR_GAM2,VMTR_GAM2H,VMTR_GSGAM2,VMTR_GSGAM2H) &
     !$acc& pcopyin(VMTR_RGSQRTH,VMTR_RGAM,VMTR_RGAMH,VMTR_RGSGAM2,VMTR_RGSGAM2H) &
     !$acc& pcopyin(VMTR_W2Cfact,VMTR_C2Wfact,VMTR_C2WfactGz,VMTR_PHI) &

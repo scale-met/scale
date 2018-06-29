@@ -325,7 +325,7 @@ contains
     call PROF_rapstart('__Dynamics',1)
     !$acc  data &
     !$acc& create(PROG,PROGq,g_TEND,g_TENDq,f_TEND,f_TENDq,PROG0,PROGq0,PROG_split,PROG_mean) &
-    !$acc& create(rho,vx,vy,vz,w,ein,tem,pre,eth,th,rhogd,pregd,q,qd,cv) &
+    !$acc& create(DIAG,rho,ein,eth,th,rhogd,pregd,q,qd,cv) &
     !$acc& pcopy(PRG_var)
 
     call PROF_rapstart('___Pre_Post',1)
@@ -409,7 +409,7 @@ contains
        call PROF_rapstart('___Pre_Post',1)
 
        !---< Generate diagnostic values and set the boudary conditions
-       !$acc kernels pcopy(rho,vx,vy,vz,ein) pcopyin(PROG,VMTR_GSGAM2) async(0)
+       !$acc kernels pcopy(rho,ein,DIAG) pcopyin(PROG,VMTR_GSGAM2) async(0)
        do l = 1, ADM_lall
        do k = ADM_kmin, ADM_kmax
        do g = 1, ADM_gall
@@ -447,7 +447,7 @@ contains
 
        end do
 
-       !$acc kernels pcopy(cv,qd,tem,pre) pcopyin(q,ein,rho) async(0)
+       !$acc kernels pcopy(DIAG) pcopyin(ein,rho,cv,r) async(0)
        do l = 1, ADM_lall
        do k = ADM_kmin, ADM_kmax
        do g = 1, ADM_gall
@@ -458,7 +458,7 @@ contains
        enddo
        !$acc end kernels
 
-       !$acc kernels pcopy(w) pcopyin(PROG,VMTR_C2Wfact) async(0)
+       !$acc kernels pcopy(DIAG) pcopyin(PROG,VMTR_C2Wfact) async(0)
        do l = 1, ADM_lall
        do k = ADM_kmin+1, ADM_kmax
        do g = 1, ADM_gall
@@ -512,7 +512,7 @@ contains
 
 
        ! perturbations ( pre, rho with metrics )
-       !$acc  kernels pcopy(pregd,rhogd) pcopyin(pre,pre_bs,rho,rho_bs,VMTR_GSGAM2) async(0)
+       !$acc  kernels pcopy(pregd,rhogd) pcopyin(DIAG,pre_bs,rho,rho_bs,VMTR_GSGAM2) async(0)
        pregd(:,:,:) = ( DIAG(:,:,:,I_pre) - pre_bs(:,:,:) ) * VMTR_GSGAM2(:,:,:)
        rhogd(:,:,:) = ( rho (:,:,:)       - rho_bs(:,:,:) ) * VMTR_GSGAM2(:,:,:)
        !$acc end kernels
