@@ -366,12 +366,12 @@ contains
                        -2, & !  16 Water Bodies                   -> -2 Lake/River
                        10, & !  17 Herbaceous Wetland             -> 10 Paddy
                        10, & !  18 Wooded Wetland                 -> 10 Paddy
-                        1, & !  19 Barren or Sparsely Vegetated   ->  1 Bare Ground
-                        1, & !  20 Herbaceous Tundra              ->  1 Bare Ground
-                        1, & !  21 Wooded Tundra                  ->  1 Bare Ground
-                        1, & !  22 Mixed Tundra                   ->  1 Bare Ground
-                        1, & !  23 Bare Ground Tundra             ->  1 Bare Ground
-                        1, & !  24 Snow or Ice                    ->  1 Bare Ground
+                        1, & !  19 Barren or Sparsely Vegetated   ->  1 Dessert
+                       16, & !  20 Herbaceous Tundra              -> 16 Tundra
+                       16, & !  21 Wooded Tundra                  -> 16 Tundra
+                       16, & !  22 Mixed Tundra                   -> 16 Tundra
+                       16, & !  23 Bare Ground Tundra             -> 16 Tundra
+                       17, & !  24 Snow or Ice                    -> 17 Gracier
                        -1  / !  25+ Sea Surface                   -> -1 Sea Surface
 
     !---------------------------------------------------------------------------
@@ -547,18 +547,18 @@ contains
     data lookuptable / -1, & ! -999 missing      -> -1 Sea Surface
                        10, & !  1 paddy          -> 10 Paddy
                         9, & !  2 cropland       ->  9 Mixed Cropland and Pasture
-                        1, & !  3 UNDEF          ->  1 Bare Ground
-                        1, & !  4 UNDEF          ->  1 Bare Ground
+                        1, & !  3 UNDEF          ->  1 Dessert
+                        1, & !  4 UNDEF          ->  1 Dessert
                        11, & !  5 forest         -> 11 Deciduous Broadleaf Forest
-                        1, & !  6 bareground     ->  1 Bare Ground
+                        1, & !  6 bareground     ->  1 Dessert
                         0, & !  7 urban building ->  0 Urban and Built-up Land
-                        1, & !  8 UNDEF          ->  1 Bare Ground
+                        1, & !  8 UNDEF          ->  1 Dessert
                         0, & !  9 motorway       ->  0 Urban and Built-up Land
                         0, & ! 10 urban ground   ->  0 Urban and Built-up Land
                        -2, & ! 11 lake,river     -> -2 Lake/River
-                        1, & ! 12 UNDEF          ->  1 Bare Ground
-                        1, & ! 13 UNDEF          ->  1 Bare Ground
-                        1, & ! 14 seashore       ->  1 Bare Ground
+                        1, & ! 12 UNDEF          ->  1 Dessert
+                        1, & ! 13 UNDEF          ->  1 Dessert
+                        1, & ! 14 seashore       ->  1 Dessert
                        -1, & ! 15 ocean          -> -1 Sea Surface
                         2  / ! 16 golf course    ->  2 Grassland
 
