@@ -32,9 +32,15 @@ module mod_ocean_admin
   logical,                public :: OCEAN_do   = .true. ! main switch for the model
 
   character(len=H_SHORT), public :: OCEAN_DYN_TYPE = 'NONE'
+                                                   ! 'OFF'
+                                                   ! 'SLAB'
+                                                   ! 'INIT'
   character(len=H_SHORT), public :: OCEAN_SFC_TYPE = 'FIXED-TEMP'
   character(len=H_SHORT), public :: OCEAN_ALB_TYPE = 'NAKAJIMA00'
+                                                   ! 'INIT'
   character(len=H_SHORT), public :: OCEAN_RGN_TYPE = 'MOON07'
+                                                   ! 'MILLER92'
+                                                   ! 'INIT'
 
   !-----------------------------------------------------------------------------
   !

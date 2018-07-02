@@ -81,7 +81,7 @@ contains
        select case ( LAND_DYN_TYPE )
        case ( 'BUCKET' )
           call LAND_DYN_BUCKET_setup
-       case ( 'CONST' )
+       case ( 'INIT' )
           ! do nothing
        case default
           LOG_ERROR("LAND_driver_setup",*) 'LAND_DYN_TYPE is invalid: ', trim(LAND_DYN_TYPE)
@@ -588,8 +588,6 @@ contains
 
     !########## Dynamics / Update variables ##########
     select case ( LAND_DYN_TYPE )
-    case ( 'CONST' )
-       ! do nothing
     case ( 'BUCKET' )
        call LAND_DYN_bucket( LKMAX, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE, &
                              LAND_TEMP_t(:,:,:), LAND_WATER_t(:,:,:),   & ! [IN]
@@ -604,6 +602,8 @@ contains
                              LAND_TEMP(:,:,:), LAND_WATER(:,:,:),       & ! [INOUT]
                              RUNOFF(:,:)                                ) ! [OUT]
        call FILE_HISTORY_in( RUNOFF(:,:), 'RUNOFF', 'runoff water', 'kg', dim_type='XY' )
+    case ( 'INIT' )
+       ! Never update LAND_TEMP and LAND_WATER from initial condition
     end select
 
     !########## Negative Fixer ##########

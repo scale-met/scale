@@ -30,9 +30,14 @@ module mod_land_admin
   !++ Public parameters & variables
   !
   character(len=H_SHORT), public :: LAND_DYN_TYPE = 'NONE'
+                                                  ! 'OFF'
+                                                  ! 'BUCKET'
+                                                  ! 'INIT'
   character(len=H_SHORT), public :: LAND_SFC_TYPE = 'SKIN'
+                                                  ! 'FIXED-TEMP'
   character(len=H_SHORT), public :: SNOW_TYPE     = 'NONE'
-
+                                                  ! 'OFF'
+                                                  ! 'KY90'
   logical,                public :: LAND_do
   logical,                public :: SNOW_sw
 

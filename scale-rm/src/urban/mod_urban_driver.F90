@@ -69,23 +69,17 @@ contains
     if ( URBAN_do ) then
 
        select case ( URBAN_DYN_TYPE )
-       case ( 'NONE' )
-          ! do nothing
        case ( 'KUSAKA01' )
           call URBAN_DYN_KUSAKA01_setup( UIA, UIS, UIE, UJA, UJS, UJE, &
                                          URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:) ) ! [OUT]
 
           URBAN_SFC_TYPE = 'KUSAKA01'
-       case ( 'CONST' )
-          ! do nothing
        case default
           LOG_ERROR("URBAN_driver_setup",*) 'LAND_DYN_TYPE is invalid: ', trim(URBAN_DYN_TYPE)
           call PRC_abort
        end select
 
        select case ( URBAN_SFC_TYPE )
-       case ( 'NONE' )
-          ! do nothing
        case ( 'KUSAKA01' )
           ! do nothing
        case default
@@ -532,10 +526,6 @@ contains
        end do
        end do
 
-    case ( 'CONST' )
-       ! do nothing
-    case default
-       ! do nothing
     end select
 
     call URBAN_vars_total

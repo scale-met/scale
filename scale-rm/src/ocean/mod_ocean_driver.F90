@@ -79,7 +79,7 @@ contains
        select case ( OCEAN_DYN_TYPE )
        case ( 'SLAB' )
           call OCEAN_DYN_SLAB_setup
-       case ( 'CONST' )
+       case ( 'INIT' )
           ! do nothing
        case default
           LOG_ERROR("OCEAN_driver_setup",*) 'OCEAN_DYN_TYPE is invalid: ', trim(OCEAN_DYN_TYPE)
@@ -95,22 +95,22 @@ contains
        end select
 
        select case ( OCEAN_ALB_TYPE )
-       case ( 'CONST' )
-          ! do nothing
        case ( 'NAKAJIMA00' )
           call OCEAN_PHY_ALBEDO_nakajima00_setup
+       case ( 'INIT' )
+          ! do nothing
        case default
           LOG_ERROR("OCEAN_driver_setup",*) 'OCEAN_ALB_TYPE is invalid: ', trim(OCEAN_ALB_TYPE)
           call PRC_abort
        end select
 
        select case ( OCEAN_RGN_TYPE )
-       case ( 'CONST' )
-          ! do nothing
        case ( 'MILLER92' )
           call OCEAN_PHY_ROUGHNESS_miller92_setup
        case ( 'MOON07' )
           call OCEAN_PHY_ROUGHNESS_moon07_setup
+       case ( 'INIT' )
+          ! do nothing
        case default
           LOG_ERROR("OCEAN_driver_setup",*) 'OCEAN_RGN_TYPE is invalid: ', trim(OCEAN_RGN_TYPE)
           call PRC_abort
@@ -242,8 +242,6 @@ contains
 
     !########## ROUGHNESS ##########
     select case ( OCEAN_RGN_TYPE )
-    case ( 'CONST' )
-       ! do nothing
     case ( 'MILLER92' )
        call OCEAN_PHY_ROUGHNESS_miller92( OIA, OIS, OIE, OJA, OJS, OJE, &
                                           ATMOS_Uabs(:,:),    & ! [IN]
@@ -255,12 +253,12 @@ contains
                                         ATMOS_Uabs(:,:), REAL_Z1(:,:),         & ! [IN]
                                         OCEAN_SFC_Z0M(:,:),                    & ! [INOUT]
                                         OCEAN_SFC_Z0H(:,:), OCEAN_SFC_Z0E(:,:) ) ! [OUT]
+    case ( 'INIT' )
+       ! Never update OCEAN_SFC_Z0M/H/E from initial condition
     end select
 
     !########## ALBEDO ##########
     select case ( OCEAN_ALB_TYPE )
-    case ( 'CONST' )
-       ! do nothing
     case ( 'NAKAJIMA00' )
        call OCEAN_PHY_albedo_nakajima00( OIA, OIS, OIE, OJA, OJS, OJE,            & ! [IN]
                                          ATMOS_cosSZA    (:,:),                   & ! [IN]
@@ -271,6 +269,8 @@ contains
 
        OCEAN_SFC_albedo(:,:,I_R_diffuse,I_R_NIR) = 0.06_RP
        OCEAN_SFC_albedo(:,:,I_R_diffuse,I_R_VIS) = 0.06_RP
+    case ( 'INIT' )
+       ! Never update OCEAN_SFC_albedo from initial condition
     end select
 
 
@@ -395,8 +395,8 @@ contains
                             LANDUSE_fact_ocean(:,:),                    & ! [IN]
                             dt, NOWDAYSEC,                              & ! [IN]
                             OCEAN_TEMP(:,:,:)                           ) ! [INOUT]
-    case ( 'CONST' )
-       ! do nothing
+    case ( 'INIT' )
+       ! Never update OCEAN_TEMP from initial condition
     end select
 
     call OCEAN_vars_total
