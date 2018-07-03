@@ -43,8 +43,8 @@ module scale_atmos_phy_mp_suzuki10
   public :: ATMOS_PHY_MP_suzuki10_cloud_fraction
   public :: ATMOS_PHY_MP_suzuki10_effective_radius
   public :: ATMOS_PHY_MP_suzuki10_qtrc2qhyd
-  public :: ATMOS_PHY_MP_suzuki10_qhyd2qtrc
   public :: ATMOS_PHY_MP_suzuki10_qtrc2nhyd
+  public :: ATMOS_PHY_MP_suzuki10_qhyd2qtrc
 
   !-----------------------------------------------------------------------------
   !
@@ -1458,6 +1458,75 @@ contains
     return
   end subroutine ATMOS_PHY_MP_suzuki10_qtrc2qhyd
 
+  !> Calculate number concentration of each category
+  subroutine ATMOS_PHY_MP_suzuki10_qtrc2nhyd( &
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       DENS,       &
+       QTRC0,      &
+       Ne          )
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC,  &
+       I_HR,  &
+       I_HI,  &
+       I_HS,  &
+       I_HG,  &
+       I_HH
+    implicit none
+
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+    real(RP), intent(in)  :: DENS (KA,IA,JA)           ! density [kg/m3]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,nbin*nspc) ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Ne   (KA,IA,JA,N_HYD)     ! number concentration of each cateory [1/m3]
+
+    integer :: ihydro, ibin, iq, icateg
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+!OCL XFILL
+    Ne(:,:,:,:) = 0.0_RP
+
+    do ihydro = 1, nspc
+    do ibin   = 1, nbin
+       iq = nbin*(ihydro-1) + ibin
+
+       if    ( iq > 0                 .AND. iq <= nbin*(I_mp_QC -1) ) then ! liquid
+          if    ( iq > 0    .AND. iq <= nbnd ) then ! cloud
+             icateg = I_HC
+          elseif( iq > nbnd .AND. iq <= nbin ) then ! rain
+             icateg = I_HR
+          endif
+       elseif( iq > nbin*(I_mp_QC -1) .AND. iq <= nbin*(I_mp_QCL-1) ) then ! ice (column)
+          icateg = I_HI
+       elseif( iq > nbin*(I_mp_QCL-1) .AND. iq <= nbin*(I_mp_QP -1) ) then ! ice (plate)
+          icateg = I_HI
+       elseif( iq > nbin*(I_mp_QP -1) .AND. iq <= nbin*(I_mp_QS -1) ) then ! ice (dendrite)
+          icateg = I_HI
+       elseif( iq > nbin*(I_mp_QS -1) .AND. iq <= nbin*(I_mp_QG -1) ) then ! snow
+          icateg = I_HS
+       elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QH -1) ) then ! graupel
+          icateg = I_HG
+       elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= nbin*nspc         ) then ! hail
+          icateg = I_HH
+       endif
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          Ne(k,i,j,icateg) = Ne(k,i,j,icateg) + DENS(k,i,j) * QTRC0(k,i,j,iq) * rexpxctr(ibin)
+       enddo
+       enddo
+       enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_suzuki10_qtrc2nhyd
+
   !-----------------------------------------------------------------------------
   !> get mass ratio of each category
   subroutine ATMOS_PHY_MP_suzuki10_qhyd2qtrc( &
@@ -1654,76 +1723,6 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_qhyd2qtrc
-
-  !-----------------------------------------------------------------------------
-  !> Calculate number concentration of each category
-  subroutine ATMOS_PHY_MP_suzuki10_qtrc2nhyd( &
-       KA, KS, KE, &
-       IA, IS, IE, &
-       JA, JS, JE, &
-       DENS,       &
-       QTRC0,      &
-       Ne          )
-    use scale_atmos_hydrometeor, only: &
-       N_HYD, &
-       I_HC,  &
-       I_HR,  &
-       I_HI,  &
-       I_HS,  &
-       I_HG,  &
-       I_HH
-    implicit none
-
-    integer,  intent(in)  :: KA, KS, KE
-    integer,  intent(in)  :: IA, IS, IE
-    integer,  intent(in)  :: JA, JS, JE
-    real(RP), intent(in)  :: DENS (KA,IA,JA)           ! density [kg/m3]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,nbin*nspc) ! tracer mass concentration [kg/kg]
-    real(RP), intent(out) :: Ne   (KA,IA,JA,N_HYD)     ! number concentration of each cateory [1/m3]
-
-    integer :: ihydro, ibin, iq, icateg
-    integer :: k, i, j
-    !---------------------------------------------------------------------------
-
-!OCL XFILL
-    Ne(:,:,:,:) = 0.0_RP
-
-    do ihydro = 1, nspc
-    do ibin   = 1, nbin
-       iq = nbin*(ihydro-1) + ibin
-
-       if    ( iq > 0                 .AND. iq <= nbin*(I_mp_QC -1) ) then ! liquid
-          if    ( iq > 0    .AND. iq <= nbnd ) then ! cloud
-             icateg = I_HC
-          elseif( iq > nbnd .AND. iq <= nbin ) then ! rain
-             icateg = I_HR
-          endif
-       elseif( iq > nbin*(I_mp_QC -1) .AND. iq <= nbin*(I_mp_QCL-1) ) then ! ice (column)
-          icateg = I_HI
-       elseif( iq > nbin*(I_mp_QCL-1) .AND. iq <= nbin*(I_mp_QP -1) ) then ! ice (plate)
-          icateg = I_HI
-       elseif( iq > nbin*(I_mp_QP -1) .AND. iq <= nbin*(I_mp_QS -1) ) then ! ice (dendrite)
-          icateg = I_HI
-       elseif( iq > nbin*(I_mp_QS -1) .AND. iq <= nbin*(I_mp_QG -1) ) then ! snow
-          icateg = I_HS
-       elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QH -1) ) then ! graupel
-          icateg = I_HG
-       elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= nbin*nspc         ) then ! hail
-          icateg = I_HH
-       endif
-
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          Ne(k,i,j,icateg) = Ne(k,i,j,icateg) + DENS(k,i,j) * QTRC0(k,i,j,iq) * rexpxctr(ibin)
-       enddo
-       enddo
-       enddo
-    enddo
-    enddo
-
-    return
-  end subroutine ATMOS_PHY_MP_suzuki10_qtrc2nhyd
 
   !-----------------------------------------------------------------------------
   subroutine MP_suzuki10( &

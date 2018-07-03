@@ -109,6 +109,7 @@ module scale_atmos_phy_mp_sn14
   public :: ATMOS_PHY_MP_sn14_effective_radius
   public :: ATMOS_PHY_MP_sn14_cloud_fraction
   public :: ATMOS_PHY_MP_sn14_qtrc2qhyd
+  public :: ATMOS_PHY_MP_sn14_qtrc2nhyd
   public :: ATMOS_PHY_MP_sn14_qhyd2qtrc
 
   !-----------------------------------------------------------------------------
@@ -845,8 +846,9 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA_MP-1)     ! tracer mass concentration [kg/kg]
-    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA_MP-1) ! tracer mass concentration [kg/kg]
+
+    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD)   ! mixing ratio of each cateory [kg/kg]
     !---------------------------------------------------------------------------
 
 !OCL XFILL
@@ -864,6 +866,44 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_sn14_qtrc2qhyd
+
+  !> Calculate number concentration of each category
+  subroutine ATMOS_PHY_MP_sn14_qtrc2nhyd( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       QTRC0, &
+       Ne     )
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC,  &
+       I_HR,  &
+       I_HI,  &
+       I_HS,  &
+       I_HG
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA_MP-1) ! tracer mass concentration [kg/kg]
+
+    real(RP), intent(out) :: Ne   (KA,IA,JA,N_HYD)   ! number density of each cateory [1/m3]
+    !---------------------------------------------------------------------------
+
+!OCL XFILL
+    Ne(:,:,:,I_HC) = QTRC0(:,:,:,I_mp_NC)
+!OCL XFILL
+    Ne(:,:,:,I_HR) = QTRC0(:,:,:,I_mp_NR)
+!OCL XFILL
+    Ne(:,:,:,I_HI) = QTRC0(:,:,:,I_mp_NI)
+!OCL XFILL
+    Ne(:,:,:,I_HS) = QTRC0(:,:,:,I_mp_NS)
+!OCL XFILL
+    Ne(:,:,:,I_HG) = QTRC0(:,:,:,I_mp_NG)
+!OCL XFILL
+    Ne(:,:,:,I_HG+1:) = 0.0_RP
+
+    return
+  end subroutine ATMOS_PHY_MP_sn14_qtrc2nhyd
 
   subroutine ATMOS_PHY_MP_sn14_qhyd2qtrc( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &

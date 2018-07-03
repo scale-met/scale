@@ -105,9 +105,11 @@ module mod_atmos_phy_mp_vars
   real(RP), private, allocatable :: ATMOS_PHY_MP_CLDFRAC(:,:,:)
   real(RP), private, allocatable :: ATMOS_PHY_MP_Re     (:,:,:,:)
   real(RP), private, allocatable :: ATMOS_PHY_MP_Qe     (:,:,:,:)
+  real(RP), private, allocatable :: ATMOS_PHY_MP_Ne     (:,:,:,:)
   logical, private :: DIAG_CLDFRAC
   logical, private :: DIAG_Re
   logical, private :: DIAG_Qe
+  logical, private :: DIAG_Ne
 
   ! for history
   integer, private              :: HIST_CLDFRAC_id
@@ -115,8 +117,8 @@ module mod_atmos_phy_mp_vars
   logical, private              :: HIST_Qe
   logical, private              :: HIST_Ne
   integer, private, allocatable :: HIST_Re_id(:)
-  integer, private, allocatable :: HIST_Qe_id(:) ! for suzuki10
-  integer, private, allocatable :: HIST_Ne_id(:) ! for suzuki10
+  integer, private, allocatable :: HIST_Qe_id(:)
+  integer, private, allocatable :: HIST_Ne_id(:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -220,15 +222,18 @@ contains
     allocate( ATMOS_PHY_MP_CLDFRAC(KA,IA,JA) )
     allocate( ATMOS_PHY_MP_Re     (KA,IA,JA,N_HYD) )
     allocate( ATMOS_PHY_MP_Qe     (KA,IA,JA,N_HYD) )
+    allocate( ATMOS_PHY_MP_Ne     (KA,IA,JA,N_HYD) )
 !OCL XFILL
     ATMOS_PHY_MP_CLDFRAC(:,:,:) = UNDEF
 !OCL XFILL
     ATMOS_PHY_MP_Re     (:,:,:,:) = UNDEF
 !OCL XFILL
     ATMOS_PHY_MP_Qe     (:,:,:,:) = UNDEF
+    ATMOS_PHY_MP_Ne     (:,:,:,:) = UNDEF
     DIAG_CLDFRAC = .false.
     DIAG_Re      = .false.
     DIAG_Qe      = .false.
+    DIAG_Ne      = .false.
 
     ! history
     allocate( HIST_Re_id(N_HYD) )
@@ -245,13 +250,13 @@ contains
 
     HIST_Qe = .false.
     do ih = 1, N_HYD
-       call FILE_HISTORY_reg( trim(HYD_NAME(ih))//'_blk', 'mass ratio of '//trim(HYD_DESC(ih)), 'kg/kg', HIST_Qe_id(ih), fill_halo=.true., dim_type='ZXY' )
+       call FILE_HISTORY_reg( trim(HYD_NAME(ih))//'_hyd', 'mass ratio of '//trim(HYD_DESC(ih)), 'kg/kg', HIST_Qe_id(ih), fill_halo=.true., dim_type='ZXY' )
        if( HIST_Qe_id(ih) > 0 ) HIST_Qe = .true.
     enddo
 
     HIST_Ne = .false.
     do ih = 1, N_HYD
-       call FILE_HISTORY_reg( trim(NUM_NAME(ih))//'_blk', 'number concentration of '//trim(HYD_DESC(ih)), '1/m3', HIST_Ne_id(ih), fill_halo=.true., dim_type='ZXY' )
+       call FILE_HISTORY_reg( trim(NUM_NAME(ih))//'_hyd', 'number concentration of '//trim(HYD_DESC(ih)), '1/m3', HIST_Ne_id(ih), fill_halo=.true., dim_type='ZXY' )
        if( HIST_Ne_id(ih) > 0 ) HIST_Ne = .true.
     enddo
 
@@ -500,9 +505,6 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_query, &
        FILE_HISTORY_put
-    use scale_atmos_phy_mp_suzuki10, only: &
-       ATMOS_PHY_MP_suzuki10_qtrc2qhyd, &
-       ATMOS_PHY_MP_suzuki10_qtrc2nhyd
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE
     implicit none
@@ -512,7 +514,7 @@ contains
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
     real(RP) :: WORK  (KA,IA,JA,N_HYD)
-    logical  :: do_put, do_put_all
+    logical  :: do_put
     integer  :: ih
     !---------------------------------------------------------------------------
 
@@ -549,67 +551,56 @@ contains
        end if
     end if
 
-    if ( ATMOS_PHY_MP_TYPE == 'SUZUKI10' ) then
-
-       if ( HIST_Qe ) then
-          do_put_all = .false.
+    if ( HIST_Qe ) then
+       do ih = 1, N_HYD
+          if ( HIST_Qe_id(ih) > 0 ) then
+             call FILE_HISTORY_query( HIST_Qe_id(ih), do_put )
+             if ( do_put ) then
+                call ATMOS_PHY_MP_vars_get_diagnostic( &
+                     DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
+                     Qe=WORK(:,:,:,:)                         ) ! [OUT]
+                exit
+             end if
+          end if
+       end do
+       if ( do_put ) then
           do ih = 1, N_HYD
              if ( HIST_Qe_id(ih) > 0 ) then
                 call FILE_HISTORY_query( HIST_Qe_id(ih), do_put )
-                do_put_all = ( do_put_all .OR. do_put )
-             endif
-          enddo
+                if( do_put ) call FILE_HISTORY_put( HIST_Qe_id(ih), WORK(:,:,:,ih) )
+             end if
+          end do
+       end if
+    end if
 
-          if ( do_put_all ) then
-             call ATMOS_PHY_MP_suzuki10_qtrc2qhyd( KA, KS,  KE,         & ! [IN]
-                                                   IA, ISB, IEB,        & ! [IN]
-                                                   JA, JSB, JEB,        & ! [IN]
-                                                   QTRC(:,:,:,QHS:QHE), & ! [IN]
-                                                   WORK(:,:,:,:)        ) ! [OUT]
-
-             do ih = 1, N_HYD
-                if ( HIST_Qe_id(ih) > 0 ) then
-                   call FILE_HISTORY_query( HIST_Qe_id(ih), do_put )
-                   if( do_put ) call FILE_HISTORY_put( HIST_Qe_id(ih), WORK(:,:,:,ih) )
-                endif
-             enddo
-          endif
-       endif
-
-       if ( HIST_Ne ) then
-          do_put_all = .false.
+    if ( HIST_Ne ) then
+       do ih = 1, N_HYD
+          if ( HIST_Ne_id(ih) > 0 ) then
+             call FILE_HISTORY_query( HIST_Ne_id(ih), do_put )
+             if ( do_put ) then
+                call ATMOS_PHY_MP_vars_get_diagnostic( &
+                     DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
+                     Ne=WORK(:,:,:,:)                         ) ! [OUT]
+                exit
+             end if
+          end if
+       end do
+       if ( do_put ) then
           do ih = 1, N_HYD
              if ( HIST_Ne_id(ih) > 0 ) then
                 call FILE_HISTORY_query( HIST_Ne_id(ih), do_put )
-                do_put_all = ( do_put_all .OR. do_put )
-             endif
-          enddo
-
-          if ( do_put_all ) then
-             call ATMOS_PHY_MP_suzuki10_qtrc2nhyd( KA, KS,  KE,         & ! [IN]
-                                                   IA, ISB, IEB,        & ! [IN]
-                                                   JA, JSB, JEB,        & ! [IN]
-                                                   DENS(:,:,:),         & ! [IN]
-                                                   QTRC(:,:,:,QHS:QHE), & ! [IN]
-                                                   WORK(:,:,:,:)        ) ! [OUT]
-
-             do ih = 1, N_HYD
-                if ( HIST_Ne_id(ih) > 0 ) then
-                   call FILE_HISTORY_query( HIST_Ne_id(ih), do_put )
-                   if( do_put ) call FILE_HISTORY_put( HIST_Ne_id(ih), WORK(:,:,:,ih) )
-                endif
-             enddo
-          endif
-       endif
-
-    endif
+                if( do_put ) call FILE_HISTORY_put( HIST_Ne_id(ih), WORK(:,:,:,ih) )
+             end if
+          end do
+       end if
+    end if
 
     return
   end subroutine ATMOS_PHY_MP_vars_history
 
   subroutine ATMOS_PHY_MP_vars_get_diagnostic( &
-       DENS, TEMP, QTRC, &
-       CLDFRAC, Re, Qe   )
+       DENS, TEMP, QTRC,   &
+       CLDFRAC, Re, Qe, Ne )
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_HC,  &
@@ -630,10 +621,12 @@ contains
        ATMOS_PHY_MP_TOMITA08_cloud_fraction
     use scale_atmos_phy_mp_sn14, only: &
        ATMOS_PHY_MP_SN14_qtrc2qhyd, &
+       ATMOS_PHY_MP_SN14_qtrc2nhyd, &
        ATMOS_PHY_MP_SN14_effective_radius, &
        ATMOS_PHY_MP_SN14_cloud_fraction
     use scale_atmos_phy_mp_suzuki10, only: &
        ATMOS_PHY_MP_suzuki10_qtrc2qhyd, &
+       ATMOS_PHY_MP_suzuki10_qtrc2nhyd, &
        ATMOS_PHY_MP_suzuki10_effective_radius, &
        ATMOS_PHY_MP_suzuki10_cloud_fraction
     use mod_atmos_admin, only: &
@@ -646,6 +639,7 @@ contains
     real(RP), intent(out), optional :: CLDFRAC(KA,IA,JA)       !> cloud fraction [0-1]
     real(RP), intent(out), optional :: Re     (KA,IA,JA,N_HYD) !> effective radius [cm]
     real(RP), intent(out), optional :: Qe     (KA,IA,JA,N_HYD) !> mass ratio [kg/kg]
+    real(RP), intent(out), optional :: Ne     (KA,IA,JA,N_HYD) !> number concentratio [1/m3]
 
     integer :: k, i, j, ih
 
@@ -770,6 +764,36 @@ contains
        end do
     end if
 
+    if ( present(Ne) ) then
+       if ( .not. DIAG_Ne ) then
+          select case ( ATMOS_PHY_MP_TYPE )
+          case ( 'KESSLER', 'TOMITA08' )
+             ! do nothing
+          case ( 'SN14' )
+             call ATMOS_PHY_MP_sn14_qtrc2nhyd( &
+                  KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                  QTRC(:,:,:,QHS:QHE),     & ! [IN]
+                  ATMOS_PHY_MP_Ne(:,:,:,:) ) ! [OUT]
+          case ( 'SUZUKI10' )
+             call ATMOS_PHY_MP_suzuki10_qtrc2nhyd( &
+                  KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                  DENS(:,:,:), QTRC(:,:,:,QHS:QHE),  & ! [IN]
+                  ATMOS_PHY_MP_Ne(:,:,:,:)           ) ! [OUT]
+          end select
+          DIAG_Ne = .true.
+       end if
+!OCL XIFLL
+       do ih = 1, N_HYD
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          Ne(k,i,j,ih) = ATMOS_PHY_MP_Ne(k,i,j,ih)
+       end do
+       end do
+       end do
+       end do
+    end if
+
     return
   end subroutine ATMOS_PHY_MP_vars_get_diagnostic
 
@@ -777,6 +801,7 @@ contains
     DIAG_CLDFRAC = .false.
     DIAG_Re      = .false.
     DIAG_Qe      = .false.
+    DIAG_Ne      = .false.
 
     return
   end subroutine ATMOS_PHY_MP_vars_reset_diagnostics
