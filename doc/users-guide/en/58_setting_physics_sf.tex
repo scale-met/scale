@@ -1,0 +1,92 @@
+\section{Surface flux at the bottom of atmospheric boundary } \label{sec:basic_usel_surface}
+%------------------------------------------------------
+The flux scheme at the bottom atmospheric boundary is configured in \nmitem{ATMOS_PHY_SF_TYPE} in \namelist{PARAM_ATMOS} as follows:
+
+\editboxtwo{
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | &  ; Select the surface flux scheme shown in Table \ref{tab:nml_atm_sf}\\
+\verb|/             | & \\
+}
+If ocean, land, and urban models are not used, the bottom atmospheric boundary is assumed to be a virtual surface used in an ideal experiment. The timing of the calling of the surface flux scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing. If ocean, land, and urban models are used, ``COUPLE'' is given to \nmitem{ATMOS_PHY_SF_TYPE}:
+
+\begin{table}[htb]
+\begin{center}
+  \caption{Choices for the atmospheric bottom boundary }
+  \label{tab:nml_atm_sf}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  Value & Description of scheme\\ \hline
+      \verb|NONE|         & Do not calculate surface flux, but \verb|"NONE"| is replaced to \verb|"COUPLE"| according to settings of ocean, land, and urban models) \\
+      \verb|OFF|          & Do not calculate surface flux\\
+      \verb|CONST|   　　　& Fix the constant value of surface flux \\
+      \verb|BULK|    　　　& Calculate the surface flux in bulk mode \\
+      \verb|COUPLE|  　　　& Receive surface flux from ocean, land, and urban models \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+%-------------------------------------------------------------------------------
+\subsubsection{Configuration of constant}
+
+If \nmitem{ATMOS_PHY_SF_TYPE} $=$ \verb|"CONST"|, the surface flux can be kept to a value specified in file \verb|run.conf| as follows. The values below are the default ones.
+
+\editboxtwo{
+ \verb|&PARAM_ATMOS_PHY_SF_CONST                | & \\
+ \verb| ATMOS_PHY_SF_FLG_MOM_FLUX   =    0      | & 0: Bulk coefficient is constant \\
+                                                  & 1: Frictional velocity is constant  \\
+ \verb| ATMOS_PHY_SF_U_minM         =    0.0E0  | & Lower limit of absolute velocity  [m/s] \\
+ \verb| ATMOS_PHY_SF_Const_Cm       = 0.0011E0  | & Constant bulk coefficient for momentum \\
+                                                  &  (Active at \verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 0|) \\
+ \verb| ATMOS_PHY_SF_CM_min         =    1.0E-5 | & Lower limit of bulk coefficient for momentum \\
+                                                  &  (Active at \verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1|) \\
+ \verb| ATMOS_PHY_SF_Const_Ustar    =   0.25E0  | & Constant fictional velocity [m/s] \\
+                                                  &  (Active at \verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1|) \\
+ \verb| ATMOS_PHY_SF_Const_SH       =    15.E0  | & Constant sensible heat flux at the surface [W/m2] \\
+ \verb| ATMOS_PHY_SF_FLG_SH_DIURNAL =   .false. | & Whether diurnal variation is enabled for sensible heat flux [logical]\\
+ \verb| ATMOS_PHY_SF_Const_FREQ     =    24.E0  | & Daily cycle if diurnal variation is enabled [hour]\\
+ \verb| ATMOS_PHY_SF_Const_LH       =   115.E0  | & Constant latent heat flux at the surface [W/m2] \\
+ \verb|/|            & \\
+}
+
+\subsubsection{Bulk configuration}
+%-------------------------------------------------------------------------------
+If \nmitem{ATMOS_PHY_SF_TYPE} $=$ \verb|"BULK"|, the surface flux is calculated by the bulk model using the surface temperature. The roughness is calculated by the scheme for ocean roughness as default. On the contrary, ocean roughness can be given as a constant value, and evaporation efficiency can be given arbitrarily. This flexibility enables the ideal experiment not only for ocean surfaces but also for land. The scheme for ocean roughness is specified in \nmitem{ROUGHNESS_TYPE} in \namelist{PARAM_ROUGHNESS} in the file \verb|run.conf| as follows:
+
+\editboxtwo{
+\verb|&PARAM_ROUGHNESS  | & \\
+\verb| ROUGHNESS_TYPE = "MOON07", | & ; Select the radiation scheme shown in Table \ref{tab:nml_roughness}\\
+\verb|/             | & \\
+}
+\begin{table}[hbt]
+\begin{center}
+  \caption{Choices of ocean roughness}
+  \label{tab:nml_roughness}
+  \begin{tabularx}{150mm}{lXX} \hline
+    \rowcolor[gray]{0.9}  Value & Description of scheme & Reference \\ \hline
+      \verb|MOON07|   & Based on empirical formula with time development as default　& \citet{moon_2007} \\
+      \verb|MILLER92| & Based on empirical formula without time development          & \citet{miller_1992} \\
+      \verb|CONST|    & Constant value & \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+The scheme for the bulk coefficient is configured in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in the file \verb|run.conf| as follows:
+
+\editboxtwo{
+\verb|&PARAM_BULKFLUX  | & \\
+\verb| BULKFLUX_TYPE = "B91W01", | & ; Select the radiation scheme shown in Table \ref{tab:nml_bulk}\\
+\verb|/                | & \\
+}
+\begin{table}[h]
+\begin{center}
+  \caption{Choices of bulk coefficient scheme}
+  \label{tab:nml_bulk}
+  \begin{tabularx}{150mm}{llX} \hline
+    \rowcolor[gray]{0.9}  Value & Description of scheme & Reference\\ \hline
+      \verb|B91W01| & Bulk method by the universal function (Default) & \citet{beljaars_1991,wilson_2001} \\
+      \verb|U95|    & Louis-type bulk method  (improved version of Louis (1979) & \citet{uno_1995} \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}

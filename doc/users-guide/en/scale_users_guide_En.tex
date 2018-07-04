@@ -103,10 +103,10 @@
 
 \part{Various settings} \label{part:basic_usel}
  \chapter{Common settings}
- \input{514_setting_common}
+ \input{516_setting_common}
  \input{55_setting_time}
  \input{56_setting_history}
- \input{setting_log}
+ \input{515_setting_log}
 
  \chapter{Framework for \scalerm}
  \input{50_setting_introduction}
@@ -123,16 +123,23 @@
  \input{511_3setting_online_nesting}
  \input{512_setting_bulkjob}
  \input{513_setting_makeconf}
+ \input{514_setting_convert4conf}
 
  \chapter{Framework for \scalegm}
  \input{setting_gm_level}
 
- \chapter{Setting the dynamical core} 
+ \chapter{Setting the dynamical core}
  \input{57_setting_dynamics}
  %input \section{Dynamical core for \scalegm} here
 
  \chapter{Setting the physical process} \label{sec:basic_usel_physics}
- \input{58_setting_physics}
+ \input{58_setting_physics_mp}
+ \input{58_setting_physics_cp}
+ \input{58_setting_physics_tb}
+ \input{58_setting_physics_rd}
+ \input{58_setting_physics_sf}
+ \input{58_setting_physics_OcnLndUrb}
+
 
 \part{Detailed explanation for advanced use} \label{part:advance_use}
  \chapter{File IO of \scalelib}
@@ -143,7 +150,8 @@
 
  \chapter{How to use user defined program}
  \chapter{How to use scale library}
-
+ \input{62_uselibrary}
+ \input{62_doxygen}
 
 \bibliographystyle{plainnat}
 \bibliography{reference}
