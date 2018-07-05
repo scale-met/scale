@@ -106,7 +106,6 @@ contains
 
     real(RP) :: QV  (KA,IA,JA)
     real(RP) :: QHYD(KA,IA,JA,N_HYD)
-    real(RP) :: QNUM(KA,IA,JA,N_HYD)
 
     integer  :: modsec
     real(RP) :: dist
@@ -118,7 +117,6 @@ contains
 
     QV  (:,:,:)   = 0.0_RP
     QHYD(:,:,:,:) = 0.0_RP
-    QNUM(:,:,:,:) = 0.0_RP
 
     do j = JS, JE
     do i = IS, IE
@@ -134,13 +132,12 @@ contains
     enddo
     enddo
 
-    call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE,              & ! [IN]
-                                        IA, IS, IE,              & ! [IN]
-                                        JA, JS, JE,              & ! [IN]
-                                        QV  (:,:,:),             & ! [IN]
-                                        QHYD(:,:,:,:),           & ! [IN]
-                                        QTRC(:,:,:,QS_MP:QE_MP), & ! [OUT]
-                                        QNUM=QNUM(:,:,:,:)       ) ! [IN]
+    call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE,             & ! [IN]
+                                        IA, IS, IE,             & ! [IN]
+                                        JA, JS, JE,             & ! [IN]
+                                        QV  (:,:,:),            & ! [IN]
+                                        QHYD(:,:,:,:),          & ! [IN]
+                                        QTRC(:,:,:,QS_MP:QE_MP) ) ! [OUT]
 
     return
   end subroutine USER_mkinit

@@ -557,10 +557,11 @@ contains
 
     real(RP) :: vtermh(KA)
     real(RP) :: dvterm(KA)
-    real(RP) :: rcdz2 (KA)
+    real(RP) :: cdz   (KA)
+    real(RP) :: rfdz2 (KA)
     real(RP) :: dist  (KA)
     real(RP) :: Z_src
-    real(RP) :: mask
+    real(RP) :: flx
     integer  :: k_src (KA)
     integer  :: k_dst
 
@@ -568,22 +569,28 @@ contains
     !---------------------------------------------------------------------------
 
     ! tracer/energy transport by falldown
-    ! 1st order upwind, forward euler, velocity is always negative
+    ! velocity is always negative
 
     mflx(:) = 0.0_RP
     sflx(:) = 0.0_RP
     qflx(:) = 0.0_RP
-    eflx(KE) = 0.0_RP
+    eflx(:) = 0.0_RP
 
     do k = KS, KE
        RHOCP(k) = CPtot(k) * DENS(k)
        RHOCV(k) = CVtot(k) * DENS(k)
     end do
 
+    do k = KS, KE
+       CDZ(k) = 1.0_RP / RCDZ(k)
+    end do
+    do k = KS, KE-1
+       rfdz2(k) = 1.0_RP / ( CDZ(k) + CDZ(k+1) )
+    end do
+
     do iq = 1, QHA
        do k = KS, KE-1
-          rcdz2 (k) = 1.0_RP / ( 1.0_RP / RCDZ(k+1) + 1.0_RP / RCDZ(k) )
-          vtermh(k) = 0.5_RP * ( vterm(k+1,iq) + vterm(k,iq) )
+          vtermh(k) = ( CDZ(k) * vterm(k+1,iq) + CDZ(k+1) * vterm(k,iq) ) * rfdz2(k)
        enddo
        vtermh(KS-1) = vterm(KS,iq)
 
@@ -592,16 +599,22 @@ contains
        enddo
 
        ! Movement distance of the cell wall by the fall
+       ! the midpoint method (second-order Runge-Kutta)
+       ! dz/dt = v(z + v dt/2) ~ v(z) + v dt/2 dv/dz + 1/2 (v dt/2)^2 d^2v/dz^2
        do k = KS, KE-1
-          dist(k) = - vtermh(k) * dt                                                                                             &
-                    + vtermh(k) * dt**2 / 2.0_RP *     ( dvterm(k+1)+dvterm(k) )*rcdz2(k)                                        &
-                    - vtermh(k) * dt**3 / 6.0_RP * ( ( ( dvterm(k+1)+dvterm(k) )*rcdz2(k) )**2                                   &
-                                                   + 2.0_RP * vtermh(k)*rcdz2(k) * ( dvterm(k+1)*RCDZ(k+1) - dvterm(k)*RCDZ(k) ) )
+          dist(k) = - vtermh(k)    * dt                                                                        &
+                    + vtermh(k)    * dt**2 / 2.0_RP * ( dvterm(k+1)+dvterm(k) ) * rfdz2(k)                     &
+                    - vtermh(k)**2 * dt**3 / 4.0_RP * ( dvterm(k+1)*RCDZ(k+1) - dvterm(k)*RCDZ(k) ) * rfdz2(k)
           dist(k) = max( dist(k), 0.0_RP )
        enddo
        dist(KS-1) = - vtermh(KS-1) * dt &
                     + vtermh(KS-1) * dt**2 / 2.0_RP * dvterm(KS)*RCDZ(KS)
        dist(KS-1) = max( dist(KS-1), 0.0_RP )
+
+       ! wall cannot overtake
+       do k = KE-2, KS-1, -1
+          dist(k) = min( dist(k), dist(k+1) + CDZ(k+1) )
+       end do
 
 !        LOG_INFO_CONT(*) "distance", iq
 !        do k = KA, 1, -1
@@ -619,6 +632,7 @@ contains
                 k_src(k_dst) = k
              endif
           enddo
+          if ( Z_src > FZ(KE) ) k_src(k_dst) = KE
        enddo
 
 !        LOG_INFO_CONT(*) "seek", iq
@@ -626,18 +640,29 @@ contains
 !           LOG_INFO_CONT('(1x,2I5,2F9.3)') k, k_src(k), FZ(k), FZ(k)+dist(k)
 !        enddo
 
+       if ( iq > QLA ) then ! ice water
+          CP = CP_ICE
+          CV = CV_ICE
+       else                 ! liquid water
+          CP = CP_WATER
+          CV = CV_WATER
+       end if
+
        do k_dst = KS-1, KE-1
           do k = k_dst, k_src(k_dst)-1
-             mask = 0.5_RP * ( sign(1,k_src(k_dst)-1-k) + 1.0_RP ) ! if k < k_src(k_dst), mask = 1.0
-
-             qflx(k_dst) = qflx(k_dst) - mask / RCDZ(k+1) * RHOQ(k+1,iq) / dt ! sum column mass rhoq*dz
-             dist(k_dst) = dist(k_dst) - mask / RCDZ(k+1)                     ! residual
+             flx = RHOQ(k+1,iq) * CDZ(k+1) / dt               ! sum column mass rhoq*dz
+             qflx(k_dst) = qflx(k_dst) - flx
+             eflx(k_dst) = eflx(k_dst) - flx * TEMP(k+1) * CV ! internal energy flux
+             dist(k_dst) = dist(k_dst) - CDZ(k+1)             ! residual
           enddo
+          if ( k_src(k_dst) < KE ) then
+             ! residual (simple upwind)
+             flx = RHOQ(k_src(k_dst)+1,iq) * dist(k_dst) / dt
+             qflx(k_dst) = qflx(k_dst) - flx                            ! sum column mass rhoq*dz
+             eflx(k_dst) = eflx(k_dst) -flx * TEMP(k_src(k_dst)+1) * CV ! internal energy flux
+          end if
 
-          ! residual (simple upwind)
-          mask = 0.5_RP * ( sign(1,k_src(k_dst)-k_dst) + 1.0_RP ) ! if k_dst <= k_src(k_dst), mask = 1.0
-
-          qflx(k_dst) = qflx(k_dst) - mask * dist(k_dst) * RHOQ(k_src(k_dst)+1,iq) / dt ! sum column mass rhoq*dz
+          eflx(k_dst) = eflx(k_dst) + qflx(k) * FDZ(k_dst) * GRAV ! potential energy
        enddo
 
 !        LOG_INFO_CONT(*) "flux", iq
@@ -663,12 +688,8 @@ contains
        end do
 
        if ( iq > QLA ) then ! ice water
-          CP = CP_ICE
-          CV = CV_ICE
           sflx(2) = sflx(2) + qflx(KS-1)
        else                 ! liquid water
-          CP = CP_WATER
-          CV = CV_WATER
           sflx(1) = sflx(1) + qflx(KS-1)
        end if
 
@@ -680,11 +701,6 @@ contains
           DENS(k) = DENS(k) + dDENS
        end do
 
-       ! internal energy flux
-       do k = KS-1, KE-1
-          eflx(k) = qflx(k) * TEMP(k+1) * CV &
-                  + qflx(k) * FDZ(k) * GRAV               ! potential energy
-       end do
        !--- update internal energy
        do k = KS, KE
           RHOE(k) = RHOE(k) - ( eflx(k) - eflx(k-1) ) * RCDZ(k) * dt
