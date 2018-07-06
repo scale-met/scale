@@ -1,0 +1,59 @@
+%\section{Setting the physical process} \label{sec:basic_usel_physics}
+%------------------------------------------------------
+
+
+\section{Cloud micro-physics} \label{sec:basic_usel_microphys}
+%------------------------------------------------------
+The cloud micro-physics scheme is configured in \nmitem{ATMOS_PHY_MP_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|, respectively.
+{\color{blue} Note that it is necessary to specify the same scheme for \nmitem{ATMOS_PHY_MP_TYPE} in both \texttt{init.conf} and \texttt{run.conf}}.
+The update interval for the cloud micro-physics scheme is specified in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing. The following example shows the configuration for cases involving a six-class one-moment bulk scheme that contains ice phase clouds:
+
+\editboxtwo{
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_MP_TYPE = "TOMITA08", | & ; Choose from Table \ref{tab:nml_atm_mp}.\\
+\verb|/             | & \\
+}
+
+\begin{table}[tbh]
+\begin{center}
+  \caption{Choices of cloud micro-physics scheme}
+  \label{tab:nml_atm_mp}
+  \begin{tabularx}{150mm}{lXX} \hline
+    \rowcolor[gray]{0.9}  Scheme name & Description of scheme & Reference\\ \hline
+     \verb|OFF|      & Do not calculate phase change of water by cloud micro-physics. &  \\
+     \verb|KESSLER|  & Three-class one-moment bulk scheme & \citet{kessler_1969} \\
+     \verb|TOMITA08| & Six-class one-moment bulk scheme & \citet{tomita_2008} \\
+     \verb|SN14|     & Six-class two-moment bulk scheme & \citet{sn_2014} \\
+     \verb|SUZUKI10| & Spectral bin scheme (consideration of ice cloud can be specified as option) & \citet{suzuki_etal_2010} \\
+%    \verb|XX|       & Super droplet scheme              & \citer{Shima_etal_2009} \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+Four typical schemes are prepared:
+\begin{enumerate}
+\item {\bf One-moment bulk scheme without ice \cite{kessler_1969}}\\ This scheme assumes that the particle size distribution function is expressed only by mass concentration. Considering two categories of water in cloud and rain, the ratios of the densities of cloud and rain to total air density are prognostically predicted.
+\item {\bf One-moment bulk scheme with ice \cite{tomita_2008}}\\
+This scheme makes the same assumption as that in \cite{kessler_1969} for the particle size distribution function, but with five categories of water: cloud, rain, ice, snow, and graupel.
+\item {\bf Two-moment bulk scheme with ice \cite{sn_2014}}\\
+In this scheme, the particle size distribution is expressed by the numerical concentration of particles and their mass concentration.
+\item {\bf One-moment bin scheme \cite{suzuki_etal_2010}}\\
+This scheme explicitly expresses particle size distribution by discretizing it using an appropriate number of degrees of freedom for each category. There are six categories: cloud, rain, ice, snow, graupel, and hail. The accuracy of expressing the size distribution depends on the degrees of freedom.
+
+\end{enumerate}
+The degrees of sophistication increases from 1 to 4, as does computational cost.
+
+If \verb|SUZUKI10| is selected, in addition to the specification of \nmitem{ATMOS_PHY_MP_TYPE}, the following configuration needs to be added to both files of \verb|init.conf| and \verb|run.conf|:
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_MP_SUZUKI10_bin|   &  \\
+\verb| nbin   = 33, & : The number of bins| \\
+\verb| ICEFLG =  1, & : Option for consideration of ice cloud: 0(not considered), 1(considered)| \\
+\verb|/|            & \\
+}
+In this case, {\color{blue}{\namelist{PARAM_ATMOS_PHY_MP_SUZUKI10_bin} in \texttt{init.conf} must also be same as in \texttt{run.conf}}}. A necessary file \verb|micpara.dat| is automatically generated. If file \verb|micpara.dat| already exists, it is used for the calculation. When changing \verb|nbin| as described in the first line, this file is regenerated. If \verb|nbin| in file \verb|run.conf| is different from that in file \verb|micpara.dat|, the following error message is output and the simulation program is terminated instantaneously without calculation:
+\msgbox{
+\verb|xxx nbin in inc_tracer and nbin in micpara.dat is different check!| \\
+}
+To avoid this error, it is necessary to delete the old \verb|micpara.dat| beforehand and regenerate it. The regeneration is automatically done at the execution of \scalerm with \verb|SUZUKI10|.
+

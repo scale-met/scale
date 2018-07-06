@@ -1,0 +1,134 @@
+\section{Ocean model} \label{sec:basic_usel_ocean}
+%-------------------------------------------------------------------------------
+The ocean process consists of two main parts, i.e., update of sea surface state and flux calculation at the interface of atmosphere and ocean. The timing of calling these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing.
+
+\subsubsection{Sea surface scheme}
+%-------------------------------------------------------------------------------
+The manner of updating sea surface state, such as sea surface temperature, is configured in \nmitem{OCEAN_TYPE} in \namelist{PARAM_OCEAN} in the files \verb|init.conf| and \verb|run.conf|:
+
+\editboxtwo{
+\verb|&PARAM_OCEAN           | & \\
+\verb| OCEAN_TYPE = "CONST", | & ; Select the sea surface type shown in Table \ref{tab:nml_ocean}\\
+\verb|/                      | & \\
+}
+\begin{table}[h]
+\begin{center}
+  \caption{Choices of sea surface schemes}
+  \label{tab:nml_ocean}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
+      \verb|NONE or OFF| & Not using the sea surface model         \\
+      \verb|CONST|        & Fixed as initial condition           \\
+      \verb|FILE|         & Input from external data (temporal variation is available) \\
+      \verb|SLAB|         & Slab ocean model                   \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+If the ocean category is included in land-use setup by \namelist{PARAM_LANDUSE}, neither \verb|"NONE"| nor \verb|"OFF"| can be given to \nmitem{OCEAN_TYPE}. If this condition is not satisfied, the program immediately stops without the computation, and outputs the following message to LOG file:
+\msgbox{
+\verb|xxx Ocean fraction exists, but ocean components never called. STOP.| \\
+}
+
+If \nmitem{OCEAN_TYPE} $=$ \verb|"FILE"|, it is necessary to specify an external input file name in files \verb|init.conf| and \verb|run.conf|. In this case, the sea surface temperature varies with time according to spatial distribution and the temporal history of the external file.
+\editboxtwo{
+ \verb|&PARAM_OCEAN_PHY_FILE                                    | & \\
+ \verb| OCEAN_PHY_FILE_basename   = "",                         | & ; base name of input data \\
+ \verb| OCEAN_PHY_FILE_ENABLE_PERIODIC_YEAR  = .false.,         | & ; whether annually cyclic data \\
+ \verb| OCEAN_PHY_FILE_ENABLE_PERIODIC_MONTH = .false.,         | & ; whether monthly cyclic data \\
+ \verb| OCEAN_PHY_FILE_ENABLE_PERIODIC_DAY   = .false.,         | & ; whether dayly cyclic data \\
+ \verb| OCEAN_PHY_FILE_STEP_FIXED            = 0,               | & ; step number when data at a cirtain time step is used. Set the value less than 1 for temporal varied data. \\
+ \verb| OCEAN_PHY_FILE_CHECK_COORDINATES     = .true.,          | & ; whether coordinate variables are to be checked \\
+ \verb| OCEAN_PHY_FILE_STEP_LIMIT            = 0,               | & ; maximum limit of steps. The data at the time step exceed this limit would not be read. 0 for no limit \\
+ \verb|/                                         | & \\
+}
+
+If \nmitem{OCEAN_TYPE} $=$ \verb|"SLAB"|, the depth of the mixed slab layer can be specified in files \verb|init.conf| and \verb|run.conf|. In this case, the temperature in the mixed slab layer develops over time through heat flux exchange between the atmosphere and the ocean:
+\editboxtwo{
+ \verb|&PARAM_OCEAN_PHY_SLAB           | & \\
+ \verb| OCEAN_PHY_SLAB_DEPTH = 10.0D0, | & ; Default [m] \\
+ \verb|/                               | & \\
+}
+The albedo on the sea surface does not depend on the scheme selected, and
+is calculated by using only the solar zenith angle.
+
+\subsubsection{Flux in atmosphere and ocean}
+%-------------------------------------------------------------------------------
+Once a sea surface scheme except for \verb|NONE| or \verb|OFF| is specified, flux is exchanged at the interface of atmosphere and ocean. The fluxes between the atmosphere and the ocean are calculated by some kind of bulk schemes contained in \scalerm. The scheme for the length of the roughness on the sea surface is also selected from several schemes prepared. The scheme of roughness is specified in \nmitem{ROUGHNESS_TYPE} in \namelist{PARAM_ROUGHNESS} in file \verb|run.conf|. The scheme for the bulk transfer coefficient is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{sec:basic_usel_surface} for more details.
+
+
+\section{Land model} \label{sec:basic_usel_land}
+%-------------------------------------------------------------------------------
+Similar to the ocean model, the land model consists of two main parts, i.e., an update of the state of the land surface, and calculation of flux at the interface of atmosphere and land. The timing of the calling of these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
+
+\subsubsection{Land surface scheme}
+%-------------------------------------------------------------------------------
+The land model scheme that updates the state of land, e.g., land surface temperature, soil temperature, and soil moisture, is configured as in \nmitem{LAND_TYPE} in \namelist{PARAM_LAND} in files \verb|init.conf| and \verb|run.conf|:
+
+\editboxtwo{
+\verb|&PARAM_LAND  | & \\
+\verb| LAND_TYPE = "SLAB", | & ; Select the land type shown in Table \ref{tab:nml_land}\\
+\verb|/             | & \\
+}
+\begin{table}[hbt]
+\begin{center}
+  \caption{Choices of land surface scheme}
+  \label{tab:nml_land}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
+      \verb|NONE or OFF| & Do not use land surface model              \\
+      \verb|SLAB|          & Heat diffusion/bucket model                   \\
+      \verb|CONST|         & Do not update soil temperature, soil moister, and land surface temperature in \verb|SLAB| \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+If the land surface type is included in the land use setup by \namelist{PARAM_LANDUSE}, neither NONE nor OFF can be given to \nmitem{LAND_TYPE}. If this condition is not satisfied, the program immediately terminates without computation, outputting the following message to the LOG file:
+\msgbox{
+\verb|xxx Land  fraction exists, but land  components never called. STOP.| \\
+}
+
+If \nmitem{LAND_TYPE} $=$ \verb|"SLAB"| or \nmitem{LAND_TYPE} $=$ \verb|"CONST"|,
+it is necessary to prepare parameter tables for the length of roughness and the input to the land-use distribution.
+A parameter table is provided
+in the file \verb|scale-rm/test/data/land/param.bucket.conf|.\\
+
+
+\subsubsection{Flux in atmosphere and on land}
+%-------------------------------------------------------------------------------
+Once any land surface scheme except \verb|NONE| or \verb|OFF| is specified, flux is exchanged at the interface of the atmosphere and land. The flux between atmosphere and land is calculated by some kind of land scheme contained in \scalerm. If \nmitem{LAND_TYPE} $=$ \verb|"SLAB"| or \nmitem{LAND_TYPE} $=$ \verb|"CONST"|, the bulk scheme is the same as that for ocean or ideal land surface. This is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{sec:basic_usel_surface} for details.
+
+\section{Urban model} \label{sec:basic_usel_urban}
+%------------------------------------------------------
+The urban process consists of two main parts, i.e., updating the urban state and flux calculation at the interface of the atmosphere and the urban environment. The timing of calling these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
+
+\subsubsection{Flux in atmosphere and urban area}
+%-------------------------------------------------------------------------------
+
+The urban scheme that updates the urban surface state, e.g., urban surface temperature and moisture, and calculates flux at the interface of atmosphere and the urban environment is configured in \nmitem{URBAN_TYPE} in \namelist{PARAM_URBAN} in \verb|init.conf| and \verb|run.conf|, as follows:
+
+\editboxtwo{
+\verb|&PARAM_URBAN         | & \\
+\verb| URBAN_TYPE = "SLC", | & ; Select the urban type shown in Table \ref{tab:nml_urban}\\
+\verb|/                    | & \\
+}
+\begin{table}[hbt]
+\begin{center}
+  \caption{Choices of urban scheme}
+  \label{tab:nml_urban}
+  \begin{tabularx}{150mm}{llX} \hline
+    \rowcolor[gray]{0.9}  Value  & Description of scheme & reference \\ \hline
+      \verb|NONE or OFF|  & Do not use the urban scheme            \\
+      \verb|SLC|          & Single-layer canopy model  & \citet{kusaka_2001} \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+If the type of urban area is included in the land-use setup by \namelist{PARAM LANDUSE}, neither \verb|NONE| nor \verb|OFF| can be given to \nmitem{URBAN_TYPE}. If this condition is not satisfied, the program immediately stops without computation, outputting the following message to LOG file:
+\msgbox{
+\verb|xxx Urban fraction exists, but urban components never called. STOP.| \\
+}
+
