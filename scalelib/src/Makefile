@@ -166,7 +166,7 @@ OBJS = \
 	$(OBJ_DIR)/scale_ocean_grid_cartesC_index.o	\
 	$(OBJ_DIR)/scale_ocean_grid_cartesC_real.o	\
 	$(OBJ_DIR)/scale_ocean_dyn_slab.o	\
-	$(OBJ_DIR)/scale_ocean_phy_common.o	\
+	$(OBJ_DIR)/scale_ocean_phy_ice_simple.o	\
 	$(OBJ_DIR)/scale_ocean_phy_albedo.o	\
 	$(OBJ_DIR)/scale_ocean_phy_albedo_nakajima00.o	\
 	$(OBJ_DIR)/scale_ocean_phy_roughness.o	\

@@ -975,6 +975,9 @@ contains
        OCEAN_SALT,       &
        OCEAN_UVEL,       &
        OCEAN_VVEL,       &
+       OCEAN_OCN_Z0M,    &
+       OCEAN_ICE_TEMP,   &
+       OCEAN_ICE_MASS,   &
        OCEAN_SFC_TEMP,   &
        OCEAN_SFC_albedo, &
        OCEAN_SFC_Z0M,    &
@@ -986,6 +989,8 @@ contains
     real(RP) :: OCN_SALT      = 0.0_RP   ! ocean salinity                            [psu]
     real(RP) :: OCN_UVEL      = 0.0_RP   ! ocean u-velocity                          [m/s]
     real(RP) :: OCN_VVEL      = 0.0_RP   ! ocean v-velocity                          [m/s]
+    real(RP) :: ICE_TEMP                 ! ocean temperature                         [K]
+    real(RP) :: ICE_MASS      = 0.0_RP   ! ocean temperature                         [K]
     real(RP) :: SFC_TEMP                 ! ocean skin temperature                    [K]
     real(RP) :: SFC_albedo_LW = 0.04_RP  ! ocean surface albedo for LW               (0-1)
     real(RP) :: SFC_albedo_SW = 0.05_RP  ! ocean surface albedo for SW               (0-1)
@@ -998,6 +1003,8 @@ contains
        OCN_SALT,      &
        OCN_UVEL,      &
        OCN_VVEL,      &
+       ICE_TEMP,      &
+       ICE_MASS,      &
        SFC_TEMP,      &
        SFC_albedo_LW, &
        SFC_albedo_SW, &
@@ -1009,6 +1016,7 @@ contains
     !---------------------------------------------------------------------------
 
     OCN_TEMP = THETAstd
+    ICE_TEMP = 271.35_RP ! freezing point of the ocean
     SFC_TEMP = THETAstd
 
     !--- read namelist
@@ -1022,10 +1030,13 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_OCEAN)
 
-    OCEAN_TEMP      (:,:,:)      = OCN_TEMP
-    OCEAN_SALT      (:,:,:)      = OCN_SALT
-    OCEAN_UVEL      (:,:,:)      = OCN_UVEL
-    OCEAN_VVEL      (:,:,:)      = OCN_VVEL
+    OCEAN_TEMP      (:,:,:) = OCN_TEMP
+    OCEAN_SALT      (:,:,:) = OCN_SALT
+    OCEAN_UVEL      (:,:,:) = OCN_UVEL
+    OCEAN_VVEL      (:,:,:) = OCN_VVEL
+    OCEAN_OCN_Z0M   (:,:)   = SFC_Z0M
+    OCEAN_ICE_TEMP  (:,:)   = ICE_TEMP
+    OCEAN_ICE_MASS  (:,:)   = ICE_MASS
 
     OCEAN_SFC_TEMP  (:,:)           = SFC_TEMP
     OCEAN_SFC_albedo(:,:,:,I_R_IR)  = SFC_albedo_LW

@@ -83,8 +83,8 @@ contains
        TC_dz          )
     use scale_const, only: &
        EPS => CONST_EPS
-    use scale_ocean_phy_common, only: &
-       OCEAN_PHY_DENS_seaice
+    use scale_ocean_phy_ice_simple, only: &
+       OCEAN_PHY_ICE_density
     implicit none
 
     integer,  intent(in)  :: OIA, OIS, OIE
@@ -99,7 +99,7 @@ contains
 
     do j = OJS, OJE
     do i = OIS, OIE
-       ice_depth  = ICE_MASS(i,j) / OCEAN_PHY_DENS_seaice / max(ICE_FRAC(i,j),EPS)
+       ice_depth  = ICE_MASS(i,j) / OCEAN_PHY_ICE_density / max(ICE_FRAC(i,j),EPS)
 
        TC_dz(i,j) = OCEAN_PHY_thermalcond_seaice / max(ice_depth,EPS)
 
