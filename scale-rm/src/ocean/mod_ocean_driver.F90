@@ -745,7 +745,7 @@ contains
        OCEAN_vars_total,   &
        OCEAN_vars_history
     use scale_ocean_dyn_slab, only: &
-       OCEAN_DYN_slab
+       OCEAN_DYN_SLAB
     use scale_ocean_phy_ice_simple, only: &
        OCEAN_PHY_ICE_adjustment, &
        OCEAN_PHY_ICE_fraction
@@ -763,7 +763,7 @@ contains
     select case ( OCEAN_DYN_TYPE )
     case ( 'SLAB' )
 
-       call OCEAN_DYN_slab( OKMAX, OKS, OKE,         & ! [IN]
+       call OCEAN_DYN_SLAB( OKMAX, OKS, OKE,         & ! [IN]
                             OIA,   OIS, OIE,         & ! [IN]
                             OJA,   OJS, OJE,         & ! [IN]
                             OCEAN_TEMP_t    (:,:,:), & ! [IN]

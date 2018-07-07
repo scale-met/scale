@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ocean / dynamics / Slab model
+!> module ocean / dynamics / slab model
 !!
 !! @par Description
 !!          ocean slab model
@@ -195,7 +195,7 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'ocean / dynamics / Slab'
+    LOG_PROGRESS(*) 'ocean / dynamics / slab'
 
     if ( OCEAN_DYN_SLAB_nudging ) then
 
