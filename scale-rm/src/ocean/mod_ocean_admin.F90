@@ -34,6 +34,7 @@ module mod_ocean_admin
   character(len=H_SHORT), public :: OCEAN_DYN_TYPE = 'NONE'
                                                    ! 'OFF'
                                                    ! 'SLAB'
+                                                   ! 'OFFLINE'
                                                    ! 'INIT'
   character(len=H_SHORT), public :: OCEAN_SFC_TYPE = 'FIXED-TEMP'
   character(len=H_SHORT), public :: OCEAN_ICE_TYPE = 'NONE'

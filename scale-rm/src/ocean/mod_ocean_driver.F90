@@ -67,6 +67,8 @@ contains
        CPL_PHY_SFC_fixed_temp_setup
     use scale_ocean_dyn_slab, only: &
        OCEAN_DYN_SLAB_setup
+    use scale_ocean_dyn_offline, only: &
+       OCEAN_DYN_OFFLINE_setup
     use scale_ocean_phy_ice_simple, only: &
        OCEAN_PHY_ICE_setup
     use scale_ocean_phy_albedo, only: &
@@ -94,6 +96,8 @@ contains
        select case ( OCEAN_DYN_TYPE )
        case ( 'SLAB' )
           call OCEAN_DYN_SLAB_setup
+       case ( 'OFFLINE' )
+          call OCEAN_DYN_OFFLINE_setup
        case ( 'INIT' )
           ! do nothing
        case default
@@ -746,6 +750,8 @@ contains
        OCEAN_vars_history
     use scale_ocean_dyn_slab, only: &
        OCEAN_DYN_SLAB
+    use scale_ocean_dyn_offline, only: &
+       OCEAN_DYN_OFFLINE
     use scale_ocean_phy_ice_simple, only: &
        OCEAN_PHY_ICE_adjustment, &
        OCEAN_PHY_ICE_fraction
@@ -773,6 +779,15 @@ contains
                             exists_ocean    (:,:),   & ! [IN]
                             dt, NOWDAYSEC,           & ! [IN]
                             OCEAN_TEMP      (:,:,:)  ) ! [INOUT]
+
+    case ( 'OFFLINE' )
+
+       call OCEAN_DYN_OFFLINE( OKMAX, OKS, OKE,         & ! [IN]
+                               OIA,   OIS, OIE,         & ! [IN]
+                               OJA,   OJS, OJE,         & ! [IN]
+                               exists_ocean    (:,:),   & ! [IN]
+                               dt, NOWDAYSEC,           & ! [IN]
+                               OCEAN_TEMP      (:,:,:)  ) ! [INOUT]
 
     case ( 'INIT' )
        ! Never update OCEAN_TEMP from initial condition
