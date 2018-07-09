@@ -1,7 +1,10 @@
 %Setting the physical process
 
-\section{Sub-grid scale turbulence scheme} \label{sec:basic_usel_turbulence}
+\section{Sub-Grid Scale Turbulence Scheme} \label{sec:basic_usel_turbulence}
 %------------------------------------------------------
+
+The sub-grid scale turbulence model is for representing energy cascade to the sub-grid scale due to the advection terms in Large-eddy simulations (LESs).
+
 
 The turbulence scheme is specified in \nmitem{ATMOS_PHY_TB_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|. The timing of the calling of the turbulence scheme is specified in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing.
 
@@ -24,12 +27,11 @@ The turbulence scheme is specified in \nmitem{ATMOS_PHY_TB_TYPE} in \namelist{PA
 \end{center}
 \end{table}
 
-\verb|SMAGORINSKY| and \verb|D1980| are sub-grid scale turbulence models for Large-eddy simulations (LESs).
-They can be used for the horizontal eddy viscosity for RANS simulations.
-The RANS planetary boundarly layer parameterization (Section \ref{sec:basic_usel_pbl}) is a scheme considering only vertical mixing.
+The \verb|SMAGORINSKY| scheme can be also used for the horizontal eddy viscosity in RANS simulations.
+The planetary boundarly layer parameterization (Section \ref{sec:basic_usel_pbl}) is a scheme considering only vertical mixing.
 If you want to consider the horizontal eddy viscosity in RANS simulations,
-that becomes possible by using the sug-grid scale turbulence model for for horizontal mixing.
-Then, \nmitem{ATMOS_PHY_TB_SMG_horizontal} should be \verb|.true.| as follows:
+use the sug-grid scale turbulence model for horizontal mixing.
+Then, \nmitem{ATMOS_PHY_TB_SMG_horizontal} in \namelist{PARAM_ATMOS_PHY_TB_SMG} should be \verb|.true.| as follows:
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_TB_SMG  | & \\
 \verb| ATMOS_PHY_TB_SMG_horizontal = .true., | & \\
