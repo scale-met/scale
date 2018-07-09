@@ -432,10 +432,11 @@ contains
     real(RP), intent(out)   :: mflx (KA)
     real(RP), intent(out)   :: sflx (2) !> 1: rain, 2: snow
 
-    real(RP) :: qflx(KA)
-    real(RP) :: eflx(KA)
-    real(RP) :: RHOCP(KA)
-    real(RP) :: RHOCV(KA)
+    real(RP) :: vtermh(KA)
+    real(RP) :: qflx  (KA)
+    real(RP) :: eflx  (KA)
+    real(RP) :: RHOCP (KA)
+    real(RP) :: RHOCV (KA)
     real(RP) :: dDENS
     real(RP) :: CP, CV
 
@@ -456,10 +457,14 @@ contains
     end do
 
     do iq = 1, QHA
+       do k = KS, KE-1
+          vtermh(k) = 0.5_RP * ( vterm(k+1,iq) + vterm(k,iq) )
+       enddo
+       vtermh(KS-1) = vterm(KS,iq)
 
        !--- mass flux for each tracer, upwind with vel < 0
        do k = KS-1, KE-1
-          qflx(k) = vterm(k+1,iq) * RHOQ(k+1,iq)
+          qflx(k) = vtermh(k) * RHOQ(k+1,iq)
        enddo
 
        !--- update falling tracer
