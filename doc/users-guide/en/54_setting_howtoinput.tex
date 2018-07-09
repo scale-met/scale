@@ -180,35 +180,49 @@ missval  & missing value     & (option) \\ \hline
 {
 \begin{table}[bth]
 \begin{center}
-\caption{Variable list of \nmitem{item} in \namelist{grdvar}. The asterisk means ``required.'' When you target on the place at high altitude, use of \texttt{HGT} is recommended.}
+\caption{Variable list of \nmitem{item} in \namelist{grdvar}. The asterisk means ``it is optional but recommended as possible''. The double-asterisk means ``it is available but not recommended''. When you target on the place at high altitude, use of \texttt{HGT} is stongly recommended.}
 \label{tab:grdvar_item}
 \small
-\begin{tabularx}{150mm}{rl|l|l|X} \hline
- \rowcolor[gray]{0.9}  & Variable name            & Explanation &  Unit & \nmitem{dtype} \\ \hline
-$\ast$ &\verb|lon|     & longitude data           & [deg.]      & \verb|linear, map| \\
-$\ast$ &\verb|lat|     & latitude data            & [deg.]      & \verb|linear, map| \\
-$\ast$ &\verb|plev|    & pressure data            & [Pa]        & \verb|levels, map| \\
-$\ast$ &\verb|HGT|     & geopotential height data & [m]         & \verb|map| \\
-$\ast$ &\verb|U|       & eastward wind speed      & [m/s]       & \verb|map| \\
-$\ast$ &\verb|V|       & northward wind speed     & [m/s]       & \verb|map| \\
-$\ast$ &\verb|T|       & temperature              & [K]         & \verb|map| \\
-$\ast$ &\verb|QV|      & specific humidity (optional if RH is given) & [kg/kg] & \verb|map| \\
-$\ast$ &\verb|RH|      & relative humidity (optional if QV is given) & [\%] & \verb|map| \\
-       &\verb|MSLP|    & sea level pressure       & [Pa]        & \verb|map| \\
-       &\verb|PSFC|    & surface pressure         & [Pa]        & \verb|map| \\
-       &\verb|U10|     & eastward 10m wind speed  & [m/s]       & \verb|map| \\
-       &\verb|V10|     & northward 10m wind speed & [m/s]       & \verb|map| \\
-       &\verb|T2|      & 2m temperature           & [K]         & \verb|map| \\
-       &\verb|Q2|      & 2m specific humidity  (optional if RH2 is given)   &[kg/kg] & \verb|map| \\
-       &\verb|RH2|     & 2m relative humidity (optional if Q2 is given) & [\%]  & \verb|map| \\
-       &\verb|TOPO|    & topography of GCM        & [m]         & \verb|map| \\
-       &\verb|lsmask|  & ocean--land distribution of GCM & 0:ocean1:land & \verb|map| \\
-$\ast$ &\verb|SKINT|   & surface temperature      & [K]         & \verb|map| \\
-$\ast$ &\verb|llev|    & soil depth  & [m]        & \verb|levels| \\
-$\ast$ &\verb|STEMP|   & soil temperature         & [K]         & \verb|map| \\
-($\ast$) &\verb|SMOISVC| & soil moisture (volume fraction)  & [-] & \verb|map| \\
-($\ast$) &\verb|SMOISDS| & soil moisture (saturation ratio) & [-] & \verb|map| \\
-$\ast$ &\verb|SST|     & sea surface temperature (optional if SKINT is given) & [K] & \verb|map|\\\hline
+\begin{tabularx}{150mm}{rl|l|l|l} \hline
+ \rowcolor[gray]{0.9} & Variable name & Explanation & Unit & \nmitem{dtype} \\ \hline
+             &\verb|lon|     & longitude data                   & [deg.]         & \verb|linear, map| \\
+             &\verb|lat|     & latitude data                    & [deg.]         & \verb|linear, map| \\
+             &\verb|plev|    & pressure data                    & [Pa]           & \verb|levels, map| \\
+      $\ast$ &\verb|HGT|     & geopotential height data         & [m]            & \verb|map|         \\
+$\ast$$\ast$ &\verb|DENS|    & air density                      & [kg/m3]        & \verb|map|         \\
+             &\verb|U|       & eastward wind speed              & [m/s]          & \verb|map|         \\
+             &\verb|V|       & northward wind speed             & [m/s]          & \verb|map|         \\
+$\ast$$\ast$ &\verb|W|       & vertical wind speed              & [m/s]          & \verb|map|         \\
+             &\verb|T|       & temperature                      & [K]            & \verb|map|         \\
+             &\verb|RH|      & relative humidity                & [\%]           & \verb|map|         \\
+             &               & (optional if QV is given)        &                &                    \\
+             &\verb|QV|      & specific humidity                & [kg/kg]        & \verb|map|         \\
+             &               & (optional if RH is given)        &                &                    \\
+$\ast$$\ast$ &\verb|QC|      & ratio of cloud water mass        & [kg/kg]        & \verb|map|         \\
+$\ast$$\ast$ &\verb|QR|      & ratio of rain water mass         & [kg/kg]        & \verb|map|         \\
+$\ast$$\ast$ &\verb|QI|      & ratio of cloud ice mass ratio    & [kg/kg]        & \verb|map|         \\
+$\ast$$\ast$ &\verb|QS|      & ratio of snow miass ratio        & [kg/kg]        & \verb|map|         \\
+$\ast$$\ast$ &\verb|QG|      & ratio of graupel mass ratio      & [kg/kg]        & \verb|map|         \\
+      $\ast$ &\verb|MSLP|    & sea level pressure               & [Pa]           & \verb|map|         \\
+      $\ast$ &\verb|PSFC|    & surface pressure                 & [Pa]           & \verb|map|         \\
+      $\ast$ &\verb|U10|     & eastward 10m wind speed          & [m/s]          & \verb|map|         \\
+      $\ast$ &\verb|V10|     & northward 10m wind speed         & [m/s]          & \verb|map|         \\
+      $\ast$ &\verb|T2|      & 2m temperature                   & [K]            & \verb|map|         \\
+      $\ast$ &\verb|RH2|     & 2m relative humidity             & [\%]           & \verb|map|         \\
+             &               & (optional if Q2 is given)        &                &                    \\
+      $\ast$ &\verb|Q2|      & 2m specific humidity             & [kg/kg]        & \verb|map|         \\
+             &               & (optional if RH2 is given)       &                &                    \\
+      $\ast$ &\verb|TOPO|    & topography of GCM                & [m]            & \verb|map|         \\
+      $\ast$ &\verb|lsmask|  & ocean--land distribution of GCM  & 0:ocean,1:land & \verb|map|         \\
+             &\verb|SKINT|   & surface temperature              & [K]            & \verb|map|         \\
+             &\verb|llev|    & soil depth                       & [m]            & \verb|levels|      \\
+             &\verb|STEMP|   & soil temperature                 & [K]            & \verb|map|         \\
+             &\verb|SMOISVC| & soil moisture (volume fraction)  & [-]            & \verb|map|         \\
+             &               & (optional if SMOISDS is given)   &                &                    \\
+             &\verb|SMOISDS| & soil moisture (saturation ratio) & [-]            & \verb|map|         \\
+             &               & (optional if SMOISVC is given)   &                &                    \\
+             &\verb|SST|     & sea surface temperature          & [K]            & \verb|map|         \\
+             &               & (optional if SKINT is given)     &                &                    \\\hline
 \end{tabularx}
 \end{center}
 \end{table}
