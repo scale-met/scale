@@ -1,5 +1,5 @@
 
-\section{Cumulus parameterization} \label{sec:basic_usel_cumulus}
+\section{Cumulus Parameterization} \label{sec:basic_usel_cumulus}
 
 The cumulus parameterization is specified in \nmitem{ATMOS_PHY_CP_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|. The timing of the calling of the cumulus parameterization is specified in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing.
 
@@ -57,6 +57,7 @@ Following tuning parameters are available in \verb|KF|:
 \verb| PARAM_ATMOS_PHY_CP_kf_prec      = 1,|     & ; Precipitation type: 1=Ogura-Cho, 2=Kessler\\
 \verb| PARAM_ATMOS_PHY_CP_kf_rate      = 0.03, | & ; Ratio of cloud water and precipitation for Ogura-Cho precipitation fuction\\
 \verb| PARAM_ATMOS_PHY_CP_kf_thres     = 1.E-3,| & ; Autoconversion rate for Kessler precipitation fuction\\
+\verb| PARAM_ATMOS_PHY_CP_kf_LOG       = false,| & ; Output warning messages\\
 \verb|/             | & \\
 }\\
 Users can select trigger fuction from two options:
