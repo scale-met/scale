@@ -5,7 +5,7 @@
 \section{Setting Physical Constants} \label{subsec:const}
 %-------------------------------------------------------------------------------
 
-The changeable physical constants are specified in \namelist{PARAM_CONST} in files \verb|init.conf| and \verb|run.conf|.
+The some physical constants are able to modify in \namelist{PARAM_CONST} in the configure file.
 
 \editboxtwo{
 \verb|&PARAM_CONST                           | & \\
@@ -29,12 +29,8 @@ When \nmitem{CONST_THERMODYN_TYPE} is 'EXACT', temperature dependencies of the l
 When \nmitem{CONST_THERMODYN_TYPE} is 'SIMPLE', specific heat of water categories are set to that of dry air,
 and temperature dependencies of the latent heat are ignored.
 %
-When \nmitem{CONST_SmallPlanetFactor} is set, both radius and angular velocity of the planet are changed as follows;
-
-\begin{eqnarray}
-   && \nmitemeq{CONST_RADIUS} = \nmitemeq{CONST_RADIUS} \times \nmitemeq{CONST_SmallPlanetFactor}, \\
-   && \nmitemeq{CONST_OHM}    = \frac{\nmitemeq{CONST_OHM}}{\nmitemeq{CONST_SmallPlanetFactor}}
-\end{eqnarray}
+The \nmitem{CONST_RADIUS) is multiplied by the \nmitem{CONST_SmallPlanetFactor}.
+At the same time, \nmitem{CONST_OHM) is multiplied by the inverse of the \nmitem{CONST_SmallPlanetFactor}.
 
 
 
@@ -42,7 +38,7 @@ When \nmitem{CONST_SmallPlanetFactor} is set, both radius and angular velocity o
 \section{Setting Calendar} \label{subsec:calendar}
 %-------------------------------------------------------------------------------
 
-The calendar is specified in \namelist{PARAM_CALENDAR} in files \verb|init.conf| and \verb|run.conf|.
+The calendar type can be specified in \namelist{PARAM_CALENDAR} in the configure file.
 Gregorian calendar is used in default.
 
 \editboxtwo{
@@ -69,7 +65,7 @@ the Gregorian calendar is used without leap year.
 \section{Setting Random Number Generator} \label{subsec:random}
 %-------------------------------------------------------------------------------
 
-The random number generator is specified in \namelist{PARAM_RANDOM} in files \verb|init.conf| and \verb|run.conf|.
+A parameter of the random number generator is set in \namelist{PARAM_RANDOM} in the configure file.
 
 \editboxtwo{
 \verb|&PARAM_RANDOM         | & \\
@@ -90,7 +86,7 @@ This option is useful to reproduce the simulation results, which use the random 
 \section{Setting Performance Profiler} \label{subsec:prof}
 %-------------------------------------------------------------------------------
 
-The performance profiler is specified in \namelist{PARAM_PROF} in files \verb|init.conf| and \verb|run.conf|.
+Parameters of the performance profiler are set in \namelist{PARAM_PROF} in the configure file.
 
 \editboxtwo{
 \verb|&PARAM_PROF                 | & \\
@@ -107,7 +103,7 @@ The results of the rap time are displayed at the end of the log file.
 If \nmitem{IO_LOG_ALLNODE} in  \namelist{PARAM_IO} is \verb|.true.|, the result of each process is reported to each log file individually.
 If \nmitem{IO_LOG_SUPPRESS} in \namelist{PARAM_IO} is \verb|.true.|, the result is sent to the standard output.
 %
-Each measurement section has the output level. The sections larger than the \nmitem{PROF_rap_level} are not measured.
+Each measurement section has the output level. The section, which has the output level larger than the \nmitem{PROF_rap_level} are not measured.
 
 When \nmitem{PROF_mpi_barrier} is \verb|.true.|, barrier command of MPI is called before and after getting current time.
 This option is useful to separate the computation time and communication time.
@@ -119,7 +115,7 @@ The computation time often shows large imbalance among the processes.
 \section{Setting Statistics Monitor} \label{subsec:statistics}
 %-------------------------------------------------------------------------------
 
-The statistics monitor is specified in \namelist{PARAM_STATISTICS} in files \verb|init.conf| and \verb|run.conf|.
+Parameters of the statistics monitor are set in \namelist{PARAM_STATISTICS} in the configure file.
 
 \editboxtwo{
 \verb|&PARAM_STATISTICS                    | & \\
@@ -133,7 +129,7 @@ When \nmitem{STATISTICS_checktotal} is \verb|.true.|, domain total of some varia
 %
 When \nmitem{STATISTICS_use_globalcomm} is \verb|.true.|, global domain total is calculated by using global communication.
 This option can slow the simulation time.
-When the option is \verb|.false.|, local domain total is calculated in each process.
+When the option is \verb|.false.|, the total is calculated in the spatial region allocated for each process.
 
 
 
