@@ -21,7 +21,7 @@ program scalerm_init
   use scale_prc, only: &
      PRC_DOMAIN_nlim,     &
      PRC_MPIstart,        &
-     PRC_abort,         &
+     PRC_abort,           &
      PRC_MPIfinish,       &
      PRC_MPIsplit,        &
      PRC_UNIVERSAL_setup, &
@@ -60,8 +60,8 @@ program scalerm_init
   logical               :: FAILURE_PRC_MANAGE           = .false. ! use failure process management?
 
   namelist / PARAM_LAUNCHER / &
-     EXECUTE_PREPROCESS, &
-     EXECUTE_MODEL,      &
+!      EXECUTE_PREPROCESS, &
+!      EXECUTE_MODEL,      &
      NUM_BULKJOB,        &
      NUM_DOMAIN,         &
      NUM_FAIL_TOLERANCE, &
