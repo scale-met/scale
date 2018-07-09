@@ -83,7 +83,7 @@ the following three executable files are generated under the \texttt{scale-{\ver
 
 \subsubsection{Compile of \scalegm} %\label{subsec:compile}
 
-Move to the \scalegm source directory 
+Move to the \scalegm source directory
 and compile it by executing the following command:
 \begin{alltt}
   $  cd scale-{\version}/scale-gm/src
@@ -92,7 +92,7 @@ and compile it by executing the following command:
 
 The number of \verb|-j| option shows a number of parallel compile processes;
 it is four-parallel in this example.
-To reduce elapsed time of compile, 
+To reduce elapsed time of compile,
 it is better to use this option to execute parallel compilation.
 Specify this number according to your environment;
 we recommend the use of two $\sim$ eight processes.
@@ -141,30 +141,29 @@ If you want to change the compilation options in detail, edit \verb|Makedef.***|
 \begin{center}
 \caption{List of environment variables applied at compile time}
 \begin{tabularx}{150mm}{|l|X|} \hline
- \rowcolor[gray]{0.9} Environment variable & Description  \\ \hline
- SCALE\_SYS               & Selection of system（necessary）  \\ \hline
- SCALE\_DISABLE\_MPI      & Do not use MPI（only utils）  \\ \hline
- SCALE\_DEBUG             & Compile with options for debug  \\ \hline
- SCALE\_QUICKDEBUG        & Use compile option for quick debug（keep options for speed-up + detect floating point error）  \\ \hline
- SCALE\_USE\_MASSCHECK    & Add calculation for checking mass conservation（only in dynamical process in SCALE-RM）  \\ \hline
- SCALE\_USE\_SINGLEFP     & Use single precision floating-point number（for all sources）  \\ \hline
- SCALE\_USE\_FIXEDINDEX   & Prompt optimization by fixing grid size at compile time  \\ \hline
- SCALE\_ENABLE\_OPENMP    & Enable OpenMP  \\ \hline
- SCALE\_ENABLE\_OPENACC   & Enable OpenACC  \\ \hline
- SCALE\_USE\_AGRESSIVEOPT & Conduct strong optimization with the potentiality of side effect（only with K computer and FX）  \\ \hline
- SCALE\_DISABLE\_INTELVEC & Suppress option for vectorization（only with Intel compiler）  \\ \hline
- SCALE\_NETCDF\_INCLUDE   & Include path of NetCDF library  \\ \hline
- SCALE\_NETCDF\_LIBS      & Library path of NetCDF and specifying libraries  \\ \hline
- SCALE\_ENABLE\_PNETCDF   & Use Parallel NetCDF  \\ \hline
- SCALE\_COMPAT\_NETCDF3   & Limit to NetCDF3-compatible features  \\ \hline
- SCALE\_ENABLE\_MATHLIB   & Use numerical calculation library  \\ \hline
- SCALE\_MATHLIB\_LIBS     & Directory path of numerical library and specifying libraries  \\ \hline
- SCALE\_ENABLE\_PAPI      & Use PAPI  \\ \hline
- SCALE\_PAPI\_INCLUDE     & Include path of PAPI library  \\ \hline
- SCALE\_PAPI\_LIBS        & Directory path of PAPI library and specifying libraries  \\ \hline
- SCALE\_DISABLE\_LOCALBIN & Disable making local binary files in directory for test cases  \\ \hline
- SCALE\_IGNORE\_SRCDEP    & Ignore dependency check at compile time  \\ \hline
- SCALE\_ENABLE\_SDM       & Use SDM (Super Droplet Method) model  \\ \hline
+ \rowcolor[gray]{0.9} Environment variable & Description \\ \hline
+ SCALE\_SYS               & Selection of system（required）\\ \hline
+ SCALE\_DISABLE\_MPI      & Do not use MPI（only for utils）\\ \hline
+ SCALE\_DEBUG             & Use compile option for debug \\ \hline
+ SCALE\_QUICKDEBUG        & Use compile option for quick debug（detect floating point error while maintaining speed-up option）\\ \hline
+ SCALE\_USE\_SINGLEFP     & Use single precision floating-point number（for all sources）\\ \hline
+ SCALE\_USE\_FIXEDINDEX   & Fix grid index size at the compile time \\ \hline
+ SCALE\_ENABLE\_OPENMP    & Enable to use OpenMP \\ \hline
+ SCALE\_ENABLE\_OPENACC   & Enable to use OpenACC \\ \hline
+ SCALE\_USE\_AGRESSIVEOPT & Conduct strong optimization (only for K computer and FX, this can be a side effect）\\ \hline
+ SCALE\_DISABLE\_INTELVEC & Suppress option for vectorization（only with Intel compiler）\\ \hline
+ SCALE\_NETCDF\_INCLUDE   & Include path of NetCDF library \\ \hline
+ SCALE\_NETCDF\_LIBS      & Directory path of NetCDF library and specifying libraries \\ \hline
+ SCALE\_ENABLE\_PNETCDF   & Use Parallel NetCDF \\ \hline
+ SCALE\_COMPAT\_NETCDF3   & Limit to NetCDF3-compatible features \\ \hline
+ SCALE\_ENABLE\_MATHLIB   & Use numerical calculation library \\ \hline
+ SCALE\_MATHLIB\_LIBS     & Directory path of numerical library and specifying libraries \\ \hline
+ SCALE\_ENABLE\_PAPI      & Use Performance Application Programming Interface (PAPI) \\ \hline
+ SCALE\_PAPI\_INCLUDE     & Include path of PAPI library \\ \hline
+ SCALE\_PAPI\_LIBS        & Directory path of PAPI library and specifying libraries \\ \hline
+ SCALE\_DISABLE\_LOCALBIN & Disable making local binary files in directory for test cases \\ \hline
+ SCALE\_IGNORE\_SRCDEP    & Ignore dependency check at the compile time \\ \hline
+ SCALE\_ENABLE\_SDM       & Use Super Droplet Method (SDM) model \\ \hline
 \end{tabularx}
 \label{tab:env_var_list}
 \end{center}
