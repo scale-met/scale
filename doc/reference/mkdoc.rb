@@ -151,7 +151,7 @@ files.each do |fname|
           group.strip!
           lists = lists.split(",").map{|c| c.strip.upcase}
           namelists[group] = lists
-        when /call HIST_in\s*\((.+)$/i
+        when /call FILE_HISTORY_in\s*\((.+)$/i
           next if modname == "scale_history"
           str = $1.strip.sub(/\)\Z/,"").strip
           str.gsub!(/\(:[^)]*\)/,'')
