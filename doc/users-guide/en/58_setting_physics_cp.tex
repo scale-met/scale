@@ -77,5 +77,6 @@ Users can select precipitation fuction from two options:
 
 The time interval of calling KF specified by \nmitem{TIME_DT_ATMOS_PHY_CP} in \namelist{PARAM_TIME} is also a tuning parameter, which is effective to the precipitation amount. As the first setting of \nmitem{TIME_DT_ATMOS_PHY_CP}, 300s is recommended.
 
-
+KF will output a warning message of ``go off top/bottom of updraft source layer'', if \nmitem{PALAM_ATMOS_PHY_CP_kf_LOG} is true.
+However, the calculation is not aborted for these conditions.
 
