@@ -6,6 +6,8 @@ and it enables us to generate files with self-describing and machine-independent
 for example, the former has a merit to describe variables along with their axis variables in a file and
 the latter has a merit to treat data without worry which endian is used.
 Based on the above virtue, \scalelib has particular conversion ( \scalenetcdf convention ).
+It is mostly following the CF conventions (\url{http://cfconventions.org}).
+
 
 \subsection{Global Attributes}
 \scalenetcdf file contains information about data contained in the file,
@@ -17,20 +19,33 @@ the attributes of myrank, rankidx, and procsize are not output.
 \begin{center}
   \caption{Global attributes in \scalenetcdf file}
   \label{table:netcdf_global_attrs}
-  \begin{tabularx}{150mm}{llX} \hline
+  \begin{tabularx}{150mm}{lXX} \hline
     Name & description & remarks \\ \hline \hline
-    title & brief description of data & value of \nmitem{History_TITLE} in \namelist{PARAM_HISTORY}\\
+    title & brief description of data & value of \nmitem{History_TITLE} in \namelist{PARAM_HISTORY} \\
     source & name of the source software & value of \nmitem{History_SOURCE} in \namelist{PARAM_HISTORY} for history files and \nmitem{H_SOURCE} in \namelist{PARAM_IO} for other files\\
     institution & data author & value of \nmitem{History_INSTITUTION} in \namelist{PARAM_HISTORY} for history files and \nmitem{H_INSTITUTE} for other files\\
-    myrank & rank id of MPI process & \verb|PRC_myrank| in the model \\
-    rankidx & mapping index of the 2D decomposition & \verb|PRC_2Drank(PRC_myrank,1:2)| in the model \\
-    procsize & number of the 2D decomposition & \verb|(/| \nmitem{PRC_NUM_X}, \nmitem{PRC_NUM_Y} \verb|/)| in the model \\ \hline
+    rankid & rank id of MPI process & \verb|PRC_myrank| in the model \\
+    Conventions & CF convention version  & ``CF-1.6'' for version 5.3 \\
+    grid\_name & grid type & ``cartesC'' for \scalerm \\
+    scale\_cartesC\_prc\_rank\_[xy] & mapping index of the 2D decomposition & \verb|PRC_2Drank(PRC_myrank,1 or 2)| in the model \\
+    scale\_cartesC\_prc\_num\_[xy] & number of the 2D decomposition & \nmitem{PRC_NUM_X}, \nmitem{PRC_NUM_Y} in the model \\
+    scale\_cartesC\_prc\_periodic\_[zxy] & wheather the boundary condition is periodic & 0 for .false. and 1 for .true, 0. They correspoind to \nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} in the model \\
+    \shortstack{scale\_atmos\_grid\_cartesC\\\_index\_[ij]maxg} & number of the grids in the global domain & \nmitem{IMAX} $\times$ \nmitem{PRC_NUM_X}, \nmitem{JMAX} $\times$ \nmitem{PRC_NUM_Y} in the model \\
+    \shortstack{scale\_atmos\_grid\_cartesC\\\_index\_kmax} & number of the vertical layer for the atmospheric model & \nmitem{KMAX} in the model \\
+    \shortstack{scale\_ocean\_grid\_cartesC\\\_index\_kmax} & number of the vertical layer for the ocean model & \nmitem{OKMAX} in the model \\
+    \shortstack{scale\_land\_grid\_cartesC\\\_index\_kmax} & number of the vertical layer for the land model & \nmitem{LKMAX} in the model \\
+    \shortstack{scale\_urban\_grid\_cartesC\\\_index\_kmax} & number of the vertical layer for the urban & \nmitem{UKMAX} in the model \\
+    \shortstack{scale\_atmos\_grid\_cartesC\\\_index\_[kij]halo} & number of halo grids & \nmitem{KHALO}, \nmitem{IHALO}, \nmitem{JHALO} in the model \\
+    calendar & calendar type & \nmitem{PARAM_CALENDAR} in the model \\
+    time\_start, time\_units & init time \\ \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-\noindent Refer Section \ref{sec:domain} for \nmitem{PRC_NUM_X, PRC_NUM_Y} and
-Section \ref{sec:output} for \nmitem{History_TITLE, History_SOURCE, History_INSTITUTION}.
+\noindent Refer
+Section \ref{sec:output} for \nmitem{History_TITLE, History_SOURCE, History_INSTITUTION},
+Section \ref{sec:domain} for \nmitem{PRC_NUM_X, PRC_NUM_Y, PRC_PERIODIC_X, PRC_PERIODIC_Y, KMAX, IMAX, JMAX},
+and \ref{subsec:calendar} for \nmitem{PARAM_CALENDAR}.
 
 
 \subsection{Data in the halo region}
@@ -53,7 +68,9 @@ the halo data is contained
 only when the lateral boundary conditions are not periodic
 (\nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} = .false. in \namelist{PARAM_PRC_CARTESC})
 and \nmitem{HIST_BND}=.true. in \namelist{PARAM_HIST},
+and \nmitem{FILE_HISTORY_CARTESC_BOUNDARY}=.true. in \namelist{PARAM_FILE_HISTORY_CARTESC},
 otherwise it is not. Refer Section \ref{sec:output} for detail.
+
 
 \subsection{Axis variables}
 \scalenetcdf file contains axis data.
@@ -76,6 +93,18 @@ the horizontal and vertical locations of coordinate variables,
 respectively.
 Refer to them with Table \ref{table:netcdf_axes} at the same time.
 
+The area and volume data of the grids are also in the file as ``cell\_area**'' and ``cell\_volume**'', respectively.
+The ``cell\_measures'' attribute of each variables specifies the correspoinding area or volume data.
+
+The map projection data is contained as a non-dimentional variable whose name is specified by ``grid\_mapping'' attribute of the variables.
+
+The information of relationship the staggared grids, an attribute and a non-dimensional variable are contained as follows SGRID conventions (\url{https://github.com/sgrid/sgrid}).
+The non-dimensional variable's name is specified by the ``grid'' attribute of each variable.
+
+In the file, there also the surface elevation data and land mask data as ``topo'' and ``lsmask'', respectively.
+
+
+
 \begin{longtable}{l|l}
   \caption{Axis data in \scalenetcdf.}
   \label{table:netcdf_axes} \\ \hline
@@ -88,11 +117,16 @@ Refer to them with Table \ref{table:netcdf_axes} at the same time.
   \multicolumn{2}{l}{Coordinate variables}\\ \hline
 name & description \\ \hline \hline
 \multicolumn{2}{c}{Common : Horizontal axis \& time}\\ \hline
-x & full level position in x-direction of the data in the file \\
-y & full level position in y-direction of the data in the file \\
-xh & half level position in x-direction of the data in the file \\
-yh & half level position in y-direction of the data in the file \\
-time & time information \\ \hline
+x        & full level position in x-direction of the data in the file \\
+x\_bnds  & full level cell boundary in x-direction of the data in the file \\
+xh       & half level position in x-direction of the data in the file \\
+xh\_bnds & half level cell boundary in x-direction of the data in the file \\
+y        & full level position in y-direction of the data in the file \\
+y\_bnds  & full level cell boundary in y-direction of the data in the file \\
+yh       & half level position in y-direction of the data in the file \\
+yh\_bnds & half level cell boundary in y-direction of the data in the file \\
+time       & time information \\ \hline
+time\_bnds & time boundary information \\ \hline
 CX  & full level grid position in x-direction for the local region (inc. halo grids) \\
 FX  & half level grid position in x-direction for the local region (inc. halo grids) \\
 CDX & full level grid spacing  in x-direction (inc. halo grids) \\
@@ -106,21 +140,35 @@ FXG & half level grid position in x-direction for the whole region (inc. halo gr
 CYG & full level grid position in y-direction for the whole region (inc. halo grids) \\
 FYG & half level grid position in y-direction for the whole region (inc. halo grids) \\ \hline
 \multicolumn{2}{c}{Vertical axis : Atmosphere}\\ \hline
-z   & full level position in z-direction in the file \\
-zh  & half level position in z-direction in the file \\
+z         & full level position in z-direction in the file \\
+z\_bnds   & full level cell boundary in z-direction in the file \\
+zh        & half level position in z-direction in the file \\
+zh\_bnds  & half level cell boundary in z-direction in the file \\
 CZ  & full level grid position in z-direction (inc. halo grids) \\
 FZ  & half level grid position in z-direction (inc. halo grids) \\
 CDZ & full level grid spacing  in z-direction (inc. halo grids) \\
 FDZ & half level grid spacing  in z-direction (inc. halo grids) \\ \hline
 \multicolumn{2}{c}{Vertical axis : Land}\\ \hline
-lz   & full level position in z-direction of the land data in the file \\
-lzh  & half level position in z-direction of the land data in the file \\
+oz        & full level position in z-direction of the ocean data in the file \\
+oz\_bnds  & full level cell boundary in z-direction of the ocean data in the file \\
+ozh       & half level position in z-direction of the ocean data in the file \\
+ozh\_bnds & half level cell boundary in z-direction of the ocean data in the file \\
+OCZ  & full level grid position in z-direction of the ocean model \\
+OFZ  & half level grid position in z-direction of the ocean model \\
+OCDZ & full level grid spacing in z-direction of the ocean model \\  \hline
+\multicolumn{2}{c}{Vertical axis : Land}\\ \hline
+lz        & full level position in z-direction of the land data in the file \\
+lz\_bnds  & full level cell boundary in z-direction of the land data in the file \\
+lzh       & half level position in z-direction of the land data in the file \\
+lzh\_bnds & half level cell boundary in z-direction of the land data in the file \\
 LCZ  & full level grid position in z-direction of the land model \\
 LFZ  & half level grid position in z-direction of the land model \\
 LCDZ & full level grid spacing in z-direction of the land model \\  \hline
 \multicolumn{2}{c}{Vertical axis : Urban canopy}\\ \hline
-uz   & full level position in z-direction in the file \\
-uzh  & half level position in z-direction in the file \\
+uz        & full level position in z-direction in the file \\
+uz\_bnds  & full level cell boundary in z-direction in the file \\
+uzh       & half level position in z-direction in the file \\
+uzh\_bnds & half level cell boundary in z-direction in the file \\
 UCZ  & full level grid position in z-direction \\
 UFZ  & half level grid position in z-direction \\
 UCDZ & full level grid spacing in z-direction \\ \hline
