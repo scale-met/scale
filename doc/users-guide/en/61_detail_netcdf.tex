@@ -1,4 +1,5 @@
-\section{What is \scalenetcdf file?} \label{sec:netcdf}
+\section{What is \scalenetcdf File?} \label{sec:netcdf}
+
 In this section, \scalenetcdf file, which \scalelib directly reads from and writes in, is explained.
 \scalelib employs \netcdf (network Common Data Format) as data file format.
 \Netcdf is a software developed by Unidata (\url{http://www.unidata.ucar.edu/}),
@@ -12,8 +13,6 @@ It is mostly following the CF conventions (\url{http://cfconventions.org}).
 \subsection{Global Attributes}
 \scalenetcdf file contains information about data contained in the file,
 such as those with regards to spatial decomposition as ``Global Attributes'' (Table \ref{table:netcdf_global_attrs}).
-When the single file I/O is used (\nmitem{FILE_AGGREGATE}=.true. in \namelist{PARAM_FILE}),
-the attributes of myrank, rankidx, and procsize are not output.
 
 \begin{table}[bth]
 \begin{center}
@@ -48,7 +47,7 @@ Section \ref{sec:domain} for \nmitem{PRC_NUM_X, PRC_NUM_Y, PRC_PERIODIC_X, PRC_P
 and \ref{subsec:calendar} for \nmitem{PARAM_CALENDAR}.
 
 
-\subsection{Data in the halo region}
+\subsection{Data in the Halo Region}
 
 Whether the file 
 contains the data in the halo region
@@ -59,7 +58,7 @@ not the halo in each of local regions.
 For the initial (or restart) and boundary data files, 
 the halo data is contained if the lateral boundary conditions are not periodic 
 (\nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} = .false. in \namelist{PARAM_PRC_CARTESC}) 
-or the single file I/O is used (\nmitem{FILE_AGGREGATE}=.true. in \namelist{PARAM_FILE}),
+or the single file I/O (Section \ref{subsec:single_io}) is used (\nmitem{FILE_AGGREGATE}=.true. in \namelist{PARAM_FILE}),
 otherwise it is not.
 
 On the other hand,
@@ -72,7 +71,7 @@ and \nmitem{FILE_HISTORY_CARTESC_BOUNDARY}=.true. in \namelist{PARAM_FILE_HISTOR
 otherwise it is not. Refer Section \ref{sec:output} for detail.
 
 
-\subsection{Axis variables}
+\subsection{Axis Variables}
 \scalenetcdf file contains axis data.
 All the axis variables have 
 ``long\_name'' and ``units'' attributes,
@@ -228,7 +227,7 @@ height\_uvw & height at (zh, yh, xh) in history file or at (yh, xh, zh) in resta
 
 
 
-\subsection{Data variables}
+\subsection{Data Variables}
 Data variables have attributes of the undefined value ``\_FillValue'' and 
 the missing value ``missing\_value'' as well as ``long\_name'' and ``untis''.
 Data structure in the initial (restart) data and boundary data files 
@@ -236,4 +235,17 @@ is identical to the array in the model, that is the z-x-y order.
 On the other hand, it in the history data file is the x-y-z order.
 This is true for 3D axis variables.
 See also Table \ref{table:netcdf_axes}.
+
+
+
+\subsection{Single File I/O} \label{subsec:single_io}
+As default, all the data files are output by each process, namley separate file I/O.
+If \scalerm is compiled with pnetCDF (SCALE\_ENABLE\_PNETCDF=T), the data from all processes can be combined into a single file (See Section\ref{sec:scale_compile}).
+To do this, set \nmitem{FILE_AGGREGATE} in \namelist{PARAM_FILE}) .true..
+The all the data files become single file.
+In stead, you can switch on/off of the single I/O for individual file types, i.e., history, init/restart, topography, and land use files.
+Set \nmitem{FILE_HISTORY_AGGREGATE}=.true. in \namelist{PARAM_FILE_HISTORY} for the history file.
+For init/restart files, set \nmitem{RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_RESTART}, or \nmitem{(MODELNAME)_RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_(MODELNAME)_VARS}.
+Here, (MODELNAME) is ``ATMOS'', ``OCEAN'', ``LAND'', or ``URBAN''.
+For topography and land use files, set \nmitem{TOPO_(IN|OUT)_AGGREGATE}=.ture. in \namelist{PARAM_TOPO} and \nmitem{LANDUSE_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_LANDUSE}, respectively.
 
