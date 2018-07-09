@@ -28,7 +28,7 @@ such as those with regards to spatial decomposition as ``Global Attributes'' (Ta
     grid\_name & grid type & ``cartesC'' for \scalerm \\
     scale\_cartesC\_prc\_rank\_[xy] & mapping index of the 2D decomposition & \verb|PRC_2Drank(PRC_myrank,1 or 2)| in the model \\
     scale\_cartesC\_prc\_num\_[xy] & number of the 2D decomposition & \nmitem{PRC_NUM_X}, \nmitem{PRC_NUM_Y} in the model \\
-    scale\_cartesC\_prc\_periodic\_[zxy] & wheather the boundary condition is periodic & 0 for .false. and 1 for .true, 0. They correspoind to \nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} in the model \\
+    scale\_cartesC\_prc\_periodic\_[zxy] & whether the boundary condition is periodic & 0 for .false. and 1 for .true, 0. They correspond to \nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} in the model \\
     \shortstack{scale\_atmos\_grid\_cartesC\\\_index\_[ij]maxg} & number of the grids in the global domain & \nmitem{IMAX} $\times$ \nmitem{PRC_NUM_X}, \nmitem{JMAX} $\times$ \nmitem{PRC_NUM_Y} in the model \\
     \shortstack{scale\_atmos\_grid\_cartesC\\\_index\_kmax} & number of the vertical layer for the atmospheric model & \nmitem{KMAX} in the model \\
     \shortstack{scale\_ocean\_grid\_cartesC\\\_index\_kmax} & number of the vertical layer for the ocean model & \nmitem{OKMAX} in the model \\
@@ -93,11 +93,11 @@ respectively.
 Refer to them with Table \ref{table:netcdf_axes} at the same time.
 
 The area and volume data of the grids are also in the file as ``cell\_area**'' and ``cell\_volume**'', respectively.
-The ``cell\_measures'' attribute of each variables specifies the correspoinding area or volume data.
+The ``cell\_measures'' attribute of each variables specifies the corresponding area or volume data.
 
-The map projection data is contained as a non-dimentional variable whose name is specified by ``grid\_mapping'' attribute of the variables.
+The map projection data is contained as a non-dimensional variable whose name is specified by ``grid\_mapping'' attribute of the variables.
 
-The information of relationship the staggared grids, an attribute and a non-dimensional variable are contained as follows SGRID conventions (\url{https://github.com/sgrid/sgrid}).
+The information of relationship the staggered grids, an attribute and a non-dimensional variable are contained as follows SGRID conventions (\url{https://github.com/sgrid/sgrid}).
 The non-dimensional variable's name is specified by the ``grid'' attribute of each variable.
 
 In the file, there also the surface elevation data and land mask data as ``topo'' and ``lsmask'', respectively.
@@ -239,13 +239,38 @@ See also Table \ref{table:netcdf_axes}.
 
 
 \subsection{Single File I/O} \label{subsec:single_io}
-As default, all the data files are output by each process, namley separate file I/O.
-If \scalerm is compiled with pnetCDF (SCALE\_ENABLE\_PNETCDF=T), the data from all processes can be combined into a single file (See Section\ref{sec:scale_compile}).
+As default, all the data files are output by each process, namely separate file I/O.
+If \scalerm is compiled with pnetCDF (SCALE\_ENABLE\_PNETCDF=T), the data from all processes can be combined into a single file (See Section \ref{sec:scale_compile}).
 To do this, set \nmitem{FILE_AGGREGATE} in \namelist{PARAM_FILE}) .true..
 The all the data files become single file.
 In stead, you can switch on/off of the single I/O for individual file types, i.e., history, init/restart, topography, and land use files.
 Set \nmitem{FILE_HISTORY_AGGREGATE}=.true. in \namelist{PARAM_FILE_HISTORY} for the history file.
-For init/restart files, set \nmitem{RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_RESTART}, or \nmitem{(MODELNAME)_RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_(MODELNAME)_VARS}.
+For init/restart files, set \nmitem{RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_RESTART},\\
+or \nmitem{(MODELNAME)_RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_(MODELNAME)_VARS}.
 Here, (MODELNAME) is ``ATMOS'', ``OCEAN'', ``LAND'', or ``URBAN''.
-For topography and land use files, set \nmitem{TOPO_(IN|OUT)_AGGREGATE}=.ture. in \namelist{PARAM_TOPO} and \nmitem{LANDUSE_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_LANDUSE}, respectively.
+For topography and land use files, set \nmitem{TOPO_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_TOPO} and \nmitem{LANDUSE_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_LANDUSE}, respectively.
 
+
+\subsection{Restrictions with \Netcdf 3}
+If \scale is compiled with \netcdf version 3, the following restrictions exist.
+\begin{itemize}
+\item Variables with different time intervals cannot stored in the same file.
+\item Compression of data cannot be used.
+\item File of \netcdf 4 format cannot be read.
+\end{itemize}
+If you want to output variables with different time intervals, set \nmitem{BASENAME} in \namelist{HISTORY_ITEM} to output them to different files.
+
+
+Note that the restrictions of the multiple time interval and compression are placed when the single file I/O is used, because pnetCDF is based on \netcdf 3 file format.
+
+\begin{table}
+  \caption{Functionality of each \netcdf versions.}
+  \begin{tabular}{llllll} \hline
+    & \shortstack{multiple\\time interval} & Compression & \shortstack{Read\\\netcdf 3 file} & \shortstack{Read\\\netcdf 4 file} & \shortstack{Read\\single file}\\ \hline
+    \netcdf 3 & NG & NG & OK & NG & NG$^{*}$ \\
+    \netcdf 4 & OK & OK & OK & OK & NG$^{*}$ \\
+    pnetCDF   & NG & NG & NG$^{*}$ & NG & OK \\\hline
+  \end{tabular}
+  \\
+  (*) it is OK if the number of total processes is 1.
+\end{table}
