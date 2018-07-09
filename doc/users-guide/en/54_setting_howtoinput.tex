@@ -16,6 +16,9 @@
 
 \scalerm can generate initial and boundary data by entering various types of external data, as shown in Table \ref{tab:inputdata_format}. The program \verb|scale-rm_init| converts external data into boundary and initial data by configuring the file \verb|init.conf|. The input data format is specified at \nmitem{FILETYPE_ORG} in \namelist{PARAM_MKINIT_REAL_***}. The SCALE format is mainly used for offline nesting. Refer to Section \ref{subsec:nest_offline} for details. The WRF data format is available; WRF model output data can be used directly. Note that the file should contain all data required for the generation of the boundary data of \scalerm. The ``binary format'' in this documentation is defined as binary data with single-precision floating points that FORTRAN can directly access. GRIB/GRIB2 data are available by converting them to binary format; this procedure is explained in Section \ref{sec:tutrial_real_data}. Other arbitrary data can also be used if it is converted into binary format.
 
+Note that the format of output files in the latest version is different from that in the version older than 5.2.
+Therefore, the init/boundary files which are made in the version older than 5.2 can't be used in the latest version.
+
 %%%---------------------------------------------------------------------------------%%%%
 \subsubsection{Input from binary format data} \label{sec:datainput_grads}
 
@@ -66,6 +69,7 @@ The header name of input files, i.e., \verb|"filename"|, is specified in the nam
 \nmitem{BOUNDARY_UPDATE_DT} is the time step of input data.
 \nmitem{RESTART_OUT_BASENAME} in \namelist{PARAM_RESTART} is the header name of the initial file converted.
 \nmitem{BASENAME_BOUNDARY} is the header name of the boundary files converted.
+If \nmitem{BASENAME_BOUNDARY} is null, the boundary files are not outputed.
 
 The above configurations are the common among \namelist{PARAM_MKINIT_REAL_ATMOS},\\ \namelist{PARAM_MKINIT_REAL_OCEAN}, and \namelist{PARAM_MKINIT_REAL_LAND}. Unless otherwise specified in\\
 \namelist{PARAM_MKINIT_REAL_OCEAN} and \namelist{PARAM_MKINIT_REAL_LAND}, these information are inherited.
