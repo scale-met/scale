@@ -1,13 +1,16 @@
 %Setting the physical process
 
-\section{Turbulence scheme} \label{sec:basic_usel_turbulence}
+\section{Sub-Grid Scale Turbulence Scheme} \label{sec:basic_usel_turbulence}
 %------------------------------------------------------
+
+The sub-grid scale turbulence model is for representing energy cascade to the sub-grid scale due to the advection terms in Large-eddy simulations (LESs).
+
 
 The turbulence scheme is specified in \nmitem{ATMOS_PHY_TB_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|. The timing of the calling of the turbulence scheme is specified in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing.
 
 \editboxtwo{
 \verb|&PARAM_ATMOS  | & \\
-\verb| ATMOS_PHY_TB_TYPE = "MYNN", | & ; Select the scheme shown in Table \ref{tab:nml_atm_tb}\\
+\verb| ATMOS_PHY_TB_TYPE = "SMAGORINSKY", | & ; Select the scheme shown in Table \ref{tab:nml_atm_tb}\\
 \verb|/             | & \\
 }
 \begin{table}[h]
@@ -19,27 +22,16 @@ The turbulence scheme is specified in \nmitem{ATMOS_PHY_TB_TYPE} in \namelist{PA
       \verb|OFF|          & Do not calculate the turbulence process &  \\
       \verb|SMAGORINSKY|  & Smagorinsky—Lily-type sub-grid model & \citet{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993} \\
       \verb|D1980|        & Deardorff-type sub-grid model & \citet{Deardorff_1980} \\
-      \verb|MYNN|         & MYNN Level 2.5 boundary scheme & \citet{my_1982,nakanishi_2004} \\
-      \verb|HYBRID|       & Hybrid use of the boundary layer parameterization ans sub-grid scale turbulence model. Only the hybrid of \verb|SMAGORINSKY| and \verb|MYNN| is currently available.\\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-\verb|SMAGORINSKY| and \verb|D1980| are sub-grid scale turbulence models for Large-eddy simulations (LESs).
-\verb|MYNN| is a boundary layer parameterization for Reynolds-Averaged Navier-Stokes equations (RANS).
-\verb|HYBRID| is used for the following two purposes.
-\begin{enumerate}
-\item Simulations with inter-mediate resolution between LES and RANS (gray zone) \\
-  The temporal tendencies by vertical mixing is calculated by a linear combination of those calculated by the LES turbulence model and RANS turbulence parameterization. The horizontal mixing is calculate by the LES turbulence model.
-\item Horizontal eddy viscosity for RANS simulations \\
-  The RANS turbulence parameterization is a scheme considering only vertical mixing.
-  If you want to consider the horizontal eddy viscosity in RANS simulations,
-  that becomes possible by using the \verb|HYBRID| scheme.
-  The horizontal mixing is calculate by the LES turbulence model.
-\end{enumerate}
-
-In order to use the \verb|HYBRID| scheme for the horizontal eddy viscosity in RANS simulations, \nmitem{ATMOS_PHY_TB_SMG_horizontal} should be \verb|.true.| as follows:
+The \verb|SMAGORINSKY| scheme can be also used for the horizontal eddy viscosity in RANS simulations.
+The planetary boundarly layer parameterization (Section \ref{sec:basic_usel_pbl}) is a scheme considering only vertical mixing.
+If you want to consider the horizontal eddy viscosity in RANS simulations,
+use the sug-grid scale turbulence model for horizontal mixing.
+Then, \nmitem{ATMOS_PHY_TB_SMG_horizontal} in \namelist{PARAM_ATMOS_PHY_TB_SMG} should be \verb|.true.| as follows:
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_TB_SMG  | & \\
 \verb| ATMOS_PHY_TB_SMG_horizontal = .true., | & \\
