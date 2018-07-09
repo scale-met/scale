@@ -1,0 +1,12 @@
+\section{Configure File Converter from Previous Version}
+%------------------------------------------
+
+From version 5.2 to 5.3, there are many changes in namelist parameters.
+So, we provide the configure file converter from 5.2 to 5.3.
+It requires ``ruby'' (\url{https://www.ruby-lang.org/en/}).
+
+Usage of the converter is the following:
+\begin{verbatim}
+ $ ruby ${path_to_the_scale_top_dir}/utils/config-converter/config-converter_5.2-5.3.rb \
+   old.conf > new.conf
+\end{verbatim}
