@@ -62,3 +62,24 @@ the calendar that one year is 12 months and one month is 30 days, is set.
 %
 When \nmitem{CALENDAR_365DAYS} is \verb|.true.|,
 the Gregorian calendar is used without leap year.
+
+
+
+%-------------------------------------------------------------------------------
+\section{Setting Random Number Generator} \label{subsec:random}
+%-------------------------------------------------------------------------------
+
+The random number generator is specified in \namelist{PARAM_RANDOM} in files \verb|init.conf| and \verb|run.conf|.
+
+\editboxtwo{
+\verb|&PARAM_RANDOM         | & \\
+\verb| RANDOM_FIX = .false. | & ; Random seed is fixed? \\
+\verb|/                     | & \\
+}
+
+\noindent
+The intrinsic function of random number generator is used in the scale library. Note that the generated number is pseudorandom.
+The seed of the random number is determined by current datetime, cpu time, and the process id.
+%
+When \nmitem{RANDOM_FIX} is \verb|.true.|, the seed is fixed by specific number.
+This option is useful to reproduce the simulation results, which use the random perturbation for the initial field.
