@@ -10,7 +10,7 @@ Based on the above virtue, \scalelib has particular conversion ( \scalenetcdf co
 \subsection{Global Attributes}
 \scalenetcdf file contains information about data contained in the file,
 such as those with regards to spatial decomposition as ``Global Attributes'' (Table \ref{table:netcdf_global_attrs}).
-When the single file I/O is used (\nmitem{IO_AGGREGATE}=.true. in \namelist{PARAM_IO}),
+When the single file I/O is used (\nmitem{FILE_AGGREGATE}=.true. in \namelist{PARAM_FILE}),
 the attributes of myrank, rankidx, and procsize are not output.
 
 \begin{table}[bth]
@@ -44,7 +44,7 @@ not the halo in each of local regions.
 For the initial (or restart) and boundary data files, 
 the halo data is contained if the lateral boundary conditions are not periodic 
 (\nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} = .false. in \namelist{PARAM_PRC}) 
-or the single file I/O is used (\nmitem{IO_AGGREGATE}=.true. in \namelist{PARAM_IO}),
+or the single file I/O is used (\nmitem{FILE_AGGREGATE}=.true. in \namelist{PARAM_FILE}),
 otherwise it is not.
 
 On the other hand,
