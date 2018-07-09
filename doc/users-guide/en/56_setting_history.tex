@@ -19,8 +19,16 @@ The default format of the history file is configured at \namelist{PARAM_HISTORY}
 \verb|/| & \\
 }
 
-The unit for \nmitem{HISTORY_DEFAULT_TUNIT} can be selected from \\
+
+\nmitem{HISTORY_DEFAULT_TINTERVAL} is time interval of history output
+and its unit is defined by \nmitem{HISTORY_DEFAULT_TUNIT}.
+The unit can be selected from \\
 \verb|"MSEC", "msec", "SEC", "sec", "s", "MIN", "min", "HOUR", "hour", "h", "DAY", "day"|.\\
+%
+The time interval of history output must be the same as or a factor of the time interval of its related scheme.
+When you want to disable checking this consistency, please set \nmitem{History_ERROR_PUTMISS} to \verb|.false.|.
+
+
 When the average value output is selected as \verb|HISTORY_DEFAULT_TAVERAGE = .true.|,
 the history data averaged over the last period, given as \verb|HISTORY_DEFAULT_TINTERVAL|, is output.
 
@@ -63,7 +71,7 @@ the format for a specific variable can be changed from the default setting.
 \verb|/| & \\
 }
 
-Namelists with ``(OPTION)'' are applied only to the variable \nmitem{ITEM}. If the default setting is used for the variable, the namelist with ``(OPTION)'' can be omitted. For example, let the below setting for \namelist{HISTITEM} be added, maintaining the above setting of \namelist{PARAM_HISTORY}. The snapshot values of \verb|T, U, V| are stored as four-byte real values at an interval of 3600 s in the file \verb|history_d01.xxxxxx.nc|, whereas the value of \verb|RAIN| averaged over the last 600 seconds is stored each time in the file. 
+Namelists with ``(OPTION)'' are applied only to the variable \nmitem{ITEM}. If the default setting is used for the variable, the namelist with ``(OPTION)'' can be omitted. For example, let the below setting for \namelist{HISTITEM} be added, maintaining the above setting of \namelist{PARAM_HISTORY}. The snapshot values of \verb|T, U, V| are stored as four-byte real values at an interval of 3600 s in the file \verb|history_d01.xxxxxx.nc|, whereas the value of \verb|RAIN| averaged over the last 600 seconds is stored each time in the file.
 
 \editbox{
 \verb|&HISTITEM  ITEM = "T" /|\\
