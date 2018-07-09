@@ -1,0 +1,30 @@
+%Setting the physical process
+
+\section{Planetary Boundary Layer scheme} \label{sec:basic_usel_pbl}
+%------------------------------------------------------
+
+The planetary boundary layer (PBL) parameterization scheme is specified in \nmitem{ATMOS_PHY_BL_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|. The timing of the calling of the turbulence scheme is specified in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing.
+
+\editboxtwo{
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_BL_TYPE = "MYNN", | & ; Select the scheme shown in Table \ref{tab:nml_atm_bl}\\
+\verb|/             | & \\
+}
+\begin{table}[h]
+\begin{center}
+  \caption{Choices of planetary boundary layer scheme}
+  \label{tab:nml_atm_bl}
+  \begin{tabularx}{150mm}{lXX} \hline
+    \rowcolor[gray]{0.9}  Value & Description of scheme & Reference\\ \hline
+      \verb|OFF|          & Do not calculate the PBL process &  \\
+      \verb|MYNN|         & MYNN Level 2.5 boundary scheme & \citet{my_1982,nakanishi_2004} \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+\verb|MYNN| is a boundary layer parameterization for Reynolds-Averaged Navier-Stokes equations (RANS).
+The RANS turbulence parameterization is a scheme considering only vertical mixing.
+If you want to consider the horizontal eddy viscosity in RANS simulations,
+sub-grid scale turbulence model can be used for the horizontal mixing.
+See Section \ref{sec:basic_usel_turbulence} for the horizontal mixing.
