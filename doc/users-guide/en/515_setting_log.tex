@@ -27,10 +27,17 @@ Furthermore, the required time for this computation can be estimated from these 
 In this case, 440000s ( $= 2000.2 \times 432000 \div 1984$ ) is the estimated elapsed time.
 
 
-% ----- Future Work ----------------------------------------------------------
-% The description of signal code such as "***" for warning and "xxx" for error,
-% is skipped in this time. Coz, the rule has not been defined regidly,
-% and has not been applied to the source codes.
-% When the policy is defined, add the descriptions about Ticket #1042.
-%
+Message format in the log file is as follows.
 
+\editboxtwo{
+\verb|ERROR [ATMOS_PHY_MP_negative_fixer] large negative is found. rank =            1| & \\
+\verb|      k,i,j,value(QHYD,QV) =           17           8           1   1.7347234759768071E-018   0.0000000000000000| & \\
+\verb|      k,i,j,value(QHYD,QV) =           19           8           1  -5.4717591620764856E-003   0.0000000000000000| & \\
+\verb| :| & \\
+}
+
+In the first line, message type (INFO, WARN, or ERROR) appears at first, followed by subroutine name and message.
+In the subsequent lines, only messages are shown.
+"INFO" denotes general information about the job execution.
+"WARN" denotes considerable event about the job execution.
+"ERROR" denotes fatal error that involves stop of execution.
