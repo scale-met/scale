@@ -23,11 +23,26 @@ Below is an example of such a case.
 \verb|&PARAM_LAUNCHER|       & \\
 \verb| NUM_BULKJOB = 3,|     & number of sub-jobs\\
 \verb| NUM_DOMAIN  = 2,|     & number of nesting domains\\
-\verb| PRC_DOMAINS = 9, 36,|  & \\
-\verb| CONF_FILES  = run.d01.conf, run.d02.conf,| & \\
+\verb| PRC_DOMAINS = 9, 36,|  & number of total process in each domain\\
+\verb| CONF_FILES  = run.d01.conf, run.d02.conf,| & name of configulation files\\
+\verb| LOG_SPLIT   = .false.,| & log-output for mpi splitting?\\
+\verb| COLOR_REORDER = .true.,| & coloring reorder for mpi splitting?\\
+\verb| FAILURE_PRC_MANAGE = .false.,| & use failure process management?\\
+\verb| NUM_FAIL_TOLERANCE = 1, | & tolerance number of failure processes\\
+\verb| FREQ_FAIL_CHECK    = 5, | & FPM polling frequency per DT\\
 \verb|/| \\
 }
 It is sufficient to add item \nmitem{NUM_BULKJOB} to the \verb|launch.conf|. The other configurations are similar to those in Section \ref{subsubsec:launch}. In case of a single-domain experiment (no nesting), specify \nmitem{NUM_DOMAIN} $=$ 1 and assign a file name to \nmitem{CONF_FILES}.
+Log of MPI communicator splitting will output, when \nmitem{LOG_SPLIT} is true. Option of \nmitem{COLOR_REORDER} is job rearrangement
+in communicator groups following the process size of the job. The job which has the largest process size is arranged at the front row;
+this would be reasonable to gain the efficient node-communication.
+
+In the \scalerm bulk job system, a failure process management (FPM) tool is available. FPM is watching the job groups in the prescribed polling
+interval. If some jobs are unfortunately aborted, all jobs are not aborted until the number of failure jobs reacheas to the limit number.
+\nmitem{FAILURE_PRC_MANAGE} is a switch for use FPM tool. \nmitem{NUM_FAIL_TOLERANCE} and \nmitem{FREQ_FAIL_CHECK} are setting parameters
+for limit number of failure jobs and interval of checking failure job. Note, this version of FPM tool is available only for single domain
+calculation, not available of full system for online-nesting calculation. If you want to use FPM tool even in online-nesting calculation,
+\nmitem{NUM_FAIL_TOLERANCE} must be equal to the number of all jobs.
 
 Prior to the execution of bulk jobs, prepare as many directories as the number of jobs, which are called ``sub-directories.'' As in Fig. \ref{fig_bulkjob}, these correspond to \verb|0000/  0001/  0002/|. The directory name is assigned as a four-digit number starting from zero. In each directory, all the necessary files (configuration files, input files, and output directories) must be prepared.
 Note than the path to directoies or files specified in the configuration files must be correctly set up as explained below.
