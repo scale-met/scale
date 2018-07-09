@@ -4,93 +4,171 @@ The ocean process consists of two main parts, i.e., update of sea surface state 
 
 \subsubsection{Sea surface scheme}
 %-------------------------------------------------------------------------------
-The manner of updating sea surface state, such as sea surface temperature, is configured in \nmitem{OCEAN_TYPE} in \namelist{PARAM_OCEAN} in the files \verb|init.conf| and \verb|run.conf|:
+The manner of updating sea surface state, such as sea surface temperature, is configured in \nmitem{OCEAN_DYN_TYPE}, \nmitem{OCEAN_SFC_TYPE}, \nmitem{OCEAN_ALB_TYPE}, and \nmitem{OCEAN_RGN_TYPE} in \namelist{PARAM_OCEAN} in the files \verb|init.conf| and \verb|run.conf|:
 
 \editboxtwo{
 \verb|&PARAM_OCEAN           | & \\
-\verb| OCEAN_TYPE = "CONST", | & ; Select the sea surface type shown in Table \ref{tab:nml_ocean}\\
+\verb| OCEAN_DYN_TYPE = "SLAB", | & ; Select the sea dynamics type shown in Table \ref{tab:nml_ocean_dyn}\\
+\verb| OCEAN_SFC_TYPE = "FIXED-TEMP", | & ; Select the sea surface type shown in Table \ref{tab:nml_ocean_sfc}\\
+\verb| OCEAN_ALB_TYPE = "NAKAJIMA00", | & ; Select the sea albedo type shown in Table \ref{tab:nml_ocean_alb}\\
+\verb| OCEAN_RGN_TYPE = "MOON07", | & ; Select the sea roughness type shown in Table \ref{tab:nml_ocean_rgn}\\
 \verb|/                      | & \\
 }
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of sea surface schemes}
-  \label{tab:nml_ocean}
+  \caption{Choices of sea dynamics schemes}
+  \label{tab:nml_ocean_dyn}
   \begin{tabularx}{150mm}{lX} \hline
     \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
-      \verb|NONE or OFF| & Not using the sea surface model         \\
-      \verb|CONST|        & Fixed as initial condition           \\
-      \verb|FILE|         & Input from external data (temporal variation is available) \\
-      \verb|SLAB|         & Slab ocean model                   \\
+      \verb|NONE or OFF| & Not using the sea model \\
+      \verb|SLAB|        & Slab ocean model \\
+      \verb|INIT|        & Fixed as initial condition \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-If the ocean category is included in land-use setup by \namelist{PARAM_LANDUSE}, neither \verb|"NONE"| nor \verb|"OFF"| can be given to \nmitem{OCEAN_TYPE}. If this condition is not satisfied, the program immediately stops without the computation, and outputs the following message to LOG file:
+\begin{table}[h]
+\begin{center}
+  \caption{Choices of sea surface schemes}
+  \label{tab:nml_ocean_sfc}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
+      \verb|FIXED-TEMP| & Do not update sea surface temperature \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+  \caption{Choices of sea albedo schemes}
+  \label{tab:nml_ocean_alb}
+  \begin{tabularx}{150mm}{llX} \hline
+    \rowcolor[gray]{0.9}  Values & Description of scheme & reference \\ \hline
+      \verb|NAKAJIMA00| & Sea albedo scheme & \citet{nakajima_2000} \\
+      \verb|INIT|       & Fixed as initial condition \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+  \caption{Choices of sea roughness schemes}
+  \label{tab:nml_ocean_rgn}
+  \begin{tabularx}{150mm}{llX} \hline
+    \rowcolor[gray]{0.9}  Values & Description of scheme & reference \\ \hline
+      \verb|MOON07|   & Sea roughness scheme & \citet{moon_2007} \\
+      \verb|MILLER92| & Sea roughness scheme & \citet{miller_1992} \\
+      \verb|INIT|     & Fixed as initial condition \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+If the ocean category is included in land-use setup by \namelist{PARAM_LANDUSE}, neither \verb|"NONE"| nor \verb|"OFF"| can be given to \nmitem{OCEAN_DYN_TYPE}. If this condition is not satisfied, the program immediately stops without the computation, and outputs the following message to LOG file:
 \msgbox{
-\verb|xxx Ocean fraction exists, but ocean components never called. STOP.| \\
+\verb|ERROR [Ocean fraction exists, but ocean components never called. STOP.]| \\
 }
 
-If \nmitem{OCEAN_TYPE} $=$ \verb|"FILE"|, it is necessary to specify an external input file name in files \verb|init.conf| and \verb|run.conf|. In this case, the sea surface temperature varies with time according to spatial distribution and the temporal history of the external file.
+If \nmitem{OCEAN_DYN_TYPE} $=$ \verb|"SLAB"|, the depth of the mixed slab layer can be specified in files \verb|init.conf| and \verb|run.conf|. In this case, the temperature in the mixed slab layer develops over time through heat flux exchange between the atmosphere and the ocean:
 \editboxtwo{
- \verb|&PARAM_OCEAN_PHY_FILE                                    | & \\
- \verb| OCEAN_PHY_FILE_basename   = "",                         | & ; base name of input data \\
- \verb| OCEAN_PHY_FILE_ENABLE_PERIODIC_YEAR  = .false.,         | & ; whether annually cyclic data \\
- \verb| OCEAN_PHY_FILE_ENABLE_PERIODIC_MONTH = .false.,         | & ; whether monthly cyclic data \\
- \verb| OCEAN_PHY_FILE_ENABLE_PERIODIC_DAY   = .false.,         | & ; whether dayly cyclic data \\
- \verb| OCEAN_PHY_FILE_STEP_FIXED            = 0,               | & ; step number when data at a cirtain time step is used. Set the value less than 1 for temporal varied data. \\
- \verb| OCEAN_PHY_FILE_CHECK_COORDINATES     = .true.,          | & ; whether coordinate variables are to be checked \\
- \verb| OCEAN_PHY_FILE_STEP_LIMIT            = 0,               | & ; maximum limit of steps. The data at the time step exceed this limit would not be read. 0 for no limit \\
- \verb|/                                         | & \\
+ \verb|&PARAM_OCEAN_DYN_SLAB            | & \\
+ \verb| OCEAN_DYN_SLAB_DEPTH = 10.0_RP, | & ; water depth of slab ocean [m] \\ 
+ \verb|/                                | & \\
 }
 
-If \nmitem{OCEAN_TYPE} $=$ \verb|"SLAB"|, the depth of the mixed slab layer can be specified in files \verb|init.conf| and \verb|run.conf|. In this case, the temperature in the mixed slab layer develops over time through heat flux exchange between the atmosphere and the ocean:
+If \nmitem{OCEAN_DYN_TYPE} $=$ \verb|"SLAB"|, you can use an external input file name in files \verb|init.conf| and \verb|run.conf|. In this case, the sea surface temperature varies with time according to spatial distribution and the temporal history of the external file with relaxetion time.
 \editboxtwo{
- \verb|&PARAM_OCEAN_PHY_SLAB           | & \\
- \verb| OCEAN_PHY_SLAB_DEPTH = 10.0D0, | & ; Default [m] \\
- \verb|/                               | & \\
+ \verb|&PARAM_OCEAN_DYN_SLAB                                            | & \\
+ \verb| OCEAN_DYN_SLAB_nudging                       = .false.,         | & ; the switch for ocean data nudging \\
+ \verb| OCEAN_DYN_SLAB_nudging_tau                   = 0.0_DP,          | & ; relax time for nudging \\
+ \verb| OCEAN_DYN_SLAB_nudging_tau_unit              = "SEC",           | & ; relax time unit \\
+ \verb| OCEAN_DYN_SLAB_nudging_basename              = "",              | & ; base name of input data \\
+ \verb| OCEAN_DYN_SLAB_nudging_enable_periodic_year  = .false.,         | & ; whether annually cyclic data \\
+ \verb| OCEAN_DYN_SLAB_nudging_enable_periodic_month = .false.,         | & ; whether monthly cyclic data \\
+ \verb| OCEAN_DYN_SLAB_nudging_enable_periodic_day   = .false.,         | & ; whether dayly cyclic data \\
+ \verb| OCEAN_DYN_SLAB_nudging_step_fixed            = 0,               | & ; step number when data at a cirtain time step is used. Set the value less than 1 for temporal varied data. \\
+ \verb| OCEAN_DYN_SLAB_nudging_offset                = 0.0_RP,          | & ; offset value for sea surface temperature \\
+ \verb| OCEAN_DYN_SLAB_nudging_defval                = UNDEF,           | & ; default value for sea surface temperature \\
+ \verb| OCEAN_DYN_SLAB_nudging_check_coordinates     = .true.,          | & ; whether coordinate variables are to be checked \\
+ \verb| OCEAN_DYN_SLAB_nudging_step_limit            = 0,               | & ; maximum limit of steps. The data at the time step exceed this limit would not be read. 0 for no limit \\
+ \verb|/                                                                | & \\
 }
-The albedo on the sea surface does not depend on the scheme selected, and
-is calculated by using only the solar zenith angle.
+When \verb|OCEAN_DYN_SLAB_nudging_tau| $=$ 0, the value of sea surface temperature is totally replaced by the external file. This configuration is the same as \nmitem{OCEAN_TYPE} $=$ \verb|"FILE"| in the old version.
 
 \subsubsection{Flux in atmosphere and ocean}
 %-------------------------------------------------------------------------------
-Once a sea surface scheme except for \verb|NONE| or \verb|OFF| is specified, flux is exchanged at the interface of atmosphere and ocean. The fluxes between the atmosphere and the ocean are calculated by some kind of bulk schemes contained in \scalerm. The scheme for the length of the roughness on the sea surface is also selected from several schemes prepared. The scheme of roughness is specified in \nmitem{ROUGHNESS_TYPE} in \namelist{PARAM_ROUGHNESS} in file \verb|run.conf|. The scheme for the bulk transfer coefficient is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{sec:basic_usel_surface} for more details.
+Once a sea surface scheme is specified, flux is exchanged at the interface of atmosphere and ocean. The fluxes between the atmosphere and the ocean are calculated by some kind of bulk schemes contained in \scalerm. The scheme for the length of the roughness on the sea surface is also selected from several schemes prepared. The scheme for the bulk transfer coefficient is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{sec:basic_usel_surface} for more details.
 
 
 \section{Land model} \label{sec:basic_usel_land}
 %-------------------------------------------------------------------------------
 Similar to the ocean model, the land model consists of two main parts, i.e., an update of the state of the land surface, and calculation of flux at the interface of atmosphere and land. The timing of the calling of these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
 
-\subsubsection{Land surface scheme}
+\subsubsection{Land dynamics/surface scheme}
 %-------------------------------------------------------------------------------
-The land model scheme that updates the state of land, e.g., land surface temperature, soil temperature, and soil moisture, is configured as in \nmitem{LAND_TYPE} in \namelist{PARAM_LAND} in files \verb|init.conf| and \verb|run.conf|:
+The land model scheme that updates the state of land, e.g., land surface temperature, soil temperature, and soil moisture, is configured as in \nmitem{LAND_DYN_TYPE} and \nmitem{LAND_SFC_TYPE} in \namelist{PARAM_LAND} in files \verb|init.conf| and \verb|run.conf|:
 
 \editboxtwo{
 \verb|&PARAM_LAND  | & \\
-\verb| LAND_TYPE = "SLAB", | & ; Select the land type shown in Table \ref{tab:nml_land}\\
+\verb| LAND_DYN_TYPE = "BUCKET", | & ; Select the land dynamics type shown in Table \ref{tab:nml_land_dyn}\\
+\verb| LAND_SFC_TYPE = "SKIN", | & ; Select the land surface type shown in Table \ref{tab:nml_land_sfc}\\
 \verb|/             | & \\
 }
 \begin{table}[hbt]
 \begin{center}
-  \caption{Choices of land surface scheme}
-  \label{tab:nml_land}
+  \caption{Choices of land dynamics scheme}
+  \label{tab:nml_land_dyn}
   \begin{tabularx}{150mm}{lX} \hline
     \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
-      \verb|NONE or OFF| & Do not use land surface model              \\
-      \verb|SLAB|          & Heat diffusion/bucket model                   \\
-      \verb|CONST|         & Do not update soil temperature, soil moister, and land surface temperature in \verb|SLAB| \\
+      \verb|NONE or OFF| & Do not use land dynamics model \\
+      \verb|BUCKET|      & Heat diffusion/bucket model \\
+      \verb|INIT|        & Do not update soil temperature and soil moisture \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+\begin{table}[hbt]
+\begin{center}
+  \caption{Choices of land surface scheme}
+  \label{tab:nml_land_sfc}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
+      \verb|SKIN|       & thin-layered bulk-flux model \\
+      \verb|FIXED-TEMP| & Do not update land surface temperature \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-If the land surface type is included in the land use setup by \namelist{PARAM_LANDUSE}, neither NONE nor OFF can be given to \nmitem{LAND_TYPE}. If this condition is not satisfied, the program immediately terminates without computation, outputting the following message to the LOG file:
+If the land type is included in the land use setup by \namelist{PARAM_LANDUSE}, neither NONE nor OFF can be given to \nmitem{LAND_DYN_TYPE}. If this condition is not satisfied, the program immediately terminates without computation, outputting the following message to the LOG file:
 \msgbox{
-\verb|xxx Land  fraction exists, but land  components never called. STOP.| \\
+\verb|ERROR [Land  fraction exists, but land  components never called. STOP.]| \\
 }
 
-If \nmitem{LAND_TYPE} $=$ \verb|"SLAB"| or \nmitem{LAND_TYPE} $=$ \verb|"CONST"|,
+If \nmitem{LAND_DYN_TYPE} $=$ \verb|"BUCKET"|, you can use an external input file name in files \verb|init.conf| and \verb|run.conf|. In this case, the soil temperature and moisture vary with time according to spatial distribution and the temporal history of the external file with relaxetion time.
+\editboxtwo{
+ \verb|&PARAM_OCEAN_DYN_SLAB                                            | & \\
+ \verb| LAND_DYN_BUCKET_nudging                       = .false.,        | & ; the switch for land data nudging \\
+ \verb| LAND_DYN_BUCKET_nudging_tau                   = 0.0_DP,         | & ; relax time for nudging \\
+ \verb| LAND_DYN_BUCKET_nudging_tau_unit              = "SEC",          | & ; relax time unit \\
+ \verb| LAND_DYN_BUCKET_nudging_basename              = "",             | & ; base name of input data \\
+ \verb| LAND_DYN_BUCKET_nudging_enable_periodic_year  = .false.,        | & ; whether annually cyclic data \\
+ \verb| LAND_DYN_BUCKET_nudging_enable_periodic_month = .false.,        | & ; whether monthly cyclic data \\
+ \verb| LAND_DYN_BUCKET_nudging_enable_periodic_day   = .false.,        | & ; whether dayly cyclic data \\
+ \verb| LAND_DYN_BUCKET_nudging_step_fixed            = 0,              | & ; step number when data at a cirtain time step is used. Set the value less than 1 for temporal varied data. \\
+ \verb| LAND_DYN_BUCKET_nudging_offset                = 0.0_RP,         | & ; offset value for land data \\
+ \verb| LAND_DYN_BUCKET_nudging_defval                = UNDEF,          | & ; default value for land data \\
+ \verb| LAND_DYN_BUCKET_nudging_check_coordinates     = .true.,         | & ; whether coordinate variables are to be checked \\
+ \verb| LAND_DYN_BUCKET_nudging_step_limit            = 0,              | & ; maximum limit of steps. The data at the time step exceed this limit would not be read. 0 for no limit \\
+ \verb|/                                                                | & \\
+}
+When \verb|LAND_DYN_BUCKET_nudging_tau| $=$ 0, the value of sea surface temperature is totally replaced by the external file. This configuration is the same as \nmitem{LAND_TYPE} $=$ \verb|"FILE"| in the old version.
+Note that \nmitem{URBAN_TYPE} has to be \verb|"OFF"| when you use the land surface nudging.
+
+If \nmitem{LAND_DYN_TYPE} except \verb|"NONE"| or \verb|"OFF"| is specified,
 it is necessary to prepare parameter tables for the length of roughness and the input to the land-use distribution.
 A parameter table is provided
 in the file \verb|scale-rm/test/data/land/param.bucket.conf|.\\
@@ -98,7 +176,7 @@ in the file \verb|scale-rm/test/data/land/param.bucket.conf|.\\
 
 \subsubsection{Flux in atmosphere and on land}
 %-------------------------------------------------------------------------------
-Once any land surface scheme except \verb|NONE| or \verb|OFF| is specified, flux is exchanged at the interface of the atmosphere and land. The flux between atmosphere and land is calculated by some kind of land scheme contained in \scalerm. If \nmitem{LAND_TYPE} $=$ \verb|"SLAB"| or \nmitem{LAND_TYPE} $=$ \verb|"CONST"|, the bulk scheme is the same as that for ocean or ideal land surface. This is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{sec:basic_usel_surface} for details.
+Once any land surface scheme is specified, flux is exchanged at the interface of the atmosphere and land. The flux between atmosphere and land is calculated by some kind of land scheme contained in \scalerm. If \nmitem{LAND_SFC_TYPE} $=$ \verb|"SKIN"| or \nmitem{LAND_SFC_TYPE} $=$ \verb|"FIXED-TEMP"|, the bulk scheme is the same as that for ocean or ideal land surface. This is specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in file \verb|run.conf|. Refer to Section \ref{sec:basic_usel_surface} for details.
 
 \section{Urban model} \label{sec:basic_usel_urban}
 %------------------------------------------------------
