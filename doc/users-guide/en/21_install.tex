@@ -134,9 +134,41 @@ In \scalelib, a compilation and an archive are conducted in directory \texttt{sc
 Object files are placed in a hidden directory called \verb|".lib"| under this directory when you carry out a compilation.
 
 When you want to compile it in debug mode, compile it using \verb|"make -j 4 SCALE_DEBUG=T"|.
+(All the environment variables applied at compile time are listed in Table \ref{tab:env_var_list}.)
 If you want to change the compilation options in detail, edit \verb|Makedef.***|.
 
-
+\begin{table}[htb]
+\begin{center}
+\caption{List of environment variables applied at compile time}
+\begin{tabularx}{150mm}{|l|X|} \hline
+ \rowcolor[gray]{0.9} Environment variable & Description  \\ \hline
+ SCALE\_SYS               & Selection of system（necessary）  \\ \hline
+ SCALE\_DISABLE\_MPI      & Do not use MPI（only utils）  \\ \hline
+ SCALE\_DEBUG             & Compile with options for debug  \\ \hline
+ SCALE\_QUICKDEBUG        & Use compile option for quick debug（keep options for speed-up + detect floating point error）  \\ \hline
+ SCALE\_USE\_MASSCHECK    & Add calculation for checking mass conservation（only in dynamical process in SCALE-RM）  \\ \hline
+ SCALE\_USE\_SINGLEFP     & Use single precision floating-point number（for all sources）  \\ \hline
+ SCALE\_USE\_FIXEDINDEX   & Prompt optimization by fixing grid size at compile time  \\ \hline
+ SCALE\_ENABLE\_OPENMP    & Enable OpenMP  \\ \hline
+ SCALE\_ENABLE\_OPENACC   & Enable OpenACC  \\ \hline
+ SCALE\_USE\_AGRESSIVEOPT & Conduct strong optimization with the potentiality of side effect（only with K computer and FX）  \\ \hline
+ SCALE\_DISABLE\_INTELVEC & Suppress option for vectorization（only with Intel compiler）  \\ \hline
+ SCALE\_NETCDF\_INCLUDE   & Include path of NetCDF library  \\ \hline
+ SCALE\_NETCDF\_LIBS      & Library path of NetCDF and specifying libraries  \\ \hline
+ SCALE\_ENABLE\_PNETCDF   & Use Parallel NetCDF  \\ \hline
+ SCALE\_COMPAT\_NETCDF3   & Limit to NetCDF3-compatible features  \\ \hline
+ SCALE\_ENABLE\_MATHLIB   & Use numerical calculation library  \\ \hline
+ SCALE\_MATHLIB\_LIBS     & Directory path of numerical library and specifying libraries  \\ \hline
+ SCALE\_ENABLE\_PAPI      & Use PAPI  \\ \hline
+ SCALE\_PAPI\_INCLUDE     & Include path of PAPI library  \\ \hline
+ SCALE\_PAPI\_LIBS        & Directory path of PAPI library and specifying libraries  \\ \hline
+ SCALE\_DISABLE\_LOCALBIN & Disable making local binary files in directory for test cases  \\ \hline
+ SCALE\_IGNORE\_SRCDEP    & Ignore dependency check at compile time  \\ \hline
+ SCALE\_ENABLE\_SDM       & Use SDM (Super Droplet Method) model  \\ \hline
+\end{tabularx}
+\label{tab:env_var_list}
+\end{center}
+\end{table}
 
 
 
