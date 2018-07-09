@@ -112,3 +112,28 @@ Each measurement section has the output level. The sections larger than the \nmi
 When \nmitem{PROF_mpi_barrier} is \verb|.true.|, barrier command of MPI is called before and after getting current time.
 This option is useful to separate the computation time and communication time.
 The computation time often shows large imbalance among the processes.
+
+
+
+%-------------------------------------------------------------------------------
+\section{Setting Statistics Monitor} \label{subsec:statistics}
+%-------------------------------------------------------------------------------
+
+The statistics monitor is specified in \namelist{PARAM_STATISTICS} in files \verb|init.conf| and \verb|run.conf|.
+
+\editboxtwo{
+\verb|&PARAM_STATISTICS                    | & \\
+\verb| STATISTICS_checktotal     = .false. | & ; Calculate and report variable totals to logfile? \\
+\verb| STATISTICS_use_globalcomm = .false. | & ; Calculate total with global communication? \\
+\verb|/                                    | & \\
+}
+
+\noindent
+When \nmitem{STATISTICS_checktotal} is \verb|.true.|, domain total of some variables are calculated and reported to the log file, for debugging.
+%
+When \nmitem{STATISTICS_use_globalcomm} is \verb|.true.|, global domain total is calculated by using global communication.
+This option can slow the simulation time.
+When the option is \verb|.false.|, local domain total is calculated in each process.
+
+
+
