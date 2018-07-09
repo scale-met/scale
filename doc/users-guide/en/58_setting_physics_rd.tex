@@ -196,10 +196,11 @@ The example of configuration of putting five files above to the current director
 \verb|/| & \\
 }\\
 
-Gases considered in radiation calculation are carbon dioxide($CO_{2}$), ozone($O_{3}$), Nauru's oxide($N_{2}O$), carbon monoxide($CO$), methane($CH_{4}$), oxigen($O_{2}$), and chlorofluorocarbons($CFCs$). These concentrations are able to be set to zero in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}.
+Gases considered in radiation calculation are water vapor($H_{2}O$), carbon dioxide($CO_{2}$), ozone($O_{3}$), Nauru's oxide($N_{2}O$), carbon monoxide($CO$), methane($CH_{4}$), oxigen($O_{2}$), and chlorofluorocarbons($CFCs$). These concentrations are able to be set to zero in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}.
 
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_RD_PROFILE | & \\
+\verb| ATMOS_PHY_RD_PROFILE_USE_H2O = .true. | & When false, H2O concentration is zero.\\
 \verb| ATMOS_PHY_RD_PROFILE_USE_CO2 = .true. | & When false, CO2 concentration is zero.\\
 \verb| ATMOS_PHY_RD_PROFILE_USE_O3  = .true. | & When false, O3 concentration is zero.\\
 \verb| ATMOS_PHY_RD_PROFILE_USE_N2O = .true. | & When false, N2O concentration is zero.\\
