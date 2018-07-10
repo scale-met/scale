@@ -126,7 +126,7 @@ files.each do |fname|
         case line_new
         when /^\s*(public|private)\s* ::/i
           next
-        when /^\s*module\s*([^\s]+)\s*$/i
+        when /^\s*(?:program|module)\s*([^\s]+)\s*$/i
           modname = $1.strip
         when /^([^,]+).*(intent\([^\)]+\))?.*::([^=]+)(=.*)?$/i
           next if $2
@@ -151,7 +151,7 @@ files.each do |fname|
           group.strip!
           lists = lists.split(",").map{|c| c.strip.upcase}
           namelists[group] = lists
-        when /call HIST_in\s*\((.+)$/i
+        when /call FILE_HISTORY_in\s*\((.+)$/i
           next if modname == "scale_history"
           str = $1.strip.sub(/\)\Z/,"").strip
           str.gsub!(/\(:[^)]*\)/,'')
@@ -295,7 +295,7 @@ if nm_params.any?
 EOL
     nm_params.sort.each do |name,ary|
       list = ary.map do |mod, group|
-        file.print "!>    <tr><td>#{name}</td><td>@ref namelist_#{mod}_#{group} \"#{group}\"</td><td>#{mod}</td></tr>\n"
+        file.print "!>    <tr><td>#{name}</td><td>@ref namelist_#{mod}_#{group} \"#{group}\"</td><td>@ref #{mod.downcase} \"#{mod}\"</td></tr>\n"
       end
     end
     file.print <<EOL
