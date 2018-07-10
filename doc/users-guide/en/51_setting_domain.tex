@@ -3,7 +3,8 @@
 
 This section explains the number of grids, and the target domain and its relationship with the MPI process. The calculation domain is determined by the horizontal grid spacing, the number of grid points, and the number of MPI processes. Figure \ref{fig:domain} gives an example of this relationship. The parallelization is implemented by a 2D domain decomposition in the horizontal direction.
 
-The numbers of grids and of MPI processes are specified in \nmitem{IMAX, JMAX} in \namelist{PARAM_INDEX}, and in \nmitem{PRC_NUM_X, PRC_NUM_Y} in \namelist{PARAM_PRC}, respectively. As shown in Fig. \ref{fig:domain},  the entire domain is divided into \nmitem{PRC_NUM_X} along the X direction and \nmitem{PRC_NUM_Y} in the Y direction.
+The numbers of grids and of MPI processes are specified in \nmitem{IMAX, JMAX} in\\
+\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}, and in \nmitem{PRC_NUM_X, PRC_NUM_Y} in \namelist{PARAM_PRC_CARTESC}, respectively. As shown in Fig. \ref{fig:domain},  the entire domain is divided into \nmitem{PRC_NUM_X} along the X direction and \nmitem{PRC_NUM_Y} in the Y direction.
 The process number starts zero and is numbered in order from the bottom left to the top right (Arrow in Fig. \ref{fig:domain}).
 Each sub-domain is managed by an MPI process, each of which takes charge of a grid block of IMAX $\times$ JMAX $\times$ KMAX. Care is taken to ensure that this number of grids is taken charge of by one process: its value is not identical to the total number of grids in the domain. In other words, the entire domain depends on the number of MPI processes, the horizontal grid spacing, and the number of grids.
 
@@ -18,7 +19,8 @@ Thus, the number of grids along each horizontal direction and that in the entire
           \times (\verb|JMAX| \times \verb|PRC_NUM_Y|)
           \times (\verb|KMAX| ),
 \end{eqnarray}
-where \nmitem{KMAX} is the number of grids along the vertical direction, which is specified in \namelist{PARAM_INDEX}.
+where \nmitem{KMAX} is the number of grids along the vertical direction, which is specified in\\
+\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}.
 
 By using Eqs. (\ref{eq:xgridnum} and \ref{eq:ygridnum}),  the size of the entire domain is determined as follows:
 \begin{eqnarray}
@@ -27,7 +29,7 @@ By using Eqs. (\ref{eq:xgridnum} and \ref{eq:ygridnum}),  the size of the entire
 && \verb|Domain length in the Y direction| \nonumber\\
 &&    \qquad = \verb|number of grids in the Y direction| \times \verb|DY|,
 \end{eqnarray}
-where \nmitem{DX, DY} is grid spacings specified  in \namelist{PRAM_GRID} as described in subsection \ref{subsec:gridinterv}.
+where \nmitem{DX, DY} is grid spacings specified  in \namelist{PARAM_ATMOS_GRID_CARTESC} as described in subsection \ref{subsec:gridinterv}.
 If the horizontal resolution and domain size are set and the available number of MPI processes is given, the number of grids that are controlled by one MPI process can be determined as in the above relationship.
 
 In the next subsections, the configuration of the MPI processes, the number of grids, and the grid interval are described in more detail.  \textcolor{blue}{Note that it is necessary that these settings  be identical among the configuration files \texttt{pp.conf},  \texttt{init.conf}, and \texttt{run.conf}}.
@@ -48,11 +50,11 @@ In the next subsections, the configuration of the MPI processes, the number of g
 \subsection{Setting the number of MPI processes} \label{subsec:relation_dom_reso2}
 %-----------------------------------------------------------------------
 
-The number of MPI processes is specified in \namelist{PARAM_PRC} in the configuration file. Since the input and output files of \scalerm are divided process by process according to the MPI, the total number of files is changed according to the number of MPI processes. For example, the initial condition file made by a two-MPI parallel combination cannot be used for model execution by a four-MPI parallel.
-It is necessary to edit \namelist{PARAM_PRC} in \verb|pp.conf|, \verb|init.conf|, and \verb|run.conf| if the number of MPI processes is changed,
+The number of MPI processes is specified in \namelist{PARAM_PRC_CARTESC} in the configuration file. Since the input and output files of \scalerm are divided process by process according to the MPI, the total number of files is changed according to the number of MPI processes. For example, the initial condition file made by a two-MPI parallel combination cannot be used for model execution by a four-MPI parallel.
+It is necessary to edit \namelist{PARAM_PRC_CARTESC} in \verb|pp.conf|, \verb|init.conf|, and \verb|run.conf| if the number of MPI processes is changed,
 and to conduct once again the processes of \verb|pp| and \verb|init|.
 \editboxtwo{
-\verb|&PARAM_PRC| & \\
+\verb|&PARAM_PRC_CARTESC| & \\
 \verb| PRC_NUM_X       = 2,| & ; number of divisions by MPI parallelization in the {\XDIR}（zonal direction）\\
 \verb| PRC_NUM_Y       = 1,| & ; number of divisions by MPI parallelization in the {\YDIR}（meridional direction）\\
 \verb|/|\\
@@ -67,9 +69,9 @@ The above example expresses a two-MPI parallel by dividing the domain into two s
 \subsection{Setting the number of horizontal and vertical grids} \label{subsec:relation_dom_reso3}
 %-----------------------------------------------------------------------
 
-The number of grids is specified in \namelist{PARAM_INDEX} in the configuration files \verb|***.conf|. It should be noted that the specified horizontal grids are values controlled by one MPI process.
+The number of grids is specified in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX} in the configuration files \verb|***.conf|. It should be noted that the specified horizontal grids are values controlled by one MPI process.
 \editboxtwo{
-\verb|&PARAM_INDEX| & \\
+\verb|&PARAM_ATMOS_GRID_CARTESC_INDEX| & \\
 \verb| KMAX = 97,|  & ; number of vertical layers \\
 \verb| IMAX = 20,|  & ; number of grids along the X direction by an MPI process\\
 \verb| JMAX = 25,|  & ; number of grids along the Y direction by an MPI process\\
@@ -81,9 +83,9 @@ The number of grids is specified in \namelist{PARAM_INDEX} in the configuration 
 %-----------------------------------------------------------------------
 
 Excluding the buffer region explained in Section \ref{subsec:buffer}, the horizontal grid intervals are configured only equidistantly, whereas the
- vertical grid intervals are configured freely. When the grid intervals are  configured uniformly along all directions, specify the zonal, meridional, and vertical grid intervals  at \nmitem{DX, DY, DZ} in \namelist{PARAM_GRID}, respectively. The unit is [m].
+ vertical grid intervals are configured freely. When the grid intervals are  configured uniformly along all directions, specify the zonal, meridional, and vertical grid intervals  at \nmitem{DX, DY, DZ} in \namelist{PARAM_ATMOS_GRID_CARTESC}, respectively. The unit is [m].
 \editboxtwo{
-\verb|&PARAM_GRID  | & \\
+\verb|&PARAM_ATMOS_GRID_CARTESC  | & \\
 \verb| DX = 500.D0,| & ; grid interval along the zonal (X) direction\\
 \verb| DY = 500.D0,| & ; grid interval along the meridional（Y）direction\\
 \verb| DZ = 500.D0,| & ; grid interval along the vertical (Z) direction\\
@@ -93,9 +95,9 @@ Excluding the buffer region explained in Section \ref{subsec:buffer}, the horizo
 The box below shows the method to set how to specify a non-uniform grid system.
 Since the model employs the Lorenz grid system, the points of definition for the velocity vector and other scalars are staggered, deviating by a half grid.
 In this document, the scalar location is called the center point and the half-grid-deviated location the face point.
-When the vertical grid locations are directly specified, provide them in \nmitem{FZ(:)} in \namelist{PARAM_GRID} as an array.\footnote{In this case, the same precision as used in the simulation is recommended to be specified. By default, the model is compiled as a double-precision floating point model.} Refer to Figure \ref{fig:scale_grid} for the details. Note that the number of elements specified in \nmitem{FZ(:)} should correspond to the number of vertical layers (\nmitem{KMAX} in \namelist{PARAM_INDEX}). The following file for the ideal experiment is shown as an example:
+When the vertical grid locations are directly specified, provide them in \nmitem{FZ(:)} in \namelist{PARAM_ATMOS_GRID_CARTESC} as an array.\footnote{In this case, the same precision as used in the simulation is recommended to be specified. By default, the model is compiled as a double-precision floating point model.} Refer to Figure \ref{fig:scale_grid} for the details. Note that the number of elements specified in \nmitem{FZ(:)} should correspond to the number of vertical layers (\nmitem{KMAX} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}). The following file for the ideal experiment is shown as an example:
 \editboxtwo{
-\verb|&PARAM_GRID|     & \\
+\verb|&PARAM_ATMOS_GRID_CARTESC|     & \\
 \verb| DX = 500.D0,|   & grid interval along the X direction (equidistant) [m]\\
 \verb| DY = 500.D0,|   & grid interval along the Y direction (equidistant) [m]\\
 \verb| FZ(:) = |       & location at face point along the Z direction [m] \\
@@ -118,7 +120,7 @@ When the vertical grid locations are directly specified, provide them in \nmitem
 \begin{figure}[tb]
 \begin{center}
   \includegraphics[width=0.4\hsize]{./figure/verticalface.eps}\\
-  \caption{The point of definition of the face point in \scalerm. If \nmitem{FZ} is given in \namelist{PARAM_GRID}, the top height at the first layer is given for the value at $k=1$. Note that $k=1$ is not the ground surface height.}
+  \caption{The point of definition of the face point in \scalerm. If \nmitem{FZ} is given in \namelist{PARAM_ATMOS_GRID_CARTESC}, the top height at the first layer is given for the value at $k=1$. Note that $k=1$ is not the ground surface height.}
   \label{fig:scale_grid}
 \end{center}
 \end{figure}
@@ -159,7 +161,7 @@ To avoid these problems, the ``buffer region'' is placed in the domain.
 As shown in Fig.\ref{fig:buff_xz}, \scalerm places the buffer region just inside the calculation domain. In the buffer region, prognostic variables are updated to be close to the specified values of boundary data and/or the parent model data with a certain relaxation time. Hereinafter, this relaxation is called nudging.
 %As described in \ref{subsec:raydamp}, Rayleigh damping is often applied at the upper layers. If nudging at the upper layers is required, the thickness of the sponge layer for Rayleigh damping should be set to zero.
 If \nmitem{ATMOS_BOUNDARY_TYPE} in \namelist{PARAM_ATMOS_BOUNDARY} is \verb|REAL|, no nudging is applied in upper boundary by default.
-The width of the buffer region is specified in \namelist{PARAM_GRID} in the configuration file. Note again that the configuration in all procedures must be identical. There are two methods to configure the width of the buffer region.
+The width of the buffer region is specified in \namelist{PARAM_ATMOS_GRID_CARTESC} in the configuration file. Note again that the configuration in all procedures must be identical. There are two methods to configure the width of the buffer region.
 
 \begin{enumerate}
 \item specify number of grid of the buffer region with \nmitem{BUFFER_NX, BUFFER_NY, BUFFER_NZ} \\
@@ -174,14 +176,14 @@ Note that the actual target region unaffected by the nudging (the region excludi
 Two examples are as below.
 
 \editboxtwo{
-\verb|&PARAM_GRID | & \\
+\verb|&PARAM_ATMOS_GRID_CARTESC | & \\
  \verb|BUFFER_NX = 30,   | & ; The number of grid for the buffer region along the X (zonal) direction\\
  \verb|BUFFER_NY = 30,   | & ; The number of grid for the buffer region along the Y (meridional) direction\\
  \verb|BUFFFACT  = 1.D0, | & ; Stretched factor for grid intervals in the buffer region( default : 1.0 )\\
 \verb|/|\\
 }
 \editboxtwo{
-\verb|&PARAM_GRID | & \\
+\verb|&PARAM_ATMOS_GRID_CARTESC | & \\
  \verb|BUFFER_DZ  = 5000.D0,   | & ; The width of the buffer region along the Z direction from the top of the model (a reference) [m]\\
  \verb|BUFFER_DX  = 300000.D0, | & ; The width of the buffer region along the X (zonal) direction ( a reference ) [m]\\
  \verb|BUFFER_DY  = 300000.D0, | & ; The width of the buffer region along the Y (meridional) direction ( a reference ) [m]\\
@@ -238,7 +240,7 @@ Please refer to section \ref{sec:timeintiv} for \nmitem{TIME_DT}.
 \subsubsection{Method for stretching grid intervals in buffer region}
 %-----------------------------------------------------------------------
 
-The grid intervals in the buffer region are the same as \nmitem{DX, DY, DZ} in \namelist{PARAM_GRID} by default.
+The grid intervals in the buffer region are the same as \nmitem{DX, DY, DZ} in \namelist{PARAM_ATMOS_GRID_CARTESC} by default.
 But, it is possible for them to be stretched by setting \nmitem{BUFFFACT} $>$ 1. This specification of \nmitem{BUFFFACT} is applied in all directions if the grid intervals are uniformly specified. When the stretched factor is configured separately in every direction, specify \nmitem{BUFFFACT_X, BUFFFACT_Y, BUFFFACT_Z}. Note that in case of the configuration of vertical levels by giving \nmitem{FZ(:)} (refer to \ref{subsec:gridinterv}), the above stretched settings have no effect along the vertical direction.
 
 The grid interval \verb|BDX| in the buffer region is determined as follows:
