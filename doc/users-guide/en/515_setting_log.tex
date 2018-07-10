@@ -26,11 +26,30 @@ This line presents messages about status of computation as follows:
 Furthermore, the required time for this computation can be estimated from these information.
 In this case, 440000s ( $= 2000.2 \times 432000 \div 1984$ ) is the estimated elapsed time.
 
+\vspace{2ex}
+Messages in the log file are output in following format.
+\msgbox{
+\texttt{{\it type} [{\it subroutine name}] {\it message}} \\
+\texttt{\hspace{2em}{\it messages}} \\
+\texttt{\hspace{2em} ... }
+}
+\begin{description}
+ \item[{\it type}]: message type that can take one of the following.
+   \begin{itemize}
+    \item INFO: General information about job execution
+    \item WARN: Considerable event about job execution
+    \item ERROR: Fatal error that involves stop of execution
+   \end{itemize}
+ \item[{\it subroutine name}]: the subroutine name writing the message.
+ \item[{\it message}]: the main body of the message.
+\end{description}
 
-% ----- Future Work ----------------------------------------------------------
-% The description of signal code such as "***" for warning and "xxx" for error,
-% is skipped in this time. Coz, the rule has not been defined regidly,
-% and has not been applied to the source codes.
-% When the policy is defined, add the descriptions about Ticket #1042.
-%
+
+\noindent The sample of error message is as follows.
+\msgbox{
+\verb|ERROR [ATMOS_PHY_MP_negative_fixer] large negative is found. rank =            1| \\
+\verb|      k,i,j,value(QHYD,QV) =           17           8           1   1.7347234759768071E-018   0.0000000000000000| \\
+\verb|      k,i,j,value(QHYD,QV) =           19           8           1  -5.4717591620764856E-003   0.0000000000000000| \\
+\verb|  ... |
+}
 
