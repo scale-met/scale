@@ -12,14 +12,27 @@ The reference has the following information:
 \end{itemize}
 
 
-
+\subsection{Subroutines}
 The subroutine information contains the description, arguments, and call graph.
+The source code of the subroutine can be also seen.
 Users can find subroutins through the module list or file list, which are linked at the top page or the top menu.
+The module list has brief description of each module.
 
-The NAMELIST parameter list has the variable name, NAMELIST group name, and module name where the variable is defined.
+The name of the subroutines has a prefix of module name except the prefix of module names.
+The prefix of module name is ``scale\_'' for \scalelib and ``mod\_'' for \scalerm.
+The file name is the same as the module but suffix of ``.F90''.
+For example, the subroutine of \verb|ATMOS_ADIABAT_cape| is contained in the module of \verb|scale_atmos_adiabat| in the file of \verb|scale_atmos_adiabat.F90|.
+
+
+\subsection{NAMELIST Parameters}
+You can see the NAMELIST parameter list throught the link at the top page of the rference manual, or the directly at \url{https://scale.aics.riken.jp/doc/\version/namelist.html}.
+The list has the parameter name, NAMELIST group name, and module name where the variable is defined.
 The parameters are sorted by the variable name.
 The detail information of parameters can be see by clicking the NAMELIST group name or module name.
 
-The History variable list has the variable name, brief description, and module name where the variable is registered for the history data.
+
+\subsection{History Variables}
+You can see the History variable list throught the link at the top page of the rference manual, or the directly at \url{https://scale.aics.riken.jp/doc/\version/history.html}.
+The list has the variable name, brief description, and module name where the variable is registered for the history data.
 The variables are sorted by the module name.
 The detail information of parameters can be see by clicking the module name.
