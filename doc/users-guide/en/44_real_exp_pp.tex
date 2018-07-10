@@ -15,29 +15,29 @@ such as the position of the domain and the number of grids.
 Since \verb|pp.d01.conf| has already been edited for this tutorial, it can be used without any change.
 The setting of this experiment is shown in Table \ref{tab:grids}.
 
-In Namelists in \verb|pp.d01.conf|, the parameters related to the domain are configured in \namelist{PARAM_PRC},
-\namelist{PARAM_INDEX}, and \namelist{PARAM_GRID}.
+In Namelists in \verb|pp.d01.conf|, the parameters related to the domain are configured in \namelist{PARAM_PRC_CARTESC},
+\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}, and \namelist{PARAM_ATMOS_GRID_CATESC}.
 The domain is decomposed along each of the X and Y directions into two domains.
 Thus, four MPI processes are used.
 The number of grids per MPI process is \nmitem{IMAX = 45} and \nmitem{JMAX = 45}.
 Thus, the total number of grids is 90 ($= 2 \times 45$) along the X and Y directions.
-The grid spacings in each direction \nmitem{DX, DY} in \namelist{PARAM_GRID} is 20,000 m (20 km).
+The grid spacings in each direction \nmitem{DX, DY} in \namelist{PARAM_ATMOS_GRID_CARTESC} is 20,000 m (20 km).
 This means that the domain of calculation is an area of 1,800 km $\times$ 1,800 km because one side has length 90 $\times$ 20 km.
 \editbox{
-\verb|&PARAM_PRC| \\
+\verb|&PARAM_PRC_CARTESC| \\
 \verb| PRC_NUM_X      = 2,| \\
 \verb| PRC_NUM_Y      = 2,| \\
 \verb| PRC_PERIODIC_X = .false.,| \\
 \verb| PRC_PERIODIC_Y = .false.,| \\
 \verb|/| \\
  \\
-\verb|&PARAM_INDEX| \\
+\verb|&PARAM_ATMOS_GRID_CARTESC_INDEX| \\
 \verb| KMAX = 36,| \\
 \verb| IMAX = 45,| \\
 \verb| JMAX = 45,| \\
 \verb|/| \\
  \\
-\verb|&PARAM_GRID| \\
+\verb|&PARAM_ATMOS_GRID_CARTESC| \\
 \verb| DX = 20000.0, |\\
 \verb| DY = 20000.0, |\\
 \verb| FZ(:) =    80.841,   248.821,   429.882,   625.045,   835.409,  1062.158,|\\
