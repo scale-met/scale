@@ -9,7 +9,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-program scalerm_launcher
+program scalerm_init
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -244,4 +244,4 @@ program scalerm_launcher
   if( universal_master ) write(*,*) '*** End   Launch System for SCALE-RM'
 
   stop
-end program scalerm_launcher
+end program scalerm_init
