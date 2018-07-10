@@ -23,9 +23,15 @@ The directory \texttt{scale-{\version}/} can be seen when the tarball file of th
 \subsubsection{Setting Makedef file and environment variables} \label{subsec:environment}
 %-----------------------------------------------------------------------------------
 
-\scalelib is compiled using a Makedef file specified in the environment variable ``\verb|SCALE_SYS|.''  Several variations of the Makedef file corresponding to computer environment are prepared in the directory \texttt{scale-{\version}/sysdep/}.  Choose a Makedef file according to your environment. Table \ref{tab:makedef} shows  environments that support Makedef files that have already been checked. If there is no file for your environment,  create a Makedif file by modifying any existing one.
-For example, if you use Linux x86-64 OS, a GNU compiler, and openMPI, "Makedef.Linux64-gnu-ompi" is apropriate.
-If installation is conducted in another environment, change the file name according to Table \ref{tab:makedef}. An environment variable must also be specified as follows:
+\scalelib is compiled using a Makedef file
+specified in the environment variable ``\verb|SCALE_SYS|.''
+Several variations of the Makedef file corresponding to computer environment are prepared in the directory \texttt{scale-{\version}/sysdep/}.
+Choose a Makedef file according to your environment.
+Table \ref{tab:makedef} shows environments that Makedef files have supported. If there is no file for your environment, create a Makedif file by modifying any existing one.
+For example,
+if you use Linux x86-64 OS, a GNU compiler, and openMPI,
+"Makedef.Linux64-gnu-ompi" is apropriate.
+An environment variable must also be specified as follows:
 \begin{verbatim}
  $ export SCALE_SYS="Linux64-gnu-ompi"
 \end{verbatim}
