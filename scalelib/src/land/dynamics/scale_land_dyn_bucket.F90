@@ -41,23 +41,24 @@ module scale_land_dyn_bucket
   !
   !++ Private parameters & variables
   !
-  logical,               private :: LAND_DYN_BUCKET_update_bottom_temp  = .false. ! Is LAND_TEMP  updated in the lowest level?
-  logical,               private :: LAND_DYN_BUCKET_update_bottom_water = .false. ! Is LAND_WATER updated in the lowest level?
+  logical,                private :: LAND_DYN_BUCKET_update_bottom_temp  = .false. ! Is LAND_TEMP  updated in the lowest level?
+  logical,                private :: LAND_DYN_BUCKET_update_bottom_water = .false. ! Is LAND_WATER updated in the lowest level?
 
-  logical,               private :: LAND_DYN_BUCKET_nudging                                          = .false. ! Is nudging for land physics used?
-  real(RP),              private :: LAND_DYN_BUCKET_nudging_tau                                      = 0.0_RP  ! time constant for nudging [sec]
-  character(len=H_LONG), private :: LAND_DYN_BUCKET_nudging_basename(FILE_EXTERNAL_INPUT_file_limit) = ''
-  logical,               private :: LAND_DYN_BUCKET_nudging_enable_periodic_year                     = .false.
-  logical,               private :: LAND_DYN_BUCKET_nudging_enable_periodic_month                    = .false.
-  logical,               private :: LAND_DYN_BUCKET_nudging_enable_periodic_day                      = .false.
-  integer,               private :: LAND_DYN_BUCKET_nudging_step_fixed                               = 0
-  real(RP),              private :: LAND_DYN_BUCKET_nudging_offset                                   = 0.0_RP
-  real(RP),              private :: LAND_DYN_BUCKET_nudging_defval                                 ! = UNDEF
-  logical,               private :: LAND_DYN_BUCKET_nudging_check_coordinates                        = .true.
-  integer,               private :: LAND_DYN_BUCKET_nudging_step_limit                               = 0
+  logical,                private :: LAND_DYN_BUCKET_nudging                                          = .false. ! Is nudging for land physics used?
+  real(DP),               private :: LAND_DYN_BUCKET_nudging_tau                                      = 0.0_DP  ! time constant for nudging [sec]
+  character(len=H_SHORT), private :: LAND_DYN_BUCKET_nudging_tau_unit                                 = "SEC"
+  character(len=H_LONG),  private :: LAND_DYN_BUCKET_nudging_basename(FILE_EXTERNAL_INPUT_file_limit) = ''
+  logical,                private :: LAND_DYN_BUCKET_nudging_enable_periodic_year                     = .false.
+  logical,                private :: LAND_DYN_BUCKET_nudging_enable_periodic_month                    = .false.
+  logical,                private :: LAND_DYN_BUCKET_nudging_enable_periodic_day                      = .false.
+  integer,                private :: LAND_DYN_BUCKET_nudging_step_fixed                               = 0
+  real(RP),               private :: LAND_DYN_BUCKET_nudging_offset                                   = 0.0_RP
+  real(RP),               private :: LAND_DYN_BUCKET_nudging_defval                                 ! = UNDEF
+  logical,                private :: LAND_DYN_BUCKET_nudging_check_coordinates                        = .true.
+  integer,                private :: LAND_DYN_BUCKET_nudging_step_limit                               = 0
 
-  real(RP),              private :: WATER_DENSCS !< Heat Capacity (rho*CS) for soil moisture [J/K/m3]
-
+  real(RP),               private :: WATER_DENSCS !< Heat Capacity (rho*CS) for soil moisture [J/K/m3]
+  real(DP),               private :: LAND_DYN_BUCKET_nudging_tausec  !< Relaxation time [sec]
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -68,6 +69,8 @@ contains
     use scale_const, only: &
        DWATR => CONST_DWATR, &
        CL    => CONST_CL
+    use scale_calendar, only: &
+       CALENDAR_unit2sec
     use scale_file_external_input, only: &
        FILE_EXTERNAL_INPUT_regist
     use scale_const, only: &
@@ -77,6 +80,7 @@ contains
     namelist / PARAM_LAND_DYN_BUCKET / &
        LAND_DYN_BUCKET_nudging,                       &
        LAND_DYN_BUCKET_nudging_tau,                   &
+       LAND_DYN_BUCKET_nudging_tau_unit,              &
        LAND_DYN_BUCKET_nudging_basename,              &
        LAND_DYN_BUCKET_nudging_enable_periodic_year,  &
        LAND_DYN_BUCKET_nudging_enable_periodic_month, &
@@ -109,6 +113,15 @@ contains
     LOG_NML(PARAM_LAND_DYN_BUCKET)
 
     if ( LAND_DYN_BUCKET_nudging ) then
+       call CALENDAR_unit2sec( LAND_DYN_BUCKET_nudging_tausec, LAND_DYN_BUCKET_nudging_tau, LAND_DYN_BUCKET_nudging_tau_unit )
+
+       LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Use nudging for OCEAN physics : ON'
+       LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Relaxation time Tau [sec]     : ', LAND_DYN_BUCKET_nudging_tausec
+
+       if ( LAND_DYN_BUCKET_nudging_tausec == 0.0_RP ) then
+          LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Tau=0 means that LST is completely replaced by the external data.'
+       endif
+
        if ( LAND_DYN_BUCKET_nudging_basename(1) == '' ) then
           LOG_ERROR("LAND_DYN_BUCKET_setup",*) 'LAND_DYN_BUCKET_nudging_basename is necessary !!'
           call PRC_abort
@@ -249,8 +262,8 @@ contains
         ! nudging is used
         solve_matrix = .true.
 
-        NDG_TEMP (:,:,:) = ( TEMP1 (:,:,:) - TEMP (:,:,:) ) / LAND_DYN_BUCKET_nudging_tau * dt
-        NDG_WATER(:,:,:) = ( WATER1(:,:,:) - WATER(:,:,:) ) / LAND_DYN_BUCKET_nudging_tau * dt
+        NDG_TEMP (:,:,:) = ( TEMP1 (:,:,:) - TEMP (:,:,:) ) / LAND_DYN_BUCKET_nudging_tausec * dt
+        NDG_WATER(:,:,:) = ( WATER1(:,:,:) - WATER(:,:,:) ) / LAND_DYN_BUCKET_nudging_tausec * dt
 
       else
         ! replace data to reference
