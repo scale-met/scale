@@ -3,34 +3,31 @@ and the minimum computational requirements for their execution.
 
 \section{System environment} \label{sec:req_env}
 %====================================================================================
-\subsubsection{Recommended Hardware}
+\subsubsection{Recommended Hardwares}
 
   Although the necessary hardware depends on the experiment to be performed,
-the following are the specifications for conducting a tutorial as in Chapters \ref{chap:tutorial_ideal} and \ref{chap:tutorial_real}.
+the following are the specifications for conducting the tutorial as in Chapters \ref{chap:tutorial_ideal} and \ref{chap:tutorial_real}.
 
   \begin{itemize}
     \item {\bf CPU} :
-    The system need to have more than two and more than four physical cores
-    for an ideal experiment and a real atmospheric experiment, respectively.
+    The system need to have more than or more than two physical cores for the ideal experiment in the tutorial, and more than or equal to four for the real atmospheric experiment.
     \item {\bf Memory} :
     The system needs 512 MB and 2 GB memory
-    for the ideal experiment and a real atmospheric experiment, respectively.
+    for the ideal experiment and the real atmospheric experiment, respectively.
     Note that this applies to the case involving the use of double-precision floating points.
-    \item {\bf HDD} : The system needs to have 3 GB of free disk space in a real atmospheric experiment.
+    \item {\bf HDD} : The system needs to have 3 GB of free disk space in the real atmospheric experiment.
   \end{itemize}
 
 
-\subsubsection{Required Software}
+\subsubsection{Required Softwares}
 
   \begin{itemize}
-  \item {\bf OS} : Linux OS, Mac OS X
+  \item {\bf OS} : Linux OS, Mac OS
   %Refer to Table \ref{tab:compatible_os} for other OSs currently supported.
   \item {\bf Compiler} : C, Fortran
   \end{itemize}
 
 Since the source code of \scalelib is  written in FORTRAN 2003 standard syntax, the compiler must support it. For example, GNU gfortran version 4.3 or previous versions cannot be used for \scalelib compilation because they do not follow the FORTRAN 2003 standard. Refer to Table \ref{tab:compatible_compiler} for compilers already confirmed as supported.
-
-In addition to the above environment, it has been confirmed that \scalelib can be compiled and run on  machines with a SPARC-based instruction set, such as the K Computer.
 
 
 \begin{table}[tb]
@@ -50,23 +47,16 @@ In addition to the above environment, it has been confirmed that \scalelib can b
 
 \subsubsection{Required libraries}\label{sec:inst_env}
 
-The required external libraries are described below; each library is commonly used.
+The required external libraries are described below:
 \begin{itemize}
-\item HDF5 Library (\url{https://www.hdfgroup.org/HDF5/})
+%\item HDF5 Library (\url{https://www.hdfgroup.org/HDF5/})
 \item {\netcdf} Library (\url{http://www.unidata.ucar.edu/software/netcdf/})
-\item MPI Library (openMPI version、\url{http://www.open-mpi.org/})
+\item MPI Library (e.g., openMPI \url{http://www.open-mpi.org/})
 \item LAPACK ( \url{http://www.netlib.org/lapack/} ) (only required for \scalegm)
 \end{itemize}
 
 
 The MPI library should support the MPI 1.0/2.0 protocol.  Refer to Table \ref{tab:compatible_mpi} for MPI libraries already confirmed as supported.
-%
-The libraries of gzip, HDF5, and {\netcdf}4 are required. In stead of the HDF5/{\netcdf}4, {\netcdf}3 is sufficient, but the size of the output file increases in this case.
-The information about installation of each library is provided from the above URLs.;
-you can also use distributed packages for Linux and Mac. 
-These libraries have been already installed on the K Computer as AICS software. Refer to the description ``AICS software'' in the K portal site or the URL\\ \url{https://www-sys-aics.riken.jp/releasedsoftware/ksoftware/pnetcdf/}\\ for details. The library paths are described there in ``Makedef.K.'' The tutorials in Chapters \ref{chap:tutorial_ideal} and \ref{chap:tutorial_real} assume that the above library environment has been prepared.
-
-
 
 \begin{table}[tb]
 \begin{center}
@@ -83,17 +73,27 @@ These libraries have been already installed on the K Computer as AICS software. 
 
 
 
+{\netcdf}4 is recommended, but {\netcdf}3 is also available.
+Note that with \netcdf 3 there are some restrictions (See Section \ref{sec:netcdf}).
+You can also use distributed binary packages for Linux and Mac.
+These \netcdf library have been already installed on the K Computer. Refer to the description ``R-CCS software'' in the K portal site or the URL\\ \url{https://www-sys-aics.riken.jp/releasedsoftware/ksoftware/pnetcdf/}\\ for details. The library paths are described there in ``Makedef.K.''
+
+The tutorials in Chapters \ref{chap:tutorial_ideal} and \ref{chap:tutorial_real} assume that the above library environment has been prepared.
+
+
+
+
 
 
 
 \subsubsection{Drawing tools}
 
-The following are typical drawing tools that can draw
-the initial conditions, boundary data, and the simulation results on \scalelib.
+In this subsection, drawing tools that can draw the initial conditions, boundary data, and the simulation results with \scalerm are introduced.
+
 The GPhys and \grads are used for a quick view
 and the drawing model output in the tutorial in Chapters \ref{chap:tutorial_ideal} and \ref{chap:tutorial_real}, respectively.
-Other tools are of course available,
-if they can be read in \netcdf format, which is the output format of \scalelib.
+Other tools are also available,
+if they can be read in \netcdf file format, which is the output of \scalerm.
 
 \begin{itemize}
 \item GPhys / Ruby-DCL by GFD DENNOU Club
@@ -105,7 +105,6 @@ if they can be read in \netcdf format, which is the output format of \scalelib.
   \item How to install：
   On the GFD DENNOU Club webpage, the installation is explained for major OSs\\
   \url{http://ruby.gfd-dennou.org/tutorial/install/}\\
-  %\url{https://www.gfd-dennou.org/library/ruby/tutorial/install/index-j.html}\\
    \end{itemize}
 \item Grid Analysis and Display System (\grads) by COLA
  \begin{itemize}

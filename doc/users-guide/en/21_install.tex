@@ -24,6 +24,12 @@ The directory \texttt{scale-{\version}/} can be seen when the tarball file of th
 %-----------------------------------------------------------------------------------
 
 \scalelib is compiled using a Makedef file specified in the environment variable ``\verb|SCALE_SYS|.''  Several variations of the Makedef file corresponding to computer environment are prepared in the directory \texttt{scale-{\version}/sysdep/}.  Choose a Makedef file according to your environment. Table \ref{tab:makedef} shows  environments that support Makedef files that have already been checked. If there is no file for your environment,  create a Makedif file by modifying any existing one.
+For example, if you use Linux x86-64 OS, a GNU compiler, and openMPI, "Makedef.Linux64-gnu-ompi" is apropriate.
+If installation is conducted in another environment, change the file name according to Table \ref{tab:makedef}. An environment variable must also be specified as follows:
+\begin{verbatim}
+ $ export SCALE_SYS="Linux64-gnu-ompi"
+\end{verbatim}
+If the environment is always the same, it is convenient to explicitly describe the environmental variable in the environmental configuration file, such as \verb|.bashrc|.
 
 \begin{table}[htb]
 \begin{center}
@@ -33,30 +39,25 @@ The directory \texttt{scale-{\version}/} can be seen when the tarball file of th
                  & gcc/gfortran & openMPI  & Makedef.Linux64-gnu-ompi \\ \cline{2-4}
  Linux OS x86-64 & icc/ifort    & intelMPI & Makedef.Linux64-intel-impi \\ \cline{2-4}
                  & icc/ifort    & SGI-MPT  & Makedef.Linux64-intel-mpt \\ \hline
- Mac OS X        & gcc/gfortran & openMPI  & Makedef.MacOSX-gnu-ompi \\ \hline
+ Mac OS          & gcc/gfortran & openMPI  & Makedef.MacOSX-gnu-ompi \\ \hline
  K Computer      & fccpx/frtpx  & mpiccpx/mpifrtpx & Makedef.K \\ \hline
- Fujitsu PRIME-HPC FX10 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX10 \\ \hline
+ Fujitsu PRIME-HPC FX100 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX100 \\ \hline
 \end{tabularx}
 \label{tab:makedef}
 \end{center}
 \end{table}
 
-When Linux OS is used, a GNU compiler and openMPI in "Makedef.Linux64-gnu-ompi" are available. If installation is conducted in another environment, change the file name according to Table \ref{tab:makedef}. An environment variable must also be specified as follows:
-\begin{verbatim}
- $ export SCALE_SYS="Linux64-gnu-ompi"
-\end{verbatim}
-If the environment is always the same, it is convenient to explicitly describe the environmental variable in the environmental configuration file, such as \verb|.bashrc|.
 
-The setting of following path is necessary. You must set the environmental variables for HDF5 and {\netcdf}4 as follows:
+\scale requires \netcdf.
+In the most cases, the pathes of \netcdf may be automatically found by using ``nc-config'' command.
+If the pathes cannot be found automatically, you should set the following pathes.
+You must set the environmental variables for \netcdf as follows:
 \begin{verbatim}
  $ export SCALE_NETCDF_INCLUDE="-I/opt/netcdf/include"
- $ export SCALE_NETCDF_LIBS=
+ $ export SCALE_NETCDF_LIBS= \
         "-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 -lnetcdff -lnetcdf -hdf5_hl -lhdf5 -lm -lz"
 \end{verbatim}
-The above example shows that
-HDF5 is installed in the directory \verb|/opt/hdf5|
-and {\netcdf}4 in the directory \verb|/opt/netcdf|
-on an Intel compiler.
+
 
 \section{Compile} %\label{subsec:compile}
 %-----------------------------------------------------------------------------------
