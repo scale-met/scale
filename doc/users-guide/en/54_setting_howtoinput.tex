@@ -69,11 +69,10 @@ The header name of input files, i.e., \verb|"filename"|, is specified in the nam
 \nmitem{BOUNDARY_UPDATE_DT} is the time step of input data.
 \nmitem{RESTART_OUT_BASENAME} in \namelist{PARAM_RESTART} is the header name of the initial file converted.
 \nmitem{BASENAME_BOUNDARY} is the header name of the boundary files converted.
-If \nmitem{BASENAME_BOUNDARY} is null, the boundary files are not outputed.
+If \nmitem{BASENAME_BOUNDARY} is empty, no boundary files are output.
 
 The above configurations are the common among \namelist{PARAM_MKINIT_REAL_ATMOS},\\ \namelist{PARAM_MKINIT_REAL_OCEAN}, and \namelist{PARAM_MKINIT_REAL_LAND}. Unless otherwise specified in\\
 \namelist{PARAM_MKINIT_REAL_OCEAN} and \namelist{PARAM_MKINIT_REAL_LAND}, these information are inherited.
-
 
 \nmitem{USE_FILE_DENSITY} is an option in case of \verb|FILETYPE_ORG="SCALE-RM"|.
 If binary data is selected, provide \verb|.false.| to \nmitem{USE_FILE_DENSITY}.
