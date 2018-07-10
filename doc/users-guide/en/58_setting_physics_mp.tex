@@ -2,9 +2,12 @@
 %------------------------------------------------------
 
 
-\section{Cloud micro-physics} \label{sec:basic_usel_microphys}
+\section{Cloud Micro-Physics} \label{sec:basic_usel_microphys}
 %------------------------------------------------------
-The cloud micro-physics scheme is configured in \nmitem{ATMOS_PHY_MP_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|, respectively. Note that it is necessary to specify the same scheme for \nmitem{ATMOS_PHY_MP_TYPE} in both \texttt{init.conf} and \texttt{run.conf}. The update interval for the cloud micro-physics scheme is specified in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing. The following example shows the configuration for cases involving a six-class one-moment bulk scheme that contains ice phase clouds:
+The cloud micro-physics scheme is configured in \nmitem{ATMOS_PHY_MP_TYPE} in \namelist{PARAM_ATMOS} in files \verb|init.conf| and \verb|run.conf|, respectively.
+Note that it is necessary to specify the same scheme for \nmitem{ATMOS_PHY_MP_TYPE} in the configure files for both init and run executions.
+The update interval for the cloud micro-physics scheme is specified in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
+The following example shows the configuration for cases involving a six-class one-moment bulk scheme that contains ice phase clouds:
 
 \editboxtwo{
 \verb|&PARAM_ATMOS  | & \\
@@ -42,7 +45,7 @@ This scheme explicitly expresses particle size distribution by discretizing it u
 \end{enumerate}
 The degrees of sophistication increases from 1 to 4, as does computational cost.
 
-If \verb|SUZUKI10| is selected, in addition to the specification of \nmitem{ATMOS_PHY_MP_TYPE}, the following configuration needs to be added to both files of \verb|init.conf| and \verb|run.conf|:
+If \verb|SUZUKI10| is selected, in addition to the specification of \nmitem{ATMOS_PHY_MP_TYPE}, the following configuration needs to be added to both configuration files of init and run executions:
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_MP_SUZUKI10_bin|   &  \\
 \verb| nbin   = 33, | & ; The number of bins \\
@@ -50,7 +53,7 @@ If \verb|SUZUKI10| is selected, in addition to the specification of \nmitem{ATMO
 \verb| kphase = 0, | & ; Type of collection kernel function for collision/coagulation processes: 0 is hydro-dynamic kernel, 1 is Golovin type kernel (\cite{golovin_1963}), and 2 is Long type kernel (\cite{long_1974}). Pleas see the description document of SCALE-RM for more details.  \\
 \verb|/|            & \\
 }
-In this case, \namelist{PARAM_ATMOS_PHY_MP_SUZUKI10_bin} in \texttt{init.conf} must also be same as in \texttt{run.conf}. A necessary file \verb|micpara.dat| is automatically generated. If file \verb|micpara.dat| already exists, it is used for the calculation. When changing \verb|nbin| as described in the first line, this file is regenerated. If \verb|nbin| in file \verb|run.conf| is different from that in file \verb|micpara.dat|, the following error message is output and the simulation program is terminated instantaneously without calculation:
+In this case, \namelist{PARAM_ATMOS_PHY_MP_SUZUKI10_bin} in the init configuration file must also be same as in the run configuration file. A necessary file \verb|micpara.dat| is automatically generated. If file \verb|micpara.dat| already exists, it is used for the calculation. When changing \verb|nbin| as described in the first line, this file is regenerated. If \verb|nbin| in file \verb|run.conf| is different from that in file \verb|micpara.dat|, the following error message is output and the simulation program is terminated instantaneously without calculation:
 \msgbox{
 \verb|ERROR [ATMOS_PHY_MP_suzuki10_setup] nbin in inc_tracer and nbin in micpara.dat is| \\
 \verb|different check!| \\
