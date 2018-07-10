@@ -184,7 +184,6 @@ module scale_file_cartesC
 
   logical,    private :: File_axes_written(0:FILE_FILE_MAX-1)          ! whether axes have been written
   !                                                                    ! fid starts from zero so index should start from zero
-  logical,    private :: File_closed     (-1:FILE_FILE_MAX-1) = .true. ! whether file has been closed
   logical,    private :: File_haszcoord   (0:FILE_FILE_MAX-1)          ! z-coordinates exist?
   integer(8), private :: write_buf_amount (0:FILE_FILE_MAX-1)          ! sum of write buffer amounts
 
@@ -773,8 +772,6 @@ contains
                     aggregate=aggregate, & ! [IN]
                     rankid=PRC_myrank    ) ! [IN]
 
-    File_closed(fid) = .false.
-
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
@@ -905,9 +902,6 @@ contains
     else if ( .not. fileexisted ) then ! do below only once when file is created
 
        File_axes_written(fid) = .false.  ! indicating axes have not been written yet
-       if ( PRC_myrank==0 .or. (.not. single_) ) then
-          File_closed(fid) = .false.
-       end if
 
        if ( present( haszcoord ) ) then
           File_haszcoord(fid) = haszcoord
@@ -958,6 +952,7 @@ contains
   subroutine FILE_CARTESC_enddef( fid )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
+       FILE_opened,    &
        FILE_EndDef,    &
        FILE_Flush,     &
        FILE_Attach_Buffer
@@ -967,12 +962,14 @@ contains
 
     integer, intent(in) :: fid  !< file ID
 
+    logical :: opened
     integer :: start(3)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_O_NetCDF', 2)
        return
     end if
@@ -1015,15 +1012,19 @@ contains
   subroutine FILE_CARTESC_flush( fid )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
+       FILE_opened, &
        FILE_Flush
     implicit none
 
     integer, intent(in) :: fid  !< file ID
+
+    logical :: opened
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_O_NetCDF', 2)
        return
     end if
@@ -1042,6 +1043,7 @@ contains
   subroutine FILE_CARTESC_close( fid )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
+       FILE_opened,    &
        FILE_Close,     &
        FILE_Flush,     &
        FILE_Detach_Buffer
@@ -1049,11 +1051,13 @@ contains
 
     integer, intent(in) :: fid  !< file ID
 
+    logical :: opened
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_O_NetCDF', 2)
        return
     end if
@@ -1067,8 +1071,6 @@ contains
     endif
 
     call FILE_Close( fid ) ! [IN]
-
-    File_closed(fid) = .true.
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -1220,6 +1222,7 @@ contains
        step          )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
+       FILE_opened, &
        FILE_Read
     use scale_prc, only: &
        PRC_abort
@@ -1239,11 +1242,13 @@ contains
     integer :: dim1_S, dim1_E
     integer :: start(1)   ! start offset of globale variable
     integer :: count(1)   ! request length to the global variable
+    logical :: opened
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_I_NetCDF', 2)
        return
     end if
@@ -1339,6 +1344,7 @@ contains
        step          )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
+       FILE_opened, &
        FILE_Read
     use scale_prc, only: &
        PRC_abort
@@ -1353,11 +1359,13 @@ contains
 
     integer :: dim1_S, dim1_E
     integer :: dim2_S, dim2_E
+    logical :: opened
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_I_NetCDF', 2)
        return
     end if
@@ -1413,6 +1421,7 @@ contains
        step          )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
+       FILE_opened, &
        FILE_Read
     use scale_prc, only: &
        PRC_abort
@@ -1431,11 +1440,13 @@ contains
     integer :: dim1_S, dim1_E
     integer :: dim2_S, dim2_E
     integer :: dim3_S, dim3_E
+    logical :: opened
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_I_NetCDF', 2)
        return
     end if
@@ -1546,6 +1557,7 @@ contains
        step          )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
+       FILE_opened, &
        FILE_Read
     use scale_prc, only: &
        PRC_abort
@@ -1565,11 +1577,13 @@ contains
     integer :: dim2_S, dim2_E
     integer :: dim3_S, dim3_E
     integer :: dim4_S, dim4_E
+    logical :: opened
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_I_NetCDF', 2)
        return
     end if
@@ -1648,6 +1662,7 @@ contains
        var,          &
        step, existed )
     use scale_file, only: &
+       FILE_opened, &
        FILE_get_shape, &
        FILE_get_dataInfo, &
        FILE_get_attribute, &
@@ -1674,13 +1689,15 @@ contains
     integer :: n
 
     logical :: existed2
+    logical :: opened
 
     intrinsic size
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_I_NetCDF', 2)
        return
     end if
@@ -1731,6 +1748,7 @@ contains
        var,          &
        step, existed )
     use scale_file, only: &
+       FILE_opened, &
        FILE_get_shape, &
        FILE_get_dataInfo, &
        FILE_get_attribute, &
@@ -1759,13 +1777,15 @@ contains
     integer :: nx, ny, nz
     integer :: n
     integer :: k, i, j
+    logical :: opened
 
     intrinsic size
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_I_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_I_NetCDF', 2)
        return
     end if
@@ -2159,6 +2179,7 @@ contains
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_NAME
     use scale_file, only: &
+       FILE_opened, &
        FILE_Set_Attribute
 
     integer,          intent(in) :: fid
@@ -2172,9 +2193,12 @@ contains
     character(len=*), intent(in) :: tunits
     character(len=*), intent(in) :: calendar
 
+    logical :: opened
+
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_O_NetCDF', 2)
        return
     end if
@@ -2221,6 +2245,7 @@ contains
        dtype, &
        hasZ   )
     use scale_file, only: &
+       FILE_opened,                   &
        FILE_get_AGGREGATE,            &
        FILE_Def_Axis,                 &
        FILE_Set_Attribute,            &
@@ -2240,13 +2265,15 @@ contains
     integer :: jsize ! grid size, y-axis, (whole domain or local tile), without halo except domain edge
 
     character(len=2) :: axisname(3)
+    logical :: opened
 
     logical, save :: set_dim = .false.
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_O_NetCDF', 2)
        return
     end if
@@ -2695,6 +2722,7 @@ contains
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_file, only: &
+       FILE_opened, &
        FILE_get_AGGREGATE, &
        FILE_Write_Axis,                 &
        FILE_Write_AssociatedCoordinate
@@ -2764,12 +2792,14 @@ contains
 
     real(RP) :: FDXG(0:IAG), FDYG(0:JAG)
     real(RP) :: FDX(0:IA), FDY(0:JA)
+    logical :: opened
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_O_NetCDF', 2)
        return
     end if
@@ -3160,6 +3190,7 @@ contains
        FILE_REAL8, &
        FILE_REAL4
     use scale_file, only: &
+       FILE_opened, &
        FILE_Def_Variable, &
        FILE_Set_Attribute
     use scale_prc, only: &
@@ -3187,11 +3218,13 @@ contains
 
     integer :: dtype, elm_size, ndims
     integer :: dimid, n
+    logical :: opened
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_O_NetCDF', 2)
        return
     end if
@@ -3329,6 +3362,7 @@ contains
        dim_type  )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
+       FILE_opened, &
        FILE_Write
     use scale_prc, only: &
        PRC_myrank,  &
@@ -3349,11 +3383,13 @@ contains
     integer :: rankidx(2)
     integer :: start(1)         ! used only when AGGREGATE is .true.
     logical :: exec
+    logical :: opened
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_O_NetCDF', 2)
        return
     end if
@@ -3418,6 +3454,7 @@ contains
        RMISS => FILE_RMISS
     use scale_file, only: &
        FILE_get_AGGREGATE, &
+       FILE_opened, &
        FILE_Write
     use scale_prc, only: &
        PRC_myrank,     &
@@ -3447,11 +3484,13 @@ contains
     integer :: rankidx(2)
     integer :: start(2)         ! used only when AGGREGATE is .true.
     logical :: exec
+    logical :: opened
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_O_NetCDF', 2)
        return
     end if
@@ -3556,6 +3595,7 @@ contains
        RMISS => FILE_RMISS
     use scale_file, only: &
        FILE_get_AGGREGATE, &
+       FILE_opened, &
        FILE_Write
     use scale_prc, only: &
        PRC_myrank,  &
@@ -3586,11 +3626,13 @@ contains
     logical  :: fill_halo_
     integer  :: rankidx(2)
     integer  :: start(3) ! used only when AGGREGATE is .true.
+    logical  :: opened
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_O_NetCDF', 2)
        return
     end if
@@ -3708,6 +3750,7 @@ contains
        RMISS => FILE_RMISS
     use scale_file, only: &
        FILE_get_AGGREGATE, &
+       FILE_opened, &
        FILE_Write
     use scale_prc, only: &
        PRC_myrank,     &
@@ -3742,11 +3785,13 @@ contains
     real(DP) :: timeofs_
     integer  :: rankidx(2)
     integer  :: start(2) ! used only when AGGREGATE is .true.
+    logical  :: opened
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_O_NetCDF', 2)
        return
     end if
@@ -3883,6 +3928,7 @@ contains
        RMISS => FILE_RMISS
     use scale_file, only: &
        FILE_get_AGGREGATE, &
+       FILE_opened, &
        FILE_Write, &
        FILE_Flush
     use scale_prc, only: &
@@ -3919,11 +3965,13 @@ contains
     real(DP) :: timeofs_
     integer  :: rankidx(2)
     integer  :: start(3) ! used only when AGGREGATE is .true.
+    logical  :: opened
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    if ( FILE_closed(fid) ) then
+    call FILE_opened(fid, opened)
+    if ( .not. opened ) then
        call PROF_rapend('FILE_O_NetCDF', 2)
        return
     end if

@@ -34,6 +34,7 @@ module scale_file
   !
   public :: FILE_setup
   public :: FILE_open
+  public :: FILE_opened
   public :: FILE_create
   public :: FILE_get_dimLength
   public :: FILE_set_option
@@ -460,6 +461,21 @@ contains
 
     return
   end subroutine FILE_open
+
+  !-----------------------------------------------------------------------------
+  !> check if the file is opened?
+  subroutine FILE_opened( &
+      fid,   &
+      opened )
+    implicit none
+
+    integer, intent( in) :: fid
+    logical, intent(out) :: opened
+
+    opened = FILE_files(fid)%fid >= 0
+
+    return
+  end subroutine FILE_opened
 
   !-----------------------------------------------------------------------------
   !> get length of dimension
