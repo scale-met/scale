@@ -26,18 +26,29 @@ This line presents messages about status of computation as follows:
 Furthermore, the required time for this computation can be estimated from these information.
 In this case, 440000s ( $= 2000.2 \times 432000 \div 1984$ ) is the estimated elapsed time.
 
+Format of messages in the log file are as follows.
 
-Message format in the log file is as follows.
-
-\editboxtwo{
-\verb|ERROR [ATMOS_PHY_MP_negative_fixer] large negative is found. rank =            1| & \\
-\verb|      k,i,j,value(QHYD,QV) =           17           8           1   1.7347234759768071E-018   0.0000000000000000| & \\
-\verb|      k,i,j,value(QHYD,QV) =           19           8           1  -5.4717591620764856E-003   0.0000000000000000| & \\
-\verb| :| & \\
+\msgbox{
+\texttt{{\it type} [{\it subroutine name}] {\it message}} \\
+\texttt{\hspace{2em}{\it message}} \\
+\texttt{\hspace{2em}:} \\
 }
 
-In the first line, message type (INFO, WARN, or ERROR) appears at first, followed by subroutine name and message.
-In the subsequent lines, only messages are shown.
-"INFO" denotes general information about the job execution.
-"WARN" denotes considerable event about the job execution.
-"ERROR" denotes fatal error that involves stop of execution.
+{\it type} is the message type that can take one of the following.
+\begin{itemize}
+ \item INFO: General information about job execution
+ \item WARN: Considerable event about job execution
+ \item ERROR: Fatal error that involves stop of execution
+\end{itemize}
+{\it subroutine name} is the current subroutine's name.
+{\it message} is the main body of the message.
+
+The following is a sample of error message.
+
+\msgbox{
+\verb|ERROR [ATMOS_PHY_MP_negative_fixer] large negative is found. rank =            1| \\
+\verb|      k,i,j,value(QHYD,QV) =           17           8           1   1.7347234759768071E-018   0.0000000000000000| \\
+\verb|      k,i,j,value(QHYD,QV) =           19           8           1  -5.4717591620764856E-003   0.0000000000000000| \\
+\verb| :| \\
+}
+
