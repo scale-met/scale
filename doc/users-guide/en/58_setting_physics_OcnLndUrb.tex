@@ -71,7 +71,8 @@ The manner of updating sea surface state, such as sea surface temperature, is co
 
 If the ocean category is included in land-use setup by \namelist{PARAM_LANDUSE}, neither \verb|"NONE"| nor \verb|"OFF"| can be given to \nmitem{OCEAN_DYN_TYPE}. If this condition is not satisfied, the program immediately stops without the computation, and outputs the following message to LOG file:
 \msgbox{
-\verb|ERROR [CPL_vars_setup] Ocean fraction exists, but ocean component has not been called. Please check this inconsistency. STOP.| \\
+\verb|ERROR [CPL_vars_setup] Ocean fraction exists, but ocean component has not been called.|\\
+\verb| Please check this inconsistency. STOP.| \\
 }
 
 If \nmitem{OCEAN_DYN_TYPE} $=$ \verb|"SLAB"|, the depth of the slab layer can be specified in \verb|run.conf|. In this case, the temperature in the slab layer develops over time through heat flux exchange between the atmosphere and the ocean:
@@ -157,7 +158,8 @@ The land model scheme that updates the state of land, e.g., land surface tempera
 
 If the land type is included in the land use setup by \namelist{PARAM_LANDUSE}, neither NONE nor OFF can be given to \nmitem{LAND_DYN_TYPE}. If this condition is not satisfied, the program immediately terminates without computation, outputting the following message to the LOG file:
 \msgbox{
-\verb|ERROR [CPL_vars_setup] Land fraction exists, but land component has not been called. Please check this inconsistency. STOP.| \\
+\verb|ERROR [CPL_vars_setup] Land fraction exists, but land component has not been called.|\\
+\verb| Please check this inconsistency. STOP.| \\
 }
 
 If \nmitem{LAND_DYN_TYPE} = \verb|"BUCKET"|, you can apply relaxation (nudging) of land variables by using external data.
@@ -207,7 +209,7 @@ The timing of calling these schemes is configured in \namelist{PARAM_TIME}. Refe
 %-------------------------------------------------------------------------------
 
 The urban scheme that updates the urban surface state, e.g., urban surface temperature and moisture, and calculates fluxes at the interface between atmosphere and the urban environment is configured in \nmitem{URBAN_DYN_TYPE} in \namelist{PARAM_URBAN} in \verb|init.conf| and \verb|run.conf|, as follows:
-
+%
 \editboxtwo{
 \verb|&PARAM_URBAN                  | & \\
 \verb| URBAN_DYN_TYPE = "KUSAKA01", | & ; Select the urban type shown in Table \ref{tab:nml_urban}\\
@@ -228,8 +230,12 @@ The urban scheme that updates the urban surface state, e.g., urban surface tempe
 \end{table}
 
 If the type of urban area is included in the land-use specified by \namelist{PARAM_LANDUSE}, neither \verb|NONE| nor \verb|OFF| can be given to \nmitem{URBAN_TYPE}. If this condition is not satisfied, the program immediately stops without computation, outputting the following message to LOG file:
-
+%
 \msgbox{
-\verb|ERROR [CPL_vars_setup] Urban fraction exists, but urban component has not been called. Please check this inconsistency. STOP.| \\
+\verb|ERROR [CPL_vars_setup] Urban fraction exists, but urban component has not been called.|\\
+\verb| Please check this inconsistency. STOP.| \\
 }
+
+There are many parameters specifying urban morphology in the urban scheme.
+Regarding the urban parameters, please refer to description about namelist in Section \ref{sec:reference_manual}.
 
