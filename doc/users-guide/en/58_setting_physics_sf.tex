@@ -26,9 +26,9 @@ If ocean, land, and urban models are not used, the bottom atmospheric boundary i
 \end{table}
 
 %-------------------------------------------------------------------------------
-\subsubsection{Configuration of constant}
+\subsubsection{Configuration of Constant}
 
-If \nmitem{ATMOS_PHY_SF_TYPE} $=$ \verb|"CONST"|, the surface flux can be kept to a value specified in file \verb|run.conf| as follows. The values below are the default ones.
+If \nmitem{ATMOS_PHY_SF_TYPE} $=$ \verb|"CONST"|, the surface flux can be kept to a value specified in \runconf as follows. The values below are the default ones.
 
 \editboxtwo{
  \verb|&PARAM_ATMOS_PHY_SF_CONST                | & \\
@@ -48,9 +48,12 @@ If \nmitem{ATMOS_PHY_SF_TYPE} $=$ \verb|"CONST"|, the surface flux can be kept t
  \verb|/|            & \\
 }
 
-\subsubsection{Bulk configuration}
+\subsubsection{Bulk Configuration}
 %-------------------------------------------------------------------------------
-If \nmitem{ATMOS_PHY_SF_TYPE} $=$ \verb|"BULK"|, the surface flux is calculated by the bulk model using the surface temperature and roughness lengths, which are given as constant values. Evaporation efficiency can also be given optionally in a range of 0 to 1. This flexibility enables the ideal experiment not only for ocean surfaces but also for land. The evaporation efficiency is specified in \nmitem{ATMOS_PHY_SF_BULK_beta} in \namelist{PARAM_ATMOS_PHY_SF_BULK} in the file \verb|run.conf| as follows:
+If \nmitem{ATMOS_PHY_SF_TYPE} $=$ \verb|"BULK"|, the surface flux is calculated by the bulk model using the prescribed surface temperature and roughness lengths.
+Evaporation efficiency can also be given optionally in a range of 0 to 1.
+This flexibility enables the ideal experiment not only for ocean surfaces but also for land.
+The evaporation efficiency is specified in \nmitem{ATMOS_PHY_SF_BULK_beta} in \namelist{PARAM_ATMOS_PHY_SF_BULK} in \runconf as follows:
 
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_SF_BULK  | & \\
@@ -58,7 +61,7 @@ If \nmitem{ATMOS_PHY_SF_TYPE} $=$ \verb|"BULK"|, the surface flux is calculated 
 \verb|/             | & \\
 }
 
-The scheme for the bulk coefficient is configured in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in the file \verb|run.conf| as follows:
+The scheme for the bulk coefficient is configured in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in the file \runconf as follows:
 
 \editboxtwo{
 \verb|&PARAM_BULKFLUX  | & \\
