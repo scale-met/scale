@@ -19,6 +19,10 @@ The default format of the history file is configured at \namelist{PARAM_FILE_HIS
 
 \editboxtwo{
 \verb|&PARAM_FILE_HISTORY                                      | & \\
+\verb| FILE_HISTORY_TITLE                     = "",            | & ; Brief description of data (See Sec.\ref{sec:netcdf})\\
+\verb| FILE_HISTORY_SOURCE                    = "",            | & ; Name of the source software  (See Sec.\ref{sec:netcdf})\\
+\verb| FILE_HISTORY_INSTITUTION               = "",            | & ; Data author  (See Sec.\ref{sec:netcdf})\\
+\verb| FILE_HISTORY_TIME_UNITS                = "seconds",     | & ; Unit of time axis in \netcdf \\
 \verb| FILE_HISTORY_DEFAULT_BASENAME          = "history_d01", | & ; Base name of the output file \\
 \verb| FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL = .false.,       | & ; Add the time label to the file name? \\
 \verb| FILE_HISTORY_DEFAULT_ZCOORD            = "model",       | & ; Type of vertical coordinate \\
@@ -36,7 +40,10 @@ The default format of the history file is configured at \namelist{PARAM_FILE_HIS
 \verb|/                                                        | & \\
 }
 
-In default, each process output the history file. when \nmitem{FILE_HISTORY_AGGREGATE} is set to \verb|.true.|, the distributed output file is aggregated into one file by using parallel NetCDF. The default setting of \nmitem{FILE_HISTORY_AGGREGATE} is determined by the (\nmitem{FILE_AGGREGATE} in \namelist{PARAM_FILE}.
+In default, each process output the history file.
+When \nmitem{FILE_HISTORY_AGGREGATE} is set to \verb|.true.|, the distributed output file is aggregated into one file by using parallel \Netcdf.
+The default setting of \nmitem{FILE_HISTORY_AGGREGATE} is determined by the \nmitem{FILE_AGGREGATE} in \namelist{PARAM_FILE}.
+Please refer to Section \ref{sec:netcdf}
 
 \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL} is time interval of history output and its unit is defined by \nmitem{FILE_HISTORY_DEFAULT_TUNIT}.
 The unit can be selected from\\
@@ -109,7 +116,7 @@ Namelists with ``(OPTION)'' are applied only to the variable \nmitem{NAME}. If t
 %-------------------------------------------------------------------------------
 
 A monitor file and output variables are configured at \namelist{PARAM_MONITOR} and \namelist{MONITOR_ITEM} in \verb|run.conf|.
-The default format of the history file is configured at \namelist{PARAM_FILE_HISTORY}.
+The default format of the monitor file is configured at \namelist{PARAM_MONITOR}.
 
 \editboxtwo{
 \verb|&PARAM_MONITOR                      | & \\
@@ -119,10 +126,10 @@ The default format of the history file is configured at \namelist{PARAM_FILE_HIS
 \verb|/                                   | & \\
 }
 
-Monitor component outputs global domain total of variables such as dry airmass, water vapor, total energy, surface precipitation flux, and so on.
+Monitor component outputs global domain total of physical quantity such as dry airmass, water vapor, total energy, surface precipitation flux, and so on.
 These output is useful to check mass and energy budget.
 The monitor file is ASCII format and the name of the file is set by \nmitem{MONITOR_OUT_BASENAME} \verb|.pe000000|.
-The time interval of monitor output is determined by the time step specified in the \nmitem{MONITOR_STEP_INTERVAL}.
+The time interval of monitor output is specified in the \nmitem{MONITOR_STEP_INTERVAL} as the multiple of time step ($\Delta t$).
 
 \editboxtwo{
 \verb|&MONITOR_ITEM   | & \\

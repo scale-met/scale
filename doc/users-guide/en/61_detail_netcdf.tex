@@ -20,9 +20,9 @@ such as those with regards to spatial decomposition as ``Global Attributes'' (Ta
   \label{table:netcdf_global_attrs}
   \begin{tabularx}{150mm}{p{50mm}XX} \hline
     Name        & Description                 & Remarks \\ \hline \hline
-    title       & Brief description of data   & Value of \nmitem{History_TITLE} in \namelist{PARAM_HISTORY} \\  
-    source      & Name of the source software & Value of \nmitem{History_SOURCE} in \namelist{PARAM_HISTORY} for history files and \nmitem{H_SOURCE} in \namelist{PARAM_IO} for other files\\
-    institution & Data author                 & Value of \nmitem{History_INSTITUTION} in \namelist{PARAM_HISTORY} for history files and \nmitem{H_INSTITUTE} for other files\\
+    title       & Brief description of data   & Value of \nmitem{FILE_History_TITLE} in \namelist{PARAM_FILE_HISTORY} \\
+    source      & Name of the source software & Value of \nmitem{FILE_History_SOURCE} in \namelist{PARAM_FILE_HISTORY} for history files and \nmitem{H_SOURCE} in \namelist{PARAM_IO} for other files\\
+    institution & Data author                 & Value of \nmitem{FILE_History_INSTITUTION} in \namelist{PARAM_FILE_HISTORY} for history files and \nmitem{H_INSTITUTE} for other files\\
     rankid      & Rank id of MPI process      & \verb|PRC_myrank| in the model \\
     Conventions & CF convention version       & ``CF-1.6'' for version 5.3 \\
     grid\_name  & Grid type                   & ``cartesC'' for \scalerm \\
