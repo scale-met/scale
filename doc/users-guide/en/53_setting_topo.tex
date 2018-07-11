@@ -17,7 +17,7 @@ The program \verb|scale-rm_pp| converts external topography data into \scalelib 
  \verb|CNVTOPO_smooth_maxslope_ratio = 1.0,       | & ; Allowable maximum ratio of inclination to $\mathrm{DZ}$/$\mathrm{DX}$ \\
  \verb|CNVTOPO_smooth_local          = .true.,    | & ; 
 Whether smoothened or not, only grids whose angles of inclination exceed the maximum value \\
- \verb|CNVTOPO_copyparent            = .false.,   | & ; Whether the topography in the buffer region is copied \\
+ \verb|CNVTOPO_copy_parent            = .false.,   | & ; Whether the topography in the buffer region is copied \\
 \verb|/|\\
 }
 \scalerm supports GTOPO30 and DEM50M provided by the Geospatial Information Authority of Japan as external input topography data.
@@ -30,9 +30,9 @@ Smoothing is selectively applied either only to grids whose angles of inclinatio
 Since the former saves the sharp structure of the topography within the allowable maximum angle, it is selected if the representation of fine structures is desired.
 The Gaussian filter is also selected as a smoothing filter. In this case, the topography is smoother than when the Laplacian filter is used.
 
-\nmitem{CNVTOPO_copyparent} is the item used for the nesting computation.
+\nmitem{CNVTOPO_copy_parent} is the item used for the nesting computation.
 In general, the topography in the child domain is finer than in the parent domain due to higher spatial resolution.
 At this time, problems often occers due to 
 an inconsistency between 
 the atmospheric data in the buffer region of the child domain and that in the parent domain.
-To avoid this problem, the topography of the parent domain can be copied to the buffer region of the child domain by specifying \nmitem{CNVTOPO_copyparent}$=$\verb|.true.| If there is no parent domain, \nmitem{CNVTOPO_copyparent} must be \verb|.false.|. Section \ref{subsec:nest_topo} provides a more detailed explanation of the case that involves the use of \nmitem{CNVTOPO_copyparent}.
+To avoid this problem, the topography of the parent domain can be copied to the buffer region of the child domain by specifying \nmitem{CNVTOPO_copy_parent}$=$\verb|.true.| If there is no parent domain, \nmitem{CNVTOPO_copy_parent} must be \verb|.false.|. Section \ref{subsec:nest_topo} provides a more detailed explanation of the case that involves the use of \nmitem{CNVTOPO_copy_parent}.
