@@ -91,7 +91,38 @@ When using \verb|CD4| in a simulation with a steep terrain,
 an artificial grid-scale vertical flow is often seen at the peak of mountains.
 This grid-scale flow may be reduced by using \verb|UD3|.
 So, the use of \verb|UD3| is recommended for experiments with steep terrains.
-\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} can be set to zero when using \verb|UD3|, which it has implicit numerical diffusion.
+
+
+\subsection{Numerical Diffusions}
+
+The numerical stability depends on schemes used in simulations.
+Numerical diffusion may improve the stability.
+\scalerm has the hyper-diffusion and divergence dumping as the numerical diffusion.
+The setting for them is the following:
+\editboxtwo{
+ \verb|&PARAM_ATMOS_DYN  | & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_ORDER       = 1,    |        & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-4,|        & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |        & \\
+ \verb|ATMOS_DYN_DIVDMP_COEF                = 0.D0, |        & \\
+\verb|/                  | & \\
+}
+
+
+The order of the hyper-diffusion is 4 times \nmitem{ATMOS_DYN_NUMERICAL_DIFF_ORDER}.\\
+\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} and \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER} is a non-dimensional coefficient of the hyper-diffusion.
+The two-grid scale noise is dumped to $1/e$ in one time step if the coefficient is unity.
+The dumping is stronger for larger coefficient.
+The hyper-diffusion itself would be numerically unstable if the coefficient is larger than 1.
+\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} is for the dynamical prognostic variables, such as density, momentum and potential temperature, and \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER} is for the tracer variables, such as specific humidity, hydrometeors, and turbulent kinetic energy.
+\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} can be set to zero when using the upwind schemes, such as \verb|UD3, UD5|, which has implicit numerical diffusion.
+
+
+The divergence dumping can also be available to improve numerical stability.
+Its coefficient can be set with \nmitem{ATMOS_DYN_DIVDMP_COEF}.
+
+
+\subsection{Positive Definit}
 
 For tracer advection, guaranteeing a non-negative value is required in most cases.\\
 The \verb|UD3KOREN1993| scheme guarantees a non-negative value, whereas other schemes do not.
