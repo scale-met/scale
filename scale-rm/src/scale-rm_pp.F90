@@ -60,8 +60,8 @@ program scalerm_pp
   logical               :: FAILURE_PRC_MANAGE           = .false. ! use failure process management?
 
   namelist / PARAM_LAUNCHER / &
-     EXECUTE_PREPROCESS, &
-     EXECUTE_MODEL,      &
+!      EXECUTE_PREPROCESS, &
+!      EXECUTE_MODEL,      &
      NUM_BULKJOB,        &
      NUM_DOMAIN,         &
      NUM_FAIL_TOLERANCE, &
