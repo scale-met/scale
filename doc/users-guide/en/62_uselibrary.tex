@@ -1,0 +1,60 @@
+\section{User Program Using \scalelib}
+
+\scalelib is a collection of subroutines.
+The subroutines is available in user's program.
+
+The following is a template of program using \scalelib.
+\editbox{
+  \verb|program template|\\
+  \verb|  use scalelib|\\
+  \verb|  implicit none|\\
+  \verb||\\
+  \verb|  call SCALE_init|\\
+  \verb||\\
+  \verb|  ! user instractions|\\
+  \verb||\\
+  \verb|  call SCALE_finalize|\\
+  \verb||\\
+  \verb|  stop|\\
+  \verb|end program template|\\
+}
+
+This is a pseudo program calculating convective available potential energy (CAPE) from atmospheric quantities read from a file.
+Note that this is only a part of program.
+\editbox{
+  \verb|use scale_const, only: Rdry => CONST_Rdry, Rvap => CONST_Rvap, CPdry => CONST_CPdry|\\
+  \verb|use scale_atmos_hydrometeor, only: CPvap => CP_VAPOR, CL => CP_WATER|\\
+  \verb|use scale_file, only: FILE_open, FILE_read, FILE_close|\\
+  \verb|use scale_atmos_adiabat, only: ATMOS_ADIABAT_setup, ATMOS_ADIABAT_cape|\\
+  \verb|real(8) :: z(kmax,imax,jmax), zh(0:kmax,imax,jmax)|\\
+  \verb|real(8) :: temp(kmax,imax,jmax), pres(kmax,imax,jmax), dens(kmax,imax,jmax)|\\
+  \verb|real(8) :: qv(kmax,imax,jmax), qc(kmax,imax,jmax), qdry(kmax,imax,jmax)|\\
+  \verb|real(8) :: rtot(kmax,imax,jmax), cptot(kmax,imax,jmax)|\\
+  \verb|real(8) :: cape(imax,jmax), cin(imax,jmax)|\\
+  \verb|real(8) :: lcl(imax,jmax), lfc(imax,jmax), lnb(imax,jmax)|\\
+  \verb|                  :|\\
+  \verb|call FILE_open( basename, fid )         ! open file|\\
+  \verb|call FILE_read( fid, 'height', z(:,:,:) )      ! read full-level height data|\\
+  \verb|call FILE_read( fid, 'height_xyw', zh(:,:,:) ) ! read half-level height data|\\
+  \verb|call FILE_read( fid, 'T', temp(:,:,:) )        ! read temperature data|\\
+  \verb|                  : ! read PRES, DENS, QV, QC|\\
+  \verb|call FILE_close( fid )|\\
+  \verb|! calculate some variables required to calculate CAPE|\\
+  \verb|qdry(:,:,:)  = 1.0D0 - qv(:,:,:) - qc(:,:,:)                            ! mass ratio of dry air|\\
+  \verb|rtot(:,:,:)  = qdry(:,:,:) * Rdry + qv(:,:,:) * Rvap                    ! gas constant|\\
+  \verb|cptot(:,:,:) = qdry(:,:,:) * CPdry + qv(:,:,:) * CPvap + ql(:,:,:) * CL ! heat capacity|\\
+  \verb|call ATMOS_ADIABAT_setup|\\
+  \verb|call ATMOS_ADIABAT_cape( kmax, 1, kmax, imax, 1, imax, jmax, 1, jmax,      & ! array size|\\
+  \verb|                         k0,                                               & ! percel initial layer|\\
+  \verb|                         dens(:,:,:), temp(:,:,:), pres(:,:,:),            & ! input|\\
+  \verb|                         qv(:,:,:), qc(:,:,:), qdry(:,:,:),                & ! input|\\
+  \verb|                         rtot(:,:,:), cptot(:,:,:),                        & ! input|\\
+  \verb|                         z(:,:,:), zh(:,:,:),                              & ! input|\\
+  \verb|                         cape(:,:), cin(:,:), lcl(:,:), lfc(:,:), lnb(:,:) ) ! output|\\
+}
+What to do is that 1) use necessary modules and 2) prepare required input variables.
+
+
+In the reference manual (see Section \ref{sec:reference_manual}), you can find list of the subroutine which is available and details of the subroutines.
+There are sample programs for analysis of \scalerm history file at the \texttt{scale-\version/scalelib/test/analysis} directory.
+
