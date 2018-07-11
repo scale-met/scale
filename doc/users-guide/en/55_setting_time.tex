@@ -1,7 +1,10 @@
 \section{Setting integration period and time step} \label{sec:timeintiv}
 %------------------------------------------------------
 
-The integration period and time step are configured appropriately according to experimental design. The time step depends on the spatial resolution of the model. A shorter time step is sometimes required to avoid numerical instability. The period of integration and the time step are configured in \namelist{PARAM_TIME} in the configuration file \verb|run.conf|.
+The integration period and time step are configured appropriately according to experimental design.
+The time step depends on the spatial resolution of the model.
+A shorter time step is sometimes required to avoid numerical instability.
+The period of integration and the time step are configured in \namelist{PARAM_TIME} in \runconf.
 
 \editboxtwo{
 \verb|&PARAM_TIME| & \\
@@ -39,16 +42,41 @@ The integration period and time step are configured appropriately according to e
 \verb| TIME_DT_URBAN_RESTART_UNIT = "SEC",    | & Unit for \verb|TIME_DT_URBAN_RESTART|\\
 \verb|/|\\
 }
+
+\subsection{Time Step for Dynamical Processes}
+
 \nmitem{TIME_DT} is the time step for time integration, usually described as $\Delta t$. It is used as time step for tracer advection as well as the basic unit for all physical processes. To avoid numerical instability, \nmitem{TIME_DT} must satisfy the following condition: it is less than the value calculated by dividing grid size by a supposed maximum advection velocity. A shorter time step for dynamical process, i.e. \nmitem{TIME_DT_ATMOS_DYN}, should be given than $\Delta t$ because the time integration of dynamic variables is constrained not by advection velocity, but by the speed of the acoustic wave.
-\nmitem{TIME_DT_ATMOS_DYN} depends on the time integration scheme in relation to the stability of calculation. As criterion, the standard values of \nmitem{TIME_DT_ATMOS_DYN} are calculated by dividing the minimum grid interval by 420 m/s and 840 m/s, in the case \nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE="RK4, RK3"}, respectively.
+\nmitem{TIME_DT_ATMOS_DYN} depends on the time integration scheme in relation to the stability of calculation. As a criterion, the standard values of \nmitem{TIME_DT_ATMOS_DYN} are calculated by dividing the minimum grid interval by 420 m/s and 840 m/s, in the case \nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE="RK4, RK3"}, respectively.
 Note that \nmitem{TIME_DT_ATMOS_DYN} needs to be a divisor of \nmitem{TIME_DT}.
 When the ratio of \nmitem{TIME_DT} to \nmitem{TIME_DT_ATMOS_DYN} is too large,
 the numerical instability sometimes occurs.
 The ratio of \nmitem{TIME_DT}/\nmitem{TIME_DT_ATMOS_DYN} is recommended to be set two or three.
+See also Section \ref{subsec:cfl_check}.
 
 
+\subsection{Time Step for Physical Processes}
 A time step for the physical process represents the timing of the tendency to update given by the process. Once the model starts, each physical process is called during the setup of the model to obtain the initial tendency. Each tendency is updated at every time step specified process by process. All time steps for the physical process are better as multiples of \nmitem{TIME_DT}.
 
 The surface fluxes are calculated by the surface process for the atmosphere. On the contrary, if ocean, land, and urban models are used, the fluxes are calculated by these models. A model grid contains several types of land use, such as ocean, urban, and land. The grid mean value of fluxes is obtained as the weighted average of fluxes over each instance of land use according to the fraction of land use.
 
 As described above, the initial tendencies of all processes are updated during the setup of the model. Therefore, the output intervals of restart file are required as multiples of time steps for all processes. If not, a restart calculation disagrees with the continuous calculation. When \nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART},  \nmitem{TIME_DT_LAND_RESTART}, and\\ \nmitem{TIME_DT_URBAN_RESTART}, are not specified, the restart files are created at the end of the simulation, i.e. at \nmitem{TIME_DURATION}. The details of the restarted simulation are described in Section \ref{sec:restart}.
+
+
+
+\subsection{Check of CFL Condition} \label{subsec:cfl_check}
+
+The time step for the advection \nmitem{TIME_DT} must be smaller than the grid spacing divided by velocity, i.e., the Courant-Friedrichs-Lewy (CFL) condition.
+A non-dimensional number $U \Delta t/\Delta x$ is called the Courant number, where $U, \Delta x$ and $\Delta t$ are velocity, spatial grid spacing, and time step, respectively.
+The CFL condition is that the Courant number must be smaller than 1.
+
+\scalerm has a functionality to check whether the Courant number exceeds a limit.
+To enable this function, set \nmitem{ATMOS_VARS_CHECKCFL_SOFT} and/or \nmitem{ATMOS_VARS_CHECKCFL_HARD} in \namelist{PARAM_ATMOS_VARS}.
+Their default values are 0.
+If the Courant number in simulations exceeds \nmitem{ATMOS_VARS_CHECKCFL_SOFT}, the following message is output to the LOG file.
+\editboxtwo{
+\verb|INFO [ATMOS_vars_monitor] Courant number = xxx exceeded the soft limit = yyy|
+}
+If it exceeds \nmitem{ATMOS_VARS_CHECKCFL_HARD}, the following message is output to the standard output, and the simulation aborts.
+\editboxtwo{
+\verb|ERROR [ATMOS_vars_monitor] Courant number = xxx exceeded the hard limit = yyy|
+}
