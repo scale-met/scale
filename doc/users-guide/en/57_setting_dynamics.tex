@@ -96,12 +96,12 @@ So, the use of \verb|UD3| is recommended for experiments with steep terrains.
 For tracer advection, guaranteeing a non-negative value is required in most cases.\\
 The \verb|UD3KOREN1993| scheme guarantees a non-negative value, whereas other schemes do not.
 When schemes other than \verb|UD3KOREN1993| are used the FCT filter can be used to guarantee the non-negative value.
-The advection scheme is specified by \nmitem{ATMOS_DYN_FVM_FLUX_TRACER_TYPE}, and switch for the FCT filter is \nmitem{ATMOS_DYN_FLAG_FCT_TRACER=}.
+The advection scheme is specified by \nmitem{ATMOS_DYN_FVM_FLUX_TRACER_TYPE}, and switch for the FCT filter is \nmitem{ATMOS_DYN_FLAG_FCT_TRACER}$=$\verb|.true.|.
 
 
 \subsection{Halos}
 
-The necessary number of halos grid depends on the spatial difference scheme as shown in Table \ref{tab:nml_atm_dyn}
+The necessary number of halos grid depends on the spatial difference scheme as shown in Table \ref{tab:nml_atm_dyn}.
 Set \nmitem{IHALO} and \nmitem{JHALO} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX} for the number of halos grid for the x- and y-directions, respectively.
 By default, the number of the grid is 2, which is suitable for ``UD3'', ``UD3KOREN1993'', and ``CD4''.
 For example, the configuration of the halo for the fifth-order upwind difference scheme is as follows:
