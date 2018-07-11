@@ -45,6 +45,7 @@ module scale_atmos_dyn_tinteg_large
           REF_dens, REF_pott, REF_qv, REF_pres,                 &
           BND_W, BND_E, BND_S, BND_N,                           &
           ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
+          BND_QA, BND_SMOOTHER_FACT,                            &
           DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,          &
           DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
           DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    &
@@ -61,8 +62,6 @@ module scale_atmos_dyn_tinteg_large
        use scale_atmos_grid_cartesC_index
        use scale_index
        use scale_tracer
-       use scale_atmos_boundary, only: &
-            BND_QA
        real(RP), intent(inout) :: DENS(KA,IA,JA)
        real(RP), intent(inout) :: MOMZ(KA,IA,JA)
        real(RP), intent(inout) :: MOMX(KA,IA,JA)
@@ -132,6 +131,9 @@ module scale_atmos_dyn_tinteg_large
        integer,  intent(in)    :: ND_ORDER
        real(RP), intent(in)    :: ND_SFC_FACT
        logical,  intent(in)    :: ND_USE_RS
+
+       integer,  intent(in)    :: BND_QA
+       real(RP), intent(in)    :: BND_SMOOTHER_FACT
 
        real(RP), intent(in)    :: DAMP_DENS(KA,IA,JA)
        real(RP), intent(in)    :: DAMP_VELZ(KA,IA,JA)

@@ -83,6 +83,7 @@ module scale_comm_cartesC
      module procedure COMM_bcast_INT_1D
      module procedure COMM_bcast_INT_2D
      module procedure COMM_bcast_LOGICAL_SCR
+     module procedure COMM_bcast_CHARACTER
   end interface COMM_bcast
 
   !-----------------------------------------------------------------------------
@@ -916,6 +917,35 @@ contains
 
     return
   end subroutine COMM_bcast_LOGICAL_SCR
+
+  !-----------------------------------------------------------------------------
+  !> Broadcast data for whole process value in character
+  subroutine COMM_bcast_CHARACTER( var )
+    use scale_prc, only: &
+       PRC_masterrank
+    implicit none
+
+    character(len=*), intent(inout) :: var   !< broadcast buffer
+
+    integer :: counts
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('COMM_Bcast', 2)
+
+    counts = len(var)
+
+    call MPI_BCAST( var,            &
+                    counts,         &
+                    MPI_CHARACTER,  &
+                    PRC_masterrank, &
+                    COMM_world,     &
+                    ierr            )
+
+    call PROF_rapend('COMM_Bcast', 2)
+
+    return
+  end subroutine COMM_bcast_CHARACTER
 
 !-------------------------------------------------------------------------------
 ! private routines

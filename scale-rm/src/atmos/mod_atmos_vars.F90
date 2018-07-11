@@ -102,6 +102,8 @@ module mod_atmos_vars
   real(RP), public, pointer             :: QG(:,:,:)
   real(RP), public, pointer             :: QH(:,:,:)
 
+  real(RP), public, target, allocatable :: Qe(:,:,:,:)  !> mass ratio of hydrometors [kg/kg]
+
   ! reference state
   real(RP), public, allocatable :: DENS_ref(:,:,:)
   real(RP), public, allocatable :: POTT_ref(:,:,:)
@@ -426,7 +428,6 @@ module mod_atmos_vars
 
 
   logical,  private                      :: moist
-  real(RP), private, target, allocatable :: Qe(:,:,:,:)  !> mass ratio of hydrometors [kg/kg]
   real(RP), private, target, allocatable :: ZERO(:,:,:)
 
 

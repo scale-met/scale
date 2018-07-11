@@ -103,7 +103,7 @@ module scale_comm_cartesC_nest
   logical,  public              :: ONLINE_USE_VELZ          = .false.
   logical,  public              :: ONLINE_NO_ROTATE         = .false.
   logical,  public              :: ONLINE_BOUNDARY_USE_QHYD = .false.
-  logical,  public              :: ONLINE_BOUNDARY_DIAGQNUM = .false.
+  logical,  public              :: ONLINE_BOUNDARY_DIAGQHYD = .false.
 
   !-----------------------------------------------------------------------------
   !
@@ -209,7 +209,6 @@ module scale_comm_cartesC_nest
 
   integer,  private, parameter   :: max_isu   = 100        ! maximum number of receive/wait issue
   integer,  private, parameter   :: max_isuf  = 20         ! maximum number of receive/wait issue (z-stag)
-  integer,  private, parameter   :: max_bndqa = 12         ! maximum number of QA in boundary: tentative approach
   integer,  private              :: max_rq    = 1000       ! maximum number of req: tentative approach
   integer,  private              :: rq_ctl_p               ! for control request id (counting)
   integer,  private              :: rq_ctl_d               ! for control request id (counting)
@@ -255,12 +254,15 @@ module scale_comm_cartesC_nest
 
   integer(8), private :: nwait_p, nwait_d, nrecv, nsend
 
+  character(len=H_SHORT) :: MP_TYPE
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine COMM_CARTESC_NEST_setup ( &
        QA_MP,        &
+       MP_TYPE_in,   &
        inter_parent, &
        inter_child   )
     use scale_file, only: &
@@ -297,7 +299,8 @@ contains
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry
     implicit none
-    integer, intent(in) :: QA_MP
+    integer,          intent(in) :: QA_MP
+    character(len=*), intent(in) :: MP_TYPE_in
 
     integer, intent(in), optional :: inter_parent
     integer, intent(in), optional :: inter_child
@@ -329,7 +332,6 @@ contains
        ONLINE_USE_VELZ,          &
        ONLINE_NO_ROTATE,         &
        ONLINE_BOUNDARY_USE_QHYD, &
-       ONLINE_BOUNDARY_DIAGQNUM, &
        ONLINE_AGGRESSIVE_COMM,   &
        ONLINE_WAIT_LIMIT,        &
        ONLINE_SPECIFIED_MAXRQ,   &
@@ -546,10 +548,13 @@ contains
 !         endif
 
          if( ONLINE_BOUNDARY_USE_QHYD ) then
+            MP_TYPE = MP_TYPE_in
             COMM_CARTESC_NEST_BND_QA = QA_MP
          elseif ( ATMOS_HYDROMETEOR_dry ) then
+            MP_TYPE = "DRY"
             COMM_CARTESC_NEST_BND_QA = 0
          else
+            MP_TYPE = "QV"
             COMM_CARTESC_NEST_BND_QA = 1
          endif
 
@@ -617,7 +622,7 @@ contains
             allocate( org_U_ll(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
             allocate( org_V_ll(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
             allocate( org_RHOT(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
-            allocate( org_QTRC(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM),max_bndqa) )
+            allocate( org_QTRC(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM),max(COMM_CARTESC_NEST_BND_QA,1)) )
 
             call COMM_CARTESC_NEST_setup_nestdown( HANDLING_NUM )
 
@@ -718,8 +723,8 @@ contains
             ! for scalar points
             call INTERP_factor3d( itp_nh,                             & ! [IN]
                                   TILEAL_KA(HANDLING_NUM),            & ! [IN]
-                                  1,                                  & ! [IN]
-                                  TILEAL_KA(HANDLING_NUM),            & ! [IN]
+                                  KHALO+1,                            & ! [IN]
+                                  TILEAL_KA(HANDLING_NUM)-KHALO,      & ! [IN]
                                   TILEAL_IA(HANDLING_NUM),            & ! [IN]
                                   TILEAL_JA(HANDLING_NUM),            & ! [IN]
                                   buffer_ref_LON(:,:),                & ! [IN]
@@ -742,8 +747,8 @@ contains
             ! for z staggered points
             call INTERP_factor3d( itp_nh,                                & ! [IN]
                                   TILEAL_KA(HANDLING_NUM)+1,             & ! [IN]
-                                  1,                                     & ! [IN]
-                                  TILEAL_KA(HANDLING_NUM)+1,             & ! [IN]
+                                  KHALO+1,                               & ! [IN]
+                                  TILEAL_KA(HANDLING_NUM)+1-KHALO,       & ! [IN]
                                   TILEAL_IA(HANDLING_NUM),               & ! [IN]
                                   TILEAL_JA(HANDLING_NUM),               & ! [IN]
                                   buffer_ref_LON(:,:),                   & ! [IN]
@@ -766,8 +771,8 @@ contains
             ! for x staggered points
             call INTERP_factor3d( itp_nh,                                   & ! [IN]
                                   TILEAL_KA(HANDLING_NUM),                  & ! [IN]
-                                  1,                                        & ! [IN]
-                                  TILEAL_KA(HANDLING_NUM),                  & ! [IN]
+                                  KHALO+1,                                  & ! [IN]
+                                  TILEAL_KA(HANDLING_NUM)-KHALO,            & ! [IN]
                                   TILEAL_IA(HANDLING_NUM),                  & ! [IN]
                                   TILEAL_JA(HANDLING_NUM),                  & ! [IN]
                                   buffer_ref_LONUY(:,:),                    & ! [IN]
@@ -790,8 +795,8 @@ contains
             ! for y staggered points
             call INTERP_factor3d( itp_nh,                                   & ! [IN]
                                   TILEAL_KA(HANDLING_NUM),                  & ! [IN]
-                                  1,                                        & ! [IN]
-                                  TILEAL_KA(HANDLING_NUM),                  & ! [IN]
+                                  KHALO+1,                                  & ! [IN]
+                                  TILEAL_KA(HANDLING_NUM)-KHALO,            & ! [IN]
                                   TILEAL_IA(HANDLING_NUM),                  & ! [IN]
                                   TILEAL_JA(HANDLING_NUM),                  & ! [IN]
                                   buffer_ref_LONXV(:,:),                    & ! [IN]
@@ -1005,14 +1010,19 @@ contains
        TIME_DTSEC
     use scale_comm_cartesC, only: &
        COMM_bcast
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     implicit none
 
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
 
     real(RP) :: buffer
     integer  :: datapack(14)
-    integer  :: QA_OTHERSIDE
-    integer  :: ireq1, ireq2, ierr1, ierr2, ileng
+
+    integer                :: QA_OTHERSIDE
+    character(len=H_SHORT) :: MP_TYPE_OTHERSIDE
+
+    integer  :: ireq1, ireq2, ireq3, ierr1, ierr2, ierr3, ileng
     integer  :: istatus(MPI_STATUS_SIZE)
     integer  :: tag
     !---------------------------------------------------------------------------
@@ -1046,8 +1056,10 @@ contains
        if ( PRC_IsMaster ) then
           call MPI_ISEND(datapack, ileng, MPI_INTEGER, PRC_myrank, tag, INTERCOMM_DAUGHTER, ireq1, ierr1)
           call MPI_ISEND(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+1, INTERCOMM_DAUGHTER, ireq2, ierr2)
+          call MPI_ISEND(MP_TYPE, H_SHORT, MPI_CHARACTER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq3, ierr3)
           call MPI_WAIT(ireq1, istatus, ierr1)
           call MPI_WAIT(ireq2, istatus, ierr2)
+          call MPI_WAIT(ireq3, istatus, ierr3)
        endif
 
        PARENT_PRC_nprocs(HANDLE) = datapack( 1)
@@ -1067,13 +1079,16 @@ contains
 
        ! from daughter to parent
        if ( PRC_IsMaster ) then
-          call MPI_IRECV(datapack, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq1, ierr1)
-          call MPI_IRECV(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+3, INTERCOMM_DAUGHTER, ireq2, ierr2)
+          call MPI_IRECV(datapack, ileng, MPI_INTEGER, PRC_myrank, tag+3, INTERCOMM_DAUGHTER, ireq1, ierr1)
+          call MPI_IRECV(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+4, INTERCOMM_DAUGHTER, ireq2, ierr2)
+          call MPI_IRECV(MP_TYPE_OTHERSIDE, H_SHORT, MPI_CHARACTER, PRC_myrank, tag+5, INTERCOMM_DAUGHTER, ireq3, ierr3)
           call MPI_WAIT(ireq1, istatus, ierr1)
           call MPI_WAIT(ireq2, istatus, ierr2)
+          call MPI_WAIT(ireq3, istatus, ierr3)
        endif
        call COMM_bcast(datapack, ileng)
        call COMM_bcast(buffer)
+       call COMM_bcast(MP_TYPE_OTHERSIDE)
 
        DAUGHTER_PRC_nprocs(HANDLE) = datapack( 1)
        DAUGHTER_PRC_NUM_X (HANDLE) = datapack( 2)
@@ -1100,11 +1115,14 @@ contains
        if ( PRC_IsMaster ) then
           call MPI_IRECV(datapack, ileng, MPI_INTEGER, PRC_myrank, tag, INTERCOMM_PARENT, ireq1, ierr1)
           call MPI_IRECV(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq2, ierr2)
+          call MPI_IRECV(MP_TYPE_OTHERSIDE, H_SHORT, MPI_CHARACTER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq3, ierr3)
           call MPI_WAIT(ireq1, istatus, ierr1)
           call MPI_WAIT(ireq2, istatus, ierr2)
+          call MPI_WAIT(ireq3, istatus, ierr3)
        endif
        call COMM_bcast(datapack, ileng)
        call COMM_bcast(buffer)
+       call COMM_bcast(MP_TYPE_OTHERSIDE)
 
        PARENT_PRC_nprocs(HANDLE) = datapack( 1)
        PARENT_PRC_NUM_X (HANDLE) = datapack( 2)
@@ -1140,10 +1158,12 @@ contains
        buffer       = TIME_DTSEC
 
        if ( PRC_IsMaster ) then
-          call MPI_ISEND(datapack, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq1, ierr1)
-          call MPI_ISEND(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+3, INTERCOMM_PARENT, ireq2, ierr2)
+          call MPI_ISEND(datapack, ileng, MPI_INTEGER, PRC_myrank, tag+3, INTERCOMM_PARENT, ireq1, ierr1)
+          call MPI_ISEND(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+4, INTERCOMM_PARENT, ireq2, ierr2)
+          call MPI_ISEND(MP_TYPE, H_SHORT, MPI_CHARACTER, PRC_myrank, tag+5, INTERCOMM_PARENT, ireq3, ierr3)
           call MPI_WAIT(ireq1, istatus, ierr1)
           call MPI_WAIT(ireq2, istatus, ierr2)
+          call MPI_WAIT(ireq3, istatus, ierr3)
        endif
 
        DAUGHTER_PRC_nprocs(HANDLE) = datapack( 1)
@@ -1165,17 +1185,14 @@ contains
        call PRC_abort
     endif
 
-    if ( ONLINE_BOUNDARY_DIAGQNUM ) then
-       LOG_INFO("COMM_CARTESC_NEST_parentsize",*) 'Number concentration of hydrometeor will be diagnosed'
-       LOG_INFO("COMM_CARTESC_NEST_parentsize",*) 'Number of QA (remote,local) = ', QA_OTHERSIDE, COMM_CARTESC_NEST_BND_QA
-       COMM_CARTESC_NEST_BND_QA = min(QA_OTHERSIDE, COMM_CARTESC_NEST_BND_QA)
+    if ( MP_TYPE == MP_TYPE_OTHERSIDE .and. COMM_CARTESC_NEST_BND_QA == QA_OTHERSIDE ) then
+       ONLINE_BOUNDARY_DIAGQHYD = .false.
     else
-       if ( QA_OTHERSIDE /= COMM_CARTESC_NEST_BND_QA ) then
-          LOG_ERROR("COMM_CARTESC_NEST_parentsize",*) 'NUMBER of QA are not matched!'
-          LOG_ERROR_CONT(*) 'check a flag of ONLINE_BOUNDARY_USE_QHYD.'
-          LOG_ERROR_CONT(*) 'Number of QA (remote,local) = ', QA_OTHERSIDE, COMM_CARTESC_NEST_BND_QA
-          call PRC_abort
-       endif
+       LOG_INFO("COMM_CARTESC_NEST_parentsize",*) 'Hydrometeor will be diagnosed'
+       LOG_INFO("COMM_CARTESC_NEST_parentsize",*) 'MP type      (remote,local) = ', trim(MP_TYPE_OTHERSIDE), ", ", trim(MP_TYPE)
+       LOG_INFO("COMM_CARTESC_NEST_parentsize",*) 'Number of QA (remote,local) = ', QA_OTHERSIDE, COMM_CARTESC_NEST_BND_QA
+       COMM_CARTESC_NEST_BND_QA = N_HYD + 1 ! QV + hydrometeors
+       ONLINE_BOUNDARY_DIAGQHYD = .true.
     endif
 
     return
@@ -1254,7 +1271,7 @@ contains
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
 
     integer :: ping, pong
-    integer :: ireq1, ireq2, ierr1, ierr2
+    integer :: ireq1, ireq2, ireq3, ierr1, ierr2, ierr3
     integer :: istatus(MPI_STATUS_SIZE)
     integer :: tag
     logical :: ping_error
@@ -1722,20 +1739,20 @@ contains
        ROTC => ATMOS_GRID_CARTESC_METRIC_ROTC
     implicit none
 
-    integer,  intent(in)    :: HANDLE !< id number of nesting relation in this process target
-    integer,  intent(in)    :: BND_QA !< num of tracer
-    real(RP), intent(in)    :: DENS_send(PARENT_KA  (HANDLE),PARENT_IA  (HANDLE),PARENT_JA  (HANDLE))
-    real(RP), intent(in)    :: MOMZ_send(PARENT_KA  (HANDLE),PARENT_IA  (HANDLE),PARENT_JA  (HANDLE))
-    real(RP), intent(in)    :: MOMX_send(PARENT_KA  (HANDLE),PARENT_IA  (HANDLE),PARENT_JA  (HANDLE))
-    real(RP), intent(in)    :: MOMY_send(PARENT_KA  (HANDLE),PARENT_IA  (HANDLE),PARENT_JA  (HANDLE))
-    real(RP), intent(in)    :: RHOT_send(PARENT_KA  (HANDLE),PARENT_IA  (HANDLE),PARENT_JA  (HANDLE))
-    real(RP), intent(in)    :: QTRC_send(PARENT_KA  (HANDLE),PARENT_IA  (HANDLE),PARENT_JA  (HANDLE),BND_QA)
-    real(RP), intent(inout) :: DENS_recv(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
-    real(RP), intent(inout) :: VELZ_recv(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
-    real(RP), intent(inout) :: VELX_recv(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
-    real(RP), intent(inout) :: VELY_recv(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
-    real(RP), intent(inout) :: POTT_recv(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
-    real(RP), intent(inout) :: QTRC_recv(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE),BND_QA)
+    integer,  intent(in)  :: HANDLE !< id number of nesting relation in this process target
+    integer,  intent(in)  :: BND_QA !< num of tracer
+    real(RP), intent(in)  :: DENS_send(PARENT_KA  (HANDLE),PARENT_IA  (HANDLE),PARENT_JA  (HANDLE))
+    real(RP), intent(in)  :: MOMZ_send(PARENT_KA  (HANDLE),PARENT_IA  (HANDLE),PARENT_JA  (HANDLE))
+    real(RP), intent(in)  :: MOMX_send(PARENT_KA  (HANDLE),PARENT_IA  (HANDLE),PARENT_JA  (HANDLE))
+    real(RP), intent(in)  :: MOMY_send(PARENT_KA  (HANDLE),PARENT_IA  (HANDLE),PARENT_JA  (HANDLE))
+    real(RP), intent(in)  :: RHOT_send(PARENT_KA  (HANDLE),PARENT_IA  (HANDLE),PARENT_JA  (HANDLE))
+    real(RP), intent(in)  :: QTRC_send(PARENT_KA  (HANDLE),PARENT_IA  (HANDLE),PARENT_JA  (HANDLE),BND_QA)
+    real(RP), intent(out) :: DENS_recv(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
+    real(RP), intent(out) :: VELZ_recv(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
+    real(RP), intent(out) :: VELX_recv(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
+    real(RP), intent(out) :: VELY_recv(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
+    real(RP), intent(out) :: POTT_recv(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
+    real(RP), intent(out) :: QTRC_recv(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE),BND_QA)
 
     real(RP) :: WORK1_send(PARENT_KA  (HANDLE),PARENT_IA  (HANDLE),PARENT_JA  (HANDLE))
     real(RP) :: WORK2_send(PARENT_KA  (HANDLE),PARENT_IA  (HANDLE),PARENT_JA  (HANDLE))
@@ -1757,9 +1774,6 @@ contains
 
     if ( BND_QA > I_BNDQA ) then
        LOG_ERROR("COMM_CARTESC_NEST_nestdown",*) 'internal error: BND_QA is larger than I_BNDQA'
-       call PRC_abort
-    elseif( BND_QA > max_bndqa ) then
-       LOG_ERROR("COMM_CARTESC_NEST_nestdown",*) 'internal error: BND_QA is larger than max_bndqa'
        call PRC_abort
     endif
 

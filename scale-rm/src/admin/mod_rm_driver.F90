@@ -161,7 +161,8 @@ contains
        TIME_DOend
     use mod_atmos_admin, only: &
        ATMOS_admin_setup, &
-       ATMOS_do
+       ATMOS_do, &
+       ATMOS_PHY_MP_TYPE
     use mod_atmos_vars, only: &
        ATMOS_vars_setup,                         &
        ATMOS_sw_check => ATMOS_RESTART_CHECK,    &
@@ -320,7 +321,7 @@ contains
     call FILE_EXTERNAL_INPUT_CARTESC_setup
 
     ! setup nesting grid
-    call COMM_CARTESC_NEST_setup ( QA_MP, intercomm_parent, intercomm_child )
+    call COMM_CARTESC_NEST_setup ( QA_MP, ATMOS_PHY_MP_TYPE, intercomm_parent, intercomm_child )
 
     ! setup common tools
     call ATMOS_HYDROSTATIC_setup
@@ -501,8 +502,8 @@ contains
        LAND_vars_history
     use mod_urban_vars, only: &
        URBAN_vars_history
-    use scale_atmos_boundary, only: &
-       ATMOS_BOUNDARY_set
+    use mod_atmos_bnd_driver, only: &
+       ATMOS_BOUNDARY_driver_set
     use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_UPDATE
     use mod_user, only: &
@@ -557,7 +558,7 @@ contains
                                    REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:), AREA(:,:),    & ! [IN]
                                    TIME_NOWSEC,                                                   & ! [IN]
                                    force = .true.                                                 )
-       call ATMOS_BOUNDARY_set( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+       call ATMOS_BOUNDARY_driver_set
        call ATMOS_vars_history_setpres
     endif
 
