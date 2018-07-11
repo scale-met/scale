@@ -1,0 +1,48 @@
+\section{Module for user defined settings} \label{sec:mod_user}
+
+\scale prepares many options, users can specify as namelist, to meet users' demand for their calculations.
+However, when there is no option you desire, you can set the desired settings in module of \verb|mod_user|.
+This section describes what is \verb|mod_user| module and how to use it.
+
+
+\subsection{What is \texttt{mod\_user} module}
+
+\verb|mod_user| module is provided in \texttt{scale-{\version}/scale/scale-rm/src/user/mod\_user.F90}.\\
+The module contains the following subroutines:
+\begin{alltt}
+  subroutine USER_tracer_setup
+  subroutine USER_setup
+  subroutine USER_mkinit
+  subroutine USER_update
+  subroutine USER_calc_tendency
+\end{alltt}
+
+\noindent These subroutines are called by \scale at the following timing.
+\begin{alltt}
+Initial setup
+  IO setup
+  MPI setup
+  Grid settings
+  Setup of administrator for dynamics and physics schemes 
+  Tracer setup
+  \textcolor{blue}{USER_tracer_setup}
+  Setup topography, land
+  Setup of vars and drivers for dynamics and physics schemes 
+  \textcolor{blue}{USER_setup}
+Main routine
+  Time advance
+  Ocean/Land/Urban/Atmos update
+  \textcolor{blue}{User update}
+  Output restart
+  Calculation of tendency in Atmos/Ocean/Land/Urban
+  \textcolor{blue}{Calculation of tendency}
+  History output
+\end{alltt}
+
+Since the subroutines in \verb|mod_user| are basically called after handling the processes,
+you can replace settings and output and add tracers and processes users desire.
+%\verb|USER_tracer_setup| can add tracers to one difined according to physical schemes.
+%When you change settings defined in setup process, use \verb|USER_setup|.
+%\textcolor{blue}{User update}
+Please refer to \verb|mod_user.F90| under test cases (\texttt{scale-{\version}/scale-rm/test/case}).
+
