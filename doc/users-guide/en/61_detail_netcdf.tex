@@ -7,44 +7,44 @@ and it enables us to generate files with self-describing and machine-independent
 for example, the former has a merit to describe variables along with their axis variables in a file and
 the latter has a merit to treat data without worry which endian is used.
 Based on the above virtue, \scalelib has particular conversion ( \scalenetcdf convention ).
-It is mostly following the CF conventions (\url{http://cfconventions.org}).
+It is mostly following the CF conventions \\ (\url{http://cfconventions.org}).
 
 
 \subsection{Global Attributes}
 \scalenetcdf file contains information about data contained in the file,
 such as those with regards to spatial decomposition as ``Global Attributes'' (Table \ref{table:netcdf_global_attrs}).
 
-\begin{table}[bth]
+\begin{table}%[bth]
 \begin{center}
   \caption{Global attributes in \scalenetcdf file}
   \label{table:netcdf_global_attrs}
-  \begin{tabularx}{150mm}{lXX} \hline
-    Name & description & remarks \\ \hline \hline
-    title & brief description of data & value of \nmitem{History_TITLE} in \namelist{PARAM_HISTORY} \\
-    source & name of the source software & value of \nmitem{History_SOURCE} in \namelist{PARAM_HISTORY} for history files and \nmitem{H_SOURCE} in \namelist{PARAM_IO} for other files\\
-    institution & data author & value of \nmitem{History_INSTITUTION} in \namelist{PARAM_HISTORY} for history files and \nmitem{H_INSTITUTE} for other files\\
-    rankid & rank id of MPI process & \verb|PRC_myrank| in the model \\
-    Conventions & CF convention version  & ``CF-1.6'' for version 5.3 \\
-    grid\_name & grid type & ``cartesC'' for \scalerm \\
-    scale\_cartesC\_prc\_rank\_[xy] & mapping index of the 2D decomposition & \verb|PRC_2Drank(PRC_myrank,1 or 2)| in the model \\
-    scale\_cartesC\_prc\_num\_[xy] & number of the 2D decomposition & \nmitem{PRC_NUM_X}, \nmitem{PRC_NUM_Y} in the model \\
-    scale\_cartesC\_prc\_periodic\_[zxy] & whether the boundary condition is periodic & 0 for .false. and 1 for .true, 0. They correspond to \nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} in the model \\
-    \shortstack{scale\_atmos\_grid\_cartesC\\\_index\_[ij]maxg} & number of the grids in the global domain & \nmitem{IMAX} $\times$ \nmitem{PRC_NUM_X}, \nmitem{JMAX} $\times$ \nmitem{PRC_NUM_Y} in the model \\
-    \shortstack{scale\_atmos\_grid\_cartesC\\\_index\_kmax} & number of the vertical layer for the atmospheric model & \nmitem{KMAX} in the model \\
-    \shortstack{scale\_ocean\_grid\_cartesC\\\_index\_kmax} & number of the vertical layer for the ocean model & \nmitem{OKMAX} in the model \\
-    \shortstack{scale\_land\_grid\_cartesC\\\_index\_kmax} & number of the vertical layer for the land model & \nmitem{LKMAX} in the model \\
-    \shortstack{scale\_urban\_grid\_cartesC\\\_index\_kmax} & number of the vertical layer for the urban & \nmitem{UKMAX} in the model \\
-    \shortstack{scale\_atmos\_grid\_cartesC\\\_index\_[kij]halo} & number of halo grids & \nmitem{KHALO}, \nmitem{IHALO}, \nmitem{JHALO} in the model \\
-    calendar & calendar type & \nmitem{PARAM_CALENDAR} in the model \\
-    time\_start, time\_units & init time \\ \hline
+  \begin{tabularx}{150mm}{p{50mm}XX} \hline
+    Name        & Description                 & Remarks \\ \hline \hline
+    title       & Brief description of data   & Value of \nmitem{History_TITLE} in \namelist{PARAM_HISTORY} \\  
+    source      & Name of the source software & Value of \nmitem{History_SOURCE} in \namelist{PARAM_HISTORY} for history files and \nmitem{H_SOURCE} in \namelist{PARAM_IO} for other files\\
+    institution & Data author                 & Value of \nmitem{History_INSTITUTION} in \namelist{PARAM_HISTORY} for history files and \nmitem{H_INSTITUTE} for other files\\
+    rankid      & Rank id of MPI process      & \verb|PRC_myrank| in the model \\
+    Conventions & CF convention version       & ``CF-1.6'' for version 5.3 \\
+    grid\_name  & Grid type                   & ``cartesC'' for \scalerm \\
+    scale\_cartesC\_prc\_rank\_[xy]           & Mapping index of the 2D decomposition      & Equal to \verb|PRC_2Drank(PRC_myrank, 1 or 2)| in the model \\
+    scale\_cartesC\_prc\_num\_[xy]            & Number of the 2D decomposition             & ~\nmitem{PRC_NUM_X}, \nmitem{PRC_NUM_Y} in the model \\
+    scale\_cartesC\_prc\_periodic\_[zxy]      & Whether the boundary condition is periodic & \verb|.false.| and \verb|.true.|\ They correspond to \nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} in the model\\
+    scale\_atmos\_grid\_cartesC\ \_index\_[ij]maxg  & Number of the grids in the global domain               & ~\nmitem{IMAX} $\times$ \nmitem{PRC_NUM_X}, \nmitem{JMAX} $\times$ \nmitem{PRC_NUM_Y} in the model \\
+    scale\_atmos\_grid\_cartesC\ \_index\_kmax      & Number of the vertical layer for the atmospheric model & ~\nmitem{KMAX} in the model \\
+    scale\_ocean\_grid\_cartesC\ \_index\_kmax      & Number of the vertical layer for the ocean model       & ~\nmitem{OKMAX} in the model \\
+    scale\_land\_grid\_cartesC\ \_index\_kmax       & Number of the vertical layer for the land model        & ~\nmitem{LKMAX} in the model \\
+    scale\_urban\_grid\_cartesC\ \_index\_kmax      & Number of the vertical layer for the urban model       & ~\nmitem{UKMAX} in the model \\
+    scale\_atmos\_grid\_cartesC\ \_index\_[kij]halo & Number of halo grids                                   & ~\nmitem{KHALO}, \nmitem{IHALO}, \nmitem{JHALO} in the model \\
+    Calendar    & Calendar type                            & ~\nmitem{PARAM_CALENDAR} in the model \\
+    time\_units & Unit of time & \\
+    time\_start & Start time   & \\ \hline
+    \multicolumn{3}{l}{Refer Section \ref{sec:output} for \nmitem{History_TITLE, History_SOURCE, History_INSTITUTION},} \\
+    \multicolumn{3}{l}{Section \ref{sec:domain}       for \nmitem{PRC_NUM_X, PRC_NUM_Y, PRC_PERIODIC_X, PRC_PERIODIC_Y},} \\
+    \multicolumn{3}{l}{\nmitem{KMAX, IMAX, JMAX}, and \ref{subsec:calendar} for \nmitem{PARAM_CALENDAR}.} \\ \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-\noindent Refer
-Section \ref{sec:output} for \nmitem{History_TITLE, History_SOURCE, History_INSTITUTION},
-Section \ref{sec:domain} for \nmitem{PRC_NUM_X, PRC_NUM_Y, PRC_PERIODIC_X, PRC_PERIODIC_Y, KMAX, IMAX, JMAX},
-and \ref{subsec:calendar} for \nmitem{PARAM_CALENDAR}.
 
 
 \subsection{Data in the Halo Region}
@@ -66,7 +66,6 @@ for the history data file,
 the halo data is contained 
 only when the lateral boundary conditions are not periodic
 (\nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} = .false. in \namelist{PARAM_PRC_CARTESC})
-and \nmitem{HIST_BND}=.true. in \namelist{PARAM_HIST},
 and \nmitem{FILE_HISTORY_CARTESC_BOUNDARY}=.true. in \namelist{PARAM_FILE_HISTORY_CARTESC},
 otherwise it is not. Refer Section \ref{sec:output} for detail.
 
@@ -77,16 +76,16 @@ All the axis variables have
 ``long\_name'' and ``units'' attributes,
 which describe description and unit of the variable, respectively.
 In addition, x, y, xh, and yh variables 
-have attributes for the total number of grids in the whole domain ``size\_global'',
-the start index in the total grid of data in the file ``start\_global'',
-the number of the halo grids at the begin and end in the whole data ``halo\_global'',
-and the number of the halo grids of data in the file ``halo\_local''.
+have attributes for the total number of grids in the whole domain (``size\_global''),
+the start index in the total grid of data in the file (``start\_global''),
+the number of the halo grids at the begin and end in the whole data (``halo\_global''),
+and the number of the halo grids of data in the file (``halo\_local'').
 
 Table \ref{table:netcdf_axes} shows list of the axis data.
-The coordinate variables have their own dimension; their variable names are same as their dimension names.
-The other axis variables use some dimensions of coordinate variables.
-The lower-case variables are mainly used in the file, 
-while the upper-case variables describe axes in simulation.
+The coordinate variables have their own dimension; their variable names are the same as their dimension names.
+%The other axis variables use some dimensions of coordinate variables.
+The lower-case name of variables are mainly used in the file, 
+while the upper-case name of variables describe axes in simulation.
 Figure \ref{fig:netcdfhorizontalcoordinate} and \ref{fig:netcdfverticalcoordinate} show 
 the horizontal and vertical locations of coordinate variables,
 respectively.
@@ -100,7 +99,7 @@ The map projection data is contained as a non-dimensional variable whose name is
 The information of relationship the staggered grids, an attribute and a non-dimensional variable are contained as follows SGRID conventions (\url{https://github.com/sgrid/sgrid}).
 The non-dimensional variable's name is specified by the ``grid'' attribute of each variable.
 
-In the file, there also the surface elevation data and land mask data as ``topo'' and ``lsmask'', respectively.
+In the file, there are also the surface elevation data and land mask data as ``topo'' and ``lsmask'', respectively.
 
 
 
@@ -240,14 +239,14 @@ See also Table \ref{table:netcdf_axes}.
 
 \subsection{Single File I/O} \label{subsec:single_io}
 As default, all the data files are output by each process, namely separate file I/O.
-If \scalerm is compiled with pnetCDF (SCALE\_ENABLE\_PNETCDF=T), the data from all processes can be combined into a single file (See Section \ref{sec:scale_compile}).
-To do this, set \nmitem{FILE_AGGREGATE} in \namelist{PARAM_FILE}) .true..
-The all the data files become single file.
+If \scalerm is compiled with pnetCDF (environmental variable SCALE\_ENABLE\_PNETCDF=T),
+the data from all processes can be combined into a single file (See Section \ref{subsec:environment}).
+To do this, set \nmitem{FILE_AGGREGATE} in \namelist{PARAM_FILE}) \verb|.true.|. The all the data files become single file.
 In stead, you can switch on/off of the single I/O for individual file types, i.e., history, init/restart, topography, and land use files.
 Set \nmitem{FILE_HISTORY_AGGREGATE}=.true. in \namelist{PARAM_FILE_HISTORY} for the history file.
 For init/restart files, set \nmitem{RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_RESTART},\\
 or \nmitem{(MODELNAME)_RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_(MODELNAME)_VARS}.
-Here, (MODELNAME) is ``ATMOS'', ``OCEAN'', ``LAND'', or ``URBAN''.
+Here, \verb|(MODELNAME)| is ``ATMOS'', ``OCEAN'', ``LAND'', or ``URBAN''.
 For topography and land use files, set \nmitem{TOPO_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_TOPO} and \nmitem{LANDUSE_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_LANDUSE}, respectively.
 
 
@@ -256,12 +255,12 @@ If \scale is compiled with \netcdf version 3, the following restrictions exist.
 \begin{itemize}
 \item Variables with different time intervals cannot stored in the same file.
 \item Compression of data cannot be used.
-\item File of \netcdf 4 format cannot be read.
+\item File of {\netcdf}4 format cannot be read.
 \end{itemize}
 If you want to output variables with different time intervals, set \nmitem{BASENAME} in \namelist{HISTORY_ITEM} to output them to different files.
 
-
-Note that the restrictions of the multiple time interval and compression are placed when the single file I/O is used, because pnetCDF is based on \netcdf 3 file format.
+Note that the restrictions of the multiple time interval and compression are placed when the single file I/O is used,
+because pnetCDF is based on \netcdf 3 file format.
 
 \begin{table}
   \caption{Functionality of each \netcdf versions.}
