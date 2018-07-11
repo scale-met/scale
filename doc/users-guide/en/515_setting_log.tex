@@ -9,35 +9,33 @@ On a default setting, log messages from the process of number zero is written in
 Users can modify the settings of log file outputs by editing configuration files as follows:
 
 \editboxtwo{
-\verb|&PARAM_IO| & \\
-\verb| IO_LOG_BASENAME     = 'LOG-test1',| & ; output name of log file\\
-\verb| IO_LOG_ALLNODE      = .true.,|      & ; output log files for all processes or not?\\
-\verb| IO_LOG_SUPPRESS     = .false., |    & ; if .true., log output is suppressed\\
-\verb| IO_LOG_NML_SUPPRESS = .false., |    & ; if .true., namelist parameter output is suppressed\\
-\verb| IO_NML_FILENAME     = '',|          & ; if specified, namelist parameter is output to specified file. Otherwise to the log file.\\
-\verb| IO_STEP_TO_STDOUT   = -1,|          & ; if > 0, the step information is output to STDOUT every \nmitem{IO_STEP_TO_STDOUT} steps.
-\verb|/|\\
+\verb|&PARAM_IO                       | & \\
+\verb| IO_LOG_BASENAME     = 'LOG',   | & ; Output name of log file \\
+\verb| IO_LOG_ALLNODE      = .false., | & ; Output log files for all processes? \\
+\verb| IO_LOG_SUPPRESS     = .false., | & ; If .true., log output is suppressed \\
+\verb| IO_LOG_NML_SUPPRESS = .false., | & ; If .true., namelist parameter output is suppressed \\
+\verb| IO_NML_FILENAME     = '',      | & ; If specified, namelist parameter is output to specified file. Otherwise to the log file. \\
+\verb| IO_STEP_TO_STDOUT   = -1,      | & ; If positive, the time step information is output to standard out (STDOUT). \\
+\verb|/                               | & \\
 }
 
 The name of the log file is controled by \nmitem{IO_LOG_BASENAME} in \namelist{PARAM_IO}.
-In the case of above sample, the name of log file for the master process is "\verb|LOG-test1.pe000000|".
+In the case of above default setting, the name of log file for the master process is "\verb|LOG.pe000000|".
 \nmitem{IO_LOG_ALLNODE} controls whether to output log files for all processes or not.
-When \nmitem{IO_LOG_ALLNODE} is "\verb|.true.|", log files for all processes will be created, otherwise the log file is output only from master process, namely rank 0.
-The default setting of \nmitem{IO_LOG_ALLNODE} is "\verb|.false.|".
+When \nmitem{IO_LOG_ALLNODE} is \verb|.true.|, log files for all processes will be created, otherwise the log file is output only from master process, namely rank 0.
 
-If \nmitem{IO_LOG_SUPPRESS} is set to .true., log will not output.
-This means that log file does not created.
+If \nmitem{IO_LOG_SUPPRESS} is set to \verb|.true.|, No log files are created and the almost all log messages are not output.
+Only the information about elapsed time is sent to the STDOUT, even if \nmitem{IO_LOG_SUPPRESS} is set to \verb|.true.|.
 
-The NAMELIST parameters are output unless \nmitem{IO_LOG_NML_SUPPRESS}=.true..
+The NAMELIST parameters are output unless \nmitem{IO_LOG_NML_SUPPRESS} is set to \verb|.true.|.
 The paremeters are output to the log file as default.
 They can be output different file by setting \nmitem{IO_NML_FILENAME}.
 Note that the file specified by \nmitem{IO_NML_FILENAME} can be used as input configuration file for later runs.
 
 The time step infomation is output to the log file.
-Details of the information is explained in the next secction.
-If \nmitem{IO_STEP_TO_STDOUT} is set as $>0$, the time step information is output to the standard out.
-The time interval (number of steps) is specified by the parameter.
-
+Details of the information is explained in the next section.
+If \nmitem{IO_STEP_TO_STDOUT} is set as $>0$, the time step information is output to the STDOUT, too.
+All the time step infomation is output to the log file. For the STDOUT, the step interval of output is specified by the number of \nmitem{IO_STEP_TO_STDOUT}.
 
 
 
@@ -45,7 +43,7 @@ The time interval (number of steps) is specified by the parameter.
 
 You can find the lines with following format in the log file when you execute \verb|scale-rm|:\\
 \msgbox{
-  *** TIME: 0000/01/01 00:06:36 + 0.600 STEP:   1984/ 432000 WCLOCK:    2000.2\\
+  +++++ TIME: 0000/01/01 00:06:36 + 0.600 STEP:   1984/ 432000 WCLOCK:    2000.2 \\
 }
 This line presents messages about status of computation as follows:
 \begin{itemize}
@@ -54,7 +52,7 @@ This line presents messages about status of computation as follows:
  \item 2000.2s was taken in a wall clock time (cpu time) .
 \end{itemize}
 Furthermore, the required time for this computation can be estimated from these information.
-In this case, 440000s ( $= 2000.2 \times 432000 \div 1984$ ) is the estimated elapsed time.
+In this case, 121 hours ( $= 2000.2 \times 432000 \div 1984$ ) is the estimated elapsed time.
 
 \vspace{2ex}
 Messages in the log file are output in following format.
@@ -82,4 +80,3 @@ Messages in the log file are output in following format.
 \verb|      k,i,j,value(QHYD,QV) =           19           8           1  -5.4717591620764856E-003   0.0000000000000000| \\
 \verb|  ... |
 }
-
