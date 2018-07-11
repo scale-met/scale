@@ -31,7 +31,7 @@ module mod_rm_prep
   !
   !++ Public procedure
   !
-  public :: scalerm_prep
+  public :: rm_prep
 
   !-----------------------------------------------------------------------------
   !
@@ -51,7 +51,7 @@ module mod_rm_prep
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine scalerm_prep( &
+  subroutine rm_prep( &
        comm_world,       &
        intercomm_parent, &
        intercomm_child,  &
@@ -361,6 +361,6 @@ contains
     call PROF_rapreport
 
     return
-  end subroutine scalerm_prep
+  end subroutine rm_prep
 
 end module mod_rm_prep

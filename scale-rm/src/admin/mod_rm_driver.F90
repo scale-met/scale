@@ -30,7 +30,7 @@ module mod_rm_driver
   !
   !++ Public procedure
   !
-  public :: scalerm
+  public :: rm_driver
 
   !-----------------------------------------------------------------------------
   !
@@ -50,7 +50,7 @@ module mod_rm_driver
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine scalerm( &
+  subroutine rm_driver( &
        comm_world,       &
        intercomm_parent, &
        intercomm_child,  &
@@ -472,7 +472,7 @@ contains
 #endif
 
     return
-  end subroutine scalerm
+  end subroutine rm_driver
 
   !-----------------------------------------------------------------------------
   subroutine restart_read
