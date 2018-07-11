@@ -214,23 +214,23 @@ def gen_run_conf( conf_name,
 /
 
 
-&PARAM_HISTORY
- HISTORY_DEFAULT_BASENAME  = "history",
- HISTORY_DEFAULT_TINTERVAL = #{HISTORY_TINTERVAL_SEC},
- HISTORY_DEFAULT_TUNIT     = "SEC",
- HISTORY_DEFAULT_TAVERAGE  = .false.,
- HISTORY_DEFAULT_DATATYPE  = "REAL8",
- HISTORY_OUTPUT_STEP0      = .true.,
+&PARAM_FILE_HISTORY
+ FILE_HISTORY_DEFAULT_BASENAME  = "history",
+ FILE_HISTORY_DEFAULT_TINTERVAL = #{HISTORY_TINTERVAL_SEC},
+ FILE_HISTORY_DEFAULT_TUNIT     = "SEC",
+ FILE_HISTORY_DEFAULT_TAVERAGE  = .false.,
+ FILE_HISTORY_DEFAULT_DATATYPE  = "REAL8",
+ FILE_HISTORY_OUTPUT_STEP0      = .true.,
 /
 
-&HISTITEM item='U'           /
-&HISTITEM item='V'           /
-&HISTITEM item='NC'          /
-&HISTITEM item='NC_diff'     /
-&HISTITEM item='l2error'     /
-&HISTITEM item='linferror'   /
-!&HISTITEM item='DENS'       /
-!&HISTITEM item='W'          /
+&HISTORY_ITEM item='U'           /
+&HISTORY_ITEM item='V'           /
+&HISTORY_ITEM item='NC'          /
+&HISTORY_ITEM item='NC_diff'     /
+&HISTORY_ITEM item='l2error'     /
+&HISTORY_ITEM item='linferror'   /
+!&HISTORY_ITEM item='DENS'       /
+!&HISTORY_ITEM item='W'          /
 
 
 &PARAM_MONITOR
