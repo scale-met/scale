@@ -556,7 +556,7 @@ contains
        REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI, &
        AREA     => ATMOS_GRID_CARTESC_REAL_AREA
     use scale_time, only: &
-       TIME_NOWSEC
+       TIME_NOWDAYSEC
     implicit none
     !---------------------------------------------------------------------------
 
@@ -570,7 +570,7 @@ contains
                                    DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                                    CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
                                    REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:), AREA(:,:),    & ! [IN]
-                                   TIME_NOWSEC,                                                   & ! [IN]
+                                   TIME_NOWDAYSEC,                                                & ! [IN]
                                    force = .true.                                                 )
        call ATMOS_BOUNDARY_driver_set
        call ATMOS_vars_history_setpres
