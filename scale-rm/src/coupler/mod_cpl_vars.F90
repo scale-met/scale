@@ -195,21 +195,21 @@ contains
     ! Check consistency of OCEAN_do and LANDUSE_fact_ocean
     checkfact = maxval( LANDUSE_fact_ocean(:,:) )
     if ( .NOT. OCEAN_do .AND. checkfact > 0.0_RP ) then
-       LOG_ERROR("CPL_vars_setup",*) 'Ocean fraction exists, but ocean components never called. STOP.', checkfact
+       LOG_ERROR("CPL_vars_setup",*) 'Ocean fraction exists, but ocean component has not been called. Please check this inconsistency. STOP.', checkfact
        call PRC_abort
     endif
 
     ! Check consistency of LAND_do and LANDUSE_fact_land
     checkfact = maxval( LANDUSE_fact_land(:,:) )
     if ( .NOT. LAND_do .AND. checkfact > 0.0_RP ) then
-       LOG_ERROR("CPL_vars_setup",*) 'Land  fraction exists, but land  components never called. STOP.', checkfact
+       LOG_ERROR("CPL_vars_setup",*) 'Land fraction exists, but land component has not been called. Please check this inconsistency. STOP.', checkfact
        call PRC_abort
     endif
 
     ! Check consistency of URBAN_do and LANDUSE_fact_urban
     checkfact = maxval( LANDUSE_fact_urban(:,:) )
     if ( .NOT. URBAN_do .AND. checkfact > 0.0_RP ) then
-       LOG_ERROR("CPL_vars_setup",*) 'URBAN fraction exists, but urban components never called. STOP.', checkfact
+       LOG_ERROR("CPL_vars_setup",*) 'Urban fraction exists, but urban component has not been called. Please check this inconsistency. STOP.', checkfact
        call PRC_abort
     endif
 
