@@ -1,14 +1,15 @@
 \section{Module for user defined settings} \label{sec:mod_user}
 
 \scalerm prepares many options, which users can specify as namelist parameters, to meet users' demand for their calculations.
-However, when there is no option you desire, you can modify model variables directly as you want by programming using the module for users, namely \verb|mod_user|.
+However, when there is no option you desire,
+you can modify model variables directly as you want by programming using the module for users, namely \verb|mod_user|.
 This section describes what is \verb|mod_user| module and how to use it.
 
 
 \subsection{What is \texttt{mod\_user} module}
 
 The default \verb|mod_user| module is provided in \texttt{scale-{\version}/scale/scale-rm/src/user/mod\_user.F90}.\\
-Prepare your own \verb|mod_user.F90| and compile it instead of the default one.
+Prepare your own \verb|mod_user.F90| and then compile it instead of the default one.
 
 The module must contain the following subroutines:
 \begin{alltt}
@@ -41,7 +42,7 @@ Main routine
   History output
 \end{alltt}
 The timings for calling individual subroutines of the \verb|mod_user| are indicated by blue color.
-The \verb|USER_mkinit| is called in the init program scale-rm\_init.
+The \verb|USER_mkinit| is called in the init program \verb|scale-rm_init|.
 
 
 Since the subroutines in \verb|mod_user| are basically called after handling each process,
