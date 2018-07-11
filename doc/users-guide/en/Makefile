@@ -26,6 +26,9 @@ pdf: $(TEXNAME).pdf
 html: $(TEXNAME).html
 
 clean:
+	rm -f *.dvi *.aux *.bbl *.blg *.log *.out *.toc $(VERFNAME)
+
+allclean:
 	rm -f *.pdf *.dvi *.aux *.bbl *.blg *.log *.out *.toc $(VERFNAME)
 
 $(TEXNAME).pdf: $(TEXNAME).dvi
