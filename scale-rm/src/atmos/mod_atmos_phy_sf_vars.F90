@@ -219,11 +219,16 @@ contains
     allocate( ATMOS_PHY_SF_SFC_Z0M   (IA,JA)                     )
     allocate( ATMOS_PHY_SF_SFC_Z0H   (IA,JA)                     )
     allocate( ATMOS_PHY_SF_SFC_Z0E   (IA,JA)                     )
-    ATMOS_PHY_SF_SFC_TEMP  (:,:)     = UNDEF
-    ATMOS_PHY_SF_SFC_albedo(:,:,:,:) = UNDEF
-    ATMOS_PHY_SF_SFC_Z0M   (:,:)     = UNDEF
-    ATMOS_PHY_SF_SFC_Z0H   (:,:)     = UNDEF
-    ATMOS_PHY_SF_SFC_Z0E   (:,:)     = UNDEF
+    ATMOS_PHY_SF_SFC_TEMP(:,:) = ATMOS_PHY_SF_DEFAULT_SFC_TEMP
+    ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_IR ) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_LW
+    ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_IR ) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_LW
+    ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_NIR) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW
+    ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_NIR) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW
+    ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_VIS) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW
+    ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_VIS) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW
+    ATMOS_PHY_SF_SFC_Z0M (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0
+    ATMOS_PHY_SF_SFC_Z0H (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0
+    ATMOS_PHY_SF_SFC_Z0E (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0
 
     allocate( ATMOS_PHY_SF_SFC_DENS  (IA,JA) )
     allocate( ATMOS_PHY_SF_SFC_PRES  (IA,JA) )
@@ -367,17 +372,6 @@ contains
 
     else
        LOG_INFO("ATMOS_PHY_SF_vars_restart_open",*) 'restart file for ATMOS_PHY_SF is not specified.'
-       ATMOS_PHY_SF_SFC_TEMP(:,:) = ATMOS_PHY_SF_DEFAULT_SFC_TEMP
-       ATMOS_PHY_SF_SFC_Z0M (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0
-       ATMOS_PHY_SF_SFC_Z0H (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0
-       ATMOS_PHY_SF_SFC_Z0E (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0
-
-       ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_IR ) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_LW
-       ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_IR ) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_LW
-       ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_NIR) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW
-       ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_NIR) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW
-       ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_VIS) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW
-       ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_VIS) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW
     endif
 
     return
