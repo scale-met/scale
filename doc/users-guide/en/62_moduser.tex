@@ -1,14 +1,16 @@
 \section{Module for user defined settings} \label{sec:mod_user}
 
-\scale prepares many options, users can specify as namelist, to meet users' demand for their calculations.
-However, when there is no option you desire, you can set the desired settings in module of \verb|mod_user|.
+\scalerm prepares many options, which users can specify as namelist parameters, to meet users' demand for their calculations.
+However, when there is no option you desire, you can modify model variables directly as you want by programming using the module for users, namely \verb|mod_user|.
 This section describes what is \verb|mod_user| module and how to use it.
 
 
 \subsection{What is \texttt{mod\_user} module}
 
-\verb|mod_user| module is provided in \texttt{scale-{\version}/scale/scale-rm/src/user/mod\_user.F90}.\\
-The module contains the following subroutines:
+The default \verb|mod_user| module is provided in \texttt{scale-{\version}/scale/scale-rm/src/user/mod\_user.F90}.\\
+Prepare your own \verb|mod_user.F90| and compile it instead of the default one.
+
+The module must contain the following subroutines:
 \begin{alltt}
   subroutine USER_tracer_setup
   subroutine USER_setup
@@ -17,7 +19,7 @@ The module contains the following subroutines:
   subroutine USER_calc_tendency
 \end{alltt}
 
-\noindent These subroutines are called by \scale at the following timing.
+\noindent This is the sequence of execution of the scale-rm.
 \begin{alltt}
 Initial setup
   IO setup
@@ -25,10 +27,10 @@ Initial setup
   Grid settings
   Setup of administrator for dynamics and physics schemes 
   Tracer setup
-  \textcolor{blue}{USER_tracer_setup}
+  \textcolor{blue}{USER tracer setup}
   Setup topography, land
   Setup of vars and drivers for dynamics and physics schemes 
-  \textcolor{blue}{USER_setup}
+  \textcolor{blue}{USER setup}
 Main routine
   Time advance
   Ocean/Land/Urban/Atmos update
@@ -38,11 +40,13 @@ Main routine
   \textcolor{blue}{Calculation of tendency}
   History output
 \end{alltt}
+The timings for calling individual subroutines of the \verb|mod_user| are indicated by blue color.
+The \verb|USER_mkinit| is called in the init program scale-rm\_init.
 
-Since the subroutines in \verb|mod_user| are basically called after handling the processes,
-you can replace settings and output and add tracers and processes users desire.
-%\verb|USER_tracer_setup| can add tracers to one difined according to physical schemes.
+
+Since the subroutines in \verb|mod_user| are basically called after handling each process,
+you can replace any settings and variables as you need.
+You can also add several tracers, such as passive tracers, in \verb|USER_tracer_setup|.
 %When you change settings defined in setup process, use \verb|USER_setup|.
 %\textcolor{blue}{User update}
-Please refer to \verb|mod_user.F90| under test cases (\texttt{scale-{\version}/scale-rm/test/case}).
-
+There are several examples of \verb|mod_user.F90| in the test cases (\texttt{scale-{\version}/scale-rm/test/case}).
