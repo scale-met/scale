@@ -15,7 +15,7 @@ Users can modify the settings of log file outputs by editing configuration files
 \verb| IO_LOG_SUPPRESS     = .false., | & ; If .true., log output is suppressed \\
 \verb| IO_LOG_NML_SUPPRESS = .false., | & ; If .true., namelist parameter output is suppressed \\
 \verb| IO_NML_FILENAME     = '',      | & ; If specified, namelist parameter is output to specified file. Otherwise to the log file. \\
-\verb| IO_STEP_TO_STDOUT   = -1,      | & ; If positive, the time step information is output to standard out (STDOUT). \\
+\verb| IO_STEP_TO_STDOUT   = -1,      | & ; If positive, the time step information is output to standard output. \\
 \verb|/                               | & \\
 }
 
@@ -24,8 +24,8 @@ In the case of above default setting, the name of log file for the master proces
 \nmitem{IO_LOG_ALLNODE} controls whether to output log files for all processes or not.
 When \nmitem{IO_LOG_ALLNODE} is \verb|.true.|, log files for all processes will be created, otherwise the log file is output only from master process, namely rank 0.
 
-If \nmitem{IO_LOG_SUPPRESS} is set to \verb|.true.|, No log files are created and the almost all log messages are not output.
-Only the information about elapsed time is sent to the STDOUT, even if \nmitem{IO_LOG_SUPPRESS} is set to \verb|.true.|.
+If \nmitem{IO_LOG_SUPPRESS} is set to \verb|.true.|, no log files are created and the almost all log messages are not output.
+Only the information about elapsed time is sent to the standard output (STDOUT), even if \nmitem{IO_LOG_SUPPRESS} is set to \verb|.true.|.
 
 The NAMELIST parameters are output unless \nmitem{IO_LOG_NML_SUPPRESS} is set to \verb|.true.|.
 The paremeters are output to the log file as default.
