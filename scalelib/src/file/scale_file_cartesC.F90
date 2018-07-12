@@ -962,17 +962,12 @@ contains
 
     integer, intent(in) :: fid  !< file ID
 
-    logical :: opened
     integer :: start(3)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_O_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     call FILE_EndDef( fid ) ! [IN]
 
@@ -1017,17 +1012,11 @@ contains
     implicit none
 
     integer, intent(in) :: fid  !< file ID
-
-    logical :: opened
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_O_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     if ( FILE_get_AGGREGATE(fid) ) then
        call FILE_Flush( fid ) ! flush all pending read/write requests
@@ -1050,17 +1039,11 @@ contains
     implicit none
 
     integer, intent(in) :: fid  !< file ID
-
-    logical :: opened
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_O_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     if ( FILE_get_AGGREGATE(fid) ) then
        call FILE_Flush( fid )        ! flush all pending read/write requests
@@ -1242,16 +1225,11 @@ contains
     integer :: dim1_S, dim1_E
     integer :: start(1)   ! start offset of globale variable
     integer :: count(1)   ! request length to the global variable
-    logical :: opened
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_I_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_I_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     LOG_INFO("FILE_CARTESC_read_var_1D",'(1x,2A)') 'Read from file (1D), name : ', trim(varname)
 
@@ -1359,16 +1337,11 @@ contains
 
     integer :: dim1_S, dim1_E
     integer :: dim2_S, dim2_E
-    logical :: opened
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_I_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_I_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     LOG_INFO("FILE_CARTESC_read_var_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
 
@@ -1440,16 +1413,11 @@ contains
     integer :: dim1_S, dim1_E
     integer :: dim2_S, dim2_E
     integer :: dim3_S, dim3_E
-    logical :: opened
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_I_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_I_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     LOG_INFO("FILE_CARTESC_read_var_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
 
@@ -1577,16 +1545,11 @@ contains
     integer :: dim2_S, dim2_E
     integer :: dim3_S, dim3_E
     integer :: dim4_S, dim4_E
-    logical :: opened
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_I_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_I_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     LOG_INFO("FILE_CARTESC_read_var_4D",'(1x,2A)') 'Read from file (4D), name : ', trim(varname)
 
@@ -1689,18 +1652,13 @@ contains
     integer :: n
 
     logical :: existed2
-    logical :: opened
 
     intrinsic size
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_I_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_I_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     LOG_INFO("FILE_CARTESC_read_auto_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
 
@@ -1777,18 +1735,13 @@ contains
     integer :: nx, ny, nz
     integer :: n
     integer :: k, i, j
-    logical :: opened
 
     intrinsic size
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_I_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_I_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     LOG_INFO("FILE_CARTESC_read_auto_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
 
@@ -2194,14 +2147,11 @@ contains
     character(len=*), intent(in) :: calendar
 
     logical :: opened
+    !---------------------------------------------------------------------------
+
+    if ( .not. FILE_opened(fid) ) return
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
-
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_O_NetCDF', 2)
-       return
-    end if
 
     call FILE_Set_Attribute( fid, "global", "Conventions", "CF-1.6" ) ! [IN]
 
@@ -2265,18 +2215,14 @@ contains
     integer :: jsize ! grid size, y-axis, (whole domain or local tile), without halo except domain edge
 
     character(len=2) :: axisname(3)
-    logical :: opened
 
     logical, save :: set_dim = .false.
     !---------------------------------------------------------------------------
 
+    if ( .not. FILE_opened(fid) ) return
+
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_O_NetCDF', 2)
-       return
-    end if
 
     if ( .not. set_dim ) then
        call set_dimension_informations
@@ -2792,17 +2738,13 @@ contains
 
     real(RP) :: FDXG(0:IAG), FDYG(0:JAG)
     real(RP) :: FDX(0:IA), FDY(0:JA)
-    logical :: opened
+
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_O_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     if ( FILE_get_AGGREGATE(fid) ) then
        ! For parallel I/O, not all variables are written by all processes.
@@ -3218,16 +3160,11 @@ contains
 
     integer :: dtype, elm_size, ndims
     integer :: dimid, n
-    logical :: opened
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_O_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     if    ( datatype == 'REAL8' ) then
        dtype = FILE_REAL8
@@ -3383,16 +3320,11 @@ contains
     integer :: rankidx(2)
     integer :: start(1)         ! used only when AGGREGATE is .true.
     logical :: exec
-    logical :: opened
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_O_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -3484,16 +3416,11 @@ contains
     integer :: rankidx(2)
     integer :: start(2)         ! used only when AGGREGATE is .true.
     logical :: exec
-    logical :: opened
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_O_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -3626,16 +3553,11 @@ contains
     logical  :: fill_halo_
     integer  :: rankidx(2)
     integer  :: start(3) ! used only when AGGREGATE is .true.
-    logical  :: opened
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_O_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     fill_halo_ = .false.
     if( present(fill_halo) ) fill_halo_ = fill_halo
@@ -3785,16 +3707,11 @@ contains
     real(DP) :: timeofs_
     integer  :: rankidx(2)
     integer  :: start(2) ! used only when AGGREGATE is .true.
-    logical  :: opened
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_O_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     fill_halo_ = .false.
     if( present(fill_halo) ) fill_halo_ = fill_halo
@@ -3965,16 +3882,11 @@ contains
     real(DP) :: timeofs_
     integer  :: rankidx(2)
     integer  :: start(3) ! used only when AGGREGATE is .true.
-    logical  :: opened
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    if ( .not. FILE_opened(fid) ) return
 
-    call FILE_opened(fid, opened)
-    if ( .not. opened ) then
-       call PROF_rapend('FILE_O_NetCDF', 2)
-       return
-    end if
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     fill_halo_ = .false.
     if( present(fill_halo) ) fill_halo_ = fill_halo
