@@ -69,3 +69,27 @@ Note that this is only a part of program.
 In the reference manual (see Section \ref{sec:reference_manual}), you can find list of the subroutine which is available and details of the subroutines.
 There are sample programs for analysis of \scalerm history file at the \texttt{scale-\version/scalelib/test/analysis} directory.
 
+
+\subsection{Compile}
+
+Before compiling your program using \scalelib, you need to compile \scalelib.\\
+\texttt{ \$ cd scale-\version/scalelib/src}\\
+\texttt{ \$ make}
+
+To compile your program, you need to link \verb|libscale.a| located at \texttt{scale-\version/lib}.
+You also have to tell the path of the module files to the compiler.
+The module path is \texttt{scale-\version/include}.
+The option to specify the module path depends on compiler.
+You can find the option in the sysdep file as \verb|MODDIROPT| variable (refer Section \ref{subsec:environment}).\\
+\verb| $ ${FC} your-program ${MODDIROPT} scale-top-dir/include \\|\\
+\verb|            `nc-config --cflags` -Lscale-top-dir/lib -lscale `nc-config --libs`|
+
+You can also use the Makefile in the samples to compile your program as follows.\\
+\texttt{ \$ cd scale-\version/scalelib/test/analysys}\\
+\texttt{ \$ mkdir your\_dir}\\
+\texttt{ \$ cd your\_dir}\\
+\texttt{ \$ cp ../horizontal\_mean/Makefile .}\\
+Copy your program file to this directory.\\
+Edit Makefile (BINNAME = your\_program\_name).\\
+\texttt{ \$ make}
+
