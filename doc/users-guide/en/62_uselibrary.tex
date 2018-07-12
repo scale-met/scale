@@ -2,7 +2,7 @@
 
 \scalelib is a collection of subroutines.
 The subroutines can be used in an arbitrary program.
-The library file is created as ``\verb|scalelib.a|'' under \texttt{scale-{\version}/scale/scalelib/src/} after compiling.
+The library file is created as ``\verb|scalelib.a|'' under \texttt{scale-{\version}/lib/} after compiling.
 
 The following is a template when you use \scalelib in your program.
 \editbox{
@@ -22,8 +22,8 @@ The following is a template when you use \scalelib in your program.
 
 The following is a pseudo program calculating convective available potential energy (CAPE)
 from atmospheric quantities read from a file.
-It is necessary to use necessary modules and then prepare required input variables before main part.
-Note that this is only a part of program.
+You needs to use necessary modules and prepare required input variables before main part.
+Note that this is only a part of the program.
 \editbox{
   \verb|                         |\\
   \verb|use scale_const, only: & | \\
@@ -85,7 +85,7 @@ You can find the option in the sysdep file as \verb|MODDIROPT| variable (refer S
 \verb|            `nc-config --cflags` -Lscale-top-dir/lib -lscale `nc-config --libs`|
 
 You can also use the Makefile in the samples to compile your program as follows.\\
-\texttt{ \$ cd scale-\version/scalelib/test/analysys}\\
+\texttt{ \$ cd scale-\version/scalelib/test/analysis}\\
 \texttt{ \$ mkdir your\_dir}\\
 \texttt{ \$ cd your\_dir}\\
 \texttt{ \$ cp ../horizontal\_mean/Makefile .}\\
