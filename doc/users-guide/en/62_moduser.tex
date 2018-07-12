@@ -51,3 +51,14 @@ You can also add several tracers, such as passive tracers, in \verb|USER_tracer_
 %When you change settings defined in setup process, use \verb|USER_setup|.
 %\textcolor{blue}{User update}
 There are several examples of \verb|mod_user.F90| in the test cases (\texttt{scale-{\version}/scale-rm/test/case}).
+
+
+\subsection{Compile}
+
+To compile \scalerm with your \verb|mod_user.F90|, you can use the Makefile in the test cases as follows.\\
+\texttt{ \$ cd scale-\version/scale-rm/test/case}\\
+\texttt{ \$ mkdir -p your\_dir/exp\_name}\\
+\texttt{ \$ cd your\_dir/exp\_name}\\
+\texttt{ \$ cp ../../advection/500m/Makefile .}\\
+Copy your \verb|mod_user.F90| to this directory.\\
+\texttt{ \$ make}
