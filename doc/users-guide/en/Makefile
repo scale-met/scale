@@ -15,7 +15,7 @@ BIBTEX   = bibtex
 DVIPDF   = dvipdfmx -p a4
 HTMLBIN  = pandoc --to=html
 CURL     = curl -s --create-dirs
-
+IMAGE_PATH = $(IMAGE_URL)/$(VERSION)
 
 VERSION  = $(shell cat ../../../scale-rm/src/VERSION)
 
@@ -33,7 +33,7 @@ html: $(TEXNAME).html
 update_images:
 	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
 	for image in $(IMAGES) ; do \
-	  $(CURL) $(IMAGE_URL)/`basename $$image` -z $$image -o $$image; \
+	  $(CURL) $(IMAGE_PATH)/`basename $$image` -z $$image -o $$image; \
 	done
 
 clean:
@@ -63,12 +63,12 @@ $(TEXNAME).html: $(TEXNAME).tex
 
 figure/%.png:
 	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
-	$(CURL) $(IMAGE_URL)/`basename $@` -o $@
+	$(CURL) $(IMAGE_PATH)/`basename $@` -o $@
 figure/%.pdf:
 	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
-	$(CURL) $(IMAGE_URL)/`basename $@` -o $@
+	$(CURL) $(IMAGE_PATH)/`basename $@` -o $@
 figure/%.eps:
 	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
-	$(CURL) $(IMAGE_URL)/`basename $@` -o $@
+	$(CURL) $(IMAGE_PATH)/`basename $@` -o $@
 
 .PHONY : pdf clean html
