@@ -14,10 +14,15 @@ LATEX    = platex
 BIBTEX   = bibtex
 DVIPDF   = dvipdfmx -p a4
 HTMLBIN  = pandoc --to=html
+CURL     = curl -s --create-dirs
+
 
 VERSION  = $(shell cat ../../../scale-rm/src/VERSION)
 
-SRCS = $(wildcard *.tex)
+IMAGE_BASENAME = $(shell grep includegraphics *tex | ruby -n -e '/^\s*\\includegraphics.*\{(.+)\}/ =~ $$_.split(":")[1] && print(/\A([^.]+)(\..+)?\Z/=~File.basename($$1) && $$1+($$2 || ".eps"),"\n") ') title_wallpaper.pdf scale_logo_final_ULWB.pdf
+IMAGES = $(patsubst %,figure/%,$(IMAGE_BASENAME))
+
+SRCS = $(wildcard *.tex) $(IMAGES)
 
 all: pdf
 
@@ -25,11 +30,17 @@ pdf: $(TEXNAME).pdf
 
 html: $(TEXNAME).html
 
+update_images:
+	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
+	for image in $(IMAGES) ; do \
+	  $(CURL) $(IMAGE_URL)/`basename $$image` -z $$image -o $$image; \
+	done
+
 clean:
 	rm -f *.dvi *.aux *.bbl *.blg *.log *.out *.toc $(VERFNAME)
 
-allclean:
-	rm -f *.pdf *.dvi *.aux *.bbl *.blg *.log *.out *.toc $(VERFNAME)
+allclean: clean
+	rm -rf *.pdf figure
 
 $(TEXNAME).pdf: $(TEXNAME).dvi
 	$(DVIPDF) $(TEXNAME)
@@ -48,6 +59,16 @@ $(TEXNAME).html: $(TEXNAME).tex
 
 
 .SUFFIXES:
-.SUFFIXES: .tex .bbl .dvi .pdf .bib .html
+.SUFFIXES: .tex .bbl .dvi .pdf .bib .html .pdf .png .eps
+
+figure/%.png:
+	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
+	$(CURL) $(IMAGE_URL)/`basename $@` -o $@
+figure/%.pdf:
+	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
+	$(CURL) $(IMAGE_URL)/`basename $@` -o $@
+figure/%.eps:
+	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
+	$(CURL) $(IMAGE_URL)/`basename $@` -o $@
 
 .PHONY : pdf clean html
