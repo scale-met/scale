@@ -55,40 +55,40 @@ With regard to temporal integration, it is configured in \namelist{PARAM_TIME} i
 \verb|/| &\\
 }
 
-The output of the results of the calculation are configured in \nmitem{PARAM_HISTORY}.
+The output of the results of the calculation are configured in \nmitem{PARAM_FILE_HISTORY}.
 \editboxtwo{
-\verb|&PARAM_HISTORY| & \\
-\verb|   HISTORY_DEFAULT_BASENAME  = "history_d01",| & : output file name\\
-\verb|   HISTORY_DEFAULT_TINTERVAL = 3600.D0,      | & : time interval for output\\
-\verb|   HISTORY_DEFAULT_TUNIT     = "SEC",        | & : unit of output time interval\\
-\verb|   HISTORY_DEFAULT_TAVERAGE  = .false.,      | & \\
-\verb|   HISTORY_DEFAULT_DATATYPE  = "REAL4",      | & \\
-\verb|   HISTORY_DEFAULT_ZCOORD    = "model",      | & : no vertical interpolation\\
-\verb|   HISTORY_OUTPUT_STEP0      = .true.,       | & : output at initial time(t=0) or not \\
+\verb|&PARAM_FILE_HISTORY| & \\
+\verb|   FILE_HISTORY_DEFAULT_BASENAME  = "history_d01",| & : output file name\\
+\verb|   FILE_HISTORY_DEFAULT_TINTERVAL = 3600.D0,      | & : time interval for output\\
+\verb|   FILE_HISTORY_DEFAULT_TUNIT     = "SEC",        | & : unit of output time interval\\
+\verb|   FILE_HISTORY_DEFAULT_TAVERAGE  = .false.,      | & \\
+\verb|   FILE_HISTORY_DEFAULT_DATATYPE  = "REAL4",      | & \\
+\verb|   FILE_HISTORY_DEFAULT_ZCOORD    = "model",      | & : no vertical interpolation\\
+\verb|   FILE_HISTORY_OUTPUT_STEP0      = .true.,       | & : output at initial time(t=0) or not \\
 \verb|/| \\
 }
-According to the above setting,  variables listed in the following \nmitem{HISTITEM} are output.  It is possible to change output intervals at every variable in \nmitem{HISTITEM} by adding options if needed.  The mean value instead of the snapshot value can be output.  Refer to Section \ref{sec:output} for the details.
+According to the above setting,  variables listed in the following \nmitem{HISTORY_ITEM} are output.  It is possible to change output intervals at every variable in \nmitem{HISTORY_ITEM} by adding options if needed.  The mean value instead of the snapshot value can be output.  Refer to Section \ref{sec:output} for the details.
 \editboxtwo{
-\verb|&HISTITEM item="MSLP" /| 　   　  & : sea-level pressure \\
-\verb|&HISTITEM item="PREC" /| 　   　  & : precipitation intensity (2D) \\
-\verb|&HISTITEM item="OLR"  /| 　    　 & : outgoing longwave radiation (2D) \\
-\verb|&HISTITEM item="U10" / |　     　 & : horizontal wind speed along X direction at 10 m(2D) \\
-\verb|&HISTITEM item="V10" / |　     　 & : horizontal wind speed along Y direction at 10 m(2D) \\
-\verb|&HISTITEM item="T2"  / |　     　 & : temperature at 2m　(2D) \\
-\verb|&HISTITEM item="Q2"  / |　     　 &  : specific humidity at 2m (2D) \\
-\verb|&HISTITEM item="SFC_PRES"   /| 　 & : surface pressure (2D) \\
-\verb|&HISTITEM item="SFC_TEMP"   /| 　 & : bulk surface temperature(2D) \\
-\verb|&HISTITEM item="DENS" /| 　  　   & : density (3D) \\
-\verb|&HISTITEM item="QV"   /| 　  　   & : specific humidity (3D) \\
-\verb|&HISTITEM item="QHYD" /| 　  　   & : mass concentration of total hydrometeor　(3D) \\
-\verb|&HISTITEM item="PRES" /| 　  　   & : pressure (3D) \\
-\verb|&HISTITEM item="U"    /| 　  　   & : horizontal wind speed along X direction (3D) \\
-\verb|&HISTITEM item="V"    /| 　  　   & : horizontal wind speed along Y direction (3D) \\
-\verb|&HISTITEM item="T"    /| 　  　   & : temperature (3D) \\
-\verb|&HISTITEM item="W"    /| 　  　   & : vertical wind speed (3D) \\
-\verb|&HISTITEM item="Uabs" /| 　  　   & : absolute value of wind velocity(3D) \\
-\verb|&HISTITEM item="PT"   /| 　  　   & : potential temperature (3D) \\
-\verb|&HISTITEM item="RH"   /| 　   　  & : relative humidity (3D) \\
+\verb|&HISTORY_ITEM NAME="MSLP" /| 　   　  & : sea-level pressure \\
+\verb|&HISTORY_ITEM NAME="PREC" /| 　   　  & : precipitation intensity (2D) \\
+\verb|&HISTORY_ITEM NAME="OLR"  /| 　    　 & : outgoing longwave radiation (2D) \\
+\verb|&HISTORY_ITEM NAME="U10" / |　     　 & : horizontal wind speed along X direction at 10 m(2D) \\
+\verb|&HISTORY_ITEM NAME="V10" / |　     　 & : horizontal wind speed along Y direction at 10 m(2D) \\
+\verb|&HISTORY_ITEM NAME="T2"  / |　     　 & : temperature at 2m　(2D) \\
+\verb|&HISTORY_ITEM NAME="Q2"  / |　     　 &  : specific humidity at 2m (2D) \\
+\verb|&HISTORY_ITEM NAME="SFC_PRES"   /| 　 & : surface pressure (2D) \\
+\verb|&HISTORY_ITEM NAME="SFC_TEMP"   /| 　 & : bulk surface temperature(2D) \\
+\verb|&HISTORY_ITEM NAME="DENS" /| 　  　   & : density (3D) \\
+\verb|&HISTORY_ITEM NAME="QV"   /| 　  　   & : specific humidity (3D) \\
+\verb|&HISTORY_ITEM NAME="QHYD" /| 　  　   & : mass concentration of total hydrometeor　(3D) \\
+\verb|&HISTORY_ITEM NAME="PRES" /| 　  　   & : pressure (3D) \\
+\verb|&HISTORY_ITEM NAME="U"    /| 　  　   & : horizontal wind speed along X direction (3D) \\
+\verb|&HISTORY_ITEM NAME="V"    /| 　  　   & : horizontal wind speed along Y direction (3D) \\
+\verb|&HISTORY_ITEM NAME="T"    /| 　  　   & : temperature (3D) \\
+\verb|&HISTORY_ITEM NAME="W"    /| 　  　   & : vertical wind speed (3D) \\
+\verb|&HISTORY_ITEM NAME="Uabs" /| 　  　   & : absolute value of wind velocity(3D) \\
+\verb|&HISTORY_ITEM NAME="PT"   /| 　  　   & : potential temperature (3D) \\
+\verb|&HISTORY_ITEM NAME="RH"   /| 　   　  & : relative humidity (3D) \\
 }
 
 If other schemes for the dynamics process and the physical processes are used,
@@ -129,7 +129,7 @@ The size of each file is approximately 23 MB.
 The output files (\verb|history_d01.pe######.nc|) are
 split according to number of MPI processes,
 where \verb|######| represents the MPI process number.
-In these files, the variables specified in \nmitem{HISTITEM} are output.
+In these files, the variables specified in \nmitem{HISTORY_ITEM} are output.
 The files are formatted by NetCDF,
 corresponding to climate and forecast (CF) metadata convention.
 

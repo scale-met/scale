@@ -108,20 +108,20 @@ Furthermore, it is necessary to prepare a boundary condition of more than 12 hou
 
 \item {\bf How are output variables added and their output interval changed?}\\
 
-The output interval is set to \nmitem{HISTORY_DEFAULT_TINTERVAL} in \namelist{PARAM_HISTORY} as below. The output variables are specified at \nmitem{ITEM} in \namelist{HISTITEM}. The list of the history variables is in the reference manual.
+The output interval is set to \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL} in \namelist{PARAM_FILE_HISTORY} as below. The output variables are specified at \nmitem{ITEM} in \namelist{HISTORY_ITEM}. The list of the history variables is in the reference manual.
 See Section \ref{sec:reference_manual} for the reference manual.\\
 
 \noindent {\small {\rm
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
-\verb|&PARAM_HISTORY | & \\
-\verb| HISTORY_DEFAULT_BASENAME  = "history_d01", | & \\
-\textcolor{red}{\verb| HISTORY_DEFAULT_TINTERVAL = 1800.D0,|} & (\verb|3600.D0,| in the original settings) \\
-\verb| HISTORY_DEFAULT_TUNIT     = "SEC",| & \\
+\verb|&PARAM_FILE_HISTORY | & \\
+\verb| FILE_HISTORY_DEFAULT_BASENAME  = "history_d01", | & \\
+\textcolor{red}{\verb| FILE_HISTORY_DEFAULT_TINTERVAL = 1800.D0,|} & (\verb|3600.D0,| in the original settings) \\
+\verb| FILE_HISTORY_DEFAULT_TUNIT     = "SEC",| & \\
 \verb|/| & \\
 \\
-\textcolor{red}{\verb|&HISTITEM item="SFLX_SW_up" /|} & \textcolor{red}{added}\\
-\textcolor{red}{\verb|&HISTITEM item="SFLX_SW_dn" /|} & \textcolor{red}{added}\\
+\textcolor{red}{\verb|&HISTORY_ITEM NAME="SFLX_SW_up" /|} & \textcolor{red}{added}\\
+\textcolor{red}{\verb|&HISTORY_ITEM NAME="SFLX_SW_dn" /|} & \textcolor{red}{added}\\
 \\
 \end{tabularx}
 }}}\\

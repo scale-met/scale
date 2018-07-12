@@ -132,7 +132,7 @@ URBAN_DYN_TYPE=( "KUSAKA01" "KUSAKA01" ) # required parameters for each domain
 
 #################################################
 #
-# &HISTITEM (run config)
+# &HISTORY_ITEM (run config)
 #
 #################################################
 

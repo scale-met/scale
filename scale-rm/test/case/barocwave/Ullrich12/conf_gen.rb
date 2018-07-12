@@ -249,35 +249,35 @@ def gen_run_conf( conf_name,
  USER_do = .true., 
 /
 
-&PARAM_HISTORY
- HISTORY_DEFAULT_BASENAME  = "history",
- HISTORY_DEFAULT_TINTERVAL = #{hst_interval},
- HISTORY_DEFAULT_TUNIT     = "HOUR",
- HISTORY_DEFAULT_TAVERAGE  = .false.,
- HISTORY_DEFAULT_DATATYPE  = "REAL4",
- HISTORY_OUTPUT_STEP0      = .true.,
+&PARAM_FILE_HISTORY
+ FILE_HISTORY_DEFAULT_BASENAME  = "history",
+ FILE_HISTORY_DEFAULT_TINTERVAL = #{hst_interval},
+ FILE_HISTORY_DEFAULT_TUNIT     = "HOUR",
+ FILE_HISTORY_DEFAULT_TAVERAGE  = .false.,
+ FILE_HISTORY_DEFAULT_DATATYPE  = "REAL4",
+ FILE_HISTORY_OUTPUT_STEP0      = .true.,
 /
 
-&HISTITEM item='U'    /
-&HISTITEM item='V'    /
-&HISTITEM item='W'    /
-&HISTITEM item='VOR' /
-&HISTITEM item='PT'   /
-&HISTITEM item='PRES'   /
-&HISTITEM item='T' /
-&HISTITEM item='DENS'    /
-!&HISTITEM item='MOMY'    /
-!&HISTITEM item='RHOT'    /
+&HISTORY_ITEM item='U'    /
+&HISTORY_ITEM item='V'    /
+&HISTORY_ITEM item='W'    /
+&HISTORY_ITEM item='VOR' /
+&HISTORY_ITEM item='PT'   /
+&HISTORY_ITEM item='PRES'   /
+&HISTORY_ITEM item='T' /
+&HISTORY_ITEM item='DENS'    /
+!&HISTORY_ITEM item='MOMY'    /
+!&HISTORY_ITEM item='RHOT'    /
 
-!&HISTITEM item='DENS_t_advch'    /
-!&HISTITEM item='DENS_t_advcv'    /
-!&HISTITEM item='MOMZ_t_pg'    /
-!&HISTITEM item='MOMZ_t_advch'    /
-!&HISTITEM item='MOMZ_t_advcv'    /
-!&HISTITEM item='MOMY_t_pg'    /
-!&HISTITEM item='MOMY_t_cf'    /
-!&HISTITEM item='MOMY_t_advch'    /
-!&HISTITEM item='MOMY_t_advcv'    /
+!&HISTORY_ITEM item='DENS_t_advch'    /
+!&HISTORY_ITEM item='DENS_t_advcv'    /
+!&HISTORY_ITEM item='MOMZ_t_pg'    /
+!&HISTORY_ITEM item='MOMZ_t_advch'    /
+!&HISTORY_ITEM item='MOMZ_t_advcv'    /
+!&HISTORY_ITEM item='MOMY_t_pg'    /
+!&HISTORY_ITEM item='MOMY_t_cf'    /
+!&HISTORY_ITEM item='MOMY_t_advch'    /
+!&HISTORY_ITEM item='MOMY_t_advcv'    /
 
 &PARAM_MONITOR
  MONITOR_STEP_INTERVAL = 30,
