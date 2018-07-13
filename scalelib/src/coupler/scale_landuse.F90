@@ -37,13 +37,19 @@ module scale_landuse
   real(RP), public, allocatable :: LANDUSE_fact_ocean(:,:) !< ocean factor
   real(RP), public, allocatable :: LANDUSE_fact_land (:,:) !< land  factor
   real(RP), public, allocatable :: LANDUSE_fact_urban(:,:) !< urban factor
+  real(RP), public, allocatable :: LANDUSE_fact_lake (:,:) !< lake  factor
 
   real(RP), public, allocatable :: LANDUSE_frac_land (:,:) !< land  fraction
-  real(RP), public, allocatable :: LANDUSE_frac_lake (:,:) !< lake  fraction
   real(RP), public, allocatable :: LANDUSE_frac_urban(:,:) !< urban fraction
+  real(RP), public, allocatable :: LANDUSE_frac_lake (:,:) !< lake  fraction
 
-  integer,  public              :: LANDUSE_PFT_mosaic = 2   !< number of PFT mosaic
+  integer,  public, parameter   :: LANDUSE_index_OCEAN  =  0 !< ocean index
+  integer,  public, parameter   :: LANDUSE_index_URBAN  = -1 !< urban index
+  integer,  public, parameter   :: LANDUSE_index_LAKE   = -2 !< lake  index
+
+  integer,  public, parameter   :: LANDUSE_PFT_nmin   = -2  !< minimum number of PFT type
   integer,  public              :: LANDUSE_PFT_nmax   = 17  !< number of plant functional type(PFT)
+  integer,  public              :: LANDUSE_PFT_mosaic = 2   !< number of PFT mosaic
 
   real(RP), public, allocatable :: LANDUSE_frac_PFT (:,:,:) !< fraction of PFT for each mosaic
   integer,  public, allocatable :: LANDUSE_index_PFT(:,:,:) !< index of PFT for each mosaic
@@ -68,18 +74,23 @@ module scale_landuse
   logical,                private :: LANDUSE_AllOcean     = .false.
   logical,                private :: LANDUSE_AllLand      = .false.
   logical,                private :: LANDUSE_AllUrban     = .false.
+  logical,                private :: LANDUSE_AllLake      = .false.
   logical,                private :: LANDUSE_MosaicWorld  = .false.
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine LANDUSE_setup
+  subroutine LANDUSE_setup( &
+       OCEAN_do, URBAN_do, LAKE_do )
     use scale_file, only: &
        FILE_AGGREGATE
     use scale_prc, only: &
        PRC_abort
     implicit none
+    logical, intent(in) :: OCEAN_do
+    logical, intent(in) :: URBAN_do
+    logical, intent(in) :: LAKE_do
 
     namelist / PARAM_LANDUSE / &
        LANDUSE_IN_BASENAME,          &
@@ -93,6 +104,7 @@ contains
        LANDUSE_AllOcean,             &
        LANDUSE_AllLand,              &
        LANDUSE_AllUrban,             &
+       LANDUSE_AllLake,              &
        LANDUSE_MosaicWorld
 
     integer :: ierr
@@ -116,11 +128,11 @@ contains
     LOG_NML(PARAM_LANDUSE)
 
     allocate( LANDUSE_frac_land (IA,JA) )
-    allocate( LANDUSE_frac_lake (IA,JA) )
     allocate( LANDUSE_frac_urban(IA,JA) )
+    allocate( LANDUSE_frac_lake (IA,JA) )
     LANDUSE_frac_land (:,:) = 0.0_RP
-    LANDUSE_frac_lake (:,:) = 0.0_RP
     LANDUSE_frac_urban(:,:) = 0.0_RP
+    LANDUSE_frac_lake (:,:) = 0.0_RP
 
     allocate( LANDUSE_index_PFT(IA,JA,LANDUSE_PFT_mosaic) )
     allocate( LANDUSE_frac_PFT (IA,JA,LANDUSE_PFT_mosaic) )
@@ -131,9 +143,11 @@ contains
     allocate( LANDUSE_fact_ocean(IA,JA) )
     allocate( LANDUSE_fact_land (IA,JA) )
     allocate( LANDUSE_fact_urban(IA,JA) )
+    allocate( LANDUSE_fact_lake (IA,JA) )
     LANDUSE_fact_ocean(:,:) = 0.0_RP
     LANDUSE_fact_land (:,:) = 0.0_RP
     LANDUSE_fact_urban(:,:) = 0.0_RP
+    LANDUSE_fact_lake (:,:) = 0.0_RP
 
 
     if    ( LANDUSE_AllOcean ) then
@@ -146,20 +160,32 @@ contains
        call LANDUSE_calc_fact
     elseif( LANDUSE_AllUrban ) then
        LOG_INFO("LANDUSE_setup",*) 'Assume all grids are land'
-       LOG_INFO("LANDUSE_setup",*) 'Assume land PFT is 1 (bare ground)'
        LANDUSE_frac_land (:,:) = 1.0_RP
+       LANDUSE_index_PFT(:,:,:) = LANDUSE_index_URBAN
        LOG_INFO("LANDUSE_setup",*) 'Assume all lands are urban'
+       LOG_INFO("LANDUSE_setup",*) 'Assume land PFT is urban: ', LANDUSE_index_URBAN
        LANDUSE_frac_urban(:,:) = 1.0_RP
+       call LANDUSE_calc_fact
+    elseif( LANDUSE_AllLake ) then
+       LOG_INFO("LANDUSE_setup",*) 'Assume all grids are land'
+       LANDUSE_frac_land (:,:) = 1.0_RP
+       LANDUSE_index_PFT(:,:,:) = LANDUSE_index_LAKE
+       LOG_INFO("LANDUSE_setup",*) 'Assume all lands are lake'
+       LOG_INFO("LANDUSE_setup",*) 'Assume land PFT is lake: ', LANDUSE_index_LAKE
+       LANDUSE_frac_lake (:,:) = 1.0_RP
        call LANDUSE_calc_fact
     elseif( LANDUSE_MosaicWorld ) then
        LOG_INFO("LANDUSE_setup",*) 'Assume all grids have ocean, land, and urban'
+!       LOG_INFO("LANDUSE_setup",*) 'Assume all grids have ocean, land, urban, and lake'
        LOG_INFO("LANDUSE_setup",*) 'Assume land PFT is 1 (bare ground)'
        LANDUSE_frac_land (:,:) = 0.5_RP
        LANDUSE_frac_urban(:,:) = 0.5_RP
+!       LANDUSE_frac_lake (:,:) = 0.25_RP
        call LANDUSE_calc_fact
     else
        ! read from file
-       call LANDUSE_read
+       call LANDUSE_read( OCEAN_do, URBAN_do, LAKE_do )
+       call LANDUSE_calc_fact
     endif
 
     return
@@ -173,13 +199,13 @@ contains
     LOG_NEWLINE
     LOG_INFO("LANDUSE_calc_fact",*) 'calculate landuse factor'
 
-    ! tentative treatment: The area of the lake is treated as the ocean
-    LANDUSE_frac_land (:,:) = LANDUSE_frac_land(:,:) * ( 1.0_RP - LANDUSE_frac_lake(:,:) )
-
     ! make factors
     LANDUSE_fact_ocean(:,:) = ( 1.0_RP - LANDUSE_frac_land(:,:) )
-    LANDUSE_fact_land (:,:) = (          LANDUSE_frac_land(:,:) ) * ( 1.0_RP - LANDUSE_frac_urban(:,:) )
+    LANDUSE_fact_land (:,:) = (          LANDUSE_frac_land(:,:) ) * ( 1.0_RP - LANDUSE_frac_urban(:,:) - LANDUSE_frac_lake(:,:) )
     LANDUSE_fact_urban(:,:) = (          LANDUSE_frac_land(:,:) ) * (          LANDUSE_frac_urban(:,:) )
+    LANDUSE_fact_lake (:,:) = (          LANDUSE_frac_land(:,:) ) * (          LANDUSE_frac_lake (:,:) )
+
+    call LANDUSE_write
 
     return
   end subroutine LANDUSE_calc_fact
@@ -209,6 +235,7 @@ contains
     call COMM_vars8( LANDUSE_fact_ocean(:,:), 4 )
     call COMM_vars8( LANDUSE_fact_land (:,:), 5 )
     call COMM_vars8( LANDUSE_fact_urban(:,:), 6 )
+    call COMM_vars8( LANDUSE_fact_lake (:,:), 7 )
 
     call COMM_wait ( LANDUSE_frac_land (:,:), 1, FILL_BND_ )
     call COMM_wait ( LANDUSE_frac_lake (:,:), 2, FILL_BND_ )
@@ -216,17 +243,18 @@ contains
     call COMM_wait ( LANDUSE_fact_ocean(:,:), 4, FILL_BND_ )
     call COMM_wait ( LANDUSE_fact_land (:,:), 5, FILL_BND_ )
     call COMM_wait ( LANDUSE_fact_urban(:,:), 6, FILL_BND_ )
+    call COMM_wait ( LANDUSE_fact_lake (:,:), 7, FILL_BND_ )
 
     do p = 1, LANDUSE_PFT_mosaic
        temp(:,:) = real(LANDUSE_index_PFT(:,:,p),kind=RP)
 
-       call COMM_vars8( LANDUSE_frac_PFT(:,:,p), 7+2*(p-1) )
-       call COMM_vars8( temp            (:,:)  , 8+2*(p-1) )
+       call COMM_vars8( LANDUSE_frac_PFT(:,:,p), 8+2*(p-1) )
+       call COMM_vars8( temp            (:,:)  , 9+2*(p-1) )
 
-       call COMM_wait ( LANDUSE_frac_PFT(:,:,p), 7+2*(p-1), FILL_BND_ )
-       call COMM_wait ( temp            (:,:)  , 8+2*(p-1), FILL_BND_ )
+       call COMM_wait ( LANDUSE_frac_PFT(:,:,p), 8+2*(p-1), FILL_BND_ )
+       call COMM_wait ( temp            (:,:)  , 9+2*(p-1), FILL_BND_ )
 
-       LANDUSE_index_PFT(:,:,p) = int(temp(:,:)+1.E-3_RP,kind=4)
+       LANDUSE_index_PFT(:,:,p) = aint(temp(:,:),kind=4)
     enddo
 
     return
@@ -234,7 +262,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Read landuse data
-  subroutine LANDUSE_read
+  subroutine LANDUSE_read( OCEAN_do, URBAN_do, LAKE_do )
     use scale_file_cartesC, only: &
        FILE_CARTESC_open, &
        FILE_CARTESC_read, &
@@ -242,8 +270,12 @@ contains
        FILE_CARTESC_check_coordinates, &
        FILE_CARTESC_close
     implicit none
+    logical, intent(in) :: OCEAN_do
+    logical, intent(in) :: URBAN_do
+    logical, intent(in) :: LAKE_do
 
     real(RP) :: temp(IA,JA)
+!    real(RP) :: frac_ocean
 
     character(len=H_SHORT) :: varname
 
@@ -261,10 +293,6 @@ contains
        call FILE_CARTESC_read( fid, 'FRAC_LAND',  'XY', LANDUSE_frac_land(:,:) )
        call FILE_CARTESC_read( fid, 'FRAC_LAKE',  'XY', LANDUSE_frac_lake(:,:) )
        call FILE_CARTESC_read( fid, 'FRAC_URBAN', 'XY', LANDUSE_frac_urban(:,:) )
-
-       call FILE_CARTESC_read( fid, 'FRAC_OCEAN_abs', 'XY', LANDUSE_fact_ocean(:,:) )
-       call FILE_CARTESC_read( fid, 'FRAC_LAND_abs',  'XY', LANDUSE_fact_land(:,:) )
-       call FILE_CARTESC_read( fid, 'FRAC_URBAN_abs', 'XY', LANDUSE_fact_urban(:,:) )
 
        call FILE_CARTESC_flush( fid )
 
@@ -293,6 +321,72 @@ contains
 
        call LANDUSE_fillhalo( FILL_BND=.false. )
 
+!!$       if ( .not. OCEAN_do ) then
+!!$          !$omp parallel do private(frac_ocean)
+!!$          do j = 1, JA
+!!$          do i = 1, IA
+!!$             do p = LANDUSE_PFT_mosaic, 1, -1
+!!$                frac_ocean = 1.0_RP - LANDUSE_frac_land(i,j)
+!!$                if ( frac_ocean > LANDUSE_frac_PFT(i,j,p) ) then
+!!$                   if ( p < LANDUSE_PFT_mosaic ) then
+!!$                      LANDUSE_index_PFT(i,j,p+1) = LANDUSE_index_PFT(i,j,p)
+!!$                      LANDUSE_frac_PFT (i,j,p+1) = LANDUSE_frac_PFT (i,j,p)
+!!$                   end if
+!!$                   LANDUSE_index_PFT(i,j,p) = LANDUSE_index_OCEAN
+!!$                   LANDUSE_frac_PFT (i,j,p) = frac_ocean
+!!$                end if
+!!$             end do
+!!$             LANDUSE_frac_PFT(i,j,:) = LANDUSE_frac_PFT(i,j,:) / sum( LANDUSE_frac_PFT(i,j,:) )
+!!$          end do
+!!$          end do
+!!$          LANDUSE_frac_land(:,:) = 1.0_RP
+!!$       end if
+
+       if ( .not. URBAN_do ) then
+          !$omp parallel do
+          do j = 1, JA
+          do i = 1, IA
+             do p = LANDUSE_PFT_mosaic, 1, -1
+                if ( LANDUSE_frac_urban(i,j) > LANDUSE_frac_PFT(i,j,p) ) then
+                   if ( p < LANDUSE_PFT_mosaic ) then
+                      LANDUSE_index_PFT(i,j,p+1) = LANDUSE_index_PFT(i,j,p)
+                      LANDUSE_frac_PFT (i,j,p+1) = LANDUSE_frac_PFT (i,j,p)
+                   end if
+                   LANDUSE_index_PFT(i,j,p) = LANDUSE_index_URBAN
+                   LANDUSE_frac_PFT (i,j,p) = LANDUSE_frac_urban(i,j)
+                end if
+             end do
+             LANDUSE_frac_PFT(i,j,:) = LANDUSE_frac_PFT(i,j,:) / sum( LANDUSE_frac_PFT(i,j,:) )
+          end do
+          end do
+          LANDUSE_frac_urban(:,:) = 0.0_RP
+       end if
+
+       if ( .not. LAKE_do ) then
+          ! lake is assumed to be ocean
+          if ( OCEAN_do ) then
+             LANDUSE_frac_land(:,:) = max(LANDUSE_frac_land(:,:) - LANDUSE_frac_lake(:,:), 0.0_RP)
+          else
+             !$omp parallel do
+             do j = 1, JA
+             do i = 1, IA
+                do p = LANDUSE_PFT_mosaic, 1, -1
+                   if ( LANDUSE_frac_lake(i,j) > LANDUSE_frac_PFT(i,j,p) ) then
+                      if ( p < LANDUSE_PFT_mosaic ) then
+                         LANDUSE_index_PFT(i,j,p+1) = LANDUSE_index_PFT(i,j,p)
+                         LANDUSE_frac_PFT (i,j,p+1) = LANDUSE_frac_PFT (i,j,p)
+                      end if
+                      LANDUSE_index_PFT(i,j,p) = LANDUSE_index_LAKE
+                      LANDUSE_frac_PFT (i,j,p) = LANDUSE_frac_lake(i,j)
+                   end if
+                end do
+                LANDUSE_frac_PFT(i,j,:) = LANDUSE_frac_PFT(i,j,:) / sum( LANDUSE_frac_PFT(i,j,:) )
+             end do
+             end do
+          end if
+          LANDUSE_frac_lake(:,:) = 0.0_RP
+       end if
+
     else
        LOG_INFO_CONT(*) 'landuse file is not specified.'
        LOG_INFO_CONT(*) 'Assume all grids are ocean'
@@ -314,14 +408,14 @@ contains
 
     real(RP) :: temp(IA,JA)
 
-    integer                :: vid(6+LANDUSE_PFT_mosaic*2)
+    integer                :: vid(7+LANDUSE_PFT_mosaic*2)
     character(len=H_SHORT) :: varname
 
     integer :: fid
     integer :: p
     !---------------------------------------------------------------------------
 
-    if ( LANDUSE_OUT_BASENAME /= '' ) then
+    if ( LANDUSE_OUT_BASENAME /= '' .and. LANDUSE_OUT_BASENAME /= LANDUSE_IN_BASENAME ) then
 
        LOG_NEWLINE
        LOG_INFO("LANDUSE_write",*) 'Output landuse file '
@@ -339,12 +433,13 @@ contains
        call FILE_CARTESC_def_var( fid, 'FRAC_OCEAN_abs', 'absolute OCEAN fraction', '1', 'XY', LANDUSE_OUT_DTYPE, vid(4) )
        call FILE_CARTESC_def_var( fid, 'FRAC_LAND_abs' , 'absolute LAND fraction' , '1', 'XY', LANDUSE_OUT_DTYPE, vid(5) )
        call FILE_CARTESC_def_var( fid, 'FRAC_URBAN_abs', 'absolute URBAN fraction', '1', 'XY', LANDUSE_OUT_DTYPE, vid(6) )
+       call FILE_CARTESC_def_var( fid, 'FRAC_LAKE_abs' , 'absolute LAKE fraction' , '1', 'XY', LANDUSE_OUT_DTYPE, vid(7) )
 
        do p = 1, LANDUSE_PFT_mosaic
           write(varname,'(A8,I1.1)') 'FRAC_PFT', p
-          call FILE_CARTESC_def_var( fid, varname, 'PFT fraction', '1', 'XY', LANDUSE_OUT_DTYPE, vid(7+2*(p-1)) )
+          call FILE_CARTESC_def_var( fid, varname, 'PFT fraction', '1', 'XY', LANDUSE_OUT_DTYPE, vid(8+2*(p-1)) )
           write(varname,'(A9,I1.1)') 'INDEX_PFT', p
-          call FILE_CARTESC_def_var( fid, varname, 'PFT index',    '1', 'XY', LANDUSE_OUT_DTYPE, vid(8+2*(p-1)) )
+          call FILE_CARTESC_def_var( fid, varname, 'PFT index',    '1', 'XY', LANDUSE_OUT_DTYPE, vid(9+2*(p-1)) )
        end do
 
        call FILE_CARTESC_enddef( fid )
@@ -355,13 +450,14 @@ contains
        call FILE_CARTESC_write_var( fid, vid(4), LANDUSE_fact_ocean(:,:), 'FRAC_OCEAN_abs', 'XY' )
        call FILE_CARTESC_write_var( fid, vid(5), LANDUSE_fact_land (:,:), 'FRAC_LAND_abs' , 'XY' )
        call FILE_CARTESC_write_var( fid, vid(6), LANDUSE_fact_urban(:,:), 'FRAC_URBAN_abs', 'XY' )
+       call FILE_CARTESC_write_var( fid, vid(7), LANDUSE_fact_lake (:,:), 'FRAC_LAKE_abs' , 'XY' )
 
        do p = 1, LANDUSE_PFT_mosaic
           write(varname,'(A8,I1.1)') 'FRAC_PFT', p
-          call FILE_CARTESC_write_var( fid, vid(7+2*(p-1)), LANDUSE_frac_PFT(:,:,p), varname, 'XY' )
+          call FILE_CARTESC_write_var( fid, vid(8+2*(p-1)), LANDUSE_frac_PFT(:,:,p), varname, 'XY' )
           write(varname,'(A9,I1.1)') 'INDEX_PFT', p
           temp(:,:) = real(LANDUSE_index_PFT(:,:,p),kind=RP)
-          call FILE_CARTESC_write_var( fid, vid(8+2*(p-1)), temp(:,:),               varname, 'XY' )
+          call FILE_CARTESC_write_var( fid, vid(9+2*(p-1)), temp(:,:),               varname, 'XY' )
        end do
 
        call FILE_CARTESC_close( fid )

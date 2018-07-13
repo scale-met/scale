@@ -29,10 +29,12 @@ module mod_urban_admin
   !
   !++ Public parameters & variables
   !
-  logical,                public :: URBAN_do   = .true. ! main switch for the model
+  logical,                public :: URBAN_do   = .true.  ! main switch for the model
+  logical,                public :: URBAN_land = .false. ! urban is handled as a land use type
 
   character(len=H_SHORT), public :: URBAN_DYN_TYPE = 'NONE'
                                                    ! 'OFF'
+                                                   ! 'LAND'
                                                    ! 'KUSAKA01'
   character(len=H_SHORT), public :: URBAN_SFC_TYPE = 'NONE'
                                                    ! 'KUSAKA01'
@@ -80,7 +82,11 @@ contains
     LOG_NEWLINE
     LOG_INFO("URBAN_ADMIN_setup",*) 'Urban model components '
 
-    if ( URBAN_DYN_TYPE /= 'OFF' .AND. URBAN_DYN_TYPE /= 'NONE' ) then
+    if ( URBAN_DYN_TYPE == 'LAND' ) then
+       LOG_INFO_CONT(*) 'Urban model : OFF (Land model is used for urban)'
+       URBAN_do   = .false.
+       URBAN_land = .true.
+    else if ( URBAN_DYN_TYPE /= 'OFF' .AND. URBAN_DYN_TYPE /= 'NONE' ) then
        if ( UKMAX < 0 ) then
           LOG_ERROR("URBAN_ADMIN_setup",*) 'URBAN_DYN_TYPE is set but UKMAX < 0'
           call PRC_abort
