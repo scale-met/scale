@@ -152,20 +152,25 @@ The relaxation time at the uppermost boundary is specified by \nmitem{ATMOS_DYN_
 The example of concrete setting is shown in section \ref{subsec:atmos_dyn_scheme}.
 
 %-----------------------------------------------------------------------
-\subsection{Setting the buffer region and boundary nudging method} \label{subsec:buffer}
+\subsection{Setting Buffer Region and Boundary Nudging Method} \label{subsec:buffer}
 %-----------------------------------------------------------------------
 
-In general, disagreement in values between input data as boundary condition and actual calculation output occurs at the lateral boundaries. They generate several problems, such as nonphysical mode, in calculation.
+In general, disagreement in values between input data as boundary condition and actual calculation output occurs at the lateral boundaries.
+They generate several problems, such as nonphysical mode, in calculation.
 To avoid these problems, the ``buffer region'' is placed in the domain.
 
-As shown in Fig.\ref{fig:buff_xz}, \scalerm places the buffer region just inside the calculation domain. In the buffer region, prognostic variables are updated to be close to the specified values of boundary data and/or the parent model data with a certain relaxation time. Hereinafter, this relaxation is called nudging.
-%As described in \ref{subsec:raydamp}, Rayleigh damping is often applied at the upper layers. If nudging at the upper layers is required, the thickness of the sponge layer for Rayleigh damping should be set to zero.
-If \nmitem{ATMOS_BOUNDARY_TYPE} in \namelist{PARAM_ATMOS_BOUNDARY} is \verb|REAL|, no nudging is applied in upper boundary by default.
+As shown in Fig.\ref{fig:buff_xz}, \scalerm places the buffer region just inside the calculation domain.
+In the buffer region, prognostic variables are updated to be close to the specified values of boundary data and/or the parent model data with a certain relaxation time.
+Hereinafter, this relaxation is called nudging.
+
+\subsubsection{Buffer Region}
+
+
 The width of the buffer region is specified in \namelist{PARAM_ATMOS_GRID_CARTESC} in the configuration file. Note again that the configuration in all procedures must be identical. There are two methods to configure the width of the buffer region.
 
 \begin{enumerate}
-\item specify number of grid of the buffer region with \nmitem{BUFFER_NX, BUFFER_NY, BUFFER_NZ} \\
-\item specify width [m] of the buffer region with \nmitem{BUFFER_DX, BUFFER_DY, BUFFER_DZ} \\
+\item specify number of grid of the buffer region with \nmitem{BUFFER_NX, BUFFER_NY, BUFFER_NZ}
+\item specify width [m] of the buffer region with \nmitem{BUFFER_DX, BUFFER_DY, BUFFER_DZ}
 \end{enumerate}
 Both parameters above are not set by default, and no buffer regions are set. If both are set, \nmitem{BUFFER_NX, BUFFER_NY, BUFFER_NZ} is given priority.
 The buffer regions along the horizontal directions are placed at the four domain boundaries, 
@@ -190,7 +195,7 @@ Two examples are as below.
  \verb|BUFFFACT_Z = 1.20D0,    | & ; Stretched factor for grid intervals along the Z direction\\
  \verb|BUFFFACT_X = 1.05D0,    | & ; Stretched factor for grid intervals along the X (zonal) direction\\
  \verb|BUFFFACT_Y = 1.05D0,    | & ; Stretched factor for grid intervals along the Y (meridional) direction\\
-\verb|/|\\
+ \verb|/|\\
 }
 
 
@@ -226,19 +231,12 @@ using the number of grids \verb|kbuff| in the upper buffer region.
 \end{figure}
 
 In general, there is no clear criterion for setting the width and locating grids in the buffer region.
-This depends on a problem to be solved. In \scalerm, the followings are recommended: the number of grids in the vertical buffer region at the top of the model is greater than 5, whereas that in the lateral boundaries is approximately 20$\sim$40. Depending on the experiment, it may be necessary to increase the number of grids in the buffer region, to increase the buffer region itself by using the appropriate stretch factor, to tune relaxation time, and so on.
-The relaxation time is defined as the time
-where the difference between the simulated value and the target value becomes $1/e$.
-%This relaxation time is given in \nmitem{ATMOS_BOUNDARY_taux, ATMOS_BOUNDARY_tauy, ATMOS_BOUNDARY_tauz}
-This relaxation time is given in \nmitem{ATMOS_BOUNDARY_taux, ATMOS_BOUNDARY_tauy}
-in \namelist{PARAM_ATMOS_BOUNDARY} in units of seconds.
-The default value is ten times as large as \nmitem{TIME_DT}. 
-Please refer to section \ref{sec:timeintiv} for \nmitem{TIME_DT}.
+This depends on a problem to be solved.
+In \scalerm, the followings are recommended: the number of grids in the vertical buffer region at the top of the model is greater than 5, whereas that in the lateral boundaries is approximately 20$\sim$40.
+Depending on the experiment, it may be necessary to increase the number of grids in the buffer region, to increase the buffer region itself by using the appropriate stretch factor, to tune relaxation time, and so on.
+The relaxation time is explained below.
 
 
-%-----------------------------------------------------------------------
-\subsubsection{Method for stretching grid intervals in buffer region}
-%-----------------------------------------------------------------------
 
 The grid intervals in the buffer region are the same as \nmitem{DX, DY, DZ} in \namelist{PARAM_ATMOS_GRID_CARTESC} by default.
 But, it is possible for them to be stretched by setting \nmitem{BUFFFACT} $>$ 1. This specification of \nmitem{BUFFFACT} is applied in all directions if the grid intervals are uniformly specified. When the stretched factor is configured separately in every direction, specify \nmitem{BUFFFACT_X, BUFFFACT_Y, BUFFFACT_Z}. Note that in case of the configuration of vertical levels by giving \nmitem{FZ(:)} (refer to \ref{subsec:gridinterv}), the above stretched settings have no effect along the vertical direction.
@@ -255,3 +253,120 @@ Finally, the width of the buffer region $\verb|BUFFER|_{\verb|X|}$ is as follows
 \end{eqnarray}
 Even if the same width of buffer region \nmitem{BUFFER_DX} is specified, the number of grids in the buffer region decreases with increasing \nmitem{BUFFFACT}.
 When given by \nmitem{BUFFER_NX}, only the width of buffer region is changed.
+
+
+
+\subsubsection{Nudging Methods}
+
+
+The boundary data type is configurable by \nmitem{ATMOS_BOUNDARY_TYPE} in \namelist{PARAM_ATMOS_BOUNDARY} (Table \ref{tab:nml_atmos_boundary_type}.)
+
+\begin{table}[h]
+\begin{center}
+\caption{Choices of the boundary data type}
+\label{tab:nml_atmos_boundary_type}
+\begin{tabularx}{150mm}{lXX} \hline
+  \rowcolor[gray]{0.9} Value & Description of type \\ \hline
+  \verb|NONE|    & Do not nudge \\
+  \verb|CONST|   & Nudge to a prescribed constant value \\
+  \verb|INIT|    & Nudge to the initial value \\
+  \verb|OFFLINE| & Nudge to value read from a file (temporally unchanged) \\
+  \verb|REAL|    & Nudge to time-dependent value of the parent model or domain \\
+  \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+
+The following is the parameters in \namelist{PARAM_ATMOS_BOUNDARY}.
+\editboxtwo{
+  \verb|&PARAM_ATMOS_BOUNDARY | & \\
+  \verb| ATMOS_BOUNDARY_TYPE = 'NONE',         | & ; The boundary data type. See Table \ref{tab:nml_atmos_boundary_type}. \\
+  \verb| ATMOS_BOUNDARY_IN_BASENAME = '',      | & ; File name of the boundary data for \verb|OFFLINE| or \verb|REAL| type \\
+  \verb| ATMOS_BOUNDARY_IN_CHECK_COORDINAMTES | \textbackslash \\
+  \verb|                              = .true.,| & ; Flag to check coordinate variables in the boundary data file. \\
+  \verb| ATMOS_BOUNDARY_START_DATE | \textbackslash \\
+  \verb|          = (/ -9999, 0, 0, 0, 0, 0 /),| & ; Start time of the boundary data. Only for \verb|REAL| type. \\
+  \verb| ATMOS_BOUNDARY_UPDATE_DT = 0.0D0,     | & ; Time interval of the boundary data. Only for \verb|REAL| type. \\
+  \verb| ATMOS_BOUNDARY_INTERP_TYPE | \textbackslash \\
+  \verb|                    = 'lerp_initpoint',| & ; Temporal interpolation type. \verb|same_parent|: use the latest step value (no interpolation), \verb|nearest_neighbor|: use the value of the nearest time step, \verb|lerp_initpoint|: linear interpolation between values at two time steps as the values are snapshot, \verb|lerp_midpoint|: same as \verb|lerp_initpoint| but the values are temporal average during the time step. \\
+  \verb| ATMOS_BOUNDARY_OUT_BASENAME = '',     | & ; File name to output the initial boundary data. \\
+  \verb| ATMOS_BOUNDARY_OUT_TITLE | \textbackslash \\
+  \verb|       = 'SCALE-RM BOUNDARY CONDITION',| & ; Title for the output file. \\
+  \verb| ATMOS_BOUNDARY_OUT_DTYPE = 'DEFAULT', | & ; Data type (\verb|REAL4| or \verb|REAL8|) for the output. \\
+  \verb| ATMOS_BOUNDARY_USE_DENS = .false.,    | & ; Switch of the nudging for the density. \\
+  \verb| ATMOS_BOUNDARY_USE_VELZ = .false.,    | & ; Switch for the w. \\
+  \verb| ATMOS_BOUNDARY_USE_VELX = .false.,    | & ; Switch for the u. \\
+  \verb| ATMOS_BOUNDARY_USE_VELY = .false.,    | & ; Switch for the v. \\
+  \verb| ATMOS_BOUNDARY_USE_POTT = .false.,    | & ; Switch for the $\theta$. \\
+  \verb| ATMOS_BOUNDARY_USE_QV = .false.,      | & ; Switch for the vapor. \\
+  \verb| ATMOS_BOUNDARY_USE_QHYD = .false.,    | & ; Switch for the hydrometeors. \\
+  \verb| ATMOS_BOUNDARY_VALUE_VELZ =   0.0D0,  | & ; Value of the w. Only for \verb|CONST| type. \\
+  \verb| ATMOS_BOUNDARY_VALUE_VELX =   0.0D0,  | & ; Value of the u. Only for \verb|CONST| type. \\
+  \verb| ATMOS_BOUNDARY_VALUE_VELY =   0.0D0,  | & ; Value of the v. Only for \verb|CONST| type. \\
+  \verb| ATMOS_BOUNDARY_VALUE_POTT = 300.0D0,  | & ; Value of the $\theta$. Only for \verb|CONST| type. \\
+  \verb| ATMOS_BOUNDARY_VALUE_QTRC =   0.0D0,  | & ; Value of the vapor. Only for \verb|CONST| type. \\
+  \verb| ATMOS_BOUNDARY_ALPHAFACT_DENS = 1.0D0,| & ; Factor of the $1/\tau$ for the density. \\
+  \verb| ATMOS_BOUNDARY_ALPHAFACT_VELZ = 1.0D0,| & ; Factor for the w. \\
+  \verb| ATMOS_BOUNDARY_ALPHAFACT_VELX = 1.0D0,| & ; Factor for the u. \\
+  \verb| ATMOS_BOUNDARY_ALPHAFACT_VELZ = 1.0D0,| & ; Factor for the v. \\
+  \verb| ATMOS_BOUNDARY_ALPHAFACT_POTT = 1.0D0,| & ; Factor for the $\theta$. \\
+  \verb| ATMOS_BOUNDARY_ALPHAFACT_QTRC = 1.0D0,| & ; Factor for the vapor. \\
+  \verb| ATMOS_BOUNDARY_SMOOTHER_FACT = 0.2D0, | & ; Factor of the horizontal smoother against the pointwise difference. \\
+  \verb| ATMOS_BOUNDARY_FRACZ = 1.0D0,         | & ; Fraction for the nudging region to the buffer region in the z-direction. \\
+  \verb| ATMOS_BOUNDARY_FRACX = 1.0D0,         | & ; Fraction in the x-direction. \\
+  \verb| ATMOS_BOUNDARY_FRACY = 1.0D0,         | & ; Fraction in the y-direction. \\
+  \verb| ATMOS_BOUNDARY_TAUZ = DT * 10.0D0,    | & ; Time scale of the nudging at the top boundary (in second). \\
+  \verb| ATMOS_BOUNDARY_TAUX = DT * 10.0D0,    | & ; Time scale at the western and eastern boundary. \\
+  \verb| ATMOS_BOUNDARY_TAUY = DT * 10.0D0,    | & ; Time scale at the southern and northern boundary. \\
+  \verb| ATMOS_BOUNDARY_LINEAR_V = .false.,    | & ; Profile type of the time scale in the z-direction. If \verb|.true.|, it is a linear profile, otherwise a sinusoidal profile. \\
+  \verb| ATMOS_BOUNDARY_LINEAR_H = .false.,    | & ; Profile type in the x- and y-direction. If \verb|.true.|, it is a linear profile, otherwise a exponential profile. \\
+  \verb| ATMOS_BOUNDARY_EXP_H = 2.0D0,         | & ; Factor of the exponent of the exponential profile. \\
+}
+
+The nudging is applied as
+\begin{eqnarray}
+  \frac{\partial \phi_{k,i,j}}{\partial t}
+  & = & - \alpha \Delta\phi_{k,i,j} \\ \nonumber
+  && + \alpha_s \left( \frac{\Delta\phi_{k,i-1,j} + \Delta\phi_{k,i+1,j} + \Delta\phi_{k,i,j-1} + \Delta\phi_{k,i,j+1}}{4} - \Delta\phi_{k,i,j} \right),
+\end{eqnarray}
+where $\Delta\phi$ is difference from the boundary data and $\alpha_s = \alpha \times \nmitemeq{ATMOS_BOUNDARY_SMOOTHER_FACT}$.
+The $\alpha$ is the maximum of those in the tree directions $\alpha_x, \alpha_y$ and $\alpha_z$.
+The $\alpha$s depend on a length scale $e$ as
+\begin{equation}
+  e = \max\left( 1 - \frac{d}{\texttt{BUFFER} \times \nmitemeq{ATMOS_BOUNDARY_FRAC}}, 0 \right),
+\end{equation}
+where $d$ is distance from the boundary.
+If \nmitem{ATMOS_BOUNDARY_LINEAR_V} = \verb|.true.|,
+\begin{equation}
+  \alpha_z = e_z / \tau_z,
+\end{equation}
+otherwise
+\begin{equation}
+  \alpha_z =  \left\{
+    \begin{array}{lll}
+      ( 0.5 - \cos(\pi e_z)/2 ) / \tau_z & \mathrm{for} & e_z \le 0.5, \\
+      ( 0.5 + \sin(\pi (e_z-0.5))/2 ) / \tau_z & \mathrm{for} & e_z > 0.5,
+    \end{array} \right.
+\end{equation}
+where $\tau_z$ is \nmitem{ATMOS_BOUNDARY_TAUZ}.
+For the horizontal direction, if \nmitem{ATMOS_BOUNDARY_LINEAR_H} = \verb|.true.|,
+\begin{equation}
+  \alpha_x = e_x / \tau_x,
+\end{equation}
+otherwise
+\begin{equation}
+  \alpha_x = e_x \exp\{ - (1-e_x) \times \nmitemeq{ATMOS_BOUNDARY_EXP_H} \} / \tau_x.
+\end{equation}
+$\alpha_y$ is derived by the same way as $\alpha_x$.
+
+The $\tau$ is the relaxation time in which the difference between the simulated value and the boundary value becomes $1/e$.
+The default value is ten times of \nmitem{TIME_DT}. 
+Please refer to Section \ref{sec:timeintiv} for \nmitem{TIME_DT}.
+
+
+If \nmitem{ATMOS_BOUNDARY_TYPE} in \namelist{PARAM_ATMOS_BOUNDARY} is \verb|REAL|, the nudging at the lateral boundary for the horizontal velocities, potential temperature, and vapor is applied.
+If the simulation is on a daughter domain of the online nesting (See Section \ref{subsec:nest_online}), the same setting is applied with the \verb|REAL| boundary type.
+
+
+There exists a similar dumping method at near the top boundary, i.e., Rayleigh dumping. See Section \ref{subsec:raydamp}.
