@@ -235,6 +235,9 @@ contains
   end subroutine FILE_setup
 
   !-----------------------------------------------------------------------------
+  !> create file
+  !!  fid is >= 1
+  !<
   subroutine FILE_create( &
        basename,                   &
        title, source, institution, &
@@ -341,6 +344,11 @@ contains
     integer :: error
     !---------------------------------------------------------------------------
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_get_var_num",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     call file_get_nvars_c( FILE_files(fid)%fid, & ! (in)
                            nvars, error         ) ! (out)
 
@@ -370,6 +378,11 @@ contains
     integer :: error
     !---------------------------------------------------------------------------
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_get_var_name",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     call file_get_varname_c( FILE_files(fid)%fid, cvid, & ! (in)
                              varname, error             ) ! (out)
 
@@ -382,12 +395,17 @@ contains
   end subroutine FILE_get_var_name
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_add_associatedvariable( fid, vname, existed )
+  subroutine FILE_add_associatedVariable( fid, vname, existed )
     integer,           intent(in)  :: fid
     character(len=*),  intent(in)  :: vname
     logical, optional, intent(out) :: existed
 
     integer :: error
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_add_associatedVariable",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     call file_add_associatedvariable_c( FILE_files(fid)%fid, vname , & ! (in)
                                         error                        ) ! (out)
@@ -418,6 +436,11 @@ contains
     character(len=*), intent(in) :: val
 
     integer :: error
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_set_option",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     call file_set_option_c( FILE_files(fid)%fid, filetype, key, val, & ! (in)
                             error                                    ) ! (out)
@@ -477,18 +500,20 @@ contains
 
   !-----------------------------------------------------------------------------
   !> check if the file is opened?
-  subroutine FILE_opened( &
-      fid,   &
-      opened )
+  function FILE_opened( fid )
     implicit none
 
     integer, intent( in) :: fid
-    logical, intent(out) :: opened
+    logical :: FILE_opened
 
-    opened = FILE_files(fid)%fid >= 0
+    if ( fid < 1 ) then
+       FILE_opened = .false.
+    else
+       FILE_opened = FILE_files(fid)%fid >= 0
+    end if
 
     return
-  end subroutine FILE_opened
+  end function FILE_opened
 
   !-----------------------------------------------------------------------------
   !> get length of dimension
@@ -505,6 +530,12 @@ contains
     logical, intent(out), optional :: error
 
     integer :: ierror
+
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_get_dimLength",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     call file_get_dim_length_c( FILE_files(fid)%fid, dimname, & ! (in)
                                 len, ierror                   ) ! (out)
@@ -541,6 +572,11 @@ contains
     integer :: error
     intrinsic size
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_put_axis_real",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     call file_put_axis_c( FILE_files(fid)%fid,                        & ! (in)
          name, desc, units, dim_name, dtype, val, size(val), SP, & ! (in)
          error                                                        ) ! (out)
@@ -566,6 +602,11 @@ contains
 
     integer :: error
     intrinsic size
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_put_axis_real",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     call file_put_axis_c( FILE_files(fid)%fid,                        & ! (in)
          name, desc, units, dim_name, dtype, val, size(val), DP, & ! (in)
@@ -601,6 +642,11 @@ contains
        if ( bounds ) bounds_ = 1 ! .true.
     end if
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_def_axis",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     call file_def_axis_c( FILE_files(fid)%fid, &
          name, desc, units, dim_name, dtype, dim_size, bounds_, & ! (in)
          error                                                  ) ! (out)
@@ -627,6 +673,11 @@ contains
 
     integer :: error
     intrinsic shape
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_axis_realSP",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     if ( present(start) ) then
        call file_write_axis_c( FILE_files(fid)%fid, & ! (in)
@@ -656,6 +707,11 @@ contains
 
     integer :: error
     intrinsic shape
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_axis_realDP",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     if ( present(start) ) then
        call file_write_axis_c( FILE_files(fid)%fid, & ! (in)
@@ -693,6 +749,11 @@ contains
     integer :: error
     intrinsic size
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_put_associatedCoordinate_realSP_1D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
          val, SP,                                         & ! (in)
@@ -719,6 +780,11 @@ contains
 
     integer :: error
     intrinsic size
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_put_associatedCoordinate_realDP_1D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
@@ -747,6 +813,11 @@ contains
     integer :: error
     intrinsic size
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_put_associatedCoordinate_realSP_2D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
          val, SP,                                         & ! (in)
@@ -773,6 +844,11 @@ contains
 
     integer :: error
     intrinsic size
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_put_associatedCoordinate_realDP_2D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
@@ -801,6 +877,11 @@ contains
     integer :: error
     intrinsic size
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_put_associatedCoordinate_realSP_3D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
          val, SP,                                         & ! (in)
@@ -827,6 +908,11 @@ contains
 
     integer :: error
     intrinsic size
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_put_associatedCoordinate_realDP_3D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
@@ -855,6 +941,11 @@ contains
     integer :: error
     intrinsic size
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_put_associatedCoordinate_realSP_4D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
          val, SP,                                         & ! (in)
@@ -882,6 +973,11 @@ contains
     integer :: error
     intrinsic size
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_put_associatedCoordinate_realDP_4D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
          val, DP,                                         & ! (in)
@@ -907,6 +1003,11 @@ contains
 
     integer :: error
     intrinsic size
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_def_associatedCoordinate",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     call file_def_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
          name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
@@ -937,6 +1038,11 @@ contains
 
     integer :: error
     intrinsic shape
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_associatedCoordinate_realSP_1D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
@@ -981,6 +1087,11 @@ contains
     integer :: error
     intrinsic shape
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_associatedCoordinate_realDP_1D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
@@ -1023,6 +1134,11 @@ contains
 
     integer :: error
     intrinsic shape
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_associatedCoordinate_realSP_2D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
@@ -1067,6 +1183,11 @@ contains
     integer :: error
     intrinsic shape
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_associatedCoordinate_realDP_2D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
@@ -1109,6 +1230,11 @@ contains
 
     integer :: error
     intrinsic shape
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_associatedCoordinate_realSP_3D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
@@ -1153,6 +1279,11 @@ contains
     integer :: error
     intrinsic shape
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_associatedCoordinate_realDP_3D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
@@ -1196,6 +1327,11 @@ contains
     integer :: error
     intrinsic shape
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_associatedCoordinate_realSP_4D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
@@ -1238,6 +1374,11 @@ contains
 
     integer :: error
     intrinsic shape
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_associatedCoordinate_realDP_4D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
@@ -1287,6 +1428,11 @@ contains
     integer,          intent(out) :: vid
     logical,          intent( in), optional :: time_avg
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_add_variable_no_time",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     call FILE_add_variable_with_time( fid,    & ! (in)
          varname, desc, units, standard_name, & ! (in)
          dims, dtype, -1.0_DP,                & ! (in)
@@ -1327,6 +1473,11 @@ contains
 
     intrinsic size
     !---------------------------------------------------------------------------
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_add_variable_with_time",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     vid = -1
     do n = 1, FILE_nvars
@@ -1398,6 +1549,11 @@ contains
 
     !---------------------------------------------------------------------------
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_def_variable",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     vid = -1
     do n = 1, FILE_nvars
        if ( FILE_vars(n)%fid == fid .and. FILE_vars(n)%name == varname ) then
@@ -1467,6 +1623,11 @@ contains
 
     integer :: suppress
     integer :: error
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_get_attribute_text_fid",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     if ( present(existed) ) then
        suppress = 1
@@ -1539,6 +1700,11 @@ contains
 
     character(len=5) :: buf
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_get_attribute_logical_fid",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     call FILE_get_attribute_text_fid( fid, vname, key, & ! (in)
                                       buf, existed     ) ! (out)
 
@@ -1607,6 +1773,11 @@ contains
     integer :: error
 
     intrinsic size
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_get_attribute_int_fid",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     if ( present(existed) ) then
        suppress = 1
@@ -1682,6 +1853,11 @@ contains
 
     intrinsic size
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_get_attribute_float_fid",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     if ( present(existed) ) then
        suppress = 1
     else
@@ -1754,6 +1930,11 @@ contains
 
     intrinsic size
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_get_attribute_double_fid",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     if ( present(existed) ) then
        suppress = 1
     else
@@ -1824,6 +2005,11 @@ contains
 
     integer :: error
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_set_attribute_text",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     call file_set_attribute_text_c( &
          FILE_files(fid)%fid, vname, & ! (in)
          key, val,                   & ! (in)
@@ -1845,6 +2031,11 @@ contains
     logical,          intent(in) :: val
 
     character(len=5) :: buf
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_set_attribute_logical",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     if ( val ) then
        buf = "true"
@@ -1869,6 +2060,11 @@ contains
     integer :: error
 
     intrinsic size
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_set_attribute_int",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     call file_set_attribute_int_c( &
          FILE_files(fid)%fid, vname, & ! (in)
@@ -1895,6 +2091,11 @@ contains
 
     intrinsic size
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_set_attributefloat",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     call file_set_attribute_float_c( &
          FILE_files(fid)%fid, vname, & ! (in)
          key, val(:), size(val(:)),  & ! (in)
@@ -1918,6 +2119,11 @@ contains
     integer :: error
 
     intrinsic size
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_set_attributedouble",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     call file_set_attribute_double_c( &
          FILE_files(fid)%fid, vname, & ! (in)
@@ -1983,6 +2189,11 @@ contains
     intrinsic size
     !---------------------------------------------------------------------------
 
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_get_shape_id",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     if ( present(error) ) then
        suppress = .true.
     else
@@ -2034,6 +2245,11 @@ contains
     logical, intent(out), optional :: error
 
     integer :: ierror
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_get_stepSize",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     call file_get_step_size_c( FILE_files(fid)%fid, varname, & ! (in)
                                len, ierror                   ) ! (out)
@@ -2112,6 +2328,11 @@ contains
 
     integer :: v
     !---------------------------------------------------------------------------
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_get_commonInfo_fid",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     call FILE_get_attribute( fid, 'global', 'title',       title       )
     call FILE_get_attribute( fid, 'global', 'source',      source      )
@@ -2247,6 +2468,11 @@ contains
        suppress = .true.
     else
        suppress = .false.
+    end if
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_get_dataInfo_fid",*) 'File is not opened. fid = ', fid
+       call PRC_abort
     end if
 
     !--- get data information
@@ -2447,6 +2673,11 @@ contains
 
     intrinsic size
     !---------------------------------------------------------------------------
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_get_all_dataInfo_fid",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
 
     ! initialize
     description   = ""
@@ -2842,8 +3073,8 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
-    if ( fid < 0 ) then
-       LOG_ERROR("FILE_read_var_realSP_1D",*) '[File_read_var_readSP_4D] fid is invalid'
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -2951,8 +3182,8 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
-    if ( fid < 0 ) then
-       LOG_ERROR("FILE_read_var_realDP_1D",*) '[File_read_var_readDP_4D] fid is invalid'
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -3060,8 +3291,8 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
-    if ( fid < 0 ) then
-       LOG_ERROR("FILE_read_var_realSP_2D",*) '[File_read_var_readSP_4D] fid is invalid'
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -3169,8 +3400,8 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
-    if ( fid < 0 ) then
-       LOG_ERROR("FILE_read_var_realDP_2D",*) '[File_read_var_readDP_4D] fid is invalid'
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -3278,8 +3509,8 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
-    if ( fid < 0 ) then
-       LOG_ERROR("FILE_read_var_realSP_3D",*) '[File_read_var_readSP_4D] fid is invalid'
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -3387,8 +3618,8 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
-    if ( fid < 0 ) then
-       LOG_ERROR("FILE_read_var_realDP_3D",*) '[File_read_var_readDP_4D] fid is invalid'
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -3496,8 +3727,8 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
-    if ( fid < 0 ) then
-       LOG_ERROR("FILE_read_var_realSP_4D",*) '[File_read_var_readSP_4D] fid is invalid'
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -3605,8 +3836,8 @@ contains
     intrinsic size, shape
     !---------------------------------------------------------------------------
 
-    if ( fid < 0 ) then
-       LOG_ERROR("FILE_read_var_realDP_4D",*) '[File_read_var_readDP_4D] fid is invalid'
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -3714,6 +3945,12 @@ contains
     te = t_end
 
     fid = FILE_vars(vid)%fid
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_realSP_1D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
        ! In this case, start and count must be present
@@ -3784,6 +4021,12 @@ contains
     te = t_end
 
     fid = FILE_vars(vid)%fid
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_realDP_1D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
        ! In this case, start and count must be present
@@ -3850,6 +4093,12 @@ contains
     te = t_end
 
     fid = FILE_vars(vid)%fid
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_realSP_2D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
@@ -3897,6 +4146,12 @@ contains
     te = t_end
 
     fid = FILE_vars(vid)%fid
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_realDP_2D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
@@ -3944,6 +4199,12 @@ contains
     te = t_end
 
     fid = FILE_vars(vid)%fid
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_realSP_3D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
@@ -3991,6 +4252,12 @@ contains
     te = t_end
 
     fid = FILE_vars(vid)%fid
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_realDP_3D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
@@ -4038,6 +4305,12 @@ contains
     te = t_end
 
     fid = FILE_vars(vid)%fid
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_realSP_4D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
@@ -4085,6 +4358,12 @@ contains
     te = t_end
 
     fid = FILE_vars(vid)%fid
+
+    if ( .not. FILE_opened(fid) ) then
+       LOG_ERROR("FILE_write_realDP_4D",*) 'File is not opened. fid = ', fid
+       call PRC_abort
+    end if
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
@@ -4118,7 +4397,7 @@ contains
     integer :: error
     !---------------------------------------------------------------------------
 
-    if ( fid < 0 ) return
+    if ( .not. FILE_opened(fid) ) return
 
     call file_enddef_c( FILE_files(fid)%fid, error )
 
@@ -4149,7 +4428,7 @@ contains
     integer :: error
     !---------------------------------------------------------------------------
 
-    if ( fid < 0 ) return
+    if ( .not. FILE_opened(fid) ) return
 
     call file_attach_buffer_c( FILE_files(fid)%fid, buf_amount, error )
 
@@ -4177,7 +4456,7 @@ contains
     integer :: error
     !---------------------------------------------------------------------------
 
-    if ( fid < 0 ) return
+    if ( .not. FILE_opened(fid) ) return
 
     if ( FILE_files(fid)%fid < 0 ) return  ! already closed
 
@@ -4207,7 +4486,7 @@ contains
     integer :: error
     !---------------------------------------------------------------------------
 
-    if ( fid < 0 ) return
+    if ( .not. FILE_opened(fid) ) return
 
     if ( FILE_files(fid)%fid < 0 ) return  ! already closed
 
@@ -4238,7 +4517,7 @@ contains
     integer :: n
     !---------------------------------------------------------------------------
 
-    if ( fid < 0 ) return
+    if ( .not. FILE_opened(fid) ) return
 
     if ( FILE_files(fid)%fid < 0 ) return  ! already closed
 
@@ -4280,11 +4559,11 @@ contains
     implicit none
     logical, intent(in), optional :: skip_abort
 
-    integer n
+    integer :: fid
     !---------------------------------------------------------------------------
 
-    do n = 1, FILE_nfiles
-       call FILE_close( n, skip_abort )
+    do fid = 1, FILE_nfiles
+       call FILE_close( fid, skip_abort )
     enddo
 
     return
@@ -4337,7 +4616,7 @@ contains
     integer, intent(in) :: fid
     logical :: FILE_get_aggregate
 
-    if ( fid < 0 ) then
+    if ( .not. FILE_opened(fid) ) then
        FILE_get_aggregate = .false.
     else
        FILE_get_aggregate = FILE_files(fid)%aggregate
@@ -4422,7 +4701,7 @@ contains
        end if
     enddo
 
-    if ( fid >= 0 ) then
+    if ( FILE_opened(fid) ) then
        existed = .true.
        return
     end if
