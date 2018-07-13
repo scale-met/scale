@@ -14,8 +14,9 @@ LATEX    = platex
 BIBTEX   = bibtex
 DVIPDF   = dvipdfmx -p a4
 HTMLBIN  = pandoc --to=html
-CURL     = curl -s --create-dirs
-IMAGE_PATH = $(IMAGE_URL)/$(VERSION)
+CURL     = curl -f -s -S --create-dirs
+# IMAGE_URL = https://scale.aics.riken.jp/doc/ug_figures
+IMAGE_PATH = $(IMAGE_URL)/$(VERSION)$(if $(shell git branch --contains 2>/dev/null|grep -v master),"-devel")
 
 VERSION  = $(shell cat ../../../scale-rm/src/VERSION)
 
@@ -23,6 +24,7 @@ IMAGE_BASENAME = $(shell grep includegraphics *tex | ruby -n -e '/^\s*\\includeg
 IMAGES = $(patsubst %,figure/%,$(IMAGE_BASENAME))
 
 SRCS = $(wildcard *.tex) $(IMAGES)
+
 
 all: pdf
 
