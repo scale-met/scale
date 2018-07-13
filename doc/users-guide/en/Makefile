@@ -10,9 +10,8 @@ VERFNAME = 00_version.tex
 VERTEMPL = 00_version_template.tex
 
 # commands to compile documents
-LATEX    = platex
+LATEX    = pdflatex
 BIBTEX   = bibtex
-DVIPDF   = dvipdfmx -p a4
 HTMLBIN  = pandoc --to=html
 CURL     = curl -f -s -S --create-dirs
 # IMAGE_URL = https://scale.aics.riken.jp/doc/ug_figures
@@ -44,10 +43,7 @@ clean:
 allclean: clean
 	rm -rf *.pdf figure
 
-$(TEXNAME).pdf: $(TEXNAME).dvi
-	$(DVIPDF) $(TEXNAME)
-
-$(TEXNAME).dvi: $(VERFNAME) $(SRCS) reference.bib
+$(TEXNAME).pdf: $(VERFNAME) $(SRCS) reference.bib
 	$(LATEX)  $(TEXNAME)
 	$(BIBTEX) $(TEXNAME)
 	$(LATEX)  $(TEXNAME)
