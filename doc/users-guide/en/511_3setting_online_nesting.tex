@@ -110,12 +110,9 @@ For example, the configuration files prepared by the
 ``the making tool for the complete settings of the experiment''
 use \verb|history_d01.pe***.nc, history_d02.pe***.nc| for the file name of history output.
 
-The calculation may sometimes abort, outputting the message below. This is the error message, meaning that the domain of computation of the child  is larger than that of the parent domain. If the error message indicates ``SW search,'' the western or southern area of the child domain is beyond the parent domain. If the error message indicates ``NE search,'' the eastern or northern area of the child domain is beyond the parent domain. If such a message appears, retry creating the topography, the land-use data, and the initial/boundary data, and confirm again whether the configurations are correct:
+The calculation may sometimes abort, outputting the message below. This is the error message, meaning that the domain of computation of the child  is larger than that of the parent domain. If such a message appears, retry creating the topography, the land-use data, and the initial/boundary data, and confirm again whether the configurations are correct:
 \msgbox{
-\verb|xxx region of daughter domain is larger than that of parent: SW search| \\
-}
-\msgbox{
-\verb|xxx region of daughter domain is larger than that of parent: NE search| \\
+\verb|ERROR [...] region of daughter domain is larger than that of parent| \\
 }
 
 
