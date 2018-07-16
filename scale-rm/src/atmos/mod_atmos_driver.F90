@@ -85,8 +85,8 @@ contains
        ATMOS_SOLARINS_setup
     use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_setup
-    use scale_atmos_boundary, only: &
-       ATMOS_BOUNDARY_setup
+    use mod_atmos_bnd_driver, only: &
+       ATMOS_BOUNDARY_driver_setup
     use mod_atmos_dyn_driver, only: &
        ATMOS_DYN_driver_setup
     use mod_atmos_phy_mp_driver, only: &
@@ -137,7 +137,7 @@ contains
     call PROF_rapend  ('ATM_Refstate', 2)
 
     call PROF_rapstart('ATM_Boundary', 2)
-    call ATMOS_BOUNDARY_setup( QA_MP, QS_MP, QE_MP )
+    call ATMOS_BOUNDARY_driver_setup
     call PROF_rapend  ('ATM_Boundary', 2)
 
     ! setup each components
@@ -348,9 +348,6 @@ contains
     use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_UPDATE_FLAG, &
        ATMOS_REFSTATE_update
-    use scale_atmos_boundary, only: &
-       ATMOS_BOUNDARY_UPDATE_FLAG, &
-       ATMOS_BOUNDARY_update
     use scale_time, only: &
        TIME_NOWSEC
     use mod_atmos_vars, only: &
@@ -359,15 +356,13 @@ contains
        ATMOS_vars_history_setpres, &
        ATMOS_vars_monitor,         &
        DENS,                       &
-       MOMZ,                       &
-       MOMX,                       &
-       MOMY,                       &
-       RHOT,                       &
-       QTRC,                       &
        TEMP,                       &
        PRES,                       &
        POTT,                       &
        QV
+    use mod_atmos_bnd_driver, only: &
+       ATMOS_BOUNDARY_driver_update, &
+       ATMOS_BOUNDARY_UPDATE_FLAG
     use mod_atmos_dyn_driver, only: &
        ATMOS_DYN_driver
     use mod_atmos_phy_mp_driver, only: &
@@ -399,7 +394,7 @@ contains
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
        call PROF_rapstart('ATM_Boundary', 2)
-       call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! [INOUT]
+       call ATMOS_BOUNDARY_driver_update
        call PROF_rapend  ('ATM_Boundary', 2)
     endif
 
@@ -450,9 +445,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Finalize
   subroutine ATMOS_driver_finalize
-    use scale_atmos_boundary, only: &
+    use mod_atmos_bnd_driver, only: &
        ATMOS_BOUNDARY_UPDATE_FLAG, &
-       ATMOS_BOUNDARY_finalize
+       ATMOS_BOUNDARY_driver_finalize
     use scale_comm_cartesC_nest, only: &
        NEST_COMM_disconnect => COMM_CARTESC_NEST_disconnect
     implicit none
@@ -461,7 +456,7 @@ contains
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
        ! If this run is parent of online nesting, boundary data must be sent
-       call ATMOS_BOUNDARY_finalize
+       call ATMOS_BOUNDARY_driver_finalize
 
        ! Finialize Inter-Communicators
        call NEST_COMM_disconnect

@@ -125,9 +125,12 @@ contains
     use mod_admin_time, only: &
        ADMIN_TIME_setup
     use mod_atmos_admin, only: &
-       ATMOS_admin_setup
+       ATMOS_admin_setup, &
+       ATMOS_PHY_MP_TYPE
     use mod_atmos_vars, only: &
        ATMOS_vars_setup
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP
     use mod_ocean_admin, only: &
        OCEAN_admin_setup
     use mod_ocean_vars, only: &
@@ -276,7 +279,7 @@ contains
     call STATISTICS_setup
 
     ! setup nesting grid
-    call COMM_CARTESC_NEST_setup ( intercomm_parent, intercomm_child )
+    call COMM_CARTESC_NEST_setup ( QA_MP, ATMOS_PHY_MP_TYPE, intercomm_parent, intercomm_child )
 
 
     ! setup common tools

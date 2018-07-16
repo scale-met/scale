@@ -156,7 +156,6 @@ OBJS = \
 	$(OBJ_DIR)/scale_atmos_phy_sf_bulk.o	\
 	$(OBJ_DIR)/scale_atmos_phy_sf_const.o	\
 	\
-	$(OBJ_DIR)/scale_atmos_boundary.o	\
 	$(OBJ_DIR)/scale_atmos_phy_tb.o	\
 	$(OBJ_DIR)/scale_atmos_phy_tb_common.o	\
 	$(OBJ_DIR)/scale_atmos_phy_tb_d1980.o	\

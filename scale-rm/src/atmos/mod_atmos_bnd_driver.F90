@@ -10,7 +10,7 @@
 !<
 !-------------------------------------------------------------------------------
 #include "scalelib.h"
-module scale_atmos_boundary
+module mod_atmos_bnd_driver
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -29,11 +29,10 @@ module scale_atmos_boundary
   !
   !++ Public procedure
   !
-  public :: ATMOS_BOUNDARY_setup
-  public :: ATMOS_BOUNDARY_set
-  public :: ATMOS_BOUNDARY_firstsend
-  public :: ATMOS_BOUNDARY_finalize
-  public :: ATMOS_BOUNDARY_update
+  public :: ATMOS_BOUNDARY_driver_setup
+  public :: ATMOS_BOUNDARY_driver_set
+  public :: ATMOS_BOUNDARY_driver_finalize
+  public :: ATMOS_BOUNDARY_driver_update
 
   !-----------------------------------------------------------------------------
   !
@@ -77,6 +76,7 @@ module scale_atmos_boundary
   private :: ATMOS_BOUNDARY_update_file
   private :: ATMOS_BOUNDARY_update_online_parent
   private :: ATMOS_BOUNDARY_update_online_daughter
+  private :: ATMOS_BOUNDARY_firstsend
   private :: ATMOS_BOUNDARY_send
   private :: ATMOS_BOUNDARY_recv
 
@@ -159,7 +159,11 @@ module scale_atmos_boundary
   real(RP),              private, allocatable :: ATMOS_BOUNDARY_ref_VELX(:,:,:,:)   ! reference VELX (with HALO)
   real(RP),              private, allocatable :: ATMOS_BOUNDARY_ref_VELY(:,:,:,:)   ! reference VELY (with HALO)
   real(RP),              private, allocatable :: ATMOS_BOUNDARY_ref_POTT(:,:,:,:)   ! reference POTT (with HALO)
-  real(RP),              private, allocatable :: ATMOS_BOUNDARY_ref_QTRC(:,:,:,:,:) ! reference QTRC (with HALO)
+  real(RP),              private, allocatable, target :: ATMOS_BOUNDARY_ref_QTRC(:,:,:,:,:) ! reference QTRC (with HALO)
+
+  ! work
+  real(RP),              private, allocatable, target :: Q_WORK(:,:,:,:) ! QV + Qe
+
 
   character(len=H_LONG), private :: ATMOS_BOUNDARY_interp_TYPE = 'lerp_initpoint' ! type of boundary interporation
 
@@ -174,10 +178,6 @@ module scale_atmos_boundary
   real(RP),              private :: ATMOS_BOUNDARY_EXP_H    = 2.0_RP   ! factor of non-linear profile of relax region
   logical,               private :: ATMOS_BOUNDARY_ONLINE   = .false.  ! boundary online update by communicate inter-domain
   logical,               private :: ATMOS_BOUNDARY_ONLINE_MASTER = .false.  ! master domain in communicate inter-domain
-
-  integer,               private :: QA_MP
-  integer,               private :: QS_MP
-  integer,               private :: QE_MP
 
   logical,               private :: do_parent_process       = .false.
   logical,               private :: do_daughter_process     = .false.
@@ -194,7 +194,7 @@ module scale_atmos_boundary
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_BOUNDARY_setup( QA_MP_in, QS_MP_in, QE_MP_in )
+  subroutine ATMOS_BOUNDARY_driver_setup
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
@@ -202,12 +202,15 @@ contains
     use scale_time, only: &
        DT => TIME_DTSEC
     use scale_comm_cartesC_nest, only: &
+       ONLINE_BOUNDARY_DIAGQHYD, &
+       ONLINE_BOUNDARY_USE_QHYD, &
        USE_NESTING,         &
        OFFLINE,             &
        ONLINE_IAM_PARENT,   &
-       ONLINE_IAM_DAUGHTER
-    implicit none
-    integer, intent(in) :: QA_MP_in, QS_MP_in, QE_MP_in
+       ONLINE_IAM_DAUGHTER, &
+       NESTQA => COMM_CARTESC_NEST_BND_QA
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP
 
     namelist / PARAM_ATMOS_BOUNDARY / &
        ATMOS_BOUNDARY_TYPE,           &
@@ -255,11 +258,6 @@ contains
     LOG_INFO("ATMOS_BOUNDARY_setup",*) 'Setup'
 
 
-    QA_MP = QA_MP_in
-    QS_MP = QS_MP_in
-    QE_MP = QE_MP_in
-
-
     ATMOS_BOUNDARY_tauz = DT * 10.0_RP
     ATMOS_BOUNDARY_taux = DT * 10.0_RP
     ATMOS_BOUNDARY_tauy = DT * 10.0_RP
@@ -297,6 +295,7 @@ contains
        endif
        if ( ONLINE_IAM_DAUGHTER ) then
           do_daughter_process = .true.
+          ATMOS_BOUNDARY_USE_QHYD = ONLINE_BOUNDARY_USE_QHYD
        endif
     endif
 
@@ -460,30 +459,34 @@ contains
        LOG_INFO_CONT(*) 'Lateral boundary interporation type                : ', ATMOS_BOUNDARY_interp_TYPE
     endif
 
+    if ( ONLINE_BOUNDARY_DIAGQHYD ) then
+       allocate( Q_WORK(KA,IA,JA,NESTQA) )
+    end if
+
     return
-  end subroutine ATMOS_BOUNDARY_setup
+  end subroutine ATMOS_BOUNDARY_driver_setup
 
   !-----------------------------------------------------------------------------
   !> set
-  subroutine ATMOS_BOUNDARY_set( &
+  subroutine ATMOS_BOUNDARY_driver_set
+    use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
        MOMX, &
        MOMY, &
        RHOT, &
-       QTRC  )
+       QTRC, &
+       QV,   &
+       Qe
+    use mod_atmos_phy_mp_vars, only: &
+       QS_MP, &
+       QE_MP
     implicit none
 
-    real(RP), intent(in) :: DENS(KA,IA,JA)
-    real(RP), intent(in) :: MOMZ(KA,IA,JA)
-    real(RP), intent(in) :: MOMX(KA,IA,JA)
-    real(RP), intent(in) :: MOMY(KA,IA,JA)
-    real(RP), intent(in) :: RHOT(KA,IA,JA)
-    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
-
-
-    call ATMOS_BOUNDARY_firstsend( &
-         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+    if ( do_parent_process ) then !online [parent]
+       call ATMOS_BOUNDARY_firstsend( &
+            DENS, MOMZ, MOMX, MOMY, RHOT, QTRC(:,:,:,QS_MP:QE_MP), QV, Qe )
+    end if
 
     if ( l_bnd ) then
 
@@ -526,7 +529,7 @@ contains
     end if
 
     return
-  end subroutine ATMOS_BOUNDARY_set
+  end subroutine ATMOS_BOUNDARY_driver_set
 
   !-----------------------------------------------------------------------------
   !> HALO Communication
@@ -1422,8 +1425,8 @@ contains
 
     if ( NESTQA > BND_QA ) then
        LOG_ERROR("ATMOS_BOUNDARY_initialize_online",*) 'NEST_BND_QA exceeds BND_QA'
-       LOG_ERROR_CONT(*) 'check consistency between'
-       LOG_ERROR_CONT(*) '    ONLINE_BOUNDARY_USE_QHYD and ATMOS_BOUNDARY_USE_QHYD.'
+       LOG_ERROR_CONT(*) 'This must not be occur.'
+       LOG_ERROR_CONT(*) 'Please send your configuration file to SCALE develop member.'
        call PRC_abort
     end if
 
@@ -1525,9 +1528,13 @@ contains
   !-----------------------------------------------------------------------------
   !> First send boundary value
   subroutine ATMOS_BOUNDARY_firstsend( &
-       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, QV, Qe )
     use scale_comm_cartesC_nest, only: &
        NESTQA => COMM_CARTESC_NEST_BND_QA
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP
     implicit none
 
     ! arguments
@@ -1537,12 +1544,14 @@ contains
     real(RP), intent(in) :: MOMY(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA_MP)
+    real(RP), intent(in) :: QV  (KA,IA,JA)
+    real(RP), intent(in) :: Qe  (KA,IA,JA,N_HYD)
     !---------------------------------------------------------------------------
 
     ! send data at the first time
     if ( do_parent_process ) then !online [parent]
        ! issue send
-       call ATMOS_BOUNDARY_send( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+       call ATMOS_BOUNDARY_send( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, QV, Qe )
     endif
 
     return
@@ -1550,7 +1559,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Finalize boundary value
-  subroutine ATMOS_BOUNDARY_finalize
+  subroutine ATMOS_BOUNDARY_driver_finalize
     use scale_comm_cartesC_nest, only: &
        COMM_CARTESC_NEST_recvwait_issue, &
        COMM_CARTESC_NEST_recv_cancel, &
@@ -1579,12 +1588,11 @@ contains
     end if
 
     return
-  end subroutine ATMOS_BOUNDARY_finalize
+  end subroutine ATMOS_BOUNDARY_driver_finalize
 
   !-----------------------------------------------------------------------------
   !> Update boundary value with a constant time boundary
-  subroutine ATMOS_BOUNDARY_update( &
-       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+  subroutine ATMOS_BOUNDARY_driver_update
     use scale_prc, only: &
        PRC_abort
     use scale_prc_cartesC, only: &
@@ -1595,14 +1603,19 @@ contains
     use scale_comm_cartesC_nest, only: &
        ONLINE_USE_VELZ,       &
        COMM_CARTESC_NEST_test
+    use mod_atmos_vars, only: &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC, &
+       QV,   &
+       Qe
+    use mod_atmos_phy_mp_vars, only: &
+       QS_MP, &
+       QE_MP
     implicit none
-
-    real(RP), intent(inout) :: DENS(KA,IA,JA)
-    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
-    real(RP), intent(inout) :: MOMX(KA,IA,JA)
-    real(RP), intent(inout) :: MOMY(KA,IA,JA)
-    real(RP), intent(inout) :: RHOT(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
 
     real(RP) :: bnd_DENS(KA,IA,JA)        ! damping coefficient for DENS (0-1)
     real(RP) :: bnd_VELZ(KA,IA,JA)        ! damping coefficient for VELZ (0-1)
@@ -1617,7 +1630,7 @@ contains
 
     if ( do_parent_process ) then !online [parent]
        ! should be called every time step
-       call ATMOS_BOUNDARY_update_online_parent( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC(:,:,:,QS_MP:QE_MP) )
+       call ATMOS_BOUNDARY_update_online_parent( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC(:,:,:,QS_MP:QE_MP), QV, Qe )
     endif
 
     if ( l_bnd ) then
@@ -1959,7 +1972,7 @@ contains
     endif
 
     return
-  end subroutine ATMOS_BOUNDARY_update
+  end subroutine ATMOS_BOUNDARY_driver_update
 
   !-----------------------------------------------------------------------------
   !> Update reference boundary from file
@@ -1967,6 +1980,8 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_read, &
        FILE_CARTESC_flush
+    use mod_atmos_phy_mp_vars, only: &
+       QS_MP
     implicit none
 
     integer, intent(in) :: ref
@@ -2002,10 +2017,16 @@ contains
        MOMX, & ! [in]
        MOMY, & ! [in]
        RHOT, & ! [in]
-       QTRC )  ! [in]
+       QTRC, & ! [in]
+       QV,   & ! [in]
+       Qe    ) ! [in]
     use scale_comm_cartesC_nest, only: &
        COMM_CARTESC_NEST_recvwait_issue, &
        NESTQA => COMM_CARTESC_NEST_BND_QA
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP
     implicit none
 
     ! arguments
@@ -2015,6 +2036,8 @@ contains
     real(RP), intent(in) :: MOMY(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA_MP)
+    real(RP), intent(in) :: QV  (KA,IA,JA)
+    real(RP), intent(in) :: Qe  (KA,IA,JA,N_HYD)
 
     integer, parameter :: handle = 1
     !---------------------------------------------------------------------------
@@ -2025,7 +2048,7 @@ contains
     call COMM_CARTESC_NEST_recvwait_issue( handle, NESTQA )
 
     ! issue send
-    call ATMOS_BOUNDARY_send( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+    call ATMOS_BOUNDARY_send( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, QV, Qe )
 
     return
   end subroutine ATMOS_BOUNDARY_update_online_parent
@@ -2062,13 +2085,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Send boundary value
   subroutine ATMOS_BOUNDARY_send( &
-       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, QV, Qe )
     use scale_comm_cartesC_nest, only: &
+       ONLINE_BOUNDARY_DIAGQHYD,   &
        COMM_CARTESC_NEST_nestdown,    &
        DAUGHTER_KA,           &
        DAUGHTER_IA,           &
        DAUGHTER_JA,           &
        NESTQA => COMM_CARTESC_NEST_BND_QA
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP
     implicit none
 
     ! parameters
@@ -2080,14 +2108,26 @@ contains
     real(RP), intent(in) :: MOMX(KA,IA,JA)
     real(RP), intent(in) :: MOMY(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
-    real(RP), intent(in) :: QTRC(KA,IA,JA,NESTQA)
+    real(RP), intent(in), target :: QTRC(KA,IA,JA,QA_MP)
+    real(RP), intent(in) :: QV  (KA,IA,JA)
+    real(RP), intent(in) :: Qe  (KA,IA,JA,N_HYD)
 
     ! works
+    real(RP), pointer :: Q(:,:,:,:)
     real(RP) :: dummy_d( DAUGHTER_KA(handle), DAUGHTER_IA(handle), DAUGHTER_JA(handle), NESTQA )
+
+    integer :: iq
     !---------------------------------------------------------------------------
 
-!OCL XFILL
-    dummy_d(:,:,:,:) = 0.0_RP
+    if ( ONLINE_BOUNDARY_DIAGQHYD ) then
+       Q => Q_WORK
+       Q(:,:,:,1) = QV(:,:,:)
+       do iq = 2, NESTQA
+          Q(:,:,:,iq) = Qe(:,:,:,iq-1)
+       end do
+    else
+       Q => QTRC
+    end if
 
     call COMM_CARTESC_NEST_nestdown( handle,           &
                                      NESTQA,           &
@@ -2096,13 +2136,13 @@ contains
                                      MOMX(:,:,:),      &  !(KA,IA,JA)
                                      MOMY(:,:,:),      &  !(KA,IA,JA)
                                      RHOT(:,:,:),      &  !(KA,IA,JA)
-                                     QTRC(:,:,:,:),    &  !(KA,IA,JA,QA)
+                                     Q   (:,:,:,:),    &  !(KA,IA,JA,NESTQA)
                                      dummy_d(:,:,:,1), &  !(KA,IA,JA)
                                      dummy_d(:,:,:,1), &  !(KA,IA,JA)
                                      dummy_d(:,:,:,1), &  !(KA,IA,JA)
                                      dummy_d(:,:,:,1), &  !(KA,IA,JA)
                                      dummy_d(:,:,:,1), &  !(KA,IA,JA)
-                                     dummy_d(:,:,:,:)  )  !(KA,IA,JA,QA)
+                                     dummy_d(:,:,:,:)  )  !(KA,IA,JA,NESTQA)
 
     return
   end subroutine ATMOS_BOUNDARY_send
@@ -2111,15 +2151,17 @@ contains
   !> Recieve boundary value
   subroutine ATMOS_BOUNDARY_recv( &
        ref_idx )
-    use scale_comm_cartesC_nest, only: &
-       ONLINE_BOUNDARY_DIAGQNUM, &
-       COMM_CARTESC_NEST_nestdown,       &
-       PARENT_KA,                &
-       PARENT_IA,                &
-       PARENT_JA,                &
-       NESTQA => COMM_CARTESC_NEST_BND_QA
     use scale_prc, only: &
        PRC_abort
+    use scale_comm_cartesC_nest, only: &
+       ONLINE_BOUNDARY_DIAGQHYD,   &
+       COMM_CARTESC_NEST_nestdown, &
+       PARENT_KA,                  &
+       PARENT_IA,                  &
+       PARENT_JA,                  &
+       NESTQA => COMM_CARTESC_NEST_BND_QA
+    use mod_atmos_phy_mp_driver, only: &
+       ATMOS_PHY_MP_driver_qhyd2qtrc
     implicit none
 
     ! parameters
@@ -2129,32 +2171,42 @@ contains
     integer, intent(in) :: ref_idx
 
     ! works
+    real(RP), pointer :: Q(:,:,:,:)
     real(RP) :: dummy_p( PARENT_KA(handle), PARENT_IA(handle), PARENT_JA(handle), NESTQA )
     !---------------------------------------------------------------------------
 
 !OCL XFILL
     dummy_p(:,:,:,:) = 0.0_RP
 
-    call COMM_CARTESC_NEST_nestdown( handle,                                         &
-                                     NESTQA,                                         &
-                                     dummy_p(:,:,:,1),                               & !(KA,IA,JA)
-                                     dummy_p(:,:,:,1),                               & !(KA,IA,JA)
-                                     dummy_p(:,:,:,1),                               & !(KA,IA,JA)
-                                     dummy_p(:,:,:,1),                               & !(KA,IA,JA)
-                                     dummy_p(:,:,:,1),                               & !(KA,IA,JA)
-                                     dummy_p(:,:,:,1:NESTQA),                        & !(KA,IA,JA,QA)
-                                     ATMOS_BOUNDARY_ref_DENS(:,:,:,ref_idx),         & !(KA,IA,JA)
-                                     ATMOS_BOUNDARY_ref_VELZ(:,:,:,ref_idx),         & !(KA,IA,JA)
-                                     ATMOS_BOUNDARY_ref_VELX(:,:,:,ref_idx),         & !(KA,IA,JA)
-                                     ATMOS_BOUNDARY_ref_VELY(:,:,:,ref_idx),         & !(KA,IA,JA)
-                                     ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_idx),         & !(KA,IA,JA)
-                                     ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,ref_idx) ) !(KA,IA,JA,QA)
+    if ( ONLINE_BOUNDARY_DIAGQHYD ) then
+       Q => Q_WORK
+    else
+       Q => ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,ref_idx)
+    end if
 
-    if ( ONLINE_BOUNDARY_DIAGQNUM ) then
-!       call ATMOS_HYDROMETEOR_diagnose_number_concentration( ATMOS_BOUNDARY_ref_QTRC(:,:,:,:,ref_idx) ) ! [INOUT]
-       LOG_ERROR("ATMOS_BOUNDARY_recv",*) 'tentative disabled'
-       call PRC_abort
-    endif
+    call COMM_CARTESC_NEST_nestdown( handle,                                 &
+                                     NESTQA,                                 &
+                                     dummy_p(:,:,:,1),                       & !(KA,IA,JA)
+                                     dummy_p(:,:,:,1),                       & !(KA,IA,JA)
+                                     dummy_p(:,:,:,1),                       & !(KA,IA,JA)
+                                     dummy_p(:,:,:,1),                       & !(KA,IA,JA)
+                                     dummy_p(:,:,:,1),                       & !(KA,IA,JA)
+                                     dummy_p(:,:,:,1:NESTQA),                & !(KA,IA,JA,NESTQA)
+                                     ATMOS_BOUNDARY_ref_DENS(:,:,:,ref_idx), & !(KA,IA,JA)
+                                     ATMOS_BOUNDARY_ref_VELZ(:,:,:,ref_idx), & !(KA,IA,JA)
+                                     ATMOS_BOUNDARY_ref_VELX(:,:,:,ref_idx), & !(KA,IA,JA)
+                                     ATMOS_BOUNDARY_ref_VELY(:,:,:,ref_idx), & !(KA,IA,JA)
+                                     ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_idx), & !(KA,IA,JA)
+                                     Q(:,:,:,:)                              ) !(KA,IA,JA,NESTQA)
+
+
+    if ( ONLINE_BOUNDARY_DIAGQHYD ) then
+       call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                                           Q(:,:,:,1), Q(:,:,:,2:),                 & ! (in)
+                                           ATMOS_BOUNDARY_ref_QTRC(:,:,:,:,ref_idx) ) ! (out)
+    else if ( NESTQA > 0 ) then
+       ATMOS_BOUNDARY_ref_QTRC(:,:,:,1,ref_idx) = Q(:,:,:,1)
+    end if
 
     return
   end subroutine ATMOS_BOUNDARY_recv
@@ -2494,6 +2546,8 @@ contains
        ATMOS_BOUNDARY_QTRC )
     use scale_file_history, only: &
        FILE_HISTORY_in
+    use mod_atmos_phy_mp_vars, only: &
+       QS_MP
     implicit none
     real(RP), intent(in) :: ATMOS_BOUNDARY_DENS(KA,IA,JA)
     real(RP), intent(in) :: ATMOS_BOUNDARY_VELZ(KA,IA,JA)
@@ -2502,7 +2556,7 @@ contains
     real(RP), intent(in) :: ATMOS_BOUNDARY_POTT(KA,IA,JA)
     real(RP), intent(in) :: ATMOS_BOUNDARY_QTRC(KA,IA,JA,BND_QA)
 
-    integer :: iq
+    integer :: iq, iqa
 
     call FILE_HISTORY_in( ATMOS_BOUNDARY_DENS(:,:,:), 'DENS_BND', 'Boundary Density',               'kg/m3'             )
     call FILE_HISTORY_in( ATMOS_BOUNDARY_VELZ(:,:,:), 'VELZ_BND', 'Boundary velocity z-direction',  'm/s',  dim_type='ZHXY' )
@@ -2510,11 +2564,12 @@ contains
     call FILE_HISTORY_in( ATMOS_BOUNDARY_VELY(:,:,:), 'VELY_BND', 'Boundary velocity y-direction',  'm/s',  dim_type='ZXYH' )
     call FILE_HISTORY_in( ATMOS_BOUNDARY_POTT(:,:,:), 'POTT_BND', 'Boundary potential temperature', 'K'                 )
     do iq = 1, BND_QA
-       call FILE_HISTORY_in( ATMOS_BOUNDARY_QTRC(:,:,:,iq), trim(TRACER_NAME(iq))//'_BND', &
-                     'Boundary '//trim(TRACER_NAME(iq)), 'kg/kg' )
+       iqa = QS_MP + iq - 1
+       call FILE_HISTORY_in( ATMOS_BOUNDARY_QTRC(:,:,:,iq), trim(TRACER_NAME(iqa))//'_BND', &
+                     'Boundary '//trim(TRACER_NAME(iqa)), 'kg/kg' )
     enddo
 
     return
   end subroutine history_bnd
 
-end module scale_atmos_boundary
+end module mod_atmos_bnd_driver

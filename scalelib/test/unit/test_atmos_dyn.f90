@@ -91,6 +91,9 @@ module test_atmos_dyn
   real(RP), allocatable :: AQ_CP(:)
   real(RP), allocatable :: AQ_MASS(:)
 
+  integer  :: BND_QA
+  real(RP) :: BND_SMOOTHER_FACT
+
   integer  :: nd_order
   real(RP) :: nd_coef
   real(RP) :: nd_sfc_fact
@@ -140,9 +143,6 @@ contains
      CBFZ => ATMOS_GRID_CARTESC_CBFZ
   use scale_const, only: &
      GRAV => CONST_GRAV
-  use scale_atmos_boundary, only: &
-     BND_QA
-
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -211,7 +211,8 @@ contains
 
   allocate( PROG(KA,IA,JA,1) )
 
-  BND_QA = 0
+  BND_QA            = 0
+  BND_SMOOTHER_FACT = 0.2_RP
 
   ZERO(:,:,:) = 0.0_RP
 
@@ -352,6 +353,7 @@ subroutine test_undef
           AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
           REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
           nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+          BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
           DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
           DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
           DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
@@ -408,6 +410,7 @@ subroutine test_const
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+       BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
@@ -510,6 +513,7 @@ subroutine test_conserve
          AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
          REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
          nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+         BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
          DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
          DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
          DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
@@ -640,6 +644,7 @@ subroutine test_cwc
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+       BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
@@ -731,6 +736,7 @@ subroutine test_fctminmax
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        0.0_RP, 0.0_RP, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+       BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)

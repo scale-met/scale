@@ -287,7 +287,7 @@ contains
        ATMOS_REFSTATE_pott, &
        ATMOS_REFSTATE_qv,   &
        ATMOS_REFSTATE_pres
-    use scale_atmos_boundary, only: &
+    use mod_atmos_bnd_driver, only: &
        ATMOS_BOUNDARY_DENS,       &
        ATMOS_BOUNDARY_VELZ,       &
        ATMOS_BOUNDARY_VELX,       &
@@ -299,7 +299,9 @@ contains
        ATMOS_BOUNDARY_alpha_VELX, &
        ATMOS_BOUNDARY_alpha_VELY, &
        ATMOS_BOUNDARY_alpha_POTT, &
-       ATMOS_BOUNDARY_alpha_QTRC
+       ATMOS_BOUNDARY_alpha_QTRC, &
+       BND_QA, &
+       ATMOS_BOUNDARY_SMOOTHER_FACT
     use scale_atmos_dyn, only: &
        ATMOS_DYN
     use scale_comm_cartesC, only: &
@@ -392,6 +394,7 @@ contains
                        ATMOS_DYN_NUMERICAL_DIFF_order,                       & ! [IN]
                        ATMOS_DYN_NUMERICAL_DIFF_sfc_fact,                    & ! [IN]
                        ATMOS_DYN_NUMERICAL_DIFF_use_refstate,                & ! [IN]
+                       BND_QA, ATMOS_BOUNDARY_SMOOTHER_FACT,                 & ! [IN]
                        ATMOS_BOUNDARY_DENS,                                  & ! [IN]
                        ATMOS_BOUNDARY_VELZ,                                  & ! [IN]
                        ATMOS_BOUNDARY_VELX,                                  & ! [IN]
