@@ -615,7 +615,7 @@ contains
        call FILE_CARTESC_read( fid, "LAND_SFC_ALB_IR_dif", read2D(:,:), step=it )
        albg_org(xs:xe,ys:ye,I_R_diffuse,I_R_IR ) = read2D(:,:)
 
-       call FILE_CARTESC_read( fid, "LAND_SFC_ALB_NNIR_dir", read2D(:,:), step=it )
+       call FILE_CARTESC_read( fid, "LAND_SFC_ALB_NIR_dir", read2D(:,:), step=it )
        albg_org(xs:xe,ys:ye,I_R_direct ,I_R_NIR) = read2D(:,:)
 
        call FILE_CARTESC_read( fid, "LAND_SFC_ALB_NIR_dif", read2D(:,:), step=it )
@@ -810,7 +810,7 @@ contains
        call FILE_CARTESC_read( fid, "OCEAN_SFC_ALB_IR_dif", read2D(:,:), step=it )
        albw_org(xs:xe,ys:ye,I_R_diffuse,I_R_IR ) = read2D(:,:)
 
-       call FILE_CARTESC_read( fid, "OCEAN_SFC_ALB_NNIR_dir", read2D(:,:), step=it )
+       call FILE_CARTESC_read( fid, "OCEAN_SFC_ALB_NIR_dir", read2D(:,:), step=it )
        albw_org(xs:xe,ys:ye,I_R_direct ,I_R_NIR) = read2D(:,:)
 
        call FILE_CARTESC_read( fid, "OCEAN_SFC_ALB_NIR_dif", read2D(:,:), step=it )
