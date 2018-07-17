@@ -387,12 +387,16 @@ contains
   !-----------------------------------------------------------------------------
   subroutine REALINPUT_surface
     use scale_time, only: &
-       TIME_gettimelabel
+         TIME_gettimelabel
+    use mod_land_admin, only: &
+         LAND_do
     use mod_land_vars, only: &
          LAND_TEMP, &
          LAND_WATER, &
          LAND_SFC_TEMP, &
          LAND_SFC_albedo
+    use mod_urban_admin, only: &
+         URBAN_do
     use mod_urban_vars, only: &
          URBAN_SFC_TEMP, &
          URBAN_SFC_albedo, &
@@ -409,6 +413,8 @@ contains
          URBAN_RAINB, &
          URBAN_RAING, &
          URBAN_ROFF
+    use mod_ocean_admin, only: &
+         OCEAN_do
     use mod_ocean_vars, only: &
          OCEAN_TEMP, &
          OCEAN_SALT, &
@@ -539,9 +545,21 @@ contains
     character(len=19)     :: timelabel
 
     logical :: boundary_flag = .false.
+    logical :: land_flag
 
     integer :: k, i, j, n, ns, ne, idir, irgn
     !---------------------------------------------------------------------------
+
+    if ( LAND_do .or. URBAN_do ) then
+       land_flag = .true.
+    else
+       land_flag = .false.
+    end if
+
+    if ( .not. land_flag .or. .not. OCEAN_do ) then
+       LOG_ERROR("REALINPUT_surface",*) 'OCEAN_ and LAND_DYN_TYPE must be set'
+    end if
+
 
     LOG_NEWLINE
     LOG_INFO('REALINPUT_surface',*) 'Setup LAND'
@@ -580,8 +598,8 @@ contains
     case('limit' )
        SOILWATER_DS2VC_flag = .false.
     case default
-      LOG_ERROR("REALINPUT_surface",*) 'Unsupported SOILWATER_DS2CV TYPE:', trim(SOILWATER_DS2VC)
-      call PRC_abort
+       LOG_ERROR("REALINPUT_surface",*) 'Unsupported SOILWATER_DS2CV TYPE:', trim(SOILWATER_DS2VC)
+       call PRC_abort
     end select
 
     serial_land = SERIAL_PROC_READ
@@ -726,7 +744,9 @@ contains
                                 elevation_collection,    &
                                 boundary_flag,           &
                                 NUMBER_OF_TSTEPS,        &
-                                skip_steps               )
+                                skip_steps,              &
+                                URBAN_do                 )
+
 
        ! required one-step data only
        if( BASENAME_BOUNDARY == '' ) exit
@@ -750,27 +770,31 @@ contains
           LAND_WATER(k,i,j) = LAND_WATER_org(k,i,j,ns)
        enddo
 
-       URBAN_SFC_TEMP  (i,j)      = URBAN_SFC_TEMP_org  (i,j)
-       do irgn = I_R_IR, I_R_VIS
-       do idir = I_R_direct, I_R_diffuse
-          URBAN_SFC_albedo(i,j,idir,irgn) = URBAN_SFC_albedo_org(i,j,idir,irgn)
-       enddo
-       enddo
-       do k = UKS, UKE
-          URBAN_TRL(k,i,j) = URBAN_SFC_TEMP_org(i,j)
-          URBAN_TBL(k,i,j) = URBAN_SFC_TEMP_org(i,j)
-          URBAN_TGL(k,i,j) = URBAN_SFC_TEMP_org(i,j)
-       enddo
-       URBAN_TC   (i,j) = URBAN_TC_org      (i,j)
-       URBAN_QC   (i,j) = URBAN_QC_org      (i,j)
-       URBAN_UC   (i,j) = URBAN_UC_org      (i,j)
-       URBAN_TR   (i,j) = URBAN_SFC_TEMP_org(i,j)
-       URBAN_TB   (i,j) = URBAN_SFC_TEMP_org(i,j)
-       URBAN_TG   (i,j) = URBAN_SFC_TEMP_org(i,j)
-       URBAN_RAINR(i,j) = 0.0_RP
-       URBAN_RAINB(i,j) = 0.0_RP
-       URBAN_RAING(i,j) = 0.0_RP
-       URBAN_ROFF (i,j) = 0.0_RP
+       if ( URBAN_do ) then
+
+          URBAN_SFC_TEMP  (i,j)      = URBAN_SFC_TEMP_org  (i,j)
+          do irgn = I_R_IR, I_R_VIS
+          do idir = I_R_direct, I_R_diffuse
+             URBAN_SFC_albedo(i,j,idir,irgn) = URBAN_SFC_albedo_org(i,j,idir,irgn)
+          enddo
+          enddo
+          do k = UKS, UKE
+             URBAN_TRL(k,i,j) = URBAN_SFC_TEMP_org(i,j)
+             URBAN_TBL(k,i,j) = URBAN_SFC_TEMP_org(i,j)
+             URBAN_TGL(k,i,j) = URBAN_SFC_TEMP_org(i,j)
+          enddo
+          URBAN_TC   (i,j) = URBAN_TC_org      (i,j)
+          URBAN_QC   (i,j) = URBAN_QC_org      (i,j)
+          URBAN_UC   (i,j) = URBAN_UC_org      (i,j)
+          URBAN_TR   (i,j) = URBAN_SFC_TEMP_org(i,j)
+          URBAN_TB   (i,j) = URBAN_SFC_TEMP_org(i,j)
+          URBAN_TG   (i,j) = URBAN_SFC_TEMP_org(i,j)
+          URBAN_RAINR(i,j) = 0.0_RP
+          URBAN_RAINB(i,j) = 0.0_RP
+          URBAN_RAING(i,j) = 0.0_RP
+          URBAN_ROFF (i,j) = 0.0_RP
+
+       end if
 
        do k = 1, OKMAX
           OCEAN_TEMP(k,i,j) = OCEAN_TEMP_ORG(OKS,i,j,ns)
@@ -792,21 +816,40 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       ATMOS_PHY_SF_SFC_TEMP(i,j) = fact_ocean(i,j) * OCEAN_SFC_TEMP(i,j) &
-                                  + fact_land (i,j) * LAND_SFC_TEMP (i,j) &
-                                  + fact_urban(i,j) * URBAN_SFC_TEMP(i,j)
        ATMOS_PHY_SF_SFC_Z0M (i,j) = OCEAN_SFC_Z0M(i,j)
        ATMOS_PHY_SF_SFC_Z0H (i,j) = OCEAN_SFC_Z0H(i,j)
        ATMOS_PHY_SF_SFC_Z0E (i,j) = OCEAN_SFC_Z0E(i,j)
-       do irgn = I_R_IR, I_R_VIS
-       do idir = I_R_direct, I_R_diffuse
-          ATMOS_PHY_SF_SFC_albedo(i,j,idir,irgn) = fact_ocean(i,j) * OCEAN_SFC_albedo(i,j,idir,irgn) &
-                                                 + fact_land (i,j) * LAND_SFC_albedo (i,j,idir,irgn) &
-                                                 + fact_urban(i,j) * URBAN_SFC_albedo(i,j,idir,irgn)
+    end do
+    end do
+    if ( URBAN_do ) then
+       do j = 1, JA
+       do i = 1, IA
+          ATMOS_PHY_SF_SFC_TEMP(i,j) = fact_ocean(i,j) * OCEAN_SFC_TEMP(i,j) &
+                                     + fact_land (i,j) * LAND_SFC_TEMP (i,j) &
+                                     + fact_urban(i,j) * URBAN_SFC_TEMP(i,j)
+          do irgn = I_R_IR, I_R_VIS
+          do idir = I_R_direct, I_R_diffuse
+             ATMOS_PHY_SF_SFC_albedo(i,j,idir,irgn) = fact_ocean(i,j) * OCEAN_SFC_albedo(i,j,idir,irgn) &
+                                                    + fact_land (i,j) * LAND_SFC_albedo (i,j,idir,irgn) &
+                                                    + fact_urban(i,j) * URBAN_SFC_albedo(i,j,idir,irgn)
+          enddo
+          enddo
        enddo
        enddo
-    enddo
-    enddo
+    else
+       do j = 1, JA
+       do i = 1, IA
+          ATMOS_PHY_SF_SFC_TEMP(i,j) = fact_ocean(i,j) * OCEAN_SFC_TEMP(i,j) &
+                                     + fact_land (i,j) * LAND_SFC_TEMP (i,j)
+          do irgn = I_R_IR, I_R_VIS
+          do idir = I_R_direct, I_R_diffuse
+             ATMOS_PHY_SF_SFC_albedo(i,j,idir,irgn) = fact_ocean(i,j) * OCEAN_SFC_albedo(i,j,idir,irgn) &
+                                                    + fact_land (i,j) * LAND_SFC_albedo (i,j,idir,irgn)
+          enddo
+          enddo
+       enddo
+       enddo
+    end if
 
 
     !--- output boundary data
@@ -1937,36 +1980,24 @@ contains
   !-----------------------------------------------------------------------------
   !> Surface Data Read
   subroutine ParentSurfaceInput( &
-       tg, &
-       strg, &
-       lst, &
-       albg, &
-       tc_urb, &
-       qc_urb, &
-       uc_urb, &
-       ust, &
-       albu, &
-       tw, &
-       sst, &
-       albw, &
-       z0w, &
-       basename_land,     &
-       basename_ocean,    &
-       mdlid_land, &
-       mdlid_ocean,            &
-       ldims,             &
-       odims,             &
-       use_file_landwater, &
+       tg, strg, lst, albg,               &
+       tc_urb, qc_urb, uc_urb, ust, albu, &
+       tw, sst, albw, z0w,                &
+       basename_land, basename_ocean,     &
+       mdlid_land, mdlid_ocean,           &
+       ldims, odims,                      &
+       use_file_landwater,   &
        init_landwater_ratio, &
-       init_ocean_alb_lw, &
-       init_ocean_alb_sw, &
-       init_ocean_z0w, &
-       intrp_iter_max, &
+       init_ocean_alb_lw,    &
+       init_ocean_alb_sw,    &
+       init_ocean_z0w,       &
+       intrp_iter_max,       &
        soilwater_ds2vc_flag, &
        elevation_collection, &
        boundary_flag,        &
-       timelen,          &
-       skiplen )
+       timelen,              &
+       skiplen,              &
+       URBAN_do              )
     use scale_comm_cartesC, only: &
          COMM_bcast, &
          COMM_vars8, &
@@ -2042,6 +2073,7 @@ contains
     logical,          intent(in)  :: boundary_flag    ! switch for making boundary file
     integer,          intent(in)  :: timelen          ! time steps in one file
     integer,          intent(in)  :: skiplen          ! skip steps
+    logical,          intent(in)  :: URBAN_do
 
    ! land
     real(RP) :: tg_org   (ldims(1),ldims(2),ldims(3))
@@ -2079,46 +2111,48 @@ contains
 
        ! urban data
 
-       do j = 1, JA
-       do i = 1, IA
-          call THERMODYN_specific_heat( QA, &
-                                        qtrc(KS,i,j,:), &
-                                        TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
-                                        Qdry, Rtot, CVtot, CPtot                                 ) ! [OUT]
-          call THERMODYN_rhot2temp_pres( dens(KS,i,j), rhot(KS,i,j), Rtot, CVtot, CPtot, &
-                                         temp, pres                                      )
+       if ( URBAN_do ) then
+          do j = 1, JA
+          do i = 1, IA
+             call THERMODYN_specific_heat( QA, &
+                                           qtrc(KS,i,j,:), &
+                                           TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+                                           Qdry, Rtot, CVtot, CPtot                                 ) ! [OUT]
+             call THERMODYN_rhot2temp_pres( dens(KS,i,j), rhot(KS,i,j), Rtot, CVtot, CPtot, &
+                                            temp, pres                                      )
 
-          tc_urb(i,j) = temp
+             tc_urb(i,j) = temp
 #ifdef DRY
-          qc_urb(i,j) = 0.0_RP
+             qc_urb(i,j) = 0.0_RP
 #else
-          qc_urb(i,j) = qtrc(KS,i,j,I_QV)
+             qc_urb(i,j) = qtrc(KS,i,j,I_QV)
 #endif
-       enddo
-       enddo
+          enddo
+          enddo
 
-       do j = 1, JA-1
-       do i = 1, IA-1
-          uc_urb(i,j) = max(sqrt( ( momx(KS,i,j) / (dens(KS,i+1,  j)+dens(KS,i,j)) * 2.0_RP )**2.0_RP &
-                                + ( momy(KS,i,j) / (dens(KS,  i,j+1)+dens(KS,i,j)) * 2.0_RP )**2.0_RP ), &
-                            0.01_RP)
-       enddo
-       enddo
-       do j = 1, JA-1
-          uc_urb(IA,j) = max(sqrt( ( momx(KS,IA,j) /  dens(KS,IA,j  ) )**2.0_RP &
-                                 + ( momy(KS,IA,j) / (dens(KS,IA,j+1)+dens(KS,IA,j)) * 2.0_RP )**2.0_RP ), &
-                             0.01_RP)
-       enddo
-       do i = 1, IA-1
-          uc_urb(i,JA) = max(sqrt( ( momx(KS,i,JA) / (dens(KS,i+1,JA)+dens(KS,i,JA)) * 2.0_RP )**2.0_RP &
-                                 + ( momy(KS,i,JA) /  dens(KS,i  ,JA) )**2.0_RP ), 0.01_RP)
-       enddo
-       uc_urb(IA,JA) = max(sqrt( ( momx(KS,IA,JA) / dens(KS,IA,JA) )**2.0_RP &
-                               + ( momy(KS,IA,JA) / dens(KS,IA,JA) )**2.0_RP ), 0.01_RP)
+          do j = 1, JA-1
+          do i = 1, IA-1
+             uc_urb(i,j) = max(sqrt( ( momx(KS,i,j) / (dens(KS,i+1,  j)+dens(KS,i,j)) * 2.0_RP )**2.0_RP &
+                                   + ( momy(KS,i,j) / (dens(KS,  i,j+1)+dens(KS,i,j)) * 2.0_RP )**2.0_RP ), &
+                               0.01_RP)
+          enddo
+          enddo
+          do j = 1, JA-1
+             uc_urb(IA,j) = max(sqrt( ( momx(KS,IA,j) /  dens(KS,IA,j  ) )**2.0_RP &
+                                    + ( momy(KS,IA,j) / (dens(KS,IA,j+1)+dens(KS,IA,j)) * 2.0_RP )**2.0_RP ), &
+                                0.01_RP)
+          enddo
+          do i = 1, IA-1
+             uc_urb(i,JA) = max(sqrt( ( momx(KS,i,JA) / (dens(KS,i+1,JA)+dens(KS,i,JA)) * 2.0_RP )**2.0_RP &
+                                    + ( momy(KS,i,JA) /  dens(KS,i  ,JA) )**2.0_RP ), 0.01_RP)
+          enddo
+          uc_urb(IA,JA) = max(sqrt( ( momx(KS,IA,JA) / dens(KS,IA,JA) )**2.0_RP &
+                                  + ( momy(KS,IA,JA) / dens(KS,IA,JA) )**2.0_RP ), 0.01_RP)
 
-       call COMM_vars8( uc_urb, 1 )
-       call COMM_wait ( uc_urb, 1, .false. )
+          call COMM_vars8( uc_urb, 1 )
+          call COMM_wait ( uc_urb, 1, .false. )
 
+       end if
 
     end if ! first
 
@@ -2219,7 +2253,7 @@ contains
              call COMM_bcast( strg_org, ldims(1), ldims(2), ldims(3) )
           end if
           call COMM_bcast( lst_org, ldims(2), ldims(3) )
-          call COMM_bcast( ust_org, ldims(2), ldims(3) )
+          if ( URBAN_do ) call COMM_bcast( ust_org, ldims(2), ldims(3) )
           call COMM_bcast( albg_org(:,:,I_R_direct ,I_R_IR ), ldims(2), ldims(3) )
           call COMM_bcast( albg_org(:,:,I_R_diffuse,I_R_IR ), ldims(2), ldims(3) )
           call COMM_bcast( albg_org(:,:,I_R_direct ,I_R_NIR), ldims(2), ldims(3) )
@@ -2344,26 +2378,27 @@ contains
        if ( first ) then ! interporate land data only once
 
           call land_interporation( &
-               tg(:,:,:,nn), strg(:,:,:,nn), & ! (out)
-               lst(:,:,nn), albg(:,:,:,:,nn),  & ! (out)
-               ust, albu,                    & ! (out)
-               tg_org, strg_org, smds_org,   & ! (inout)
-               lst_org, albg_org,            & ! (inout)
-               ust_org,                      & ! (inout)
-               sst_org,                      & ! (in)
-               lmask_org,                    & ! (in)
-               lsmask_nest,                  & ! (in)
-               topo_org,                     & ! (in)
-               lz_org, llon_org, llat_org,   & ! (in)
-               LCZ, LON, LAT,                & ! (in)
-               ldims, odims,                 & ! (in)
-               maskval_tg, maskval_strg,     & ! (in)
-               init_landwater_ratio,         & ! (in)
-               use_file_landwater,           & ! (in)
-               use_waterratio,               & ! (in)
-               soilwater_ds2vc_flag,         & ! (in)
-               elevation_collection,         & ! (in)
-               intrp_iter_max                ) ! (in)
+               tg(:,:,:,nn), strg(:,:,:,nn),  & ! (out)
+               lst(:,:,nn), albg(:,:,:,:,nn), & ! (out)
+               ust, albu,                     & ! (out)
+               tg_org, strg_org, smds_org,    & ! (inout)
+               lst_org, albg_org,             & ! (inout)
+               ust_org,                       & ! (inout)
+               sst_org,                       & ! (in)
+               lmask_org,                     & ! (in)
+               lsmask_nest,                   & ! (in)
+               topo_org,                      & ! (in)
+               lz_org, llon_org, llat_org,    & ! (in)
+               LCZ, LON, LAT,                 & ! (in)
+               ldims, odims,                  & ! (in)
+               maskval_tg, maskval_strg,      & ! (in)
+               init_landwater_ratio,          & ! (in)
+               use_file_landwater,            & ! (in)
+               use_waterratio,                & ! (in)
+               soilwater_ds2vc_flag,          & ! (in)
+               elevation_collection,          & ! (in)
+               intrp_iter_max,                & ! (in)
+               URBAN_do                       ) ! (in)
 
        end if ! first
 
@@ -2497,10 +2532,18 @@ contains
           do i = 1, IA
              if( abs(lsmask_nest(i,j)-0.0_RP) < EPS ) then ! ocean grid
                 lst(i,j,nn) = sst(i,j,nn)
-                ust(i,j)    = sst(i,j,nn)
              endif
           enddo
           enddo
+          if ( URBAN_do ) then
+             do j = 1, JA
+             do i = 1, IA
+                if( abs(lsmask_nest(i,j)-0.0_RP) < EPS ) then ! ocean grid
+                   ust(i,j)    = sst(i,j,nn)
+                endif
+             enddo
+          enddo
+       end if
 
        end if
 
@@ -2646,7 +2689,8 @@ contains
        use_waterratio,       &
        soilwater_ds2vc_flag, &
        elevation_collection, &
-       intrp_iter_max        )
+       intrp_iter_max,       &
+       URBAN_do              )
     use scale_prc, only: &
          PRC_abort
     use scale_const, only: &
@@ -2696,6 +2740,7 @@ contains
     logical,  intent(in)    :: soilwater_ds2vc_flag
     logical,  intent(in)    :: elevation_collection
     integer,  intent(in)    :: intrp_iter_max
+    logical,  intent(in)    :: URBAN_do
 
     real(RP) :: lmask(ldims(2), ldims(3))
     real(RP) :: smds(LKMAX,IA,JA)
@@ -2775,7 +2820,6 @@ contains
     ! replace missing value
     do j = 1, ldims(3)
     do i = 1, ldims(2)
-       if ( ust_org(i,j) == UNDEF ) ust_org(i,j) = lst_org(i,j)
 !       if ( skinw_org(i,j) == UNDEF ) skinw_org(i,j) = 0.0_RP
 !       if ( snowq_org(i,j) == UNDEF ) snowq_org(i,j) = 0.0_RP
 !       if ( snowt_org(i,j) == UNDEF ) snowt_org(i,j) = TEM00
@@ -2787,6 +2831,13 @@ contains
        if( albg_org(i,j,I_R_diffuse,I_R_VIS) == UNDEF ) albg_org(i,j,I_R_diffuse,I_R_VIS) = 0.22_RP
     end do
     end do
+    if ( URBAN_do ) then
+       do j = 1, ldims(3)
+       do i = 1, ldims(2)
+          if ( ust_org(i,j) == UNDEF ) ust_org(i,j) = lst_org(i,j)
+       end do
+       end do
+    end if
 
     ! Land temp: interpolate over the ocean
     if ( i_INTRP_LAND_TEMP .ne. i_intrp_off ) then
@@ -2845,14 +2896,16 @@ contains
                           lst_org (:,:),      & ! [IN]
                           lst     (:,:)       ) ! [OUT]
 
-    call INTERP_interp2d( itp_nh,             & ! [IN]
-                          ldims(2), ldims(3), & ! [IN]
-                          IA, JA,             & ! [IN]
-                          igrd    (:,:,:),    & ! [IN]
-                          jgrd    (:,:,:),    & ! [IN]
-                          hfact   (:,:,:),    & ! [IN]
-                          ust_org (:,:),      & ! [IN]
-                          ust     (:,:)       ) ! [OUT]
+    if ( URBAN_do ) then
+       call INTERP_interp2d( itp_nh,             & ! [IN]
+                             ldims(2), ldims(3), & ! [IN]
+                             IA, JA,             & ! [IN]
+                             igrd    (:,:,:),    & ! [IN]
+                             jgrd    (:,:,:),    & ! [IN]
+                             hfact   (:,:,:),    & ! [IN]
+                             ust_org (:,:),      & ! [IN]
+                             ust     (:,:)       ) ! [OUT]
+    end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
                           ldims(2), ldims(3),                & ! [IN]
@@ -2948,13 +3001,24 @@ contains
           if ( topo(i,j) > 0.0_RP ) then ! ignore UNDEF value
              tdiff = ( TOPO_Zsfc(i,j) - topo(i,j) ) * LAPS
              lst(i,j) = lst(i,j) - tdiff
-             ust(i,j) = ust(i,j) - tdiff
              do k = 1, LKMAX
                 tg(k,i,j) = tg(k,i,j) - tdiff
              end do
           end if
        end do
        end do
+
+       if ( URBAN_do ) then
+          do j = 1, JA
+          do i = 1, IA
+             if ( topo(i,j) > 0.0_RP ) then ! ignore UNDEF value
+                tdiff = ( TOPO_Zsfc(i,j) - topo(i,j) ) * LAPS
+                ust(i,j) = ust(i,j) - tdiff
+             end if
+          end do
+          end do
+       end if
+
     end if
 
 
@@ -3051,12 +3115,14 @@ contains
     endif ! use_file_waterratio
 
 
-    ! copy albedo of land to urban
-    do j = 1, JA
-    do i = 1, IA
-       albu(i,j,:,:) = albg(i,j,:,:)
-    enddo
-    enddo
+    if ( URBAN_do ) then
+       ! copy albedo of land to urban
+       do j = 1, JA
+       do i = 1, IA
+          albu(i,j,:,:) = albg(i,j,:,:)
+       enddo
+       enddo
+    end if
 
 
     return

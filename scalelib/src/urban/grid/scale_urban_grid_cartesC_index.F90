@@ -85,6 +85,11 @@ contains
     endif
     LOG_NML(PARAM_URBAN_GRID_CARTESC_INDEX)
 
+    if ( UKMAX < 1 ) then
+       LOG_ERROR("URBAN_GRID_CARTESC_INDEX_setup",*) 'UKMAX must be >= 1 ', UKMAX
+       call PRC_abort
+    end if
+
     UKA  = UKMAX
     UKS  = 1
     UKE  = UKMAX

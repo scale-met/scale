@@ -534,7 +534,8 @@ contains
       use_file_landwater, &
       it                  )
     use scale_const, only: &
-       D2R => CONST_D2R
+       UNDEF => CONST_UNDEF, &
+       D2R   => CONST_D2R
     use scale_comm_cartesC_nest, only: &
        PARENT_IMAX,                                     &
        PARENT_JMAX,                                     &
@@ -542,7 +543,8 @@ contains
        NEST_TILE_ID    => COMM_CARTESC_NEST_TILE_ID
     use scale_file, only: &
        FILE_open, &
-       FILE_read
+       FILE_read, &
+       FILE_get_dataInfo
     use scale_file_CARTESC, only: &
        FILE_CARTESC_read
     implicit none
@@ -569,6 +571,8 @@ contains
     integer :: xloc, yloc
     integer :: xs, xe
     integer :: ys, ye
+
+    logical :: existed
 
     integer :: k, i, j, n
     !---------------------------------------------------------------------------
@@ -606,8 +610,13 @@ contains
        call FILE_CARTESC_read( fid, "LAND_SFC_TEMP", read2D(:,:), step=it )
        lst_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FILE_CARTESC_read( fid, "URBAN_SFC_TEMP", read2D(:,:), step=it )
-       ust_org(xs:xe,ys:ye) = read2D(:,:)
+       call FILE_get_dataInfo( fid, "URBAN_SFC_TEMP", istep=it, existed=existed )
+       if ( existed ) then
+          call FILE_CARTESC_read( fid, "URBAN_SFC_TEMP", read2D(:,:), step=it )
+          ust_org(xs:xe,ys:ye) = read2D(:,:)
+       else
+          ust_org(xs:xe,ys:ye) = UNDEF
+       end if
 
        call FILE_CARTESC_read( fid, "LAND_SFC_ALB_IR_dir", read2D(:,:), step=it )
        albg_org(xs:xe,ys:ye,I_R_direct ,I_R_IR ) = read2D(:,:)

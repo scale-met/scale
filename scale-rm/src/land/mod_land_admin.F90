@@ -56,8 +56,6 @@ contains
   subroutine LAND_ADMIN_setup
     use scale_prc, only: &
        PRC_abort
-    use scale_land_grid_cartesC_index, only: &
-       LKMAX
     implicit none
 
     namelist / PARAM_LAND / &
@@ -88,10 +86,6 @@ contains
     LOG_INFO("LAND_ADMIN_setup",*) 'Land model components '
 
     if ( LAND_DYN_TYPE /= 'OFF' .AND. LAND_DYN_TYPE /= 'NONE' ) then
-       if ( LKMAX < 0 ) then
-          LOG_ERROR("LAND_ADMIN_setup",*) 'LAND_DYN_TYPE is set but LKMAX < 0'
-          call PRC_abort
-       end if
        LOG_INFO_CONT(*) 'Land model           : ON, ', trim(LAND_DYN_TYPE)
        LAND_do = .true.
     else

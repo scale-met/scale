@@ -71,8 +71,6 @@ contains
   subroutine ATMOS_ADMIN_setup
     use scale_prc, only: &
        PRC_abort
-    use scale_atmos_grid_cartesC_index, only: &
-       KMAX
     implicit none
 
     namelist / PARAM_ATMOS / &
@@ -112,10 +110,6 @@ contains
     LOG_INFO("ATMOS_ADMIN_setup",*) 'Atmosphere model components '
 
     if ( ATMOS_do ) then
-       if ( KMAX < 0 ) then
-          LOG_ERROR("ATMOS_ADMIN_setup",*) 'ATMOS_do is .true. but KMAX < 0'
-          call PRC_abort
-       end if
        LOG_INFO_CONT(*) 'Atmosphere model       : ON'
     else
        LOG_INFO_CONT(*) 'Atmosphere model       : OFF'
