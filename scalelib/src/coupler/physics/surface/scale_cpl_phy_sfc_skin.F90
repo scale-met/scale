@@ -454,7 +454,7 @@ contains
                + RFLXD(i,j,I_R_direct ,I_R_VIS) * ALBEDO(i,j,I_R_direct ,I_R_VIS) &
                + RFLXD(i,j,I_R_diffuse,I_R_VIS) * ALBEDO(i,j,I_R_diffuse,I_R_VIS)
 
-          GFLX(i,j) = -TC_dZ(i,j) * ( TMPS1(i,j) - TG(i,j) )
+          GFLX(i,j) = -TC_dZ(i,j) * ( TMPS(i,j) - TG(i,j) )
 
           ! calculation for residual
           res = SWD - SWU + LWD - LWU - SHFLX(i,j) - QVFLX(i,j) * LH(i,j) + GFLX(i,j)

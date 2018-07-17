@@ -42,6 +42,7 @@ module scale_landuse
   logical,  public, allocatable :: LANDUSE_exists_ocean(:,:) !< ocean calculation flag
   logical,  public, allocatable :: LANDUSE_exists_land (:,:) !< land  calculation flag
   logical,  public, allocatable :: LANDUSE_exists_urban(:,:) !< urban calculation flag
+  logical,  public, allocatable :: LANDUSE_exists_lake (:,:) !< lake  calculation flag
 
   real(RP), public, allocatable :: LANDUSE_frac_land (:,:) !< land  fraction
   real(RP), public, allocatable :: LANDUSE_frac_urban(:,:) !< urban fraction
@@ -86,12 +87,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LANDUSE_setup( &
-       OCEAN_do, URBAN_do, LAKE_do )
-    use scale_file, only: &
-       FILE_AGGREGATE
+       OCEAN_do, &
+       URBAN_do, &
+       LAKE_do   )
     use scale_prc, only: &
        PRC_abort
+    use scale_file, only: &
+       FILE_AGGREGATE
     implicit none
+
     logical, intent(in) :: OCEAN_do
     logical, intent(in) :: URBAN_do
     logical, intent(in) :: LAKE_do
@@ -156,47 +160,66 @@ contains
     allocate( LANDUSE_exists_ocean(IA,JA) )
     allocate( LANDUSE_exists_land (IA,JA) )
     allocate( LANDUSE_exists_urban(IA,JA) )
+    allocate( LANDUSE_exists_lake (IA,JA) )
     LANDUSE_exists_ocean(:,:) = .false.
     LANDUSE_exists_land (:,:) = .false.
     LANDUSE_exists_urban(:,:) = .false.
+    LANDUSE_exists_lake (:,:) = .false.
+
 
 
     if    ( LANDUSE_AllOcean ) then
+
        LOG_INFO("LANDUSE_setup",*) 'Assume all grids are ocean'
+
        call LANDUSE_calc_fact
+
     elseif( LANDUSE_AllLand ) then
+
        LOG_INFO("LANDUSE_setup",*) 'Assume all grids are land'
        LOG_INFO("LANDUSE_setup",*) 'Assume land PFT is 1 (bare ground)'
        LANDUSE_frac_land (:,:) = 1.0_RP
+
        call LANDUSE_calc_fact
+
     elseif( LANDUSE_AllUrban ) then
+
        LOG_INFO("LANDUSE_setup",*) 'Assume all grids are land'
-       LANDUSE_frac_land (:,:) = 1.0_RP
-       LANDUSE_index_PFT(:,:,:) = LANDUSE_index_URBAN
        LOG_INFO("LANDUSE_setup",*) 'Assume all lands are urban'
        LOG_INFO("LANDUSE_setup",*) 'Assume land PFT is urban: ', LANDUSE_index_URBAN
-       LANDUSE_frac_urban(:,:) = 1.0_RP
+       LANDUSE_frac_land (:,:)   = 1.0_RP
+       LANDUSE_frac_urban(:,:)   = 1.0_RP
+       LANDUSE_index_PFT (:,:,:) = LANDUSE_index_URBAN
+
        call LANDUSE_calc_fact
+
     elseif( LANDUSE_AllLake ) then
+
        LOG_INFO("LANDUSE_setup",*) 'Assume all grids are land'
-       LANDUSE_frac_land (:,:) = 1.0_RP
-       LANDUSE_index_PFT(:,:,:) = LANDUSE_index_LAKE
        LOG_INFO("LANDUSE_setup",*) 'Assume all lands are lake'
        LOG_INFO("LANDUSE_setup",*) 'Assume land PFT is lake: ', LANDUSE_index_LAKE
-       LANDUSE_frac_lake (:,:) = 1.0_RP
+       LANDUSE_frac_land (:,:)   = 1.0_RP
+       LANDUSE_frac_lake (:,:)   = 1.0_RP
+       LANDUSE_index_PFT (:,:,:) = LANDUSE_index_LAKE
+
        call LANDUSE_calc_fact
+
     elseif( LANDUSE_MosaicWorld ) then
+
        LOG_INFO("LANDUSE_setup",*) 'Assume all grids have ocean, land, and urban'
 !       LOG_INFO("LANDUSE_setup",*) 'Assume all grids have ocean, land, urban, and lake'
        LOG_INFO("LANDUSE_setup",*) 'Assume land PFT is 1 (bare ground)'
        LANDUSE_frac_land (:,:) = 0.5_RP
        LANDUSE_frac_urban(:,:) = 0.5_RP
 !       LANDUSE_frac_lake (:,:) = 0.25_RP
+
        call LANDUSE_calc_fact
-    else
-       ! read from file
+
+    else ! default: read from file
+
        call LANDUSE_read( OCEAN_do, URBAN_do, LAKE_do )
        call LANDUSE_calc_fact
+
     endif
 
     return
@@ -218,15 +241,16 @@ contains
     LANDUSE_fact_urban(:,:) = (          LANDUSE_frac_land(:,:) ) * (          LANDUSE_frac_urban(:,:) )
     LANDUSE_fact_lake (:,:) = (          LANDUSE_frac_land(:,:) ) * (          LANDUSE_frac_lake (:,:) )
 
-    call LANDUSE_write
-
     do j = 1, JA
     do i = 1, IA
        if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) LANDUSE_exists_ocean(i,j) = .true.
        if( LANDUSE_fact_land (i,j) > 0.0_RP ) LANDUSE_exists_land (i,j) = .true.
        if( LANDUSE_fact_urban(i,j) > 0.0_RP ) LANDUSE_exists_urban(i,j) = .true.
+       if( LANDUSE_fact_lake (i,j) > 0.0_RP ) LANDUSE_exists_lake (i,j) = .true.
     enddo
     enddo
+
+    call LANDUSE_write
 
     return
   end subroutine LANDUSE_calc_fact
@@ -283,14 +307,18 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Read landuse data
-  subroutine LANDUSE_read( OCEAN_do, URBAN_do, LAKE_do )
+  subroutine LANDUSE_read( &
+       OCEAN_do, &
+       URBAN_do, &
+       LAKE_do   )
     use scale_file_cartesC, only: &
-       FILE_CARTESC_open, &
-       FILE_CARTESC_read, &
-       FILE_CARTESC_flush, &
+       FILE_CARTESC_open,              &
+       FILE_CARTESC_read,              &
+       FILE_CARTESC_flush,             &
        FILE_CARTESC_check_coordinates, &
        FILE_CARTESC_close
     implicit none
+
     logical, intent(in) :: OCEAN_do
     logical, intent(in) :: URBAN_do
     logical, intent(in) :: LAKE_do
@@ -311,8 +339,8 @@ contains
 
        call FILE_CARTESC_open( LANDUSE_IN_BASENAME, fid, aggregate=LANDUSE_IN_AGGREGATE )
 
-       call FILE_CARTESC_read( fid, 'FRAC_LAND',  'XY', LANDUSE_frac_land(:,:) )
-       call FILE_CARTESC_read( fid, 'FRAC_LAKE',  'XY', LANDUSE_frac_lake(:,:) )
+       call FILE_CARTESC_read( fid, 'FRAC_LAND',  'XY', LANDUSE_frac_land (:,:) )
+       call FILE_CARTESC_read( fid, 'FRAC_LAKE',  'XY', LANDUSE_frac_lake (:,:) )
        call FILE_CARTESC_read( fid, 'FRAC_URBAN', 'XY', LANDUSE_frac_urban(:,:) )
 
        call FILE_CARTESC_flush( fid )
@@ -420,9 +448,9 @@ contains
   !> Write landuse data
   subroutine LANDUSE_write
     use scale_file_cartesC, only: &
-       FILE_CARTESC_create, &
-       FILE_CARTESC_def_var, &
-       FILE_CARTESC_enddef, &
+       FILE_CARTESC_create,    &
+       FILE_CARTESC_def_var,   &
+       FILE_CARTESC_enddef,    &
        FILE_CARTESC_write_var, &
        FILE_CARTESC_close
     implicit none
@@ -443,10 +471,9 @@ contains
 
        call LANDUSE_fillhalo( FILL_BND=.false. )
 
-       call FILE_CARTESC_create( &
-            LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, LANDUSE_OUT_DTYPE, & ! [IN]
-            fid,                                                        & ! [OUT]
-            haszcoord=.false., aggregate=LANDUSE_OUT_AGGREGATE          ) ! [IN]
+       call FILE_CARTESC_create( LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, LANDUSE_OUT_DTYPE, & ! [IN]
+                                 fid,                                                        & ! [OUT]
+                                 haszcoord=.false., aggregate=LANDUSE_OUT_AGGREGATE          ) ! [IN]
 
        call FILE_CARTESC_def_var( fid, 'FRAC_LAND'     , 'LAND fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE, vid(1), standard_name="land_area_fraction" )
        call FILE_CARTESC_def_var( fid, 'FRAC_LAKE'     , 'LAKE fraction'          , '1', 'XY', LANDUSE_OUT_DTYPE, vid(2) )
