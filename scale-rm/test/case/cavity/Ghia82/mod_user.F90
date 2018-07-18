@@ -138,7 +138,7 @@ contains
        CZ => ATMOS_GRID_CARTESC_CZ
     use scale_time, only: &
        DTSEC => TIME_DTSEC, &
-       NOWTSEC => TIME_NOWSEC
+       NOWDAYSEC => TIME_NOWDAYSEC
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_comm
@@ -155,7 +155,7 @@ contains
     ! Consider eddy turbulent mixing with constant eddy viscosity and diffusivity
     !
 
-    if ( NOWTSEC > DTSEC ) then
+    if ( NOWDAYSEC > DTSEC ) then
 
        call COMM_vars8( DENS(:,:,:), I_COMM_DENS )
 !!$       call COMM_vars8( MOMZ(:,:,:), I_COMM_MOMZ )

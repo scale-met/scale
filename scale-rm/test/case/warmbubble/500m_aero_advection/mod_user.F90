@@ -208,7 +208,7 @@ contains
     use scale_const, only: &
        CONST_PI
     use scale_time, only: &
-       TIME_NOWSEC
+       TIME_NOWDAYSEC
     use mod_atmos_phy_ae_vars, only: &
        QS_AE, &
        QE_AE
@@ -235,7 +235,7 @@ contains
     !--- Add tendency of box model
 
     ! update conc_h2so4
-    if ( i /= 0 .AND. j /= 0 .AND. k /= 0 .AND.  TIME_NOWSEC <= user_emitdt ) then
+    if ( i /= 0 .AND. j /= 0 .AND. k /= 0 .AND.  TIME_NOWDAYSEC <= user_emitdt ) then
 
        !--- Emission from Aerosol
        m0t = user_m0_sulf                               ! total M0 [#/m3]

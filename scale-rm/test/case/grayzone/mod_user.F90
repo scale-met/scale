@@ -24,10 +24,6 @@ module mod_user
        CX => ATMOS_GRID_CARTESC_CX, &
        CY => ATMOS_GRID_CARTESC_CY, &
        CZ => ATMOS_GRID_CARTESC_CZ
-  use scale_time, only: &
-       TIME_NOWSTEP,&
-       TIME_NOWSEC,&
-       TIME_DTSEC
   use mod_atmos_phy_sf_vars, only: &
      SFC_TEMP => ATMOS_PHY_SF_SFC_TEMP
   !-----------------------------------------------------------------------------
@@ -360,8 +356,6 @@ contains
     use scale_atmos_grid_cartesC, only: &
          RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
          RFDZ => ATMOS_GRID_CARTESC_RFDZ
-    use scale_time, only: &
-        TIME_NOWSEC
     use scale_const, only: &
         GRAV   => CONST_GRAV,   &
         KARMAN => CONST_KARMAN, &

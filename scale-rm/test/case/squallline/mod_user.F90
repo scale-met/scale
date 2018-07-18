@@ -79,7 +79,7 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_time, only: &
-       NOWSEC => TIME_NOWSEC
+       NOWDAYSEC => TIME_NOWDAYSEC
     use scale_atmos_grid_cartesC, only: &
        CZ => ATMOS_GRID_CARTESC_CZ
     implicit none
@@ -120,7 +120,7 @@ contains
 
     if ( USER_do ) then
        LOG_INFO("USER_setup",*) 'Enable cold pool forcing'
-       TIME0 = NOWSEC
+       TIME0 = NOWDAYSEC
 
        pi2 = atan(1.0) * 2.0_RP
 
@@ -149,7 +149,7 @@ contains
   !> Calc tendency
   subroutine USER_calc_tendency
     use scale_time, only: &
-       NOWSEC => TIME_NOWSEC, &
+       NOWDAYSEC => TIME_NOWDAYSEC, &
        DTSEC  => TIME_DTSEC
     use mod_atmos_vars, only: &
        DENS, &
@@ -174,7 +174,7 @@ contains
 
     if ( USER_do ) then
 
-       time = NOWSEC - TIME0
+       time = NOWDAYSEC - TIME0
 
        if ( time <= FORCE_DURATION ) then
           do j = JS, JE

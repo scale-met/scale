@@ -39,7 +39,7 @@ module mod_user
        ATMOS_DYN_FVM_fluxX_XYZ
   use scale_time, only: &
        DTSEC => TIME_DTSEC, &
-       NOWTSEC => TIME_NOWSEC
+       NOWDAYSEC => TIME_NOWDAYSEC
   use mod_atmos_vars, only: &
        DENS, &
        RHOT, &
@@ -200,7 +200,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( USER_do ) then
-       xshift = 40.0_RP * (NOWTSEC - DTSEC)
+       xshift = 40.0_RP * (NOWDAYSEC - DTSEC)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -234,8 +234,8 @@ contains
 
        l2_error = calc_l2error( QTRC(:,:,:,I_NC), ExactSol )
        linf_error = calc_linferror(QTRC(:,:,:,I_NC), ExactSol)
-       if ( mod(NOWTSEC, 10.0_RP) == 0 ) then
-          LOG_WARN("USER_update",*) "t=", NOWTSEC, "l2=", l2_error, "linf=", linf_error
+       if ( mod(NOWDAYSEC, 10.0_RP) == 0 ) then
+          LOG_WARN("USER_update",*) "t=", NOWDAYSEC, "l2=", l2_error, "linf=", linf_error
        end if
        call FILE_HISTORY_in( l2_error, 'l2error', 'l2error', '1' )
        call FILE_HISTORY_in( linf_error, 'linferror', 'linferror', '1' )

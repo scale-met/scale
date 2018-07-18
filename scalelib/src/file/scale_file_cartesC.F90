@@ -3307,7 +3307,7 @@ contains
     use scale_prc_cartesC, only: &
        PRC_2Drank
     use scale_time, only: &
-       NOWSEC => TIME_NOWDAYSEC
+       NOWDAYSEC => TIME_NOWDAYSEC
     implicit none
 
     integer,          intent(in) :: fid      !< file ID
@@ -3365,8 +3365,8 @@ contains
        call PRC_abort
     endif
 
-    if( exec ) call FILE_Write( vid, var(dim1_S:dim1_E),    & ! [IN]
-                                NOWSEC, NOWSEC, start=start ) ! [IN]
+    if( exec ) call FILE_Write( vid, var(dim1_S:dim1_E),          & ! [IN]
+                                NOWDAYSEC, NOWDAYSEC, start=start ) ! [IN]
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
@@ -3396,7 +3396,7 @@ contains
        PRC_NUM_X, &
        PRC_NUM_Y
     use scale_time, only: &
-       NOWSEC  => TIME_NOWDAYSEC
+       NOWDAYSEC  => TIME_NOWDAYSEC
     implicit none
 
     integer,          intent(in)  :: fid      !< file ID
@@ -3496,10 +3496,10 @@ contains
           enddo
 
           call FILE_Write( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
-                           NOWSEC, NOWSEC, start                      ) ! [IN]
+                           NOWDAYSEC, NOWDAYSEC, start                ) ! [IN]
        else
           call FILE_Write( vid, var(dim1_S:dim1_E,dim2_S:dim2_E), &
-                           NOWSEC, NOWSEC, start                  ) ! [IN]
+                           NOWDAYSEC, NOWDAYSEC, start            ) ! [IN]
        endif
 
     endif
@@ -3532,7 +3532,7 @@ contains
        PRC_NUM_X,  &
        PRC_NUM_Y
     use scale_time, only: &
-       NOWSEC  => TIME_NOWDAYSEC
+       NOWDAYSEC  => TIME_NOWDAYSEC
     implicit none
 
     integer,          intent(in) :: fid        !< file ID
@@ -3645,10 +3645,10 @@ contains
        enddo
 
        call FILE_Write( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                        NOWSEC, NOWSEC, start                                    ) ! [IN]
+                        NOWDAYSEC, NOWDAYSEC, start                              ) ! [IN]
     else
        call FILE_Write( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                        NOWSEC, NOWSEC, start                                ) ! [IN]
+                        NOWDAYSEC, NOWDAYSEC, start                          ) ! [IN]
     endif
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
