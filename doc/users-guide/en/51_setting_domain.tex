@@ -324,9 +324,9 @@ The following is the parameters in \namelist{PARAM_ATMOS_BOUNDARY}.
   \verb| ATMOS_BOUNDARY_EXP_H = 2.0D0,         | & ; Factor of the exponent of the exponential profile. \\
 }
 
-The nudging is applied as
+The tendency due to the nudging is written as
 \begin{eqnarray}
-  \frac{\partial \phi_{k,i,j}}{\partial t}
+  \left.\frac{\partial \phi_{k,i,j}}{\partial t}\right|_\mathrm{nudging}
   & = & - \alpha \Delta\phi_{k,i,j} \\ \nonumber
   && + \alpha_s \left( \frac{\Delta\phi_{k,i-1,j} + \Delta\phi_{k,i+1,j} + \Delta\phi_{k,i,j-1} + \Delta\phi_{k,i,j+1}}{4} - \Delta\phi_{k,i,j} \right),
 \end{eqnarray}
@@ -343,11 +343,7 @@ If \nmitem{ATMOS_BOUNDARY_LINEAR_V} = \verb|.true.|,
 \end{equation}
 otherwise
 \begin{equation}
-  \alpha_z =  \left\{
-    \begin{array}{lll}
-      ( 0.5 - \cos(\pi e_z)/2 ) / \tau_z & \mathrm{for} & e_z \le 0.5, \\
-      ( 0.5 + \sin(\pi (e_z-0.5))/2 ) / \tau_z & \mathrm{for} & e_z > 0.5,
-    \end{array} \right.
+  \alpha_z =  \sin^2(\pi e_z/2) / \tau_z,
 \end{equation}
 where $\tau_z$ is \nmitem{ATMOS_BOUNDARY_TAUZ}.
 For the horizontal direction, if \nmitem{ATMOS_BOUNDARY_LINEAR_H} = \verb|.true.|,
@@ -365,7 +361,9 @@ The default value is ten times of \nmitem{TIME_DT}.
 Please refer to Section \ref{sec:timeintiv} for \nmitem{TIME_DT}.
 
 
-If \nmitem{ATMOS_BOUNDARY_TYPE} in \namelist{PARAM_ATMOS_BOUNDARY} is \verb|REAL|, the nudging at the lateral boundary for the horizontal velocities, potential temperature, and vapor is applied.
+If \nmitem{ATMOS_BOUNDARY_TYPE} in \namelist{PARAM_ATMOS_BOUNDARY} is \verb|REAL|, the nudging at the lateral boundary for the horizontal velocities, potential temperature, and vapor is forced to be applied.
+The switches of \nmitem{ATMOS_BOUNDARY_USE_VELX}, \nmitem{ATMOS_BOUNDARY_USE_VELY}, \\
+\nmitem{ATMOS_BOUNDARY_USE_POTT}, and \nmitem{ATMOS_BOUNDARY_USE_QV} are only for the top boundary in this case.
 If the simulation is on a daughter domain of the online nesting (See Section \ref{subsec:nest_online}), the same setting is applied with the \verb|REAL| boundary type.
 
 
