@@ -3009,7 +3009,7 @@ contains
        sd_rest_flg_out, &
        ATMOS_PHY_MP_sdm_restart_create
     use scale_time, only: &
-       NOWSEC => TIME_NOWSEC
+       NOWDAYSEC => TIME_NOWDAYSEC
 #endif
     implicit none
 
@@ -3020,7 +3020,7 @@ contains
 #ifdef SDM
     if( sd_rest_flg_out ) then
        LOG_INFO("ATMOS_vars_restart_create",*) 'Output random number for SDM '
-       call ATMOS_PHY_MP_sdm_restart_create(NOWSEC)
+       call ATMOS_PHY_MP_sdm_restart_create(NOWDAYSEC)
     endif
 #endif
 

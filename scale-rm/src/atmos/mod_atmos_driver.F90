@@ -348,8 +348,6 @@ contains
     use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_UPDATE_FLAG, &
        ATMOS_REFSTATE_update
-    use scale_time, only: &
-       TIME_NOWSEC
     use mod_atmos_vars, only: &
        ATMOS_vars_history,         &
        ATMOS_vars_calc_diagnostics,&
@@ -380,7 +378,7 @@ contains
        REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI, &
        AREA     => ATMOS_GRID_CARTESC_REAL_AREA
     use scale_time, only: &
-       TIME_NOWSEC
+       TIME_NOWDAYSEC
     implicit none
     !---------------------------------------------------------------------------
 
@@ -426,7 +424,7 @@ contains
                                    DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                                    CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
                                    REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:), AREA(:,:),    & ! [IN]
-                                   TIME_NOWSEC                                                    ) ! [IN]
+                                   TIME_NOWDAYSEC                                                 ) ! [IN]
        call PROF_rapend  ('ATM_Refstate', 2)
     endif
 

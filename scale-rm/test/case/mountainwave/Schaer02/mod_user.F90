@@ -129,9 +129,6 @@ contains
        GRAV  => CONST_GRAV
     use scale_atmos_grid_cartesC, only : &
        CZ => ATMOS_GRID_CARTESC_CZ
-    use scale_time, only: &
-       NOWSEC  => TIME_NOWSEC, &
-       DTSEC => TIME_DTSEC
     use scale_file_history, only: &
        FILE_HISTORY_in
     implicit none

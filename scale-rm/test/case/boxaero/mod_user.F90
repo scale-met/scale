@@ -133,7 +133,7 @@ contains
   !> User step
   subroutine USER_update
     use scale_time, only: &
-       TIME_NOWSEC, &
+       TIME_NOWDAYSEC, &
        TIME_STARTDAYSEC
     use scale_atmos_phy_ae_kajino13, only: &
        ATMOS_PHY_AE_KAJINO13_flag_npf
@@ -141,7 +141,7 @@ contains
     !---------------------------------------------------------------------------
     real(DP) :: t_elaps
 
-    t_elaps = TIME_NOWSEC - TIME_STARTDAYSEC
+    t_elaps = TIME_NOWDAYSEC - TIME_STARTDAYSEC
 
     if ( t_elaps > t_npf ) then ! no more new particle formation does not occur
        ATMOS_PHY_AE_KAJINO13_flag_npf = .false.

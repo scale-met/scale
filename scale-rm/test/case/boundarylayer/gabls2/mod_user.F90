@@ -191,7 +191,7 @@ contains
     use scale_atmos_hydrometeor, only: &
        I_QV
     use scale_time, only: &
-       NOWSEC => TIME_NOWSEC
+       NOWDAYSEC => TIME_NOWDAYSEC
     use scale_atmos_hydrostatic, only: &
        buildrho => ATMOS_HYDROSTATIC_buildrho
     use mod_atmos_vars, only: &
@@ -263,7 +263,7 @@ contains
        end do
     end if
 
-    call set_tg( NOWSEC, Ts )
+    call set_tg( NOWDAYSEC, Ts )
 
     ATMOS_PHY_SF_SFC_TEMP(:,:) = Ts
 
@@ -283,7 +283,7 @@ contains
   !> Calculate tendency
   subroutine USER_calc_tendency
     use scale_time, only: &
-       NOWSEC => TIME_NOWSEC, &
+       NOWDAYSEC => TIME_NOWDAYSEC, &
        dt     => TIME_DTSEC
     use scale_atmos_grid_cartesC, only: &
        FDZ  => ATMOS_GRID_CARTESC_FDZ, &
@@ -392,7 +392,7 @@ contains
     end do
     end do
 
-    call set_tg( NOWSEC, Ts )
+    call set_tg( NOWDAYSEC, Ts )
 
     ATMOS_PHY_SF_SFC_TEMP(:,:) = Ts
 

@@ -20,10 +20,6 @@ module mod_user
   use scale_atmos_grid_cartesC_index
   use scale_tracer
 
-  use scale_time, only: &
-       DTSEC => TIME_DTSEC, &
-       NOWTSEC => TIME_NOWSEC
-
   use scale_const, only: &
        PI  => CONST_PI,    &
        OHM => CONST_OHM,   &
@@ -163,8 +159,6 @@ contains
     use scale_atmos_grid_cartesC, only : &
        CX => ATMOS_GRID_CARTESC_CX, &
        CZ => ATMOS_GRID_CARTESC_CZ
-    use scale_time, only: &
-       DTSEC => TIME_DTSEC
     use scale_file_history, only: &
        FILE_HISTORY_in
     implicit none
