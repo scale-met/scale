@@ -223,7 +223,7 @@ The urban scheme that updates the urban surface state, e.g., urban surface tempe
   \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  Value  & Description of scheme & reference \\ \hline
       \verb|NONE or OFF|         & Do not use the urban scheme            \\
-      \verb|LAND|                & Urban area is treated as a land use type \\
+      \verb|LAND|                & Urban area is calculated by a land model \\
       \verb|KUSAKA01|            & Single-layer canopy model  & \citet{kusaka_2001} \\
     \hline
   \end{tabularx}
@@ -238,7 +238,7 @@ If this condition is not satisfied, the program immediately stops without comput
 \verb| Please check this inconsistency. STOP.| \\
 }
 
-If \verb|LAND| type is selected as \nmitem{URBAN_DYN_TYPE}, the land model is used to calculate the surface flux and soil variables.
+If \verb|LAND| type is selected as \nmitem{URBAN_DYN_TYPE}, the land model is used to calculate the surface flux and soil variables for urban areas.
 In this case, parameters for the urban area should be provided in the land parameter table described in Section \ref{sec:basic_usel_land}.
 
 There are many parameters specifying urban morphology in the \verb|KUSAKA01| scheme.
