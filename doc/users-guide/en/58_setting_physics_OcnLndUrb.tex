@@ -1,9 +1,9 @@
 %-------------------------------------------------------------------------------
-\section{Ocean model} \label{sec:basic_usel_ocean}
+\section{Ocean Model} \label{sec:basic_usel_ocean}
 %-------------------------------------------------------------------------------
 The ocean process consists of two main parts, i.e., update of sea surface state and flux calculation at the interface of atmosphere and ocean. The timing of calling these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing.
 
-\subsubsection{Sea surface scheme}
+\subsection{Sea Surface Scheme}
 %-------------------------------------------------------------------------------
 The manner of updating sea surface state, such as sea surface temperature, is configured in \nmitem{OCEAN_DYN_TYPE}, \nmitem{OCEAN_SFC_TYPE}, \nmitem{OCEAN_ALB_TYPE}, and \nmitem{OCEAN_RGN_TYPE} in \namelist{PARAM_OCEAN} in the files \verb|init.conf| and \verb|run.conf|:
 
@@ -108,17 +108,17 @@ When \nmitem{OCEAN_DYN_SLAB_nudging_step_fixed} is less than 1, the certain time
 %
 When the number larger than 0 is set to \nmitem{OCEAN_DYN_SLAB_nudging_step_limit}, The data at the time step exceed this limit would not be read. When \nmitem{OCEAN_DYN_SLAB_nudging_step_limit} is 0, no limit is set.
 
-\subsubsection{Flux in atmosphere and ocean}
+\subsection{Flux in Atmosphere and Ocean}
 %-------------------------------------------------------------------------------
 The albedo of ocean surface is calculated by the scheme selected by \nmitem{OCEAN_ALB_TYPE}. The roughness length of ocean surface is calculated by the scheme selected by \nmitem{OCEAN_RGN_TYPE}. By using these variables, surface flux between atmosphere and ocean is calculated by the scheme selected by \nmitem{OCEAN_SFC_TYPE}. The bulk scheme specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} is used for this calculation. Refer to Section \ref{sec:basic_usel_surface} for more detail of bulk scheme.
 
 
 
-\section{Land model} \label{sec:basic_usel_land}
+\section{Land Model} \label{sec:basic_usel_land}
 %-------------------------------------------------------------------------------
 Similar to the ocean model, the land model consists of two main parts, i.e., an update of the state of the land surface, and calculation of flux at the interface of atmosphere and land. The timing of the calling of these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
 
-\subsubsection{Land dynamics/surface scheme}
+\subsection{Land Dynamics and Surface Scheme}
 %-------------------------------------------------------------------------------
 The land model scheme that updates the state of land, e.g., land surface temperature, soil temperature, and soil moisture, is configured as in \nmitem{LAND_DYN_TYPE} and \nmitem{LAND_SFC_TYPE} in \namelist{PARAM_LAND} in the files \verb|init.conf| and \verb|run.conf|:
 
@@ -205,7 +205,7 @@ The albedo and roughness length of land surface are provided by the parameter ta
 The urban process consists of two main parts, that is updating the urban state and calculating fluxes at the interface between the atmosphere and the urban.
 The timing of calling these schemes is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
 
-\subsubsection{Flux in atmosphere and urban area}
+\subsection{Flux in Atmosphere and Urban Area}
 %-------------------------------------------------------------------------------
 
 The urban scheme that updates the urban surface state, e.g., urban surface temperature and moisture, and calculates fluxes at the interface between atmosphere and the urban environment is configured in \nmitem{URBAN_DYN_TYPE} in \namelist{PARAM_URBAN} in \verb|init.conf| and \verb|run.conf|, as follows:
@@ -223,19 +223,24 @@ The urban scheme that updates the urban surface state, e.g., urban surface tempe
   \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  Value  & Description of scheme & reference \\ \hline
       \verb|NONE or OFF|         & Do not use the urban scheme            \\
+      \verb|LAND|                & Urban area is calculated by a land model \\
       \verb|KUSAKA01|            & Single-layer canopy model  & \citet{kusaka_2001} \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-If the type of urban area is included in the land-use specified by \namelist{PARAM_LANDUSE}, neither \verb|NONE| nor \verb|OFF| can be given to \nmitem{URBAN_TYPE}. If this condition is not satisfied, the program immediately stops without computation, outputting the following message to LOG file:
+If the type of urban area is included in the land-use specified by \namelist{PARAM_LANDUSE}, neither \verb|NONE| nor \verb|OFF| can be given to \nmitem{URBAN_TYPE}.
+If this condition is not satisfied, the program immediately stops without computation, outputting the following message to LOG file:
 %
 \msgbox{
 \verb|ERROR [CPL_vars_setup] Urban fraction exists, but urban component has not been called.|\\
 \verb| Please check this inconsistency. STOP.| \\
 }
 
-There are many parameters specifying urban morphology in the urban scheme.
+If \verb|LAND| type is selected as \nmitem{URBAN_DYN_TYPE}, the land model is used to calculate the surface flux and soil variables for urban areas.
+In this case, parameters for the urban area should be provided in the land parameter table described in Section \ref{sec:basic_usel_land}.
+
+There are many parameters specifying urban morphology in the \verb|KUSAKA01| scheme.
 Regarding the urban parameters, please refer to description about namelist in Section \ref{sec:reference_manual}.
 
