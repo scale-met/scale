@@ -126,25 +126,34 @@ contains
        ADMIN_TIME_setup
     use mod_atmos_admin, only: &
        ATMOS_admin_setup, &
-       ATMOS_PHY_MP_TYPE
+       ATMOS_PHY_MP_TYPE, &
+       ATMOS_do
     use mod_atmos_vars, only: &
        ATMOS_vars_setup
     use mod_atmos_phy_mp_vars, only: &
        QA_MP
     use mod_ocean_admin, only: &
-       OCEAN_admin_setup
+       OCEAN_admin_setup, &
+       OCEAN_do
     use mod_ocean_vars, only: &
        OCEAN_vars_setup
     use mod_land_admin, only: &
-       LAND_admin_setup
+       LAND_admin_setup, &
+       LAND_do
     use mod_land_vars, only: &
        LAND_vars_setup
     use mod_urban_admin, only: &
-       URBAN_admin_setup
+       URBAN_admin_setup, &
+       URBAN_do, &
+       URBAN_land
     use mod_urban_vars, only: &
        URBAN_vars_setup
+    use mod_lake_admin, only: &
+       LAKE_admin_setup, &
+       LAKE_do
     use mod_cpl_admin, only: &
-       CPL_admin_setup
+       CPL_admin_setup, &
+       CPL_sw
     use mod_cpl_vars, only: &
        CPL_vars_setup
     use mod_convert, only: &
@@ -169,8 +178,6 @@ contains
        URBAN_SURFACE_SET
     use mod_admin_restart, only: &
        ADMIN_restart_write
-    use scale_landuse, only: &
-       LANDUSE_write
     use mod_admin_time, only: &
        TIME_DOATMOS_restart,  &
        TIME_DOLAND_restart,   &
@@ -226,25 +233,34 @@ contains
     ! setup random number
     call RANDOM_setup
 
-    ! setup horizontal/vertical grid coordinates (cartesian,idealized)
-    call ATMOS_GRID_CARTESC_INDEX_setup
-    call ATMOS_GRID_CARTESC_setup
-
-    call OCEAN_GRID_CARTESC_INDEX_setup
-    call OCEAN_GRID_CARTESC_setup
-
-    call LAND_GRID_CARTESC_INDEX_setup
-    call LAND_GRID_CARTESC_setup
-
-    call URBAN_GRID_CARTESC_INDEX_setup
-    call URBAN_GRID_CARTESC_setup
-
     ! setup submodel administrator
     call ATMOS_admin_setup
     call OCEAN_admin_setup
     call LAND_admin_setup
     call URBAN_admin_setup
+    call LAKE_admin_setup
     call CPL_admin_setup
+
+    ! setup horizontal/vertical grid coordinates (cartesian,idealized)
+    if ( ATMOS_do ) then
+       call ATMOS_GRID_CARTESC_INDEX_setup
+       call ATMOS_GRID_CARTESC_setup
+    end if
+
+    if ( OCEAN_do ) then
+       call OCEAN_GRID_CARTESC_INDEX_setup
+       call OCEAN_GRID_CARTESC_setup
+    end if
+
+    if ( LAND_do ) then
+       call LAND_GRID_CARTESC_INDEX_setup
+       call LAND_GRID_CARTESC_setup
+    end if
+
+    if ( URBAN_do ) then
+       call URBAN_GRID_CARTESC_INDEX_setup
+       call URBAN_GRID_CARTESC_setup
+    end if
 
     ! setup tracer index
     call ATMOS_HYDROMETEOR_setup
@@ -260,16 +276,17 @@ contains
     ! setup topography
     call TOPO_setup
     ! setup land use category index/fraction
-    call LANDUSE_setup
+    call LANDUSE_setup( OCEAN_do, (.not. URBAN_land), LAKE_do )
+
     ! setup grid coordinates (real world)
-    call ATMOS_GRID_CARTESC_REAL_setup
-
-    ! setup grid transfer metrics (uses in ATMOS_dynamics)
-    call ATMOS_GRID_CARTESC_METRIC_setup
-
-    call OCEAN_GRID_CARTESC_REAL_setup
-    call LAND_GRID_CARTESC_REAL_setup
-    call URBAN_GRID_CARTESC_REAL_setup
+    if ( ATMOS_do ) then
+       call ATMOS_GRID_CARTESC_REAL_setup
+       ! setup grid transfer metrics (uses in ATMOS_dynamics)
+       call ATMOS_GRID_CARTESC_METRIC_setup
+    end if
+    if ( OCEAN_do ) call OCEAN_GRID_CARTESC_REAL_setup
+    if ( LAND_do  ) call LAND_GRID_CARTESC_REAL_setup
+    if ( URBAN_do ) call URBAN_GRID_CARTESC_REAL_setup
 
     ! setup restart
     call ADMIN_restart_setup
@@ -288,11 +305,11 @@ contains
     call ATMOS_SATURATION_setup
 
     ! setup variable container
-    call ATMOS_vars_setup
-    call OCEAN_vars_setup
-    call LAND_vars_setup
-    call URBAN_vars_setup
-    call CPL_vars_setup
+    if ( ATMOS_do ) call ATMOS_vars_setup
+    if ( OCEAN_do ) call OCEAN_vars_setup
+    if ( LAND_do  ) call LAND_vars_setup
+    if ( URBAN_do ) call URBAN_vars_setup
+    if ( CPL_sw   ) call CPL_vars_setup
 
     ! setup preprocess converter
     call CONVERT_setup
@@ -337,9 +354,6 @@ contains
       call LAND_SURFACE_SET ( countup = .false. )
       call URBAN_SURFACE_SET( countup = .false. )
       call ATMOS_SURFACE_GET
-
-      ! output boundary file
-      call LANDUSE_write
 
       ! output restart file
       TIME_DOOCEAN_restart = .TRUE.

@@ -46,7 +46,9 @@ module scale_monitor_cartesc
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine MONITOR_CARTESC_setup( dt )
+  subroutine MONITOR_CARTESC_setup( &
+       dt, &
+       ATMOS_do, OCEAN_do, LAND_do, URBAN_do )
     use scale_monitor, only: &
        MONITOR_setup, &
        MONITOR_set_dim
@@ -83,6 +85,10 @@ contains
     implicit none
 
     real(DP), intent(in) :: dt
+    logical,  intent(in) :: ATMOS_do
+    logical,  intent(in) :: OCEAN_do
+    logical,  intent(in) :: LAND_do
+    logical,  intent(in) :: URBAN_do
 
     integer :: ierr
     integer :: n
@@ -92,58 +98,66 @@ contains
     call MONITOR_setup( dt )
 
     ! atmos
-    call MONITOR_set_dim( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                          "ZXY", 3, &
-                          ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
-                          ATMOS_GRID_CARTESC_REAL_TOTAREA,    &
-                          ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), &
-                          ATMOS_GRID_CARTESC_REAL_TOTVOL      )
-    call MONITOR_set_dim( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                          "WXY", 3, &
-                          ATMOS_GRID_CARTESC_REAL_AREA(:,:),     &
-                          ATMOS_GRID_CARTESC_REAL_TOTAREA,       &
-                          ATMOS_GRID_CARTESC_REAL_VOLWXY(:,:,:), &
-                          ATMOS_GRID_CARTESC_REAL_TOTVOLWXY      )
-    call MONITOR_set_dim( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                          "ZUY", 3, &
-                          ATMOS_GRID_CARTESC_REAL_AREAUY(:,:),   &
-                          ATMOS_GRID_CARTESC_REAL_TOTAREAUY,     &
-                          ATMOS_GRID_CARTESC_REAL_VOLZUY(:,:,:), &
-                          ATMOS_GRID_CARTESC_REAL_TOTVOLZUY      )
-    call MONITOR_set_dim( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                          "ZXV", 3, &
-                          ATMOS_GRID_CARTESC_REAL_AREAXV(:,:),   &
-                          ATMOS_GRID_CARTESC_REAL_TOTAREAXV,     &
-                          ATMOS_GRID_CARTESC_REAL_VOLZXV(:,:,:), &
-                          ATMOS_GRID_CARTESC_REAL_TOTVOLZXV      )
-    call MONITOR_set_dim( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                          "XY", 2, &
-                          ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
-                          ATMOS_GRID_CARTESC_REAL_TOTAREA    )
+    if ( ATMOS_do ) then
+       call MONITOR_set_dim( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                             "ZXY", 3, &
+                             ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
+                             ATMOS_GRID_CARTESC_REAL_TOTAREA,    &
+                             ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), &
+                             ATMOS_GRID_CARTESC_REAL_TOTVOL      )
+       call MONITOR_set_dim( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                             "WXY", 3, &
+                             ATMOS_GRID_CARTESC_REAL_AREA(:,:),     &
+                             ATMOS_GRID_CARTESC_REAL_TOTAREA,       &
+                             ATMOS_GRID_CARTESC_REAL_VOLWXY(:,:,:), &
+                             ATMOS_GRID_CARTESC_REAL_TOTVOLWXY      )
+       call MONITOR_set_dim( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                             "ZUY", 3, &
+                             ATMOS_GRID_CARTESC_REAL_AREAUY(:,:),   &
+                             ATMOS_GRID_CARTESC_REAL_TOTAREAUY,     &
+                             ATMOS_GRID_CARTESC_REAL_VOLZUY(:,:,:), &
+                             ATMOS_GRID_CARTESC_REAL_TOTVOLZUY      )
+       call MONITOR_set_dim( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                             "ZXV", 3, &
+                             ATMOS_GRID_CARTESC_REAL_AREAXV(:,:),   &
+                             ATMOS_GRID_CARTESC_REAL_TOTAREAXV,     &
+                             ATMOS_GRID_CARTESC_REAL_VOLZXV(:,:,:), &
+                             ATMOS_GRID_CARTESC_REAL_TOTVOLZXV      )
+       call MONITOR_set_dim( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                             "XY", 2, &
+                             ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
+                             ATMOS_GRID_CARTESC_REAL_TOTAREA    )
+    end if
 
     ! ocean
-    call MONITOR_set_dim( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE, &
-                          "OXY", 3, &
-                          OCEAN_GRID_CARTESC_REAL_AREA(:,:),  &
-                          OCEAN_GRID_CARTESC_REAL_TOTAREA,    &
-                          OCEAN_GRID_CARTESC_REAL_VOL(:,:,:), &
-                          OCEAN_GRID_CARTESC_REAL_TOTVOL      )
+    if ( OCEAN_do ) then
+       call MONITOR_set_dim( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE, &
+                             "OXY", 3, &
+                             OCEAN_GRID_CARTESC_REAL_AREA(:,:),  &
+                             OCEAN_GRID_CARTESC_REAL_TOTAREA,    &
+                             OCEAN_GRID_CARTESC_REAL_VOL(:,:,:), &
+                             OCEAN_GRID_CARTESC_REAL_TOTVOL      )
+    end if
 
     ! land
-    call MONITOR_set_dim( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE, &
-                          "LXY", 3, &
-                          LAND_GRID_CARTESC_REAL_AREA(:,:),  &
-                          LAND_GRID_CARTESC_REAL_TOTAREA,    &
-                          LAND_GRID_CARTESC_REAL_VOL(:,:,:), &
-                          LAND_GRID_CARTESC_REAL_TOTVOL      )
+    if ( LAND_do ) then
+       call MONITOR_set_dim( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE, &
+                             "LXY", 3, &
+                             LAND_GRID_CARTESC_REAL_AREA(:,:),  &
+                             LAND_GRID_CARTESC_REAL_TOTAREA,    &
+                             LAND_GRID_CARTESC_REAL_VOL(:,:,:), &
+                             LAND_GRID_CARTESC_REAL_TOTVOL      )
+    end if
 
     ! urban
-    call MONITOR_set_dim( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
-                          "UXY", 3, &
-                          URBAN_GRID_CARTESC_REAL_AREA(:,:),  &
-                          URBAN_GRID_CARTESC_REAL_TOTAREA,    &
-                          URBAN_GRID_CARTESC_REAL_VOL(:,:,:), &
-                          URBAN_GRID_CARTESC_REAL_TOTVOL      )
+    if ( URBAN_do ) then
+       call MONITOR_set_dim( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+                             "UXY", 3, &
+                             URBAN_GRID_CARTESC_REAL_AREA(:,:),  &
+                             URBAN_GRID_CARTESC_REAL_TOTAREA,    &
+                             URBAN_GRID_CARTESC_REAL_VOL(:,:,:), &
+                             URBAN_GRID_CARTESC_REAL_TOTVOL      )
+    end if
 
     return
   end subroutine MONITOR_CARTESC_setup

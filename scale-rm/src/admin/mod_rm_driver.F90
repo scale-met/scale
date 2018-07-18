@@ -195,13 +195,17 @@ contains
        LAND_driver_update
     use mod_urban_admin, only: &
        URBAN_admin_setup, &
-       URBAN_do
+       URBAN_do, &
+       URBAN_land
     use mod_urban_vars, only: &
        URBAN_vars_setup
     use mod_urban_driver, only: &
        URBAN_driver_setup,         &
        URBAN_driver_calc_tendency, &
        URBAN_driver_update
+    use mod_lake_admin, only: &
+       LAKE_admin_setup, &
+       LAKE_do
     use mod_cpl_admin, only: &
        CPL_admin_setup, &
        CPL_sw
@@ -262,25 +266,34 @@ contains
     ! setup random number
     call RANDOM_setup
 
-    ! setup horizontal/vertical grid coordinates (cartesian,idealized)
-    call ATMOS_GRID_CARTESC_INDEX_setup
-    call ATMOS_GRID_CARTESC_setup
-
-    call OCEAN_GRID_CARTESC_INDEX_setup
-    call OCEAN_GRID_CARTESC_setup
-
-    call LAND_GRID_CARTESC_INDEX_setup
-    call LAND_GRID_CARTESC_setup
-
-    call URBAN_GRID_CARTESC_INDEX_setup
-    call URBAN_GRID_CARTESC_setup
-
     ! setup submodel administrator
     call ATMOS_admin_setup
     call OCEAN_admin_setup
     call LAND_admin_setup
     call URBAN_admin_setup
+    call LAKE_admin_setup
     call CPL_admin_setup
+
+    ! setup horizontal/vertical grid coordinates (cartesian,idealized)
+    if ( ATMOS_do ) then
+       call ATMOS_GRID_CARTESC_INDEX_setup
+       call ATMOS_GRID_CARTESC_setup
+    end if
+
+    if ( OCEAN_do ) then
+       call OCEAN_GRID_CARTESC_INDEX_setup
+       call OCEAN_GRID_CARTESC_setup
+    end if
+
+    if ( LAND_do ) then
+       call LAND_GRID_CARTESC_INDEX_setup
+       call LAND_GRID_CARTESC_setup
+    end if
+
+    if ( URBAN_do ) then
+       call URBAN_GRID_CARTESC_INDEX_setup
+       call URBAN_GRID_CARTESC_setup
+    end if
 
     ! setup tracer index
     call ATMOS_HYDROMETEOR_setup
@@ -296,16 +309,17 @@ contains
     ! setup topography
     call TOPO_setup
     ! setup land use category index/fraction
-    call LANDUSE_setup
+    call LANDUSE_setup( OCEAN_do, (.not. URBAN_land), LAKE_do )
+
     ! setup grid coordinates (real world)
-    call ATMOS_GRID_CARTESC_REAL_setup
-
-    ! setup grid transfer metrics (uses in ATMOS_dynamics)
-    call ATMOS_GRID_CARTESC_METRIC_setup
-
-    call OCEAN_GRID_CARTESC_REAL_setup
-    call LAND_GRID_CARTESC_REAL_setup
-    call URBAN_GRID_CARTESC_REAL_setup
+    if ( ATMOS_do ) then
+       call ATMOS_GRID_CARTESC_REAL_setup
+       ! setup grid transfer metrics (uses in ATMOS_dynamics)
+       call ATMOS_GRID_CARTESC_METRIC_setup
+    end if
+    if ( OCEAN_do ) call OCEAN_GRID_CARTESC_REAL_setup
+    if ( LAND_do  ) call LAND_GRID_CARTESC_REAL_setup
+    if ( URBAN_do ) call URBAN_GRID_CARTESC_REAL_setup
 
     ! setup restart
     call ADMIN_restart_setup
@@ -316,7 +330,7 @@ contains
     ! setup history I/O
     call FILE_HISTORY_CARTESC_setup
     ! setup monitor I/O
-    call MONITOR_CARTESC_setup( TIME_DTSEC )
+    call MONITOR_CARTESC_setup( TIME_DTSEC, ATMOS_do, OCEAN_do, LAND_do, URBAN_do )
     ! setup external in
     call FILE_EXTERNAL_INPUT_CARTESC_setup
 
@@ -331,17 +345,17 @@ contains
     call BULKFLUX_setup( sqrt(DX**2+DY**2) )
 
     ! setup variable container
-    call ATMOS_vars_setup
-    call OCEAN_vars_setup
-    call LAND_vars_setup
-    call URBAN_vars_setup
-    call CPL_vars_setup
+    if ( ATMOS_do ) call ATMOS_vars_setup
+    if ( OCEAN_do ) call OCEAN_vars_setup
+    if ( LAND_do  ) call LAND_vars_setup
+    if ( URBAN_do ) call URBAN_vars_setup
+    if ( CPL_sw   ) call CPL_vars_setup
 
     ! setup driver
-    call ATMOS_driver_setup
-    call OCEAN_driver_setup
-    call LAND_driver_setup
-    call URBAN_driver_setup
+    if ( ATMOS_do ) call ATMOS_driver_setup
+    if ( OCEAN_do ) call OCEAN_driver_setup
+    if ( LAND_do  ) call LAND_driver_setup
+    if ( URBAN_do ) call URBAN_driver_setup
 
     call USER_setup
 

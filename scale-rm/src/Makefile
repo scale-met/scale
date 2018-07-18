@@ -30,6 +30,7 @@ VPATH = $(BUILD_DIR): \
         ocean:        \
         land:         \
         urban:        \
+        lake:         \
         coupler:      \
         user:         \
         preprocess:
@@ -48,6 +49,7 @@ SUB_OBJS =	\
 	mod_ocean_admin.o         \
 	mod_land_admin.o          \
 	mod_urban_admin.o         \
+	mod_lake_admin.o          \
 	mod_cpl_admin.o           \
 	\
 	mod_atmos_dyn_vars.o      \

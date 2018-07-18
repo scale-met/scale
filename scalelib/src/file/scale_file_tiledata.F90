@@ -509,15 +509,14 @@ contains
                                       TILE_LONS(t), TILE_LONE(t), & ! WEST->EAST
                                       TILE_fname(t)
 
+       if ( ierr /= 0 ) exit
+
        TILE_LATS(t) = TILE_LATS(t) * D2R
        TILE_LATE(t) = TILE_LATE(t) * D2R
 
        if ( TILE_LONS(t) > TILE_LONE(t) ) TILE_LONE(t) = TILE_LONE(t) + 360.0_RP
        TILE_LONS(t) = TILE_LONS(t) * D2R
        TILE_LONE(t) = TILE_LONE(t) * D2R
-
-
-       if ( ierr /= 0 ) exit
     end do
 
     TILE_nmax = t - 1

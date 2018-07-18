@@ -57,8 +57,6 @@ contains
   subroutine OCEAN_ADMIN_setup
     use scale_prc, only: &
        PRC_abort
-    use scale_ocean_grid_cartesC_index, only: &
-       OKMAX
     implicit none
 
     namelist / PARAM_OCEAN / &
@@ -90,10 +88,6 @@ contains
     LOG_INFO("OCEAN_ADMIN_setup",*) 'Ocean model components '
 
     if ( OCEAN_DYN_TYPE /= 'OFF' .AND. OCEAN_DYN_TYPE /= 'NONE' ) then
-       if ( OKMAX < 0 ) then
-          LOG_ERROR("OCEAN_ADMIN_setup",*) 'OCEAN_DYN_TYPE is set but OKMAX < 0'
-          call PRC_abort
-       end if
        LOG_INFO_CONT(*) 'Ocean model             : ON, ', trim(OCEAN_DYN_TYPE)
        OCEAN_do = .true.
     else

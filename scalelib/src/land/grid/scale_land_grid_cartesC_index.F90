@@ -86,6 +86,11 @@ contains
     endif
     LOG_NML(PARAM_LAND_GRID_CARTESC_INDEX)
 
+    if ( LKMAX < 1 ) then
+       LOG_ERROR("LAND_GRID_CARTESC_INDEX_setup",*) 'LKMAX must be >= 1 ', LKMAX
+       call PRC_abort
+    end if
+
     LKS  = 1
     LKE  = LKMAX
     LKA  = LKMAX

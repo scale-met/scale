@@ -257,6 +257,7 @@ contains
        COMM_wait
     use scale_landuse, only: &
        LANDUSE_index_PFT, &
+       LANDUSE_PFT_nmin, &
        LANDUSE_PFT_nmax
     implicit none
 
@@ -400,7 +401,7 @@ contains
     endif
 
     ! Read land property table
-    allocate( LAND_PROPERTY_table(LANDUSE_PFT_nmax,LAND_PROPERTY_nmax) )
+    allocate( LAND_PROPERTY_table(LANDUSE_PFT_nmin:LANDUSE_PFT_nmax,LAND_PROPERTY_nmax) )
     LAND_PROPERTY_table(:,:) = UNDEF
 
     call LAND_param_read
@@ -721,6 +722,7 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_landuse, only: &
+       LANDUSE_PFT_nmin, &
        LANDUSE_PFT_nmax
     implicit none
 
@@ -805,7 +807,7 @@ contains
         !--- read namelist
         rewind(IO_FID_LAND_PROPERTY)
 
-        do n = 1, LANDUSE_PFT_nmax
+        do n = LANDUSE_PFT_nmin, LANDUSE_PFT_nmax
            ! default value
            ALBSW   =  0.2_RP
            STRGMAX =  0.2_RP
@@ -847,7 +849,7 @@ contains
            LAND_PROPERTY_table(index,I_Z0H          ) = Z0H
            LAND_PROPERTY_table(index,I_Z0E          ) = Z0E
 
-           LOG_INFO_CONT('(1x,A4,I3.3,1x,A32,4(1x,F7.3),2(1x,ES7.1),5(1x,F6.3))') &
+           LOG_INFO_CONT('(1x,A4,I4.3,1x,A32,4(1x,F7.3),2(1x,ES7.1),5(1x,F6.3))') &
                                          'IDX=', index, &
                                          trim(description), &
                                          STRGMAX, &

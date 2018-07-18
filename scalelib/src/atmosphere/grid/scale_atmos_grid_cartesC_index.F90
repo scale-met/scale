@@ -196,6 +196,10 @@ contains
     endif
     LOG_NML(PARAM_ATMOS_GRID_CARTESC_INDEX)
 
+    if ( KMAX < 2 ) then
+       LOG_ERROR("ATMOS_GRID_CARTESC_index_setup_main",*) 'KMAX must be >= 2! ', KMAX
+       call PRC_abort
+    end if
 
 
     if ( IMAXG * JMAXG < 0 ) then

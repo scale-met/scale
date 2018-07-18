@@ -174,7 +174,8 @@ contains
     use scale_landuse, only: &
        LANDUSE_fact_ocean, &
        LANDUSE_fact_land,  &
-       LANDUSE_fact_urban
+       LANDUSE_fact_urban, &
+       LANDUSE_fact_lake
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry
     use mod_ocean_admin, only: &
@@ -183,6 +184,8 @@ contains
        LAND_do
     use mod_urban_admin, only: &
        URBAN_do
+    use mod_lake_admin, only: &
+       LAKE_do
     implicit none
 
     real(RP) :: checkfact
@@ -210,6 +213,13 @@ contains
     checkfact = maxval( LANDUSE_fact_urban(:,:) )
     if ( .NOT. URBAN_do .AND. checkfact > 0.0_RP ) then
        LOG_ERROR("CPL_vars_setup",*) 'Urban fraction exists, but urban component has not been called. Please check this inconsistency. STOP.', checkfact
+       call PRC_abort
+    endif
+
+    ! Check consistency of LAKE_do and LANDUSE_fact_lake
+    checkfact = maxval( LANDUSE_fact_lake(:,:) )
+    if ( .NOT. LAKE_do .AND. checkfact > 0.0_RP ) then
+       LOG_ERROR("CPL_vars_setup",*) 'Lake fraction exists, but lake component has not been called. Please check this inconsistency. STOP.', checkfact
        call PRC_abort
     endif
 

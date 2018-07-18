@@ -87,6 +87,11 @@ contains
     endif
     LOG_NML(PARAM_OCEAN_GRID_CARTESC_INDEX)
 
+    if ( OKMAX < 1 ) then
+       LOG_ERROR("OCEAN_GRID_CARTESC_INDEX_setup",*) 'OKMAX must be >= 1 ', OKMAX
+       call PRC_abort
+    end if
+
     OKA  = OKMAX
     OKS  = 1
     OKE  = OKMAX
