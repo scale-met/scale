@@ -77,8 +77,8 @@ The above example shows a configuration in the case where 3D variables in a doma
 \begin{itemize}
  \item \namelist{LOGOUT} (The following items are not required.)
  \begin{itemize}
-  \item \nmitem{LOG_BASENAME}：If the default LOG file name \verb|LOG| is changed, this item is specified.
-  \item \nmitem{LOG_ALL_OUTPUT}：If processes other than the 0th process are output in the LOG files,
+  \item \nmitem{LOG_BASENAME}:If the default LOG file name \verb|LOG| is changed, this item is specified.
+  \item \nmitem{LOG_ALL_OUTPUT}:If processes other than the 0th process are output in the LOG files,
 \verb|".true."| is assigned to this item.  The default value is \verb|."false".|
  \end{itemize}
  \item \namelist{INFO}
@@ -87,23 +87,23 @@ The above example shows a configuration in the case where 3D variables in a doma
   \item \nmitem{START_TSTEP} : The start time step of converted \netcdf data is specified.
     If several first steps are skipped, the appropriate values are assigned to this item.
     The default value is 1.
-  \item \nmitem{END_TSTEP}：The end of the time step of converted \netcdf data is specified.
+  \item \nmitem{END_TSTEP}:The end of the time step of converted \netcdf data is specified.
     It is required in all cases.
-  \item \nmitem{DOMAIN_NUM}：The domain number is specified. The default value is 1.
-  \item \nmitem{CONFFILE}：The path of \verb|run.***.conf| at the execution of \scalerm is specified, including the file name.
-  \item \nmitem{IDIR}：The path of history files is specified.
-  \item \nmitem{Z_LEV_TYPE}：The type of vertical data conversion is specified. \verb|"original"| represents the model surface,
+  \item \nmitem{DOMAIN_NUM}:The domain number is specified. The default value is 1.
+  \item \nmitem{CONFFILE}:The path of \verb|run.***.conf| at the execution of \scalerm is specified, including the file name.
+  \item \nmitem{IDIR}:The path of history files is specified.
+  \item \nmitem{Z_LEV_TYPE}:The type of vertical data conversion is specified. \verb|"original"| represents the model surface,
     \verb|"plev"| the interpolation to the pressure surface,
     and \verb|"zlev"| that to the height surface.
     If \verb|"anal"| is specified, the result with a simple analysis is output. The details for \verb|"anal"| is explained subsequently.
     The default value is \verb|"plev"|.
-  \item \nmitem{MAPPROJ_ctl}： It indicates whether the ``ctl'' file corresponding to the map projection using \verb|pdef| is output. Currently, this option is available only for \verb|LC| coordinate.
+  \item \nmitem{MAPPROJ_ctl}: It indicates whether the ``ctl'' file corresponding to the map projection using \verb|pdef| is output. Currently, this option is available only for \verb|LC| coordinate.
  \end{itemize}
  \item \namelist{VARI}
  \begin{itemize}
-  \item \nmitem{VNAME}：The variables converted are specified.
+  \item \nmitem{VNAME}:The variables converted are specified.
     As default, \verb|"PT"|,\verb|"PRES"|,\verb|"U"|,\verb|"V"|, \verb|"W"|,\verb|"QHYD"| are given.
-  \item \nmitem{TARGET_ZLEV}： The heights corresponding to \nmitem{Z_LEV_TYPE} are specified.
+  \item \nmitem{TARGET_ZLEV}: The heights corresponding to \nmitem{Z_LEV_TYPE} are specified.
     In the case of \verb|"plev"|, the unit is [$hPa$],
     in the case of \verb|"zlev"|, the unit is [$m$], and
     in the case of \verb|"original"|, the grid numbers are specified.
@@ -139,7 +139,7 @@ because of the output of 2D data.
 \begin{itemize}
  \item \namelist{ANAL}
  \begin{itemize}
-  \item \nmitem{ANALYSIS}：The type of vertical simple analysis is specified. \verb|"max"| and \verb|"min"|
+  \item \nmitem{ANALYSIS}:The type of vertical simple analysis is specified. \verb|"max"| and \verb|"min"|
     represent the maximum and minimum value outputs in the vertical column, respectively, whereas \verb|"sum"| and \verb|"ave"| represent
     the vertical integration and the vertical average outputs, respectively. The default value is \verb|"ave"|.
  \end{itemize}
