@@ -1,28 +1,30 @@
 \section{netcdf2grads (net2g)} \label{sec:net2g}
 %====================================================================================
 
-In this section, the post-processing tool \verb|net2g| is described and its function explained. \verb|net2g| generates the binary format that is readable in \grads by combining history files \verb|history.***.nc| with the \netcdf format.
-The conversion of all files to one enable \grads to draw the result.
-Thus, formatted data can be easily analyzed, even by a FORTRAN serial program.
-Since \verb|net2g| can also be executed as an MPI parallel program,
-the elapsed time can be to a greater extent than in the case of serial processing. The following functions are also available
+\verb|net2g| has two roles; 1) to combine history files \verb|history.***.nc| divided by process into one file
+and 2) to convert from the \netcdf format to binary format that is readable in \grads.
+\verb|net2g| can also be executed as an MPI parallel program.
+%
+In addition, the following functions are also available
 \begin{itemize}
- \item Interpolate data from the model level to arbitrary height coordinates or pressure coordinates.
+ \item Interpolate data from the model level to arbitrary height levels or pressure levels.
  \item Output the mean, maximum, and minimum values of the vertical integration of 3D variables.
  \item Output multiple files for 3D variables, layer by layer.
  \item Output multiple files, time-step by time-step.
 \end{itemize}
 
 
-It is convenient to divide files layer by layer or time-step by time-step because such data can be easily handled, particularly large-scale computational data. Refer to Section \ref{sec:source_net2g} for a guide to installing \verb|net2g|.
+Refer to Section \ref{sec:source_net2g} for a guide to installing \verb|net2g|.
 Note that the current version of \verb|net2g| has the following limitations:
 \begin{itemize}
-\item The number of MPI processes in \verb|net2g| must be a divisor of the number of MPI processes at execution in \scalerm.
-\item The history output format at the execution of \scalerm must be output with   \nmitem{FILE_HISTORY_CARTESC_BOUNDARY} $=$ \verb|.false. | in \namelist{PARAM_FILE_HISTORY_CARTESC}.
-\item Two- and three-dimensional data cannot be simultaneously converted.
-\item Only history data can be converted.
+ \item The number of MPI processes in \verb|net2g| must be a divisor of the number of MPI processes of executing \scalerm.
+ \item The history files in \scalerm must be output with option of \nmitem{FILE_HISTORY_CARTESC_BOUNDARY} $=$ \verb|.false. | in \namelist{PARAM_FILE_HISTORY_CARTESC}.
+ \item Two- and three-dimensional data cannot be simultaneously converted.
+ \item Only history data can be converted.
 \end{itemize}
-Beware that if too large a number of MPI processes is set, computational performance is affected. Since most instruction in \verb|net2g| are for the input/output of data, it is possible that the number of requests for storage access becomes too large. In particular, this situation should be attended to if the conversion of large-scale computation results is carried out on small-scale machines.
+Beware that if too large a number of MPI processes is set,
+computational performance is affected.
+
 
 If MPI parallel is used, \verb|net2g| is executed as follows:
 \begin{verbatim}
@@ -42,9 +44,9 @@ If only the following message without error can be found, the execution is concl
 The following explains how to describe the configuration files in the case of 2D or 3D variables
 by using sample files \verb|net2g.3d.conf| and \verb|net2g.2d.conf| in the directory\\
 \texttt{scale-\version/scale-rm/util/netcdf2grads\_h/}.
-In this section, only the major issues pertaining to its use are treated.
-Refer to the sample files \verb|net2g.all.conf| in \\
-\texttt{scale-\version/scale-rm/util/netcdf2grads\_h/} for the other options.
+In this section, only the major settings are treated.
+Regarding to other options, refer to the explanation files \verb|README.net2g.conf| in \\
+\texttt{scale-\version/scale-rm/util/netcdf2grads\_h/}.
 
 \subsubsection{The sample configuration file: Conversion of 3D variables}
 %------------------------------------------------------
@@ -160,7 +162,7 @@ The example below shows a configuration in the case where 2D variables are conve
 \verb| CONFFILE    = "../run/run.d01.conf",| \\
 \verb| IDIR        = "../run",| \\
 \verb| ZCOUNT      = 1,| \\
-\verb| MAPPROJ_ctl    = .true.|\\
+\verb| MAPPROJ_ctl = .true.|\\
 \verb|/| \\
  \\
 \verb|&VARI| \\
@@ -174,7 +176,7 @@ The example below shows a configuration in the case where 2D variables are conve
 As described in Section \ref{sec:output},
 although the output interval is basically defined by \\ \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL},
 it is possible to change the output interval of particular variables
-by giving a value different from \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}  to \nmitem{TINTERVAL} in \namelist{HISTORY_ITEM}.
+by giving a value different from \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL} to \nmitem{TINTERVAL} in \namelist{HISTORY_ITEM}.
 \verb|net2g| supports the data conversion of these variables with different output interval by setting \namelist{EXTRA}.
 The below example shows the namelists, which should be added or modified
 for the case described in the last paragraph of Section \ref{sec:output}
@@ -202,5 +204,7 @@ so variable names in output from \verb|net2g| are replaced to ``long'' for longi
 
 
 \subsubsection{Note for execution on supercomputer}
-When a simulation is conducted on a supercomputer such as the K Computer, many output files are generated, where the size of each file is large. In such cases, the local disk space is often not large enough to store them,  and post-processing may take a long time. In this case, both a simulation by \scalerm and its post-processing on the same supercomputer are recommended. On the K Computer, \verb|net2g| can be compiled by the ``make'' command  if the environmental variable is appropriately set as described in Section \ref{subsec:environment}.
-
+When a simulation is conducted on a supercomputer such as the K Computer, many output files are generated, where the size of each file is large.
+In such cases, the local disk space is often not large enough to store them, and post-processing may take a long time.
+In this case, both a simulation by \scalerm and its post-processing on the same supercomputer are recommended.
+On the K Computer, \verb|net2g| can be compiled by the ``make'' command  if the environmental variable is appropriately set as described in Section \ref{subsec:environment}.
