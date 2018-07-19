@@ -1,0 +1,25 @@
+{\bf \Large
+\begin{tabular}{ccc}
+\hline
+  Corresponding author & : & Sachiho A. Adachi\\
+\hline
+\end{tabular}
+}
+\\
+
+
+Urban models calculate energy exchanges between the urban surface (urban canopy) and atmosphere.
+SCALE-RM has two options for calculation of urban areas: LAND and KUSAKA01.
+In LAND option, fluxes over urban subtiles are calculated by the land model you chose for your examination.
+Please refer to Section \ref{sec:land}.
+
+\subsection{KUSAKA01: Single layer urban canopy model}
+
+KUSAKA01 is the single layer urban canopy model by \citet{kusaka_2001} and \citet{kusaka_2004} (henceforth, UCM).
+The UCM of KUSAKA01 assumes street canyons as the urban geometry.
+The model estimates prognostic variables of the surface temperatures and heat fluxes from three surfaces, i.e., roofs, walls, and roads,
+and those from urban canopy.
+The model assumes that the urban canopy layer is located lower than the 1st layer of atmospheric model.
+Therefore, there is a restriction that a sum of displacement height and roughness length must be two meters lower than the face level of 1st layer of atmosphere.
+In this version, single urban type can be considered in the urban model.
+Several parameters are prepared to specify the urban geometry and anthropogenic heat. 
