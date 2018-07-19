@@ -120,9 +120,9 @@ contains
     use scale_file_h, only: &
        FILE_FREAD
     use scale_file, only: &
-       FILE_Open,                &
-       FILE_Get_Commoninfo,      &
-       FILE_Get_Attribute
+       FILE_open,           &
+       FILE_get_commonInfo, &
+       FILE_get_attribute
     use scale_file_cartesc, only: &
        FILE_CARTESC_get_size
     use scale_atmos_grid_cartesc, only: &
@@ -189,11 +189,11 @@ contains
     if ( ismaster ) then
        nowrank = 0 ! first file
 
-       call FILE_Open( basename,        & ! [IN]
+       call FILE_open( basename,        & ! [IN]
                        fid,             & ! [OUT]
                        rankid = nowrank ) ! [IN]
 
-       call FILE_Get_Commoninfo( fid,             & ! [IN]
+       call FILE_get_commonInfo( fid,             & ! [IN]
                                  item_limit,      & ! [IN]
                                  hinfo%title,     & ! [OUT]
                                  hinfo%source,    & ! [OUT]
@@ -202,34 +202,34 @@ contains
                                  varname_file(:)  ) ! [OUT]
 
 
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_num_x", procsize(1:1) )
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_num_y", procsize(2:2) )
+       call FILE_get_attribute( fid, "global", "scale_cartesC_prc_num_x", procsize(1:1) )
+       call FILE_get_attribute( fid, "global", "scale_cartesC_prc_num_y", procsize(2:2) )
 
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_z", hinfo%periodic(1) )
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_x", hinfo%periodic(2) )
-       call FILE_Get_Attribute( fid, "global", "scale_cartesC_prc_periodic_y", hinfo%periodic(3) )
+       call FILE_get_attribute( fid, "global", "scale_cartesC_prc_periodic_z", hinfo%periodic(1) )
+       call FILE_get_attribute( fid, "global", "scale_cartesC_prc_periodic_x", hinfo%periodic(2) )
+       call FILE_get_attribute( fid, "global", "scale_cartesC_prc_periodic_y", hinfo%periodic(3) )
 
-       call FILE_Get_Attribute( fid, "global", "grid_name", hinfo%grid_name )
+       call FILE_get_attribute( fid, "global", "grid_name", hinfo%grid_name )
 
        select case ( hinfo%grid_name )
        case ( ATMOS_GRID_CARTESC_NAME )
 
-          call FILE_CARTESC_get_size( fid, & ! (in)
+          call FILE_CARTESC_get_size( fid,                                                     & ! (in)
                                       hinfo%gridsize(1),                                       & ! (out) KMAX
                                       hinfo%gridsize(4), hinfo%gridsize(5), hinfo%gridsize(6), & ! (out) OKMAX, LKMAX, UKMAX
                                       hinfo%gridsize(2), hinfo%gridsize(3),                    & ! (out) IMAXG, JMAXG
                                       hinfo%halosize(1), hinfo%halosize(2), hinfo%halosize(3)  ) ! (out) KHALO, IHALO, JHALO
 
-          call FILE_Get_Attribute( fid, "global", "time_units", hinfo%time_units    )
-          call FILE_Get_Attribute( fid, "global", "calendar", hinfo%calendar, existed )
+          call FILE_get_attribute( fid, "global", "time_units", hinfo%time_units    )
+          call FILE_get_attribute( fid, "global", "calendar", hinfo%calendar, existed )
           if ( .NOT. existed ) hinfo%calendar = ""
-          call FILE_Get_Attribute( fid, "global", "time_start", hinfo%time_start(:) )
+          call FILE_get_attribute( fid, "global", "time_start", hinfo%time_start(:) )
 
-          call FILE_Get_Attribute( fid, 'x', 'size_global', hinfo%xatt_size_global(:) )
-          call FILE_Get_Attribute( fid, 'x', 'halo_global', hinfo%xatt_halo_global(:) )
+          call FILE_get_attribute( fid, 'x', 'size_global', hinfo%xatt_size_global(:) )
+          call FILE_get_attribute( fid, 'x', 'halo_global', hinfo%xatt_halo_global(:) )
 
-          call FILE_Get_Attribute( fid, 'y', 'size_global', hinfo%yatt_size_global(:) )
-          call FILE_Get_Attribute( fid, 'y', 'halo_global', hinfo%yatt_halo_global(:) )
+          call FILE_get_attribute( fid, 'y', 'size_global', hinfo%yatt_size_global(:) )
+          call FILE_get_attribute( fid, 'y', 'halo_global', hinfo%yatt_halo_global(:) )
        case default
           LOG_ERROR("SNO_file_getinfo",*) 'currently only ', trim(ATMOS_GRID_CARTESC_NAME), ' is supported as grid_name'
           call PRC_abort
@@ -376,54 +376,54 @@ contains
           ! do nothing
        case('lambert_conformal_conic')
           if ( ismaster ) then
-             call FILE_Get_Attribute( fid, varname_file(n), "grid_mapping_name",             &
+             call FILE_get_attribute( fid, varname_file(n), "grid_mapping_name",             &
                                       hinfo%minfo_mapping_name                               )
-             call FILE_Get_Attribute( fid, varname_file(n), "false_easting",                 &
+             call FILE_get_attribute( fid, varname_file(n), "false_easting",                 &
                                       hinfo%minfo_false_easting                        (:)   )
-             call FILE_Get_Attribute( fid, varname_file(n), "false_northing",                &
+             call FILE_get_attribute( fid, varname_file(n), "false_northing",                &
                                       hinfo%minfo_false_northing                       (:)   )
-             call FILE_Get_Attribute( fid, varname_file(n), "longitude_of_central_meridian", &
+             call FILE_get_attribute( fid, varname_file(n), "longitude_of_central_meridian", &
                                       hinfo%minfo_longitude_of_central_meridian        (:)   )
-             call FILE_Get_Attribute( fid, varname_file(n), "latitude_of_projection_origin", &
+             call FILE_get_attribute( fid, varname_file(n), "latitude_of_projection_origin", &
                                       hinfo%minfo_latitude_of_projection_origin        (:)   )
-             call FILE_Get_Attribute( fid, varname_file(n), "standard_parallel",             &
+             call FILE_get_attribute( fid, varname_file(n), "standard_parallel",             &
                                       hinfo%minfo_standard_parallel                    (:)   )
           endif
        case('polar_stereographic')
           if ( ismaster ) then
-             call FILE_Get_Attribute( fid, varname_file(n), "grid_mapping_name",                     &
+             call FILE_get_attribute( fid, varname_file(n), "grid_mapping_name",                     &
                                       hinfo%minfo_mapping_name                             )
-             call FILE_Get_Attribute( fid, varname_file(n), "false_easting",                         &
+             call FILE_get_attribute( fid, varname_file(n), "false_easting",                         &
                                       hinfo%minfo_false_easting                        (:) )
-             call FILE_Get_Attribute( fid, varname_file(n), "false_northing",                        &
+             call FILE_get_attribute( fid, varname_file(n), "false_northing",                        &
                                        hinfo%minfo_false_northing                       (:) )
-             call FILE_Get_Attribute( fid, varname_file(n), "latitude_of_projection_origin",         &
+             call FILE_get_attribute( fid, varname_file(n), "latitude_of_projection_origin",         &
                                       hinfo%minfo_latitude_of_projection_origin        (:) )
-             call FILE_Get_Attribute( fid, varname_file(n), "straight_vertical_longitude_from_pole", &
+             call FILE_get_attribute( fid, varname_file(n), "straight_vertical_longitude_from_pole", &
                                       hinfo%minfo_straight_vertical_longitude_from_pole(:) )
-             call FILE_Get_Attribute( fid, varname_file(n), "standard_parallel",                     &
+             call FILE_get_attribute( fid, varname_file(n), "standard_parallel",                     &
                                       hinfo%minfo_standard_parallel                  (1:1) )
           endif
        case('mercator')
           if ( ismaster ) then
-             call FILE_Get_Attribute( fid, varname_file(n), "grid_mapping_name",              &
+             call FILE_get_attribute( fid, varname_file(n), "grid_mapping_name",              &
                                       hinfo%minfo_mapping_name                             )
-             call FILE_Get_Attribute( fid, varname_file(n), "false_easting",                  &
+             call FILE_get_attribute( fid, varname_file(n), "false_easting",                  &
                                       hinfo%minfo_false_easting                        (:) )
-             call FILE_Get_Attribute( fid, varname_file(n), "false_northing",                 &
+             call FILE_get_attribute( fid, varname_file(n), "false_northing",                 &
                                       hinfo%minfo_false_northing                       (:) )
-             call FILE_Get_Attribute( fid, varname_file(n), "longitude_of_projection_origin", &
+             call FILE_get_attribute( fid, varname_file(n), "longitude_of_projection_origin", &
                                       hinfo%minfo_longitude_of_projection_origin       (:) )
           endif
        case('equirectangular')
           if ( ismaster ) then
-             call FILE_Get_Attribute( fid, varname_file(n), "grid_mapping_name",             &
+             call FILE_get_attribute( fid, varname_file(n), "grid_mapping_name",             &
                                       hinfo%minfo_mapping_name                             )
-             call FILE_Get_Attribute( fid, varname_file(n), "false_easting",                 &
+             call FILE_get_attribute( fid, varname_file(n), "false_easting",                 &
                                       hinfo%minfo_false_easting                        (:) )
-             call FILE_Get_Attribute( fid, varname_file(n), "false_northing",                &
+             call FILE_get_attribute( fid, varname_file(n), "false_northing",                &
                                       hinfo%minfo_false_northing                       (:) )
-             call FILE_Get_Attribute( fid, varname_file(n), "longitude_of_central_meridian", &
+             call FILE_get_attribute( fid, varname_file(n), "longitude_of_central_meridian", &
                                       hinfo%minfo_longitude_of_central_meridian        (:) )
           endif
        case default
@@ -552,7 +552,7 @@ contains
        FILE_REAL8, &
        FILE_dtypelist
     use scale_file, only: &
-       FILE_Read
+       FILE_read
     use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD, &
@@ -587,7 +587,7 @@ contains
        if ( ismaster ) then
           allocate( tmp_SP(varsize) )
 
-          call FILE_Read( basename, varname, tmp_SP(:), rankid=nowrank )
+          call FILE_read( basename, varname, tmp_SP(:), rankid=nowrank )
 
           var(:) = real(tmp_SP(:),kind=RP)
 
@@ -599,7 +599,7 @@ contains
        if ( ismaster ) then
           allocate( tmp_DP(varsize) )
 
-          call FILE_Read( basename, varname, tmp_DP(:), rankid=nowrank )
+          call FILE_read( basename, varname, tmp_DP(:), rankid=nowrank )
 
           var(:) = real(tmp_DP(:),kind=RP)
 
@@ -632,7 +632,7 @@ contains
        FILE_REAL8, &
        FILE_dtypelist
     use scale_file, only: &
-       FILE_Read
+       FILE_read
     use scale_prc, only: &
        PRC_abort
     use mod_sno_h, only: &
@@ -658,7 +658,7 @@ contains
 
     if ( datatype == FILE_REAL4 ) then
 
-       call FILE_Read( basename, varname, tmp_SP(:), step=nowstep, rankid=nowrank )
+       call FILE_read( basename, varname, tmp_SP(:), step=nowstep, rankid=nowrank )
 
        do i = 1, gout1
           if ( localmap(i,I_map_p) == nowrank ) then
@@ -670,7 +670,7 @@ contains
 
     elseif( datatype == FILE_REAL8 ) then
 
-       call FILE_Read( basename, varname, tmp_DP(:), step=nowstep, rankid=nowrank )
+       call FILE_read( basename, varname, tmp_DP(:), step=nowstep, rankid=nowrank )
 
        do i = 1, gout1
           if ( localmap(i,I_map_p) == nowrank ) then
@@ -703,7 +703,7 @@ contains
        FILE_REAL8, &
        FILE_dtypelist
     use scale_file, only: &
-       FILE_Read
+       FILE_read
     use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD, &
@@ -739,7 +739,7 @@ contains
        if ( ismaster ) then
           allocate( tmp_SP(varsize1,varsize2) )
 
-          call FILE_Read( basename, varname, tmp_SP(:,:), rankid=nowrank )
+          call FILE_read( basename, varname, tmp_SP(:,:), rankid=nowrank )
 
           var(:,:) = real(tmp_SP(:,:),kind=RP)
 
@@ -751,7 +751,7 @@ contains
        if ( ismaster ) then
           allocate( tmp_DP(varsize1,varsize2) )
 
-          call FILE_Read( basename, varname, tmp_DP(:,:), rankid=nowrank )
+          call FILE_read( basename, varname, tmp_DP(:,:), rankid=nowrank )
 
           var(:,:) = real(tmp_DP(:,:),kind=RP)
 
@@ -786,7 +786,7 @@ contains
        FILE_REAL8, &
        FILE_dtypelist
     use scale_file, only: &
-       FILE_Read
+       FILE_read
     use scale_prc, only: &
        PRC_abort
     use mod_sno_h, only: &
@@ -815,7 +815,7 @@ contains
 
     if ( datatype == FILE_REAL4 ) then
 
-       call FILE_Read( basename, varname, tmp_SP(:,:), step=nowstep, rankid=nowrank )
+       call FILE_read( basename, varname, tmp_SP(:,:), step=nowstep, rankid=nowrank )
 
        do j = 1, gout2
        do i = 1, gout1
@@ -830,7 +830,7 @@ contains
 
     elseif( datatype == FILE_REAL8 ) then
 
-       call FILE_Read( basename, varname, tmp_DP(:,:), step=nowstep, rankid=nowrank )
+       call FILE_read( basename, varname, tmp_DP(:,:), step=nowstep, rankid=nowrank )
 
        do j = 1, gout2
        do i = 1, gout1
@@ -872,7 +872,7 @@ contains
        FILE_REAL8, &
        FILE_dtypelist
     use scale_file, only: &
-       FILE_Read
+       FILE_read
     use scale_prc, only: &
        PRC_abort
     use mod_sno_h, only: &
@@ -910,7 +910,7 @@ contains
           allocate( tmp_SP(gin1,gin2,gin3) ) ! z,x,y
        endif
 
-       call FILE_Read( basename, varname, tmp_SP(:,:,:), step=nowstep, rankid=nowrank )
+       call FILE_read( basename, varname, tmp_SP(:,:,:), step=nowstep, rankid=nowrank )
 
        if ( transpose ) then
           do j = 1, gout3
@@ -950,7 +950,7 @@ contains
           allocate( tmp_DP(gin1,gin2,gin3) ) ! z,x,y
        endif
 
-       call FILE_Read( basename, varname, tmp_DP(:,:,:), step=nowstep, rankid=nowrank )
+       call FILE_read( basename, varname, tmp_DP(:,:,:), step=nowstep, rankid=nowrank )
 
        if ( transpose ) then
           do j = 1, gout3
@@ -1004,8 +1004,8 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_file, only: &
-       FILE_Set_Attribute,         &
-       FILE_Add_AssociatedVariable
+       FILE_set_attribute,         &
+       FILE_add_associatedVariable
     use scale_const, &
        UNDEF => CONST_UNDEF
     use scale_atmos_grid_cartesc, only: &
@@ -1117,76 +1117,76 @@ contains
     minfo%straight_vertical_longitude_from_pole(:) = hinfo%minfo_straight_vertical_longitude_from_pole(:)
     minfo%standard_parallel                    (:) = hinfo%minfo_standard_parallel                    (:)
 
-    call FILE_Set_Attribute( fid, "x" , "size_global" , ainfo(1)%size_global (:) )
-    call FILE_Set_Attribute( fid, "x" , "start_global", ainfo(1)%start_global(:) )
-    call FILE_Set_Attribute( fid, "x" , "halo_global" , ainfo(1)%halo_global (:) )
-    call FILE_Set_Attribute( fid, "x" , "halo_local"  , ainfo(1)%halo_local  (:) )
-    call FILE_Set_Attribute( fid, "x" , "periodic"    , ainfo(1)%periodic        )
+    call FILE_set_attribute( fid, "x" , "size_global" , ainfo(1)%size_global (:) )
+    call FILE_set_attribute( fid, "x" , "start_global", ainfo(1)%start_global(:) )
+    call FILE_set_attribute( fid, "x" , "halo_global" , ainfo(1)%halo_global (:) )
+    call FILE_set_attribute( fid, "x" , "halo_local"  , ainfo(1)%halo_local  (:) )
+    call FILE_set_attribute( fid, "x" , "periodic"    , ainfo(1)%periodic        )
 
-    call FILE_Set_Attribute( fid, "xh", "size_global" , ainfo(2)%size_global (:) )
-    call FILE_Set_Attribute( fid, "xh", "start_global", ainfo(2)%start_global(:) )
-    call FILE_Set_Attribute( fid, "xh", "halo_global" , ainfo(2)%halo_global (:) )
-    call FILE_Set_Attribute( fid, "xh", "halo_local"  , ainfo(2)%halo_local  (:) )
-    call FILE_Set_Attribute( fid, "xh", "periodic"    , ainfo(2)%periodic        )
+    call FILE_set_attribute( fid, "xh", "size_global" , ainfo(2)%size_global (:) )
+    call FILE_set_attribute( fid, "xh", "start_global", ainfo(2)%start_global(:) )
+    call FILE_set_attribute( fid, "xh", "halo_global" , ainfo(2)%halo_global (:) )
+    call FILE_set_attribute( fid, "xh", "halo_local"  , ainfo(2)%halo_local  (:) )
+    call FILE_set_attribute( fid, "xh", "periodic"    , ainfo(2)%periodic        )
 
-    call FILE_Set_Attribute( fid, "y" , "size_global" , ainfo(3)%size_global (:) )
-    call FILE_Set_Attribute( fid, "y" , "start_global", ainfo(3)%start_global(:) )
-    call FILE_Set_Attribute( fid, "y" , "halo_global" , ainfo(3)%halo_global (:) )
-    call FILE_Set_Attribute( fid, "y" , "halo_local"  , ainfo(3)%halo_local  (:) )
-    call FILE_Set_Attribute( fid, "y" , "periodic"    , ainfo(3)%periodic        )
+    call FILE_set_attribute( fid, "y" , "size_global" , ainfo(3)%size_global (:) )
+    call FILE_set_attribute( fid, "y" , "start_global", ainfo(3)%start_global(:) )
+    call FILE_set_attribute( fid, "y" , "halo_global" , ainfo(3)%halo_global (:) )
+    call FILE_set_attribute( fid, "y" , "halo_local"  , ainfo(3)%halo_local  (:) )
+    call FILE_set_attribute( fid, "y" , "periodic"    , ainfo(3)%periodic        )
 
-    call FILE_Set_Attribute( fid, "yh", "size_global" , ainfo(4)%size_global (:) )
-    call FILE_Set_Attribute( fid, "yh", "start_global", ainfo(4)%start_global(:) )
-    call FILE_Set_Attribute( fid, "yh", "halo_global" , ainfo(4)%halo_global (:) )
-    call FILE_Set_Attribute( fid, "yh", "halo_local"  , ainfo(4)%halo_local  (:) )
-    call FILE_Set_Attribute( fid, "yh", "periodic"    , ainfo(4)%periodic        )
+    call FILE_set_attribute( fid, "yh", "size_global" , ainfo(4)%size_global (:) )
+    call FILE_set_attribute( fid, "yh", "start_global", ainfo(4)%start_global(:) )
+    call FILE_set_attribute( fid, "yh", "halo_global" , ainfo(4)%halo_global (:) )
+    call FILE_set_attribute( fid, "yh", "halo_local"  , ainfo(4)%halo_local  (:) )
+    call FILE_set_attribute( fid, "yh", "periodic"    , ainfo(4)%periodic        )
 
     if ( minfo%mapping_name /= "" ) then
-       call FILE_Set_Attribute( fid, "x" , "standard_name", "projection_x_coordinate" )
-       call FILE_Set_Attribute( fid, "xh", "standard_name", "projection_x_coordinate" )
-       call FILE_Set_Attribute( fid, "y" , "standard_name", "projection_y_coordinate" )
-       call FILE_Set_Attribute( fid, "yh", "standard_name", "projection_y_coordinate" )
+       call FILE_set_attribute( fid, "x" , "standard_name", "projection_x_coordinate" )
+       call FILE_set_attribute( fid, "xh", "standard_name", "projection_x_coordinate" )
+       call FILE_set_attribute( fid, "y" , "standard_name", "projection_y_coordinate" )
+       call FILE_set_attribute( fid, "yh", "standard_name", "projection_y_coordinate" )
 
-       call FILE_Add_AssociatedVariable( fid, minfo%mapping_name )
-       call FILE_Set_Attribute( fid, minfo%mapping_name, "grid_mapping_name",  minfo%mapping_name )
+       call FILE_add_associatedVariable( fid, minfo%mapping_name )
+       call FILE_set_attribute( fid, minfo%mapping_name, "grid_mapping_name",  minfo%mapping_name )
 
        if ( minfo%false_easting(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                   & ! [IN]
+          call FILE_set_attribute( fid,                   & ! [IN]
                                    minfo%mapping_name,    & ! [IN]
                                    "false_easting",       & ! [IN]
                                    minfo%false_easting(:) ) ! [IN]
        endif
 
        if ( minfo%false_northing(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                    & ! [IN]
+          call FILE_set_attribute( fid,                    & ! [IN]
                                    minfo%mapping_name,     & ! [IN]
                                    "false_northing",       & ! [IN]
                                    minfo%false_northing(:) ) ! [IN]
        endif
 
        if ( minfo%longitude_of_central_meridian(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                   & ! [IN]
+          call FILE_set_attribute( fid,                                   & ! [IN]
                                    minfo%mapping_name,                    & ! [IN]
                                    "longitude_of_central_meridian",       & ! [IN]
                                    minfo%longitude_of_central_meridian(:) ) ! [IN]
        endif
 
        if ( minfo%longitude_of_projection_origin(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                    & ! [IN]
+          call FILE_set_attribute( fid,                                    & ! [IN]
                                    minfo%mapping_name,                     & ! [IN]
                                    "longitude_of_projection_origin",       & ! [IN]
                                    minfo%longitude_of_projection_origin(:) ) ! [IN]
        endif
 
        if ( minfo%latitude_of_projection_origin(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                   & ! [IN]
+          call FILE_set_attribute( fid,                                   & ! [IN]
                                    minfo%mapping_name,                    & ! [IN]
                                    "latitude_of_projection_origin",       & ! [IN]
                                    minfo%latitude_of_projection_origin(:) ) ! [IN]
        endif
 
        if ( minfo%straight_vertical_longitude_from_pole(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                           & ! [IN]
+          call FILE_set_attribute( fid,                                           & ! [IN]
                                    minfo%mapping_name,                            & ! [IN]
                                    "straight_vertical_longitude_from_pole",       & ! [IN]
                                    minfo%straight_vertical_longitude_from_pole(:) ) ! [IN]
@@ -1194,12 +1194,12 @@ contains
 
        if ( minfo%standard_parallel(1) /= UNDEF ) then
           if ( minfo%standard_parallel(2) /= UNDEF ) then
-             call FILE_Set_Attribute( fid,                         & ! [IN]
+             call FILE_set_attribute( fid,                         & ! [IN]
                                       minfo%mapping_name,          & ! [IN]
                                       "standard_parallel",         & ! [IN]
                                       minfo%standard_parallel(1:2) ) ! [IN]
           else
-             call FILE_Set_Attribute( fid,                         & ! [IN]
+             call FILE_set_attribute( fid,                         & ! [IN]
                                       minfo%mapping_name,          & ! [IN]
                                       "standard_parallel",         & ! [IN]
                                       minfo%standard_parallel(1:1) ) ! [IN]
@@ -1208,85 +1208,85 @@ contains
     endif
 
     ! SGRID
-    call FILE_Add_AssociatedVariable( fid, "grid" )
-    call FILE_Set_Attribute( fid, "grid", "cf_role",             "grid_topology" )
-    call FILE_Set_Attribute( fid, "grid", "topology_dimension",  (/ 2 /) )
-    call FILE_Set_Attribute( fid, "grid", "node_dimensions",     "xh yh" )
-    call FILE_Set_Attribute( fid, "grid", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
-    call FILE_Set_Attribute( fid, "grid", "node_coordinates",    "lon_uv lat_uv" )
-    call FILE_Set_Attribute( fid, "grid", "face_coordinates",    "lon lat" )
-    call FILE_Set_Attribute( fid, "grid", "edge1_coordinates",   "lon_uy lat_uy" )
-    call FILE_Set_Attribute( fid, "grid", "edge2_coordinates",   "lon_xv lat_xv" )
-    call FILE_Set_Attribute( fid, "grid", "vertical_dimensions", "z: zh (padding: none)" )
+    call FILE_add_associatedVariable( fid, "grid" )
+    call FILE_set_attribute( fid, "grid", "cf_role",             "grid_topology" )
+    call FILE_set_attribute( fid, "grid", "topology_dimension",  (/ 2 /) )
+    call FILE_set_attribute( fid, "grid", "node_dimensions",     "xh yh" )
+    call FILE_set_attribute( fid, "grid", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_set_attribute( fid, "grid", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_set_attribute( fid, "grid", "face_coordinates",    "lon lat" )
+    call FILE_set_attribute( fid, "grid", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_set_attribute( fid, "grid", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_set_attribute( fid, "grid", "vertical_dimensions", "z: zh (padding: none)" )
 
-    call FILE_Add_AssociatedVariable( fid, "grid_ocean" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "cf_role",             "grid_topology" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "topology_dimension",  (/ 2 /) )
-    call FILE_Set_Attribute( fid, "grid_ocean", "node_dimensions",     "xh yh" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "node_coordinates",    "lon_uv lat_uv" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "face_coordinates",    "lon lat" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "edge1_coordinates",   "lon_uy lat_uy" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "edge2_coordinates",   "lon_xv lat_xv" )
-    call FILE_Set_Attribute( fid, "grid_ocean", "vertical_dimensions", "oz: ozh (padding: none)" )
+    call FILE_add_associatedVariable( fid, "grid_ocean" )
+    call FILE_set_attribute( fid, "grid_ocean", "cf_role",             "grid_topology" )
+    call FILE_set_attribute( fid, "grid_ocean", "topology_dimension",  (/ 2 /) )
+    call FILE_set_attribute( fid, "grid_ocean", "node_dimensions",     "xh yh" )
+    call FILE_set_attribute( fid, "grid_ocean", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_set_attribute( fid, "grid_ocean", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_set_attribute( fid, "grid_ocean", "face_coordinates",    "lon lat" )
+    call FILE_set_attribute( fid, "grid_ocean", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_set_attribute( fid, "grid_ocean", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_set_attribute( fid, "grid_ocean", "vertical_dimensions", "oz: ozh (padding: none)" )
 
-    call FILE_Add_AssociatedVariable( fid, "grid_land" )
-    call FILE_Set_Attribute( fid, "grid_land", "cf_role",             "grid_topology" )
-    call FILE_Set_Attribute( fid, "grid_land", "topology_dimension",  (/ 2 /) )
-    call FILE_Set_Attribute( fid, "grid_land", "node_dimensions",     "xh yh" )
-    call FILE_Set_Attribute( fid, "grid_land", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
-    call FILE_Set_Attribute( fid, "grid_land", "node_coordinates",    "lon_uv lat_uv" )
-    call FILE_Set_Attribute( fid, "grid_land", "face_coordinates",    "lon lat" )
-    call FILE_Set_Attribute( fid, "grid_land", "edge1_coordinates",   "lon_uy lat_uy" )
-    call FILE_Set_Attribute( fid, "grid_land", "edge2_coordinates",   "lon_xv lat_xv" )
-    call FILE_Set_Attribute( fid, "grid_land", "vertical_dimensions", "lz: lzh (padding: none)" )
+    call FILE_add_associatedVariable( fid, "grid_land" )
+    call FILE_set_attribute( fid, "grid_land", "cf_role",             "grid_topology" )
+    call FILE_set_attribute( fid, "grid_land", "topology_dimension",  (/ 2 /) )
+    call FILE_set_attribute( fid, "grid_land", "node_dimensions",     "xh yh" )
+    call FILE_set_attribute( fid, "grid_land", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_set_attribute( fid, "grid_land", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_set_attribute( fid, "grid_land", "face_coordinates",    "lon lat" )
+    call FILE_set_attribute( fid, "grid_land", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_set_attribute( fid, "grid_land", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_set_attribute( fid, "grid_land", "vertical_dimensions", "lz: lzh (padding: none)" )
 
-    call FILE_Add_AssociatedVariable( fid, "grid_urban" )
-    call FILE_Set_Attribute( fid, "grid_urban", "cf_role",             "grid_topology" )
-    call FILE_Set_Attribute( fid, "grid_urban", "topology_dimension",  (/ 2 /) )
-    call FILE_Set_Attribute( fid, "grid_urban", "node_dimensions",     "xh yh" )
-    call FILE_Set_Attribute( fid, "grid_urban", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
-    call FILE_Set_Attribute( fid, "grid_urban", "node_coordinates",    "lon_uv lat_uv" )
-    call FILE_Set_Attribute( fid, "grid_urban", "face_coordinates",    "lon lat" )
-    call FILE_Set_Attribute( fid, "grid_urban", "edge1_coordinates",   "lon_uy lat_uy" )
-    call FILE_Set_Attribute( fid, "grid_urban", "edge2_coordinates",   "lon_xv lat_xv" )
-    call FILE_Set_Attribute( fid, "grid_urban", "vertical_dimensions", "uz: uzh (padding: none)" )
+    call FILE_add_associatedVariable( fid, "grid_urban" )
+    call FILE_set_attribute( fid, "grid_urban", "cf_role",             "grid_topology" )
+    call FILE_set_attribute( fid, "grid_urban", "topology_dimension",  (/ 2 /) )
+    call FILE_set_attribute( fid, "grid_urban", "node_dimensions",     "xh yh" )
+    call FILE_set_attribute( fid, "grid_urban", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_set_attribute( fid, "grid_urban", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_set_attribute( fid, "grid_urban", "face_coordinates",    "lon lat" )
+    call FILE_set_attribute( fid, "grid_urban", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_set_attribute( fid, "grid_urban", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_set_attribute( fid, "grid_urban", "vertical_dimensions", "uz: uzh (padding: none)" )
 
-    call FILE_Add_AssociatedVariable( fid, "grid_pressure" )
-    call FILE_Set_Attribute( fid, "grid_pressure", "cf_role",             "grid_topology" )
-    call FILE_Set_Attribute( fid, "grid_pressure", "topology_dimension",  (/ 2 /) )
-    call FILE_Set_Attribute( fid, "grid_pressure", "node_dimensions",     "xh yh" )
-    call FILE_Set_Attribute( fid, "grid_pressure", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
-    call FILE_Set_Attribute( fid, "grid_pressure", "node_coordinates",    "lon_uv lat_uv" )
-    call FILE_Set_Attribute( fid, "grid_pressure", "face_coordinates",    "lon lat" )
-    call FILE_Set_Attribute( fid, "grid_pressure", "edge1_coordinates",   "lon_uy lat_uy" )
-    call FILE_Set_Attribute( fid, "grid_pressure", "edge2_coordinates",   "lon_xv lat_xv" )
-    call FILE_Set_Attribute( fid, "grid_pressure", "vertical_dimensions", "pressure" )
+    call FILE_add_associatedVariable( fid, "grid_pressure" )
+    call FILE_set_attribute( fid, "grid_pressure", "cf_role",             "grid_topology" )
+    call FILE_set_attribute( fid, "grid_pressure", "topology_dimension",  (/ 2 /) )
+    call FILE_set_attribute( fid, "grid_pressure", "node_dimensions",     "xh yh" )
+    call FILE_set_attribute( fid, "grid_pressure", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_set_attribute( fid, "grid_pressure", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_set_attribute( fid, "grid_pressure", "face_coordinates",    "lon lat" )
+    call FILE_set_attribute( fid, "grid_pressure", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_set_attribute( fid, "grid_pressure", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_set_attribute( fid, "grid_pressure", "vertical_dimensions", "pressure" )
 
-    call FILE_Add_AssociatedVariable( fid, "grid_z" )
-    call FILE_Set_Attribute( fid, "grid_z", "cf_role",             "grid_topology" )
-    call FILE_Set_Attribute( fid, "grid_z", "topology_dimension",  (/ 2 /) )
-    call FILE_Set_Attribute( fid, "grid_z", "node_dimensions",     "xh yh" )
-    call FILE_Set_Attribute( fid, "grid_z", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
-    call FILE_Set_Attribute( fid, "grid_z", "node_coordinates",    "lon_uv lat_uv" )
-    call FILE_Set_Attribute( fid, "grid_z", "face_coordinates",    "lon lat" )
-    call FILE_Set_Attribute( fid, "grid_z", "edge1_coordinates",   "lon_uy lat_uy" )
-    call FILE_Set_Attribute( fid, "grid_z", "edge2_coordinates",   "lon_xv lat_xv" )
-    call FILE_Set_Attribute( fid, "grid_z", "vertical_dimensions", "height_xyw: height (padding: none)" )
+    call FILE_add_associatedVariable( fid, "grid_z" )
+    call FILE_set_attribute( fid, "grid_z", "cf_role",             "grid_topology" )
+    call FILE_set_attribute( fid, "grid_z", "topology_dimension",  (/ 2 /) )
+    call FILE_set_attribute( fid, "grid_z", "node_dimensions",     "xh yh" )
+    call FILE_set_attribute( fid, "grid_z", "face_dimensions",     "x: xh (padding: none) y: yh (padding: none)" )
+    call FILE_set_attribute( fid, "grid_z", "node_coordinates",    "lon_uv lat_uv" )
+    call FILE_set_attribute( fid, "grid_z", "face_coordinates",    "lon lat" )
+    call FILE_set_attribute( fid, "grid_z", "edge1_coordinates",   "lon_uy lat_uy" )
+    call FILE_set_attribute( fid, "grid_z", "edge2_coordinates",   "lon_xv lat_xv" )
+    call FILE_set_attribute( fid, "grid_z", "vertical_dimensions", "height_xyw: height (padding: none)" )
 
-    call FILE_Add_AssociatedVariable( fid, "grid_model" )
-    call FILE_Set_Attribute( fid, "grid_model", "cf_role",             "grid_topology" )
-    call FILE_Set_Attribute( fid, "grid_model", "topology_dimension",  (/ 2 /) )
-    call FILE_Set_Attribute( fid, "grid_model", "node_dimensions",     "FX FY" )
-    call FILE_Set_Attribute( fid, "grid_model", "face_dimensions",     "CX: FY (padding: none) CY: FY (padding: none)" )
-    call FILE_Set_Attribute( fid, "grid_model", "vertical_dimensions", "CZ: FZ (padding: none)" )
+    call FILE_add_associatedVariable( fid, "grid_model" )
+    call FILE_set_attribute( fid, "grid_model", "cf_role",             "grid_topology" )
+    call FILE_set_attribute( fid, "grid_model", "topology_dimension",  (/ 2 /) )
+    call FILE_set_attribute( fid, "grid_model", "node_dimensions",     "FX FY" )
+    call FILE_set_attribute( fid, "grid_model", "face_dimensions",     "CX: FY (padding: none) CY: FY (padding: none)" )
+    call FILE_set_attribute( fid, "grid_model", "vertical_dimensions", "CZ: FZ (padding: none)" )
 
-    call FILE_Add_AssociatedVariable( fid, "grid_model_global" )
-    call FILE_Set_Attribute( fid, "grid_model_global", "cf_role",             "grid_topology" )
-    call FILE_Set_Attribute( fid, "grid_model_global", "topology_dimension",  (/ 2 /) )
-    call FILE_Set_Attribute( fid, "grid_model_global", "node_dimensions",     "FXG FYG" )
-    call FILE_Set_Attribute( fid, "grid_model_global", "face_dimensions",     "CXG: FYG (padding: none) CYG: FYG (padding: none)" )
-    call FILE_Set_Attribute( fid, "grid_model_global", "vertical_dimensions", "CZ: FZ (padding: none)" )
+    call FILE_add_associatedVariable( fid, "grid_model_global" )
+    call FILE_set_attribute( fid, "grid_model_global", "cf_role",             "grid_topology" )
+    call FILE_set_attribute( fid, "grid_model_global", "topology_dimension",  (/ 2 /) )
+    call FILE_set_attribute( fid, "grid_model_global", "node_dimensions",     "FXG FYG" )
+    call FILE_set_attribute( fid, "grid_model_global", "face_dimensions",     "CXG: FYG (padding: none) CYG: FYG (padding: none)" )
+    call FILE_set_attribute( fid, "grid_model_global", "vertical_dimensions", "CZ: FZ (padding: none)" )
 
     return
   end subroutine SNO_attributes_write

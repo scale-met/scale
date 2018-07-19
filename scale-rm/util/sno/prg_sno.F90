@@ -17,7 +17,7 @@ program sno
   !
   use mpi
   use scale_file, only: &
-     FILE_Close_All
+     FILE_close_all
   use scale_precision
   use scale_io
   use scale_prof
@@ -31,6 +31,8 @@ program sno
      CONST_setup
   use scale_calendar, only: &
      CALENDAR_setup
+  use scale_file, only: &
+     FILE_setup
   use mod_sno_h
   use mod_sno, only: &
      SNO_proc_alloc,   &
@@ -177,6 +179,9 @@ program sno
 
   ! setup calendar
   call CALENDAR_setup
+
+  ! setup fie I/O
+  call FILE_setup( myrank )
 
   LOG_NEWLINE
   LOG_INFO("SNO",*) 'Setup'
@@ -459,7 +464,7 @@ program sno
   !########## Finalize ##########
   call PROF_rapend  ('Main', 0)
 
-  call FILE_Close_All
+  call FILE_close_all
 
   call PROF_rapreport
 

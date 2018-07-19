@@ -59,7 +59,6 @@ module mod_snoplugin_hgridope
 
   integer,                private              :: SNOPLGIN_hgridope_nintrp      = 5       ! number of interpolation point
   integer,                private              :: SNOPLGIN_hgridope_weight      = 2       ! weighting factor for interpolation
-  integer,                private, parameter   :: SNOPLGIN_hgridope_divnum      = 10      ! number of divided block for interpolation
 
   logical,                private              :: SNOPLGIN_hgridope_outorigdata = .false. ! output original (non-averaged) data ?
 
@@ -209,8 +208,8 @@ contains
        CONST_D2R,   &
        CONST_RADIUS
     use scale_interp, only: &
-       INTRP_setup,   &
-       INTRP_factor2d
+       INTERP_setup,   &
+       INTERP_factor2d
     use mod_sno_h, only: &
        axisinfo
     implicit none
@@ -299,9 +298,8 @@ contains
     dy  = SNOPLGIN_hgridope_dlat * CONST_D2R * CONST_RADIUS * cos(clat)
     dxy = sqrt( dx*dx + dy*dy )
 
-    call INTRP_setup( SNOPLGIN_hgridope_divnum, & ! [IN]
-                      SNOPLGIN_hgridope_weight, & ! [IN]
-                      search_limit = dxy        ) ! [IN]
+    call INTERP_setup( SNOPLGIN_hgridope_weight, & ! [IN]
+                       search_limit = dxy        ) ! [IN]
 
     imax_ref = ngrids_x_out
     jmax_ref = ngrids_y_out
@@ -332,16 +330,16 @@ contains
     enddo
     enddo
 
-    call INTRP_factor2d( SNOPLGIN_hgridope_nintrp, & ! [IN]
-                         imax_ref, jmax_ref,       & ! [IN]
-                         lon_ref(:,:),             & ! [IN]
-                         lat_ref(:,:),             & ! [IN]
-                         imax_new, jmax_new,       & ! [IN]
-                         lon_new(:,:),             & ! [IN]
-                         lat_new(:,:),             & ! [IN]
-                         idx_i  (:,:,:),           & ! [OUT]
-                         idx_j  (:,:,:),           & ! [OUT]
-                         hfact  (:,:,:)            ) ! [OUT]
+    call INTERP_factor2d( SNOPLGIN_hgridope_nintrp, & ! [IN]
+                          imax_ref, jmax_ref,       & ! [IN]
+                          lon_ref(:,:),             & ! [IN]
+                          lat_ref(:,:),             & ! [IN]
+                          imax_new, jmax_new,       & ! [IN]
+                          lon_new(:,:),             & ! [IN]
+                          lat_new(:,:),             & ! [IN]
+                          idx_i  (:,:,:),           & ! [OUT]
+                          idx_j  (:,:,:),           & ! [OUT]
+                          hfact  (:,:,:)            ) ! [OUT]
 
     deallocate( lon_ref )
     deallocate( lat_ref )
@@ -426,7 +424,7 @@ contains
        dinfo,         &
        debug          )
     use scale_interp, only: &
-       INTRP_interp2d
+       INTERP_interp2d
     use mod_sno_h, only: &
        commoninfo, &
        iteminfo
@@ -481,14 +479,14 @@ contains
        dinfo_ll%dim_size(1) = imax_new
        dinfo_ll%dim_size(2) = jmax_new
 
-       call INTRP_interp2d( SNOPLGIN_hgridope_nintrp,  & ! [IN]
-                            imax_ref, jmax_ref,        & ! [IN]
-                            imax_new, jmax_new,        & ! [IN]
-                            idx_i          (:,:,:),    & ! [IN]
-                            idx_j          (:,:,:),    & ! [IN]
-                            hfact          (:,:,:),    & ! [IN]
-                            dinfo%VAR_2d   (:,:),      & ! [IN]
-                            dinfo_ll%VAR_2d(:,:)       ) ! [OUT]
+       call INTERP_interp2d( SNOPLGIN_hgridope_nintrp,  & ! [IN]
+                             imax_ref, jmax_ref,        & ! [IN]
+                             imax_new, jmax_new,        & ! [IN]
+                             idx_i          (:,:,:),    & ! [IN]
+                             idx_j          (:,:,:),    & ! [IN]
+                             hfact          (:,:,:),    & ! [IN]
+                             dinfo%VAR_2d   (:,:),      & ! [IN]
+                             dinfo_ll%VAR_2d(:,:)       ) ! [OUT]
 
        do_output = .true.
 
@@ -508,14 +506,14 @@ contains
        dinfo_ll%dim_size(3) = gout1
 
        do k = 1, gout1
-          call INTRP_interp2d( SNOPLGIN_hgridope_nintrp,  & ! [IN]
-                               imax_ref, jmax_ref,        & ! [IN]
-                               imax_new, jmax_new,        & ! [IN]
-                               idx_i          (:,:,:),    & ! [IN]
-                               idx_j          (:,:,:),    & ! [IN]
-                               hfact          (:,:,:),    & ! [IN]
-                               dinfo%VAR_3d   (k,:,:),    & ! [IN]
-                               dinfo_ll%VAR_3d(k,:,:)     ) ! [OUT]
+          call INTERP_interp2d( SNOPLGIN_hgridope_nintrp,  & ! [IN]
+                                imax_ref, jmax_ref,        & ! [IN]
+                                imax_new, jmax_new,        & ! [IN]
+                                idx_i          (:,:,:),    & ! [IN]
+                                idx_j          (:,:,:),    & ! [IN]
+                                hfact          (:,:,:),    & ! [IN]
+                                dinfo%VAR_3d   (k,:,:),    & ! [IN]
+                                dinfo_ll%VAR_3d(k,:,:)     ) ! [OUT]
        enddo
 
        do_output = .true.
