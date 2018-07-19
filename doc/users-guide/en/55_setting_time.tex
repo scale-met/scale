@@ -67,7 +67,7 @@ Integer is acceptable for \nmitem{TIME_NSTEP_ATMOS_DYN}.
 
 \subsection{Time Step for Physical Processes}
 A time step for the physical process represents the timing of the tendency to update given by the process. Once the model starts, each physical process is called during the setup of the model to obtain the initial tendency. Each tendency is updated at every time step specified process by process.
-All time steps for the physical process are better as multiples of \nmitem{TIME_DT}.
+All time steps for the physical process must be a multiple of \nmitem{TIME_DT}.
 
 The surface fluxes are calculated by the surface process for the atmosphere.
 On the contrary, if a model grid contains several types of land use, such as ocean, urban, and land,
