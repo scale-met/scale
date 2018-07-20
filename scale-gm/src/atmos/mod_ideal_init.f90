@@ -2811,7 +2811,7 @@ contains
        do l = 1, ADM_lall
        do k = 1, ADM_kall
        do g = 1, ADM_gall
-          bubble(g,k,l) = CONST_UNDEF8
+          bubble(g,k,l) = 0.0_RP
        enddo
        enddo
        enddo

@@ -1339,7 +1339,6 @@ contains
        ch,     ch_pl,   &
        cmask,  cmask_pl )
     use scale_const, only: &
-       BIG => CONST_HUGE, &
        EPS => CONST_EPS
     use mod_adm, only: &
        ADM_have_pl,    &
@@ -1358,6 +1357,8 @@ contains
     real(RP), intent(in)    :: ch_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl  )
     real(RP), intent(in)    :: cmask   (ADM_gall   ,ADM_kall,ADM_lall   ,6)
     real(RP), intent(in)    :: cmask_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl  )
+
+    real(RP), parameter :: BIG = 1e10_RP
 
     real(RP) :: q_min_AI, q_min_AIJ, q_min_AJ, q_min_pl
     real(RP) :: q_max_AI, q_max_AIJ, q_max_AJ, q_max_pl
