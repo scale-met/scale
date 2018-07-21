@@ -9,8 +9,9 @@
 
 
 Urban models calculate energy exchanges between the urban surface (urban canopy) and atmosphere.
-SCALE-RM has two options for calculation of urban areas: LAND and KUSAKA01.
-In LAND option, fluxes over urban subtiles are calculated by the land model you chose for your examination.
+In paricular, the model estimates sensible and latent heat fluxes and momentum flux from urban surface to atmosphere.
+SCALE-RM has two options for calculation in urban areas: LAND and KUSAKA01.
+In LAND option, fluxes over urban subtile are calculated by the land model you chose for your experiment.
 Please refer to Section \ref{sec:land}.
 
 \subsection{KUSAKA01: Single layer urban canopy model}
@@ -18,12 +19,17 @@ Please refer to Section \ref{sec:land}.
 KUSAKA01 is the single layer urban canopy model (UCM) by \citet{kusaka_2001} and \citet{kusaka_2004}.
 The UCM of KUSAKA01 assumes street canyons as the urban geometry.
 
-The model has the prognostic variables at the roof, wall, and road, and those in the urban canopy:
-the layer temparature, surface tempeature, and rain amount at the roof, wall, and road; and the air temperature, specific humidity, and wind velocity in the canopy.
-It also estimates the the heat fluxes from their surfaces and the urban canopy.
+The model has the prognostic variables at the roof, wall, and road:
+the surface tempeature and near-surface temparature of artificial construction.
+The near-surface temparature is calculated by dividing facets of artificial construction into a number of thickness layers.
+The rain amount remaining over the roof, wall, and road are also calculated to evaluate evaporation efficiency.
+And then, it also calculates the the heat fluxes from their facets.
+The fluxes from urban subtile are estimated by weighted avrage of fluxes from roof, wall, and road.
 
 The model assumes that the urban canopy layer is located lower than the 1st layer of the atmospheric model.
-Therefore, there is a restriction that a sum of the displacement height of the canopy and roughness length must be two meters lower than the center level of the 1st layer of the atmosphere.
+Therefore, there is a restriction that a sum of the displacement height of the canopy and roughness length
+must be two meters lower than the center level of the 1st layer of the atmosphere.
 
 In this version, only single urban type can be considered.
 Several parameters are prepared to specify the urban geometry and anthropogenic heat. 
+
