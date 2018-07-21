@@ -85,17 +85,22 @@ When \nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART},  \nmitem{TI
 the restart files are created at the end of the simulation, i.e. at \nmitem{TIME_DURATION}.
 The details of the restarted simulation are described in Section \ref{sec:restart}.
 
-\subsection{Finalization by wall-clock timer} \label{subsec:cfl_check}
+\subsection{Finalization by wall-clock timer} \label{subsec:wallclock_check}
 
 Some batch job system usually have the limit of the execution time. However, it is difficult to estimate the elapse time of the long-termed simulation, and the job sometimes exceeds the time limit.
 To solve this problem, \scalerm has the finalize option by using the self timer.
+
 When the elapse time reached the time specified by \nmitem{TIME_WALLCLOCK_LIMIT} (in second), the simulation outputs the restart file and finalize the time loop, even if the timestep is not finished.
+There is the safety factor for \nmitem{TIME_WALLCLOCK_LIMIT}. The default value is 0.9 and specified by \nmitem{TIME_WALLCLOCK_SAFE}.
+
 
 As described above, the interval of the restart output should be a multiples of time steps for all physical processes and surface submodels. However, the self timer will stop the simulation suddenly.
-Thus the wall clock will be checked the time interval specified by \nmitem{TIME_DT_WALLCLOCK_CHECK} and \nmitem{TIME_DT_WALLCLOCK_CHECK_UNIT}. When these parameters are not specified, maximum time interval in the physical process and the surface submodel is set.
+To avoid restart output at a time other than expected timing, you can specify the timing to check the wall clock time.
+The wall clock will be checked the time interval specified by \nmitem{TIME_DT_WALLCLOCK_CHECK} and \nmitem{TIME_DT_WALLCLOCK_CHECK_UNIT}. When these parameters are not specified, maximum time interval in the physical process and the surface submodel is set.
 Note that if you set a very long interval for checking, the timing of the finalization may delay.
 
-There is the safety factor for \nmitem{TIME_WALLCLOCK_LIMIT}. The default value is 0.9 and specified by \nmitem{TIME_WALLCLOCK_SAFE}. In the sample above, the \nmitem{TIME_WALLCLOCK_LIMIT} and \nmitem{TIME_WALLCLOCK_SAFE} are set to 24 hours and 0.95, respectively. The wall clock is checked every 6 hours of the simulation time. When the elapse time exceeds 22.8 hours, the restart file will be generated and the simulation will stop.
+ In the sample above, the \nmitem{TIME_WALLCLOCK_LIMIT} and \nmitem{TIME_WALLCLOCK_SAFE} are set to 24 hours and 0.95, respectively.
+The wall clock is checked every 6 hours of the simulation time. When the elapse time exceeds 22.8 hours, the restart file will be generated and the simulation will stop.
 
 
 
