@@ -43,9 +43,6 @@ module mod_ocean_driver
   !
   !++ Private parameters & variables
   !
-  integer,  private, parameter   :: I_ICEFREE = 1
-  integer,  private, parameter   :: I_ICE     = 2
-
   real(RP), private, allocatable :: QVEF(:,:)
   real(RP), private, allocatable :: SR  (:,:)
 
@@ -147,6 +144,7 @@ contains
           call OCEAN_PHY_ROUGHNESS_seaice_setup
        case ( 'MOON07' )
           call OCEAN_PHY_ROUGHNESS_moon07_setup
+          call OCEAN_PHY_ROUGHNESS_seaice_setup
        case ( 'CONST' )
           call OCEAN_PHY_ROUGHNESS_const_setup
        case ( 'INIT' )
@@ -339,352 +337,349 @@ contains
 
 
 
-    !########## surface process (ice-free & ice) ##########
-    do n = I_ICEFREE, I_ICE
+    !########## surface process (ice-free ocean) ##########
 
-       if ( n == I_ICEFREE ) then
+    !$omp parallel do
+    do j = OJS, OJE
+    do i = OIS, OIE
+       sfc_frac(i,j) = 1.0_RP - OCEAN_ICE_FRAC(i,j)
+       sfc_temp(i,j) = OCEAN_TEMP(OKS,i,j)
+    enddo
+    enddo
 
-          !$omp parallel do
-          do j = OJS, OJE
-          do i = OIS, OIE
-             sfc_frac(i,j) = 1.0_RP - OCEAN_ICE_FRAC(i,j)
-             sfc_temp(i,j) = OCEAN_TEMP(OKS,i,j)
-          enddo
-          enddo
+    ! albedo
+    select case ( OCEAN_ALB_TYPE )
+    case ( 'NAKAJIMA00' )
+       ! for Near-IR, IR
+       call OCEAN_PHY_ALBEDO_const     ( OIA, OIS, OIE,        & ! [IN]
+                                         OJA, OJS, OJE,        & ! [IN]
+                                         sfc_albedo  (:,:,:,:) ) ! [OUT]
+       ! for VIS (overwrite)
+       call OCEAN_PHY_ALBEDO_nakajima00( OIA, OIS, OIE,              & ! [IN]
+                                         OJA, OJS, OJE,              & ! [IN]
+                                         ATMOS_cosSZA(:,:),          & ! [IN]
+                                         sfc_albedo  (:,:,:,I_R_VIS) ) ! [OUT]
+    case ( 'CONST' )
+       call OCEAN_PHY_ALBEDO_const     ( OIA, OIS, OIE,        & ! [IN]
+                                         OJA, OJS, OJE,        & ! [IN]
+                                         sfc_albedo  (:,:,:,:) ) ! [OUT]
+    case ( 'INIT' )
+       ! Never update OCEAN_SFC_albedo from initial condition
+       do irgn = I_R_IR, I_R_VIS
+       do idir = I_R_direct, I_R_diffuse
+       do j    = OJS, OJE
+       do i    = OIS, OIE
+          sfc_albedo(i,j,idir,irgn) = OCEAN_SFC_albedo(i,j,idir,irgn)
+       enddo
+       enddo
+       enddo
+       enddo
+    end select
 
-          ! albedo
-          select case ( OCEAN_ALB_TYPE )
-          case ( 'NAKAJIMA00' )
-             ! for Near-IR, IR
-             call OCEAN_PHY_ALBEDO_const     ( OIA, OIS, OIE,        & ! [IN]
-                                               OJA, OJS, OJE,        & ! [IN]
-                                               sfc_albedo  (:,:,:,:) ) ! [OUT]
-             ! for VIS (overwrite)
-             call OCEAN_PHY_ALBEDO_nakajima00( OIA, OIS, OIE,              & ! [IN]
-                                               OJA, OJS, OJE,              & ! [IN]
-                                               ATMOS_cosSZA(:,:),          & ! [IN]
-                                               sfc_albedo  (:,:,:,I_R_VIS) ) ! [OUT]
-          case ( 'CONST' )
-             call OCEAN_PHY_ALBEDO_const     ( OIA, OIS, OIE,        & ! [IN]
-                                               OJA, OJS, OJE,        & ! [IN]
-                                               sfc_albedo  (:,:,:,:) ) ! [OUT]
-          case ( 'INIT' )
-             ! Never update OCEAN_SFC_albedo from initial condition
-             do irgn = I_R_IR, I_R_VIS
-             do idir = I_R_direct, I_R_diffuse
-             do j    = OJS, OJE
-             do i    = OIS, OIE
-                sfc_albedo(i,j,idir,irgn) = OCEAN_SFC_albedo(i,j,idir,irgn)
-             enddo
-             enddo
-             enddo
-             enddo
-          end select
+    ! roughness length
+    select case ( OCEAN_RGN_TYPE )
+    case ( 'MILLER92' )
+       call OCEAN_PHY_ROUGHNESS_miller92( OIA, OIS, OIE,   & ! [IN]
+                                          OJA, OJS, OJE,   & ! [IN]
+                                          ATMOS_Uabs(:,:), & ! [IN]
+                                          sfc_Z0M   (:,:), & ! [OUT]
+                                          sfc_Z0H   (:,:), & ! [OUT]
+                                          sfc_Z0E   (:,:)  ) ! [OUT]
+    case ( 'MOON07' )
+       call OCEAN_PHY_ROUGHNESS_moon07  ( OIA, OIS, OIE,      & ! [IN]
+                                          OJA, OJS, OJE,      & ! [IN]
+                                          ATMOS_Uabs   (:,:), & ! [IN]
+                                          REAL_Z1      (:,:), & ! [IN]
+                                          OCEAN_OCN_Z0M(:,:), & ! [INOUT]
+                                          sfc_Z0H      (:,:), & ! [OUT]
+                                          sfc_Z0E      (:,:)  ) ! [OUT]
 
-          ! roughness length
-          select case ( OCEAN_RGN_TYPE )
-          case ( 'MILLER92' )
-             call OCEAN_PHY_ROUGHNESS_miller92( OIA, OIS, OIE,   & ! [IN]
-                                                OJA, OJS, OJE,   & ! [IN]
-                                                ATMOS_Uabs(:,:), & ! [IN]
-                                                sfc_Z0M   (:,:), & ! [OUT]
-                                                sfc_Z0H   (:,:), & ! [OUT]
-                                                sfc_Z0E   (:,:)  ) ! [OUT]
-          case ( 'MOON07' )
-             call OCEAN_PHY_ROUGHNESS_moon07  ( OIA, OIS, OIE,      & ! [IN]
-                                                OJA, OJS, OJE,      & ! [IN]
-                                                ATMOS_Uabs   (:,:), & ! [IN]
-                                                REAL_Z1      (:,:), & ! [IN]
-                                                OCEAN_OCN_Z0M(:,:), & ! [INOUT]
-                                                sfc_Z0H      (:,:), & ! [OUT]
-                                                sfc_Z0E      (:,:)  ) ! [OUT]
+       !$omp parallel do
+       do j = OJS, OJE
+       do i = OIS, OIE
+          sfc_Z0M(i,j) = OCEAN_OCN_Z0M(i,j)
+       enddo
+       enddo
+    case ( 'CONST' )
+       call OCEAN_PHY_ROUGHNESS_const   ( OIA, OIS, OIE,   & ! [IN]
+                                          OJA, OJS, OJE,   & ! [IN]
+                                          sfc_Z0M   (:,:), & ! [OUT]
+                                          sfc_Z0H   (:,:), & ! [OUT]
+                                          sfc_Z0E   (:,:)  ) ! [OUT]
+    case ( 'INIT' )
+       ! Never update OCEAN_SFC_Z0M/H/E from initial condition
+       !$omp parallel do
+       do j = OJS, OJE
+       do i = OIS, OIE
+          sfc_Z0M(i,j) = OCEAN_SFC_Z0M(i,j)
+          sfc_Z0H(i,j) = OCEAN_SFC_Z0H(i,j)
+          sfc_Z0E(i,j) = OCEAN_SFC_Z0E(i,j)
+       enddo
+       enddo
+    end select
 
-             !$omp parallel do
-             do j = OJS, OJE
-             do i = OIS, OIE
-                sfc_Z0M(i,j) = OCEAN_OCN_Z0M(i,j)
-             enddo
-             enddo
-          case ( 'CONST' )
-             call OCEAN_PHY_ROUGHNESS_const   ( OIA, OIS, OIE,   & ! [IN]
-                                                OJA, OJS, OJE,   & ! [IN]
-                                                sfc_Z0M   (:,:), & ! [OUT]
-                                                sfc_Z0H   (:,:), & ! [OUT]
-                                                sfc_Z0E   (:,:)  ) ! [OUT]
-          case ( 'INIT' )
-             ! Never update OCEAN_SFC_Z0M/H/E from initial condition
-             !$omp parallel do
-             do j = OJS, OJE
-             do i = OIS, OIE
-                sfc_Z0M(i,j) = OCEAN_SFC_Z0M(i,j)
-                sfc_Z0H(i,j) = OCEAN_SFC_Z0H(i,j)
-                sfc_Z0E(i,j) = OCEAN_SFC_Z0E(i,j)
-             enddo
-             enddo
-          end select
+    ! tendency
+    select case ( OCEAN_SFC_TYPE )
+    case ( 'FIXED-TEMP' )
+       call CPL_PHY_SFC_fixed_temp( OIA, OIS, OIE,              & ! [IN]
+                                    OJA, OJS, OJE,              & ! [IN]
+                                    ATMOS_TEMP       (:,:),     & ! [IN]
+                                    ATMOS_PRES       (:,:),     & ! [IN]
+                                    ATMOS_W          (:,:),     & ! [IN]
+                                    ATMOS_U          (:,:),     & ! [IN]
+                                    ATMOS_V          (:,:),     & ! [IN]
+                                    ATMOS_DENS       (:,:),     & ! [IN]
+                                    ATMOS_QV         (:,:),     & ! [IN]
+                                    LHV              (:,:),     & ! [IN]
+                                    REAL_Z1          (:,:),     & ! [IN]
+                                    ATMOS_PBL        (:,:),     & ! [IN]
+                                    ATMOS_SFC_DENS   (:,:),     & ! [IN]
+                                    ATMOS_SFC_PRES   (:,:),     & ! [IN]
+                                    ATMOS_SFLX_rad_dn(:,:,:,:), & ! [IN]
+                                    sfc_temp         (:,:),     & ! [IN]
+                                    QVEF             (:,:),     & ! [IN]
+                                    sfc_albedo       (:,:,:,:), & ! [IN]
+                                    SR               (:,:),     & ! [IN]
+                                    sfc_Z0M          (:,:),     & ! [IN]
+                                    sfc_Z0H          (:,:),     & ! [IN]
+                                    sfc_Z0E          (:,:),     & ! [IN]
+                                    exists_ocean     (:,:),     & ! [IN]
+                                    dt,                         & ! [IN]
+                                    sflx_MW          (:,:),     & ! [OUT]
+                                    sflx_MU          (:,:),     & ! [OUT]
+                                    sflx_MV          (:,:),     & ! [OUT]
+                                    sflx_SH          (:,:),     & ! [OUT]
+                                    sflx_QV          (:,:),     & ! [OUT]
+                                    sflx_G           (:,:),     & ! [OUT]
+                                    U10              (:,:),     & ! [OUT]
+                                    V10              (:,:),     & ! [OUT]
+                                    T2               (:,:),     & ! [OUT]
+                                    Q2               (:,:)      ) ! [OUT]
+    end select
 
-          ! tendency
-          select case ( OCEAN_SFC_TYPE )
-          case ( 'FIXED-TEMP' )
-             call CPL_PHY_SFC_fixed_temp( OIA, OIS, OIE,              & ! [IN]
-                                          OJA, OJS, OJE,              & ! [IN]
-                                          ATMOS_TEMP       (:,:),     & ! [IN]
-                                          ATMOS_PRES       (:,:),     & ! [IN]
-                                          ATMOS_W          (:,:),     & ! [IN]
-                                          ATMOS_U          (:,:),     & ! [IN]
-                                          ATMOS_V          (:,:),     & ! [IN]
-                                          ATMOS_DENS       (:,:),     & ! [IN]
-                                          ATMOS_QV         (:,:),     & ! [IN]
-                                          LHV              (:,:),     & ! [IN]
-                                          REAL_Z1          (:,:),     & ! [IN]
-                                          ATMOS_PBL        (:,:),     & ! [IN]
-                                          ATMOS_SFC_DENS   (:,:),     & ! [IN]
-                                          ATMOS_SFC_PRES   (:,:),     & ! [IN]
-                                          ATMOS_SFLX_rad_dn(:,:,:,:), & ! [IN]
-                                          sfc_temp         (:,:),     & ! [IN]
-                                          QVEF             (:,:),     & ! [IN]
-                                          sfc_albedo       (:,:,:,:), & ! [IN]
-                                          SR               (:,:),     & ! [IN]
-                                          sfc_Z0M          (:,:),     & ! [IN]
-                                          sfc_Z0H          (:,:),     & ! [IN]
-                                          sfc_Z0E          (:,:),     & ! [IN]
-                                          exists_ocean     (:,:),     & ! [IN]
-                                          dt,                         & ! [IN]
-                                          sflx_MW          (:,:),     & ! [OUT]
-                                          sflx_MU          (:,:),     & ! [OUT]
-                                          sflx_MV          (:,:),     & ! [OUT]
-                                          sflx_SH          (:,:),     & ! [OUT]
-                                          sflx_QV          (:,:),     & ! [OUT]
-                                          sflx_G           (:,:),     & ! [OUT]
-                                          U10              (:,:),     & ! [OUT]
-                                          V10              (:,:),     & ! [OUT]
-                                          T2               (:,:),     & ! [OUT]
-                                          Q2               (:,:)      ) ! [OUT]
-          end select
+    !$omp parallel do
+    do j = OJS, OJE
+    do i = OIS, OIE
+       sflx_water(i,j) = ATMOS_SFLX_rain(i,j) - sflx_QV(i,j)
+       sflx_ice  (i,j) = ATMOS_SFLX_snow(i,j)
+    enddo
+    enddo
 
-          !$omp parallel do
-          do j = OJS, OJE
-          do i = OIS, OIE
-             sflx_water(i,j) = ATMOS_SFLX_rain(i,j) - sflx_QV(i,j)
-             sflx_ice  (i,j) = ATMOS_SFLX_snow(i,j)
-          enddo
-          enddo
+    ! weighted average
 
-          ! weighted average
+    !$omp parallel do
+    do j = OJS, OJE
+    do i = OIS, OIE
+       OCEAN_SFC_TEMP  (i,j) = sfc_temp  (i,j) * sfc_frac(i,j)
+       OCEAN_SFC_Z0M   (i,j) = sfc_Z0M   (i,j) * sfc_frac(i,j)
+       OCEAN_SFC_Z0H   (i,j) = sfc_Z0H   (i,j) * sfc_frac(i,j)
+       OCEAN_SFC_Z0E   (i,j) = sfc_Z0E   (i,j) * sfc_frac(i,j)
+       OCEAN_SFLX_MW   (i,j) = sflx_MW   (i,j) * sfc_frac(i,j)
+       OCEAN_SFLX_MU   (i,j) = sflx_MU   (i,j) * sfc_frac(i,j)
+       OCEAN_SFLX_MV   (i,j) = sflx_MV   (i,j) * sfc_frac(i,j)
+       OCEAN_SFLX_SH   (i,j) = sflx_SH   (i,j) * sfc_frac(i,j)
+       OCEAN_SFLX_evap (i,j) = sflx_QV   (i,j) * sfc_frac(i,j)
+       OCEAN_U10       (i,j) = U10       (i,j) * sfc_frac(i,j)
+       OCEAN_V10       (i,j) = V10       (i,j) * sfc_frac(i,j)
+       OCEAN_T2        (i,j) = T2        (i,j) * sfc_frac(i,j)
+       OCEAN_Q2        (i,j) = Q2        (i,j) * sfc_frac(i,j)
 
-          !$omp parallel do
-          do j = OJS, OJE
-          do i = OIS, OIE
-             OCEAN_SFC_TEMP  (i,j) = sfc_temp  (i,j) * sfc_frac(i,j)
-             OCEAN_SFC_Z0M   (i,j) = sfc_Z0M   (i,j) * sfc_frac(i,j)
-             OCEAN_SFC_Z0H   (i,j) = sfc_Z0H   (i,j) * sfc_frac(i,j)
-             OCEAN_SFC_Z0E   (i,j) = sfc_Z0E   (i,j) * sfc_frac(i,j)
-             OCEAN_SFLX_MW   (i,j) = sflx_MW   (i,j) * sfc_frac(i,j)
-             OCEAN_SFLX_MU   (i,j) = sflx_MU   (i,j) * sfc_frac(i,j)
-             OCEAN_SFLX_MV   (i,j) = sflx_MV   (i,j) * sfc_frac(i,j)
-             OCEAN_SFLX_SH   (i,j) = sflx_SH   (i,j) * sfc_frac(i,j)
-             OCEAN_SFLX_evap (i,j) = sflx_QV   (i,j) * sfc_frac(i,j)
-             OCEAN_U10       (i,j) = U10       (i,j) * sfc_frac(i,j)
-             OCEAN_V10       (i,j) = V10       (i,j) * sfc_frac(i,j)
-             OCEAN_T2        (i,j) = T2        (i,j) * sfc_frac(i,j)
-             OCEAN_Q2        (i,j) = Q2        (i,j) * sfc_frac(i,j)
+       OCEAN_SFLX_G    (i,j) = sflx_G    (i,j) * sfc_frac(i,j) * (-1.0_RP) ! upward to downward
+       OCEAN_SFLX_water(i,j) = sflx_water(i,j) * sfc_frac(i,j)
+       OCEAN_SFLX_ice  (i,j) = sflx_ice  (i,j) * sfc_frac(i,j)
+    enddo
+    enddo
 
-             OCEAN_SFLX_G    (i,j) = sflx_G    (i,j) * sfc_frac(i,j) * (-1.0_RP) ! upward to downward
-             OCEAN_SFLX_water(i,j) = sflx_water(i,j) * sfc_frac(i,j)
-             OCEAN_SFLX_ice  (i,j) = sflx_ice  (i,j) * sfc_frac(i,j)
-          enddo
-          enddo
+    !$omp parallel do
+    do irgn = I_R_IR, I_R_VIS
+    do idir = I_R_direct, I_R_diffuse
+    do j    = OJS, OJE
+    do i    = OIS, OIE
+       OCEAN_SFC_albedo(i,j,idir,irgn) = sfc_albedo(i,j,idir,irgn) * sfc_frac(i,j)
+    enddo
+    enddo
+    enddo
+    enddo
 
-          !$omp parallel do
+
+
+    !########## surface process (ice) ##########
+
+    if ( OCEAN_ICE_TYPE /= 'NONE' ) then
+
+       !$omp parallel do
+       do j = OJS, OJE
+       do i = OIS, OIE
+          sfc_frac   (i,j) = OCEAN_ICE_FRAC(i,j)
+          sfc_temp   (i,j) = OCEAN_ICE_TEMP(i,j)
+          subsfc_temp(i,j) = OCEAN_TEMP(OKS,i,j)
+       enddo
+       enddo
+
+       ! albedo
+       select case ( OCEAN_ALB_TYPE )
+       case ( 'NAKAJIMA00' )
+          call OCEAN_PHY_ALBEDO_seaice( OIA, OIS, OIE,      & ! [IN]
+                                        OJA, OJS, OJE,      & ! [IN]
+                                        sfc_albedo(:,:,:,:) ) ! [OUT]
+       case ( 'CONST' )
+          call OCEAN_PHY_ALBEDO_const ( OIA, OIS, OIE,      & ! [IN]
+                                        OJA, OJS, OJE,      & ! [IN]
+                                        sfc_albedo(:,:,:,:) ) ! [OUT]
+       case ( 'INIT' )
+          ! Never update OCEAN_SFC_albedo from initial condition
           do irgn = I_R_IR, I_R_VIS
           do idir = I_R_direct, I_R_diffuse
           do j    = OJS, OJE
           do i    = OIS, OIE
-             OCEAN_SFC_albedo(i,j,idir,irgn) = sfc_albedo(i,j,idir,irgn) * sfc_frac(i,j)
+             sfc_albedo(i,j,idir,irgn) = OCEAN_SFC_albedo(i,j,idir,irgn)
           enddo
           enddo
           enddo
           enddo
+       end select
 
-       elseif( n == I_ICE ) then
-
-          if( OCEAN_ICE_TYPE == 'NONE' ) exit !skip
-
+       ! roughness length
+       select case ( OCEAN_RGN_TYPE )
+       case ( 'MILLER92', 'MOON07' )
+          call OCEAN_PHY_ROUGHNESS_seaice( OIA, OIS, OIE, & ! [IN]
+                                           OJA, OJS, OJE, & ! [IN]
+                                           sfc_Z0M(:,:),  & ! [OUT]
+                                           sfc_Z0H(:,:),  & ! [OUT]
+                                           sfc_Z0E(:,:)   ) ! [OUT]
+       case ( 'CONST' )
+          call OCEAN_PHY_ROUGHNESS_const ( OIA, OIS, OIE, & ! [IN]
+                                           OJA, OJS, OJE, & ! [IN]
+                                           sfc_Z0M(:,:),  & ! [OUT]
+                                           sfc_Z0H(:,:),  & ! [OUT]
+                                           sfc_Z0E(:,:)   ) ! [OUT]
+       case ( 'INIT' )
+          ! Never update OCEAN_SFC_Z0M/H/E from initial condition
           !$omp parallel do
           do j = OJS, OJE
           do i = OIS, OIE
-             sfc_frac   (i,j) = OCEAN_ICE_FRAC(i,j)
-             sfc_temp   (i,j) = OCEAN_ICE_TEMP(i,j)
-             subsfc_temp(i,j) = OCEAN_TEMP(OKS,i,j)
+             sfc_Z0M(i,j) = OCEAN_SFC_Z0M(i,j)
+             sfc_Z0H(i,j) = OCEAN_SFC_Z0H(i,j)
+             sfc_Z0E(i,j) = OCEAN_SFC_Z0E(i,j)
           enddo
           enddo
+       end select
 
-          ! albedo
-          select case ( OCEAN_ALB_TYPE )
-          case ( 'NAKAJIMA00' )
-             call OCEAN_PHY_ALBEDO_seaice( OIA, OIS, OIE,      & ! [IN]
-                                           OJA, OJS, OJE,      & ! [IN]
-                                           sfc_albedo(:,:,:,:) ) ! [OUT]
-          case ( 'CONST' )
-             call OCEAN_PHY_ALBEDO_const ( OIA, OIS, OIE,      & ! [IN]
-                                           OJA, OJS, OJE,      & ! [IN]
-                                           sfc_albedo(:,:,:,:) ) ! [OUT]
-          case ( 'INIT' )
-             ! Never update OCEAN_SFC_albedo from initial condition
-             do irgn = I_R_IR, I_R_VIS
-             do idir = I_R_direct, I_R_diffuse
-             do j    = OJS, OJE
-             do i    = OIS, OIE
-                sfc_albedo(i,j,idir,irgn) = OCEAN_SFC_albedo(i,j,idir,irgn)
-             enddo
-             enddo
-             enddo
-             enddo
-          end select
+       ! thermal conductivity / depth
+       call OCEAN_PHY_TC_seaice( OIA, OIS, OIE,       & ! [IN]
+                                 OJA, OJS, OJE,       & ! [IN]
+                                 OCEAN_ICE_MASS(:,:), & ! [IN]
+                                 OCEAN_ICE_FRAC(:,:), & ! [IN]
+                                 TC_dz         (:,:)  ) ! [OUT]
 
-          ! roughness length
-          select case ( OCEAN_RGN_TYPE )
-          case ( 'MILLER92', 'MOON07' )
-             call OCEAN_PHY_ROUGHNESS_seaice( OIA, OIS, OIE, & ! [IN]
-                                              OJA, OJS, OJE, & ! [IN]
-                                              sfc_Z0M(:,:),  & ! [OUT]
-                                              sfc_Z0H(:,:),  & ! [OUT]
-                                              sfc_Z0E(:,:)   ) ! [OUT]
-          case ( 'CONST' )
-             call OCEAN_PHY_ROUGHNESS_const ( OIA, OIS, OIE, & ! [IN]
-                                              OJA, OJS, OJE, & ! [IN]
-                                              sfc_Z0M(:,:),  & ! [OUT]
-                                              sfc_Z0H(:,:),  & ! [OUT]
-                                              sfc_Z0E(:,:)   ) ! [OUT]
-          case ( 'INIT' )
-             ! Never update OCEAN_SFC_Z0M/H/E from initial condition
-             !$omp parallel do
-             do j = OJS, OJE
-             do i = OIS, OIE
-                sfc_Z0M(i,j) = OCEAN_SFC_Z0M(i,j)
-                sfc_Z0H(i,j) = OCEAN_SFC_Z0H(i,j)
-                sfc_Z0E(i,j) = OCEAN_SFC_Z0E(i,j)
-             enddo
-             enddo
-          end select
+       ! tendency
+       select case ( OCEAN_SFC_TYPE )
+       case ( 'FIXED-TEMP' )
+          call CPL_PHY_SFC_fixed_temp( OIA, OIS, OIE,              & ! [IN]
+                                       OJA, OJS, OJE,              & ! [IN]
+                                       ATMOS_TEMP       (:,:),     & ! [IN]
+                                       ATMOS_PRES       (:,:),     & ! [IN]
+                                       ATMOS_W          (:,:),     & ! [IN]
+                                       ATMOS_U          (:,:),     & ! [IN]
+                                       ATMOS_V          (:,:),     & ! [IN]
+                                       ATMOS_DENS       (:,:),     & ! [IN]
+                                       ATMOS_QV         (:,:),     & ! [IN]
+                                       LHS              (:,:),     & ! [IN]
+                                       REAL_Z1          (:,:),     & ! [IN]
+                                       ATMOS_PBL        (:,:),     & ! [IN]
+                                       ATMOS_SFC_DENS   (:,:),     & ! [IN]
+                                       ATMOS_SFC_PRES   (:,:),     & ! [IN]
+                                       ATMOS_SFLX_rad_dn(:,:,:,:), & ! [IN]
+                                       sfc_temp         (:,:),     & ! [IN]
+                                       QVEF             (:,:),     & ! [IN]
+                                       sfc_albedo       (:,:,:,:), & ! [IN]
+                                       SR               (:,:),     & ! [IN]
+                                       sfc_Z0M          (:,:),     & ! [IN]
+                                       sfc_Z0H          (:,:),     & ! [IN]
+                                       sfc_Z0E          (:,:),     & ! [IN]
+                                       exists_ocean     (:,:),     & ! [IN]
+                                       dt,                         & ! [IN]
+                                       sflx_MW          (:,:),     & ! [OUT]
+                                       sflx_MU          (:,:),     & ! [OUT]
+                                       sflx_MV          (:,:),     & ! [OUT]
+                                       sflx_SH          (:,:),     & ! [OUT]
+                                       sflx_QV          (:,:),     & ! [OUT]
+                                       sflx_hbalance    (:,:),     & ! [OUT]
+                                       U10              (:,:),     & ! [OUT]
+                                       V10              (:,:),     & ! [OUT]
+                                       T2               (:,:),     & ! [OUT]
+                                       Q2               (:,:)      ) ! [OUT]
+       end select
 
-          ! thermal conductivity / depth
-          call OCEAN_PHY_TC_seaice( OIA, OIS, OIE,       & ! [IN]
-                                    OJA, OJS, OJE,       & ! [IN]
-                                    OCEAN_ICE_MASS(:,:), & ! [IN]
-                                    OCEAN_ICE_FRAC(:,:), & ! [IN]
-                                    TC_dz         (:,:)  ) ! [OUT]
-
-          ! tendency
-          select case ( OCEAN_SFC_TYPE )
-          case ( 'FIXED-TEMP' )
-             call CPL_PHY_SFC_fixed_temp( OIA, OIS, OIE,              & ! [IN]
-                                          OJA, OJS, OJE,              & ! [IN]
-                                          ATMOS_TEMP       (:,:),     & ! [IN]
-                                          ATMOS_PRES       (:,:),     & ! [IN]
-                                          ATMOS_W          (:,:),     & ! [IN]
-                                          ATMOS_U          (:,:),     & ! [IN]
-                                          ATMOS_V          (:,:),     & ! [IN]
-                                          ATMOS_DENS       (:,:),     & ! [IN]
-                                          ATMOS_QV         (:,:),     & ! [IN]
-                                          LHS              (:,:),     & ! [IN]
-                                          REAL_Z1          (:,:),     & ! [IN]
-                                          ATMOS_PBL        (:,:),     & ! [IN]
-                                          ATMOS_SFC_DENS   (:,:),     & ! [IN]
-                                          ATMOS_SFC_PRES   (:,:),     & ! [IN]
-                                          ATMOS_SFLX_rad_dn(:,:,:,:), & ! [IN]
-                                          sfc_temp         (:,:),     & ! [IN]
-                                          QVEF             (:,:),     & ! [IN]
-                                          sfc_albedo       (:,:,:,:), & ! [IN]
-                                          SR               (:,:),     & ! [IN]
-                                          sfc_Z0M          (:,:),     & ! [IN]
-                                          sfc_Z0H          (:,:),     & ! [IN]
-                                          sfc_Z0E          (:,:),     & ! [IN]
-                                          exists_ocean     (:,:),     & ! [IN]
-                                          dt,                         & ! [IN]
-                                          sflx_MW          (:,:),     & ! [OUT]
-                                          sflx_MU          (:,:),     & ! [OUT]
-                                          sflx_MV          (:,:),     & ! [OUT]
-                                          sflx_SH          (:,:),     & ! [OUT]
-                                          sflx_QV          (:,:),     & ! [OUT]
-                                          sflx_hbalance    (:,:),     & ! [OUT]
-                                          U10              (:,:),     & ! [OUT]
-                                          V10              (:,:),     & ! [OUT]
-                                          T2               (:,:),     & ! [OUT]
-                                          Q2               (:,:)      ) ! [OUT]
-          end select
-
-          ! roughness length
-          select case ( OCEAN_ICE_TYPE )
-          case ( 'SIMPLE' )
-             call OCEAN_PHY_ICE_simple( OIA, OIS, OIE,         & ! [IN]
-                                        OJA, OJS, OJE,         & ! [IN]
-                                        LHS             (:,:), & ! [IN]
-                                        sflx_QV         (:,:), & ! [IN]
-                                        ATMOS_SFLX_rain (:,:), & ! [IN]
-                                        ATMOS_SFLX_snow (:,:), & ! [IN]
-                                        sflx_hbalance   (:,:), & ! [IN]
-                                        subsfc_temp     (:,:), & ! [IN]
-                                        TC_dz           (:,:), & ! [IN]
-                                        OCEAN_ICE_TEMP  (:,:), & ! [IN]
-                                        OCEAN_ICE_MASS  (:,:), & ! [IN]
-                                        exists_ocean    (:,:), & ! [IN]
-                                        dt,                    & ! [IN]
-                                        OCEAN_ICE_TEMP_t(:,:), & ! [OUT]
-                                        OCEAN_ICE_MASS_t(:,:), & ! [OUT]
-                                        sflx_G          (:,:), & ! [OUT]
-                                        sflx_water      (:,:), & ! [OUT]
-                                        sflx_ice        (:,:)  ) ! [OUT]
-          case ( 'INIT' )
-             !$omp parallel do
-             do j = OJS, OJE
-             do i = OIS, OIE
-                sflx_G    (i,j) = sflx_hbalance  (i,j)
-                sflx_water(i,j) = 0.0_RP ! no flux from seaice to ocean
-                sflx_ice  (i,j) = 0.0_RP ! no flux from seaice to ocean
-             enddo
-             enddo
-          end select
-
-          ! weighted average
-
+       ! roughness length
+       select case ( OCEAN_ICE_TYPE )
+       case ( 'SIMPLE' )
+          call OCEAN_PHY_ICE_simple( OIA, OIS, OIE,         & ! [IN]
+                                     OJA, OJS, OJE,         & ! [IN]
+                                     LHS             (:,:), & ! [IN]
+                                     sflx_QV         (:,:), & ! [IN]
+                                     ATMOS_SFLX_rain (:,:), & ! [IN]
+                                     ATMOS_SFLX_snow (:,:), & ! [IN]
+                                     sflx_hbalance   (:,:), & ! [IN]
+                                     subsfc_temp     (:,:), & ! [IN]
+                                     TC_dz           (:,:), & ! [IN]
+                                     OCEAN_ICE_TEMP  (:,:), & ! [IN]
+                                     OCEAN_ICE_MASS  (:,:), & ! [IN]
+                                     exists_ocean    (:,:), & ! [IN]
+                                     dt,                    & ! [IN]
+                                     OCEAN_ICE_TEMP_t(:,:), & ! [OUT]
+                                     OCEAN_ICE_MASS_t(:,:), & ! [OUT]
+                                     sflx_G          (:,:), & ! [OUT]
+                                     sflx_water      (:,:), & ! [OUT]
+                                     sflx_ice        (:,:)  ) ! [OUT]
+       case ( 'INIT' )
           !$omp parallel do
           do j = OJS, OJE
           do i = OIS, OIE
-             OCEAN_SFC_TEMP  (i,j) = OCEAN_SFC_TEMP  (i,j) + sfc_temp  (i,j) * sfc_frac(i,j)
-             OCEAN_SFC_Z0M   (i,j) = OCEAN_SFC_Z0M   (i,j) + sfc_Z0M   (i,j) * sfc_frac(i,j)
-             OCEAN_SFC_Z0H   (i,j) = OCEAN_SFC_Z0H   (i,j) + sfc_Z0H   (i,j) * sfc_frac(i,j)
-             OCEAN_SFC_Z0E   (i,j) = OCEAN_SFC_Z0E   (i,j) + sfc_Z0E   (i,j) * sfc_frac(i,j)
-             OCEAN_SFLX_MW   (i,j) = OCEAN_SFLX_MW   (i,j) + sflx_MW   (i,j) * sfc_frac(i,j)
-             OCEAN_SFLX_MU   (i,j) = OCEAN_SFLX_MU   (i,j) + sflx_MU   (i,j) * sfc_frac(i,j)
-             OCEAN_SFLX_MV   (i,j) = OCEAN_SFLX_MV   (i,j) + sflx_MV   (i,j) * sfc_frac(i,j)
-             OCEAN_SFLX_SH   (i,j) = OCEAN_SFLX_SH   (i,j) + sflx_SH   (i,j) * sfc_frac(i,j)
-             OCEAN_SFLX_evap (i,j) = OCEAN_SFLX_evap (i,j) + sflx_QV   (i,j) * sfc_frac(i,j)
-             OCEAN_U10       (i,j) = OCEAN_U10       (i,j) + U10       (i,j) * sfc_frac(i,j)
-             OCEAN_V10       (i,j) = OCEAN_V10       (i,j) + V10       (i,j) * sfc_frac(i,j)
-             OCEAN_T2        (i,j) = OCEAN_T2        (i,j) + T2        (i,j) * sfc_frac(i,j)
-             OCEAN_Q2        (i,j) = OCEAN_Q2        (i,j) + Q2        (i,j) * sfc_frac(i,j)
+             sflx_G    (i,j) = sflx_hbalance  (i,j)
+             sflx_water(i,j) = 0.0_RP ! no flux from seaice to ocean
+             sflx_ice  (i,j) = 0.0_RP ! no flux from seaice to ocean
+          enddo
+          enddo
+       end select
 
-             OCEAN_SFLX_G    (i,j) = OCEAN_SFLX_G    (i,j) + sflx_G    (i,j) * sfc_frac(i,j) * (-1.0_RP) ! upward to downward
-             OCEAN_SFLX_water(i,j) = OCEAN_SFLX_water(i,j) + sflx_water(i,j) * sfc_frac(i,j)
-             OCEAN_SFLX_ice  (i,j) = OCEAN_SFLX_ice  (i,j) + sflx_ice  (i,j) * sfc_frac(i,j)
-          enddo
-          enddo
+       ! weighted average
 
-          !$omp parallel do
-          do irgn = I_R_IR, I_R_VIS
-          do idir = I_R_direct, I_R_diffuse
-          do j    = OJS, OJE
-          do i    = OIS, OIE
-             OCEAN_SFC_albedo(i,j,idir,irgn) = OCEAN_SFC_albedo(i,j,idir,irgn) + sfc_albedo(i,j,idir,irgn) * sfc_frac(i,j)
-          enddo
-          enddo
-          enddo
-          enddo
+       !$omp parallel do
+       do j = OJS, OJE
+       do i = OIS, OIE
+          OCEAN_SFC_TEMP  (i,j) = OCEAN_SFC_TEMP  (i,j) + sfc_temp  (i,j) * sfc_frac(i,j)
+          OCEAN_SFC_Z0M   (i,j) = OCEAN_SFC_Z0M   (i,j) + sfc_Z0M   (i,j) * sfc_frac(i,j)
+          OCEAN_SFC_Z0H   (i,j) = OCEAN_SFC_Z0H   (i,j) + sfc_Z0H   (i,j) * sfc_frac(i,j)
+          OCEAN_SFC_Z0E   (i,j) = OCEAN_SFC_Z0E   (i,j) + sfc_Z0E   (i,j) * sfc_frac(i,j)
+          OCEAN_SFLX_MW   (i,j) = OCEAN_SFLX_MW   (i,j) + sflx_MW   (i,j) * sfc_frac(i,j)
+          OCEAN_SFLX_MU   (i,j) = OCEAN_SFLX_MU   (i,j) + sflx_MU   (i,j) * sfc_frac(i,j)
+          OCEAN_SFLX_MV   (i,j) = OCEAN_SFLX_MV   (i,j) + sflx_MV   (i,j) * sfc_frac(i,j)
+          OCEAN_SFLX_SH   (i,j) = OCEAN_SFLX_SH   (i,j) + sflx_SH   (i,j) * sfc_frac(i,j)
+          OCEAN_SFLX_evap (i,j) = OCEAN_SFLX_evap (i,j) + sflx_QV   (i,j) * sfc_frac(i,j)
+          OCEAN_U10       (i,j) = OCEAN_U10       (i,j) + U10       (i,j) * sfc_frac(i,j)
+          OCEAN_V10       (i,j) = OCEAN_V10       (i,j) + V10       (i,j) * sfc_frac(i,j)
+          OCEAN_T2        (i,j) = OCEAN_T2        (i,j) + T2        (i,j) * sfc_frac(i,j)
+          OCEAN_Q2        (i,j) = OCEAN_Q2        (i,j) + Q2        (i,j) * sfc_frac(i,j)
 
-       endif ! ICEFREE/ICE
+          OCEAN_SFLX_G    (i,j) = OCEAN_SFLX_G    (i,j) + sflx_G    (i,j) * sfc_frac(i,j) * (-1.0_RP) ! upward to downward
+          OCEAN_SFLX_water(i,j) = OCEAN_SFLX_water(i,j) + sflx_water(i,j) * sfc_frac(i,j)
+          OCEAN_SFLX_ice  (i,j) = OCEAN_SFLX_ice  (i,j) + sflx_ice  (i,j) * sfc_frac(i,j)
+       enddo
+       enddo
 
-    enddo ! ICEFREE/ICE loop
+       !$omp parallel do
+       do irgn = I_R_IR, I_R_VIS
+       do idir = I_R_direct, I_R_diffuse
+       do j    = OJS, OJE
+       do i    = OIS, OIE
+          OCEAN_SFC_albedo(i,j,idir,irgn) = OCEAN_SFC_albedo(i,j,idir,irgn) + sfc_albedo(i,j,idir,irgn) * sfc_frac(i,j)
+       enddo
+       enddo
+       enddo
+       enddo
+
+    endif ! ICE process?
 
     !$omp parallel do
     do j = OJS, OJE
