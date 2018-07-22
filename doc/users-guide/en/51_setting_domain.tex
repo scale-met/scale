@@ -55,8 +55,8 @@ It is necessary to edit \namelist{PARAM_PRC_CARTESC} in \verb|pp.conf|, \verb|in
 and to conduct once again the processes of \verb|pp| and \verb|init|.
 \editboxtwo{
 \verb|&PARAM_PRC_CARTESC| & \\
-\verb| PRC_NUM_X       = 2,| & ; number of divisions by MPI parallelization in the {\XDIR}（zonal direction）\\
-\verb| PRC_NUM_Y       = 1,| & ; number of divisions by MPI parallelization in the {\YDIR}（meridional direction）\\
+\verb| PRC_NUM_X       = 2,| & ; number of divisions by MPI parallelization in the {\XDIR} (zonal direction) \\
+\verb| PRC_NUM_Y       = 1,| & ; number of divisions by MPI parallelization in the {\YDIR} (meridional direction) \\
 \verb|/|\\
 }
 The total number of MPI processes is given by \verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|.
@@ -87,7 +87,7 @@ Excluding the buffer region explained in Section \ref{subsec:buffer}, the horizo
 \editboxtwo{
 \verb|&PARAM_ATMOS_GRID_CARTESC  | & \\
 \verb| DX = 500.D0,| & ; grid interval along the zonal (X) direction\\
-\verb| DY = 500.D0,| & ; grid interval along the meridional（Y）direction\\
+\verb| DY = 500.D0,| & ; grid interval along the meridional (Y) direction\\
 \verb| DZ = 500.D0,| & ; grid interval along the vertical (Z) direction\\
 \verb|/|\\
 }
@@ -101,17 +101,17 @@ When the vertical grid locations are directly specified, provide them in \nmitem
 \verb| DX = 500.D0,|   & grid interval along the X direction (equidistant) [m]\\
 \verb| DY = 500.D0,|   & grid interval along the Y direction (equidistant) [m]\\
 \verb| FZ(:) = |       & location at face point along the Z direction [m] \\
-\verb| 　  80.000000000000000      ,| & \\
-\verb| 　  168.00000190734863      ,| & \\
-\verb| 　  264.80000610351567      ,| & \\
-\verb|　 　 　........ |           & \\
-\verb| 　  14910.428862936289      ,| & \\
-\verb| 　  15517.262523292475      ,| & \\
-\verb| 　  16215.121232702089      ,| & \\
-\verb| 　  17017.658748523147      ,| & \\
-\verb| 　  17940.576891717363      ,| & \\
-\verb| 　  19001.932756390710      ,| & \\
-\verb| 　  20222.492000765058      ,| & \\
+\verb|     80.000000000000000      ,| & \\
+\verb|     168.00000190734863      ,| & \\
+\verb|     264.80000610351567      ,| & \\
+\verb|           ........           | & \\
+\verb|     14910.428862936289      ,| & \\
+\verb|     15517.262523292475      ,| & \\
+\verb|     16215.121232702089      ,| & \\
+\verb|     17017.658748523147      ,| & \\
+\verb|     17940.576891717363      ,| & \\
+\verb|     19001.932756390710      ,| & \\
+\verb|     20222.492000765058      ,| & \\
 \verb| BUFFER_DZ = 5000.D0,|          & Refer to Section \ref{subsec:buffer}\\
 \verb| BUFFFACT  =   1.0D0,|          & Refer to Section \ref{subsec:buffer}\\
 \verb|/|\\
@@ -173,9 +173,9 @@ The width of the buffer region is specified in \namelist{PARAM_ATMOS_GRID_CARTES
 \item specify width [m] of the buffer region with \nmitem{BUFFER_DX, BUFFER_DY, BUFFER_DZ}
 \end{enumerate}
 Both parameters above are not set by default, and no buffer regions are set. If both are set, \nmitem{BUFFER_NX, BUFFER_NY, BUFFER_NZ} is given priority.
-The buffer regions along the horizontal directions are placed at the four domain boundaries, 
+The buffer regions along the horizontal directions are placed at the four domain boundaries,
 whereas those along the vertical direction are placed just at the top of the domain.
-Nothing is affected in the bottom region. 
+Nothing is affected in the bottom region.
 Note that the actual target region unaffected by the nudging (the region excluding the buffer regions) narrows compared to the calculation domain because the buffer region is placed on the inside of calculation domain.
 
 Two examples are as below.
@@ -361,7 +361,7 @@ otherwise
 $\alpha_y$ is derived by the same way as $\alpha_x$.
 
 The $\tau$ is the relaxation time in which the difference between the simulated value and the boundary value becomes $1/e$.
-The default value is ten times of \nmitem{TIME_DT}. 
+The default value is ten times of \nmitem{TIME_DT}.
 Please refer to Section \ref{sec:timeintiv} for \nmitem{TIME_DT}.
 
 

@@ -59,7 +59,7 @@ contains
     use scale_file_h, only: &
        FILE_dtypelist
     use scale_file, only: &
-       FILE_Get_Datainfo
+       FILE_get_dataInfo
     use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD, &
@@ -96,7 +96,7 @@ contains
              LOG_INFO("SNO_axis_getinfo",*) 'read info : ', trim(axisname(n))
           endif
 
-          call FILE_Get_Datainfo( basename,                           & ! [IN]
+          call FILE_get_dataInfo( basename,                           & ! [IN]
                                   axisname(n),                        & ! [IN]
                                   nowrank,                            & ! [IN]
                                   nowstep,                            & ! [IN]
@@ -1467,9 +1467,9 @@ contains
        ainfo, &
        debug  )
     use scale_file, only: &
-       FILE_Def_Axis,                 &
-       FILE_Def_AssociatedCoordinate, &
-       FILE_Set_Attribute
+       FILE_def_axis,                 &
+       FILE_def_associatedCoordinate, &
+       FILE_set_attribute
     use mod_sno_h, only: &
        axisinfo
     implicit none
@@ -1495,7 +1495,7 @@ contains
        if ( ainfo(n)%dim_rank == 1 ) then
           dsize = size(ainfo(n)%AXIS_1d(:))
 
-          call FILE_Def_Axis( fid,                       & ! [IN]
+          call FILE_def_axis( fid,                       & ! [IN]
                               ainfo(n)%varname,          & ! [IN]
                               ainfo(n)%description,      & ! [IN]
                               ainfo(n)%units,            & ! [IN]
@@ -1506,13 +1506,13 @@ contains
 
           select case(ainfo(n)%varname)
           case('oz','ozh','lz','lzh','uz','uzh','OCZ','OFZ','LCZ','LFZ','UCZ','UFZ')
-             call FILE_Set_Attribute( fid, ainfo(n)%varname, 'positive', 'down' )
+             call FILE_set_attribute( fid, ainfo(n)%varname, 'positive', 'down' )
           end select
 
        else
           drank = ainfo(n)%dim_rank
 
-          call FILE_Def_AssociatedCoordinate( fid,                        & ! [IN]
+          call FILE_def_associatedCoordinate( fid,                        & ! [IN]
                                               ainfo(n)%varname,           & ! [IN]
                                               ainfo(n)%description,       & ! [IN]
                                               ainfo(n)%units,             & ! [IN]
@@ -1526,13 +1526,13 @@ contains
                'cell_area_uyz_x','cell_area_xvz_y','cell_area_uyw_x','cell_area_xvw_y', &
                'cell_area_xyz_x','cell_area_uvz_y','cell_area_uvz_x','cell_area_xyz_y'  )
 
-             call FILE_Set_Attribute( fid, ainfo(n)%varname, "standard_name", "area" ) ! [IN]
+             call FILE_set_attribute( fid, ainfo(n)%varname, "standard_name", "area" ) ! [IN]
 
           case('cell_volume',                                                                                               &
                'cell_volume_wxy','cell_volume_zuy','cell_volume_zxv','cell_volume_oxy','cell_volume_lxy','cell_volume_uxy', &
                'cell_volume_xyw','cell_volume_uyz','cell_volume_xvz','cell_volume_xyo','cell_volume_xyl','cell_volume_xyu'  )
 
-             call FILE_Set_Attribute( fid, ainfo(n)%varname, "standard_name", "volume" ) ! [IN]
+             call FILE_set_attribute( fid, ainfo(n)%varname, "standard_name", "volume" ) ! [IN]
 
           end select
        endif
@@ -1548,8 +1548,8 @@ contains
        ainfo, &
        debug  )
     use scale_file, only: &
-       FILE_Write_Axis,                &
-       FILE_Write_AssociatedCoordinate
+       FILE_write_axis,                &
+       FILE_write_associatedCoordinate
     use mod_sno_h, only: &
        axisinfo
     implicit none
@@ -1570,20 +1570,20 @@ contains
     do n = 1, naxis
        if    ( ainfo(n)%dim_rank == 1 ) then
 
-          call FILE_Write_Axis( fid,                & ! [IN]
+          call FILE_write_axis( fid,                & ! [IN]
                                 ainfo(n)%varname,   & ! [IN]
                                 ainfo(n)%AXIS_1d(:) ) ! [IN]
 
        elseif( ainfo(n)%dim_rank == 2 ) then
 
-          call FILE_Write_AssociatedCoordinate( fid,                   & ! [IN]
+          call FILE_write_associatedCoordinate( fid,                   & ! [IN]
                                                 ainfo(n)%varname,      & ! [IN]
                                                 ainfo(n)%AXIS_2d(:,:), & ! [IN]
                                                 start(2:3)             ) ! [IN]
 
        elseif( ainfo(n)%dim_rank == 3 ) then
 
-          call FILE_Write_AssociatedCoordinate( fid,                     & ! [IN]
+          call FILE_write_associatedCoordinate( fid,                     & ! [IN]
                                                 ainfo(n)%varname,        & ! [IN]
                                                 ainfo(n)%AXIS_3d(:,:,:), & ! [IN]
                                                 start(1:3)               ) ! [IN]

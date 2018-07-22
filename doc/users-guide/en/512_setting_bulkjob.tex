@@ -79,14 +79,14 @@ An excerpt of \verb|run.d01.conf| for job \verb|0000| are as follows:
 \verb|/| \\
  \\
 \verb|&PARAM_ATMOS_BOUNDARY| \\
-\verb|　 　 　〜　...　〜|\\
+\verb| ~ ... ~             | \\
 \verb| ATMOS_BOUNDARY_IN_BASENAME    = "../init/0000/boundary_d01",| \\
-\verb|　 　 　〜　...　〜|\\
-\verb|/| \\
+\verb| ~ ... ~             | \\
+\verb|/                    | \\
  \\
 \verb|&PARAM_FILE_HISTORY| \\
 \verb| FILE_HISTORY_DEFAULT_BASENAME  = "0000/history_d01",| \\
-\verb|　 　 　〜　... 〜|\\
+\verb| ~ ... ~           | \\
 \verb|/| \\
 }
 
@@ -94,16 +94,16 @@ As shown in Fig. \ref{fig_bulkjob}, job directories exist in the same hierarchy 
 }}
 
 
-%% バルクジョブの実行は、全サブジョブを実行するのに必要なMPIプロセス数を指定し、
+%% バルクジョブの実行は, 全サブジョブを実行するのに必要なMPIプロセス数を指定し,
 %% \begin{verbatim}
 %%  $ mpirun  -n  135  ./scale-rm  launch.conf
 %% \end{verbatim}
-%% と行う。例では、一つのサブジョブあたり、$9 + 36 = 45$プロセス使用し、全体で3つのジョブを実行するので、
+%% と行う。例では, 一つのサブジョブあたり, $9 + 36 = 45$プロセス使用し, 全体で3つのジョブを実行するので,
 %% 総計で135プロセスを必要とする。
 %% %
-%% 実行すると得られるLOGファイルに、MPIプロセスを分割した時の情報が示されている。
-%% LOGファイルを開くと、最初の「SCALEロゴ」のあとに下記のようなメッセージが出力される。
-%% 下記、ドメイン1のプロセス0からの出力例である。\\
+%% 実行すると得られるLOGファイルに, MPIプロセスを分割した時の情報が示されている。
+%% LOGファイルを開くと, 最初の「SCALEロゴ」のあとに下記のようなメッセージが出力される。
+%% 下記, ドメイン1のプロセス0からの出力例である。\\
 
 
 \subsection{Execution of Bulk Job}

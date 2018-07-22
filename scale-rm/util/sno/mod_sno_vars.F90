@@ -63,8 +63,8 @@ contains
        FILE_REAL8
     use scale_file, only: &
        FILE_open, &
-       FILE_Get_All_Datainfo, &
-       FILE_Get_Attribute
+       FILE_get_all_dataInfo, &
+       FILE_get_attribute
     use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD, &
@@ -112,7 +112,7 @@ contains
        call FILE_open( basename, fid, rankid = nowrank )
 
        do v = 1, nvars
-          call FILE_Get_All_Datainfo( fid, varname(v),                                                                     & ! [IN]
+          call FILE_get_all_dataInfo( fid, varname(v),                                                                     & ! [IN]
                                       dinfo(v)%step_nmax,                                                                  & ! [OUT]
                                       dinfo(v)%description, dinfo(v)%units, dinfo(v)%standard_name,                        & ! [OUT]
                                       dinfo(v)%datatype,                                                                   & ! [OUT]
@@ -947,17 +947,19 @@ contains
        ainfo,         &
        dinfo,         &
        debug          )
+    use scale_prc, only: &
+       PRC_abort
     use scale_file_h, only: &
        FILE_TEXT,     &
        FILE_INTEGER4, &
        FILE_REAL4,    &
        FILE_REAL8
     use scale_file, only: &
-       FILE_create,         &
-       FILE_def_variable, &
+       FILE_create,                 &
+       FILE_def_variable,           &
        FILE_add_associatedVariable, &
-       FILE_set_attribute,   &
-       FILE_endDef,         &
+       FILE_set_attribute,          &
+       FILE_enddef,                 &
        FILE_write
     use mod_sno_h, only: &
        commoninfo, &
@@ -996,13 +998,18 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
+    if ( basename == '' ) then
+       LOG_ERROR("SNO_vars_write_netcdf",*) 'Namelist parameter basename_out in PARAM_SNO is empty. Check!'
+       call PRC_abort
+    endif
+
     if ( dirpath == '' ) then
        basename_mod = trim(basename)
     else
        basename_mod = trim(dirpath)//'/'//trim(basename)
     endif
 
-    call FILE_Create( basename_mod,                  & ! [IN]
+    call FILE_create( basename_mod,                  & ! [IN]
                       hinfo%title,                   & ! [IN]
                       hinfo%source,                  & ! [IN]
                       hinfo%institute,               & ! [IN]
@@ -1036,7 +1043,7 @@ contains
        call FILE_add_associatedVariable( fid, dinfo%varname,  & ! [IN]
                                          existed = varexisted ) ! [OUT]
     else if ( dinfo%dt > 0.0_DP ) then
-       call FILE_Def_Variable( fid,                 & ! [IN]
+       call FILE_def_variable( fid,                 & ! [IN]
                                dinfo%varname,       & ! [IN]
                                dinfo%description,   & ! [IN]
                                dinfo%units,         & ! [IN]
@@ -1048,7 +1055,7 @@ contains
                                time_int = dinfo%dt, & ! [IN]
                                existed = varexisted ) ! [OUT]
     else
-       call FILE_Def_Variable( fid,                 & ! [IN]
+       call FILE_def_variable( fid,                 & ! [IN]
                                dinfo%varname,       & ! [IN]
                                dinfo%description,   & ! [IN]
                                dinfo%units,         & ! [IN]
@@ -1063,13 +1070,13 @@ contains
     do i = 1, dinfo%natts
        select case( dinfo%att_type(i) )
        case ( FILE_TEXT )
-          call FILE_Set_Attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%text )
+          call FILE_set_attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%text )
        case ( FILE_INTEGER4 )
-          call FILE_Set_Attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%int(1:dinfo%att_len(i)) )
+          call FILE_set_attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%int(1:dinfo%att_len(i)) )
        case ( FILE_REAL4 )
-          call FILE_Set_Attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%float(1:dinfo%att_len(i)) )
+          call FILE_set_attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%float(1:dinfo%att_len(i)) )
        case ( FILE_REAL8 )
-          call FILE_Set_Attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%double(1:dinfo%att_len(i)) )
+          call FILE_set_attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%double(1:dinfo%att_len(i)) )
        end select
     end do
 
@@ -1095,7 +1102,7 @@ contains
           allocate( VAR_1d_SP(gout1) )
           VAR_1d_SP(:) = real(dinfo%VAR_1d(:),kind=SP)
 
-          call FILE_Write( vid,                       & ! [IN]
+          call FILE_write( vid,                       & ! [IN]
                            VAR_1d_SP(:),              & ! [IN]
                            dinfo%time_start(nowstep), & ! [IN]
                            dinfo%time_end  (nowstep)  ) ! [IN]
@@ -1107,7 +1114,7 @@ contains
           allocate( VAR_1d_DP(gout1) )
           VAR_1d_DP(:) = real(dinfo%VAR_1d(:),kind=DP)
 
-          call FILE_Write( vid,                       & ! [IN]
+          call FILE_write( vid,                       & ! [IN]
                            VAR_1d_DP(:),              & ! [IN]
                            dinfo%time_start(nowstep), & ! [IN]
                            dinfo%time_end  (nowstep)  ) ! [IN]
@@ -1126,7 +1133,7 @@ contains
           allocate( VAR_2d_SP(gout1,gout2) )
           VAR_2d_SP(:,:) = real(dinfo%VAR_2d(:,:),kind=SP)
 
-          call FILE_Write( vid,                       & ! [IN]
+          call FILE_write( vid,                       & ! [IN]
                            VAR_2d_SP(:,:),            & ! [IN]
                            dinfo%time_start(nowstep), & ! [IN]
                            dinfo%time_end  (nowstep)  ) ! [IN]
@@ -1138,7 +1145,7 @@ contains
           allocate( VAR_2d_DP(gout1,gout2) )
           VAR_2d_DP(:,:) = real(dinfo%VAR_2d(:,:),kind=DP)
 
-          call FILE_Write( vid,                       & ! [IN]
+          call FILE_write( vid,                       & ! [IN]
                            VAR_2d_DP(:,:),            & ! [IN]
                            dinfo%time_start(nowstep), & ! [IN]
                            dinfo%time_end  (nowstep)  ) ! [IN]
@@ -1165,7 +1172,7 @@ contains
              enddo
              enddo
 
-             call FILE_Write( vid,                       & ! [IN]
+             call FILE_write( vid,                       & ! [IN]
                               VAR_3d_SP(:,:,:),          & ! [IN]
                               dinfo%time_start(nowstep), & ! [IN]
                               dinfo%time_end  (nowstep)  ) ! [IN]
@@ -1183,7 +1190,7 @@ contains
              enddo
              enddo
 
-             call FILE_Write( vid,                       & ! [IN]
+             call FILE_write( vid,                       & ! [IN]
                               VAR_3d_DP(:,:,:),          & ! [IN]
                               dinfo%time_start(nowstep), & ! [IN]
                               dinfo%time_end  (nowstep)  ) ! [IN]
@@ -1197,7 +1204,7 @@ contains
              allocate( VAR_3d_SP(gout1,gout2,gout3) )
              VAR_3d_SP(:,:,:) = real(dinfo%VAR_3d(:,:,:),kind=SP)
 
-             call FILE_Write( vid,                       & ! [IN]
+             call FILE_write( vid,                       & ! [IN]
                               VAR_3d_SP(:,:,:),          & ! [IN]
                               dinfo%time_start(nowstep), & ! [IN]
                               dinfo%time_end  (nowstep)  ) ! [IN]
@@ -1209,7 +1216,7 @@ contains
              allocate( VAR_3d_DP(gout1,gout2,gout3) )
              VAR_3d_DP(:,:,:) = real(dinfo%VAR_3d(:,:,:),kind=DP)
 
-             call FILE_Write( vid,                       & ! [IN]
+             call FILE_write( vid,                       & ! [IN]
                               VAR_3d_DP(:,:,:),          & ! [IN]
                               dinfo%time_start(nowstep), & ! [IN]
                               dinfo%time_end  (nowstep)  ) ! [IN]

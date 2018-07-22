@@ -496,6 +496,11 @@ contains
        endif
     enddo
 
+    if ( basename == '' ) then
+       LOG_ERROR("SNO_grads_netcdfctl",*) 'Namelist parameter basename_out in PARAM_SNO is empty. Check!'
+       call PRC_abort
+    endif
+
     grdname = trim(basename)//'.pe000000.nc'
     if ( dirpath == '' ) then
        ctlname = trim(basename)//'.ctl'
