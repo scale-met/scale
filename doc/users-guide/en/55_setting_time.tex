@@ -8,40 +8,44 @@ The period of integration and the time step are configured in \namelist{PARAM_TI
 
 \editboxtwo{
 \verb|&PARAM_TIME| & \\
-\verb| TIME_STARTDATE             = 2014, 8, 10, 0, 0, 0,| & Start date of integration: it is required for the calculation of the radiation process.\\
-\verb| TIME_STARTMS               = 0.D0,    | & Start date [mili sec]\\
-\verb| TIME_DURATION              = 12.0D0,  | & Integration time [init is defined by \verb|TIME_DURATION_UNIT|]\\
-\verb| TIME_DURATION_UNIT         = "HOUR",  | & Unit for \verb|TIME_DURATION|\\
-\verb| TIME_DT                    = 60.0D0,  | & Time step for time integration\\
-\verb| TIME_DT_UNIT               = "SEC",   | & Unit for \verb|TIME_DT|\\
-\verb| TIME_DT_ATMOS_DYN          = 30.0D0,  | & Time step for calculation of dynamical process\\
-\verb| TIME_DT_ATMOS_DYN_UNIT     = "SEC",   | & Unit for \verb|TIME_DT_ATMOS_DYN|\\
-\verb| TIME_DT_ATMOS_PHY_CP       = 600.0D0, | & Time step for calculation of cumulus parameterization process\\
-\verb| TIME_DT_ATMOS_PHY_CP_UNIT  = "SEC",   | & Unit for \verb|TIME_DT_ATMOS_PHY_CP|\\
-\verb| TIME_DT_ATMOS_PHY_MP       = 60.0D0,  | & Time step for calculation of microphysics process\\
-\verb| TIME_DT_ATMOS_PHY_MP_UNIT  = "SEC",   | & Unit for \verb|TIME_DT_ATMOS_PHY_MP|\\
-\verb| TIME_DT_ATMOS_PHY_RD       = 600.0D0, | & Time step for calculation of radiation process\\
-\verb| TIME_DT_ATMOS_PHY_RD_UNIT  = "SEC",   | & Unit for \verb|TIME_DT_ATMOS_PHY_RD|\\
-\verb| TIME_DT_ATMOS_PHY_SF       = 60.0D0,  | & Time step for calculation of bottom boundary condition (surface process) for atmosphere\\
-\verb| TIME_DT_ATMOS_PHY_SF_UNIT  = "SEC",   | & Unit for \verb|TIME_DT_ATMOS_PHY_SF|\\
-\verb| TIME_DT_ATMOS_PHY_TB       = 60.0D0,  | & Time step for calculation of turbulence process\\
-\verb| TIME_DT_ATMOS_PHY_TB_UNIT  = "SEC",   | & Unit for \verb|TIME_DT_ATMOS_PHY_TB|\\
-\verb| TIME_DT_ATMOS_PHY_BL       = 60.0D0,  | & Time step for calculation of boundary layer process\\
-\verb| TIME_DT_ATMOS_PHY_BL_UNIT  = "SEC",   | & Unit for \verb|TIME_DT_ATMOS_PHY_BL|\\
-\verb| TIME_DT_OCEAN              = 300.0D0, | & Time step for calculation of ocean process\\
-\verb| TIME_DT_OCEAN_UNIT         = "SEC",   | & Unit for \verb|TIME_DT_OCEAN|\\
-\verb| TIME_DT_LAND               = 300.0D0, | & Time step for calculation of land process\\
-\verb| TIME_DT_LAND_UNIT          = "SEC",   | & Unit for \verb|TIME_DT_LAND|\\
-\verb| TIME_DT_URBAN              = 300.0D0, | & Time step for calculation of urban process\\
-\verb| TIME_DT_URBAN_UNIT         = "SEC",   | & Unit for \verb|TIME_DT_URBAN|\\
-\verb| TIME_DT_ATMOS_RESTART      = 21600.D0, | & Output interval of restart files for atmospheric variables\\
-\verb| TIME_DT_ATMOS_RESTART_UNIT = "SEC",    | & Unit for \verb|TIME_DT_ATMOS_RESTART|\\
-\verb| TIME_DT_OCEAN_RESTART      = 21600.D0, | & Output interval of restart files for ocean variables\\
-\verb| TIME_DT_OCEAN_RESTART_UNIT = "SEC",    | & Unit for \verb|TIME_DT_OCEAN_RESTART|\\
-\verb| TIME_DT_LAND_RESTART       = 21600.D0, | & Output interval of restart files for land variables\\
-\verb| TIME_DT_LAND_RESTART_UNIT  = "SEC",    | & Unit for \verb|TIME_DT_LAND_RESTART|\\
-\verb| TIME_DT_URBAN_RESTART      = 21600.D0, | & Output interval of restart files for urban variables\\
-\verb| TIME_DT_URBAN_RESTART_UNIT = "SEC",    | & Unit for \verb|TIME_DT_URBAN_RESTART|\\
+\verb| TIME_STARTDATE               = 2014, 8, 10, 0, 0, 0,| & Start date of integration: it is required for the calculation of the radiation process.\\
+\verb| TIME_STARTMS                 = 0.D0,                | & Start date [mili sec]\\
+\verb| TIME_DURATION                = 12.0D0,              | & Integration time [init is defined by \verb|TIME_DURATION_UNIT|]\\
+\verb| TIME_DURATION_UNIT           = "HOUR",              | & Unit for \verb|TIME_DURATION|\\
+\verb| TIME_DT                      = 60.0D0,              | & Time step for time integration\\
+\verb| TIME_DT_UNIT                 = "SEC",               | & Unit for \verb|TIME_DT|\\
+\verb| TIME_DT_ATMOS_DYN            = 30.0D0,              | & Time step for calculation of dynamical process\\
+\verb| TIME_DT_ATMOS_DYN_UNIT       = "SEC",               | & Unit for \verb|TIME_DT_ATMOS_DYN|\\
+\verb| TIME_DT_ATMOS_PHY_CP         = 600.0D0,             | & Time step for calculation of cumulus parameterization process\\
+\verb| TIME_DT_ATMOS_PHY_CP_UNIT    = "SEC",               | & Unit for \verb|TIME_DT_ATMOS_PHY_CP|\\
+\verb| TIME_DT_ATMOS_PHY_MP         = 60.0D0,              | & Time step for calculation of microphysics process\\
+\verb| TIME_DT_ATMOS_PHY_MP_UNIT    = "SEC",               | & Unit for \verb|TIME_DT_ATMOS_PHY_MP|\\
+\verb| TIME_DT_ATMOS_PHY_RD         = 600.0D0,             | & Time step for calculation of radiation process\\
+\verb| TIME_DT_ATMOS_PHY_RD_UNIT    = "SEC",               | & Unit for \verb|TIME_DT_ATMOS_PHY_RD|\\
+\verb| TIME_DT_ATMOS_PHY_SF         = 60.0D0,              | & Time step for calculation of bottom boundary condition (surface process) for atmosphere\\
+\verb| TIME_DT_ATMOS_PHY_SF_UNIT    = "SEC",               | & Unit for \verb|TIME_DT_ATMOS_PHY_SF|\\
+\verb| TIME_DT_ATMOS_PHY_TB         = 60.0D0,              | & Time step for calculation of turbulence process\\
+\verb| TIME_DT_ATMOS_PHY_TB_UNIT    = "SEC",               | & Unit for \verb|TIME_DT_ATMOS_PHY_TB|\\
+\verb| TIME_DT_ATMOS_PHY_BL         = 60.0D0,              | & Time step for calculation of boundary layer process\\
+\verb| TIME_DT_ATMOS_PHY_BL_UNIT    = "SEC",               | & Unit for \verb|TIME_DT_ATMOS_PHY_BL|\\
+\verb| TIME_DT_OCEAN                = 300.0D0,             | & Time step for calculation of ocean process\\
+\verb| TIME_DT_OCEAN_UNIT           = "SEC",               | & Unit for \verb|TIME_DT_OCEAN|\\
+\verb| TIME_DT_LAND                 = 300.0D0,             | & Time step for calculation of land process\\
+\verb| TIME_DT_LAND_UNIT            = "SEC",               | & Unit for \verb|TIME_DT_LAND|\\
+\verb| TIME_DT_URBAN                = 300.0D0,             | & Time step for calculation of urban process\\
+\verb| TIME_DT_URBAN_UNIT           = "SEC",               | & Unit for \verb|TIME_DT_URBAN|\\
+\verb| TIME_DT_ATMOS_RESTART        = 21600.D0,            | & Output interval of restart files for atmospheric variables\\
+\verb| TIME_DT_ATMOS_RESTART_UNIT   = "SEC",               | & Unit for \verb|TIME_DT_ATMOS_RESTART|\\
+\verb| TIME_DT_OCEAN_RESTART        = 21600.D0,            | & Output interval of restart files for ocean variables\\
+\verb| TIME_DT_OCEAN_RESTART_UNIT   = "SEC",               | & Unit for \verb|TIME_DT_OCEAN_RESTART|\\
+\verb| TIME_DT_LAND_RESTART         = 21600.D0,            | & Output interval of restart files for land variables\\
+\verb| TIME_DT_LAND_RESTART_UNIT    = "SEC",               | & Unit for \verb|TIME_DT_LAND_RESTART|\\
+\verb| TIME_DT_URBAN_RESTART        = 21600.D0,            | & Output interval of restart files for urban variables\\
+\verb| TIME_DT_URBAN_RESTART_UNIT   = "SEC",               | & Unit for \verb|TIME_DT_URBAN_RESTART|\\
+\verb| TIME_DT_WALLCLOCK_CHECK      = 21600.D0,            | & Interval of checking wallclock\\
+\verb| TIME_DT_WALLCLOCK_CHECK_UNIT = "SEC",               | & Unit for \verb|TIME_DT_WALLCLOCK_CHECK|\\
+\verb| TIME_WALLCLOCK_LIMIT         = 86400.D0,            | & Limit of elapse time of wall clock time [sec]\\
+\verb| TIME_WALLCLOCK_SAFE          = 0.95D0,              | & Safety coefficient for elapse time limit\\
 \verb|/|\\
 }
 
@@ -80,6 +84,23 @@ If not, a restart calculation disagrees with the continuous calculation.
 When \nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART},  \nmitem{TIME_DT_LAND_RESTART}, and\\ \nmitem{TIME_DT_URBAN_RESTART}, are not specified,
 the restart files are created at the end of the simulation, i.e. at \nmitem{TIME_DURATION}.
 The details of the restarted simulation are described in Section \ref{sec:restart}.
+
+\subsection{Finalization by wall-clock timer} \label{subsec:wallclock_check}
+
+Some batch job system usually have the limit of the execution time. However, it is difficult to estimate the elapse time of the long-termed simulation, and the job sometimes exceeds the time limit.
+To solve this problem, \scalerm has the finalize option by using the self timer.
+
+When the elapse time reached the time specified by \nmitem{TIME_WALLCLOCK_LIMIT} (in second), the simulation outputs the restart file and finalize the time loop, even if the timestep is not finished.
+There is the safety factor for \nmitem{TIME_WALLCLOCK_LIMIT}. The default value is 0.9 and specified by \nmitem{TIME_WALLCLOCK_SAFE}.
+
+
+As described above, the interval of the restart output should be a multiples of time steps for all physical processes and surface submodels. However, the self timer will stop the simulation suddenly.
+To avoid restart output at a time other than expected timing, you can specify the timing to check the wall clock time.
+The wall clock will be checked the time interval specified by \nmitem{TIME_DT_WALLCLOCK_CHECK} and \nmitem{TIME_DT_WALLCLOCK_CHECK_UNIT}. When these parameters are not specified, maximum time interval in the physical process and the surface submodel is set.
+Note that if you set a very long interval for checking, the timing of the finalization may delay.
+
+ In the sample above, the \nmitem{TIME_WALLCLOCK_LIMIT} and \nmitem{TIME_WALLCLOCK_SAFE} are set to 24 hours and 0.95, respectively.
+The wall clock is checked every 6 hours of the simulation time. When the elapse time exceeds 22.8 hours, the restart file will be generated and the simulation will stop.
 
 
 
