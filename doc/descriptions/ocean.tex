@@ -17,32 +17,36 @@ The temperature tendency equation is estimated from simple heat equation, as fol
   \label{eq:Ocean-Tdt}
 \end{align}
 where
-$T$ is sea temperature ($K$),
-$\rho_{w}$ is water density ($kg/m^3$),
-$D$ is water depth of the slab model,
-$G_{w}$ is upward heat flux between the Earth's surface and subsurface ($J/m^2/s$),
-and $Q$ is external heat source ($J/m^2/s$).
+$T$ is the sea temperature (K),
+$\rho_{w}$ is the water density (kg/m$^3$),
+$D$ is the water depth of the slab model,
+$c_l$ is the heat capacity of water (J/kg),
+$G_{w}$ is the downward heat flux between the sea surface and atmosphere(J/m$^2$/s),
+and $Q$ is external heat source (J/m$^2$/s).
+The $Q$ contains the negative heat for the melting of the snow precipitation.
 
 Eq. (\ref{eq:Ocean-Tdt}) is discretized as follows:
 \begin{align}
   \frac{\Delta T}{\Delta t} = \frac{1}{C_{w}} \left( G_{w} + Q \right),
 \end{align}
 where
-$C_{w}$ is heat capacity of water ($J/K/m^2$).
+$C_{w}$ is the heat capacity of the slab layer (J/K/m$^2$).
 
 \subsection{Sea surface albedo}
-Nakajima et al. (2000) provide albedo on the sea surface $A$:
+\subsubsection{Nakajima et al. (2000) model}
+\citet{nakajima_2000} provided the albedo for the short wave on the sea surface $A$:
 \begin{align}
   A = \exp \left[ \Sigma_{i=1}^{3} \Sigma_{j=1}^{5} C_{ij} t^{j-1} \mu_0^{i-1} \right],
 \end{align}
 where
-$C_{ij}$ is optical parameter table,
+$C_{ij}$ is the empirical optical parameters,
 $t$ is the flux transmissivity for short-wave radiation,
-and $\mu_0$ is the cosine of solar zenith angle.
+and $\mu_0$ is cosine of the solar zenith angle.
 
 
 \subsection{Roughness length}
-Miller et al. (1992) provide the roughness length over the tropical ocean,
+\subsubsection{Miller et al. (1992) model}
+Miller et al. (1992) provides the roughness length over the tropical ocean,
 based on numerical calculations by combining smooth surface values
 with the Charnock relation for aerodynamic roughness length
 and constant values for heat and moisture in accordance with Smith et al. (1988,1989) suggestions:
@@ -54,23 +58,27 @@ and constant values for heat and moisture in accordance with Smith et al. (1988,
 where $\nu_*$ is the kinematic viscosity of air ($\sim 1.5 \times 10^{-5}$), and $z_0, z_t$,
 and $z_q$ are the roughness length for momentum, heat, and vapor, respectively.
 
-Moon et al. (2007) provide the air--sea momentum flux at high wind speeds
+\subsubsection{Moon et al. (2007) model}
+Moon et al. (2007) provides the air--sea momentum flux at high wind speeds
 based on the coupled wave--wind model simulations for hurricanes.
 At first, the wind speed $U$ at 10-m height is estimated from the previous roughness length $z_0$, as follows:
 \begin{align}
   U =\frac{u_{*}}{\kappa} \ln \frac{10}{z_0},
 \end{align}
 where
-$u_{*}$ is friction velocity ($m/s$)
+$u_{*}$ is friction velocity (m/s)
 and $\kappa$ is von Kalman constant.
-And then, new roughness length $z_0$ is iteratively estimated from the wind spped:
-\begin{align}
-  z_0 &= \frac{0.0185}{g} u_{*}^2 ~ ( U < 12.5 ), \\
-  z_0 &= \left[ 0.085 \left( -0.56 u_{*}^2 + 20.255 u_{*} + 2.458 \right) - 0.58 \right] \times 10^{-3} ~ ( U \ge 12.5 ).
-\end{align}
+And then, new roughness length $z_0$ is iteratively estimated from the wind speed:
+\begin{equation}
+  z_0   = \left\{
+  \begin{array}{lll}
+    \frac{0.0185}{g} u_{*}^2 & \mathrm{for} & U < 12.5, \\
+    \left[ 0.085 \left( -0.56 u_{*}^2 + 20.255 u_{*} + 2.458 \right) - 0.58 \right] \times 10^{-3} & \mathrm{for} & U \ge 12.5.
+   \end{array} \right.
+\end{equation}
 
-Furthermore, Fairall et al. (2003) provide the roughness length for heat and vapor
-using the roughness length for momentum, as follows:
+Furthermore, Fairall et al. (2003) provides the roughness length for the heat and vapor
+using that for momentum, as follows:
 \begin{align}
   z_t &= \frac{ 5.5 \times 10^{-5} }{ ( z_0 u_{*} / \nu_{*} )^{0.6} }, \\
   z_q &= z_t.
