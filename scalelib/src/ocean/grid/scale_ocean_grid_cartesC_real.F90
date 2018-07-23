@@ -64,11 +64,19 @@ contains
     allocate( OCEAN_GRID_CARTESC_REAL_VOL (OKA,OIA,OJA) )
     OCEAN_GRID_CARTESC_REAL_AREA(:,:) = ATMOS_GRID_CARTESC_REAL_AREA(:,:)
     OCEAN_GRID_CARTESC_REAL_TOTAREA   = ATMOS_GRID_CARTESC_REAL_TOTAREA
-    OCEAN_GRID_CARTESC_REAL_TOTVOL = 0.0_RP
-    do j = 1, OJA
-    do i = 1, OIA
+
+    do j = 1,   OJA
+    do i = 1,   OIA
     do k = OKS, OKE
        OCEAN_GRID_CARTESC_REAL_VOL(k,i,j) = OCEAN_GRID_CARTESC_REAL_AREA(i,j) * OCEAN_GRID_CARTESC_CDZ(k)
+    enddo
+    enddo
+    enddo
+
+    OCEAN_GRID_CARTESC_REAL_TOTVOL = 0.0_RP
+    do j = OJS, OJE
+    do i = OIS, OIE
+    do k = OKS, OKE
        OCEAN_GRID_CARTESC_REAL_TOTVOL = OCEAN_GRID_CARTESC_REAL_TOTVOL + OCEAN_GRID_CARTESC_REAL_VOL(k,i,j)
     end do
     end do

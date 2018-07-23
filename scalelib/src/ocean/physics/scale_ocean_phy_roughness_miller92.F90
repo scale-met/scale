@@ -61,15 +61,15 @@ contains
     implicit none
 
     namelist / PARAM_OCEAN_PHY_ROUGHNESS_MILLER92 / &
-       OCEAN_PHY_ROUGHNESS_miller92_CM0,    &
-       OCEAN_PHY_ROUGHNESS_miller92_Z0MI,   &
-       OCEAN_PHY_ROUGHNESS_miller92_Z0MR,   &
-       OCEAN_PHY_ROUGHNESS_miller92_Z0MS,   &
-       OCEAN_PHY_ROUGHNESS_miller92_Z0HI,   &
-       OCEAN_PHY_ROUGHNESS_miller92_Z0HR,   &
-       OCEAN_PHY_ROUGHNESS_miller92_Z0HS,   &
-       OCEAN_PHY_ROUGHNESS_miller92_Z0EI,   &
-       OCEAN_PHY_ROUGHNESS_miller92_Z0ER,   &
+       OCEAN_PHY_ROUGHNESS_miller92_CM0,  &
+       OCEAN_PHY_ROUGHNESS_miller92_Z0MI, &
+       OCEAN_PHY_ROUGHNESS_miller92_Z0MR, &
+       OCEAN_PHY_ROUGHNESS_miller92_Z0MS, &
+       OCEAN_PHY_ROUGHNESS_miller92_Z0HI, &
+       OCEAN_PHY_ROUGHNESS_miller92_Z0HR, &
+       OCEAN_PHY_ROUGHNESS_miller92_Z0HS, &
+       OCEAN_PHY_ROUGHNESS_miller92_Z0EI, &
+       OCEAN_PHY_ROUGHNESS_miller92_Z0ER, &
        OCEAN_PHY_ROUGHNESS_miller92_Z0ES
 
     integer :: ierr
@@ -94,9 +94,10 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine OCEAN_PHY_ROUGHNESS_miller92( &
-       OIA, OIS, OIE, OJA, OJS, OJE, &
-       Uabs,          & ! [IN]
-       Z0M, Z0H, Z0E  ) ! [OUT]
+       OIA, OIS, OIE, &
+       OJA, OJS, OJE, &
+       Uabs,          &
+       Z0M, Z0H, Z0E  )
     use scale_const, only: &
        GRAV => CONST_GRAV
     use scale_ocean_phy_roughness, only: &
@@ -106,25 +107,22 @@ contains
        OCEAN_PHY_ROUGHNESS_Z0H_min, &
        OCEAN_PHY_ROUGHNESS_Z0E_min
     implicit none
-    integer, intent(in) :: OIA, OIS, OIE
-    integer, intent(in) :: OJA, OJS, OJE
 
-    real(RP), intent(in) :: Uabs(OIA,OJA) ! velocity at the lowest atomspheric layer [m/s]
-
-    real(RP), intent(inout) :: Z0M(OIA,OJA) ! roughness length for momentum [m]
-    real(RP), intent(inout) :: Z0H(OIA,OJA) ! roughness length for heat [m]
-    real(RP), intent(inout) :: Z0E(OIA,OJA) ! roughness length for vapor [m]
+    integer,  intent(in)  :: OIA, OIS, OIE
+    integer,  intent(in)  :: OJA, OJS, OJE
+    real(RP), intent(in)  :: Uabs(OIA,OJA) ! velocity at the lowest atomspheric layer [m/s]
+    real(RP), intent(out) :: Z0M (OIA,OJA) ! roughness length for momentum [m]
+    real(RP), intent(out) :: Z0H (OIA,OJA) ! roughness length for heat [m]
+    real(RP), intent(out) :: Z0E (OIA,OJA) ! roughness length for vapor [m]
 
     real(RP) :: Ustar
 
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do &
-    !$omp private(Ustar)
+    !$omp parallel do private(Ustar)
     do j = OJS, OJE
     do i = OIS, OIE
-
        Ustar = max( sqrt( OCEAN_PHY_ROUGHNESS_miller92_CM0 ) * Uabs(i,j), OCEAN_PHY_ROUGHNESS_Ustar_min )
 
        Z0M(i,j) = max( OCEAN_PHY_ROUGHNESS_miller92_Z0MI &
@@ -139,7 +137,6 @@ contains
                      + OCEAN_PHY_ROUGHNESS_miller92_Z0ER / GRAV * Ustar * Ustar &
                      + OCEAN_PHY_ROUGHNESS_miller92_Z0ES * OCEAN_PHY_ROUGHNESS_visck / Ustar, &
                        OCEAN_PHY_ROUGHNESS_Z0E_min )
-
     enddo
     enddo
 

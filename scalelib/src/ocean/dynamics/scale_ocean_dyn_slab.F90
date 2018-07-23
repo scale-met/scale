@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ocean / dynamics / Slab model
+!> module ocean / dynamics / slab model
 !!
 !! @par Description
 !!          ocean slab model
@@ -32,6 +32,8 @@ module scale_ocean_dyn_slab
   !
   !++ Public parameters & variables
   !
+  real(RP), public :: OCEAN_DYN_SLAB_DEPTH = 10.0_RP !< water depth of slab ocean [m]
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -40,7 +42,6 @@ module scale_ocean_dyn_slab
   !
   !++ Private parameters & variables
   !
-  real(RP), private :: OCEAN_DYN_SLAB_DEPTH          = 10.0_RP !< water depth of slab ocean [m]
   real(RP), private :: OCEAN_DYN_SLAB_HeatCapacity             !< heat capacity of slab ocean [J/K/m2]
 
   logical,  private :: OCEAN_DYN_SLAB_nudging        = .false. !< SST Nudging is used?
@@ -114,14 +115,14 @@ contains
     OCEAN_DYN_SLAB_HeatCapacity = DWATR * CL * OCEAN_DYN_SLAB_DEPTH
 
     LOG_NEWLINE
-    LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Slab ocean depth [m]          : ', OCEAN_DYN_SLAB_DEPTH
-    LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Ocean heat capacity [J/K/m2]  : ', OCEAN_DYN_SLAB_HeatCapacity
+    LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Slab ocean depth [m]         : ', OCEAN_DYN_SLAB_DEPTH
+    LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Ocean heat capacity [J/K/m2] : ', OCEAN_DYN_SLAB_HeatCapacity
 
     if ( OCEAN_DYN_SLAB_nudging ) then
        call CALENDAR_unit2sec( OCEAN_DYN_SLAB_nudging_tausec, OCEAN_DYN_SLAB_nudging_tau, OCEAN_DYN_SLAB_nudging_tau_unit )
 
-       LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Use nudging for OCEAN physics : ON'
-       LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Relaxation time Tau [sec]     : ', OCEAN_DYN_SLAB_nudging_tausec
+       LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Use nudging for SST : ON'
+       LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Relaxation time Tau [sec] : ', OCEAN_DYN_SLAB_nudging_tausec
 
        if ( OCEAN_DYN_SLAB_nudging_tausec == 0.0_RP ) then
           OCEAN_DYN_SLAB_offline_mode = .true.
@@ -133,7 +134,7 @@ contains
           call PRC_abort
        endif
     else
-       LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Use nudging for OCEAN physics : OFF'
+       LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Use nudging for SST : OFF'
     endif
 
     if ( OCEAN_DYN_SLAB_nudging ) then
@@ -156,12 +157,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Slab ocean model
   subroutine OCEAN_DYN_SLAB( &
-       OKMAX, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE, &
+       OKMAX, OKS, OKE,  &
+       OIA,   OIS, OIE,  &
+       OJA,   OJS, OJE,  &
        OCEAN_TEMP_t,     &
-       OCEAN_SFLX_WH,    &
+       OCEAN_SFLX_G,     &
        OCEAN_SFLX_water, &
        OCEAN_SFLX_ice,   &
-       fact_ocean,       &
+       calc_flag,        &
        dt, NOWDAYSEC,    &
        OCEAN_TEMP        )
     use scale_prc, only: &
@@ -171,19 +174,18 @@ contains
     use scale_file_external_input, only: &
        FILE_EXTERNAL_INPUT_update
     implicit none
-    integer, intent(in) :: OKMAX, OKS, OKE
-    integer, intent(in) :: OIA, OIS, OIE
-    integer, intent(in) :: OJA, OJS, OJE
 
-    real(RP), intent(in) :: OCEAN_TEMP_t    (OKMAX,OIA,OJA)
-    real(RP), intent(in) :: OCEAN_SFLX_WH   (OIA,OJA)
-    real(RP), intent(in) :: OCEAN_SFLX_water(OIA,OJA)
-    real(RP), intent(in) :: OCEAN_SFLX_ice  (OIA,OJA)
-    real(RP), intent(in) :: fact_ocean      (OIA,OJA)
-    real(DP), intent(in) :: dt
-    real(DP), intent(in) :: NOWDAYSEC
-
-    real(RP), intent(inout) :: OCEAN_TEMP(OKMAX,OIA,OJA)
+    integer,  intent(in)    :: OKMAX, OKS, OKE
+    integer,  intent(in)    :: OIA,   OIS, OIE
+    integer,  intent(in)    :: OJA,   OJS, OJE
+    real(RP), intent(in)    :: OCEAN_TEMP_t    (OKMAX,OIA,OJA) ! tendency of ocean temperature
+    real(RP), intent(in)    :: OCEAN_SFLX_G    (OIA,OJA)       ! heat         flux from surface to subsurface (open ocean/sea ice)
+    real(RP), intent(in)    :: OCEAN_SFLX_water(OIA,OJA)       ! liquid water flux from surface to subsurface (open ocean/sea ice)
+    real(RP), intent(in)    :: OCEAN_SFLX_ice  (OIA,OJA)       ! ice    water flux from surface to subsurface (open ocean/sea ice)
+    logical,  intent(in)    :: calc_flag       (OIA,OJA)       ! to decide calculate or not
+    real(DP), intent(in)    :: dt
+    real(DP), intent(in)    :: NOWDAYSEC
+    real(RP), intent(inout) :: OCEAN_TEMP      (OKMAX,OIA,OJA)
 
     real(RP) :: OCEAN_TEMP_t_ndg(OKMAX,OIA,OJA)
     real(RP) :: OCEAN_TEMP_ref  (OKMAX,OIA,OJA)
@@ -193,7 +195,7 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    LOG_PROGRESS(*) 'ocean / dynamics / Slab'
+    LOG_PROGRESS(*) 'ocean / dynamics / slab'
 
     if ( OCEAN_DYN_SLAB_nudging ) then
 
@@ -220,26 +222,30 @@ contains
     endif
 
     if ( OCEAN_DYN_SLAB_offline_mode ) then
+
        do j = OJS, OJE
        do i = OIS, OIE
-          if ( fact_ocean(i,j) > 0.0_RP ) then
+          if ( calc_flag(i,j) ) then
              OCEAN_TEMP(OKS,i,j) = OCEAN_TEMP_ref(OKS,i,j)
           endif
        enddo
        enddo
+
     else
+
        do j = OJS, OJE
        do i = OIS, OIE
-          if ( fact_ocean(i,j) > 0.0_RP ) then
+          if ( calc_flag(i,j) ) then
              ! heat flux from atm/ice at uppermost ocean layer
              OCEAN_TEMP(OKS,i,j) = OCEAN_TEMP(OKS,i,j) + OCEAN_TEMP_t_ndg(OKS,i,j) * dt &
-                                 + ( OCEAN_SFLX_WH(i,j) - OCEAN_SFLX_ice(i,j) * EMELT ) / OCEAN_DYN_SLAB_HeatCapacity * dt
+                                 + ( OCEAN_SFLX_G(i,j) - OCEAN_SFLX_ice(i,j) * EMELT ) / OCEAN_DYN_SLAB_HeatCapacity * dt
              do k = OKS, OKE
                 OCEAN_TEMP(k,i,j) = OCEAN_TEMP(k,i,j) + OCEAN_TEMP_t_ndg(k,i,j) * dt
-             end do
+             enddo
           endif
        enddo
        enddo
+
     endif
 
     return

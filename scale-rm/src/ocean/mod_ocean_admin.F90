@@ -34,8 +34,12 @@ module mod_ocean_admin
   character(len=H_SHORT), public :: OCEAN_DYN_TYPE = 'NONE'
                                                    ! 'OFF'
                                                    ! 'SLAB'
+                                                   ! 'OFFLINE'
                                                    ! 'INIT'
   character(len=H_SHORT), public :: OCEAN_SFC_TYPE = 'FIXED-TEMP'
+  character(len=H_SHORT), public :: OCEAN_ICE_TYPE = 'NONE'
+                                                   ! 'SIMPLE'
+                                                   ! 'INIT'
   character(len=H_SHORT), public :: OCEAN_ALB_TYPE = 'NAKAJIMA00'
                                                    ! 'INIT'
   character(len=H_SHORT), public :: OCEAN_RGN_TYPE = 'MOON07'
@@ -61,6 +65,7 @@ contains
 
     namelist / PARAM_OCEAN / &
        OCEAN_DYN_TYPE, &
+       OCEAN_ICE_TYPE, &
        OCEAN_SFC_TYPE, &
        OCEAN_ALB_TYPE, &
        OCEAN_RGN_TYPE
@@ -98,6 +103,7 @@ contains
     if ( OCEAN_do ) then
 
        LOG_INFO_CONT(*) '+ Ocean surface   model : ', trim(OCEAN_SFC_TYPE)
+       LOG_INFO_CONT(*) '+ Ocean ice       model : ', trim(OCEAN_ICE_TYPE)
        LOG_INFO_CONT(*) '+ Ocean albedo    model : ', trim(OCEAN_ALB_TYPE)
        LOG_INFO_CONT(*) '+ Ocean roughness model : ', trim(OCEAN_RGN_TYPE)
 

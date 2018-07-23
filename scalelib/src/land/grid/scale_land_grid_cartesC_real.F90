@@ -64,11 +64,19 @@ contains
     allocate( LAND_GRID_CARTESC_REAL_VOL (LKA,LIA,LJA) )
     LAND_GRID_CARTESC_REAL_AREA(:,:) = ATMOS_GRID_CARTESC_REAL_AREA(:,:)
     LAND_GRID_CARTESC_REAL_TOTAREA   = ATMOS_GRID_CARTESC_REAL_TOTAREA
-    LAND_GRID_CARTESC_REAL_TOTVOL = 0.0_RP
-    do j = 1, LJA
-    do i = 1, LIA
+
+    do j = 1,   LJA
+    do i = 1,   LIA
     do k = LKS, LKE
        LAND_GRID_CARTESC_REAL_VOL(k,i,j) = LAND_GRID_CARTESC_REAL_AREA(i,j) * LAND_GRID_CARTESC_CDZ(k)
+    enddo
+    enddo
+    enddo
+
+    LAND_GRID_CARTESC_REAL_TOTVOL = 0.0_RP
+    do j = LJS, LJE
+    do i = LIS, LIE
+    do k = LKS, LKE
        LAND_GRID_CARTESC_REAL_TOTVOL = LAND_GRID_CARTESC_REAL_TOTVOL + LAND_GRID_CARTESC_REAL_VOL(k,i,j)
     end do
     end do

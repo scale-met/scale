@@ -294,8 +294,8 @@ contains
        endif
 
        ! calculate landuse factors
-       call LANDUSE_calc_fact
        call LANDUSE_fillhalo( FILL_BND=.true. )
+       call LANDUSE_calc_fact
 
        LOG_PROGRESS(*) 'end   convert landuse data'
 

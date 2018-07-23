@@ -169,7 +169,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( OKA == 1 .and. FZ(1) == 0.0_RP ) then
-       FZ(1) = 10.0_RP ! to avoid zero thickness (tentative)
+       FZ(1) = 1.0_RP ! to avoid zero thickness (tentative)
     end if
     OCEAN_GRID_CARTESC_FZ(OKS-1) = 0.0_RP
     do k = OKS, OKE

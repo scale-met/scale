@@ -387,54 +387,57 @@ contains
   !-----------------------------------------------------------------------------
   subroutine REALINPUT_surface
     use scale_time, only: &
-         TIME_gettimelabel
-    use mod_land_admin, only: &
-         LAND_do
-    use mod_land_vars, only: &
-         LAND_TEMP, &
-         LAND_WATER, &
-         LAND_SFC_TEMP, &
-         LAND_SFC_albedo
-    use mod_urban_admin, only: &
-         URBAN_do
-    use mod_urban_vars, only: &
-         URBAN_SFC_TEMP, &
-         URBAN_SFC_albedo, &
-         URBAN_TC, &
-         URBAN_QC, &
-         URBAN_UC, &
-         URBAN_TR, &
-         URBAN_TB, &
-         URBAN_TG, &
-         URBAN_TRL, &
-         URBAN_TBL, &
-         URBAN_TGL, &
-         URBAN_RAINR, &
-         URBAN_RAINB, &
-         URBAN_RAING, &
-         URBAN_ROFF
-    use mod_ocean_admin, only: &
-         OCEAN_do
-    use mod_ocean_vars, only: &
-         OCEAN_TEMP, &
-         OCEAN_SALT, &
-         OCEAN_UVEL, &
-         OCEAN_VVEL, &
-         OCEAN_SFC_TEMP, &
-         OCEAN_SFC_albedo, &
-         OCEAN_SFC_Z0M, &
-         OCEAN_SFC_Z0H, &
-         OCEAN_SFC_Z0E
-    use mod_atmos_phy_sf_vars, only: &
-         ATMOS_PHY_SF_SFC_TEMP, &
-         ATMOS_PHY_SF_SFC_albedo, &
-         ATMOS_PHY_SF_SFC_Z0M, &
-         ATMOS_PHY_SF_SFC_Z0H, &
-         ATMOS_PHY_SF_SFC_Z0E
+       TIME_gettimelabel
     use scale_landuse, only: &
-         fact_ocean  => LANDUSE_fact_ocean, &
-         fact_land   => LANDUSE_fact_land, &
-         fact_urban  => LANDUSE_fact_urban
+       fact_ocean => LANDUSE_fact_ocean, &
+       fact_land  => LANDUSE_fact_land,  &
+       fact_urban => LANDUSE_fact_urban
+    use mod_atmos_phy_sf_vars, only: &
+       ATMOS_PHY_SF_SFC_TEMP,   &
+       ATMOS_PHY_SF_SFC_albedo, &
+       ATMOS_PHY_SF_SFC_Z0M,    &
+       ATMOS_PHY_SF_SFC_Z0H,    &
+       ATMOS_PHY_SF_SFC_Z0E
+    use mod_ocean_admin, only: &
+       OCEAN_do
+    use mod_ocean_vars, only: &
+       OCEAN_TEMP,       &
+       OCEAN_SALT,       &
+       OCEAN_UVEL,       &
+       OCEAN_VVEL,       &
+       OCEAN_OCN_Z0M,    &
+       OCEAN_ICE_TEMP,   &
+       OCEAN_ICE_MASS,   &
+       OCEAN_SFC_TEMP,   &
+       OCEAN_SFC_albedo, &
+       OCEAN_SFC_Z0M,    &
+       OCEAN_SFC_Z0H,    &
+       OCEAN_SFC_Z0E
+    use mod_land_admin, only: &
+       LAND_do
+    use mod_land_vars, only: &
+       LAND_TEMP,       &
+       LAND_WATER,      &
+       LAND_SFC_TEMP,   &
+       LAND_SFC_albedo
+    use mod_urban_admin, only: &
+       URBAN_do
+    use mod_urban_vars, only: &
+       URBAN_TC,        &
+       URBAN_QC,        &
+       URBAN_UC,        &
+       URBAN_TR,        &
+       URBAN_TB,        &
+       URBAN_TG,        &
+       URBAN_TRL,       &
+       URBAN_TBL,       &
+       URBAN_TGL,       &
+       URBAN_RAINR,     &
+       URBAN_RAINB,     &
+       URBAN_RAING,     &
+       URBAN_ROFF,      &
+       URBAN_SFC_TEMP,  &
+       URBAN_SFC_albedo
     implicit none
 
     logical                  :: USE_FILE_LANDWATER   = .true.    ! use land water data from files
@@ -747,7 +750,6 @@ contains
                                 skip_steps,              &
                                 URBAN_do                 )
 
-
        ! required one-step data only
        if( BASENAME_BOUNDARY == '' ) exit
 
@@ -759,6 +761,25 @@ contains
 
     do j = 1, JA
     do i = 1, IA
+       OCEAN_SFC_TEMP(i,j) = OCEAN_SFC_TEMP_ORG(i,j,ns)
+       OCEAN_SFC_Z0M (i,j) = OCEAN_SFC_Z0_ORG  (i,j,ns)
+       OCEAN_SFC_Z0H (i,j) = OCEAN_SFC_Z0_ORG  (i,j,ns)
+       OCEAN_SFC_Z0E (i,j) = OCEAN_SFC_Z0_ORG  (i,j,ns)
+       do irgn = I_R_IR, I_R_VIS
+       do idir = I_R_direct, I_R_diffuse
+          OCEAN_SFC_albedo(i,j,idir,irgn) = OCEAN_SFC_albedo_ORG(i,j,idir,irgn,ns)
+       enddo
+       enddo
+       do k = 1, OKMAX
+          OCEAN_TEMP(k,i,j) = OCEAN_TEMP_ORG(OKS,i,j,ns)
+          OCEAN_SALT(k,i,j) = 0.0_RP
+          OCEAN_UVEL(k,i,j) = 0.0_RP
+          OCEAN_VVEL(k,i,j) = 0.0_RP
+       enddo
+       OCEAN_OCN_Z0M (i,j) = OCEAN_SFC_Z0_ORG  (i,j,ns)
+       OCEAN_ICE_TEMP(i,j) = OCEAN_SFC_TEMP_ORG(i,j,ns)
+       OCEAN_ICE_MASS(i,j) = 0.0_RP
+
        LAND_SFC_TEMP  (i,j)      = LAND_SFC_TEMP_org  (i,j,     ns)
        do irgn = I_R_IR, I_R_VIS
        do idir = I_R_direct, I_R_diffuse
@@ -771,14 +792,13 @@ contains
        enddo
 
        if ( URBAN_do ) then
-
           URBAN_SFC_TEMP  (i,j)      = URBAN_SFC_TEMP_org  (i,j)
           do irgn = I_R_IR, I_R_VIS
           do idir = I_R_direct, I_R_diffuse
              URBAN_SFC_albedo(i,j,idir,irgn) = URBAN_SFC_albedo_org(i,j,idir,irgn)
           enddo
           enddo
-          do k = UKS, UKE
+          do k = 1, UKMAX
              URBAN_TRL(k,i,j) = URBAN_SFC_TEMP_org(i,j)
              URBAN_TBL(k,i,j) = URBAN_SFC_TEMP_org(i,j)
              URBAN_TGL(k,i,j) = URBAN_SFC_TEMP_org(i,j)
@@ -793,37 +813,13 @@ contains
           URBAN_RAINB(i,j) = 0.0_RP
           URBAN_RAING(i,j) = 0.0_RP
           URBAN_ROFF (i,j) = 0.0_RP
-
        end if
 
-       do k = 1, OKMAX
-          OCEAN_TEMP(k,i,j) = OCEAN_TEMP_ORG(OKS,i,j,ns)
-          OCEAN_SALT(k,i,j) = 0.0_RP
-          OCEAN_UVEL(k,i,j) = 0.0_RP
-          OCEAN_VVEL(k,i,j) = 0.0_RP
-       enddo
-       OCEAN_SFC_TEMP(i,j) = OCEAN_SFC_TEMP_ORG(i,j,ns)
-       OCEAN_SFC_Z0M (i,j) = OCEAN_SFC_Z0_ORG  (i,j,ns)
-       OCEAN_SFC_Z0H (i,j) = OCEAN_SFC_Z0_ORG  (i,j,ns)
-       OCEAN_SFC_Z0E (i,j) = OCEAN_SFC_Z0_ORG  (i,j,ns)
-       do irgn = I_R_IR, I_R_VIS
-       do idir = I_R_direct, I_R_diffuse
-          OCEAN_SFC_albedo(i,j,idir,irgn) = OCEAN_SFC_albedo_ORG(i,j,idir,irgn,ns)
-       enddo
-       enddo
-    enddo
-    enddo
-
-    do j = 1, JA
-    do i = 1, IA
        ATMOS_PHY_SF_SFC_Z0M (i,j) = OCEAN_SFC_Z0M(i,j)
        ATMOS_PHY_SF_SFC_Z0H (i,j) = OCEAN_SFC_Z0H(i,j)
        ATMOS_PHY_SF_SFC_Z0E (i,j) = OCEAN_SFC_Z0E(i,j)
-    end do
-    end do
-    if ( URBAN_do ) then
-       do j = 1, JA
-       do i = 1, IA
+
+       if ( URBAN_do ) then
           ATMOS_PHY_SF_SFC_TEMP(i,j) = fact_ocean(i,j) * OCEAN_SFC_TEMP(i,j) &
                                      + fact_land (i,j) * LAND_SFC_TEMP (i,j) &
                                      + fact_urban(i,j) * URBAN_SFC_TEMP(i,j)
@@ -834,11 +830,7 @@ contains
                                                     + fact_urban(i,j) * URBAN_SFC_albedo(i,j,idir,irgn)
           enddo
           enddo
-       enddo
-       enddo
-    else
-       do j = 1, JA
-       do i = 1, IA
+       else
           ATMOS_PHY_SF_SFC_TEMP(i,j) = fact_ocean(i,j) * OCEAN_SFC_TEMP(i,j) &
                                      + fact_land (i,j) * LAND_SFC_TEMP (i,j)
           do irgn = I_R_IR, I_R_VIS
@@ -847,9 +839,9 @@ contains
                                                     + fact_land (i,j) * LAND_SFC_albedo (i,j,idir,irgn)
           enddo
           enddo
-       enddo
-       enddo
-    end if
+       endif
+    enddo
+    enddo
 
 
     !--- output boundary data

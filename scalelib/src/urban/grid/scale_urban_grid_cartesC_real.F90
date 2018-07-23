@@ -65,11 +65,19 @@ contains
     allocate( URBAN_GRID_CARTESC_REAL_VOL (UKA,UIA,UJA) )
     URBAN_GRID_CARTESC_REAL_AREA(:,:) = ATMOS_GRID_CARTESC_REAL_AREA(:,:)
     URBAN_GRID_CARTESC_REAL_TOTAREA   = ATMOS_GRID_CARTESC_REAL_TOTAREA
-    URBAN_GRID_CARTESC_REAL_TOTVOL = 0.0_RP
-    do j = 1, UJA
-    do i = 1, UIA
+
+    do j = 1,   UJA
+    do i = 1,   UIA
     do k = UKS, UKE
        URBAN_GRID_CARTESC_REAL_VOL(k,i,j) = URBAN_GRID_CARTESC_REAL_AREA(i,j) * URBAN_GRID_CARTESC_CDZ(k)
+    enddo
+    enddo
+    enddo
+
+    URBAN_GRID_CARTESC_REAL_TOTVOL = 0.0_RP
+    do j = UJS, UJE
+    do i = UIS, UIE
+    do k = UKS, UKE
        URBAN_GRID_CARTESC_REAL_TOTVOL = URBAN_GRID_CARTESC_REAL_TOTVOL + URBAN_GRID_CARTESC_REAL_VOL(k,i,j)
     end do
     end do
