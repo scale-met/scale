@@ -1,0 +1,16 @@
+%\section{Radiation}
+{\bf \Large
+\begin{tabular}{ccc}
+\hline
+  Corresponding author & : & Hisashi Yashiro\\
+\hline
+\end{tabular}
+}
+\\
+
+\subsection{mstrnX}
+SCALE implements a broadband atmospheric radiative transfer model named ``Model Simulation radiation TRaNsfer code version X (mstrn-X)'' developed by \citet{nakajima_2000} and \citet{sekiguchi_2008}. \verb|mstrn| is based on the discrete ordinate method with a delta two-stream approximation and the correlated k-distribution method. The model calculates long- and short-wave radiation fluxes using the atmospheric states, the three dimensional distribution of clouds/gases/aerosols, and the property of land/ocean surface.
+The spectrum between 0.2 and \SI{200}{\micro m} is divided into 29 spectral bands and 111 integration points.
+
+The calculation of solar insolation is based on the parameterization of \citet{berger_1978}. The expected top of atmosphere in the radiation model is 100 km above sea level. However, it is sometimes higher than the top of the domain used in the limited-area simulations.
+Thus, SCALE can add the climatological profile to the upper part of the model domain, as needed. The COSPAR International Reference Atmosphere (CIRA-86)  \citep{CSR_2006} is used for the climatological profile of temperature and pressure. The standard profiles of trace gases such as oxygen, carbon dioxide, ozone, water vapor, methane, etc., are referred to the MIPAS reference atmospheres (\citet{Remedios_2007}).
