@@ -139,6 +139,8 @@ contains
        ATMOS_PHY_SF_bulk_flux
     use scale_atmos_phy_sf_const, only: &
        ATMOS_PHY_SF_const_flux
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_SF_TYPE
     use mod_atmos_vars, only: &
        DENS   => DENS_av, &
        RHOT   => RHOT_av, &
@@ -162,35 +164,33 @@ contains
     use mod_atmos_phy_bl_vars, only: &
        PBL_Zi => ATMOS_PHY_BL_Zi
     use mod_atmos_phy_sf_vars, only: &
-       DENS_t_SF  => ATMOS_PHY_SF_DENS_t,     &
-       MOMZ_t_SF  => ATMOS_PHY_SF_MOMZ_t,     &
-       RHOU_t_SF  => ATMOS_PHY_SF_RHOU_t,     &
-       RHOV_t_SF  => ATMOS_PHY_SF_RHOV_t,     &
-       RHOH_SF    => ATMOS_PHY_SF_RHOH,       &
-       RHOT_t_SF  => ATMOS_PHY_SF_RHOT_t,     &
-       RHOQ_t_SF  => ATMOS_PHY_SF_RHOQ_t,     &
-       SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
-       SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
-       SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,   &
-       SFC_Z0M    => ATMOS_PHY_SF_SFC_Z0M,    &
-       SFC_Z0H    => ATMOS_PHY_SF_SFC_Z0H,    &
-       SFC_Z0E    => ATMOS_PHY_SF_SFC_Z0E,    &
-       SFLX_MW    => ATMOS_PHY_SF_SFLX_MW,    &
-       SFLX_MU    => ATMOS_PHY_SF_SFLX_MU,    &
-       SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
-       SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
-       SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
-       SFLX_GH    => ATMOS_PHY_SF_SFLX_GH,    &
-       SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC,  &
-       U10        => ATMOS_PHY_SF_U10,        &
-       V10        => ATMOS_PHY_SF_V10,        &
-       T2         => ATMOS_PHY_SF_T2,         &
-       Q2         => ATMOS_PHY_SF_Q2,         &
-       l_mo       => ATMOS_PHY_SF_l_mo
+       DENS_t_SF => ATMOS_PHY_SF_DENS_t,    &
+       MOMZ_t_SF => ATMOS_PHY_SF_MOMZ_t,    &
+       RHOU_t_SF => ATMOS_PHY_SF_RHOU_t,    &
+       RHOV_t_SF => ATMOS_PHY_SF_RHOV_t,    &
+       RHOH_SF   => ATMOS_PHY_SF_RHOH,      &
+       RHOT_t_SF => ATMOS_PHY_SF_RHOT_t,    &
+       RHOQ_t_SF => ATMOS_PHY_SF_RHOQ_t,    &
+       SFC_DENS  => ATMOS_PHY_SF_SFC_DENS,  &
+       SFC_PRES  => ATMOS_PHY_SF_SFC_PRES,  &
+       SFC_TEMP  => ATMOS_PHY_SF_SFC_TEMP,  &
+       SFC_Z0M   => ATMOS_PHY_SF_SFC_Z0M,   &
+       SFC_Z0H   => ATMOS_PHY_SF_SFC_Z0H,   &
+       SFC_Z0E   => ATMOS_PHY_SF_SFC_Z0E,   &
+       SFLX_MW   => ATMOS_PHY_SF_SFLX_MW,   &
+       SFLX_MU   => ATMOS_PHY_SF_SFLX_MU,   &
+       SFLX_MV   => ATMOS_PHY_SF_SFLX_MV,   &
+       SFLX_SH   => ATMOS_PHY_SF_SFLX_SH,   &
+       SFLX_LH   => ATMOS_PHY_SF_SFLX_LH,   &
+       SFLX_GH   => ATMOS_PHY_SF_SFLX_GH,   &
+       SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC, &
+       U10       => ATMOS_PHY_SF_U10,       &
+       V10       => ATMOS_PHY_SF_V10,       &
+       T2        => ATMOS_PHY_SF_T2,        &
+       Q2        => ATMOS_PHY_SF_Q2,        &
+       l_mo      => ATMOS_PHY_SF_l_mo
     use mod_cpl_admin, only: &
        CPL_sw
-    use mod_atmos_admin, only: &
-       ATMOS_PHY_SF_TYPE
     implicit none
 
     logical, intent(in) :: update_flag
@@ -217,13 +217,15 @@ contains
 
     real(RP) :: work
 
-    integer :: i, j, iq
+    integer  :: i, j, iq
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
 
        ! update surface density, surface pressure
-       call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+       call BOTTOM_estimate( KA, KS,  KE,                        & ! [IN]
+                             IA, ISB, IEB,                       & ! [IN]
+                             JA, JSB, JEB,                       & ! [IN]
                              DENS(:,:,:), PRES(:,:,:),           & ! [IN]
                              CZ(:,:,:), TOPO_Zsfc(:,:), Z1(:,:), & ! [IN]
                              SFC_DENS(:,:), SFC_PRES(:,:)        ) ! [OUT]
@@ -240,39 +242,38 @@ contains
              ATM_TEMP(i,j) = TEMP(KS,i,j)
              ATM_PRES(i,j) = PRES(KS,i,j)
              ATM_QV  (i,j) = QV  (KS,i,j)
-          end do
-          end do
+          enddo
+          enddo
 
           select case ( ATMOS_PHY_SF_TYPE )
           case ( 'BULK' )
-             call ATMOS_PHY_SF_bulk_flux( &
-                  IA, ISB, IEB, JA, JSB, JEB, &
-                  ATM_W(:,:), ATM_U(:,:), ATM_V(:,:),          & ! [IN]
-                  ATM_TEMP(:,:), ATM_PRES(:,:), ATM_QV(:,:),   & ! [IN]
-                  SFC_DENS(:,:), SFC_TEMP(:,:), SFC_PRES(:,:), & ! [IN]
-                  SFC_Z0M(:,:), SFC_Z0H(:,:), SFC_Z0E(:,:),    & ! [IN]
-                  PBL_Zi(:,:), Z1(:,:),                        & ! [IN]
-                  SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),    & ! [OUT]
-                  SFLX_SH(:,:), SFLX_LH(:,:), SFLX_QV(:,:),    & ! [OUT]
-                  U10(:,:), V10(:,:), T2(:,:), Q2(:,:)         ) ! [OUT]
+
+             call ATMOS_PHY_SF_bulk_flux( IA, ISB, IEB, JA, JSB, JEB,                  & ! [IN]
+                                          ATM_W(:,:), ATM_U(:,:), ATM_V(:,:),          & ! [IN]
+                                          ATM_TEMP(:,:), ATM_PRES(:,:), ATM_QV(:,:),   & ! [IN]
+                                          SFC_DENS(:,:), SFC_TEMP(:,:), SFC_PRES(:,:), & ! [IN]
+                                          SFC_Z0M(:,:), SFC_Z0H(:,:), SFC_Z0E(:,:),    & ! [IN]
+                                          PBL_Zi(:,:), Z1(:,:),                        & ! [IN]
+                                          SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),    & ! [OUT]
+                                          SFLX_SH(:,:), SFLX_LH(:,:), SFLX_QV(:,:),    & ! [OUT]
+                                          U10(:,:), V10(:,:), T2(:,:), Q2(:,:)         ) ! [OUT]
 
           case ( 'CONST' )
 
-             call ATMOS_PHY_SF_const_flux( &
-                  IA, IS, IE, JA, JS, JE, &
-                  ATM_W(:,:), ATM_U(:,:), ATM_V(:,:), ATM_TEMP(:,:), & ! [IN]
-                  Z1(:,:), SFC_DENS(:,:),                            & ! [IN]
-                  SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),          & ! [OUT]
-                  SFLX_SH(:,:), SFLX_LH(:,:), SFLX_QV(:,:),          & ! [OUT]
-                  U10(:,:), V10(:,:)                                 ) ! [OUT]
+             call ATMOS_PHY_SF_const_flux( IA, IS, IE, JA, JS, JE,                            & ! [IN]
+                                           ATM_W(:,:), ATM_U(:,:), ATM_V(:,:), ATM_TEMP(:,:), & ! [IN]
+                                           Z1(:,:), SFC_DENS(:,:),                            & ! [IN]
+                                           SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),          & ! [OUT]
+                                           SFLX_SH(:,:), SFLX_LH(:,:), SFLX_QV(:,:),          & ! [OUT]
+                                           U10(:,:), V10(:,:)                                 ) ! [OUT]
              T2(:,:) = ATM_TEMP(:,:)
              Q2(:,:) = ATM_QV(:,:)
 
           end select
 
-          if ( .not. ATMOS_HYDROMETEOR_dry ) then
+          if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
              SFLX_QTRC(:,:,I_QV) = SFLX_QV(:,:)
-          end if
+          endif
 
        endif
 
@@ -280,39 +281,44 @@ contains
        !$omp parallel do private(us,sflx_pt)
        do j = JS, JE
        do i = IS, IE
-          us = max( 1.E-6_RP, &
-                    sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) / DENS(KS,i,j) ) ) ! frictional velocity
-          SFLX_PT = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) ) &
-                  * POTT(KS,i,j) / TEMP(KS,i,j)
+          us = max( 1.E-6_RP, sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) / DENS(KS,i,j) ) ) ! frictional velocity
+
+          SFLX_PT = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) ) * POTT(KS,i,j) / TEMP(KS,i,j)
           SFLX_PT = sign( max(abs(SFLX_PT), EPS), SFLX_PT )
+
           l_mo(i,j) = - us**3 * POTT(KS,i,j) / ( KARMAN * GRAV * SFLX_PT )
-       end do
-       end do
+       enddo
+       enddo
 
        call history_output
 
-       !$omp parallel do
 !OCL XFILL
+       !$omp parallel do
        do j = JS, JE
        do i = IS, IE
-          MOMZ_t_SF(i,j) = SFLX_MW(i,j) / ( CZ(KS+1,i,j) - CZ(KS,i,j) )
-          RHOU_t_SF(i,j) = SFLX_MU(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
-          RHOV_t_SF(i,j) = SFLX_MV(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
+          MOMZ_t_SF(i,j) = SFLX_MW(i,j)         / ( CZ(KS+1,i,j) - CZ(KS,i,j) )
+          RHOU_t_SF(i,j) = SFLX_MU(i,j)         / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
+          RHOV_t_SF(i,j) = SFLX_MV(i,j)         / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
           RHOH_SF  (i,j) = SFLX_SH(i,j) / CPdry / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
+          DENS_t_SF(i,j) = 0.0_RP
+          RHOT_t_SF(i,j) = 0.0_RP
        enddo
        enddo
 
-       if ( .not. ATMOS_HYDROMETEOR_dry ) then
+       if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
           !$omp parallel do
-          do j = JS, JE
-          do i = IS, IE
-             work = SFLX_QTRC(i,j,I_QV) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
-             DENS_t_SF(i,j)      = work
-             RHOQ_t_SF(i,j,I_QV) = work
-             RHOT_t_SF(i,j) = work * RHOT(KS,i,j) / DENS(KS,i,j)
+          do iq = 1, QA
+             do j = JS, JE
+             do i = IS, IE
+                work = SFLX_QTRC(i,j,iq) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
+
+                RHOQ_t_SF(i,j,iq) = work
+                DENS_t_SF(i,j)    = DENS_t_SF(i,j) + work * TRACER_MASS(iq)
+                RHOT_t_SF(i,j)    = RHOT_t_SF(i,j) + work * TRACER_MASS(iq) * RHOT(KS,i,j) / DENS(KS,i,j)
+             enddo
+             enddo
           enddo
-          enddo
-       end if
+       endif
 
     endif
 
@@ -326,18 +332,30 @@ contains
     enddo
     enddo
 
-    if ( .not. ATMOS_HYDROMETEOR_dry ) then
+    if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
        !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-          DENS_t(KS,i,j) = DENS_t(KS,i,j) + DENS_t_SF(i,j)
-          RHOQ_t(KS,i,j,I_QV) = RHOQ_t(KS,i,j,I_QV) + RHOQ_t_SF(i,j,I_QV)
-          RHOT_t(KS,i,j) = RHOT_t(KS,i,j) + RHOT_t_SF(i,j)
+       do iq = 1, QA
+          do j = JS, JE
+          do i = IS, IE
+             RHOQ_t(KS,i,j,iq) = RHOQ_t(KS,i,j,iq) + RHOQ_t_SF(i,j,iq)
+             DENS_t(KS,i,j)    = DENS_t(KS,i,j)    + DENS_t_SF(i,j)
+             RHOT_t(KS,i,j)    = RHOT_t(KS,i,j)    + RHOT_t_SF(i,j)
+          enddo
+          enddo
        enddo
-       enddo
-    end if
+    endif
 
     if ( STATISTICS_checktotal ) then
+
+       if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
+          do iq = 1, QA
+             call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                                    SFLX_QTRC(:,:,iq), 'SFLX_'//trim(TRACER_NAME(iq)), &
+                                    ATMOS_GRID_CARTESC_REAL_AREA(:,:),                 &
+                                    ATMOS_GRID_CARTESC_REAL_TOTAREA                    )
+          enddo
+       endif
+
        call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
                               DENS_t_SF(:,:), 'DENS_t_SF',       &
                               ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
@@ -359,21 +377,24 @@ contains
                               ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
                               ATMOS_GRID_CARTESC_REAL_TOTAREA    )
 
-       if ( .not. ATMOS_HYDROMETEOR_dry ) then
+       if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
           call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                                 RHOT_t_SF(:,:)     , 'RHOT_t_SF',                      &
-                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),                     &
-                                 ATMOS_GRID_CARTESC_REAL_TOTAREA                        )
-          call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                                 RHOQ_t_SF(:,:,I_QV), trim(TRACER_NAME(I_QV))//'_t_SF', &
-                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),                     &
-                                 ATMOS_GRID_CARTESC_REAL_TOTAREA                        )
-       end if
+                                 RHOT_t_SF(:,:), 'RHOT_t_SF',       &
+                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
+                                 ATMOS_GRID_CARTESC_REAL_TOTAREA    )
+          do iq = 1, QA
+             call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                                    RHOQ_t_SF(:,:,iq), trim(TRACER_NAME(iq))//'_t_SF', &
+                                    ATMOS_GRID_CARTESC_REAL_AREA(:,:),                 &
+                                    ATMOS_GRID_CARTESC_REAL_TOTAREA                    )
+          enddo
+       endif
     endif
 
     return
   end subroutine ATMOS_PHY_SF_driver_calc_tendency
 
+  !-----------------------------------------------------------------------------
   subroutine history_output
     use scale_const, only: &
        UNDEF => CONST_UNDEF
@@ -383,6 +404,9 @@ contains
        barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
     use scale_topography, only: &
        TOPO_Zsfc
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_dry, &
+       I_QV
     use mod_atmos_phy_sf_vars, only: &
        SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
        SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
@@ -397,26 +421,28 @@ contains
        SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
        SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
        SFLX_GH    => ATMOS_PHY_SF_SFLX_GH,    &
+       SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC,  &
        U10        => ATMOS_PHY_SF_U10,        &
        V10        => ATMOS_PHY_SF_V10,        &
        T2         => ATMOS_PHY_SF_T2,         &
        Q2         => ATMOS_PHY_SF_Q2
-    real(RP) :: MSLP  (IA,JA) ! mean sea-level pressure [Pa]
+    implicit none
 
+    real(RP) :: MSLP  (IA,JA) ! mean sea-level pressure [Pa]
     real(RP) :: Uabs10(IA,JA) ! 10m absolute wind [m/s]
 
-    integer :: i, j
+    integer :: i, j, iq
+    !---------------------------------------------------------------------------
 
 !OCL XFILL
     !$omp parallel do
     do j = JS, JE
     do i = IS, IE
        Uabs10(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
-    end do
-    end do
+    enddo
+    enddo
 
-
-    call barometric_law_mslp( IA, IS, IE, JA, JS, JE, &
+    call barometric_law_mslp( IA, IS, IE, JA, JS, JE,                 & ! [IN]
                               SFC_PRES(:,:), T2(:,:), TOPO_Zsfc(:,:), & ! [IN]
                               MSLP(:,:)                               ) ! [OUT]
 
@@ -427,7 +453,7 @@ contains
     call FILE_HISTORY_in( SFC_albedo(:,:,I_R_diffuse,I_R_IR ), 'SFC_ALB_IR_dif' , 'surface albedo (IR, diffuse,merged)', '1'       , fill_halo=.true. )
     call FILE_HISTORY_in( SFC_albedo(:,:,I_R_direct ,I_R_NIR), 'SFC_ALB_NIR_dir', 'surface albedo (NIR,direct, merged)', '1'       , fill_halo=.true. )
     call FILE_HISTORY_in( SFC_albedo(:,:,I_R_diffuse,I_R_NIR), 'SFC_ALB_NIR_dif', 'surface albedo (NIR,diffuse,merged)', '1'       , fill_halo=.true. )
-    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_direct ,I_R_VIS), 'SFC_ALB_VIS_dir', 'surface albedo (VIS,direct, merged)', '1'       , fill_halo= .true. )
+    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_direct ,I_R_VIS), 'SFC_ALB_VIS_dir', 'surface albedo (VIS,direct, merged)', '1'       , fill_halo=.true. )
     call FILE_HISTORY_in( SFC_albedo(:,:,I_R_diffuse,I_R_VIS), 'SFC_ALB_VIS_dif', 'surface albedo (VIS,diffuse,merged)', '1'       , fill_halo=.true. )
     call FILE_HISTORY_in( SFC_Z0M   (:,:),                     'SFC_Z0M',         'roughness length (momentum)',         'm'       , fill_halo=.true. )
     call FILE_HISTORY_in( SFC_Z0H   (:,:),                     'SFC_Z0H',         'roughness length (heat)',             'm'       , fill_halo=.true. )
@@ -438,6 +464,13 @@ contains
     call FILE_HISTORY_in( SFLX_SH   (:,:),                     'SHFLX',           'sensible heat flux (merged)',         'W/m2'    , fill_halo=.true. )
     call FILE_HISTORY_in( SFLX_LH   (:,:),                     'LHFLX',           'latent heat flux (merged)',           'W/m2'    , fill_halo=.true. )
     call FILE_HISTORY_in( SFLX_GH   (:,:),                     'GHFLX',           'ground heat flux (merged)',           'W/m2'    , fill_halo=.true. )
+    if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
+       do iq = 1, QA
+          call FILE_HISTORY_in( SFLX_QTRC(:,:,iq), 'SFLX_'//trim(TRACER_NAME(iq)),   &
+                                'surface '//trim(TRACER_NAME(iq))//' flux (merged)', &
+                                'kg/m2/s' , fill_halo=.true.                         )
+       enddo
+    endif
     call FILE_HISTORY_in( Uabs10    (:,:),                     'Uabs10',          '10m absolute wind',                   'm/s'     , fill_halo=.true. )
     call FILE_HISTORY_in( U10       (:,:),                     'U10',             '10m x-wind',                          'm/s'     , fill_halo=.true. )
     call FILE_HISTORY_in( V10       (:,:),                     'V10',             '10m y-wind',                          'm/s'     , fill_halo=.true. )

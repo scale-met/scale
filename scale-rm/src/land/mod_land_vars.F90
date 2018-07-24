@@ -18,6 +18,7 @@ module mod_land_vars
   use scale_prof
   use scale_debug
   use scale_land_grid_cartesC_index
+  use scale_tracer
   use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
@@ -78,7 +79,7 @@ module mod_land_vars
   real(RP), public, allocatable :: LAND_SFLX_MV   (:,:)     !< land surface v-momentum flux    [kg/m2/s]
   real(RP), public, allocatable :: LAND_SFLX_SH   (:,:)     !< land surface sensible heat flux [J/m2/s]
   real(RP), public, allocatable :: LAND_SFLX_LH   (:,:)     !< land surface latent heat flux   [J/m2/s]
-  real(RP), public, allocatable :: LAND_SFLX_evap (:,:)     !< land surface water vapor flux   [kg/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_QTRC (:,:,:)   !< land surface tracer flux        [kg/m2/s]
   real(RP), public, allocatable :: LAND_SFLX_GH   (:,:)     !< land surface heat flux          [J/m2/s]
   real(RP), public, allocatable :: LAND_SFLX_water(:,:)     !< land surface water flux         [kg/m2/s]
   real(RP), public, allocatable :: LAND_SFLX_ice  (:,:)     !< land surface ice   flux         [kg/m2/s]
@@ -312,7 +313,7 @@ contains
     allocate( LAND_SFLX_SH   (LIA,LJA) )
     allocate( LAND_SFLX_LH   (LIA,LJA) )
     allocate( LAND_SFLX_GH   (LIA,LJA) )
-    allocate( LAND_SFLX_evap (LIA,LJA) )
+    allocate( LAND_SFLX_QTRC (LIA,LJA,QA) )
     allocate( LAND_SFLX_water(LIA,LJA) )
     allocate( LAND_SFLX_ice  (LIA,LJA) )
     LAND_SFLX_MW   (:,:)     = UNDEF
@@ -320,7 +321,7 @@ contains
     LAND_SFLX_MV   (:,:)     = UNDEF
     LAND_SFLX_SH   (:,:)     = UNDEF
     LAND_SFLX_LH   (:,:)     = UNDEF
-    LAND_SFLX_evap (:,:)     = UNDEF
+    LAND_SFLX_QTRC (:,:,:)   = UNDEF
     LAND_SFLX_GH   (:,:)     = UNDEF
     LAND_SFLX_water(:,:)     = UNDEF
     LAND_SFLX_ice  (:,:)     = UNDEF
@@ -541,6 +542,8 @@ contains
   subroutine LAND_vars_history
     use scale_file_history, only: &
        FILE_HISTORY_in
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     real(RP) :: LAND_WATERDS(LKMAX,LIA,LJA)
@@ -617,7 +620,7 @@ contains
                           VAR_DESC(I_SFLX_SH),         VAR_UNIT(I_SFLX_SH),         standard_name=VAR_STDN(I_SFLX_SH)         )
     call FILE_HISTORY_in( LAND_SFLX_LH   (:,:),                     VAR_NAME(I_SFLX_LH),                                      &
                           VAR_DESC(I_SFLX_LH),         VAR_UNIT(I_SFLX_LH),         standard_name=VAR_STDN(I_SFLX_LH)         )
-    call FILE_HISTORY_in( LAND_SFLX_evap (:,:),                     VAR_NAME(I_SFLX_evap),                                    &
+    call FILE_HISTORY_in( LAND_SFLX_QTRC (:,:,I_QV),                VAR_NAME(I_SFLX_evap),                                    &
                           VAR_DESC(I_SFLX_evap),       VAR_UNIT(I_SFLX_evap),       standard_name=VAR_STDN(I_SFLX_evap)       )
     call FILE_HISTORY_in( LAND_SFLX_GH   (:,:),                     VAR_NAME(I_SFLX_GH),                                      &
                           VAR_DESC(I_SFLX_GH),         VAR_UNIT(I_SFLX_GH),         standard_name=VAR_STDN(I_SFLX_GH)         )

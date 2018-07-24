@@ -17,6 +17,7 @@ module mod_urban_driver
   use scale_io
   use scale_prof
   use scale_urban_grid_cartesC_index
+  use scale_tracer
   use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
@@ -143,7 +144,7 @@ contains
        URBAN_SFLX_MV,     &
        URBAN_SFLX_SH,     &
        URBAN_SFLX_LH,     &
-       URBAN_SFLX_evap,   &
+       URBAN_SFLX_QTRC,   &
        URBAN_SFLX_GH,     &
        URBAN_Z0M,         &
        URBAN_Z0H,         &
@@ -166,7 +167,8 @@ contains
        URBAN_RAING,       &
        URBAN_ROFF
     use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       I_QV
     use scale_time, only: &
        dt => TIME_DTSEC_URBAN, &
        NOWDATE => TIME_NOWDATE
@@ -197,7 +199,7 @@ contains
     integer  :: tloc     ! local time (1-24h)
     real(RP) :: dsec     ! second [s]
 
-    integer :: k, i, j
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('URB_CalcTend', 1)
@@ -234,6 +236,15 @@ contains
     enddo
     enddo
 
+!OCL XFILL
+    !$omp parallel do
+    do iq = 1, QA
+    do j  = UJS, UJE
+    do i  = UIS, UIE
+       URBAN_SFLX_QTRC(i,j,iq) = 0.0_RP
+    enddo
+    enddo
+    enddo
 
     select case ( URBAN_SFC_TYPE )
     case ( 'KUSAKA01' )
@@ -324,7 +335,7 @@ contains
           URBAN_RAING_t(i,j) = ( RAING(i,j) - URBAN_RAING(i,j) ) / dt
           URBAN_ROFF_t (i,j) = ( ROFF (i,j) - URBAN_ROFF (i,j) ) / dt
 
-          URBAN_SFLX_evap(i,j) = URBAN_SFLX_LH(i,j) / LHV(i,j)
+          URBAN_SFLX_QTRC(i,j,I_QV) = URBAN_SFLX_LH(i,j) / LHV(i,j)
        end do
        end do
 
@@ -454,7 +465,7 @@ contains
        URBAN_SFLX_MV,     &
        URBAN_SFLX_SH,     &
        URBAN_SFLX_LH,     &
-       URBAN_SFLX_evap,   &
+       URBAN_SFLX_QTRC,   &
        URBAN_SFLX_GH,     &
        URBAN_Z0M,         &
        URBAN_Z0H,         &
@@ -620,7 +631,7 @@ contains
        URBAN_SFLX_SH,    &
        URBAN_SFLX_LH,    &
        URBAN_SFLX_GH,    &
-       URBAN_SFLX_evap,  &
+       URBAN_SFLX_QTRC,  &
        URBAN_Z0M,        &
        URBAN_Z0H,        &
        URBAN_Z0E,        &
@@ -650,7 +661,7 @@ contains
                         URBAN_SFLX_SH   (:,:),     & ! [IN]
                         URBAN_SFLX_LH   (:,:),     & ! [IN]
                         URBAN_SFLX_GH   (:,:),     & ! [IN]
-                        URBAN_SFLX_evap (:,:),     & ! [IN]
+                        URBAN_SFLX_QTRC (:,:,:),   & ! [IN]
                         URBAN_U10       (:,:),     & ! [IN]
                         URBAN_V10       (:,:),     & ! [IN]
                         URBAN_T2        (:,:),     & ! [IN]

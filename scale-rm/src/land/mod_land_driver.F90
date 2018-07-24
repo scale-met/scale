@@ -17,6 +17,7 @@ module mod_land_driver
   use scale_io
   use scale_prof
   use scale_land_grid_cartesC_index
+  use scale_tracer
   use scale_cpl_sfc_index
 
   use scale_const, only: &
@@ -127,6 +128,8 @@ contains
        FILE_HISTORY_in
     use scale_atmos_grid_cartesC_real, only: &
        REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     use scale_land_grid_cartesC, only: &
        LCZ => LAND_GRID_CARTESC_CZ
     use scale_land_phy_snow_ky90, only: &
@@ -165,7 +168,7 @@ contains
        LAND_SFLX_SH,      &
        LAND_SFLX_LH,      &
        LAND_SFLX_GH,      &
-       LAND_SFLX_evap,    &
+       LAND_SFLX_QTRC,    &
        LAND_SFLX_water,   &
        LAND_SFLX_ice,     &
        LAND_U10,          &
@@ -237,7 +240,7 @@ contains
     !real(RP) :: MONIT_LAND_heat     (LIA,LJA)
     !real(RP) :: MONIT_LAND_water    (LIA,LJA)
 
-    integer :: k, i, j, idir
+    integer :: k, i, j, iq, idir
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('LND_CalcTend', 1)
@@ -253,6 +256,15 @@ contains
     do k = LKS, LKE
        LAND_TEMP_t (k,i,j) = 0.0_RP
        LAND_WATER_t(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+!OCL XFILL
+    !$omp parallel do
+    do iq = 1, QA
+    do j  = LJS, LJE
+    do i  = LIS, LIE
+       LAND_SFLX_QTRC(i,j,iq) = 0.0_RP
     enddo
     enddo
     enddo
@@ -430,7 +442,7 @@ contains
                               'LAND',                                                  & ! [IN]
                               LAND_SFC_TEMP(:,:),                                      & ! [INOUT]
                               LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
-                              LAND_SFLX_SH(:,:), LAND_SFLX_evap(:,:), SFLX_GH(:,:),    & ! [OUT]
+                              LAND_SFLX_SH(:,:), LAND_SFLX_QTRC(i,j,I_QV), SFLX_GH(:,:), & ! [OUT]
                               LAND_U10(:,:), LAND_V10(:,:), LAND_T2(:,:), LAND_Q2(:,:) ) ! [OUT]
 
     case ( 'FIXED-TEMP' )
@@ -469,7 +481,7 @@ contains
                                     LAND_PROPERTY(:,:,I_Z0E),                                & ! [IN]
                                     LANDUSE_exists_land(:,:), dt,                            & ! [IN]
                                     LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
-                                    LAND_SFLX_SH(:,:), LAND_SFLX_evap(:,:), SFLX_GH(:,:),    & ! [OUT]
+                                    LAND_SFLX_SH(:,:), LAND_SFLX_QTRC(i,j,I_QV), SFLX_GH(:,:), & ! [OUT]
                                     LAND_U10(:,:), LAND_V10(:,:),                            & ! [OUT]
                                     LAND_T2(:,:), LAND_Q2(:,:)                               ) ! [OUT]
 
@@ -481,8 +493,8 @@ contains
     do j = LJS, LJE
     do i = LIS, LIE
        LAND_SFLX_GH   (i,j) = - SFLX_GH(i,j) ! inverse sign ( positive for upward to downward )
-       LAND_SFLX_LH   (i,j) = LAND_SFLX_evap(i,j) * LHV(i,j) ! always LHV
-       LAND_SFLX_water(i,j) = ATMOS_SFLX_rain(i,j) - LAND_SFLX_evap(i,j)
+       LAND_SFLX_LH   (i,j) = LAND_SFLX_QTRC (i,j,I_QV) * LHV(i,j) ! always LHV
+       LAND_SFLX_water(i,j) = ATMOS_SFLX_rain(i,j) - LAND_SFLX_QTRC(i,j,I_QV)
        LAND_SFLX_ice  (i,j) = ATMOS_SFLX_snow(i,j)
     end do
     end do
@@ -519,7 +531,9 @@ contains
                                + ( 1.0_RP-SNOW_frac(i,j) ) *       LAND_SFLX_SH  (i,j)
           LAND_SFLX_LH   (i,j) = (        SNOW_frac(i,j) ) * SNOW_ATMOS_SFLX_LH  (i,j) &
                                + ( 1.0_RP-SNOW_frac(i,j) ) *       LAND_SFLX_LH  (i,j)
-          LAND_SFLX_evap (i,j) =  LAND_SFLX_LH(i,j) / LHV(i,j)
+
+          LAND_SFLX_QTRC (i,j,I_QV) = LAND_SFLX_LH(i,j) / LHV(i,j)
+
           ! diagnostics
           LAND_U10       (i,j) = (        SNOW_frac(i,j) ) *      SNOW_U10       (i,j) &
                                + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_U10       (i,j)
@@ -697,7 +711,7 @@ contains
        LAND_SFLX_SH,    &
        LAND_SFLX_LH,    &
        LAND_SFLX_GH,    &
-       LAND_SFLX_evap,  &
+       LAND_SFLX_QTRC,  &
        LAND_U10,        &
        LAND_V10,        &
        LAND_T2,         &
@@ -724,7 +738,7 @@ contains
                         LAND_SFLX_SH   (:,:),       & ! [IN]
                         LAND_SFLX_LH   (:,:),       & ! [IN]
                         LAND_SFLX_GH   (:,:),       & ! [IN]
-                        LAND_SFLX_evap (:,:),       & ! [IN]
+                        LAND_SFLX_QTRC (:,:,:),     & ! [IN]
                         LAND_U10       (:,:),       & ! [IN]
                         LAND_V10       (:,:),       & ! [IN]
                         LAND_T2        (:,:),       & ! [IN]

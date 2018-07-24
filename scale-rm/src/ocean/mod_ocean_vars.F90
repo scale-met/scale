@@ -19,6 +19,7 @@ module mod_ocean_vars
   use scale_prof
   use scale_debug
   use scale_ocean_grid_cartesC_index
+  use scale_tracer
   use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
@@ -102,7 +103,7 @@ module mod_ocean_vars
   real(RP), public, allocatable :: OCEAN_SFLX_MV    (:,:)     !< ocean surface v-momentum flux    [kg/m/s2]
   real(RP), public, allocatable :: OCEAN_SFLX_SH    (:,:)     !< ocean surface sensible heat flux [J/m2/s]
   real(RP), public, allocatable :: OCEAN_SFLX_LH    (:,:)     !< ocean surface latent heat flux   [J/m2/s]
-  real(RP), public, allocatable :: OCEAN_SFLX_evap  (:,:)     !< ocean surface water vapor flux   [kg/m2/s]
+  real(RP), public, allocatable :: OCEAN_SFLX_QTRC  (:,:,:)   !< ocean surface tracer flux        [kg/m2/s]
   real(RP), public, allocatable :: OCEAN_U10        (:,:)     !< ocean surface velocity u at 10m  [m/s]
   real(RP), public, allocatable :: OCEAN_V10        (:,:)     !< ocean surface velocity v at 10m  [m/s]
   real(RP), public, allocatable :: OCEAN_T2         (:,:)     !< ocean surface temperature at 2m  [K]
@@ -382,7 +383,7 @@ contains
     allocate( OCEAN_SFLX_MV    (OIA,OJA) )
     allocate( OCEAN_SFLX_SH    (OIA,OJA) )
     allocate( OCEAN_SFLX_LH    (OIA,OJA) )
-    allocate( OCEAN_SFLX_evap  (OIA,OJA) )
+    allocate( OCEAN_SFLX_QTRC  (OIA,OJA,QA) )
     allocate( OCEAN_U10        (OIA,OJA) )
     allocate( OCEAN_V10        (OIA,OJA) )
     allocate( OCEAN_T2         (OIA,OJA) )
@@ -392,7 +393,7 @@ contains
     OCEAN_SFLX_MV    (:,:)     = UNDEF
     OCEAN_SFLX_SH    (:,:)     = UNDEF
     OCEAN_SFLX_LH    (:,:)     = UNDEF
-    OCEAN_SFLX_evap  (:,:)     = UNDEF
+    OCEAN_SFLX_QTRC  (:,:,:)   = UNDEF
     OCEAN_U10        (:,:)     = UNDEF
     OCEAN_V10        (:,:)     = UNDEF
     OCEAN_T2         (:,:)     = UNDEF
@@ -571,6 +572,8 @@ contains
   subroutine OCEAN_vars_history
     use scale_file_history, only: &
        FILE_HISTORY_in
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
     !---------------------------------------------------------------------------
 
@@ -688,7 +691,7 @@ contains
     call FILE_HISTORY_in( OCEAN_SFLX_LH   (:,:),                                                 &
                           VAR_NAME(I_SFLX_LH),         VAR_DESC(I_SFLX_LH),                      &
                           VAR_UNIT(I_SFLX_LH),         standard_name=VAR_STDN(I_SFLX_LH)         )
-    call FILE_HISTORY_in( OCEAN_SFLX_evap (:,:),                                                 &
+    call FILE_HISTORY_in( OCEAN_SFLX_QTRC (:,:,I_QV),                                            &
                           VAR_NAME(I_SFLX_evap),       VAR_DESC(I_SFLX_evap),                    &
                           VAR_UNIT(I_SFLX_evap),       standard_name=VAR_STDN(I_SFLX_evap)       )
     call FILE_HISTORY_in( OCEAN_SFLX_G    (:,:),                                                 &
@@ -715,6 +718,8 @@ contains
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STATISTICS_total
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     use scale_ocean_grid_cartesC_real, only: &
        OCEAN_GRID_CARTESC_REAL_AREA,    &
        OCEAN_GRID_CARTESC_REAL_TOTAREA, &
@@ -816,10 +821,10 @@ contains
                               OCEAN_SFLX_LH   (:,:), VAR_NAME(I_SFLX_LH),    & ! [IN]
                               OCEAN_GRID_CARTESC_REAL_AREA(:,:),             & ! [IN]
                               OCEAN_GRID_CARTESC_REAL_TOTAREA                ) ! [IN]
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                  & ! [IN]
-                              OCEAN_SFLX_evap (:,:), VAR_NAME(I_SFLX_evap),  & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),             & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA                ) ! [IN]
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                       & ! [IN]
+                              OCEAN_SFLX_QTRC (:,:,I_QV), VAR_NAME(I_SFLX_evap),  & ! [IN]
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                  & ! [IN]
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA                     ) ! [IN]
        call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                  & ! [IN]
                               OCEAN_SFLX_G    (:,:), VAR_NAME(I_SFLX_G),     & ! [IN]
                               OCEAN_GRID_CARTESC_REAL_AREA(:,:),             & ! [IN]
