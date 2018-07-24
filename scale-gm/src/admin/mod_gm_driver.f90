@@ -223,7 +223,8 @@ contains
        ATMOS_ADMIN_setup
     use mod_atmos_phy_driver, only: &
        ATMOS_phy_driver_tracer_setup, &
-       ATMOS_phy_driver_setup
+       atmos_phy_driver_setup, &
+       atmos_phy_driver
     use mod_atmos_phy_sf_vars, only: &
        ATMOS_PHY_SF_vars_setup
     use mod_atmos_phy_sf_driver, only: &
@@ -423,6 +424,7 @@ contains
 
        call PROF_rapstart('_Atmos',1)
        call dynamics_step
+       call atmos_phy_driver
        call forcing_step
        call PROF_rapend  ('_Atmos',1)
 

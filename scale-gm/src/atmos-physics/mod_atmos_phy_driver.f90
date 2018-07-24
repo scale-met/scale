@@ -155,10 +155,20 @@ contains
     if( atmos_sw_phy_mp ) then
        call atmos_phy_mp_driver_step
        call atmos_phy_mp_driver_adjustment
+       call atmos_vars_calc_diagnostics
     end if
-    if( atmos_sw_phy_rd ) call atmos_phy_rd_driver_step
-    if( atmos_sw_phy_sf ) call atmos_phy_sf_driver_step
-    if( atmos_sw_phy_bl ) call atmos_phy_bl_driver_step
+    if( atmos_sw_phy_rd ) then
+       call atmos_phy_rd_driver_step
+       call atmos_vars_calc_diagnostics
+    end if
+    if( atmos_sw_phy_sf ) then
+       call atmos_phy_sf_driver_step
+       call atmos_vars_calc_diagnostics
+    end if
+    if( atmos_sw_phy_bl ) then
+       call atmos_phy_bl_driver_step
+       call atmos_vars_calc_diagnostics
+    end if
 
 
     call atmos_vars_calc_prognostics( &

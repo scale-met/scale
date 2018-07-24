@@ -127,7 +127,7 @@ contains
     enddo
     enddo
 
-    diffq_min = minval( diffq_check(KS:KE,ISB:IEB,JSB:JEB) )
+    diffq_min = minval( diffq_check(KS:KE,IS:IE,JS:JE) )
 
     if (       abs(limit_negative) > 0.0_RP         &
          .AND. abs(limit_negative) < abs(diffq_min) ) then

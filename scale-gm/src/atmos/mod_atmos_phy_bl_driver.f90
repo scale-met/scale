@@ -235,7 +235,7 @@ contains
              call ATMOS_PHY_BL_MYNN_tendency_tracer( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:,l), QTRC(:,:,:,iq,l), & ! (in)
-                  SFLX_Q(:,:,l,iq), Kh(:,:,:,l),   & ! (in)
+                  SFLX_Q(:,:,iq,l), Kh(:,:,:,l),   & ! (in)
                   CZ(:,:,:,l), FZ(:,:,:,l),        & ! (in)
                   dt_BL, TRACER_NAME(iq),          & ! (in)
                   RHOQ_t(:,:,:)                    ) ! (out)

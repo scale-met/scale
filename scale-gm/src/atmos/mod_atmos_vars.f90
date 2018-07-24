@@ -984,7 +984,7 @@ contains
           rhog (ij,k,l) = DENS(k,i,j,l) * GSGAM2(ij,k,l)
           rhoge(ij,k,l) = RHOE(k,i,j,l) * GSGAM2(ij,k,l)
           do iq = 1, QA
-             rhogq(ij,k,l,iq) = RHOQ(k,i,j,l,iq) * GSGAM2(ij,k,l)
+             rhogq(ij,k,l,iq) = RHOQ(k,i,j,iq,l) * GSGAM2(ij,k,l)
           end do
        end do
        end do
@@ -1020,7 +1020,7 @@ contains
        !$omp parallel do
        do j = JS, JE
        do i = IS, IE
-       do k = KS, IE
+       do k = KS, KE
           U(k,i,j,l) = RHOU(k,i,j,l) / DENS(k,i,j,l)
           V(k,i,j,l) = RHOV(k,i,j,l) / DENS(k,i,j,l)
           W(k,i,j,l) = ( MOMZ(k,i,j,l) + MOMZ(k-1,i,j,l) ) * 0.5_RP / DENS(k,i,j,l)
@@ -1033,7 +1033,7 @@ contains
           !$omp parallel do
           do j = JS, JE
           do i = IS, IE
-          do k = KS, IE
+          do k = KS, KE
              QTRC(k,i,j,iq,l) = RHOQ(k,i,j,iq,l) / DENS(k,i,j,l)
           end do
           end do
