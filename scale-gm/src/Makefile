@@ -42,12 +42,11 @@ VPATH = $(BUILD_DIR):           \
         admin:                  \
         atmos:                  \
         atmos/dcmip:            \
+        atmos/forcing:  	\
+        atmos/share:    	\
         atmos-gm/communication: \
         atmos-gm/dynamics:      \
         atmos-gm/grid:          \
-        atmos-physics:          \
-        atmos-physics/forcing:  \
-        atmos-physics/share:    \
         common:                 \
         coupler:                \
         io:                     \
