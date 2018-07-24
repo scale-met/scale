@@ -330,7 +330,7 @@ contains
     call TOPO_setup
 
     !---< landuse module setup >---
-    call landuse_setup
+    call landuse_setup( .false., .false., .false. )
 
     !---< module setup >---
     call atmos_thermodyn_setup

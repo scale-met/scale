@@ -392,7 +392,7 @@ contains
        QLA,   &
        QIA
     use scale_atmos_phy_mp_common, only: &
-       ATMOS_PHY_MP_precipitation, &
+       ATMOS_PHY_MP_precipitation_upwind, &
        ATMOS_PHY_MP_precipitation_momentum
     use scale_atmos_phy_mp_kessler, only: &
        ATMOS_PHY_MP_KESSLER_adjustment, &
@@ -662,7 +662,7 @@ contains
                    end if
                 end do
 
-                call ATMOS_PHY_MP_precipitation( &
+                call ATMOS_PHY_MP_precipitation_upwind( &
                      KA, KS, KE, QE_MP-QS_MP, QLA, QIA, &
                      TEMP(:,i,j,l), vterm(:,:),      & ! [IN]
                      FDZ(:), RCDZ(:),                & ! [IN]
