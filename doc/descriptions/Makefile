@@ -23,12 +23,18 @@ SRCS = ${TARGET}.tex \
        dynamical_process_hivi.tex \
        turbulence.tex \
        turbulence_mynn.tex \
+       microphysics.tex \
+       microphysics_kessler.tex \
+       microphysics_suzuki.tex \
        surface_flux.tex \
-       aerosol.tex \
+       ocean.tex \
+       land.tex \
+       urban.tex \
        large_scale_sinking.tex \
        appendix.tex \
        notation.tex \
        variables.tex
+#       aerosol.tex \
 
 all: ${TARGET}.pdf
 
