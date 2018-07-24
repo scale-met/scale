@@ -13,7 +13,7 @@ module mod_chemvar
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -28,10 +28,9 @@ module mod_chemvar
   !
   !++ Public parameters & variables
   !
-  integer,                public, parameter   :: CHEM_TRC_vlim = 100
-  integer,                public              :: CHEM_TRC_vmax = 1
-  character(len=H_SHORT), public, allocatable :: CHEM_TRC_name(:) ! short name  of tracer
-  character(len=H_MID),   public, allocatable :: CHEM_TRC_desc(:) ! description of tracer
+  integer, public :: NCHEM_MAX =  0
+  integer, public :: NCHEM_STR = -1
+  integer, public :: NCHEM_END = -1
 
   !-----------------------------------------------------------------------------
   !
@@ -41,13 +40,21 @@ module mod_chemvar
   !
   !++ Private parameters & variables
   !
+  integer                             :: CHEM_TRC_vmax = 0
+  character(len=H_SHORT), allocatable :: CHEM_TRC_name(:) ! short name  of tracer
+  character(len=H_MID),   allocatable :: CHEM_TRC_desc(:) ! description of tracer
+  character(len=H_SHORT), allocatable :: CHEM_TRC_unit(:)
+
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CHEMVAR_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
+    use scale_tracer, only: &
+       TRACER_regist
     implicit none
 
     namelist /CHEMVARPARAM/ &
@@ -66,25 +73,35 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** CHEMVARPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist CHEMVARPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=CHEMVARPARAM)
 
-    allocate( CHEM_TRC_name(CHEM_TRC_vmax) )
-    allocate( CHEM_TRC_desc(CHEM_TRC_vmax) )
+    allocate( CHEM_TRC_name(max(CHEM_TRC_vmax,1)) )
+    allocate( CHEM_TRC_desc(max(CHEM_TRC_vmax,1)) )
+    allocate( CHEM_TRC_unit(max(CHEM_TRC_vmax,1)) )
 
     do nq = 1, CHEM_TRC_vmax
        write(CHEM_TRC_name(nq),'(A,I3.3)') 'passive', nq
        write(CHEM_TRC_desc(nq),'(A,I3.3)') 'passive_tracer_no', nq
+       CHEM_TRC_unit(nq) = 'kg/kg'
     enddo
+
+    if ( CHEM_TRC_vmax > 0 ) then
+       call TRACER_regist( NCHEM_STR,                                           & ! [OUT]
+                           CHEM_TRC_vmax,                                       & ! [IN]
+                           CHEM_TRC_name(:), CHEM_TRC_desc(:), CHEM_TRC_unit(:) ) ! [IN]
+       NCHEM_END = NCHEM_STR + CHEM_TRC_vmax - 1
+       NCHEM_MAX = CHEM_TRC_vmax
+    end if
 
     return
   end subroutine CHEMVAR_setup
 
   !-----------------------------------------------------------------------------
   function chemvar_getid( tracername )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*), intent(in) :: tracername
@@ -107,7 +124,7 @@ contains
 
     if ( chemvar_getid <= 0 ) then
        write(*,*) 'xxx [chemvar_getid] INDEX does not exist =>', tname
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
   end function chemvar_getid

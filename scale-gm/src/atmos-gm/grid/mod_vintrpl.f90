@@ -13,7 +13,9 @@ module mod_vintrpl
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -45,14 +47,7 @@ contains
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_grd, only: &
        Xi => GRD_gz, &
        GRD_Z,        &
@@ -132,14 +127,7 @@ contains
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_grd, only: &
        Xi => GRD_gz, &
        GRD_Z,        &

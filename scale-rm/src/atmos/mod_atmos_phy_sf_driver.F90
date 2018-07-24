@@ -298,7 +298,7 @@ contains
           MOMZ_t_SF(i,j) = SFLX_MW(i,j) / ( CZ(KS+1,i,j) - CZ(KS,i,j) )
           RHOU_t_SF(i,j) = SFLX_MU(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
           RHOV_t_SF(i,j) = SFLX_MV(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
-          RHOH_SF  (i,j) = SFLX_SH(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
+          RHOH_SF  (i,j) = SFLX_SH(i,j) / CPdry / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
        enddo
        enddo
 

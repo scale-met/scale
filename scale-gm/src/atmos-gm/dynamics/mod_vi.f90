@@ -13,15 +13,10 @@ module mod_vi
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
 
-  use mod_adm, only: &
-     ADM_lall,    &
-     ADM_lall_pl, &
-     ADM_gall,    &
-     ADM_gall_pl, &
-     ADM_kall
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -48,21 +43,12 @@ module mod_vi
   !
   !++ Private parameters & variables
   !
-#ifdef FIXEDINDEX
-  real(RP), public               :: Mc   (ADM_gall   ,ADM_kall,ADM_lall   )
-  real(RP), private              :: Mc_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-  real(RP), public               :: Ml   (ADM_gall   ,ADM_kall,ADM_lall   )
-  real(RP), private              :: Ml_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-  real(RP), public               :: Mu   (ADM_gall   ,ADM_kall,ADM_lall   )
-  real(RP), private              :: Mu_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
-#else
   real(RP), public,  allocatable :: Mc   (:,:,:)
   real(RP), private, allocatable :: Mc_pl(:,:,:)
   real(RP), public,  allocatable :: Ml   (:,:,:)
   real(RP), private, allocatable :: Ml_pl(:,:,:)
   real(RP), public,  allocatable :: Mu   (:,:,:)
   real(RP), private, allocatable :: Mu_pl(:,:,:)
-#endif
 
   !-----------------------------------------------------------------------------
 contains
@@ -71,14 +57,12 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-#ifndef FIXEDINDEX
     allocate( Mc   (ADM_gall   ,ADM_kall,ADM_lall   ) )
     allocate( Mc_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl) )
     allocate( Mu   (ADM_gall   ,ADM_kall,ADM_lall   ) )
     allocate( Mu_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl) )
     allocate( Ml   (ADM_gall   ,ADM_kall,ADM_lall   ) )
     allocate( Ml_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl) )
-#endif
 
     return
   end subroutine vi_setup
@@ -102,9 +86,7 @@ contains
        Rdry  => CONST_Rdry, &
        CVdry => CONST_CVdry
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_kmax,    &
-       ADM_kmin
+       ADM_have_pl
     use mod_comm, only: &
        COMM_data_transfer
     use mod_grd, only: &
@@ -772,12 +754,7 @@ contains
        grhogetot,        grhogetot_pl,        &
        dt                                     )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_kall
+       ADM_have_pl
     use scale_const, only: &
        Rdry  => CONST_Rdry, &
        CVdry => CONST_CVdry
@@ -1139,14 +1116,7 @@ contains
        g_tilde, g_tilde_pl, &
        dt                   )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use scale_const, only: &
        GRAV  => CONST_GRAV, &
        Rdry  => CONST_Rdry, &
@@ -1304,14 +1274,7 @@ contains
        Spre,   Spre_pl,   &
        dt                 )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use scale_const, only: &
        GRAV  => CONST_GRAV, &
        Rdry  => CONST_Rdry, &

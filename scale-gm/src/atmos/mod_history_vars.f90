@@ -13,7 +13,10 @@ module mod_history_vars
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
+  use scale_tracer
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -55,6 +58,7 @@ module mod_history_vars
   logical, private :: out_duvw     = .false.
   logical, private :: out_dtem     = .false.
   logical, private :: out_dq       = .false.
+  logical, private :: out_sst      = .false.
 
   real(RP), private, allocatable :: u_old  (:,:,:)
   real(RP), private, allocatable :: v_old  (:,:,:)
@@ -66,29 +70,21 @@ module mod_history_vars
 contains
   !-----------------------------------------------------------------------------
   subroutine history_vars_setup
-    use mod_adm, only: &
-       ADM_KNONE,   &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_kmin,    &
-       ADM_kmax
     use mod_vmtr, only: &
        VMTR_getIJ_GSGAM2,    &
        VMTR_getIJ_W2Cfact,   &
        VMTR_getIJ_C2Wfact,   &
        VMTR_getIJ_C2WfactGz, &
        VMTR_getIJ_PHI
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     use mod_runconf, only: &
-       TRC_VMAX, &
-       I_QV,     &
        AF_TYPE
     use mod_prgvar, only: &
        prgvar_get_withdiag
     use mod_bndcnd, only: &
-       BNDCND_all
+       BNDCND_all,  &
+       tem_sfc
     use mod_cnvvar, only: &
        cnvvar_vh2uv
     use mod_history, only: &
@@ -109,8 +105,8 @@ contains
     real(RP) :: rhogw_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: rhoge    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhoge_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
     real(RP) :: rho      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rho_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: pre      (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -125,8 +121,8 @@ contains
     real(RP) :: vz_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: w        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: w_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: q        (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP) :: q        (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: u        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: u_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
@@ -197,7 +193,7 @@ contains
            .OR. item_save(n) == 'ml_dw'       ) out_duvw     = .true.
        if(      item_save(n) == 'ml_dtem'     ) out_dtem     = .true.
        if(      item_save(n) == 'ml_dq'       ) out_dq       = .true.
-
+       if(      item_save(n) == 'sl_sst'      ) out_sst      = .true.
     enddo
 
     !--- get variables
@@ -282,6 +278,12 @@ contains
        qv_old(:,:,:) = q(:,:,:,I_QV)
     endif
 
+    if(out_sst) then
+       do l = 1, ADM_lall
+          call history_in( 'sl_sst', tmp2d(:,:) )
+       enddo
+    endif
+
     tmp2d(:,:) = 0.0_RP
     tmp3d(:,:) = 0.0_RP
 
@@ -293,18 +295,19 @@ contains
           call history_in( 'ml_af_fvz', tmp3d(:,:) )
           call history_in( 'ml_af_fe',  tmp3d(:,:) )
        enddo
-    case('DCMIP')
+    case default
        do l = 1, ADM_lall
           call history_in( 'ml_af_fvx', tmp3d(:,:) )
           call history_in( 'ml_af_fvy', tmp3d(:,:) )
           call history_in( 'ml_af_fvz', tmp3d(:,:) )
+          call history_in( 'ml_af_fw',  tmp3d(:,:) )
           call history_in( 'ml_af_fe',  tmp3d(:,:) )
+          call history_in( 'ml_af_frho',tmp3d(:,:) )
 
-          do nq = 1, TRC_VMAX
+          do nq = 1, QA
              write(varname,'(A,I2.2)') 'ml_af_fq', nq
              call history_in( varname, tmp3d(:,:) )
           enddo
-
           call history_in( 'sl_af_prcp', tmp2d(:,:) )
        enddo
     end select
@@ -314,24 +317,24 @@ contains
 
   !----------------------------------------------------------------------
   subroutine history_vars
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        CPdry => CONST_CPdry, &
        Rvap  => CONST_Rvap
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_specific_heat, &
+       ATMOS_THERMODYN_temp_pres2pott
     use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       I_QV, &
+       QLS, &
+       QLE, &
+       QIS, &
+       QIE
     use mod_adm, only: &
-       ADM_KNONE,   &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_grd, only: &
        GRD_dgz,  &
        GRD_ZSFC, &
@@ -349,27 +352,16 @@ contains
     use mod_time, only: &
        TIME_DTL
     use mod_runconf, only: &
-       TRC_VMAX,  &
-       TRC_name,  &
-       NQW_STR,   &
-       NQW_END,   &
-       I_QV,      &
-       I_QC,      &
-       I_QR,      &
-       I_QI,      &
-       I_QS,      &
-       I_QG,      &
-       AF_TYPE,   &
+       AF_TYPE
+    use mod_chemvar, only: &
        NCHEM_STR, &
        NCHEM_END
     use mod_prgvar, only: &
        prgvar_get_withdiag
-    use mod_thrmdyn, only: &
-       THRMDYN_th
-    use mod_saturation, only: &
-       SATURATION_psat_all, &
-       SATURATION_psat_liq, &
-       SATURATION_psat_ice
+    use scale_atmos_saturation, only: &
+       SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
+       SATURATION_psat_liq => ATMOS_SATURATION_psat_liq, &
+       SATURATION_psat_ice => ATMOS_SATURATION_psat_ice
     use mod_bndcnd, only: &
        BNDCND_all
     use mod_cnvvar, only: &
@@ -390,8 +382,8 @@ contains
     real(RP) :: rhogw_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: rhoge    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rhoge_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
     real(RP) :: rho      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: rho_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: pre      (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -406,8 +398,8 @@ contains
     real(RP) :: vz_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: w        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: w_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP) :: q        (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP) :: q        (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: u        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: u_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
@@ -419,8 +411,8 @@ contains
     real(RP) :: ein      (ADM_gall   ,ADM_kall,ADM_lall   )
 
     real(RP) :: omg      (ADM_gall   ,ADM_kall,ADM_lall   )
-    real(RP) :: psat     (ADM_gall   ,ADM_kall,ADM_lall   )
-    real(RP) :: rh       (ADM_gall   ,ADM_kall,ADM_lall   )
+    real(RP) :: psat     (ADM_gall   ,ADM_kall)
+    real(RP) :: rh       (ADM_gall   ,ADM_kall)
 
     real(RP) :: u_slice  (ADM_gall   ,ADM_KNONE,ADM_lall  )
     real(RP) :: v_slice  (ADM_gall   ,ADM_KNONE,ADM_lall  )
@@ -436,7 +428,7 @@ contains
     real(RP) :: th       (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: th_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: th_prof  (ADM_kall)
-    real(RP) :: thv      (ADM_gall   ,ADM_kall,ADM_lall   )
+    real(RP) :: thv      (ADM_gall   ,ADM_kall)
     real(RP) :: mse      (ADM_gall   ,ADM_kall,ADM_lall   )
 
     real(RP) :: q_clw    (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -456,6 +448,15 @@ contains
     real(RP) :: VMTR_C2WfactGz_pl(ADM_gall_pl,ADM_kall,6,ADM_lall_pl)
     real(RP) :: VMTR_PHI         (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: VMTR_PHI_pl      (ADM_gall_pl,ADM_kall,ADM_lall_pl)
+
+    real(RP) :: Qdry    (ADM_gall   ,ADM_kall)
+    real(RP) :: Rtot    (ADM_gall   ,ADM_kall)
+    real(RP) :: CVtot   (ADM_gall   ,ADM_kall)
+    real(RP) :: CPtot   (ADM_gall   ,ADM_kall)
+    real(RP) :: Qdry_pl (ADM_gall_pl,ADM_kall)
+    real(RP) :: Rtot_pl (ADM_gall_pl,ADM_kall)
+    real(RP) :: CVtot_pl(ADM_gall_pl,ADM_kall)
+    real(RP) :: CPtot_pl(ADM_gall_pl,ADM_kall)
 
     real(RP) :: LHV
     real(RP) :: mxval, mnval
@@ -531,7 +532,7 @@ contains
        enddo
        enddo
        enddo
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ! zonal and meridonal wind
@@ -627,67 +628,67 @@ contains
     ! relative humidity (liq+ice, liq, ice)
 
     if ( out_rha ) then
-       call SATURATION_psat_all( ADM_gall,    & ! [IN]
-                                 ADM_kall,    & ! [IN]
-                                 ADM_lall,    & ! [IN]
-                                 tem (:,:,:), & ! [IN]
-                                 psat(:,:,:)  ) ! [OUT]
-
        do l = 1, ADM_lall
-          rh(:,:,l) = q(:,:,l,I_QV) * rho(:,:,l) * Rvap * tem(:,:,l) &
-                    / psat(:,:,l) &
-                    * 100.0_RP
+          call SATURATION_psat_all( ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+                                    tem (:,:,l), & ! [IN]
+                                    psat(:,:)    ) ! [OUT]
 
-          call history_in( 'ml_rha', rh(:,:,l) )
+          rh(:,:) = q(:,:,l,I_QV) * rho(:,:,l) * Rvap * tem(:,:,l) &
+                  / psat(:,:) &
+                  * 100.0_RP
+
+          call history_in( 'ml_rha', rh(:,:) )
        enddo
     endif
 
     if ( out_rh ) then
-       call SATURATION_psat_liq( ADM_gall,    & ! [IN]
-                                 ADM_kall,    & ! [IN]
-                                 ADM_lall,    & ! [IN]
-                                 tem (:,:,:), & ! [IN]
-                                 psat(:,:,:)  ) ! [OUT]
 
        do l = 1, ADM_lall
-          rh(:,:,l) = q(:,:,l,I_QV) * rho(:,:,l) * Rvap * tem(:,:,l) &
-                    / psat(:,:,l) &
-                    * 100.0_RP
+          call SATURATION_psat_liq( ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+                                    tem (:,:,l), & ! [IN]
+                                    psat(:,:)    ) ! [OUT]
 
-          call history_in( 'ml_rh', rh(:,:,l) )
+          rh(:,:) = q(:,:,l,I_QV) * rho(:,:,l) * Rvap * tem(:,:,l) &
+                  / psat(:,:) &
+                  * 100.0_RP
+
+          call history_in( 'ml_rh', rh(:,:) )
        enddo
     endif
 
     if ( out_rhi ) then
-       call SATURATION_psat_ice( ADM_gall,    & ! [IN]
-                                 ADM_kall,    & ! [IN]
-                                 ADM_lall,    & ! [IN]
-                                 tem (:,:,:), & ! [IN]
-                                 psat(:,:,:)  ) ! [OUT]
 
        do l = 1, ADM_lall
-          rh(:,:,l) = q(:,:,l,I_QV) * rho(:,:,l) * Rvap * tem(:,:,l) &
-                    / psat(:,:,l) &
-                    * 100.0_RP
+          call SATURATION_psat_ice( ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+                                    tem (:,:,l), & ! [IN]
+                                    psat(:,:)    ) ! [OUT]
+          rh(:,:) = q(:,:,l,I_QV) * rho(:,:,l) * Rvap * tem(:,:,l) &
+                  / psat(:,:) &
+                  * 100.0_RP
 
-          call history_in( 'ml_rhi', rh(:,:,l) )
+          call history_in( 'ml_rhi', rh(:,:) )
        enddo
     endif
 
     ! potential temperature
     if ( out_th ) then
-       call THRMDYN_th( ADM_gall,   & ! [IN]
-                        ADM_kall,   & ! [IN]
-                        ADM_lall,   & ! [IN]
-                        tem(:,:,:), & ! [IN]
-                        pre(:,:,:), & ! [IN]
-                        th (:,:,:)  ) ! [OUT]
-
-       thv(:,:,:) = th(:,:,:) * ( 1.D0 + 0.61D0 * q(:,:,:,I_QV) )
-
        do l = 1, ADM_lall
+
+          call ATMOS_THERMODYN_specific_heat( &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, QA, &
+               q(:,:,l,:),                                              & ! [IN]
+               TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+               Qdry(:,:), Rtot(:,:), CVtot(:,:), CPtot(:,:)             ) ! [OUT]
+
+          call ATMOS_THERMODYN_temp_pres2pott( &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+               tem(:,:,l), pre(:,:,l), CPtot(:,:), Rtot(:,:), & ! [IN]
+               th(:,:,l)                                      ) ! [OUT]
+
+          thv(:,:) = th(:,:,l) * ( 1.D0 + 0.61D0 * q(:,:,l,I_QV) )
+
           call history_in( 'ml_th',  th (:,:,l) )
-          call history_in( 'ml_thv', thv(:,:,l) )
+          call history_in( 'ml_thv', thv(:,:) )
        enddo
     endif
 
@@ -714,20 +715,38 @@ contains
 
        call GTL_global_sum_eachlayer( one, one_pl, area_prof )
 
-       call THRMDYN_th( ADM_gall,   & ! [IN]
-                        ADM_kall,   & ! [IN]
-                        ADM_lall,   & ! [IN]
-                        tem(:,:,:), & ! [IN]
-                        pre(:,:,:), & ! [IN]
-                        th (:,:,:)  ) ! [OUT]
+       do l = 1, ADM_lall
+
+          call ATMOS_THERMODYN_specific_heat( &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, QA, &
+               q(:,:,l,:),                                              & ! [IN]
+               TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+               Qdry(:,:), Rtot(:,:), CVtot(:,:), CPtot(:,:)             ) ! [OUT]
+
+          call ATMOS_THERMODYN_temp_pres2pott( &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+               tem(:,:,l), pre(:,:,l), CPtot(:,:), Rtot(:,:), & ! [IN]
+               th(:,:,l)                                      ) ! [OUT]
+
+       end do
 
        if ( ADM_have_pl ) then
-          call THRMDYN_th( ADM_gall_pl,   & ! [IN]
-                           ADM_kall,      & ! [IN]
-                           ADM_lall_pl,   & ! [IN]
-                           tem_pl(:,:,:), & ! [IN]
-                           pre_pl(:,:,:), & ! [IN]
-                           th_pl (:,:,:)  ) ! [OUT]
+
+          do l = 1, ADM_lall_pl
+
+             call ATMOS_THERMODYN_specific_heat( &
+                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, QA, &
+                  q_pl(:,:,l,:),                                           & ! [IN]
+                  TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+                  Qdry_pl(:,:), Rtot_pl(:,:), CVtot_pl(:,:), CPtot_pl(:,:) ) ! [OUT]
+
+             call ATMOS_THERMODYN_temp_pres2pott( &
+                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, &
+                  tem_pl(:,:,l), pre_pl(:,:,l), CPtot_pl(:,:), Rtot_pl(:,:), & ! [IN]
+                  th_pl(:,:,l)                                      ) ! [OUT]
+
+          end do
+
        endif
 
        call GTL_global_sum_eachlayer( th, th_pl, th_prof )
@@ -840,9 +859,9 @@ contains
     !### tracers ###
 
     ! tracers
-    do nq = 1, TRC_vmax
+    do nq = 1, QA
     do l  = 1, ADM_lall
-       call history_in( 'ml_'//TRC_name(nq), q(:,:,l,nq) )
+       call history_in( 'ml_'//TRACER_name(nq), q(:,:,l,nq) )
     enddo
     enddo
 
@@ -850,18 +869,11 @@ contains
     do l  = 1, ADM_lall
        q_clw(:,:,l) = 0.0_RP
        q_cli(:,:,l) = 0.0_RP
-       do nq = NQW_STR, NQW_END
-          if ( nq == I_QC ) then
-             q_clw(:,:,l) = q_clw(:,:,l) + q(:,:,l,nq)
-          elseif( nq == I_QR ) then
-             q_clw(:,:,l) = q_clw(:,:,l) + q(:,:,l,nq)
-          elseif( nq == I_QI ) then
-             q_cli(:,:,l) = q_cli(:,:,l) + q(:,:,l,nq)
-          elseif( nq == I_QS ) then
-             q_cli(:,:,l) = q_cli(:,:,l) + q(:,:,l,nq)
-          elseif( nq == I_QG ) then
-             q_cli(:,:,l) = q_cli(:,:,l) + q(:,:,l,nq)
-          endif
+       do nq = QLS, QLE
+          q_clw(:,:,l) = q_clw(:,:,l) + q(:,:,l,nq)
+       end do
+       do nq = QIS, QIE
+          q_cli(:,:,l) = q_cli(:,:,l) + q(:,:,l,nq)
        enddo
     enddo
 
@@ -947,15 +959,12 @@ contains
        pre_srf  )
     use scale_const, only: &
        GRAV => CONST_GRAV
-    use mod_adm, only: &
-       kdim => ADM_kall, &
-       kmin => ADM_kmin
     implicit none
 
     integer,  intent(in)  :: ijdim
-    real(RP), intent(in)  :: rho    (ijdim,kdim)
-    real(RP), intent(in)  :: pre    (ijdim,kdim)
-    real(RP), intent(in)  :: z      (ijdim,kdim)
+    real(RP), intent(in)  :: rho    (ijdim,ADM_kall)
+    real(RP), intent(in)  :: pre    (ijdim,ADM_kall)
+    real(RP), intent(in)  :: z      (ijdim,ADM_kall)
     real(RP), intent(in)  :: z_srf  (ijdim)
     real(RP), intent(out) :: rho_srf(ijdim)
     real(RP), intent(out) :: pre_srf(ijdim)
@@ -965,13 +974,13 @@ contains
 
     !--- surface density ( extrapolation )
     do ij = 1, ijdim
-       rho_srf(ij) = rho(ij,kmin) &
-                   - ( rho(ij,kmin+1)-rho(ij,kmin) ) * ( z(ij,kmin)-z_srf(ij) ) / ( z(ij,kmin+1)-z(ij,kmin) )
+       rho_srf(ij) = rho(ij,ADM_kmin) &
+                   - ( rho(ij,ADM_kmin+1)-rho(ij,ADM_kmin) ) * ( z(ij,ADM_kmin)-z_srf(ij) ) / ( z(ij,ADM_kmin+1)-z(ij,ADM_kmin) )
     enddo
 
     !--- surface pressure ( hydrostatic balance )
     do ij = 1, ijdim
-       pre_srf(ij) = pre(ij,kmin) + rho(ij,kmin) * GRAV * ( z(ij,kmin)-z_srf(ij) )
+       pre_srf(ij) = pre(ij,ADM_kmin) + rho(ij,ADM_kmin) * GRAV * ( z(ij,ADM_kmin)-z_srf(ij) )
     enddo
 
     return
@@ -991,19 +1000,16 @@ contains
        v_p,   &
        w_p,   &
        t_p    )
-    use scale_process, only: &
-       PRC_MPIstop
-    use mod_adm, only: &
-       kdim => ADM_kall, &
-       kmin => ADM_kmin
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer,  intent(in)  :: ijdim
-    real(RP), intent(in)  :: pre(ijdim,kdim)
-    real(RP), intent(in)  :: u_z(ijdim,kdim)
-    real(RP), intent(in)  :: v_z(ijdim,kdim)
-    real(RP), intent(in)  :: w_z(ijdim,kdim)
-    real(RP), intent(in)  :: t_z(ijdim,kdim)
+    real(RP), intent(in)  :: pre(ijdim,ADM_kall)
+    real(RP), intent(in)  :: u_z(ijdim,ADM_kall)
+    real(RP), intent(in)  :: v_z(ijdim,ADM_kall)
+    real(RP), intent(in)  :: w_z(ijdim,ADM_kall)
+    real(RP), intent(in)  :: t_z(ijdim,ADM_kall)
     real(RP), intent(in)  :: plev
     real(RP), intent(out) :: u_p(ijdim)
     real(RP), intent(out) :: v_p(ijdim)
@@ -1019,13 +1025,13 @@ contains
 
     ! search z-level
     do ij = 1, ijdim
-       do k = kmin, kdim
+       do k = ADM_kmin, ADM_kall
           if( pre(ij,k) < plev ) exit
        enddo
-       if ( k >= kdim ) then
+       if ( k >= ADM_kall ) then
           write(*,*) 'xxx internal error! [sv_plev_uvwt/mod_history_vars] STOP.', &
-                     kdim,k,plev,ij,pre(ij,:)
-          call PRC_MPIstop
+                     ADM_kall,k,plev,ij,pre(ij,:)
+          call PRC_abort
        endif
 
        ku(ij) = k

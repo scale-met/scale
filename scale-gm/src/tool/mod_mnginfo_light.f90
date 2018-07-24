@@ -12,7 +12,7 @@ module mod_mnginfo_light
   !
   !++ Used modules
   !
-  use scale_stdio
+  use scale_io
   !-----------------------------------------------------------------------------
   implicit none
   private

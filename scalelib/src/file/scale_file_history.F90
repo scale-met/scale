@@ -53,6 +53,7 @@ module scale_file_history
      module procedure FILE_HISTORY_Put_1D
      module procedure FILE_HISTORY_Put_2D
      module procedure FILE_HISTORY_Put_3D
+     module procedure FILE_HISTORY_Put_4D
   end interface FILE_HISTORY_Put
 
   interface FILE_HISTORY_in
@@ -60,6 +61,7 @@ module scale_file_history
      module procedure FILE_HISTORY_in_1D
      module procedure FILE_HISTORY_in_2D
      module procedure FILE_HISTORY_in_3D
+     module procedure FILE_HISTORY_in_4D
   end interface FILE_HISTORY_in
 
   abstract interface
@@ -98,6 +100,18 @@ module scale_file_history
   end interface
   procedure(truncate_3D), pointer :: FILE_HISTORY_truncate_3D => NULL()
   public :: FILE_HISTORY_truncate_3D
+  abstract interface
+     subroutine truncate_4D( src, dim_type, zcoord, fill_halo, dsc )
+       import RP, DP
+       real(RP),         intent(in) :: src(:,:,:,:)
+       character(len=*), intent(in) :: dim_type
+       character(len=*), intent(in) :: zcoord
+       logical,          intent(in) :: fill_halo
+       real(DP),         intent(out) :: dsc(:)
+     end subroutine truncate_4D
+  end interface
+  procedure(truncate_4D), pointer :: FILE_HISTORY_truncate_4D => NULL()
+  public :: FILE_HISTORY_truncate_4D
 
 
   interface FILE_HISTORY_Set_AssociatedCoordinate
@@ -614,6 +628,7 @@ contains
     FILE_HISTORY_truncate_1D => FILE_HISTORY_truncate_1D_default
     FILE_HISTORY_truncate_2D => FILE_HISTORY_truncate_2D_default
     FILE_HISTORY_truncate_3D => FILE_HISTORY_truncate_3D_default
+    FILE_HISTORY_truncate_4D => FILE_HISTORY_truncate_4D_default
 
     FILE_HISTORY_disabled = .false.
 
@@ -1272,6 +1287,130 @@ contains
 
     return
   end subroutine FILE_HISTORY_in_3D
+
+  !-----------------------------------------------------------------------------
+  subroutine FILE_HISTORY_Put_4D( &
+       itemid,   &
+       var       )
+    use scale_const, only: &
+       EPS => CONST_EPS
+    implicit none
+
+    integer,  intent(in) :: itemid
+    real(RP), intent(in) :: var(:,:,:,:)
+
+    integer :: dimid
+    real(DP), allocatable :: buffer(:)
+    real(DP) :: dt
+    integer  :: idx
+    logical  :: do_put
+
+    integer :: i, id
+
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    if ( FILE_HISTORY_disabled ) return
+    if ( itemid < 0 ) return
+
+    call FILE_HISTORY_query( itemid, do_put )
+    if ( .not. do_put ) return
+
+    call PROF_rapstart('FILE_HISTORY_OUT', 2)
+
+    do i = 1, FILE_HISTORY_var_inputs(itemid)%nvariants
+       id = FILE_HISTORY_var_inputs(itemid)%variants(i)
+
+       dt = ( FILE_HISTORY_NOWSTEP - FILE_HISTORY_vars(id)%laststep_put ) * FILE_HISTORY_DTSEC
+
+       if ( dt < eps .AND. ( .NOT. FILE_HISTORY_vars(id)%taverage ) ) then
+          LOG_ERROR("FILE_HISTORY_Put_4D",*) 'variable was put two times before output!: ', &
+                     trim(FILE_HISTORY_vars(id)%name), FILE_HISTORY_NOWSTEP, FILE_HISTORY_vars(id)%laststep_put
+          call PRC_abort
+       endif
+
+       if ( FILE_HISTORY_vars(id)%flag_clear ) then ! time to purge
+          FILE_HISTORY_vars(id)%timesum    = 0.0_DP
+          if ( FILE_HISTORY_vars(id)%taverage ) FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+       endif
+
+       dimid = FILE_HISTORY_vars(id)%dimid
+       if ( FILE_HISTORY_vars(id)%taverage ) then
+         allocate( buffer( FILE_HISTORY_vars(id)%size ) )
+         call FILE_HISTORY_truncate_4D( var(:,:,:,:),               & ! (in)
+                                        FILE_HISTORY_dims(dimid)%name,   & ! (in)
+                                        FILE_HISTORY_vars(id)%zcoord,    & ! (in)
+                                        FILE_HISTORY_vars(id)%fill_halo, & ! (in)
+                                        buffer(:)                        ) ! (out)
+         do idx = 1, FILE_HISTORY_vars(id)%size
+            FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+         enddo
+         deallocate( buffer )
+         FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
+      else
+         call FILE_HISTORY_truncate_4D( var(:,:,:,:),               & ! (in)
+                                        FILE_HISTORY_dims(dimid)%name,   & ! (in)
+                                        FILE_HISTORY_vars(id)%zcoord,    & ! (in)
+                                        FILE_HISTORY_vars(id)%fill_halo, & ! (in)
+                                        FILE_HISTORY_vars(id)%varsum(:)  ) ! (out)
+         FILE_HISTORY_vars(id)%timesum = 0.0_DP
+      endif
+
+      FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_NOWSTEP
+      FILE_HISTORY_vars(id)%flag_clear   = .false.
+
+   end do ! variants
+
+    call PROF_rapend('FILE_HISTORY_OUT', 2)
+
+    return
+  end subroutine FILE_HISTORY_Put_4D
+
+  !-----------------------------------------------------------------------------
+  !> Wrapper routine of FILE_HISTORY_reg + FILE_HISTORY_put
+  !-----------------------------------------------------------------------------
+  subroutine FILE_HISTORY_in_4D( &
+       var,              &
+       name, desc, unit, &
+       standard_name,    &
+       dim_type, &
+       fill_halo )
+    implicit none
+
+    real(RP),         intent(in) :: var(:,:,:,:) !< value
+    character(len=*), intent(in) :: name       !< name        of the item
+    character(len=*), intent(in) :: desc       !< description of the item
+    character(len=*), intent(in) :: unit       !< unit        of the item
+
+    character(len=*), intent(in), optional :: standard_name
+    character(len=*), intent(in), optional :: dim_type
+    logical,          intent(in), optional :: fill_halo
+    character(len=H_SHORT) :: dim_type_
+
+    integer, parameter :: ndim = 4
+    integer :: itemid
+    logical :: do_put
+    !---------------------------------------------------------------------------
+
+    if ( FILE_HISTORY_disabled ) return
+
+    ! Check whether the item has been already registered
+    call FILE_HISTORY_reg( name, desc, unit,            & ! [IN]
+                           itemid,                      & ! [OUT]
+                           standard_name=standard_name, & ! [IN]
+                           ndims=ndim,                  & ! [IN]
+                           dim_type=dim_type,           & ! [IN]
+                           fill_halo=fill_halo          ) ! [IN]
+
+    if ( itemid < 0 ) return
+
+    ! Check whether it is time to input the item
+    call FILE_HISTORY_query( itemid, do_put ) ! [IN], [OUT]
+
+    if ( do_put ) call FILE_HISTORY_put( itemid, var(:,:,:,:) )
+
+    return
+  end subroutine FILE_HISTORY_in_4D
 
 
   !-----------------------------------------------------------------------------
@@ -2798,6 +2937,33 @@ contains
 
     return
   end subroutine FILE_HISTORY_truncate_3D_default
+  subroutine FILE_HISTORY_truncate_4D_default( &
+       src, &
+       dim_type, zcoord, fill_halo, &
+       dsc )
+    real(RP),         intent(in) :: src(:,:,:,:)
+    character(len=*), intent(in) :: dim_type
+    character(len=*), intent(in) :: zcoord
+    logical,          intent(in) :: fill_halo
+    real(DP),         intent(out) :: dsc(:)
+
+    integer :: l, k, i, j
+    integer :: idx
+
+    intrinsic size
+
+    idx = 1
+    do j = 1, size(src,4)
+    do i = 1, size(src,3)
+    do l = 1, size(src,1)
+       dsc(idx) = src(l, k, i, j)
+       idx = idx + 1
+    end do
+    end do
+    end do
+
+    return
+  end subroutine FILE_HISTORY_truncate_4D_default
 
 end module scale_file_history
 

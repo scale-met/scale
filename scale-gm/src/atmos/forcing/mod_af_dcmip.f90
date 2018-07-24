@@ -13,7 +13,10 @@ module mod_af_dcmip
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
+  use scale_tracer
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -42,19 +45,42 @@ module mod_af_dcmip
   logical, private :: SM_LargeScaleCond   = .false. ! more option for SimpleMicrophysics
   logical, private :: SM_PBL_Bryan        = .false. ! more option for SimpleMicrophysics
   logical, private :: USE_ToyChemistry    = .false.
-  logical, private :: USE_HeldSuarez      = .false.
+  logical, public  :: USE_HeldSuarez      = .false.
+
+  integer :: vlayer
+  integer :: kdim
+
+  integer :: I_QV
+  integer :: I_QC
+  integer :: I_QR
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   subroutine af_dcmip_init
-    use scale_process, only: &
-       PRC_MPIstop
-    use mod_runconf, only: &
-       CHEM_TYPE, &
+    use scale_prc, only: &
+       PRC_abort
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_regist => ATMOS_HYDROMETEOR_regist
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_CH_TYPE
+    use mod_chemvar, only: &
        NCHEM_MAX
     use mod_af_heldsuarez, only: &
        AF_heldsuarez_init
+    use mod_bndcnd, only: &
+       Tsfc => tem_sfc
+    use mod_grd, only: &
+       GRD_LAT,  &
+       GRD_s
+    use mod_gtl, only: &
+       GTL_clip_region_1layer
+    use scale_const, only:    &
+       omega => CONST_OHM,    &
+       pi    => CONST_PI,     &
+       rair  => CONST_Rdry,   &
+       a     => CONST_RADIUS, &
+       rh2o  => CONST_Rvap
     implicit none
 
     logical :: SET_RJ2012          = .false.
@@ -83,7 +109,18 @@ contains
        USE_ToyChemistry,    &
        USE_HeldSuarez
 
-    integer :: ierr
+    real(RP) :: dphi2
+    real(RP) :: q0 = 0.021_RP           ! Maximum specific humidity for baro test
+    real(RP) :: latw                    ! Halfwidth for  for baro test
+    real(RP) :: etav                    ! Auxiliary variable for baro test
+    real(RP) :: SST_TC   = 302.15_RP      ! Constant Value for SST
+    real(RP) :: u0       = 35.0_RP          ! Zonal wind constant for moist baro test
+    real(RP) :: eta0     = 0.252_RP         ! Center of jets (hybrid) for baro test
+    real(RP) :: T00      = 288.0_RP         ! Horizontal mean T at surface for moist baro test
+    real(RP) :: zvir  ! Constant for virtual temp. calc. =(rh2o/rair) - 1 is approx. 0.608
+    real(RP) :: lat    (ADM_gall,ADM_lall)
+
+    integer :: ierr, ij, l
     !---------------------------------------------------------------------------
 
     !--- read parameters
@@ -95,7 +132,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** FORCING_DCMIP_PARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist FORCING_DCMIP_PARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=FORCING_DCMIP_PARAM)
 
@@ -204,6 +241,22 @@ contains
 
     endif
 
+    if ( USE_Kessler ) then
+       call HYDROMETEOR_regist( 2, 0,                            & ! [IN]
+                                (/ "QV", "QC", "QR" /),          & ! [IN]
+                                (/ "water vapor mass ratio", "cloud water mass ratio", "rain water mass ratio " /), & ! [IN]
+                                (/ "kg/kg", "kg/kg", "kg/kg" /), & ! [IN]
+                                I_QV                             ) ! [OUT]
+       I_QC = I_QV + 1
+       I_QR = I_QV + 2
+    else
+       call HYDROMETEOR_regist( 0, 0,                           & ! [IN]
+                                (/ "QV" /),                     & ! [IN]
+                                (/ "water vapor mass ratio" /), & ! [IN]
+                                (/ "kg/kg" /),                  & ! [IN]
+                                I_QV                            ) ! [OUT]
+    end if
+
     if( IO_L ) write(IO_FID_LOG,*) '*** Final Settings of FORCING_DCMIP_PARAM'
     if( IO_L ) write(IO_FID_LOG,*) '+ USE_Kessler         : ', USE_Kessler
     if( IO_L ) write(IO_FID_LOG,*) '+ USE_SimpleMicrophys : ', USE_SimpleMicrophys
@@ -215,16 +268,51 @@ contains
 
     ! initial value of the tracer is set in mod_prgvar - mod_ideal_init
     if ( USE_ToyChemistry ) then
-       if ( CHEM_TYPE == 'PASSIVE' ) then
+       if ( ATMOS_PHY_CH_TYPE == 'PASSIVE' ) then
           if ( NCHEM_MAX /= 2 ) then
              write(*,*) 'xxx Not appropriate number of passive tracer. STOP.', NCHEM_MAX
-             call PRC_MPIstop
+             call PRC_abort
           endif
        else
-          write(*,*) 'xxx CHEM_TYPE must be set to PASSIVE. STOP.', trim(CHEM_TYPE)
-          call PRC_MPIstop
+          write(*,*) 'xxx ATMOS_PHY_CH_TYPE must be set to PASSIVE. STOP.', trim(ATMOS_PHY_CH_TYPE)
+          call PRC_abort
        endif
     endif
+!
+! Set Sea Surface Temperature (constant for tropical cyclone)
+! Tsurf needs to be dependent on latitude for moist baroclinic wave test
+! Tsurf needs to be constant for tropical cyclone test
+!
+    lat(:,:) = GRD_s(:,ADM_KNONE,:,GRD_LAT)
+    latw = 2.0_RP * pi / 9.0_RP
+    etav = (1._RP-eta0) * 0.5_RP * pi
+    zvir   = (rh2o/rair) - 1._RP
+
+    do l=1, ADM_lall
+       if ( USE_HeldSuarez ) then ! Moist H-S Test
+          dphi2 = ( 26.D0 / 180.D0 * pi )**2
+          do ij = 1, ADM_gall
+             Tsfc(ij,l) = 29.D0 * exp( -0.5D0 * lat(ij,l) * lat(ij,l) / dphi2 ) + 271.D0
+          enddo
+       else
+          if ( SM_Latdepend_SST ) then ! Moist Baroclinic Wave Test
+             do ij=1, ADM_gall
+                Tsfc(ij,l) = (T00 + pi*u0/rair * 1.5_RP * sin(etav) * (cos(etav))**0.5_RP *  &
+        ((-2._RP*(sin(lat(ij,l)))**6 * ((cos(lat(ij,l)))**2 + 1._RP/3._RP) + 10._RP/63._RP) * &
+                     u0 * (cos(etav))**1.5_RP  +  &
+  (8._RP/5._RP*(cos(lat(ij,l)))**3 * ((sin(lat(ij,l)))**2 + 2._RP/3._RP) - pi/4._RP)*a*omega*0.5_RP ))/ &
+                    (1._RP+zvir*q0*exp(-(lat(ij,l)/latw)**4))
+             end do
+          else ! Tropical Cyclone Test
+             do ij=1, ADM_gall
+                Tsfc(ij,l) = SST_TC
+             end do
+          end if
+       endif
+    enddo
+
+    vlayer = ADM_vlayer
+    kdim   = ADM_kall
 
     return
   end subroutine af_dcmip_init
@@ -245,6 +333,7 @@ contains
        q,       &
        ein,     &
        pre_sfc, &
+       tem_sfc, &
        fvx,     &
        fvy,     &
        fvz,     &
@@ -258,26 +347,15 @@ contains
        jy,      &
        jz,      &
        dt       )
-    use mod_adm, only: &
-       vlayer => ADM_vlayer, &
-       kdim   => ADM_kall,   &
-       kmin   => ADM_kmin,   &
-       kmax   => ADM_kmax
     use scale_const, only: &
        d2r   => CONST_D2R,   &
        Rdry  => CONST_Rdry,  &
        CPdry => CONST_CPdry, &
        CVdry => CONST_CVdry, &
        PRE00 => CONST_PRE00
-    use mod_runconf, only: &
-       TRC_VMAX,  &
-       RAIN_TYPE, &
-       I_QV,      &
-       I_QC,      &
-       I_QR,      &
+    use mod_chemvar, only: &
        NCHEM_STR, &
-       NCHEM_END, &
-       CVW
+       NCHEM_END
     use mod_simple_physics, only: &
        simple_physics
     use mod_af_heldsuarez, only: &
@@ -297,14 +375,15 @@ contains
     real(RP), intent(in)  :: vx     (ijdim,kdim)
     real(RP), intent(in)  :: vy     (ijdim,kdim)
     real(RP), intent(in)  :: vz     (ijdim,kdim)
-    real(RP), intent(in)  :: q      (ijdim,kdim,TRC_VMAX)
+    real(RP), intent(in)  :: q      (ijdim,kdim,QA)
     real(RP), intent(in)  :: ein    (ijdim,kdim)
     real(RP), intent(in)  :: pre_sfc(ijdim)
+    real(RP), intent(in)  :: tem_sfc(ijdim)
     real(RP), intent(out) :: fvx    (ijdim,kdim)
     real(RP), intent(out) :: fvy    (ijdim,kdim)
     real(RP), intent(out) :: fvz    (ijdim,kdim)
     real(RP), intent(out) :: fe     (ijdim,kdim)
-    real(RP), intent(out) :: fq     (ijdim,kdim,TRC_VMAX)
+    real(RP), intent(out) :: fq     (ijdim,kdim,QA)
     real(RP), intent(out) :: precip (ijdim)
     real(RP), intent(in)  :: ix     (ijdim)
     real(RP), intent(in)  :: iy     (ijdim)
@@ -315,28 +394,30 @@ contains
     real(DP), intent(in)  :: dt
 
     ! for kessler
-    real(RP) :: theta(vlayer) ! potential temperature (K)
-    real(RP) :: qv   (vlayer) ! water vapor mixing ratio (gm/gm)
-    real(RP) :: qc   (vlayer) ! cloud water mixing ratio (gm/gm)
-    real(RP) :: qr   (vlayer) ! rain  water mixing ratio (gm/gm)
-    real(RP) :: rhod (vlayer) ! dry air density (not mean state as in KW) (kg/m^3)
-    real(RP) :: pk   (vlayer) ! Exner function (p/p0)**(R/cp)
-    real(RP) :: z    (vlayer) ! heights of thermo. levels in the grid column (m)
-    real(RP) :: qd   (vlayer)
-    real(RP) :: cv   (vlayer)
+    real(DP) :: theta(vlayer) ! potential temperature (K)
+    real(DP) :: qv   (vlayer) ! water vapor mixing ratio (gm/gm)
+    real(DP) :: qc   (vlayer) ! cloud water mixing ratio (gm/gm)
+    real(DP) :: qr   (vlayer) ! rain  water mixing ratio (gm/gm)
+    real(DP) :: rhod (vlayer) ! dry air density (not mean state as in KW) (kg/m^3)
+    real(DP) :: pk   (vlayer) ! Exner function (p/p0)**(R/cp)
+    real(DP) :: z    (vlayer) ! heights of thermo. levels in the grid column (m)
+    real(DP) :: qd   (vlayer)
+    real(DP) :: cv   (vlayer)
+    real(DP) :: precip1(ijdim)
 
     ! for simple physics
-    real(RP) :: t    (ijdim,vlayer)   ! Temperature at full-model level (K)
-    real(RP) :: qvv  (ijdim,vlayer)   ! Specific Humidity at full-model level (kg/kg)
-    real(RP) :: u    (ijdim,vlayer)   ! Zonal wind at full-model level (m/s)
-    real(RP) :: v    (ijdim,vlayer)   ! Meridional wind at full-model level (m/s)
-    real(RP) :: pmid (ijdim,vlayer)   ! Pressure is full-model level (Pa)
-    real(RP) :: pint (ijdim,vlayer+1) ! Pressure at model interfaces (Pa)
-    real(RP) :: pdel (ijdim,vlayer)   ! Layer thickness (Pa)
-    real(RP) :: rpdel(ijdim,vlayer)   ! Reciprocal of layer thickness (1/Pa)
-    real(RP) :: ps   (ijdim)          ! surface pressure output [dummy]
-    real(RP) :: precip2 (ijdim)
-    integer  :: test
+    real(DP) :: t      (ijdim,vlayer)   ! Temperature at full-model level (K)
+    real(DP) :: qvv    (ijdim,vlayer)   ! Specific Humidity at full-model level (kg/kg)
+    real(DP) :: u      (ijdim,vlayer)   ! Zonal wind at full-model level (m/s)
+    real(DP) :: v      (ijdim,vlayer)   ! Meridional wind at full-model level (m/s)
+    real(DP) :: pmid   (ijdim,vlayer)   ! Pressure is full-model level (Pa)
+    real(DP) :: pint   (ijdim,vlayer+1) ! Pressure at model interfaces (Pa)
+    real(DP) :: pdel   (ijdim,vlayer)   ! Layer thickness (Pa)
+    real(DP) :: rpdel  (ijdim,vlayer)   ! Reciprocal of layer thickness (1/Pa)
+    real(DP) :: ps     (ijdim)          ! surface pressure output [dummy]
+    real(DP) :: ts     (ijdim)
+    real(DP) :: lat_rad(ijdim)
+    real(DP) :: precip2(ijdim)
 
     ! for toy-chemistory
     real(DP) :: lat_deg, lon_deg
@@ -350,8 +431,13 @@ contains
     real(RP) :: gvz(ijdim,kdim)
     real(RP) :: ge (ijdim,kdim)
 
+    integer :: kmin, kmax
+
     integer  :: ij, k, kk
     !---------------------------------------------------------------------------
+
+    kmin = ADM_kmin
+    kmax = ADM_kmax
 
     fvx(:,:)   = 0.0_RP
     fvy(:,:)   = 0.0_RP
@@ -360,10 +446,12 @@ contains
     fq (:,:,:) = 0.0_RP
 
     precip (:) = 0.0_RP
+    precip1(:) = 0.0_RP
     precip2(:) = 0.0_RP
 
     if ( USE_Kessler ) then
        do ij = 1, ijdim
+
           qd   (:) = 1.0_RP               &
                    - q(ij,kmin:kmax,I_QV) &
                    - q(ij,kmin:kmax,I_QC) &
@@ -387,7 +475,7 @@ contains
                         dt,        & ! [IN]
                         z    (:),  & ! [IN]
                         vlayer,    & ! [IN]
-                        precip(ij) ) ! [OUT]
+                        precip1(ij) ) ! [OUT]
 
           qd(:) = 1.0_RP &
                 / ( 1.0_RP + qv(:) + qc(:) + qr(:) )
@@ -396,9 +484,9 @@ contains
           qr(:) = qr(:) * qd(:)
 
           cv(:) = qd(:) * CVdry     &
-                + qv(:) * CVW(I_QV) &
-                + qc(:) * CVW(I_QC) &
-                + qr(:) * CVW(I_QR)
+                + qv(:) * TRACER_CV(I_QV) &
+                + qc(:) * TRACER_CV(I_QC) &
+                + qr(:) * TRACER_CV(I_QR)
 
           fq(ij,kmin:kmax,I_QV) = fq(ij,kmin:kmax,I_QV) + ( qv(:) - q(ij,kmin:kmax,I_QV) ) / dt
           fq(ij,kmin:kmax,I_QC) = fq(ij,kmin:kmax,I_QC) + ( qc(:) - q(ij,kmin:kmax,I_QC) ) / dt
@@ -408,11 +496,6 @@ contains
     endif
 
     if ( USE_SimpleMicrophys ) then
-       if ( SM_Latdepend_SST ) then
-          test = 1
-       else
-          test = 0
-       endif
 
        do k = 1, vlayer
           kk = kmax - k + 1 ! reverse order
@@ -441,12 +524,15 @@ contains
           rpdel(:,k) = 1.0_RP / pdel(:,k)
        enddo
 
-       ps(:) = pre_sfc(:)
+       ps     (:) = pre_sfc(:)
+       ts     (:) = real( tem_sfc(:), kind=DP )
+       lat_rad(:) = real( lat    (:), kind=DP )
 
        call simple_physics( ijdim,             & ! [IN]
                             vlayer,            & ! [IN]
                             dt,                & ! [IN]
-                            lat   (:),         & ! [IN]
+                            lat_rad(:),        & ! [IN]
+                            ts    (:),        & ! [IN]
                             t     (:,:),       & ! [INOUT]
                             qvv   (:,:),       & ! [INOUT]
                             u     (:,:),       & ! [INOUT]
@@ -457,7 +543,6 @@ contains
                             rpdel (:,:),       & ! [INOUT] but not changed
                             ps    (:),         & ! [INOUT] but not changed
                             precip2(:),        & ! [OUT]
-                            test,              & ! [IN]
                             SM_LargeScaleCond, & ! [IN]
                             SM_PBL_Bryan,      & ! [IN]
                             USE_HeldSuarez     ) ! [IN]
@@ -474,15 +559,7 @@ contains
           kk = kmax - k + 1 ! reverse order
 
           do ij = 1, ijdim
-             if    ( RAIN_TYPE == 'DRY' ) then
-                qv(k) = qvv(ij,k)
-
-                qd(k) = 1.0_RP &
-                      - qv(k)
-
-                cv(k) = qd(k) * CVdry     &
-                      + qv(k) * CVW(I_QV)
-             elseif( RAIN_TYPE == 'WARM' ) then
+             if ( USE_Kessler ) then
                 qv(k) = qvv(ij,k)
                 qc(k) = q  (ij,kk,I_QC)
                 qr(k) = q  (ij,kk,I_QR)
@@ -493,9 +570,17 @@ contains
                       - qr(k)
 
                 cv(k) = qd(k) * CVdry     &
-                      + qv(k) * CVW(I_QV) &
-                      + qc(k) * CVW(I_QC) &
-                      + qr(k) * CVW(I_QR)
+                      + qv(k) * TRACER_CV(I_QV) &
+                      + qc(k) * TRACER_CV(I_QC) &
+                      + qr(k) * TRACER_CV(I_QR)
+             else
+                qv(k) = qvv(ij,k)
+
+                qd(k) = 1.0_RP &
+                      - qv(k)
+
+                cv(k) = qd(k) * CVdry     &
+                      + qv(k) * TRACER_CV(I_QV)
              endif
 
              fq(ij,kk,I_QV) = fq(ij,kk,I_QV) + ( qv(k) - q(ij,kk,I_QV) ) / dt
@@ -503,7 +588,7 @@ contains
           enddo
        enddo
 
-       precip(:) = precip(:) + precip2(:)
+       precip(:) = precip1(:) + precip2(:)
 
     endif
 

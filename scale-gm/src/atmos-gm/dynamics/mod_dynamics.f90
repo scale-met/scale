@@ -13,8 +13,11 @@ module mod_dynamics
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
   use scale_prof
+  use scale_tracer
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -45,8 +48,8 @@ contains
   !-----------------------------------------------------------------------------
   !> setup
   subroutine dynamics_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_time, only: &
        TIME_INTEG_TYPE, &
        TIME_SSTEP_MAX
@@ -78,7 +81,7 @@ contains
        if ( mod(TIME_SSTEP_MAX,2) /= 0 ) then
           write(*,*) 'xxx [dynamics_setup] TIME_SSTEP_MAX should be set N*2! STOP.', &
                      TIME_SSTEP_MAX
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        num_of_iteration_lstep    = 2
@@ -92,7 +95,7 @@ contains
             .OR. mod(TIME_SSTEP_MAX,3) /= 0 ) then
           write(*,*) 'xxx [dynamics_setup] TIME_SSTEP_MAX should be set N*2*3! STOP.', &
                      TIME_SSTEP_MAX
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        num_of_iteration_lstep    = 3
@@ -108,7 +111,7 @@ contains
             .OR. mod(TIME_SSTEP_MAX,4) /= 0 ) then
           write(*,*) 'xxx [dynamics_setup] TIME_SSTEP_MAX should be set N*3*4! STOP.', &
                      TIME_SSTEP_MAX
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        num_of_iteration_lstep    = 4
@@ -125,12 +128,12 @@ contains
        if ( TRC_ADV_TYPE == 'DEFAULT' ) then
           write(*,*) 'xxx [dynamics_setup] unsupported advection scheme for TRCADV test! STOP.', &
                      trim(TRC_ADV_TYPE)
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
     case default
        write(*,*) 'xxx [dynamics_setup] unsupported integration type! STOP.', trim(TIME_INTEG_TYPE)
-       call PRC_MPIstop
+       call PRC_abort
     endselect
 
     !---< boundary condition module setup >---
@@ -156,19 +159,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine dynamics_step
-    use scale_const, only: &
-       Rdry  => CONST_Rdry, &
-       Rvap  => CONST_Rvap, &
-       CVdry => CONST_CVdry
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_kall,    &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kmax,    &
-       ADM_kmin
+       ADM_have_pl
     use mod_comm, only: &
        COMM_data_transfer
     use mod_vmtr, only: &
@@ -195,17 +187,13 @@ contains
        I_vy,           &
        I_vz,           &
        I_w,            &
-       TRC_VMAX,       &
-       I_QV,           &
-       I_TKE,          &
-       NQW_STR,        &
-       NQW_END,        &
-       CVW,            &
        DYN_DIV_NUM,    &
        NDIFF_LOCATION, &
        TRC_ADV_TYPE,   &
        FLAG_NUDGING,   &
        THUBURN_LIM
+    use mod_atmos_phy_bl_vars, only: &
+       I_TKE
     use mod_prgvar, only: &
        prgvar_get, &
        prgvar_set
@@ -216,9 +204,10 @@ contains
        rho_bs_pl, &
        pre_bs,    &
        pre_bs_pl
-    use mod_thrmdyn, only: &
-       THRMDYN_th, &
-       THRMDYN_eth
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_specific_heat, &
+       ATMOS_THERMODYN_temp_pres2pott, &
+       ATMOS_THERMODYN_ein_pres2enth
     use mod_numfilter, only: &
        NUMFILTER_DOrayleigh,       &
        NUMFILTER_DOverticaldiff,   &
@@ -248,23 +237,23 @@ contains
 
     real(RP) :: PROG         (ADM_gall   ,ADM_kall,ADM_lall   ,6)        ! prognostic variables
     real(RP) :: PROG_pl      (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
-    real(RP) :: PROGq        (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX) ! tracer variables
-    real(RP) :: PROGq_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP) :: PROGq        (ADM_gall   ,ADM_kall,ADM_lall   ,QA) ! tracer variables
+    real(RP) :: PROGq_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: g_TEND       (ADM_gall   ,ADM_kall,ADM_lall   ,6)        ! tendency of prognostic variables
     real(RP) :: g_TEND_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
-    real(RP) :: g_TENDq      (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX) ! tendency of tracer variables
-    real(RP) :: g_TENDq_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP) :: g_TENDq      (ADM_gall   ,ADM_kall,ADM_lall   ,QA) ! tendency of tracer variables
+    real(RP) :: g_TENDq_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: f_TEND       (ADM_gall   ,ADM_kall,ADM_lall   ,6)        ! forcing tendency of prognostic variables
     real(RP) :: f_TEND_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
-    real(RP) :: f_TENDq      (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX) ! forcing tendency of tracer variables
-    real(RP) :: f_TENDq_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP) :: f_TENDq      (ADM_gall   ,ADM_kall,ADM_lall   ,QA) ! forcing tendency of tracer variables
+    real(RP) :: f_TENDq_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: PROG0        (ADM_gall   ,ADM_kall,ADM_lall   ,6)        ! prognostic variables (save)
     real(RP) :: PROG0_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
-    real(RP) :: PROGq0       (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX) ! tracer variables (save)
-    real(RP) :: PROGq0_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP) :: PROGq0       (ADM_gall   ,ADM_kall,ADM_lall   ,QA) ! tracer variables (save)
+    real(RP) :: PROGq0_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: PROG_split   (ADM_gall   ,ADM_kall,ADM_lall   ,6)        ! prognostic variables (split)
     real(RP) :: PROG_split_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
@@ -274,8 +263,8 @@ contains
 
     real(RP) :: DIAG         (ADM_gall   ,ADM_kall,ADM_lall   ,6)        ! diagnostic variables
     real(RP) :: DIAG_pl      (ADM_gall_pl,ADM_kall,ADM_lall_pl,6)
-    real(RP) :: q            (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_VMAX) ! tracer variables
-    real(RP) :: q_pl         (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_VMAX)
+    real(RP) :: q            (ADM_gall   ,ADM_kall,ADM_lall   ,QA) ! tracer variables
+    real(RP) :: q_pl         (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     !--- density
     real(RP) :: rho   (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -304,8 +293,12 @@ contains
     !--- temporary variables
     real(RP) :: qd      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: qd_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP) :: r       (ADM_gall   ,ADM_kall,ADM_lall   )
+    real(RP) :: r_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: cv      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: cv_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP) :: cp      (ADM_gall   ,ADM_kall,ADM_lall   )
+    real(RP) :: cp_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
     real(RP) :: VMTR_GSGAM2      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: VMTR_GSGAM2_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
@@ -332,7 +325,7 @@ contains
     call PROF_rapstart('__Dynamics',1)
     !$acc  data &
     !$acc& create(PROG,PROGq,g_TEND,g_TENDq,f_TEND,f_TENDq,PROG0,PROGq0,PROG_split,PROG_mean) &
-    !$acc& create(rho,vx,vy,vz,w,ein,tem,pre,eth,th,rhogd,pregd,q,qd,cv) &
+    !$acc& create(DIAG,rho,ein,eth,th,rhogd,pregd,q,qd,cv) &
     !$acc& pcopy(PRG_var)
 
     call PROF_rapstart('___Pre_Post',1)
@@ -389,7 +382,7 @@ contains
        f_TEND_pl(:,:,:,:) = 0.0_RP
        !$acc end kernels
 
-       call src_tracer_advection( TRC_VMAX,                                          & ! [IN]
+       call src_tracer_advection( QA,                                          & ! [IN]
                                   PROGq (:,:,:,:),        PROGq_pl (:,:,:,:),        & ! [INOUT]
                                   PROG0 (:,:,:,I_RHOG),   PROG0_pl (:,:,:,I_RHOG),   & ! [IN]
                                   PROG  (:,:,:,I_RHOG),   PROG_pl  (:,:,:,I_RHOG),   & ! [IN]
@@ -416,9 +409,9 @@ contains
        call PROF_rapstart('___Pre_Post',1)
 
        !---< Generate diagnostic values and set the boudary conditions
-       !$acc kernels pcopy(rho,vx,vy,vz,ein) pcopyin(PROG,VMTR_GSGAM2) async(0)
+       !$acc kernels pcopy(rho,ein,DIAG) pcopyin(PROG,VMTR_GSGAM2) async(0)
        do l = 1, ADM_lall
-       do k = 1, ADM_kall
+       do k = ADM_kmin, ADM_kmax
        do g = 1, ADM_gall
           rho (g,k,l)      = PROG(g,k,l,I_RHOG)   / VMTR_GSGAM2(g,k,l)
           DIAG(g,k,l,I_vx) = PROG(g,k,l,I_RHOGVX) / PROG(g,k,l,I_RHOG)
@@ -432,10 +425,10 @@ contains
 
        !$acc kernels pcopy(q) pcopyin(PROGq,PROG) async(0)
        do l = 1, ADM_lall
-       do k = 1, ADM_kall
+       do k = ADM_kmin, ADM_kmax
        do g = 1, ADM_gall
           !$acc loop seq
-          do nq = 1, TRC_VMAX
+          do nq = 1, QA
              q(g,k,l,nq) = PROGq(g,k,l,nq) / PROG(g,k,l,I_RHOG)
           enddo
           !$acc end loop
@@ -444,30 +437,28 @@ contains
        enddo
        !$acc end kernels
 
-       !$acc kernels pcopy(cv,qd,tem,pre) pcopyin(q,ein,rho,CVW) async(0)
        do l = 1, ADM_lall
-       do k = 1, ADM_kall
+
+          call ATMOS_THERMODYN_specific_heat( &
+               ADM_gall, 1, ADM_gall, ADM_kall, ADM_kmin, ADM_kmax, QA, &
+               q(:,:,l,:),                                              & ! [IN]
+               TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+               qd(:,:,l), r(:,:,l), cv(:,:,l), cp(:,:,l)                ) ! [OUT]
+
+       end do
+
+       !$acc kernels pcopy(DIAG) pcopyin(ein,rho,cv,r) async(0)
+       do l = 1, ADM_lall
+       do k = ADM_kmin, ADM_kmax
        do g = 1, ADM_gall
-          cv(g,k,l) = 0.0_RP
-          qd(g,k,l) = 1.0_RP
-
-          !$acc loop seq
-          do nq = NQW_STR, NQW_END
-             cv(g,k,l) = cv(g,k,l) + q(g,k,l,nq) * CVW(nq)
-             qd(g,k,l) = qd(g,k,l) - q(g,k,l,nq)
-          enddo
-          !$acc end loop
-
-          cv(g,k,l) = cv(g,k,l) + qd(g,k,l) * CVdry
-
           DIAG(g,k,l,I_tem) = ein(g,k,l) / cv(g,k,l)
-          DIAG(g,k,l,I_pre) = rho(g,k,l) * DIAG(g,k,l,I_tem) * ( qd(g,k,l)*Rdry + q(g,k,l,I_QV)*Rvap )
+          DIAG(g,k,l,I_pre) = rho(g,k,l) * DIAG(g,k,l,I_tem) * r(g,k,l)
        enddo
        enddo
        enddo
        !$acc end kernels
 
-       !$acc kernels pcopy(w) pcopyin(PROG,VMTR_C2Wfact) async(0)
+       !$acc kernels pcopy(DIAG) pcopyin(PROG,VMTR_C2Wfact) async(0)
        do l = 1, ADM_lall
        do k = ADM_kmin+1, ADM_kmax
        do g = 1, ADM_gall
@@ -500,49 +491,67 @@ contains
                         VMTR_C2Wfact  (:,:,:,:),        & ! [IN]
                         VMTR_C2WfactGz(:,:,:,:)         ) ! [IN]
 
-       call THRMDYN_th ( ADM_gall,          & ! [IN]
-                         ADM_kall,          & ! [IN]
-                         ADM_lall,          & ! [IN]
-                         DIAG(:,:,:,I_tem), & ! [IN]
-                         DIAG(:,:,:,I_pre), & ! [IN]
-                         th  (:,:,:)        ) ! [OUT]
+       do l = 1, ADM_lall
 
-       call THRMDYN_eth( ADM_gall,          & ! [IN]
-                         ADM_kall,          & ! [IN]
-                         ADM_lall,          & ! [IN]
-                         ein (:,:,:),       & ! [IN]
-                         DIAG(:,:,:,I_pre), & ! [IN]
-                         rho (:,:,:),       & ! [IN]
-                         eth (:,:,:)        ) ! [OUT]
+          cp(:,ADM_kmin-1,l) = cp(:,ADM_kmin,l)
+          r (:,ADM_kmin-1,l) = r (:,ADM_kmin,l)
+          cp(:,ADM_kmax+1,l) = cp(:,ADM_kmax,l)
+          r (:,ADM_kmax+1,l) = r (:,ADM_kmax,l)
+
+          call ATMOS_THERMODYN_temp_pres2pott( &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+               DIAG(:,:,l,I_tem), DIAG(:,:,l,I_pre), cp(:,:,l), r(:,:,l), & ! [IN]
+               th(:,:,l)                                                  ) ! [OUT]
+
+          call ATMOS_THERMODYN_ein_pres2enth( &
+               ADM_gall, 1, ADM_gall, ADM_kall, 1, ADM_kall, &
+               ein(:,:,l), DIAG(:,:,l,I_pre), rho(:,:,l), & ! [IN]
+               eth(:,:,l)                                 ) ! [OUT]
+
+       end do
+
 
        ! perturbations ( pre, rho with metrics )
-       !$acc  kernels pcopy(pregd,rhogd) pcopyin(pre,pre_bs,rho,rho_bs,VMTR_GSGAM2) async(0)
+       !$acc  kernels pcopy(pregd,rhogd) pcopyin(DIAG,pre_bs,rho,rho_bs,VMTR_GSGAM2) async(0)
        pregd(:,:,:) = ( DIAG(:,:,:,I_pre) - pre_bs(:,:,:) ) * VMTR_GSGAM2(:,:,:)
        rhogd(:,:,:) = ( rho (:,:,:)       - rho_bs(:,:,:) ) * VMTR_GSGAM2(:,:,:)
        !$acc end kernels
 
        if ( ADM_have_pl ) then
 
-          rho_pl (:,:,:)      = PROG_pl(:,:,:,I_RHOG)   / VMTR_GSGAM2_pl(:,:,:)
-          DIAG_pl(:,:,:,I_vx) = PROG_pl(:,:,:,I_RHOGVX) / PROG_pl(:,:,:,I_RHOG)
-          DIAG_pl(:,:,:,I_vy) = PROG_pl(:,:,:,I_RHOGVY) / PROG_pl(:,:,:,I_RHOG)
-          DIAG_pl(:,:,:,I_vz) = PROG_pl(:,:,:,I_RHOGVZ) / PROG_pl(:,:,:,I_RHOG)
-          ein_pl (:,:,:)      = PROG_pl(:,:,:,I_RHOGE)  / PROG_pl(:,:,:,I_RHOG)
+          do l = 1, ADM_lall_pl
+          do k = ADM_kmin, ADM_kmax
+          do g = 1, ADM_gall_pl
+             rho_pl (g,k,l)      = PROG_pl(g,k,l,I_RHOG)   / VMTR_GSGAM2_pl(g,k,l)
+             DIAG_pl(g,k,l,I_vx) = PROG_pl(g,k,l,I_RHOGVX) / PROG_pl(g,k,l,I_RHOG)
+             DIAG_pl(g,k,l,I_vy) = PROG_pl(g,k,l,I_RHOGVY) / PROG_pl(g,k,l,I_RHOG)
+             DIAG_pl(g,k,l,I_vz) = PROG_pl(g,k,l,I_RHOGVZ) / PROG_pl(g,k,l,I_RHOG)
+             ein_pl (g,k,l)      = PROG_pl(g,k,l,I_RHOGE)  / PROG_pl(g,k,l,I_RHOG)
+             do nq = 1, QA
+                q_pl(g,k,l,nq) = PROGq_pl(g,k,l,nq) / PROG_pl(g,k,l,I_RHOG)
+             enddo
+          end do
+          end do
+          end do
 
-          do nq = 1, TRC_VMAX
-             q_pl(:,:,:,nq) = PROGq_pl(:,:,:,nq) / PROG_pl(:,:,:,I_RHOG)
-          enddo
+          do l = 1, ADM_lall_pl
 
-          cv_pl(:,:,:) = 0.0_RP
-          qd_pl(:,:,:) = 1.0_RP
-          do nq = NQW_STR, NQW_END
-             cv_pl(:,:,:) = cv_pl(:,:,:) + q_pl(:,:,:,nq) * CVW(nq)
-             qd_pl(:,:,:) = qd_pl(:,:,:) - q_pl(:,:,:,nq)
-          enddo
-          cv_pl(:,:,:) = cv_pl(:,:,:) + qd_pl(:,:,:) * CVdry
+             call ATMOS_THERMODYN_specific_heat( &
+                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, ADM_kmin, ADM_kmax, QA, &
+                  q_pl(:,:,l,:),                                           & ! [IN]
+                  TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+                  qd_pl(:,:,l), r_pl(:,:,l), cv_pl(:,:,l), cp_pl(:,:,l) ) ! [OUT]
 
-          DIAG_pl(:,:,:,I_tem) = ein_pl(:,:,:) / cv_pl(:,:,:)
-          DIAG_pl(:,:,:,I_pre) = rho_pl(:,:,:) * DIAG_pl(:,:,:,I_tem) * ( qd_pl(:,:,:)*Rdry + q_pl(:,:,:,I_QV)*Rvap )
+          end do
+
+          do l = 1, ADM_lall_pl
+          do k = ADM_kmin, ADM_kmax
+          do g = 1, ADM_gall_pl
+             DIAG_pl(g,k,l,I_tem) = ein_pl(g,k,l) / cv_pl(g,k,l)
+             DIAG_pl(g,k,l,I_pre) = rho_pl(g,k,l) * DIAG_pl(g,k,l,I_tem) * r_pl(g,k,l)
+          end do
+          end do
+          end do
 
           do l = 1, ADM_lall_pl
           do k = ADM_kmin+1, ADM_kmax
@@ -575,20 +584,24 @@ contains
                            VMTR_C2Wfact_pl  (:,:,:,:),        & ! [IN]
                            VMTR_C2WfactGz_pl(:,:,:,:)         ) ! [IN]
 
-          call THRMDYN_th ( ADM_gall_pl,          & ! [IN]
-                            ADM_kall,             & ! [IN]
-                            ADM_lall_pl,          & ! [IN]
-                            DIAG_pl(:,:,:,I_tem), & ! [IN]
-                            DIAG_pl(:,:,:,I_pre), & ! [IN]
-                            th_pl  (:,:,:)        ) ! [OUT]
+          do l = 1, ADM_lall_pl
 
-          call THRMDYN_eth( ADM_gall_pl,          & ! [IN]
-                            ADM_kall,             & ! [IN]
-                            ADM_lall_pl,          & ! [IN]
-                            ein_pl (:,:,:),       & ! [IN]
-                            DIAG_pl(:,:,:,I_pre), & ! [IN]
-                            rho_pl (:,:,:),       & ! [IN]
-                            eth_pl (:,:,:)        ) ! [OUT]
+             cp_pl(:,ADM_kmin-1,l) = cp_pl(:,ADM_kmin,l)
+             r_pl (:,ADM_kmin-1,l) = r_pl (:,ADM_kmin,l)
+             cp_pl(:,ADM_kmax+1,l) = cp_pl(:,ADM_kmax,l)
+             r_pl (:,ADM_kmax+1,l) = r_pl (:,ADM_kmax,l)
+
+             call ATMOS_THERMODYN_temp_pres2pott( &
+                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, &
+                  DIAG_pl(:,:,l,I_tem), DIAG_pl(:,:,l,I_pre), cp_pl(:,:,l), r_pl(:,:,l), & ! [IN]
+                  th_pl(:,:,l)                                                           ) ! [OUT]
+
+             call ATMOS_THERMODYN_ein_pres2enth( &
+                  ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, &
+                  ein_pl(:,:,l), DIAG_pl(:,:,l,I_pre), rho_pl(:,:,l), & ! [IN]
+                  eth_pl(:,:,l)                                       ) ! [OUT]
+
+          end do
 
           pregd_pl(:,:,:) = ( DIAG_pl(:,:,:,I_pre) - pre_bs_pl(:,:,:) ) * VMTR_GSGAM2_pl(:,:,:)
           rhogd_pl(:,:,:) = ( rho_pl (:,:,:)       - rho_bs_pl(:,:,:) ) * VMTR_GSGAM2_pl(:,:,:)
@@ -827,7 +840,7 @@ contains
 
           if ( nl == num_of_iteration_lstep ) then
 
-             call src_tracer_advection( TRC_VMAX,                                                & ! [IN]
+             call src_tracer_advection( QA,                                                & ! [IN]
                                         PROGq    (:,:,:,:),        PROGq_pl    (:,:,:,:),        & ! [INOUT]
                                         PROG0    (:,:,:,I_RHOG),   PROG0_pl    (:,:,:,I_RHOG),   & ! [IN]
                                         PROG_mean(:,:,:,I_RHOG),   PROG_mean_pl(:,:,:,I_RHOG),   & ! [IN]
@@ -854,7 +867,7 @@ contains
 
        elseif( TRC_ADV_TYPE == 'DEFAULT' ) then
 
-          do nq = 1, TRC_VMAX
+          do nq = 1, QA
 
              call src_advection_convergence( PROG_mean(:,:,:,I_RHOGVX), PROG_mean_pl(:,:,:,I_RHOGVX), & ! [IN]
                                              PROG_mean(:,:,:,I_RHOGVY), PROG_mean_pl(:,:,:,I_RHOGVY), & ! [IN]

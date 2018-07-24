@@ -9,18 +9,19 @@
 !! @author NICAM developers, Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module mod_gm_driver
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
-  use dc_log, only: &
-     LogInit
   use scale_file, only: &
      FILE_Close_All
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -58,13 +59,21 @@ contains
        intercomm_parent, &
        intercomm_child,  &
        cnf_fname         )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_IsMaster,    &
        PRC_MPIstart,    &
+       PRC_abort,       &
        PRC_LOCAL_setup, &
        PRC_MPIfinish
+    use scale_fpm, only: &
+       FPM_alive,       &
+       FPM_Polling,     &
+       FPM_POLLING_FREQ
     use scale_const, only: &
-       CONST_setup
+       CONST_setup,  &
+       CONST_THERMODYN_TYPE, &
+       RADIUS => CONST_RADIUS, &
+       PI => CONST_PI
     use scale_calendar, only: &
        CALENDAR_setup
     use scale_random, only: &
@@ -95,14 +104,27 @@ contains
        extdata_setup
     use mod_runconf, only: &
        runconf_setup
-    use mod_saturation, only: &
-       saturation_setup
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE,  &
+       ATMOS_PHY_BL_TYPE,  &
+       ATMOS_PHY_SF_TYPE,  &
+       atmos_sw_phy_sf
     use mod_prgvar, only: &
        prgvar_setup,            &
        restart_input_basename,  &
        restart_output_basename, &
        restart_input,           &
        restart_output
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_setup
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_setup
+    use scale_atmos_hydrometeor, only: &
+       atmos_hydrometeor_setup
+    use mod_atmos_phy_bl_driver, only: &
+       atmos_phy_bl_driver_setup
+    use scale_bulkflux, only: &
+       BULKFLUX_setup
     use mod_dynamics, only: &
        dynamics_setup, &
        dynamics_step
@@ -119,6 +141,8 @@ contains
     use mod_embudget, only: &
        embudget_setup, &
        embudget_monitor
+    use mod_bndcnd, only: &
+       tem_sfc
 
     !##### OpenACC (for data copy) #####
     use mod_adm, only: &
@@ -163,8 +187,6 @@ contains
        VMTR_C2Wfact,   &
        VMTR_C2WfactGz, &
        VMTR_PHI
-    use mod_runconf, only: &
-       CVW
     use mod_prgvar, only: &
        PRG_var,  &
        DIAG_var
@@ -185,18 +207,52 @@ contains
        cnvpre_klev, &
        cnvpre_fac1, &
        cnvpre_fac2
-    !##### OpenACC #####
+    use scale_landuse, only: &
+       landuse_setup
+    use mod_atmos_surface, only: &
+       atmos_surface_get
+    use mod_atmos_vars, only: &
+       atmos_vars_setup
+    use scale_tracer, only: &
+       QA,  &
+       tracer_CV,  &
+       tracer_CP,  &
+       tracer_R
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_BL_TYPE, &
+       ATMOS_ADMIN_setup
+    use mod_atmos_phy_driver, only: &
+       ATMOS_phy_driver_tracer_setup, &
+       atmos_phy_driver_setup, &
+       atmos_phy_driver
+    use mod_atmos_phy_sf_vars, only: &
+       ATMOS_PHY_SF_vars_setup
+    use mod_atmos_phy_sf_driver, only: &
+       ATMOS_PHY_SF_driver_setup
+    use mod_gm_topography, only: &
+       TOPO_setup
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_vars_setup
+    use mod_atmos_phy_rd_driver, only: &
+       ATMOS_PHY_RD_driver_setup
+    use mod_time, only: &
+       TIME_RES_ATMOS_PHY_RD, &
+       TIME_DOATMOS_PHY_RD
     implicit none
 
     integer,          intent(in) :: comm_world
     integer,          intent(in) :: intercomm_parent
     integer,          intent(in) :: intercomm_child
     character(len=*), intent(in) :: cnf_fname
+    real(RP) :: Tsfc   (ADM_gall_in,1,ADM_lall)
+    real(RP) :: dx, dy
 
     integer :: myrank
+    integer :: fpm_counter
     logical :: ismaster
+    logical :: sign_exit
 
-    integer :: n
+    integer :: n, l
     !---------------------------------------------------------------------------
 
     !########## Initial setup ##########
@@ -211,9 +267,6 @@ contains
 
     ! setup Log
     call IO_LOG_setup( myrank, ismaster )
-    call LogInit( IO_FID_CONF,       &
-                  IO_FID_LOG, IO_L,  &
-                  IO_FID_NML, IO_NML )
 
     !---< admin module setup >---
     call ADM_setup
@@ -226,9 +279,9 @@ contains
     call PROF_setprefx('INIT')
     call PROF_rapstart('Initialize',0)
 
-
     ! setup constants
     call CONST_setup
+    CONST_THERMODYN_TYPE='EXACT'
 
     ! setup calendar
     call CALENDAR_setup
@@ -261,22 +314,46 @@ contains
     call extdata_setup
 
 
+    call atmos_admin_setup
+
+    !---< tracer setup >---
+    call atmos_hydrometeor_setup
+    call atmos_phy_driver_tracer_setup
+
+    !---< forcing module setup >---
+    call forcing_setup
+
     !---< nhm_runconf module setup >---
     call runconf_setup
 
-    !---< saturation module setup >---
-    call saturation_setup
+    !---< topography module setup >---
+    call TOPO_setup
+
+    !---< landuse module setup >---
+    call landuse_setup( .false., .false., .false. )
+
+    !---< module setup >---
+    call atmos_thermodyn_setup
+    call atmos_saturation_setup
 
     !---< prognostic variable module setup >---
     call prgvar_setup
     call restart_input( restart_input_basename )
 
+    !---< scale variable module setup >---
+    call atmos_vars_setup
+
+    !---< surface module setup >---
+    call atmos_phy_sf_driver_setup
+    dx = sqrt( 4.0_RP * PI * RADIUS**2 / real(10*4**ADM_glevel+2,kind=RP) )
+    dy = dx
+    call bulkflux_setup( sqrt(dx**2+dy**2) )
 
     !---< dynamics module setup >---
     call dynamics_setup
 
-    !---< forcing module setup >---
-    call forcing_setup
+    !---< physics module setup >---
+    call atmos_phy_driver_setup
 
     !---< energy&mass budget module setup >---
     call embudget_setup
@@ -288,8 +365,8 @@ contains
     call history_vars_setup
 
     call PROF_rapend('Initialize', 0)
-
     !########## main ##########
+
 
 #ifdef FIPP
     call fipp_start
@@ -318,11 +395,9 @@ contains
     !$acc& pcopyin(ncmax_r2r,ncmax_sgp,ncmax_r2p,ncmax_p2r) &
     !$acc& pcopyin(GRD_rdgz,GRD_rdgzh,GRD_x,GRD_xt,GRD_vz,GRD_zs) &
     !$acc& pcopyin(GMTR_p,GMTR_t,GMTR_a) &
-    !$acc& pcopyin(cdiv,cgrad,clap,cinterp_TN,cinterp_HN,cinterp_TRA,cinterp_PRA) &
     !$acc& pcopyin(VMTR_GAM2,VMTR_GAM2H,VMTR_GSGAM2,VMTR_GSGAM2H) &
     !$acc& pcopyin(VMTR_RGSQRTH,VMTR_RGAM,VMTR_RGAMH,VMTR_RGSGAM2,VMTR_RGSGAM2H) &
     !$acc& pcopyin(VMTR_W2Cfact,VMTR_C2Wfact,VMTR_C2WfactGz,VMTR_PHI) &
-    !$acc& pcopyin(CVW) &
     !$acc& pcopyin(rho_bs,pre_bs,tem_bs) &
     !$acc& pcopyin(divdamp_coef,Kh_coef,Kh_coef_lap1) &
     !$acc& pcopyin(Mc,Mu,Ml) &
@@ -338,12 +413,18 @@ contains
        call history_out
     endif
 
+    TIME_RES_ATMOS_PHY_RD = 0
+    TIME_DOATMOS_PHY_RD = .true.
+
+    fpm_counter = 0
+
     do n = 1, TIME_LSTEP_MAX
 
        call TIME_report
 
        call PROF_rapstart('_Atmos',1)
        call dynamics_step
+       call atmos_phy_driver
        call forcing_step
        call PROF_rapend  ('_Atmos',1)
 
@@ -361,6 +442,22 @@ contains
        call PROF_rapend  ('_History',1)
 
       if( IO_L ) call flush(IO_FID_LOG)
+
+      ! FPM polling
+      if ( FPM_alive ) then
+      if ( FPM_POLLING_FREQ > 0 ) then
+         if ( fpm_counter > FPM_POLLING_FREQ ) then
+            sign_exit = .false.
+            call FPM_Polling( .true., sign_exit )
+            if ( sign_exit ) then
+               LOG_ERROR("scalegm",*) 'receive stop signal'
+               call PRC_abort
+            endif
+            fpm_counter = 0
+         endif
+         fpm_counter = fpm_counter + 1
+      endif
+      endif
 
     enddo
 

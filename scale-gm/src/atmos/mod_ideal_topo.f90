@@ -13,7 +13,9 @@ module mod_ideal_topo
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -46,12 +48,8 @@ contains
        lat, &
        lon, &
        Zsfc )
-    use scale_process, only: &
-       PRC_MPIstop
-    use mod_adm, only: &
-       ADM_KNONE, &
-       ADM_lall,  &
-       ADM_gall
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(in)  :: lat (ADM_gall,ADM_KNONE,ADM_lall)
@@ -75,7 +73,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** IDEALTOPOPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist IDEALTOPOPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=IDEALTOPOPARAM)
 
@@ -98,7 +96,7 @@ contains
 
     else
        write(*,*) 'xxx [IDEAL_topo] Not appropriate topo_type. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -110,15 +108,11 @@ contains
        lat, &
        lon, &
        Zsfc )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        PI  => CONST_PI, &
        D2R => CONST_D2R
-    use mod_adm, only: &
-       ADM_KNONE, &
-       ADM_lall,  &
-       ADM_gall
     implicit none
 
     real(RP), intent(in)  :: lat (ADM_gall,ADM_KNONE,ADM_lall)
@@ -156,7 +150,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** IDEALTOPOPARAM_Schar_Moderate is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist IDEALTOPOPARAM_Schar_Moderate. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=IDEALTOPOPARAM_Schar_Moderate)
 
@@ -195,16 +189,12 @@ contains
        lat, &
        lon, &
        Zsfc )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        PI     => CONST_PI,     &
        D2R    => CONST_D2R,    &
        RADIUS => CONST_RADIUS
-    use mod_adm, only: &
-       ADM_KNONE, &
-       ADM_lall,  &
-       ADM_gall
     implicit none
 
     real(RP), intent(in)  :: lat (ADM_gall,ADM_KNONE,ADM_lall)
@@ -242,7 +232,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** IDEALTOPOPARAM_Schar_Steep is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist IDEALTOPOPARAM_Schar_Steep. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=IDEALTOPOPARAM_Schar_Steep)
 
@@ -280,10 +270,6 @@ contains
        GRAV   => CONST_GRAV,   &
        RADIUS => CONST_RADIUS, &
        OHM    => CONST_OHM
-    use mod_adm, only: &
-       ADM_KNONE, &
-       ADM_lall,  &
-       ADM_gall
     implicit none
 
     real(RP), intent(in)  :: lat (ADM_gall,ADM_KNONE,ADM_lall)

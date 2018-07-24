@@ -12,14 +12,12 @@ program mkllmap
   !
   !++ Used modules
   !
-  use dc_log, only: &
-     LogInit
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_LOCAL_MPIstart, &
-     PRC_MPIstop,        &
+     PRC_abort, &
      PRC_MPIfinish
   use scale_const, only: &
      CONST_setup
@@ -67,9 +65,6 @@ program mkllmap
   ! setup standard I/O
   call IO_setup( MODELNAME )
   call IO_LOG_setup( myrank, ismaster )
-  call LogInit( IO_FID_CONF,       &
-                IO_FID_LOG, IO_L,  &
-                IO_FID_NML, IO_NML )
 
   ! setup PROF
   call PROF_setup
@@ -107,7 +102,7 @@ program mkllmap
      if( IO_L ) write(IO_FID_LOG,*) '*** MKLLMAP_PARAM is not specified. use default.'
   elseif( ierr > 0 ) then
      write(*,*) 'xxx Not appropriate names in namelist MKLLMAP_PARAM. STOP.'
-     call PRC_MPIstop
+     call PRC_abort
   endif
   if( IO_NML ) write(IO_FID_NML,nml=MKLLMAP_PARAM)
 

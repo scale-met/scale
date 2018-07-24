@@ -14,21 +14,9 @@ module mod_grd
   !
   use mpi
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
 
-  use mod_adm, only: &
-     ADM_nxyz,    &
-     ADM_TI,      &
-     ADM_TJ,      &
-     ADM_AI,      &
-     ADM_AIJ,     &
-     ADM_AJ,      &
-     ADM_KNONE,   &
-     ADM_lall,    &
-     ADM_lall_pl, &
-     ADM_gall,    &
-     ADM_gall_pl, &
-     ADM_kall
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -209,19 +197,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine GRD_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_IsMaster, &
-       PRC_MPIstop
+       PRC_abort
     use scale_const, only: &
        UNDEF  => CONST_UNDEF,  &
        RADIUS => CONST_RADIUS
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gmin,    &
-       ADM_gmax,    &
-       ADM_gslf_pl, &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_comm, only:  &
        COMM_data_transfer
     implicit none
@@ -241,11 +224,12 @@ contains
        triangle_size
 
     real(RP) :: htop
+    real(RP) :: dz
     integer  :: nstart, nend
     integer  :: kflat
 
     integer  :: ierr
-    integer  :: n, k, l, k0
+    integer  :: n, k, l, k0, i, j
     !---------------------------------------------------------------------------
 
     k0 = ADM_KNONE
@@ -259,7 +243,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** GRDPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist GRDPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=GRDPARAM)
 
@@ -311,8 +295,6 @@ contains
     ! calc position of cell arc
     call GRD_makearc
 
-
-
     !---< surface height >---
 #ifndef FIXEDINDEX
     allocate( GRD_zs   (ADM_gall,   k0,ADM_lall,   GRD_ZSFC) )
@@ -362,7 +344,7 @@ contains
           GRD_rdgz (k) = 1.0_RP / grd_dgz (k)
           GRD_rdgzh(k) = 1.0_RP / grd_dgzh(k)
        enddo
-
+       
        ! hight top
        GRD_htop = GRD_gzh(ADM_kmax+1) - GRD_gzh(ADM_kmin)
 
@@ -489,6 +471,7 @@ contains
 
        ! fill HALO
        call COMM_data_transfer( GRD_vz, GRD_vz_pl )
+
     endif
 
     !--- output information about grid.
@@ -541,8 +524,8 @@ contains
        basename,     &
        input_vertex, &
        io_mode       )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_fio, only: &
        FIO_input
     implicit none
@@ -568,7 +551,7 @@ contains
 
     else
        if( IO_L ) write(IO_FID_LOG,*) 'Invalid io_mode!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     call GRD_gen_plgrid
@@ -584,8 +567,8 @@ contains
        io_mode        )
     use mod_io_param, only: &
        IO_REAL8
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_fio, only: &
        FIO_output
     implicit none
@@ -641,7 +624,7 @@ contains
 
     else
        if( IO_L ) write(IO_FID_LOG,*) 'Invalid io_mode!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     return
@@ -650,10 +633,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Input vertical grid
   subroutine GRD_input_vgrid( fname )
-    use scale_process, only: &
-       PRC_MPIstop
-    use mod_adm, only: &
-       ADM_vlayer
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*), intent(in) :: fname ! vertical grid file name
@@ -676,7 +657,7 @@ contains
 
        if ( ierr /= 0 ) then
           write(*,*) 'xxx [GRD_input_vgrid] No vertical grid file.'
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        read(fid) num_of_layer
@@ -689,7 +670,7 @@ contains
 
        if ( num_of_layer /= ADM_vlayer ) then
           write(*,*) 'xxx [GRD_input_vgrid] inconsistency in number of vertical layers.'
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        GRD_gz (:) = real(gz ,kind=RP)
@@ -703,8 +684,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Output vertical grid
   subroutine GRD_output_vgrid( fname )
-    use mod_adm, only: &
-       ADM_vlayer
     implicit none
 
     character(len=*), intent(in) :: fname
@@ -771,27 +750,17 @@ contains
   !-----------------------------------------------------------------------------
   !> Communicate grid data for pole region: This routine is NOT same as COMM_var
   subroutine GRD_gen_plgrid
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD, &
-       PRC_MPIstop
+       PRC_abort
     use mod_adm, only: &
-       ADM_N,          &
-       ADM_S,          &
-       ADM_NPL,        &
-       ADM_SPL,        &
-       ADM_RID,        &
-       ADM_rgn_nmax,   &
        ADM_rgn_vnum,   &
        ADM_rgn_vtab,   &
        ADM_rgn2prc,    &
-       ADM_vlink,      &
        ADM_prc_tab,    &
        ADM_prc_me,     &
        ADM_prc_npl,    &
-       ADM_prc_spl,    &
-       ADM_gmax,       &
-       ADM_gmin,       &
-       ADM_gslf_pl
+       ADM_prc_spl
     use mod_comm, only: &
        COMM_var
     implicit none
@@ -808,7 +777,7 @@ contains
     integer :: datatype
 
     integer :: istat(MPI_STATUS_SIZE)
-    integer :: n, nn, l, ierr
+    integer :: n, l, ierr
     !---------------------------------------------------------------------------
 
     if ( RP == DP ) then
@@ -817,7 +786,7 @@ contains
        datatype = MPI_REAL
     else
        write(*,*) 'xxx precision is not supportd'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     !--- send information of grid around north pole from regular region
@@ -826,9 +795,7 @@ contains
     do l = ADM_rgn_nmax, 1, -1
        if ( ADM_rgn_vnum(ADM_N,l) == ADM_vlink ) then
           do n = 1, ADM_vlink
-             nn = n + 1
-             if( nn > ADM_vlink ) nn = 1
-             rgntab(n) = ADM_rgn_vtab(ADM_RID,ADM_N,l,nn)
+             rgntab(n) = ADM_rgn_vtab(ADM_RID,ADM_N,l,n)
              prctab(n) = ADM_rgn2prc(rgntab(n))
           enddo
           exit
@@ -887,7 +854,7 @@ contains
     !--- send information of grid around south pole from regular region
 
     ! find region which has the south pole
-    do l = ADM_rgn_nmax, 1, -1
+    do l = 1, ADM_rgn_nmax
        if ( ADM_rgn_vnum(ADM_S,l) == ADM_vlink ) then
           do n = 1, ADM_vlink
              rgntab(n) = ADM_rgn_vtab(ADM_RID,ADM_S,l,n)
@@ -1047,13 +1014,7 @@ contains
   !> calculate location of the mid-point of cell arc
   subroutine GRD_makearc
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall_1d, &
-       ADM_gmin,    &
-       ADM_gmax,    &
-       ADM_gslf_pl, &
-       ADM_gmin_pl, &
-       ADM_gmax_pl
+       ADM_have_pl
     implicit none
 
     integer :: ij
@@ -1123,8 +1084,6 @@ contains
 
   !-----------------------------------------------------------------------------
   integer function suf(i,j)
-    use mod_adm, only: &
-       ADM_gall_1d
     implicit none
 
     integer :: i, j

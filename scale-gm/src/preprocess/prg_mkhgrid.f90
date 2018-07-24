@@ -12,12 +12,10 @@ program mkhgrid
   !
   !++ Used modules
   !
-  use dc_log, only: &
-     LogInit
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_LOCAL_MPIstart, &
      PRC_MPIfinish
   use scale_const, only: &
@@ -75,9 +73,6 @@ program mkhgrid
   ! setup standard I/O
   call IO_setup( MODELNAME )
   call IO_LOG_setup( myrank, ismaster )
-  call LogInit( IO_FID_CONF,       &
-                IO_FID_LOG, IO_L,  &
-                IO_FID_NML, IO_NML )
 
   !---< admin module setup >---
   call ADM_setup

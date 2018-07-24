@@ -65,6 +65,14 @@ for f in $( ls ${TOPDIR}/scale-gm/test/data/grid/boundary/${dir2d} )
 do
    echo "ln -svf ${TOPDIR}/scale-gm/test/data/grid/boundary/${dir2d}/${f} ." >> run.sh
 done
+echo "ln -svf ${TOPDIR}/scale-rm/test/data/rad/MIPAS/day.atm ." >> run.sh
+echo "ln -svf ${TOPDIR}/scale-rm/test/data/rad/MIPAS/equ.atm ." >> run.sh
+echo "ln -svf ${TOPDIR}/scale-rm/test/data/rad/MIPAS/sum.atm ." >> run.sh
+echo "ln -svf ${TOPDIR}/scale-rm/test/data/rad/MIPAS/win.atm ." >> run.sh
+echo "ln -svf ${TOPDIR}/scale-rm/test/data/rad/cira.nc ." >> run.sh
+echo "ln -svf ${TOPDIR}/scale-rm/test/data/rad/PARAG.29 ." >> run.sh
+echo "ln -svf ${TOPDIR}/scale-rm/test/data/rad/PARAPC.29 ." >> run.sh
+echo "ln -svf ${TOPDIR}/scale-rm/test/data/rad/VARDATA.RM29 ." >> run.sh
 
 cat << EOF2 >> run.sh
 

@@ -13,7 +13,9 @@ module mod_adm
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -27,88 +29,6 @@ module mod_adm
   !
   !++ Public parameters & variables
   !
-  !====== Basic definition & information ======
-
-  ! Fist colomn on the table for region and direction
-  integer,  public, parameter :: ADM_RID = 1
-  integer,  public, parameter :: ADM_DIR = 2
-
-  ! Identifiers of directions of region edges
-  integer,  public, parameter :: ADM_SW = 1
-  integer,  public, parameter :: ADM_NW = 2
-  integer,  public, parameter :: ADM_NE = 3
-  integer,  public, parameter :: ADM_SE = 4
-
-  ! Identifiers of directions of region vertices
-  integer,  public, parameter :: ADM_W = 1
-  integer,  public, parameter :: ADM_N = 2
-  integer,  public, parameter :: ADM_E = 3
-  integer,  public, parameter :: ADM_S = 4
-
-  ! Identifier of triangle element (i-axis-side or j-axis side)
-  integer,  public, parameter :: ADM_TI = 1
-  integer,  public, parameter :: ADM_TJ = 2
-
-  ! Identifier of arc element (i-axis-side, ij-axis side, or j-axis side)
-  integer,  public, parameter :: ADM_AI  = 1
-  integer,  public, parameter :: ADM_AIJ = 2
-  integer,  public, parameter :: ADM_AJ  = 3
-
-  ! Identifier of 1 variable
-  integer,  public, parameter :: ADM_KNONE = 1
-
-  ! Identifier of poles (north pole or south pole)
-  integer,  public, parameter :: ADM_NPL = 1
-  integer,  public, parameter :: ADM_SPL = 2
-
-  ! dimension of the spacial vector
-  integer,  public, parameter :: ADM_nxyz = 3
-
-#ifdef FIXEDINDEX
-  include "inc_index.h"
-#else
-  !#############################################################################
-  ! Basic Index Parameters
-  !#############################################################################
-
-  ! main parameter
-  integer,  public            :: ADM_glevel           ! grid   division level
-  integer,  public            :: ADM_rlevel           ! region division level
-  integer,  public            :: ADM_vlayer           ! number of vertical layer
-  integer,  public            :: ADM_DMD              ! number of diamond
-
-  ! region
-  integer,  public            :: ADM_rgn_nmax         ! number of regular region
-  integer,  public            :: ADM_lall             ! number of regular region per process
-  integer,  public, parameter :: ADM_rgn_nmax_pl =  2 ! number of pole    region
-  integer,  public, parameter :: ADM_lall_pl     =  2 ! number of pole    region per process
-
-  ! horizontal grid
-  integer,  public            :: ADM_gall             ! number of horizontal grid per regular region
-  integer,  public            :: ADM_gall_in          ! number of horizontal grid (inner part)
-  integer,  public            :: ADM_gall_1d          ! number of horizontal grid (1D)
-  integer,  public            :: ADM_gmin             ! start index of 1D horizontal grid
-  integer,  public            :: ADM_gmax             ! end   index of 1D horizontal grid
-
-  integer,  public            :: ADM_iall             ! number of horizontal grid per regular region (i-axis)
-  integer,  public            :: ADM_imin             ! start index of 1D horizontal grid
-  integer,  public            :: ADM_imax             ! end   index of 1D horizontal grid
-  integer,  public            :: ADM_jall             ! number of horizontal grid per regular region (j-axis)
-  integer,  public            :: ADM_jmin             ! start index of 1D horizontal grid
-  integer,  public            :: ADM_jmax             ! end   index of 1D horizontal grid
-
-  integer,  public            :: ADM_vlink       = -1 ! maximum number of vertex linkage, ICO:5, PSP:6, LCP, MLCP:k
-  integer,  public            :: ADM_gall_pl          ! number of horizontal grid for pole region
-  integer,  public, parameter :: ADM_gslf_pl     =  1 ! index for pole point
-  integer,  public, parameter :: ADM_gmin_pl     =  2 ! start index of grid around the pole point
-  integer,  public            :: ADM_gmax_pl          ! end   index of grid around the pole point
-
-  ! vertical grid
-  integer,  public            :: ADM_kall             ! number of vertical grid
-  integer,  public            :: ADM_kmin             ! start index of vertical grid
-  integer,  public            :: ADM_kmax             ! end   index of vertical grid
-#endif
-
   !
   !====== Information for processes ======
   !
@@ -189,8 +109,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ADM_setup
-    use scale_process, only: &
-       PRC_MPIstop, &
+    use scale_prc, only: &
+       PRC_abort, &
        PRC_myrank,  &
        PRC_nprocs
     implicit none
@@ -206,9 +126,7 @@ contains
         vlayer,           &
         rgnmngfname,      &
         ADM_HGRID_SYSTEM, &
-#ifndef FIXEDINDEX
         ADM_vlink,        &
-#endif
         ADM_XTMS_MLCP_S,  &
         ADM_debug
 
@@ -220,12 +138,6 @@ contains
     ADM_prc_me = PRC_myrank + 1
     ADM_prc_pl = 1
 
-#ifdef FIXEDINDEX
-    if ( ADM_prc_all /= PRC_nprocs ) then
-       write(*,*) 'xxx Fixed prc_all is not match (fixed,requested): ', ADM_prc_all, PRC_nprocs
-       stop
-    endif
-#endif
 
     !--- read parameters
     if( IO_L ) write(IO_FID_LOG,*)
@@ -234,41 +146,25 @@ contains
     read(IO_FID_CONF,nml=ADMPARAM,iostat=ierr)
     if ( ierr < 0 ) then
        write(*,*) 'xxx Not found namelist ADMPARAM! STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist ADMPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=ADMPARAM)
 
     ! Error if glevel & rlevel are not defined
     if ( glevel < 1 ) then
        write(*,*) 'xxx [ADM_setup] glevel is not appropriate :', glevel
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if ( rlevel < 0 ) then
        write(*,*) 'xxx [ADM_setup] rlevel is not appropriate :', rlevel
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ADM_rgnmngfname = trim(rgnmngfname)
 
-#ifdef FIXEDINDEX
-    if ( ADM_HGRID_SYSTEM == 'ICO' ) then
-       dmd        = 10
-    elseif( ADM_HGRID_SYSTEM == 'PERIODIC-1DMD' ) then ! T.Ohno 110721
-       dmd        = 1
-       ADM_prc_pl = -999
-    elseif( ADM_HGRID_SYSTEM == '1DMD-ON-SPHERE' ) then ! M.Hara 110721
-       dmd        = 1
-       ADM_prc_pl = -999
-    elseif( ADM_HGRID_SYSTEM == 'ICO-XTMS' ) then
-       dmd        = 10
-    else
-       write(*,*) 'xxx [ADM_setup] Not appropriate param for ADM_HGRID_SYSTEM. STOP.', trim(ADM_HGRID_SYSTEM)
-       call PRC_MPIstop
-    endif
-#else
     if ( ADM_HGRID_SYSTEM == 'ICO' ) then
        ADM_vlink  = 5
        dmd        = 10
@@ -294,31 +190,12 @@ contains
        dmd        = 10
     else
        write(*,*) 'xxx [ADM_setup] Not appropriate param for ADM_HGRID_SYSTEM. STOP.', trim(ADM_HGRID_SYSTEM)
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     ADM_gall_pl = ADM_vlink + 1
     ADM_gmax_pl = ADM_vlink + 1
-#endif
 
-#ifdef FIXEDINDEX
-    if ( ADM_glevel /= glevel ) then
-       write(*,*) 'xxx [ADM_setup] Fixed glevel is not match (fixed,requested): ', ADM_glevel, glevel
-       call PRC_MPIstop
-    endif
-    if ( ADM_rlevel /= rlevel ) then
-       write(*,*) 'xxx [ADM_setup] Fixed rlevel is not match (fixed,requested): ', ADM_rlevel, rlevel
-       call PRC_MPIstop
-    endif
-    if ( ADM_vlayer /= vlayer ) then
-       write(*,*) 'xxx [ADM_setup] Fixed vlayer is not match (fixed,requested): ', ADM_vlayer, vlayer
-       call PRC_MPIstop
-    endif
-    if ( ADM_DMD /= dmd ) then
-       write(*,*) 'xxx [ADM_setup] Fixed dmd is not match (fixed,requested): ', ADM_DMD, dmd
-       call PRC_MPIstop
-    endif
-#else
     ADM_glevel   = glevel
     ADM_rlevel   = rlevel
     ADM_vlayer   = vlayer
@@ -351,8 +228,18 @@ contains
        ADM_kmin = 1 + 1
        ADM_kmax = 1 + ADM_vlayer
     endif
-#endif
 
+
+    ! for physics grid
+    KS = ADM_kmin
+    KE = ADM_kmax
+    KA = ADM_kall
+    ! IS = 1
+    IE = nmax + 1
+    IA = IE
+    ! JS = 1
+    JE = nmax + 1
+    JA = JE
 
 
     call input_mnginfo( ADM_rgnmngfname )
@@ -387,9 +274,9 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine input_mnginfo( fname )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_nprocs, &
-       PRC_MPIstop
+       PRC_abort
     implicit none
 
     character(len=*), intent(in) :: fname
@@ -444,7 +331,7 @@ contains
     ! ERROR if filename are not defined
     if ( ierr /= 0 ) then
        write(*,*) 'xxx [input_mnginfo] mnginfo file is not found! STOP. ', trim(fname)
-       call PRC_MPIstop
+       call PRC_abort
     endif
     !<= [add] H.Yashiro 20120611
 
@@ -452,7 +339,7 @@ contains
     if ( num_of_rgn /= ADM_rgn_nmax ) then
        write(*,*) 'xxx [input_mnginfo] No match for region number! STOP.'
        write(*,*) 'xxx ADM_rgn_nmax= ',ADM_rgn_nmax,' num_of_rgn=',num_of_rgn
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     allocate( ADM_rgn_etab( ADM_RID:ADM_DIR, &
@@ -472,13 +359,13 @@ contains
     if ( PRC_nprocs /= num_of_proc ) then
        write(*,*) 'xxx [input_mnginfo] No match for process number! STOP.'
        write(*,*) 'xxx PRC_nprocs= ',PRC_nprocs,' num_of_proc=',num_of_proc
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( PRC_nprocs /= num_of_proc ) then
        if( IO_L ) write(IO_FID_LOG,*) 'Msg : Sub[ADM_input_mngtab]/Mod[admin]'
        if( IO_L ) write(IO_FID_LOG,*) ' --- No match for process number!'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     allocate( ADM_prc_rnum(PRC_nprocs)              )
@@ -617,7 +504,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine output_info
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_nprocs
     implicit none
 

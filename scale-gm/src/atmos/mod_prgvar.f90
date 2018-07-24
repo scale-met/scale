@@ -13,7 +13,9 @@ module mod_prgvar
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
+  use scale_tracer
 
   use mod_runconf, only: &
      PRG_vmax0,  &
@@ -73,7 +75,7 @@ module mod_prgvar
   real(RP), private, allocatable :: PRG_var_pl (:,:,:,:)
   real(RP), private, allocatable :: DIAG_var_pl(:,:,:,:)
 
-  integer, private :: TRC_vmax_input ! number of input tracer variables
+  integer, private :: TRC_VMAX_input ! number of input tracer variables
 
   character(len=H_SHORT), private :: layername      = ''
   character(len=H_SHORT), private :: input_io_mode  = 'ADVANCED'
@@ -85,18 +87,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine prgvar_setup
-    use scale_process, only: &
-       PRC_MPIstop
-    use mod_adm, only: &
-       ADM_gall,      &
-       ADM_gall_pl,   &
-       ADM_kall,      &
-       ADM_lall,      &
-       ADM_lall_pl
+    use scale_prc, only: &
+       PRC_abort
     use mod_runconf, only: &
        PRG_vmax,  &
-       DIAG_vmax, &
-       TRC_vmax
+       DIAG_vmax
     implicit none
 
     character(len=H_LONG)  :: input_basename    = ''
@@ -115,7 +110,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    TRC_vmax_input = TRC_vmax
+    TRC_vmax_input = QA
 
     !--- read parameters
     if( IO_L ) write(IO_FID_LOG,*)
@@ -126,7 +121,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** RESTARTPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist RESTARTPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=RESTARTPARAM)
 
@@ -142,7 +137,7 @@ contains
     elseif( input_io_mode == 'IDEAL_TRACER' ) then
     else
        write(*,*) 'xxx [prgvar] Invalid input_io_mode. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if( IO_L ) write(IO_FID_LOG,*) '*** io_mode for restart, output: ', trim(output_io_mode)
@@ -150,7 +145,7 @@ contains
     elseif( output_io_mode == 'ADVANCED'    ) then
     else
        write(*,*) 'xxx [prgvar] Invalid output_io_mode. STOP'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if ( allow_missingq ) then
@@ -177,14 +172,7 @@ contains
        rhoge,  rhoge_pl,  &
        rhogq,  rhogq_pl   )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_lall,    &
-       ADM_lall_pl
-    use mod_runconf, only: &
-       TRC_vmax
+       ADM_have_pl
     implicit none
 
     real(RP), intent(out) :: rhog     (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -199,8 +187,8 @@ contains
     real(RP), intent(out) :: rhogw_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP), intent(out) :: rhoge    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(out) :: rhoge_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(out) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP), intent(out) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP), intent(out) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP), intent(out) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     integer :: n, k, l, nq
     !---------------------------------------------------------------------------
@@ -218,7 +206,7 @@ contains
     enddo
     enddo
 
-    do nq = 1, TRC_vmax
+    do nq = 1, QA
     do l  = 1, ADM_lall
     do k  = 1, ADM_kall
     do n  = 1, ADM_gall
@@ -243,7 +231,7 @@ contains
        enddo
        enddo
 
-       do nq = 1, TRC_vmax
+       do nq = 1, QA
        do l  = 1, ADM_lall_pl
        do k  = 1, ADM_kall
        do n  = 1, ADM_gall_pl
@@ -276,16 +264,9 @@ contains
        w,      w_pl,      &
        q,      q_pl       )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall
+       ADM_have_pl
     use mod_vmtr, only: &
        VMTR_getIJ_RGSGAM2
-    use mod_runconf, only: &
-       TRC_vmax
     use mod_cnvvar, only: &
        cnvvar_prg2diag
     implicit none
@@ -302,8 +283,8 @@ contains
     real(RP), intent(out) :: rhogw_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP), intent(out) :: rhoge    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(out) :: rhoge_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(out) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP), intent(out) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP), intent(out) :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP), intent(out) :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
     real(RP), intent(out) :: rho      (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(out) :: rho_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP), intent(out) :: pre      (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -318,8 +299,8 @@ contains
     real(RP), intent(out) :: vz_pl    (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP), intent(out) :: w        (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(out) :: w_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(out) :: q        (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP), intent(out) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP), intent(out) :: q        (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP), intent(out) :: q_pl     (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     real(RP) :: VMTR_RGSGAM2     (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: VMTR_RGSGAM2_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl)
@@ -354,7 +335,7 @@ contains
     enddo
     enddo
 
-    do nq = 1, TRC_vmax
+    do nq = 1, QA
     do l  = 1, ADM_lall
     do k  = 1, ADM_kall
     do n  = 1, ADM_gall
@@ -390,7 +371,7 @@ contains
        enddo
        enddo
 
-       do nq = 1, TRC_vmax
+       do nq = 1, QA
        do l  = 1, ADM_lall_pl
        do k  = 1, ADM_kall
        do n  = 1, ADM_gall_pl
@@ -417,16 +398,9 @@ contains
        rhoge,  rhoge_pl,  &
        rhogq,  rhogq_pl   )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_lall,    &
-       ADM_lall_pl
+       ADM_have_pl
     use mod_comm, only: &
        COMM_data_transfer
-    use mod_runconf, only: &
-       TRC_vmax
     implicit none
 
     real(RP), intent(in)  :: rhog     (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -441,8 +415,8 @@ contains
     real(RP), intent(in)  :: rhogw_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP), intent(in)  :: rhoge    (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP), intent(in)  :: rhoge_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
-    real(RP), intent(in)  :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,TRC_vmax)
-    real(RP), intent(in)  :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,TRC_vmax)
+    real(RP), intent(in)  :: rhogq    (ADM_gall   ,ADM_kall,ADM_lall   ,QA)
+    real(RP), intent(in)  :: rhogq_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl,QA)
 
     integer :: n, k, l, nq
     !---------------------------------------------------------------------------
@@ -460,7 +434,7 @@ contains
     enddo
     enddo
 
-    do nq = 1, TRC_vmax
+    do nq = 1, QA
     do l  = 1, ADM_lall
     do k  = 1, ADM_kall
     do n  = 1, ADM_gall
@@ -485,7 +459,7 @@ contains
        enddo
        enddo
 
-       do nq = 1, TRC_vmax
+       do nq = 1, QA
        do l  = 1, ADM_lall_pl
        do k  = 1, ADM_kall
        do n  = 1, ADM_gall_pl
@@ -511,14 +485,6 @@ contains
        rhogw,  &
        rhoge,  &
        rhogq   )
-    use mod_adm, only: &
-       ADM_lall,    &
-       ADM_gall_in, &
-       ADM_kall,    &
-       ADM_gmin,    &
-       ADM_gmax
-    use mod_runconf, only: &
-       TRC_vmax
     implicit none
 
     real(RP), intent(out) :: rhog  (ADM_gall_in,ADM_kall,ADM_lall)
@@ -527,7 +493,7 @@ contains
     real(RP), intent(out) :: rhogvz(ADM_gall_in,ADM_kall,ADM_lall)
     real(RP), intent(out) :: rhogw (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP), intent(out) :: rhoge (ADM_gall_in,ADM_kall,ADM_lall)
-    real(RP), intent(out) :: rhogq (ADM_gall_in,ADM_kall,ADM_lall,TRC_vmax)
+    real(RP), intent(out) :: rhogq (ADM_gall_in,ADM_kall,ADM_lall,QA)
 
     integer :: i, j, n, k, l, nq, ij
     !---------------------------------------------------------------------------
@@ -552,7 +518,7 @@ contains
     enddo
     enddo
 
-    do nq = 1, TRC_vmax
+    do nq = 1, QA
     do l  = 1, ADM_lall
     do k  = 1, ADM_kall
        n = 1
@@ -589,19 +555,8 @@ contains
        vz,     &
        w,      &
        q       )
-    use mod_adm, only: &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_gall_in, &
-       ADM_kall,    &
-       ADM_gmin,    &
-       ADM_gmax
     use mod_vmtr, only: &
        VMTR_getIJ_RGSGAM2
-    use mod_runconf, only: &
-       TRC_vmax
     use mod_cnvvar, only: &
        cnvvar_prg2diag
     implicit none
@@ -612,7 +567,7 @@ contains
     real(RP), intent(out) :: rhogvz(ADM_gall_in,ADM_kall,ADM_lall)
     real(RP), intent(out) :: rhogw (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP), intent(out) :: rhoge (ADM_gall_in,ADM_kall,ADM_lall)
-    real(RP), intent(out) :: rhogq (ADM_gall_in,ADM_kall,ADM_lall,TRC_vmax)
+    real(RP), intent(out) :: rhogq (ADM_gall_in,ADM_kall,ADM_lall,QA)
     real(RP), intent(out) :: rho   (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP), intent(out) :: pre   (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP), intent(out) :: tem   (ADM_gall_in,ADM_kall,ADM_lall)
@@ -620,7 +575,7 @@ contains
     real(RP), intent(out) :: vy    (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP), intent(out) :: vz    (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP), intent(out) :: w     (ADM_gall_in,ADM_kall,ADM_lall)
-    real(RP), intent(out) :: q     (ADM_gall_in,ADM_kall,ADM_lall,TRC_vmax)
+    real(RP), intent(out) :: q     (ADM_gall_in,ADM_kall,ADM_lall,QA)
 
     real(RP) :: VMTR_RGSGAM2     (ADM_gall   ,ADM_kall,ADM_lall   )
     real(RP) :: VMTR_RGSGAM2_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl)
@@ -662,7 +617,7 @@ contains
     enddo
     enddo
 
-    do nq = 1, TRC_vmax
+    do nq = 1, QA
     do l  = 1, ADM_lall
     do k  = 1, ADM_kall
        n = 1
@@ -693,17 +648,10 @@ contains
        rhogw,  &
        rhoge,  &
        rhogq   )
-    use mod_adm, only : &
-       ADM_lall,    &
-       ADM_gall_in, &
-       ADM_kall,    &
-       ADM_gmin,    &
-       ADM_gmax
     use mod_comm, only: &
        COMM_var
     use mod_runconf, only: &
-       PRG_vmax, &
-       TRC_vmax
+       PRG_vmax
     implicit none
 
     real(RP), intent(in) :: rhog  (ADM_gall_in,ADM_kall,ADM_lall)
@@ -712,7 +660,7 @@ contains
     real(RP), intent(in) :: rhogvz(ADM_gall_in,ADM_kall,ADM_lall)
     real(RP), intent(in) :: rhogw (ADM_gall_in,ADM_kall,ADM_lall)
     real(RP), intent(in) :: rhoge (ADM_gall_in,ADM_kall,ADM_lall)
-    real(RP), intent(in) :: rhogq (ADM_gall_in,ADM_kall,ADM_lall,TRC_vmax)
+    real(RP), intent(in) :: rhogq (ADM_gall_in,ADM_kall,ADM_lall,QA)
 
     integer :: i, j, n, k, l, nq, ij
     !---------------------------------------------------------------------------
@@ -737,7 +685,7 @@ contains
     enddo
     enddo
 
-    do nq = 1, TRC_vmax
+    do nq = 1, QA
     do l  = 1, ADM_lall
     do k  = 1, ADM_kall
        n = 1
@@ -762,10 +710,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine restart_input( basename )
-    use mod_adm, only: &
-       ADM_kall,    &
-       ADM_kmax,    &
-       ADM_kmin
     use mod_fio, only: &
        FIO_input
     use mod_comm, only: &
@@ -776,9 +720,7 @@ contains
     use mod_runconf, only: &
        PRG_name,  &
        DIAG_vmax, &
-       DIAG_name, &
-       TRC_vmax,  &
-       TRC_name
+       DIAG_name
     use mod_cnvvar, only: &
        cnvvar_diag2prg
     use mod_ideal_init, only :  & ! [add] R.Yoshida 20121019
@@ -805,7 +747,7 @@ contains
        enddo
 
        do nq = 1, TRC_vmax_input
-          call FIO_input( DIAG_var(:,:,:,DIAG_vmax0+nq),basename,TRC_name(nq), &
+          call FIO_input( DIAG_var(:,:,:,DIAG_vmax0+nq),basename,TRACER_name(nq), &
                           layername,1,ADM_kall,1,                              &
                           allow_missingq=allow_missingq                        )
        enddo
@@ -825,7 +767,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** make ideal initials for tracer'
 
-       call tracer_input( DIAG_var(:,:,:,DIAG_vmax0+1:DIAG_vmax0+TRC_vmax) ) ! [OUT]
+       call tracer_input( DIAG_var(:,:,:,DIAG_vmax0+1:DIAG_vmax0+QA) ) ! [OUT]
 
     endif !--- io_mode
 
@@ -839,7 +781,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,2(A,1PE24.17))') '--- ', DIAG_name(nq), ': max=', val_max, ', min=', val_min
     enddo
 
-    do nq = 1, TRC_vmax
+    do nq = 1, QA
        val_max = GTL_max( DIAG_var   (:,:,:,DIAG_vmax0+nq), &
                           DIAG_var_pl(:,:,:,DIAG_vmax0+nq), &
                           ADM_kall, ADM_kmin, ADM_kmax      )
@@ -854,7 +796,7 @@ contains
                           DIAG_var_pl(:,:,:,DIAG_vmax0+nq), &
                           ADM_kall, ADM_kmin, ADM_kmax, nonzero)
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,2(A,1PE24.17))') '--- ', TRC_name(nq),  ': max=', val_max, ', min=', val_min
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,2(A,1PE24.17))') '--- ', TRACER_name(nq),  ': max=', val_max, ', min=', val_min
     enddo
 
     call cnvvar_diag2prg( PRG_var (:,:,:,:), PRG_var_pl (:,:,:,:), & ! [OUT]
@@ -868,7 +810,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,2(A,1PE24.17))') '--- ', PRG_name(nq), ': max=', val_max, ', min=', val_min
     enddo
 
-    do nq = 1, TRC_vmax
+    do nq = 1, QA
        val_max = GTL_max( PRG_var   (:,:,:,PRG_vmax0+nq), &
                           PRG_var_pl(:,:,:,PRG_vmax0+nq), &
                           ADM_kall, ADM_kmin, ADM_kmax    )
@@ -883,7 +825,7 @@ contains
                           PRG_var_pl(:,:,:,PRG_vmax0+nq),      &
                           ADM_kall, ADM_kmin, ADM_kmax, nonzero)
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,2(A,1PE24.17))') '--- rhog * ', TRC_name(nq),  ': max=', val_max, ', min=', val_min
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,2(A,1PE24.17))') '--- rhog * ', TRACER_name(nq),  ': max=', val_max, ', min=', val_min
     enddo
 
     return
@@ -891,10 +833,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine restart_output( basename )
-    use mod_adm, only: &
-       ADM_kall,    &
-       ADM_kmax,    &
-       ADM_kmin
     use mod_io_param, only: &
        IO_REAL8
     use mod_fio, only: &
@@ -905,10 +843,7 @@ contains
        GTL_max, &
        GTL_min
     use mod_runconf, only: &
-       DIAG_name, &
-       TRC_vmax,  &
-       TRC_name,  &
-       WLABEL
+       DIAG_name
     use mod_cnvvar, only: &
        cnvvar_prg2diag
     implicit none
@@ -957,7 +892,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,2(A,1PE24.17))') '--- ', DIAG_name(nq), ': max=', val_max, ', min=', val_min
     enddo
 
-    do nq = 1, TRC_vmax
+    do nq = 1, QA
        val_max = GTL_max( DIAG_var   (:,:,:,DIAG_vmax0+nq), &
                           DIAG_var_pl(:,:,:,DIAG_vmax0+nq), &
                           ADM_kall, ADM_kmin, ADM_kmax      )
@@ -972,7 +907,7 @@ contains
                           DIAG_var_pl(:,:,:,DIAG_vmax0+nq), &
                           ADM_kall, ADM_kmin, ADM_kmax, nonzero)
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,2(A,1PE24.17))') '--- ', TRC_name(nq),  ': max=', val_max, ', min=', val_min
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,2(A,1PE24.17))') '--- ', TRACER_name(nq),  ': max=', val_max, ', min=', val_min
     enddo
 
     if ( output_io_mode == 'ADVANCED' ) then
@@ -982,8 +917,8 @@ contains
                            IO_REAL8, layername, 1, ADM_kall, 1, TIME_CTIME, TIME_CTIME                       ) ! [IN]
        enddo
 
-       do nq = 1, TRC_vmax
-          call FIO_output( DIAG_var(:,:,:,DIAG_vmax0+nq), basename, desc, '', TRC_name(nq), WLABEL(nq), '', WUNIT, & ! [IN]
+       do nq = 1, QA
+          call FIO_output( DIAG_var(:,:,:,DIAG_vmax0+nq), basename, desc, '', TRACER_name(nq), TRACER_desc(nq), '', WUNIT, & ! [IN]
                            IO_REAL8, layername, 1, ADM_kall, 1, TIME_CTIME, TIME_CTIME                             ) ! [IN]
        enddo
 
@@ -994,8 +929,6 @@ contains
 
   !-----------------------------------------------------------------------------
   integer function suf(i,j)
-    use mod_adm, only: &
-       ADM_gall_1d
     implicit none
 
     integer :: i, j

@@ -13,7 +13,10 @@ module mod_ideal_init
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_prof
+  use scale_atmos_grid_icoA_index
+  use scale_tracer
 
   use scale_const, only: &
      pi    => CONST_PI,     &
@@ -24,17 +27,6 @@ module mod_ideal_init
      Rv    => CONST_Rvap,   &
      Cp    => CONST_CPdry,  &
      PRE00 => CONST_PRE00
-  use mod_adm, only: &
-     ADM_KNONE, &
-     ADM_lall,    &
-     ADM_lall_pl, &
-     ADM_gall,    &
-     ADM_gall_pl, &
-     ADM_kall,    &
-     ADM_kmin,    &
-     ADM_kmax
-  use mod_runconf, only: &
-     TRC_vmax
   use dcmip_initial_conditions_test_1_2_3, only: &
      test2_steady_state_mountain, &
      test2_schaer_mountain,       &
@@ -78,6 +70,7 @@ module mod_ideal_init
   private :: mountwave_init
   private :: gravwave_init
   private :: tomita_init
+  private :: warmbubble_init
 
   private :: tomita_2004
   private :: eta_vert_coord_NW
@@ -117,16 +110,20 @@ module mod_ideal_init
   logical, private, parameter :: message = .false.
   integer, private, parameter :: itrmax = 100       ! # of iteration maximum
 
+  real(RP), private, allocatable :: bubble(:,:,:)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   subroutine dycore_input( &
        DIAG_var )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
-    real(RP), intent(out) :: DIAG_var(ADM_gall,ADM_kall,ADM_lall,6+TRC_VMAX)
+    real(RP), intent(out) :: DIAG_var(ADM_gall,ADM_kall,ADM_lall,6+QA)
 
     character(len=H_SHORT) :: init_type   = ''
     character(len=H_SHORT) :: test_case   = ''
@@ -159,7 +156,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** DYCORETESTPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist DYCORETESTPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=DYCORETESTPARAM)
 
@@ -221,12 +218,27 @@ contains
 
        call tomita_init( ADM_gall, ADM_kall, ADM_lall, DIAG_var(:,:,:,:) )
 
+    case('Warmbubble')
+
+       call BUBBLE_setup
+       call warmbubble_init( ADM_gall, ADM_kall, ADM_lall, DIAG_var(:,:,:,:) )
+
     case default
 
        write(*,*) 'xxx [dycore_input] Invalid init_type. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
 
     end select
+
+    call PROF_valcheck( 'dycore_input', 'DIAG_var(pres)', DIAG_var(:,:,:,1) )
+    call PROF_valcheck( 'dycore_input', 'DIAG_var(temp)', DIAG_var(:,:,:,2) )
+    call PROF_valcheck( 'dycore_input', 'DIAG_var(vx)  ', DIAG_var(:,:,:,3) )
+    call PROF_valcheck( 'dycore_input', 'DIAG_var(vy)  ', DIAG_var(:,:,:,4) )
+    call PROF_valcheck( 'dycore_input', 'DIAG_var(vz)  ', DIAG_var(:,:,:,5) )
+    call PROF_valcheck( 'dycore_input', 'DIAG_var(w)   ', DIAG_var(:,:,:,6) )
+    if ( I_QV > 0 ) then
+       call PROF_valcheck( 'dycore_input', 'DIAG_var(qv)  ', DIAG_var(:,:,:,I_QV) )
+    endif
 
     return
   end subroutine dycore_input
@@ -244,7 +256,7 @@ contains
        GRD_s
     implicit none
 
-    real(RP), intent(out) :: TRC_var(ADM_gall,ADM_kall,ADM_lall,TRC_VMAX)
+    real(RP), intent(out) :: TRC_var(ADM_gall,ADM_kall,ADM_lall,QA)
 
     real(RP) :: random(ADM_gall,ADM_kall,ADM_lall)
     integer  :: deg
@@ -254,7 +266,7 @@ contains
 
     k0 = ADM_KNONE
 
-    do nq = 1, TRC_VMAX
+    do nq = 1, QA
        call RANDOM_get( random(:,:,:) )
 
        if ( nq == 1 ) then ! vapor (dummy for thermodynamics)
@@ -322,7 +334,7 @@ contains
     integer,  intent(in)    :: ijdim
     integer,  intent(in)    :: kdim
     integer,  intent(in)    :: lall
-    real(RP), intent(inout) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP), intent(inout) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     real(RP) :: pre(kdim), tem(kdim), dz(kdim)
     real(RP) :: pre_sfc, tem_sfc
@@ -441,8 +453,8 @@ contains
        eps_geo2prs,  &
        nicamcore,    &
        DIAG_var      )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_grd, only: &
        GRD_LAT, &
        GRD_LON, &
@@ -458,7 +470,7 @@ contains
     character(len=*), intent(in)  :: test_case
     real(RP),         intent(in)  :: eps_geo2prs
     logical,          intent(in)  :: nicamcore
-    real(RP),         intent(out) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP),         intent(out) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     real(RP) :: lat, lon               ! latitude, longitude on Icosahedral grid
     real(RP) :: eta(kdim,2), geo(kdim) ! eta & geopotential in ICO-grid field
@@ -544,7 +556,7 @@ contains
        if ( itr > itrmax ) then
           write(*         ,*) 'ETA ITERATION ERROR: NOT CONVERGED', n, l
           if( IO_L ) write(IO_FID_LOG,*) 'ETA ITERATION ERROR: NOT CONVERGED', n, l
-          call PRC_MPIstop
+          call PRC_abort
        endif
 
        if (psgm) then
@@ -589,8 +601,8 @@ contains
        test_case,   &
        chemtracer,  &
        DIAG_var     )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_grd, only: &
        GRD_LAT,  &
        GRD_LON,  &
@@ -602,9 +614,10 @@ contains
        GRD_vz
     use mod_vmtr, only : &
        VMTR_getIJ_PHI
-    use mod_runconf, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV,      &
-       NQW_MAX,   &
+       QHA
+    use mod_chemvar, only: &
        NCHEM_MAX, &
        NCHEM_STR, &
        NCHEM_END
@@ -617,7 +630,7 @@ contains
     integer,          intent(in)  :: lall
     character(len=*), intent(in)  :: test_case
     logical,          intent(in)  :: chemtracer
-    real(RP),         intent(out) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP),         intent(out) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     real(DP) :: DP_lon          ! latitude, longitude on Icosahedral grid
     real(DP) :: DP_lat          ! latitude, longitude on Icosahedral grid
@@ -698,16 +711,16 @@ contains
     case default
        if( IO_L ) write(IO_FID_LOG,*) "xxx Invalid test_case: '"//trim(test_case)//"' specified."
        if( IO_L ) write(IO_FID_LOG,*) 'STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     end select
     if( IO_L ) write(IO_FID_LOG,*) "Chemical Tracer: ", chemtracer
     if( IO_L ) write(IO_FID_LOG,*) "### DO NOT INPUT ANY TOPOGRAPHY ###"
 
     if ( moist == 1 ) then
-       if ( NQW_MAX < 3 ) then
-          write(*         ,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
-          if( IO_L ) write(IO_FID_LOG,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
-          call PRC_MPIstop
+       if ( QHA < 2 ) then
+          write(*         ,*) 'QHA is not enough! requires >= 2.', QHA
+          if( IO_L ) write(IO_FID_LOG,*) 'QHA is not enough! requires >= 2.', QA
+          call PRC_abort
        endif
     endif
 
@@ -777,7 +790,7 @@ contains
           if ( NCHEM_MAX /= 2 ) then
              write(*         ,*) 'NCHEM_MAX is not enough! requires 2.', NCHEM_MAX
              if( IO_L ) write(IO_FID_LOG,*) 'NCHEM_MAX is not enough! requires 2.', NCHEM_MAX
-             call PRC_MPIstop
+             call PRC_abort
           endif
 
           call initial_value_Terminator( DP_lat*r2d, DP_lon*r2d, cl, cl2 )
@@ -809,17 +822,17 @@ contains
        test_case,   &
        prs_rebuild, &
        DIAG_var     )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_grd, only: &
        GRD_LAT, &
        GRD_LON, &
        GRD_s,   &
        GRD_Z,   &
        GRD_vz
-    use mod_runconf, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV,    &
-       NQW_MAX
+       QHA
     implicit none
 
     integer,          intent(in)  :: ijdim
@@ -827,7 +840,7 @@ contains
     integer,          intent(in)  :: lall
     character(len=*), intent(in)  :: test_case
     logical,          intent(in)  :: prs_rebuild
-    real(RP),         intent(out) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP),         intent(out) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     real(DP) :: DP_lon          ! latitude, longitude on Icosahedral grid
     real(DP) :: DP_lat          ! latitude, longitude on Icosahedral grid
@@ -859,9 +872,10 @@ contains
     real(RP)            :: RdovRv
     real(RP)            :: Mvap2           ! Ratio of molar mass of dry air/water based on NICAM CONSTANTs
 
-    integer,  parameter :: zcoords = 1     ! 1 if z is specified, 0 if p is specified
-    integer             :: pert            ! type of perturbation (0 = no perturbation, 1 = perturbation)
-    logical,  parameter :: prs_dry = .false.
+    integer,  parameter :: zcoords  = 1      ! 1 if z is specified, 0 if p is specified
+    integer             :: pert              ! type of perturbation (0 = no perturbation, 1 = perturbation)
+    real(RP)            :: windmask = 1.0_RP
+    logical,  parameter :: prs_dry  = .false.
 
     integer :: n, k, l, k0
     !---------------------------------------------------------------------------
@@ -881,17 +895,20 @@ contains
     case('2')  ! without perturbation
        if( IO_L ) write(IO_FID_LOG,*) "Super-Cell Initialize - case 2: no perturbation"
        pert = 0
+    case('3')  ! without wind
+       if( IO_L ) write(IO_FID_LOG,*) "Super-Cell Initialize - case 3: no wind (warmbubble)"
+       windmask = 0.0_RP
     case default
        if( IO_L ) write(IO_FID_LOG,*) "xxx Invalid test_case: '"//trim(test_case)//"' specified."
        if( IO_L ) write(IO_FID_LOG,*) 'STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     end select
     if( IO_L ) write(IO_FID_LOG,*) "### DO NOT INPUT ANY TOPOGRAPHY ###"
 
-    if ( NQW_MAX < 3 ) then
-       write(*         ,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
-       if( IO_L ) write(IO_FID_LOG,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
-       call PRC_MPIstop
+    if ( QHA < 2 ) then
+       write(*         ,*) 'QHA is not enough! requires >= 2.', QHA
+       if( IO_L ) write(IO_FID_LOG,*) 'QHA is not enough! requires >= 2.', QHA
+       call PRC_abort
     endif
 
     call supercell_init
@@ -942,9 +959,9 @@ contains
        do k = 1, kdim
           DIAG_var(n,k,l,1     ) = prs     (k)
           DIAG_var(n,k,l,2     ) = tmp     (k)
-          DIAG_var(n,k,l,3     ) = vx_local(k)
-          DIAG_var(n,k,l,4     ) = vy_local(k)
-          DIAG_var(n,k,l,5     ) = vz_local(k)
+          DIAG_var(n,k,l,3     ) = vx_local(k) * windmask
+          DIAG_var(n,k,l,4     ) = vy_local(k) * windmask
+          DIAG_var(n,k,l,5     ) = vz_local(k) * windmask
           DIAG_var(n,k,l,6+I_QV) = q       (k)
        enddo
 
@@ -961,24 +978,24 @@ contains
        lall,        &
        prs_rebuild, &
        DIAG_var     )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_grd, only: &
        GRD_LAT, &
        GRD_LON, &
        GRD_s,   &
        GRD_Z,   &
        GRD_vz
-    use mod_runconf, only: &
+    use scale_atmos_hydrometeor, only: &
        I_QV,    &
-       NQW_MAX
+       QHA
     implicit none
 
     integer,  intent(in)  :: ijdim
     integer,  intent(in)  :: kdim
     integer,  intent(in)  :: lall
     logical,  intent(in)  :: prs_rebuild
-    real(RP), intent(out) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP), intent(out) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     real(DP) :: DP_lon          ! latitude, longitude on Icosahedral grid
     real(DP) :: DP_lat          ! latitude, longitude on Icosahedral grid
@@ -1026,10 +1043,10 @@ contains
     Mvap2  = ( 1.0_RP - RdovRv ) / RdovRv
 
     if( IO_L ) write(IO_FID_LOG,*) "### DO NOT INPUT ANY TOPOGRAPHY ###"
-    if ( NQW_MAX < 3 ) then
-       write(*         ,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
-       if( IO_L ) write(IO_FID_LOG,*) 'NQW_MAX is not enough! requires more than 3.', NQW_MAX
-       call PRC_MPIstop
+    if ( QHA < 2 ) then
+       write(*         ,*) 'QHA is not enough! requires >= 2.', QHA
+       if( IO_L ) write(IO_FID_LOG,*) 'QHA is not enough! requires >= 2.', QHA
+       call PRC_abort
     endif
 
     do l = 1, lall
@@ -1093,8 +1110,8 @@ contains
        lall,       &
        test_case,  &
        DIAG_var    )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_grd, only: &
        GRD_LAT, &
        GRD_LON, &
@@ -1103,7 +1120,7 @@ contains
        GRD_Z,   &
        GRD_ZH,  &
        GRD_vz
-    use mod_runconf, only: &
+    use mod_chemvar, only: &
        NCHEM_STR
     use mod_chemvar, only: &
        chemvar_getid
@@ -1117,7 +1134,7 @@ contains
     integer,          intent(in)    :: kdim
     integer,          intent(in)    :: lall
     character(len=*), intent(in)    :: test_case
-    real(RP),         intent(inout) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP),         intent(inout) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     real(RP) :: lon      ! longitude            [rad]
     real(RP) :: lat      ! latitude             [rad]
@@ -1396,7 +1413,7 @@ contains
     case default
        write(*         ,*) "Unknown test_case: ", trim(test_case)," specified. STOP"
        if( IO_L ) write(IO_FID_LOG,*) "Unknown test_case: ", trim(test_case)," specified. STOP"
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     return
@@ -1409,8 +1426,8 @@ contains
        lall,      &
        test_case, &
        DIAG_var   )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_grd, only: &
        GRD_LAT, &
        GRD_LON, &
@@ -1418,9 +1435,8 @@ contains
        GRD_vz,  &
        GRD_Z,   &
        GRD_ZH
-    use mod_runconf, only: &
-       NCHEM_STR
     use mod_chemvar, only: &
+       NCHEM_STR, &
        chemvar_getid
     implicit none
 
@@ -1428,7 +1444,7 @@ contains
     integer,          intent(in)    :: kdim
     integer,          intent(in)    :: lall
     character(len=*), intent(in)    :: test_case
-    real(RP),         intent(inout) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP),         intent(inout) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     real(RP) :: lon      ! longitude            [rad]
     real(RP) :: lat      ! latitude             [rad]
@@ -1669,7 +1685,7 @@ contains
     case default
        write(*         ,*) "Unknown test_case: ", trim(test_case)," specified. STOP"
        if( IO_L ) write(IO_FID_LOG,*) "Unknown test_case: ", trim(test_case)," specified. STOP"
-       call PRC_MPIstop
+       call PRC_abort
     end select
 
     return
@@ -1693,7 +1709,7 @@ contains
     integer, intent(in)    :: ijdim
     integer, intent(in)    :: kdim
     integer, intent(in)    :: lall
-    real(RP), intent(inout) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP), intent(inout) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     integer, parameter :: zcoords = 1
 
@@ -1812,7 +1828,7 @@ contains
     integer, intent(in)  :: ijdim
     integer, intent(in)  :: kdim
     integer, intent(in)  :: lall
-    real(RP), intent(out) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
+    real(RP), intent(out) :: DIAG_var(ijdim,kdim,lall,6+QA)
 
     ! work paramters
     real(RP) :: lat, lon                 ! latitude, longitude on Icosahedral grid
@@ -1873,6 +1889,215 @@ contains
 
     return
   end subroutine tomita_init
+
+  !-----------------------------------------------------------------------------
+  subroutine warmbubble_init( &
+       ijdim,   &
+       kdim,    &
+       lall,    &
+       DIAG_var )
+    use scale_prc, only: &
+       PRC_abort
+    use scale_const, only: &
+       Pstd   => CONST_Pstd,   &
+       EPSvap => CONST_EPSvap
+    use mod_grd, only: &
+       GRD_LAT, &
+       GRD_LON, &
+       GRD_s,   &
+       GRD_Z,   &
+       GRD_vz
+    use scale_atmos_hydrometeor, only: &
+       I_QV,    &
+       QHA
+    implicit none
+
+    integer,  intent(in)  :: ijdim
+    integer,  intent(in)  :: kdim
+    integer,  intent(in)  :: lall
+    real(RP), intent(out) :: DIAG_var(ijdim,kdim,lall,6+QA)
+
+    ! Surface state
+    real(RP) :: SFC_THETA               ! surface potential temperature [K]
+    real(RP) :: SFC_PRES                ! surface pressure [Pa]
+    real(RP) :: SFC_RH       =  80.0_RP ! surface relative humidity [%]
+    ! Environment state
+    real(RP) :: ENV_U        =   0.0_RP ! velocity u of environment [m/s]
+    real(RP) :: ENV_V        =   0.0_RP ! velocity v of environment [m/s]
+    real(RP) :: ENV_RH       =  80.0_RP ! Relative Humidity of environment [%]
+    real(RP) :: ENV_L1_ZTOP  =  1.E3_RP ! top height of the layer1 (constant THETA)       [m]
+    real(RP) :: ENV_L2_ZTOP  = 14.E3_RP ! top height of the layer2 (small THETA gradient) [m]
+    real(RP) :: ENV_L2_TLAPS = 4.E-3_RP ! Lapse rate of THETA in the layer2 (small THETA gradient) [K/m]
+    real(RP) :: ENV_L3_TLAPS = 3.E-2_RP ! Lapse rate of THETA in the layer3 (large THETA gradient) [K/m]
+    ! Bubble
+    real(RP) :: BBL_THETA    =   1.0_RP ! extremum of temperature in bubble [K]
+
+    NAMELIST / PARAM_MKINIT_WARMBUBBLE / &
+       SFC_THETA,    &
+       SFC_PRES,     &
+       ENV_U,        &
+       ENV_V,        &
+       ENV_RH,       &
+       ENV_L1_ZTOP,  &
+       ENV_L2_ZTOP,  &
+       ENV_L2_TLAPS, &
+       ENV_L3_TLAPS, &
+       BBL_THETA
+
+    real(RP) :: lat, lon
+    real(RP) :: z(kdim)
+
+    real(RP) :: dens(kdim)
+    real(RP) :: pres(kdim)
+    real(RP) :: temp(kdim)
+    real(RP) :: pott(kdim)
+    real(RP) :: qv  (kdim)
+    real(RP) :: qc  (kdim)
+    real(RP) :: temp_sfc
+    real(RP) :: pres_sfc
+    real(RP) :: pott_sfc
+    real(RP) :: qv_sfc
+    real(RP) :: qc_sfc
+
+    real(RP) :: qsat(kdim)
+    real(RP) :: qsat_sfc
+    real(RP) :: psat
+    real(RP) :: dtheta
+
+    integer  :: ierr
+    integer  :: n, k, l, k0
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) "Warmbubble Initialize"
+
+    if ( QHA < 2 ) then
+       write(*         ,*) 'QHA is not enough! requires >= 2.', QHA
+       if( IO_L ) write(IO_FID_LOG,*) 'QHA is not enough! requires >= 2.', QHA
+       call PRC_abort
+    endif
+
+    SFC_THETA = 300.0_RP
+    SFC_PRES  = Pstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_WARMBUBBLE,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_WARMBUBBLE. Check!'
+       call PRC_abort
+    endif
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKINIT_WARMBUBBLE)
+
+    k0 = ADM_KNONE
+
+    DIAG_var(:,:,:,:) = 0.0_RP
+
+    do l = 1, lall
+    do n = 1, ijdim
+       do k = ADM_kmin, ADM_kmax
+          z(k) = GRD_vz(n,k,l,GRD_Z)
+       enddo
+
+       lat = GRD_s(n,k0,l,GRD_LAT)
+       lon = GRD_s(n,k0,l,GRD_LON)
+
+       ! calc in dry condition
+       pres_sfc = SFC_PRES
+       pott_sfc = SFC_THETA
+       qv_sfc   = 0.0_RP
+       qc_sfc   = 0.0_RP
+
+       do k = ADM_kmin, ADM_kmax
+          if    ( z(k) <= ENV_L1_ZTOP ) then ! Layer 1
+             pott(k) = SFC_THETA
+          elseif( z(k) <  ENV_L2_ZTOP ) then ! Layer 2
+             pott(k) = pott(k-1) + ENV_L2_TLAPS * ( z(k)-z(k-1) )
+          else                               ! Layer 3
+             pott(k) = pott(k-1) + ENV_L3_TLAPS * ( z(k)-z(k-1) )
+          endif
+       enddo
+       qv(:)    = 0.0_RP
+       qc(:)    = 0.0_RP
+
+       ! make density & pressure profile in dry condition
+       call HYDROSTATIC_buildrho( kdim,     & ! [IN]
+                                  ADM_kmin, & ! [IN]
+                                  ADM_kmax, & ! [IN]
+                                  z   (:),  & ! [IN]
+                                  dens(:),  & ! [OUT]
+                                  temp(:),  & ! [OUT]
+                                  pres(:),  & ! [OUT]
+                                  pott(:),  & ! [IN]
+                                  qv  (:),  & ! [IN]
+                                  qc  (:),  & ! [IN]
+                                  temp_sfc, & ! [OUT]
+                                  pres_sfc, & ! [IN]
+                                  pott_sfc, & ! [IN]
+                                  qv_sfc,   & ! [IN]
+                                  qc_sfc    ) ! [IN]
+
+       ! calc QV from RH
+       call SATURATION_psat( psat, temp_sfc )
+       qsat_sfc = EPSvap * psat / ( pres_sfc - ( 1.0_RP-EPSvap ) * psat )
+
+       do k = 1, kdim
+          call SATURATION_psat( psat, temp(k) )
+          qsat(k) = EPSvap * psat / ( pres(k) - ( 1.0_RP-EPSvap ) * psat )
+       enddo
+
+       qv_sfc = SFC_RH * 1.E-2_RP * qsat_sfc
+       do k = ADM_kmin, ADM_kmax
+          if    ( z(k) <= ENV_L1_ZTOP ) then ! Layer 1
+             qv(k) = ENV_RH * 1.E-2_RP * qsat(k)
+          elseif( z(k) <=  ENV_L2_ZTOP ) then ! Layer 2
+             qv(k) = ENV_RH * 1.E-2_RP * qsat(k)
+          else                                ! Layer 3
+             qv(k) = 0.0_RP
+          endif
+       enddo
+
+       ! make density & pressure profile in moist condition
+       call HYDROSTATIC_buildrho( kdim,     & ! [IN]
+                                  ADM_kmin, & ! [IN]
+                                  ADM_kmax, & ! [IN]
+                                  z   (:),  & ! [IN]
+                                  dens(:),  & ! [OUT]
+                                  temp(:),  & ! [OUT]
+                                  pres(:),  & ! [OUT]
+                                  pott(:),  & ! [IN]
+                                  qv  (:),  & ! [IN]
+                                  qc  (:),  & ! [IN]
+                                  temp_sfc, & ! [OUT]
+                                  pres_sfc, & ! [IN]
+                                  pott_sfc, & ! [IN]
+                                  qv_sfc,   & ! [IN]
+                                  qc_sfc    ) ! [IN]
+
+       ! make warm bubble
+       do k = 1, kdim
+          dtheta = BBL_THETA * bubble(n,k,l)
+
+          temp(k) = temp(k) + dtheta * ( pres(k) / PRE00 )**(Rd/Cp)
+       enddo
+
+
+       do k = 1, kdim
+          DIAG_var(n,k,l,1)      = pres(k)
+          DIAG_var(n,k,l,2)      = temp(k)
+          DIAG_var(n,k,l,3)      = 0.0_RP
+          DIAG_var(n,k,l,4)      = 0.0_RP
+          DIAG_var(n,k,l,5)      = 0.0_RP
+          DIAG_var(n,k,l,6)      = 0.0_RP
+          DIAG_var(n,k,l,6+I_QV) = qv  (k)
+       enddo
+    enddo
+    enddo
+
+    return
+  end subroutine warmbubble_init
 
   !-----------------------------------------------------------------------------
   ! estimation ps distribution by using topography
@@ -2274,8 +2499,6 @@ contains
        lall,    &
        vmax,    &
        DIAG_var )
-    use mod_adm, only: &
-       K0 => ADM_KNONE
     use scale_vector, only: &
        VECTR_xyz2latlon
     use mod_grd, only: &
@@ -2297,8 +2520,12 @@ contains
     real(RP) :: ptb_wix(kdim), ptb_wiy(kdim)
     real(RP) :: ptb_vx(kdim), ptb_vy(kdim), ptb_vz(kdim)
 
+    integer :: K0
+
     cla = clat * d2r
     clo = clon * d2r
+
+    K0 = ADM_KNONE
 
     do l = 1, lall
     do n = 1, ijdim
@@ -2507,5 +2734,429 @@ contains
 
     return
   end function Sp_Unit_North
+
+  !-----------------------------------------------------------------------------
+  !> Bubble
+  subroutine BUBBLE_setup
+    use scale_prc, only: &
+       PRC_abort
+    use scale_const, only: &
+       CONST_UNDEF8, &
+       CONST_D2R
+    use scale_vector, only: &
+       VECTR_distance
+    use mod_grd, only: &
+       GRD_LAT, &
+       GRD_LON, &
+       GRD_s,   &
+       GRD_Z,   &
+       GRD_vz
+    implicit none
+
+    ! Bubble
+    real(RP) :: BBL_CZ     =  2.E3_RP ! center location [m]: z
+    real(RP) :: BBL_CLON   =  2.E3_RP ! center location [deg.]: longitude
+    real(RP) :: BBL_CLAT   =  2.E3_RP ! center location [deg.]: latitude
+    real(RP) :: BBL_RZ     =  0.0_RP  ! bubble radius   [m]: z
+    real(RP) :: BBL_RHORIZ =  0.0_RP  ! bubble radius   [m]: horizontal
+
+    NAMELIST / PARAM_BUBBLE / &
+       BBL_CZ,    &
+       BBL_CLON,  &
+       BBL_CLAT,  &
+       BBL_RZ,    &
+       BBL_RHORIZ
+
+    real(RP) :: lon_rad, lat_rad
+    real(RP) :: disth, distz
+
+    integer  :: ierr
+    integer  :: g, k, l, k0
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[idealinit bubble] / Categ[atmos] / Origin[SCALE-GM]'
+
+    k0 = ADM_KNONE
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_BUBBLE,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_BUBBLE. Check!'
+       call PRC_abort
+    endif
+    if( IO_NML ) write(IO_FID_NML,nml=PARAM_BUBBLE)
+
+    lon_rad = BBL_CLON * CONST_D2R
+    lat_rad = BBL_CLAT * CONST_D2R
+
+    allocate( bubble(ADM_gall,ADM_kall,ADM_lall) )
+
+    if ( abs(BBL_RZ*BBL_RHORIZ) <= 0.0_RP ) then
+
+       if( IO_L ) write(IO_FID_LOG,*) '*** no bubble'
+       do l = 1, ADM_lall
+       do k = 1, ADM_kall
+       do g = 1, ADM_gall
+          bubble(g,k,l) = 0.0_RP
+       enddo
+       enddo
+       enddo
+
+    else
+
+       do l = 1, ADM_lall
+       do k = 1, ADM_kall
+       do g = 1, ADM_gall
+          bubble(g,k,l) = 0.0_RP
+       enddo
+       enddo
+       enddo
+
+       ! make bubble coefficient
+       do l = 1, ADM_lall
+       do g = 1, ADM_gall
+
+          call VECTR_distance( a,                     & ! [IN]
+                               lon_rad,               & ! [IN]
+                               lat_rad,               & ! [IN]
+                               GRD_s(g,k0,l,GRD_LON), & ! [IN]
+                               GRD_s(g,k0,l,GRD_LAT), & ! [IN]
+                               disth                  ) ! [OUT]
+
+          disth = ( disth / BBL_RHORIZ )**2
+
+          do k = ADM_kmin, ADM_kmax
+             distz = ( (GRD_vz(g,k,l,GRD_Z)-BBL_CZ) / BBL_RZ )**2
+
+             bubble(g,k,l) = cos( 0.5_RP*PI*sqrt( min(distz+disth,1.0_RP) ) )**2
+          enddo
+
+       enddo
+       enddo
+    endif
+
+    return
+  end subroutine BUBBLE_setup
+
+  !-----------------------------------------------------------------------------
+  !> calc saturation vapor pressure from Clausius-Clapeyron equation (0D)
+  subroutine SATURATION_psat( &
+       psat, &
+       temp  )
+    use scale_const, only: &
+       Rvap  => CONST_Rvap,   &
+       LHV0  => CONST_LHV0,  &
+       PSAT0 => CONST_PSAT0,  &
+       TEM00 => CONST_TEM00
+    implicit none
+
+    real(RP), intent(out) :: psat !< saturation vapor pressure [Pa]
+    real(RP), intent(in)  :: temp !< temperature               [K]
+    !---------------------------------------------------------------------------
+
+    psat = PSAT0 * exp( LHV0 / Rvap * ( 1.0_RP / TEM00 - 1.0_RP/temp ) )
+
+    return
+  end subroutine SATURATION_psat
+
+  !-----------------------------------------------------------------------------
+  !> Build up density from surface (1D)
+  subroutine HYDROSTATIC_buildrho( &
+       KA,       &
+       KS,       &
+       KE,       &
+       z,        &
+       dens,     &
+       temp,     &
+       pres,     &
+       pott,     &
+       qv,       &
+       qc,       &
+       temp_sfc, &
+       pres_sfc, &
+       pott_sfc, &
+       qv_sfc,   &
+       qc_sfc    )
+    use scale_prc, only: &
+       PRC_abort
+    use scale_const, only: &
+       CONST_EPS,                &
+       CVdry   => CONST_CVdry,   &
+       CPvap   => CONST_CPvap,   &
+       CVvap   => CONST_CVvap,   &
+       LAPSdry => CONST_LAPSdry
+    implicit none
+
+    integer,  intent(in)  :: KA       !< # of vertical layer with halo
+    integer,  intent(in)  :: KS       !< start index of k
+    integer,  intent(in)  :: KE       !< end   index of k
+    real(RP), intent(in)  :: z   (KA) !< height                [m]
+    real(RP), intent(out) :: dens(KA) !< density               [kg/m3]
+    real(RP), intent(out) :: temp(KA) !< temperature           [K]
+    real(RP), intent(out) :: pres(KA) !< pressure              [Pa]
+    real(RP), intent(in)  :: pott(KA) !< potential temperature [K]
+    real(RP), intent(in)  :: qv  (KA) !< water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc  (KA) !< liquid water          [kg/kg]
+
+    real(RP), intent(out) :: temp_sfc !< surface temperature           [K]
+    real(RP), intent(in)  :: pres_sfc !< surface pressure              [Pa]
+    real(RP), intent(in)  :: pott_sfc !< surface potential temperature [K]
+    real(RP), intent(in)  :: qv_sfc   !< surface water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc_sfc   !< surface liquid water          [kg/kg]
+
+    integer, parameter :: itelim = 100 !< itelation number limit
+    real(RP)           :: criteria                            !< convergence judgement criteria
+    logical            :: HYDROSTATIC_uselapserate  = .false. !< use lapse rate?
+
+    real(RP) :: Rdry
+    real(RP) :: Rvap
+    real(RP) :: CV_qv
+    real(RP) :: CP_qv
+    real(RP) :: CV_qc
+    real(RP) :: CP_qc
+
+    real(RP) :: dens_sfc
+
+    real(RP) :: Rtot_sfc
+    real(RP) :: CVtot_sfc
+    real(RP) :: CPovCV_sfc
+    real(RP) :: Rtot
+    real(RP) :: CVtot
+    real(RP) :: CPtot
+    real(RP) :: CPovCV
+
+    real(RP) :: CVovCP_sfc, CPovR, CVovCP, RovCV
+    real(RP) :: dens_s, dhyd, dgrd
+    integer  :: ite
+    logical  :: converged
+    !---------------------------------------------------------------------------
+
+    Rdry  = Rd
+    Rvap  = Rv
+    CV_qv = CVvap
+    CP_qv = CPvap
+    CV_qc = CVvap
+    CP_qc = CVvap
+
+    criteria = sqrt( CONST_EPS )
+
+    !--- from surface to lowermost atmosphere
+
+    Rtot_sfc   = Rdry  * ( 1.0_RP - qv_sfc - qc_sfc ) &
+               + Rvap  * qv_sfc
+    CVtot_sfc  = CVdry * ( 1.0_RP - qv_sfc - qc_sfc ) &
+               + CV_qv * qv_sfc                       &
+               + CV_qc * qc_sfc
+    CPovCV_sfc = ( CVtot_sfc + Rtot_sfc ) / CVtot_sfc
+
+    Rtot   = Rdry  * ( 1.0_RP - qv(KS) - qc(KS) ) &
+           + Rvap  * qv(KS)
+    CVtot  = CVdry * ( 1.0_RP - qv(KS) - qc(KS) ) &
+           + CV_qv * qv(KS)                       &
+           + CV_qc * qc(KS)
+    CPtot  = Cp    * ( 1.0_RP - qv(KS) - qc(KS) ) &
+           + CP_qv * qv(KS)                       &
+           + CV_qc * qc(KS)
+    CPovCV = CPtot / CVtot
+
+    ! density at surface
+    CVovCP_sfc = 1.0_RP / CPovCV_sfc
+    dens_sfc   = PRE00 / Rtot_sfc / pott_sfc * ( pres_sfc/PRE00 )**CVovCP_sfc
+    temp_sfc   = pres_sfc / ( dens_sfc * Rtot_sfc )
+
+    ! make density at lowermost cell center
+    if ( HYDROSTATIC_uselapserate ) then
+
+       CPovR  = CPtot / Rtot
+       CVovCP = 1.0_RP / CPovCV
+
+       temp(KS) = pott_sfc - LAPSdry * z(KS) ! use dry lapse rate
+       pres(KS) = PRE00 * ( temp(KS)/pott(KS) )**CPovR
+       dens(KS) = PRE00 / Rtot / pott(KS) * ( pres(KS)/PRE00 )**CVovCP
+
+    else ! use itelation
+
+       RovCV = Rtot / CVtot
+
+       dens_s   = 0.0_RP
+       dens(KS) = dens_sfc ! first guess
+
+       converged = .false.
+       do ite = 1, itelim
+          if ( abs(dens(KS)-dens_s) <= criteria ) then
+             converged = .true.
+             exit
+          endif
+
+          dens_s = dens(KS)
+
+          dhyd = + ( PRE00 * ( dens_sfc * Rtot_sfc * pott_sfc / PRE00 )**CPovCV_sfc &
+                   - PRE00 * ( dens_s   * Rtot     * pott(KS) / PRE00 )**CPovCV     ) / z(KS) & ! dp/dz
+                 - g    * 0.5_RP * ( dens_sfc + dens_s )                                     ! rho*g
+
+          dgrd = - PRE00 * ( Rtot * pott(KS) / PRE00 )**CPovCV / z(KS) &
+                 * CPovCV * dens_s**RovCV                           &
+                 - 0.5_RP * g
+
+          dens(KS) = dens_s - dhyd/dgrd
+
+          if( dens(KS)*0.0_RP /= 0.0_RP) exit
+       enddo
+
+       if ( .NOT. converged ) then
+          write(*,*) 'xxx [buildrho 1D sfc] iteration not converged!', &
+                     dens(KS),ite,dens_s,dhyd,dgrd
+          call PRC_abort
+       endif
+
+    endif
+
+    !--- from lowermost atmosphere to top of atmosphere
+    call ATMOS_HYDROSTATIC_buildrho_atmos_1D( KA,      & ! [IN]
+                                              KS,      & ! [IN]
+                                              KE,      & ! [IN]
+                                              z   (:), & ! [IN]
+                                              dens(:), & ! [INOUT]
+                                              temp(:), & ! [OUT]
+                                              pres(:), & ! [OUT]
+                                              pott(:), & ! [IN]
+                                              qv  (:), & ! [IN]
+                                              qc  (:)  ) ! [IN]
+
+    return
+  end subroutine HYDROSTATIC_buildrho
+
+  !-----------------------------------------------------------------------------
+  !> Build up density from lowermost atmosphere (1D)
+  subroutine ATMOS_HYDROSTATIC_buildrho_atmos_1D( &
+       KA,   &
+       KS,   &
+       KE,   &
+       z,    &
+       dens, &
+       temp, &
+       pres, &
+       pott, &
+       qv,   &
+       qc    )
+    use scale_prc, only: &
+       PRC_abort
+    use scale_const, only: &
+       CONST_EPS,                &
+       CVdry   => CONST_CVdry,   &
+       CPvap   => CONST_CPvap,   &
+       CVvap   => CONST_CVvap,   &
+       LAPSdry => CONST_LAPSdry
+    implicit none
+
+    integer,  intent(in)    :: KA       !< # of vertical layer with halo
+    integer,  intent(in)    :: KS       !< start index of k
+    integer,  intent(in)    :: KE       !< end   index of k
+    real(RP), intent(in)    :: z   (KA) !< height                [m]
+    real(RP), intent(inout) :: dens(KA) !< density               [kg/m3]
+    real(RP), intent(out)   :: temp(KA) !< temperature           [K]
+    real(RP), intent(out)   :: pres(KA) !< pressure              [Pa]
+    real(RP), intent(in)    :: pott(KA) !< potential temperature [K]
+    real(RP), intent(in)    :: qv  (KA) !< water vapor           [kg/kg]
+    real(RP), intent(in)    :: qc  (KA) !< liquid water          [kg/kg]
+
+    integer, parameter :: itelim = 100 !< itelation number limit
+    real(RP)           :: criteria                            !< convergence judgement criteria
+    logical            :: HYDROSTATIC_uselapserate  = .false. !< use lapse rate?
+
+    real(RP) :: Rdry
+    real(RP) :: Rvap
+    real(RP) :: CV_qv
+    real(RP) :: CP_qv
+    real(RP) :: CV_qc
+    real(RP) :: CP_qc
+
+    real(RP) :: Rtot  (KA)
+    real(RP) :: CVtot (KA)
+    real(RP) :: CPtot (KA)
+    real(RP) :: CPovCV(KA)
+
+    real(RP) :: RovCV
+    real(RP) :: dens_s, dhyd, dgrd
+    integer  :: ite
+    logical  :: converged
+
+    integer  :: k
+    !---------------------------------------------------------------------------
+
+    Rdry  = Rd
+    Rvap  = Rv
+    CV_qv = CVvap
+    CP_qv = CPvap
+    CV_qc = CVvap
+    CP_qc = CVvap
+
+    criteria = sqrt( CONST_EPS )
+
+    do k = KS, KE
+       Rtot  (k) = Rdry  * ( 1.0_RP - qv(k) - qc(k) ) &
+                 + Rvap  * qv(k)
+       CVtot (k) = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
+                 + CV_qv * qv(k)                      &
+                 + CV_qc * qc(k)
+       CPtot (k) = Cp    * ( 1.0_RP - qv(k) - qc(k) ) &
+                 + CP_qv * qv(k)                      &
+                 + CV_qc * qc(k)
+       CPovCV(k) = CPtot(k) / CVtot(k)
+    enddo
+
+    do k = KS+1, KE
+       RovCV = Rtot(k) / CVtot(k)
+
+       dens_s  = 0.0_RP
+       dens(k) = dens(k-1) ! first guess
+
+       converged = .false.
+       do ite = 1, itelim
+          if ( abs(dens(k)-dens_s) <= criteria ) then
+             converged = .true.
+             exit
+          endif
+
+          dens_s = dens(k)
+
+          dhyd = + ( PRE00 * ( dens(k-1) * Rtot(k-1) * pott(k-1) / PRE00 )**CPovCV(k-1) &
+                   - PRE00 * ( dens_s    * Rtot(k  ) * pott(k  ) / PRE00 )**CPovCV(k  ) ) / (z(k)-z(k-1)) & ! dpdz
+                 - g    * 0.5_RP * ( dens(k-1) + dens_s )                                                   ! rho*g
+
+          dgrd = - PRE00 * ( Rtot(k) * pott(k) / PRE00 )**CPovCV(k) / (z(k)-z(k-1)) &
+                 * CPovCV(k) * dens_s**RovCV                                        &
+                 - 0.5_RP * g
+
+          dens(k) = dens_s - dhyd/dgrd
+
+          if( dens(k)*0.0_RP /= 0.0_RP) exit
+       enddo
+
+       if ( .NOT. converged ) then
+          write(*,*) 'xxx [buildrho 1D atmos] iteration not converged!', &
+                     k,dens(k),ite,dens_s,dhyd,dgrd
+          call PRC_abort
+       endif
+    enddo
+
+    do k = KS, KE
+       pres(k) = PRE00 * ( dens(k) * Rtot(k) * pott(k) / PRE00 )**CPovCV(k)
+       temp(k) = pres(k) / ( dens(k) * Rtot(k) )
+    enddo
+
+    dens(   1:KS-1) = dens(KS)
+    dens(KE+1:KA  ) = dens(KE)
+    pres(   1:KS-1) = pres(KS)
+    pres(KE+1:KA  ) = pres(KE)
+    temp(   1:KS-1) = temp(KS)
+    temp(KE+1:KA  ) = temp(KE)
+
+    return
+  end subroutine ATMOS_HYDROSTATIC_buildrho_atmos_1D
 
 end module mod_ideal_init

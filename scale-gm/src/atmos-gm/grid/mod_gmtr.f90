@@ -13,19 +13,9 @@ module mod_gmtr
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_atmos_grid_icoA_index
 
-  use mod_adm, only: &
-     ADM_TI,      &
-     ADM_TJ,      &
-     ADM_AI,      &
-     ADM_AIJ,     &
-     ADM_AJ,      &
-     ADM_KNONE,   &
-     ADM_lall,    &
-     ADM_lall_pl, &
-     ADM_gall,    &
-     ADM_gall_pl
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -130,8 +120,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine GMTR_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use mod_comm, only: &
        COMM_data_transfer
     use mod_grd, only: &
@@ -161,7 +151,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** GMTRPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist GMTRPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=GMTRPARAM)
 
@@ -223,13 +213,8 @@ contains
        GMTR_p, GMTR_p_pl, &
        GRD_rscale         )
     use mod_adm, only: &
-       ADM_nxyz,     &
        ADM_have_pl,  &
-       ADM_have_sgp, &
-       ADM_vlink,    &
-       ADM_gmin,     &
-       ADM_gmax,     &
-       ADM_gslf_pl
+       ADM_have_sgp
     use mod_grd, only: &
        GRD_XDIR,     &
        GRD_YDIR,     &
@@ -414,14 +399,8 @@ contains
        GMTR_t, GMTR_t_pl, &
        GRD_rscale         )
     use mod_adm, only: &
-       ADM_nxyz,     &
        ADM_have_pl,  &
-       ADM_have_sgp, &
-       ADM_gmin,     &
-       ADM_gmax,     &
-       ADM_gslf_pl,  &
-       ADM_gmin_pl,  &
-       ADM_gmax_pl
+       ADM_have_sgp
     use mod_grd, only: &
        GRD_grid_type
     use scale_vector, only: &
@@ -582,14 +561,8 @@ contains
        GMTR_a, GMTR_a_pl, &
        GRD_rscale         )
     use mod_adm, only: &
-       ADM_nxyz,     &
        ADM_have_pl,  &
-       ADM_have_sgp, &
-       ADM_gmin,     &
-       ADM_gmax,     &
-       ADM_gslf_pl,  &
-       ADM_gmin_pl,  &
-       ADM_gmax_pl
+       ADM_have_sgp
     use mod_grd, only: &
        GRD_grid_type
     implicit none
@@ -990,8 +963,6 @@ contains
     use mod_io_param, only: &
        IO_REAL8, &
        IO_REAL4
-    use scale_process, only: &
-       PRC_MPIstop
     use mod_adm, only: &
        ADM_prc_tab, &
        ADM_prc_me,  &
@@ -1090,8 +1061,6 @@ contains
 
   !-----------------------------------------------------------------------------
   integer function suf(i,j)
-    use mod_adm, only: &
-       ADM_gall_1d
     implicit none
 
     integer :: i, j

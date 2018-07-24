@@ -32,7 +32,7 @@ BINS = $(BINDIR)/$(BINNAME) \
        $(BINDIR)/$(PPNAME7) \
        $(BINDIR)/$(PPNAME8) \
        $(BINDIR)/$(PPNAME9)
-LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libdcutils.a
+LIBS = $(LIBDIR)/libscale.a
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
   DEPENDLIB = $(LIBS)
@@ -42,15 +42,20 @@ VPATH = $(BUILD_DIR):           \
         admin:                  \
         atmos:                  \
         atmos/dcmip:            \
+        atmos/forcing:  	\
+        atmos/share:    	\
         atmos-gm/communication: \
         atmos-gm/dynamics:      \
         atmos-gm/grid:          \
-        atmos-physics/forcing:  \
-        atmos-physics/share:    \
         common:                 \
+        coupler:                \
         io:                     \
+        land:                   \
+        ocean:                  \
         preprocess:             \
-        tool:
+        tool:                   \
+        urban:
+
 
 VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(VERSION),)
@@ -76,36 +81,55 @@ OBJS =	\
 	baroclinic_wave_test.o                   \
 	supercell_test.o                         \
 	tropical_cyclone_test.o                  \
-	simple_physics_v6.o                      \
+	simple_physics_v6_1.o                    \
 	kessler.o                                \
 	Terminator.o                             \
 	mod_chemvar.o        \
+	mod_ocean_admin.o   \
+	mod_land_admin.o   \
+	mod_urban_admin.o   \
+	mod_atmos_admin.o    \
+	mod_cpl_vars.o      \
+	mod_cpl_admin.o     \
 	mod_runconf.o        \
 	mod_gtl.o            \
 	mod_gm_statistics.o  \
 	mod_vintrpl.o        \
-	mod_thrmdyn.o        \
 	mod_bndcnd.o         \
 	mod_cnvvar.o         \
 	mod_src.o            \
 	mod_ideal_init.o     \
 	mod_prgvar.o         \
-	mod_history.o        \
 	mod_bsstate.o        \
+	mod_history.o        \
 	mod_history_vars.o   \
 	mod_embudget.o       \
 	mod_extdata.o        \
-	mod_saturation.o     \
 	mod_af_heldsuarez.o  \
-	mod_af_dcmip.o       \
+	mod_grd_conversion.o \
+	mod_atmos_vars.o     \
+	mod_atmos_phy_mp_vars.o     \
+	mod_atmos_phy_ae_vars.o     \
+	mod_atmos_phy_rd_vars.o     \
+	mod_atmos_phy_sf_vars.o     \
+	mod_atmos_phy_bl_vars.o     \
+	mod_mp_vars.o	     \
 	mod_af_trcadv.o      \
-	mod_forcing_driver.o \
 	mod_oprt3d.o         \
 	mod_numfilter.o      \
 	mod_vi.o             \
 	mod_src_tracer.o     \
 	mod_nudge.o          \
+	mod_gm_topography.o  \
+	mod_atmos_phy_driver.o	\
+	mod_atmos_phy_mp_driver.o   \
+	mod_atmos_phy_rd_driver.o \
+	mod_atmos_phy_sf_driver.o \
+	mod_atmos_phy_bl_driver.o \
+	mod_atmos_surface.o     \
 	mod_dynamics.o       \
+	mod_af_dcmip.o       \
+	mod_forcing_driver.o \
 	mod_gm_driver.o      \
 	orgico.o             \
 	mod_latlon.o         \
@@ -114,12 +138,9 @@ OBJS =	\
 	mod_option.o         \
 	mod_netcdf.o
 
-
-
 all:
 	$(MAKE) envlog
 	$(MAKE) makedir
-	$(MAKE) -C $(DCUTILSDIR)
 	$(MAKE) -C $(SCALELIBDIR)/src
 	@echo;echo "Entering scale-gm...";echo "Current version is " $(VERSION)
 	$(MAKE) makebin
@@ -130,10 +151,7 @@ makedir:
 	mkdir -p $(LIBDIR)
 	mkdir -p $(BUILD_DIR)
 
-$(LIBDIR)/libdcutils.a :
-	$(MAKE) -C $(DCUTILSDIR)
-
-$(LIBDIR)/libscale.a : $(LIBDIR)/libdcutils.a
+$(LIBDIR)/libscale.a:
 	$(MAKE) -C $(SCALELIBDIR)/src
 
 makebin: $(BINS)
@@ -173,7 +191,6 @@ $(BUILD_DIR)/prg_fio_ico2ll.o : prg_fio_ico2ll.f90 $(patsubst %,$(BUILD_DIR)/%,$
 
 
 allclean: distclean
-	$(MAKE) -C $(DCUTILSDIR)      allclean
 	$(MAKE) -C $(SCALELIBDIR)/src allclean
 	rm -f $(BINDIR)/$(BINNAME)
 	rm -f $(BINDIR)/$(PPNAME1)
@@ -213,9 +230,9 @@ dependency:
 	make $(patsubst %.f90,%.o,$<)
 
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/mod_oprt.o :
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) $(FFLAGS_TENTATIVE) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) $(FFLAGS_TENTATIVE) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALEGMDIR)/include -o $@ -c $<

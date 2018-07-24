@@ -14,8 +14,10 @@ module mod_comm
   !
   use mpi
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -243,7 +245,6 @@ module mod_comm
 contains
   !-----------------------------------------------------------------------------
   subroutine init_tempsb
-    use mod_adm, only : ADM_rgn_nmax
     implicit none
     integer :: i
     !
@@ -260,7 +261,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine finalize_tempsb
-    use mod_adm, only : ADM_rgn_nmax
     implicit none
     integer :: i
     !
@@ -308,39 +308,18 @@ contains
   subroutine COMM_setup( &
        max_hallo_num,    & !--- IN : number of hallo regions
        debug             ) !--- IN : debug flag
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD, &
        PRC_nprocs,           &
-       PRC_MPIstop
+       PRC_abort
     use mod_adm, only: &
-       ADM_w,           &
-       ADM_e,           &
-       ADM_n,           &
-       ADM_s,           &
-       ADM_sw,          &
-       ADM_nw,          &
-       ADM_ne,          &
-       ADM_se,          &
-       ADM_rid,         &
-       ADM_dir,         &
-       ADM_vlink,       &
-       ADM_rgn_nmax_pl, &
-       ADM_npl,         &
-       ADM_spl,         &
-       ADM_gslf_pl,     &
        ADM_prc_rnum,    &
        ADM_prc_tab,     &
        ADM_prc_me,      &
-       ADM_rgn_nmax,    &
        ADM_rgn_etab,    &
        ADM_rgn_vnum,    &
        ADM_rgn_vtab,    &
        ADM_rgn_vtab_pl, &
-       ADM_gmin,        &
-       ADM_gmax,        &
-       ADM_gall_1d,     &
-       ADM_lall,        &
-       ADM_kall,        &
        ADM_prc_nspl,    &
        ADM_rgn2prc
     implicit none
@@ -386,7 +365,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** COMMPARAM is not specified. use default.'
     elseif( ierr > 0 ) then
        write(*,*) 'xxx Not appropriate names in namelist COMMPARAM. STOP.'
-       call PRC_MPIstop
+       call PRC_abort
     endif
     if( IO_NML ) write(IO_FID_NML,nml=COMMPARAM)
 
@@ -396,7 +375,7 @@ contains
        COMM_datatype = MPI_REAL
     else
        write(*,*) 'xxx precision is not supportd'
-       call PRC_MPIstop
+       call PRC_abort
     endif
 
     if (present(max_hallo_num)) then
@@ -2107,7 +2086,7 @@ contains
   end subroutine COMM_setup
   !-----------------------------------------------------------------------------
   subroutine output_info
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_nprocs
     implicit none
 
@@ -2247,16 +2226,9 @@ contains
   subroutine COMM_data_transfer(&
        var,   &
        var_pl )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD, &
-       PRC_MPIstop
-    use mod_adm, only: &
-       ADM_vlink,   &
-       ADM_gall_1d, &
-       ADM_lall,    &
-       ADM_kall,    &
-       ADM_gmax,    &
-       ADM_gmin
+       PRC_abort
     implicit none
 
     real(RP), intent(inout) ::  var   (:,:,:,:)
@@ -2313,7 +2285,7 @@ contains
        if ( cmax > max_varmax * ADM_kall ) then
           if( IO_L ) write(IO_FID_LOG,*)  'error: cmax >  max_varmax * ADM_kall, stop!'
           if( IO_L ) write(IO_FID_LOG,*)  'cmax=', cmax, 'max_varmax*ADM_kall=', max_varmax*ADM_kall
-          call PRC_MPIstop
+          call PRC_abort
        endif
     endif
 
@@ -2677,26 +2649,16 @@ contains
        var_pl, &
        knum,   &
        nnum    )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD
     use mod_adm, only: &
        ADM_prc_tab,        &
        ADM_rgn2prc,        &
        ADM_prc_me,         &
-       ADM_NPL,            &
-       ADM_SPL,            &
        ADM_prc_npl,        &
        ADM_prc_spl,        &
        ADM_rgnid_npl_mng,  &
-       ADM_rgnid_spl_mng,  &
-       ADM_gall,           &
-       ADM_gall_pl,        &
-       ADM_lall,           &
-       ADM_lall_pl,        &
-       ADM_gall_1d,        &
-       ADM_gmin,           &
-       ADM_gmax,           &
-       ADM_gslf_pl
+       ADM_rgnid_spl_mng
     implicit none
 
     integer, intent(in)  ::  knum
@@ -2849,7 +2811,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine COMM_Stat_sum( localsum, globalsum )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD, &
        PRC_nprocs
     implicit none
@@ -2885,7 +2847,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine COMM_Stat_sum_eachlayer( kall, localsum, globalsum )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD, &
        PRC_nprocs
     implicit none
@@ -2935,7 +2897,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine COMM_Stat_avg( localavg, globalavg )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD, &
        PRC_nprocs
     implicit none
@@ -2971,7 +2933,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine COMM_Stat_max( localmax, globalmax )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD, &
        PRC_nprocs
     implicit none
@@ -3003,7 +2965,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine COMM_Stat_min( localmin, globalmin )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD, &
        PRC_nprocs
     implicit none

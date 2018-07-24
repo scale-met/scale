@@ -14,8 +14,10 @@ module mod_gm_statistics
   !
   use mpi
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -46,19 +48,7 @@ contains
   !-----------------------------------------------------------------------------
   function GTL_global_sum( var, var_pl ) result( sum_g )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_imin,    &
-       ADM_imax,    &
-       ADM_gslf_pl, &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_comm, only: &
        COMM_Stat_sum
     use mod_vmtr, only: &
@@ -101,17 +91,7 @@ contains
   !-----------------------------------------------------------------------------
   function GTL_global_sum_srf( var, var_pl ) result( sum_g )
     use mod_adm, only: &
-       ADM_KNONE,   &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_imin,    &
-       ADM_imax,    &
-       ADM_gslf_pl
+       ADM_have_pl
     use mod_comm, only: &
        COMM_Stat_sum
     use mod_gmtr, only: &
@@ -150,17 +130,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine GTL_global_sum_eachlayer( var, var_pl, sum_g )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_imin,    &
-       ADM_imax,    &
-       ADM_gslf_pl
+       ADM_have_pl
     use mod_comm, only: &
        COMM_Stat_sum_eachlayer
     use mod_gmtr, only: &
@@ -209,12 +179,6 @@ contains
 
   !-----------------------------------------------------------------------------
   function GTL_global_mean( var, var_pl ) result( sum_g )
-    use mod_adm, only: &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall
     implicit none
 
     real(RP), intent(in) :: var   (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -246,12 +210,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine GTL_global_mean_eachlayer( var, var_pl, sum_g )
-    use mod_adm, only: &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall
     implicit none
 
     real(RP), intent(in)  :: var   (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -277,16 +235,7 @@ contains
   !-----------------------------------------------------------------------------
   function GTL_max( var, var_pl, kdim, kstart, kend ) result( vmax_g )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_imin,    &
-       ADM_imax,    &
-       ADM_gslf_pl
+       ADM_have_pl
     use mod_comm, only: &
        COMM_Stat_max
     implicit none
@@ -329,17 +278,7 @@ contains
   !-----------------------------------------------------------------------------
   function GTL_max_k( var, var_pl, k ) result( vmax_g )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_imin,    &
-       ADM_imax,    &
-       ADM_gslf_pl
+       ADM_have_pl
     use mod_comm, only: &
        COMM_Stat_max
     implicit none
@@ -376,16 +315,7 @@ contains
   !-----------------------------------------------------------------------------
   function GTL_min( var, var_pl, kdim, kstart, kend, nonzero ) result( vmin_g )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_imin,    &
-       ADM_imax,    &
-       ADM_gslf_pl
+       ADM_have_pl
     use mod_comm, only: &
        COMM_Stat_min
     implicit none
@@ -468,17 +398,7 @@ contains
   !-----------------------------------------------------------------------------
   function GTL_min_k( var, var_pl, k ) result( vmin_g )
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_jmin,    &
-       ADM_jmax,    &
-       ADM_imin,    &
-       ADM_imax,    &
-       ADM_gslf_pl
+       ADM_have_pl
     use mod_comm, only: &
        COMM_Stat_min
     implicit none
@@ -514,8 +434,6 @@ contains
 
   !-----------------------------------------------------------------------------
   integer function suf(i,j)
-    use mod_adm, only: &
-       ADM_gall_1d
     implicit none
 
     integer :: i, j

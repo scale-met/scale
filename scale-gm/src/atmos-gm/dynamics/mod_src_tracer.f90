@@ -13,16 +13,10 @@ module mod_src_tracer
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
+  use scale_atmos_grid_icoA_index
 
-  use mod_adm, only: &
-     TI  => ADM_TI,  &
-     TJ  => ADM_TJ,  &
-     AI  => ADM_AI,  &
-     AIJ => ADM_AIJ, &
-     AJ  => ADM_AJ,  &
-     K0  => ADM_KNONE
   use mod_grd, only: &
      XDIR => GRD_XDIR, &
      YDIR => GRD_YDIR, &
@@ -68,6 +62,13 @@ module mod_src_tracer
   !
   !++ Private parameters & variables
   !
+  integer, parameter :: TI  = ADM_TI
+  integer, parameter :: TJ  = ADM_TJ
+  integer, parameter :: AI  = ADM_AI
+  integer, parameter :: AIJ = ADM_AIJ
+  integer, parameter :: AJ  = ADM_AJ
+  integer, parameter :: K0  = ADM_KNONE
+
   !-----------------------------------------------------------------------------
 contains
   !----------------------------------------------------------------------------------
@@ -86,19 +87,7 @@ contains
     use scale_const, only: &
        EPS => CONST_EPS
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_gmin,    &
-       ADM_gmax,    &
-       ADM_gslf_pl, &
-       ADM_gmin_pl, &
-       ADM_gmax_pl, &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     use mod_grd, only: &
        GRD_rdgz, &
        GRD_afac, &
@@ -637,19 +626,8 @@ contains
     use scale_const, only: &
        EPS => CONST_EPS
     use mod_adm, only: &
-       ADM_have_pl,    &
-       ADM_have_sgp,   &
-       ADM_lall,       &
-       ADM_lall_pl,    &
-       ADM_gall,       &
-       ADM_gall_pl,    &
-       ADM_kall,       &
-       ADM_gall_1d,    &
-       ADM_gmin,       &
-       ADM_gmax,       &
-       ADM_gslf_pl,    &
-       ADM_gmin_pl,    &
-       ADM_gmax_pl
+       ADM_have_pl, &
+       ADM_have_sgp
     use mod_grd, only: &
        GRD_xr,   &
        GRD_xr_pl
@@ -904,21 +882,7 @@ contains
        cmask,  cmask_pl, &
        GRD_xc, GRD_xc_pl )
     use mod_adm, only: &
-       ADM_nxyz,    &
-       ADM_have_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_iall,    &
-       ADM_jall,    &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_kall,    &
-       ADM_gall_1d, &
-       ADM_gmin,    &
-       ADM_gmax,    &
-       ADM_gslf_pl, &
-       ADM_gmin_pl, &
-       ADM_gmax_pl
+       ADM_have_pl
     use mod_comm, only: &
        COMM_data_transfer
     use mod_grd, only: &
@@ -1235,14 +1199,7 @@ contains
        BIG => CONST_HUGE, &
        EPS => CONST_EPS
     use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_gall,    &
-       ADM_gall_pl, &
-       ADM_lall,    &
-       ADM_lall_pl, &
-       ADM_kall,    &
-       ADM_kmin,    &
-       ADM_kmax
+       ADM_have_pl
     implicit none
 
     real(RP), intent(inout) :: q_h   (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -1292,10 +1249,10 @@ contains
           Cout     = ( 1.0_RP-inflagL ) * ( ck(n,k,l,1) ) &
                    + ( 1.0_RP-inflagU ) * ( ck(n,k,l,2) )
 
-          CQin_max = (        inflagL ) * ( ck(n,k,l,1) * Qin_maxL ) &
-                   + (        inflagU ) * ( ck(n,k,l,2) * Qin_maxU )
-          CQin_min = (        inflagL ) * ( ck(n,k,l,1) * Qin_minL ) &
-                   + (        inflagU ) * ( ck(n,k,l,2) * Qin_minU )
+          CQin_max = (        inflagL * Qin_maxL ) * ck(n,k,l,1) &
+                   + (        inflagU * Qin_maxU ) * ck(n,k,l,2)
+          CQin_min = (        inflagL * Qin_minL ) * ck(n,k,l,1) &
+                   + (        inflagU * Qin_minU ) * ck(n,k,l,2)
 
           zerosw = 0.5_RP - sign(0.5_RP,abs(Cout)-EPS) ! if Cout = 0, sw = 1
 
@@ -1382,22 +1339,10 @@ contains
        ch,     ch_pl,   &
        cmask,  cmask_pl )
     use scale_const, only: &
-       BIG => CONST_HUGE, &
        EPS => CONST_EPS
     use mod_adm, only: &
        ADM_have_pl,    &
-       ADM_have_sgp,   &
-       ADM_lall,       &
-       ADM_lall_pl,    &
-       ADM_gall,       &
-       ADM_gall_pl,    &
-       ADM_kall,       &
-       ADM_gall_1d,    &
-       ADM_gmin,       &
-       ADM_gmax,       &
-       ADM_gslf_pl,    &
-       ADM_gmin_pl,    &
-       ADM_gmax_pl
+       ADM_have_sgp
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
@@ -1412,6 +1357,8 @@ contains
     real(RP), intent(in)    :: ch_pl   (ADM_gall_pl,ADM_kall,ADM_lall_pl  )
     real(RP), intent(in)    :: cmask   (ADM_gall   ,ADM_kall,ADM_lall   ,6)
     real(RP), intent(in)    :: cmask_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl  )
+
+    real(RP), parameter :: BIG = 1e10_RP
 
     real(RP) :: q_min_AI, q_min_AIJ, q_min_AJ, q_min_pl
     real(RP) :: q_max_AI, q_max_AIJ, q_max_AJ, q_max_pl
@@ -1777,8 +1724,6 @@ contains
 
   !-----------------------------------------------------------------------------
   integer function suf(i,j)
-    use mod_adm, only: &
-       ADM_gall_1d
     implicit none
 
     integer :: i, j

@@ -499,9 +499,7 @@ contains
   subroutine ATMOS_PHY_MP_vars_history( &
        DENS, TEMP, QTRC )
     use scale_atmos_hydrometeor, only: &
-       N_HYD, &
-       QHS,   &
-       QHE
+       N_HYD
     use scale_file_history, only: &
        FILE_HISTORY_query, &
        FILE_HISTORY_put
@@ -608,9 +606,7 @@ contains
        I_HI,  &
        I_HS,  &
        I_HG,  &
-       I_HH,  &
-       QHS,   &
-       QHE
+       I_HH
     use scale_atmos_phy_mp_kessler, only: &
        ATMOS_PHY_MP_KESSLER_qtrc2qhyd, &
        ATMOS_PHY_MP_KESSLER_effective_radius, &
@@ -649,23 +645,23 @@ contains
           case ( 'KESSLER' )
              call ATMOS_PHY_MP_kessler_cloud_fraction( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                  QTRC(:,:,:,QHS:QHE), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
-                  ATMOS_PHY_MP_CLDFRAC(:,:,:)                          ) ! [OUT]
+                  QTRC(:,:,:,QS_MP+1:QE_MP), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
+                  ATMOS_PHY_MP_CLDFRAC(:,:,:)                                ) ! [OUT]
           case ( 'TOMITA08' )
              call ATMOS_PHY_MP_tomita08_cloud_fraction( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                  QTRC(:,:,:,QHS:QHE), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
-                  ATMOS_PHY_MP_CLDFRAC(:,:,:)                          ) ! [OUT]
+                  QTRC(:,:,:,QS_MP+1:QE_MP), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
+                  ATMOS_PHY_MP_CLDFRAC(:,:,:)                                ) ! [OUT]
           case ( 'SN14' )
              call ATMOS_PHY_MP_sn14_cloud_fraction( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                  QTRC(:,:,:,QHS:QHE), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
-                  ATMOS_PHY_MP_CLDFRAC(:,:,:)                          ) ! [OUT]
+                  QTRC(:,:,:,QS_MP+1:QE_MP), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
+                  ATMOS_PHY_MP_CLDFRAC(:,:,:)                                ) ! [OUT]
           case ( 'SUZUKI10' )
              call ATMOS_PHY_MP_suzuki10_cloud_fraction( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                  QTRC(:,:,:,QHS:QHE), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
-                  ATMOS_PHY_MP_CLDFRAC(:,:,:)                          ) ! [OUT]
+                  QTRC(:,:,:,QS_MP+1:QE_MP), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
+                  ATMOS_PHY_MP_CLDFRAC(:,:,:)                                ) ! [OUT]
           case default
 !OCL XFILL
              ATMOS_PHY_MP_CLDFRAC(:,:,:) = 0.0_RP
@@ -688,23 +684,23 @@ contains
           case ( 'KESSLER' )
              call ATMOS_PHY_MP_kessler_effective_radius( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                  DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QHS:QHE), & ! [IN]
-                  ATMOS_PHY_MP_Re(:,:,:,:)                       ) ! [OUT]
+                  DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
+                  ATMOS_PHY_MP_Re(:,:,:,:)                             ) ! [OUT]
           case ( 'TOMITA08' )
              call ATMOS_PHY_MP_tomita08_effective_radius( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                  DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QHS:QHE), & ! [IN]
-                  ATMOS_PHY_MP_Re(:,:,:,:)                       ) ! [OUT]
+                  DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
+                  ATMOS_PHY_MP_Re(:,:,:,:)                             ) ! [OUT]
           case ( 'SN14' )
              call ATMOS_PHY_MP_sn14_effective_radius( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                  DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QHS:QHE), & ! [IN]
-                  ATMOS_PHY_MP_Re(:,:,:,:)                       ) ! [OUT]
+                  DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
+                  ATMOS_PHY_MP_Re(:,:,:,:)                             ) ! [OUT]
           case ( 'SUZUKI10' )
              call ATMOS_PHY_MP_suzuki10_effective_radius( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                  DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QHS:QHE), & ! [IN]
-                  ATMOS_PHY_MP_Re(:,:,:,:)                       ) ! [OUT]
+                  DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
+                  ATMOS_PHY_MP_Re(:,:,:,:)                             ) ! [OUT]
           case default
 !OCL XFILL
              ATMOS_PHY_MP_Re(:,:,:,:) = 0.0_RP
@@ -729,23 +725,23 @@ contains
           case ( 'KESSLER' )
              call ATMOS_PHY_MP_kessler_qtrc2qhyd( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                  QTRC(:,:,:,QHS:QHE),     & ! [IN]
-                  ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]
+                  QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
+                  ATMOS_PHY_MP_Qe(:,:,:,:)   ) ! [OUT]
           case ( 'TOMITA08' )
              call ATMOS_PHY_MP_tomita08_qtrc2qhyd( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                  QTRC(:,:,:,QHS:QHE),     & ! [IN]
-                  ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]
+                  QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
+                  ATMOS_PHY_MP_Qe(:,:,:,:)   ) ! [OUT]
           case ( 'SN14' )
              call ATMOS_PHY_MP_sn14_qtrc2qhyd( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                  QTRC(:,:,:,QHS:QHE),     & ! [IN]
-                  ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]
+                  QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
+                  ATMOS_PHY_MP_Qe(:,:,:,:)   ) ! [OUT]
           case ( 'SUZUKI10' )
              call ATMOS_PHY_MP_suzuki10_qtrc2qhyd( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                  QTRC(:,:,:,QHS:QHE),     & ! [IN]
-                  ATMOS_PHY_MP_Qe(:,:,:,:) ) ! [OUT]
+                  QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
+                  ATMOS_PHY_MP_Qe(:,:,:,:)   ) ! [OUT]
           case default
 !OCL XIFLL
              ATMOS_PHY_MP_Qe(:,:,:,:) = 0.0_RP
@@ -772,13 +768,13 @@ contains
           case ( 'SN14' )
              call ATMOS_PHY_MP_sn14_qtrc2nhyd( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                  QTRC(:,:,:,QHS:QHE),     & ! [IN]
-                  ATMOS_PHY_MP_Ne(:,:,:,:) ) ! [OUT]
+                  QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
+                  ATMOS_PHY_MP_Ne(:,:,:,:)   ) ! [OUT]
           case ( 'SUZUKI10' )
              call ATMOS_PHY_MP_suzuki10_qtrc2nhyd( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                  DENS(:,:,:), QTRC(:,:,:,QHS:QHE),  & ! [IN]
-                  ATMOS_PHY_MP_Ne(:,:,:,:)           ) ! [OUT]
+                  DENS(:,:,:), QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
+                  ATMOS_PHY_MP_Ne(:,:,:,:)                ) ! [OUT]
           end select
           DIAG_Ne = .true.
        end if

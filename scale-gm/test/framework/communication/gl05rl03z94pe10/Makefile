@@ -33,7 +33,7 @@ include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 
 BINS = $(BINDIR)/$(BINNAME)
-LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libdcutils.a
+LIBS = $(LIBDIR)/libscale.a
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
   DEPENDLIB = $(LIBS)
@@ -81,10 +81,7 @@ makedir:
 	mkdir -p $(LIBDIR)
 	mkdir -p $(BUILD_DIR)
 
-$(LIBDIR)/libdcutils.a :
-	$(MAKE) -C $(DCUTILSDIR)
-
-$(LIBDIR)/libscale.a : $(LIBDIR)/libdcutils.a
+$(LIBDIR)/libscale.a :
 	$(MAKE) -C $(SCALELIBDIR)/src
 
 makebin: $(BINS)

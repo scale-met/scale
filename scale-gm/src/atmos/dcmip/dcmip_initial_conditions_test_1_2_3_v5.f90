@@ -51,7 +51,7 @@ module dcmip_initial_conditions_test_1_2_3
   !
   !
   !=======================================================================
-  use scale_stdio
+  use scale_io
 
   IMPLICIT NONE
 

@@ -2,7 +2,8 @@ $(OBJ_DIR)/scale.o: ./scale.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)
 $(OBJ_DIR)/scale_atmos_adiabat.o: ./atmosphere/common/scale_atmos_adiabat.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_hydrometeor.o $(OBJ_DIR)/scale_atmos_saturation.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file_history.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_atmos_aerosol.o: ./atmosphere/common/scale_atmos_aerosol.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_atmos_bottom.o: ./atmosphere/common/scale_atmos_bottom.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
-$(OBJ_DIR)/scale_atmos_diagnostic_cartesC.o: ./atmosphere/common/scale_atmos_diagnostic_cartesC.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_grid_cartesC_metric.o $(OBJ_DIR)/scale_atmos_thermodyn.o $(OBJ_DIR)/scale_comm_cartesC.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
+$(OBJ_DIR)/scale_atmos_diagnostic.o: ./atmosphere/common/scale_atmos_diagnostic.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_thermodyn.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
+$(OBJ_DIR)/scale_atmos_diagnostic_cartesC.o: ./atmosphere/common/scale_atmos_diagnostic_cartesC.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_grid_cartesC_metric.o $(OBJ_DIR)/scale_atmos_phy_mp_common.o $(OBJ_DIR)/scale_comm_cartesC.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_atmos_dyn.o: ./atmos-rm/dynamics/scale_atmos_dyn.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_dyn_common.o $(OBJ_DIR)/scale_atmos_dyn_fvm_flux.o $(OBJ_DIR)/scale_atmos_dyn_tinteg_large.o $(OBJ_DIR)/scale_atmos_dyn_tinteg_short.o $(OBJ_DIR)/scale_atmos_dyn_tinteg_tracer.o $(OBJ_DIR)/scale_atmos_dyn_tstep_large.o $(OBJ_DIR)/scale_atmos_dyn_tstep_short.o $(OBJ_DIR)/scale_atmos_dyn_tstep_tracer.o $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_grid_cartesC_real.o $(OBJ_DIR)/scale_comm_cartesC.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_debug.o $(OBJ_DIR)/scale_file_history.o $(OBJ_DIR)/scale_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_prc_cartesC.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_tracer.o
 $(OBJ_DIR)/scale_atmos_dyn_common.o: ./atmos-rm/dynamics/scale_atmos_dyn_common.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_comm_cartesC.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_debug.o $(OBJ_DIR)/scale_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_tracer.o
 $(OBJ_DIR)/scale_atmos_dyn_fvm_flux.o: ./atmos-rm/dynamics/scale_atmos_dyn_fvm_flux.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_dyn_fvm_flux_cd2.o $(OBJ_DIR)/scale_atmos_dyn_fvm_flux_cd4.o $(OBJ_DIR)/scale_atmos_dyn_fvm_flux_cd6.o $(OBJ_DIR)/scale_atmos_dyn_fvm_flux_ud1.o $(OBJ_DIR)/scale_atmos_dyn_fvm_flux_ud3.o $(OBJ_DIR)/scale_atmos_dyn_fvm_flux_ud3Koren1993.o $(OBJ_DIR)/scale_atmos_dyn_fvm_flux_ud5.o $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_debug.o $(OBJ_DIR)/scale_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_tracer.o
@@ -34,6 +35,8 @@ $(OBJ_DIR)/scale_atmos_grid_cartesC.o: ./atmosphere/grid/scale_atmos_grid_cartes
 $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o: ./atmosphere/grid/scale_atmos_grid_cartesC_index.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_prc_cartesC.o $(OBJ_DIR)/scale_precision.o
 $(OBJ_DIR)/scale_atmos_grid_cartesC_metric.o: ./atmosphere/grid/scale_atmos_grid_cartesC_metric.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC.o $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_grid_cartesC_real.o $(OBJ_DIR)/scale_comm_cartesC.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file_cartesC.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_mapprojection.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_topography.o $(OBJ_DIR)/scale_vector.o
 $(OBJ_DIR)/scale_atmos_grid_cartesC_real.o: ./atmosphere/grid/scale_atmos_grid_cartesC_real.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC.o $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_comm_cartesC.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file_cartesC.o $(OBJ_DIR)/scale_interp_vert.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_mapprojection.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_topography.o
+$(OBJ_DIR)/scale_atmos_grid_icoA.o: ./atmosphere/grid/scale_atmos_grid_icoA.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_icoA_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
+$(OBJ_DIR)/scale_atmos_grid_icoA_index.o: ./atmosphere/grid/scale_atmos_grid_icoA_index.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o
 $(OBJ_DIR)/scale_atmos_hydrometeor.o: ./atmosphere/common/scale_atmos_hydrometeor.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_tracer.o
 $(OBJ_DIR)/scale_atmos_hydrostatic.o: ./atmosphere/common/scale_atmos_hydrostatic.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_hydrometeor.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_statistics.o
 $(OBJ_DIR)/scale_atmos_phy_ae_kajino13.o: ./atmosphere/physics/aerosol/scale_atmos_phy_ae_kajino13.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_aerosol.o $(OBJ_DIR)/scale_atmos_saturation.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file_history.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
@@ -131,6 +134,7 @@ MODS =	\
 	$(OBJ_DIR)/scale_atmos_adiabat.mod	\
 	$(OBJ_DIR)/scale_atmos_aerosol.mod	\
 	$(OBJ_DIR)/scale_atmos_bottom.mod	\
+	$(OBJ_DIR)/scale_atmos_diagnostic.mod	\
 	$(OBJ_DIR)/scale_atmos_diagnostic_cartesc.mod	\
 	$(OBJ_DIR)/scale_atmos_dyn.mod	\
 	$(OBJ_DIR)/scale_atmos_dyn_common.mod	\
@@ -163,6 +167,8 @@ MODS =	\
 	$(OBJ_DIR)/scale_atmos_grid_cartesc_index.mod	\
 	$(OBJ_DIR)/scale_atmos_grid_cartesc_metric.mod	\
 	$(OBJ_DIR)/scale_atmos_grid_cartesc_real.mod	\
+	$(OBJ_DIR)/scale_atmos_grid_icoa.mod	\
+	$(OBJ_DIR)/scale_atmos_grid_icoa_index.mod	\
 	$(OBJ_DIR)/scale_atmos_hydrometeor.mod	\
 	$(OBJ_DIR)/scale_atmos_hydrostatic.mod	\
 	$(OBJ_DIR)/scale_atmos_phy_ae_kajino13.mod	\
