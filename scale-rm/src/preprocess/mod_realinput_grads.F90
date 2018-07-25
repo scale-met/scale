@@ -48,8 +48,8 @@ module mod_realinput_grads
   !++ Private parameters & variables
   !
   integer,  parameter    :: grads_vars_limit = 1000 !> limit of number of values
-  integer,  parameter    :: num_item_list = 24
-  integer,  parameter    :: num_item_list_atom  = 24
+  integer,  parameter    :: num_item_list = 25
+  integer,  parameter    :: num_item_list_atom  = 25
   integer,  parameter    :: num_item_list_land  = 12
   integer,  parameter    :: num_item_list_ocean = 10
   logical                :: data_available(num_item_list_atom,3) ! 1:atom, 2:land, 3:ocean
@@ -57,7 +57,7 @@ module mod_realinput_grads
   character(len=H_SHORT) :: item_list_land (num_item_list_land)
   character(len=H_SHORT) :: item_list_ocean(num_item_list_ocean)
   data item_list_atom  /'lon','lat','plev','DENS','U','V','W','T','HGT','QV','QC','QR','QI','QS','QG','RH', &
-                        'MSLP','PSFC','U10','V10','T2','Q2','RH2','TOPO' /
+                        'MSLP','PSFC','U10','V10','T2','Q2','RH2','TOPO','RN222' /
   data item_list_land  /'lsmask','lon','lat','lon_sfc','lat_sfc','llev', &
                         'STEMP','SMOISVC','SMOISDS','SKINT','TOPO','TOPO_sfc' /
   data item_list_ocean /'lsmask','lsmask_sst','lon','lat','lon_sfc','lat_sfc','lon_sst','lat_sst','SKINT','SST'/
@@ -86,6 +86,7 @@ module mod_realinput_grads
   integer,  parameter   :: Ia_q2     = 22
   integer,  parameter   :: Ia_rh2    = 23 ! Percentage (%)
   integer,  parameter   :: Ia_topo   = 24
+  integer,  parameter   :: Ia_rn222  = 25
 
   integer,  parameter   :: Il_lsmask  = 1
   integer,  parameter   :: Il_lon     = 2
@@ -280,7 +281,7 @@ contains
        item  = item_list_atom(ielem)
        !--- check data
        select case(trim(item))
-       case('DENS','W','QC','QR','QI','QS','QG','MSLP','PSFC','U10','V10','T2','Q2','TOPO')
+       case('DENS','W','QC','QR','QI','QS','QG','MSLP','PSFC','U10','V10','T2','Q2','TOPO','RN222')
           if (.not. data_available(ielem,1)) then
              LOG_WARN("ParentAtmosSetupGrADS",*) trim(item),' is not found & will be estimated.'
              cycle
@@ -353,6 +354,7 @@ contains
        temp_org, &
        qv_org,   &
        qhyd_org, &
+       chem_org, &
        lon_org,  &
        lat_org,  &
        cz_org,   &
@@ -379,6 +381,10 @@ contains
        I_HG
     use scale_atmos_saturation, only: &
        psat => ATMOS_SATURATION_psat_liq
+    use mod_atmos_phy_ch_vars, only: &
+       QA_CH, &
+       QS_CH, &
+       QE_CH
     implicit none
 
 
@@ -390,6 +396,7 @@ contains
     real(RP),         intent(out) :: temp_org(:,:,:)
     real(RP),         intent(out) :: qv_org  (:,:,:)
     real(RP),         intent(out) :: qhyd_org(:,:,:,:)
+    real(RP),         intent(out) :: chem_org(:,:,:,:)
     real(RP),         intent(out) :: lon_org(:,:)
     real(RP),         intent(out) :: lat_org(:,:)
     real(RP),         intent(out) :: cz_org(:,:,:)
@@ -420,6 +427,7 @@ contains
     velz_org(:,:,:)   = 0.0_RP
     qv_org  (:,:,:)   = 0.0_RP
     qhyd_org(:,:,:,:) = 0.0_RP
+    chem_org(:,:,:,:) = 0.0_RP
 
     !--- read grads data
     loop_InputAtmosGrADS : do ielem = 1, num_item_list_atom
@@ -935,6 +943,22 @@ contains
              enddo
              enddo
           endif
+       case('RN222')
+          if ( trim(dtype) == 'map' ) then
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, knum
+                   chem_org(k+2,i,j,QA_CH) = real(gdata3D(i,j,k), kind=RP)
+                   ! replace missval with UNDEF
+                   if( abs( chem_org(k+2,i,j,QA_CH) - missval ) < EPS ) then
+                      chem_org(k+2,i,j,QA_CH) = UNDEF
+                   endif
+                enddo
+                chem_org(1:2,i,j,QA_CH) = chem_org(3,i,j,QA_CH)
+             enddo
+             enddo
+          endif
        end select
     enddo loop_InputAtmosGrADS
 
@@ -1086,6 +1110,7 @@ contains
           temp_org(k,i,j)   = temp_org(2,i,j)
           qv_org  (k,i,j)   = qv_org  (2,i,j)
           qhyd_org(k,i,j,:) = qhyd_org(2,i,j,:)
+          chem_org(k,i,j,QA_CH)  = chem_org(2,i,j,QA_CH)
           cz_org  (k,i,j)   = cz_org  (2,i,j)
         end if
       enddo
@@ -1105,6 +1130,7 @@ contains
         do iq = 1, N_HYD
           if( abs( qhyd_org(k,i,j,iq) - UNDEF ) < EPS ) qhyd_org(k,i,j,iq) = 0.0_RP
         end do
+        if( abs( chem_org(k,i,j,QA_CH) - UNDEF ) < EPS ) chem_org(k,i,j,QA_CH) = 0.0_RP
       enddo
       enddo
       enddo
