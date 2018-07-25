@@ -238,7 +238,8 @@ contains
     ! open CIRA86 datafile (netCDF)
     call FILE_open( PROFILE_CIRA86_fname, & ! (in)
                     fid,                  & ! (out)
-                    postfix=""            ) ! (in)
+                    aggregate = .false.,  & ! (in)
+                    postfix   = ""        ) ! (in)
 
     call FILE_get_shape( fid, "ta", dims(:) )
     CIRA_nlat  = dims(1)
