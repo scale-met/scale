@@ -94,7 +94,7 @@ The soil moisture tendency equation is defined as a 1-D vertical diffusion equat
   \frac{\partial W}{\partial t} = \frac{\partial}{\partial z} \left( \nu \frac{\partial W}{\partial z} \right),
   \label{eq:Wdt}
 \end{align}
-where $W$ is the soil moisture (m$^3$/m$^3$) and $\nu$ is the constant water diffusivity ($m$^2$/s).
+where $W$ is the soil moisture (m$^3$/m$^3$) and $\nu$ is the constant water diffusivity (m$^2$/s).
 Eq. (\ref{eq:Wdt}) is discretized as follows:
 \begin{align}
   \frac{\Delta W_{1}}{\Delta t} &= \frac{PE}{\rho_{W}\Delta z_{1}} + \frac{2\nu}{\Delta z_{1}(\Delta z_{2}+\Delta z_{1})} (W_{2}-W_{1}), \\
@@ -104,3 +104,6 @@ Eq. (\ref{eq:Wdt}) is discretized as follows:
 where $PE$ is the net downward water flux (kg/m$^2$/s) at the top surface calculated from the precipitation, i.e., rain and snow, and evaporation rates.
 As in the case of the soil temperature, the tendency equations can be solved using the Thomas algorithm.
 
+Each land grid has the limitation on the amount of water.
+When incoming water flux is excessive beyond the limitation, water overflows from each soil layer.
+The overflowing water is put out of the model and stored in the RUNOFF variable.
