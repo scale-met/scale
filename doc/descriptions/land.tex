@@ -104,6 +104,6 @@ Eq. (\ref{eq:Wdt}) is discretized as follows:
 where $PE$ is the net downward water flux (kg/m$^2$/s) at the top surface calculated from the precipitation, i.e., rain and snow, and evaporation rates.
 As in the case of the soil temperature, the tendency equations can be solved using the Thomas algorithm.
 
-Each land grid has the limitation on the amount of water.
-When incoming water flux is excessive beyond the limitation, water overflows from each soil layer.
-The overflowing water is put out of the model and stored in the RUNOFF variable.
+Each land grid has the limitation on the water storage.
+When water amount excesses the limitation, water overflows from each soil layer.
+The overflowed water is removed out from the system and stored in the RUNOFF variable.
