@@ -1,0 +1,18 @@
+This file is readme file of a directory named "data/chem/rn222/flux_Hirao2010".
+Using the information in this file, you can get a global map of Rn-222 flux by Hirao et al. (2010) and arrange it for SCALE simulation.
+
+1. How to get flux data
+The Rn-222 flux data is published from a web site (http://www.ees.nagoya-u.ac.jp/~env_eng/data/flux_hirao/index.html).
+To use the data by SCALE, you should firstly get data named flux_hirao2010.tar.gz
+
+2. Uncompress the file at directry that you want to put the flux data, then, a "flux_hirao2010" created after the uncompress.
+
+3. In your simulation by SCALE, you should specify the directory, which contains data files, in the configure file.
+
+&PARAM_ATMOS_SFC_CH_RN222
+ ATMOS_SFC_CH_Rn222_emission_type     = 'HIRAO2010',
+ ATMOS_SFC_CH_Rn222_HIRAO2010_dirpath = '#path_to_the_data_directory#',
+/
+
+Reference
+Hirao, S., et al., Estimation of the Global 222Rn Flux Density from the Earth's Surface, Jpn. J. Health Phys., 45(2), 161-171, 2010
