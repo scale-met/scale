@@ -17,6 +17,7 @@ module mod_ocean_driver
   use scale_io
   use scale_prof
   use scale_ocean_grid_cartesC_index
+  use scale_tracer
   use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
@@ -211,6 +212,10 @@ contains
        OCEAN_PHY_TC_seaice
     use scale_ocean_phy_ice_simple, only: &
        OCEAN_PHY_ICE_simple
+    use mod_atmos_admin, only: &
+       ATMOS_sw_phy_ch
+    use mod_atmos_phy_ch_driver, only: &
+       ATMOS_PHY_CH_driver_OCEAN_flux
     use mod_ocean_admin, only: &
        OCEAN_SFC_TYPE, &
        OCEAN_ICE_TYPE, &
@@ -697,6 +702,11 @@ contains
        OCEAN_SFLX_LH(i,j) = OCEAN_SFLX_QTRC(i,j,I_QV) * LHV(i,j) ! always LHV
     enddo
     enddo
+
+    ! Surface flux for chemical tracers
+    if ( ATMOS_sw_phy_ch ) then
+       call ATMOS_PHY_CH_driver_OCEAN_flux( OCEAN_SFLX_QTRC(:,:,:) ) ! [INOUT]
+    endif
 
     call OCEAN_vars_total
 

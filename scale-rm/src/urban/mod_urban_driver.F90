@@ -108,6 +108,10 @@ contains
        URBAN_GRID_CARTESC_REAL_TOTAREA
     use scale_file_history, only: &
        FILE_HISTORY_in
+    use mod_atmos_admin, only: &
+       ATMOS_sw_phy_ch
+    use mod_atmos_phy_ch_driver, only: &
+       ATMOS_PHY_CH_driver_URBAN_flux
     use mod_urban_vars, only: &
        ATMOS_TEMP,      &
        ATMOS_PRES,      &
@@ -340,6 +344,11 @@ contains
        end do
 
     end select
+
+    ! Surface flux for chemical tracers
+    if ( ATMOS_sw_phy_ch ) then
+       call ATMOS_PHY_CH_driver_URBAN_flux( URBAN_SFLX_QTRC(:,:,:) ) ! [INOUT]
+    endif
 
     !########## Set Surface Boundary to coupler ##########
     call URBAN_SURFACE_SET( countup=.true. )

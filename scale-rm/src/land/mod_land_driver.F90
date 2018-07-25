@@ -140,6 +140,10 @@ contains
        CPL_PHY_SFC_skin
     use scale_cpl_phy_sfc_fixed_temp, only: &
        CPL_PHY_SFC_fixed_temp
+    use mod_atmos_admin, only: &
+       ATMOS_sw_phy_ch
+    use mod_atmos_phy_ch_driver, only: &
+       ATMOS_PHY_CH_driver_LAND_flux
     use mod_land_admin, only: &
        LAND_SFC_TYPE, &
        SNOW_TYPE
@@ -547,6 +551,11 @@ contains
        enddo
 
     end if
+
+    ! Surface flux for chemical tracers
+    if ( ATMOS_sw_phy_ch ) then
+       call ATMOS_PHY_CH_driver_LAND_flux( LAND_SFLX_QTRC(:,:,:) ) ! [INOUT]
+    endif
 
     !########## Set Surface Boundary to coupler ##########
     call LAND_SURFACE_SET( countup=.true. )
