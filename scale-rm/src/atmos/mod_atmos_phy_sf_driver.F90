@@ -306,17 +306,18 @@ contains
        enddo
 
        if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
-          !$omp parallel do
-          do iq = 1, QA
-             do j = JS, JE
-             do i = IS, IE
+          !$omp parallel do &
+          !$omp private(work)
+          do j = JS, JE
+          do i = IS, IE
+             do iq = 1, QA
                 work = SFLX_QTRC(i,j,iq) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
 
                 RHOQ_t_SF(i,j,iq) = work
                 DENS_t_SF(i,j)    = DENS_t_SF(i,j) + work * TRACER_MASS(iq)
                 RHOT_t_SF(i,j)    = RHOT_t_SF(i,j) + work * TRACER_MASS(iq) * RHOT(KS,i,j) / DENS(KS,i,j)
              enddo
-             enddo
+          enddo
           enddo
        endif
 
@@ -334,14 +335,14 @@ contains
 
     if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
        !$omp parallel do
-       do iq = 1, QA
-          do j = JS, JE
-          do i = IS, IE
+       do j = JS, JE
+       do i = IS, IE
+          do iq = 1, QA
              RHOQ_t(KS,i,j,iq) = RHOQ_t(KS,i,j,iq) + RHOQ_t_SF(i,j,iq)
-             DENS_t(KS,i,j)    = DENS_t(KS,i,j)    + DENS_t_SF(i,j)
-             RHOT_t(KS,i,j)    = RHOT_t(KS,i,j)    + RHOT_t_SF(i,j)
           enddo
-          enddo
+          DENS_t(KS,i,j)    = DENS_t(KS,i,j)    + DENS_t_SF(i,j)
+          RHOT_t(KS,i,j)    = RHOT_t(KS,i,j)    + RHOT_t_SF(i,j)
+       enddo
        enddo
     endif
 

@@ -85,11 +85,12 @@ module mod_realinput
   real(RP), private, allocatable :: POTT_org(:,:,:)
   real(RP), private, allocatable :: TEMP_org(:,:,:)
   real(RP), private, allocatable :: PRES_org(:,:,:)
-  real(RP), private, allocatable :: QTRC_org(:,:,:,:)
-  real(RP), private, allocatable :: QV_org  (:,:,:)
-  real(RP), private, allocatable :: QHYD_org(:,:,:,:)
-  real(RP), private, allocatable :: QNUM_org(:,:,:,:)
-  real(RP), private, allocatable :: CHEM_org(:,:,:,:)
+  real(RP), private, allocatable :: QTRC_org (:,:,:,:)
+  real(RP), private, allocatable :: QV_org   (:,:,:)
+  real(RP), private, allocatable :: QHYD_org (:,:,:,:)
+  real(RP), private, allocatable :: QNUM_org (:,:,:,:)
+
+  real(RP), private, allocatable :: RN222_org(:,:,:)
 
   integer,  private, allocatable :: igrd (:,:,:)
   integer,  private, allocatable :: jgrd (:,:,:)
@@ -906,7 +907,6 @@ contains
     use mod_realinput_grads, only: &
        ParentAtmosSetupGrADS
     use mod_atmos_phy_ch_vars, only: &
-       QA_CH, &
        QS_CH, &
        QE_CH
     use scale_atmos_hydrometeor, only: &
@@ -1010,10 +1010,10 @@ contains
     allocate( DENS_org( dims(1)+2, dims(2), dims(3)     ) )
     allocate( QTRC_org( dims(1)+2, dims(2), dims(3), QA ) )
 
-    allocate( QV_org  ( dims(1)+2, dims(2), dims(3)        ) )
-    allocate( QHYD_org( dims(1)+2, dims(2), dims(3), N_HYD ) )
-    allocate( QNUM_org( dims(1)+2, dims(2), dims(3), N_HYD ) )
-    allocate( CHEM_org( dims(1)+2, dims(2), dims(3), QA_CH ) )
+    allocate( QV_org   ( dims(1)+2, dims(2), dims(3)        ) )
+    allocate( QHYD_org ( dims(1)+2, dims(2), dims(3), N_HYD ) )
+    allocate( QNUM_org ( dims(1)+2, dims(2), dims(3), N_HYD ) )
+    allocate( RN222_org( dims(1)+2, dims(2), dims(3)        ) )
 
     LOG_INFO("ParentAtmosSetup",*) 'Horizontal Interpolation Level: ', COMM_CARTESC_NEST_INTERP_LEVEL
     itp_nh = COMM_CARTESC_NEST_INTERP_LEVEL
@@ -1128,7 +1128,6 @@ contains
        QS_MP, &
        QE_MP
     use mod_atmos_phy_ch_vars, only: &
-       QA_CH, &
        QS_CH, &
        QE_CH
     use mod_atmos_phy_mp_driver, only: &
@@ -1199,7 +1198,7 @@ contains
                                        TEMP_org(:,:,:),   & ! [OUT]
                                        QV_org  (:,:,:),   & ! [OUT]
                                        QHYD_org(:,:,:,:), & ! [OUT]
-                                       CHEM_org(:,:,:,:), & ! [OUT]
+                                       RN222_org(:,:,:),  & ! [OUT]
                                        LON_org (:,:),     & ! [OUT]
                                        LAT_org (:,:),     & ! [OUT]
                                        CZ_org  (:,:,:),   & ! [OUT]
@@ -1245,8 +1244,8 @@ contains
                                               QNUM=QNUM_org(:,:,:,:)            ) ! [IN]
        end if
 
-       if( ATMOS_PHY_CH_TYPE == 'RN222' ) then
-          QTRC_org(:,:,:,QS_CH:QE_CH) = CHEM_org(:,:,:,1:QA_CH)
+       if ( ATMOS_PHY_CH_TYPE == 'RN222' ) then
+          QTRC_org(:,:,:,QS_CH) = RN222_org(:,:,:)
        endif
 
        if ( temp2pott ) then

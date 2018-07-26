@@ -354,7 +354,7 @@ contains
        temp_org, &
        qv_org,   &
        qhyd_org, &
-       chem_org, &
+       RN222_org,&
        lon_org,  &
        lat_org,  &
        cz_org,   &
@@ -396,7 +396,7 @@ contains
     real(RP),         intent(out) :: temp_org(:,:,:)
     real(RP),         intent(out) :: qv_org  (:,:,:)
     real(RP),         intent(out) :: qhyd_org(:,:,:,:)
-    real(RP),         intent(out) :: chem_org(:,:,:,:)
+    real(RP),         intent(out) :: RN222_org(:,:,:)
     real(RP),         intent(out) :: lon_org(:,:)
     real(RP),         intent(out) :: lat_org(:,:)
     real(RP),         intent(out) :: cz_org(:,:,:)
@@ -427,7 +427,7 @@ contains
     velz_org(:,:,:)   = 0.0_RP
     qv_org  (:,:,:)   = 0.0_RP
     qhyd_org(:,:,:,:) = 0.0_RP
-    chem_org(:,:,:,:) = 0.0_RP
+    RN222_org(:,:,:)  = 0.0_RP
 
     !--- read grads data
     loop_InputAtmosGrADS : do ielem = 1, num_item_list_atom
@@ -949,13 +949,13 @@ contains
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
-                   chem_org(k+2,i,j,QA_CH) = real(gdata3D(i,j,k), kind=RP)
+                   RN222_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
                    ! replace missval with UNDEF
-                   if( abs( chem_org(k+2,i,j,QA_CH) - missval ) < EPS ) then
-                      chem_org(k+2,i,j,QA_CH) = UNDEF
+                   if( abs( RN222_org(k+2,i,j) - missval ) < EPS ) then
+                      RN222_org(k+2,i,j) = UNDEF
                    endif
                 enddo
-                chem_org(1:2,i,j,QA_CH) = chem_org(3,i,j,QA_CH)
+                RN222_org(1:2,i,j) = RN222_org(3,i,j)
              enddo
              enddo
           endif
@@ -1110,8 +1110,9 @@ contains
           temp_org(k,i,j)   = temp_org(2,i,j)
           qv_org  (k,i,j)   = qv_org  (2,i,j)
           qhyd_org(k,i,j,:) = qhyd_org(2,i,j,:)
-          chem_org(k,i,j,QA_CH)  = chem_org(2,i,j,QA_CH)
           cz_org  (k,i,j)   = cz_org  (2,i,j)
+
+          RN222_org(k,i,j)  = RN222_org(2,i,j)
         end if
       enddo
       enddo
@@ -1130,7 +1131,7 @@ contains
         do iq = 1, N_HYD
           if( abs( qhyd_org(k,i,j,iq) - UNDEF ) < EPS ) qhyd_org(k,i,j,iq) = 0.0_RP
         end do
-        if( abs( chem_org(k,i,j,QA_CH) - UNDEF ) < EPS ) chem_org(k,i,j,QA_CH) = 0.0_RP
+        if( abs( RN222_org(k,i,j) - UNDEF ) < EPS ) RN222_org(k,i,j) = 0.0_RP
       enddo
       enddo
       enddo

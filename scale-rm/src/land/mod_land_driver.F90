@@ -264,8 +264,8 @@ contains
     enddo
     enddo
 !OCL XFILL
-    !$omp parallel do
     do iq = 1, QA
+    !$omp parallel do
     do j  = LJS, LJE
     do i  = LIS, LIE
        LAND_SFLX_QTRC(i,j,iq) = 0.0_RP
@@ -446,7 +446,7 @@ contains
                               'LAND',                                                  & ! [IN]
                               LAND_SFC_TEMP(:,:),                                      & ! [INOUT]
                               LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
-                              LAND_SFLX_SH(:,:), LAND_SFLX_QTRC(i,j,I_QV), SFLX_GH(:,:), & ! [OUT]
+                              LAND_SFLX_SH(:,:), LAND_SFLX_QTRC(:,:,I_QV), SFLX_GH(:,:), & ! [OUT]
                               LAND_U10(:,:), LAND_V10(:,:), LAND_T2(:,:), LAND_Q2(:,:) ) ! [OUT]
 
     case ( 'FIXED-TEMP' )
@@ -485,7 +485,7 @@ contains
                                     LAND_PROPERTY(:,:,I_Z0E),                                & ! [IN]
                                     LANDUSE_exists_land(:,:), dt,                            & ! [IN]
                                     LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
-                                    LAND_SFLX_SH(:,:), LAND_SFLX_QTRC(i,j,I_QV), SFLX_GH(:,:), & ! [OUT]
+                                    LAND_SFLX_SH(:,:), LAND_SFLX_QTRC(:,:,I_QV), SFLX_GH(:,:), & ! [OUT]
                                     LAND_U10(:,:), LAND_V10(:,:),                            & ! [OUT]
                                     LAND_T2(:,:), LAND_Q2(:,:)                               ) ! [OUT]
 

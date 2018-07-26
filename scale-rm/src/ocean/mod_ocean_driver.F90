@@ -341,8 +341,8 @@ contains
     enddo
     enddo
 
-    !$omp parallel do
     do iq = 1, QA
+    !$omp parallel do
     do j  = OJS, OJE
     do i  = OIS, OIE
        OCEAN_SFLX_QTRC(i,j,iq) = 0.0_RP
