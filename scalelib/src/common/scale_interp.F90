@@ -254,7 +254,7 @@ contains
 
     nsize = IA_ref * JA_ref
     if ( nsize > 100 ) then
-       psize = int( sqrt(sqrt(real(nsize,RP))) )
+       psize = int( sqrt(2.0_RP*sqrt(real(nsize,RP))) )
        nidx_max = nsize / psize * INTERP_buffer_size_fact
     else
        psize = 1
@@ -269,9 +269,10 @@ contains
                           idx_blk(:,:,:), nidx(:,:),  & ! [OUT]
                           lon_min, lon_max,           & ! [OUT]
                           lat_min, lat_max,           & ! [OUT]
-                          dlon, dlat                  )
+                          dlon, dlat                  ) ! [OUT]
 
     hfact(:,:,:) = 0.0_RP
+
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(idx_ref)
     do j = 1, JA
@@ -291,7 +292,7 @@ contains
                                  search_limit = search_limit, & ! [IN]
                                  weight_order = weight_order  ) ! [IN]
        do n = 1, npoints
-          idx_i(i,j,n) = mod(idx_ref(n), IA_ref)
+          idx_i(i,j,n) = mod(idx_ref(n) - 1, IA_ref) + 1
           idx_j(i,j,n) = ( idx_ref(n) - 1 ) / IA_ref + 1
        end do
     enddo
@@ -366,14 +367,12 @@ contains
 
     nsize = IA_ref * JA_ref
     if ( nsize > 100 ) then
-       psize = int( sqrt(sqrt(real(nsize,RP))) )
+       psize = int( sqrt(2.0_RP*sqrt(real(nsize,RP))) )
        nidx_max = nsize / psize * INTERP_buffer_size_fact
     else
        psize = 1
        nidx_max = nsize
     end if
-
-    nidx_max = nsize / psize * INTERP_buffer_size_fact
 
     allocate(idx_blk(nidx_max,psize,psize))
     allocate(nidx   (         psize,psize))
@@ -406,7 +405,7 @@ contains
                                  idx_ref(:), hfact(i,j,:)     ) ! [OUT]
 
        do n = 1, npoints
-          ii = mod(idx_ref(n), IA_ref)
+          ii = mod(idx_ref(n) - 1, IA_ref) + 1
           jj = ( idx_ref(n) - 1 ) / IA_ref + 1
           idx_i(i,j,n) = ii
           idx_j(i,j,n) = jj
@@ -641,6 +640,7 @@ contains
 
     real(RP) :: dmin(psize,psize)
     real(RP) :: d
+    real(RP) :: d_sl
     integer  :: ijloc(2)
 
     real(RP) :: dist(npoints)
@@ -718,9 +718,10 @@ contains
                            dist(:), idx_ref(:)                                   ) ! [INOUT]
     end do
 
+    d_sl = max(dlon, dlat) * 0.5_RP
     do jj = 1, psize
     do ii = 1, psize
-       if ( dmin(ii,jj) > dist(npoints) ) cycle
+       if ( dmin(ii,jj) > dist(npoints) + d_sl ) cycle
        if ( ii== ijloc(1) .and. jj==ijloc(2) ) cycle
        do i = 1, nidx(ii,jj)
           call INTERP_insert( npoints, &
@@ -731,7 +732,6 @@ contains
        end do
     end do
     end do
-
 
     if ( abs(dist(1)) < CONST_EPS ) then
        hfact(:) = 0.0_RP
@@ -841,10 +841,13 @@ contains
   end subroutine INTERP_search_vert
 
   ! private
+
 !OCL SERIAL
-  subroutine INTERP_insert( npoints, lon, lat, lon_ref, lat_ref, &
-                            i,                                   &
-                            dist, idx_i                          )
+  subroutine INTERP_insert( npoints, &
+                            lon, lat, &
+                            lon_ref, lat_ref, &
+                            i,                &
+                            dist, idx_i       )
     use scale_sort, only: &
        SORT_exec
 
@@ -853,8 +856,8 @@ contains
     real(RP), intent(in) :: lon_ref, lat_ref
     integer,  intent(in) :: i
 
-    real(RP), intent(out) :: dist(npoints)
-    integer,  intent(out) :: idx_i(npoints)
+    real(RP), intent(inout) :: dist(npoints)
+    integer,  intent(inout) :: idx_i(npoints)
     
     real(RP) :: distance
 

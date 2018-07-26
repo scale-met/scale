@@ -94,17 +94,13 @@ contains
 
     integer,  intent(in)    :: npoints                ! number of interpolation points
     real(RP), intent(inout) :: val  (npoints)         ! value to sort
-    integer,  intent(out)   :: index(npoints)         ! index
+    integer,  intent(inout) :: index(npoints)         ! index
 
     integer  :: itmp
     real(RP) :: vtmp
 
     integer  :: n1, n2
     !---------------------------------------------------------------------------
-
-    do n1 = 1, npoints
-       index(n1) = n1
-    end do
 
     do n1 = 1, npoints-1
     do n2 = n1+1, npoints
