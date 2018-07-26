@@ -1170,9 +1170,9 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    if ( read_by_myproc_atmos ) then
-       call PROF_rapstart('___AtmosInput',3)
+    call PROF_rapstart('___AtmosInput',3)
 
+    if ( read_by_myproc_atmos ) then
        select case(inputtype)
        case('SCALE-RM')
           call ParentAtmosInputSCALE ( W_org   (:,:,:),   & ! [OUT]
@@ -1262,12 +1262,13 @@ contains
           enddo
        endif
 
-       call PROF_rapend  ('___AtmosInput',3)
     endif ! read by this process?
 
-    if ( serial_atmos ) then
-       call PROF_rapstart('___AtmosBcast',3)
+    call PROF_rapend  ('___AtmosInput',3)
 
+    call PROF_rapstart('___AtmosBcast',3)
+
+    if ( serial_atmos ) then
        if ( first .OR. update_coord ) then
           call COMM_bcast( LON_org,            dims(2), dims(3) )
           call COMM_bcast( LAT_org,            dims(2), dims(3) )
@@ -1282,8 +1283,9 @@ contains
        call COMM_bcast( DENS_org, dims(1)+2, dims(2), dims(3) )
        call COMM_bcast( QTRC_org, dims(1)+2, dims(2), dims(3), QA )
 
-       call PROF_rapend  ('___AtmosBcast',3)
     endif
+
+    call PROF_rapend  ('___AtmosBcast',3)
 
     do iq = 1, QA
     do j  = 1, dims(3)
@@ -2217,9 +2219,9 @@ contains
     do n = skiplen+1, timelen
        nn = n - skiplen
 
-       if ( do_read_land ) then
+       call PROF_rapstart('___SurfaceInput',3)
 
-          call PROF_rapstart('___SurfaceInput',3)
+       if ( do_read_land ) then
 
           select case( mdlid_land )
           case( iSCALE ) ! TYPE: SCALE-RM
@@ -2268,9 +2270,11 @@ contains
 
           end select
 
-          call PROF_rapend  ('___SurfaceInput',3)
-
        end if
+
+       call PROF_rapend  ('___SurfaceInput',3)
+
+       call PROF_rapstart('___SurfaceBcast',3)
 
        if ( serial_land ) then
           call COMM_bcast( tg_org, ldims(1), ldims(2), ldims(3) )
@@ -2294,9 +2298,11 @@ contains
           call COMM_bcast( lz_org, ldims(1) )
        end if
 
-       if ( do_read_ocean ) then
+       call PROF_rapend  ('___SurfaceBcast',3)
 
-          call PROF_rapstart('___SurfaceInput',3)
+       call PROF_rapstart('___SurfaceInput',3)
+
+       if ( do_read_ocean ) then
 
           select case( mdlid_ocean )
           case( iSCALE ) ! TYPE: SCALE-RM
@@ -2341,12 +2347,13 @@ contains
 
           end select
 
-          call PROF_rapend  ('___SurfaceInput',3)
-
        end if
 
+       call PROF_rapend  ('___SurfaceInput',3)
+
+       call PROF_rapstart('___SurfaceBcast',3)
+
        if ( serial_ocean ) then
-          call PROF_rapstart('___SurfaceBcast',3)
           call COMM_bcast( tw_org, odims(1), odims(2) )
           call COMM_bcast( sst_org, odims(1), odims(2) )
           call COMM_bcast( albw_org(:,:,I_R_direct ,I_R_IR ), odims(1), odims(2) )
@@ -2361,8 +2368,9 @@ contains
              call COMM_bcast( olon_org, odims(1), odims(2) )
              call COMM_bcast( olat_org, odims(1), odims(2) )
           end if
-          call PROF_rapend  ('___SurfaceBcast',3)
        end if
+
+       call PROF_rapend  ('___SurfaceBcast',3)
 
        call PROF_rapstart('___SurfaceInterp',3)
 
