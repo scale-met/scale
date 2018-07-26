@@ -4,9 +4,6 @@ The restart function is beneficial in limiting the job execution time of a compu
 Such run can usually be executed by being divided into multiple sequential runs using this function. In the restart run, it is also possible to output restart files for the next restart simulation. The file outputs for restart are configured in \namelist{PARAM_RESTART} and \namelist{PARAM_TIME} in \verb|run.conf|. The example below indicates that the restart run starts using the initial file \verb|restart1_***|, and generates restart files called \verb|restart2_***| every six hours.
 \editboxtwo{
 \verb|&PARAM_RESTART| & \\
-\verb| RESTART_RUN          = .true.,                                      | & \verb|.true.|: Restart run\\
-                                                                             & \verb|.false.|: Normal run (Default)\\
-                                                                             & \\ 
 \multicolumn{2}{l}{\verb| RESTART_IN_BASENAME  = "restart1_d01_20070715-000000.000",|} \\
                                                                              & File name of input initial (restart) file.\\
                                                                              & \\ 
@@ -37,8 +34,8 @@ Such run can usually be executed by being divided into multiple sequential runs 
 The time intervals for output of restart files are specifided by \nmitem{TIME_DT_ATMOS_RESTART}, \\
 \nmitem{TIME_DT_OCEAN_RESTART},  \nmitem{TIME_DT_LAND_RESTART}, and \nmitem{TIME_DT_URBAN_RESTART}. When they are not specified, the restart files are generated at the end of the simulation, i.e., \nmitem{TIME_DURATION}.
 
-The normal run is performed by specifying  \nmitem{RESTART_RUN} $=$ \verb|.false.| and \nmitem{RESTART_IN_BASENAME} $=$ \verb|init_***|, which are prepared by \verb|scale-rm_init|.
-The restart run is performed by specifying \nmitem{RESTART_RUN} $=$ \verb|.true.| and assigning the restart file name to \nmitem{RESTART_IN_BASENAME}.
+The normal run is performed by specifying \nmitem{RESTART_IN_BASENAME} $=$ \verb|init_***|, which are prepared by \verb|scale-rm_init|.
+The restart run is performed by assigning the restart file name to \nmitem{RESTART_IN_BASENAME}.
 
 The file names of input and output restart files are specified by \nmitem{RESTART_IN_BASENAME} and \nmitem{RESTART_OUT_BASENAME}, respectively.
 \nmitem{RESTART_IN_POSTFIX_TIMELABEL}, \\ \nmitem{RESTART_OUT_POSTFIX_TIMELABEL} indicate
@@ -50,7 +47,7 @@ setting \nmitem{RESTART_IN_POSTFIX_TIMELABEL = .true.} and \nmitem{RESTART_IN_BA
 The restart run is independent of the calculation that generates a restart file for the run.
 Note that the output variables in the restart file must be sufficient for the next restart run because the prognostic variables depend on the scheme used, especially in case of physical schemes.
 The simplest way for preparing the sufficient variables in the restart file is
-to use the same dynamic and physics schemeses, that would be used in the restart simulation, in the simulation vreating the restart file.
+to use the same dynamic and physics schemeses, that would be used in the restart simulation, in the simulation creating the restart file.
 \nmitem{TIME_STARTDATE} and \nmitem{TIME_DURATION} represent the start date and the integration time for the restart simulation.
 
 For a realistic atmospheric experiment, the boundary data prepared by \verb|scale-rm_init| is needed in addition to the initial data. An example is as follows:
