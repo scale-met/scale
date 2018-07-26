@@ -638,18 +638,15 @@ contains
     real(RP), intent(in), optional :: search_limit
     integer,  intent(in), optional :: weight_order
 
-    real(RP) :: dmin(psize,psize)
-    real(RP) :: d
-    real(RP) :: d_sl
-    integer  :: ijloc(2)
-
     real(RP) :: dist(npoints)
     real(RP) :: sum
     real(RP) :: search_limit_
     integer  :: weight_order_
 
+    real(RP) :: lon0, lon1, lat0, lat1
+    real(RP) :: dlon_sl, dlat_sl
     integer  :: i, j, n
-    integer  :: ii, jj
+    integer  :: ii, jj, ii0, jj0
     !---------------------------------------------------------------------------
 
     if ( present(search_limit) ) then
@@ -666,71 +663,45 @@ contains
 
 
 
-    ! search minimum at the four corners of the blocks
-    dmin(:,:) = large_number
-    dmin(1    ,1) = haversine(lon, lat, lon_min, lat_min)
-    dmin(psize,1) = haversine(lon, lat, lon_max, lat_min)
-    do i = 1, psize-1
-       d = haversine(lon, lat, lon_min+dlon*i, lat_min)
-       if ( d < dmin(i  ,1) ) dmin(i  ,1) = d
-       if ( d < dmin(i+1,1) ) dmin(i+1,1) = d
-    end do
-    dmin(1    ,psize) = haversine(lon, lat, lon_min, lat_max)
-    dmin(psize,psize) = haversine(lon, lat, lon_max, lat_max)
-    do i = 1, psize-1
-       d = haversine(lon, lat, lon_min+dlon*i, lat_max)
-       if ( d < dmin(i  ,psize) ) dmin(i  ,psize) = d
-       if ( d < dmin(i+1,psize) ) dmin(i+1,psize) = d
-    end do
-    do j = 1, psize-1
-       d = haversine(lon, lat, lon_min, lat_min+dlat*j)
-       if ( d < dmin(1,j  ) ) dmin(1,j  ) = d
-       if ( d < dmin(1,j+1) ) dmin(1,j+1) = d
-    end do
-    do j = 1, psize-1
-       d = haversine(lon, lat, lon_max, lat_min+dlat*j)
-       if ( d < dmin(psize,j  ) ) dmin(psize,j  ) = d
-       if ( d < dmin(psize,j+1) ) dmin(psize,j+1) = d
-    end do
-
-    do j = 1, psize-1
-    do i = 1, psize-1
-       d = haversine(lon, lat, lon_min+dlon*i, lat_min+dlat*j)
-       if ( d < dmin(i  ,j  ) ) dmin(i  ,j  ) = d
-       if ( d < dmin(i+1,j  ) ) dmin(i+1,j  ) = d
-       if ( d < dmin(i  ,j+1) ) dmin(i  ,j+1) = d
-       if ( d < dmin(i+1,j+1) ) dmin(i+1,j+1) = d
-    end do
-    end do
-
     dist   (:) = large_number
     idx_ref(:) = -1
 
     ! find k-nearest points in the nearest block
-    ijloc = minloc(dmin(:,:), mask=nidx.gt.0)
-    ii = ijloc(1)
-    jj = ijloc(2)
-    do i = 1, nidx(ii,jj)
+    ii0 = min( int(( lon - lon_min ) / dlon) + 1, psize )
+    jj0 = min( int(( lat - lat_min ) / dlat) + 1, psize )
+    do i = 1, nidx(ii0,jj0)
+       n = idx_blk(i,ii0,jj0)
        call INTERP_insert( npoints, &
                            lon, lat, &
-                           lon_ref(idx_blk(i,ii,jj)), lat_ref(idx_blk(i,ii,jj)), & ! [IN]
-                           idx_blk(i,ii,jj),                                     & ! [IN]
-                           dist(:), idx_ref(:)                                   ) ! [INOUT]
+                           lon_ref(n), lat_ref(n), & ! [IN]
+                           n,                      & ! [IN]
+                           dist(:), idx_ref(:)     ) ! [INOUT]
     end do
 
-    d_sl = max(dlon, dlat) * 0.5_RP
+    dlon_sl = max(dlon * 0.5_RP, dist(npoints))
+    dlat_sl = max(dlat * 0.5_RP, dist(npoints))
     do jj = 1, psize
-    do ii = 1, psize
-       if ( dmin(ii,jj) > dist(npoints) + d_sl ) cycle
-       if ( ii== ijloc(1) .and. jj==ijloc(2) ) cycle
-       do i = 1, nidx(ii,jj)
-          call INTERP_insert( npoints, &
-                              lon, lat, &
-                              lon_ref(idx_blk(i,ii,jj)), lat_ref(idx_blk(i,ii,jj)), & ! [IN]
-                              idx_blk(i,ii,jj),                                     & ! [IN]
-                              dist(:), idx_ref(:)                                   ) ! [INOUT]
+       lat0 = lat_min + dlat * (jj-1)
+       lat1 = lat_min + dlat * jj
+       if (     lat <  lat0 - dlat_sl &
+           .or. lat >= lat1 + dlat_sl ) cycle
+       do ii = 1, psize
+          if ( ii==ii0 .and. jj==jj0 ) cycle
+          lon0 = lon_min + dlon * (ii-1)
+          lon1 = lon_min + dlon * ii
+          if (     lon <  lon0 - dlon_sl &
+              .or. lon >= lon1 + dlon_sl ) cycle
+          do i = 1, nidx(ii,jj)
+             n = idx_blk(i,ii,jj)
+             call INTERP_insert( npoints, &
+                                 lon, lat, &
+                                 lon_ref(n), lat_ref(n), & ! [IN]
+                                 n,                      & ! [IN]
+                                 dist(:), idx_ref(:)     ) ! [INOUT]
+          end do
+          dlon_sl = max(dlon * 0.5_RP, dist(npoints))
+          dlat_sl = max(dlat * 0.5_RP, dist(npoints))
        end do
-    end do
     end do
 
     if ( abs(dist(1)) < CONST_EPS ) then
