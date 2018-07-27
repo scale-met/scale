@@ -199,7 +199,7 @@ contains
     else
        QA_MP = 0
        QS_MP = -1
-       QE_MP = -1
+       QE_MP = -2
     end if
 
     return

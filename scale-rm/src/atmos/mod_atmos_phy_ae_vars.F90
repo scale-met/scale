@@ -62,9 +62,9 @@ module mod_atmos_phy_ae_vars
   real(RP), public, allocatable :: ATMOS_PHY_AE_CCN_t(:,:,:)                                  ! tendency CCN [/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_AE_EMIT(:,:,:,:)                                 ! emission of aerosol and gas
 
-  integer, public :: QA_AE
-  integer, public :: QS_AE
-  integer, public :: QE_AE
+  integer, public :: QA_AE = 0
+  integer, public :: QS_AE = -1
+  integer, public :: QE_AE = -2
 
   !-----------------------------------------------------------------------------
   !

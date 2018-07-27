@@ -71,9 +71,9 @@ module mod_atmos_phy_mp_vars
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_rain(:,:)   ! precipitation flux (liquid) [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_snow(:,:)   ! precipitation flux (solid)  [kg/m2/s]
 
-  integer, public :: QA_MP
-  integer, public :: QS_MP
-  integer, public :: QE_MP
+  integer, public :: QA_MP = 0
+  integer, public :: QS_MP = -1
+  integer, public :: QE_MP = -2
 
   !-----------------------------------------------------------------------------
   !

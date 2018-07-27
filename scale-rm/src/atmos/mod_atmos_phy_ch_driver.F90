@@ -96,7 +96,7 @@ contains
     else
        QA_CH = 0
        QS_CH = -1
-       QE_CH = -1
+       QE_CH = -2
     endif
 
     return

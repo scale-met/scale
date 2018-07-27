@@ -56,9 +56,9 @@ module mod_atmos_phy_ch_vars
 
   real(RP), public, allocatable :: ATMOS_PHY_CH_O3(:,:,:) ! ozone [PPM]
 
-  integer, public :: QA_CH
-  integer, public :: QS_CH
-  integer, public :: QE_CH
+  integer, public :: QA_CH = 0
+  integer, public :: QS_CH = -1
+  integer, public :: QE_CH = -2
 
   !-----------------------------------------------------------------------------
   !

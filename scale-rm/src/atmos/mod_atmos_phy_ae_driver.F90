@@ -90,7 +90,7 @@ contains
     else
        QA_AE = 0
        QS_AE = -1
-       QE_AE = -1
+       QE_AE = -2
     end if
 
     return
