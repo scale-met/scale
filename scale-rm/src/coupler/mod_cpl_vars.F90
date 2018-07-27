@@ -56,7 +56,7 @@ module mod_cpl_vars
   real(RP), public, allocatable :: OCN_SFLX_SH   (:,:)     ! ocean surface sensible heat flux [J/m/s2]
   real(RP), public, allocatable :: OCN_SFLX_LH   (:,:)     ! ocean surface latent heat flux [J/m2/s]
   real(RP), public, allocatable :: OCN_SFLX_G    (:,:)     ! ocean surface water heat flux [J/m2/s]
-  real(RP), public, allocatable :: OCN_SFLX_evap (:,:)     ! ocean surface water vapor flux [kg/m2/s]
+  real(RP), public, allocatable :: OCN_SFLX_QTRC (:,:,:)   ! ocean surface tracer flux [kg/m2/s]
   real(RP), public, allocatable :: OCN_U10       (:,:)     ! ocean velocity u at 10m [m/s]
   real(RP), public, allocatable :: OCN_V10       (:,:)     ! ocean velocity v at 10m [m/s]
   real(RP), public, allocatable :: OCN_T2        (:,:)     ! ocean temperature at 2m [K]
@@ -74,7 +74,7 @@ module mod_cpl_vars
   real(RP), public, allocatable :: LND_SFLX_SH   (:,:)     ! land surface sensible heat flux [J/m2/s]
   real(RP), public, allocatable :: LND_SFLX_LH   (:,:)     ! land surface latent heat flux [J/m2/s]
   real(RP), public, allocatable :: LND_SFLX_G    (:,:)     ! land surface ground heat flux [J/m2/s]
-  real(RP), public, allocatable :: LND_SFLX_evap (:,:)     ! land surface water vapor flux [kg/m2/s]
+  real(RP), public, allocatable :: LND_SFLX_QTRC (:,:,:)   ! land surface tracer flux [kg/m2/s]
   real(RP), public, allocatable :: LND_U10       (:,:)     ! land velocity u at 10m [m/s]
   real(RP), public, allocatable :: LND_V10       (:,:)     ! land velocity v at 10m [m/s]
   real(RP), public, allocatable :: LND_T2        (:,:)     ! land temperature at 2m [K]
@@ -92,7 +92,7 @@ module mod_cpl_vars
   real(RP), public, allocatable :: URB_SFLX_SH   (:,:)     ! urban surface sensible heat flux [J/m2/s]
   real(RP), public, allocatable :: URB_SFLX_LH   (:,:)     ! urban surface latent heat flux [J/m2/s]
   real(RP), public, allocatable :: URB_SFLX_G    (:,:)     ! urban surface ground heat flux [J/m2/s]
-  real(RP), public, allocatable :: URB_SFLX_evap (:,:)     ! urban surface water vapor flux [kg/m2/s]
+  real(RP), public, allocatable :: URB_SFLX_QTRC (:,:,:)   ! urban surface tracer flux [kg/m2/s]
   real(RP), public, allocatable :: URB_U10       (:,:)     ! urban velocity u at 10m [m/s]
   real(RP), public, allocatable :: URB_V10       (:,:)     ! urban velocity v at 10m [m/s]
   real(RP), public, allocatable :: URB_T2        (:,:)     ! urban temperature at 2m [K]
@@ -235,7 +235,7 @@ contains
     allocate( OCN_SFLX_SH   (IA,JA)                     )
     allocate( OCN_SFLX_LH   (IA,JA)                     )
     allocate( OCN_SFLX_G    (IA,JA)                     )
-    allocate( OCN_SFLX_evap (IA,JA)                     )
+    allocate( OCN_SFLX_QTRC (IA,JA,QA)                  )
     allocate( OCN_U10       (IA,JA)                     )
     allocate( OCN_V10       (IA,JA)                     )
     allocate( OCN_T2        (IA,JA)                     )
@@ -251,7 +251,7 @@ contains
     OCN_SFLX_SH   (:,:)     = UNDEF
     OCN_SFLX_LH   (:,:)     = UNDEF
     OCN_SFLX_G    (:,:)     = UNDEF
-    OCN_SFLX_evap (:,:)     = UNDEF
+    OCN_SFLX_QTRC (:,:,:)   = UNDEF
     OCN_U10       (:,:)     = UNDEF
     OCN_V10       (:,:)     = UNDEF
     OCN_T2        (:,:)     = UNDEF
@@ -268,7 +268,7 @@ contains
     allocate( LND_SFLX_SH   (IA,JA)                     )
     allocate( LND_SFLX_LH   (IA,JA)                     )
     allocate( LND_SFLX_G    (IA,JA)                     )
-    allocate( LND_SFLX_evap (IA,JA)                     )
+    allocate( LND_SFLX_QTRC (IA,JA,QA)                  )
     allocate( LND_U10       (IA,JA)                     )
     allocate( LND_V10       (IA,JA)                     )
     allocate( LND_T2        (IA,JA)                     )
@@ -284,7 +284,7 @@ contains
     LND_SFLX_SH   (:,:)     = UNDEF
     LND_SFLX_LH   (:,:)     = UNDEF
     LND_SFLX_G    (:,:)     = UNDEF
-    LND_SFLX_evap (:,:)     = UNDEF
+    LND_SFLX_QTRC (:,:,:)   = UNDEF
     LND_U10       (:,:)     = UNDEF
     LND_V10       (:,:)     = UNDEF
     LND_T2        (:,:)     = UNDEF
@@ -301,7 +301,7 @@ contains
     allocate( URB_SFLX_SH   (IA,JA)                     )
     allocate( URB_SFLX_LH   (IA,JA)                     )
     allocate( URB_SFLX_G    (IA,JA)                     )
-    allocate( URB_SFLX_evap (IA,JA)                     )
+    allocate( URB_SFLX_QTRC (IA,JA,QA)                  )
     allocate( URB_U10       (IA,JA)                     )
     allocate( URB_V10       (IA,JA)                     )
     allocate( URB_T2        (IA,JA)                     )
@@ -317,7 +317,7 @@ contains
     URB_SFLX_SH   (:,:)     = UNDEF
     URB_SFLX_LH   (:,:)     = UNDEF
     URB_SFLX_G    (:,:)     = UNDEF
-    URB_SFLX_evap (:,:)     = UNDEF
+    URB_SFLX_QTRC (:,:,:)   = UNDEF
     URB_U10       (:,:)     = UNDEF
     URB_V10       (:,:)     = UNDEF
     URB_T2        (:,:)     = UNDEF
@@ -643,7 +643,7 @@ contains
        SFLX_SH,    &
        SFLX_LH,    &
        SFLX_G,     &
-       SFLX_evap,  &
+       SFLX_QTRC,  &
        U10,        &
        V10,        &
        T2,         &
@@ -662,7 +662,7 @@ contains
     real(RP), intent(in) :: SFLX_SH   (IA,JA)
     real(RP), intent(in) :: SFLX_LH   (IA,JA)
     real(RP), intent(in) :: SFLX_G    (IA,JA)
-    real(RP), intent(in) :: SFLX_evap (IA,JA)
+    real(RP), intent(in) :: SFLX_QTRC (IA,JA,QA)
     real(RP), intent(in) :: U10       (IA,JA)
     real(RP), intent(in) :: V10       (IA,JA)
     real(RP), intent(in) :: T2        (IA,JA)
@@ -674,47 +674,47 @@ contains
 
     !$omp parallel do default(none) private(i,j,idir,irgn) OMP_SCHEDULE_ &
     !$omp shared(JSB,JEB,ISB,IEB,OCN_SFC_TEMP,OCN_SFC_albedo,OCN_SFC_Z0M,OCN_SFC_Z0H,OCN_SFC_Z0E) &
-    !$omp shared(OCN_SFLX_MW,OCN_SFLX_MU,OCN_SFLX_MV,OCN_SFLX_SH,OCN_SFLX_LH,OCN_SFLX_G,OCN_SFLX_evap,OCN_U10,OCN_V10,OCN_T2,OCN_Q2) &
-    !$omp shared(SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_G,SFLX_evap,U10,V10,T2,Q2) &
+    !$omp shared(OCN_SFLX_MW,OCN_SFLX_MU,OCN_SFLX_MV,OCN_SFLX_SH,OCN_SFLX_LH,OCN_SFLX_G,OCN_SFLX_QTRC,OCN_U10,OCN_V10,OCN_T2,OCN_Q2) &
+    !$omp shared(SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_G,SFLX_QTRC,U10,V10,T2,Q2) &
     !$omp shared(CNT_putOCN)
     do j = JSB, JEB
     do i = ISB, IEB
-       OCN_SFC_TEMP (i,j) = OCN_SFC_TEMP (i,j) * CNT_putOCN + SFC_TEMP (i,j)
-       OCN_SFC_Z0M  (i,j) = OCN_SFC_Z0M  (i,j) * CNT_putOCN + SFC_Z0M  (i,j)
-       OCN_SFC_Z0H  (i,j) = OCN_SFC_Z0H  (i,j) * CNT_putOCN + SFC_Z0H  (i,j)
-       OCN_SFC_Z0E  (i,j) = OCN_SFC_Z0E  (i,j) * CNT_putOCN + SFC_Z0E  (i,j)
-       OCN_SFLX_MW  (i,j) = OCN_SFLX_MW  (i,j) * CNT_putOCN + SFLX_MW  (i,j)
-       OCN_SFLX_MU  (i,j) = OCN_SFLX_MU  (i,j) * CNT_putOCN + SFLX_MU  (i,j)
-       OCN_SFLX_MV  (i,j) = OCN_SFLX_MV  (i,j) * CNT_putOCN + SFLX_MV  (i,j)
-       OCN_SFLX_SH  (i,j) = OCN_SFLX_SH  (i,j) * CNT_putOCN + SFLX_SH  (i,j)
-       OCN_SFLX_LH  (i,j) = OCN_SFLX_LH  (i,j) * CNT_putOCN + SFLX_LH  (i,j)
-       OCN_SFLX_G   (i,j) = OCN_SFLX_G   (i,j) * CNT_putOCN + SFLX_G   (i,j)
-       OCN_SFLX_evap(i,j) = OCN_SFLX_evap(i,j) * CNT_putOCN + SFLX_evap(i,j)
-       OCN_U10      (i,j) = OCN_U10      (i,j) * CNT_putOCN + U10      (i,j)
-       OCN_V10      (i,j) = OCN_V10      (i,j) * CNT_putOCN + V10      (i,j)
-       OCN_T2       (i,j) = OCN_T2       (i,j) * CNT_putOCN + T2       (i,j)
-       OCN_Q2       (i,j) = OCN_Q2       (i,j) * CNT_putOCN + Q2       (i,j)
+       OCN_SFC_TEMP (i,j)   = OCN_SFC_TEMP (i,j)   * CNT_putOCN + SFC_TEMP (i,j)
+       OCN_SFC_Z0M  (i,j)   = OCN_SFC_Z0M  (i,j)   * CNT_putOCN + SFC_Z0M  (i,j)
+       OCN_SFC_Z0H  (i,j)   = OCN_SFC_Z0H  (i,j)   * CNT_putOCN + SFC_Z0H  (i,j)
+       OCN_SFC_Z0E  (i,j)   = OCN_SFC_Z0E  (i,j)   * CNT_putOCN + SFC_Z0E  (i,j)
+       OCN_SFLX_MW  (i,j)   = OCN_SFLX_MW  (i,j)   * CNT_putOCN + SFLX_MW  (i,j)
+       OCN_SFLX_MU  (i,j)   = OCN_SFLX_MU  (i,j)   * CNT_putOCN + SFLX_MU  (i,j)
+       OCN_SFLX_MV  (i,j)   = OCN_SFLX_MV  (i,j)   * CNT_putOCN + SFLX_MV  (i,j)
+       OCN_SFLX_SH  (i,j)   = OCN_SFLX_SH  (i,j)   * CNT_putOCN + SFLX_SH  (i,j)
+       OCN_SFLX_LH  (i,j)   = OCN_SFLX_LH  (i,j)   * CNT_putOCN + SFLX_LH  (i,j)
+       OCN_SFLX_G   (i,j)   = OCN_SFLX_G   (i,j)   * CNT_putOCN + SFLX_G   (i,j)
+       OCN_SFLX_QTRC(i,j,:) = OCN_SFLX_QTRC(i,j,:) * CNT_putOCN + SFLX_QTRC(i,j,:)
+       OCN_U10      (i,j)   = OCN_U10      (i,j)   * CNT_putOCN + U10      (i,j)
+       OCN_V10      (i,j)   = OCN_V10      (i,j)   * CNT_putOCN + V10      (i,j)
+       OCN_T2       (i,j)   = OCN_T2       (i,j)   * CNT_putOCN + T2       (i,j)
+       OCN_Q2       (i,j)   = OCN_Q2       (i,j)   * CNT_putOCN + Q2       (i,j)
        do irgn = I_R_IR, I_R_VIS
        do idir = I_R_direct, I_R_diffuse
           OCN_SFC_albedo(i,j,idir,irgn) = OCN_SFC_albedo(i,j,idir,irgn) * CNT_putOCN + SFC_albedo(i,j,idir,irgn)
        enddo
        enddo
 
-       OCN_SFC_TEMP (i,j) = OCN_SFC_TEMP (i,j) / ( CNT_putOCN + 1.0_RP )
-       OCN_SFC_Z0M  (i,j) = OCN_SFC_Z0M  (i,j) / ( CNT_putOCN + 1.0_RP )
-       OCN_SFC_Z0H  (i,j) = OCN_SFC_Z0H  (i,j) / ( CNT_putOCN + 1.0_RP )
-       OCN_SFC_Z0E  (i,j) = OCN_SFC_Z0E  (i,j) / ( CNT_putOCN + 1.0_RP )
-       OCN_SFLX_MW  (i,j) = OCN_SFLX_MW  (i,j) / ( CNT_putOCN + 1.0_RP )
-       OCN_SFLX_MU  (i,j) = OCN_SFLX_MU  (i,j) / ( CNT_putOCN + 1.0_RP )
-       OCN_SFLX_MV  (i,j) = OCN_SFLX_MV  (i,j) / ( CNT_putOCN + 1.0_RP )
-       OCN_SFLX_SH  (i,j) = OCN_SFLX_SH  (i,j) / ( CNT_putOCN + 1.0_RP )
-       OCN_SFLX_LH  (i,j) = OCN_SFLX_LH  (i,j) / ( CNT_putOCN + 1.0_RP )
-       OCN_SFLX_G   (i,j) = OCN_SFLX_G   (i,j) / ( CNT_putOCN + 1.0_RP )
-       OCN_SFLX_evap(i,j) = OCN_SFLX_evap(i,j) / ( CNT_putOCN + 1.0_RP )
-       OCN_U10      (i,j) = OCN_U10      (i,j) / ( CNT_putOCN + 1.0_RP )
-       OCN_V10      (i,j) = OCN_V10      (i,j) / ( CNT_putOCN + 1.0_RP )
-       OCN_T2       (i,j) = OCN_T2       (i,j) / ( CNT_putOCN + 1.0_RP )
-       OCN_Q2       (i,j) = OCN_Q2       (i,j) / ( CNT_putOCN + 1.0_RP )
+       OCN_SFC_TEMP (i,j)   = OCN_SFC_TEMP (i,j)   / ( CNT_putOCN + 1.0_RP )
+       OCN_SFC_Z0M  (i,j)   = OCN_SFC_Z0M  (i,j)   / ( CNT_putOCN + 1.0_RP )
+       OCN_SFC_Z0H  (i,j)   = OCN_SFC_Z0H  (i,j)   / ( CNT_putOCN + 1.0_RP )
+       OCN_SFC_Z0E  (i,j)   = OCN_SFC_Z0E  (i,j)   / ( CNT_putOCN + 1.0_RP )
+       OCN_SFLX_MW  (i,j)   = OCN_SFLX_MW  (i,j)   / ( CNT_putOCN + 1.0_RP )
+       OCN_SFLX_MU  (i,j)   = OCN_SFLX_MU  (i,j)   / ( CNT_putOCN + 1.0_RP )
+       OCN_SFLX_MV  (i,j)   = OCN_SFLX_MV  (i,j)   / ( CNT_putOCN + 1.0_RP )
+       OCN_SFLX_SH  (i,j)   = OCN_SFLX_SH  (i,j)   / ( CNT_putOCN + 1.0_RP )
+       OCN_SFLX_LH  (i,j)   = OCN_SFLX_LH  (i,j)   / ( CNT_putOCN + 1.0_RP )
+       OCN_SFLX_G   (i,j)   = OCN_SFLX_G   (i,j)   / ( CNT_putOCN + 1.0_RP )
+       OCN_SFLX_QTRC(i,j,:) = OCN_SFLX_QTRC(i,j,:) / ( CNT_putOCN + 1.0_RP )
+       OCN_U10      (i,j)   = OCN_U10      (i,j)   / ( CNT_putOCN + 1.0_RP )
+       OCN_V10      (i,j)   = OCN_V10      (i,j)   / ( CNT_putOCN + 1.0_RP )
+       OCN_T2       (i,j)   = OCN_T2       (i,j)   / ( CNT_putOCN + 1.0_RP )
+       OCN_Q2       (i,j)   = OCN_Q2       (i,j)   / ( CNT_putOCN + 1.0_RP )
        do irgn = I_R_IR, I_R_VIS
        do idir = I_R_direct, I_R_diffuse
           OCN_SFC_albedo(i,j,idir,irgn) = OCN_SFC_albedo(i,j,idir,irgn) / ( CNT_putOCN + 1.0_RP )
@@ -743,7 +743,7 @@ contains
        SFLX_SH,    &
        SFLX_LH,    &
        SFLX_G,     &
-       SFLX_evap,  &
+       SFLX_QTRC,  &
        U10,        &
        V10,        &
        T2,         &
@@ -762,7 +762,7 @@ contains
     real(RP), intent(in) :: SFLX_SH   (IA,JA)
     real(RP), intent(in) :: SFLX_LH   (IA,JA)
     real(RP), intent(in) :: SFLX_G    (IA,JA)
-    real(RP), intent(in) :: SFLX_evap (IA,JA)
+    real(RP), intent(in) :: SFLX_QTRC (IA,JA,QA)
     real(RP), intent(in) :: U10       (IA,JA)
     real(RP), intent(in) :: V10       (IA,JA)
     real(RP), intent(in) :: T2        (IA,JA)
@@ -774,48 +774,48 @@ contains
 
     !$omp parallel do default(none) &
     !$omp shared(JSB,JEB,ISB,IEB,LND_SFC_TEMP,LND_SFC_albedo,LND_SFC_Z0M,LND_SFC_Z0H,LND_SFC_Z0E) &
-    !$omp shared(LND_SFLX_MW,LND_SFLX_MU,LND_SFLX_MV,LND_SFLX_SH,LND_SFLX_LH,LND_SFLX_G,LND_SFLX_evap) &
+    !$omp shared(LND_SFLX_MW,LND_SFLX_MU,LND_SFLX_MV,LND_SFLX_SH,LND_SFLX_LH,LND_SFLX_G,LND_SFLX_QTRC) &
     !$omp shared(LND_U10,LND_V10,LND_T2,LND_Q2,CNT_putLND,SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H) &
-    !$omp shared(SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_G,SFLX_evap,U10,V10,T2,Q2) &
+    !$omp shared(SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_G,SFLX_QTRC,U10,V10,T2,Q2) &
     !$omp private(i,j,idir,irgn) OMP_SCHEDULE_
     do j = JSB, JEB
     do i = ISB, IEB
-       LND_SFC_TEMP (i,j) = LND_SFC_TEMP (i,j) * CNT_putLND + SFC_TEMP (i,j)
-       LND_SFC_Z0M  (i,j) = LND_SFC_Z0M  (i,j) * CNT_putLND + SFC_Z0M  (i,j)
-       LND_SFC_Z0H  (i,j) = LND_SFC_Z0H  (i,j) * CNT_putLND + SFC_Z0H  (i,j)
-       LND_SFC_Z0E  (i,j) = LND_SFC_Z0E  (i,j) * CNT_putLND + SFC_Z0E  (i,j)
-       LND_SFLX_MW  (i,j) = LND_SFLX_MW  (i,j) * CNT_putLND + SFLX_MW  (i,j)
-       LND_SFLX_MU  (i,j) = LND_SFLX_MU  (i,j) * CNT_putLND + SFLX_MU  (i,j)
-       LND_SFLX_MV  (i,j) = LND_SFLX_MV  (i,j) * CNT_putLND + SFLX_MV  (i,j)
-       LND_SFLX_SH  (i,j) = LND_SFLX_SH  (i,j) * CNT_putLND + SFLX_SH  (i,j)
-       LND_SFLX_LH  (i,j) = LND_SFLX_LH  (i,j) * CNT_putLND + SFLX_LH  (i,j)
-       LND_SFLX_G   (i,j) = LND_SFLX_G   (i,j) * CNT_putLND + SFLX_G   (i,j)
-       LND_SFLX_evap(i,j) = LND_SFLX_evap(i,j) * CNT_putLND + SFLX_evap(i,j)
-       LND_U10      (i,j) = LND_U10      (i,j) * CNT_putLND + U10      (i,j)
-       LND_V10      (i,j) = LND_V10      (i,j) * CNT_putLND + V10      (i,j)
-       LND_T2       (i,j) = LND_T2       (i,j) * CNT_putLND + T2       (i,j)
-       LND_Q2       (i,j) = LND_Q2       (i,j) * CNT_putLND + Q2       (i,j)
+       LND_SFC_TEMP (i,j)   = LND_SFC_TEMP (i,j)   * CNT_putLND + SFC_TEMP (i,j)
+       LND_SFC_Z0M  (i,j)   = LND_SFC_Z0M  (i,j)   * CNT_putLND + SFC_Z0M  (i,j)
+       LND_SFC_Z0H  (i,j)   = LND_SFC_Z0H  (i,j)   * CNT_putLND + SFC_Z0H  (i,j)
+       LND_SFC_Z0E  (i,j)   = LND_SFC_Z0E  (i,j)   * CNT_putLND + SFC_Z0E  (i,j)
+       LND_SFLX_MW  (i,j)   = LND_SFLX_MW  (i,j)   * CNT_putLND + SFLX_MW  (i,j)
+       LND_SFLX_MU  (i,j)   = LND_SFLX_MU  (i,j)   * CNT_putLND + SFLX_MU  (i,j)
+       LND_SFLX_MV  (i,j)   = LND_SFLX_MV  (i,j)   * CNT_putLND + SFLX_MV  (i,j)
+       LND_SFLX_SH  (i,j)   = LND_SFLX_SH  (i,j)   * CNT_putLND + SFLX_SH  (i,j)
+       LND_SFLX_LH  (i,j)   = LND_SFLX_LH  (i,j)   * CNT_putLND + SFLX_LH  (i,j)
+       LND_SFLX_G   (i,j)   = LND_SFLX_G   (i,j)   * CNT_putLND + SFLX_G   (i,j)
+       LND_SFLX_QTRC(i,j,:) = LND_SFLX_QTRC(i,j,:) * CNT_putLND + SFLX_QTRC(i,j,:)
+       LND_U10      (i,j)   = LND_U10      (i,j)   * CNT_putLND + U10      (i,j)
+       LND_V10      (i,j)   = LND_V10      (i,j)   * CNT_putLND + V10      (i,j)
+       LND_T2       (i,j)   = LND_T2       (i,j)   * CNT_putLND + T2       (i,j)
+       LND_Q2       (i,j)   = LND_Q2       (i,j)   * CNT_putLND + Q2       (i,j)
        do irgn = I_R_IR, I_R_VIS
        do idir = I_R_direct, I_R_diffuse
           LND_SFC_albedo(i,j,idir,irgn) = LND_SFC_albedo(i,j,idir,irgn) * CNT_putLND + SFC_albedo(i,j,idir,irgn)
        enddo
        enddo
 
-       LND_SFC_TEMP (i,j) = LND_SFC_TEMP (i,j) / ( CNT_putLND + 1.0_RP )
-       LND_SFC_Z0M  (i,j) = LND_SFC_Z0M  (i,j) / ( CNT_putLND + 1.0_RP )
-       LND_SFC_Z0H  (i,j) = LND_SFC_Z0H  (i,j) / ( CNT_putLND + 1.0_RP )
-       LND_SFC_Z0E  (i,j) = LND_SFC_Z0E  (i,j) / ( CNT_putLND + 1.0_RP )
-       LND_SFLX_MW  (i,j) = LND_SFLX_MW  (i,j) / ( CNT_putLND + 1.0_RP )
-       LND_SFLX_MU  (i,j) = LND_SFLX_MU  (i,j) / ( CNT_putLND + 1.0_RP )
-       LND_SFLX_MV  (i,j) = LND_SFLX_MV  (i,j) / ( CNT_putLND + 1.0_RP )
-       LND_SFLX_SH  (i,j) = LND_SFLX_SH  (i,j) / ( CNT_putLND + 1.0_RP )
-       LND_SFLX_LH  (i,j) = LND_SFLX_LH  (i,j) / ( CNT_putLND + 1.0_RP )
-       LND_SFLX_G   (i,j) = LND_SFLX_G   (i,j) / ( CNT_putLND + 1.0_RP )
-       LND_SFLX_evap(i,j) = LND_SFLX_evap(i,j) / ( CNT_putLND + 1.0_RP )
-       LND_U10      (i,j) = LND_U10      (i,j) / ( CNT_putLND + 1.0_RP )
-       LND_V10      (i,j) = LND_V10      (i,j) / ( CNT_putLND + 1.0_RP )
-       LND_T2       (i,j) = LND_T2       (i,j) / ( CNT_putLND + 1.0_RP )
-       LND_Q2       (i,j) = LND_Q2       (i,j) / ( CNT_putLND + 1.0_RP )
+       LND_SFC_TEMP (i,j)   = LND_SFC_TEMP (i,j)   / ( CNT_putLND + 1.0_RP )
+       LND_SFC_Z0M  (i,j)   = LND_SFC_Z0M  (i,j)   / ( CNT_putLND + 1.0_RP )
+       LND_SFC_Z0H  (i,j)   = LND_SFC_Z0H  (i,j)   / ( CNT_putLND + 1.0_RP )
+       LND_SFC_Z0E  (i,j)   = LND_SFC_Z0E  (i,j)   / ( CNT_putLND + 1.0_RP )
+       LND_SFLX_MW  (i,j)   = LND_SFLX_MW  (i,j)   / ( CNT_putLND + 1.0_RP )
+       LND_SFLX_MU  (i,j)   = LND_SFLX_MU  (i,j)   / ( CNT_putLND + 1.0_RP )
+       LND_SFLX_MV  (i,j)   = LND_SFLX_MV  (i,j)   / ( CNT_putLND + 1.0_RP )
+       LND_SFLX_SH  (i,j)   = LND_SFLX_SH  (i,j)   / ( CNT_putLND + 1.0_RP )
+       LND_SFLX_LH  (i,j)   = LND_SFLX_LH  (i,j)   / ( CNT_putLND + 1.0_RP )
+       LND_SFLX_G   (i,j)   = LND_SFLX_G   (i,j)   / ( CNT_putLND + 1.0_RP )
+       LND_SFLX_QTRC(i,j,:) = LND_SFLX_QTRC(i,j,:) / ( CNT_putLND + 1.0_RP )
+       LND_U10      (i,j)   = LND_U10      (i,j)   / ( CNT_putLND + 1.0_RP )
+       LND_V10      (i,j)   = LND_V10      (i,j)   / ( CNT_putLND + 1.0_RP )
+       LND_T2       (i,j)   = LND_T2       (i,j)   / ( CNT_putLND + 1.0_RP )
+       LND_Q2       (i,j)   = LND_Q2       (i,j)   / ( CNT_putLND + 1.0_RP )
        do irgn = I_R_IR, I_R_VIS
        do idir = I_R_direct, I_R_diffuse
           LND_SFC_albedo(i,j,idir,irgn) = LND_SFC_albedo(i,j,idir,irgn) / ( CNT_putLND + 1.0_RP )
@@ -844,7 +844,7 @@ contains
        SFLX_SH,    &
        SFLX_LH,    &
        SFLX_G,     &
-       SFLX_evap,  &
+       SFLX_QTRC,  &
        U10,        &
        V10,        &
        T2,         &
@@ -863,7 +863,7 @@ contains
     real(RP), intent(in) :: SFLX_SH   (IA,JA)
     real(RP), intent(in) :: SFLX_LH   (IA,JA)
     real(RP), intent(in) :: SFLX_G    (IA,JA)
-    real(RP), intent(in) :: SFLX_evap (IA,JA)
+    real(RP), intent(in) :: SFLX_QTRC (IA,JA,QA)
     real(RP), intent(in) :: U10       (IA,JA)
     real(RP), intent(in) :: V10       (IA,JA)
     real(RP), intent(in) :: T2        (IA,JA)
@@ -876,46 +876,46 @@ contains
     !$omp parallel do default(none)  OMP_SCHEDULE_ &
     !$omp shared(JSB,JEB,ISB,IEB, &
     !$omp        URB_SFC_TEMP,URB_SFC_albedo,URB_SFC_Z0M,URB_SFC_Z0H,URB_SFC_Z0E, &
-    !$omp        URB_SFLX_MW,URB_SFLX_MU,URB_SFLX_MV,URB_SFLX_SH,URB_SFLX_LH,URB_SFLX_G,URB_SFLX_evap,URB_U10,URB_V10,URB_T2,URB_Q2,CNT_putURB, &
-    !$omp        SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_G,SFLX_evap,U10,V10,T2,Q2)
+    !$omp        URB_SFLX_MW,URB_SFLX_MU,URB_SFLX_MV,URB_SFLX_SH,URB_SFLX_LH,URB_SFLX_G,URB_SFLX_QTRC,URB_U10,URB_V10,URB_T2,URB_Q2,CNT_putURB, &
+    !$omp        SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_G,SFLX_QTRC,U10,V10,T2,Q2)
     do j = JSB, JEB
     do i = ISB, IEB
-       URB_SFC_TEMP (i,j) = URB_SFC_TEMP (i,j) * CNT_putURB + SFC_TEMP (i,j)
-       URB_SFC_Z0M  (i,j) = URB_SFC_Z0M  (i,j) * CNT_putURB + SFC_Z0M  (i,j)
-       URB_SFC_Z0H  (i,j) = URB_SFC_Z0H  (i,j) * CNT_putURB + SFC_Z0H  (i,j)
-       URB_SFC_Z0E  (i,j) = URB_SFC_Z0E  (i,j) * CNT_putURB + SFC_Z0E  (i,j)
-       URB_SFLX_MW  (i,j) = URB_SFLX_MW  (i,j) * CNT_putURB + SFLX_MW  (i,j)
-       URB_SFLX_MU  (i,j) = URB_SFLX_MU  (i,j) * CNT_putURB + SFLX_MU  (i,j)
-       URB_SFLX_MV  (i,j) = URB_SFLX_MV  (i,j) * CNT_putURB + SFLX_MV  (i,j)
-       URB_SFLX_SH  (i,j) = URB_SFLX_SH  (i,j) * CNT_putURB + SFLX_SH  (i,j)
-       URB_SFLX_LH  (i,j) = URB_SFLX_LH  (i,j) * CNT_putURB + SFLX_LH  (i,j)
-       URB_SFLX_G   (i,j) = URB_SFLX_G   (i,j) * CNT_putURB + SFLX_G   (i,j)
-       URB_SFLX_evap(i,j) = URB_SFLX_evap(i,j) * CNT_putURB + SFLX_evap(i,j)
-       URB_U10      (i,j) = URB_U10      (i,j) * CNT_putURB + U10      (i,j)
-       URB_V10      (i,j) = URB_V10      (i,j) * CNT_putURB + V10      (i,j)
-       URB_T2       (i,j) = URB_T2       (i,j) * CNT_putURB + T2       (i,j)
-       URB_Q2       (i,j) = URB_Q2       (i,j) * CNT_putURB + Q2       (i,j)
+       URB_SFC_TEMP (i,j)   = URB_SFC_TEMP (i,j)   * CNT_putURB + SFC_TEMP (i,j)
+       URB_SFC_Z0M  (i,j)   = URB_SFC_Z0M  (i,j)   * CNT_putURB + SFC_Z0M  (i,j)
+       URB_SFC_Z0H  (i,j)   = URB_SFC_Z0H  (i,j)   * CNT_putURB + SFC_Z0H  (i,j)
+       URB_SFC_Z0E  (i,j)   = URB_SFC_Z0E  (i,j)   * CNT_putURB + SFC_Z0E  (i,j)
+       URB_SFLX_MW  (i,j)   = URB_SFLX_MW  (i,j)   * CNT_putURB + SFLX_MW  (i,j)
+       URB_SFLX_MU  (i,j)   = URB_SFLX_MU  (i,j)   * CNT_putURB + SFLX_MU  (i,j)
+       URB_SFLX_MV  (i,j)   = URB_SFLX_MV  (i,j)   * CNT_putURB + SFLX_MV  (i,j)
+       URB_SFLX_SH  (i,j)   = URB_SFLX_SH  (i,j)   * CNT_putURB + SFLX_SH  (i,j)
+       URB_SFLX_LH  (i,j)   = URB_SFLX_LH  (i,j)   * CNT_putURB + SFLX_LH  (i,j)
+       URB_SFLX_G   (i,j)   = URB_SFLX_G   (i,j)   * CNT_putURB + SFLX_G   (i,j)
+       URB_SFLX_QTRC(i,j,:) = URB_SFLX_QTRC(i,j,:) * CNT_putURB + SFLX_QTRC(i,j,:)
+       URB_U10      (i,j)   = URB_U10      (i,j)   * CNT_putURB + U10      (i,j)
+       URB_V10      (i,j)   = URB_V10      (i,j)   * CNT_putURB + V10      (i,j)
+       URB_T2       (i,j)   = URB_T2       (i,j)   * CNT_putURB + T2       (i,j)
+       URB_Q2       (i,j)   = URB_Q2       (i,j)   * CNT_putURB + Q2       (i,j)
        do irgn = I_R_IR, I_R_VIS
        do idir = I_R_direct, I_R_diffuse
           URB_SFC_albedo(i,j,idir,irgn) = URB_SFC_albedo(i,j,idir,irgn) * CNT_putURB + SFC_albedo(i,j,idir,irgn)
        enddo
        enddo
 
-       URB_SFC_TEMP (i,j) = URB_SFC_TEMP (i,j) / ( CNT_putURB + 1.0_RP )
-       URB_SFC_Z0M  (i,j) = URB_SFC_Z0M  (i,j) / ( CNT_putURB + 1.0_RP )
-       URB_SFC_Z0H  (i,j) = URB_SFC_Z0H  (i,j) / ( CNT_putURB + 1.0_RP )
-       URB_SFC_Z0E  (i,j) = URB_SFC_Z0E  (i,j) / ( CNT_putURB + 1.0_RP )
-       URB_SFLX_MW  (i,j) = URB_SFLX_MW  (i,j) / ( CNT_putURB + 1.0_RP )
-       URB_SFLX_MU  (i,j) = URB_SFLX_MU  (i,j) / ( CNT_putURB + 1.0_RP )
-       URB_SFLX_MV  (i,j) = URB_SFLX_MV  (i,j) / ( CNT_putURB + 1.0_RP )
-       URB_SFLX_SH  (i,j) = URB_SFLX_SH  (i,j) / ( CNT_putURB + 1.0_RP )
-       URB_SFLX_LH  (i,j) = URB_SFLX_LH  (i,j) / ( CNT_putURB + 1.0_RP )
-       URB_SFLX_G   (i,j) = URB_SFLX_G   (i,j) / ( CNT_putURB + 1.0_RP )
-       URB_SFLX_evap(i,j) = URB_SFLX_evap(i,j) / ( CNT_putURB + 1.0_RP )
-       URB_U10      (i,j) = URB_U10      (i,j) / ( CNT_putURB + 1.0_RP )
-       URB_V10      (i,j) = URB_V10      (i,j) / ( CNT_putURB + 1.0_RP )
-       URB_T2       (i,j) = URB_T2       (i,j) / ( CNT_putURB + 1.0_RP )
-       URB_Q2       (i,j) = URB_Q2       (i,j) / ( CNT_putURB + 1.0_RP )
+       URB_SFC_TEMP (i,j)   = URB_SFC_TEMP (i,j)   / ( CNT_putURB + 1.0_RP )
+       URB_SFC_Z0M  (i,j)   = URB_SFC_Z0M  (i,j)   / ( CNT_putURB + 1.0_RP )
+       URB_SFC_Z0H  (i,j)   = URB_SFC_Z0H  (i,j)   / ( CNT_putURB + 1.0_RP )
+       URB_SFC_Z0E  (i,j)   = URB_SFC_Z0E  (i,j)   / ( CNT_putURB + 1.0_RP )
+       URB_SFLX_MW  (i,j)   = URB_SFLX_MW  (i,j)   / ( CNT_putURB + 1.0_RP )
+       URB_SFLX_MU  (i,j)   = URB_SFLX_MU  (i,j)   / ( CNT_putURB + 1.0_RP )
+       URB_SFLX_MV  (i,j)   = URB_SFLX_MV  (i,j)   / ( CNT_putURB + 1.0_RP )
+       URB_SFLX_SH  (i,j)   = URB_SFLX_SH  (i,j)   / ( CNT_putURB + 1.0_RP )
+       URB_SFLX_LH  (i,j)   = URB_SFLX_LH  (i,j)   / ( CNT_putURB + 1.0_RP )
+       URB_SFLX_G   (i,j)   = URB_SFLX_G   (i,j)   / ( CNT_putURB + 1.0_RP )
+       URB_SFLX_QTRC(i,j,:) = URB_SFLX_QTRC(i,j,:) / ( CNT_putURB + 1.0_RP )
+       URB_U10      (i,j)   = URB_U10      (i,j)   / ( CNT_putURB + 1.0_RP )
+       URB_V10      (i,j)   = URB_V10      (i,j)   / ( CNT_putURB + 1.0_RP )
+       URB_T2       (i,j)   = URB_T2       (i,j)   / ( CNT_putURB + 1.0_RP )
+       URB_Q2       (i,j)   = URB_Q2       (i,j)   / ( CNT_putURB + 1.0_RP )
        do irgn = I_R_IR, I_R_VIS
        do idir = I_R_direct, I_R_diffuse
           URB_SFC_albedo(i,j,idir,irgn) = URB_SFC_albedo(i,j,idir,irgn) / ( CNT_putURB + 1.0_RP )
@@ -949,9 +949,6 @@ contains
        V10,        &
        T2,         &
        Q2          )
-    use scale_atmos_hydrometeor, only: &
-       ATMOS_HYDROMETEOR_dry, &
-       I_QV
     use scale_landuse, only: &
        fact_ocean => LANDUSE_fact_ocean, &
        fact_land  => LANDUSE_fact_land,  &
@@ -981,21 +978,16 @@ contains
     !$omp parallel do default(none) &
     !$omp shared(JSB,JEB,ISB,IEB,QA,SFLX_QTRC,SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E) &
     !$omp shared(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_G,U10,V10,T2,Q2) &
-    !$omp shared(ATMOS_HYDROMETEOR_dry,I_QV) &
     !$omp shared(fact_ocean,fact_land,fact_urban,OCN_SFC_TEMP,LND_SFC_TEMP,URB_SFC_TEMP,OCN_SFC_albedo) &
     !$omp shared(LND_SFC_albedo,URB_SFC_albedo,OCN_SFC_Z0M,LND_SFC_Z0M,URB_SFC_Z0M) &
     !$omp shared(OCN_SFC_Z0H,LND_SFC_Z0H,URB_SFC_Z0H,OCN_SFC_Z0E,LND_SFC_Z0E,URB_SFC_Z0E,OCN_SFLX_MW) &
     !$omp shared(LND_SFLX_MW,URB_SFLX_MW,OCN_SFLX_MU,LND_SFLX_MU,URB_SFLX_MU,OCN_SFLX_MV,LND_SFLX_MV) &
     !$omp shared(URB_SFLX_MV,OCN_SFLX_SH,LND_SFLX_SH,URB_SFLX_SH,OCN_SFLX_LH,LND_SFLX_LH,URB_SFLX_LH) &
-    !$omp shared(OCN_SFLX_G,LND_SFLX_G,URB_SFLX_G,OCN_SFLX_evap,LND_SFLX_evap,URB_SFLX_evap,OCN_U10) &
+    !$omp shared(OCN_SFLX_G,LND_SFLX_G,URB_SFLX_G,OCN_SFLX_QTRC,LND_SFLX_QTRC,URB_SFLX_QTRC,OCN_U10) &
     !$omp shared(LND_U10,URB_U10,OCN_V10,LND_V10,URB_V10,OCN_T2,LND_T2,URB_T2,OCN_Q2,LND_Q2,URB_Q2) &
     !$omp private(i,j,iq) OMP_SCHEDULE_
     do j = JSB, JEB
     do i = ISB, IEB
-       do iq = 1, QA
-          SFLX_QTRC(i,j,iq) = 0.0_RP ! tentative
-       enddo
-
        SFC_TEMP (i,j)      =   fact_ocean(i,j) * OCN_SFC_TEMP (i,j) &
                              + fact_land (i,j) * LND_SFC_TEMP (i,j) &
                              + fact_urban(i,j) * URB_SFC_TEMP (i,j)
@@ -1045,10 +1037,11 @@ contains
                              - fact_land (i,j) * LND_SFLX_G   (i,j) &
                              - fact_urban(i,j) * URB_SFLX_G   (i,j)
 
-       if ( .NOT. ATMOS_HYDROMETEOR_dry ) &
-       SFLX_QTRC(i,j,I_QV) =   fact_ocean(i,j) * OCN_SFLX_evap(i,j) &
-                             + fact_land (i,j) * LND_SFLX_evap(i,j) &
-                             + fact_urban(i,j) * URB_SFLX_evap(i,j)
+       do iq = 1, QA
+          SFLX_QTRC(i,j,iq) =   fact_ocean(i,j) * OCN_SFLX_QTRC(i,j,iq) &
+                              + fact_land (i,j) * LND_SFLX_QTRC(i,j,iq) &
+                              + fact_urban(i,j) * URB_SFLX_QTRC(i,j,iq)
+       enddo
 
        U10      (i,j)      =   fact_ocean(i,j) * OCN_U10      (i,j) &
                              + fact_land (i,j) * LND_U10      (i,j) &

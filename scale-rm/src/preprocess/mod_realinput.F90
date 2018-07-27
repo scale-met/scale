@@ -85,10 +85,12 @@ module mod_realinput
   real(RP), private, allocatable :: POTT_org(:,:,:)
   real(RP), private, allocatable :: TEMP_org(:,:,:)
   real(RP), private, allocatable :: PRES_org(:,:,:)
-  real(RP), private, allocatable :: QTRC_org(:,:,:,:)
-  real(RP), private, allocatable :: QV_org  (:,:,:)
-  real(RP), private, allocatable :: QHYD_org(:,:,:,:)
-  real(RP), private, allocatable :: QNUM_org(:,:,:,:)
+  real(RP), private, allocatable :: QTRC_org (:,:,:,:)
+  real(RP), private, allocatable :: QV_org   (:,:,:)
+  real(RP), private, allocatable :: QHYD_org (:,:,:,:)
+  real(RP), private, allocatable :: QNUM_org (:,:,:,:)
+
+  real(RP), private, allocatable :: RN222_org(:,:,:)
 
   integer,  private, allocatable :: igrd (:,:,:)
   integer,  private, allocatable :: jgrd (:,:,:)
@@ -904,6 +906,9 @@ contains
 !!$       ParentAtmosSetupNICAM
     use mod_realinput_grads, only: &
        ParentAtmosSetupGrADS
+    use mod_atmos_phy_ch_vars, only: &
+       QS_CH, &
+       QE_CH
     use scale_atmos_hydrometeor, only: &
        N_HYD
     implicit none
@@ -1005,9 +1010,10 @@ contains
     allocate( DENS_org( dims(1)+2, dims(2), dims(3)     ) )
     allocate( QTRC_org( dims(1)+2, dims(2), dims(3), QA ) )
 
-    allocate( QV_org  ( dims(1)+2, dims(2), dims(3)        ) )
-    allocate( QHYD_org( dims(1)+2, dims(2), dims(3), N_HYD ) )
-    allocate( QNUM_org( dims(1)+2, dims(2), dims(3), N_HYD ) )
+    allocate( QV_org   ( dims(1)+2, dims(2), dims(3)        ) )
+    allocate( QHYD_org ( dims(1)+2, dims(2), dims(3), N_HYD ) )
+    allocate( QNUM_org ( dims(1)+2, dims(2), dims(3), N_HYD ) )
+    allocate( RN222_org( dims(1)+2, dims(2), dims(3)        ) )
 
     LOG_INFO("ParentAtmosSetup",*) 'Horizontal Interpolation Level: ', COMM_CARTESC_NEST_INTERP_LEVEL
     itp_nh = COMM_CARTESC_NEST_INTERP_LEVEL
@@ -1108,6 +1114,8 @@ contains
        INTERP_domain_compatibility, &
        INTERP_factor3d,             &
        INTERP_interp3d
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_CH_TYPE
     use mod_realinput_scale, only: &
        ParentAtmosInputSCALE
     use mod_realinput_wrfarw, only: &
@@ -1119,6 +1127,9 @@ contains
     use mod_atmos_phy_mp_vars, only: &
        QS_MP, &
        QE_MP
+    use mod_atmos_phy_ch_vars, only: &
+       QS_CH, &
+       QE_CH
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_qhyd2qtrc
     use scale_atmos_grid_cartesC_real, only: &
@@ -1187,6 +1198,7 @@ contains
                                        TEMP_org(:,:,:),   & ! [OUT]
                                        QV_org  (:,:,:),   & ! [OUT]
                                        QHYD_org(:,:,:,:), & ! [OUT]
+                                       RN222_org(:,:,:),  & ! [OUT]
                                        LON_org (:,:),     & ! [OUT]
                                        LAT_org (:,:),     & ! [OUT]
                                        CZ_org  (:,:,:),   & ! [OUT]
@@ -1231,6 +1243,10 @@ contains
                                               QTRC_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
                                               QNUM=QNUM_org(:,:,:,:)            ) ! [IN]
        end if
+
+       if ( ATMOS_PHY_CH_TYPE == 'RN222' ) then
+          QTRC_org(:,:,:,QS_CH) = RN222_org(:,:,:)
+       endif
 
        if ( temp2pott ) then
           do j = 1, dims(3)
@@ -1600,6 +1616,9 @@ contains
     use mod_atmos_phy_mp_vars, only: &
        QS_MP, &
        QE_MP
+    use mod_atmos_phy_ch_vars, only: &
+       QS_CH, &
+       QE_CH
     implicit none
 
     character(len=*), intent(in)  :: basename
@@ -1643,6 +1662,14 @@ contains
             timeintv = timeintv                                      ) ! [IN]
     enddo
 
+    do iq = QS_CH, QE_CH
+       call FILE_CARTESC_def_var( fid,                               & ! [IN]
+            TRACER_NAME(iq), 'Reference '//TRACER_NAME(iq), 'kg/kg', & ! [IN]
+            'ZXYT', datatype,                                        & ! [IN]
+            vid(5+iq),                                               & ! [OUT]
+            timeintv = timeintv                                      ) ! [IN]
+    enddo
+
     call FILE_CARTESC_enddef( fid )
 
     return
@@ -1666,6 +1693,9 @@ contains
     use mod_atmos_phy_mp_vars, only: &
        QS_MP, &
        QE_MP
+    use mod_atmos_phy_ch_vars, only: &
+       QS_CH, &
+       QE_CH
     implicit none
 
     real(RP), intent(in)  :: DENS(KA,IA,JA)
@@ -1706,6 +1736,11 @@ contains
     call FILE_CARTESC_write_var( fid, vid(5), work(:,:,:,:), 'POTT', 'ZXYT', timeintv, timeofs=timeofs )
 
     do iq = QS_MP, QE_MP
+       call FILE_CARTESC_write_var( fid, vid(5+iq),QTRC(:,:,:,iq:iq), TRACER_NAME(iq), &
+                              'ZXYT', timeintv, timeofs=timeofs                  )
+    enddo
+
+    do iq = QS_CH, QE_CH
        call FILE_CARTESC_write_var( fid, vid(5+iq),QTRC(:,:,:,iq:iq), TRACER_NAME(iq), &
                               'ZXYT', timeintv, timeofs=timeofs                  )
     enddo

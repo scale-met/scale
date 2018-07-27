@@ -145,6 +145,7 @@ OBJS = \
 	$(OBJ_DIR)/scale_atmos_phy_ae_kajino13.o	\
 	$(OBJ_DIR)/scale_atmos_phy_bl_mynn.o	\
 	$(OBJ_DIR)/scale_atmos_phy_ch_rn222.o	\
+	$(OBJ_DIR)/scale_atmos_sfc_ch_rn222.o	\
 	$(OBJ_DIR)/scale_atmos_phy_cp_common.o	\
 	$(OBJ_DIR)/scale_atmos_phy_cp_kf.o	\
 	$(OBJ_DIR)/scale_atmos_phy_mp_common.o	\

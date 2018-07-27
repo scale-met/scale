@@ -19,6 +19,7 @@ module mod_urban_vars
   use scale_prof
   use scale_debug
   use scale_urban_grid_cartesC_index
+  use scale_tracer
   use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
   implicit none
@@ -93,7 +94,7 @@ module mod_urban_vars
   real(RP), public, allocatable :: URBAN_SFLX_SH   (:,:)     ! urban grid average of sensible heat flux [W/m2]
   real(RP), public, allocatable :: URBAN_SFLX_LH   (:,:)     ! urban grid average of latent heat flux [W/m2]
   real(RP), public, allocatable :: URBAN_SFLX_GH   (:,:)     ! urban grid average of ground heat flux [W/m2]
-  real(RP), public, allocatable :: URBAN_SFLX_evap (:,:)     ! urban grid average of water vapor flux [kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFLX_QTRC (:,:,:)   ! urban grid average of water vapor flux [kg/m2/s]
 
   ! diagnostic variables
   real(RP), public, allocatable :: URBAN_Z0M(:,:) ! urban grid average of rougness length (momentum) [m]
@@ -375,7 +376,7 @@ contains
     allocate( URBAN_SFLX_SH   (UIA,UJA)                     )
     allocate( URBAN_SFLX_LH   (UIA,UJA)                     )
     allocate( URBAN_SFLX_GH   (UIA,UJA)                     )
-    allocate( URBAN_SFLX_evap (UIA,UJA)                     )
+    allocate( URBAN_SFLX_QTRC (UIA,UJA,QA)                  )
     URBAN_SFC_TEMP  (:,:)     = UNDEF
     URBAN_SFC_albedo(:,:,:,:) = UNDEF
     URBAN_SFLX_MW   (:,:)     = UNDEF
@@ -384,7 +385,7 @@ contains
     URBAN_SFLX_SH   (:,:)     = UNDEF
     URBAN_SFLX_LH   (:,:)     = UNDEF
     URBAN_SFLX_GH   (:,:)     = UNDEF
-    URBAN_SFLX_evap (:,:)     = UNDEF
+    URBAN_SFLX_QTRC (:,:,:)   = UNDEF
 
     allocate( URBAN_Z0M(UIA,UJA) )
     allocate( URBAN_Z0H(UIA,UJA) )
@@ -592,6 +593,8 @@ contains
   subroutine URBAN_vars_history
     use scale_file_history, only: &
        FILE_HISTORY_in
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
     !---------------------------------------------------------------------------
 
@@ -677,7 +680,7 @@ contains
     call FILE_HISTORY_in( URBAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   VAR_UNIT(I_SFLX_SH)   )
     call FILE_HISTORY_in( URBAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH)   )
     call FILE_HISTORY_in( URBAN_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH),   VAR_DESC(I_SFLX_GH),   VAR_UNIT(I_SFLX_GH)   )
-    call FILE_HISTORY_in( URBAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap) )
+    call FILE_HISTORY_in( URBAN_SFLX_QTRC(:,:,I_QV), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap) )
 
     call PROF_rapend  ('URB_History', 1)
 
@@ -690,6 +693,8 @@ contains
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STATISTICS_total
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     use scale_urban_grid_cartesC_real, only: &
        URBAN_GRID_CARTESC_REAL_AREA,    &
        URBAN_GRID_CARTESC_REAL_TOTAREA, &
@@ -812,7 +817,7 @@ contains
                               URBAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
                               URBAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
        call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap), & ! (in)
+                              URBAN_SFLX_QTRC(:,:,I_QV), VAR_NAME(I_SFLX_evap), & ! (in)
                               URBAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
                               URBAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
     endif
