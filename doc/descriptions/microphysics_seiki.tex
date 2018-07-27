@@ -1,7 +1,7 @@
-\subsection{Double-Moment Bulk \cite{sn_2014}}
+\subsection{Double-Moment Bulk scheme}
 
 SCALE implements a double-moment bulk microphysical scheme with six categories (cloud water, rain, cloud ice, snow, and graupel) 
-based on \cite{sn_2014} (heareafter SN14).
+based on \cite{sn_2014} (hereafter SN14).
 SN14 is designed to maintain the self consistency of the assumptions regarding particle mass distribution and
 the shapes of ice particles throughout cloud microphysical process.
 In this scheme, particle mass distributions of each category are expressed as a generalized gamma function and 0-th moments ( number density ) and
@@ -10,3 +10,4 @@ SN14 calculates microphysical process for nucleation of cloud droplets and cloud
 phase change (condensation/evaporation, deposition/sublimation, freezing, melting), and
 collection (self-collection, auto-conversion, accretion and breakup).
 Precipitation process for SN14 is separated from other microphysical process and calculated using terminal velocity in SCALE.
+More details are described in Appendix \ref{app:sn14}.
