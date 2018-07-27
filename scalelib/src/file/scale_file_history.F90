@@ -809,8 +809,11 @@ contains
   subroutine FILE_HISTORY_Put_0D( &
        itemid,   &
        var       )
+    use scale_file_h, only: &
+       RMISS => FILE_RMISS
     use scale_const, only: &
-       EPS => CONST_EPS
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     implicit none
 
     integer,  intent(in) :: itemid
@@ -853,7 +856,13 @@ contains
 
        dimid = FILE_HISTORY_vars(id)%dimid
        if ( FILE_HISTORY_vars(id)%taverage ) then
-         FILE_HISTORY_vars(id)%varsum(1) = FILE_HISTORY_vars(id)%varsum(1) + var * dt
+         if ( FILE_HISTORY_vars(id)%varsum(1) /= RMISS ) then
+            if ( var /= UNDEF ) then
+               FILE_HISTORY_vars(id)%varsum(1) = FILE_HISTORY_vars(id)%varsum(1) + var * dt
+            else
+               FILE_HISTORY_vars(id)%varsum(1) = RMISS
+            end if
+         end if
          FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
       else
          FILE_HISTORY_vars(id)%varsum(1) = var
@@ -920,8 +929,11 @@ contains
   subroutine FILE_HISTORY_Put_1D( &
        itemid,   &
        var       )
+    use scale_file_h, only: &
+       RMISS => FILE_RMISS
     use scale_const, only: &
-       EPS => CONST_EPS
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     implicit none
 
     integer,  intent(in) :: itemid
@@ -971,7 +983,13 @@ contains
                                         FILE_HISTORY_vars(id)%fill_halo, & ! (in)
                                         buffer(:)                        ) ! (out)
          do idx = 1, FILE_HISTORY_vars(id)%size
-            FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+            if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+               if ( buffer(idx) /= UNDEF ) then
+                  FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+               else
+                  FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+               end if
+            end if
          enddo
          deallocate( buffer )
          FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
@@ -1044,8 +1062,11 @@ contains
   subroutine FILE_HISTORY_Put_2D( &
        itemid,   &
        var       )
+    use scale_file_h, only: &
+       RMISS => FILE_RMISS
     use scale_const, only: &
-       EPS => CONST_EPS
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     implicit none
 
     integer,  intent(in) :: itemid
@@ -1095,7 +1116,13 @@ contains
                                         FILE_HISTORY_vars(id)%fill_halo, & ! (in)
                                         buffer(:)                        ) ! (out)
          do idx = 1, FILE_HISTORY_vars(id)%size
-            FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+            if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+               if ( buffer(idx) /= UNDEF ) then
+                  FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+               else
+                  FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+               end if
+            end if
          enddo
          deallocate( buffer )
          FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
@@ -1168,8 +1195,11 @@ contains
   subroutine FILE_HISTORY_Put_3D( &
        itemid,   &
        var       )
+    use scale_file_h, only: &
+       RMISS => FILE_RMISS
     use scale_const, only: &
-       EPS => CONST_EPS
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     implicit none
 
     integer,  intent(in) :: itemid
@@ -1219,7 +1249,13 @@ contains
                                         FILE_HISTORY_vars(id)%fill_halo, & ! (in)
                                         buffer(:)                        ) ! (out)
          do idx = 1, FILE_HISTORY_vars(id)%size
-            FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+            if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+               if ( buffer(idx) /= UNDEF ) then
+                  FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+               else
+                  FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+               end if
+            end if
          enddo
          deallocate( buffer )
          FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
@@ -1292,8 +1328,11 @@ contains
   subroutine FILE_HISTORY_Put_4D( &
        itemid,   &
        var       )
+    use scale_file_h, only: &
+       RMISS => FILE_RMISS
     use scale_const, only: &
-       EPS => CONST_EPS
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     implicit none
 
     integer,  intent(in) :: itemid
@@ -1343,7 +1382,13 @@ contains
                                         FILE_HISTORY_vars(id)%fill_halo, & ! (in)
                                         buffer(:)                        ) ! (out)
          do idx = 1, FILE_HISTORY_vars(id)%size
-            FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+            if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+               if ( buffer(idx) /= UNDEF ) then
+                  FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+               else
+                  FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+               end if
+            end if
          enddo
          deallocate( buffer )
          FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
@@ -2680,6 +2725,8 @@ contains
   subroutine FILE_HISTORY_Write_OneVar( &
        id,  &
        step_now )
+    use scale_file_h, only: &
+       RMISS => FILE_RMISS
     use scale_calendar, only: &
        CALENDAR_sec2unit
     use scale_file, only: &
@@ -2692,6 +2739,7 @@ contains
     integer  :: dimid, zid
     real(DP) :: time_str, time_end
     real(DP) :: sec_str,  sec_end
+    integer  :: i
     !---------------------------------------------------------------------------
 
     if( FILE_HISTORY_nreqs == 0 ) return
@@ -2719,7 +2767,11 @@ contains
     endif
 
     if ( .NOT. FILE_HISTORY_vars(id)%flag_clear .AND. FILE_HISTORY_vars(id)%taverage ) then
-       FILE_HISTORY_vars(id)%varsum(:) = FILE_HISTORY_vars(id)%varsum(:) / FILE_HISTORY_vars(id)%timesum
+       do i = 1, FILE_HISTORY_vars(id)%size
+          if ( FILE_HISTORY_vars(id)%varsum(i) /= RMISS ) then
+             FILE_HISTORY_vars(id)%varsum(i) = FILE_HISTORY_vars(id)%varsum(i) / FILE_HISTORY_vars(id)%timesum
+          end if
+       end do
     endif
 
     if ( firsttime ) then
