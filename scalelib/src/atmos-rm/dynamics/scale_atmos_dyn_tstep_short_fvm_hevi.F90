@@ -279,17 +279,17 @@ contains
 #endif
 
     ! for implicit solver
-    real(RP) :: A(KA,IA,JA)
+    real(RP) :: A(KA)
     real(RP) :: B
     real(RP) :: Sr(KA,IA,JA)
     real(RP) :: Sw(KA,IA,JA)
     real(RP) :: St(KA,IA,JA)
-    real(RP) :: PT(KA,IA,JA)
-    real(RP) :: C(KMAX-1,IA,JA)
+    real(RP) :: PT(KA)
+    real(RP) :: C(KMAX-1)
 
-    real(RP) :: F1(KA,IA,JA)
-    real(RP) :: F2(KA,IA,JA)
-    real(RP) :: F3(KA,IA,JA)
+    real(RP) :: F1(KA)
+    real(RP) :: F2(KA)
+    real(RP) :: F3(KA)
 
     integer :: IIS, IIE, JJS, JJE
     integer :: k, i, j
@@ -299,7 +299,7 @@ contains
     POTT(:,:,:) = UNDEF
     DPRES(:,:,:) = UNDEF
 
-    PT(:,:,:) = UNDEF
+    PT(:) = UNDEF
 
     qflx_hi (:,:,:,:) = UNDEF
     qflx_J13(:,:,:)   = UNDEF
@@ -672,7 +672,7 @@ contains
 !OCL PREFETCH_SEQUENTIAL(SOFT)
 #ifndef __GFORTRAN__
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(i,j,B,pg,advcv) &
+       !$omp private(i,j,A,B,C,F1,F2,F3,PT,pg,advcv) &
 #ifdef HIST_TEND
        !$omp shared(lhist,pg_t,advcv_t) &
 #endif
@@ -681,36 +681,36 @@ contains
 #endif
        !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
        !$omp shared(mflx_hi,MOMZ_RK,MOMZ0) &
-       !$omp shared(DENS_RK,RHOT_RK,DENS0,RHOT0,DENS,MOMZ,PT,POTT,DPRES) &
-       !$omp shared(GRAV,dtrk,A,C,F1,F2,F3,REF_dens,Sr,Sw,St,RT2P) &
+       !$omp shared(DENS_RK,RHOT_RK,DENS0,RHOT0,DENS,MOMZ,POTT,DPRES) &
+       !$omp shared(GRAV,dtrk,REF_dens,Sr,Sw,St,RT2P) &
        !$omp shared(ATMOS_DYN_FVM_flux_valueW_Z) &
        !$omp shared(MAPF,GSQRT,J33G,I_XY,I_XYZ,I_XYW,CDZ,RCDZ,RFDZ)
 #else
        !$omp parallel do default(shared) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(B,pg,advcv)
+       !$omp private(A,B,C,F1,F2,F3,PT,pg,advcv)
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
 
-          call ATMOS_DYN_FVM_flux_valueW_Z( PT(:,i,j), & ! (out)
+          call ATMOS_DYN_FVM_flux_valueW_Z( PT(:), & ! (out)
                MOMZ(:,i,j), POTT(:,i,j), GSQRT(:,i,j,I_XYZ), & ! (in)
                CDZ )
 
           do k = KS, KE
-             A(k,i,j) = dtrk**2 * J33G * RCDZ(k) * RT2P(k,i,j) * J33G / GSQRT(k,i,j,I_XYZ)
+             A(k) = dtrk**2 * J33G * RCDZ(k) * RT2P(k,i,j) * J33G / GSQRT(k,i,j,I_XYZ)
           enddo
           B = GRAV * dtrk**2 * J33G / ( CDZ(KS+1) + CDZ(KS) )
-          F1(KS,i,j) =        - ( PT(KS+1,i,j) * RFDZ(KS) *   A(KS+1,i,j)             + B ) / GSQRT(KS,i,j,I_XYW)
-          F2(KS,i,j) = 1.0_RP + ( PT(KS  ,i,j) * RFDZ(KS) * ( A(KS+1,i,j)+A(KS,i,j) )     ) / GSQRT(KS,i,j,I_XYW)
+          F1(KS) =        - ( PT(KS+1) * RFDZ(KS) *   A(KS+1)         + B ) / GSQRT(KS,i,j,I_XYW)
+          F2(KS) = 1.0_RP + ( PT(KS  ) * RFDZ(KS) * ( A(KS+1)+A(KS) )     ) / GSQRT(KS,i,j,I_XYW)
           do k = KS+1, KE-2
              B = GRAV * dtrk**2 * J33G / ( CDZ(k+1) + CDZ(k) )
-             F1(k,i,j) =        - ( PT(k+1,i,j) * RFDZ(k) *   A(k+1,i,j)            + B ) / GSQRT(k,i,j,I_XYW)
-             F2(k,i,j) = 1.0_RP + ( PT(k  ,i,j) * RFDZ(k) * ( A(k+1,i,j)+A(k,i,j) )     ) / GSQRT(k,i,j,I_XYW)
-             F3(k,i,j) =        - ( PT(k-1,i,j) * RFDZ(k) *              A(k,i,j)   - B ) / GSQRT(k,i,j,I_XYW)
+             F1(k) =        - ( PT(k+1) * RFDZ(k) *   A(k+1)        + B ) / GSQRT(k,i,j,I_XYW)
+             F2(k) = 1.0_RP + ( PT(k  ) * RFDZ(k) * ( A(k+1)+A(k) )     ) / GSQRT(k,i,j,I_XYW)
+             F3(k) =        - ( PT(k-1) * RFDZ(k) *          A(k)   - B ) / GSQRT(k,i,j,I_XYW)
           enddo
           B = GRAV * dtrk**2 * J33G / ( CDZ(KE) + CDZ(KE-1) )
-          F2(KE-1,i,j) = 1.0_RP + ( PT(KE-1,i,j) * RFDZ(KE-1) * ( A(KE,i,j)+A(KE-1,i,j) )    ) / GSQRT(KE-1,i,j,I_XYW)
-          F3(KE-1,i,j) =        - ( PT(KE-2,i,j) * RFDZ(KE-1) *             A(KE-1,i,j)  - B ) / GSQRT(KE-1,i,j,I_XYW)
+          F2(KE-1) = 1.0_RP + ( PT(KE-1) * RFDZ(KE-1) * ( A(KE)+A(KE-1) )    ) / GSQRT(KE-1,i,j,I_XYW)
+          F3(KE-1) =        - ( PT(KE-2) * RFDZ(KE-1) *         A(KE-1)  - B ) / GSQRT(KE-1,i,j,I_XYW)
           do k = KS, KE-1
              pg = - ( DPRES(k+1,i,j) + RT2P(k+1,i,j)*dtrk*St(k+1,i,j) &
                     - DPRES(k  ,i,j) - RT2P(k  ,i,j)*dtrk*St(k  ,i,j) ) &
@@ -718,20 +718,20 @@ contains
                   - GRAV &
                     * ( F2H(k,1,I_XYZ) * ( DENS(k+1,i,j) - REF_dens(k+1,i,j) + Sr(k+1,i,j) * dtrk ) &
                       + F2H(k,2,I_XYZ) * ( DENS(k  ,i,j) - REF_dens(k  ,i,j) + Sr(k  ,i,j) * dtrk ) )
-             C(k-KS+1,i,j) = MOMZ(k,i,j) + dtrk * ( pg + Sw(k,i,j) )
+             C(k-KS+1) = MOMZ(k,i,j) + dtrk * ( pg + Sw(k,i,j) )
 #ifdef HIST_TEND
              if ( lhist ) pg_t(k,i,j,1) = pg
 #endif
           enddo
 
           call solve_direct( &
-               C(:,i,j),        & ! (inout)
-               F1(:,i,j), F2(:,i,j), F3(:,i,j) ) ! (in)
+               C(:),               & ! (inout)
+               F1(:), F2(:), F3(:) ) ! (in)
 
           do k = KS, KE-1
 #ifdef DEBUG_HEVI2HEVE
           ! for debug (change to explicit integration)
-             C(k-KS+1,i,j) = MOMZ(k,i,j)
+             C(k-KS+1) = MOMZ(k,i,j)
              mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
                                  + J33G * MOMZ(k,i,j) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
              MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
@@ -742,46 +742,46 @@ contains
 #else
              ! z-momentum flux
              mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
-                                 + J33G * C(k-KS+1,i,j) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
+                                 + J33G * C(k-KS+1) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
              ! z-momentum
              MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
-                            + ( C(k-KS+1,i,j) - MOMZ(k,i,j) )
+                            + ( C(k-KS+1) - MOMZ(k,i,j) )
 #endif
           enddo
           MOMZ_RK(KS-1,i,j) = 0.0_RP
           MOMZ_RK(KE  ,i,j) = 0.0_RP
 
           ! density and rho*theta
-          advcv = - C(1,i,j)            * J33G * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
+          advcv = - C(1)            * J33G * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
           DENS_RK(KS,i,j) = DENS0(KS,i,j) + dtrk * ( advcv + Sr(KS,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) advcv_t(KS,i,j,I_DENS) = advcv
 #endif
-          advcv = - C(1,i,j)*PT(KS,i,j) * J33G * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
+          advcv = - C(1)*PT(KS) * J33G * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
           RHOT_RK(KS,i,j) = RHOT0(KS,i,j) + dtrk * ( advcv + St(KS,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) advcv_t(KS,i,j,I_RHOT) = advcv
 #endif
           do k = KS+1, KE-1
-             advcv = - ( C(k-KS+1,i,j)           - C(k-KS,i,j) ) &
+             advcv = - ( C(k-KS+1)           - C(k-KS) ) &
                    * J33G * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
              DENS_RK(k,i,j) = DENS0(k,i,j) + dtrk * ( advcv + Sr(k,i,j) )
 #ifdef HIST_TEND
              if ( lhist ) advcv_t(k,i,j,I_DENS) = advcv
 #endif
-             advcv = - ( C(k-KS+1,i,j)*PT(k,i,j) - C(k-KS,i,j)*PT(k-1,i,j) ) &
+             advcv = - ( C(k-KS+1)*PT(k) - C(k-KS)*PT(k-1) ) &
                    * J33G * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
              RHOT_RK(k,i,j) = RHOT0(k,i,j) + dtrk * ( advcv + St(k,i,j) )
 #ifdef HIST_TEND
              if ( lhist ) advcv_t(k,i,j,I_RHOT) = advcv
 #endif
           enddo
-          advcv = C(KE-KS,i,j)                * J33G * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ) ! C(KE-KS+1) = 0
+          advcv = C(KE-KS)                * J33G * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ) ! C(KE-KS+1) = 0
           DENS_RK(KE,i,j) = DENS0(KE,i,j) + dtrk * ( advcv + Sr(KE,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) advcv_t(KE,i,j,I_DENS) = advcv
 #endif
-          advcv = C(KE-KS,i,j) * PT(KE-1,i,j) * J33G * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ) ! C(KE-KS+1) = 0
+          advcv = C(KE-KS) * PT(KE-1) * J33G * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ) ! C(KE-KS+1) = 0
           RHOT_RK(KE,i,j) = RHOT0(KE,i,j) + dtrk * ( advcv + St(KE,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) advcv_t(KE,i,j,I_RHOT) = advcv
@@ -789,7 +789,7 @@ contains
 
 #ifdef DEBUG
           call check_equation( &
-               C(:,i,j), &
+               C(:), &
                DENS(:,i,j), MOMZ(:,i,j), RHOT(:,i,j), DPRES(:,i,j), &
                REF_dens(:,i,j), &
                Sr(:,i,j), Sw(:,i,j), St(:,i,j), &

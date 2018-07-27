@@ -209,6 +209,8 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
+    if ( VA < 1 ) return
+
     LOG_NEWLINE
     LOG_INFO("ATMOS_DYN_vars_restart_open",*) 'Open restart file (ATMOS_DYN) '
 
@@ -287,8 +289,10 @@ contains
           enddo
        endif
     else
-       LOG_ERROR("ATMOS_DYN_vars_restart_read",*) 'invalid restart file ID for ATMOS_DYN.'
-       call PRC_abort
+       if ( VA > 0 ) then
+          LOG_ERROR("ATMOS_DYN_vars_restart_read",*) 'invalid restart file ID for ATMOS_DYN.'
+          call PRC_abort
+       end if
     endif
 
     return
@@ -305,6 +309,8 @@ contains
     character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
+
+    if ( VA < 1 ) return
 
     if ( ATMOS_DYN_RESTART_OUT_BASENAME /= '' ) then
 
@@ -337,7 +343,7 @@ contains
        FILE_CARTESC_enddef
     implicit none
 
-    if ( restart_fid /= -1 ) then
+    if ( restart_fid /= -1 .and. VA > 0 ) then
        call FILE_CARTESC_enddef( restart_fid ) ! [IN]
     endif
 
