@@ -42,8 +42,8 @@ module scale_ocean_phy_roughness
   !
   !++ Private parameters & variables
   !
-  real(RP), public :: OCEAN_PHY_ROUGHNESS_visck      = 1.5E-5_RP ! kinematic viscosity
-  real(RP), public :: OCEAN_PHY_ROUGHNESS_Ustar_min  = 1.0E-3_RP ! minimum fiction velocity
+  real(RP), public :: OCEAN_PHY_ROUGHNESS_visck      = 1.5E-5_RP ! kinematic viscosity [m2/s]
+  real(RP), public :: OCEAN_PHY_ROUGHNESS_Ustar_min  = 1.0E-3_RP ! minimum friction velocity [m/s]
   real(RP), public :: OCEAN_PHY_ROUGHNESS_Z0M_min    = 1.0E-5_RP ! minimum roughness length for momentum [m]
   real(RP), public :: OCEAN_PHY_ROUGHNESS_Z0H_min    = 1.0E-5_RP ! minimum roughness length for heat     [m]
   real(RP), public :: OCEAN_PHY_ROUGHNESS_Z0E_min    = 1.0E-5_RP ! minimum roughness length for moisture [m]
@@ -52,9 +52,9 @@ module scale_ocean_phy_roughness
   real(RP), public :: OCEAN_PHY_ROUGHNESS_Z0H        = 1.0E-5_RP ! constant roughness length for heat     [m]
   real(RP), public :: OCEAN_PHY_ROUGHNESS_Z0E        = 1.0E-5_RP ! constant roughness length for moisture [m]
 
-  real(RP), public :: OCEAN_PHY_ROUGHNESS_Z0M_seaice = 2.0E-2_RP ! seaice roughness length for momentum [m]
-  real(RP), public :: OCEAN_PHY_ROUGHNESS_Z0H_seaice = 2.0E-3_RP ! seaice roughness length for heat     [m]
-  real(RP), public :: OCEAN_PHY_ROUGHNESS_Z0E_seaice = 2.0E-3_RP ! seaice roughness length for moisture [m]
+  real(RP), public :: OCEAN_PHY_ROUGHNESS_seaice_Z0M = 2.0E-2_RP ! seaice roughness length for momentum [m]
+  real(RP), public :: OCEAN_PHY_ROUGHNESS_seaice_Z0H = 2.0E-3_RP ! seaice roughness length for heat     [m]
+  real(RP), public :: OCEAN_PHY_ROUGHNESS_seaice_Z0E = 2.0E-3_RP ! seaice roughness length for moisture [m]
 
   !-----------------------------------------------------------------------------
 contains
@@ -129,9 +129,9 @@ contains
     implicit none
 
     namelist / PARAM_OCEAN_PHY_ROUGHNESS_seaice / &
-       OCEAN_PHY_ROUGHNESS_Z0M_seaice, &
-       OCEAN_PHY_ROUGHNESS_Z0H_seaice, &
-       OCEAN_PHY_ROUGHNESS_Z0E_seaice
+       OCEAN_PHY_ROUGHNESS_seaice_Z0M, &
+       OCEAN_PHY_ROUGHNESS_seaice_Z0H, &
+       OCEAN_PHY_ROUGHNESS_seaice_Z0E
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -198,9 +198,9 @@ contains
 
     do j = OJS, OJE
     do i = OIS, OIE
-       Z0M(i,j) = max( OCEAN_PHY_ROUGHNESS_Z0M_seaice, OCEAN_PHY_ROUGHNESS_Z0M_min )
-       Z0H(i,j) = max( OCEAN_PHY_ROUGHNESS_Z0H_seaice, OCEAN_PHY_ROUGHNESS_Z0H_min )
-       Z0E(i,j) = max( OCEAN_PHY_ROUGHNESS_Z0E_seaice, OCEAN_PHY_ROUGHNESS_Z0E_min )
+       Z0M(i,j) = max( OCEAN_PHY_ROUGHNESS_seaice_Z0M, OCEAN_PHY_ROUGHNESS_Z0M_min )
+       Z0H(i,j) = max( OCEAN_PHY_ROUGHNESS_seaice_Z0H, OCEAN_PHY_ROUGHNESS_Z0H_min )
+       Z0E(i,j) = max( OCEAN_PHY_ROUGHNESS_seaice_Z0E, OCEAN_PHY_ROUGHNESS_Z0E_min )
     enddo
     enddo
 

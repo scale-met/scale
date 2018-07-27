@@ -43,9 +43,11 @@ module scale_ocean_phy_ice_simple
   !
   real(RP), public :: OCEAN_PHY_ICE_freezetemp      =  271.35_RP ! freezing temperature of sea ice [K]
   real(RP), public :: OCEAN_PHY_ICE_density         =  1000.0_RP ! density of sea ice              [kg/m3]
-  real(RP), public :: OCEAN_PHY_ICE_mass_critical   =  1600.0_RP ! ice amount for fraction = 1     [kg/m2]
-  real(RP), public :: OCEAN_PHY_ICE_mass_limit      = 50000.0_RP ! maximum ice amount              [kg/m2]
-  real(RP), public :: OCEAN_PHY_ICE_fraction_limit  =     1.0_RP ! maximum ice fraction            [1]
+
+  real(RP), private :: OCEAN_PHY_ICE_mass_critical  =  1600.0_RP ! ice amount for fraction = 1     [kg/m2]
+  real(RP), private :: OCEAN_PHY_ICE_mass_limit     = 50000.0_RP ! maximum ice amount              [kg/m2]
+  real(RP), private :: OCEAN_PHY_ICE_fraction_limit =     1.0_RP ! maximum ice fraction            [1]
+  real(RP), private :: OCEAN_PHY_ICE_dT_max         =   5.E-2_RP ! maximum delta ice temperature   [K/s]
 
   logical,  private :: OCEAN_PHY_ICE_nudging        = .false.    !< Sea ice nudging is used?
   real(DP), private :: OCEAN_PHY_ICE_nudging_tausec              !< Relaxation time [sec]
@@ -83,18 +85,19 @@ contains
        OCEAN_PHY_ICE_mass_critical,                 &
        OCEAN_PHY_ICE_mass_limit,                    &
        OCEAN_PHY_ICE_fraction_limit,                &
-       OCEAN_PHY_ICE_nudging,                       &
-       OCEAN_PHY_ICE_nudging_tau,                   &
-       OCEAN_PHY_ICE_nudging_tau_unit,              &
-       OCEAN_PHY_ICE_nudging_basename,              &
-       OCEAN_PHY_ICE_nudging_enable_periodic_year,  &
-       OCEAN_PHY_ICE_nudging_enable_periodic_month, &
-       OCEAN_PHY_ICE_nudging_enable_periodic_day,   &
-       OCEAN_PHY_ICE_nudging_step_fixed,            &
-       OCEAN_PHY_ICE_nudging_offset,                &
-       OCEAN_PHY_ICE_nudging_defval,                &
-       OCEAN_PHY_ICE_nudging_check_coordinates,     &
-       OCEAN_PHY_ICE_nudging_step_limit
+       OCEAN_PHY_ICE_dT_max!,                        &
+!        OCEAN_PHY_ICE_nudging,                       &
+!        OCEAN_PHY_ICE_nudging_tau,                   &
+!        OCEAN_PHY_ICE_nudging_tau_unit,              &
+!        OCEAN_PHY_ICE_nudging_basename,              &
+!        OCEAN_PHY_ICE_nudging_enable_periodic_year,  &
+!        OCEAN_PHY_ICE_nudging_enable_periodic_month, &
+!        OCEAN_PHY_ICE_nudging_enable_periodic_day,   &
+!        OCEAN_PHY_ICE_nudging_step_fixed,            &
+!        OCEAN_PHY_ICE_nudging_offset,                &
+!        OCEAN_PHY_ICE_nudging_defval,                &
+!        OCEAN_PHY_ICE_nudging_check_coordinates,     &
+!        OCEAN_PHY_ICE_nudging_step_limit
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -173,7 +176,7 @@ contains
     do i = OIS, OIE
        ICE_FRAC(i,j) = ICE_MASS(i,j) / OCEAN_PHY_ICE_mass_critical
 
-       ICE_FRAC(i,j) = min( max( ICE_FRAC(i,j), 0.0_RP ), OCEAN_PHY_ICE_fraction_limit )
+       ICE_FRAC(i,j) = min( sqrt( max( ICE_FRAC(i,j), 0.0_RP ) ), OCEAN_PHY_ICE_fraction_limit )
     enddo
     enddo
 
@@ -230,9 +233,11 @@ contains
 
           ! update ice temperature
           if ( ICE_MASS(i,j) > 0.0_RP ) then
-             ICE_TEMP(i,j) = ( ICE_TEMP(i,j) * ICE_MASS_prev + OCEAN_PHY_ICE_freezetemp * ICE_MASS_t * dt_RP ) &
-                           / ICE_MASS(i,j)
-          else
+             if ( ICE_MASS_t > 0.0_RP ) then ! when ice increases, new ice have the temperature at freezing point
+                ICE_TEMP(i,j) = ( ICE_TEMP(i,j) * ICE_MASS_prev + OCEAN_PHY_ICE_freezetemp * ICE_MASS_t * dt_RP ) &
+                              / ICE_MASS(i,j)
+             endif
+          else ! fill value
              ICE_TEMP(i,j) = OCEAN_PHY_ICE_freezetemp
           endif
        endif
@@ -247,7 +252,6 @@ contains
   subroutine OCEAN_PHY_ICE_simple( &
        OIA, OIS, OIE, &
        OJA, OJS, OJE, &
-       LHS,           &
        sflx_QV,       &
        sflx_rain,     &
        sflx_snow,     &
@@ -274,7 +278,6 @@ contains
 
     integer,  intent(in)  :: OIA,   OIS, OIE
     integer,  intent(in)  :: OJA,   OJS, OJE
-    real(RP), intent(in)  :: LHS          (OIA,OJA) ! latent heat for sublimation [J/kg]
     real(RP), intent(in)  :: sflx_QV      (OIA,OJA) ! water vapor flux [kg/m2/s]
     real(RP), intent(in)  :: sflx_rain    (OIA,OJA) ! rain        flux [kg/m2/s]
     real(RP), intent(in)  :: sflx_snow    (OIA,OJA) ! snow        flux [kg/m2/s]
@@ -291,14 +294,16 @@ contains
     real(RP), intent(out) :: SFLX_water   (OIA,OJA) ! liquid water flux from sea ice to subsurface
     real(RP), intent(out) :: SFLX_ice     (OIA,OJA) ! ice    water flux from sea ice to subsurface
 
-    real(RP) :: mass_budget
-    real(RP) :: ICE_MASS_new
-    real(RP) :: ICE_MASS_new2
-    real(RP) :: heat_budget
-    real(RP) :: heat_budget_new
-    real(RP) :: ICE_TEMP_new
-    real(RP) :: heating_limit
-    real(RP) :: sflx_melt
+    real(RP) :: mass_budget     ! [kg/m2/s]
+    real(RP) :: ICE_MASS_new    ! [kg/m2]
+    real(RP) :: ICE_MASS_new2   ! [kg/m2]
+    real(RP) :: heat_budget     ! [J/m2/s]
+    real(RP) :: heat_budget_new ! [J/m2/s]
+    real(RP) :: ICE_TEMP_new    ! [K]
+    real(RP) :: heatcapacity    ! [J/m2/K]
+    real(RP) :: heating         ! [J/m2/s]
+    real(RP) :: cooling         ! [J/m2/s]
+    real(RP) :: sflx_melt       ! [kg/m2/s]
     real(RP) :: dt_RP
 
     integer  :: i, j
@@ -306,7 +311,7 @@ contains
 
     LOG_PROGRESS(*) 'ocean / physics / seaice'
 
-    dt_RP  = real(dt,kind=RP)
+    dt_RP = real(dt,kind=RP)
 
     do j = OJS, OJE
     do i = OIS, OIE
@@ -321,29 +326,50 @@ contains
                             + ( subsfc_temp(i,j) - ICE_TEMP(i,j) ) * TC_dZ(i,j) & ! heat flux from ocean
                             + sflx_rain(i,j) * CONST_EMELT                        ! rain freezing
 
-          ! ice cooling/warming
-          if ( ICE_MASS_new > 0.0_RP ) then
-             heating_limit   = max( OCEAN_PHY_ICE_freezetemp - ICE_TEMP(i,j), 0.0_RP ) * CONST_CI * ICE_MASS_new / dt_RP
-             heat_budget_new = max( heat_budget - heating_limit, 0.0_RP )
-             ICE_TEMP_new    = ICE_TEMP(i,j) + ( heat_budget - heat_budget_new ) / CONST_CI / ICE_MASS_new * dt_RP
+          ICE_TEMP_new    = ICE_TEMP(i,j)
+          heatcapacity    = CONST_CI * ICE_MASS_new
+
+          ! heating ice
+          if ( heat_budget > 0.0_RP .AND. ICE_MASS_new > 0.0_RP ) then
+             heating         = max( OCEAN_PHY_ICE_freezetemp - ICE_TEMP(i,j), 0.0_RP ) / dt_RP * heatcapacity
+             heat_budget_new = max( heat_budget - heating, 0.0_RP )
+             ICE_TEMP_new    = ICE_TEMP(i,j) + ( heat_budget - heat_budget_new ) / heatcapacity * dt_RP
              heat_budget     = heat_budget_new
-          else
-             ICE_TEMP_new    = ICE_TEMP(i,j)
           endif
 
-          ! ice melting
+          ! cooling ice
+          if ( heat_budget < 0.0_RP .AND. ICE_MASS_new > 0.0_RP ) then
+             !! cooling limiter: tiny ice does not cooled faster than thermal conductance of ice, residual heat flux goes ocean
+             !ICE_TEMP_new    = max( ICE_TEMP(i,j) + heat_budget / heatcapacity * dt_RP, 0.0_RP )
+             !cooling         = max( heat_budget, ( ICE_TEMP_new - ICE_TEMP(i,j) ) * TC_dZ(i,j) )
+
+             ! cooling limiter: tiny ice does not cooled faster than the limit (-0.05K/s), residual heat flux goes ocean
+             cooling         = max( heat_budget, -OCEAN_PHY_ICE_dT_max * heatcapacity )
+
+             ICE_TEMP_new    = ICE_TEMP(i,j) + cooling / heatcapacity * dt_RP
+             heat_budget     = heat_budget - cooling
+          endif
+
+          ! melting ice
           sflx_melt       = max( heat_budget / CONST_EMELT, 0.0_RP ) ! only for positive heat flux
           ICE_MASS_new2   = max( ICE_MASS_new - sflx_melt * dt_RP, 0.0_RP )
           sflx_melt       = ( ICE_MASS_new2 - ICE_MASS_new ) / dt_RP
           heat_budget     = heat_budget - sflx_melt * CONST_EMELT
           mass_budget     = mass_budget + sflx_melt
 
+          ! ice to ocean flux
           SFLX_G    (i,j) = heat_budget
           SFLX_water(i,j) = mass_budget
           SFLX_ice  (i,j) = 0.0_RP
 
           ICE_MASS_t(i,j) = ( ICE_MASS_new2 - ICE_MASS(i,j) ) / dt_RP
           ICE_TEMP_t(i,j) = ( ICE_TEMP_new  - ICE_TEMP(i,j) ) / dt_RP
+       else
+          SFLX_G    (i,j) = 0.0_RP
+          SFLX_water(i,j) = 0.0_RP
+          SFLX_ice  (i,j) = 0.0_RP
+          ICE_MASS_t(i,j) = 0.0_RP
+          ICE_TEMP_t(i,j) = 0.0_RP
        endif
     enddo
     enddo

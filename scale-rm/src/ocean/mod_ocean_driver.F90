@@ -296,6 +296,7 @@ contains
     real(RP) :: sflx_G       (OIA,OJA)
     real(RP) :: sflx_water   (OIA,OJA)
     real(RP) :: sflx_ice     (OIA,OJA)
+    logical  :: exists_ice   (OIA,OJA)
 
     integer  :: k, i, j, iq, idir, irgn, n
     !---------------------------------------------------------------------------
@@ -316,6 +317,14 @@ contains
     do j = OJS, OJE
     do i = OIS, OIE
        ATMOS_Uabs(i,j) = sqrt( ATMOS_U(i,j)**2 + ATMOS_V(i,j)**2 )
+    enddo
+    enddo
+
+    !$omp parallel do
+    do j = OJS, OJE
+    do i = OIS, OIE
+       exists_ice(i,j) = .false.
+       if( exists_ocean(i,j) .AND. OCEAN_ICE_FRAC(i,j) > 0.0_RP ) exists_ice(i,j) = .true.
     enddo
     enddo
 
@@ -612,7 +621,7 @@ contains
                                        sfc_Z0M          (:,:),     & ! [IN]
                                        sfc_Z0H          (:,:),     & ! [IN]
                                        sfc_Z0E          (:,:),     & ! [IN]
-                                       exists_ocean     (:,:),     & ! [IN]
+                                       exists_ice       (:,:),     & ! [IN]
                                        dt,                         & ! [IN]
                                        sflx_MW          (:,:),     & ! [OUT]
                                        sflx_MU          (:,:),     & ! [OUT]
@@ -631,7 +640,6 @@ contains
        case ( 'SIMPLE' )
           call OCEAN_PHY_ICE_simple( OIA, OIS, OIE,         & ! [IN]
                                      OJA, OJS, OJE,         & ! [IN]
-                                     LHS             (:,:), & ! [IN]
                                      sflx_QV         (:,:), & ! [IN]
                                      ATMOS_SFLX_rain (:,:), & ! [IN]
                                      ATMOS_SFLX_snow (:,:), & ! [IN]
@@ -640,7 +648,7 @@ contains
                                      TC_dz           (:,:), & ! [IN]
                                      OCEAN_ICE_TEMP  (:,:), & ! [IN]
                                      OCEAN_ICE_MASS  (:,:), & ! [IN]
-                                     exists_ocean    (:,:), & ! [IN]
+                                     exists_ice      (:,:), & ! [IN]
                                      dt,                    & ! [IN]
                                      OCEAN_ICE_TEMP_t(:,:), & ! [OUT]
                                      OCEAN_ICE_MASS_t(:,:), & ! [OUT]
@@ -707,8 +715,6 @@ contains
     if ( ATMOS_sw_phy_ch ) then
        call ATMOS_PHY_CH_driver_OCEAN_flux( OCEAN_SFLX_QTRC(:,:,:) ) ! [INOUT]
     endif
-
-    call OCEAN_vars_total
 
     if ( STATISTICS_checktotal ) then
        call STATISTICS_total( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE, &
