@@ -468,7 +468,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) private(i,j,idir,irgn) OMP_SCHEDULE_ &
-    !$omp shared(JSB,JEB,ISB,IEB,OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U) &
+    !$omp shared(JS,JE,IS,IE,OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U) &
     !$omp shared(OCN_ATM_V,OCN_ATM_DENS,CNT_putATM_OCN,TEMP,PRES,W,U,V,DENS) &
     !$omp shared(ATMOS_HYDROMETEOR_dry,OCN_ATM_QV,OCN_ATM_PBL,OCN_ATM_SFC_DENS,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn) &
     !$omp shared(OCN_ATM_cosSZA,OCN_ATM_SFLX_rain,OCN_ATM_SFLX_snow,QV,PBL,SFC_DENS,SFC_PRES) &
@@ -479,8 +479,8 @@ contains
     !$omp shared(URB_ATM_TEMP,URB_ATM_PRES,URB_ATM_W,URB_ATM_U,URB_ATM_V,URB_ATM_DENS) &
     !$omp shared(URB_ATM_QV,URB_ATM_PBL,URB_ATM_SFC_DENS,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA) &
     !$omp shared(URB_ATM_SFLX_rain,URB_ATM_SFLX_snow,CNT_putATM_URB,CNT_putATM_LND)
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        ! for ocean
        OCN_ATM_TEMP     (i,j) = OCN_ATM_TEMP     (i,j) * CNT_putATM_OCN + TEMP     (i,j)
        OCN_ATM_PRES     (i,j) = OCN_ATM_PRES     (i,j) * CNT_putATM_OCN + PRES     (i,j)
@@ -547,7 +547,7 @@ contains
     enddo
 
     !$omp parallel do default(none) private(i,j,idir,irgn) OMP_SCHEDULE_ &
-    !$omp shared(JSB,JEB,ISB,IEB) &
+    !$omp shared(JS,JE,IS,IE) &
     !$omp shared(OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U,OCN_ATM_V,OCN_ATM_DENS,OCN_ATM_QV) &
     !$omp shared(OCN_ATM_PBL,OCN_ATM_SFC_DENS,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn,OCN_ATM_cosSZA,OCN_ATM_SFLX_rain) &
     !$omp shared(OCN_ATM_SFLX_snow,CNT_putATM_OCN) &
@@ -557,8 +557,8 @@ contains
     !$omp shared(URB_ATM_TEMP,URB_ATM_PRES,URB_ATM_W,URB_ATM_U,URB_ATM_V,URB_ATM_DENS,URB_ATM_QV) &
     !$omp shared(URB_ATM_PBL,URB_ATM_SFC_DENS,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA,URB_ATM_SFLX_rain) &
     !$omp shared(URB_ATM_SFLX_snow,CNT_putATM_URB)
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        ! for ocean
        OCN_ATM_TEMP     (i,j) = OCN_ATM_TEMP     (i,j) / ( CNT_putATM_OCN + 1.0_RP )
        OCN_ATM_PRES     (i,j) = OCN_ATM_PRES     (i,j) / ( CNT_putATM_OCN + 1.0_RP )
@@ -673,12 +673,12 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) private(i,j,idir,irgn) OMP_SCHEDULE_ &
-    !$omp shared(JSB,JEB,ISB,IEB,OCN_SFC_TEMP,OCN_SFC_albedo,OCN_SFC_Z0M,OCN_SFC_Z0H,OCN_SFC_Z0E) &
+    !$omp shared(JS,JE,IS,IE,OCN_SFC_TEMP,OCN_SFC_albedo,OCN_SFC_Z0M,OCN_SFC_Z0H,OCN_SFC_Z0E) &
     !$omp shared(OCN_SFLX_MW,OCN_SFLX_MU,OCN_SFLX_MV,OCN_SFLX_SH,OCN_SFLX_LH,OCN_SFLX_G,OCN_SFLX_QTRC,OCN_U10,OCN_V10,OCN_T2,OCN_Q2) &
     !$omp shared(SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_G,SFLX_QTRC,U10,V10,T2,Q2) &
     !$omp shared(CNT_putOCN)
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        OCN_SFC_TEMP (i,j)   = OCN_SFC_TEMP (i,j)   * CNT_putOCN + SFC_TEMP (i,j)
        OCN_SFC_Z0M  (i,j)   = OCN_SFC_Z0M  (i,j)   * CNT_putOCN + SFC_Z0M  (i,j)
        OCN_SFC_Z0H  (i,j)   = OCN_SFC_Z0H  (i,j)   * CNT_putOCN + SFC_Z0H  (i,j)
@@ -773,13 +773,13 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) &
-    !$omp shared(JSB,JEB,ISB,IEB,LND_SFC_TEMP,LND_SFC_albedo,LND_SFC_Z0M,LND_SFC_Z0H,LND_SFC_Z0E) &
+    !$omp shared(JS,JE,IS,IE,LND_SFC_TEMP,LND_SFC_albedo,LND_SFC_Z0M,LND_SFC_Z0H,LND_SFC_Z0E) &
     !$omp shared(LND_SFLX_MW,LND_SFLX_MU,LND_SFLX_MV,LND_SFLX_SH,LND_SFLX_LH,LND_SFLX_G,LND_SFLX_QTRC) &
     !$omp shared(LND_U10,LND_V10,LND_T2,LND_Q2,CNT_putLND,SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H) &
     !$omp shared(SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_G,SFLX_QTRC,U10,V10,T2,Q2) &
     !$omp private(i,j,idir,irgn) OMP_SCHEDULE_
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        LND_SFC_TEMP (i,j)   = LND_SFC_TEMP (i,j)   * CNT_putLND + SFC_TEMP (i,j)
        LND_SFC_Z0M  (i,j)   = LND_SFC_Z0M  (i,j)   * CNT_putLND + SFC_Z0M  (i,j)
        LND_SFC_Z0H  (i,j)   = LND_SFC_Z0H  (i,j)   * CNT_putLND + SFC_Z0H  (i,j)
@@ -874,12 +874,12 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none)  OMP_SCHEDULE_ &
-    !$omp shared(JSB,JEB,ISB,IEB, &
+    !$omp shared(JS,JE,IS,IE, &
     !$omp        URB_SFC_TEMP,URB_SFC_albedo,URB_SFC_Z0M,URB_SFC_Z0H,URB_SFC_Z0E, &
     !$omp        URB_SFLX_MW,URB_SFLX_MU,URB_SFLX_MV,URB_SFLX_SH,URB_SFLX_LH,URB_SFLX_G,URB_SFLX_QTRC,URB_U10,URB_V10,URB_T2,URB_Q2,CNT_putURB, &
     !$omp        SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_G,SFLX_QTRC,U10,V10,T2,Q2)
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        URB_SFC_TEMP (i,j)   = URB_SFC_TEMP (i,j)   * CNT_putURB + SFC_TEMP (i,j)
        URB_SFC_Z0M  (i,j)   = URB_SFC_Z0M  (i,j)   * CNT_putURB + SFC_Z0M  (i,j)
        URB_SFC_Z0H  (i,j)   = URB_SFC_Z0H  (i,j)   * CNT_putURB + SFC_Z0H  (i,j)
@@ -976,7 +976,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) &
-    !$omp shared(JSB,JEB,ISB,IEB,QA,SFLX_QTRC,SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E) &
+    !$omp shared(JS,JE,IS,IE,QA,SFLX_QTRC,SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E) &
     !$omp shared(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_G,U10,V10,T2,Q2) &
     !$omp shared(fact_ocean,fact_land,fact_urban,OCN_SFC_TEMP,LND_SFC_TEMP,URB_SFC_TEMP,OCN_SFC_albedo) &
     !$omp shared(LND_SFC_albedo,URB_SFC_albedo,OCN_SFC_Z0M,LND_SFC_Z0M,URB_SFC_Z0M) &
@@ -986,8 +986,8 @@ contains
     !$omp shared(OCN_SFLX_G,LND_SFLX_G,URB_SFLX_G,OCN_SFLX_QTRC,LND_SFLX_QTRC,URB_SFLX_QTRC,OCN_U10) &
     !$omp shared(LND_U10,URB_U10,OCN_V10,LND_V10,URB_V10,OCN_T2,LND_T2,URB_T2,OCN_Q2,LND_Q2,URB_Q2) &
     !$omp private(i,j,iq) OMP_SCHEDULE_
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        SFC_TEMP (i,j)      =   fact_ocean(i,j) * OCN_SFC_TEMP (i,j) &
                              + fact_land (i,j) * LND_SFC_TEMP (i,j) &
                              + fact_urban(i,j) * URB_SFC_TEMP (i,j)
@@ -1106,13 +1106,13 @@ contains
 
 !OCL XFILL
     !$omp parallel do default(none) private(i,j,idir,irgn) OMP_SCHEDULE_ &
-    !$omp shared(JSB,JEB,ISB,IEB,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_DENS,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
+    !$omp shared(JS,JE,IS,IE,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_DENS,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
     !$omp shared(SFLX_snow) &
     !$omp shared(OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U,OCN_ATM_V,OCN_ATM_DENS,OCN_ATM_QV) &
     !$omp shared(OCN_ATM_PBL,OCN_ATM_SFC_DENS,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn,OCN_ATM_cosSZA,OCN_ATM_SFLX_rain) &
     !$omp shared(OCN_ATM_SFLX_snow)
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        TEMP     (i,j) = OCN_ATM_TEMP     (i,j)
        PRES     (i,j) = OCN_ATM_PRES     (i,j)
        W        (i,j) = OCN_ATM_W        (i,j)
@@ -1177,13 +1177,13 @@ contains
 
 !OCL XFILL
     !$omp parallel do default(none) private(i,j,idir,irgn) OMP_SCHEDULE_ &
-    !$omp shared(JSB,JEB,ISB,IEB,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_DENS,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
+    !$omp shared(JS,JE,IS,IE,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_DENS,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
     !$omp shared(SFLX_snow) &
     !$omp shared(LND_ATM_TEMP,LND_ATM_PRES,LND_ATM_W,LND_ATM_U,LND_ATM_V,LND_ATM_DENS,LND_ATM_QV) &
     !$omp shared(LND_ATM_PBL,LND_ATM_SFC_DENS,LND_ATM_SFC_PRES,LND_ATM_SFLX_rad_dn,LND_ATM_cosSZA,LND_ATM_SFLX_rain) &
     !$omp shared(LND_ATM_SFLX_snow)
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        TEMP     (i,j) = LND_ATM_TEMP     (i,j)
        PRES     (i,j) = LND_ATM_PRES     (i,j)
        W        (i,j) = LND_ATM_W        (i,j)
@@ -1248,13 +1248,13 @@ contains
 
 !OCL XFILL
     !$omp parallel do default(none) private(i,j,idir,irgn) OMP_SCHEDULE_ &
-    !$omp shared(JSB,JEB,ISB,IEB,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_DENS,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
+    !$omp shared(JS,JE,IS,IE,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_DENS,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_rain) &
     !$omp shared(SFLX_snow) &
     !$omp shared(URB_ATM_TEMP,URB_ATM_PRES,URB_ATM_W,URB_ATM_U,URB_ATM_V,URB_ATM_DENS,URB_ATM_QV) &
     !$omp shared(URB_ATM_PBL,URB_ATM_SFC_DENS,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA,URB_ATM_SFLX_rain) &
     !$omp shared(URB_ATM_SFLX_snow)
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        TEMP     (i,j) = URB_ATM_TEMP     (i,j)
        PRES     (i,j) = URB_ATM_PRES     (i,j)
        W        (i,j) = URB_ATM_W        (i,j)
