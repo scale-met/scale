@@ -239,7 +239,10 @@ contains
           urban_wgt = PFT_weight( 0,i,j)
           land_wgt  = sum( PFT_weight(1:,i,j) )
 
-          call SORT_exec( LANDUSE_PFT_nmax, PFT_weight(1:,i,j), index=PFT_idx(:) )
+          do p = 1, LANDUSE_PFT_nmax
+             PFT_idx(p) = p
+          end do
+          call SORT_exec( LANDUSE_PFT_nmax, PFT_weight(1:,i,j), PFT_idx(:) )
 
 
           ! land fraction : 1 - ocean / total

@@ -1170,9 +1170,9 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    if ( read_by_myproc_atmos ) then
-       call PROF_rapstart('___AtmosInput',3)
+    call PROF_rapstart('___AtmosInput',3)
 
+    if ( read_by_myproc_atmos ) then
        select case(inputtype)
        case('SCALE-RM')
           call ParentAtmosInputSCALE ( W_org   (:,:,:),   & ! [OUT]
@@ -1262,12 +1262,13 @@ contains
           enddo
        endif
 
-       call PROF_rapend  ('___AtmosInput',3)
     endif ! read by this process?
 
-    if ( serial_atmos ) then
-       call PROF_rapstart('___AtmosBcast',3)
+    call PROF_rapend  ('___AtmosInput',3)
 
+    call PROF_rapstart('___AtmosBcast',3)
+
+    if ( serial_atmos ) then
        if ( first .OR. update_coord ) then
           call COMM_bcast( LON_org,            dims(2), dims(3) )
           call COMM_bcast( LAT_org,            dims(2), dims(3) )
@@ -1282,8 +1283,9 @@ contains
        call COMM_bcast( DENS_org, dims(1)+2, dims(2), dims(3) )
        call COMM_bcast( QTRC_org, dims(1)+2, dims(2), dims(3), QA )
 
-       call PROF_rapend  ('___AtmosBcast',3)
     endif
+
+    call PROF_rapend  ('___AtmosBcast',3)
 
     do iq = 1, QA
     do j  = 1, dims(3)
@@ -2121,6 +2123,8 @@ contains
     real(RP) :: omask    (        odims(1),odims(2))
     real(RP) :: lst_ocean(        odims(1),odims(2))
 
+    logical :: ol_interp
+
     real(RP) :: hfact_o(odims(1),odims(2),itp_nh)
     integer  :: igrd_o (odims(1),odims(2),itp_nh)
     integer  :: jgrd_o (odims(1),odims(2),itp_nh)
@@ -2217,9 +2221,9 @@ contains
     do n = skiplen+1, timelen
        nn = n - skiplen
 
-       if ( do_read_land ) then
+       call PROF_rapstart('___SurfaceInput',3)
 
-          call PROF_rapstart('___SurfaceInput',3)
+       if ( do_read_land ) then
 
           select case( mdlid_land )
           case( iSCALE ) ! TYPE: SCALE-RM
@@ -2268,9 +2272,11 @@ contains
 
           end select
 
-          call PROF_rapend  ('___SurfaceInput',3)
-
        end if
+
+       call PROF_rapend  ('___SurfaceInput',3)
+
+       call PROF_rapstart('___SurfaceBcast',3)
 
        if ( serial_land ) then
           call COMM_bcast( tg_org, ldims(1), ldims(2), ldims(3) )
@@ -2294,9 +2300,11 @@ contains
           call COMM_bcast( lz_org, ldims(1) )
        end if
 
-       if ( do_read_ocean ) then
+       call PROF_rapend  ('___SurfaceBcast',3)
 
-          call PROF_rapstart('___SurfaceInput',3)
+       call PROF_rapstart('___SurfaceInput',3)
+
+       if ( do_read_ocean ) then
 
           select case( mdlid_ocean )
           case( iSCALE ) ! TYPE: SCALE-RM
@@ -2341,12 +2349,13 @@ contains
 
           end select
 
-          call PROF_rapend  ('___SurfaceInput',3)
-
        end if
 
+       call PROF_rapend  ('___SurfaceInput',3)
+
+       call PROF_rapstart('___SurfaceBcast',3)
+
        if ( serial_ocean ) then
-          call PROF_rapstart('___SurfaceBcast',3)
           call COMM_bcast( tw_org, odims(1), odims(2) )
           call COMM_bcast( sst_org, odims(1), odims(2) )
           call COMM_bcast( albw_org(:,:,I_R_direct ,I_R_IR ), odims(1), odims(2) )
@@ -2361,23 +2370,43 @@ contains
              call COMM_bcast( olon_org, odims(1), odims(2) )
              call COMM_bcast( olat_org, odims(1), odims(2) )
           end if
-          call PROF_rapend  ('___SurfaceBcast',3)
        end if
+
+       call PROF_rapend  ('___SurfaceBcast',3)
 
        call PROF_rapstart('___SurfaceInterp',3)
 
        if ( first .or. update_coord ) then
-          ! interpolation factor between outer ocean grid and land grid
-          call INTERP_factor2d( itp_nh,             & ! [IN]
-                                ldims(2), ldims(3), & ! [IN]
-                                llon_org(:,:),      & ! [IN]
-                                llat_org(:,:),      & ! [IN]
-                                odims(1), odims(2), & ! [IN]
-                                olon_org(:,:),      & ! [IN]
-                                olat_org(:,:),      & ! [IN]
-                                igrd_o  (:,:,:),    & ! [OUT]
-                                jgrd_o  (:,:,:),    & ! [OUT]
-                                hfact_o (:,:,:)     ) ! [OUT]
+
+          if (    ldims(2) .ne. odims(1) &
+             .or. ldims(3) .ne. odims(2) ) then
+             ol_interp = .true.
+          else
+             ol_interp = .false.
+             do j = 1, ldims(3)
+             do i = 1, ldims(2)
+                if (    llon_org(i,j) .ne. olon_org(i,j) &
+                   .or. llat_org(i,j) .ne. olat_org(i,j) ) then
+                   ol_interp = .true.
+                   exit
+                end if
+             end do
+             end do
+          end if
+
+          if ( ol_interp ) then
+             ! interpolation factor between outer ocean grid and land grid
+             call INTERP_factor2d( itp_nh,             & ! [IN]
+                                   ldims(2), ldims(3), & ! [IN]
+                                   llon_org(:,:),      & ! [IN]
+                                   llat_org(:,:),      & ! [IN]
+                                   odims(1), odims(2), & ! [IN]
+                                   olon_org(:,:),      & ! [IN]
+                                   olat_org(:,:),      & ! [IN]
+                                   igrd_o  (:,:,:),    & ! [OUT]
+                                   jgrd_o  (:,:,:),    & ! [OUT]
+                                   hfact_o (:,:,:)     ) ! [OUT]
+          end if
        end if
 
        ! Ocean temp: interpolate over the land
@@ -2425,20 +2454,25 @@ contains
                soilwater_ds2vc_flag,          & ! (in)
                elevation_collection,          & ! (in)
                intrp_iter_max,                & ! (in)
+               ol_interp,                     & ! (in)
                URBAN_do                       ) ! (in)
 
        end if ! first
 
        if ( first .or. update_coord ) then
-          ! land surface temperature at ocean grid
-          call INTERP_interp2d( itp_nh,             & ! [IN]
-                                ldims(2), ldims(3), & ! [IN]
-                                odims(1), odims(2), & ! [IN]
-                                igrd_o   (:,:,:),   & ! [IN]
-                                jgrd_o   (:,:,:),   & ! [IN]
-                                hfact_o  (:,:,:),   & ! [IN]
-                                lst_org  (:,:),     & ! [IN]
-                                lst_ocean(:,:)      ) ! [OUT]
+          if ( ol_interp ) then
+             ! land surface temperature at ocean grid
+             call INTERP_interp2d( itp_nh,             & ! [IN]
+                                   ldims(2), ldims(3), & ! [IN]
+                                   odims(1), odims(2), & ! [IN]
+                                   igrd_o   (:,:,:),   & ! [IN]
+                                   jgrd_o   (:,:,:),   & ! [IN]
+                                   hfact_o  (:,:,:),   & ! [IN]
+                                   lst_org  (:,:),     & ! [IN]
+                                   lst_ocean(:,:)      ) ! [OUT]
+          else
+             lst_ocean(:,:) = lst_org(:,:)
+          end if
        end if
 
        call replace_misval_map( sst_org, lst_ocean, odims(1), odims(2), "SST")
@@ -2717,6 +2751,7 @@ contains
        soilwater_ds2vc_flag, &
        elevation_collection, &
        intrp_iter_max,       &
+       ol_interp,            &
        URBAN_do              )
     use scale_prc, only: &
          PRC_abort
@@ -2767,6 +2802,7 @@ contains
     logical,  intent(in)    :: soilwater_ds2vc_flag
     logical,  intent(in)    :: elevation_collection
     integer,  intent(in)    :: intrp_iter_max
+    logical,  intent(in)    :: ol_interp
     logical,  intent(in)    :: URBAN_do
 
     real(RP) :: lmask(ldims(2), ldims(3))
@@ -2820,27 +2856,31 @@ contains
     !   call interp_OceanLand_data(ust_org, lmask, ldims(2), ldims(3), .true., intrp_iter_max)
     !end if
 
-    ! interpolation facter between outer land grid and ocean grid
-    call INTERP_factor2d( itp_nh,             & ! [IN]
-                          odims(1), odims(2), & ! [IN]
-                          olon_org(:,:),      & ! [IN]
-                          olat_org(:,:),      & ! [IN]
-                          ldims(2), ldims(3), & ! [IN]
-                          llon_org(:,:),      & ! [IN]
-                          llat_org(:,:),      & ! [IN]
-                          igrd_l  (:,:,:),    & ! [OUT]
-                          jgrd_l  (:,:,:),    & ! [OUT]
-                          hfact_l (:,:,:)     ) ! [OUT]
+    if ( ol_interp ) then
+       ! interpolation facter between outer land grid and ocean grid
+       call INTERP_factor2d( itp_nh,             & ! [IN]
+                             odims(1), odims(2), & ! [IN]
+                             olon_org(:,:),      & ! [IN]
+                             olat_org(:,:),      & ! [IN]
+                             ldims(2), ldims(3), & ! [IN]
+                             llon_org(:,:),      & ! [IN]
+                             llat_org(:,:),      & ! [IN]
+                             igrd_l  (:,:,:),    & ! [OUT]
+                             jgrd_l  (:,:,:),    & ! [OUT]
+                             hfact_l (:,:,:)     ) ! [OUT]
 
-    ! sst on land grid
-    call INTERP_interp2d( itp_nh,             & ! [IN]
-                          odims(1), odims(2), & ! [IN]
-                          ldims(2), ldims(3), & ! [IN]
-                          igrd_l   (:,:,:),   & ! [IN]
-                          jgrd_l   (:,:,:),   & ! [IN]
-                          hfact_l  (:,:,:),   & ! [IN]
-                          sst_org  (:,:),     & ! [IN]
-                          sst_land (:,:)      ) ! [OUT]
+       ! sst on land grid
+       call INTERP_interp2d( itp_nh,             & ! [IN]
+                             odims(1), odims(2), & ! [IN]
+                             ldims(2), ldims(3), & ! [IN]
+                             igrd_l   (:,:,:),   & ! [IN]
+                             jgrd_l   (:,:,:),   & ! [IN]
+                             hfact_l  (:,:,:),   & ! [IN]
+                             sst_org  (:,:),     & ! [IN]
+                             sst_land (:,:)      ) ! [OUT]
+    else
+       sst_land(:,:) = sst_org(:,:)
+    end if
 
     call replace_misval_map( lst_org, sst_land, ldims(2), ldims(3), "SKINT")
 

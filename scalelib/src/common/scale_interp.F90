@@ -43,9 +43,9 @@ module scale_interp
   !
   !++ Private procedure
   !
-  private :: INTERP_search_nearest_block
   private :: INTERP_search_horiz
   private :: INTERP_search_vert
+  private :: INTERP_insert
 
   private :: haversine
 
@@ -57,6 +57,7 @@ module scale_interp
 
   integer,  private :: INTERP_weight_order = 2
   real(RP), private :: INTERP_search_limit
+  real(RP), private :: INTERP_buffer_size_fact = 2.0_RP
 
   !-----------------------------------------------------------------------------
 contains
@@ -65,10 +66,17 @@ contains
   subroutine INTERP_setup( &
        weight_order, &
        search_limit  )
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer,  intent(in) :: weight_order
     real(RP), intent(in), optional :: search_limit
+
+    namelist /PARAM_INTERP/ &
+         INTERP_buffer_size_fact
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
@@ -81,6 +89,17 @@ contains
        INTERP_search_limit = search_limit
        LOG_INFO("INTERP_setup",*) 'search limit [m] : ', INTERP_search_limit
     endif
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_INTERP,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       LOG_INFO("INTERP_setup",*) 'Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       LOG_ERROR("INTERP_setup",*) 'Not appropriate names in namelist PARAM_INTERP. Check!'
+       call PRC_abort
+    endif
+    LOG_NML(PARAM_INTERP)
 
     return
   end subroutine INTERP_setup
@@ -96,10 +115,10 @@ contains
        skip_x,  &
        skip_y,  &
        skip_z   )
-    use scale_prc, only: &
-       PRC_abort
     use scale_const, only: &
        D2R => CONST_D2R
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(in) :: lon_org(:,:)
@@ -221,40 +240,65 @@ contains
     real(RP), intent(in), optional :: search_limit
     integer,  intent(in), optional :: weight_order
 
-    integer  :: IS, IE ! [start,end] index for x-direction
-    integer  :: JS, JE ! [start,end] index for y-direction
+    integer :: nsize, psize, nidx_max
+    integer, allocatable :: idx_blk(:,:,:), nidx(:,:)
+    real(RP) :: lon_min, lon_max
+    real(RP) :: lat_min, lat_max
+    real(RP) :: dlon, dlat
+    integer  :: idx_ref(npoints)
 
-    integer  :: i, j
+    integer  :: i, j, n
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('INTERP_fact',3)
 
+    nsize = IA_ref * JA_ref
+    if ( nsize > 100 ) then
+       psize = int( sqrt(2.0_RP*sqrt(real(nsize,RP))) )
+       nidx_max = nsize / psize * INTERP_buffer_size_fact
+    else
+       psize = 1
+       nidx_max = nsize
+    end if
+
+    allocate(idx_blk(nidx_max,psize,psize))
+    allocate(nidx   (         psize,psize))
+
+    call INTERP_div_block(nsize, psize, nidx_max,     & ! [IN]
+                          lon_ref(:,:), lat_ref(:,:), & ! [IN]
+                          idx_blk(:,:,:), nidx(:,:),  & ! [OUT]
+                          lon_min, lon_max,           & ! [OUT]
+                          lat_min, lat_max,           & ! [OUT]
+                          dlon, dlat                  ) ! [OUT]
+
     hfact(:,:,:) = 0.0_RP
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2), &
-    !$omp private(IS,IE,JS,JE)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(idx_ref)
     do j = 1, JA
     do i = 1, IA
-       ! nearest block search
-       call INTERP_search_nearest_block( IA_ref, JA_ref, & ! [IN]
-                                         lon_ref(:,:),   & ! [IN]
-                                         lat_ref(:,:),   & ! [IN]
-                                         lon    (i,j),   & ! [IN]
-                                         lat    (i,j),   & ! [IN]
-                                         IS, IE, JS, JE  ) ! [OUT]
-
        ! main search
        call INTERP_search_horiz( npoints,                     & ! [IN]
-                                 IA_ref, JA_ref,              & ! [IN]
-                                 IS, IE, JS, JE,              & ! [IN]
+                                 nsize,                       & ! [IN]
                                  lon_ref(:,:), lat_ref(:,:),  & ! [IN]
+                                 lon_min, lon_max,            & ! [IN]
+                                 lat_min, lat_max,            & ! [IN]
+                                 psize, nidx_max,             & ! [IN]
+                                 dlon, dlat,                  & ! [IN]
+                                 idx_blk(:,:,:), nidx(:,:),   & ! [IN]
                                  lon(i,j), lat(i,j),          & ! [IN]
-                                 idx_i(i,j,:), idx_j(i,j,:),  & ! [OUT]
+                                 idx_ref(:),                  & ! [OUT]
                                  hfact(i,j,:),                & ! [OUT]
                                  search_limit = search_limit, & ! [IN]
                                  weight_order = weight_order  ) ! [IN]
+       do n = 1, npoints
+          idx_i(i,j,n) = mod(idx_ref(n) - 1, IA_ref) + 1
+          idx_j(i,j,n) = ( idx_ref(n) - 1 ) / IA_ref + 1
+       end do
     enddo
     enddo
+
+    deallocate(idx_blk, nidx)
 
     call PROF_rapend  ('INTERP_fact',3)
 
@@ -309,45 +353,62 @@ contains
     integer,  intent(out) :: idx_k(KA,2,IA,JA,npoints)     ! i-index in reference     (target)
     real(RP), intent(out) :: vfact(KA,2,IA,JA,npoints)     ! horizontal interp factor (target)
 
-    integer  :: IS, IE ! [start,end] index for x-direction
-    integer  :: JS, JE ! [start,end] index for y-direction
+    integer :: nsize, psize, nidx_max
+    integer, allocatable :: idx_blk(:,:,:), nidx(:,:)
+    real(RP) :: lon_min, lon_max
+    real(RP) :: lat_min, lat_max
+    real(RP) :: dlon, dlat
+    integer  :: idx_ref(npoints)
 
     integer  :: k, i, j, ii, jj, n
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('INTERP_fact',3)
 
+    nsize = IA_ref * JA_ref
+    if ( nsize > 100 ) then
+       psize = int( sqrt(2.0_RP*sqrt(real(nsize,RP))) )
+       nidx_max = nsize / psize * INTERP_buffer_size_fact
+    else
+       psize = 1
+       nidx_max = nsize
+    end if
+
+    allocate(idx_blk(nidx_max,psize,psize))
+    allocate(nidx   (         psize,psize))
+
+    call INTERP_div_block(nsize, psize, nidx_max,     & ! [IN]
+                          lon_ref(:,:), lat_ref(:,:), & ! [IN]
+                          idx_blk(:,:,:), nidx(:,:),  & ! [OUT]
+                          lon_min, lon_max,           & ! [OUT]
+                          lat_min, lat_max,           & ! [OUT]
+                          dlon, dlat                  ) ! [OUT]
+
     hfact(:,:,:)     = 0.0_RP
     vfact(:,:,:,:,:) = 0.0_RP
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
-    !$omp private(ii,jj,IS,IE,JS,JE)
+    !$omp private(ii,jj,idx_ref)
     do j = 1, JA
     do i = 1, IA
-       ! nearest block search
-       call INTERP_search_nearest_block( IA_ref, JA_ref, & ! [IN]
-                                         lon_ref(:,:),   & ! [IN]
-                                         lat_ref(:,:),   & ! [IN]
-                                         lon    (i,j),   & ! [IN]
-                                         lat    (i,j),   & ! [IN]
-                                         IS, IE, JS, JE  ) ! [OUT]
 
        ! main search
-       call INTERP_search_horiz( npoints,        & ! [IN]
-                                 IA_ref, JA_ref, & ! [IN]
-                                 IS, IE,         & ! [IN]
-                                 JS, JE,         & ! [IN]
-                                 lon_ref(:,:),   & ! [IN]
-                                 lat_ref(:,:),   & ! [IN]
-                                 lon    (i,j),   & ! [IN]
-                                 lat    (i,j),   & ! [IN]
-                                 idx_i  (i,j,:), & ! [OUT]
-                                 idx_j  (i,j,:), & ! [OUT]
-                                 hfact  (i,j,:)  ) ! [OUT]
+       call INTERP_search_horiz( npoints,                     & ! [IN]
+                                 nsize,                       & ! [IN]
+                                 lon_ref(:,:), lat_ref(:,:),  & ! [IN]
+                                 lon_min, lon_max,            & ! [IN]
+                                 lat_min, lat_max,            & ! [IN]
+                                 psize, nidx_max,             & ! [IN]
+                                 dlon, dlat,                  & ! [IN]
+                                 idx_blk(:,:,:), nidx(:,:),   & ! [IN]
+                                 lon(i,j), lat(i,j),          & ! [IN]
+                                 idx_ref(:), hfact(i,j,:)     ) ! [OUT]
 
        do n = 1, npoints
-          ii = idx_i(i,j,n)
-          jj = idx_j(i,j,n)
+          ii = mod(idx_ref(n) - 1, IA_ref) + 1
+          jj = ( idx_ref(n) - 1 ) / IA_ref + 1
+          idx_i(i,j,n) = ii
+          idx_j(i,j,n) = jj
 
           call INTERP_search_vert( KA_ref, KS_ref, KE_ref, & ! [IN]
                                    KA,     KS,     KE,     & ! [IN]
@@ -358,6 +419,8 @@ contains
        enddo
     enddo
     enddo
+
+    deallocate(idx_blk, nidx)
 
     call PROF_rapend  ('INTERP_fact',3)
 
@@ -378,8 +441,8 @@ contains
        val_ref, &
        val      )
     use scale_const, only: &
-       EPS   => CONST_EPS,  &
-       UNDEF => CONST_UNDEF
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     implicit none
 
     integer,  intent(in)  :: npoints                ! number of interpolation point for horizontal
@@ -533,114 +596,57 @@ contains
   end subroutine INTERP_interp3d
 
   !-----------------------------------------------------------------------------
-  ! search of nearest region for speed up of interpolation
-!OCL SERIAL
-  subroutine INTERP_search_nearest_block( &
-       IA_ref,  &
-       JA_ref,  &
-       lon_ref, &
-       lat_ref, &
-       lon,     &
-       lat,     &
-       IS, IE,  &
-       JS, JE   )
-    use scale_const, only: &
-       CONST_RADIUS
-    implicit none
-
-    integer,  intent(in)  :: IA_ref                 ! number of x-direction    (reference)
-    integer,  intent(in)  :: JA_ref                 ! number of y-direction    (reference)
-    real(RP), intent(in)  :: lon_ref(IA_ref,JA_ref) ! longitude [rad]          (reference)
-    real(RP), intent(in)  :: lat_ref(IA_ref,JA_ref) ! latitude  [rad]          (reference)
-    real(RP), intent(in)  :: lon                    ! longitude [rad]          (target)
-    real(RP), intent(in)  :: lat                    ! latitude  [rad]          (target)
-    integer,  intent(out) :: IS                     ! start index for x-direction
-    integer,  intent(out) :: IE                     ! end   index for x-direction
-    integer,  intent(out) :: JS                     ! start index for y-direction
-    integer,  intent(out) :: JE                     ! end   index for y-direction
-
-    real(RP) :: distance, dist
-    integer  :: iskip, jskip
-    integer  :: i_bulk, j_bulk
-
-    integer  :: i, j
-    !---------------------------------------------------------------------------
-
-    iskip = max( nint(sqrt(1.0_RP*IA_ref)), 3 )
-    jskip = max( nint(sqrt(1.0_RP*JA_ref)), 3 )
-
-    dist   = large_number
-    i_bulk = IA_ref / 2
-    j_bulk = JA_ref / 2
-
-    do j = 1 + (jskip/2), JA_ref, jskip
-    do i = 1 + (iskip/2), IA_ref, iskip
-
-          distance = haversine( lon, lat, lon_ref(i,j), lat_ref(i,j), CONST_RADIUS )
-
-          if ( distance < dist ) then
-             dist   = distance
-             i_bulk = i
-             j_bulk = j
-          endif
-
-    end do
-    end do
-
-    ! +- 3 is buffer for 12 points
-    IS = max( i_bulk - (iskip/2) - 3, 1      )
-    IE = min( i_bulk + (iskip/2) + 3, IA_ref )
-    JS = max( j_bulk - (jskip/2) - 3, 1      )
-    JE = min( j_bulk + (jskip/2) + 3, JA_ref )
-
-    return
-  end subroutine INTERP_search_nearest_block
-
-  !-----------------------------------------------------------------------------
-  ! horizontal search of interpolation points for three-points
+  ! horizontal search of interpolation points
 !OCL SERIAL
   subroutine INTERP_search_horiz( &
        npoints,          &
-       IA_ref, JA_ref,   &
-       IS, IE, JS, JE,   &
+       nsize,            &
        lon_ref, lat_ref, &
+       lon_min, lon_max, &
+       lat_min, lat_max, &
+       psize, nidx_max,  &
+       dlon, dlat,       &
+       idx_blk, nidx,    &
        lon, lat,         &
-       idx_i, idx_j,     &
+       idx_ref,          &
        hfact,            &
        search_limit,     &
        weight_order      )
     use scale_const, only: &
-       CONST_RADIUS, &
        CONST_EPS
-    use scale_sort, only: &
-       SORT_exec
     implicit none
 
-    integer,  intent(in)  :: npoints                ! number of interpolation point for horizontal
-    integer,  intent(in)  :: IA_ref                 ! number of x-direction    (reference)
-    integer,  intent(in)  :: JA_ref                 ! number of y-direction    (reference)
-    integer,  intent(in)  :: IS                     ! start index for x-direction
-    integer,  intent(in)  :: IE                     ! end   index for x-direction
-    integer,  intent(in)  :: JS                     ! start index for y-direction
-    integer,  intent(in)  :: JE                     ! end   index for y-direction
-    real(RP), intent(in)  :: lon_ref(IA_ref,JA_ref) ! longitude [rad]          (reference)
-    real(RP), intent(in)  :: lat_ref(IA_ref,JA_ref) ! latitude  [rad]          (reference)
-    real(RP), intent(in)  :: lon                    ! longitude [rad]          (target)
-    real(RP), intent(in)  :: lat                    ! latitude  [rad]          (target)
-    integer,  intent(out) :: idx_i(npoints)         ! i-index in reference     (target)
-    integer,  intent(out) :: idx_j(npoints)         ! j-index in reference     (target)
-    real(RP), intent(out) :: hfact(npoints)         ! horizontal interp factor (target)
+    integer,  intent(in)  :: npoints        ! number of interpolation point for horizontal
+    integer,  intent(in)  :: nsize          ! number of grids          (reference)
+    real(RP), intent(in)  :: lon_ref(nsize) ! longitude [rad]          (reference)
+    real(RP), intent(in)  :: lat_ref(nsize) ! latitude  [rad]          (reference)
+    real(RP), intent(in)  :: lon_min        ! minmum  longitude [rad]  (reference)
+    real(RP), intent(in)  :: lon_max        ! maximum longitude [rad]  (reference)
+    real(RP), intent(in)  :: lat_min        ! minmum  latitude  [rad]  (reference)
+    real(RP), intent(in)  :: lat_max        ! maximum latitude  [rad]  (reference)
+    integer,  intent(in)  :: psize          ! number of blocks for each dimension
+    integer,  intent(in)  :: nidx_max       ! maximum number of index in the block
+    real(RP), intent(in)  :: dlon           ! block longitude difference
+    real(RP), intent(in)  :: dlat           ! block latitude  difference
+    integer,  intent(in)  :: idx_blk(nidx_max,psize,psize) ! index of the reference in the block
+    integer,  intent(in)  :: nidx            (psize,psize) ! number of indexes in the block
+    real(RP), intent(in)  :: lon              ! longitude [rad]          (target)
+    real(RP), intent(in)  :: lat              ! latitude  [rad]          (target)
+    integer,  intent(out) :: idx_ref(npoints) ! index in reference     (target)
+    real(RP), intent(out) :: hfact(npoints)   ! horizontal interp factor (target)
 
     real(RP), intent(in), optional :: search_limit
     integer,  intent(in), optional :: weight_order
 
-    real(RP) :: distance
     real(RP) :: dist(npoints)
     real(RP) :: sum
     real(RP) :: search_limit_
     integer  :: weight_order_
 
+    real(RP) :: lon0, lon1, lat0, lat1
+    real(RP) :: dlon_sl, dlat_sl
     integer  :: i, j, n
+    integer  :: ii, jj, ii0, jj0
     !---------------------------------------------------------------------------
 
     if ( present(search_limit) ) then
@@ -655,27 +661,48 @@ contains
        weight_order_ = INTERP_weight_order
     end if
 
-    dist (:) = large_number
-    idx_i(:) = -1
-    idx_j(:) = -1
 
-    do j = JS, JE
-    do i = IS, IE
-       distance = haversine( lon, lat, lon_ref(i,j), lat_ref(i,j), CONST_RADIUS )
 
-       if ( distance <= dist(npoints) ) then
-          ! replace last(=longest) value
-          dist (npoints) = distance
-          idx_i(npoints) = i
-          idx_j(npoints) = j
+    dist   (:) = large_number
+    idx_ref(:) = -1
 
-          ! sort by ascending order
-          call SORT_exec( npoints,           & ! [IN]
-                          dist (:),          & ! [INOUT]
-                          idx_i(:), idx_j(:) ) ! [INOUT]
-       endif
-    enddo
-    enddo
+    ! find k-nearest points in the nearest block
+    ii0 = min( int(( lon - lon_min ) / dlon) + 1, psize )
+    jj0 = min( int(( lat - lat_min ) / dlat) + 1, psize )
+    do i = 1, nidx(ii0,jj0)
+       n = idx_blk(i,ii0,jj0)
+       call INTERP_insert( npoints, &
+                           lon, lat, &
+                           lon_ref(n), lat_ref(n), & ! [IN]
+                           n,                      & ! [IN]
+                           dist(:), idx_ref(:)     ) ! [INOUT]
+    end do
+
+    dlon_sl = max(dlon * 0.5_RP, dist(npoints))
+    dlat_sl = max(dlat * 0.5_RP, dist(npoints))
+    do jj = 1, psize
+       lat0 = lat_min + dlat * (jj-1)
+       lat1 = lat_min + dlat * jj
+       if (     lat <  lat0 - dlat_sl &
+           .or. lat >= lat1 + dlat_sl ) cycle
+       do ii = 1, psize
+          if ( ii==ii0 .and. jj==jj0 ) cycle
+          lon0 = lon_min + dlon * (ii-1)
+          lon1 = lon_min + dlon * ii
+          if (     lon <  lon0 - dlon_sl &
+              .or. lon >= lon1 + dlon_sl ) cycle
+          do i = 1, nidx(ii,jj)
+             n = idx_blk(i,ii,jj)
+             call INTERP_insert( npoints, &
+                                 lon, lat, &
+                                 lon_ref(n), lat_ref(n), & ! [IN]
+                                 n,                      & ! [IN]
+                                 dist(:), idx_ref(:)     ) ! [INOUT]
+          end do
+          dlon_sl = max(dlon * 0.5_RP, dist(npoints))
+          dlat_sl = max(dlat * 0.5_RP, dist(npoints))
+       end do
+    end do
 
     if ( abs(dist(1)) < CONST_EPS ) then
        hfact(:) = 0.0_RP
@@ -784,15 +811,100 @@ contains
     return
   end subroutine INTERP_search_vert
 
+  ! private
+
+!OCL SERIAL
+  subroutine INTERP_insert( npoints, &
+                            lon, lat, &
+                            lon_ref, lat_ref, &
+                            i,                &
+                            dist, idx_i       )
+    use scale_sort, only: &
+       SORT_exec
+
+    integer,  intent(in) :: npoints
+    real(RP), intent(in) :: lon, lat
+    real(RP), intent(in) :: lon_ref, lat_ref
+    integer,  intent(in) :: i
+
+    real(RP), intent(inout) :: dist(npoints)
+    integer,  intent(inout) :: idx_i(npoints)
+    
+    real(RP) :: distance
+
+    distance = haversine( lon, lat, lon_ref, lat_ref )
+
+    if ( distance <= dist(npoints) ) then
+       ! replace last(=longest) value
+       dist (npoints) = distance
+       idx_i(npoints) = i
+
+       ! sort by ascending order
+       call SORT_exec( npoints,   & ! [IN]
+                       dist (:),  & ! [INOUT]
+                       idx_i(:)   ) ! [INOUT]
+    endif
+
+    return
+  end subroutine INTERP_insert
+
+  subroutine INTERP_div_block(nsize, psize, nidx_max,  &
+                              lon_ref, lat_ref, &
+                              idx, nidx,        &
+                              lon_min, lon_max, &
+                              lat_min, lat_max, &
+                              dlon, dlat        )
+    use scale_prc, only: &
+       PRC_abort
+    integer,  intent(in) :: nsize
+    integer,  intent(in) :: psize
+    integer,  intent(in) :: nidx_max
+    real(RP), intent(in) :: lon_ref(nsize)
+    real(RP), intent(in) :: lat_ref(nsize)
+
+    integer,  intent(out) :: idx (nidx_max,psize,psize)
+    integer,  intent(out) :: nidx(psize,psize)
+    real(RP), intent(out) :: lon_min, lon_max
+    real(RP), intent(out) :: lat_min, lat_max
+    real(RP), intent(out) :: dlon, dlat
+
+    integer :: i, ii, jj, n
+
+    lon_min = minval(lon_ref(:))
+    lon_max = maxval(lon_ref(:))
+    lat_min = minval(lat_ref(:))
+    lat_max = maxval(lat_ref(:))
+
+    dlon = ( lon_max - lon_min ) / psize
+    dlat = ( lat_max - lat_min ) / psize
+
+    nidx(:,:) = 0
+    !$omp parallel do &
+    !$omp private(ii,jj,n)
+    do i = 1, nsize
+       ii = min(int((lon_ref(i) - lon_min) / dlon) + 1, psize)
+       jj = min(int((lat_ref(i) - lat_min) / dlat) + 1, psize)
+       if ( nidx(ii,jj) >= nidx_max ) then
+          LOG_ERROR("INTERP_search_horiz",*) 'Buffer size is not enough'
+          LOG_ERROR_CONT(*)                  '   Use larger INTERP_buffer_size_fact: ', INTERP_buffer_size_fact
+          call PRC_abort
+       end if
+       !$omp critical
+       n = nidx(ii,jj) + 1
+       nidx(ii,jj) = n
+       !$omp end critical
+       idx(n,ii,jj) = i
+    end do
+
+    return
+  end subroutine INTERP_div_block
+
   !-----------------------------------------------------------------------------
   ! Haversine Formula (from R.W. Sinnott, "Virtues of the Haversine",
   ! Sky and Telescope, vol. 68, no. 2, 1984, p. 159):
   function haversine( &
-       lon0,  &
-       lat0,  &
-       lon1,  &
-       lat1,  &
-       r_in_m ) &
+       lon0, lat0, &
+       lon1, lat1  ) &
        result( d )
     implicit none
 
@@ -800,8 +912,7 @@ contains
     real(RP), intent(in) :: lat0   ! [rad]
     real(RP), intent(in) :: lon1   ! [rad]
     real(RP), intent(in) :: lat1   ! [rad]
-    real(RP), intent(in) :: r_in_m ! [m]
-    real(RP)             :: d      ! [m]
+    real(RP)             :: d      ! [rad]
 
     real(RP) :: dlonh, dlath
     real(RP) :: work1
@@ -812,7 +923,7 @@ contains
 
     work1 = sin(dlath)**2 + cos(lat0) * cos(lat1) * sin(dlonh)**2
 
-    d = r_in_m * 2.0_RP * asin( min(sqrt(work1),1.0_RP) )
+    d = 2.0_RP * asin( min(sqrt(work1),1.0_RP) )
 
   end function haversine
 

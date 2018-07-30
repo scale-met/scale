@@ -109,7 +109,7 @@ params.each do |param|
     print "&PARAM_COMM_CARTESC_NEST\n"
     param_items.each do |item|
       if /^(\s*)USE_NESTING\s*=/i !~ item && /^(\s*)OFFLINE\s*=/i !~ item
-        print item, "\n"
+        print item.sub(/^(\s*)NEST_/i,'\1'+"COMM_CARTESC_NEST_"), "\n"
       end
     end
     print "/\n"
@@ -462,6 +462,16 @@ EOL
     next
   end
   if /^&PARAM_MKINIT_INTERPORATION$/i =~ param_name
+    next
+  end
+  if /^&PARAM_MKINIT_REAL_ATMOS/i =~ param_name
+    print param_name, "\n"
+    param_items.each do |item|
+      if /PARENT_MP_TYPE/i !~ item
+        print item, "\n"
+      end
+    end
+    print "/\n"
     next
   end
 
