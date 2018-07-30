@@ -343,6 +343,7 @@ contains
   ! Iteration method: refs. JMA-NHM Description Note II, Mar 2008
   !
   !-----------------------------------------------------------------------------
+!OCL SERIAL
   subroutine BULKFLUX_B91W01( &
       Ustar,   & ! (out)
       Tstar,   & ! (out)

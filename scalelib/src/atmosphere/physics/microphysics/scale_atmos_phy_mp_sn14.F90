@@ -4109,6 +4109,7 @@ contains
   !> ATMOS_PHY_MP_sn14_terminal_velocity
   !! Calculate terminal velocity
   !<
+!OCL SERIAL
   subroutine ATMOS_PHY_MP_sn14_terminal_velocity( &
     KA, KS, KE, &
       DENS, &

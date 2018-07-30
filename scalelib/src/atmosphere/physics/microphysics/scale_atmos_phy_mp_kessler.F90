@@ -352,6 +352,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Kessler-type warm rain microphysics (terminal velocity)
+!OCL SERIAL
   subroutine ATMOS_PHY_MP_kessler_terminal_velocity( &
        KA, KS, KE,            &
        DENS0, RHOQ0,          &

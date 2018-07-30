@@ -1177,6 +1177,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> get terminal velocity
+!OCL SERIAL
   subroutine ATMOS_PHY_MP_suzuki10_terminal_velocity( &
        KA,     &
        vterm_o )
