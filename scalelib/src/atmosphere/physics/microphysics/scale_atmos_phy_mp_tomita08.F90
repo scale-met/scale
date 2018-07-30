@@ -2062,6 +2062,7 @@ contains
   end subroutine ATMOS_PHY_MP_tomita08_effective_radius
 
   !-----------------------------------------------------------------------------
+!OCL SERIAL
   subroutine MP_tomita08_BergeronParam( &
        KA, KS, KE, &
        temp,       &
