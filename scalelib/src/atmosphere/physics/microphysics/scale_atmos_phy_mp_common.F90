@@ -40,7 +40,6 @@ module scale_atmos_phy_mp_common
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
-  logical, public :: SCALE_GM = .false.
   !
   !-----------------------------------------------------------------------------
   !
@@ -825,7 +824,7 @@ contains
     real(RP) :: rcdz_u(KA,IA,JA)
     real(RP) :: rcdz_v(KA,IA,JA)
 
-    integer  :: k, i, j, ijadd
+    integer  :: k, i, j
     integer  :: iq, iqa
     logical  :: vt_fixed_
     !---------------------------------------------------------------------------
@@ -843,21 +842,12 @@ contains
 
        if( TRACER_MASS(iqa) == 0.0_RP ) cycle
 
-       if( .NOT. SCALE_GM ) then
-          if( .NOT. vt_fixed_ ) call COMM_vars8( vterm(:,:,:,iq), iq )
-
-          call COMM_vars8( QTRC(:,:,:,iqa), QA_MP+iq )
-       endif
+       if( .NOT. vt_fixed_ ) call COMM_vars8( vterm(:,:,:,iq), iq )
+       call COMM_vars8( QTRC(:,:,:,iqa), QA_MP+iq )
     enddo
 
     ! tracer/energy transport by falldown
     ! 1st order upwind, forward euler, velocity is always negative
-
-    if( SCALE_GM ) then ! staggered or not
-       ijadd = 0
-    else
-       ijadd = 1
-    endif
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
@@ -867,9 +857,9 @@ contains
           rfdz  (k,i,j) = 1.0_RP / ( REAL_CZ(k+1,i,j) - REAL_CZ(k  ,i,j) )
           rcdz  (k,i,j) = 1.0_RP / ( REAL_FZ(k  ,i,j) - REAL_FZ(k-1,i,j) )
 
-          rcdz_u(k,i,j) = 2.0_RP / ( ( REAL_FZ(k,i+ijadd,j) - REAL_FZ(k-1,i+ijadd,j) ) &
+          rcdz_u(k,i,j) = 2.0_RP / ( ( REAL_FZ(k,i+1,j) - REAL_FZ(k-1,i+1,j) ) &
                                    + ( REAL_FZ(k,i  ,j) - REAL_FZ(k-1,i  ,j) ) )
-          rcdz_v(k,i,j) = 2.0_RP / ( ( REAL_FZ(k,i,j+ijadd) - REAL_FZ(k-1,i,j+ijadd) ) &
+          rcdz_v(k,i,j) = 2.0_RP / ( ( REAL_FZ(k,i,j+1) - REAL_FZ(k-1,i,j+1) ) &
                                    + ( REAL_FZ(k,i,j  ) - REAL_FZ(k-1,i,j  ) ) )
        enddo
     enddo
@@ -879,12 +869,10 @@ contains
        iqa = QS_MP + iq
        if ( TRACER_MASS(iqa) == 0.0_RP ) cycle
 
-       if( .NOT. SCALE_GM ) then
-          if ( .not. vt_fixed_ ) then
-             call COMM_wait( vterm(:,:,:,iq), iq )
-          endif
-          call COMM_wait( QTRC(:,:,:,iqa), QA_MP+iq )
+       if ( .not. vt_fixed_ ) then
+          call COMM_wait( vterm(:,:,:,iq), iq )
        endif
+       call COMM_wait( QTRC(:,:,:,iqa), QA_MP+iq )
 
        !$omp parallel do default(none)                                                   &
        !$omp shared(JS,JE,IS,IE,KS,KE,qflx,iq,vterm,DENS,QTRC,iqa,eflx,temp,CVq,RHOE,dt) &

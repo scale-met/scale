@@ -1126,6 +1126,7 @@ contains
   end subroutine solve_direct
 
 #ifdef DEBUG
+!OCL SERIAL
   subroutine check_equation( &
        VECT, &
        DENS, MOMZ, RHOT, DPRES, &
