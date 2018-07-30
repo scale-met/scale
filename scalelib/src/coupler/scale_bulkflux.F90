@@ -682,7 +682,7 @@ contains
     FracT2  = real( FracT2C,  kind=RP )
     FracQ2  = real( FracQ2C,  kind=RP )
 
-    Ra = ( Q1 - Q0 ) / ( UstarC * QstarC + EPS )
+    Ra = max( ( Q1 - Q0 ) / ( UstarC * QstarC + EPS ), EPS )
 
     return
   end subroutine BULKFLUX_B91W01
