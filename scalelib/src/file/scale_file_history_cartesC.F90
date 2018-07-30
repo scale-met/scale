@@ -261,8 +261,8 @@ contains
     if ( FILE_HISTORY_CARTESC_PRES_nlayer > 0 ) then
        call INTERP_VERT_setcoef_pres( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
                                       KA, KS, KE,                       & ! [IN]
-                                      IA, IS, IE,                       & ! [IN]
-                                      JA, JS, JE,                       & ! [IN]
+                                      IA, ISB, IEB,                     & ! [IN]
+                                      JA, JSB, JEB,                     & ! [IN]
                                       PRES         (:,:,:),             & ! [IN]
                                       PRESH        (:,:,:),             & ! [IN]
                                       SFC_PRES     (:,:)  ,             & ! [IN]

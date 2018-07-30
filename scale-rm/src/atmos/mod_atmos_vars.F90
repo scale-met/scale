@@ -1585,7 +1585,7 @@ contains
                LHV(:,:,:)   ) ! (out)
           DV_calclated(I_LHV) = .true.
        end if
-       var(:,:,:) = LHV(:,:,:)
+       var(KS:KE,:,:) = LHV(KS:KE,:,:)
 
     case ( 'LHS' )
        if ( .not. DV_calclated(I_LHS) ) then
@@ -1596,7 +1596,7 @@ contains
                LHS(:,:,:)   ) ! (out)
           DV_calclated(I_LHS) = .true.
        end if
-       var(:,:,:) = LHS(:,:,:)
+       var(KS:KE,:,:) = LHS(KS:KE,:,:)
 
     case ( 'LHF' )
        if ( .not. DV_calclated(I_LHF) ) then
@@ -1607,7 +1607,7 @@ contains
                LHF(:,:,:)   ) ! (out)
           DV_calclated(I_LHF) = .true.
        end if
-       var(:,:,:) = LHF(:,:,:)
+       var(KS:KE,:,:) = LHF(KS:KE,:,:)
 
     case ( 'POTV' )
        if ( .not. DV_calclated(I_POTV) ) then
@@ -1618,7 +1618,7 @@ contains
                POTV(:,:,:)               ) ! (out)
           DV_calclated(I_POTV) = .true.
        end if
-       var(:,:,:) = POTV(:,:,:)
+       var(KS:KE,:,:) = POTV(KS:KE,:,:)
 
     case ( 'TEML' )
        if ( .not. DV_calclated(I_TEML) ) then
@@ -1634,7 +1634,7 @@ contains
                TEML(:,:,:)                          ) ! (out)
           DV_calclated(I_TEML) = .true.
        end if
-       var(:,:,:) = TEML(:,:,:)
+       var(KS:KE,:,:) = TEML(KS:KE,:,:)
 
     case ( 'POTL' )
        if ( .not. DV_calclated(I_POTL) ) then
@@ -1654,7 +1654,7 @@ contains
           enddo
           DV_calclated(I_POTL) = .true.
        end if
-       var(:,:,:) = POTL(:,:,:)
+       var(KS:KE,:,:) = POTL(KS:KE,:,:)
 
     case ( 'POTE' )
        if ( .not. DV_calclated(I_POTE) ) then
@@ -1664,7 +1664,7 @@ contains
                DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), QV(:,:,:), & ! [IN]
                POTE(:,:,:)                                       ) ! [OUT]
        end if
-       var(:,:,:) = POTE(:,:,:)
+       var(KS:KE,:,:) = POTE(KS:KE,:,:)
     case ( 'QTOT' )
        if ( .not. DV_calclated(I_QTOT) ) then
           call allocate_3D( QTOT )
@@ -1698,7 +1698,7 @@ contains
           end if
           DV_calclated(I_QTOT) = .true.
        end if
-       var(:,:,:) = QTOT(:,:,:)
+       var(KS:KE,:,:) = QTOT(KS:KE,:,:)
 
     case ( 'QHYD' )
        if ( .not. DV_calclated(I_QHYD) ) then
@@ -1734,7 +1734,7 @@ contains
           end if
           DV_calclated(I_QHYD) = .true.
        end if
-       var(:,:,:) = QHYD(:,:,:)
+       var(KS:KE,:,:) = QHYD(KS:KE,:,:)
 
     case ( 'QLIQ' )
        if ( .not. DV_calclated(I_QLIQ) ) then
@@ -1753,7 +1753,7 @@ contains
           enddo
           DV_calclated(I_QLIQ) = .true.
        end if
-       var(:,:,:) = QLIQ(:,:,:)
+       var(KS:KE,:,:) = QLIQ(KS:KE,:,:)
 
     case ( 'QICE' )
        if ( .not. DV_calclated(I_QICE) ) then
@@ -1772,7 +1772,7 @@ contains
           enddo
           DV_calclated(I_QICE) = .true.
        end if
-       var(:,:,:) = QICE(:,:,:)
+       var(KS:KE,:,:) = QICE(KS:KE,:,:)
 
     case ( 'QSAT' )
        if ( .not. DV_calclated(I_QSAT) ) then
@@ -1783,7 +1783,7 @@ contains
                QSAT(:,:,:)                  ) ! (out)
           DV_calclated(I_QSAT) = .true.
        end if
-       var(:,:,:) = QSAT(:,:,:)
+       var(KS:KE,:,:) = QSAT(KS:KE,:,:)
 
     case ( 'RHA' )
        if ( .not. DV_calclated(I_RHA) ) then
@@ -1823,7 +1823,7 @@ contains
           end if
           DV_calclated(I_RHA) = .true.
        end if
-       var(:,:,:) = RHA(:,:,:)
+       var(KS:KE,:,:) = RHA(KS:KE,:,:)
 
     case ( 'RHL', 'RH' )
        if ( .not. DV_calclated(I_RHL) ) then
@@ -1863,7 +1863,7 @@ contains
           end if
           DV_calclated(I_RHL) = .true.
        end if
-       var(:,:,:) = RHL(:,:,:)
+       var(KS:KE,:,:) = RHL(KS:KE,:,:)
 
     case ( 'RHI' )
        if ( .not. DV_calclated(I_RHI) ) then
@@ -1903,7 +1903,7 @@ contains
           end if
           DV_calclated(I_RHI) = .true.
        end if
-       var(:,:,:) = RHI(:,:,:)
+       var(KS:KE,:,:) = RHI(KS:KE,:,:)
 
     case ( 'VOR' )
        if ( .not. DV_calclated(I_VOR) ) then
@@ -1959,7 +1959,7 @@ contains
           enddo
           DV_calclated(I_VOR) = .true.
        end if
-       var(:,:,:) = VOR(:,:,:)
+       var(KS:KE,:,:) = VOR(KS:KE,:,:)
 
     case ( 'DIV' )
        if ( .not. DV_calclated(I_DIV) ) then
@@ -1978,7 +1978,7 @@ contains
           enddo
           DV_calclated(I_DIV) = .true.
        end if
-       var(:,:,:) = DIV(:,:,:)
+       var(KS:KE,:,:) = DIV(KS:KE,:,:)
 
     case ( 'HDIV' )
        if ( .not. DV_calclated(I_HDIV) ) then
@@ -2008,7 +2008,7 @@ contains
           enddo
           DV_calclated(I_HDIV) = .true.
        end if
-       var(:,:,:) = HDIV(:,:,:)
+       var(KS:KE,:,:) = HDIV(KS:KE,:,:)
 
     case ( 'Uabs' )
        if ( .not. DV_calclated(I_Uabs) ) then
@@ -2024,7 +2024,7 @@ contains
           enddo
           DV_calclated(I_Uabs) = .true.
        end if
-       var(:,:,:) = Uabs(:,:,:)
+       var(KS:KE,:,:) = Uabs(KS:KE,:,:)
 
     case ( 'N2' )
        if ( .not. DV_calclated(I_N2) ) then
@@ -2036,7 +2036,7 @@ contains
                N2(:,:,:)                 ) ! (out)
           DV_calclated(I_N2) = .true.
        end if
-       var(:,:,:) = N2(:,:,:)
+       var(KS:KE,:,:) = N2(KS:KE,:,:)
 
     case ( 'MSE' )
        if ( .not. DV_calclated(I_MSE) ) then
@@ -2055,7 +2055,7 @@ contains
           enddo
           DV_calclated(I_MSE) = .true.
        end if
-       var(:,:,:) = MSE(:,:,:)
+       var(KS:KE,:,:) = MSE(KS:KE,:,:)
 
     case ( 'TDEW' )
        if ( .not. DV_calclated(I_TDEW) ) then
@@ -2065,7 +2065,7 @@ contains
                                           TDEW(:,:,:)                          ) ! [OUT]
           DV_calclated(I_TDEW) = .true.
        end if
-       var(:,:,:) = TDEW(:,:,:)
+       var(KS:KE,:,:) = TDEW(KS:KE,:,:)
 
     case ( 'ENGP' )
        if ( .not. DV_calclated(I_ENGP) ) then
@@ -2080,7 +2080,7 @@ contains
           end do
           DV_calclated(I_ENGP) = .true.
        end if
-       var(:,:,:) = ENGP(:,:,:)
+       var(KS:KE,:,:) = ENGP(KS:KE,:,:)
 
     case ( 'ENGK' )
        if ( .not. DV_calclated(I_ENGK) ) then
@@ -2096,7 +2096,7 @@ contains
           end do
              DV_calclated(I_ENGK) = .true.
        end if
-       var(:,:,:) = ENGK(:,:,:)
+       var(KS:KE,:,:) = ENGK(KS:KE,:,:)
 
     case ( 'ENGI' )
        if ( .not. DV_calclated(I_ENGI) ) then
@@ -2123,7 +2123,7 @@ contains
           end do
           DV_calclated(I_ENGI) = .true.
        end if
-       var(:,:,:) = ENGI(:,:,:)
+       var(KS:KE,:,:) = ENGI(KS:KE,:,:)
 
     case ( 'ENGT' )
        if ( .not. DV_calclated(I_ENGT) ) then
@@ -2141,7 +2141,7 @@ contains
           enddo
           DV_calclated(I_ENGT) = .true.
        end if
-       var(:,:,:) = ENGT(:,:,:)
+       var(KS:KE,:,:) = ENGT(KS:KE,:,:)
 
     case ( 'DENS_PRIM' )
        if ( .not. DV_calclated(I_DENS_PRIM) ) then
@@ -2158,7 +2158,7 @@ contains
           enddo
           DV_calclated(I_DENS_PRIM) = .true.
        end if
-       var(:,:,:) = DENS_PRIM(:,:,:)
+       var(KS:KE,:,:) = DENS_PRIM(KS:KE,:,:)
 
     case ( 'W_PRIM' )
        if ( .not. DV_calclated(I_W_PRIM) ) then
@@ -2175,7 +2175,7 @@ contains
           enddo
           DV_calclated(I_W_PRIM) = .true.
        end if
-       var(:,:,:) = W_PRIM(:,:,:)
+       var(KS:KE,:,:) = W_PRIM(KS:KE,:,:)
 
     case ( 'U_PRIM' )
        if ( .not. DV_calclated(I_U_PRIM) ) then
@@ -2192,7 +2192,7 @@ contains
           enddo
           DV_calclated(I_U_PRIM) = .true.
        end if
-       var(:,:,:) = U_PRIM(:,:,:)
+       var(KS:KE,:,:) = U_PRIM(KS:KE,:,:)
 
     case ( 'V_PRIM' )
        if ( .not. DV_calclated(I_V_PRIM) ) then
@@ -2209,7 +2209,7 @@ contains
           enddo
           DV_calclated(I_V_PRIM) = .true.
        end if
-       var(:,:,:) = V_PRIM(:,:,:)
+       var(KS:KE,:,:) = V_PRIM(KS:KE,:,:)
 
     case ( 'PT_PRIM' )
        if ( .not. DV_calclated(I_PT_PRIM) ) then
@@ -2226,7 +2226,7 @@ contains
           enddo
           DV_calclated(I_PT_PRIM) = .true.
        end if
-       var(:,:,:) = PT_PRIM(:,:,:)
+       var(KS:KE,:,:) = PT_PRIM(KS:KE,:,:)
 
     case ( 'W_PRIM2' )
        if ( .not. DV_calclated(I_W_PRIM2) ) then
@@ -2243,7 +2243,7 @@ contains
           enddo
           DV_calclated(I_W_PRIM2) = .true.
        end if
-       var(:,:,:) = W_PRIM2(:,:,:)
+       var(KS:KE,:,:) = W_PRIM2(KS:KE,:,:)
 
     case ( 'PT_W_PRIM' )
        if ( .not. DV_calclated(I_PT_W_PRIM) ) then
@@ -2260,7 +2260,7 @@ contains
           enddo
           DV_calclated(I_PT_W_PRIM) = .true.
        end if
-       var(:,:,:) = PT_W_PRIM(:,:,:)
+       var(KS:KE,:,:) = PT_W_PRIM(KS:KE,:,:)
 
     case ( 'W_PRIM3' )
        if ( .not. DV_calclated(I_W_PRIM3) ) then
@@ -2277,7 +2277,7 @@ contains
           enddo
           DV_calclated(I_W_PRIM3) = .true.
        end if
-       var(:,:,:) = W_PRIM3(:,:,:)
+       var(KS:KE,:,:) = W_PRIM3(KS:KE,:,:)
 
     case ( 'TKE_RS' )
        if ( .not. DV_calclated(I_TKE_RS) ) then
@@ -2296,7 +2296,7 @@ contains
           enddo
           DV_calclated(I_TKE_RS) = .true.
        end if
-       var(:,:,:) = TKE_RS(:,:,:)
+       var(KS:KE,:,:) = TKE_RS(KS:KE,:,:)
 
     case default
        LOG_ERROR("ATMOS_vars_calc_diagnostics",*) 'name is invalid for ATMOS_vars_get_diagnostic_3D: ', trim(vname)
