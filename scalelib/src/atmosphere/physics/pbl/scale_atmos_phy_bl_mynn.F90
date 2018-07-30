@@ -692,8 +692,8 @@ contains
 !OCL INDEPENDENT
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE_PBL,KE,IS,IE,JS,JE) &
-    !$omp shared(RHOQ_t,DENS,QTRC,SFLX_Q,Kh,CZ,FZ,F2H,DT,flx) &
-    !$omp private(QTRC_n,RHOKh,a,b,c,d,ap,sf_t) &
+    !$omp shared(RHOQ_t,DENS,QTRC,SFLX_Q,Kh,CZ,FZ,DT,flx) &
+    !$omp private(QTRC_n,RHOKh,a,b,c,d,ap,sf_t,f2h) &
     !$omp private(k,i,j)
     do j = JS, JE
     do i = IS, IE
@@ -757,6 +757,7 @@ contains
   ! private routines
   !-----------------------------------------------------------------------------
 
+!OCL SERIAL
   subroutine get_length( &
        KA, KS, KE_PBL, &
        PT0, q, n2,    &
@@ -838,6 +839,7 @@ contains
     return
   end subroutine get_length
 
+!OCL SERIAL
   subroutine get_q2_level2( &
        KA, KS, KE_PBL, &
        q2_2,           &
@@ -872,6 +874,7 @@ contains
     return
   end subroutine get_q2_level2
 
+!OCL SERIAL
   subroutine get_smsh( &
        KA, KS, KE_PBL, &
        sm, sh,         &
@@ -927,6 +930,7 @@ contains
     return
   end subroutine get_smsh
 
+!OCL SERIAL
   subroutine get_f2h( &
        KA, KS, KE, &
        FZ, &

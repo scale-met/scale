@@ -33,6 +33,7 @@ module scale_const
   real(RP), public            :: CONST_EPS     = 1.E-16_RP           !< small number
   real(RP), public            :: CONST_EPS1    = 0.99999999999999_RP !< small number
   real(RP), public            :: CONST_HUGE    = 1.E+30_RP           !< huge  number
+  !$acc declare create(CONST_PI, CONST_EPS, CONST_EPS1, CONST_HUGE)
 
   integer,  public, parameter :: CONST_UNDEF2  = -32768              !< undefined value (INT2)
   real(SP), public, parameter :: CONST_UNDEF4  = -9.9999E30          !< undefined value (REAL4)

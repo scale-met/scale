@@ -47,6 +47,7 @@ module scale_matrix
 contains
   !-----------------------------------------------------------------------------
   !> solve tridiagonal matrix with Thomas's algorithm
+!OCL SERIAL
   subroutine MATRIX_SOLVER_tridiagonal_1D( &
        KA, KS, KE, &
        ud, md, ld, &
