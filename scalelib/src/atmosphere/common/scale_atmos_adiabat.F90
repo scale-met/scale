@@ -282,7 +282,7 @@ contains
                                    converged                              ) ! [OUT]
 
        if ( .not. converged ) then
-       LOG_ERROR("ATMOS_ADIABAT_cape_3D",*) '[liftparcel] not converged! ', i, j
+          LOG_ERROR("ATMOS_ADIABAT_cape_3D",*) '[liftparcel] not converged! ', i, j
           error = .true.
        end if
 

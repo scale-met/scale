@@ -1819,7 +1819,8 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do OMP_SCHEDULE_
+    !$omp parallel do OMP_SCHEDULE_ &
+    !$omp private(qhydro)
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE

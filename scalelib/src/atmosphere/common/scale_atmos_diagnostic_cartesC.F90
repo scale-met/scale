@@ -102,7 +102,8 @@ contains
     enddo
     enddo
 !OCL XFILL
-    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,momws)
     do j = max(2,JS), JE
     do i = max(2,IS), IE
        if( .NOT. SCALE_GM ) then
