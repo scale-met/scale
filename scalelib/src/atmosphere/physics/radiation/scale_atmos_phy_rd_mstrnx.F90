@@ -491,24 +491,24 @@ contains
     ! marge basic profile and value in model domain
 
     if ( RD_PROFILE_use_climatology ) then
-       call RD_PROFILE_read( RD_KMAX,                & ! [IN]
-                             MSTRN_ngas,             & ! [IN]
-                             MSTRN_ncfc,             & ! [IN]
-                             RD_naero,               & ! [IN]
-                             ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT,     & ! [IN]
-                             TIME_NOWDATE   (:),     & ! [IN]
-                             RD_zh          (:),     & ! [IN]
-                             RD_z           (:),     & ! [IN]
-                             RD_rhodz       (:),     & ! [OUT]
-                             RD_pres        (:),     & ! [OUT]
-                             RD_presh       (:),     & ! [OUT]
-                             RD_temp        (:),     & ! [OUT]
-                             RD_temph       (:),     & ! [OUT]
-                             RD_gas         (:,:),   & ! [OUT]
-                             RD_cfc         (:,:),   & ! [OUT]
-                             RD_aerosol_conc(:,:),   & ! [OUT]
-                             RD_aerosol_radi(:,:),   & ! [OUT]
-                             RD_cldfrac     (:)      ) ! [OUT]
+       call RD_PROFILE_read( RD_KMAX,                               & ! [IN]
+                             MSTRN_ngas,                            & ! [IN]
+                             MSTRN_ncfc,                            & ! [IN]
+                             RD_naero,                              & ! [IN]
+                             ATMOS_GRID_CARTESC_REAL_BASEPOINT_LAT, & ! [IN]
+                             TIME_NOWDATE   (:),                    & ! [IN]
+                             RD_zh          (:),                    & ! [IN]
+                             RD_z           (:),                    & ! [IN]
+                             RD_rhodz       (:),                    & ! [OUT]
+                             RD_pres        (:),                    & ! [OUT]
+                             RD_presh       (:),                    & ! [OUT]
+                             RD_temp        (:),                    & ! [OUT]
+                             RD_temph       (:),                    & ! [OUT]
+                             RD_gas         (:,:),                  & ! [OUT]
+                             RD_cfc         (:,:),                  & ! [OUT]
+                             RD_aerosol_conc(:,:),                  & ! [OUT]
+                             RD_aerosol_radi(:,:),                  & ! [OUT]
+                             RD_cldfrac     (:)                     ) ! [OUT]
     endif
 
 !OCL XFILL
@@ -720,21 +720,20 @@ contains
     call PROF_rapstart('RD_MSTRN_DTRN3', 3)
 
     ! calc radiative transfer
-    call RD_MSTRN_DTRN3( &
-         RD_KMAX, IA, IS, IE, JA, JS, JE, &
-         MSTRN_ngas, MSTRN_ncfc, RD_naero,                         & ! [IN]
-         RD_hydro_str, RD_hydro_end, RD_aero_str, RD_aero_end,     & ! [IN]
-         solins(:,:), cosSZA(:,:),                                 & ! [IN]
-         rhodz_merge(:,:,:), pres_merge(:,:,:),                    & ! [IN]
-         temp_merge(:,:,:), temph_merge(:,:,:), temp_sfc(:,:),     & ! [IN]
-         gas_merge(:,:,:,:), cfc_merge(:,:,:,:),                   & ! [IN]
-         aerosol_conc_merge(:,:,:,:), aerosol_radi_merge(:,:,:,:), & ! [IN]
-         I_MPAE2RD(:),                                             & ! [IN]
-         cldfrac_merge(:,:,:),                                     & ! [IN]
-         albedo_sfc(:,:,:,:),                                      & ! [IN]
-         fact_ocean(:,:), fact_land(:,:), fact_urban(:,:),         & ! [IN]
-         flux_rad_merge(:,:,:,:,:,:), flux_rad_sfc_dn(:,:,:,:),    & ! [OUT]
-         tauCLD_067u(:,:,:), emisCLD_105u(:,:,:)                   ) ! [OUT]
+    call RD_MSTRN_DTRN3( RD_KMAX, IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                         MSTRN_ngas, MSTRN_ncfc, RD_naero,                         & ! [IN]
+                         RD_hydro_str, RD_hydro_end, RD_aero_str, RD_aero_end,     & ! [IN]
+                         solins(:,:), cosSZA(:,:),                                 & ! [IN]
+                         rhodz_merge(:,:,:), pres_merge(:,:,:),                    & ! [IN]
+                         temp_merge(:,:,:), temph_merge(:,:,:), temp_sfc(:,:),     & ! [IN]
+                         gas_merge(:,:,:,:), cfc_merge(:,:,:,:),                   & ! [IN]
+                         aerosol_conc_merge(:,:,:,:), aerosol_radi_merge(:,:,:,:), & ! [IN]
+                         I_MPAE2RD(:),                                             & ! [IN]
+                         cldfrac_merge(:,:,:),                                     & ! [IN]
+                         albedo_sfc(:,:,:,:),                                      & ! [IN]
+                         fact_ocean(:,:), fact_land(:,:), fact_urban(:,:),         & ! [IN]
+                         flux_rad_merge(:,:,:,:,:,:), flux_rad_sfc_dn(:,:,:,:),    & ! [OUT]
+                         tauCLD_067u(:,:,:), emisCLD_105u(:,:,:)                   ) ! [OUT]
 
     call PROF_rapend  ('RD_MSTRN_DTRN3', 3)
 
@@ -1967,10 +1966,10 @@ contains
           T(k) = (        cf(k) ) * T0(k,I_Cloud   ) &
                + ( 1.0_RP-cf(k) ) * T0(k,I_ClearSky)
 
-          R12pls(k) = R (k) + T(k) / ( 1.0_RP - R12pls(k+1) * R(k)           ) &
-                                            * ( R12pls(k+1) * T (k)                   )
-          E12mns(k) = Em(k) + T(k) / ( 1.0_RP - R12pls(k+1) * R(k)           ) &
-                                            * ( R12pls(k+1) * Ep(k) + E12mns(k+1) )
+          R12pls(k) = R (k) + T(k) / ( 1.0_RP - R12pls(k+1) * R(k)       ) &
+                                   * ( R12pls(k+1) * T (k)               )
+          E12mns(k) = Em(k) + T(k) / ( 1.0_RP - R12pls(k+1) * R(k)       ) &
+                                   * ( R12pls(k+1) * Ep(k) + E12mns(k+1) )
        enddo
 
        ! adding: TOA to surface
@@ -1980,10 +1979,10 @@ contains
 
        !$acc loop seq
        do k = 2, rd_kmax+1
-          R12mns(k) = R (k) + T(k) / ( 1.0_RP - R12mns(k-1) * R(k)         ) &
-                                            * ( R12mns(k-1) *T (k)                  )
-          E12pls(k) = Ep(k) + T(k) / ( 1.0_RP - R12mns(k-1) * R(k)         ) &
-                                            * ( R12mns(k-1)*Em(k) + E12pls(k-1) )
+          R12mns(k) = R (k) + T(k) / ( 1.0_RP - R12mns(k-1) * R(k)     ) &
+                                   * ( R12mns(k-1) *T (k)              )
+          E12pls(k) = Ep(k) + T(k) / ( 1.0_RP - R12mns(k-1) * R(k)     ) &
+                                   * ( R12mns(k-1)*Em(k) + E12pls(k-1) )
        enddo
 
 
